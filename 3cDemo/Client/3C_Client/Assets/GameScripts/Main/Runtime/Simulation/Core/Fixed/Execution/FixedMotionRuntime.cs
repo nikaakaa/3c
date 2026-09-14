@@ -1,4 +1,4 @@
-﻿using ThirdPersonSimulation;
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 
@@ -358,7 +358,7 @@ namespace ThirdPersonSimulation.Fixed
                 sourceCount++;
                 sourceFingerprint = MixSource(sourceFingerprint, contribution.Source.Identity);
                 FixedVector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
-                    ? FixedAngle.RotatePlanar(contribution.Displacement, m_Frame.Body.Yaw)
+                    ? FixedAngle.RotatePlanar(contribution.Displacement, m_Frame.BodyFacts.Yaw)
                     : contribution.Displacement;
                 switch (contribution.BlendMode)
                 {
@@ -518,7 +518,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedActionStateStore m_Actions;
-        readonly FixedCharacterRuntimeStateTransaction m_Transaction;
+        readonly IFixedAbilityExecutionStateTransaction m_Transaction;
 
         public FixedMotionWarpTarget(
             FixedGameplayAbilityExecutionAccess access,
@@ -780,8 +780,8 @@ namespace ThirdPersonSimulation.Fixed
             ProgramCatalogEntry warp = m_Ability.CatalogEntries[descriptor.CatalogEntryIndex];
             FixedScalar warpStart = ClipTime(warp, TimelineClipTimePoint.Start);
             FixedScalar warpEnd = ClipTime(warp, TimelineClipTimePoint.End);
-            startBodyPosition = m_Frame.Body.Position;
-            startBodyYaw = m_Frame.Body.Yaw;
+            startBodyPosition = m_Frame.BodyFacts.Position;
+            startBodyYaw = m_Frame.BodyFacts.Yaw;
             SourcePoseAtTime(source, warpStart, out sourceWindowStartPosition, out sourceWindowStartYaw);
             SourcePoseAtTime(source, warpEnd, out FixedVector3 sourceWindowEndPosition, out FixedScalar sourceWindowEndYaw);
             FixedVector3 sourceEnd = sourceWindowEndPosition - sourceWindowStartPosition;
@@ -1085,7 +1085,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramCatalogEntry source = SourceCatalog(descriptor.SourceMotionOperation);
             SourcePoseAtTime(source, segment.Previous, out FixedVector3 previousPosition, out FixedScalar previousYaw);
             SourcePoseAtTime(source, segment.Current, out FixedVector3 currentPosition, out FixedScalar currentYaw);
-            displacement = FixedAngle.RotatePlanar(currentPosition - previousPosition, m_Frame.Body.Yaw);
+            displacement = FixedAngle.RotatePlanar(currentPosition - previousPosition, m_Frame.BodyFacts.Yaw);
             yaw = currentYaw - previousYaw;
         }
 
@@ -1237,7 +1237,7 @@ namespace ThirdPersonSimulation.Fixed
             if (move != FixedVector2.Zero && maxYaw > FixedScalar.Zero)
             {
                 FixedYaw desired = FixedAngle.FromPlanarDirection(move);
-                yaw = FixedScalar.Clamp(FixedAngle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+                yaw = FixedScalar.Clamp(FixedAngle.Delta(m_Frame.BodyFacts.Yaw, desired), -maxYaw, maxYaw);
             }
             CommittedLocomotionPlanarMotionTimeline locomotionTimeline = ResolveMotionTimeline(
                 cursor,
@@ -1295,7 +1295,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (move != FixedVector2.Zero && maxYaw > FixedScalar.Zero)
                 {
                     FixedYaw desired = FixedAngle.FromPlanarDirection(move);
-                    yaw = FixedScalar.Clamp(FixedAngle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+                    yaw = FixedScalar.Clamp(FixedAngle.Delta(m_Frame.BodyFacts.Yaw, desired), -maxYaw, maxYaw);
                 }
             }
             int continuousTicks = checked(request.ContinuousTicks + 1);
@@ -1512,3 +1512,4 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 }
+

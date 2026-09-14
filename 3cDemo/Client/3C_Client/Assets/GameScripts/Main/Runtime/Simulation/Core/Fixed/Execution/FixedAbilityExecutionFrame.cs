@@ -4,6 +4,47 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
+    internal sealed class FixedAbilityExecutionInput
+    {
+        public FixedAbilityExecutionInput(
+            ulong sequence,
+            IReadOnlyList<SimulationInputValue> values,
+            IReadOnlyList<SimulationInputRequest> requests)
+        {
+            if (sequence == 0)
+                throw new ArgumentOutOfRangeException(nameof(sequence));
+            Sequence = sequence;
+            Values = values ?? throw new ArgumentNullException(nameof(values));
+            Requests = requests ?? throw new ArgumentNullException(nameof(requests));
+        }
+
+        public ulong Sequence { get; }
+        public IReadOnlyList<SimulationInputValue> Values { get; }
+        public IReadOnlyList<SimulationInputRequest> Requests { get; }
+    }
+
+    internal readonly struct FixedAbilityBodyFacts
+    {
+        public FixedAbilityBodyFacts(ActorId actorId, WorldBodyState body)
+        {
+            if (!actorId.IsValid || body.ActorId != actorId)
+                throw new ArgumentException("Fixed Ability body facts identity is incomplete.", nameof(body));
+            IsValid = true;
+            Position = body.Position;
+            Yaw = body.Yaw;
+            Velocity = body.Velocity;
+            VerticalVelocity = body.VerticalVelocity;
+            Grounded = body.Grounded;
+        }
+
+        public bool IsValid { get; }
+        public FixedVector3 Position { get; }
+        public FixedYaw Yaw { get; }
+        public FixedVector3 Velocity { get; }
+        public FixedScalar VerticalVelocity { get; }
+        public bool Grounded { get; }
+    }
+
     internal interface IFixedSkillExecutionStateAccess
     {
         bool TryGet(int slotIndex, out CharacterStateValue value);
@@ -37,10 +78,10 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayAbilityExecutionInstallation installation,
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationInput input,
+            FixedAbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
-            WorldBodyState body,
-            FixedCharacterRuntimeState state,
+            FixedAbilityBodyFacts bodyFacts,
+            IFixedAbilityExecutionStateTransaction transaction,
             FixedAbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -51,13 +92,8 @@ namespace ThirdPersonSimulation.Fixed
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
-            Body = body;
-            Transaction = new FixedCharacterRuntimeStateTransaction(
-                installation,
-                state ?? throw new ArgumentNullException(nameof(state)),
-                actorId,
-                tick,
-                installation.GameplayEffectCatalog);
+            BodyFacts = bodyFacts;
+            Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -76,10 +112,10 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationNumericProfile NumericProfile => Data.NumericProfile;
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
-        public CharacterSimulationInput Input { get; }
+        public FixedAbilityExecutionInput Input { get; }
         public IReadOnlyList<SimulationIngress> Ingress { get; }
-        public WorldBodyState Body { get; }
-        internal FixedCharacterRuntimeStateTransaction Transaction { get; }
+        public FixedAbilityBodyFacts BodyFacts { get; }
+        internal IFixedAbilityExecutionStateTransaction Transaction { get; }
         internal FixedEventSequence EventSequence { get; }
         internal FixedFactSink Facts { get; }
         internal FixedPresentationSink Presentation { get; }
@@ -133,9 +169,15 @@ namespace ThirdPersonSimulation.Fixed
             m_SkillExecutionStateAccess = access;
         }
 
-        internal bool TryGetSkillExecutionState(int slotIndex, out CharacterStateValue value) =>
-            m_SkillExecutionStateAccess != null &&
-            m_SkillExecutionStateAccess.TryGet(slotIndex, out value);
+        internal bool TryGetSkillExecutionState(int slotIndex, out CharacterStateValue value)
+        {
+            if (m_SkillExecutionStateAccess == null)
+            {
+                value = default;
+                return false;
+            }
+            return m_SkillExecutionStateAccess.TryGet(slotIndex, out value);
+        }
 
         internal bool TrySetSkillExecutionState(int slotIndex, CharacterStateValue value) =>
             m_SkillExecutionStateAccess != null &&
@@ -144,6 +186,22 @@ namespace ThirdPersonSimulation.Fixed
         internal bool TryResetSkillExecutionState(int slotIndex) =>
             m_SkillExecutionStateAccess != null &&
             m_SkillExecutionStateAccess.TryReset(slotIndex);
+
+        internal ulong CurrentActionTraceInstanceId => m_ActionTraceInstanceId;
+        internal string CurrentActionTraceSkillId => m_ActionTraceSkillId;
+        internal bool HasActionTraceContext => m_ActionTraceInstanceId != 0;
+
+        internal FixedAbilityOutputSavepoint CreateOutputSavepoint() =>
+            new FixedAbilityOutputSavepoint(m_Facts.Count, m_Presentation.Count);
+
+        internal void RestoreOutput(FixedAbilityOutputSavepoint savepoint)
+        {
+            if (savepoint.FactCount < 0 || savepoint.FactCount > m_Facts.Count ||
+                savepoint.PresentationCount < 0 || savepoint.PresentationCount > m_Presentation.Count)
+                throw new InvalidOperationException("Fixed Ability output savepoint is stale.");
+            m_Facts.RemoveRange(savepoint.FactCount, m_Facts.Count - savepoint.FactCount);
+            m_Presentation.RemoveRange(savepoint.PresentationCount, m_Presentation.Count - savepoint.PresentationCount);
+        }
 
         internal void ResetState(int slotIndex)
         {
@@ -159,7 +217,6 @@ namespace ThirdPersonSimulation.Fixed
 
         internal void End()
         {
-            Transaction.Dispose();
             Trace.End();
             m_Facts.Clear();
             m_Presentation.Clear();
@@ -707,6 +764,3 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 }
-
-
-

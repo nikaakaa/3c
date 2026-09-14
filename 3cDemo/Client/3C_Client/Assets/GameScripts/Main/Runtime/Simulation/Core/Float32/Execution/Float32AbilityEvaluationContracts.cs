@@ -4,15 +4,15 @@ namespace ThirdPersonSimulation
 {
     public sealed class Float32PendingAbilityEvaluation
     {
-        readonly Float32CharacterRuntimeStateTransaction m_Transaction;
+        readonly IFloat32AbilityExecutionStateTransaction m_Transaction;
         bool m_Consumed;
 
         internal Float32PendingAbilityEvaluation(
             Float32GameplayAbilityExecutionInstallation installation,
             ActorId actorId,
             SimulationTick tick,
-            Float32CharacterRuntimeState sourceState,
-            Float32CharacterRuntimeStateTransaction transaction,
+            Float32AbilityRuntimeState sourceState,
+            IFloat32AbilityExecutionStateTransaction transaction,
             CharacterWorldSolveRequest worldRequest,
             ResolvedGameplayMotion gameplayMotion,
             bool diagnosticsEnabled)
@@ -26,7 +26,7 @@ namespace ThirdPersonSimulation
             if (worldRequest.ActorId != actorId || worldRequest.Tick != tick ||
                 !worldRequest.NumericProfile.Equals(installation.Data.NumericProfile) ||
                 transaction.ActorId != actorId || transaction.Tick != tick ||
-                !ReferenceEquals(transaction.BaseState, sourceState))
+                !transaction.Installation.Identity.Equals(installation.Identity))
             {
                 throw new InvalidOperationException("Float32 pending Ability evaluation binding is invalid.");
             }
@@ -43,10 +43,10 @@ namespace ThirdPersonSimulation
         public CharacterWorldSolveRequest WorldRequest { get; }
         public ResolvedGameplayMotion GameplayMotion { get; }
         public bool DiagnosticsEnabled { get; }
-        internal Float32CharacterRuntimeState SourceState { get; }
-        internal Float32CharacterRuntimeStateTransaction Transaction => m_Transaction;
+        internal Float32AbilityRuntimeState SourceState { get; }
+        internal IFloat32AbilityExecutionStateTransaction Transaction => m_Transaction;
 
-        internal Float32CharacterRuntimeStateTransaction ClaimForFinalize()
+        internal IFloat32AbilityExecutionStateTransaction ClaimForFinalize()
         {
             if (m_Consumed)
                 throw new InvalidOperationException("Float32 pending Ability evaluation has already been consumed.");

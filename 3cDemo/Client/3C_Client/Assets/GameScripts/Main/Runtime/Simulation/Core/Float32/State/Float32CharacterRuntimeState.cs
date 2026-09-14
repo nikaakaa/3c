@@ -203,7 +203,45 @@ namespace ThirdPersonSimulation
         internal Float32CharacterRuntimeState Snapshot { get; }
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IDisposable
+    internal interface IFloat32AbilityExecutionStateTransaction : IDisposable
+    {
+        Float32GameplayAbilityExecutionInstallation Installation { get; }
+        ActorId ActorId { get; }
+        SimulationTick Tick { get; }
+        CharacterStateValue Get(int slotIndex);
+        CharacterStateValue Get(TypedStateAddress address);
+        void Set(int slotIndex, CharacterStateValue value);
+        void Set(TypedStateAddress address, CharacterStateValue value);
+        void Reset(int slotIndex);
+        ulong NextEventSequence();
+        ulong NextActionEventSequence();
+        ulong NextHandleAllocator();
+        ulong CaptureHandleAllocator();
+        void RestoreHandleAllocator(ulong value);
+        GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState();
+        void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
+        SimulationInputRequestState GetInputRequest(string requestId);
+        void SetInputRequest(string requestId, SimulationInputRequestState state);
+        IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
+        void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
+        IReadOnlyList<Float32ActionInstanceState> GetActionInstances();
+        void SetActionInstances(IReadOnlyList<Float32ActionInstanceState> actions);
+        Float32ActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation);
+        void SetTimelineRetainedActionContext(OperationHandle operation, Float32ActionInstanceReference value);
+        Float32MotionWarpState GetMotionWarpState(OperationHandle operation);
+        void SetMotionWarpState(OperationHandle operation, Float32MotionWarpState value);
+        SimulationGameplayEffectState GetGameplayEffectState(Float32GameplayEffectExecutionScratch scratch);
+        GameplayEffectStateAggregate GetGameplayEffectAggregate();
+        EquipmentStateAggregate GetEquipmentState();
+        void SetEquipmentState(EquipmentStateAggregate state);
+        void Abort();
+        Float32CharacterRuntimeStateSavepoint CreateSavepoint();
+        void Restore(Float32CharacterRuntimeStateSavepoint savepoint);
+        void Release(Float32CharacterRuntimeStateSavepoint savepoint);
+        Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
+    }
+
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityExecutionStateTransaction
     {
         readonly Float32GameplayAbilityExecutionInstallation m_Installation;
         readonly Float32GameplayAbilityExecutionData m_Ability;

@@ -402,18 +402,18 @@ namespace ThirdPersonSimulation
                 inputs[0].Vector2 == Float32Vector2.Zero)
                 return Float32Scalar.Zero;
             Float32Yaw desired = Float32Angle.FromPlanarDirection(inputs[0].Vector2);
-            return Float32Scalar.Abs(Float32Angle.Delta(m_Frame.Body.Yaw, desired));
+            return Float32Scalar.Abs(Float32Angle.Delta(m_Frame.BodyFacts.Yaw, desired));
         }
 
         CharacterStateValue ReadCharacterState(string field)
         {
             return field switch
             {
-                CharacterStateProviderFields.Position => CharacterStateValue.FromVector3(m_Frame.Body.Position),
-                CharacterStateProviderFields.Velocity => CharacterStateValue.FromVector3(m_Frame.Body.Velocity),
-                CharacterStateProviderFields.VerticalVelocity => CharacterStateValue.FromScalar(m_Frame.Body.VerticalVelocity),
-                CharacterStateProviderFields.BodyYaw => CharacterStateValue.FromYaw(m_Frame.Body.Yaw),
-                CharacterStateProviderFields.Grounded => CharacterStateValue.FromBoolean(m_Frame.Body.Grounded),
+                CharacterStateProviderFields.Position => CharacterStateValue.FromVector3(m_Frame.BodyFacts.Position),
+                CharacterStateProviderFields.Velocity => CharacterStateValue.FromVector3(m_Frame.BodyFacts.Velocity),
+                CharacterStateProviderFields.VerticalVelocity => CharacterStateValue.FromScalar(m_Frame.BodyFacts.VerticalVelocity),
+                CharacterStateProviderFields.BodyYaw => CharacterStateValue.FromYaw(m_Frame.BodyFacts.Yaw),
+                CharacterStateProviderFields.Grounded => CharacterStateValue.FromBoolean(m_Frame.BodyFacts.Grounded),
                 _ => throw new InvalidOperationException($"Character State field '{field}' is not supported by Float32 runtime.")
             };
         }
@@ -514,3 +514,4 @@ namespace ThirdPersonSimulation
     }
 }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+

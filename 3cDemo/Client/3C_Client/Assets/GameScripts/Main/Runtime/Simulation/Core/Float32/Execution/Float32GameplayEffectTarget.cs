@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation
             PortableEffectSpecState,
             Float32Scalar>
     {
-        readonly Float32CharacterRuntimeStateTransaction m_Transaction;
+        readonly IFloat32AbilityExecutionStateTransaction m_Transaction;
         readonly Float32GameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
         readonly ActorId m_ActorId;
@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation
         PortablePredictionRecord m_CurrentPrediction;
 
         public Float32GameplayEffectTarget(
-            Float32CharacterRuntimeStateTransaction transaction,
+            IFloat32AbilityExecutionStateTransaction transaction,
             Float32GameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
             SimulationTick tick,

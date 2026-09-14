@@ -96,11 +96,6 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.BlackboardOwnerToken,
                 ProgramStateSemantic.BlackboardLifetime,
                 ProgramStateSemantic.BlackboardWriteStamp);
-            TimelinePolicy = new FixedStateAccessPolicy(
-                ProgramStateSemantic.TimelinePlayback,
-                ProgramStateSemantic.TimelineLoop,
-                ProgramStateSemantic.TimelineTreeClipCycle,
-                ProgramStateSemantic.TimelineLogicTime);
             Access = new FixedGameplayAbilityExecutionAccess(data, layout, this);
         }
 
@@ -110,7 +105,6 @@ namespace ThirdPersonSimulation.Fixed
         public FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         public FixedStateAccessPolicy ControlPolicy { get; }
         public FixedStateAccessPolicy BlackboardPolicy { get; }
-        public FixedStateAccessPolicy TimelinePolicy { get; }
 
         public string SourcePath(OperationHandle operation)
         {
@@ -512,5 +506,4 @@ namespace ThirdPersonSimulation.Fixed
     }
 
 }
-
 

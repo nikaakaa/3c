@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation.Fixed
             PortableEffectSpecState,
             FixedScalar>
     {
-        readonly FixedCharacterRuntimeStateTransaction m_Transaction;
+        readonly IFixedAbilityExecutionStateTransaction m_Transaction;
         readonly FixedGameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
         readonly ActorId m_ActorId;
@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation.Fixed
         PortablePredictionRecord m_CurrentPrediction;
 
         public FixedGameplayEffectTarget(
-            FixedCharacterRuntimeStateTransaction transaction,
+            IFixedAbilityExecutionStateTransaction transaction,
             FixedGameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
             SimulationTick tick,

@@ -5,15 +5,15 @@ namespace ThirdPersonSimulation.Fixed
 {
     public sealed class FixedPendingAbilityEvaluation
     {
-        readonly FixedCharacterRuntimeStateTransaction m_Transaction;
+        readonly IFixedAbilityExecutionStateTransaction m_Transaction;
         bool m_Consumed;
 
         internal FixedPendingAbilityEvaluation(
             FixedGameplayAbilityExecutionInstallation installation,
             ActorId actorId,
             SimulationTick tick,
-            FixedCharacterRuntimeState sourceState,
-            FixedCharacterRuntimeStateTransaction transaction,
+            FixedAbilityRuntimeState sourceState,
+            IFixedAbilityExecutionStateTransaction transaction,
             CharacterWorldSolveRequest worldRequest,
             ResolvedGameplayMotion gameplayMotion,
             bool diagnosticsEnabled)
@@ -27,7 +27,7 @@ namespace ThirdPersonSimulation.Fixed
             if (worldRequest.ActorId != actorId || worldRequest.Tick != tick ||
                 !worldRequest.NumericProfile.Equals(installation.Data.NumericProfile) ||
                 transaction.ActorId != actorId || transaction.Tick != tick ||
-                !ReferenceEquals(transaction.BaseState, sourceState))
+                !transaction.Installation.Identity.Equals(installation.Identity))
             {
                 throw new InvalidOperationException("Fixed pending Ability evaluation binding is invalid.");
             }
@@ -44,10 +44,10 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterWorldSolveRequest WorldRequest { get; }
         public ResolvedGameplayMotion GameplayMotion { get; }
         public bool DiagnosticsEnabled { get; }
-        internal FixedCharacterRuntimeState SourceState { get; }
-        internal FixedCharacterRuntimeStateTransaction Transaction => m_Transaction;
+        internal FixedAbilityRuntimeState SourceState { get; }
+        internal IFixedAbilityExecutionStateTransaction Transaction => m_Transaction;
 
-        internal FixedCharacterRuntimeStateTransaction ClaimForFinalize()
+        internal IFixedAbilityExecutionStateTransaction ClaimForFinalize()
         {
             if (m_Consumed)
                 throw new InvalidOperationException("Fixed pending Ability evaluation has already been consumed.");

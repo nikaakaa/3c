@@ -4,167 +4,63 @@ using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
 {
+    internal interface IFloat32AbilityExecutionServices
+    {
+        Float32AbilityExecutionTarget Target { get; }
+        Float32ActionRuntime Actions { get; }
+        Float32ActionStateStore ActionStore { get; }
+        Float32InputRuntime Input { get; }
+        Float32GameplayEffectOperationRuntime GameplayEffects { get; }
+        Float32EquipmentRuntime Equipment { get; }
+        Float32ValueRuntime Values { get; }
+        Float32BlackboardRuntime Blackboard { get; }
+        Float32MotionAccumulator Motion { get; }
+        OperationControlCursor<Float32AbilityExecutionTarget> Cursor { get; }
+        void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
+        void EndEvaluation();
+        void ApplyIngress();
+        void ApplyInputRequests();
+        void AdvanceGameplayEffects();
+    }
+
     internal sealed class Float32AbilityControlRuntime : IFloat32AbilityControlRuntime
     {
-        readonly Float32AbilityExecutionFrame m_Frame;
-        readonly Float32ActionStateStore m_ActionStore;
-        readonly Float32InputRuntime m_Input;
-        readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
-        readonly Float32EquipmentRuntime m_Equipment;
-        readonly Float32ActionRuntime m_Actions;
-        readonly Float32ValueRuntime m_Values;
-        readonly Float32BlackboardRuntime m_Blackboard;
-        readonly Float32MotionAccumulator m_Motion;
-        readonly Float32LocomotionRuntime m_Locomotion;
-        readonly Float32AbilityExecutionTarget m_Target;
+        readonly IFloat32AbilityExecutionServices m_Services;
         OperationControlRuntime<Float32AbilityExecutionTarget> m_Runtime;
 
         public Float32AbilityControlRuntime(
             Float32GameplayAbilityExecutionInstallation installation,
-            Float32GameplayAbilityExecutionInstallationSet installations,
-            Float32AbilityExecutionFrame frame,
-            Float32AbilityExecutionWorkspace workspace,
-            CharacterControlRuntimeBinding controlRuntimeBinding)
+            IFloat32AbilityExecutionServices services)
         {
             if (installation == null)
                 throw new ArgumentNullException(nameof(installation));
-            if (installations == null)
-                throw new ArgumentNullException(nameof(installations));
-            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            if (workspace == null)
-                throw new ArgumentNullException(nameof(workspace));
-
-            Float32GameplayAbilityExecutionAccess access = installation.Access;
-            Float32StatePort controlState = frame.CreateStatePort("AbilityControl", installation.Services.ControlPolicy);
-            m_ActionStore = new Float32ActionStateStore(access, frame);
-            m_Input = new Float32InputRuntime(access, frame);
-            var handles = new Float32HandleAllocator(access, frame);
-            m_Blackboard = new Float32BlackboardRuntime(
-                access,
-                frame.CreateStatePort("AbilityBlackboard", installation.Services.BlackboardPolicy),
-                frame,
-                m_ActionStore,
-                frame.Facts,
-                frame.Trace,
-                workspace);
-            m_GameplayEffects = new Float32GameplayEffectOperationRuntime(
-                access,
-                frame,
-                m_ActionStore,
-                handles,
-                frame.Facts,
-                frame.Presentation,
-                frame.Trace,
-                workspace.GameplayEffects);
-            m_Equipment = new Float32EquipmentRuntime(
-                access,
-                frame,
-                m_ActionStore,
-                handles,
-                m_GameplayEffects,
-                frame.Facts,
-                frame.Trace);
-            m_Actions = new Float32ActionRuntime(
-                access,
-                installations,
-                frame,
-                m_Input,
-                m_ActionStore,
-                m_Blackboard,
-                m_GameplayEffects,
-                m_GameplayEffects,
-                handles,
-                frame.Facts,
-                frame.Trace,
-                m_Equipment,
-                operation => m_Runtime == null || !m_Runtime.IsActive(operation) && !m_Runtime.IsStopping(operation));
-            m_Values = new Float32ValueRuntime(
-                access,
-                m_Input,
-                m_ActionStore,
-                m_Actions,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Blackboard,
-                frame,
-                workspace);
-            m_Motion = new Float32MotionAccumulator(
-                access,
-                frame,
-                workspace.MotionContributions,
-                workspace.MotionWarpSamples,
-                m_ActionStore);
-            m_Locomotion = new Float32LocomotionRuntime(
-                access,
-                m_Values,
-                m_Motion,
-                frame,
-                controlRuntimeBinding);
-            m_Target = new Float32AbilityExecutionTarget(
-                access,
-                controlState,
-                frame.CreateOperationStateReset(),
-                m_Values,
-                m_Blackboard,
-                m_Actions,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Locomotion,
-                frame.Facts,
-                frame.Presentation,
-                frame.Trace);
+            m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Runtime = new OperationControlRuntime<Float32AbilityExecutionTarget>(
                 installation.Topology,
-                m_Target,
+                m_Services.Target,
                 checked(Math.Max(1024, installation.Data.Operations.Count * 128)));
         }
 
-        internal Float32ActionRuntime Actions => m_Actions;
-        internal Float32ActionStateStore ActionStore => m_ActionStore;
-        internal Float32InputRuntime Input => m_Input;
-        internal Float32GameplayEffectOperationRuntime GameplayEffects => m_GameplayEffects;
-        internal Float32EquipmentRuntime Equipment => m_Equipment;
-        internal Float32ValueRuntime Values => m_Values;
-        internal Float32BlackboardRuntime Blackboard => m_Blackboard;
-        internal Float32MotionAccumulator Motion => m_Motion;
+        internal Float32ActionRuntime Actions => m_Services.Actions;
+        internal Float32ActionStateStore ActionStore => m_Services.ActionStore;
+        internal Float32InputRuntime Input => m_Services.Input;
+        internal Float32GameplayEffectOperationRuntime GameplayEffects => m_Services.GameplayEffects;
+        internal Float32EquipmentRuntime Equipment => m_Services.Equipment;
+        internal Float32ValueRuntime Values => m_Services.Values;
+        internal Float32BlackboardRuntime Blackboard => m_Services.Blackboard;
+        internal Float32MotionAccumulator Motion => m_Services.Motion;
         internal OperationControlCursor<Float32AbilityExecutionTarget> Cursor => m_Runtime.Cursor;
 
         internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
         {
-            m_Frame.Trace.Begin(diagnosticsEnabled, captureValues, captureControlFlow);
-            m_ActionStore.BeginEvaluation();
-            m_Values.BeginEvaluation();
-            m_GameplayEffects.BeginEvaluation();
-            m_Equipment.BeginEvaluation();
-            m_Blackboard.BeginFrame();
+            m_Services.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
             m_Runtime.BeginEvaluation();
         }
 
-        internal void EndEvaluation()
-        {
-            m_Equipment.EndEvaluation();
-            m_Blackboard.EndFrame();
-            m_GameplayEffects.EndEvaluation();
-            m_ActionStore.EndEvaluation();
-        }
-
-        internal void ApplyIngress()
-        {
-            for (int i = 0; i < m_Frame.Ingress.Count; i++)
-            {
-                SimulationIngress ingress = m_Frame.Ingress[i];
-                if (ingress.Header.Kind == SimulationIngressKind.ActionLifecycle)
-                    m_Actions.ApplyIngress(ingress);
-                else
-                    m_GameplayEffects.ApplyIngress(ingress);
-            }
-        }
-
-        internal void ApplyInputRequests()
-        {
-            m_Input.ApplyRequests();
-            m_Input.ApplyBlackboardInputBindings(m_Blackboard);
-        }
+        internal void EndEvaluation() => m_Services.EndEvaluation();
+        internal void ApplyIngress() => m_Services.ApplyIngress();
+        internal void AdvanceGameplayEffects() => m_Services.AdvanceGameplayEffects();
+        internal void ApplyInputRequests() => m_Services.ApplyInputRequests();
 
         public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
 

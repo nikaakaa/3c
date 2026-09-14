@@ -204,7 +204,45 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterRuntimeState Snapshot { get; }
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IDisposable
+    internal interface IFixedAbilityExecutionStateTransaction : IDisposable
+    {
+        FixedGameplayAbilityExecutionInstallation Installation { get; }
+        ActorId ActorId { get; }
+        SimulationTick Tick { get; }
+        CharacterStateValue Get(int slotIndex);
+        CharacterStateValue Get(TypedStateAddress address);
+        void Set(int slotIndex, CharacterStateValue value);
+        void Set(TypedStateAddress address, CharacterStateValue value);
+        void Reset(int slotIndex);
+        ulong NextEventSequence();
+        ulong NextActionEventSequence();
+        ulong NextHandleAllocator();
+        ulong CaptureHandleAllocator();
+        void RestoreHandleAllocator(ulong value);
+        GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState();
+        void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
+        SimulationInputRequestState GetInputRequest(string requestId);
+        void SetInputRequest(string requestId, SimulationInputRequestState state);
+        IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
+        void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
+        IReadOnlyList<FixedActionInstanceState> GetActionInstances();
+        void SetActionInstances(IReadOnlyList<FixedActionInstanceState> actions);
+        FixedActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation);
+        void SetTimelineRetainedActionContext(OperationHandle operation, FixedActionInstanceReference value);
+        FixedMotionWarpState GetMotionWarpState(OperationHandle operation);
+        void SetMotionWarpState(OperationHandle operation, FixedMotionWarpState value);
+        SimulationGameplayEffectState GetGameplayEffectState(FixedGameplayEffectExecutionScratch scratch);
+        GameplayEffectStateAggregate GetGameplayEffectAggregate();
+        EquipmentStateAggregate GetEquipmentState();
+        void SetEquipmentState(EquipmentStateAggregate state);
+        void Abort();
+        FixedCharacterRuntimeStateSavepoint CreateSavepoint();
+        void Restore(FixedCharacterRuntimeStateSavepoint savepoint);
+        void Release(FixedCharacterRuntimeStateSavepoint savepoint);
+        FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
+    }
+
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityExecutionStateTransaction
     {
         readonly FixedGameplayAbilityExecutionInstallation m_Installation;
         readonly FixedGameplayAbilityExecutionData m_Ability;

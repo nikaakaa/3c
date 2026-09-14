@@ -65,7 +65,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     contentHash: model.SourceRevision.Value);
                 builder.RequireGameplayCapability("Action");
                 builder.RequireGameplayCapability("RunnableTree");
-                builder.RequireGameplayCapability("GameplayEffect");
                 var catalogIndex = new GameplayAbilityCatalogIndex();
                 var catalogEmitter = new GameplayAbilitySemanticDependencyCatalogEmitter(builder, report, catalogIndex);
                 GameplayAbilityProviderOwnerSet providers = catalogEmitter.Emit(model);

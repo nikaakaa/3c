@@ -95,11 +95,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.BlackboardOwnerToken,
                 ProgramStateSemantic.BlackboardLifetime,
                 ProgramStateSemantic.BlackboardWriteStamp);
-            TimelinePolicy = new Float32StateAccessPolicy(
-                ProgramStateSemantic.TimelinePlayback,
-                ProgramStateSemantic.TimelineLoop,
-                ProgramStateSemantic.TimelineTreeClipCycle,
-                ProgramStateSemantic.TimelineLogicTime);
             Access = new Float32GameplayAbilityExecutionAccess(data, layout, this);
         }
 
@@ -109,7 +104,6 @@ namespace ThirdPersonSimulation
         public Float32GameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         public Float32StateAccessPolicy ControlPolicy { get; }
         public Float32StateAccessPolicy BlackboardPolicy { get; }
-        public Float32StateAccessPolicy TimelinePolicy { get; }
 
         public string SourcePath(OperationHandle operation)
         {

@@ -3,6 +3,47 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
+    internal sealed class Float32AbilityExecutionInput
+    {
+        public Float32AbilityExecutionInput(
+            ulong sequence,
+            IReadOnlyList<SimulationInputValue> values,
+            IReadOnlyList<SimulationInputRequest> requests)
+        {
+            if (sequence == 0)
+                throw new ArgumentOutOfRangeException(nameof(sequence));
+            Sequence = sequence;
+            Values = values ?? throw new ArgumentNullException(nameof(values));
+            Requests = requests ?? throw new ArgumentNullException(nameof(requests));
+        }
+
+        public ulong Sequence { get; }
+        public IReadOnlyList<SimulationInputValue> Values { get; }
+        public IReadOnlyList<SimulationInputRequest> Requests { get; }
+    }
+
+    internal readonly struct Float32AbilityBodyFacts
+    {
+        public Float32AbilityBodyFacts(ActorId actorId, WorldBodyState body)
+        {
+            if (!actorId.IsValid || body.ActorId != actorId)
+                throw new ArgumentException("Float32 Ability body facts identity is incomplete.", nameof(body));
+            IsValid = true;
+            Position = body.Position;
+            Yaw = body.Yaw;
+            Velocity = body.Velocity;
+            VerticalVelocity = body.VerticalVelocity;
+            Grounded = body.Grounded;
+        }
+
+        public bool IsValid { get; }
+        public Float32Vector3 Position { get; }
+        public Float32Yaw Yaw { get; }
+        public Float32Vector3 Velocity { get; }
+        public Float32Scalar VerticalVelocity { get; }
+        public bool Grounded { get; }
+    }
+
     internal interface IFloat32SkillExecutionStateAccess
     {
         bool TryGet(int slotIndex, out CharacterStateValue value);
@@ -36,10 +77,10 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityExecutionInstallation installation,
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationInput input,
+            Float32AbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
-            WorldBodyState body,
-            Float32CharacterRuntimeState state,
+            Float32AbilityBodyFacts bodyFacts,
+            IFloat32AbilityExecutionStateTransaction transaction,
             Float32AbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -50,13 +91,8 @@ namespace ThirdPersonSimulation
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
-            Body = body;
-            Transaction = new Float32CharacterRuntimeStateTransaction(
-                installation,
-                state ?? throw new ArgumentNullException(nameof(state)),
-                actorId,
-                tick,
-                installation.GameplayEffectCatalog);
+            BodyFacts = bodyFacts;
+            Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -75,10 +111,10 @@ namespace ThirdPersonSimulation
         public SimulationNumericProfile NumericProfile => Data.NumericProfile;
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
-        public CharacterSimulationInput Input { get; }
+        public Float32AbilityExecutionInput Input { get; }
         public IReadOnlyList<SimulationIngress> Ingress { get; }
-        public WorldBodyState Body { get; }
-        internal Float32CharacterRuntimeStateTransaction Transaction { get; }
+        public Float32AbilityBodyFacts BodyFacts { get; }
+        internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
         internal Float32EventSequence EventSequence { get; }
         internal Float32FactSink Facts { get; }
         internal Float32PresentationSink Presentation { get; }
@@ -132,9 +168,15 @@ namespace ThirdPersonSimulation
             m_SkillExecutionStateAccess = access;
         }
 
-        internal bool TryGetSkillExecutionState(int slotIndex, out CharacterStateValue value) =>
-            m_SkillExecutionStateAccess != null &&
-            m_SkillExecutionStateAccess.TryGet(slotIndex, out value);
+        internal bool TryGetSkillExecutionState(int slotIndex, out CharacterStateValue value)
+        {
+            if (m_SkillExecutionStateAccess == null)
+            {
+                value = default;
+                return false;
+            }
+            return m_SkillExecutionStateAccess.TryGet(slotIndex, out value);
+        }
 
         internal bool TrySetSkillExecutionState(int slotIndex, CharacterStateValue value) =>
             m_SkillExecutionStateAccess != null &&
@@ -143,6 +185,22 @@ namespace ThirdPersonSimulation
         internal bool TryResetSkillExecutionState(int slotIndex) =>
             m_SkillExecutionStateAccess != null &&
             m_SkillExecutionStateAccess.TryReset(slotIndex);
+
+        internal ulong CurrentActionTraceInstanceId => m_ActionTraceInstanceId;
+        internal string CurrentActionTraceSkillId => m_ActionTraceSkillId;
+        internal bool HasActionTraceContext => m_ActionTraceInstanceId != 0;
+
+        internal Float32AbilityOutputSavepoint CreateOutputSavepoint() =>
+            new Float32AbilityOutputSavepoint(m_Facts.Count, m_Presentation.Count);
+
+        internal void RestoreOutput(Float32AbilityOutputSavepoint savepoint)
+        {
+            if (savepoint.FactCount < 0 || savepoint.FactCount > m_Facts.Count ||
+                savepoint.PresentationCount < 0 || savepoint.PresentationCount > m_Presentation.Count)
+                throw new InvalidOperationException("Float32 Ability output savepoint is stale.");
+            m_Facts.RemoveRange(savepoint.FactCount, m_Facts.Count - savepoint.FactCount);
+            m_Presentation.RemoveRange(savepoint.PresentationCount, m_Presentation.Count - savepoint.PresentationCount);
+        }
 
         internal void ResetState(int slotIndex)
         {
@@ -158,7 +216,6 @@ namespace ThirdPersonSimulation
 
         internal void End()
         {
-            Transaction.Dispose();
             Trace.End();
             m_Facts.Clear();
             m_Presentation.Clear();
@@ -706,4 +763,3 @@ namespace ThirdPersonSimulation
         }
     }
 }
-

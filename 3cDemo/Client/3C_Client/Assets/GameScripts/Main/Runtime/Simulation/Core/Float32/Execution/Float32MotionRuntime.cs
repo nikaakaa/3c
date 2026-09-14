@@ -357,7 +357,7 @@ namespace ThirdPersonSimulation
                 sourceCount++;
                 sourceFingerprint = MixSource(sourceFingerprint, contribution.Source.Identity);
                 Float32Vector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
-                    ? Float32Angle.RotatePlanar(contribution.Displacement, m_Frame.Body.Yaw)
+                    ? Float32Angle.RotatePlanar(contribution.Displacement, m_Frame.BodyFacts.Yaw)
                     : contribution.Displacement;
                 switch (contribution.BlendMode)
                 {
@@ -517,7 +517,7 @@ namespace ThirdPersonSimulation
     {
         readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32ActionStateStore m_Actions;
-        readonly Float32CharacterRuntimeStateTransaction m_Transaction;
+        readonly IFloat32AbilityExecutionStateTransaction m_Transaction;
 
         public Float32MotionWarpTarget(
             Float32GameplayAbilityExecutionAccess access,
@@ -776,8 +776,8 @@ namespace ThirdPersonSimulation
             ProgramCatalogEntry warp = m_Ability.CatalogEntries[descriptor.CatalogEntryIndex];
             Float32Scalar warpStart = ClipTime(warp, TimelineClipTimePoint.Start);
             Float32Scalar warpEnd = ClipTime(warp, TimelineClipTimePoint.End);
-            startBodyPosition = m_Frame.Body.Position;
-            startBodyYaw = m_Frame.Body.Yaw;
+            startBodyPosition = m_Frame.BodyFacts.Position;
+            startBodyYaw = m_Frame.BodyFacts.Yaw;
             SourcePoseAtTime(source, warpStart, out sourceWindowStartPosition, out sourceWindowStartYaw);
             SourcePoseAtTime(source, warpEnd, out Float32Vector3 sourceWindowEndPosition, out Float32Scalar sourceWindowEndYaw);
             Float32Vector3 sourceEnd = sourceWindowEndPosition - sourceWindowStartPosition;
@@ -1081,7 +1081,7 @@ namespace ThirdPersonSimulation
             ProgramCatalogEntry source = SourceCatalog(descriptor.SourceMotionOperation);
             SourcePoseAtTime(source, segment.Previous, out Float32Vector3 previousPosition, out Float32Scalar previousYaw);
             SourcePoseAtTime(source, segment.Current, out Float32Vector3 currentPosition, out Float32Scalar currentYaw);
-            displacement = Float32Angle.RotatePlanar(currentPosition - previousPosition, m_Frame.Body.Yaw);
+            displacement = Float32Angle.RotatePlanar(currentPosition - previousPosition, m_Frame.BodyFacts.Yaw);
             yaw = currentYaw - previousYaw;
         }
 
@@ -1233,7 +1233,7 @@ namespace ThirdPersonSimulation
             if (move != Float32Vector2.Zero && maxYaw > Float32Scalar.Zero)
             {
                 Float32Yaw desired = Float32Angle.FromPlanarDirection(move);
-                yaw = Float32Scalar.Clamp(Float32Angle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+                yaw = Float32Scalar.Clamp(Float32Angle.Delta(m_Frame.BodyFacts.Yaw, desired), -maxYaw, maxYaw);
             }
             CommittedLocomotionPlanarMotionTimeline locomotionTimeline = ResolveMotionTimeline(
                 cursor,
@@ -1291,7 +1291,7 @@ namespace ThirdPersonSimulation
 				if (move != Float32Vector2.Zero && maxYaw > Float32Scalar.Zero)
 				{
 					Float32Yaw desired = Float32Angle.FromPlanarDirection(move);
-					yaw = Float32Scalar.Clamp(Float32Angle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+					yaw = Float32Scalar.Clamp(Float32Angle.Delta(m_Frame.BodyFacts.Yaw, desired), -maxYaw, maxYaw);
 				}
 			}
             int continuousTicks = checked(request.ContinuousTicks + 1);
@@ -1508,3 +1508,4 @@ namespace ThirdPersonSimulation
         }
     }
 }
+

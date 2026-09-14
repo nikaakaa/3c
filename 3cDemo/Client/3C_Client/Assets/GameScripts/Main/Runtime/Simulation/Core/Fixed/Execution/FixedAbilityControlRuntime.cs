@@ -4,167 +4,62 @@ using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation.Fixed
 {
+    internal interface IFixedAbilityExecutionServices
+    {
+        FixedAbilityExecutionTarget Target { get; }
+        FixedActionRuntime Actions { get; }
+        FixedActionStateStore ActionStore { get; }
+        FixedInputRuntime Input { get; }
+        FixedGameplayEffectOperationRuntime GameplayEffects { get; }
+        FixedEquipmentRuntime Equipment { get; }
+        FixedValueRuntime Values { get; }
+        FixedBlackboardRuntime Blackboard { get; }
+        FixedMotionAccumulator Motion { get; }
+        OperationControlCursor<FixedAbilityExecutionTarget> Cursor { get; }
+        void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
+        void EndEvaluation();
+        void ApplyIngress();
+        void ApplyInputRequests();
+        void AdvanceGameplayEffects();
+    }
+
     internal sealed class FixedAbilityControlRuntime : IFixedAbilityControlRuntime
     {
-        readonly FixedAbilityExecutionFrame m_Frame;
-        readonly FixedActionStateStore m_ActionStore;
-        readonly FixedInputRuntime m_Input;
-        readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
-        readonly FixedEquipmentRuntime m_Equipment;
-        readonly FixedActionRuntime m_Actions;
-        readonly FixedValueRuntime m_Values;
-        readonly FixedBlackboardRuntime m_Blackboard;
-        readonly FixedMotionAccumulator m_Motion;
-        readonly FixedLocomotionRuntime m_Locomotion;
-        readonly FixedAbilityExecutionTarget m_Target;
+        readonly IFixedAbilityExecutionServices m_Services;
         OperationControlRuntime<FixedAbilityExecutionTarget> m_Runtime;
 
         public FixedAbilityControlRuntime(
             FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionInstallationSet installations,
-            FixedAbilityExecutionFrame frame,
-            FixedAbilityExecutionWorkspace workspace,
-            CharacterControlRuntimeBinding controlRuntimeBinding)
+            IFixedAbilityExecutionServices services)
         {
             if (installation == null)
                 throw new ArgumentNullException(nameof(installation));
-            if (installations == null)
-                throw new ArgumentNullException(nameof(installations));
-            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            if (workspace == null)
-                throw new ArgumentNullException(nameof(workspace));
-
-            FixedGameplayAbilityExecutionAccess access = installation.Access;
-            FixedStatePort controlState = frame.CreateStatePort("AbilityControl", installation.Services.ControlPolicy);
-            m_ActionStore = new FixedActionStateStore(access, frame);
-            m_Input = new FixedInputRuntime(access, frame);
-            var handles = new FixedHandleAllocator(access, frame);
-            m_Blackboard = new FixedBlackboardRuntime(
-                access,
-                frame.CreateStatePort("AbilityBlackboard", installation.Services.BlackboardPolicy),
-                frame,
-                m_ActionStore,
-                frame.Facts,
-                frame.Trace,
-                workspace);
-            m_GameplayEffects = new FixedGameplayEffectOperationRuntime(
-                access,
-                frame,
-                m_ActionStore,
-                handles,
-                frame.Facts,
-                frame.Presentation,
-                frame.Trace,
-                workspace.GameplayEffects);
-            m_Equipment = new FixedEquipmentRuntime(
-                access,
-                frame,
-                m_ActionStore,
-                handles,
-                m_GameplayEffects,
-                frame.Facts,
-                frame.Trace);
-            m_Actions = new FixedActionRuntime(
-                access,
-                installations,
-                frame,
-                m_Input,
-                m_ActionStore,
-                m_Blackboard,
-                m_GameplayEffects,
-                m_GameplayEffects,
-                handles,
-                frame.Facts,
-                frame.Trace,
-                m_Equipment,
-                operation => m_Runtime == null || !m_Runtime.IsActive(operation) && !m_Runtime.IsStopping(operation));
-            m_Values = new FixedValueRuntime(
-                access,
-                m_Input,
-                m_ActionStore,
-                m_Actions,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Blackboard,
-                frame,
-                workspace);
-            m_Motion = new FixedMotionAccumulator(
-                access,
-                frame,
-                workspace.MotionContributions,
-                workspace.MotionWarpSamples,
-                m_ActionStore);
-            m_Locomotion = new FixedLocomotionRuntime(
-                access,
-                m_Values,
-                m_Motion,
-                frame,
-                controlRuntimeBinding);
-            m_Target = new FixedAbilityExecutionTarget(
-                access,
-                controlState,
-                frame.CreateOperationStateReset(),
-                m_Values,
-                m_Blackboard,
-                m_Actions,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Locomotion,
-                frame.Facts,
-                frame.Presentation,
-                frame.Trace);
+            m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Runtime = new OperationControlRuntime<FixedAbilityExecutionTarget>(
                 installation.Topology,
-                m_Target,
+                m_Services.Target,
                 checked(Math.Max(1024, installation.Data.Operations.Count * 128)));
         }
 
-        internal FixedActionRuntime Actions => m_Actions;
-        internal FixedActionStateStore ActionStore => m_ActionStore;
-        internal FixedInputRuntime Input => m_Input;
-        internal FixedGameplayEffectOperationRuntime GameplayEffects => m_GameplayEffects;
-        internal FixedEquipmentRuntime Equipment => m_Equipment;
-        internal FixedValueRuntime Values => m_Values;
-        internal FixedBlackboardRuntime Blackboard => m_Blackboard;
-        internal FixedMotionAccumulator Motion => m_Motion;
+        internal FixedActionRuntime Actions => m_Services.Actions;
+        internal FixedActionStateStore ActionStore => m_Services.ActionStore;
+        internal FixedInputRuntime Input => m_Services.Input;
+        internal FixedGameplayEffectOperationRuntime GameplayEffects => m_Services.GameplayEffects;
+        internal FixedEquipmentRuntime Equipment => m_Services.Equipment;
+        internal FixedValueRuntime Values => m_Services.Values;
+        internal FixedBlackboardRuntime Blackboard => m_Services.Blackboard;
+        internal FixedMotionAccumulator Motion => m_Services.Motion;
         internal OperationControlCursor<FixedAbilityExecutionTarget> Cursor => m_Runtime.Cursor;
 
         internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
         {
-            m_Frame.Trace.Begin(diagnosticsEnabled, captureValues, captureControlFlow);
-            m_ActionStore.BeginEvaluation();
-            m_Values.BeginEvaluation();
-            m_GameplayEffects.BeginEvaluation();
-            m_Equipment.BeginEvaluation();
-            m_Blackboard.BeginFrame();
+            m_Services.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
             m_Runtime.BeginEvaluation();
         }
-
-        internal void EndEvaluation()
-        {
-            m_Equipment.EndEvaluation();
-            m_Blackboard.EndFrame();
-            m_GameplayEffects.EndEvaluation();
-            m_ActionStore.EndEvaluation();
-        }
-
-        internal void ApplyIngress()
-        {
-            for (int i = 0; i < m_Frame.Ingress.Count; i++)
-            {
-                SimulationIngress ingress = m_Frame.Ingress[i];
-                if (ingress.Header.Kind == SimulationIngressKind.ActionLifecycle)
-                    m_Actions.ApplyIngress(ingress);
-                else
-                    m_GameplayEffects.ApplyIngress(ingress);
-            }
-        }
-
-        internal void ApplyInputRequests()
-        {
-            m_Input.ApplyRequests();
-            m_Input.ApplyBlackboardInputBindings(m_Blackboard);
-        }
+        internal void EndEvaluation() => m_Services.EndEvaluation();
+        internal void ApplyIngress() => m_Services.ApplyIngress();
+        internal void AdvanceGameplayEffects() => m_Services.AdvanceGameplayEffects();
+        internal void ApplyInputRequests() => m_Services.ApplyInputRequests();
 
         public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
 

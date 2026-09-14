@@ -13,38 +13,41 @@ namespace ThirdPersonSimulation.Fixed
 		readonly FixedHandleAllocator m_Handles;
 		readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
 		readonly FixedFactSink m_Facts;
-		readonly FixedTraceSink m_Trace;
-		readonly EquipmentRuntimeControl m_Control;
+        readonly FixedTraceSink m_Trace;
+        readonly EquipmentProgramLayout m_EquipmentLayout;
+        readonly EquipmentRuntimeControl m_Control;
 		readonly Dictionary<int, EquipmentChangeOutcome> m_Outcomes = new Dictionary<int, EquipmentChangeOutcome>();
 		public FixedEquipmentRuntime(
 			FixedGameplayAbilityExecutionAccess access,
 			FixedAbilityExecutionFrame frame,
 			FixedActionStateStore actions,
 			FixedHandleAllocator handles,
-			FixedGameplayEffectOperationRuntime gameplayEffects,
-			FixedFactSink facts,
-			FixedTraceSink trace)
+            FixedGameplayEffectOperationRuntime gameplayEffects,
+            FixedFactSink facts,
+            FixedTraceSink trace,
+            EquipmentProgramLayout equipmentLayout)
 			: base(access)
 		{
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
 			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
 			m_GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
-			m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
-			m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
+            m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
+            m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
+            m_EquipmentLayout = equipmentLayout ?? throw new ArgumentNullException(nameof(equipmentLayout));
 			m_Control = new EquipmentRuntimeControl(this);
 		}
 
 		public bool TryReadActionContext(EquipmentActionRouteId routeId, out EquipmentActionContext context)
 		{
 			context = default;
-			if (!m_Layout.Equipment.CapabilityEnabled || !routeId.IsValid)
+			if (!m_EquipmentLayout.CapabilityEnabled || !routeId.IsValid)
 				return false;
-			EquipmentProgramRoute route = m_Layout.Equipment.RequireRoute(routeId);
+			EquipmentProgramRoute route = m_EquipmentLayout.RequireRoute(routeId);
 			EquipmentSlotState slot = ReadState().RequireSlot(route.OwnerSlotId);
 			if (!slot.IsEquipped)
 				return false;
-			if (!m_Layout.Equipment.TryGetRouteImplementation(slot.FeatureId, routeId, out _))
+			if (!m_EquipmentLayout.TryGetRouteImplementation(slot.FeatureId, routeId, out _))
 			{
 				if (route.MissingImplementation == EquipmentRouteMissingImplementation.RejectComposition)
 					throw new InvalidOperationException($"Equipment Route '{routeId}' has no implementation for Feature '{slot.FeatureId}'.");
@@ -58,15 +61,15 @@ namespace ThirdPersonSimulation.Fixed
 		{
             if (!context.IsValid || !abilityId.IsValid || !IsCurrentActionContext(context))
 				return false;
-			return m_Layout.Equipment.TryGetRouteImplementation(context.FeatureId, context.RouteId, out EquipmentProgramRouteImplementation implementation) &&
+			return m_EquipmentLayout.TryGetRouteImplementation(context.FeatureId, context.RouteId, out EquipmentProgramRouteImplementation implementation) &&
 				implementation.AbilityId == abilityId;
 		}
 
 		public bool IsCurrentActionContext(EquipmentActionContext context)
 		{
-			if (!context.IsValid || !m_Layout.Equipment.TryGetRouteImplementation(context.FeatureId, context.RouteId, out _))
+			if (!context.IsValid || !m_EquipmentLayout.TryGetRouteImplementation(context.FeatureId, context.RouteId, out _))
 				return false;
-			EquipmentProgramRoute route = m_Layout.Equipment.RequireRoute(context.RouteId);
+			EquipmentProgramRoute route = m_EquipmentLayout.RequireRoute(context.RouteId);
 			EquipmentSlotState slot = ReadState().RequireSlot(route.OwnerSlotId);
 			return slot.IsEquipped &&
 				slot.SlotId == context.SlotId &&
@@ -78,7 +81,7 @@ namespace ThirdPersonSimulation.Fixed
 		public void BeginEvaluation()
 		{
 			m_Outcomes.Clear();
-			if (!m_Layout.Equipment.CapabilityEnabled)
+			if (!m_EquipmentLayout.CapabilityEnabled)
 				return;
 			SimulationOperation source = m_Ability.Operations[m_Layout.RootOperation.Value];
 			m_Control.InitializeContributions(source.Handle);
@@ -88,7 +91,7 @@ namespace ThirdPersonSimulation.Fixed
 
 		public void EndEvaluation()
 		{
-			if (!m_Layout.Equipment.CapabilityEnabled)
+			if (!m_EquipmentLayout.CapabilityEnabled)
 				return;
 			SimulationOperation source = m_Ability.Operations[m_Layout.RootOperation.Value];
 			m_Control.CancelOrphanedPending(source.Handle);
@@ -161,8 +164,8 @@ namespace ThirdPersonSimulation.Fixed
 				throw new InvalidOperationException($"Equipment parameter operation '{SourcePath(operation)}' requires an explicit Slot revision.");
 			if (slot.Revision != expectedRevision)
 				throw new InvalidOperationException($"Equipment parameter operation '{SourcePath(operation)}' revision is stale.");
-			EquipmentParameterId parameterId = m_Layout.Equipment.RequireOperationParameter(operation.Handle);
-			EquipmentProgramParameter parameter = m_Layout.Equipment.RequireParameter(slot.EquipmentId, parameterId);
+			EquipmentParameterId parameterId = m_EquipmentLayout.RequireOperationParameter(operation.Handle);
+			EquipmentProgramParameter parameter = m_EquipmentLayout.RequireParameter(slot.EquipmentId, parameterId);
 			if (parameter.FeatureId != slot.FeatureId)
 				throw new InvalidOperationException($"Equipment parameter '{parameterId}' does not belong to Feature '{slot.FeatureId}'.");
 			return ToStateValue(parameter.Value);
@@ -214,19 +217,19 @@ namespace ThirdPersonSimulation.Fixed
 
 		EquipmentProgramSlot RequireSlot(SimulationOperation operation)
 		{
-			return m_Layout.Equipment.RequireSlot(m_Layout.Equipment.RequireOperationSlot(operation.Handle));
+			return m_EquipmentLayout.RequireSlot(m_EquipmentLayout.RequireOperationSlot(operation.Handle));
 		}
 
 		EquipmentSlotState RequireSlotState(SimulationOperation operation) => ReadState().RequireSlot(RequireSlot(operation).SlotId);
 
 		bool TryRequireItem(SimulationOperation operation, out EquipmentProgramItem item)
 		{
-			if (!m_Layout.Equipment.TryGetOperationEquipment(operation.Handle, out EquipmentId equipmentId))
+			if (!m_EquipmentLayout.TryGetOperationEquipment(operation.Handle, out EquipmentId equipmentId))
 			{
 				item = null;
 				return false;
 			}
-			item = m_Layout.Equipment.RequireItem(equipmentId);
+			item = m_EquipmentLayout.RequireItem(equipmentId);
 			return true;
 		}
 
@@ -270,7 +273,7 @@ namespace ThirdPersonSimulation.Fixed
 
 		ActorId IEquipmentRuntimePort.ActorId => m_Frame.ActorId;
 		ulong IEquipmentRuntimePort.Tick => m_Frame.Tick.Value;
-		EquipmentProgramLayout IEquipmentRuntimePort.Layout => m_Layout.Equipment;
+		EquipmentProgramLayout IEquipmentRuntimePort.Layout => m_EquipmentLayout;
 		public EquipmentStateAggregate ReadState() => m_Frame.Transaction.GetEquipmentState();
 		public void WriteState(EquipmentStateAggregate state) => m_Frame.Transaction.SetEquipmentState(state);
 		EquipmentChangeId IEquipmentRuntimePort.AllocateChangeId() => new EquipmentChangeId(m_Handles.Next());
@@ -290,7 +293,7 @@ namespace ThirdPersonSimulation.Fixed
 		}
 		void IEquipmentRuntimePort.ResetLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
 		{
-			EquipmentProgramLocalState localState = m_Layout.Equipment.RequireLocalState(featureId, stateId);
+			EquipmentProgramLocalState localState = m_EquipmentLayout.RequireLocalState(featureId, stateId);
 			m_Frame.Transaction.SetEquipmentState(
 				m_Frame.Transaction.GetEquipmentState().WithLocalState(featureId, stateId, localState.DefaultValue));
 		}
@@ -335,7 +338,7 @@ namespace ThirdPersonSimulation.Fixed
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 				m_Savepoint = frame.Transaction.CreateSavepoint();
 			m_OutputSavepoint = frame.CreateOutputSavepoint();
-			m_Values = new CharacterStateValue[frame.Program.StateSlots.Count];
+                m_Values = new CharacterStateValue[frame.Data.StateSlots.Count];
 			for (int i = 0; i < m_Values.Length; i++)
 				m_Values[i] = frame.Transaction.Get(i);
 			}
@@ -362,3 +365,4 @@ namespace ThirdPersonSimulation.Fixed
 	}
 }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+

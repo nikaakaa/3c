@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 
 namespace ThirdPersonSimulation
 {
@@ -488,23 +487,6 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public readonly struct CharacterControlModuleBinding
-    {
-        public CharacterControlModuleBinding(int catalogEntryIndex, CharacterControlModuleId moduleId, int semanticVersion)
-        {
-            if (catalogEntryIndex < 0 || !moduleId.IsValid || semanticVersion <= 0)
-                throw new ArgumentException("Character control module binding is incomplete.");
-            CatalogEntryIndex = catalogEntryIndex;
-            ModuleId = moduleId;
-            SemanticVersion = semanticVersion;
-        }
-
-        public int CatalogEntryIndex { get; }
-        public CharacterControlModuleId ModuleId { get; }
-        public int SemanticVersion { get; }
-        public bool IsValid => CatalogEntryIndex >= 0 && ModuleId.IsValid && SemanticVersion > 0;
-    }
-
     public sealed class CharacterControlRuntimeBinding
     {
         public CharacterControlRuntimeBinding(
@@ -591,18 +573,6 @@ namespace ThirdPersonSimulation
             }
         }
 
-        public ICharacterControlModule Require(CharacterControlModuleBinding binding)
-        {
-            if (!binding.IsValid)
-                throw new ArgumentException("Character control module binding is invalid.", nameof(binding));
-            if (!m_Entries.TryGetValue(binding.ModuleId, out ModuleEntry entry))
-                throw new InvalidOperationException($"Character control module '{binding.ModuleId}' is not installed.");
-            if (entry.Contract.SemanticVersion != binding.SemanticVersion)
-                throw new InvalidOperationException(
-                    $"Character control module '{binding.ModuleId}' version '{entry.Contract.SemanticVersion}' does not match Program version '{binding.SemanticVersion}'.");
-            return entry.Factory();
-        }
-
         public ICharacterControlModule Require(CharacterControlModuleId moduleId)
         {
             if (!moduleId.IsValid)
@@ -622,93 +592,4 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public static class CharacterControlProgramCatalogValidator
-    {
-        public static CharacterControlModuleBinding Resolve(
-            IReadOnlyList<ProgramCatalogEntry> catalogEntries)
-        {
-            if (catalogEntries == null)
-                throw new ArgumentNullException(nameof(catalogEntries));
-
-            CharacterControlModuleBinding binding = default;
-            for (int i = 0; i < catalogEntries.Count; i++)
-            {
-                ProgramCatalogEntry entry = catalogEntries[i];
-                if (entry.Kind != ProgramCatalogEntryKind.ControlModule)
-                    continue;
-                if (binding.IsValid)
-                    throw new InvalidDataException("Program contains more than one Character control module.");
-                binding = new CharacterControlModuleBinding(
-                    entry.Index,
-                    new CharacterControlModuleId(entry.Identity),
-                    entry.Revision);
-            }
-
-            return binding;
-        }
-
-        public static void ValidateAbilityPrograms(
-            CharacterControlModuleContract contract,
-            GameplayAbilityProgramCatalog abilities,
-            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames)
-        {
-            if (contract == null)
-                throw new ArgumentNullException(nameof(contract));
-            if (abilities == null)
-                throw new ArgumentNullException(nameof(abilities));
-            if (graphCallFrames == null)
-                throw new ArgumentNullException(nameof(graphCallFrames));
-            for (int i = 0; i < contract.Abilities.Count; i++)
-                abilities.Require(contract.Abilities[i]);
-            for (int i = 0; i < abilities.Bindings.Count; i++)
-            {
-                GameplayAbilityProgramBinding binding = abilities.Bindings[i];
-                CharacterSkillId ability = binding.SkillId;
-                bool declared = false;
-                for (int skillIndex = 0; skillIndex < contract.Abilities.Count; skillIndex++)
-                {
-                    if (contract.Abilities[skillIndex] == ability)
-                    {
-                        declared = true;
-                        break;
-                    }
-                }
-                if (!declared)
-                    throw new InvalidDataException($"AbilityProgram '{ability}' is not declared by control module '{contract.ModuleId}'.");
-                for (int followUpIndex = 0; followUpIndex < binding.AllowedFollowUps.Count; followUpIndex++)
-                {
-                    CharacterSkillId followUp = binding.AllowedFollowUps[followUpIndex];
-                    bool followUpDeclared = false;
-                    for (int skillIndex = 0; skillIndex < contract.Abilities.Count; skillIndex++)
-                    {
-                        if (contract.Abilities[skillIndex] == followUp)
-                        {
-                            followUpDeclared = true;
-                            break;
-                        }
-                    }
-                    if (!followUpDeclared)
-                        throw new InvalidDataException($"AbilityProgram '{ability}' follow-up '{followUp}' is not declared by control module '{contract.ModuleId}'.");
-                }
-                for (int dependencyIndex = 0; dependencyIndex < binding.Dependencies.Count; dependencyIndex++)
-                {
-                    GameplayAbilityDependency dependency = binding.Dependencies[dependencyIndex];
-                    ProgramGraphCallFrame match = null;
-                    for (int frameIndex = 0; frameIndex < graphCallFrames.Count; frameIndex++)
-                    {
-                        ProgramGraphCallFrame frame = graphCallFrames[frameIndex];
-                        if (!string.Equals(frame.Identity, dependency.CallSiteIdentity, StringComparison.Ordinal))
-                            continue;
-                        if (match != null)
-                            throw new InvalidDataException($"AbilityProgram '{ability}' dependency call site '{dependency.CallSiteIdentity}' is duplicated.");
-                        match = frame;
-                    }
-                    if (match == null)
-                        throw new InvalidDataException($"AbilityProgram '{ability}' dependency call site '{dependency.CallSiteIdentity}' is missing from the Program.");
-                    if (!string.Equals(match.ChildGraphIdentity, dependency.SubgraphIdentity, StringComparison.Ordinal))
-                        throw new InvalidDataException($"AbilityProgram '{ability}' dependency call site '{dependency.CallSiteIdentity}' targets '{match.ChildGraphIdentity}', expected '{dependency.SubgraphIdentity}'.");
-                }
-            }
-        }
-    }
 }

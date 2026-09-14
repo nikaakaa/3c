@@ -16,7 +16,9 @@ Timeline Runtime 不是 Timeline 窗口里的播放按钮，也不是 Slate 的 
 
 4. `TimelineRuntimePreparation` 从 `TimelineContentDiscovery`、`TimelineBindingPlan`、正式 call input 和 dependency resolver 形成 Ready 结果；Camera Override/Zoom/Stretch/Shot 资源现在也进入内容闭包和 typed resource sample。`TimelineRuntimeEvaluationBuffer` 在同一 Commit 边界发布不可变 committed evaluation，包含 playback/generation、逻辑帧、循环、内容 revision、执行 identity 和所有领域输出。
 
-因此当前“Timeline Runtime 库内闭环”表示直接 Playback 的生命周期和候选提交协议已经闭合；不表示主工程已经安装一个 Composition。当前真实剩余边界是：没有生产代码创建 `TimelineRuntimeComposition`，也没有正式 owner 注入角色/World 汇集、TreeClip 技能服务、Motion/Warp、Camera、Cue 和 committed evaluation consumer。这个接线必须由核心 Runtime/Preview owner 完成，不能在 Timeline 内创建全局 service、空执行器、假 Actor 或第二套播放器。
+5. `TimelineRuntimeCompositionHost` 是正式组合宿主：一次装配 `TimelineRuntimeComposition`、`TimelineRuntimeEvaluationBuffer`、外部 typed evaluation sinks 和 TreeClip service，并统一暴露 Prepare、Skill Playback、Step、Stop、Capture、Restore、Shutdown。它只组合已有 Runtime，不创建第二个时钟、播放器或组件对象。
+
+因此当前“Timeline Runtime 库内闭环”表示直接 Playback 的生命周期、候选提交协议和一次性组合装配已经闭合；不表示主工程已经把宿主安装到角色/技能 Step。当前真实剩余边界是：没有主工程生产 owner 创建并持有 `TimelineRuntimeCompositionHost`，也没有正式 owner 注入角色/World 汇集、TreeClip 技能服务、Motion/Warp、Camera、Cue 和 committed evaluation consumer。这个接线必须由核心 Runtime/Preview owner 完成，不能在 Timeline 内创建全局 service、空执行器、假 Actor 或第二套播放器。
 
 ## 已完成代码链
 

@@ -230,3 +230,10 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 原生 FlowCanvas 图的 Node/Port/Connection 与 `CharacterPoseNativeGraphValidator` 直接确定执行拓扑，不再生成或读取这两种全图执行描述。
 - 诊断、Projection 和旧 Program 消费者的引用暂不补兼容；它们将在切换原生观察/发布合同时删除或改为节点观察数据。
 - 本步未运行 Unity/Build；当前残留引用是激进裁剪过程中的预期中间状态，不能作为完成证据。
+
+## 2026-09-14 r3 删除旧 Worker Kernel 与 Operation 适配器
+
+- 删除 `PoseGraph/Worker/CharacterPoseWorkerKernels.cs`、`CharacterPoseWorkerActorSlice.cs`、`PoseGraph/Constraints/CharacterPoseConstraintOperationModule.cs`、`PoseGraph/Final/CharacterPoseOutputOperationModule.cs` 和 `PoseGraph/Diagnostics/CharacterPoseProgramCommittedDiagnosticsProjector.cs` 及其 `.meta`。
+- 这些文件只把旧 Operation header、Value page、Worker batch 接到节点执行；Constraint/Final 的正式能力仍由 `CharacterPoseConstraintRuntime`、`CharacterFinalPosePublication` 和现有 Foot/Goal/FBBIK 服务负责，不删除它们。
+- 旧 Program Executor/Evaluation 与诊断消费者的引用继续作为断链清单保留，不建立新的 Worker 或 Operation 兼容层。
+- 本步未运行 Unity/Build；当前断链仍是激进裁剪中间状态，不能作为完成证据。

@@ -128,6 +128,14 @@ node_modules/
 ExternalDownloads/ZZZ_Studio/
 /ExternalDownloads/ZZZMiyabi/
 
+# Project art payloads are local-only
+/3cDemo/Client/3C_Client/Assets/AssetArt/**/*.fbx
+/3cDemo/Client/3C_Client/Assets/AssetArt/**/*.FBX
+/3cDemo/Client/3C_Client/Assets/AssetArt/**/*.anim
+/3cDemo/Client/3C_Client/Assets/AssetArt/**/*.png
+/3cDemo/Client/3C_Client/Assets/AssetArt/**/*.PNG
+/3cDemo/Client/3C_Client/Assets/AssetArt/**/*.unitypackage
+
 # Third-party Feel asset (MoreMountains), local reference only
 /3cDemo/Client/3C_Client/Assets/Feel/
 /3cDemo/Client/3C_Client/Assets/Feel.meta

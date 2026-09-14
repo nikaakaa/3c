@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation
 		readonly EquipmentRuntimeControl m_Control;
 		readonly Dictionary<int, EquipmentChangeOutcome> m_Outcomes = new Dictionary<int, EquipmentChangeOutcome>();
 		public Float32EquipmentRuntime(
-			Float32ProgramAccess access,
+			Float32GameplayAbilityExecutionAccess access,
 			Float32EvaluationFrame frame,
 			Float32ActionStateStore actions,
 			Float32HandleAllocator handles,
@@ -79,7 +79,7 @@ namespace ThirdPersonSimulation
 			m_Outcomes.Clear();
 			if (!m_Layout.Equipment.CapabilityEnabled)
 				return;
-			SimulationOperation source = m_Program.Operations[m_Layout.RootOperation.Value];
+			SimulationOperation source = m_Ability.Operations[m_Layout.RootOperation.Value];
 			m_Control.InitializeContributions(source.Handle);
 			m_Control.CancelOrphanedPending(source.Handle);
 			TraceSnapshot(source);
@@ -89,7 +89,7 @@ namespace ThirdPersonSimulation
 		{
 			if (!m_Layout.Equipment.CapabilityEnabled)
 				return;
-			SimulationOperation source = m_Program.Operations[m_Layout.RootOperation.Value];
+			SimulationOperation source = m_Ability.Operations[m_Layout.RootOperation.Value];
 			m_Control.CancelOrphanedPending(source.Handle);
 		}
 
@@ -313,9 +313,9 @@ namespace ThirdPersonSimulation
 
 		SimulationOperation RequireSource(OperationHandle source)
 		{
-			if (!source.IsValid || source.Value >= m_Program.Operations.Count)
+			if (!source.IsValid || source.Value >= m_Ability.Operations.Count)
 				throw new InvalidOperationException($"Equipment source Operation '{source}' is absent from the Program.");
-			SimulationOperation operation = m_Program.Operations[source.Value];
+			SimulationOperation operation = m_Ability.Operations[source.Value];
 			if (!operation.Handle.Equals(source))
 				throw new InvalidOperationException($"Equipment source Operation '{source}' does not match Program order.");
 			return operation;

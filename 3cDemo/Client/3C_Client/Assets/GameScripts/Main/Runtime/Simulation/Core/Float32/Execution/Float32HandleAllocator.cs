@@ -6,7 +6,7 @@ namespace ThirdPersonSimulation
     {
         readonly Float32EvaluationFrame m_Frame;
 
-        public Float32HandleAllocator(Float32ProgramAccess access, Float32EvaluationFrame frame)
+        public Float32HandleAllocator(Float32GameplayAbilityExecutionAccess access, Float32EvaluationFrame frame)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));

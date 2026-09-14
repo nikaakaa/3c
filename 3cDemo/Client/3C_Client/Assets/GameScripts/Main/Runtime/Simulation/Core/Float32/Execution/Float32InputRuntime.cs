@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation
         readonly Float32EvaluationFrame m_Frame;
 
         public Float32InputRuntime(
-            Float32ProgramAccess access,
+            Float32GameplayAbilityExecutionAccess access,
             Float32EvaluationFrame frame)
             : base(access)
         {

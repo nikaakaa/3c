@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation
 		Float32GameplayEffectTarget m_GameplayEffects;
 
 		public Float32GameplayEffectOperationRuntime(
-			Float32ProgramAccess access,
+			Float32GameplayAbilityExecutionAccess access,
 			Float32EvaluationFrame frame,
 			IFloat32ActionContextReader actions,
 			Float32HandleAllocator handles,
@@ -299,7 +299,7 @@ namespace ThirdPersonSimulation
 			ProgramCatalogEntry found = null;
 			foreach (ProgramReference reference in References(operation.Handle, ProgramReferenceKind.CatalogEntry))
 			{
-				ProgramCatalogEntry candidate = m_Program.CatalogEntries[reference.TargetIndex];
+				ProgramCatalogEntry candidate = m_Ability.CatalogEntries[reference.TargetIndex];
 				if (candidate.Kind != ProgramCatalogEntryKind.GameplayEffect)
 					continue;
 				if (found != null)
@@ -323,7 +323,7 @@ namespace ThirdPersonSimulation
 		SimulationOperation RootOperation()
 		{
 			OperationHandle handle = m_Layout.RootOperation;
-			return m_Program.Operations[handle.Value];
+			return m_Ability.Operations[handle.Value];
 		}
 
 	}

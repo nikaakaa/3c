@@ -266,7 +266,7 @@ namespace ThirdPersonSimulation
         readonly Float32MotionWarpTarget m_MotionWarp;
 
         public Float32MotionAccumulator(
-            Float32ProgramAccess access,
+            Float32GameplayAbilityExecutionAccess access,
             Float32EvaluationFrame frame,
             List<SimulationMotionContribution> contributions,
             List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> warpSamples,
@@ -520,7 +520,7 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterStateTransaction m_Transaction;
 
         public Float32MotionWarpTarget(
-            Float32ProgramAccess access,
+            Float32GameplayAbilityExecutionAccess access,
             Float32EvaluationFrame frame,
             Float32ActionStateStore actions)
             : base(access)
@@ -773,7 +773,7 @@ namespace ThirdPersonSimulation
             out ProgramMotionWarpLimitResult limitResult)
         {
             ProgramCatalogEntry source = SourceCatalog(descriptor.SourceMotionOperation);
-            ProgramCatalogEntry warp = m_Program.CatalogEntries[descriptor.CatalogEntryIndex];
+            ProgramCatalogEntry warp = m_Ability.CatalogEntries[descriptor.CatalogEntryIndex];
             Float32Scalar warpStart = ClipTime(warp, TimelineClipTimePoint.Start);
             Float32Scalar warpEnd = ClipTime(warp, TimelineClipTimePoint.End);
             startBodyPosition = m_Frame.Body.Position;
@@ -945,7 +945,7 @@ namespace ThirdPersonSimulation
             out Float32Scalar sourceYawRelative)
         {
             ProgramCatalogEntry source = SourceCatalog(descriptor.SourceMotionOperation);
-            ProgramCatalogEntry warp = m_Program.CatalogEntries[descriptor.CatalogEntryIndex];
+            ProgramCatalogEntry warp = m_Ability.CatalogEntries[descriptor.CatalogEntryIndex];
             SourcePoseAtTime(source, sampleTime, out Float32Vector3 sourcePosition, out Float32Scalar sourceYaw);
             SourcePoseAtTime(source, ClipTime(warp, TimelineClipTimePoint.End), out Float32Vector3 sourceEndPosition, out Float32Scalar sourceEndYaw);
             sourceRelative = sourcePosition - sourceWindowStartPosition;
@@ -1090,7 +1090,7 @@ namespace ThirdPersonSimulation
 
         Float32Scalar NormalizeWindowTime(ProgramMotionModifierDescriptor descriptor, Float32Scalar time)
         {
-            ProgramCatalogEntry warp = m_Program.CatalogEntries[descriptor.CatalogEntryIndex];
+            ProgramCatalogEntry warp = m_Ability.CatalogEntries[descriptor.CatalogEntryIndex];
             Float32Scalar start = ClipTime(warp, TimelineClipTimePoint.Start);
             Float32Scalar end = ClipTime(warp, TimelineClipTimePoint.End);
             Float32Scalar duration = Float32Scalar.Max(Float32Scalar.FromSingle(0.000001f), end - start);
@@ -1150,9 +1150,9 @@ namespace ThirdPersonSimulation
 
         ProgramConstant RequireConstant(int index, ProgramConstantKind kind, string name)
         {
-            if (index < 0 || index >= m_Program.Constants.Count || m_Program.Constants[index].Kind != kind)
+            if (index < 0 || index >= m_Ability.Constants.Count || m_Ability.Constants[index].Kind != kind)
                 throw new InvalidOperationException($"MotionWarp constant '{name}' has an invalid Program kind.");
-            return m_Program.Constants[index];
+            return m_Ability.Constants[index];
         }
 
         static Float32Scalar SampleProgress(ProgramCurve curve, Float32Scalar normalized) =>
@@ -1190,7 +1190,7 @@ namespace ThirdPersonSimulation
         readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
 
         public Float32LocomotionRuntime(
-            Float32ProgramAccess access,
+            Float32GameplayAbilityExecutionAccess access,
             IFloat32ValueInputReader values,
             IFloat32MotionContributionSink motion,
             Float32EvaluationFrame frame,
@@ -1222,8 +1222,8 @@ namespace ThirdPersonSimulation
                 generation,
                 m_Frame.Tick,
                 committedTicks,
-                m_Program.Manifest.TickRate);
-            Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_Program.Manifest.TickRate);
+                m_Ability.TickRate);
+            Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_Ability.TickRate);
             ProgramConstant turnConstant = FindConstant(operation, OperationNamedConstant.TurnSpeedDegrees);
             if (turnConstant == null || turnConstant.Kind != ProgramConstantKind.Scalar)
                 throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid turn speed.");
@@ -1271,7 +1271,7 @@ namespace ThirdPersonSimulation
             Float32Vector2 move = input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2).Vector2;
             if (move.SqrMagnitude > Float32Scalar.One)
                 move = move.Normalized;
-            Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_Program.Manifest.TickRate);
+            Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_Ability.TickRate);
             Float32Scalar moveSpeed = Float32Scalar.FromDouble(descriptor.MoveSpeed);
 			Float32Scalar turnSpeed = Float32Scalar.FromDouble(descriptor.TurnSpeedDegrees);
 			Float32Scalar maxYaw = turnSpeed * delta;
@@ -1298,19 +1298,19 @@ namespace ThirdPersonSimulation
 			int durationTicks = descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
 				? 0
 				: descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
-                ? checked((int)Math.Ceiling(descriptor.DurationSeconds * m_Program.Manifest.TickRate))
+                ? checked((int)Math.Ceiling(descriptor.DurationSeconds * m_Ability.TickRate))
                 : 0;
             var movementPlaybackClock = new CommittedMovementPlaybackClock(
                 request.Source.Identity,
                 request.PlaybackGeneration,
                 m_Frame.Tick,
                 continuousTicks,
-                m_Program.Manifest.TickRate);
+                m_Ability.TickRate);
             var locomotionTimeline = new CommittedLocomotionPlanarMotionTimeline(
                 request.Source.Identity,
                 request.PlaybackGeneration,
                 m_Frame.Tick,
-                m_Program.Manifest.TickRate,
+                m_Ability.TickRate,
                 (displacement.X / delta).ToSingle(),
                 (displacement.Z / delta).ToSingle(),
                 (yaw / delta).ToSingle(),
@@ -1347,7 +1347,7 @@ namespace ThirdPersonSimulation
 			CharacterControlMotionBinding source = m_ControlMotionBindings == null
 				? throw new InvalidOperationException("Float32 Control motion bindings are not installed.")
 				: m_ControlMotionBindings.Require(descriptor.SourceMotionIdentity);
-			double tickRate = m_Program.Manifest.TickRate;
+			double tickRate = m_Ability.TickRate;
 			CharacterControlMotionDelta delta = source.EvaluateDelta(
 				request.ContinuousTicks / tickRate,
 				(request.ContinuousTicks + 1) / tickRate);
@@ -1394,7 +1394,7 @@ namespace ThirdPersonSimulation
                 SourcePath(operation),
                 generation,
                 m_Frame.Tick,
-                m_Program.Manifest.TickRate,
+                m_Ability.TickRate,
                 currentVelocity.X.ToSingle(),
                 currentVelocity.Y.ToSingle(),
                 (yawDegrees / delta).ToSingle(),
@@ -1412,7 +1412,7 @@ namespace ThirdPersonSimulation
             ProgramConstant duration = FindConstant(operation, OperationNamedConstant.DurationSeconds);
             if (duration == null || duration.Kind != ProgramConstantKind.Scalar || duration.Scalar <= Float32Scalar.Zero)
                 throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid duration.");
-            return checked((int)Math.Ceiling(duration.Scalar.ToDouble() * m_Program.Manifest.TickRate));
+            return checked((int)Math.Ceiling(duration.Scalar.ToDouble() * m_Ability.TickRate));
         }
 
         bool TryFindSingleLocomotion(OperationHandle state, out SimulationOperation motion)
@@ -1473,7 +1473,7 @@ namespace ThirdPersonSimulation
                 durationConstant.Scalar <= Float32Scalar.Zero)
                 throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has invalid Action Motion Curve constants.");
 
-            Float32Scalar tickRate = Float32Scalar.FromInt64(m_Program.Manifest.TickRate);
+            Float32Scalar tickRate = Float32Scalar.FromInt64(m_Ability.TickRate);
             Float32Scalar fromTime = Float32Scalar.FromInt64(elapsedTicks) / tickRate;
             Float32Scalar toTime = Float32Scalar.FromInt64(checked(elapsedTicks + 1)) / tickRate;
             bool looping = (LocomotionInputMotionExecutionMode)operation.Integer0 == LocomotionInputMotionExecutionMode.Continuous;

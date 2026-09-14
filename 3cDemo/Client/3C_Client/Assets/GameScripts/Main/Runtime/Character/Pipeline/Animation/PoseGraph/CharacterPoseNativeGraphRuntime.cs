@@ -126,6 +126,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeFrameInput CurrentInput => m_FrameInput;
         internal CharacterPoseNativePortValue LastCommittedOutput => m_LastCommittedOutput;
 
+        internal CharacterPoseNativeGraphPrepareResult PrepareChild(
+            ulong requestId,
+            PoseGraphId graphId)
+        {
+            RequireAlive();
+            CharacterPoseCanvasGraph graph =
+                m_PreparedBinding.GraphAsset.RequireGraph(graphId);
+            var request = new CharacterPoseNativeGraphPrepareRequest(
+                requestId,
+                m_PreparedBinding.ActorId,
+                m_PreparedBinding.GraphAsset,
+                graph,
+                m_PreparedBinding.Profile,
+                m_PreparedBinding.Rig,
+                m_PreparedBinding.InputContract,
+                m_PreparedBinding.ResourceRevision);
+            return Prepare(in request);
+        }
+
         internal static CharacterPoseNativeGraphPrepareResult Prepare(
             in CharacterPoseNativeGraphPrepareRequest request)
         {

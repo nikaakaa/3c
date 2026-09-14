@@ -114,9 +114,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     actor.StateHash.Value,
                     new[]
                     {
-                        new KeyValuePair<string, StableHash>("character-state", actor.StateHash.Value),
-                        new KeyValuePair<string, StableHash>("program", actor.ProgramHash.Value),
-                        new KeyValuePair<string, StableHash>("layout", actor.LayoutHash.Value)
+                        new KeyValuePair<string, StableHash>("gameplay-content", actor.GameplayContentHash.Value),
+                        new KeyValuePair<string, StableHash>("character-state", actor.StateHash.Value)
                     });
             }
             return new RollbackStateHashReport(

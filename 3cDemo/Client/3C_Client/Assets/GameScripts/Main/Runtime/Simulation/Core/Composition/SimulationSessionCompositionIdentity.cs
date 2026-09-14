@@ -61,7 +61,6 @@ namespace ThirdPersonSimulation
 
     public enum SimulationComponentRole : byte
     {
-        ProgramRuntime = 1,
         ExecutionBackend = 2,
         SessionSource = 3,
         WorldSolver = 4,

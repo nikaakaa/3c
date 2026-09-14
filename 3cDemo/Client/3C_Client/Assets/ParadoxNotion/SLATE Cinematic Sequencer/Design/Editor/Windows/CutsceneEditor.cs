@@ -375,6 +375,7 @@ namespace Slate
         [System.NonSerialized] private Dictionary<string, int> formalInspectedParameters;
         [System.NonSerialized] private IEmbeddedTimelineTrackBinding formalPickedTrack;
         [System.NonSerialized] private IEmbeddedTimelineSectionBinding formalDraggedSection;
+        [System.NonSerialized] private bool formalSelectionHandled;
 
         [System.NonSerialized] private CutsceneTrack copyTrack;
 
@@ -848,6 +849,7 @@ namespace Slate
         {
             CutsceneEditorSurface previous = current;
             current = this;
+            formalSelectionHandled = false;
             try
             {
                 OnGUI();
@@ -1562,7 +1564,7 @@ namespace Slate
 
             //clean selection and hotcontrols
             if ( e.type == EventType.MouseDown && e.button == 0 && GUIUtility.hotControl == 0 ) {
-                if ( centerRect.Contains(mousePosition) ) {
+                if ( centerRect.Contains(mousePosition) && !formalSelectionHandled ) {
                     if (embeddedTimeline != null)
                         embeddedTimeline.Select(null);
                     else
@@ -4016,9 +4018,14 @@ namespace Slate
                         } else {
                             multiSelection.Add(this);
                         }
+                        if (editor.embeddedTimeline != null && editorBinding.FormalClip != null)
+                            editor.formalSelectionHandled = true;
                     } else {
                         if (editor.embeddedTimeline != null && editorBinding.FormalClip != null)
+                        {
                             editor.embeddedTimeline.Select(editorBinding.FormalClip);
+                            editor.formalSelectionHandled = true;
+                        }
                         else if (action != null)
                             CutsceneUtility.selectedObject = action;
                         if ( multiSelection != null && !multiSelection.Select(cw => cw.editorBinding).Contains(editorBinding) ) {

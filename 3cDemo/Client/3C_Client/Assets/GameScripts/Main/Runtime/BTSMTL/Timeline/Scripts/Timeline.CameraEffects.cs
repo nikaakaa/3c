@@ -6,6 +6,34 @@ namespace BTSMTL.Timeline
 {
     public abstract class CameraResourceTrack : Track
     {
+#if UNITY_EDITOR
+        public override Clip AddClip(UnityEngine.Object referenceObject, int frame)
+        {
+            Clip clip = Activator.CreateInstance(ClipType, this, frame) as Clip;
+            if (clip == null)
+                throw new InvalidOperationException($"Camera track '{ContractKind}' could not create clip '{ClipType.Name}'.");
+            switch (clip)
+            {
+                case CameraOverrideClip cameraOverride:
+                    cameraOverride.OverrideTrack = referenceObject as CameraOverrideTrackAsset;
+                    break;
+                case CameraZoomClip cameraZoom:
+                    cameraZoom.Zoom = referenceObject as CameraZoomAsset;
+                    break;
+                case CameraStretchClip cameraStretch:
+                    cameraStretch.Stretch = referenceObject as CameraStretchAsset;
+                    break;
+                case CameraShotClip cameraShot:
+                    cameraShot.Shot = referenceObject as CameraShotAsset;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Camera track '{ContractKind}' has an unsupported clip type '{clip.GetType().Name}'.");
+            }
+            clip.RegenerateAuthoringIdentity();
+            m_Clips.Add(clip);
+            return clip;
+        }
+#endif
     }
 
     [TrackGroup("Camera"), ScriptGuid("de0a9b796b3c4d1a8f5e02af91d63c74"), Ordered(7), Color(255, 196, 130)]

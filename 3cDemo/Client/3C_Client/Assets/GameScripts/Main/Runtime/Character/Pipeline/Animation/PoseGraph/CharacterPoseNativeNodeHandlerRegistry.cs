@@ -62,6 +62,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (handler == null)
                         throw new InvalidOperationException(
                             $"Pose native handler creator for '{node.NodeId}' returned no handler.");
+                    if (handler.NodeId != node.NodeId || handler.Kind != node.Kind)
+                    {
+                        handler.Dispose();
+                        throw new InvalidOperationException(
+                            $"Pose native handler for '{node.NodeId}' does not match the registered node identity or kind.");
+                    }
                     handlers.Add(handler);
                 }
                 return handlers.ToArray();

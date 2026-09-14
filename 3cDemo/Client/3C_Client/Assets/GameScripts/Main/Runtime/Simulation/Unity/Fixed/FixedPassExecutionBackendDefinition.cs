@@ -8,6 +8,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     [CreateAssetMenu(fileName = "FixedPassExecutionBackend", menuName = "3C/Simulation/Fixed/Pass Backend")]
     public sealed class FixedPassExecutionBackendDefinition : SimulationExecutionBackendDefinition
     {
+        public override SimulationExecutionTargetManifest BuildExecutionTargetManifest() =>
+            FixedSimulationTarget.Manifest.ExecutionTarget;
+
         public override SimulationExecutionBackendDescriptor BuildPortableDescriptor() =>
             FixedPassExecutionBackend.Descriptor;
 

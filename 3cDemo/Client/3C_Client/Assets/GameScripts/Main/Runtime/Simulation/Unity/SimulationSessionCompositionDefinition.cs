@@ -14,7 +14,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         [SerializeField] string m_WorldRevision = string.Empty;
         [SerializeField] string m_SourceClockId = string.Empty;
         [SerializeField, Min(1)] int m_TickRate;
-        [SerializeField] SimulationProgramRuntimeDefinition m_ProgramRuntime;
         [SerializeField] SimulationExecutionBackendDefinition m_ExecutionBackend;
         [SerializeField] SimulationPipelineDefinition m_Pipeline;
         [SerializeField] SimulationSessionSourceDefinition m_SessionSource;
@@ -29,8 +28,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public int TickRate => m_TickRate > 0
             ? m_TickRate
             : throw new InvalidOperationException($"Session Composition '{name}' requires an explicit TickRate.");
-        public SimulationProgramRuntimeDefinition ProgramRuntime => m_ProgramRuntime;
         public SimulationExecutionBackendDefinition ExecutionBackend => m_ExecutionBackend;
+        public SimulationExecutionTargetManifest ExecutionTarget => m_ExecutionBackend
+            ? m_ExecutionBackend.BuildExecutionTargetManifest()
+            : throw new InvalidOperationException($"Session Composition '{name}' requires an Execution Backend.");
         public SimulationPipelineDefinition Pipeline => m_Pipeline;
         public SimulationSessionSourceDefinition SessionSource => m_SessionSource;
         public SimulationWorldSolverDefinition WorldSolver => m_WorldSolver;
@@ -45,8 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             _ = SourceClockId;
             _ = TickRate;
             var missingDefinitions = new List<string>(5);
-            if (!m_ProgramRuntime)
-                missingDefinitions.Add(nameof(m_ProgramRuntime));
             if (!m_ExecutionBackend)
                 missingDefinitions.Add(nameof(m_ExecutionBackend));
             if (!m_Pipeline)
@@ -77,7 +76,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             string worldRevision,
             string sourceClockId,
             int tickRate,
-            SimulationProgramRuntimeDefinition programRuntime,
             SimulationExecutionBackendDefinition executionBackend,
             SimulationPipelineDefinition pipeline,
             SimulationSessionSourceDefinition sessionSource,
@@ -92,7 +90,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             m_WorldRevision = RequireIdentity(worldRevision, nameof(worldRevision));
             m_SourceClockId = RequireIdentity(sourceClockId, nameof(sourceClockId));
             m_TickRate = tickRate;
-            m_ProgramRuntime = programRuntime ? programRuntime : throw new ArgumentNullException(nameof(programRuntime));
             m_ExecutionBackend = executionBackend ? executionBackend : throw new ArgumentNullException(nameof(executionBackend));
             m_Pipeline = pipeline ? pipeline : throw new ArgumentNullException(nameof(pipeline));
             m_SessionSource = sessionSource ? sessionSource : throw new ArgumentNullException(nameof(sessionSource));
@@ -123,18 +120,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     {
         public SimulationSessionCompositionBuildRequest(
             SimulationSessionCompositionDefinition definition,
-            SimulationProgramRuntimeDescriptor programRuntime,
             ISimulationSessionPreparedSource source,
             IReadOnlyList<ISimulationActorRegistration> registrations)
         {
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
-            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
             Source = source ?? throw new ArgumentNullException(nameof(source));
             Registrations = registrations ?? throw new ArgumentNullException(nameof(registrations));
         }
 
         public SimulationSessionCompositionDefinition Definition { get; }
-        public SimulationProgramRuntimeDescriptor ProgramRuntime { get; }
         public ISimulationSessionPreparedSource Source { get; }
         public IReadOnlyList<ISimulationActorRegistration> Registrations { get; }
     }

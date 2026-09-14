@@ -7,6 +7,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     public sealed class Float32PassExecutionBackendDefinition :
         SimulationExecutionBackendDefinition
     {
+        public override SimulationExecutionTargetManifest BuildExecutionTargetManifest() =>
+            Float32SimulationTarget.Manifest.ExecutionTarget;
+
         public override SimulationExecutionBackendDescriptor BuildPortableDescriptor()
         {
             return Float32PassExecutionBackend.Descriptor;

@@ -1010,22 +1010,23 @@ namespace BTSMTL.Timeline.Editor
         {
             readonly BtsmtlTimelineClipBinding m_Clip;
             readonly TimelineCurveChannelDescriptor m_Descriptor;
-            readonly float m_Duration;
             AnimationCurve m_Curve;
 
             public BtsmtlTimelineCurveBinding(BtsmtlTimelineClipBinding clip, TimelineCurveChannelDescriptor descriptor)
             {
                 m_Clip = clip;
                 m_Descriptor = descriptor;
-                m_Duration = CurveDuration(clip.Source, descriptor, clip.Owner.FrameRate);
-                m_Curve = ConvertCurveTime(descriptor.Read(clip.Source), m_Duration, false);
+                m_Curve = ConvertCurveTime(
+                    descriptor.Read(clip.Source),
+                    CurveDuration(clip.Source, descriptor, clip.Owner.FrameRate),
+                    false);
             }
             public string ChannelId => m_Descriptor.ChannelId.Value;
             public string DisplayName => m_Descriptor.DisplayName;
             public AnimationCurve Curve => m_Curve;
             public int StartFrame => m_Clip.Source.StartFrame;
             public int EndFrame => m_Clip.Source.EndFrame;
-            public float Duration => m_Duration;
+            public float Duration => Mathf.Max(1f / m_Clip.Owner.FrameRate, m_Clip.Length);
             public void Replace(AnimationCurve curve) => m_Curve = TimelineCurveAuthoring.CopyCurve(curve);
             public void Trim(float min, float max)
             {
@@ -1036,7 +1037,7 @@ namespace BTSMTL.Timeline.Editor
             public bool CommitSource()
             {
                 AnimationCurve source = m_Descriptor.Read(m_Clip.Source);
-                AnimationCurve converted = ConvertCurveTime(m_Curve, m_Duration, true);
+                AnimationCurve converted = ConvertCurveTime(m_Curve, Duration, true);
                 if (TimelineCurveAuthoring.AreEquivalent(source, converted))
                     return false;
                 m_Descriptor.Replace(m_Clip.Source, converted);
@@ -1046,7 +1047,7 @@ namespace BTSMTL.Timeline.Editor
             public bool HasChanges()
             {
                 AnimationCurve source = m_Descriptor.Read(m_Clip.Source);
-                AnimationCurve converted = ConvertCurveTime(m_Curve, m_Duration, true);
+                AnimationCurve converted = ConvertCurveTime(m_Curve, Duration, true);
                 return !TimelineCurveAuthoring.AreEquivalent(source, converted);
             }
 

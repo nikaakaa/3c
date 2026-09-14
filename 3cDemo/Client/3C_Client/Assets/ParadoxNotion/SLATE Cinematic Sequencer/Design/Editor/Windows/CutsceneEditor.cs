@@ -1774,6 +1774,11 @@ namespace Slate
                         multiSelection = null;
                         e.Use();
                     }
+                    else if (embeddedTimeline != null && embeddedTimeline.Selected is IEmbeddedTimelineClipBinding formalClip)
+                    {
+                        embeddedTimeline.DeleteClip(formalClip);
+                        e.Use();
+                    }
                     else if ( multiSelection != null ) {
                         SafeDoAction(() =>
                            {

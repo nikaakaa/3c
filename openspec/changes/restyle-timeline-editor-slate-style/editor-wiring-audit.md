@@ -97,7 +97,7 @@ B.SplitClip复制整个Clip并改Start/End，没有处理Animation ClipIn、运�
 
 ### A10 刷新状态保存不完整，缓存释放仍有全局操作
 
-P.CaptureViewState只保存第一个ShowCurves轨道，RestoreViewState把其它轨道全部折叠；Section选择不在该view state字段里。B.BuildBindings虽保存所有展开TrackId，P随后恢复单轨道状态仍会覆盖它。提交 `bf07cf6e6` 已把Formal Curve/DopeSheet缓存清理限定到当前Surface；视野多展开恢复和完整通知仍未收口。
+P.CaptureViewState原先只保存第一个ShowCurves轨道，提交 `8b7a0e2a3` 已改为按稳定TrackId保存全部展开状态；Section选择和完整通知仍未收口。提交 `bf07cf6e6` 已把Formal Curve/DopeSheet缓存清理限定到当前Surface。
 
 修正：现有view state保存全部必要展开与稳定通道/Section选择，避免两处恢复互相覆盖；缓存清理限定当前Surface。正常关闭/重开不影响其它真实Slate使用者。数据/选择/视野变化请求重绘，runtime观察按实际变化刷新；不要依赖全窗口持续重绘掩盖缺失通知，不额外建轮询系统。对应11.11及新增11.23。
 

@@ -3357,6 +3357,9 @@ namespace Slate
                         int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
                         GenericMenu menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                        if (embeddedTimeline.CanPasteClip)
+                            menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
+                        menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
                         menu.ShowAsContext();
                         e.Use();
                     }
@@ -4002,7 +4005,13 @@ namespace Slate
 
                 //...
                 var wholeRect = new Rect(0, 0, rect.width, rect.height);
-                if ( editorBinding.IsLocked && e.isMouse && wholeRect.Contains(e.mousePosition) ) { e.Use(); }
+                if (editorBinding.IsLocked &&
+                    (e.type == EventType.MouseDown ||
+                     e.type == EventType.MouseDrag ||
+                     e.type == EventType.MouseUp ||
+                     e.type == EventType.ContextClick) &&
+                    wholeRect.Contains(e.mousePosition))
+                    e.Use();
                 editorBinding.DrawClipGUI(wholeRect);
                 if ( hasActiveParameters && editorBinding.Length > 0 ) {
                     ShowClipDopesheet(wholeRect);

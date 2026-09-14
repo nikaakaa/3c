@@ -544,8 +544,6 @@ namespace ThirdPersonCharacter.Editor.Preview
                 BtsmtlScenePlayState.Paused => "已暂停",
                 BtsmtlScenePlayState.Resetting => "重建中",
                 BtsmtlScenePlayState.Stopping => "结束中",
-                BtsmtlScenePlayState.Building => "构建中",
-                BtsmtlScenePlayState.NeedsBuild => "需要构建",
                 BtsmtlScenePlayState.Faulted => "失败",
                 _ => status.State.ToString()
             };

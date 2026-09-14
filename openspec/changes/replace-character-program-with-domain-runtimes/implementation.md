@@ -114,6 +114,7 @@
 - `69756dac4`：删除旧 Program Runtime 组件描述器。
 - `1b08dfbed`：移除 `ProgramRuntime` 组件角色身份，保留其它 Backend／Source／Solver／Snapshot 角色编号。
 - `af0986661`：删除旧 Session Program Runtime 兼容性 evaluator 和 Inspector；保留 Pipeline Inspector。
+- `aa7f6a708`：删除 Float32／Fixed `SimulationActorBinding`，不再用整角色 Program、ProgramHash 和 LayoutHash 作为角色注册 wrapper。
 
 ## 当前实现边界
 
@@ -126,7 +127,7 @@
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 或缺失／类型／版本／句柄不符的成员在资源绑定阶段失败，任务 1.4 的身份入口和 1.9 的成员合同分别保留其边界。
 - 当前 Character Host、Session、Network 和部分 Evaluate／State 链仍引用旧整角色 Program；这些是本轮删除后暴露出来的待拆接线，不是继续服务角色的正式入口。Ability 资源集合尚未装配进新的领域运行实例，后续由角色领域工厂直接组装。
 - 旧 `SimulationKernel`、Float32／Fixed `CharacterDomainRuntimeInstance` 和整角色 Program evaluator 入口已删除；Session／Pipeline／Network 的旧请求、ProgramRuntime port 和 Program identity 消费者仍是删除后暴露的待接线错误。后续角色工厂必须直接装配 Control、独立 Ability 数据集合、Timeline、Pose、Camera、Motion、Effect、Equipment 和 World owner，不恢复 Kernel、全局 Layout 或转换 Factory。Ability 数据已能由 Character Definition 直接加载为按 AbilityId 索引的集合，实际 evaluator／Host／Pass 消费仍待接通。旧 Timeline reader、播放器和场景 Host 已删除；Timeline 私有播放状态仍归 Timeline owner，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
-- Float32／Fixed Control 参数链路已改为 `CharacterPipelineDefinition.ControlParameters` → `CharacterControlRuntimeBinding` → `SimulationActorBinding`／`SimulationEvaluateRequest` → 对应 `ControlDomainRuntime`。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash；Program adoption 也拒绝改变已安装 Actor 的 Control binding。
+- Float32／Fixed Control 参数链路的旧 `SimulationActorBinding` wrapper 和 Program adoption 合同已删除；现有 `CharacterPipelineDefinition.ControlParameters`、`CharacterControlRuntimeBinding` 与 `SimulationEvaluateRequest` 仍是待接入的新角色装配材料。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash，后续由角色 Factory 直接把它交给 Control owner。
 - Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才通过主状态事务的统一入口和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract。
 - `CharacterControlMotionBinding` 保存 RootMotionCurve 的关键帧、wrap、求值模式、源秒区间、Clip 帧范围、源修订和内容 hash；Unity builder 从 Definition 的真实 MotionCurveClip 生成它，运行时不读取 Unity asset。Float32／Fixed 通过同一 `EvaluateDelta` 时间映射消费，DotRecast manifest schema 8 携带同一 codec bytes；旧 `CharacterControlMotionCatalogEmitter` 和 Control Motion 的 Program catalog 回读已删除，MovingTurn 的 SourceCurve 与 CameraRelative 输入仍由正式 contract 驱动。

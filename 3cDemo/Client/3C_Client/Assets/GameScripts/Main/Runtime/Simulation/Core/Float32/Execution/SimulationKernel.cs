@@ -17,6 +17,7 @@ namespace ThirdPersonSimulation
             Kernel = kernel ?? throw new ArgumentNullException(nameof(kernel));
             Specialization = kernel.Specialization;
             Layout.RequireProgram(Program);
+            AbilityExecutions = Float32GameplayAbilityExecutionCatalogFactory.FromProgram(Program);
             LayoutIdentity = new ProgramLayoutIdentity(
                 program.Manifest.ProgramId,
                 program.ProgramHash,
@@ -34,6 +35,7 @@ namespace ThirdPersonSimulation
         public StableHash SpecializationIdentity { get; }
         internal SimulationKernelSpecializationManifest Specialization { get; }
         internal SimulationKernel Kernel { get; }
+        internal Float32GameplayAbilityExecutionCatalog AbilityExecutions { get; }
 
         internal void Require(
             CharacterSimulationProgram program,

@@ -405,10 +405,13 @@ namespace ThirdPersonSimulation
 			ActorId actorId,
 			Float32EvaluationWorkspace workspace,
 			CharacterControlModuleCatalog controlModules,
-			CharacterControlRuntimeBinding controlRuntimeBinding)
+			CharacterControlRuntimeBinding controlRuntimeBinding,
+			Float32GameplayAbilityExecutionCatalog abilities)
 		{
 			if (controlModules == null)
 				throw new ArgumentNullException(nameof(controlModules));
+			if (abilities == null)
+				throw new ArgumentNullException(nameof(abilities));
 			m_Frame = new Float32EvaluationFrame(program, layout, actorId, workspace);
             Float32ProgramExecutionServices services = m_Frame.Services;
             Float32ProgramAccess access = services.Access;
@@ -419,7 +422,7 @@ namespace ThirdPersonSimulation
 				access,
 				m_Frame);
             m_ActionStore = actionStore;
-			m_Abilities = Float32GameplayAbilityExecutionCatalogFactory.FromProgram(program);
+			m_Abilities = abilities;
             m_Input = new Float32InputRuntime(
                 access,
                 m_Frame);

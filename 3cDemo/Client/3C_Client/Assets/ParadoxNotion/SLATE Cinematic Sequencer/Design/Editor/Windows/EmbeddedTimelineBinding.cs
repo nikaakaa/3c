@@ -28,7 +28,6 @@ namespace Slate
         void DeleteClips(IReadOnlyList<IEmbeddedTimelineClipBinding> clips);
         void SplitClip(IEmbeddedTimelineClipBinding clip, int frame);
         void MoveTrack(IEmbeddedTimelineTrackBinding track, int index);
-        void MoveClip(IEmbeddedTimelineClipBinding clip, int startFrame);
         void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, int frame);
         void DeleteSection(IEmbeddedTimelineSectionBinding section);
         void AddSection(int frame);

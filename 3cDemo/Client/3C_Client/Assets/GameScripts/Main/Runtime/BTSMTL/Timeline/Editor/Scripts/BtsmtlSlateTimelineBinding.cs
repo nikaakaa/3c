@@ -305,13 +305,6 @@ namespace BTSMTL.Timeline.Editor
             }, "Reorder Timeline Track");
         }
 
-        public void MoveClip(IEmbeddedTimelineClipBinding clip, int startFrame)
-        {
-            if (!(clip is BtsmtlTimelineClipBinding formalClip))
-                return;
-            formalClip.StartTime = Mathf.Max(0, startFrame) / (float)FrameRate;
-        }
-
         public void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, int frame)
         {
             if (IsReadOnly || !(section is BtsmtlTimelineSectionBinding formalSection))

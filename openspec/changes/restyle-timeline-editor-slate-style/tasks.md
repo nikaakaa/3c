@@ -106,7 +106,7 @@
 - [x] 11.5 D3/D7：原Track/Clip/Section菜单和排序释放直接提交正式命令；Section不依赖directorGroup，显示边界不保存成Section，删除无正式合同的Actor/循环/任意组件创建命令。真实窗口验收仍未完成。
 - [ ] 11.6 D5：原CurveRenderer/DopeSheetRenderer/参数工具只接正式Timeline-local曲线、编辑时间和事务通知，保留原key/切线/缩放算法；删除proxy假字段，保留局部Weight/Ease；Motion源XYZ/Yaw仅只读/源导航，源区间及映射消费曲线owner的typed接线
 - [ ] 11.7 D6：原ActionClipInspector通用控件参数化并通过真实serialized owner接入Unity已有Inspector；普通字段走Read/Configure，选择不写代理context，不增加假Actor、假Unity Object或Timeline右侧自制面板
-- [ ] 11.8 D7：在现有Session/TimelineData mutation链收口手势、字段、菜单的一次提交、完整业务校验、source revision反馈与该次owner范围失败恢复；组件Undo退出BTSMTL编辑，选择/滚动不产生事务
+- [x] 11.8 D7：在现有Session/TimelineData mutation链收口手势、字段、菜单的一次提交、完整业务校验、source revision反馈与该次owner范围失败恢复；组件Undo退出BTSMTL编辑，选择/滚动不产生事务。真实窗口验收仍未完成。
 - [x] 11.9 D8：原标尺/游标/步进/局部曲线吸附使用正式帧上下文，编辑不依赖Cutscene/Actor；保留原Runtime/History与Scene Play归属，实际采用读取领域报告，删除BTSMTL的Slate采样副作用，不擅自新增Play或实现领域工厂。真实窗口验收仍未完成。
 - [x] 11.10 D2/D8：正式入口切到无组件binding并删除BuildProjection/CreateChild/隐藏宿主、BtsmtlSlateGroup/Track/ActionClip及组件字典/扫描/销毁；删除无消费者的EditorModel与过时接口/meta，真实Slate组件与正式Actor/Camera资源不在删除范围
 - [x] 11.11 D5/D7：原选择、曲线缓存与Undo订阅按窗口/正式ID恢复和释放，改为可解除回调，关闭丢弃未提交草稿但不改已保存数据；原native/BTSMTL共用Renderer，不互相清空状态。正式 binding 刷新后的选择与曲线 cache 已按 Surface/Clip/参数 identity 恢复；真实关闭和未提交手势仍待主 Unity Editor 验收。

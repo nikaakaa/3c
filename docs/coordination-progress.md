@@ -1,7 +1,91 @@
 # 3C 工作协调进展
 
-维护人：工作协调窗口。最近更新：2026-09-06 11:56:12 +08:00（北京时间，以事件更新）。
+维护人：工作协调窗口。最近更新：2026-09-14（PARALLEL-20260914-DOMAIN-01 审阅；未派工）。
 本文件是推进记录，由协调窗口单独维护；不替代业务 spec，不由功能任务顺手修改或并入功能 MR。
+
+## 2026-09-14：PARALLEL-20260914-DOMAIN-01 审阅
+
+状态：`REVIEWED_AWAITING_USER_DISPATCH_DECISION`。维护窗口：`01a0962e-319b-7c31-997d-01cd01230536`。
+
+本节响应用户要求的先审阅后决定分派，只记录可行分工和实际冲突。没有派发任务、索取回执、启动实现、修改业务代码或执行 Unity/Build。下方2026-09-06章节保留历史，不作为本轮消息路由和任务配对依据。本轮沿用用户已允许的实现层临时阻塞协商，不因此向规划窗口发送日常消息。
+
+审阅来源为 [领域运行设计 D9—D13](../openspec/changes/replace-character-program-with-domain-runtimes/design.md)，提报编号 `PARALLEL-20260914-DOMAIN-01`。代码观察点为共享工作树 `fb5affe196d1cf0cb0fff0728f02e7a9e27fdee6` 附近，包含并行修改；这是读取时证据，不代表运行或最终产物通过。
+
+### 结论
+
+建议复用已有任务，把 Timeline 直接内容运行、Pose 原生运行分别交回相应领域，原主实现集中角色／技能／状态／网络公共接线。方向符合 D9—D13，不需要新增窗口，也不需要重新选择已经批准的运行路线。但当前文档不能直接视为完成交接：Timeline 接收任务原范围主要是 Slate 编辑，Pose 接收规划主要是只读输入；需要用户确认它们承接新增 Runtime 范围，以及下列共享文件和接口归属。
+
+现有独立 Ability 前端、两个数值目标、领域拆分类、原生作者 API、曲线源迁移和已正确算法均保留。拆分不表示领域 Runtime 已实现，也不重新打开已完成的只读 Blackboard 或运动源迁移清单。
+
+### 既有任务定位与接收范围
+
+| 实现线 | 既有规划／实现 | 审阅结论 |
+| --- | --- | --- |
+| 角色／技能公共核心 | 收窄Locomotion与Skill编译边界：规划 `01a09a5f-7316-79f2-9058-1d2cce37e801`；实现 `01a09a5f-8d64-7c11-a461-7889623b7459` | 保留角色 Host／Factory、Ability 最终数据／provider、角色级状态与事务、网络快照／manifest、共享产物及总 Program 删除。继续作为本轮临时实现协调入口。 |
+| Timeline 直接运行 | Timeline作者编辑收口（规划窗口）`01a095ac-88a4-7bd3-abbf-197b9058c1ca`；既有实现 `timeline`：`01a089db-81e3-7a73-ae52-82ef95b744d4` | 任务存在和既有配对可复用；现行 Slate 设计不等于已授权完整 Timeline Runtime。建议承接 D13 指定的直接内容、portable 数据、播放／取消／TreeClip 调用及私有状态；UI 原职责保持。需登记明确接收范围后再分派。 |
+| Pose 原生运行 | 规划 PoseGraph：`01a09594-1751-7512-b8c0-08b04185055b`；PoseGraph：`01a081f3-46f4-7c91-8930-73923ff7950b` | 可复用已有配对；只读输入的完成记录保持。建议新增接收原生 Graph／Node／Port／Connection、两阶段求值、实例／缓冲生命周期、节点观察与旧 Image 专属链清理，不让主实现同时重做。 |
+| Camera | 摄像机规划：规划 `01a098bd-a5c1-7283-8aab-59736bab97f5`；实现 `01a098bd-bbdf-7d50-b1cc-95339d3bbf8d` | 原 Profile／资源准备、Camera 绑定与采用、Timeline.Camera.cs、镜头求解及来源映射继续由此任务负责。主实现只装配与消费。 |
+| 运动源／C# authoring | C# authoring：规划 `01a09634-fc59-7192-8cda-25fdd142b82d`；实现 `01a09635-2024-74b2-98b4-28c1e17d548b` | `unify-timeline-motion-curve-source` 已归档。复用正式 RootMotionCurveAsset、Clip 区间／Warp／时间映射及显式生成 API，不再派一轮源迁移。未来需要修改其共享字段时仍按此既有归属处理。 |
+| 场景预览 | 既有任务 `预览`：`01a08127-0be6-7f52-b555-3d36121c7a73` | 本轮未找到另一个可确认的独立规划配对；不捏造配对、不新建窗口。原预览任务维护运行协调器；Timeline 规划只维护共同联动文档，不能据此接管预览运行实现。 |
+| Foot／IK | zzz-pik（规划窗口）`01a0966b-6672-7e80-9e39-590895f98ab7`；检查 IK 当前状态 `01a08159-e71a-7f31-afbb-2c19cd8e7d5a` | 继续拥有正在实施的 Foot／PIK 算法、状态和源输入要求。Pose 迁移接入其当前正式接口，不以“保留旧 Constraint”冻结已获准替换的算法，也不另存一套 IK 状态。 |
+
+以上为已有任务定位及建议分工，不是各接收方已经同意或开始实施的记录。
+
+### 代码与文档中确认的冲突
+
+| 编号 | 证据 | 业务影响与处理建议 |
+| --- | --- | --- |
+| R1 接收范围尚未写明 | `restyle-timeline-editor-slate-style/proposal.md`以复用 Slate UI 为目标；`refine-pose-graph-readonly-blackboard/design.md`以只读输入为目标 | 不能因任务名字含 Timeline／Pose 就认为完整 Runtime 已在其任务内。用户确认后将 D13 接收项登记到已有领域规划；每项只有一份可勾选实施清单，主方案保留责任指针和公共集成项。 |
+| R2 Timeline 溢出到技能编译 | `Editor/CharacterSimulation/Compilation/Skills/BtsmtlSkillTimelineCompiler.cs:24`的 Emit 同时调用 TimelineSemanticEmitter 和技能 TreeClip 编译回调 | 此文件不是纯 Timeline 内部文件。建议主实现唯一写入，保留“调用 Timeline／独立 TreeClip 技能入口”的技能职责；Timeline 任务移出自身轨道／Clip发射，并提供直接内容 Runtime。不能双方各删半个共同入口。 |
+| R3 非 Skill Timeline 准备结果缺项 | D10 表只有 Ability、Pose、Camera、Motion；D13 又要求 Timeline 支持技能和非 Skill 调用 | 补 Timeline 自己的 Prepare／CreatePlayback 请求和结果，不把独立内容塞进 Ability Prepare。Ready 应绑定内容 identity／revision、NumericTarget、外部资源及 TreeClip 服务；缺少依赖精确失败，不依赖角色总包。 |
+| R4 播放状态与角色事务边界需固定 | `Runtime/BTSMTL/Timeline/Runtime/Float32TimelinePlayback.cs`仍以 Float32TimelineProgramPlan 准备，Advance 路径存在 CommitFrame；`Runtime/Simulation/Core/Execution/TimelineControlRuntime.cs`仍通过 target 读取 Timeline section／time | Timeline 拥有 cursor、区间／loop、活动 Clip 与播放私有状态；角色核心拥有 Step 的提交／丢弃及完整角色快照。直接 Runtime 必须明确暂存输出、接受提交、丢弃失败帧和取消传播，不能在角色提交前直接发布 Gameplay 副作用。非 Skill 调用也消费同一 Runtime 的正式生命周期，不另做播放器。 |
+| R5 Pose 与角色装配共写风险 | `Runtime/Character/Pipeline/Animation/Contracts/Pose/CharacterPoseCanvasGraph.cs:56`仍明确拒绝原生运行；D13将节点与执行模块交 Pose，但主实现仍承担表现装配和总 Projection 删除 | Pose 独占图与其内部执行迁移，主实现独占共享角色装配壳。准备／求值／提交／丢弃／停止接口先在文档写明，Source／Constraint／Final Publication仍各自唯一；不凭目录名删除 IK 算法、资源服务或共享帧提交代码。 |
+| R6 公共核心尚不能被当作最终新接口 | `Float32CharacterDomainRuntimeInstance.cs`仍用 request.Program／ExecutionLayout 创建旧 Workspace／OperationEvaluator；`GameplayAbilityDataAsset.Load`及 Fixed 对应入口仍返回 CharacterSimulationProgram；`GameplayAbilityProgramContracts.cs:752`的 RequireBinding仍只比较 Kind／ProviderIdentity | D12的Q1/Q3/Q4本轮仍可在源码确认。主实现继续移除整角色载体、提供真实成员／类型／版本与 typed 服务绑定；Timeline／Pose不能为了接入复制旧 Program 适配器。D12的Q2四个无条件角色状态声明，本轮在 Ability 前端目录直接搜索未再命中，不能照抄为仍在原位置；其最终角色级所有权仍归主实现追踪，不由其它任务重复补做。 |
+| R7 准备结果与采用结果发布者存在表述歧义 | D10先要求领域 owner 实际安装后发布 AdoptedResult，又说“本任务拥有……这些装配调用与结果发布” | 明确由领域 owner 确认实际安装版本／实例／generation，主实现只装配并汇集该事实；预览读取，不自己制造版本。Camera 不以 Pose Reset 代替采用，Motion新版本不暗改正在执行的技能轨迹。 |
+| R8 历史路径和规范未完全跟进 | 活跃文档仍引用已归档曲线源路径；旧 Pose／预览文档还有 Image、编译句柄和旧运行入口描述 | 归档说明仅追溯；新开发读取现行 spec/API。用户确认分派后由各文档 owner明确替代范围，保留已完成业务事实。不能按旧“未完成”段恢复 Character Build、Image 或旧 Document。 |
+
+源码路径在本节均相对 `3cDemo/Client/3C_Client/Assets/GameScripts/Main/`；读取期间发生的后续提交不自动包含在本次判断中。
+
+### 交接必须写清的接口
+
+以下为需要在对应领域文档固定的职责，不是本轮新增代码类型或验证任务。
+
+- Timeline内容：唯一只读轨道／Clip数据，portable序列化与Unity authoring使用同一字段语义；只有稳定资源／技能引用，无Unity对象、IR或操作码。内容identity与修订、外部依赖、源区间和业务顺序明确。Float32／Fixed仅做数值和资源绑定，不复制片段逻辑。
+- Timeline播放：精确调用身份、内容版本、NumericTarget、资源绑定及核心提供的TreeClip技能调用服务进入Prepare/Create；Advance产出本次待提交结果，正式提交或丢弃由调用方Step边界决定。Stop/取消必须关闭本实例窗口和TreeClip，有限动画尾部仍归Slot。Timeline给出自身分型Capture/Restore，核心组合角色快照；同一状态不双份保存。
+- Pose实例：Graph／Rig／资源及EventGraph同次typed输入进入准备；每Actor/子图调用实例隔离；沿原表现时钟完成source demand准备、唯一Animancer Barrier、姿态/约束求值与最终提交。每阶段缓存避免重复推进。Pose内部失败状态不提交；网络重放不推进Pose，也不把Pose对象加入角色快照。
+- 实际采用：领域准备成功不等于已安装。Ability活动实例固定版本；Pose替换明确重置历史；Camera返回自身绑定采用结果；Motion只在正式创建/重新准备时生效。主实现和预览都不计算假ProgramEpoch或维护第二份状态真相。
+- 观察：领域提供Node/Port/Clip、调用实例、求值/播放身份及已完成结果；预览只管理选择、会话控制和订阅，不能为了旧SourceMap重新编译隐藏Pose Image。
+
+### 建议的唯一文件写入归属
+
+| 文件或符号范围 | 建议唯一写入者 | 其它领域怎样配合 |
+| --- | --- | --- |
+| CharacterPipelineHost；Float32/Fixed CharacterDomainRuntimeInstance/Factory；角色状态／Step／codec；网络checkpoint／manifest；共享Program/artifact；Character Build编排 | 原主实现 | 领域提供接口、私有状态与准确调用需求；不同时改Host/总快照。 |
+| BtsmtlSkillTimelineCompiler及共享技能编译/调用入口 | 原主实现 | Timeline提供直接内容和调用合同；TreeClip的技能图编译与执行服务仍由核心提供。 |
+| Timeline专属内容/播放实现、Float32TimelinePlayback/FixedTimelinePlayback、TimelineControlRuntime及Timeline专属发射适配 | Timeline运行接收任务 | 涉及通用Evaluator/Workspace/Program codec的修改交主实现一次集成；不把整个Simulation目录划给Timeline。 |
+| CharacterPoseCanvasGraph/Node/Connection/NativePorts；Pose内部执行及Image专属Compiler/Worker链 | Pose接收任务 | 先划清“Image专属”与已有Source/Constraint/算法服务；保留当前正确节点行为和资源数据。 |
+| CharacterPresentationRuntime、CharacterSimulationPresentationRuntime、角色表现工厂、旧总Projection挂接 | 原主实现 | Pose/Camera/EventGraph给出必要接口，由主实现接线；内部算法模块各归原owner。 |
+| Camera Builder/payload、Camera Prepare/Adopt与Timeline.Camera.cs | Camera原任务 | 核心只调用绑定，Timeline只承载相应正式片段；不替Camera解释效果资源。 |
+| RootMotionCurveAsset、Timeline.MotionCurve.cs、Timeline.MotionWarp.cs、源时间映射及相应typed配置 | 运动源原owner | 已归档迁移不重做，Timeline Runtime及Control Motion消费同一映射。 |
+| ScenePlay协调器与观察生命周期 | 预览原任务 | 消费真正的领域准备/采用和观察，不创建另一套运行实例或资源准备器。 |
+| Slate源码、编辑Session/界面适配 | Timeline UI原owner | 与运行接收任务可以是同一个现有任务，但UI和Runtime范围分别登记。 |
+| 公共C#代码输出/生成入口与领域适配公共合同；同批Corin生成源码/Timeline资产迁移 | C# authoring原owner | 图结构变更消费Pose/Timeline正式API；资源映射按Camera提供的精确内容汇入，不各自重建覆盖。 |
+
+本表是待用户确认的具体分工。已有文件内混合多个领域时，按上表确定一个修改者；不能把“各自负责自己的部分”解释成可以同时写同一文件。后续若拆开混合文件，应让现有有效实现迁出而非复制一份。
+
+### 依赖、取舍与待用户决定
+
+推荐采用已有Timeline/Pose任务承接两条运行线，主实现保留公共核心。这样领域代码可以并行，代价是必须明确上述提交/恢复、TreeClip调用和角色装配边界。另一可行方式是主实现继续端到端完成Runtime，原任务只提供领域API：共享接入较集中，但Timeline/Pose仍会串行挤在主实现，不能实现用户希望的职责拆分。本轮推荐前者，不新增任务。
+
+依赖关系是：核心与领域先固定输入/输出和私有状态；Timeline/Pose直接推进域内内容/节点；核心接一次Host/Step/快照/资源装配；预览和C#输出接同一正式接口；最后按各自消费者迁移情况删除旧Program/Image/发射链。接口未闭合时可以明确未完成，不补临时空实现、兼容开关或加载期Compiler。
+
+用户需要决定的是：是否将Timeline Runtime正式加给既有Timeline配对、将Pose原生Runtime正式加给既有Pose配对，并采用本节共享文件写入归属。不是重新审批D9已经确定的Timeline直接运行或Pose原生方向。
+
+编译/Unity刷新建议由已指定的临时协调实现窗口 `01a09a5f-8d64-7c11-a461-7889623b7459` 统一组织；编译期间暂停源码写入，不新增锁服务或验证流程。此项只是后续分工建议，本轮没有触发编译或发送停写通知。各实现仍小步中文提交，不夹带其它任务改动；不新增测试或验证tasks。
+
+文档只记录审阅结果，不改变其它change的勾选、文件所有权或执行授权。没有发送COORDINATION_DECISION、DOCUMENT_UPDATED或任何回执。用户后续明确分派时再按既有窗口发送一次必要通知。
+
+---
 
 ## 协作方式：文档为准
 

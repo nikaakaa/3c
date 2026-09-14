@@ -171,3 +171,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 本步独立 Runtime 编译通过，0 errors；首次编译发现并修正的是新增合同自身的引用类型判断，不涉及共享工程错误。编译后已执行 `dotnet build-server shutdown`。
 - `CharacterPoseNativeSourceDemand` 拒绝同一图调用内同一节点的重复 Source request，保证一个播放器/资源准备只对应一个节点 demand，不恢复旧全图 Operation index 消重。
 - `CharacterPoseNativeGraphRuntime.PrepareChild` 为 State/ControlRig/Linked Pose 子图生成同一资源、Rig 和 EventGraph 输入合同下的独立准备请求；子图后续通过独立 `InstanceId/ResetGeneration` 采用，不复制父图执行计划。
+- `CharacterPoseNativeFrameInput` 在合同入口冻结动作命令数组，保证 Prepare 到 Evaluate 期间使用同一帧动作输入；Body/Facts/EventGraph/Pose 数据仍由各自只读合同持有，不复制整份姿态缓冲。

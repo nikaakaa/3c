@@ -213,17 +213,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             OutputPlan plan = CreatePlan(context);
             Dictionary<string, HashSet<string>> namespaceSymbols =
-                BuildNamespaceSymbols(context.Usings);
+                BuildNamespaceSymbols(new[] { "System" }.Concat(context.Usings));
             var files = new List<BtsmtlAuthoringCodeSourceFile>
             {
-                CreateFile(entryPath, "Root", true, TrimHeader(BuildRootFile(context, plan), namespaceSymbols))
+                CreateFile(entryPath, "Root", true, TrimHeader(BuildRootFile(context, plan), context.Request.NamespaceName, namespaceSymbols))
             };
             if (plan.Root.HasStatements)
                 files.Add(CreateFile(
                     Path.Combine(outputDirectory, "Root.cs"),
                     "Root",
                     false,
-                    TrimHeader(BuildRootSectionFile(context, plan), namespaceSymbols)));
+                    TrimHeader(BuildRootSectionFile(context, plan), context.Request.NamespaceName, namespaceSymbols)));
             foreach (SectionPlan section in plan.Sections)
             {
                 if (string.Equals(section.Name, "Root", StringComparison.Ordinal) || !section.HasStatements)
@@ -235,7 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     filePath,
                     section.Name,
                     false,
-                    TrimHeader(BuildSectionFile(context, plan, section), namespaceSymbols)));
+                    TrimHeader(BuildSectionFile(context, plan, section), context.Request.NamespaceName, namespaceSymbols)));
             }
             return files;
         }
@@ -701,6 +701,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         static string TrimHeader(
             string sourceCode,
+            string generatedNamespaceName,
             IReadOnlyDictionary<string, HashSet<string>> namespaceSymbols)
         {
             string[] lines = sourceCode.Replace("\r\n", "\n").Split('\n');
@@ -729,9 +730,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     continue;
                 }
                 string namespaceName = line.Substring("using ".Length).TrimEnd(';');
-                if (namespaceName == "System" ||
-                    namespaceName == "ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration" ||
-                    HasNamespaceSymbol(namespaceName, identifiers, namespaceSymbols))
+                if (string.Equals(namespaceName, generatedNamespaceName, StringComparison.Ordinal))
+                    continue;
+                if (HasNamespaceSymbol(namespaceName, identifiers, namespaceSymbols))
                     result.Add(line);
             }
             result.AddRange(lines.Skip(namespaceIndex));

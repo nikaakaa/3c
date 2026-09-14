@@ -495,7 +495,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             BodyFrame = bodyFrame;
             FactFrame = factFrame;
             ParameterFrame = parameterFrame;
-            ActionCommands = actionCommands;
+            var commands = new ActionAnimationPlaybackCommand[actionCommands.Count];
+            for (int i = 0; i < commands.Length; i++)
+                commands[i] = actionCommands[i];
+            ActionCommands = commands;
         }
 
         internal ActorId ActorId { get; }

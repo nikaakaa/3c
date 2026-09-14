@@ -4317,7 +4317,6 @@ namespace Slate
                 GUI.color = Color.white;
                 if (editorBinding.FormalClip != null)
                 {
-                    GUI.Label(dopeRect, editorBinding.Info, Styles.centerLabel);
                     return;
                 }
                 DopeSheetEditor.DrawDopeSheet(action.animationData, action, dopeRect, 0, action.length, false);

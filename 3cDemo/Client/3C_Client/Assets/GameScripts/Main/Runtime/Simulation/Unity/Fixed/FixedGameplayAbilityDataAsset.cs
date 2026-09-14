@@ -48,41 +48,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public FixedGameplayAbilityExecutionData Load(GameplayAbilityProviderBinding providerBinding)
         {
-            if (m_CanonicalArtifact == null || m_CanonicalArtifact.Length == 0)
-                throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' has no compiled artifact.");
-            ThirdPersonSimulation.Fixed.CharacterTargetProgramArtifactLoader.RequireDefinitionGuid(m_AbilityGuid);
-            if (string.IsNullOrEmpty(m_AbilityId))
-                throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' has no Ability identity.");
-            StableHash bytesHash = ThirdPersonSimulation.Fixed.CharacterTargetProgramArtifactLoader.ComputeBytesHash(m_CanonicalArtifact);
-            if (!bytesHash.IsValid || !string.Equals(bytesHash.ToString(), m_CanonicalBytesHash, StringComparison.Ordinal))
-                throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' canonical bytes hash is invalid.");
-            if (!string.Equals(m_NumericProfileId, FixedSimulationNumericProfile.Value.Id.Value, StringComparison.Ordinal) ||
-                m_TargetAbiVersion != FixedSimulationNumericProfile.Value.AbiVersion.Value)
-                throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' Numeric Target is not Fixed.");
             var root = new SimulationProgramRootDescriptor(
                 (SimulationProgramRootKind)m_RootKind,
                 m_RootIdentity,
                 m_EntryIdentity,
                 m_ContentIdentity);
-            RequireMetadataRoot(root);
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = ThirdPersonSimulation.Fixed.CharacterSimulationProgramCodec.ReadArtifact(
+            return ThirdPersonSimulation.Fixed.FixedGameplayAbilityExecutionDataLoader.Load(
                 m_CanonicalArtifact,
-                new ThirdPersonSimulation.Fixed.ProgramLoadExpectation(
+                new ThirdPersonSimulation.Fixed.FixedGameplayAbilityExecutionDataLoadExpectation(
+                    m_AbilityGuid,
+                    m_AbilityId,
                     m_CompilerVersion,
-                    new OperationSetVersion(m_OperationSetVersion),
-                    new ProgramRevision(m_SourceRevision),
-                    new SemanticHash(new StableHash(m_SemanticHash)),
-                    FixedSimulationNumericProfile.Value,
-                    root));
-            RequireProgramMetadata(program, root);
-            program.AbilityPrograms.Require(new CharacterSkillId(m_AbilityId));
-            GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract
-                .Create(program.CatalogEntries, index => program.Constants[index].Int32);
-            providerContract.RequireBinding(providerBinding);
-            return FixedGameplayAbilityExecutionData.FromProgram(
-                program,
-                new CharacterSkillId(m_AbilityId),
-                providerContract);
+                    m_OperationSetVersion,
+                    m_SourceRevision,
+                    m_SemanticHash,
+                    m_NumericProfileId,
+                    m_TargetAbiVersion,
+                    m_ProgramId,
+                    m_AbilityDataHash,
+                    m_AbilityLayoutHash,
+                    m_CanonicalBytesHash,
+                    root),
+                providerBinding);
         }
 
 #if UNITY_EDITOR
@@ -112,24 +99,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ContentIdentity = program.Manifest.Root.ContentIdentity;
         }
 #endif
-
-        void RequireMetadataRoot(SimulationProgramRootDescriptor root)
-        {
-            if (!root.IsAbility || !string.Equals(root.RootIdentity, m_AbilityGuid, StringComparison.Ordinal) ||
-                !string.Equals(root.EntryIdentity, $"ability:{m_AbilityId}", StringComparison.Ordinal))
-                throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' root metadata is invalid.");
-        }
-
-        void RequireProgramMetadata(ThirdPersonSimulation.Fixed.CharacterSimulationProgram program, SimulationProgramRootDescriptor root)
-        {
-            if (!program.Manifest.Root.Equals(root) ||
-                !string.Equals(program.Manifest.ProgramId.Value, m_ProgramId, StringComparison.Ordinal) ||
-                !string.Equals(program.Manifest.OperationSetVersion.Value, m_OperationSetVersion, StringComparison.Ordinal) ||
-                !string.Equals(program.Manifest.SemanticHash.ToString(), m_SemanticHash, StringComparison.Ordinal) ||
-                !string.Equals(program.ProgramHash.ToString(), m_AbilityDataHash, StringComparison.Ordinal) ||
-                !string.Equals(program.LayoutHash.ToString(), m_AbilityLayoutHash, StringComparison.Ordinal))
-                throw new InvalidOperationException($"Fixed Gameplay Ability Data asset '{name}' metadata does not match its canonical artifact.");
-        }
 
         static string RequireAbilityId(string entryIdentity)
         {

@@ -57,17 +57,38 @@ namespace BTSMTL.Timeline.Editor
         public int CurrentFrame
         {
             get => m_CurrentFrame;
-            set => m_CurrentFrame = Mathf.Clamp(value, 0, Timeline.MaxFrame);
+            set
+            {
+                int nextFrame = Mathf.Clamp(value, 0, Timeline.MaxFrame);
+                if (m_CurrentFrame == nextFrame)
+                    return;
+                m_CurrentFrame = nextFrame;
+                RequestRepaint();
+            }
         }
         public float ViewTimeMin
         {
             get => m_ViewTimeMin;
-            set => m_ViewTimeMin = Mathf.Min(value, ViewTimeMax - 1f / FrameRate);
+            set
+            {
+                float nextValue = Mathf.Min(value, ViewTimeMax - 1f / FrameRate);
+                if (Mathf.Approximately(m_ViewTimeMin, nextValue))
+                    return;
+                m_ViewTimeMin = nextValue;
+                RequestRepaint();
+            }
         }
         public float ViewTimeMax
         {
             get => m_ViewTimeMax;
-            set => m_ViewTimeMax = Mathf.Max(value, ViewTimeMin + 1f / FrameRate);
+            set
+            {
+                float nextValue = Mathf.Max(value, ViewTimeMin + 1f / FrameRate);
+                if (Mathf.Approximately(m_ViewTimeMax, nextValue))
+                    return;
+                m_ViewTimeMax = nextValue;
+                RequestRepaint();
+            }
         }
         public bool IsReadOnly => m_ReadOnly || m_Session.IsReadOnly;
         public IReadOnlyList<IEmbeddedTimelineGroupBinding> Groups => m_Groups;

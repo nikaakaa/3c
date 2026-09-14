@@ -5,6 +5,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Reflection;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Slate
 {
@@ -18,6 +19,9 @@ namespace Slate
 
         private static Dictionary<IAnimatableData, CurveRenderer> cache = new Dictionary<IAnimatableData, CurveRenderer>();
         private static Dictionary<object, CurveRenderer> embeddedCache = new Dictionary<object, CurveRenderer>();
+        public static object CreateEmbeddedOwner(object scope, string identity) {
+            return new EmbeddedOwnerKey(scope, identity);
+        }
         public static void DrawCurves(IAnimatableData animatable, IKeyable keyable, Rect posRect, Rect timeRect) {
             CurveRenderer instance = null;
             if ( !cache.TryGetValue(animatable, out instance) ) {
@@ -145,9 +149,22 @@ namespace Slate
             }
 
             public void SetRawCurves(AnimationCurve[] curves, Action onCurvesUpdated) {
+                var sameCurves = SameCurves(this.curves, curves);
                 this.curves = curves;
                 rawOnCurvesUpdated = onCurvesUpdated;
-                RefreshCurves();
+                if (!sameCurves)
+                    RefreshCurves();
+            }
+
+            static bool SameCurves(AnimationCurve[] left, AnimationCurve[] right) {
+                if (ReferenceEquals(left, right))
+                    return true;
+                if (left == null || right == null || left.Length != right.Length)
+                    return false;
+                for (int index = 0; index < left.Length; index++)
+                    if (!ReferenceEquals(left[index], right[index]))
+                        return false;
+                return true;
             }
 
             public void Init() {
@@ -431,6 +448,29 @@ namespace Slate
                 }
             }
 
+        }
+
+        readonly struct EmbeddedOwnerKey : IEquatable<EmbeddedOwnerKey> {
+            readonly object scope;
+            readonly string identity;
+
+            public EmbeddedOwnerKey(object scope, string identity) {
+                this.scope = scope;
+                this.identity = identity ?? string.Empty;
+            }
+
+            public bool Equals(EmbeddedOwnerKey other) {
+                return ReferenceEquals(scope, other.scope) &&
+                       string.Equals(identity, other.identity, StringComparison.Ordinal);
+            }
+
+            public override bool Equals(object obj) {
+                return obj is EmbeddedOwnerKey other && Equals(other);
+            }
+
+            public override int GetHashCode() {
+                return unchecked((RuntimeHelpers.GetHashCode(scope) * 397) ^ StringComparer.Ordinal.GetHashCode(identity));
+            }
         }
     }
 }

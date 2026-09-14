@@ -510,7 +510,9 @@ namespace Slate
             CutsceneEditorSurface currentEditor = CutsceneEditorSurface.current;
             CurveEditor.DrawCurves(
                 new[] { selectedParameter.Curves[0].Curve },
-                selectedParameter.Curves[0],
+                CurveEditor.CreateEmbeddedOwner(
+                    currentEditor,
+                    string.Concat(clip.AuthoringId, ":", selectedParameter.ParameterId)),
                 curveRect,
                 finalTimeRect,
                 () => currentEditor?.ApplyEmbeddedCommand(() => { }, "Edit Timeline Curve"));

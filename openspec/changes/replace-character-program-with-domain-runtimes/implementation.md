@@ -4,7 +4,7 @@
 
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
-- OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.9—1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。
+- OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.9—1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。2.6 已开始收敛：本步完成 Input request 的角色状态分区，但控制机器内部状态、技能调用帧、目标、效果、装备与跨 Tick MotionWarp 的统一 Capture／Restore 尚未闭合。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
 ## 已提交的小步
@@ -63,6 +63,7 @@
 - `f01846176`：删除 `runtime:handle-allocator` Program 槽和访问策略；Action、Gameplay Effect、Equipment 共用角色事务的句柄分配、Capture、Restore 与提交，状态 codec 和 Server Authority checkpoint 同步携带句柄状态并升级格式版本。
 - `56a0af13f`：删除没有模拟运行时消费者的 RandomState Program 槽、语义校验和空的 Runtime／Random owner，并升级 Float32／Fixed 程序格式；Unity 普通 RandomNode 不属于该模拟状态链，未做改动。
 - `7ee1c2f4e`：删除角色级 `AbilityExecutionState` Program 槽、value kind 和旧 `CharacterStateValue` 聚合封装；ActionStateStore 通过角色事务读写 Ability 执行帧聚合，局部 Runnable／StateMachine／Timeline／Blackboard 状态仍由 `GameplayAbilityExecutionSlotMap` 映射，状态 codec 与 Server Authority checkpoint 同步保存该分区。
+- `b57940900`：删除 Input request 的 Program state slot、semantic 和 Float32／Fixed 重复状态结构；请求身份只保留在 Program catalog，值按排序后的 request identity 由 `CharacterSimulationState` 持有，Input runtime 通过角色状态事务完成读取、写入、消费与 savepoint／Restore；状态 codec、Server Authority full／delta checkpoint 和格式版本同步升级。
 
 ## 当前实现边界
 
@@ -88,6 +89,7 @@
 - `HandleAllocator` 现在由 `CharacterSimulationState.HandleAllocator` 持有，`Float32HandleAllocator`／`FixedHandleAllocator` 只调用角色事务的递增、Capture、Restore；Action、Gameplay Effect 和 Equipment 的句柄来源保持同一条事务链，Gameplay Effect 的局部失败恢复仍通过显式 allocator Capture／Restore 回到该事务。角色状态 codec、Server Authority full／delta checkpoint 和 checkpoint hash 都携带该字段，构建诊断标记 `HandleAllocator=external`。
 - `RandomState` 没有实际模拟运行时读写者，已从全局 Emitter、ProgramStateSemantic 和 owner 枚举中删除；随机节点仍可作为普通 Unity 节点存在，但不会借用角色模拟状态伪装成正式 RNG 服务。
 - `AbilityExecutionState` 现在由 `CharacterSimulationState.AbilityExecutionState` 持有，`GameplayAbilityExecutionManager` 的 Add／Remove／generation／局部值写入都通过 Float32／Fixed 主状态事务保存；`GameplayAbilityExecutionSlotMap` 只负责识别需要按 Ability 实例隔离的局部 Program 状态，不再提供角色级聚合存储。状态 codec 额外编码执行帧聚合，Server Authority checkpoint 使用独立 bytes 载荷；这仍不是 1.10 要求的独立 Ability execution data，Ability 资源本身仍从旧 Program 容器读取。
+- Input request 由 Program catalog 只提供稳定 identity；`ProgramExecutionLayout` 按 identity 建立排序后的 request 列表，`CharacterSimulationState` 保存每个请求的 request id、sequence、source／expire tick、priority 和 consumed 状态。Float32／Fixed 的 Input runtime 不再持有自己的状态或 Input policy，而是经同一角色状态事务读写；事务的 savepoint／Restore、提交和清理都与其它角色分区共用。请求 codec 使用共享核心合同，角色状态 codec 与 Server Authority checkpoint 按同一字段顺序携带该分区，旧 Program state identity 和 payload format 由版本升级拒绝。这样 Input 的配置身份仍来自正式 Program catalog，运行值只有一个角色状态 owner；但 2.6 仍未完成，因为统一角色 Step 还没有把所有剩余领域分区的跨 Tick 状态一次性纳入同一套完整 Capture／Restore 合同。
 
 ## 编译证据与阻断
 
@@ -113,6 +115,7 @@
 - 2026-09-14 HandleAllocator 迁移后，Portable `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecast.csproj` 为 2 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 使用 `-m:1` 编译成功，为 56 个既有 warning、0 errors。Editor 默认并行编译曾两次出现 MSBuild 子节点提前退出（MSB4166），没有产生 C# 错误；串行重跑成功。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 2026-09-14 RandomState 清理后，Portable `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Editor.csproj` 使用 `-m:1` 编译成功，为 93 个既有 warning、0 errors。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 2026-09-14 Ability 执行聚合迁移后，Portable `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecast.csproj` 为 2 个既有 warning、0 errors；`ThirdPersonSimulation.ServerAuthoritative.csproj` 为 1 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 使用 `-m:1` 编译成功，为 34 个既有 warning、0 errors。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+- 2026-09-14 Input request 状态分区后，`ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecast.csproj` 为 2 个既有 warning、0 errors；`ThirdPersonSimulation.ServerAuthoritative.csproj` 为 1 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 使用 `-m:1` 编译成功，为 93 个既有 warning、0 errors。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步

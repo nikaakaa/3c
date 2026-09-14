@@ -133,11 +133,13 @@ namespace BTSMTL.Timeline.Editor
                     foreach (BtsmtlTimelineSectionBinding section in m_SectionsById.Values)
                         section.CommitSource();
                     Timeline.Init();
+                    ValidateTimeline();
                 }, m_EditUndoName);
             }
-            catch (Exception)
+            catch (Exception exception)
             {
                 Rebuild();
+                ReportIssue(exception.Message);
                 throw;
             }
             Rebuild();
@@ -403,13 +405,30 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("Timeline 内容已被外部修改，当前操作未提交。");
                 return false;
             }
-            m_Session.Apply(() =>
+            try
             {
-                mutation();
-                Timeline.Init();
-            }, undoName);
+                m_Session.Apply(() =>
+                {
+                    mutation();
+                    Timeline.Init();
+                    ValidateTimeline();
+                }, undoName);
+            }
+            catch (Exception exception)
+            {
+                Rebuild();
+                ReportIssue(exception.Message);
+                return false;
+            }
             Rebuild();
             return true;
+        }
+
+        void ValidateTimeline()
+        {
+            var errors = new List<string>();
+            if (!Timeline.ValidateContent(ContractCatalog, errors))
+                throw new InvalidOperationException(string.Join("\n", errors));
         }
 
         void BuildBindings()

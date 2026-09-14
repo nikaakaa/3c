@@ -981,10 +981,10 @@ namespace BTSMTL.Timeline.Editor
                         break;
                     }
                 }
-                float parameterHeight = DefaultHeight + 4f + clip.Parameters.Count * 20f;
+                float parameterHeight = DefaultHeight + 10f + clip.Parameters.Count * 20f;
                 if (!hasInspectedParameter)
                     return Mathf.Max(parameterHeight, DefaultHeight + 50f);
-                return Mathf.Max(parameterHeight + 120f, m_CustomHeight);
+                return Mathf.Max(parameterHeight + 65f, m_CustomHeight);
             }
             public IReadOnlyList<IEmbeddedTimelineClipBinding> Clips => m_Clips;
             public IEmbeddedTimelineClipBinding SelectedClip =>

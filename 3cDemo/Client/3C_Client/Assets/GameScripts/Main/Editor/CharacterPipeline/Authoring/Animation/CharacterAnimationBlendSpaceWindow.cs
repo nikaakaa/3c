@@ -961,33 +961,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 for (int i = 0; i < diagnostics.Count; i++)
                     AddReadOnly($"Artifact {i + 1}", $"{diagnostics[i].Status} · {diagnostics[i].BindingKey}");
             }
-            if (m_Window.Definition && m_Window.Definition.SimulationProgram && m_Window.Projection)
-            {
-                try
-                {
-                    CharacterSimulationProgram program = m_Window.Definition.SimulationProgram.Load();
-                    CharacterPresentationProjection projection = m_Window.Projection.Load(
-                        Float32CharacterPresentationContractAdapter.Create(program));
-                    for (int playerIndex = 0; playerIndex < projection.BlendSpacePlayers.Count; playerIndex++)
-                    {
-                        CharacterAnimationBlendSpacePlayerPlan player = projection.BlendSpacePlayers[playerIndex];
-                        bool matches =
-                            player.BlendSpacePlanIndex >= 0 &&
-                            player.BlendSpacePlanIndex <
-                            projection.BlendSpaces.Count &&
-                            projection.BlendSpaces[
-                                player.BlendSpacePlanIndex]
-                            .BlendSpaceId.Equals(
-                                m_Window.Asset.BlendSpaceId);
-                        if (matches)
-                            AddReadOnly($"Pose Graph Node {playerIndex + 1}", player.NodeId.Value);
-                    }
-                }
-                catch (Exception exception)
-                {
-                    AddReadOnly("Compiled References", $"Unavailable · {exception.Message}");
-                }
-            }
         }
 
         void AddReadOnly(string label, string value)

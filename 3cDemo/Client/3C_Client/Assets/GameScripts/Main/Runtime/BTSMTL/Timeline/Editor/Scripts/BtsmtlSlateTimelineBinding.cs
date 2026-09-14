@@ -155,7 +155,6 @@ namespace BTSMTL.Timeline.Editor
             {
                 Rebuild();
                 ReportIssue(exception.Message);
-                throw;
             }
             Rebuild();
         }

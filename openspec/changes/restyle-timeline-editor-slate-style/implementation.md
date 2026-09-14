@@ -53,6 +53,7 @@ TimelineEditorWindow
 - formal Clip binding 的 Start 移动会平移 End，保持 Clip 原长度；左/右缩放仍由原 `ActionClipWrapper` 显式写入两侧边界，Motion 源区间只在裁剪分支更新。
 - formal 参数曲线的显示副本初始按 Clip 时长展开，缩放草稿提交时按当前 Clip 时长归一化回正式 descriptor，避免边缘缩放后仍使用旧时长造成曲线左右段错位。
 - formal Split 通过现有 `TimelineCurveChannelDescriptor` 对每条归一化曲线采样切点、重映射两段时间和切线，再写回两个正式 Clip；不是复制整条曲线，也不新增曲线资产。
+- Formal 提交失败时 `TimelineData.ApplyModify` 负责 Undo 回滚，binding 随后重建正式绑定并发出 `AuthoringIssue`；不再把已恢复的数据异常重新抛回 Slate IMGUI 回调。
 - native 与 formal Clip 的可视矩形、命中、拖动、相邻限制、多选、Shift/Ripple、磁吸和外部标题现在共用 `CutsceneEditor.DrawTimelineClip`；两种来源只提供不同的 `IClipEditorBinding` 与正式命令，不再各自实现一套 Clip 鼠标算法。Track 行的背景、选中框、颜色标记和局部坐标容器共用 `DrawTrackListRowFrame`，Group 标题共用 `DrawGroupListHeaderFrame`，Group/Track 选中与排序共用 `HandleGroupListInput`/`HandleTrackListInput`；组列表布局、Track 参数提供者和来源特有命令仍待11.1/11.2/11.4继续参数化。
 - Timeline 打开时清空外部 Unity Selection，作者选择只进入 Timeline binding 与 Slate Surface，避免旧 Slate ActionClip Inspector 残留的 Actor/AnimatedParameter 报错。
 - `TimelineEditorWindow` 所在的 `BTSMTL.Timeline.Tree.Editor` asmdef 显式引用 Slate 与 `ThirdPersonCamera.Contracts`；Timeline 窗口只作为 Unity 容器，实际可见编辑 UI 来自原 Slate Surface，均不改变 TimelineData owner，也不引入 Slate 组件树。

@@ -137,14 +137,45 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    public readonly struct TimelineRuntimeCommittedEvaluation
+    {
+        internal TimelineRuntimeCommittedEvaluation(TimelineRuntimeStepContext context)
+        {
+            Handle = context.Playback.Handle;
+            Generation = context.Playback.Generation;
+            LogicTick = context.Request.LogicTick;
+            PreviousFrame = context.Advance.PreviousFrame;
+            Frame = context.Advance.Frame;
+            PreviousCycle = context.Advance.PreviousCycle;
+            Cycle = context.Advance.Cycle;
+            ContentIdentity = context.Playback.Content.Identity;
+            ContentRevision = context.Playback.Content.ContentHash;
+            ExecutionIdentity = context.Playback.ExecutionIdentity;
+            Evaluation = context.Advance.Evaluation;
+        }
+
+        public TimelineRuntimePlaybackHandle Handle { get; }
+        public ulong Generation { get; }
+        public ulong LogicTick { get; }
+        public int PreviousFrame { get; }
+        public int Frame { get; }
+        public int PreviousCycle { get; }
+        public int Cycle { get; }
+        public string ContentIdentity { get; }
+        public string ContentRevision { get; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelineRuntimeEvaluationResult Evaluation { get; }
+    }
+
     public sealed class TimelineRuntimeEvaluationBuffer : ITimelineRuntimeEvaluationSink
     {
         readonly Dictionary<ulong, TimelineRuntimeEvaluationResult> m_Pending =
             new Dictionary<ulong, TimelineRuntimeEvaluationResult>();
-        readonly Dictionary<ulong, TimelineRuntimeEvaluationResult> m_Committed =
-            new Dictionary<ulong, TimelineRuntimeEvaluationResult>();
+        readonly Dictionary<ulong, TimelineRuntimeCommittedEvaluation> m_Committed =
+            new Dictionary<ulong, TimelineRuntimeCommittedEvaluation>();
 
         public event Action<TimelineRuntimeStepContext> Committed;
+        public event Action<TimelineRuntimeCommittedEvaluation> CommittedEvaluation;
         public event Action<TimelineRuntimeStopRequest> StopCommitted;
 
         public bool Consume(TimelineRuntimeStepContext context)
@@ -158,8 +189,10 @@ namespace BTSMTL.Timeline.Runtime
             ulong handle = context.Playback.Handle.Value;
             if (m_Pending.TryGetValue(handle, out TimelineRuntimeEvaluationResult result))
             {
-                m_Committed[handle] = result;
+                TimelineRuntimeCommittedEvaluation committed = new TimelineRuntimeCommittedEvaluation(context);
+                m_Committed[handle] = committed;
                 m_Pending.Remove(handle);
+                CommittedEvaluation?.Invoke(committed);
             }
             Committed?.Invoke(context);
         }
@@ -187,7 +220,20 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlaybackHandle handle,
             out TimelineRuntimeEvaluationResult result)
         {
-            return m_Committed.TryGetValue(handle.Value, out result);
+            if (m_Committed.TryGetValue(handle.Value, out TimelineRuntimeCommittedEvaluation committed))
+            {
+                result = committed.Evaluation;
+                return true;
+            }
+            result = null;
+            return false;
+        }
+
+        public bool TryGetCommittedEvaluation(
+            TimelineRuntimePlaybackHandle handle,
+            out TimelineRuntimeCommittedEvaluation evaluation)
+        {
+            return m_Committed.TryGetValue(handle.Value, out evaluation);
         }
 
         public void Clear()

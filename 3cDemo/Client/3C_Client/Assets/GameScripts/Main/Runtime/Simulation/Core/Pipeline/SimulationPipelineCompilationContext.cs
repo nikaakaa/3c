@@ -11,12 +11,10 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<SimulationPipelinePortRequirement> m_SourceRequiredPorts;
 
         public SimulationPipelineCompilationContext(
-            SimulationComponentIdentity programRuntime,
-            NumericProfileId numericProfileId,
-            TargetAbiVersion targetAbiVersion,
-            WorldCapability programRequiredWorldCapabilities,
-            SimulationPipelineExecutionSupport programExecutionSupport,
-            bool programDeterministic,
+            SimulationExecutionTargetManifest executionTarget,
+            WorldCapability executionTargetRequiredWorldCapabilities,
+            SimulationPipelineExecutionSupport executionTargetExecutionSupport,
+            bool executionTargetDeterministic,
             SimulationComponentIdentity backend,
             SimulationPipelineExecutionSupport backendExecutionSupport,
             bool backendDeterministic,
@@ -35,22 +33,18 @@ namespace ThirdPersonSimulation
             SimulationPipelineExecutionSupport requiredExecutionSupport,
             bool requiresDeterministic)
         {
-            RequireRole(programRuntime, SimulationComponentRole.ProgramRuntime, nameof(programRuntime));
+            ExecutionTarget = executionTarget ?? throw new ArgumentNullException(nameof(executionTarget));
             RequireRole(backend, SimulationComponentRole.ExecutionBackend, nameof(backend));
             RequireRole(sessionSource, SimulationComponentRole.SessionSource, nameof(sessionSource));
             RequireRole(worldSolver, SimulationComponentRole.WorldSolver, nameof(worldSolver));
             RequireRole(snapshotCodec, SimulationComponentRole.SnapshotCodec, nameof(snapshotCodec));
-            if (!numericProfileId.IsValid || !targetAbiVersion.IsValid ||
-                (requiredExecutionSupport & SimulationPipelineExecutionSupport.Forward) == 0)
+            if ((requiredExecutionSupport & SimulationPipelineExecutionSupport.Forward) == 0)
             {
                 throw new ArgumentException("Pipeline compilation Target requirements are incomplete.");
             }
-            ProgramRuntime = programRuntime;
-            NumericProfileId = numericProfileId;
-            TargetAbiVersion = targetAbiVersion;
-            ProgramRequiredWorldCapabilities = programRequiredWorldCapabilities;
-            ProgramExecutionSupport = programExecutionSupport;
-            ProgramDeterministic = programDeterministic;
+            ExecutionTargetRequiredWorldCapabilities = executionTargetRequiredWorldCapabilities;
+            ExecutionTargetExecutionSupport = executionTargetExecutionSupport;
+            ExecutionTargetDeterministic = executionTargetDeterministic;
             Backend = backend;
             BackendExecutionSupport = backendExecutionSupport;
             BackendDeterministic = backendDeterministic;
@@ -70,12 +64,12 @@ namespace ThirdPersonSimulation
             RequiresDeterministic = requiresDeterministic;
         }
 
-        public SimulationComponentIdentity ProgramRuntime { get; }
-        public NumericProfileId NumericProfileId { get; }
-        public TargetAbiVersion TargetAbiVersion { get; }
-        public WorldCapability ProgramRequiredWorldCapabilities { get; }
-        public SimulationPipelineExecutionSupport ProgramExecutionSupport { get; }
-        public bool ProgramDeterministic { get; }
+        public SimulationExecutionTargetManifest ExecutionTarget { get; }
+        public NumericProfileId NumericProfileId => ExecutionTarget.NumericProfile.Id;
+        public TargetAbiVersion TargetAbiVersion => ExecutionTarget.NumericProfile.AbiVersion;
+        public WorldCapability ExecutionTargetRequiredWorldCapabilities { get; }
+        public SimulationPipelineExecutionSupport ExecutionTargetExecutionSupport { get; }
+        public bool ExecutionTargetDeterministic { get; }
         public SimulationComponentIdentity Backend { get; }
         public SimulationPipelineExecutionSupport BackendExecutionSupport { get; }
         public bool BackendDeterministic { get; }

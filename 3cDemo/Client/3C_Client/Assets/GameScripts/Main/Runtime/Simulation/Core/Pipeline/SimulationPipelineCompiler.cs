@@ -31,8 +31,10 @@ namespace ThirdPersonSimulation
         public static SimulationPipelineCompilationResult Compile(
             SimulationPipelineDescriptor descriptor,
             SimulationPipelinePassFactoryCatalog catalog,
-            SimulationProgramRuntimeDescriptor program,
-            WorldCapability programRequiredWorldCapabilities,
+            SimulationExecutionTargetManifest executionTarget,
+            WorldCapability executionTargetRequiredWorldCapabilities,
+            SimulationPipelineExecutionSupport executionTargetExecutionSupport,
+            bool executionTargetDeterministic,
             SimulationExecutionBackendDescriptor backend,
             SimulationSessionSourceDescriptor source,
             IEnumerable<SimulationPortDescriptor> sourcePorts,
@@ -41,8 +43,8 @@ namespace ThirdPersonSimulation
             SimulationPipelineExecutionSupport snapshotExecutionSupport,
             bool snapshotDeterministic)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
+            if (executionTarget == null)
+                throw new ArgumentNullException(nameof(executionTarget));
             if (backend == null)
                 throw new ArgumentNullException(nameof(backend));
             if (source == null)
@@ -50,16 +52,14 @@ namespace ThirdPersonSimulation
             if (solver == null)
                 throw new ArgumentNullException(nameof(solver));
             SimulationExecutionBackendTargetSupport backendTarget = backend.RequireTarget(
-                program.NumericProfileId,
-                program.TargetAbiVersion,
+                executionTarget.NumericProfile.Id,
+                executionTarget.NumericProfile.AbiVersion,
                 descriptor?.SchemaVersion ?? throw new ArgumentNullException(nameof(descriptor)));
             var context = new SimulationPipelineCompilationContext(
-                program.Identity,
-                program.NumericProfileId,
-                program.TargetAbiVersion,
-                programRequiredWorldCapabilities,
-                program.ExecutionSupport,
-                program.Deterministic,
+                executionTarget,
+                executionTargetRequiredWorldCapabilities,
+                executionTargetExecutionSupport,
+                executionTargetDeterministic,
                 backend.Identity,
                 backendTarget.ExecutionSupport,
                 backendTarget.Deterministic,
@@ -98,7 +98,7 @@ namespace ThirdPersonSimulation
             var usages = new Dictionary<SimulationPipelineProductId, ProductUsage>();
             var phaseIndexes = new int[5];
             WorldCapability requiredSolverCapabilities =
-                context.ProgramRequiredWorldCapabilities | context.SourceRequiredWorldCapabilities;
+                context.ExecutionTargetRequiredWorldCapabilities | context.SourceRequiredWorldCapabilities;
 
             ValidateSourceRequirements(descriptor, context, errors);
 
@@ -162,16 +162,16 @@ namespace ThirdPersonSimulation
                     $"Factory catalog Backend '{catalog.Backend}' does not match selected Backend '{context.Backend}'.",
                     componentIdentity: catalog.Backend.ToString()));
             }
-            RequireExecutionSupport("Program Runtime", context.ProgramExecutionSupport, context.RequiredExecutionSupport, context.ProgramRuntime, errors);
-            RequireExecutionSupport("Execution Backend", context.BackendExecutionSupport, context.RequiredExecutionSupport, context.Backend, errors);
-            RequireExecutionSupport("World Solver", context.SolverExecutionSupport, context.RequiredExecutionSupport, context.WorldSolver, errors);
-            RequireExecutionSupport("Snapshot Codec", context.SnapshotExecutionSupport, context.RequiredExecutionSupport, context.SnapshotCodec, errors);
+            RequireExecutionSupport("Execution Target", context.ExecutionTargetExecutionSupport, context.RequiredExecutionSupport, context.ExecutionTarget.Identity.ToString(), errors);
+            RequireExecutionSupport("Execution Backend", context.BackendExecutionSupport, context.RequiredExecutionSupport, context.Backend.ToString(), errors);
+            RequireExecutionSupport("World Solver", context.SolverExecutionSupport, context.RequiredExecutionSupport, context.WorldSolver.ToString(), errors);
+            RequireExecutionSupport("Snapshot Codec", context.SnapshotExecutionSupport, context.RequiredExecutionSupport, context.SnapshotCodec.ToString(), errors);
             if (context.RequiresDeterministic &&
-                (!context.ProgramDeterministic || !context.BackendDeterministic || !context.SolverDeterministic || !context.SnapshotDeterministic))
+                (!context.ExecutionTargetDeterministic || !context.BackendDeterministic || !context.SolverDeterministic || !context.SnapshotDeterministic))
             {
                 errors.Add(new SimulationPipelineCompileError(
                     SimulationPipelineCompileErrorCode.DeterministicSupportMismatch,
-                    "Deterministic Pipeline requirement is not supported by Program Runtime, Backend, Solver and Snapshot Codec together."));
+                    "Deterministic Pipeline requirement is not supported by Execution Target, Backend, Solver and Snapshot Codec together."));
             }
         }
 
@@ -179,7 +179,7 @@ namespace ThirdPersonSimulation
             string component,
             SimulationPipelineExecutionSupport available,
             SimulationPipelineExecutionSupport required,
-            SimulationComponentIdentity identity,
+            string identity,
             List<SimulationPipelineCompileError> errors)
         {
             if ((available & required) != required)
@@ -187,7 +187,7 @@ namespace ThirdPersonSimulation
                 errors.Add(new SimulationPipelineCompileError(
                     SimulationPipelineCompileErrorCode.ExecutionSupportMismatch,
                     $"{component} supports '{available}', required '{required}'.",
-                    componentIdentity: identity.ToString()));
+                    componentIdentity: identity));
             }
         }
 
@@ -704,6 +704,7 @@ namespace ThirdPersonSimulation
                 backend.ComponentId,
                 backend.SemanticVersion,
                 backend.ConfigurationHash.ToString(),
+                context.ExecutionTarget.Identity.ToString(),
                 context.NumericProfileId.Value,
                 context.TargetAbiVersion.ToString(),
                 ((int)context.RequiredExecutionSupport).ToString(CultureInfo.InvariantCulture),

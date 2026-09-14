@@ -6,8 +6,6 @@ namespace ThirdPersonSimulation
 {
     public enum SimulationProgramRootKind : byte
     {
-        Character = 1,
-        Timeline = 2,
         Ability = 3
     }
 
@@ -19,7 +17,7 @@ namespace ThirdPersonSimulation
             string entryIdentity,
             string contentIdentity)
         {
-            if (!Enum.IsDefined(typeof(SimulationProgramRootKind), kind))
+            if (kind != SimulationProgramRootKind.Ability)
                 throw new ArgumentOutOfRangeException(nameof(kind));
             Kind = kind;
             RootIdentity = SimulationIdentity.Require(rootIdentity, nameof(rootIdentity));
@@ -36,8 +34,6 @@ namespace ThirdPersonSimulation
             IsGuid(RootIdentity) &&
             IsEntryIdentity(Kind, EntryIdentity) &&
             IsHash(ContentIdentity);
-        public bool IsCharacter => Kind == SimulationProgramRootKind.Character;
-        public bool IsTimeline => Kind == SimulationProgramRootKind.Timeline;
         public bool IsAbility => Kind == SimulationProgramRootKind.Ability;
 
         public bool Equals(SimulationProgramRootDescriptor other) =>
@@ -67,17 +63,10 @@ namespace ThirdPersonSimulation
 
         static bool IsEntryIdentity(SimulationProgramRootKind kind, string value)
         {
-            string prefix = kind == SimulationProgramRootKind.Character
-                ? "control:"
-                : kind == SimulationProgramRootKind.Timeline
-                    ? "timeline:"
-                    : kind == SimulationProgramRootKind.Ability
-                        ? "ability:"
-                    : string.Empty;
-            return prefix.Length > 0 &&
+            return kind == SimulationProgramRootKind.Ability &&
                    !string.IsNullOrEmpty(value) &&
-                   value.StartsWith(prefix, StringComparison.Ordinal) &&
-                   value.Length > prefix.Length;
+                   value.StartsWith("ability:", StringComparison.Ordinal) &&
+                   value.Length > "ability:".Length;
         }
 
         static bool IsGuid(string value) => IsHex(value, 32);

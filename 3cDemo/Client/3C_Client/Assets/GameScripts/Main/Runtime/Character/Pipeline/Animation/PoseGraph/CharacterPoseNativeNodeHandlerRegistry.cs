@@ -40,9 +40,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativePreparedBinding preparedBinding,
             in CharacterPoseNativeInstanceContext context)
         {
-            if (!preparedBinding.IsValid || !context.IsValid)
+            if (!preparedBinding.IsValid || !context.IsValid ||
+                preparedBinding.ActorId != context.ActorId)
                 throw new ArgumentException(
-                    "Pose native handler registry binding is invalid.");
+                    "Pose native handler registry binding does not match its Actor instance.");
             m_Sealed = true;
             var handlers = new List<ICharacterPoseNativeNodeHandler>();
             try

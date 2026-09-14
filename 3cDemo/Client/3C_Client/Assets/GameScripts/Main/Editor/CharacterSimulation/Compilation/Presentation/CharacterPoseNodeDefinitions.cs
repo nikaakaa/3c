@@ -13,17 +13,6 @@ using static ThirdPersonCharacter.Editor.CharacterSimulation.CharacterPoseCapabi
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    internal enum CharacterPoseIrGraphRole : byte
-    {
-        Root = 1,
-        StateLocal = 2,
-        Subgraph = 3,
-        LinkedPoseEntry = 4,
-        MotionMatchingEntry = 5,
-        AnimationLayer = 6,
-        ControlRig = 7
-    }
-
     internal enum CharacterPoseNativeNodeRole : byte
     {
         Operation = 1,
@@ -41,19 +30,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override Type PayloadType => typeof(TPayload);
         public override CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.Operation;
-
-        public override CharacterPoseIrNode Lower(CharacterPoseCanvasNode node, IReadOnlyList<CharacterPoseIrInput> inputs, string sourcePath)
-        {
-            if (!(node.Payload is TPayload payload) || node.Kind != Kind)
-                throw new InvalidOperationException($"{sourcePath}: payload does not match Node Definition '{Kind}'.");
-            Validate(payload, sourcePath);
-            return new CharacterPoseIrNode(
-                new CharacterPoseIrNodeId(node.NodeId.Value),
-                GetSourceMapName(payload),
-                payload,
-                inputs,
-                sourcePath);
-        }
 
         public override CharacterPresentationPoseSourceSlot Source(
             CharacterPoseNodePayload payload) =>
@@ -1249,104 +1225,4 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 executionDomain: CharacterPoseExecutionDomain.FinalPublication);
     }
 
-    internal sealed class CharacterPoseIrTopologyCompiler
-    {
-        public CharacterPoseIrGraph Compile(
-            CharacterPoseTypedIrGraph source,
-            CharacterPoseIrGraphRole role)
-        {
-            if (source == null)
-                throw new ArgumentNullException(nameof(source));
-            CharacterPoseCanvasGraph graph = source.Source;
-            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes =
-                source.AuthoredNodes;
-            IReadOnlyDictionary<PoseNodeId,
-                IReadOnlyList<CharacterPoseCanvasConnection>> incoming =
-                source.Incoming;
-            List<CharacterPoseCanvasNode> ordered = TopologicalOrder(nodes, incoming);
-            ValidateBoundary(role, ordered);
-            var loweredNodes = new List<CharacterPoseIrNode>(ordered.Count);
-            foreach (CharacterPoseCanvasNode node in ordered)
-                loweredNodes.Add(source.RequireNode(node.NodeId));
-            CharacterPoseCanvasNode output =
-                role != CharacterPoseIrGraphRole.Subgraph &&
-                role != CharacterPoseIrGraphRole.LinkedPoseEntry &&
-                role != CharacterPoseIrGraphRole.MotionMatchingEntry &&
-                role != CharacterPoseIrGraphRole.AnimationLayer &&
-                role != CharacterPoseIrGraphRole.ControlRig
-                ? ordered.Single(value => value.Kind == CharacterPoseNodeKind.OutputPose)
-                : ordered.Single(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
-            return new CharacterPoseIrGraph(graph.GraphId, graph.ContentRevision, loweredNodes, new CharacterPoseIrNodeId(output.NodeId.Value));
-        }
-
-        static List<CharacterPoseCanvasNode> TopologicalOrder(
-            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
-            IReadOnlyDictionary<PoseNodeId,
-                IReadOnlyList<CharacterPoseCanvasConnection>> incoming)
-        {
-            var indegree = incoming.ToDictionary(
-                pair => pair.Key,
-                pair => pair.Value
-                    .Where(edge => !IsTemporalHistoryEdge(nodes, edge))
-                    .Select(value => value.SourceNodeId)
-                    .Distinct()
-                    .Count());
-            var outgoing = nodes.Keys.ToDictionary(value => value, _ => new HashSet<PoseNodeId>());
-            foreach (KeyValuePair<PoseNodeId,
-                         IReadOnlyList<CharacterPoseCanvasConnection>> pair in incoming)
-                foreach (CharacterPoseCanvasConnection edge in pair.Value)
-                    if (!IsTemporalHistoryEdge(nodes, edge))
-                        outgoing[edge.SourceNodeId].Add(pair.Key);
-            var ready = new SortedSet<PoseNodeId>(indegree.Where(pair => pair.Value == 0).Select(pair => pair.Key));
-            var result = new List<CharacterPoseCanvasNode>(nodes.Count);
-            while (ready.Count > 0)
-            {
-                PoseNodeId id = ready.Min;
-                ready.Remove(id);
-                result.Add(nodes[id]);
-                foreach (PoseNodeId target in outgoing[id])
-                {
-                    indegree[target]--;
-                    if (indegree[target] == 0)
-                        ready.Add(target);
-                }
-            }
-            if (result.Count != nodes.Count)
-                throw new InvalidOperationException("Pose Graph contains a cycle.");
-            return result;
-        }
-
-        static bool IsTemporalHistoryEdge(
-            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> nodes,
-            CharacterPoseCanvasConnection edge) =>
-            ResolvePort(
-                nodes[edge.SourceNodeId],
-                edge.SourcePortId.Value,
-                CharacterPosePortDirection.Output).Kind == CharacterPosePortKind.PoseHistory;
-
-        static CharacterPosePortDefinition ResolvePort(
-            CharacterPoseCanvasNode node,
-            string portId,
-            CharacterPosePortDirection direction) =>
-            CharacterPoseAuthoringPortProjection.Require(
-                node,
-                portId,
-                direction);
-
-        static void ValidateBoundary(CharacterPoseIrGraphRole role, IReadOnlyList<CharacterPoseCanvasNode> nodes)
-        {
-            int rootOutputs = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
-            int graphOutputs = nodes.Count(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
-            bool graphBoundary =
-                role == CharacterPoseIrGraphRole.Subgraph ||
-                role == CharacterPoseIrGraphRole.LinkedPoseEntry ||
-                role == CharacterPoseIrGraphRole.MotionMatchingEntry ||
-                role == CharacterPoseIrGraphRole.AnimationLayer ||
-                role == CharacterPoseIrGraphRole.ControlRig;
-            if (!graphBoundary && (rootOutputs != 1 || graphOutputs != 0))
-                throw new InvalidOperationException("Root and state-local Pose Graphs must contain exactly one Output Pose and no Graph Output.");
-            if (graphBoundary && (graphOutputs != 1 || rootOutputs != 0))
-                throw new InvalidOperationException("Pose Subgraphs and Linked Pose Entries must contain exactly one Graph Output and no Output Pose.");
-        }
-    }
 }

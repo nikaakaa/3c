@@ -323,67 +323,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        internal static CharacterPoseGraphValidationReport
-            ValidateClosedGraph(
-                CharacterPresentationPoseGraphAsset ownerAsset,
-                CharacterPoseCanvasGraph graph,
-                CharacterAnimationRigDefinition rig,
-                CharacterPosePortContractResolver portResolver,
-                CharacterPoseGraphClosure closure,
-                CharacterPoseIrGraphRole role,
-                IReadOnlyCollection<AnimationChannelId>
-                    reachableChannels,
-                IReadOnlyCollection<CharacterPresentationPoseSourceSlot>
-                    reachableSources,
-                IReadOnlyCollection<CharacterPoseParameterDeclaration>
-                    animationInputParameters = null)
-        {
-            if (!ownerAsset)
-                throw new ArgumentNullException(nameof(ownerAsset));
-            if (graph == null)
-                throw new ArgumentNullException(nameof(graph));
-            if (!rig)
-                throw new ArgumentNullException(nameof(rig));
-            if (portResolver == null)
-                throw new ArgumentNullException(nameof(portResolver));
-            if (closure == null)
-                throw new ArgumentNullException(nameof(closure));
-            var report = new CharacterPoseGraphValidationReport();
-            if (role == CharacterPoseIrGraphRole.Root)
-                ValidateStateMachineLayouts(ownerAsset, report);
-            ValidateGraph(
-                ownerAsset,
-                graphId => closure.RequireGraph(
-                    ownerAsset,
-                    graphId),
-                graph,
-                rig,
-                portResolver,
-                reachableChannels,
-                reachableSources,
-                role switch
-                {
-                    CharacterPoseIrGraphRole.Root => GraphRole.Root,
-                    CharacterPoseIrGraphRole.StateLocal =>
-                        GraphRole.StatePose,
-                    CharacterPoseIrGraphRole.Subgraph or
-                    CharacterPoseIrGraphRole.LinkedPoseEntry or
-                    CharacterPoseIrGraphRole.MotionMatchingEntry =>
-                        GraphRole.Subgraph,
-                    CharacterPoseIrGraphRole.AnimationLayer =>
-                        GraphRole.AnimationLayer,
-                    CharacterPoseIrGraphRole.ControlRig =>
-                        GraphRole.ControlRig,
-                    _ => throw new ArgumentOutOfRangeException(nameof(role))
-                },
-                new List<PoseGraphId>(),
-                new HashSet<PoseGraphId>(),
-                report,
-                false,
-                animationInputParameters);
-            return report;
-        }
-
         static void ValidateGraph(
             CharacterPresentationPoseGraphAsset ownerAsset,
             Func<PoseGraphId, CharacterPoseCanvasGraph> graphResolver,

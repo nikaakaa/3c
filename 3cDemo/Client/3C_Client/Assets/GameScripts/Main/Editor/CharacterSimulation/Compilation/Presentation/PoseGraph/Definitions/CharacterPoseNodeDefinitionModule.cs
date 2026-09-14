@@ -204,11 +204,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             string sourcePath);
 
-        public abstract CharacterPoseIrNode Lower(
-            CharacterPoseCanvasNode node,
-            IReadOnlyList<CharacterPoseIrInput> inputs,
-            string sourcePath);
-
         public abstract CharacterPresentationPoseSourceSlot Source(
             CharacterPoseNodePayload payload);
 

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -226,43 +225,4 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterMotionMatchingSearchCadencePolicy SearchCadencePolicy => m_SearchCadencePolicy;
     }
 
-    public sealed partial class CharacterPoseProgramImage
-    {
-        [SerializeField] CharacterMotionMatchingPosePlanDescriptor[] m_MotionMatchingNodes = Array.Empty<CharacterMotionMatchingPosePlanDescriptor>();
-        [SerializeField] CharacterPoseHistoryCollectorPlanDescriptor[] m_PoseHistoryCollectors = Array.Empty<CharacterPoseHistoryCollectorPlanDescriptor>();
-        [SerializeField] CharacterMotionMatchingEntryProgramDescriptor[] m_MotionMatchingEntryPrograms = Array.Empty<CharacterMotionMatchingEntryProgramDescriptor>();
-        [SerializeField] CharacterMotionMatchingBlendPlanDescriptor[] m_MotionMatchingBlendPlans = Array.Empty<CharacterMotionMatchingBlendPlanDescriptor>();
-
-        public IReadOnlyList<CharacterMotionMatchingPosePlanDescriptor> MotionMatchingNodes => m_MotionMatchingNodes ?? Array.Empty<CharacterMotionMatchingPosePlanDescriptor>();
-        public IReadOnlyList<CharacterPoseHistoryCollectorPlanDescriptor> PoseHistoryCollectors => m_PoseHistoryCollectors ?? Array.Empty<CharacterPoseHistoryCollectorPlanDescriptor>();
-        public IReadOnlyList<CharacterMotionMatchingEntryProgramDescriptor> MotionMatchingEntryPrograms => m_MotionMatchingEntryPrograms ?? Array.Empty<CharacterMotionMatchingEntryProgramDescriptor>();
-        public IReadOnlyList<CharacterMotionMatchingBlendPlanDescriptor> MotionMatchingBlendPlans => m_MotionMatchingBlendPlans ?? Array.Empty<CharacterMotionMatchingBlendPlanDescriptor>();
-
-        public void RequireMotionMatchingPlan()
-        {
-            if (MotionMatchingNodes.Count == 0)
-            {
-                if (PoseHistoryCollectors.Count != 0 || MotionMatchingEntryPrograms.Count != 0 || MotionMatchingBlendPlans.Count != 0)
-                    throw new InvalidOperationException("Pose Plan has Motion Matching support records without a Motion Matching node.");
-                return;
-            }
-            var nodeIds = new HashSet<PoseNodeId>();
-            var historyIds = new HashSet<CharacterPoseHistoryId>();
-            for (int i = 0; i < PoseHistoryCollectors.Count; i++)
-            {
-                CharacterPoseHistoryCollectorPlanDescriptor collector = PoseHistoryCollectors[i] ??
-                    throw new InvalidOperationException($"Pose History Collector plan #{i} is missing.");
-                if (!historyIds.Add(collector.HistoryId))
-                    throw new InvalidOperationException($"Pose History identity '{collector.HistoryId}' is duplicated.");
-            }
-            for (int i = 0; i < MotionMatchingNodes.Count; i++)
-            {
-                CharacterMotionMatchingPosePlanDescriptor node = MotionMatchingNodes[i] ??
-                    throw new InvalidOperationException($"Motion Matching Pose plan #{i} is missing.");
-                if (!nodeIds.Add(node.NodeId) || node.CollectorIndex >= PoseHistoryCollectors.Count ||
-                    node.EntryProgramIndex >= MotionMatchingEntryPrograms.Count || node.BlendPlanIndex >= MotionMatchingBlendPlans.Count)
-                    throw new InvalidOperationException($"Motion Matching Pose plan #{i} has invalid ownership indices.");
-            }
-        }
-    }
 }

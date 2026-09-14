@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline
             return new GameplayAbilityProviderBinding(providers);
         }
 
-        public ThirdPersonSimulation.CharacterSimulationProgram LoadFloat32GameplayAbility(
+        public Float32GameplayAbilityExecutionData LoadFloat32GameplayAbility(
             ThirdPersonCharacter.Pipeline.Simulation.GameplayAbilityDataAsset asset)
         {
             if (!asset)

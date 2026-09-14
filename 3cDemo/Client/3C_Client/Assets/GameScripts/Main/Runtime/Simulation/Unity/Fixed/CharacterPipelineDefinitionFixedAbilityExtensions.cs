@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
     public static class CharacterPipelineDefinitionFixedAbilityExtensions
     {
-        public static ThirdPersonSimulation.Fixed.CharacterSimulationProgram LoadFixedGameplayAbility(
+        public static FixedGameplayAbilityExecutionData LoadFixedGameplayAbility(
             this CharacterPipelineDefinition definition,
             FixedGameplayAbilityDataAsset asset)
         {

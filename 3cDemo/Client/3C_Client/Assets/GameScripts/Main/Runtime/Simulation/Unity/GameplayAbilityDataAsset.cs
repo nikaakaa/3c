@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public byte[] CopyCanonicalArtifact() =>
             m_CanonicalArtifact == null ? Array.Empty<byte>() : (byte[])m_CanonicalArtifact.Clone();
 
-        public CharacterSimulationProgram Load(GameplayAbilityProviderBinding providerBinding)
+        public Float32GameplayAbilityExecutionData Load(GameplayAbilityProviderBinding providerBinding)
         {
             if (m_CanonicalArtifact == null || m_CanonicalArtifact.Length == 0)
                 throw new InvalidOperationException($"Gameplay Ability Data asset '{name}' has no compiled artifact.");
@@ -75,10 +75,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     root));
             RequireProgramMetadata(program, root);
             program.AbilityPrograms.Require(new CharacterSkillId(m_AbilityId));
-            GameplayAbilityProviderContract
-                .Create(program.CatalogEntries, index => program.Constants[index].Int32)
-                .RequireBinding(providerBinding);
-            return program;
+            GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract
+                .Create(program.CatalogEntries, index => program.Constants[index].Int32);
+            providerContract.RequireBinding(providerBinding);
+            return Float32GameplayAbilityExecutionData.FromProgram(
+                program,
+                new CharacterSkillId(m_AbilityId),
+                providerContract);
         }
 
 #if UNITY_EDITOR

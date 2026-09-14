@@ -17,7 +17,7 @@
 - EventGraph 继续原生运行并唯一写入动画实例变量，Pose 只读其成功发布的 typed Frame。有限 Action／Timeline 直接提交现有播放生命周期请求，不经 EventGraph 转发。
 - Projection 中的 Pose ProgramImage 与全 Character Program 身份依赖退役；仍被消费的 Rig、ACL、动画资源、有限动作与 Camera 绑定迁回各自正式资源／实例绑定，资源烘焙不随技能构建触发。
 - 正式运行、Pose／Timeline 预览、Live Debug、C# authoring 和 Build／Run 产品入口共同迁移；旧产物、旧字段、旧 reader 与废弃 UI 同步退出，不保留双运行路径或运行时自动构建。
-- 删除旧编译体系是迁移交付的一部分：每个领域完成正式消费者切换时，同时删除该owner已无消费者的编译、执行、缓存与产物链。新增Factory／Loader／目录或原生图外壳不构成完成；不得用旧Program到新数据的永久转换保留整角色容器。技能编译、Pipeline／Pass计划校验及ACL／Motion Matching／Foot资源处理继续保留。
+- 按用户2026-09-14明确选择先大删除再接线：先删除整角色Program、Timeline操作码编译／ProgramPlan、Pose IR／Image及专属执行、转换、缓存和产物链，再把保留业务接入正式接口，不等旧消费者全部迁完才删除。允许中间提交编译失败或功能明确不可用，以剩余引用定位接线；不为维持旧体系编译增加桥接、占位类型或假成功。共享文件中的技能／动画算法保留并做必要提取；技能编译、Pipeline／Pass计划校验及ACL／Motion Matching／Foot资源处理继续保留。
 - 本次只规划；保留当前正确算法、作者 identity、已发布 ACL 和其它窗口修改。Corin 是本次资产迁移对象，TrainingEnemy 的不稳定作者数据和未完成行为任务不纳入。
 
 ## Capabilities

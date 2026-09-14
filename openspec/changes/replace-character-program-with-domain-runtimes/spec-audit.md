@@ -2,6 +2,16 @@
 
 本文件属于本 change 的规划附件。它记录本轮读取的现行要求与增量操作，不能代替正式 spec，也不证明实现已完成。主规范和其它窗口文件本轮不改。
 
+## 2026-09-14用户改定为删除优先
+
+用户明确要求“更新吧文档，那就先大删除再做”。design D17、Migration Plan、proposal和tasks据此撤销ee2d02c2f中“消费者全部切换后删除／8.2和8.4仅公共残留收口”的顺序：先删除已取消职责，再修复保留业务接线，允许中间提交无法编译或运行，不建立桥接与占位类型来保持旧体系可用。
+
+原8.2／8.4移到tasks首批删除章节，分别重编号为0.1／0.2且只出现一次；映射在该章节保存，其它编号及9个已完成小步不变。Timeline／Pose仍由既有领域owner在其唯一清单执行删除优先，核心只修改自己拥有的共享入口，本轮不编辑其它任务或发送实施消息。
+
+删除边界仍以D16表为准：旧Program／IR／Image／ProgramPlan及专属工具、转换、缓存和产物属于取消职责；技能编译、实际动画／播放／恢复算法、网络Pipeline／Pass和资源处理属于保留职责。混合文件允许先提取有效代码；不需要先实现完整替代运行，再删除旧层。引用错误用于定位下一步消费者处理，不能据此误删有效业务或报告完成。
+
+`character-domain-runtime`删除要求补充删除优先与中间失败场景；`character-pose-plan-compilation`增量同步取消“迁移后才删旧产物”的措辞，原MODIFIED场景标题和业务结果保留。既有主规范仍描述旧整角色／Pose编译体系，该方向冲突继续由本change既有delta处理；Pipeline计划编译和资源处理没有被此次顺序调整撤销。本次只改变实施顺序，不宣称代码已经删除或运行恢复。
+
 ## 2026-09-14实现质量与删除范围复审
 
 本节补充D12历史审查，当前代码快照32f75a37c、实施记录401b52e15；D12中的旧事实只代表当时版本。此次只更新规划，不修改implementation.md、实现代码或其它领域任务。
@@ -18,7 +28,7 @@
 
 目录规模只作为删除负担线索：当次`rg --files -g '*.cs'`配合UTF-8读取和`Measure-Object -Line`统计，Timeline Semantic相关12个文件共2,139非空行；PoseGraph/Program目录28个文件共13,530非空行；整角色Frontend／Builder／BuildService相关4个文件共1,445非空行。这不是净删除承诺：Pose目录含必须保留的算法，共享编译代码含必要技能职责，须按实际消费者切分。不得为达到行数删业务。
 
-新增`character-domain-runtime`的“领域迁移必须同时退出对应旧编译和运行链”要求及两个场景，D16和既有任务同步说明完成条件；未新增测试或手动验收任务，保留所有已完成checkbox。8.2／8.4只是公共残留收口，各领域能退出的旧链随消费者切换删除。Timeline／Pose不复制第二份领域任务清单。
+ee2d02c2f当时新增`character-domain-runtime`的“领域迁移必须同时退出对应旧编译和运行链”要求及两个场景；其中消费者切换后删除、8.2／8.4仅负责公共残留的顺序现已由D17替代。最终完成仍要求删除与业务接通，未新增测试或手动验收任务，保留所有已完成checkbox；Timeline／Pose不复制第二份领域任务清单。
 
 本次对照current specs与project.md后，旧整角色Program、Pose Image唯一运行要求仍与既定方案冲突，继续由既有delta及8.6替换，不能当成已经发布的新现状。`gameplay-simulation-pipeline`的Pass计划编译／能力检查与本轮删除要求不冲突，明确保留；`btsmtl-compiled-simulation-program`增量的技能编译和`native-flowcanvas-pose-runtime`增量的原生图合同保持一致。旧Requirement标题只用于MODIFIED匹配，不代表保留旧类型命名。
 

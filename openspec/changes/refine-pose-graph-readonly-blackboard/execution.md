@@ -249,3 +249,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 从 `CharacterMotionMatchingPosePlan.cs` 和 `CharacterLinkedPosePosePlan.cs` 移除 `CharacterPoseProgramImage` 的 partial 字段、属性和旧 Operation/Stage 校验扩展；保留 Motion Matching/Linked Pose 的独立 descriptor 类型，因为它们仍属于资源/接口合同。
 - 删除后这些 descriptor 不再反向恢复旧 Image 类型；它们由原生图节点和对应的 Motion Matching/Linked Pose 服务按节点/接口身份消费。
 - 本步未运行 Unity/Build；Projection、诊断和旧 Presentation Host 的 Image 引用仍待后续改为原生图/节点观察数据。
+
+## 2026-09-14 r3 删除孤立旧 Tuning Snapshot
+
+- 删除 `PoseGraph/CharacterPoseTuningSnapshot.cs` 及其 `.meta`；该文件只组合已退出的 Program/Source/Constraint 调参 view，且没有外部消费者。
+- 调参状态继续由正式 Tuning Binding/Parameter Block 持有，不恢复旧的 Pose 总调参快照。
+- 本步未运行 Unity/Build；没有涉及共享 Host、Projection、IK 算法或现有未提交改动。

@@ -5,10 +5,26 @@
 - planning_thread_id: 01a09594-1751-7512-b8c0-08b04185055b
 - implementation_thread_id: 01a081f3-46f4-7c91-8930-73923ff7950b
 - planning_revision: r3
-- native_runtime_implementation_dispatch: NOT_DISPATCHED
+- native_runtime_implementation_dispatch: DISPATCHED_TO_EXISTING_IMPLEMENTATION
 - implementation_record: execution.md（已有实现窗口维护，本轮不改）
 
 本目录继续唯一维护原只读Blackboard范围；第1、2组20项均已完成并保持原文。新增原生Runtime接收范围见第11节和tasks第3组，其余旧架构任务不并入。第1—10节的输入、作者API与曲线成果继续保留，原Image/专属编译前置由r3替代。协调文档“待用户决定”是发送本轮PLAN通知前的审阅状态；本轮已经授权登记接收范围，但没有授权开始该实现批次。
+
+### 2026-09-14 实施授权
+
+用户随后明确要求让既有实现窗口执行，现授权PoseGraph实现窗口01a081f3-46f4-7c91-8930-73923ff7950b开始本r3第11节、tasks第3组的18项工作。前文及第11节末尾的“仅规划、未启动”描述的是广播规划阶段，不再作为阻止本次已授权实施的条件。原20项完成记录保持；不创建新窗口，不扩大到主实现拥有的共享Host/装配壳/快照/总Projection或IK算法。
+
+```text
+PLANNING_DOCUMENT
+planner_thread_id: 01a09594-1751-7512-b8c0-08b04185055b
+implementation_thread_id: 01a081f3-46f4-7c91-8930-73923ff7950b
+planning_document_paths: D:/Unity_Project_1/3C/openspec/changes/refine-pose-graph-readonly-blackboard/proposal.md; design.md; tasks.md; specs/character-presentation-pose-graph/spec.md
+implementation_document_path: D:/Unity_Project_1/3C/openspec/changes/refine-pose-graph-readonly-blackboard/execution.md
+confirmed_by_user: true
+confirmed_revision: r3 / design section 11 / tasks section 3
+```
+
+实现按职责清楚的小步中文提交，仅维护execution.md中的实际改动、提交与未完成边界，不改规划正文，不夹带共享工作树其它改动，不新增测试或验证任务。无需向规划或协调窗口发送收到回执、日常进度或完成汇报。
 
 ## 1. 业务目标与输入输出
 

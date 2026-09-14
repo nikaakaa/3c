@@ -36,11 +36,12 @@
 
 - BTSMTL.Timeline.Tree.csproj：最近一次编译为 0 个错误、17 个已有警告。
 - ThirdPersonClient.Runtime.csproj：最近一次成功编译为 0 个错误、1 个警告。
-- 当前 Attack 生成目录参与的 Editor 静态编译为 0 个错误、32 个已有警告；当前完整 Unity 项目仍受并行 Simulation/Pose 状态迁移的外部编译错误影响，未宣称全项目通过。
+- 核心 Program 删除前，当前 Attack 生成目录参与的 Editor 静态编译曾为 0 个错误、32 个已有警告；该结果不代表当前完整项目状态。
+- 当前 `ThirdPersonClient.Editor.csproj` 静态编译失败，错误集中在并行 Simulation/Pose 状态迁移后的核心类型缺失，未宣称全项目通过。
 - 此前中间 Attack 生成文件的静态编译曾发现 19 个 `timelineCatalog*` 未解析名称；这是旧程序集输出没有应用 `80055079b` 提升规则的结果，未把该旧输出当作新生成器编译证据。
 - Unity Editor 会话已经恢复并注册为 `3C_Client@e852139597e42532`。正式 `btsmtl.export_code` 已用当时的最新生成器对 Attack 返回 8 个文件、总计 182,305 字节，其中入口 980 字节；文件均已写入并通过静态编译。
 - 历史中间导出曾发现短入口缺少命名空间闭合和跨阶段 `timelineCatalog*` 提升缺口，源码分别已在 `cf715b0b9` 与 `80055079b` 修复；最后的无用导入裁剪已在源码提交，尚未由 Unity 最新程序集再次重导。
-- Unity 当前 Console 返回至少 50 个并行 Fixed Simulation 核心错误，集中在 `ProgramExecutionLayout`、`SimulationProgramCatalog`、`BlackboardInputStateBinding` 和 `TypedStateAddress` 未解析，阻止 `ThirdPersonClient.Editor` 加载最后的导入裁剪。`034dde874` 只修复了一个独立扩展的命名空间引用；当前脏的 Fixed/Pose/Slate 并行改动未被本任务继续重构，未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。
+- Unity 当前唯一目标实例为 `3C_Client@e852139597e42532`，处于非Play、非编译、可用状态；Console 仍返回 `ProgramExecutionLayout`、`SimulationProgramCatalog`、`BlackboardInputStateBinding` 和 `TypedStateAddress` 未解析。`59cad96bd` 已明确删除这些旧 Program/Core 类型并允许旧消费者暂时编译失败，不能在本变更内恢复旧载体、添加占位类型或建立兼容路径；`034dde874` 只修复了一个独立扩展的命名空间引用。当前脏的 Fixed/Pose/Slate 并行改动未被本任务继续重构，未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。
 
 因此当前缺少的是 Unity 编译恢复后用最新程序集重新导出并编译全部已采用 C# 根，不是另建一个生成路径来绕过该边界。
 

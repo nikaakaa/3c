@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using UnityEngine;
 
@@ -215,7 +216,7 @@ namespace BTSMTL.Timeline
     [TimelineAuthoringProperty("blendMode", typeof(TimelineMotionBlendMode))]
     [TimelineAuthoringProperty("priority", TimelineAuthoringPropertyKind.Integer)]
     [TimelineAuthoringProperty("consumeLowerChannels", TimelineAuthoringPropertyKind.Boolean)]
-    public sealed partial class MotionCurveClip : Clip
+    public sealed partial class MotionCurveClip : Clip, ITimelineContentClosureSource
     {
         public override string ContractKind => TimelineContractKinds.MotionCurveClip;
 
@@ -248,6 +249,23 @@ namespace BTSMTL.Timeline
         public float SourceStartTime => m_SourceStartTime;
         public float SourceEndTime => m_SourceEndTime;
         public float SourceDuration => Mathf.Max(0f, m_SourceEndTime - m_SourceStartTime);
+
+        public void CollectContentClosure(TimelineContentClosureBuilder builder)
+        {
+            if (builder == null)
+                throw new ArgumentNullException(nameof(builder));
+            if (!m_SourceCurve)
+            {
+                builder.AddError("timeline_motion_curve_missing", AuthoringId, "MotionCurveClip缺少RootMotionCurveAsset正式源引用。");
+                return;
+            }
+            string contentHash = SourceContentHasher.Hash(JsonUtility.ToJson(m_SourceCurve));
+            builder.AddDependency(
+                $"motion-curve:{contentHash}",
+                "timeline.motion-curve",
+                m_SourceCurve.name,
+                contentHash);
+        }
 
         public int CurveEndFrame => StartFrame + Mathf.RoundToInt(SourceDuration * TimelineUtility.FrameRate);
         public AnimationCurve ProgramPositionX => ProgramCurve(SourcePositionX);

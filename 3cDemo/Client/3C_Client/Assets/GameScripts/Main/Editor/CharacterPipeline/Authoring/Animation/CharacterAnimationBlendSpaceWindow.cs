@@ -1310,8 +1310,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_BottomDock = new BlendSpaceBottomDockAdapter(this);
             var commands = new[]
             {
-                new GraphAuthoringToolbarCommandDescriptor("compile", "Compile", GraphAuthoringToolbarCommandKind.ExplicitOperation, CompilePoseProjection),
-                new GraphAuthoringToolbarCommandDescriptor("build", "Build", GraphAuthoringToolbarCommandKind.ExplicitOperation, BuildDefinition)
+                new GraphAuthoringToolbarCommandDescriptor("compile", "Compile", GraphAuthoringToolbarCommandKind.ExplicitOperation, CompilePoseProjection)
             };
             return new GraphAuthoringDomainAdapters(
                 new BlendSpaceDocumentAdapter(this),
@@ -1653,33 +1652,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterAnimationBlendSpaceValidationReport report =
                     CharacterAnimationBlendSpaceValidator.Validate(m_Asset);
                 message = report.IsValid
-                    ? "Blend Space graph data compile completed. Character Build publishes Projection and Program."
+                    ? "Blend Space graph data compile completed."
                     : $"Blend Space graph data compile failed: {report.Issues[0]}";
-            }
-            finally
-            {
-                SetBuilding(false);
-            }
-            m_BottomDock?.Report(message);
-        }
-
-        void BuildDefinition()
-        {
-            if (!m_Definition)
-            {
-                m_BottomDock?.Report("Build unavailable: the Blend Space has no unique Character Definition context.");
-                return;
-            }
-            SetBuilding(true);
-            string message;
-            try
-            {
-                bool success = CharacterSimulationProgramBuildService.Build(m_Definition, true);
-                message = success ? "Build completed and published." : "Build failed. Inspect the formal compile report.";
-            }
-            catch (Exception exception)
-            {
-                message = $"Build failed: {exception.Message}";
             }
             finally
             {

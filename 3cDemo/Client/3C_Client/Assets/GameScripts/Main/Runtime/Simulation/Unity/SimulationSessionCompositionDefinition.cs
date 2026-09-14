@@ -61,13 +61,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             }
         }
 
-        public SimulationSessionCompositionPreparation CreatePreparation(
-            IReadOnlyList<ISimulationActorRegistration> registrations)
-        {
-            RequireComplete();
-            return new SimulationSessionCompositionPreparation(this, registrations);
-        }
-
 #if UNITY_EDITOR
         public void SetAuthoring(
             string sessionId,
@@ -106,31 +99,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         }
     }
 
-    public interface ISimulationSessionComposer
-    {
-        SimulationSessionPreparedRuntime Compose(SimulationSessionCompositionBuildRequest request);
-    }
-
     public interface ISimulationSessionOutputLifecycle
     {
         void BeginLogicTick();
-    }
-
-    public sealed class SimulationSessionCompositionBuildRequest
-    {
-        public SimulationSessionCompositionBuildRequest(
-            SimulationSessionCompositionDefinition definition,
-            ISimulationSessionPreparedSource source,
-            IReadOnlyList<ISimulationActorRegistration> registrations)
-        {
-            Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
-            Source = source ?? throw new ArgumentNullException(nameof(source));
-            Registrations = registrations ?? throw new ArgumentNullException(nameof(registrations));
-        }
-
-        public SimulationSessionCompositionDefinition Definition { get; }
-        public ISimulationSessionPreparedSource Source { get; }
-        public IReadOnlyList<ISimulationActorRegistration> Registrations { get; }
     }
 
     public sealed class SimulationSessionPreparedRuntime

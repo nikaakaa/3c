@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace BTSMTL.Timeline
 {
@@ -88,11 +89,36 @@ namespace BTSMTL.Timeline
         public int WeightedMode { get; }
     }
 
-    public interface ITimelineContentCurveSource
+    public readonly struct TimelineContentCurve
     {
-        int CurvePreWrapMode { get; }
-        int CurvePostWrapMode { get; }
-        IReadOnlyList<TimelineContentCurveKey> CurveKeys { get; }
+        public TimelineContentCurve(
+            string channelId,
+            string displayName,
+            TimelineCurveTimeDomain timeDomain,
+            TimelineCurveValueDomain valueDomain,
+            int preWrapMode,
+            int postWrapMode,
+            IReadOnlyList<TimelineContentCurveKey> keys)
+        {
+            ChannelId = string.IsNullOrWhiteSpace(channelId)
+                ? throw new ArgumentException("Timeline curve channel identity is required.", nameof(channelId))
+                : channelId.Trim();
+            DisplayName = displayName ?? string.Empty;
+            TimeDomain = timeDomain;
+            ValueDomain = valueDomain;
+            PreWrapMode = preWrapMode;
+            PostWrapMode = postWrapMode;
+            Keys = new ReadOnlyCollection<TimelineContentCurveKey>(
+                new List<TimelineContentCurveKey>(keys ?? Array.Empty<TimelineContentCurveKey>()));
+        }
+
+        public string ChannelId { get; }
+        public string DisplayName { get; }
+        public TimelineCurveTimeDomain TimeDomain { get; }
+        public TimelineCurveValueDomain ValueDomain { get; }
+        public int PreWrapMode { get; }
+        public int PostWrapMode { get; }
+        public IReadOnlyList<TimelineContentCurveKey> Keys { get; }
     }
 
     public sealed class TimelineContentClosureBuilder
@@ -137,9 +163,7 @@ namespace BTSMTL.Timeline
             bool supportsStop,
             bool trackMuted,
             IReadOnlyList<TimelineContentBindingUse> bindings,
-            int curvePreWrapMode = 0,
-            int curvePostWrapMode = 0,
-            IReadOnlyList<TimelineContentCurveKey> curveKeys = null)
+            IReadOnlyList<TimelineContentCurve> curves = null)
         {
             AuthoringId = Require(authoringId, nameof(authoringId));
             ContractKind = Require(contractKind, nameof(contractKind));
@@ -151,9 +175,7 @@ namespace BTSMTL.Timeline
             SupportsStop = supportsStop;
             TrackMuted = trackMuted;
             Bindings = new ReadOnlyCollection<TimelineContentBindingUse>(new List<TimelineContentBindingUse>(bindings ?? Array.Empty<TimelineContentBindingUse>()));
-            CurvePreWrapMode = curvePreWrapMode;
-            CurvePostWrapMode = curvePostWrapMode;
-            CurveKeys = new ReadOnlyCollection<TimelineContentCurveKey>(new List<TimelineContentCurveKey>(curveKeys ?? Array.Empty<TimelineContentCurveKey>()));
+            Curves = new ReadOnlyCollection<TimelineContentCurve>(new List<TimelineContentCurve>(curves ?? Array.Empty<TimelineContentCurve>()));
         }
 
         public string AuthoringId { get; }
@@ -166,9 +188,7 @@ namespace BTSMTL.Timeline
         public bool SupportsStop { get; }
         public bool TrackMuted { get; }
         public IReadOnlyList<TimelineContentBindingUse> Bindings { get; }
-        public int CurvePreWrapMode { get; }
-        public int CurvePostWrapMode { get; }
-        public IReadOnlyList<TimelineContentCurveKey> CurveKeys { get; }
+        public IReadOnlyList<TimelineContentCurve> Curves { get; }
 
         static string Require(string value, string name)
         {
@@ -376,14 +396,37 @@ namespace BTSMTL.Timeline
                         continue;
                     }
                     var bindingUses = new List<TimelineContentBindingUse>();
-                    int curvePreWrapMode = 0;
-                    int curvePostWrapMode = 0;
-                    IReadOnlyList<TimelineContentCurveKey> curveKeys = null;
-                    if (clip is ITimelineContentCurveSource curveSource)
+                    var curves = new List<TimelineContentCurve>();
+                    var curveDescriptors = new List<TimelineCurveChannelDescriptor>();
+                    TimelineCurveChannelCatalog.CollectForTrack(track, curveDescriptors);
+                    for (int curveIndex = 0; curveIndex < curveDescriptors.Count; curveIndex++)
                     {
-                        curvePreWrapMode = curveSource.CurvePreWrapMode;
-                        curvePostWrapMode = curveSource.CurvePostWrapMode;
-                        curveKeys = curveSource.CurveKeys;
+                        TimelineCurveChannelDescriptor descriptor = curveDescriptors[curveIndex];
+                        if (!descriptor.Supports(clip))
+                            continue;
+                        AnimationCurve sourceCurve = descriptor.Read(clip);
+                        Keyframe[] keys = sourceCurve?.keys ?? Array.Empty<Keyframe>();
+                        var curveKeys = new TimelineContentCurveKey[keys.Length];
+                        for (int keyIndex = 0; keyIndex < keys.Length; keyIndex++)
+                        {
+                            Keyframe key = keys[keyIndex];
+                            curveKeys[keyIndex] = new TimelineContentCurveKey(
+                                key.time,
+                                key.value,
+                                key.inTangent,
+                                key.outTangent,
+                                key.inWeight,
+                                key.outWeight,
+                                (int)key.weightedMode);
+                        }
+                        curves.Add(new TimelineContentCurve(
+                            descriptor.ChannelId.Value,
+                            descriptor.DisplayName,
+                            descriptor.TimeDomain,
+                            descriptor.ValueDomain,
+                            (int)(sourceCurve?.preWrapMode ?? WrapMode.ClampForever),
+                            (int)(sourceCurve?.postWrapMode ?? WrapMode.ClampForever),
+                            curveKeys));
                     }
                     if (clip is ITimelineExternalBindingUseSource bindingSource && bindingSource.ExternalBindingUses != null)
                     {
@@ -405,9 +448,7 @@ namespace BTSMTL.Timeline
                         clipContract.SupportsStop,
                         track.PersistentMuted,
                         bindingUses,
-                        curvePreWrapMode,
-                        curvePostWrapMode,
-                        curveKeys));
+                        curves));
                     if (clip is ITimelineContentClosureSource closureSource)
                         closureSource.CollectContentClosure(closure);
                 }

@@ -40,7 +40,7 @@ namespace BTSMTL.Timeline
     [TimelineAuthoringProperty("targetBindingId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("parameterBindingId", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     [TimelineAuthoringProperty("valueCurve", TimelineAuthoringPropertyKind.Object)]
-    public sealed class ScenePresentationParameterCurveClip : Clip, ITimelineExternalBindingUseSource, ITimelineContentCurveSource
+    public sealed class ScenePresentationParameterCurveClip : Clip, ITimelineExternalBindingUseSource
     {
         [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
         string m_TargetBindingId = "target";
@@ -65,29 +65,6 @@ namespace BTSMTL.Timeline
             }
         }
         public AnimationCurve ValueCurve => m_ValueCurve;
-        public int CurvePreWrapMode => (int)(m_ValueCurve?.preWrapMode ?? WrapMode.ClampForever);
-        public int CurvePostWrapMode => (int)(m_ValueCurve?.postWrapMode ?? WrapMode.ClampForever);
-        public IReadOnlyList<TimelineContentCurveKey> CurveKeys
-        {
-            get
-            {
-                Keyframe[] keys = m_ValueCurve?.keys ?? Array.Empty<Keyframe>();
-                var values = new TimelineContentCurveKey[keys.Length];
-                for (int i = 0; i < keys.Length; i++)
-                {
-                    Keyframe key = keys[i];
-                    values[i] = new TimelineContentCurveKey(
-                        key.time,
-                        key.value,
-                        key.inTangent,
-                        key.outTangent,
-                        key.inWeight,
-                        key.outWeight,
-                        (int)key.weightedMode);
-                }
-                return values;
-            }
-        }
         public IReadOnlyList<TimelineExternalBindingUse> ExternalBindingUses => new[]
         {
             new TimelineExternalBindingUse(TargetBindingId, TimelineBindingValueKind.Target, TimelineBindingAccess.Input, TimelineBindingLifetime.Call),

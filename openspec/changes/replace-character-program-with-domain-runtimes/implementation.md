@@ -95,6 +95,10 @@
 - `fd14cc72a`：删除旧 Timeline Program MCP 构建／示例工具。
 - `afd92e310`：删除只调用旧角色 Semantic Frontend 的 Semantic IR 检视窗口。
 - `9748e8398`：删除已无实现对应的 Float32 ProgramEvaluate／Finalize Pass 定义和 StandardLocal 配置资产。
+- `f3fec70b6`：删除把整角色 Program、Projection、旧诊断和表现 runtime 捆在一起的 CharacterSimulationActorRegistration。
+- `aad466b13`：删除从整角色 Program operation 反查 Timeline 的预览辅助器。
+- `167e3b20e`：删除 Float32／Fixed 旧整角色 Program 诊断适配器。
+- `a9f06ae6f`：删除 ServerAuthoritative 侧旧 Program 角色链，包括 Authority Actor、Remote Presentation、Fantasy endpoint/connection、Hybrid model 和旧 Session Source。
 
 ## 当前实现边界
 
@@ -161,8 +165,9 @@
 - 2026-09-14 D17 首批整角色 Program 载体删除后，`ThirdPersonSimulation.Float32.csproj` 出现 94 个预期旧 `ProgramExecutionLayout`／`SimulationProgramCatalog` 消费者错误；未新增恢复类型或兼容路径，构建结束后已执行 `dotnet build-server shutdown`。这是删除批次的接线清单，不代表保留业务已接通；未运行 Unity、测试或资产生成。
 - 2026-09-14 D17 激进删除继续完成 ProgramRuntime、Timeline reader／播放器和旧 Target 集合清理；本轮未重新编译或运行 Unity，故不宣称构建恢复。剩余旧 Program 消费者错误保持为后续领域接线清单。
 - 2026-09-14 Fixed 整角色 Program 类和旧 Pipeline Pass 删除后，`ThirdPersonSimulation.Fixed.csproj` 只报 6 个生成工程 `CS2001`：生成 csproj 仍列出已删除的 Fixed 源文件；没有新增原语的编译诊断。已执行 `dotnet build-server shutdown`，未运行 Unity、测试或资产生成。
+- 2026-09-14 激进删除继续移除角色 Actor Registration、旧 Program 预览／诊断和 ServerAuthoritative Program 角色链；没有重新编译或运行 Unity，当前残余错误是待接线清单，不宣称网络或角色运行时已恢复。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步
 
-下一步继续删除后的核心接线：先用独立技能格式恢复 Float32／Fixed Ability Load 和执行数据 reader，再让保留的技能执行入口直接消费独立数据；不恢复角色 Program、全局 Layout 或转换 Factory。随后接入 D14 的 Timeline Prepare／CreatePlayback／Pending Commit／Discard、D15 的 Pose 阶段接口、2.1 的非旧 Program 角色工厂和 2.6 的统一 Step／快照收口。Timeline／Pose 内部状态不在本窗口重复实现。
+下一步进入删除后的核心接线：让保留的 Ability 执行入口直接消费 Float32／Fixed 独立 execution data，建立按 Ability 数据的执行布局和状态边界；不恢复角色 Program、全局 Layout 或转换 Factory。随后接入 D14 的 Timeline Prepare／CreatePlayback／Pending Commit／Discard、D15 的 Pose 阶段接口、2.1 的非旧 Program 角色工厂和 2.6 的统一 Step／快照收口。Timeline／Pose 内部状态不在本窗口重复实现。

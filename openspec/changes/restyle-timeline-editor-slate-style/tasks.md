@@ -126,7 +126,7 @@
 - [x] 11.18 MotionCurveClip保持与其它Clip相同的参数行、DopeSheet和CurveEditor布局；Position X/Y/Z/Yaw作为带`[Ref]`标记的只读源曲线显示，source字段通过正式typed Inspector配置，Timeline不写源资产。提交 `081ba862b` 改为同一Renderer引用项，提交 `a25a05d10` 接通source typed字段，提交 `dfa8a2db3` 将源区间显示映射移回MotionCurveClip正式定义，提交 `f2df9c64e` 修正Keyframe显示副本的值类型拷贝，提交 `7545f0b22` 保留源区间边界切线；真实窗口验收仍未完成。
 - [x] 11.19 在现有binding/Session内只提交实际变化字段/曲线，空手势不记Undo；分离作者SelfEase与派生OtherEase，删除每次遍历所有Clip回写曲线/字段的路径，保留已有失败回滚（A07）。提交 `48a1d2a72` 已加入HasChanges差异门、SelfEase初始化和曲线等价判断；真实窗口验收仍未完成。
 - [x] 11.20 将Track Muted等正式状态改为同一正式命令提交，禁止先写Source再验revision；Track锁定贯穿本轨Clip的原手势与菜单，锁状态只按已有编辑语义保存（A08）。提交 `48a1d2a72`、`ff70519c2` 已接正式Muted命令、可见锁定按钮和本轨Clip锁定阻断，`e7b22ab74` 让binding重建按AuthoringId恢复锁定视图状态；真实窗口验收仍未完成。
-- [ ] 11.21 原移动/裁剪/缩放/切分准确接入ClipIn、局部曲线及正式源区间含义，Copy即时捕获正式内容，Paste新身份；缺失源操作由原Motion/Warp owner提供，不只改Start/End冒充完整操作（A01/A09）。`0f9448bd9` 和 `adc097652` 已接入ClipIn、Split source range与Formal裁剪草稿；`e3833c11` 已让native/formal共用原生Clip移动事件算法；formal binding 现在移动 Start 时保持原长度，曲线提交按当前 Clip 时长归一化；移动提交、完整缩放重定时和局部曲线左右段映射仍未完成。
+- [ ] 11.21 原移动/裁剪/缩放/切分准确接入ClipIn、局部曲线及正式源区间含义，Copy即时捕获正式内容，Paste新身份；缺失源操作由原Motion/Warp owner提供，不只改Start/End冒充完整操作（A01/A09）。`0f9448bd9` 和 `adc097652` 已接入ClipIn、Split source range与Formal裁剪草稿；`e3833c11` 已让native/formal共用原生Clip移动事件算法；formal binding 现在移动 Start 时保持原长度，曲线提交按当前 Clip 时长归一化，切分时按 descriptor 的归一化时间域生成两段曲线；移动提交、完整缩放重定时和局部曲线左右段映射仍未完成。
 - [x] 11.22 用原Section编辑控件接名称与整数帧配置，保持已接通新增/删除；精确展示创建过期/必填字段错误并保留输入，不新增另一套表单/校验规则（A12）。现有Timeline Inspector typed Section字段与正式ConfigureSection、AddSection失败反馈已接通；真实窗口验收仍未完成。
 - [x] 11.23 接通数据/选择/视野/真实观察变化的重绘通知，移除空RequestRepaint和无条件窗口循环重绘依赖；与11.11一起收口当前Surface范围缓存释放，不新增轮询服务（A10）。提交 `bf07cf6e6`、`8b7a0e2a3` 和现有RepaintRequested链已接通；真实窗口验收仍未完成。
 

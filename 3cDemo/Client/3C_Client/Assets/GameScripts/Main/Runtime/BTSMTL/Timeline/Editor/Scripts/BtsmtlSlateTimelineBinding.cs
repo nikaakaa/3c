@@ -270,7 +270,14 @@ namespace BTSMTL.Timeline.Editor
                     motionCopy.ConfigureSource(motionCopy.SourceCurve, splitSourceTime, originalSourceEnd);
                 }
                 formalClip.Source.EndFrame = frame;
+                formalClip.Source.SelfEaseOutFrame = 0;
+                copy.SelfEaseInFrame = 0;
+                copy.Track = formalClip.Source.Track;
                 formalClip.Source.Track.Clips.Add(copy);
+                SplitClipCurves(
+                    formalClip.Source,
+                    copy,
+                    (frame - originalStartFrame) / (float)Mathf.Max(1, originalEndFrame - originalStartFrame));
                 formalClip.Source.Track.UpdateMix();
             }, "Split Timeline Clip");
         }
@@ -724,6 +731,79 @@ namespace BTSMTL.Timeline.Editor
                 configuration.ParameterBindingId = request.ParameterBindingId;
             }
             return configuration;
+        }
+
+        static void SplitClipCurves(Clip first, Clip second, float split)
+        {
+            if (first?.Track == null || second == null)
+                return;
+            var descriptors = new List<TimelineCurveChannelDescriptor>();
+            TimelineCurveChannelCatalog.CollectForTrack(first.Track, descriptors);
+            float normalizedSplit = Mathf.Clamp(split, 0.0001f, 0.9999f);
+            for (int index = 0; index < descriptors.Count; index++)
+            {
+                TimelineCurveChannelDescriptor descriptor = descriptors[index];
+                if (!descriptor.Supports(first) || !descriptor.Supports(second))
+                    continue;
+                AnimationCurve source = descriptor.Read(first);
+                descriptor.Replace(first, SplitNormalizedCurve(source, 0f, normalizedSplit));
+                descriptor.Replace(second, SplitNormalizedCurve(source, normalizedSplit, 1f));
+            }
+        }
+
+        static AnimationCurve SplitNormalizedCurve(AnimationCurve source, float start, float end)
+        {
+            if (source == null)
+                return new AnimationCurve();
+            float duration = Mathf.Max(0.0001f, end - start);
+            var keys = new List<Keyframe>();
+            Keyframe[] sourceKeys = source.keys;
+            bool hasStart = false;
+            bool hasEnd = false;
+            for (int index = 0; index < sourceKeys.Length; index++)
+            {
+                Keyframe key = sourceKeys[index];
+                if (key.time < start - 0.0001f || key.time > end + 0.0001f)
+                    continue;
+                key.time = Mathf.Clamp01((key.time - start) / duration);
+                key.inTangent *= duration;
+                key.outTangent *= duration;
+                hasStart |= Mathf.Abs(key.time) <= 0.0001f;
+                hasEnd |= Mathf.Abs(key.time - 1f) <= 0.0001f;
+                keys.Add(key);
+            }
+            if (!hasStart)
+                keys.Add(CreateBoundaryKey(source, start, 0f, duration));
+            if (!hasEnd)
+                keys.Add(CreateBoundaryKey(source, end, 1f, duration));
+            keys.Sort((left, right) => left.time.CompareTo(right.time));
+            var result = new AnimationCurve(keys.ToArray())
+            {
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
+            };
+            return result;
+        }
+
+        static Keyframe CreateBoundaryKey(AnimationCurve source, float sourceTime, float normalizedTime, float duration)
+        {
+            float tangent = BoundaryTangent(source, sourceTime) * duration;
+            return new Keyframe(normalizedTime, source.Evaluate(sourceTime), tangent, tangent);
+        }
+
+        static float BoundaryTangent(AnimationCurve source, float sourceTime)
+        {
+            Keyframe[] keys = source.keys;
+            if (keys.Length == 0)
+                return 0f;
+            if (sourceTime <= keys[0].time)
+                return keys[0].outTangent;
+            if (sourceTime >= keys[keys.Length - 1].time)
+                return keys[keys.Length - 1].inTangent;
+            for (int index = 1; index < keys.Length; index++)
+                if (sourceTime <= keys[index].time)
+                    return keys[index - 1].outTangent;
+            return 0f;
         }
 
         static string DisplayKind(string kind)

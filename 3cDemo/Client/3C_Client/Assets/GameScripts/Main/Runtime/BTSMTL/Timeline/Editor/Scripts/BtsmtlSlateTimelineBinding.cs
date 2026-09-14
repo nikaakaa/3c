@@ -100,12 +100,6 @@ namespace BTSMTL.Timeline.Editor
                 TimelineInspectorSelection.Set(m_Request.SerializedOwner, propertyPath);
             else
                 TimelineInspectorSelection.Clear(m_Request.SerializedOwner);
-            foreach (BtsmtlTimelineTrackBinding track in m_Tracks.Values)
-                track.SetSelectedClip(null);
-            if (element is BtsmtlTimelineClipBinding clip)
-                clip.Track.SetSelectedClip(clip);
-            if (element is BtsmtlTimelineTrackBinding trackElement)
-                trackElement.SetSelectedClip(null);
             m_Session.SetSelection(
                 element is BtsmtlTimelineClipBinding selectedClip
                     ? selectedClip.Source
@@ -696,7 +690,6 @@ namespace BTSMTL.Timeline.Editor
         sealed class BtsmtlTimelineTrackBinding : IEmbeddedTimelineTrackBinding
         {
             readonly List<IEmbeddedTimelineClipBinding> m_Clips = new List<IEmbeddedTimelineClipBinding>();
-            IEmbeddedTimelineClipBinding m_SelectedClip;
             public BtsmtlTimelineTrackBinding(BtsmtlSlateTimelineBinding owner, BtsmtlTimelineGroupBinding group, Track source)
             {
                 Owner = owner;
@@ -717,9 +710,12 @@ namespace BTSMTL.Timeline.Editor
             public float DefaultHeight => 32f;
             public float FinalHeight => ShowCurves ? 250f : DefaultHeight;
             public IReadOnlyList<IEmbeddedTimelineClipBinding> Clips => m_Clips;
-            public IEmbeddedTimelineClipBinding SelectedClip => m_SelectedClip;
+            public IEmbeddedTimelineClipBinding SelectedClip =>
+                Owner.Selected is BtsmtlTimelineClipBinding selected &&
+                ReferenceEquals(selected.Track, this)
+                    ? selected
+                    : null;
             public void AddClip(BtsmtlTimelineClipBinding clip) => m_Clips.Add(clip);
-            public void SetSelectedClip(BtsmtlTimelineClipBinding clip) => m_SelectedClip = clip;
         }
 
         sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding

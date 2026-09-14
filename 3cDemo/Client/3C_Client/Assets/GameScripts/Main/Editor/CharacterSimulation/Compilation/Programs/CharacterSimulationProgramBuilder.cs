@@ -676,7 +676,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (m_DefaultConstants.TryGetValue(kind, out int index))
                 return index;
-            var source = new CharacterSimulationSourceLocation("ProgramDefault", "Program", string.Empty, string.Empty, string.Empty, string.Empty, $"Program/default/{kind}");
+            var source = new CharacterSimulationSourceLocation("AbilityDefault", "Ability", string.Empty, string.Empty, string.Empty, string.Empty, $"Ability/default/{kind}");
             if (kind == ProgramStateValueKind.Yaw)
             {
                 string identity = $"{source.Identity}/constant/value";

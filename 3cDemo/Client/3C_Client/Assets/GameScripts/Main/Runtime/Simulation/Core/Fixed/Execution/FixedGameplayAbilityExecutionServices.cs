@@ -46,7 +46,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayAbilityExecutionData data,
             GameplayAbilityExecutionLayout layout,
             string[] operationSourcePaths,
-            SimulationGameplayEffectProgram gameplayEffectProgram)
+            FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
@@ -69,9 +69,9 @@ namespace ThirdPersonSimulation.Fixed
             m_ExecutionCurves = BuildExecutionCurves(data);
             m_TagQueries = BuildTagQueries(data);
             m_SetByCallerValues = BuildSetByCallerValues(data);
-            GameplayEffectProgram = gameplayEffectProgram ??
-                throw new ArgumentNullException(nameof(gameplayEffectProgram));
-            m_GameplayCueProducers = BuildGameplayCueProducers(data, GameplayEffectProgram);
+            GameplayEffectCatalog = gameplayEffectCatalog ??
+                throw new ArgumentNullException(nameof(gameplayEffectCatalog));
+            m_GameplayCueProducers = BuildGameplayCueProducers(data, GameplayEffectCatalog);
             BuildAdmissionProfiles(data, layout, out m_AdmissionProfilesByOperation, out m_AdmissionProfilesById);
             BuildBlackboardGroups(
                 data,
@@ -104,7 +104,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedGameplayAbilityExecutionAccess Access { get; }
         public GameplayAbilityExecutionIdentity Identity { get; }
         public OperationExecutionTopology Topology { get; }
-        public SimulationGameplayEffectProgram GameplayEffectProgram { get; }
+        public FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         public FixedStateAccessPolicy ControlPolicy { get; }
         public FixedStateAccessPolicy BlackboardPolicy { get; }
         public FixedStateAccessPolicy TimelinePolicy { get; }
@@ -358,7 +358,7 @@ namespace ThirdPersonSimulation.Fixed
 
         static IReadOnlyDictionary<GameplayCueProducerKey, ProgramProducer> BuildGameplayCueProducers(
             FixedGameplayAbilityExecutionData data,
-            SimulationGameplayEffectProgram gameplayEffects)
+            FixedGameplayEffectRuntimeCatalog gameplayEffects)
         {
             var result = new Dictionary<GameplayCueProducerKey, ProgramProducer>();
             for (int i = 0; i < data.Producers.Count; i++)
@@ -509,7 +509,6 @@ namespace ThirdPersonSimulation.Fixed
     }
 
 }
-
 
 
 

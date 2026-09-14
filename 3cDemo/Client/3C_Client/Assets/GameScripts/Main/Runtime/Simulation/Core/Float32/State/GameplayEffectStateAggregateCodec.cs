@@ -17,14 +17,14 @@ namespace ThirdPersonSimulation
         internal static void Write(
             CanonicalWriter writer,
             GameplayEffectStateAggregate aggregate,
-            SimulationGameplayEffectProgram program)
+            Float32GameplayEffectRuntimeCatalog catalog)
         {
             if (writer == null)
                 throw new ArgumentNullException(nameof(writer));
             if (aggregate == null)
                 throw new ArgumentNullException(nameof(aggregate));
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
 
             var tagSources = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
             var attributes = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
@@ -44,12 +44,12 @@ namespace ThirdPersonSimulation
 
         internal static GameplayEffectStateAggregate Read(
             CanonicalReader reader,
-            SimulationGameplayEffectProgram program)
+            Float32GameplayEffectRuntimeCatalog catalog)
         {
             if (reader == null)
                 throw new ArgumentNullException(nameof(reader));
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
 
             var tagSources = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
             var attributes = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
@@ -59,10 +59,10 @@ namespace ThirdPersonSimulation
             var lifecycleRevisions = new SortedDictionary<ulong, ulong>();
 
             ReadTags(reader.ReadBytes(), tagSources);
-            ReadAttributes(reader.ReadBytes(), program, attributes);
-            ReadActiveEffects(reader.ReadBytes(), program, activeEffects);
+            ReadAttributes(reader.ReadBytes(), catalog, attributes);
+            ReadActiveEffects(reader.ReadBytes(), catalog, activeEffects);
             ReadPeriods(reader.ReadBytes(), periods);
-            ReadJournal(reader.ReadBytes(), program, journal, lifecycleRevisions);
+            ReadJournal(reader.ReadBytes(), catalog, journal, lifecycleRevisions);
 
             var aggregate = new GameplayEffectStateAggregate(
                 tagSources,
@@ -72,7 +72,7 @@ namespace ThirdPersonSimulation
                 journal,
                 lifecycleRevisions,
                 reader.ReadUInt64());
-            return new SimulationGameplayEffectState(program, aggregate).Freeze();
+            return new SimulationGameplayEffectState(catalog, aggregate).Freeze();
         }
 
         static byte[] WriteTags(IReadOnlyDictionary<string, string[]> tagSources)
@@ -100,7 +100,7 @@ namespace ThirdPersonSimulation
                 if (i > 0 && string.CompareOrdinal(previous, source) >= 0)
                     throw new InvalidDataException("Gameplay Tag sources are not canonically ordered.");
                 previous = source;
-                tagSources.Add(source, ReadStrings(reader, SimulationGameplayEffectProgram.NormalizeTag));
+                tagSources.Add(source, ReadStrings(reader, Float32GameplayEffectRuntimeCatalog.NormalizeTag));
             }
             reader.RequireComplete();
         }
@@ -127,15 +127,15 @@ namespace ThirdPersonSimulation
 
         static void ReadAttributes(
             byte[] bytes,
-            SimulationGameplayEffectProgram program,
+            Float32GameplayEffectRuntimeCatalog catalog,
             IDictionary<string, PortableAttributeState> attributes)
         {
             CanonicalReader reader = Reader(bytes, AttributesMagic, "Gameplay Effect Attributes");
             int count = ReadCount(reader, "Gameplay Attribute");
             for (int i = 0; i < count; i++)
             {
-                string id = SimulationGameplayEffectProgram.NormalizeAttribute(reader.ReadString());
-                if (!program.Attributes.TryGetValue(id, out PortableAttributeDefinition definition) || attributes.ContainsKey(id))
+                string id = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(reader.ReadString());
+                if (!catalog.Attributes.TryGetValue(id, out PortableAttributeDefinition definition) || attributes.ContainsKey(id))
                     throw new InvalidDataException($"Gameplay Attribute state '{id}' is unknown or duplicated.");
                 var attribute = new PortableAttributeState
                 {
@@ -153,8 +153,8 @@ namespace ThirdPersonSimulation
                 attributes.Add(id, attribute);
             }
             reader.RequireComplete();
-            if (attributes.Count != program.Attributes.Count)
-                throw new InvalidDataException("Gameplay Attribute state does not match the Program catalog.");
+            if (attributes.Count != catalog.Attributes.Count)
+                throw new InvalidDataException("Gameplay Attribute state does not match the runtime catalog.");
         }
 
         static byte[] WriteActiveEffects(IReadOnlyList<PortableActiveEffectState> activeEffects)
@@ -170,13 +170,13 @@ namespace ThirdPersonSimulation
 
         static void ReadActiveEffects(
             byte[] bytes,
-            SimulationGameplayEffectProgram program,
+            Float32GameplayEffectRuntimeCatalog catalog,
             List<PortableActiveEffectState> activeEffects)
         {
             CanonicalReader reader = Reader(bytes, ActiveMagic, "Active Gameplay Effects");
             int count = ReadCount(reader, "Active Gameplay Effect");
             for (int i = 0; i < count; i++)
-                activeEffects.Add(ReadActive(reader, program));
+                activeEffects.Add(ReadActive(reader, catalog));
             reader.RequireComplete();
             activeEffects.Sort(CompareActive);
         }
@@ -238,7 +238,7 @@ namespace ThirdPersonSimulation
 
         static void ReadJournal(
             byte[] bytes,
-            SimulationGameplayEffectProgram program,
+            Float32GameplayEffectRuntimeCatalog catalog,
             IDictionary<ulong, List<PortablePredictionRecord>> journal,
             IDictionary<ulong, ulong> lifecycleRevisions)
         {
@@ -255,7 +255,7 @@ namespace ThirdPersonSimulation
                 var records = new List<PortablePredictionRecord>(recordCount);
                 for (int recordIndex = 0; recordIndex < recordCount; recordIndex++)
                 {
-                    PortablePredictionRecord record = ReadPredictionRecord(reader, program);
+                    PortablePredictionRecord record = ReadPredictionRecord(reader, catalog);
                     if (record.Spec.Context.PredictionKey != key)
                         throw new InvalidDataException("Gameplay Effect prediction record key does not match its context.");
                     records.Add(record);
@@ -290,13 +290,13 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(active.LifecycleRevision);
         }
 
-        static PortableActiveEffectState ReadActive(CanonicalReader reader, SimulationGameplayEffectProgram program)
+        static PortableActiveEffectState ReadActive(CanonicalReader reader, Float32GameplayEffectRuntimeCatalog catalog)
         {
             var active = new PortableActiveEffectState
             {
                 Handle = reader.ReadUInt64(),
                 InstanceId = reader.ReadUInt64(),
-                Spec = ReadSpec(reader, program),
+                Spec = ReadSpec(reader, catalog),
                 StartTick = reader.ReadUInt64(),
                 EndTick = reader.ReadUInt64(),
                 InsertionSequence = reader.ReadUInt64(),
@@ -323,9 +323,9 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(spec.PeriodTicks);
         }
 
-        static PortableEffectSpecState ReadSpec(CanonicalReader reader, SimulationGameplayEffectProgram program)
+        static PortableEffectSpecState ReadSpec(CanonicalReader reader, Float32GameplayEffectRuntimeCatalog catalog)
         {
-            PortableEffectDefinition definition = program.RequireEffect(reader.ReadString());
+            PortableEffectDefinition definition = catalog.RequireEffect(reader.ReadString());
             var spec = new PortableEffectSpecState
             {
                 Definition = definition,
@@ -334,10 +334,10 @@ namespace ThirdPersonSimulation
                 TargetTags = Array.Empty<string>()
             };
             ReadScalarMap(reader, spec.SetByCaller, value => SimulationIdentity.Require(value, "SetByCallerParameter"));
-            ReadScalarMap(reader, spec.SourceAttributes, SimulationGameplayEffectProgram.NormalizeAttribute);
-            ReadScalarMap(reader, spec.TargetAttributes, SimulationGameplayEffectProgram.NormalizeAttribute);
-            spec.SourceTags = ReadStrings(reader, SimulationGameplayEffectProgram.NormalizeTag);
-            spec.TargetTags = ReadStrings(reader, SimulationGameplayEffectProgram.NormalizeTag);
+            ReadScalarMap(reader, spec.SourceAttributes, Float32GameplayEffectRuntimeCatalog.NormalizeAttribute);
+            ReadScalarMap(reader, spec.TargetAttributes, Float32GameplayEffectRuntimeCatalog.NormalizeAttribute);
+            spec.SourceTags = ReadStrings(reader, Float32GameplayEffectRuntimeCatalog.NormalizeTag);
+            spec.TargetTags = ReadStrings(reader, Float32GameplayEffectRuntimeCatalog.NormalizeTag);
             spec.DurationTicks = reader.ReadUInt64();
             spec.PeriodTicks = reader.ReadUInt64();
             return spec;
@@ -368,11 +368,11 @@ namespace ThirdPersonSimulation
 
         static PortablePredictionRecord ReadPredictionRecord(
             CanonicalReader reader,
-            SimulationGameplayEffectProgram program)
+            Float32GameplayEffectRuntimeCatalog catalog)
         {
             var record = new PortablePredictionRecord
             {
-                Spec = ReadSpec(reader, program),
+                Spec = ReadSpec(reader, catalog),
                 Handle = reader.ReadUInt64(),
                 InstanceId = reader.ReadUInt64(),
                 CreatedActive = reader.ReadBoolean(),
@@ -385,7 +385,7 @@ namespace ThirdPersonSimulation
             int attributeCount = ReadCount(reader, "Prediction Attribute");
             for (int i = 0; i < attributeCount; i++)
             {
-                string id = SimulationGameplayEffectProgram.NormalizeAttribute(reader.ReadString());
+                string id = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(reader.ReadString());
                 record.Attributes.Add(
                     id,
                     new PortablePredictionAttributeSnapshot(
@@ -480,7 +480,7 @@ namespace ThirdPersonSimulation
                 !Enum.IsDefined(typeof(PortableClampBound), modifier.ClampBound))
                 throw new InvalidDataException("Gameplay Attribute modifier identity is invalid.");
             if (!string.IsNullOrEmpty(modifier.LiveAttributeId))
-                modifier.LiveAttributeId = SimulationGameplayEffectProgram.NormalizeAttribute(modifier.LiveAttributeId);
+                modifier.LiveAttributeId = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(modifier.LiveAttributeId);
             return modifier;
         }
 

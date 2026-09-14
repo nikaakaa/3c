@@ -207,7 +207,7 @@ namespace ThirdPersonSimulation.Fixed
             out ulong revision)
         {
             if (m_Attributes.TryGetValue(
-                SimulationGameplayEffectProgram.NormalizeAttribute(attributeId),
+                FixedGameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId),
                 out PortableAttributeState value))
             {
                 baseValue = value.BaseValue;
@@ -221,11 +221,11 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        internal static GameplayEffectStateAggregate CreateInitial(SimulationGameplayEffectProgram program)
+        internal static GameplayEffectStateAggregate CreateInitial(FixedGameplayEffectRuntimeCatalog catalog)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-            return new SimulationGameplayEffectState(program, null).Freeze();
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
+            return new SimulationGameplayEffectState(catalog, null).Freeze();
         }
 
         internal void CopyTo(
@@ -420,7 +420,7 @@ namespace ThirdPersonSimulation.Fixed
         const uint JournalMagic = 0x52554F4A;
         const int StateVersion = 1;
 
-        readonly SimulationGameplayEffectProgram m_Program;
+        readonly FixedGameplayEffectRuntimeCatalog m_Catalog;
         readonly FixedGameplayEffectExecutionScratch m_Scratch;
         readonly SortedDictionary<string, string[]> m_TagSources = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
         readonly SortedDictionary<string, PortableAttributeState> m_Attributes = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
@@ -439,13 +439,13 @@ namespace ThirdPersonSimulation.Fixed
         bool m_RestoredDirty;
 
         public SimulationGameplayEffectState(
-            SimulationGameplayEffectProgram program,
+            FixedGameplayEffectRuntimeCatalog catalog,
             GameplayEffectStateAggregate aggregate,
             FixedGameplayEffectExecutionScratch scratch = null)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-            m_Program = program;
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
+            m_Catalog = catalog;
             m_Scratch = scratch;
             if (aggregate == null)
                 Initialize();
@@ -454,7 +454,7 @@ namespace ThirdPersonSimulation.Fixed
             ValidateRuntimeClosure();
         }
 
-        public SimulationGameplayEffectProgram Program => m_Program;
+        public FixedGameplayEffectRuntimeCatalog Catalog => m_Catalog;
         public IReadOnlyList<PortableActiveEffectState> ActiveEffects => m_ActiveEffects;
         public SortedDictionary<ulong, List<PortablePredictionRecord>> Journal => m_Journal;
         public SortedDictionary<ulong, ulong> LastLifecycleRevisions => m_LastLifecycleRevisions;
@@ -498,10 +498,10 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool HasTag(string tagId)
         {
-            string query = SimulationGameplayEffectProgram.NormalizeTag(tagId);
+            string query = FixedGameplayEffectRuntimeCatalog.NormalizeTag(tagId);
             foreach (string owned in CopyOwnedTags())
             {
-                if (m_Program.IsTagOrParent(owned, query))
+                if (m_Catalog.IsTagOrParent(owned, query))
                     return true;
             }
             return false;
@@ -509,7 +509,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool Matches(PortableTagQuery query)
         {
-            return m_Program.Matches(query, CopyOwnedTags());
+            return m_Catalog.Matches(query, CopyOwnedTags());
         }
 
         public void SetTagSource(string sourceId, IEnumerable<string> tags)
@@ -536,7 +536,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool TryGetAttribute(string attributeId, out PortableAttributeState value)
         {
-            return m_Attributes.TryGetValue(SimulationGameplayEffectProgram.NormalizeAttribute(attributeId), out value);
+            return m_Attributes.TryGetValue(FixedGameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId), out value);
         }
 
         public PortableAttributeState RequireAttribute(string attributeId)
@@ -756,10 +756,10 @@ namespace ThirdPersonSimulation.Fixed
         {
             ClearCollections();
             m_Baseline = null;
-            string[] initialTags = CanonicalTags(m_Program.InitialTags);
+            string[] initialTags = CanonicalTags(m_Catalog.InitialTags);
             if (initialTags.Length > 0)
                 m_TagSources.Add("initial", initialTags);
-            foreach (KeyValuePair<string, PortableAttributeDefinition> pair in m_Program.Attributes)
+            foreach (KeyValuePair<string, PortableAttributeDefinition> pair in m_Catalog.Attributes)
             {
                 m_Attributes.Add(pair.Key, new PortableAttributeState
                 {
@@ -999,7 +999,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (tags != null)
                 {
                     foreach (string tag in tags)
-                        values.Add(SimulationGameplayEffectProgram.NormalizeTag(tag));
+                        values.Add(FixedGameplayEffectRuntimeCatalog.NormalizeTag(tag));
                 }
                 values.Sort(StringComparer.Ordinal);
                 for (int i = values.Count - 1; i > 0; i--)

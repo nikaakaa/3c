@@ -85,7 +85,7 @@ namespace ThirdPersonSimulation
         {
             if (m_State != null)
                 return m_State.HasTag(tagId);
-            string query = SimulationGameplayEffectProgram.NormalizeTag(tagId);
+            string query = Float32GameplayEffectRuntimeCatalog.NormalizeTag(tagId);
             foreach (string owned in m_CommittedState.CopyOwnedTags())
             {
                 if (m_Transaction.Layout.GameplayEffectProgram.IsTagOrParent(owned, query))
@@ -163,7 +163,7 @@ namespace ThirdPersonSimulation
             if (causeHandle == 0 && !string.IsNullOrEmpty(ingress.CauseEffectId) && ingress.CauseContext.IsValid)
             {
                 causeHandle = m_AllocateHandle();
-                PortableEffectDefinition definition = m_State.Program.RequireEffect(ingress.CauseEffectId);
+                PortableEffectDefinition definition = m_State.Catalog.RequireEffect(ingress.CauseEffectId);
                 m_Causes[causeHandle] = new PortableEffectCause(definition, ingress.CauseEffectInstanceId, ingress.CauseContext);
             }
             if (m_State.ApplyAuthoritativeAttribute(ingress.AttributeId, ingress.BaseValue, ingress.CurrentValue, ingress.ValueRevision, causeHandle, out IReadOnlyList<PortableAttributeChange> changes))
@@ -205,7 +205,7 @@ namespace ThirdPersonSimulation
 
         bool EvaluateTagRequirement(PortableEffectSpecState spec, PortableTagRequirementsComponent requirement)
         {
-            bool source = requirement.Source.IsEmpty || m_State.Program.Matches(requirement.Source, spec.SourceTags);
+            bool source = requirement.Source.IsEmpty || m_State.Catalog.Matches(requirement.Source, spec.SourceTags);
             bool target = requirement.Target.IsEmpty || m_State.Matches(requirement.Target);
             return source && target;
         }
@@ -399,7 +399,7 @@ namespace ThirdPersonSimulation
             int effectIndex)
         {
             PortableAdditionalEffect effect = component.Effects[effectIndex];
-            PortableEffectDefinition definition = m_State.Program.RequireEffect(effect.EffectId);
+            PortableEffectDefinition definition = m_State.Catalog.RequireEffect(effect.EffectId);
             List<SimulationSetByCallerValue> values = m_Scratch.AdditionalSetByCallerValues.Acquire();
             List<SimulationAttributeCapture> attributes = m_Scratch.AdditionalSourceAttributes.Acquire();
             try
@@ -440,7 +440,7 @@ namespace ThirdPersonSimulation
         {
             if (m_CurrentPrediction == null)
                 return;
-            string id = SimulationGameplayEffectProgram.NormalizeAttribute(attributeId);
+            string id = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId);
             if (m_CurrentPrediction.Attributes.ContainsKey(id))
                 return;
             PortableAttributeState value = m_State.RequireAttribute(id);

@@ -45,7 +45,7 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityExecutionData data,
             GameplayAbilityExecutionLayout layout,
             string[] operationSourcePaths,
-            SimulationGameplayEffectProgram gameplayEffectProgram)
+            Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
@@ -68,9 +68,9 @@ namespace ThirdPersonSimulation
             m_ExecutionCurves = BuildExecutionCurves(data);
             m_TagQueries = BuildTagQueries(data);
             m_SetByCallerValues = BuildSetByCallerValues(data);
-            GameplayEffectProgram = gameplayEffectProgram ??
-                throw new ArgumentNullException(nameof(gameplayEffectProgram));
-            m_GameplayCueProducers = BuildGameplayCueProducers(data, GameplayEffectProgram);
+            GameplayEffectCatalog = gameplayEffectCatalog ??
+                throw new ArgumentNullException(nameof(gameplayEffectCatalog));
+            m_GameplayCueProducers = BuildGameplayCueProducers(data, GameplayEffectCatalog);
             BuildAdmissionProfiles(data, layout, out m_AdmissionProfilesByOperation, out m_AdmissionProfilesById);
             BuildBlackboardGroups(
                 data,
@@ -103,7 +103,7 @@ namespace ThirdPersonSimulation
         public Float32GameplayAbilityExecutionAccess Access { get; }
         public GameplayAbilityExecutionIdentity Identity { get; }
         public OperationExecutionTopology Topology { get; }
-        public SimulationGameplayEffectProgram GameplayEffectProgram { get; }
+        public Float32GameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         public Float32StateAccessPolicy ControlPolicy { get; }
         public Float32StateAccessPolicy BlackboardPolicy { get; }
         public Float32StateAccessPolicy TimelinePolicy { get; }
@@ -357,7 +357,7 @@ namespace ThirdPersonSimulation
 
         static IReadOnlyDictionary<GameplayCueProducerKey, ProgramProducer> BuildGameplayCueProducers(
             Float32GameplayAbilityExecutionData data,
-            SimulationGameplayEffectProgram gameplayEffects)
+            Float32GameplayEffectRuntimeCatalog gameplayEffects)
         {
             var result = new Dictionary<GameplayCueProducerKey, ProgramProducer>();
             for (int i = 0; i < data.Producers.Count; i++)
@@ -508,5 +508,3 @@ namespace ThirdPersonSimulation
     }
 
 }
-
-

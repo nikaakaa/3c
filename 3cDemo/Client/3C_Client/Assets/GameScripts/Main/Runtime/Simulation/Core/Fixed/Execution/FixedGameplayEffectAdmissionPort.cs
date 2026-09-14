@@ -25,7 +25,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 spec = new PortableEffectSpecState
                 {
-                    Definition = m_State.Program.RequireEffect(application.EffectId),
+                    Definition = m_State.Catalog.RequireEffect(application.EffectId),
                     Context = application.Context
                 };
                 return true;
@@ -49,7 +49,7 @@ namespace ThirdPersonSimulation.Fixed
         int IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SuppliedSourceAttributeCount(SimulationGameplayEffectApplication application) => application.SourceAttributeSnapshots.Count;
         string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SuppliedSourceAttributeId(SimulationGameplayEffectApplication application, int index) => application.SourceAttributeSnapshots[index].AttributeId;
         FixedScalar IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SuppliedSourceAttributeValue(SimulationGameplayEffectApplication application, int index) => application.SourceAttributeSnapshots[index].Value;
-        string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.NormalizeAttributeId(string attributeId) => SimulationGameplayEffectProgram.NormalizeAttribute(attributeId);
+        string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.NormalizeAttributeId(string attributeId) => FixedGameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId);
         IEnumerable<string> IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.RequiredSnapshotAttributes(PortableEffectSpecState spec, GameplayEffectAttributeSnapshotKind kind) =>
             CollectSnapshotAttributes(
                 spec.Definition,
@@ -73,7 +73,7 @@ namespace ThirdPersonSimulation.Fixed
         string[] IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.CopyTargetTags() => m_State.CopyOwnedTags().ToArray();
         int IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SourceTagCount(SimulationGameplayEffectApplication application) => application.SourceTagSnapshot.Count;
         string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SourceTag(SimulationGameplayEffectApplication application, int index) => application.SourceTagSnapshot[index];
-        string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.NormalizeTag(string tag) => SimulationGameplayEffectProgram.NormalizeTag(tag);
+        string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.NormalizeTag(string tag) => FixedGameplayEffectRuntimeCatalog.NormalizeTag(tag);
         void IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SetTargetTags(PortableEffectSpecState spec, string[] tags) => spec.TargetTags = tags;
         void IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SetSourceTags(PortableEffectSpecState spec, string[] tags) => spec.SourceTags = tags;
         bool IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.RequiresDuration(PortableEffectSpecState spec) => spec.Definition.DurationPolicy == PortableEffectDurationPolicy.Duration;
@@ -98,4 +98,3 @@ namespace ThirdPersonSimulation.Fixed
         GameplayEffectPreparedSpec<PortableEffectSpecState> IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.DescribeSpec(PortableEffectSpecState spec) => DescribeSpec(spec);
     }
 }
-

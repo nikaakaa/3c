@@ -1,10 +1,9 @@
-﻿using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace ThirdPersonSimulation.Fixed
+namespace ThirdPersonSimulation
 {
     internal enum PortableEffectDurationPolicy : byte
     {
@@ -119,11 +118,11 @@ namespace ThirdPersonSimulation.Fixed
     {
         public PortableMagnitude(
             PortableMagnitudeSource source,
-            FixedScalar constant,
+            Float32Scalar constant,
             string setByCallerParameterId,
             string attributeId,
-            FixedScalar coefficient,
-            FixedScalar postAdd)
+            Float32Scalar coefficient,
+            Float32Scalar postAdd)
         {
             Source = source;
             Constant = constant;
@@ -134,11 +133,11 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public PortableMagnitudeSource Source { get; }
-        public FixedScalar Constant { get; }
+        public Float32Scalar Constant { get; }
         public string SetByCallerParameterId { get; }
         public string AttributeId { get; }
-        public FixedScalar Coefficient { get; }
-        public FixedScalar PostAdd { get; }
+        public Float32Scalar Coefficient { get; }
+        public Float32Scalar PostAdd { get; }
     }
 
     internal sealed class PortableTagQuery
@@ -159,7 +158,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             var result = values == null
                 ? new List<string>()
-                : values.Select(SimulationGameplayEffectProgram.NormalizeTag).ToList();
+                : values.Select(Float32GameplayEffectRuntimeCatalog.NormalizeTag).ToList();
             result.Sort(StringComparer.Ordinal);
             for (int i = 0; i < result.Count; i++)
             {
@@ -172,7 +171,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal readonly struct PortableAttributeBound
     {
-        public PortableAttributeBound(bool enabled, bool fromAttribute, FixedScalar constant, string attributeId)
+        public PortableAttributeBound(bool enabled, bool fromAttribute, Float32Scalar constant, string attributeId)
         {
             Enabled = enabled;
             FromAttribute = fromAttribute;
@@ -182,22 +181,22 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool Enabled { get; }
         public bool FromAttribute { get; }
-        public FixedScalar Constant { get; }
+        public Float32Scalar Constant { get; }
         public string AttributeId { get; }
     }
 
     internal sealed class PortableAttributeDefinition
     {
-        public PortableAttributeDefinition(string id, FixedScalar initialBase, PortableAttributeBound minimum, PortableAttributeBound maximum)
+        public PortableAttributeDefinition(string id, Float32Scalar initialBase, PortableAttributeBound minimum, PortableAttributeBound maximum)
         {
-            Id = SimulationGameplayEffectProgram.NormalizeAttribute(id);
+            Id = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(id);
             InitialBase = initialBase;
             Minimum = minimum;
             Maximum = maximum;
         }
 
         public string Id { get; }
-        public FixedScalar InitialBase { get; }
+        public Float32Scalar InitialBase { get; }
         public PortableAttributeBound Minimum { get; }
         public PortableAttributeBound Maximum { get; }
     }
@@ -210,7 +209,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         public PortableModifierComponent(string attributeId, PortableModifierApplication application, PortableModifierOperation operation, PortableMagnitude magnitude, int priority, PortableClampBound clampBound, bool scaleWithStack)
         {
-            AttributeId = SimulationGameplayEffectProgram.NormalizeAttribute(attributeId);
+            AttributeId = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId);
             Application = application;
             Operation = operation;
             Magnitude = magnitude;
@@ -232,7 +231,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         public PortableGrantedTagsComponent(IEnumerable<string> tags)
         {
-            Tags = tags.Select(SimulationGameplayEffectProgram.NormalizeTag).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            Tags = tags.Select(Float32GameplayEffectRuntimeCatalog.NormalizeTag).OrderBy(value => value, StringComparer.Ordinal).ToArray();
         }
 
         public string[] Tags { get; }
@@ -258,7 +257,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             Phase = phase;
             Source = source;
-            AttributeId = SimulationGameplayEffectProgram.NormalizeAttribute(attributeId);
+            AttributeId = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId);
             Comparison = comparison;
             Threshold = threshold;
         }
@@ -274,7 +273,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         public PortableExecutionMutation(string attributeId, PortableModifierOperation operation, PortableMagnitude magnitude, PortableClampBound clampBound)
         {
-            AttributeId = SimulationGameplayEffectProgram.NormalizeAttribute(attributeId);
+            AttributeId = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId);
             Operation = operation;
             Magnitude = magnitude;
             ClampBound = clampBound;
@@ -298,7 +297,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal readonly struct PortableAdditionalParameterBinding
     {
-        public PortableAdditionalParameterBinding(string childParameterId, PortableAdditionalParameterSource source, string parentParameterId, FixedScalar constant)
+        public PortableAdditionalParameterBinding(string childParameterId, PortableAdditionalParameterSource source, string parentParameterId, Float32Scalar constant)
         {
             ChildParameterId = SimulationIdentity.Require(childParameterId, nameof(childParameterId));
             Source = source;
@@ -309,7 +308,7 @@ namespace ThirdPersonSimulation.Fixed
         public string ChildParameterId { get; }
         public PortableAdditionalParameterSource Source { get; }
         public string ParentParameterId { get; }
-        public FixedScalar Constant { get; }
+        public Float32Scalar Constant { get; }
     }
 
     internal readonly struct PortableAdditionalEffect
@@ -317,7 +316,7 @@ namespace ThirdPersonSimulation.Fixed
         public PortableAdditionalEffect(PortableAdditionalEffectTrigger trigger, string effectId, PortableAdditionalParameterBinding[] bindings)
         {
             Trigger = trigger;
-            EffectId = SimulationGameplayEffectProgram.NormalizeEffect(effectId);
+            EffectId = Float32GameplayEffectRuntimeCatalog.NormalizeEffect(effectId);
             Bindings = bindings ?? Array.Empty<PortableAdditionalParameterBinding>();
         }
 
@@ -367,7 +366,7 @@ namespace ThirdPersonSimulation.Fixed
             string[] setByCallerParameters,
             PortableEffectComponent[] components)
         {
-            Id = SimulationGameplayEffectProgram.NormalizeEffect(id);
+            Id = Float32GameplayEffectRuntimeCatalog.NormalizeEffect(id);
             Revision = revision;
             EffectTags = effectTags ?? Array.Empty<string>();
             DurationPolicy = durationPolicy;
@@ -401,24 +400,14 @@ namespace ThirdPersonSimulation.Fixed
         public PortableEffectComponent[] Components { get; }
     }
 
-    internal sealed class SimulationGameplayEffectProgram
+    internal sealed class Float32GameplayEffectRuntimeCatalog
     {
-        readonly CharacterSimulationProgram m_Program;
         readonly Dictionary<string, string> m_TagParents = new Dictionary<string, string>(StringComparer.Ordinal);
         readonly HashSet<string> m_InitialTags = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<string, PortableAttributeDefinition> m_Attributes = new Dictionary<string, PortableAttributeDefinition>(StringComparer.Ordinal);
         readonly Dictionary<string, PortableEffectDefinition> m_Effects = new Dictionary<string, PortableEffectDefinition>(StringComparer.Ordinal);
 
-        public SimulationGameplayEffectProgram(CharacterSimulationProgram program)
-        {
-            m_Program = program ?? throw new ArgumentNullException(nameof(program));
-            ReadTags();
-            ReadAttributes();
-            ReadEffects();
-            ValidateClosure();
-        }
-
-        public SimulationGameplayEffectProgram(CharacterGameplayEffectRuntimeBinding binding)
+        public Float32GameplayEffectRuntimeCatalog(CharacterGameplayEffectRuntimeBinding binding)
         {
             if (binding == null)
                 throw new ArgumentNullException(nameof(binding));
@@ -473,44 +462,6 @@ namespace ThirdPersonSimulation.Fixed
             return true;
         }
 
-        void ReadTags()
-        {
-            foreach (ProgramCatalogEntry entry in m_Program.CatalogEntries.Where(value => value.Kind == ProgramCatalogEntryKind.GameplayTag))
-            {
-                string id = NormalizeTag(entry.Identity);
-                string parent = Identity(entry, "Parent", string.Empty);
-                m_TagParents.Add(id, string.IsNullOrEmpty(parent) ? string.Empty : NormalizeTag(parent));
-                if (Boolean(entry, "Initial", false))
-                    m_InitialTags.Add(id);
-            }
-        }
-
-        void ReadAttributes()
-        {
-            foreach (ProgramCatalogEntry entry in m_Program.CatalogEntries.Where(value => value.Kind == ProgramCatalogEntryKind.Attribute))
-            {
-                string id = NormalizeAttribute(entry.Identity);
-                var definition = new PortableAttributeDefinition(
-                    id,
-                    Scalar(entry, "InitialBase"),
-                    ReadBound(entry, "Minimum"),
-                    ReadBound(entry, "Maximum"));
-                m_Attributes.Add(id, definition);
-            }
-        }
-
-        void ReadEffects()
-        {
-            foreach (ProgramCatalogEntry entry in m_Program.CatalogEntries.Where(value => value.Kind == ProgramCatalogEntryKind.GameplayEffect))
-            {
-                ProgramConstant constant = Constant(entry, "Definition");
-                if (constant.Kind != ProgramConstantKind.Bytes)
-                    throw new InvalidDataException($"Gameplay Effect '{entry.Identity}' Definition is not Bytes.");
-                PortableEffectDefinition definition = DecodeEffect(entry, constant.Bytes.ToArray());
-                m_Effects.Add(definition.Id, definition);
-            }
-        }
-
         void ReadBinding(byte[] bytes)
         {
             var reader = new CanonicalReader(bytes);
@@ -533,7 +484,7 @@ namespace ThirdPersonSimulation.Fixed
                     id,
                     new PortableAttributeDefinition(
                         id,
-                        FixedScalar.FromDouble(reader.ReadDouble()),
+                        Float32Scalar.FromDouble(reader.ReadDouble()),
                         ReadBindingBound(reader),
                         ReadBindingBound(reader)));
             }
@@ -556,9 +507,9 @@ namespace ThirdPersonSimulation.Fixed
                 return default;
             int source = reader.ReadInt32();
             if (source == 0)
-                return new PortableAttributeBound(true, false, FixedScalar.FromDouble(reader.ReadDouble()), string.Empty);
+                return new PortableAttributeBound(true, false, Float32Scalar.FromDouble(reader.ReadDouble()), string.Empty);
             if (source == 1)
-                return new PortableAttributeBound(true, true, FixedScalar.Zero, NormalizeAttribute(reader.ReadString()));
+                return new PortableAttributeBound(true, true, Float32Scalar.Zero, NormalizeAttribute(reader.ReadString()));
             throw new InvalidDataException($"Gameplay Attribute bound source '{source}' is invalid.");
         }
 
@@ -591,54 +542,6 @@ namespace ThirdPersonSimulation.Fixed
             string[] setByCaller = ReadStrings(reader, false);
             PortableEffectComponent[] components = ReadComponents(reader, true);
             reader.RequireComplete();
-            return new PortableEffectDefinition(
-                id,
-                revision,
-                tags,
-                durationPolicy,
-                duration,
-                hasPeriod,
-                period,
-                executeOnApplication,
-                stacking,
-                maxStacks,
-                durationUpdate,
-                periodUpdate,
-                overflow,
-                setByCaller,
-                components);
-        }
-
-        PortableEffectDefinition DecodeEffect(ProgramCatalogEntry entry, byte[] bytes)
-        {
-            var reader = new CanonicalReader(bytes);
-            int version = reader.ReadInt32();
-            if (version != 1)
-                throw new InvalidDataException($"Gameplay Effect '{entry.Identity}' format '{version}' is unsupported.");
-            string id = NormalizeEffect(reader.ReadString());
-            uint revision = reader.ReadUInt32();
-            if (!string.Equals(id, NormalizeEffect(entry.Identity), StringComparison.Ordinal) || revision != entry.Revision || revision == 0)
-                throw new InvalidDataException($"Gameplay Effect '{entry.Identity}' catalog identity or revision does not match its definition bytes.");
-            PortableEffectDurationPolicy durationPolicy = EnumValue<PortableEffectDurationPolicy>(reader.ReadInt32(), "duration policy");
-            PortableMagnitude duration = ReadMagnitude(reader);
-            bool hasPeriod = reader.ReadBoolean();
-            PortableMagnitude period = ReadMagnitude(reader);
-            bool executeOnApplication = reader.ReadBoolean();
-            PortableEffectStackingPolicy stacking = EnumValue<PortableEffectStackingPolicy>(reader.ReadInt32(), "stacking policy");
-            int maxStacks = reader.ReadInt32();
-            if (maxStacks <= 0)
-                throw new InvalidDataException($"Gameplay Effect '{id}' MaxStacks must be positive.");
-            PortableEffectDurationUpdatePolicy durationUpdate = EnumValue<PortableEffectDurationUpdatePolicy>(reader.ReadInt32(), "duration update policy");
-            PortableEffectPeriodUpdatePolicy periodUpdate = EnumValue<PortableEffectPeriodUpdatePolicy>(reader.ReadInt32(), "period update policy");
-            PortableEffectOverflowPolicy overflow = EnumValue<PortableEffectOverflowPolicy>(reader.ReadInt32(), "overflow policy");
-            string[] setByCaller = ReadStrings(reader, false);
-            PortableEffectComponent[] components = ReadComponents(reader);
-            reader.RequireComplete();
-            string[] tags = entry.Fields
-                .Where(value => value.Kind == ProgramCatalogFieldKind.Identity && value.Name.StartsWith("Tag:", StringComparison.Ordinal))
-                .Select(value => NormalizeTag(value.Identity))
-                .OrderBy(value => value, StringComparer.Ordinal)
-                .ToArray();
             return new PortableEffectDefinition(
                 id,
                 revision,
@@ -725,7 +628,7 @@ namespace ThirdPersonSimulation.Fixed
                                 reader.ReadString(),
                                 EnumValue<PortableAdditionalParameterSource>(reader.ReadInt32(), "additional effect parameter source"),
                                 reader.ReadString(),
-                                sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar());
+                                sourceDouble ? Float32Scalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar());
                         }
                         effects[effectIndex] = new PortableAdditionalEffect(trigger, effectId, bindings);
                     }
@@ -749,29 +652,16 @@ namespace ThirdPersonSimulation.Fixed
         {
             return new PortableMagnitude(
                 EnumValue<PortableMagnitudeSource>(reader.ReadInt32(), "magnitude source"),
-                sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                sourceDouble ? Float32Scalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
                 reader.ReadString(),
                 NormalizeOptionalAttribute(reader.ReadString()),
-                sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
-                sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar());
+                sourceDouble ? Float32Scalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                sourceDouble ? Float32Scalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar());
         }
 
         PortableTagQuery ReadQuery(CanonicalReader reader)
         {
             return new PortableTagQuery(ReadStrings(reader, true), ReadStrings(reader, true), ReadStrings(reader, true));
-        }
-
-        PortableAttributeBound ReadBound(ProgramCatalogEntry entry, string prefix)
-        {
-            bool enabled = Boolean(entry, $"{prefix}:Enabled", false);
-            if (!enabled)
-                return default;
-            int source = Int32(entry, $"{prefix}:Source");
-            if (source == 0)
-                return new PortableAttributeBound(true, false, Scalar(entry, $"{prefix}:Constant"), string.Empty);
-            if (source == 1)
-                return new PortableAttributeBound(true, true, FixedScalar.Zero, NormalizeAttribute(Identity(entry, $"{prefix}:Attribute", string.Empty)));
-            throw new InvalidDataException($"Attribute '{entry.Identity}' {prefix} bound source '{source}' is invalid.");
         }
 
         void ValidateClosure()
@@ -880,47 +770,6 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException($"Gameplay definition '{owner}' references missing Attribute '{id}'.");
         }
 
-        ProgramConstant Constant(ProgramCatalogEntry entry, string name)
-        {
-            ProgramCatalogField field = entry.Fields.FirstOrDefault(value => value.Kind == ProgramCatalogFieldKind.Constant && string.Equals(value.Name, name, StringComparison.Ordinal));
-            if (field == null)
-                throw new InvalidDataException($"Catalog entry '{entry.Identity}' is missing constant field '{name}'.");
-            return m_Program.Constants[field.ConstantIndex];
-        }
-
-        string Identity(ProgramCatalogEntry entry, string name, string fallback)
-        {
-            ProgramCatalogField field = entry.Fields.FirstOrDefault(value => value.Kind == ProgramCatalogFieldKind.Identity && string.Equals(value.Name, name, StringComparison.Ordinal));
-            return field?.Identity ?? fallback;
-        }
-
-        bool Boolean(ProgramCatalogEntry entry, string name, bool fallback)
-        {
-            ProgramCatalogField field = entry.Fields.FirstOrDefault(value => value.Kind == ProgramCatalogFieldKind.Constant && string.Equals(value.Name, name, StringComparison.Ordinal));
-            if (field == null)
-                return fallback;
-            ProgramConstant constant = m_Program.Constants[field.ConstantIndex];
-            if (constant.Kind != ProgramConstantKind.Boolean)
-                throw new InvalidDataException($"Catalog field '{entry.Identity}/{name}' is not Boolean.");
-            return constant.Boolean;
-        }
-
-        int Int32(ProgramCatalogEntry entry, string name)
-        {
-            ProgramConstant constant = Constant(entry, name);
-            if (constant.Kind != ProgramConstantKind.Int32)
-                throw new InvalidDataException($"Catalog field '{entry.Identity}/{name}' is not Int32.");
-            return constant.Int32;
-        }
-
-        FixedScalar Scalar(ProgramCatalogEntry entry, string name)
-        {
-            ProgramConstant constant = Constant(entry, name);
-            if (constant.Kind != ProgramConstantKind.Scalar)
-                throw new InvalidDataException($"Catalog field '{entry.Identity}/{name}' is not Scalar.");
-            return constant.Scalar;
-        }
-
         static string[] ReadStrings(CanonicalReader reader, bool normalizeTags)
         {
             int count = ReadCount(reader, "string array");
@@ -964,4 +813,5 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 }
+
 

@@ -32,6 +32,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ThirdPersonSimulation.Fixed.FixedGameplayAbilityExecutionCompilationResult fixedData =
                 GameplayAbilityTargetCompiler.CompileFixed(semantic.Artifact);
 
+            ValidateAssetSlot<GameplayAbilityDataAsset>(float32Path);
+            ValidateAssetSlot<FixedGameplayAbilityDataAsset>(fixedPath);
             GameplayAbilityDataAsset float32Asset = PrepareAsset<GameplayAbilityDataAsset>(float32Path);
             FixedGameplayAbilityDataAsset fixedAsset = PrepareAsset<FixedGameplayAbilityDataAsset>(fixedPath);
             float32Asset.SetCompiledExecutionData(float32);
@@ -46,20 +48,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static TAsset PrepareAsset<TAsset>(string path)
             where TAsset : ScriptableObject
         {
+            ValidateAssetSlot<TAsset>(path);
             UnityEngine.Object existing = AssetDatabase.LoadMainAssetAtPath(path);
-            if (existing != null && existing is not TAsset)
-                throw new InvalidOperationException(
-                    $"Ability Data output '{path}' is occupied by '{existing.GetType().Name}'.");
             TAsset asset = existing as TAsset;
             if (asset)
                 return asset;
-            string folder = Path.GetDirectoryName(path)?.Replace('\\', '/');
-            if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
-                throw new InvalidOperationException($"Ability Data output folder '{folder}' does not exist.");
             asset = ScriptableObject.CreateInstance<TAsset>();
             asset.name = Path.GetFileNameWithoutExtension(path);
             AssetDatabase.CreateAsset(asset, path);
             return asset;
+        }
+
+        static void ValidateAssetSlot<TAsset>(string path)
+            where TAsset : ScriptableObject
+        {
+            UnityEngine.Object existing = AssetDatabase.LoadMainAssetAtPath(path);
+            if (existing != null && existing is not TAsset)
+                throw new InvalidOperationException(
+                    $"Ability Data output '{path}' is occupied by '{existing.GetType().Name}'.");
+            string folder = Path.GetDirectoryName(path)?.Replace('\\', '/');
+            if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+                throw new InvalidOperationException($"Ability Data output folder '{folder}' does not exist.");
         }
 
         static string RequireAssetPath(string path, string parameter)

@@ -9,41 +9,69 @@ namespace ThirdPersonSimulation.Fixed
         FixedGameplayAbilityExecutionData(
             CharacterSkillId abilityId,
             GameplayAbilityProgramBinding binding,
-            CharacterSimulationProgram program,
-            GameplayAbilityProviderContract providerContract)
+            GameplayAbilityProviderContract providerContract,
+            string compilerVersion,
+            OperationSetVersion operationSetVersion,
+            int tickRate,
+            ProgramRevision sourceRevision,
+            SemanticHash semanticHash,
+            SimulationNumericProfile numericProfile,
+            SimulationProgramRootDescriptor root,
+            ProgramId programId,
+            ProgramHash programHash,
+            LayoutHash layoutHash,
+            IEnumerable<SimulationOperationDefinition> operationDefinitions,
+            IEnumerable<SimulationOperation> operations,
+            IEnumerable<ProgramConstant> constants,
+            IEnumerable<ProgramConstantInputBinding> constantInputBindings,
+            IEnumerable<ProgramControlFlowEdge> controlFlow,
+            IEnumerable<ProgramReference> references,
+            IEnumerable<ProgramGraphCallFrame> graphCallFrames,
+            IEnumerable<ProgramStateSlot> stateSlots,
+            IEnumerable<ProgramScopeLayout> scopes,
+            IEnumerable<ProgramWorldRequestLayout> worldRequests,
+            IEnumerable<ProgramOutputChannelLayout> outputChannels,
+            IEnumerable<ProgramCatalogEntry> catalogEntries,
+            IEnumerable<ProgramMotionModifierDescriptor> motionModifiers,
+            IEnumerable<ProgramSourceMapEntry> sourceMap,
+            IEnumerable<ProgramProducer> producers)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-            if (!program.Manifest.Root.IsAbility)
+            if (!root.IsAbility)
                 throw new InvalidOperationException("Fixed Ability execution data requires an Ability root.");
             AbilityId = abilityId;
             Binding = binding ?? throw new ArgumentNullException(nameof(binding));
             ProviderContract = providerContract ?? throw new ArgumentNullException(nameof(providerContract));
-            CompilerVersion = program.Manifest.CompilerVersion;
-            OperationSetVersion = program.Manifest.OperationSetVersion;
-            TickRate = program.Manifest.TickRate;
-            SourceRevision = program.Manifest.SourceRevision;
-            SemanticHash = program.Manifest.SemanticHash;
-            NumericProfile = program.Manifest.NumericProfile;
-            Root = program.Manifest.Root;
+            CompilerVersion = SimulationIdentity.Require(compilerVersion, nameof(compilerVersion));
+            OperationSetVersion = operationSetVersion;
+            TickRate = tickRate;
+            SourceRevision = sourceRevision;
+            SemanticHash = semanticHash;
+            NumericProfile = numericProfile;
+            Root = root;
+            ProgramId = programId;
+            ProgramHash = programHash;
+            LayoutHash = layoutHash;
             ContentHash = StableHash.Compute(
                 "gameplay-ability-execution-data/1",
                 abilityId.Value,
                 Root.ContentIdentity,
-                program.ProgramHash.ToString(),
-                program.LayoutHash.ToString());
-            OperationDefinitions = Copy(program.OperationDefinitions);
-            Operations = Copy(program.Operations);
-            Constants = Copy(program.Constants);
-            ConstantInputBindings = Copy(program.ConstantInputBindings);
-            ControlFlow = Copy(program.ControlFlow);
-            References = Copy(program.References);
-            GraphCallFrames = Copy(program.GraphCallFrames);
-            StateSlots = Copy(program.StateSlots);
-            Scopes = Copy(program.Scopes);
-            CatalogEntries = Copy(program.CatalogEntries);
-            SourceMap = Copy(program.SourceMap);
-            Producers = Copy(program.Producers);
+                programHash.ToString(),
+                layoutHash.ToString());
+            OperationDefinitions = Copy(operationDefinitions);
+            Operations = Copy(operations);
+            Constants = Copy(constants);
+            ConstantInputBindings = Copy(constantInputBindings);
+            ControlFlow = Copy(controlFlow);
+            References = Copy(references);
+            GraphCallFrames = Copy(graphCallFrames);
+            StateSlots = Copy(stateSlots);
+            Scopes = Copy(scopes);
+            WorldRequests = Copy(worldRequests);
+            OutputChannels = Copy(outputChannels);
+            CatalogEntries = Copy(catalogEntries);
+            MotionModifiers = Copy(motionModifiers);
+            SourceMap = Copy(sourceMap);
+            Producers = Copy(producers);
         }
 
         public CharacterSkillId AbilityId { get; }
@@ -56,6 +84,9 @@ namespace ThirdPersonSimulation.Fixed
         public SemanticHash SemanticHash { get; }
         public SimulationNumericProfile NumericProfile { get; }
         public SimulationProgramRootDescriptor Root { get; }
+        public ProgramId ProgramId { get; }
+        public ProgramHash ProgramHash { get; }
+        public LayoutHash LayoutHash { get; }
         public StableHash ContentHash { get; }
         public IReadOnlyList<SimulationOperationDefinition> OperationDefinitions { get; }
         public IReadOnlyList<SimulationOperation> Operations { get; }
@@ -66,19 +97,74 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<ProgramGraphCallFrame> GraphCallFrames { get; }
         public IReadOnlyList<ProgramStateSlot> StateSlots { get; }
         public IReadOnlyList<ProgramScopeLayout> Scopes { get; }
+        public IReadOnlyList<ProgramWorldRequestLayout> WorldRequests { get; }
+        public IReadOnlyList<ProgramOutputChannelLayout> OutputChannels { get; }
         public IReadOnlyList<ProgramCatalogEntry> CatalogEntries { get; }
+        public IReadOnlyList<ProgramMotionModifierDescriptor> MotionModifiers { get; }
         public IReadOnlyList<ProgramSourceMapEntry> SourceMap { get; }
         public IReadOnlyList<ProgramProducer> Producers { get; }
 
-        internal static FixedGameplayAbilityExecutionData FromProgram(
-            CharacterSimulationProgram program,
+        internal static FixedGameplayAbilityExecutionData Create(
             CharacterSkillId abilityId,
-            GameplayAbilityProviderContract providerContract)
+            GameplayAbilityProgramBinding binding,
+            GameplayAbilityProviderContract providerContract,
+            string compilerVersion,
+            OperationSetVersion operationSetVersion,
+            int tickRate,
+            ProgramRevision sourceRevision,
+            SemanticHash semanticHash,
+            SimulationNumericProfile numericProfile,
+            SimulationProgramRootDescriptor root,
+            ProgramId programId,
+            ProgramHash programHash,
+            LayoutHash layoutHash,
+            IEnumerable<SimulationOperationDefinition> operationDefinitions,
+            IEnumerable<SimulationOperation> operations,
+            IEnumerable<ProgramConstant> constants,
+            IEnumerable<ProgramConstantInputBinding> constantInputBindings,
+            IEnumerable<ProgramControlFlowEdge> controlFlow,
+            IEnumerable<ProgramReference> references,
+            IEnumerable<ProgramGraphCallFrame> graphCallFrames,
+            IEnumerable<ProgramStateSlot> stateSlots,
+            IEnumerable<ProgramScopeLayout> scopes,
+            IEnumerable<ProgramWorldRequestLayout> worldRequests,
+            IEnumerable<ProgramOutputChannelLayout> outputChannels,
+            IEnumerable<ProgramCatalogEntry> catalogEntries,
+            IEnumerable<ProgramMotionModifierDescriptor> motionModifiers,
+            IEnumerable<ProgramSourceMapEntry> sourceMap,
+            IEnumerable<ProgramProducer> producers)
         {
             if (!abilityId.IsValid)
                 throw new ArgumentException("Ability identity is invalid.", nameof(abilityId));
-            GameplayAbilityProgramBinding binding = program?.AbilityPrograms.Require(abilityId);
-            return new FixedGameplayAbilityExecutionData(abilityId, binding, program, providerContract);
+            return new FixedGameplayAbilityExecutionData(
+                abilityId,
+                binding,
+                providerContract,
+                compilerVersion,
+                operationSetVersion,
+                tickRate,
+                sourceRevision,
+                semanticHash,
+                numericProfile,
+                root,
+                programId,
+                programHash,
+                layoutHash,
+                operationDefinitions,
+                operations,
+                constants,
+                constantInputBindings,
+                controlFlow,
+                references,
+                graphCallFrames,
+                stateSlots,
+                scopes,
+                worldRequests,
+                outputChannels,
+                catalogEntries,
+                motionModifiers,
+                sourceMap,
+                producers);
         }
 
         static ReadOnlyCollection<T> Copy<T>(IEnumerable<T> values) =>

@@ -5,8 +5,7 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32AbilityExecutionWorkspace
     {
-        readonly Float32GameplayEffectExecutionScratch m_GameplayEffects =
-            new Float32GameplayEffectExecutionScratch();
+        readonly Float32GameplayEffectExecutionScratch m_GameplayEffects;
         readonly Float32MotionExecutionScratch m_Motion =
             new Float32MotionExecutionScratch();
         readonly ActorExecutionWorkspace<
@@ -18,7 +17,14 @@ namespace ThirdPersonSimulation
             Float32MotionExecutionScratch> m_Shared;
 
         public Float32AbilityExecutionWorkspace()
+            : this(new Float32GameplayEffectExecutionScratch())
         {
+        }
+
+        internal Float32AbilityExecutionWorkspace(
+            Float32GameplayEffectExecutionScratch gameplayEffects)
+        {
+            m_GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
             m_Shared = new ActorExecutionWorkspace<
                 GameplayFact,
                 PresentationCommand,

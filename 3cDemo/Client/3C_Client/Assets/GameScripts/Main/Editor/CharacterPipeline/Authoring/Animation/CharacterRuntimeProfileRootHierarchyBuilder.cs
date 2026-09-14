@@ -5,11 +5,8 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback;
-using ThirdPersonGameplay.Networking.ServerAuthoritative;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
@@ -19,15 +16,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string LocalCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
         const string RollbackCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
         const string UnityAuthorityCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/UnityAuthority/CorinServerAuthoritativeUnityClient.prefab";
-        const string DotRecastCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/DotRecast/CorinServerAuthoritativeDotRecastClient.prefab";
-        const string UnityAuthorityClientScenePath = "Assets/Scenes/ServerAuthoritative/ServerAuthoritativeClient.unity";
-        const string DotRecastClientScenePath = "Assets/Scenes/ServerAuthoritative/DotRecastAuthorityClient.unity";
 
         static readonly string[] PipelineProfiles =
         {
             LocalCorinPath,
-            UnityAuthorityCorinPath,
-            DotRecastCorinPath
+            UnityAuthorityCorinPath
         };
 
         [MenuItem("Tools/3C/Characters/Synchronize Runtime Root Hierarchies")]
@@ -51,8 +44,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PrefabUtility.UnloadPrefabContents(templateRoot);
             }
             SynchronizeRollbackProfile();
-            SynchronizeRemoteTemplateScene(UnityAuthorityClientScenePath, UnityAuthorityCorinPath);
-            SynchronizeRemoteTemplateScene(DotRecastClientScenePath, DotRecastCorinPath);
             AssetDatabase.SaveAssets();
         }
 
@@ -163,44 +154,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
-            }
-        }
-
-        static void SynchronizeRemoteTemplateScene(string scenePath, string prefabPath)
-        {
-            Scene previous = SceneManager.GetActiveScene();
-            Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
-            try
-            {
-                ServerAuthoritativeRemotePresentationSite site = null;
-                GameObject[] roots = scene.GetRootGameObjects();
-                for (int i = 0; i < roots.Length; i++)
-                {
-                    ServerAuthoritativeRemotePresentationSite[] candidates =
-                        roots[i].GetComponentsInChildren<ServerAuthoritativeRemotePresentationSite>(true);
-                    for (int candidateIndex = 0; candidateIndex < candidates.Length; candidateIndex++)
-                    {
-                        if (site)
-                            throw new InvalidOperationException($"ServerAuthoritative Scene '{scenePath}' has multiple Remote Presentation Sites.");
-                        site = candidates[candidateIndex];
-                    }
-                }
-                if (!site)
-                    throw new InvalidOperationException($"ServerAuthoritative Scene '{scenePath}' has no Remote Presentation Site.");
-                GameObject characterTemplate = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) ??
-                    throw new InvalidOperationException($"Remote Character Template is missing: {prefabPath}");
-                var serialized = new SerializedObject(site);
-                serialized.FindProperty("m_CharacterTemplate").objectReferenceValue = characterTemplate;
-                serialized.ApplyModifiedPropertiesWithoutUndo();
-                EditorSceneManager.MarkSceneDirty(scene);
-                if (!EditorSceneManager.SaveScene(scene))
-                    throw new InvalidOperationException($"ServerAuthoritative Scene could not be saved: {scenePath}");
-            }
-            finally
-            {
-                EditorSceneManager.CloseScene(scene, true);
-                if (previous.IsValid() && previous.isLoaded)
-                    SceneManager.SetActiveScene(previous);
             }
         }
 

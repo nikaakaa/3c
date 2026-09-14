@@ -67,6 +67,7 @@ TimelineEditorWindow
 - 相邻 Clip 的重叠显示仍保留 Slate 图形，但自动把重叠量写入 `BlendIn/BlendOut` 的逻辑只对真实 native Cutscene 生效；formal Ease 只在明确的边缘手势中通过正式 Session 提交，多选删除也直接调用正式 binding。
 - formal 轨道参数绘制恢复原 Slate 行内坐标组；formal Clip 标题只由 `ActionClipWrapper` 统一绘制，底部 DopeSheet 条保留样式但不重复写 Info。`TimelineData.ApplyModify` 使用同一 Undo group，正式 mutation 抛错时回滚 owner 并重新建立序列化绑定。
 - formal 轨道展开高度按当前参数数量和曲线编辑区计算；没有选 Clip 或没有参数时不再预留固定的大块空白，左右列表与时间区仍消费同一 `FinalHeight`。
+- formal Track 的底部 ResizeVertical 手势复用原 Slate 行内交互，临时高度按 AuthoringId 在 binding 重建时保留，不写入 TimelineData。
 - MotionCurve 的源 Reference 显示副本由 `MotionCurveClip` 按正式源区间生成；区间边界优先保留原 key 和切线，没有原 key 时才用邻近切线生成边界，Slate 不再自行改写源曲线插值。
 - formal 局部曲线现在通过原 `DopeSheetRenderer` 编辑真实 keys；`EditorContext` 只提供正式曲线、局部时间、作者游标和 binding 事务回调，不实现 `IKeyable`/Director 运行接口。DopeSheet 的 key 拖动、框选、复制、切线和粘贴都回到同一正式曲线草稿与 Session 提交链。
 - formal Session 在提交后调用正式 `TimelineData.ValidateContent`；`ApplyModify` 以同一 owner Undo group 包住序列化 mutation，失败时回滚并重建绑定，source revision 过期和提交异常通过现有 Timeline Editor 通知反馈。

@@ -67,7 +67,7 @@ S.ShowClipDopesheet先画底栏，FormalClip分支仍return；真实key只在原
 
 ### A03 局部参数面板仍是简化版
 
-T正式DrawParametersInfoGUI仍自己循环画通道、小按钮和CurrentValue标签；不像原参数工具那样提供完整Value编辑、齿轮与现有参数操作。B.Parameter.CurrentValue也只有getter。`53493a8df` 已取消 Track.FinalHeight 固定250，改为按当前参数数量和曲线区计算，无 Clip/无参数时使用最小空态高度；但正式参数行仍未完全参数化到原工具的值域/单位/可调高度。通道颜色/值域/单位未完整送入CurveRenderer，C仍按曲线数组下标选RGB。
+T正式DrawParametersInfoGUI仍自己循环画通道、小按钮和CurrentValue标签；不像原参数工具那样提供完整Value编辑、齿轮与现有参数操作。B.Parameter.CurrentValue也只有getter。`53493a8df` 已取消 Track.FinalHeight 固定250，`ec59bd5a1` 又恢复了原 Slate 底部纵向调高手势；正式参数行仍未完全参数化到原工具的值域/单位/可调高度。通道颜色/值域/单位未完整送入CurveRenderer，C仍按曲线数组下标选RGB。
 
 修正：参数列表、数值输入、key/切线工具与高度状态从原实现接数据，不新造面板。恢复正式支持的原操作；表达式/场景AddProperty等无正式合同的菜单不恢复。Value编辑须明确是当前key或待加key值，不偷偷给运行对象赋值。descriptor提供显示元数据，初次取景按实际key和值域；后续普通刷新不抢走作者纵向视野。对应11.2/11.6/11.16。
 

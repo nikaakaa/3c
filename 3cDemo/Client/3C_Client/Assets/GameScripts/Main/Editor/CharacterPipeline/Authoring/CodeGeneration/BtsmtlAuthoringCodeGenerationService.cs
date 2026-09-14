@@ -212,16 +212,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 throw new InvalidOperationException("C#导出路径缺少专属生成目录。");
 
             OutputPlan plan = CreatePlan(context);
+            Dictionary<string, HashSet<string>> namespaceSymbols =
+                BuildNamespaceSymbols(context.Usings);
             var files = new List<BtsmtlAuthoringCodeSourceFile>
             {
-                CreateFile(entryPath, "Root", true, BuildRootFile(context, plan))
+                CreateFile(entryPath, "Root", true, TrimHeader(BuildRootFile(context, plan), namespaceSymbols))
             };
             if (plan.Root.HasStatements)
                 files.Add(CreateFile(
                     Path.Combine(outputDirectory, "Root.cs"),
                     "Root",
                     false,
-                    BuildRootSectionFile(context, plan)));
+                    TrimHeader(BuildRootSectionFile(context, plan), namespaceSymbols)));
             foreach (SectionPlan section in plan.Sections)
             {
                 if (string.Equals(section.Name, "Root", StringComparison.Ordinal) || !section.HasStatements)
@@ -233,7 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     filePath,
                     section.Name,
                     false,
-                    BuildSectionFile(context, plan, section)));
+                    TrimHeader(BuildSectionFile(context, plan, section), namespaceSymbols)));
             }
             return files;
         }
@@ -692,6 +694,108 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             writer.WriteLine();
             writer.WriteLine($"namespace {context.Request.NamespaceName}");
             writer.OpenBlock();
+        }
+
+        static string TrimHeader(
+            string sourceCode,
+            IReadOnlyDictionary<string, HashSet<string>> namespaceSymbols)
+        {
+            string[] lines = sourceCode.Replace("\r\n", "\n").Split('\n');
+            int namespaceIndex = Array.FindIndex(
+                lines,
+                value => value.StartsWith("namespace ", StringComparison.Ordinal));
+            if (namespaceIndex < 0)
+                return sourceCode;
+            string body = string.Join("\n", lines.Skip(namespaceIndex));
+            HashSet<string> identifiers = Identifiers(body);
+            var result = new List<string>();
+            for (int i = 0; i < namespaceIndex; i++)
+            {
+                string line = lines[i];
+                if (!line.StartsWith("using ", StringComparison.Ordinal))
+                {
+                    result.Add(line);
+                    continue;
+                }
+                int aliasIndex = line.IndexOf(" = ", StringComparison.Ordinal);
+                if (aliasIndex >= 0)
+                {
+                    string alias = line.Substring("using ".Length, aliasIndex - "using ".Length);
+                    if (identifiers.Contains(alias))
+                        result.Add(line);
+                    continue;
+                }
+                string namespaceName = line.Substring("using ".Length).TrimEnd(';');
+                if (namespaceName == "System" ||
+                    namespaceName == "ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration" ||
+                    HasNamespaceSymbol(namespaceName, identifiers, namespaceSymbols))
+                    result.Add(line);
+            }
+            result.AddRange(lines.Skip(namespaceIndex));
+            return string.Join(Environment.NewLine, result);
+        }
+
+        static HashSet<string> Identifiers(string source)
+        {
+            var result = new HashSet<string>(StringComparer.Ordinal);
+            int index = 0;
+            while (index < source.Length)
+            {
+                if (source[index] == '_' ||
+                    source[index] >= 'A' && source[index] <= 'Z' ||
+                    source[index] >= 'a' && source[index] <= 'z')
+                {
+                    int start = index++;
+                    while (index < source.Length && IsIdentifierCharacter(source[index]))
+                        index++;
+                    result.Add(source.Substring(start, index - start));
+                    continue;
+                }
+                index++;
+            }
+            return result;
+        }
+
+        static bool HasNamespaceSymbol(
+            string namespaceName,
+            ISet<string> identifiers,
+            IReadOnlyDictionary<string, HashSet<string>> namespaceSymbols)
+        {
+            return namespaceSymbols.TryGetValue(namespaceName, out HashSet<string> symbols) &&
+                symbols.Overlaps(identifiers);
+        }
+
+        static Dictionary<string, HashSet<string>> BuildNamespaceSymbols(
+            IEnumerable<string> namespaceNames)
+        {
+            var result = namespaceNames.ToDictionary(
+                value => value,
+                value => new HashSet<string>(StringComparer.Ordinal),
+                StringComparer.Ordinal);
+            foreach (System.Reflection.Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                System.Type[] types;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (System.Reflection.ReflectionTypeLoadException error)
+                {
+                    types = error.Types;
+                }
+                foreach (System.Type type in types)
+                {
+                    if (type == null ||
+                        !result.TryGetValue(type.Namespace ?? string.Empty, out HashSet<string> symbols))
+                        continue;
+                    string name = type.Name;
+                    int tick = name.IndexOf('`');
+                    if (tick >= 0)
+                        name = name.Substring(0, tick);
+                    symbols.Add(name);
+                }
+            }
+            return result;
         }
 
         sealed class OutputPlan

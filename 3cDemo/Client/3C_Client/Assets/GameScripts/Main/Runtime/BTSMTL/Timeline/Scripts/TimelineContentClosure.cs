@@ -201,6 +201,37 @@ namespace BTSMTL.Timeline
         }
     }
 
+    public readonly struct TimelineContentTrack
+    {
+        public TimelineContentTrack(
+            string authoringId,
+            string contractKind,
+            int order,
+            bool muted,
+            IReadOnlyList<string> clipAuthoringIds)
+        {
+            AuthoringId = Require(authoringId, nameof(authoringId));
+            ContractKind = Require(contractKind, nameof(contractKind));
+            Order = order;
+            Muted = muted;
+            ClipAuthoringIds = new ReadOnlyCollection<string>(
+                new List<string>(clipAuthoringIds ?? Array.Empty<string>()));
+        }
+
+        public string AuthoringId { get; }
+        public string ContractKind { get; }
+        public int Order { get; }
+        public bool Muted { get; }
+        public IReadOnlyList<string> ClipAuthoringIds { get; }
+
+        static string Require(string value, string name)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? throw new ArgumentException("Timeline track identity is required.", name)
+                : value.Trim();
+        }
+    }
+
     public sealed class TimelineContentUnit
     {
         internal TimelineContentUnit(
@@ -212,6 +243,7 @@ namespace BTSMTL.Timeline
             int maxFrame,
             float scale,
             bool loop,
+            IReadOnlyList<TimelineContentTrack> tracks,
             IReadOnlyList<TimelineContentClip> clips,
             IReadOnlyList<TimelineContentSection> sections,
             IReadOnlyList<TimelineBindingDeclaration> bindings,
@@ -225,6 +257,7 @@ namespace BTSMTL.Timeline
             MaxFrame = maxFrame;
             Scale = scale;
             Loop = loop;
+            Tracks = new ReadOnlyCollection<TimelineContentTrack>(new List<TimelineContentTrack>(tracks ?? Array.Empty<TimelineContentTrack>()));
             Clips = new ReadOnlyCollection<TimelineContentClip>(new List<TimelineContentClip>(clips ?? Array.Empty<TimelineContentClip>()));
             Sections = new ReadOnlyCollection<TimelineContentSection>(new List<TimelineContentSection>(sections ?? Array.Empty<TimelineContentSection>()));
             Bindings = new ReadOnlyCollection<TimelineBindingDeclaration>(new List<TimelineBindingDeclaration>(bindings ?? Array.Empty<TimelineBindingDeclaration>()));
@@ -239,6 +272,7 @@ namespace BTSMTL.Timeline
         public int MaxFrame { get; }
         public float Scale { get; }
         public bool Loop { get; }
+        public IReadOnlyList<TimelineContentTrack> Tracks { get; }
         public IReadOnlyList<TimelineContentClip> Clips { get; }
         public IReadOnlyList<TimelineContentSection> Sections { get; }
         public IReadOnlyList<TimelineBindingDeclaration> Bindings { get; }
@@ -283,6 +317,7 @@ namespace BTSMTL.Timeline
                 return new TimelineContentDiscoveryResult(null, errors);
 
             var clips = new List<TimelineContentClip>();
+            var tracks = new List<TimelineContentTrack>();
             var sections = new List<TimelineContentSection>();
             var closure = new TimelineContentClosureBuilder();
             int maxFrame = 0;
@@ -291,12 +326,21 @@ namespace BTSMTL.Timeline
                 Track track = timeline.Tracks[trackIndex];
                 if (track == null)
                     continue;
+                var clipAuthoringIds = new List<string>();
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
                     Clip clip = track.Clips[clipIndex];
+                    if (clip != null)
+                        clipAuthoringIds.Add(clip.AuthoringId);
                     if (clip != null && clip.EndFrame > maxFrame)
                         maxFrame = clip.EndFrame;
                 }
+                tracks.Add(new TimelineContentTrack(
+                    track.AuthoringId,
+                    track.ContractKind,
+                    trackIndex,
+                    track.PersistentMuted,
+                    clipAuthoringIds));
             }
             for (int sectionIndex = 0; sectionIndex < timeline.Sections.Count; sectionIndex++)
             {
@@ -418,6 +462,7 @@ namespace BTSMTL.Timeline
                     maxFrame,
                     timeline.Scale,
                     timeline.Loop,
+                    tracks,
                     clips,
                     sections,
                     bindings,

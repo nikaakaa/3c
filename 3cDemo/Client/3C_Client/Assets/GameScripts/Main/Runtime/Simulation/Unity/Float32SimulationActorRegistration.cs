@@ -9,7 +9,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         string OwnerIdentity { get; }
         StableHash DiagnosticsConfigurationHash { get; }
         SimulationOutputRouteDescriptor OutputRoute { get; }
-        void BindProgramEpoch(ulong programEpoch);
         void BindExecutionBranch(Guid executionBranchId);
         void Activate();
         void Deactivate();
@@ -39,19 +38,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             out string error);
     }
 
-    public interface ISimulationProgramEpochRegistration
-    {
-        ISimulationProgramBinding ProgramBinding { get; }
-        void CommitProgramEpoch();
-        void DiscardProgramEpoch();
-    }
-
     public interface IFloat32SimulationActorRegistration :
         ISimulationActorRegistration,
         IFloat32PublishedActorResultObserver
     {
-        CharacterSimulationProgram Program { get; }
-        SimulationActorBinding ProgramIdentity { get; }
         Float32WorldBodyBinding WorldBodyBinding { get; }
         WorldBodyState InitialBody { get; }
         ISimulationGameplayOutputPort GameplayOutput { get; }

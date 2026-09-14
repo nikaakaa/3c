@@ -104,7 +104,7 @@
 - [ ] 11.1 D1/D2：在现有Slate Editor模块收窄原编辑输入，原生Cutscene入口与BTSMTL入口共用一套原函数；BTSMTL输入不继承IDirector/IKeyable运行接口，不增加空运行实现或替代绘制分支
 - [ ] 11.2 D1/D3：将CutsceneTrack原OnTrackInfoGUI、DoDefaultInfoGUI、DoParamsInfoGUI、OnTrackTimelineGUI、DoClipCurves及原展开/高度状态参数化，必要时搬入现有Editor模块；旧位置不保留第二份函数主体
 - [x] 11.3 D2：把现有Projection中正确的ID映射、typed新增、曲线换算和提交迁移为BtsmtlSlateTimelineBinding；只引用正式对象和必要手势草稿，不恢复EditorModel/DirectProjection两条路径。真实窗口验收仍未完成。
-- [ ] 11.4 D3/D4：原ShowListGroups/ShowListTracks/ShowTimeLines及ActionClipWrapper就地改接该输入；保留Rect、样式、GUI.Window/DragWindow、框选和边缘交互，能力与重叠规则来自正式Capabilities/contract，分离SelfEase与派生OtherEase。`e3fd0b691` 已合并Clip主体，`32aee7b96`/`1bdc420f8`/`a3c4ca3ce` 已合并Track/Group外壳和Track输入状态机；组列表主体、参数提供者和来源特有命令仍未完全参数化。
+- [ ] 11.4 D3/D4：原ShowListGroups/ShowListTracks/ShowTimeLines及ActionClipWrapper就地改接该输入；保留Rect、样式、GUI.Window/DragWindow、框选和边缘交互，能力与重叠规则来自正式Capabilities/contract，分离SelfEase与派生OtherEase。`e3fd0b691` 已合并Clip主体，`32aee7b96`/`1bdc420f8`/`a3c4ca3ce`/`001a6ce99` 已合并Track/Group外壳和Group/Track输入状态机；组列表布局、参数提供者和来源特有命令仍未完全参数化。
 - [x] 11.5 D3/D7：原Track/Clip/Section菜单和排序释放直接提交正式命令；Section不依赖directorGroup，显示边界不保存成Section，删除无正式合同的Actor/循环/任意组件创建命令。真实窗口验收仍未完成。
 - [x] 11.6 D5：原CurveRenderer/DopeSheetRenderer/参数工具只接正式Timeline-local曲线、编辑时间和事务通知，保留原key/切线/缩放算法；删除proxy假字段，保留局部Weight/Ease；Motion源XYZ/Yaw以同一参数行/DopeSheet/CurveEditor作只读Reference显示，只有source字段可配置并沿正式入口导航。提交 `081ba862b` 已接通Reference参数和只读原Renderer。
 - [x] 11.7 D6：原ActionClipInspector通用控件参数化并通过真实serialized owner接入Unity已有Inspector；普通字段走Read/Configure，选择不写代理context，不增加假Actor、假Unity Object或Timeline右侧自制面板。提交 `a25a05d10` 已将TimelineAsset Inspector改为typed字段和正式Configure；真实窗口验收仍未完成。

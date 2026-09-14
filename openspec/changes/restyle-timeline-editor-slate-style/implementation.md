@@ -50,7 +50,7 @@ TimelineEditorWindow
 - 嵌入 Slate 顶栏提供 `+ Track`、上一帧、下一帧、Fit 和当前作者帧；没有 Timeline 本地 Play/Sample/ReSample/Stop。
 - 左右轨道共享行高和滚动，曲线展开同步；外层 Timeline 窗口不再添加 Toolbar、SplitView、Runtime 菜单或右侧自制 Inspector，只承载原 `CutsceneEditorSurface`。
 - formal Clip 的时间、Blend、DopeSheet、关键帧和曲线交互全部由原 Slate `ActionClipWindow` / `ActionClipWrapper` 通过 `IEmbeddedTimelineBinding` 接回正式 Session；不再创建 `TimelineFormalClipDetailsView`、MotionWarp/Tree 自制属性面板。
-- native 与 formal Clip 的可视矩形、命中、拖动、相邻限制、多选、Shift/Ripple、磁吸和外部标题现在共用 `CutsceneEditor.DrawTimelineClip`；两种来源只提供不同的 `IClipEditorBinding` 与正式命令，不再各自实现一套 Clip 鼠标算法。Track 行的背景、选中框、颜色标记和局部坐标容器共用 `DrawTrackListRowFrame`，Group 标题共用 `DrawGroupListHeaderFrame`，Track 选中/排序共用 `HandleTrackListInput`；组列表顺序、Track 参数提供者和来源特有命令仍待11.1/11.2/11.4继续参数化。
+- native 与 formal Clip 的可视矩形、命中、拖动、相邻限制、多选、Shift/Ripple、磁吸和外部标题现在共用 `CutsceneEditor.DrawTimelineClip`；两种来源只提供不同的 `IClipEditorBinding` 与正式命令，不再各自实现一套 Clip 鼠标算法。Track 行的背景、选中框、颜色标记和局部坐标容器共用 `DrawTrackListRowFrame`，Group 标题共用 `DrawGroupListHeaderFrame`，Group/Track 选中与排序共用 `HandleGroupListInput`/`HandleTrackListInput`；组列表布局、Track 参数提供者和来源特有命令仍待11.1/11.2/11.4继续参数化。
 - Timeline 打开时清空外部 Unity Selection，作者选择只进入 Timeline binding 与 Slate Surface，避免旧 Slate ActionClip Inspector 残留的 Actor/AnimatedParameter 报错。
 - `TimelineEditorWindow` 所在的 `BTSMTL.Timeline.Tree.Editor` asmdef 显式引用 Slate 与 `ThirdPersonCamera.Contracts`；Timeline 窗口只作为 Unity 容器，实际可见编辑 UI 来自原 Slate Surface，均不改变 TimelineData owner，也不引入 Slate 组件树。
 - 嵌入绘制现在从原 `ShowGroupsAndTracksList` / `ShowTimeLines` 入口进入；正式 binding 只在原函数入口处分派数据，`OnEmbeddedTimelineGUI` 不再直接调另一套顶层列表/时间线入口。

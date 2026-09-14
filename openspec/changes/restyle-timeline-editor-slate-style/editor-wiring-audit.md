@@ -37,7 +37,7 @@
 
 ### A01 轨道列表主体仍分离，Clip主体已合并
 
-S的ShowGroupsAndTracksList(Rect)、ShowTimeLines(Rect)在embeddedTimeline非空时仍转同名重载；组列表、来源特有命令和两套 Track 参数提供者仍有来源分支，但 Group 标题已由 `DrawGroupListHeaderFrame` 共用，Track 行的背景、选中框、颜色标记和局部坐标容器已由 `DrawTrackListRowFrame` 共用，Track 选中/排序事件已由 `HandleTrackListInput` 共用。Clip部分已在 `DrawTimelineClip` 收口为一份：native 与 formal 都通过同一个 `ActionClipWrapper`、`GUI.Window/GUI.DragWindow`、选中框、外部标题、相邻限制、多选、Shift/Ripple、双端磁吸和正式 binding 提交。旧的 `formalDragOffset` 和正式单端 Clamp 拖动路径已删除。
+S的ShowGroupsAndTracksList(Rect)、ShowTimeLines(Rect)在embeddedTimeline非空时仍转同名重载；组列表布局、来源特有命令和两套 Track 参数提供者仍有来源分支，但 Group 标题已由 `DrawGroupListHeaderFrame` 共用，Group/Track 选中排序事件已由 `HandleGroupListInput`/`HandleTrackListInput` 共用，Track 行的背景、选中框、颜色标记和局部坐标容器已由 `DrawTrackListRowFrame` 共用。Clip部分已在 `DrawTimelineClip` 收口为一份：native 与 formal 都通过同一个 `ActionClipWrapper`、`GUI.Window/GUI.DragWindow`、选中框、外部标题、相邻限制、多选、Shift/Ripple、双端磁吸和正式 binding 提交。旧的 `formalDragOffset` 和正式单端 Clamp 拖动路径已删除。
 
 影响：Clip命中与拖动已经回到原生窗口事件链，但左侧轨道列表、行高/折叠/搜索、轨道按钮和拖放排序仍按来源分成两份；因此本结构项不能整体标记完成。
 

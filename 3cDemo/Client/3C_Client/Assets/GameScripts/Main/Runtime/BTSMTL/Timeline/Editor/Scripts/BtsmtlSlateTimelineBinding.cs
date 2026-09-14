@@ -896,32 +896,7 @@ namespace BTSMTL.Timeline.Editor
                     channelId,
                     displayName,
                     motion.SourceCurve.name,
-                    MapSourceCurve(source, motion)));
-            }
-
-            static AnimationCurve MapSourceCurve(AnimationCurve source, MotionCurveClip motion)
-            {
-                if (source == null)
-                    return new AnimationCurve();
-                AnimationCurve result = new AnimationCurve(source.keys)
-                {
-                    preWrapMode = source.preWrapMode,
-                    postWrapMode = source.postWrapMode
-                };
-                float sourceDuration = Mathf.Max(0.0001f, motion.SourceDuration);
-                float timelineDuration = Mathf.Max(1f / TimelineUtility.FrameRate, motion.DurationTime);
-                float tangentScale = sourceDuration / timelineDuration;
-                Keyframe[] keys = result.keys;
-                for (int index = 0; index < keys.Length; index++)
-                {
-                    Keyframe key = keys[index];
-                    key.time = Mathf.Clamp01((key.time - motion.SourceStartTime) / sourceDuration) * timelineDuration;
-                    key.inTangent *= tangentScale;
-                    key.outTangent *= tangentScale;
-                    keys[index] = key;
-                }
-                result.keys = keys;
-                return result;
+                    motion.CreateSourceDisplayCurve(source, motion.DurationTime)));
             }
 
             public void Split(float time) => m_Owner.SplitClip(this, Mathf.RoundToInt(time * m_Owner.FrameRate));

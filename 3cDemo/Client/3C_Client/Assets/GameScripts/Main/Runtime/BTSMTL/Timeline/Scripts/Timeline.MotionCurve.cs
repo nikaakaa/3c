@@ -310,6 +310,31 @@ namespace BTSMTL.Timeline
             return RequireSource().EvaluateYaw(sourceTime);
         }
 
+        public AnimationCurve CreateSourceDisplayCurve(AnimationCurve source, float timelineDuration)
+        {
+            if (source == null)
+                return new AnimationCurve();
+            float sourceDuration = SourceDuration;
+            if (sourceDuration <= 0f)
+                throw new InvalidOperationException($"MotionCurveClip '{CurveId}' has an invalid source duration.");
+
+            var result = new AnimationCurve();
+            result.AddKey(new Keyframe(0f, source.Evaluate(m_SourceStartTime), 0f, 0f));
+            foreach (Keyframe key in source.keys)
+            {
+                if (key.time <= m_SourceStartTime || key.time >= m_SourceEndTime)
+                    continue;
+                key.time -= m_SourceStartTime;
+                result.AddKey(key);
+            }
+            result.AddKey(new Keyframe(sourceDuration, source.Evaluate(m_SourceEndTime), 0f, 0f));
+            if (timelineDuration > sourceDuration)
+                result.AddKey(new Keyframe(timelineDuration, source.Evaluate(m_SourceEndTime), 0f, 0f));
+            result.preWrapMode = WrapMode.ClampForever;
+            result.postWrapMode = WrapMode.ClampForever;
+            return result;
+        }
+
         static AnimationCurve ZeroCurve() => AnimationCurve.Linear(0f, 0f, 1f, 0f);
 
         public override void Init(Track track)

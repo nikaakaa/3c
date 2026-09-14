@@ -255,3 +255,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 删除 `PoseGraph/CharacterPoseTuningSnapshot.cs` 及其 `.meta`；该文件只组合已退出的 Program/Source/Constraint 调参 view，且没有外部消费者。
 - 调参状态继续由正式 Tuning Binding/Parameter Block 持有，不恢复旧的 Pose 总调参快照。
 - 本步未运行 Unity/Build；没有涉及共享 Host、Projection、IK 算法或现有未提交改动。
+
+## 2026-09-14 r3 删除旧 Pose Diagnostics facade
+
+- 删除 `PoseGraph/Diagnostics/CharacterPoseDiagnosticsRuntime.cs` 及其 `.meta`；该类型只把旧 Program/FrameResult/ConstraintResult 组合后喂给旧 Snapshot Publisher，不拥有快照数据或 IK 算法。
+- Snapshot Publisher 文件暂留，后续改为消费原生节点观察与正式 Source/Constraint/Publication 结果；不恢复旧 Program Diagnostics facade。
+- 本步未运行 Unity/Build；Presentation Diagnostics Coordinator 的旧引用保留为后续断链。

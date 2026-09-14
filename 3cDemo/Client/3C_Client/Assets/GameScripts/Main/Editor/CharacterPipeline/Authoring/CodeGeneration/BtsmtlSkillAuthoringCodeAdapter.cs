@@ -556,6 +556,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 string timelineVariable = Variable(context, timeline, $"timeline-asset:{AssetDatabase.GetAssetPath(timeline)}");
                 string dataVariable = Variable(context, timeline.Data, $"timeline:{timelineIdentity}");
                 string catalogVariable = context.AllocateVariableName("timelineCatalog");
+                context.RegisterLocalVariable(
+                    catalogVariable,
+                    TypeName(typeof(TimelineContractCatalog)),
+                    context.VariableSections[dataVariable]);
                 context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Create, $"var {dataVariable} = {timelineVariable}.Data;");
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.Create,

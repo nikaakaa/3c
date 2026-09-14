@@ -226,6 +226,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         readonly Dictionary<object, string> m_ObjectIdentities = new(ReferenceComparer.Instance);
         readonly Dictionary<string, object> m_IdentityOwners = new(StringComparer.Ordinal);
         readonly List<string> m_ObjectVariableOrder = new();
+        readonly List<string> m_LocalVariableOrder = new();
         readonly Dictionary<string, string> m_VariableTypeNames = new(StringComparer.Ordinal);
         readonly Dictionary<string, string> m_VariableSections = new(StringComparer.Ordinal);
         readonly List<string> m_Sections = new();
@@ -337,6 +338,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             m_Usings.Add(namespaceName);
         }
 
+        internal void RegisterLocalVariable(string variableName, string typeName, string sectionName)
+        {
+            m_LocalVariableOrder.Add(variableName);
+            m_VariableTypeNames.Add(variableName, typeName);
+            m_VariableSections.Add(variableName, EnsureSection(sectionName, false));
+        }
+
         public void AddExternalDependency(string assetPath, string typeName, long localFileId = 0)
         {
             if (string.IsNullOrWhiteSpace(assetPath) || string.IsNullOrWhiteSpace(typeName))
@@ -414,6 +422,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         internal IReadOnlyList<string> Sections => m_Sections;
 
         internal IReadOnlyList<string> ObjectVariableOrder => m_ObjectVariableOrder;
+
+        internal IReadOnlyList<string> LocalVariableOrder => m_LocalVariableOrder;
 
         internal IReadOnlyDictionary<string, string> VariableTypeNames => m_VariableTypeNames;
 

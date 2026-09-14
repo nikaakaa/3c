@@ -356,6 +356,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             foreach (string variableName in context.ObjectVariableOrder)
                 yield return variableName;
+            foreach (string variableName in context.LocalVariableOrder)
+                yield return variableName;
             foreach (BtsmtlAuthoringCodeExternalAssetReference asset in context.ExternalAssets)
                 yield return asset.VariableName;
         }

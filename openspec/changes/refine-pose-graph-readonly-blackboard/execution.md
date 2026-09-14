@@ -184,3 +184,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 删除 `PoseGraph/Program/CharacterPoseProgramExecutionView.cs` 及其 `.meta`；该文件只负责把旧 `CharacterPoseProgramImage` 展开为全图 Operation/Stage/Linked Pose 索引，属于本次要退出的旧载体。
 - 删除后静态残留集中在 `CharacterPoseProgramExecutor`、`CharacterPoseProgramRuntime`、`CharacterPoseProgramEvaluationRuntime`、`CharacterPoseProgramActorRuntime`、`CharacterPoseRuntimeComposition` 和 Worker Scheduler；这些消费者下一步统一改接原生 Graph Runtime，不新增同名兼容类型。
 - 本步未运行 Unity/Build；当前残留引用是预期的删除后接线状态，尚不能作为完成证据。
+
+## 2026-09-14 r3 删除旧执行页、配置与节点索引
+
+- 删除 `CharacterPoseProgramFramePages`、`CharacterPoseProgramExecutorConfiguration`、`CharacterPoseProgramEvaluationState` 和 `CharacterPoseProgramNodeRuntimeIndex` 及其 `.meta`；它们分别承载旧 Program 的帧页、执行器配置、评估状态和 Node 到 Operation 的索引，属于旧执行链的纯载体。
+- 保留现有 `CharacterPoseProgramExecutor`、`CharacterPoseProgramRuntime`、`CharacterPoseProgramEvaluationRuntime`、`CharacterPoseProgramActorRuntime` 等未提交消费者改动，不在本步为已删除类型补兼容壳；下一步继续沿引用残留切换到原生 Graph/Source/Constraint/Publication 链。
+- 本步未运行 Unity/Build；删除后的消费者引用残留是激进裁剪过程中的预期中间状态，不能作为完成证据。

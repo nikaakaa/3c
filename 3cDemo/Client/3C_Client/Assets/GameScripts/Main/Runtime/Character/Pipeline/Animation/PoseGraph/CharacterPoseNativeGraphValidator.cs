@@ -73,7 +73,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     bool interfaceBoundary =
                         node.Kind == CharacterPoseNodeKind.GraphInput ||
                         node.Kind == CharacterPoseNodeKind.GraphOutput ||
-                        node.Kind == CharacterPoseNodeKind.PoseSubgraph;
+                        node.Kind == CharacterPoseNodeKind.PoseSubgraph ||
+                        node.Kind == CharacterPoseNodeKind.LinkedPoseCall;
                     var ports = new HashSet<PosePortId>();
                     var interfacePorts = new HashSet<PoseInterfacePortId>();
                     for (int portIndex = 0; portIndex < shape.Count; portIndex++)

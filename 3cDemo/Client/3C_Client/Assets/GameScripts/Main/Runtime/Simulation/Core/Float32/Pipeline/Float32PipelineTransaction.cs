@@ -49,8 +49,7 @@ namespace ThirdPersonSimulation
         public Float32PipelineTransaction(
             SimulationSessionCompositionDescriptor descriptor,
             CompiledSimulationPipelinePlan plan,
-            SimulationProgramCatalog catalog,
-            IReadOnlyList<SimulationActorBinding> roster,
+            Float32CharacterRuntime characterRuntime,
             SimulationWorldStateStore stateStore,
             ICharacterWorldSolver solver,
             IFloat32SimulationRestoreSource restoreSource,
@@ -62,8 +61,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ISimulationPipelineReconstructiblePass> reconstructiblePasses,
             Float32PipelineProductStore products,
             Float32WorkingStatePort workingStatePort,
-            Float32CompletedStepPort completedStepPort,
-            Float32CharacterRuntime characterRuntime)
+            Float32CompletedStepPort completedStepPort)
         {
             var services = new PipelineTransactionRuntimeServices(
                 descriptor,
@@ -73,8 +71,7 @@ namespace ThirdPersonSimulation
                 reconstructiblePasses);
             m_Target = new Float32PipelineTransactionPort(
                 services,
-                catalog,
-                roster,
+                characterRuntime,
                 stateStore,
                 solver,
                 diagnostics,
@@ -83,8 +80,7 @@ namespace ThirdPersonSimulation
                 committer,
                 products,
                 workingStatePort,
-                completedStepPort,
-                characterRuntime);
+                completedStepPort);
             m_Coordinator = new PipelineTransactionCoordinator<
                 Float32SimulationStep,
                 Float32PipelineWorkingState,
@@ -125,7 +121,7 @@ namespace ThirdPersonSimulation
     {
         readonly IFloat32SimulationRestoreSource m_RestoreSource;
         readonly PipelineTransactionRuntimeServices m_Services;
-        SimulationProgramCatalog m_Catalog;
+        readonly Float32CharacterRuntime m_CharacterRuntime;
         IReadOnlyList<SimulationActorBinding> m_Roster;
         readonly SimulationWorldStateStore m_StateStore;
         readonly ICharacterWorldSolver m_Solver;
@@ -139,8 +135,7 @@ namespace ThirdPersonSimulation
 
         public Float32PipelineTransactionPort(
             PipelineTransactionRuntimeServices services,
-            SimulationProgramCatalog catalog,
-            IReadOnlyList<SimulationActorBinding> roster,
+            Float32CharacterRuntime characterRuntime,
             SimulationWorldStateStore stateStore,
             ICharacterWorldSolver solver,
             ISimulationDiagnosticsSink diagnostics,
@@ -149,12 +144,11 @@ namespace ThirdPersonSimulation
             IFloat32SimulationCommitter committer,
             Float32PipelineProductStore products,
             Float32WorkingStatePort workingStatePort,
-            Float32CompletedStepPort completedStepPort,
-            Float32CharacterRuntime characterRuntime)
+            Float32CompletedStepPort completedStepPort)
         {
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
-            m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-            m_Roster = roster ?? throw new ArgumentNullException(nameof(roster));
+            m_CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
+            m_Roster = m_CharacterRuntime.Roster;
             m_StateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
             m_Solver = solver ?? throw new ArgumentNullException(nameof(solver));
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
@@ -185,7 +179,7 @@ namespace ThirdPersonSimulation
                 m_Services.StateParticipants);
             Float32SimulationSessionSnapshot snapshot = m_SnapshotCodec.Capture(
                 m_Services.Descriptor,
-                m_Catalog,
+                m_CharacterRuntime,
                 state,
                 pipeline,
                 m_Solver.Descriptor.Capabilities);
@@ -194,7 +188,7 @@ namespace ThirdPersonSimulation
             return new SimulationSessionCheckpoint(
                 m_Services.Descriptor.SessionId,
                 snapshot.Tick,
-                m_Catalog.CatalogHash,
+                m_CharacterRuntime.GameplayContentHash,
                 m_Services.Descriptor.Pipeline.Hash,
                 m_Services.Descriptor.ExecutionBackend.ComponentId,
                 m_Services.Descriptor.ExecutionBackend.SemanticVersion,
@@ -220,7 +214,7 @@ namespace ThirdPersonSimulation
                 checkpoint.SnapshotHash);
             m_SnapshotCodec.RequireRestore(
                 m_Services.Descriptor,
-                m_Catalog,
+                m_CharacterRuntime,
                 m_Solver,
                 directive,
                 snapshot);
@@ -293,7 +287,7 @@ namespace ThirdPersonSimulation
             SimulationSessionLogicTickContext outer)
         {
             _ = outer;
-            SimulationProgramCatalog catalog = m_Catalog;
+            Float32CharacterRuntime characterRuntime = m_CharacterRuntime;
             IReadOnlyList<SimulationActorBinding> roster = m_Roster;
             for (int stepIndex = 0; stepIndex < plan.Steps.Count; stepIndex++)
             {
@@ -305,13 +299,13 @@ namespace ThirdPersonSimulation
                     SimulationPipelineActorInput<Float32StepInput> input = step.Inputs[i];
                     CharacterSimulationInput value = input.Value.Input;
                     if (!input.ActorId.Equals(roster[i].ActorId) || value == null ||
-                        !value.NumericProfile.Equals(catalog.NumericProfile) ||
+                        !value.NumericProfile.Equals(characterRuntime.NumericProfile) ||
                         !value.TickSource.Equals(step.Source) || value.Sequence != input.Sequence)
                     {
                         throw Failure("execution_plan_input_mismatch", $"ExecutionPlan input for Actor '{input.ActorId}' is invalid.");
                     }
                 }
-                ValidateIngress(step.Ingress, catalog);
+                ValidateIngress(step.Ingress, characterRuntime.NumericProfile);
             }
         }
 
@@ -326,7 +320,7 @@ namespace ThirdPersonSimulation
                 throw Failure("restore_snapshot_missing", "Restore Source returned no Session snapshot.");
             m_SnapshotCodec.RequireRestore(
                 services.Descriptor,
-                m_Catalog,
+                m_CharacterRuntime,
                 m_Solver,
                 directive,
                 snapshot);
@@ -423,7 +417,7 @@ namespace ThirdPersonSimulation
                 : null;
             SimulationWorldSnapshot worldSnapshot = capture
                 ? SimulationWorldSnapshotFactory.Capture(
-                    m_Catalog,
+                    m_CharacterRuntime,
                     step.Tick,
                     nextActors,
                     worldResult.NextWorldState,
@@ -433,8 +427,8 @@ namespace ThirdPersonSimulation
                 ? new Float32SimulationStepSnapshot(m_Services.Descriptor.Identity, worldSnapshot, pipelineSnapshot)
                 : null;
             var tickResult = new SimulationTickResult(
-                m_Catalog.NumericProfile,
-                m_Catalog.CatalogHash,
+                m_CharacterRuntime.NumericProfile,
+                m_CharacterRuntime.GameplayContentHash,
                 step.Tick,
                 actorResults,
                 worldResult.Summary,
@@ -533,14 +527,14 @@ namespace ThirdPersonSimulation
 
         void ValidateIngress(
             IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> ingressValues,
-            SimulationProgramCatalog catalog)
+            SimulationNumericProfile numericProfile)
         {
             for (int i = 0; i < ingressValues.Count; i++)
             {
                 SimulationPipelineTypedIngress<SimulationIngress> ingress = ingressValues[i];
                 SimulationIngressHeader header = ingress.Value.Header;
                 if (!header.ActorId.Equals(ingress.ActorId) ||
-                    !header.NumericProfile.Equals(catalog.NumericProfile) ||
+                    !header.NumericProfile.Equals(numericProfile) ||
                     header.SourceTick != ingress.Source.SourceTick || header.Sequence != ingress.Sequence ||
                     !string.Equals(header.FactIdentity.ToString(), ingress.FactIdentity, StringComparison.Ordinal))
                 {

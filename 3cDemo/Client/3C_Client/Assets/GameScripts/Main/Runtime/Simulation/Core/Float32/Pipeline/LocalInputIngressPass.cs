@@ -61,14 +61,13 @@ namespace ThirdPersonSimulation
             RequireExecution();
             if (!ReferenceEquals(m_Source, readPorts.Source))
                 throw new InvalidOperationException("Local Control Input Ingress source port changed after activation.");
-            SimulationProgramCatalog catalog = readPorts.CharacterRuntime.Catalog;
             var nextTick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
             Float32CommittedActorPoseSnapshot observation = readPorts.CommittedObservation.Read();
             Float32LocalInputFrame frame = readPorts.Source.Read(
                 context.Source,
                 nextTick,
-                catalog.NumericProfile,
-                catalog.TickRate,
+                readPorts.CharacterRuntime.Runtime.NumericProfile,
+                readPorts.CharacterRuntime.Runtime.TickRate,
                 readPorts.CharacterRuntime.Roster,
                 observation);
             writePorts.CanonicalInputs.Write(frame.CanonicalInputs);

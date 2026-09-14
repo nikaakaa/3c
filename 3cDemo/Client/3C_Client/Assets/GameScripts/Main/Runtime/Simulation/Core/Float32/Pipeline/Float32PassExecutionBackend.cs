@@ -102,7 +102,7 @@ namespace ThirdPersonSimulation
                     resources.Register(SimulationSessionResourceReleasePhase.ActorAndPresentationRegistration, request.ActorResources[i]);
 
                 Float32PipelineProductStore products = request.ProductRuntimeFactories.CreateStore(request.CompiledPipeline.Products);
-                var stateStore = new SimulationWorldStateStore(request.Catalog, request.InitialState);
+                var stateStore = new SimulationWorldStateStore(request.CharacterRuntime, request.InitialState);
                 var programPort = new Float32CharacterRuntimePort(
                     request.Backend.Identity,
                     request.CharacterRuntime);
@@ -164,7 +164,7 @@ namespace ThirdPersonSimulation
                 var reconstructionContext = new SimulationPipelineReconstructionContext(
                     request.Descriptor.Identity,
                     request.CompiledPipeline.Identity,
-                    request.Catalog.CatalogHash,
+                    request.CharacterRuntime.GameplayContentHash,
                     request.Descriptor.Roster.RosterHash,
                     request.InitialState.WorldState.WorldRevision);
                 for (int i = 0; i < reconstructible.Count; i++)
@@ -189,8 +189,7 @@ namespace ThirdPersonSimulation
                 var transaction = new Float32PipelineTransaction(
                     request.Descriptor,
                     request.CompiledPipeline,
-                    request.Catalog,
-                    request.Roster,
+                    request.CharacterRuntime,
                     stateStore,
                     request.Solver,
                     request.RestoreSource,
@@ -202,8 +201,7 @@ namespace ThirdPersonSimulation
                     reconstructible.AsReadOnly(),
                     products,
                     workingStatePort,
-                    completedStepPort,
-                    request.CharacterRuntime);
+                    completedStepPort);
                 var handle = new Float32PassPipelineRuntimeHandle(
                     request.Descriptor,
                     request.CompiledPipeline,
@@ -234,7 +232,7 @@ namespace ThirdPersonSimulation
                     SimulationInitialStateKind.Character,
                     "float32-character-state",
                     1,
-                    CharacterSimulationStateCodec.ComputeHash(request.InitialState.Actors[i].State).Value,
+                    Float32CharacterRuntimeStateCodec.ComputeHash(request.InitialState.Actors[i].State).Value,
                     request.InitialState.Actors[i].ActorId));
             }
             states.Add(new SimulationInitialStateIdentity(

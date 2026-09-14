@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation
         SimulationComponentIdentity Identity { get; }
         Float32SimulationSessionSnapshot Capture(
             SimulationSessionCompositionDescriptor descriptor,
-            SimulationProgramCatalog catalog,
+            Float32CharacterRuntime characterRuntime,
             SimulationWorldStateSet state,
             SimulationPipelineStateSnapshot pipelineState,
             WorldCapability solverCapabilities);
@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation
         Float32SimulationSessionSnapshot Read(byte[] bytes);
         void RequireRestore(
             SimulationSessionCompositionDescriptor descriptor,
-            SimulationProgramCatalog catalog,
+            Float32CharacterRuntime characterRuntime,
             ICharacterWorldSolver solver,
             SimulationRestoreDirective directive,
             Float32SimulationSessionSnapshot snapshot);
@@ -26,7 +26,7 @@ namespace ThirdPersonSimulation
     public sealed class Float32SimulationSessionSnapshotCodec : IFloat32SimulationSessionSnapshotCodec
     {
         const uint Magic = 0x53534643;
-        const int Version = 2;
+        const int Version = 3;
 
         public Float32SimulationSessionSnapshotCodec(SimulationComponentIdentity identity)
         {
@@ -39,15 +39,15 @@ namespace ThirdPersonSimulation
 
         public Float32SimulationSessionSnapshot Capture(
             SimulationSessionCompositionDescriptor descriptor,
-            SimulationProgramCatalog catalog,
+            Float32CharacterRuntime characterRuntime,
             SimulationWorldStateSet state,
             SimulationPipelineStateSnapshot pipelineState,
             WorldCapability solverCapabilities)
         {
             if (descriptor == null)
                 throw new ArgumentNullException(nameof(descriptor));
-            if (catalog == null)
-                throw new ArgumentNullException(nameof(catalog));
+            if (characterRuntime == null)
+                throw new ArgumentNullException(nameof(characterRuntime));
             if (state == null || state.LastCompletedTick == 0)
                 throw new InvalidOperationException("Session snapshot requires a completed Simulation Tick.");
             if (pipelineState == null || pipelineState.LastCompletedTick != state.LastCompletedTick ||
@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Pipeline state snapshot does not match the active Session composition.");
             }
             SimulationWorldSnapshot world = SimulationWorldSnapshotFactory.Capture(
-                catalog,
+                characterRuntime,
                 new SimulationTick(state.LastCompletedTick),
                 state.Actors,
                 state.WorldState,
@@ -97,17 +97,17 @@ namespace ThirdPersonSimulation
 
         public void RequireRestore(
             SimulationSessionCompositionDescriptor descriptor,
-            SimulationProgramCatalog catalog,
+            Float32CharacterRuntime characterRuntime,
             ICharacterWorldSolver solver,
             SimulationRestoreDirective directive,
             Float32SimulationSessionSnapshot snapshot)
         {
-            if (descriptor == null || catalog == null || solver == null || directive == null || snapshot == null)
+            if (descriptor == null || characterRuntime == null || solver == null || directive == null || snapshot == null)
                 throw new ArgumentNullException("Restore validation requires complete Session dependencies.");
             if (!snapshot.CompositionIdentity.Equals(descriptor.Identity) ||
                 snapshot.Tick != directive.Tick || !snapshot.SnapshotHash.Equals(directive.SnapshotHash) ||
-                !snapshot.World.GameplayContentHash.Equals(catalog.CatalogHash) ||
-                !directive.GameplayContentHash.Equals(catalog.CatalogHash) ||
+                !snapshot.World.GameplayContentHash.Equals(characterRuntime.GameplayContentHash) ||
+                !directive.GameplayContentHash.Equals(characterRuntime.GameplayContentHash) ||
                 !snapshot.Pipeline.Pipeline.Equals(descriptor.Pipeline) ||
                 !directive.PipelineHash.Equals(descriptor.Pipeline.Hash) ||
                 !snapshot.Pipeline.Backend.Equals(descriptor.ExecutionBackend) ||

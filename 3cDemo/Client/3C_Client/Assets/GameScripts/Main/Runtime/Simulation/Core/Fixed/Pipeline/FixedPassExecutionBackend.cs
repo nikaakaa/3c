@@ -103,7 +103,7 @@ namespace ThirdPersonSimulation.Fixed
                     resources.Register(SimulationSessionResourceReleasePhase.ActorAndPresentationRegistration, request.ActorResources[i]);
 
                 FixedPipelineProductStore products = request.ProductRuntimeFactories.CreateStore(request.CompiledPipeline.Products);
-                var stateStore = new SimulationWorldStateStore(request.Catalog, request.InitialState);
+                var stateStore = new SimulationWorldStateStore(request.CharacterRuntime, request.InitialState);
                 var programPort = new FixedCharacterRuntimePort(
                     request.Backend.Identity,
                     request.CharacterRuntime);
@@ -165,7 +165,7 @@ namespace ThirdPersonSimulation.Fixed
                 var reconstructionContext = new SimulationPipelineReconstructionContext(
                     request.Descriptor.Identity,
                     request.CompiledPipeline.Identity,
-                    request.Catalog.CatalogHash,
+                    request.CharacterRuntime.GameplayContentHash,
                     request.Descriptor.Roster.RosterHash,
                     request.InitialState.WorldState.WorldRevision);
                 for (int i = 0; i < reconstructible.Count; i++)
@@ -190,8 +190,7 @@ namespace ThirdPersonSimulation.Fixed
                 var transaction = new FixedPipelineTransaction(
                     request.Descriptor,
                     request.CompiledPipeline,
-                    request.Catalog,
-                    request.Roster,
+                    request.CharacterRuntime,
                     stateStore,
                     request.Solver,
                     request.RestoreSource,
@@ -203,8 +202,7 @@ namespace ThirdPersonSimulation.Fixed
                     reconstructible.AsReadOnly(),
                     products,
                     workingStatePort,
-                    completedStepPort,
-                    request.CharacterRuntime);
+                    completedStepPort);
                 var handle = new FixedPassPipelineRuntimeHandle(
                     request.Descriptor,
                     request.CompiledPipeline,
@@ -236,7 +234,7 @@ namespace ThirdPersonSimulation.Fixed
                     SimulationInitialStateKind.Character,
                     "fixed-character-state",
                     1,
-                    CharacterSimulationStateCodec.ComputeHash(request.InitialState.Actors[i].State).Value,
+                    FixedCharacterRuntimeStateCodec.ComputeHash(request.InitialState.Actors[i].State).Value,
                     request.InitialState.Actors[i].ActorId));
             }
             states.Add(new SimulationInitialStateIdentity(

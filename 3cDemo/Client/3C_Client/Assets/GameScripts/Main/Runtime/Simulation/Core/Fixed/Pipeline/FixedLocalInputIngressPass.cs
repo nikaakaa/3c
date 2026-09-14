@@ -61,12 +61,11 @@ namespace ThirdPersonSimulation.Fixed
             RequireExecution();
             if (!ReferenceEquals(m_Source, readPorts.Source))
                 throw new InvalidOperationException("Fixed Local input Source port changed after activation.");
-            SimulationProgramCatalog catalog = readPorts.CharacterRuntime.Catalog;
             var nextTick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
             FixedLocalInputFrame frame = readPorts.Source.Read(
                 context.Source,
                 nextTick,
-                catalog.TickRate,
+                readPorts.CharacterRuntime.Runtime.TickRate,
                 readPorts.CharacterRuntime.Roster,
                 readPorts.CommittedObservation.Read());
             writePorts.CanonicalInputs.Write(frame.CanonicalInputs);

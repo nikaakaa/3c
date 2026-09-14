@@ -92,7 +92,7 @@ namespace ThirdPersonSimulation
             return new SimulationSessionExecutionPlan<Float32SimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                characterRuntime.Catalog.CatalogHash,
+                characterRuntime.GameplayContentHash,
                 context.Pipeline.Hash,
                 characterRuntime.RosterDescriptor,
                 new[]

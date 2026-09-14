@@ -7,6 +7,7 @@
 | 当前代码 | 已有事实 | 不能据此宣称的完成项 |
 |---|---|---|
 | `Timeline.ExecutionContracts.cs` | 已有 `TimelineBindingPlan`、`TimelineCallInput`、`TimelineBindingPreparation`、分型 `TimelineTickContext`/`ITimelineTickExecutionView`、执行 identity、观察和 Scene Presentation sink 合同 | 这只是 binding/输入准备和输出合同；没有直接内容 playback 实例、Advance 候选、Commit/Discard 或分型 Capture/Restore |
+| `TimelineRuntimePreparation.cs` | 已有正式 `Prepare`/`CreatePlayback`，显式 NumericTarget、执行 identity、内容 revision、domain binding 和 dependency resolver；Playback 保存 prepared bindings、prepared dependencies 和 generation | 还没有 Advance、TreeClip 实际执行、Commit/Discard、停止窗口提交或 Capture/Restore |
 | `TimelineData.Runtime.cs`、`TimelinePlaybackTreeContracts.cs`、`TimelineNode.cs` | Skill Timeline 已通过 `ITimelinePlaybackService` 请求 `TimelinePlaybackHandle`，查询状态并传播 Stop/Cancel | 这是现有 Skill/Node 播放入口，不是非 Skill 可用的直接内容 Runtime，也不替代第12节的独立 Prepare/CreatePlayback |
 | `Simulation/Core/Execution/TimelineControlContracts.cs`、`TimelineControlRuntime.cs` | 已有基于 `OperationHandle`、`ITimelineTargetLeaf<TTime>`、`OperationControlCursor` 的循环、Section、TreeClip、Motion/Camera/Cue、Weight/Ease 和 trace 调度 | 该实现仍从 operation/Program 读取并在控制状态口写入，不能原样作为“删除 ProgramPlan/operation 前提”的最终实现；第12.3、12.4、12.8仍未完成 |
 | `RuntimeDiagnostics` 的 Timeline playback provenance/summary | 已有按 playback identity 的只读诊断与编辑器观察入口 | 诊断只观察运行事实，不是 Timeline Runtime owner，不得反向驱动播放 |

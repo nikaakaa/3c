@@ -11,10 +11,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseSourceModule source,
             Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
-            Func<CharacterPoseCanvasNode, AnimationClipPlayerRuntime>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                AnimationClipPlayerRuntime>
                 playerFactory,
-            Func<CharacterPoseCanvasNode, int> bindingIndexFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, int>
+                bindingIndexFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(
@@ -24,16 +27,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 playerFactory,
                 bindingIndexFactory,
                 bufferFactory);
-            var creator = new Creator((node, preparedBinding) =>
+            var creator = new Creator((node, preparedBinding, context) =>
             {
                 AnimationClipPlayerRuntime player = null;
                 CharacterPoseNativeNodePoseBuffer buffer = null;
                 try
                 {
-                    player = playerFactory(node) ??
+                    player = playerFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native Clip Player factory returned no player for '{node.NodeId}'.");
-                    buffer = bufferFactory(node) ??
+                    buffer = bufferFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native buffer factory returned no buffer for '{node.NodeId}'.");
                     return new CharacterPoseNativeClipPlayerHandler(
@@ -42,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterPoseNativeClipSourceModuleBinding(
                             source,
                             sourceLeaseProvider,
-                            bindingIndexFactory(node)));
+                            bindingIndexFactory(node, context)));
                 }
                 catch
                 {
@@ -58,10 +61,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseSourceModule source,
             Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
-            Func<CharacterPoseCanvasNode, AnimationBlendSpacePlayerRuntime>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                AnimationBlendSpacePlayerRuntime>
                 playerFactory,
-            Func<CharacterPoseCanvasNode, int> bindingIndexFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, int>
+                bindingIndexFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(
@@ -71,16 +77,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 playerFactory,
                 bindingIndexFactory,
                 bufferFactory);
-            var creator = new Creator((node, preparedBinding) =>
+            var creator = new Creator((node, preparedBinding, context) =>
             {
                 AnimationBlendSpacePlayerRuntime player = null;
                 CharacterPoseNativeNodePoseBuffer buffer = null;
                 try
                 {
-                    player = playerFactory(node) ??
+                    player = playerFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native Blend Space Player factory returned no player for '{node.NodeId}'.");
-                    buffer = bufferFactory(node) ??
+                    buffer = bufferFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native buffer factory returned no buffer for '{node.NodeId}'.");
                     return new CharacterPoseNativeBlendSpacePlayerHandler(
@@ -89,7 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterPoseNativeBlendSpaceSourceModuleBinding(
                             source,
                             sourceLeaseProvider,
-                            bindingIndexFactory(node)));
+                            bindingIndexFactory(node, context)));
                 }
                 catch
                 {
@@ -107,12 +113,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseSourceModule source,
             Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
-            Func<CharacterPoseCanvasNode, AnimationSelectedPosePlayerRuntime>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                AnimationSelectedPosePlayerRuntime>
                 playerFactory,
-            Func<CharacterPoseCanvasNode, PresentationPoseSourceSample>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                PresentationPoseSourceSample>
                 sampleFactory,
-            Func<CharacterPoseCanvasNode, int> bindingIndexFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, int>
+                bindingIndexFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(
@@ -123,16 +133,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 sampleFactory,
                 bindingIndexFactory,
                 bufferFactory);
-            var creator = new Creator((node, preparedBinding) =>
+            var creator = new Creator((node, preparedBinding, context) =>
             {
                 AnimationSelectedPosePlayerRuntime player = null;
                 CharacterPoseNativeNodePoseBuffer buffer = null;
                 try
                 {
-                    player = playerFactory(node) ??
+                    player = playerFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native Selected Player factory returned no player for '{node.NodeId}'.");
-                    buffer = bufferFactory(node) ??
+                    buffer = bufferFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native buffer factory returned no buffer for '{node.NodeId}'.");
                     return new CharacterPoseNativeSelectedPosePlayerHandler(
@@ -141,8 +151,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterPoseNativeSelectedSourceModuleBinding(
                             source,
                             sourceLeaseProvider,
-                            () => sampleFactory(node),
-                            bindingIndexFactory(node)));
+                            () => sampleFactory(node, context),
+                            bindingIndexFactory(node, context)));
                 }
                 catch
                 {
@@ -160,13 +170,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseSourceModule source,
             Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
-            Func<CharacterPoseCanvasNode, AnimationBlendStackRuntime>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                AnimationBlendStackRuntime>
                 stackFactory,
             Func<PoseNodeId, AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> actionSampleProvider,
             Func<PoseNodeId, AnimationPoseSourceId,
                 PresentationPoseSourceSample> providerSampleProvider,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(
@@ -193,13 +205,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             this CharacterPoseNativeNodeHandlerRegistry registry,
             CharacterPoseSourceModule source,
             Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
-            Func<CharacterPoseCanvasNode, AnimationBlendStackRuntime>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                AnimationBlendStackRuntime>
                 stackFactory,
             Func<PoseNodeId, AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> actionSampleProvider,
             Func<PoseNodeId, AnimationPoseSourceId,
                 PresentationPoseSourceSample> providerSampleProvider,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(
@@ -227,9 +241,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseSourceModule source,
             Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
             Delegate playerFactory,
-            Func<CharacterPoseCanvasNode, int> bindingIndexFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
-                bufferFactory)
+            Delegate bindingIndexFactory,
+            Delegate bufferFactory)
         {
             if (registry == null)
                 throw new ArgumentNullException(nameof(registry));
@@ -252,8 +265,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Delegate stackFactory,
             Delegate actionSampleProvider,
             Delegate providerSampleProvider,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
-                bufferFactory)
+            Delegate bufferFactory)
         {
             if (registry == null)
                 throw new ArgumentNullException(nameof(registry));
@@ -276,12 +288,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             readonly Func<
                 CharacterPoseCanvasNode,
                 CharacterPoseNativePreparedBinding,
+                CharacterPoseNativeInstanceContext,
                 ICharacterPoseNativeNodeHandler> m_Create;
 
             internal Creator(
                 Func<
                     CharacterPoseCanvasNode,
                     CharacterPoseNativePreparedBinding,
+                    CharacterPoseNativeInstanceContext,
                     ICharacterPoseNativeNodeHandler> create)
             {
                 m_Create = create ?? throw new ArgumentNullException(nameof(create));
@@ -291,32 +305,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseCanvasNode node,
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
-                m_Create(node, preparedBinding);
+                m_Create(node, preparedBinding, context);
         }
 
         sealed class BlendStackCreator
         {
             readonly CharacterPoseSourceModule m_Source;
             readonly Func<CharacterPoseSourceFrameLease> m_SourceLeaseProvider;
-            readonly Func<CharacterPoseCanvasNode, AnimationBlendStackRuntime>
+            readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                AnimationBlendStackRuntime>
                 m_StackFactory;
             readonly Func<PoseNodeId, AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> m_ActionSampleProvider;
             readonly Func<PoseNodeId, AnimationPoseSourceId,
                 PresentationPoseSourceSample> m_ProviderSampleProvider;
-            readonly Func<CharacterPoseCanvasNode,
+            readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer> m_BufferFactory;
 
             internal BlendStackCreator(
                 CharacterPoseSourceModule source,
                 Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
-                Func<CharacterPoseCanvasNode, AnimationBlendStackRuntime>
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                    AnimationBlendStackRuntime>
                     stackFactory,
                 Func<PoseNodeId, AnimationPoseSourceId,
                     AnimationResolvedPoseSourceSample> actionSampleProvider,
                 Func<PoseNodeId, AnimationPoseSourceId,
                     PresentationPoseSourceSample> providerSampleProvider,
-                Func<CharacterPoseCanvasNode,
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                     CharacterPoseNativeNodePoseBuffer> bufferFactory)
             {
                 m_Source = source;
@@ -336,10 +352,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseNativeNodePoseBuffer buffer = null;
                 try
                 {
-                    stack = m_StackFactory(node) ??
+                    stack = m_StackFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native Blend Stack factory returned no stack for '{node.NodeId}'.");
-                    buffer = m_BufferFactory(node) ??
+                    buffer = m_BufferFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native buffer factory returned no buffer for '{node.NodeId}'.");
                     return new CharacterPoseNativeBlendStackHandler(
@@ -365,25 +381,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             readonly CharacterPoseSourceModule m_Source;
             readonly Func<CharacterPoseSourceFrameLease> m_SourceLeaseProvider;
-            readonly Func<CharacterPoseCanvasNode, AnimationBlendStackRuntime>
+            readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                AnimationBlendStackRuntime>
                 m_StackFactory;
             readonly Func<PoseNodeId, AnimationPoseSourceId,
                 AnimationResolvedPoseSourceSample> m_ActionSampleProvider;
             readonly Func<PoseNodeId, AnimationPoseSourceId,
                 PresentationPoseSourceSample> m_ProviderSampleProvider;
-            readonly Func<CharacterPoseCanvasNode,
+            readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer> m_BufferFactory;
 
             internal AnimationSlotCreator(
                 CharacterPoseSourceModule source,
                 Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
-                Func<CharacterPoseCanvasNode, AnimationBlendStackRuntime>
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                    AnimationBlendStackRuntime>
                     stackFactory,
                 Func<PoseNodeId, AnimationPoseSourceId,
                     AnimationResolvedPoseSourceSample> actionSampleProvider,
                 Func<PoseNodeId, AnimationPoseSourceId,
                     PresentationPoseSourceSample> providerSampleProvider,
-                Func<CharacterPoseCanvasNode,
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                     CharacterPoseNativeNodePoseBuffer> bufferFactory)
             {
                 m_Source = source;
@@ -405,10 +423,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseNativeAnimationSlotSourceBinding slotSource = null;
                 try
                 {
-                    stack = m_StackFactory(node) ??
+                    stack = m_StackFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native Animation Slot factory returned no stack for '{node.NodeId}'.");
-                    innerBuffer = m_BufferFactory(node) ??
+                    innerBuffer = m_BufferFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native slot buffer factory returned no inner buffer for '{node.NodeId}'.");
                     slotSource = new CharacterPoseNativeAnimationSlotSourceBinding(
@@ -420,7 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             m_ActionSampleProvider,
                             m_ProviderSampleProvider),
                         innerBuffer);
-                    outputBuffer = m_BufferFactory(node) ??
+                    outputBuffer = m_BufferFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native slot buffer factory returned no output buffer for '{node.NodeId}'.");
                     return new CharacterPoseNativeAnimationSlotHandler(

@@ -10,9 +10,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 27;
-		public const string CodecIdentity = "character-state/float32/v28";
-		const string HashIdentity = "character-state-hash/float32/v26";
+		const int Version = 28;
+		public const string CodecIdentity = "character-state/float32/v29";
+		const string HashIdentity = "character-state-hash/float32/v27";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -43,6 +43,7 @@ namespace ThirdPersonSimulation
             WriteActionActivationRequests(writer, state.ActionActivationRequests, layout);
             WriteActionInstances(writer, state.ActionInstances, layout);
             WriteTimelineRetentions(writer, state.TimelineRetainedActionContexts, layout);
+            WriteMotionWarpContexts(writer, state.MotionWarpActionContexts, layout);
             writer.WriteInt32(state.SlotCount);
             for (int i = 0; i < state.SlotCount; i++)
             {
@@ -83,6 +84,7 @@ namespace ThirdPersonSimulation
             List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, layout);
             List<Float32ActionInstanceState> actionInstances = ReadActionInstances(reader, layout);
             Dictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, layout);
+            Dictionary<int, Float32ActionInstanceReference> motionWarpActionContexts = ReadMotionWarpContexts(reader, layout);
             if (numericProfile != program.Manifest.NumericProfile ||
                 !targetAbi.Equals(program.Manifest.NumericProfile.AbiVersion) ||
                 programId != program.Manifest.ProgramId ||
@@ -117,7 +119,7 @@ namespace ThirdPersonSimulation
 			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
 				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, controlState, gameplayEffectState, equipmentState);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, actionActivationRequests, actionInstances, timelineRetainedActionContexts, motionWarpActionContexts, controlState, gameplayEffectState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }
@@ -152,7 +154,6 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.Identity: writer.WriteString(value.Identity); break;
                 case ProgramStateValueKind.BlackboardOwnerToken: WriteBlackboardOwnerToken(writer, value.BlackboardOwnerToken); break;
                 case ProgramStateValueKind.BlackboardWriteStamp: WriteBlackboardWriteStamp(writer, value.BlackboardWriteStamp); break;
-                case ProgramStateValueKind.ActionInstanceReference: WriteActionReference(writer, value.ActionInstanceReference); break;
                 case ProgramStateValueKind.ActionTargetSnapshot: WriteTargetSnapshot(writer, value.ActionTargetSnapshot); break;
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{value.Kind}'.");
             }
@@ -175,7 +176,6 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.Identity: return CharacterStateValue.FromIdentity(reader.ReadString());
                 case ProgramStateValueKind.BlackboardOwnerToken: return CharacterStateValue.FromBlackboardOwnerToken(ReadBlackboardOwnerToken(reader));
                 case ProgramStateValueKind.BlackboardWriteStamp: return CharacterStateValue.FromBlackboardWriteStamp(ReadBlackboardWriteStamp(reader));
-                case ProgramStateValueKind.ActionInstanceReference: return CharacterStateValue.FromActionInstanceReference(ReadActionReference(reader));
                 case ProgramStateValueKind.ActionTargetSnapshot: return CharacterStateValue.FromActionTargetSnapshot(ReadTargetSnapshot(reader));
                 default: throw new InvalidDataException($"Unsupported Character state value kind '{kind}'.");
             }
@@ -421,6 +421,69 @@ namespace ThirdPersonSimulation
         {
             var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
             Dictionary<int, Float32ActionInstanceReference> values = ReadTimelineRetentions(reader, layout);
+            reader.RequireComplete();
+            return values;
+        }
+
+        static void WriteMotionWarpContexts(
+            CanonicalWriter writer,
+            IReadOnlyDictionary<int, Float32ActionInstanceReference> values,
+            ProgramExecutionLayout layout)
+        {
+            IReadOnlyList<int> operationIds = layout.MotionWarpOperationIds;
+            writer.WriteInt32(operationIds.Count);
+            for (int i = 0; i < operationIds.Count; i++)
+            {
+                int operation = operationIds[i];
+                writer.WriteInt32(operation);
+                if (values.TryGetValue(operation, out Float32ActionInstanceReference value))
+                {
+                    writer.WriteBoolean(true);
+                    WriteActionReference(writer, value);
+                }
+                else
+                    writer.WriteBoolean(false);
+            }
+        }
+
+        static Dictionary<int, Float32ActionInstanceReference> ReadMotionWarpContexts(
+            CanonicalReader reader,
+            ProgramExecutionLayout layout)
+        {
+            IReadOnlyList<int> operationIds = layout.MotionWarpOperationIds;
+            int count = reader.ReadInt32();
+            if (count != operationIds.Count)
+                throw new InvalidDataException("Character MotionWarp Action context count does not match its runtime binding.");
+            var values = new Dictionary<int, Float32ActionInstanceReference>();
+            for (int i = 0; i < count; i++)
+            {
+                int operation = reader.ReadInt32();
+                if (operation != operationIds[i])
+                    throw new InvalidDataException("Character MotionWarp Action context order does not match its runtime binding.");
+                if (!reader.ReadBoolean())
+                    continue;
+                Float32ActionInstanceReference value = ReadActionReference(reader);
+                if (!values.TryAdd(operation, value))
+                    throw new InvalidDataException("Character MotionWarp Action context is duplicated.");
+            }
+            return values;
+        }
+
+        internal static byte[] WriteMotionWarpContexts(
+            IReadOnlyDictionary<int, Float32ActionInstanceReference> values,
+            ProgramExecutionLayout layout)
+        {
+            using var writer = new CanonicalWriter();
+            WriteMotionWarpContexts(writer, values, layout);
+            return writer.ToArray();
+        }
+
+        internal static Dictionary<int, Float32ActionInstanceReference> ReadMotionWarpContexts(
+            byte[] bytes,
+            ProgramExecutionLayout layout)
+        {
+            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            Dictionary<int, Float32ActionInstanceReference> values = ReadMotionWarpContexts(reader, layout);
             reader.RequireComplete();
             return values;
         }

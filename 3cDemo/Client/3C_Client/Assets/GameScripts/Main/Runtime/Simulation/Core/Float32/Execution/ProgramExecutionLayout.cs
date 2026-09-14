@@ -92,6 +92,8 @@ namespace ThirdPersonSimulation
         readonly IReadOnlyDictionary<string, int> m_ActionCapacities;
         readonly HashSet<int> m_TimelineRetentionOperations;
         readonly int[] m_TimelineRetentionOperationIds;
+        readonly HashSet<int> m_MotionWarpOperations;
+        readonly int[] m_MotionWarpOperationIds;
         readonly HashSet<int> m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
@@ -147,9 +149,11 @@ namespace ThirdPersonSimulation
                 out m_InputRequests,
                 out m_ActionCapacities,
                 out m_TimelineRetentionOperations,
+                out m_MotionWarpOperations,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
             m_InputRequestIds = m_InputRequests.OrderBy(value => value, StringComparer.Ordinal).ToArray();
             m_TimelineRetentionOperationIds = m_TimelineRetentionOperations.OrderBy(value => value).ToArray();
+            m_MotionWarpOperationIds = m_MotionWarpOperations.OrderBy(value => value).ToArray();
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(program, actionTargetSnapshots);
             RootOperation = ResolveRootOperation(program);
             var topology = new OperationExecutionTopology(
@@ -412,6 +416,11 @@ namespace ThirdPersonSimulation
         internal bool HasTimelineRetention(OperationHandle timeline) =>
             timeline.IsValid && m_TimelineRetentionOperations.Contains(timeline.Value);
 
+        internal IReadOnlyList<int> MotionWarpOperationIds => m_MotionWarpOperationIds;
+
+        internal bool HasMotionWarp(OperationHandle operation) =>
+            operation.IsValid && m_MotionWarpOperations.Contains(operation.Value);
+
         public bool TryGetActionTargetSnapshot(OperationHandle operation, out TypedStateAddress address)
         {
             RequireOperation(operation);
@@ -590,11 +599,13 @@ namespace ThirdPersonSimulation
             out HashSet<string> inputRequests,
             out IReadOnlyDictionary<string, int> actionCapacities,
             out HashSet<int> timelineRetentionOperations,
+            out HashSet<int> motionWarpOperations,
             out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots)
         {
             var inputs = new HashSet<string>(StringComparer.Ordinal);
             var capacities = new Dictionary<string, int>(StringComparer.Ordinal);
             var timeline = new HashSet<int>();
+            var motionWarp = new HashSet<int>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
             for (int i = 0; i < program.CatalogEntries.Count; i++)
             {
@@ -620,8 +631,12 @@ namespace ThirdPersonSimulation
             }
 
             for (int i = 0; i < program.Operations.Count; i++)
+            {
                 if (program.Operations[i].Code == SimulationOperationCode.Timeline)
                     timeline.Add(i);
+                if (program.Operations[i].Code == SimulationOperationCode.TimelineMotionWarp)
+                    motionWarp.Add(i);
+            }
 
             for (int i = 0; i < program.StateSlots.Count; i++)
             {
@@ -638,6 +653,7 @@ namespace ThirdPersonSimulation
             inputRequests = inputs;
             actionCapacities = capacities;
             timelineRetentionOperations = timeline;
+            motionWarpOperations = motionWarp;
             actionTargetSnapshots = targets;
         }
 

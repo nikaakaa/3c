@@ -112,7 +112,7 @@ namespace ThirdPersonSimulation
 
     public sealed class ProgramMotionModifierDescriptor
     {
-        public const int MotionWarpStateSlotCount = 16;
+        public const int MotionWarpStateSlotCount = 15;
 
         public ProgramMotionModifierDescriptor(
             int index,
@@ -917,7 +917,6 @@ namespace ThirdPersonSimulation
         Identity = 8,
         BlackboardOwnerToken = 9,
         BlackboardWriteStamp = 10,
-        ActionInstanceReference = 23,
         ActionTargetSnapshot = 24
     }
 
@@ -951,7 +950,6 @@ namespace ThirdPersonSimulation
         MotionWarpActive = 45,
         MotionWarpInitialized = 46,
         MotionWarpPlaybackGeneration = 47,
-        MotionWarpActionInstance = 48,
         MotionWarpStartBodyPosition = 49,
         MotionWarpStartBodyYaw = 50,
         MotionWarpSourceWindowStartPosition = 51,
@@ -1028,7 +1026,6 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.Identity => "state.identity/v1",
                 ProgramStateValueKind.BlackboardOwnerToken => "state.blackboard-owner-token/v1",
                 ProgramStateValueKind.BlackboardWriteStamp => "state.blackboard-write-stamp/v1",
-                ProgramStateValueKind.ActionInstanceReference => "state.action-instance-reference/v1",
                 ProgramStateValueKind.ActionTargetSnapshot => "state.action-target-snapshot/v1",
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
             };
@@ -1059,7 +1056,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.MotionWarpActive => kind == ProgramStateValueKind.Boolean && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpInitialized => kind == ProgramStateValueKind.Boolean && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpPlaybackGeneration => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.MotionModifier,
-                ProgramStateSemantic.MotionWarpActionInstance => kind == ProgramStateValueKind.ActionInstanceReference && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpStartBodyPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpStartBodyYaw => kind == ProgramStateValueKind.Yaw && owner == ProgramStateOwnerKind.MotionModifier,
                 ProgramStateSemantic.MotionWarpSourceWindowStartPosition => kind == ProgramStateValueKind.Vector3 && owner == ProgramStateOwnerKind.MotionModifier,

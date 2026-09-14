@@ -256,6 +256,8 @@ namespace ThirdPersonSimulation.Fixed
             List<FixedActionInstanceState> actionInstancesSnapshot,
             bool hadTimelineRetainedActionContextsWorking,
             Dictionary<int, FixedActionInstanceReference> timelineRetainedActionContextsSnapshot,
+            bool hadMotionWarpActionContextsWorking,
+            Dictionary<int, FixedActionInstanceReference> motionWarpActionContextsSnapshot,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
             GameplayEffectStateAggregate gameplayEffectSnapshot,
@@ -279,6 +281,8 @@ namespace ThirdPersonSimulation.Fixed
             ActionInstancesSnapshot = actionInstancesSnapshot;
             HadTimelineRetainedActionContextsWorking = hadTimelineRetainedActionContextsWorking;
             TimelineRetainedActionContextsSnapshot = timelineRetainedActionContextsSnapshot;
+            HadMotionWarpActionContextsWorking = hadMotionWarpActionContextsWorking;
+            MotionWarpActionContextsSnapshot = motionWarpActionContextsSnapshot;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
@@ -303,6 +307,8 @@ namespace ThirdPersonSimulation.Fixed
         internal List<FixedActionInstanceState> ActionInstancesSnapshot { get; }
         internal bool HadTimelineRetainedActionContextsWorking { get; }
         internal Dictionary<int, FixedActionInstanceReference> TimelineRetainedActionContextsSnapshot { get; }
+        internal bool HadMotionWarpActionContextsWorking { get; }
+        internal Dictionary<int, FixedActionInstanceReference> MotionWarpActionContextsSnapshot { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
@@ -335,6 +341,7 @@ namespace ThirdPersonSimulation.Fixed
         List<SimulationActionActivationRequestState> m_ActionActivationRequestsWorking;
         List<FixedActionInstanceState> m_ActionInstancesWorking;
         Dictionary<int, FixedActionInstanceReference> m_TimelineRetainedActionContextsWorking;
+        Dictionary<int, FixedActionInstanceReference> m_MotionWarpActionContextsWorking;
         FixedCharacterStateTransactionStatus m_Status;
 
         FixedCharacterStateTransaction(
@@ -529,6 +536,31 @@ namespace ThirdPersonSimulation.Fixed
                 m_TimelineRetainedActionContextsWorking.Remove(operation.Value);
         }
 
+        public FixedActionInstanceReference GetMotionWarpActionContext(OperationHandle operation)
+        {
+            RequireActive();
+            if (!m_Layout.HasMotionWarp(operation))
+                throw new InvalidOperationException($"Character has no MotionWarp Action context for '{operation}'.");
+            if (m_MotionWarpActionContextsWorking != null &&
+                m_MotionWarpActionContextsWorking.TryGetValue(operation.Value, out FixedActionInstanceReference working))
+                return working;
+            return m_BaseState.MotionWarpActionContexts.TryGetValue(operation.Value, out FixedActionInstanceReference value)
+                ? value
+                : default;
+        }
+
+        public void SetMotionWarpActionContext(OperationHandle operation, FixedActionInstanceReference value)
+        {
+            RequireActive();
+            if (!m_Layout.HasMotionWarp(operation))
+                throw new InvalidOperationException($"Character has no MotionWarp Action context for '{operation}'.");
+            m_MotionWarpActionContextsWorking ??= CloneMotionWarpActionContexts(m_BaseState.MotionWarpActionContexts);
+            if (value.IsValid)
+                m_MotionWarpActionContextsWorking[operation.Value] = value;
+            else
+                m_MotionWarpActionContextsWorking.Remove(operation.Value);
+        }
+
         public void Set(int slotIndex, CharacterStateValue value)
         {
             Set(m_Layout.Address(slotIndex), value);
@@ -622,6 +654,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_ActionInstancesWorking == null ? null : new List<FixedActionInstanceState>(m_ActionInstancesWorking),
                 m_TimelineRetainedActionContextsWorking != null,
                 m_TimelineRetainedActionContextsWorking == null ? null : CloneTimelineRetainedActionContexts(m_TimelineRetainedActionContextsWorking),
+                m_MotionWarpActionContextsWorking != null,
+                m_MotionWarpActionContextsWorking == null ? null : CloneMotionWarpActionContexts(m_MotionWarpActionContextsWorking),
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
                 m_GameplayEffectWorking?.Freeze(),
@@ -672,6 +706,9 @@ namespace ThirdPersonSimulation.Fixed
             m_TimelineRetainedActionContextsWorking = savepoint.HadTimelineRetainedActionContextsWorking
                 ? CloneTimelineRetainedActionContexts(savepoint.TimelineRetainedActionContextsSnapshot)
                 : null;
+            m_MotionWarpActionContextsWorking = savepoint.HadMotionWarpActionContextsWorking
+                ? CloneMotionWarpActionContexts(savepoint.MotionWarpActionContextsSnapshot)
+                : null;
             m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
         }
@@ -719,6 +756,7 @@ namespace ThirdPersonSimulation.Fixed
             IReadOnlyList<SimulationActionActivationRequestState> actionActivationRequests = m_ActionActivationRequestsWorking ?? m_BaseState.ActionActivationRequests;
             IReadOnlyList<FixedActionInstanceState> actionInstances = m_ActionInstancesWorking ?? m_BaseState.ActionInstances;
             IReadOnlyDictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts = m_TimelineRetainedActionContextsWorking ?? m_BaseState.TimelineRetainedActionContexts;
+            IReadOnlyDictionary<int, FixedActionInstanceReference> motionWarpActionContexts = m_MotionWarpActionContextsWorking ?? m_BaseState.MotionWarpActionContexts;
 
             try
             {
@@ -734,6 +772,7 @@ namespace ThirdPersonSimulation.Fixed
                     actionActivationRequests,
                     actionInstances,
                     timelineRetainedActionContexts,
+                    motionWarpActionContexts,
                     controlState,
                     gameplayEffectState,
                     equipmentState,
@@ -825,6 +864,7 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionActivationRequestsWorking = null;
             m_ActionInstancesWorking = null;
             m_TimelineRetainedActionContextsWorking = null;
+            m_MotionWarpActionContextsWorking = null;
         }
 
         static Dictionary<string, SimulationInputRequestState> CloneInputRequests(
@@ -837,6 +877,15 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static Dictionary<int, FixedActionInstanceReference> CloneTimelineRetainedActionContexts(
+            IReadOnlyDictionary<int, FixedActionInstanceReference> source)
+        {
+            var result = new Dictionary<int, FixedActionInstanceReference>();
+            foreach (KeyValuePair<int, FixedActionInstanceReference> pair in source)
+                result.Add(pair.Key, pair.Value);
+            return result;
+        }
+
+        static Dictionary<int, FixedActionInstanceReference> CloneMotionWarpActionContexts(
             IReadOnlyDictionary<int, FixedActionInstanceReference> source)
         {
             var result = new Dictionary<int, FixedActionInstanceReference>();

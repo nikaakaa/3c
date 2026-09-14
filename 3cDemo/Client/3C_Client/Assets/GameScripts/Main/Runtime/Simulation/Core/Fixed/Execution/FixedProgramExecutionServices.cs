@@ -105,7 +105,6 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.MotionWarpActive,
                 ProgramStateSemantic.MotionWarpInitialized,
                 ProgramStateSemantic.MotionWarpPlaybackGeneration,
-                ProgramStateSemantic.MotionWarpActionInstance,
                 ProgramStateSemantic.MotionWarpStartBodyPosition,
                 ProgramStateSemantic.MotionWarpStartBodyYaw,
                 ProgramStateSemantic.MotionWarpSourceWindowStartPosition,

@@ -673,7 +673,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Boolean, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpActive));
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Boolean, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpInitialized));
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpPlaybackGeneration));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.ActionInstanceReference, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpActionInstance));
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Vector3, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpStartBodyPosition));
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Yaw, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpStartBodyYaw));
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Vector3, ProgramStateOwnerKind.MotionModifier, ProgramStateSemantic.MotionWarpSourceWindowStartPosition));
@@ -702,8 +701,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         int GetDefaultConstant(ProgramStateValueKind kind)
         {
-            if (kind == ProgramStateValueKind.ActionInstanceReference ||
-                kind == ProgramStateValueKind.BlackboardOwnerToken ||
+            if (kind == ProgramStateValueKind.BlackboardOwnerToken ||
                 kind == ProgramStateValueKind.BlackboardWriteStamp)
             {
                 return -1;

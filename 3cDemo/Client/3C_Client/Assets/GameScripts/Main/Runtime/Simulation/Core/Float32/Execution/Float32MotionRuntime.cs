@@ -440,6 +440,7 @@ namespace ThirdPersonSimulation
         readonly Float32EvaluationFrame m_Frame;
         readonly Float32StatePort m_State;
         readonly Float32ActionStateStore m_Actions;
+        readonly Float32CharacterStateTransaction m_Transaction;
 
         public Float32MotionWarpTarget(
             Float32ProgramAccess access,
@@ -451,6 +452,7 @@ namespace ThirdPersonSimulation
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_State = state ?? throw new ArgumentNullException(nameof(state));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            m_Transaction = m_Frame.Transaction ?? throw new InvalidOperationException("MotionWarp target requires an active Character state transaction.");
         }
 
         public void Reset(ProgramMotionModifierDescriptor descriptor)
@@ -473,6 +475,7 @@ namespace ThirdPersonSimulation
 
         void ResetState(ProgramMotionModifierDescriptor descriptor)
         {
+            m_Transaction.SetMotionWarpActionContext(descriptor.Operation, default);
             for (int i = 0; i < descriptor.StateSlotCount; i++)
                 m_State.Reset(descriptor.StateSlotStart + i);
         }
@@ -542,7 +545,7 @@ namespace ThirdPersonSimulation
 
             bool active = Read(descriptor, ProgramStateSemantic.MotionWarpActive).Boolean;
             bool initialized = Read(descriptor, ProgramStateSemantic.MotionWarpInitialized).Boolean;
-            Float32ActionInstanceReference storedReference = Read(descriptor, ProgramStateSemantic.MotionWarpActionInstance).ActionInstanceReference;
+            Float32ActionInstanceReference storedReference = m_Transaction.GetMotionWarpActionContext(descriptor.Operation);
             var storedAction = storedReference.IsValid
                 ? new TimelineActionContextIdentity(
                     storedReference.ActionId,
@@ -809,7 +812,7 @@ namespace ThirdPersonSimulation
             Write(descriptor, ProgramStateSemantic.MotionWarpActive, CharacterStateValue.FromBoolean(true));
             Write(descriptor, ProgramStateSemantic.MotionWarpInitialized, CharacterStateValue.FromBoolean(true));
             Write(descriptor, ProgramStateSemantic.MotionWarpPlaybackGeneration, CharacterStateValue.FromUInt64(playbackGeneration));
-            Write(descriptor, ProgramStateSemantic.MotionWarpActionInstance, CharacterStateValue.FromActionInstanceReference(Float32ActionInstanceReference.FromInstance(action)));
+            m_Transaction.SetMotionWarpActionContext(descriptor.Operation, Float32ActionInstanceReference.FromInstance(action));
             Write(descriptor, ProgramStateSemantic.MotionWarpStartBodyPosition, CharacterStateValue.FromVector3(startBodyPosition));
             Write(descriptor, ProgramStateSemantic.MotionWarpStartBodyYaw, CharacterStateValue.FromYaw(startBodyYaw));
             Write(descriptor, ProgramStateSemantic.MotionWarpSourceWindowStartPosition, CharacterStateValue.FromVector3(sourceWindowStartPosition));

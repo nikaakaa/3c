@@ -86,6 +86,8 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj --no-restore 
 
 结果为 0 errors；输出包含 Unity TestRunner、InputSystem、TreeDesigner 和 Slate 既有 warnings；构建后已执行 `dotnet build-server shutdown`。该结果只证明 Timeline 编辑程序集源码闭合，不替代 Unity 主工程和真实 UI 验收。
 
+后续重新执行同一完整 `BTSMTL.Timeline.Editor.csproj` 窄编译时，结果仍为 0 errors、19 个既有 warnings，并已再次关闭 MSBuild/C# 编译服务器；当前 Unity MCP HTTP 服务可连接但实例列表为空，因此新程序集尚未在主 Editor 内现场加载。
+
 ## 尚未完成
 
 - 场景预览的非 Skill 正式目标、角色目标选择和纯 Timeline 调用入口仍未完成；SceneAsset/ContextId 的精确启动定位已完成。

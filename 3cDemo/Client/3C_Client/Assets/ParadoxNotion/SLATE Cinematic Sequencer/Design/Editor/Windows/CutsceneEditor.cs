@@ -2123,31 +2123,39 @@ namespace Slate
             }
 
             var pointerTime = PosToTime(mousePosition.x);
-            if ( isMovingScrubCarret ) {
+            bool scrubbed = false;
+            bool pointerEvent = e.type == EventType.MouseDown || e.type == EventType.MouseDrag;
+            if ( pointerEvent && isMovingScrubCarret ) {
                 var scrubTime = Mathf.Clamp(SnapTime(pointerTime), Mathf.Max(viewTimeMin, 0) + float.Epsilon, length - float.Epsilon);
                 SetEmbeddedCurrentTime(scrubTime);
+                scrubbed = true;
             }
 
-            if ( isMovingEndCarret ) {
+            if ( pointerEvent && isMovingEndCarret ) {
                 length = SnapTime(pointerTime);
                 var magnetSnap = MagnetSnapTime(length, magnetSnapTimesCache);
                 length = magnetSnap != null ? magnetSnap.Value : length;
                 length = Mathf.Clamp(length, viewTimeMin + float.Epsilon, viewTimeMax - float.Epsilon);
+                scrubbed = true;
             }
 
-            if ( isMovingLoopRegionMax ) {
+            if ( pointerEvent && isMovingLoopRegionMax ) {
                 cutscene.playTimeMax = SnapTime(pointerTime);
                 var magnetSnap = MagnetSnapTime(cutscene.playTimeMax, magnetSnapTimesCache);
                 cutscene.playTimeMax = magnetSnap != null ? magnetSnap.Value : cutscene.playTimeMax;
                 cutscene.playTimeMax = Mathf.Clamp(cutscene.playTimeMax, viewTimeMin + float.Epsilon, viewTimeMax - float.Epsilon);
+                scrubbed = true;
             }
 
-            if ( isMovingLoopRegionMin ) {
+            if ( pointerEvent && isMovingLoopRegionMin ) {
                 cutscene.playTimeMin = SnapTime(pointerTime);
                 var magnetSnap = MagnetSnapTime(cutscene.playTimeMin, magnetSnapTimesCache);
                 cutscene.playTimeMin = magnetSnap != null ? magnetSnap.Value : cutscene.playTimeMin;
                 cutscene.playTimeMin = Mathf.Clamp(cutscene.playTimeMin, viewTimeMin + float.Epsilon, viewTimeMax - float.Epsilon);
+                scrubbed = true;
             }
+            if (scrubbed && e.type == EventType.MouseDrag)
+                e.Use();
         }
 
         //...

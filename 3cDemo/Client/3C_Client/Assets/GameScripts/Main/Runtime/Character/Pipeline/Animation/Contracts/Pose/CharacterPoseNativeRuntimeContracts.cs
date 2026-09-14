@@ -556,8 +556,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!lineage.IsValid || requests == null)
                 throw new ArgumentException("Pose native source demand is invalid.");
+            var nodeIds = new HashSet<PoseNodeId>();
             for (int i = 0; i < requests.Count; i++)
-                if (!requests[i].NodeId.IsValid || !requests[i].SourceSlot)
+                if (!requests[i].NodeId.IsValid || !requests[i].SourceSlot ||
+                    !nodeIds.Add(requests[i].NodeId))
                     throw new ArgumentException("Pose native source demand contains an invalid request.");
             Lineage = lineage;
             Requests = requests;

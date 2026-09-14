@@ -169,3 +169,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 节点观察分成当前帧工作页和最后一次成功提交页；Discard、Commit 失败或 Stop 只清理工作页，不覆盖上一帧合法观察。`TryObserve` 只读已提交页，不会重新触发节点求值。
 - `CharacterPoseNativeInstanceContext` 增加同版本 `CharacterAnimationRigPayload`，创建实例时强制校验 Rig 与 `CharacterAnimationRigBinding` 的 ID/Revision 一致；native 节点后续可据此分配实例级骨骼/虚拟骨骼缓冲并接入现有 IK 服务。
 - 本步独立 Runtime 编译通过，0 errors；首次编译发现并修正的是新增合同自身的引用类型判断，不涉及共享工程错误。编译后已执行 `dotnet build-server shutdown`。
+- `CharacterPoseNativeSourceDemand` 拒绝同一图调用内同一节点的重复 Source request，保证一个播放器/资源准备只对应一个节点 demand，不恢复旧全图 Operation index 消重。

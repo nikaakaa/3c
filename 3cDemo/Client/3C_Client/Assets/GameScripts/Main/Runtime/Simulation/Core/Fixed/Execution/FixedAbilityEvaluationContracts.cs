@@ -26,7 +26,6 @@ namespace ThirdPersonSimulation.Fixed
             WorldRequest = worldRequest ?? throw new ArgumentNullException(nameof(worldRequest));
             if (worldRequest.ActorId != actorId || worldRequest.Tick != tick ||
                 !worldRequest.NumericProfile.Equals(installation.Data.NumericProfile) ||
-                transaction.ActorId != actorId || transaction.Tick != tick ||
                 !transaction.Installation.Identity.Equals(installation.Identity))
             {
                 throw new InvalidOperationException("Fixed pending Ability evaluation binding is invalid.");

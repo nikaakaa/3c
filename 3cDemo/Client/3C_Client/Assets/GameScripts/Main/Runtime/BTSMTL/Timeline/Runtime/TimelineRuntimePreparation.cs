@@ -198,6 +198,7 @@ namespace BTSMTL.Timeline.Runtime
                                BindingPlan != null &&
                                CallInput != null &&
                                PreparedBindings != null &&
+                               PreparedDependencies != null &&
                                Errors.Count == 0;
 
         internal static TimelineRuntimePreparationResult Failed(

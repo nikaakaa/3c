@@ -125,6 +125,15 @@
 - `60a758ef0`：从 Fixed registration contract 移除 Character Program 和 ProgramIdentity 成员。
 - `1a3865f9f`：将保留的 Session checkpoint/replay 合同重命名为 `SimulationSessionCheckpointContracts.cs`，不再用 Epoch 文件名承载旧 adoption。
 - `8f2675c6d`：从 Float32／Fixed 旧 Kernel contracts 中删除 Program-bound Evaluate／Pending／Finalize 请求，把仍由 WorldResolve／Finalize 使用的 BodySample／ActorTickResult 提取为 Step Result 合同。
+- `9211434a7`：删除 Float32／Fixed Pass RuntimeHandle 的 Program Epoch 状态、adoption 方法和 ProgramRuntime 诊断项，保留 LogicTick、checkpoint、回放和资源生命周期。
+- `9f8c1bf25`：将 Pipeline compiler/context 的第一输入从旧 Program Runtime 改为 `SimulationExecutionTargetManifest` 和显式 Target 能力。
+- `459c0b273`：删除 Float32／Fixed Standard 合同中的旧 ProgramEvaluate/ProgramFinalize Pass 及其 ProgramRuntime port requirement。
+- `7ad93c3d6`：删除 ServerAuthoritative/Rollback Pass 合同的 ProgramRuntime port requirement。
+- `ee56d2cac`：清理干净的 Local、ServerAuthority、Rollback Package 对已删除 Program Pass 的配置和运行工厂引用。
+- `25dd37ddb`：让 Session CompositionDescriptor/LaunchPlan 持有 Execution Target，移除 ProgramRuntime component 输入并升级 Composition identity。
+- `240adee9d`：提取 Pipeline 初始状态选择合同，删除 Float32/Fixed 旧 Pass Backend composition request 及其整角色 ProgramRuntime/Actor roster 载体。
+- `c0c85cc5a`：让 Unity Backend Definition 发布正式 Execution Target，移除 Session Composition 的旧 ProgramRuntime 序列化字段。
+- `13c28dd4a`：删除无实际 Composer 实现的旧 Session Composition Preparation/Composer 编排路径，保留 PreparedRuntime 和输出生命周期合同。
 
 ## 当前实现边界
 
@@ -141,6 +150,7 @@
 - 旧 GameplayLab Bootstrap、Session Variant 和空 Editor 程序集已删除；性能采样与网络产品脚本仍引用旧 GameplayLab 类型，属于后续正式角色启动入口的待接线消费者。
 - Session checkpoint/replay 数据结构仍保留，但旧 Program adoption、Actor binding、Program Runtime component 和 Kernel implementation 已退出；Float32/Fixed Pipeline、Host、Network、Rollback 和性能脚本中的旧签名暂时保持错误，后续统一改成领域内容 identity、roster 和状态合同。
 - Float32／Fixed 旧 Kernel 请求合同已经删除，新的领域 Step 请求尚未建立；现有 Step Result 只负责携带已完成状态、Body sample、Motion 和事实／表现／诊断输出，不再暗含 Program binding。
+- Pipeline 的旧 Program Evaluate/Finalize Pass、ProgramRuntime port、Backend composition request 和 Session Composer 已删除；WorldResolve、Pass product、checkpoint/replay 算法仍保留，但新的领域 Evaluate/Finalize、Backend composition request 和 Session preparation 尚未重建。
 - Float32／Fixed Control 参数链路的旧 `SimulationActorBinding` wrapper 和 Program adoption 合同已删除；现有 `CharacterPipelineDefinition.ControlParameters`、`CharacterControlRuntimeBinding` 与 `SimulationEvaluateRequest` 仍是待接入的新角色装配材料。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash，后续由角色 Factory 直接把它交给 Control owner。
 - Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才通过主状态事务的统一入口和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract。

@@ -47,7 +47,7 @@ S的ShowGroupsAndTracksList(Rect)、ShowTimeLines(Rect)在embeddedTimeline非空
 
 S.ShowClipDopesheet先画底栏，FormalClip分支仍return；真实key只在原action路径画。正式HasActiveParameters仍会让wrapper扣出底栏高度。展开Track里的DopeSheet已经有接线，不能据此将Clip底部也标完成。
 
-修正：底部与展开区使用原D的同一key逻辑和正式事务，分别传各自显示Rect/时间范围。无局部曲线不预留空底栏，有曲线不以标题或假key顶替。对应11.14，重新记为未完成，不回退已接好的展开区。
+修正：底部与展开区使用原D的同一key逻辑和正式事务，分别传各自显示Rect/时间范围。无局部曲线不预留空底栏，有曲线不以标题或假key顶替。提交 `48a1d2a72` 已接通FormalClip底部DopeSheet；真实窗口验收仍未完成。
 
 ### A03 局部参数面板仍是简化版
 
@@ -57,7 +57,7 @@ T正式DrawParametersInfoGUI自己循环画通道、小按钮和CurrentValue标�
 
 ### A04 Root Motion只读查看缺失，不是源数据消失
 
-B只枚举Timeline-local descriptor；T没有源XYZ/Yaw展示输入。W.OpenClip通过SourceAsset定位源资产只执行Selection/PingObject，不会在Timeline自动画源曲线。正式RootMotionCurveAsset与源区间仍存在。
+B原先只枚举Timeline-local descriptor；提交 `6b35adc19` 已把MotionCurveClip现有源映射接到Timeline只读源区，包含XYZ/Yaw、源资产GUID、使用区间和Open Source入口。正式RootMotionCurveAsset与源区间仍是唯一源，真实窗口仍待验收。
 
 本次需求收口：将之前“源曲线可选只读展示”改为必须能在Timeline查看。选中MotionCurveClip后，除了可编辑Weight/Ease，还要有明确的源XYZ/Yaw只读通道、源名称/使用区间与打开源入口。只读意味着不能在本窗口拖key写共享源，不意味着隐藏曲线。
 
@@ -77,15 +77,15 @@ I.Rebuild绘制整个m_Data PropertyField，再绘制选中serialized路径的Pr
 
 ### A07 每次提交回写全部Clip和曲线，混合字段也混淆
 
-B.CommitEdit遍历全部m_Clips并CommitSource，后者无条件写Start/End、SelfEase和每条曲线。构造binding时m_BlendIn/Out却取Source.EaseIn/OutFrame（可能来自OtherEase），提交时写入SelfEase。例：未编辑Clip的SelfEase为0、OtherEase为10，另一个Clip的有效编辑触发全量提交，就有把10回写成SelfEase的路径。
+B.CommitEdit仍遍历binding集合做差异检查，但提交 `48a1d2a72` 已让HasChanges先过滤空手势，CommitSource只写变化的Start/End、SelfEase和曲线；构造binding改取SelfEase，不再把OtherEase当作者草稿。未改Clip只读比较，不回写字段或曲线。
 
 影响：不是只有性能问题，可能改动作者没碰的混合字段，并让所有曲线做秒域往返。M的新增回滚机制无法解决“合法提交了不该写的字段”。
 
-修正：在既有binding内记录本次实际修改的字段/曲线，空操作不建立业务Undo；只转换/提交受影响数据。SelfEase作者草稿与OtherEase派生显示分开；源时间、完整key/切线与未改资源必须保持。曲线更新回调目前用ApplyEmbeddedCommand空委托触发全量提交，要改为当前曲线的明确修改，不建立新事务框架。对应新增11.19。
+修正：上述差异门和SelfEase分离已经落地；原有失败回滚保留。曲线更新回调仍复用现有ApplyEmbeddedCommand入口，但实际提交由曲线等价比较限制到当前变化，真实窗口需继续确认没有额外Undo。
 
 ### A08 Track启停在正式Undo之前改源，锁定未贯通
 
-B.Track.IsActive setter直接改Source.PersistentMuted。T把此setter放在ApplyEmbeddedCommand中，BeginEdit只设标志；CommitEdit随后先做source fingerprint检查，此时源已被setter改了。这条路径会把自己的修改识别为外部变更，并且已写入字段未被本次正式Undo记录。
+B.Track.IsActive的直接源写入已从Slate按钮移除，提交 `48a1d2a72` 通过binding的SetTrackActive走ApplyImmediate和正式Undo；旧的属性setter仅保留为binding实现细节。Track锁定已合并到Clip有效锁定判断，但锁按钮/状态持久语义仍需继续收口。
 
 Track.IsLocked是独立窗口字段，Clip.IsLocked也是独立字段；FormalClipEditorBinding只读Clip.IsLocked，未合并Track锁定。当前正式列表也没有完整恢复原禁用/锁定菜单，因此某入口即使能改状态，也不能推定Clip交互遵守。
 
@@ -93,7 +93,7 @@ Track.IsLocked是独立窗口字段，Clip.IsLocked也是独立字段；FormalCl
 
 ### A09 Split/Trim/Copy不是只调整起止帧
 
-B.SplitClip复制整个Clip并改Start/End，没有处理Animation ClipIn、运动源区间或局部曲线的左右段映射；原UpdateClipAdjustContents对子素材偏移的处理仍要求action is ISubClipContainable，正式binding没有该输入。复制缓存m_CopiedClip持有实时binding/Source，粘贴时才clone，原对象修改会改变“已复制”的内容。
+B.SplitClip复制整个Clip并改Start/End，没有处理Animation ClipIn、运动源区间或局部曲线的左右段映射；原UpdateClipAdjustContents对子素材偏移的处理仍要求action is ISubClipContainable，正式binding没有该输入。提交 `48a1d2a72` 已把Copy改为复制瞬间捕获正式Clip副本，剩余Split/ClipIn/源区间语义仍未完成。
 
 修正：在现有正式编辑合同明确移动/裁剪/缩放/切分对应的源区间、ClipIn与局部曲线含义；使用既有源映射，不能新写采样公式。涉及Motion/Warp共享字段由原owner提供必要操作，本任务接原手势和命令。一次Split完整创建两个合法使用区间并保留引用/新身份，未支持类型明确拒绝而非只改帧伪装成功。Copy在命令时捕获正式内容，后续Paste基于该副本并生成新身份；不保持失效UI binding当剪贴板。对应新增11.21。
 

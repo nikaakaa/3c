@@ -115,7 +115,7 @@
 
 - [x] 11.12 恢复原轨道行内GUI.BeginGroup/EndGroup和局部坐标裁剪，名称/图标/曲线按钮/参数只在本行绘制，背景与滚动使用原列表坐标；局部坐标修复保留，不用固定偏移遮盖问题；两份列表主体合并仍归11.1。真实窗口验收仍未完成。
 - [x] 11.13 Clip标题统一由原ActionClipWrapper绘制，保留已删除binding重复Label的正确改动；真实运行状态不冒充或覆盖标题，不重复显示Info。真实窗口验收仍未完成。
-- [ ] 11.14 将正式局部曲线接同一原DopeSheet的真实key操作与正式事务，删除FormalClip画Info后return的占位；无曲线时同时消除假底栏高度和对应拖动区域扣减，不恢复源XYZ/Yaw的局部写入。真实窗口验收仍未完成。 本次源码确认FormalClip底部仍return；展开区DopeSheet接入已完成部分保持，不能混作底部已接通。
+- [x] 11.14 将正式局部曲线接同一原DopeSheet的真实key操作与正式事务，删除FormalClip画Info后return的占位；无曲线时同时消除假底栏高度和对应拖动区域扣减，不恢复源XYZ/Yaw的局部写入。提交 `48a1d2a72` 已让FormalClip底部复用原DopeSheet并走正式事务；真实窗口验收仍未完成。
 
 2026-09-14 后续截图修正见源码决策第14节；保留已正确修复，以下仅为新增实现项，不是验证任务。
 
@@ -123,8 +123,8 @@
 - [ ] 11.16 接通选中MotionCurveClip的Weight/Ease局部参数到原Timeline曲线区，修正descriptor收集/过滤/参数生成的实际缺项；区分未选择、无局部曲线与绑定失败，不以Inspector曲线框代替原CurveEditor/DopeSheet
 - [ ] 11.17 按实际调用栈修正Event.Use对Layout/Repaint的错误消费，只处理明确输入事件，保留现有鼠标交互，不屏蔽警告或将其未经证明归为曲线缺失唯一原因
 
-- [ ] 11.18 在原Timeline曲线区增加当前MotionCurveClip源XYZ/Yaw的必须只读查看、源版本/使用区间与源owner导航，复用现行映射及原Renderer只读资格，不恢复局部源写入或另造曲线工具（A04）
-- [ ] 11.19 在现有binding/Session内只提交实际变化字段/曲线，空手势不记Undo；分离作者SelfEase与派生OtherEase，删除每次遍历所有Clip回写曲线/字段的路径，保留已有失败回滚（A07）
+- [x] 11.18 在原Timeline曲线区增加当前MotionCurveClip源XYZ/Yaw的必须只读查看、源版本/使用区间与源owner导航，复用现行映射及原Renderer只读资格，不恢复局部源写入或另造曲线工具（A04）。提交 `6b35adc19` 已接入MotionCurveClip现有源映射、只读CurveField、源GUID/区间和Open Source导航；真实窗口验收仍未完成。
+- [x] 11.19 在现有binding/Session内只提交实际变化字段/曲线，空手势不记Undo；分离作者SelfEase与派生OtherEase，删除每次遍历所有Clip回写曲线/字段的路径，保留已有失败回滚（A07）。提交 `48a1d2a72` 已加入HasChanges差异门、SelfEase初始化和曲线等价判断；真实窗口验收仍未完成。
 - [ ] 11.20 将Track Muted等正式状态改为同一正式命令提交，禁止先写Source再验revision；Track锁定贯穿本轨Clip的原手势与菜单，锁状态只按已有编辑语义保存（A08）
 - [ ] 11.21 原移动/裁剪/缩放/切分准确接入ClipIn、局部曲线及正式源区间含义，Copy即时捕获正式内容，Paste新身份；缺失源操作由原Motion/Warp owner提供，不只改Start/End冒充完整操作（A01/A09）
 - [ ] 11.22 用原Section编辑控件接名称与整数帧配置，保持已接通新增/删除；精确展示创建过期/必填字段错误并保留输入，不新增另一套表单/校验规则（A12）

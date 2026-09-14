@@ -430,7 +430,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame);
             var handles = new FixedHandleAllocator(
                 access,
-                m_Frame.CreateStatePort("HandleAllocator", services.HandleAllocatorPolicy));
+                m_Frame);
             m_Blackboard = new FixedBlackboardRuntime(
                 access,
                 m_Frame.CreateStatePort("Blackboard", services.BlackboardPolicy),

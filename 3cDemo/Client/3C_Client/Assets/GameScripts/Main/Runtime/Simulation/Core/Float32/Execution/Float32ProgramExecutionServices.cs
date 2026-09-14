@@ -95,7 +95,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.ActionInstance,
                 ProgramStateSemantic.AbilityExecutionState);
             InputPolicy = new Float32StateAccessPolicy(ProgramStateSemantic.InputRequestBuffer);
-            HandleAllocatorPolicy = new Float32StateAccessPolicy(ProgramStateSemantic.HandleAllocator);
             BlackboardPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.BlackboardValue,
                 ProgramStateSemantic.BlackboardOwnerToken,
@@ -134,7 +133,6 @@ namespace ThirdPersonSimulation
         public Float32StateAccessPolicy ControlPolicy { get; }
         public Float32StateAccessPolicy ActionPolicy { get; }
         public Float32StateAccessPolicy InputPolicy { get; }
-        public Float32StateAccessPolicy HandleAllocatorPolicy { get; }
         public Float32StateAccessPolicy BlackboardPolicy { get; }
         public Float32StateAccessPolicy TimelinePolicy { get; }
         public Float32StateAccessPolicy MotionModifierPolicy { get; }

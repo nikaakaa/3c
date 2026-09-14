@@ -275,6 +275,7 @@ namespace ThirdPersonSimulation
 		readonly ProgramExecutionLayout m_Layout;
 		readonly ulong m_EventSequence;
 		readonly ulong m_ActionEventSequence;
+		readonly ulong m_HandleAllocator;
 		readonly CharacterControlRuntimeState m_ControlState;
 		readonly GameplayEffectStateAggregate m_GameplayEffectState;
 		readonly EquipmentStateAggregate m_EquipmentState;
@@ -286,6 +287,7 @@ namespace ThirdPersonSimulation
 			ulong lastCompletedTick,
 			ulong eventSequence,
 			ulong actionEventSequence,
+			ulong handleAllocator,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -297,6 +299,7 @@ namespace ThirdPersonSimulation
 			m_Layout = layout ?? throw new ArgumentNullException(nameof(layout));
 			m_EventSequence = eventSequence;
 			m_ActionEventSequence = actionEventSequence;
+			m_HandleAllocator = handleAllocator;
 			m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
 			bool gameplayEffectEnabled = program.Manifest.Capabilities.HasGameplayCapability("GameplayEffect");
 			if (gameplayEffectEnabled)
@@ -342,6 +345,7 @@ namespace ThirdPersonSimulation
 		public ulong LastCompletedTick { get; }
 		internal ulong EventSequence => m_EventSequence;
 		internal ulong ActionEventSequence => m_ActionEventSequence;
+		internal ulong HandleAllocator => m_HandleAllocator;
 		public int SlotCount => m_Layout == null ? 0 : m_Layout.StatePartitions.Count == 0 ? 0 : CountSlots(m_Layout.StatePartitions);
 		internal ProgramExecutionLayout ExecutionLayout => m_Layout;
 		public CharacterControlRuntimeState ControlState => m_ControlState;
@@ -405,7 +409,7 @@ namespace ThirdPersonSimulation
 			EquipmentStateAggregate equipmentState = layout.Equipment.CapabilityEnabled
 				? EquipmentStateAggregate.CreateInitial(layout.Equipment)
 				: null;
-			return Create(program, layout, 0, values, 0, 0, controlState, gameplayEffectState, equipmentState);
+			return Create(program, layout, 0, values, 0, 0, 0, controlState, gameplayEffectState, equipmentState);
 		}
 
 		internal static CharacterSimulationState Create(
@@ -415,6 +419,7 @@ namespace ThirdPersonSimulation
 			IReadOnlyList<CharacterStateValue> values,
 			ulong eventSequence,
 			ulong actionEventSequence,
+			ulong handleAllocator,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState)
@@ -442,7 +447,7 @@ namespace ThirdPersonSimulation
 				}
 				partitions[partitionIndex] = new CharacterStatePartition(descriptor.ValueKind, pages, true);
 			}
-			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, layout, lastCompletedTick, eventSequence, actionEventSequence, handleAllocator, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		public CharacterStateValue Get(int slotIndex, ProgramStateValueKind expectedKind)
@@ -470,6 +475,7 @@ namespace ThirdPersonSimulation
 			SimulationTick completedTick,
 			ulong eventSequence,
 			ulong actionEventSequence,
+			ulong handleAllocator,
 			CharacterControlRuntimeState controlState,
 			GameplayEffectStateAggregate gameplayEffectState,
 			EquipmentStateAggregate equipmentState,
@@ -488,7 +494,7 @@ namespace ThirdPersonSimulation
 					replacementCount,
 					partitionIndex);
 			}
-			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, controlState, gameplayEffectState, equipmentState, partitions, true);
+			return new CharacterSimulationState(program, m_Layout, completedTick.Value, eventSequence, actionEventSequence, handleAllocator, controlState, gameplayEffectState, equipmentState, partitions, true);
 		}
 
 		internal CharacterSimulationState RebindProgram(CharacterSimulationProgram program)
@@ -510,6 +516,7 @@ namespace ThirdPersonSimulation
 				values,
 				EventSequence,
 				ActionEventSequence,
+				HandleAllocator,
 				ControlState,
 				m_GameplayEffectState,
 				m_EquipmentState);

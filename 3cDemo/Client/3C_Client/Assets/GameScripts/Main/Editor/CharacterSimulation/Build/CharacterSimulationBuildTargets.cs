@@ -210,7 +210,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report.TargetInformation(
                     "float32_state_abi",
                     result.Program.Manifest.ProgramId.Value,
-                    $"ABI={result.Program.Manifest.NumericProfile.AbiVersion.Value} Codec={ThirdPersonSimulation.CharacterSimulationStateCodec.CodecIdentity} StateSlots={result.Program.StateSlots.Count} TypedPartitions={partitions.Count} MotionTransientSlots=0 GameplayEffectAggregateSlots=0 EquipmentLocalStateSlots=0 FactSequence=external ActionEventSequence=external.");
+                    $"ABI={result.Program.Manifest.NumericProfile.AbiVersion.Value} Codec={ThirdPersonSimulation.CharacterSimulationStateCodec.CodecIdentity} StateSlots={result.Program.StateSlots.Count} TypedPartitions={partitions.Count} MotionTransientSlots=0 GameplayEffectAggregateSlots=0 EquipmentLocalStateSlots=0 FactSequence=external ActionEventSequence=external HandleAllocator=external.");
                 return new Float32CharacterSimulationTargetBuildProduct(
                     result.Program,
                     Float32CharacterPresentationContractAdapter.Create(result.Program));

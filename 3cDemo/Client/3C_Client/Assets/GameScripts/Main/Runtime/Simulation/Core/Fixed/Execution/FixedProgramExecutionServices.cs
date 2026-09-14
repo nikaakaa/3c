@@ -96,7 +96,6 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.ActionInstance,
                 ProgramStateSemantic.AbilityExecutionState);
             InputPolicy = new FixedStateAccessPolicy(ProgramStateSemantic.InputRequestBuffer);
-            HandleAllocatorPolicy = new FixedStateAccessPolicy(ProgramStateSemantic.HandleAllocator);
             BlackboardPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.BlackboardValue,
                 ProgramStateSemantic.BlackboardOwnerToken,
@@ -135,7 +134,6 @@ namespace ThirdPersonSimulation.Fixed
         public FixedStateAccessPolicy ControlPolicy { get; }
         public FixedStateAccessPolicy ActionPolicy { get; }
         public FixedStateAccessPolicy InputPolicy { get; }
-        public FixedStateAccessPolicy HandleAllocatorPolicy { get; }
         public FixedStateAccessPolicy BlackboardPolicy { get; }
         public FixedStateAccessPolicy TimelinePolicy { get; }
         public FixedStateAccessPolicy MotionModifierPolicy { get; }

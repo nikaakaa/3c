@@ -242,6 +242,8 @@ namespace ThirdPersonSimulation
             ulong eventSequenceSnapshot,
             bool hadActionEventSequenceWorking,
             ulong actionEventSequenceSnapshot,
+            bool hadHandleAllocatorWorking,
+            ulong handleAllocatorSnapshot,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
             GameplayEffectStateAggregate gameplayEffectSnapshot,
@@ -253,6 +255,8 @@ namespace ThirdPersonSimulation
             EventSequenceSnapshot = eventSequenceSnapshot;
             HadActionEventSequenceWorking = hadActionEventSequenceWorking;
             ActionEventSequenceSnapshot = actionEventSequenceSnapshot;
+            HadHandleAllocatorWorking = hadHandleAllocatorWorking;
+            HandleAllocatorSnapshot = handleAllocatorSnapshot;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
@@ -265,6 +269,8 @@ namespace ThirdPersonSimulation
         internal ulong EventSequenceSnapshot { get; }
         internal bool HadActionEventSequenceWorking { get; }
         internal ulong ActionEventSequenceSnapshot { get; }
+        internal bool HadHandleAllocatorWorking { get; }
+        internal ulong HandleAllocatorSnapshot { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
@@ -290,6 +296,8 @@ namespace ThirdPersonSimulation
         bool m_EventSequenceDirty;
         ulong m_ActionEventSequenceWorking;
         bool m_ActionEventSequenceDirty;
+        ulong m_HandleAllocatorWorking;
+        bool m_HandleAllocatorDirty;
         Float32CharacterStateTransactionStatus m_Status;
 
         Float32CharacterStateTransaction(
@@ -376,6 +384,30 @@ namespace ThirdPersonSimulation
             return sequence;
         }
 
+        public ulong NextHandleAllocator()
+        {
+            RequireActive();
+            ulong value = checked((m_HandleAllocatorDirty ? m_HandleAllocatorWorking : m_BaseState.HandleAllocator) + 1UL);
+            if (value == 0)
+                throw new OverflowException("Simulation handle allocator overflowed.");
+            m_HandleAllocatorWorking = value;
+            m_HandleAllocatorDirty = true;
+            return value;
+        }
+
+        public ulong CaptureHandleAllocator()
+        {
+            RequireActive();
+            return m_HandleAllocatorDirty ? m_HandleAllocatorWorking : m_BaseState.HandleAllocator;
+        }
+
+        public void RestoreHandleAllocator(ulong value)
+        {
+            RequireActive();
+            m_HandleAllocatorWorking = value;
+            m_HandleAllocatorDirty = true;
+        }
+
         public void Set(int slotIndex, CharacterStateValue value)
         {
             Set(m_Layout.Address(slotIndex), value);
@@ -457,6 +489,8 @@ namespace ThirdPersonSimulation
                 m_EventSequenceWorking,
                 m_ActionEventSequenceDirty,
                 m_ActionEventSequenceWorking,
+                m_HandleAllocatorDirty,
+                m_HandleAllocatorWorking,
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
                 m_GameplayEffectWorking?.Freeze(),
@@ -490,6 +524,8 @@ namespace ThirdPersonSimulation
             m_EventSequenceWorking = savepoint.EventSequenceSnapshot;
             m_ActionEventSequenceDirty = savepoint.HadActionEventSequenceWorking;
             m_ActionEventSequenceWorking = savepoint.ActionEventSequenceSnapshot;
+            m_HandleAllocatorDirty = savepoint.HadHandleAllocatorWorking;
+            m_HandleAllocatorWorking = savepoint.HandleAllocatorSnapshot;
             m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
         }
@@ -531,6 +567,7 @@ namespace ThirdPersonSimulation
                 : null;
             ulong eventSequence = m_EventSequenceDirty ? m_EventSequenceWorking : m_BaseState.EventSequence;
             ulong actionEventSequence = m_ActionEventSequenceDirty ? m_ActionEventSequenceWorking : m_BaseState.ActionEventSequence;
+            ulong handleAllocator = m_HandleAllocatorDirty ? m_HandleAllocatorWorking : m_BaseState.HandleAllocator;
 
             try
             {
@@ -540,6 +577,7 @@ namespace ThirdPersonSimulation
                     m_Tick,
                     eventSequence,
                     actionEventSequence,
+                    handleAllocator,
                     controlState,
                     gameplayEffectState,
                     equipmentState,
@@ -624,6 +662,8 @@ namespace ThirdPersonSimulation
             m_EventSequenceDirty = false;
             m_ActionEventSequenceWorking = 0;
             m_ActionEventSequenceDirty = false;
+            m_HandleAllocatorWorking = 0;
+            m_HandleAllocatorDirty = false;
         }
 
     }

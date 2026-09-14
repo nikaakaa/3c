@@ -981,7 +981,6 @@ namespace ThirdPersonSimulation
         ActionRequestBuffer = 81,
         AbilityExecutionState = 82,
         RandomState = 122,
-        HandleAllocator = 123,
         AIWaitElapsedTicks = 130
     }
 
@@ -1100,7 +1099,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.ActionRequestBuffer => kind == ProgramStateValueKind.ActionActivationRequest && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.AbilityExecutionState => kind == ProgramStateValueKind.AbilityExecutionState && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.RandomState => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Random,
-                ProgramStateSemantic.HandleAllocator => kind == ProgramStateValueKind.UInt64 && owner == ProgramStateOwnerKind.Runtime,
                 _ => false
             };
             if (!valid)

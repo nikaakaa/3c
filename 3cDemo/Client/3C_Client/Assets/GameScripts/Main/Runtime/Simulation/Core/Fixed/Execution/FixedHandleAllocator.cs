@@ -5,30 +5,19 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedHandleAllocator : FixedOperationModule
     {
-        readonly FixedStatePort m_State;
-        readonly int m_Slot;
+        readonly FixedEvaluationFrame m_Frame;
 
-        public FixedHandleAllocator(FixedProgramAccess access, FixedStatePort state)
+        public FixedHandleAllocator(FixedProgramAccess access, FixedEvaluationFrame frame)
             : base(access)
         {
-            m_State = state ?? throw new ArgumentNullException(nameof(state));
-            m_Slot = FindStateSlot(ProgramStateSemantic.HandleAllocator, null);
-            if (m_Slot < 0)
-                throw new InvalidOperationException("Program has no HandleAllocator state slot.");
+            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
         }
 
-        public ulong Next()
-        {
-            ulong value = checked(m_State.Get(m_Slot).UInt64 + 1);
-            if (value == 0)
-                throw new OverflowException("Simulation handle allocator overflowed.");
-            m_State.Set(m_Slot, CharacterStateValue.FromUInt64(value));
-            return value;
-        }
+        public ulong Next() => m_Frame.Transaction.NextHandleAllocator();
 
-        public ulong Capture() => m_State.Get(m_Slot).UInt64;
+        public ulong Capture() => m_Frame.Transaction.CaptureHandleAllocator();
 
-        public void Restore(ulong value) => m_State.Set(m_Slot, CharacterStateValue.FromUInt64(value));
+        public void Restore(ulong value) => m_Frame.Transaction.RestoreHandleAllocator(value);
     }
 }
 

@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 {
     public sealed class NetworkCheckpointLayout
     {
-        const int SchemaVersion = 8;
+        const int SchemaVersion = 9;
         readonly CharacterSimulationProgram m_Program;
         readonly ProgramExecutionLayout m_ExecutionLayout;
 
@@ -60,6 +60,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         readonly byte[] m_ControlStateBytes;
         readonly ulong m_EventSequence;
         readonly ulong m_ActionEventSequence;
+        readonly ulong m_HandleAllocator;
         readonly byte[] m_GameplayEffectStateBytes;
         readonly byte[] m_EquipmentStateBytes;
 
@@ -69,6 +70,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] controlStateBytes,
             ulong eventSequence,
             ulong actionEventSequence,
+            ulong handleAllocator,
             byte[] gameplayEffectStateBytes,
             byte[] equipmentStateBytes)
         {
@@ -84,9 +86,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 : (byte[])controlStateBytes.Clone();
             m_EventSequence = eventSequence;
             m_ActionEventSequence = actionEventSequence;
+            m_HandleAllocator = handleAllocator;
             m_GameplayEffectStateBytes = gameplayEffectStateBytes == null ? null : (byte[])gameplayEffectStateBytes.Clone();
             m_EquipmentStateBytes = equipmentStateBytes == null ? null : (byte[])equipmentStateBytes.Clone();
-            CheckpointHash = ComputeHash(baseline, copied, m_ControlStateBytes, m_EventSequence, m_ActionEventSequence, m_GameplayEffectStateBytes, m_EquipmentStateBytes);
+            CheckpointHash = ComputeHash(baseline, copied, m_ControlStateBytes, m_EventSequence, m_ActionEventSequence, m_HandleAllocator, m_GameplayEffectStateBytes, m_EquipmentStateBytes);
         }
 
         public AuthoritativeActorBaseline Baseline { get; }
@@ -94,6 +97,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         internal byte[] ControlStateBytes => m_ControlStateBytes;
         internal ulong EventSequence => m_EventSequence;
         internal ulong ActionEventSequence => m_ActionEventSequence;
+        internal ulong HandleAllocator => m_HandleAllocator;
         internal byte[] GameplayEffectStateBytes => m_GameplayEffectStateBytes;
         internal byte[] EquipmentStateBytes => m_EquipmentStateBytes;
         public StableHash CheckpointHash { get; }
@@ -104,11 +108,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] controlStateBytes,
             ulong eventSequence,
             ulong actionEventSequence,
+            ulong handleAllocator,
             byte[] gameplayEffectStateBytes,
             byte[] equipmentStateBytes)
         {
             using var writer = new CanonicalWriter();
-            writer.WriteString("server-authoritative-network-checkpoint/6");
+            writer.WriteString("server-authoritative-network-checkpoint/7");
             writer.WriteString(baseline.ActorId.Value);
             writer.WriteUInt64(baseline.AuthorityTick.Value);
             writer.WriteString(baseline.StateCodecIdentity);
@@ -122,6 +127,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteBytes(controlStateBytes);
             writer.WriteUInt64(eventSequence);
             writer.WriteUInt64(actionEventSequence);
+            writer.WriteUInt64(handleAllocator);
             writer.WriteBoolean(gameplayEffectStateBytes != null);
             if (gameplayEffectStateBytes != null)
                 writer.WriteBytes(gameplayEffectStateBytes);
@@ -136,8 +142,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         const uint FullMagic = 0x50434E53;
         const uint DeltaMagic = 0x44434E53;
-        const int FullVersion = 9;
-        const int DeltaVersion = 12;
+        const int FullVersion = 10;
+        const int DeltaVersion = 13;
         const string PresentationChannel = "Presentation";
 
         public static NetworkCheckpoint Capture(NetworkCheckpointLayout layout, AuthoritativeActorBaseline baseline)
@@ -159,6 +165,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 CharacterControlRuntimeStateCodec.Write(state.ControlState),
                 state.EventSequence,
                 state.ActionEventSequence,
+                state.HandleAllocator,
                 EncodeGameplayEffectState(layout, state),
                 EncodeEquipmentState(state));
         }
@@ -190,6 +197,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteBytes(checkpoint.ControlStateBytes);
             writer.WriteUInt64(checkpoint.EventSequence);
             writer.WriteUInt64(checkpoint.ActionEventSequence);
+            writer.WriteUInt64(checkpoint.HandleAllocator);
             WriteOptionalBytes(writer, checkpoint.GameplayEffectStateBytes);
             WriteOptionalBytes(writer, checkpoint.EquipmentStateBytes);
             writer.WriteString(checkpoint.CheckpointHash.ToString());
@@ -225,6 +233,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] controlStateBytes = reader.ReadBytes();
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
+            ulong handleAllocator = reader.ReadUInt64();
             byte[] gameplayEffectStateBytes = ReadOptionalBytes(reader);
             byte[] equipmentStateBytes = ReadOptionalBytes(reader);
             StableHash expectedCheckpointHash = new StableHash(reader.ReadString());
@@ -246,9 +255,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 controlStateBytes,
                 eventSequence,
                 actionEventSequence,
+                handleAllocator,
                 gameplayEffectStateBytes,
                 equipmentStateBytes);
-            var checkpoint = new NetworkCheckpoint(baseline, values, controlStateBytes, eventSequence, actionEventSequence, gameplayEffectStateBytes, equipmentStateBytes);
+            var checkpoint = new NetworkCheckpoint(baseline, values, controlStateBytes, eventSequence, actionEventSequence, handleAllocator, gameplayEffectStateBytes, equipmentStateBytes);
             if (!checkpoint.CheckpointHash.Equals(expectedCheckpointHash))
                 throw new InvalidDataException("Full Network Checkpoint hash is invalid.");
             return checkpoint;
@@ -301,6 +311,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteBytes(target.ControlStateBytes);
             writer.WriteUInt64(target.EventSequence);
             writer.WriteUInt64(target.ActionEventSequence);
+            writer.WriteUInt64(target.HandleAllocator);
             WriteOptionalBytes(writer, target.GameplayEffectStateBytes);
             WriteOptionalBytes(writer, target.EquipmentStateBytes);
             WriteCompactRemote(writer, layout, target.Baseline.AuthorityTick, remote);
@@ -356,11 +367,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] controlStateBytes = reader.ReadBytes();
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
+            ulong handleAllocator = reader.ReadUInt64();
             byte[] gameplayEffectStateBytes = ReadOptionalBytes(reader);
             byte[] equipmentStateBytes = ReadOptionalBytes(reader);
             remote = ReadCompactRemote(reader, layout, authorityTick, remoteActor);
             reader.RequireComplete();
-            CharacterSimulationState state = DecodeState(layout, authorityTick, values, controlStateBytes, eventSequence, actionEventSequence, gameplayEffectStateBytes, equipmentStateBytes);
+            CharacterSimulationState state = DecodeState(layout, authorityTick, values, controlStateBytes, eventSequence, actionEventSequence, handleAllocator, gameplayEffectStateBytes, equipmentStateBytes);
             byte[] stateBytes = CharacterSimulationStateCodec.Write(state);
             if (!CharacterSimulationStateCodec.ComputeHash(state).Equals(stateHash))
                 throw new InvalidDataException("Network Checkpoint delta reconstructed Character state hash is invalid.");
@@ -385,7 +397,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 body,
                 confirmedInputSequence,
                 horizon);
-            return new NetworkCheckpoint(rebuilt, values, controlStateBytes, eventSequence, actionEventSequence, gameplayEffectStateBytes, equipmentStateBytes);
+            return new NetworkCheckpoint(rebuilt, values, controlStateBytes, eventSequence, actionEventSequence, handleAllocator, gameplayEffectStateBytes, equipmentStateBytes);
         }
 
         static void WriteCompactRemote(
@@ -614,6 +626,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] controlStateBytes,
             ulong eventSequence,
             ulong actionEventSequence,
+            ulong handleAllocator,
             byte[] gameplayEffectStateBytes,
             byte[] equipmentStateBytes)
         {
@@ -649,7 +662,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
             if ((equipmentStateBytes != null) != layout.ExecutionLayout.Equipment.CapabilityEnabled)
                 throw new InvalidDataException("Network Checkpoint Equipment state presence does not match its runtime binding.");
-            return CharacterSimulationState.Create(layout.Program, layout.ExecutionLayout, tick.Value, decoded, eventSequence, actionEventSequence, controlState, gameplayEffectState, equipmentState);
+            return CharacterSimulationState.Create(layout.Program, layout.ExecutionLayout, tick.Value, decoded, eventSequence, actionEventSequence, handleAllocator, controlState, gameplayEffectState, equipmentState);
         }
 
         static AuthoritativeActorBaseline BuildBaseline(
@@ -669,10 +682,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] controlStateBytes,
             ulong eventSequence,
             ulong actionEventSequence,
+            ulong handleAllocator,
             byte[] gameplayEffectStateBytes,
             byte[] equipmentStateBytes)
         {
-            CharacterSimulationState state = DecodeState(layout, tick, values, controlStateBytes, eventSequence, actionEventSequence, gameplayEffectStateBytes, equipmentStateBytes);
+            CharacterSimulationState state = DecodeState(layout, tick, values, controlStateBytes, eventSequence, actionEventSequence, handleAllocator, gameplayEffectStateBytes, equipmentStateBytes);
             byte[] stateBytes = CharacterSimulationStateCodec.Write(state);
             CharacterStateHash stateHash = CharacterSimulationStateCodec.ComputeHash(state);
             if (!stateHash.Equals(expectedStateHash))

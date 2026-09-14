@@ -425,7 +425,7 @@ namespace ThirdPersonSimulation
                 m_Frame);
             var handles = new Float32HandleAllocator(
                 access,
-                m_Frame.CreateStatePort("HandleAllocator", services.HandleAllocatorPolicy));
+                m_Frame);
             m_Blackboard = new Float32BlackboardRuntime(
                 access,
                 m_Frame.CreateStatePort("Blackboard", services.BlackboardPolicy),

@@ -5,6 +5,7 @@
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
 - OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.9—1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。2.6 已开始收敛：Input request、Action activation request、Action instance、Timeline retention 和完整 MotionWarp 状态已进入角色状态分区，但控制机器内部状态、技能调用帧、目标、效果、装备和统一角色 Step 的完整 Capture／Restore 尚未闭合。
+- 按 D13—D15，Timeline 直接内容、播放私有状态和 Pose 原生图内部实现归各自既有任务；本窗口只接它们的 Prepare／Create、typed Pending、Commit／Discard、Stop 和采用事实，不复制其 cursor、节点状态或缓冲实现。核心继续负责 Host／Factory、Ability 最终数据与 Provider、角色 Step／快照／codec、网络／manifest、共享技能编译入口和总 Program／Projection 清理。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
 ## 已提交的小步
@@ -80,7 +81,7 @@
 - `GameplayAbilityDataAsset` 与 `FixedGameplayAbilityDataAsset` 当前仍从 canonical bytes 读取 `CharacterSimulationProgram`，只是严格的 Ability root/catalog 校验入口；它们不是最终独立 execution data，运行时 Ability 数据接口、领域工厂、角色绑定替换和旧 Character Program 清理尚未完成。
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 在资源绑定阶段失败，任务 1.4 已完成。
 - 当前 Character Host 仍加载旧整角色 Program，尚未把 Ability 资源集合装配进新的领域运行实例；这部分仍属于后续角色领域工厂工作。
-- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion、BodyMotion 的数值配置和 Ability 的生命周期已分别进入独立 Module。Effect、Equipment、FactSequence、ActionEventSequence、HandleAllocator、Input request、Action activation request、Action instance、Timeline retention 和完整 MotionWarp 状态已进入独立角色状态分区；Character Program 仍承载 Runnable、StateMachine、Timeline 播放和 Blackboard，旧 Program 数据清理仍未完成。
+- `SimulationKernel` 仍负责跨 Actor roster/binding 和 World request，但每个 Actor 的 Workspace／Evaluator 已由 `CharacterDomainRuntimeFactory` 创建，Pass 通过 `CharacterRuntime` Interface 调用 Evaluate/Finalize；Control 的静态 Motion、BodyMotion 的数值配置和 Ability 的生命周期已分别进入独立 Module。Effect、Equipment、FactSequence、ActionEventSequence、HandleAllocator、Input request、Action activation request、Action instance、Timeline retention 和完整 MotionWarp 状态已进入独立角色状态分区；Character Program 仍承载 Runnable、StateMachine、Timeline 播放和 Blackboard，旧 Program 数据清理仍未完成。Timeline 播放内部由 Timeline owner 提供，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
 - Float32／Fixed Control 参数链路已改为 `CharacterPipelineDefinition.ControlParameters` → `CharacterControlRuntimeBinding` → `SimulationActorBinding`／`SimulationEvaluateRequest` → 对应 `ControlDomainRuntime`。绑定会校验 ModuleId、semantic version、参数 kind 和 ContentHash；Program adoption 也拒绝改变已安装 Actor 的 Control binding。
 - Control 状态现在由每个角色的 `CharacterSimulationState.ControlState` 持有，Evaluate 为它单独开启 `CharacterControlRuntimeStateTransaction`，只有 World resolve 成功才通过主状态事务的统一入口和 Program state 一起提交；角色状态 codec、World snapshot 和 ServerAuthoritative full/delta checkpoint 都携带同一份 Control state。Control state descriptor、value kind、semantic 和 codec 已由 Control 自己拥有，旧 Program Control owner、semantic 与 ControlState source-map 映射已删除。
 - Control catalog 现在只发射身份、版本和初始状态字段；参数由 `CharacterControlRuntimeBinding` 提供，静态 Motion 由 `CharacterControlModuleContract.Motions` 提供，Control state 不再发射为 Program slot。Unity 输入适配器直接消费正式 Control contract。
@@ -131,4 +132,4 @@
 
 ## 下一小步
 
-下一步继续按 2.6 补齐统一角色 Step 的 Capture／Restore，优先收口仍留在 Program 的 Timeline 播放、Runnable、StateMachine 与 Blackboard 状态；并推进 1.9 的真实 provider 成员解析、1.10 的独立 Ability execution data，最后清理旧 `CharacterSimulationProgram` 容器。
+下一步继续核心边界：接入 D14 的 Timeline Prepare／CreatePlayback／Pending Commit／Discard 与 D15 的 Pose 阶段接口，同时推进 1.9 的真实 Provider 成员解析、1.10 的独立 Ability execution data、2.1 的非旧 Program 角色工厂和 2.6 的统一 Step／快照收口；Timeline／Pose 内部状态不在本窗口重复实现。

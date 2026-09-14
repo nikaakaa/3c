@@ -1063,7 +1063,9 @@ namespace BTSMTL.Timeline.Editor
                 for (int index = 0; index < m_Curves.Count; index++)
                 {
                     AnimationCurve curve = m_Curves[index].Curve;
-                    curve.AddKey(time, curve.Evaluate(time));
+                    BtsmtlTimelineCurveBinding binding = (BtsmtlTimelineCurveBinding)m_Curves[index];
+                    float snappedTime = binding.SnapTime(time);
+                    curve.AddKey(snappedTime, curve.Evaluate(snappedTime));
                 }
             }
 
@@ -1186,7 +1188,7 @@ namespace BTSMTL.Timeline.Editor
             public int StartFrame => m_Clip.Source.StartFrame;
             public int EndFrame => m_Clip.Source.EndFrame;
             public float Duration => Mathf.Max(1f / m_Clip.Owner.FrameRate, m_Clip.Length);
-            public void Replace(AnimationCurve curve) => m_Curve = TimelineCurveAuthoring.CopyCurve(curve);
+            public void Replace(AnimationCurve curve) => m_Curve = SnapCurve(curve);
             public void Trim(float min, float max)
             {
                 for (int index = m_Curve.length - 1; index >= 0; index--)
@@ -1208,6 +1210,29 @@ namespace BTSMTL.Timeline.Editor
                 AnimationCurve source = m_Descriptor.Read(m_Clip.Source);
                 AnimationCurve converted = ConvertCurveTime(m_Curve, Duration, true);
                 return !TimelineCurveAuthoring.AreEquivalent(source, converted);
+            }
+
+            public float SnapTime(float time)
+            {
+                int frame = Mathf.Clamp(
+                    Mathf.RoundToInt(time * m_Clip.Owner.FrameRate),
+                    0,
+                    Mathf.RoundToInt(Duration * m_Clip.Owner.FrameRate));
+                return frame / (float)m_Clip.Owner.FrameRate;
+            }
+
+            AnimationCurve SnapCurve(AnimationCurve source)
+            {
+                AnimationCurve result = TimelineCurveAuthoring.CopyCurve(source);
+                Keyframe[] keys = result.keys;
+                for (int index = 0; index < keys.Length; index++)
+                {
+                    Keyframe key = keys[index];
+                    key.time = SnapTime(key.time);
+                    keys[index] = key;
+                }
+                result.keys = keys;
+                return result;
             }
 
             static float CurveDuration(Clip clip, TimelineCurveChannelDescriptor descriptor, int frameRate) =>

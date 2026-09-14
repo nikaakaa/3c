@@ -796,13 +796,13 @@ namespace Slate
                 return;
             try
             {
-                embeddedTimeline.BeginEdit(undoName);
+                BeginEditTransaction(undoName, 0);
                 command?.Invoke();
-                embeddedTimeline.CommitEdit();
+                CommitEditTransaction();
             }
             catch (System.Exception exception)
             {
-                embeddedTimeline.CancelEdit();
+                CancelEditTransaction();
                 ShowNotification(new GUIContent(exception.Message));
             }
         }
@@ -1472,6 +1472,16 @@ namespace Slate
                 {
                     embeddedTimeline?.RequestRepaint();
                 }
+                e.Use();
+                return;
+            }
+
+            if (embeddedSurface && e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && editTransactionActive)
+            {
+                CancelEditTransaction();
+                interactingClip?.ResetInteraction();
+                interactingClip = null;
+                formalDraggedSection = null;
                 e.Use();
                 return;
             }
@@ -3456,7 +3466,7 @@ namespace Slate
                     if (e.type == EventType.MouseDown && e.button == 0 && markerRect.Contains(e.mousePosition) && !embeddedTimeline.IsReadOnly)
                     {
                         formalDraggedSection = section;
-                        embeddedTimeline.BeginEdit("Move Timeline Section");
+                        BeginEmbeddedEdit("Move Timeline Section");
                         e.Use();
                     }
                     if (e.type == EventType.ContextClick && sectionRect.Contains(e.mousePosition))
@@ -3464,9 +3474,9 @@ namespace Slate
                         GenericMenu menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Move to Current Frame"), false, () =>
                         {
-                            embeddedTimeline.BeginEdit("Move Timeline Section");
+                            BeginEmbeddedEdit("Move Timeline Section");
                             embeddedTimeline.ConfigureSection(section, section.Name, embeddedTimeline.CurrentFrame);
-                            embeddedTimeline.CommitEdit();
+                            CommitEmbeddedEdit();
                         });
                         menu.AddItem(new GUIContent("Delete Section"), false, () => embeddedTimeline.DeleteSection(section));
                         menu.ShowAsContext();
@@ -3481,7 +3491,7 @@ namespace Slate
                 formalDraggedSection.Time = Mathf.Clamp(SnapTime(PosToTime(mousePosition.x)), 0f, length);
                 if (e.rawType == EventType.MouseUp)
                 {
-                    embeddedTimeline.CommitEdit();
+                    CommitEmbeddedEdit();
                     formalDraggedSection = null;
                 }
             }
@@ -4062,7 +4072,7 @@ namespace Slate
                     isDragging = true;
                     isWaitingMouseDrag = false;
                     if (editorBinding.FormalClip != null)
-                        editor.embeddedTimeline.BeginEdit("Move Timeline Clip");
+                        editor.BeginEmbeddedEdit("Move Timeline Clip");
                 }
 
                 if ( e.rawType == EventType.ContextClick ) {
@@ -4205,7 +4215,7 @@ namespace Slate
                 }
                 editor.CacheMagnetSnapTimes(editorBinding);
                 if (action == null)
-                    editor.embeddedTimeline?.BeginEdit("Adjust Timeline Clip");
+                    editor.BeginEmbeddedEdit("Adjust Timeline Clip");
             }
 
             //retime keys lerp between start/end time.
@@ -4256,7 +4266,7 @@ namespace Slate
                     CleanKeysOffRange();
                 }
                 if (editorBinding.FormalClip != null)
-                    editor.embeddedTimeline?.CommitEdit();
+                    editor.CommitEmbeddedEdit();
             }
 
 

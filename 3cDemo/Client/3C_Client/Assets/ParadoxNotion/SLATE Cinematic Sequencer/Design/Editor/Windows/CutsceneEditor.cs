@@ -3431,6 +3431,12 @@ namespace Slate
                     if (e.type == EventType.ContextClick && sectionRect.Contains(e.mousePosition))
                     {
                         GenericMenu menu = new GenericMenu();
+                        menu.AddItem(new GUIContent("Move to Current Frame"), false, () =>
+                        {
+                            embeddedTimeline.BeginEdit("Move Timeline Section");
+                            embeddedTimeline.ConfigureSection(section, section.Name, embeddedTimeline.CurrentFrame);
+                            embeddedTimeline.CommitEdit();
+                        });
                         menu.AddItem(new GUIContent("Delete Section"), false, () => embeddedTimeline.DeleteSection(section));
                         menu.ShowAsContext();
                         e.Use();

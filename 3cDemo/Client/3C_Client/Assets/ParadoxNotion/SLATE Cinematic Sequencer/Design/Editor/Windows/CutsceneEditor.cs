@@ -3886,6 +3886,7 @@ namespace Slate
             public Dictionary<int, Keyframe[]> preScaleKeys;
             public float preScaleStartTime;
             public float preScaleEndTime;
+            public int preScaleClipInFrame;
             public float preScaleSubclipOffset;
             public float preScaleSubclipSpeed;
 
@@ -4190,6 +4191,7 @@ namespace Slate
             public void BeginClipAdjust() {
                 preScaleStartTime = editorBinding.StartTime;
                 preScaleEndTime = editorBinding.EndTime;
+                preScaleClipInFrame = editorBinding.FormalClip?.ClipInFrame ?? 0;
 
                 preScaleKeys = new Dictionary<int, Keyframe[]>();
                 var curves = editorBinding.Curves;
@@ -4223,6 +4225,16 @@ namespace Slate
                     editorBinding.Length,
                     retime,
                     trim);
+
+                if (editorBinding.FormalClip != null &&
+                    editorBinding.FormalClip.CanClipIn &&
+                    trim &&
+                    isScalingStart)
+                {
+                    int deltaFrame = Mathf.RoundToInt(
+                        (preScaleStartTime - editorBinding.StartTime) * editor.embeddedTimeline.FrameRate);
+                    editorBinding.FormalClip.ClipInFrame = preScaleClipInFrame + deltaFrame;
+                }
 
                 if (action != null)
                     CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);

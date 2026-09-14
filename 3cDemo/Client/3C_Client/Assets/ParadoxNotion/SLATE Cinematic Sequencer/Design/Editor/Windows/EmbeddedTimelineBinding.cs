@@ -82,6 +82,8 @@ namespace Slate
         float BlendIn { get; set; }
         float BlendOut { get; set; }
         bool CanScale { get; }
+        bool CanClipIn { get; }
+        int ClipInFrame { get; set; }
         bool CanBlendIn { get; }
         bool CanBlendOut { get; }
         IReadOnlyList<IEmbeddedTimelineParameterBinding> Parameters { get; }

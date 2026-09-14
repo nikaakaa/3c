@@ -241,14 +241,31 @@ namespace BTSMTL.Timeline.Editor
                 return;
             if (frame <= formalClip.Source.StartFrame || frame >= formalClip.Source.EndFrame)
                 return;
+            if (formalClip.Source is not AnimationClip && formalClip.Source is not MotionCurveClip)
+            {
+                ReportIssue($"Clip kind '{formalClip.Source.ContractKind}' does not provide a formal split source operation.");
+                return;
+            }
             ApplyImmediate(() =>
             {
+                int originalStartFrame = formalClip.Source.StartFrame;
+                int originalEndFrame = formalClip.Source.EndFrame;
                 Clip copy = ManagedReferenceCloneUtility.Clone(formalClip.Source);
                 copy.RegenerateAuthoringIdentity();
                 if (copy is ITimelineOwnedAuthoringIdentity owned)
                     owned.RegenerateOwnedAuthoringIdentity();
                 copy.StartFrame = frame;
-                copy.EndFrame = formalClip.Source.EndFrame;
+                copy.EndFrame = originalEndFrame;
+                if (formalClip.Source is AnimationClip animation && copy is AnimationClip animationCopy)
+                    animationCopy.ClipInFrame = animation.ClipInFrame + frame - originalStartFrame;
+                if (formalClip.Source is MotionCurveClip motion && copy is MotionCurveClip motionCopy)
+                {
+                    float splitSourceTime = motion.SourceStartTime +
+                        (frame - originalStartFrame) / (float)FrameRate;
+                    float originalSourceEnd = motion.SourceEndTime;
+                    motion.ConfigureSource(motion.SourceCurve, motion.SourceStartTime, splitSourceTime);
+                    motionCopy.ConfigureSource(motionCopy.SourceCurve, splitSourceTime, originalSourceEnd);
+                }
                 formalClip.Source.EndFrame = frame;
                 formalClip.Source.Track.Clips.Add(copy);
                 formalClip.Source.Track.UpdateMix();
@@ -751,6 +768,7 @@ namespace BTSMTL.Timeline.Editor
             float m_EndTime;
             float m_BlendIn;
             float m_BlendOut;
+            int m_ClipInFrame;
             bool m_IsCollapsed;
             bool m_IsLocked;
 
@@ -763,6 +781,7 @@ namespace BTSMTL.Timeline.Editor
                 m_EndTime = source.EndFrame / (float)owner.FrameRate;
                 m_BlendIn = source.SelfEaseInFrame / (float)owner.FrameRate;
                 m_BlendOut = source.SelfEaseOutFrame / (float)owner.FrameRate;
+                m_ClipInFrame = source.ClipInFrame;
                 var descriptors = owner.CollectCurveChannels(source.Track);
                 for (int index = 0; index < descriptors.Count; index++)
                 {
@@ -801,6 +820,12 @@ namespace BTSMTL.Timeline.Editor
             public float BlendIn { get => Mathf.Clamp(m_BlendIn, 0f, Length); set => m_BlendIn = Mathf.Clamp(value, 0f, Length); }
             public float BlendOut { get => Mathf.Clamp(m_BlendOut, 0f, Length); set => m_BlendOut = Mathf.Clamp(value, 0f, Length); }
             public bool CanScale => Source.IsResizable();
+            public bool CanClipIn => Source.IsClipInable();
+            public int ClipInFrame
+            {
+                get => m_ClipInFrame;
+                set => m_ClipInFrame = Mathf.Max(0, value);
+            }
             public bool CanBlendIn => Source.IsMixable();
             public bool CanBlendOut => Source.IsMixable();
             public IReadOnlyList<IEmbeddedTimelineParameterBinding> Parameters => m_Parameters;
@@ -884,7 +909,8 @@ namespace BTSMTL.Timeline.Editor
                 bool changed = Source.StartFrame != startFrame ||
                                Source.EndFrame != endFrame ||
                                Source.SelfEaseInFrame != selfEaseInFrame ||
-                               Source.SelfEaseOutFrame != selfEaseOutFrame;
+                               Source.SelfEaseOutFrame != selfEaseOutFrame ||
+                               (CanClipIn && Source.ClipInFrame != m_ClipInFrame);
                 for (int index = 0; index < m_Curves.Count; index++)
                     changed |= ((BtsmtlTimelineCurveBinding)m_Curves[index]).CommitSource();
                 if (!changed)
@@ -893,6 +919,8 @@ namespace BTSMTL.Timeline.Editor
                 Source.EndFrame = endFrame;
                 Source.SelfEaseInFrame = selfEaseInFrame;
                 Source.SelfEaseOutFrame = selfEaseOutFrame;
+                if (CanClipIn)
+                    Source.ClipInFrame = m_ClipInFrame;
                 Source.Track.UpdateMix();
                 return true;
             }
@@ -904,7 +932,8 @@ namespace BTSMTL.Timeline.Editor
                 int selfEaseInFrame = Mathf.Clamp(Mathf.RoundToInt(BlendIn * m_Owner.FrameRate), 0, endFrame - startFrame - 1);
                 int selfEaseOutFrame = Mathf.Clamp(Mathf.RoundToInt(BlendOut * m_Owner.FrameRate), 0, endFrame - startFrame - selfEaseInFrame - 1);
                 if (Source.StartFrame != startFrame || Source.EndFrame != endFrame ||
-                    Source.SelfEaseInFrame != selfEaseInFrame || Source.SelfEaseOutFrame != selfEaseOutFrame)
+                    Source.SelfEaseInFrame != selfEaseInFrame || Source.SelfEaseOutFrame != selfEaseOutFrame ||
+                    (CanClipIn && Source.ClipInFrame != m_ClipInFrame))
                     return true;
                 for (int index = 0; index < m_Curves.Count; index++)
                     if (((BtsmtlTimelineCurveBinding)m_Curves[index]).HasChanges())

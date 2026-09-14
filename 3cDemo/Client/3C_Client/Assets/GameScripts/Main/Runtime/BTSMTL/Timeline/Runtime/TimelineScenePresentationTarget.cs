@@ -13,7 +13,9 @@ namespace BTSMTL.Timeline.Runtime
 
         public TimelineScenePresentationTarget(string targetIdentity)
         {
-            TargetIdentity = TimelineRuntimeIdentityValidation.Require(targetIdentity, nameof(targetIdentity));
+            TargetIdentity = string.IsNullOrWhiteSpace(targetIdentity)
+                ? throw new ArgumentException("Timeline target identity is required.", nameof(targetIdentity))
+                : targetIdentity.Trim();
         }
 
         public string TargetIdentity { get; }

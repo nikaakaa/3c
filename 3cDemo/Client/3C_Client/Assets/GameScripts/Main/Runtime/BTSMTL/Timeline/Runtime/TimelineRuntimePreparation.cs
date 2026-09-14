@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace BTSMTL.Timeline.Runtime
 {
@@ -285,7 +287,8 @@ namespace BTSMTL.Timeline.Runtime
                 m_Cycle,
                 nextFrame,
                 nextCycle,
-                Content.Loop);
+                Content.Loop,
+                boundaries);
             bool completes = !Content.Loop && nextFrame >= maxFrame;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
@@ -689,6 +692,68 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    public readonly struct TimelineRuntimeTreeClipRequest
+    {
+        public TimelineRuntimeTreeClipRequest(
+            string clipAuthoringId,
+            string trackAuthoringId,
+            TimelineTreeExecutionPhase phase,
+            TimelineRuntimeClipBoundaryKind kind,
+            int frame,
+            int cycle)
+        {
+            ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
+                ? throw new ArgumentException("TreeClip identity is required.", nameof(clipAuthoringId))
+                : clipAuthoringId.Trim();
+            TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
+                ? throw new ArgumentException("Tree Track identity is required.", nameof(trackAuthoringId))
+                : trackAuthoringId.Trim();
+            Phase = phase;
+            Kind = kind;
+            Frame = frame;
+            Cycle = cycle;
+        }
+
+        public string ClipAuthoringId { get; }
+        public string TrackAuthoringId { get; }
+        public TimelineTreeExecutionPhase Phase { get; }
+        public TimelineRuntimeClipBoundaryKind Kind { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+    }
+
+    public readonly struct TimelineRuntimeScenePresentationSample
+    {
+        public TimelineRuntimeScenePresentationSample(
+            string clipAuthoringId,
+            string targetBindingId,
+            string parameterBindingId,
+            TimelineBindingValueKind valueKind,
+            float value,
+            float normalizedTime,
+            int frame,
+            int cycle)
+        {
+            ClipAuthoringId = clipAuthoringId ?? string.Empty;
+            TargetBindingId = targetBindingId ?? string.Empty;
+            ParameterBindingId = parameterBindingId ?? string.Empty;
+            ValueKind = valueKind;
+            Value = value;
+            NormalizedTime = Mathf.Clamp01(normalizedTime);
+            Frame = frame;
+            Cycle = cycle;
+        }
+
+        public string ClipAuthoringId { get; }
+        public string TargetBindingId { get; }
+        public string ParameterBindingId { get; }
+        public TimelineBindingValueKind ValueKind { get; }
+        public float Value { get; }
+        public float NormalizedTime { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+    }
+
     public sealed class TimelineRuntimeEvaluationResult
     {
         internal TimelineRuntimeEvaluationResult(
@@ -697,7 +762,9 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineCameraStateSample> cameraStates,
             IReadOnlyList<TimelineCameraCueSample> cameraCues,
             IReadOnlyList<TimelineCameraResponseSample> cameraResponses,
-            IReadOnlyList<TimelineActionCueSample> actionCues)
+            IReadOnlyList<TimelineActionCueSample> actionCues,
+            IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
+            IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation)
         {
             AnimationContributions = Copy(animations);
             MotionContributions = Copy(motions);
@@ -705,6 +772,8 @@ namespace BTSMTL.Timeline.Runtime
             CameraCues = Copy(cameraCues);
             CameraResponses = Copy(cameraResponses);
             ActionCues = Copy(actionCues);
+            TreeClips = Copy(treeClips);
+            ScenePresentation = Copy(scenePresentation);
         }
 
         public IReadOnlyList<TimelineAnimationContribution> AnimationContributions { get; }
@@ -713,6 +782,8 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineCameraCueSample> CameraCues { get; }
         public IReadOnlyList<TimelineCameraResponseSample> CameraResponses { get; }
         public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
+        public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
+        public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
 
         static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
         {
@@ -729,7 +800,8 @@ namespace BTSMTL.Timeline.Runtime
             int previousCycle,
             int currentFrame,
             int currentCycle,
-            bool loop)
+            bool loop,
+            IReadOnlyList<TimelineRuntimeClipBoundary> boundaries)
         {
             if (timeline == null)
                 throw new ArgumentNullException(nameof(timeline));
@@ -740,6 +812,8 @@ namespace BTSMTL.Timeline.Runtime
             var cameraCues = new List<TimelineCameraCueSample>();
             var cameraResponses = new List<TimelineCameraResponseSample>();
             var actionCues = new List<TimelineActionCueSample>();
+            var treeClips = new List<TimelineRuntimeTreeClipRequest>();
+            var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
             List<TimelineRuntimeEvaluationSegment> segments = BuildSegments(
                 previousFrame,
                 previousCycle,
@@ -796,6 +870,44 @@ namespace BTSMTL.Timeline.Runtime
                 }
             }
             float currentTime = currentFrame / (float)frameRate;
+            for (int boundaryIndex = 0; boundaryIndex < (boundaries?.Count ?? 0); boundaryIndex++)
+            {
+                TimelineRuntimeClipBoundary boundary = boundaries[boundaryIndex];
+                if (!TryResolveTreeClip(
+                        timeline,
+                        boundary.AuthoringId,
+                        out TreeClip treeClip))
+                    continue;
+                treeClips.Add(new TimelineRuntimeTreeClipRequest(
+                    treeClip.AuthoringId,
+                    treeClip.Track.AuthoringId,
+                    treeClip.ExecutionPhase,
+                    boundary.Kind,
+                    boundary.Frame,
+                    boundary.Cycle));
+            }
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                if (timeline.Tracks[trackIndex] is not ScenePresentationParameterTrack track)
+                    continue;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    if (track.Clips[clipIndex] is not ScenePresentationParameterCurveClip clip ||
+                        currentTime < clip.StartTime || currentTime > clip.EndTime)
+                        continue;
+                    float duration = Mathf.Max(0.0001f, clip.DurationTime);
+                    float local = Mathf.Clamp01((currentTime - clip.StartTime) / duration);
+                    scenePresentation.Add(new TimelineRuntimeScenePresentationSample(
+                        clip.AuthoringId,
+                        clip.TargetBindingId,
+                        clip.ParameterBindingId,
+                        clip.ParameterValueKind,
+                        clip.ValueCurve.Evaluate(local),
+                        local,
+                        currentFrame,
+                        currentCycle));
+                }
+            }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
                 Track track = timeline.Tracks[trackIndex];
@@ -810,7 +922,31 @@ namespace BTSMTL.Timeline.Runtime
                 cameraStates,
                 cameraCues,
                 cameraResponses,
-                actionCues);
+                actionCues,
+                treeClips,
+                scenePresentation);
+        }
+
+        static bool TryResolveTreeClip(
+            TimelineData timeline,
+            string authoringId,
+            out TreeClip treeClip)
+        {
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                Track track = timeline.Tracks[trackIndex];
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    if (track.Clips[clipIndex] is TreeClip candidate &&
+                        string.Equals(candidate.AuthoringId, authoringId, StringComparison.Ordinal))
+                    {
+                        treeClip = candidate;
+                        return true;
+                    }
+                }
+            }
+            treeClip = null;
+            return false;
         }
 
         static List<TimelineRuntimeEvaluationSegment> BuildSegments(

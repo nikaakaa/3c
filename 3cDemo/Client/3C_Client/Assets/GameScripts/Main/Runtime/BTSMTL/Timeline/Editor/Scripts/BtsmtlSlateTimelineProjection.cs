@@ -52,7 +52,7 @@ namespace BTSMTL.Timeline.Editor
                 : trackHeights.Where(value => !string.IsNullOrEmpty(value.AuthoringId) && value.Height > 0f).ToArray();
             m_InspectedParameters = inspectedParameters == null
                 ? Array.Empty<BtsmtlSlateTimelineInspection>()
-                : inspectedParameters.Where(value => !string.IsNullOrEmpty(value.TrackAuthoringId) && !string.IsNullOrEmpty(value.ParameterId)).ToArray();
+                : inspectedParameters.Where(value => !string.IsNullOrEmpty(value.InspectionKey) && !string.IsNullOrEmpty(value.ParameterId)).ToArray();
             m_GroupCollapsed = groupCollapsed;
         }
 
@@ -91,16 +91,16 @@ namespace BTSMTL.Timeline.Editor
     [Serializable]
     public struct BtsmtlSlateTimelineInspection
     {
-        [SerializeField] string m_TrackAuthoringId;
+        [SerializeField] string m_InspectionKey;
         [SerializeField] string m_ParameterId;
 
-        public BtsmtlSlateTimelineInspection(string trackAuthoringId, string parameterId)
+        public BtsmtlSlateTimelineInspection(string inspectionKey, string parameterId)
         {
-            m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
+            m_InspectionKey = inspectionKey ?? string.Empty;
             m_ParameterId = parameterId ?? string.Empty;
         }
 
-        public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
+        public string InspectionKey => m_InspectionKey ?? string.Empty;
         public string ParameterId => m_ParameterId ?? string.Empty;
     }
 
@@ -228,7 +228,7 @@ namespace BTSMTL.Timeline.Editor
                     if (trackHeights.TryGetValue(track.AuthoringId, out BtsmtlSlateTimelineTrackHeight height))
                         track.CustomHeight = height.Height;
             var inspectedParameters = state.InspectedParameters.ToDictionary(
-                value => value.TrackAuthoringId,
+                value => value.InspectionKey,
                 value => value.ParameterId,
                 StringComparer.Ordinal);
             m_EmbeddedEditor.RestoreEmbeddedInspectedParameters(inspectedParameters);

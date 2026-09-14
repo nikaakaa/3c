@@ -1,5 +1,7 @@
 ## Context
 
+2026-09-14 作者UI集中审阅见[editor-wiring-audit.md](editor-wiring-audit.md)。以该文档的当前调用点和状态为准，旧快照仅作追溯：无组件打开、局部坐标、统一SelectedClip派生和正式失败回滚已有代码，原绘制合并/完整手势/局部提交/曲线/Inspector仍未齐。本轮只排查和补文档，不修改实现代码或声称实际窗口已通过。
+
 2026-09-13 领域运行协调：运行基线改为[replace-character-program-with-domain-runtimes](../replace-character-program-with-domain-runtimes/design.md)，源运动规则改为[unify-timeline-motion-curve-source](../../specs/character-root-motion-curves/spec.md)。仅更新本任务规划，不下发实现。角色总Program、整包Projection、统一ProgramEpoch采用和Document/v7不再是前置；原Slate UI、TimelineData、编辑Session/Undo与typed接线保持。领域准备与实际采用接口见[联动计划第3–4节](preview-integration-plan.md)。
 
 2026-09-13 源码对账与具体接线决策见 [Slate原源码解耦决策](slate-source-decoupling.md)。该文档逐项说明原窗口、Track内Editor方法、Clip wrapper、曲线/参数工具、Inspector、Undo和选择的实际依赖；本设计第3节与其共同约束实现，不允许以原入口转发另一套绘制冒充复用。
@@ -171,7 +173,7 @@ Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行�
 
 2026-09-14 用户截图回归的具体源码原因与修正归属见[源码决策第13节](slate-source-decoupling.md#13-2026-09-14-截图回归轨道错位重复文字与dopesheet)：恢复轨道局部GUI分组/裁剪，Clip标题由原wrapper画一次，正式曲线接真实DopeSheet而非名称占位。保持原UI算法与已正确接线，不新增另一套布局或组件代理。
 
-- 复用Slate Curve/DopeSheet；名称、单位、颜色来自正式descriptor。Motion源XYZ/Yaw不再是Timeline-local可写通道，只读显示或导航源owner；Weight/Ease、Warp progress等真正局部曲线保持可编辑。Track名称不拼曲线数量，展开沿原入口。
+- 复用Slate Curve/DopeSheet；名称、单位、颜色来自正式descriptor。Motion源XYZ/Yaw不再是Timeline-local可写通道，必须在Timeline只读显示并提供源owner导航；Weight/Ease、Warp progress等真正局部曲线保持可编辑。Track名称不拼曲线数量，展开沿原入口。
 - 展开仅显示当前 Clip 的有效通道；无曲线 Clip 不出现大片“No Clip Selected”参数区域。
 - 密集 key 根据缩放优化显示，不减少正式 key；选中 key 支持时间、值和切线精确编辑。
 - 按稳定 ID 保存选择、选中曲线、展开状态、编辑帧、横向范围和纵向滚动。提交、Undo/Redo、外部刷新恢复仍有效的状态。
@@ -240,13 +242,13 @@ r2 仅 export_code 显式写指定源码、generate_assets 显式执行当前已
 - C# 是显式生成范围的可重建来源，人工编辑保留在资产；需要把人工修改带入下次生成时显式完整 export_code。代价是未导出修改不会自动合并，收益是没有源码同步/解析/冲突状态机。
 
 - 修改 Slate 源码需要维护插件升级差异，换来复用真实 UI；补丁集中于 Editor Surface，领域规则留在 BTSMTL。
-- 非组件适配引用正式对象，只为有效手势保留必要草稿；不存在可独立保存/运行的第二模型。TimelineData.ApplyModify目前不会自动校验/回滚，完整提交需在原mutation链收口，不能把现有Undo注册当作事务完成。
+- 非组件适配引用正式对象，只为有效手势保留必要草稿；不存在可独立保存/运行的第二模型。TimelineData.ApplyModify已补Undo分组与失败回滚，保留该成果；当前还需在原mutation链移除直接写源和全Clip无差别回写，不能把回滚存在当作所有控件提交正确。
 - 不在Timeline内部保留右侧自制Inspector，避免挤压原Slate时间轴；选中元素属性在Unity已有Inspector复用原控件，字段写入仍走原正式命令。
 - 作者帧沿用已有语义，逐 Tick 运行定位消费真实 trace；本次不做时钟迁移。
 
 ## 文档对账
 
-领域协调新增对账：current btsmtl-timeline-editor-preview仍要求Motion Position X/Y/Z与Yaw进入Timeline Curve Catalog（约261–275行），与源迁移后的真实owner冲突，相关替换由unify-timeline-motion-curve-source维护；本change只规定UI消费源引用/区间和导航、局部Weight/Ease继续编辑。current旧角色Program/Projection和统一采用条款由领域运行/原预览owner迁移，本联动计划已经撤销这些前置，不能以旧条款阻塞UI接线。曲线设计中保留总Program的旧运行措辞也以新的领域装配方案覆盖，源码/资产迁移仍归对应owner。
+2026-09-14重新对账：current btsmtl-timeline-editor-preview已把源XYZ/Yaw归RootMotionCurveAsset、局部通道保留Weight/Ease，不能继续声称源规范尚未更新。本次进一步要求Timeline内必须只读查看源曲线/区间，写入仍归源owner；详见editor-wiring-audit第5节。旧角色Program/Projection和统一采用条款仍由领域运行/原预览owner迁移，本联动计划不恢复这些前置。
 
 本次冲突纠正：上一版本 change 要求全面替换 Slate 的模型、交互与曲线输入，违背用户直接使用现成 UI 的要求，现已撤销。current 独立作者能力、typed Session、合法字段和预览边界保持；current 旧 PreviewSession 描述仍由原预览 change 处理，本轮不改其它任务文档。数据绑定替换和无关组件清理按第3节在原 Slate 源码内完成，不能改成另一套 UI。
 
@@ -257,8 +259,8 @@ r2 仅 export_code 显式写指定源码、generate_assets 显式执行当前已
 | current btsmtl-timeline-editor-preview | 仍描述 TimelinePreviewSession、互斥 Preview/LiveDebug 和只读；由 rebuild 场景预览 change 的 REMOVED/MODIFIED delta 替换。尚未归档，不把目标直接写成 current 已交付。 |
 | restyle 本 change | 负责 Slate GUI、帧、新增、正式编辑及桥接，旧完成勾选按代码证据纠正。 |
 | rebuild 场景预览 change | 同步改正“观察后结构只读”为“观察只读、作者可编辑”；场景控制和采用实现仍归该 change。 |
-| 原引用 timeline-animation-authoring-surface | 本次对应current spec路径不存在，不再作为已核对的现行依据；正式Curve与作者行为对照当前btsmtl-timeline-editor-preview规范。 |
-| 当前代码 | ce21aec8f/afcb90056恢复原Slate UI及正式新增/游标，仍创建隐藏组件代理；原UI恢复不等于解耦完成。 |
+| 原引用 timeline-animation-authoring-surface | 此前路径遗漏btsmtl前缀；正确现行路径为btsmtl-timeline-animation-authoring-surface，不能再声称该能力规范不存在。 |
+| 当前代码 | 以editor-wiring-audit为最新作者审阅：隐藏组件已退出、仍有两份绘制/部分简化交互和曲线/字段接线缺口；旧ce21aec8f/afcb90056只作历史。 |
 
 ## Migration Plan
 

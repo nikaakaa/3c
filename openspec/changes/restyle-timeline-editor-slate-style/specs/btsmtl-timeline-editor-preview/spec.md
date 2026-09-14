@@ -94,6 +94,18 @@ Slate 对 proxy 的字段修改 MUST仅作为手势草稿。Adapter MUST通过 s
 - **AND** 普通选择、滚动、缩放、游标和折叠 MUST NOT建立作者事务；菜单 MUST NOT依赖外层MouseUp才保存
 - **AND** MUST NOT把现有ApplyModify注册Undo视为已经实现自动校验或异常回滚，缺项 MUST在原正式链实现而非另建全局事务框架
 
+#### Scenario: 修改一个元素不回写其它元素
+
+- **WHEN** 作者只修改一条曲线或一个Clip字段并提交
+- **THEN** 现有mutation MUST仅写本次实际变化，MUST NOT无差别重存所有Clip曲线或把派生OtherEase回写为SelfEase
+- **AND** 空手势 MUST NOT生成业务Undo，Track启停 MUST经过正式命令，MUST NOT先改Source再以revision检查拒绝自己的修改
+
+#### Scenario: 原操作保留正式源时间含义
+
+- **WHEN** 作者移动、裁剪、缩放、切分或复制粘贴有源内容的Clip
+- **THEN** 原手势 MUST按正式合同处理时长、ClipIn、源区间和局部曲线，MUST NOT只复制数据后修改Start/End冒充无损切分
+- **AND** Copy MUST捕获命令时的正式内容，Paste MUST生成新身份，不从后续可变的旧UI binding取得内容
+
 ### Requirement: Preview与Live Debug控制必须归Graph Shell
 
 Scene Play Session、Runtime Trace、Follow/Pin、TreeClip ownership、Character/Actor target、Build、Skill request、Capture、History、Restore 和 Replay MUST由 Graph Shell/SkillGraph 与唯一 Scene Play coordinator 管理。Timeline 只读取正式 binding，将当前实际运行标记作为只读 overlay 显示；Timeline 不得控制运行对象或复制这些状态机。
@@ -199,7 +211,8 @@ MotionCurve源、源区间、播放映射及MotionWarp源配置 MUST由unify-tim
 #### Scenario: 查看或修改共享运动源
 
 - **WHEN** 作者从Timeline查看XYZ/Yaw或请求修改源
-- **THEN** Timeline MAY只读显示源及其版本，修改 MUST导航真实源owner并由其负责Undo/保存/依赖失效
+- **THEN** Timeline MUST在原曲线区域提供源XYZ/Yaw只读查看、源版本和当前Clip使用区间，修改 MUST导航真实源owner并由其负责Undo/保存/依赖失效
+- **AND** 只读图 MUST消费现行正式时间映射并禁止key/切线/数值写入，MUST NOT仅用资产导航或局部Weight/Ease显示替代源曲线查看
 - **AND** 普通Timeline C#输出 MUST只保留明确源引用与使用配置，不复制外部源关键帧；局部曲线仍完整输出
 
 ### Requirement: Timeline必须直接复用现成Slate编辑功能
@@ -384,6 +397,14 @@ Surface MUST消费正式 Timeline Session 的 FrameRate，统一像素、整数�
 - **THEN** Inspector、原Surface与Track.SelectedClip MUST按同一正式owner/AuthoringId解析当前Clip，保留有效通道选择，不使用旧引用或额外选择真相
 - **AND** Weight/Ease In/Ease Out MUST可在Timeline原曲线区进入CurveEditor/DopeSheet编辑，不以Inspector中的普通曲线字段替代
 - **AND** 未选择、确无局部曲线与绑定失败 MUST分别说明，MUST NOT统一显示No Clip Selected掩盖缺项
+
+- **AND** 普通属性写入 MUST走同一正式typed mutation，身份与派生字段 MUST NOT通过默认PropertyField形成第二可写入口；参数Value/单位/值域和支持的原编辑工具 MUST接descriptor，而非只读数值标签代替编辑
+
+#### Scenario: 视图与缓存按正式身份恢复
+
+- **WHEN** 编辑、Undo或绑定更新导致窗口刷新，或窗口关闭
+- **THEN** 系统 MUST保留全部有效展开轨道、Clip/Section/Channel身份与视野，不用仅一个展开Track或参数数组下标恢复不同内容
+- **AND** 缓存释放 MUST限定所属Surface，重绘 MUST由实际编辑/观察变化驱动，不用空通知加无条件循环重绘掩盖缺接线
 
 #### Scenario: GUI事件消费符合输入类型
 

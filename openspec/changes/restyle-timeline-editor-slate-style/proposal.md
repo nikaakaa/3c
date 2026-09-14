@@ -1,5 +1,7 @@
 ## Why
 
+2026-09-14 完整作者接线审阅见[editor-wiring-audit.md](editor-wiring-audit.md)。此次新增明确要求：Timeline内必须可只读查看当前MotionCurveClip的源XYZ/Yaw及使用区间，不以源资产导航替代查看。曲线数据仍归源owner，不注册为局部可写channel；局部Weight/Ease照常编辑。审阅同时明确原交互合并、局部提交、Inspector、锁定/禁用和状态恢复缺口，不把之前勾选当全部完成。
+
 2026-09-14 PARALLEL-20260914-DOMAIN-01新增规划接收范围：除原Slate UI线外，本任务登记独立的Timeline直接内容Runtime，详见[timeline-direct-runtime.md](timeline-direct-runtime.md)。本次只更新规划，不启动该Runtime实现；复用现有timeline任务，原UI授权/正确进展不变。历史段落不作为当前实现状态。
 
 用户要求直接使用 Slate 已有的完整 Timeline UI。此前规划把数据适配扩大为纯内存 Editor Model、新 Surface API、交互与 Curve/DopeSheet 输入全面改造，实际成为重做编辑器，用户已明确否决；实现窗口已通过 0aa52f209 按用户要求回退。
@@ -43,11 +45,11 @@
 - 新增Runtime规划接收主方案D13的Timeline域内部分；主实现仍拥有共享BtsmtlSkillTimelineCompiler、TreeClip技能执行服务、角色Step/总快照/Host及公共artifact删除。Motion/Warp/Camera、预览协调器、C#生成与资产均保留原owner。
 - 对照现行btsmtl-runnable-timeline-node、gameplay-semantic-ir、compiled-simulation-program：Timeline内部operation发射、全角色state slots及ProgramPlan前提被D9与本change的新直接Runtime合同替代，原inline/shared、隔离、结束/取消语义保留。跨领域旧要求的全局delta仍由主方案维护，不覆盖其文档。
 
-- 本次领域协调只修改本change的6份规划文档。现行规范仍要求Motion XYZ/Yaw作为Timeline-local通道，与新源owner规则冲突，源迁移delta归曲线任务；现行总Program/Projection与预览总Epoch条款由领域运行和原预览owner替换。本change明确消费新合同，不覆盖这些owner文档或下发执行。
+- 本次作者审阅只修改本change文档。现行源XYZ/Yaw owner规范已同步，不重开源迁移；新增必须在Timeline只读查看的体验要求。总Program/Projection与预览总Epoch条款由原领域owner替换，本change不覆盖其文档或自动下发执行。
 
-- 本轮只修改本change文档，增加slate-source-decoupling.md；当前恢复状态按ce21aec8f/afcb90056及源码记录，不修改实现或资产。
+- 本轮新增editor-wiring-audit.md，集中记录当前作者接线证据和具体剩余项；ce21aec8f/afcb90056仅作恢复历史，不代表当前代码。未修改实现或资产。
 - 保留正式TimelineData/identity/资源/Curve/typed Mutation/Undo/Session、真实Slate UI、原Inspector控件、既有Camera Track和已正确的预览；不恢复右侧自制面板。
 - 删除文档中“必须新建 SlateTimelineEditorSurface/Editor Model”“必须改造全部 IKeyable/AnimatedParameter”“必须拆 UI 程序集”的指令，避免错误规划继续驱动实现。
 - 与 current specs 对比：独立作者能力、合法字段、稳定 identity、正式 Undo 等业务合同继续成立；旧 PreviewSession 条款仍归预览 change 处理。本轮不安装未完成 delta，也不修改其它任务的规范。
-- 本次已纠正本change内部右侧Inspector与原生属性接线的冲突；current btsmtl-timeline-editor-preview仍有TimelinePreviewSession/互斥LiveDebug只读条款，和Graph Shell预览决策冲突，由原场景预览change处理。旧timeline-animation-authoring-surface引用路径本次不存在，不再作为已核对依据。
-- 不新增测试或验证任务；design 第3节明确原函数保留与接线替换清单。原重做第11节撤销，新第11节仅记录原源码接线任务且保持未勾选，不能把回退或规划更新当成代码完成。
+- 本次已纠正本change内部右侧Inspector与原生属性接线的冲突；current btsmtl-timeline-editor-preview仍有TimelinePreviewSession/互斥LiveDebug只读条款，和Graph Shell预览决策冲突，由原场景预览change处理。旧引用缺少btsmtl前缀，正确路径为btsmtl-timeline-animation-authoring-surface；现行源曲线规范已按源owner更新，具体对账以editor-wiring-audit.md为准。
+- 不新增测试或验证任务；原重做方案撤销。tasks第11节按当前代码保留正确成果并记录剩余接线，不能把规划更新或旧勾选当成整体完成；第12节独立记录已授权Runtime工作。

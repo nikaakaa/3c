@@ -100,7 +100,7 @@ Timeline正式编辑/Undo
 
 - RootMotionCurveAsset拥有源累计XYZ/Yaw及其时间/求值模式；源XYZ/Yaw不再注册为Timeline-local可写通道。
 - Clip仍拥有一次使用的区间/映射及Weight/Ease；Warp progress仍属其正式owner，继续用原Slate曲线工具编辑。
-- 如显示源XYZ/Yaw，明确只读和源版本；编辑必须导航真实源owner。Timeline Undo不写共享源，不自动复制源资产制造局部覆盖。
+- Timeline必须提供当前Clip使用的源XYZ/Yaw只读曲线和区间显示，明确源版本与作者/源时间对应，不能仅提供资产导航。编辑源仍由真实源owner负责，Timeline Undo不写共享源、不自动复制；当前缺口与接线见editor-wiring-audit.md A04。
 - 源时间、区间裁切、末端保持和delta等使用曲线owner唯一正式映射，预览不能另造采样公式。旧CurveEndFrame到源秒的等价迁移属于曲线owner，不留UI双读。
 - 源改动使哪些技能数据或控制绑定失效由正式依赖报告决定，不触发Character总Build。
 

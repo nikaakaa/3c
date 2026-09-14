@@ -2,6 +2,8 @@
 
 ## 1. 结论与本次范围
 
+2026-09-14 最新集中作者审阅见[editor-wiring-audit.md](editor-wiring-audit.md)：原UI逐项接线、资产写入范围、源曲线查看和未完成任务以该文档为当前索引。以下历史源码证据不自动等同当前状态；特别是SelectedClip派生、ApplyModify失败回滚与c167301eb绘图区初始化已有正确改动，不重新列为未改。
+
 2026-09-14 新增Runtime规划已单列[timeline-direct-runtime.md](timeline-direct-runtime.md)。本文继续只约束Slate UI解耦与已确认截图修正；UI不运行角色。新增直接Runtime不使用Slate播放器，不把portable内容视为被禁止的自制Editor Model，也不改变本节各历史源码快照事实。仅登记规划，本轮不下发Runtime实现。
 
 2026-09-13 后续领域协调更新：本文件原UI解耦决策保留；运行依赖以[领域运行方案](../replace-character-program-with-domain-runtimes/design.md)为准，MotionCurve数据归属以[曲线源迁移](../../specs/character-root-motion-curves/spec.md)为准。以下源码快照仍是此前阅读事实，不是本轮重跑检查。此次仅PLAN，不改代码或向实现任务发送授权。
@@ -134,7 +136,7 @@ TimelineEditorWindow
 
 真正Timeline-local的Weight/Ease、Warp progress等曲线继续沿正式descriptor换算：normalized域时`t秒 = u × D`、`tangent秒 = tangent归一化 / D`，写回反向换算，weight/WeightedMode/wrap保持。只对作者移动/新增的key按帧吸附。
 
-Motion源XYZ/Yaw不再参与这条局部可写链：由RootMotionCurveAsset拥有，UI消费曲线迁移owner提供的源引用、源区间与播放映射、打开源导航。源XYZ/Yaw可只读展示，不经Timeline mutation改源；旧CurveEndFrame等价迁移和源秒映射归曲线owner，不能在Slate适配里保留旧嵌入曲线双读或另一套采样公式。
+Motion源XYZ/Yaw不再参与这条局部可写链：由RootMotionCurveAsset拥有，UI消费曲线迁移owner提供的源引用、源区间与播放映射、打开源导航。源XYZ/Yaw必须在Timeline只读展示，不经Timeline mutation改源；旧CurveEndFrame等价迁移和源秒映射归曲线owner，不能在Slate适配里保留旧嵌入曲线双读或另一套采样公式。
 
 修改原Renderer的cache释放与通知：缓存身份归当前窗口/通道，不因每次重建对象丢失曲线视野；关闭解除所属订阅并清理对应条目。当前匿名`Undo.undoRedoPerformed`订阅无法逐实例解除，需要改成可解除的原处理函数。不能只销毁隐藏GameObject就认为曲线缓存已释放。
 
@@ -204,7 +206,7 @@ Motion源XYZ/Yaw不再参与这条局部可写链：由RootMotionCurveAsset拥�
 - proposal、delta中的“保留右侧Inspector”、design旧布局图，与后续明确“不新增右侧自制Inspector”冲突；统一为复用原Slate控件，属性使用Unity已有Inspector，不能因此删除正式属性编辑能力。
 - 原tasks“只从原入口分派”不足以约束复用：原入口提前return到另一套绘制不算。本次明确要求同一个函数主体、同一个wrapper/Renderer，允许只为脱离MonoBehaviour迁移原方法。
 - current `openspec/specs/btsmtl-timeline-editor-preview/spec.md`仍要求TimelinePreviewSession与互斥LiveDebug/只读，和已决定的Graph Shell场景预览不同；仍由场景预览change的delta处理，不在本次安装未实现规范。
-- 旧文档引用的`openspec/specs/timeline-animation-authoring-surface/spec.md`本次不存在，不再将其列作已核对的current依据。正式Curve descriptor等要求在当前`btsmtl-timeline-editor-preview`规范后半部可定位。
+- 早期文档误用了不带btsmtl前缀的路径；当前已定位`openspec/specs/btsmtl-timeline-animation-authoring-surface/spec.md`。源曲线owner和局部Curve要求在current规范已更新，不再照抄旧XYZ/Yaw局部写入条款。
 - `implementation.md`包含旧回退前状态，仅保留历史，本次不改其所属任务记录；不能拿旧的“无组件、无Actor、已编译”当当前结论。没有新增测试、验证或编译任务。
 
 ## 13. 2026-09-14 截图回归：轨道错位、重复文字与DopeSheet

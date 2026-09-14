@@ -486,6 +486,16 @@ namespace BTSMTL.Timeline.Editor
                     .Where(track => track.ShowCurves)
                     .Select(track => track.AuthoringId),
                 StringComparer.Ordinal);
+            var lockedTracks = new HashSet<string>(
+                m_Tracks.Values
+                    .Where(track => track.IsLocked)
+                    .Select(track => track.AuthoringId),
+                StringComparer.Ordinal);
+            var lockedClips = new HashSet<string>(
+                m_Clips.Values
+                    .Where(clip => clip.IsLocked)
+                    .Select(clip => clip.AuthoringId),
+                StringComparer.Ordinal);
             m_Groups.Clear();
             m_Sections.Clear();
             m_Tracks.Clear();
@@ -500,6 +510,7 @@ namespace BTSMTL.Timeline.Editor
                     continue;
                 var track = new BtsmtlTimelineTrackBinding(this, group, source);
                 track.ShowCurves = expandedTracks.Contains(source.AuthoringId);
+                track.IsLocked = lockedTracks.Contains(source.AuthoringId);
                 group.AddTrack(track);
                 m_Tracks[source.AuthoringId] = track;
                 for (int clipIndex = 0; clipIndex < source.Clips.Count; clipIndex++)
@@ -508,6 +519,7 @@ namespace BTSMTL.Timeline.Editor
                     if (sourceClip == null)
                         continue;
                     var clip = new BtsmtlTimelineClipBinding(this, track, sourceClip);
+                    clip.IsLocked = lockedClips.Contains(sourceClip.AuthoringId);
                     track.AddClip(clip);
                     m_Clips[sourceClip.AuthoringId] = clip;
                 }

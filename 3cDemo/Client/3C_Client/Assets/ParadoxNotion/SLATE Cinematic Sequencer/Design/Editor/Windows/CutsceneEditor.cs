@@ -2516,6 +2516,32 @@ namespace Slate
             GUI.EndGroup();
         }
 
+        void HandleTrackListInput(
+            Event e,
+            Rect trackRect,
+            MouseCursor cursor,
+            Action selectAndBeginDrag,
+            Func<bool> canDrop,
+            Action drawDropMarker,
+            Action completeDrop)
+        {
+            AddCursorRect(trackRect, cursor);
+            if (e.type == EventType.MouseDown && e.button == 0 && trackRect.Contains(e.mousePosition))
+            {
+                selectAndBeginDrag();
+                e.Use();
+            }
+            if (!canDrop())
+                return;
+            if (trackRect.Contains(e.mousePosition))
+                drawDropMarker();
+            if (e.rawType == EventType.MouseUp && e.button == 0 && trackRect.Contains(e.mousePosition))
+            {
+                completeDrop();
+                e.Use();
+            }
+        }
+
         void ShowGroupsAndTracksList(Rect leftRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
@@ -2617,7 +2643,6 @@ namespace Slate
                     if (formalInspectedParameters != null)
                         formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
 
-                    AddCursorRect(trackRect, formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow);
                     if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
                     {
                         int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
@@ -2629,22 +2654,38 @@ namespace Slate
                         menu.ShowAsContext();
                         e.Use();
                     }
-                    if (e.type == EventType.MouseDown && e.button == 0 && trackRect.Contains(e.mousePosition))
-                    {
-                        embeddedTimeline.Select(track);
-                        formalPickedTrack = track;
-                        e.Use();
-                    }
-                    if (formalPickedTrack != null && !ReferenceEquals(formalPickedTrack, track) && ReferenceEquals(formalPickedTrack, tracks.FirstOrDefault(value => value.AuthoringId == formalPickedTrack.AuthoringId)))
-                    {
-                        if (e.rawType == EventType.MouseUp && trackRect.Contains(e.mousePosition))
+                    HandleTrackListInput(
+                        e,
+                        trackRect,
+                        formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                        () =>
                         {
-                            int destination = trackIndex;
-                            embeddedTimeline.MoveTrack(formalPickedTrack, destination);
+                            embeddedTimeline.Select(track);
+                            formalPickedTrack = track;
+                        },
+                        () => formalPickedTrack != null &&
+                              !ReferenceEquals(formalPickedTrack, track) &&
+                              tracks.Any(value => value.AuthoringId == formalPickedTrack.AuthoringId),
+                        () =>
+                        {
+                            int pickedIndex = 0;
+                            while (pickedIndex < tracks.Count &&
+                                   tracks[pickedIndex].AuthoringId != formalPickedTrack.AuthoringId)
+                                pickedIndex++;
+                            var markRect = new Rect(
+                                trackRect.x,
+                                pickedIndex < trackIndex ? trackRect.yMax - 2 : trackRect.y,
+                                trackRect.width,
+                                2);
+                            GUI.color = Color.grey;
+                            GUI.DrawTexture(markRect, Styles.whiteTexture);
+                            GUI.color = Color.white;
+                        },
+                        () =>
+                        {
+                            embeddedTimeline.MoveTrack(formalPickedTrack, trackIndex);
                             formalPickedTrack = null;
-                            e.Use();
-                        }
-                    }
+                        });
                 }
             }
             GUI.EndGroup();
@@ -2816,8 +2857,6 @@ namespace Slate
                     track.color,
                     () => track.OnTrackInfoGUI(trackRect));
 
-                AddCursorRect(trackRect, pickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow);
-
                 //CONTEXT
                 if ( e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition) ) {
                     var menu = new GenericMenu();
@@ -2847,29 +2886,36 @@ namespace Slate
                     e.Use();
                 }
 
-                //REORDERING
-                if ( e.type == EventType.MouseDown && e.button == 0 && trackRect.Contains(e.mousePosition) ) {
-                    CutsceneUtility.selectedObject = track;
-                    pickedTrack = track;
-                    e.Use();
-                }
-
-                if ( pickedTrack != null && pickedTrack != track && ReferenceEquals(pickedTrack.parent, group) ) {
-                    if ( trackRect.Contains(e.mousePosition) ) {
-                        var markRect = new Rect(trackRect.x, ( group.tracks.IndexOf(pickedTrack) < t ) ? trackRect.yMax - 2 : trackRect.y, trackRect.width, 2);
+                HandleTrackListInput(
+                    e,
+                    trackRect,
+                    pickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                    () =>
+                    {
+                        CutsceneUtility.selectedObject = track;
+                        pickedTrack = track;
+                    },
+                    () => pickedTrack != null &&
+                          pickedTrack != track &&
+                          ReferenceEquals(pickedTrack.parent, group),
+                    () =>
+                    {
+                        var markRect = new Rect(
+                            trackRect.x,
+                            group.tracks.IndexOf(pickedTrack) < t ? trackRect.yMax - 2 : trackRect.y,
+                            trackRect.width,
+                            2);
                         GUI.color = Color.grey;
                         GUI.DrawTexture(markRect, Styles.whiteTexture);
                         GUI.color = Color.white;
-                    }
-
-                    if ( e.rawType == EventType.MouseUp && e.button == 0 && trackRect.Contains(e.mousePosition) ) {
+                    },
+                    () =>
+                    {
                         group.tracks.Remove(pickedTrack);
                         group.tracks.Insert(t, pickedTrack);
                         cutscene.Validate();
                         pickedTrack = null;
-                        e.Use();
-                    }
-                }
+                    });
             }
         }
 

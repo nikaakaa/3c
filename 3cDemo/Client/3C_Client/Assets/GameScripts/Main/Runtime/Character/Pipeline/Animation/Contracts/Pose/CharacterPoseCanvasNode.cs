@@ -234,8 +234,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new CharacterPoseCanvasNode(
                 NodeId,
                 DisplayName,
-                Payload,
-                DynamicPorts.ToArray(),
+                ParadoxNotion.Serialization.JSONSerializer.Clone<
+                    CharacterPoseNodePayload>(Payload),
+                DynamicPorts
+                    .Select(value =>
+                        ParadoxNotion.Serialization.JSONSerializer.Clone<
+                            CharacterPoseDynamicPort>(value))
+                    .ToArray(),
                 position);
 
 #if UNITY_EDITOR

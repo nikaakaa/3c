@@ -268,6 +268,15 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 保留快照数据结构与现有正式 IK/Final Publication 服务；旧 Presentation Diagnostics Coordinator 的引用作为后续原生观察接线清单，不恢复旧 Program 诊断事件链。
 - 本步未运行 Unity/Build；当前断链仍是激进裁剪的中间状态。
 
+## 2026-09-14 r3 激进删除批次执行收据
+
+- Scope：退出 Pose 专属 IR、Program Image/ExecutionView、全图 Operation/Value/Worker 编排、旧 Program 状态生命周期和旧 Pose 诊断 facade；保留 FlowCanvas 原生图合同、节点/端口校验、Source/Constraint/Foot/Goal/FBBIK、Final Publication、共享快照/Projection 和所有并行脏文件。
+- Retired：本轮连续小步删除了旧执行描述、页、调度器、Kernel、操作适配器、旧协调器、Tuning Compiler、Image partial 扩展和旧诊断 facade；没有新增 fallback、兼容 reader 或第二运行时路径。
+- Artifacts：每个删除均同步移除对应 `.meta`；仅维护本文件，删除提交按职责拆分为 `98bf408e5`、`eefcb4111`、`72a2a92d0`、`91ebda04d`、`194bd230b`、`042d2c1ec`、`e189ce453`、`d70759d79`、`ccf98bb1b`、`d1c097cda`、`36b446883`、`f7cc5b126`、`934c9b7b6`、`13eb38a76`。
+- Verification：通过当前工作树的精确 `rg` 残留扫描、目标文件状态检查和每步暂存范围审计；按当前约束未运行 Unity、Build、Play 或资源刷新，因此这些检查只证明删除边界，不证明运行时闭环。
+- Residual risk：旧 Presentation Host、Projection、Snapshot Publisher 和少量并行脏消费者仍引用已退出类型；原生 evaluator 尚未接入 Source/Constraint/Final Publication，当前不能宣称 3.1—3.18 全部完成。
+- Undo：这些是源文件与 `.meta` 的 Git 删除，可按上述 Pose 提交逆序逐个 revert；不要回退或覆盖同期间的并行提交。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

@@ -8,7 +8,6 @@ using System.Linq;
 using System.Text;
 using ThirdPersonCharacter.Editor.ProductBuild;
 using ThirdPersonCharacter.Editor.ProductStartup;
-using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
@@ -517,8 +516,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 {
                     if (backendChanged)
                         PlayerSettings.SetScriptingBackend(descriptor.PlayerTargetGroup, descriptor.ScriptingBackend);
-                    using (ProductBuildValidationContext.Enter(ProductBuildKind.NetworkTestPlayer))
-                    using (CharacterSimulationProgramBuildService.RetainAuthoringDependenciesForPlayerBuild())
+                     using (ProductBuildValidationContext.Enter(ProductBuildKind.NetworkTestPlayer))
                     {
                         report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                         {

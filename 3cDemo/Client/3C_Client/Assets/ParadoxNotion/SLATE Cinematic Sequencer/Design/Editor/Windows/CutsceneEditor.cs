@@ -525,7 +525,7 @@ namespace Slate
             return cutscene.currentTime;
         }
 
-        void SetEmbeddedCurrentTime(float time)
+        internal void SetEmbeddedCurrentTime(float time)
         {
             if (embeddedSetCurrentFrame != null)
             {
@@ -534,6 +534,16 @@ namespace Slate
                 return;
             }
             cutscene.currentTime = time;
+        }
+
+        internal void BeginEmbeddedEdit(string undoName)
+        {
+            BeginEditTransaction(undoName, 0);
+        }
+
+        internal void CommitEmbeddedEdit()
+        {
+            CommitEditTransaction();
         }
 
         public static float CurrentSnapInterval {
@@ -926,6 +936,7 @@ namespace Slate
             embeddedAddTrack = null;
             embeddedCopyClip = null;
             CurveEditor.ClearEmbeddedCache();
+            DopeSheetEditor.ClearEmbeddedCache();
             embeddedTimeline = null;
             formalInspectedParameters = null;
             formalPickedTrack = null;

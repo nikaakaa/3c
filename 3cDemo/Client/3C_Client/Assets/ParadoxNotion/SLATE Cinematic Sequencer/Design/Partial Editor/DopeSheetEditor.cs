@@ -16,12 +16,51 @@ namespace Slate
         public static event System.Action<IAnimatableData> onCurvesUpdated;
 
         private static Dictionary<IAnimatableData, DopeSheetRenderer> cache = new Dictionary<IAnimatableData, DopeSheetRenderer>();
+        private static Dictionary<object, DopeSheetRenderer> embeddedCache = new Dictionary<object, DopeSheetRenderer>();
+
+        public static void ClearEmbeddedCache()
+        {
+            foreach (DopeSheetRenderer renderer in embeddedCache.Values)
+                renderer.Dispose();
+            embeddedCache.Clear();
+        }
+
+        public sealed class EditorContext
+        {
+            public AnimationCurve[] Curves { get; set; }
+            public System.Func<float> GetCurrentTime { get; set; }
+            public System.Action<float> SetCurrentTime { get; set; }
+            public float LocalStart { get; set; }
+            public bool IsCollection { get; set; }
+            public System.Func<float, string> GetKeyLabel { get; set; }
+            public System.Action<float> AddIdentityKey { get; set; }
+            public System.Action RecordUndo { get; set; }
+            public System.Action NotifyChanged { get; set; }
+        }
+
         public static void DrawDopeSheet(IAnimatableData animatable, IKeyable keyable, Rect rect, float startTime, float length, bool highlightRange = true) {
             DopeSheetRenderer dopeSheet = null;
             if ( !cache.TryGetValue(animatable, out dopeSheet) ) {
                 cache[animatable] = dopeSheet = new DopeSheetRenderer(animatable, keyable);
             }
             dopeSheet.DrawDopeSheet(animatable, keyable, rect, startTime, length, highlightRange);
+        }
+
+        public static void DrawDopeSheet(
+            AnimationCurve[] curves,
+            object owner,
+            EditorContext context,
+            Rect rect,
+            float startTime,
+            float length,
+            bool highlightRange = true)
+        {
+            if (owner == null || context == null)
+                return;
+            context.Curves = curves;
+            if (!embeddedCache.TryGetValue(owner, out DopeSheetRenderer dopeSheet))
+                embeddedCache[owner] = dopeSheet = new DopeSheetRenderer(context);
+            dopeSheet.DrawDopeSheet(context, rect, startTime, length, highlightRange);
         }
 
         static DopeSheetEditor() {
@@ -76,6 +115,7 @@ namespace Slate
 
             private IAnimatableData animatable;
             private IKeyable keyable;
+            private EditorContext editorContext;
 
             private AnimationCurve[] allCurves;
             private List<Keyframe> allKeys;
@@ -94,6 +134,7 @@ namespace Slate
 
             private static Keyframe[] copyKeyframes;
             private static List<Keyframe[]> multiCopyKeyframes;
+            private UnityEditor.Undo.UndoRedoCallback undoRedoHandler;
 
             private float? selectionStartPos; //used only for creating the rect
             private float? startDragTime; //the time which we started dragging the selection rect
@@ -123,23 +164,67 @@ namespace Slate
             }
 
             public DopeSheetRenderer(IAnimatableData animatable, IKeyable keyable) {
+                editorContext = null;
                 this.animatable = animatable;
                 this.allCurves = animatable.GetCurves();
                 this.keyable = keyable;
                 RefreshDopeKeys(animatable);
-                Undo.undoRedoPerformed += () => { ResetInteraction(); refreshDopeKeys = true; };
+                SubscribeUndoRedo();
                 UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { refreshDopeKeys = true; };
             }
 
-            public void DrawDopeSheet(IAnimatableData animatable, IKeyable keyable, Rect rect, float startTime, float length, bool highlightRange) {
+            public DopeSheetRenderer(EditorContext context)
+            {
+                editorContext = context;
+                allCurves = context.Curves;
+                RefreshDopeKeys(context);
+                SubscribeUndoRedo();
+                UnityEditor.SceneManagement.PrefabStage.prefabStageClosing += (stage) => { refreshDopeKeys = true; };
+            }
 
+            void SubscribeUndoRedo()
+            {
+                undoRedoHandler = OnUndoRedo;
+                Undo.undoRedoPerformed += undoRedoHandler;
+            }
+
+            void OnUndoRedo()
+            {
+                ResetInteraction();
+                refreshDopeKeys = true;
+            }
+
+            public void Dispose()
+            {
+                if (undoRedoHandler == null)
+                    return;
+                Undo.undoRedoPerformed -= undoRedoHandler;
+                undoRedoHandler = null;
+            }
+
+            public void DrawDopeSheet(IAnimatableData animatable, IKeyable keyable, Rect rect, float startTime, float length, bool highlightRange) {
+                editorContext = null;
+                this.animatable = animatable;
+                this.allCurves = animatable.GetCurves();
+                this.keyable = keyable;
+                DrawDopeSheet(rect, startTime, length, highlightRange);
+            }
+
+            public void DrawDopeSheet(EditorContext context, Rect rect, float startTime, float length, bool highlightRange)
+            {
+                editorContext = context;
+                animatable = null;
+                keyable = null;
+                allCurves = context.Curves;
+                DrawDopeSheet(rect, startTime, length, highlightRange);
+            }
+
+            void DrawDopeSheet(Rect rect, float startTime, float length, bool highlightRange)
+            {
                 this.length = length;
                 this.rect = rect;
                 this.width = rect.width;
                 this.startTime = startTime;
-                this.animatable = animatable;
-                this.allCurves = animatable.GetCurves();
-                this.keyable = keyable;
                 var e = Event.current;
 
                 //no curves?
@@ -151,7 +236,10 @@ namespace Slate
                 //if flag is true refresh all dopesheets of the same IKeyable
                 if ( refreshDopeKeys ) {
                     refreshDopeKeys = false;
-                    DopeSheetEditor.RefreshDopeKeysOf(animatable);
+                    if (editorContext != null)
+                        RefreshDopeKeys(editorContext);
+                    else
+                        DopeSheetEditor.RefreshDopeKeysOf(animatable);
                 }
 
                 //range graphics
@@ -271,8 +359,7 @@ namespace Slate
                             prePickTimes = new List<float>(currentTimes);
                             pickIndex = t;
                             if ( e.clickCount == 2 ) {
-                                keyable.root.currentTime = time + keyable.startTime;
-                                CutsceneUtility.selectedObject = keyable;
+                                SetCurrentTime(time + LocalStart);
                             }
                             e.Use();
                         }
@@ -463,6 +550,33 @@ namespace Slate
                 }
             }
 
+            float CurrentTime => editorContext != null ? editorContext.GetCurrentTime() : keyable.root.currentTime;
+            float LocalStart => editorContext != null ? editorContext.LocalStart : keyable.startTime;
+            bool IsCollection => editorContext != null && editorContext.IsCollection || editorContext == null && animatable is AnimationDataCollection;
+
+            void SetCurrentTime(float time)
+            {
+                if (editorContext != null)
+                    editorContext.SetCurrentTime(time);
+                else
+                    keyable.root.currentTime = time;
+            }
+
+            void AddIdentityKey(float time)
+            {
+                if (editorContext != null)
+                    editorContext.AddIdentityKey?.Invoke(time);
+                else
+                    animatable.TryKeyIdentity(time);
+            }
+
+            string GetKeyLabel(float time)
+            {
+                return editorContext != null
+                    ? editorContext.GetKeyLabel?.Invoke(time) ?? string.Empty
+                    : animatable.GetKeyLabel(time);
+            }
+
             void ResetInteraction() {
                 isRetiming = false;
                 startDragTime = null;
@@ -475,7 +589,7 @@ namespace Slate
             ///<summary>Context menu for single key</summary>
             void DoSingleKeyContextMenu(Event e, float time, TangentMode tangentMode) {
                 var menu = new GenericMenu();
-                menu.AddItem(new GUIContent("Jump Here (Double Click)"), false, () => { keyable.root.currentTime = time + keyable.startTime; });
+                menu.AddItem(new GUIContent("Jump Here (Double Click)"), false, () => { SetCurrentTime(time + LocalStart); });
                 menu.AddItem(new GUIContent("Tangent Mode/Smooth"), tangentMode == TangentMode.Smooth, () => { SetKeyTangentMode(time, TangentMode.Smooth); });
                 menu.AddItem(new GUIContent("Tangent Mode/Linear"), tangentMode == TangentMode.Linear, () => { SetKeyTangentMode(time, TangentMode.Linear); });
                 menu.AddItem(new GUIContent("Tangent Mode/Constant"), tangentMode == TangentMode.Constant, () => { SetKeyTangentMode(time, TangentMode.Constant); });
@@ -533,20 +647,20 @@ namespace Slate
             //Context menu for empty space
             void DoVoidContextMenu(Event e) {
                 var cursorTime = PosToTime(e.mousePosition.x);
-                var isCollection = animatable is AnimationDataCollection;
+                var isCollection = IsCollection;
                 var menu = new GenericMenu();
                 var label = "Create New Key" + ( isCollection ? " (All Parameters)" : "" );
                 menu.AddItem(new GUIContent(label), false, () => { CreateNewKey(cursorTime); });
                 if ( copyKeyframes != null && copyKeyframes.Length == allCurves.Length ) {
                     menu.AddItem(new GUIContent("Paste Key At Cursor"), false, () => { PasteKeyAtTime(cursorTime); });
-                    menu.AddItem(new GUIContent("Paste Key At Scrubber"), false, () => { PasteKeyAtTime(keyable.root.currentTime - keyable.startTime); });
+                    menu.AddItem(new GUIContent("Paste Key At Scrubber"), false, () => { PasteKeyAtTime(CurrentTime - LocalStart); });
                 } else {
                     if ( multiCopyKeyframes != null && multiCopyKeyframes.Count != 0 && multiCopyKeyframes[0].Length == allCurves.Length ) {
                         var from = Mathf.Max(multiCopyKeyframes.FirstOrDefault().Select(k => k.time).ToArray());
                         var to = Mathf.Max(multiCopyKeyframes.LastOrDefault().Select(k => k.time).ToArray());
                         var range = to - from;
                         menu.AddItem(new GUIContent("Paste Keys At Cursor"), false, () => { PasteKeysSelected(cursorTime, range, false); });
-                        menu.AddItem(new GUIContent("Paste Keys At Scrubber"), false, () => { PasteKeysSelected(keyable.root.currentTime - keyable.startTime, range, false); });
+                        menu.AddItem(new GUIContent("Paste Keys At Scrubber"), false, () => { PasteKeysSelected(CurrentTime - LocalStart, range, false); });
                         //TODO: BUGGY NEEDS FIX
                         // if (range > 0){
                         // 	menu.AddItem(new GUIContent(string.Format("Paste Keys (Ripple {0} sec.)", range.ToString("0.00")) ), false, ()=>
@@ -563,6 +677,11 @@ namespace Slate
 
             //...
             void RecordUndo() {
+                if (editorContext != null)
+                {
+                    editorContext.RecordUndo?.Invoke();
+                    return;
+                }
                 UnityEngine.Object obj = keyable as UnityEngine.Object;
                 if ( obj != null ) { Undo.RecordObject(obj, "DopeSheet Change"); }
             }
@@ -570,7 +689,7 @@ namespace Slate
             //...
             void CreateNewKey(float time) {
                 RecordUndo();
-                animatable.TryKeyIdentity(time);
+                AddIdentityKey(time);
                 refreshDopeKeys = true;
                 NotifyChange();
             }
@@ -773,7 +892,11 @@ namespace Slate
 
             //raise changed event
             void NotifyChange() {
-                if ( onCurvesUpdated != null ) {
+                if (editorContext != null)
+                {
+                    editorContext.NotifyChanged?.Invoke();
+                }
+                else if ( onCurvesUpdated != null ) {
                     onCurvesUpdated(animatable);
                 }
             }
@@ -782,14 +905,26 @@ namespace Slate
 
             ///<summary>Should be called after each change to the curves</summary>
             public void RefreshDopeKeys(IAnimatableData animatable) {
+                editorContext = null;
+                RefreshDopeKeys(animatable.GetCurves(), animatable.GetKeyLabel);
+            }
+
+            public void RefreshDopeKeys(EditorContext context)
+            {
+                editorContext = context;
+                RefreshDopeKeys(context.Curves, context.GetKeyLabel);
+            }
+
+            void RefreshDopeKeys(AnimationCurve[] curves, System.Func<float, string> keyLabel)
+            {
 
                 //get all curve keys
-                allCurves = animatable.GetCurves();
+                allCurves = curves ?? System.Array.Empty<AnimationCurve>();
                 allKeys = new List<Keyframe>();
                 for ( var i = 0; i < allCurves.Length; i++ ) {
                     allKeys.AddRange(allCurves[i].keys);
                     //cache wrapmode to parameters
-                    if ( animatable is AnimatedParameter && i == 0 ) {
+                    if ( i == 0 ) {
                         preWrapMode = allCurves[i].preWrapMode;
                         postWrapMode = allCurves[i].postWrapMode;
                     }
@@ -817,7 +952,7 @@ namespace Slate
                         tangentModes.Add(keyTangent);
 
                         //cache key labels
-                        keyLabels.Add(string.Format("<size=8>{0}</size>", animatable.GetKeyLabel(key.time)));
+                        keyLabels.Add(string.Format("<size=8>{0}</size>", keyLabel?.Invoke(key.time) ?? string.Empty));
                     }
                 }
             }

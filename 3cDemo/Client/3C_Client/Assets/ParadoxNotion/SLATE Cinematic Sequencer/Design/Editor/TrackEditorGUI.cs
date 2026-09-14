@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.Linq;
 using UnityEngine;
 
 namespace Slate
@@ -527,13 +528,25 @@ namespace Slate
                 for (int index = 0; index < clip.Parameters.Count; index++)
                 {
                     var parameter = clip.Parameters[index];
+                    var editor = CutsceneEditorSurface.current;
                     var parameterRect = new Rect(finalPosRect.xMin, finalPosRect.yMin + y, finalPosRect.width, 18f);
                     y += 20f;
                     GUI.color = Color.black.WithAlpha(0.05f);
                     GUI.DrawTexture(parameterRect, Texture2D.whiteTexture);
                     GUI.color = Color.white;
                     GUI.Label(parameterRect, string.Format(" <size=10>{0}</size>", parameter.DisplayName), Styles.leftLabel);
-                    DrawKeys(parameter, parameterRect, finalTimeRect);
+                    DopeSheetEditor.DrawDopeSheet(
+                        parameter.Curves == null
+                            ? Array.Empty<AnimationCurve>()
+                            : parameter.Curves.Select(value => value.Curve).ToArray(),
+                        CurveEditor.CreateEmbeddedOwner(
+                            editor,
+                            string.Concat(clip.AuthoringId, ":dope:", parameter.ParameterId)),
+                        CreateDopeSheetContext(clip, parameter, editor),
+                        parameterRect,
+                        finalTimeRect.xMin,
+                        finalTimeRect.width,
+                        true);
                     if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
                     {
                         inspectedParameterIndex = index;
@@ -546,9 +559,22 @@ namespace Slate
             var selectedParameter = clip.Parameters[inspectedParameterIndex];
             if (selectedParameter.Curves == null || selectedParameter.Curves.Count == 0)
                 return;
+            var currentEditor = CutsceneEditorSurface.current;
+            var dopeRect = finalPosRect;
+            dopeRect.y += 4f;
+            dopeRect.height = 16f;
+            DopeSheetEditor.DrawDopeSheet(
+                selectedParameter.Curves.Select(value => value.Curve).ToArray(),
+                CurveEditor.CreateEmbeddedOwner(
+                    currentEditor,
+                    string.Concat(clip.AuthoringId, ":dope:", selectedParameter.ParameterId)),
+                CreateDopeSheetContext(clip, selectedParameter, currentEditor),
+                dopeRect,
+                finalTimeRect.xMin,
+                finalTimeRect.width,
+                true);
             var curveRect = finalPosRect;
-            curveRect.yMin += 4f;
-            CutsceneEditorSurface currentEditor = CutsceneEditorSurface.current;
+            curveRect.yMin = dopeRect.yMax + 4f;
             CurveEditor.DrawCurves(
                 new[] { selectedParameter.Curves[0].Curve },
                 CurveEditor.CreateEmbeddedOwner(
@@ -559,20 +585,31 @@ namespace Slate
                 () => currentEditor?.ApplyEmbeddedCommand(() => { }, "Edit Timeline Curve"));
         }
 
-        static void DrawKeys(IEmbeddedTimelineParameterBinding parameter, Rect rect, Rect timeRect)
+        static DopeSheetEditor.EditorContext CreateDopeSheetContext(
+            IEmbeddedTimelineClipBinding clip,
+            IEmbeddedTimelineParameterBinding parameter,
+            CutsceneEditorSurface editor)
         {
-            if (parameter.Curves == null || parameter.Curves.Count == 0)
-                return;
-            var curve = parameter.Curves[0].Curve;
-            if (curve == null)
-                return;
-            for (int index = 0; index < curve.length; index++)
+            return new DopeSheetEditor.EditorContext
             {
-                float normalized = timeRect.width <= 0f ? 0f : Mathf.InverseLerp(timeRect.xMin, timeRect.xMax, curve[index].time);
-                float x = Mathf.Lerp(rect.xMin, rect.xMax, normalized);
-                var keyRect = new Rect(x - 2f, rect.center.y - 2f, 4f, 4f);
-                GUI.DrawTexture(keyRect, Styles.whiteTexture);
-            }
+                Curves = parameter.Curves == null
+                    ? Array.Empty<AnimationCurve>()
+                    : parameter.Curves.Select(value => value.Curve).ToArray(),
+                GetCurrentTime = () => editor?.EmbeddedCurrentTime() ?? clip.StartTime,
+                SetCurrentTime = value => editor?.SetEmbeddedCurrentTime(value),
+                LocalStart = clip.StartTime,
+                IsCollection = false,
+                GetKeyLabel = time =>
+                {
+                    var curve = parameter.Curves != null && parameter.Curves.Count != 0
+                        ? parameter.Curves[0].Curve
+                        : null;
+                    return curve == null ? string.Empty : curve.Evaluate(time).ToString("0.###");
+                },
+                AddIdentityKey = parameter.AddKey,
+                RecordUndo = () => editor?.BeginEmbeddedEdit("Edit Timeline Keys"),
+                NotifyChanged = () => editor?.CommitEmbeddedEdit()
+            };
         }
 
         public static void DrawTimelineGUI(

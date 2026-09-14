@@ -412,6 +412,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             writer.WriteLine($"return context.Complete(rootParts.{context.RootVariableName});");
             writer.CloseBlock();
             writer.CloseBlock();
+            writer.CloseBlock();
             return writer.ToString();
         }
 

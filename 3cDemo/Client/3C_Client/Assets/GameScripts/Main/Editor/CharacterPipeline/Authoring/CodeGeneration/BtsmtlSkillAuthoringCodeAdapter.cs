@@ -691,8 +691,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     continue;
                 TimelineData data = timeline.Data;
                 string dataVariable = Variable(context, data, $"timeline:{data.AuthoringId}");
-                context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
-                    $"{dataVariable}.ConfigureAuthoringIdentity({String(data.AuthoringId)});");
                 if (!string.Equals(data.Name, timeline.name, StringComparison.Ordinal))
                     context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                         $"{dataVariable}.Name = {String(data.Name)};");
@@ -756,11 +754,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     context.ReportError("timeline_curve_read_failed", $"{clip.AuthoringId}:{descriptor.ChannelId.Value}", error.Message);
                     continue;
                 }
-                if (IsDefaultCurve(curve, descriptor))
+                if (descriptor.IsDefault(curve))
                     continue;
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.Configure,
-                    $"{TypeName(typeof(TimelineCurveChannelCatalog))}.Require({String(descriptor.ChannelId.Value)}).Replace({clipVariable}, {CurveExpression(curve, descriptor.ChannelId)});");
+                    $"{TypeName(typeof(TimelineCurveChannelCatalog))}.Require({String(descriptor.ChannelId.Value)}).Replace({clipVariable}, {CurveExpression(curve)});");
             }
         }
 
@@ -958,43 +956,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         static bool NeedsClipSegmentOverride(Clip clip, UnityEngine.Object reference) =>
             TimelineAuthoringPropertyContract.NeedsSegmentOverride(clip, reference);
 
-        static string CurveExpression(AnimationCurve curve, TimelineCurveChannelId channelId)
-        {
-            return CurveExpression(curve, TimelineCurveChannelCatalog.Require(channelId.Value));
-        }
-
-        static string CurveExpression(AnimationCurve curve, TimelineCurveChannelDescriptor descriptor)
-        {
-            if (IsDefaultCurve(curve, descriptor))
-                return $"{TypeName(typeof(TimelineCurveChannelCatalog))}.Require({String(descriptor.ChannelId.Value)}).CreateDefaultCurve()";
-            return BtsmtlAuthoringCodeValues.AnimationCurve(curve);
-        }
-
-        static bool IsDefaultCurve(AnimationCurve curve, TimelineCurveChannelDescriptor descriptor)
-        {
-            if (curve == null || descriptor == null)
-                return false;
-            return CurvesEqual(curve, descriptor.CreateDefaultCurve());
-        }
-
-        static bool CurvesEqual(AnimationCurve left, AnimationCurve right)
-        {
-            if (left == null || right == null || left.preWrapMode != right.preWrapMode ||
-                left.postWrapMode != right.postWrapMode || left.length != right.length)
-                return false;
-            Keyframe[] leftKeys = left.keys;
-            Keyframe[] rightKeys = right.keys;
-            for (int i = 0; i < leftKeys.Length; i++)
-            {
-                Keyframe a = leftKeys[i];
-                Keyframe b = rightKeys[i];
-                if (a.time != b.time || a.value != b.value || a.inTangent != b.inTangent ||
-                    a.outTangent != b.outTangent || a.inWeight != b.inWeight ||
-                    a.outWeight != b.outWeight || a.weightedMode != b.weightedMode)
-                    return false;
-            }
-            return true;
-        }
+        static string CurveExpression(AnimationCurve curve) => BtsmtlAuthoringCodeValues.AnimationCurve(curve);
 
         string ExternalAsset(
             BtsmtlAuthoringCodeExportContext context,

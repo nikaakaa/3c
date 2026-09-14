@@ -105,6 +105,7 @@ namespace BTSMTL.Timeline
         public TimelineCurveValueDomain ValueDomain { get; }
         public bool Supports(Clip owner) => owner != null && OwnerType.IsInstanceOfType(owner) && (m_Availability?.Invoke(owner) ?? true);
         public AnimationCurve CreateDefaultCurve() => TimelineCurveAuthoring.CopyCurve(m_DefaultFactory());
+        public bool IsDefault(AnimationCurve curve) => TimelineCurveAuthoring.AreEquivalent(curve, CreateDefaultCurve());
 
         public AnimationCurve Read(Clip owner)
         {
@@ -365,6 +366,27 @@ namespace BTSMTL.Timeline
             if (source == null)
                 throw new InvalidOperationException("Timeline curve cannot be null.");
             return new AnimationCurve(source.keys) { preWrapMode = source.preWrapMode, postWrapMode = source.postWrapMode };
+        }
+
+        public static bool AreEquivalent(AnimationCurve left, AnimationCurve right)
+        {
+            if (left == null || right == null || left.preWrapMode != right.preWrapMode ||
+                left.postWrapMode != right.postWrapMode || left.length != right.length)
+                return false;
+            Keyframe[] leftKeys = left.keys;
+            Keyframe[] rightKeys = right.keys;
+            for (int i = 0; i < leftKeys.Length; i++)
+            {
+                Keyframe a = leftKeys[i];
+                Keyframe b = rightKeys[i];
+                if (a.time != b.time || a.value != b.value || a.inTangent != b.inTangent ||
+                    a.outTangent != b.outTangent || a.weightedMode != b.weightedMode)
+                    return false;
+                if (a.weightedMode != WeightedMode.None &&
+                    (a.inWeight != b.inWeight || a.outWeight != b.outWeight))
+                    return false;
+            }
+            return true;
         }
 
         public static ulong Revision(AnimationCurve curve)

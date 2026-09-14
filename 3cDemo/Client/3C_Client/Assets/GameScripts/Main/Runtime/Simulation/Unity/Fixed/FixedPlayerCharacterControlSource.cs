@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException($"Fixed Player Control Source '{name}' requires the Fixed Character Host Camera Rig.");
             return new UnityFixedCharacterInputAdapter(
                 inputProfile,
-                context.Program,
+                context.ControlModule,
                 cameraRig,
                 context.Owner,
                 ActionTargetInputValueId,

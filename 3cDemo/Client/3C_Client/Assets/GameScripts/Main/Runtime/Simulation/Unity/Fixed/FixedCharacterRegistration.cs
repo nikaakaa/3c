@@ -112,11 +112,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             InitialBody = initialBody;
             m_MaximumActivePresentationRecords = maximumActivePresentationRecords;
             m_ControlSource = controlSource ?? throw new ArgumentNullException(nameof(controlSource));
-            if (!m_ControlSource.CharacterProgramId.Equals(Program.Manifest.ProgramId) ||
-                !m_ControlSource.CharacterProgramHash.Equals(Program.ProgramHash))
-            {
-                throw new ArgumentException("Fixed Control Source does not match the Actor Program.", nameof(controlSource));
-            }
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
             m_PresentationRuntimeFactory = presentationRuntimeFactory ??
@@ -281,11 +276,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 		{
 			if (m_PendingProgram == null)
 				return;
-			if (m_ControlSource is IFixedCharacterControlSourceProgramAdoption adoption &&
-				!adoption.TryAdoptProgram(m_PendingProgram, out string inputError))
-			{
-				throw new InvalidOperationException(inputError);
-			}
 			m_DiagnosticsAdapter.AdoptProgram(m_PendingProgram);
 			if (m_PendingProjection != null)
 			{

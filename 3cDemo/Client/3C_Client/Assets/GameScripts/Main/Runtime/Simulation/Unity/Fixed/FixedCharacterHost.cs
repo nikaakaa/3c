@@ -185,8 +185,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Character Pipeline Definition.");
             if (characterDefinition.SimulationTickRate != program.Manifest.TickRate)
                 throw new InvalidOperationException($"Fixed Character Host '{name}' Definition and Program TickRate must match.");
-            CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(
-                CharacterControlRuntimeModuleCatalog.Create());
+            CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
+            CharacterControlRuntimeBinding controlRuntimeBinding = characterDefinition.BuildControlRuntimeBinding(controlModules);
+            CharacterControlModuleContract controlModule = controlModules.RequireContract(controlRuntimeBinding.ModuleId);
             CharacterBodyMotionBinding bodyMotionBinding = characterDefinition.BuildBodyMotionRuntimeBinding();
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = characterDefinition.BuildGameplayEffectRuntimeBinding();
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
@@ -232,7 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 if (projection.EquipmentVisualBindings.Count != 0)
                     m_EquipmentRigBindings.RequireValid();
                 controlSource = controlSourceDefinition.Create(
-                    new FixedCharacterControlSourceContext(this, program));
+                    new FixedCharacterControlSourceContext(this, characterDefinition, controlModule));
                 IUnityFixedCharacterControlSourceRuntime presentationControlSource = controlSource;
                 Func<
                     CharacterPresentationSemanticContract,

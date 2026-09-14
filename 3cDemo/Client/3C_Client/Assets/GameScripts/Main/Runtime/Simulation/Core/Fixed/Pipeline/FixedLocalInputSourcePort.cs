@@ -94,8 +94,6 @@ namespace ThirdPersonSimulation.Fixed
     public interface IFixedCharacterControlSourceRuntime
     {
         string SourceIdentity { get; }
-        ProgramId CharacterProgramId { get; }
-        ProgramHash CharacterProgramHash { get; }
         CharacterSimulationInput BuildInput(FixedCharacterInputBuildContext context);
         byte[] CaptureState();
         void RestoreState(byte[] state);
@@ -193,7 +191,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException("Fixed Local input Source contains a missing binding.", nameof(bindings));
                 if (i > 0 && values[i - 1].ActorId.Equals(binding.ActorId))
                     throw new ArgumentException("Fixed Local input Source contains duplicate ActorId.", nameof(bindings));
-                identity[i + 4] = $"{binding.ActorId}:{binding.ControlSource.SourceIdentity}:{binding.ControlSource.CharacterProgramId}:{binding.ControlSource.CharacterProgramHash}";
+                identity[i + 4] = $"{binding.ActorId}:{binding.ControlSource.SourceIdentity}";
             }
             m_Bindings = values.AsReadOnly();
             m_OffensiveRequestDelayTicks = offensiveRequestDelayTicks;
@@ -239,9 +237,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException("Fixed Local input Source roster contains a missing Actor binding.");
                 FixedLocalSimulationInputBinding binding = m_Bindings[i];
                 IFixedCharacterControlSourceRuntime controlSource = binding.ControlSource;
-                if (!actor.ActorId.Equals(binding.ActorId) ||
-                    !controlSource.CharacterProgramId.Equals(actor.ProgramId) ||
-                    !controlSource.CharacterProgramHash.Equals(actor.ProgramHash))
+                if (!actor.ActorId.Equals(binding.ActorId))
                 {
                     throw new InvalidOperationException($"Fixed Local input binding for Actor '{actor.ActorId}' is incompatible.");
                 }

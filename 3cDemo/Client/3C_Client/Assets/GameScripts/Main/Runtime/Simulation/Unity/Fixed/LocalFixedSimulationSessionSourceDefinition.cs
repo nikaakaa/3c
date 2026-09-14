@@ -117,13 +117,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     throw new InvalidOperationException($"Fixed Local Actor '{context.Registrations[i]?.ActorId}' has no formal Fixed Control Source.");
                 }
                 IFixedCharacterControlSourceRuntime controlSource = registration.FixedControlSource;
-                if (!controlSource.CharacterProgramId.Equals(registration.Program.Manifest.ProgramId) ||
-                    !controlSource.CharacterProgramHash.Equals(registration.Program.ProgramHash))
-                {
-                    throw new InvalidOperationException($"Fixed Local Actor '{registration.ActorId}' Control Source does not match its Fixed Program.");
-                }
                 inputBindings[i] = new FixedLocalSimulationInputBinding(registration.ActorId, controlSource);
-                identityParts[i + 5] = $"{registration.ActorId}:{controlSource.SourceIdentity}:{registration.Program.ProgramHash}";
+                identityParts[i + 5] = $"{registration.ActorId}:{controlSource.SourceIdentity}";
             }
             var identity = new SimulationComponentIdentity(
                 SimulationComponentRole.SessionSource,

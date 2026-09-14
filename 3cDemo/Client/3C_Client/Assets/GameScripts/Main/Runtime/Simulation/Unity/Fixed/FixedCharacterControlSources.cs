@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 using FixedCharacterSimulationInput = ThirdPersonSimulation.Fixed.CharacterSimulationInput;
-using FixedCharacterSimulationProgram = ThirdPersonSimulation.Fixed.CharacterSimulationProgram;
-using FixedProgramConstant = ThirdPersonSimulation.Fixed.ProgramConstant;
 using FixedSimulationInputRequest = ThirdPersonSimulation.Fixed.SimulationInputRequest;
 using FixedSimulationInputValue = ThirdPersonSimulation.Fixed.SimulationInputValue;
 
@@ -20,23 +19,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         void CaptureRenderFrame(ulong renderFrame);
     }
 
-    public interface IFixedCharacterControlSourceProgramAdoption
-    {
-        bool TryAdoptProgram(FixedCharacterSimulationProgram program, out string error);
-    }
-
     public readonly struct FixedCharacterControlSourceContext
     {
         public FixedCharacterControlSourceContext(
             FixedCharacterHost owner,
-            FixedCharacterSimulationProgram program)
+            CharacterPipelineDefinition definition,
+            CharacterControlModuleContract controlModule)
         {
             Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
-            Program = program ?? throw new ArgumentNullException(nameof(program));
+            Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
+            ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
         }
 
         public FixedCharacterHost Owner { get; }
-        public FixedCharacterSimulationProgram Program { get; }
+        public CharacterPipelineDefinition Definition { get; }
+        public CharacterControlModuleContract ControlModule { get; }
     }
 
     public abstract class FixedCharacterControlSource : MonoBehaviour
@@ -45,54 +42,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public abstract IUnityFixedCharacterControlSourceRuntime Create(FixedCharacterControlSourceContext context);
     }
 
-    public sealed class NeutralFixedCharacterSimulationInputAdapter : IUnityFixedCharacterControlSourceRuntime, IFixedCharacterControlSourceProgramAdoption
+    public sealed class NeutralFixedCharacterSimulationInputAdapter : IUnityFixedCharacterControlSourceRuntime
     {
-        const string InputPrefix = "input:value:";
         readonly List<FixedSimulationInputValue> m_Values = new List<FixedSimulationInputValue>();
-        ProgramId m_ProgramId;
-        ProgramHash m_ProgramHash;
         bool m_Active;
         bool m_Disposed;
         ulong m_RenderFrame;
 
-        public NeutralFixedCharacterSimulationInputAdapter(FixedCharacterSimulationProgram program)
+        public NeutralFixedCharacterSimulationInputAdapter(CharacterInputProfile profile)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-            if (program.Manifest.NumericProfile != FixedSimulationNumericProfile.Value)
-                throw new ArgumentException("Neutral Fixed Character input requires a FixedQ32.32 Program.", nameof(program));
-            m_ProgramId = program.Manifest.ProgramId;
-            m_ProgramHash = program.ProgramHash;
-            for (int i = 0; i < program.CatalogEntries.Count; i++)
+            if (profile)
             {
-                ProgramCatalogEntry entry = program.CatalogEntries[i];
-                if (entry.Kind != ProgramCatalogEntryKind.InputValue)
-                    continue;
-                if (!entry.Identity.StartsWith(InputPrefix, StringComparison.Ordinal))
-                    throw new InvalidOperationException($"Fixed Program input catalog identity '{entry.Identity}' is invalid.");
-                string inputId = entry.Identity.Substring(InputPrefix.Length);
-                m_Values.Add(CreateNeutralValue(program, entry, inputId));
+                for (int i = 0; i < profile.InputValues.Count; i++)
+                    m_Values.Add(CreateNeutralValue(profile.InputValues[i]));
             }
             m_Values.Sort((left, right) => string.CompareOrdinal(left.InputId, right.InputId));
-            SourceIdentity = $"NeutralProgramInputs/FixedQ32.32/{program.ProgramHash}";
+            SourceIdentity = "neutral-character-inputs/fixed-q32-32";
         }
 
         public string SourceIdentity { get; }
-        public ProgramId CharacterProgramId => m_ProgramId;
-        public ProgramHash CharacterProgramHash => m_ProgramHash;
-
-        public bool TryAdoptProgram(FixedCharacterSimulationProgram program, out string error)
-        {
-            error = string.Empty;
-            if (program == null || program.Manifest.ProgramId != m_ProgramId ||
-                program.Manifest.NumericProfile != FixedSimulationNumericProfile.Value)
-            {
-                error = "Neutral Fixed input Program identity is incompatible.";
-                return false;
-            }
-            m_ProgramHash = program.ProgramHash;
-            return true;
-        }
 
         public void Activate()
         {
@@ -166,37 +134,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_Values.Clear();
         }
 
-        static FixedSimulationInputValue CreateNeutralValue(
-            FixedCharacterSimulationProgram program,
-            ProgramCatalogEntry entry,
-            string inputId)
+        static FixedSimulationInputValue CreateNeutralValue(CharacterInputValueDefinition definition)
         {
-            ProgramCatalogField typeField = null;
-            for (int i = 0; i < entry.Fields.Count; i++)
+            if (definition == null)
+                throw new InvalidOperationException("Character Input Profile contains a missing input value.");
+            return definition.ValueType switch
             {
-                if (string.Equals(entry.Fields[i].Name, "ValueType", StringComparison.Ordinal))
-                {
-                    typeField = entry.Fields[i];
-                    break;
-                }
-            }
-            if (typeField == null || typeField.Kind != ProgramCatalogFieldKind.Constant)
-                throw new InvalidOperationException($"Fixed Program input '{inputId}' has no ValueType field.");
-            FixedProgramConstant type = program.Constants[typeField.ConstantIndex];
-            if (type.Kind != ThirdPersonSimulation.Fixed.ProgramConstantKind.Int32)
-                throw new InvalidOperationException($"Fixed Program input '{inputId}' ValueType is not Int32.");
-            var kind = (ProgramInputValueKind)type.Int32;
-            return kind switch
-            {
-                ProgramInputValueKind.Boolean => FixedSimulationInputValue.FromBoolean(inputId, false),
-                ProgramInputValueKind.Scalar => FixedSimulationInputValue.FromScalar(inputId, FixedScalar.Zero),
-                ProgramInputValueKind.Vector2 => FixedSimulationInputValue.FromVector2(inputId, FixedVector2.Zero),
-                ProgramInputValueKind.Vector3 => FixedSimulationInputValue.FromVector3(inputId, FixedVector3.Zero),
-                ProgramInputValueKind.Yaw => FixedSimulationInputValue.FromYaw(inputId, FixedYaw.Zero),
-                ProgramInputValueKind.ActionTargetSnapshot => FixedSimulationInputValue.FromActionTargetSnapshot(
-                    inputId,
-                    ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot.None),
-                _ => throw new InvalidOperationException($"Fixed Program input '{inputId}' has unsupported kind '{kind}'.")
+                CharacterInputValueType.Bool => FixedSimulationInputValue.FromBoolean(definition.InputValueId, false),
+                CharacterInputValueType.Float => FixedSimulationInputValue.FromScalar(definition.InputValueId, FixedScalar.Zero),
+                CharacterInputValueType.Vector2 => FixedSimulationInputValue.FromVector2(definition.InputValueId, FixedVector2.Zero),
+                _ => throw new InvalidOperationException($"Fixed character input '{definition.InputValueId}' has unsupported type '{definition.ValueType}'.")
             };
         }
 

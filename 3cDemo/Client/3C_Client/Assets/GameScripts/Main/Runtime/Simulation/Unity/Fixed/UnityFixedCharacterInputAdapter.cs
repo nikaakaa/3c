@@ -12,7 +12,6 @@ using UnityEngine.InputSystem;
 using FixedCharacterSimulationInput = ThirdPersonSimulation.Fixed.CharacterSimulationInput;
 using FixedSimulationInputRequest = ThirdPersonSimulation.Fixed.SimulationInputRequest;
 using FixedSimulationInputValue = ThirdPersonSimulation.Fixed.SimulationInputValue;
-using FixedSimulationOperation = ThirdPersonSimulation.Fixed.SimulationOperation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
@@ -22,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         IDisposable
     {
         readonly CharacterInputProfile m_Profile;
-        ThirdPersonSimulation.Fixed.CharacterSimulationProgram m_Program;
+        readonly CharacterControlModuleContract m_ControlModule;
         readonly ICameraBasisSnapshotProvider m_CameraBasis;
         readonly ISimulationSessionActorHost m_Owner;
         readonly string m_ActionTargetInputValueId;
@@ -48,22 +47,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
+            CharacterControlModuleContract controlModule,
             ICameraBasisSnapshotProvider cameraBasis)
-            : this(profile, program, cameraBasis, null, string.Empty, null)
+            : this(profile, controlModule, cameraBasis, null, string.Empty, null)
         {
         }
 
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
+            CharacterControlModuleContract controlModule,
             ICameraBasisSnapshotProvider cameraBasis,
             ISimulationSessionActorHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)
         {
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
-            m_Program = program ?? throw new ArgumentNullException(nameof(program));
+            m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
             m_CameraBasis = cameraBasis ?? throw new ArgumentNullException(nameof(cameraBasis));
             m_Owner = owner;
             m_ActionTargetInputValueId = string.IsNullOrWhiteSpace(actionTargetInputValueId)
@@ -75,50 +74,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 throw new ArgumentException("Fixed Action target input requires an owner, input value id, and target provider together.");
             }
-            if (program.Manifest.NumericProfile != FixedSimulationNumericProfile.Value)
-                throw new ArgumentException("Unity Fixed Input Adapter requires a FixedQ32.32 Program.", nameof(program));
             var errors = new List<string>();
             if (!profile.CollectConfigurationErrors(errors))
                 throw new InvalidOperationException(string.Join("\n", errors));
             Actions.bindingMask = InputBinding.MaskByGroup(profile.BindingGroup);
             BuildBindings();
             BuildActionTargetInputs();
-            ValidateActionTargetInput();
-            ValidateProgramInputs();
             ResolveDirectionSpaces();
-            m_RequiresCameraBasis = RequiresCameraBasis(program);
+            m_RequiresCameraBasis = RequiresCameraBasis(controlModule);
         }
 
         public string SourceIdentity =>
-            $"UnityInputSystem/FixedQ32.32/{m_Program.ProgramHash}/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
-        public ProgramId CharacterProgramId => m_Program.Manifest.ProgramId;
-        public ProgramHash CharacterProgramHash => m_Program.ProgramHash;
-
-        public bool TryAdoptProgram(ThirdPersonSimulation.Fixed.CharacterSimulationProgram program, out string error)
-        {
-            error = string.Empty;
-            if (program == null || program.Manifest.ProgramId != m_Program.Manifest.ProgramId ||
-                !program.LayoutHash.Equals(m_Program.LayoutHash) ||
-                program.Manifest.NumericProfile != m_Program.Manifest.NumericProfile)
-            {
-                error = "Unity Fixed input Program identity or input layout is incompatible.";
-                return false;
-            }
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram previous = m_Program;
-            m_Program = program;
-            try
-            {
-                ValidateProgramInputs();
-                ResolveDirectionSpaces();
-                return true;
-            }
-            catch (Exception exception)
-            {
-                m_Program = previous;
-                error = exception.Message;
-                return false;
-            }
-        }
+            $"UnityInputSystem/FixedQ32.32/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
         public InputActionAsset Actions => m_Profile.SourceAsset;
 
         public void Activate()
@@ -399,43 +366,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         void BuildActionTargetInputs()
         {
-            const string prefix = "input:value:";
-            for (int entryIndex = 0; entryIndex < m_Program.CatalogEntries.Count; entryIndex++)
-            {
-                ProgramCatalogEntry entry = m_Program.CatalogEntries[entryIndex];
-                if (entry.Kind != ProgramCatalogEntryKind.InputValue ||
-                    !entry.Identity.StartsWith(prefix, StringComparison.Ordinal))
-                    continue;
-                ProgramCatalogField typeField = null;
-                for (int fieldIndex = 0; fieldIndex < entry.Fields.Count; fieldIndex++)
-                {
-                    if (string.Equals(entry.Fields[fieldIndex].Name, "ValueType", StringComparison.Ordinal))
-                    {
-                        typeField = entry.Fields[fieldIndex];
-                        break;
-                    }
-                }
-                if (typeField == null || typeField.Kind != ProgramCatalogFieldKind.Constant)
-                    throw new InvalidOperationException($"Program input '{entry.Identity}' has no ValueType field.");
-                ThirdPersonSimulation.Fixed.ProgramConstant constant = m_Program.Constants[typeField.ConstantIndex];
-                if (constant.Kind != ThirdPersonSimulation.Fixed.ProgramConstantKind.Int32)
-                    throw new InvalidOperationException($"Program input '{entry.Identity}' ValueType is not Int32.");
-                if ((ProgramInputValueKind)constant.Int32 != ProgramInputValueKind.ActionTargetSnapshot)
-                    continue;
-                string inputId = entry.Identity.Substring(prefix.Length);
-                if (m_ValueBindings.ContainsKey(inputId))
-                    throw new InvalidOperationException($"Action target input '{inputId}' must not be bound to an InputAction.");
-                m_ActionTargetInputIds.Add(inputId);
-            }
-            m_ActionTargetInputIds.Sort(StringComparer.Ordinal);
-        }
-
-        void ValidateActionTargetInput()
-        {
-            if (m_ActionTargetProvider == null)
+            if (string.IsNullOrEmpty(m_ActionTargetInputValueId))
                 return;
-            if (!m_ActionTargetInputIds.Contains(m_ActionTargetInputValueId))
-                throw new InvalidOperationException($"Fixed Program does not declare Action target input '{m_ActionTargetInputValueId}'.");
+            if (m_ValueBindings.ContainsKey(m_ActionTargetInputValueId))
+                throw new InvalidOperationException($"Action target input '{m_ActionTargetInputValueId}' must not be bound to an InputAction.");
+            m_ActionTargetInputIds.Add(m_ActionTargetInputValueId);
         }
 
         ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot ResolveActionTarget(
@@ -453,108 +388,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 target.Yaw);
         }
 
-        void ValidateProgramInputs()
-        {
-            var requests = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < m_RequestBindings.Count; i++)
-                requests.Add(m_RequestBindings[i].RequestId);
-            for (int i = 0; i < m_Program.Operations.Count; i++)
-            {
-                FixedSimulationOperation operation = m_Program.Operations[i];
-                CharacterInputValueType expected;
-                switch (operation.Code)
-                {
-                    case SimulationOperationCode.InputBoolean:
-                        expected = CharacterInputValueType.Bool;
-                        break;
-                    case SimulationOperationCode.InputScalar:
-                        expected = CharacterInputValueType.Float;
-                        break;
-                    case SimulationOperationCode.InputVector2:
-                    case SimulationOperationCode.InputVector2Magnitude:
-                        expected = CharacterInputValueType.Vector2;
-                        break;
-                    case SimulationOperationCode.InputRequest:
-                        if (!requests.Contains(operation.Text0))
-                            throw new InvalidOperationException($"Fixed Program input request '{operation.Text0}' has no CharacterInputProfile binding.");
-                        continue;
-                    default:
-                        continue;
-                }
-                if (!m_ValueBindings.TryGetValue(operation.Text0, out InputValueBinding binding) || binding.Kind != expected)
-                    throw new InvalidOperationException($"Fixed Program input '{operation.Text0}' has no matching CharacterInputProfile value binding.");
-            }
-        }
-
         void ResolveDirectionSpaces()
         {
             m_CameraRelativeVector2Ids.Clear();
             m_WorldVector2Ids.Clear();
-            for (int i = 0; i < m_Program.Operations.Count; i++)
+            for (int i = 0; i < m_ControlModule.Motions.Count; i++)
             {
-                FixedSimulationOperation operation = m_Program.Operations[i];
-                if (operation.Code != SimulationOperationCode.LocomotionInputMotion &&
-                    operation.Code != SimulationOperationCode.MoveFacingAngle)
-                {
-                    continue;
-                }
-                bool cameraRelative = operation.Code == SimulationOperationCode.MoveFacingAngle ||
-                                      (operation.Flags & 1U) != 0;
-                HashSet<string> targets = cameraRelative ? m_CameraRelativeVector2Ids : m_WorldVector2Ids;
-                bool found = false;
-                for (int edgeIndex = 0; edgeIndex < m_Program.ControlFlow.Count; edgeIndex++)
-                {
-                    ProgramControlFlowEdge edge = m_Program.ControlFlow[edgeIndex];
-                    if (edge.Kind != ProgramControlFlowKind.Value || !edge.Target.Equals(operation.Handle))
-                        continue;
-                    FixedSimulationOperation source = m_Program.Operations[edge.Source.Value];
-                    if (source.Code != SimulationOperationCode.InputVector2)
-                        continue;
-                    targets.Add(source.Text0);
-                    found = true;
-                }
-                if (!found)
-                    throw new InvalidOperationException($"Fixed Program operation '{operation.Definition.Identity}' must receive movement directly from InputVector2.");
-            }
-            var controlInputs = new Dictionary<string, string>(StringComparer.Ordinal);
-            var controlSpaces = new Dictionary<string, CharacterControlMotionSpace>();
-            for (int i = 0; i < m_Program.CatalogEntries.Count; i++)
-            {
-                ProgramCatalogEntry entry = m_Program.CatalogEntries[i];
-                if (entry.Kind != ProgramCatalogEntryKind.ControlModule)
-                    continue;
-                for (int f = 0; f < entry.Fields.Count; f++)
-                {
-                    ProgramCatalogField field = entry.Fields[f];
-                    if (!field.Name.StartsWith("Motion:", StringComparison.Ordinal))
-                        continue;
-                    int split = field.Name.LastIndexOf(':');
-                    if (split <= "Motion:".Length)
-                        continue;
-                    string binding = field.Name.Substring("Motion:".Length, split - "Motion:".Length);
-                    string leaf = field.Name.Substring(split + 1);
-                    if (leaf == "Input" && field.Kind == ProgramCatalogFieldKind.Identity)
-                        controlInputs[binding] = field.Identity;
-                    else if (leaf == "Space" && field.Kind == ProgramCatalogFieldKind.Constant)
-                    {
-                        ThirdPersonSimulation.Fixed.ProgramConstant constant = m_Program.Constants[field.ConstantIndex];
-                        if (constant.Kind == ThirdPersonSimulation.Fixed.ProgramConstantKind.Int32)
-                            controlSpaces[binding] = (CharacterControlMotionSpace)constant.Int32;
-                    }
-                }
-            }
-            foreach (KeyValuePair<string, string> pair in controlInputs)
-            {
-                if (controlSpaces.TryGetValue(pair.Key, out CharacterControlMotionSpace space) &&
-                    space == CharacterControlMotionSpace.CameraRelative)
-                {
-                    m_CameraRelativeVector2Ids.Add(pair.Value);
-                }
+                CharacterControlMotionDescriptor motion = m_ControlModule.Motions[i];
+                HashSet<string> targets = motion.Space == CharacterControlMotionSpace.CameraRelative
+                    ? m_CameraRelativeVector2Ids
+                    : m_WorldVector2Ids;
+                if (!targets.Add(motion.Input.Value))
+                    throw new InvalidOperationException($"Input '{motion.Input.Value}' is used by multiple Control motions.");
             }
             foreach (string inputId in m_CameraRelativeVector2Ids)
             {
                 if (m_WorldVector2Ids.Contains(inputId))
-                    throw new InvalidOperationException($"Input '{inputId}' is used by camera-relative and world-relative locomotion operations.");
+                    throw new InvalidOperationException($"Input '{inputId}' is used by both camera-relative and world-relative Control motions.");
             }
         }
 
@@ -617,11 +467,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return new Vector2(direction.x, direction.z);
         }
 
-        static bool RequiresCameraBasis(ThirdPersonSimulation.Fixed.CharacterSimulationProgram program)
+        static bool RequiresCameraBasis(CharacterControlModuleContract controlModule)
         {
-            for (int i = 0; i < program.Operations.Count; i++)
+            for (int i = 0; i < controlModule.Motions.Count; i++)
             {
-                if (CameraProgramOperationSchema.IsCameraBasisOperation(program.Operations[i].Code))
+                if (controlModule.Motions[i].Space == CharacterControlMotionSpace.CameraRelative)
                     return true;
             }
             return false;
@@ -784,3 +634,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 }
+

@@ -232,8 +232,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw Failure("authority_runtime_launcher_source_mismatch", "Authority Runtime Launcher does not belong to the prepared Session Source.");
             if (!request.Source.NumericProfileId.Equals(Descriptor.NumericProfileId) ||
                 !request.Source.TargetAbiVersion.Equals(Descriptor.TargetAbiVersion) ||
-                !request.CharacterRuntime.Descriptor.NumericProfileId.Equals(Descriptor.NumericProfileId) ||
-                !request.CharacterRuntime.Descriptor.TargetAbiVersion.Equals(Descriptor.TargetAbiVersion))
+                !request.CharacterRuntime.NumericProfile.Id.Equals(Descriptor.NumericProfileId) ||
+                !request.CharacterRuntime.NumericProfile.AbiVersion.Equals(Descriptor.TargetAbiVersion))
             {
                 throw Failure("authority_runtime_launcher_target_abi_mismatch", "Authority Runtime Launcher, Session Source, and Program Runtime Target ABI do not match.");
             }

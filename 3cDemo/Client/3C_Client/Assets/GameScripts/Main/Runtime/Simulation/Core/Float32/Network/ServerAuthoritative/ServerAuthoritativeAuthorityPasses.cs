@@ -182,7 +182,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writePorts.ExecutionPlan.Write(new SimulationSessionExecutionPlan<Float32SimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                readPorts.CharacterRuntime.Catalog.CatalogHash,
+                readPorts.CharacterRuntime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
                 Roster(readPorts.CharacterRuntime),
                 new[]
@@ -283,7 +283,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             new SimulationSessionExecutionPlan<Float32SimulationStep>(
                 SimulationSessionExecutionPlanStatus.Pending,
                 context.Source,
-                runtime.Catalog.CatalogHash,
+                runtime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
                 Roster(runtime),
                 Array.Empty<SimulationPipelineStepSourceMapping>(),
@@ -523,8 +523,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 for (int i = 0; i < completed.Result.Actors.Count; i++)
                 {
                     SimulationActorTickResult actor = completed.Result.Actors[i];
-                    CharacterSimulationProgram program = readPorts.CharacterRuntime.GetProgram(
-                        readPorts.CharacterRuntime.GetActorIndex(actor.ActorId));
+                    Float32CharacterRuntime characterRuntime = readPorts.CharacterRuntime.Runtime;
                     m_SampleCommands.Clear();
                     m_ReliableEvents.Clear();
                     for (int eventIndex = 0; eventIndex < actor.GameplayFacts.Count; eventIndex++)
@@ -541,9 +540,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     for (int eventIndex = 0; eventIndex < actor.PresentationCommands.Count; eventIndex++)
                     {
                         PresentationCommand command = actor.PresentationCommands[eventIndex];
-                        if (m_ReplicationPolicy.ShouldStream(command, program))
+                        if (m_ReplicationPolicy.ShouldStream(command, characterRuntime))
                             m_SampleCommands.Add(command);
-                        if (m_ReplicationPolicy.ShouldReplicateReliably(command, program))
+                        if (m_ReplicationPolicy.ShouldReplicateReliably(command, characterRuntime))
                             m_ReliableEvents.Add(new ServerAuthoritativeReliableEvent(command));
                         m_Dispositions.Add(new SimulationOutputDisposition(
                             command.Header.EventId,
@@ -621,7 +620,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             Float32CompletedSimulationStep completed,
             AuthorityReplicationEgressReads ports)
         {
-            CharacterSimulationProgram program = ports.CharacterRuntime.Catalog.GetRequired(actor.State.ProgramId);
             int actorIndex = FindActorInput(completed.Step, actor.ActorId);
             ulong inputSequence = completed.Step.Inputs[actorIndex].Sequence;
             ServerAuthoritativeEventHorizon horizon = m_Horizons.TryGetValue(actor.ActorId, out ServerAuthoritativeEventHorizon value)
@@ -630,13 +628,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return new AuthoritativeActorBaseline(
                 actor.ActorId,
                 completed.Step.Tick,
-                program.Manifest.NumericProfile,
-                program.Manifest.NumericProfile.AbiVersion,
-                CharacterSimulationStateCodec.CodecIdentity,
-                program.ProgramHash,
-                program.LayoutHash,
-                program.Manifest.OperationSetVersion,
-                CharacterSimulationStateCodec.Write(actor.State),
+                actor.State.NumericProfile,
+                actor.State.NumericProfile.AbiVersion,
+                Float32CharacterRuntimeStateCodec.CodecIdentity,
+                actor.State.GameplayContentHash,
+                ports.CharacterRuntime.Runtime.OperationSetVersion,
+                Float32CharacterRuntimeStateCodec.Write(actor.State),
                 actor.StateHash,
                 completed.State.WorldState.WorldRevision,
                 completed.State.WorldState.SolverId,

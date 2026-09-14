@@ -52,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 m_RootIdentity,
                 m_EntryIdentity,
                 m_ContentIdentity);
-            return Float32GameplayAbilityExecutionDataCodec.ReadArtifact(
+            Float32GameplayAbilityExecutionData data = Float32GameplayAbilityExecutionDataCodec.ReadArtifact(
                 m_CanonicalArtifact,
                 new Float32GameplayAbilityExecutionDataLoadExpectation(
                     m_AbilityGuid,
@@ -67,8 +67,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     m_ExecutionDataHash,
                     m_StateSchemaHash,
                     m_CanonicalBytesHash,
-                    root),
-                providerBinding);
+                    root));
+            data.ProviderContract.RequireBinding(providerBinding);
+            return data;
         }
 
 #if UNITY_EDITOR

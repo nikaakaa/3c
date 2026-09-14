@@ -83,8 +83,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public static FixedGameplayAbilityExecutionData ReadArtifact(
             byte[] bytes,
-            FixedGameplayAbilityExecutionDataLoadExpectation expectation,
-            GameplayAbilityProviderBinding providerBinding)
+            FixedGameplayAbilityExecutionDataLoadExpectation expectation)
         {
             if (bytes == null || bytes.Length == 0)
                 throw new InvalidOperationException("Fixed Gameplay Ability artifact is empty.");
@@ -124,7 +123,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterSkillId expectedAbilityId = new CharacterSkillId(expectation.AbilityId);
             if (!string.Equals(abilityId, expectedAbilityId.Value, StringComparison.Ordinal))
                 throw new InvalidDataException("Fixed Gameplay Ability artifact Ability identity is inconsistent.");
-            FixedGameplayAbilityExecutionData data = ReadPayload(payload, providerBinding);
+            FixedGameplayAbilityExecutionData data = ReadPayload(payload);
             if (!string.Equals(data.CompilerVersion, compilerVersion, StringComparison.Ordinal) ||
                 !data.OperationSetVersion.Equals(new OperationSetVersion(operationSetVersion)) ||
                 !data.SourceRevision.Equals(new ProgramRevision(sourceRevision)) ||
@@ -184,8 +183,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static FixedGameplayAbilityExecutionData ReadPayload(
-            byte[] bytes,
-            GameplayAbilityProviderBinding providerBinding)
+            byte[] bytes)
         {
             var reader = new CanonicalReader(bytes);
             if (reader.ReadInt32() != PayloadVersion)
@@ -226,7 +224,6 @@ namespace ThirdPersonSimulation.Fixed
             GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract.Create(
                 catalogEntries,
                 index => constants[index].Int32);
-            providerContract.RequireBinding(providerBinding);
             FixedGameplayAbilityExecutionData data = FixedGameplayAbilityExecutionData.Create(
                 abilityId,
                 binding,

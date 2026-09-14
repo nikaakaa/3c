@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_RootIdentity,
                 m_EntryIdentity,
                 m_ContentIdentity);
-            return ThirdPersonSimulation.Fixed.FixedGameplayAbilityExecutionDataCodec.ReadArtifact(
+            FixedGameplayAbilityExecutionData data = ThirdPersonSimulation.Fixed.FixedGameplayAbilityExecutionDataCodec.ReadArtifact(
                 m_CanonicalArtifact,
                 new ThirdPersonSimulation.Fixed.FixedGameplayAbilityExecutionDataLoadExpectation(
                     m_AbilityGuid,
@@ -68,8 +68,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_ExecutionDataHash,
                     m_StateSchemaHash,
                     m_CanonicalBytesHash,
-                    root),
-                providerBinding);
+                    root));
+            data.ProviderContract.RequireBinding(providerBinding);
+            return data;
         }
 
 #if UNITY_EDITOR

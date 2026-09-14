@@ -84,8 +84,7 @@ namespace ThirdPersonSimulation
 
         public static Float32GameplayAbilityExecutionData ReadArtifact(
             byte[] bytes,
-            Float32GameplayAbilityExecutionDataLoadExpectation expectation,
-            GameplayAbilityProviderBinding providerBinding)
+            Float32GameplayAbilityExecutionDataLoadExpectation expectation)
         {
             if (bytes == null || bytes.Length == 0)
                 throw new InvalidOperationException("Float32 Gameplay Ability artifact is empty.");
@@ -125,7 +124,7 @@ namespace ThirdPersonSimulation
             CharacterSkillId expectedAbilityId = new CharacterSkillId(expectation.AbilityId);
             if (!string.Equals(abilityId, expectedAbilityId.Value, StringComparison.Ordinal))
                 throw new InvalidDataException("Float32 Gameplay Ability artifact Ability identity is inconsistent.");
-            Float32GameplayAbilityExecutionData data = ReadPayload(payload, providerBinding);
+            Float32GameplayAbilityExecutionData data = ReadPayload(payload);
             if (!string.Equals(data.CompilerVersion, compilerVersion, StringComparison.Ordinal) ||
                 !data.OperationSetVersion.Equals(new OperationSetVersion(operationSetVersion)) ||
                 !data.SourceRevision.Equals(new ProgramRevision(sourceRevision)) ||
@@ -185,8 +184,7 @@ namespace ThirdPersonSimulation
         }
 
         static Float32GameplayAbilityExecutionData ReadPayload(
-            byte[] bytes,
-            GameplayAbilityProviderBinding providerBinding)
+            byte[] bytes)
         {
             var reader = new CanonicalReader(bytes);
             if (reader.ReadInt32() != PayloadVersion)
@@ -227,7 +225,6 @@ namespace ThirdPersonSimulation
             GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract.Create(
                 catalogEntries,
                 index => constants[index].Int32);
-            providerContract.RequireBinding(providerBinding);
             Float32GameplayAbilityExecutionData data = Float32GameplayAbilityExecutionData.Create(
                 abilityId,
                 binding,

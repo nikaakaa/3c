@@ -2700,7 +2700,7 @@ namespace Slate
 
                     if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
                     {
-                        int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
+                        int frame = embeddedTimeline.CurrentFrame;
                         GenericMenu menu = new GenericMenu();
                         menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
                         if (embeddedTimeline.CanPasteClip)

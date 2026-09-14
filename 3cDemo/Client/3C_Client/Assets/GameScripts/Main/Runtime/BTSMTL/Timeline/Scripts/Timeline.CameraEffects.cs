@@ -15,16 +15,20 @@ namespace BTSMTL.Timeline
             switch (clip)
             {
                 case CameraOverrideClip cameraOverride:
-                    cameraOverride.OverrideTrack = referenceObject as CameraOverrideTrackAsset;
+                    cameraOverride.OverrideTrack = referenceObject as CameraOverrideTrackAsset
+                        ?? throw new ArgumentException("Camera Override clip requires a CameraOverrideTrackAsset.", nameof(referenceObject));
                     break;
                 case CameraZoomClip cameraZoom:
-                    cameraZoom.Zoom = referenceObject as CameraZoomAsset;
+                    cameraZoom.Zoom = referenceObject as CameraZoomAsset
+                        ?? throw new ArgumentException("Camera Zoom clip requires a CameraZoomAsset.", nameof(referenceObject));
                     break;
                 case CameraStretchClip cameraStretch:
-                    cameraStretch.Stretch = referenceObject as CameraStretchAsset;
+                    cameraStretch.Stretch = referenceObject as CameraStretchAsset
+                        ?? throw new ArgumentException("Camera Stretch clip requires a CameraStretchAsset.", nameof(referenceObject));
                     break;
                 case CameraShotClip cameraShot:
-                    cameraShot.Shot = referenceObject as CameraShotAsset;
+                    cameraShot.Shot = referenceObject as CameraShotAsset
+                        ?? throw new ArgumentException("Camera Shot clip requires a CameraShotAsset.", nameof(referenceObject));
                     break;
                 default:
                     throw new InvalidOperationException($"Camera track '{ContractKind}' has an unsupported clip type '{clip.GetType().Name}'.");

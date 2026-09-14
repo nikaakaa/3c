@@ -111,7 +111,7 @@ namespace ThirdPersonSimulation.Fixed
             AbilityLifecycleTransition defaultTransition,
             string reason)
         {
-            GameplayAbilityProgramBinding binding = m_Program.AbilityPrograms.Require(action.SkillId);
+            GameplayAbilityExecutionBinding binding = m_Program.AbilityPrograms.Require(action.SkillId);
             m_Lifecycle.Resolve(action, binding, trigger, source, defaultTransition, reason);
         }
 
@@ -137,14 +137,14 @@ namespace ThirdPersonSimulation.Fixed
                         $"ability={controlRequest.AbilityId}:context={controlRequest.EquipmentContext}");
                 return false;
             }
-            GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
+            GameplayAbilityExecutionBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
             ActionAdmissionProfile profile = RequireAdmissionProfile(skill.AdmissionProfileId);
             return m_Activation.ActivateFromControl(controlRequest, skill, profile);
         }
 
         public void StopFromControl(CharacterControlAbilityStopRequest controlRequest)
         {
-            GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
+            GameplayAbilityExecutionBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
             string trigger = string.IsNullOrWhiteSpace(controlRequest.ActionWindowType)
                 ? controlRequest.Mode == CharacterControlAbilityStopMode.Force
                     ? GameplayAbilityEndTriggerNames.AbortRequested
@@ -195,7 +195,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool TryCommitPendingControl(CharacterSkillId skillId)
         {
-            GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(skillId);
+            GameplayAbilityExecutionBinding skill = m_Program.AbilityPrograms.Require(skillId);
             ActionAdmissionProfile profile = RequireAdmissionProfile(skill.AdmissionProfileId);
             return m_Activation.TryCommitPendingControl(skillId, profile);
         }

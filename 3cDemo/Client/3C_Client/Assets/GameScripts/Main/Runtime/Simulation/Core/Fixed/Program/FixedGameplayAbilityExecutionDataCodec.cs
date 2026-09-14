@@ -219,8 +219,8 @@ namespace ThirdPersonSimulation.Fixed
             ProgramSourceMapEntry[] sourceMap = ReadSourceMapTable(reader);
             ProgramProducer[] producers = ReadTable(reader, ReadProducer);
             reader.RequireComplete();
-            GameplayAbilityProgramCatalog catalog = new GameplayAbilityProgramCatalog(catalogEntries, references);
-            GameplayAbilityProgramBinding binding = catalog.Require(abilityId);
+            GameplayAbilityExecutionCatalog catalog = new GameplayAbilityExecutionCatalog(catalogEntries, references);
+            GameplayAbilityExecutionBinding binding = catalog.Require(abilityId);
             GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract.Create(
                 catalogEntries,
                 index => constants[index].Int32);

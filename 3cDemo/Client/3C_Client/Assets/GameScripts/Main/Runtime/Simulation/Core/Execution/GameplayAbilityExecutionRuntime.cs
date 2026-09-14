@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation
             int operationCount,
             IReadOnlyList<ProgramControlFlowEdge> controlFlow,
             IReadOnlyList<ProgramScopeLayout> scopes,
-            GameplayAbilityProgramCatalog skills,
+            GameplayAbilityExecutionCatalog skills,
             IReadOnlyList<ProgramReference> references,
             IReadOnlyList<ProgramStateSlot> stateSlots,
             Func<int, IReadOnlyList<int>> operationStateSlots)
@@ -515,7 +515,7 @@ namespace ThirdPersonSimulation
 
         public bool ActivateFromControl(
             CharacterControlAbilityRequest controlRequest,
-            GameplayAbilityProgramBinding skill,
+            GameplayAbilityExecutionBinding skill,
             ActionAdmissionProfile profile)
         {
             string requestId = string.IsNullOrEmpty(controlRequest.SourceInputRequestId)
@@ -892,7 +892,7 @@ namespace ThirdPersonSimulation
 
         public void Resolve(
             CharacterSkillId skillId,
-            GameplayAbilityProgramBinding binding,
+            GameplayAbilityExecutionBinding binding,
             string trigger,
             SimulationExecutionSource source,
             AbilityLifecycleTransition defaultTransition,
@@ -906,7 +906,7 @@ namespace ThirdPersonSimulation
 
         public void Resolve(
             TActionState action,
-            GameplayAbilityProgramBinding binding,
+            GameplayAbilityExecutionBinding binding,
             string trigger,
             SimulationExecutionSource source,
             AbilityLifecycleTransition defaultTransition,
@@ -915,7 +915,7 @@ namespace ThirdPersonSimulation
         {
             AbilityLifecycleTransition transition = defaultTransition;
             string resolvedReason = reason ?? string.Empty;
-            if (binding != null && binding.TryGetEndRule(trigger, actionWindowType, out GameplayAbilityProgramEndRule rule))
+            if (binding != null && binding.TryGetEndRule(trigger, actionWindowType, out GameplayAbilityExecutionEndRule rule))
             {
                 transition = RequireTerminalTransition(rule.Transition);
                 if (!string.IsNullOrEmpty(rule.Reason) &&

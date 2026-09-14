@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         FixedGameplayAbilityExecutionData(
             CharacterSkillId abilityId,
-            GameplayAbilityProgramBinding binding,
+            GameplayAbilityExecutionBinding binding,
             GameplayAbilityProviderContract providerContract,
             string compilerVersion,
             OperationSetVersion operationSetVersion,
@@ -77,7 +77,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public CharacterSkillId AbilityId { get; }
-        public GameplayAbilityProgramBinding Binding { get; }
+        public GameplayAbilityExecutionBinding Binding { get; }
         public GameplayAbilityProviderContract ProviderContract { get; }
         public string CompilerVersion { get; }
         public OperationSetVersion OperationSetVersion { get; }
@@ -108,7 +108,7 @@ namespace ThirdPersonSimulation.Fixed
 
         internal static FixedGameplayAbilityExecutionData Create(
             CharacterSkillId abilityId,
-            GameplayAbilityProgramBinding binding,
+            GameplayAbilityExecutionBinding binding,
             GameplayAbilityProviderContract providerContract,
             string compilerVersion,
             OperationSetVersion operationSetVersion,

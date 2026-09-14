@@ -6,9 +6,9 @@ using System.Linq;
 
 namespace ThirdPersonSimulation
 {
-    public readonly struct GameplayAbilityProgramEndRule
+    public readonly struct GameplayAbilityExecutionEndRule
     {
-        public GameplayAbilityProgramEndRule(
+        public GameplayAbilityExecutionEndRule(
             string trigger,
             int transition,
             string actionWindowType,
@@ -95,9 +95,9 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<CharacterControlParameterDescriptor> Parameters => m_Parameters;
     }
 
-    public sealed class GameplayAbilityProgramBinding
+    public sealed class GameplayAbilityExecutionBinding
     {
-        public GameplayAbilityProgramBinding(
+        public GameplayAbilityExecutionBinding(
             CharacterSkillId skillId,
             string admissionProfileId,
             string entryIdentity,
@@ -109,7 +109,7 @@ namespace ThirdPersonSimulation
             string targetKey,
             IEnumerable<GameplayAbilityDependency> dependencies,
             IEnumerable<CharacterSkillId> allowedFollowUps,
-            IEnumerable<GameplayAbilityProgramEndRule> endRules = null)
+            IEnumerable<GameplayAbilityExecutionEndRule> endRules = null)
         {
             if (!skillId.IsValid || !entryOperation.IsValid)
                 throw new ArgumentException("Character SkillProgram binding is incomplete.");
@@ -129,7 +129,7 @@ namespace ThirdPersonSimulation
 
         readonly ReadOnlyCollection<GameplayAbilityDependency> m_Dependencies;
         readonly ReadOnlyCollection<CharacterSkillId> m_AllowedFollowUps;
-        readonly ReadOnlyCollection<GameplayAbilityProgramEndRule> m_EndRules;
+        readonly ReadOnlyCollection<GameplayAbilityExecutionEndRule> m_EndRules;
 
         public CharacterSkillId SkillId { get; }
         public string AdmissionProfileId { get; }
@@ -142,18 +142,18 @@ namespace ThirdPersonSimulation
         public string TargetKey { get; }
         public IReadOnlyList<GameplayAbilityDependency> Dependencies => m_Dependencies;
         public IReadOnlyList<CharacterSkillId> AllowedFollowUps => m_AllowedFollowUps;
-        public IReadOnlyList<GameplayAbilityProgramEndRule> EndRules => m_EndRules;
+        public IReadOnlyList<GameplayAbilityExecutionEndRule> EndRules => m_EndRules;
 
         public bool TryGetEndRule(
             string trigger,
             string actionWindowType,
-            out GameplayAbilityProgramEndRule rule)
+            out GameplayAbilityExecutionEndRule rule)
         {
             string triggerName = SimulationIdentity.Require(trigger, nameof(trigger));
             string windowType = actionWindowType ?? string.Empty;
             for (int i = 0; i < m_EndRules.Count; i++)
             {
-                GameplayAbilityProgramEndRule candidate = m_EndRules[i];
+                GameplayAbilityExecutionEndRule candidate = m_EndRules[i];
                 if (string.Equals(candidate.Trigger, triggerName, StringComparison.Ordinal) &&
                     (triggerName != GameplayAbilityEndTriggerNames.ActionWindowClosed ||
                      string.Equals(candidate.ActionWindowType, windowType, StringComparison.Ordinal)))
@@ -205,12 +205,12 @@ namespace ThirdPersonSimulation
             return values.AsReadOnly();
         }
 
-        static ReadOnlyCollection<GameplayAbilityProgramEndRule> FreezeEndRules(
-            IEnumerable<GameplayAbilityProgramEndRule> endRules)
+        static ReadOnlyCollection<GameplayAbilityExecutionEndRule> FreezeEndRules(
+            IEnumerable<GameplayAbilityExecutionEndRule> endRules)
         {
             var values = endRules == null
-                ? new List<GameplayAbilityProgramEndRule>()
-                : new List<GameplayAbilityProgramEndRule>(endRules);
+                ? new List<GameplayAbilityExecutionEndRule>()
+                : new List<GameplayAbilityExecutionEndRule>(endRules);
             values.Sort((left, right) =>
             {
                 int byTrigger = string.CompareOrdinal(left.Trigger, right.Trigger);
@@ -220,11 +220,11 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class GameplayAbilityProgramCatalog
+    public sealed class GameplayAbilityExecutionCatalog
     {
-        readonly ReadOnlyCollection<GameplayAbilityProgramBinding> m_Bindings;
+        readonly ReadOnlyCollection<GameplayAbilityExecutionBinding> m_Bindings;
 
-        public GameplayAbilityProgramCatalog(
+        public GameplayAbilityExecutionCatalog(
             IReadOnlyList<ProgramCatalogEntry> entries,
             IReadOnlyList<ProgramReference> references)
         {
@@ -232,7 +232,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(entries));
             if (references == null)
                 throw new ArgumentNullException(nameof(references));
-            var values = new List<GameplayAbilityProgramBinding>();
+            var values = new List<GameplayAbilityExecutionBinding>();
             for (int i = 0; i < entries.Count; i++)
             {
                 ProgramCatalogEntry entry = entries[i];
@@ -259,8 +259,8 @@ namespace ThirdPersonSimulation
                     entry,
                     out List<GameplayAbilityDependency> dependencies,
                     out List<CharacterSkillId> allowedFollowUps,
-                    out List<GameplayAbilityProgramEndRule> endRules);
-                values.Add(new GameplayAbilityProgramBinding(
+                    out List<GameplayAbilityExecutionEndRule> endRules);
+                values.Add(new GameplayAbilityExecutionBinding(
                     new CharacterSkillId(skillValue),
                     admissionProfileIdentity,
                     RequireIdentity(entry, "EntryIdentity", null),
@@ -283,9 +283,9 @@ namespace ThirdPersonSimulation
             m_Bindings = values.AsReadOnly();
         }
 
-        public IReadOnlyList<GameplayAbilityProgramBinding> Bindings => m_Bindings;
+        public IReadOnlyList<GameplayAbilityExecutionBinding> Bindings => m_Bindings;
 
-        public GameplayAbilityProgramBinding Require(CharacterSkillId skillId)
+        public GameplayAbilityExecutionBinding Require(CharacterSkillId skillId)
         {
             for (int i = 0; i < m_Bindings.Count; i++)
             {
@@ -360,12 +360,12 @@ namespace ThirdPersonSimulation
             ProgramCatalogEntry entry,
             out List<GameplayAbilityDependency> dependencies,
             out List<CharacterSkillId> allowedFollowUps,
-            out List<GameplayAbilityProgramEndRule> endRules)
+            out List<GameplayAbilityExecutionEndRule> endRules)
         {
             var subgraphs = new Dictionary<int, string>();
             var callSites = new Dictionary<int, string>();
             var followUps = new Dictionary<int, CharacterSkillId>();
-            var endRuleValues = new Dictionary<int, GameplayAbilityProgramEndRule>();
+            var endRuleValues = new Dictionary<int, GameplayAbilityExecutionEndRule>();
             for (int i = 0; i < entry.Fields.Count; i++)
             {
                 ProgramCatalogField field = entry.Fields[i];
@@ -417,7 +417,7 @@ namespace ThirdPersonSimulation
         static void ReadEndRuleField(
             ProgramCatalogEntry entry,
             ProgramCatalogField field,
-            IDictionary<int, GameplayAbilityProgramEndRule> values)
+            IDictionary<int, GameplayAbilityExecutionEndRule> values)
         {
             if (field.Kind != ProgramCatalogFieldKind.Identity)
                 throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' is not an identity.");
@@ -426,8 +426,8 @@ namespace ThirdPersonSimulation
             if (separator <= 0 || !int.TryParse(suffix.Substring(0, separator), out int index) || index < 0)
                 throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' is malformed.");
             string component = suffix.Substring(separator + 1);
-            if (!values.TryGetValue(index, out GameplayAbilityProgramEndRule current))
-                current = new GameplayAbilityProgramEndRule("ExecutionCompleted", 2, string.Empty, string.Empty);
+            if (!values.TryGetValue(index, out GameplayAbilityExecutionEndRule current))
+                current = new GameplayAbilityExecutionEndRule("ExecutionCompleted", 2, string.Empty, string.Empty);
             string trigger = current.Trigger;
             int transition = current.Transition;
             string actionWindowType = current.ActionWindowType;
@@ -450,7 +450,7 @@ namespace ThirdPersonSimulation
                 default:
                     throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' has an unknown component.");
             }
-            values[index] = new GameplayAbilityProgramEndRule(trigger, transition, actionWindowType, reason);
+            values[index] = new GameplayAbilityExecutionEndRule(trigger, transition, actionWindowType, reason);
         }
 
         static void ReadDependencyField(

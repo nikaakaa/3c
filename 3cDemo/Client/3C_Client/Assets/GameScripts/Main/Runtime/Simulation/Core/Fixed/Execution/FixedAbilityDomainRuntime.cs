@@ -26,11 +26,11 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.ability-program-tick")]
         public void Tick()
         {
-            IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
+            IReadOnlyList<GameplayAbilityExecutionBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
             var stoppingInstances = new HashSet<ulong>();
             for (int i = 0; i < skills.Count; i++)
             {
-                GameplayAbilityProgramBinding skill = skills[i];
+                GameplayAbilityExecutionBinding skill = skills[i];
                 IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
                 {
@@ -111,7 +111,7 @@ namespace ThirdPersonSimulation.Fixed
             }
             for (int i = 0; i < skills.Count; i++)
             {
-                GameplayAbilityProgramBinding skill = skills[i];
+                GameplayAbilityExecutionBinding skill = skills[i];
                 m_Actions.TryCommitPendingControl(skill.SkillId);
                 IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)

@@ -635,7 +635,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
                 return;
             }
-            IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
+            IReadOnlyList<GameplayAbilityExecutionBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
             for (int i = 0; i < skills.Count; i++)
             {
                 IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.CurrentActions(skills[i].SkillId);

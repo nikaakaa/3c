@@ -172,11 +172,11 @@ namespace ThirdPersonSimulation.Fixed
                     binding.ConstantIndex,
                     binding.ResolvedValueKind);
             }
-            GameplayAbilityProgramCatalog catalog = new GameplayAbilityProgramCatalog(
+            GameplayAbilityExecutionCatalog catalog = new GameplayAbilityExecutionCatalog(
                 semanticIr.CatalogEntries,
                 semanticIr.References);
             CharacterSkillId abilityId = RequireAbilityId(semanticIr.Manifest.Root.EntryIdentity);
-            GameplayAbilityProgramBinding binding = catalog.Require(abilityId);
+            GameplayAbilityExecutionBinding binding = catalog.Require(abilityId);
             GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract.Create(
                 semanticIr.CatalogEntries,
                 index => constants[index].Int32);

@@ -22,10 +22,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         protected override string serializedSourcePortID { get => m_SourcePortId; set => m_SourcePortId = value; }
         protected override string serializedTargetPortID { get => m_TargetPortId; set => m_TargetPortId = value; }
 
-        public override void Bind() =>
-            throw new InvalidOperationException("Pose authoring connections are compiled, not executed by FlowCanvas.");
+        public override void Bind()
+        {
+            if (!isActive)
+                return;
+            if (sourcePort is FlowCanvas.ValueOutput valueOutput &&
+                targetPort is FlowCanvas.ValueInput valueInput)
+            {
+                valueInput.BindTo(valueOutput);
+                return;
+            }
+            if (sourcePort is FlowCanvas.FlowOutput &&
+                targetPort is FlowCanvas.FlowInput)
+            {
+                base.Bind();
+                return;
+            }
+            throw new InvalidOperationException(
+                $"Pose connection '{EdgeId}' has incompatible runtime ports.");
+        }
 
-        public override void UnBind() { }
+        public override void UnBind()
+        {
+            if (targetPort is FlowCanvas.ValueInput valueInput)
+            {
+                valueInput.UnBind();
+                return;
+            }
+            base.UnBind();
+        }
 
         public override string UID => EdgeId;
         public string EdgeId => m_EdgeId ?? string.Empty;

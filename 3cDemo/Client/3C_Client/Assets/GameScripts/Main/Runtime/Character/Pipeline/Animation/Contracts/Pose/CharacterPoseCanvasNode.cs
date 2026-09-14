@@ -79,15 +79,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         protected override void RegisterPorts()
         {
-#if UNITY_EDITOR
             CharacterPoseCanvasNativePorts.Register(this);
-#endif
         }
 
         public T RequirePayload<T>() where T : CharacterPoseNodePayload =>
             m_Payload as T ??
             throw new InvalidOperationException(
                 $"Pose Canvas node '{NodeId}' does not own payload '{typeof(T).Name}'.");
+
+        internal T ReadNativeOutput<T>(PosePortId portId)
+        {
+            CharacterPoseCanvasGraph owner = graph as CharacterPoseCanvasGraph ??
+                throw new InvalidOperationException("Pose node is not attached to a native Pose graph.");
+            return owner.ReadNativeOutput<T>(this, portId);
+        }
 
         public AnimationChannelId AnimationChannelId => m_Payload switch
         {

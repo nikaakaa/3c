@@ -53,8 +53,62 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override bool allowBlackboardOverrides => false;
         public override bool canAcceptVariableDrops => true;
 
-        protected override void OnGraphInitialize() =>
-            throw new InvalidOperationException("Pose authoring graphs compile to the formal Pose Program; they cannot execute as FlowCanvas graphs.");
+        [NonSerialized] ICharacterPoseCanvasNativeRuntime m_NativeRuntime;
+
+        internal ICharacterPoseCanvasNativeRuntime NativeRuntime => m_NativeRuntime;
+
+        internal void AttachNativeRuntime(ICharacterPoseCanvasNativeRuntime runtime)
+        {
+            if (runtime == null)
+                throw new ArgumentNullException(nameof(runtime));
+            if (isRunning)
+                throw new InvalidOperationException("Pose native runtime cannot attach to a running graph.");
+            if (m_NativeRuntime != null && !ReferenceEquals(m_NativeRuntime, runtime))
+                throw new InvalidOperationException("Pose native runtime is already attached.");
+            m_NativeRuntime = runtime;
+        }
+
+        internal void DetachNativeRuntime(ICharacterPoseCanvasNativeRuntime runtime)
+        {
+            if (runtime == null || !ReferenceEquals(m_NativeRuntime, runtime))
+                throw new InvalidOperationException("Pose native runtime detach does not match the attached runtime.");
+            if (isRunning)
+                throw new InvalidOperationException("Pose native runtime cannot detach from a running graph.");
+            m_NativeRuntime = null;
+        }
+
+        protected override void OnGraphInitialize()
+        {
+            ICharacterPoseCanvasNativeRuntime runtime = m_NativeRuntime ??
+                throw new InvalidOperationException("Pose graph requires an attached native runtime instance.");
+            runtime.Initialize(this);
+            CharacterPoseCanvasNode[] nodes = Nodes.ToArray();
+            for (int i = 0; i < nodes.Length; i++)
+                nodes[i].GatherPorts();
+            for (int i = 0; i < nodes.Length; i++)
+                nodes[i].BindPorts();
+        }
+
+        protected override void OnGraphStarted() =>
+            m_NativeRuntime?.Start(this);
+
+        protected override void OnGraphStoped() =>
+            m_NativeRuntime?.Stop(this);
+
+        protected override void OnGraphObjectDestroy()
+        {
+            m_NativeRuntime?.Dispose();
+            m_NativeRuntime = null;
+        }
+
+        internal T ReadNativeOutput<T>(
+            CharacterPoseCanvasNode node,
+            PosePortId portId)
+        {
+            ICharacterPoseCanvasNativeRuntime runtime = m_NativeRuntime ??
+                throw new InvalidOperationException("Pose graph has no attached native runtime instance.");
+            return runtime.Read<T>(node, portId);
+        }
 
 #if UNITY_EDITOR
         [NonSerialized] BlackboardSource m_EditorBlackboard;

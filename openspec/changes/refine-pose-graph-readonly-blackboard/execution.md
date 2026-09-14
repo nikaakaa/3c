@@ -122,3 +122,14 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 未把以下结果写成 Pose 完成证据：
 
 - 最后一轮完整 Character Float32/Projection 在 Pose、Foot、Inertialization 均通过后，仍有 Definition/Skill `AuthoringDiscovery` 的 null key 诊断；该错误位于并行 Skill/Definition 清理，不是 Pose compiler。作者可自行进行最终端到端验证。
+
+## 2026-09-14 r3 原生 Runtime 第一步
+
+- `CharacterPoseNativeRuntimeContracts.cs` 建立 Pose 图准备、实例上下文、采用版本、帧 lineage、source demand、阶段结果和节点观察的 typed 合同；合同不携带 Pose Image、IR 或全图操作计划。
+- `CharacterPoseCanvasGraph.cs` 增加原生 Runtime 挂载、初始化、启动、停止和输出读取入口；未挂载实例时明确失败，不再用“Pose 图只能编译”拒绝原生生命周期。
+- `CharacterPoseCanvasNode.cs` 取消运行时不注册端口的条件，节点输出通过挂载 Runtime 读取。
+- `CharacterPoseCanvasConnection.cs` 接入 FlowCanvas ValueInput/ValueOutput 的真实绑定和解绑，删除“Pose connection 只能编译”的占位行为。
+- `CharacterPoseCanvasNativePorts.cs` 移除 Editor-only 端口注册和抛异常输出，建立运行时节点静态端口形状；后续以此作为原生图与作者面的共同端口定义收口重复声明。
+- 本步静态编译已确认新增 Pose 文件无新增类型错误；当前完整 Editor 工程仍被共享工作区既有 `GameplayAbilityDataAsset.cs` 对 `Float32GameplayAbilityExecutionData` 的缺失引用阻断。编译后已执行 `dotnet build-server shutdown`。
+
+本步未删除旧 Pose IR/Image/Compiler 链，也未改共享表现 Host、IK 算法或角色快照；这些删除必须等原生 Pose 消费者切换完成后进行。

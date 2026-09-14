@@ -7,15 +7,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal static void RegisterStateMachine(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, ICharacterPoseNativeStateMachineSource>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                ICharacterPoseNativeStateMachineSource>
                 sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(registry, sourceFactory, bufferFactory);
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 CreateSourceHandler(
                     node,
+                    in context,
                     sourceFactory,
                     bufferFactory,
                     (value, source, buffer) =>
@@ -30,15 +33,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static void RegisterLinkedPose(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, ICharacterPoseNativeLinkedPoseSource>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                ICharacterPoseNativeLinkedPoseSource>
                 sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(registry, sourceFactory, bufferFactory);
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 CreateSourceHandler(
                     node,
+                    in context,
                     sourceFactory,
                     bufferFactory,
                     (value, source, buffer) =>
@@ -53,15 +59,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static void RegisterMotionMatching(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 ICharacterPoseNativeMotionMatchingSource> sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(registry, sourceFactory, bufferFactory);
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 CreateSourceHandler(
                     node,
+                    in context,
                     sourceFactory,
                     bufferFactory,
                     (value, source, buffer) =>
@@ -76,25 +84,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static void RegisterHistoryCollector(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseHistoryId> historyIdFactory,
-            Func<CharacterPoseCanvasNode,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 ICharacterPoseNativeHistoryCollectorSource> sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(registry, sourceFactory, bufferFactory);
             if (historyIdFactory == null)
                 throw new ArgumentNullException(nameof(historyIdFactory));
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 CreateSourceHandler(
                     node,
+                    in context,
                     sourceFactory,
                     bufferFactory,
                     (value, source, buffer) =>
                         new CharacterPoseNativeHistoryCollectorHandler(
                             value.NodeId,
-                            historyIdFactory(value),
+                            historyIdFactory(value, context),
                             source,
                             buffer)));
             registry.Register(
@@ -104,15 +114,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static void RegisterEntryPose(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, ICharacterPoseNativeEntryPoseSource>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                ICharacterPoseNativeEntryPoseSource>
                 sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             RequireArguments(registry, sourceFactory, bufferFactory);
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 CreateSourceHandler(
                     node,
+                    in context,
                     sourceFactory,
                     bufferFactory,
                     (value, source, buffer) =>
@@ -127,10 +140,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static void RegisterSubgraph(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, ulong> requestIdFactory,
-            Func<CharacterPoseCanvasNode, ulong> instanceIdFactory,
-            Func<CharacterPoseCanvasNode, ulong> resetGenerationFactory,
-            Func<CharacterPoseCanvasNode, string> reasonFactory)
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ulong>
+                requestIdFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ulong>
+                instanceIdFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, ulong>
+                resetGenerationFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, string>
+                reasonFactory)
         {
             if (registry == null)
                 throw new ArgumentNullException(nameof(registry));
@@ -142,13 +159,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(resetGenerationFactory));
             if (reasonFactory == null)
                 throw new ArgumentNullException(nameof(reasonFactory));
-            var creator = new Creator(node =>
+            var creator = new Creator((node, context) =>
                 new CharacterPoseNativeSubgraphHandler(
                     node.NodeId,
-                    requestIdFactory(node),
-                    instanceIdFactory(node),
-                    resetGenerationFactory(node),
-                    reasonFactory(node),
+                    requestIdFactory(node, context),
+                    instanceIdFactory(node, context),
+                    resetGenerationFactory(node, context),
+                    reasonFactory(node, context),
                     registry));
             registry.Register(
                 CharacterPoseNodeKind.PoseSubgraph,
@@ -157,10 +174,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static void RegisterRootOrientationWarp(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, RootMotionCurveAsset> curveFactory,
-            Func<CharacterPoseCanvasNode,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                RootMotionCurveAsset> curveFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 ICharacterPoseNativeRootOrientationSource> sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
         {
             if (registry == null)
@@ -171,19 +190,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(sourceFactory));
             if (bufferFactory == null)
                 throw new ArgumentNullException(nameof(bufferFactory));
-            var creator = new PreparedCreator((node, preparedBinding) =>
+            var creator = new PreparedCreator((node, preparedBinding, context) =>
             {
                 ICharacterPoseNativeRootOrientationSource source = null;
                 CharacterPoseNativeNodePoseBuffer buffer = null;
                 try
                 {
-                    RootMotionCurveAsset curve = curveFactory(node) ??
+                    RootMotionCurveAsset curve = curveFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native Root Orientation curve factory returned no curve for '{node.NodeId}'.");
-                    source = sourceFactory(node) ??
+                    source = sourceFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native Root Orientation source factory returned no source for '{node.NodeId}'.");
-                    buffer = bufferFactory(node) ??
+                    buffer = bufferFactory(node, context) ??
                         throw new InvalidOperationException(
                             $"Pose native Root Orientation buffer factory returned no buffer for '{node.NodeId}'.");
                     return new CharacterPoseNativeRootOrientationWarpHandler(
@@ -207,8 +226,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static ICharacterPoseNativeNodeHandler CreateSourceHandler<TSource>(
             CharacterPoseCanvasNode node,
-            Func<CharacterPoseCanvasNode, TSource> sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            in CharacterPoseNativeInstanceContext context,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, TSource>
+                sourceFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory,
             Func<CharacterPoseCanvasNode, TSource,
                 CharacterPoseNativeNodePoseBuffer,
@@ -219,10 +241,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeNodePoseBuffer buffer = null;
             try
             {
-                source = sourceFactory(node) ??
+                source = sourceFactory(node, context) ??
                     throw new InvalidOperationException(
                         $"Pose native source factory returned no source for '{node.NodeId}'.");
-                buffer = bufferFactory(node) ??
+                buffer = bufferFactory(node, context) ??
                     throw new InvalidOperationException(
                         $"Pose native buffer factory returned no buffer for '{node.NodeId}'.");
                 return handlerFactory(node, source, buffer);
@@ -237,8 +259,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void RequireArguments<TSource>(
             CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, TSource> sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, TSource>
+                sourceFactory,
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory)
             where TSource : class, IDisposable
         {
@@ -252,11 +276,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         sealed class Creator
         {
-            readonly Func<CharacterPoseCanvasNode,
+            readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 ICharacterPoseNativeNodeHandler> m_Create;
 
             internal Creator(
-                Func<CharacterPoseCanvasNode,
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                     ICharacterPoseNativeNodeHandler> create)
             {
                 m_Create = create ?? throw new ArgumentNullException(nameof(create));
@@ -266,18 +290,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseCanvasNode node,
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
-                m_Create(node);
+                m_Create(node, context);
         }
 
         sealed class PreparedCreator
         {
             readonly Func<CharacterPoseCanvasNode,
                 CharacterPoseNativePreparedBinding,
+                CharacterPoseNativeInstanceContext,
                 ICharacterPoseNativeNodeHandler> m_Create;
 
             internal PreparedCreator(
                 Func<CharacterPoseCanvasNode,
                     CharacterPoseNativePreparedBinding,
+                    CharacterPoseNativeInstanceContext,
                     ICharacterPoseNativeNodeHandler> create)
             {
                 m_Create = create ?? throw new ArgumentNullException(nameof(create));
@@ -287,7 +313,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseCanvasNode node,
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
-                m_Create(node, preparedBinding);
+                m_Create(node, preparedBinding, context);
         }
     }
 }

@@ -388,7 +388,7 @@ namespace Slate
                 track.IsLocked,
                 track.ShowCurves,
                 value => CutsceneEditorSurface.current?.ApplyEmbeddedCommand(() => track.IsActive = value, "Track Active"),
-                value => CutsceneEditorSurface.current?.ApplyEmbeddedCommand(() => track.IsLocked = value, "Track Lock"),
+                value => track.IsLocked = value,
                 value => track.ShowCurves = value);
 
             if (!track.ShowCurves)

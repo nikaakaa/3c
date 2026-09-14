@@ -120,7 +120,7 @@ namespace BTSMTL.Timeline.Editor
             m_EditActive = false;
             if (!IsSourceCurrent())
             {
-                BuildBindings();
+                Rebuild();
                 return;
             }
             try
@@ -136,10 +136,10 @@ namespace BTSMTL.Timeline.Editor
             }
             catch (Exception)
             {
-                BuildBindings();
+                Rebuild();
                 throw;
             }
-            BuildBindings();
+            Rebuild();
         }
 
         public void CancelEdit()
@@ -147,7 +147,7 @@ namespace BTSMTL.Timeline.Editor
             if (!m_EditActive)
                 return;
             m_EditActive = false;
-            BuildBindings();
+            Rebuild();
         }
 
         public void RequestRepaint() { }

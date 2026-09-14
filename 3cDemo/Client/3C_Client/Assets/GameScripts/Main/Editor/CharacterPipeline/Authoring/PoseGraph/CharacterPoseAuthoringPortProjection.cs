@@ -22,11 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (node == null)
                 throw new ArgumentNullException(nameof(node));
-            return CharacterPoseNodeDefinitionModule.Shared
-                .Require(node.Kind)
-                .ProjectPortShape(node)
-                .Select(ToPosePort)
-                .ToArray();
+            return CharacterPoseCanvasNativePorts.GetRuntimeShape(node);
         }
 
         public static IReadOnlyList<CharacterPosePortDefinition>

@@ -1,5 +1,4 @@
 using System;
-using TreeDesigner.Editor;
 
 namespace BTSMTL.Timeline.Editor
 {
@@ -10,7 +9,6 @@ namespace BTSMTL.Timeline.Editor
             UnityEngine.Object serializedOwner,
             string serializedPropertyPath,
             string ownershipLabel,
-            BaseTreeWindow sourceGraphWindow,
             ITimelineEditorRuntimeDebugBinding runtimeDebugBinding = null)
         {
             return new TimelineEditorOpenRequest(

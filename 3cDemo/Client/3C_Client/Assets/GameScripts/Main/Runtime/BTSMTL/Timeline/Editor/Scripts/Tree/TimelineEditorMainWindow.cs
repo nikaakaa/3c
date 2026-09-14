@@ -314,8 +314,7 @@ namespace BTSMTL.Timeline.Editor
                 timeline,
                 serializedOwner,
                 serializedPropertyPath,
-                ownershipLabel,
-                sourceGraphWindow);
+                ownershipLabel);
             if (!BtsmtlSlateTimelineProjection.TryOpen(
                     openRequest,
                     OpenClip,

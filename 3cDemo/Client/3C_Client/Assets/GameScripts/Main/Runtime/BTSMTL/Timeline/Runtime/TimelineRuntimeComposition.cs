@@ -2,10 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
+using ThirdPersonSimulation;
 using TreeDesigner;
 
 namespace BTSMTL.Timeline.Runtime
 {
+    static class TimelineRuntimeIdentity
+    {
+        public static string Require(string value, string name)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException("Timeline runtime identity is required.", name);
+            return value.Trim();
+        }
+    }
+
     public sealed class TimelineRuntimeCallBindingSource : ITimelineRuntimeCallBindingSource
     {
         readonly string m_OwnerIdentity;
@@ -19,8 +30,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelinePlaybackActionContext actionContext,
             IEnumerable<TimelineCallBinding> callBindings = null)
         {
-            m_OwnerIdentity = SimulationIdentity.Require(ownerIdentity, nameof(ownerIdentity));
-            m_CallIdentity = SimulationIdentity.Require(callIdentity, nameof(callIdentity));
+            m_OwnerIdentity = TimelineRuntimeIdentity.Require(ownerIdentity, nameof(ownerIdentity));
+            m_CallIdentity = TimelineRuntimeIdentity.Require(callIdentity, nameof(callIdentity));
             m_ActionContext = actionContext;
             m_CallBindings = new ReadOnlyCollection<TimelineCallBinding>(
                 new List<TimelineCallBinding>(callBindings ?? Array.Empty<TimelineCallBinding>()));
@@ -96,14 +107,14 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (!handle.IsValid)
                 throw new ArgumentOutOfRangeException(nameof(handle));
-            m_Bindings[SimulationIdentity.Require(bindingId, nameof(bindingId))] = handle;
+            m_Bindings[TimelineRuntimeIdentity.Require(bindingId, nameof(bindingId))] = handle;
         }
 
         public void BindDependency(string dependencyIdentity, TimelineRuntimeDependencyHandle handle)
         {
             if (!handle.IsValid)
                 throw new ArgumentOutOfRangeException(nameof(handle));
-            m_Dependencies[SimulationIdentity.Require(dependencyIdentity, nameof(dependencyIdentity))] = handle;
+            m_Dependencies[TimelineRuntimeIdentity.Require(dependencyIdentity, nameof(dependencyIdentity))] = handle;
         }
 
         public bool TryResolve(

@@ -586,7 +586,8 @@ namespace BTSMTL.Timeline.Runtime
                         TimelineRuntimeClipBoundaryKind.Exit,
                         previousAbsolute,
                         nextAbsolute,
-                        maxFrame);
+                        maxFrame,
+                        false);
                 }
             }
             result.Sort((left, right) =>

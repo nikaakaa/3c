@@ -68,6 +68,7 @@ TimelineEditorWindow
 - 已删除仓库内无消费者的 `TimelineEditorToolPanel`、`ITimelineEditorToolProvider`、`TimelineEditorToolCatalog` 及 resolver 链；UI Toolkit 只保留 Unity 窗口容器、owner/source 状态和 Slate `IMGUIContainer` 宿主，不再存在第二个 Timeline 工具面板入口。
 - Slate 包内仍保留原生 Cutscene 使用的 `Director`、`ShotPicker`、`RenderWindow`、Preferences 等入口；`CutsceneEditor` 的 embeddedSurface 路径不创建或调用这些原生运行对象。它们不是 BTSMTL Timeline 残留，不能按 Timeline 清理范围删除。
 - 嵌入绘制现在从原 `ShowGroupsAndTracksList` / `ShowTimeLines` 入口进入；正式 binding 只在原函数入口处分派数据，`OnEmbeddedTimelineGUI` 不再直接调另一套顶层列表/时间线入口。
+- `CutsceneEditor.ShowTimeLines` 的 native 与 embedded 分支互斥；formal 分支每个 Clip 只经过一次原 `DrawTimelineClip`、`GUI.Window` 和 `ActionClipWrapper` 命中处理，不再存在第二个 formal Clip 绘制/鼠标入口。
 - 嵌入游标、逐帧快捷键和引导线也从原 `DoScrubControls`、`DoKeyboardShortcuts`、`DrawGuides` 入口进入；这些入口在正式 binding 下只切换作者时间、调用正式 Clip 编辑或绘制引导，不启用 Slate 播放或采样。
 - formal Clip 不再使用独立的嵌入 Clip 手势循环；Slate 原 `ActionClipWindow` / `ActionClipWrapper` 通过 binding 分支读取 formal 时间、Blend、曲线和选择，拖动/裁剪/混合/DopeSheet/菜单仍走同一窗口交互，提交仍由 `IEmbeddedTimelineBinding` 接回 Session。
 - 嵌入 Surface 每次 `DrawEmbeddedGUI` 都重置本帧的 `formalSelectionHandled`；它只记录当前输入事件是否已由正式 Clip 处理，不把一次 Clip 点击状态泄漏到后续帧。该修正不增加选择源，也不改变原 Slate 命中算法。

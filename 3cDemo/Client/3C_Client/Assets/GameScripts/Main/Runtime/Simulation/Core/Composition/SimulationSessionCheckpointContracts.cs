@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation
         public SimulationSessionCheckpoint(
             SimulationSessionId sessionId,
             SimulationTick tick,
-            ProgramCatalogHash programCatalogHash,
+            GameplayContentHash gameplayContentHash,
             SimulationPipelineHash pipelineHash,
             string backendId,
             string backendSemanticVersion,
@@ -18,14 +18,14 @@ namespace ThirdPersonSimulation
             StableHash snapshotHash,
             byte[] payload)
         {
-            if (!sessionId.IsValid || !tick.IsValid || !programCatalogHash.IsValid ||
+            if (!sessionId.IsValid || !tick.IsValid || !gameplayContentHash.IsValid ||
                 !pipelineHash.IsValid || !snapshotHash.IsValid || payload == null || payload.Length == 0)
             {
                 throw new ArgumentException("Simulation Session checkpoint identity is incomplete.");
             }
             SessionId = sessionId;
             Tick = tick;
-            ProgramCatalogHash = programCatalogHash;
+            GameplayContentHash = gameplayContentHash;
             PipelineHash = pipelineHash;
             BackendId = SimulationIdentity.Require(backendId, nameof(backendId));
             BackendSemanticVersion = SimulationIdentity.Require(backendSemanticVersion, nameof(backendSemanticVersion));
@@ -36,7 +36,7 @@ namespace ThirdPersonSimulation
 
         public SimulationSessionId SessionId { get; }
         public SimulationTick Tick { get; }
-        public ProgramCatalogHash ProgramCatalogHash { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public SimulationPipelineHash PipelineHash { get; }
         public string BackendId { get; }
         public string BackendSemanticVersion { get; }

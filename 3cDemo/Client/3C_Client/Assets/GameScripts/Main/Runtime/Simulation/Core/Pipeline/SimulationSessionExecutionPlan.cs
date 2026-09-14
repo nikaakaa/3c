@@ -55,17 +55,17 @@ namespace ThirdPersonSimulation
         public SimulationRestoreDirective(
             string snapshotId,
             SimulationTick tick,
-            ProgramCatalogHash programCatalogHash,
+            GameplayContentHash gameplayContentHash,
             SimulationPipelineHash pipelineHash,
             string backendId,
             string backendSemanticVersion,
             StableHash snapshotHash)
         {
-            if (!tick.IsValid || !programCatalogHash.IsValid || !pipelineHash.IsValid || !snapshotHash.IsValid)
+            if (!tick.IsValid || !gameplayContentHash.IsValid || !pipelineHash.IsValid || !snapshotHash.IsValid)
                 throw new ArgumentException("Restore directive identity is incomplete.");
             SnapshotId = SimulationIdentity.Require(snapshotId, nameof(snapshotId));
             Tick = tick;
-            ProgramCatalogHash = programCatalogHash;
+            GameplayContentHash = gameplayContentHash;
             PipelineHash = pipelineHash;
             BackendId = SimulationIdentity.Require(backendId, nameof(backendId));
             BackendSemanticVersion = SimulationIdentity.Require(backendSemanticVersion, nameof(backendSemanticVersion));
@@ -74,7 +74,7 @@ namespace ThirdPersonSimulation
 
         public string SnapshotId { get; }
         public SimulationTick Tick { get; }
-        public ProgramCatalogHash ProgramCatalogHash { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public SimulationPipelineHash PipelineHash { get; }
         public string BackendId { get; }
         public string BackendSemanticVersion { get; }
@@ -286,7 +286,7 @@ namespace ThirdPersonSimulation
         public SimulationSessionExecutionPlan(
             SimulationSessionExecutionPlanStatus status,
             SimulationTickSourceIdentity outerSource,
-            ProgramCatalogHash programCatalogHash,
+            GameplayContentHash gameplayContentHash,
             SimulationPipelineHash pipelineHash,
             SimulationActorRosterDescriptor roster,
             IEnumerable<SimulationPipelineStepSourceMapping> sourceMappings,
@@ -296,7 +296,7 @@ namespace ThirdPersonSimulation
         {
             if (!Enum.IsDefined(typeof(SimulationSessionExecutionPlanStatus), status) ||
                 string.IsNullOrEmpty(outerSource.ClockId) || outerSource.SourceTick == 0 ||
-                !programCatalogHash.IsValid || !pipelineHash.IsValid || roster == null)
+                !gameplayContentHash.IsValid || !pipelineHash.IsValid || roster == null)
             {
                 throw new ArgumentException("Session ExecutionPlan identity is incomplete.");
             }
@@ -336,7 +336,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Restore Tick must precede the first ExecutionPlan Step.", nameof(restore));
             Status = status;
             OuterSource = outerSource;
-            ProgramCatalogHash = programCatalogHash;
+            GameplayContentHash = gameplayContentHash;
             PipelineHash = pipelineHash;
             RosterHash = roster.RosterHash;
             Restore = restore;
@@ -346,7 +346,7 @@ namespace ThirdPersonSimulation
 
         public SimulationSessionExecutionPlanStatus Status { get; }
         public SimulationTickSourceIdentity OuterSource { get; }
-        public ProgramCatalogHash ProgramCatalogHash { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public SimulationPipelineHash PipelineHash { get; }
         public StableHash RosterHash { get; }
         public IReadOnlyList<SimulationPipelineStepSourceMapping> SourceMappings => m_SourceMappings;

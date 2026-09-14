@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationWorldSnapshot(
             SimulationNumericProfile numericProfile,
-            ProgramCatalogHash programCatalogHash,
+            GameplayContentHash gameplayContentHash,
             SolverImplementationId solverId,
             string solverVersion,
             WorldRevision worldRevision,
@@ -107,10 +107,10 @@ namespace ThirdPersonSimulation.Fixed
             byte[] worldStateBytes,
             bool deterministicValidity)
         {
-            if (!numericProfile.IsValid || !programCatalogHash.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value) || !tick.IsValid)
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value) || !tick.IsValid)
                 throw new ArgumentException("Simulation World Snapshot header is incomplete.");
             NumericProfile = numericProfile;
-            ProgramCatalogHash = programCatalogHash;
+            GameplayContentHash = gameplayContentHash;
             SolverId = solverId;
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
@@ -148,7 +148,7 @@ namespace ThirdPersonSimulation.Fixed
 
         internal SimulationWorldSnapshot(
             SimulationNumericProfile numericProfile,
-            ProgramCatalogHash programCatalogHash,
+            GameplayContentHash gameplayContentHash,
             SolverImplementationId solverId,
             string solverVersion,
             WorldRevision worldRevision,
@@ -158,7 +158,7 @@ namespace ThirdPersonSimulation.Fixed
             WorldSimulationState worldState,
             bool deterministicValidity)
         {
-            if (!numericProfile.IsValid || !programCatalogHash.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value) || !tick.IsValid)
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value) || !tick.IsValid)
                 throw new ArgumentException("Simulation World Snapshot header is incomplete.");
             if (!worldStateHash.IsValid)
                 throw new ArgumentException("Simulation World Snapshot state hash is invalid.", nameof(worldStateHash));
@@ -170,7 +170,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Simulation World Snapshot state binding does not match its header.", nameof(worldState));
             }
             NumericProfile = numericProfile;
-            ProgramCatalogHash = programCatalogHash;
+            GameplayContentHash = gameplayContentHash;
             SolverId = solverId;
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
@@ -194,7 +194,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public SimulationNumericProfile NumericProfile { get; }
-        public ProgramCatalogHash ProgramCatalogHash { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public SolverImplementationId SolverId { get; }
         public string SolverVersion { get; }
         public WorldRevision WorldRevision { get; }
@@ -390,8 +390,8 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
-            if (snapshot.NumericProfile != m_Catalog.NumericProfile || !snapshot.ProgramCatalogHash.Equals(m_Catalog.CatalogHash))
-                throw new InvalidDataException("Snapshot Numeric Profile or ProgramCatalogHash does not match the active Catalog.");
+            if (snapshot.NumericProfile != m_Catalog.NumericProfile || !snapshot.GameplayContentHash.Equals(m_Catalog.CatalogHash))
+                throw new InvalidDataException("Snapshot Numeric Profile or GameplayContentHash does not match the active Catalog.");
             if (!snapshot.SolverId.Equals(m_Current.WorldState.SolverId) ||
                 !string.Equals(snapshot.SolverVersion, m_Current.WorldState.SolverVersion, StringComparison.Ordinal) ||
                 !snapshot.WorldRevision.Equals(m_Current.WorldState.WorldRevision))
@@ -490,7 +490,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException("Simulation World Snapshot header is invalid.");
             var expectedHash = new SimulationWorldHash(new StableHash(reader.ReadString()));
             SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
-            var catalogHash = new ProgramCatalogHash(new StableHash(reader.ReadString()));
+            var catalogHash = new GameplayContentHash(new StableHash(reader.ReadString()));
             var solverId = new SolverImplementationId(reader.ReadString());
             string solverVersion = reader.ReadString();
             var worldRevision = new WorldRevision(reader.ReadString());
@@ -546,7 +546,7 @@ namespace ThirdPersonSimulation.Fixed
         static void WriteHeader(CanonicalWriter writer, SimulationWorldSnapshot snapshot)
         {
             SimulationNumericProfileCodec.Write(writer, snapshot.NumericProfile);
-            writer.WriteString(snapshot.ProgramCatalogHash.ToString());
+            writer.WriteString(snapshot.GameplayContentHash.ToString());
             writer.WriteString(snapshot.SolverId.Value);
             writer.WriteString(snapshot.SolverVersion);
             writer.WriteString(snapshot.WorldRevision.Value);

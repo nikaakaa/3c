@@ -1,4 +1,4 @@
-﻿using ThirdPersonSimulation;
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -107,8 +107,8 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException("Restore validation requires complete Session dependencies.");
             if (!snapshot.CompositionIdentity.Equals(descriptor.Identity) ||
                 snapshot.Tick != directive.Tick || !snapshot.SnapshotHash.Equals(directive.SnapshotHash) ||
-                !snapshot.World.ProgramCatalogHash.Equals(catalog.CatalogHash) ||
-                !directive.ProgramCatalogHash.Equals(catalog.CatalogHash) ||
+                !snapshot.World.GameplayContentHash.Equals(catalog.CatalogHash) ||
+                !directive.GameplayContentHash.Equals(catalog.CatalogHash) ||
                 !snapshot.Pipeline.Pipeline.Equals(descriptor.Pipeline) ||
                 !directive.PipelineHash.Equals(descriptor.Pipeline.Hash) ||
                 !snapshot.Pipeline.Backend.Equals(descriptor.ExecutionBackend) ||

@@ -165,13 +165,13 @@ namespace ThirdPersonSimulation
         public override string ToString() => Value.ToString();
     }
 
-    public readonly struct ProgramCatalogHash : IEquatable<ProgramCatalogHash>
+    public readonly struct GameplayContentHash : IEquatable<GameplayContentHash>
     {
-        public ProgramCatalogHash(StableHash value) { Value = value; }
+        public GameplayContentHash(StableHash value) { Value = value; }
         public StableHash Value { get; }
         public bool IsValid => Value.IsValid;
-        public bool Equals(ProgramCatalogHash other) => Value == other.Value;
-        public override bool Equals(object obj) => obj is ProgramCatalogHash other && Equals(other);
+        public bool Equals(GameplayContentHash other) => Value == other.Value;
+        public override bool Equals(object obj) => obj is GameplayContentHash other && Equals(other);
         public override int GetHashCode() => Value.GetHashCode();
         public override string ToString() => Value.ToString();
     }

@@ -204,7 +204,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationProgramEpoch current = SimulationProgramEpoch.Initial(m_Catalog.CatalogHash);
             if (!epoch.IsValid)
                 throw new ArgumentException("Program Epoch is invalid.", nameof(epoch));
-            if (epoch.Value <= current.Value && epoch.ProgramCatalogHash.Equals(m_Catalog.CatalogHash))
+            if (epoch.Value <= current.Value && epoch.GameplayContentHash.Equals(m_Catalog.CatalogHash))
             {
                 return new SimulationProgramAdoptionResult(
                     SimulationProgramAdoptionStatus.Rejected,
@@ -231,7 +231,7 @@ namespace ThirdPersonSimulation.Fixed
             var roster = new List<SimulationActorBinding>(typed);
             roster.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             m_Roster = roster.AsReadOnly();
-            m_Services.Descriptor.AdoptProgramCatalogHash(catalog.CatalogHash);
+            m_Services.Descriptor.AdoptGameplayContentHash(catalog.CatalogHash);
             return new SimulationProgramAdoptionResult(
                 SimulationProgramAdoptionStatus.Applied,
                 epoch,
@@ -299,7 +299,7 @@ namespace ThirdPersonSimulation.Fixed
             var directive = new SimulationRestoreDirective(
                 checkpoint.SnapshotId,
                 checkpoint.Tick,
-                checkpoint.ProgramCatalogHash,
+                checkpoint.GameplayContentHash,
                 checkpoint.PipelineHash,
                 checkpoint.BackendId,
                 checkpoint.BackendSemanticVersion,

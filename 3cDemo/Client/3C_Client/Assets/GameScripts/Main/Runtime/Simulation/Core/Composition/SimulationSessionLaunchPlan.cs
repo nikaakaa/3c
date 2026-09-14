@@ -170,7 +170,7 @@ namespace ThirdPersonSimulation
         public SimulationComponentIdentity WorldSolver => Descriptor.WorldSolver;
         public SimulationComponentIdentity SnapshotCodec => Descriptor.SnapshotCodec;
         public SimulationComponentIdentity Committer => Descriptor.Committer;
-        public ProgramCatalogHash ProgramCatalogHash => Descriptor.ProgramCatalogHash;
+        public GameplayContentHash GameplayContentHash => Descriptor.GameplayContentHash;
         public SimulationActorRosterDescriptor Roster => Descriptor.Roster;
         public IReadOnlyList<SimulationPortDescriptor> SourcePorts => m_SourcePorts;
         public IReadOnlyList<SimulationInitialStateIdentity> InitialStates => m_InitialStates;

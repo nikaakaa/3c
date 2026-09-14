@@ -573,7 +573,7 @@ namespace ThirdPersonSimulation
             SimulationSessionLogicTickContext outer)
         {
             if (plan == null || !plan.OuterSource.Equals(outer.Source) ||
-                !plan.ProgramCatalogHash.Equals(m_Services.Descriptor.ProgramCatalogHash) ||
+                !plan.GameplayContentHash.Equals(m_Services.Descriptor.GameplayContentHash) ||
                 !plan.PipelineHash.Equals(m_Services.Plan.Identity.Hash) ||
                 !plan.RosterHash.Equals(m_Services.Descriptor.Roster.RosterHash))
             {
@@ -640,7 +640,7 @@ namespace ThirdPersonSimulation
             var context = new SimulationPipelineReconstructionContext(
                 m_Services.Descriptor.Identity,
                 m_Services.Plan.Identity,
-                m_Services.Descriptor.ProgramCatalogHash,
+                m_Services.Descriptor.GameplayContentHash,
                 m_Services.Descriptor.Roster.RosterHash,
                 m_Target.BaselineWorldRevision);
             for (int i = 0; i < m_Services.ReconstructiblePasses.Count; i++)

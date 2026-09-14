@@ -167,7 +167,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var directive = new SimulationRestoreDirective(
                 snapshotId,
                 baseline.AuthorityTick,
-                world.ProgramCatalogHash,
+                world.GameplayContentHash,
                 pipeline.Hash,
                 pipelineSnapshot.Backend.ComponentId,
                 pipelineSnapshot.Backend.SemanticVersion,
@@ -203,7 +203,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 localWorld.SolverStatePayload.ToArray());
             return new SimulationWorldSnapshot(
                 local.NumericProfile,
-                local.ProgramCatalogHash,
+                local.GameplayContentHash,
                 local.SolverId,
                 local.SolverVersion,
                 local.WorldRevision,

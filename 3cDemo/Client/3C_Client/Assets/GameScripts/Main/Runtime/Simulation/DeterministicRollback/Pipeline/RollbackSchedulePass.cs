@@ -188,7 +188,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static SimulationSessionExecutionPlan<FixedSimulationStep> BuildNoStep(
             SimulationPipelineScheduleContext context,
-            ProgramCatalogHash catalogHash,
+            GameplayContentHash catalogHash,
             SimulationActorRosterDescriptor roster)
         {
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(

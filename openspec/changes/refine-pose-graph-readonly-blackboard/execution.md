@@ -237,3 +237,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 这些文件只把旧 Operation header、Value page、Worker batch 接到节点执行；Constraint/Final 的正式能力仍由 `CharacterPoseConstraintRuntime`、`CharacterFinalPosePublication` 和现有 Foot/Goal/FBBIK 服务负责，不删除它们。
 - 旧 Program Executor/Evaluation 与诊断消费者的引用继续作为断链清单保留，不建立新的 Worker 或 Operation 兼容层。
 - 本步未运行 Unity/Build；当前断链仍是激进裁剪中间状态，不能作为完成证据。
+
+## 2026-09-14 r3 删除旧 Pose 协调器
+
+- 删除 `PoseGraph/CharacterPoseTuningCoordinator.cs` 和 `CharacterPoseMotionMatchingCoordinator.cs` 及其 `.meta`；前者只把旧 Program Runtime 接到调参入口，后者只把旧 Program frame lease 接到 Motion Matching 完成/回放入口。
+- Tuning 继续使用正式的 Tuning Binding，Motion Matching 继续由 `CharacterMotionMatchingPresentationModule` 和原生 Pose 节点输入合同负责；不恢复旧协调器或双重状态。
+- 本步未运行 Unity/Build；现有 Presentation Host 的旧引用仍作为下一步断链清单，不能作为完成证据。

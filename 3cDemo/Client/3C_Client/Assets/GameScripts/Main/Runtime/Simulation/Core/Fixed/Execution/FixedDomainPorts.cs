@@ -29,11 +29,6 @@ namespace ThirdPersonSimulation.Fixed
         void Submit(MotionWarpSample<FixedScalar, FixedActionInstanceState> sample);
     }
 
-    internal interface IFixedActivationReader
-    {
-        ulong ReadGeneration(OperationHandle operation);
-    }
-
     internal interface IFixedActionContextReader
     {
         bool IsContextActive(string contextId);

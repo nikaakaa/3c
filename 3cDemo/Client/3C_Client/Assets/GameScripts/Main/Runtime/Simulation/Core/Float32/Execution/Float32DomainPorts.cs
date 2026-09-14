@@ -28,11 +28,6 @@ namespace ThirdPersonSimulation
         void Submit(MotionWarpSample<Float32Scalar, Float32ActionInstanceState> sample);
     }
 
-    internal interface IFloat32ActivationReader
-    {
-        ulong ReadGeneration(OperationHandle operation);
-    }
-
     internal interface IFloat32ActionContextReader
     {
         bool IsContextActive(string contextId);

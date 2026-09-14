@@ -253,6 +253,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 output.Space != CharacterPoseSpace.Local ||
                 output.Availability[0] != AnimationPoseAvailability.Pose ||
                 output.InvalidReason[0] != AnimationPoseNativeInvalidReason.None ||
+                output.CompletedAt[0] != output.CompletionIdentity ||
                 output.ContinuityIdentity[0] == 0 ||
                 !float.IsFinite(output.OutputWeight[0]) ||
                 output.OutputWeight[0] < 0f || output.OutputWeight[0] > 1f ||

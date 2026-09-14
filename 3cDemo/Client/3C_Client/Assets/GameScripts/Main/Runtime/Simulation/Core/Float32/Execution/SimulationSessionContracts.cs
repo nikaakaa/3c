@@ -4,61 +4,6 @@ using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class SimulationActorBinding : ISimulationProgramBinding
-    {
-        public SimulationActorBinding(
-            ActorId actorId,
-            CharacterSimulationProgram program,
-            string worldBodyBindingId,
-            CharacterControlRuntimeBinding controlRuntimeBinding,
-            CharacterBodyMotionBinding bodyMotionBinding,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
-        {
-            if (!actorId.IsValid)
-                throw new ArgumentException("Actor identity is invalid.", nameof(actorId));
-            Program = program ?? throw new ArgumentNullException(nameof(program));
-            ActorId = actorId;
-            ProgramId = program.Manifest.ProgramId;
-            ProgramHash = program.ProgramHash;
-            LayoutHash = program.LayoutHash;
-            WorldBodyBindingId = SimulationIdentity.Require(worldBodyBindingId, nameof(worldBodyBindingId));
-            if (program.Manifest.Root.IsCharacter && controlRuntimeBinding == null)
-                throw new ArgumentNullException(nameof(controlRuntimeBinding));
-            if (!program.Manifest.Root.IsCharacter && controlRuntimeBinding != null)
-                throw new ArgumentException("Non-Character Program cannot carry a Control runtime binding.", nameof(controlRuntimeBinding));
-            if (program.Manifest.Root.IsCharacter && bodyMotionBinding == null)
-                throw new ArgumentNullException(nameof(bodyMotionBinding));
-            if (!program.Manifest.Root.IsCharacter && bodyMotionBinding != null)
-                throw new ArgumentException("Non-Character Program cannot carry a Body Motion binding.", nameof(bodyMotionBinding));
-            if (program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding == null)
-                throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
-            if (!program.Manifest.Root.IsCharacter && gameplayEffectRuntimeBinding != null)
-                throw new ArgumentException("Non-Character Program cannot carry a Character Gameplay Effect binding.", nameof(gameplayEffectRuntimeBinding));
-            bool equipmentEnabled = program.Manifest.Root.IsCharacter && program.Manifest.Capabilities.HasGameplayCapability("Equipment");
-            if (equipmentEnabled && equipmentRuntimeBinding == null)
-                throw new ArgumentNullException(nameof(equipmentRuntimeBinding));
-            if (!equipmentEnabled && equipmentRuntimeBinding != null)
-                throw new ArgumentException("Program cannot carry an Equipment runtime binding while Equipment is not installed.", nameof(equipmentRuntimeBinding));
-            ControlRuntimeBinding = controlRuntimeBinding;
-            BodyMotionBinding = bodyMotionBinding;
-            GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
-            EquipmentRuntimeBinding = equipmentRuntimeBinding;
-        }
-
-        public ActorId ActorId { get; }
-        public ProgramId ProgramId { get; }
-        public ProgramHash ProgramHash { get; }
-        public LayoutHash LayoutHash { get; }
-        public string WorldBodyBindingId { get; }
-        public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
-        public CharacterBodyMotionBinding BodyMotionBinding { get; }
-        public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
-        public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
-        internal CharacterSimulationProgram Program { get; }
-        object ISimulationProgramBinding.ProgramObject => Program;
-    }
-
     public enum SimulationOutputDispositionKind : byte
     {
         Publish = 1,

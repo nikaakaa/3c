@@ -248,7 +248,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.ActionPlaybackInput;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.AnimationChannel |
                 CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl;
 
         public override GraphAuthoringCapabilityDescriptor Declare() =>
@@ -555,7 +554,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.AnimationSlot;
         public override CharacterPoseNodeRuntimeRequirement
             RuntimeRequirements =>
-                CharacterPoseNodeRuntimeRequirement.AnimationChannel |
                 CharacterPoseNodeRuntimeRequirement.Player |
                 CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl |
                 CharacterPoseNodeRuntimeRequirement.BlendPolicy |

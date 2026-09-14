@@ -54,7 +54,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         None = 0,
         PoseSourceSlot = 1 << 0,
-        AnimationChannel = 1 << 1,
         Player = 1 << 2,
         ActionPlaybackControl = 1 << 3,
         BlendPolicy = 1 << 4,
@@ -94,8 +93,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Kind != CharacterPoseNodeKind.PoseStateMachine;
         public bool UsesPoseSourceSlot =>
             Requires(CharacterPoseNodeRuntimeRequirement.PoseSourceSlot);
-        public bool UsesAnimationChannel =>
-            Requires(CharacterPoseNodeRuntimeRequirement.AnimationChannel);
         public GraphAuthoringCapabilityDescriptor Capability =>
             m_Capability ?? throw new InvalidOperationException(
                 $"Pose Node Definition '{Kind}' has no capability projection.");

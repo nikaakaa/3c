@@ -222,7 +222,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterPoseOperationFamily OperationFamily => m_Definition.OperationFamily;
         public CharacterPoseNativeNodeRole NativeRole => m_Definition.NativeRole;
         public bool UsesPoseSourceSlot => m_Definition.UsesPoseSourceSlot;
-        public bool UsesAnimationChannel => m_Definition.UsesAnimationChannel;
 
         public CharacterPresentationPoseSourceSlot Source(
             CharacterPoseNodePayload payload) =>

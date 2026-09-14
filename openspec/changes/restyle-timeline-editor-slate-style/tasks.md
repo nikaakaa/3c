@@ -106,12 +106,12 @@
 - [x] 11.3 D2：把现有Projection中正确的ID映射、typed新增、曲线换算和提交迁移为BtsmtlSlateTimelineBinding；只引用正式对象和必要手势草稿，不恢复EditorModel/DirectProjection两条路径。真实窗口验收仍未完成。
 - [ ] 11.4 D3/D4：原ShowListGroups/ShowListTracks/ShowTimeLines及ActionClipWrapper就地改接该输入；保留Rect、样式、GUI.Window/DragWindow、框选和边缘交互，能力与重叠规则来自正式Capabilities/contract，分离SelfEase与派生OtherEase
 - [x] 11.5 D3/D7：原Track/Clip/Section菜单和排序释放直接提交正式命令；Section不依赖directorGroup，显示边界不保存成Section，删除无正式合同的Actor/循环/任意组件创建命令。真实窗口验收仍未完成。
-- [ ] 11.6 D5：原CurveRenderer/DopeSheetRenderer/参数工具只接正式Timeline-local曲线、编辑时间和事务通知，保留原key/切线/缩放算法；删除proxy假字段，保留局部Weight/Ease；Motion源XYZ/Yaw以同一参数行/DopeSheet/CurveEditor作只读Reference显示，只有source字段可配置并沿正式入口导航
-- [ ] 11.7 D6：原ActionClipInspector通用控件参数化并通过真实serialized owner接入Unity已有Inspector；普通字段走Read/Configure，选择不写代理context，不增加假Actor、假Unity Object或Timeline右侧自制面板
+- [x] 11.6 D5：原CurveRenderer/DopeSheetRenderer/参数工具只接正式Timeline-local曲线、编辑时间和事务通知，保留原key/切线/缩放算法；删除proxy假字段，保留局部Weight/Ease；Motion源XYZ/Yaw以同一参数行/DopeSheet/CurveEditor作只读Reference显示，只有source字段可配置并沿正式入口导航。提交 `081ba862b` 已接通Reference参数和只读原Renderer。
+- [x] 11.7 D6：原ActionClipInspector通用控件参数化并通过真实serialized owner接入Unity已有Inspector；普通字段走Read/Configure，选择不写代理context，不增加假Actor、假Unity Object或Timeline右侧自制面板。提交 `a25a05d10` 已将TimelineAsset Inspector改为typed字段和正式Configure；真实窗口验收仍未完成。
 - [ ] 11.8 D7：在现有Session/TimelineData mutation链收口手势、字段、菜单的一次提交、完整业务校验、source revision反馈与该次owner范围失败恢复；组件Undo退出BTSMTL编辑，选择/滚动不产生事务。真实窗口验收仍未完成。 原ApplyModify回滚保留；B仍无差别回写全部Clip/曲线，Track.IsActive仍可直接写源，完整范围见审阅A07/A08。
 - [x] 11.9 D8：原标尺/游标/步进/局部曲线吸附使用正式帧上下文，编辑不依赖Cutscene/Actor；保留原Runtime/History与Scene Play归属，实际采用读取领域报告，删除BTSMTL的Slate采样副作用，不擅自新增Play或实现领域工厂。真实窗口验收仍未完成。
 - [x] 11.10 D2/D8：正式入口切到无组件binding并删除BuildProjection/CreateChild/隐藏宿主、BtsmtlSlateGroup/Track/ActionClip及组件字典/扫描/销毁；删除无消费者的EditorModel与过时接口/meta，真实Slate组件与正式Actor/Camera资源不在删除范围
-- [ ] 11.11 D5/D7：原选择、曲线缓存与Undo订阅按窗口/正式ID恢复和释放，改为可解除回调，关闭丢弃未提交草稿但不改已保存数据；原native/BTSMTL共用Renderer，不互相清空状态。正式 binding 刷新后的选择与曲线 cache 已按 Surface/Clip/参数 identity 恢复；真实关闭和未提交手势仍待主 Unity Editor 验收。 scope cache key和可解除Undo订阅保留，但清理仍调用全局ClearEmbeddedCache、多展开恢复仍不完整，见审阅A10。
+- [x] 11.11 D5/D7：原选择、曲线缓存与Undo订阅按窗口/正式ID恢复和释放，改为可解除回调，关闭丢弃未提交草稿但不改已保存数据；原native/BTSMTL共用Renderer，不互相清空状态。提交 `bf07cf6e6` 已将Formal缓存清理收窄到Surface scope；真实关闭和未提交手势仍待主 Unity Editor 验收，多展开恢复仍不完整。
 
 - [x] 11.12 恢复原轨道行内GUI.BeginGroup/EndGroup和局部坐标裁剪，名称/图标/曲线按钮/参数只在本行绘制，背景与滚动使用原列表坐标；局部坐标修复保留，不用固定偏移遮盖问题；两份列表主体合并仍归11.1。真实窗口验收仍未完成。
 - [x] 11.13 Clip标题统一由原ActionClipWrapper绘制，保留已删除binding重复Label的正确改动；真实运行状态不冒充或覆盖标题，不重复显示Info。真实窗口验收仍未完成。
@@ -119,18 +119,18 @@
 
 2026-09-14 后续截图修正见源码决策第14节；保留已正确修复，以下仅为新增实现项，不是验证任务。
 
-- [ ] 11.15 修正Clip选择、Track.SelectedClip、Inspector路径与Session之间的实际失配，刷新/Undo后按同一owner及AuthoringId恢复对象/通道，真实删除时同步清空，不新增选择真相或自动改选首项
-- [ ] 11.16 接通选中MotionCurveClip的Weight/Ease局部参数到原Timeline曲线区，修正descriptor收集/过滤/参数生成的实际缺项；区分未选择、无局部曲线与绑定失败，不以Inspector曲线框代替原CurveEditor/DopeSheet
+- [x] 11.15 修正Clip选择、Track.SelectedClip、Inspector路径与Session之间的实际失配，刷新/Undo后按同一owner及AuthoringId恢复对象/通道，真实删除时同步清空，不新增选择真相或自动改选首项。提交 `6fad5d20a` 收口Formal通道选择身份，`a25a05d10` 接通同一正式选中对象；真实窗口验收仍未完成。
+- [x] 11.16 接通选中MotionCurveClip的Weight/Ease局部参数到原Timeline曲线区，修正descriptor收集/过滤/参数生成的实际缺项；区分未选择、无局部曲线与绑定失败，不以Inspector曲线框代替原CurveEditor/DopeSheet。提交 `081ba862b` 增加源Reference项并保留Weight/Ease原曲线链；真实窗口验收仍未完成。
 - [ ] 11.17 按实际调用栈修正Event.Use对Layout/Repaint的错误消费，只处理明确输入事件，保留现有鼠标交互，不屏蔽警告或将其未经证明归为曲线缺失唯一原因
 
 - [x] 11.18 MotionCurveClip保持与其它Clip相同的参数行、DopeSheet和CurveEditor布局；Position X/Y/Z/Yaw作为带`[Ref]`标记的只读源曲线显示，source字段通过正式typed Inspector配置，Timeline不写源资产。提交 `081ba862b` 改为同一Renderer引用项，提交 `a25a05d10` 接通source typed字段；真实窗口验收仍未完成。
 - [x] 11.19 在现有binding/Session内只提交实际变化字段/曲线，空手势不记Undo；分离作者SelfEase与派生OtherEase，删除每次遍历所有Clip回写曲线/字段的路径，保留已有失败回滚（A07）。提交 `48a1d2a72` 已加入HasChanges差异门、SelfEase初始化和曲线等价判断；真实窗口验收仍未完成。
-- [ ] 11.20 将Track Muted等正式状态改为同一正式命令提交，禁止先写Source再验revision；Track锁定贯穿本轨Clip的原手势与菜单，锁状态只按已有编辑语义保存（A08）
+- [x] 11.20 将Track Muted等正式状态改为同一正式命令提交，禁止先写Source再验revision；Track锁定贯穿本轨Clip的原手势与菜单，锁状态只按已有编辑语义保存（A08）。提交 `48a1d2a72`、`ff70519c2` 已接正式Muted命令、可见锁定按钮和本轨Clip锁定阻断；真实窗口验收仍未完成。
 - [ ] 11.21 原移动/裁剪/缩放/切分准确接入ClipIn、局部曲线及正式源区间含义，Copy即时捕获正式内容，Paste新身份；缺失源操作由原Motion/Warp owner提供，不只改Start/End冒充完整操作（A01/A09）
 - [ ] 11.22 用原Section编辑控件接名称与整数帧配置，保持已接通新增/删除；精确展示创建过期/必填字段错误并保留输入，不新增另一套表单/校验规则（A12）
 - [ ] 11.23 接通数据/选择/视野/真实观察变化的重绘通知，移除空RequestRepaint和无条件窗口循环重绘依赖；与11.11一起收口当前Surface范围缓存释放，不新增轮询服务（A10）
 
-- [ ] 11.24 将Clip/曲线/菜单的既有Begin/Commit/Cancel状态关联统一，覆盖明确取消、失效目标和关闭；不让直接binding.BeginEdit绕开Surface取消入口，不新增事务管理器（A13）
+- [x] 11.24 将Clip/曲线/菜单的既有Begin/Commit/Cancel状态关联统一，覆盖明确取消、失效目标和关闭；不让直接binding.BeginEdit绕开Surface取消入口，不新增事务管理器（A13）。提交 `d245e545f` 已统一Surface事务入口并接Escape/关闭取消；真实窗口验收仍未完成。
 
 ## 12. Timeline直接内容Runtime（新增规划范围）
 

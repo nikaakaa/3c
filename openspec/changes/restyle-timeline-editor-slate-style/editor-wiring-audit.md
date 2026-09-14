@@ -63,7 +63,7 @@ MotionCurveClip的Weight/Ease是Timeline-local可写曲线，RootMotionCurveAsse
 
 ### A05 选择、空态和通道缓存仍需完整收口
 
-B.SelectedClip现在已从统一选择派生；T仍把未选Clip、参数为空和零通道合并成No Clip Selected。S.formalInspectedParameters按TrackId存int下标，缺少ClipId/ChannelId，切换不同Clip可能把同一下标当作同一通道。TryGetValue直接out到初值-1的变量，失败时会变成默认0，这不等同“未选参数”。
+B.SelectedClip现在已从统一选择派生；正式参数空态已有未选Clip、绑定不可用和无Timeline-local曲线区分。提交 `6fad5d20a` 将Formal参数选择改为TrackId+ClipId+ChannelId，不再用数组下标跨Clip复用；Inspector路径通过同一选中对象桥接。
 
 修正：保持正式owner/ClipId为选择来源，参数选择使用稳定ChannelId；重建后解析仍有效通道，无效时明确清空。未选择、没有局部曲线、源只读、绑定失败分别提示。不能回头加m_SelectedClip第三份状态。与Inspector路径同步按同一身份解析，不用数组索引证明对象没变。对应11.15/11.16。
 
@@ -83,7 +83,7 @@ B.CommitEdit仍遍历binding集合做差异检查，但提交 `48a1d2a72` 已让
 
 ### A08 Track启停在正式Undo之前改源，锁定未贯通
 
-B.Track.IsActive的直接源写入已从Slate按钮移除，提交 `48a1d2a72` 通过binding的SetTrackActive走ApplyImmediate和正式Undo；旧的属性setter仅保留为binding实现细节。Track锁定已合并到Clip有效锁定判断，但锁按钮/状态持久语义仍需继续收口。
+B.Track.IsActive的直接源写入已从Slate按钮移除，提交 `48a1d2a72` 通过binding的SetTrackActive走ApplyImmediate和正式Undo；旧的属性setter仅保留为binding实现细节。提交 `ff70519c2` 让锁按钮可见，Track锁定已合并到Clip有效锁定判断；锁状态按窗口编辑语义保存，不新增业务字段。
 
 Track.IsLocked是独立窗口字段，Clip.IsLocked也是独立字段；FormalClipEditorBinding只读Clip.IsLocked，未合并Track锁定。当前正式列表也没有完整恢复原禁用/锁定菜单，因此某入口即使能改状态，也不能推定Clip交互遵守。
 
@@ -91,13 +91,13 @@ Track.IsLocked是独立窗口字段，Clip.IsLocked也是独立字段；FormalCl
 
 ### A09 Split/Trim/Copy不是只调整起止帧
 
-B.SplitClip复制整个Clip并改Start/End，没有处理Animation ClipIn、运动源区间或局部曲线的左右段映射；原UpdateClipAdjustContents对子素材偏移的处理仍要求action is ISubClipContainable，正式binding没有该输入。提交 `48a1d2a72` 已把Copy改为复制瞬间捕获正式Clip副本，剩余Split/ClipIn/源区间语义仍未完成。
+B.SplitClip复制整个Clip并改Start/End，没有处理Animation ClipIn、运动源区间或局部曲线的左右段映射；原UpdateClipAdjustContents对子素材偏移的处理仍要求action is ISubClipContainable，正式binding没有该输入。提交 `48a1d2a72` 已把Copy改为复制瞬间捕获正式Clip副本，提交 `0f9448bd9` 已为Animation/MotionCurve接入ClipIn/源区间切分；移动与缩放期间的完整源区间映射仍未完成。
 
 修正：在现有正式编辑合同明确移动/裁剪/缩放/切分对应的源区间、ClipIn与局部曲线含义；使用既有源映射，不能新写采样公式。涉及Motion/Warp共享字段由原owner提供必要操作，本任务接原手势和命令。一次Split完整创建两个合法使用区间并保留引用/新身份，未支持类型明确拒绝而非只改帧伪装成功。Copy在命令时捕获正式内容，后续Paste基于该副本并生成新身份；不保持失效UI binding当剪贴板。对应新增11.21。
 
 ### A10 刷新状态保存不完整，缓存释放仍有全局操作
 
-P.CaptureViewState只保存第一个ShowCurves轨道，RestoreViewState把其它轨道全部折叠；Section选择不在该view state字段里。B.BuildBindings虽保存所有展开TrackId，P随后恢复单轨道状态仍会覆盖它。C/D cache key含scope，但S.ClearEmbedded调用无scope的ClearEmbeddedCache清空全部embedded缓存。W.OnEditorUpdate无条件MarkDirtyRepaint，B.RequestRepaint为空。
+P.CaptureViewState只保存第一个ShowCurves轨道，RestoreViewState把其它轨道全部折叠；Section选择不在该view state字段里。B.BuildBindings虽保存所有展开TrackId，P随后恢复单轨道状态仍会覆盖它。提交 `bf07cf6e6` 已把Formal Curve/DopeSheet缓存清理限定到当前Surface；视野多展开恢复和完整通知仍未收口。
 
 修正：现有view state保存全部必要展开与稳定通道/Section选择，避免两处恢复互相覆盖；缓存清理限定当前Surface。正常关闭/重开不影响其它真实Slate使用者。数据/选择/视野变化请求重绘，runtime观察按实际变化刷新；不要依赖全窗口持续重绘掩盖缺失通知，不额外建轮询系统。对应11.11及新增11.23。
 
@@ -121,7 +121,7 @@ W的“运行控制：Skill Graph / Graph Shell”是标签，当前工具栏没
 
 ### A13 手势取消的两层状态没有完全统一
 
-S同时有editTransactionActive与B.m_EditActive。DopeSheet通过BeginEmbeddedEdit设置Surface状态；部分Clip手势/菜单却直接调用binding.BeginEdit。ClearEmbedded/OnDisable中的CancelEditTransaction只有Surface状态为true才转发Cancel，未覆盖所有直接开始的binding手势；当前窗口键盘处理也未找到Escape取消路径。
+S仍同时有editTransactionActive与B.m_EditActive，但提交 `d245e545f` 已将Formal Clip、Section、DopeSheet和CurveEditor的开始/提交改走Surface入口，并加入Escape和关闭取消；当前仍需真实窗口确认失效目标和组合手势没有重复提交。
 
 修正：在现有事务入口统一开始/提交/取消关联，让失去有效目标、明确取消和窗口关闭都丢弃未提交草稿，不能有一层认为已结束、另一层仍在编辑。只修现有状态接线，不新建事务管理器；需要按最终实际输入事件确认该路径，不推断它已经造成资产写坏。对应11.8/11.24。
 

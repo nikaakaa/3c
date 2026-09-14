@@ -4,41 +4,6 @@ using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class SimulationProgramRuntimeDescriptor
-    {
-        public SimulationProgramRuntimeDescriptor(
-            SimulationComponentIdentity identity,
-            NumericProfileId numericProfileId,
-            TargetAbiVersion targetAbiVersion,
-            OperationSetVersion operationSetVersion,
-            SimulationPipelineExecutionSupport executionSupport,
-            bool deterministic,
-            string kernelSpecializationId)
-        {
-            if (!identity.IsValid || identity.Role != SimulationComponentRole.ProgramRuntime ||
-                !numericProfileId.IsValid || !targetAbiVersion.IsValid || !operationSetVersion.IsValid ||
-                (executionSupport & SimulationPipelineExecutionSupport.Forward) == 0)
-            {
-                throw new ArgumentException("Program Runtime descriptor is incomplete.");
-            }
-            Identity = identity;
-            NumericProfileId = numericProfileId;
-            TargetAbiVersion = targetAbiVersion;
-            OperationSetVersion = operationSetVersion;
-            ExecutionSupport = executionSupport;
-            Deterministic = deterministic;
-            KernelSpecializationId = SimulationIdentity.Require(kernelSpecializationId, nameof(kernelSpecializationId));
-        }
-
-        public SimulationComponentIdentity Identity { get; }
-        public NumericProfileId NumericProfileId { get; }
-        public TargetAbiVersion TargetAbiVersion { get; }
-        public OperationSetVersion OperationSetVersion { get; }
-        public SimulationPipelineExecutionSupport ExecutionSupport { get; }
-        public bool Deterministic { get; }
-        public string KernelSpecializationId { get; }
-    }
-
     public sealed class SimulationSessionSourceDescriptor
     {
         readonly ReadOnlyCollection<SimulationPipelinePassRequirement> m_RequiredPipelinePasses;

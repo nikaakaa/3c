@@ -879,6 +879,7 @@ namespace Slate
             embeddedHeight = Mathf.Max(1f, height);
             beginWindows = beginWindowsCallback;
             endWindows = endWindowsCallback;
+            formalSelectionHandled = false;
             CutsceneEditorSurface previous = current;
             current = this;
             try

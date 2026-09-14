@@ -792,6 +792,70 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    public enum TimelineRuntimeStepDecision : byte
+    {
+        Commit = 1,
+        Discard = 2
+    }
+
+    public readonly struct TimelineRuntimeStepContext
+    {
+        internal TimelineRuntimeStepContext(
+            TimelineRuntimePlayback playback,
+            TimelineRuntimeAdvanceRequest request,
+            TimelineRuntimeAdvanceResult advance)
+        {
+            Playback = playback;
+            Request = request;
+            Advance = advance;
+        }
+
+        public TimelineRuntimePlayback Playback { get; }
+        public TimelineRuntimeAdvanceRequest Request { get; }
+        public TimelineRuntimeAdvanceResult Advance { get; }
+    }
+
+    public interface ITimelineRuntimeStepConsumer
+    {
+        TimelineRuntimeStepDecision Consume(TimelineRuntimeStepContext context);
+    }
+
+    public static class TimelineRuntimeStepCoordinator
+    {
+        public static TimelineRuntimeAdvanceResult Step(
+            TimelineRuntimePlayback playback,
+            TimelineRuntimeAdvanceRequest request,
+            ITimelineRuntimeStepConsumer consumer)
+        {
+            if (playback == null)
+                throw new ArgumentNullException(nameof(playback));
+            if (consumer == null)
+                throw new ArgumentNullException(nameof(consumer));
+            TimelineRuntimeAdvanceResult advance = playback.Advance(request);
+            try
+            {
+                TimelineRuntimeStepDecision decision = consumer.Consume(
+                    new TimelineRuntimeStepContext(playback, request, advance));
+                if (decision == TimelineRuntimeStepDecision.Commit)
+                {
+                    playback.Commit(advance);
+                    return advance;
+                }
+                if (decision == TimelineRuntimeStepDecision.Discard)
+                {
+                    playback.Discard(advance);
+                    return advance;
+                }
+                throw new InvalidOperationException("Timeline Step consumer returned an invalid decision.");
+            }
+            catch
+            {
+                playback.Discard(advance);
+                throw;
+            }
+        }
+    }
+
     internal static class TimelineRuntimeEvaluator
     {
         public static TimelineRuntimeEvaluationResult Evaluate(

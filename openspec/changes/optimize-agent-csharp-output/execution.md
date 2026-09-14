@@ -24,9 +24,9 @@
 
 此前多文件版本的 Attack 基线为 21 个文件、254719 字节、入口 819 行。该布局不是本轮最终结果。
 
-本轮已经清理 Attack 专属目录中的旧入口、Conditions/Stages/Timelines 源码和空布局目录；Unity 会话已恢复，但仍需等最新 Editor 程序集加载后由正式 btsmtl.export_code 从当前资产完整重建。当前未把上一次旧编译入口产生的中间输出当作最终源码统计，也未勾选第 4～5 节任务。
+本轮已经清理 Attack 专属目录中的旧入口、Conditions/Stages/Timelines 源码和空布局目录；随后用已加载的最新生成器完成了一次有效 Attack 正式重导。当前目录保留这次 8 文件结果，但最后的导入裁剪源码尚未再次正式重导，也未勾选第 4～5 节任务。
 
-此前一次旧程序集导出的 8 个中间文件已在静态诊断后再次清理；当前 Attack 专属生成目录不保留中间 C#，等待最新程序集正式重导。
+此前旧程序集导出的 8 个中间文件已在静态诊断后清理；当前目录中的 Attack C# 是 182,305 字节的有效静态编译结果，不把它冒充为完成全部根对象迁移。
 
 正式重导完成后需要记录同一导出范围的总字节数、入口字节数、阶段局部文件数及一次局部修改涉及的文件，不能只报文件数量。
 
@@ -36,11 +36,11 @@
 
 - BTSMTL.Timeline.Tree.csproj：最近一次编译为 0 个错误、17 个已有警告。
 - ThirdPersonClient.Runtime.csproj：最近一次成功编译为 0 个错误、1 个警告。
-- 清理 Attack 生成目录后，Editor 侧 CodeGeneration 源使用已有 Unity 程序集作为引用静态编译为 0 个错误、32 个已有警告；当前完整项目仍受并行 Simulation/Pose 状态迁移的外部编译错误影响，未宣称全项目通过。
+- 当前 Attack 生成目录参与的 Editor 静态编译为 0 个错误、32 个已有警告；当前完整 Unity 项目仍受并行 Simulation/Pose 状态迁移的外部编译错误影响，未宣称全项目通过。
 - 此前中间 Attack 生成文件的静态编译曾发现 19 个 `timelineCatalog*` 未解析名称；这是旧程序集输出没有应用 `80055079b` 提升规则的结果，未把该旧输出当作新生成器编译证据。
-- Unity Editor 会话已经恢复并注册为 `3C_Client@e852139597e42532`。此前正式 `btsmtl.export_code` 对 Attack 返回过 8 个文件、总计 198,414 字节，其中入口 1,608 字节；这次调用仍使用当时已加载的旧生成器程序集，相关中间文件已清理。
-- 静态编译中间导出时发现短入口缺少命名空间闭合，源码已在 `cf715b0b9` 修复；最新生成器还没有在 Unity 中重新加载，因此当前生成目录不能作为最终输出归档。
-- Unity 当前 Console 仍有并行 Fixed Simulation 源码的 1 个编译错误：`CharacterPipelineDefinitionFixedAbilityExtensions.cs:9` 找不到 `FixedGameplayAbilityExecutionData`，阻止 `ThirdPersonClient.Editor` 加载最新生成器。未修改并行 Simulation/Pose 文件、未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。
+- Unity Editor 会话已经恢复并注册为 `3C_Client@e852139597e42532`。正式 `btsmtl.export_code` 已用当时的最新生成器对 Attack 返回 8 个文件、总计 182,305 字节，其中入口 980 字节；文件均已写入并通过静态编译。
+- 历史中间导出曾发现短入口缺少命名空间闭合和跨阶段 `timelineCatalog*` 提升缺口，源码分别已在 `cf715b0b9` 与 `80055079b` 修复；最后的无用导入裁剪已在源码提交，尚未由 Unity 最新程序集再次重导。
+- Unity 当前 Console 返回至少 50 个并行 Fixed Simulation 核心错误，集中在 `ProgramExecutionLayout`、`SimulationProgramCatalog`、`BlackboardInputStateBinding` 和 `TypedStateAddress` 未解析，阻止 `ThirdPersonClient.Editor` 加载最后的导入裁剪。`034dde874` 只修复了一个独立扩展的命名空间引用；当前脏的 Fixed/Pose/Slate 并行改动未被本任务继续重构，未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。
 
 因此当前缺少的是 Unity 编译恢复后用最新程序集重新导出并编译全部已采用 C# 根，不是另建一个生成路径来绕过该边界。
 

@@ -241,6 +241,9 @@ namespace BTSMTL.Timeline
         {
             m_SerializedOwner = owner;
             m_SerializedPropertyPath = propertyPath ?? string.Empty;
+#if UNITY_EDITOR
+            UpdateSerializedTimeline();
+#endif
             for (int trackIndex = 0; trackIndex < m_Tracks.Count; trackIndex++)
             {
                 Track track = m_Tracks[trackIndex];

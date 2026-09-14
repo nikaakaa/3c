@@ -1811,10 +1811,10 @@ namespace Slate
             //draw a vertical line at dragging clip start/end time
             if ( interactingClip != null ) {
                 if ( interactingClip.isDragging || interactingClip.isScalingStart ) {
-                    DrawGuideLine(interactingClip.action.startTime, Color.white.WithAlpha(0.05f));
+                    DrawGuideLine(interactingClip.editorBinding.StartTime, Color.white.WithAlpha(0.05f));
                 }
                 if ( interactingClip.isDragging || interactingClip.isScalingEnd ) {
-                    DrawGuideLine(interactingClip.action.endTime, Color.white.WithAlpha(0.05f));
+                    DrawGuideLine(interactingClip.editorBinding.EndTime, Color.white.WithAlpha(0.05f));
                 }
             }
 

@@ -81,8 +81,8 @@ namespace ThirdPersonSimulation
             var capabilities = new ProgramCapabilityManifest(gameplayCapabilities, requiredWorldCapabilities);
             m_GameplayCapabilities = new List<string>(capabilities.GameplayCapabilities).AsReadOnly();
             RequiredWorldCapabilities = capabilities.RequiredWorldCapabilities;
-            if (!root.IsValid)
-                throw new ArgumentException("Semantic IR artifact root descriptor is invalid.", nameof(root));
+            if (!root.IsValid || !root.IsAbility)
+                throw new ArgumentException("Semantic IR artifact requires an Ability root descriptor.", nameof(root));
             Root = root;
         }
 

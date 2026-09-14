@@ -889,7 +889,7 @@ namespace BTSMTL.Timeline.Editor
                         return DefaultHeight;
                     IEmbeddedTimelineClipBinding clip = SelectedClip;
                     if (clip == null || clip.Parameters == null || clip.Parameters.Count == 0)
-                        return DefaultHeight + 32f;
+                        return DefaultHeight + 50f;
                     return Mathf.Max(DefaultHeight + 4f + clip.Parameters.Count * 20f + 120f, m_CustomHeight);
                 }
             }

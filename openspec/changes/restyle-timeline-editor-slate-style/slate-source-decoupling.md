@@ -136,7 +136,7 @@ TimelineEditorWindow
 
 真正Timeline-local的Weight/Ease、Warp progress等曲线继续沿正式descriptor换算：normalized域时`t秒 = u × D`、`tangent秒 = tangent归一化 / D`，写回反向换算，weight/WeightedMode/wrap保持。只对作者移动/新增的key按帧吸附。
 
-Motion源XYZ/Yaw不再参与这条局部可写链：由RootMotionCurveAsset拥有，UI消费曲线迁移owner提供的源引用、源区间与播放映射、打开源导航。源XYZ/Yaw必须在Timeline只读展示，不经Timeline mutation改源；旧CurveEndFrame等价迁移和源秒映射归曲线owner，不能在Slate适配里保留旧嵌入曲线双读或另一套采样公式。
+Motion源XYZ/Yaw不再参与这条局部可写链：由RootMotionCurveAsset拥有，但在Timeline中作为带Reference标记的只读参数复用同一套DopeSheet/CurveEditor显示；source字段通过正式Inspector配置并沿已有入口打开源owner。源XYZ/Yaw不经Timeline mutation改源；旧CurveEndFrame等价迁移和源秒映射归曲线owner，不能在Slate适配里保留另一套可编辑源资产或另一套采样公式。
 
 修改原Renderer的cache释放与通知：缓存身份归当前窗口/通道，不因每次重建对象丢失曲线视野；关闭解除所属订阅并清理对应条目。当前匿名`Undo.undoRedoPerformed`订阅无法逐实例解除，需要改成可解除的原处理函数。不能只销毁隐藏GameObject就认为曲线缓存已释放。
 

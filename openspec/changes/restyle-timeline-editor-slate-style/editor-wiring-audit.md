@@ -26,7 +26,7 @@
 | 左侧局部坐标 | S正式列表在trackRect内BeginGroup并传局部Rect | 不代表Track原全部控件/高度行为已复用 |
 | Clip标题去重 | FormalClipEditorBinding.DrawClipGUI为空，标题归原wrapper | 不代表底部DopeSheet已接入 |
 | 曲线数组入口初始化 | c167301eb在C的两个数组构造函数补this.posRect | 尚未取得修复后真实曲线视野证据，不继续把这两行列为未修改 |
-| 三条Motion局部通道 | Curve Catalog注册Weight/Ease In/Ease Out，B从descriptor复制曲线，T调用原CurveRenderer和展开区DopeSheet | 不代表源XYZ/Yaw已显示，也不代表所有参数控件已恢复 |
+| Motion局部通道与源Reference | Curve Catalog提供Weight/Ease In/Ease Out；Formal Clip另提供源XYZ/Yaw只读Reference参数，统一进入原CurveRenderer/DopeSheet | Reference不进入正式曲线写入，source字段由typed Inspector配置；不代表所有参数控件已恢复 |
 | 选中Clip归属收窄 | B.Track.SelectedClip已从Owner.Selected及Track关联派生，不再维护m_SelectedClip副本 | Inspector仍用serialized路径；刷新、通道和空态仍需收口，不能把之前缺SetSelectedClip的快照当现状 |
 | 正式失败回滚 | M.ApplyModify已建立Undo group，catch中RevertAllDownToGroup并更新serialized引用 | 不代表所有UI修改都经过此入口，也不等于只提交了实际编辑字段 |
 | 正式新增与错误传递 | B.AddTrack/AddClip消费catalog及typed创建；AuthoringIssue接P再接W；新增弹窗失败保留输入 | 资源必填字段全覆盖、过期原因精确显示和运行效果不能仅凭菜单存在判断 |
@@ -55,13 +55,11 @@ T正式DrawParametersInfoGUI自己循环画通道、小按钮和CurrentValue标�
 
 修正：参数列表、数值输入、key/切线工具与高度状态从原实现接数据，不新造面板。恢复正式支持的原操作；表达式/场景AddProperty等无正式合同的菜单不恢复。Value编辑须明确是当前key或待加key值，不偷偷给运行对象赋值。descriptor提供显示元数据，初次取景按实际key和值域；后续普通刷新不抢走作者纵向视野。对应11.2/11.6/11.16。
 
-### A04 Root Motion只读查看缺失，不是源数据消失
+### A04 Root Motion源曲线必须复用同一套Slate曲线UI
 
-B原先只枚举Timeline-local descriptor；提交 `6b35adc19` 已把MotionCurveClip现有源映射接到Timeline只读源区，包含XYZ/Yaw、源资产GUID、使用区间和Open Source入口。正式RootMotionCurveAsset与源区间仍是唯一源，真实窗口仍待验收。
+MotionCurveClip的Weight/Ease是Timeline-local可写曲线，RootMotionCurveAsset的Position X/Y/Z/Yaw是外部源曲线。之前提交 `6b35adc19` 把源曲线塞进独立CurveField面板，破坏了Slate参数行和曲线区一致性，已删除。
 
-本次需求收口：将之前“源曲线可选只读展示”改为必须能在Timeline查看。选中MotionCurveClip后，除了可编辑Weight/Ease，还要有明确的源XYZ/Yaw只读通道、源名称/使用区间与打开源入口。只读意味着不能在本窗口拖key写共享源，不意味着隐藏曲线。
-
-显示使用现行正式源映射，把本次使用的源区间对应到Timeline作者时间；显示源区间终点与Clip结束的区别。源区间结束后保持累计终值，不能为了显示重新采样写回源或复制成局部四条曲线。使用原CurveRenderer的只读能力；若无法真正阻止修改，只能补原Renderer编辑资格入口，不能复制渲染器或允许改后再偷偷恢复。编辑源明确导航源owner；不重做已归档源迁移。对应新增11.18。
+当前需求收口：源曲线也作为Formal Clip参数行进入同一DopeSheet/CurveEditor，名称带`[Ref: source]`，但该参数只读；只有Clip的source字段可在正式typed Inspector配置。Timeline不写共享源、不为源曲线创建第二份可编辑资产，双击/已有Open Source入口负责源导航。对应11.18。
 
 ### A05 选择、空态和通道缓存仍需完整收口
 
@@ -131,7 +129,7 @@ S同时有editTransactionActive与B.m_EditActive。DopeSheet通过BeginEmbeddedE
 
 1. 同一原函数承载绘制与手势，先固定坐标、选择及编辑字段的真实含义，再接原控件；不能继续给正式简化版追补一串功能。
 2. 已有正式mutation/回滚保持，只收口漏过它的直接写源与全量回写；数据正确性不能靠禁用Undo、重新载入全部资产或双写修补。
-3. 局部曲线编辑和源曲线只读查看同时纳入作者体验，初次取景/通道切换/刷新各自含义明确。原Renderer不重做，源时间映射由正式owner提供。
+3. 局部曲线编辑和源Reference参数同时纳入作者体验，初次取景/通道切换/刷新各自含义明确。原Renderer不重做，源时间映射由正式owner提供。
 4. Inspector、Section、复制/切分和原菜单使用同一正式字段/命令；没有真实合同的能力不能靠默认值或空实现冒充。
 5. 最后收口布局、事件、重绘和预览导航，保留已完成UI与源迁移。直接Runtime仍按tasks第12节接公共核心，不由本轮作者审阅扩大到玩法算法。
 
@@ -139,6 +137,6 @@ S同时有editTransactionActive与B.m_EditActive。DopeSheet通过BeginEmbeddedE
 
 ## 5. 与现行规范的对账
 
-本次读取current btsmtl-timeline-editor-preview第261行附近：源XYZ/Yaw已归RootMotionCurveAsset，局部通道仅Weight/Ease，源迁移条款已经同步，不再是“等待曲线任务更新旧规范”。本次新增的是Timeline内必须只读查看源曲线及使用区间，强化查看体验但不改变写入owner；delta将此前MAY查看改为MUST。
+本次读取current btsmtl-timeline-editor-preview第261行附近：源XYZ/Yaw已归RootMotionCurveAsset，Weight/Ease仍是Timeline-local曲线。源曲线以只读Reference参数复用原Slate曲线布局；只有source字段可配置，不能通过曲线手势回写源。
 
 current原子Curve mutation、完整key/切线、正式owner、仅本次草稿写入的要求继续保留。A06–A08属于这些既有要求的实现缺口，不是另起新数据模型的理由。current旧预览/总Program条款仍按原领域运行change处理，本轮不覆盖其规范。此前缺少btsmtl前缀的作者能力路径已纠正为btsmtl-timeline-animation-authoring-surface。

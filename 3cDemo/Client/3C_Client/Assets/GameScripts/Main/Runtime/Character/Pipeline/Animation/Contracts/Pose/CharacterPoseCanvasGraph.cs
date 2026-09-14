@@ -142,9 +142,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                      m_EditorAnimationVariables?.Variables ??
                      Array.Empty<EventGraphVariableDescriptor>())
             {
-                if (!TryGetVariableType(descriptor.ValueKind, out Type variableType))
-                    continue;
                 string id = descriptor.Reference.VariableId;
+                if (!TryGetVariableType(descriptor.ValueKind, out Type variableType) ||
+                    !CharacterPoseParameterAccess.IsBlackboardInput(
+                        new PoseParameterId(id),
+                        CharacterPoseParameterUsage.Control))
+                    continue;
                 if (!m_EditorBlackboard.variables.TryGetValue(id, out Variable variable) ||
                     variable == null || variable.varType != variableType ||
                     !string.Equals(variable.ID, id, StringComparison.Ordinal))

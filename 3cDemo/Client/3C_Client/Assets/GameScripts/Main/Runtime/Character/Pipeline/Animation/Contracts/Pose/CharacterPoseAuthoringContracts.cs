@@ -442,6 +442,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseParameterUsage usage)
         {
             if (parameterId.Equals(AnimationPoseParameterIds.FootPlacementWeight) ||
+                parameterId.Value.StartsWith("animation.blendshape.", StringComparison.Ordinal) ||
                 usage == CharacterPoseParameterUsage.AnimatedProperty)
                 return CharacterPoseParameterInputCategory.PoseCurve;
             if (parameterId.Equals(AnimationPoseParameterIds.ActionWeight))

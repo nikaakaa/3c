@@ -225,8 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 CharacterPresentationSemanticContract presentationContract =
                     FixedCharacterPresentationContractAdapter.Create(program);
                 CharacterPresentationProjection projection = CharacterPresentationRuntimeFactory.LoadProjection(
-                    projectionAsset,
-                    presentationContract);
+                    projectionAsset);
                 animationRigBinding.RequireValid(projection.Rig);
                 if (projection.EquipmentVisualBindings.Count != 0 && !m_EquipmentRigBindings)
                     throw new InvalidOperationException($"Fixed Character Host '{name}' requires an Equipment Rig Binding Catalog.");
@@ -239,8 +238,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     CharacterPresentationSemanticContract,
                     CharacterPresentationProjection,
                     CharacterPresentationRuntimeBinding> presentationRuntimeFactory =
-                    (candidateContract, candidateProjection) => CreatePresentationRuntime(
-                        candidateContract,
+                    (_, candidateProjection) => CreatePresentationRuntime(
                         candidateProjection,
                         actorId,
                         presentationBody,
@@ -251,7 +249,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         false);
                 CharacterPresentationRuntimeBinding presentationBinding;
                 presentationBinding = CreatePresentationRuntime(
-                    presentationContract,
                     projection,
                     actorId,
                     presentationBody,
@@ -307,7 +304,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
 
         CharacterPresentationRuntimeBinding CreatePresentationRuntime(
-            CharacterPresentationSemanticContract contract,
             CharacterPresentationProjection projection,
             ActorId actorId,
             CharacterPresentationBodyState initialPresentationBody,
@@ -341,7 +337,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     if (controlSource is not ICharacterPresentationLookInput lookInput)
                         throw new InvalidOperationException($"Local Fixed Character Host '{name}' Control Source has no look input contract.");
                     return CharacterPresentationRuntimeFactory.CreateLocalOwner(
-                        contract,
                         tickRate,
                         projection,
                         actorId,
@@ -365,7 +360,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 }
                 case CharacterPresentationRole.SimulatedActor:
                     return CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-                        contract,
                         tickRate,
                         projection,
                         actorId,

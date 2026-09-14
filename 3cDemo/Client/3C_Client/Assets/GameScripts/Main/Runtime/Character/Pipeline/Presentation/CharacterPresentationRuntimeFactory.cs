@@ -19,17 +19,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public static class CharacterPresentationRuntimeFactory
     {
         public static CharacterPresentationProjection LoadProjection(
-            CharacterPresentationProjectionAsset projectionAsset,
-            CharacterPresentationSemanticContract contract)
+            CharacterPresentationProjectionAsset projectionAsset)
         {
             if (!projectionAsset)
                 throw new ArgumentNullException(nameof(projectionAsset));
-            return projectionAsset.Load(contract);
+            return projectionAsset.Load();
         }
 
         public static CharacterPresentationRuntimeBinding CreateLocalOwner(
             CharacterPresentationProjectionAsset projectionAsset,
-            CharacterPresentationSemanticContract contract,
             int simulationTickRate,
             ActorId actorId,
             AnimancerComponent animancer,
@@ -50,9 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool initializeExternalState = true)
         {
             return CreateLocalOwner(
-                contract,
                 simulationTickRate,
-                LoadProjection(projectionAsset, contract),
+                LoadProjection(projectionAsset),
                 actorId,
                 animancer,
                 animationRigBinding,
@@ -74,7 +71,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public static CharacterPresentationRuntimeBinding CreateLocalOwner(
-            CharacterPresentationSemanticContract contract,
             int simulationTickRate,
             CharacterPresentationProjection projection,
             ActorId actorId,
@@ -97,7 +93,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool initializeExternalState = true)
         {
             return Create(
-                contract,
                 simulationTickRate,
                 projection,
                 actorId,
@@ -123,7 +118,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public static CharacterPresentationRuntimeBinding CreateSimulatedActor(
             CharacterPresentationProjectionAsset projectionAsset,
-            CharacterPresentationSemanticContract contract,
             int simulationTickRate,
             ActorId actorId,
             AnimancerComponent animancer,
@@ -138,9 +132,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool initializeExternalState = true)
         {
             return CreateSimulatedActor(
-                contract,
                 simulationTickRate,
-                LoadProjection(projectionAsset, contract),
+                LoadProjection(projectionAsset),
                 actorId,
                 animancer,
                 animationRigBinding,
@@ -156,7 +149,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public static CharacterPresentationRuntimeBinding CreateSimulatedActor(
-            CharacterPresentationSemanticContract contract,
             int simulationTickRate,
             CharacterPresentationProjection projection,
             ActorId actorId,
@@ -173,7 +165,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool initializeExternalState = true)
         {
             return Create(
-                contract,
                 simulationTickRate,
                 projection,
                 actorId,
@@ -198,7 +189,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public static CharacterPresentationRuntimeBinding CreateObservedActor(
-            CharacterPresentationSemanticContract contract,
             int simulationTickRate,
             CharacterPresentationProjection projection,
             ActorId actorId,
@@ -214,7 +204,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool initializeExternalState = true)
         {
             return Create(
-                contract,
                 simulationTickRate,
                 projection,
                 actorId,
@@ -239,7 +228,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static CharacterPresentationRuntimeBinding Create(
-            CharacterPresentationSemanticContract contract,
             int simulationTickRate,
             CharacterPresentationProjection projection,
             ActorId actorId,
@@ -262,8 +250,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RuntimeDiagnosticsContext diagnostics,
             bool initializeExternalState)
         {
-            if (contract == null)
-                throw new ArgumentNullException(nameof(contract));
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
             if (!animationRigBinding)
@@ -273,7 +259,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!animancer || !animancer.Animator)
                 throw new ArgumentNullException(nameof(animancer));
             rootHierarchy.RequireValid();
-            projection.RequireContract(contract);
             projection.RequirePosePayload();
             projection.RequireTuningPayload();
             animationRigBinding.RequireValid(projection.Rig);
@@ -317,7 +302,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     diagnostics);
                 CharacterAnimationPresentationBindings animationBindings =
                     CharacterAnimationPresentationBindingFactory.Build(
-                        contract,
                         projection);
                 if (projection.MotionMatching != null)
                 {

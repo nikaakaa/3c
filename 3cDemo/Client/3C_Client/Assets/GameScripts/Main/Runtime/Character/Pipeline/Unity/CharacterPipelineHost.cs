@@ -119,7 +119,6 @@ namespace ThirdPersonCharacter.Pipeline
 		}
 
 		CharacterPresentationRuntimeBinding CreatePresentationRuntime(
-			CharacterPresentationSemanticContract contract,
 			CharacterPresentationProjection projection,
 			ActorId actorId,
 			WorldBodyState initialBody,
@@ -141,7 +140,6 @@ namespace ThirdPersonCharacter.Pipeline
 				if (!(inputAdapter is ICharacterPresentationLookInput lookInput))
 					throw new InvalidOperationException("LocalOwner control source must provide Presentation look input.");
 				return CharacterPresentationRuntimeFactory.CreateLocalOwner(
-					contract,
 					tickRate,
 					projection,
 					actorId,
@@ -164,7 +162,6 @@ namespace ThirdPersonCharacter.Pipeline
 					initializeExternalState);
 			}
 			return CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-				contract,
 				tickRate,
 				projection,
 				actorId,
@@ -401,10 +398,9 @@ namespace ThirdPersonCharacter.Pipeline
 					CharacterPresentationSemanticContract,
 					CharacterPresentationProjection,
 					CharacterPresentationRuntimeBinding> presentationRuntimeFactory =
-					(candidateContract, candidateProjection) =>
+					(_, candidateProjection) =>
 						m_PresentationRole == CharacterPresentationRole.LocalOwner
 							? CharacterPresentationRuntimeFactory.CreateLocalOwner(
-								candidateContract,
 								tickRate,
 								candidateProjection,
 								actorId,
@@ -427,7 +423,6 @@ namespace ThirdPersonCharacter.Pipeline
 								m_SessionHost,
 								diagnosticsContext)
 							: CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-								candidateContract,
 								tickRate,
 								candidateProjection,
 								actorId,
@@ -447,7 +442,6 @@ namespace ThirdPersonCharacter.Pipeline
 					if (!(inputAdapter is ICharacterPresentationLookInput lookInput))
 						throw new InvalidOperationException("LocalOwner control source must provide Presentation look input.");
 					presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
-						presentationContract,
 						tickRate,
 						projection,
 						actorId,
@@ -471,7 +465,6 @@ namespace ThirdPersonCharacter.Pipeline
 				else
 				{
 					presentationBinding = CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-						presentationContract,
 						tickRate,
 						projection,
 						actorId,

@@ -215,7 +215,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     input = new UnityFixedCharacterInputAdapter(inputProfile, program, cameraRig);
                     presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
                         projectionAsset,
-                        presentationContract,
                         program.Manifest.TickRate,
                         actorId,
                         animancer,
@@ -238,7 +237,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 {
                     presentationBinding = CharacterPresentationRuntimeFactory.CreateSimulatedActor(
                         projectionAsset,
-                        presentationContract,
                         program.Manifest.TickRate,
                         actorId,
                         animancer,

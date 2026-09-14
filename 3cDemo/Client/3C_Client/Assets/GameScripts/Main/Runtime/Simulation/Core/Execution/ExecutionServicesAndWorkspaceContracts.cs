@@ -440,67 +440,67 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public readonly struct ProgramLayoutIdentity : IEquatable<ProgramLayoutIdentity>
+    public readonly struct GameplayAbilityExecutionIdentity : IEquatable<GameplayAbilityExecutionIdentity>
     {
-        public ProgramLayoutIdentity(
-            ProgramId programId,
-            ProgramHash programHash,
-            LayoutHash layoutHash,
+        public GameplayAbilityExecutionIdentity(
+            CharacterSkillId abilityId,
+            StableHash contentHash,
+            StableHash stateSchemaHash,
             OperationSetVersion operationSetVersion,
             SimulationNumericProfile numericProfile)
         {
-            if (!programId.IsValid || !programHash.IsValid || !layoutHash.IsValid ||
+            if (!abilityId.IsValid || !contentHash.IsValid || !stateSchemaHash.IsValid ||
                 !operationSetVersion.IsValid || !numericProfile.IsValid)
             {
-                throw new ArgumentException("Program execution services identity is incomplete.");
+                throw new ArgumentException("Ability execution services identity is incomplete.");
             }
-            ProgramId = programId;
-            ProgramHash = programHash;
-            LayoutHash = layoutHash;
+            AbilityId = abilityId;
+            ContentHash = contentHash;
+            StateSchemaHash = stateSchemaHash;
             OperationSetVersion = operationSetVersion;
             NumericProfile = numericProfile;
         }
 
-        public ProgramId ProgramId { get; }
-        public ProgramHash ProgramHash { get; }
-        public LayoutHash LayoutHash { get; }
+        public CharacterSkillId AbilityId { get; }
+        public StableHash ContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public OperationSetVersion OperationSetVersion { get; }
         public SimulationNumericProfile NumericProfile { get; }
         public bool IsValid =>
-            ProgramId.IsValid &&
-            ProgramHash.IsValid &&
-            LayoutHash.IsValid &&
+            AbilityId.IsValid &&
+            ContentHash.IsValid &&
+            StateSchemaHash.IsValid &&
             OperationSetVersion.IsValid &&
             NumericProfile.IsValid;
 
-        public bool Equals(ProgramLayoutIdentity other) =>
-            ProgramId.Equals(other.ProgramId) &&
-            ProgramHash.Equals(other.ProgramHash) &&
-            LayoutHash.Equals(other.LayoutHash) &&
+        public bool Equals(GameplayAbilityExecutionIdentity other) =>
+            AbilityId.Equals(other.AbilityId) &&
+            ContentHash.Equals(other.ContentHash) &&
+            StateSchemaHash.Equals(other.StateSchemaHash) &&
             OperationSetVersion.Equals(other.OperationSetVersion) &&
             NumericProfile.Equals(other.NumericProfile);
 
-        public override bool Equals(object obj) => obj is ProgramLayoutIdentity other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(ProgramId, ProgramHash, LayoutHash, OperationSetVersion, NumericProfile);
-        public static bool operator ==(ProgramLayoutIdentity left, ProgramLayoutIdentity right) => left.Equals(right);
-        public static bool operator !=(ProgramLayoutIdentity left, ProgramLayoutIdentity right) => !left.Equals(right);
+        public override bool Equals(object obj) => obj is GameplayAbilityExecutionIdentity other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(AbilityId, ContentHash, StateSchemaHash, OperationSetVersion, NumericProfile);
+        public static bool operator ==(GameplayAbilityExecutionIdentity left, GameplayAbilityExecutionIdentity right) => left.Equals(right);
+        public static bool operator !=(GameplayAbilityExecutionIdentity left, GameplayAbilityExecutionIdentity right) => !left.Equals(right);
 
-        public void Require(ProgramLayoutIdentity actual)
+        public void Require(GameplayAbilityExecutionIdentity actual)
         {
             if (!Equals(actual))
             {
                 throw new InvalidOperationException(
-                    $"Program execution services identity mismatch: expected '{ProgramId}/{ProgramHash}/{LayoutHash}/{NumericProfile.Id}', received '{actual.ProgramId}/{actual.ProgramHash}/{actual.LayoutHash}/{actual.NumericProfile.Id}'.");
+                    $"Ability execution services identity mismatch: expected '{AbilityId}/{ContentHash}/{StateSchemaHash}/{NumericProfile.Id}', received '{actual.AbilityId}/{actual.ContentHash}/{actual.StateSchemaHash}/{actual.NumericProfile.Id}'.");
             }
         }
     }
 
-    internal interface IProgramExecutionServices
+    internal interface IGameplayAbilityExecutionServices
     {
-        ProgramLayoutIdentity Identity { get; }
+        GameplayAbilityExecutionIdentity Identity { get; }
         OperationExecutionTopology Topology { get; }
         string SourcePath(OperationHandle operation);
-        void RequireIdentity(ProgramLayoutIdentity identity);
+        void RequireIdentity(GameplayAbilityExecutionIdentity identity);
     }
 
     internal enum ExecutionWorkspaceScope : byte

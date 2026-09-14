@@ -1,15 +1,14 @@
-using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace ThirdPersonSimulation.Fixed
+namespace ThirdPersonSimulation
 {
-    internal sealed class FixedStateAccessPolicy
+    internal sealed class Float32StateAccessPolicy
     {
         readonly bool[] m_Allowed;
 
-        public FixedStateAccessPolicy(params ProgramStateSemantic[] semantics)
+        public Float32StateAccessPolicy(params ProgramStateSemantic[] semantics)
         {
             Array values = Enum.GetValues(typeof(ProgramStateSemantic));
             int maximum = 0;
@@ -29,11 +28,11 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedProgramExecutionServices : IProgramExecutionServices
+    internal sealed class Float32GameplayAbilityExecutionServices : IGameplayAbilityExecutionServices
     {
-        readonly ProgramExecutionLayout m_Layout;
+        readonly GameplayAbilityExecutionLayout m_Layout;
         readonly string[] m_OperationSourcePaths;
-        readonly IReadOnlyDictionary<int, ProgramCurve> m_ProgramCurves;
+        readonly IReadOnlyDictionary<int, ProgramCurve> m_ExecutionCurves;
         readonly PortableTagQuery[] m_TagQueries;
         readonly SimulationSetByCallerValue[][] m_SetByCallerValues;
         readonly IReadOnlyDictionary<GameplayCueProducerKey, ProgramProducer> m_GameplayCueProducers;
@@ -42,45 +41,42 @@ namespace ThirdPersonSimulation.Fixed
         readonly ActionAdmissionProfile[] m_AdmissionProfilesByOperation;
         readonly IReadOnlyDictionary<string, ActionAdmissionProfile> m_AdmissionProfilesById;
 
-        public FixedProgramExecutionServices(
-            CharacterSimulationProgram program,
-            ProgramExecutionLayout layout,
-            OperationExecutionTopology topology,
+        public Float32GameplayAbilityExecutionServices(
+            Float32GameplayAbilityExecutionData data,
+            GameplayAbilityExecutionLayout layout,
             string[] operationSourcePaths,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+            SimulationGameplayEffectProgram gameplayEffectProgram)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
             if (layout == null)
                 throw new ArgumentNullException(nameof(layout));
-            layout.RequireProgram(program);
-            if (topology == null)
-                throw new ArgumentNullException(nameof(topology));
-            if (operationSourcePaths == null || operationSourcePaths.Length != program.Operations.Count)
-                throw new ArgumentException("Program execution services SourceMap index is incomplete.", nameof(operationSourcePaths));
+            if (operationSourcePaths == null || operationSourcePaths.Length != data.Operations.Count)
+                throw new ArgumentException("Ability execution services SourceMap index is incomplete.", nameof(operationSourcePaths));
+            if (!ReferenceEquals(layout.Topology, data.Topology))
+                throw new InvalidOperationException("Ability execution layout topology does not match its data.");
 
             m_Layout = layout;
             m_OperationSourcePaths = operationSourcePaths;
-            Identity = new ProgramLayoutIdentity(
-                program.Manifest.ProgramId,
-                program.ProgramHash,
-                program.LayoutHash,
-                program.Manifest.OperationSetVersion,
-                program.Manifest.NumericProfile);
-            Topology = topology;
-            m_ProgramCurves = BuildProgramCurves(program);
-            m_TagQueries = BuildTagQueries(program);
-            m_SetByCallerValues = BuildSetByCallerValues(program);
-            GameplayEffectProgram = program.Manifest.Root.IsCharacter
-                ? new SimulationGameplayEffectProgram(gameplayEffectBinding)
-                : new SimulationGameplayEffectProgram(program);
-            m_GameplayCueProducers = BuildGameplayCueProducers(program, GameplayEffectProgram);
-            BuildAdmissionProfiles(program, layout, out m_AdmissionProfilesByOperation, out m_AdmissionProfilesById);
+            Identity = new GameplayAbilityExecutionIdentity(
+                data.AbilityId,
+                data.ContentHash,
+                data.StateSchemaHash,
+                data.OperationSetVersion,
+                data.NumericProfile);
+            Topology = data.Topology;
+            m_ExecutionCurves = BuildExecutionCurves(data);
+            m_TagQueries = BuildTagQueries(data);
+            m_SetByCallerValues = BuildSetByCallerValues(data);
+            GameplayEffectProgram = gameplayEffectProgram ??
+                throw new ArgumentNullException(nameof(gameplayEffectProgram));
+            m_GameplayCueProducers = BuildGameplayCueProducers(data, GameplayEffectProgram);
+            BuildAdmissionProfiles(data, layout, out m_AdmissionProfilesByOperation, out m_AdmissionProfilesById);
             BuildBlackboardGroups(
-                program,
+                data,
                 out m_BlackboardGroups,
                 out m_ScopeBlackboardGroups);
-            ControlPolicy = new FixedStateAccessPolicy(
+            ControlPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.RunnableLifecycle,
                 ProgramStateSemantic.RunnableChildCursor,
                 ProgramStateSemantic.RunnableStopBarrier,
@@ -91,26 +87,26 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.StateMachineExiting,
                 ProgramStateSemantic.StateMachineTransition,
                 ProgramStateSemantic.StateMachineExecutionPath);
-            BlackboardPolicy = new FixedStateAccessPolicy(
+            BlackboardPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.BlackboardValue,
                 ProgramStateSemantic.BlackboardOwnerToken,
                 ProgramStateSemantic.BlackboardLifetime,
                 ProgramStateSemantic.BlackboardWriteStamp);
-            TimelinePolicy = new FixedStateAccessPolicy(
+            TimelinePolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.TimelinePlayback,
                 ProgramStateSemantic.TimelineLoop,
                 ProgramStateSemantic.TimelineTreeClipCycle,
                 ProgramStateSemantic.TimelineLogicTime);
-            Access = new FixedProgramAccess(program, layout, this);
+            Access = new Float32GameplayAbilityExecutionAccess(data, layout, this);
         }
 
-        public FixedProgramAccess Access { get; }
-        public ProgramLayoutIdentity Identity { get; }
+        public Float32GameplayAbilityExecutionAccess Access { get; }
+        public GameplayAbilityExecutionIdentity Identity { get; }
         public OperationExecutionTopology Topology { get; }
         public SimulationGameplayEffectProgram GameplayEffectProgram { get; }
-        public FixedStateAccessPolicy ControlPolicy { get; }
-        public FixedStateAccessPolicy BlackboardPolicy { get; }
-        public FixedStateAccessPolicy TimelinePolicy { get; }
+        public Float32StateAccessPolicy ControlPolicy { get; }
+        public Float32StateAccessPolicy BlackboardPolicy { get; }
+        public Float32StateAccessPolicy TimelinePolicy { get; }
 
         public string SourcePath(OperationHandle operation)
         {
@@ -119,7 +115,7 @@ namespace ThirdPersonSimulation.Fixed
             return m_OperationSourcePaths[operation.Value];
         }
 
-        public void RequireIdentity(ProgramLayoutIdentity identity)
+        public void RequireIdentity(GameplayAbilityExecutionIdentity identity)
         {
             Identity.Require(identity);
         }
@@ -128,8 +124,8 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (constant == null)
                 throw new ArgumentNullException(nameof(constant));
-            if (!m_ProgramCurves.TryGetValue(constant.Index, out ProgramCurve curve))
-                throw new InvalidDataException($"Program curve '{identity}' was not compiled into Program execution services.");
+            if (!m_ExecutionCurves.TryGetValue(constant.Index, out ProgramCurve curve))
+                throw new InvalidDataException($"Ability execution curve '{identity}' was not compiled into Ability execution services.");
             return curve;
         }
 
@@ -161,7 +157,7 @@ namespace ThirdPersonSimulation.Fixed
             string identity = SimulationIdentity.Require(actionId, nameof(actionId));
             return m_AdmissionProfilesById.TryGetValue(identity, out ActionAdmissionProfile profile)
                 ? profile
-                : throw new InvalidOperationException($"Action profile '{identity}' is absent from the Program catalog.");
+                : throw new InvalidOperationException($"Action profile '{identity}' is absent from the Ability catalog.");
         }
 
         public ProgramProducer RequireGameplayCueProducer(string effectId, string cueId)
@@ -206,12 +202,12 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        static IReadOnlyDictionary<int, ProgramCurve> BuildProgramCurves(CharacterSimulationProgram program)
+        static IReadOnlyDictionary<int, ProgramCurve> BuildExecutionCurves(Float32GameplayAbilityExecutionData data)
         {
             var result = new Dictionary<int, ProgramCurve>();
-            for (int entryIndex = 0; entryIndex < program.CatalogEntries.Count; entryIndex++)
+            for (int entryIndex = 0; entryIndex < data.CatalogEntries.Count; entryIndex++)
             {
-                ProgramCatalogEntry entry = program.CatalogEntries[entryIndex];
+                ProgramCatalogEntry entry = data.CatalogEntries[entryIndex];
                 if (entry.Kind != ProgramCatalogEntryKind.TimelineClip &&
                     entry.Kind != ProgramCatalogEntryKind.MotionCurve)
                 {
@@ -222,7 +218,7 @@ namespace ThirdPersonSimulation.Fixed
                     ProgramCatalogField field = entry.Fields[fieldIndex];
                     if (field.Kind != ProgramCatalogFieldKind.Constant)
                         continue;
-                    ProgramConstant constant = program.Constants[field.ConstantIndex];
+                    ProgramConstant constant = data.Constants[field.ConstantIndex];
                     if (constant.Kind != ProgramConstantKind.Bytes || result.ContainsKey(constant.Index))
                         continue;
                     byte[] bytes = constant.Bytes.ToArray();
@@ -231,42 +227,42 @@ namespace ThirdPersonSimulation.Fixed
                     result.Add(constant.Index, ProgramCurveCodec.Read(bytes));
                 }
             }
-            for (int i = 0; i < program.Constants.Count; i++)
+            for (int i = 0; i < data.Constants.Count; i++)
             {
-                ProgramConstant constant = program.Constants[i];
+                ProgramConstant constant = data.Constants[i];
                 if (constant.Kind != ProgramConstantKind.Bytes || result.ContainsKey(constant.Index) ||
                     !OperationNamedConstantSchema.TryParseIdentity(constant.Identity, out OperationNamedConstant field) ||
                     field != OperationNamedConstant.ActionMotionPositionX && field != OperationNamedConstant.ActionMotionPositionZ)
                     continue;
                 byte[] bytes = constant.Bytes.ToArray();
                 if (bytes.Length == 0)
-                    throw new InvalidDataException($"Program curve '{constant.Identity}' is empty.");
+                    throw new InvalidDataException($"Ability execution curve '{constant.Identity}' is empty.");
                 result.Add(constant.Index, ProgramCurveCodec.Read(bytes));
             }
             return result;
         }
 
         static void BuildAdmissionProfiles(
-            CharacterSimulationProgram program,
-            ProgramExecutionLayout layout,
+            Float32GameplayAbilityExecutionData data,
+            GameplayAbilityExecutionLayout layout,
             out ActionAdmissionProfile[] byOperation,
             out IReadOnlyDictionary<string, ActionAdmissionProfile> byId)
         {
             var profiles = new Dictionary<string, ActionAdmissionProfile>(StringComparer.Ordinal);
-            for (int entryIndex = 0; entryIndex < program.CatalogEntries.Count; entryIndex++)
+            for (int entryIndex = 0; entryIndex < data.CatalogEntries.Count; entryIndex++)
             {
-                ProgramCatalogEntry entry = program.CatalogEntries[entryIndex];
+                ProgramCatalogEntry entry = data.CatalogEntries[entryIndex];
                 if (entry.Kind != ProgramCatalogEntryKind.Action)
                     continue;
                 ActionAdmissionProfile profile = ActionAdmissionProfileCompiler.Compile(
                     entry,
-                    constantIndex => ReadActionTargetRequirement(program, constantIndex));
+                    constantIndex => ReadActionTargetRequirement(data, constantIndex));
                 if (!profiles.TryAdd(profile.ActionId, profile))
                     throw new InvalidDataException($"Action profile '{profile.ActionId}' is duplicated.");
                 if (layout.ActionCapacity(profile.ActionId) != profile.MaxConcurrentInstances)
                     throw new InvalidDataException($"Action profile '{profile.ActionId}' declares capacity '{profile.MaxConcurrentInstances}', but Program layout provides '{layout.ActionCapacity(profile.ActionId)}' capacity.");
             }
-            byOperation = new ActionAdmissionProfile[program.Operations.Count];
+            byOperation = new ActionAdmissionProfile[data.Operations.Count];
             for (int operationIndex = 0; operationIndex < byOperation.Length; operationIndex++)
             {
                 ProgramCatalogEntry entry = layout.FindCatalog(new OperationHandle(operationIndex), ProgramCatalogEntryKind.Action);
@@ -274,28 +270,28 @@ namespace ThirdPersonSimulation.Fixed
                     continue;
                 ActionAdmissionProfile profile = ActionAdmissionProfileCompiler.Compile(
                     entry,
-                    constantIndex => ReadActionTargetRequirement(program, constantIndex));
+                    constantIndex => ReadActionTargetRequirement(data, constantIndex));
                 byOperation[operationIndex] = profiles[profile.ActionId];
             }
             byId = profiles;
         }
 
-        static int ReadActionTargetRequirement(CharacterSimulationProgram program, int constantIndex)
+        static int ReadActionTargetRequirement(Float32GameplayAbilityExecutionData data, int constantIndex)
         {
-            if (constantIndex < 0 || constantIndex >= program.Constants.Count)
+            if (constantIndex < 0 || constantIndex >= data.Constants.Count)
                 throw new InvalidDataException($"Action target requirement constant '{constantIndex}' is out of range.");
-            ProgramConstant constant = program.Constants[constantIndex];
+            ProgramConstant constant = data.Constants[constantIndex];
             if (constant.Kind != ProgramConstantKind.Int32)
                 throw new InvalidDataException($"Action target requirement constant '{constant.Identity}' has kind '{constant.Kind}'.");
             return constant.Int32;
         }
 
-        static PortableTagQuery[] BuildTagQueries(CharacterSimulationProgram program)
+        static PortableTagQuery[] BuildTagQueries(Float32GameplayAbilityExecutionData data)
         {
-            var result = new PortableTagQuery[program.Operations.Count];
-            for (int operationIndex = 0; operationIndex < program.Operations.Count; operationIndex++)
+            var result = new PortableTagQuery[data.Operations.Count];
+            for (int operationIndex = 0; operationIndex < data.Operations.Count; operationIndex++)
             {
-                SimulationOperation operation = program.Operations[operationIndex];
+                SimulationOperation operation = data.Operations[operationIndex];
                 if (operation.Code != SimulationOperationCode.GameplayEffectMatchTags &&
                     operation.Code != SimulationOperationCode.GameplayEffectRemove)
                     continue;
@@ -304,7 +300,7 @@ namespace ThirdPersonSimulation.Fixed
                 var none = new List<string>();
                 for (int i = 0; i < operation.ConstantReferences.Count; i++)
                 {
-                    ProgramConstant constant = program.Constants[operation.ConstantReferences[i]];
+                    ProgramConstant constant = data.Constants[operation.ConstantReferences[i]];
                     if (!OperationNamedConstantSchema.TryGetDynamicField(constant.Identity, out string field))
                         continue;
                     if (!field.StartsWith("Query:", StringComparison.Ordinal))
@@ -323,12 +319,12 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        static SimulationSetByCallerValue[][] BuildSetByCallerValues(CharacterSimulationProgram program)
+        static SimulationSetByCallerValue[][] BuildSetByCallerValues(Float32GameplayAbilityExecutionData data)
         {
-            var result = new SimulationSetByCallerValue[program.Operations.Count][];
-            for (int operationIndex = 0; operationIndex < program.Operations.Count; operationIndex++)
+            var result = new SimulationSetByCallerValue[data.Operations.Count][];
+            for (int operationIndex = 0; operationIndex < data.Operations.Count; operationIndex++)
             {
-                SimulationOperation operation = program.Operations[operationIndex];
+                SimulationOperation operation = data.Operations[operationIndex];
                 if (operation.Code != SimulationOperationCode.GameplayEffectApply)
                 {
                     result[operationIndex] = Array.Empty<SimulationSetByCallerValue>();
@@ -337,7 +333,7 @@ namespace ThirdPersonSimulation.Fixed
                 var values = new List<SimulationSetByCallerValue>();
                 for (int i = 0; i < operation.ConstantReferences.Count; i++)
                 {
-                    ProgramConstant constant = program.Constants[operation.ConstantReferences[i]];
+                    ProgramConstant constant = data.Constants[operation.ConstantReferences[i]];
                     if (!OperationNamedConstantSchema.TryGetDynamicField(constant.Identity, out string field) ||
                         !field.StartsWith("SetByCaller:", StringComparison.Ordinal))
                     {
@@ -360,13 +356,13 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static IReadOnlyDictionary<GameplayCueProducerKey, ProgramProducer> BuildGameplayCueProducers(
-            CharacterSimulationProgram program,
+            Float32GameplayAbilityExecutionData data,
             SimulationGameplayEffectProgram gameplayEffects)
         {
             var result = new Dictionary<GameplayCueProducerKey, ProgramProducer>();
-            for (int i = 0; i < program.Producers.Count; i++)
+            for (int i = 0; i < data.Producers.Count; i++)
             {
-                ProgramProducer producer = program.Producers[i];
+                ProgramProducer producer = data.Producers[i];
                 if (producer.ChannelKind != ProgramOutputChannelKind.Presentation ||
                     !gameplayEffects.Effects.ContainsKey(producer.SourceIdentity))
                 {
@@ -413,26 +409,26 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static void BuildBlackboardGroups(
-            CharacterSimulationProgram program,
+            Float32GameplayAbilityExecutionData data,
             out IReadOnlyDictionary<string, SimulationBlackboardSlotGroup> groups,
             out IReadOnlyDictionary<ProgramScopeLayout, IReadOnlyList<SimulationBlackboardSlotGroup>> scopeGroups)
         {
             var byOwner = new Dictionary<string, SimulationBlackboardSlotGroup>(StringComparer.Ordinal);
             var byScope = new Dictionary<ProgramScopeLayout, IReadOnlyList<SimulationBlackboardSlotGroup>>();
-            for (int scopeIndex = 0; scopeIndex < program.Scopes.Count; scopeIndex++)
+            for (int scopeIndex = 0; scopeIndex < data.Scopes.Count; scopeIndex++)
             {
-                ProgramScopeLayout scope = program.Scopes[scopeIndex];
+                ProgramScopeLayout scope = data.Scopes[scopeIndex];
                 if (scope.CompiledOwnerIndex != scopeIndex)
                     throw new InvalidOperationException($"Program scope '{scope.Identity}' compiled owner index is not canonical.");
                 var owners = new HashSet<string>(StringComparer.Ordinal);
                 var values = new List<SimulationBlackboardSlotGroup>();
                 for (int slotIndex = 0; slotIndex < scope.StateSlots.Count; slotIndex++)
                 {
-                    ProgramStateSlot slot = program.StateSlots[scope.StateSlots[slotIndex]];
+                    ProgramStateSlot slot = data.StateSlots[scope.StateSlots[slotIndex]];
                     if (slot.Semantic != ProgramStateSemantic.BlackboardValue || !owners.Add(slot.OwnerIdentity))
                         continue;
                     SimulationBlackboardSlotGroup group = BuildBlackboardGroup(
-                        program,
+                        data,
                         scope,
                         scope.CompiledOwnerIndex,
                         slot.OwnerIdentity);
@@ -447,9 +443,9 @@ namespace ThirdPersonSimulation.Fixed
                         ? Array.Empty<SimulationBlackboardSlotGroup>()
                         : Array.AsReadOnly(values.ToArray()));
             }
-            for (int i = 0; i < program.StateSlots.Count; i++)
+            for (int i = 0; i < data.StateSlots.Count; i++)
             {
-                ProgramStateSlot slot = program.StateSlots[i];
+                ProgramStateSlot slot = data.StateSlots[i];
                 if (slot.Semantic == ProgramStateSemantic.BlackboardValue && !byOwner.ContainsKey(slot.OwnerIdentity))
                     throw new InvalidOperationException($"Blackboard state group '{slot.OwnerIdentity}' has no compiled scope owner.");
             }
@@ -458,7 +454,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static SimulationBlackboardSlotGroup BuildBlackboardGroup(
-            CharacterSimulationProgram program,
+            Float32GameplayAbilityExecutionData data,
             ProgramScopeLayout scope,
             int compiledOwnerIndex,
             string ownerIdentity)
@@ -470,7 +466,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < scope.StateSlots.Count; i++)
             {
                 int stateSlot = scope.StateSlots[i];
-                ProgramStateSlot slot = program.StateSlots[stateSlot];
+                ProgramStateSlot slot = data.StateSlots[stateSlot];
                 if (!string.Equals(slot.OwnerIdentity, ownerIdentity, StringComparison.Ordinal))
                     continue;
                 switch (slot.Semantic)
@@ -483,10 +479,10 @@ namespace ThirdPersonSimulation.Fixed
             }
             if (value < 0 || ownerToken < 0 || lifetime < 0 || writeStamp < 0)
                 throw new InvalidOperationException($"Blackboard state group '{ownerIdentity}' is incomplete.");
-            ProgramStateSlot lifetimeSlot = program.StateSlots[lifetime];
+            ProgramStateSlot lifetimeSlot = data.StateSlots[lifetime];
             if (lifetimeSlot.DefaultConstantIndex < 0)
                 throw new InvalidOperationException($"Blackboard state group '{ownerIdentity}' has no lifetime constant.");
-            ProgramConstant lifetimeConstant = program.Constants[lifetimeSlot.DefaultConstantIndex];
+            ProgramConstant lifetimeConstant = data.Constants[lifetimeSlot.DefaultConstantIndex];
             if (lifetimeConstant.Kind != ProgramConstantKind.Int32 ||
                 lifetimeConstant.Int32 < byte.MinValue || lifetimeConstant.Int32 > byte.MaxValue ||
                 !Enum.IsDefined(typeof(ProgramBlackboardLifetime), (byte)lifetimeConstant.Int32))
@@ -512,3 +508,5 @@ namespace ThirdPersonSimulation.Fixed
     }
 
 }
+
+

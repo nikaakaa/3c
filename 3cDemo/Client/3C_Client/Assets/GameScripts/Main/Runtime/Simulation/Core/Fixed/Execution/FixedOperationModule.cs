@@ -5,28 +5,27 @@ using System.Linq;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedProgramAccess
+    internal sealed class FixedGameplayAbilityExecutionAccess
     {
-        public FixedProgramAccess(
-            CharacterSimulationProgram program,
-            ProgramExecutionLayout layout,
-            FixedProgramExecutionServices services)
+        public FixedGameplayAbilityExecutionAccess(
+            FixedGameplayAbilityExecutionData data,
+            GameplayAbilityExecutionLayout layout,
+            FixedGameplayAbilityExecutionServices services)
         {
-            Program = program ?? throw new ArgumentNullException(nameof(program));
+            Data = data ?? throw new ArgumentNullException(nameof(data));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
-            Layout.RequireProgram(Program);
         }
 
-        public CharacterSimulationProgram Program { get; }
-        public ProgramExecutionLayout Layout { get; }
-        public FixedProgramExecutionServices Services { get; }
+        public FixedGameplayAbilityExecutionData Data { get; }
+        public GameplayAbilityExecutionLayout Layout { get; }
+        public FixedGameplayAbilityExecutionServices Services { get; }
         public OperationExecutionTopology Topology => Layout.Topology;
 
         public SimulationOperation Operation(OperationHandle handle)
         {
             Topology.RequireOperation(handle);
-            return Program.Operations[handle.Value];
+            return Data.Operations[handle.Value];
         }
 
         public IReadOnlyList<ProgramControlFlowEdge> Edges(OperationHandle source, ProgramControlFlowKind kind) =>
@@ -92,14 +91,14 @@ namespace ThirdPersonSimulation.Fixed
 
     internal abstract class FixedOperationModule
     {
-        protected FixedOperationModule(FixedProgramAccess access)
+        protected FixedOperationModule(FixedGameplayAbilityExecutionAccess access)
         {
             Access = access ?? throw new ArgumentNullException(nameof(access));
         }
 
-        protected FixedProgramAccess Access { get; }
-        protected CharacterSimulationProgram m_Program => Access.Program;
-        protected ProgramExecutionLayout m_Layout => Access.Layout;
+        protected FixedGameplayAbilityExecutionAccess Access { get; }
+        protected FixedGameplayAbilityExecutionData m_Ability => Access.Data;
+        protected GameplayAbilityExecutionLayout m_Layout => Access.Layout;
         protected IReadOnlyList<ProgramControlFlowEdge> Edges(OperationHandle source, ProgramControlFlowKind kind) =>
             Access.Edges(source, kind);
         protected IReadOnlyList<ProgramReference> References(OperationHandle source, ProgramReferenceKind kind) =>
@@ -134,7 +133,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramCatalogField value = Access.RequireCatalogField(entry, field);
             if (value.Kind != ProgramCatalogFieldKind.Constant)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{field}' is not Constant.");
-            return m_Program.Constants[value.ConstantIndex];
+            return m_Ability.Constants[value.ConstantIndex];
         }
 
         protected ProgramConstant CatalogConstant(ProgramCatalogEntry entry, string fieldName)
@@ -143,7 +142,7 @@ namespace ThirdPersonSimulation.Fixed
                 string.Equals(field.Name, fieldName, StringComparison.Ordinal));
             if (value == null || value.Kind != ProgramCatalogFieldKind.Constant)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{fieldName}' is not Constant.");
-            return m_Program.Constants[value.ConstantIndex];
+            return m_Ability.Constants[value.ConstantIndex];
         }
 
         protected bool TryCatalogInt32(ProgramCatalogEntry entry, ProgramCatalogFieldId field, out int value)
@@ -153,7 +152,7 @@ namespace ThirdPersonSimulation.Fixed
                 return false;
             if (catalogField.Kind != ProgramCatalogFieldKind.Constant)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{field}' is not Constant.");
-            ProgramConstant constant = m_Program.Constants[catalogField.ConstantIndex];
+            ProgramConstant constant = m_Ability.Constants[catalogField.ConstantIndex];
             if (constant.Kind != ProgramConstantKind.Int32)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{field}' is not Int32.");
             value = constant.Int32;

@@ -330,6 +330,8 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
 
+            m_SlateProjection.AuthoringIssue += OnAuthoringIssue;
+
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             WindowOpened?.Invoke(this);
             rootVisualElement.Clear();
@@ -468,10 +470,18 @@ namespace BTSMTL.Timeline.Editor
         {
             if (m_Timeline != null)
                 m_Timeline.OnValueChanged -= OnTimelineValueChanged;
+            if (m_SlateProjection != null)
+                m_SlateProjection.AuthoringIssue -= OnAuthoringIssue;
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_SlateSurface = null;
             m_Timeline = null;
+        }
+
+        void OnAuthoringIssue(string message)
+        {
+            if (!string.IsNullOrEmpty(message))
+                ShowNotification(new GUIContent(message));
         }
 
         void OnEditorUpdate()

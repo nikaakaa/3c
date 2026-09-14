@@ -121,6 +121,7 @@ namespace BTSMTL.Timeline.Editor
             if (!IsSourceCurrent())
             {
                 Rebuild();
+                ReportIssue("Timeline 内容已被外部修改，当前编辑已丢弃。");
                 return;
             }
             try
@@ -268,6 +269,7 @@ namespace BTSMTL.Timeline.Editor
         }
 
         public bool CanPasteClip => m_CopiedClip != null;
+        public event Action<string> AuthoringIssue;
 
         public void CopyClip(IEmbeddedTimelineClipBinding clip)
         {
@@ -398,6 +400,7 @@ namespace BTSMTL.Timeline.Editor
             if (!IsSourceCurrent())
             {
                 Rebuild();
+                ReportIssue("Timeline 内容已被外部修改，当前操作未提交。");
                 return false;
             }
             m_Session.Apply(() =>
@@ -492,6 +495,7 @@ namespace BTSMTL.Timeline.Editor
             catch (Exception exception)
             {
                 Debug.LogException(exception);
+                ReportIssue(exception.Message);
                 return false;
             }
         }
@@ -564,6 +568,7 @@ namespace BTSMTL.Timeline.Editor
             catch (Exception exception)
             {
                 Debug.LogException(exception);
+                ReportIssue(exception.Message);
                 return false;
             }
         }
@@ -633,6 +638,11 @@ namespace BTSMTL.Timeline.Editor
         {
             int separator = kind.LastIndexOf('.');
             return (separator >= 0 ? kind.Substring(0, separator) : kind).Replace('-', ' ');
+        }
+
+        void ReportIssue(string message)
+        {
+            AuthoringIssue?.Invoke(message ?? string.Empty);
         }
 
         sealed class BtsmtlTimelineGroupBinding : IEmbeddedTimelineGroupBinding

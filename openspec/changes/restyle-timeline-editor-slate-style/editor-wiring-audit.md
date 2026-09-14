@@ -35,6 +35,8 @@
 
 ## 3. 逐项接线缺口
 
+本轮扫描确认 `TimelineEditorToolPanel`、`ITimelineEditorToolProvider`、`TimelineEditorToolCatalog` 及其 resolver 在源码树中没有消费者，已删除；这不影响右侧正式 Unity Inspector，也不改变唯一 Slate Surface。
+
 ### A01 轨道列表主体仍分离，Clip主体已合并
 
 S的ShowGroupsAndTracksList(Rect)、ShowTimeLines(Rect)在embeddedTimeline非空时仍转同名重载；组列表布局、来源特有命令和两套 Track 参数提供者仍有来源分支，但 Group 标题已由 `DrawGroupListHeaderFrame` 共用，Group/Track 选中排序事件已由 `HandleGroupListInput`/`HandleTrackListInput` 共用，Track 行的背景、选中框、颜色标记和局部坐标容器已由 `DrawTrackListRowFrame` 共用。Clip部分已在 `DrawTimelineClip` 收口为一份：native 与 formal 都通过同一个 `ActionClipWrapper`、`GUI.Window/GUI.DragWindow`、选中框、外部标题、相邻限制、多选、Shift/Ripple、双端磁吸和正式 binding 提交。旧的 `formalDragOffset` 和正式单端 Clamp 拖动路径已删除。

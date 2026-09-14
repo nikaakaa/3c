@@ -53,6 +53,7 @@ TimelineEditorWindow
 - native 与 formal Clip 的可视矩形、命中、拖动、相邻限制、多选、Shift/Ripple、磁吸和外部标题现在共用 `CutsceneEditor.DrawTimelineClip`；两种来源只提供不同的 `IClipEditorBinding` 与正式命令，不再各自实现一套 Clip 鼠标算法。Track 行的背景、选中框、颜色标记和局部坐标容器共用 `DrawTrackListRowFrame`，Group 标题共用 `DrawGroupListHeaderFrame`，Group/Track 选中与排序共用 `HandleGroupListInput`/`HandleTrackListInput`；组列表布局、Track 参数提供者和来源特有命令仍待11.1/11.2/11.4继续参数化。
 - Timeline 打开时清空外部 Unity Selection，作者选择只进入 Timeline binding 与 Slate Surface，避免旧 Slate ActionClip Inspector 残留的 Actor/AnimatedParameter 报错。
 - `TimelineEditorWindow` 所在的 `BTSMTL.Timeline.Tree.Editor` asmdef 显式引用 Slate 与 `ThirdPersonCamera.Contracts`；Timeline 窗口只作为 Unity 容器，实际可见编辑 UI 来自原 Slate Surface，均不改变 TimelineData owner，也不引入 Slate 组件树。
+- 已删除仓库内无消费者的 `TimelineEditorToolPanel`、`ITimelineEditorToolProvider`、`TimelineEditorToolCatalog` 及 resolver 链；UI Toolkit 只保留 Unity 窗口容器、owner/source 状态和 Slate `IMGUIContainer` 宿主，不再存在第二个 Timeline 工具面板入口。
 - 嵌入绘制现在从原 `ShowGroupsAndTracksList` / `ShowTimeLines` 入口进入；正式 binding 只在原函数入口处分派数据，`OnEmbeddedTimelineGUI` 不再直接调另一套顶层列表/时间线入口。
 - 嵌入游标、逐帧快捷键和引导线也从原 `DoScrubControls`、`DoKeyboardShortcuts`、`DrawGuides` 入口进入；这些入口在正式 binding 下只切换作者时间、调用正式 Clip 编辑或绘制引导，不启用 Slate 播放或采样。
 - formal Clip 不再使用独立的嵌入 Clip 手势循环；Slate 原 `ActionClipWindow` / `ActionClipWrapper` 通过 binding 分支读取 formal 时间、Blend、曲线和选择，拖动/裁剪/混合/DopeSheet/菜单仍走同一窗口交互，提交仍由 `IEmbeddedTimelineBinding` 接回 Session。

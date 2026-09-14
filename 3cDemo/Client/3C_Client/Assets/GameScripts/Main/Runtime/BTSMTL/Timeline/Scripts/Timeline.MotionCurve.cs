@@ -320,8 +320,9 @@ namespace BTSMTL.Timeline
 
             var result = new AnimationCurve();
             result.AddKey(new Keyframe(0f, source.Evaluate(m_SourceStartTime), 0f, 0f));
-            foreach (Keyframe key in source.keys)
+            foreach (Keyframe sourceKey in source.keys)
             {
+                Keyframe key = sourceKey;
                 if (key.time <= m_SourceStartTime || key.time >= m_SourceEndTime)
                     continue;
                 key.time -= m_SourceStartTime;

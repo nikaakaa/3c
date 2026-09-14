@@ -232,7 +232,6 @@ namespace Slate
         public bool CanCrossBlend(IClipEditorBinding other) => other?.FormalClip != null && FormalClip.CanCrossBlend(other.FormalClip);
         public void DrawClipGUI(Rect rect)
         {
-            GUI.Label(rect, Info, Styles.leftLabel);
         }
         public void DrawClipGUIExternal(Rect leftRect, Rect rightRect) { }
     }

@@ -2536,7 +2536,14 @@ namespace Slate
                     int inspected = -1;
                     if (formalInspectedParameters != null)
                         formalInspectedParameters.TryGetValue(track.AuthoringId, out inspected);
-                    TrackEditorGUI.DrawParametersInfoGUI(e, trackRect, track, ReferenceEquals(embeddedTimeline.Selected, track), ref inspected);
+                    GUI.BeginGroup(trackRect);
+                    TrackEditorGUI.DrawParametersInfoGUI(
+                        e,
+                        new Rect(0f, 0f, trackRect.width, trackRect.height),
+                        track,
+                        ReferenceEquals(embeddedTimeline.Selected, track),
+                        ref inspected);
+                    GUI.EndGroup();
                     if (formalInspectedParameters != null)
                         formalInspectedParameters[track.AuthoringId] = inspected;
 

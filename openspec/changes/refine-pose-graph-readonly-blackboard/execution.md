@@ -309,6 +309,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - handler/evaluator 注册合同同步增加 Reset；Stop/Dispose 仍负责终止图和释放资源，Replacement 继续通过新 Prepared/Adopted 实例完成，不复用旧实例身份。
 - 本步未运行 Unity/Build；正式 handler 与角色 Host 尚未接入，不能宣称 3.15 完成。
 
+## 2026-09-14 r3 建立 Replacement 原语
+
+- `CharacterPoseNativeGraphRuntime.Replace` 先创建并启动新实例，只有新实例实际 Adopted 后才停止并释放旧实例；新建或旧实例停止失败都会销毁新实例并返回 typed 失败。
+- Replacement 不修改旧实例的 ResetGeneration，不共享节点缓存，不回滚 EventGraph 输入，也不保留旧实例作为兼容路径。
+- 本步未运行 Unity/Build；共享 Host 尚未调用该原语，不能宣称角色替换链已完成。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

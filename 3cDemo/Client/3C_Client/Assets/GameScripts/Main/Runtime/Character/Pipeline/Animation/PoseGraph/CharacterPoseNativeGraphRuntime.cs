@@ -230,6 +230,55 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseNativeGraphEvaluator(handlers),
                 out runtime);
 
+        internal static CharacterPoseNativeAdoptedResult Replace(
+            CharacterPoseNativeGraphRuntime current,
+            in CharacterPoseNativePreparedBinding preparedBinding,
+            in CharacterPoseNativeInstanceContext context,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            IReadOnlyList<ICharacterPoseNativeNodeHandler> handlers,
+            out CharacterPoseNativeGraphRuntime runtime)
+        {
+            if (current == null)
+                throw new ArgumentNullException(nameof(current));
+            var request = new CharacterPoseNativeCreateInstanceRequest(
+                in preparedBinding,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason);
+            runtime = null;
+            CharacterPoseNativeAdoptedResult adopted = Create(
+                in preparedBinding,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                handlers,
+                out runtime);
+            if (!adopted.IsAdopted)
+                return adopted;
+            try
+            {
+                if (ReferenceEquals(current, runtime))
+                    throw new InvalidOperationException(
+                        "Pose native replacement cannot reuse the current instance.");
+                current.StopInstance();
+                current.Dispose();
+                return adopted;
+            }
+            catch (Exception exception)
+            {
+                runtime?.Dispose();
+                runtime = null;
+                return CharacterPoseNativeAdoptedResult.Failed(
+                    in request,
+                    CharacterPoseNativeFailureCode.Disposed,
+                    exception.Message);
+            }
+        }
+
         void AttachAndStart()
         {
             RequireAlive();

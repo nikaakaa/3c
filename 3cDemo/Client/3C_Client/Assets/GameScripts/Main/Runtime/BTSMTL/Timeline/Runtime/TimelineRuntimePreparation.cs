@@ -450,6 +450,13 @@ namespace BTSMTL.Timeline.Runtime
                 state != TimelineRuntimePlaybackState.Completed &&
                 state != TimelineRuntimePlaybackState.Stopped)
                 return false;
+            bool requiresStopContext = state == TimelineRuntimePlaybackState.Stopping ||
+                                       state == TimelineRuntimePlaybackState.Stopped;
+            if (requiresStopContext != hasStopContext)
+                return false;
+            if (!ValidateRestoredSection(sectionId, cursorFrame) ||
+                !ValidateRestoredActiveClips(activeClipIds, state, cursorFrame))
+                return false;
             m_CursorFrame = cursorFrame;
             m_Cycle = cycle;
             m_SectionId = sectionId ?? string.Empty;
@@ -460,6 +467,52 @@ namespace BTSMTL.Timeline.Runtime
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             State = state;
+            return true;
+        }
+
+        bool ValidateRestoredSection(string sectionId, int cursorFrame)
+        {
+            if (string.IsNullOrEmpty(sectionId))
+                return true;
+            for (int index = 0; index < Content.Sections.Count; index++)
+            {
+                TimelineContentSection section = Content.Sections[index];
+                if (string.Equals(section.AuthoringId, sectionId, StringComparison.Ordinal))
+                    return section.Frame <= cursorFrame;
+            }
+            return false;
+        }
+
+        bool ValidateRestoredActiveClips(
+            IReadOnlyList<string> activeClipIds,
+            TimelineRuntimePlaybackState state,
+            int cursorFrame)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int index = 0; index < (activeClipIds?.Count ?? 0); index++)
+            {
+                string clipId = activeClipIds[index] ?? string.Empty;
+                if (!seen.Add(clipId))
+                    return false;
+                bool found = false;
+                for (int clipIndex = 0; clipIndex < Content.Clips.Count; clipIndex++)
+                {
+                    TimelineContentClip clip = Content.Clips[clipIndex];
+                    if (!string.Equals(clip.AuthoringId, clipId, StringComparison.Ordinal))
+                        continue;
+                    found = true;
+                    if (clip.TrackMuted || clip.StartFrame > cursorFrame || cursorFrame >= clip.EndFrame)
+                        return false;
+                    break;
+                }
+                if (!found)
+                    return false;
+            }
+            if (state == TimelineRuntimePlaybackState.Prepared ||
+                state == TimelineRuntimePlaybackState.Stopping ||
+                state == TimelineRuntimePlaybackState.Completed ||
+                state == TimelineRuntimePlaybackState.Stopped)
+                return (activeClipIds?.Count ?? 0) == 0;
             return true;
         }
 

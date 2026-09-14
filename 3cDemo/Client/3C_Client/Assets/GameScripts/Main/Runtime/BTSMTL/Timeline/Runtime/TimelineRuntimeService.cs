@@ -204,13 +204,14 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeStepDecision Consume(TimelineRuntimeStepContext context)
         {
             int consumedTreeClipCount = 0;
+            m_ConsumedTreeClipCounts[context.Playback.Handle.Value] = 0;
             for (; consumedTreeClipCount < context.Advance.Evaluation.TreeClips.Count; consumedTreeClipCount++)
             {
                 TimelineRuntimeTreeClipRequest request = context.Advance.Evaluation.TreeClips[consumedTreeClipCount];
                 if (!m_TreeClipService.Consume(request, context))
                     break;
+                m_ConsumedTreeClipCounts[context.Playback.Handle.Value] = consumedTreeClipCount + 1;
             }
-            m_ConsumedTreeClipCounts[context.Playback.Handle.Value] = consumedTreeClipCount;
             if (consumedTreeClipCount != context.Advance.Evaluation.TreeClips.Count)
                 return TimelineRuntimeStepDecision.Discard;
             return m_EvaluationSink.Consume(context)
@@ -576,10 +577,11 @@ namespace BTSMTL.Timeline.Runtime
             if (!string.Equals(snapshot.Schema, TimelineRuntimePlaybackSnapshot.CurrentSchema, StringComparison.Ordinal) ||
                 !snapshot.Handle.IsValid ||
                 snapshot.Generation == 0 ||
-                snapshot.State == TimelineRuntimePlaybackState.Disposed ||
-                snapshot.State == TimelineRuntimePlaybackState.Failed ||
-                snapshot.ExecutionIdentity != preparation.ExecutionIdentity ||
-                snapshot.PlaybackMode != preparation.PlaybackMode ||
+                 snapshot.State == TimelineRuntimePlaybackState.Disposed ||
+                 snapshot.State == TimelineRuntimePlaybackState.Failed ||
+                 snapshot.ExecutionIdentity != preparation.ExecutionIdentity ||
+                 !string.Equals(snapshot.RequestId, preparation.RequestId, StringComparison.Ordinal) ||
+                 snapshot.PlaybackMode != preparation.PlaybackMode ||
                 snapshot.NumericTarget != preparation.NumericTarget ||
                 !string.Equals(snapshot.ContentRevision, preparation.ContentRevision, StringComparison.Ordinal))
                 throw new InvalidOperationException("Timeline playback Restore snapshot does not match the prepared content.");

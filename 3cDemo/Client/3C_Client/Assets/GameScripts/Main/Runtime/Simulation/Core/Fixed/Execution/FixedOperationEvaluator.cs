@@ -393,7 +393,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedBlackboardRuntime m_Blackboard;
         readonly FixedActionRuntime m_Actions;
         readonly FixedActionStateStore m_ActionStore;
-        readonly FixedGameplayAbilityExecutionCatalog m_Abilities;
         readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
         readonly FixedEquipmentRuntime m_Equipment;
         readonly FixedInputRuntime m_Input;
@@ -410,13 +409,10 @@ namespace ThirdPersonSimulation.Fixed
             ActorId actorId,
             FixedEvaluationWorkspace workspace,
             CharacterControlModuleCatalog controlModules,
-            CharacterControlRuntimeBinding controlRuntimeBinding,
-            FixedGameplayAbilityExecutionCatalog abilities)
+            CharacterControlRuntimeBinding controlRuntimeBinding)
         {
             if (controlModules == null)
                 throw new ArgumentNullException(nameof(controlModules));
-            if (abilities == null)
-                throw new ArgumentNullException(nameof(abilities));
             m_Frame = new FixedEvaluationFrame(program, layout, actorId, workspace);
             FixedProgramExecutionServices services = m_Frame.Services;
             FixedProgramAccess access = services.Access;
@@ -427,7 +423,6 @@ namespace ThirdPersonSimulation.Fixed
                 access,
                 m_Frame);
             m_ActionStore = actionStore;
-            m_Abilities = abilities;
             m_Input = new FixedInputRuntime(
                 access,
                 m_Frame);
@@ -464,7 +459,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame,
                 m_Input,
                 actionStore,
-                m_Abilities,
                 m_Blackboard,
                 m_GameplayEffects,
                 m_GameplayEffects,
@@ -534,8 +528,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame,
                 m_Actions,
                 m_ActionStore,
-                m_Control,
-                m_Abilities);
+                m_Control);
             m_ControlDomain = new FixedControlDomainRuntime(
                 program,
                 m_Frame,
@@ -642,11 +635,10 @@ namespace ThirdPersonSimulation.Fixed
                 m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
                 return;
             }
-            IReadOnlyList<FixedGameplayAbilityExecutionData> abilities = m_Abilities.Abilities;
-            for (int i = 0; i < abilities.Count; i++)
+            IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
+            for (int i = 0; i < skills.Count; i++)
             {
-                GameplayAbilityProgramBinding skill = abilities[i].Binding;
-                IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
+                IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.CurrentActions(skills[i].SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
                 {
                     FixedActionInstanceState action = actions[actionIndex];

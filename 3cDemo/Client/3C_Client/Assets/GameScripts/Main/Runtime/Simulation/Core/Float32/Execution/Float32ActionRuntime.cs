@@ -10,7 +10,6 @@ namespace ThirdPersonSimulation
 		readonly Float32EvaluationFrame m_Frame;
 		readonly IFloat32InputPort m_InputRuntime;
 		readonly Float32ActionStateStore m_Actions;
-		readonly Float32GameplayAbilityExecutionCatalog m_Abilities;
 		readonly IFloat32BlackboardPort m_Blackboard;
 		readonly IFloat32GameplayTagQuery m_GameplayTags;
 		readonly IFloat32GameplayEffectActionPort m_GameplayEffectActions;
@@ -28,7 +27,6 @@ namespace ThirdPersonSimulation
 			Float32EvaluationFrame frame,
 			IFloat32InputPort inputRuntime,
 			Float32ActionStateStore actions,
-			Float32GameplayAbilityExecutionCatalog abilities,
 			IFloat32BlackboardPort blackboard,
 			IFloat32GameplayTagQuery gameplayTags,
 			IFloat32GameplayEffectActionPort gameplayEffectActions,
@@ -42,7 +40,6 @@ namespace ThirdPersonSimulation
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_InputRuntime = inputRuntime ?? throw new ArgumentNullException(nameof(inputRuntime));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-			m_Abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
 			m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
 			m_GameplayTags = gameplayTags ?? throw new ArgumentNullException(nameof(gameplayTags));
 			m_GameplayEffectActions = gameplayEffectActions ?? throw new ArgumentNullException(nameof(gameplayEffectActions));
@@ -113,7 +110,7 @@ namespace ThirdPersonSimulation
             AbilityLifecycleTransition defaultTransition,
             string reason)
         {
-            GameplayAbilityProgramBinding binding = m_Abilities.Require(action.SkillId).Binding;
+            GameplayAbilityProgramBinding binding = m_Program.AbilityPrograms.Require(action.SkillId);
             m_Lifecycle.Resolve(action, binding, trigger, source, defaultTransition, reason);
         }
 
@@ -139,14 +136,14 @@ namespace ThirdPersonSimulation
                         $"ability={controlRequest.AbilityId}:context={controlRequest.EquipmentContext}");
                 return false;
             }
-			GameplayAbilityProgramBinding skill = m_Abilities.Require(controlRequest.AbilityId).Binding;
+			GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
 			ActionAdmissionProfile profile = RequireAdmissionProfile(skill.AdmissionProfileId);
 			return m_Activation.ActivateFromControl(controlRequest, skill, profile);
 		}
 
         public void StopFromControl(CharacterControlAbilityStopRequest controlRequest)
         {
-            GameplayAbilityProgramBinding skill = m_Abilities.Require(controlRequest.AbilityId).Binding;
+            GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
             string trigger = string.IsNullOrWhiteSpace(controlRequest.ActionWindowType)
                 ? controlRequest.Mode == CharacterControlAbilityStopMode.Force
                     ? GameplayAbilityEndTriggerNames.AbortRequested
@@ -187,7 +184,7 @@ namespace ThirdPersonSimulation
                 return false;
             m_Lifecycle.Resolve(
                 action,
-                m_Abilities.Require(action.SkillId).Binding,
+                m_Program.AbilityPrograms.Require(action.SkillId),
                 GameplayAbilityEndTriggerNames.AbortRequested,
                 action.Source,
                 AbilityLifecycleTransition.Abort,
@@ -197,7 +194,7 @@ namespace ThirdPersonSimulation
 
 		public bool TryCommitPendingControl(CharacterSkillId skillId)
 		{
-			GameplayAbilityProgramBinding skill = m_Abilities.Require(skillId).Binding;
+			GameplayAbilityProgramBinding skill = m_Program.AbilityPrograms.Require(skillId);
 			ActionAdmissionProfile profile = RequireAdmissionProfile(skill.AdmissionProfileId);
 			return m_Activation.TryCommitPendingControl(skillId, profile);
 		}
@@ -486,7 +483,7 @@ namespace ThirdPersonSimulation
 				throw new InvalidOperationException($"Action instance '{actionInstanceId}' is not active for replacement.");
 			m_Lifecycle.Resolve(
                 action,
-                m_Abilities.Require(action.SkillId).Binding,
+                m_Program.AbilityPrograms.Require(action.SkillId),
                 GameplayAbilityEndTriggerNames.InterruptRequested,
                 source,
                 AbilityLifecycleTransition.Interrupt,

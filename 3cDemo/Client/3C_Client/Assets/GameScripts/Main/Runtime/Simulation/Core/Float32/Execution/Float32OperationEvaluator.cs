@@ -387,8 +387,7 @@ namespace ThirdPersonSimulation
         readonly Float32EvaluationFrame m_Frame;
         readonly Float32BlackboardRuntime m_Blackboard;
         readonly Float32ActionRuntime m_Actions;
-		readonly Float32ActionStateStore m_ActionStore;
-		readonly Float32GameplayAbilityExecutionCatalog m_Abilities;
+        readonly Float32ActionStateStore m_ActionStore;
         readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
         readonly Float32EquipmentRuntime m_Equipment;
         readonly Float32InputRuntime m_Input;
@@ -405,13 +404,10 @@ namespace ThirdPersonSimulation
 			ActorId actorId,
 			Float32EvaluationWorkspace workspace,
 			CharacterControlModuleCatalog controlModules,
-			CharacterControlRuntimeBinding controlRuntimeBinding,
-			Float32GameplayAbilityExecutionCatalog abilities)
+			CharacterControlRuntimeBinding controlRuntimeBinding)
 		{
 			if (controlModules == null)
 				throw new ArgumentNullException(nameof(controlModules));
-			if (abilities == null)
-				throw new ArgumentNullException(nameof(abilities));
 			m_Frame = new Float32EvaluationFrame(program, layout, actorId, workspace);
             Float32ProgramExecutionServices services = m_Frame.Services;
             Float32ProgramAccess access = services.Access;
@@ -422,7 +418,6 @@ namespace ThirdPersonSimulation
 				access,
 				m_Frame);
             m_ActionStore = actionStore;
-			m_Abilities = abilities;
             m_Input = new Float32InputRuntime(
                 access,
                 m_Frame);
@@ -456,11 +451,10 @@ namespace ThirdPersonSimulation
                 m_Frame.Trace);
             m_Actions = new Float32ActionRuntime(
                 access,
-				m_Frame,
-				m_Input,
-				actionStore,
-				m_Abilities,
-				m_Blackboard,
+                m_Frame,
+                m_Input,
+                actionStore,
+                m_Blackboard,
                 m_GameplayEffects,
                 m_GameplayEffects,
                 handles,
@@ -529,8 +523,7 @@ namespace ThirdPersonSimulation
 				m_Frame,
 				m_Actions,
 				m_ActionStore,
-				m_Control,
-				m_Abilities);
+				m_Control);
 				m_ControlDomain = new Float32ControlDomainRuntime(
 					program,
 					m_Frame,
@@ -637,11 +630,10 @@ namespace ThirdPersonSimulation
 				m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
 				return;
 			}
-			IReadOnlyList<Float32GameplayAbilityExecutionData> abilities = m_Abilities.Abilities;
-			for (int i = 0; i < abilities.Count; i++)
+			IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
+			for (int i = 0; i < skills.Count; i++)
 			{
-				GameplayAbilityProgramBinding skill = abilities[i].Binding;
-				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
+				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skills[i].SkillId);
 				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
 				{
 					Float32ActionInstanceState action = actions[actionIndex];

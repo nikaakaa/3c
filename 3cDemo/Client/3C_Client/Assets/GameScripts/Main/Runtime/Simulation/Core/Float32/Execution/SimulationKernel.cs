@@ -10,13 +10,11 @@ namespace ThirdPersonSimulation
         internal KernelProgramBinding(
             CharacterSimulationProgram program,
             ProgramExecutionLayout layout,
-            SimulationKernel kernel,
-            Float32GameplayAbilityExecutionCatalog abilityExecutions)
+            SimulationKernel kernel)
         {
             Program = program ?? throw new ArgumentNullException(nameof(program));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Kernel = kernel ?? throw new ArgumentNullException(nameof(kernel));
-            AbilityExecutions = abilityExecutions ?? throw new ArgumentNullException(nameof(abilityExecutions));
             Specialization = kernel.Specialization;
             Layout.RequireProgram(Program);
             LayoutIdentity = new ProgramLayoutIdentity(
@@ -36,7 +34,6 @@ namespace ThirdPersonSimulation
         public StableHash SpecializationIdentity { get; }
         internal SimulationKernelSpecializationManifest Specialization { get; }
         internal SimulationKernel Kernel { get; }
-        internal Float32GameplayAbilityExecutionCatalog AbilityExecutions { get; }
 
         internal void Require(
             CharacterSimulationProgram program,

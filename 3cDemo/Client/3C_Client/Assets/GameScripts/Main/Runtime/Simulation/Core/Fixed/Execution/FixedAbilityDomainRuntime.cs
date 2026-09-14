@@ -10,30 +10,27 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedActionRuntime m_Actions;
         readonly FixedActionStateStore m_ActionStore;
         readonly OperationControlRuntime<FixedOperationTarget> m_Control;
-        readonly FixedGameplayAbilityExecutionCatalog m_Abilities;
 
         public FixedAbilityDomainRuntime(
             FixedEvaluationFrame frame,
             FixedActionRuntime actions,
             FixedActionStateStore actionStore,
-            OperationControlRuntime<FixedOperationTarget> control,
-            FixedGameplayAbilityExecutionCatalog abilities)
+            OperationControlRuntime<FixedOperationTarget> control)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
             m_Control = control ?? throw new ArgumentNullException(nameof(control));
-            m_Abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
         }
 
         [PerformanceProbe("simulation.operation.ability-program-tick")]
         public void Tick()
         {
-            IReadOnlyList<FixedGameplayAbilityExecutionData> abilities = m_Abilities.Abilities;
+            IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
             var stoppingInstances = new HashSet<ulong>();
-            for (int i = 0; i < abilities.Count; i++)
+            for (int i = 0; i < skills.Count; i++)
             {
-                GameplayAbilityProgramBinding skill = abilities[i].Binding;
+                GameplayAbilityProgramBinding skill = skills[i];
                 IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
                 {
@@ -112,9 +109,9 @@ namespace ThirdPersonSimulation.Fixed
                         m_ActionStore.RemoveSkillExecution(action.InstanceId);
                 }
             }
-            for (int i = 0; i < abilities.Count; i++)
+            for (int i = 0; i < skills.Count; i++)
             {
-                GameplayAbilityProgramBinding skill = abilities[i].Binding;
+                GameplayAbilityProgramBinding skill = skills[i];
                 m_Actions.TryCommitPendingControl(skill.SkillId);
                 IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)

@@ -25,6 +25,21 @@ namespace Slate
             embeddedCache.Clear();
         }
 
+        public static void ClearEmbeddedCache(object scope)
+        {
+            if (scope == null)
+                return;
+            var owners = embeddedCache.Keys
+                .Where(owner => CurveEditor.IsEmbeddedOwnerForScope(owner, scope))
+                .ToArray();
+            for (int index = 0; index < owners.Length; index++)
+            {
+                DopeSheetRenderer renderer = embeddedCache[owners[index]];
+                renderer.Dispose();
+                embeddedCache.Remove(owners[index]);
+            }
+        }
+
         public sealed class EditorContext
         {
             public AnimationCurve[] Curves { get; set; }

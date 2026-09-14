@@ -3,6 +3,7 @@
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System;
 using System.Runtime.CompilerServices;
@@ -46,6 +47,26 @@ namespace Slate
                 instance.Dispose();
             }
             embeddedCache.Clear();
+        }
+
+        public static void ClearEmbeddedCache(object scope)
+        {
+            if (scope == null)
+                return;
+            var owners = embeddedCache.Keys
+                .Where(owner => IsEmbeddedOwnerForScope(owner, scope))
+                .ToArray();
+            for (int index = 0; index < owners.Length; index++)
+            {
+                CurveRenderer renderer = embeddedCache[owners[index]];
+                renderer.Dispose();
+                embeddedCache.Remove(owners[index]);
+            }
+        }
+
+        internal static bool IsEmbeddedOwnerForScope(object owner, object scope)
+        {
+            return owner is EmbeddedOwnerKey key && key.MatchesScope(scope);
         }
 
 
@@ -478,6 +499,8 @@ namespace Slate
             public override int GetHashCode() {
                 return unchecked((RuntimeHelpers.GetHashCode(scope) * 397) ^ StringComparer.Ordinal.GetHashCode(identity));
             }
+
+            public bool MatchesScope(object value) => ReferenceEquals(scope, value);
         }
     }
 }

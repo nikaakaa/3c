@@ -938,8 +938,8 @@ namespace Slate
             embeddedRuntimeClipStatus = null;
             embeddedAddTrack = null;
             embeddedCopyClip = null;
-            CurveEditor.ClearEmbeddedCache();
-            DopeSheetEditor.ClearEmbeddedCache();
+            CurveEditor.ClearEmbeddedCache(this);
+            DopeSheetEditor.ClearEmbeddedCache(this);
             embeddedTimeline = null;
             formalInspectedParameters = null;
             formalPickedTrack = null;

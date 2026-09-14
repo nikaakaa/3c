@@ -43,7 +43,7 @@
 - 运行时直接读取正式 Timeline 内容的只读闭包或 portable 表示；不从 Slate 投影、Unity `Object`、旧 `ProgramPlan` 或隐藏组件生成第二份作者数据。
 - `Prepare → CreatePlayback → Advance → Commit/Discard → Stop` 是正式调用链；Timeline 只能提交自己的候选状态和表现请求，角色/World 的总 Step、快照和最终发布仍由原 owner 决定。
 - Skill 与非 Skill 调用方共用同一 Timeline Runtime；差异只来自调用身份、目标和正式能力 binding。不能通过空 Actor、空技能或 Slate 播放器凑出成功结果。
-- 作者游标、Runtime playback 时间、History 时间保持三个独立状态；Graph Shell/SkillGraph 仍拥有运行控制和实例选择。:codex-annotation{index="1"}
+- 作者游标、Runtime playback 时间、History 时间保持三个独立状态；Graph Shell/SkillGraph 仍拥有运行控制和实例选择。
 
 ## Decisions
 

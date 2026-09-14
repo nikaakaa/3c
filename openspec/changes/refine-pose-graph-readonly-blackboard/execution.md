@@ -283,6 +283,13 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 保留 `CharacterPoseAuthoringPortProjection` 供正式 Mutation/Clipboard/作者字段规则使用，但它不再成为 FlowCanvas 运行端口的第二来源；节点的 typed value 仍由 NativePorts 注册表创建。
 - 本步保留并行已有的 NativePorts/Graph 泛型约束改动；未运行 Unity/Build，下一步仍需把原生 evaluator 接到正式 Source/Constraint/Final 服务。
 
+## 2026-09-14 r3 建立原生节点 evaluator 注册边界
+
+- 新增 `PoseGraph/CharacterPoseNativeGraphEvaluator.cs` 及其 `.meta`；FlowCanvas Runtime 只负责图生命周期、端口读取和阶段门禁，节点语义通过 `ICharacterPoseNativeNodeHandler` 显式注册，避免把第二套节点执行器写回 Graph Runtime。
+- evaluator 已直接实现 EventGraph 参数 Get 和 Action Playback 输入，并能从真实 GraphOutput/OutputPose 的 ValueInput 返回 typed 结果；Player、State、Blend、Inertialization、Foot/Goal/FBBIK、Linked Pose 和 Final Publication 没有注册时明确失败，不返回零值、旧缓存或默认姿态。
+- Source demand、EvaluateFrame、Commit/Discard/Stop/Dispose 都沿 handler 注册表传播；handler 状态属于注入的领域服务，Graph Runtime 不复制 Source/Constraint/Final 状态。
+- 本步未运行 Unity/Build；当前还缺少正式服务 handler 与角色 Host 的 Create/Replace 接线，不能把 evaluator 注册边界记为完整 Pose Runtime。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

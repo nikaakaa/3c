@@ -2720,6 +2720,64 @@ namespace Slate
                 completeDrop);
         }
 
+        void DrawGroupList<TGroup>(
+            Event e,
+            IReadOnlyList<TGroup> groups,
+            ref float nextY,
+            Func<TGroup, bool> isFiltered,
+            Action<TGroup> collapseFiltered,
+            Func<TGroup, string> getTitle,
+            Func<TGroup, bool> getActive,
+            Func<TGroup, bool> getSelected,
+            Func<TGroup, bool> getCollapsed,
+            Func<TGroup, Color> getActiveColor,
+            Action<TGroup, bool> setCollapsed,
+            Func<TGroup, Rect, bool> drawControls,
+            Action<TGroup> drawContextMenu,
+            Action<TGroup> selectAndBeginDrag,
+            Func<TGroup, bool> canDrop,
+            Action<TGroup, Rect, int> drawDropMarker,
+            Action<TGroup, int> completeDrop,
+            Func<TGroup, float, float> drawChildren)
+        {
+            for (int index = 0; index < groups.Count; index++)
+            {
+                TGroup group = groups[index];
+                if (isFiltered(group))
+                {
+                    collapseFiltered(group);
+                    continue;
+                }
+                Rect groupRect = new Rect(4, nextY, leftRect.width - GROUP_RIGHT_MARGIN - 4, GROUP_HEIGHT - 3);
+                nextY += GROUP_HEIGHT;
+                bool controlsClicked = drawControls != null && drawControls(group, groupRect);
+                DrawGroupListEntry(
+                    e,
+                    groupRect,
+                    MouseCursor.Link,
+                    getTitle(group),
+                    getActive(group),
+                    getSelected(group),
+                    getCollapsed(group),
+                    getActiveColor(group),
+                    value => setCollapsed(group, value),
+                    () => (e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition)) || controlsClicked,
+                    () => drawContextMenu(group),
+                    () => selectAndBeginDrag(group),
+                    () => canDrop(group),
+                    () => drawDropMarker(group, groupRect, index),
+                    () => completeDrop(group, index));
+                if (getCollapsed(group))
+                    continue;
+                float childEnd = drawChildren(group, nextY);
+                nextY = childEnd;
+                GUI.color = getSelected(group) ? LIST_SELECTION_COLOR : GROUP_COLOR;
+                var verticalRect = Rect.MinMaxRect(groupRect.x, groupRect.yMax, groupRect.x + 3, nextY - 2);
+                GUI.DrawTexture(verticalRect, Styles.whiteTexture);
+                GUI.color = Color.white;
+            }
+        }
+
         void ShowGroupsAndTracksList(Rect leftRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
@@ -2755,111 +2813,99 @@ namespace Slate
 
             float nextY = FIRST_GROUP_TOP_MARGIN;
             GUI.BeginGroup(leftRect);
-            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
-            {
-                IEmbeddedTimelineGroupBinding group = groups[groupIndex];
-                bool matches = string.IsNullOrEmpty(searchString) ||
-                    group.DisplayName.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    group.Tracks.Any(track => track.DisplayName.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) >= 0);
-                if (!matches)
+            DrawGroupList(
+                e,
+                groups,
+                ref nextY,
+                group => string.IsNullOrEmpty(searchString) == false &&
+                         group.DisplayName.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) < 0 &&
+                         !group.Tracks.Any(track => track.DisplayName.IndexOf(searchString, StringComparison.OrdinalIgnoreCase) >= 0),
+                group => group.IsCollapsed = true,
+                group => string.Format("<b>{0}</b>", group.DisplayName),
+                group => group.IsActive,
+                group => ReferenceEquals(embeddedTimeline.Selected, group),
+                group => group.IsCollapsed,
+                group => Color.white,
+                (group, value) => group.IsCollapsed = value,
+                (group, _) => false,
+                group =>
                 {
-                    group.IsCollapsed = true;
-                    continue;
-                }
-
-                Rect groupRect = new Rect(4, nextY, leftRect.width - GROUP_RIGHT_MARGIN - 4, GROUP_HEIGHT - 3);
-                nextY += GROUP_HEIGHT;
-                bool groupSelected = ReferenceEquals(embeddedTimeline.Selected, group);
-                DrawGroupListEntry(
-                    e,
-                    groupRect,
-                    formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
-                    string.Format("<b>{0}</b>", group.DisplayName),
-                    group.IsActive,
-                    groupSelected,
-                    group.IsCollapsed,
-                    Color.white,
-                    value => group.IsCollapsed = value,
-                    () => e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition),
-                    () =>
-                    {
-                        GenericMenu menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Add Track"), false, embeddedTimeline.AddTrack);
-                        menu.ShowAsContext();
-                    },
-                    () => embeddedTimeline.Select(group),
-                    () => false,
-                    () => { },
-                    () => { });
-
-                if (group.IsCollapsed)
-                    continue;
-
+                    GenericMenu menu = new GenericMenu();
+                    menu.AddItem(new GUIContent("Add Track"), false, embeddedTimeline.AddTrack);
+                    menu.ShowAsContext();
+                },
+                group => embeddedTimeline.Select(group),
+                group => false,
+                (group, _, _) => { },
+                (group, _) => { },
+                (group, childY) =>
+                {
                     IReadOnlyList<IEmbeddedTimelineTrackBinding> tracks = group.Tracks;
-                DrawTrackList(
-                    e,
-                    tracks,
-                    ref nextY,
-                    EmbeddedTrackFinalHeight,
-                    track => track.IsActive &&
-                             (embeddedRuntimeTrackActive == null || embeddedRuntimeTrackActive(track.AuthoringId)),
-                    track => ReferenceEquals(embeddedTimeline.Selected, track),
-                    track => track.Color,
-                    () => formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
-                    (track, trackRect) =>
-                    {
-                        string inspectionKey = FormalInspectionKey(track);
-                        string inspected = string.Empty;
-                        if (formalInspectedParameters != null)
-                            formalInspectedParameters.TryGetValue(inspectionKey, out inspected);
-                        TrackEditorGUI.DrawParametersInfoGUI(
-                            e,
-                            new Rect(0f, 0f, trackRect.width, trackRect.height),
-                            track,
-                            ReferenceEquals(embeddedTimeline.Selected, track),
-                            ref inspected);
-                        if (formalInspectedParameters != null)
-                            formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
-                    },
-                    (track, _, _) =>
-                    {
-                        int frame = embeddedTimeline.CurrentFrame;
-                        GenericMenu menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
-                        if (embeddedTimeline.CanPasteClip)
-                            menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
-                        menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
-                        menu.ShowAsContext();
-                    },
-                    track =>
-                    {
-                        embeddedTimeline.Select(track);
-                        formalPickedTrack = track;
-                    },
-                    track => formalPickedTrack != null &&
-                            !ReferenceEquals(formalPickedTrack, track) &&
-                            tracks.Any(value => value.AuthoringId == formalPickedTrack.AuthoringId),
-                    (track, trackRect, trackIndex) =>
-                    {
-                        int pickedIndex = 0;
-                        while (pickedIndex < tracks.Count &&
-                               tracks[pickedIndex].AuthoringId != formalPickedTrack.AuthoringId)
-                            pickedIndex++;
-                        var markRect = new Rect(
-                            trackRect.x,
-                            pickedIndex < trackIndex ? trackRect.yMax - 2 : trackRect.y,
-                            trackRect.width,
-                            2);
-                        GUI.color = Color.grey;
-                        GUI.DrawTexture(markRect, Styles.whiteTexture);
-                        GUI.color = Color.white;
-                    },
-                    (_, trackIndex) =>
-                    {
-                        embeddedTimeline.MoveTrack(formalPickedTrack, trackIndex);
-                        formalPickedTrack = null;
-                    });
-            }
+                    DrawTrackList(
+                        e,
+                        tracks,
+                        ref childY,
+                        EmbeddedTrackFinalHeight,
+                        track => track.IsActive &&
+                                 (embeddedRuntimeTrackActive == null || embeddedRuntimeTrackActive(track.AuthoringId)),
+                        track => ReferenceEquals(embeddedTimeline.Selected, track),
+                        track => track.Color,
+                        () => formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                        (track, trackRect) =>
+                        {
+                            string inspectionKey = FormalInspectionKey(track);
+                            string inspected = string.Empty;
+                            if (formalInspectedParameters != null)
+                                formalInspectedParameters.TryGetValue(inspectionKey, out inspected);
+                            TrackEditorGUI.DrawParametersInfoGUI(
+                                e,
+                                new Rect(0f, 0f, trackRect.width, trackRect.height),
+                                track,
+                                ReferenceEquals(embeddedTimeline.Selected, track),
+                                ref inspected);
+                            if (formalInspectedParameters != null)
+                                formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
+                        },
+                        (track, _, _) =>
+                        {
+                            int frame = embeddedTimeline.CurrentFrame;
+                            GenericMenu menu = new GenericMenu();
+                            menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                            if (embeddedTimeline.CanPasteClip)
+                                menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
+                            menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
+                            menu.ShowAsContext();
+                        },
+                        track =>
+                        {
+                            embeddedTimeline.Select(track);
+                            formalPickedTrack = track;
+                        },
+                        track => formalPickedTrack != null &&
+                                !ReferenceEquals(formalPickedTrack, track) &&
+                                tracks.Any(value => value.AuthoringId == formalPickedTrack.AuthoringId),
+                        (track, trackRect, trackIndex) =>
+                        {
+                            int pickedIndex = 0;
+                            while (pickedIndex < tracks.Count &&
+                                   tracks[pickedIndex].AuthoringId != formalPickedTrack.AuthoringId)
+                                pickedIndex++;
+                            var markRect = new Rect(
+                                trackRect.x,
+                                pickedIndex < trackIndex ? trackRect.yMax - 2 : trackRect.y,
+                                trackRect.width,
+                                2);
+                            GUI.color = Color.grey;
+                            GUI.DrawTexture(markRect, Styles.whiteTexture);
+                            GUI.color = Color.white;
+                        },
+                        (_, trackIndex) =>
+                        {
+                            embeddedTimeline.MoveTrack(formalPickedTrack, trackIndex);
+                            formalPickedTrack = null;
+                        });
+                    return childY;
+                });
             GUI.EndGroup();
             totalHeight = nextY;
             if (e.rawType == EventType.MouseUp)

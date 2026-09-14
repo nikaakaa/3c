@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline
             new SortedDictionary<ulong, SimulationSessionCheckpoint>();
         const int MaxCheckpointCount = 32;
         const ulong CheckpointInterval = 30;
-        SimulationSessionCompositionPreparation m_Preparation;
+        ISimulationSessionCompositionPreparation m_Preparation;
         SimulationSessionLaunchPlan m_LaunchPlan;
         ISimulationSessionRuntimeHandle m_Runtime;
         ISimulationSessionOutputLifecycle m_OutputLifecycle;

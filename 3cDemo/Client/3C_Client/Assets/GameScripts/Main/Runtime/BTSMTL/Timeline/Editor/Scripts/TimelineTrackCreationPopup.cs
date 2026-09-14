@@ -10,7 +10,7 @@ namespace BTSMTL.Timeline.Editor
     {
         readonly string m_Kind;
         readonly IReadOnlyList<TimelineAuthoringTrackFieldAttribute> m_Fields;
-        readonly Func<string, IReadOnlyDictionary<string, string>, bool> m_Create;
+        readonly Func<string, IReadOnlyDictionary<string, string>, string> m_Create;
         readonly Dictionary<string, string> m_Values = new Dictionary<string, string>(StringComparer.Ordinal);
         string m_Name;
         string m_Error;
@@ -20,7 +20,7 @@ namespace BTSMTL.Timeline.Editor
             string kind,
             string displayName,
             IReadOnlyList<TimelineAuthoringTrackFieldAttribute> fields,
-            Func<string, IReadOnlyDictionary<string, string>, bool> create)
+            Func<string, IReadOnlyDictionary<string, string>, string> create)
         {
             m_Kind = kind;
             m_Fields = fields ?? Array.Empty<TimelineAuthoringTrackFieldAttribute>();
@@ -50,10 +50,11 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (GUILayout.Button("Create"))
                 {
-                    if (m_Create(m_Name, m_Values))
+                    string error = m_Create(m_Name, m_Values);
+                    if (string.IsNullOrEmpty(error))
                         editorWindow.Close();
                     else
-                        m_SubmitError = "正式 Timeline 提交失败，可能是 owner 已更新；当前输入已保留。";
+                        m_SubmitError = error;
                 }
             }
         }

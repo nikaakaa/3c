@@ -587,15 +587,15 @@ namespace BTSMTL.Timeline.Editor
                 (name, values) => CreateTrack(kind, name, values)));
         }
 
-        bool CreateTrack(string kind, string name, IReadOnlyDictionary<string, string> values)
+        string CreateTrack(string kind, string name, IReadOnlyDictionary<string, string> values)
         {
             if (IsReadOnly)
-                return false;
+                return "Timeline 当前只读，不能添加 Track。";
             if (!IsSourceCurrent())
             {
                 Rebuild();
                 ReportIssue("Timeline 内容已被外部修改，Add Track 已取消。");
-                return false;
+                return "Timeline 内容已被外部修改，Add Track 已取消。";
             }
             try
             {
@@ -609,16 +609,16 @@ namespace BTSMTL.Timeline.Editor
                     added.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
                     TimelineAuthoringTrackBinding.Apply(added, values);
                 }, "Add Timeline Track"))
-                    return false;
+                    return "正式 Timeline Track 提交失败。";
                 if (added != null && m_Tracks.TryGetValue(added.AuthoringId, out BtsmtlTimelineTrackBinding addedBinding))
                     Select(addedBinding);
-                return true;
+                return string.Empty;
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
                 ReportIssue(exception.Message);
-                return false;
+                return exception.Message;
             }
         }
 
@@ -665,20 +665,20 @@ namespace BTSMTL.Timeline.Editor
                 m_PopupPosition = GUIUtility.GUIToScreenPoint(currentEvent.mousePosition);
         }
 
-        bool CreateClip(TimelineClipCreationRequest request)
+        string CreateClip(TimelineClipCreationRequest request)
         {
             if (IsReadOnly)
-                return false;
+                return "Timeline 当前只读，不能添加 Clip。";
             if (!IsSourceCurrent())
             {
                 Rebuild();
                 ReportIssue("Timeline 内容已被外部修改，Add Clip 已取消。");
-                return false;
+                return "Timeline 内容已被外部修改，Add Clip 已取消。";
             }
             if (!m_Tracks.TryGetValue(request.TrackAuthoringId, out BtsmtlTimelineTrackBinding track))
             {
                 ReportIssue("Add Clip 的目标 Track 已失效。");
-                return false;
+                return "Add Clip 的目标 Track 已失效。";
             }
             try
             {
@@ -696,16 +696,16 @@ namespace BTSMTL.Timeline.Editor
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip"))
-                    return false;
+                    return "正式 Timeline Clip 提交失败。";
                 if (added != null && m_Clips.TryGetValue(added.AuthoringId, out BtsmtlTimelineClipBinding addedBinding))
                     Select(addedBinding);
-                return true;
+                return string.Empty;
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
                 ReportIssue(exception.Message);
-                return false;
+                return exception.Message;
             }
         }
 

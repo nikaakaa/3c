@@ -55,7 +55,7 @@ namespace BTSMTL.Timeline.Editor
         readonly TimelineClipCreationRequest m_Request;
         readonly IReadOnlyList<string> m_MotionClipIds;
         readonly IReadOnlyList<TimelineExternalBindingDeclaration> m_Bindings;
-        readonly Func<TimelineClipCreationRequest, bool> m_Create;
+        readonly Func<TimelineClipCreationRequest, string> m_Create;
         string m_Error;
         string m_SubmitError;
 
@@ -63,7 +63,7 @@ namespace BTSMTL.Timeline.Editor
             TimelineClipCreationRequest request,
             IReadOnlyList<string> motionClipIds,
             IReadOnlyList<TimelineExternalBindingDeclaration> bindings,
-            Func<TimelineClipCreationRequest, bool> create)
+            Func<TimelineClipCreationRequest, string> create)
         {
             m_Request = request;
             m_MotionClipIds = motionClipIds ?? Array.Empty<string>();
@@ -192,10 +192,11 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (GUILayout.Button("Create"))
                 {
-                    if (m_Create(m_Request))
+                    string error = m_Create(m_Request);
+                    if (string.IsNullOrEmpty(error))
                         editorWindow.Close();
                     else
-                        m_SubmitError = "正式 Timeline 提交失败，可能是 owner 已更新；当前输入已保留。";
+                        m_SubmitError = error;
                 }
             }
         }

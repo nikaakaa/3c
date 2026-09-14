@@ -85,6 +85,7 @@ namespace ThirdPersonSimulation
         readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
         readonly List<Float32ActionInstanceState> m_ActionInstances;
         readonly Dictionary<string, SimulationInputRequestState> m_InputRequests;
+        CharacterControlRuntimeStateTransaction m_ControlState;
         GameplayEffectStateAggregate m_GameplayEffectAggregate;
         SimulationGameplayEffectState m_GameplayEffectWorking;
         Float32GameplayEffectExecutionScratch m_GameplayEffectScratch;
@@ -137,6 +138,22 @@ namespace ThirdPersonSimulation
             if (!m_AbilityStates.TryGetValue(installation.Data.AbilityId, out Float32AbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' is not part of the Character runtime state.");
             return new Float32AbilityExecutionStateTransaction(this, installation, state);
+        }
+
+        internal CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
+        {
+            RequireActive();
+            if (schema == null)
+                throw new ArgumentNullException(nameof(schema));
+            if (m_ControlState != null)
+                throw new InvalidOperationException("Float32 Character Control state is already bound.");
+            if (m_BaseState.ControlState == null)
+                throw new InvalidOperationException("Float32 Character runtime has no Control state.");
+            m_ControlState = CharacterControlRuntimeStateTransaction.Begin(
+                m_BaseState.ControlState,
+                schema,
+                m_Tick);
+            return m_ControlState;
         }
 
         internal void AcceptAbility(IFloat32AbilityExecutionStateTransaction transaction)
@@ -314,6 +331,7 @@ namespace ThirdPersonSimulation
             RequireActive();
             if (m_Savepoints.Count != 0)
                 throw new InvalidOperationException("Character runtime state transaction has active savepoints.");
+            m_ControlState?.Abort();
             m_Disposed = true;
         }
 
@@ -322,6 +340,7 @@ namespace ThirdPersonSimulation
             if (m_Disposed)
                 return;
             m_Savepoints.Clear();
+            m_ControlState?.Dispose();
             m_Disposed = true;
         }
 
@@ -339,7 +358,7 @@ namespace ThirdPersonSimulation
                 m_EventSequence,
                 m_ActionEventSequence,
                 m_HandleAllocator,
-                m_BaseState.ControlState,
+                m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectWorking?.Freeze() ?? m_GameplayEffectAggregate,
                 m_EquipmentState);
         }
@@ -362,6 +381,12 @@ namespace ThirdPersonSimulation
             m_EventSequence = state.EventSequence;
             m_ActionEventSequence = state.ActionEventSequence;
             m_HandleAllocator = state.HandleAllocator;
+            if (m_ControlState != null)
+            {
+                if (state.ControlState == null)
+                    throw new InvalidOperationException("Float32 Character runtime restore removed its bound Control state.");
+                m_ControlState.Restore(state.ControlState);
+            }
             m_GameplayEffectAggregate = state.GameplayEffectState;
             m_GameplayEffectWorking = m_GameplayEffectAggregate == null
                 ? null

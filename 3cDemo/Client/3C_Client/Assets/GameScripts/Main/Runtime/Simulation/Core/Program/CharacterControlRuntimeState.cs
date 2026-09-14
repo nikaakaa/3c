@@ -308,10 +308,22 @@ namespace ThirdPersonSimulation
             m_Values[index] = value;
         }
 
-        internal CharacterControlRuntimeState Preview()
+        public CharacterControlRuntimeState Capture()
         {
             RequireActive();
             return new CharacterControlRuntimeState(m_Schema, m_Tick.Value, m_Values);
+        }
+
+        public void Restore(CharacterControlRuntimeState state)
+        {
+            RequireActive();
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            if (!state.Schema.SchemaHash.Equals(m_Schema.SchemaHash) ||
+                state.LastCompletedTick != m_Tick.Value)
+                throw new InvalidOperationException("Character control runtime state restore identity does not match the active transaction.");
+            m_Values.Clear();
+            m_Values.AddRange(state.Values);
         }
 
         public CharacterControlRuntimeState Commit()

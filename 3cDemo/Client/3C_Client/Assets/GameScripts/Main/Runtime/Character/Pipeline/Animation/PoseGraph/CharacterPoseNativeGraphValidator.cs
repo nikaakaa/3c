@@ -305,13 +305,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 else if (node.Payload is CharacterMotionMatchingPosePayload motionMatching)
                 {
+                    CharacterPoseCanvasGraph entryGraph =
+                        graphAsset.RequireGraph(motionMatching.EntryGraph.PoseGraphId);
+                    ValidateMotionMatchingEntryBoundary(entryGraph);
                     ValidateGraph(
                         graphAsset,
-                        graphAsset.RequireGraph(motionMatching.EntryGraph.PoseGraphId),
+                        entryGraph,
                         BoundaryKind.Boundary,
                         visiting,
                         visited);
                 }
+            }
+        }
+
+        static void ValidateMotionMatchingEntryBoundary(
+            CharacterPoseCanvasGraph graph)
+        {
+            int entryCount = graph.Nodes.Count(value =>
+                value.Kind == CharacterPoseNodeKind.EntryPoseInput);
+            if (entryCount != 1)
+            {
+                Fail(
+                    CharacterPoseNativeFailureCode.GraphInvalid,
+                    graph.GraphId.Value,
+                    "Motion Matching entry graph must contain exactly one Entry Pose Input.");
             }
         }
 

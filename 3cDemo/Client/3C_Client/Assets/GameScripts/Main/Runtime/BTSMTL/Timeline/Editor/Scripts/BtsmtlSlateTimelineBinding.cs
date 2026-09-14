@@ -1137,6 +1137,8 @@ namespace BTSMTL.Timeline.Editor
             {
                 AnimationCurve result = TimelineCurveAuthoring.CopyCurve(source);
                 float safeDuration = Mathf.Max(0.0001f, duration);
+                if (toNormalized)
+                    result = ClipCurveToDuration(result, safeDuration);
                 Keyframe[] keys = result.keys;
                 for (int index = 0; index < keys.Length; index++)
                 {
@@ -1157,6 +1159,52 @@ namespace BTSMTL.Timeline.Editor
                 }
                 result.keys = keys;
                 return result;
+            }
+
+            static AnimationCurve ClipCurveToDuration(AnimationCurve source, float duration)
+            {
+                var keys = new List<Keyframe>();
+                Keyframe[] sourceKeys = source.keys;
+                for (int index = 0; index < sourceKeys.Length; index++)
+                {
+                    Keyframe key = sourceKeys[index];
+                    if (key.time < -0.0001f || key.time > duration + 0.0001f)
+                        continue;
+                    key.time = Mathf.Clamp(key.time, 0f, duration);
+                    keys.Add(key);
+                }
+                AddBoundaryKey(source, keys, 0f, duration);
+                AddBoundaryKey(source, keys, duration, duration);
+                keys.Sort((left, right) => left.time.CompareTo(right.time));
+                return new AnimationCurve(keys.ToArray())
+                {
+                    preWrapMode = source.preWrapMode,
+                    postWrapMode = source.postWrapMode
+                };
+            }
+
+            static void AddBoundaryKey(AnimationCurve source, List<Keyframe> keys, float time, float duration)
+            {
+                for (int index = 0; index < keys.Count; index++)
+                    if (Mathf.Abs(keys[index].time - time) <= 0.0001f)
+                        return;
+                float tangent = BoundaryTangent(source, time);
+                keys.Add(new Keyframe(time, source.Evaluate(time), tangent, tangent));
+            }
+
+            static float BoundaryTangent(AnimationCurve source, float time)
+            {
+                Keyframe[] keys = source.keys;
+                if (keys.Length == 0)
+                    return 0f;
+                if (time <= keys[0].time)
+                    return keys[0].outTangent;
+                if (time >= keys[keys.Length - 1].time)
+                    return keys[keys.Length - 1].inTangent;
+                for (int index = 1; index < keys.Length; index++)
+                    if (time <= keys[index].time)
+                        return keys[index - 1].outTangent;
+                return 0f;
             }
         }
 

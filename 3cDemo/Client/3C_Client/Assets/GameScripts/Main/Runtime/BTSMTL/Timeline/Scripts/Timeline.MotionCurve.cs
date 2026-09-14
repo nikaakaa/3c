@@ -319,16 +319,47 @@ namespace BTSMTL.Timeline
                 throw new InvalidOperationException($"MotionCurveClip '{CurveId}' has an invalid source duration.");
 
             var result = new AnimationCurve();
-            result.AddKey(new Keyframe(0f, source.Evaluate(m_SourceStartTime), 0f, 0f));
-            foreach (Keyframe sourceKey in source.keys)
+            Keyframe[] sourceKeys = source.keys;
+            bool hasStartKey = false;
+            bool hasEndKey = false;
+            int firstKeyAfterStart = -1;
+            int lastKeyBeforeEnd = -1;
+            for (int index = 0; index < sourceKeys.Length; index++)
             {
-                Keyframe key = sourceKey;
+                Keyframe key = sourceKeys[index];
+                if (Mathf.Approximately(key.time, m_SourceStartTime))
+                {
+                    key.time = 0f;
+                    result.AddKey(key);
+                    hasStartKey = true;
+                    continue;
+                }
+                if (Mathf.Approximately(key.time, m_SourceEndTime))
+                {
+                    key.time = sourceDuration;
+                    result.AddKey(key);
+                    hasEndKey = true;
+                    continue;
+                }
+                if (key.time > m_SourceStartTime && firstKeyAfterStart < 0)
+                    firstKeyAfterStart = index;
+                if (key.time < m_SourceEndTime)
+                    lastKeyBeforeEnd = index;
                 if (key.time <= m_SourceStartTime || key.time >= m_SourceEndTime)
                     continue;
                 key.time -= m_SourceStartTime;
                 result.AddKey(key);
             }
-            result.AddKey(new Keyframe(sourceDuration, source.Evaluate(m_SourceEndTime), 0f, 0f));
+            if (!hasStartKey)
+            {
+                float tangent = firstKeyAfterStart >= 0 ? sourceKeys[firstKeyAfterStart].inTangent : 0f;
+                result.AddKey(new Keyframe(0f, source.Evaluate(m_SourceStartTime), tangent, tangent));
+            }
+            if (!hasEndKey)
+            {
+                float tangent = lastKeyBeforeEnd >= 0 ? sourceKeys[lastKeyBeforeEnd].outTangent : 0f;
+                result.AddKey(new Keyframe(sourceDuration, source.Evaluate(m_SourceEndTime), tangent, tangent));
+            }
             if (timelineDuration > sourceDuration)
                 result.AddKey(new Keyframe(timelineDuration, source.Evaluate(m_SourceEndTime), 0f, 0f));
             result.preWrapMode = WrapMode.ClampForever;

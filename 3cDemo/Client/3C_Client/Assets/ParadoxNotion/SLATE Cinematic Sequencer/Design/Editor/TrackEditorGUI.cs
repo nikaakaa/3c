@@ -83,6 +83,29 @@ namespace Slate
             GUI.enabled = wasEnabled;
         }
 
+        static void DrawParameterHeader(
+            Event e,
+            Rect parameterRect,
+            string displayName,
+            bool selected,
+            Action drawTrailing,
+            Action select)
+        {
+            GUI.color = selected ? new Color(0.5f, 0.5f, 1f, 0.4f) : new Color(0, 0.5f, 0.5f, 0.5f);
+            GUI.Box(parameterRect, string.Empty, Styles.headerBoxStyle);
+            GUI.color = Color.white;
+            string label = string.Format(" <size=10><color=#252525>{0}</color></size>", displayName ?? string.Empty);
+            GUI.Label(parameterRect, selected ? string.Format("<b>{0}</b>", label) : label, Styles.leftLabel);
+            drawTrailing?.Invoke();
+            GUI.color = Color.white;
+            GUI.enabled = true;
+            if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
+            {
+                select?.Invoke();
+                e.Use();
+            }
+        }
+
         public static void DrawParametersInfoGUI(
             Event e,
             Rect trackRect,
@@ -97,6 +120,7 @@ namespace Slate
             ref float proposedHeight,
             ref int inspectedParameterIndex)
         {
+            int inspectedIndex = inspectedParameterIndex;
             var expansionRect = Rect.MinMaxRect(5, defaultHeight, trackRect.width - 3, finalHeight() - 3);
             GUI.color = UnityEditor.EditorGUIUtility.isProSkin ? new Color(0.22f, 0.22f, 0.22f) : new Color(0.7f, 0.7f, 0.7f);
             GUI.DrawTexture(expansionRect, Styles.whiteTexture);
@@ -104,7 +128,7 @@ namespace Slate
             GUI.Box(expansionRect, string.Empty, Styles.shadowBorderStyle);
             GUI.color = Color.white;
 
-            if (inspectedParameterIndex >= 0)
+            if (inspectedIndex >= 0)
             {
                 var resizeRect = Rect.MinMaxRect(0, finalHeight() - 4, trackRect.width, finalHeight());
                 UnityEditor.EditorGUIUtility.AddCursorRect(resizeRect, UnityEditor.MouseCursor.ResizeVertical);
@@ -127,20 +151,23 @@ namespace Slate
             if (!isSelectedKeyable())
             {
                 GUI.Label(expansionRect, "No Clip Selected", Styles.centerLabel);
-                inspectedParameterIndex = -1;
+                inspectedIndex = -1;
+                inspectedParameterIndex = inspectedIndex;
                 return;
             }
 
             if (!showAddPropertyButton && keyable is ActionClip action && !action.isValid)
             {
                 GUI.Label(expansionRect, "Clip Is Invalid", Styles.centerLabel);
+                inspectedParameterIndex = inspectedIndex;
                 return;
             }
 
             if (keyable == null)
             {
                 GUI.Label(expansionRect, "No Clip Selected", Styles.centerLabel);
-                inspectedParameterIndex = -1;
+                inspectedIndex = -1;
+                inspectedParameterIndex = inspectedIndex;
                 return;
             }
 
@@ -149,6 +176,7 @@ namespace Slate
                 if (keyable is ActionClip)
                 {
                     GUI.Label(expansionRect, "Clip Has No Animatable Parameters", Styles.centerLabel);
+                    inspectedParameterIndex = inspectedIndex;
                     return;
                 }
             }
@@ -156,8 +184,8 @@ namespace Slate
             proposedHeight = defaultHeight + 5f;
             if (keyable.animationData != null && keyable.animationData.animatedParameters != null)
             {
-                if (inspectedParameterIndex >= keyable.animationData.animatedParameters.Count)
-                    inspectedParameterIndex = -1;
+                if (inspectedIndex >= keyable.animationData.animatedParameters.Count)
+                    inspectedIndex = -1;
 
                 var paramsCount = keyable.animationData.animatedParameters.Count;
                 for (var i = 0; i < paramsCount; i++)
@@ -165,35 +193,32 @@ namespace Slate
                     var animParam = keyable.animationData.animatedParameters[i];
                     var paramRect = new Rect(expansionRect.xMin + 4, proposedHeight, expansionRect.width - 8, 18f);
                     proposedHeight += 18f + 2f;
-                    GUI.color = inspectedParameterIndex == i ? new Color(0.5f, 0.5f, 1f, 0.4f) : new Color(0, 0.5f, 0.5f, 0.5f);
-                    GUI.Box(paramRect, string.Empty, Styles.headerBoxStyle);
-                    GUI.color = Color.white;
-
-                    var paramName = string.Format(" <size=10><color=#252525>{0}</color></size>", animParam);
-                    paramName = inspectedParameterIndex == i ? string.Format("<b>{0}</b>", paramName) : paramName;
-                    GUI.Label(paramRect, paramName, Styles.leftLabel);
-
-                    var gearRect = new Rect(paramRect.xMax - 16 - 4, paramRect.y, 16, 16);
-                    gearRect.center = new Vector2(gearRect.center.x, paramRect.y + (paramRect.height / 2) - 1);
-                    GUI.enabled = true;
-                    GUI.color = Color.white.WithAlpha(animParam.enabled ? 1 : 0.5f);
-                    if (GUI.Button(gearRect, Styles.gearIcon, GUIStyle.none))
-                        AnimatableParameterEditor.DoParamGearContextMenu(animParam, keyable);
-                    GUI.enabled = animParam.enabled;
-                    if (GUI.Button(paramRect, string.Empty, GUIStyle.none))
-                    {
-                        inspectedParameterIndex = inspectedParameterIndex == i ? -1 : i;
-                        CurveEditor.FrameAllCurvesOf(animParam);
-                    }
-                    GUI.color = Color.white;
-                    GUI.enabled = true;
+                    DrawParameterHeader(
+                        e,
+                        paramRect,
+                        animParam.ToString(),
+                        inspectedIndex == i,
+                        () =>
+                        {
+                            var gearRect = new Rect(paramRect.xMax - 16 - 4, paramRect.y, 16, 16);
+                            gearRect.center = new Vector2(gearRect.center.x, paramRect.y + (paramRect.height / 2) - 1);
+                            GUI.color = Color.white.WithAlpha(animParam.enabled ? 1 : 0.5f);
+                            if (GUI.Button(gearRect, Styles.gearIcon, GUIStyle.none))
+                                AnimatableParameterEditor.DoParamGearContextMenu(animParam, keyable);
+                            GUI.enabled = animParam.enabled;
+                        },
+                        () =>
+                        {
+                            inspectedIndex = inspectedIndex == i ? -1 : i;
+                            CurveEditor.FrameAllCurvesOf(animParam);
+                        });
                 }
 
                 proposedHeight += 5f;
-                if (inspectedParameterIndex >= 0)
+                if (inspectedIndex >= 0)
                 {
                     var controlRect = Rect.MinMaxRect(expansionRect.x + 6, proposedHeight + 5, expansionRect.xMax - 6, proposedHeight + 50);
-                    var animParam = keyable.animationData.animatedParameters[inspectedParameterIndex];
+                    var animParam = keyable.animationData.animatedParameters[inspectedIndex];
                     GUILayout.BeginArea(controlRect);
                     AnimatableParameterEditor.ShowMiniParameterKeyControls(animParam, keyable);
                     GUILayout.EndArea();
@@ -201,7 +226,7 @@ namespace Slate
                 }
             }
 
-            if (showAddPropertyButton && inspectedParameterIndex == -1)
+            if (showAddPropertyButton && inspectedIndex == -1)
             {
                 var buttonRect = Rect.MinMaxRect(expansionRect.x + 6, proposedHeight + 5, expansionRect.xMax - 6, proposedHeight + 25);
                 var go = keyable?.animatedParametersTarget as GameObject;
@@ -214,6 +239,7 @@ namespace Slate
 
             if (e.type == EventType.MouseDown && e.button == 0 && expansionRect.Contains(e.mousePosition))
                 e.Use();
+            inspectedParameterIndex = inspectedIndex;
         }
         public static void DrawClipCurves(Event e, Rect posRect, Rect timeRect, System.Func<float, float> TimeToPos, IKeyable keyable, System.Func<bool> isSelectedKeyable, ref int inspectedParameterIndex) {
 
@@ -377,6 +403,7 @@ namespace Slate
             bool selected,
             ref string inspectedParameterId)
         {
+            string inspectedId = inspectedParameterId;
             DrawDefaultInfoGUI(
                 trackRect,
                 track.DisplayName,
@@ -428,51 +455,52 @@ namespace Slate
             if (clip == null)
             {
                 GUI.Label(expansionRect, "No Clip Selected", Styles.centerLabel);
-                inspectedParameterId = string.Empty;
+                inspectedId = string.Empty;
+                inspectedParameterId = inspectedId;
                 return;
             }
 
             if (clip.Parameters == null)
             {
                 GUI.Label(expansionRect, "Selected Clip Parameter Binding Unavailable", Styles.centerLabel);
-                inspectedParameterId = string.Empty;
+                inspectedId = string.Empty;
+                inspectedParameterId = inspectedId;
                 return;
             }
 
             if (clip.Parameters.Count == 0)
             {
                 GUI.Label(expansionRect, "Selected Clip Has No Timeline-local Curves", Styles.centerLabel);
-                inspectedParameterId = string.Empty;
+                inspectedId = string.Empty;
+                inspectedParameterId = inspectedId;
                 return;
             }
 
             int inspectedParameterIndex = -1;
             for (int index = 0; index < clip.Parameters.Count; index++)
-                if (string.Equals(clip.Parameters[index].ParameterId, inspectedParameterId, StringComparison.Ordinal))
+                if (string.Equals(clip.Parameters[index].ParameterId, inspectedId, StringComparison.Ordinal))
                 {
                     inspectedParameterIndex = index;
                     break;
                 }
             if (inspectedParameterIndex < 0)
-                inspectedParameterId = string.Empty;
+                inspectedId = string.Empty;
             float nextY = track.DefaultHeight + 5f;
             for (int index = 0; index < clip.Parameters.Count; index++)
             {
                 var parameter = clip.Parameters[index];
                 var parameterRect = new Rect(expansionRect.xMin + 4, nextY, expansionRect.width - 8, 18f);
                 nextY += 20f;
-                GUI.color = inspectedParameterIndex == index ? new Color(0.5f, 0.5f, 1f, 0.4f) : new Color(0, 0.5f, 0.5f, 0.5f);
-                GUI.Box(parameterRect, string.Empty, Styles.headerBoxStyle);
-                GUI.color = Color.white;
                 string parameterName = parameter.DisplayName;
                 if (parameter is IEmbeddedTimelineReferenceParameterBinding reference)
                     parameterName = string.Concat(parameterName, "  [Ref: ", reference.ReferenceLabel, "]");
-                GUI.Label(parameterRect, string.Format(" <size=10><color=#252525>{0}</color></size>", parameterName), Styles.leftLabel);
-                if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
-                {
-                    inspectedParameterId = inspectedParameterIndex == index ? string.Empty : parameter.ParameterId;
-                    e.Use();
-                }
+                DrawParameterHeader(
+                    e,
+                    parameterRect,
+                    parameterName,
+                    inspectedParameterIndex == index,
+                    null,
+                     () => inspectedId = inspectedParameterIndex == index ? string.Empty : parameter.ParameterId);
             }
 
             if (inspectedParameterIndex >= 0)
@@ -483,6 +511,7 @@ namespace Slate
                 {
                     var referenceRect = new Rect(expansionRect.xMin + 4, nextY + 4, expansionRect.width - 8, 22f);
                     GUI.Label(referenceRect, string.Concat("Reference: ", reference.ReferenceLabel), Styles.leftLabel);
+                    inspectedParameterId = inspectedId;
                     return;
                 }
                 float localTime = Mathf.Clamp(
@@ -521,6 +550,7 @@ namespace Slate
                     parameter.CurrentValue.ToString("0.###"),
                     Styles.rightLabel);
             }
+            inspectedParameterId = inspectedId;
         }
 
         public static void DrawClipCurves(

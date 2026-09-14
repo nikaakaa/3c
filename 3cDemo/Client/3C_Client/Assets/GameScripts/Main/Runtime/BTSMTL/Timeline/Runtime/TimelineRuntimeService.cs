@@ -22,6 +22,105 @@ namespace BTSMTL.Timeline.Runtime
             out string error);
     }
 
+    public interface ITimelineRuntimeCallBindingSource : ITimelinePlaybackActionContextSource
+    {
+        bool TryCreateExecutionIdentity(
+            string sourceId,
+            string sourceName,
+            TimelinePlaybackActionContext actionContext,
+            TimelineRuntimePlaybackHandle playbackHandle,
+            out TimelineExecutionIdentity identity,
+            out string error);
+
+        bool TryGetCallBindings(
+            TimelineData timeline,
+            string sourceId,
+            string sourceName,
+            TimelinePlaybackActionContext actionContext,
+            out IReadOnlyList<TimelineCallBinding> bindings,
+            out string error);
+    }
+
+    public sealed class TimelineRuntimePlaybackRequestFactory : ITimelineRuntimePlaybackRequestFactory
+    {
+        readonly TimelineContractCatalog m_ContractCatalog;
+        readonly TimelineRuntimeNumericTarget m_NumericTarget;
+        readonly ITimelineDomainBindingResolver m_DomainResolver;
+        readonly ITimelineRuntimeDependencyResolver m_DependencyResolver;
+        readonly ITimelineRuntimeCallBindingSource m_CallBindingSource;
+
+        public TimelineRuntimePlaybackRequestFactory(
+            TimelineContractCatalog contractCatalog,
+            TimelineRuntimeNumericTarget numericTarget,
+            ITimelineDomainBindingResolver domainResolver,
+            ITimelineRuntimeDependencyResolver dependencyResolver,
+            ITimelineRuntimeCallBindingSource callBindingSource)
+        {
+            m_ContractCatalog = contractCatalog ?? throw new ArgumentNullException(nameof(contractCatalog));
+            if (!Enum.IsDefined(typeof(TimelineRuntimeNumericTarget), numericTarget))
+                throw new ArgumentOutOfRangeException(nameof(numericTarget));
+            m_NumericTarget = numericTarget;
+            m_DomainResolver = domainResolver ?? throw new ArgumentNullException(nameof(domainResolver));
+            m_DependencyResolver = dependencyResolver ?? throw new ArgumentNullException(nameof(dependencyResolver));
+            m_CallBindingSource = callBindingSource ?? throw new ArgumentNullException(nameof(callBindingSource));
+        }
+
+        public bool TryCreate(
+            TimelineData timeline,
+            string sourceId,
+            string sourceName,
+            TimelinePlaybackActionContext actionContext,
+            TimelinePlaybackMode playbackMode,
+            TreeExecutionActivationScope sourceActivation,
+            BaseGraph sourceRuntimeGraph,
+            TimelineRuntimePlaybackHandle playbackHandle,
+            ulong generation,
+            out TimelineRuntimePrepareRequest request,
+            out string error)
+        {
+            request = null;
+            error = string.Empty;
+            if (timeline == null || !playbackHandle.IsValid || generation == 0)
+            {
+                error = "timeline_runtime_request_invalid";
+                return false;
+            }
+            if (!m_CallBindingSource.TryCreateExecutionIdentity(
+                    sourceId,
+                    sourceName,
+                    actionContext,
+                    playbackHandle,
+                    out TimelineExecutionIdentity identity,
+                    out error))
+                return false;
+            if (!m_CallBindingSource.TryGetCallBindings(
+                    timeline,
+                    sourceId,
+                    sourceName,
+                    actionContext,
+                    out IReadOnlyList<TimelineCallBinding> bindings,
+                    out error))
+                return false;
+            request = new TimelineRuntimePrepareRequest(
+                $"timeline:{playbackHandle.Value}",
+                timeline,
+                m_ContractCatalog,
+                identity,
+                m_NumericTarget,
+                bindings,
+                m_DomainResolver,
+                m_DependencyResolver);
+            return true;
+        }
+
+        public bool TryGetTimelinePlaybackActionContext(
+            ActionContextSlot actionContext,
+            out TimelinePlaybackActionContext playbackActionContext)
+        {
+            return m_CallBindingSource.TryGetTimelinePlaybackActionContext(actionContext, out playbackActionContext);
+        }
+    }
+
     public interface ITimelineRuntimeEvaluationSink
     {
         bool Consume(TimelineRuntimeStepContext context);

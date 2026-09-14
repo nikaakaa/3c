@@ -179,6 +179,37 @@ Q3要求的是被实际引用的成员合同，不是整资产每个无关字段
 
 已有有效小步继续保留：独立Ability前端、两个Target／store、生命周期模块拆分、Control Tick模块拆分、Pass的CharacterRuntime调用口，以及Control静态Motion直接读取C# Contract。此次重开完成标记不回退代码、不撤销这些成果，也不以改名或保留旧兼容入口代替剩余收口。
 
+### D13. 复用已有任务并行实施的协调提报
+
+提报编号：`PARALLEL-20260914-DOMAIN-01`。用户明确要求“拆给对应的任务，现在有timeline等等任务，上报给协调窗口”。本节供协调窗口登记责任、通知已有规划／实现配对，不新建重复任务。本次不改现有任务勾选，不以提报成功等同于各owner已经接受或完成交接。
+
+| 实现线 | 交给已有任务的范围 | 本任务保留的范围 |
+| --- | --- | --- |
+| 角色／技能公共核心 | 原“收窄Locomotion与Skill编译边界（实现窗口）”继续1.9—1.10、2.1、2.6—2.8及网络／产品接线 | 角色Host／领域工厂、统一Step事务、角色state codec、checkpoint／manifest、旧角色Program容器与共享构建删除 |
+| Timeline直接运行 | 由已有Timeline领域规划／实现承接1.5—1.7中的内容Runtime、portable轨道／Clip数据、窗口／循环／Section／取消／TreeClip调用；3.8的Timeline私有状态；8.2中Timeline旧发射入口删除 | 本任务只接技能调用、provider／内容依赖、角色快照分区与共享artifact接线；不再串行代做全部Timeline内部实现 |
+| Pose原生运行 | 由已有Pose规划／实现承接4.1—4.6、5.1—5.8、6.1的Pose消费、7.3的节点观察与8.3；直接FlowCanvas Runtime，不加载期生成Image | 本任务只接角色表现装配、D10真实准备／采用结果与旧总Projection挂接删除；不改Pose算法 |
+| Camera／运动源／预览／C#／Slate | 继续由各自已有owner完成原职责与领域接口，按D10消费和提供实际结果 | 不重复派工，不扩大到它们的算法、编辑UI或已正确作者实现 |
+
+当前可见任务定位：`timeline`（01a089db-81e3-7a73-ae52-82ef95b744d4）；`PoseGraph`（01a081f3-46f4-7c91-8930-73923ff7950b）；`规划 PoseGraph`（01a09594-1751-7512-b8c0-08b04185055b）；`Timeline作者编辑收口（规划窗口）`（01a095ac-88a4-7bd3-abbf-197b9058c1ca）。标题和存在性已核对，具体配对／代码owner由协调窗口依据其登记确认；Timeline Runtime不能仅凭“Timeline”名字误派给只负责Slate UI的窗口。原主实现为01a09a5f-8d64-7c11-a461-7889623b7459。
+
+#### 公共接口先固定，领域工作直接推进
+
+- Timeline提供正式内容／资源准备、播放实例创建、推进／停止和分型Capture／Restore；输入包含调用上下文、精确内容版本、数值目标、唯一时间映射及TreeClip执行服务。输出包含本次播放状态、领域结果、跨Tick状态与真实采用版本。技能编译和TreeClip图执行服务由主实现提供，不由Timeline复制。
+- Pose提供正式图／Rig／资源准备、实例创建、手动准备／求值／停止与结果观察；只消费committed角色事实、EventGraph typed Frame和有限动作请求。网络重放不执行Pose；Pose不得接管角色快照。
+- Camera准备和运动源映射沿现行正式owner合同，RootMotionCurveAsset的已完成迁移不重新做。资源／接口位置变化按当前规范与源码接续，不恢复已归档任务的旧Program接入假设。
+- 领域可以先推进自己独立的节点、连接、内容与状态实现；到公共Host／codec／Program删除边界时只交付明确接口和变更需求，由主实现一次接入，不补临时桥、空实现或fallback。
+
+#### 文件写入与集成责任
+
+- 主实现：CharacterPipelineHost、CharacterDomainRuntimeFactory、角色状态／事务／codec、网络checkpoint和manifest、共享Program／artifact容器、Character Build编排。
+- Timeline：Timeline直接内容Runtime与其portable内容／播放状态，以及原Timeline专属发射器的退出；MotionCurve源／Clip／Warp的领域代码继续服从曲线owner，Slate源码继续服从UI owner。
+- Pose：CharacterPoseCanvasGraph／Node／Connection／NativePorts的原生执行接入、Pose执行模块与旧Image专属链清理；Source／Constraint／Final Publication只调整已明确的调用／存储边界，不覆盖IK公式、资源算法或其它窗口正确工作。
+- 同一共享文件默认一个写入owner。协调确认后在对应既有文档登记范围；具体冲突按文件／符号提出，不能用整个目录归属抢写其它业务。
+- 各线按现有提交规则独立小步交付。编译／Unity刷新统一由指定执行owner组织，编译期间暂停源码写入；沿现有CLI／开发控制入口执行，不新增锁服务或另一套验证流程。
+- 汇合时主实现接角色调用、快照与产物边界；规划窗口复核是否真实切断旧依赖。日常进度留各owner文档，只有这次必要协调通知和实际合同冲突发消息。
+
+用户最新要求先由指定协调窗口审阅。请先检查本节与现有任务配对、实际文件owner及公共接口是否匹配，并在其协调文档记录可行分工与真实冲突；本次提报不要求立即派工或修改代码。审阅后再按用户指令下发已有任务，不能把本节或消息发送成功当成已完成责任交接。不要求日常回执。
+
 ## Risks / Trade-offs
 
 - [原生端口重复取值] → D3 的调用实例／阶段缓存；同一输入共享两条支路时源时间与求解只推进一次。

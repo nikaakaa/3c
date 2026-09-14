@@ -4,7 +4,6 @@ using ThirdPersonSimulation;
 using FixedActorBinding = ThirdPersonSimulation.Fixed.SimulationActorBinding;
 using FixedActorState = ThirdPersonSimulation.Fixed.SimulationActorState;
 using FixedCharacterRuntime = ThirdPersonSimulation.Fixed.FixedCharacterRuntime;
-using FixedCharacterRuntimeState = ThirdPersonSimulation.Fixed.FixedCharacterRuntimeState;
 using FixedCompositionRequest = ThirdPersonSimulation.Fixed.FixedSimulationSessionCompositionRequest;
 using FixedPassBackendCompositionResult = ThirdPersonSimulation.Fixed.FixedPassBackendCompositionResult;
 using FixedSimulationActorRegistration = ThirdPersonCharacter.Pipeline.Simulation.Fixed.IFixedCharacterRuntimeRegistration;

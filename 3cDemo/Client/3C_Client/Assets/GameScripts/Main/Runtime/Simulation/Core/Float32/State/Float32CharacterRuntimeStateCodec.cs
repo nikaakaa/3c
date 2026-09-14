@@ -33,27 +33,50 @@ namespace ThirdPersonSimulation
 
         public static Float32CharacterRuntimeState Read(
             byte[] bytes,
-            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionInstallationSet installations,
+            GameplayContentHash expectedGameplayContentHash,
             CharacterEquipmentRuntimeBinding equipmentBinding)
         {
-            if (bytes == null || installation == null)
-                throw new ArgumentNullException(bytes == null ? nameof(bytes) : nameof(installation));
+            if (bytes == null || installations == null)
+                throw new ArgumentNullException(bytes == null ? nameof(bytes) : nameof(installations));
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version ||
                 !string.Equals(reader.ReadString(), CodecIdentity, StringComparison.Ordinal))
             {
                 throw new InvalidDataException("Float32 Character runtime state header is invalid.");
             }
-            installation.Identity.Require(ReadIdentity(reader));
+            SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
+            GameplayContentHash gameplayContentHash = new GameplayContentHash(new StableHash(reader.ReadString()));
+            if (!gameplayContentHash.Equals(expectedGameplayContentHash))
+                throw new InvalidDataException("Float32 Character runtime state GameplayContentHash does not match the active Character Runtime.");
             ulong lastCompletedTick = reader.ReadUInt64();
-            Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
-            GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
-            Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installation.Layout);
-            EquipmentProgramLayout equipmentLayout = equipmentBinding == null ? null : CreateEquipmentLayout(installation, equipmentBinding);
-            List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installation.Layout, equipmentLayout);
-            List<Float32ActionInstanceState> actionInstances = ReadActionInstances(reader, installation.Layout, equipmentLayout);
-            Dictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, installation.Layout);
-            Dictionary<int, Float32MotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
+            int abilityCount = ReadCount(reader, installations.Installations.Count, "Float32 Character Ability partition");
+            var abilities = new List<Float32AbilityRuntimeState>(abilityCount);
+            for (int i = 0; i < abilityCount; i++)
+            {
+                GameplayAbilityExecutionIdentity identity = ReadIdentity(reader);
+                Float32GameplayAbilityExecutionInstallation installation = installations.Require(identity.AbilityId);
+                installation.Identity.Require(identity);
+                Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
+                GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
+                Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installation.Layout);
+                Dictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, installation.Layout);
+                Dictionary<int, Float32MotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
+                abilities.Add(new Float32AbilityRuntimeState(
+                    installation,
+                    lastCompletedTick,
+                    stateValues,
+                    abilityExecutionState,
+                    inputRequests,
+                    timelineRetainedActionContexts,
+                    motionWarpStates));
+            }
+            Float32GameplayAbilityExecutionInstallation equipmentInstallation = FindInstallationWithCapability(installations, "Equipment");
+            EquipmentProgramLayout equipmentLayout = equipmentInstallation == null || equipmentBinding == null
+                ? null
+                : CreateEquipmentLayout(equipmentInstallation, equipmentBinding);
+            List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installations, equipmentLayout);
+            List<Float32ActionInstanceState> actionInstances = ReadActionInstances(reader, installations, equipmentLayout);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
             ulong handleAllocator = reader.ReadUInt64();
@@ -63,30 +86,31 @@ namespace ThirdPersonSimulation
             GameplayEffectStateAggregate gameplayEffectState = null;
             if (reader.ReadBoolean())
             {
-                if (installation.GameplayEffectCatalog == null)
+                Float32GameplayAbilityExecutionInstallation effectInstallation = FindInstallationWithCapability(installations, "GameplayEffect");
+                if (effectInstallation == null || effectInstallation.GameplayEffectCatalog == null)
                     throw new InvalidDataException("Float32 Character runtime state contains Gameplay Effect state without an installed catalog.");
                 var effectReader = new CanonicalReader(reader.ReadBytes());
-                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, installation.GameplayEffectCatalog);
+                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, effectInstallation.GameplayEffectCatalog);
                 effectReader.RequireComplete();
             }
             EquipmentStateAggregate equipmentState = null;
             if (reader.ReadBoolean())
             {
+                if (equipmentLayout == null)
+                    throw new InvalidDataException("Float32 Character runtime state contains Equipment state without an installed layout.");
                 var equipmentReader = new CanonicalReader(reader.ReadBytes());
                 equipmentState = EquipmentStateAggregateCodec.Read(equipmentReader, equipmentLayout);
                 equipmentReader.RequireComplete();
             }
             reader.RequireComplete();
             var state = new Float32CharacterRuntimeState(
-                installation,
+                installations,
+                numericProfile,
+                gameplayContentHash,
                 lastCompletedTick,
-                stateValues,
-                abilityExecutionState,
-                inputRequests,
+                abilities,
                 actionActivationRequests,
                 actionInstances,
-                timelineRetainedActionContexts,
-                motionWarpStates,
                 eventSequence,
                 actionEventSequence,
                 handleAllocator,
@@ -102,15 +126,22 @@ namespace ThirdPersonSimulation
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
             writer.WriteString(CodecIdentity);
-            WriteIdentity(writer, state.AbilityIdentity);
+            SimulationNumericProfileCodec.Write(writer, state.NumericProfile);
+            writer.WriteString(state.GameplayContentHash.ToString());
             writer.WriteUInt64(state.LastCompletedTick);
-            WriteValues(writer, state.StateValues);
-            WriteAbilityExecutionState(writer, state.AbilityExecutionState);
-            WriteInputRequests(writer, state.InputRequests);
+            writer.WriteInt32(state.Abilities.Count);
+            for (int i = 0; i < state.Abilities.Count; i++)
+            {
+                Float32AbilityRuntimeState ability = state.Abilities[i];
+                WriteIdentity(writer, ability.AbilityIdentity);
+                WriteValues(writer, ability.StateValues);
+                WriteAbilityExecutionState(writer, ability.AbilityExecutionState);
+                WriteInputRequests(writer, ability.InputRequests);
+                WriteTimelineRetentions(writer, ability.TimelineRetainedActionContexts);
+                WriteMotionWarpStates(writer, ability.MotionWarpStates);
+            }
             WriteActionActivationRequests(writer, state.ActionActivationRequests);
             WriteActionInstances(writer, state.ActionInstances);
-            WriteTimelineRetentions(writer, state.TimelineRetainedActionContexts);
-            WriteMotionWarpStates(writer, state.MotionWarpStates);
             writer.WriteUInt64(state.EventSequence);
             writer.WriteUInt64(state.ActionEventSequence);
             writer.WriteUInt64(state.HandleAllocator);
@@ -121,7 +152,10 @@ namespace ThirdPersonSimulation
             if (state.GameplayEffectState != null)
             {
                 using var effectWriter = new CanonicalWriter();
-                GameplayEffectStateAggregateCodec.Write(effectWriter, state.GameplayEffectState, state.Installation.GameplayEffectCatalog);
+                GameplayEffectStateAggregateCodec.Write(
+                    effectWriter,
+                    state.GameplayEffectState,
+                    RequireInstallationWithCapability(state.Installations, "GameplayEffect").GameplayEffectCatalog);
                 writer.WriteBytes(effectWriter.ToArray());
             }
             writer.WriteBoolean(state.EquipmentState != null);
@@ -292,7 +326,7 @@ namespace ThirdPersonSimulation
 
         static List<SimulationActionActivationRequestState> ReadActionActivationRequests(
             CanonicalReader reader,
-            GameplayAbilityExecutionLayout layout,
+            Float32GameplayAbilityExecutionInstallationSet installations,
             EquipmentProgramLayout equipmentLayout)
         {
             int count = ReadCount(reader, 1000000, "Float32 Action activation request");
@@ -304,7 +338,7 @@ namespace ThirdPersonSimulation
                 var request = new SimulationActionActivationRequestState(
                     reader.ReadString(),
                     ReadOptionalSkill(reader),
-                    ReadOptionalOperation(reader, layout),
+                    ReadOptionalOperation(reader, null),
                     reader.ReadString(),
                     reader.ReadString(),
                     reader.ReadUInt64(),
@@ -316,6 +350,7 @@ namespace ThirdPersonSimulation
                     reader.ReadUInt64());
                 if (!request.IsValid)
                     throw new InvalidDataException("Float32 Action activation request identity is invalid.");
+                RequireSkillExecution(request.SkillId, request.SkillEntryOperation, installations);
                 requests.Add(request);
             }
             return requests;
@@ -356,7 +391,7 @@ namespace ThirdPersonSimulation
 
         static List<Float32ActionInstanceState> ReadActionInstances(
             CanonicalReader reader,
-            GameplayAbilityExecutionLayout layout,
+            Float32GameplayAbilityExecutionInstallationSet installations,
             EquipmentProgramLayout equipmentLayout)
         {
             int count = ReadCount(reader, 1000000, "Float32 Action instance");
@@ -368,7 +403,7 @@ namespace ThirdPersonSimulation
                 var action = new Float32ActionInstanceState(
                     reader.ReadString(),
                     ReadOptionalSkill(reader),
-                    ReadOptionalOperation(reader, layout),
+                    ReadOptionalOperation(reader, null),
                     reader.ReadUInt64(),
                     reader.ReadString(),
                     reader.ReadUInt64(),
@@ -389,6 +424,7 @@ namespace ThirdPersonSimulation
                     reader.ReadUInt64());
                 if (!action.IsValid)
                     throw new InvalidDataException("Float32 Action instance identity is invalid.");
+                RequireSkillExecution(action.SkillId, action.SkillEntryOperation, installations);
                 actions.Add(action);
             }
             return actions;
@@ -722,6 +758,39 @@ namespace ThirdPersonSimulation
                 installation.Data.CatalogEntries,
                 installation.Data.References,
                 installation.Data.Producers);
+        }
+
+        static Float32GameplayAbilityExecutionInstallation FindInstallationWithCapability(
+            Float32GameplayAbilityExecutionInstallationSet installations,
+            string capability)
+        {
+            for (int i = 0; i < installations.Installations.Count; i++)
+            {
+                Float32GameplayAbilityExecutionInstallation installation = installations.Installations[i];
+                if (installation.Data.Capabilities.HasGameplayCapability(capability))
+                    return installation;
+            }
+            return null;
+        }
+
+        static Float32GameplayAbilityExecutionInstallation RequireInstallationWithCapability(
+            Float32GameplayAbilityExecutionInstallationSet installations,
+            string capability) =>
+            FindInstallationWithCapability(installations, capability) ??
+            throw new InvalidDataException($"Float32 Character runtime state requires an Ability with '{capability}' capability.");
+
+        static void RequireSkillExecution(
+            CharacterSkillId skillId,
+            OperationHandle operation,
+            Float32GameplayAbilityExecutionInstallationSet installations)
+        {
+            if (!operation.IsValid)
+                return;
+            if (!skillId.IsValid)
+                throw new InvalidDataException("Float32 Character runtime state operation has no Ability identity.");
+            Float32GameplayAbilityExecutionInstallation installation = installations.Require(skillId);
+            if (operation.Value >= installation.Layout.Operations.Count)
+                throw new InvalidDataException("Float32 Character runtime state Ability operation is outside its installed Ability layout.");
         }
 
         static int ReadCount(CanonicalReader reader, int maximum, string label)

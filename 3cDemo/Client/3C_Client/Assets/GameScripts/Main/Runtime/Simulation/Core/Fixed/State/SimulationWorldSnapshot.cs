@@ -25,41 +25,47 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationActorSnapshot(
             ActorId actorId,
-            GameplayAbilityExecutionIdentity abilityIdentity,
+            GameplayContentHash gameplayContentHash,
             CharacterStateHash stateHash,
             string stateCodecIdentity,
             byte[] stateBytes)
         {
-            if (!actorId.IsValid || !abilityIdentity.IsValid || !stateHash.IsValid ||
+            if (!actorId.IsValid || !gameplayContentHash.IsValid || !stateHash.IsValid ||
                 !string.Equals(stateCodecIdentity, FixedCharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal))
             {
                 throw new ArgumentException("Actor snapshot identity is incomplete.");
             }
             ActorId = actorId;
-            AbilityIdentity = abilityIdentity;
+            GameplayContentHash = gameplayContentHash;
             StateHash = stateHash;
             StateCodecIdentity = stateCodecIdentity;
             m_StateBytes = stateBytes == null ? throw new ArgumentNullException(nameof(stateBytes)) : (byte[])stateBytes.Clone();
         }
 
         public ActorId ActorId { get; }
-        public GameplayAbilityExecutionIdentity AbilityIdentity { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public CharacterStateHash StateHash { get; }
         public string StateCodecIdentity { get; }
         public ReadOnlyMemory<byte> StateBytes => m_StateBytes;
         internal byte[] StateBytesBuffer => m_StateBytes;
 
         public FixedCharacterRuntimeState Decode(
-            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionInstallationSet installations,
+            GameplayContentHash expectedGameplayContentHash,
             CharacterEquipmentRuntimeBinding equipmentBinding)
         {
             if (!string.Equals(StateCodecIdentity, FixedCharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal) ||
-                installation == null)
+                installations == null)
             {
                 throw new InvalidDataException($"Actor '{ActorId}' snapshot Ability binding is stale or mismatched.");
             }
-            installation.Identity.Require(AbilityIdentity);
-            FixedCharacterRuntimeState state = FixedCharacterRuntimeStateCodec.Read(m_StateBytes, installation, equipmentBinding);
+            if (!GameplayContentHash.Equals(expectedGameplayContentHash))
+                throw new InvalidDataException($"Actor '{ActorId}' snapshot Character Runtime binding is stale or mismatched.");
+            FixedCharacterRuntimeState state = FixedCharacterRuntimeStateCodec.Read(
+                m_StateBytes,
+                installations,
+                expectedGameplayContentHash,
+                equipmentBinding);
             if (!FixedCharacterRuntimeStateCodec.ComputeHash(state).Equals(StateHash))
                 throw new InvalidDataException($"Actor '{ActorId}' Character runtime state hash is invalid.");
             return state;
@@ -155,19 +161,23 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     throw new InvalidOperationException("Character runtime state, Character Runtime and World body rosters are not the same stable ActorId order.");
                 }
-                FixedGameplayAbilityExecutionInstallation installation = binding.AbilityInstallations.Require(actor.State.AbilityIdentity.AbilityId);
-                installation.Identity.Require(actor.State.AbilityIdentity);
+                GameplayContentHash actorContentHash = new GameplayContentHash(binding.GameplayContentHash);
+                if (!actor.State.GameplayContentHash.Equals(actorContentHash))
+                    throw new InvalidOperationException($"Actor '{actor.ActorId}' Character runtime state identity does not match Character Runtime binding.");
                 if (actor.State.NumericProfile != characterRuntime.NumericProfile)
                     throw new InvalidOperationException($"Actor '{actor.ActorId}' Character runtime state Numeric Profile does not match Character Runtime.");
                 byte[] stateBytes = FixedCharacterRuntimeStateCodec.Write(actor.State);
                 snapshots[i] = new SimulationActorSnapshot(
                     actor.ActorId,
-                    installation.Identity,
+                    actor.State.GameplayContentHash,
                     FixedCharacterRuntimeStateCodec.ComputeHash(actor.State),
                     FixedCharacterRuntimeStateCodec.CodecIdentity,
                     stateBytes);
-                FixedGameplayAbilityExecutionData ability = installation.Data;
-                abilitiesDeterministic &= ability.NumericProfile.DeterministicReplay && ability.Capabilities.HasGameplayCapability("DeterministicReplay");
+                for (int abilityIndex = 0; abilityIndex < binding.AbilityData.Data.Count; abilityIndex++)
+                {
+                    FixedGameplayAbilityExecutionData ability = binding.AbilityData.Data[abilityIndex];
+                    abilitiesDeterministic &= ability.NumericProfile.DeterministicReplay && ability.Capabilities.HasGameplayCapability("DeterministicReplay");
+                }
             }
             bool deterministicValidity = characterRuntime.NumericProfile.DeterministicReplay && abilitiesDeterministic &&
                 (solverCapabilities & WorldCapability.DeterministicReplay) != 0;
@@ -277,10 +287,14 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationActorSnapshot actorSnapshot = snapshot.Actors[i];
                 SimulationActorState currentActor = m_Current.Actors[i];
                 SimulationActorBinding binding = m_Runtime.Roster[i];
-                if (actorSnapshot.ActorId != currentActor.ActorId || actorSnapshot.AbilityIdentity != currentActor.State.AbilityIdentity || binding.ActorId != actorSnapshot.ActorId)
+                if (actorSnapshot.ActorId != currentActor.ActorId ||
+                    !actorSnapshot.GameplayContentHash.Equals(currentActor.State.GameplayContentHash) ||
+                    binding.ActorId != actorSnapshot.ActorId)
                     throw new InvalidDataException("Snapshot Actor roster or Ability binding does not match the active roster.");
-                FixedGameplayAbilityExecutionInstallation installation = binding.AbilityInstallations.Require(actorSnapshot.AbilityIdentity.AbilityId);
-                FixedCharacterRuntimeState state = actorSnapshot.Decode(installation, binding.EquipmentRuntimeBinding);
+                FixedCharacterRuntimeState state = actorSnapshot.Decode(
+                    binding.AbilityInstallations,
+                    actorSnapshot.GameplayContentHash,
+                    binding.EquipmentRuntimeBinding);
                 if (state.LastCompletedTick != snapshot.Tick.Value)
                     throw new InvalidDataException($"Actor '{actorSnapshot.ActorId}' state Tick does not match Snapshot Tick.");
                 restoredActors[i] = new SimulationActorState(actorSnapshot.ActorId, state);
@@ -304,7 +318,9 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationActorBinding binding = m_Runtime.Roster[i];
                 if (actor.ActorId != binding.ActorId)
                     throw new InvalidDataException($"Simulation state Actor '{actor.ActorId}' does not match the active Character Runtime roster.");
-                binding.AbilityInstallations.Require(actor.State.AbilityIdentity.AbilityId).Identity.Require(actor.State.AbilityIdentity);
+                GameplayContentHash expected = new GameplayContentHash(binding.GameplayContentHash);
+                if (!actor.State.GameplayContentHash.Equals(expected))
+                    throw new InvalidDataException($"Simulation state Actor '{actor.ActorId}' content identity does not match the active Character Runtime.");
             }
         }
 
@@ -321,7 +337,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < current.Actors.Count; i++)
             {
                 if (candidate.Actors[i].ActorId != current.Actors[i].ActorId ||
-                    candidate.Actors[i].State.AbilityIdentity != current.Actors[i].State.AbilityIdentity ||
+                    !candidate.Actors[i].State.GameplayContentHash.Equals(current.Actors[i].State.GameplayContentHash) ||
                     candidate.WorldState.Bodies[i].ActorId != current.WorldState.Bodies[i].ActorId)
                 {
                     throw new InvalidOperationException("Simulation state replacement changes the locked Actor or Ability binding.");
@@ -368,7 +384,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 actors[i] = new SimulationActorSnapshot(
                     new ActorId(reader.ReadString()),
-                    ReadAbilityIdentity(reader),
+                    new GameplayContentHash(new StableHash(reader.ReadString())),
                     new CharacterStateHash(new StableHash(reader.ReadString())),
                     reader.ReadString(),
                     reader.ReadBytes());
@@ -412,30 +428,13 @@ namespace ThirdPersonSimulation.Fixed
             {
                 SimulationActorSnapshot actor = snapshot.Actors[i];
                 writer.WriteString(actor.ActorId.Value);
-                WriteAbilityIdentity(writer, actor.AbilityIdentity);
+                writer.WriteString(actor.GameplayContentHash.ToString());
                 writer.WriteString(actor.StateHash.ToString());
                 writer.WriteString(actor.StateCodecIdentity);
                 writer.WriteBytes(actor.StateBytesBuffer);
             }
             writer.WriteBytes(snapshot.WorldStateBytesBuffer);
         }
-
-        static void WriteAbilityIdentity(CanonicalWriter writer, GameplayAbilityExecutionIdentity identity)
-        {
-            writer.WriteString(identity.AbilityId.Value);
-            writer.WriteString(identity.ContentHash.ToString());
-            writer.WriteString(identity.StateSchemaHash.ToString());
-            writer.WriteString(identity.OperationSetVersion.Value);
-            SimulationNumericProfileCodec.Write(writer, identity.NumericProfile);
-        }
-
-        static GameplayAbilityExecutionIdentity ReadAbilityIdentity(CanonicalReader reader) =>
-            new GameplayAbilityExecutionIdentity(
-                new CharacterSkillId(reader.ReadString()),
-                new StableHash(reader.ReadString()),
-                new StableHash(reader.ReadString()),
-                new OperationSetVersion(reader.ReadString()),
-                SimulationNumericProfileCodec.Read(reader));
 
         static void RequireCanonical(byte[] source, byte[] canonical, string label)
         {

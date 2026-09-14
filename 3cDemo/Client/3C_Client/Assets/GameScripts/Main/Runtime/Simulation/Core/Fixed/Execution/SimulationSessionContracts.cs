@@ -80,7 +80,7 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     SimulationActorSnapshot actorSnapshot = candidateSnapshot.Actors[i];
                     if (actorSnapshot.ActorId != values[i].ActorId ||
-                        actorSnapshot.AbilityIdentity != values[i].State.AbilityIdentity ||
+                        !actorSnapshot.GameplayContentHash.Equals(values[i].State.GameplayContentHash) ||
                         !actorSnapshot.StateHash.Equals(values[i].StateHash))
                         throw new ArgumentException("Simulation result Actor state does not match candidate snapshot.", nameof(candidateSnapshot));
                 }

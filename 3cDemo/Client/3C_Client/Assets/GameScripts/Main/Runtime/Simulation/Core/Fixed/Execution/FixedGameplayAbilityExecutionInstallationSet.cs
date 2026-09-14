@@ -20,7 +20,11 @@ namespace ThirdPersonSimulation.Fixed
             m_ByAbility = new Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionInstallation>();
             for (int i = 0; i < data.Data.Count; i++)
             {
-                var installation = new FixedGameplayAbilityExecutionInstallation(data.Data[i], gameplayEffectBinding);
+                FixedGameplayAbilityExecutionData ability = data.Data[i];
+                CharacterGameplayEffectRuntimeBinding abilityEffectBinding = ability.Capabilities.HasGameplayCapability("GameplayEffect")
+                    ? gameplayEffectBinding ?? throw new ArgumentNullException(nameof(gameplayEffectBinding))
+                    : null;
+                var installation = new FixedGameplayAbilityExecutionInstallation(ability, abilityEffectBinding);
                 values.Add(installation);
                 m_ByAbility.Add(installation.Data.AbilityId, installation);
             }

@@ -32,10 +32,10 @@ namespace ThirdPersonSimulation.Fixed
                 requiresGameplayEffects |= data.Capabilities.HasGameplayCapability("GameplayEffect");
                 requiresEquipment |= data.Capabilities.HasGameplayCapability("Equipment");
             }
-            if (requiresGameplayEffects != (gameplayEffectRuntimeBinding != null))
-                throw new ArgumentException("Fixed Actor Gameplay Effect binding does not match installed Ability capabilities.", nameof(gameplayEffectRuntimeBinding));
-            if (requiresEquipment != (equipmentRuntimeBinding != null))
-                throw new ArgumentException("Fixed Actor Equipment binding does not match installed Ability capabilities.", nameof(equipmentRuntimeBinding));
+            if (requiresGameplayEffects && gameplayEffectRuntimeBinding == null)
+                throw new ArgumentException("Fixed Actor Gameplay Effect service is required by an installed Ability.", nameof(gameplayEffectRuntimeBinding));
+            if (requiresEquipment && equipmentRuntimeBinding == null)
+                throw new ArgumentException("Fixed Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             AbilityInstallations = new FixedGameplayAbilityExecutionInstallationSet(

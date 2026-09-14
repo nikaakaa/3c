@@ -19,7 +19,11 @@ namespace ThirdPersonSimulation
             m_ByAbility = new Dictionary<CharacterSkillId, Float32GameplayAbilityExecutionInstallation>();
             for (int i = 0; i < data.Data.Count; i++)
             {
-                var installation = new Float32GameplayAbilityExecutionInstallation(data.Data[i], gameplayEffectBinding);
+                Float32GameplayAbilityExecutionData ability = data.Data[i];
+                CharacterGameplayEffectRuntimeBinding abilityEffectBinding = ability.Capabilities.HasGameplayCapability("GameplayEffect")
+                    ? gameplayEffectBinding ?? throw new ArgumentNullException(nameof(gameplayEffectBinding))
+                    : null;
+                var installation = new Float32GameplayAbilityExecutionInstallation(ability, abilityEffectBinding);
                 values.Add(installation);
                 m_ByAbility.Add(installation.Data.AbilityId, installation);
             }

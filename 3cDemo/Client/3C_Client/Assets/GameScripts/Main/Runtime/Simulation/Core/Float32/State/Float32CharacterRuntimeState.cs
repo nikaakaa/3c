@@ -4,28 +4,18 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation
 {
-    public sealed class Float32CharacterRuntimeState
+    public sealed class Float32AbilityRuntimeState
     {
         readonly Float32GameplayAbilityExecutionInstallation m_Installation;
 
-        internal Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
-
-        internal Float32CharacterRuntimeState(
+        internal Float32AbilityRuntimeState(
             Float32GameplayAbilityExecutionInstallation installation,
             ulong lastCompletedTick,
             IDictionary<int, CharacterStateValue> stateValues,
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
             IDictionary<string, SimulationInputRequestState> inputRequests,
-            IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
-            IEnumerable<Float32ActionInstanceState> actionInstances,
             IDictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts,
-            IDictionary<int, Float32MotionWarpState> motionWarpStates,
-            ulong eventSequence,
-            ulong actionEventSequence,
-            ulong handleAllocator,
-            CharacterControlRuntimeState controlState,
-            GameplayEffectStateAggregate gameplayEffectState,
-            EquipmentStateAggregate equipmentState)
+            IDictionary<int, Float32MotionWarpState> motionWarpStates)
         {
             m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             LastCompletedTick = lastCompletedTick;
@@ -35,44 +25,34 @@ namespace ThirdPersonSimulation
             InputRequests = inputRequests == null
                 ? new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal)
                 : new Dictionary<string, SimulationInputRequestState>(inputRequests, StringComparer.Ordinal);
-            ActionActivationRequests = new List<SimulationActionActivationRequestState>(
-                actionActivationRequests ?? Array.Empty<SimulationActionActivationRequestState>());
-            ActionInstances = new List<Float32ActionInstanceState>(
-                actionInstances ?? Array.Empty<Float32ActionInstanceState>());
             TimelineRetainedActionContexts = timelineRetainedActionContexts == null
                 ? new Dictionary<int, Float32ActionInstanceReference>()
                 : new Dictionary<int, Float32ActionInstanceReference>(timelineRetainedActionContexts);
             MotionWarpStates = motionWarpStates == null
                 ? new Dictionary<int, Float32MotionWarpState>()
                 : new Dictionary<int, Float32MotionWarpState>(motionWarpStates);
-            EventSequence = eventSequence;
-            ActionEventSequence = actionEventSequence;
-            HandleAllocator = handleAllocator;
-            ControlState = controlState;
-            GameplayEffectState = gameplayEffectState;
-            EquipmentState = equipmentState;
         }
 
+        internal Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
         internal Dictionary<int, CharacterStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionState { get; }
         internal Dictionary<string, SimulationInputRequestState> InputRequests { get; }
-        internal List<SimulationActionActivationRequestState> ActionActivationRequests { get; }
-        internal List<Float32ActionInstanceState> ActionInstances { get; }
         internal Dictionary<int, Float32ActionInstanceReference> TimelineRetainedActionContexts { get; }
         internal Dictionary<int, Float32MotionWarpState> MotionWarpStates { get; }
-        internal ulong EventSequence { get; }
-        internal ulong ActionEventSequence { get; }
-        internal ulong HandleAllocator { get; }
-        internal CharacterControlRuntimeState ControlState { get; }
-        internal GameplayEffectStateAggregate GameplayEffectState { get; }
-        internal EquipmentStateAggregate EquipmentState { get; }
-        public SimulationNumericProfile NumericProfile => m_Installation.Data.NumericProfile;
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
-        public GameplayContentHash GameplayContentHash => new GameplayContentHash(m_Installation.Identity.ContentHash);
         public ulong LastCompletedTick { get; }
 
-        static Dictionary<int, CharacterStateValue> CopyValues(
-            IDictionary<int, CharacterStateValue> values)
+        internal Float32AbilityRuntimeState Clone(ulong lastCompletedTick) =>
+            new Float32AbilityRuntimeState(
+                m_Installation,
+                lastCompletedTick,
+                StateValues,
+                AbilityExecutionState,
+                InputRequests,
+                TimelineRetainedActionContexts,
+                MotionWarpStates);
+
+        static Dictionary<int, CharacterStateValue> CopyValues(IDictionary<int, CharacterStateValue> values)
         {
             var result = new Dictionary<int, CharacterStateValue>();
             if (values == null)
@@ -83,6 +63,119 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Character runtime state values are invalid or duplicated.", nameof(values));
             }
             return result;
+        }
+    }
+
+    public sealed class Float32CharacterRuntimeState
+    {
+        readonly Float32GameplayAbilityExecutionInstallationSet m_Installations;
+        readonly System.Collections.ObjectModel.ReadOnlyCollection<Float32AbilityRuntimeState> m_Abilities;
+
+        internal Float32CharacterRuntimeState(
+            Float32GameplayAbilityExecutionInstallationSet installations,
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            ulong lastCompletedTick,
+            IEnumerable<Float32AbilityRuntimeState> abilities,
+            IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
+            IEnumerable<Float32ActionInstanceState> actionInstances,
+            ulong eventSequence,
+            ulong actionEventSequence,
+            ulong handleAllocator,
+            CharacterControlRuntimeState controlState,
+            GameplayEffectStateAggregate gameplayEffectState,
+            EquipmentStateAggregate equipmentState)
+        {
+            m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid)
+                throw new ArgumentException("Character runtime state identity is incomplete.");
+            NumericProfile = numericProfile;
+            GameplayContentHash = gameplayContentHash;
+            LastCompletedTick = lastCompletedTick;
+            var copied = abilities == null
+                ? new List<Float32AbilityRuntimeState>()
+                : new List<Float32AbilityRuntimeState>(abilities);
+            copied.Sort((left, right) => left.AbilityIdentity.AbilityId.CompareTo(right.AbilityIdentity.AbilityId));
+            if (copied.Count != m_Installations.Installations.Count)
+                throw new ArgumentException("Character runtime state must contain one partition for every installed Ability.", nameof(abilities));
+            for (int i = 0; i < copied.Count; i++)
+            {
+                if (copied[i] == null || i > 0 && copied[i - 1].AbilityIdentity.AbilityId == copied[i].AbilityIdentity.AbilityId)
+                    throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.", nameof(abilities));
+                m_Installations.Require(copied[i].AbilityIdentity.AbilityId).Identity.Require(copied[i].AbilityIdentity);
+            }
+            m_Abilities = copied.AsReadOnly();
+            ActionActivationRequests = new List<SimulationActionActivationRequestState>(
+                actionActivationRequests ?? Array.Empty<SimulationActionActivationRequestState>());
+            ActionInstances = new List<Float32ActionInstanceState>(
+                actionInstances ?? Array.Empty<Float32ActionInstanceState>());
+            EventSequence = eventSequence;
+            ActionEventSequence = actionEventSequence;
+            HandleAllocator = handleAllocator;
+            ControlState = controlState;
+            GameplayEffectState = gameplayEffectState;
+            EquipmentState = equipmentState;
+        }
+
+        internal Float32GameplayAbilityExecutionInstallationSet Installations => m_Installations;
+        internal Float32AbilityRuntimeState RequireAbility(CharacterSkillId abilityId)
+        {
+            for (int i = 0; i < m_Abilities.Count; i++)
+                if (m_Abilities[i].AbilityIdentity.AbilityId == abilityId)
+                    return m_Abilities[i];
+            throw new InvalidOperationException($"Character runtime state Ability '{abilityId}' is missing.");
+        }
+
+        public SimulationNumericProfile NumericProfile { get; }
+        public GameplayContentHash GameplayContentHash { get; }
+        public ulong LastCompletedTick { get; }
+        public IReadOnlyList<Float32AbilityRuntimeState> Abilities => m_Abilities;
+        internal List<SimulationActionActivationRequestState> ActionActivationRequests { get; }
+        internal List<Float32ActionInstanceState> ActionInstances { get; }
+        internal ulong EventSequence { get; }
+        internal ulong ActionEventSequence { get; }
+        internal ulong HandleAllocator { get; }
+        internal CharacterControlRuntimeState ControlState { get; }
+        internal GameplayEffectStateAggregate GameplayEffectState { get; }
+        internal EquipmentStateAggregate EquipmentState { get; }
+
+        internal static Float32CharacterRuntimeState CreateInitial(
+            Float32GameplayAbilityExecutionInstallationSet installations,
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            CharacterControlRuntimeState controlState,
+            GameplayEffectStateAggregate gameplayEffectState,
+            EquipmentStateAggregate equipmentState)
+        {
+            if (installations == null)
+                throw new ArgumentNullException(nameof(installations));
+            var abilities = new Float32AbilityRuntimeState[installations.Installations.Count];
+            for (int i = 0; i < abilities.Length; i++)
+            {
+                Float32GameplayAbilityExecutionInstallation installation = installations.Installations[i];
+                abilities[i] = new Float32AbilityRuntimeState(
+                    installation,
+                    0,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
+            }
+            return new Float32CharacterRuntimeState(
+                installations,
+                numericProfile,
+                gameplayContentHash,
+                0,
+                abilities,
+                null,
+                null,
+                0,
+                0,
+                0,
+                controlState,
+                gameplayEffectState,
+                equipmentState);
         }
     }
 
@@ -116,6 +209,7 @@ namespace ThirdPersonSimulation
         readonly Float32GameplayAbilityExecutionData m_Ability;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly Float32CharacterRuntimeState m_BaseState;
+        readonly Float32AbilityRuntimeState m_BaseAbilityState;
         readonly Float32GameplayEffectRuntimeCatalog m_GameplayEffectCatalog;
         readonly ActorId m_ActorId;
         readonly SimulationTick m_Tick;
@@ -148,16 +242,17 @@ namespace ThirdPersonSimulation
             m_Ability = installation.Data;
             m_Layout = installation.Layout;
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
+            m_BaseAbilityState = m_BaseState.RequireAbility(installation.Data.AbilityId);
             m_GameplayEffectCatalog = gameplayEffectCatalog;
             m_ActorId = actorId;
             m_Tick = tick;
-            m_StateValues = new Dictionary<int, CharacterStateValue>(baseState.StateValues);
-            m_AbilityExecutionState = baseState.AbilityExecutionState.Clone();
-            m_InputRequests = new Dictionary<string, SimulationInputRequestState>(baseState.InputRequests, StringComparer.Ordinal);
+            m_StateValues = new Dictionary<int, CharacterStateValue>(m_BaseAbilityState.StateValues);
+            m_AbilityExecutionState = m_BaseAbilityState.AbilityExecutionState.Clone();
+            m_InputRequests = new Dictionary<string, SimulationInputRequestState>(m_BaseAbilityState.InputRequests, StringComparer.Ordinal);
             m_ActionActivationRequests = new List<SimulationActionActivationRequestState>(baseState.ActionActivationRequests);
             m_ActionInstances = new List<Float32ActionInstanceState>(baseState.ActionInstances);
-            m_TimelineRetainedActionContexts = new Dictionary<int, Float32ActionInstanceReference>(baseState.TimelineRetainedActionContexts);
-            m_MotionWarpStates = new Dictionary<int, Float32MotionWarpState>(baseState.MotionWarpStates);
+            m_TimelineRetainedActionContexts = new Dictionary<int, Float32ActionInstanceReference>(m_BaseAbilityState.TimelineRetainedActionContexts);
+            m_MotionWarpStates = new Dictionary<int, Float32MotionWarpState>(m_BaseAbilityState.MotionWarpStates);
             m_GameplayEffectAggregate = baseState.GameplayEffectState;
             m_EquipmentState = baseState.EquipmentState;
             m_EventSequence = baseState.EventSequence;
@@ -439,42 +534,58 @@ namespace ThirdPersonSimulation
             m_Disposed = true;
         }
 
-        Float32CharacterRuntimeState Snapshot() =>
-            new Float32CharacterRuntimeState(
-                m_Installation,
+        Float32CharacterRuntimeState Snapshot()
+        {
+            var abilities = new Float32AbilityRuntimeState[m_BaseState.Abilities.Count];
+            for (int i = 0; i < abilities.Length; i++)
+            {
+                Float32AbilityRuntimeState source = m_BaseState.Abilities[i];
+                abilities[i] = source.AbilityIdentity.AbilityId == m_Installation.Data.AbilityId
+                    ? new Float32AbilityRuntimeState(
+                        m_Installation,
+                        m_Tick.Value,
+                        m_StateValues,
+                        m_AbilityExecutionState,
+                        m_InputRequests,
+                        m_TimelineRetainedActionContexts,
+                        m_MotionWarpStates)
+                    : source.Clone(m_Tick.Value);
+            }
+            return new Float32CharacterRuntimeState(
+                m_BaseState.Installations,
+                m_BaseState.NumericProfile,
+                m_BaseState.GameplayContentHash,
                 m_Tick.Value,
-                m_StateValues,
-                m_AbilityExecutionState,
-                m_InputRequests,
+                abilities,
                 m_ActionActivationRequests,
                 m_ActionInstances,
-                m_TimelineRetainedActionContexts,
-                m_MotionWarpStates,
                 m_EventSequence,
                 m_ActionEventSequence,
                 m_HandleAllocator,
                 m_BaseState.ControlState,
                 m_GameplayEffectWorking?.Freeze() ?? m_GameplayEffectAggregate,
                 m_EquipmentState);
+        }
 
         void Apply(Float32CharacterRuntimeState state)
         {
+            Float32AbilityRuntimeState abilityState = state.RequireAbility(m_Installation.Data.AbilityId);
             m_StateValues.Clear();
-            foreach (KeyValuePair<int, CharacterStateValue> value in state.StateValues)
+            foreach (KeyValuePair<int, CharacterStateValue> value in abilityState.StateValues)
                 m_StateValues.Add(value.Key, value.Value);
-            m_AbilityExecutionState = state.AbilityExecutionState.Clone();
+            m_AbilityExecutionState = abilityState.AbilityExecutionState.Clone();
             m_InputRequests.Clear();
-            foreach (KeyValuePair<string, SimulationInputRequestState> value in state.InputRequests)
+            foreach (KeyValuePair<string, SimulationInputRequestState> value in abilityState.InputRequests)
                 m_InputRequests.Add(value.Key, value.Value);
             m_ActionActivationRequests.Clear();
             m_ActionActivationRequests.AddRange(state.ActionActivationRequests);
             m_ActionInstances.Clear();
             m_ActionInstances.AddRange(state.ActionInstances);
             m_TimelineRetainedActionContexts.Clear();
-            foreach (KeyValuePair<int, Float32ActionInstanceReference> value in state.TimelineRetainedActionContexts)
+            foreach (KeyValuePair<int, Float32ActionInstanceReference> value in abilityState.TimelineRetainedActionContexts)
                 m_TimelineRetainedActionContexts.Add(value.Key, value.Value);
             m_MotionWarpStates.Clear();
-            foreach (KeyValuePair<int, Float32MotionWarpState> value in state.MotionWarpStates)
+            foreach (KeyValuePair<int, Float32MotionWarpState> value in abilityState.MotionWarpStates)
                 m_MotionWarpStates.Add(value.Key, value.Value);
             m_EventSequence = state.EventSequence;
             m_ActionEventSequence = state.ActionEventSequence;

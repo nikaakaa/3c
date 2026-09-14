@@ -34,27 +34,50 @@ namespace ThirdPersonSimulation.Fixed
 
         public static FixedCharacterRuntimeState Read(
             byte[] bytes,
-            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionInstallationSet installations,
+            GameplayContentHash expectedGameplayContentHash,
             CharacterEquipmentRuntimeBinding equipmentBinding)
         {
-            if (bytes == null || installation == null)
-                throw new ArgumentNullException(bytes == null ? nameof(bytes) : nameof(installation));
+            if (bytes == null || installations == null)
+                throw new ArgumentNullException(bytes == null ? nameof(bytes) : nameof(installations));
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version ||
                 !string.Equals(reader.ReadString(), CodecIdentity, StringComparison.Ordinal))
             {
                 throw new InvalidDataException("Fixed Character runtime state header is invalid.");
             }
-            installation.Identity.Require(ReadIdentity(reader));
+            SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
+            GameplayContentHash gameplayContentHash = new GameplayContentHash(new StableHash(reader.ReadString()));
+            if (!gameplayContentHash.Equals(expectedGameplayContentHash))
+                throw new InvalidDataException("Fixed Character runtime state GameplayContentHash does not match the active Character Runtime.");
             ulong lastCompletedTick = reader.ReadUInt64();
-            Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
-            GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
-            Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installation.Layout);
-            EquipmentProgramLayout equipmentLayout = equipmentBinding == null ? null : CreateEquipmentLayout(installation, equipmentBinding);
-            List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installation.Layout, equipmentLayout);
-            List<FixedActionInstanceState> actionInstances = ReadActionInstances(reader, installation.Layout, equipmentLayout);
-            Dictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, installation.Layout);
-            Dictionary<int, FixedMotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
+            int abilityCount = ReadCount(reader, installations.Installations.Count, "Fixed Character Ability partition");
+            var abilities = new List<FixedAbilityRuntimeState>(abilityCount);
+            for (int i = 0; i < abilityCount; i++)
+            {
+                GameplayAbilityExecutionIdentity identity = ReadIdentity(reader);
+                FixedGameplayAbilityExecutionInstallation installation = installations.Require(identity.AbilityId);
+                installation.Identity.Require(identity);
+                Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
+                GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
+                Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installation.Layout);
+                Dictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, installation.Layout);
+                Dictionary<int, FixedMotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
+                abilities.Add(new FixedAbilityRuntimeState(
+                    installation,
+                    lastCompletedTick,
+                    stateValues,
+                    abilityExecutionState,
+                    inputRequests,
+                    timelineRetainedActionContexts,
+                    motionWarpStates));
+            }
+            FixedGameplayAbilityExecutionInstallation equipmentInstallation = FindInstallationWithCapability(installations, "Equipment");
+            EquipmentProgramLayout equipmentLayout = equipmentInstallation == null || equipmentBinding == null
+                ? null
+                : CreateEquipmentLayout(equipmentInstallation, equipmentBinding);
+            List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installations, equipmentLayout);
+            List<FixedActionInstanceState> actionInstances = ReadActionInstances(reader, installations, equipmentLayout);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
             ulong handleAllocator = reader.ReadUInt64();
@@ -64,30 +87,31 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectStateAggregate gameplayEffectState = null;
             if (reader.ReadBoolean())
             {
-                if (installation.GameplayEffectCatalog == null)
+                FixedGameplayAbilityExecutionInstallation effectInstallation = FindInstallationWithCapability(installations, "GameplayEffect");
+                if (effectInstallation == null || effectInstallation.GameplayEffectCatalog == null)
                     throw new InvalidDataException("Fixed Character runtime state contains Gameplay Effect state without an installed catalog.");
                 var effectReader = new CanonicalReader(reader.ReadBytes());
-                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, installation.GameplayEffectCatalog);
+                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, effectInstallation.GameplayEffectCatalog);
                 effectReader.RequireComplete();
             }
             EquipmentStateAggregate equipmentState = null;
             if (reader.ReadBoolean())
             {
+                if (equipmentLayout == null)
+                    throw new InvalidDataException("Fixed Character runtime state contains Equipment state without an installed layout.");
                 var equipmentReader = new CanonicalReader(reader.ReadBytes());
                 equipmentState = EquipmentStateAggregateCodec.Read(equipmentReader, equipmentLayout);
                 equipmentReader.RequireComplete();
             }
             reader.RequireComplete();
             var state = new FixedCharacterRuntimeState(
-                installation,
+                installations,
+                numericProfile,
+                gameplayContentHash,
                 lastCompletedTick,
-                stateValues,
-                abilityExecutionState,
-                inputRequests,
+                abilities,
                 actionActivationRequests,
                 actionInstances,
-                timelineRetainedActionContexts,
-                motionWarpStates,
                 eventSequence,
                 actionEventSequence,
                 handleAllocator,
@@ -103,15 +127,22 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
             writer.WriteString(CodecIdentity);
-            WriteIdentity(writer, state.AbilityIdentity);
+            SimulationNumericProfileCodec.Write(writer, state.NumericProfile);
+            writer.WriteString(state.GameplayContentHash.ToString());
             writer.WriteUInt64(state.LastCompletedTick);
-            WriteValues(writer, state.StateValues);
-            WriteAbilityExecutionState(writer, state.AbilityExecutionState);
-            WriteInputRequests(writer, state.InputRequests);
+            writer.WriteInt32(state.Abilities.Count);
+            for (int i = 0; i < state.Abilities.Count; i++)
+            {
+                FixedAbilityRuntimeState ability = state.Abilities[i];
+                WriteIdentity(writer, ability.AbilityIdentity);
+                WriteValues(writer, ability.StateValues);
+                WriteAbilityExecutionState(writer, ability.AbilityExecutionState);
+                WriteInputRequests(writer, ability.InputRequests);
+                WriteTimelineRetentions(writer, ability.TimelineRetainedActionContexts);
+                WriteMotionWarpStates(writer, ability.MotionWarpStates);
+            }
             WriteActionActivationRequests(writer, state.ActionActivationRequests);
             WriteActionInstances(writer, state.ActionInstances);
-            WriteTimelineRetentions(writer, state.TimelineRetainedActionContexts);
-            WriteMotionWarpStates(writer, state.MotionWarpStates);
             writer.WriteUInt64(state.EventSequence);
             writer.WriteUInt64(state.ActionEventSequence);
             writer.WriteUInt64(state.HandleAllocator);
@@ -122,7 +153,10 @@ namespace ThirdPersonSimulation.Fixed
             if (state.GameplayEffectState != null)
             {
                 using var effectWriter = new CanonicalWriter();
-                GameplayEffectStateAggregateCodec.Write(effectWriter, state.GameplayEffectState, state.Installation.GameplayEffectCatalog);
+                GameplayEffectStateAggregateCodec.Write(
+                    effectWriter,
+                    state.GameplayEffectState,
+                    RequireInstallationWithCapability(state.Installations, "GameplayEffect").GameplayEffectCatalog);
                 writer.WriteBytes(effectWriter.ToArray());
             }
             writer.WriteBoolean(state.EquipmentState != null);
@@ -293,7 +327,7 @@ namespace ThirdPersonSimulation.Fixed
 
         static List<SimulationActionActivationRequestState> ReadActionActivationRequests(
             CanonicalReader reader,
-            GameplayAbilityExecutionLayout layout,
+            FixedGameplayAbilityExecutionInstallationSet installations,
             EquipmentProgramLayout equipmentLayout)
         {
             int count = ReadCount(reader, 1000000, "Fixed Action activation request");
@@ -305,7 +339,7 @@ namespace ThirdPersonSimulation.Fixed
                 var request = new SimulationActionActivationRequestState(
                     reader.ReadString(),
                     ReadOptionalSkill(reader),
-                    ReadOptionalOperation(reader, layout),
+                    ReadOptionalOperation(reader, null),
                     reader.ReadString(),
                     reader.ReadString(),
                     reader.ReadUInt64(),
@@ -317,6 +351,7 @@ namespace ThirdPersonSimulation.Fixed
                     reader.ReadUInt64());
                 if (!request.IsValid)
                     throw new InvalidDataException("Fixed Action activation request identity is invalid.");
+                RequireSkillExecution(request.SkillId, request.SkillEntryOperation, installations);
                 requests.Add(request);
             }
             return requests;
@@ -357,7 +392,7 @@ namespace ThirdPersonSimulation.Fixed
 
         static List<FixedActionInstanceState> ReadActionInstances(
             CanonicalReader reader,
-            GameplayAbilityExecutionLayout layout,
+            FixedGameplayAbilityExecutionInstallationSet installations,
             EquipmentProgramLayout equipmentLayout)
         {
             int count = ReadCount(reader, 1000000, "Fixed Action instance");
@@ -369,7 +404,7 @@ namespace ThirdPersonSimulation.Fixed
                 var action = new FixedActionInstanceState(
                     reader.ReadString(),
                     ReadOptionalSkill(reader),
-                    ReadOptionalOperation(reader, layout),
+                    ReadOptionalOperation(reader, null),
                     reader.ReadUInt64(),
                     reader.ReadString(),
                     reader.ReadUInt64(),
@@ -390,6 +425,7 @@ namespace ThirdPersonSimulation.Fixed
                     reader.ReadUInt64());
                 if (!action.IsValid)
                     throw new InvalidDataException("Fixed Action instance identity is invalid.");
+                RequireSkillExecution(action.SkillId, action.SkillEntryOperation, installations);
                 actions.Add(action);
             }
             return actions;
@@ -723,6 +759,39 @@ namespace ThirdPersonSimulation.Fixed
                 installation.Data.CatalogEntries,
                 installation.Data.References,
                 installation.Data.Producers);
+        }
+
+        static FixedGameplayAbilityExecutionInstallation FindInstallationWithCapability(
+            FixedGameplayAbilityExecutionInstallationSet installations,
+            string capability)
+        {
+            for (int i = 0; i < installations.Installations.Count; i++)
+            {
+                FixedGameplayAbilityExecutionInstallation installation = installations.Installations[i];
+                if (installation.Data.Capabilities.HasGameplayCapability(capability))
+                    return installation;
+            }
+            return null;
+        }
+
+        static FixedGameplayAbilityExecutionInstallation RequireInstallationWithCapability(
+            FixedGameplayAbilityExecutionInstallationSet installations,
+            string capability) =>
+            FindInstallationWithCapability(installations, capability) ??
+            throw new InvalidDataException($"Fixed Character runtime state requires an Ability with '{capability}' capability.");
+
+        static void RequireSkillExecution(
+            CharacterSkillId skillId,
+            OperationHandle operation,
+            FixedGameplayAbilityExecutionInstallationSet installations)
+        {
+            if (!operation.IsValid)
+                return;
+            if (!skillId.IsValid)
+                throw new InvalidDataException("Fixed Character runtime state operation has no Ability identity.");
+            FixedGameplayAbilityExecutionInstallation installation = installations.Require(skillId);
+            if (operation.Value >= installation.Layout.Operations.Count)
+                throw new InvalidDataException("Fixed Character runtime state Ability operation is outside its installed Ability layout.");
         }
 
         static int ReadCount(CanonicalReader reader, int maximum, string label)

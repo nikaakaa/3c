@@ -1,9 +1,9 @@
 using System;
 using ThirdPersonSimulation;
-using FixedCompilation = ThirdPersonSimulation.Fixed.FixedProgramArtifactCompilationResult;
-using FixedCompiler = ThirdPersonSimulation.Fixed.FixedCharacterSimulationTargetCompiler;
-using Float32Compilation = ThirdPersonSimulation.Float32ProgramLoweringResult;
-using Float32Compiler = ThirdPersonSimulation.Float32CharacterSimulationTargetCompiler;
+using FixedCompilation = ThirdPersonSimulation.Fixed.FixedGameplayAbilityExecutionCompilationResult;
+using FixedCompiler = ThirdPersonSimulation.Fixed.FixedGameplayAbilityTargetCompiler;
+using Float32Compilation = ThirdPersonSimulation.Float32GameplayAbilityExecutionCompilationResult;
+using Float32Compiler = ThirdPersonSimulation.Float32GameplayAbilityTargetCompiler;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static FixedCompilation CompileFixed(ValidatedSemanticIrArtifact artifact)
         {
             RequireAbilityArtifact(artifact);
-            return FixedCompiler.CompileArtifact(artifact);
+            return FixedCompiler.Compile(artifact);
         }
 
         static void RequireAbilityArtifact(ValidatedSemanticIrArtifact artifact)

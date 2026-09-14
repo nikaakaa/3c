@@ -2,44 +2,27 @@ using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public sealed class FixedProgramLoweringResult
+    public sealed class FixedGameplayAbilityExecutionCompilationResult
     {
         readonly ReadOnlyCollection<FixedScalarConversion> m_Conversions;
 
-        public FixedProgramLoweringResult(CharacterSimulationProgram program, IEnumerable<FixedScalarConversion> conversions)
-        {
-            Program = program ?? throw new ArgumentNullException(nameof(program));
-            m_Conversions = new List<FixedScalarConversion>(conversions ?? Array.Empty<FixedScalarConversion>()).AsReadOnly();
-        }
-
-        public CharacterSimulationProgram Program { get; }
-        public IReadOnlyList<FixedScalarConversion> Conversions => m_Conversions;
-    }
-
-    public sealed class FixedProgramArtifactCompilationResult
-    {
-        readonly byte[] m_CanonicalBytes;
-        readonly ReadOnlyCollection<FixedScalarConversion> m_Conversions;
-
-        public FixedProgramArtifactCompilationResult(
-            CharacterSimulationProgram program,
-            byte[] canonicalBytes,
+        public FixedGameplayAbilityExecutionCompilationResult(
+            FixedGameplayAbilityExecutionData data,
             IEnumerable<FixedScalarConversion> conversions)
         {
-            Program = program ?? throw new ArgumentNullException(nameof(program));
-            m_CanonicalBytes = canonicalBytes == null ? throw new ArgumentNullException(nameof(canonicalBytes)) : (byte[])canonicalBytes.Clone();
+            Data = data ?? throw new ArgumentNullException(nameof(data));
             m_Conversions = new List<FixedScalarConversion>(conversions ?? Array.Empty<FixedScalarConversion>()).AsReadOnly();
         }
 
-        public CharacterSimulationProgram Program { get; }
+        public FixedGameplayAbilityExecutionData Data { get; }
         public IReadOnlyList<FixedScalarConversion> Conversions => m_Conversions;
-        public byte[] CopyCanonicalBytes() => (byte[])m_CanonicalBytes.Clone();
     }
 
-    public static class FixedCharacterSimulationTargetCompiler
+    public static class FixedGameplayAbilityTargetCompiler
     {
         static readonly HashSet<string> s_SupportedGameplayCapabilities = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -54,12 +37,14 @@ namespace ThirdPersonSimulation.Fixed
             "TimelineScenePresentationParameter"
         };
 
-        public static FixedProgramLoweringResult Compile(ValidatedSemanticIrArtifact artifact)
+        public static FixedGameplayAbilityExecutionCompilationResult Compile(ValidatedSemanticIrArtifact artifact)
         {
             if (artifact == null)
                 throw new ArgumentNullException(nameof(artifact));
             CharacterGameplaySemanticIr semanticIr = artifact.SemanticIr;
             CharacterGameplaySemanticIrArtifactHeader header = artifact.Header;
+            if (!semanticIr.Manifest.Root.IsAbility || !header.Root.IsAbility)
+                throw new InvalidOperationException("Fixed Ability Target requires an Ability Semantic IR artifact.");
             if (!semanticIr.Manifest.ProgramId.Equals(header.ProgramId) ||
                 !semanticIr.Manifest.SourceRevision.Equals(header.SourceRevision) ||
                 !semanticIr.SemanticHash.Equals(header.SemanticHash))
@@ -77,41 +62,19 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException($"Fixed Target does not support gameplay capability '{header.GameplayCapabilities[i]}'.");
             }
             ValidateLiteralPrecision(semanticIr);
-            FixedProgramLoweringResult result = FixedCharacterSimulationProgramLowerer.Lower(semanticIr);
-            CharacterSimulationProgramManifest manifest = result.Program.Manifest;
-            if (!manifest.ProgramId.Equals(header.ProgramId) ||
-                !string.Equals(manifest.CompilerVersion, header.CompilerVersion, StringComparison.Ordinal) ||
-                !manifest.OperationSetVersion.Equals(header.OperationSetVersion) ||
-                manifest.TickRate != header.TickRate ||
-                !manifest.SourceRevision.Equals(header.SourceRevision) ||
-                !manifest.SemanticHash.Equals(header.SemanticHash) ||
-                manifest.NumericProfile != FixedSimulationNumericProfile.Value)
+            FixedGameplayAbilityExecutionCompilationResult result =
+                FixedGameplayAbilityExecutionDataLowerer.Lower(semanticIr);
+            if (!result.Data.Root.Equals(header.Root) ||
+                !string.Equals(result.Data.CompilerVersion, header.CompilerVersion, StringComparison.Ordinal) ||
+                !result.Data.OperationSetVersion.Equals(header.OperationSetVersion) ||
+                result.Data.TickRate != header.TickRate ||
+                !result.Data.SourceRevision.Equals(header.SourceRevision) ||
+                !result.Data.SemanticHash.Equals(header.SemanticHash) ||
+                result.Data.NumericProfile != FixedSimulationNumericProfile.Value)
             {
-                throw new InvalidOperationException("Fixed Program manifest does not preserve its Semantic IR artifact identity.");
+                throw new InvalidOperationException("Fixed Ability execution data does not preserve its Semantic IR artifact identity.");
             }
             return result;
-        }
-
-        public static FixedProgramArtifactCompilationResult CompileArtifact(ValidatedSemanticIrArtifact artifact)
-        {
-            FixedProgramLoweringResult result = Compile(artifact);
-            byte[] bytes = CharacterSimulationProgramCodec.WriteArtifact(result.Program);
-            CharacterSimulationProgramArtifactHeader header = CharacterSimulationProgramCodec.ReadArtifactHeader(bytes);
-            CharacterSimulationProgram loaded = CharacterSimulationProgramCodec.ReadArtifact(
-                bytes,
-                new ProgramLoadExpectation(
-                    header.CompilerVersion,
-                    header.OperationSetVersion,
-                    header.SourceRevision,
-                    header.SemanticHash,
-                    header.NumericProfile,
-                    header.Root));
-            if (!loaded.ProgramHash.Equals(result.Program.ProgramHash) ||
-                !loaded.LayoutHash.Equals(result.Program.LayoutHash))
-            {
-                throw new InvalidOperationException("Fixed Program round-trip changed ProgramHash or LayoutHash.");
-            }
-            return new FixedProgramArtifactCompilationResult(loaded, bytes, result.Conversions);
         }
 
         static void ValidateLiteralPrecision(CharacterGameplaySemanticIr semanticIr)
@@ -125,12 +88,14 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal static class FixedCharacterSimulationProgramLowerer
+    internal static class FixedGameplayAbilityExecutionDataLowerer
     {
-        internal static FixedProgramLoweringResult Lower(CharacterGameplaySemanticIr semanticIr)
+        internal static FixedGameplayAbilityExecutionCompilationResult Lower(CharacterGameplaySemanticIr semanticIr)
         {
             if (semanticIr == null)
                 throw new ArgumentNullException(nameof(semanticIr));
+            if (!semanticIr.Manifest.Root.IsAbility)
+                throw new InvalidOperationException("Fixed Ability execution data requires an Ability root.");
             FixedSimulationTargetManifest target = FixedSimulationTarget.Manifest;
             if (target.Profile != FixedSimulationNumericProfile.Value)
                 throw new InvalidOperationException("Fixed Numeric Target manifest is inconsistent.");
@@ -183,16 +148,6 @@ namespace ThirdPersonSimulation.Fixed
                     operation.StateSlots);
             }
 
-            var manifest = new CharacterSimulationProgramManifest(
-                semanticIr.Manifest.ProgramId,
-                semanticIr.Manifest.CompilerVersion,
-                semanticIr.Manifest.OperationSetVersion,
-                semanticIr.Manifest.TickRate,
-                semanticIr.Manifest.SourceRevision,
-                semanticIr.SemanticHash,
-                target.Profile,
-                semanticIr.Manifest.Capabilities,
-                semanticIr.Manifest.Root);
             var stateSlots = new ProgramStateSlot[semanticIr.StateDeclarations.Count];
             for (int i = 0; i < stateSlots.Length; i++)
             {
@@ -217,14 +172,45 @@ namespace ThirdPersonSimulation.Fixed
                     binding.ConstantIndex,
                     binding.ResolvedValueKind);
             }
-            var program = new CharacterSimulationProgram(
-                manifest,
+            GameplayAbilityProgramCatalog catalog = new GameplayAbilityProgramCatalog(
+                semanticIr.CatalogEntries,
+                semanticIr.References);
+            CharacterSkillId abilityId = RequireAbilityId(semanticIr.Manifest.Root.EntryIdentity);
+            GameplayAbilityProgramBinding binding = catalog.Require(abilityId);
+            GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract.Create(
+                semanticIr.CatalogEntries,
+                index => constants[index].Int32);
+            ProgramHash programHash = new ProgramHash(StableHash.Compute(
+                "fixed-gameplay-ability-execution-data/1",
+                semanticIr.Manifest.Root.ContentIdentity,
+                semanticIr.SemanticHash.ToString(),
+                semanticIr.Manifest.SourceRevision.Value));
+            LayoutHash layoutHash = new LayoutHash(StableHash.Compute(
+                "fixed-gameplay-ability-execution-layout/1",
+                semanticIr.SemanticHash.ToString(),
+                semanticIr.StateDeclarations.Count.ToString(CultureInfo.InvariantCulture),
+                semanticIr.GraphCallFrames.Count.ToString(CultureInfo.InvariantCulture)));
+            FixedGameplayAbilityExecutionData data = FixedGameplayAbilityExecutionData.Create(
+                abilityId,
+                binding,
+                providerContract,
+                semanticIr.Manifest.CompilerVersion,
+                semanticIr.Manifest.OperationSetVersion,
+                semanticIr.Manifest.TickRate,
+                semanticIr.Manifest.SourceRevision,
+                semanticIr.SemanticHash,
+                target.Profile,
+                semanticIr.Manifest.Root,
+                semanticIr.Manifest.ProgramId,
+                programHash,
+                layoutHash,
                 definitions,
                 operations,
                 constants,
                 constantInputs,
                 semanticIr.ControlFlow,
                 semanticIr.References,
+                semanticIr.GraphCallFrames,
                 stateSlots,
                 semanticIr.Scopes,
                 semanticIr.WorldRequests,
@@ -232,9 +218,16 @@ namespace ThirdPersonSimulation.Fixed
                 semanticIr.CatalogEntries,
                 ProgramMotionModifierCompiler.Compile(semanticIr),
                 semanticIr.SourceMap,
-                semanticIr.Producers,
-                semanticIr.GraphCallFrames);
-            return new FixedProgramLoweringResult(program, conversions);
+                semanticIr.Producers);
+            return new FixedGameplayAbilityExecutionCompilationResult(data, conversions);
+        }
+
+        static CharacterSkillId RequireAbilityId(string entryIdentity)
+        {
+            const string prefix = "ability:";
+            if (string.IsNullOrEmpty(entryIdentity) || !entryIdentity.StartsWith(prefix, StringComparison.Ordinal))
+                throw new InvalidOperationException("Fixed Ability execution data entry identity is invalid.");
+            return new CharacterSkillId(entryIdentity.Substring(prefix.Length));
         }
 
         static void RequireMatchingDefinition(

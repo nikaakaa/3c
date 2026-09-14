@@ -1,24 +1,28 @@
 using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class Float32ProgramLoweringResult
+    public sealed class Float32GameplayAbilityExecutionCompilationResult
     {
         readonly ReadOnlyCollection<Float32ScalarConversion> m_Conversions;
 
-        public Float32ProgramLoweringResult(CharacterSimulationProgram program, IEnumerable<Float32ScalarConversion> conversions)
+        public Float32GameplayAbilityExecutionCompilationResult(
+            Float32GameplayAbilityExecutionData data,
+            IEnumerable<Float32ScalarConversion> conversions)
         {
-            Program = program ?? throw new ArgumentNullException(nameof(program));
+            Data = data ?? throw new ArgumentNullException(nameof(data));
             m_Conversions = new List<Float32ScalarConversion>(conversions ?? Array.Empty<Float32ScalarConversion>()).AsReadOnly();
         }
 
-        public CharacterSimulationProgram Program { get; }
+        public Float32GameplayAbilityExecutionData Data { get; }
         public IReadOnlyList<Float32ScalarConversion> Conversions => m_Conversions;
     }
 
-    public static class Float32CharacterSimulationTargetCompiler
+    public static class Float32GameplayAbilityTargetCompiler
     {
         static readonly HashSet<string> s_SupportedGameplayCapabilities = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -33,12 +37,14 @@ namespace ThirdPersonSimulation
             "TimelineScenePresentationParameter"
         };
 
-        public static Float32ProgramLoweringResult Compile(ValidatedSemanticIrArtifact artifact)
+        public static Float32GameplayAbilityExecutionCompilationResult Compile(ValidatedSemanticIrArtifact artifact)
         {
             if (artifact == null)
                 throw new ArgumentNullException(nameof(artifact));
             CharacterGameplaySemanticIr semanticIr = artifact.SemanticIr;
             CharacterGameplaySemanticIrArtifactHeader header = artifact.Header;
+            if (!semanticIr.Manifest.Root.IsAbility || !header.Root.IsAbility)
+                throw new InvalidOperationException("Float32 Ability Target requires an Ability Semantic IR artifact.");
             if (!semanticIr.Manifest.ProgramId.Equals(header.ProgramId) ||
                 !semanticIr.Manifest.SourceRevision.Equals(header.SourceRevision) ||
                 !semanticIr.SemanticHash.Equals(header.SemanticHash))
@@ -56,17 +62,17 @@ namespace ThirdPersonSimulation
                     throw new InvalidOperationException($"Float32 Target does not support gameplay capability '{header.GameplayCapabilities[i]}'.");
             }
             ValidateLiteralPrecision(semanticIr);
-            Float32ProgramLoweringResult result = Float32CharacterSimulationProgramLowerer.Lower(semanticIr);
-            CharacterSimulationProgramManifest manifest = result.Program.Manifest;
-            if (!manifest.ProgramId.Equals(header.ProgramId) ||
-                !string.Equals(manifest.CompilerVersion, header.CompilerVersion, StringComparison.Ordinal) ||
-                !manifest.OperationSetVersion.Equals(header.OperationSetVersion) ||
-                manifest.TickRate != header.TickRate ||
-                !manifest.SourceRevision.Equals(header.SourceRevision) ||
-                !manifest.SemanticHash.Equals(header.SemanticHash) ||
-                manifest.NumericProfile != Float32SimulationNumericProfile.Value)
+            Float32GameplayAbilityExecutionCompilationResult result =
+                Float32GameplayAbilityExecutionDataLowerer.Lower(semanticIr);
+            if (!result.Data.Root.Equals(header.Root) ||
+                !string.Equals(result.Data.CompilerVersion, header.CompilerVersion, StringComparison.Ordinal) ||
+                !result.Data.OperationSetVersion.Equals(header.OperationSetVersion) ||
+                result.Data.TickRate != header.TickRate ||
+                !result.Data.SourceRevision.Equals(header.SourceRevision) ||
+                !result.Data.SemanticHash.Equals(header.SemanticHash) ||
+                result.Data.NumericProfile != Float32SimulationNumericProfile.Value)
             {
-                throw new InvalidOperationException("Float32 Program manifest does not preserve its Semantic IR artifact identity.");
+                throw new InvalidOperationException("Float32 Ability execution data does not preserve its Semantic IR artifact identity.");
             }
             return result;
         }
@@ -82,12 +88,14 @@ namespace ThirdPersonSimulation
         }
     }
 
-    static class Float32CharacterSimulationProgramLowerer
+    static class Float32GameplayAbilityExecutionDataLowerer
     {
-        internal static Float32ProgramLoweringResult Lower(CharacterGameplaySemanticIr semanticIr)
+        internal static Float32GameplayAbilityExecutionCompilationResult Lower(CharacterGameplaySemanticIr semanticIr)
         {
             if (semanticIr == null)
                 throw new ArgumentNullException(nameof(semanticIr));
+            if (!semanticIr.Manifest.Root.IsAbility)
+                throw new InvalidOperationException("Float32 Ability execution data requires an Ability root.");
             Float32SimulationTargetManifest target = Float32SimulationTarget.Manifest;
             if (target.Profile != Float32SimulationNumericProfile.Value)
                 throw new InvalidOperationException("Float32 Numeric Target manifest is inconsistent.");
@@ -140,16 +148,6 @@ namespace ThirdPersonSimulation
                     operation.StateSlots);
             }
 
-            var manifest = new CharacterSimulationProgramManifest(
-                semanticIr.Manifest.ProgramId,
-                semanticIr.Manifest.CompilerVersion,
-                semanticIr.Manifest.OperationSetVersion,
-                semanticIr.Manifest.TickRate,
-                semanticIr.Manifest.SourceRevision,
-                semanticIr.SemanticHash,
-                target.Profile,
-                semanticIr.Manifest.Capabilities,
-                semanticIr.Manifest.Root);
             var constantInputs = new ProgramConstantInputBinding[semanticIr.ConstantInputBindings.Count];
             for (int i = 0; i < constantInputs.Length; i++)
             {
@@ -160,14 +158,45 @@ namespace ThirdPersonSimulation
                     binding.ConstantIndex,
                     binding.ResolvedValueKind);
             }
-            var program = new CharacterSimulationProgram(
-                manifest,
+            GameplayAbilityProgramCatalog catalog = new GameplayAbilityProgramCatalog(
+                semanticIr.CatalogEntries,
+                semanticIr.References);
+            CharacterSkillId abilityId = RequireAbilityId(semanticIr.Manifest.Root.EntryIdentity);
+            GameplayAbilityProgramBinding binding = catalog.Require(abilityId);
+            GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract.Create(
+                semanticIr.CatalogEntries,
+                index => constants[index].Int32);
+            ProgramHash programHash = new ProgramHash(StableHash.Compute(
+                "float32-gameplay-ability-execution-data/1",
+                semanticIr.Manifest.Root.ContentIdentity,
+                semanticIr.SemanticHash.ToString(),
+                semanticIr.Manifest.SourceRevision.Value));
+            LayoutHash layoutHash = new LayoutHash(StableHash.Compute(
+                "float32-gameplay-ability-execution-layout/1",
+                semanticIr.SemanticHash.ToString(),
+                semanticIr.StateDeclarations.Count.ToString(CultureInfo.InvariantCulture),
+                semanticIr.GraphCallFrames.Count.ToString(CultureInfo.InvariantCulture)));
+            Float32GameplayAbilityExecutionData data = Float32GameplayAbilityExecutionData.Create(
+                abilityId,
+                binding,
+                providerContract,
+                semanticIr.Manifest.CompilerVersion,
+                semanticIr.Manifest.OperationSetVersion,
+                semanticIr.Manifest.TickRate,
+                semanticIr.Manifest.SourceRevision,
+                semanticIr.SemanticHash,
+                target.Profile,
+                semanticIr.Manifest.Root,
+                semanticIr.Manifest.ProgramId,
+                programHash,
+                layoutHash,
                 definitions,
                 operations,
                 constants,
                 constantInputs,
                 semanticIr.ControlFlow,
                 semanticIr.References,
+                semanticIr.GraphCallFrames,
                 semanticIr.StateDeclarations,
                 semanticIr.Scopes,
                 semanticIr.WorldRequests,
@@ -175,9 +204,16 @@ namespace ThirdPersonSimulation
                 semanticIr.CatalogEntries,
                 ProgramMotionModifierCompiler.Compile(semanticIr),
                 semanticIr.SourceMap,
-                semanticIr.Producers,
-                semanticIr.GraphCallFrames);
-            return new Float32ProgramLoweringResult(program, conversions);
+                semanticIr.Producers);
+            return new Float32GameplayAbilityExecutionCompilationResult(data, conversions);
+        }
+
+        static CharacterSkillId RequireAbilityId(string entryIdentity)
+        {
+            const string prefix = "ability:";
+            if (string.IsNullOrEmpty(entryIdentity) || !entryIdentity.StartsWith(prefix, StringComparison.Ordinal))
+                throw new InvalidOperationException("Float32 Ability execution data entry identity is invalid.");
+            return new CharacterSkillId(entryIdentity.Substring(prefix.Length));
         }
 
         static void RequireMatchingDefinition(

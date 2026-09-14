@@ -9,6 +9,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedActionRuntime : FixedOperationModule, IFixedActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, FixedActionInstanceState>, IAbilityLifecyclePort<FixedActionInstanceState>
     {
         readonly FixedEvaluationFrame m_Frame;
+        readonly FixedGameplayAbilityExecutionInstallationSet m_Installations;
         readonly IFixedInputPort m_InputRuntime;
         readonly FixedActionStateStore m_Actions;
         readonly IFixedBlackboardPort m_Blackboard;
@@ -24,7 +25,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly AbilityExecution<FixedActionInstanceState> m_Lifecycle;
 
         public FixedActionRuntime(
-            FixedProgramAccess access,
+            FixedGameplayAbilityExecutionAccess access,
+            FixedGameplayAbilityExecutionInstallationSet installations,
             FixedEvaluationFrame frame,
             IFixedInputPort inputRuntime,
             FixedActionStateStore actions,
@@ -38,6 +40,7 @@ namespace ThirdPersonSimulation.Fixed
             Func<OperationHandle, bool> isOperationStopComplete = null)
             : base(access)
         {
+            m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_InputRuntime = inputRuntime ?? throw new ArgumentNullException(nameof(inputRuntime));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
@@ -111,7 +114,7 @@ namespace ThirdPersonSimulation.Fixed
             AbilityLifecycleTransition defaultTransition,
             string reason)
         {
-            GameplayAbilityExecutionBinding binding = m_Program.AbilityPrograms.Require(action.SkillId);
+            GameplayAbilityExecutionBinding binding = RequireAbility(action.SkillId);
             m_Lifecycle.Resolve(action, binding, trigger, source, defaultTransition, reason);
         }
 
@@ -137,14 +140,14 @@ namespace ThirdPersonSimulation.Fixed
                         $"ability={controlRequest.AbilityId}:context={controlRequest.EquipmentContext}");
                 return false;
             }
-            GameplayAbilityExecutionBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
+            GameplayAbilityExecutionBinding skill = RequireAbility(controlRequest.AbilityId);
             ActionAdmissionProfile profile = RequireAdmissionProfile(skill.AdmissionProfileId);
             return m_Activation.ActivateFromControl(controlRequest, skill, profile);
         }
 
         public void StopFromControl(CharacterControlAbilityStopRequest controlRequest)
         {
-            GameplayAbilityExecutionBinding skill = m_Program.AbilityPrograms.Require(controlRequest.AbilityId);
+            GameplayAbilityExecutionBinding skill = RequireAbility(controlRequest.AbilityId);
             string trigger = string.IsNullOrWhiteSpace(controlRequest.ActionWindowType)
                 ? controlRequest.Mode == CharacterControlAbilityStopMode.Force
                     ? GameplayAbilityEndTriggerNames.AbortRequested
@@ -185,7 +188,7 @@ namespace ThirdPersonSimulation.Fixed
                 return false;
             m_Lifecycle.Resolve(
                 action,
-                m_Program.AbilityPrograms.Require(action.SkillId),
+                RequireAbility(action.SkillId),
                 GameplayAbilityEndTriggerNames.AbortRequested,
                 action.Source,
                 AbilityLifecycleTransition.Abort,
@@ -195,7 +198,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool TryCommitPendingControl(CharacterSkillId skillId)
         {
-            GameplayAbilityExecutionBinding skill = m_Program.AbilityPrograms.Require(skillId);
+            GameplayAbilityExecutionBinding skill = RequireAbility(skillId);
             ActionAdmissionProfile profile = RequireAdmissionProfile(skill.AdmissionProfileId);
             return m_Activation.TryCommitPendingControl(skillId, profile);
         }
@@ -252,6 +255,9 @@ namespace ThirdPersonSimulation.Fixed
             ulong generation = slot < 0 ? 1UL : m_Frame.ReadState(slot).UInt64;
             return generation == 0 ? 1UL : generation;
         }
+
+        GameplayAbilityExecutionBinding RequireAbility(CharacterSkillId abilityId) =>
+            m_Installations.Require(abilityId).Data.Binding;
 
         ActionAdmissionProfile RequireAdmissionProfile(SimulationOperation operation) =>
             Access.Services.RequireAdmissionProfile(operation.Handle);
@@ -484,7 +490,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException($"Action instance '{actionInstanceId}' is not active for replacement.");
             m_Lifecycle.Resolve(
                 action,
-                m_Program.AbilityPrograms.Require(action.SkillId),
+                RequireAbility(action.SkillId),
                 GameplayAbilityEndTriggerNames.InterruptRequested,
                 source,
                 AbilityLifecycleTransition.Interrupt,

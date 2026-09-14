@@ -1132,6 +1132,7 @@ namespace BTSMTL.Timeline.Editor
             }
             public string ChannelId => m_Descriptor.ChannelId.Value;
             public string DisplayName => m_Descriptor.DisplayName;
+            public TimelineCurveValueDomain ValueDomain => m_Descriptor.ValueDomain;
             public AnimationCurve Curve => m_Curve;
             public int StartFrame => m_Clip.Source.StartFrame;
             public int EndFrame => m_Clip.Source.EndFrame;
@@ -1249,6 +1250,7 @@ namespace BTSMTL.Timeline.Editor
             }
             public string ParameterId => m_Curve.ChannelId;
             public string DisplayName => m_Curve.DisplayName;
+            public string ValueDomainSummary => m_Curve.ValueDomain.Summary;
             public bool Enabled { get; set; } = true;
             public float CurrentValue => m_Curve.Curve.Evaluate(Mathf.Clamp(
                 (m_Clip.Owner.CurrentFrame - m_Clip.Source.StartFrame) / (float)m_Clip.Owner.FrameRate,
@@ -1304,6 +1306,7 @@ namespace BTSMTL.Timeline.Editor
 
             public string ParameterId => m_Curve.ChannelId;
             public string DisplayName => m_Curve.DisplayName;
+            public string ValueDomainSummary => "Source Reference";
             public string ReferenceLabel { get; }
             public bool Enabled { get => true; set { } }
             public float CurrentValue => m_Curve.Curve.Evaluate(Mathf.Clamp(

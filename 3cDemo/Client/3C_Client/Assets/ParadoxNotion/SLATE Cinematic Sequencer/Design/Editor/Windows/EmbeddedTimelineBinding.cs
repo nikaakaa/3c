@@ -101,6 +101,7 @@ namespace Slate
     {
         string ParameterId { get; }
         string DisplayName { get; }
+        string ValueDomainSummary { get; }
         bool Enabled { get; set; }
         float CurrentValue { get; }
         IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves { get; }

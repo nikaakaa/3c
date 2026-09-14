@@ -89,13 +89,14 @@ namespace Slate
             string displayName,
             bool selected,
             Action drawTrailing,
-            Action select)
+            Action select,
+            string tooltip = null)
         {
             GUI.color = selected ? new Color(0.5f, 0.5f, 1f, 0.4f) : new Color(0, 0.5f, 0.5f, 0.5f);
             GUI.Box(parameterRect, string.Empty, Styles.headerBoxStyle);
             GUI.color = Color.white;
             string label = string.Format(" <size=10><color=#252525>{0}</color></size>", displayName ?? string.Empty);
-            GUI.Label(parameterRect, selected ? string.Format("<b>{0}</b>", label) : label, Styles.leftLabel);
+            GUI.Label(parameterRect, new GUIContent(selected ? string.Format("<b>{0}</b>", label) : label, tooltip ?? string.Empty), Styles.leftLabel);
             drawTrailing?.Invoke();
             GUI.color = Color.white;
             GUI.enabled = true;
@@ -500,7 +501,8 @@ namespace Slate
                     parameterName,
                     inspectedParameterIndex == index,
                     null,
-                     () => inspectedId = inspectedParameterIndex == index ? string.Empty : parameter.ParameterId);
+                     () => inspectedId = inspectedParameterIndex == index ? string.Empty : parameter.ParameterId,
+                     parameter.ValueDomainSummary);
             }
 
             if (inspectedParameterIndex >= 0)

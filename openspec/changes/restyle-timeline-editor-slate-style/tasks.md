@@ -102,7 +102,7 @@
 实现门槛：打开、刷新、新增、选择、编辑、关闭均不创建或依赖 Slate 组件树；原生 Cutscene/Actor/Director 规则不能阻止正式 TimelineData 的合法操作。__BTSMTL_SlateTimelineProjection__ / BuildProjection 残留不作为最终方案或 fallback。本段是实现约束，不新增验证任务。
 
 - [ ] 11.1 D1/D2：在现有Slate Editor模块收窄原编辑输入，原生Cutscene入口与BTSMTL入口共用一套原函数；BTSMTL输入不继承IDirector/IKeyable运行接口，不增加空运行实现或替代绘制分支
-- [ ] 11.2 D1/D3：将CutsceneTrack原OnTrackInfoGUI、DoDefaultInfoGUI、DoParamsInfoGUI、OnTrackTimelineGUI、DoClipCurves及原展开/高度状态参数化，必要时搬入现有Editor模块；旧位置不保留第二份函数主体。`ec59bd5a1` 已接回 formal Track 的原生纵向调高手势，native/formal 参数行 header 和命中逻辑现在共用 Slate 函数，参数值域提供者仍未完全参数化。
+- [ ] 11.2 D1/D3：将CutsceneTrack原OnTrackInfoGUI、DoDefaultInfoGUI、DoParamsInfoGUI、OnTrackTimelineGUI、DoClipCurves及原展开/高度状态参数化，必要时搬入现有Editor模块；旧位置不保留第二份函数主体。`ec59bd5a1` 已接回 formal Track 的原生纵向调高手势，native/formal 参数行 header、命中逻辑和值域 tooltip 现在共用 Slate 函数，参数 provider 仍未完全参数化。
 - [x] 11.3 D2：把现有Projection中正确的ID映射、typed新增、曲线换算和提交迁移为BtsmtlSlateTimelineBinding；只引用正式对象和必要手势草稿，不恢复EditorModel/DirectProjection两条路径。真实窗口验收仍未完成。
 - [ ] 11.4 D3/D4：原ShowListGroups/ShowListTracks/ShowTimeLines及ActionClipWrapper就地改接该输入；保留Rect、样式、GUI.Window/DragWindow、框选和边缘交互，能力与重叠规则来自正式Capabilities/contract，分离SelfEase与派生OtherEase。`e3fd0b691` 已合并Clip主体，`32aee7b96`/`1bdc420f8`/`a3c4ca3ce`/`001a6ce99` 已合并Track/Group外壳和Group/Track输入状态机，当前 native/formal 时间线背景网格也复用同一 Slate 绘制函数；组列表布局、参数提供者和来源特有命令仍未完全参数化。
 - [x] 11.5 D3/D7：原Track/Clip/Section菜单和排序释放直接提交正式命令；Section不依赖directorGroup，显示边界不保存成Section，删除无正式合同的Actor/循环/任意组件创建命令。真实窗口验收仍未完成。

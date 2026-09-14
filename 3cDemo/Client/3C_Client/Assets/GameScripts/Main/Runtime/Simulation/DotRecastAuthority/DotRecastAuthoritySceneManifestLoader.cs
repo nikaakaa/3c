@@ -117,7 +117,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             }
             if (!actual.NumericProfileId.Equals(Float32SimulationNumericProfile.Value.Id) ||
                 !actual.TargetAbiVersion.Equals(Float32SimulationNumericProfile.Value.AbiVersion) ||
-                !actual.OperationSetVersion.Equals(SimulationKernel.SpecializationManifest.OperationSetVersion))
+                !actual.OperationSetVersion.Equals(Float32SimulationTarget.Manifest.ExecutionTarget.OperationSetVersion))
             {
                 throw new InvalidDataException("Program artifact does not target the formal Float32 Kernel ABI.");
             }

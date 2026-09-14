@@ -114,6 +114,11 @@ namespace Slate
         string ReferenceLabel { get; }
     }
 
+    public interface IEmbeddedTimelineSourceRangeBinding
+    {
+        void AdjustSourceRange(int originalStartFrame, int originalEndFrame, int currentStartFrame, int currentEndFrame, bool trimStart);
+    }
+
     public interface IEmbeddedTimelineCurveBinding
     {
         string ChannelId { get; }

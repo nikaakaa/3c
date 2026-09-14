@@ -4246,6 +4246,18 @@ namespace Slate
                     editorBinding.FormalClip.ClipInFrame = preScaleClipInFrame + deltaFrame;
                 }
 
+                if (editorBinding.FormalClip is IEmbeddedTimelineSourceRangeBinding sourceRange &&
+                    trim &&
+                    (isScalingStart || isScalingEnd))
+                {
+                    sourceRange.AdjustSourceRange(
+                        Mathf.RoundToInt(preScaleStartTime * editor.embeddedTimeline.FrameRate),
+                        Mathf.RoundToInt(preScaleEndTime * editor.embeddedTimeline.FrameRate),
+                        Mathf.RoundToInt(editorBinding.StartTime * editor.embeddedTimeline.FrameRate),
+                        Mathf.RoundToInt(editorBinding.EndTime * editor.embeddedTimeline.FrameRate),
+                        isScalingStart);
+                }
+
                 if (action != null)
                     CutsceneUtility.RefreshAllAnimationEditorsOf(action.animationData);
 

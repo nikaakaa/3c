@@ -758,7 +758,7 @@ namespace BTSMTL.Timeline.Editor
             public void AddClip(BtsmtlTimelineClipBinding clip) => m_Clips.Add(clip);
         }
 
-        sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding
+        sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding, IEmbeddedTimelineSourceRangeBinding
         {
             readonly List<IEmbeddedTimelineCurveBinding> m_Curves = new List<IEmbeddedTimelineCurveBinding>();
             readonly List<IEmbeddedTimelineParameterBinding> m_Parameters = new List<IEmbeddedTimelineParameterBinding>();
@@ -769,6 +769,8 @@ namespace BTSMTL.Timeline.Editor
             float m_BlendIn;
             float m_BlendOut;
             int m_ClipInFrame;
+            float m_SourceStartTime;
+            float m_SourceEndTime;
             bool m_IsCollapsed;
             bool m_IsLocked;
 
@@ -782,6 +784,11 @@ namespace BTSMTL.Timeline.Editor
                 m_BlendIn = source.SelfEaseInFrame / (float)owner.FrameRate;
                 m_BlendOut = source.SelfEaseOutFrame / (float)owner.FrameRate;
                 m_ClipInFrame = source.ClipInFrame;
+                if (source is MotionCurveClip motion)
+                {
+                    m_SourceStartTime = motion.SourceStartTime;
+                    m_SourceEndTime = motion.SourceEndTime;
+                }
                 var descriptors = owner.CollectCurveChannels(source.Track);
                 for (int index = 0; index < descriptors.Count; index++)
                 {
@@ -792,12 +799,12 @@ namespace BTSMTL.Timeline.Editor
                     m_Curves.Add(curve);
                     m_Parameters.Add(new BtsmtlTimelineParameterBinding(this, curve));
                 }
-                if (source is MotionCurveClip motion && motion.SourceCurve != null)
+                if (source is MotionCurveClip sourceMotion && sourceMotion.SourceCurve != null)
                 {
-                    AddReferenceParameter(motion, "source.position-x", "Position X", motion.SourcePositionX);
-                    AddReferenceParameter(motion, "source.position-y", "Position Y", motion.SourcePositionY);
-                    AddReferenceParameter(motion, "source.position-z", "Position Z", motion.SourcePositionZ);
-                    AddReferenceParameter(motion, "source.yaw", "Yaw", motion.SourceYaw);
+                    AddReferenceParameter(sourceMotion, "source.position-x", "Position X", sourceMotion.SourcePositionX);
+                    AddReferenceParameter(sourceMotion, "source.position-y", "Position Y", sourceMotion.SourcePositionY);
+                    AddReferenceParameter(sourceMotion, "source.position-z", "Position Z", sourceMotion.SourcePositionZ);
+                    AddReferenceParameter(sourceMotion, "source.yaw", "Yaw", sourceMotion.SourceYaw);
                 }
             }
 
@@ -830,6 +837,21 @@ namespace BTSMTL.Timeline.Editor
             public bool CanBlendOut => Source.IsMixable();
             public IReadOnlyList<IEmbeddedTimelineParameterBinding> Parameters => m_Parameters;
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => m_Curves;
+
+            public void AdjustSourceRange(
+                int originalStartFrame,
+                int originalEndFrame,
+                int currentStartFrame,
+                int currentEndFrame,
+                bool trimStart)
+            {
+                if (Source is not MotionCurveClip motion || motion.SourceCurve == null)
+                    return;
+                float duration = Mathf.Max(1f / m_Owner.FrameRate, (currentEndFrame - currentStartFrame) / (float)m_Owner.FrameRate);
+                if (trimStart)
+                    m_SourceStartTime = motion.SourceStartTime + (currentStartFrame - originalStartFrame) / (float)m_Owner.FrameRate;
+                m_SourceEndTime = m_SourceStartTime + duration;
+            }
 
             public bool CanCrossBlend(IEmbeddedTimelineClipBinding other)
             {
@@ -911,6 +933,10 @@ namespace BTSMTL.Timeline.Editor
                                Source.SelfEaseInFrame != selfEaseInFrame ||
                                Source.SelfEaseOutFrame != selfEaseOutFrame ||
                                (CanClipIn && Source.ClipInFrame != m_ClipInFrame);
+                if (Source is MotionCurveClip motion &&
+                    (!Mathf.Approximately(motion.SourceStartTime, m_SourceStartTime) ||
+                     !Mathf.Approximately(motion.SourceEndTime, m_SourceEndTime)))
+                    changed = true;
                 for (int index = 0; index < m_Curves.Count; index++)
                     changed |= ((BtsmtlTimelineCurveBinding)m_Curves[index]).CommitSource();
                 if (!changed)
@@ -921,6 +947,10 @@ namespace BTSMTL.Timeline.Editor
                 Source.SelfEaseOutFrame = selfEaseOutFrame;
                 if (CanClipIn)
                     Source.ClipInFrame = m_ClipInFrame;
+                if (Source is MotionCurveClip sourceMotion &&
+                    (!Mathf.Approximately(sourceMotion.SourceStartTime, m_SourceStartTime) ||
+                     !Mathf.Approximately(sourceMotion.SourceEndTime, m_SourceEndTime)))
+                    sourceMotion.ConfigureSource(sourceMotion.SourceCurve, m_SourceStartTime, m_SourceEndTime);
                 Source.Track.UpdateMix();
                 return true;
             }
@@ -934,6 +964,10 @@ namespace BTSMTL.Timeline.Editor
                 if (Source.StartFrame != startFrame || Source.EndFrame != endFrame ||
                     Source.SelfEaseInFrame != selfEaseInFrame || Source.SelfEaseOutFrame != selfEaseOutFrame ||
                     (CanClipIn && Source.ClipInFrame != m_ClipInFrame))
+                    return true;
+                if (Source is MotionCurveClip motion &&
+                    (!Mathf.Approximately(motion.SourceStartTime, m_SourceStartTime) ||
+                     !Mathf.Approximately(motion.SourceEndTime, m_SourceEndTime)))
                     return true;
                 for (int index = 0; index < m_Curves.Count; index++)
                     if (((BtsmtlTimelineCurveBinding)m_Curves[index]).HasChanges())

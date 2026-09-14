@@ -16,6 +16,7 @@
 
 - 6dc126b0a 补齐作者核心描述合同：新增 Skill 字段/连接合同、图闭包 placement owner、Timeline 属性/引用合同及必要程序集依赖。
 - b78b5309f 压缩作者局部生成输出：删除按 emission 阶段和连续块展开的包装，改为根构建、阶段构建和收尾连接；移除无用外部资源分区接口。
+- 80055079b 修正跨阶段辅助变量提升：把生成过程中分配的 Timeline 合同目录局部变量纳入类型和文件边界，避免收尾代码引用阶段局部名称。
 - bf0c3a36d 更新作者技能使用规范：同步核心合同驱动、短入口、阶段文件和局部结果的使用规则。
 - 已修复通用 C# 值编码器对可为空无运行时类型值的空值处理，并修复 Timeline 属性值正式类型包装和临时 catalog 变量命名。
 
@@ -34,6 +35,7 @@
 - BTSMTL.Timeline.Tree.csproj：最近一次编译为 0 个错误、17 个已有警告。
 - ThirdPersonClient.Runtime.csproj：最近一次成功编译为 0 个错误、1 个警告。
 - Editor 侧 CodeGeneration 源在使用已有 Unity 程序集作为引用时通过静态编译；当前完整项目仍受并行 Simulation/Pose 状态迁移的外部编译错误影响，未宣称全项目通过。
+- 针对当前旧 Attack 生成文件的静态编译还发现 19 个 `timelineCatalog*` 未解析名称；这是旧程序集输出没有应用 `80055079b` 提升规则的结果，未把该旧输出当作新生成器编译证据。
 - Unity Editor 会话已经恢复并注册为 `3C_Client@e852139597e42532`。正式 `btsmtl.export_code` 已对 Attack 执行并返回 8 个文件、总计 198,414 字节，其中入口 1,608 字节；这次调用仍使用当时已加载的旧生成器程序集。
 - 静态编译中间导出时发现短入口缺少命名空间闭合，源码已在 `cf715b0b9` 修复；最新生成器还没有在 Unity 中重新加载，因此当前生成目录不能作为最终输出归档。
 - Unity 当前 Console 仍有并行 Fixed Simulation 源码的 1 个编译错误：`CharacterPipelineDefinitionFixedAbilityExtensions.cs:9` 找不到 `FixedGameplayAbilityExecutionData`，阻止 `ThirdPersonClient.Editor` 加载最新生成器。未修改并行 Simulation/Pose 文件、未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。

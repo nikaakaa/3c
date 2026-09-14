@@ -10,27 +10,30 @@ namespace ThirdPersonSimulation
         readonly Float32ActionRuntime m_Actions;
         readonly Float32ActionStateStore m_ActionStore;
         readonly OperationControlRuntime<Float32OperationTarget> m_Control;
+        readonly Float32GameplayAbilityExecutionCatalog m_Abilities;
 
         public Float32AbilityDomainRuntime(
             Float32EvaluationFrame frame,
             Float32ActionRuntime actions,
             Float32ActionStateStore actionStore,
-            OperationControlRuntime<Float32OperationTarget> control)
+            OperationControlRuntime<Float32OperationTarget> control,
+            Float32GameplayAbilityExecutionCatalog abilities)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
             m_Control = control ?? throw new ArgumentNullException(nameof(control));
+            m_Abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
         }
 
         [PerformanceProbe("simulation.operation.ability-program-tick")]
         public void Tick()
         {
-            IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
+            IReadOnlyList<Float32GameplayAbilityExecutionData> abilities = m_Abilities.Abilities;
             var stoppingInstances = new HashSet<ulong>();
-            for (int i = 0; i < skills.Count; i++)
+            for (int i = 0; i < abilities.Count; i++)
             {
-                GameplayAbilityProgramBinding skill = skills[i];
+                GameplayAbilityProgramBinding skill = abilities[i].Binding;
                 IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
                 {
@@ -109,9 +112,9 @@ namespace ThirdPersonSimulation
                         m_ActionStore.RemoveSkillExecution(action.InstanceId);
                 }
             }
-            for (int i = 0; i < skills.Count; i++)
+            for (int i = 0; i < abilities.Count; i++)
             {
-                GameplayAbilityProgramBinding skill = skills[i];
+                GameplayAbilityProgramBinding skill = abilities[i].Binding;
                 m_Actions.TryCommitPendingControl(skill.SkillId);
                 IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
                 for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)

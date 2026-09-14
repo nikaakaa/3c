@@ -387,7 +387,8 @@ namespace ThirdPersonSimulation
         readonly Float32EvaluationFrame m_Frame;
         readonly Float32BlackboardRuntime m_Blackboard;
         readonly Float32ActionRuntime m_Actions;
-        readonly Float32ActionStateStore m_ActionStore;
+		readonly Float32ActionStateStore m_ActionStore;
+		readonly Float32GameplayAbilityExecutionCatalog m_Abilities;
         readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
         readonly Float32EquipmentRuntime m_Equipment;
         readonly Float32InputRuntime m_Input;
@@ -418,6 +419,7 @@ namespace ThirdPersonSimulation
 				access,
 				m_Frame);
             m_ActionStore = actionStore;
+			m_Abilities = Float32GameplayAbilityExecutionCatalogFactory.FromProgram(program);
             m_Input = new Float32InputRuntime(
                 access,
                 m_Frame);
@@ -451,10 +453,11 @@ namespace ThirdPersonSimulation
                 m_Frame.Trace);
             m_Actions = new Float32ActionRuntime(
                 access,
-                m_Frame,
-                m_Input,
-                actionStore,
-                m_Blackboard,
+				m_Frame,
+				m_Input,
+				actionStore,
+				m_Abilities,
+				m_Blackboard,
                 m_GameplayEffects,
                 m_GameplayEffects,
                 handles,
@@ -523,7 +526,8 @@ namespace ThirdPersonSimulation
 				m_Frame,
 				m_Actions,
 				m_ActionStore,
-				m_Control);
+				m_Control,
+				m_Abilities);
 				m_ControlDomain = new Float32ControlDomainRuntime(
 					program,
 					m_Frame,
@@ -630,10 +634,11 @@ namespace ThirdPersonSimulation
 				m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
 				return;
 			}
-			IReadOnlyList<GameplayAbilityProgramBinding> skills = m_Frame.Program.AbilityPrograms.Bindings;
-			for (int i = 0; i < skills.Count; i++)
+			IReadOnlyList<Float32GameplayAbilityExecutionData> abilities = m_Abilities.Abilities;
+			for (int i = 0; i < abilities.Count; i++)
 			{
-				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skills[i].SkillId);
+				GameplayAbilityProgramBinding skill = abilities[i].Binding;
+				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
 				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
 				{
 					Float32ActionInstanceState action = actions[actionIndex];

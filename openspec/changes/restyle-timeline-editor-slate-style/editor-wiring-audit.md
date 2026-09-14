@@ -39,7 +39,7 @@
 
 ### A01 轨道列表主体仍分离，Clip主体已合并
 
-2026-09-15 已提交 `6d56e7efd`、`6445b7490`、`3736dc802`、`5d8548a8e`、`85203d7b3`：原生与正式 Track 行共用 `DrawTrackListEntry`、`DrawTrackList<TTrack>`；Group 行共用 `DrawGroupListEntry`、`DrawGroupList<TGroup>`；右侧时间轴 Track 行也共用 `DrawTimelineTrack<TTrack>`，统一行矩形、锁定命中、曲线/原生内容回调和 ClipWrapper 循环。两侧只保留数据读取与正式/原生命令回调；时间轴 Group 外层与折叠缩略图仍分离，A01 尚未整体完成。
+2026-09-15 已提交 `6d56e7efd`、`6445b7490`、`3736dc802`、`5d8548a8e`、`85203d7b3`、`24fa2d629`：原生与正式 Track 行共用 `DrawTrackListEntry`、`DrawTrackList<TTrack>`；Group 行共用 `DrawGroupListEntry`、`DrawGroupList<TGroup>`；右侧时间轴 Track 行也共用 `DrawTimelineTrack<TTrack>`，统一行矩形、锁定命中、曲线/原生内容回调和 ClipWrapper 循环。两侧只保留数据读取与正式/原生命令回调；时间轴 Group 外层与折叠缩略图仍分离，A01 尚未整体完成。
 
 S的ShowGroupsAndTracksList(Rect)、ShowTimeLines(Rect)在embeddedTimeline非空时仍转同名重载；组列表布局、来源特有命令和两套 Track 参数提供者仍有来源分支，但 Group 标题已由 `DrawGroupListHeaderFrame` 共用，Group/Track 选中排序事件已由 `HandleGroupListInput`/`HandleTrackListInput` 共用，Track 行的背景、选中框、颜色标记和局部坐标容器已由 `DrawTrackListRowFrame` 共用。Clip部分已在 `DrawTimelineClip` 收口为一份：native 与 formal 都通过同一个 `ActionClipWrapper`、`GUI.Window/GUI.DragWindow`、选中框、外部标题、相邻限制、多选、Shift/Ripple、双端磁吸和正式 binding 提交。旧的 `formalDragOffset` 和正式单端 Clamp 拖动路径已删除。
 

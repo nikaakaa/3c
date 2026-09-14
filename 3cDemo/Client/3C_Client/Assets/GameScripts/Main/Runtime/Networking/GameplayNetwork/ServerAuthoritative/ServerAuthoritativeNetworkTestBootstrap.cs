@@ -8,8 +8,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     public enum ServerAuthoritativeTestScenarioId : byte
     {
         ServerAuthoritativeClient = 1,
-        UnityAuthorityWorker = 2,
-        DotRecastAuthorityClient = 3
+        UnityAuthorityWorker = 2
     }
 
     [DisallowMultipleComponent]
@@ -17,12 +16,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     {
         const string ScenarioArgument = "--network-test-scenario=";
         const string RoleArgument = "--server-authoritative-role=";
-        const string PlayerArgument = "--server-authoritative-player-id=";
-        const string ActorArgument = "--server-authoritative-actor-id=";
 
         [SerializeField] string m_ClientSceneName = string.Empty;
         [SerializeField] string m_AuthoritySceneName = string.Empty;
-        [SerializeField] string m_DotRecastClientSceneName = string.Empty;
 #if UNITY_EDITOR
         [SerializeField] ServerAuthoritativeTestScenarioId m_EditorScenario;
         [SerializeField] ServerAuthoritativeProcessRole m_EditorRole;
@@ -30,32 +26,21 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
 
         void Awake()
         {
-            ServerAuthoritativeTestScenarioId scenario = ResolveSelection(
-                out ServerAuthoritativeProcessRole role,
-                out string expectedPlayerId,
-                out string expectedActorId);
+            ServerAuthoritativeTestScenarioId scenario = ResolveSelection(out ServerAuthoritativeProcessRole role);
             if (scenario == ServerAuthoritativeTestScenarioId.UnityAuthorityWorker)
             {
                 SceneManager.LoadScene(RequireSceneName(m_AuthoritySceneName, "Authority Scene"), LoadSceneMode.Single);
                 return;
             }
-            ServerAuthoritativeSceneLaunchSelection.SelectClient(role, expectedPlayerId, expectedActorId);
-            string clientScene = scenario == ServerAuthoritativeTestScenarioId.DotRecastAuthorityClient
-                ? RequireSceneName(m_DotRecastClientSceneName, "DotRecast Client Scene")
-                : RequireSceneName(m_ClientSceneName, "Client Scene");
-            SceneManager.LoadScene(clientScene, LoadSceneMode.Single);
+            ServerAuthoritativeSceneLaunchSelection.SelectClient(role);
+            SceneManager.LoadScene(RequireSceneName(m_ClientSceneName, "Client Scene"), LoadSceneMode.Single);
         }
 
-        ServerAuthoritativeTestScenarioId ResolveSelection(
-            out ServerAuthoritativeProcessRole role,
-            out string expectedPlayerId,
-            out string expectedActorId)
+        ServerAuthoritativeTestScenarioId ResolveSelection(out ServerAuthoritativeProcessRole role)
         {
 #if UNITY_EDITOR
             ServerAuthoritativeTestScenarioId scenario = m_EditorScenario;
             role = m_EditorRole;
-            expectedPlayerId = string.Empty;
-            expectedActorId = string.Empty;
 #else
             string scenarioValue = RequireArgument(ScenarioArgument);
             string roleValue = RequireArgument(RoleArgument);
@@ -63,7 +48,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             {
                 "server-authoritative-client" => ServerAuthoritativeTestScenarioId.ServerAuthoritativeClient,
                 "unity-authority-worker" => ServerAuthoritativeTestScenarioId.UnityAuthorityWorker,
-                "dotrecast-authority-client" => ServerAuthoritativeTestScenarioId.DotRecastAuthorityClient,
                 _ => throw new InvalidOperationException(
                     $"Command line '{ScenarioArgument}' must name a registered ServerAuthoritative test scenario.")
             };
@@ -75,9 +59,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 _ => throw new InvalidOperationException(
                     $"Command line requires exactly one '{RoleArgument}authority|client-a|client-b' argument.")
             };
-            bool dotRecastClient = scenario == ServerAuthoritativeTestScenarioId.DotRecastAuthorityClient;
-            expectedPlayerId = dotRecastClient ? RequireArgument(PlayerArgument) : string.Empty;
-            expectedActorId = dotRecastClient ? RequireArgument(ActorArgument) : string.Empty;
 #endif
             bool authority = scenario == ServerAuthoritativeTestScenarioId.UnityAuthorityWorker;
             if (!Enum.IsDefined(typeof(ServerAuthoritativeTestScenarioId), scenario) ||
@@ -117,37 +98,24 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     internal static class ServerAuthoritativeSceneLaunchSelection
     {
         static ServerAuthoritativeProcessRole s_Role;
-        static string s_ExpectedPlayerId = string.Empty;
-        static string s_ExpectedActorId = string.Empty;
         static bool s_Pending;
 
-        public static void SelectClient(
-            ServerAuthoritativeProcessRole role,
-            string expectedPlayerId,
-            string expectedActorId)
+        public static void SelectClient(ServerAuthoritativeProcessRole role)
         {
             if (role != ServerAuthoritativeProcessRole.ClientA && role != ServerAuthoritativeProcessRole.ClientB)
                 throw new ArgumentOutOfRangeException(nameof(role));
             if (s_Pending)
                 throw new InvalidOperationException("A ServerAuthoritative client Scene launch is already pending.");
             s_Role = role;
-            s_ExpectedPlayerId = expectedPlayerId ?? string.Empty;
-            s_ExpectedActorId = expectedActorId ?? string.Empty;
             s_Pending = true;
         }
 
-        public static ServerAuthoritativeProcessRole TakeClientRole(
-            out string expectedPlayerId,
-            out string expectedActorId)
+        public static ServerAuthoritativeProcessRole TakeClientRole()
         {
             if (!s_Pending)
                 throw new InvalidOperationException("ServerAuthoritative Client Scene was entered without a Bootstrap launch selection.");
             ServerAuthoritativeProcessRole role = s_Role;
-            expectedPlayerId = s_ExpectedPlayerId;
-            expectedActorId = s_ExpectedActorId;
             s_Role = default;
-            s_ExpectedPlayerId = string.Empty;
-            s_ExpectedActorId = string.Empty;
             s_Pending = false;
             return role;
         }

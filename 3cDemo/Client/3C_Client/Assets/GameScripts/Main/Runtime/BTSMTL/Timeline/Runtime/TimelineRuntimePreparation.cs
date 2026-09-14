@@ -382,8 +382,6 @@ namespace BTSMTL.Timeline.Runtime
                 return false;
             if (m_StopPending || m_PendingAdvance != null)
                 return false;
-            StopContext = context;
-            HasStopContext = true;
             m_PendingStopContext = context;
             m_StopPending = true;
             return true;

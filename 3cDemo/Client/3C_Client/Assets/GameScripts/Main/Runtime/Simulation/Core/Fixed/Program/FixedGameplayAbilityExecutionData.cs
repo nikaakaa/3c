@@ -16,10 +16,10 @@ namespace ThirdPersonSimulation.Fixed
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
+            ProgramCapabilityManifest capabilities,
             SimulationProgramRootDescriptor root,
-            ProgramId programId,
-            ProgramHash programHash,
-            LayoutHash layoutHash,
+            string executionIdentity,
+            StableHash stateSchemaHash,
             IEnumerable<SimulationOperationDefinition> operationDefinitions,
             IEnumerable<SimulationOperation> operations,
             IEnumerable<ProgramConstant> constants,
@@ -47,16 +47,18 @@ namespace ThirdPersonSimulation.Fixed
             SourceRevision = sourceRevision;
             SemanticHash = semanticHash;
             NumericProfile = numericProfile;
+            Capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
             Root = root;
-            ProgramId = programId;
-            ProgramHash = programHash;
-            LayoutHash = layoutHash;
+            ExecutionIdentity = SimulationIdentity.Require(executionIdentity, nameof(executionIdentity));
+            StateSchemaHash = stateSchemaHash.IsValid
+                ? stateSchemaHash
+                : throw new ArgumentException("Ability state schema hash is invalid.", nameof(stateSchemaHash));
             ContentHash = StableHash.Compute(
                 "gameplay-ability-execution-data/1",
                 abilityId.Value,
                 Root.ContentIdentity,
-                programHash.ToString(),
-                layoutHash.ToString());
+                ExecutionIdentity,
+                StateSchemaHash.ToString());
             OperationDefinitions = Copy(operationDefinitions);
             Operations = Copy(operations);
             Constants = Copy(constants);
@@ -83,10 +85,10 @@ namespace ThirdPersonSimulation.Fixed
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
         public SimulationNumericProfile NumericProfile { get; }
+        public ProgramCapabilityManifest Capabilities { get; }
         public SimulationProgramRootDescriptor Root { get; }
-        public ProgramId ProgramId { get; }
-        public ProgramHash ProgramHash { get; }
-        public LayoutHash LayoutHash { get; }
+        public string ExecutionIdentity { get; }
+        public StableHash StateSchemaHash { get; }
         public StableHash ContentHash { get; }
         public IReadOnlyList<SimulationOperationDefinition> OperationDefinitions { get; }
         public IReadOnlyList<SimulationOperation> Operations { get; }
@@ -114,10 +116,10 @@ namespace ThirdPersonSimulation.Fixed
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
+            ProgramCapabilityManifest capabilities,
             SimulationProgramRootDescriptor root,
-            ProgramId programId,
-            ProgramHash programHash,
-            LayoutHash layoutHash,
+            string executionIdentity,
+            StableHash stateSchemaHash,
             IEnumerable<SimulationOperationDefinition> operationDefinitions,
             IEnumerable<SimulationOperation> operations,
             IEnumerable<ProgramConstant> constants,
@@ -146,10 +148,10 @@ namespace ThirdPersonSimulation.Fixed
                 sourceRevision,
                 semanticHash,
                 numericProfile,
+                capabilities,
                 root,
-                programId,
-                programHash,
-                layoutHash,
+                executionIdentity,
+                stateSchemaHash,
                 operationDefinitions,
                 operations,
                 constants,

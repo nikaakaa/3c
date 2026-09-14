@@ -180,16 +180,11 @@ namespace ThirdPersonSimulation.Fixed
             GameplayAbilityProviderContract providerContract = GameplayAbilityProviderContract.Create(
                 semanticIr.CatalogEntries,
                 index => constants[index].Int32);
-            ProgramHash programHash = new ProgramHash(StableHash.Compute(
-                "fixed-gameplay-ability-execution-data/1",
-                semanticIr.Manifest.Root.ContentIdentity,
-                semanticIr.SemanticHash.ToString(),
-                semanticIr.Manifest.SourceRevision.Value));
-            LayoutHash layoutHash = new LayoutHash(StableHash.Compute(
+            StableHash stateSchemaHash = StableHash.Compute(
                 "fixed-gameplay-ability-execution-layout/1",
                 semanticIr.SemanticHash.ToString(),
                 semanticIr.StateDeclarations.Count.ToString(CultureInfo.InvariantCulture),
-                semanticIr.GraphCallFrames.Count.ToString(CultureInfo.InvariantCulture)));
+                semanticIr.GraphCallFrames.Count.ToString(CultureInfo.InvariantCulture));
             FixedGameplayAbilityExecutionData data = FixedGameplayAbilityExecutionData.Create(
                 abilityId,
                 binding,
@@ -200,10 +195,10 @@ namespace ThirdPersonSimulation.Fixed
                 semanticIr.Manifest.SourceRevision,
                 semanticIr.SemanticHash,
                 target.Profile,
+                semanticIr.Manifest.Capabilities,
                 semanticIr.Manifest.Root,
-                semanticIr.Manifest.ProgramId,
-                programHash,
-                layoutHash,
+                semanticIr.Manifest.ProgramId.Value,
+                stateSchemaHash,
                 definitions,
                 operations,
                 constants,

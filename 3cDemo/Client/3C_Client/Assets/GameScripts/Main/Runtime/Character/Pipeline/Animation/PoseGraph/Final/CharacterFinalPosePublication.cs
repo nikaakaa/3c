@@ -117,6 +117,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 outputWeight,
                 continuityIdentity);
 
+        internal void WriteNativePose(
+            in CharacterPoseNativePoseReadBinding input,
+            float outputWeight,
+            ulong continuityIdentity)
+        {
+            AnimationPoseValueNativeReadBinding binding =
+                new AnimationPoseValueNativeReadBinding(in input);
+            m_Owner.WriteProgramOutputPose(
+                this,
+                in binding,
+                outputWeight,
+                continuityIdentity);
+        }
+
         internal void WriteInvalid(
             AnimationPoseNativeInvalidReason outputInvalidReason,
             ulong continuityIdentity) =>
@@ -1191,47 +1205,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPrimitivePoseContribution primitive,
             CharacterPoseSourceModule sourceModule)
         {
-            if (primitive.PhysicalPlayerIndex < 0 || primitive.PhysicalPlayerIndex >= m_PoseNodeIds.Length ||
-                !IsContributionKind(primitive.Kind) ||
-                primitive.ContributionContinuityIdentity == 0 ||
-                !IsWeight(primitive.Weight) || !IsWeight(primitive.LeftFootWeight) ||
-                !IsWeight(primitive.RightFootWeight))
-            {
-                throw new InvalidOperationException("Final Animation Pose Graph primitive contribution is invalid.");
-            }
-
-            PoseNodeId playerNodeId = m_PoseNodeIds[primitive.PhysicalPlayerIndex];
-            AnimationPoseSourceId sourceId = default;
-            if (primitive.Kind == AnimationPoseContributionKind.Live)
-            {
-                if (primitive.PhysicalSourceIndex < 0 || primitive.PhysicalSourceGeneration == 0 ||
-                    primitive.SourceOwnerIndex < 0)
-                    throw new InvalidOperationException("Final Animation Pose Graph Live contribution identity is invalid.");
-                var physicalIdentity = new AnimationPhysicalSourceIdentity(
-                    new AnimationPhysicalSourceIndex(primitive.PhysicalSourceIndex),
-                    primitive.PhysicalSourceGeneration);
-                sourceId = sourceModule.RequireSourceId(physicalIdentity);
-                if (!sourceModule.RequirePoseNodeId(physicalIdentity).Equals(playerNodeId) ||
-                    sourceModule.RequireSourceOwnerIndex(physicalIdentity) != primitive.SourceOwnerIndex)
-                {
-                    throw new InvalidOperationException("Final Animation Pose Graph Live contribution metadata does not match its physical identity.");
-                }
-            }
-            else if (primitive.PhysicalSourceIndex != -1 || primitive.PhysicalSourceGeneration != 0 ||
-                     primitive.SourceOwnerIndex != -1)
-            {
-                throw new InvalidOperationException("Final Animation Pose Graph captured contribution must not carry a Live source identity.");
-            }
-
-            return new AnimationPoseSourceContribution(
-                playerNodeId,
-                primitive.Kind,
-                sourceId,
-                primitive.SourceOwnerIndex,
-                primitive.ContributionContinuityIdentity,
-                primitive.Weight,
-                primitive.LeftFootWeight,
-                primitive.RightFootWeight);
+            return CharacterFinalPoseContributionResolver.Resolve(
+                primitive,
+                sourceModule,
+                m_PoseNodeIds);
         }
 
         static CharacterFinalPosePublicationResult CreatePublicationResult(
@@ -1261,10 +1238,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     : 0);
         }
 
-        static bool IsWeight(float value) => float.IsFinite(value) && value >= 0f && value <= 1f;
-        static bool IsContributionKind(AnimationPoseContributionKind value) =>
-            (int)value >= (int)AnimationPoseContributionKind.Live &&
-            (int)value <= (int)AnimationPoseContributionKind.Stored;
+        static bool IsWeight(float value) =>
+            float.IsFinite(value) && value >= 0f && value <= 1f;
         static long PayloadBytes<T>(T[] values) where T : unmanaged =>
             checked((long)UnsafeUtility.SizeOf<T>() * values.LongLength);
     }

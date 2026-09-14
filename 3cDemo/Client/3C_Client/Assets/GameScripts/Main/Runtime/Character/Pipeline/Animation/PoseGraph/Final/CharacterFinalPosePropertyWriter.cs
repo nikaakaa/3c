@@ -46,6 +46,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        internal CharacterFinalPosePropertyWriter(
+            CharacterAnimationRigBinding rigBinding,
+            CharacterAnimationInputContract inputContract,
+            IReadOnlyList<CharacterPresentationAnimationPropertyBinding> bindings)
+        {
+            m_RigBinding = rigBinding ? rigBinding : throw new ArgumentNullException(nameof(rigBinding));
+            if (inputContract == null)
+                throw new ArgumentNullException(nameof(inputContract));
+            if (bindings == null)
+                throw new ArgumentNullException(nameof(bindings));
+            m_Bindings = new CharacterPresentationAnimationPropertyBinding[bindings.Count];
+            m_Renderers = new CharacterAnimationRendererBinding[bindings.Count];
+            m_InitialWeights = new float[bindings.Count];
+            var bindingIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < m_Bindings.Length; i++)
+            {
+                CharacterPresentationAnimationPropertyBinding binding = bindings[i] ??
+                    throw new InvalidOperationException("Final animation property binding is missing.");
+                ValidateNativeBinding(binding, inputContract);
+                if (!bindingIds.Add(binding.BindingId))
+                    throw new InvalidOperationException("Final animation property binding identity is duplicated.");
+                CharacterAnimationRendererBinding renderer =
+                    rigBinding.FindRendererBinding(binding.RendererBindingId);
+                if (renderer == null)
+                    throw new InvalidOperationException($"Final animation property '{binding.BindingId}' has no Renderer binding '{binding.RendererBindingId}'.");
+                m_Bindings[i] = binding;
+                m_Renderers[i] = renderer;
+                ValidateBinding(binding, renderer);
+                float initialWeight = renderer.Renderer.GetBlendShapeWeight(binding.BlendShapeIndex);
+                if (!float.IsFinite(initialWeight))
+                    throw new InvalidOperationException($"Final animation property '{binding.BindingId}' initial BlendShape weight is not finite.");
+                m_InitialWeights[i] = initialWeight;
+            }
+        }
+
         internal int BindingCount => m_Bindings.Length;
 
         internal void ValidateBindingsBeforeEvaluate()
@@ -72,6 +107,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     binding.BlendShapeName,
                     StringComparison.Ordinal))
                 throw new InvalidOperationException($"Final animation property '{binding.BindingId}' Renderer binding is stale.");
+        }
+
+        static void ValidateNativeBinding(
+            CharacterPresentationAnimationPropertyBinding binding,
+            CharacterAnimationInputContract inputContract)
+        {
+            if (string.IsNullOrWhiteSpace(binding.BindingId) ||
+                !binding.ParameterId.IsValid ||
+                binding.ParameterIndex < 0 ||
+                binding.ParameterIndex >= inputContract.Parameters.Count ||
+                !float.IsFinite(binding.DefaultValue) ||
+                string.IsNullOrWhiteSpace(binding.RendererBindingId) ||
+                !binding.ExpectedMesh ||
+                !CharacterAclHash.IsSha256(binding.MeshContentHash) ||
+                string.IsNullOrWhiteSpace(binding.BlendShapeName) ||
+                binding.BlendShapeIndex < 0 ||
+                binding.BlendShapeIndex >= binding.ExpectedMesh.blendShapeCount ||
+                !string.Equals(
+                    binding.ExpectedMesh.GetBlendShapeName(binding.BlendShapeIndex),
+                    binding.BlendShapeName,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Native animation property binding is invalid.");
+            }
+            CharacterPoseParameterDeclaration parameter =
+                inputContract.Parameters[binding.ParameterIndex];
+            if (parameter == null ||
+                !parameter.ParameterId.Equals(binding.ParameterId) ||
+                parameter.Usage != CharacterPoseParameterUsage.AnimatedProperty ||
+                parameter.ValueType != PoseParameterValueType.Float ||
+                !string.Equals(parameter.Unit, binding.Unit, StringComparison.Ordinal) ||
+                parameter.DefaultValue != binding.DefaultValue)
+            {
+                throw new InvalidOperationException(
+                    $"Native animation property '{binding.BindingId}' does not match its input parameter.");
+            }
         }
 
         internal void ValidateFrame(in ComposedAnimationPoseFrame frame)

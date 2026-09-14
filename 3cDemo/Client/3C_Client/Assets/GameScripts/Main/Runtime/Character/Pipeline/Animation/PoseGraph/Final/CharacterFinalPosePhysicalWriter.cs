@@ -72,6 +72,68 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal AnimationPhysicalBoneWriteDiagnostics Diagnostics =>
             m_Diagnostics;
 
+        internal void WriteNative(
+            in CharacterPoseNativePoseReadBinding output,
+            in ComposedAnimationPoseFrame pending,
+            bool hasCommitted,
+            in ComposedAnimationPoseFrame committed,
+            bool captureFootIkDiagnostics)
+        {
+            bool pendingValid = PendingNativeHeaderIsValid(
+                in output,
+                in pending);
+            bool committedValid =
+                hasCommitted &&
+                CommittedHeaderIsValid(in committed);
+
+            for (int boneIndex = 0; boneIndex < m_Bones.Count; boneIndex++)
+            {
+                Transform bone = m_Bones[boneIndex];
+                AnimationLocalBonePose pose = ResolvePose(
+                    in pending,
+                    in committed,
+                    pendingValid,
+                    committedValid,
+                    boneIndex);
+                if (!bone || !pose.IsValid)
+                {
+                    throw new InvalidOperationException(
+                        $"Final animation physical write Bone #{boneIndex} is invalid.");
+                }
+            }
+
+            for (int boneIndex = 0; boneIndex < m_Bones.Count; boneIndex++)
+            {
+                Transform bone = m_Bones[boneIndex];
+                AnimationLocalBonePose pose = ResolvePose(
+                    in pending,
+                    in committed,
+                    pendingValid,
+                    committedValid,
+                    boneIndex);
+                bone.localPosition = pose.Position;
+                bone.localRotation = pose.Rotation;
+                bone.localScale = pose.Scale;
+            }
+            if (pendingValid)
+            {
+                Vector3 pelvisWorldPosition = m_Bones[m_PelvisBoneIndex].position;
+                CharacterFootIkPhysicalCapture footIkCapture =
+                    captureFootIkDiagnostics
+                        ? CaptureFootIkPhysical(pelvisWorldPosition)
+                        : default;
+                m_Diagnostics = new AnimationPhysicalBoneWriteDiagnostics(
+                    output.CompletionIdentity,
+                    CaptureComponentPosition(m_LeftAnkleBoneIndex),
+                    CaptureComponentRotation(m_LeftAnkleBoneIndex),
+                    CaptureComponentPosition(m_RightAnkleBoneIndex),
+                    CaptureComponentRotation(m_RightAnkleBoneIndex),
+                    m_ComponentRoot.InverseTransformPoint(pelvisWorldPosition),
+                    pelvisWorldPosition,
+                    in footIkCapture);
+            }
+        }
+
         internal void Write(
             in CharacterPoseProgramOutputResult output,
             in ComposedAnimationPoseFrame pending,
@@ -216,6 +278,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             frame.CompletionIdentity == output.Lineage.CompletionIdentity &&
             frame.Availability == AnimationPoseAvailability.Pose &&
             frame.ContinuityIdentity == output.ContinuityIdentity &&
+            frame.DenseLocalPose.Count >= m_Bones.Count;
+
+        bool PendingNativeHeaderIsValid(
+            in CharacterPoseNativePoseReadBinding output,
+            in ComposedAnimationPoseFrame frame) =>
+            output.IsValid &&
+            output.Space == CharacterPoseSpace.Local &&
+            output.Availability[0] == AnimationPoseAvailability.Pose &&
+            output.InvalidReason[0] == AnimationPoseNativeInvalidReason.None &&
+            frame.CompletionIdentity == output.CompletionIdentity &&
+            frame.Availability == AnimationPoseAvailability.Pose &&
+            frame.ContinuityIdentity == output.ContinuityIdentity[0] &&
             frame.DenseLocalPose.Count >= m_Bones.Count;
 
         bool CommittedHeaderIsValid(

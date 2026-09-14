@@ -95,8 +95,8 @@ namespace ThirdPersonSimulation.Fixed
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionAdmission = actionAdmission ?? throw new ArgumentNullException(nameof(actionAdmission));
-            m_GameplayTags = gameplayTags ?? throw new ArgumentNullException(nameof(gameplayTags));
-            m_Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+            m_GameplayTags = gameplayTags;
+            m_Equipment = equipment;
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             if (workspace == null)
@@ -182,16 +182,16 @@ namespace ThirdPersonSimulation.Fixed
 					case SimulationOperationCode.CanActivateAction:
 						result = CharacterStateValue.FromBoolean(m_ActionAdmission.PreviewActivation(cursor, operation).Allowed);
 						break;
-					case SimulationOperationCode.GameplayEffectHasTag:
-						result = CharacterStateValue.FromBoolean(m_GameplayTags.HasTag(operation.Text0));
-						break;
-					case SimulationOperationCode.GameplayEffectMatchTags:
-						result = CharacterStateValue.FromBoolean(
-							m_GameplayTags.Matches(Access.Services.RequireTagQuery(operation.Handle)));
-						break;
-					case SimulationOperationCode.GameplayAttributeRead:
-						result = m_GameplayTags.ReadAttribute(operation, outputPort);
-						break;
+                    case SimulationOperationCode.GameplayEffectHasTag:
+                        result = CharacterStateValue.FromBoolean(RequireGameplayTags().HasTag(operation.Text0));
+                        break;
+                    case SimulationOperationCode.GameplayEffectMatchTags:
+                        result = CharacterStateValue.FromBoolean(
+                            RequireGameplayTags().Matches(Access.Services.RequireTagQuery(operation.Handle)));
+                        break;
+                    case SimulationOperationCode.GameplayAttributeRead:
+                        result = RequireGameplayTags().ReadAttribute(operation, outputPort);
+                        break;
 					case SimulationOperationCode.CameraBasisRead:
 						result = ReadCameraBasis(outputPort);
 						break;
@@ -200,9 +200,9 @@ namespace ThirdPersonSimulation.Fixed
 					case SimulationOperationCode.RequestEquipmentChange:
 					case SimulationOperationCode.BeginEquipmentChange:
 					case SimulationOperationCode.CommitEquipmentChange:
-					case SimulationOperationCode.CancelEquipmentChange:
-						result = m_Equipment.Evaluate(operation, outputPort, inputs);
-						break;
+                    case SimulationOperationCode.CancelEquipmentChange:
+                        result = RequireEquipment().Evaluate(operation, outputPort, inputs);
+                        break;
 					case SimulationOperationCode.StateRootCompleted:
 						result = CharacterStateValue.FromBoolean(cursor.CurrentStateRootCompleted());
 						break;
@@ -266,7 +266,7 @@ namespace ThirdPersonSimulation.Fixed
 				$"code={operation.Code};kind={value.Kind};value={FormatValue(value)}");
 		}
 
-		static string FormatValue(CharacterStateValue value)
+        static string FormatValue(CharacterStateValue value)
 		{
 			return value.Kind switch
 			{
@@ -286,6 +286,14 @@ namespace ThirdPersonSimulation.Fixed
         {
             return edge != null && (!edge.HasCondition || ToBoolean(Evaluate(cursor, edge.Condition)));
         }
+
+        IFixedGameplayTagQuery RequireGameplayTags() => m_GameplayTags ??
+            throw new InvalidOperationException(
+                "Ability value operation requires the declared Gameplay Effect service.");
+
+        FixedEquipmentRuntime RequireEquipment() => m_Equipment ??
+            throw new InvalidOperationException(
+                "Ability value operation requires the declared Equipment service.");
 
         public bool SetBlackboard<TTarget>(
             OperationControlCursor<TTarget> cursor,

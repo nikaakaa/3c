@@ -40,16 +40,16 @@ namespace ThirdPersonSimulation
 			: base(access)
 		{
 			m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
-			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-			m_InputRuntime = inputRuntime ?? throw new ArgumentNullException(nameof(inputRuntime));
-			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-			m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
-			m_GameplayTags = gameplayTags ?? throw new ArgumentNullException(nameof(gameplayTags));
-			m_GameplayEffectActions = gameplayEffectActions ?? throw new ArgumentNullException(nameof(gameplayEffectActions));
-			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
-			m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
-			m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
-			m_EquipmentContext = equipmentContext ?? throw new ArgumentNullException(nameof(equipmentContext));
+            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+            m_InputRuntime = inputRuntime ?? throw new ArgumentNullException(nameof(inputRuntime));
+            m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
+            m_GameplayTags = gameplayTags;
+            m_GameplayEffectActions = gameplayEffectActions;
+            m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
+            m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
+            m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
+            m_EquipmentContext = equipmentContext;
 			m_IsOperationStopComplete = isOperationStopComplete ?? (operation => true);
 			m_Commit = new ActionSkillCommitFlow<SimulationActionTargetSnapshot, Float32ActionInstanceState>(this);
 			m_Lifecycle = new AbilityExecution<Float32ActionInstanceState>(this);
@@ -129,7 +129,8 @@ namespace ThirdPersonSimulation
         public bool ActivateFromControl(CharacterControlAbilityRequest controlRequest)
         {
             if (controlRequest.EquipmentContext.IsValid &&
-                !m_EquipmentContext.IsAbilityBinding(controlRequest.EquipmentContext, controlRequest.AbilityId))
+                (m_EquipmentContext == null ||
+                 !m_EquipmentContext.IsAbilityBinding(controlRequest.EquipmentContext, controlRequest.AbilityId)))
             {
                 if (m_Trace.Enabled)
                     m_Trace.Add(
@@ -183,7 +184,8 @@ namespace ThirdPersonSimulation
 
         public bool StopIfEquipmentContextStale(Float32ActionInstanceState action)
         {
-            if (!action.IsActive || !action.EquipmentContext.IsValid || m_EquipmentContext.IsCurrentActionContext(action.EquipmentContext))
+            if (!action.IsActive || !action.EquipmentContext.IsValid ||
+                m_EquipmentContext != null && m_EquipmentContext.IsCurrentActionContext(action.EquipmentContext))
                 return false;
             m_Lifecycle.Resolve(
                 action,
@@ -269,7 +271,8 @@ namespace ThirdPersonSimulation
 			return FindCatalog(ProgramCatalogEntryKind.GameplayTag, identity);
 		}
 
-		IEnumerable<string> IActionAdmissionReadPort.OwnedGameplayTags => m_GameplayTags.OwnedTags;
+		IEnumerable<string> IActionAdmissionReadPort.OwnedGameplayTags =>
+            m_GameplayTags == null ? Array.Empty<string>() : m_GameplayTags.OwnedTags;
 
 		IEnumerable<ActionAdmissionActiveAction> IActionAdmissionReadPort.ActiveActions => EnumerateActiveActions();
 
@@ -463,7 +466,18 @@ namespace ThirdPersonSimulation
 
         void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.SetActionTags(
             ulong actionInstanceId,
-            IEnumerable<string> tags) => m_GameplayEffectActions.SetActionTags(actionInstanceId, tags);
+            IEnumerable<string> tags)
+        {
+            if (m_GameplayEffectActions == null)
+            {
+                foreach (string tag in tags ?? Array.Empty<string>())
+                    if (!string.IsNullOrEmpty(tag))
+                        throw new InvalidOperationException(
+                            "Action tags require the declared Gameplay Effect service.");
+                return;
+            }
+            m_GameplayEffectActions.SetActionTags(actionInstanceId, tags);
+        }
 
 		void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.ClearRequest(
 			ActionSkillActivationRequest<SimulationActionTargetSnapshot> request) =>
@@ -546,7 +560,7 @@ namespace ThirdPersonSimulation
 		ulong IAbilityLifecyclePort<Float32ActionInstanceState>.Tick => m_Frame.Tick.Value;
 
 		IEnumerable<Float32ActionInstanceState> IAbilityLifecyclePort<Float32ActionInstanceState>.ActionStates =>
-			m_Frame.Transaction.GetActionInstances();
+			m_Frame.DomainState.GetActionInstances();
 
 		bool IAbilityLifecyclePort<Float32ActionInstanceState>.TryFindActive(
 			string contextId,
@@ -617,8 +631,11 @@ namespace ThirdPersonSimulation
 
 		public void ClearTerminalResources(ulong actionInstanceId)
 		{
-			m_GameplayEffectActions.RemoveActionTags(actionInstanceId);
-			m_GameplayEffectActions.ClearConfirmedAction(actionInstanceId);
+			if (m_GameplayEffectActions != null)
+			{
+				m_GameplayEffectActions.RemoveActionTags(actionInstanceId);
+				m_GameplayEffectActions.ClearConfirmedAction(actionInstanceId);
+			}
 			m_Blackboard.ClearActionInstanceScopes(actionInstanceId);
 		}
 
@@ -679,3 +696,4 @@ namespace ThirdPersonSimulation
 	}
 }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+

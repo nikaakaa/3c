@@ -150,11 +150,11 @@ namespace ThirdPersonSimulation
                         ? OperationExecutionResult.Success
                         : OperationExecutionResult.Failure;
                 case SimulationOperationCode.GameplayEffectApply:
-                    return m_GameplayEffects.Apply(operation)
+                    return RequireGameplayEffects().Apply(operation)
                         ? OperationExecutionResult.Success
                         : OperationExecutionResult.Failure;
                 case SimulationOperationCode.GameplayEffectRemove:
-                    return m_GameplayEffects.Remove(operation)
+                    return RequireGameplayEffects().Remove(operation)
                         ? OperationExecutionResult.Success
                         : OperationExecutionResult.Failure;
                 case SimulationOperationCode.RequestEquipmentChange:
@@ -162,7 +162,7 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.CommitEquipmentChange:
                 case SimulationOperationCode.CancelEquipmentChange:
                     using (Float32ValueInputLease inputs = m_Values.ReadInputs(cursor, operation))
-                        return m_Equipment.Execute(cursor, operation, inputs)
+                        return RequireEquipment().Execute(cursor, operation, inputs)
                             ? OperationExecutionResult.Success
                             : OperationExecutionResult.Failure;
                 case SimulationOperationCode.LocomotionInputMotion:
@@ -271,6 +271,14 @@ namespace ThirdPersonSimulation
                 ? OperationExecutionResult.Success
                 : OperationExecutionResult.Running;
         }
+
+        Float32GameplayEffectOperationRuntime RequireGameplayEffects() => m_GameplayEffects ??
+            throw new InvalidOperationException(
+                "Ability operation requires the declared Gameplay Effect service.");
+
+        Float32EquipmentRuntime RequireEquipment() => m_Equipment ??
+            throw new InvalidOperationException(
+                "Ability operation requires the declared Equipment service.");
 
         public void PrepareActivation(OperationExecutionDescriptor operation)
         {

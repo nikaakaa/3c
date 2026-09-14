@@ -23,8 +23,8 @@ namespace ThirdPersonSimulation
             Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
             Input = input ?? throw new ArgumentNullException(nameof(input));
-            GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
-            Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+            GameplayEffects = gameplayEffects;
+            Equipment = equipment;
             Values = values ?? throw new ArgumentNullException(nameof(values));
             Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             Motion = motion ?? throw new ArgumentNullException(nameof(motion));
@@ -45,16 +45,16 @@ namespace ThirdPersonSimulation
             m_Frame.Trace.Begin(diagnosticsEnabled, captureValues, captureControlFlow);
             ActionStore.BeginEvaluation();
             Values.BeginEvaluation();
-            GameplayEffects.BeginEvaluation();
-            Equipment.BeginEvaluation();
+            GameplayEffects?.BeginEvaluation();
+            Equipment?.BeginEvaluation();
             Blackboard.BeginFrame();
         }
 
         public void EndEvaluation()
         {
-            Equipment.EndEvaluation();
+            Equipment?.EndEvaluation();
             Blackboard.EndFrame();
-            GameplayEffects.EndEvaluation();
+            GameplayEffects?.EndEvaluation();
             ActionStore.EndEvaluation();
         }
 
@@ -66,10 +66,13 @@ namespace ThirdPersonSimulation
                 if (ingress.Header.Kind == SimulationIngressKind.ActionLifecycle)
                     Actions.ApplyIngress(ingress);
                 else
-                    GameplayEffects.ApplyIngress(ingress);
+                    (GameplayEffects ?? throw new InvalidOperationException(
+                        "Ability execution received Gameplay Effect ingress without the declared Gameplay Effect service.")).ApplyIngress(ingress);
             }
         }
 
-        public void AdvanceGameplayEffects() => GameplayEffects.Advance();
+        public void AdvanceGameplayEffects() =>
+            (GameplayEffects ?? throw new InvalidOperationException(
+                "Ability execution attempted to advance Gameplay Effects without the declared Gameplay Effect service.")).Advance();
     }
 }

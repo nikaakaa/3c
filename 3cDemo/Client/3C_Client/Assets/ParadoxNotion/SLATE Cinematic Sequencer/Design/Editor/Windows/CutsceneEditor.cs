@@ -2542,6 +2542,32 @@ namespace Slate
             }
         }
 
+        void HandleGroupListInput(
+            Event e,
+            Rect groupRect,
+            MouseCursor cursor,
+            Action selectAndBeginDrag,
+            Func<bool> canDrop,
+            Action drawDropMarker,
+            Action completeDrop)
+        {
+            AddCursorRect(groupRect, cursor);
+            if (e.type == EventType.MouseDown && e.button == 0 && groupRect.Contains(e.mousePosition))
+            {
+                selectAndBeginDrag();
+                e.Use();
+            }
+            if (!canDrop())
+                return;
+            if (groupRect.Contains(e.mousePosition))
+                drawDropMarker();
+            if (e.rawType == EventType.MouseUp && e.button == 0 && groupRect.Contains(e.mousePosition))
+            {
+                completeDrop();
+                e.Use();
+            }
+        }
+
         void ShowGroupsAndTracksList(Rect leftRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
@@ -2601,11 +2627,14 @@ namespace Slate
                     Color.white,
                     value => group.IsCollapsed = value);
 
-                if (e.type == EventType.MouseDown && e.button == 0 && groupRect.Contains(e.mousePosition))
-                {
-                    embeddedTimeline.Select(group);
-                    e.Use();
-                }
+                HandleGroupListInput(
+                    e,
+                    groupRect,
+                    formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                    () => embeddedTimeline.Select(group),
+                    () => false,
+                    () => { },
+                    () => { });
                 if (e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition))
                 {
                     GenericMenu menu = new GenericMenu();
@@ -2709,7 +2738,6 @@ namespace Slate
                 }
 
                 var groupRect = new Rect(4, nextYPos, leftRect.width - GROUP_RIGHT_MARGIN - 4, GROUP_HEIGHT - 3);
-                this.AddCursorRect(groupRect, pickedGroup == null ? MouseCursor.Link : MouseCursor.MoveArrow);
                 nextYPos += GROUP_HEIGHT;
 
                 //highligh?
@@ -2798,34 +2826,39 @@ namespace Slate
                 }
 
 
-                //REORDERING
-                if ( e.type == EventType.MouseDown && e.button == 0 && groupRect.Contains(e.mousePosition) ) {
-                    CutsceneUtility.selectedObject = group;
-                    if ( !( group is DirectorGroup ) ) {
-                        pickedGroup = group;
-                    }
-                    if ( e.clickCount == 2 && !embeddedSurface ) {
-                        Selection.activeGameObject = group.actor;
-                    }
-                    e.Use();
-                }
-
-                if ( pickedGroup != null && pickedGroup != group && !( group is DirectorGroup ) ) {
-                    if ( groupRect.Contains(e.mousePosition) ) {
-                        var markRect = new Rect(groupRect.x, ( cutscene.groups.IndexOf(pickedGroup) < g ) ? groupRect.yMax - 2 : groupRect.y, groupRect.width, 2);
+                HandleGroupListInput(
+                    e,
+                    groupRect,
+                    pickedGroup == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                    () =>
+                    {
+                        CutsceneUtility.selectedObject = group;
+                        if (!(group is DirectorGroup))
+                            pickedGroup = group;
+                        if (e.clickCount == 2 && !embeddedSurface)
+                            Selection.activeGameObject = group.actor;
+                    },
+                    () => pickedGroup != null &&
+                          pickedGroup != group &&
+                          !(group is DirectorGroup),
+                    () =>
+                    {
+                        var markRect = new Rect(
+                            groupRect.x,
+                            cutscene.groups.IndexOf(pickedGroup) < g ? groupRect.yMax - 2 : groupRect.y,
+                            groupRect.width,
+                            2);
                         GUI.color = Color.grey;
                         GUI.DrawTexture(markRect, Styles.whiteTexture);
                         GUI.color = Color.white;
-                    }
-
-                    if ( e.rawType == EventType.MouseUp && e.button == 0 && groupRect.Contains(e.mousePosition) ) {
+                    },
+                    ()
+                    {
                         cutscene.groups.Remove(pickedGroup);
                         cutscene.groups.Insert(g, pickedGroup);
                         cutscene.Validate();
                         pickedGroup = null;
-                        e.Use();
-                    }
-                }
+                    });
 
                 //SHOW TRACKS (?)
                 if ( !group.isCollapsed ) {

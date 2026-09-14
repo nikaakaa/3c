@@ -91,7 +91,7 @@ Track.IsLocked是独立窗口字段，Clip.IsLocked也是独立字段；FormalCl
 
 ### A09 Split/Trim/Copy不是只调整起止帧
 
-B.SplitClip复制整个Clip并改Start/End，没有处理Animation ClipIn、运动源区间或局部曲线的左右段映射；原UpdateClipAdjustContents对子素材偏移的处理仍要求action is ISubClipContainable，正式binding没有该输入。提交 `48a1d2a72` 已把Copy改为复制瞬间捕获正式Clip副本，提交 `0f9448bd9` 已为Animation/MotionCurve接入ClipIn/源区间切分；移动与缩放期间的完整源区间映射仍未完成。
+B.SplitClip复制整个Clip并改Start/End，没有处理Animation ClipIn、运动源区间或局部曲线的左右段映射；原UpdateClipAdjustContents对子素材偏移的处理仍要求action is ISubClipContainable，正式binding没有该输入。提交 `48a1d2a72` 已把Copy改为复制瞬间捕获正式Clip副本，提交 `0f9448bd9` 已为Animation/MotionCurve接入ClipIn/源区间切分，提交 `adc097652` 已把Formal裁剪期间的Motion source range接入草稿提交；移动、完整缩放重定时和局部曲线左右段映射仍未完成。
 
 修正：在现有正式编辑合同明确移动/裁剪/缩放/切分对应的源区间、ClipIn与局部曲线含义；使用既有源映射，不能新写采样公式。涉及Motion/Warp共享字段由原owner提供必要操作，本任务接原手势和命令。一次Split完整创建两个合法使用区间并保留引用/新身份，未支持类型明确拒绝而非只改帧伪装成功。Copy在命令时捕获正式内容，后续Paste基于该副本并生成新身份；不保持失效UI binding当剪贴板。对应新增11.21。
 

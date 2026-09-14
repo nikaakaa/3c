@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
     [Serializable]
     public sealed class DeterministicRollbackServerCandidateManifest
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
 
         public int schemaVersion;
         public string candidateId = string.Empty;
@@ -22,12 +22,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public string protocolVersion = string.Empty;
         public string protocolSchemaHash = string.Empty;
         public int tickRate;
-        public string programId = string.Empty;
-        public string sourceRevision = string.Empty;
-        public string projectionRevision = string.Empty;
-        public string semanticHash = string.Empty;
-        public string fixedProgramHash = string.Empty;
-        public string fixedLayoutHash = string.Empty;
+        public string characterContentHash = string.Empty;
         public string collisionWorldHash = string.Empty;
         public string kccIdentityHash = string.Empty;
         public int offensiveRequestDelayTicks;
@@ -51,8 +46,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (schemaVersion != CurrentSchemaVersion || string.IsNullOrWhiteSpace(candidateId) ||
                 string.IsNullOrWhiteSpace(productId) || string.IsNullOrWhiteSpace(relayServerPeerId) || tickRate <= 0 ||
-                string.IsNullOrWhiteSpace(programId) || string.IsNullOrWhiteSpace(sourceRevision) ||
-                string.IsNullOrWhiteSpace(projectionRevision) ||
+                string.IsNullOrWhiteSpace(characterContentHash) ||
                 !string.Equals(modelId, DeterministicRollbackModelIdentity.ModelId, StringComparison.Ordinal) ||
                 !string.Equals(modelVersion, DeterministicRollbackModelIdentity.SemanticVersion, StringComparison.Ordinal) ||
                 !string.Equals(protocolId, DeterministicRollbackModelIdentity.ProtocolId, StringComparison.Ordinal) ||
@@ -64,9 +58,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RollbackHandshake handshake = BuildHandshake();
             SimulationComponentIdentity expectedModel = DeterministicRollbackModelIdentity.BuildModel(
                 policy,
-                handshake.SemanticHash,
-                handshake.FixedProgramHash,
-                handshake.FixedLayoutHash,
                 handshake.CollisionWorldHash,
                 handshake.KccIdentityHash);
             if (roster.Entries.Count == 0 || policy.HistoryLengthTicks <= 0 ||
@@ -76,10 +67,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
             var values = new List<string>
             {
-                "deterministic-rollback-server-candidate/1",
+                "deterministic-rollback-server-candidate/2",
                 schemaVersion.ToString(), candidateId, productId, relayServerPeerId, modelId, modelVersion,
                 modelConfigurationHash, protocolId, protocolVersion, protocolSchemaHash, tickRate.ToString(),
-                programId, sourceRevision, projectionRevision, semanticHash, fixedProgramHash, fixedLayoutHash,
+                characterContentHash,
                 collisionWorldHash, kccIdentityHash, offensiveRequestDelayTicks.ToString(),
                 confirmationDelayTicks.ToString(), historyLengthTicks.ToString(), hashCadenceTicks.ToString(),
                 maximumRollbackDepthTicks.ToString(), maximumPredictionLeadTicks.ToString(),
@@ -138,9 +129,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 modelId,
                 modelVersion,
                 new StableHash(modelConfigurationHash)),
-            new SemanticHash(new StableHash(semanticHash)),
-            new ProgramHash(new StableHash(fixedProgramHash)),
-            new LayoutHash(new StableHash(fixedLayoutHash)),
+            new GameplayContentHash(new StableHash(characterContentHash)),
             tickRate,
             new StableHash(collisionWorldHash),
             new StableHash(kccIdentityHash),

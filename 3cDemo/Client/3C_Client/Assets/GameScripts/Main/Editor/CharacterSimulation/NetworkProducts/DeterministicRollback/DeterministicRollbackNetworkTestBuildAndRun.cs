@@ -26,8 +26,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         internal const string DefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
         const string ConfigDirectory = "Assets/Configs/Simulation/DeterministicRollback";
-        internal const string FixedProgramPath = ConfigDirectory + "/Programs/CorinFixedProgram.asset";
-        const string FixedRuntimePath = ConfigDirectory + "/Programs/CorinFixedProgramRuntime.asset";
         const string BackendPath = ConfigDirectory + "/Pipelines/CorinFixedPassBackend.asset";
         internal const string PipelinePath = ConfigDirectory + "/Pipelines/CorinDeterministicRollbackPipeline.asset";
         const string CollisionPath = ConfigDirectory + "/World/CorinDeterministicCollisionWorld.asset";
@@ -56,7 +54,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             DeterministicRollbackProductClosure closure = RequireProductClosure();
             ValidateSharedDebugScene(closure);
             Debug.Log(
-                $"Deterministic Rollback inputs are closed. Program={closure.Program.ProgramHash}; " +
+                $"Deterministic Rollback inputs are closed. CharacterContent={closure.CharacterContentHash}; " +
                 $"Projection={closure.Projection.ProjectionRevision}; World={closure.Collision.ContentHash}; " +
                 $"KCC={closure.KccIdentityHash}");
         }
@@ -83,7 +81,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             local.ValidateComposition(local.Composition);
             rollback.ValidateComposition(rollback.Composition);
             if (!string.Equals(local.DefinitionGuid, rollback.DefinitionGuid, StringComparison.Ordinal) ||
-                local.Program != rollback.Program ||
                 local.PresentationProjection != rollback.PresentationProjection ||
                 local.WorldSolver != rollback.WorldSolver ||
                 local.CollisionWorld != rollback.CollisionWorld)
@@ -100,39 +97,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (!definition.InputProfile || definition.PresentationProjection != rollback.PresentationProjection)
                 throw new InvalidOperationException("Rollback Variant Character Definition or Projection reference is stale.");
 
-            FixedCharacterSimulationProgramAsset fixedProgram =
-                rollback.Program as FixedCharacterSimulationProgramAsset ??
-                throw new InvalidOperationException("Rollback Variant Fixed Program product has the wrong type.");
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = fixedProgram.Load();
+            FixedCharacterRuntime characterRuntime = BuildCharacterRuntime(definition, rollback);
+            GameplayContentHash characterContentHash = characterRuntime.GameplayContentHash;
             CharacterPresentationProjectionAsset projection = rollback.PresentationProjection;
-            CharacterPresentationSemanticContract contract =
-                FixedCharacterPresentationContractAdapter.Create(program);
-            CharacterPresentationProjection publishedProjection = projection.Load(contract);
-            ProgramId expectedProgramId = CharacterSemanticFrontendCompiler.ComputeProgramId(definition);
-            ProgramRevision expectedSourceRevision = CharacterSemanticFrontendCompiler.ComputeSourceRevision(definition);
-            if (!string.Equals(fixedProgram.DefinitionGuid, rollback.DefinitionGuid, StringComparison.Ordinal) ||
-                !string.Equals(program.Manifest.ProgramId.Value, expectedProgramId.Value, StringComparison.Ordinal) ||
-                !string.Equals(program.Manifest.SourceRevision.Value, expectedSourceRevision.Value, StringComparison.Ordinal) ||
-                !string.Equals(publishedProjection.ProgramId, expectedProgramId.Value, StringComparison.Ordinal) ||
-                !string.Equals(publishedProjection.SourceRevision, expectedSourceRevision.Value, StringComparison.Ordinal) ||
-                !string.Equals(publishedProjection.SemanticHash, program.Manifest.SemanticHash.ToString(), StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("Rollback Variant Program or Projection is stale against its exact Definition.");
-            }
-            if (!CharacterPresentationProjectionCompiler.TryComputePublishedRevision(
-                    definition,
-                    contract,
-                    publishedProjection,
-                    out string expectedProjectionRevision) ||
-                !string.Equals(projection.ProjectionRevision, expectedProjectionRevision, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("Rollback Variant Presentation Projection revision is stale.");
-            }
+            CharacterPresentationProjection publishedProjection = projection.Load();
 
             SimulationSessionCompositionDefinition localComposition = local.Composition;
             SimulationSessionCompositionDefinition rollbackComposition = rollback.Composition;
-            if (localComposition.ProgramRuntime != rollbackComposition.ProgramRuntime ||
-                localComposition.ExecutionBackend != rollbackComposition.ExecutionBackend ||
+            if (localComposition.ExecutionBackend != rollbackComposition.ExecutionBackend ||
                 localComposition.WorldSolver != rollbackComposition.WorldSolver ||
                 localComposition.TickRate != rollbackComposition.TickRate ||
                 localComposition.RequiredWorldFeatures != rollbackComposition.RequiredWorldFeatures ||
@@ -155,8 +127,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             DeterministicCollisionWorldAsset collision =
                 rollback.CollisionWorld as DeterministicCollisionWorldAsset ??
                 throw new InvalidOperationException("Rollback Variant Collision product has the wrong type.");
-            if (source.FixedProgram != fixedProgram ||
-                source.Pipeline != pipeline ||
+            if (source.Pipeline != pipeline ||
                 source.WorldSolver != solver ||
                 solver.CollisionWorld != collision ||
                 !string.Equals(collision.MapId, rollbackComposition.MapId, StringComparison.Ordinal))
@@ -165,9 +136,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             DeterministicRollbackModelDefinition model = source.BuildModelDefinition();
             string kccIdentityHash = solver.BuildKccIdentityHash(rollbackComposition.TickRate).Value;
-            if (!string.Equals(model.SemanticHash.ToString(), fixedProgram.SemanticHash, StringComparison.Ordinal) ||
-                !string.Equals(model.FixedProgramHash.ToString(), fixedProgram.ProgramHash, StringComparison.Ordinal) ||
-                !string.Equals(model.CollisionWorldHash.Value, collision.ContentHash, StringComparison.Ordinal) ||
+            if (!string.Equals(model.CollisionWorldHash.Value, collision.ContentHash, StringComparison.Ordinal) ||
                 !string.Equals(model.KccIdentityHash.Value, kccIdentityHash, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException("Rollback Model identity differs from the shared Variant closure.");
@@ -176,8 +145,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 local,
                 rollback,
                 definition,
-                fixedProgram,
-                program,
+                characterContentHash,
                 projection,
                 publishedProjection,
                 rollbackComposition,
@@ -188,6 +156,46 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 source.Endpoint,
                 model,
                 kccIdentityHash);
+        }
+
+        static FixedCharacterRuntime BuildCharacterRuntime(
+            CharacterPipelineDefinition definition,
+            GameplayLabSessionVariantDefinition variant)
+        {
+            CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
+            CharacterControlRuntimeBinding controlRuntimeBinding =
+                definition.BuildControlRuntimeBinding(controlModules);
+            CharacterBodyMotionBinding bodyMotionBinding = definition.BuildBodyMotionRuntimeBinding();
+            CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding =
+                definition.BuildGameplayEffectRuntimeBinding();
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding =
+                definition.BuildEquipmentRuntimeBinding();
+            GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
+                definition.LoadFixedCharacterAbilities();
+            DeterministicRollbackCharacterHost[] hosts = variant.RuntimeRootPrefab
+                .GetComponentsInChildren<DeterministicRollbackCharacterHost>(true)
+                .OrderBy(value => value.ActorId.Value, StringComparer.Ordinal)
+                .ToArray();
+            if (hosts.Length == 0)
+                throw new InvalidOperationException("Rollback Variant runtime root has no Character Runtime hosts.");
+            var bindings = new FixedSimulationActorBinding[hosts.Length];
+            for (int i = 0; i < hosts.Length; i++)
+            {
+                if (hosts[i].CharacterDefinition != definition)
+                    throw new InvalidOperationException("Rollback Variant Character Runtime hosts do not share the exact Character Definition.");
+                bindings[i] = new FixedSimulationActorBinding(
+                    hosts[i].ActorId,
+                    hosts[i].WorldBodyBindingId,
+                    controlRuntimeBinding,
+                    bodyMotionBinding,
+                    gameplayEffectRuntimeBinding,
+                    equipmentRuntimeBinding,
+                    abilityData);
+            }
+            return FixedCharacterRuntime.Create(
+                bindings,
+                variant.Composition.TickRate,
+                controlModules);
         }
 
         static void ValidateSharedDebugScene(DeterministicRollbackProductClosure closure)
@@ -280,8 +288,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             GameplayLabSessionVariantDefinition localVariant,
             GameplayLabSessionVariantDefinition rollbackVariant,
             CharacterPipelineDefinition definition,
-            FixedCharacterSimulationProgramAsset programAsset,
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
+            GameplayContentHash characterContentHash,
             CharacterPresentationProjectionAsset projection,
             CharacterPresentationProjection publishedProjection,
             SimulationSessionCompositionDefinition composition,
@@ -296,8 +303,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             LocalVariant = localVariant;
             RollbackVariant = rollbackVariant;
             Definition = definition;
-            ProgramAsset = programAsset;
-            Program = program;
+            CharacterContentHash = characterContentHash;
             Projection = projection;
             PublishedProjection = publishedProjection;
             Composition = composition;
@@ -313,8 +319,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public GameplayLabSessionVariantDefinition LocalVariant { get; }
         public GameplayLabSessionVariantDefinition RollbackVariant { get; }
         public CharacterPipelineDefinition Definition { get; }
-        public FixedCharacterSimulationProgramAsset ProgramAsset { get; }
-        public ThirdPersonSimulation.Fixed.CharacterSimulationProgram Program { get; }
+        public GameplayContentHash CharacterContentHash { get; }
         public CharacterPresentationProjectionAsset Projection { get; }
         public CharacterPresentationProjection PublishedProjection { get; }
         public SimulationSessionCompositionDefinition Composition { get; }
@@ -344,7 +349,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             DeterministicRollbackProductClosure closure =
                 DeterministicRollbackNetworkTestBuildAndRun.RequireProductClosure();
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = closure.Program;
             DeterministicRollbackModelDefinition model = closure.Model;
             SimulationWorldSolverDefinitionDescriptor solverIdentity =
                 closure.Solver.BuildDescriptor(closure.Composition.TickRate);
@@ -360,7 +364,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 "Development, StrictMode",
                 ScriptingImplementation.IL2CPP,
                 "3cDemo/Tools/DeterministicRollback/Start-DeterministicRollbackDemo.ps1",
-                ProgramIdentity(program),
+                $"character-content={closure.CharacterContentHash}",
                 closure.Pipeline.BuildPortableDescriptor().PipelineId.Value,
                 model.ModelIdentity.ToString(),
                 RollbackGmProductBuild.Topology,
@@ -370,21 +374,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 {
                     NetworkTestProductAdapterUtility.Field("gmProfileHash", AssetDatabase.GetAssetDependencyHash(RollbackGmProductBuild.ProfilePath).ToString()),
                     NetworkTestProductAdapterUtility.Field("collisionWorldHash", closure.Collision.ContentHash),
+                    NetworkTestProductAdapterUtility.Field("characterContentHash", closure.CharacterContentHash.ToString()),
                     NetworkTestProductAdapterUtility.Field("contractHash", closure.Projection.ContractHash),
                     NetworkTestProductAdapterUtility.Field(
                         "kccId",
                         $"{solverIdentity.Identity.ComponentId}@{closure.KccIdentityHash}"),
                     NetworkTestProductAdapterUtility.Field("kccIdentityHash", closure.KccIdentityHash),
                     NetworkTestProductAdapterUtility.Field("transport", "UDP"),
-                    NetworkTestProductAdapterUtility.Field("programHash", closure.ProgramAsset.ProgramHash),
-                    NetworkTestProductAdapterUtility.Field("programId", closure.ProgramAsset.ProgramId),
                     NetworkTestProductAdapterUtility.Field(
                         "projectionRevision",
-                        closure.Projection.ProjectionRevision),
-                    NetworkTestProductAdapterUtility.Field("semanticHash", closure.ProgramAsset.SemanticHash),
-                    NetworkTestProductAdapterUtility.Field(
-                        "sourceRevision",
-                        closure.ProgramAsset.SourceRevision)
+                        closure.Projection.ProjectionRevision)
                 },
                 new[]
                 {
@@ -460,12 +459,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 protocolVersion = DeterministicRollbackModelIdentity.Protocol.SemanticVersion,
                 protocolSchemaHash = DeterministicRollbackModelIdentity.Protocol.SchemaHash.Value,
                 tickRate = model.TickRate,
-                programId = closure.ProgramAsset.ProgramId,
-                sourceRevision = closure.ProgramAsset.SourceRevision,
-                projectionRevision = closure.Projection.ProjectionRevision,
-                semanticHash = model.SemanticHash.ToString(),
-                fixedProgramHash = model.FixedProgramHash.ToString(),
-                fixedLayoutHash = model.FixedLayoutHash.ToString(),
+                characterContentHash = closure.CharacterContentHash.ToString(),
                 collisionWorldHash = model.CollisionWorldHash.Value,
                 kccIdentityHash = model.KccIdentityHash.Value,
                 offensiveRequestDelayTicks = policy.OffensiveRequestDelayTicks,
@@ -548,11 +542,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RollbackRoster expectedRoster = closure.Endpoint.BuildRoster();
             RollbackGmProductBuild.Validate(context, manifest);
             RollbackRoster actualRoster = serverManifest.BuildRoster();
-            if (!string.Equals(serverManifest.programId, closure.ProgramAsset.ProgramId, StringComparison.Ordinal) ||
-                !string.Equals(serverManifest.sourceRevision, closure.ProgramAsset.SourceRevision, StringComparison.Ordinal) ||
-                !string.Equals(serverManifest.projectionRevision, closure.Projection.ProjectionRevision, StringComparison.Ordinal) ||
-                !string.Equals(serverManifest.semanticHash, closure.ProgramAsset.SemanticHash, StringComparison.Ordinal) ||
-                !string.Equals(serverManifest.fixedProgramHash, closure.ProgramAsset.ProgramHash, StringComparison.Ordinal) ||
+            if (!string.Equals(serverManifest.characterContentHash, closure.CharacterContentHash.ToString(), StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.collisionWorldHash, closure.Collision.ContentHash, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.kccIdentityHash, closure.KccIdentityHash, StringComparison.Ordinal) ||
                 serverManifest.maximumPredictionLeadTicks != closure.Model.Policy.MaximumPredictionLeadTicks ||
@@ -573,7 +563,5 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        static string ProgramIdentity(ThirdPersonSimulation.Fixed.CharacterSimulationProgram program) =>
-            $"program={program.Manifest.ProgramId.Value};compiler={program.Manifest.CompilerVersion};operations={program.Manifest.OperationSetVersion};numeric={program.Manifest.NumericProfile.Id.Value};abi={program.Manifest.NumericProfile.AbiVersion.Value};programHash={program.ProgramHash};layoutHash={program.LayoutHash};stateCodec={ThirdPersonSimulation.Fixed.CharacterSimulationStateCodec.CodecIdentity};source={program.Manifest.SourceRevision.Value}";
     }
 }

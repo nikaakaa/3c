@@ -48,6 +48,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public bool IsLocalActor => m_Endpoint && m_Endpoint.ResolvePeerProfile().ActorId == ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
         public CharacterPipelineDefinition CharacterDefinition => m_CharacterDefinition;
+        public string WorldBodyBindingId => string.IsNullOrWhiteSpace(m_WorldBodyBindingId)
+            ? string.Empty
+            : m_WorldBodyBindingId.Trim();
         public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
         public Vector3 VisualPosition => m_RootHierarchy
             ? m_RootHierarchy.VisualRoot.position

@@ -866,7 +866,17 @@ namespace BTSMTL.Timeline.Editor
             public bool IsValid => !Source.Invalid;
             public bool IsCollapsed { get => m_IsCollapsed; set => m_IsCollapsed = value; }
             public bool IsLocked { get => m_IsLocked || m_Track.IsLocked; set => m_IsLocked = value; }
-            public float StartTime { get => m_StartTime; set => m_StartTime = Mathf.Max(0f, value); }
+            public float StartTime
+            {
+                get => m_StartTime;
+                set
+                {
+                    float nextStart = Mathf.Max(0f, value);
+                    float delta = nextStart - m_StartTime;
+                    m_StartTime = nextStart;
+                    m_EndTime = Mathf.Max(m_StartTime + 1f / m_Owner.FrameRate, m_EndTime + delta);
+                }
+            }
             public float EndTime { get => m_EndTime; set => m_EndTime = Mathf.Max(StartTime + 1f / m_Owner.FrameRate, value); }
             public float Length => Mathf.Max(0f, EndTime - StartTime);
             public float BlendIn { get => Mathf.Clamp(m_BlendIn, 0f, Length); set => m_BlendIn = Mathf.Clamp(value, 0f, Length); }

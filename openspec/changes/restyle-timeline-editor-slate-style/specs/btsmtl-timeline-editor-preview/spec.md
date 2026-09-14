@@ -378,6 +378,19 @@ Surface MUST消费正式 Timeline Session 的 FrameRate，统一像素、整数�
 - **THEN** 选择、曲线展开和视野 MUST保持，正式属性 MUST反映提交结果
 - **AND** 原对象被删除时 MUST清空对应选择，不静默选中其它内容
 
+#### Scenario: Inspector与轨道曲线共享选择
+
+- **WHEN** 作者选中MotionCurveClip或提交/Undo后刷新该选择
+- **THEN** Inspector、原Surface与Track.SelectedClip MUST按同一正式owner/AuthoringId解析当前Clip，保留有效通道选择，不使用旧引用或额外选择真相
+- **AND** Weight/Ease In/Ease Out MUST可在Timeline原曲线区进入CurveEditor/DopeSheet编辑，不以Inspector中的普通曲线字段替代
+- **AND** 未选择、确无局部曲线与绑定失败 MUST分别说明，MUST NOT统一显示No Clip Selected掩盖缺项
+
+#### Scenario: GUI事件消费符合输入类型
+
+- **WHEN** 曲线或Clip界面处理Layout/Repaint与鼠标/键盘事件
+- **THEN** Event.Use MUST仅用于已处理的有效输入事件，MUST NOT消费Layout/Repaint或屏蔽相关警告
+- **AND** 事件缺陷与曲线不显示的关系 MUST依据实际调用链确认，不将消除警告当作曲线编辑已完成
+
 #### Scenario: 不支持的命令或过期草稿
 
 - **WHEN** 命令没有正式映射或 source revision 已变化

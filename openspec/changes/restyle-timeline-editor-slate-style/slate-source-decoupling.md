@@ -230,3 +230,25 @@ Motion源XYZ/Yaw不再参与这条局部可写链：由RootMotionCurveAsset拥�
 ### 实现边界
 
 沿现有goal和小步提交继续：保留已正确左侧Track/Group、正式新增、帧/游标、曲线、缩放与鼠标行为；不整体回退共享工作树。当前未提交改动先按实际diff接续，遇到实际冲突交用户决定。代码/文档/编译通过不代表截图回归已消失，未在真实窗口确认时必须明确说明，不新增测试或验证tasks。
+
+## 14. 2026-09-14 曲线区选择与参数接线回归
+
+用户后续截图为CorinAttack2Timeline：Unity Inspector显示Selected Timeline Element及MotionCurveClip的Weight/Ease In/Ease Out曲线，但Timeline左侧展开区显示No Clip Selected，右侧曲线区提示选择Clip；Console底栏出现Event.Use不应处理Layout事件的警告。用户要求更新文档并由现有timeline任务修正。
+
+### 已确认事实与尚未定位的原因
+
+- Timeline.CurveAuthoring.cs已注册MotionWeight、MotionEaseIn、MotionEaseOut，分别读取MotionCurveClip的WeightCurve/EaseInCurve/EaseOutCurve。这三条是正式Timeline-local曲线，应在原Slate时间轴内编辑，不因源XYZ/Yaw迁移而消失。
+- BtsmtlSlateTimelineBinding.Select同时设置Inspector的serialized property路径、各Track.SelectedClip与Session selection；Rebuild会重建binding并按选中ID恢复。这是需要追踪的实际接线，不等于运行时所有引用必然一致。
+- TrackEditorGUI.DrawParametersInfoGUI与DrawClipCurves把SelectedClip为空、Parameters为空、Parameters.Count为0合并为同一“未选中”提示。截图不能区分这几种情况，不能直接断言一定是选择丢失或曲线Catalog没注册。
+- TimelineInspector目前通过独立选择路径显示普通PropertyField。它显示选中字段只能证明该路径能解析，不证明当前Surface/Track的SelectedClip和参数已同步；右侧普通曲线框不等于Timeline曲线编辑完成。
+- Layout警告确实出现在截图中，但尚未确认其调用栈与曲线不显示的因果关系。不得未经定位就把它说成唯一原因或屏蔽Console。
+
+### 修正合同
+
+1. 原Clip点击后，唯一正式选择以owner、Clip AuthoringId为依据，Inspector、当前Surface、所属Track.SelectedClip和曲线通道均解析同一个有效对象。不能额外建立第三份选择源。选轨道/点空白的行为应准确区分，不误清刚选中的Clip。
+2. 提交、Undo/Redo和binding刷新后，重新解析该ID及其所属Track，并恢复仍存在的选中通道。无效引用不得残留为“Inspector选中旧路径、Timeline没有当前Clip”；真实删除对象时同步清空相关选择，不自动选首个Clip掩盖问题。
+3. 追踪本次Clip的descriptor收集、Supports过滤、Parameters生成及Track关联，在实际失败点修正。未选Clip、Clip确无局部曲线、已选Clip但绑定失败应显示不同且准确的提示；缺失正式绑定属于未完成，不冒充合法空曲线。
+4. 作者应能在Timeline中点击Clip、展开轨道、选Weight/Ease通道，进入同一原Slate CurveEditor/DopeSheet，完成key时间/值/切线编辑并通过现有Session/Undo保存。Inspector可同步展示字段，但不能代替上述时间轴编辑入口。
+5. Event.Use只消费对应的实际输入事件，不在Layout/Repaint路径消费。沿真实触发调用栈修正事件类型与处理时机，不加吞异常或全局屏蔽；不声称修掉警告就等于修好曲线选择。
+
+本节不恢复源XYZ/Yaw的局部写入，不新建曲线渲染器/选择服务/Inspector，不改运行时与预览算法。第13节已正确坐标和重复标题修复保留。以前勾选代表对应实现记录，不作为本截图功能正常的证明；本次剩余项单列tasks 11.15–11.17，不新增测试或验证任务。

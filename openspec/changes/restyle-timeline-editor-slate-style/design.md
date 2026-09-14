@@ -167,6 +167,8 @@ Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行�
 
 ### 5. 曲线与刷新状态
 
+2026-09-14 新截图的曲线区接线要求见[源码决策第14节](slate-source-decoupling.md#14-2026-09-14-曲线区选择与参数接线回归)：Inspector、Surface和Track参数列表必须解析同一正式选中Clip；区分未选择、无局部曲线和绑定失败。Weight/Ease必须能在Timeline原CurveEditor/DopeSheet中编辑，右侧PropertyField不能代替该能力；Layout事件警告独立定位。
+
 2026-09-14 用户截图回归的具体源码原因与修正归属见[源码决策第13节](slate-source-decoupling.md#13-2026-09-14-截图回归轨道错位重复文字与dopesheet)：恢复轨道局部GUI分组/裁剪，Clip标题由原wrapper画一次，正式曲线接真实DopeSheet而非名称占位。保持原UI算法与已正确接线，不新增另一套布局或组件代理。
 
 - 复用Slate Curve/DopeSheet；名称、单位、颜色来自正式descriptor。Motion源XYZ/Yaw不再是Timeline-local可写通道，只读显示或导航源owner；Weight/Ease、Warp progress等真正局部曲线保持可编辑。Track名称不拼曲线数量，展开沿原入口。

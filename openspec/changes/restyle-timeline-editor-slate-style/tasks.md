@@ -115,6 +115,12 @@
 - [x] 11.13 Clip标题统一由原ActionClipWrapper绘制，保留已删除binding重复Label的正确改动；真实运行状态不冒充或覆盖标题，不重复显示Info。真实窗口验收仍未完成。
 - [x] 11.14 将正式局部曲线接同一原DopeSheet的真实key操作与正式事务，删除FormalClip画Info后return的占位；无曲线时同时消除假底栏高度和对应拖动区域扣减，不恢复源XYZ/Yaw的局部写入。真实窗口验收仍未完成。
 
+2026-09-14 后续截图修正见源码决策第14节；保留已正确修复，以下仅为新增实现项，不是验证任务。
+
+- [ ] 11.15 修正Clip选择、Track.SelectedClip、Inspector路径与Session之间的实际失配，刷新/Undo后按同一owner及AuthoringId恢复对象/通道，真实删除时同步清空，不新增选择真相或自动改选首项
+- [ ] 11.16 接通选中MotionCurveClip的Weight/Ease局部参数到原Timeline曲线区，修正descriptor收集/过滤/参数生成的实际缺项；区分未选择、无局部曲线与绑定失败，不以Inspector曲线框代替原CurveEditor/DopeSheet
+- [ ] 11.17 按实际调用栈修正Event.Use对Layout/Repaint的错误消费，只处理明确输入事件，保留现有鼠标交互，不屏蔽警告或将其未经证明归为曲线缺失唯一原因
+
 ## 12. Timeline直接内容Runtime（新增规划范围）
 
 2026-09-14依据PARALLEL-20260914-DOMAIN-01登记；具体合同与文件owner见[timeline-direct-runtime.md](timeline-direct-runtime.md)。本次仅授权PLAN，不启动这组实现；后续仍复用timeline任务，不新建窗口。第1–11节原UI进度保持；此处是主方案1.5–1.7、3.8与8.2中Timeline域内部分的唯一执行清单，主方案保留公共集成和责任指针，不复制勾选项。

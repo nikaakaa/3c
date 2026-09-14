@@ -55,6 +55,7 @@ TimelineEditorWindow
 - formal Clip 的时间、Blend、DopeSheet、关键帧和曲线交互全部由原 Slate `ActionClipWindow` / `ActionClipWrapper` 通过 `IEmbeddedTimelineBinding` 接回正式 Session；不再创建 `TimelineFormalClipDetailsView`、MotionWarp/Tree 自制属性面板。
 - formal Clip binding 的 Start 移动会平移 End，保持 Clip 原长度；左/右缩放仍由原 `ActionClipWrapper` 显式写入两侧边界，Motion 源区间只在裁剪分支更新。
 - formal 参数曲线的显示副本初始按 Clip 时长展开，缩放草稿提交时按当前 Clip 时长归一化回正式 descriptor，避免边缘缩放后仍使用旧时长造成曲线左右段错位。
+- formal 参数行的 value-domain 摘要通过原 Slate tooltip 提供，不增加常驻属性面板或新的 UI 区域。
 - formal Split 通过现有 `TimelineCurveChannelDescriptor` 对每条归一化曲线采样切点、重映射两段时间和切线，再写回两个正式 Clip；不是复制整条曲线，也不新增曲线资产。
 - formal 曲线回写前会按当前 Clip 时长截掉范围外 key，并补齐 0/终点边界，避免关闭自动清理时把非法归一化时间写回 `TimelineData`。
 - MotionClip 的 `[Ref]` 曲线仍由 `MotionCurveClip` 正式源映射生成；草稿裁剪或边缘缩放只刷新同一 Slate Reference 行，不写回源资产。

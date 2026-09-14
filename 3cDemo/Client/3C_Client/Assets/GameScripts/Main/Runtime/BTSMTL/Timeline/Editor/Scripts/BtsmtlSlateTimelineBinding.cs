@@ -25,6 +25,7 @@ namespace BTSMTL.Timeline.Editor
         bool m_EditActive;
         bool m_ReadOnly;
         string m_EditUndoName;
+        string m_EditSourceRevision;
         int m_CurrentFrame;
         float m_ViewTimeMin;
         float m_ViewTimeMax;
@@ -117,6 +118,7 @@ namespace BTSMTL.Timeline.Editor
                 return;
             m_EditActive = true;
             m_EditUndoName = string.IsNullOrWhiteSpace(undoName) ? "Timeline Edit" : undoName;
+            m_EditSourceRevision = m_SourceRevision;
         }
 
         public void CommitEdit()
@@ -124,8 +126,10 @@ namespace BTSMTL.Timeline.Editor
             if (!m_EditActive)
                 return;
             m_EditActive = false;
-            if (!IsSourceCurrent())
+            if (!string.Equals(m_EditSourceRevision, m_SourceRevision, StringComparison.Ordinal) ||
+                !IsSourceCurrent())
             {
+                m_EditSourceRevision = string.Empty;
                 Rebuild();
                 ReportIssue("Timeline 内容已被外部修改，当前编辑已丢弃。");
                 return;
@@ -133,6 +137,7 @@ namespace BTSMTL.Timeline.Editor
             if (!m_Clips.Values.Any(clip => clip.HasChanges()) &&
                 !m_SectionsById.Values.Any(section => section.HasChanges()))
             {
+                m_EditSourceRevision = string.Empty;
                 Rebuild();
                 return;
             }
@@ -153,9 +158,11 @@ namespace BTSMTL.Timeline.Editor
             }
             catch (Exception exception)
             {
+                m_EditSourceRevision = string.Empty;
                 Rebuild();
                 ReportIssue(exception.Message);
             }
+            m_EditSourceRevision = string.Empty;
             Rebuild();
         }
 
@@ -164,6 +171,7 @@ namespace BTSMTL.Timeline.Editor
             if (!m_EditActive)
                 return;
             m_EditActive = false;
+            m_EditSourceRevision = string.Empty;
             Rebuild();
         }
 

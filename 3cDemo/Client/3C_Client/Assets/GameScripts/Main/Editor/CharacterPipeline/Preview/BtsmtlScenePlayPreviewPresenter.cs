@@ -128,8 +128,6 @@ namespace ThirdPersonCharacter.Editor.Preview
         }
 
         public BtsmtlScenePlayStatus Status => m_Operations?.Status ?? BtsmtlScenePlayStatus.Idle;
-        public BtsmtlScenePlayBuildStatus BuildStatus => m_Operations?.BuildStatus ?? BtsmtlScenePlayBuildStatus.Idle;
-        public string BuildStatusDescription => DescribeBuildStatus(BuildStatus);
         public string TimelineAuthoringDescription => m_TimelineAuthoringDescription;
         public bool HasOperations => m_Operations != null;
         public bool IsInputRecording => m_Operations?.IsInputRecording == true;
@@ -138,7 +136,6 @@ namespace ThirdPersonCharacter.Editor.Preview
         public bool CanStopDiagnosticCapture => RuntimeDebugSession.Shared.CanStopCapture;
         public bool SupportsInputReplay => m_Operations?.SupportsInputReplay == true;
         public bool SupportsPresentationCheckpointRestore => m_Operations?.SupportsPresentationCheckpointRestore == true;
-        public IReadOnlyList<string> ActorIds => m_Operations?.ActorIds ?? Array.Empty<string>();
         public IReadOnlyList<BtsmtlScenePlaySkillOption> SkillOptions =>
             m_Operations?.SkillOptions ?? Array.Empty<BtsmtlScenePlaySkillOption>();
         public string StatusMessage => string.IsNullOrEmpty(Status.FailureMessage)
@@ -208,12 +205,6 @@ namespace ThirdPersonCharacter.Editor.Preview
         public void Resume() => Execute(m_Operations?.Resume());
         public void Reset() => Execute(m_Operations?.Reset());
         public void Stop() => Execute(m_Operations?.Stop());
-
-        public void Build(string actorId)
-        {
-            if (m_Operations != null)
-                Execute(m_Operations.Build(actorId));
-        }
 
         public void RequestSkill(string actorId, string skillId)
         {
@@ -330,11 +321,8 @@ namespace ThirdPersonCharacter.Editor.Preview
         void DrawExperimentControls()
         {
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Build", EditorStyles.toolbarButton))
-                ShowBuildMenu();
             if (GUILayout.Button("Skill", EditorStyles.toolbarButton))
                 ShowSkillMenu();
-            EditorGUILayout.LabelField(BuildStatusDescription, EditorStyles.miniLabel);
             EditorGUILayout.LabelField(TimelineAuthoringDescription, EditorStyles.miniLabel);
             EditorGUILayout.EndHorizontal();
         }
@@ -370,19 +358,6 @@ namespace ThirdPersonCharacter.Editor.Preview
             if (GUILayout.Button("输入回放", EditorStyles.toolbarButton))
                 Replay();
             EditorGUILayout.EndHorizontal();
-        }
-
-        void ShowBuildMenu()
-        {
-            var menu = new GenericMenu();
-            for (int index = 0; index < ActorIds.Count; index++)
-            {
-                string actorId = ActorIds[index];
-                menu.AddItem(new GUIContent(actorId), false, () => Build(actorId));
-            }
-            if (ActorIds.Count == 0)
-                menu.AddDisabledItem(new GUIContent("没有可构建的角色"));
-            menu.ShowAsContext();
         }
 
         void ShowSkillMenu()
@@ -573,21 +548,6 @@ namespace ThirdPersonCharacter.Editor.Preview
                 BtsmtlScenePlayState.NeedsBuild => "需要构建",
                 BtsmtlScenePlayState.Faulted => "失败",
                 _ => status.State.ToString()
-            };
-        }
-
-        static string DescribeBuildStatus(BtsmtlScenePlayBuildStatus status)
-        {
-            return status.State switch
-            {
-                BtsmtlScenePlayBuildState.Building => "构建中",
-                BtsmtlScenePlayBuildState.Published =>
-                    $"构建完成，等待采用 Epoch {status.RequestedProgramEpoch}",
-                BtsmtlScenePlayBuildState.Adopted =>
-                    $"已采用 Epoch {status.AdoptedProgramEpoch}",
-                BtsmtlScenePlayBuildState.Failed =>
-                    string.IsNullOrEmpty(status.Message) ? "构建失败" : $"构建失败：{status.Message}",
-                _ => "未构建"
             };
         }
 

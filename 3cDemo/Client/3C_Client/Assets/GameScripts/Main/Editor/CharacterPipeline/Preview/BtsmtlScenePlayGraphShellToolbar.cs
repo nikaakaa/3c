@@ -43,9 +43,7 @@ namespace ThirdPersonCharacter.Editor.Preview
         readonly ToolbarButton m_ResumeButton;
         readonly ToolbarButton m_ResetButton;
         readonly ToolbarButton m_StopButton;
-        readonly ToolbarMenu m_BuildMenu;
         readonly ToolbarMenu m_SkillMenu;
-        readonly Label m_BuildStatus;
         readonly Label m_TimelineAuthoringStatus;
         readonly ToolbarButton m_CaptureButton;
         readonly ToolbarButton m_InputRecordButton;
@@ -104,16 +102,10 @@ namespace ThirdPersonCharacter.Editor.Preview
             sceneControls.Add(m_ResetButton);
             sceneControls.Add(m_StopButton);
 
-            m_BuildMenu = new ToolbarMenu { text = "Build" };
             m_SkillMenu = new ToolbarMenu { text = "Skill" };
-            m_BuildStatus = new Label();
-            m_BuildStatus.style.marginLeft = 6f;
-            m_BuildStatus.style.flexGrow = 1f;
             m_TimelineAuthoringStatus = new Label();
             m_TimelineAuthoringStatus.style.marginLeft = 6f;
-            experimentControls.Add(m_BuildMenu);
             experimentControls.Add(m_SkillMenu);
-            experimentControls.Add(m_BuildStatus);
             experimentControls.Add(m_TimelineAuthoringStatus);
 
             m_CaptureButton = new ToolbarButton(() => m_Presenter.ToggleDiagnosticCapture()) { text = "Capture" };
@@ -164,10 +156,7 @@ namespace ThirdPersonCharacter.Editor.Preview
                                      (status.State == BtsmtlScenePlayState.Running ||
                                       status.State == BtsmtlScenePlayState.Paused));
             m_StopButton.SetEnabled(m_Presenter.HasOperations && active);
-            RefreshBuildMenu(status);
             RefreshSkillMenu(status);
-            m_BuildStatus.text = m_Presenter.BuildStatusDescription;
-            m_BuildStatus.tooltip = m_Presenter.BuildStatus.Message;
             m_TimelineAuthoringStatus.text = m_Presenter.TimelineAuthoringDescription;
             m_TimelineAuthoringStatus.tooltip = "Timeline作者版本只表示当前作者内容，不代表运行时已经采用。";
             m_InputRecordButton.SetEnabled(m_Presenter.HasOperations &&
@@ -188,30 +177,6 @@ namespace ThirdPersonCharacter.Editor.Preview
             m_Status.tooltip = m_Status.text;
         }
 
-        void RefreshBuildMenu(BtsmtlScenePlayStatus status)
-        {
-            m_BuildMenu.menu.MenuItems().Clear();
-            if (!m_Presenter.HasOperations)
-            {
-                m_BuildMenu.text = "Build";
-                m_BuildMenu.SetEnabled(false);
-                return;
-            }
-            for (int index = 0; index < m_Presenter.ActorIds.Count; index++)
-            {
-                string actorId = m_Presenter.ActorIds[index];
-                m_BuildMenu.menu.AppendAction(actorId, _ => m_Presenter.Build(actorId));
-            }
-            BtsmtlScenePlayBuildStatus build = m_Presenter.BuildStatus;
-            m_BuildMenu.text = build.IsActive ? "Building" : "Build";
-            m_BuildMenu.tooltip = build.Message;
-            m_BuildMenu.SetEnabled(
-                (status.State == BtsmtlScenePlayState.Running || status.State == BtsmtlScenePlayState.Paused) &&
-                m_Presenter.ActorIds.Count != 0 &&
-                !build.IsActive &&
-                !build.IsPublished);
-        }
-
         void RefreshSkillMenu(BtsmtlScenePlayStatus status)
         {
             m_SkillMenu.menu.MenuItems().Clear();
@@ -230,12 +195,8 @@ namespace ThirdPersonCharacter.Editor.Preview
                     $"{actorId} / {skillId}",
                     _ => m_Presenter.RequestSkill(actorId, skillId));
             }
-            BtsmtlScenePlayBuildStatus build = m_Presenter.BuildStatus;
-            m_SkillMenu.tooltip = build.Message;
             m_SkillMenu.SetEnabled(
                 status.State == BtsmtlScenePlayState.Running &&
-                !build.IsActive &&
-                !build.IsPublished &&
                 m_Presenter.SkillOptions.Count != 0);
         }
 

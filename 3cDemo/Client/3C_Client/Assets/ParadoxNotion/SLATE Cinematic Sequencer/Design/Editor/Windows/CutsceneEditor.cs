@@ -2586,6 +2586,36 @@ namespace Slate
             }
         }
 
+        void DrawTrackListEntry(
+            Event e,
+            Rect trackRect,
+            MouseCursor cursor,
+            bool active,
+            bool selected,
+            Color trackColor,
+            Action drawInfo,
+            Action drawContextMenu,
+            Action selectAndBeginDrag,
+            Func<bool> canDrop,
+            Action drawDropMarker,
+            Action completeDrop)
+        {
+            DrawTrackListRowFrame(trackRect, active, selected, trackColor, drawInfo);
+            if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
+            {
+                drawContextMenu?.Invoke();
+                e.Use();
+            }
+            HandleTrackListInput(
+                e,
+                trackRect,
+                cursor,
+                selectAndBeginDrag,
+                canDrop,
+                drawDropMarker,
+                completeDrop);
+        }
+
         void HandleGroupListInput(
             Event e,
             Rect groupRect,
@@ -2703,35 +2733,34 @@ namespace Slate
                     if (formalInspectedParameters != null)
                         formalInspectedParameters.TryGetValue(inspectionKey, out inspected);
                     bool selected = ReferenceEquals(embeddedTimeline.Selected, track);
-                    DrawTrackListRowFrame(
-                        trackRect,
-                        track.IsActive && runtimeActive,
-                        selected,
-                        track.Color,
-                        () => TrackEditorGUI.DrawParametersInfoGUI(
-                            e,
-                            new Rect(0f, 0f, trackRect.width, trackRect.height),
-                            track,
-                            selected,
-                            ref inspected));
-                    if (formalInspectedParameters != null)
-                        formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
-
-                    if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
-                    {
-                        int frame = embeddedTimeline.CurrentFrame;
-                        GenericMenu menu = new GenericMenu();
-                        menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
-                        if (embeddedTimeline.CanPasteClip)
-                            menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
-                        menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
-                        menu.ShowAsContext();
-                        e.Use();
-                    }
-                    HandleTrackListInput(
+                    DrawTrackListEntry(
                         e,
                         trackRect,
                         formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                        track.IsActive && runtimeActive,
+                        selected,
+                        track.Color,
+                        () =>
+                        {
+                            TrackEditorGUI.DrawParametersInfoGUI(
+                                e,
+                                new Rect(0f, 0f, trackRect.width, trackRect.height),
+                                track,
+                                selected,
+                                ref inspected);
+                            if (formalInspectedParameters != null)
+                                formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
+                        },
+                        () =>
+                        {
+                            int frame = embeddedTimeline.CurrentFrame;
+                            GenericMenu menu = new GenericMenu();
+                            menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                            if (embeddedTimeline.CanPasteClip)
+                                menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
+                            menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
+                            menu.ShowAsContext();
+                        },
                         () =>
                         {
                             embeddedTimeline.Select(track);
@@ -2928,46 +2957,41 @@ namespace Slate
                 var trackRect = new Rect(10, yPos, leftRect.width - TRACK_RIGHT_MARGIN - 10, track.finalHeight);
                 nextYPos += track.finalHeight + TRACK_MARGINS;
 
-                DrawTrackListRowFrame(
-                    trackRect,
-                    track.isActive,
-                    ReferenceEquals(track, CutsceneUtility.selectedObject) || track == pickedTrack,
-                    track.color,
-                    () => track.OnTrackInfoGUI(trackRect));
-
-                //CONTEXT
-                if ( e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition) ) {
-                    var menu = new GenericMenu();
-                    menu.AddItem(new GUIContent("Disable Track"), !track.isActive, () => { track.isActive = !track.isActive; });
-                    menu.AddItem(new GUIContent("Lock Track"), track.isLocked, () => { track.isLocked = !track.isLocked; });
-                    if ( !embeddedSurface ) {
-                        menu.AddItem(new GUIContent("Copy"), false, () => { copyTrack = track; });
-                        if ( track.GetType().RTGetAttribute<UniqueElementAttribute>(true) == null ) {
-                            menu.AddItem(new GUIContent("Duplicate"), false, () =>
-                                {
-                                    group.DuplicateTrack(track);
-                                    InitClipWrappers();
-                                });
-                        } else {
-                            menu.AddDisabledItem(new GUIContent("Duplicate"));
-                        }
-                    }
-                    menu.AddSeparator("/");
-                    menu.AddItem(new GUIContent("Delete Track"), false, () =>
-                        {
-                            if ( EditorUtility.DisplayDialog("Delete Track", "Are you sure?", "YES", "NO!") ) {
-                                group.DeleteTrack(track);
-                                InitClipWrappers();
-                            }
-                        });
-                    menu.ShowAsContext();
-                    e.Use();
-                }
-
-                HandleTrackListInput(
+                DrawTrackListEntry(
                     e,
                     trackRect,
                     pickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                    track.isActive,
+                    ReferenceEquals(track, CutsceneUtility.selectedObject) || track == pickedTrack,
+                    track.color,
+                    () => track.OnTrackInfoGUI(trackRect),
+                    () =>
+                    {
+                        var menu = new GenericMenu();
+                        menu.AddItem(new GUIContent("Disable Track"), !track.isActive, () => { track.isActive = !track.isActive; });
+                        menu.AddItem(new GUIContent("Lock Track"), track.isLocked, () => { track.isLocked = !track.isLocked; });
+                        if ( !embeddedSurface ) {
+                            menu.AddItem(new GUIContent("Copy"), false, () => { copyTrack = track; });
+                            if ( track.GetType().RTGetAttribute<UniqueElementAttribute>(true) == null ) {
+                                menu.AddItem(new GUIContent("Duplicate"), false, () =>
+                                    {
+                                        group.DuplicateTrack(track);
+                                        InitClipWrappers();
+                                    });
+                            } else {
+                                menu.AddDisabledItem(new GUIContent("Duplicate"));
+                            }
+                        }
+                        menu.AddSeparator("/");
+                        menu.AddItem(new GUIContent("Delete Track"), false, () =>
+                            {
+                                if ( EditorUtility.DisplayDialog("Delete Track", "Are you sure?", "YES", "NO!") ) {
+                                    group.DeleteTrack(track);
+                                    InitClipWrappers();
+                                }
+                            });
+                        menu.ShowAsContext();
+                    },
                     () =>
                     {
                         CutsceneUtility.selectedObject = track;

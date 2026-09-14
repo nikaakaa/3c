@@ -30,10 +30,12 @@ namespace ThirdPersonSimulation
             IEnumerable<SimulationActorBinding> roster,
             SimulationNumericProfile numericProfile,
             int tickRate,
-            OperationSetVersion operationSetVersion)
+            OperationSetVersion operationSetVersion,
+            CharacterControlModuleCatalog controlModules)
         {
             if (!numericProfile.IsValid || tickRate <= 0 || !operationSetVersion.IsValid)
                 throw new ArgumentException("Float32 Character Runtime execution identity is incomplete.");
+            ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             var values = roster == null
                 ? new List<SimulationActorBinding>()
                 : new List<SimulationActorBinding>(roster);
@@ -75,6 +77,8 @@ namespace ThirdPersonSimulation
             TickRate = tickRate;
             OperationSetVersion = operationSetVersion;
             WorldCapability requiredWorldCapabilities = WorldCapability.None;
+            for (int i = 0; i < values.Count; i++)
+                requiredWorldCapabilities |= values[i].BodyMotionBinding.RequiredWorldCapability;
             for (int i = 0; i < m_Abilities.Count; i++)
             {
                 Float32GameplayAbilityExecutionData ability = m_Abilities[i];
@@ -112,6 +116,7 @@ namespace ThirdPersonSimulation
         public SimulationNumericProfile NumericProfile { get; }
         public int TickRate { get; }
         public OperationSetVersion OperationSetVersion { get; }
+        public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         public GameplayContentHash GameplayContentHash { get; }

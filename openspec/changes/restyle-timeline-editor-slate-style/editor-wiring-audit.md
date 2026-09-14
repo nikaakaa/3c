@@ -97,9 +97,9 @@ B.SplitClip复制整个Clip并改Start/End，没有处理Animation ClipIn、运�
 
 ### A10 刷新状态保存不完整，缓存释放仍有全局操作
 
-P.CaptureViewState原先只保存第一个ShowCurves轨道，提交 `8b7a0e2a3` 已改为按稳定TrackId保存全部展开状态；Section选择和完整通知仍未收口。提交 `bf07cf6e6` 已把Formal Curve/DopeSheet缓存清理限定到当前Surface。
+P.CaptureViewState原先只保存第一个ShowCurves轨道，提交 `8b7a0e2a3` 已改为按稳定TrackId保存全部展开状态；Section选择仍未进入view state。提交 `bf07cf6e6` 已把Formal Curve/DopeSheet缓存清理限定到当前Surface。
 
-修正：现有view state保存全部必要展开与稳定通道/Section选择，避免两处恢复互相覆盖；缓存清理限定当前Surface。正常关闭/重开不影响其它真实Slate使用者。数据/选择/视野变化请求重绘，runtime观察按实际变化刷新；不要依赖全窗口持续重绘掩盖缺失通知，不额外建轮询系统。对应11.11及新增11.23。
+修正：现有view state保存全部必要展开与稳定通道，Section编辑通过正式Inspector和mutation完成；缓存清理限定当前Surface。正常关闭/重开不影响其它真实Slate使用者。数据/选择/视野变化通过RepaintRequested请求重绘，runtime观察按实际变化刷新；不要依赖全窗口持续重绘掩盖缺失通知，不额外建轮询系统。对应11.11及11.23。
 
 ### A11 时间尺已帧化，事件和工具栏仍有缺口
 
@@ -117,7 +117,7 @@ S正式Section菜单当前只有移到当前帧和删除，缺少原Edit名称/�
 
 W的“运行控制：Skill Graph / Graph Shell”是标签，当前工具栏没有返回精确预览来源的按钮；OpenClip源导航是Selection/Ping，TreeClip部分入口仍走BaseTreeWindow。保留已有正式导航和runtime observation，但不能将文字说明或旧树窗口入口称为已完成新SkillGraph预览联动。
 
-修正：Section姓名/帧用原编辑控件接正式ConfigureSection；创建错误按实际typed原因返回，输入保留；允许类型的表单字段按现行contract逐项接齐，缺公共字段接口只记录精确owner需求。预览导航用既有真实来源，不造角色/播放器，不为新领域Runtime复制预览协调器。对应11.5、6.3、7.3/9.3，新增11.22仅收口Section编辑。
+修正：Section姓名/帧已由现有Unity Inspector typed控件接正式ConfigureSection；创建错误按实际typed原因返回，输入保留；允许类型的表单字段按现行contract逐项接齐，缺公共字段接口只记录精确owner需求。预览导航用既有真实来源，不造角色/播放器，不为新领域Runtime复制预览协调器。11.22源码已接通，真实窗口仍待验收。
 
 ### A13 手势取消的两层状态没有完全统一
 

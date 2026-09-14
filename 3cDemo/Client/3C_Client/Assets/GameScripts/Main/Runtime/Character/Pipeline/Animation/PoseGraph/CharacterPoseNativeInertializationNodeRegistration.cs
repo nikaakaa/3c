@@ -6,9 +6,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal static void Register(
             this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseNativeNodePoseBuffer>
                 bufferFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseInertializationPolicy>
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                CharacterPoseInertializationPolicy>
                 policyFactory)
         {
             if (registry == null)
@@ -26,14 +28,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         sealed class Creator
         {
             readonly Func<CharacterPoseCanvasNode,
+                CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer> m_BufferFactory;
             readonly Func<CharacterPoseCanvasNode,
+                CharacterPoseNativeInstanceContext,
                 CharacterPoseInertializationPolicy> m_PolicyFactory;
 
             internal Creator(
-                Func<CharacterPoseCanvasNode, CharacterPoseNativeNodePoseBuffer>
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                    CharacterPoseNativeNodePoseBuffer>
                     bufferFactory,
-                Func<CharacterPoseCanvasNode, CharacterPoseInertializationPolicy>
+                Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
+                    CharacterPoseInertializationPolicy>
                     policyFactory)
             {
                 m_BufferFactory = bufferFactory;
@@ -45,10 +51,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context)
             {
-                CharacterPoseInertializationPolicy policy = m_PolicyFactory(node) ??
+                CharacterPoseInertializationPolicy policy =
+                    m_PolicyFactory(node, context) ??
                     throw new InvalidOperationException(
                         $"Pose native Inertialization policy factory returned no policy for '{node.NodeId}'.");
-                CharacterPoseNativeNodePoseBuffer buffer = m_BufferFactory(node) ??
+                CharacterPoseNativeNodePoseBuffer buffer =
+                    m_BufferFactory(node, context) ??
                     throw new InvalidOperationException(
                         $"Pose native buffer factory returned no buffer for '{node.NodeId}'.");
                 try

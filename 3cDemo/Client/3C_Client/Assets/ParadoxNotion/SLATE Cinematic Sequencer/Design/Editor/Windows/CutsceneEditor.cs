@@ -452,6 +452,25 @@ namespace Slate
             set => scrollPos = value;
         }
 
+        public IReadOnlyDictionary<string, string> CaptureEmbeddedInspectedParameters()
+        {
+            return formalInspectedParameters == null
+                ? new Dictionary<string, string>(StringComparer.Ordinal)
+                : new Dictionary<string, string>(formalInspectedParameters, StringComparer.Ordinal);
+        }
+
+        public void RestoreEmbeddedInspectedParameters(IReadOnlyDictionary<string, string> values)
+        {
+            if (formalInspectedParameters == null)
+                formalInspectedParameters = new Dictionary<string, string>(StringComparer.Ordinal);
+            formalInspectedParameters.Clear();
+            if (values == null)
+                return;
+            foreach (KeyValuePair<string, string> value in values)
+                if (!string.IsNullOrEmpty(value.Key) && !string.IsNullOrEmpty(value.Value))
+                    formalInspectedParameters[value.Key] = value.Value;
+        }
+
         //The max time currently in view
         public float maxTime {
             get { return Mathf.Max(viewTimeMax, length); }

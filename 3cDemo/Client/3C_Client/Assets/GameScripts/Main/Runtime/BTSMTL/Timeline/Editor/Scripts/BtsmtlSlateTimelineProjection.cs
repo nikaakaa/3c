@@ -21,6 +21,7 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField] string m_SectionAuthoringId;
         [SerializeField] string[] m_CurveTrackAuthoringIds;
         [SerializeField] BtsmtlSlateTimelineTrackHeight[] m_TrackHeights;
+        [SerializeField] BtsmtlSlateTimelineInspection[] m_InspectedParameters;
         [SerializeField] bool m_GroupCollapsed;
 
         public BtsmtlSlateTimelineViewState(
@@ -33,7 +34,8 @@ namespace BTSMTL.Timeline.Editor
             bool groupCollapsed,
             IEnumerable<string> curveTrackAuthoringIds = null,
             IEnumerable<BtsmtlSlateTimelineTrackHeight> trackHeights = null,
-            string sectionAuthoringId = null)
+            string sectionAuthoringId = null,
+            IEnumerable<BtsmtlSlateTimelineInspection> inspectedParameters = null)
         {
             m_ViewTimeMin = viewTimeMin;
             m_ViewTimeMax = viewTimeMax;
@@ -48,6 +50,9 @@ namespace BTSMTL.Timeline.Editor
             m_TrackHeights = trackHeights == null
                 ? Array.Empty<BtsmtlSlateTimelineTrackHeight>()
                 : trackHeights.Where(value => !string.IsNullOrEmpty(value.AuthoringId) && value.Height > 0f).ToArray();
+            m_InspectedParameters = inspectedParameters == null
+                ? Array.Empty<BtsmtlSlateTimelineInspection>()
+                : inspectedParameters.Where(value => !string.IsNullOrEmpty(value.TrackAuthoringId) && !string.IsNullOrEmpty(value.ParameterId)).ToArray();
             m_GroupCollapsed = groupCollapsed;
         }
 
@@ -60,6 +65,7 @@ namespace BTSMTL.Timeline.Editor
         public string SectionAuthoringId => m_SectionAuthoringId ?? string.Empty;
         public IReadOnlyList<string> CurveTrackAuthoringIds => m_CurveTrackAuthoringIds ?? Array.Empty<string>();
         public IReadOnlyList<BtsmtlSlateTimelineTrackHeight> TrackHeights => m_TrackHeights ?? Array.Empty<BtsmtlSlateTimelineTrackHeight>();
+        public IReadOnlyList<BtsmtlSlateTimelineInspection> InspectedParameters => m_InspectedParameters ?? Array.Empty<BtsmtlSlateTimelineInspection>();
         public bool GroupCollapsed => m_GroupCollapsed;
         public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) ||
                                     !string.IsNullOrEmpty(ClipAuthoringId) ||
@@ -80,6 +86,22 @@ namespace BTSMTL.Timeline.Editor
 
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public float Height => m_Height;
+    }
+
+    [Serializable]
+    public struct BtsmtlSlateTimelineInspection
+    {
+        [SerializeField] string m_TrackAuthoringId;
+        [SerializeField] string m_ParameterId;
+
+        public BtsmtlSlateTimelineInspection(string trackAuthoringId, string parameterId)
+        {
+            m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
+            m_ParameterId = parameterId ?? string.Empty;
+        }
+
+        public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
+        public string ParameterId => m_ParameterId ?? string.Empty;
     }
 
     public sealed class BtsmtlSlateTimelineProjection : IDisposable, ITimelineAuthoringClipResolver
@@ -167,6 +189,10 @@ namespace BTSMTL.Timeline.Editor
                 .Where(track => track.CustomHeight > 0f)
                 .Select(track => new BtsmtlSlateTimelineTrackHeight(track.AuthoringId, track.CustomHeight))
                 .ToArray();
+            BtsmtlSlateTimelineInspection[] inspectedParameters = m_EmbeddedEditor
+                .CaptureEmbeddedInspectedParameters()
+                .Select(value => new BtsmtlSlateTimelineInspection(value.Key, value.Value))
+                .ToArray();
             bool collapsed = m_Binding.Groups.Count != 0 && m_Binding.Groups[0].IsCollapsed;
             return new BtsmtlSlateTimelineViewState(
                 m_Binding.ViewTimeMin,
@@ -178,7 +204,8 @@ namespace BTSMTL.Timeline.Editor
                 collapsed,
                 curveTrackIds,
                 trackHeights,
-                sectionId);
+                sectionId,
+                inspectedParameters);
         }
 
         public void RestoreViewState(BtsmtlSlateTimelineViewState state)
@@ -200,6 +227,11 @@ namespace BTSMTL.Timeline.Editor
                 foreach (IEmbeddedTimelineTrackBinding track in group.Tracks)
                     if (trackHeights.TryGetValue(track.AuthoringId, out BtsmtlSlateTimelineTrackHeight height))
                         track.CustomHeight = height.Height;
+            var inspectedParameters = state.InspectedParameters.ToDictionary(
+                value => value.TrackAuthoringId,
+                value => value.ParameterId,
+                StringComparer.Ordinal);
+            m_EmbeddedEditor.RestoreEmbeddedInspectedParameters(inspectedParameters);
             m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
             if (state.HasSelection)
                 FocusSource(state.TrackAuthoringId, state.ClipAuthoringId, state.SectionAuthoringId);

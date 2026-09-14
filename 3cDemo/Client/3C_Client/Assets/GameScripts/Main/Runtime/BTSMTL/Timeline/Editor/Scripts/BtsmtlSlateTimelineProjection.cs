@@ -366,6 +366,7 @@ namespace BTSMTL.Timeline.Editor
             Undo.undoRedoEvent -= OnUndoRedoEvent;
             m_EmbeddedEditor.ClearEmbedded();
             UnityEngine.Object.DestroyImmediate(m_EmbeddedEditor);
+            TimelineInspectorSelection.Clear(m_Request.SerializedOwner);
             m_Session.Dispose();
             SelectionChanged = null;
             AuthoringIssue = null;

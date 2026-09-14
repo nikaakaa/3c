@@ -262,6 +262,36 @@ namespace BTSMTL.Timeline
             }
         }
 
+        public bool TryGetSerializedPropertyPath(object element, out string propertyPath)
+        {
+            for (int trackIndex = 0; trackIndex < m_Tracks.Count; trackIndex++)
+            {
+                Track track = m_Tracks[trackIndex];
+                if (ReferenceEquals(track, element))
+                {
+                    propertyPath = GetSerializedPropertyPath($"m_Tracks.Array.data[{trackIndex}]");
+                    return true;
+                }
+                if (track == null)
+                    continue;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                    if (ReferenceEquals(track.Clips[clipIndex], element))
+                    {
+                        propertyPath = GetSerializedPropertyPath(
+                            $"m_Tracks.Array.data[{trackIndex}].m_Clips.Array.data[{clipIndex}]");
+                        return true;
+                    }
+            }
+            for (int sectionIndex = 0; sectionIndex < m_Sections.Count; sectionIndex++)
+                if (ReferenceEquals(m_Sections[sectionIndex], element))
+                {
+                    propertyPath = GetSerializedPropertyPath($"m_Sections.Array.data[{sectionIndex}]");
+                    return true;
+                }
+            propertyPath = string.Empty;
+            return false;
+        }
+
         public string GetSerializedPropertyPath(string relativePath)
         {
             if (string.IsNullOrEmpty(relativePath))

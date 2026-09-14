@@ -89,6 +89,17 @@ namespace BTSMTL.Timeline.Editor
         {
             m_Selected = element;
             Selection.activeObject = m_Request.SerializedOwner;
+            object source = element is BtsmtlTimelineClipBinding clipSource
+                ? clipSource.Source
+                : element is BtsmtlTimelineTrackBinding trackSource
+                    ? trackSource.Source
+                    : element is BtsmtlTimelineSectionBinding sectionSource
+                        ? sectionSource.Source
+                        : null;
+            if (source != null && Timeline.TryGetSerializedPropertyPath(source, out string propertyPath))
+                TimelineInspectorSelection.Set(m_Request.SerializedOwner, propertyPath);
+            else
+                TimelineInspectorSelection.Clear(m_Request.SerializedOwner);
             foreach (BtsmtlTimelineTrackBinding track in m_Tracks.Values)
                 track.SetSelectedClip(null);
             if (element is BtsmtlTimelineClipBinding clip)

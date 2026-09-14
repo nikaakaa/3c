@@ -7,6 +7,43 @@ using UnityEngine.UIElements;
 
 namespace BTSMTL.Timeline.Editor
 {
+    public static class TimelineInspectorSelection
+    {
+        static UnityEngine.Object s_Owner;
+        static string s_PropertyPath = string.Empty;
+
+        public static event Action Changed;
+
+        public static void Set(UnityEngine.Object owner, string propertyPath)
+        {
+            if (ReferenceEquals(s_Owner, owner) && string.Equals(s_PropertyPath, propertyPath, StringComparison.Ordinal))
+                return;
+            s_Owner = owner;
+            s_PropertyPath = propertyPath ?? string.Empty;
+            Changed?.Invoke();
+        }
+
+        public static void Clear(UnityEngine.Object owner)
+        {
+            if (!ReferenceEquals(s_Owner, owner))
+                return;
+            s_Owner = null;
+            s_PropertyPath = string.Empty;
+            Changed?.Invoke();
+        }
+
+        public static bool TryGet(UnityEngine.Object owner, out string propertyPath)
+        {
+            if (ReferenceEquals(s_Owner, owner) && !string.IsNullOrEmpty(s_PropertyPath))
+            {
+                propertyPath = s_PropertyPath;
+                return true;
+            }
+            propertyPath = string.Empty;
+            return false;
+        }
+    }
+
     public enum TimelineEditorSelectionKind : byte
     {
         None = 0,

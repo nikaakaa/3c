@@ -238,15 +238,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Component agent,
             IBlackboard parentBlackboard,
             AnimancerComponent animancer,
+            CharacterAnimationRigPayload rig,
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy)
         {
-            if (!actorId.IsValid || !agent || !animancer || !rigBinding || !rootHierarchy)
+            if (!actorId.IsValid || !agent || !animancer || rig == null || !rigBinding || !rootHierarchy)
                 throw new ArgumentException("Pose native instance context is incomplete.");
+            rig.RequireValid();
+            if (!string.Equals(rig.RigId, rigBinding.RigId, StringComparison.Ordinal) ||
+                !string.Equals(rig.RigRevision, rigBinding.RigRevision, StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Pose native instance Rig identity does not match its binding.");
+            }
             ActorId = actorId;
             Agent = agent;
             ParentBlackboard = parentBlackboard;
             Animancer = animancer;
+            Rig = rig;
             RigBinding = rigBinding;
             RootHierarchy = rootHierarchy;
         }
@@ -255,9 +263,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal Component Agent { get; }
         internal IBlackboard ParentBlackboard { get; }
         internal AnimancerComponent Animancer { get; }
+        internal CharacterAnimationRigPayload Rig { get; }
         internal CharacterAnimationRigBinding RigBinding { get; }
         internal CharacterRootHierarchyBinding RootHierarchy { get; }
-        internal bool IsValid => ActorId.IsValid && Agent && Animancer && RigBinding && RootHierarchy;
+        internal bool IsValid => ActorId.IsValid && Agent && Animancer && Rig != null && RigBinding && RootHierarchy &&
+            string.Equals(Rig.RigId, RigBinding.RigId, StringComparison.Ordinal) &&
+            string.Equals(Rig.RigRevision, RigBinding.RigRevision, StringComparison.Ordinal);
     }
 
     internal readonly struct CharacterPoseNativeCreateInstanceRequest

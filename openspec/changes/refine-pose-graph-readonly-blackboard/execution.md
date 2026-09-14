@@ -167,3 +167,5 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 删除未接入 Source/Constraint/Publication 的占位 `CharacterPoseNativeGraphEvaluator`，原生 Runtime 现在只接受主装配提供的正式 typed evaluator，不再存在会伪装成完整运行时的空实现路径。
 - `ThirdPersonClient.Runtime.csproj` 独立编译通过，0 errors；完整依赖编译仍被共享 Float32 `CharacterSimulationProgramCodec.cs` 的参数类型顺序错误阻断。两次编译结束均已执行 `dotnet build-server shutdown`。
 - 节点观察分成当前帧工作页和最后一次成功提交页；Discard、Commit 失败或 Stop 只清理工作页，不覆盖上一帧合法观察。`TryObserve` 只读已提交页，不会重新触发节点求值。
+- `CharacterPoseNativeInstanceContext` 增加同版本 `CharacterAnimationRigPayload`，创建实例时强制校验 Rig 与 `CharacterAnimationRigBinding` 的 ID/Revision 一致；native 节点后续可据此分配实例级骨骼/虚拟骨骼缓冲并接入现有 IK 服务。
+- 本步独立 Runtime 编译通过，0 errors；首次编译发现并修正的是新增合同自身的引用类型判断，不涉及共享工程错误。编译后已执行 `dotnet build-server shutdown`。

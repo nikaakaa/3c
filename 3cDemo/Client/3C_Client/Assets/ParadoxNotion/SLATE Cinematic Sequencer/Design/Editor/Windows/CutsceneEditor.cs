@@ -3956,7 +3956,8 @@ namespace Slate
 
                 //set crossblend overlap properties. Do this when no clip is interacting or no clip is dragging
                 //this way avoid issue when moving clip on the other side of another, but keep overlap interactive when scaling a clip at least.
-                if ( editor.interactingClip == null || !editor.interactingClip.isDragging ) {
+                if ( editorBinding.FormalClip == null &&
+                     ( editor.interactingClip == null || !editor.interactingClip.isDragging ) ) {
                         var overlap = previousBinding != null ? Mathf.Max(previousBinding.EndTime - editorBinding.StartTime, 0) : 0;
                         if ( overlap > 0 ) {
                         editorBinding.BlendIn = overlap;
@@ -4357,7 +4358,7 @@ namespace Slate
                         else
                             StretchFit();
                     });
-                    if ( action.length > 0 && !editor.embeddedSurface ) {
+                    if ( !editor.embeddedSurface && action != null && action.length > 0 ) {
                         menu.AddItem(new GUIContent("Split At Cursor"), false, () => { Split(snapedPointerTime); });
                         menu.AddItem(new GUIContent("Split At Scrubber (S)"), false, () => { Split(editor.cutscene.currentTime); });
                     }

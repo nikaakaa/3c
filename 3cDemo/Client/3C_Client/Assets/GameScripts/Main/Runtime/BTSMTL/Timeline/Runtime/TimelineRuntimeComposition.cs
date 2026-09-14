@@ -246,6 +246,7 @@ namespace BTSMTL.Timeline.Runtime
             string requestId,
             TimelineData timeline,
             TimelineExecutionIdentity executionIdentity,
+            TimelinePlaybackMode playbackMode,
             IEnumerable<TimelineCallBinding> callBindings)
         {
             var request = new TimelineRuntimePrepareRequest(
@@ -253,6 +254,7 @@ namespace BTSMTL.Timeline.Runtime
                 timeline,
                 m_ContractCatalog,
                 executionIdentity,
+                playbackMode,
                 m_NumericTarget,
                 callBindings,
                 m_DomainResolver,

@@ -203,6 +203,7 @@ namespace BTSMTL.Timeline.Runtime
             Generation = generation;
             RequestId = preparation.RequestId;
             ExecutionIdentity = preparation.ExecutionIdentity;
+            PlaybackMode = preparation.PlaybackMode;
             NumericTarget = preparation.NumericTarget;
             Content = preparation.Content;
             SourceTimeline = preparation.SourceTimeline;
@@ -216,6 +217,7 @@ namespace BTSMTL.Timeline.Runtime
         public ulong Generation { get; }
         public string RequestId { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineContentUnit Content { get; }
         public TimelineData SourceTimeline { get; }
@@ -280,10 +282,11 @@ namespace BTSMTL.Timeline.Runtime
             if (m_PendingAdvance != null || m_StopPending)
                 throw new InvalidOperationException("Timeline playback has an uncommitted Advance result.");
             int maxFrame = Math.Max(0, Content.MaxFrame);
+            bool loop = PlaybackMode == TimelinePlaybackMode.Loop;
             long requestedFrame = (long)m_CursorFrame + request.DeltaFrames;
             int nextFrame;
             int nextCycle = m_Cycle;
-            if (Content.Loop && maxFrame > 0)
+            if (loop && maxFrame > 0)
             {
                 long cycleDelta = requestedFrame / maxFrame;
                 if (cycleDelta > int.MaxValue - nextCycle)
@@ -317,7 +320,7 @@ namespace BTSMTL.Timeline.Runtime
                 nextFrame,
                 nextCycle,
                 maxFrame,
-                Content.Loop,
+                loop,
                 m_InitialBoundaryPending);
             TimelineRuntimeEvaluationResult evaluation = TimelineRuntimeEvaluator.Evaluate(
                 SourceTimeline,
@@ -325,11 +328,11 @@ namespace BTSMTL.Timeline.Runtime
                 m_Cycle,
                 nextFrame,
                 nextCycle,
-                Content.Loop,
+                loop,
                 boundaries,
                 ExecutionIdentity,
                 Generation);
-            bool completes = !Content.Loop && nextFrame >= maxFrame;
+            bool completes = !loop && nextFrame >= maxFrame;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
                 Generation,
@@ -581,6 +584,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineData timeline,
             TimelineContractCatalog contractCatalog,
             TimelineExecutionIdentity executionIdentity,
+            TimelinePlaybackMode playbackMode,
             TimelineRuntimeNumericTarget numericTarget,
             IEnumerable<TimelineCallBinding> callBindings,
             ITimelineDomainBindingResolver domainResolver,
@@ -594,6 +598,9 @@ namespace BTSMTL.Timeline.Runtime
             if (!executionIdentity.IsValid)
                 throw new ArgumentException("Timeline execution identity is invalid.", nameof(executionIdentity));
             ExecutionIdentity = executionIdentity;
+            if (!Enum.IsDefined(typeof(TimelinePlaybackMode), playbackMode))
+                throw new ArgumentOutOfRangeException(nameof(playbackMode));
+            PlaybackMode = playbackMode;
             if (!Enum.IsDefined(typeof(TimelineRuntimeNumericTarget), numericTarget))
                 throw new ArgumentOutOfRangeException(nameof(numericTarget));
             NumericTarget = numericTarget;
@@ -606,6 +613,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineData Timeline { get; }
         public TimelineContractCatalog ContractCatalog { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public IReadOnlyList<TimelineCallBinding> CallBindings { get; }
         public ITimelineDomainBindingResolver DomainResolver { get; }
@@ -624,6 +632,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePreparationStatus status,
             string requestId,
             TimelineExecutionIdentity executionIdentity,
+            TimelinePlaybackMode playbackMode,
             TimelineRuntimeNumericTarget numericTarget,
             TimelineData sourceTimeline,
             TimelineContentUnit content,
@@ -636,6 +645,7 @@ namespace BTSMTL.Timeline.Runtime
             Status = status;
             RequestId = requestId ?? string.Empty;
             ExecutionIdentity = executionIdentity;
+            PlaybackMode = playbackMode;
             NumericTarget = numericTarget;
             SourceTimeline = sourceTimeline;
             Content = content;
@@ -649,6 +659,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePreparationStatus Status { get; }
         public string RequestId { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineData SourceTimeline { get; }
         public TimelineContentUnit Content { get; }
@@ -676,6 +687,7 @@ namespace BTSMTL.Timeline.Runtime
                 TimelineRuntimePreparationStatus.Failed,
                 requestId,
                 executionIdentity,
+                TimelinePlaybackMode.Once,
                 numericTarget,
                 null,
                 null,
@@ -699,6 +711,7 @@ namespace BTSMTL.Timeline.Runtime
                 TimelineRuntimePreparationStatus.Ready,
                 request.RequestId,
                 request.ExecutionIdentity,
+                request.PlaybackMode,
                 request.NumericTarget,
                 sourceTimeline,
                 content,

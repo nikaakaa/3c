@@ -106,6 +106,7 @@ namespace BTSMTL.Timeline.Runtime
                 timeline,
                 m_ContractCatalog,
                 identity,
+                playbackMode,
                 m_NumericTarget,
                 bindings,
                 m_DomainResolver,
@@ -250,6 +251,7 @@ namespace BTSMTL.Timeline.Runtime
             Generation = playback.Generation;
             RequestId = playback.RequestId;
             ExecutionIdentity = playback.ExecutionIdentity;
+            PlaybackMode = playback.PlaybackMode;
             NumericTarget = playback.NumericTarget;
             ContentRevision = playback.ContentRevision;
             State = playback.State;
@@ -259,6 +261,7 @@ namespace BTSMTL.Timeline.Runtime
         public ulong Generation { get; }
         public string RequestId { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public string ContentRevision { get; }
         public TimelineRuntimePlaybackState State { get; }
@@ -267,7 +270,7 @@ namespace BTSMTL.Timeline.Runtime
 
     public sealed class TimelineRuntimePlaybackSnapshot
     {
-        public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v1";
+        public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v2";
 
         internal TimelineRuntimePlaybackSnapshot(TimelineRuntimePlayback playback)
         {
@@ -276,6 +279,7 @@ namespace BTSMTL.Timeline.Runtime
             Generation = playback.Generation;
             RequestId = playback.RequestId;
             ExecutionIdentity = playback.ExecutionIdentity;
+            PlaybackMode = playback.PlaybackMode;
             NumericTarget = playback.NumericTarget;
             ContentRevision = playback.ContentRevision;
             State = playback.State;
@@ -294,6 +298,7 @@ namespace BTSMTL.Timeline.Runtime
         public ulong Generation { get; }
         public string RequestId { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public string ContentRevision { get; }
         public TimelineRuntimePlaybackState State { get; }
@@ -318,6 +323,7 @@ namespace BTSMTL.Timeline.Runtime
         bool m_Disposed;
 
         public event Action<TimelineRuntimePlaybackDescriptor> PlaybackChanged;
+        public string LastFailure { get; private set; } = string.Empty;
 
         public TimelineRuntimeService(
             ITimelineRuntimePlaybackRequestFactory requestFactory,
@@ -341,6 +347,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             handle = TimelinePlaybackHandle.Invalid;
             EnsureAvailable();
+            LastFailure = string.Empty;
             TimelineRuntimePlaybackHandle runtimeHandle = NextHandle();
             ulong generation = NextGeneration();
             if (!m_RequestFactory.TryCreate(
@@ -354,11 +361,17 @@ namespace BTSMTL.Timeline.Runtime
                     runtimeHandle,
                     generation,
                     out TimelineRuntimePrepareRequest request,
-                    out _))
+                    out string requestError))
+            {
+                LastFailure = requestError ?? "timeline_runtime_request_failed";
                 return false;
+            }
             TimelineRuntimePreparationResult preparation = TimelineRuntimePreparation.Prepare(request);
             if (!preparation.IsReady)
+            {
+                LastFailure = string.Join(" | ", preparation.Errors);
                 return false;
+            }
             TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
                 preparation,
                 runtimeHandle,
@@ -430,7 +443,9 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePreparationResult Prepare(TimelineRuntimePrepareRequest request)
         {
             EnsureAvailable();
-            return TimelineRuntimePreparation.Prepare(request);
+            TimelineRuntimePreparationResult result = TimelineRuntimePreparation.Prepare(request);
+            LastFailure = result.IsReady ? string.Empty : string.Join(" | ", result.Errors);
+            return result;
         }
 
         public TimelineRuntimePlaybackHandle CreatePlayback(TimelineRuntimePreparationResult preparation)
@@ -510,6 +525,7 @@ namespace BTSMTL.Timeline.Runtime
                 snapshot.State == TimelineRuntimePlaybackState.Disposed ||
                 snapshot.State == TimelineRuntimePlaybackState.Failed ||
                 snapshot.ExecutionIdentity != preparation.ExecutionIdentity ||
+                snapshot.PlaybackMode != preparation.PlaybackMode ||
                 snapshot.NumericTarget != preparation.NumericTarget ||
                 !string.Equals(snapshot.ContentRevision, preparation.ContentRevision, StringComparison.Ordinal))
                 throw new InvalidOperationException("Timeline playback Restore snapshot does not match the prepared content.");

@@ -36,6 +36,7 @@ namespace Slate
             public System.Action<float> AddIdentityKey { get; set; }
             public System.Action RecordUndo { get; set; }
             public System.Action NotifyChanged { get; set; }
+            public bool IsReadOnly { get; set; }
         }
 
         public static void DrawDopeSheet(IAnimatableData animatable, IKeyable keyable, Rect rect, float startTime, float length, bool highlightRange = true) {
@@ -352,7 +353,7 @@ namespace Slate
 
 
                     //do the following only if we dont have a rect selection
-                    if ( timeSelectionRect == null ) {
+                    if ( (editorContext == null || !editorContext.IsReadOnly) && timeSelectionRect == null ) {
 
                         //pick the key
                         if ( e.type == EventType.MouseDown && dopeKeyRect.Contains(e.mousePosition) ) {
@@ -371,6 +372,9 @@ namespace Slate
                         }
                     }
                 }
+
+                if (editorContext != null && editorContext.IsReadOnly)
+                    return;
 
 
                 //drag the picked key if any. Shift drags all next to it as well

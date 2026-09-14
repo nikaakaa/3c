@@ -253,7 +253,7 @@ namespace BTSMTL.Timeline
         public AnimationCurve ProgramPositionX => ProgramCurve(SourcePositionX);
         public AnimationCurve ProgramPositionY => ProgramCurve(SourcePositionY);
         public AnimationCurve ProgramPositionZ => ProgramCurve(SourcePositionZ);
-        public AnimationCurve ProgramYaw => ProgramCurve(SourceYaw);
+        public AnimationCurve ProgramYaw => ProgramCurve(RequireSource().LocalYaw);
 
         public AnimationCurve SourcePositionX => RequireSource().EvaluationMode == RootMotionCurveEvaluationMode.ForwardDistanceYaw
             ? ZeroCurve()

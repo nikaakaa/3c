@@ -30,14 +30,14 @@ namespace Slate
             instance.Draw(posRect, timeRect);
         }
 
-        public static void DrawCurves(AnimationCurve[] curves, object owner, Rect posRect, Rect timeRect, Action onCurvesUpdated = null) {
+        public static void DrawCurves(AnimationCurve[] curves, object owner, Rect posRect, Rect timeRect, Action onCurvesUpdated = null, bool readOnly = false) {
             if (owner == null)
                 return;
             CurveRenderer instance = null;
             if (!embeddedCache.TryGetValue(owner, out instance))
-                embeddedCache[owner] = instance = new CurveRenderer(curves, posRect, onCurvesUpdated);
+                embeddedCache[owner] = instance = new CurveRenderer(curves, posRect, onCurvesUpdated, readOnly);
             else
-                instance.SetRawCurves(curves, onCurvesUpdated);
+                instance.SetRawCurves(curves, onCurvesUpdated, readOnly);
             instance.Draw(posRect, timeRect);
         }
 
@@ -107,6 +107,7 @@ namespace Slate
 
             private object cEditor;
             private Action rawOnCurvesUpdated;
+            private bool readOnly;
             private UnityEditor.Undo.UndoRedoCallback undoRedoHandler;
 
             public CurveRenderer(IAnimatableData animatable, IKeyable keyable, Rect posRect) {
@@ -125,10 +126,11 @@ namespace Slate
                 Init();
             }
 
-            public CurveRenderer(AnimationCurve[] curves, Rect posRect, Action onCurvesUpdated) {
+            public CurveRenderer(AnimationCurve[] curves, Rect posRect, Action onCurvesUpdated, bool readOnly) {
                 this.curves = curves;
                 this.posRect = posRect;
                 rawOnCurvesUpdated = onCurvesUpdated;
+                this.readOnly = readOnly;
                 SubscribeUndoRedo();
                 Init();
             }
@@ -150,10 +152,11 @@ namespace Slate
                 undoRedoHandler = null;
             }
 
-            public void SetRawCurves(AnimationCurve[] curves, Action onCurvesUpdated) {
+            public void SetRawCurves(AnimationCurve[] curves, Action onCurvesUpdated, bool readOnly) {
                 var sameCurves = SameCurves(this.curves, curves);
                 this.curves = curves;
                 rawOnCurvesUpdated = onCurvesUpdated;
+                this.readOnly = readOnly;
                 if (!sameCurves)
                     RefreshCurves();
             }
@@ -437,6 +440,8 @@ namespace Slate
 
 
                 //OnGUI
+                if (readOnly && e.isMouse)
+                    return;
                 try { onGUI(); }
                 catch ( Exception exc ) { SelectNone(); Debug.LogException(exc); }
             }

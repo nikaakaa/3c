@@ -107,6 +107,11 @@ namespace Slate
         void SelectNextKey(float localTime);
     }
 
+    public interface IEmbeddedTimelineReferenceParameterBinding
+    {
+        string ReferenceLabel { get; }
+    }
+
     public interface IEmbeddedTimelineCurveBinding
     {
         string ChannelId { get; }
@@ -116,18 +121,6 @@ namespace Slate
         int EndFrame { get; }
         float Duration { get; }
         void Replace(AnimationCurve curve);
-    }
-
-    public interface IEmbeddedTimelineMotionSourceBinding
-    {
-        string SourceName { get; }
-        UnityEngine.Object SourceAsset { get; }
-        string SourceVersion { get; }
-        float SourceStartTime { get; }
-        float SourceEndTime { get; }
-        IReadOnlyList<string> SourceCurveNames { get; }
-        IReadOnlyList<AnimationCurve> SourceCurves { get; }
-        void OpenSource();
     }
 
     public interface IEmbeddedTimelineSectionBinding : IEmbeddedTimelineElementBinding

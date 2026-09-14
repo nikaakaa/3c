@@ -741,7 +741,7 @@ namespace BTSMTL.Timeline.Editor
             public void AddClip(BtsmtlTimelineClipBinding clip) => m_Clips.Add(clip);
         }
 
-        sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding, IEmbeddedTimelineMotionSourceBinding
+        sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding
         {
             readonly List<IEmbeddedTimelineCurveBinding> m_Curves = new List<IEmbeddedTimelineCurveBinding>();
             readonly List<IEmbeddedTimelineParameterBinding> m_Parameters = new List<IEmbeddedTimelineParameterBinding>();
@@ -773,6 +773,13 @@ namespace BTSMTL.Timeline.Editor
                     m_Curves.Add(curve);
                     m_Parameters.Add(new BtsmtlTimelineParameterBinding(this, curve));
                 }
+                if (source is MotionCurveClip motion && motion.SourceCurve != null)
+                {
+                    AddReferenceParameter(motion, "source.position-x", "Position X", motion.SourcePositionX);
+                    AddReferenceParameter(motion, "source.position-y", "Position Y", motion.SourcePositionY);
+                    AddReferenceParameter(motion, "source.position-z", "Position Z", motion.SourcePositionZ);
+                    AddReferenceParameter(motion, "source.yaw", "Yaw", motion.SourceYaw);
+                }
             }
 
             public Clip Source { get; }
@@ -781,7 +788,9 @@ namespace BTSMTL.Timeline.Editor
             IEmbeddedTimelineTrackBinding IEmbeddedTimelineClipBinding.Track => m_Track;
             public string AuthoringId => Source.AuthoringId;
             public string DisplayName => Source.Name;
-            public string Info => Source.Name;
+            public string Info => Source is MotionCurveClip motion && motion.SourceCurve != null
+                ? string.Concat(Source.Name, "  [Ref: ", motion.SourceCurve.name, "]")
+                : Source.Name;
             public bool IsActive => m_Track.IsActive;
             public bool IsValid => !Source.Invalid;
             public bool IsCollapsed { get => m_IsCollapsed; set => m_IsCollapsed = value; }
@@ -797,55 +806,9 @@ namespace BTSMTL.Timeline.Editor
             public IReadOnlyList<IEmbeddedTimelineParameterBinding> Parameters => m_Parameters;
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => m_Curves;
 
-            public string SourceName => SourceMotion?.SourceCurve?.name ?? string.Empty;
-            public UnityEngine.Object SourceAsset => SourceMotion?.SourceCurve;
-            public string SourceVersion
-            {
-                get
-                {
-                    UnityEngine.Object asset = SourceAsset;
-                    string path = asset ? AssetDatabase.GetAssetPath(asset) : string.Empty;
-                    return string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
-                }
-            }
-            public float SourceStartTime => SourceMotion?.SourceStartTime ?? 0f;
-            public float SourceEndTime => SourceMotion?.SourceEndTime ?? 0f;
-            public IReadOnlyList<string> SourceCurveNames => new[] { "Position X", "Position Y", "Position Z", "Yaw" };
-            public IReadOnlyList<AnimationCurve> SourceCurves
-            {
-                get
-                {
-                    MotionCurveClip motion = SourceMotion;
-                    if (motion == null)
-                        return Array.Empty<AnimationCurve>();
-                    return new[]
-                    {
-                        CopyCurve(motion.SourcePositionX),
-                        CopyCurve(motion.SourcePositionY),
-                        CopyCurve(motion.SourcePositionZ),
-                        CopyCurve(motion.SourceYaw)
-                    };
-                }
-            }
-
-            MotionCurveClip SourceMotion => Source as MotionCurveClip;
-
-            public void OpenSource() => m_Owner.OpenSource(this);
-
             public bool CanCrossBlend(IEmbeddedTimelineClipBinding other)
             {
                 return other is BtsmtlTimelineClipBinding formal && formal.Source.GetType() == Source.GetType() && Source.IsMixable();
-            }
-
-            static AnimationCurve CopyCurve(AnimationCurve source)
-            {
-                return source == null
-                    ? new AnimationCurve()
-                    : new AnimationCurve(source.keys)
-                    {
-                        preWrapMode = source.preWrapMode,
-                        postWrapMode = source.postWrapMode
-                    };
             }
 
             public void AddIdentityKey(float time)
@@ -855,6 +818,41 @@ namespace BTSMTL.Timeline.Editor
                     AnimationCurve curve = m_Curves[index].Curve;
                     curve.AddKey(time, curve.Evaluate(time));
                 }
+            }
+
+            void AddReferenceParameter(MotionCurveClip motion, string channelId, string displayName, AnimationCurve source)
+            {
+                m_Parameters.Add(new BtsmtlTimelineReferenceParameterBinding(
+                    this,
+                    channelId,
+                    displayName,
+                    motion.SourceCurve.name,
+                    MapSourceCurve(source, motion)));
+            }
+
+            static AnimationCurve MapSourceCurve(AnimationCurve source, MotionCurveClip motion)
+            {
+                if (source == null)
+                    return new AnimationCurve();
+                AnimationCurve result = new AnimationCurve(source.keys)
+                {
+                    preWrapMode = source.preWrapMode,
+                    postWrapMode = source.postWrapMode
+                };
+                float sourceDuration = Mathf.Max(0.0001f, motion.SourceDuration);
+                float timelineDuration = Mathf.Max(1f / TimelineUtility.FrameRate, motion.DurationTime);
+                float tangentScale = sourceDuration / timelineDuration;
+                Keyframe[] keys = result.keys;
+                for (int index = 0; index < keys.Length; index++)
+                {
+                    Keyframe key = keys[index];
+                    key.time = Mathf.Clamp01((key.time - motion.SourceStartTime) / sourceDuration) * timelineDuration;
+                    key.inTangent *= tangentScale;
+                    key.outTangent *= tangentScale;
+                    keys[index] = key;
+                }
+                result.keys = keys;
+                return result;
             }
 
             public void Split(float time) => m_Owner.SplitClip(this, Mathf.RoundToInt(time * m_Owner.FrameRate));
@@ -1034,6 +1032,64 @@ namespace BTSMTL.Timeline.Editor
                 if (next.HasValue)
                     m_Clip.Owner.CurrentFrame = m_Clip.Source.StartFrame + Mathf.RoundToInt(next.Value * m_Clip.Owner.FrameRate);
             }
+        }
+
+        sealed class BtsmtlTimelineReferenceParameterBinding : IEmbeddedTimelineParameterBinding, IEmbeddedTimelineReferenceParameterBinding
+        {
+            readonly BtsmtlTimelineClipBinding m_Clip;
+            readonly BtsmtlTimelineReferenceCurveBinding m_Curve;
+
+            public BtsmtlTimelineReferenceParameterBinding(
+                BtsmtlTimelineClipBinding clip,
+                string channelId,
+                string displayName,
+                string referenceLabel,
+                AnimationCurve curve)
+            {
+                m_Clip = clip;
+                m_Curve = new BtsmtlTimelineReferenceCurveBinding(clip, channelId, displayName, curve);
+                ReferenceLabel = referenceLabel ?? string.Empty;
+            }
+
+            public string ParameterId => m_Curve.ChannelId;
+            public string DisplayName => m_Curve.DisplayName;
+            public string ReferenceLabel { get; }
+            public bool Enabled { get => true; set { } }
+            public float CurrentValue => m_Curve.Curve.Evaluate(Mathf.Clamp(
+                (m_Clip.Owner.CurrentFrame - m_Clip.Source.StartFrame) / (float)m_Clip.Owner.FrameRate,
+                0f,
+                m_Curve.Duration));
+            public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => new[] { m_Curve };
+            public void AddKey(float localTime) { }
+            public void RemoveKey(float localTime) { }
+            public void SelectPreviousKey(float localTime) { }
+            public void SelectNextKey(float localTime) { }
+        }
+
+        sealed class BtsmtlTimelineReferenceCurveBinding : IEmbeddedTimelineCurveBinding
+        {
+            readonly BtsmtlTimelineClipBinding m_Clip;
+            readonly AnimationCurve m_Curve;
+
+            public BtsmtlTimelineReferenceCurveBinding(
+                BtsmtlTimelineClipBinding clip,
+                string channelId,
+                string displayName,
+                AnimationCurve curve)
+            {
+                m_Clip = clip;
+                ChannelId = channelId;
+                DisplayName = displayName;
+                m_Curve = curve;
+            }
+
+            public string ChannelId { get; }
+            public string DisplayName { get; }
+            public AnimationCurve Curve => m_Curve;
+            public int StartFrame => m_Clip.Source.StartFrame;
+            public int EndFrame => m_Clip.Source.EndFrame;
+            public float Duration => Mathf.Max(1f / m_Clip.Owner.FrameRate, m_Clip.Length);
+            public void Replace(AnimationCurve curve) { }
         }
 
         sealed class BtsmtlTimelineSectionBinding : IEmbeddedTimelineSectionBinding

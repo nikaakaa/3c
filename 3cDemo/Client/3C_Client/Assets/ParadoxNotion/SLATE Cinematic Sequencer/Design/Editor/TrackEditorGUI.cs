@@ -1,8 +1,6 @@
 #if UNITY_EDITOR
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace Slate
@@ -442,7 +440,10 @@ namespace Slate
                 GUI.color = inspectedParameterIndex == index ? new Color(0.5f, 0.5f, 1f, 0.4f) : new Color(0, 0.5f, 0.5f, 0.5f);
                 GUI.Box(parameterRect, string.Empty, Styles.headerBoxStyle);
                 GUI.color = Color.white;
-                GUI.Label(parameterRect, string.Format(" <size=10><color=#252525>{0}</color></size>", parameter.DisplayName), Styles.leftLabel);
+                string parameterName = parameter.DisplayName;
+                if (parameter is IEmbeddedTimelineReferenceParameterBinding reference)
+                    parameterName = string.Concat(parameterName, "  [Ref: ", reference.ReferenceLabel, "]");
+                GUI.Label(parameterRect, string.Format(" <size=10><color=#252525>{0}</color></size>", parameterName), Styles.leftLabel);
                 if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
                 {
                     inspectedParameterId = inspectedParameterIndex == index ? string.Empty : parameter.ParameterId;
@@ -454,6 +455,12 @@ namespace Slate
             {
                 var parameter = clip.Parameters[inspectedParameterIndex];
                 var editor = CutsceneEditorSurface.current;
+                if (parameter is IEmbeddedTimelineReferenceParameterBinding reference)
+                {
+                    var referenceRect = new Rect(expansionRect.xMin + 4, nextY + 4, expansionRect.width - 8, 22f);
+                    GUI.Label(referenceRect, string.Concat("Reference: ", reference.ReferenceLabel), Styles.leftLabel);
+                    return;
+                }
                 float localTime = Mathf.Clamp(
                     (editor?.EmbeddedCurrentTime() ?? clip.StartTime) - clip.StartTime,
                     0f,
@@ -512,6 +519,7 @@ namespace Slate
                 return;
             var editor = CutsceneEditorSurface.current;
             var curves = clip.Parameters
+                .Where(parameter => !(parameter is IEmbeddedTimelineReferenceParameterBinding))
                 .Where(parameter => parameter?.Curves != null)
                 .SelectMany(parameter => parameter.Curves)
                 .Where(curve => curve?.Curve != null)
@@ -585,16 +593,6 @@ namespace Slate
             if (finalPosRect.width <= 5f)
                 return;
 
-            if (clip is IEmbeddedTimelineMotionSourceBinding source)
-            {
-                const float sourceHeight = 84f;
-                Rect sourceRect = Rect.MinMaxRect(finalPosRect.xMin, finalPosRect.yMin, finalPosRect.xMax, finalPosRect.yMin + sourceHeight);
-                DrawMotionSource(sourceRect, source);
-                finalPosRect.yMin = sourceRect.yMax + 2f;
-                if (finalPosRect.height <= 5f)
-                    return;
-            }
-
             IEmbeddedTimelineParameterBinding selectedParameter = null;
             if (!string.IsNullOrEmpty(inspectedParameterId))
             {
@@ -616,7 +614,10 @@ namespace Slate
                     GUI.color = Color.black.WithAlpha(0.05f);
                     GUI.DrawTexture(parameterRect, Texture2D.whiteTexture);
                     GUI.color = Color.white;
-                    GUI.Label(parameterRect, string.Format(" <size=10>{0}</size>", parameter.DisplayName), Styles.leftLabel);
+                    string parameterName = parameter.DisplayName;
+                    if (parameter is IEmbeddedTimelineReferenceParameterBinding reference)
+                        parameterName = string.Concat(parameterName, "  [Ref: ", reference.ReferenceLabel, "]");
+                    GUI.Label(parameterRect, string.Format(" <size=10>{0}</size>", parameterName), Styles.leftLabel);
                     DopeSheetEditor.DrawDopeSheet(
                         parameter.Curves == null
                             ? Array.Empty<AnimationCurve>()
@@ -624,7 +625,11 @@ namespace Slate
                         CurveEditor.CreateEmbeddedOwner(
                             editor,
                             string.Concat(clip.AuthoringId, ":dope:", parameter.ParameterId)),
-                        CreateDopeSheetContext(clip, parameter, editor),
+                        CreateDopeSheetContext(
+                            clip,
+                            parameter,
+                            editor,
+                            parameter is IEmbeddedTimelineReferenceParameterBinding),
                         parameterRect,
                         finalTimeRect.xMin,
                         finalTimeRect.width,
@@ -649,7 +654,11 @@ namespace Slate
                 CurveEditor.CreateEmbeddedOwner(
                     currentEditor,
                     string.Concat(clip.AuthoringId, ":dope:", selectedParameter.ParameterId)),
-                CreateDopeSheetContext(clip, selectedParameter, currentEditor),
+                 CreateDopeSheetContext(
+                     clip,
+                     selectedParameter,
+                     currentEditor,
+                     selectedParameter is IEmbeddedTimelineReferenceParameterBinding),
                 dopeRect,
                 finalTimeRect.xMin,
                 finalTimeRect.width,
@@ -663,41 +672,15 @@ namespace Slate
                     string.Concat(clip.AuthoringId, ":", selectedParameter.ParameterId)),
                 curveRect,
                 finalTimeRect,
-                () => currentEditor?.ApplyEmbeddedCommand(() => { }, "Edit Timeline Curve"));
-        }
-
-        static void DrawMotionSource(Rect rect, IEmbeddedTimelineMotionSourceBinding source)
-        {
-            GUI.color = Color.black.WithAlpha(0.22f);
-            GUI.Box(rect, string.Empty, Styles.clipBoxFooterStyle);
-            GUI.color = Color.white;
-            Rect titleRect = new Rect(rect.xMin + 4f, rect.yMin + 2f, rect.width - 92f, 16f);
-            string range = string.Format("{0:0.###}-{1:0.###}s", source.SourceStartTime, source.SourceEndTime);
-            string version = string.IsNullOrEmpty(source.SourceVersion) ? "unsaved" : source.SourceVersion;
-            GUI.Label(titleRect, string.Format("Source XYZ/Yaw  {0}  [{1}]  {2}", source.SourceName, range, version), Styles.leftLabel);
-            if (GUI.Button(new Rect(rect.xMax - 84f, rect.yMin + 1f, 80f, 18f), "Open Source"))
-                source.OpenSource();
-
-            IReadOnlyList<string> names = source.SourceCurveNames;
-            IReadOnlyList<AnimationCurve> curves = source.SourceCurves;
-            if (names == null || curves == null)
-                return;
-            bool wasEnabled = GUI.enabled;
-            GUI.enabled = false;
-            float rowWidth = Mathf.Max(1f, (rect.width - 8f) / Mathf.Max(1, curves.Count));
-            for (int index = 0; index < curves.Count; index++)
-            {
-                Rect curveRect = new Rect(rect.xMin + 4f + rowWidth * index, rect.yMin + 23f, rowWidth - 4f, 56f);
-                string label = index < names.Count ? names[index] : string.Empty;
-                EditorGUI.CurveField(curveRect, new GUIContent(label), curves[index]);
-            }
-            GUI.enabled = wasEnabled;
+                 () => currentEditor?.ApplyEmbeddedCommand(() => { }, "Edit Timeline Curve"),
+                 selectedParameter is IEmbeddedTimelineReferenceParameterBinding);
         }
 
         static DopeSheetEditor.EditorContext CreateDopeSheetContext(
             IEmbeddedTimelineClipBinding clip,
             IEmbeddedTimelineParameterBinding parameter,
-            CutsceneEditorSurface editor)
+            CutsceneEditorSurface editor,
+            bool readOnly = false)
         {
             return new DopeSheetEditor.EditorContext
             {
@@ -717,7 +700,8 @@ namespace Slate
                 },
                 AddIdentityKey = parameter.AddKey,
                 RecordUndo = () => editor?.BeginEmbeddedEdit("Edit Timeline Keys"),
-                NotifyChanged = () => editor?.CommitEmbeddedEdit()
+                NotifyChanged = () => editor?.CommitEmbeddedEdit(),
+                IsReadOnly = readOnly
             };
         }
 

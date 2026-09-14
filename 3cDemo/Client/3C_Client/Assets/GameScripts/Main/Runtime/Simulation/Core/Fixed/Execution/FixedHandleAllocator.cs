@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedEvaluationFrame m_Frame;
 
-        public FixedHandleAllocator(FixedProgramAccess access, FixedEvaluationFrame frame)
+        public FixedHandleAllocator(FixedGameplayAbilityExecutionAccess access, FixedEvaluationFrame frame)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));

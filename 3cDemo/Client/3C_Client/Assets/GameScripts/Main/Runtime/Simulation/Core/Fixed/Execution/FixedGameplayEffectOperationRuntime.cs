@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedGameplayEffectTarget m_GameplayEffects;
 
         public FixedGameplayEffectOperationRuntime(
-            FixedProgramAccess access,
+            FixedGameplayAbilityExecutionAccess access,
             FixedEvaluationFrame frame,
             IFixedActionContextReader actions,
             FixedHandleAllocator handles,
@@ -300,7 +300,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramCatalogEntry found = null;
             foreach (ProgramReference reference in References(operation.Handle, ProgramReferenceKind.CatalogEntry))
             {
-                ProgramCatalogEntry candidate = m_Program.CatalogEntries[reference.TargetIndex];
+                ProgramCatalogEntry candidate = m_Ability.CatalogEntries[reference.TargetIndex];
                 if (candidate.Kind != ProgramCatalogEntryKind.GameplayEffect)
                     continue;
                 if (found != null)
@@ -324,7 +324,7 @@ namespace ThirdPersonSimulation.Fixed
         SimulationOperation RootOperation()
         {
             OperationHandle handle = m_Layout.RootOperation;
-            return m_Program.Operations[handle.Value];
+            return m_Ability.Operations[handle.Value];
         }
 
     }

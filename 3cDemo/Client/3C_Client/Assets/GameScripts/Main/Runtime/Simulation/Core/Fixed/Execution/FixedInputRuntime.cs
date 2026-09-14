@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedEvaluationFrame m_Frame;
 
         public FixedInputRuntime(
-            FixedProgramAccess access,
+            FixedGameplayAbilityExecutionAccess access,
             FixedEvaluationFrame frame)
             : base(access)
         {

@@ -260,7 +260,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly GameplayAbilityExecutionManager<CharacterStateValue> m_SkillExecution;
 
         public FixedActionStateStore(
-            FixedProgramAccess access,
+            FixedGameplayAbilityExecutionAccess access,
             FixedEvaluationFrame frame)
             : base(access)
         {
@@ -765,14 +765,14 @@ namespace ThirdPersonSimulation.Fixed
         bool IGameplayAbilityExecutionStorage<CharacterStateValue>.IsValueValid(
             int slotIndex,
             CharacterStateValue value) =>
-            value.Kind == m_Program.StateSlots[slotIndex].ValueKind;
+            value.Kind == m_Ability.StateSlots[slotIndex].ValueKind;
 
         CharacterStateValue IGameplayAbilityExecutionStorage<CharacterStateValue>.DefaultValue(int slotIndex)
         {
-            ProgramStateSlot slot = m_Program.StateSlots[slotIndex];
+            ProgramStateSlot slot = m_Ability.StateSlots[slotIndex];
             return slot.DefaultConstantIndex >= 0
                 ? CharacterStateValue.FromConstant(
-                    m_Program.Constants[slot.DefaultConstantIndex],
+                    m_Ability.Constants[slot.DefaultConstantIndex],
                     slot.ValueKind)
                 : CharacterStateValue.Default(slot.ValueKind);
         }

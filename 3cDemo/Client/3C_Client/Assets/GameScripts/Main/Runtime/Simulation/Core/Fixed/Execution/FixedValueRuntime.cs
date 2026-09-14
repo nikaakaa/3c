@@ -81,7 +81,7 @@ namespace ThirdPersonSimulation.Fixed
         int m_InputBufferDepth;
 
         public FixedValueRuntime(
-            FixedProgramAccess access,
+            FixedGameplayAbilityExecutionAccess access,
             IFixedInputPort input,
             IFixedActionContextReader actions,
             IFixedActionAdmissionQuery actionAdmission,
@@ -229,7 +229,7 @@ namespace ThirdPersonSimulation.Fixed
 						break;
 					case SimulationOperationCode.Constant:
 						result = operation.ConstantReferences.Count > 0
-							? ValueFromConstant(m_Program.Constants[operation.ConstantReferences[0]])
+							? ValueFromConstant(m_Ability.Constants[operation.ConstantReferences[0]])
 							: CharacterStateValue.FromBoolean(false);
 						break;
 					default:
@@ -298,7 +298,7 @@ namespace ThirdPersonSimulation.Fixed
             using FixedValueInputLease values = ReadInputs(cursor, operation);
             if (values.Count == 0)
                 return false;
-            ProgramStateValueKind expected = m_Program.StateSlots[reference.TargetIndex].ValueKind;
+            ProgramStateValueKind expected = m_Ability.StateSlots[reference.TargetIndex].ValueKind;
             m_Blackboard.Write(cursor, operation, reference.TargetIndex, ConvertValue(values[0], expected));
             return true;
         }
@@ -319,12 +319,12 @@ namespace ThirdPersonSimulation.Fixed
                     CompiledValueInputBinding input = inputs[i];
                     CharacterStateValue value = input.SourceKind == CompiledValueInputSourceKind.Operation
                         ? Evaluate(cursor, input.SourceOperation, m_Layout.ValueSourceOutputPort(input))
-                        : ValueFromConstant(m_Program.Constants[input.ConstantIndex]);
+                        : ValueFromConstant(m_Ability.Constants[input.ConstantIndex]);
                     buffer.Values.Add(value);
                     if (!cursor.IsPredictiveEvaluation && (m_Frame.Trace.CaptureValues ||
                         m_Frame.Trace.CaptureControlFlow && input.SourceKind == CompiledValueInputSourceKind.Operation))
                     {
-                        string port = CharacterGameplayValuePortContracts.Require(operation.Code, operation.Handle, m_Program.GraphCallFrames)
+                        string port = CharacterGameplayValuePortContracts.Require(operation.Code, operation.Handle, m_Ability.GraphCallFrames)
                             .Inputs[input.TargetPortIndex].Identity;
                         m_Frame.Trace.AddValue(operation, port, ProgramValuePortDirection.Input, value);
                         m_Frame.Trace.AddValueEdge(operation, port);
@@ -384,7 +384,7 @@ namespace ThirdPersonSimulation.Fixed
             if (binding == null)
                 throw new InvalidOperationException($"Graph call frame '{frame.Identity}' has no output port '{outputPort}'.");
             if (cursor.ReadStatus(frame.EntryOperation) != OperationRunnableStatus.Success)
-                return CharacterStateValue.Default(m_Program.StateSlots[binding.StateSlot].ValueKind);
+                return CharacterStateValue.Default(m_Ability.StateSlots[binding.StateSlot].ValueKind);
             return m_Blackboard.ReadGraphCallParameter(binding.StateSlot);
         }
 

@@ -105,7 +105,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly Stack<SimulationTimelineBlackboardContext> m_TimelineBlackboardContexts;
 
         public FixedBlackboardRuntime(
-            FixedProgramAccess access,
+            FixedGameplayAbilityExecutionAccess access,
             FixedStatePort state,
             FixedEvaluationFrame frame,
             IFixedActionContextReader actions,
@@ -142,8 +142,8 @@ namespace ThirdPersonSimulation.Fixed
         public void WriteGraphCallParameter(int valueSlot, CharacterStateValue value)
         {
             SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
-            if (value.Kind != m_Program.StateSlots[valueSlot].ValueKind)
-                throw new InvalidOperationException($"Graph call parameter state '{valueSlot}' expects '{m_Program.StateSlots[valueSlot].ValueKind}', received '{value.Kind}'.");
+            if (value.Kind != m_Ability.StateSlots[valueSlot].ValueKind)
+                throw new InvalidOperationException($"Graph call parameter state '{valueSlot}' expects '{m_Ability.StateSlots[valueSlot].ValueKind}', received '{value.Kind}'.");
             m_State.Set(group.Value, value);
         }
 
@@ -239,9 +239,9 @@ namespace ThirdPersonSimulation.Fixed
             out CharacterStateValue value)
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
-            for (int i = 0; i < m_Program.GraphCallFrames.Count; i++)
+            for (int i = 0; i < m_Ability.GraphCallFrames.Count; i++)
             {
-                ProgramGraphCallFrame frame = m_Program.GraphCallFrames[i];
+                ProgramGraphCallFrame frame = m_Ability.GraphCallFrames[i];
                 if (!cursor.IsActive(frame.OwnerOperation))
                     continue;
                 for (int bindingIndex = 0; bindingIndex < frame.Inputs.Count; bindingIndex++)
@@ -267,7 +267,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramScopeLayout scope = group.Scope;
             ProgramBlackboardLifetime lifetime = group.LifetimeKind;
             if (lifetime == ProgramBlackboardLifetime.Config)
-                throw new InvalidOperationException($"Blackboard config '{m_Program.StateSlots[valueSlot].OwnerIdentity}' is read-only.");
+                throw new InvalidOperationException($"Blackboard config '{m_Ability.StateSlots[valueSlot].OwnerIdentity}' is read-only.");
             BlackboardOwnerToken expected = ResolveBlackboardOwnerToken(cursor, operation, group, true, out FixedActionInstanceState action);
             BlackboardOwnerToken current = m_State.Get(group.OwnerToken).BlackboardOwnerToken;
             if (current != expected)
@@ -343,7 +343,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (!action.IsActive)
                 {
                     string timelineContext = GetStringConstant(
-                        m_Program.Operations[timeline.Timeline.Value],
+                        m_Ability.Operations[timeline.Timeline.Value],
                         OperationNamedConstant.ActionContext,
                         string.Empty);
                     if (!string.IsNullOrEmpty(timelineContext))
@@ -432,7 +432,7 @@ namespace ThirdPersonSimulation.Fixed
             if (!action.IsActive)
             {
                 SimulationTimelineBlackboardContext timeline = m_TimelineBlackboardContexts.Peek();
-                SimulationOperation timelineOperation = m_Program.Operations[timeline.Timeline.Value];
+                SimulationOperation timelineOperation = m_Ability.Operations[timeline.Timeline.Value];
                 string timelineContext = GetStringConstant(
                     timelineOperation,
                     OperationNamedConstant.ActionContext,
@@ -569,8 +569,8 @@ namespace ThirdPersonSimulation.Fixed
 
         CharacterStateValue DefaultValue(SimulationBlackboardSlotGroup group)
         {
-            ProgramStateSlot value = m_Program.StateSlots[group.Value];
-            return CharacterStateValue.FromConstant(m_Program.Constants[value.DefaultConstantIndex], value.ValueKind);
+            ProgramStateSlot value = m_Ability.StateSlots[group.Value];
+            return CharacterStateValue.FromConstant(m_Ability.Constants[value.DefaultConstantIndex], value.ValueKind);
         }
 
         void MaterializeGroup(SimulationBlackboardSlotGroup group, BlackboardOwnerToken ownerToken)
@@ -582,7 +582,7 @@ namespace ThirdPersonSimulation.Fixed
 
         SimulationBlackboardSlotGroup RequireBlackboardGroup(int valueSlot)
         {
-            ProgramStateSlot value = m_Program.StateSlots[valueSlot];
+            ProgramStateSlot value = m_Ability.StateSlots[valueSlot];
             if (value.Semantic != ProgramStateSemantic.BlackboardValue)
                 throw new InvalidOperationException($"State slot '{valueSlot}' is not a Blackboard value.");
             return Access.Services.RequireBlackboardGroup(value.OwnerIdentity);

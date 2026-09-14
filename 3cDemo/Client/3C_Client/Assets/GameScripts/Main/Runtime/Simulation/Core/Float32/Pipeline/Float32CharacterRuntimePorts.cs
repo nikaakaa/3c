@@ -121,6 +121,54 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         public GameplayContentHash GameplayContentHash { get; }
 
+        public Float32CharacterRuntimeState CreateInitialState(int actorIndex)
+        {
+            if (actorIndex < 0 || actorIndex >= Roster.Count)
+                throw new ArgumentOutOfRangeException(nameof(actorIndex));
+            SimulationActorBinding actor = Roster[actorIndex];
+            CharacterControlModuleContract control = ControlModules.RequireContract(actor.ControlRuntimeBinding.ModuleId);
+            CharacterControlRuntimeState controlState = CharacterControlRuntimeState.CreateInitial(
+                actor.ControlRuntimeBinding,
+                control);
+            Float32GameplayEffectRuntimeCatalog effectCatalog = actor.GameplayEffectRuntimeBinding == null
+                ? null
+                : new Float32GameplayEffectRuntimeCatalog(actor.GameplayEffectRuntimeBinding);
+            GameplayEffectStateAggregate effectState = effectCatalog == null
+                ? null
+                : GameplayEffectStateAggregate.CreateInitial(effectCatalog);
+            EquipmentStateAggregate equipmentState = null;
+            CreateEquipmentInitialState(actor, out equipmentState);
+            return Float32CharacterRuntimeState.CreateInitial(
+                actor.AbilityInstallations,
+                NumericProfile,
+                new GameplayContentHash(actor.GameplayContentHash),
+                controlState,
+                effectState,
+                equipmentState);
+        }
+
+        static void CreateEquipmentInitialState(
+            SimulationActorBinding actor,
+            out EquipmentStateAggregate equipmentState)
+        {
+            equipmentState = null;
+            for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
+            {
+                Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
+                if (!installation.Data.Capabilities.HasGameplayCapability("Equipment"))
+                    continue;
+                if (actor.EquipmentRuntimeBinding == null)
+                    throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
+                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
+                    actor.EquipmentRuntimeBinding,
+                    installation.Data.CatalogEntries,
+                    installation.Data.References,
+                    installation.Data.Producers);
+                equipmentState = EquipmentStateAggregate.CreateInitial(layout);
+                return;
+            }
+        }
+
         static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)
         {
             var result = new ActorId[values.Count];

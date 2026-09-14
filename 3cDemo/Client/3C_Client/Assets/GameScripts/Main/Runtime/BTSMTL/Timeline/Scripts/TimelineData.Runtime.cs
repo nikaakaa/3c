@@ -446,10 +446,25 @@ namespace BTSMTL.Timeline
         {
             if (!SerializedOwner || string.IsNullOrEmpty(SerializedPropertyPath))
                 throw new InvalidOperationException($"TimelineData {Name} is missing serialized owner/path.");
-            UnityEditor.Undo.RegisterCompleteObjectUndo(SerializedOwner, $"Timeline: {name}");
-            SerializedTimeline.Update();
-            action?.Invoke();
-            UnityEditor.EditorUtility.SetDirty(SerializedOwner);
+            UnityEditor.Undo.IncrementCurrentGroup();
+            int undoGroup = UnityEditor.Undo.GetCurrentGroup();
+            string undoName = $"Timeline: {name}";
+            UnityEditor.Undo.SetCurrentGroupName(undoName);
+            UnityEditor.Undo.RegisterCompleteObjectUndo(SerializedOwner, undoName);
+            try
+            {
+                UpdateSerializedTimeline();
+                action?.Invoke();
+                UnityEditor.EditorUtility.SetDirty(SerializedOwner);
+                UnityEditor.Undo.CollapseUndoOperations(undoGroup);
+            }
+            catch
+            {
+                UnityEditor.Undo.FlushUndoRecordObjects();
+                UnityEditor.Undo.RevertAllDownToGroup(undoGroup);
+                UpdateSerializedTimeline();
+                throw;
+            }
         }
         public void UpdateSerializedTimeline()
         {

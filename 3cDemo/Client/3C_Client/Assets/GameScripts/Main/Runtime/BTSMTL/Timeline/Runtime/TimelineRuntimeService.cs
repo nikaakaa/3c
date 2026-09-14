@@ -85,6 +85,30 @@ namespace BTSMTL.Timeline.Runtime
                 error = "timeline_runtime_request_invalid";
                 return false;
             }
+            if (sourceRuntimeGraph != null)
+            {
+                if (!sourceActivation.IsValid)
+                {
+                    error = "timeline_source_activation_invalid";
+                    return false;
+                }
+                if (!string.Equals(
+                        sourceActivation.AuthoringRoute.LeafGraphAuthoringId,
+                        sourceRuntimeGraph.GraphAuthoringId,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(
+                        sourceActivation.Source.GraphAuthoringId,
+                        sourceRuntimeGraph.GraphAuthoringId,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(
+                        sourceActivation.Source.ElementAuthoringId,
+                        sourceId,
+                        StringComparison.Ordinal))
+                {
+                    error = "timeline_source_activation_mismatch";
+                    return false;
+                }
+            }
             if (!m_CallBindingSource.TryCreateExecutionIdentity(
                     sourceId,
                     sourceName,

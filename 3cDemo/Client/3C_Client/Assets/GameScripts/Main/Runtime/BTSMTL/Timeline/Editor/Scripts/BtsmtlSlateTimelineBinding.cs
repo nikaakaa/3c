@@ -192,8 +192,13 @@ namespace BTSMTL.Timeline.Editor
 
         public void AddClip(IEmbeddedTimelineTrackBinding track, int frame)
         {
-            if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
+            if (IsReadOnly)
                 return;
+            if (!(track is BtsmtlTimelineTrackBinding formalTrack))
+            {
+                ReportIssue("Add Clip 需要正式 Timeline Track。");
+                return;
+            }
             CapturePopupPosition();
             ShowAddClipMenu(formalTrack.Source.AuthoringId, frame);
         }
@@ -596,7 +601,10 @@ namespace BTSMTL.Timeline.Editor
         {
             if (!m_Tracks.TryGetValue(trackAuthoringId ?? string.Empty, out BtsmtlTimelineTrackBinding track) ||
                 !ContractCatalog.TryGetTrack(track.Source.ContractKind, out TimelineTrackContract contract))
+            {
+                ReportIssue("Add Clip 找不到正式 Track contract。");
                 return;
+            }
             var menu = new GenericMenu();
             for (int index = 0; index < contract.AllowedClipKinds.Count; index++)
             {
@@ -643,7 +651,10 @@ namespace BTSMTL.Timeline.Editor
                 return false;
             }
             if (!m_Tracks.TryGetValue(request.TrackAuthoringId, out BtsmtlTimelineTrackBinding track))
+            {
+                ReportIssue("Add Clip 的目标 Track 已失效。");
                 return false;
+            }
             try
             {
                 Clip added = null;

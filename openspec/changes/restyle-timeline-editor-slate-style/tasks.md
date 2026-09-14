@@ -36,7 +36,7 @@
 
 - [x] 3.1 打开请求显式携带 owner contract composition，Add Track 候选来自正式 catalog/type metadata，收集 Track 必填字段
 - [x] 3.2 接通各 Track 允许的 Add Clip 输入：Animation 资源、TreeClip ownership/来源、Motion/Camera/Cue/Scene typed binding；基础 Slate UI 只传递资源和 binding identity，Tree contract 由正式 Track 工厂解析来源
-- [x] 3.3 在唯一 Session 事务内创建正式对象；合法空 Track 可保存，取消 picker/输入非法/owner 过期不留半成品或 Undo；Add Track/Add Clip 的 owner 过期现在通过正式 AuthoringIssue 通知
+- [x] 3.3 在唯一 Session 事务内创建正式对象；合法空 Track 可保存，取消 picker/输入非法/owner 过期不留半成品或 Undo；Add Track/Add Clip 的 owner 过期和失效 Track contract 现在通过正式 AuthoringIssue 通知
 - [x] 3.4 用 Slate Surface 的“＋轨道”和轨道右键“在第 N 帧添加 Clip”替换原生无正式身份创建入口，成功后恢复新对象选择
 
 ## 4. 帧几何

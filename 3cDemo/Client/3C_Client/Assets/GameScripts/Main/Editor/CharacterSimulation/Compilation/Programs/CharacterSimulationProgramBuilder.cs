@@ -124,7 +124,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly HashSet<string> m_GameplayCapabilities = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<ProgramStateValueKind, int> m_DefaultConstants = new Dictionary<ProgramStateValueKind, int>();
         WorldCapability m_RequiredWorldCapabilities;
-        CharacterBodyMotionBinding m_BodyMotion;
 
         public CharacterSimulationProgramBuilder(
             ProgramId programId,
@@ -140,8 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_OperationSetVersion = operationSetVersion;
             m_TickRate = tickRate;
             m_SourceRevision = sourceRevision;
-            if (!root.IsValid)
-                throw new ArgumentException("Simulation Program root descriptor is invalid.", nameof(root));
+            if (!root.IsValid || !root.IsAbility)
+                throw new ArgumentException("Ability semantic Builder requires an Ability root descriptor.", nameof(root));
             m_Root = root;
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
             m_OutputChannels.Add(new ProgramOutputChannelLayout(0, "Gameplay", ProgramOutputChannelKind.GameplayFact));
@@ -537,15 +536,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return index;
         }
 
-        public void SetBodyMotion(CharacterBodyMotionBinding descriptor, CharacterSimulationSourceLocation source)
-        {
-            if (m_BodyMotion != null)
-                throw new InvalidOperationException("Body Motion descriptor was already emitted.");
-            m_BodyMotion = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
-            m_RequiredWorldCapabilities |= descriptor.RequiredWorldCapability;
-            AddSourceMap(ProgramSourceTargetKind.BodyMotion, 0, source);
-        }
-
         public CharacterGameplaySemanticIr Build()
         {
             ValidateSingleChildControlFlow();
@@ -558,12 +548,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             catch (Exception exception)
             {
-                m_Report.Error("program_root_reference_invalid", m_ProgramId.Value, exception.Message);
+                m_Report.Error("ability_root_reference_invalid", m_ProgramId.Value, exception.Message);
             }
-            if (m_Root.IsCharacter && m_BodyMotion == null)
-                m_Report.Error("body_motion_missing", m_ProgramId.Value, "Body Motion descriptor is required.");
-            if (m_Root.IsTimeline && m_BodyMotion != null)
-                m_Report.Error("timeline_body_motion_forbidden", m_ProgramId.Value, "Timeline root cannot declare Character Body Motion.");
             if (!m_Report.IsValid)
                 return null;
             try
@@ -578,7 +564,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Root);
                 return new CharacterGameplaySemanticIr(
                     manifest,
-                    m_BodyMotion,
+                    null,
                     m_Operations,
                     m_Literals,
                     m_ConstantInputBindings,
@@ -595,7 +581,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             catch (Exception exception)
             {
-                m_Report.Error("program_invalid", m_ProgramId.Value, exception.Message);
+                m_Report.Error("ability_invalid", m_ProgramId.Value, exception.Message);
                 return null;
             }
         }

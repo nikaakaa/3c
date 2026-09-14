@@ -2731,6 +2731,7 @@ namespace Slate
             Func<TGroup, bool> getSelected,
             Func<TGroup, bool> getCollapsed,
             Func<TGroup, Color> getActiveColor,
+            Func<TGroup, MouseCursor> getCursor,
             Action<TGroup, bool> setCollapsed,
             Func<TGroup, Rect, bool> drawControls,
             Action<TGroup> drawContextMenu,
@@ -2754,7 +2755,7 @@ namespace Slate
                 DrawGroupListEntry(
                     e,
                     groupRect,
-                    MouseCursor.Link,
+                    getCursor(group),
                     getTitle(group),
                     getActive(group),
                     getSelected(group),
@@ -2826,6 +2827,7 @@ namespace Slate
                 group => ReferenceEquals(embeddedTimeline.Selected, group),
                 group => group.IsCollapsed,
                 group => Color.white,
+                group => formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
                 (group, value) => group.IsCollapsed = value,
                 (group, _) => false,
                 group =>

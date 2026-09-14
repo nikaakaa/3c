@@ -52,19 +52,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             CharacterPipelineDefinition definition =
                 NetworkTestProductAdapterUtility.RequireAsset<CharacterPipelineDefinition>(DefinitionPath);
-            CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
-                new CharacterSimulationBuildRequest(
-                    definition,
-                    CharacterSimulationBuildPublicationMode.Publish,
-                    new[] { CharacterSimulationTargetCatalog.Float32(definition) }));
-            if (!result.IsValid)
-                throw new InvalidOperationException("Unity Authority Float32 Character target failed to build.");
+            GameplayAbilityExecutionDataAssetPublisher.PublishDefinition(
+                definition,
+                "Assets/Configs/Character/Corin/Pipeline/Abilities");
         }
 
         public NetworkTestProductDescriptor CreateDescriptor(NetworkTestProductContext context)
         {
             CharacterPipelineDefinition definition = NetworkTestProductAdapterUtility.RequireAsset<CharacterPipelineDefinition>(DefinitionPath);
-            CharacterSimulationProgram program = definition.SimulationProgram.Load();
+            string characterContentIdentity = NetworkTestProductAdapterUtility.CharacterContentIdentity(definition);
             ServerAuthoritativeFantasyEndpointDefinition endpoint = NetworkTestProductAdapterUtility.RequireAsset<ServerAuthoritativeFantasyEndpointDefinition>(EndpointPath);
             ServerAuthoritativeLaunchDefinition launch = NetworkTestProductAdapterUtility.RequireAsset<ServerAuthoritativeLaunchDefinition>(LaunchPath);
             ServerAuthoritativeAuthoritySessionSourceDefinition source = NetworkTestProductAdapterUtility.RequireAsset<ServerAuthoritativeAuthoritySessionSourceDefinition>(AuthoritySourcePath);
@@ -84,7 +80,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 "Development, StrictMode",
                 ScriptingImplementation.Mono2x,
                 "3cDemo/Tools/ServerAuthoritative/Start-ServerAuthoritativeDemo.ps1",
-                NetworkTestProductAdapterUtility.ProgramIdentity(program),
+                characterContentIdentity,
                 source.Requirements.RequiredPipelineId.Value,
                 "thirdperson.network-model.server-authoritative-hybrid",
                 "thirdperson.runtime-topology.unity-authority.four-process.v1",

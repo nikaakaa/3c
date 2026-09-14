@@ -1,6 +1,8 @@
 using System;
 using ThirdPerson.NetworkTest.Contracts;
+using System.Collections.Generic;
 using System.IO;
+using ThirdPersonCharacter.Pipeline;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
@@ -9,8 +11,49 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     internal static class NetworkTestProductAdapterUtility
     {
-        public static string ProgramIdentity(CharacterSimulationProgram program) =>
-            $"program={program.Manifest.ProgramId.Value};compiler={program.Manifest.CompilerVersion};operations={program.Manifest.OperationSetVersion};numeric={program.Manifest.NumericProfile.Id.Value};abi={program.Manifest.NumericProfile.AbiVersion.Value};programHash={program.ProgramHash};layoutHash={program.LayoutHash};stateCodec={CharacterSimulationStateCodec.CodecIdentity};source={program.Manifest.SourceRevision.Value}";
+        public static string CharacterContentIdentity(CharacterPipelineDefinition definition)
+        {
+            if (!definition)
+                throw new ArgumentNullException(nameof(definition));
+            GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilities =
+                definition.LoadFloat32CharacterAbilities();
+            CharacterControlRuntimeBinding control = definition.BuildControlRuntimeBinding(
+                CharacterControlRuntimeModuleCatalog.Create());
+            CharacterBodyMotionBinding bodyMotion = definition.BuildBodyMotionRuntimeBinding();
+            CharacterGameplayEffectRuntimeBinding gameplayEffects = RequiresCapability(abilities, "GameplayEffect")
+                ? definition.BuildGameplayEffectRuntimeBinding()
+                : null;
+            CharacterEquipmentRuntimeBinding equipment = RequiresCapability(abilities, "Equipment")
+                ? definition.BuildEquipmentRuntimeBinding()
+                : null;
+            var parts = new List<string>
+            {
+                "float32-character-content/1",
+                control.BindingHash.ToString(),
+                bodyMotion.BindingHash.ToString(),
+                gameplayEffects?.BindingHash.ToString() ?? string.Empty,
+                equipment?.BindingHash.ToString() ?? string.Empty
+            };
+            for (int i = 0; i < abilities.Data.Count; i++)
+            {
+                Float32GameplayAbilityExecutionData ability = abilities.Data[i];
+                parts.Add(ability.AbilityId.Value);
+                parts.Add(ability.ContentHash.ToString());
+                parts.Add(ability.StateSchemaHash.ToString());
+                parts.Add(ability.ExecutionIdentity);
+            }
+            return $"character-content={StableHash.Compute(parts.ToArray())}";
+        }
+
+        static bool RequiresCapability(
+            GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilities,
+            string capability)
+        {
+            for (int i = 0; i < abilities.Data.Count; i++)
+                if (abilities.Data[i].Capabilities.HasGameplayCapability(capability))
+                    return true;
+            return false;
+        }
 
         public static NetworkTestProductManifestField Field(string key, string value) =>
             new NetworkTestProductManifestField { key = key, value = value };

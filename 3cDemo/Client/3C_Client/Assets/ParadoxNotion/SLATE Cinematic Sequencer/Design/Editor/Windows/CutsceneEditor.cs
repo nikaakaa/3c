@@ -4307,16 +4307,31 @@ namespace Slate
                 var menu = new GenericMenu();
                 IEmbeddedTimelineClipBinding formalClip = editorBinding.FormalClip;
                 if ( multiSelection != null && multiSelection.Contains(this) ) {
-                    menu.AddItem(new GUIContent("Delete Clips"), false, () =>
+                    var selectedFormalClips = multiSelection
+                        .Select(value => value.editorBinding.FormalClip)
+                        .Where(value => value != null)
+                        .ToArray();
+                    if (selectedFormalClips.Length != 0 && editor.embeddedTimeline != null)
                     {
-                        editor.SafeDoAction(() =>
+                        menu.AddItem(new GUIContent("Delete Clips"), false, () =>
                         {
-                            foreach (var act in multiSelection.Select(b => b.action).ToArray())
-                                (act.parent as CutsceneTrack).DeleteAction(act);
-                            editor.InitClipWrappers();
+                            editor.embeddedTimeline.DeleteClips(selectedFormalClips);
                             multiSelection = null;
                         });
-                    });
+                    }
+                    else
+                    {
+                        menu.AddItem(new GUIContent("Delete Clips"), false, () =>
+                        {
+                            editor.SafeDoAction(() =>
+                            {
+                                foreach (var act in multiSelection.Select(b => b.action).ToArray())
+                                    (act.parent as CutsceneTrack).DeleteAction(act);
+                                editor.InitClipWrappers();
+                                multiSelection = null;
+                            });
+                        });
+                    }
 
                     menu.ShowAsContext();
                     e.Use();

@@ -274,8 +274,8 @@ namespace ThirdPersonSimulation.Fixed
 		ActorId IEquipmentRuntimePort.ActorId => m_Frame.ActorId;
 		ulong IEquipmentRuntimePort.Tick => m_Frame.Tick.Value;
 		EquipmentProgramLayout IEquipmentRuntimePort.Layout => m_EquipmentLayout;
-		public EquipmentStateAggregate ReadState() => m_Frame.Transaction.GetEquipmentState();
-		public void WriteState(EquipmentStateAggregate state) => m_Frame.Transaction.SetEquipmentState(state);
+		public EquipmentStateAggregate ReadState() => m_Frame.DomainState.GetEquipmentState();
+		public void WriteState(EquipmentStateAggregate state) => m_Frame.DomainState.SetEquipmentState(state);
 		EquipmentChangeId IEquipmentRuntimePort.AllocateChangeId() => new EquipmentChangeId(m_Handles.Next());
 		bool IEquipmentRuntimePort.HasActiveActionConflict(EquipmentSlotState slot, ulong sourceActionInstanceId)
 		{
@@ -294,8 +294,8 @@ namespace ThirdPersonSimulation.Fixed
 		void IEquipmentRuntimePort.ResetLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
 		{
 			EquipmentProgramLocalState localState = m_EquipmentLayout.RequireLocalState(featureId, stateId);
-			m_Frame.Transaction.SetEquipmentState(
-				m_Frame.Transaction.GetEquipmentState().WithLocalState(featureId, stateId, localState.DefaultValue));
+			m_Frame.DomainState.SetEquipmentState(
+				m_Frame.DomainState.GetEquipmentState().WithLocalState(featureId, stateId, localState.DefaultValue));
 		}
 		void IEquipmentRuntimePort.SetTags(string sourceId, IReadOnlyList<string> tags) => m_GameplayEffects.SetEquipmentTags(sourceId, tags);
 		void IEquipmentRuntimePort.RemoveTags(string sourceId) => m_GameplayEffects.RemoveEquipmentTags(sourceId);
@@ -336,7 +336,7 @@ namespace ThirdPersonSimulation.Fixed
 			public MutationScope(FixedAbilityExecutionFrame frame)
 			{
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-				m_Savepoint = frame.Transaction.CreateSavepoint();
+				m_Savepoint = frame.DomainState.CreateSavepoint();
 			m_OutputSavepoint = frame.CreateOutputSavepoint();
                 m_Values = new CharacterStateValue[frame.Data.StateSlots.Count];
 			for (int i = 0; i < m_Values.Length; i++)
@@ -347,7 +347,7 @@ namespace ThirdPersonSimulation.Fixed
 			{
 				if (m_Completed)
 					throw new InvalidOperationException("Equipment mutation scope is already completed.");
-				m_Frame.Transaction.Release(m_Savepoint);
+				m_Frame.DomainState.Release(m_Savepoint);
 				m_Completed = true;
 			}
 
@@ -356,7 +356,7 @@ namespace ThirdPersonSimulation.Fixed
 				if (m_Completed)
 					return;
 			m_Frame.RestoreOutput(m_OutputSavepoint);
-			m_Frame.Transaction.Restore(m_Savepoint);
+			m_Frame.DomainState.Restore(m_Savepoint);
 			for (int i = 0; i < m_Values.Length; i++)
 				m_Frame.Transaction.Set(i, m_Values[i]);
 				m_Completed = true;

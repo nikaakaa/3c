@@ -207,30 +207,36 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedAbilityExecutionStateTransaction : IDisposable
     {
         FixedGameplayAbilityExecutionInstallation Installation { get; }
-        ActorId ActorId { get; }
-        SimulationTick Tick { get; }
         CharacterStateValue Get(int slotIndex);
         CharacterStateValue Get(TypedStateAddress address);
         void Set(int slotIndex, CharacterStateValue value);
         void Set(TypedStateAddress address, CharacterStateValue value);
         void Reset(int slotIndex);
+        GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState();
+        void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
+        SimulationInputRequestState GetInputRequest(string requestId);
+        void SetInputRequest(string requestId, SimulationInputRequestState state);
+        FixedActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation);
+        void SetTimelineRetainedActionContext(OperationHandle operation, FixedActionInstanceReference value);
+        FixedMotionWarpState GetMotionWarpState(OperationHandle operation);
+        void SetMotionWarpState(OperationHandle operation, FixedMotionWarpState value);
+        void Abort();
+    }
+
+    internal interface IFixedAbilityDomainStatePort
+    {
+        ActorId ActorId { get; }
+        SimulationTick Tick { get; }
+        int TickRate { get; }
         ulong NextEventSequence();
         ulong NextActionEventSequence();
         ulong NextHandleAllocator();
         ulong CaptureHandleAllocator();
         void RestoreHandleAllocator(ulong value);
-        GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState();
-        void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
-        SimulationInputRequestState GetInputRequest(string requestId);
-        void SetInputRequest(string requestId, SimulationInputRequestState state);
         IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
         void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
         IReadOnlyList<FixedActionInstanceState> GetActionInstances();
         void SetActionInstances(IReadOnlyList<FixedActionInstanceState> actions);
-        FixedActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation);
-        void SetTimelineRetainedActionContext(OperationHandle operation, FixedActionInstanceReference value);
-        FixedMotionWarpState GetMotionWarpState(OperationHandle operation);
-        void SetMotionWarpState(OperationHandle operation, FixedMotionWarpState value);
         SimulationGameplayEffectState GetGameplayEffectState(FixedGameplayEffectExecutionScratch scratch);
         GameplayEffectStateAggregate GetGameplayEffectAggregate();
         EquipmentStateAggregate GetEquipmentState();
@@ -242,7 +248,9 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityExecutionStateTransaction
+    internal sealed class FixedCharacterRuntimeStateTransaction :
+        IFixedAbilityExecutionStateTransaction,
+        IFixedAbilityDomainStatePort
     {
         readonly FixedGameplayAbilityExecutionInstallation m_Installation;
         readonly FixedGameplayAbilityExecutionData m_Ability;
@@ -304,6 +312,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedCharacterRuntimeState BaseState => m_BaseState;
         public ActorId ActorId => m_ActorId;
         public SimulationTick Tick => m_Tick;
+        public int TickRate => m_Installation.Data.TickRate;
 
         public CharacterStateValue Get(int slotIndex) => Get(m_Layout.Address(slotIndex));
 

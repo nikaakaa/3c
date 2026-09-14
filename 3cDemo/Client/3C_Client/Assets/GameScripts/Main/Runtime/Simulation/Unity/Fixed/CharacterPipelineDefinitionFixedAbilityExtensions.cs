@@ -1,6 +1,7 @@
 using System;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonSimulation;
+using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {

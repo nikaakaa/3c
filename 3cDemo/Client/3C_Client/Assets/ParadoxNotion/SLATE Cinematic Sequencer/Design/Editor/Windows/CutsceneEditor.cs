@@ -2642,6 +2642,46 @@ namespace Slate
             }
         }
 
+        void DrawGroupListEntry(
+            Event e,
+            Rect groupRect,
+            MouseCursor cursor,
+            string title,
+            bool active,
+            bool selected,
+            bool collapsed,
+            Color activeColor,
+            Action<bool> setCollapsed,
+            Func<bool> shouldDrawContextMenu,
+            Action drawContextMenu,
+            Action selectAndBeginDrag,
+            Func<bool> canDrop,
+            Action drawDropMarker,
+            Action completeDrop)
+        {
+            DrawGroupListHeaderFrame(
+                groupRect,
+                title,
+                active,
+                selected,
+                collapsed,
+                activeColor,
+                setCollapsed);
+            if (shouldDrawContextMenu != null && shouldDrawContextMenu())
+            {
+                drawContextMenu?.Invoke();
+                e.Use();
+            }
+            HandleGroupListInput(
+                e,
+                groupRect,
+                cursor,
+                selectAndBeginDrag,
+                canDrop,
+                drawDropMarker,
+                completeDrop);
+        }
+
         void ShowGroupsAndTracksList(Rect leftRect, IEmbeddedTimelineBinding timeline)
         {
             Event e = Event.current;
@@ -2692,30 +2732,27 @@ namespace Slate
                 Rect groupRect = new Rect(4, nextY, leftRect.width - GROUP_RIGHT_MARGIN - 4, GROUP_HEIGHT - 3);
                 nextY += GROUP_HEIGHT;
                 bool groupSelected = ReferenceEquals(embeddedTimeline.Selected, group);
-                DrawGroupListHeaderFrame(
+                DrawGroupListEntry(
+                    e,
                     groupRect,
+                    formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
                     string.Format("<b>{0}</b>", group.DisplayName),
                     group.IsActive,
                     groupSelected,
                     group.IsCollapsed,
                     Color.white,
-                    value => group.IsCollapsed = value);
-
-                HandleGroupListInput(
-                    e,
-                    groupRect,
-                    formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                    value => group.IsCollapsed = value,
+                    () => e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition),
+                    () =>
+                    {
+                        GenericMenu menu = new GenericMenu();
+                        menu.AddItem(new GUIContent("Add Track"), false, embeddedTimeline.AddTrack);
+                        menu.ShowAsContext();
+                    },
                     () => embeddedTimeline.Select(group),
                     () => false,
                     () => { },
                     () => { });
-                if (e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition))
-                {
-                    GenericMenu menu = new GenericMenu();
-                    menu.AddItem(new GUIContent("Add Track"), false, embeddedTimeline.AddTrack);
-                    menu.ShowAsContext();
-                    e.Use();
-                }
 
                 if (group.IsCollapsed)
                     continue;
@@ -2799,6 +2836,54 @@ namespace Slate
             GUI.enabled = true;
         }
 
+        void ShowNativeGroupContextMenu(CutsceneGroup group)
+        {
+            if (embeddedSurface && embeddedAddTrack != null)
+            {
+                embeddedAddTrack();
+                return;
+            }
+            var menu = new GenericMenu();
+            foreach (var _info in EditorTools.GetTypeMetaDerivedFrom(typeof(CutsceneTrack)))
+            {
+                var info = _info;
+                if (info.attachableTypes == null || !info.attachableTypes.Contains(group.GetType()))
+                    continue;
+                bool canAdd = !info.isUnique || group.tracks.Find(track => track.GetType() == info.type) == null;
+                string finalPath = string.IsNullOrEmpty(info.category) ? info.name : info.category + "/" + info.name;
+                if (canAdd)
+                    menu.AddItem(new GUIContent("Add Track/" + finalPath), false, () => group.AddTrack(info.type));
+                else
+                    menu.AddDisabledItem(new GUIContent("Add Track/" + finalPath));
+            }
+            if (group.CanAddTrack(copyTrack))
+                menu.AddItem(new GUIContent("Paste Track"), false, () => group.DuplicateTrack(copyTrack));
+            else
+                menu.AddDisabledItem(new GUIContent("Paste Track"));
+            menu.AddItem(new GUIContent("Disable Group"), !group.isActive, () => group.isActive = !group.isActive);
+            menu.AddItem(new GUIContent("Lock Group"), group.isLocked, () => group.isLocked = !group.isLocked);
+            if (!(group is DirectorGroup))
+            {
+                menu.AddItem(new GUIContent("Select Actor (Double Click)"), false, () => Selection.activeObject = group.actor);
+                menu.AddItem(new GUIContent("Replace Actor"), false, () => group.actor = null);
+                menu.AddItem(new GUIContent("Duplicate"), false, () =>
+                {
+                    cutscene.DuplicateGroup(group);
+                    InitClipWrappers();
+                });
+                menu.AddSeparator("/");
+                menu.AddItem(new GUIContent("Delete Group"), false, () =>
+                {
+                    if (EditorUtility.DisplayDialog("Delete Group", "Are you sure?", "YES", "NO!"))
+                    {
+                        cutscene.DeleteGroup(group);
+                        InitClipWrappers();
+                    }
+                });
+            }
+            menu.ShowAsContext();
+        }
+
         //...
         void ShowListGroups(Event e, ref float nextYPos) {
 
@@ -2817,16 +2902,6 @@ namespace Slate
                 //highligh?
                 var groupSelected = ( ReferenceEquals(group, CutsceneUtility.selectedObject) || group == pickedGroup );
                 var isVirtual = group.referenceMode == CutsceneGroup.ActorReferenceMode.UseInstanceHideOriginal;
-                DrawGroupListHeaderFrame(
-                    groupRect,
-                    string.Format("<b>{0} {1}</b>", group.name, isVirtual ? "(Ref)" : string.Empty),
-                    group.isActive,
-                    groupSelected,
-                    group.isCollapsed,
-                    isProSkin ? Color.yellow : Color.white,
-                    value => group.isCollapsed = value);
-
-
                 //GROUP CONTROLS
                 var plusClicked = false;
                 GUI.color = isProSkin ? Color.white.WithAlpha(0.5f) : new Color(0.2f, 0.2f, 0.2f);
@@ -2848,62 +2923,18 @@ namespace Slate
                 }
                 ///---
 
-                //CONTEXT
-                if ( ( e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition) ) || plusClicked ) {
-                    if ( embeddedSurface && embeddedAddTrack != null ) {
-                        embeddedAddTrack();
-                    }
-                    else {
-                        var menu = new GenericMenu();
-                        foreach ( var _info in EditorTools.GetTypeMetaDerivedFrom(typeof(CutsceneTrack)) ) {
-                            var info = _info;
-                            if ( info.attachableTypes == null || !info.attachableTypes.Contains(group.GetType()) ) {
-                                continue;
-                            }
-
-                            var canAdd = !info.isUnique || ( group.tracks.Find(track => track.GetType() == info.type) == null );
-                            var finalPath = string.IsNullOrEmpty(info.category) ? info.name : info.category + "/" + info.name;
-                            if ( canAdd ) {
-                                menu.AddItem(new GUIContent("Add Track/" + finalPath), false, () => { group.AddTrack(info.type); });
-                            } else {
-                                menu.AddDisabledItem(new GUIContent("Add Track/" + finalPath));
-                            }
-                        }
-                        if ( group.CanAddTrack(copyTrack) ) {
-                            menu.AddItem(new GUIContent("Paste Track"), false, () => { group.DuplicateTrack(copyTrack); });
-                        } else {
-                            menu.AddDisabledItem(new GUIContent("Paste Track"));
-                        }
-                        menu.AddItem(new GUIContent("Disable Group"), !group.isActive, () => { group.isActive = !group.isActive; });
-                        menu.AddItem(new GUIContent("Lock Group"), group.isLocked, () => { group.isLocked = !group.isLocked; });
-
-                        if ( !( group is DirectorGroup ) ) {
-                            menu.AddItem(new GUIContent("Select Actor (Double Click)"), false, () => { Selection.activeObject = group.actor; });
-                            menu.AddItem(new GUIContent("Replace Actor"), false, () => { group.actor = null; });
-                            menu.AddItem(new GUIContent("Duplicate"), false, () =>
-                                {
-                                    cutscene.DuplicateGroup(group);
-                                    InitClipWrappers();
-                                });
-                            menu.AddSeparator("/");
-                            menu.AddItem(new GUIContent("Delete Group"), false, () =>
-                                {
-                                    if ( EditorUtility.DisplayDialog("Delete Group", "Are you sure?", "YES", "NO!") ) {
-                                        cutscene.DeleteGroup(group);
-                                        InitClipWrappers();
-                                    }
-                                });
-                        }
-                        menu.ShowAsContext();
-                    }
-                    e.Use();
-                }
-
-
-                HandleGroupListInput(
+                DrawGroupListEntry(
                     e,
                     groupRect,
                     pickedGroup == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                    string.Format("<b>{0} {1}</b>", group.name, isVirtual ? "(Ref)" : string.Empty),
+                    group.isActive,
+                    groupSelected,
+                    group.isCollapsed,
+                    isProSkin ? Color.yellow : Color.white,
+                    value => group.isCollapsed = value,
+                    () => (e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition)) || plusClicked,
+                    () => ShowNativeGroupContextMenu(group),
                     () =>
                     {
                         CutsceneUtility.selectedObject = group;

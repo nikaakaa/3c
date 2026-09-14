@@ -296,6 +296,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 原有直接注入 `ICharacterPoseNativeNodeEvaluator` 的入口保留，两个入口都不生成默认 evaluator、不恢复旧 Program reader，也不切换第二运行路径。
 - 本步未运行 Unity/Build；正式 Source/Player/State/Blend/Constraint/Final handler 和共享 Host 接线仍未完成。
 
+## 2026-09-14 r3 删除旧 PortShape bridge 字段
+
+- 删除 `PoseCanvasEditorBridge.PortShape` 字段；编辑器 Hook 不再注册它，`NativePorts` 已统一从 `RuntimeShape` 取形状，避免留下可被重新接回的第二端口投影入口。
+- Graph/Node 其它作者 UI 与正式 Mutation 入口保持原样；本步不把作者规则投影误当成运行端口定义。
+- 本步未运行 Unity/Build；节点领域 handler 及共享 Host 接线仍未完成。
+
 ## 2026-09-14 r3 收口实例 Reset 生命周期
 
 - `CharacterPoseNativeResetResult` 增加 Reset 的 typed 成功/失败结果；同一实例只接受严格递增的 `ResetGeneration`。

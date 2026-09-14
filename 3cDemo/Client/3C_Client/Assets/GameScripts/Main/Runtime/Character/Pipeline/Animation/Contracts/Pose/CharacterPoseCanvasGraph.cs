@@ -104,6 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal T ReadNativeOutput<T>(
             CharacterPoseCanvasNode node,
             PosePortId portId)
+            where T : CharacterPoseNativePortValue
         {
             ICharacterPoseCanvasNativeRuntime runtime = m_NativeRuntime ??
                 throw new InvalidOperationException("Pose graph has no attached native runtime instance.");
@@ -579,7 +580,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal static System.Action<CharacterPoseCanvasGraph> VisualsRefresh;
         internal static System.Action<CharacterPoseCanvasGraph> Toolbar;
         internal static System.Action<CharacterPoseCanvasNode> BodyGUI;
-        internal static Func<CharacterPoseCanvasNode, IReadOnlyList<CharacterPosePortDefinition>> PortShape;
         internal static Func<CharacterPoseCanvasNode, GenericMenu> ContextMenu;
         internal static Func<CharacterPoseCanvasNode, bool> ChildSurface;
     }

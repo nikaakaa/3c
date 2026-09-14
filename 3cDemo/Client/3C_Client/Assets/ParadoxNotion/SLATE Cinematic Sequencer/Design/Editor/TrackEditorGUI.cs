@@ -379,7 +379,7 @@ namespace Slate
             Rect trackRect,
             IEmbeddedTimelineTrackBinding track,
             bool selected,
-            ref int inspectedParameterIndex)
+            ref string inspectedParameterId)
         {
             DrawDefaultInfoGUI(
                 trackRect,
@@ -406,26 +406,33 @@ namespace Slate
             if (clip == null)
             {
                 GUI.Label(expansionRect, "No Clip Selected", Styles.centerLabel);
-                inspectedParameterIndex = -1;
+                inspectedParameterId = string.Empty;
                 return;
             }
 
             if (clip.Parameters == null)
             {
                 GUI.Label(expansionRect, "Selected Clip Parameter Binding Unavailable", Styles.centerLabel);
-                inspectedParameterIndex = -1;
+                inspectedParameterId = string.Empty;
                 return;
             }
 
             if (clip.Parameters.Count == 0)
             {
                 GUI.Label(expansionRect, "Selected Clip Has No Timeline-local Curves", Styles.centerLabel);
-                inspectedParameterIndex = -1;
+                inspectedParameterId = string.Empty;
                 return;
             }
 
-            if (inspectedParameterIndex >= clip.Parameters.Count)
-                inspectedParameterIndex = -1;
+            int inspectedParameterIndex = -1;
+            for (int index = 0; index < clip.Parameters.Count; index++)
+                if (string.Equals(clip.Parameters[index].ParameterId, inspectedParameterId, StringComparison.Ordinal))
+                {
+                    inspectedParameterIndex = index;
+                    break;
+                }
+            if (inspectedParameterIndex < 0)
+                inspectedParameterId = string.Empty;
             float nextY = track.DefaultHeight + 5f;
             for (int index = 0; index < clip.Parameters.Count; index++)
             {
@@ -438,7 +445,7 @@ namespace Slate
                 GUI.Label(parameterRect, string.Format(" <size=10><color=#252525>{0}</color></size>", parameter.DisplayName), Styles.leftLabel);
                 if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
                 {
-                    inspectedParameterIndex = inspectedParameterIndex == index ? -1 : index;
+                    inspectedParameterId = inspectedParameterIndex == index ? string.Empty : parameter.ParameterId;
                     e.Use();
                 }
             }
@@ -491,12 +498,12 @@ namespace Slate
             Rect timeRect,
             System.Func<float, float> TimeToPos,
             IEmbeddedTimelineTrackBinding track,
-            ref int inspectedParameterIndex)
+            ref string inspectedParameterId)
         {
             if (!track.ShowCurves)
                 return;
             var curvesRect = Rect.MinMaxRect(posRect.xMin, posRect.yMin + track.DefaultHeight, posRect.xMax, posRect.yMax);
-            DrawClipCurves(e, curvesRect, timeRect, TimeToPos, track.SelectedClip, ref inspectedParameterIndex);
+            DrawClipCurves(e, curvesRect, timeRect, TimeToPos, track.SelectedClip, ref inspectedParameterId);
         }
 
         public static void DrawClipDopeSheet(IEmbeddedTimelineClipBinding clip, Rect rect)
@@ -528,7 +535,7 @@ namespace Slate
             Rect timeRect,
             System.Func<float, float> TimeToPos,
             IEmbeddedTimelineClipBinding clip,
-            ref int inspectedParameterIndex)
+            ref string inspectedParameterId)
         {
             GUI.color = Color.black.WithAlpha(0.1f);
             GUI.Box(posRect, string.Empty, Styles.timeBoxStyle);
@@ -538,6 +545,7 @@ namespace Slate
                 GUI.color = Color.white.WithAlpha(0.3f);
                 GUI.Label(posRect, "Select a Clip of this Track to view its Curves here", Styles.centerLabel);
                 GUI.color = Color.white;
+                inspectedParameterId = string.Empty;
                 return;
             }
 
@@ -546,6 +554,7 @@ namespace Slate
                 GUI.color = Color.white.WithAlpha(0.3f);
                 GUI.Label(posRect, "Selected Clip Parameter Binding Unavailable", Styles.centerLabel);
                 GUI.color = Color.white;
+                inspectedParameterId = string.Empty;
                 return;
             }
 
@@ -554,6 +563,7 @@ namespace Slate
                 GUI.color = Color.white.WithAlpha(0.3f);
                 GUI.Label(posRect, "Selected Clip Has No Timeline-local Curves", Styles.centerLabel);
                 GUI.color = Color.white;
+                inspectedParameterId = string.Empty;
                 return;
             }
 
@@ -585,9 +595,16 @@ namespace Slate
                     return;
             }
 
-            if (inspectedParameterIndex >= clip.Parameters.Count)
-                inspectedParameterIndex = -1;
-            if (inspectedParameterIndex < 0)
+            IEmbeddedTimelineParameterBinding selectedParameter = null;
+            if (!string.IsNullOrEmpty(inspectedParameterId))
+            {
+                string selectedParameterId = inspectedParameterId;
+                selectedParameter = clip.Parameters.FirstOrDefault(parameter =>
+                    string.Equals(parameter.ParameterId, selectedParameterId, StringComparison.Ordinal));
+            }
+            if (selectedParameter == null)
+                inspectedParameterId = string.Empty;
+            if (selectedParameter == null)
             {
                 float y = 5f;
                 for (int index = 0; index < clip.Parameters.Count; index++)
@@ -614,14 +631,13 @@ namespace Slate
                         true);
                     if (e.type == EventType.MouseDown && e.button == 0 && parameterRect.Contains(e.mousePosition))
                     {
-                        inspectedParameterIndex = index;
+                        inspectedParameterId = parameter.ParameterId;
                         e.Use();
                     }
                 }
                 return;
             }
 
-            var selectedParameter = clip.Parameters[inspectedParameterIndex];
             if (selectedParameter.Curves == null || selectedParameter.Curves.Count == 0)
                 return;
             var currentEditor = CutsceneEditorSurface.current;

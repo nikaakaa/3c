@@ -373,7 +373,7 @@ namespace Slate
         [System.NonSerialized] private float[] magnetSnapTimesCache;
         [System.NonSerialized] private List<GuideLine> pendingGuides;
         [System.NonSerialized] private System.Action postWindowsGUI;
-        [System.NonSerialized] private Dictionary<string, int> formalInspectedParameters;
+        [System.NonSerialized] private Dictionary<string, string> formalInspectedParameters;
         [System.NonSerialized] private IEmbeddedTimelineTrackBinding formalPickedTrack;
         [System.NonSerialized] private IEmbeddedTimelineSectionBinding formalDraggedSection;
         [System.NonSerialized] private bool formalSelectionHandled;
@@ -784,7 +784,7 @@ namespace Slate
             clipWrappersMap = null;
             interactingClip = null;
             multiSelection = null;
-            formalInspectedParameters = new Dictionary<string, int>(System.StringComparer.Ordinal);
+            formalInspectedParameters = new Dictionary<string, string>(System.StringComparer.Ordinal);
             formalPickedTrack = null;
             formalDraggedSection = null;
             cutscene = null;
@@ -2547,9 +2547,10 @@ namespace Slate
                     GUI.Box(trackRect, string.Empty, (GUIStyle)"flow node 0");
                     GUI.color = Color.white;
 
-                    int inspected = -1;
+                    string inspectionKey = FormalInspectionKey(track);
+                    string inspected = string.Empty;
                     if (formalInspectedParameters != null)
-                        formalInspectedParameters.TryGetValue(track.AuthoringId, out inspected);
+                        formalInspectedParameters.TryGetValue(inspectionKey, out inspected);
                     GUI.BeginGroup(trackRect);
                     TrackEditorGUI.DrawParametersInfoGUI(
                         e,
@@ -2559,7 +2560,7 @@ namespace Slate
                         ref inspected);
                     GUI.EndGroup();
                     if (formalInspectedParameters != null)
-                        formalInspectedParameters[track.AuthoringId] = inspected;
+                        formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
 
                     AddCursorRect(trackRect, formalPickedTrack == null ? MouseCursor.Link : MouseCursor.MoveArrow);
                     if (e.type == EventType.ContextClick && trackRect.Contains(e.mousePosition))
@@ -2840,6 +2841,14 @@ namespace Slate
 
 
         //middle - the actual timeline tracks
+        string FormalInspectionKey(IEmbeddedTimelineTrackBinding track)
+        {
+            return string.Concat(
+                track?.AuthoringId ?? string.Empty,
+                ":",
+                track?.SelectedClip?.AuthoringId ?? string.Empty);
+        }
+
         void ShowTimeLines(Rect centerRect) {
 
             if (embeddedTimeline != null)
@@ -3325,12 +3334,13 @@ namespace Slate
                         GUI.color = Color.white;
                     }
 
-                    int inspected = -1;
+                    string inspectionKey = FormalInspectionKey(track);
+                    string inspected = string.Empty;
                     if (formalInspectedParameters != null)
-                        formalInspectedParameters.TryGetValue(track.AuthoringId, out inspected);
+                        formalInspectedParameters.TryGetValue(inspectionKey, out inspected);
                     TrackEditorGUI.DrawClipCurves(e, trackPosRect, trackTimeRect, TimeToPos, track, ref inspected);
                     if (formalInspectedParameters != null)
-                        formalInspectedParameters[track.AuthoringId] = inspected;
+                        formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
 
                     if (e.type == EventType.ContextClick && Rect.MinMaxRect(trackPosRect.xMin, y, trackPosRect.xMax, y + track.DefaultHeight).Contains(e.mousePosition))
                     {

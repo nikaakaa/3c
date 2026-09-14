@@ -35,13 +35,27 @@
 
 ## 3. 逐项接线缺口
 
-### A01 两份绘制主体和简化拖动仍存在
+### A01 轨道列表主体仍分离，Clip主体已合并
 
-S的ShowGroupsAndTracksList(Rect)、ShowTimeLines(Rect)在embeddedTimeline非空时转同名重载并return。正式重载仍有自己的列表/Clip循环。原版拖动包含多选联动、Shift/Ripple、首尾磁吸及邻居处理；正式版只计算指针减formalDragOffset、单端吸附并Clamp到maxTime-length。
+S的ShowGroupsAndTracksList(Rect)、ShowTimeLines(Rect)在embeddedTimeline非空时仍转同名重载；左右轨道列表和轨道行内参数绘制仍有两份主体。Clip部分已在 `DrawTimelineClip` 收口为一份：native 与 formal 都通过同一个 `ActionClipWrapper`、`GUI.Window/GUI.DragWindow`、选中框、外部标题、相邻限制、多选、Shift/Ripple、双端磁吸和正式 binding 提交。旧的 `formalDragOffset` 和正式单端 Clamp 拖动路径已删除。
 
-影响：看起来是Slate，整块拖动行为却不是完整原版；Clip不能按原操作延伸到当前内容末端之外，多选/推移不能仅凭wrapper里有标志就认为工作。
+影响：Clip命中与拖动已经回到原生窗口事件链，但左侧轨道列表、行高/折叠/搜索、轨道按钮和拖放排序仍按来源分成两份；因此本结构项不能整体标记完成。
 
-修正：原函数主体就地共用，保留原Rect、GUI.Window/DragWindow和事件算法，数据与业务谓词接正式binding/contract。Source的Reject/Parallel/Blend决定合法放置，不能用当前总时长或Slate组件类型代替。绑定StartTime/EndTime的行为也必须匹配操作：目前B.StartTime只改起点，原ActionClip起点移动会保持长度；移植原StartTime+=delta时若不处理这一差异会把移动变成裁剪。移动保持时长，裁剪才改对应边界。对应11.1/11.4。
+修正：下一步只处理剩余的列表/轨道行主体参数化；Clip主体保留原Rect、GUI.Window/DragWindow和事件算法，正式数据与业务谓词接正式binding/contract。Source的Reject/Parallel/Blend仍由正式domain决定，不能用当前总时长或Slate组件类型代替。绑定StartTime/EndTime的行为必须匹配操作：移动保持时长，裁剪才改对应边界。对应11.1/11.2/11.4。
+
+#### A01收口决策：不能继续以局部补丁代替主体合并
+
+2026-09-14用户追问“为什么一直不改”。当前可确认的剩余偏差是：左侧列表和轨道行参数仍有两份主体；Clip交互主体已经消除独立正式循环，但列表结构尚未消除。这不能说明实现者动机，但能确认结构要求仍未整体兑现。不是用户需求不清楚，也不是Slate无法提供这些操作。
+
+本项按以下具体差异收口，映射已有11.1/11.2/11.4，不新增第二份执行清单：
+
+1. 对照两份主体，明确列表行高/折叠/搜索、Clip布局/多选/拖动/首尾吸附/Ripple/裁剪/Blend、事件与提交出口的对应块。保留原生主体中的实现，将正式分支正确的typed命令、帧率、只读曲线和Undo接线迁入，不整文件回退。
+2. 在原主体内参数化数据访问。真实Cutscene与BTSMTL仅在入口绑定数据，不能再按来源选择另一份列表循环、Clip循环或拖动算法。薄转发重载可以存在，但不得各自持有布局或鼠标处理主体。
+3. [x] 正式分支的单Clip指针赋值拖动已退出，`DrawTimelineClip` 共用原移动算法；多选偏移、首尾吸附与Ripple沿用原算法，业务资格/重叠/源范围由原domain提供。
+4. 删除被替代的正式列表/时间轴循环、简化拖动及仅为双分支存在的状态/调用。改名、复制到partial/helper或包进同一个类均不算完成。
+5. 原Track参数GUI与ActionClipWrapper同样只留一份交互实现；数据/资源/命令提供者可以不同，事件状态机不能再拆两套。
+
+完成说明必须写明保留哪份原主体、迁入哪些正确接线、删除哪些重复块及实际入口。源曲线显示、属性面板、编译通过或若干bug修好不能抵扣本结构项。其它已授权工作保持，不借此回退或暂停无关任务。
 
 ### A02 Clip底部DopeSheet仍直接返回
 
@@ -51,7 +65,7 @@ S.ShowClipDopesheet先画底栏，FormalClip分支仍return；真实key只在原
 
 ### A03 局部参数面板仍是简化版
 
-T正式DrawParametersInfoGUI自己循环画通道、小按钮和CurrentValue标签；不像原参数工具那样提供完整Value编辑、齿轮与现有参数操作。B.Parameter.CurrentValue也只有getter。Track.FinalHeight固定展开为250，丢失原参数数量/拖动调高逻辑。通道颜色/值域/单位未完整送入CurveRenderer，C仍按曲线数组下标选RGB。
+T正式DrawParametersInfoGUI仍自己循环画通道、小按钮和CurrentValue标签；不像原参数工具那样提供完整Value编辑、齿轮与现有参数操作。B.Parameter.CurrentValue也只有getter。`53493a8df` 已取消 Track.FinalHeight 固定250，改为按当前参数数量和曲线区计算，无 Clip/无参数时使用最小空态高度；但正式参数行仍未完全参数化到原工具的值域/单位/可调高度。通道颜色/值域/单位未完整送入CurveRenderer，C仍按曲线数组下标选RGB。
 
 修正：参数列表、数值输入、key/切线工具与高度状态从原实现接数据，不新造面板。恢复正式支持的原操作；表达式/场景AddProperty等无正式合同的菜单不恢复。Value编辑须明确是当前key或待加key值，不偷偷给运行对象赋值。descriptor提供显示元数据，初次取景按实际key和值域；后续普通刷新不抢走作者纵向视野。对应11.2/11.6/11.16。
 
@@ -60,6 +74,12 @@ T正式DrawParametersInfoGUI自己循环画通道、小按钮和CurrentValue标�
 MotionCurveClip的Weight/Ease是Timeline-local可写曲线，RootMotionCurveAsset的Position X/Y/Z/Yaw是外部源曲线。之前提交 `6b35adc19` 把源曲线塞进独立CurveField面板，破坏了Slate参数行和曲线区一致性，已删除。
 
 当前需求收口：源曲线也作为Formal Clip参数行进入同一DopeSheet/CurveEditor，名称带`[Ref: source]`，但该参数只读；只有Clip的source字段可在正式typed Inspector配置。Timeline不写共享源、不为源曲线创建第二份可编辑资产，双击/已有Open Source入口负责源导航。对应11.18。
+
+#### A04补充：显示映射不能改变源运动时间含义
+
+本轮核对B.MapSourceCurve仍按Clamp01((key.time-SourceStartTime)/SourceDuration)乘整个Clip时长映射全部key；正式MotionCurveClip.EvaluatePositionAtTimelineTime/EvaluateYawAtTimelineTime则把Timeline已过秒数加到SourceStartTime，再钳制到源区间。源区间与Clip时长不等时两者不同：线性源0..1秒、Clip长2秒，正式结果第1秒已到终值并保持，现显示却拉伸到第2秒。把所有区间外key钳到端点也不是正确裁切，会造成重合端点并可能改变显示形状。
+
+显示必须消费现行正式源映射，不按整个Clip长度自动缩放源时间；若需显示曲线副本，沿原领域接口进行精确区间/边界求值与末端保持，保留切线/插值含义，不把区间外key堆到端点。`dfa8a2db3` 已将这段映射移入 `MotionCurveClip.CreateSourceDisplayCurve`，UI只拿正式生成的只读曲线副本，不写源、不进编译/运行。仍需主Unity窗口确认源区间与Clip区间不等时的视觉结果；Reference通道出现不能替代现场验收。
 
 ### A05 选择、空态和通道缓存仍需完整收口
 

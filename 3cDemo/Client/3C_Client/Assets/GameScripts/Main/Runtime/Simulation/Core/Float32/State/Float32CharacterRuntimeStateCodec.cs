@@ -779,12 +779,6 @@ namespace ThirdPersonSimulation
             return null;
         }
 
-        static Float32GameplayAbilityExecutionInstallation RequireInstallationWithCapability(
-            Float32GameplayAbilityExecutionInstallationSet installations,
-            string capability) =>
-            FindInstallationWithCapability(installations, capability) ??
-            throw new InvalidDataException($"Float32 Character runtime state requires an Ability with '{capability}' capability.");
-
         static void RequireSkillExecution(
             CharacterSkillId skillId,
             OperationHandle operation,

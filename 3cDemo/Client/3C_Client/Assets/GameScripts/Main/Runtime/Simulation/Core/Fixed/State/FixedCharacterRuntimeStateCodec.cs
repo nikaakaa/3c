@@ -779,12 +779,6 @@ namespace ThirdPersonSimulation.Fixed
             return null;
         }
 
-        static FixedGameplayAbilityExecutionInstallation RequireInstallationWithCapability(
-            FixedGameplayAbilityExecutionInstallationSet installations,
-            string capability) =>
-            FindInstallationWithCapability(installations, capability) ??
-            throw new InvalidDataException($"Fixed Character runtime state requires an Ability with '{capability}' capability.");
-
         static void RequireSkillExecution(
             CharacterSkillId skillId,
             OperationHandle operation,

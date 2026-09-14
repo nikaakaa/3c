@@ -2966,95 +2966,83 @@ namespace Slate
 
         //...
         void ShowListGroups(Event e, ref float nextYPos) {
-
-            //GROUPS
-            for ( int g = 0; g < cutscene.groups.Count; g++ ) {
-                var group = cutscene.groups[g];
-
-                if ( IsFilteredOutBySearch(group, searchString) ) {
-                    group.isCollapsed = true;
-                    continue;
-                }
-
-                var groupRect = new Rect(4, nextYPos, leftRect.width - GROUP_RIGHT_MARGIN - 4, GROUP_HEIGHT - 3);
-                nextYPos += GROUP_HEIGHT;
-
-                //highligh?
-                var groupSelected = ( ReferenceEquals(group, CutsceneUtility.selectedObject) || group == pickedGroup );
-                var isVirtual = group.referenceMode == CutsceneGroup.ActorReferenceMode.UseInstanceHideOriginal;
-                //GROUP CONTROLS
-                var plusClicked = false;
-                GUI.color = isProSkin ? Color.white.WithAlpha(0.5f) : new Color(0.2f, 0.2f, 0.2f);
-                var plusRect = new Rect(groupRect.xMax - 14, groupRect.y + 5, 8, 8);
-                if ( GUI.Button(plusRect, Slate.Styles.plusIcon, GUIStyle.none) ) { plusClicked = true; }
-                if ( !group.isActive ) {
-                    var disableIconRect = new Rect(plusRect.xMin - 20, groupRect.y + 1, 16, 16);
-                    if ( GUI.Button(disableIconRect, Styles.hiddenIcon, GUIStyle.none) ) { group.isActive = true; }
-                }
-                if ( group.isLocked ) {
-                    var lockIconRect = new Rect(plusRect.xMin - ( group.isActive ? 20 : 36 ), groupRect.y + 1, 16, 16);
-                    if ( GUI.Button(lockIconRect, Styles.lockIcon, GUIStyle.none) ) { group.isLocked = false; }
-                }
-
-                //Actor Object Field
-                if ( !embeddedSurface && group.actor == null ) {
-                    var oRect = Rect.MinMaxRect(groupRect.xMin + 20, groupRect.yMin + 1, groupRect.xMax - 20, groupRect.yMax - 1);
-                    group.actor = (GameObject)UnityEditor.EditorGUI.ObjectField(oRect, group.actor, typeof(GameObject), true);
-                }
-                ///---
-
-                DrawGroupListEntry(
-                    e,
-                    groupRect,
-                    pickedGroup == null ? MouseCursor.Link : MouseCursor.MoveArrow,
-                    string.Format("<b>{0} {1}</b>", group.name, isVirtual ? "(Ref)" : string.Empty),
-                    group.isActive,
-                    groupSelected,
-                    group.isCollapsed,
-                    isProSkin ? Color.yellow : Color.white,
-                    value => group.isCollapsed = value,
-                    () => (e.type == EventType.ContextClick && groupRect.Contains(e.mousePosition)) || plusClicked,
-                    () => ShowNativeGroupContextMenu(group),
-                    () =>
+            DrawGroupList(
+                e,
+                cutscene.groups,
+                ref nextYPos,
+                group => IsFilteredOutBySearch(group, searchString),
+                group => group.isCollapsed = true,
+                group =>
+                {
+                    bool isVirtual = group.referenceMode == CutsceneGroup.ActorReferenceMode.UseInstanceHideOriginal;
+                    return string.Format("<b>{0} {1}</b>", group.name, isVirtual ? "(Ref)" : string.Empty);
+                },
+                group => group.isActive,
+                group => ReferenceEquals(group, CutsceneUtility.selectedObject) || group == pickedGroup,
+                group => group.isCollapsed,
+                group => isProSkin ? Color.yellow : Color.white,
+                group => pickedGroup == null ? MouseCursor.Link : MouseCursor.MoveArrow,
+                (group, value) => group.isCollapsed = value,
+                (group, groupRect) =>
+                {
+                    bool plusClicked = false;
+                    GUI.color = isProSkin ? Color.white.WithAlpha(0.5f) : new Color(0.2f, 0.2f, 0.2f);
+                    var plusRect = new Rect(groupRect.xMax - 14, groupRect.y + 5, 8, 8);
+                    if (GUI.Button(plusRect, Slate.Styles.plusIcon, GUIStyle.none))
+                        plusClicked = true;
+                    if (!group.isActive)
                     {
-                        CutsceneUtility.selectedObject = group;
-                        if (!(group is DirectorGroup))
-                            pickedGroup = group;
-                        if (e.clickCount == 2 && !embeddedSurface)
-                            Selection.activeGameObject = group.actor;
-                    },
-                    () => pickedGroup != null &&
-                          pickedGroup != group &&
-                          !(group is DirectorGroup),
-                    () =>
+                        var disableIconRect = new Rect(plusRect.xMin - 20, groupRect.y + 1, 16, 16);
+                        if (GUI.Button(disableIconRect, Styles.hiddenIcon, GUIStyle.none))
+                            group.isActive = true;
+                    }
+                    if (group.isLocked)
                     {
-                        var markRect = new Rect(
-                            groupRect.x,
-                            cutscene.groups.IndexOf(pickedGroup) < g ? groupRect.yMax - 2 : groupRect.y,
-                            groupRect.width,
-                            2);
-                        GUI.color = Color.grey;
-                        GUI.DrawTexture(markRect, Styles.whiteTexture);
-                        GUI.color = Color.white;
-                    },
-                    () =>
+                        var lockIconRect = new Rect(plusRect.xMin - (group.isActive ? 20 : 36), groupRect.y + 1, 16, 16);
+                        if (GUI.Button(lockIconRect, Styles.lockIcon, GUIStyle.none))
+                            group.isLocked = false;
+                    }
+                    if (!embeddedSurface && group.actor == null)
                     {
-                        cutscene.groups.Remove(pickedGroup);
-                        cutscene.groups.Insert(g, pickedGroup);
-                        cutscene.Validate();
-                        pickedGroup = null;
-                    });
-
-                //SHOW TRACKS (?)
-                if ( !group.isCollapsed ) {
-                    ShowListTracks(e, group, ref nextYPos);
-                    //draw vertical graphic on left side of nested track rects
-                    GUI.color = groupSelected ? LIST_SELECTION_COLOR : GROUP_COLOR;
-                    var verticalRect = Rect.MinMaxRect(groupRect.x, groupRect.yMax, groupRect.x + 3, nextYPos - 2);
-                    GUI.DrawTexture(verticalRect, Styles.whiteTexture);
+                        var objectRect = Rect.MinMaxRect(groupRect.xMin + 20, groupRect.yMin + 1, groupRect.xMax - 20, groupRect.yMax - 1);
+                        group.actor = (GameObject)UnityEditor.EditorGUI.ObjectField(objectRect, group.actor, typeof(GameObject), true);
+                    }
                     GUI.color = Color.white;
-                }
-            }
+                    return plusClicked;
+                },
+                group => ShowNativeGroupContextMenu(group),
+                group =>
+                {
+                    CutsceneUtility.selectedObject = group;
+                    if (!(group is DirectorGroup))
+                        pickedGroup = group;
+                    if (e.clickCount == 2 && !embeddedSurface)
+                        Selection.activeGameObject = group.actor;
+                },
+                group => pickedGroup != null && pickedGroup != group && !(group is DirectorGroup),
+                (group, groupRect, groupIndex) =>
+                {
+                    var markRect = new Rect(
+                        groupRect.x,
+                        cutscene.groups.IndexOf(pickedGroup) < groupIndex ? groupRect.yMax - 2 : groupRect.y,
+                        groupRect.width,
+                        2);
+                    GUI.color = Color.grey;
+                    GUI.DrawTexture(markRect, Styles.whiteTexture);
+                    GUI.color = Color.white;
+                },
+                (group, groupIndex) =>
+                {
+                    cutscene.groups.Remove(pickedGroup);
+                    cutscene.groups.Insert(groupIndex, pickedGroup);
+                    cutscene.Validate();
+                    pickedGroup = null;
+                },
+                (group, childY) =>
+                {
+                    ShowListTracks(e, group, ref childY);
+                    return childY;
+                });
         }
 
         //...

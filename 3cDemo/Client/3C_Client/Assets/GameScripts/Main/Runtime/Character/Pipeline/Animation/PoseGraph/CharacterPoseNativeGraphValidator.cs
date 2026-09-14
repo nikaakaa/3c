@@ -285,7 +285,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     graph.GraphId.Value,
                     graphBoundary
-                        ? "Pose boundary graph must contain exactly one Graph Input, one Graph Output and no Output Pose."
+                        ? "Pose boundary graph must contain exactly one Graph Input or Entry Pose Input, one Graph Output and no Output Pose."
                         : "Pose root or state graph must contain exactly one Output Pose and no Graph Input or Graph Output.");
             }
             if (graphBoundary)

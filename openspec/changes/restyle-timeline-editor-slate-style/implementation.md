@@ -50,6 +50,7 @@ TimelineEditorWindow
 - formal 参数展开区复用 Slate 的前后关键帧、加/删 key 和当前值显示入口；关键帧命令通过正式参数 binding 和 Session 提交，前后关键帧只移动作者游标。
 - 原生 CurveEditor 的 formal cache key 使用当前 Surface、Clip AuthoringId 和参数 Id；同一组曲线不会因每帧重绘重置选择，正式 binding 刷新后也不会遗留旧 renderer 的 Undo 订阅，关闭 Surface 时统一释放。
 - 相邻 Clip 的重叠显示仍保留 Slate 图形，但自动把重叠量写入 `BlendIn/BlendOut` 的逻辑只对真实 native Cutscene 生效；formal Ease 只在明确的边缘手势中通过正式 Session 提交，多选删除也直接调用正式 binding。
+- formal 轨道参数绘制恢复原 Slate 行内坐标组；formal Clip 标题只由 `ActionClipWrapper` 统一绘制，底部 DopeSheet 条保留样式但不重复写 Info。`TimelineData.ApplyModify` 使用同一 Undo group，正式 mutation 抛错时回滚 owner 并重新建立序列化绑定。
 - Graph Shell 预览控制按场景控制、试验与采用、观察、历史与录制分组；历史刷新不会覆盖作者已经输入的 Tick。
 
 共享预览宿主：

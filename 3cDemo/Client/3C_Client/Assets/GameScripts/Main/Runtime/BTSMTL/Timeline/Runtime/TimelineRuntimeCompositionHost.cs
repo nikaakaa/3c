@@ -51,6 +51,25 @@ namespace BTSMTL.Timeline.Runtime
 
         public TimelineRuntimeComposition Composition => m_Composition;
         public TimelineRuntimeService Service => m_Composition.Service;
+        public string LastFailure => Service.LastFailure;
+
+        public event Action<TimelineRuntimePlaybackDescriptor> PlaybackChanged
+        {
+            add => Service.PlaybackChanged += value;
+            remove => Service.PlaybackChanged -= value;
+        }
+
+        public event Action<TimelineRuntimeCommittedEvaluation> CommittedEvaluation
+        {
+            add => EvaluationBuffer.CommittedEvaluation += value;
+            remove => EvaluationBuffer.CommittedEvaluation -= value;
+        }
+
+        public event Action<TimelineRuntimeStopRequest> StopCommitted
+        {
+            add => EvaluationBuffer.StopCommitted += value;
+            remove => EvaluationBuffer.StopCommitted -= value;
+        }
 
         public TimelineRuntimePreparationResult Prepare(
             string requestId,

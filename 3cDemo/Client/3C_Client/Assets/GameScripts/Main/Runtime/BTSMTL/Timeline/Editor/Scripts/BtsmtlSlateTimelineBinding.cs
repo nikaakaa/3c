@@ -400,6 +400,17 @@ namespace BTSMTL.Timeline.Editor
             return false;
         }
 
+        public bool TryGetSectionBinding(string authoringId, out IEmbeddedTimelineSectionBinding binding)
+        {
+            if (m_SectionsById.TryGetValue(authoringId ?? string.Empty, out BtsmtlTimelineSectionBinding value))
+            {
+                binding = value;
+                return true;
+            }
+            binding = null;
+            return false;
+        }
+
         bool IEmbeddedTimelineBinding.TryGetTrack(string authoringId, out IEmbeddedTimelineTrackBinding track)
         {
             return TryGetTrackBinding(authoringId, out track);

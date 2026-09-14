@@ -40,6 +40,18 @@ namespace ThirdPersonCharacter.Pipeline
             return asset.Load(BuildGameplayAbilityProviderBinding());
         }
 
+        public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> LoadFloat32GameplayAbilities(
+            IEnumerable<ThirdPersonCharacter.Pipeline.Simulation.GameplayAbilityDataAsset> assets)
+        {
+            if (assets == null)
+                throw new ArgumentNullException(nameof(assets));
+            GameplayAbilityProviderBinding providerBinding = BuildGameplayAbilityProviderBinding();
+            var data = new List<Float32GameplayAbilityExecutionData>();
+            foreach (ThirdPersonCharacter.Pipeline.Simulation.GameplayAbilityDataAsset asset in assets)
+                data.Add(asset.Load(providerBinding));
+            return new GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData>(data, value => value.AbilityId);
+        }
+
 #if UNITY_EDITOR
         void OnValidate()
         {

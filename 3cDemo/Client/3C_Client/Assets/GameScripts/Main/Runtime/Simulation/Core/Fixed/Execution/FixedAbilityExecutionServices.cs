@@ -71,12 +71,6 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        public void ApplyInputRequests()
-        {
-            Input.ApplyRequests();
-            Input.ApplyBlackboardInputBindings(Blackboard);
-        }
-
         public void AdvanceGameplayEffects() => GameplayEffects.Advance();
     }
 }

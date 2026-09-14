@@ -24,6 +24,7 @@ namespace ThirdPersonSimulation
     {
         readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
         readonly ReadOnlyCollection<Float32GameplayAbilityExecutionData> m_Abilities;
+        readonly ReadOnlyCollection<string> m_InputRequestIds;
 
         public Float32CharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
@@ -85,6 +86,16 @@ namespace ThirdPersonSimulation
                 requiredWorldCapabilities |= ability.Capabilities.RequiredWorldCapabilities;
             }
             RequiredWorldCapabilities = requiredWorldCapabilities;
+            var requestIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < m_Abilities.Count; i++)
+            {
+                GameplayAbilityExecutionLayout layout = Float32GameplayAbilityExecutionLayoutFactory.Create(m_Abilities[i]);
+                for (int requestIndex = 0; requestIndex < layout.InputRequestIds.Count; requestIndex++)
+                    requestIds.Add(layout.InputRequestIds[requestIndex]);
+            }
+            var sortedRequestIds = new List<string>(requestIds);
+            sortedRequestIds.Sort(StringComparer.Ordinal);
+            m_InputRequestIds = sortedRequestIds.AsReadOnly();
             var parts = new List<string>
             {
                 "float32-character-runtime/1",
@@ -102,6 +113,7 @@ namespace ThirdPersonSimulation
         public int TickRate { get; }
         public OperationSetVersion OperationSetVersion { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
+        public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         public GameplayContentHash GameplayContentHash { get; }
 
         static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)

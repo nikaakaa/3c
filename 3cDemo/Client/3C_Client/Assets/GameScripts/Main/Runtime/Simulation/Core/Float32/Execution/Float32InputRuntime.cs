@@ -15,34 +15,6 @@ namespace ThirdPersonSimulation
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
         }
 
-        public void ApplyRequests()
-        {
-            foreach (string requestId in m_Layout.InputRequestIds)
-            {
-                SimulationInputRequestState state = m_Frame.DomainState.GetInputRequest(requestId);
-                if (state.IsValid && state.ExpireTick < m_Frame.Tick.Value)
-                    state = default;
-                for (int requestIndex = 0; requestIndex < m_Frame.Input.Requests.Count; requestIndex++)
-                {
-                    SimulationInputRequest request = m_Frame.Input.Requests[requestIndex];
-                    if (!string.Equals(request.RequestId, requestId, StringComparison.Ordinal))
-                        continue;
-                    if (!state.IsValid ||
-                        request.Priority > state.Priority ||
-                        request.Priority == state.Priority && request.Sequence > state.Sequence)
-                    {
-                        state = new SimulationInputRequestState(
-                            request.RequestId,
-                            request.Sequence,
-                            request.SourceTick,
-                            request.ExpireSimulationTick,
-                            request.Priority);
-                    }
-                }
-                m_Frame.DomainState.SetInputRequest(requestId, state);
-            }
-        }
-
         public void ApplyBlackboardInputBindings(IFloat32BlackboardPort blackboard)
         {
             if (blackboard == null)

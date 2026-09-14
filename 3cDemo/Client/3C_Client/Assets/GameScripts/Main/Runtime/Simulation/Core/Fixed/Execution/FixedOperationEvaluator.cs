@@ -410,10 +410,13 @@ namespace ThirdPersonSimulation.Fixed
             ActorId actorId,
             FixedEvaluationWorkspace workspace,
             CharacterControlModuleCatalog controlModules,
-            CharacterControlRuntimeBinding controlRuntimeBinding)
+            CharacterControlRuntimeBinding controlRuntimeBinding,
+            FixedGameplayAbilityExecutionCatalog abilities)
         {
             if (controlModules == null)
                 throw new ArgumentNullException(nameof(controlModules));
+            if (abilities == null)
+                throw new ArgumentNullException(nameof(abilities));
             m_Frame = new FixedEvaluationFrame(program, layout, actorId, workspace);
             FixedProgramExecutionServices services = m_Frame.Services;
             FixedProgramAccess access = services.Access;
@@ -424,7 +427,7 @@ namespace ThirdPersonSimulation.Fixed
                 access,
                 m_Frame);
             m_ActionStore = actionStore;
-            m_Abilities = FixedGameplayAbilityExecutionCatalogFactory.FromProgram(program);
+            m_Abilities = abilities;
             m_Input = new FixedInputRuntime(
                 access,
                 m_Frame);

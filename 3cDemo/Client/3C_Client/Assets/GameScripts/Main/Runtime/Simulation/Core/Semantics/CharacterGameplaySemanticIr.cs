@@ -286,8 +286,8 @@ namespace ThirdPersonSimulation
             TickRate = tickRate;
             SourceRevision = sourceRevision;
             Capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
-            if (!root.IsValid)
-                throw new ArgumentException("Semantic IR root descriptor is invalid.", nameof(root));
+            if (!root.IsValid || !root.IsAbility)
+                throw new ArgumentException("Semantic IR requires an Ability root descriptor.", nameof(root));
             Root = root;
         }
 
@@ -318,7 +318,6 @@ namespace ThirdPersonSimulation
 
         public CharacterGameplaySemanticIr(
             CharacterGameplaySemanticIrManifest manifest,
-            CharacterBodyMotionBinding bodyMotion,
             IEnumerable<SemanticOperation> operations,
             IEnumerable<SemanticLiteral> literals,
             IEnumerable<SemanticConstantInputBinding> constantInputBindings,
@@ -334,14 +333,6 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramGraphCallFrame> graphCallFrames = null)
         {
             Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
-            if (Manifest.Root.IsCharacter && bodyMotion == null)
-                throw new ArgumentNullException(nameof(bodyMotion));
-            if (Manifest.Root.IsTimeline && bodyMotion != null)
-                throw new ArgumentException("Timeline Semantic IR cannot contain Character Body Motion.", nameof(bodyMotion));
-            BodyMotion = bodyMotion;
-            if (BodyMotion != null &&
-                (Manifest.Capabilities.RequiredWorldCapabilities & BodyMotion.RequiredWorldCapability) != BodyMotion.RequiredWorldCapability)
-                throw new InvalidDataException("Semantic IR Body Motion capability is missing from the manifest.");
             m_Operations = Indexed(operations, value => value.Handle.Value, "semantic operation");
             m_Literals = Indexed(literals, value => value.Index, "semantic literal");
             m_GraphCallFrames = Indexed(graphCallFrames, value => value.Index, "graph call frame");
@@ -369,7 +360,6 @@ namespace ThirdPersonSimulation
         }
 
         public CharacterGameplaySemanticIrManifest Manifest { get; }
-        public CharacterBodyMotionBinding BodyMotion { get; }
         public IReadOnlyList<SemanticOperation> Operations => m_Operations;
         public IReadOnlyList<SemanticLiteral> Literals => m_Literals;
         public IReadOnlyList<SemanticConstantInputBinding> ConstantInputBindings => m_ConstantInputBindings;

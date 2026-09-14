@@ -564,7 +564,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Root);
                 return new CharacterGameplaySemanticIr(
                     manifest,
-                    null,
                     m_Operations,
                     m_Literals,
                     m_ConstantInputBindings,

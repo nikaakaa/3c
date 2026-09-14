@@ -61,7 +61,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             WorldCapability requiredWorldCapabilities)
         {
             RelativePath = DotRecastAuthorityRelativePath.Require(relativePath, nameof(relativePath));
-            DefinitionGuid = CharacterTargetProgramArtifactLoader.RequireDefinitionGuid(definitionGuid);
+            DefinitionGuid = DotRecastAuthorityManifestIdentity.RequireDefinitionGuid(definitionGuid);
             if (!programId.IsValid || !programHash.IsValid || !layoutHash.IsValid || !artifactBytesHash.IsValid ||
                 artifactByteLength <= 0 || !operationSetVersion.IsValid || !semanticHash.IsValid ||
                 !numericProfileId.IsValid || !targetAbiVersion.IsValid || requiredWorldCapabilities == WorldCapability.None)
@@ -409,6 +409,23 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 
     static class DotRecastAuthorityManifestIdentity
     {
+        public static string RequireDefinitionGuid(string value)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length != 32)
+                throw new ArgumentException("Manifest Definition GUID is invalid.", nameof(value));
+            for (int i = 0; i < value.Length; i++)
+            {
+                char character = value[i];
+                if (!((character >= '0' && character <= '9') ||
+                      (character >= 'a' && character <= 'f') ||
+                      (character >= 'A' && character <= 'F')))
+                {
+                    throw new ArgumentException("Manifest Definition GUID is invalid.", nameof(value));
+                }
+            }
+            return value;
+        }
+
         public static string Require(string value, string parameter, int maximumLength = 128)
         {
             if (string.IsNullOrWhiteSpace(value))

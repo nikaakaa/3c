@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.Fixed
         IFixedGameplayTagQuery,
         IFixedGameplayEffectActionPort
     {
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
         readonly IFixedActionContextReader m_Actions;
         readonly FixedHandleAllocator m_Handles;
         readonly FixedFactSink m_Facts;
@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedGameplayEffectOperationRuntime(
             FixedGameplayAbilityExecutionAccess access,
-            FixedEvaluationFrame frame,
+            FixedAbilityExecutionFrame frame,
             IFixedActionContextReader actions,
             FixedHandleAllocator handles,
             FixedFactSink facts,

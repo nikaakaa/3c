@@ -95,7 +95,7 @@ namespace ThirdPersonSimulation
     internal sealed class Float32BlackboardRuntime : Float32OperationModule, IFloat32BlackboardPort
     {
         readonly Float32StatePort m_State;
-        readonly Float32EvaluationFrame m_Frame;
+        readonly Float32AbilityExecutionFrame m_Frame;
         readonly IFloat32ActionContextReader m_Actions;
         readonly Float32FactSink m_Facts;
         readonly Float32TraceSink m_Trace;
@@ -106,11 +106,11 @@ namespace ThirdPersonSimulation
         public Float32BlackboardRuntime(
             Float32GameplayAbilityExecutionAccess access,
             Float32StatePort state,
-            Float32EvaluationFrame frame,
+            Float32AbilityExecutionFrame frame,
             IFloat32ActionContextReader actions,
             Float32FactSink facts,
             Float32TraceSink trace,
-            Float32EvaluationWorkspace workspace)
+            Float32AbilityExecutionWorkspace workspace)
             : base(access)
         {
             m_State = state ?? throw new ArgumentNullException(nameof(state));

@@ -260,14 +260,14 @@ namespace ThirdPersonSimulation
         IFloat32MotionContributionSink,
         IFloat32MotionModifierSampleSink
     {
-        readonly Float32EvaluationFrame m_Frame;
+        readonly Float32AbilityExecutionFrame m_Frame;
         readonly List<SimulationMotionContribution> m_Contributions;
         readonly List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> m_WarpSamples;
         readonly Float32MotionWarpTarget m_MotionWarp;
 
         public Float32MotionAccumulator(
             Float32GameplayAbilityExecutionAccess access,
-            Float32EvaluationFrame frame,
+            Float32AbilityExecutionFrame frame,
             List<SimulationMotionContribution> contributions,
             List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> warpSamples,
             Float32ActionStateStore actions)
@@ -515,13 +515,13 @@ namespace ThirdPersonSimulation
     internal sealed class Float32MotionWarpTarget : Float32OperationModule,
         IMotionModifierTarget<Float32Scalar, Float32ActionInstanceState, ResolvedMotionChannel>
     {
-        readonly Float32EvaluationFrame m_Frame;
+        readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32ActionStateStore m_Actions;
         readonly Float32CharacterRuntimeStateTransaction m_Transaction;
 
         public Float32MotionWarpTarget(
             Float32GameplayAbilityExecutionAccess access,
-            Float32EvaluationFrame frame,
+            Float32AbilityExecutionFrame frame,
             Float32ActionStateStore actions)
             : base(access)
         {
@@ -1186,14 +1186,14 @@ namespace ThirdPersonSimulation
     {
         readonly IFloat32ValueInputReader m_Values;
         readonly IFloat32MotionContributionSink m_Motion;
-        readonly Float32EvaluationFrame m_Frame;
+        readonly Float32AbilityExecutionFrame m_Frame;
         readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
 
         public Float32LocomotionRuntime(
             Float32GameplayAbilityExecutionAccess access,
             IFloat32ValueInputReader values,
             IFloat32MotionContributionSink motion,
-            Float32EvaluationFrame frame,
+            Float32AbilityExecutionFrame frame,
             CharacterControlRuntimeBinding controlRuntimeBinding)
             : base(access)
         {

@@ -6,11 +6,11 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedInputRuntime : FixedOperationModule, IFixedInputPort
     {
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
 
         public FixedInputRuntime(
             FixedGameplayAbilityExecutionAccess access,
-            FixedEvaluationFrame frame)
+            FixedAbilityExecutionFrame frame)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));

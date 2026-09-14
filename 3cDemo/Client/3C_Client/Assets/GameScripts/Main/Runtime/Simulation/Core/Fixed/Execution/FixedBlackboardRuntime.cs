@@ -96,7 +96,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedBlackboardRuntime : FixedOperationModule, IFixedBlackboardPort
     {
         readonly FixedStatePort m_State;
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
         readonly IFixedActionContextReader m_Actions;
         readonly FixedFactSink m_Facts;
         readonly FixedTraceSink m_Trace;
@@ -107,11 +107,11 @@ namespace ThirdPersonSimulation.Fixed
         public FixedBlackboardRuntime(
             FixedGameplayAbilityExecutionAccess access,
             FixedStatePort state,
-            FixedEvaluationFrame frame,
+            FixedAbilityExecutionFrame frame,
             IFixedActionContextReader actions,
             FixedFactSink facts,
             FixedTraceSink trace,
-            FixedEvaluationWorkspace workspace)
+            FixedAbilityExecutionWorkspace workspace)
             : base(access)
         {
             m_State = state ?? throw new ArgumentNullException(nameof(state));

@@ -254,13 +254,13 @@ namespace ThirdPersonSimulation
 
 	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader, IFloat32SkillExecutionStateAccess, IGameplayAbilityExecutionStorage<CharacterStateValue>
 	{
-		readonly Float32EvaluationFrame m_Frame;
+		readonly Float32AbilityExecutionFrame m_Frame;
 		readonly Stack<Float32ActionInstanceReference> m_SkillExecutionStack = new Stack<Float32ActionInstanceReference>();
 		readonly GameplayAbilityExecutionManager<CharacterStateValue> m_SkillExecution;
 
         public Float32ActionStateStore(
             Float32GameplayAbilityExecutionAccess access,
-            Float32EvaluationFrame frame)
+            Float32AbilityExecutionFrame frame)
             : base(access)
 		{
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));

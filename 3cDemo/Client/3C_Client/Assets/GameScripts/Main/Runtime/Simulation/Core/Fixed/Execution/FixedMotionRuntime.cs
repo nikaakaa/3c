@@ -261,14 +261,14 @@ namespace ThirdPersonSimulation.Fixed
         IFixedMotionContributionSink,
         IFixedMotionModifierSampleSink
     {
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
         readonly List<SimulationMotionContribution> m_Contributions;
         readonly List<MotionWarpSample<FixedScalar, FixedActionInstanceState>> m_WarpSamples;
         readonly FixedMotionWarpTarget m_MotionWarp;
 
         public FixedMotionAccumulator(
             FixedGameplayAbilityExecutionAccess access,
-            FixedEvaluationFrame frame,
+            FixedAbilityExecutionFrame frame,
             List<SimulationMotionContribution> contributions,
             List<MotionWarpSample<FixedScalar, FixedActionInstanceState>> warpSamples,
             FixedActionStateStore actions)
@@ -516,13 +516,13 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedMotionWarpTarget : FixedOperationModule,
         IMotionModifierTarget<FixedScalar, FixedActionInstanceState, ResolvedMotionChannel>
     {
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedActionStateStore m_Actions;
         readonly FixedCharacterRuntimeStateTransaction m_Transaction;
 
         public FixedMotionWarpTarget(
             FixedGameplayAbilityExecutionAccess access,
-            FixedEvaluationFrame frame,
+            FixedAbilityExecutionFrame frame,
             FixedActionStateStore actions)
             : base(access)
         {
@@ -1190,14 +1190,14 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly IFixedValueInputReader m_Values;
         readonly IFixedMotionContributionSink m_Motion;
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
         readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
 
         public FixedLocomotionRuntime(
             FixedGameplayAbilityExecutionAccess access,
             IFixedValueInputReader values,
             IFixedMotionContributionSink motion,
-            FixedEvaluationFrame frame,
+            FixedAbilityExecutionFrame frame,
             CharacterControlRuntimeBinding controlRuntimeBinding)
             : base(access)
         {

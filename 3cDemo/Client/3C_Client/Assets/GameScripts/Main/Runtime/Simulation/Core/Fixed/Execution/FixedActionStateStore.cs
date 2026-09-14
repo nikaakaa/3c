@@ -255,13 +255,13 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedActionStateStore : FixedOperationModule, IFixedActionContextReader, IFixedSkillExecutionStateAccess, IGameplayAbilityExecutionStorage<CharacterStateValue>
     {
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
         readonly GameplayAbilityExecutionManager<CharacterStateValue> m_SkillExecution;
 
         public FixedActionStateStore(
             FixedGameplayAbilityExecutionAccess access,
-            FixedEvaluationFrame frame)
+            FixedAbilityExecutionFrame frame)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));

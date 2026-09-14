@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedActionRuntime : FixedOperationModule, IFixedActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, FixedActionInstanceState>, IAbilityLifecyclePort<FixedActionInstanceState>
     {
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedGameplayAbilityExecutionInstallationSet m_Installations;
         readonly IFixedInputPort m_InputRuntime;
         readonly FixedActionStateStore m_Actions;
@@ -27,7 +27,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedActionRuntime(
             FixedGameplayAbilityExecutionAccess access,
             FixedGameplayAbilityExecutionInstallationSet installations,
-            FixedEvaluationFrame frame,
+            FixedAbilityExecutionFrame frame,
             IFixedInputPort inputRuntime,
             FixedActionStateStore actions,
             IFixedBlackboardPort blackboard,

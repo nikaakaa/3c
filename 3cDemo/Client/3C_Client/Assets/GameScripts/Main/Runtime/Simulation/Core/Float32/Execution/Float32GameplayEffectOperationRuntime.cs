@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation
 		IFloat32GameplayTagQuery,
 		IFloat32GameplayEffectActionPort
 	{
-		readonly Float32EvaluationFrame m_Frame;
+		readonly Float32AbilityExecutionFrame m_Frame;
 		readonly IFloat32ActionContextReader m_Actions;
 		readonly Float32HandleAllocator m_Handles;
 		readonly Float32FactSink m_Facts;
@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation
 
 		public Float32GameplayEffectOperationRuntime(
 			Float32GameplayAbilityExecutionAccess access,
-			Float32EvaluationFrame frame,
+			Float32AbilityExecutionFrame frame,
 			IFloat32ActionContextReader actions,
 			Float32HandleAllocator handles,
 			Float32FactSink facts,

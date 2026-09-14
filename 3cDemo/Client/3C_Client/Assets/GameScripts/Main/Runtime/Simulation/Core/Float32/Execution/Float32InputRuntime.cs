@@ -5,11 +5,11 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32InputRuntime : Float32OperationModule, IFloat32InputPort
     {
-        readonly Float32EvaluationFrame m_Frame;
+        readonly Float32AbilityExecutionFrame m_Frame;
 
         public Float32InputRuntime(
             Float32GameplayAbilityExecutionAccess access,
-            Float32EvaluationFrame frame)
+            Float32AbilityExecutionFrame frame)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));

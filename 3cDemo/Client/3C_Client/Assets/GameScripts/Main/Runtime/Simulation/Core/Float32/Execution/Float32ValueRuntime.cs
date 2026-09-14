@@ -74,7 +74,7 @@ namespace ThirdPersonSimulation
         readonly IFloat32GameplayTagQuery m_GameplayTags;
         readonly Float32EquipmentRuntime m_Equipment;
         readonly IFloat32BlackboardPort m_Blackboard;
-        readonly Float32EvaluationFrame m_Frame;
+        readonly Float32AbilityExecutionFrame m_Frame;
         readonly HashSet<Float32ValueEvaluationKey> m_ValueStack;
         readonly List<Float32ValueInputBuffer> m_InputBuffers;
         int m_InputBufferDepth;
@@ -87,8 +87,8 @@ namespace ThirdPersonSimulation
             IFloat32GameplayTagQuery gameplayTags,
             Float32EquipmentRuntime equipment,
             IFloat32BlackboardPort blackboard,
-            Float32EvaluationFrame frame,
-            Float32EvaluationWorkspace workspace)
+            Float32AbilityExecutionFrame frame,
+            Float32AbilityExecutionWorkspace workspace)
             : base(access)
         {
             m_Input = input ?? throw new ArgumentNullException(nameof(input));

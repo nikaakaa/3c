@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.Fixed
 		IEquipmentRuntimePort,
 		IEquipmentActionContextProvider
 	{
-		readonly FixedEvaluationFrame m_Frame;
+		readonly FixedAbilityExecutionFrame m_Frame;
 		readonly FixedActionStateStore m_Actions;
 		readonly FixedHandleAllocator m_Handles;
 		readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation.Fixed
 		readonly Dictionary<int, EquipmentChangeOutcome> m_Outcomes = new Dictionary<int, EquipmentChangeOutcome>();
 		public FixedEquipmentRuntime(
 			FixedGameplayAbilityExecutionAccess access,
-			FixedEvaluationFrame frame,
+			FixedAbilityExecutionFrame frame,
 			FixedActionStateStore actions,
 			FixedHandleAllocator handles,
 			FixedGameplayEffectOperationRuntime gameplayEffects,
@@ -324,13 +324,13 @@ namespace ThirdPersonSimulation.Fixed
 
 		sealed class MutationScope : IEquipmentMutationScope
 		{
-			readonly FixedEvaluationFrame m_Frame;
+			readonly FixedAbilityExecutionFrame m_Frame;
 			readonly FixedCharacterRuntimeStateSavepoint m_Savepoint;
-			readonly FixedEvaluationOutputSavepoint m_OutputSavepoint;
+			readonly FixedAbilityOutputSavepoint m_OutputSavepoint;
 			readonly CharacterStateValue[] m_Values;
 			bool m_Completed;
 
-			public MutationScope(FixedEvaluationFrame frame)
+			public MutationScope(FixedAbilityExecutionFrame frame)
 			{
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 				m_Savepoint = frame.Transaction.CreateSavepoint();

@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation
 		IEquipmentRuntimePort,
 		IEquipmentActionContextProvider
 	{
-		readonly Float32EvaluationFrame m_Frame;
+		readonly Float32AbilityExecutionFrame m_Frame;
 		readonly Float32ActionStateStore m_Actions;
 		readonly Float32HandleAllocator m_Handles;
 		readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation
 		readonly Dictionary<int, EquipmentChangeOutcome> m_Outcomes = new Dictionary<int, EquipmentChangeOutcome>();
 		public Float32EquipmentRuntime(
 			Float32GameplayAbilityExecutionAccess access,
-			Float32EvaluationFrame frame,
+			Float32AbilityExecutionFrame frame,
 			Float32ActionStateStore actions,
 			Float32HandleAllocator handles,
 			Float32GameplayEffectOperationRuntime gameplayEffects,
@@ -323,13 +323,13 @@ namespace ThirdPersonSimulation
 
 		sealed class MutationScope : IEquipmentMutationScope
 		{
-			readonly Float32EvaluationFrame m_Frame;
+			readonly Float32AbilityExecutionFrame m_Frame;
 			readonly Float32CharacterRuntimeStateSavepoint m_Savepoint;
-			readonly Float32EvaluationOutputSavepoint m_OutputSavepoint;
+			readonly Float32AbilityOutputSavepoint m_OutputSavepoint;
 			readonly CharacterStateValue[] m_Values;
 			bool m_Completed;
 
-			public MutationScope(Float32EvaluationFrame frame)
+			public MutationScope(Float32AbilityExecutionFrame frame)
 			{
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 				m_Savepoint = frame.Transaction.CreateSavepoint();

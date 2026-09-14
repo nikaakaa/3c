@@ -4,9 +4,9 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32HandleAllocator : Float32OperationModule
     {
-        readonly Float32EvaluationFrame m_Frame;
+        readonly Float32AbilityExecutionFrame m_Frame;
 
-        public Float32HandleAllocator(Float32GameplayAbilityExecutionAccess access, Float32EvaluationFrame frame)
+        public Float32HandleAllocator(Float32GameplayAbilityExecutionAccess access, Float32AbilityExecutionFrame frame)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));

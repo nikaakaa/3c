@@ -75,7 +75,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedGameplayTagQuery m_GameplayTags;
         readonly FixedEquipmentRuntime m_Equipment;
         readonly IFixedBlackboardPort m_Blackboard;
-        readonly FixedEvaluationFrame m_Frame;
+        readonly FixedAbilityExecutionFrame m_Frame;
         readonly HashSet<FixedValueEvaluationKey> m_ValueStack;
         readonly List<FixedValueInputBuffer> m_InputBuffers;
         int m_InputBufferDepth;
@@ -88,8 +88,8 @@ namespace ThirdPersonSimulation.Fixed
             IFixedGameplayTagQuery gameplayTags,
             FixedEquipmentRuntime equipment,
             IFixedBlackboardPort blackboard,
-            FixedEvaluationFrame frame,
-            FixedEvaluationWorkspace workspace)
+            FixedAbilityExecutionFrame frame,
+            FixedAbilityExecutionWorkspace workspace)
             : base(access)
         {
             m_Input = input ?? throw new ArgumentNullException(nameof(input));

@@ -62,6 +62,7 @@
 - `2e292a3db`：删除 ActionEventSequence 的 Program 语义和 Action typed state 地址；ActionStateStore 的预测 key 改由 Float32／Fixed 角色状态事务递增，序号接入 savepoint、状态 codec、Server Authority full／delta checkpoint 与 checkpoint hash；同步升级程序、状态和 checkpoint 格式版本。
 - `f01846176`：删除 `runtime:handle-allocator` Program 槽和访问策略；Action、Gameplay Effect、Equipment 共用角色事务的句柄分配、Capture、Restore 与提交，状态 codec 和 Server Authority checkpoint 同步携带句柄状态并升级格式版本。
 - `56a0af13f`：删除没有模拟运行时消费者的 RandomState Program 槽、语义校验和空的 Runtime／Random owner，并升级 Float32／Fixed 程序格式；Unity 普通 RandomNode 不属于该模拟状态链，未做改动。
+- `7ee1c2f4e`：删除角色级 `AbilityExecutionState` Program 槽、value kind 和旧 `CharacterStateValue` 聚合封装；ActionStateStore 通过角色事务读写 Ability 执行帧聚合，局部 Runnable／StateMachine／Timeline／Blackboard 状态仍由 `GameplayAbilityExecutionSlotMap` 映射，状态 codec 与 Server Authority checkpoint 同步保存该分区。
 
 ## 当前实现边界
 
@@ -86,6 +87,7 @@
 - `ActionEventSequence` 现在由 `CharacterSimulationState.ActionEventSequence` 持有，`Float32ActionStateStore`／`FixedActionStateStore` 只通过事务申请下一个预测 key；ProgramExecutionLayout 不再为每个 Action 复制全局序号地址，ActionPolicy 也不再开放该 Program semantic。状态 codec 与 Server Authority full／delta checkpoint 使用同一字段顺序，旧程序和旧状态由格式版本或 identity 变化拒绝；构建诊断标记 `ActionEventSequence=external`。
 - `HandleAllocator` 现在由 `CharacterSimulationState.HandleAllocator` 持有，`Float32HandleAllocator`／`FixedHandleAllocator` 只调用角色事务的递增、Capture、Restore；Action、Gameplay Effect 和 Equipment 的句柄来源保持同一条事务链，Gameplay Effect 的局部失败恢复仍通过显式 allocator Capture／Restore 回到该事务。角色状态 codec、Server Authority full／delta checkpoint 和 checkpoint hash 都携带该字段，构建诊断标记 `HandleAllocator=external`。
 - `RandomState` 没有实际模拟运行时读写者，已从全局 Emitter、ProgramStateSemantic 和 owner 枚举中删除；随机节点仍可作为普通 Unity 节点存在，但不会借用角色模拟状态伪装成正式 RNG 服务。
+- `AbilityExecutionState` 现在由 `CharacterSimulationState.AbilityExecutionState` 持有，`GameplayAbilityExecutionManager` 的 Add／Remove／generation／局部值写入都通过 Float32／Fixed 主状态事务保存；`GameplayAbilityExecutionSlotMap` 只负责识别需要按 Ability 实例隔离的局部 Program 状态，不再提供角色级聚合存储。状态 codec 额外编码执行帧聚合，Server Authority checkpoint 使用独立 bytes 载荷；这仍不是 1.10 要求的独立 Ability execution data，Ability 资源本身仍从旧 Program 容器读取。
 
 ## 编译证据与阻断
 
@@ -110,6 +112,7 @@
 - 2026-09-14 ActionEventSequence 迁移后，Portable `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecast.csproj` 为 2 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 为 57 个既有 warning、0 errors。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 2026-09-14 HandleAllocator 迁移后，Portable `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecast.csproj` 为 2 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 使用 `-m:1` 编译成功，为 56 个既有 warning、0 errors。Editor 默认并行编译曾两次出现 MSBuild 子节点提前退出（MSB4166），没有产生 C# 错误；串行重跑成功。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 2026-09-14 RandomState 清理后，Portable `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Editor.csproj` 使用 `-m:1` 编译成功，为 93 个既有 warning、0 errors。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+- 2026-09-14 Ability 执行聚合迁移后，Portable `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Float32.csproj`、`ThirdPersonSimulation.Fixed.csproj` 均为 0 warning、0 error；`ThirdPersonClient.Runtime.csproj` 为 34 个既有 warning、0 errors；`ThirdPersonSimulation.DotRecast.csproj` 为 2 个既有 warning、0 errors；`ThirdPersonSimulation.ServerAuthoritative.csproj` 为 1 个既有 warning、0 errors；`ThirdPersonClient.Editor.csproj` 使用 `-m:1` 编译成功，为 34 个既有 warning、0 errors。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步

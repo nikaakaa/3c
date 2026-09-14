@@ -150,6 +150,6 @@ DOMAIN-BOUNDARIES-20260914-03执行补充见timeline-direct-runtime.md第9节。
 - [ ] 12.6 提供 Float32/Fixed 分型 Capture/Restore 候选，保存已提交 Timeline 私有状态、调用关联、内容/资源 revision 和 schema；由主实现组合总快照并原子安装，不捕获 Pending、Unity对象、缓存索引或重发副作用。Timeline侧现在还保存 PlaybackMode、首帧边界状态、committed cursor/cycle/section/active clips、identity、generation、NumericTarget、revision 和 schema；外层主实现组合快照尚未接入。
 - [ ] 12.7 消费现行 `RootMotionCurveAsset` 唯一源区间/时间映射及 Camera/Motion/Warp typed 领域服务；不重开曲线迁移、不修改共享算法或字段，保证 UI Reference 显示和 Runtime 求值共用同一源定义。直接 evaluator 已复用现有 Animation/Motion/Camera/Cue/Scene sample API，并输出通用 ClipSample；MotionWarp/角色 Camera 领域服务仍待正式 owner 消费。
 - [x] 12.8 迁出 Timeline 专属轨道/Clip 发射和 ProgramPlan 消费者，把共享 `Evaluator/Host/codec` 的改动交由唯一主实现 owner；不得整文件删除混合的 Camera/Motion 资源处理。当前无调用的 `TimelineControlRuntime` 已删除；`TimelineControlContracts` 中仍被并行 Simulation 诊断/运动代码使用的公共类型保持原 owner，不作为第二个执行器。
-- [ ] 12.9 向预览 owner 提供独立准备结果、实际创建版本、playback identity 和已提交运行观察；Skill 与非 Skill 共用 Runtime，作者导航/游标不推进运行，不创建预览专用播放器。`TimelineRuntimeComposition` 已提供非Skill入口，`TimelineRuntimeService.PlaybackChanged`和evaluation提交事件已提供运行观察；编辑器/Graph Shell直接消费、实际采用版本展示仍未接入。
+- [ ] 12.9 向预览 owner 提供独立准备结果、实际创建版本、playback identity 和已提交运行观察；Skill 与非 Skill 共用 Runtime，作者导航/游标不推进运行，不创建预览专用播放器。`TimelineRuntimeComposition` 已提供非Skill入口，`TimelineRuntimeService.PlaybackChanged`和evaluation提交事件已提供运行观察；现有Timeline窗口已接入direct playback的活动轨道/Clip overlay，Graph Shell实际采用版本展示仍未接入。
 
 本清单不包含测试、编译、验证或资产生成任务。不存在旧Program/Slate fallback；接口缺失按明确owner记录，不新增空服务或第二套执行清单。本次登记不代表上述能力已实现，也不改变原任务的已完成事实。

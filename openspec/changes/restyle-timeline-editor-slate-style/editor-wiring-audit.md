@@ -127,7 +127,7 @@ P.CaptureViewState原先只保存第一个ShowCurves轨道，提交 `8b7a0e2a3` 
 
 ### A11 时间尺已帧化，事件和工具栏仍有缺口
 
-S正式拖动分支在isDragging时会计算并在数值变化后e.Use，没有先限定当前事件为MouseDrag，存在Layout/Repaint也走到消费的路径；这与截图警告一致，但未取得实时堆栈，不能声称它是唯一调用点。
+S正式拖动分支的游标/长度/循环区间更新此前在isMoving状态持续时未限定输入事件，Layout/Repaint可能重复写回作者帧。提交 `d62c4cf8b` 已把这些写入收窄到MouseDown/MouseDrag，并在MouseDrag消费事件；剩余轨道Clip手势仍需真实窗口确认。
 
 工具栏仍是ShowEmbeddedAuthoringToolbar，当前有Add Track、前后帧、Fit和帧输入；没有原播放工具条，Space在embedded时明确消费后返回。W另有Document、Source与Timeline Ownership重复信息，窄布局没有完整收口。F既被窗口用作Fit Clip快捷键，也被曲线区标为Frame Selection，必须按焦点/事件归属区分，不能一次按键触发错误内容修改。
 

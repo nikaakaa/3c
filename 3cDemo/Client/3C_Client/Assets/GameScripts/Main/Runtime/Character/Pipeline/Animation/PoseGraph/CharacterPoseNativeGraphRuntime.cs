@@ -208,6 +208,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        internal static CharacterPoseNativeAdoptedResult Create(
+            in CharacterPoseNativePreparedBinding preparedBinding,
+            in CharacterPoseNativeInstanceContext context,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            IReadOnlyList<ICharacterPoseNativeNodeHandler> handlers,
+            out CharacterPoseNativeGraphRuntime runtime) =>
+            Create(
+                in preparedBinding,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                new CharacterPoseNativeGraphEvaluator(handlers),
+                out runtime);
+
         void AttachAndStart()
         {
             RequireAlive();

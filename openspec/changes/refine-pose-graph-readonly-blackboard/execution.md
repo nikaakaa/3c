@@ -290,6 +290,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - Source demand、EvaluateFrame、Commit/Discard/Stop/Dispose 都沿 handler 注册表传播；handler 状态属于注入的领域服务，Graph Runtime 不复制 Source/Constraint/Final 状态。
 - 本步未运行 Unity/Build；当前还缺少正式服务 handler 与角色 Host 的 Create/Replace 接线，不能把 evaluator 注册边界记为完整 Pose Runtime。
 
+## 2026-09-14 r3 暴露显式 handler 创建入口
+
+- `CharacterPoseNativeGraphRuntime` 增加只接受 `ICharacterPoseNativeNodeHandler` 列表的 `Create` 重载；角色装配必须明确提供节点领域服务，缺失 handler 仍在图初始化时失败。
+- 原有直接注入 `ICharacterPoseNativeNodeEvaluator` 的入口保留，两个入口都不生成默认 evaluator、不恢复旧 Program reader，也不切换第二运行路径。
+- 本步未运行 Unity/Build；正式 Source/Player/State/Blend/Constraint/Final handler 和共享 Host 接线仍未完成。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

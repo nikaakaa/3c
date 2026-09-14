@@ -2,6 +2,33 @@
 
 本文件属于本 change 的规划附件。它记录本轮读取的现行要求与增量操作，不能代替正式 spec，也不证明实现已完成。主规范和其它窗口文件本轮不改。
 
+## DOMAIN-BOUNDARIES-20260914-02：领域文档与执行划分提报
+
+状态：待工作协调窗口审阅。用户要求“先把领域做好”并让协调窗口查看规划；本轮只更新本change现有proposal／design D21／tasks／spec增量和此审查附件，随后发送一次文档定位。没有修改协调窗口维护的docs/coordination-progress.md，没有新建任务、重派实现或覆盖其它领域清单／实施日志。
+
+### 提报内容
+
+- D21给出输入、角色控制、技能、Timeline、运动、效果、装备、Pose、相机九个业务职责，以及角色装配和Session／Pipeline／Backend两层协调职责。表中每项都有输入、规则／状态、输出／依赖和已有owner，不要求建立九套运行框架或九个窗口。
+- 主清单按既有1.9／1.11、2.6／2.7、1.5／3.8、4.7／6.4及3.x组织收口；Timeline第12组和Pose第3组仍是唯一域内实施清单。共享ActionRuntime按方法区分技能自身规则与调用方动作协调，不整类迁给Control，也不把所有窗口归给Timeline或Effect。
+- 提请协调确认现有owner是否需要调整：Input／Control／Skill／Effect／Equipment／运动运行目前仍在核心，同一实现负担较大；如需要分担，必须复用明确存在的任务并指定文件／符号和唯一清单。Camera、运动源／C# authoring、Foot／IK和预览仍按已有职责，不因表中出现名称就重新派工。
+- 先领域收口不等于先把所有接口写完。每个业务切面必须包含实际状态、已有算法接入、输入输出消费者及候选接受／丢弃，不建立全员等待，整体运行恢复仍属于原目标。
+
+### 本轮补充代码证据与进展修正
+
+检查起点为1f26e07c0及随后工作区。角色已改为多Ability分区并接收独立角色Hash，效果安装集合已按技能能力选择binding；Q11／Q12不能继续按完全未改描述，剩余职责按下面三项收口。
+
+| 编号 | 当前源码位置（客户端Main相对路径） | 后续合同与任务 |
+| --- | --- | --- |
+| Q19 | Runtime/Simulation/Core/Float32/Execution/Float32AbilityEvaluationContracts.cs:24—25强制角色Transaction与WorldRequest，AbortUnconsumed调用角色事务Abort；Fixed有同类结构 | 1.11覆盖技能输出侧独立性：不运动的技能不要求世界请求，技能候选不拥有外层事务的终止权 |
+| Q20 | Runtime/Simulation/Core/Float32/State/Float32CharacterRuntimeState.cs中的Float32AbilityRuntimeState.InputRequests按技能保存；Float32InputRuntime.ClearRequest只更新当前技能的事务分区 | 2.6把共享请求消费交输入owner，技能只保存局部等待状态；明确相同来源／序号的请求只能共享一份消费事实 |
+| Q21 | Float32AbilityExecutionFrame.cs的BodyFacts具有IsValid，Float32ValueRuntime.cs:408—417直接读取字段，当前未找到IsValid消费检查；Fixed对应值读取也直接取字段 | 1.11把事实作为按需能力，实际读取缺失服务时明确失败；不能用默认结构的原点／零速度／false冒充角色事实 |
+
+这些是静态消费者证据，本轮未运行复现。新增规范场景补齐无运动技能结果、缺失事实拒绝、共享输入单次消费；不新增测试任务。现行角色／网络状态规范中的恢复和唯一提交职责保留，D20技能独立性保持，D21只组织既有约束与提请协调的文件分工。主规范仍由本change既有delta在实施归并时同步。
+
+### 协调记录使用边界
+
+已读取工作协调窗口最近状态，其确认三个实现已在推进；docs/coordination-progress.md顶部仍保留PARALLEL-20260914-DOMAIN-01当时“待分派”的审阅快照。本次提报请协调按当前已授权事实审阅D21，不以旧快照要求用户重复授权。协调记录的更新仍由协调窗口自己维护，本窗口不代写或发送日常回执。
+
 ## 2026-09-14补正Skill执行独立性遗漏
 
 用户指出Skill本应不依赖角色。原提案只约束独立编译根／数据和角色领域状态迁出，却未禁止技能执行帧依赖完整角色、创建角色事务或组装角色模块；规划不能把这描述为已经覆盖的明确要求。本次以D20、tasks 1.11和character-domain-runtime新增要求补正，不作为新增产品需求。

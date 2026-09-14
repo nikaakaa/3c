@@ -6,6 +6,8 @@
 
 本change保留整体目标与公共合同，实施清单按2026-09-14协调审阅拆回已有任务：Timeline Runtime归Timeline配对，Pose原生Runtime归Pose配对；本任务只保留核心运行、状态／网络与公共集成。当前仅更新规划归属，不启动实现。
 
+后续执行已由用户授权；本轮DOMAIN-BOUNDARIES-20260914-02只把“先把领域做好”的文档组织与职责表交协调窗口审阅，见D21。九个业务领域和角色／Session两层装配沿用现有模块，不对应九个新任务，不新增通用框架；现有实现继续自己的已授权范围，本轮不重派工。
+
 - **BREAKING**：取消 `CharacterSimulationProgram` 作为整个角色的执行、配置、资源和状态装配根。角色由 C# ControlModule、AbilityRuntime、Motion、Effect、Equipment 等正式模块装配；不以另一个总包或万能运行上下文改名保留旧职责。
 - **BREAKING**：Semantic 处理收窄为 Ability 的私有 Graph／FSM／条件／子图引用，以及 TreeClip 引用的技能图。保留 Float32／Fixed 数值目标、portable 技能数据、必要技能局部状态和来源映射；不把角色控制、BodyMotion、装备总目录或 Pose 资源继续编码进技能产物。
 - Skill独立覆盖执行层：技能只依赖自身执行数据／局部状态和声明需要的typed服务，不要求完整角色配置、状态或Body，不创建角色事务或组装角色领域模块。角色及其它正式调用方提供服务并控制外层提交；不使用效果的技能不被无条件要求GameplayEffect能力。此条补正原规划遗漏，具体见D20与任务1.11。

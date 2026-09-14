@@ -6,6 +6,8 @@
 
 D20补正原规划遗漏：Skill独立必须覆盖定义、编译、加载和执行，不仅是独立数据文件。技能不得创建角色事务或组装Control／Effect／Equipment模块；实际调用方提供技能声明所需的typed服务和调用输入，并拥有外层提交。角色只是一种调用方，1.11必须与角色接线同步收口，不能因1.10独立格式存在判定Skill已独立。
 
+D21领域分工提报DOMAIN-BOUNDARIES-20260914-02待协调窗口审阅：主清单保留核心任务，Timeline／Pose继续使用各自唯一清单，不新增任务或重分文件owner。建议以“技能与调用方 → 共享状态 → 领域实际调用 → 公共入口／产品”的业务切面接续，每批包含真实算法和消费者，不只搭接口。1f26e07c0已交付角色多Ability聚合，效果安装也已按技能能力选择绑定；这些历史问题按剩余边界处理，不重复撤回正确工作。
+
 执行顺序以用户2026-09-14“先大删除再做”为准：先执行下列首批删除，再完成独立技能、角色装配及其它保留业务的接线。旧消费者仍引用取消的类型不是延迟删除的条件；允许中间提交编译失败或功能明确不可用，记录错误所属消费者并接到正式接口，不加兼容层、占位类型、假结果或新旧开关。已完成小步保留，整个迁移必须等保留业务接通才算完成。Timeline／Pose在各自唯一清单执行同样顺序，不在这里复制领域任务。
 
 ## 0. 首批删除已取消职责
@@ -31,6 +33,8 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [ ] 1.10 将独立Ability数据的加载、格式、执行拓扑／布局接到Float32／Fixed实际执行与实例状态；复用已交付的自有拓扑和GameplayAbilityExecutionLayout，不能把创建布局视作执行完成。补齐读入到Tick／取消／恢复消费者，继续清除整角色Program解码／复制依赖，不恢复已撤回的FromProgram转换，保留必要技能编译与唯一技能格式。
 - [ ] 1.11 解除技能执行入口对角色装配的依赖：Float32／Fixed AbilityExecutionFrame只消费技能局部状态、调用输入／目标／时间和实际需要的typed服务，不强制接收CharacterRuntimeState、整角色Input／Body或在内部创建CharacterRuntimeStateTransaction；AbilityControlRuntime不再组装Control／Effect／Equipment领域模块，改调用外部正式服务。Frontend按可达节点声明能力，删除无条件GameplayEffect要求；依赖角色事实的节点只要求该事实服务。角色与TreeClip等调用方适配同一执行入口，禁止假角色、完整角色上下文包装或第二套技能执行器。
 
+1.11执行边界补充：PendingAbilityEvaluation只承载技能局部候选及实际产生的领域请求，不强制附带CharacterWorldSolveRequest／角色事务，也不得在AbortUnconsumed内中止外层角色事务。BodyFacts等只读服务可以按需不提供，但实际读取该能力时必须拒绝缺失／无效数据，不接受默认结构的零值充当真实事实。
+
 ## 2. 角色领域运行与状态
 
 - [ ] 2.1 按明确角色配置、已绑定独立技能集合和领域状态创建角色运行实例，接入正式Host及保留Pass的Evaluate／Finalize；关闭Host对旧Program／Projection的必要条件和Load调用。根类型错误接线已撤回，不恢复旧工厂或修改根校验；输入必须是真实领域绑定，输出必须是可推进的角色实例。
@@ -39,6 +43,8 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [x] 2.4 将 BodyMotion 配置接到原数值目标运动模块，保留垂直积分、Motion 仲裁、WorldResolveBatch 和 Solver 能力要求。
 - [x] 2.5 将 Effect／Equipment 的目录和运行状态交回对应模块，技能只保留请求接口，不复制全角色配置。
 - [ ] 2.6 将Float32／Fixed CharacterRuntimeState与codec改为角色级领域聚合；控制／请求／效果／装备／序号归角色，多个技能按技能及调用实例分区，Timeline私有播放状态由Timeline提供，不挂在某一个Ability安装对象之下。以同一Step完整Capture／Restore控制机器、技能调用、目标及跨Tick运动状态，保留已有codec和算法的有效部分。
+
+2.6执行边界补充：多Ability聚合已经建立，继续移出AbilityRuntimeState中的共享InputRequests／Consumed记录。相同请求由输入领域保存一份消费状态，多个技能查询／消费同一事实；技能自身等待和局部变量仍独立。动作准入／替换沿既有Action规则接入，不把窗口统一交Timeline保存或在Control重写技能规则。
 - [ ] 2.7 将Actor roster、角色内容identity与状态schema接到完整领域状态，使用真实角色配置／技能集合／模块合同身份；删除CharacterRuntimeState.GameplayContentHash直接取单个Ability ContentHash的映射，快照不能挑一个技能身份代表整角色，保留角色、技能分区、World／Pipeline各自身份与完整恢复。
 
 - [ ] 2.8 由角色工厂装配Ability／Timeline／Pose／Camera／Motion的分型准备结果，汇集各领域owner确认的实际采用事实与失败原因；核心只发布自己拥有的Ability安装事实，不替其它领域决定版本或状态。

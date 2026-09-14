@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
     }
 
@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
     }
 
@@ -98,7 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
     }
 
@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void DoAction()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
     }
 
@@ -195,7 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void DoAction()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
     }
 }

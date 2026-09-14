@@ -102,7 +102,11 @@ namespace ThirdPersonSimulation
                     program,
                     FindGameplayEffectBinding(bindings, program.Manifest.ProgramId),
                     FindEquipmentBinding(bindings, program.Manifest.ProgramId));
-                var kernelBinding = new KernelProgramBinding(program, layout, kernel);
+                var kernelBinding = new KernelProgramBinding(
+                    program,
+                    layout,
+                    kernel,
+                    Float32GameplayAbilityExecutionCatalogFactory.FromProgram(program));
                 kernelBindings[i] = kernelBinding;
                 bindingsByProgram.Add(program.Manifest.ProgramId, kernelBinding);
             }
@@ -166,7 +170,8 @@ namespace ThirdPersonSimulation
                         program,
                         FindGameplayEffectBinding(values, program.Manifest.ProgramId),
                         FindEquipmentBinding(values, program.Manifest.ProgramId)),
-                    m_CharacterRuntime);
+                    m_CharacterRuntime,
+                    Float32GameplayAbilityExecutionCatalogFactory.FromProgram(program));
                 kernelBindings[i] = binding;
                 bindingsByProgram.Add(program.Manifest.ProgramId, binding);
             }

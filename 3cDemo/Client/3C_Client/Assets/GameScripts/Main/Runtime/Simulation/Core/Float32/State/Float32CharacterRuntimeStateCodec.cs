@@ -8,9 +8,9 @@ namespace ThirdPersonSimulation
     internal static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 1;
-        const string HashIdentity = "float32-character-runtime-state-hash/1";
-        public const string CodecIdentity = "float32-character-runtime-state/1";
+        const int Version = 2;
+        const string HashIdentity = "float32-character-runtime-state-hash/2";
+        public const string CodecIdentity = "float32-character-runtime-state/2";
 
         public static byte[] Write(Float32CharacterRuntimeState state)
         {
@@ -59,7 +59,6 @@ namespace ThirdPersonSimulation
                 installation.Identity.Require(identity);
                 Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
                 GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
-                Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installation.Layout);
                 Dictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, installation.Layout);
                 Dictionary<int, Float32MotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
                 abilities.Add(new Float32AbilityRuntimeState(
@@ -67,7 +66,6 @@ namespace ThirdPersonSimulation
                     lastCompletedTick,
                     stateValues,
                     abilityExecutionState,
-                    inputRequests,
                     timelineRetainedActionContexts,
                     motionWarpStates));
             }
@@ -77,6 +75,7 @@ namespace ThirdPersonSimulation
                 : CreateEquipmentLayout(equipmentInstallation, equipmentBinding);
             List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installations, equipmentLayout);
             List<Float32ActionInstanceState> actionInstances = ReadActionInstances(reader, installations, equipmentLayout);
+            Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installations);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
             ulong handleAllocator = reader.ReadUInt64();
@@ -111,6 +110,7 @@ namespace ThirdPersonSimulation
                 abilities,
                 actionActivationRequests,
                 actionInstances,
+                inputRequests,
                 eventSequence,
                 actionEventSequence,
                 handleAllocator,
@@ -136,12 +136,12 @@ namespace ThirdPersonSimulation
                 WriteIdentity(writer, ability.AbilityIdentity);
                 WriteValues(writer, ability.StateValues);
                 WriteAbilityExecutionState(writer, ability.AbilityExecutionState);
-                WriteInputRequests(writer, ability.InputRequests);
                 WriteTimelineRetentions(writer, ability.TimelineRetainedActionContexts);
                 WriteMotionWarpStates(writer, ability.MotionWarpStates);
             }
             WriteActionActivationRequests(writer, state.ActionActivationRequests);
             WriteActionInstances(writer, state.ActionInstances);
+            WriteInputRequests(writer, state.InputRequests);
             writer.WriteUInt64(state.EventSequence);
             writer.WriteUInt64(state.ActionEventSequence);
             writer.WriteUInt64(state.HandleAllocator);
@@ -279,19 +279,23 @@ namespace ThirdPersonSimulation
 
         static Dictionary<string, SimulationInputRequestState> ReadInputRequests(
             CanonicalReader reader,
-            GameplayAbilityExecutionLayout layout)
+            Float32GameplayAbilityExecutionInstallationSet installations)
         {
-            int count = ReadCount(reader, layout.InputRequestIds.Count, "Float32 Ability Input request");
+            int count = ReadCount(reader, 1000000, "Float32 Character Input request");
+            var known = new HashSet<string>(StringComparer.Ordinal);
+            for (int installationIndex = 0; installationIndex < installations.Installations.Count; installationIndex++)
+                for (int requestIndex = 0; requestIndex < installations.Installations[installationIndex].Layout.InputRequestIds.Count; requestIndex++)
+                    known.Add(installations.Installations[installationIndex].Layout.InputRequestIds[requestIndex]);
             var requests = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
             string previous = null;
             for (int i = 0; i < count; i++)
             {
                 string requestId = SimulationIdentity.Require(reader.ReadString(), "InputRequestId");
-                if (previous != null && string.CompareOrdinal(previous, requestId) >= 0 || !layout.HasInputRequest(requestId))
-                    throw new InvalidDataException("Float32 Ability Input request identities are invalid or not canonically ordered.");
+                if (previous != null && string.CompareOrdinal(previous, requestId) >= 0 || !known.Contains(requestId))
+                    throw new InvalidDataException("Float32 Character Input request identities are invalid or not canonically ordered.");
                 SimulationInputRequestState value = SimulationInputRequestStateCodec.Read(reader);
                 if (value.IsValid && !string.Equals(value.RequestId, requestId, StringComparison.Ordinal))
-                    throw new InvalidDataException("Float32 Ability Input request state key does not match its value.");
+                    throw new InvalidDataException("Float32 Character Input request state key does not match its value.");
                 requests.Add(requestId, value);
                 previous = requestId;
             }

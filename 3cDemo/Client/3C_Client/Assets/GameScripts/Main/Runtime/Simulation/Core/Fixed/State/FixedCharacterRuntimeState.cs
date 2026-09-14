@@ -14,7 +14,6 @@ namespace ThirdPersonSimulation.Fixed
             ulong lastCompletedTick,
             IDictionary<int, CharacterStateValue> stateValues,
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
-            IDictionary<string, SimulationInputRequestState> inputRequests,
             IDictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts,
             IDictionary<int, FixedMotionWarpState> motionWarpStates)
         {
@@ -23,9 +22,6 @@ namespace ThirdPersonSimulation.Fixed
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
                 new GameplayAbilityExecutionAggregate<CharacterStateValue>();
-            InputRequests = inputRequests == null
-                ? new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal)
-                : new Dictionary<string, SimulationInputRequestState>(inputRequests, StringComparer.Ordinal);
             TimelineRetainedActionContexts = timelineRetainedActionContexts == null
                 ? new Dictionary<int, FixedActionInstanceReference>()
                 : new Dictionary<int, FixedActionInstanceReference>(timelineRetainedActionContexts);
@@ -37,7 +33,6 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedGameplayAbilityExecutionInstallation Installation => m_Installation;
         internal Dictionary<int, CharacterStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionState { get; }
-        internal Dictionary<string, SimulationInputRequestState> InputRequests { get; }
         internal Dictionary<int, FixedActionInstanceReference> TimelineRetainedActionContexts { get; }
         internal Dictionary<int, FixedMotionWarpState> MotionWarpStates { get; }
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
@@ -49,7 +44,6 @@ namespace ThirdPersonSimulation.Fixed
                 lastCompletedTick,
                 StateValues,
                 AbilityExecutionState,
-                InputRequests,
                 TimelineRetainedActionContexts,
                 MotionWarpStates);
 
@@ -80,6 +74,7 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<FixedAbilityRuntimeState> abilities,
             IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
             IEnumerable<FixedActionInstanceState> actionInstances,
+            IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
             ulong eventSequence,
             ulong actionEventSequence,
             ulong handleAllocator,
@@ -110,6 +105,9 @@ namespace ThirdPersonSimulation.Fixed
                 actionActivationRequests ?? Array.Empty<SimulationActionActivationRequestState>());
             ActionInstances = new List<FixedActionInstanceState>(
                 actionInstances ?? Array.Empty<FixedActionInstanceState>());
+            InputRequests = inputRequests == null
+                ? new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal)
+                : new Dictionary<string, SimulationInputRequestState>(inputRequests, StringComparer.Ordinal);
             EventSequence = eventSequence;
             ActionEventSequence = actionEventSequence;
             HandleAllocator = handleAllocator;
@@ -134,6 +132,7 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<FixedAbilityRuntimeState> Abilities => m_Abilities;
         internal List<SimulationActionActivationRequestState> ActionActivationRequests { get; }
         internal List<FixedActionInstanceState> ActionInstances { get; }
+        internal Dictionary<string, SimulationInputRequestState> InputRequests { get; }
         internal ulong EventSequence { get; }
         internal ulong ActionEventSequence { get; }
         internal ulong HandleAllocator { get; }
@@ -161,7 +160,6 @@ namespace ThirdPersonSimulation.Fixed
                     null,
                     null,
                     null,
-                    null,
                     null);
             }
             return new FixedCharacterRuntimeState(
@@ -170,6 +168,7 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayContentHash,
                 0,
                 abilities,
+                null,
                 null,
                 null,
                 0,

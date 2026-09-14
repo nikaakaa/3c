@@ -38,8 +38,6 @@ namespace ThirdPersonSimulation.Fixed
         void Reset(int slotIndex);
         GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState();
         void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
-        SimulationInputRequestState GetInputRequest(string requestId);
-        void SetInputRequest(string requestId, SimulationInputRequestState state);
         FixedActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation);
         void SetTimelineRetainedActionContext(OperationHandle operation, FixedActionInstanceReference value);
         FixedMotionWarpState GetMotionWarpState(OperationHandle operation);
@@ -57,6 +55,8 @@ namespace ThirdPersonSimulation.Fixed
         ulong NextHandleAllocator();
         ulong CaptureHandleAllocator();
         void RestoreHandleAllocator(ulong value);
+        SimulationInputRequestState GetInputRequest(string requestId);
+        void SetInputRequest(string requestId, SimulationInputRequestState state);
         IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
         void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
         IReadOnlyList<FixedActionInstanceState> GetActionInstances();
@@ -84,6 +84,7 @@ namespace ThirdPersonSimulation.Fixed
             new Stack<FixedCharacterRuntimeStateSavepoint>();
         readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
         readonly List<FixedActionInstanceState> m_ActionInstances;
+        readonly Dictionary<string, SimulationInputRequestState> m_InputRequests;
         GameplayEffectStateAggregate m_GameplayEffectAggregate;
         SimulationGameplayEffectState m_GameplayEffectWorking;
         FixedGameplayEffectExecutionScratch m_GameplayEffectScratch;
@@ -115,6 +116,7 @@ namespace ThirdPersonSimulation.Fixed
             }
             m_ActionActivationRequests = new List<SimulationActionActivationRequestState>(baseState.ActionActivationRequests);
             m_ActionInstances = new List<FixedActionInstanceState>(baseState.ActionInstances);
+            m_InputRequests = new Dictionary<string, SimulationInputRequestState>(baseState.InputRequests, StringComparer.Ordinal);
             m_GameplayEffectAggregate = baseState.GameplayEffectState;
             m_EquipmentState = baseState.EquipmentState;
             m_EventSequence = baseState.EventSequence;
@@ -194,6 +196,20 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             m_HandleAllocator = value;
+        }
+
+        public SimulationInputRequestState GetInputRequest(string requestId)
+        {
+            RequireActive();
+            return m_InputRequests.TryGetValue(requestId ?? string.Empty, out SimulationInputRequestState state)
+                ? state
+                : default;
+        }
+
+        public void SetInputRequest(string requestId, SimulationInputRequestState state)
+        {
+            RequireActive();
+            m_InputRequests[requestId ?? string.Empty] = state;
         }
 
         public IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests()
@@ -319,6 +335,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_AbilityStates.Values,
                 m_ActionActivationRequests,
                 m_ActionInstances,
+                m_InputRequests,
                 m_EventSequence,
                 m_ActionEventSequence,
                 m_HandleAllocator,
@@ -339,6 +356,9 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionActivationRequests.AddRange(state.ActionActivationRequests);
             m_ActionInstances.Clear();
             m_ActionInstances.AddRange(state.ActionInstances);
+            m_InputRequests.Clear();
+            foreach (KeyValuePair<string, SimulationInputRequestState> value in state.InputRequests)
+                m_InputRequests.Add(value.Key, value.Value);
             m_EventSequence = state.EventSequence;
             m_ActionEventSequence = state.ActionEventSequence;
             m_HandleAllocator = state.HandleAllocator;
@@ -369,7 +389,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly FixedGameplayAbilityExecutionData m_Ability;
         readonly Dictionary<int, CharacterStateValue> m_StateValues;
-        readonly Dictionary<string, SimulationInputRequestState> m_InputRequests;
         readonly Dictionary<int, FixedActionInstanceReference> m_TimelineRetainedActionContexts;
         readonly Dictionary<int, FixedMotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionState;
@@ -386,7 +405,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Layout = installation.Layout;
             m_Ability = installation.Data;
             m_StateValues = new Dictionary<int, CharacterStateValue>(state.StateValues);
-            m_InputRequests = new Dictionary<string, SimulationInputRequestState>(state.InputRequests, StringComparer.Ordinal);
             m_TimelineRetainedActionContexts = new Dictionary<int, FixedActionInstanceReference>(state.TimelineRetainedActionContexts);
             m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>(state.MotionWarpStates);
             m_AbilityExecutionState = state.AbilityExecutionState.Clone();
@@ -440,24 +458,6 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             m_AbilityExecutionState = state ?? throw new ArgumentNullException(nameof(state));
-        }
-
-        public SimulationInputRequestState GetInputRequest(string requestId)
-        {
-            RequireActive();
-            if (!m_Layout.HasInputRequest(requestId))
-                throw new InvalidOperationException($"Ability '{m_Ability.AbilityId}' has no Input request '{requestId}'.");
-            return m_InputRequests.TryGetValue(requestId ?? string.Empty, out SimulationInputRequestState state)
-                ? state
-                : default;
-        }
-
-        public void SetInputRequest(string requestId, SimulationInputRequestState state)
-        {
-            RequireActive();
-            if (!m_Layout.HasInputRequest(requestId))
-                throw new InvalidOperationException($"Ability '{m_Ability.AbilityId}' has no Input request '{requestId}'.");
-            m_InputRequests[requestId ?? string.Empty] = state;
         }
 
         public FixedActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation)
@@ -522,7 +522,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_Owner.Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,
-                m_InputRequests,
                 m_TimelineRetainedActionContexts,
                 m_MotionWarpStates);
         }

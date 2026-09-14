@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation
         {
             foreach (string requestId in m_Layout.InputRequestIds)
             {
-                SimulationInputRequestState state = m_Frame.Transaction.GetInputRequest(requestId);
+                SimulationInputRequestState state = m_Frame.DomainState.GetInputRequest(requestId);
                 if (state.IsValid && state.ExpireTick < m_Frame.Tick.Value)
                     state = default;
                 for (int requestIndex = 0; requestIndex < m_Frame.Input.Requests.Count; requestIndex++)
@@ -39,7 +39,7 @@ namespace ThirdPersonSimulation
                             request.Priority);
                     }
                 }
-                m_Frame.Transaction.SetInputRequest(requestId, state);
+                m_Frame.DomainState.SetInputRequest(requestId, state);
             }
         }
 
@@ -61,7 +61,7 @@ namespace ThirdPersonSimulation
                 state = default;
                 return false;
             }
-            state = m_Frame.Transaction.GetInputRequest(requestId);
+            state = m_Frame.DomainState.GetInputRequest(requestId);
             return state.IsValid && !state.Consumed && state.ExpireTick >= m_Frame.Tick.Value;
         }
 
@@ -69,9 +69,9 @@ namespace ThirdPersonSimulation
         {
             if (!m_Layout.HasInputRequest(requestId))
                 return;
-            SimulationInputRequestState state = m_Frame.Transaction.GetInputRequest(requestId);
+            SimulationInputRequestState state = m_Frame.DomainState.GetInputRequest(requestId);
             if (state.IsValid && !state.Consumed)
-                m_Frame.Transaction.SetInputRequest(requestId, state.Consume());
+                m_Frame.DomainState.SetInputRequest(requestId, state.Consume());
         }
 
         public SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)

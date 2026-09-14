@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using ThirdPersonSimulation;
 using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation.Fixed
@@ -9,9 +8,9 @@ namespace ThirdPersonSimulation.Fixed
     internal static class FixedCharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 1;
-        const string HashIdentity = "fixed-character-runtime-state-hash/1";
-        public const string CodecIdentity = "fixed-character-runtime-state/1";
+        const int Version = 2;
+        const string HashIdentity = "float32-character-runtime-state-hash/2";
+        public const string CodecIdentity = "float32-character-runtime-state/2";
 
         public static byte[] Write(FixedCharacterRuntimeState state)
         {
@@ -60,7 +59,6 @@ namespace ThirdPersonSimulation.Fixed
                 installation.Identity.Require(identity);
                 Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
                 GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
-                Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installation.Layout);
                 Dictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, installation.Layout);
                 Dictionary<int, FixedMotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
                 abilities.Add(new FixedAbilityRuntimeState(
@@ -68,7 +66,6 @@ namespace ThirdPersonSimulation.Fixed
                     lastCompletedTick,
                     stateValues,
                     abilityExecutionState,
-                    inputRequests,
                     timelineRetainedActionContexts,
                     motionWarpStates));
             }
@@ -78,6 +75,7 @@ namespace ThirdPersonSimulation.Fixed
                 : CreateEquipmentLayout(equipmentInstallation, equipmentBinding);
             List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installations, equipmentLayout);
             List<FixedActionInstanceState> actionInstances = ReadActionInstances(reader, installations, equipmentLayout);
+            Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installations);
             ulong eventSequence = reader.ReadUInt64();
             ulong actionEventSequence = reader.ReadUInt64();
             ulong handleAllocator = reader.ReadUInt64();
@@ -112,6 +110,7 @@ namespace ThirdPersonSimulation.Fixed
                 abilities,
                 actionActivationRequests,
                 actionInstances,
+                inputRequests,
                 eventSequence,
                 actionEventSequence,
                 handleAllocator,
@@ -137,12 +136,12 @@ namespace ThirdPersonSimulation.Fixed
                 WriteIdentity(writer, ability.AbilityIdentity);
                 WriteValues(writer, ability.StateValues);
                 WriteAbilityExecutionState(writer, ability.AbilityExecutionState);
-                WriteInputRequests(writer, ability.InputRequests);
                 WriteTimelineRetentions(writer, ability.TimelineRetainedActionContexts);
                 WriteMotionWarpStates(writer, ability.MotionWarpStates);
             }
             WriteActionActivationRequests(writer, state.ActionActivationRequests);
             WriteActionInstances(writer, state.ActionInstances);
+            WriteInputRequests(writer, state.InputRequests);
             writer.WriteUInt64(state.EventSequence);
             writer.WriteUInt64(state.ActionEventSequence);
             writer.WriteUInt64(state.HandleAllocator);
@@ -280,19 +279,23 @@ namespace ThirdPersonSimulation.Fixed
 
         static Dictionary<string, SimulationInputRequestState> ReadInputRequests(
             CanonicalReader reader,
-            GameplayAbilityExecutionLayout layout)
+            FixedGameplayAbilityExecutionInstallationSet installations)
         {
-            int count = ReadCount(reader, layout.InputRequestIds.Count, "Fixed Ability Input request");
+            int count = ReadCount(reader, 1000000, "Fixed Character Input request");
+            var known = new HashSet<string>(StringComparer.Ordinal);
+            for (int installationIndex = 0; installationIndex < installations.Installations.Count; installationIndex++)
+                for (int requestIndex = 0; requestIndex < installations.Installations[installationIndex].Layout.InputRequestIds.Count; requestIndex++)
+                    known.Add(installations.Installations[installationIndex].Layout.InputRequestIds[requestIndex]);
             var requests = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
             string previous = null;
             for (int i = 0; i < count; i++)
             {
                 string requestId = SimulationIdentity.Require(reader.ReadString(), "InputRequestId");
-                if (previous != null && string.CompareOrdinal(previous, requestId) >= 0 || !layout.HasInputRequest(requestId))
-                    throw new InvalidDataException("Fixed Ability Input request identities are invalid or not canonically ordered.");
+                if (previous != null && string.CompareOrdinal(previous, requestId) >= 0 || !known.Contains(requestId))
+                    throw new InvalidDataException("Fixed Character Input request identities are invalid or not canonically ordered.");
                 SimulationInputRequestState value = SimulationInputRequestStateCodec.Read(reader);
                 if (value.IsValid && !string.Equals(value.RequestId, requestId, StringComparison.Ordinal))
-                    throw new InvalidDataException("Fixed Ability Input request state key does not match its value.");
+                    throw new InvalidDataException("Fixed Character Input request state key does not match its value.");
                 requests.Add(requestId, value);
                 previous = requestId;
             }
@@ -820,4 +823,3 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 }
-

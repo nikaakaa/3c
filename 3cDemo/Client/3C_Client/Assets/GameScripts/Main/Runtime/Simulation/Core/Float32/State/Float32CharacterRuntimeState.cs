@@ -14,7 +14,6 @@ namespace ThirdPersonSimulation
             ulong lastCompletedTick,
             IDictionary<int, CharacterStateValue> stateValues,
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
-            IDictionary<string, SimulationInputRequestState> inputRequests,
             IDictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts,
             IDictionary<int, Float32MotionWarpState> motionWarpStates)
         {
@@ -23,9 +22,6 @@ namespace ThirdPersonSimulation
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
                 new GameplayAbilityExecutionAggregate<CharacterStateValue>();
-            InputRequests = inputRequests == null
-                ? new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal)
-                : new Dictionary<string, SimulationInputRequestState>(inputRequests, StringComparer.Ordinal);
             TimelineRetainedActionContexts = timelineRetainedActionContexts == null
                 ? new Dictionary<int, Float32ActionInstanceReference>()
                 : new Dictionary<int, Float32ActionInstanceReference>(timelineRetainedActionContexts);
@@ -37,7 +33,6 @@ namespace ThirdPersonSimulation
         internal Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
         internal Dictionary<int, CharacterStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionState { get; }
-        internal Dictionary<string, SimulationInputRequestState> InputRequests { get; }
         internal Dictionary<int, Float32ActionInstanceReference> TimelineRetainedActionContexts { get; }
         internal Dictionary<int, Float32MotionWarpState> MotionWarpStates { get; }
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
@@ -49,7 +44,6 @@ namespace ThirdPersonSimulation
                 lastCompletedTick,
                 StateValues,
                 AbilityExecutionState,
-                InputRequests,
                 TimelineRetainedActionContexts,
                 MotionWarpStates);
 
@@ -80,6 +74,7 @@ namespace ThirdPersonSimulation
             IEnumerable<Float32AbilityRuntimeState> abilities,
             IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
             IEnumerable<Float32ActionInstanceState> actionInstances,
+            IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests,
             ulong eventSequence,
             ulong actionEventSequence,
             ulong handleAllocator,
@@ -110,6 +105,9 @@ namespace ThirdPersonSimulation
                 actionActivationRequests ?? Array.Empty<SimulationActionActivationRequestState>());
             ActionInstances = new List<Float32ActionInstanceState>(
                 actionInstances ?? Array.Empty<Float32ActionInstanceState>());
+            InputRequests = inputRequests == null
+                ? new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal)
+                : new Dictionary<string, SimulationInputRequestState>(inputRequests, StringComparer.Ordinal);
             EventSequence = eventSequence;
             ActionEventSequence = actionEventSequence;
             HandleAllocator = handleAllocator;
@@ -134,6 +132,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<Float32AbilityRuntimeState> Abilities => m_Abilities;
         internal List<SimulationActionActivationRequestState> ActionActivationRequests { get; }
         internal List<Float32ActionInstanceState> ActionInstances { get; }
+        internal Dictionary<string, SimulationInputRequestState> InputRequests { get; }
         internal ulong EventSequence { get; }
         internal ulong ActionEventSequence { get; }
         internal ulong HandleAllocator { get; }
@@ -161,7 +160,6 @@ namespace ThirdPersonSimulation
                     null,
                     null,
                     null,
-                    null,
                     null);
             }
             return new Float32CharacterRuntimeState(
@@ -170,6 +168,7 @@ namespace ThirdPersonSimulation
                 gameplayContentHash,
                 0,
                 abilities,
+                null,
                 null,
                 null,
                 0,

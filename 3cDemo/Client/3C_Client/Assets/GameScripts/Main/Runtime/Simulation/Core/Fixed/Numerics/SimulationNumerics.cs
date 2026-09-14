@@ -28,7 +28,7 @@ namespace ThirdPersonSimulation.Fixed
             string vector3Type,
             string yawType,
             string canonicalCodec,
-            SimulationKernelSpecializationManifest kernelSpecialization)
+            SimulationExecutionTargetManifest executionTarget)
         {
             Profile = profile;
             ScalarType = SimulationIdentity.Require(scalarType, nameof(scalarType));
@@ -36,9 +36,9 @@ namespace ThirdPersonSimulation.Fixed
             Vector3Type = SimulationIdentity.Require(vector3Type, nameof(vector3Type));
             YawType = SimulationIdentity.Require(yawType, nameof(yawType));
             CanonicalCodec = SimulationIdentity.Require(canonicalCodec, nameof(canonicalCodec));
-            KernelSpecialization = kernelSpecialization ?? throw new ArgumentNullException(nameof(kernelSpecialization));
-            if (kernelSpecialization.NumericProfile != profile)
-                throw new ArgumentException("Numeric Target and Kernel specialization profiles must match.", nameof(kernelSpecialization));
+            ExecutionTarget = executionTarget ?? throw new ArgumentNullException(nameof(executionTarget));
+            if (executionTarget.NumericProfile != profile)
+                throw new ArgumentException("Numeric Target and Execution Target profiles must match.", nameof(executionTarget));
         }
 
         public SimulationNumericProfile Profile { get; }
@@ -47,7 +47,7 @@ namespace ThirdPersonSimulation.Fixed
         public string Vector3Type { get; }
         public string YawType { get; }
         public string CanonicalCodec { get; }
-        public SimulationKernelSpecializationManifest KernelSpecialization { get; }
+        public SimulationExecutionTargetManifest ExecutionTarget { get; }
     }
 
     public static class FixedSimulationTarget
@@ -59,7 +59,11 @@ namespace ThirdPersonSimulation.Fixed
             nameof(FixedVector3),
             nameof(FixedYaw),
             "fixed-q32.32-le/v1",
-            SimulationKernel.SpecializationManifest);
+            new SimulationExecutionTargetManifest(
+                "character-execution/fixed/v2",
+                FixedSimulationNumericProfile.Value,
+                CharacterGameplayOperationSet.Version,
+                CharacterGameplayOperationSet.Operations));
 
         public static FixedSimulationTargetManifest Manifest => s_Manifest;
     }

@@ -27,7 +27,7 @@ namespace ThirdPersonSimulation
             string vector3Type,
             string yawType,
             string canonicalCodec,
-            SimulationKernelSpecializationManifest kernelSpecialization)
+            SimulationExecutionTargetManifest executionTarget)
         {
             Profile = profile;
             ScalarType = SimulationIdentity.Require(scalarType, nameof(scalarType));
@@ -35,9 +35,9 @@ namespace ThirdPersonSimulation
             Vector3Type = SimulationIdentity.Require(vector3Type, nameof(vector3Type));
             YawType = SimulationIdentity.Require(yawType, nameof(yawType));
             CanonicalCodec = SimulationIdentity.Require(canonicalCodec, nameof(canonicalCodec));
-            KernelSpecialization = kernelSpecialization ?? throw new ArgumentNullException(nameof(kernelSpecialization));
-            if (kernelSpecialization.NumericProfile != profile)
-                throw new ArgumentException("Numeric Target and Kernel specialization profiles must match.", nameof(kernelSpecialization));
+            ExecutionTarget = executionTarget ?? throw new ArgumentNullException(nameof(executionTarget));
+            if (executionTarget.NumericProfile != profile)
+                throw new ArgumentException("Numeric Target and Execution Target profiles must match.", nameof(executionTarget));
         }
 
         public SimulationNumericProfile Profile { get; }
@@ -46,7 +46,7 @@ namespace ThirdPersonSimulation
         public string Vector3Type { get; }
         public string YawType { get; }
         public string CanonicalCodec { get; }
-        public SimulationKernelSpecializationManifest KernelSpecialization { get; }
+        public SimulationExecutionTargetManifest ExecutionTarget { get; }
     }
 
     public static class Float32SimulationTarget
@@ -59,7 +59,11 @@ namespace ThirdPersonSimulation
                 nameof(Float32Vector3),
                 nameof(Float32Yaw),
                 "float32-le/v1",
-                SimulationKernel.SpecializationManifest);
+                new SimulationExecutionTargetManifest(
+                    "character-execution/float32/v2",
+                    Float32SimulationNumericProfile.Value,
+                    CharacterGameplayOperationSet.Version,
+                    CharacterGameplayOperationSet.Operations));
 
         public static Float32SimulationTargetManifest Manifest => s_Manifest;
     }

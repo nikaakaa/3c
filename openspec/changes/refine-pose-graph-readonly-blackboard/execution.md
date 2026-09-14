@@ -315,6 +315,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - Replacement 不修改旧实例的 ResetGeneration，不共享节点缓存，不回滚 EventGraph 输入，也不保留旧实例作为兼容路径。
 - 本步未运行 Unity/Build；共享 Host 尚未调用该原语，不能宣称角色替换链已完成。
 
+## 2026-09-14 r3 原生阶段接线收据
+
+- 本轮新增的原生阶段能力已提交为 `333a3a1a4`、`6a28afae6`、`5bb83d3af`、`15631b7b5`、`4663e6d76`、`597f31ec4`；目标文件当前无未提交差异，暂存区为空。
+- 当前 `rg` 结果显示 `CharacterPoseNativeGraphRuntime.Create` 只有 Runtime 工厂重载自身，没有角色 Host 的实际调用点；因此只能确认合同、handler 注册、Reset/Replace 和 FlowCanvas 生命周期已建立，不能确认角色运行闭环。
+- 未运行 Unity、Build、Play、资源刷新或端到端验证；下一步必须由现有 Source/Player/State/Blend/Constraint/Foot/Goal/FBBIK/Final 服务提供真实 handler，并由共享 Host 安装调用。
+
 ## 2026-09-14 r3 删除孤立 Pose Tuning Compiler
 
 - 删除 `Editor/CharacterSimulation/Compilation/Presentation/CharacterPoseTuningParameterCompiler.cs` 及其 `.meta`；该入口没有外部引用，职责只是从旧 Program Image 的 Operation/Weight 表生成调参布局。

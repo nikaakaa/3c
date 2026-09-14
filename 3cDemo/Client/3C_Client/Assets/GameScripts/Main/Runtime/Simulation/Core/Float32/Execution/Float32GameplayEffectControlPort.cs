@@ -6,20 +6,20 @@ namespace ThirdPersonSimulation
 {
     internal sealed partial class Float32GameplayEffectTarget
     {
-        ActorId IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.ActorId => m_ActorId;
-        ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.Tick => m_Tick.Value;
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.HasActiveEffects =>
+        ActorId IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.ActorId => m_ActorId;
+        ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.Tick => m_Tick.Value;
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.HasActiveEffects =>
             m_State != null ? m_State.ActiveEffects.Count > 0 : m_CommittedState.ActiveEffectCount > 0;
-        int IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.ChangeCount => m_Changes.Count;
+        int IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.ChangeCount => m_Changes.Count;
 
-        GameplayEffectApplicationIdentity IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.DescribeApplication(SimulationGameplayEffectApplication application)
+        GameplayEffectApplicationIdentity IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.DescribeApplication(SimulationGameplayEffectApplication application)
         {
             return application == null
                 ? default
                 : new GameplayEffectApplicationIdentity(application.EffectId, application.AuthoritativeInstanceId, application.AuthoritativeLifecycleRevision);
         }
 
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.TryPrepare(
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.TryPrepare(
             SimulationGameplayEffectApplication application,
             out GameplayEffectPreparedSpec<PortableEffectSpecState> prepared,
             out GameplayEffectApplyResult failure)
@@ -28,18 +28,18 @@ namespace ThirdPersonSimulation
             return m_Admission.TryPrepare(application, out prepared, out failure);
         }
 
-        GameplayEffectPreparedSpec<PortableEffectSpecState> IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.DescribeSpec(PortableEffectSpecState spec) => DescribeSpec(spec);
-        int IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.ComponentCount(PortableEffectSpecState spec) => spec.Definition.Components.Length;
-        GameplayEffectComponentDescriptor IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.DescribeComponent(PortableEffectSpecState spec, int componentIndex) => DescribeComponent(spec.Definition.Components[componentIndex]);
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.EvaluateTagRequirement(PortableEffectSpecState spec, int componentIndex) => EvaluateTagRequirement(spec, (PortableTagRequirementsComponent)spec.Definition.Components[componentIndex]);
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.EvaluateAttributeRequirement(PortableEffectSpecState spec, int componentIndex) => EvaluateAttributeRequirement(spec, (PortableAttributeRequirementsComponent)spec.Definition.Components[componentIndex]);
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.MatchesEffectId(PortableEffectSpecState spec, string effectId) =>
+        GameplayEffectPreparedSpec<PortableEffectSpecState> IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.DescribeSpec(PortableEffectSpecState spec) => DescribeSpec(spec);
+        int IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.ComponentCount(PortableEffectSpecState spec) => spec.Definition.Components.Length;
+        GameplayEffectComponentDescriptor IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.DescribeComponent(PortableEffectSpecState spec, int componentIndex) => DescribeComponent(spec.Definition.Components[componentIndex]);
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.EvaluateTagRequirement(PortableEffectSpecState spec, int componentIndex) => EvaluateTagRequirement(spec, (PortableTagRequirementsComponent)spec.Definition.Components[componentIndex]);
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.EvaluateAttributeRequirement(PortableEffectSpecState spec, int componentIndex) => EvaluateAttributeRequirement(spec, (PortableAttributeRequirementsComponent)spec.Definition.Components[componentIndex]);
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.MatchesEffectId(PortableEffectSpecState spec, string effectId) =>
             spec != null && string.Equals(spec.Definition.Id, Float32GameplayEffectRuntimeCatalog.NormalizeEffect(effectId), StringComparison.Ordinal);
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.MatchesEffectTagQuery(PortableEffectSpecState spec, PortableTagQuery tagQuery) =>
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.MatchesEffectTagQuery(PortableEffectSpecState spec, PortableTagQuery tagQuery) =>
             tagQuery != null && m_State.Catalog.Matches(tagQuery, spec.Definition.EffectTags);
-        PortableActiveEffectState IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.FindActiveByHandle(ulong handle) => m_State.FindActiveByHandle(handle);
-        PortableActiveEffectState IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.FindActiveByInstance(ulong instanceId) => m_State.FindActiveByInstance(instanceId);
-        IReadOnlyList<PortableActiveEffectState> IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.AcquireActiveEffects()
+        PortableActiveEffectState IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.FindActiveByHandle(ulong handle) => m_State.FindActiveByHandle(handle);
+        PortableActiveEffectState IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.FindActiveByInstance(ulong instanceId) => m_State.FindActiveByInstance(instanceId);
+        IReadOnlyList<PortableActiveEffectState> IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.AcquireActiveEffects()
         {
             List<PortableActiveEffectState> values = m_Scratch.ActiveEffects.Acquire();
             for (int i = 0; i < m_State.ActiveEffects.Count; i++)
@@ -47,14 +47,14 @@ namespace ThirdPersonSimulation
             return values;
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.ReleaseActiveEffects(IReadOnlyList<PortableActiveEffectState> activeEffects)
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.ReleaseActiveEffects(IReadOnlyList<PortableActiveEffectState> activeEffects)
         {
             if (!(activeEffects is List<PortableActiveEffectState> values))
                 throw new InvalidOperationException("Gameplay Effect active snapshot does not belong to the Actor workspace.");
             m_Scratch.ActiveEffects.Release(values);
         }
 
-        PortableActiveEffectState IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.CreateActive(
+        PortableActiveEffectState IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.CreateActive(
             GameplayEffectPreparedSpec<PortableEffectSpecState> spec,
             ulong handle,
             ulong instanceId,
@@ -76,33 +76,33 @@ namespace ThirdPersonSimulation
             };
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.AddActive(PortableActiveEffectState active) => m_State.AddActive(active);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.RemoveActive(PortableActiveEffectState active) => m_State.RemoveActive(active);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.MarkActiveEffectsDirty() => m_State.MarkActiveEffectsDirty();
-        ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.GetNextPeriod(ulong instanceId) => m_State.GetNextPeriod(instanceId);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.SetNextPeriod(ulong instanceId, ulong tick) => m_State.SetNextPeriod(instanceId, tick);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.DeactivatePersistent(PortableActiveEffectState active) => DeactivatePersistent(active);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.AddActive(PortableActiveEffectState active) => m_State.AddActive(active);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.RemoveActive(PortableActiveEffectState active) => m_State.RemoveActive(active);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.MarkActiveEffectsDirty() => m_State.MarkActiveEffectsDirty();
+        ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.GetNextPeriod(ulong instanceId) => m_State.GetNextPeriod(instanceId);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.SetNextPeriod(ulong instanceId, ulong tick) => m_State.SetNextPeriod(instanceId, tick);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.DeactivatePersistent(PortableActiveEffectState active) => DeactivatePersistent(active);
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.ActivateCurrentModifier(PortableActiveEffectState active, int componentIndex) =>
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.ActivateCurrentModifier(PortableActiveEffectState active, int componentIndex) =>
             ActivateCurrentModifier(active, (PortableModifierComponent)active.Spec.Definition.Components[componentIndex]);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.ActivateGrantedTags(PortableActiveEffectState active) => ActivateGrantedTags(active);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.ActivateGrantedTags(PortableActiveEffectState active) => ActivateGrantedTags(active);
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.ExecuteNumericComponent(
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.ExecuteNumericComponent(
             GameplayEffectPreparedSpec<PortableEffectSpecState> spec,
             PortableActiveEffectState active,
             ulong handle,
             int stackCount,
             int componentIndex) => ExecuteNumericComponent(spec.TargetSpec, handle, stackCount, spec.TargetSpec.Definition.Components[componentIndex]);
 
-        int IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.AdditionalEffectCount(PortableEffectSpecState spec, int componentIndex) =>
+        int IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.AdditionalEffectCount(PortableEffectSpecState spec, int componentIndex) =>
             ((PortableAdditionalEffectsComponent)spec.Definition.Components[componentIndex]).Effects.Length;
 
-        GameplayEffectAdditionalTrigger IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.DescribeAdditionalEffectTrigger(
+        GameplayEffectAdditionalTrigger IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.DescribeAdditionalEffectTrigger(
             PortableEffectSpecState spec,
             int componentIndex,
             int effectIndex) => ToCommon(((PortableAdditionalEffectsComponent)spec.Definition.Components[componentIndex]).Effects[effectIndex].Trigger);
 
-        SimulationGameplayEffectApplication IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.BuildAdditionalApplication(
+        SimulationGameplayEffectApplication IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.BuildAdditionalApplication(
             GameplayEffectPreparedSpec<PortableEffectSpecState> spec,
             ulong instanceId,
             int componentIndex,
@@ -111,7 +111,7 @@ namespace ThirdPersonSimulation
                 (PortableAdditionalEffectsComponent)spec.TargetSpec.Definition.Components[componentIndex],
                 effectIndex);
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.EmitCue(
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.EmitCue(
             GameplayEffectPreparedSpec<PortableEffectSpecState> spec,
             ulong instanceId,
             int componentIndex,
@@ -121,14 +121,14 @@ namespace ThirdPersonSimulation
             AddCue(cue.CueId, cue.Trigger, spec.TargetSpec.Definition, instanceId, spec.TargetSpec.Context, trackPrediction);
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.RegisterCause(
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.RegisterCause(
             ulong handle,
             GameplayEffectPreparedSpec<PortableEffectSpecState> spec,
             ulong instanceId) => m_Causes[handle] = new PortableEffectCause(spec.TargetSpec.Definition, instanceId, spec.TargetSpec.Context);
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.EmitLifecycle(PortableActiveEffectState active, GameplayEffectLifecycleKind lifecycle) => AddLifecycle(active, ToTarget(lifecycle));
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.EmitLifecycle(PortableActiveEffectState active, GameplayEffectLifecycleKind lifecycle) => AddLifecycle(active, ToTarget(lifecycle));
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.EmitLifecycle(
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.EmitLifecycle(
             GameplayEffectPreparedSpec<PortableEffectSpecState> spec,
             ulong instanceId,
             GameplayEffectLifecycleKind lifecycle,
@@ -138,29 +138,29 @@ namespace ThirdPersonSimulation
             ulong revision,
             bool instant) => AddLifecycle(spec.TargetSpec.Definition, instanceId, ToTarget(lifecycle), spec.TargetSpec.Context, startTick, endTick, stackCount, revision, instant);
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.EmitFailure(
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.EmitFailure(
             string ownerEffectId,
             ulong ownerInstanceId,
             string requestedEffectId,
             GameplayEffectApplyResult failure) => AddFailure(ownerEffectId, ownerInstanceId, requestedEffectId, ToTarget(failure.Kind), failure.Reason);
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.TrimChanges(int count) => TrimChanges(count);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.RebuildCauses() => RebuildCauses();
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.TrimChanges(int count) => TrimChanges(count);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.RebuildCauses() => RebuildCauses();
 
-        Float32CharacterStateSavepoint IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.CreateSavepoint()
+        Float32CharacterRuntimeStateSavepoint IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.CreateSavepoint()
         {
             EnsureWorkingState();
             return m_Transaction.CreateSavepoint();
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.Restore(Float32CharacterStateSavepoint savepoint) => m_Transaction.Restore(savepoint);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.Release(Float32CharacterStateSavepoint savepoint) => m_Transaction.Release(savepoint);
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.SavepointIsActive(Float32CharacterStateSavepoint savepoint) => m_Transaction.Diagnostics().SavepointDepth >= savepoint.Depth;
-        ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.CaptureAllocator() => m_CaptureAllocator();
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.RestoreAllocator(ulong value) => m_RestoreAllocator(value);
-        ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.AllocateHandle() => m_AllocateHandle();
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.Restore(Float32CharacterRuntimeStateSavepoint savepoint) => m_Transaction.Restore(savepoint);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.Release(Float32CharacterRuntimeStateSavepoint savepoint) => m_Transaction.Release(savepoint);
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.SavepointIsActive(Float32CharacterRuntimeStateSavepoint savepoint) => m_Transaction.Diagnostics().SavepointDepth >= savepoint.Depth;
+        ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.CaptureAllocator() => m_CaptureAllocator();
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.RestoreAllocator(ulong value) => m_RestoreAllocator(value);
+        ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.AllocateHandle() => m_AllocateHandle();
 
-        PortablePredictionRecord IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.CreatePrediction(
+        PortablePredictionRecord IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.CreatePrediction(
             GameplayEffectPreparedSpec<PortableEffectSpecState> spec,
             ulong handle,
             ulong instanceId,
@@ -188,9 +188,9 @@ namespace ThirdPersonSimulation
             };
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.SetCurrentPrediction(PortablePredictionRecord prediction) => m_CurrentPrediction = prediction;
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.SetCurrentPrediction(PortablePredictionRecord prediction) => m_CurrentPrediction = prediction;
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.CompletePrediction(PortablePredictionRecord prediction)
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.CompletePrediction(PortablePredictionRecord prediction)
         {
             List<string> attributes = m_Scratch.PredictionAttributes.Acquire();
             try
@@ -209,11 +209,11 @@ namespace ThirdPersonSimulation
             }
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.CancelPrediction(PortablePredictionRecord prediction)
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.CancelPrediction(PortablePredictionRecord prediction)
         {
         }
 
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.TryGetPredictions(
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.TryGetPredictions(
             ulong predictionKey,
             out IReadOnlyList<PortablePredictionRecord> predictions)
         {
@@ -226,7 +226,7 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        IReadOnlyList<ulong> IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.AcquirePredictionKeys()
+        IReadOnlyList<ulong> IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.AcquirePredictionKeys()
         {
             List<ulong> values = m_Scratch.PredictionKeys.Acquire();
             foreach (ulong key in m_State.Journal.Keys)
@@ -234,14 +234,14 @@ namespace ThirdPersonSimulation
             return values;
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.ReleasePredictionKeys(IReadOnlyList<ulong> keys)
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.ReleasePredictionKeys(IReadOnlyList<ulong> keys)
         {
             if (!(keys is List<ulong> values))
                 throw new InvalidOperationException("Gameplay Effect prediction-key snapshot does not belong to the Actor workspace.");
             m_Scratch.PredictionKeys.Release(values);
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.AddPrediction(PortablePredictionRecord prediction)
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.AddPrediction(PortablePredictionRecord prediction)
         {
             ulong key = prediction.Spec.Context.PredictionKey;
             if (!m_State.Journal.TryGetValue(key, out List<PortablePredictionRecord> records))
@@ -252,9 +252,9 @@ namespace ThirdPersonSimulation
             records.Add(prediction);
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.RemovePredictions(ulong predictionKey) => m_State.Journal.Remove(predictionKey);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.RemovePredictions(ulong predictionKey) => m_State.Journal.Remove(predictionKey);
 
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.RestorePredictionAttributes(PortablePredictionRecord prediction)
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.RestorePredictionAttributes(PortablePredictionRecord prediction)
         {
             bool restored = true;
             foreach (PortablePredictionAttributeSnapshot attribute in prediction.Attributes.Values)
@@ -267,14 +267,14 @@ namespace ThirdPersonSimulation
             return restored;
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.EmitPredictionCueRemoval(PortablePredictionRecord prediction, string cueId) =>
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.EmitPredictionCueRemoval(PortablePredictionRecord prediction, string cueId) =>
             AddCue(cueId, PortableCueTrigger.Removed, prediction.Spec.Definition, prediction.InstanceId, prediction.Spec.Context, false);
 
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.TryGetLastLifecycleRevision(ulong instanceId, out ulong revision) => m_State.LastLifecycleRevisions.TryGetValue(instanceId, out revision);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.SetLastLifecycleRevision(ulong instanceId, ulong revision) => m_State.LastLifecycleRevisions[instanceId] = revision;
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.MarkJournalDirty() => m_State.MarkJournalDirty();
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.TryGetLastLifecycleRevision(ulong instanceId, out ulong revision) => m_State.LastLifecycleRevisions.TryGetValue(instanceId, out revision);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.SetLastLifecycleRevision(ulong instanceId, ulong revision) => m_State.LastLifecycleRevisions[instanceId] = revision;
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.MarkJournalDirty() => m_State.MarkJournalDirty();
 
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterStateSavepoint>.TryEmitRejectedApplication(
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.TryEmitRejectedApplication(
             SimulationGameplayEffectApplication application,
             GameplayEffectApplyResult failure)
         {

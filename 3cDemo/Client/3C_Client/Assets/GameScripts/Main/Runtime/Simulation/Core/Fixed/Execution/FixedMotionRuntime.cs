@@ -518,7 +518,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedEvaluationFrame m_Frame;
         readonly FixedActionStateStore m_Actions;
-        readonly FixedCharacterStateTransaction m_Transaction;
+        readonly FixedCharacterRuntimeStateTransaction m_Transaction;
 
         public FixedMotionWarpTarget(
             FixedGameplayAbilityExecutionAccess access,

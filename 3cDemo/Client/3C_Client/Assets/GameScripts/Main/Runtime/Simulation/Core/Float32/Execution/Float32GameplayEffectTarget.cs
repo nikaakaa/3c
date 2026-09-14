@@ -10,13 +10,14 @@ namespace ThirdPersonSimulation
         PortableActiveEffectState,
         PortablePredictionRecord,
         PortableTagQuery,
-        Float32CharacterStateSavepoint>,
+        Float32CharacterRuntimeStateSavepoint>,
         IGameplayEffectApplicationAdmissionPort<
             SimulationGameplayEffectApplication,
             PortableEffectSpecState,
             Float32Scalar>
     {
-        readonly Float32CharacterStateTransaction m_Transaction;
+        readonly Float32CharacterRuntimeStateTransaction m_Transaction;
+        readonly Float32GameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
         readonly ActorId m_ActorId;
         readonly SimulationTick m_Tick;
@@ -33,7 +34,7 @@ namespace ThirdPersonSimulation
             PortableActiveEffectState,
             PortablePredictionRecord,
             PortableTagQuery,
-            Float32CharacterStateSavepoint> m_Control;
+            Float32CharacterRuntimeStateSavepoint> m_Control;
         readonly GameplayEffectApplicationAdmissionRuntime<
             SimulationGameplayEffectApplication,
             PortableEffectSpecState,
@@ -42,7 +43,8 @@ namespace ThirdPersonSimulation
         PortablePredictionRecord m_CurrentPrediction;
 
         public Float32GameplayEffectTarget(
-            Float32CharacterStateTransaction transaction,
+            Float32CharacterRuntimeStateTransaction transaction,
+            Float32GameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
             SimulationTick tick,
             Func<ulong> allocateHandle,
@@ -51,10 +53,11 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectExecutionScratch scratch)
         {
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             m_CommittedState = transaction.GetGameplayEffectAggregate();
             m_ActorId = actorId;
             m_Tick = tick;
-            m_TickRate = transaction.Program.Manifest.TickRate;
+            m_TickRate = transaction.Installation.Data.TickRate;
             m_AllocateHandle = allocateHandle ?? throw new ArgumentNullException(nameof(allocateHandle));
             m_CaptureAllocator = captureAllocator ?? throw new ArgumentNullException(nameof(captureAllocator));
             m_RestoreAllocator = restoreAllocator ?? throw new ArgumentNullException(nameof(restoreAllocator));
@@ -72,7 +75,7 @@ namespace ThirdPersonSimulation
                 PortableActiveEffectState,
                 PortablePredictionRecord,
                 PortableTagQuery,
-                Float32CharacterStateSavepoint>(this);
+                Float32CharacterRuntimeStateSavepoint>(this);
             m_Admission = new GameplayEffectApplicationAdmissionRuntime<
                 SimulationGameplayEffectApplication,
                 PortableEffectSpecState,
@@ -88,7 +91,7 @@ namespace ThirdPersonSimulation
             string query = Float32GameplayEffectRuntimeCatalog.NormalizeTag(tagId);
             foreach (string owned in m_CommittedState.CopyOwnedTags())
             {
-                if (m_Transaction.Layout.GameplayEffectProgram.IsTagOrParent(owned, query))
+                if (m_Catalog.IsTagOrParent(owned, query))
                     return true;
             }
             return false;
@@ -98,7 +101,7 @@ namespace ThirdPersonSimulation
         {
             return m_State != null
                 ? m_State.Matches(query)
-                : m_Transaction.Layout.GameplayEffectProgram.Matches(query, m_CommittedState.CopyOwnedTags());
+                : m_Catalog.Matches(query, m_CommittedState.CopyOwnedTags());
         }
 
         public bool TryGetAttribute(string attributeId, out Float32Scalar baseValue, out Float32Scalar currentValue, out ulong revision)

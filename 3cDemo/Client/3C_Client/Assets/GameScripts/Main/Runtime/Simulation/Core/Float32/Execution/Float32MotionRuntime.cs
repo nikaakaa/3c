@@ -517,7 +517,7 @@ namespace ThirdPersonSimulation
     {
         readonly Float32EvaluationFrame m_Frame;
         readonly Float32ActionStateStore m_Actions;
-        readonly Float32CharacterStateTransaction m_Transaction;
+        readonly Float32CharacterRuntimeStateTransaction m_Transaction;
 
         public Float32MotionWarpTarget(
             Float32GameplayAbilityExecutionAccess access,

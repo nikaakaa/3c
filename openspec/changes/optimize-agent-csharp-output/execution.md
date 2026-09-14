@@ -24,7 +24,9 @@
 
 此前多文件版本的 Attack 基线为 21 个文件、254719 字节、入口 819 行。该布局不是本轮最终结果。
 
-本轮已经清理 Attack 专属目录中的旧入口、Conditions/Stages/Timelines 源码和空布局目录，等待同一 Unity Editor 会话恢复后由正式 btsmtl.export_code 从当前资产完整重建。当前未把上一次旧编译入口产生的中间输出当作最终源码统计，也未勾选第 4～5 节任务。
+本轮已经清理 Attack 专属目录中的旧入口、Conditions/Stages/Timelines 源码和空布局目录；Unity 会话已恢复，但仍需等最新 Editor 程序集加载后由正式 btsmtl.export_code 从当前资产完整重建。当前未把上一次旧编译入口产生的中间输出当作最终源码统计，也未勾选第 4～5 节任务。
+
+此前一次旧程序集导出的 8 个中间文件已在静态诊断后再次清理；当前 Attack 专属生成目录不保留中间 C#，等待最新程序集正式重导。
 
 正式重导完成后需要记录同一导出范围的总字节数、入口字节数、阶段局部文件数及一次局部修改涉及的文件，不能只报文件数量。
 
@@ -34,9 +36,9 @@
 
 - BTSMTL.Timeline.Tree.csproj：最近一次编译为 0 个错误、17 个已有警告。
 - ThirdPersonClient.Runtime.csproj：最近一次成功编译为 0 个错误、1 个警告。
-- Editor 侧 CodeGeneration 源在使用已有 Unity 程序集作为引用时通过静态编译；当前完整项目仍受并行 Simulation/Pose 状态迁移的外部编译错误影响，未宣称全项目通过。
-- 针对当前旧 Attack 生成文件的静态编译还发现 19 个 `timelineCatalog*` 未解析名称；这是旧程序集输出没有应用 `80055079b` 提升规则的结果，未把该旧输出当作新生成器编译证据。
-- Unity Editor 会话已经恢复并注册为 `3C_Client@e852139597e42532`。正式 `btsmtl.export_code` 已对 Attack 执行并返回 8 个文件、总计 198,414 字节，其中入口 1,608 字节；这次调用仍使用当时已加载的旧生成器程序集。
+- 清理 Attack 生成目录后，Editor 侧 CodeGeneration 源使用已有 Unity 程序集作为引用静态编译为 0 个错误、32 个已有警告；当前完整项目仍受并行 Simulation/Pose 状态迁移的外部编译错误影响，未宣称全项目通过。
+- 此前中间 Attack 生成文件的静态编译曾发现 19 个 `timelineCatalog*` 未解析名称；这是旧程序集输出没有应用 `80055079b` 提升规则的结果，未把该旧输出当作新生成器编译证据。
+- Unity Editor 会话已经恢复并注册为 `3C_Client@e852139597e42532`。此前正式 `btsmtl.export_code` 对 Attack 返回过 8 个文件、总计 198,414 字节，其中入口 1,608 字节；这次调用仍使用当时已加载的旧生成器程序集，相关中间文件已清理。
 - 静态编译中间导出时发现短入口缺少命名空间闭合，源码已在 `cf715b0b9` 修复；最新生成器还没有在 Unity 中重新加载，因此当前生成目录不能作为最终输出归档。
 - Unity 当前 Console 仍有并行 Fixed Simulation 源码的 1 个编译错误：`CharacterPipelineDefinitionFixedAbilityExtensions.cs:9` 找不到 `FixedGameplayAbilityExecutionData`，阻止 `ThirdPersonClient.Editor` 加载最新生成器。未修改并行 Simulation/Pose 文件、未修改 SessionState、未注入脚本、未启动第二个 Unity 实例。
 

@@ -27,6 +27,36 @@ namespace ThirdPersonSimulation.Fixed
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
 
+        public static FixedCharacterRuntime Create(
+            IEnumerable<SimulationActorBinding> roster,
+            CharacterControlModuleCatalog controlModules)
+        {
+            SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
+            var values = roster == null ? new List<SimulationActorBinding>() : new List<SimulationActorBinding>(roster);
+            if (values.Count == 0 || values[0].AbilityData.Data.Count == 0)
+                throw new ArgumentException("Fixed Character Runtime factory requires an Ability TickRate.", nameof(roster));
+            return new FixedCharacterRuntime(
+                values,
+                target.NumericProfile,
+                values[0].AbilityData.Data[0].TickRate,
+                target.OperationSetVersion,
+                controlModules);
+        }
+
+        public static FixedCharacterRuntime Create(
+            IEnumerable<SimulationActorBinding> roster,
+            int tickRate,
+            CharacterControlModuleCatalog controlModules)
+        {
+            SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
+            return new FixedCharacterRuntime(
+                roster,
+                target.NumericProfile,
+                tickRate,
+                target.OperationSetVersion,
+                controlModules);
+        }
+
         public FixedCharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
             SimulationNumericProfile numericProfile,

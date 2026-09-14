@@ -312,9 +312,22 @@ namespace BTSMTL.Timeline
 
         public AnimationCurve CreateSourceDisplayCurve(AnimationCurve source, float timelineDuration)
         {
+            return CreateSourceDisplayCurve(source, m_SourceStartTime, m_SourceEndTime, timelineDuration);
+        }
+
+        public AnimationCurve CreateSourceDisplayCurve(
+            AnimationCurve source,
+            float sourceStartTime,
+            float sourceEndTime,
+            float timelineDuration)
+        {
             if (source == null)
                 return new AnimationCurve();
-            float sourceDuration = SourceDuration;
+            if (!float.IsFinite(sourceStartTime) || !float.IsFinite(sourceEndTime) ||
+                sourceStartTime < 0f || sourceEndTime <= sourceStartTime ||
+                sourceEndTime > RequireSource().Duration)
+                throw new InvalidOperationException($"MotionCurveClip '{CurveId}' has an invalid source display range.");
+            float sourceDuration = sourceEndTime - sourceStartTime;
             if (sourceDuration <= 0f)
                 throw new InvalidOperationException($"MotionCurveClip '{CurveId}' has an invalid source duration.");
 
@@ -327,41 +340,41 @@ namespace BTSMTL.Timeline
             for (int index = 0; index < sourceKeys.Length; index++)
             {
                 Keyframe key = sourceKeys[index];
-                if (Mathf.Approximately(key.time, m_SourceStartTime))
+                if (Mathf.Approximately(key.time, sourceStartTime))
                 {
                     key.time = 0f;
                     result.AddKey(key);
                     hasStartKey = true;
                     continue;
                 }
-                if (Mathf.Approximately(key.time, m_SourceEndTime))
+                if (Mathf.Approximately(key.time, sourceEndTime))
                 {
                     key.time = sourceDuration;
                     result.AddKey(key);
                     hasEndKey = true;
                     continue;
                 }
-                if (key.time > m_SourceStartTime && firstKeyAfterStart < 0)
+                if (key.time > sourceStartTime && firstKeyAfterStart < 0)
                     firstKeyAfterStart = index;
-                if (key.time < m_SourceEndTime)
+                if (key.time < sourceEndTime)
                     lastKeyBeforeEnd = index;
-                if (key.time <= m_SourceStartTime || key.time >= m_SourceEndTime)
+                if (key.time <= sourceStartTime || key.time >= sourceEndTime)
                     continue;
-                key.time -= m_SourceStartTime;
+                key.time -= sourceStartTime;
                 result.AddKey(key);
             }
             if (!hasStartKey)
             {
                 float tangent = firstKeyAfterStart >= 0 ? sourceKeys[firstKeyAfterStart].inTangent : 0f;
-                result.AddKey(new Keyframe(0f, source.Evaluate(m_SourceStartTime), tangent, tangent));
+                result.AddKey(new Keyframe(0f, source.Evaluate(sourceStartTime), tangent, tangent));
             }
             if (!hasEndKey)
             {
                 float tangent = lastKeyBeforeEnd >= 0 ? sourceKeys[lastKeyBeforeEnd].outTangent : 0f;
-                result.AddKey(new Keyframe(sourceDuration, source.Evaluate(m_SourceEndTime), tangent, tangent));
+                result.AddKey(new Keyframe(sourceDuration, source.Evaluate(sourceEndTime), tangent, tangent));
             }
             if (timelineDuration > sourceDuration)
-                result.AddKey(new Keyframe(timelineDuration, source.Evaluate(m_SourceEndTime), 0f, 0f));
+                result.AddKey(new Keyframe(timelineDuration, source.Evaluate(sourceEndTime), 0f, 0f));
             result.preWrapMode = WrapMode.ClampForever;
             result.postWrapMode = WrapMode.ClampForever;
             return result;

@@ -954,9 +954,18 @@ namespace BTSMTL.Timeline.Editor
                     float delta = nextStart - m_StartTime;
                     m_StartTime = nextStart;
                     m_EndTime = Mathf.Max(m_StartTime + 1f / m_Owner.FrameRate, m_EndTime + delta);
+                    RefreshReferenceCurves();
                 }
             }
-            public float EndTime { get => m_EndTime; set => m_EndTime = Mathf.Max(StartTime + 1f / m_Owner.FrameRate, value); }
+            public float EndTime
+            {
+                get => m_EndTime;
+                set
+                {
+                    m_EndTime = Mathf.Max(StartTime + 1f / m_Owner.FrameRate, value);
+                    RefreshReferenceCurves();
+                }
+            }
             public float Length => Mathf.Max(0f, EndTime - StartTime);
             public float BlendIn { get => Mathf.Clamp(m_BlendIn, 0f, Length); set => m_BlendIn = Mathf.Clamp(value, 0f, Length); }
             public float BlendOut { get => Mathf.Clamp(m_BlendOut, 0f, Length); set => m_BlendOut = Mathf.Clamp(value, 0f, Length); }
@@ -985,6 +994,7 @@ namespace BTSMTL.Timeline.Editor
                 if (trimStart)
                     m_SourceStartTime = motion.SourceStartTime + (currentStartFrame - originalStartFrame) / (float)m_Owner.FrameRate;
                 m_SourceEndTime = m_SourceStartTime + duration;
+                RefreshReferenceCurves();
             }
 
             public bool CanCrossBlend(IEmbeddedTimelineClipBinding other)
@@ -1008,7 +1018,14 @@ namespace BTSMTL.Timeline.Editor
                     channelId,
                     displayName,
                     motion.SourceCurve.name,
-                    motion.CreateSourceDisplayCurve(source, motion.DurationTime)));
+                    () => motion.CreateSourceDisplayCurve(source, m_SourceStartTime, m_SourceEndTime, Length)));
+            }
+
+            void RefreshReferenceCurves()
+            {
+                for (int index = 0; index < m_Parameters.Count; index++)
+                    if (m_Parameters[index] is BtsmtlTimelineReferenceParameterBinding reference)
+                        reference.Refresh();
             }
 
             public void Split(float time) => m_Owner.SplitClip(this, Mathf.RoundToInt(time * m_Owner.FrameRate));
@@ -1265,10 +1282,10 @@ namespace BTSMTL.Timeline.Editor
                 string channelId,
                 string displayName,
                 string referenceLabel,
-                AnimationCurve curve)
+                Func<AnimationCurve> createCurve)
             {
                 m_Clip = clip;
-                m_Curve = new BtsmtlTimelineReferenceCurveBinding(clip, channelId, displayName, curve);
+                m_Curve = new BtsmtlTimelineReferenceCurveBinding(clip, channelId, displayName, createCurve);
                 ReferenceLabel = referenceLabel ?? string.Empty;
             }
 
@@ -1285,23 +1302,26 @@ namespace BTSMTL.Timeline.Editor
             public void RemoveKey(float localTime) { }
             public void SelectPreviousKey(float localTime) { }
             public void SelectNextKey(float localTime) { }
+            public void Refresh() => m_Curve.Refresh();
         }
 
         sealed class BtsmtlTimelineReferenceCurveBinding : IEmbeddedTimelineCurveBinding
         {
             readonly BtsmtlTimelineClipBinding m_Clip;
-            readonly AnimationCurve m_Curve;
+            readonly Func<AnimationCurve> m_CreateCurve;
+            AnimationCurve m_Curve;
 
             public BtsmtlTimelineReferenceCurveBinding(
                 BtsmtlTimelineClipBinding clip,
                 string channelId,
                 string displayName,
-                AnimationCurve curve)
+                Func<AnimationCurve> createCurve)
             {
                 m_Clip = clip;
                 ChannelId = channelId;
                 DisplayName = displayName;
-                m_Curve = curve;
+                m_CreateCurve = createCurve ?? throw new ArgumentNullException(nameof(createCurve));
+                m_Curve = m_CreateCurve();
             }
 
             public string ChannelId { get; }
@@ -1311,6 +1331,7 @@ namespace BTSMTL.Timeline.Editor
             public int EndFrame => m_Clip.Source.EndFrame;
             public float Duration => Mathf.Max(1f / m_Clip.Owner.FrameRate, m_Clip.Length);
             public void Replace(AnimationCurve curve) { }
+            public void Refresh() => m_Curve = m_CreateCurve();
         }
 
         sealed class BtsmtlTimelineSectionBinding : IEmbeddedTimelineSectionBinding

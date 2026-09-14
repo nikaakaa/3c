@@ -190,6 +190,8 @@ namespace BTSMTL.Timeline.Runtime
     {
         readonly ITimelineRuntimeEvaluationSink m_EvaluationSink;
         readonly ITimelineRuntimeTreeClipService m_TreeClipService;
+        readonly Dictionary<ulong, int> m_ConsumedTreeClipCounts =
+            new Dictionary<ulong, int>();
 
         public TimelineRuntimeExecutionConsumer(
             ITimelineRuntimeEvaluationSink evaluationSink,
@@ -201,12 +203,16 @@ namespace BTSMTL.Timeline.Runtime
 
         public TimelineRuntimeStepDecision Consume(TimelineRuntimeStepContext context)
         {
-            for (int index = 0; index < context.Advance.Evaluation.TreeClips.Count; index++)
+            int consumedTreeClipCount = 0;
+            for (; consumedTreeClipCount < context.Advance.Evaluation.TreeClips.Count; consumedTreeClipCount++)
             {
-                TimelineRuntimeTreeClipRequest request = context.Advance.Evaluation.TreeClips[index];
+                TimelineRuntimeTreeClipRequest request = context.Advance.Evaluation.TreeClips[consumedTreeClipCount];
                 if (!m_TreeClipService.Consume(request, context))
-                    return TimelineRuntimeStepDecision.Discard;
+                    break;
             }
+            m_ConsumedTreeClipCounts[context.Playback.Handle.Value] = consumedTreeClipCount;
+            if (consumedTreeClipCount != context.Advance.Evaluation.TreeClips.Count)
+                return TimelineRuntimeStepDecision.Discard;
             return m_EvaluationSink.Consume(context)
                 ? TimelineRuntimeStepDecision.Commit
                 : TimelineRuntimeStepDecision.Discard;
@@ -222,24 +228,32 @@ namespace BTSMTL.Timeline.Runtime
         {
             m_TreeClipService.Commit(context);
             m_EvaluationSink.Commit(context);
+            m_ConsumedTreeClipCounts.Remove(context.Playback.Handle.Value);
         }
 
         public void Discard(TimelineRuntimeStepContext context)
         {
+            if (!m_ConsumedTreeClipCounts.TryGetValue(context.Playback.Handle.Value, out int count))
+                count = 0;
+            for (int index = 0; index < count; index++)
+                m_TreeClipService.Discard(context.Advance.Evaluation.TreeClips[index], context);
             m_TreeClipService.DiscardStep(context);
             m_EvaluationSink.Discard(context);
+            m_ConsumedTreeClipCounts.Remove(context.Playback.Handle.Value);
         }
 
         public void CommitStop(TimelineRuntimeStopRequest request)
         {
             m_TreeClipService.CommitStop(request);
             m_EvaluationSink.CommitStop(request);
+            m_ConsumedTreeClipCounts.Remove(request.Handle.Value);
         }
 
         public void DiscardStop(TimelineRuntimeStopRequest request)
         {
             m_TreeClipService.DiscardStop(request);
             m_EvaluationSink.DiscardStop(request);
+            m_ConsumedTreeClipCounts.Remove(request.Handle.Value);
         }
     }
 
@@ -496,12 +510,20 @@ namespace BTSMTL.Timeline.Runtime
 
         public bool Start(TimelineRuntimePlaybackHandle handle)
         {
-            return Require(handle).Start();
+            TimelineRuntimePlayback playback = Require(handle);
+            bool started = playback.Start();
+            if (started)
+                Publish(playback);
+            return started;
         }
 
         public bool Start(TimelinePlaybackHandle handle)
         {
-            return Require(handle).Start();
+            TimelineRuntimePlayback playback = Require(handle);
+            bool started = playback.Start();
+            if (started)
+                Publish(playback);
+            return started;
         }
 
         public TimelineRuntimeAdvanceResult Step(

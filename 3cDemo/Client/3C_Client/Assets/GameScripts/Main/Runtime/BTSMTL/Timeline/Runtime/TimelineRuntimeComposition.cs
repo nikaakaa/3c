@@ -145,6 +145,7 @@ namespace BTSMTL.Timeline.Runtime
             new Dictionary<ulong, TimelineRuntimeEvaluationResult>();
 
         public event Action<TimelineRuntimeStepContext> Committed;
+        public event Action<TimelineRuntimeStopRequest> StopCommitted;
 
         public bool Consume(TimelineRuntimeStepContext context)
         {
@@ -174,6 +175,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             m_Pending.Remove(request.Handle.Value);
             m_Committed.Remove(request.Handle.Value);
+            StopCommitted?.Invoke(request);
         }
 
         public void DiscardStop(TimelineRuntimeStopRequest request)

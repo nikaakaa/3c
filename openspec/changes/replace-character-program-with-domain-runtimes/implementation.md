@@ -134,6 +134,9 @@
 - `240adee9d`：提取 Pipeline 初始状态选择合同，删除 Float32/Fixed 旧 Pass Backend composition request 及其整角色 ProgramRuntime/Actor roster 载体。
 - `c0c85cc5a`：让 Unity Backend Definition 发布正式 Execution Target，移除 Session Composition 的旧 ProgramRuntime 序列化字段。
 - `13c28dd4a`：删除无实际 Composer 实现的旧 Session Composition Preparation/Composer 编排路径，保留 PreparedRuntime 和输出生命周期合同。
+- `dd38dde00`：建立独立 Ability 执行布局的索引算法和 Float32/Fixed 工厂。
+- `ad3bdc28b`：按程序集边界把 Ability layout/value resolver 从 Core 移到 Float32/Fixed 执行目录，避免 Core 依赖数值私有操作类型。
+- `3ac938eec`：修正 Ability 数据集合 `TryGet` 的 out 参数赋值，使公共 Core 编译恢复。
 
 ## 当前实现边界
 
@@ -146,7 +149,7 @@
 - typed provider binding 已通过 Character Definition 的 Float32／Fixed Ability Load 入口实际消费；缺失 provider 或缺失／类型／版本／句柄不符的成员在资源绑定阶段失败，任务 1.4 的身份入口和 1.9 的成员合同分别保留其边界。
 - 当前 Character Host、Session、Network 和部分 Evaluate／State 链仍引用旧整角色 Program；这些是本轮删除后暴露出来的待拆接线，不是继续服务角色的正式入口。Ability 资源集合尚未装配进新的领域运行实例，后续由角色领域工厂直接组装。
 - 旧 `SimulationKernel`、Float32／Fixed `CharacterDomainRuntimeInstance` 和整角色 Program evaluator 入口已删除；Session／Pipeline／Network 的旧请求、ProgramRuntime port 和 Program identity 消费者仍是删除后暴露的待接线错误。后续角色工厂必须直接装配 Control、独立 Ability 数据集合、Timeline、Pose、Camera、Motion、Effect、Equipment 和 World owner，不恢复 Kernel、全局 Layout 或转换 Factory。Ability 数据已能由 Character Definition 直接加载为按 AbilityId 索引的集合，实际 evaluator／Host／Pass 消费仍待接通。旧 Timeline reader、播放器和场景 Host 已删除；Timeline 私有播放状态仍归 Timeline owner，核心尚未接入 D14 的 Prepare／CreatePlayback／Pending 提交合同。
-- Ability execution data 现在自持 `OperationExecutionTopology`、`ProgramCatalogRuntimeIndex`；值边缘类型解析已由独立 `GameplayAbilityExecutionValueResolver` 承担。`SimulationExecutionTargetManifest` 只描述数值后端、ABI 和操作集，不再通过 Kernel 提供 Target 身份。
+- Ability execution data 现在自持 `OperationExecutionTopology`、`ProgramCatalogRuntimeIndex`；Float32/Fixed 各自执行程序集拥有 `GameplayAbilityExecutionLayout` 和 `GameplayAbilityExecutionValueResolver`，按独立 Ability data 构建值输入、状态地址、Action/Input/Timeline/MotionWarp 索引。`SimulationExecutionTargetManifest` 只描述数值后端、ABI 和操作集，不再通过 Kernel 提供 Target 身份。
 - 旧 GameplayLab Bootstrap、Session Variant 和空 Editor 程序集已删除；性能采样与网络产品脚本仍引用旧 GameplayLab 类型，属于后续正式角色启动入口的待接线消费者。
 - Session checkpoint/replay 数据结构仍保留，但旧 Program adoption、Actor binding、Program Runtime component 和 Kernel implementation 已退出；Float32/Fixed Pipeline、Host、Network、Rollback 和性能脚本中的旧签名暂时保持错误，后续统一改成领域内容 identity、roster 和状态合同。
 - Float32／Fixed 旧 Kernel 请求合同已经删除，新的领域 Step 请求尚未建立；现有 Step Result 只负责携带已完成状态、Body sample、Motion 和事实／表现／诊断输出，不再暗含 Program binding。
@@ -207,6 +210,7 @@
 - 2026-09-14 Fixed 整角色 Program 类和旧 Pipeline Pass 删除后，`ThirdPersonSimulation.Fixed.csproj` 只报 6 个生成工程 `CS2001`：生成 csproj 仍列出已删除的 Fixed 源文件；没有新增原语的编译诊断。已执行 `dotnet build-server shutdown`，未运行 Unity、测试或资产生成。
 - 2026-09-14 激进删除继续移除角色 Actor Registration、旧 Program 预览／诊断和 ServerAuthoritative Program 角色链；没有重新编译或运行 Unity，当前残余错误是待接线清单，不宣称网络或角色运行时已恢复。
 - 2026-09-14 Control owner 与旧 Ability 定义目录删除后未重新编译；生成工程和旧 Runtime 消费者仍按删除后的断裂状态保留，未运行 Unity、测试或资产生成。
+- 2026-09-14 Ability layout/value resolver 搬到 Float32/Fixed 程序集后，Core 本机索引修正并编译为 0 warning、0 error；Float32/Fixed 窄编译仍因旧 State/Pipeline/evaluator/Backend 消费者报错，过滤输出未命中本步 layout/resolver 错误。每次编译结束后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 - 每次编译结束后已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
 ## 下一小步

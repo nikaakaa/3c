@@ -9,13 +9,13 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedGameplayAbilityExecutionInstallationSet m_Installations;
         readonly FixedActionRuntime m_Actions;
         readonly FixedActionStateStore m_ActionStore;
-        readonly OperationControlRuntime<FixedOperationTarget> m_Control;
+        readonly IFixedAbilityControlRuntime m_Control;
 
         public FixedAbilityDomainRuntime(
             FixedGameplayAbilityExecutionInstallationSet installations,
             FixedActionRuntime actions,
             FixedActionStateStore actionStore,
-            OperationControlRuntime<FixedOperationTarget> control)
+            IFixedAbilityControlRuntime control)
         {
             m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));

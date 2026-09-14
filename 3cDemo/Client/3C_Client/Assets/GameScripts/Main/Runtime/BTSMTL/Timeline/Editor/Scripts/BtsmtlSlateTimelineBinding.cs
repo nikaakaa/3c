@@ -191,9 +191,8 @@ namespace BTSMTL.Timeline.Editor
             foreach (TimelineTrackContract contract in ContractCatalog.Tracks)
             {
                 TimelineTrackContract candidate = contract;
-                Type type = TimelineAuthoringTypeCatalog.RequireTrackType(candidate.Kind);
-                bool requiresFields = type.GetCustomAttributes(typeof(TimelineAuthoringTrackFieldAttribute), true).Length > 0;
-                menu.AddItem(new GUIContent(DisplayKind(candidate.Kind)), false, () => ShowTrackCreationPopup(candidate.Kind, requiresFields));
+                IReadOnlyList<TimelineAuthoringTrackFieldAttribute> fields = TimelineAuthoringTrackBinding.GetFields(candidate.Kind);
+                menu.AddItem(new GUIContent(DisplayKind(candidate.Kind)), false, () => ShowTrackCreationPopup(candidate.Kind, fields));
             }
             menu.ShowAsContext();
         }
@@ -561,16 +560,16 @@ namespace BTSMTL.Timeline.Editor
             m_SourceRevision = TimelineAuthoringFingerprint.Compute(Timeline);
         }
 
-        void ShowTrackCreationPopup(string kind, bool requiresFields)
+        void ShowTrackCreationPopup(string kind, IReadOnlyList<TimelineAuthoringTrackFieldAttribute> fields)
         {
             PopupWindow.Show(new Rect(m_PopupPosition, Vector2.zero), new TimelineTrackCreationPopup(
                 kind,
                 DisplayKind(kind),
-                requiresFields,
-                (name, channelId, slotId) => CreateTrack(kind, name, channelId, slotId)));
+                fields,
+                (name, values) => CreateTrack(kind, name, values)));
         }
 
-        bool CreateTrack(string kind, string name, string channelId, string slotId)
+        bool CreateTrack(string kind, string name, IReadOnlyDictionary<string, string> values)
         {
             if (IsReadOnly)
                 return false;
@@ -590,7 +589,7 @@ namespace BTSMTL.Timeline.Editor
                     Timeline.AddTrack(trackType, ContractCatalog);
                     added = Timeline.Tracks[count];
                     added.Name = string.IsNullOrWhiteSpace(name) ? DisplayKind(kind) : name.Trim();
-                    TimelineAuthoringTrackBinding.Apply(added, channelId, slotId);
+                    TimelineAuthoringTrackBinding.Apply(added, values);
                 }, "Add Timeline Track"))
                     return false;
                 if (added != null && m_Tracks.TryGetValue(added.AuthoringId, out BtsmtlTimelineTrackBinding addedBinding))

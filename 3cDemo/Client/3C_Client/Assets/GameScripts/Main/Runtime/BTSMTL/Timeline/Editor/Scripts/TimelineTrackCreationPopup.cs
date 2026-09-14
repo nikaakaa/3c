@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,40 +9,39 @@ namespace BTSMTL.Timeline.Editor
     sealed class TimelineTrackCreationPopup : PopupWindowContent
     {
         readonly string m_Kind;
-        readonly bool m_RequiresFields;
-        readonly Func<string, string, string, bool> m_Create;
+        readonly IReadOnlyList<TimelineAuthoringTrackFieldAttribute> m_Fields;
+        readonly Func<string, IReadOnlyDictionary<string, string>, bool> m_Create;
+        readonly Dictionary<string, string> m_Values = new Dictionary<string, string>(StringComparer.Ordinal);
         string m_Name;
-        string m_ChannelId;
-        string m_SlotId;
         string m_Error;
         string m_SubmitError;
 
         public TimelineTrackCreationPopup(
             string kind,
             string displayName,
-            bool requiresFields,
-            Func<string, string, string, bool> create)
+            IReadOnlyList<TimelineAuthoringTrackFieldAttribute> fields,
+            Func<string, IReadOnlyDictionary<string, string>, bool> create)
         {
             m_Kind = kind;
-            m_RequiresFields = requiresFields;
+            m_Fields = fields ?? Array.Empty<TimelineAuthoringTrackFieldAttribute>();
             m_Create = create;
             m_Name = displayName;
         }
 
-        public override Vector2 GetWindowSize() => new Vector2(340, m_RequiresFields ? 156 : 96);
+        public override Vector2 GetWindowSize() => new Vector2(340, 96f + m_Fields.Count * 24f);
 
         public override void OnGUI(Rect rect)
         {
             EditorGUILayout.LabelField("Add Track", EditorStyles.boldLabel);
             m_Name = EditorGUILayout.TextField("Name", m_Name);
-            if (m_RequiresFields && m_Kind == TimelineContractKinds.AnimationTrack)
+            for (int index = 0; index < m_Fields.Count; index++)
             {
-                m_ChannelId = EditorGUILayout.TextField("Animation Channel", m_ChannelId);
-                m_SlotId = EditorGUILayout.TextField("Animation Slot", m_SlotId);
-                m_Error = TimelineAuthoringTrackBinding.Validate(m_Kind, m_ChannelId, m_SlotId).Count > 0
-                    ? "Animation Channel 和 Animation Slot 必须填写正式 identity."
-                    : string.Empty;
+                TimelineAuthoringTrackFieldAttribute field = m_Fields[index];
+                string value = m_Values.TryGetValue(field.FieldId, out string current) ? current : string.Empty;
+                m_Values[field.FieldId] = EditorGUILayout.TextField(DisplayName(field.FieldId), value);
             }
+            IReadOnlyList<TimelineAuthoringTrackIssue> issues = TimelineAuthoringTrackBinding.Validate(m_Kind, m_Values);
+            m_Error = issues.Count == 0 ? string.Empty : issues[0].ErrorMessage;
             if (!string.IsNullOrEmpty(m_Error))
                 EditorGUILayout.HelpBox(m_Error, MessageType.Error);
             if (!string.IsNullOrEmpty(m_SubmitError))
@@ -50,12 +50,20 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (GUILayout.Button("Create"))
                 {
-                    if (m_Create(m_Name, m_ChannelId, m_SlotId))
+                    if (m_Create(m_Name, m_Values))
                         editorWindow.Close();
                     else
                         m_SubmitError = "正式 Timeline 提交失败，可能是 owner 已更新；当前输入已保留。";
                 }
             }
+        }
+
+        static string DisplayName(string fieldId)
+        {
+            if (string.IsNullOrEmpty(fieldId))
+                return string.Empty;
+            string value = fieldId.Replace("Id", " ID").Replace("animation", "Animation");
+            return char.ToUpperInvariant(value[0]) + value.Substring(1);
         }
     }
 }

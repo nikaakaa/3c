@@ -25,6 +25,11 @@ namespace BTSMTL.Timeline
         public string ErrorMessage { get; }
     }
 
+    public interface ITimelineAuthoringTrackFieldSink
+    {
+        void ApplyAuthoringField(string fieldId, string value);
+    }
+
     public readonly struct TimelineAuthoringTrackExport
     {
         public TimelineAuthoringTrackExport(string animationChannelId, string animationSlotId)
@@ -53,6 +58,15 @@ namespace BTSMTL.Timeline
 
     public static class TimelineAuthoringTrackBinding
     {
+        public static IReadOnlyList<TimelineAuthoringTrackFieldAttribute> GetFields(string kind)
+        {
+            Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
+            return trackType
+                .GetCustomAttributes(typeof(TimelineAuthoringTrackFieldAttribute), true)
+                .OfType<TimelineAuthoringTrackFieldAttribute>()
+                .ToArray();
+        }
+
         public static Clip CreateClip(
             TimelineData timeline,
             TimelineContractCatalog catalog,
@@ -67,19 +81,10 @@ namespace BTSMTL.Timeline
 
         public static IReadOnlyList<TimelineAuthoringTrackIssue> Validate(
             string kind,
-            string animationChannelId,
-            string animationSlotId)
+            IReadOnlyDictionary<string, string> values)
         {
-            Type trackType = TimelineAuthoringTypeCatalog.RequireTrackType(kind);
-            var values = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["animationChannelId"] = animationChannelId,
-                ["animationSlotId"] = animationSlotId
-            };
-            return trackType
-                .GetCustomAttributes(typeof(TimelineAuthoringTrackFieldAttribute), true)
-                .OfType<TimelineAuthoringTrackFieldAttribute>()
-                .Where(field => !IsIdentity(values[field.FieldId]))
+            return GetFields(kind)
+                .Where(field => !values.TryGetValue(field.FieldId, out string value) || !IsIdentity(value))
                 .Select(field => new TimelineAuthoringTrackIssue(
                     field.FieldId,
                     field.ErrorCode,
@@ -87,15 +92,18 @@ namespace BTSMTL.Timeline
                 .ToArray();
         }
 
-        public static void Apply(
-            Track track,
-            string animationChannelId,
-            string animationSlotId)
+        public static void Apply(Track track, IReadOnlyDictionary<string, string> values)
         {
-            if (track is not AnimationTrack animation)
+            if (track is not ITimelineAuthoringTrackFieldSink sink)
+            {
+                if (GetFields(track.ContractKind).Count != 0)
+                    throw new InvalidOperationException($"Track '{track.ContractKind}' does not provide an authoring field sink.");
                 return;
-            animation.SetAnimationChannelId(new AnimationChannelId(animationChannelId));
-            animation.SetAnimationSlotId(animationSlotId);
+            }
+            foreach (TimelineAuthoringTrackFieldAttribute field in GetFields(track.ContractKind))
+                sink.ApplyAuthoringField(
+                    field.FieldId,
+                    values.TryGetValue(field.FieldId, out string value) ? value : string.Empty);
         }
 
         public static TimelineAuthoringTrackExport Export(Track track) =>

@@ -37,6 +37,7 @@ TimelineEditorWindow
 新增链路：
 
 - `+ Track` 使用 `TimelineContractCatalog`、`TimelineAuthoringTypeCatalog` 和正式 Track 字段 binding。
+- Add Track popup 由正式 Track field metadata 动态生成输入，校验和写入经过同一 field sink；当前已有 AnimationTrack 字段保持原样，后续正式 Track 可复用同一入口。
 - 轨道右键按作者帧打开 Add Clip 表单；Animation、Tree、Motion、MotionWarp、Camera、Cue 和 Scene binding 均走正式类型工厂/`TimelineAuthoringClipBinding`。
 - Add Track/Add Clip 失败或 owner revision 过期时保留表单输入，不留下半成品或额外 Undo。
 - Add Track/Add Clip 在发现 owner revision 过期时先重建正式 binding，再通过 `AuthoringIssue` 报告具体取消原因；popup 只保留输入，不创建临时对象。

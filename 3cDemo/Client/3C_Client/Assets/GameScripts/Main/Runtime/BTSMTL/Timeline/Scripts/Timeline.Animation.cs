@@ -75,7 +75,7 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), IconGuid("e6435fa591ae4414eb0f26dc6410086e"), Ordered(0), Color(127, 253, 228)]
     [TimelineAuthoringTrackField("animationChannelId", "skill_timeline_animation_channel_invalid", "AnimationTrack必须声明稳定AnimationChannel identity。")]
     [TimelineAuthoringTrackField("animationSlotId", "skill_timeline_animation_slot_invalid", "AnimationTrack必须声明稳定AnimationSlot identity。")]
-    public partial class AnimationTrack : Track
+    public partial class AnimationTrack : Track, ITimelineAuthoringTrackFieldSink
     {
         public override string ContractKind => TimelineContractKinds.AnimationTrack;
 
@@ -103,6 +103,21 @@ namespace BTSMTL.Timeline
         {
             m_AnimationSlotId = animationSlotId?.Trim() ?? string.Empty;
             RebindTimeline();
+        }
+
+        public void ApplyAuthoringField(string fieldId, string value)
+        {
+            switch (fieldId)
+            {
+                case "animationChannelId":
+                    SetAnimationChannelId(new AnimationChannelId(value));
+                    return;
+                case "animationSlotId":
+                    SetAnimationSlotId(value);
+                    return;
+                default:
+                    throw new ArgumentException($"Unknown AnimationTrack authoring field '{fieldId}'.", nameof(fieldId));
+            }
         }
 
 #endif

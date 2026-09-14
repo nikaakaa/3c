@@ -122,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 expression = BtsmtlAuthoringCodeSyntax.StringLiteral(text);
                 return true;
             }
-            if (value == null && !type.IsValueType)
+            if (value == null && (type == null || !type.IsValueType))
             {
                 expression = "null";
                 return true;

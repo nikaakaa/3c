@@ -437,16 +437,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 new ReadOnlyCollection<BtsmtlAuthoringCodeExternalDependency>(m_ExternalDependencies.ToArray()),
                 new ReadOnlyCollection<BtsmtlAuthoringCodeDiagnostic>(m_Diagnostics.ToArray()));
 
-        internal IReadOnlyList<string> ExternalAssetUsageSections(string variableName)
-        {
-            var result = new List<string>();
-            foreach (List<BtsmtlAuthoringCodeStatement> statements in m_Statements.Values)
-                foreach (BtsmtlAuthoringCodeStatement statement in statements)
-                    if (ContainsIdentifier(statement.Text, variableName) && !result.Contains(statement.SectionName))
-                        result.Add(statement.SectionName);
-            return result;
-        }
-
         internal bool IsVariableUsed(string variableName) =>
             string.Equals(variableName, RootVariableName, StringComparison.Ordinal) ||
             m_Statements.Values.Any(statements =>

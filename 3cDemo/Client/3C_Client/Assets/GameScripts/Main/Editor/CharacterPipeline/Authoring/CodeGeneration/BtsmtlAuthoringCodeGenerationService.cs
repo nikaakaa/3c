@@ -211,66 +211,151 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (string.IsNullOrEmpty(outputDirectory))
                 throw new InvalidOperationException("C#导出路径缺少专属生成目录。");
 
-            var sharedAssetVariables = new HashSet<string>(
-                context.ExternalAssets
-                    .Where(value => context.IsVariableUsed(value.VariableName))
-                    .Where(value => context.ExternalAssetUsageSections(value.VariableName).Count > 1)
-                    .Select(value => value.VariableName),
-                StringComparer.Ordinal);
-            var localAssetGroups = context.ExternalAssets
-                .Where(value => context.IsVariableUsed(value.VariableName))
-                .Where(value => !sharedAssetVariables.Contains(value.VariableName))
-                .GroupBy(value => context.ExternalAssetUsageSections(value.VariableName).FirstOrDefault() ?? "Root")
-                .ToDictionary(value => value.Key, value => value.ToArray(), StringComparer.Ordinal);
+            OutputPlan plan = CreatePlan(context);
             var files = new List<BtsmtlAuthoringCodeSourceFile>
             {
-                CreateFile(
-                    entryPath,
-                    "Root",
-                    true,
-                    BuildEntry(
-                        context,
-                        sharedAssetVariables,
-                        localAssetGroups.TryGetValue("Root", out BtsmtlAuthoringCodeExternalAssetReference[] rootAssets)
-                            ? rootAssets
-                            : Array.Empty<BtsmtlAuthoringCodeExternalAssetReference>(),
-                        localAssetGroups.Keys.Where(value => value != "Root").ToArray()))
+                CreateFile(entryPath, "Root", true, BuildRootFile(context, plan))
             };
-
-            if (sharedAssetVariables.Count != 0)
-            {
-                string resourcesPath = Path.Combine(outputDirectory, "SharedResources.cs");
+            if (plan.Root.HasStatements)
                 files.Add(CreateFile(
-                    resourcesPath,
-                    "SharedResources",
+                    Path.Combine(outputDirectory, "Root.cs"),
+                    "Root",
                     false,
-                    BuildSharedResources(context, sharedAssetVariables)));
+                    BuildRootSectionFile(context, plan)));
+            foreach (SectionPlan section in plan.Sections)
+            {
+                if (string.Equals(section.Name, "Root", StringComparison.Ordinal) || !section.HasStatements)
+                    continue;
+                string filePath = Path.Combine(
+                    outputDirectory,
+                    section.Name.Replace('/', Path.DirectorySeparatorChar) + ".cs");
+                files.Add(CreateFile(
+                    filePath,
+                    section.Name,
+                    false,
+                    BuildSectionFile(context, plan, section)));
+            }
+            return files;
+        }
+
+        static OutputPlan CreatePlan(BtsmtlAuthoringCodeExportContext context)
+        {
+            var plan = new OutputPlan();
+            foreach (BtsmtlAuthoringCodeEmissionPhase phase in Enum.GetValues(typeof(BtsmtlAuthoringCodeEmissionPhase)))
+                foreach (BtsmtlAuthoringCodeStatement statement in context.Statements(phase))
+                {
+                    var item = new StatementPlan(phase, statement.SectionName, statement.Text);
+                    item.Deferred = phase == BtsmtlAuthoringCodeEmissionPhase.RootBinding ||
+                        HasCrossNonRootReference(context, statement);
+                    plan.Statements.Add(item);
+                }
+
+            foreach (BtsmtlAuthoringCodeExternalAssetReference asset in context.ExternalAssets)
+            {
+                if (!context.IsVariableUsed(asset.VariableName))
+                    continue;
+                List<string> usageSections = plan.Statements
+                    .Where(value => ContainsIdentifier(value.Text, asset.VariableName))
+                    .Select(value => value.SectionName)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+                if (usageSections.Count != 1 ||
+                    plan.Statements.Any(value =>
+                        value.Deferred && ContainsIdentifier(value.Text, asset.VariableName)))
+                    plan.SharedAssets.Add(asset.VariableName);
+                plan.VariableOwners[asset.VariableName] =
+                    plan.SharedAssets.Contains(asset.VariableName)
+                        ? "Root"
+                        : usageSections.FirstOrDefault() ?? "Root";
+            }
+
+            foreach (KeyValuePair<string, string> value in context.VariableSections)
+                plan.VariableOwners[value.Key] = value.Value;
+
+            foreach (string variableName in context.VariableTypeNames.Keys)
+            {
+                if (!context.IsVariableUsed(variableName) ||
+                    !plan.VariableOwners.TryGetValue(variableName, out string owner))
+                    continue;
+                if (string.Equals(variableName, context.RootVariableName, StringComparison.Ordinal))
+                {
+                    plan.Promoted.Add(variableName);
+                    continue;
+                }
+                if (plan.Statements.Any(statement =>
+                        ContainsIdentifier(statement.Text, variableName) &&
+                        (statement.Deferred ||
+                         !string.Equals(statement.SectionName, owner, StringComparison.Ordinal))))
+                    plan.Promoted.Add(variableName);
             }
 
             foreach (string sectionName in context.Sections)
             {
                 if (string.Equals(sectionName, "Root", StringComparison.Ordinal))
                     continue;
-                if (!Enum.GetValues(typeof(BtsmtlAuthoringCodeEmissionPhase))
-                        .Cast<BtsmtlAuthoringCodeEmissionPhase>()
-                        .Any(phase => context.Statements(phase).Any(value =>
-                            string.Equals(value.SectionName, sectionName, StringComparison.Ordinal))))
-                    continue;
-                string filePath = Path.Combine(
-                    outputDirectory,
-                    sectionName.Replace('/', Path.DirectorySeparatorChar) + ".cs");
-                files.Add(CreateFile(
-                    filePath,
-                    sectionName,
-                    false,
-                    BuildSection(
-                        context,
-                        sectionName,
-                        localAssetGroups.TryGetValue(sectionName, out BtsmtlAuthoringCodeExternalAssetReference[] localAssets)
-                            ? localAssets
-                            : Array.Empty<BtsmtlAuthoringCodeExternalAssetReference>())));
+                if (plan.Statements.Any(value =>
+                        string.Equals(value.SectionName, sectionName, StringComparison.Ordinal)))
+                    plan.Sections.Add(new SectionPlan(sectionName));
             }
-            return files;
+            plan.Sections.Insert(0, new SectionPlan("Root"));
+            foreach (SectionPlan section in plan.Sections)
+            {
+                foreach (string variableName in VariableOrder(context))
+                    if (plan.Promoted.Contains(variableName) &&
+                        plan.VariableOwners.TryGetValue(variableName, out string owner) &&
+                        string.Equals(owner, section.Name, StringComparison.Ordinal))
+                        section.PromotedVariables.Add(variableName);
+                section.HasStatements = plan.Statements.Any(value =>
+                    string.Equals(value.SectionName, section.Name, StringComparison.Ordinal));
+                section.UsesRoot = !string.Equals(section.Name, "Root", StringComparison.Ordinal) &&
+                    plan.Statements.Any(value =>
+                        !value.Deferred &&
+                        string.Equals(value.SectionName, section.Name, StringComparison.Ordinal) &&
+                        context.VariableTypeNames.Keys.Any(variableName =>
+                            ContainsIdentifier(value.Text, variableName) &&
+                            plan.VariableOwners.TryGetValue(variableName, out string owner) &&
+                            string.Equals(owner, "Root", StringComparison.Ordinal)));
+                foreach (BtsmtlAuthoringCodeExternalAssetReference asset in context.ExternalAssets)
+                    if (!plan.SharedAssets.Contains(asset.VariableName) &&
+                        plan.VariableOwners.TryGetValue(asset.VariableName, out string assetOwner) &&
+                        string.Equals(assetOwner, section.Name, StringComparison.Ordinal))
+                        section.LocalAssets.Add(asset);
+            }
+            plan.Root = plan.Sections[0];
+            plan.FinalStatements.AddRange(plan.Statements.Where(value => value.Deferred));
+            foreach (StatementPlan statement in plan.FinalStatements)
+                foreach (string variableName in context.VariableTypeNames.Keys)
+                    if (ContainsIdentifier(statement.Text, variableName) &&
+                        plan.VariableOwners.TryGetValue(variableName, out string owner))
+                        plan.FinalOwners.Add(owner);
+            foreach (SectionPlan section in plan.Sections)
+                plan.SectionByName.Add(section.Name, section);
+            return plan;
+        }
+
+        static bool HasCrossNonRootReference(
+            BtsmtlAuthoringCodeExportContext context,
+            BtsmtlAuthoringCodeStatement statement)
+        {
+            foreach (string variableName in context.VariableTypeNames.Keys)
+            {
+                if (!ContainsIdentifier(statement.Text, variableName) ||
+                    !context.VariableSections.TryGetValue(variableName, out string owner))
+                    continue;
+                if (string.Equals(owner, statement.SectionName, StringComparison.Ordinal) ||
+                    string.Equals(owner, "Root", StringComparison.Ordinal))
+                    continue;
+                return true;
+            }
+            return false;
+        }
+
+        static IEnumerable<string> VariableOrder(BtsmtlAuthoringCodeExportContext context)
+        {
+            foreach (string variableName in context.ObjectVariableOrder)
+                yield return variableName;
+            foreach (BtsmtlAuthoringCodeExternalAssetReference asset in context.ExternalAssets)
+                yield return asset.VariableName;
         }
 
         static BtsmtlAuthoringCodeSourceFile CreateFile(
@@ -295,11 +380,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 sourceCode);
         }
 
-        static string BuildEntry(
+        static string BuildRootFile(
             BtsmtlAuthoringCodeExportContext context,
-            ISet<string> sharedAssetVariables,
-            IReadOnlyList<BtsmtlAuthoringCodeExternalAssetReference> rootLocalAssets,
-            IReadOnlyCollection<string> localResourceSections)
+            OutputPlan plan)
         {
             var writer = new SourceWriter();
             WriteHeader(writer, context);
@@ -309,191 +392,240 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             writer.WriteLine(
                 "public BtsmtlAuthoringGenerationResult Execute(BtsmtlAuthoringGenerationContext context)");
             writer.OpenBlock();
-            writer.WriteLine("var generation = new GenerationState();");
-            if (rootLocalAssets.Count != 0)
-                writer.WriteLine($"{ResourceLoaderName("Root")}(generation, context);");
-            if (sharedAssetVariables.Count != 0)
-                writer.WriteLine("LoadSharedResources(generation, context);");
-            foreach (string sectionName in context.Sections)
-                if (localResourceSections.Contains(sectionName))
-                    writer.WriteLine($"{ResourceLoaderName(sectionName)}(generation, context);");
-            foreach (BtsmtlAuthoringCodeEmissionPhase phase in Enum.GetValues(typeof(BtsmtlAuthoringCodeEmissionPhase)))
+            writer.WriteLine("var rootParts = BuildRoot(context);");
+            foreach (SectionPlan section in plan.Sections)
             {
-                foreach (StatementBlock block in Blocks(context, phase))
-                    writer.WriteLine($"{MethodName(phase, block.SectionName, block.Index)}(generation, context);");
-            }
-            writer.WriteLine($"return context.Complete(generation.{context.RootVariableName});");
-            writer.CloseBlock();
-            if (rootLocalAssets.Count != 0)
-            {
-                writer.WriteLine();
-                WriteResourceLoader(writer, ResourceLoaderName("Root"), rootLocalAssets);
-            }
-            writer.WriteLine();
-            WriteStatementBlocks(writer, context, "Root");
-            writer.WriteLine();
-            WriteState(writer, context);
-            writer.CloseBlock();
-            writer.CloseBlock();
-            return writer.ToString();
-        }
-
-        static string BuildSharedResources(
-            BtsmtlAuthoringCodeExportContext context,
-            ISet<string> sharedAssetVariables)
-        {
-            var writer = new SourceWriter();
-            WriteHeader(writer, context);
-            writer.WriteLine($"public sealed partial class {context.Request.EntryTypeName}");
-            writer.OpenBlock();
-            WriteResourceLoader(
-                writer,
-                "LoadSharedResources",
-                context.ExternalAssets
-                    .Where(value => context.IsVariableUsed(value.VariableName))
-                    .Where(value => sharedAssetVariables.Contains(value.VariableName))
-                    .ToArray());
-            writer.CloseBlock();
-            writer.CloseBlock();
-            return writer.ToString();
-        }
-
-        static string BuildSection(
-            BtsmtlAuthoringCodeExportContext context,
-            string sectionName,
-            IReadOnlyList<BtsmtlAuthoringCodeExternalAssetReference> localAssets)
-        {
-            var writer = new SourceWriter();
-            WriteHeader(writer, context);
-            writer.WriteLine($"public sealed partial class {context.Request.EntryTypeName}");
-            writer.OpenBlock();
-            if (localAssets.Count != 0)
-            {
-                WriteResourceLoader(writer, ResourceLoaderName(sectionName), localAssets);
-                writer.WriteLine();
-            }
-            WriteStatementBlocks(writer, context, sectionName);
-            writer.CloseBlock();
-            writer.CloseBlock();
-            return writer.ToString();
-        }
-
-        static void WriteStatementBlocks(
-            SourceWriter writer,
-            BtsmtlAuthoringCodeExportContext context,
-            string sectionName)
-        {
-            bool wroteMethod = false;
-            foreach (BtsmtlAuthoringCodeEmissionPhase phase in Enum.GetValues(typeof(BtsmtlAuthoringCodeEmissionPhase)))
-                foreach (StatementBlock block in Blocks(context, phase)
-                             .Where(value => string.Equals(value.SectionName, sectionName, StringComparison.Ordinal)))
-                {
-                    if (wroteMethod)
-                        writer.WriteLine();
-                    writer.WriteLine(
-                        $"static void {MethodName(block.Phase, sectionName, block.Index)}(GenerationState generation, BtsmtlAuthoringGenerationContext context)");
-                    writer.OpenBlock();
-                    foreach (BtsmtlAuthoringCodeStatement statement in block.Statements)
-                        writer.WriteLine(RewriteStatement(context, statement.Text));
-                    writer.CloseBlock();
-                    wroteMethod = true;
-                }
-        }
-
-        static string MethodName(
-            BtsmtlAuthoringCodeEmissionPhase phase,
-            string sectionName,
-            int blockIndex) =>
-            $"Build{phase}{BtsmtlAuthoringCodeSyntax.Identifier(sectionName.Replace('/', '_'))}{blockIndex}";
-
-        static string ResourceLoaderName(string sectionName) =>
-            $"Load{BtsmtlAuthoringCodeSyntax.Identifier(sectionName.Replace('/', '_'))}Resources";
-
-        static IReadOnlyList<StatementBlock> Blocks(
-            BtsmtlAuthoringCodeExportContext context,
-            BtsmtlAuthoringCodeEmissionPhase phase)
-        {
-            var result = new List<StatementBlock>();
-            StatementBlock current = null;
-            foreach (BtsmtlAuthoringCodeStatement statement in context.Statements(phase))
-            {
-                if (current == null ||
-                    !string.Equals(current.SectionName, statement.SectionName, StringComparison.Ordinal))
-                {
-                    current = new StatementBlock(phase, statement.SectionName, result.Count);
-                    result.Add(current);
-                }
-                current.Statements.Add(statement);
-            }
-            return result;
-        }
-
-        static void WriteHeader(SourceWriter writer, BtsmtlAuthoringCodeExportContext context)
-        {
-            writer.WriteLine("using System;");
-            writer.WriteLine("using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;");
-            writer.WriteLine("using TimelineAnimationClip = BTSMTL.Timeline.AnimationClip;");
-            writer.WriteLine("using UnityObject = UnityEngine.Object;");
-            writer.WriteLine("using UnityAnimationClip = UnityEngine.AnimationClip;");
-            foreach (string namespaceName in context.Usings.OrderBy(value => value, StringComparer.Ordinal))
-                writer.WriteLine($"using {namespaceName};");
-            writer.WriteLine();
-            writer.WriteLine($"namespace {context.Request.NamespaceName}");
-            writer.OpenBlock();
-        }
-
-        static void WriteResourceLoader(
-            SourceWriter writer,
-            string methodName,
-            IReadOnlyList<BtsmtlAuthoringCodeExternalAssetReference> assets)
-        {
-            writer.WriteLine(
-                $"static void {methodName}(GenerationState generation, BtsmtlAuthoringGenerationContext context)");
-            writer.OpenBlock();
-            foreach (BtsmtlAuthoringCodeExternalAssetReference asset in assets)
+                if (string.Equals(section.Name, "Root", StringComparison.Ordinal) || !section.HasStatements)
+                    continue;
+                string arguments = section.UsesRoot
+                    ? "rootParts, context"
+                    : "context";
                 writer.WriteLine(
-                    $"generation.{asset.VariableName} = context.ResolveExternalAsset<{asset.TypeName}>({BtsmtlAuthoringCodeSyntax.StringLiteral(asset.AssetPath)}, {asset.LocalFileId}L);");
+                    section.HasResult
+                        ? $"var {section.ResultParameterName} = Build{SectionIdentifier(section.Name)}({arguments});"
+                        : $"Build{SectionIdentifier(section.Name)}({arguments});");
+            }
+            if (plan.FinalStatements.Count != 0)
+                writer.WriteLine($"FinalizeAuthoring({string.Join(", ", FinalArguments(plan))});");
+            writer.WriteLine($"return context.Complete(rootParts.{context.RootVariableName});");
+            writer.CloseBlock();
+            writer.CloseBlock();
+            return writer.ToString();
+        }
+
+        static string BuildRootSectionFile(
+            BtsmtlAuthoringCodeExportContext context,
+            OutputPlan plan)
+        {
+            var writer = new SourceWriter();
+            WriteHeader(writer, context);
+            writer.WriteLine($"public sealed partial class {context.Request.EntryTypeName}");
+            writer.OpenBlock();
+            writer.WriteLine();
+            writer.WriteLine($"static {plan.Root.ResultTypeName} BuildRoot(BtsmtlAuthoringGenerationContext context)");
+            writer.OpenBlock();
+            writer.WriteLine($"var parts = new {plan.Root.ResultTypeName}();");
+            WriteSharedAssets(writer, context, plan);
+            WriteLocalAssets(writer, plan.Root);
+            WriteStatements(writer, context, plan, plan.Root, false);
+            writer.WriteLine("return parts;");
+            writer.CloseBlock();
+            if (plan.FinalStatements.Count != 0)
+            {
+                writer.WriteLine();
+                WriteFinalizer(writer, context, plan);
+            }
+            writer.WriteLine();
+            WriteResultType(writer, context, plan.Root);
+            writer.CloseBlock();
+            writer.CloseBlock();
+            return writer.ToString();
+        }
+
+        static string BuildSectionFile(
+            BtsmtlAuthoringCodeExportContext context,
+            OutputPlan plan,
+            SectionPlan section)
+        {
+            var writer = new SourceWriter();
+            WriteHeader(writer, context);
+            writer.WriteLine($"public sealed partial class {context.Request.EntryTypeName}");
+            writer.OpenBlock();
+            string resultType = section.HasResult ? section.ResultTypeName : "void";
+            var parameters = new List<string>();
+            if (section.UsesRoot)
+                parameters.Add($"{plan.Root.ResultTypeName} rootParts");
+            parameters.Add("BtsmtlAuthoringGenerationContext context");
+            writer.WriteLine(
+                $"static {resultType} Build{SectionIdentifier(section.Name)}({string.Join(", ", parameters)})");
+            writer.OpenBlock();
+            if (section.HasResult)
+                writer.WriteLine($"var parts = new {section.ResultTypeName}();");
+            WriteLocalAssets(writer, section);
+            WriteStatements(writer, context, plan, section, false);
+            if (section.HasResult)
+                writer.WriteLine("return parts;");
+            writer.CloseBlock();
+            if (section.HasResult)
+            {
+                writer.WriteLine();
+                WriteResultType(writer, context, section);
+            }
+            writer.CloseBlock();
+            writer.CloseBlock();
+            return writer.ToString();
+        }
+
+        static void WriteFinalizer(
+            SourceWriter writer,
+            BtsmtlAuthoringCodeExportContext context,
+            OutputPlan plan)
+        {
+            var parameters = new List<string>();
+            foreach (SectionPlan section in plan.Sections)
+                if (plan.FinalOwners.Contains(section.Name) && section.HasResult)
+                    parameters.Add($"{section.ResultTypeName} {section.ResultParameterName}");
+            parameters.Add("BtsmtlAuthoringGenerationContext context");
+            writer.WriteLine($"static void FinalizeAuthoring({string.Join(", ", parameters)})");
+            writer.OpenBlock();
+            foreach (StatementPlan statement in plan.FinalStatements)
+                writer.WriteLine(
+                    RewriteStatement(
+                        context,
+                        plan,
+                        statement.Text,
+                        statement.SectionName,
+                        null,
+                        true));
             writer.CloseBlock();
         }
 
-        static void WriteState(
-            SourceWriter writer,
-            BtsmtlAuthoringCodeExportContext context)
+        static IEnumerable<string> FinalArguments(OutputPlan plan)
         {
-            writer.WriteLine("sealed class GenerationState");
+            foreach (SectionPlan section in plan.Sections)
+                if (plan.FinalOwners.Contains(section.Name) && section.HasResult)
+                    yield return section.ResultParameterName;
+            yield return "context";
+        }
+
+        static void WriteSharedAssets(
+            SourceWriter writer,
+            BtsmtlAuthoringCodeExportContext context,
+            OutputPlan plan)
+        {
+            foreach (BtsmtlAuthoringCodeExternalAssetReference asset in context.ExternalAssets)
+                if (plan.SharedAssets.Contains(asset.VariableName))
+                    writer.WriteLine(
+                        $"parts.{asset.VariableName} = context.ResolveExternalAsset<{asset.TypeName}>({BtsmtlAuthoringCodeSyntax.StringLiteral(asset.AssetPath)}, {asset.LocalFileId}L);");
+        }
+
+        static void WriteLocalAssets(
+            SourceWriter writer,
+            SectionPlan section)
+        {
+            foreach (BtsmtlAuthoringCodeExternalAssetReference asset in section.LocalAssets)
+                writer.WriteLine(
+                    $"var {asset.VariableName} = context.ResolveExternalAsset<{asset.TypeName}>({BtsmtlAuthoringCodeSyntax.StringLiteral(asset.AssetPath)}, {asset.LocalFileId}L);");
+        }
+
+        static void WriteStatements(
+            SourceWriter writer,
+            BtsmtlAuthoringCodeExportContext context,
+            OutputPlan plan,
+            SectionPlan section,
+            bool final)
+        {
+            foreach (StatementPlan statement in plan.Statements)
+            {
+                if (statement.Deferred != final ||
+                    !string.Equals(statement.SectionName, section.Name, StringComparison.Ordinal))
+                    continue;
+                writer.WriteLine(
+                    RewriteStatement(
+                        context,
+                        plan,
+                        statement.Text,
+                        section.Name,
+                        "parts",
+                        final));
+            }
+        }
+
+        static void WriteResultType(
+            SourceWriter writer,
+            BtsmtlAuthoringCodeExportContext context,
+            SectionPlan section)
+        {
+            writer.WriteLine($"sealed class {section.ResultTypeName}");
             writer.OpenBlock();
-            foreach (string variableName in context.ObjectVariableOrder.Where(context.IsVariableUsed))
+            foreach (string variableName in section.PromotedVariables)
                 writer.WriteLine($"internal {context.VariableTypeNames[variableName]} {variableName};");
-            foreach (BtsmtlAuthoringCodeExternalAssetReference asset in context.ExternalAssets
-                         .Where(value => context.IsVariableUsed(value.VariableName)))
-                writer.WriteLine($"internal {asset.TypeName} {asset.VariableName};");
             writer.CloseBlock();
         }
+
+        static string SectionIdentifier(string sectionName) =>
+            BtsmtlAuthoringCodeSyntax.Identifier(sectionName.Replace('/', '_'));
 
         static string RewriteStatement(
             BtsmtlAuthoringCodeExportContext context,
-            string statement)
+            OutputPlan plan,
+            string statement,
+            string sectionName,
+            string localResultName,
+            bool final)
         {
             string result = statement;
             string declaredVariable = context.VariableTypeNames.Keys
                 .Where(value => result.StartsWith($"var {value} =", StringComparison.Ordinal))
                 .OrderByDescending(value => value.Length)
                 .FirstOrDefault();
-            if (!string.IsNullOrEmpty(declaredVariable) &&
-                context.VariableSections.ContainsKey(declaredVariable))
+            if (!string.IsNullOrEmpty(declaredVariable))
             {
-                string prefix = $"var {declaredVariable} =";
-                result = $"generation.{declaredVariable} =" + result.Substring(prefix.Length);
+                string expression = VariableReference(
+                    plan,
+                    declaredVariable,
+                    sectionName,
+                    localResultName,
+                    final);
+                if (!string.Equals(expression, declaredVariable, StringComparison.Ordinal))
+                {
+                    string prefix = $"var {declaredVariable} =";
+                    result = expression + " =" + result.Substring(prefix.Length);
+                }
             }
-
             foreach (string variableName in context.VariableTypeNames.Keys
                          .OrderByDescending(value => value.Length))
             {
                 if (string.Equals(variableName, declaredVariable, StringComparison.Ordinal))
                     continue;
-                result = ReplaceIdentifier(result, variableName, $"generation.{variableName}");
+                string expression = VariableReference(
+                    plan,
+                    variableName,
+                    sectionName,
+                    localResultName,
+                    final);
+                if (!string.Equals(expression, variableName, StringComparison.Ordinal))
+                    result = ReplaceIdentifier(result, variableName, expression);
             }
             return result;
+        }
+
+        static string VariableReference(
+            OutputPlan plan,
+            string variableName,
+            string sectionName,
+            string localResultName,
+            bool final)
+        {
+            if (!plan.VariableOwners.TryGetValue(variableName, out string owner))
+                return variableName;
+            if (!final && string.Equals(owner, sectionName, StringComparison.Ordinal))
+                return plan.Promoted.Contains(variableName)
+                    ? $"{localResultName}.{variableName}"
+                    : variableName;
+            if (plan.SectionByName.TryGetValue(owner, out SectionPlan resultSection))
+                return $"{resultSection.ResultParameterName}.{variableName}";
+            return variableName;
         }
 
         static string ReplaceIdentifier(string text, string identifier, string replacement)
@@ -505,7 +637,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             while (index < text.Length)
             {
                 char character = text[index];
-                if (character == '\"' && !escaped)
+                if (character == '"' && !escaped)
                     inString = !inString;
                 if (!inString && IsIdentifierStart(text, index, identifier))
                 {
@@ -523,6 +655,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return result.ToString();
         }
 
+        static bool ContainsIdentifier(string text, string identifier)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(identifier))
+                return false;
+            for (int index = 0; index < text.Length; index++)
+                if (IsIdentifierStart(text, index, identifier))
+                    return true;
+            return false;
+        }
+
         static bool IsIdentifierStart(string text, int index, string identifier)
         {
             if (index > 0 && IsIdentifierCharacter(text[index - 1]))
@@ -538,22 +680,77 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             value == '_' || value >= '0' && value <= '9' ||
             value >= 'A' && value <= 'Z' || value >= 'a' && value <= 'z';
 
-        sealed class StatementBlock
+        static void WriteHeader(SourceWriter writer, BtsmtlAuthoringCodeExportContext context)
         {
-            public StatementBlock(
+            writer.WriteLine("using System;");
+            writer.WriteLine("using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;");
+            writer.WriteLine("using TimelineAnimationClip = BTSMTL.Timeline.AnimationClip;");
+            writer.WriteLine("using UnityObject = UnityEngine.Object;");
+            writer.WriteLine("using UnityAnimationClip = UnityEngine.AnimationClip;");
+            foreach (string namespaceName in context.Usings.OrderBy(value => value, StringComparer.Ordinal))
+                writer.WriteLine($"using {namespaceName};");
+            writer.WriteLine();
+            writer.WriteLine($"namespace {context.Request.NamespaceName}");
+            writer.OpenBlock();
+        }
+
+        sealed class OutputPlan
+        {
+            public List<StatementPlan> Statements { get; } = new();
+            public List<StatementPlan> FinalStatements { get; } = new();
+            public List<SectionPlan> Sections { get; } = new();
+            public Dictionary<string, SectionPlan> SectionByName { get; } = new(StringComparer.Ordinal);
+            public Dictionary<string, string> VariableOwners { get; } = new(StringComparer.Ordinal);
+            public HashSet<string> Promoted { get; } = new(StringComparer.Ordinal);
+            public HashSet<string> SharedAssets { get; } = new(StringComparer.Ordinal);
+            public HashSet<string> FinalOwners { get; } = new(StringComparer.Ordinal);
+            public SectionPlan Root { get; set; }
+        }
+
+        sealed class SectionPlan
+        {
+            public SectionPlan(string name)
+            {
+                Name = name;
+                ResultTypeName = string.Equals(name, "Root", StringComparison.Ordinal)
+                    ? "RootParts"
+                    : SectionIdentifier(name) + "Parts";
+                ResultParameterName = string.Equals(name, "Root", StringComparison.Ordinal)
+                    ? "rootParts"
+                    : LowerFirst(SectionIdentifier(name));
+            }
+
+            public string Name { get; }
+            public string ResultTypeName { get; }
+            public string ResultParameterName { get; }
+            public bool HasStatements { get; set; }
+            public bool UsesRoot { get; set; }
+            public bool HasResult => PromotedVariables.Count != 0;
+            public List<string> PromotedVariables { get; } = new();
+            public List<BtsmtlAuthoringCodeExternalAssetReference> LocalAssets { get; } = new();
+
+            static string LowerFirst(string value) =>
+                string.IsNullOrEmpty(value)
+                    ? "parts"
+                    : char.ToLowerInvariant(value[0]) + value.Substring(1);
+        }
+
+        sealed class StatementPlan
+        {
+            public StatementPlan(
                 BtsmtlAuthoringCodeEmissionPhase phase,
                 string sectionName,
-                int index)
+                string text)
             {
                 Phase = phase;
                 SectionName = sectionName;
-                Index = index;
+                Text = text;
             }
 
             public BtsmtlAuthoringCodeEmissionPhase Phase { get; }
             public string SectionName { get; }
-            public int Index { get; }
-            public List<BtsmtlAuthoringCodeStatement> Statements { get; } = new();
+            public string Text { get; }
+            public bool Deferred { get; set; }
         }
 
         sealed class SourceWriter

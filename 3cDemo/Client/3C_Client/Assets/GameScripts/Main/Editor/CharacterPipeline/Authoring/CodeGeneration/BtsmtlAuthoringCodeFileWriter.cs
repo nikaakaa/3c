@@ -73,6 +73,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     deletedFiles.Add(filePath);
                 }
 
+                foreach (string directory in Directory.EnumerateDirectories(outputDirectory, "*", SearchOption.AllDirectories)
+                             .OrderByDescending(path => path.Length)
+                             .ToArray())
+                {
+                    if (Directory.EnumerateFiles(directory).Any() ||
+                        Directory.EnumerateDirectories(directory).Any())
+                        continue;
+                    string metaPath = directory + ".meta";
+                    if (File.Exists(metaPath))
+                    {
+                        File.Delete(metaPath);
+                        deletedFiles.Add(metaPath);
+                    }
+                    Directory.Delete(directory);
+                }
+
                 return new BtsmtlAuthoringCodeFileWriteResult(
                     true,
                     string.Empty,

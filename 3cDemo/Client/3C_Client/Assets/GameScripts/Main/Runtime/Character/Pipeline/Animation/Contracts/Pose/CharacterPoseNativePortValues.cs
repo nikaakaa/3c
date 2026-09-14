@@ -1,5 +1,6 @@
 using System;
 using BTSMTL.EventGraphs;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation

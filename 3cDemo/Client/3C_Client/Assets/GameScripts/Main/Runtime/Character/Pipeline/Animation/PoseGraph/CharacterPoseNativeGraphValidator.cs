@@ -13,11 +13,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             : base(message)
         {
             Code = code;
-            Source = source;
+            Origin = source;
         }
 
         internal CharacterPoseNativeFailureCode Code { get; }
-        internal string Source { get; }
+        internal string Origin { get; }
     }
 
     internal static class CharacterPoseNativeGraphValidator
@@ -86,12 +86,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     _ => new HashSet<PoseNodeId>());
                 foreach (CharacterPoseCanvasConnection connection in graph.Connections)
                 {
-                    if (!byId.TryGetValue(connection.SourceNodeId, out CharacterPoseCanvasNode source) ||
-                        !byId.TryGetValue(connection.TargetNodeId, out CharacterPoseCanvasNode target) ||
-                        !shapes.TryGetValue(source.NodeId, out IReadOnlyList<CharacterPosePortDefinition> sourceShape) ||
-                        !shapes.TryGetValue(target.NodeId, out IReadOnlyList<CharacterPosePortDefinition> targetShape))
+                    CharacterPoseCanvasNode source = null;
+                    CharacterPoseCanvasNode target = null;
+                    IReadOnlyList<CharacterPosePortDefinition> sourceShape = null;
+                    IReadOnlyList<CharacterPosePortDefinition> targetShape = null;
+                    if (!byId.TryGetValue(connection.SourceNodeId, out source) ||
+                        !byId.TryGetValue(connection.TargetNodeId, out target) ||
+                        !shapes.TryGetValue(source.NodeId, out sourceShape) ||
+                        !shapes.TryGetValue(target.NodeId, out targetShape))
                     {
-                        Fail(
+                        throw new CharacterPoseNativeGraphValidationException(
                             CharacterPoseNativeFailureCode.PortInvalid,
                             $"{graph.GraphId}/{connection.EdgeId}",
                             "Pose connection references an unknown node.");
@@ -161,7 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string edgeId)
         {
             CharacterPosePortDefinition port = shape.SingleOrDefault(value =>
-                value.PortId == portId && value.Direction == direction);
+                value.PortId.Equals(portId) && value.Direction == direction);
             return port ?? throw new CharacterPoseNativeGraphValidationException(
                 CharacterPoseNativeFailureCode.PortInvalid,
                 $"{graphId}/{edgeId}/{portId}",

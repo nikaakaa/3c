@@ -605,7 +605,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeFrameStatus status,
             CharacterPoseNativeFailureCode failureCode,
             string source,
-            string message)
+            string message,
+            CharacterPoseNativePortValue output = null)
         {
             if (!lineage.IsValid || status != CharacterPoseNativeFrameStatus.Evaluated &&
                 status != CharacterPoseNativeFrameStatus.Pending &&
@@ -613,7 +614,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 status != CharacterPoseNativeFrameStatus.Faulted ||
                 string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(message) ||
                 status == CharacterPoseNativeFrameStatus.Evaluated && failureCode != CharacterPoseNativeFailureCode.None ||
-                status != CharacterPoseNativeFrameStatus.Evaluated && failureCode == CharacterPoseNativeFailureCode.None)
+                status != CharacterPoseNativeFrameStatus.Evaluated && failureCode == CharacterPoseNativeFailureCode.None ||
+                status == CharacterPoseNativeFrameStatus.Evaluated && output == null ||
+                status != CharacterPoseNativeFrameStatus.Evaluated && output != null)
             {
                 throw new ArgumentException("Pose native evaluation result is invalid.");
             }
@@ -622,6 +625,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FailureCode = failureCode;
             Source = source.Trim();
             Message = message.Trim();
+            Output = output;
         }
 
         internal CharacterPoseNativeFrameLineage Lineage { get; }
@@ -629,9 +633,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeFailureCode FailureCode { get; }
         internal string Source { get; }
         internal string Message { get; }
+        internal CharacterPoseNativePortValue Output { get; }
         internal bool IsValid => Lineage.IsValid &&
             (Status == CharacterPoseNativeFrameStatus.Evaluated
-                ? FailureCode == CharacterPoseNativeFailureCode.None
+                ? FailureCode == CharacterPoseNativeFailureCode.None && Output != null
                 : FailureCode != CharacterPoseNativeFailureCode.None) &&
             !string.IsNullOrWhiteSpace(Source) && !string.IsNullOrWhiteSpace(Message);
     }
@@ -717,6 +722,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void Initialize(CharacterPoseCanvasGraph graph);
         void Start(CharacterPoseCanvasGraph graph);
         void Stop(CharacterPoseCanvasGraph graph);
-        T Read<T>(CharacterPoseCanvasNode node, PosePortId portId);
+        T Read<T>(CharacterPoseCanvasNode node, PosePortId portId)
+            where T : CharacterPoseNativePortValue;
     }
 }

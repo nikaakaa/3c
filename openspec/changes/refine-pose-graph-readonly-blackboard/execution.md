@@ -145,3 +145,12 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `CharacterPoseNativeGraphValidator.cs` 增加不依赖 Pose IR 的原生 Graph 校验：检查节点/端口身份、typed 连接、输入单连接、可执行环、根/边界 Output 约束，并递归检查 StateMachine、Pose Subgraph 和 Motion Matching Entry Graph 的引用闭包。
 - 校验失败保留 `FailureCode` 与图/节点/端口路径，不能读旧 Image 或默认姿态继续运行。
 - Runtime 工程未发现本步新增错误；完整 Editor 依赖链仍被共享 Ability 文件 `GameplayAbilityDataAsset.cs:81` 的 `Float32GameplayAbilityExecutionData.FromProgram` 缺失成员阻断，编译后已执行 `dotnet build-server shutdown`。
+
+## 2026-09-14 r3 原生图实例与阶段驱动外壳
+
+- `CharacterPoseNativeGraphRuntime.cs` 建立按准备绑定创建的独立 Graph 实例，使用 FlowCanvas `Manual` 更新模式挂载原生 Runtime，并提供 `BeginFrame -> Prepare -> Evaluate -> Commit/Discard -> Stop/Dispose` 阶段门禁。
+- Native Runtime 以 `CharacterPoseNativeFrameLineage`、source demand、typed evaluation output 和 completion identity 串起单帧；节点输出使用 `(NodeId, PortId, Stage)` 缓存，递归读取会被拒绝，不复制全图 ValueLifetime 或旧 Program Image。
+- 当前评估器只完成原生端口读取、参数 Get、History 透传和 Graph Output 透传；现有 Player、StateMachine、Slot、BlendStack、Inertialization、Foot/Goal/FBBIK、Final Publication 尚未切换到该评估器，不能把本步记为完整运行时替换。
+- Runtime 工程已通过：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonClient.Runtime.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore`，0 errors；完成后已执行 `dotnet build-server shutdown`。结果只证明 C# 静态编译，不证明 Unity 资源刷新、Build、Play 或端到端行为。
+
+本步仍未删除旧 Pose IR/Image/Compiler/Worker 链；待全部正式消费者改由原生 Graph Runtime 读取后，再按消费者证据垂直删除，并记录删除后的残留扫描与构建边界。

@@ -26,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!isActive)
                 return;
+            CharacterPoseCanvasNativePorts.RequireCompatible(this);
             if (sourcePort is FlowCanvas.ValueOutput valueOutput &&
                 targetPort is FlowCanvas.ValueInput valueInput)
             {

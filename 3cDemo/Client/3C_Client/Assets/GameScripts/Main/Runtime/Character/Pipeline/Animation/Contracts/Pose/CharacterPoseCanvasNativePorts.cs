@@ -59,6 +59,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return Require(port.Kind).Type;
         }
 
+        internal static void RequireCompatible(
+            CharacterPoseCanvasConnection connection)
+        {
+            if (connection == null || connection.SourceNode == null ||
+                connection.TargetNode == null)
+            {
+                throw new InvalidOperationException(
+                    "Pose connection endpoint is missing.");
+            }
+            CharacterPosePortDefinition source = Shape(connection.SourceNode).SingleOrDefault(value =>
+                value.Direction == CharacterPosePortDirection.Output &&
+                value.PortId.Equals(connection.SourcePortId));
+            CharacterPosePortDefinition target = Shape(connection.TargetNode).SingleOrDefault(value =>
+                value.Direction == CharacterPosePortDirection.Input &&
+                value.PortId.Equals(connection.TargetPortId));
+            if (source == null || target == null ||
+                Require(source.Kind).Type != Require(target.Kind).Type)
+            {
+                throw new InvalidOperationException(
+                    $"Pose connection '{connection.EdgeId}' has incompatible typed ports.");
+            }
+        }
+
         internal static Type RuntimeBindingType(CharacterPosePortKind kind) =>
             Require(kind).Type;
 

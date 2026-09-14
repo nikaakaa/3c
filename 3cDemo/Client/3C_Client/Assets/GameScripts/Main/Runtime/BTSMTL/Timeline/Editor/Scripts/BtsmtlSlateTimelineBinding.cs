@@ -238,7 +238,11 @@ namespace BTSMTL.Timeline.Editor
         public void AddClipAt(string trackAuthoringId, int frame)
         {
             if (m_Tracks.TryGetValue(trackAuthoringId ?? string.Empty, out BtsmtlTimelineTrackBinding track))
+            {
                 AddClip(track, frame);
+                return;
+            }
+            ReportIssue("Add Clip 的目标 Track 已失效。");
         }
 
         public void DeleteTrack(IEmbeddedTimelineTrackBinding track)

@@ -687,6 +687,74 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal readonly struct AnimationPlayerPoseNativeWriteBinding
     {
         internal AnimationPlayerPoseNativeWriteBinding(
+            int physicalPlayerIndex,
+            int boneCount,
+            int parameterCount,
+            int contributionCapacity,
+            ulong completionIdentity,
+            NativeSlice<AnimationLocalBonePose> denseLocalPoses,
+            NativeSlice<AnimationBlendBoneVelocity> denseVelocities,
+            NativeSlice<float> poseParameters,
+            NativeSlice<byte> poseParameterAvailability,
+            NativeSlice<AnimationPrimitivePoseContribution> contributions,
+            NativeSlice<float> denseContributionWeights,
+            NativeSlice<int> contributionCount,
+            NativeSlice<float> outputWeight,
+            NativeSlice<AnimationFootFeatureSample> leftFootFeatures,
+            NativeSlice<AnimationFootFeatureSample> rightFootFeatures,
+            NativeSlice<byte> hasFootFeatures,
+            NativeSlice<AnimationPoseAvailability> availability,
+            NativeSlice<ulong> continuityIdentity,
+            NativeSlice<PoseDiscontinuityNative> discontinuity,
+            NativeSlice<AnimationPoseNativeInvalidReason> invalidReason,
+            NativeSlice<ulong> completedAt)
+        {
+            if (physicalPlayerIndex < 0 || boneCount <= 0 || parameterCount <= 0 ||
+                contributionCapacity <= 0 || completionIdentity == 0 ||
+                denseLocalPoses.Length != boneCount ||
+                denseVelocities.Length != boneCount ||
+                poseParameters.Length != parameterCount ||
+                poseParameterAvailability.Length != parameterCount ||
+                contributions.Length != contributionCapacity ||
+                denseContributionWeights.Length !=
+                    checked(contributionCapacity * boneCount) ||
+                contributionCount.Length != 1 || outputWeight.Length != 1 ||
+                leftFootFeatures.Length != 1 || rightFootFeatures.Length != 1 ||
+                hasFootFeatures.Length != 1 || availability.Length != 1 ||
+                continuityIdentity.Length != 1 || discontinuity.Length != 1 ||
+                invalidReason.Length != 1 || completedAt.Length != 1)
+            {
+                throw new ArgumentException(
+                    "Animation pose native node write binding is invalid.");
+            }
+            Range = new AnimationPlayerPoseNativeRange(
+                physicalPlayerIndex,
+                0,
+                0,
+                0,
+                0,
+                contributionCapacity,
+                0);
+            CompletionIdentity = completionIdentity;
+            DenseLocalPoses = denseLocalPoses;
+            DenseVelocities = denseVelocities;
+            PoseParameters = poseParameters;
+            PoseParameterAvailability = poseParameterAvailability;
+            Contributions = contributions;
+            DenseContributionWeights = denseContributionWeights;
+            ContributionCount = contributionCount;
+            OutputWeight = outputWeight;
+            LeftFootFeatures = leftFootFeatures;
+            RightFootFeatures = rightFootFeatures;
+            HasFootFeatures = hasFootFeatures;
+            Availability = availability;
+            ContinuityIdentity = continuityIdentity;
+            Discontinuity = discontinuity;
+            InvalidReason = invalidReason;
+            CompletedAt = completedAt;
+        }
+
+        internal AnimationPlayerPoseNativeWriteBinding(
             in CharacterPoseGraphNativeBinding aggregate,
             int physicalSlotIndex)
         {
@@ -743,6 +811,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal readonly struct AnimationPoseValueNativeReadBinding
     {
+        internal AnimationPoseValueNativeReadBinding(
+            in CharacterPoseNativePoseReadBinding native)
+        {
+            if (!native.IsValid)
+                throw new ArgumentException(
+                    "Animation pose native read binding is invalid.",
+                    nameof(native));
+            CompletionIdentity = native.CompletionIdentity;
+            ValueIndex = -1;
+            DensePoses = native.DenseLocalPoses;
+            PoseParameters = native.PoseParameters;
+            PoseParameterAvailability = native.PoseParameterAvailability;
+            Contributions = native.Contributions;
+            DenseContributionWeights = native.DenseContributionWeights;
+            ContributionCount = native.ContributionCount;
+            OutputWeight = native.OutputWeight;
+            LeftFootFeatures = native.LeftFootFeatures;
+            RightFootFeatures = native.RightFootFeatures;
+            HasFootFeatures = native.HasFootFeatures;
+            Availability = native.Availability;
+            ContinuityIdentity = native.ContinuityIdentity;
+            InvalidReason = native.InvalidReason;
+            PoseGraphInvalidOperationIndex = default;
+        }
+
         internal AnimationPoseValueNativeReadBinding(
             in CharacterPoseGraphNativeBinding aggregate,
             int valueIndex)

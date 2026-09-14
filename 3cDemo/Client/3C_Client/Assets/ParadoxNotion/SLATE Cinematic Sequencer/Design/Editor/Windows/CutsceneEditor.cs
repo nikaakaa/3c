@@ -770,6 +770,8 @@ namespace Slate
             pendingGuides = new List<GuideLine>();
             clipWrappers = new Dictionary<int, ActionClipWrapper>();
             clipWrappersMap = null;
+            interactingClip = null;
+            multiSelection = null;
             formalInspectedParameters = new Dictionary<string, int>(System.StringComparer.Ordinal);
             formalPickedTrack = null;
             formalDraggedSection = null;

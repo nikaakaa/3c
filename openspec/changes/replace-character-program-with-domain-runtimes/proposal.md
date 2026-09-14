@@ -4,10 +4,12 @@
 
 ## What Changes
 
+本change保留整体目标与公共合同，实施清单按2026-09-14协调审阅拆回已有任务：Timeline Runtime归Timeline配对，Pose原生Runtime归Pose配对；本任务只保留核心运行、状态／网络与公共集成。当前仅更新规划归属，不启动实现。
+
 - **BREAKING**：取消 `CharacterSimulationProgram` 作为整个角色的执行、配置、资源和状态装配根。角色由 C# ControlModule、AbilityRuntime、Motion、Effect、Equipment 等正式模块装配；不以另一个总包或万能运行上下文改名保留旧职责。
 - **BREAKING**：Semantic 处理收窄为 Ability 的私有 Graph／FSM／条件／子图引用，以及 TreeClip 引用的技能图。保留 Float32／Fixed 数值目标、portable 技能数据、必要技能局部状态和来源映射；不把角色控制、BodyMotion、装备总目录或 Pose 资源继续编码进技能产物。
 - **BREAKING**：Timeline 轨道、Clip、区间、播放参数和 MotionWarp 配置作为正式时间轴数据直接调度，不编成 Semantic IR／Program operation。技能只保留调用 Timeline 的节点和精确内容引用；TreeClip 图独立编译。保留 portable 内容导出、资源绑定和目标数值准备，复用现有时间、窗口、取消、回绕和恢复语义，不接入 Slate Runtime 或第二播放器。
-- 提供技能、Pose、Camera、Motion 各自的准备输入、Ready／Pending／Missing／Invalid／Failed 结果、失败原因与实际采用版本／实例身份。预览只消费真实领域操作与结果，不恢复 Character Build／ProgramEpoch 或创造假全局版本。
+- 各领域分别提供技能、独立Timeline、Pose、Camera、Motion的准备／实际采用结果。Timeline独立Prepare／CreatePlayback不要求Ability外壳；Advance只生成Pending，调用方Step决定提交／丢弃，Timeline提供分型私有状态，核心只聚合。预览只消费真实领域操作与结果，不恢复 Character Build／ProgramEpoch 或创造假全局版本。
 - Camera 领域准备 Profile／资源到只读运行绑定，本任务只负责装配调用与旧 Projection 挂接迁出；运动曲线统一引用 RootMotionCurveAsset 和 Timeline 唯一时间映射，portable 数值运行不读取 Unity 资产。
 - 保留全部现有网络 Pipeline、四阶段 Pass、Backend、Source、WorldSolver、预测纠正、回滚、History、EventId disposition 与普通 .NET Authority 产品边界。仅迁移角色执行、玩法内容身份和完整状态快照接口，不撤销网络模型或改用固定 C# 网络流水线。
 - **BREAKING**：Pose Graph、节点及连接使用 FlowCanvas 原生 Runtime，按角色实例化、由现有表现宿主手动驱动；删除 Pose IR、ProgramImage、全图操作调度及其专属编译和发布链，不把编译转移到加载时。
@@ -48,9 +50,10 @@
 
 ## Impact
 
-- Editor：Character Semantic Frontend／Builder、技能编译、Pose Compiler、Projection 绑定、资源身份、构建缓存与产物、预览及诊断适配。
-- Runtime：Character Host／Registration、Float32／Fixed evaluator 与状态 codec、Control／Ability／Motion／Effect／Equipment 接口、Pose 原生图／节点／连接、动画资源和最终输出。
+- 核心Editor：Character Semantic Frontend／Builder、共享技能编译、资源身份与公共构建／产物；BtsmtlSkillTimelineCompiler由主实现唯一写入。Pose Image专属Compiler退出归Pose，Timeline专属发射退出归Timeline；预览、Camera和C#适配保持原owner。
+- 核心Runtime：Character Host／Registration／Factory、Float32／Fixed角色Step和状态codec、Control／Ability最终数据／provider、网络与表现外壳。Timeline和Pose内部Runtime及专属旧链由各自既有任务清单交付，核心不串行代做。
 - Network／Server：Session Composer、Pass 产品及快照接口、握手与 Authority manifest；协议身份正式升级，网络行为和部署产品分工不改变。
 - Authoring：复用已安装的 FlowCanvas／NodeCanvas、正式 Capability／Mutation 与显式 `export_code`／`generate_assets`，不新增插件或作者同步机制。
 - 接口现状：1.1—1.3已交付Ability前端、目标入口与store，1.4已交付Provider身份检查；当前仍借用旧容器。2026-09-14审查将2.1重开：现有Factory只包住旧Workspace／Evaluator，尚未完成领域装配。技能角色级状态、Provider成员／类型／版本解析和最终技能Load接口分别由新增1.8—1.10收口，不能据已有小步宣称新运行或预览接口可用。
+- 分工：唯一领域清单分别是`restyle-timeline-editor-slate-style/tasks.md`与`refine-pose-graph-readonly-blackboard/tasks.md`的Runtime接收章节，本任务只保留指针和公共集成项。领域owner发布实际采用事实，核心装配并汇集，不自行制造版本；详见design D13—D15。
 - 文档：本提案替代旧评估中“继续保留角色总 Program”的方向。现行 spec、`openspec/project.md` 和并行 Pose／EventGraph／技能 FSM 提案的矛盾与准确分工见 `design.md`；本轮不改写其它任务，不把旧完成项重新判为未完成。

@@ -66,6 +66,36 @@
 
 本轮在character-domain-runtime增加工厂脱离Program、技能不复制角色级状态、Provider真实合同三项要求与场景。未新增测试代码或验证任务，后续实现仍按原owner边界推进；不向其它窗口发送日常回执或新增执行指令。
 
+## 2026-09-14并行规划归属更新
+
+依据：`docs/coordination-progress.md` 的 `PARALLEL-20260914-DOMAIN-01` 审阅（2801861c1）和用户广播 `parallel-20260914-domain-01-planning-update`。本次只更新本任务已有规划、责任指针与公共合同，不改其它任务文档，不启动实现或发送执行消息。接收方续写Runtime章节不代表其旧的Slate／只读输入工作未完成。
+
+### 唯一清单与旧编号去向
+
+| 原主清单范围 | 现在的唯一责任 | 主清单保留方式 |
+| --- | --- | --- |
+| 1.5—1.7的Timeline直接内容、portable轨道／Clip与域内调度 | `restyle-timeline-editor-slate-style/tasks.md` Runtime接收章节 | 1.5只接Prepare／Create结果；1.6只改共享技能调用入口；原1.7从本清单移出 |
+| 3.8的Timeline私有播放状态 | Timeline接收清单 | 3.8只把领域typed状态和Commit／Discard接入角色／网络事务 |
+| 4.1—4.6、5.1—5.8、7.3、8.3 | `refine-pose-graph-readonly-blackboard/tasks.md` Runtime接收章节 | 原checkbox从本清单移出；核心仅4.7—4.8的表现外壳调用与事实汇集 |
+| 6.1、7.2、7.6、7.7、8.1—8.2中混合的领域职责 | 对应既有Pose／Timeline／预览／C#／资源owner | 文字收窄为核心公共接入，不重复节点、播放器、导出或资产迁移清单 |
+
+迁出的17个checkbox在本次读取时均未完成，移出不计为完成。主清单现有已完成事项原样保留；未把领域接收章节的编写过程当成主实现阻塞或授权其代做。领域详细步骤和勾选只保留在上述对应文档，由各接收规划维护。
+
+### 协调审阅项处理
+
+| 审阅项 | 本轮修改 |
+| --- | --- |
+| R1 接收范围 | D13明确已有Timeline／Pose配对、唯一清单、核心保留边界；主tasks移除重复领域实现项 |
+| R2 共享技能Timeline入口 | BtsmtlSkillTimelineCompiler只由核心写入，Timeline不复制TreeClip图编译或共改方法 |
+| R3 非Skill独立准备 | D10新增Timeline行，D14固定独立PrepareContent／CreatePlayback；不通过伪造Ability准备 |
+| R4 提交／丢弃与状态 | Advance只返回Pending；Timeline检查并安装自身状态，核心决定整Step提交／丢弃和快照组合；私有字段不复制，TreeClip图执行帧仍归核心技能服务 |
+| R5 Pose与角色外壳 | D15划定Pose两阶段／私有状态和核心表现外壳；CharacterPresentationRuntime等共享外壳由核心唯一写入 |
+| R6 当前实现边界 | D12保留其历史审查语境；Q2相关1.8已完成，不作为仍待删的旧位置重复派工。最终工厂／独立数据／Provider按当前tasks推进 |
+| R7 采用事实发布者 | 各领域owner确认和发布实际版本／实例；核心只装配与汇集，不能从请求或Ready推断已采用 |
+| R8 历史路径与正确算法 | 已归档运动源迁移不重做，读取现行规范和API；Pose接当前Foot／IK正式接口，不以保留旧Constraint冻结另一任务已批准算法 |
+
+现行规范中的整个Program、Timeline operation和PoseImage运行要求仍按本change已有delta替代；此次分工不改变已批准运行方向。新增的规范只约束跨领域准备、原子状态、私有状态所有权和实际采用事实，不把一个领域的实现细节变成另一份核心任务清单。
+
 ## 增量清单
 
 | 能力 | 操作 | 原Requirement | 保留原场景数 | 迁移说明 |

@@ -84,3 +84,12 @@ Player、PoseState、Slot、BlendStack、惯性化、Linked Pose、Phase 同步�
 - **WHEN** 作者查看当前角色 Foot 节点的实际输出
 - **THEN** UI MUST定位同一作者节点和调用实例的正式已完成结果
 - **AND** MUST不再次执行节点、读取半帧状态或改变原求值
+
+### Requirement: Pose必须提供供角色外壳调用的阶段结果
+
+Pose领域 MUST独立提供原生图／资源准备、实例创建、source demand准备、姿态求值、Pending检查、提交／丢弃、停止和已完成观察结果。角色表现外壳 MUST调用这些接口保持同一表现时钟、唯一Animancer Barrier和最终输出边界，不能解释Pose内部操作或复制图状态。实际采用的图版本、实例与ResetGeneration MUST由Pose owner确认，核心只汇集。
+
+#### Scenario: 核心装配已准备的Pose实例
+- **WHEN** Pose owner返回合法实例及其实际内容版本
+- **THEN** 角色外壳 MUST按正式阶段调用并消费typed结果，不创建另一份图或Image
+- **AND** Barrier前失败按原规则Discard，Barrier内或之后失败按原Fault边界阻止半帧发布

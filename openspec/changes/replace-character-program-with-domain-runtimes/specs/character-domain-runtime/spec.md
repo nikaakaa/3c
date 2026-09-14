@@ -102,7 +102,7 @@ MotionCurve MUST引用 RootMotionCurveAsset 的正式源内容，源区间和播
 
 ### Requirement: 各领域必须分别提供准备与实际采用结果
 
-技能、Pose、Camera、Motion MUST各自返回请求身份、请求来源与版本、Ready／Pending／Missing／Invalid／Failed 状态和 typed 原因；只有 Ready 才能提供合法准备结果。采用 MUST由实际 owner 单独完成，返回 actor／实例和实际采用版本。明确不需要某领域的角色只能依据正式角色职责返回 NotRequired，不能把缺失配置当成不需要。
+技能、独立Timeline、Pose、Camera、Motion MUST各自返回请求身份、请求来源与版本、Ready／Pending／Missing／Invalid／Failed 状态和 typed 原因；只有 Ready 才能提供合法准备结果。采用 MUST由实际 owner 单独完成并发布其确认的 actor／调用实例和实际采用版本；核心只装配并汇集，不能将Ready或请求版本重写为已采用。明确不需要某领域的角色只能依据正式角色职责返回 NotRequired，不能把缺失配置当成不需要。
 
 #### Scenario: 资源准备失败但角色仍有旧实例
 - **WHEN** 请求版本的资源缺失或无效
@@ -156,3 +156,39 @@ Provider绑定 MUST从当前实际模块或正式配置取得被引用成员的i
 #### Scenario: 提供者改变字段类型
 - **WHEN** 技能要求的属性类型与实际提供者声明不同
 - **THEN** 绑定 MUST在运行前报告类型不匹配，不能延迟为Tick中的默认值或错误读取
+
+### Requirement: 独立Timeline必须拥有无需Ability外壳的准备入口
+
+Timeline MUST接收明确内容identity／revision、数值目标、调用身份、资源与实际需要的TreeClip服务，独立返回Ready／Pending／Missing／Invalid／Failed及精确原因。Ready MUST提供只读内容绑定，CreatePlayback MUST建立独立调用实例并由Timeline确认实际版本。无技能的合法内容 MUST不被要求伪造Ability；缺失必要技能服务的内容 MUST明确失败。
+
+#### Scenario: 非Skill调用准备纯相机Timeline
+- **WHEN** 调用方提供合法Timeline内容、数值目标、相机绑定和调用身份，内容不包含TreeClip或其它技能需求
+- **THEN** Timeline准备 MUST独立完成，不要求技能Program或角色总包
+- **AND** Camera采用事实 MUST仍由相机领域确认
+
+### Requirement: Timeline推进必须参加调用方的提交和丢弃边界
+
+Advance MUST只产生本次Step的Pending播放状态与待提交结果，不提前更新committed cursor、发布窗口／运动／效果等Gameplay副作用或内部完成不可撤销提交。调用方 MUST在必要领域与World结果全部通过后决定Commit，否则Discard。Timeline MUST只安装已经验证的自身状态，不重复执行Clip；外部输出只在整个正式Step成功后发布。Stop／取消 MUST遵守同一边界，不能提前关闭其它实例状态。
+
+#### Scenario: Timeline推进后世界求解失败
+- **WHEN** Timeline已产生本次Pending窗口与cursor，但同Step的World求解失败
+- **THEN** 调用方 MUST丢弃该Pending，Timeline此前committed状态保持不变
+- **AND** 本次窗口、运动、效果与外部表现输出 MUST不得提前发布
+
+### Requirement: Timeline私有状态必须分型交接且只有一个owner
+
+Timeline MUST唯一拥有cursor、区间／loop／section、活动Clip与播放私有状态，提供typed Capture／PrepareRestore／ApplyRestore。角色核心 MUST只组合这些同次提交结果与其它领域／世界／Pipeline快照，不复制私有字段语义或直接修改它们。TreeClip的图执行帧归核心技能服务，Timeline只保存其调用关联与调度状态，不能复制第二份技能执行状态。
+
+#### Scenario: 恢复一个含TreeClip的播放实例
+- **WHEN** 核心恢复合法的完整角色快照
+- **THEN** Timeline owner MUST恢复本实例私有状态，核心技能服务恢复对应图执行帧，并精确重连调用关联
+- **AND** 任一内容／schema／调用身份不匹配 MUST在整体状态安装前失败
+
+### Requirement: 公共装配与领域执行必须遵守唯一实现归属
+
+核心 MUST唯一维护角色Host／Factory、角色Step／状态codec、网络checkpoint／manifest及共享技能编译／调用接口。Timeline和Pose MUST各自提供内部运行和分型状态／结果；共享技能Timeline调用入口不能由Timeline另实现TreeClip编译。公共装配只调用领域接口并汇集事实，不解释其私有轨道／图操作或重新生成执行计划。
+
+#### Scenario: 技能调用含TreeClip的Timeline
+- **WHEN** 核心技能执行器发起Timeline调用
+- **THEN** Timeline MUST使用核心提供的已编译TreeClip执行服务，并由自身Runtime负责播放调度
+- **AND** MUST不出现两套TreeClip编译／执行入口或重复操作发射

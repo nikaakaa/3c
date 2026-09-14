@@ -42,7 +42,6 @@ namespace ThirdPersonCharacter.Pipeline
 		[SerializeField] string m_CameraLookInputValueId;
 
 		CharacterSimulationActorRegistration m_Registration;
-		CharacterPipelinePreviewController m_PreviewController;
 
 		public CharacterPipelineDefinition Definition => m_Definition;
 		public SimulationSessionHost SessionHost => m_SessionHost;
@@ -72,47 +71,12 @@ namespace ThirdPersonCharacter.Pipeline
 			? string.Empty
 			: m_CameraLookInputValueId.Trim();
 		public CharacterSimulationActorRegistration Registration => m_Registration;
-		public bool HasPreviewAnimationDebugView =>
-			m_PreviewController != null &&
-			m_PreviewController.HasAnimationDebugView;
-		public AnimationPresentationDebugView PreviewAnimationDebugView =>
-			m_PreviewController != null
-				? m_PreviewController.AnimationDebugView
-				: throw new InvalidOperationException(
-					"Animation Preview Debug View is unavailable.");
-		public CharacterPosePlanStageSnapshot PreviewPosePlanStages =>
-			m_PreviewController != null
-				? m_PreviewController.PosePlanStages
-				: default;
-		internal CharacterPoseTuningLayout PreviewTuningLayout =>
-			m_PreviewController?.TuningLayout;
-		internal CharacterPoseTuningParameterBlock PreviewActiveTuningBlock =>
-			m_PreviewController?.ActiveTuningBlock;
-		internal CharacterPoseTuningRuntimeState PreviewTuningState =>
-			m_PreviewController?.TuningState ?? default;
 		internal CharacterPoseTuningLayout LiveTuningLayout =>
 			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)?.TuningLayout;
 		internal CharacterPoseTuningParameterBlock LiveActiveTuningBlock =>
 			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)?.ActiveTuningBlock;
 		internal CharacterPoseTuningRuntimeState LiveTuningState =>
 			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)?.TuningState ?? default;
-		internal bool SubmitPreviewPoseTuningCandidate(
-			string sourceAuthoringRevision,
-			string candidateRevision,
-			CharacterPoseTuningParameterBlock block,
-			out string error)
-		{
-			if (m_PreviewController == null)
-			{
-				error = "Pose tuning requires an active Preview controller.";
-				return false;
-			}
-			return m_PreviewController.SubmitPoseTuningCandidate(
-				sourceAuthoringRevision,
-				candidateRevision,
-				block,
-				out error);
-		}
 		internal bool SubmitLivePoseTuningCandidate(
 			string sourceAuthoringRevision,
 			string candidateRevision,
@@ -150,18 +114,9 @@ namespace ThirdPersonCharacter.Pipeline
 		}
 		internal void ClearPoseTuningCandidate()
 		{
-			m_PreviewController?.ClearPoseTuningCandidate();
 			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)
 				?.ClearPendingTuningCandidate();
 		}
-		public bool TrySetPreviewPoseWatchInterests(
-			Guid sessionId,
-			Guid ownerId,
-			IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
-			m_PreviewController != null &&
-			m_PreviewController.TrySetPoseWatchInterests(sessionId, ownerId, interests);
-		public void RemovePreviewPoseWatchInterests(Guid ownerId) =>
-			m_PreviewController?.RemovePoseWatchInterests(ownerId);
 
 		CharacterPresentationRuntimeBinding CreatePresentationRuntime(
 			CharacterPresentationSemanticContract contract,
@@ -241,17 +196,6 @@ namespace ThirdPersonCharacter.Pipeline
 			}
 			return input.TryQueueInputRequest(requestId, out requestSequence, out error);
 		}
-		public bool CanPreviewPoseGraph =>
-			!Application.isPlaying &&
-			m_Definition &&
-			m_Definition.AnimationPresentationProfile &&
-			m_Definition.SimulationProgram &&
-			m_Definition.PresentationProjection &&
-			m_Animancer &&
-			m_Animancer.Animator &&
-			m_AnimationRigBinding &&
-			m_WorldBodyBinding &&
-			m_RootHierarchy;
 		public void BindSessionActor(SimulationSessionHost sessionHost, ActorId actorId)
 		{
 			if (m_Registration != null)
@@ -586,83 +530,10 @@ namespace ThirdPersonCharacter.Pipeline
 			}
 		}
 
-		public void EvaluatePoseGraphPreview(
-			Guid sessionId,
-			double presentationTime,
-			ulong evaluationTick,
-			float presentationDeltaSeconds,
-			bool resetLifecycle,
-			bool grounded,
-			float horizontalSpeed,
-			float horizontalAcceleration,
-			float verticalSpeed,
-			Vector2 movementDirection,
-			Vector2 desiredDirection,
-            float facingError,
-            CharacterPresentationMotionPhase motionPhase,
-            Guid poseWatchOwnerId = default,
-            IReadOnlyList<AnimationPoseWatchIdentity> poseWatchInterests = null)
-		{
-			if (sessionId == Guid.Empty || !CanPreviewPoseGraph)
-			{
-				ClearPoseGraphPreview(sessionId);
-				return;
-			}
-			EnsurePreviewController().EvaluatePoseGraph(
-				sessionId,
-				presentationTime,
-				evaluationTick,
-				presentationDeltaSeconds,
-				resetLifecycle,
-				grounded,
-				horizontalSpeed,
-				horizontalAcceleration,
-				verticalSpeed,
-				movementDirection,
-                desiredDirection,
-                facingError,
-                motionPhase,
-                poseWatchOwnerId,
-                poseWatchInterests);
-		}
-
-		public void ClearPoseGraphPreview(Guid sessionId)
-		{
-			m_PreviewController?.Clear(sessionId);
-		}
-
-		public void SetLinkedPosePreviewOverride(
-			Guid sessionId,
-			LinkedPoseGroupId groupId,
-			LinkedPoseImplementationId implementationId)
-		{
-			if (sessionId == Guid.Empty || !CanPreviewPoseGraph)
-				return;
-			EnsurePreviewController().SetLinkedPosePreviewOverride(
-				sessionId,
-				groupId,
-				implementationId);
-		}
-
-		public void ClearLinkedPosePreviewOverride(
-			Guid sessionId,
-			LinkedPoseGroupId groupId)
-		{
-			m_PreviewController?.ClearLinkedPosePreviewOverride(
-				sessionId,
-				groupId);
-		}
-
-		public void ClearLinkedPosePreviewOverrides(Guid sessionId)
-		{
-			m_PreviewController?.ClearLinkedPosePreviewOverrides(sessionId);
-		}
-
 		void Awake()
 		{
 			if (!Application.isPlaying)
 				return;
-			ClearAllTimelinePreviews();
 			EnsureRegistration();
 		}
 
@@ -686,13 +557,11 @@ namespace ThirdPersonCharacter.Pipeline
 
 		void OnDisable()
 		{
-			ClearAllTimelinePreviews();
 			DisposeRegistration();
 		}
 
 		void OnDestroy()
 		{
-			ClearAllTimelinePreviews();
 			DisposeRegistration();
 		}
 
@@ -711,19 +580,5 @@ namespace ThirdPersonCharacter.Pipeline
 				registration.Dispose();
 		}
 
-		CharacterPipelinePreviewController EnsurePreviewController()
-		{
-			if (m_PreviewController != null && m_PreviewController.Matches(m_Definition, m_Animancer))
-				return m_PreviewController;
-			ClearAllTimelinePreviews();
-			m_PreviewController = new CharacterPipelinePreviewController(this);
-			return m_PreviewController;
-		}
-
-		void ClearAllTimelinePreviews()
-		{
-			m_PreviewController?.Dispose();
-			m_PreviewController = null;
-		}
 	}
 }

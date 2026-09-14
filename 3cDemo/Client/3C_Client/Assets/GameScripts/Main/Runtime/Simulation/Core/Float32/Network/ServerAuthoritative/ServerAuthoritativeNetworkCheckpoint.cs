@@ -823,7 +823,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (!state.TryGetGameplayEffectState(out GameplayEffectStateAggregate gameplayEffectState))
                 return null;
             using var writer = new CanonicalWriter();
-            GameplayEffectStateAggregateCodec.Write(writer, gameplayEffectState, layout.ExecutionLayout.GameplayEffectProgram);
+            GameplayEffectStateAggregateCodec.Write(writer, gameplayEffectState);
             return writer.ToArray();
         }
 

@@ -16,16 +16,12 @@ namespace ThirdPersonSimulation
 
         internal static void Write(
             CanonicalWriter writer,
-            GameplayEffectStateAggregate aggregate,
-            Float32GameplayEffectRuntimeCatalog catalog)
+            GameplayEffectStateAggregate aggregate)
         {
             if (writer == null)
                 throw new ArgumentNullException(nameof(writer));
             if (aggregate == null)
                 throw new ArgumentNullException(nameof(aggregate));
-            if (catalog == null)
-                throw new ArgumentNullException(nameof(catalog));
-
             var tagSources = new SortedDictionary<string, string[]>(StringComparer.Ordinal);
             var attributes = new SortedDictionary<string, PortableAttributeState>(StringComparer.Ordinal);
             var activeEffects = new List<PortableActiveEffectState>();

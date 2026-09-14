@@ -52,6 +52,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedCharacterRuntimeState Decode(
             FixedGameplayAbilityExecutionInstallationSet installations,
             GameplayContentHash expectedGameplayContentHash,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
             CharacterEquipmentRuntimeBinding equipmentBinding)
         {
             if (!string.Equals(StateCodecIdentity, FixedCharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal) ||
@@ -65,6 +66,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_StateBytes,
                 installations,
                 expectedGameplayContentHash,
+                gameplayEffectBinding,
                 equipmentBinding);
             if (!FixedCharacterRuntimeStateCodec.ComputeHash(state).Equals(StateHash))
                 throw new InvalidDataException($"Actor '{ActorId}' Character runtime state hash is invalid.");
@@ -294,6 +296,7 @@ namespace ThirdPersonSimulation.Fixed
                 FixedCharacterRuntimeState state = actorSnapshot.Decode(
                     binding.AbilityInstallations,
                     actorSnapshot.GameplayContentHash,
+                    binding.GameplayEffectRuntimeBinding,
                     binding.EquipmentRuntimeBinding);
                 if (state.LastCompletedTick != snapshot.Tick.Value)
                     throw new InvalidDataException($"Actor '{actorSnapshot.ActorId}' state Tick does not match Snapshot Tick.");

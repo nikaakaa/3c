@@ -35,6 +35,7 @@ namespace ThirdPersonSimulation
             byte[] bytes,
             Float32GameplayAbilityExecutionInstallationSet installations,
             GameplayContentHash expectedGameplayContentHash,
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
             CharacterEquipmentRuntimeBinding equipmentBinding)
         {
             if (bytes == null || installations == null)
@@ -85,11 +86,13 @@ namespace ThirdPersonSimulation
             GameplayEffectStateAggregate gameplayEffectState = null;
             if (reader.ReadBoolean())
             {
-                Float32GameplayAbilityExecutionInstallation effectInstallation = FindInstallationWithCapability(installations, "GameplayEffect");
-                if (effectInstallation == null || effectInstallation.GameplayEffectCatalog == null)
-                    throw new InvalidDataException("Float32 Character runtime state contains Gameplay Effect state without an installed catalog.");
+                Float32GameplayEffectRuntimeCatalog effectCatalog = gameplayEffectBinding == null
+                    ? null
+                    : new Float32GameplayEffectRuntimeCatalog(gameplayEffectBinding);
+                if (effectCatalog == null)
+                    throw new InvalidDataException("Float32 Character runtime state contains Gameplay Effect state without a Character Effect service.");
                 var effectReader = new CanonicalReader(reader.ReadBytes());
-                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, effectInstallation.GameplayEffectCatalog);
+                gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, effectCatalog);
                 effectReader.RequireComplete();
             }
             EquipmentStateAggregate equipmentState = null;
@@ -154,8 +157,7 @@ namespace ThirdPersonSimulation
                 using var effectWriter = new CanonicalWriter();
                 GameplayEffectStateAggregateCodec.Write(
                     effectWriter,
-                    state.GameplayEffectState,
-                    RequireInstallationWithCapability(state.Installations, "GameplayEffect").GameplayEffectCatalog);
+                    state.GameplayEffectState);
                 writer.WriteBytes(effectWriter.ToArray());
             }
             writer.WriteBoolean(state.EquipmentState != null);

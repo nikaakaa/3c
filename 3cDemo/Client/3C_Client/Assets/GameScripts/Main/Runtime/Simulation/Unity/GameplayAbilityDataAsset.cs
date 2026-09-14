@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             RequireProgramMetadata(program, root);
             program.AbilityPrograms.Require(new CharacterSkillId(m_AbilityId));
             GameplayAbilityProviderContract
-                .Create(program.CatalogEntries)
+                .Create(program.CatalogEntries, index => program.Constants[index].Int32)
                 .RequireBinding(providerBinding);
             return program;
         }

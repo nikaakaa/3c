@@ -621,34 +621,79 @@ namespace ThirdPersonSimulation
         CharacterState = 4
     }
 
+    public enum GameplayAbilityProviderValueKind : byte
+    {
+        None = 0,
+        Boolean = 1,
+        Number = 2,
+        Vector2 = 3,
+        Vector3 = 4,
+        Yaw = 5,
+        ActionTargetSnapshot = 6
+    }
+
+    public static class GameplayAbilityProviderContractVersions
+    {
+        public const int Input = 1;
+        public const int GameplayEffect = 1;
+        public const int Equipment = 1;
+        public const int CharacterState = 1;
+
+        public static int Require(GameplayAbilityProviderKind kind) => kind switch
+        {
+            GameplayAbilityProviderKind.Input => Input,
+            GameplayAbilityProviderKind.GameplayEffect => GameplayEffect,
+            GameplayAbilityProviderKind.Equipment => Equipment,
+            GameplayAbilityProviderKind.CharacterState => CharacterState,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        };
+    }
+
     public readonly struct GameplayAbilityProviderRequirement : IEquatable<GameplayAbilityProviderRequirement>
     {
         public GameplayAbilityProviderRequirement(
             GameplayAbilityProviderKind kind,
             string dependencyIdentity,
-            string providerIdentity)
+            string providerIdentity,
+            string memberIdentity,
+            GameplayAbilityProviderValueKind valueKind,
+            int memberRevision)
         {
             if (!Enum.IsDefined(typeof(GameplayAbilityProviderKind), kind))
                 throw new ArgumentOutOfRangeException(nameof(kind));
+            if (!Enum.IsDefined(typeof(GameplayAbilityProviderValueKind), valueKind) || memberRevision <= 0)
+                throw new ArgumentOutOfRangeException(nameof(memberRevision));
             Kind = kind;
             DependencyIdentity = SimulationIdentity.Require(dependencyIdentity, nameof(dependencyIdentity));
             ProviderIdentity = RequireProviderIdentity(kind, providerIdentity);
+            MemberIdentity = SimulationIdentity.Require(memberIdentity, nameof(memberIdentity));
+            ValueKind = valueKind;
+            MemberRevision = memberRevision;
+            ProviderSemanticVersion = GameplayAbilityProviderContractVersions.Require(kind);
         }
 
         public GameplayAbilityProviderKind Kind { get; }
         public string DependencyIdentity { get; }
         public string ProviderIdentity { get; }
+        public string MemberIdentity { get; }
+        public GameplayAbilityProviderValueKind ValueKind { get; }
+        public int MemberRevision { get; }
+        public int ProviderSemanticVersion { get; }
 
         public bool Equals(GameplayAbilityProviderRequirement other) =>
             Kind == other.Kind &&
             string.Equals(DependencyIdentity, other.DependencyIdentity, StringComparison.Ordinal) &&
-            string.Equals(ProviderIdentity, other.ProviderIdentity, StringComparison.Ordinal);
+            string.Equals(ProviderIdentity, other.ProviderIdentity, StringComparison.Ordinal) &&
+            string.Equals(MemberIdentity, other.MemberIdentity, StringComparison.Ordinal) &&
+            ValueKind == other.ValueKind &&
+            MemberRevision == other.MemberRevision &&
+            ProviderSemanticVersion == other.ProviderSemanticVersion;
 
         public override bool Equals(object obj) =>
             obj is GameplayAbilityProviderRequirement other && Equals(other);
 
         public override int GetHashCode() =>
-            HashCode.Combine(Kind, DependencyIdentity, ProviderIdentity);
+            HashCode.Combine(Kind, DependencyIdentity, ProviderIdentity, MemberIdentity, ValueKind, MemberRevision, ProviderSemanticVersion);
 
         internal static string RequireProviderIdentity(GameplayAbilityProviderKind kind, string value)
         {
@@ -662,42 +707,129 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public readonly struct GameplayAbilityProviderBindingEntry
+    public readonly struct GameplayAbilityProviderMemberBinding
     {
-        public GameplayAbilityProviderBindingEntry(
+        public GameplayAbilityProviderMemberBinding(
             GameplayAbilityProviderKind kind,
-            string providerIdentity)
+            string providerIdentity,
+            string memberIdentity,
+            GameplayAbilityProviderValueKind valueKind,
+            int memberRevision,
+            string runtimeHandle)
         {
-            if (!Enum.IsDefined(typeof(GameplayAbilityProviderKind), kind))
-                throw new ArgumentOutOfRangeException(nameof(kind));
+            if (!Enum.IsDefined(typeof(GameplayAbilityProviderKind), kind) ||
+                !Enum.IsDefined(typeof(GameplayAbilityProviderValueKind), valueKind) ||
+                memberRevision <= 0)
+                throw new ArgumentOutOfRangeException();
             Kind = kind;
-            ProviderIdentity = GameplayAbilityProviderRequirement
-                .RequireProviderIdentity(kind, providerIdentity);
+            ProviderIdentity = GameplayAbilityProviderRequirement.RequireProviderIdentity(kind, providerIdentity);
+            MemberIdentity = SimulationIdentity.Require(memberIdentity, nameof(memberIdentity));
+            ValueKind = valueKind;
+            MemberRevision = memberRevision;
+            RuntimeHandle = SimulationIdentity.Require(runtimeHandle, nameof(runtimeHandle));
         }
 
         public GameplayAbilityProviderKind Kind { get; }
         public string ProviderIdentity { get; }
+        public string MemberIdentity { get; }
+        public GameplayAbilityProviderValueKind ValueKind { get; }
+        public int MemberRevision { get; }
+        public string RuntimeHandle { get; }
+    }
+
+    public readonly struct GameplayAbilityProviderBindingEntry
+    {
+        public GameplayAbilityProviderBindingEntry(
+            GameplayAbilityProviderKind kind,
+            string providerIdentity,
+            int semanticVersion,
+            IEnumerable<GameplayAbilityProviderMemberBinding> members)
+        {
+            if (!Enum.IsDefined(typeof(GameplayAbilityProviderKind), kind))
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            if (semanticVersion <= 0)
+                throw new ArgumentOutOfRangeException(nameof(semanticVersion));
+            Kind = kind;
+            ProviderIdentity = GameplayAbilityProviderRequirement
+                .RequireProviderIdentity(kind, providerIdentity);
+            SemanticVersion = semanticVersion;
+            var values = new List<GameplayAbilityProviderMemberBinding>(members ?? Array.Empty<GameplayAbilityProviderMemberBinding>());
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < values.Count; i++)
+            {
+                GameplayAbilityProviderMemberBinding member = values[i];
+                if (member.Kind != kind || !string.Equals(member.ProviderIdentity, ProviderIdentity, StringComparison.Ordinal) ||
+                    !identities.Add(member.MemberIdentity))
+                    throw new ArgumentException("Gameplay Ability provider members are invalid or duplicated.", nameof(members));
+            }
+            values.Sort((left, right) => string.CompareOrdinal(left.MemberIdentity, right.MemberIdentity));
+            Members = new ReadOnlyCollection<GameplayAbilityProviderMemberBinding>(values);
+        }
+
+        public GameplayAbilityProviderKind Kind { get; }
+        public string ProviderIdentity { get; }
+        public int SemanticVersion { get; }
+        public IReadOnlyList<GameplayAbilityProviderMemberBinding> Members { get; }
+
+        public bool TryGetMember(string memberIdentity, out GameplayAbilityProviderMemberBinding member)
+        {
+            string identity = memberIdentity ?? string.Empty;
+            for (int i = 0; i < Members.Count; i++)
+            {
+                if (string.Equals(Members[i].MemberIdentity, identity, StringComparison.Ordinal))
+                {
+                    member = Members[i];
+                    return true;
+                }
+            }
+            member = default;
+            return false;
+        }
     }
 
     public sealed class GameplayAbilityProviderBinding
     {
-        readonly ReadOnlyDictionary<GameplayAbilityProviderKind, string> m_Providers;
+        readonly ReadOnlyDictionary<GameplayAbilityProviderKind, GameplayAbilityProviderBindingEntry> m_Providers;
 
         public GameplayAbilityProviderBinding(IEnumerable<GameplayAbilityProviderBindingEntry> providers)
         {
-            var values = new Dictionary<GameplayAbilityProviderKind, string>();
+            var values = new Dictionary<GameplayAbilityProviderKind, GameplayAbilityProviderBindingEntry>();
             foreach (GameplayAbilityProviderBindingEntry provider in providers ?? Array.Empty<GameplayAbilityProviderBindingEntry>())
             {
-                if (!values.TryAdd(provider.Kind, provider.ProviderIdentity))
+                if (!values.TryAdd(provider.Kind, provider))
                     throw new ArgumentException($"Gameplay Ability provider '{provider.Kind}' is duplicated.", nameof(providers));
             }
-            m_Providers = new ReadOnlyDictionary<GameplayAbilityProviderKind, string>(values);
+            m_Providers = new ReadOnlyDictionary<GameplayAbilityProviderKind, GameplayAbilityProviderBindingEntry>(values);
         }
 
         public bool TryGet(
             GameplayAbilityProviderKind kind,
-            out string providerIdentity) =>
-            m_Providers.TryGetValue(kind, out providerIdentity);
+            out string providerIdentity)
+        {
+            if (m_Providers.TryGetValue(kind, out GameplayAbilityProviderBindingEntry provider))
+            {
+                providerIdentity = provider.ProviderIdentity;
+                return true;
+            }
+            providerIdentity = string.Empty;
+            return false;
+        }
+
+        public bool TryGetEntry(
+            GameplayAbilityProviderKind kind,
+            out GameplayAbilityProviderBindingEntry provider) =>
+            m_Providers.TryGetValue(kind, out provider);
+
+        public bool TryGetMember(
+            GameplayAbilityProviderKind kind,
+            string memberIdentity,
+            out GameplayAbilityProviderMemberBinding member)
+        {
+            if (m_Providers.TryGetValue(kind, out GameplayAbilityProviderBindingEntry provider))
+                return provider.TryGetMember(memberIdentity, out member);
+            member = default;
+            return false;
+        }
     }
 
     public sealed class GameplayAbilityProviderContract
@@ -731,10 +863,13 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<GameplayAbilityProviderRequirement> Requirements => m_Requirements;
 
         public static GameplayAbilityProviderContract Create(
-            IReadOnlyList<ProgramCatalogEntry> catalogEntries)
+            IReadOnlyList<ProgramCatalogEntry> catalogEntries,
+            Func<int, int> readInt32Constant)
         {
             if (catalogEntries == null)
                 throw new ArgumentNullException(nameof(catalogEntries));
+            if (readInt32Constant == null)
+                throw new ArgumentNullException(nameof(readInt32Constant));
             var requirements = new List<GameplayAbilityProviderRequirement>();
             for (int i = 0; i < catalogEntries.Count; i++)
             {
@@ -744,7 +879,10 @@ namespace ThirdPersonSimulation
                 requirements.Add(new GameplayAbilityProviderRequirement(
                     kind,
                     entry.Identity,
-                    RequireProviderIdentity(entry)));
+                    RequireProviderIdentity(entry),
+                    entry.Identity,
+                    ResolveValueKind(entry, kind, readInt32Constant),
+                    entry.Revision));
             }
             return new GameplayAbilityProviderContract(requirements);
         }
@@ -756,14 +894,81 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < m_Requirements.Count; i++)
             {
                 GameplayAbilityProviderRequirement requirement = m_Requirements[i];
-                if (!binding.TryGet(requirement.Kind, out string actual))
+                if (!binding.TryGetEntry(requirement.Kind, out GameplayAbilityProviderBindingEntry provider))
                     throw new InvalidOperationException(
                         $"Gameplay Ability dependency '{requirement.DependencyIdentity}' requires unbound provider '{requirement.ProviderIdentity}' of kind '{requirement.Kind}'.");
-                if (!string.Equals(actual, requirement.ProviderIdentity, StringComparison.Ordinal))
+                if (!string.Equals(provider.ProviderIdentity, requirement.ProviderIdentity, StringComparison.Ordinal))
                     throw new InvalidOperationException(
-                        $"Gameplay Ability dependency '{requirement.DependencyIdentity}' requires provider '{requirement.ProviderIdentity}', but binding supplies '{actual}'.");
+                        $"Gameplay Ability dependency '{requirement.DependencyIdentity}' requires provider '{requirement.ProviderIdentity}', but binding supplies '{provider.ProviderIdentity}'.");
+                if (provider.SemanticVersion != requirement.ProviderSemanticVersion)
+                    throw new InvalidOperationException(
+                        $"Gameplay Ability dependency '{requirement.DependencyIdentity}' requires provider version '{requirement.ProviderSemanticVersion}', but binding supplies '{provider.SemanticVersion}'.");
+                if (!provider.TryGetMember(requirement.MemberIdentity, out GameplayAbilityProviderMemberBinding member))
+                    throw new InvalidOperationException(
+                        $"Gameplay Ability dependency '{requirement.DependencyIdentity}' requires missing provider member '{requirement.MemberIdentity}'.");
+                if (member.ValueKind != requirement.ValueKind || member.MemberRevision != requirement.MemberRevision || string.IsNullOrEmpty(member.RuntimeHandle))
+                    throw new InvalidOperationException(
+                        $"Gameplay Ability dependency '{requirement.DependencyIdentity}' provider member '{requirement.MemberIdentity}' has an incompatible contract.");
             }
         }
+
+        static GameplayAbilityProviderValueKind ResolveValueKind(
+            ProgramCatalogEntry entry,
+            GameplayAbilityProviderKind kind,
+            Func<int, int> readInt32Constant)
+        {
+            if (entry.Kind == ProgramCatalogEntryKind.InputValue)
+            {
+                int raw = readInt32Constant == null
+                    ? throw new ArgumentNullException(nameof(readInt32Constant))
+                    : readInt32Constant(RequireInt32Field(entry, "ValueType"));
+                return (ProgramInputValueKind)raw switch
+                {
+                    ProgramInputValueKind.Boolean => GameplayAbilityProviderValueKind.Boolean,
+                    ProgramInputValueKind.Scalar => GameplayAbilityProviderValueKind.Number,
+                    ProgramInputValueKind.Vector2 => GameplayAbilityProviderValueKind.Vector2,
+                    ProgramInputValueKind.Vector3 => GameplayAbilityProviderValueKind.Vector3,
+                    ProgramInputValueKind.Yaw => GameplayAbilityProviderValueKind.Yaw,
+                    ProgramInputValueKind.ActionTargetSnapshot => GameplayAbilityProviderValueKind.ActionTargetSnapshot,
+                    _ => throw new InvalidDataException($"Gameplay Ability input provider member '{entry.Identity}' has an invalid value kind.")
+                };
+            }
+            if (entry.Kind == ProgramCatalogEntryKind.GameplayTag)
+                return GameplayAbilityProviderValueKind.Boolean;
+            if (entry.Kind == ProgramCatalogEntryKind.Attribute)
+                return GameplayAbilityProviderValueKind.Number;
+            if (entry.Kind == ProgramCatalogEntryKind.CharacterState)
+            {
+                string field = entry.Identity.StartsWith("character-state:", StringComparison.Ordinal)
+                    ? entry.Identity.Substring("character-state:".Length)
+                    : string.Empty;
+                if (string.Equals(field, "move-facing-angle", StringComparison.Ordinal))
+                    return GameplayAbilityProviderValueKind.Number;
+                return ToProviderValueKind(CharacterStateProviderFields.ValueKind(field));
+            }
+            return GameplayAbilityProviderValueKind.None;
+        }
+
+        static int RequireInt32Field(ProgramCatalogEntry entry, string name)
+        {
+            for (int i = 0; i < entry.Fields.Count; i++)
+            {
+                ProgramCatalogField field = entry.Fields[i];
+                if (string.Equals(field.Name, name, StringComparison.Ordinal) && field.Kind == ProgramCatalogFieldKind.Constant)
+                    return field.ConstantIndex;
+            }
+            throw new InvalidDataException($"Gameplay Ability provider member '{entry.Identity}' has no '{name}' field.");
+        }
+
+        static GameplayAbilityProviderValueKind ToProviderValueKind(SemanticValueKind kind) => kind switch
+        {
+            SemanticValueKind.Boolean => GameplayAbilityProviderValueKind.Boolean,
+            SemanticValueKind.Number => GameplayAbilityProviderValueKind.Number,
+            SemanticValueKind.Vector2 => GameplayAbilityProviderValueKind.Vector2,
+            SemanticValueKind.Vector3 => GameplayAbilityProviderValueKind.Vector3,
+            SemanticValueKind.Yaw => GameplayAbilityProviderValueKind.Yaw,
+            _ => throw new InvalidDataException($"Gameplay Ability Character State provider member kind '{kind}' is unsupported.")
+        };
 
         static bool TryResolveKind(
             ProgramCatalogEntryKind kind,

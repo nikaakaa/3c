@@ -525,6 +525,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Pose Canvas graph '{GraphId}' contains a node outside the Pose Canvas node catalog.");
             RequireNodeSet(nodes);
+            var nodeSet = new HashSet<CharacterPoseCanvasNode>(nodes);
             var parameterIds = new HashSet<PoseParameterId>();
             foreach (CharacterPoseParameterDeclaration parameter in Parameters)
             {
@@ -542,7 +543,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (connection == null || string.IsNullOrWhiteSpace(connection.EdgeId) ||
                     !edges.Add(connection.EdgeId) || connection.SourceNode == null ||
                     connection.TargetNode == null || !connection.SourcePortId.IsValid ||
-                    !connection.TargetPortId.IsValid)
+                    !connection.TargetPortId.IsValid ||
+                    !nodeSet.Contains(connection.SourceNode) ||
+                    !nodeSet.Contains(connection.TargetNode) ||
+                    connection.SourceNodeId != connection.SourceNode.NodeId ||
+                    connection.TargetNodeId != connection.TargetNode.NodeId)
                 {
                     throw new InvalidOperationException(
                         $"Pose Canvas graph '{GraphId}' contains an invalid connection.");

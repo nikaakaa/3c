@@ -917,7 +917,6 @@ namespace ThirdPersonSimulation
         Identity = 8,
         BlackboardOwnerToken = 9,
         BlackboardWriteStamp = 10,
-        InputRequest = 20,
         ActionActivationRequest = 21,
         ActionInstance = 22,
         ActionInstanceReference = 23,
@@ -933,7 +932,6 @@ namespace ThirdPersonSimulation
         Action = 6,
         GameplayEffect = 7,
         MotionModifier = 8,
-        Input = 10,
     }
 
     public enum ProgramStateSemantic : ushort
@@ -973,7 +971,6 @@ namespace ThirdPersonSimulation
         BlackboardOwnerToken = 61,
         BlackboardLifetime = 63,
         BlackboardWriteStamp = 64,
-        InputRequestBuffer = 70,
         ActionInstance = 80,
         ActionRequestBuffer = 81,
         AIWaitElapsedTicks = 130
@@ -1036,7 +1033,6 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.Identity => "state.identity/v1",
                 ProgramStateValueKind.BlackboardOwnerToken => "state.blackboard-owner-token/v1",
                 ProgramStateValueKind.BlackboardWriteStamp => "state.blackboard-write-stamp/v1",
-                ProgramStateValueKind.InputRequest => "state.input-request/v1",
                 ProgramStateValueKind.ActionActivationRequest => "state.action-activation-request/v1",
                 ProgramStateValueKind.ActionInstance => "state.action-instance/v1",
                 ProgramStateValueKind.ActionInstanceReference => "state.action-instance-reference/v1",
@@ -1088,7 +1084,6 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.BlackboardOwnerToken => kind == ProgramStateValueKind.BlackboardOwnerToken && owner == ProgramStateOwnerKind.Blackboard,
                 ProgramStateSemantic.BlackboardLifetime => kind == ProgramStateValueKind.Int32 && owner == ProgramStateOwnerKind.Blackboard,
                 ProgramStateSemantic.BlackboardWriteStamp => kind == ProgramStateValueKind.BlackboardWriteStamp && owner == ProgramStateOwnerKind.Blackboard,
-                ProgramStateSemantic.InputRequestBuffer => kind == ProgramStateValueKind.InputRequest && owner == ProgramStateOwnerKind.Input,
                 ProgramStateSemantic.ActionInstance => kind == ProgramStateValueKind.ActionInstance && owner == ProgramStateOwnerKind.Action,
                 ProgramStateSemantic.ActionRequestBuffer => kind == ProgramStateValueKind.ActionActivationRequest && owner == ProgramStateOwnerKind.Action,
                 _ => false

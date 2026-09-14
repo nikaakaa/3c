@@ -5,7 +5,7 @@ namespace ThirdPersonSimulation
 {
     internal interface IFloat32InputPort
     {
-        bool HasRequest(string requestId, out Float32InputRequestState state);
+        bool HasRequest(string requestId, out SimulationInputRequestState state);
         void ClearRequest(string requestId);
         SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind);
     }

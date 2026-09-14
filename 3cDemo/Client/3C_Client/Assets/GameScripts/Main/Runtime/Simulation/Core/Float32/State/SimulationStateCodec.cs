@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 23;
-		public const string CodecIdentity = "character-state/float32/v24";
-		const string HashIdentity = "character-state-hash/float32/v22";
+		const int Version = 24;
+		public const string CodecIdentity = "character-state/float32/v25";
+		const string HashIdentity = "character-state-hash/float32/v23";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -38,6 +38,7 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(state.HandleAllocator);
             ProgramExecutionLayout layout = state.ExecutionLayout;
             WriteSkillExecutionState(writer, state.AbilityExecutionState, layout);
+            WriteInputRequests(writer, state.InputRequests, layout.InputRequestIds);
             writer.WriteInt32(state.SlotCount);
             for (int i = 0; i < state.SlotCount; i++)
             {
@@ -74,6 +75,7 @@ namespace ThirdPersonSimulation
             ulong handleAllocator = reader.ReadUInt64();
             ProgramExecutionLayout layout = ProgramExecutionLayout.GetOrCreate(program);
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadSkillExecutionState(reader, layout);
+            Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, layout.InputRequestIds);
             if (numericProfile != program.Manifest.NumericProfile ||
                 !targetAbi.Equals(program.Manifest.NumericProfile.AbiVersion) ||
                 programId != program.Manifest.ProgramId ||
@@ -108,7 +110,7 @@ namespace ThirdPersonSimulation
 			if (hasEquipmentState != layout.Equipment.CapabilityEnabled)
 				throw new InvalidDataException("Character Equipment state presence does not match its runtime binding.");
             reader.RequireComplete();
-            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, controlState, gameplayEffectState, equipmentState);
+            var result = CharacterSimulationState.Create(program, layout, lastCompletedTick, values, eventSequence, actionEventSequence, handleAllocator, abilityExecutionState, inputRequests, controlState, gameplayEffectState, equipmentState);
             RequireCanonical(bytes, Write(result), "Character state");
             return result;
         }
@@ -143,7 +145,6 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.Identity: writer.WriteString(value.Identity); break;
                 case ProgramStateValueKind.BlackboardOwnerToken: WriteBlackboardOwnerToken(writer, value.BlackboardOwnerToken); break;
                 case ProgramStateValueKind.BlackboardWriteStamp: WriteBlackboardWriteStamp(writer, value.BlackboardWriteStamp); break;
-                case ProgramStateValueKind.InputRequest: WriteInputRequest(writer, value.InputRequest); break;
                 case ProgramStateValueKind.ActionActivationRequest: WriteActionRequest(writer, value.ActionActivationRequest); break;
                 case ProgramStateValueKind.ActionInstance: WriteActionInstance(writer, value.ActionInstance); break;
                 case ProgramStateValueKind.ActionInstanceReference: WriteActionReference(writer, value.ActionInstanceReference); break;
@@ -169,7 +170,6 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.Identity: return CharacterStateValue.FromIdentity(reader.ReadString());
                 case ProgramStateValueKind.BlackboardOwnerToken: return CharacterStateValue.FromBlackboardOwnerToken(ReadBlackboardOwnerToken(reader));
                 case ProgramStateValueKind.BlackboardWriteStamp: return CharacterStateValue.FromBlackboardWriteStamp(ReadBlackboardWriteStamp(reader));
-                case ProgramStateValueKind.InputRequest: return CharacterStateValue.FromInputRequest(ReadInputRequest(reader));
                 case ProgramStateValueKind.ActionActivationRequest: return CharacterStateValue.FromActionActivationRequest(ReadActionRequest(reader, layout));
                 case ProgramStateValueKind.ActionInstance: return CharacterStateValue.FromActionInstance(ReadActionInstance(reader, layout));
                 case ProgramStateValueKind.ActionInstanceReference: return CharacterStateValue.FromActionInstanceReference(ReadActionReference(reader));
@@ -224,33 +224,55 @@ namespace ThirdPersonSimulation
                 cycle);
         }
 
-        static void WriteInputRequest(CanonicalWriter writer, Float32InputRequestState value)
+        static void WriteInputRequests(
+            CanonicalWriter writer,
+            IReadOnlyDictionary<string, SimulationInputRequestState> values,
+            IReadOnlyList<string> requestIds)
         {
-            writer.WriteBoolean(value.IsValid);
-            if (!value.IsValid)
-                return;
-            writer.WriteString(value.RequestId);
-            writer.WriteUInt64(value.Sequence);
-            writer.WriteUInt64(value.SourceTick);
-            writer.WriteUInt64(value.ExpireTick);
-            writer.WriteInt32(value.Priority);
-            writer.WriteBoolean(value.Consumed);
+            writer.WriteInt32(requestIds.Count);
+            for (int i = 0; i < requestIds.Count; i++)
+            {
+                string requestId = requestIds[i];
+                writer.WriteString(requestId);
+                SimulationInputRequestStateCodec.Write(writer, values[requestId]);
+            }
         }
 
-        static Float32InputRequestState ReadInputRequest(CanonicalReader reader)
+        static Dictionary<string, SimulationInputRequestState> ReadInputRequests(
+            CanonicalReader reader,
+            IReadOnlyList<string> requestIds)
         {
-            if (!reader.ReadBoolean())
-                return default;
-            var value = new Float32InputRequestState(
-                reader.ReadString(),
-                reader.ReadUInt64(),
-                reader.ReadUInt64(),
-                reader.ReadUInt64(),
-                reader.ReadInt32(),
-                reader.ReadBoolean());
-            if (!value.IsValid)
-                throw new InvalidDataException("Character state Input request identity is invalid.");
-            return value;
+            int count = reader.ReadInt32();
+            if (count != requestIds.Count)
+                throw new InvalidDataException("Character input request state count does not match its runtime binding.");
+            var values = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
+            for (int i = 0; i < count; i++)
+            {
+                string requestId = reader.ReadString();
+                if (!string.Equals(requestId, requestIds[i], StringComparison.Ordinal))
+                    throw new InvalidDataException("Character input request state order does not match its runtime binding.");
+                values.Add(requestId, SimulationInputRequestStateCodec.Read(reader));
+            }
+            return values;
+        }
+
+        internal static byte[] WriteInputRequests(
+            IReadOnlyDictionary<string, SimulationInputRequestState> values,
+            IReadOnlyList<string> requestIds)
+        {
+            using var writer = new CanonicalWriter();
+            WriteInputRequests(writer, values, requestIds);
+            return writer.ToArray();
+        }
+
+        internal static Dictionary<string, SimulationInputRequestState> ReadInputRequests(
+            byte[] bytes,
+            IReadOnlyList<string> requestIds)
+        {
+            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            Dictionary<string, SimulationInputRequestState> values = ReadInputRequests(reader, requestIds);
+            reader.RequireComplete();
+            return values;
         }
 
         static void WriteActionRequest(CanonicalWriter writer, Float32ActionActivationRequestState value)

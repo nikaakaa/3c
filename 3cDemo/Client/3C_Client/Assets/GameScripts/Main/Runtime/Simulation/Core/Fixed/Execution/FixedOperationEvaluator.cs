@@ -426,7 +426,6 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionStore = actionStore;
             m_Input = new FixedInputRuntime(
                 access,
-                m_Frame.CreateStatePort("Input", services.InputPolicy),
                 m_Frame);
             var handles = new FixedHandleAllocator(
                 access,

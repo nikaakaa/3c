@@ -421,7 +421,6 @@ namespace ThirdPersonSimulation
             m_ActionStore = actionStore;
             m_Input = new Float32InputRuntime(
                 access,
-                m_Frame.CreateStatePort("Input", services.InputPolicy),
                 m_Frame);
             var handles = new Float32HandleAllocator(
                 access,

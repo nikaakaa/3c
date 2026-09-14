@@ -4,62 +4,23 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal readonly struct FixedInputRequestState
-    {
-        public FixedInputRequestState(
-            string requestId,
-            ulong sequence,
-            ulong sourceTick,
-            ulong expireTick,
-            int priority,
-            bool consumed = false)
-        {
-            RequestId = requestId ?? string.Empty;
-            Sequence = sequence;
-            SourceTick = sourceTick;
-            ExpireTick = expireTick;
-            Priority = priority;
-            Consumed = consumed;
-        }
-
-        public string RequestId { get; }
-        public ulong Sequence { get; }
-        public ulong SourceTick { get; }
-        public ulong ExpireTick { get; }
-        public int Priority { get; }
-        public bool Consumed { get; }
-        public bool IsValid => !string.IsNullOrEmpty(RequestId) && Sequence != 0;
-
-        public FixedInputRequestState Consume()
-        {
-            return IsValid
-                ? new FixedInputRequestState(RequestId, Sequence, SourceTick, ExpireTick, Priority, true)
-                : this;
-        }
-    }
-
     internal sealed class FixedInputRuntime : FixedOperationModule, IFixedInputPort
     {
-        readonly FixedStatePort m_State;
         readonly FixedEvaluationFrame m_Frame;
 
         public FixedInputRuntime(
             FixedProgramAccess access,
-            FixedStatePort state,
             FixedEvaluationFrame frame)
             : base(access)
         {
-            m_State = state ?? throw new ArgumentNullException(nameof(state));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
         }
 
         public void ApplyRequests()
         {
-            foreach (KeyValuePair<string, TypedStateAddress> pair in m_Layout.InputRequestIndex)
+            foreach (string requestId in m_Layout.InputRequestIds)
             {
-                string requestId = pair.Key;
-                TypedStateAddress address = pair.Value;
-                FixedInputRequestState state = m_State.Get(address.SlotIndex).InputRequest;
+                SimulationInputRequestState state = m_Frame.Transaction.GetInputRequest(requestId);
                 if (state.IsValid && state.ExpireTick < m_Frame.Tick.Value)
                     state = default;
                 for (int requestIndex = 0; requestIndex < m_Frame.Input.Requests.Count; requestIndex++)
@@ -71,7 +32,7 @@ namespace ThirdPersonSimulation.Fixed
                         request.Priority > state.Priority ||
                         request.Priority == state.Priority && request.Sequence > state.Sequence)
                     {
-                        state = new FixedInputRequestState(
+                        state = new SimulationInputRequestState(
                             request.RequestId,
                             request.Sequence,
                             request.SourceTick,
@@ -79,7 +40,7 @@ namespace ThirdPersonSimulation.Fixed
                             request.Priority);
                     }
                 }
-                m_State.Set(address.SlotIndex, CharacterStateValue.FromInputRequest(state));
+                m_Frame.Transaction.SetInputRequest(requestId, state);
             }
         }
 
@@ -94,24 +55,24 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        public bool HasRequest(string requestId, out FixedInputRequestState state)
+        public bool HasRequest(string requestId, out SimulationInputRequestState state)
         {
-            if (!m_Layout.TryGetInputRequest(requestId, out TypedStateAddress address))
+            if (!m_Layout.HasInputRequest(requestId))
             {
                 state = default;
                 return false;
             }
-            state = m_State.Get(address.SlotIndex).InputRequest;
+            state = m_Frame.Transaction.GetInputRequest(requestId);
             return state.IsValid && !state.Consumed && state.ExpireTick >= m_Frame.Tick.Value;
         }
 
         public void ClearRequest(string requestId)
         {
-            if (!m_Layout.TryGetInputRequest(requestId, out TypedStateAddress address))
+            if (!m_Layout.HasInputRequest(requestId))
                 return;
-            FixedInputRequestState state = m_State.Get(address.SlotIndex).InputRequest;
+            SimulationInputRequestState state = m_Frame.Transaction.GetInputRequest(requestId);
             if (state.IsValid && !state.Consumed)
-                m_State.Set(address.SlotIndex, CharacterStateValue.FromInputRequest(state.Consume()));
+                m_Frame.Transaction.SetInputRequest(requestId, state.Consume());
         }
 
         public SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)

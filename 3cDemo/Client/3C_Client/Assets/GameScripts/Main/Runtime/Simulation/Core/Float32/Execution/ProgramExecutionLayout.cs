@@ -103,7 +103,8 @@ namespace ThirdPersonSimulation
         readonly Dictionary<string, int>[] m_StateSlotsByOwner;
         readonly TypedStateAddress[] m_TypedAddresses;
         readonly IReadOnlyList<TypedStatePartitionDescriptor> m_Partitions;
-        readonly IReadOnlyDictionary<string, TypedStateAddress> m_InputRequests;
+        readonly HashSet<string> m_InputRequests;
+        readonly string[] m_InputRequestIds;
         readonly IReadOnlyDictionary<string, TypedActionStateAddresses> m_Actions;
         readonly IReadOnlyDictionary<string, IReadOnlyList<TypedActionStateAddresses>> m_ActionSlots;
         readonly IReadOnlyList<TypedActionStateAddresses> m_AllActionSlots;
@@ -168,6 +169,7 @@ namespace ThirdPersonSimulation
                 out m_ActionContexts,
                 out m_TimelineRetention,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
+            m_InputRequestIds = m_InputRequests.OrderBy(value => value, StringComparer.Ordinal).ToArray();
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(program, actionTargetSnapshots);
             RootOperation = ResolveRootOperation(program);
             var topology = new OperationExecutionTopology(
@@ -416,18 +418,8 @@ namespace ThirdPersonSimulation
             return m_TypedAddresses[slotIndex];
         }
 
-        public TypedStateAddress RequireInputRequest(string requestId)
-        {
-            string identity = SimulationIdentity.Require(requestId, nameof(requestId));
-            if (!m_InputRequests.TryGetValue(identity, out TypedStateAddress address))
-                throw new InvalidOperationException($"Program has no Input request '{identity}'.");
-            return address;
-        }
-
-        public bool TryGetInputRequest(string requestId, out TypedStateAddress address)
-        {
-            return m_InputRequests.TryGetValue(requestId ?? string.Empty, out address);
-        }
+        public bool HasInputRequest(string requestId) =>
+            m_InputRequests.Contains(requestId ?? string.Empty);
 
         public TypedActionStateAddresses RequireAction(string actionId)
         {
@@ -444,7 +436,7 @@ namespace ThirdPersonSimulation
                 : Array.Empty<TypedStateAddress>();
         }
 
-        internal IReadOnlyDictionary<string, TypedStateAddress> InputRequestIndex => m_InputRequests;
+        internal IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         internal IReadOnlyDictionary<string, TypedActionStateAddresses> ActionStateIndex => m_Actions;
         internal IReadOnlyList<TypedActionStateAddresses> AllActionStateAddresses => m_AllActionSlots;
 
@@ -637,7 +629,7 @@ namespace ThirdPersonSimulation
         static void BuildDomainIndexes(
             CharacterSimulationProgram program,
             TypedStateAddress[] addresses,
-            out IReadOnlyDictionary<string, TypedStateAddress> inputRequests,
+            out HashSet<string> inputRequests,
             out IReadOnlyDictionary<string, TypedActionStateAddresses> actions,
             out IReadOnlyDictionary<string, IReadOnlyList<TypedActionStateAddresses>> actionSlots,
             out IReadOnlyList<TypedActionStateAddresses> allActionSlots,
@@ -645,19 +637,26 @@ namespace ThirdPersonSimulation
             out IReadOnlyDictionary<int, TypedStateAddress> timelineRetention,
             out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots)
         {
-            var inputs = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
+            var inputs = new HashSet<string>(StringComparer.Ordinal);
             var actionBuilders = new Dictionary<string, Dictionary<int, ActionAddressBuilder>>(StringComparer.Ordinal);
             var timeline = new Dictionary<int, TypedStateAddress>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
+            for (int i = 0; i < program.CatalogEntries.Count; i++)
+            {
+                ProgramCatalogEntry entry = program.CatalogEntries[i];
+                if (entry.Kind != ProgramCatalogEntryKind.InputRequest)
+                    continue;
+                string requestId = TrimPrefix(entry.Identity, "input:request:");
+                if (!inputs.Add(requestId))
+                    throw new InvalidDataException($"Input request '{requestId}' is duplicated.");
+            }
+
             for (int i = 0; i < program.StateSlots.Count; i++)
             {
                 ProgramStateSlot slot = program.StateSlots[i];
                 TypedStateAddress address = addresses[i];
                 switch (slot.Semantic)
                 {
-                    case ProgramStateSemantic.InputRequestBuffer:
-                        AddUnique(inputs, TrimPrefix(slot.OwnerIdentity, "input:request:"), address, "Input request");
-                        break;
                     case ProgramStateSemantic.ActionRequestBuffer:
                         RequireActionBuilder(actionBuilders, slot.OwnerIdentity).Request = address;
                         break;

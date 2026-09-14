@@ -309,7 +309,7 @@ namespace ThirdPersonSimulation
 
 		bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TryReadInputSequence(string requestId, out ulong sequence)
 		{
-			if (!m_InputRuntime.HasRequest(requestId, out Float32InputRequestState request))
+			if (!m_InputRuntime.HasRequest(requestId, out SimulationInputRequestState request))
 			{
 				sequence = 0;
 				return false;

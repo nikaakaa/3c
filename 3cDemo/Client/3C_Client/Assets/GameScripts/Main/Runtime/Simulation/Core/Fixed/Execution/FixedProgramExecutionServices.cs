@@ -94,7 +94,6 @@ namespace ThirdPersonSimulation.Fixed
             ActionPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.ActionRequestBuffer,
                 ProgramStateSemantic.ActionInstance);
-            InputPolicy = new FixedStateAccessPolicy(ProgramStateSemantic.InputRequestBuffer);
             BlackboardPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.BlackboardValue,
                 ProgramStateSemantic.BlackboardOwnerToken,
@@ -132,7 +131,6 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationGameplayEffectProgram GameplayEffectProgram { get; }
         public FixedStateAccessPolicy ControlPolicy { get; }
         public FixedStateAccessPolicy ActionPolicy { get; }
-        public FixedStateAccessPolicy InputPolicy { get; }
         public FixedStateAccessPolicy BlackboardPolicy { get; }
         public FixedStateAccessPolicy TimelinePolicy { get; }
         public FixedStateAccessPolicy MotionModifierPolicy { get; }

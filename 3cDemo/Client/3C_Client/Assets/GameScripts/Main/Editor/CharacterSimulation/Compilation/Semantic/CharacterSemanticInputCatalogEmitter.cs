@@ -108,12 +108,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         m_Builder.ConstantField(source, "Priority", request.Priority),
                         m_Builder.ConstantField(source, "TimingClass", request.TimingClass)),
                     source);
-                m_Builder.DeclareStandaloneStateSlot(
-                    source,
-                    ProgramStateValueKind.InputRequest,
-                    ProgramStateOwnerKind.Input,
-                    ProgramStateSemantic.InputRequestBuffer,
-                    $"input:request:{request.RequestId}");
             }
         }
 

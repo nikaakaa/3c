@@ -247,6 +247,8 @@ namespace ThirdPersonSimulation.Fixed
             ulong handleAllocatorSnapshot,
             bool hadAbilityExecutionWorking,
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionSnapshot,
+            bool hadInputRequestsWorking,
+            Dictionary<string, SimulationInputRequestState> inputRequestsSnapshot,
             bool hadGameplayEffectWorking,
             bool gameplayEffectDirty,
             GameplayEffectStateAggregate gameplayEffectSnapshot,
@@ -262,6 +264,8 @@ namespace ThirdPersonSimulation.Fixed
             HandleAllocatorSnapshot = handleAllocatorSnapshot;
             HadAbilityExecutionWorking = hadAbilityExecutionWorking;
             AbilityExecutionSnapshot = abilityExecutionSnapshot;
+            HadInputRequestsWorking = hadInputRequestsWorking;
+            InputRequestsSnapshot = inputRequestsSnapshot;
             HadGameplayEffectWorking = hadGameplayEffectWorking;
             GameplayEffectDirty = gameplayEffectDirty;
             GameplayEffectSnapshot = gameplayEffectSnapshot;
@@ -278,6 +282,8 @@ namespace ThirdPersonSimulation.Fixed
         internal ulong HandleAllocatorSnapshot { get; }
         internal bool HadAbilityExecutionWorking { get; }
         internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionSnapshot { get; }
+        internal bool HadInputRequestsWorking { get; }
+        internal Dictionary<string, SimulationInputRequestState> InputRequestsSnapshot { get; }
         internal bool HadGameplayEffectWorking { get; }
         internal bool GameplayEffectDirty { get; }
         internal GameplayEffectStateAggregate GameplayEffectSnapshot { get; }
@@ -306,6 +312,7 @@ namespace ThirdPersonSimulation.Fixed
         ulong m_HandleAllocatorWorking;
         bool m_HandleAllocatorDirty;
         GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionWorking;
+        Dictionary<string, SimulationInputRequestState> m_InputRequestsWorking;
         FixedCharacterStateTransactionStatus m_Status;
 
         FixedCharacterStateTransaction(
@@ -428,6 +435,25 @@ namespace ThirdPersonSimulation.Fixed
             m_AbilityExecutionWorking = state ?? throw new ArgumentNullException(nameof(state));
         }
 
+        public SimulationInputRequestState GetInputRequest(string requestId)
+        {
+            RequireActive();
+            if (!m_Layout.HasInputRequest(requestId))
+                throw new InvalidOperationException($"Character has no Input request '{requestId}'.");
+            if (m_InputRequestsWorking != null && m_InputRequestsWorking.TryGetValue(requestId, out SimulationInputRequestState working))
+                return working;
+            return m_BaseState.InputRequests[requestId];
+        }
+
+        public void SetInputRequest(string requestId, SimulationInputRequestState state)
+        {
+            RequireActive();
+            if (!m_Layout.HasInputRequest(requestId))
+                throw new InvalidOperationException($"Character has no Input request '{requestId}'.");
+            m_InputRequestsWorking ??= CloneInputRequests(m_BaseState.InputRequests);
+            m_InputRequestsWorking[requestId] = state;
+        }
+
         public void Set(int slotIndex, CharacterStateValue value)
         {
             Set(m_Layout.Address(slotIndex), value);
@@ -513,6 +539,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_HandleAllocatorWorking,
                 m_AbilityExecutionWorking != null,
                 m_AbilityExecutionWorking?.Clone(),
+                m_InputRequestsWorking != null,
+                m_InputRequestsWorking == null ? null : new Dictionary<string, SimulationInputRequestState>(m_InputRequestsWorking, StringComparer.Ordinal),
                 m_GameplayEffectWorking != null,
                 m_GameplayEffectWorking != null && m_GameplayEffectWorking.HasChanges,
                 m_GameplayEffectWorking?.Freeze(),
@@ -550,6 +578,9 @@ namespace ThirdPersonSimulation.Fixed
             m_HandleAllocatorWorking = savepoint.HandleAllocatorSnapshot;
             m_AbilityExecutionWorking = savepoint.HadAbilityExecutionWorking
                 ? savepoint.AbilityExecutionSnapshot?.Clone()
+                : null;
+            m_InputRequestsWorking = savepoint.HadInputRequestsWorking
+                ? new Dictionary<string, SimulationInputRequestState>(savepoint.InputRequestsSnapshot, StringComparer.Ordinal)
                 : null;
             m_EquipmentWorking = savepoint.HadEquipmentWorking ? savepoint.EquipmentSnapshot : null;
             m_Savepoints.Pop();
@@ -594,6 +625,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong actionEventSequence = m_ActionEventSequenceDirty ? m_ActionEventSequenceWorking : m_BaseState.ActionEventSequence;
             ulong handleAllocator = m_HandleAllocatorDirty ? m_HandleAllocatorWorking : m_BaseState.HandleAllocator;
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = m_AbilityExecutionWorking ?? m_BaseState.AbilityExecutionState;
+            IReadOnlyDictionary<string, SimulationInputRequestState> inputRequests = m_InputRequestsWorking ?? m_BaseState.InputRequests;
 
             try
             {
@@ -605,6 +637,7 @@ namespace ThirdPersonSimulation.Fixed
                     actionEventSequence,
                     handleAllocator,
                     abilityExecutionState,
+                    inputRequests,
                     controlState,
                     gameplayEffectState,
                     equipmentState,
@@ -692,6 +725,16 @@ namespace ThirdPersonSimulation.Fixed
             m_HandleAllocatorWorking = 0;
             m_HandleAllocatorDirty = false;
             m_AbilityExecutionWorking = null;
+            m_InputRequestsWorking = null;
+        }
+
+        static Dictionary<string, SimulationInputRequestState> CloneInputRequests(
+            IReadOnlyDictionary<string, SimulationInputRequestState> source)
+        {
+            var result = new Dictionary<string, SimulationInputRequestState>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, SimulationInputRequestState> pair in source)
+                result.Add(pair.Key, pair.Value);
+            return result;
         }
 
     }

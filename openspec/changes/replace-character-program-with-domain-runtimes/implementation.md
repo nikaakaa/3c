@@ -276,6 +276,12 @@
 - 回放证明字段由 `program_id`／`program_hash` 改为 `runtime_id`／`runtime_content_hash`，调度证明与普通证明的 schema 分别升级，比较、校验和证明 hash 使用同一 Runtime 身份。旧证明不再解析，避免把旧 Program 证明伪装成新 Runtime 结果。
 - 未运行 Unity 或测试；当前 Editor 工程仍受并行窗口的 Pose 旧链路阻断，未把该阻断伪装成回放验证结果。
 
+## 2026-09-15 技能诊断入口直接定位Character Definition
+
+- `BtsmtlSkillHostEntry` 不再从 `FixedCharacterHost.ProgramAsset` 反查 `DefinitionGuid`；Fixed Host 与本地 Host 一样直接暴露并返回 `CharacterDefinition`。
+- 这条链路只负责编辑器技能图定位，不需要读取运行时 Program、构建 Program identity 或重新加载资产；删除旧 reader 后保持作者入口的输入仍是正式 Character Definition。
+- 未运行 Unity 或测试；本步为独立静态接线，后续随 Editor 工程统一刷新验证。
+
 ## 2026-09-15 Frontend按可达节点声明Equipment能力
 
 - 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。

@@ -22,25 +22,23 @@ namespace ThirdPersonSimulation
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             AbilityData = abilityData ?? throw new ArgumentNullException(nameof(abilityData));
             bool requiresGameplayEffects = false;
-            bool requiresEquipment = false;
             for (int i = 0; i < abilityData.Data.Count; i++)
             {
                 Float32GameplayAbilityExecutionData data = abilityData.Data[i];
                 if (data.NumericProfile != Float32SimulationNumericProfile.Value)
                     throw new InvalidOperationException($"Ability '{data.AbilityId}' does not target Float32.");
                 requiresGameplayEffects |= data.Capabilities.HasGameplayCapability("GameplayEffect");
-                requiresEquipment |= data.Capabilities.HasGameplayCapability("Equipment");
             }
             if (requiresGameplayEffects && gameplayEffectRuntimeBinding == null)
                 throw new ArgumentException("Float32 Actor Gameplay Effect service is required by an installed Ability.", nameof(gameplayEffectRuntimeBinding));
-            if (requiresEquipment && equipmentRuntimeBinding == null)
-                throw new ArgumentException("Float32 Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
-            RequiresEquipment = requiresEquipment;
             AbilityInstallations = new Float32GameplayAbilityExecutionInstallationSet(
                 abilityData,
                 gameplayEffectRuntimeBinding);
+            if (AbilityInstallations.RequiresEquipment && equipmentRuntimeBinding == null)
+                throw new ArgumentException("Float32 Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
+            RequiresEquipment = AbilityInstallations.RequiresEquipment;
             GameplayContentHash = ComputeGameplayContentHash(
                 controlRuntimeBinding,
                 bodyMotionBinding,

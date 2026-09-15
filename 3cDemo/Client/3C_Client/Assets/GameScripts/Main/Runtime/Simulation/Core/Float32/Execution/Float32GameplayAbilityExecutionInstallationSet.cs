@@ -17,9 +17,11 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(data));
             var values = new List<Float32GameplayAbilityExecutionInstallation>();
             m_ByAbility = new Dictionary<CharacterSkillId, Float32GameplayAbilityExecutionInstallation>();
+            bool requiresEquipment = false;
             for (int i = 0; i < data.Data.Count; i++)
             {
                 Float32GameplayAbilityExecutionData ability = data.Data[i];
+                requiresEquipment |= ability.Capabilities.HasGameplayCapability("Equipment");
                 CharacterGameplayEffectRuntimeBinding abilityEffectBinding = ability.Capabilities.HasGameplayCapability("GameplayEffect")
                     ? gameplayEffectBinding ?? throw new ArgumentNullException(nameof(gameplayEffectBinding))
                     : null;
@@ -29,9 +31,11 @@ namespace ThirdPersonSimulation
             }
             values.Sort((left, right) => left.Data.AbilityId.CompareTo(right.Data.AbilityId));
             m_Installations = values.AsReadOnly();
+            RequiresEquipment = requiresEquipment;
         }
 
         public IReadOnlyList<Float32GameplayAbilityExecutionInstallation> Installations => m_Installations;
+        public bool RequiresEquipment { get; }
 
         public Float32GameplayAbilityExecutionInstallation Require(CharacterSkillId abilityId) =>
             abilityId.IsValid && m_ByAbility.TryGetValue(abilityId, out Float32GameplayAbilityExecutionInstallation installation)

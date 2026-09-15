@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation.Fixed
                     abilityExecutionState,
                     motionWarpStates));
             }
-            EquipmentProgramLayout equipmentLayout = !HasEquipmentCapability(installations) || equipmentBinding == null
+            EquipmentProgramLayout equipmentLayout = !installations.RequiresEquipment || equipmentBinding == null
                 ? null
                 : EquipmentProgramLayoutCompiler.CompileRoleStateLayout(equipmentBinding);
             List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installations, equipmentLayout);
@@ -710,18 +710,6 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException($"Equipment Action Context '{context}' does not match the Equipment layout.");
             }
             return context;
-        }
-
-        static bool HasEquipmentCapability(
-            FixedGameplayAbilityExecutionInstallationSet installations)
-        {
-            for (int i = 0; i < installations.Installations.Count; i++)
-            {
-                FixedGameplayAbilityExecutionInstallation installation = installations.Installations[i];
-                if (installation.Data.Capabilities.HasGameplayCapability("Equipment"))
-                    return true;
-            }
-            return false;
         }
 
         static void RequireSkillExecution(

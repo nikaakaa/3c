@@ -23,25 +23,23 @@ namespace ThirdPersonSimulation.Fixed
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             AbilityData = abilityData ?? throw new ArgumentNullException(nameof(abilityData));
             bool requiresGameplayEffects = false;
-            bool requiresEquipment = false;
             for (int i = 0; i < abilityData.Data.Count; i++)
             {
                 FixedGameplayAbilityExecutionData data = abilityData.Data[i];
                 if (data.NumericProfile != FixedSimulationNumericProfile.Value)
                     throw new InvalidOperationException($"Ability '{data.AbilityId}' does not target Fixed.");
                 requiresGameplayEffects |= data.Capabilities.HasGameplayCapability("GameplayEffect");
-                requiresEquipment |= data.Capabilities.HasGameplayCapability("Equipment");
             }
             if (requiresGameplayEffects && gameplayEffectRuntimeBinding == null)
                 throw new ArgumentException("Fixed Actor Gameplay Effect service is required by an installed Ability.", nameof(gameplayEffectRuntimeBinding));
-            if (requiresEquipment && equipmentRuntimeBinding == null)
-                throw new ArgumentException("Fixed Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
-            RequiresEquipment = requiresEquipment;
             AbilityInstallations = new FixedGameplayAbilityExecutionInstallationSet(
                 abilityData,
                 gameplayEffectRuntimeBinding);
+            if (AbilityInstallations.RequiresEquipment && equipmentRuntimeBinding == null)
+                throw new ArgumentException("Fixed Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
+            RequiresEquipment = AbilityInstallations.RequiresEquipment;
             GameplayContentHash = ComputeGameplayContentHash(
                 controlRuntimeBinding,
                 bodyMotionBinding,

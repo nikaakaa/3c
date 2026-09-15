@@ -479,3 +479,9 @@
 - 提交 `64bb4008d`，Float32／Fixed Evaluate 在生成角色 WorldSolve 请求后完成角色状态事务的 Commit，并立即释放可变事务；Pending 结果改为保存不可变 `CandidateState`、World 请求和领域输出。
 - Finalize 直接校验并消费候选角色状态，不再跨 Pass Claim 或 Dispose 角色状态事务；`AbortUnconsumed` 只结束 Pending 的消费生命周期，失败时不会反向中止外层角色事务。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；按 D22 收口 Pending／事务所有权边界，但 1.11、2.1、2.6 的完整技能独立执行和角色跨领域结果接线仍未完成。
+
+## 2026-09-16 Ability局部状态事务脱离角色实现
+
+- 提交 `2a9ecd815`，Float32／Fixed Ability 状态事务改为自己持有 Tick 和不透明绑定身份，不再保存或回指具体 `CharacterRuntimeStateTransaction`；Ability 执行帧继续只依赖局部状态接口。
+- 角色聚合器仍唯一负责创建 Ability 状态事务、校验其绑定归属和接收快照，保留跨角色误接收拒绝，不复制状态、不创建第二条提交路径。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；本步推进 D22 的 Ability 局部状态边界，但 1.11 的完整外部 typed 服务执行入口仍未完成。

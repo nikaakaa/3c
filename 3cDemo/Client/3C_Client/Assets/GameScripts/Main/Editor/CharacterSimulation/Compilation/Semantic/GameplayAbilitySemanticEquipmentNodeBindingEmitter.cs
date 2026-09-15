@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BaseNode node,
             OperationHandle operation,
             string route,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             if (node is ReadEquipmentIdentityNode equipmentIdentity)
             {
@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void BindEquipmentSlot(
             OperationHandle operation,
             string route,
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             string slotId)
         {
             m_Catalog.Bind(

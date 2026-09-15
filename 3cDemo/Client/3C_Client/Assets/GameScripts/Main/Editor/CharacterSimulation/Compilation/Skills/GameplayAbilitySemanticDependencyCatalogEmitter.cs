@@ -166,7 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (model == null)
                 throw new ArgumentNullException(nameof(model));
             GameplayAbilityProviderOwnerSet owners = GameplayAbilityProviderOwnerSet.Discover(model.EntryGraph, m_Report);
-            CharacterSimulationSourceLocation rootSource = Source(model, model.EntryGraph, "ability");
+            SimulationSourceLocation rootSource = Source(model, model.EntryGraph, "ability");
             DeclareAction(model.Definition.AdmissionProfile, rootSource);
             foreach (GameplayEffectDefinition effect in model.Definition.Effects)
                 DeclareEffect(effect, owners.GameplayProviderOwnerId, rootSource);
@@ -182,7 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             FlowNode node,
             GameplayAbilityProviderOwnerSet owners)
         {
-            CharacterSimulationSourceLocation source = Source(model, occurrence, $"node:{node.UID}", node);
+            SimulationSourceLocation source = Source(model, occurrence, $"node:{node.UID}", node);
             if (node is BtsmtlSkillActionRequestFlowNode request)
             {
                 DeclareInput(
@@ -269,7 +269,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        void DeclareAction(GameplayAbilityAdmissionProfile profile, CharacterSimulationSourceLocation source)
+        void DeclareAction(GameplayAbilityAdmissionProfile profile, SimulationSourceLocation source)
         {
             if (!profile || string.IsNullOrEmpty(profile.ActionId))
             {
@@ -279,7 +279,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             DeclareActionIdentity(profile.ActionId, profile, source);
         }
 
-        void DeclareActionIdentity(string actionId, object profile, CharacterSimulationSourceLocation source)
+        void DeclareActionIdentity(string actionId, object profile, SimulationSourceLocation source)
         {
             if (string.IsNullOrEmpty(actionId))
             {
@@ -310,7 +310,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         void AddQueryFields(
             List<ProgramCatalogField> fields,
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             string prefix,
             GameplayTagQuery query)
         {
@@ -333,7 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void DeclareEffect(
             GameplayEffectDefinition effect,
             string providerOwner,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             if (!effect || !effect.EffectId.IsValid)
                 return;
@@ -360,7 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             GameplayAbilityAuthoringCompilationModel model,
             GameplayEffectDefinition effect,
             string providerOwner,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             if (!effect || !effect.EffectId.IsValid)
             {
@@ -377,7 +377,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramCatalogEntryKind kind,
             string identity,
             string providerOwner,
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             HashSet<string> index)
         {
             DeclareIdentity(kind, identity, providerOwner, source, index, kind == ProgramCatalogEntryKind.InputRequest ? "input:request" : "input:value");
@@ -386,7 +386,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void DeclareTag(
             string identity,
             string providerOwner,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             DeclareIdentity(ProgramCatalogEntryKind.GameplayTag, identity, providerOwner, source, m_Index.GameplayTags, "tag");
         }
@@ -394,7 +394,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void DeclareQuery(
             GameplayTagQuery query,
             string providerOwner,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             if (query == null)
             {
@@ -409,7 +409,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void DeclareQueryTags(
             IReadOnlyList<GameplayTagId> tags,
             string providerOwner,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             for (int i = 0; i < tags.Count; i++)
                 DeclareTag(tags[i].Value, providerOwner, source);
@@ -419,7 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramCatalogEntryKind kind,
             string identity,
             string providerOwner,
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             HashSet<string> index,
             string prefix,
             int revision = 1,
@@ -445,7 +445,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static SemanticDataDocument EncodeGameplayEffectDefinition(
             GameplayEffectDefinition effect,
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             SimulationCompileReport report)
         {
             try
@@ -459,7 +459,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        static CharacterSimulationSourceLocation Source(
+        static SimulationSourceLocation Source(
             GameplayAbilityAuthoringCompilationModel model,
             BtsmtlSkillGraphOccurrence occurrence,
             string suffix,

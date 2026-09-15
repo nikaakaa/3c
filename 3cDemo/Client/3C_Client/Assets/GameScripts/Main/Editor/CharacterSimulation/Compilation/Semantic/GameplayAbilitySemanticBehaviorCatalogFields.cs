@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static IEnumerable<ProgramCatalogField> Emit(
             IGameplayBehaviorProfile profile,
             GameplayAbilitySemanticBuilder builder,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             yield return builder.ConstantField(source, "BehaviorKind", profile.BehaviorKind);
             yield return builder.ConstantField(source, "DisplayName", profile.DisplayName);

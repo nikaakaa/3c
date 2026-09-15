@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 if (parameter.type == typeof(Flow))
                     continue;
-                CharacterSimulationSourceLocation source = Source(input, "parameter-read", parameter.ID);
+                SimulationSourceLocation source = Source(input, "parameter-read", parameter.ID);
                 int slot = DeclareParameter(parameter, ProgramGraphParameterDirection.Input, source);
                 OperationHandle reader = m_Builder.DeclareOperation(source, SimulationOperationCode.BlackboardGet,
                     Array.Empty<int>(), text0: parameter.ID);
@@ -49,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             int order = 0;
             foreach (DynamicParameterDefinition parameter in macro.outputDefinitions)
             {
-                CharacterSimulationSourceLocation source = Source(output, "parameter-write", parameter.ID);
+                SimulationSourceLocation source = Source(output, "parameter-write", parameter.ID);
                 int slot = DeclareParameter(parameter, ProgramGraphParameterDirection.Output, source);
                 OperationHandle writer = m_Builder.DeclareOperation(source, SimulationOperationCode.BlackboardSet,
                     Array.Empty<int>(), integer0: 1, text0: parameter.ID);
@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public OperationHandle EmitCall(BtsmtlSkillGraphReferenceOccurrence reference, BtsmtlSkillOperationBindings parent)
         {
             var node = (MacroNodeWrapper)reference.Owner;
-            var source = new CharacterSimulationSourceLocation(node.GetType().FullName,
+            var source = new SimulationSourceLocation(node.GetType().FullName,
                 ((IBtsmtlSkillFlowGraph)node.graph).AuthoringId, node.UID, string.Empty, string.Empty, string.Empty,
                 reference.CallSiteIdentity, contentHash: reference.OwnerContentHash);
             OperationHandle call = m_Builder.DeclareOperation(source, SimulationOperationCode.SubGraph, Array.Empty<int>());
@@ -82,7 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 parent.AddValueInput(node, port.ID, call, port.ID);
                 if (!port.isConnected)
-                    BindDefault(call, port.ID, port, new CharacterSimulationSourceLocation(node.GetType().FullName,
+                    BindDefault(call, port.ID, port, new SimulationSourceLocation(node.GetType().FullName,
                         source.GraphId, node.UID, string.Empty, string.Empty, string.Empty,
                         $"{reference.CallSiteIdentity}/port:{port.ID}", portId: port.ID, contentHash: reference.OwnerContentHash));
             }
@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         int DeclareParameter(DynamicParameterDefinition parameter, ProgramGraphParameterDirection direction,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             string owner = $"{m_Graph.Route}/parameter:{direction}:{parameter.ID}";
             ProgramStateValueKind kind = StateKind(parameter.type);
@@ -111,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return value;
         }
 
-        void BindDefault(OperationHandle operation, string compiledPort, ValueInput port, CharacterSimulationSourceLocation source)
+        void BindDefault(OperationHandle operation, string compiledPort, ValueInput port, SimulationSourceLocation source)
         {
             object value = port.serializedValue;
             if (value == null && port.type == typeof(string))
@@ -121,17 +121,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Builder.DeclareConstantInputBinding(operation, compiledPort, constant, ValueKind(port.type), source);
         }
 
-        void BindState(OperationHandle operation, int slot, CharacterSimulationSourceLocation source) =>
+        void BindState(OperationHandle operation, int slot, SimulationSourceLocation source) =>
             m_Builder.DeclareReference($"{source.Identity}/state", operation, ProgramReferenceKind.StateSlot, slot, source.PortId, source);
 
         OperationHandle Declare(FlowNode node, string phase, SimulationOperationCode code) =>
             m_Builder.DeclareOperation(Source(node, phase), code, Array.Empty<int>());
 
-        void Child(OperationHandle owner, OperationHandle child, int order, CharacterSimulationSourceLocation source) =>
+        void Child(OperationHandle owner, OperationHandle child, int order, SimulationSourceLocation source) =>
             m_Builder.DeclareControlFlow($"{source.Identity}/child:{order}", owner, child, "Output", "Input",
                 ProgramControlFlowKind.Child, order, 0, ProgramAbortPolicy.None, false, OperationHandle.Invalid, source);
 
-        CharacterSimulationSourceLocation Source(FlowNode node, string phase, string port = "") =>
+        SimulationSourceLocation Source(FlowNode node, string phase, string port = "") =>
             new(node.GetType().FullName, m_Graph.GraphId, node.UID, string.Empty, string.Empty, string.Empty,
                 $"{m_Graph.Route}/node:{node.UID}/phase:{phase}/port:{port}", portId: port, contentHash: m_Graph.ContentHash);
 

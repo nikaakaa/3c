@@ -64,17 +64,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmission emission, string portId)
         {
-            CharacterSimulationSourceLocation source = Source(node, portId);
+            SimulationSourceLocation source = Source(node, portId);
             List<CapturedValuePort> valuePorts = CaptureValuePorts(node, emission.Code);
             var constantInputs = new List<SimulationConstantInput>();
             CaptureUnconnectedInputConstants(node, valuePorts, constantInputs);
             return m_OperationEmitter.Emit(source, emission, constantInputs);
         }
 
-        public CharacterSimulationSourceLocation Source(BaseNode node, string portId = "")
+        public SimulationSourceLocation Source(BaseNode node, string portId = "")
         {
             string sourcePort = portId ?? string.Empty;
-            return new CharacterSimulationSourceLocation(
+            return new SimulationSourceLocation(
                 node.GetType().FullName,
                 m_Graph.GraphAuthoringId,
                 node.GUID,
@@ -146,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string portId = captured.PortId;
                 if (IsPropertyInputLinked(node.GUID, portId, captured.FieldKey))
                     continue;
-                CharacterSimulationSourceLocation source = Source(node, portId);
+                SimulationSourceLocation source = Source(node, portId);
                 constantInputs.Add(new SimulationConstantInput(portId, captured.Kind, captured.Port.GetValue(), source));
             }
         }
@@ -295,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmitterContext context)
         {
             CharacterSimulationNodeEmission emission = m_Emit((T)node);
-            CharacterSimulationSourceLocation source = context.Source(node, CameraProgramOperationSchema.OutputPortId);
+            SimulationSourceLocation source = context.Source(node, CameraProgramOperationSchema.OutputPortId);
             OperationHandle operation = context.Emit(node, emission, CameraProgramOperationSchema.OutputPortId);
             string producerIdentity = $"camera:{source.TemplateIdentity}";
             int producer = context.Builder.DeclareProducer(

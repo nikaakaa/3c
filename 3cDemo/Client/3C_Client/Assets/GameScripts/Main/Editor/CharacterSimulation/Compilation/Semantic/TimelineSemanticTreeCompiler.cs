@@ -295,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Report.Error("timeline_tree_state_lifecycle_missing", childRoute, "State behavior is missing OnEnter or OnExit operation.");
                 return;
             }
-            CharacterSimulationSourceLocation source = Source(graph, owner, childRoute);
+            SimulationSourceLocation source = Source(graph, owner, childRoute);
             m_Builder.DeclareControlFlow(
                 $"{childRoute}/state-on-enter",
                 ownerOperation,
@@ -359,8 +359,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                    operations.TryGetValue(nodeId, out operation);
         }
 
-        static CharacterSimulationSourceLocation Source(BaseTree graph, BaseNode node, string route) =>
-            new CharacterSimulationSourceLocation(
+        static SimulationSourceLocation Source(BaseTree graph, BaseNode node, string route) =>
+            new SimulationSourceLocation(
                 node.GetType().FullName,
                 graph.GraphAuthoringId,
                 node.GUID,
@@ -370,8 +370,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 $"{route}/node:{node.GUID}",
                 contentHash: GraphAuthoringFingerprint.Compute(graph));
 
-        static CharacterSimulationSourceLocation Source(BaseTree graph, BaseEdge edge, string route) =>
-            new CharacterSimulationSourceLocation(
+        static SimulationSourceLocation Source(BaseTree graph, BaseEdge edge, string route) =>
+            new SimulationSourceLocation(
                 edge.GetType().FullName,
                 graph.GraphAuthoringId,
                 string.Empty,

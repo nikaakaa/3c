@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BaseNode node,
             OperationHandle operation,
             string route,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             if (node is CharacterInputValueInfoNode input)
             {

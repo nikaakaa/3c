@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Builder.DeclareControlFlow(record.Route, source, target, sourcePort, targetPort,
                     kind, record.Order, record.Priority, record.AbortPolicy,
                     record.Condition != null, condition,
-                    new CharacterSimulationSourceLocation(edge.GetType().FullName, graph.GraphId, string.Empty,
+                    new SimulationSourceLocation(edge.GetType().FullName, graph.GraphId, string.Empty,
                         edge.UID, string.Empty, string.Empty, record.Route, contentHash: graph.ContentHash));
             }
         }
@@ -68,7 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     continue;
                 m_Builder.DeclareReference($"{child.Route}/node:{node.UID}/state-machine-owner", operations[node.UID],
                     ProgramReferenceKind.Operation, owner.Value, child.Route,
-                    new CharacterSimulationSourceLocation(node.GetType().FullName, child.GraphId, node.UID,
+                    new SimulationSourceLocation(node.GetType().FullName, child.GraphId, node.UID,
                         string.Empty, string.Empty, string.Empty, $"{child.Route}/node:{node.UID}", contentHash: child.ContentHash));
             }
         }
@@ -142,7 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             m_Builder.DeclareControlFlow($"{reference.CallSiteIdentity}/entry:{port}", owner, entry, port, "Entry",
                 kind, order, 0, ProgramAbortPolicy.None, false, OperationHandle.Invalid,
-                new CharacterSimulationSourceLocation(reference.Owner.GetType().FullName,
+                new SimulationSourceLocation(reference.Owner.GetType().FullName,
                     ((IBtsmtlSkillFlowGraph)reference.Owner.graph).AuthoringId, reference.Owner.UID,
                     string.Empty, string.Empty, string.Empty, reference.CallSiteIdentity, contentHash: reference.OwnerContentHash));
         }
@@ -205,21 +205,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 Source(machine, state.State));
         }
 
-        static CharacterSimulationSourceLocation Source(
+        static SimulationSourceLocation Source(
             BtsmtlSkillNativeStateMachineOccurrence machine,
             BtsmtlSkillNativeState state) =>
             new(typeof(BtsmtlSkillNativeState).FullName, machine.GraphId, state.UID,
                 string.Empty, string.Empty, string.Empty,
                 $"{machine.Route}/state:{state.UID}", contentHash: machine.ContentHash);
 
-        static CharacterSimulationSourceLocation Source(
+        static SimulationSourceLocation Source(
             BtsmtlSkillNativeStateMachineOccurrence machine,
             BtsmtlSkillNativeConnection edge) =>
             new(typeof(BtsmtlSkillNativeConnection).FullName, machine.GraphId, string.Empty,
                 edge.UID, string.Empty, string.Empty,
                 $"{machine.Route}/edge:{edge.UID}", contentHash: machine.ContentHash);
 
-        static CharacterSimulationSourceLocation Source(
+        static SimulationSourceLocation Source(
             BtsmtlSkillNativeStateMachineOccurrence machine,
             BtsmtlSkillNativeStateMachine graph) =>
             new(typeof(BtsmtlSkillNativeStateMachine).FullName, machine.GraphId, string.Empty,

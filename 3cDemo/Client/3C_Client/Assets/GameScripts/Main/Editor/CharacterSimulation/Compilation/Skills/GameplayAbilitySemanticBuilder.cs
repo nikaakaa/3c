@@ -6,69 +6,6 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    public readonly struct CharacterSimulationSourceLocation
-    {
-        public CharacterSimulationSourceLocation(
-            string sourceType,
-            string graphId,
-            string nodeId,
-            string edgeId,
-            string timelineId,
-            string clipId,
-            string displayPath,
-            string trackId = "",
-            string declarationId = "",
-            string portId = "",
-            string contentHash = "")
-        {
-            SourceType = sourceType ?? string.Empty;
-            GraphId = graphId ?? string.Empty;
-            NodeId = nodeId ?? string.Empty;
-            PortId = portId ?? string.Empty;
-            EdgeId = edgeId ?? string.Empty;
-            DeclarationId = declarationId ?? string.Empty;
-            TimelineId = timelineId ?? string.Empty;
-            TrackId = trackId ?? string.Empty;
-            ClipId = clipId ?? string.Empty;
-            DisplayPath = displayPath ?? string.Empty;
-            ContentHash = contentHash ?? string.Empty;
-        }
-        public string SourceType { get; }
-        public string GraphId { get; }
-        public string NodeId { get; }
-        public string PortId { get; }
-        public string EdgeId { get; }
-        public string DeclarationId { get; }
-        public string TimelineId { get; }
-        public string TrackId { get; }
-        public string ClipId { get; }
-        public string DisplayPath { get; }
-        public string ContentHash { get; }
-        public string TemplateIdentity => !string.IsNullOrEmpty(ClipId)
-            ? $"timeline:{TimelineId}/clip:{ClipId}"
-            : !string.IsNullOrEmpty(TrackId)
-                ? $"timeline:{TimelineId}/track:{TrackId}"
-                : !string.IsNullOrEmpty(TimelineId)
-                    ? $"timeline:{TimelineId}"
-                    : !string.IsNullOrEmpty(NodeId)
-                        ? $"graph:{GraphId}/node:{NodeId}"
-                        : !string.IsNullOrEmpty(EdgeId)
-                            ? $"graph:{GraphId}/edge:{EdgeId}"
-                            : !string.IsNullOrEmpty(GraphId)
-                                ? $"graph:{GraphId}"
-                                : SourceType;
-        public string ImmutableDataIdentity => !string.IsNullOrEmpty(NodeId) || !string.IsNullOrEmpty(ClipId)
-            ? !string.IsNullOrEmpty(PortId) ? $"{TemplateIdentity}/port:{PortId}" : TemplateIdentity
-            : Identity;
-        public string Identity => !string.IsNullOrEmpty(DisplayPath)
-            ? DisplayPath
-            : !string.IsNullOrEmpty(NodeId)
-                ? $"{GraphId}/{NodeId}"
-                : !string.IsNullOrEmpty(ClipId)
-                    ? $"{TimelineId}/{ClipId}"
-                    : GraphId;
-    }
-
     public sealed class GameplayAbilitySemanticBuilder
     {
         sealed class GraphInvocationScope : IDisposable
@@ -155,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         public OperationHandle DeclareOperation(
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             SimulationOperationCode code,
             IReadOnlyList<int> constantReferences,
             int integer0 = 0,
@@ -186,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return handle;
         }
 
-        public void DeclareOperationPortSource(OperationHandle operation, CharacterSimulationSourceLocation source,
+        public void DeclareOperationPortSource(OperationHandle operation, SimulationSourceLocation source,
             string compiledPortId = "", ProgramValuePortDirection direction = ProgramValuePortDirection.None)
         {
             if (!operation.IsValid || operation.Value >= m_Operations.Count)
@@ -196,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AddSourceMap(ProgramSourceTargetKind.OperationPort, operation.Value, source, compiledPortId, direction);
         }
 
-        public void DeclareOptimizedSource(CharacterSimulationSourceLocation source)
+        public void DeclareOptimizedSource(SimulationSourceLocation source)
         {
             if (string.IsNullOrEmpty(source.GraphId) || string.IsNullOrEmpty(source.NodeId) ||
                 string.IsNullOrEmpty(source.ContentHash))
@@ -204,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AddSourceMap(ProgramSourceTargetKind.OptimizedAway, 0, source);
         }
 
-        public void DeclareGraphInvocation(OperationHandle owner, CharacterSimulationSourceLocation source,
+        public void DeclareGraphInvocation(OperationHandle owner, SimulationSourceLocation source,
             ProgramInvocationCallerKind callerKind, string callerId, string callerClipId)
         {
             if (!owner.IsValid || owner.Value >= m_Operations.Count)
@@ -226,7 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 parentInvocation: parent, callerKind: callerKind, callerId: callerId, callerClipId: callerClipId);
         }
 
-        public int DeclareConstant(CharacterSimulationSourceLocation source, string fieldName, object value)
+        public int DeclareConstant(SimulationSourceLocation source, string fieldName, object value)
         {
             string identity = $"{source.ImmutableDataIdentity}/constant/{fieldName}";
             if (m_ConstantByIdentity.TryGetValue(identity, out int existing))
@@ -253,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string targetPort,
             int constantIndex,
             SemanticValueKind resolvedValueKind,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             try
             {
@@ -269,7 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        public int DeclareCatalogEntry(ProgramCatalogEntryKind kind, string identity, int revision, IEnumerable<ProgramCatalogField> fields, CharacterSimulationSourceLocation source)
+        public int DeclareCatalogEntry(ProgramCatalogEntryKind kind, string identity, int revision, IEnumerable<ProgramCatalogField> fields, SimulationSourceLocation source)
         {
             string key = $"{kind}:{identity}";
             if (m_CatalogByIdentity.TryGetValue(key, out int existing))
@@ -299,7 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramStateSemantic semantic,
             string ownerIdentity,
             ProgramSourceTargetKind sourceTargetKind,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             int index = m_StateSlots.Count;
             m_StateSlots.Add(new ProgramStateSlot(
@@ -317,12 +254,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         internal void DeclareSourceMap(
             ProgramSourceTargetKind targetKind,
             int targetIndex,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             AddSourceMap(targetKind, targetIndex, source);
         }
 
-        public ProgramCatalogField ConstantField(CharacterSimulationSourceLocation source, string name, object value)
+        public ProgramCatalogField ConstantField(SimulationSourceLocation source, string name, object value)
         {
             int constant = DeclareConstant(source, name, value);
             return constant >= 0 ? new ProgramCatalogField(name, ProgramCatalogFieldKind.Constant, constant, null) : null;
@@ -345,7 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramAbortPolicy abortPolicy,
             bool hasCondition,
             OperationHandle condition,
-            CharacterSimulationSourceLocation sourceLocation)
+            SimulationSourceLocation sourceLocation)
         {
             try
             {
@@ -358,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        public void DeclareReference(string identity, OperationHandle sourceOperation, ProgramReferenceKind kind, int targetIndex, string externalIdentity, CharacterSimulationSourceLocation source)
+        public void DeclareReference(string identity, OperationHandle sourceOperation, ProgramReferenceKind kind, int targetIndex, string externalIdentity, SimulationSourceLocation source)
         {
             if (!m_ReferenceIdentities.Add(identity))
             {
@@ -382,7 +319,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string childGraphIdentity,
             IEnumerable<ProgramGraphParameterBinding> inputs,
             IEnumerable<ProgramGraphParameterBinding> outputs,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             try
             {
@@ -406,7 +343,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationChannelId animationChannelId,
             string sourceIdentity,
             ProgramOutputChannelKind channelKind,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             if (m_ProducerByIdentity.TryGetValue(identity, out int existing))
             {
@@ -444,7 +381,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string ownerIdentity,
             OperationHandle ownerOperation,
             IReadOnlyList<int> slots,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             if (!m_ScopeIdentities.Add(identity))
             {
@@ -454,13 +391,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Scopes.Add(new ProgramScopeLayout(m_Scopes.Count, identity, kind, ownerIdentity, ownerOperation, slots));
         }
 
-        public int DeclareStandaloneStateSlot(CharacterSimulationSourceLocation source, ProgramStateValueKind valueKind, ProgramStateOwnerKind ownerKind, ProgramStateSemantic semantic, string ownerIdentity)
+        public int DeclareStandaloneStateSlot(SimulationSourceLocation source, ProgramStateValueKind valueKind, ProgramStateOwnerKind ownerKind, ProgramStateSemantic semantic, string ownerIdentity)
         {
             return DeclareStandaloneStateSlot(source, valueKind, ownerKind, semantic, ownerIdentity, null, false);
         }
 
         public int DeclareStandaloneStateSlot(
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             ProgramStateValueKind valueKind,
             ProgramStateOwnerKind ownerKind,
             ProgramStateSemantic semantic,
@@ -471,7 +408,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         int DeclareStandaloneStateSlot(
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             ProgramStateValueKind valueKind,
             ProgramStateOwnerKind ownerKind,
             ProgramStateSemantic semantic,
@@ -492,7 +429,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         int DeclareStateDefaultConstant(
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             ProgramStateValueKind valueKind,
             ProgramStateSemantic semantic,
             string ownerIdentity,
@@ -600,7 +537,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                    code == SimulationOperationCode.TimelineEnter;
         }
 
-        List<int> DeclareOperationStateSlots(OperationHandle handle, SimulationOperationCode code, CharacterSimulationSourceLocation source)
+        List<int> DeclareOperationStateSlots(OperationHandle handle, SimulationOperationCode code, SimulationSourceLocation source)
         {
             var slots = new List<int>();
             if (IsRunnable(code))
@@ -636,7 +573,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return slots;
         }
 
-        int DeclareStateSlot(CharacterSimulationSourceLocation source, OperationHandle handle, ProgramStateValueKind valueKind, ProgramStateOwnerKind ownerKind, ProgramStateSemantic semantic)
+        int DeclareStateSlot(SimulationSourceLocation source, OperationHandle handle, ProgramStateValueKind valueKind, ProgramStateOwnerKind ownerKind, ProgramStateSemantic semantic)
         {
             int index = m_StateSlots.Count;
             string identity = $"{source.Identity}/state/{semantic}";
@@ -655,7 +592,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (m_DefaultConstants.TryGetValue(kind, out int index))
                 return index;
-            var source = new CharacterSimulationSourceLocation("AbilityDefault", "Ability", string.Empty, string.Empty, string.Empty, string.Empty, $"Ability/default/{kind}");
+            var source = new SimulationSourceLocation("AbilityDefault", "Ability", string.Empty, string.Empty, string.Empty, string.Empty, $"Ability/default/{kind}");
             if (kind == ProgramStateValueKind.Yaw)
             {
                 string identity = $"{source.Identity}/constant/value";
@@ -708,7 +645,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        void AddSourceMap(ProgramSourceTargetKind targetKind, int targetIndex, CharacterSimulationSourceLocation source,
+        void AddSourceMap(ProgramSourceTargetKind targetKind, int targetIndex, SimulationSourceLocation source,
             string compiledPortId = "", ProgramValuePortDirection direction = ProgramValuePortDirection.None,
             string parentInvocation = "", ProgramInvocationCallerKind callerKind = ProgramInvocationCallerKind.None,
             string callerId = "", string callerClipId = "")

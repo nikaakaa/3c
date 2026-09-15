@@ -321,8 +321,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             throw new InvalidOperationException($"Unsupported skill value type '{type.FullName}'.");
         }
 
-        static CharacterSimulationSourceLocation Source(FlowNode node, IBtsmtlSkillFlowGraph graph,
-            string route, string contentHash, string portId) => new CharacterSimulationSourceLocation(
+        static SimulationSourceLocation Source(FlowNode node, IBtsmtlSkillFlowGraph graph,
+            string route, string contentHash, string portId) => new SimulationSourceLocation(
                 node.GetType().FullName, graph.AuthoringId, node.UID, string.Empty, string.Empty, string.Empty,
                 string.IsNullOrEmpty(portId) ? $"{route}/node:{node.UID}" : $"{route}/node:{node.UID}/port:{portId}",
                 portId: portId, contentHash: contentHash);

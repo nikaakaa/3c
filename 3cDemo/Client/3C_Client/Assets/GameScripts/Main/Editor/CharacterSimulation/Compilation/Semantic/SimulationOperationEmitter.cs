@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public readonly struct SimulationConstantInput
     {
-        public SimulationConstantInput(string portId, SemanticValueKind kind, object value, CharacterSimulationSourceLocation source)
+        public SimulationConstantInput(string portId, SemanticValueKind kind, object value, SimulationSourceLocation source)
         {
             PortId = portId;
             Kind = kind;
@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public string PortId { get; }
         public SemanticValueKind Kind { get; }
         public object Value { get; }
-        public CharacterSimulationSourceLocation Source { get; }
+        public SimulationSourceLocation Source { get; }
     }
 
     public sealed class SimulationOperationEmitter
@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         public OperationHandle Emit(
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             CharacterSimulationNodeEmission emission,
             IReadOnlyList<SimulationConstantInput> inputs)
         {

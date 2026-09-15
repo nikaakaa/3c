@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     model.SourceRevision,
                     report,
                     root);
-                CharacterSimulationSourceLocation abilitySource = new(
+                SimulationSourceLocation abilitySource = new(
                     typeof(GameplayAbilityDefinition).FullName,
                     model.DefinitionGuid,
                     string.Empty,
@@ -146,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             OperationHandle entry,
             GameplayAbilitySemanticBuilder builder,
             SimulationCompileReport report,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             GameplayAbilityAdmissionProfile profile = model.Definition.AdmissionProfile;
             if (!profile || string.IsNullOrEmpty(profile.ActionId))

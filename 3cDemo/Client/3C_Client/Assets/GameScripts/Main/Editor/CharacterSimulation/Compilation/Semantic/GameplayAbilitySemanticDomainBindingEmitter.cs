@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BaseNode node,
             OperationHandle operation,
             string route,
-            CharacterSimulationSourceLocation source);
+            SimulationSourceLocation source);
     }
 
     internal sealed class GameplayAbilitySemanticDomainBindingEmitter
@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BaseNode node,
             OperationHandle operation,
             string route,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             if (TryGetBlackboardReference(node, out PipelineBlackboardVariableReference blackboard))
             {
@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return false;
         }
 
-        public void Bind(FlowNode node, OperationHandle operation, string route, CharacterSimulationSourceLocation source)
+        public void Bind(FlowNode node, OperationHandle operation, string route, SimulationSourceLocation source)
         {
             switch (node)
             {

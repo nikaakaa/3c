@@ -36,11 +36,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly BtsmtlSkillGraphFlowEmitter m_Flow;
         readonly BtsmtlSkillTimelineCompiler m_Timelines;
         readonly IBtsmtlSkillBlackboardCompilation m_Blackboard;
-        readonly Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> m_BindDomain;
+        readonly Action<FlowNode, OperationHandle, string, SimulationSourceLocation> m_BindDomain;
         readonly Dictionary<string, BtsmtlSkillGraphCompilation> m_Graphs = new(StringComparer.Ordinal);
 
         public BtsmtlSkillGraphCompiler(GameplayAbilitySemanticBuilder builder,
-            Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> bindDomain,
+            Action<FlowNode, OperationHandle, string, SimulationSourceLocation> bindDomain,
             TimelineSemanticEmitterRegistry timelineEmitters, IBtsmtlSkillBlackboardCompilation blackboard,
             string controlModuleId,
             string inputProviderOwnerId,
@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 OperationHandle invocationOwner = context.Owner.IsValid ? context.Owner : context.UseTimelineEnable
                     ? operations.Node(graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single().UID)
                     : entry;
-                m_Builder.DeclareGraphInvocation(invocationOwner, new CharacterSimulationSourceLocation(
+                m_Builder.DeclareGraphInvocation(invocationOwner, new SimulationSourceLocation(
                     graph.Graph.GetType().FullName, graph.GraphId, string.Empty, string.Empty, string.Empty, string.Empty,
                     graph.Route, contentHash: graph.ContentHash), context.CallerKind, context.CallerId, context.ClipId);
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return operations.Node(entry.UID);
         }
 
-        static CharacterSimulationSourceLocation Source(BtsmtlSkillGraphOccurrence graph, FlowNode node, string portId = "") =>
+        static SimulationSourceLocation Source(BtsmtlSkillGraphOccurrence graph, FlowNode node, string portId = "") =>
             new(node.GetType().FullName, graph.GraphId, node.UID, string.Empty, string.Empty, string.Empty,
                 string.IsNullOrEmpty(portId) ? $"{graph.Route}/node:{node.UID}" : $"{graph.Route}/node:{node.UID}/port:{portId}",
                 portId: portId, contentHash: graph.ContentHash);

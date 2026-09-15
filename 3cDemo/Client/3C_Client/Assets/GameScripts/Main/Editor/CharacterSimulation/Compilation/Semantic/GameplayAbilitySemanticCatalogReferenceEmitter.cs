@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public void Bind(
             OperationHandle operation,
             string route,
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             ProgramCatalogEntryKind kind,
             string identity,
             bool known,
@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public void BindTagQuery(
             OperationHandle operation,
             string route,
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             GameplayTagQuery query)
         {
             if (query == null)

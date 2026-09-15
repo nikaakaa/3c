@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             foreach (BlackboardDeclaration item in m_Declarations.Values)
             {
                 GameplayAbilityBlackboardDeclarationSnapshot declaration = item.Declaration;
-                CharacterSimulationSourceLocation source = DeclarationSource(item, item.Route);
+                SimulationSourceLocation source = DeclarationSource(item, item.Route);
                 string identity = DeclarationIdentity(item.GraphId, declaration.DeclarationId);
                 var fields = new List<ProgramCatalogField>
                 {
@@ -147,7 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             OperationHandle operation,
             string route,
             PipelineBlackboardVariableReference reference,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             Bind(operation, route, reference.DeclarationOwnerId, reference.DeclarationId, source);
         }
@@ -157,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string route,
             string declarationOwnerId,
             string declarationId,
-            CharacterSimulationSourceLocation source)
+            SimulationSourceLocation source)
         {
             Bind(operation, route, declarationOwnerId, declarationId, null, source);
         }
@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string declarationOwnerId,
             string declarationId,
             Type expectedValueType,
-            CharacterSimulationSourceLocation source,
+            SimulationSourceLocation source,
             bool requireWritable = false)
         {
             string declarationIdentity = DeclarationIdentity(declarationOwnerId, declarationId);
@@ -236,7 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!TryMapValueKind(item.Declaration.ValueType, out ProgramStateValueKind valueKind))
                 return -1;
 
-            CharacterSimulationSourceLocation source = DeclarationSource(item, route);
+            SimulationSourceLocation source = DeclarationSource(item, route);
             int value = m_Builder.DeclareStandaloneStateSlot(
                 source,
                 valueKind,
@@ -312,7 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return true;
         }
 
-        static object CompileBlackboardDefault(object value, CharacterSimulationSourceLocation source)
+        static object CompileBlackboardDefault(object value, SimulationSourceLocation source)
         {
             if (value is not ActionTargetSnapshot snapshot)
                 return value;
@@ -348,9 +348,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static string DeclarationIdentity(string ownerId, string declarationId) => $"blackboard:{ownerId}:{declarationId}";
 
-        static CharacterSimulationSourceLocation DeclarationSource(BlackboardDeclaration item, string route)
+        static SimulationSourceLocation DeclarationSource(BlackboardDeclaration item, string route)
         {
-            return new CharacterSimulationSourceLocation(
+            return new SimulationSourceLocation(
                 item.SourceType,
                 item.GraphId,
                 string.Empty,
@@ -369,7 +369,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ProgramScopeKind kind,
                 string ownerIdentity,
                 OperationHandle ownerOperation,
-                CharacterSimulationSourceLocation source)
+                SimulationSourceLocation source)
             {
                 Identity = identity;
                 Kind = kind;
@@ -382,7 +382,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public ProgramScopeKind Kind { get; }
             public string OwnerIdentity { get; }
             public OperationHandle OwnerOperation { get; private set; }
-            public CharacterSimulationSourceLocation Source { get; }
+            public SimulationSourceLocation Source { get; }
             public List<int> StateSlots { get; } = new List<int>();
 
             public void SetOwnerOperation(OperationHandle ownerOperation)

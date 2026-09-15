@@ -26,6 +26,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
+        readonly Dictionary<ActorId, int> m_ActorIndices = new Dictionary<ActorId, int>();
 
         public FixedCharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
@@ -49,6 +50,8 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException("Fixed Character Runtime roster contains a null or duplicate ActorId.", nameof(roster));
             }
             m_Roster = values.AsReadOnly();
+            for (int i = 0; i < m_Roster.Count; i++)
+                m_ActorIndices.Add(m_Roster[i].ActorId, i);
             RosterDescriptor = new SimulationActorRosterDescriptor(ActorIds(values));
             var abilities = new Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionData>();
             for (int actorIndex = 0; actorIndex < values.Count; actorIndex++)
@@ -128,6 +131,11 @@ namespace ThirdPersonSimulation.Fixed
         public GameplayContentHash GameplayContentHash { get; }
         public string AbilitySetSourceRevision { get; }
 
+        public int GetActorIndex(ActorId actorId) =>
+            m_ActorIndices.TryGetValue(actorId, out int index)
+                ? index
+                : throw new InvalidOperationException($"Actor '{actorId}' is not part of the locked Character Runtime roster.");
+
         public FixedCharacterRuntimeState CreateInitialState(int actorIndex)
         {
             if (actorIndex < 0 || actorIndex >= Roster.Count)
@@ -186,13 +194,10 @@ namespace ThirdPersonSimulation.Fixed
     public interface IFixedCharacterRuntimePort : ISimulationRuntimePort
     {
         FixedCharacterRuntime Runtime { get; }
-        int GetActorIndex(ActorId actorId);
     }
 
     public sealed class FixedCharacterRuntimePort : IFixedCharacterRuntimePort
     {
-        readonly Dictionary<ActorId, int> m_ActorIndices = new Dictionary<ActorId, int>();
-
         public FixedCharacterRuntimePort(
             SimulationComponentIdentity backend,
             FixedCharacterRuntime runtime)
@@ -200,8 +205,6 @@ namespace ThirdPersonSimulation.Fixed
             if (!backend.IsValid || backend.Role != SimulationComponentRole.ExecutionBackend)
                 throw new ArgumentException("Execution Backend identity is invalid.", nameof(backend));
             Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            for (int i = 0; i < Runtime.Roster.Count; i++)
-                m_ActorIndices.Add(Runtime.Roster[i].ActorId, i);
             Descriptor = FixedPipelineRuntimePortDescriptor.Create(
                 FixedPipelineRuntimePortIds.CharacterRuntime,
                 FixedPipelineRuntimePortIds.CharacterRuntimeSchema,
@@ -212,11 +215,6 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationPortDescriptor Descriptor { get; }
         public FixedCharacterRuntime Runtime { get; }
-
-        public int GetActorIndex(ActorId actorId) =>
-            m_ActorIndices.TryGetValue(actorId, out int index)
-                ? index
-                : throw new InvalidOperationException($"Actor '{actorId}' is not part of the locked Character Runtime roster.");
 
 
     }

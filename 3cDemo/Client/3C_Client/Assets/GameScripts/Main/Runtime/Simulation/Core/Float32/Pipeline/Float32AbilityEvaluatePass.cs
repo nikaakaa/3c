@@ -124,7 +124,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < m_Ingress.Length; i++)
                 m_Ingress[i].Clear();
             for (int i = 0; i < step.Ingress.Count; i++)
-                m_Ingress[runtime.GetActorIndex(step.Ingress[i].ActorId)].Add(step.Ingress[i].Value);
+                m_Ingress[runtime.Runtime.GetActorIndex(step.Ingress[i].ActorId)].Add(step.Ingress[i].Value);
         }
     }
 

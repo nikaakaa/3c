@@ -323,7 +323,7 @@ namespace ThirdPersonSimulation
     {
         public Float32AbilityExecutionAssembly Create(
             Float32GameplayAbilityExecutionInstallation installation,
-            Float32GameplayAbilityExecutionInstallationSet installations,
+            IFloat32AbilityInstallationProvider installations,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace)
         {

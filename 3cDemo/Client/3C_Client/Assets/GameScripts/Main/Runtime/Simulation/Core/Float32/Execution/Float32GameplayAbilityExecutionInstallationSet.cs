@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class Float32GameplayAbilityExecutionInstallationSet
+    public sealed class Float32GameplayAbilityExecutionInstallationSet : IFloat32AbilityInstallationProvider
     {
         readonly ReadOnlyCollection<Float32GameplayAbilityExecutionInstallation> m_Installations;
         readonly Dictionary<CharacterSkillId, Float32GameplayAbilityExecutionInstallation> m_ByAbility;

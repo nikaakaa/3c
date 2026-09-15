@@ -27,9 +27,14 @@ namespace ThirdPersonSimulation
     {
         Float32AbilityExecutionAssembly Create(
             Float32GameplayAbilityExecutionInstallation installation,
-            Float32GameplayAbilityExecutionInstallationSet installations,
+            IFloat32AbilityInstallationProvider installations,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace);
+    }
+
+    public interface IFloat32AbilityInstallationProvider
+    {
+        Float32GameplayAbilityExecutionInstallation Require(CharacterSkillId abilityId);
     }
 
     internal sealed class Float32AbilityExecutionAssembly
@@ -97,7 +102,7 @@ namespace ThirdPersonSimulation
 
         public Float32AbilityInvocationRuntime(
             Float32GameplayAbilityExecutionInstallation installation,
-            Float32GameplayAbilityExecutionInstallationSet installations,
+            IFloat32AbilityInstallationProvider installations,
             IFloat32SkillExecutionState skillState,
             IFloat32AbilityExecutionSavepointPort savepointPort,
             ActorId actorId,

@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation
 	internal sealed class Float32ActionRuntime : Float32OperationModule, IFloat32ActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>, IAbilityLifecyclePort<Float32ActionInstanceState>
 	{
 		readonly Float32AbilityExecutionFrame m_Frame;
-		readonly Float32GameplayAbilityExecutionInstallationSet m_Installations;
+		readonly IFloat32AbilityInstallationProvider m_Installations;
 		readonly IFloat32InputPort m_InputRuntime;
 		readonly Float32ActionStateStore m_Actions;
 		readonly IFloat32BlackboardPort m_Blackboard;
@@ -25,7 +25,7 @@ namespace ThirdPersonSimulation
 
 		public Float32ActionRuntime(
 			Float32GameplayAbilityExecutionAccess access,
-			Float32GameplayAbilityExecutionInstallationSet installations,
+			IFloat32AbilityInstallationProvider installations,
 			Float32AbilityExecutionFrame frame,
 			IFloat32InputPort inputRuntime,
 			Float32ActionStateStore actions,

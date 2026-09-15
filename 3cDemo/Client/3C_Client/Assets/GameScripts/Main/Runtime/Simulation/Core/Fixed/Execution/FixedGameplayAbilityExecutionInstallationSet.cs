@@ -5,7 +5,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public sealed class FixedGameplayAbilityExecutionInstallationSet
+    public sealed class FixedGameplayAbilityExecutionInstallationSet : IFixedAbilityInstallationProvider
     {
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionInstallation> m_Installations;
         readonly Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionInstallation> m_ByAbility;

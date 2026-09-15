@@ -324,7 +324,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         public FixedAbilityExecutionAssembly Create(
             FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionInstallationSet installations,
+            IFixedAbilityInstallationProvider installations,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace)
         {

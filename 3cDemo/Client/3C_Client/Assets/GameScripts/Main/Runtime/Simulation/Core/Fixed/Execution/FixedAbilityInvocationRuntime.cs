@@ -28,9 +28,14 @@ namespace ThirdPersonSimulation.Fixed
     {
         FixedAbilityExecutionAssembly Create(
             FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionInstallationSet installations,
+            IFixedAbilityInstallationProvider installations,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace);
+    }
+
+    public interface IFixedAbilityInstallationProvider
+    {
+        FixedGameplayAbilityExecutionInstallation Require(CharacterSkillId abilityId);
     }
 
     internal sealed class FixedAbilityExecutionAssembly
@@ -98,7 +103,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedAbilityInvocationRuntime(
             FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionInstallationSet installations,
+            IFixedAbilityInstallationProvider installations,
             IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
             ActorId actorId,

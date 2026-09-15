@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string traceId,
             string traceContentHash,
             string actorId,
-            string programHash,
+            string runtimeContentHash,
             int tickRate,
             int traceFrameCount,
             int launcherVariantIndex)
@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (string.IsNullOrWhiteSpace(traceId) ||
                 string.IsNullOrWhiteSpace(traceContentHash) ||
                 string.IsNullOrWhiteSpace(actorId) ||
-                string.IsNullOrWhiteSpace(programHash) ||
+                string.IsNullOrWhiteSpace(runtimeContentHash) ||
                 tickRate <= 0 || traceFrameCount <= 0 ||
                 launcherVariantIndex < 0)
             {
@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TraceId = traceId;
             TraceContentHash = traceContentHash;
             ActorId = actorId;
-            ProgramHash = programHash;
+            RuntimeContentHash = runtimeContentHash;
             TickRate = tickRate;
             TraceFrameCount = traceFrameCount;
             LauncherVariantIndex = launcherVariantIndex;
@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal string TraceId { get; }
         internal string TraceContentHash { get; }
         internal string ActorId { get; }
-        internal string ProgramHash { get; }
+        internal string RuntimeContentHash { get; }
         internal int TickRate { get; }
         internal int TraceFrameCount { get; }
         internal int LauncherVariantIndex { get; }
@@ -117,7 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterFixedInputPresentationSchedule
     {
         internal const string Schema =
-            "character-fixed-input-presentation-schedule/1";
+            "character-fixed-input-presentation-schedule/2";
         readonly ScheduleDocument m_Document;
 
         CharacterFixedInputPresentationSchedule(ScheduleDocument document)
@@ -170,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 trace_id = binding.TraceId,
                 trace_content_hash = binding.TraceContentHash,
                 actor_id = binding.ActorId,
-                program_hash = binding.ProgramHash,
+                runtime_content_hash = binding.RuntimeContentHash,
                 tick_rate = binding.TickRate,
                 trace_frame_count = binding.TraceFrameCount,
                 launcher_variant_index = binding.LauncherVariantIndex,
@@ -236,7 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     binding.TraceContentHash,
                     StringComparison.Ordinal) ||
                 !string.Equals(m_Document.actor_id, binding.ActorId, StringComparison.Ordinal) ||
-                !string.Equals(m_Document.program_hash, binding.ProgramHash, StringComparison.Ordinal) ||
+                !string.Equals(m_Document.runtime_content_hash, binding.RuntimeContentHash, StringComparison.Ordinal) ||
                 m_Document.tick_rate != binding.TickRate ||
                 TraceFrameCount != binding.TraceFrameCount ||
                 m_Document.launcher_variant_index != binding.LauncherVariantIndex)
@@ -355,7 +355,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(hash, document.trace_id);
             Add(hash, document.trace_content_hash);
             Add(hash, document.actor_id);
-            Add(hash, document.program_hash);
+            Add(hash, document.runtime_content_hash);
             Add(hash, document.tick_rate);
             Add(hash, document.trace_frame_count);
             Add(hash, document.launcher_variant_index);
@@ -416,7 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string trace_id;
             public string trace_content_hash;
             public string actor_id;
-            public string program_hash;
+            public string runtime_content_hash;
             public int tick_rate;
             public int trace_frame_count;
             public int launcher_variant_index;

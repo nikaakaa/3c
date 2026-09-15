@@ -294,6 +294,12 @@
 - Fixed、Float32、Rollback 注册器和 Host 使用新 Presentation identity；Foot IK、Presentation Replication 采样元数据与 Pose 作者观察入口同步改名，采样算法和身份内容不变。
 - 未运行 Unity 或测试；本步只收口身份命名，未修改 Pose 内部状态或诊断算法。
 
+## 2026-09-15 Fixed回放调度证明退出program_hash
+
+- `CharacterFixedInputPresentationSchedule` 的绑定字段和 JSON 字段由 `program_hash` 改为 `runtime_content_hash`，schema 升级为 `character-fixed-input-presentation-schedule/2`。
+- 调度文件、回放身份和调度绑定现在使用同一 Fixed Runtime 内容 hash；旧 schema 不再解析，避免旧 Program 调度文件混入新 Runtime 回放。
+- 未运行 Unity 或测试；本步只收口回放调度格式。
+
 ## 2026-09-15 Frontend按可达节点声明Equipment能力
 
 - 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。

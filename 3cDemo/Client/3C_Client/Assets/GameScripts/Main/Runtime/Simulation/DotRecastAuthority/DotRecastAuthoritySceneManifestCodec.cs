@@ -49,6 +49,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             var abilities = new DotRecastAuthorityAbilityArtifactBinding[abilityCount];
             for (int i = 0; i < abilityCount; i++)
                 abilities[i] = ReadAbilityArtifact(payloadReader);
+            GameplayAbilityProviderBinding providerBinding = ReadProviderBinding(payloadReader);
             CharacterControlRuntimeBinding controlRuntimeBinding = ReadControlRuntimeBinding(payloadReader);
             CharacterBodyMotionBinding bodyMotionBinding = ReadBodyMotionBinding(payloadReader);
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = ReadGameplayEffectRuntimeBinding(payloadReader);
@@ -68,6 +69,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 roomId,
                 data,
                 abilities,
+                providerBinding,
                 controlRuntimeBinding,
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
@@ -99,6 +101,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteInt32(manifest.Abilities.Count);
             for (int i = 0; i < manifest.Abilities.Count; i++)
                 WriteAbilityArtifact(writer, manifest.Abilities[i]);
+            WriteProviderBinding(writer, manifest.ProviderBinding);
             WriteControlRuntimeBinding(writer, manifest.ControlRuntimeBinding);
             WriteBodyMotionBinding(writer, manifest.BodyMotionBinding);
             WriteGameplayEffectRuntimeBinding(writer, manifest.GameplayEffectRuntimeBinding);
@@ -175,6 +178,71 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 reader.ReadString(),
                 SimulationProgramRootDescriptorCodec.Read(reader),
                 (WorldCapability)reader.ReadUInt64());
+        }
+
+        static void WriteProviderBinding(CanonicalWriter writer, GameplayAbilityProviderBinding binding)
+        {
+            var kinds = new[]
+            {
+                GameplayAbilityProviderKind.Input,
+                GameplayAbilityProviderKind.GameplayEffect,
+                GameplayAbilityProviderKind.Equipment,
+                GameplayAbilityProviderKind.CharacterState
+            };
+            int count = 0;
+            for (int i = 0; i < kinds.Length; i++)
+                if (binding.TryGetEntry(kinds[i], out _))
+                    count++;
+            writer.WriteInt32(count);
+            for (int i = 0; i < kinds.Length; i++)
+            {
+                if (!binding.TryGetEntry(kinds[i], out GameplayAbilityProviderBindingEntry provider))
+                    continue;
+                writer.WriteByte((byte)provider.Kind);
+                writer.WriteString(provider.ProviderIdentity);
+                writer.WriteInt32(provider.SemanticVersion);
+                writer.WriteInt32(provider.Members.Count);
+                for (int memberIndex = 0; memberIndex < provider.Members.Count; memberIndex++)
+                {
+                    GameplayAbilityProviderMemberBinding member = provider.Members[memberIndex];
+                    writer.WriteByte((byte)member.Kind);
+                    writer.WriteString(member.ProviderIdentity);
+                    writer.WriteString(member.MemberIdentity);
+                    writer.WriteByte((byte)member.ValueKind);
+                    writer.WriteInt32(member.MemberRevision);
+                    writer.WriteString(member.RuntimeHandle);
+                }
+            }
+        }
+
+        static GameplayAbilityProviderBinding ReadProviderBinding(CanonicalReader reader)
+        {
+            int providerCount = ReadNonNegativeCount(reader, "provider", 4);
+            var providers = new List<GameplayAbilityProviderBindingEntry>(providerCount);
+            for (int i = 0; i < providerCount; i++)
+            {
+                GameplayAbilityProviderKind kind = ReadEnum<GameplayAbilityProviderKind>(reader.ReadByte(), "provider kind");
+                string providerIdentity = reader.ReadString();
+                int semanticVersion = reader.ReadInt32();
+                int memberCount = ReadNonNegativeCount(reader, "provider member", 1000000);
+                var members = new List<GameplayAbilityProviderMemberBinding>(memberCount);
+                for (int memberIndex = 0; memberIndex < memberCount; memberIndex++)
+                {
+                    members.Add(new GameplayAbilityProviderMemberBinding(
+                        ReadEnum<GameplayAbilityProviderKind>(reader.ReadByte(), "provider member kind"),
+                        reader.ReadString(),
+                        reader.ReadString(),
+                        ReadEnum<GameplayAbilityProviderValueKind>(reader.ReadByte(), "provider member value kind"),
+                        reader.ReadInt32(),
+                        reader.ReadString()));
+                }
+                providers.Add(new GameplayAbilityProviderBindingEntry(
+                    kind,
+                    providerIdentity,
+                    semanticVersion,
+                    members));
+            }
+            return new GameplayAbilityProviderBinding(providers);
         }
 
         static void WriteControlRuntimeBinding(CanonicalWriter writer, CharacterControlRuntimeBinding binding)
@@ -688,6 +756,14 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         {
             int count = reader.ReadInt32();
             if (count <= 0 || count > maximum)
+                throw new InvalidDataException($"Manifest {label} count '{count}' is invalid.");
+            return count;
+        }
+
+        static int ReadNonNegativeCount(CanonicalReader reader, string label, int maximum)
+        {
+            int count = reader.ReadInt32();
+            if (count < 0 || count > maximum)
                 throw new InvalidDataException($"Manifest {label} count '{count}' is invalid.");
             return count;
         }

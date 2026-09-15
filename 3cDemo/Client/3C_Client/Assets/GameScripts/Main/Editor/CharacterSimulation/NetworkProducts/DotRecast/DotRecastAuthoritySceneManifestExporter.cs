@@ -144,6 +144,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterBodyMotionBinding bodyMotionBinding = definition.BuildBodyMotionRuntimeBinding();
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = definition.BuildGameplayEffectRuntimeBinding();
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = definition.BuildEquipmentRuntimeBinding();
+            GameplayAbilityProviderBinding providerBinding = definition.BuildGameplayAbilityProviderBinding();
             GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilityData =
                 definition.LoadFloat32CharacterAbilities();
             var characterBindings = new SimulationActorBinding[request.Roster.Count];
@@ -272,6 +273,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.RoomId,
                 request.DataEndpoint,
                 abilityBindings,
+                providerBinding,
                 controlRuntimeBinding,
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,

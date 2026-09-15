@@ -309,6 +309,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             ServerAuthoritativeRoomId roomId,
             DotRecastAuthorityEndpointDescriptor dataEndpoint,
             IEnumerable<DotRecastAuthorityAbilityArtifactBinding> abilities,
+            GameplayAbilityProviderBinding providerBinding,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterBodyMotionBinding bodyMotionBinding,
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
@@ -327,6 +328,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 throw new ArgumentException("DotRecast Authority Scene manifest requires a RoomId.", nameof(roomId));
             RoomId = roomId;
             DataEndpoint = dataEndpoint;
+            ProviderBinding = providerBinding ?? throw new ArgumentNullException(nameof(providerBinding));
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
@@ -381,7 +383,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         }
 
         public const string Magic = "thirdperson.dotrecast-authority-scene-manifest";
-        public const int SchemaVersion = 9;
+        public const int SchemaVersion = 10;
         public const string PublishDirectoryName = "Authority";
         public const string FileName = "DotRecastAuthorityScene.manifest";
         public HostProductId HostProductId { get; }
@@ -390,6 +392,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         public ServerAuthoritativeRoomId RoomId { get; }
         public DotRecastAuthorityEndpointDescriptor DataEndpoint { get; }
         public IReadOnlyList<DotRecastAuthorityAbilityArtifactBinding> Abilities => m_Abilities;
+        public GameplayAbilityProviderBinding ProviderBinding { get; }
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }

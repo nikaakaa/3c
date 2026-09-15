@@ -107,14 +107,15 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 DotRecastAuthorityAbilityArtifactBinding expected = manifest.Abilities[i];
                 string path = DotRecastAuthorityRelativePath.ResolveUnderRoot(root, expected.RelativePath);
                 byte[] bytes = ReadRequiredArtifact(path, $"Ability '{expected.AbilityId}'");
-                data.Add(LoadAbility(expected, bytes));
+                data.Add(LoadAbility(expected, bytes, manifest.ProviderBinding));
             }
             return new GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData>(data, value => value.AbilityId);
         }
 
         static Float32GameplayAbilityExecutionData LoadAbility(
             DotRecastAuthorityAbilityArtifactBinding expected,
-            byte[] bytes)
+            byte[] bytes,
+            GameplayAbilityProviderBinding providerBinding)
         {
             StableHash bytesHash = Float32GameplayAbilityExecutionDataCodec.ComputeCanonicalBytesHash(bytes);
             if (bytes.Length != expected.ArtifactByteLength || !bytesHash.Equals(expected.ArtifactBytesHash))
@@ -135,6 +136,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                     expected.StateSchemaHash.ToString(),
                     expected.ArtifactBytesHash.ToString(),
                     expected.Root));
+            data.ProviderContract.RequireBinding(providerBinding);
             if (!data.AbilityId.Equals(expected.AbilityId) ||
                 !data.ContentHash.Equals(expected.ContentHash) ||
                 !data.StateSchemaHash.Equals(expected.StateSchemaHash) ||

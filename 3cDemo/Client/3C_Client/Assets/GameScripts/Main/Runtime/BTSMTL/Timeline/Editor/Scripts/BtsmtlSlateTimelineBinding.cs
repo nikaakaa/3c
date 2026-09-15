@@ -528,6 +528,12 @@ namespace BTSMTL.Timeline.Editor
 
         public void Apply(Action mutation, string undoName)
         {
+            if (!IsSourceCurrent())
+            {
+                Rebuild();
+                ReportIssue("Timeline 内容已被外部修改，当前字段修改未提交。");
+                return;
+            }
             m_Session.Apply(mutation, undoName);
         }
 

@@ -1149,3 +1149,8 @@
 
 - 提交 `4d85acb76`，删除旧 `CharacterAuthoringCompilationModel`、`CharacterAuthoringDiscovery`、GraphSignature 及其混合源文件；将仍被使用的 Timeline 语义记录和 Ability 黑板合同迁入独立文件。
 - Ability 黑板声明改用 `GameplayAbilityAuthoringBlackboardDeclaration` 与对应快照命名；保留 Timeline 记录内容、黑板默认值／作用域／输入绑定和语义产物结构，不新增角色级编译兼容链。
+
+## 2026-09-16 统一Ability黑板语义发射器命名
+
+- 提交 `8cb440c72`，将只由 Gameplay Ability 前端使用的 `CharacterSemanticBlackboardEmitter` 及其参数类型引用统一为 `GameplayAbilitySemanticBlackboardEmitter`。
+- 本步只清理领域命名和文件路径，保留黑板目录字段、作用域、默认值、输入绑定与事实投影发射行为。

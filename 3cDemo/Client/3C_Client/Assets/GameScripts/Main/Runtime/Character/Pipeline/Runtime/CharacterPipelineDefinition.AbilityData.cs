@@ -23,13 +23,13 @@ namespace ThirdPersonCharacter.Pipeline
         public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> LoadFloat32AbilitySet()
         {
             RequireAbilityDataCoverage(Float32AbilityData, asset => asset?.AbilityId, "Float32");
-            return LoadFloat32GameplayAbilities(Float32AbilityData);
+            return LoadFloat32AbilityExecutionDataSet(Float32AbilityData);
         }
 
         public GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> LoadFixedAbilitySet()
         {
             RequireAbilityDataCoverage(FixedAbilityData, asset => asset?.AbilityId, "Fixed");
-            return this.LoadFixedGameplayAbilities(FixedAbilityData);
+            return this.LoadFixedAbilityExecutionDataSet(FixedAbilityData);
         }
 
 #if UNITY_EDITOR

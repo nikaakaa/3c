@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline
             return new GameplayAbilityProviderBinding(providers);
         }
 
-        public Float32GameplayAbilityExecutionData LoadFloat32GameplayAbility(
+        public Float32GameplayAbilityExecutionData LoadFloat32AbilityExecutionData(
             ThirdPersonCharacter.Pipeline.Simulation.GameplayAbilityDataAsset asset)
         {
             if (!asset)
@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline
             return asset.Load(BuildGameplayAbilityProviderBinding());
         }
 
-        public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> LoadFloat32GameplayAbilities(
+        public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> LoadFloat32AbilityExecutionDataSet(
             IEnumerable<ThirdPersonCharacter.Pipeline.Simulation.GameplayAbilityDataAsset> assets)
         {
             if (assets == null)

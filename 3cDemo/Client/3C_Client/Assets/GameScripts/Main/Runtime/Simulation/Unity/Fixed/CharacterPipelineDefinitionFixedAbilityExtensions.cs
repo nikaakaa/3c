@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
     public static class CharacterPipelineDefinitionFixedAbilityExtensions
     {
-        public static FixedGameplayAbilityExecutionData LoadFixedGameplayAbility(
+        public static FixedGameplayAbilityExecutionData LoadFixedAbilityExecutionData(
             this CharacterPipelineDefinition definition,
             FixedGameplayAbilityDataAsset asset)
         {
@@ -19,7 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return asset.Load(definition.BuildGameplayAbilityProviderBinding());
         }
 
-        public static GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> LoadFixedGameplayAbilities(
+        public static GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> LoadFixedAbilityExecutionDataSet(
             this CharacterPipelineDefinition definition,
             IEnumerable<FixedGameplayAbilityDataAsset> assets)
         {

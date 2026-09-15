@@ -188,7 +188,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 GameplayAbilityDataAsset asset = definition.Float32AbilityData[i]
                     ? definition.Float32AbilityData[i]
                     : throw new InvalidOperationException("Character Definition contains a missing Float32 Ability Data asset.");
-                Float32GameplayAbilityExecutionData data = definition.LoadFloat32GameplayAbility(asset);
+                Float32GameplayAbilityExecutionData data = definition.LoadFloat32AbilityExecutionData(asset);
                 byte[] bytes = asset.CopyCanonicalArtifact();
                 string assetPath = AssetDatabase.GetAssetPath(asset);
                 string abilityGuid = AssetDatabase.AssetPathToGUID(assetPath);

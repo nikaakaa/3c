@@ -101,14 +101,6 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentState = equipmentState;
         }
 
-        internal FixedAbilityRuntimeState RequireAbility(CharacterSkillId abilityId)
-        {
-            for (int i = 0; i < m_Abilities.Count; i++)
-                if (m_Abilities[i].AbilityIdentity.AbilityId == abilityId)
-                    return m_Abilities[i];
-            throw new InvalidOperationException($"Character runtime state Ability '{abilityId}' is missing.");
-        }
-
         public SimulationNumericProfile NumericProfile { get; }
         public GameplayContentHash GameplayContentHash { get; }
         public ulong LastCompletedTick { get; }

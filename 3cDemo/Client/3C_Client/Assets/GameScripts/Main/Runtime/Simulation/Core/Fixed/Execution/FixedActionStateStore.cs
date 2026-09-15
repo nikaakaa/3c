@@ -305,7 +305,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool IsContextActive(string contextId)
         {
-            foreach (FixedActionInstanceState action in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState action in m_Frame.ActionState.GetActionInstances())
             {
                 if (action.IsActive && string.Equals(action.ContextId, contextId ?? string.Empty, StringComparison.Ordinal))
                     return true;
@@ -320,7 +320,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool IsAbilityActive(CharacterSkillId abilityId)
         {
-            foreach (FixedActionInstanceState action in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState action in m_Frame.ActionState.GetActionInstances())
             {
                 if (action.IsActive && action.SkillId == abilityId)
                     return true;
@@ -340,7 +340,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             ulong result = 0;
             ulong resultTick = 0;
-            foreach (FixedActionInstanceState action in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState action in m_Frame.ActionState.GetActionInstances())
             {
                 if (action.SkillId != abilityId || action.State != SimulationActionState.Ended)
                     continue;
@@ -359,7 +359,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             int found = -1;
             state = default;
-            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.DomainState.GetActionInstances();
+            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
             for (int i = 0; i < actions.Count; i++)
                 MatchActive(i, skillId, ref found, ref state);
             return found;
@@ -368,7 +368,7 @@ namespace ThirdPersonSimulation.Fixed
         public bool TryGetActiveAbilityInstanceId(CharacterSkillId abilityId, out ulong instanceId)
         {
             ulong found = 0;
-            foreach (FixedActionInstanceState state in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState state in m_Frame.ActionState.GetActionInstances())
             {
                 if (!state.IsActive || state.SkillId != abilityId)
                     continue;
@@ -387,7 +387,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             int found = -1;
             state = default;
-            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.DomainState.GetActionInstances();
+            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
             for (int i = 0; i < actions.Count; i++)
             {
                 FixedActionInstanceState candidate = actions[i];
@@ -404,7 +404,7 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<FixedActionInstanceState> CurrentActions(CharacterSkillId skillId)
         {
             var result = new List<FixedActionInstanceState>();
-            foreach (FixedActionInstanceState candidate in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState candidate in m_Frame.ActionState.GetActionInstances())
             {
                 if (candidate.IsValid && candidate.SkillId == skillId)
                     result.Add(candidate);
@@ -415,7 +415,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public IEnumerable<FixedActionInstanceState> EnumerateActiveActions()
         {
-            foreach (FixedActionInstanceState action in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState action in m_Frame.ActionState.GetActionInstances())
             {
                 if (action.IsActive)
                     yield return action;
@@ -466,7 +466,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             int found = -1;
             state = default;
-            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.DomainState.GetActionInstances();
+            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
             if (!string.IsNullOrEmpty(contextId))
             {
                 for (int i = 0; i < actions.Count; i++)
@@ -483,7 +483,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedActionInstanceState FindOnlyActive()
         {
             FixedActionInstanceState result = default;
-            foreach (FixedActionInstanceState current in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState current in m_Frame.ActionState.GetActionInstances())
             {
                 if (!current.IsActive)
                     continue;
@@ -549,7 +549,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool ContainsInstance(ulong instanceId)
         {
-            foreach (FixedActionInstanceState current in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState current in m_Frame.ActionState.GetActionInstances())
             {
                 if (current.InstanceId == instanceId)
                     return true;
@@ -559,7 +559,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool TryGetInstance(ulong instanceId, out FixedActionInstanceState state)
         {
-            foreach (FixedActionInstanceState current in m_Frame.DomainState.GetActionInstances())
+            foreach (FixedActionInstanceState current in m_Frame.ActionState.GetActionInstances())
             {
                 if (current.InstanceId != instanceId)
                     continue;
@@ -589,7 +589,7 @@ namespace ThirdPersonSimulation.Fixed
                 index = FindEmptyInstanceIndex(action.ActionId);
             if (index < 0)
                 throw new InvalidOperationException($"Action '{action.ActionId}' has no free instance state capacity.");
-            IReadOnlyList<FixedActionInstanceState> current = m_Frame.DomainState.GetActionInstances();
+            IReadOnlyList<FixedActionInstanceState> current = m_Frame.ActionState.GetActionInstances();
             var actions = new List<FixedActionInstanceState>(current);
             if (index < actions.Count)
             {
@@ -600,20 +600,20 @@ namespace ThirdPersonSimulation.Fixed
             }
             else
                 actions.Add(action);
-            m_Frame.DomainState.SetActionInstances(actions);
+            m_Frame.ActionState.SetActionInstances(actions);
         }
 
         void ReplaceAction(int index, FixedActionInstanceState action)
         {
-            IReadOnlyList<FixedActionInstanceState> current = m_Frame.DomainState.GetActionInstances();
+            IReadOnlyList<FixedActionInstanceState> current = m_Frame.ActionState.GetActionInstances();
             var actions = new List<FixedActionInstanceState>(current);
             actions[index] = action;
-            m_Frame.DomainState.SetActionInstances(actions);
+            m_Frame.ActionState.SetActionInstances(actions);
         }
 
         public bool HasPendingRequest(string actionId)
         {
-            foreach (SimulationActionActivationRequestState request in m_Frame.DomainState.GetActionActivationRequests())
+            foreach (SimulationActionActivationRequestState request in m_Frame.ActionState.GetActionActivationRequests())
                 if (request.IsValid && string.Equals(request.ActionId, actionId, StringComparison.Ordinal))
                     return true;
             return false;
@@ -621,7 +621,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public void StageRequest(SimulationActionActivationRequestState state)
         {
-            IReadOnlyList<SimulationActionActivationRequestState> current = m_Frame.DomainState.GetActionActivationRequests();
+            IReadOnlyList<SimulationActionActivationRequestState> current = m_Frame.ActionState.GetActionActivationRequests();
             int count = 0;
             for (int i = 0; i < current.Count; i++)
                 if (string.Equals(current[i].ActionId, state.ActionId, StringComparison.Ordinal))
@@ -632,7 +632,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < current.Count; i++)
                 requests.Add(current[i]);
             requests.Add(state);
-            m_Frame.DomainState.SetActionActivationRequests(requests);
+            m_Frame.ActionState.SetActionActivationRequests(requests);
         }
 
         public int FindPendingSkill(
@@ -641,7 +641,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             int found = -1;
             request = default;
-            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.DomainState.GetActionActivationRequests();
+            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.ActionState.GetActionActivationRequests();
             for (int i = 0; i < requests.Count; i++)
             {
                 SimulationActionActivationRequestState candidate = requests[i];
@@ -664,7 +664,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong startTick,
             ulong replacementActionInstanceId)
         {
-            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.DomainState.GetActionActivationRequests();
+            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.ActionState.GetActionActivationRequests();
             for (int i = 0; i < requests.Count; i++)
             {
                 SimulationActionActivationRequestState candidate = requests[i];
@@ -690,7 +690,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong startTick,
             ulong replacementActionInstanceId)
         {
-            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.DomainState.GetActionActivationRequests();
+            IReadOnlyList<SimulationActionActivationRequestState> requests = m_Frame.ActionState.GetActionActivationRequests();
             for (int i = 0; i < requests.Count; i++)
             {
                 SimulationActionActivationRequestState candidate = requests[i];
@@ -714,19 +714,19 @@ namespace ThirdPersonSimulation.Fixed
 
         public void ClearRequestAt(int index)
         {
-            IReadOnlyList<SimulationActionActivationRequestState> current = m_Frame.DomainState.GetActionActivationRequests();
+            IReadOnlyList<SimulationActionActivationRequestState> current = m_Frame.ActionState.GetActionActivationRequests();
             if (index < 0 || index >= current.Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
             var requests = new List<SimulationActionActivationRequestState>(current.Count - 1);
             for (int i = 0; i < current.Count; i++)
                 if (i != index)
                     requests.Add(current[i]);
-            m_Frame.DomainState.SetActionActivationRequests(requests);
+            m_Frame.ActionState.SetActionActivationRequests(requests);
         }
 
         bool TryFindInstanceIndex(ulong instanceId, out int index)
         {
-            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.DomainState.GetActionInstances();
+            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
             for (int i = 0; i < actions.Count; i++)
             {
                 if (actions[i].InstanceId == instanceId)
@@ -741,7 +741,7 @@ namespace ThirdPersonSimulation.Fixed
 
         int FindEmptyInstanceIndex(string actionId)
         {
-            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.DomainState.GetActionInstances();
+            IReadOnlyList<FixedActionInstanceState> actions = m_Frame.ActionState.GetActionInstances();
             int count = 0;
             for (int i = 0; i < actions.Count; i++)
             {
@@ -756,7 +756,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public ulong NextSequence()
         {
-            return m_Frame.DomainState.NextActionEventSequence();
+            return m_Frame.ActionState.NextActionEventSequence();
         }
 
         bool IGameplayAbilityExecutionStorage<CharacterStateValue>.IsAbilityStateSlot(int slotIndex) =>
@@ -790,7 +790,7 @@ namespace ThirdPersonSimulation.Fixed
             ref int found,
             ref FixedActionInstanceState state)
         {
-            FixedActionInstanceState candidate = m_Frame.DomainState.GetActionInstances()[index];
+            FixedActionInstanceState candidate = m_Frame.ActionState.GetActionInstances()[index];
             if (!candidate.IsActive ||
                 !string.IsNullOrEmpty(contextId) && !string.Equals(candidate.ContextId, contextId, StringComparison.Ordinal))
                 return;
@@ -806,7 +806,7 @@ namespace ThirdPersonSimulation.Fixed
             ref int found,
             ref FixedActionInstanceState state)
         {
-            FixedActionInstanceState candidate = m_Frame.DomainState.GetActionInstances()[index];
+            FixedActionInstanceState candidate = m_Frame.ActionState.GetActionInstances()[index];
             if (!candidate.IsActive || candidate.SkillId != skillId)
                 return;
             if (found >= 0)

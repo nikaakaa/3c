@@ -278,6 +278,7 @@ namespace ThirdPersonSimulation
             CharacterControlRuntimeBinding binding,
             Float32CharacterRuntimeStateTransaction roleState,
             IFloat32InputRequestStatePort inputRequests,
+            IFloat32ActionRuntimeStatePort actionState,
             ActorId actorId,
             SimulationTick tick,
             int tickRate,
@@ -294,6 +295,7 @@ namespace ThirdPersonSimulation
             m_Binding = binding ?? throw new ArgumentNullException(nameof(binding));
             roleState = roleState ?? throw new ArgumentNullException(nameof(roleState));
             inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
+            actionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             if (!actorId.IsValid || !tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Float32 Character Control runtime identity is incomplete.");
             m_Control = controlModules.Require(binding.ModuleId);
@@ -308,10 +310,10 @@ namespace ThirdPersonSimulation
                 body,
                 requestId => HasInputRequest(inputRequests, requestId),
                 parameter => Float32Scalar.FromDouble(binding.Parameters.ReadNumeric(parameter)),
-                skill => IsAbilityActive(roleState, skill),
-                skill => TryGetActiveAbilityInstanceId(roleState, skill),
-                skill => IsAbilityCompleted(roleState, skill),
-                skill => CompletedAbilityInstanceId(roleState, skill),
+                skill => IsAbilityActive(actionState, skill),
+                skill => TryGetActiveAbilityInstanceId(actionState, skill),
+                skill => IsAbilityCompleted(actionState, skill),
+                skill => CompletedAbilityInstanceId(actionState, skill),
                 isActionWindowActive,
                 tryReadEquipmentActionContext);
             m_Output = new Float32CharacterControlOutputPort(
@@ -331,7 +333,7 @@ namespace ThirdPersonSimulation
             m_Control.Tick(in context, m_Read, new Float32CharacterControlStatePort(m_State, m_Schema), m_Output);
         }
 
-        static bool IsAbilityActive(Float32CharacterRuntimeStateTransaction state, CharacterSkillId abilityId)
+        static bool IsAbilityActive(IFloat32ActionRuntimeStatePort state, CharacterSkillId abilityId)
         {
             IReadOnlyList<Float32ActionInstanceState> actions = state.GetActionInstances();
             for (int i = 0; i < actions.Count; i++)
@@ -346,11 +348,11 @@ namespace ThirdPersonSimulation
             return request.IsValid && !request.Consumed && request.ExpireTick >= state.Tick.Value;
         }
 
-        static bool IsAbilityCompleted(Float32CharacterRuntimeStateTransaction state, CharacterSkillId abilityId) =>
+        static bool IsAbilityCompleted(IFloat32ActionRuntimeStatePort state, CharacterSkillId abilityId) =>
             CompletedAbilityInstanceId(state, abilityId) != 0;
 
         static (bool Found, ulong InstanceId) TryGetActiveAbilityInstanceId(
-            Float32CharacterRuntimeStateTransaction state,
+            IFloat32ActionRuntimeStatePort state,
             CharacterSkillId abilityId)
         {
             ulong found = 0;
@@ -367,7 +369,7 @@ namespace ThirdPersonSimulation
             return (found != 0, found);
         }
 
-        static ulong CompletedAbilityInstanceId(Float32CharacterRuntimeStateTransaction state, CharacterSkillId abilityId)
+        static ulong CompletedAbilityInstanceId(IFloat32ActionRuntimeStatePort state, CharacterSkillId abilityId)
         {
             ulong result = 0;
             ulong tick = 0;

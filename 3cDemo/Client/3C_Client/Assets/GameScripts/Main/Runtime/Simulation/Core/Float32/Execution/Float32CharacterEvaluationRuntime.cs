@@ -67,6 +67,7 @@ namespace ThirdPersonSimulation
                         bodyFacts,
                         workspace,
                         roleState,
+                        roleState,
                         new Float32CharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
@@ -82,6 +83,7 @@ namespace ThirdPersonSimulation
                     var control = new Float32CharacterControlRuntime(
                         characterRuntime.ControlModules,
                         actor.ControlRuntimeBinding,
+                        roleState,
                         roleState,
                         roleState,
                         actor.ActorId,

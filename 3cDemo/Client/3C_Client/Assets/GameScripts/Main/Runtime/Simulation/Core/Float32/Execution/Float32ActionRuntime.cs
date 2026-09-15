@@ -560,7 +560,7 @@ namespace ThirdPersonSimulation
 		ulong IAbilityLifecyclePort<Float32ActionInstanceState>.Tick => m_Frame.Tick.Value;
 
 		IEnumerable<Float32ActionInstanceState> IAbilityLifecyclePort<Float32ActionInstanceState>.ActionStates =>
-			m_Frame.DomainState.GetActionInstances();
+			m_Frame.ActionState.GetActionInstances();
 
 		bool IAbilityLifecyclePort<Float32ActionInstanceState>.TryFindActive(
 			string contextId,

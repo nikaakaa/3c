@@ -52,20 +52,24 @@ namespace ThirdPersonSimulation.Fixed
         void SetInputRequest(string requestId, SimulationInputRequestState state);
     }
 
+    internal interface IFixedActionRuntimeStatePort
+    {
+        ulong NextActionEventSequence();
+        IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
+        void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
+        IReadOnlyList<FixedActionInstanceState> GetActionInstances();
+        void SetActionInstances(IReadOnlyList<FixedActionInstanceState> actions);
+    }
+
     internal interface IFixedAbilityDomainStatePort
     {
         ActorId ActorId { get; }
         SimulationTick Tick { get; }
         int TickRate { get; }
         ulong NextEventSequence();
-        ulong NextActionEventSequence();
         ulong NextHandleAllocator();
         ulong CaptureHandleAllocator();
         void RestoreHandleAllocator(ulong value);
-        IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
-        void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
-        IReadOnlyList<FixedActionInstanceState> GetActionInstances();
-        void SetActionInstances(IReadOnlyList<FixedActionInstanceState> actions);
         SimulationGameplayEffectState GetGameplayEffectState(FixedGameplayEffectExecutionScratch scratch);
         GameplayEffectStateAggregate GetGameplayEffectAggregate();
         EquipmentStateAggregate GetEquipmentState();
@@ -77,7 +81,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;

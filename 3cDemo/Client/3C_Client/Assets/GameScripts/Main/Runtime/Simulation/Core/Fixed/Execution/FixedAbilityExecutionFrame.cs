@@ -85,6 +85,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedAbilityExecutionStateTransaction transaction,
             IFixedAbilityDomainStatePort domainState,
             IFixedInputRequestStatePort inputRequests,
+            IFixedActionRuntimeStatePort actionState,
             FixedAbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -99,6 +100,7 @@ namespace ThirdPersonSimulation.Fixed
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
+            ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -125,6 +127,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedAbilityExecutionStateTransaction Transaction { get; }
         internal IFixedAbilityDomainStatePort DomainState { get; }
         internal IFixedInputRequestStatePort InputRequests { get; }
+        internal IFixedActionRuntimeStatePort ActionState { get; }
         internal FixedEventSequence EventSequence { get; }
         internal FixedFactSink Facts { get; }
         internal FixedPresentationSink Presentation { get; }

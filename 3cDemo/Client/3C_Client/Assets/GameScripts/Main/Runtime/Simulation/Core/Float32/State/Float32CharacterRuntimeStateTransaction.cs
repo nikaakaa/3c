@@ -52,20 +52,24 @@ namespace ThirdPersonSimulation
         void SetInputRequest(string requestId, SimulationInputRequestState state);
     }
 
+    internal interface IFloat32ActionRuntimeStatePort
+    {
+        ulong NextActionEventSequence();
+        IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
+        void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
+        IReadOnlyList<Float32ActionInstanceState> GetActionInstances();
+        void SetActionInstances(IReadOnlyList<Float32ActionInstanceState> actions);
+    }
+
     internal interface IFloat32AbilityDomainStatePort
     {
         ActorId ActorId { get; }
         SimulationTick Tick { get; }
         int TickRate { get; }
         ulong NextEventSequence();
-        ulong NextActionEventSequence();
         ulong NextHandleAllocator();
         ulong CaptureHandleAllocator();
         void RestoreHandleAllocator(ulong value);
-        IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
-        void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
-        IReadOnlyList<Float32ActionInstanceState> GetActionInstances();
-        void SetActionInstances(IReadOnlyList<Float32ActionInstanceState> actions);
         SimulationGameplayEffectState GetGameplayEffectState(Float32GameplayEffectExecutionScratch scratch);
         GameplayEffectStateAggregate GetGameplayEffectAggregate();
         EquipmentStateAggregate GetEquipmentState();
@@ -77,7 +81,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort, IFloat32InputRequestStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;

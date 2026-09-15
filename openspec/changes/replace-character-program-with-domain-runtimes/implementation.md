@@ -320,3 +320,9 @@
 - Character Runtime 的 NumericProfile、TickRate、OperationSetVersion 现在只能由调用方从正式 Simulation Session／Execution Target 传入；Runtime 不再读取第一个 Ability 的 TickRate，也不再要求 roster 至少安装一个 Ability 才能创建。
 - 现有 Local、Fixed、Rollback 与 Session Composition Preparation 已使用显式 tick rate；DotRecast Authority 旧 manifest 仍调用被删除的入口，作为后续按独立 Ability artifact 迁移的明确断点。
 - 未运行 Unity 或测试；Runtime 工程编译按项目规则执行，若仍出现 Unity 生成工程的旧路径错误，只记录为生成索引阻断。
+
+## 2026-09-15 Float32角色状态codec开放给Authority程序集
+
+- `Float32CharacterRuntimeStateCodec` 从程序集内部接口改为公开正式接口，保留现有 `Write`、`Read` 与 `ComputeHash` 的同一状态格式和校验规则。
+- DotRecast Authority 后续直接用当前 Float32 Runtime 的 Ability 安装集合、角色内容 hash 和领域状态读取初始状态；不再依赖旧 `CharacterSimulationState` 或整角色 Program reader。
+- 未运行 Unity 或测试；Float32 portable Runtime 编译按项目规则执行并清理 .NET Host。

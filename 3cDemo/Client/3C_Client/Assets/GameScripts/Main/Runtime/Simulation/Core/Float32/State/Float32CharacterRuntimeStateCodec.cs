@@ -5,7 +5,7 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation
 {
-    internal static class Float32CharacterRuntimeStateCodec
+    public static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
         const int Version = 2;

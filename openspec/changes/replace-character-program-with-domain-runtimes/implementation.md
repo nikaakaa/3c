@@ -761,3 +761,9 @@
 - 提交 `60a99e58d`，Float32／Fixed `AbilityExecutionInput` 不再携带角色级 `Requests` 列表；角色统一写入 `InputRequestState`，技能通过 `InputRequests` 端口查询和消费。
 - 保留数值输入和序列输入，多个 Ability 共享同一请求消费事实，未改变 Control 或技能执行顺序。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色运行状态脱离Ability安装对象
+
+- 提交 `d2a2e24a8`，Float32／Fixed `CharacterRuntimeState` 不再持有 Ability 安装集合；每个 Ability 分区只保存执行身份、局部状态、执行聚合和 MotionWarp 状态。
+- Ability 安装集合继续由运行装配创建，并只在状态 Codec 读入时解析布局、校验身份和验证分区数量；状态事务的快照、恢复和提交不再反向拥有内容安装对象。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

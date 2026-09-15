@@ -97,11 +97,10 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedGameplayEffectStatePort, IFixedEquipmentStatePort, IFixedControlRuntimeStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedEquipmentStatePort, IFixedControlRuntimeStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
-        readonly FixedGameplayEffectRuntimeCatalog m_GameplayEffectCatalog;
         readonly ActorId m_ActorId;
         readonly SimulationTick m_Tick;
         readonly int m_TickRate;
@@ -111,10 +110,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterInputRequestState m_InputRequestState;
         readonly FixedCharacterEventSequenceState m_EventSequenceState;
         readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState;
+        readonly FixedCharacterGameplayEffectRuntimeState m_GameplayEffectState;
         CharacterControlRuntimeStateTransaction m_ControlState;
-        GameplayEffectStateAggregate m_GameplayEffectAggregate;
-        SimulationGameplayEffectState m_GameplayEffectWorking;
-        FixedGameplayEffectExecutionScratch m_GameplayEffectScratch;
         EquipmentStateAggregate m_EquipmentState;
         bool m_Disposed;
 
@@ -131,7 +128,6 @@ namespace ThirdPersonSimulation.Fixed
             m_ActorId = actorId;
             m_Tick = tick;
             m_TickRate = tickRate;
-            m_GameplayEffectCatalog = gameplayEffectCatalog;
             m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>();
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {
@@ -145,7 +141,10 @@ namespace ThirdPersonSimulation.Fixed
             m_InputRequestState = new FixedCharacterInputRequestState(m_Tick, baseState.InputRequests);
             m_EventSequenceState = new FixedCharacterEventSequenceState(baseState.EventSequence);
             m_HandleAllocatorState = new FixedCharacterHandleAllocatorState(baseState.HandleAllocator);
-            m_GameplayEffectAggregate = baseState.GameplayEffectState;
+            m_GameplayEffectState = new FixedCharacterGameplayEffectRuntimeState(
+                m_TickRate,
+                gameplayEffectCatalog,
+                baseState.GameplayEffectState);
             m_EquipmentState = baseState.EquipmentState;
         }
 
@@ -204,34 +203,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedActionRuntimeStatePort ActionState => m_ActionState;
         internal IFixedEventSequenceStatePort EventSequenceState => m_EventSequenceState;
         internal IFixedHandleAllocatorStatePort HandleAllocatorState => m_HandleAllocatorState;
-
-        public SimulationGameplayEffectState GetGameplayEffectState(FixedGameplayEffectExecutionScratch scratch)
-        {
-            RequireActive();
-            if (scratch == null)
-                throw new ArgumentNullException(nameof(scratch));
-            if (m_GameplayEffectWorking != null)
-            {
-                if (!ReferenceEquals(m_GameplayEffectScratch, scratch))
-                    throw new InvalidOperationException("Gameplay Effect state is bound to another Actor workspace.");
-                return m_GameplayEffectWorking;
-            }
-            if (m_GameplayEffectCatalog == null || m_GameplayEffectAggregate == null)
-                throw new InvalidOperationException("Character does not install Gameplay Effect state.");
-            m_GameplayEffectScratch = scratch;
-            m_GameplayEffectWorking = new SimulationGameplayEffectState(
-                m_GameplayEffectCatalog,
-                m_GameplayEffectAggregate,
-                scratch);
-            return m_GameplayEffectWorking;
-        }
-
-        public GameplayEffectStateAggregate GetGameplayEffectAggregate()
-        {
-            RequireActive();
-            return m_GameplayEffectWorking?.Freeze() ?? m_GameplayEffectAggregate ??
-                throw new InvalidOperationException("Character does not install Gameplay Effect state.");
-        }
+        internal IFixedGameplayEffectStatePort GameplayEffectState => m_GameplayEffectState;
 
         public EquipmentStateAggregate GetEquipmentState()
         {
@@ -284,6 +256,7 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionState.Dispose();
             m_EventSequenceState.Dispose();
             m_HandleAllocatorState.Dispose();
+            m_GameplayEffectState.Dispose();
             m_Disposed = true;
         }
 
@@ -302,7 +275,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_ActionState.ActionEventSequence,
                 m_HandleAllocatorState.HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
-                m_GameplayEffectWorking?.Freeze() ?? m_GameplayEffectAggregate,
+                m_GameplayEffectState.Capture(),
                 m_EquipmentState);
         }
 
@@ -327,10 +300,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException("Fixed Character runtime restore removed its bound Control state.");
                 m_ControlState.Restore(state.ControlState);
             }
-            m_GameplayEffectAggregate = state.GameplayEffectState;
-            m_GameplayEffectWorking = m_GameplayEffectAggregate == null
-                ? null
-                : new SimulationGameplayEffectState(m_GameplayEffectCatalog, m_GameplayEffectAggregate, m_GameplayEffectScratch);
+            m_GameplayEffectState.Restore(state.GameplayEffectState);
             m_EquipmentState = state.EquipmentState;
         }
 

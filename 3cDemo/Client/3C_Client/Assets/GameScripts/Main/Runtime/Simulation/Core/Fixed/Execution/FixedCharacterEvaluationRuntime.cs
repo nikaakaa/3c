@@ -71,7 +71,7 @@ namespace ThirdPersonSimulation.Fixed
                         roleState.ActionState,
                         roleState.HandleAllocatorState,
                         roleState.EventSequenceState,
-                        roleState,
+                        roleState.GameplayEffectState,
                         roleState,
                         new FixedCharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
                         roleState.AcceptAbility);

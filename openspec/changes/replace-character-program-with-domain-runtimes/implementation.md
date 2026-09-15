@@ -826,3 +826,9 @@
 - 提交 `e7e2a729d`，删除 Float32／Fixed `AbilityExecutionFrame` 状态回退中的旧 `Transaction` 引用，状态重置和读取统一回到当前调用方提供的技能局部状态。
 - 执行帧不再保留角色事务名称作为隐含入口；没有改变局部状态访问策略、操作状态语义或角色外层提交责任。
 - Float32／Fixed 生成工程仍因既有 `.csproj` 索引已删除源文件而未能进入源码编译；两次构建结束均已执行 `dotnet build-server shutdown`，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 状态绑定只接收Ability执行数据
+
+- 提交 `5d5d2a166`，Float32／Fixed `CharacterRuntimeStateTransaction.BindAbility` 从完整 Ability 安装对象收窄为执行身份、布局和执行数据；临时技能状态只保存这三项技能数据与局部状态，不再反向持有安装对象。
+- 角色评估仍在装配边界持有安装对象，并在创建调用运行时前拆出三项数据传给状态事务；没有新增兼容入口、第二份状态来源或改变安装集合的所有权。
+- Float32／Fixed 生成工程仍被既有 `.csproj` 对已删除 `*AbilityControlRuntime.cs`、`CharacterStateValue.cs` 的索引阻断；本步构建后已执行 `dotnet build-server shutdown`，未运行 Unity、测试或资产生成。

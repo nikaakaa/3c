@@ -159,7 +159,7 @@ namespace ThirdPersonSimulation
         public Float32GameplayAbilityExecutionInstallation Installation { get; }
         public Float32AbilityExecutionWorkspace Workspace => m_Workspace;
         public Float32ActionRuntime Actions => m_Actions;
-        public Float32GameplayEffectOperationRuntime GameplayEffects => m_GameplayEffects;
+        public bool HasGameplayEffects => m_GameplayEffects != null;
         public IEquipmentActionContextReader Equipment => m_Equipment;
 
         public void BeginEvaluation(

@@ -160,7 +160,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedGameplayAbilityExecutionInstallation Installation { get; }
         public FixedAbilityExecutionWorkspace Workspace => m_Workspace;
         public FixedActionRuntime Actions => m_Actions;
-        public FixedGameplayEffectOperationRuntime GameplayEffects => m_GameplayEffects;
+        public bool HasGameplayEffects => m_GameplayEffects != null;
         public IEquipmentActionContextReader Equipment => m_Equipment;
 
         public void BeginEvaluation(

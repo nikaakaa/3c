@@ -122,7 +122,7 @@ namespace ThirdPersonSimulation.Fixed
                     FixedAbilityInvocationRuntime invocation = invocations[i];
                     invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
                     ApplyIngress(invocation, ingress, sourceState);
-                    if (!effectAdvanced && invocation.GameplayEffects != null)
+                    if (!effectAdvanced && invocation.HasGameplayEffects)
                     {
                         ApplyGameplayEffectIngress(invocation, ingress);
                         invocation.AdvanceGameplayEffects();

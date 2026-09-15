@@ -22,21 +22,18 @@ namespace ThirdPersonSimulation.Fixed
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             AbilityData = abilityData ?? throw new ArgumentNullException(nameof(abilityData));
-            bool requiresGameplayEffects = false;
             for (int i = 0; i < abilityData.Data.Count; i++)
             {
                 FixedGameplayAbilityExecutionData data = abilityData.Data[i];
                 if (data.NumericProfile != FixedSimulationNumericProfile.Value)
                     throw new InvalidOperationException($"Ability '{data.AbilityId}' does not target Fixed.");
-                requiresGameplayEffects |= data.Capabilities.HasGameplayCapability("GameplayEffect");
             }
-            if (requiresGameplayEffects && gameplayEffectRuntimeBinding == null)
-                throw new ArgumentException("Fixed Actor Gameplay Effect service is required by an installed Ability.", nameof(gameplayEffectRuntimeBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             AbilityInstallations = new FixedGameplayAbilityExecutionInstallationSet(
                 abilityData,
                 gameplayEffectRuntimeBinding);
+            RequiresGameplayEffects = AbilityInstallations.RequiresGameplayEffects;
             if (AbilityInstallations.RequiresEquipment && equipmentRuntimeBinding == null)
                 throw new ArgumentException("Fixed Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
             RequiresEquipment = AbilityInstallations.RequiresEquipment;
@@ -54,6 +51,7 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
+        public bool RequiresGameplayEffects { get; }
         public bool RequiresEquipment { get; }
         public GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> AbilityData { get; }
         public FixedGameplayAbilityExecutionInstallationSet AbilityInstallations { get; }

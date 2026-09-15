@@ -18,12 +18,15 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(data));
             var values = new List<FixedGameplayAbilityExecutionInstallation>();
             m_ByAbility = new Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionInstallation>();
+            bool requiresGameplayEffects = false;
             bool requiresEquipment = false;
             for (int i = 0; i < data.Data.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = data.Data[i];
+                bool abilityRequiresGameplayEffects = ability.Capabilities.HasGameplayCapability("GameplayEffect");
+                requiresGameplayEffects |= abilityRequiresGameplayEffects;
                 requiresEquipment |= ability.Capabilities.HasGameplayCapability("Equipment");
-                CharacterGameplayEffectRuntimeBinding abilityEffectBinding = ability.Capabilities.HasGameplayCapability("GameplayEffect")
+                CharacterGameplayEffectRuntimeBinding abilityEffectBinding = abilityRequiresGameplayEffects
                     ? gameplayEffectBinding ?? throw new ArgumentNullException(nameof(gameplayEffectBinding))
                     : null;
                 var installation = new FixedGameplayAbilityExecutionInstallation(ability, abilityEffectBinding);
@@ -32,10 +35,12 @@ namespace ThirdPersonSimulation.Fixed
             }
             values.Sort((left, right) => left.Data.AbilityId.CompareTo(right.Data.AbilityId));
             m_Installations = values.AsReadOnly();
+            RequiresGameplayEffects = requiresGameplayEffects;
             RequiresEquipment = requiresEquipment;
         }
 
         public IReadOnlyList<FixedGameplayAbilityExecutionInstallation> Installations => m_Installations;
+        public bool RequiresGameplayEffects { get; }
         public bool RequiresEquipment { get; }
 
         public FixedGameplayAbilityExecutionInstallation Require(CharacterSkillId abilityId) =>

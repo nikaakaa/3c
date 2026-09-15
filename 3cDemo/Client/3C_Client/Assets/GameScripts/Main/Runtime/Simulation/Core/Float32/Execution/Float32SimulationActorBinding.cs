@@ -21,21 +21,18 @@ namespace ThirdPersonSimulation
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             AbilityData = abilityData ?? throw new ArgumentNullException(nameof(abilityData));
-            bool requiresGameplayEffects = false;
             for (int i = 0; i < abilityData.Data.Count; i++)
             {
                 Float32GameplayAbilityExecutionData data = abilityData.Data[i];
                 if (data.NumericProfile != Float32SimulationNumericProfile.Value)
                     throw new InvalidOperationException($"Ability '{data.AbilityId}' does not target Float32.");
-                requiresGameplayEffects |= data.Capabilities.HasGameplayCapability("GameplayEffect");
             }
-            if (requiresGameplayEffects && gameplayEffectRuntimeBinding == null)
-                throw new ArgumentException("Float32 Actor Gameplay Effect service is required by an installed Ability.", nameof(gameplayEffectRuntimeBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
             AbilityInstallations = new Float32GameplayAbilityExecutionInstallationSet(
                 abilityData,
                 gameplayEffectRuntimeBinding);
+            RequiresGameplayEffects = AbilityInstallations.RequiresGameplayEffects;
             if (AbilityInstallations.RequiresEquipment && equipmentRuntimeBinding == null)
                 throw new ArgumentException("Float32 Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
             RequiresEquipment = AbilityInstallations.RequiresEquipment;
@@ -53,6 +50,7 @@ namespace ThirdPersonSimulation
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
+        public bool RequiresGameplayEffects { get; }
         public bool RequiresEquipment { get; }
         public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> AbilityData { get; }
         public Float32GameplayAbilityExecutionInstallationSet AbilityInstallations { get; }

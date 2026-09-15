@@ -725,3 +725,9 @@
 - 提交 `0aa13c9c7`，删除 Float32／Fixed `AbilityExecutionFrame.Installation`；该属性只有构造赋值，没有读取方。
 - 执行帧继续按实际消费者持有 `Data`、`Layout` 与 `Services`，Invocation 内部组装仍使用安装对象，未改变技能执行行为或数据格式。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除局部状态安装死出口
+
+- 提交 `36cfdbdbd`，删除 Float32／Fixed 技能局部状态接口与运行状态上的 `Installation` 属性；这些属性没有读取方。
+- 局部状态内部仍保留安装对象，用于快照构造和执行身份校验；状态槽、MotionWarp、提交与恢复路径不变。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

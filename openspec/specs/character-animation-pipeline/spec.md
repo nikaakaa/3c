@@ -3,7 +3,9 @@
 ## Purpose
 
 定义Gameplay Timeline、Presentation Fact、state-local Pose source、有限Action playback、唯一编译Pose Plan与预分配表现帧事务之间的角色动画输出链。
+
 ## Requirements
+
 ### Requirement: Gameplay Timeline只能提交有限Action播放事实
 
 Compiler MUST把有限Action Timeline AnimationTrack降低为稳定producer binding、直接AnimationClip计划、committed sample contract与source-local Clip Weight计划。Producer binding MUST只保存Timeline/Track引用；Foot Analysis MUST从Profile Analysis Source、角色Rig与Clip Analysis Input Hash解析，Foot Placement Weight MUST通过唯一Clip Curve catalog从`presentation.foot-placement-weight`降低为`animation.foot-placement-weight`Runtime参数。SimulationTick MUST只推进Gameplay Timeline logic time并提交Select、Sample、Complete或Release command；PresentationFrame sampler MUST按committed raw sample、cycle、PlaybackMode和source-local clip weight生成Action playback frame与typed parameter page。Timeline MUST不解析Locomotion Phase、不创建Pose、transition、Bone Mask或IK plan。持续Idle、Walk、Run、Start、Stop与Turn MUST不依赖Gameplay Timeline或AnimationChannel。
@@ -81,7 +83,7 @@ Pose Constraint Runtime MUST只保存一个Solver、一个Goal Set、一个BendH
 
 Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint Module或Final Publication的可变引用，不得读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推，也不得从Animancer weight重建事实。没有interest时 MUST跳过对应大页与逐骨骼复制，但正式执行结果不变。
 
-成功Seal后，Runtime Snapshot或具体`CharacterFootIkCommittedCaptureViewLease` MAY继续服务Live、Trace与Gizmo，但 Foot采样 MUST在同步Commit调用栈内从同一lineage的已提交Owner直接取得Left／Right与公共Fact Root，并以`in`执行一行target-scoped `DiagnosticEvent` partial调用，不得消费Runtime Snapshot、Capture View、万能Committed View、Consumer／Binding或第二事实页。帧开始的可选partial Query只决定是否冻结昂贵事实；Disabled构建中Event／Query调用及参数求值都必须消失。`generated-diagnostic-sampling-framework`唯一拥有通用AOT生成、typed packet、Capability Session、Writer和Host Finalizer合同，`character-foot-ik-diagnostic-sampling`只拥有字段／Sampler／Program Definitions与Editor workflow。PoseGraph不得认识Schema、Generated Program、packet、Host或字段映射。旧Foot单体Analyzer／Publisher、Diagnosis Store与旧格式兼容路径直接删除；独立Host-only Foot诊断器只在Completed Artifact之后执行当前Plan、Operator、评分和报告，不建立第二采样状态机。
+成功Seal后，Runtime Snapshot或具体`CharacterFootIkCommittedCaptureViewLease` MAY继续服务Live、Trace与Gizmo，但 Foot采样 MUST在同步Commit调用栈内从同一lineage的已提交Owner直接取得Left／Right与公共Fact Root，并以`in`执行一行target-scoped `DiagnosticEvent` partial调用，不得消费Runtime Snapshot、Capture View、万能Committed View、Consumer／Binding或第二事实页。帧开始的可选partial Query只决定是否冻结昂贵事实；Disabled构建中Event／Query调用及参数求值都必须消失。`generated-diagnostic-sampling-framework`唯一拥有通用AOT生成、typed packet、Capability Session、Writer和Host Finalizer合同，`character-foot-ik-diagnostic-sampling`只拥有字段分类、Sampler／Program Definitions和Editor workflow。PoseGraph不得认识Schema、Generated Program、packet、Host或字段映射。旧Foot单体Analyzer／Publisher、Diagnosis Store与旧格式兼容路径直接删除；独立Host-only Foot诊断器 MAY在Capability manifest完成后读取生成Artifact并执行当前Plan、Operator、评分与报告，但不得形成动画Runtime、PoseGraph或采样Session的第二报告状态机。
 
 #### Scenario: 导出每帧调试数据
 
@@ -100,6 +102,12 @@ Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint 
 - **WHEN** Editor在当前表现帧中途打开Foot Placement或FBBIK detail interest
 - **THEN** 本帧运行Result MUST保持不变且完整诊断 MAY从下一成功帧开始
 - **AND** Runtime MUST不读取Pending页补齐半帧Snapshot
+
+#### Scenario: Host分析已封存Artifact
+
+- **WHEN** 动画Runtime已经退出本次Capture且通用Host完成Capability封存
+- **THEN** 独立Analyzer MAY读取不可变Artifact产生诊断结果
+- **AND** Analyzer MUST不回调动画Runtime、重新求值Pose或改变任何Committed页
 
 ### Requirement: 不得恢复Timeline或Preview分裂路径
 

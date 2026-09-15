@@ -557,3 +557,9 @@
 - 提交 `8e613751a`，Float32／Fixed 单个 Ability 安装点解析并持有 `RequiresGameplayEffects`、`RequiresEquipment`；安装集合只汇总安装事实，服务装配只消费安装事实。
 - 删除集合和每帧服务装配对能力字符串的重复解析；同一份 GameplayEffect binding 可由集合传入所有安装，但只有声明该能力的安装创建效果目录，额外 binding 不再被误当成能力状态。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.10、1.11、2.1、2.6 的完整领域接线仍未完成。
+
+## 2026-09-16 Ability执行级存档点边界收口
+
+- 提交 `38e168ffc` 与 `b01bbc97c`，Float32／Fixed Ability Frame、GameplayEffect、Equipment 和调用运行时改用数值后端自己的执行级 Savepoint 接口；角色状态事务只作为当前 Character 调用方的实现。
+- 删除执行文件对 `Float32／FixedCharacterRuntimeStateSavepoint` 和角色事务诊断类型的直接依赖，保留角色快照的完整回滚内容、嵌套存档点顺序和 Effect／Equipment 原子恢复行为；没有新增第二套状态格式或兼容路径。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；独立 Ability 的非角色调用方装配仍需接入正式状态与服务提供者。

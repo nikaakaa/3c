@@ -964,3 +964,8 @@
 - 提交 `a2b421e6f`，Float32／Fixed Character Runtime 接管 ActorId 到名册索引的派生查找；Character Runtime Port 删除重复索引字典和 `GetActorIndex` 出口，Ability Evaluate 通过端口持有的 Runtime 查找 Actor。
 - Character Runtime 继续沿用既有排序、重复 ActorId 校验和缺失 Actor 异常；注册对象的正式 Runtime 查找路径不变，端口只负责发布 Runtime 适配，不再拥有角色名册派生状态。
 - Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除Float32注册无消费者出口
+
+- 提交 `481b6766d`，Float32 Character Registration 删除没有消费者的 `CharacterRuntime`、`DiagnosticsTarget` 和 `IsActivated` 公开转发；注册对象内部继续持有并使用正式 Runtime、诊断目标和激活状态。
+- 不改变注册接口要求、诊断注册生命周期、激活流程、输出路由或表现运行时；静态检索确认这些公开属性没有调用方。Unity 生成工程仍受既有 `ThirdPersonSimulation.Unity.csproj` 依赖缺失阻断，未修改或提交生成配置，未运行 Unity、测试或资产生成。

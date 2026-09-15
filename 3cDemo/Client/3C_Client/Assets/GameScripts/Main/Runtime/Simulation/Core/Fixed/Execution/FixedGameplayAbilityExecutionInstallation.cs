@@ -13,9 +13,6 @@ namespace ThirdPersonSimulation.Fixed
             Data = data ?? throw new ArgumentNullException(nameof(data));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
-            bool requiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
-            if (requiresGameplayEffects != (Services.GameplayEffectCatalog != null))
-                throw new InvalidOperationException("Fixed Ability execution context Gameplay Effect binding does not match its capability.");
         }
 
         public FixedGameplayAbilityExecutionData Data { get; }

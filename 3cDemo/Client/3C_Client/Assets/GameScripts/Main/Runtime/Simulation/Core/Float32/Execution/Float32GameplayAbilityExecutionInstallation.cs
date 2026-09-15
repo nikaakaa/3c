@@ -12,9 +12,6 @@ namespace ThirdPersonSimulation
             Data = data ?? throw new ArgumentNullException(nameof(data));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
-            bool requiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
-            if (requiresGameplayEffects != (Services.GameplayEffectCatalog != null))
-                throw new InvalidOperationException("Float32 Ability execution context Gameplay Effect binding does not match its capability.");
         }
 
         public Float32GameplayAbilityExecutionData Data { get; }

@@ -104,7 +104,7 @@ namespace ThirdPersonSimulation.Fixed
             string executionIdentity = reader.ReadString();
             string contentHash = reader.ReadString();
             string stateSchemaHash = reader.ReadString();
-            ProgramCapabilityManifest capabilities = ReadCapabilities(reader);
+            GameplayAbilityCapabilityManifest capabilities = ReadCapabilities(reader);
             SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             string abilityId = reader.ReadString();
             byte[] payload = reader.ReadBytes();
@@ -196,7 +196,7 @@ namespace ThirdPersonSimulation.Fixed
             string executionIdentity = reader.ReadString();
             StableHash contentHash = new StableHash(reader.ReadString());
             StableHash stateSchemaHash = new StableHash(reader.ReadString());
-            ProgramCapabilityManifest capabilities = ReadCapabilities(reader);
+            GameplayAbilityCapabilityManifest capabilities = ReadCapabilities(reader);
             SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             CharacterSkillId abilityId = new CharacterSkillId(reader.ReadString());
             ProgramConstant[] constants = ReadTable(reader, ReadConstant);
@@ -283,25 +283,25 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException("Fixed Gameplay Ability artifact metadata is invalid.");
         }
 
-        static void WriteCapabilities(CanonicalWriter writer, ProgramCapabilityManifest capabilities)
+        static void WriteCapabilities(CanonicalWriter writer, GameplayAbilityCapabilityManifest capabilities)
         {
             writer.WriteInt32(capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(capabilities.GameplayCapabilities[i]);
         }
 
-        static ProgramCapabilityManifest ReadCapabilities(CanonicalReader reader)
+        static GameplayAbilityCapabilityManifest ReadCapabilities(CanonicalReader reader)
         {
             int count = ReadCount(reader);
             var values = new string[count];
             for (int i = 0; i < count; i++)
                 values[i] = reader.ReadString();
-            return new ProgramCapabilityManifest(values);
+            return new GameplayAbilityCapabilityManifest(values);
         }
 
         static bool CapabilitiesEqual(
-            ProgramCapabilityManifest left,
-            ProgramCapabilityManifest right)
+            GameplayAbilityCapabilityManifest left,
+            GameplayAbilityCapabilityManifest right)
         {
             if (left.GameplayCapabilities.Count != right.GameplayCapabilities.Count)
                 return false;

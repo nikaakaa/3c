@@ -77,7 +77,7 @@ namespace ThirdPersonSimulation
             TickRate = tickRate;
             SourceRevision = sourceRevision;
             SemanticHash = semanticHash;
-            var capabilities = new ProgramCapabilityManifest(gameplayCapabilities);
+            var capabilities = new GameplayAbilityCapabilityManifest(gameplayCapabilities);
             m_GameplayCapabilities = new List<string>(capabilities.GameplayCapabilities).AsReadOnly();
             if (!root.IsValid || !root.IsAbility)
                 throw new ArgumentException("Semantic IR artifact requires an Ability root descriptor.", nameof(root));
@@ -393,7 +393,7 @@ namespace ThirdPersonSimulation
                 operationSetVersion,
                 tickRate,
                 sourceRevision,
-                new ProgramCapabilityManifest(gameplayCapabilities),
+                new GameplayAbilityCapabilityManifest(gameplayCapabilities),
                 root);
         }
 

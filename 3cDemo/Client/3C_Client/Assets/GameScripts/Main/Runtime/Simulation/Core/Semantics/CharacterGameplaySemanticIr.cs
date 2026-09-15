@@ -275,7 +275,7 @@ namespace ThirdPersonSimulation
             OperationSetVersion operationSetVersion,
             int tickRate,
             ProgramRevision sourceRevision,
-            ProgramCapabilityManifest capabilities,
+            GameplayAbilityCapabilityManifest capabilities,
             SimulationProgramRootDescriptor root)
         {
             if (!programId.IsValid || !operationSetVersion.IsValid || tickRate <= 0 || string.IsNullOrEmpty(sourceRevision.Value))
@@ -296,7 +296,7 @@ namespace ThirdPersonSimulation
         public OperationSetVersion OperationSetVersion { get; }
         public int TickRate { get; }
         public ProgramRevision SourceRevision { get; }
-        public ProgramCapabilityManifest Capabilities { get; }
+        public GameplayAbilityCapabilityManifest Capabilities { get; }
         public SimulationProgramRootDescriptor Root { get; }
     }
 

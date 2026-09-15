@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
-            ProgramCapabilityManifest capabilities,
+            GameplayAbilityCapabilityManifest capabilities,
             SimulationProgramRootDescriptor root,
             string executionIdentity,
             StableHash stateSchemaHash,
@@ -92,7 +92,7 @@ namespace ThirdPersonSimulation.Fixed
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
         public SimulationNumericProfile NumericProfile { get; }
-        public ProgramCapabilityManifest Capabilities { get; }
+        public GameplayAbilityCapabilityManifest Capabilities { get; }
         public SimulationProgramRootDescriptor Root { get; }
         public string ExecutionIdentity { get; }
         public StableHash StateSchemaHash { get; }
@@ -125,7 +125,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
-            ProgramCapabilityManifest capabilities,
+            GameplayAbilityCapabilityManifest capabilities,
             SimulationProgramRootDescriptor root,
             string executionIdentity,
             StableHash stateSchemaHash,

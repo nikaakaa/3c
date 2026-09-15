@@ -1512,11 +1512,11 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<ProgramCatalogField> Fields => m_Fields;
     }
 
-    public sealed class ProgramCapabilityManifest
+    public sealed class GameplayAbilityCapabilityManifest
     {
         readonly ReadOnlyCollection<string> m_GameplayCapabilities;
 
-        public ProgramCapabilityManifest(IEnumerable<string> gameplayCapabilities)
+        public GameplayAbilityCapabilityManifest(IEnumerable<string> gameplayCapabilities)
         {
             var values = gameplayCapabilities == null ? new List<string>() : new List<string>(gameplayCapabilities);
             values.Sort(StringComparer.Ordinal);

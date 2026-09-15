@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFixedInputScheduledReplayProof
     {
-        const string Schema = "character-fixed-input-replay-proof/4";
+        const string Schema = "character-fixed-input-replay-proof/5";
 
         internal static CharacterFixedInputScheduledReplayProofResult Publish(
             in CharacterFixedInputPresentationScheduleBinding binding,
@@ -144,8 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 trace_content_hash = binding.TraceContentHash,
                 runtime_identity = new RuntimeIdentityDocument
                 {
-                    program_id = runtimeIdentity.ProgramId,
-                    program_hash = runtimeIdentity.ProgramHash,
+                    runtime_id = runtimeIdentity.RuntimeId,
+                    runtime_content_hash = runtimeIdentity.RuntimeContentHash,
                     source_revision = runtimeIdentity.SourceRevision,
                     semantic_hash = runtimeIdentity.SemanticHash,
                     tick_rate = runtimeIdentity.TickRate,
@@ -397,8 +397,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RuntimeIdentityDocument baseline,
             RuntimeIdentityDocument candidate)
         {
-            Add(target, "program_id", baseline.program_id, candidate.program_id);
-            Add(target, "program_hash", baseline.program_hash, candidate.program_hash);
+            Add(target, "runtime_id", baseline.runtime_id, candidate.runtime_id);
+            Add(target, "runtime_content_hash", baseline.runtime_content_hash, candidate.runtime_content_hash);
             Add(target, "source_revision", baseline.source_revision, candidate.source_revision);
             Add(target, "semantic_hash", baseline.semantic_hash, candidate.semantic_hash);
             Add(target, "runtime_tick_rate", baseline.tick_rate, candidate.tick_rate);
@@ -470,8 +470,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IncrementalHash hash,
             RuntimeIdentityDocument identity)
         {
-            Append(hash, identity.program_id);
-            Append(hash, identity.program_hash);
+            Append(hash, identity.runtime_id);
+            Append(hash, identity.runtime_content_hash);
             Append(hash, identity.source_revision);
             Append(hash, identity.semantic_hash);
             Append(hash, identity.tick_rate);
@@ -533,8 +533,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static bool IsRuntimeIdentityValid(RuntimeIdentityDocument identity) =>
             identity != null &&
-            !string.IsNullOrWhiteSpace(identity.program_id) &&
-            !string.IsNullOrWhiteSpace(identity.program_hash) &&
+            !string.IsNullOrWhiteSpace(identity.runtime_id) &&
+            !string.IsNullOrWhiteSpace(identity.runtime_content_hash) &&
             !string.IsNullOrWhiteSpace(identity.source_revision) &&
             !string.IsNullOrWhiteSpace(identity.semantic_hash) &&
             identity.tick_rate > 0 &&
@@ -622,8 +622,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [Serializable]
         sealed class RuntimeIdentityDocument
         {
-            public string program_id;
-            public string program_hash;
+            public string runtime_id;
+            public string runtime_content_hash;
             public string source_revision;
             public string semantic_hash;
             public int tick_rate;

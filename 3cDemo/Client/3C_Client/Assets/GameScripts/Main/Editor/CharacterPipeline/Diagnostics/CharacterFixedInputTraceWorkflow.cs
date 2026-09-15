@@ -27,8 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal readonly struct CharacterFixedInputReplayRuntimeIdentity
     {
         internal CharacterFixedInputReplayRuntimeIdentity(
-            string programId,
-            string programHash,
+            string runtimeId,
+            string runtimeContentHash,
             string sourceRevision,
             string semanticHash,
             int tickRate,
@@ -39,8 +39,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string worldRevision,
             int launcherVariantIndex)
         {
-            if (string.IsNullOrWhiteSpace(programId) ||
-                string.IsNullOrWhiteSpace(programHash) ||
+            if (string.IsNullOrWhiteSpace(runtimeId) ||
+                string.IsNullOrWhiteSpace(runtimeContentHash) ||
                 string.IsNullOrWhiteSpace(sourceRevision) ||
                 string.IsNullOrWhiteSpace(semanticHash) ||
                 tickRate <= 0 ||
@@ -54,8 +54,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentException(
                     "Fixed input replay runtime identity is incomplete.");
             }
-            ProgramId = programId.Trim();
-            ProgramHash = programHash.Trim();
+            RuntimeId = runtimeId.Trim();
+            RuntimeContentHash = runtimeContentHash.Trim();
             SourceRevision = sourceRevision.Trim();
             SemanticHash = semanticHash.Trim();
             TickRate = tickRate;
@@ -67,8 +67,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             LauncherVariantIndex = launcherVariantIndex;
         }
 
-        internal string ProgramId { get; }
-        internal string ProgramHash { get; }
+        internal string RuntimeId { get; }
+        internal string RuntimeContentHash { get; }
         internal string SourceRevision { get; }
         internal string SemanticHash { get; }
         internal int TickRate { get; }
@@ -108,7 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         const string Schema = "character-fixed-input-trace/4";
         const string SchemaV3 = "character-fixed-input-trace/3";
-        const string ReplayProofSchema = "character-fixed-input-replay-proof/5";
+        const string ReplayProofSchema = "character-fixed-input-replay-proof/6";
         const string DiagnosticReplayProofSchema =
             "character-fixed-input-diagnostic-replay-proof/1";
         const string ReplayTickDriveMode = "one-fixed-tick-per-presentation-frame";
@@ -901,8 +901,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in CharacterFixedInputReplayRuntimeIdentity identity) =>
             new ReplayRuntimeIdentityDocument
             {
-                program_id = identity.ProgramId,
-                program_hash = identity.ProgramHash,
+                runtime_id = identity.RuntimeId,
+                runtime_content_hash = identity.RuntimeContentHash,
                 source_revision = identity.SourceRevision,
                 semantic_hash = identity.SemanticHash,
                 tick_rate = identity.TickRate,
@@ -1112,8 +1112,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ReplayRuntimeIdentityDocument baseline,
             ReplayRuntimeIdentityDocument candidate)
         {
-            AddReplayMismatch(mismatches, "program_id", baseline.program_id, candidate.program_id);
-            AddReplayMismatch(mismatches, "program_hash", baseline.program_hash, candidate.program_hash);
+            AddReplayMismatch(mismatches, "runtime_id", baseline.runtime_id, candidate.runtime_id);
+            AddReplayMismatch(mismatches, "runtime_content_hash", baseline.runtime_content_hash, candidate.runtime_content_hash);
             AddReplayMismatch(mismatches, "source_revision", baseline.source_revision, candidate.source_revision);
             AddReplayMismatch(mismatches, "semantic_hash", baseline.semantic_hash, candidate.semantic_hash);
             AddReplayMismatch(
@@ -1267,8 +1267,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static bool IsRuntimeIdentityValid(
             ReplayRuntimeIdentityDocument identity) =>
             identity != null &&
-            !string.IsNullOrWhiteSpace(identity.program_id) &&
-            !string.IsNullOrWhiteSpace(identity.program_hash) &&
+            !string.IsNullOrWhiteSpace(identity.runtime_id) &&
+            !string.IsNullOrWhiteSpace(identity.runtime_content_hash) &&
             !string.IsNullOrWhiteSpace(identity.source_revision) &&
             !string.IsNullOrWhiteSpace(identity.semantic_hash) &&
             identity.tick_rate > 0 &&
@@ -1283,8 +1283,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IncrementalHash hash,
             ReplayRuntimeIdentityDocument identity)
         {
-            AppendHash(hash, identity.program_id);
-            AppendHash(hash, identity.program_hash);
+            AppendHash(hash, identity.runtime_id);
+            AppendHash(hash, identity.runtime_content_hash);
             AppendHash(hash, identity.source_revision);
             AppendHash(hash, identity.semantic_hash);
             AppendHash(hash, identity.tick_rate.ToString(CultureInfo.InvariantCulture));
@@ -1481,21 +1481,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterFixedInputReplayRuntimeIdentity
             ResolveReplayRuntimeIdentity(FixedCharacterHost host)
         {
-            if (host == null || !host.ProgramAsset ||
+            if (host == null || host.Registration == null ||
                 !host.ProjectionAsset || !host.SessionHost ||
                 !host.SessionHost.Composition)
             {
                 throw new InvalidOperationException(
                     "Fixed input replay runtime products are unavailable.");
             }
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program =
-                host.ProgramAsset.Load();
+            FixedCharacterRuntime runtime = host.Registration.CharacterRuntime;
+            if (runtime == null || runtime.Abilities.Count == 0)
+                throw new InvalidOperationException(
+                    "Fixed input replay runtime has no registered Character Runtime abilities.");
+            FixedGameplayAbilityExecutionData ability = runtime.Abilities[0];
             return new CharacterFixedInputReplayRuntimeIdentity(
-                program.Manifest.ProgramId.Value,
-                program.ProgramHash.ToString(),
-                program.Manifest.SourceRevision.Value,
-                program.Manifest.SemanticHash.ToString(),
-                program.Manifest.TickRate,
+                $"fixed-character-runtime/{host.ActorId.Value}",
+                runtime.GameplayContentHash.ToString(),
+                ability.SourceRevision.Value,
+                ability.SemanticHash.ToString(),
+                runtime.TickRate,
                 host.ProjectionAsset.ProjectionRevision,
                 host.ProjectionAsset.SourceRevision,
                 host.ProjectionAsset.SemanticHash,
@@ -1836,7 +1839,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 document.trace_id,
                 document.content_hash,
                 document.actor_id,
-                s_ActiveReplayRuntimeIdentity.ProgramHash,
+                s_ActiveReplayRuntimeIdentity.RuntimeContentHash,
                 s_ActiveReplayRuntimeIdentity.TickRate,
                 document.frame_count,
                 s_ActiveReplayRuntimeIdentity.LauncherVariantIndex);
@@ -2032,8 +2035,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [Serializable]
         sealed class ReplayRuntimeIdentityDocument
         {
-            public string program_id;
-            public string program_hash;
+            public string runtime_id;
+            public string runtime_content_hash;
             public string source_revision;
             public string semantic_hash;
             public int tick_rate;

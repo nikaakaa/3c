@@ -270,6 +270,12 @@
 - 这条工具链的业务输入是 BlendSpace 的 Projection 计划与作者参数，不执行角色 Ability，也不需要整角色 Program identity；保留 Projection revision、BlendSpace content revision 和已有权重／相位算法校验，避免把工具职责扩成角色构建入口。
 - 未运行 Unity 或测试；当前 Editor 全量工程仍受并行窗口的 Pose 旧 `CharacterPoseProgramImage`／`CharacterPoseNative*Operation` 中间断裂影响，待对应 Pose 公共接线收口后统一编译。
 
+## 2026-09-15 Fixed回放身份改用Character Runtime
+
+- `CharacterFixedInputTraceWorkflow` 的回放身份不再检查或加载 `FixedCharacterHost.ProgramAsset`；它要求已激活的 `FixedCharacterRegistration`，从注册器的 `FixedCharacterRuntime` 读取 Runtime 内容 hash、tick rate，并从其 Ability 数据读取来源修订和语义 hash。
+- 回放证明字段由 `program_id`／`program_hash` 改为 `runtime_id`／`runtime_content_hash`，调度证明与普通证明的 schema 分别升级，比较、校验和证明 hash 使用同一 Runtime 身份。旧证明不再解析，避免把旧 Program 证明伪装成新 Runtime 结果。
+- 未运行 Unity 或测试；当前 Editor 工程仍受并行窗口的 Pose 旧链路阻断，未把该阻断伪装成回放验证结果。
+
 ## 2026-09-15 Frontend按可达节点声明Equipment能力
 
 - 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。

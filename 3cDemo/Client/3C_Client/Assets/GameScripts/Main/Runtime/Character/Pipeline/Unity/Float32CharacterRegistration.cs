@@ -111,7 +111,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public string OwnerName { get; }
         public string OwnerIdentity => $"unity-character-host/{OwnerInstanceId}";
         public ActorId ActorId { get; }
-        public Float32CharacterRuntime CharacterRuntime => m_CharacterRuntime;
         public SimulationActorBinding CharacterBinding => m_CharacterBinding;
         public Float32WorldBodyBinding WorldBodyBinding { get; }
         public WorldBodyState InitialBody { get; }
@@ -122,10 +121,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public ISimulationPresentationOutputPort PresentationOutput => m_PresentationOutput;
         public ISimulationDiagnosticsSink SimulationDiagnostics => m_Diagnostics;
         public RuntimeDiagnosticsContext DiagnosticsContext => m_DiagnosticsTarget.Context;
-        public RuntimeDiagnosticsTarget DiagnosticsTarget => m_DiagnosticsTarget;
         public string VisualRootIdentity { get; }
         public SimulationOutputRouteDescriptor OutputRoute { get; }
-        public bool IsActivated => m_Activated;
         public bool SupportsPresentationCheckpointCapture =>
             m_PresentationRuntime is ICharacterPresentationCheckpointRuntime checkpoint &&
             checkpoint.SupportsCheckpointCapture;

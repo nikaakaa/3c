@@ -74,7 +74,6 @@ namespace ThirdPersonSimulation
             writer.WriteString(data.ExecutionIdentity);
             writer.WriteString(data.ContentHash.ToString());
             writer.WriteString(data.StateSchemaHash.ToString());
-            writer.WriteString(data.ContentHash.ToString());
             WriteCapabilities(writer, data.Capabilities);
             SimulationProgramRootDescriptorCodec.Write(writer, data.Root);
             writer.WriteString(data.AbilityId.Value);

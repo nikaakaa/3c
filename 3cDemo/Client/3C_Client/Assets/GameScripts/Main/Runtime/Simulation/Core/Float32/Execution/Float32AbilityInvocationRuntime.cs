@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
+    internal interface IFloat32AbilityActionControlPort
+    {
+        bool ActivateFromControl(CharacterControlAbilityRequest request);
+        void StopFromControl(CharacterControlAbilityStopRequest request);
+    }
+
     internal sealed class Float32AbilityInvocationResult
     {
         public Float32AbilityInvocationResult(
@@ -60,7 +66,7 @@ namespace ThirdPersonSimulation
         }
 
         public Float32InputRuntime Input { get; }
-        public Float32ActionRuntime Actions { get; }
+        public IFloat32AbilityActionControlPort Actions { get; }
         public Float32GameplayEffectOperationRuntime GameplayEffects { get; }
         public Float32EquipmentRuntime Equipment { get; }
         public Float32BlackboardRuntime Blackboard { get; }

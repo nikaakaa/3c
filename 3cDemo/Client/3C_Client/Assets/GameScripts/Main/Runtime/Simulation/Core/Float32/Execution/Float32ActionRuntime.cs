@@ -5,7 +5,7 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation
 {
-	internal sealed class Float32ActionRuntime : Float32OperationModule, IFloat32ActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>, IAbilityLifecyclePort<Float32ActionInstanceState>
+	internal sealed class Float32ActionRuntime : Float32OperationModule, IFloat32AbilityActionControlPort, IFloat32ActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>, IAbilityLifecyclePort<Float32ActionInstanceState>
 	{
 		readonly Float32AbilityExecutionFrame m_Frame;
 		readonly IFloat32AbilityInstallationProvider m_Installations;

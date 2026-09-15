@@ -6,7 +6,7 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedActionRuntime : FixedOperationModule, IFixedActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, FixedActionInstanceState>, IAbilityLifecyclePort<FixedActionInstanceState>
+    internal sealed class FixedActionRuntime : FixedOperationModule, IFixedAbilityActionControlPort, IFixedActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, FixedActionInstanceState>, IAbilityLifecyclePort<FixedActionInstanceState>
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly IFixedAbilityInstallationProvider m_Installations;

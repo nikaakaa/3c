@@ -39,7 +39,7 @@ namespace ThirdPersonSimulation.Fixed
                 characterRuntime.TickRate,
                 effectCatalog);
             var invocations = new List<FixedAbilityInvocationRuntime>(actor.AbilityInstallations.Installations.Count);
-            var actionRuntimes = new Dictionary<CharacterSkillId, FixedActionRuntime>();
+            var actionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>();
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
             var results = new List<FixedAbilityInvocationResult>(invocations.Capacity);
             var facts = new List<GameplayFact>();

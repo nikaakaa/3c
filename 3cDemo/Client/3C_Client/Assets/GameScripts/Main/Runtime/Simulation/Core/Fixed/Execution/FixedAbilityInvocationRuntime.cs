@@ -4,6 +4,12 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
+    internal interface IFixedAbilityActionControlPort
+    {
+        bool ActivateFromControl(CharacterControlAbilityRequest request);
+        void StopFromControl(CharacterControlAbilityStopRequest request);
+    }
+
     internal sealed class FixedAbilityInvocationResult
     {
         public FixedAbilityInvocationResult(
@@ -61,7 +67,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public FixedInputRuntime Input { get; }
-        public FixedActionRuntime Actions { get; }
+        public IFixedAbilityActionControlPort Actions { get; }
         public FixedGameplayEffectOperationRuntime GameplayEffects { get; }
         public FixedEquipmentRuntime Equipment { get; }
         public FixedBlackboardRuntime Blackboard { get; }

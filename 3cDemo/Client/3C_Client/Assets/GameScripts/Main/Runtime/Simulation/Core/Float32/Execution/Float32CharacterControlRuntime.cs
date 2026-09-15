@@ -504,13 +504,13 @@ namespace ThirdPersonSimulation
     {
         readonly CharacterControlModuleContract m_ControlModule;
         readonly Float32CharacterControlMotionRuntime m_Motion;
-        readonly IReadOnlyDictionary<CharacterSkillId, Float32ActionRuntime> m_Actions;
+        readonly IReadOnlyDictionary<CharacterSkillId, IFloat32AbilityActionControlPort> m_Actions;
         readonly Float32CharacterControlTraceSink m_Trace;
 
         public Float32CharacterControlOutputPort(
             CharacterControlModuleContract controlModule,
             Float32CharacterControlMotionRuntime motion,
-            IReadOnlyDictionary<CharacterSkillId, Float32ActionRuntime> actions,
+            IReadOnlyDictionary<CharacterSkillId, IFloat32AbilityActionControlPort> actions,
             Float32CharacterControlTraceSink trace)
         {
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
@@ -534,9 +534,9 @@ namespace ThirdPersonSimulation
         public void Trace(SimulationExecutionSource source, string code, string detail, ulong generation) =>
             m_Trace.Add(source, code, SimulationTraceSeverity.Information, detail, generation);
 
-        Float32ActionRuntime RequireAction(CharacterSkillId abilityId)
+        IFloat32AbilityActionControlPort RequireAction(CharacterSkillId abilityId)
         {
-            if (!m_Actions.TryGetValue(abilityId, out Float32ActionRuntime action))
+            if (!m_Actions.TryGetValue(abilityId, out IFloat32AbilityActionControlPort action))
                 throw new InvalidOperationException($"Character Control requested uninstalled Ability '{abilityId}'.");
             return action;
         }
@@ -578,7 +578,7 @@ namespace ThirdPersonSimulation
             Float32AbilityBodyFacts body,
             Float32CharacterControlMotionRuntime motion,
             Float32CharacterControlTraceSink trace,
-            IReadOnlyDictionary<CharacterSkillId, Float32ActionRuntime> actions,
+            IReadOnlyDictionary<CharacterSkillId, IFloat32AbilityActionControlPort> actions,
             Func<CharacterSkillId, string, bool> isActionWindowActive,
             Func<EquipmentActionRouteId, (bool Found, EquipmentActionContext Context)> tryReadEquipmentActionContext)
         {

@@ -38,7 +38,7 @@ namespace ThirdPersonSimulation
                 characterRuntime.TickRate,
                 effectCatalog);
             var invocations = new List<Float32AbilityInvocationRuntime>(actor.AbilityInstallations.Installations.Count);
-            var actionRuntimes = new Dictionary<CharacterSkillId, Float32ActionRuntime>();
+            var actionRuntimes = new Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort>();
             var sharedEffectScratch = new Float32GameplayEffectExecutionScratch();
             var results = new List<Float32AbilityInvocationResult>(invocations.Capacity);
             var facts = new List<GameplayFact>();

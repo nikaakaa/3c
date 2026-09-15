@@ -505,13 +505,13 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly CharacterControlModuleContract m_ControlModule;
         readonly FixedCharacterControlMotionRuntime m_Motion;
-        readonly IReadOnlyDictionary<CharacterSkillId, FixedActionRuntime> m_Actions;
+        readonly IReadOnlyDictionary<CharacterSkillId, IFixedAbilityActionControlPort> m_Actions;
         readonly FixedCharacterControlTraceSink m_Trace;
 
         public FixedCharacterControlOutputPort(
             CharacterControlModuleContract controlModule,
             FixedCharacterControlMotionRuntime motion,
-            IReadOnlyDictionary<CharacterSkillId, FixedActionRuntime> actions,
+            IReadOnlyDictionary<CharacterSkillId, IFixedAbilityActionControlPort> actions,
             FixedCharacterControlTraceSink trace)
         {
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
@@ -535,9 +535,9 @@ namespace ThirdPersonSimulation.Fixed
         public void Trace(SimulationExecutionSource source, string code, string detail, ulong generation) =>
             m_Trace.Add(source, code, SimulationTraceSeverity.Information, detail, generation);
 
-        FixedActionRuntime RequireAction(CharacterSkillId abilityId)
+        IFixedAbilityActionControlPort RequireAction(CharacterSkillId abilityId)
         {
-            if (!m_Actions.TryGetValue(abilityId, out FixedActionRuntime action))
+            if (!m_Actions.TryGetValue(abilityId, out IFixedAbilityActionControlPort action))
                 throw new InvalidOperationException($"Character Control requested uninstalled Ability '{abilityId}'.");
             return action;
         }
@@ -579,7 +579,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityBodyFacts body,
             FixedCharacterControlMotionRuntime motion,
             FixedCharacterControlTraceSink trace,
-            IReadOnlyDictionary<CharacterSkillId, FixedActionRuntime> actions,
+            IReadOnlyDictionary<CharacterSkillId, IFixedAbilityActionControlPort> actions,
             Func<CharacterSkillId, string, bool> isActionWindowActive,
             Func<EquipmentActionRouteId, (bool Found, EquipmentActionContext Context)> tryReadEquipmentActionContext)
         {

@@ -630,3 +630,9 @@
 - 提交 `b338e708f`，将 Float32／Fixed `AbilityExecutionServiceFactory` 从 `CharacterEvaluationRuntime` 的嵌套实现拆为独立 Ability 文件；角色评估文件只保留角色 Step 的评估、Ingress 处理和结果汇总。
 - 工厂继续由角色调用方创建并提供安装解析服务，仍按当前安装、执行帧和 Workspace 组装既有模块；没有改变状态提交、模块顺序或增加第二套执行器。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 Ability状态值移除角色命名
+
+- 提交 `f3604a8d5`，Float32／Fixed 的 `CharacterStateValue` 统一改为 `AbilityStateValue`，同步状态槽、黑板／操作值、动作状态、执行帧、快照 Codec 与值观察合同。
+- 该值对象只表示单个 Ability 的状态和执行值；角色聚合状态仍由 `CharacterRuntimeState` 持有。此次不改变状态字节格式、布局索引、默认值或执行算法，旧类型和旧文件名已删除。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

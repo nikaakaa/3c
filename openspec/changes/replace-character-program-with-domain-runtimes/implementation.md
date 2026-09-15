@@ -905,3 +905,9 @@
 - 提交 `cc52391ed`，Float32／Fixed Character Runtime Port 删除重复发布的 `GameplayContentHash` 与 `RosterDescriptor`；这两项身份数据继续由 `Float32/FixedCharacterRuntime` 持有，端口只发布 Runtime、Roster 和 Actor 索引。
 - 单步调度 Pass 改为从 `characterRuntime.Runtime` 读取名册与内容身份，调用链不再依赖端口的领域数据转发；没有新增兼容属性或第二份身份来源。
 - Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 分离评估结果与世界请求
+
+- 提交 `7ad2c8e49`，Float32／Fixed `CharacterEvaluationResult` 删除 `CharacterWorldSolveRequest` 和未被消费的 `DiagnosticsEnabled`；评估结果只保留角色状态候选、玩法事实、表现命令和诊断记录。
+- Evaluate Pass 通过已有的 `WorldSolveBatchRequest` 产品独立传递世界请求，Finalize 从 `WorldSolveBatchResult.Request` 读取并校验同一请求；没有新增混合结果对象、复制世界请求或兼容入口。
+- Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

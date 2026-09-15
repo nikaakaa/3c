@@ -14,7 +14,6 @@
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",
         "ThirdPersonSimulation.Unity",
-        "ThirdPersonSimulation.UnityAuthority",
         "ThirdPersonSimulation.DotRecast",
         "ThirdPersonSimulation.DotRecast.Unity",
         "ThirdPersonSimulation.Fixed",

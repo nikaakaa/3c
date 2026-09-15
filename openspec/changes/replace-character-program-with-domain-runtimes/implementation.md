@@ -1119,3 +1119,8 @@
 
 - 提交 `88d467709`，为 Float32／Fixed Ability invocation 增加 typed state services bundle；执行器统一接收技能状态、savepoint、输入请求、动作、Effect、Equipment 和外层提交端口，不再以逐个角色事务参数构造调用。
 - 角色评估器仍负责提供这些正式端口并拥有外层提交；本步不改变 Ability 状态、执行顺序、Effect／Equipment 生命周期或结果提交行为。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 让Ability Frame消费统一状态服务
+
+- 提交 `f9fa33ed9`，Float32／Fixed `AbilityExecutionFrame` 改为直接消费 invocation state services bundle；技能状态、savepoint、输入请求、动作、Effect 与 Equipment 端口只在一处展开。
+- 角色事务仍只由角色评估器组装并提供；本步保留服务缺失时的正式拒绝、执行顺序和状态生命周期。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

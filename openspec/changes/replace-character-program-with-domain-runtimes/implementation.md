@@ -1064,3 +1064,8 @@
 
 - 提交 `120f02e3b`，删除 `CharacterPresentationProjectionAsset.SetCompiledProjection`；全仓没有任何调用方，旧 Projection 总编译入口已不存在，继续保留现有资产读取以及 Pose、Camera、Rig 和动作数据。
 - 本步不删除仍被运行时和作者工具消费的 Projection 数据，也不建立替代发布器；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability语义编解码文件名
+
+- 提交 `de96a82f0`，将内部类型已经统一为 `GameplayAbilitySemanticsCodec` 的源文件和 Unity `.meta` 从 `SimulationProgramSemanticsCodec` 改为 `GameplayAbilitySemanticsCodec`，删除旧文件路径。
+- Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

@@ -850,3 +850,9 @@
 - 提交 `81dd0f398`，Float32／Fixed `AbilityExecutionFrame` 不再接收完整 Ability 安装对象，直接接收执行数据、执行布局和执行服务；Invocation 只在组合边界完成安装对象拆解。
 - Frame 的局部状态、输入、输出、诊断和领域服务访问保持原有顺序与来源；没有复制安装集合，也没有保留旧构造入口。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除安装对象拓扑死出口
+
+- 提交 `f33ed358d`，删除 Float32／Fixed Ability 安装对象没有调用方的 `Topology` 属性；操作控制器直接从执行数据读取拓扑，安装对象不再重复发布同一份图结构信息。
+- 安装对象仍保留状态 Codec、服务工厂和角色评估实际使用的身份、布局及能力服务，不改变技能执行或恢复行为。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

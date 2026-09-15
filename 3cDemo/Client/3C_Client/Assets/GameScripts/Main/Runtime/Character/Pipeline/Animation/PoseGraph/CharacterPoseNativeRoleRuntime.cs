@@ -23,6 +23,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong InstanceId => m_Graph.InstanceId;
         internal ulong ResetGeneration => m_Graph.ResetGeneration;
         internal bool IsStarted => m_Graph.IsStarted;
+        internal bool HasOpenFrame => m_Graph.HasOpenFrame;
+        internal CharacterPoseNativeFrameLineage CurrentLineage => m_Graph.CurrentLineage;
+        internal CharacterPoseNativeFrameInput CurrentInput => m_Graph.CurrentInput;
+        internal CharacterPoseNativePortValue LastCommittedOutput =>
+            m_Graph.LastCommittedOutput;
 
         internal static CharacterPoseNativeGraphPrepareResult Prepare(
             ulong requestId,

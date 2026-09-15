@@ -713,3 +713,9 @@
 - 提交 `822451c48`，Float32／Fixed 角色 Control 不再读取 Ability Workspace 的可变动作窗口投影列表；Invocation 提供 `HasActionWindowProjection` 事实查询。
 - Ability 继续拥有 Workspace 和窗口匹配逻辑，角色只消费查询结果；动作窗口判定、调用顺序和输出数据不变，没有复制投影列表或新增旁路。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色通过Ability身份事实隐藏安装对象
+
+- 提交 `e53c6b093`，Float32／Fixed Invocation 对角色只发布 `AbilityId`，角色评估不再读取 `invocation.Installation.Data.AbilityId`。
+- 安装对象仍只参与 Ability Invocation 的内部执行组装；动作归属与动作窗口筛选使用同一个技能身份事实，未改变执行顺序或运行结果。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

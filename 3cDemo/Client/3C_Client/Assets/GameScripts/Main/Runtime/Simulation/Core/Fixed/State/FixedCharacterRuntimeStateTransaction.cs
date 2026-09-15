@@ -38,8 +38,6 @@ namespace ThirdPersonSimulation.Fixed
         void Reset(int slotIndex);
         GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState();
         void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
-        FixedActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation);
-        void SetTimelineRetainedActionContext(OperationHandle operation, FixedActionInstanceReference value);
         FixedMotionWarpState GetMotionWarpState(OperationHandle operation);
         void SetMotionWarpState(OperationHandle operation, FixedMotionWarpState value);
         void Abort();
@@ -167,7 +165,7 @@ namespace ThirdPersonSimulation.Fixed
             return new FixedAbilityExecutionStateTransaction(this, installation, state);
         }
 
-        internal CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
+        public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
         {
             RequireActive();
             if (schema == null)
@@ -432,7 +430,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly FixedGameplayAbilityExecutionData m_Ability;
         readonly Dictionary<int, CharacterStateValue> m_StateValues;
-        readonly Dictionary<int, FixedActionInstanceReference> m_TimelineRetainedActionContexts;
         readonly Dictionary<int, FixedMotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionState;
         bool m_Aborted;
@@ -448,7 +445,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Layout = installation.Layout;
             m_Ability = installation.Data;
             m_StateValues = new Dictionary<int, CharacterStateValue>(state.StateValues);
-            m_TimelineRetainedActionContexts = new Dictionary<int, FixedActionInstanceReference>(state.TimelineRetainedActionContexts);
             m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>(state.MotionWarpStates);
             m_AbilityExecutionState = state.AbilityExecutionState.Clone();
         }
@@ -503,27 +499,6 @@ namespace ThirdPersonSimulation.Fixed
             m_AbilityExecutionState = state ?? throw new ArgumentNullException(nameof(state));
         }
 
-        public FixedActionInstanceReference GetTimelineRetainedActionContext(OperationHandle operation)
-        {
-            RequireActive();
-            if (!m_Layout.HasTimelineRetention(operation))
-                throw new InvalidOperationException($"Ability '{m_Ability.AbilityId}' has no Timeline retention for '{operation}'.");
-            return m_TimelineRetainedActionContexts.TryGetValue(operation.Value, out FixedActionInstanceReference value)
-                ? value
-                : default;
-        }
-
-        public void SetTimelineRetainedActionContext(OperationHandle operation, FixedActionInstanceReference value)
-        {
-            RequireActive();
-            if (!m_Layout.HasTimelineRetention(operation))
-                throw new InvalidOperationException($"Ability '{m_Ability.AbilityId}' has no Timeline retention for '{operation}'.");
-            if (value.IsValid)
-                m_TimelineRetainedActionContexts[operation.Value] = value;
-            else
-                m_TimelineRetainedActionContexts.Remove(operation.Value);
-        }
-
         public FixedMotionWarpState GetMotionWarpState(OperationHandle operation)
         {
             RequireActive();
@@ -565,7 +540,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_Owner.Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,
-                m_TimelineRetainedActionContexts,
                 m_MotionWarpStates);
         }
 

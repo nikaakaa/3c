@@ -911,3 +911,8 @@
 - 提交 `7ad2c8e49`，Float32／Fixed `CharacterEvaluationResult` 删除 `CharacterWorldSolveRequest` 和未被消费的 `DiagnosticsEnabled`；评估结果只保留角色状态候选、玩法事实、表现命令和诊断记录。
 - Evaluate Pass 通过已有的 `WorldSolveBatchRequest` 产品独立传递世界请求，Finalize 从 `WorldSolveBatchResult.Request` 读取并校验同一请求；没有新增混合结果对象、复制世界请求或兼容入口。
 - Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 修正注册投影身份读取
+
+- 提交 `522d66d2b`，Float32 Character Registration 的输出路由身份改从正式 `PresentationProjection` 读取 `ProjectionRevision`，清除迁移后残留的旧 `Projection` 别名访问。
+- 只修正注册对象的身份来源，不改变 Pose／Camera 投影数据、Host 装配或表现运行时；该 Unity 注册文件不在当前生成的 Float32／Fixed .NET 编译清单中，未运行 Unity、测试或资产生成。

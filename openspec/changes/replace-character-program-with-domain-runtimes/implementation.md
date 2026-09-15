@@ -671,3 +671,9 @@
 - 提交 `cbb2b6701`，Float32／Fixed `AbilityExecutionServiceSet` 将动作、效果、装备、值和黑板依赖改为私有字段，只通过控制器需要的 `Target` 与生命周期方法工作。
 - 删除具体实现上的无消费者属性，不改变服务持有关系、Ingress 分流、生命周期顺序或技能执行结果；未新增替代出口。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除Ability调用组装无用出口
+
+- 提交 `ea4cc3cc1`，Float32／Fixed Ability Invocation 不再公开未被角色或执行流程消费的 Frame、Input、Blackboard、Motion、Locomotion、Control、Domain；ExecutionAssembly 也不再返回 Invocation 未使用的 Locomotion。
+- 角色继续直接消费 Actions、GameplayEffects、Equipment 和 Workspace，技能执行内部仍持有其它服务；本步只收窄组装边界，不改变执行顺序或结果。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

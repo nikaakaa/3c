@@ -96,6 +96,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Graph.LastCommittedOutput;
         internal CharacterPoseNativeFrameCoordinator CreateFrameCoordinator() =>
             new CharacterPoseNativeFrameCoordinator(this);
+        internal bool TryGetCommittedPose(
+            out ComposedAnimationPoseFrame frame) =>
+            m_Publication.TryGetCommittedFrame(out frame);
+        internal void ResetPublicationToDefaults() =>
+            m_Publication.ResetToDefaults();
+        internal void RestoreInitialPublication() =>
+            m_Publication.RestoreInitialAndInvalidate();
 
         internal static CharacterPoseNativeGraphPrepareResult Prepare(
             ulong requestId,

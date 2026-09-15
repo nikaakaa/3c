@@ -40,7 +40,7 @@ public sealed class DotRecastAuthoritySceneCreated : AsyncEventSystem<OnCreateSc
                 host.Diagnostics);
             var response = await scene.Call(
                 host.GateSceneAddress,
-                DotRecastAuthoritySceneRegistration.Build(host.Address, host.LoadedManifest.Manifest))
+                DotRecastAuthoritySceneRegistration.Build(host.Address, host.LoadedManifest))
                 as G2A_ServerAuthoritativeAuthoritySceneRegisterResponse ??
                 throw new InvalidOperationException("Gate returned an unexpected Authority Scene registration response.");
             control.AcceptRegistration(response);
@@ -162,8 +162,9 @@ static class DotRecastAuthoritySceneRegistration
 {
     public static A2G_ServerAuthoritativeAuthoritySceneRegisterRequest Build(
         long authorityAddress,
-        DotRecastAuthoritySceneManifest manifest)
+        LoadedDotRecastAuthoritySceneManifest loaded)
     {
+        DotRecastAuthoritySceneManifest manifest = loaded.Manifest;
         SimulationSessionSourceDescriptor source = manifest.Pipeline.Source;
         SimulationComponentIdentity model = source.Model ??
             throw new InvalidOperationException("Authority Source descriptor has no Model identity.");
@@ -171,6 +172,7 @@ static class DotRecastAuthoritySceneRegistration
             throw new InvalidOperationException("Authority Source descriptor has no Endpoint identity.");
         SimulationProtocolIdentity protocol = source.Protocol ??
             throw new InvalidOperationException("Authority Source descriptor has no Protocol identity.");
+        NetworkCheckpointLayout checkpointLayout = new NetworkCheckpointLayout(loaded.CharacterRuntime);
         if (!string.Equals(model.ComponentId, ServerAuthoritativeModelIdentity.ModelId, StringComparison.Ordinal) ||
             !string.Equals(protocol.ProtocolId, ServerAuthoritativeModelIdentity.ProtocolId, StringComparison.Ordinal))
         {
@@ -193,13 +195,13 @@ static class DotRecastAuthoritySceneRegistration
                 ModelConfigurationHash = model.ConfigurationHash.ToString(),
                 EndpointId = endpoint.ComponentId
             },
-            Program = new ServerAuthoritativeInnerProgramIdentity
+            Runtime = new ServerAuthoritativeInnerRuntimeIdentity
             {
-                ProgramId = manifest.Program.ProgramId.Value,
-                ProgramHash = manifest.Program.ProgramHash.ToString(),
-                LayoutHash = manifest.Program.LayoutHash.ToString(),
+                CharacterRuntimeHash = loaded.CharacterRuntime.GameplayContentHash.ToString(),
+                StateCodecIdentity = checkpointLayout.StateCodecIdentity,
+                CheckpointLayoutHash = checkpointLayout.LayoutIdentity.ToString(),
                 OperationSetId = CharacterGameplayOperationSet.Id,
-                OperationSetVersion = manifest.Program.OperationSetVersion.Value
+                OperationSetVersion = loaded.CharacterRuntime.OperationSetVersion.Value
             },
             AuthorityPipeline = new ServerAuthoritativeInnerPipelineIdentity
             {

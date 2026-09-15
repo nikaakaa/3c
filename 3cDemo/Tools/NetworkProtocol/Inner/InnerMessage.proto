@@ -23,11 +23,11 @@ message ServerAuthoritativeInnerProtocolIdentity
     string EndpointId = 4;
 }
 
-message ServerAuthoritativeInnerProgramIdentity
+message ServerAuthoritativeInnerRuntimeIdentity
 {
-    string ProgramId = 1;
-    string ProgramHash = 2;
-    string LayoutHash = 3;
+    string CharacterRuntimeHash = 1;
+    string StateCodecIdentity = 2;
+    string CheckpointLayoutHash = 3;
     string OperationSetId = 4;
     string OperationSetVersion = 5;
 }
@@ -100,7 +100,7 @@ message A2G_ServerAuthoritativeAuthoritySceneRegisterRequest // IAddressRequest,
     int64 AuthorityAddress = 1;
     ServerAuthoritativeInnerHostIdentity Host = 2;
     ServerAuthoritativeInnerProtocolIdentity Protocol = 3;
-    ServerAuthoritativeInnerProgramIdentity Program = 4;
+    ServerAuthoritativeInnerRuntimeIdentity Runtime = 4;
     ServerAuthoritativeInnerPipelineIdentity AuthorityPipeline = 5;
     string PredictionPipelineId = 6;
     string PredictionPipelineHash = 7;

@@ -36,11 +36,11 @@ message ServerAuthoritativeProtocolIdentityMessage
     string EndpointId = 4;
 }
 
-message ServerAuthoritativeProgramIdentityMessage
+message ServerAuthoritativeRuntimeIdentityMessage
 {
-    string ProgramId = 1;
-    string ProgramHash = 2;
-    string LayoutHash = 3;
+    string CharacterRuntimeHash = 1;
+    string StateCodecIdentity = 2;
+    string CheckpointLayoutHash = 3;
     string OperationSetId = 4;
     string OperationSetVersion = 5;
 }
@@ -133,7 +133,7 @@ message W2G_ServerAuthoritativeAuthorityRegisterRequest // IRequest,G2W_ServerAu
     ServerAuthoritativeAuthorityHostIdentityMessage Host = 2;
     int32 ProcessRole = 3;
     ServerAuthoritativeProtocolIdentityMessage Protocol = 4;
-    ServerAuthoritativeProgramIdentityMessage Program = 5;
+    ServerAuthoritativeRuntimeIdentityMessage Runtime = 5;
     ServerAuthoritativePipelineIdentityMessage AuthorityPipeline = 6;
     string PredictionPipelineId = 7;
     string PredictionPipelineHash = 8;
@@ -155,7 +155,7 @@ message C2G_ServerAuthoritativeClientJoinRequest // IRequest,G2C_ServerAuthorita
     string PlayerId = 2;
     int32 ProcessRole = 3;
     ServerAuthoritativeProtocolIdentityMessage Protocol = 4;
-    ServerAuthoritativeProgramIdentityMessage Program = 5;
+    ServerAuthoritativeRuntimeIdentityMessage Runtime = 5;
     string PredictionPipelineId = 6;
     string PredictionPipelineHash = 7;
     ServerAuthoritativeWorldIdentityMessage PredictionWorld = 8;

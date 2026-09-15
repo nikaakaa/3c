@@ -136,28 +136,28 @@ namespace Fantasy
 
     [Serializable]
     [ProtoContract]
-    public partial class ServerAuthoritativeProgramIdentityMessage : AMessage
+    public partial class ServerAuthoritativeRuntimeIdentityMessage : AMessage
     {
-        public static ServerAuthoritativeProgramIdentityMessage Create()
+        public static ServerAuthoritativeRuntimeIdentityMessage Create()
         {
-            return MessageObjectPool<ServerAuthoritativeProgramIdentityMessage>.Rent();
+            return MessageObjectPool<ServerAuthoritativeRuntimeIdentityMessage>.Rent();
         }
 
         public void Dispose()
         {
-            ProgramId = default;
-            ProgramHash = default;
-            LayoutHash = default;
+            CharacterRuntimeHash = default;
+            StateCodecIdentity = default;
+            CheckpointLayoutHash = default;
             OperationSetId = default;
             OperationSetVersion = default;
-            MessageObjectPool<ServerAuthoritativeProgramIdentityMessage>.Return(this);
+            MessageObjectPool<ServerAuthoritativeRuntimeIdentityMessage>.Return(this);
         }
         [ProtoMember(1)]
-        public string ProgramId { get; set; }
+        public string CharacterRuntimeHash { get; set; }
         [ProtoMember(2)]
-        public string ProgramHash { get; set; }
+        public string StateCodecIdentity { get; set; }
         [ProtoMember(3)]
-        public string LayoutHash { get; set; }
+        public string CheckpointLayoutHash { get; set; }
         [ProtoMember(4)]
         public string OperationSetId { get; set; }
         [ProtoMember(5)]
@@ -449,7 +449,7 @@ namespace Fantasy
             Host = default;
             ProcessRole = default;
             Protocol = default;
-            Program = default;
+            Runtime = default;
             AuthorityPipeline = default;
             PredictionPipelineId = default;
             PredictionPipelineHash = default;
@@ -469,7 +469,7 @@ namespace Fantasy
         [ProtoMember(4)]
         public ServerAuthoritativeProtocolIdentityMessage Protocol { get; set; }
         [ProtoMember(5)]
-        public ServerAuthoritativeProgramIdentityMessage Program { get; set; }
+        public ServerAuthoritativeRuntimeIdentityMessage Runtime { get; set; }
         [ProtoMember(6)]
         public ServerAuthoritativePipelineIdentityMessage AuthorityPipeline { get; set; }
         [ProtoMember(7)]
@@ -527,7 +527,7 @@ namespace Fantasy
             PlayerId = default;
             ProcessRole = default;
             Protocol = default;
-            Program = default;
+            Runtime = default;
             PredictionPipelineId = default;
             PredictionPipelineHash = default;
             PredictionWorld = default;
@@ -545,7 +545,7 @@ namespace Fantasy
         [ProtoMember(4)]
         public ServerAuthoritativeProtocolIdentityMessage Protocol { get; set; }
         [ProtoMember(5)]
-        public ServerAuthoritativeProgramIdentityMessage Program { get; set; }
+        public ServerAuthoritativeRuntimeIdentityMessage Runtime { get; set; }
         [ProtoMember(6)]
         public string PredictionPipelineId { get; set; }
         [ProtoMember(7)]

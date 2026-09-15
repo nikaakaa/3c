@@ -72,9 +72,9 @@ public static class ServerAuthoritativeRoomRuntime
         route.Endpoint = registration.Endpoint;
         route.EndpointId = registration.EndpointId;
         route.ModelConfigurationHash = registration.ModelConfigurationHash;
-        route.ProgramId = registration.ProgramId;
-        route.ProgramHash = registration.ProgramHash;
-        route.LayoutHash = registration.LayoutHash;
+        route.CharacterRuntimeHash = registration.CharacterRuntimeHash;
+        route.StateCodecIdentity = registration.StateCodecIdentity;
+        route.CheckpointLayoutHash = registration.CheckpointLayoutHash;
         route.OperationSetId = registration.OperationSetId;
         route.OperationSetVersion = registration.OperationSetVersion;
         route.AuthorityPipelineId = registration.AuthorityPipelineId;
@@ -653,7 +653,7 @@ public static class ServerAuthoritativeRoomRuntime
             string.Equals(value.PredictionPipelineId, ServerAuthoritativeRoom.ExpectedPredictionPipelineId, StringComparison.Ordinal) &&
             string.Equals(value.BackendId, ServerAuthoritativeRoom.ExpectedBackendId, StringComparison.Ordinal) &&
             string.Equals(value.OperationSetId, ServerAuthoritativeRoom.ExpectedOperationSetId, StringComparison.Ordinal) &&
-            Required(value.HostId, value.ModelConfigurationHash, value.ProgramId, value.ProgramHash, value.LayoutHash,
+            Required(value.HostId, value.ModelConfigurationHash, value.CharacterRuntimeHash, value.StateCodecIdentity, value.CheckpointLayoutHash,
                 value.OperationSetVersion, value.AuthorityPipelineHash, value.PredictionPipelineHash,
                 value.SolverId, value.SolverVersion, value.WorldId, value.MapId, value.WorldRevision,
                 value.WorldConfigurationHash, value.NavigationSurfaceArtifactHash, value.QueryProfileHash,
@@ -675,22 +675,22 @@ public static class ServerAuthoritativeRoomRuntime
         out string reason)
     {
         ServerAuthoritativeProtocolIdentityMessage? protocol = request.Protocol;
-        ServerAuthoritativeProgramIdentityMessage? program = request.Program;
+        ServerAuthoritativeRuntimeIdentityMessage? runtime = request.Runtime;
         ServerAuthoritativeWorldIdentityMessage? world = request.PredictionWorld;
-        bool valid = protocol != null && program != null && world != null &&
+        bool valid = protocol != null && runtime != null && world != null &&
             protocol.ModelProtocolVersion == ServerAuthoritativeRoom.ModelProtocolVersion &&
             string.Equals(protocol.ModelId, ServerAuthoritativeRoom.ModelId, StringComparison.Ordinal) &&
             string.Equals(protocol.ModelConfigurationHash, route.ModelConfigurationHash, StringComparison.Ordinal) &&
             string.Equals(protocol.EndpointId, route.EndpointId, StringComparison.Ordinal) &&
-            string.Equals(program.ProgramId, route.ProgramId, StringComparison.Ordinal) &&
-            string.Equals(program.ProgramHash, route.ProgramHash, StringComparison.Ordinal) &&
-            string.Equals(program.LayoutHash, route.LayoutHash, StringComparison.Ordinal) &&
-            string.Equals(program.OperationSetId, route.OperationSetId, StringComparison.Ordinal) &&
-            string.Equals(program.OperationSetVersion, route.OperationSetVersion, StringComparison.Ordinal) &&
+            string.Equals(runtime.CharacterRuntimeHash, route.CharacterRuntimeHash, StringComparison.Ordinal) &&
+            string.Equals(runtime.StateCodecIdentity, route.StateCodecIdentity, StringComparison.Ordinal) &&
+            string.Equals(runtime.CheckpointLayoutHash, route.CheckpointLayoutHash, StringComparison.Ordinal) &&
+            string.Equals(runtime.OperationSetId, route.OperationSetId, StringComparison.Ordinal) &&
+            string.Equals(runtime.OperationSetVersion, route.OperationSetVersion, StringComparison.Ordinal) &&
             string.Equals(request.PredictionPipelineId, route.PredictionPipelineId, StringComparison.Ordinal) &&
             string.Equals(request.PredictionPipelineHash, route.PredictionPipelineHash, StringComparison.Ordinal) &&
             PredictionWorldMatches(route, world);
-        reason = valid ? string.Empty : "Client Program, Pipeline, prediction Solver capability, or World contract does not match the locked Authority Host.";
+        reason = valid ? string.Empty : "Client Runtime, Pipeline, prediction Solver capability, or World contract does not match the locked Authority Host.";
         return valid;
     }
 

@@ -93,9 +93,9 @@ public sealed class ServerAuthoritativeAuthorityHostRoute : Entity
     public IServerAuthoritativeAuthorityHostEndpoint? Endpoint;
     public string EndpointId = string.Empty;
     public string ModelConfigurationHash = string.Empty;
-    public string ProgramId = string.Empty;
-    public string ProgramHash = string.Empty;
-    public string LayoutHash = string.Empty;
+    public string CharacterRuntimeHash = string.Empty;
+    public string StateCodecIdentity = string.Empty;
+    public string CheckpointLayoutHash = string.Empty;
     public string OperationSetId = string.Empty;
     public string OperationSetVersion = string.Empty;
     public string AuthorityPipelineId = string.Empty;
@@ -130,9 +130,9 @@ public sealed class ServerAuthoritativeAuthorityHostRegistration
     public uint ModelProtocolVersion;
     public string ModelId = string.Empty;
     public string ModelConfigurationHash = string.Empty;
-    public string ProgramId = string.Empty;
-    public string ProgramHash = string.Empty;
-    public string LayoutHash = string.Empty;
+    public string CharacterRuntimeHash = string.Empty;
+    public string StateCodecIdentity = string.Empty;
+    public string CheckpointLayoutHash = string.Empty;
     public string OperationSetId = string.Empty;
     public string OperationSetVersion = string.Empty;
     public string AuthorityPipelineId = string.Empty;

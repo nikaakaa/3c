@@ -44,7 +44,7 @@ public sealed class DotRecastAuthoritySceneControlTransport : IServerAuthoritati
             ThirdPersonSimulation.ServerAuthoritative.ServerAuthoritativeAuthorityHostRouteKind.InProcessAuthorityScene,
             manifest.RoomId);
         m_HeartbeatTicks = manifest.Pipeline.SourcePolicy.ControlHeartbeatTicks;
-        m_CheckpointLayout = new NetworkCheckpointLayout(loaded.Program);
+        m_CheckpointLayout = new NetworkCheckpointLayout(loaded.CharacterRuntime);
     }
 
     public ServerAuthoritativeAuthorityControlTransportStatus ControlStatus => m_Failure != null

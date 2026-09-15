@@ -83,7 +83,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 request.Host = CreateAuthorityHostIdentity(Host);
                 request.ProcessRole = (int)Process.Role;
                 request.Protocol = CreateProtocolIdentity();
-                request.Program = CreateProgramIdentity();
+                request.Runtime = CreateRuntimeIdentity();
                 request.AuthorityPipeline = CreatePipelineIdentity(Compatibility.AuthorityPipeline, Compatibility, AuthorityWorld);
                 request.PredictionPipelineId = Compatibility.PredictionPipeline.Id.Value;
                 request.PredictionPipelineHash = Compatibility.PredictionPipeline.Hash.ToString();
@@ -318,4 +318,3 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         }
     }
 }
-

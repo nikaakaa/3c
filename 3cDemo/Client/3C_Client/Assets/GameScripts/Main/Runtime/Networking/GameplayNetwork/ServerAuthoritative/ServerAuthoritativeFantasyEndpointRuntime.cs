@@ -477,11 +477,11 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             EndpointId = ServerAuthoritativeFantasyEndpointDefinition.EndpointId
         };
 
-        protected ServerAuthoritativeProgramIdentityMessage CreateProgramIdentity() => new ServerAuthoritativeProgramIdentityMessage
+        protected ServerAuthoritativeRuntimeIdentityMessage CreateRuntimeIdentity() => new ServerAuthoritativeRuntimeIdentityMessage
         {
-            ProgramId = CharacterRuntime.GameplayContentHash.ToString(),
-            ProgramHash = Compatibility.GameplayContentHash.ToString(),
-            LayoutHash = CheckpointLayout.LayoutIdentity.ToString(),
+            CharacterRuntimeHash = CharacterRuntime.GameplayContentHash.ToString(),
+            StateCodecIdentity = CheckpointLayout.StateCodecIdentity,
+            CheckpointLayoutHash = CheckpointLayout.LayoutIdentity.ToString(),
             OperationSetId = CharacterGameplayOperationSet.Id,
             OperationSetVersion = Compatibility.OperationSetVersion.Value
         };
@@ -645,7 +645,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 request.PlayerId = Process.PlayerId.Value;
                 request.ProcessRole = (int)Process.Role;
                 request.Protocol = CreateProtocolIdentity();
-                request.Program = CreateProgramIdentity();
+                request.Runtime = CreateRuntimeIdentity();
                 request.PredictionPipelineId = Compatibility.PredictionPipeline.Id.Value;
                 request.PredictionPipelineHash = Compatibility.PredictionPipeline.Hash.ToString();
                 request.PredictionWorld = CreateWorldIdentity();

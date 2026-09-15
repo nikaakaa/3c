@@ -79,28 +79,28 @@ namespace Fantasy
 
     [Serializable]
     [ProtoContract]
-    public partial class ServerAuthoritativeInnerProgramIdentity : AMessage
+    public partial class ServerAuthoritativeInnerRuntimeIdentity : AMessage
     {
-        public static ServerAuthoritativeInnerProgramIdentity Create()
+        public static ServerAuthoritativeInnerRuntimeIdentity Create()
         {
-            return MessageObjectPool<ServerAuthoritativeInnerProgramIdentity>.Rent();
+            return MessageObjectPool<ServerAuthoritativeInnerRuntimeIdentity>.Rent();
         }
 
         public void Dispose()
         {
-            ProgramId = default;
-            ProgramHash = default;
-            LayoutHash = default;
+            CharacterRuntimeHash = default;
+            StateCodecIdentity = default;
+            CheckpointLayoutHash = default;
             OperationSetId = default;
             OperationSetVersion = default;
-            MessageObjectPool<ServerAuthoritativeInnerProgramIdentity>.Return(this);
+            MessageObjectPool<ServerAuthoritativeInnerRuntimeIdentity>.Return(this);
         }
         [ProtoMember(1)]
-        public string ProgramId { get; set; }
+        public string CharacterRuntimeHash { get; set; }
         [ProtoMember(2)]
-        public string ProgramHash { get; set; }
+        public string StateCodecIdentity { get; set; }
         [ProtoMember(3)]
-        public string LayoutHash { get; set; }
+        public string CheckpointLayoutHash { get; set; }
         [ProtoMember(4)]
         public string OperationSetId { get; set; }
         [ProtoMember(5)]
@@ -328,7 +328,7 @@ namespace Fantasy
             AuthorityAddress = default;
             Host = default;
             Protocol = default;
-            Program = default;
+            Runtime = default;
             AuthorityPipeline = default;
             PredictionPipelineId = default;
             PredictionPipelineHash = default;
@@ -346,7 +346,7 @@ namespace Fantasy
         [ProtoMember(3)]
         public ServerAuthoritativeInnerProtocolIdentity Protocol { get; set; }
         [ProtoMember(4)]
-        public ServerAuthoritativeInnerProgramIdentity Program { get; set; }
+        public ServerAuthoritativeInnerRuntimeIdentity Runtime { get; set; }
         [ProtoMember(5)]
         public ServerAuthoritativeInnerPipelineIdentity AuthorityPipeline { get; set; }
         [ProtoMember(6)]

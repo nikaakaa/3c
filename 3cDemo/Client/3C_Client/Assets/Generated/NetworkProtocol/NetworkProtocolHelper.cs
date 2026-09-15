@@ -42,14 +42,14 @@ namespace Fantasy
 			return (G2W_ServerAuthoritativeAuthorityRegisterResponse)await session.Call(request);
 		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static async FTask<G2W_ServerAuthoritativeAuthorityRegisterResponse> W2G_ServerAuthoritativeAuthorityRegisterRequest(this Session session, string roomId, ServerAuthoritativeAuthorityHostIdentityMessage host, int processRole, ServerAuthoritativeProtocolIdentityMessage protocol, ServerAuthoritativeProgramIdentityMessage program, ServerAuthoritativePipelineIdentityMessage authorityPipeline, string predictionPipelineId, string predictionPipelineHash, ServerAuthoritativeDataEndpointMessage dataEndpoint, ServerAuthoritativeWorldIdentityMessage world)
+		public static async FTask<G2W_ServerAuthoritativeAuthorityRegisterResponse> W2G_ServerAuthoritativeAuthorityRegisterRequest(this Session session, string roomId, ServerAuthoritativeAuthorityHostIdentityMessage host, int processRole, ServerAuthoritativeProtocolIdentityMessage protocol, ServerAuthoritativeRuntimeIdentityMessage runtime, ServerAuthoritativePipelineIdentityMessage authorityPipeline, string predictionPipelineId, string predictionPipelineHash, ServerAuthoritativeDataEndpointMessage dataEndpoint, ServerAuthoritativeWorldIdentityMessage world)
 		{
 			using var request = Fantasy.W2G_ServerAuthoritativeAuthorityRegisterRequest.Create();
 			request.RoomId = roomId;
 			request.Host = host;
 			request.ProcessRole = processRole;
 			request.Protocol = protocol;
-			request.Program = program;
+			request.Runtime = runtime;
 			request.AuthorityPipeline = authorityPipeline;
 			request.PredictionPipelineId = predictionPipelineId;
 			request.PredictionPipelineHash = predictionPipelineHash;
@@ -63,14 +63,14 @@ namespace Fantasy
 			return (G2C_ServerAuthoritativeClientJoinResponse)await session.Call(request);
 		}
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static async FTask<G2C_ServerAuthoritativeClientJoinResponse> C2G_ServerAuthoritativeClientJoinRequest(this Session session, string roomId, string playerId, int processRole, ServerAuthoritativeProtocolIdentityMessage protocol, ServerAuthoritativeProgramIdentityMessage program, string predictionPipelineId, string predictionPipelineHash, ServerAuthoritativeWorldIdentityMessage predictionWorld)
+		public static async FTask<G2C_ServerAuthoritativeClientJoinResponse> C2G_ServerAuthoritativeClientJoinRequest(this Session session, string roomId, string playerId, int processRole, ServerAuthoritativeProtocolIdentityMessage protocol, ServerAuthoritativeRuntimeIdentityMessage runtime, string predictionPipelineId, string predictionPipelineHash, ServerAuthoritativeWorldIdentityMessage predictionWorld)
 		{
 			using var request = Fantasy.C2G_ServerAuthoritativeClientJoinRequest.Create();
 			request.RoomId = roomId;
 			request.PlayerId = playerId;
 			request.ProcessRole = processRole;
 			request.Protocol = protocol;
-			request.Program = program;
+			request.Runtime = runtime;
 			request.PredictionPipelineId = predictionPipelineId;
 			request.PredictionPipelineHash = predictionPipelineHash;
 			request.PredictionWorld = predictionWorld;

@@ -24,7 +24,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedValueInputBuffer
     {
-        public List<CharacterStateValue> Values { get; } = new List<CharacterStateValue>();
+        public List<AbilityStateValue> Values { get; } = new List<AbilityStateValue>();
 
         public void Clear()
         {
@@ -49,9 +49,9 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public int Count => m_Buffer.Values.Count;
-        public CharacterStateValue this[int index] => m_Buffer.Values[index];
+        public AbilityStateValue this[int index] => m_Buffer.Values[index];
 
-        public CharacterStateValue FindByKind(ProgramStateValueKind kind)
+        public AbilityStateValue FindByKind(ProgramStateValueKind kind)
         {
             for (int i = 0; i < m_Buffer.Values.Count; i++)
             {
@@ -129,7 +129,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Blackboard.WriteGraphCallParameter(frame.Inputs[i].StateSlot, inputs[i]);
         }
 
-		public CharacterStateValue Evaluate<TTarget>(
+		public AbilityStateValue Evaluate<TTarget>(
 			OperationControlCursor<TTarget> cursor,
 			OperationHandle handle,
 			string outputPort = "")
@@ -143,26 +143,26 @@ namespace ThirdPersonSimulation.Fixed
 			{
 				SimulationOperation operation = Access.Operation(handle);
 				using FixedValueInputLease inputs = ReadInputs(cursor, operation);
-				CharacterStateValue result;
+				AbilityStateValue result;
 				switch (operation.Code)
 				{
 					case SimulationOperationCode.ConditionResult:
-						result = CharacterStateValue.FromBoolean(inputs.Count > 0 && ToBoolean(inputs[0]));
+						result = AbilityStateValue.FromBoolean(inputs.Count > 0 && ToBoolean(inputs[0]));
 						break;
 					case SimulationOperationCode.InputBoolean:
-						result = CharacterStateValue.FromBoolean(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Boolean).Boolean);
+						result = AbilityStateValue.FromBoolean(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Boolean).Boolean);
 						break;
 					case SimulationOperationCode.InputScalar:
-						result = CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Scalar).Scalar);
+						result = AbilityStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Scalar).Scalar);
 						break;
 					case SimulationOperationCode.InputVector2:
-						result = CharacterStateValue.FromVector2(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2);
+						result = AbilityStateValue.FromVector2(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2);
 						break;
 					case SimulationOperationCode.InputVector2Magnitude:
-						result = CharacterStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2.Magnitude);
+						result = AbilityStateValue.FromScalar(m_Input.ReadValue(operation.Text0, SimulationInputValueKind.Vector2).Vector2.Magnitude);
 						break;
 					case SimulationOperationCode.InputRequest:
-						result = CharacterStateValue.FromBoolean(m_Input.HasRequest(operation.Text0, out _));
+						result = AbilityStateValue.FromBoolean(m_Input.HasRequest(operation.Text0, out _));
 						break;
 					case SimulationOperationCode.BlackboardGet:
 						result = ReadBlackboard(cursor, operation);
@@ -171,22 +171,22 @@ namespace ThirdPersonSimulation.Fixed
 						result = ReadSubGraphOutput(cursor, operation, outputPort);
 						break;
 					case SimulationOperationCode.ActionContextActive:
-						result = CharacterStateValue.FromBoolean(
+						result = AbilityStateValue.FromBoolean(
 							string.IsNullOrEmpty(operation.Text0)
 								? m_Actions.IsCurrentExecutionContextActive()
 								: m_Actions.IsContextActive(operation.Text0));
 						break;
 					case SimulationOperationCode.ActionWindowActive:
-						result = CharacterStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));
+						result = AbilityStateValue.FromBoolean(m_Blackboard.IsActionWindowActive(operation));
 						break;
 					case SimulationOperationCode.CanActivateAction:
-						result = CharacterStateValue.FromBoolean(m_ActionAdmission.PreviewActivation(cursor, operation).Allowed);
+						result = AbilityStateValue.FromBoolean(m_ActionAdmission.PreviewActivation(cursor, operation).Allowed);
 						break;
                     case SimulationOperationCode.GameplayEffectHasTag:
-                        result = CharacterStateValue.FromBoolean(RequireGameplayTags().HasTag(operation.Text0));
+                        result = AbilityStateValue.FromBoolean(RequireGameplayTags().HasTag(operation.Text0));
                         break;
                     case SimulationOperationCode.GameplayEffectMatchTags:
-                        result = CharacterStateValue.FromBoolean(
+                        result = AbilityStateValue.FromBoolean(
                             RequireGameplayTags().Matches(Access.Services.RequireTagQuery(operation.Handle)));
                         break;
                     case SimulationOperationCode.GameplayAttributeRead:
@@ -204,33 +204,33 @@ namespace ThirdPersonSimulation.Fixed
                         result = RequireEquipment().Evaluate(operation, outputPort, inputs);
                         break;
 					case SimulationOperationCode.StateRootCompleted:
-						result = CharacterStateValue.FromBoolean(cursor.CurrentStateRootCompleted());
+						result = AbilityStateValue.FromBoolean(cursor.CurrentStateRootCompleted());
 						break;
 					case SimulationOperationCode.StateExitCause:
-						result = CharacterStateValue.FromBoolean(operation.Integer0 == cursor.CurrentStateExitCause());
+						result = AbilityStateValue.FromBoolean(operation.Integer0 == cursor.CurrentStateExitCause());
 						break;
 					case SimulationOperationCode.MoveFacingAngle:
-						result = CharacterStateValue.FromScalar(ReadMoveFacingAngle(inputs));
+						result = AbilityStateValue.FromScalar(ReadMoveFacingAngle(inputs));
 						break;
 					case SimulationOperationCode.CharacterStateRead:
 						result = ReadCharacterState(operation.Text0);
 						break;
 					case SimulationOperationCode.Compare:
-						result = CharacterStateValue.FromBoolean(Compare(operation.Integer0, inputs));
+						result = AbilityStateValue.FromBoolean(Compare(operation.Integer0, inputs));
 						break;
 					case SimulationOperationCode.And:
-						result = CharacterStateValue.FromBoolean(inputs.Count >= 2 && ToBoolean(inputs[0]) && ToBoolean(inputs[1]));
+						result = AbilityStateValue.FromBoolean(inputs.Count >= 2 && ToBoolean(inputs[0]) && ToBoolean(inputs[1]));
 						break;
 					case SimulationOperationCode.Or:
-						result = CharacterStateValue.FromBoolean(inputs.Count >= 2 && (ToBoolean(inputs[0]) || ToBoolean(inputs[1])));
+						result = AbilityStateValue.FromBoolean(inputs.Count >= 2 && (ToBoolean(inputs[0]) || ToBoolean(inputs[1])));
 						break;
 					case SimulationOperationCode.Not:
-						result = CharacterStateValue.FromBoolean(inputs.Count == 0 || !ToBoolean(inputs[0]));
+						result = AbilityStateValue.FromBoolean(inputs.Count == 0 || !ToBoolean(inputs[0]));
 						break;
 					case SimulationOperationCode.Constant:
 						result = operation.ConstantReferences.Count > 0
 							? ValueFromConstant(m_Ability.Constants[operation.ConstantReferences[0]])
-							: CharacterStateValue.FromBoolean(false);
+							: AbilityStateValue.FromBoolean(false);
 						break;
 					default:
 						throw new InvalidOperationException($"Operation '{handle}' code '{operation.Code}' is not a value operation.");
@@ -246,7 +246,7 @@ namespace ThirdPersonSimulation.Fixed
 			}
 		}
 
-		void TraceValue(SimulationOperation operation, CharacterStateValue value)
+		void TraceValue(SimulationOperation operation, AbilityStateValue value)
 		{
 			if (!m_Frame.Trace.Enabled ||
 			    operation.Code != SimulationOperationCode.InputVector2 &&
@@ -266,7 +266,7 @@ namespace ThirdPersonSimulation.Fixed
 				$"code={operation.Code};kind={value.Kind};value={FormatValue(value)}");
 		}
 
-        static string FormatValue(CharacterStateValue value)
+        static string FormatValue(AbilityStateValue value)
 		{
 			return value.Kind switch
 			{
@@ -325,7 +325,7 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < inputs.Length; i++)
                 {
                     CompiledValueInputBinding input = inputs[i];
-                    CharacterStateValue value = input.SourceKind == CompiledValueInputSourceKind.Operation
+                    AbilityStateValue value = input.SourceKind == CompiledValueInputSourceKind.Operation
                         ? Evaluate(cursor, input.SourceOperation, m_Layout.ValueSourceOutputPort(input))
                         : ValueFromConstant(m_Ability.Constants[input.ConstantIndex]);
                     buffer.Values.Add(value);
@@ -362,7 +362,7 @@ namespace ThirdPersonSimulation.Fixed
             m_InputBufferDepth--;
         }
 
-        CharacterStateValue ReadBlackboard<TTarget>(
+        AbilityStateValue ReadBlackboard<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation)
             where TTarget : struct, IOperationControlTarget<TTarget>
@@ -373,7 +373,7 @@ namespace ThirdPersonSimulation.Fixed
             return m_Blackboard.Read(cursor, operation, reference.TargetIndex);
         }
 
-        CharacterStateValue ReadSubGraphOutput<TTarget>(
+        AbilityStateValue ReadSubGraphOutput<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
             string outputPort)
@@ -392,7 +392,7 @@ namespace ThirdPersonSimulation.Fixed
             if (binding == null)
                 throw new InvalidOperationException($"Graph call frame '{frame.Identity}' has no output port '{outputPort}'.");
             if (cursor.ReadStatus(frame.EntryOperation) != OperationRunnableStatus.Success)
-                return CharacterStateValue.Default(m_Ability.StateSlots[binding.StateSlot].ValueKind);
+                return AbilityStateValue.Default(m_Ability.StateSlots[binding.StateSlot].ValueKind);
             return m_Blackboard.ReadGraphCallParameter(binding.StateSlot);
         }
 
@@ -414,36 +414,36 @@ namespace ThirdPersonSimulation.Fixed
             return FixedScalar.Abs(FixedAngle.Delta(m_Frame.BodyFacts.Yaw, desired));
         }
 
-        CharacterStateValue ReadCharacterState(string field)
+        AbilityStateValue ReadCharacterState(string field)
         {
             return field switch
             {
-                CharacterStateProviderFields.Position => CharacterStateValue.FromVector3(m_Frame.BodyFacts.Position),
-                CharacterStateProviderFields.Velocity => CharacterStateValue.FromVector3(m_Frame.BodyFacts.Velocity),
-                CharacterStateProviderFields.VerticalVelocity => CharacterStateValue.FromScalar(m_Frame.BodyFacts.VerticalVelocity),
-                CharacterStateProviderFields.BodyYaw => CharacterStateValue.FromYaw(m_Frame.BodyFacts.Yaw),
-                CharacterStateProviderFields.Grounded => CharacterStateValue.FromBoolean(m_Frame.BodyFacts.Grounded),
+                CharacterStateProviderFields.Position => AbilityStateValue.FromVector3(m_Frame.BodyFacts.Position),
+                CharacterStateProviderFields.Velocity => AbilityStateValue.FromVector3(m_Frame.BodyFacts.Velocity),
+                CharacterStateProviderFields.VerticalVelocity => AbilityStateValue.FromScalar(m_Frame.BodyFacts.VerticalVelocity),
+                CharacterStateProviderFields.BodyYaw => AbilityStateValue.FromYaw(m_Frame.BodyFacts.Yaw),
+                CharacterStateProviderFields.Grounded => AbilityStateValue.FromBoolean(m_Frame.BodyFacts.Grounded),
                 _ => throw new InvalidOperationException($"Character State field '{field}' is not supported by Fixed runtime.")
             };
         }
 
-        CharacterStateValue ReadCameraBasis(string outputPort)
+        AbilityStateValue ReadCameraBasis(string outputPort)
         {
             return outputPort switch
             {
-                CameraProgramOperationSchema.BasisValidPortId => CharacterStateValue.FromBoolean(
+                CameraProgramOperationSchema.BasisValidPortId => AbilityStateValue.FromBoolean(
                     m_Input.ReadValue(CameraProgramOperationSchema.BasisValidInputId, SimulationInputValueKind.Boolean).Boolean),
-                CameraProgramOperationSchema.BasisPlanarForwardPortId => CharacterStateValue.FromVector3(
+                CameraProgramOperationSchema.BasisPlanarForwardPortId => AbilityStateValue.FromVector3(
                     m_Input.ReadValue(CameraProgramOperationSchema.BasisPlanarForwardInputId, SimulationInputValueKind.Vector3).Vector3),
-                CameraProgramOperationSchema.BasisPlanarRightPortId => CharacterStateValue.FromVector3(
+                CameraProgramOperationSchema.BasisPlanarRightPortId => AbilityStateValue.FromVector3(
                     m_Input.ReadValue(CameraProgramOperationSchema.BasisPlanarRightInputId, SimulationInputValueKind.Vector3).Vector3),
-                CameraProgramOperationSchema.BasisLookDirectionPortId => CharacterStateValue.FromVector3(
+                CameraProgramOperationSchema.BasisLookDirectionPortId => AbilityStateValue.FromVector3(
                     m_Input.ReadValue(CameraProgramOperationSchema.BasisLookDirectionInputId, SimulationInputValueKind.Vector3).Vector3),
-                CameraProgramOperationSchema.BasisAimPointPortId => CharacterStateValue.FromVector3(
+                CameraProgramOperationSchema.BasisAimPointPortId => AbilityStateValue.FromVector3(
                     m_Input.ReadValue(CameraProgramOperationSchema.BasisAimPointInputId, SimulationInputValueKind.Vector3).Vector3),
-                CameraProgramOperationSchema.BasisYawPortId => CharacterStateValue.FromYaw(
+                CameraProgramOperationSchema.BasisYawPortId => AbilityStateValue.FromYaw(
                     m_Input.ReadValue(CameraProgramOperationSchema.BasisYawInputId, SimulationInputValueKind.Yaw).Yaw),
-                CameraProgramOperationSchema.BasisPitchPortId => CharacterStateValue.FromScalar(
+                CameraProgramOperationSchema.BasisPitchPortId => AbilityStateValue.FromScalar(
                     m_Input.ReadValue(CameraProgramOperationSchema.BasisPitchInputId, SimulationInputValueKind.Scalar).Scalar),
                 _ => throw new InvalidOperationException($"Camera basis contains unknown output port '{outputPort}'.")
             };
@@ -467,7 +467,7 @@ namespace ThirdPersonSimulation.Fixed
             };
         }
 
-        static FixedScalar ToScalar(CharacterStateValue value)
+        static FixedScalar ToScalar(AbilityStateValue value)
         {
             return value.Kind switch
             {
@@ -479,7 +479,7 @@ namespace ThirdPersonSimulation.Fixed
             };
         }
 
-        public static bool ToBoolean(CharacterStateValue value)
+        public static bool ToBoolean(AbilityStateValue value)
         {
             return value.Kind switch
             {
@@ -492,29 +492,29 @@ namespace ThirdPersonSimulation.Fixed
             };
         }
 
-        static CharacterStateValue ConvertValue(CharacterStateValue value, ProgramStateValueKind expected)
+        static AbilityStateValue ConvertValue(AbilityStateValue value, ProgramStateValueKind expected)
         {
             if (value.Kind == expected)
                 return value;
             if (expected == ProgramStateValueKind.Scalar)
-                return CharacterStateValue.FromScalar(ToScalar(value));
+                return AbilityStateValue.FromScalar(ToScalar(value));
             if (expected == ProgramStateValueKind.Int32 && value.Kind == ProgramStateValueKind.Scalar)
-                return CharacterStateValue.FromInt32(value.Scalar.TruncateToInt32());
+                return AbilityStateValue.FromInt32(value.Scalar.TruncateToInt32());
             throw new InvalidOperationException($"Cannot assign '{value.Kind}' to '{expected}'.");
         }
 
-        static CharacterStateValue ValueFromConstant(ProgramConstant constant)
+        static AbilityStateValue ValueFromConstant(ProgramConstant constant)
         {
             return constant.Kind switch
             {
-                ProgramConstantKind.Boolean => CharacterStateValue.FromBoolean(constant.Boolean),
-                ProgramConstantKind.Int32 => CharacterStateValue.FromInt32(constant.Int32),
-                ProgramConstantKind.UInt64 => CharacterStateValue.FromUInt64(constant.UInt64),
-                ProgramConstantKind.Scalar => CharacterStateValue.FromScalar(constant.Scalar),
-                ProgramConstantKind.Vector2 => CharacterStateValue.FromVector2(constant.Vector2),
-                ProgramConstantKind.Vector3 => CharacterStateValue.FromVector3(constant.Vector3),
-                ProgramConstantKind.Yaw => CharacterStateValue.FromYaw(constant.Yaw),
-                ProgramConstantKind.String => CharacterStateValue.FromIdentity(constant.Text),
+                ProgramConstantKind.Boolean => AbilityStateValue.FromBoolean(constant.Boolean),
+                ProgramConstantKind.Int32 => AbilityStateValue.FromInt32(constant.Int32),
+                ProgramConstantKind.UInt64 => AbilityStateValue.FromUInt64(constant.UInt64),
+                ProgramConstantKind.Scalar => AbilityStateValue.FromScalar(constant.Scalar),
+                ProgramConstantKind.Vector2 => AbilityStateValue.FromVector2(constant.Vector2),
+                ProgramConstantKind.Vector3 => AbilityStateValue.FromVector3(constant.Vector3),
+                ProgramConstantKind.Yaw => AbilityStateValue.FromYaw(constant.Yaw),
+                ProgramConstantKind.String => AbilityStateValue.FromIdentity(constant.Text),
                 ProgramConstantKind.Bytes => throw new InvalidOperationException(
                     $"Bytes constant '{constant.Identity}' cannot enter typed Character state evaluation."),
                 _ => throw new ArgumentOutOfRangeException(nameof(constant.Kind))

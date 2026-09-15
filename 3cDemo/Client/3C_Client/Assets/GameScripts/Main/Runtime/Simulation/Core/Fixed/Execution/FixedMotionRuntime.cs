@@ -1212,7 +1212,7 @@ namespace ThirdPersonSimulation.Fixed
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             using FixedValueInputLease inputs = m_Values.ReadInputs(cursor, operation);
-            CharacterStateValue input = inputs.FindByKind(ProgramStateValueKind.Vector2);
+            AbilityStateValue input = inputs.FindByKind(ProgramStateValueKind.Vector2);
             if (input.Kind != ProgramStateValueKind.Vector2)
                 throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has no Vector2 input.");
             FixedVector2 move = input.Vector2;

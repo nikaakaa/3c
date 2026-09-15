@@ -198,20 +198,20 @@ namespace ThirdPersonSimulation
 			return removed > 0;
 		}
 
-		public CharacterStateValue ReadAttribute(SimulationOperation operation, string outputPort)
+		public AbilityStateValue ReadAttribute(SimulationOperation operation, string outputPort)
 		{
 			if (!m_GameplayEffects.TryGetAttribute(operation.Text0, out Float32Scalar baseValue, out Float32Scalar currentValue, out _))
 			{
 				if (string.Equals(outputPort, "m_Valid", StringComparison.Ordinal))
-					return CharacterStateValue.FromBoolean(false);
-				return CharacterStateValue.FromScalar(Float32Scalar.Zero);
+					return AbilityStateValue.FromBoolean(false);
+				return AbilityStateValue.FromScalar(Float32Scalar.Zero);
 			}
 			if (string.Equals(outputPort, "m_Valid", StringComparison.Ordinal))
-				return CharacterStateValue.FromBoolean(true);
+				return AbilityStateValue.FromBoolean(true);
 			if (string.Equals(outputPort, "m_BaseValue", StringComparison.Ordinal))
-				return CharacterStateValue.FromScalar(baseValue);
+				return AbilityStateValue.FromScalar(baseValue);
 			if (string.Equals(outputPort, "m_CurrentValue", StringComparison.Ordinal))
-				return CharacterStateValue.FromScalar(currentValue);
+				return AbilityStateValue.FromScalar(currentValue);
 			throw new InvalidOperationException($"Gameplay Attribute output port '{outputPort}' is unknown.");
 		}
 

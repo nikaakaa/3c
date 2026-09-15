@@ -60,8 +60,8 @@ namespace ThirdPersonSimulation.Fixed
 
     internal interface IFixedSkillExecutionStateAccess
     {
-        bool TryGet(int slotIndex, out CharacterStateValue value);
-        bool TrySet(int slotIndex, CharacterStateValue value);
+        bool TryGet(int slotIndex, out AbilityStateValue value);
+        bool TrySet(int slotIndex, AbilityStateValue value);
         bool TryReset(int slotIndex);
     }
 
@@ -212,7 +212,7 @@ namespace ThirdPersonSimulation.Fixed
             m_SkillExecutionStateAccess = access;
         }
 
-        internal bool TryGetSkillExecutionState(int slotIndex, out CharacterStateValue value)
+        internal bool TryGetSkillExecutionState(int slotIndex, out AbilityStateValue value)
         {
             if (m_SkillExecutionStateAccess == null)
             {
@@ -222,7 +222,7 @@ namespace ThirdPersonSimulation.Fixed
             return m_SkillExecutionStateAccess.TryGet(slotIndex, out value);
         }
 
-        internal bool TrySetSkillExecutionState(int slotIndex, CharacterStateValue value) =>
+        internal bool TrySetSkillExecutionState(int slotIndex, AbilityStateValue value) =>
             m_SkillExecutionStateAccess != null &&
             m_SkillExecutionStateAccess.TrySet(slotIndex, value);
 
@@ -253,8 +253,8 @@ namespace ThirdPersonSimulation.Fixed
             Transaction.Reset(slotIndex);
         }
 
-        internal CharacterStateValue ReadState(int slotIndex) =>
-            TryGetSkillExecutionState(slotIndex, out CharacterStateValue value)
+        internal AbilityStateValue ReadState(int slotIndex) =>
+            TryGetSkillExecutionState(slotIndex, out AbilityStateValue value)
                 ? value
                 : Transaction.Get(slotIndex);
 
@@ -348,15 +348,15 @@ namespace ThirdPersonSimulation.Fixed
             m_Policy = policy ?? throw new ArgumentNullException(nameof(policy));
         }
 
-        public CharacterStateValue Get(int slotIndex)
+        public AbilityStateValue Get(int slotIndex)
         {
             Require(slotIndex);
-            if (m_Frame.TryGetSkillExecutionState(slotIndex, out CharacterStateValue value))
+            if (m_Frame.TryGetSkillExecutionState(slotIndex, out AbilityStateValue value))
                 return value;
             return m_Frame.SkillState.Get(slotIndex);
         }
 
-        public void Set(int slotIndex, CharacterStateValue value)
+        public void Set(int slotIndex, AbilityStateValue value)
         {
             Require(slotIndex);
             if (m_Frame.TrySetSkillExecutionState(slotIndex, value))
@@ -596,7 +596,7 @@ namespace ThirdPersonSimulation.Fixed
             CaptureControlFlow = false;
         }
 
-        public void AddValue(SimulationOperation operation, string portId, ProgramValuePortDirection direction, in CharacterStateValue value)
+        public void AddValue(SimulationOperation operation, string portId, ProgramValuePortDirection direction, in AbilityStateValue value)
         {
             if (!CaptureValues || string.IsNullOrEmpty(portId) || !m_ValuePorts.Contains((operation.Handle.Value, portId, direction)))
                 return;

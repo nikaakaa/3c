@@ -54,11 +54,11 @@ namespace ThirdPersonSimulation.Fixed
 
     internal interface IFixedBlackboardPort
     {
-        void WriteGraphCallParameter(int valueSlot, CharacterStateValue value);
+        void WriteGraphCallParameter(int valueSlot, AbilityStateValue value);
         void ResetGraphCallParameter(int valueSlot);
-        CharacterStateValue ReadGraphCallParameter(int valueSlot);
+        AbilityStateValue ReadGraphCallParameter(int valueSlot);
 
-        CharacterStateValue Read<TTarget>(
+        AbilityStateValue Read<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
             int valueSlot)
@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation.Fixed
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
             int valueSlot,
-            CharacterStateValue value)
+            AbilityStateValue value)
             where TTarget : struct, IOperationControlTarget<TTarget>;
 
         void ClearActionInstanceScopes(ulong actionInstanceId);
@@ -89,7 +89,7 @@ namespace ThirdPersonSimulation.Fixed
         IEnumerable<string> OwnedTags { get; }
         bool HasTag(string tag);
         bool Matches(PortableTagQuery query);
-        CharacterStateValue ReadAttribute(SimulationOperation operation, string outputPort);
+        AbilityStateValue ReadAttribute(SimulationOperation operation, string outputPort);
     }
 
     internal interface IFixedGameplayEffectActionPort

@@ -684,7 +684,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!m_Layout.TryGetActionTargetSnapshot(operation.Handle, out TypedStateAddress address))
                 return SimulationActionTargetSnapshot.None;
-            CharacterStateValue value = m_Blackboard.Read(cursor, operation, address.SlotIndex);
+            AbilityStateValue value = m_Blackboard.Read(cursor, operation, address.SlotIndex);
             if (value.Kind != ProgramStateValueKind.ActionTargetSnapshot)
                 throw new InvalidOperationException($"Action target snapshot for '{SourcePath(operation)}' has kind '{value.Kind}'.");
             return value.ActionTargetSnapshot;

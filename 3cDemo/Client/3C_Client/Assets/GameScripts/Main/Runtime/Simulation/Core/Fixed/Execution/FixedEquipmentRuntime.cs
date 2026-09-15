@@ -107,7 +107,7 @@ namespace ThirdPersonSimulation.Fixed
 			m_Control.CancelOrphanedPending(source.Handle);
 		}
 
-		public CharacterStateValue Evaluate(SimulationOperation operation, string outputPort, FixedValueInputLease inputs)
+		public AbilityStateValue Evaluate(SimulationOperation operation, string outputPort, FixedValueInputLease inputs)
 		{
 			switch (operation.Code)
 			{
@@ -116,13 +116,13 @@ namespace ThirdPersonSimulation.Fixed
 					EquipmentSlotState slot = RequireSlotState(operation);
 					if (string.Equals(outputPort, "m_Equipment", StringComparison.Ordinal) ||
 						string.Equals(outputPort, "m_Output", StringComparison.Ordinal))
-						return CharacterStateValue.FromIdentity(slot.EquipmentId.Value ?? string.Empty);
+						return AbilityStateValue.FromIdentity(slot.EquipmentId.Value ?? string.Empty);
 					if (string.Equals(outputPort, "m_Feature", StringComparison.Ordinal))
-						return CharacterStateValue.FromIdentity(slot.FeatureId.Value ?? string.Empty);
+						return AbilityStateValue.FromIdentity(slot.FeatureId.Value ?? string.Empty);
 					if (string.Equals(outputPort, "m_Revision", StringComparison.Ordinal))
-						return CharacterStateValue.FromUInt64(slot.Revision);
+						return AbilityStateValue.FromUInt64(slot.Revision);
 					if (string.Equals(outputPort, "m_Equipped", StringComparison.Ordinal))
-						return CharacterStateValue.FromBoolean(slot.IsEquipped);
+						return AbilityStateValue.FromBoolean(slot.IsEquipped);
 					throw new InvalidOperationException($"Equipment identity output '{outputPort}' is unknown.");
 				}
 				case SimulationOperationCode.ReadEquipmentParameter:
@@ -166,7 +166,7 @@ namespace ThirdPersonSimulation.Fixed
 		}
 
 
-		CharacterStateValue ReadParameter(SimulationOperation operation, FixedValueInputLease inputs)
+		AbilityStateValue ReadParameter(SimulationOperation operation, FixedValueInputLease inputs)
 		{
 			EquipmentSlotState slot = RequireSlotState(operation);
 			ulong expectedRevision = ReadUInt64(inputs);
@@ -198,11 +198,11 @@ namespace ThirdPersonSimulation.Fixed
 
 		static ulong ReadUInt64(FixedValueInputLease inputs)
 		{
-			CharacterStateValue value = inputs.FindByKind(ProgramStateValueKind.UInt64);
+			AbilityStateValue value = inputs.FindByKind(ProgramStateValueKind.UInt64);
 			return value.Kind == ProgramStateValueKind.UInt64 ? value.UInt64 : 0;
 		}
 
-		CharacterStateValue ReadOutcome(SimulationOperation operation, string outputPort)
+		AbilityStateValue ReadOutcome(SimulationOperation operation, string outputPort)
 		{
 			if (!m_Outcomes.TryGetValue(operation.Handle.Value, out EquipmentChangeOutcome outcome))
 				throw new InvalidOperationException($"Equipment change operation '{SourcePath(operation)}' has not executed in the current evaluation.");
@@ -210,11 +210,11 @@ namespace ThirdPersonSimulation.Fixed
 				string.Equals(outputPort, "m_Begun", StringComparison.Ordinal) ||
 				string.Equals(outputPort, "m_Committed", StringComparison.Ordinal) ||
 				string.Equals(outputPort, "m_Cancelled", StringComparison.Ordinal))
-				return CharacterStateValue.FromBoolean(outcome.Succeeded);
+				return AbilityStateValue.FromBoolean(outcome.Succeeded);
 			if (string.Equals(outputPort, "m_ChangeId", StringComparison.Ordinal))
-				return CharacterStateValue.FromUInt64(outcome.ChangeId.Value);
+				return AbilityStateValue.FromUInt64(outcome.ChangeId.Value);
 			if (string.Equals(outputPort, "m_Failure", StringComparison.Ordinal))
-				return CharacterStateValue.FromInt32((int)outcome.Failure);
+				return AbilityStateValue.FromInt32((int)outcome.Failure);
 			throw new InvalidOperationException($"Equipment change output '{outputPort}' is unknown.");
 		}
 
@@ -267,17 +267,17 @@ namespace ThirdPersonSimulation.Fixed
 				m_Trace.Add(source, "equipment_snapshot", SimulationTraceSeverity.Detail, $"resolved={resolved.ChangeId}:{resolved.State}:{resolved.SlotId}:{resolved.FromEquipmentId}->{resolved.ToEquipmentId}:begin={resolved.BeginTick}:tick={resolved.ResolvedTick}");
 		}
 
-		static CharacterStateValue ToStateValue(EquipmentRuntimeParameterValue value) => value.Kind switch
+		static AbilityStateValue ToStateValue(EquipmentRuntimeParameterValue value) => value.Kind switch
 		{
-			EquipmentParameterValueKind.Boolean => CharacterStateValue.FromBoolean(value.Boolean),
-			EquipmentParameterValueKind.Int32 => CharacterStateValue.FromInt32(value.Int32),
-			EquipmentParameterValueKind.Scalar => CharacterStateValue.FromScalar(FixedScalar.FromDouble(value.X)),
-			EquipmentParameterValueKind.Vector2 => CharacterStateValue.FromVector2(new FixedVector2(FixedScalar.FromDouble(value.X), FixedScalar.FromDouble(value.Y))),
-			EquipmentParameterValueKind.Vector3 => CharacterStateValue.FromVector3(new FixedVector3(FixedScalar.FromDouble(value.X), FixedScalar.FromDouble(value.Y), FixedScalar.FromDouble(value.Z))),
-			EquipmentParameterValueKind.Yaw => CharacterStateValue.FromYaw(new FixedYaw(FixedScalar.FromDouble(value.X))),
-			EquipmentParameterValueKind.GameplayTag => CharacterStateValue.FromIdentity(value.Identity),
-			EquipmentParameterValueKind.GameplayEffect => CharacterStateValue.FromIdentity(value.Identity),
-			EquipmentParameterValueKind.AnimationProducer => CharacterStateValue.FromIdentity(value.Identity),
+			EquipmentParameterValueKind.Boolean => AbilityStateValue.FromBoolean(value.Boolean),
+			EquipmentParameterValueKind.Int32 => AbilityStateValue.FromInt32(value.Int32),
+			EquipmentParameterValueKind.Scalar => AbilityStateValue.FromScalar(FixedScalar.FromDouble(value.X)),
+			EquipmentParameterValueKind.Vector2 => AbilityStateValue.FromVector2(new FixedVector2(FixedScalar.FromDouble(value.X), FixedScalar.FromDouble(value.Y))),
+			EquipmentParameterValueKind.Vector3 => AbilityStateValue.FromVector3(new FixedVector3(FixedScalar.FromDouble(value.X), FixedScalar.FromDouble(value.Y), FixedScalar.FromDouble(value.Z))),
+			EquipmentParameterValueKind.Yaw => AbilityStateValue.FromYaw(new FixedYaw(FixedScalar.FromDouble(value.X))),
+			EquipmentParameterValueKind.GameplayTag => AbilityStateValue.FromIdentity(value.Identity),
+			EquipmentParameterValueKind.GameplayEffect => AbilityStateValue.FromIdentity(value.Identity),
+			EquipmentParameterValueKind.AnimationProducer => AbilityStateValue.FromIdentity(value.Identity),
 			_ => throw new InvalidOperationException($"Equipment parameter kind '{value.Kind}' is unsupported.")
 		};
 
@@ -343,7 +343,7 @@ namespace ThirdPersonSimulation.Fixed
 			readonly FixedAbilityExecutionFrame m_Frame;
 			readonly IFixedAbilityExecutionSavepoint m_Savepoint;
 			readonly FixedAbilityOutputSavepoint m_OutputSavepoint;
-			readonly CharacterStateValue[] m_Values;
+			readonly AbilityStateValue[] m_Values;
 			bool m_Completed;
 
 			public MutationScope(FixedAbilityExecutionFrame frame)
@@ -351,7 +351,7 @@ namespace ThirdPersonSimulation.Fixed
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 				m_Savepoint = frame.SavepointPort.CreateSavepoint();
 			m_OutputSavepoint = frame.CreateOutputSavepoint();
-                m_Values = new CharacterStateValue[frame.Data.StateSlots.Count];
+                m_Values = new AbilityStateValue[frame.Data.StateSlots.Count];
 			for (int i = 0; i < m_Values.Length; i++)
 				m_Values[i] = frame.SkillState.Get(i);
 			}

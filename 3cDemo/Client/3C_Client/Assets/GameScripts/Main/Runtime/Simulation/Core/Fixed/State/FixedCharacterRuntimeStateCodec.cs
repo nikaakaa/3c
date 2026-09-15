@@ -58,8 +58,8 @@ namespace ThirdPersonSimulation.Fixed
                 GameplayAbilityExecutionIdentity identity = ReadIdentity(reader);
                 FixedGameplayAbilityExecutionInstallation installation = installations.Require(identity.AbilityId);
                 installation.Identity.Require(identity);
-                Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
-                GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
+                Dictionary<int, AbilityStateValue> stateValues = ReadValues(reader, installation.Layout);
+                GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
                 Dictionary<int, FixedMotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
                 abilities.Add(new FixedAbilityRuntimeState(
                     installation,
@@ -182,7 +182,7 @@ namespace ThirdPersonSimulation.Fixed
                 new OperationSetVersion(reader.ReadString()),
                 SimulationNumericProfileCodec.Read(reader));
 
-        static void WriteValues(CanonicalWriter writer, IReadOnlyDictionary<int, CharacterStateValue> values)
+        static void WriteValues(CanonicalWriter writer, IReadOnlyDictionary<int, AbilityStateValue> values)
         {
             var keys = new List<int>(values.Keys);
             keys.Sort();
@@ -194,17 +194,17 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static Dictionary<int, CharacterStateValue> ReadValues(CanonicalReader reader, GameplayAbilityExecutionLayout layout)
+        static Dictionary<int, AbilityStateValue> ReadValues(CanonicalReader reader, GameplayAbilityExecutionLayout layout)
         {
             int count = ReadCount(reader, layout.StateSlots.Count, "Fixed Character state value");
-            var values = new Dictionary<int, CharacterStateValue>(count);
+            var values = new Dictionary<int, AbilityStateValue>(count);
             int previous = -1;
             for (int i = 0; i < count; i++)
             {
                 int slotIndex = reader.ReadInt32();
                 if (slotIndex < 0 || slotIndex >= layout.StateSlots.Count || slotIndex <= previous)
                     throw new InvalidDataException("Fixed Character state value indexes are invalid or not canonically ordered.");
-                CharacterStateValue value = ReadValue(reader);
+                AbilityStateValue value = ReadValue(reader);
                 if (value.Kind != layout.StateSlots[slotIndex].ValueKind)
                     throw new InvalidDataException($"Fixed Character state value slot '{slotIndex}' kind does not match the Ability layout.");
                 values.Add(slotIndex, value);
@@ -215,14 +215,14 @@ namespace ThirdPersonSimulation.Fixed
 
         static void WriteAbilityExecutionState(
             CanonicalWriter writer,
-            GameplayAbilityExecutionAggregate<CharacterStateValue> aggregate)
+            GameplayAbilityExecutionAggregate<AbilityStateValue> aggregate)
         {
-            var frames = new List<GameplayAbilityExecutionFrame<CharacterStateValue>>(aggregate?.Frames ?? Array.Empty<GameplayAbilityExecutionFrame<CharacterStateValue>>());
+            var frames = new List<GameplayAbilityExecutionFrame<AbilityStateValue>>(aggregate?.Frames ?? Array.Empty<GameplayAbilityExecutionFrame<AbilityStateValue>>());
             frames.Sort((left, right) => left.ActionInstanceId.CompareTo(right.ActionInstanceId));
             writer.WriteInt32(frames.Count);
             for (int i = 0; i < frames.Count; i++)
             {
-                GameplayAbilityExecutionFrame<CharacterStateValue> frame = frames[i];
+                GameplayAbilityExecutionFrame<AbilityStateValue> frame = frames[i];
                 writer.WriteString(frame.SkillId.Value);
                 writer.WriteInt32(frame.EntryOperation.Value);
                 writer.WriteUInt64(frame.ActionInstanceId);
@@ -232,12 +232,12 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static GameplayAbilityExecutionAggregate<CharacterStateValue> ReadAbilityExecutionState(
+        static GameplayAbilityExecutionAggregate<AbilityStateValue> ReadAbilityExecutionState(
             CanonicalReader reader,
             GameplayAbilityExecutionLayout layout)
         {
             int count = ReadCount(reader, 1000000, "Fixed Ability execution frame");
-            var frames = new List<GameplayAbilityExecutionFrame<CharacterStateValue>>(count);
+            var frames = new List<GameplayAbilityExecutionFrame<AbilityStateValue>>(count);
             ulong previous = 0;
             for (int i = 0; i < count; i++)
             {
@@ -248,8 +248,8 @@ namespace ThirdPersonSimulation.Fixed
                 ulong generation = reader.ReadUInt64();
                 if (actionInstanceId == 0 || i > 0 && actionInstanceId <= previous)
                     throw new InvalidDataException("Fixed Ability execution frame identities are invalid or not canonically ordered.");
-                Dictionary<int, CharacterStateValue> values = ReadValues(reader, layout);
-                frames.Add(new GameplayAbilityExecutionFrame<CharacterStateValue>(
+                Dictionary<int, AbilityStateValue> values = ReadValues(reader, layout);
+                frames.Add(new GameplayAbilityExecutionFrame<AbilityStateValue>(
                     skillId,
                     entryOperation,
                     actionInstanceId,
@@ -258,7 +258,7 @@ namespace ThirdPersonSimulation.Fixed
                     values));
                 previous = actionInstanceId;
             }
-            return new GameplayAbilityExecutionAggregate<CharacterStateValue>(frames);
+            return new GameplayAbilityExecutionAggregate<AbilityStateValue>(frames);
         }
 
         static void WriteInputRequests(
@@ -514,7 +514,7 @@ namespace ThirdPersonSimulation.Fixed
                 ReadOptionalOperation(reader, layout));
         }
 
-        static void WriteValue(CanonicalWriter writer, CharacterStateValue value)
+        static void WriteValue(CanonicalWriter writer, AbilityStateValue value)
         {
             writer.WriteByte((byte)value.Kind);
             switch (value.Kind)
@@ -534,22 +534,22 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static CharacterStateValue ReadValue(CanonicalReader reader)
+        static AbilityStateValue ReadValue(CanonicalReader reader)
         {
             ProgramStateValueKind kind = ReadEnum<ProgramStateValueKind>(reader.ReadByte());
             return kind switch
             {
-                ProgramStateValueKind.Boolean => CharacterStateValue.FromBoolean(reader.ReadBoolean()),
-                ProgramStateValueKind.Int32 => CharacterStateValue.FromInt32(reader.ReadInt32()),
-                ProgramStateValueKind.UInt64 => CharacterStateValue.FromUInt64(reader.ReadUInt64()),
-                ProgramStateValueKind.Scalar => CharacterStateValue.FromScalar(reader.ReadScalar()),
-                ProgramStateValueKind.Vector2 => CharacterStateValue.FromVector2(reader.ReadVector2()),
-                ProgramStateValueKind.Vector3 => CharacterStateValue.FromVector3(reader.ReadVector3()),
-                ProgramStateValueKind.Yaw => CharacterStateValue.FromYaw(reader.ReadYaw()),
-                ProgramStateValueKind.Identity => CharacterStateValue.FromIdentity(reader.ReadString()),
-                ProgramStateValueKind.BlackboardOwnerToken => CharacterStateValue.FromBlackboardOwnerToken(ReadBlackboardOwnerToken(reader)),
-                ProgramStateValueKind.BlackboardWriteStamp => CharacterStateValue.FromBlackboardWriteStamp(ReadBlackboardWriteStamp(reader)),
-                ProgramStateValueKind.ActionTargetSnapshot => CharacterStateValue.FromActionTargetSnapshot(ReadTarget(reader)),
+                ProgramStateValueKind.Boolean => AbilityStateValue.FromBoolean(reader.ReadBoolean()),
+                ProgramStateValueKind.Int32 => AbilityStateValue.FromInt32(reader.ReadInt32()),
+                ProgramStateValueKind.UInt64 => AbilityStateValue.FromUInt64(reader.ReadUInt64()),
+                ProgramStateValueKind.Scalar => AbilityStateValue.FromScalar(reader.ReadScalar()),
+                ProgramStateValueKind.Vector2 => AbilityStateValue.FromVector2(reader.ReadVector2()),
+                ProgramStateValueKind.Vector3 => AbilityStateValue.FromVector3(reader.ReadVector3()),
+                ProgramStateValueKind.Yaw => AbilityStateValue.FromYaw(reader.ReadYaw()),
+                ProgramStateValueKind.Identity => AbilityStateValue.FromIdentity(reader.ReadString()),
+                ProgramStateValueKind.BlackboardOwnerToken => AbilityStateValue.FromBlackboardOwnerToken(ReadBlackboardOwnerToken(reader)),
+                ProgramStateValueKind.BlackboardWriteStamp => AbilityStateValue.FromBlackboardWriteStamp(ReadBlackboardWriteStamp(reader)),
+                ProgramStateValueKind.ActionTargetSnapshot => AbilityStateValue.FromActionTargetSnapshot(ReadTarget(reader)),
                 _ => throw new InvalidDataException($"Unsupported Fixed Character state value kind '{kind}'.")
             };
         }

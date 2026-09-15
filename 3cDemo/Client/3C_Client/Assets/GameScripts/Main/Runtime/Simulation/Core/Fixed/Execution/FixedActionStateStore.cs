@@ -253,11 +253,11 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedActionStateStore : FixedOperationModule, IFixedActionContextReader, IFixedSkillExecutionStateAccess, IGameplayAbilityExecutionStorage<CharacterStateValue>
+    internal sealed class FixedActionStateStore : FixedOperationModule, IFixedActionContextReader, IFixedSkillExecutionStateAccess, IGameplayAbilityExecutionStorage<AbilityStateValue>
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
-        readonly GameplayAbilityExecutionManager<CharacterStateValue> m_SkillExecution;
+        readonly GameplayAbilityExecutionManager<AbilityStateValue> m_SkillExecution;
 
         public FixedActionStateStore(
             FixedGameplayAbilityExecutionAccess access,
@@ -265,7 +265,7 @@ namespace ThirdPersonSimulation.Fixed
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_SkillExecution = new GameplayAbilityExecutionManager<CharacterStateValue>(this);
+            m_SkillExecution = new GameplayAbilityExecutionManager<AbilityStateValue>(this);
             m_Frame.BindSkillExecutionStateAccess(this);
         }
 
@@ -532,12 +532,12 @@ namespace ThirdPersonSimulation.Fixed
                 : default;
         }
 
-        bool IFixedSkillExecutionStateAccess.TryGet(int slotIndex, out CharacterStateValue value)
+        bool IFixedSkillExecutionStateAccess.TryGet(int slotIndex, out AbilityStateValue value)
         {
             return m_SkillExecution.TryGet(slotIndex, out value);
         }
 
-        bool IFixedSkillExecutionStateAccess.TrySet(int slotIndex, CharacterStateValue value)
+        bool IFixedSkillExecutionStateAccess.TrySet(int slotIndex, AbilityStateValue value)
         {
             return m_SkillExecution.TrySet(slotIndex, value);
         }
@@ -759,29 +759,29 @@ namespace ThirdPersonSimulation.Fixed
             return m_Frame.ActionState.NextActionEventSequence();
         }
 
-        bool IGameplayAbilityExecutionStorage<CharacterStateValue>.IsAbilityStateSlot(int slotIndex) =>
+        bool IGameplayAbilityExecutionStorage<AbilityStateValue>.IsAbilityStateSlot(int slotIndex) =>
             m_Layout.IsSkillExecutionStateSlot(slotIndex);
 
-        bool IGameplayAbilityExecutionStorage<CharacterStateValue>.IsValueValid(
+        bool IGameplayAbilityExecutionStorage<AbilityStateValue>.IsValueValid(
             int slotIndex,
-            CharacterStateValue value) =>
+            AbilityStateValue value) =>
             value.Kind == m_Ability.StateSlots[slotIndex].ValueKind;
 
-        CharacterStateValue IGameplayAbilityExecutionStorage<CharacterStateValue>.DefaultValue(int slotIndex)
+        AbilityStateValue IGameplayAbilityExecutionStorage<AbilityStateValue>.DefaultValue(int slotIndex)
         {
             ProgramStateSlot slot = m_Ability.StateSlots[slotIndex];
             return slot.DefaultConstantIndex >= 0
-                ? CharacterStateValue.FromConstant(
+                ? AbilityStateValue.FromConstant(
                     m_Ability.Constants[slot.DefaultConstantIndex],
                     slot.ValueKind)
-                : CharacterStateValue.Default(slot.ValueKind);
+                : AbilityStateValue.Default(slot.ValueKind);
         }
 
-        GameplayAbilityExecutionAggregate<CharacterStateValue> IGameplayAbilityExecutionStorage<CharacterStateValue>.ReadAggregate() =>
+        GameplayAbilityExecutionAggregate<AbilityStateValue> IGameplayAbilityExecutionStorage<AbilityStateValue>.ReadAggregate() =>
 			m_Frame.SkillState.GetAbilityExecutionState();
 
-        void IGameplayAbilityExecutionStorage<CharacterStateValue>.WriteAggregate(
-            GameplayAbilityExecutionAggregate<CharacterStateValue> aggregate) =>
+        void IGameplayAbilityExecutionStorage<AbilityStateValue>.WriteAggregate(
+            GameplayAbilityExecutionAggregate<AbilityStateValue> aggregate) =>
 			m_Frame.SkillState.SetAbilityExecutionState(aggregate);
 
         void MatchActive(

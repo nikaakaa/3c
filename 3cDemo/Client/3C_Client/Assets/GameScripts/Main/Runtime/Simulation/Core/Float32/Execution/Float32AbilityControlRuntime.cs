@@ -118,11 +118,11 @@ namespace ThirdPersonSimulation
         public bool DiagnosticsEnabled => m_Trace.Enabled;
         public bool ControlTraceEnabled => m_Trace.CaptureControlFlow;
         public int ReadInt32(int slotIndex) => m_ControlState.Get(slotIndex).Int32;
-        public void WriteInt32(int slotIndex, int value) => m_ControlState.Set(slotIndex, CharacterStateValue.FromInt32(value));
+        public void WriteInt32(int slotIndex, int value) => m_ControlState.Set(slotIndex, AbilityStateValue.FromInt32(value));
         public ulong ReadUInt64(int slotIndex) => m_ControlState.Get(slotIndex).UInt64;
-        public void WriteUInt64(int slotIndex, ulong value) => m_ControlState.Set(slotIndex, CharacterStateValue.FromUInt64(value));
+        public void WriteUInt64(int slotIndex, ulong value) => m_ControlState.Set(slotIndex, AbilityStateValue.FromUInt64(value));
         public string ReadIdentity(int slotIndex) => m_ControlState.Get(slotIndex).Identity;
-        public void WriteIdentity(int slotIndex, string value) => m_ControlState.Set(slotIndex, CharacterStateValue.FromIdentity(value));
+        public void WriteIdentity(int slotIndex, string value) => m_ControlState.Set(slotIndex, AbilityStateValue.FromIdentity(value));
         public void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed) =>
             m_Trace.AddControlFlow(edge, selected, passed);
 
@@ -253,7 +253,7 @@ namespace ThirdPersonSimulation
             var mode = (LocomotionInputMotionExecutionMode)operation.Integer0;
             if (mode == LocomotionInputMotionExecutionMode.Once)
                 return OperationExecutionResult.Success;
-            m_ControlState.Set(slot, CharacterStateValue.FromInt32(committedTicks));
+            m_ControlState.Set(slot, AbilityStateValue.FromInt32(committedTicks));
             if (mode == LocomotionInputMotionExecutionMode.Continuous)
                 return OperationExecutionResult.Running;
             if (mode != LocomotionInputMotionExecutionMode.Timed)

@@ -12,23 +12,23 @@ namespace ThirdPersonSimulation
         internal Float32AbilityRuntimeState(
             Float32GameplayAbilityExecutionInstallation installation,
             ulong lastCompletedTick,
-            IDictionary<int, CharacterStateValue> stateValues,
-            GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
+            IDictionary<int, AbilityStateValue> stateValues,
+            GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
             IDictionary<int, Float32MotionWarpState> motionWarpStates)
         {
             m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             LastCompletedTick = lastCompletedTick;
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
-                new GameplayAbilityExecutionAggregate<CharacterStateValue>();
+                new GameplayAbilityExecutionAggregate<AbilityStateValue>();
             MotionWarpStates = motionWarpStates == null
                 ? new Dictionary<int, Float32MotionWarpState>()
                 : new Dictionary<int, Float32MotionWarpState>(motionWarpStates);
         }
 
         internal Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
-        internal Dictionary<int, CharacterStateValue> StateValues { get; }
-        internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionState { get; }
+        internal Dictionary<int, AbilityStateValue> StateValues { get; }
+        internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, Float32MotionWarpState> MotionWarpStates { get; }
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
         public ulong LastCompletedTick { get; }
@@ -41,12 +41,12 @@ namespace ThirdPersonSimulation
                 AbilityExecutionState,
                 MotionWarpStates);
 
-        static Dictionary<int, CharacterStateValue> CopyValues(IDictionary<int, CharacterStateValue> values)
+        static Dictionary<int, AbilityStateValue> CopyValues(IDictionary<int, AbilityStateValue> values)
         {
-            var result = new Dictionary<int, CharacterStateValue>();
+            var result = new Dictionary<int, AbilityStateValue>();
             if (values == null)
                 return result;
-            foreach (KeyValuePair<int, CharacterStateValue> value in values)
+            foreach (KeyValuePair<int, AbilityStateValue> value in values)
             {
                 if (value.Key < 0 || !result.TryAdd(value.Key, value.Value))
                     throw new ArgumentException("Character runtime state values are invalid or duplicated.", nameof(values));

@@ -139,7 +139,7 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionWindowProjectionKeys.Clear();
         }
 
-        public void WriteGraphCallParameter(int valueSlot, CharacterStateValue value)
+        public void WriteGraphCallParameter(int valueSlot, AbilityStateValue value)
         {
             SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
             if (value.Kind != m_Ability.StateSlots[valueSlot].ValueKind)
@@ -147,7 +147,7 @@ namespace ThirdPersonSimulation.Fixed
             m_State.Set(group.Value, value);
         }
 
-        public CharacterStateValue ReadGraphCallParameter(int valueSlot)
+        public AbilityStateValue ReadGraphCallParameter(int valueSlot)
         {
             SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
             return m_State.Get(group.Value);
@@ -195,7 +195,7 @@ namespace ThirdPersonSimulation.Fixed
             if (m_State.Get(group.OwnerToken).BlackboardOwnerToken != owner)
                 MaterializeGroup(group, owner);
             m_State.Set(group.Value, ToStateValue(value));
-            m_State.Set(group.WriteStamp, CharacterStateValue.FromBlackboardWriteStamp(new BlackboardWriteStamp(
+            m_State.Set(group.WriteStamp, AbilityStateValue.FromBlackboardWriteStamp(new BlackboardWriteStamp(
                 m_Layout.RootOperation,
                 m_Frame.Tick.Value,
                 0,
@@ -204,28 +204,28 @@ namespace ThirdPersonSimulation.Fixed
                 0)));
         }
 
-        static CharacterStateValue ToStateValue(SimulationInputValue value)
+        static AbilityStateValue ToStateValue(SimulationInputValue value)
         {
             return value.Kind switch
             {
-                SimulationInputValueKind.Boolean => CharacterStateValue.FromBoolean(value.Boolean),
-                SimulationInputValueKind.Scalar => CharacterStateValue.FromScalar(value.Scalar),
-                SimulationInputValueKind.Vector2 => CharacterStateValue.FromVector2(value.Vector2),
-                SimulationInputValueKind.Vector3 => CharacterStateValue.FromVector3(value.Vector3),
-                SimulationInputValueKind.Yaw => CharacterStateValue.FromYaw(value.Yaw),
-                SimulationInputValueKind.ActionTargetSnapshot => CharacterStateValue.FromActionTargetSnapshot(value.ActionTargetSnapshot),
+                SimulationInputValueKind.Boolean => AbilityStateValue.FromBoolean(value.Boolean),
+                SimulationInputValueKind.Scalar => AbilityStateValue.FromScalar(value.Scalar),
+                SimulationInputValueKind.Vector2 => AbilityStateValue.FromVector2(value.Vector2),
+                SimulationInputValueKind.Vector3 => AbilityStateValue.FromVector3(value.Vector3),
+                SimulationInputValueKind.Yaw => AbilityStateValue.FromYaw(value.Yaw),
+                SimulationInputValueKind.ActionTargetSnapshot => AbilityStateValue.FromActionTargetSnapshot(value.ActionTargetSnapshot),
                 _ => throw new InvalidOperationException($"Blackboard Input Binding value kind '{value.Kind}' is unsupported.")
             };
         }
 
-        public CharacterStateValue Read<TTarget>(
+        public AbilityStateValue Read<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
             int valueSlot)
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
-            if (TryReadActiveGraphCallInput(cursor, valueSlot, out CharacterStateValue graphInput))
+            if (TryReadActiveGraphCallInput(cursor, valueSlot, out AbilityStateValue graphInput))
                 return graphInput;
             BlackboardOwnerToken expected = ResolveBlackboardOwnerToken(cursor, operation, group, false, out _);
             if (m_State.Get(group.OwnerToken).BlackboardOwnerToken != expected)
@@ -236,7 +236,7 @@ namespace ThirdPersonSimulation.Fixed
         bool TryReadActiveGraphCallInput<TTarget>(
             OperationControlCursor<TTarget> cursor,
             int valueSlot,
-            out CharacterStateValue value)
+            out AbilityStateValue value)
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             for (int i = 0; i < m_Ability.GraphCallFrames.Count; i++)
@@ -260,7 +260,7 @@ namespace ThirdPersonSimulation.Fixed
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
             int valueSlot,
-            CharacterStateValue value)
+            AbilityStateValue value)
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
@@ -280,7 +280,7 @@ namespace ThirdPersonSimulation.Fixed
                 MaterializeGroup(group, expected);
             }
             m_State.Set(valueSlot, value);
-            m_State.Set(group.WriteStamp, CharacterStateValue.FromBlackboardWriteStamp(BuildBlackboardWriteStamp(operation, action)));
+            m_State.Set(group.WriteStamp, AbilityStateValue.FromBlackboardWriteStamp(BuildBlackboardWriteStamp(operation, action)));
             ProjectBlackboardWrite(cursor, operation, valueSlot, value, action);
         }
 
@@ -410,7 +410,7 @@ namespace ThirdPersonSimulation.Fixed
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
             int valueSlot,
-            CharacterStateValue value,
+            AbilityStateValue value,
             FixedActionInstanceState action)
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
@@ -567,17 +567,17 @@ namespace ThirdPersonSimulation.Fixed
             return new TimelineBlackboardScope(this);
         }
 
-        CharacterStateValue DefaultValue(SimulationBlackboardSlotGroup group)
+        AbilityStateValue DefaultValue(SimulationBlackboardSlotGroup group)
         {
             ProgramStateSlot value = m_Ability.StateSlots[group.Value];
-            return CharacterStateValue.FromConstant(m_Ability.Constants[value.DefaultConstantIndex], value.ValueKind);
+            return AbilityStateValue.FromConstant(m_Ability.Constants[value.DefaultConstantIndex], value.ValueKind);
         }
 
         void MaterializeGroup(SimulationBlackboardSlotGroup group, BlackboardOwnerToken ownerToken)
         {
             m_State.Set(group.Value, DefaultValue(group));
-            m_State.Set(group.OwnerToken, CharacterStateValue.FromBlackboardOwnerToken(ownerToken));
-            m_State.Set(group.WriteStamp, CharacterStateValue.FromBlackboardWriteStamp(default));
+            m_State.Set(group.OwnerToken, AbilityStateValue.FromBlackboardOwnerToken(ownerToken));
+            m_State.Set(group.WriteStamp, AbilityStateValue.FromBlackboardWriteStamp(default));
         }
 
         SimulationBlackboardSlotGroup RequireBlackboardGroup(int valueSlot)

@@ -22,13 +22,13 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedSkillExecutionState : IDisposable
     {
         FixedGameplayAbilityExecutionInstallation Installation { get; }
-        CharacterStateValue Get(int slotIndex);
-        CharacterStateValue Get(TypedStateAddress address);
-        void Set(int slotIndex, CharacterStateValue value);
-        void Set(TypedStateAddress address, CharacterStateValue value);
+        AbilityStateValue Get(int slotIndex);
+        AbilityStateValue Get(TypedStateAddress address);
+        void Set(int slotIndex, AbilityStateValue value);
+        void Set(TypedStateAddress address, AbilityStateValue value);
         void Reset(int slotIndex);
-        GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState();
-        void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
+        GameplayAbilityExecutionAggregate<AbilityStateValue> GetAbilityExecutionState();
+        void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<AbilityStateValue> state);
         FixedMotionWarpState GetMotionWarpState(OperationHandle operation);
         void SetMotionWarpState(OperationHandle operation, FixedMotionWarpState value);
     }
@@ -295,9 +295,9 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedGameplayAbilityExecutionInstallation m_Installation;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly FixedGameplayAbilityExecutionData m_Ability;
-        readonly Dictionary<int, CharacterStateValue> m_StateValues;
+        readonly Dictionary<int, AbilityStateValue> m_StateValues;
         readonly Dictionary<int, FixedMotionWarpState> m_MotionWarpStates;
-        GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionState;
+        GameplayAbilityExecutionAggregate<AbilityStateValue> m_AbilityExecutionState;
         bool m_Disposed;
 
         public FixedSkillExecutionState(
@@ -313,7 +313,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             m_Layout = installation.Layout;
             m_Ability = installation.Data;
-            m_StateValues = new Dictionary<int, CharacterStateValue>(state.StateValues);
+            m_StateValues = new Dictionary<int, AbilityStateValue>(state.StateValues);
             m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>(state.MotionWarpStates);
             m_AbilityExecutionState = state.AbilityExecutionState.Clone();
         }
@@ -322,24 +322,24 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedGameplayAbilityExecutionInstallation Installation => m_Installation;
 
-        public CharacterStateValue Get(int slotIndex) => Get(m_Layout.Address(slotIndex));
+        public AbilityStateValue Get(int slotIndex) => Get(m_Layout.Address(slotIndex));
 
-        public CharacterStateValue Get(TypedStateAddress address)
+        public AbilityStateValue Get(TypedStateAddress address)
         {
             RequireActive();
             ProgramStateSlot slot = m_Layout.StateSlots[address.SlotIndex];
-            if (!m_StateValues.TryGetValue(address.SlotIndex, out CharacterStateValue value))
+            if (!m_StateValues.TryGetValue(address.SlotIndex, out AbilityStateValue value))
                 value = slot.DefaultConstantIndex >= 0
-                    ? CharacterStateValue.FromConstant(m_Ability.Constants[slot.DefaultConstantIndex], slot.ValueKind)
-                    : CharacterStateValue.Default(slot.ValueKind);
+                    ? AbilityStateValue.FromConstant(m_Ability.Constants[slot.DefaultConstantIndex], slot.ValueKind)
+                    : AbilityStateValue.Default(slot.ValueKind);
             if (value.Kind != address.ValueKind)
                 throw new InvalidOperationException($"State slot '{address.SlotIndex}' expects '{address.ValueKind}', received '{value.Kind}'.");
             return value;
         }
 
-        public void Set(int slotIndex, CharacterStateValue value) => Set(m_Layout.Address(slotIndex), value);
+        public void Set(int slotIndex, AbilityStateValue value) => Set(m_Layout.Address(slotIndex), value);
 
-        public void Set(TypedStateAddress address, CharacterStateValue value)
+        public void Set(TypedStateAddress address, AbilityStateValue value)
         {
             RequireActive();
             if (value.Kind != address.ValueKind)
@@ -352,17 +352,17 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             ProgramStateSlot slot = m_Layout.StateSlots[slotIndex];
             Set(slotIndex, slot.DefaultConstantIndex >= 0
-                ? CharacterStateValue.FromConstant(m_Ability.Constants[slot.DefaultConstantIndex], slot.ValueKind)
-                : CharacterStateValue.Default(slot.ValueKind));
+                ? AbilityStateValue.FromConstant(m_Ability.Constants[slot.DefaultConstantIndex], slot.ValueKind)
+                : AbilityStateValue.Default(slot.ValueKind));
         }
 
-        public GameplayAbilityExecutionAggregate<CharacterStateValue> GetAbilityExecutionState()
+        public GameplayAbilityExecutionAggregate<AbilityStateValue> GetAbilityExecutionState()
         {
             RequireActive();
             return m_AbilityExecutionState;
         }
 
-        public void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state)
+        public void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<AbilityStateValue> state)
         {
             RequireActive();
             m_AbilityExecutionState = state ?? throw new ArgumentNullException(nameof(state));

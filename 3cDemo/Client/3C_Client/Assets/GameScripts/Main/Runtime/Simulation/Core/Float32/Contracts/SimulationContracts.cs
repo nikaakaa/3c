@@ -665,7 +665,7 @@ namespace ThirdPersonSimulation
 
     public sealed class SimulationValueTrace
     {
-        public SimulationValueTrace(string portId, ProgramValuePortDirection direction, CharacterStateValue value)
+        public SimulationValueTrace(string portId, ProgramValuePortDirection direction, AbilityStateValue value)
         {
             PortId = SimulationIdentity.Require(portId, nameof(portId));
             if (direction is not (ProgramValuePortDirection.Input or ProgramValuePortDirection.Output))
@@ -675,7 +675,7 @@ namespace ThirdPersonSimulation
         }
         public string PortId { get; }
         public ProgramValuePortDirection Direction { get; }
-        public CharacterStateValue Value { get; }
+        public AbilityStateValue Value { get; }
     }
 
     public readonly struct SimulationTraceRecord

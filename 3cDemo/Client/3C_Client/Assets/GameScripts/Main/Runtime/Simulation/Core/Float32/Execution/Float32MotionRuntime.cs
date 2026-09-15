@@ -1208,7 +1208,7 @@ namespace ThirdPersonSimulation
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             using Float32ValueInputLease inputs = m_Values.ReadInputs(cursor, operation);
-            CharacterStateValue input = inputs.FindByKind(ProgramStateValueKind.Vector2);
+            AbilityStateValue input = inputs.FindByKind(ProgramStateValueKind.Vector2);
             if (input.Kind != ProgramStateValueKind.Vector2)
                 throw new InvalidOperationException($"Locomotion operation '{SourcePath(operation)}' has no Vector2 input.");
             Float32Vector2 move = input.Vector2;

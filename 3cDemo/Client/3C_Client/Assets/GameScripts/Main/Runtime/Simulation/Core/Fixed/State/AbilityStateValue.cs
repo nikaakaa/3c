@@ -4,12 +4,12 @@ using System.IO;
 
 namespace ThirdPersonSimulation.Fixed
 {
-	public readonly struct CharacterStateValue
+	public readonly struct AbilityStateValue
 	{
 		readonly BlackboardOwnerToken m_BlackboardOwnerToken;
 		readonly BlackboardWriteStamp m_BlackboardWriteStamp;
 
-		CharacterStateValue(
+		AbilityStateValue(
 			ProgramStateValueKind kind,
 			bool boolean,
 			int int32,
@@ -49,18 +49,18 @@ namespace ThirdPersonSimulation.Fixed
 		public BlackboardOwnerToken BlackboardOwnerToken => Require(ProgramStateValueKind.BlackboardOwnerToken, m_BlackboardOwnerToken);
 		public BlackboardWriteStamp BlackboardWriteStamp => Require(ProgramStateValueKind.BlackboardWriteStamp, m_BlackboardWriteStamp);
 		public SimulationActionTargetSnapshot ActionTargetSnapshot { get; }
-		public static CharacterStateValue FromBoolean(bool value) => Create(ProgramStateValueKind.Boolean, boolean: value);
-		public static CharacterStateValue FromInt32(int value) => Create(ProgramStateValueKind.Int32, int32: value);
-		public static CharacterStateValue FromUInt64(ulong value) => Create(ProgramStateValueKind.UInt64, uint64: value);
-		public static CharacterStateValue FromScalar(FixedScalar value) => Create(ProgramStateValueKind.Scalar, scalar: value);
-		public static CharacterStateValue FromVector2(FixedVector2 value) => Create(ProgramStateValueKind.Vector2, vector2: value);
-		public static CharacterStateValue FromVector3(FixedVector3 value) => Create(ProgramStateValueKind.Vector3, vector3: value);
-		public static CharacterStateValue FromYaw(FixedYaw value) => Create(ProgramStateValueKind.Yaw, yaw: value);
-		public static CharacterStateValue FromIdentity(string value) => Create(ProgramStateValueKind.Identity, identity: value);
-		public static CharacterStateValue FromBlackboardOwnerToken(BlackboardOwnerToken value) => Create(ProgramStateValueKind.BlackboardOwnerToken, blackboardOwnerToken: value);
-		public static CharacterStateValue FromBlackboardWriteStamp(BlackboardWriteStamp value) => Create(ProgramStateValueKind.BlackboardWriteStamp, blackboardWriteStamp: value);
-		public static CharacterStateValue FromActionTargetSnapshot(SimulationActionTargetSnapshot value) => Create(ProgramStateValueKind.ActionTargetSnapshot, actionTargetSnapshot: value);
-		public static CharacterStateValue Default(ProgramStateValueKind kind)
+		public static AbilityStateValue FromBoolean(bool value) => Create(ProgramStateValueKind.Boolean, boolean: value);
+		public static AbilityStateValue FromInt32(int value) => Create(ProgramStateValueKind.Int32, int32: value);
+		public static AbilityStateValue FromUInt64(ulong value) => Create(ProgramStateValueKind.UInt64, uint64: value);
+		public static AbilityStateValue FromScalar(FixedScalar value) => Create(ProgramStateValueKind.Scalar, scalar: value);
+		public static AbilityStateValue FromVector2(FixedVector2 value) => Create(ProgramStateValueKind.Vector2, vector2: value);
+		public static AbilityStateValue FromVector3(FixedVector3 value) => Create(ProgramStateValueKind.Vector3, vector3: value);
+		public static AbilityStateValue FromYaw(FixedYaw value) => Create(ProgramStateValueKind.Yaw, yaw: value);
+		public static AbilityStateValue FromIdentity(string value) => Create(ProgramStateValueKind.Identity, identity: value);
+		public static AbilityStateValue FromBlackboardOwnerToken(BlackboardOwnerToken value) => Create(ProgramStateValueKind.BlackboardOwnerToken, blackboardOwnerToken: value);
+		public static AbilityStateValue FromBlackboardWriteStamp(BlackboardWriteStamp value) => Create(ProgramStateValueKind.BlackboardWriteStamp, blackboardWriteStamp: value);
+		public static AbilityStateValue FromActionTargetSnapshot(SimulationActionTargetSnapshot value) => Create(ProgramStateValueKind.ActionTargetSnapshot, actionTargetSnapshot: value);
+		public static AbilityStateValue Default(ProgramStateValueKind kind)
 		{
 			return kind switch
 			{
@@ -79,11 +79,11 @@ namespace ThirdPersonSimulation.Fixed
 			};
 		}
 
-		public static CharacterStateValue FromConstant(ProgramConstant constant, ProgramStateValueKind expectedKind)
+		public static AbilityStateValue FromConstant(ProgramConstant constant, ProgramStateValueKind expectedKind)
 		{
 			if (constant == null)
 				throw new ArgumentNullException(nameof(constant));
-			CharacterStateValue value = expectedKind switch
+			AbilityStateValue value = expectedKind switch
 			{
 				ProgramStateValueKind.Boolean when constant.Kind == ProgramConstantKind.Boolean => FromBoolean(constant.Boolean),
 				ProgramStateValueKind.Int32 when constant.Kind == ProgramConstantKind.Int32 => FromInt32(constant.Int32),
@@ -101,7 +101,7 @@ namespace ThirdPersonSimulation.Fixed
 			return value;
 		}
 
-		static CharacterStateValue Create(
+		static AbilityStateValue Create(
 			ProgramStateValueKind kind,
 			bool boolean = default,
 			int int32 = default,
@@ -115,7 +115,7 @@ namespace ThirdPersonSimulation.Fixed
 			BlackboardWriteStamp blackboardWriteStamp = default,
 			SimulationActionTargetSnapshot actionTargetSnapshot = default)
 		{
-			return new CharacterStateValue(
+			return new AbilityStateValue(
 				kind,
 				boolean,
 				int32,
@@ -138,4 +138,3 @@ namespace ThirdPersonSimulation.Fixed
 		}
 	}
 }
-

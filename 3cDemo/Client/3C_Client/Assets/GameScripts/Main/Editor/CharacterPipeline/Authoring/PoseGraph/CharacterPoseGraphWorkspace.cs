@@ -128,7 +128,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         CharacterPoseRuntimeTraceProjection m_RuntimeTrace;
         CharacterPoseCanvasDetailsDataSource m_DetailsDataSource;
         CharacterPoseLiveObservationPanel m_ObservationPanel;
-        readonly CharacterPosePublishedProjectionReader m_PublishedReader = new CharacterPosePublishedProjectionReader();
         Action m_ShowDetails;
         CharacterPoseStateMachineDocument m_StateMachineDocument;
         CharacterPoseStateMachineEditorMutationAdapter m_StateMachineMutation;
@@ -1808,17 +1807,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             projection = null;
             if (!m_Definition || !m_Profile || !m_Projection ||
-                !m_Definition.SimulationProgram ||
                 m_Definition.AnimationPresentationProfile != m_Profile ||
                 m_Definition.PresentationProjection != m_Projection)
             {
                 status =
-                    "Unavailable: one exact Definition, Profile, Simulation Program and Presentation Projection context is required.";
+                    "Unavailable: one exact Definition, Profile and Presentation Projection context is required.";
                 return false;
             }
-            if (!m_PublishedReader.TryRead(m_Definition.SimulationProgram, m_Projection, out projection, out string error))
+            try
             {
-                status = "已发布产物不可用：" + error;
+                projection = m_Projection.Load();
+            }
+            catch (Exception exception)
+            {
+                status = "已发布产物不可用：" + exception.Message;
                 return false;
             }
             status = "Ready";

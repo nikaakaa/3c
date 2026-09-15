@@ -282,6 +282,12 @@
 - 这条链路只负责编辑器技能图定位，不需要读取运行时 Program、构建 Program identity 或重新加载资产；删除旧 reader 后保持作者入口的输入仍是正式 Character Definition。
 - 未运行 Unity 或测试；本步为独立静态接线，后续随 Editor 工程统一刷新验证。
 
+## 2026-09-15 Pose作者工作区退出旧Program读取
+
+- `CharacterPoseGraphWorkspace` 的已发布 Projection 查询不再要求 `CharacterPipelineDefinition.SimulationProgram`，也不再调用已经删除的 `CharacterPosePublishedProjectionReader`。
+- 工作区继续校验 Definition、Animation Profile 与 Projection 是同一组作者上下文，然后直接读取 `CharacterPresentationProjectionAsset.Load()`；异常仍只作为作者状态返回，不把 Pose 工作区变成角色运行时装配入口。
+- 未运行 Unity 或测试；本步只移除旧 Program 读路径，Pose 节点与采样算法仍由 Pose 领域负责。
+
 ## 2026-09-15 Frontend按可达节点声明Equipment能力
 
 - 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。

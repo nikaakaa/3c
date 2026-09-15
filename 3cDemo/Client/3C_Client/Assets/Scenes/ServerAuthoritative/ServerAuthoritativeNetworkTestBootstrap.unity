@@ -168,7 +168,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_ClientSceneName: ServerAuthoritativeClient
   m_AuthoritySceneName: ServerAuthoritativeAuthorityWorker
-  m_DotRecastClientSceneName: DotRecastAuthorityClient
   m_EditorScenario: 1
   m_EditorRole: 2
 --- !u!1660057539 &9223372036854775807

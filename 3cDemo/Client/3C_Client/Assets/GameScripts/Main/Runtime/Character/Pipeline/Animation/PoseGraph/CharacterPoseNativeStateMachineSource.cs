@@ -293,6 +293,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose native StateMachine source evaluation preparation is invalid.");
             foreach (StateRuntime state in EnumerateActiveStates())
             {
+                for (int requestIndex = 0;
+                     requestIndex < state.Preparation.Demand.Requests.Count;
+                     requestIndex++)
+                {
+                    CharacterPoseNativeSourceRequest expected =
+                        state.Preparation.Demand.Requests[requestIndex];
+                    bool found = demand.Requests.Any(candidate =>
+                        candidate.ScopeInstanceId == expected.ScopeInstanceId &&
+                        candidate.NodeId == expected.NodeId &&
+                        candidate.SourceId == expected.SourceId);
+                    if (!found)
+                        throw new InvalidOperationException(
+                            $"Pose StateMachine '{m_NodeId}' child source request '{expected.NodeId}/{expected.SourceId}' was lost before the evaluation barrier.");
+                }
                 state.Graph.PrepareEvaluation(
                     state.Lease,
                     in state.Preparation.Demand,

@@ -936,7 +936,7 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 
 ## 2026-09-15 r3 角色 Host 接线契约
 
-- Pose 侧交付的正式入口是 `CharacterPoseNativeRoleEntry.Create/Replace`，不是直接由 Host 操作 `CharacterPoseNativeGraphRuntime`。Host 必须提供 `CharacterAnimationPresentationProfile`、同一 Rig payload 与 Rig binding、`CharacterAnimationInputContract`、实际资源 revision、`CharacterPoseNativeInstanceContext`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、三组原生 handler composition、动画属性绑定、Player Node identity 列表和真实贡献容量。
+- Pose 侧交付的正式入口是 `CharacterPoseNativeRoleEntry.Create/Replace`，不是直接由 Host 操作 `CharacterPoseNativeGraphRuntime`。Host 必须提供 `CharacterAnimationPresentationProfile`、同一 Rig payload 与 Rig binding、`CharacterAnimationInputContract`、实际资源 revision、`CharacterPoseNativeInstanceContext`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、四组原生 handler composition、动画属性绑定、Player Node identity 列表和真实贡献容量。
 - `CharacterPoseNativeInstanceContext` 必须使用当前角色的 Actor、Host 组件、EventGraph 父 Blackboard、Animancer、Rig binding 和 Root Hierarchy；不能重新创建角色时钟、可变 Blackboard、Source、Constraint 或 IK 历史。`CharacterPoseNativeRoleDependencyFactory` 负责把这些已拥有的服务收成唯一 handler factory 与 `CharacterFinalPoseNativePublication`，Host 只持有返回的 `CharacterPoseNativeRoleSession`。
 - 首次安装调用 `Create`；已采用实例的图/资源替换调用 `Replace(current, ...)`，只有 `Adopted` 才交换当前 session。失败必须保留旧 session、释放未采用依赖，不把 `Prepare` 或图存在误报为已安装。
 - 每帧 Host 以同一次表现帧生成 `CharacterPoseNativeFrameInput`，调用 `session.Frame.BeginFrame` 取得本图活跃分支和 Source demand；唯一 Source/Animancer barrier 完成后调用 `PrepareEvaluation(barrierIdentity)`、`Evaluate`、`ValidatePending`、`Commit`。Barrier 前失败走 `Discard`，提交后的结果只从 `CharacterFinalPoseNativePublication` 消费；不得再调用旧 Program、全图 Worker 或第二次采样链。

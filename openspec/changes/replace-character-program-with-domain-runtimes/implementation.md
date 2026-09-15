@@ -1194,3 +1194,8 @@
 
 - 提交 `38faf72c4`，将节点发射结果、发射器接口、上下文、注册表、简单／Camera 发射器和各领域注册入口从 `CharacterSimulation*` 统一为 `Simulation*`，同时迁移对应 Unity 文件路径与 `.meta`。
 - 保留节点注册顺序、操作编码、值端口采集、Camera producer 和 source map 行为；本步只清理共享语义编译层的角色前缀和旧文件名。
+
+## 2026-09-16 删除无消费者的ACL发布阶段
+
+- 提交 `a1b9749ed`，删除没有实例化方、且实现仓库不存在发布接口的 `CharacterAclAnimationArtifactPublishStage`；将仍被 Stager 与 Validator 使用的 `CharacterAclAnimationPublishGroup` 独立保留。
+- 保留 ACL 组 artifact、资源 descriptor、asset stem 和 Resource 回写合同，不改变现有校验与落盘链路。

@@ -111,7 +111,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly List<ProgramGraphCallFrame> m_GraphCallFrames = new List<ProgramGraphCallFrame>();
         readonly List<ProgramStateSlot> m_StateSlots = new List<ProgramStateSlot>();
         readonly List<ProgramScopeLayout> m_Scopes = new List<ProgramScopeLayout>();
-        readonly List<ProgramWorldRequestLayout> m_WorldRequests = new List<ProgramWorldRequestLayout>();
         readonly List<ProgramOutputChannelLayout> m_OutputChannels = new List<ProgramOutputChannelLayout>();
         readonly List<ProgramCatalogEntry> m_CatalogEntries = new List<ProgramCatalogEntry>();
         readonly List<ProgramSourceMapEntry> m_SourceMap = new List<ProgramSourceMapEntry>();
@@ -123,7 +122,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly HashSet<string> m_ScopeIdentities = new HashSet<string>(StringComparer.Ordinal);
         readonly HashSet<string> m_GameplayCapabilities = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<ProgramStateValueKind, int> m_DefaultConstants = new Dictionary<ProgramStateValueKind, int>();
-        WorldCapability m_RequiredWorldCapabilities;
 
         public GameplayAbilitySemanticBuilder(
             ProgramId programId,
@@ -519,23 +517,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_GameplayCapabilities.Add(capability);
         }
 
-        public int RequireWorldRequest(string identity, WorldCapability capability)
-        {
-            for (int i = 0; i < m_WorldRequests.Count; i++)
-            {
-                if (string.Equals(m_WorldRequests[i].Identity, identity, StringComparison.Ordinal))
-                {
-                    if (m_WorldRequests[i].RequiredCapability != capability)
-                        throw new InvalidOperationException($"World request '{identity}' capability is inconsistent.");
-                    return i;
-                }
-            }
-            int index = m_WorldRequests.Count;
-            m_WorldRequests.Add(new ProgramWorldRequestLayout(index, identity, capability));
-            m_RequiredWorldCapabilities |= capability;
-            return index;
-        }
-
         public CharacterGameplaySemanticIr Build()
         {
             ValidateSingleChildControlFlow();
@@ -560,7 +541,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_OperationSetVersion,
                     m_TickRate,
                     m_SourceRevision,
-                    new ProgramCapabilityManifest(m_GameplayCapabilities, m_RequiredWorldCapabilities),
+                    new ProgramCapabilityManifest(m_GameplayCapabilities, WorldCapability.None),
                     m_Root);
                 return new CharacterGameplaySemanticIr(
                     manifest,
@@ -571,7 +552,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_References,
                     m_StateSlots,
                     m_Scopes,
-                    m_WorldRequests,
                     m_OutputChannels,
                     m_CatalogEntries,
                     m_SourceMap,

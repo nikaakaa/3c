@@ -310,7 +310,6 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<ProgramGraphCallFrame> m_GraphCallFrames;
         readonly ReadOnlyCollection<ProgramStateSlot> m_StateDeclarations;
         readonly ReadOnlyCollection<ProgramScopeLayout> m_Scopes;
-        readonly ReadOnlyCollection<ProgramWorldRequestLayout> m_WorldRequests;
         readonly ReadOnlyCollection<ProgramOutputChannelLayout> m_OutputChannels;
         readonly ReadOnlyCollection<ProgramCatalogEntry> m_CatalogEntries;
         readonly ReadOnlyCollection<ProgramSourceMapEntry> m_SourceMap;
@@ -325,7 +324,6 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramReference> references,
             IEnumerable<ProgramStateSlot> stateDeclarations,
             IEnumerable<ProgramScopeLayout> scopes,
-            IEnumerable<ProgramWorldRequestLayout> worldRequests,
             IEnumerable<ProgramOutputChannelLayout> outputChannels,
             IEnumerable<ProgramCatalogEntry> catalogEntries,
             IEnumerable<ProgramSourceMapEntry> sourceMap,
@@ -341,7 +339,6 @@ namespace ThirdPersonSimulation
             m_References = ByIdentity(references, value => value.Identity, "reference");
             m_StateDeclarations = Indexed(stateDeclarations, value => value.Index, "state declaration");
             m_Scopes = ByIdentity(scopes, value => value.Identity, "scope");
-            m_WorldRequests = Indexed(worldRequests, value => value.Index, "world request");
             m_OutputChannels = Indexed(outputChannels, value => value.Index, "output channel");
             m_CatalogEntries = Indexed(catalogEntries, value => value.Index, "catalog entry");
             m_SourceMap = SortSourceMap(sourceMap);
@@ -368,7 +365,6 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<ProgramGraphCallFrame> GraphCallFrames => m_GraphCallFrames;
         public IReadOnlyList<ProgramStateSlot> StateDeclarations => m_StateDeclarations;
         public IReadOnlyList<ProgramScopeLayout> Scopes => m_Scopes;
-        public IReadOnlyList<ProgramWorldRequestLayout> WorldRequests => m_WorldRequests;
         public IReadOnlyList<ProgramOutputChannelLayout> OutputChannels => m_OutputChannels;
         public IReadOnlyList<ProgramCatalogEntry> CatalogEntries => m_CatalogEntries;
         public IReadOnlyList<ProgramSourceMapEntry> SourceMap => m_SourceMap;

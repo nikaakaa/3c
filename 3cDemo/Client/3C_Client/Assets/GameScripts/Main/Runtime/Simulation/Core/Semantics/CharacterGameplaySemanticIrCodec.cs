@@ -123,8 +123,8 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplaySemanticIrCodec
     {
         const uint ArtifactMagic = 0x52495343;
-        const int ArtifactVersion = 15;
-        const int PayloadVersion = 15;
+        const int ArtifactVersion = 16;
+        const int PayloadVersion = 16;
 
         public static byte[] WriteArtifact(CharacterGameplaySemanticIr semanticIr)
         {
@@ -318,7 +318,6 @@ namespace ThirdPersonSimulation
             WriteTable(writer, semanticIr.GraphCallFrames, SimulationProgramSemanticsCodec.WriteGraphCallFrame);
             WriteTable(writer, semanticIr.StateDeclarations, (target, value) => SimulationProgramSemanticsCodec.WriteStateSlot(target, value, true));
             WriteTable(writer, semanticIr.Scopes, SimulationProgramSemanticsCodec.WriteScope);
-            WriteTable(writer, semanticIr.WorldRequests, SimulationProgramSemanticsCodec.WriteWorldRequest);
             WriteTable(writer, semanticIr.OutputChannels, SimulationProgramSemanticsCodec.WriteOutputChannel);
             WriteTable(writer, semanticIr.CatalogEntries, SimulationProgramSemanticsCodec.WriteCatalogEntry);
             WriteTable(writer, semanticIr.SourceMap, SimulationProgramSemanticsCodec.WriteSourceMap);
@@ -339,7 +338,6 @@ namespace ThirdPersonSimulation
             ProgramGraphCallFrame[] graphCallFrames = ReadTable(reader, SimulationProgramSemanticsCodec.ReadGraphCallFrame);
             ProgramStateSlot[] stateDeclarations = ReadTable(reader, SimulationProgramSemanticsCodec.ReadStateSlot);
             ProgramScopeLayout[] scopes = ReadTable(reader, SimulationProgramSemanticsCodec.ReadScope);
-            ProgramWorldRequestLayout[] worldRequests = ReadTable(reader, SimulationProgramSemanticsCodec.ReadWorldRequest);
             ProgramOutputChannelLayout[] outputChannels = ReadTable(reader, SimulationProgramSemanticsCodec.ReadOutputChannel);
             ProgramCatalogEntry[] catalogEntries = ReadTable(reader, SimulationProgramSemanticsCodec.ReadCatalogEntry);
             ProgramSourceMapEntry[] sourceMap = ReadTable(reader, SimulationProgramSemanticsCodec.ReadSourceMap);
@@ -354,7 +352,6 @@ namespace ThirdPersonSimulation
                 references,
                 stateDeclarations,
                 scopes,
-                worldRequests,
                 outputChannels,
                 catalogEntries,
                 sourceMap,

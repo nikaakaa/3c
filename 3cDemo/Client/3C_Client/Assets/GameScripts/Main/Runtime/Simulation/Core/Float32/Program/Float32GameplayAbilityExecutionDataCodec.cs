@@ -55,8 +55,8 @@ namespace ThirdPersonSimulation
     public static class Float32GameplayAbilityExecutionDataCodec
     {
         const uint ArtifactMagic = 0x46414244;
-        const int ArtifactVersion = 1;
-        const int PayloadVersion = 1;
+        const int ArtifactVersion = 2;
+        const int PayloadVersion = 2;
 
         public static byte[] WriteArtifact(Float32GameplayAbilityExecutionData data)
         {
@@ -173,7 +173,6 @@ namespace ThirdPersonSimulation
             WriteTable(writer, data.GraphCallFrames, WriteGraphCallFrame);
             WriteTable(writer, data.StateSlots, (target, value) => WriteStateSlot(target, value, true));
             WriteTable(writer, data.Scopes, WriteScope);
-            WriteTable(writer, data.WorldRequests, WriteWorldRequest);
             WriteTable(writer, data.OutputChannels, WriteOutputChannel);
             WriteTable(writer, data.CatalogEntries, WriteCatalogEntry);
             WriteTable(writer, data.MotionModifiers, WriteMotionModifier);
@@ -212,7 +211,6 @@ namespace ThirdPersonSimulation
             ProgramGraphCallFrame[] graphCallFrames = ReadTable(reader, ReadGraphCallFrame);
             ProgramStateSlot[] stateSlots = ReadTable(reader, ReadStateSlot);
             ProgramScopeLayout[] scopes = ReadTable(reader, ReadScope);
-            ProgramWorldRequestLayout[] worldRequests = ReadTable(reader, ReadWorldRequest);
             ProgramOutputChannelLayout[] outputChannels = ReadTable(reader, ReadOutputChannel);
             ProgramCatalogEntry[] catalogEntries = ReadTable(reader, ReadCatalogEntry);
             ProgramMotionModifierDescriptor[] motionModifiers = ReadTable(reader, ReadMotionModifier);
@@ -247,7 +245,6 @@ namespace ThirdPersonSimulation
                 graphCallFrames,
                 stateSlots,
                 scopes,
-                worldRequests,
                 outputChannels,
                 catalogEntries,
                 motionModifiers,

@@ -208,7 +208,6 @@ namespace ThirdPersonSimulation.Fixed
                 semanticIr.GraphCallFrames,
                 stateSlots,
                 semanticIr.Scopes,
-                semanticIr.WorldRequests,
                 semanticIr.OutputChannels,
                 semanticIr.CatalogEntries,
                 ProgramMotionModifierCompiler.Compile(semanticIr),

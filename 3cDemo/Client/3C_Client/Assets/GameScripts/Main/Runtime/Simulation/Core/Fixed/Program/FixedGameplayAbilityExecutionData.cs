@@ -29,7 +29,6 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<ProgramGraphCallFrame> graphCallFrames,
             IEnumerable<ProgramStateSlot> stateSlots,
             IEnumerable<ProgramScopeLayout> scopes,
-            IEnumerable<ProgramWorldRequestLayout> worldRequests,
             IEnumerable<ProgramOutputChannelLayout> outputChannels,
             IEnumerable<ProgramCatalogEntry> catalogEntries,
             IEnumerable<ProgramMotionModifierDescriptor> motionModifiers,
@@ -68,7 +67,6 @@ namespace ThirdPersonSimulation.Fixed
             GraphCallFrames = Copy(graphCallFrames);
             StateSlots = Copy(stateSlots);
             Scopes = Copy(scopes);
-            WorldRequests = Copy(worldRequests);
             OutputChannels = Copy(outputChannels);
             CatalogEntries = Copy(catalogEntries);
             MotionModifiers = Copy(motionModifiers);
@@ -108,7 +106,6 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<ProgramGraphCallFrame> GraphCallFrames { get; }
         public IReadOnlyList<ProgramStateSlot> StateSlots { get; }
         public IReadOnlyList<ProgramScopeLayout> Scopes { get; }
-        public IReadOnlyList<ProgramWorldRequestLayout> WorldRequests { get; }
         public IReadOnlyList<ProgramOutputChannelLayout> OutputChannels { get; }
         public IReadOnlyList<ProgramCatalogEntry> CatalogEntries { get; }
         public IReadOnlyList<ProgramMotionModifierDescriptor> MotionModifiers { get; }
@@ -141,7 +138,6 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<ProgramGraphCallFrame> graphCallFrames,
             IEnumerable<ProgramStateSlot> stateSlots,
             IEnumerable<ProgramScopeLayout> scopes,
-            IEnumerable<ProgramWorldRequestLayout> worldRequests,
             IEnumerable<ProgramOutputChannelLayout> outputChannels,
             IEnumerable<ProgramCatalogEntry> catalogEntries,
             IEnumerable<ProgramMotionModifierDescriptor> motionModifiers,
@@ -173,7 +169,6 @@ namespace ThirdPersonSimulation.Fixed
                 graphCallFrames,
                 stateSlots,
                 scopes,
-                worldRequests,
                 outputChannels,
                 catalogEntries,
                 motionModifiers,

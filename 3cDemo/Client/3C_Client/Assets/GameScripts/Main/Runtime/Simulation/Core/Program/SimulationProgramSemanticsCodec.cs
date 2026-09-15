@@ -169,18 +169,6 @@ namespace ThirdPersonSimulation
                 ReadIntArray(reader));
         }
 
-        internal static void WriteWorldRequest(CanonicalWriter writer, ProgramWorldRequestLayout value)
-        {
-            writer.WriteInt32(value.Index);
-            writer.WriteString(value.Identity);
-            writer.WriteUInt64((ulong)value.RequiredCapability);
-        }
-
-        internal static ProgramWorldRequestLayout ReadWorldRequest(CanonicalReader reader)
-        {
-            return new ProgramWorldRequestLayout(reader.ReadInt32(), reader.ReadString(), (WorldCapability)reader.ReadUInt64());
-        }
-
         internal static void WriteOutputChannel(CanonicalWriter writer, ProgramOutputChannelLayout value)
         {
             writer.WriteInt32(value.Index);

@@ -724,7 +724,6 @@ namespace ThirdPersonSimulation
         Constant = 2,
         StateSlot = 3,
         Scope = 4,
-        WorldRequest = 5,
         OutputChannel = 6,
         Producer = 7,
         CatalogEntry = 8,
@@ -1178,22 +1177,6 @@ namespace ThirdPersonSimulation
         public string OwnerIdentity { get; }
         public OperationHandle OwnerOperation { get; }
         public IReadOnlyList<int> StateSlots => m_StateSlots;
-    }
-
-    public sealed class ProgramWorldRequestLayout
-    {
-        public ProgramWorldRequestLayout(int index, string identity, WorldCapability requiredCapability)
-        {
-            if (index < 0 || requiredCapability == WorldCapability.None)
-                throw new ArgumentOutOfRangeException();
-            Index = index;
-            Identity = SimulationIdentity.Require(identity, nameof(identity));
-            RequiredCapability = requiredCapability;
-        }
-
-        public int Index { get; }
-        public string Identity { get; }
-        public WorldCapability RequiredCapability { get; }
     }
 
     public enum ProgramOutputChannelKind : byte

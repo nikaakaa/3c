@@ -121,12 +121,10 @@ namespace ThirdPersonSimulation.Fixed
                 actionStore,
                 control);
             return new FixedAbilityExecutionAssembly(
-                actionStore,
                 input,
                 actions,
                 gameplayEffects,
                 equipment,
-                values,
                 blackboard,
                 motion,
                 locomotion,

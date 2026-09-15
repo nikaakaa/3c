@@ -120,12 +120,10 @@ namespace ThirdPersonSimulation
                 actionStore,
                 control);
             return new Float32AbilityExecutionAssembly(
-                actionStore,
                 input,
                 actions,
                 gameplayEffects,
                 equipment,
-                values,
                 blackboard,
                 motion,
                 locomotion,

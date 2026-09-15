@@ -41,24 +41,20 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedAbilityExecutionAssembly
     {
         public FixedAbilityExecutionAssembly(
-            FixedActionStateStore actionStore,
             FixedInputRuntime input,
             FixedActionRuntime actions,
             FixedGameplayEffectOperationRuntime gameplayEffects,
             FixedEquipmentRuntime equipment,
-            FixedValueRuntime values,
             FixedBlackboardRuntime blackboard,
             FixedMotionAccumulator motion,
             FixedLocomotionRuntime locomotion,
             FixedAbilityControlRuntime control,
             FixedAbilityDomainRuntime domain)
         {
-            ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
             Input = input ?? throw new ArgumentNullException(nameof(input));
             Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             GameplayEffects = gameplayEffects;
             Equipment = equipment;
-            Values = values ?? throw new ArgumentNullException(nameof(values));
             Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             Motion = motion ?? throw new ArgumentNullException(nameof(motion));
             Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
@@ -66,12 +62,10 @@ namespace ThirdPersonSimulation.Fixed
             Domain = domain ?? throw new ArgumentNullException(nameof(domain));
         }
 
-        public FixedActionStateStore ActionStore { get; }
         public FixedInputRuntime Input { get; }
         public FixedActionRuntime Actions { get; }
         public FixedGameplayEffectOperationRuntime GameplayEffects { get; }
         public FixedEquipmentRuntime Equipment { get; }
-        public FixedValueRuntime Values { get; }
         public FixedBlackboardRuntime Blackboard { get; }
         public FixedMotionAccumulator Motion { get; }
         public FixedLocomotionRuntime Locomotion { get; }
@@ -86,11 +80,9 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedAbilityExecutionWorkspace m_Workspace;
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedInputRuntime m_Input;
-        readonly FixedActionStateStore m_ActionStore;
         readonly FixedActionRuntime m_Actions;
         readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
         readonly FixedEquipmentRuntime m_Equipment;
-        readonly FixedValueRuntime m_Values;
         readonly FixedBlackboardRuntime m_Blackboard;
         readonly FixedMotionAccumulator m_Motion;
         readonly FixedLocomotionRuntime m_Locomotion;
@@ -153,12 +145,10 @@ namespace ThirdPersonSimulation.Fixed
                 installations,
                 m_Frame,
                 m_Workspace);
-            m_ActionStore = assembly.ActionStore;
             m_Input = assembly.Input;
             m_Actions = assembly.Actions;
             m_GameplayEffects = assembly.GameplayEffects;
             m_Equipment = assembly.Equipment;
-            m_Values = assembly.Values;
             m_Blackboard = assembly.Blackboard;
             m_Motion = assembly.Motion;
             m_Locomotion = assembly.Locomotion;

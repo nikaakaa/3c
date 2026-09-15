@@ -40,24 +40,20 @@ namespace ThirdPersonSimulation
     internal sealed class Float32AbilityExecutionAssembly
     {
         public Float32AbilityExecutionAssembly(
-            Float32ActionStateStore actionStore,
             Float32InputRuntime input,
             Float32ActionRuntime actions,
             Float32GameplayEffectOperationRuntime gameplayEffects,
             Float32EquipmentRuntime equipment,
-            Float32ValueRuntime values,
             Float32BlackboardRuntime blackboard,
             Float32MotionAccumulator motion,
             Float32LocomotionRuntime locomotion,
             Float32AbilityControlRuntime control,
             Float32AbilityDomainRuntime domain)
         {
-            ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
             Input = input ?? throw new ArgumentNullException(nameof(input));
             Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             GameplayEffects = gameplayEffects;
             Equipment = equipment;
-            Values = values ?? throw new ArgumentNullException(nameof(values));
             Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             Motion = motion ?? throw new ArgumentNullException(nameof(motion));
             Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
@@ -65,12 +61,10 @@ namespace ThirdPersonSimulation
             Domain = domain ?? throw new ArgumentNullException(nameof(domain));
         }
 
-        public Float32ActionStateStore ActionStore { get; }
         public Float32InputRuntime Input { get; }
         public Float32ActionRuntime Actions { get; }
         public Float32GameplayEffectOperationRuntime GameplayEffects { get; }
         public Float32EquipmentRuntime Equipment { get; }
-        public Float32ValueRuntime Values { get; }
         public Float32BlackboardRuntime Blackboard { get; }
         public Float32MotionAccumulator Motion { get; }
         public Float32LocomotionRuntime Locomotion { get; }
@@ -85,11 +79,9 @@ namespace ThirdPersonSimulation
         readonly Float32AbilityExecutionWorkspace m_Workspace;
         readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32InputRuntime m_Input;
-        readonly Float32ActionStateStore m_ActionStore;
         readonly Float32ActionRuntime m_Actions;
         readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
         readonly Float32EquipmentRuntime m_Equipment;
-        readonly Float32ValueRuntime m_Values;
         readonly Float32BlackboardRuntime m_Blackboard;
         readonly Float32MotionAccumulator m_Motion;
         readonly Float32LocomotionRuntime m_Locomotion;
@@ -152,12 +144,10 @@ namespace ThirdPersonSimulation
                 installations,
                 m_Frame,
                 m_Workspace);
-            m_ActionStore = assembly.ActionStore;
             m_Input = assembly.Input;
             m_Actions = assembly.Actions;
             m_GameplayEffects = assembly.GameplayEffects;
             m_Equipment = assembly.Equipment;
-            m_Values = assembly.Values;
             m_Blackboard = assembly.Blackboard;
             m_Motion = assembly.Motion;
             m_Locomotion = assembly.Locomotion;

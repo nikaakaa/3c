@@ -60,7 +60,6 @@ namespace ThirdPersonSimulation.Fixed
         public FixedGameplayAbilityExecutionData Data => m_Execution.Data;
         public GameplayAbilityExecutionLayout Layout => m_Execution.Layout;
         public GameplayAbilityExecutionIdentity Identity => m_Execution.Services.Identity;
-        internal FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog => m_Execution.Services.GameplayEffectCatalog;
         internal EquipmentProgramLayout EquipmentLayout => m_EquipmentLayout;
         internal FixedGameplayAbilityExecutionServices Services => m_Execution.Services;
         internal FixedAbilityExecutionContext Execution => m_Execution;

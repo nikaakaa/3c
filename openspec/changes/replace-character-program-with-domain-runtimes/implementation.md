@@ -941,3 +941,8 @@
 
 - 提交 `0c16e8b8c`，Scene Play 历史观察删除不存在的 `SimulationProgramEpoch`／`session.ProgramEpoch` 读取和 `program_epoch`、`program_revision` 输出，改从正式 `SimulationSessionLaunchPlan` 发布 Session、执行目标、NumericProfile、Target ABI、OperationSet 与 Pipeline plan 身份。
 - 组合准备尚未完成时返回正式的 Session 状态，不制造旧 Program 版本；该 Unity Editor 文件未纳入当前两条 .NET 目标工程，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 统一角色状态解码绑定入口
+
+- 提交 `b21454492`，Float32／Fixed Character Runtime State Codec、世界快照恢复、Float32 Authority checkpoint／Prediction 恢复和 DotRecast 初始状态读取统一接收 `SimulationActorBinding`；安装集合、Gameplay Effect／Equipment 绑定和角色内容身份由 Actor binding 唯一提供。
+- 不改变状态字节格式、Codec identity 或恢复校验，只删除调用方分散传参导致的跨角色拼接入口；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

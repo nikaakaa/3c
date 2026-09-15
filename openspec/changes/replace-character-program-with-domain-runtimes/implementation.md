@@ -515,3 +515,9 @@
 - 提交 `0caed6059`，将 `CharacterPipelineDefinition.LoadFloat32CharacterAbilities`／`LoadFixedCharacterAbilities` 改为 `LoadFloat32AbilitySet`／`LoadFixedAbilitySet`，同步 Local Host、Fixed Host、Rollback Host、DotRecast Authority 导出和网络产品调用点。
 - 入口仍只负责校验 Definition 的 Ability grants 与独立 Data asset 一一对应，再通过既有 Provider binding 加载 Ability execution data；没有改变 artifact 字节格式、Provider 合同、安装顺序或执行状态。
 - 未重复执行完整 Unity 生成工程编译：该工程上一轮已被既有 `TypedStateAddress`、`GameplayAbilityExecutionLayout` 等源索引缺失和 UGUI 包错误阻断；本步已完成旧方法名的全仓源码残留检查，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色绑定持有Equipment需求
+
+- 提交 `49bde3929`，Float32／Fixed `SimulationActorBinding` 在装配时汇总全部已安装 Ability 的 Equipment 能力，并公开角色级 `RequiresEquipment`；角色初始状态改为依据这一事实编译 Equipment 布局。
+- 删除 Character Runtime 端对 Ability 安装列表的重复扫描、首个 Equipment 能力短路和运行时缺失服务判断；缺失服务仍在角色绑定装配时拒绝，Equipment 状态所有权与既有角色事务、codec 和 Step 不变。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.11、2.1、2.6 的完整独立技能执行与跨领域结果接线仍未完成。

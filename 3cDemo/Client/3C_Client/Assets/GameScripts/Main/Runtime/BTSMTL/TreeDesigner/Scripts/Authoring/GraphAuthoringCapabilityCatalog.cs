@@ -653,7 +653,6 @@ namespace TreeDesigner.Authoring
             string mutationBindingId = "",
             string validationBindingId = "",
             string compilerBindingId = "",
-            string documentCodecId = "",
             Type authoringType = null,
             string externalKind = "",
             bool systemOwned = false,
@@ -683,7 +682,6 @@ namespace TreeDesigner.Authoring
             MutationBindingId = mutationBindingId ?? string.Empty;
             ValidationBindingId = validationBindingId ?? string.Empty;
             CompilerBindingId = compilerBindingId ?? string.Empty;
-            DocumentCodecId = documentCodecId ?? string.Empty;
             AuthoringType = authoringType;
             ExternalKind = externalKind ?? string.Empty;
             SystemOwned = systemOwned;
@@ -723,7 +721,6 @@ namespace TreeDesigner.Authoring
         public string MutationBindingId { get; }
         public string ValidationBindingId { get; }
         public string CompilerBindingId { get; }
-        public string DocumentCodecId { get; }
         public Type AuthoringType { get; }
         public string ExternalKind { get; }
         public bool SystemOwned { get; }

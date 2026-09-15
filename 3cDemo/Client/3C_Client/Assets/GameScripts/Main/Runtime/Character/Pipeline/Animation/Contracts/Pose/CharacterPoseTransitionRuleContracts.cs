@@ -37,7 +37,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Bool = 1,
         Float = 2,
         Enum = 3,
-        Identity = 4
+        Identity = 4,
+        Int = 5
     }
 
     public enum PoseTransitionRuleOperationKind : byte
@@ -57,7 +58,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         LessOrEqual = 13,
         TimeInState = 14,
         StatePoseRemainingTime = 15,
-        IdentityLiteral = 16
+        IdentityLiteral = 16,
+        AnimationVariableInput = 17
     }
 
     public static class PoseTransitionRuleEnumTypes
@@ -83,6 +85,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_EnumTypeId = string.Empty;
         [SerializeField] int m_EnumLiteral;
         [SerializeField] string m_IdentityLiteral = string.Empty;
+        [SerializeField] string m_ParameterId = string.Empty;
 
         public PoseTransitionRuleOperationId OperationId => string.IsNullOrWhiteSpace(m_OperationId)
             ? default
@@ -102,6 +105,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string EnumTypeId => m_EnumTypeId ?? string.Empty;
         public int EnumLiteral => m_EnumLiteral;
         public string IdentityLiteral => m_IdentityLiteral ?? string.Empty;
+        public PoseParameterId ParameterId => string.IsNullOrWhiteSpace(m_ParameterId)
+            ? default
+            : new PoseParameterId(m_ParameterId);
 
         public CharacterPoseTransitionRuleOperation() { }
 
@@ -115,7 +121,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float floatLiteral = 0f,
             string enumTypeId = null,
             int enumLiteral = 0,
-            string identityLiteral = null)
+            string identityLiteral = null,
+            PoseParameterId parameterId = default)
         {
             if (!operationId.IsValid)
                 throw new ArgumentException("Pose Transition Rule operation identity is invalid.", nameof(operationId));
@@ -133,6 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_EnumTypeId = enumTypeId ?? string.Empty;
             m_EnumLiteral = enumLiteral;
             m_IdentityLiteral = identityLiteral ?? string.Empty;
+            m_ParameterId = parameterId.Value ?? string.Empty;
         }
     }
 
@@ -218,7 +226,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         LessOrEqual = 13,
         TimeInState = 14,
         StatePoseRemainingTime = 15,
-        IdentityLiteral = 16
+        IdentityLiteral = 16,
+        ReadAnimationVariable = 17
     }
 
     [Serializable]
@@ -235,6 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_EnumTypeId = string.Empty;
         [SerializeField] int m_EnumLiteral;
         [SerializeField] string m_IdentityLiteral = string.Empty;
+        [SerializeField] string m_ParameterId = string.Empty;
 
         public PoseTransitionRuleOperationCode Code => m_Code;
         public PoseTransitionRuleOperationId OperationId => new PoseTransitionRuleOperationId(m_OperationId);
@@ -249,6 +259,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string EnumTypeId => m_EnumTypeId ?? string.Empty;
         public int EnumLiteral => m_EnumLiteral;
         public string IdentityLiteral => m_IdentityLiteral ?? string.Empty;
+        public PoseParameterId ParameterId => string.IsNullOrWhiteSpace(m_ParameterId)
+            ? default
+            : new PoseParameterId(m_ParameterId);
 
         internal CharacterPoseTransitionRuleCompiledOperation(
             PoseTransitionRuleOperationId operationId,
@@ -261,7 +274,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float floatLiteral,
             string enumTypeId,
             int enumLiteral,
-            string identityLiteral)
+            string identityLiteral,
+            PoseParameterId parameterId = default)
         {
             m_OperationId = operationId.Value;
             m_Code = code;
@@ -274,13 +288,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_EnumTypeId = enumTypeId ?? string.Empty;
             m_EnumLiteral = enumLiteral;
             m_IdentityLiteral = identityLiteral ?? string.Empty;
+            m_ParameterId = parameterId.Value ?? string.Empty;
         }
     }
 
     [Serializable]
     public sealed class CharacterPoseTransitionRuleProgram
     {
-        public const string SchemaVersion = "character-pose-transition-rule/v3";
+        public const string SchemaVersion = "character-pose-transition-rule/v4";
 
         [SerializeField] string m_GraphId = string.Empty;
         [SerializeField] string m_ContentRevision = string.Empty;

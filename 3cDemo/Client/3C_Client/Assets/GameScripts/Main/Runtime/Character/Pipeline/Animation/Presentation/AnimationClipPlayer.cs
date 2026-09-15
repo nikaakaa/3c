@@ -362,6 +362,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal float RemainingTime => Math.Max(0f, m_Source.SourceDurationSeconds - m_SampleTime);
         internal float Duration => m_Source.SourceDurationSeconds;
         internal CharacterClipPlayerClockSource ClockSource => m_Descriptor.ClockSource;
+        internal float PlayRate => m_Descriptor.PlayRate;
         internal AnimationFootStepObservationRuntimeSnapshot CreateFootStepObservationSnapshot(
             float sourceWeight)
         {

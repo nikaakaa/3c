@@ -32,7 +32,10 @@ namespace ThirdPersonCharacter.Control.Authoring
         new bool Writes { get; }
     }
 
-    public interface IBtsmtlSkillBlackboardReadNode : IBtsmtlSkillBlackboardAccessNode { }
+    public interface IBtsmtlSkillBlackboardReadNode : IBtsmtlSkillBlackboardAccessNode
+    {
+        void SetVariable(BtsmtlSkillBlackboardReference variable);
+    }
 
     [BtsmtlSkillAuthoringField(
         "declarationId",

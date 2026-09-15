@@ -11,7 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Frame = 1,
         Prepare = 2,
         Evaluate = 3,
-        Commit = 4
+        Validate = 4,
+        Commit = 5
     }
 
     internal readonly struct CharacterPoseNativePortKey : IEquatable<CharacterPoseNativePortKey>
@@ -66,6 +67,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage,
             in CharacterPoseNativeSourceDemand demand,
             ulong barrierIdentity);
+        void PrepareEvaluation(
+            CharacterPoseNativeGraphRuntime runtime,
+            in CharacterPoseNativeFrameLineage lineage,
+            in CharacterPoseNativeSourceDemand demand,
+            ulong barrierIdentity);
+        void ValidatePending(
+            CharacterPoseNativeGraphRuntime runtime,
+            in CharacterPoseNativeFrameLineage lineage);
         void CommitFrame(
             CharacterPoseNativeGraphRuntime runtime,
             in CharacterPoseNativeFrameLineage lineage,
@@ -75,6 +84,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage,
             CharacterPoseNativeFailureCode reason);
         void Stop(CharacterPoseNativeGraphRuntime runtime);
+    }
+
+    internal interface ICharacterPoseNativeNodeHandlerFactory
+    {
+        IReadOnlyList<ICharacterPoseNativeNodeHandler> Create(
+            in CharacterPoseNativePreparedBinding preparedBinding,
+            in CharacterPoseNativeInstanceContext context);
     }
 
     internal sealed class CharacterPoseNativeGraphRuntime : ICharacterPoseCanvasNativeRuntime
@@ -88,6 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
         readonly Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> m_CommittedObservations =
             new Dictionary<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation>();
+        readonly Dictionary<PosePortId, CharacterPoseNativePortValue> m_GraphInputs =
+            new Dictionary<PosePortId, CharacterPoseNativePortValue>();
         readonly HashSet<CharacterPoseNativePortKey> m_Evaluating =
             new HashSet<CharacterPoseNativePortKey>();
         CharacterPoseCanvasGraph m_Graph;
@@ -97,6 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNativeFrameLease m_FrameLease;
         CharacterPoseNativeSourceDemand m_SourceDemand;
         CharacterPoseNativeEvaluationResult m_Evaluation;
+        CharacterPoseNativeValidationResult m_Validation;
         CharacterPoseNativePortValue m_LastCommittedOutput;
         CharacterPoseNativeFrameLineage m_LastCommittedLineage;
         ulong m_ResetGeneration;
@@ -148,6 +167,87 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PreparedBinding.InputContract,
                 m_PreparedBinding.ResourceRevision);
             return Prepare(in request);
+        }
+
+        internal CharacterPoseNativeAdoptedResult CreateChild(
+            ulong requestId,
+            PoseGraphId graphId,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            IReadOnlyList<ICharacterPoseNativeNodeHandler> handlers,
+            out CharacterPoseNativeGraphRuntime runtime)
+        {
+            RequireAlive();
+            if (instanceId == InstanceId)
+                throw new ArgumentException(
+                    "Pose child graph cannot reuse its parent instance identity.",
+                    nameof(instanceId));
+            CharacterPoseNativeGraphPrepareResult preparation =
+                PrepareChild(requestId, graphId);
+            if (!preparation.IsReady)
+            {
+                runtime = null;
+                return CharacterPoseNativeAdoptedResult.Failed(
+                    in preparation,
+                    resetGeneration,
+                    preparation.FailureCode,
+                    preparation.Message);
+            }
+            CharacterPoseNativeInstanceContext context = InstanceContext;
+            return Create(
+                in preparation.PreparedBinding,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                handlers,
+                out runtime);
+        }
+
+        internal CharacterPoseNativeAdoptedResult CreateChild(
+            ulong requestId,
+            PoseGraphId graphId,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            ICharacterPoseNativeNodeHandlerFactory factory,
+            out CharacterPoseNativeGraphRuntime runtime)
+        {
+            RequireAlive();
+            if (factory == null)
+                throw new ArgumentNullException(nameof(factory));
+            if (instanceId == InstanceId)
+                throw new ArgumentException(
+                    "Pose child graph cannot reuse its parent instance identity.",
+                    nameof(instanceId));
+            CharacterPoseNativeGraphPrepareResult preparation =
+                PrepareChild(requestId, graphId);
+            if (!preparation.IsReady)
+            {
+                runtime = null;
+                return CharacterPoseNativeAdoptedResult.Failed(
+                    in preparation,
+                    resetGeneration,
+                    preparation.FailureCode,
+                    preparation.Message);
+            }
+            CharacterPoseNativePreparedBinding preparedBinding =
+                preparation.PreparedBinding;
+            CharacterPoseNativeInstanceContext context = InstanceContext;
+            IReadOnlyList<ICharacterPoseNativeNodeHandler> handlers =
+                factory.Create(in preparedBinding, in context);
+            if (handlers == null)
+                throw new InvalidOperationException(
+                    "Pose child handler factory returned no handler list.");
+            return Create(
+                in preparedBinding,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                handlers,
+                out runtime);
         }
 
         internal static CharacterPoseNativeGraphPrepareResult Prepare(
@@ -230,6 +330,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseNativeGraphEvaluator(handlers),
                 out runtime);
 
+        internal static CharacterPoseNativeAdoptedResult Create(
+            in CharacterPoseNativePreparedBinding preparedBinding,
+            in CharacterPoseNativeInstanceContext context,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            ICharacterPoseNativeNodeHandlerFactory factory,
+            out CharacterPoseNativeGraphRuntime runtime)
+        {
+            if (factory == null)
+                throw new ArgumentNullException(nameof(factory));
+            IReadOnlyList<ICharacterPoseNativeNodeHandler> handlers =
+                factory.Create(in preparedBinding, in context);
+            if (handlers == null)
+                throw new InvalidOperationException(
+                    "Pose native handler factory returned no handler list.");
+            return Create(
+                in preparedBinding,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                handlers,
+                out runtime);
+        }
+
         internal static CharacterPoseNativeAdoptedResult Replace(
             CharacterPoseNativeGraphRuntime current,
             in CharacterPoseNativePreparedBinding preparedBinding,
@@ -279,6 +405,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        internal static CharacterPoseNativeAdoptedResult Replace(
+            CharacterPoseNativeGraphRuntime current,
+            in CharacterPoseNativePreparedBinding preparedBinding,
+            in CharacterPoseNativeInstanceContext context,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            ICharacterPoseNativeNodeHandlerFactory factory,
+            out CharacterPoseNativeGraphRuntime runtime)
+        {
+            if (factory == null)
+                throw new ArgumentNullException(nameof(factory));
+            IReadOnlyList<ICharacterPoseNativeNodeHandler> handlers =
+                factory.Create(in preparedBinding, in context);
+            if (handlers == null)
+                throw new InvalidOperationException(
+                    "Pose native handler factory returned no handler list.");
+            return Replace(
+                current,
+                in preparedBinding,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                handlers,
+                out runtime);
+        }
+
         void AttachAndStart()
         {
             RequireAlive();
@@ -306,11 +460,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameInput input)
         {
             RequireStarted();
-            if (m_FrameLease.IsValid || !input.IsValid || input.ActorId != m_PreparedBinding.ActorId)
-                throw new ArgumentException("Pose native frame cannot begin from the current instance.", nameof(input));
             if (m_NextCompletionIdentity == ulong.MaxValue)
                 throw new InvalidOperationException("Pose native frame completion identity was exhausted.");
-            ulong completionIdentity = m_NextCompletionIdentity++;
+            return BeginFrame(in input, m_NextCompletionIdentity);
+        }
+
+        internal CharacterPoseNativeFrameLease BeginFrame(
+            in CharacterPoseNativeFrameInput input,
+            ulong completionIdentity)
+        {
+            RequireStarted();
+            if (m_FrameLease.IsValid || !input.IsValid || input.ActorId != m_PreparedBinding.ActorId)
+                throw new ArgumentException("Pose native frame cannot begin from the current instance.", nameof(input));
+            if (completionIdentity == 0 ||
+                completionIdentity < m_NextCompletionIdentity ||
+                completionIdentity == ulong.MaxValue)
+                throw new InvalidOperationException("Pose native frame completion identity was exhausted.");
+            m_NextCompletionIdentity = completionIdentity + 1;
             m_OpenLineage = new CharacterPoseNativeFrameLineage(
                 input.ActorId,
                 input.FrameIdentity,
@@ -329,6 +495,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FrameInput = input;
             m_SourceDemand = default;
             m_Evaluation = default;
+            m_Validation = default;
+            m_GraphInputs.Clear();
             m_OutputCache.Clear();
             m_Observations.Clear();
             m_Evaluating.Clear();
@@ -344,13 +512,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireStage(CharacterPoseNativeExecutionStage.Frame);
             try
             {
+                m_Stage = CharacterPoseNativeExecutionStage.Prepare;
                 IReadOnlyList<CharacterPoseNativeSourceRequest> requests =
                     m_Evaluator.PrepareFrame(this, in m_FrameInput, in m_CompletedLineage) ??
                     throw new InvalidOperationException("Pose native source demand is missing.");
                 m_SourceDemand = new CharacterPoseNativeSourceDemand(
                     in m_CompletedLineage,
                     requests);
-                m_Stage = CharacterPoseNativeExecutionStage.Prepare;
                 return new CharacterPoseNativePreparationResult(
                     in m_CompletedLineage,
                     CharacterPoseNativeFrameStatus.Prepared,
@@ -370,6 +538,158 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     exception.Message,
                     default);
             }
+        }
+
+        internal void BindGraphInput(
+            PosePortId portId,
+            CharacterPoseNativePortValue value)
+        {
+            RequireStarted();
+            if (m_Stage != CharacterPoseNativeExecutionStage.Frame &&
+                m_Stage != CharacterPoseNativeExecutionStage.Prepare)
+            {
+                throw new InvalidOperationException(
+                    "Pose native graph input binding is only available before evaluation.");
+            }
+            if (!portId.IsValid || value == null ||
+                value.CompletionIdentity != m_CompletedLineage.CompletionIdentity)
+            {
+                throw new ArgumentException(
+                    "Pose native graph input binding is invalid.",
+                    nameof(value));
+            }
+            CharacterPoseCanvasNode graphInput = null;
+            foreach (CharacterPoseCanvasNode node in m_Graph.Nodes)
+            {
+                if (node.Kind != CharacterPoseNodeKind.GraphInput)
+                    continue;
+                if (graphInput != null)
+                    throw new InvalidOperationException(
+                        "Pose native graph has multiple Graph Input boundaries.");
+                graphInput = node;
+            }
+            if (graphInput == null)
+                throw new InvalidOperationException(
+                    $"Pose native graph '{m_PreparedBinding.GraphId}' has no Graph Input boundary.");
+            CharacterPosePortDefinition definition = FindPort(
+                graphInput,
+                portId,
+                CharacterPosePortDirection.Output);
+            if (definition == null ||
+                !CharacterPoseCanvasNativePorts.RuntimeBindingType(definition.Kind)
+                    .IsInstanceOfType(value))
+            {
+                throw new InvalidOperationException(
+                    $"Pose graph input '{portId}' is not declared with the supplied native type.");
+            }
+            if (!m_GraphInputs.TryAdd(portId, value))
+                throw new InvalidOperationException(
+                    $"Pose graph input '{portId}' was bound more than once.");
+        }
+
+        internal CharacterPoseNativePortValue ReadGraphInput(
+            PosePortId portId)
+        {
+            RequireEvaluationStage();
+            if (!m_GraphInputs.TryGetValue(portId, out CharacterPoseNativePortValue value) ||
+                value.CompletionIdentity != m_CompletedLineage.CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    $"Pose graph input '{portId}' has no value for the current frame.");
+            }
+            return value;
+        }
+
+        internal CharacterPoseNativePortValue ReadInputValue(
+            CharacterPoseCanvasNode node,
+            PosePortId portId)
+        {
+            RequireEvaluationStage();
+            CharacterPosePortDefinition definition = FindPort(
+                node,
+                portId,
+                CharacterPosePortDirection.Input);
+            if (definition == null)
+                throw new InvalidOperationException(
+                    $"Pose node '{node.NodeId}' input '{portId}' is not declared.");
+            return definition.Kind switch
+            {
+                CharacterPosePortKind.LocalPose =>
+                    ReadInput<CharacterPoseNativeLocalPoseValue>(node, portId.Value),
+                CharacterPosePortKind.ComponentPose =>
+                    ReadInput<CharacterPoseNativeComponentPoseValue>(node, portId.Value),
+                CharacterPosePortKind.Parameter =>
+                    ReadInput<CharacterPoseNativeParameterValue>(node, portId.Value),
+                CharacterPosePortKind.PoseDiscontinuity =>
+                    ReadInput<CharacterPoseNativeDiscontinuityValue>(node, portId.Value),
+                CharacterPosePortKind.ActionPlayback =>
+                    ReadInput<CharacterPoseNativeActionPlaybackValue>(node, portId.Value),
+                CharacterPosePortKind.FullBodyIkGoals =>
+                    ReadInput<CharacterPoseNativeFullBodyIkGoalsValue>(node, portId.Value),
+                CharacterPosePortKind.FullBodyIkGoalContribution =>
+                    ReadInput<CharacterPoseNativeGoalContributionValue>(node, portId.Value),
+                CharacterPosePortKind.PoseHistory =>
+                    ReadInput<CharacterPoseNativeHistoryValue>(node, portId.Value),
+                CharacterPosePortKind.Trajectory =>
+                    ReadInput<CharacterPoseNativeTrajectoryValue>(node, portId.Value),
+                CharacterPosePortKind.PresentationFacts =>
+                    ReadInput<CharacterPoseNativeFactsValue>(node, portId.Value),
+                CharacterPosePortKind.MotionMatchingBinding =>
+                    ReadInput<CharacterPoseNativeMotionMatchingBindingValue>(node, portId.Value),
+                _ => throw new InvalidOperationException(
+                    $"Pose node '{node.NodeId}' input '{portId}' has unsupported kind '{definition.Kind}'.")
+            };
+        }
+
+        internal CharacterPoseNativePortValue ReadGraphOutput(
+            PosePortId portId)
+        {
+            RequireEvaluationStage();
+            CharacterPoseCanvasNode graphOutput = null;
+            foreach (CharacterPoseCanvasNode node in m_Graph.Nodes)
+            {
+                if (node.Kind != CharacterPoseNodeKind.GraphOutput)
+                    continue;
+                if (graphOutput != null)
+                    throw new InvalidOperationException(
+                        "Pose native graph has multiple Graph Output boundaries.");
+                graphOutput = node;
+            }
+            if (graphOutput == null)
+                throw new InvalidOperationException(
+                    $"Pose native graph '{m_PreparedBinding.GraphId}' has no Graph Output boundary.");
+            return ReadInputValue(graphOutput, portId);
+        }
+
+        internal CharacterPoseNativePortValue ReadOutput()
+        {
+            RequireEvaluationStage();
+            return m_Evaluator.EvaluateGraphOutput(
+                       this,
+                       m_Stage) ??
+                throw new InvalidOperationException(
+                    $"Pose native graph '{m_PreparedBinding.GraphId}' has no evaluated output.");
+        }
+
+        internal void PrepareEvaluation(
+            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeSourceDemand demand,
+            ulong barrierIdentity)
+        {
+            RequireLease(lease);
+            RequireStage(CharacterPoseNativeExecutionStage.Prepare);
+            if (!demand.IsValid || demand.Lineage != m_CompletedLineage ||
+                barrierIdentity == 0)
+            {
+                throw new ArgumentException(
+                    "Pose native evaluation preparation input is invalid.",
+                    nameof(demand));
+            }
+            m_Evaluator.PrepareEvaluation(
+                this,
+                in m_CompletedLineage,
+                in demand,
+                barrierIdentity);
         }
 
         internal CharacterPoseNativeEvaluationResult Evaluate(
@@ -395,6 +715,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         this,
                         CharacterPoseNativeExecutionStage.Evaluate) ??
                     throw new InvalidOperationException("Pose native graph output is missing.");
+                if (!output.IsValid ||
+                    output.CompletionIdentity !=
+                    m_CompletedLineage.CompletionIdentity)
+                {
+                    throw new InvalidOperationException(
+                        "Pose native graph output does not match the current completion identity.");
+                }
                 m_Evaluation = new CharacterPoseNativeEvaluationResult(
                     in m_CompletedLineage,
                     CharacterPoseNativeFrameStatus.Evaluated,
@@ -417,7 +744,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        internal CharacterPoseNativePublicationResult Commit(
+        internal CharacterPoseNativeValidationResult ValidatePending(
             CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation)
         {
@@ -426,17 +753,53 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!evaluation.IsValid || evaluation.Lineage != m_CompletedLineage ||
                 evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated)
             {
+                throw new ArgumentException(
+                    "Pose native pending validation input is invalid.",
+                    nameof(evaluation));
+            }
+            try
+            {
+                m_Stage = CharacterPoseNativeExecutionStage.Validate;
+                m_Evaluator.ValidatePending(
+                    this,
+                    in m_CompletedLineage);
+                m_Validation = CharacterPoseNativeValidationResult.Succeeded(
+                    in m_CompletedLineage,
+                    "Pose/Validate",
+                    "Pose graph pending output is valid for commit.");
+                return m_Validation;
+            }
+            catch (Exception exception)
+            {
+                m_Stage = CharacterPoseNativeExecutionStage.Validate;
+                m_Validation = CharacterPoseNativeValidationResult.Failed(
+                    in m_CompletedLineage,
+                    exception is CharacterPoseNativeGraphValidationException validation
+                        ? validation.Code
+                        : CharacterPoseNativeFailureCode.FrameInvalid,
+                    "Pose/Validate",
+                    exception.Message);
+                return m_Validation;
+            }
+        }
+
+        internal CharacterPoseNativePublicationResult Commit(
+            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeEvaluationResult evaluation)
+        {
+            RequireLease(lease);
+            RequireStage(CharacterPoseNativeExecutionStage.Validate);
+            if (!evaluation.IsValid || evaluation.Lineage != m_CompletedLineage ||
+                evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated ||
+                !m_Validation.IsValidated ||
+                m_Validation.Lineage != m_CompletedLineage)
+            {
                 throw new ArgumentException("Pose native commit evaluation is invalid.", nameof(evaluation));
             }
             try
             {
                 m_Stage = CharacterPoseNativeExecutionStage.Commit;
-                m_Evaluator.CommitFrame(this, in m_CompletedLineage, evaluation.Output);
-                m_LastCommittedOutput = evaluation.Output;
-                m_CommittedObservations.Clear();
-                foreach (KeyValuePair<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> observation in m_Observations)
-                    m_CommittedObservations.Add(observation.Key, observation.Value);
-                m_LastCommittedLineage = m_CompletedLineage;
+                CommitGraphOutput(in evaluation);
                 CharacterPoseNativePublicationResult result = new CharacterPoseNativePublicationResult(
                     in m_CompletedLineage,
                     CharacterPoseNativeFrameStatus.Committed,
@@ -465,6 +828,89 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        internal CharacterPoseNativePublicationResult Commit(
+            CharacterPoseNativeFrameLease lease,
+            in CharacterPoseNativeEvaluationResult evaluation,
+            CharacterFinalPoseNativePublication publication,
+            bool captureFootIkDiagnostics)
+        {
+            RequireLease(lease);
+            RequireStage(CharacterPoseNativeExecutionStage.Validate);
+            if (!evaluation.IsValid || evaluation.Lineage != m_CompletedLineage ||
+                evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated ||
+                !m_Validation.IsValidated ||
+                m_Validation.Lineage != m_CompletedLineage)
+            {
+                throw new ArgumentException(
+                    "Pose native final publication evaluation is invalid.",
+                    nameof(evaluation));
+            }
+            if (publication == null)
+                throw new ArgumentNullException(nameof(publication));
+            CharacterPoseNativePublicationFrameLease publicationLease = default;
+            bool publicationOpen = false;
+            bool graphCommitted = false;
+            try
+            {
+                publicationLease = publication.BeginFrame(in m_CompletedLineage);
+                publicationOpen = true;
+                publication.PreparePending(publicationLease, in evaluation);
+                publication.WritePhysicalPose(
+                    publicationLease,
+                    captureFootIkDiagnostics);
+                m_Stage = CharacterPoseNativeExecutionStage.Commit;
+                CommitGraphOutput(in evaluation);
+                graphCommitted = true;
+                CharacterPoseNativePublicationResult result =
+                    publication.Commit(publicationLease);
+                CloseFrame();
+                return result;
+            }
+            catch (Exception exception)
+            {
+                Exception failure = exception;
+                try
+                {
+                    if (publicationOpen)
+                        publication.Discard(publicationLease);
+                }
+                catch (Exception cleanup)
+                {
+                    failure = new AggregateException(
+                        "Pose native final publication cleanup failed.",
+                        failure,
+                        cleanup);
+                }
+                if (!graphCommitted)
+                {
+                    try
+                    {
+                        m_Evaluator.DiscardFrame(
+                            this,
+                            in m_CompletedLineage,
+                            CharacterPoseNativeFailureCode.PublicationFailed);
+                    }
+                    catch (Exception cleanup)
+                    {
+                        failure = new AggregateException(
+                            "Pose native graph cleanup failed.",
+                            failure,
+                            cleanup);
+                    }
+                }
+                m_Observations.Clear();
+                CharacterPoseNativeFrameLineage lineage = m_CompletedLineage;
+                CloseFrame();
+                return new CharacterPoseNativePublicationResult(
+                    in lineage,
+                    CharacterPoseNativeFrameStatus.Faulted,
+                    CharacterPoseNativeFailureCode.PublicationFailed,
+                    0,
+                    "Pose/FinalPublication",
+                    failure.Message);
+            }
+        }
+
         internal void Discard(
             CharacterPoseNativeFrameLease lease,
             CharacterPoseNativeFailureCode reason)
@@ -475,6 +921,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Evaluator.DiscardFrame(this, in m_CompletedLineage, reason);
             m_Observations.Clear();
             CloseFrame();
+        }
+
+        void CommitGraphOutput(
+            in CharacterPoseNativeEvaluationResult evaluation)
+        {
+            m_Evaluator.CommitFrame(
+                this,
+                in m_CompletedLineage,
+                evaluation.Output);
+            m_LastCommittedOutput = evaluation.Output;
+            m_CommittedObservations.Clear();
+            foreach (KeyValuePair<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> observation in m_Observations)
+                m_CommittedObservations.Add(observation.Key, observation.Value);
+            m_LastCommittedLineage = m_CompletedLineage;
         }
 
         internal void StopInstance()
@@ -680,6 +1140,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FrameLease = default;
             m_SourceDemand = default;
             m_Evaluation = default;
+            m_Validation = default;
+            m_GraphInputs.Clear();
             m_FrameInput = default;
             m_OpenLineage = default;
             m_Stage = CharacterPoseNativeExecutionStage.None;
@@ -692,6 +1154,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             where T : CharacterPoseNativePortValue => value as T ??
                 throw new InvalidOperationException(
                     $"Pose node '{node.NodeId}' output '{portId}' returned '{value.GetType().Name}', expected '{typeof(T).Name}'.");
+
+        static CharacterPosePortDefinition FindPort(
+            CharacterPoseCanvasNode node,
+            PosePortId portId,
+            CharacterPosePortDirection direction)
+        {
+            if (node == null || !portId.IsValid)
+                return null;
+            IReadOnlyList<CharacterPosePortDefinition> shape =
+                CharacterPoseCanvasNativePorts.GetRuntimeShape(node);
+            for (int i = 0; i < shape.Count; i++)
+            {
+                CharacterPosePortDefinition candidate = shape[i];
+                if (candidate.Direction == direction && candidate.PortId == portId)
+                    return candidate;
+            }
+            return null;
+        }
 
         void RequireLease(CharacterPoseNativeFrameLease lease)
         {
@@ -748,6 +1228,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Observations.Clear();
             m_CommittedObservations.Clear();
             m_Evaluating.Clear();
+            m_GraphInputs.Clear();
             m_Started = false;
             m_Initialized = false;
             m_LastCommittedLineage = default;

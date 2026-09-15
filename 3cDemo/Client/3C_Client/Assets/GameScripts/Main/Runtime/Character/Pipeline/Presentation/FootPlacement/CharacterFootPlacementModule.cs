@@ -649,7 +649,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.PresentationDeltaSeconds,
                     frame.Body,
                     facts.Grounded,
-                    facts.HorizontalSpeed,
+                    frame.ParameterFrame.Require(
+                        new PoseParameterId(CharacterAnimationVariableIds.HorizontalSpeed)),
                     in leftAction,
                     in rightAction,
                     in timeline,

@@ -137,12 +137,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFrameLease lease,
             in CharacterPoseProgramPrepared prepared,
             in CharacterBodyPresentationFrame bodyFrame,
-            in CharacterPresentationFactFrame factFrame)
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             if (!prepared.IsValid ||
                 !lease.Matches(prepared.Lineage) ||
                 !bodyFrame.IsValid ||
-                !factFrame.IsValid ||
+                !factFrame.IsValid || !parameterFrame.IsValid ||
                 !m_FramePages.HasPendingEvaluationFrame ||
                 m_FramePages.PendingEvaluationCompletionIdentity !=
                     prepared.Lineage.CompletionIdentity)
@@ -178,6 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ExecutingState.PresentationDeltaSeconds,
                 in bodyFrame,
                 in factFrame,
+                in parameterFrame,
                 m_ExecutingState.Lineage.CompletionIdentity);
             m_ExecutionActive = true;
         }

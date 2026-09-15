@@ -70,45 +70,51 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public IReadOnlyList<string> ReliableProducerIds => m_ReliableProducerIds;
         public StableHash ConfigurationHash { get; }
 
-        public void RequireProgramCoverage(CharacterSimulationProgram program)
+        public void RequireCharacterCoverage(Float32CharacterRuntime characterRuntime)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-            ServerAuthoritativeReliableGameplayFactKinds requiredFacts = RequiredFacts(program);
+            if (characterRuntime == null)
+                throw new ArgumentNullException(nameof(characterRuntime));
+            ServerAuthoritativeReliableGameplayFactKinds requiredFacts = RequiredFacts(characterRuntime);
             if ((ReliableGameplayFactKinds & requiredFacts) != requiredFacts)
             {
                 ServerAuthoritativeReliableGameplayFactKinds missing = requiredFacts & ~ReliableGameplayFactKinds;
                 throw new InvalidOperationException($"ServerAuthoritative replication policy is missing GameplayFact coverage '{missing}'.");
             }
-            if (program.Producers.Count != m_ReliableProducerIds.Count)
-                throw new InvalidOperationException("ServerAuthoritative producer replication policy does not exactly cover the Program producer catalog.");
-            for (int i = 0; i < program.Producers.Count; i++)
-            {
-                if (!m_ReliableProducerSet.Contains(program.Producers[i].Identity))
-                    throw new InvalidOperationException($"ServerAuthoritative replication policy is missing producer '{program.Producers[i].Identity}'.");
-            }
+            var producers = new HashSet<string>(StringComparer.Ordinal);
+            for (int abilityIndex = 0; abilityIndex < characterRuntime.Abilities.Count; abilityIndex++)
+                for (int producerIndex = 0; producerIndex < characterRuntime.Abilities[abilityIndex].Producers.Count; producerIndex++)
+                    producers.Add(characterRuntime.Abilities[abilityIndex].Producers[producerIndex].Identity);
+            if (producers.Count != m_ReliableProducerIds.Count)
+                throw new InvalidOperationException("ServerAuthoritative producer replication policy does not exactly cover the Character producer catalog.");
+            foreach (string producer in producers)
+                if (!m_ReliableProducerSet.Contains(producer))
+                    throw new InvalidOperationException($"ServerAuthoritative replication policy is missing producer '{producer}'.");
         }
 
-        static ServerAuthoritativeReliableGameplayFactKinds RequiredFacts(CharacterSimulationProgram program)
+        static ServerAuthoritativeReliableGameplayFactKinds RequiredFacts(Float32CharacterRuntime characterRuntime)
         {
             ServerAuthoritativeReliableGameplayFactKinds required = 0;
-            for (int i = 0; i < program.CatalogEntries.Count; i++)
+            for (int abilityIndex = 0; abilityIndex < characterRuntime.Abilities.Count; abilityIndex++)
             {
-                switch (program.CatalogEntries[i].Kind)
+                IReadOnlyList<ProgramCatalogEntry> entries = characterRuntime.Abilities[abilityIndex].CatalogEntries;
+                for (int i = 0; i < entries.Count; i++)
                 {
-                    case ProgramCatalogEntryKind.Action:
-                        required |= ServerAuthoritativeReliableGameplayFactKinds.Action;
-                        break;
-                    case ProgramCatalogEntryKind.GameplayEffect:
-                        required |= ServerAuthoritativeReliableGameplayFactKinds.Effect |
-                            ServerAuthoritativeReliableGameplayFactKinds.Cue;
-                        break;
-                    case ProgramCatalogEntryKind.Attribute:
-                        required |= ServerAuthoritativeReliableGameplayFactKinds.Attribute;
-                        break;
-                    case ProgramCatalogEntryKind.TimelineClip:
-                        required |= ServerAuthoritativeReliableGameplayFactKinds.Cue;
-                        break;
+                    switch (entries[i].Kind)
+                    {
+                        case ProgramCatalogEntryKind.Action:
+                            required |= ServerAuthoritativeReliableGameplayFactKinds.Action;
+                            break;
+                        case ProgramCatalogEntryKind.GameplayEffect:
+                            required |= ServerAuthoritativeReliableGameplayFactKinds.Effect |
+                                ServerAuthoritativeReliableGameplayFactKinds.Cue;
+                            break;
+                        case ProgramCatalogEntryKind.Attribute:
+                            required |= ServerAuthoritativeReliableGameplayFactKinds.Attribute;
+                            break;
+                        case ProgramCatalogEntryKind.TimelineClip:
+                            required |= ServerAuthoritativeReliableGameplayFactKinds.Cue;
+                            break;
+                    }
                 }
             }
             return required;
@@ -136,11 +142,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public bool ShouldReplicateReliably(
             PresentationCommand command,
-            CharacterSimulationProgram program)
+            Float32CharacterRuntime characterRuntime)
         {
             if (!m_ReliableProducerSet.Contains(command.ProducerId))
                 throw new InvalidOperationException($"ServerAuthoritative replication policy has no producer mapping for '{command.ProducerId}'.");
-            if (IsCameraProducer(program, command.ProducerId))
+            if (IsCameraProducer(characterRuntime, command.ProducerId))
                 return false;
             return command.Kind == PresentationCommandKind.SelectProducer ||
                    command.Kind == PresentationCommandKind.CompleteProducer ||
@@ -153,31 +159,42 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public bool ShouldStream(
             PresentationCommand command,
-            CharacterSimulationProgram program)
+            Float32CharacterRuntime characterRuntime)
         {
             if (!m_ReliableProducerSet.Contains(command.ProducerId))
                 throw new InvalidOperationException($"ServerAuthoritative replication policy has no producer mapping for '{command.ProducerId}'.");
             return command.Kind == PresentationCommandKind.SampleProducer &&
-                !IsCameraProducer(program, command.ProducerId);
+                !IsCameraProducer(characterRuntime, command.ProducerId);
         }
 
         public static bool IsCameraProducer(
-            CharacterSimulationProgram program,
+            Float32CharacterRuntime characterRuntime,
             string producerId)
         {
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
+            if (characterRuntime == null)
+                throw new ArgumentNullException(nameof(characterRuntime));
             string identity = RequireIdentity(producerId);
-            for (int i = 0; i < program.Producers.Count; i++)
+            bool found = false;
+            bool camera = false;
+            for (int abilityIndex = 0; abilityIndex < characterRuntime.Abilities.Count; abilityIndex++)
             {
-                ProgramProducer producer = program.Producers[i];
-                if (!string.Equals(producer.Identity, identity, StringComparison.Ordinal))
-                    continue;
-                return producer.ChannelKind == ProgramOutputChannelKind.Presentation &&
-                    producer.AnimationChannelId == CameraProgramOperationSchema.ChannelId;
+                IReadOnlyList<ProgramProducer> producers = characterRuntime.Abilities[abilityIndex].Producers;
+                for (int i = 0; i < producers.Count; i++)
+                {
+                    ProgramProducer producer = producers[i];
+                    if (!string.Equals(producer.Identity, identity, StringComparison.Ordinal))
+                        continue;
+                    bool candidate = producer.ChannelKind == ProgramOutputChannelKind.Presentation &&
+                        producer.AnimationChannelId == CameraProgramOperationSchema.ChannelId;
+                    if (found && camera != candidate)
+                        throw new InvalidOperationException($"Character producer '{identity}' has conflicting Camera ownership.");
+                    found = true;
+                    camera = candidate;
+                }
             }
-            throw new InvalidOperationException(
-                $"Program has no presentation producer mapping for '{identity}'.");
+            if (!found)
+                throw new InvalidOperationException($"Character has no presentation producer mapping for '{identity}'.");
+            return camera;
         }
 
         static string RequireIdentity(string value)

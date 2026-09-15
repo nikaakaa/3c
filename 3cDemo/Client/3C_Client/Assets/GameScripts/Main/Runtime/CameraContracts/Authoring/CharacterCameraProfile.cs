@@ -43,6 +43,7 @@ namespace ThirdPersonCamera
         public IReadOnlyList<CameraCurveAsset> Curves => m_Curves ?? Array.Empty<CameraCurveAsset>();
         public float NearClipPlane => m_NearClipPlane;
         public float FarClipPlane => m_FarClipPlane;
+        public float DefaultFieldOfView => RequireDefaultTrack().FieldOfView;
         public float CameraLocateRadius => m_CameraLocateRadius;
         public float DefaultSmoothTime => m_DefaultSmoothTime;
         public float RotationTransitionSeconds => m_RotationTransitionSeconds;

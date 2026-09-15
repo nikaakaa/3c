@@ -166,8 +166,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         asset_path = assetPath,
                         definition_asset_path = definitionPath,
                         output_code_path = outputRelativePath,
+                        entrypoint = result.Files.Single(value => value.IsEntryPoint).RelativePath,
                         recipe_type = result.RecipeType,
                         entry_type_name = $"{namespaceName}.{result.EntryTypeName}",
+                        files = result.Files.Select(value => new
+                        {
+                            path = value.RelativePath,
+                            section = value.SectionName,
+                            entrypoint = value.IsEntryPoint,
+                            bytes = Encoding.UTF8.GetByteCount(value.SourceCode)
+                        }).ToArray(),
+                        created_files = ProjectRelativePaths(writeResult.CreatedFiles),
+                        modified_files = ProjectRelativePaths(writeResult.ModifiedFiles),
+                        unchanged_files = ProjectRelativePaths(writeResult.UnchangedFiles),
+                        deleted_files = ProjectRelativePaths(writeResult.DeletedFiles),
                         external_dependencies = result.ExternalDependencies.Select(value => new
                         {
                             asset_path = value.AssetPath,
@@ -264,6 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
             UnityEngine.Object[] supported = assets
                 .Where(value => value is GameplayAbilityDefinition ||
+                                value is GameplayAbilityAdmissionProfile ||
                                 value is BtsmtlSkillFlowGraph ||
                                 value is TimelineAsset ||
                                 value is CharacterPresentationPoseGraphAsset ||

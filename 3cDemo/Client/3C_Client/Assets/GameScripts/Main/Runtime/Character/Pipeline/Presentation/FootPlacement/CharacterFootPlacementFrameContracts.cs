@@ -13,6 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float footPlacementWeight,
             CharacterBodyPresentationFrame body,
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame parameterFrame,
             in CharacterFootPlacementPoseInput pose)
         {
             if (!actorId.IsValid || renderFrame == 0 ||
@@ -20,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentationDeltaSeconds < 0f ||
                 !float.IsFinite(footPlacementWeight) ||
                 footPlacementWeight < 0f || footPlacementWeight > 1f ||
-                !body.IsValid || !facts.IsValid)
+                !body.IsValid || !facts.IsValid || !parameterFrame.IsValid)
             {
                 throw new ArgumentException("Foot Placement frame input is invalid.");
             }
@@ -30,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FootPlacementWeight = footPlacementWeight;
             Body = body;
             Facts = facts;
+            ParameterFrame = parameterFrame;
             Pose = pose;
         }
 
@@ -39,6 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float FootPlacementWeight { get; }
         internal CharacterBodyPresentationFrame Body { get; }
         internal CharacterPresentationFactFrame Facts { get; }
+        internal CharacterAnimationPoseInputFrame ParameterFrame { get; }
         internal CharacterFootPlacementPoseInput Pose { get; }
     }
 }

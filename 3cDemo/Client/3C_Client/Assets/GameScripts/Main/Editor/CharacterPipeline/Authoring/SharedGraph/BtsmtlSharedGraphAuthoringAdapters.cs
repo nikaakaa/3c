@@ -1710,15 +1710,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     RequireNonEmpty(text, fieldId);
                     window.ConfigureAuthoring(text);
                     return;
-                case "actionProfileId" when node is CanActivateActionInfoNode action:
+                case "admissionProfileId" when node is CanActivateActionInfoNode action:
                     action.ConfigureAuthoring(
-                        ResolveActionProfile(text, fieldId),
+                        ResolveAdmissionProfile(text, fieldId),
                         action.TargetSnapshotVariable);
                     return;
                 case "targetSnapshotBlackboardDeclarationId"
                     when node is CanActivateActionInfoNode action:
                     action.ConfigureAuthoring(
-                        action.ActionProfile,
+                        action.AdmissionProfile,
                         ResolveDeclaration(
                                 graph,
                                 visibleTrees,
@@ -1798,15 +1798,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Field '{fieldId}' does not resolve exact asset GUID '{guid}'.");
         }
 
-        static ActionProfile ResolveActionProfile(
+        static GameplayAbilityAdmissionProfile ResolveAdmissionProfile(
             string actionId,
             GraphAuthoringFieldId fieldId)
         {
             RequireNonEmpty(actionId, fieldId);
-            ActionProfile[] matches = AssetDatabase
-                .FindAssets("t:ActionProfile")
+            GameplayAbilityAdmissionProfile[] matches = AssetDatabase
+                .FindAssets("t:GameplayAbilityAdmissionProfile")
                 .Select(AssetDatabase.GUIDToAssetPath)
-                .Select(AssetDatabase.LoadAssetAtPath<ActionProfile>)
+                .Select(AssetDatabase.LoadAssetAtPath<GameplayAbilityAdmissionProfile>)
                 .Where(value =>
                     value &&
                     value.ActionId == actionId)
@@ -1814,7 +1814,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (matches.Length != 1)
             {
                 throw new InvalidOperationException(
-                    $"ActionProfile identity '{actionId}' resolved {matches.Length} exact matches.");
+                    $"GameplayAbilityAdmissionProfile identity '{actionId}' resolved {matches.Length} exact matches.");
             }
             return matches[0];
         }
@@ -1958,9 +1958,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return AssetGuid(context.ActionContext);
                 case "windowType" when node is ActionWindowActiveInfoNode window:
                     return window.WindowType;
-                case "actionProfileId" when node is CanActivateActionInfoNode action:
-                    return action.ActionProfile
-                        ? action.ActionProfile.ActionId
+                case "admissionProfileId" when node is CanActivateActionInfoNode action:
+                    return action.AdmissionProfile
+                        ? action.AdmissionProfile.ActionId
                         : string.Empty;
                 case "targetSnapshotBlackboardDeclarationId"
                     when node is CanActivateActionInfoNode action:

@@ -644,7 +644,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void PrepareFrame(
             float presentationDeltaSeconds,
-            in CharacterPresentationFactFrame factFrame)
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             if (!float.IsFinite(presentationDeltaSeconds) ||
                 presentationDeltaSeconds < 0f ||
@@ -660,6 +661,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_StateMachines[i].PrepareFrame(
                     presentationDeltaSeconds,
                     in factFrame,
+                    in parameterFrame,
                     this);
             }
         }
@@ -758,6 +760,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void EvaluateTransitions(
             in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame,
             CharacterPoseProgramFramePages framePages,
             PresentationFrameWorkspace workspace,
             PresentationFrameWorkspaceLease lease)
@@ -784,6 +787,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_StateMachines[i];
                 machine.EvaluateTransitions(
                     in factFrame,
+                    in parameterFrame,
                     this);
                 if (!machine.CanPublishPose)
                 {

@@ -340,13 +340,6 @@ namespace ThirdPersonSimulation
         static string FormatHandle(OperationHandle value) =>
             value.IsValid ? value.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
 
-        static OperationHandle ParseHandle(string value)
-        {
-            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
-                ? new OperationHandle(parsed)
-                : OperationHandle.Invalid;
-        }
-
         static int MapExitCause(OperationStopCause cause)
         {
             switch (cause)
@@ -357,5 +350,13 @@ namespace ThirdPersonSimulation
                 default: return 3;
             }
         }
+
+        static OperationHandle ParseHandle(string value)
+        {
+            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
+                ? new OperationHandle(parsed)
+                : OperationHandle.Invalid;
+        }
+
     }
 }

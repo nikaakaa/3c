@@ -193,7 +193,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 outputRoutes[i] = actor.Binding.OutputRoute;
             }
 
-            var programRuntime = Float32ProgramRuntime.Create(
+            var characterRuntime = Float32CharacterRuntime.Create(
                 actorBindings,
                 controlModules);
             DotRecastWorldSolver solver = null;
@@ -217,7 +217,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                     manifest.World.WorldId,
                     manifest.Runtime.SourceClockId,
                     manifest.Pipeline.TickRate,
-                    programRuntime,
+                    characterRuntime,
                     Float32PassExecutionBackend.Descriptor,
                     m_Loaded.PipelineCatalog.RuntimePackage,
                     manifest.Pipeline.Source,
@@ -282,7 +282,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 !manifest.Pipeline.BackendIdentity.Equals(Float32PassExecutionBackend.Descriptor.Identity) ||
                 !manifest.Runtime.SnapshotCodec.Equals(
                     Float32SimulationSessionComposer.BuildSnapshotCodecIdentity(
-                        Float32ProgramRuntime.DescriptorDefinition,
+                        Float32CharacterRuntime.DescriptorDefinition,
                         Float32PassExecutionBackend.Descriptor)))
             {
                 throw new InvalidOperationException("DotRecast Authority Scene manifest runtime identities are not canonical.");

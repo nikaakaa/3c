@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Behavior
             }
             if (m_BehaviorKind == GameplayBehaviorKind.Transaction)
             {
-                errors?.Add($"{name}: transaction behavior must use ActionProfile.");
+                errors?.Add($"{name}: transaction behavior must use GameplayAbilityAdmissionProfile.");
                 valid = false;
             }
 

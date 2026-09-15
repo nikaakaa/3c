@@ -124,12 +124,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillActionWindowActiveFlowNode window => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.ActionWindowActive, text0: Field<BtsmtlSkillActionWindowActiveFlowNode, string>(window, "windowType")),
             BtsmtlSkillCanActivateActionFlowNode action => CanActivate(action),
-            BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.SubmitActionLifecycle,
-                integer0: (int)Field<BtsmtlSkillSubmitActionLifecycleFlowNode, ActionLifecycleTransitionType>(lifecycle, "transitionType"),
-                text0: Field<BtsmtlSkillSubmitActionLifecycleFlowNode, string>(lifecycle, "reason"),
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(
-                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillSubmitActionLifecycleFlowNode, ActionContextSlot>(lifecycle, "actionContext"))))),
             BtsmtlSkillGameplayTagFlowNode tag => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectHasTag,
                 text0: TagIdentity(Field<BtsmtlSkillGameplayTagFlowNode, string>(tag, "tagId")),
@@ -168,14 +162,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static CharacterSimulationNodeEmission CanActivate(
             BtsmtlSkillCanActivateActionFlowNode node)
         {
-            ActionProfile profile = Field<BtsmtlSkillCanActivateActionFlowNode, ActionProfile>(node, "actionProfile");
+            GameplayAbilityAdmissionProfile profile = Field<BtsmtlSkillCanActivateActionFlowNode, GameplayAbilityAdmissionProfile>(node, "admissionProfile");
             BtsmtlSkillTargetSnapshotReference snapshot =
                 Field<BtsmtlSkillCanActivateActionFlowNode, BtsmtlSkillTargetSnapshotReference>(node, "targetSnapshot");
             return new CharacterSimulationNodeEmission(
                 SimulationOperationCode.CanActivateAction,
                 text0: profile ? profile.ActionId : string.Empty,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(
-                    ("ActionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(profile)),
+                    ("AdmissionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(profile)),
                     ("TargetSnapshotDeclaration", snapshot.DeclarationId),
                     ("TargetSnapshotOwner", snapshot.OwnerId)));
         }

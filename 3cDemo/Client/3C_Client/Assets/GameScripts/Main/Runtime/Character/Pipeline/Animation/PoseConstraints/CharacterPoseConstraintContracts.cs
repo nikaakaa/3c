@@ -121,6 +121,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterFootPlacementConstraintHandle m_Handle;
         readonly CharacterFullBodyIkGoalContributionHeader m_Contribution;
         internal bool IsValid => m_IsValid;
+        internal CharacterFullBodyIkGoalContributionHeader Contribution =>
+            m_Contribution;
         internal CharacterFullBodyIkGoalContributionAvailability Availability =>
             m_Contribution.Availability;
         internal bool Matches(
@@ -261,6 +263,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseBoneContributionConstraintHandle m_Handle;
         readonly CharacterFullBodyIkGoalContributionHeader m_Contribution;
         internal bool IsValid => m_IsValid;
+        internal CharacterFullBodyIkGoalContributionHeader Contribution =>
+            m_Contribution;
         internal bool Matches(
             in CharacterPoseBoneContributionConstraintHandle handle,
             ulong frameSequence,
@@ -405,6 +409,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterFullBodyIkResult m_Assembly;
         readonly CharacterFullBodyIkGoalSetHeader m_GoalSet;
         internal bool IsValid => m_IsValid;
+        internal CharacterFullBodyIkResult Assembly => m_Assembly;
+        internal CharacterFullBodyIkGoalSetHeader GoalSet => m_GoalSet;
         internal bool Matches(
             in CharacterFullBodyIkGoalAssemblerConstraintHandle handle,
             ulong frameSequence,
@@ -502,6 +508,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly ulong m_FrameSequence;
         readonly ulong m_CompletionIdentity;
         internal bool IsValid => m_IsValid;
+        internal CharacterFullBodyIkResult Solve => m_Solve;
         internal bool Matches(
             in CharacterFullBodyIkConstraintHandle handle,
             ulong frameSequence,

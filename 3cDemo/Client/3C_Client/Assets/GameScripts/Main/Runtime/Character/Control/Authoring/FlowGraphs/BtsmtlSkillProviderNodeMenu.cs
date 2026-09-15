@@ -183,9 +183,10 @@ namespace ThirdPersonCharacter.Control.Authoring
             {
                 CharacterPipelineDefinition candidate = AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(
                     AssetDatabase.GUIDToAssetPath(guid));
-                if (!candidate || candidate.SkillGraphs == null)
+                if (!candidate)
                     continue;
-                bool found = candidate.SkillGraphs.Any(root =>
+                IReadOnlyList<BtsmtlSkillFlowGraph> roots = candidate.AbilityGraphs;
+                bool found = roots.Any(root =>
                 {
                     if (!root)
                         return false;

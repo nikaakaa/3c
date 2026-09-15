@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramId programId,
             ProgramRevision sourceRevision,
             IEnumerable<CharacterCompositionRoot> roots,
-            IEnumerable<CharacterSkillCompilationRecord> skills,
+            IEnumerable<GameplayAbilityCompilationRecord> abilities,
             IDictionary<string, CharacterAuthoringBlackboardDeclaration> declarations,
             IDictionary<string, TimelineData> timelines,
             IDictionary<UnityEngine.Object, string> assetGuids,
@@ -84,8 +84,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentException("Character compilation allows at most one Character root.", nameof(roots));
             Roots = Array.AsReadOnly(stableRoots);
             Root = stableRoots.SingleOrDefault(value => value.Role == CharacterCompositionRootRole.Character)?.Occurrence;
-            SkillRecords = Array.AsReadOnly((skills ?? throw new ArgumentNullException(nameof(skills)))
-                .OrderBy(value => value.SkillId)
+            AbilityRecords = Array.AsReadOnly((abilities ?? throw new ArgumentNullException(nameof(abilities)))
+                .OrderBy(value => value.AbilityId)
                 .ToArray());
             m_Declarations = new ReadOnlyDictionary<string, CharacterAuthoringBlackboardDeclaration>(
                 new SortedDictionary<string, CharacterAuthoringBlackboardDeclaration>(declarations, StringComparer.Ordinal));
@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BodyMotionContentRevision = ComputeBodyMotionContentRevision(BodyMotionProfile, BodyMotionProfileGuid);
             AnimationPresentationProfile = definition.AnimationPresentationProfile;
             CameraProfile = definition.CameraProfile;
-            ActionProfiles = definition.BuildCompiledActionProfileCatalog();
+            AdmissionProfiles = definition.BuildCompiledAdmissionProfileCatalog();
             BehaviorProfiles = definition.BehaviorProfiles.Where(value => value).OrderBy(value => value.BehaviorId, StringComparer.Ordinal).ToArray();
             InputValues = InputProfile ? InputProfile.InputValues.Where(value => value != null).OrderBy(value => value.InputValueId, StringComparer.Ordinal).ToArray() : Array.Empty<CharacterInputValueDefinition>();
             InputRequests = InputProfile ? InputProfile.ActionRequests.Where(value => value != null).OrderBy(value => value.RequestId, StringComparer.Ordinal).ToArray() : Array.Empty<CharacterActionRequestDefinition>();
@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public int TickRate => Definition.SimulationTickRate;
         public CharacterAuthoringGraphOccurrence Root { get; }
         public IReadOnlyList<CharacterCompositionRoot> Roots { get; }
-        public IReadOnlyList<CharacterSkillCompilationRecord> SkillRecords { get; }
+        public IReadOnlyList<GameplayAbilityCompilationRecord> AbilityRecords { get; }
         public IReadOnlyDictionary<string, CharacterAuthoringBlackboardDeclaration> Declarations => m_Declarations;
         public IReadOnlyDictionary<string, TimelineData> Timelines => m_Timelines;
         public CharacterInputProfile InputProfile { get; }
@@ -141,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public StableHash BodyMotionContentRevision { get; }
         public ThirdPersonCharacter.Pipeline.Animation.CharacterAnimationPresentationProfile AnimationPresentationProfile { get; }
         public CharacterCameraProfile CameraProfile { get; }
-        public IReadOnlyList<ActionProfile> ActionProfiles { get; }
+        public IReadOnlyList<GameplayAbilityAdmissionProfile> AdmissionProfiles { get; }
         public IReadOnlyList<GameplayBehaviorProfile> BehaviorProfiles { get; }
         public IReadOnlyList<CharacterInputValueDefinition> InputValues { get; }
         public IReadOnlyList<CharacterActionRequestDefinition> InputRequests { get; }
@@ -442,15 +442,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!m_Report.IsValid)
                 return null;
             var roots = new List<CharacterCompositionRoot>();
-            IReadOnlyList<CharacterSkillCompilationRecord> skills = CharacterSkillCompilationDiscovery.Discover(
-                definition.SkillDefinitions,
-                definition.SkillGraphs,
-                m_TimelineEmitters,
-                m_Report);
+            IReadOnlyList<GameplayAbilityCompilationRecord> abilities =
+                GameplayAbilityCompilationDiscovery.DiscoverAbilities(
+                    definition.AbilityGrants,
+                    m_TimelineEmitters,
+                    m_Report);
             if (!m_Report.IsValid)
                 return null;
-            foreach (CharacterSkillCompilationRecord skill in skills)
-                foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
+            foreach (GameplayAbilityCompilationRecord ability in abilities)
+                foreach (BtsmtlSkillGraphOccurrence graph in ability.EntryGraph.EnumerateOccurrences())
                     foreach (BtsmtlSkillBlackboardDeclaration declaration in ((IBtsmtlSkillFlowGraph)graph.Graph).BlackboardDeclarations)
                     {
                         var record = new CharacterAuthoringBlackboardDeclaration(graph.Graph, declaration, graph.Route, graph.ContentHash);
@@ -463,8 +463,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         else
                             m_Declarations.Add(identity, record);
                     }
-            foreach (CharacterSkillCompilationRecord skill in skills)
-                foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
+            foreach (GameplayAbilityCompilationRecord ability in abilities)
+                foreach (BtsmtlSkillGraphOccurrence graph in ability.EntryGraph.EnumerateOccurrences())
                     foreach (BtsmtlSkillTimelineOccurrence record in graph.Timelines)
                     {
                         TimelineData timeline = record.Content.Timeline;
@@ -481,8 +481,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 RegisterIdentity(clip.Clip.AuthoringId, clip.Clip, "TimelineClip", clip.Route);
                         }
                     }
-            foreach (CharacterSkillCompilationRecord skill in skills)
-                ValidateSkillActionWindowQueries(skill.EntryGraph);
+            foreach (GameplayAbilityCompilationRecord ability in abilities)
+                ValidateSkillActionWindowQueries(ability.EntryGraph);
             if (!m_Report.IsValid)
                 return null;
             return new CharacterAuthoringCompilationModel(
@@ -492,7 +492,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 new ProgramId($"character:{definitionGuid}"),
                 sourceRevision,
                 roots,
-                skills,
+                abilities,
                 m_Declarations,
                 m_Timelines,
                 m_AssetGuids,
@@ -979,9 +979,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ValidateAssetIdentity(definition.AnimationPresentationProfile, "AnimationPresentationProfile", definitionPath);
             ValidateAssetIdentity(definition.EquipmentProfile, "EquipmentProfile", definitionPath);
             ValidateAssetIdentity(definition.EquipmentPresentationProfile, "EquipmentPresentationProfile", definitionPath);
-            IReadOnlyList<ActionProfile> compiledActions = definition.BuildCompiledActionProfileCatalog();
-            for (int i = 0; i < compiledActions.Count; i++)
-                ValidateAssetIdentity(compiledActions[i], "ActionProfile", definitionPath);
+            IReadOnlyList<GameplayAbilityAdmissionProfile> compiledAdmissionProfiles = definition.BuildCompiledAdmissionProfileCatalog();
+            for (int i = 0; i < compiledAdmissionProfiles.Count; i++)
+                ValidateAssetIdentity(compiledAdmissionProfiles[i], "GameplayAbilityAdmissionProfile", definitionPath);
+            for (int i = 0; i < definition.AbilityGrants.Count; i++)
+            {
+                AbilityGrant grant = definition.AbilityGrants[i];
+                if (grant == null || !grant.Ability)
+                    continue;
+                ValidateAssetIdentity(grant.Ability, "GameplayAbilityDefinition", definitionPath);
+                ValidateAssetIdentity(grant.Ability.AdmissionProfile, "GameplayAbilityAdmissionProfile", definitionPath);
+                for (int effectIndex = 0; effectIndex < grant.Ability.Effects.Count; effectIndex++)
+                    ValidateAssetIdentity(grant.Ability.Effects[effectIndex], "GameplayAbilityEffect", definitionPath);
+#if UNITY_EDITOR
+                ValidateAssetIdentity(grant.Ability.AbilityGraph, "GameplayAbilityGraph", definitionPath);
+#endif
+            }
             for (int i = 0; i < definition.BehaviorProfiles.Count; i++)
                 ValidateAssetIdentity(definition.BehaviorProfiles[i], "BehaviorProfile", definitionPath);
             if (definition.GameplayEffectProfile)

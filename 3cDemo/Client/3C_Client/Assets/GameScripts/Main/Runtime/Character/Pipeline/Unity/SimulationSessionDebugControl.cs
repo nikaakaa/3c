@@ -69,7 +69,7 @@ namespace ThirdPersonCharacter.Pipeline
             SimulationSessionId sessionId,
             SimulationSessionCompositionIdentity compositionIdentity,
             SimulationPipelineIdentity pipeline,
-            ProgramCatalogHash programCatalogHash,
+            GameplayContentHash gameplayContentHash,
             NumericProfileId numericProfileId,
             SimulationComponentIdentity sessionSource,
             SimulationComponentIdentity worldSolver)
@@ -80,7 +80,7 @@ namespace ThirdPersonCharacter.Pipeline
             SessionId = sessionId;
             CompositionIdentity = compositionIdentity;
             Pipeline = pipeline;
-            ProgramCatalogHash = programCatalogHash;
+            GameplayContentHash = gameplayContentHash;
             NumericProfileId = numericProfileId;
             SessionSource = sessionSource;
             WorldSolver = worldSolver;
@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline
         public SimulationSessionId SessionId { get; }
         public SimulationSessionCompositionIdentity CompositionIdentity { get; }
         public SimulationPipelineIdentity Pipeline { get; }
-        public ProgramCatalogHash ProgramCatalogHash { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public NumericProfileId NumericProfileId { get; }
         public SimulationComponentIdentity SessionSource { get; }
         public SimulationComponentIdentity WorldSolver { get; }
@@ -118,7 +118,7 @@ namespace ThirdPersonCharacter.Pipeline
                 descriptor.SessionId,
                 descriptor.Identity,
                 descriptor.Pipeline,
-                descriptor.ProgramCatalogHash,
+                descriptor.GameplayContentHash,
                 descriptor.NumericProfileId,
                 descriptor.SessionSource,
                 descriptor.WorldSolver);

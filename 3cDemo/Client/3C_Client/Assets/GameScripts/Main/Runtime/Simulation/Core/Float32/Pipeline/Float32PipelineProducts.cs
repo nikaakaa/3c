@@ -107,18 +107,18 @@ namespace ThirdPersonSimulation
 
     public sealed class Float32PendingEvaluationBatch
     {
-        readonly Float32PendingAbilityEvaluation[] m_Evaluations;
+        readonly Float32PendingActorEvaluation[] m_Evaluations;
 
         internal Float32PendingEvaluationBatch(int actorCount)
         {
             if (actorCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(actorCount));
-            m_Evaluations = new Float32PendingAbilityEvaluation[actorCount];
+            m_Evaluations = new Float32PendingActorEvaluation[actorCount];
         }
 
         internal Float32PendingEvaluationBatch Reset(
             SimulationTick tick,
-            Float32PendingAbilityEvaluation[] evaluations)
+            Float32PendingActorEvaluation[] evaluations)
         {
             if (!tick.IsValid || evaluations == null || evaluations.Length != m_Evaluations.Length)
                 throw new ArgumentException("Pending evaluation batch workspace is invalid.");
@@ -142,7 +142,7 @@ namespace ThirdPersonSimulation
         }
 
         public SimulationTick Tick { get; private set; }
-        public IReadOnlyList<Float32PendingAbilityEvaluation> Evaluations => m_Evaluations;
+        public IReadOnlyList<Float32PendingActorEvaluation> Evaluations => m_Evaluations;
 
         internal void AbortUnconsumed()
         {

@@ -41,7 +41,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             if (!string.IsNullOrEmpty(source.GraphAuthoringId))
             {
-                FlowGraph[] nativeGraphs = definition.SkillGraphs
+                IReadOnlyList<BtsmtlSkillFlowGraph> roots = definition.AbilityGraphs;
+                FlowGraph[] nativeGraphs = roots
                     .Where(graph => graph != null)
                     .SelectMany(graph => BtsmtlSkillGraphClosure.Validate(graph, false))
                     .Distinct()

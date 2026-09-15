@@ -103,7 +103,7 @@ namespace ThirdPersonSimulation
 
                 Float32PipelineProductStore products = request.ProductRuntimeFactories.CreateStore(request.CompiledPipeline.Products);
                 var stateStore = new SimulationWorldStateStore(request.CharacterRuntime, request.InitialState);
-                var programPort = new Float32CharacterRuntimePort(
+                var characterRuntimePort = new Float32CharacterRuntimePort(
                     request.Backend.Identity,
                     request.CharacterRuntime);
                 var workingStatePort = new Float32WorkingStatePort(request.Backend.Identity);
@@ -115,7 +115,7 @@ namespace ThirdPersonSimulation
                 var diagnosticsPort = new Float32DiagnosticsRuntimePort(request.DiagnosticsIdentity, request.Diagnostics);
                 var targetPorts = new SimulationRuntimePortSet(new ISimulationRuntimePort[]
                 {
-                    programPort,
+                    characterRuntimePort,
                     workingStatePort,
                     completedStepPort,
                     committedObservationPort

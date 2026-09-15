@@ -8,7 +8,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal static CharacterPoseTransitionRuleProgram Compile(
             CharacterPoseTransitionRuleGraph graph,
-            IReadOnlyList<string> movementModeStateIdentities)
+            IReadOnlyList<string> movementModeStateIdentities,
+            CharacterAnimationVariableContract animationVariables)
         {
             if (graph == null)
                 throw new ArgumentNullException(nameof(graph));
@@ -55,7 +56,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < ordered.Count; i++)
             {
                 CharacterPoseTransitionRuleOperation operation = ordered[i];
-                ValueSignature signature = InferSignature(operation, signatures);
+                ValueSignature signature = InferSignature(
+                    operation,
+                    signatures,
+                    animationVariables);
                 int inputA = ResolveCompiledInput(operation.InputA, compiledIndexById);
                 int inputB = ResolveCompiledInput(operation.InputB, compiledIndexById);
                 ValidateInputShape(operation, inputA, inputB);
@@ -72,7 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.EnumLiteral,
                     ValidateMovementModeIdentity(
                         operation,
-                        movementModeStateIdentities));
+                        movementModeStateIdentities),
+                    operation.ParameterId);
                 compiledIndexById.Add(operation.OperationId, i);
                 signatures.Add(operation.OperationId, signature);
             }
@@ -129,12 +134,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static ValueSignature InferSignature(
             CharacterPoseTransitionRuleOperation operation,
-            IReadOnlyDictionary<PoseTransitionRuleOperationId, ValueSignature> signatures)
+            IReadOnlyDictionary<PoseTransitionRuleOperationId, ValueSignature> signatures,
+            CharacterAnimationVariableContract animationVariables)
         {
             switch (operation.Kind)
             {
                 case PoseTransitionRuleOperationKind.FactInput:
                     return ResolveFactSignature(operation.FactId);
+                case PoseTransitionRuleOperationKind.AnimationVariableInput:
+                    return ResolveAnimationVariableSignature(
+                        operation.ParameterId,
+                        animationVariables);
                 case PoseTransitionRuleOperationKind.BoolLiteral:
                     return ValueSignature.Bool;
                 case PoseTransitionRuleOperationKind.FloatLiteral:
@@ -223,15 +233,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     return ValueSignature.Bool;
                 case PresentationFactValueKind.Float:
                     return ValueSignature.Float;
-                case PresentationFactValueKind.Enum:
-                    if (factId == CharacterPresentationFactSchema.MotionPhase)
-                        return ValueSignature.Enum(PoseTransitionRuleEnumTypes.CharacterPresentationMotionPhase);
-                    break;
                 case PresentationFactValueKind.Identity:
                     return ValueSignature.Identity;
             }
             throw new InvalidOperationException(
                 $"Presentation Fact '{factId}' is not a Bool, Float, or Enum Transition Rule input.");
+        }
+
+        static ValueSignature ResolveAnimationVariableSignature(
+            PoseParameterId parameterId,
+            CharacterAnimationVariableContract animationVariables)
+        {
+            if (!parameterId.IsValid || animationVariables == null ||
+                !animationVariables.TryGet(
+                    parameterId.Value,
+                    out BTSMTL.EventGraphs.EventGraphVariableDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"Animation Variable '{parameterId}' is not declared by the Character Animation Event Graph.");
+            }
+            return descriptor.ValueKind switch
+            {
+                BTSMTL.EventGraphs.EventGraphValueKind.Bool => ValueSignature.Bool,
+                BTSMTL.EventGraphs.EventGraphValueKind.Float32 => ValueSignature.Float,
+                BTSMTL.EventGraphs.EventGraphValueKind.Int32 => ValueSignature.Int,
+                BTSMTL.EventGraphs.EventGraphValueKind.Enum
+                    when descriptor.ValueType == typeof(CharacterPresentationMotionPhase) =>
+                    ValueSignature.Enum(PoseTransitionRuleEnumTypes.CharacterPresentationMotionPhase),
+                _ => throw new InvalidOperationException(
+                    $"Animation Variable '{parameterId}' has unsupported Transition Rule type '{descriptor.ValueType.FullName}'.")
+            };
         }
 
         static ValueSignature RequireSignature(
@@ -278,6 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 case PoseTransitionRuleOperationKind.FloatLiteral:
                 case PoseTransitionRuleOperationKind.EnumLiteral:
                 case PoseTransitionRuleOperationKind.IdentityLiteral:
+                case PoseTransitionRuleOperationKind.AnimationVariableInput:
                 case PoseTransitionRuleOperationKind.TimeInState:
                 case PoseTransitionRuleOperationKind.StatePoseRemainingTime:
                     if (inputA >= 0 || inputB >= 0)
@@ -304,6 +336,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 case PoseTransitionRuleOperationKind.FactInput:
                     return PoseTransitionRuleOperationCode.ReadFact;
+                case PoseTransitionRuleOperationKind.AnimationVariableInput:
+                    return PoseTransitionRuleOperationCode.ReadAnimationVariable;
                 case PoseTransitionRuleOperationKind.BoolLiteral:
                     return PoseTransitionRuleOperationCode.BoolLiteral;
                 case PoseTransitionRuleOperationKind.FloatLiteral:
@@ -351,6 +385,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new ValueSignature(PoseTransitionRuleValueKind.Bool, string.Empty);
             internal static ValueSignature Float =>
                 new ValueSignature(PoseTransitionRuleValueKind.Float, string.Empty);
+            internal static ValueSignature Int =>
+                new ValueSignature(PoseTransitionRuleValueKind.Int, string.Empty);
             internal static ValueSignature Enum(string enumTypeId) =>
                 new ValueSignature(PoseTransitionRuleValueKind.Enum, enumTypeId);
             internal static ValueSignature Identity =>

@@ -213,7 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 }
                 EditorGUILayout.PropertyField(route.FindPropertyRelative("m_RouteId"), new GUIContent("Route Id"));
-                EditorGUILayout.PropertyField(route.FindPropertyRelative("m_SkillId"), new GUIContent("Skill Id"));
+                EditorGUILayout.PropertyField(route.FindPropertyRelative("m_AbilityGrant"), new GUIContent("Ability Grant"), true);
                 EditorGUILayout.PropertyField(route.FindPropertyRelative("m_RequiredParameterIds"), new GUIContent("Required Parameters"), true);
                 EditorGUILayout.PropertyField(route.FindPropertyRelative("m_RequiredProducerIds"), new GUIContent("Required Producers"), true);
                 EditorGUILayout.EndVertical();
@@ -222,7 +222,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 SerializedProperty route = EquipmentEditorGui.AddElement(m_RouteImplementations);
                 route.FindPropertyRelative("m_RouteId").stringValue = EquipmentEditorGui.NewIdentity("route");
-                route.FindPropertyRelative("m_SkillId").stringValue = string.Empty;
+                SerializedProperty grant = route.FindPropertyRelative("m_AbilityGrant");
+                grant.FindPropertyRelative("m_Ability").objectReferenceValue = null;
+                grant.FindPropertyRelative("m_SourceInputRequestId").stringValue = string.Empty;
+                grant.FindPropertyRelative("m_TargetInputValueId").stringValue = string.Empty;
+                grant.FindPropertyRelative("m_TargetKey").stringValue = string.Empty;
                 route.FindPropertyRelative("m_RequiredParameterIds").arraySize = 0;
                 route.FindPropertyRelative("m_RequiredProducerIds").arraySize = 0;
             }

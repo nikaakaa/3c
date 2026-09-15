@@ -840,14 +840,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFrameLease lease,
             in CharacterPoseProgramPrepared prepared,
             in CharacterBodyPresentationFrame bodyFrame,
-            in CharacterPresentationFactFrame factFrame)
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame)
         {
             RequireFrame(lease);
             m_Evaluation.BeginCompletion(
                 lease,
                 in prepared,
                 in bodyFrame,
-                in factFrame);
+                in factFrame,
+                in parameterFrame);
         }
 
         internal bool TryAdvanceEvaluationExecution(

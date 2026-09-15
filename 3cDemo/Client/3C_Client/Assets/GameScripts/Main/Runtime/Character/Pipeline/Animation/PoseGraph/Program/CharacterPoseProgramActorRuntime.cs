@@ -143,7 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 CharacterRootOrientationWarpNativeControl control =
                     m_ActorState.RootOrientationWarps[i]
-                        .Prepare(in factFrame);
+                        .Prepare(in factFrame, in parameterFrame);
                 m_FramePages.SetRootOrientationWarpControl(i, in control);
             }
         }

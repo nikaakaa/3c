@@ -35,20 +35,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     public static class CharacterAnimationPresentationBindingFactory
     {
         public static CharacterAnimationPresentationBindings Build(
-            CharacterPresentationSemanticContract contract,
             CharacterPresentationProjection projection)
         {
-            if (contract == null)
-                throw new ArgumentNullException(nameof(contract));
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
-            projection.RequireContract(contract);
             projection.RequirePosePayload();
             return new CharacterAnimationPresentationBindings(
                 projection,
                 ActionAnimationBindingIndex.Build(
-                    projection,
-                    contract),
+                    projection),
                 PoseSourceProviderBindingIndex.Build(projection));
         }
     }

@@ -81,6 +81,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<SimulationIngress> ingress,
             Float32AbilityBodyFacts bodyFacts,
             IFloat32AbilityExecutionStateTransaction transaction,
+            IFloat32AbilityDomainStatePort domainState,
             Float32AbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -93,6 +94,7 @@ namespace ThirdPersonSimulation
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
             BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -115,6 +117,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationIngress> Ingress { get; }
         public Float32AbilityBodyFacts BodyFacts { get; }
         internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
+        internal IFloat32AbilityDomainStatePort DomainState { get; }
         internal Float32EventSequence EventSequence { get; }
         internal Float32FactSink Facts { get; }
         internal Float32PresentationSink Presentation { get; }
@@ -370,7 +373,7 @@ namespace ThirdPersonSimulation
 
         public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation, string channel)
         {
-            ulong sequence = m_Frame.Transaction.NextEventSequence();
+            ulong sequence = m_Frame.DomainState.NextEventSequence();
             if (generation == 0)
                 throw new ArgumentOutOfRangeException(nameof(generation));
             var activation = new ActivationId(source, generation);

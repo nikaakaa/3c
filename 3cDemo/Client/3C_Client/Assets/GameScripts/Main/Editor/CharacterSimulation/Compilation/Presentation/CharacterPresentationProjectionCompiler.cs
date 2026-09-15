@@ -567,7 +567,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 null,
                 null,
                 string.Empty,
-                animationProperties);
+                animationProperties,
+                profile.EventGraph);
             return projection;
         }
 
@@ -651,7 +652,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 null,
                 null,
                 string.Empty,
-                animationProperties);
+                animationProperties,
+                profile.EventGraph);
         }
 
     }

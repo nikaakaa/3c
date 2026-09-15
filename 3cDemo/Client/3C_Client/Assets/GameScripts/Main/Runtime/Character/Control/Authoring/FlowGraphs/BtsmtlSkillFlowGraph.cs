@@ -23,10 +23,16 @@ namespace ThirdPersonCharacter.Control.Authoring
         TimelineBody
     }
 
-    public interface IBtsmtlSkillFlowGraph
+    public interface IBtsmtlSkillAuthoringGraph
     {
         string AuthoringId { get; }
         BtsmtlSkillFlowGraphRole Role { get; }
+    }
+
+    public interface IBtsmtlSkillFlowGraph : IBtsmtlSkillAuthoringGraph
+    {
+        new string AuthoringId { get; }
+        new BtsmtlSkillFlowGraphRole Role { get; }
         IReadOnlyList<BtsmtlSkillBlackboardDeclaration> BlackboardDeclarations { get; }
         void SetBlackboardDeclarations(IEnumerable<BtsmtlSkillBlackboardDeclaration> declarations);
         List<Node> DuplicateStructure(List<Node> nodes, Vector2 position);
@@ -52,7 +58,11 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (typeof(BtsmtlSkillTimelineHookFlowNode).IsAssignableFrom(nodeType))
                 return role == BtsmtlSkillFlowGraphRole.TimelineBody;
             if (typeof(BtsmtlSkillStateLifecycleFlowNode).IsAssignableFrom(nodeType))
-                return role == BtsmtlSkillFlowGraphRole.StateBody;
+                return (nodeType == typeof(BtsmtlSkillStateOnEnterFlowNode) ||
+                        nodeType == typeof(BtsmtlSkillStateOnExitFlowNode)) &&
+                    role == BtsmtlSkillFlowGraphRole.StateBody;
+            if (nodeType == typeof(BtsmtlSkillSucceedFlowNode))
+                return role != BtsmtlSkillFlowGraphRole.StateBody;
             if (nodeType == typeof(BtsmtlSkillConditionResultFlowNode))
                 return role == BtsmtlSkillFlowGraphRole.ConditionRule;
             return role switch
@@ -71,6 +81,125 @@ namespace ThirdPersonCharacter.Control.Authoring
                 foreach (Connection connection in node.outConnections)
                     _ = connection.UID;
             }
+        }
+    }
+
+    public static class BtsmtlSkillFlowGraphAuthoring
+    {
+        public static FlowNode ResolveNode(FlowGraph graph, string identity)
+        {
+            if (graph == null || string.IsNullOrWhiteSpace(identity))
+                return null;
+            return graph.allNodes
+                .OfType<FlowNode>()
+                .SingleOrDefault(value => string.Equals(value.UID, identity, StringComparison.Ordinal));
+        }
+
+        public static BinderConnection ResolveConnection(FlowGraph graph, string identity)
+        {
+            if (graph == null || string.IsNullOrWhiteSpace(identity))
+                return null;
+            return graph.allNodes
+                .OfType<FlowNode>()
+                .SelectMany(value => value.outConnections.OfType<BinderConnection>())
+                .SingleOrDefault(value => string.Equals(value.UID, identity, StringComparison.Ordinal));
+        }
+
+        public static FlowNode EnsureNode(
+            FlowGraph graph,
+            Type nodeType,
+            string identity,
+            string name,
+            Vector2 position)
+        {
+            if (graph is not IBtsmtlSkillFlowGraph || nodeType == null || !graph.CanAuthorNodeType(nodeType))
+                throw new InvalidOperationException("技能Graph节点类型不属于当前正式作者域。");
+            if (string.IsNullOrWhiteSpace(identity))
+                throw new ArgumentException("技能Graph节点identity不能为空。", nameof(identity));
+            return BtsmtlSkillFlowEditorMutation.Execute(graph, "配置技能Graph节点", () =>
+            {
+                FlowNode node = ResolveNode(graph, identity);
+                if (node == null && BtsmtlSkillCapabilityCatalog.IsAnchor(nodeType))
+                    node = graph.allNodes.OfType<FlowNode>()
+                        .SingleOrDefault(value => value.GetType() == nodeType);
+                if (node == null)
+                    node = (FlowNode)graph.AddNode(nodeType, position);
+                else if (node.GetType() != nodeType)
+                    throw new InvalidOperationException($"技能Graph节点identity '{identity}'的类型不一致。");
+                node.ConfigureAuthoringIdentity(identity);
+                node.name = string.IsNullOrWhiteSpace(name) ? node.name : name;
+                node.position = position;
+                node.GatherPorts();
+                return node;
+            });
+        }
+
+        public static BinderConnection EnsureConnection(
+            FlowGraph graph,
+            FlowNode source,
+            string sourcePortId,
+            FlowNode target,
+            string targetPortId,
+            string identity)
+        {
+            if (graph == null || source == null || target == null)
+                throw new ArgumentNullException(nameof(graph));
+            if (source.graph != graph || target.graph != graph)
+                throw new InvalidOperationException("技能Graph连线端点必须属于同一正式Graph。");
+            if (string.IsNullOrWhiteSpace(identity))
+                throw new ArgumentException("技能Graph连线identity不能为空。", nameof(identity));
+            Port sourcePort = source.GetOutputPort(sourcePortId);
+            Port targetPort = target.GetInputPort(targetPortId);
+            if (sourcePort == null || targetPort == null)
+                throw new InvalidOperationException($"技能Graph连线identity '{identity}'引用了不存在的端口。");
+            BinderConnection existing = ResolveConnection(graph, identity);
+            if (existing != null &&
+                (sourcePort.type != targetPort.type || sourcePort.IsFlowPort() != targetPort.IsFlowPort()))
+                throw new InvalidOperationException($"技能Graph连线identity '{identity}'的端口类型不一致。");
+            if (existing == null &&
+                !BtsmtlSkillFlowEditorMutation.CanConnect(graph, sourcePort, targetPort, out string reason))
+                throw new InvalidOperationException(reason);
+            return BtsmtlSkillFlowEditorMutation.Execute(graph, "配置技能Graph连线", () =>
+            {
+                BinderConnection connection = existing;
+                if (connection != null)
+                {
+                    if (connection.sourcePort != sourcePort)
+                        connection.SetSourcePort(sourcePort);
+                    if (connection.targetPort != targetPort)
+                        connection.SetTargetPort(targetPort);
+                    return connection;
+                }
+                connection = graph.CreatePortConnection(sourcePort, targetPort);
+                if (connection == null)
+                    throw new InvalidOperationException($"技能Graph连线identity '{identity}'创建失败。");
+                connection.ConfigureAuthoringIdentity(identity);
+                return connection;
+            });
+        }
+
+        public static void Prune(
+            FlowGraph graph,
+            IEnumerable<string> nodeIdentities,
+            IEnumerable<string> connectionIdentities)
+        {
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+            var keepNodes = new HashSet<string>(nodeIdentities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            var keepConnections = new HashSet<string>(connectionIdentities ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            BtsmtlSkillFlowEditorMutation.Execute(graph, "清理技能Graph输出", () =>
+            {
+                foreach (BinderConnection connection in graph.allNodes
+                             .OfType<FlowNode>()
+                             .SelectMany(value => value.outConnections.OfType<BinderConnection>())
+                             .ToArray())
+                    if (!keepConnections.Contains(connection.UID))
+                        graph.RemoveConnection(connection, false);
+                foreach (FlowNode node in graph.allNodes.OfType<FlowNode>().ToArray())
+                    if (!BtsmtlSkillCapabilityCatalog.IsAnchor(node.GetType()) &&
+                        !keepNodes.Contains(node.UID))
+                        graph.RemoveNode(node, false);
+            });
         }
     }
 

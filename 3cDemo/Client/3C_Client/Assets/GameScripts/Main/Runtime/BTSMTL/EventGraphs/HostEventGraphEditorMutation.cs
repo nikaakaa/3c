@@ -387,6 +387,11 @@ namespace BTSMTL.EventGraphs
                 if (result == null)
                     throw new InvalidOperationException("Event graph node could not be created.");
                 result.ConfigureAuthoringIdentity(authoringIdentity);
+                if (result is not ParameterVariableNode &&
+                    result is not SimplexNodeWrapper)
+                {
+                    result.name = DisplayNameFromAuthoringIdentity(authoringIdentity);
+                }
             });
             return result;
         }
@@ -449,6 +454,10 @@ namespace BTSMTL.EventGraphs
                 foreach (Variable variable in graph.blackboard.variables.Values.ToArray())
                     graph.blackboard.RemoveVariable(variable.name);
                 graph.canvasGroups = new List<NodeCanvas.Framework.CanvasGroup>();
+                graph.category = string.Empty;
+                graph.comments = string.Empty;
+                graph.translation = Vector2.zero;
+                graph.zoomFactor = 1f;
             });
         }
 
@@ -518,6 +527,8 @@ namespace BTSMTL.EventGraphs
                     vector2Input.ConfigureInput(inputId);
                 else if (node is EventGraphVector3InputNode vector3Input)
                     vector3Input.ConfigureInput(inputId);
+                else if (node is EventGraphQuaternionInputNode quaternionInput)
+                    quaternionInput.ConfigureInput(inputId);
                 else if (node is EventGraphDeltaNode)
                 {
                     if (!string.Equals(
@@ -532,6 +543,7 @@ namespace BTSMTL.EventGraphs
                 else
                     throw new InvalidOperationException(
                         $"Node '{node.UID}' is not a host input node.");
+                node.name = EventGraphHostInputDisplayNames.For(inputId);
             });
         }
 
@@ -590,7 +602,8 @@ namespace BTSMTL.EventGraphs
             if (!EventGraphValueKinds.IsSupported(typeof(T)))
                 throw new InvalidOperationException(
                     $"Event graph Set type '{typeof(T).FullName}' is unsupported.");
-            if (typeof(T) == typeof(bool) || typeof(T) == typeof(Vector2))
+            if (typeof(T) == typeof(bool) || typeof(T) == typeof(Vector2) ||
+                typeof(T) == typeof(Quaternion) || typeof(T).IsEnum)
             {
                 if (operation != AssignOp.Set || perSecond)
                     throw new InvalidOperationException(
@@ -766,6 +779,40 @@ namespace BTSMTL.EventGraphs
                     "Event graph authoring name is missing.",
                     parameterName);
             return value.Trim();
+        }
+
+        static string DisplayNameFromAuthoringIdentity(string identity)
+        {
+            string leaf = identity.Substring(identity.LastIndexOf('.') + 1);
+            string display = HumanizeIdentity(leaf);
+            if (identity.Contains(".input.", StringComparison.Ordinal))
+                return "Read " + display;
+            if (identity.Contains(".calculate.", StringComparison.Ordinal))
+                return "Calculate " + display;
+            if (identity.Contains(".branch.", StringComparison.Ordinal))
+                return "Branch " + display;
+            if (identity.Contains(".history.get-", StringComparison.Ordinal))
+                return "Get " + display;
+            if (identity.Contains(".history.set-", StringComparison.Ordinal))
+                return "Set " + display;
+            if (identity.Contains(".set.", StringComparison.Ordinal))
+                return "Set " + display;
+            return display;
+        }
+
+        static string HumanizeIdentity(string value)
+        {
+            string[] words = value.Split(
+                new[] { '-', '_', '.' },
+                StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < words.Length; i++)
+            {
+                if (words[i].Length == 0)
+                    continue;
+                words[i] = char.ToUpperInvariant(words[i][0]) +
+                           words[i].Substring(1);
+            }
+            return string.Join(" ", words);
         }
 
         static void EnsureFinite(Vector2 value, string parameterName)

@@ -158,8 +158,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             SimulationNumericProfile numericProfile,
             TargetAbiVersion targetAbiVersion,
             string stateCodecIdentity,
-            ProgramHash programHash,
-            LayoutHash layoutHash,
+            GameplayContentHash gameplayContentHash,
             OperationSetVersion operationSetVersion,
             byte[] characterStateBytes,
             CharacterStateHash stateHash,
@@ -173,8 +172,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (!actorId.IsValid || !authorityTick.IsValid || !numericProfile.IsValid ||
                 !targetAbiVersion.Equals(numericProfile.AbiVersion) ||
-                !string.Equals(stateCodecIdentity, CharacterSimulationStateCodec.CodecIdentity, StringComparison.Ordinal) ||
-                !programHash.IsValid || !layoutHash.IsValid ||
+                !string.Equals(stateCodecIdentity, Float32CharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal) ||
+                !gameplayContentHash.IsValid ||
                 !operationSetVersion.IsValid || !stateHash.IsValid || string.IsNullOrEmpty(worldRevision.Value) ||
                 string.IsNullOrEmpty(solverId.Value) || solverCapabilities == WorldCapability.None || body.ActorId != actorId)
             {
@@ -187,8 +186,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             NumericProfile = numericProfile;
             TargetAbiVersion = targetAbiVersion;
             StateCodecIdentity = stateCodecIdentity;
-            ProgramHash = programHash;
-            LayoutHash = layoutHash;
+            GameplayContentHash = gameplayContentHash;
             OperationSetVersion = operationSetVersion;
             m_CharacterStateBytes = (byte[])characterStateBytes.Clone();
             StateHash = stateHash;
@@ -209,8 +207,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public SimulationNumericProfile NumericProfile { get; }
         public TargetAbiVersion TargetAbiVersion { get; }
         public string StateCodecIdentity { get; }
-        public ProgramHash ProgramHash { get; }
-        public LayoutHash LayoutHash { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public OperationSetVersion OperationSetVersion { get; }
         public ReadOnlyMemory<byte> CharacterStateBytes => m_CharacterStateBytes;
         public CharacterStateHash StateHash { get; }

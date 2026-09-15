@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Register<StateExitCauseInfoNode>("state-exit-cause", "stateExitCause");
             Register<ActionContextActiveInfoNode>("action-context-active", "actionContextId");
             Register<ActionWindowActiveInfoNode>("action-window-active", "windowType");
-            Register<CanActivateActionInfoNode>("can-activate-action", "actionProfileId", "targetSnapshotBlackboardDeclarationId");
+            Register<CanActivateActionInfoNode>("can-activate-action", "admissionProfileId", "targetSnapshotBlackboardDeclarationId");
             Register<LocomotionInputMotionNode>(
                 "locomotion-input-motion",
                 "moveSpeed",
@@ -447,7 +447,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 mutationBindingId: systemOwned ? string.Empty : "btsmtl.node",
                 validationBindingId: "btsmtl.node",
                 compilerBindingId: "btsmtl.node." + kind,
-                documentCodecId: "btsmtl.graph-node",
                 authoringType: type,
                 externalKind: kind,
                 systemOwned: systemOwned,
@@ -651,7 +650,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string.Equals(property, "stateExitCause", StringComparison.Ordinal) ||
             string.Equals(property, "actionContextId", StringComparison.Ordinal) ||
             string.Equals(property, "windowType", StringComparison.Ordinal) ||
-            string.Equals(property, "actionProfileId", StringComparison.Ordinal);
+            string.Equals(property, "admissionProfileId", StringComparison.Ordinal);
 
         static string SharedPickerKind(string property)
         {

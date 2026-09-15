@@ -208,7 +208,7 @@ namespace ThirdPersonSimulation
                 ProgramReference reference = references[i];
                 if (!reference.HasSourceOperation &&
                     reference.Kind == ProgramReferenceKind.Operation &&
-                    string.Equals(reference.Identity, "program:root-operation", StringComparison.Ordinal))
+                    string.Equals(reference.Identity, "ability:root-operation", StringComparison.Ordinal))
                     return new OperationHandle(reference.TargetIndex);
             }
             throw new InvalidOperationException("Ability root operation reference is missing.");

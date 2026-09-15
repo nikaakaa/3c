@@ -16,9 +16,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<CanActivateActionInfoNode>(node => CanActivate(node)));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ActivateActionInstanceNode>(node => new CharacterSimulationNodeEmission(
                 SimulationOperationCode.ActivateActionInstance,
-                text0: node.ActionProfile ? node.ActionProfile.ActionId : string.Empty,
+                text0: node.AdmissionProfile ? node.AdmissionProfile.ActionId : string.Empty,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(
-                    ("ActionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionProfile)),
+                    ("AdmissionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(node.AdmissionProfile)),
                     ("SourceInputRequest", node.SourceInputRequestId),
                     ("ConsumeSourceInputRequest", node.ConsumeSourceInputRequest),
                     ("TargetKey", node.TargetKey),
@@ -42,9 +42,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static CharacterSimulationNodeEmission CanActivate(ICanActivateActionAuthoring node) =>
             new CharacterSimulationNodeEmission(
                 SimulationOperationCode.CanActivateAction,
-                text0: node.ActionProfile ? node.ActionProfile.ActionId : string.Empty,
+                text0: node.AdmissionProfile ? node.AdmissionProfile.ActionId : string.Empty,
                 constants: CharacterSimulationNodeEmitterRegistry.Fields(
-                    ("ActionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionProfile)),
+                    ("AdmissionProfile", CharacterSimulationNodeEmitterContext.AssetIdentity(node.AdmissionProfile)),
                     ("TargetSnapshotDeclaration", node.TargetSnapshotDeclarationId),
                     ("TargetSnapshotOwner", node.TargetSnapshotOwnerId)));
 

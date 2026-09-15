@@ -86,7 +86,14 @@ namespace BTSMTL.EventGraphs
                 { typeof(RemapFloat), "value.float.remap" },
                 { typeof(RemapVector3), "value.vector3.remap" },
                 { typeof(DampFloat), "value.float.damp" },
-                { typeof(DampVector3), "value.vector3.damp" }
+                { typeof(DampVector3), "value.vector3.damp" },
+                { typeof(EventGraphVector3PlanarNode), "value.vector3.planar" },
+                { typeof(EventGraphVector3YNode), "value.vector3.y" },
+                { typeof(EventGraphVector2MagnitudeNode), "value.vector2.magnitude" },
+                { typeof(EventGraphVector2NormalizeNode), "value.vector2.normalize" },
+                { typeof(EventGraphVector2SubtractNode), "value.vector2.subtract" },
+                { typeof(EventGraphVector2SignedAngleNode), "value.vector2.signed-angle" },
+                { typeof(EventGraphQuaternionForwardNode), "value.quaternion.forward" }
             };
 
         public static bool TryGet(
@@ -157,9 +164,10 @@ namespace BTSMTL.EventGraphs
             if (nodeType == typeof(EventGraphFloatInputNode) ||
                 nodeType == typeof(EventGraphIntInputNode) ||
                 nodeType == typeof(EventGraphBoolInputNode) ||
-                nodeType == typeof(EventGraphVector2InputNode) ||
-                nodeType == typeof(EventGraphVector3InputNode) ||
-                nodeType == typeof(EventGraphDeltaNode))
+                 nodeType == typeof(EventGraphVector2InputNode) ||
+                 nodeType == typeof(EventGraphVector3InputNode) ||
+                 nodeType == typeof(EventGraphQuaternionInputNode) ||
+                 nodeType == typeof(EventGraphDeltaNode))
             {
                 descriptor = new EventGraphCapabilityDescriptor(
                     nodeType,
@@ -186,6 +194,19 @@ namespace BTSMTL.EventGraphs
                     EventGraphCapabilityKind.VariableSet,
                     "variable.set");
                 return true;
+            }
+            if (nodeType.IsGenericType &&
+                nodeType.GetGenericTypeDefinition() == typeof(SimplexNodeWrapper<>))
+            {
+                Type simplexType = nodeType.GetGenericArguments()[0];
+                if (s_PureIdentities.TryGetValue(simplexType, out string wrappedPureIdentity))
+                {
+                    descriptor = new EventGraphCapabilityDescriptor(
+                        nodeType,
+                        EventGraphCapabilityKind.PureValue,
+                        wrappedPureIdentity);
+                    return true;
+                }
             }
             if (s_PureIdentities.TryGetValue(nodeType, out string pureIdentity))
             {
@@ -263,7 +284,7 @@ namespace BTSMTL.EventGraphs
             {
                 if (string.Equals(pair.Value, identity, StringComparison.Ordinal))
                 {
-                    authoringType = pair.Key;
+                    authoringType = typeof(SimplexNodeWrapper<>).MakeGenericType(pair.Key);
                     return true;
                 }
             }

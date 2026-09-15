@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using BTSMTL.Diagnostics;
+using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Simulation;
-using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonCharacter.Editor.ProductStartup;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonGameplay.ScenePlay;
@@ -47,28 +45,15 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
 
         readonly HashSet<Guid> m_Interests = new HashSet<Guid>();
         BtsmtlScenePlayStatus m_Status = BtsmtlScenePlayStatus.Idle;
-        BtsmtlScenePlayBuildStatus m_BuildStatus = BtsmtlScenePlayBuildStatus.Idle;
         BtsmtlScenePlayRequest m_Request;
         BtsmtlScenePlayContextDescriptor m_ContextDescriptor;
-        readonly List<string> m_ActorIds = new List<string>();
         readonly List<BtsmtlScenePlaySkillOption> m_SkillOptions = new List<BtsmtlScenePlaySkillOption>();
         bool m_HasRequest;
         bool m_ResetWasPaused;
         bool m_ResumeAfterPreparation;
-        bool m_BuildWasPaused;
         bool m_StopFailure;
         int m_PreparationPolls;
         double m_PreparationStartedAt;
-        Task<CharacterSimulationBackgroundBuildResult> m_CharacterBuildTask;
-        CharacterPipelineHost m_CharacterBuildHost;
-        CharacterPipelineHost m_BuildAdoptionHost;
-        string m_BuildActorId = string.Empty;
-        string m_BuildSourceRevision = string.Empty;
-        ulong m_BuildRequestedEpoch;
-        double m_BuildStartedAt;
-        double m_BuildPublishedAt;
-        double m_BuildElapsedSeconds;
-        double m_LastBuildTimingNotificationAt;
 
         static BtsmtlScenePlayPreviewCoordinator()
         {
@@ -89,7 +74,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
 
         public static BtsmtlScenePlayPreviewCoordinator Instance => s_Instance;
         public BtsmtlScenePlayStatus Status => m_Status;
-        public BtsmtlScenePlayBuildStatus BuildStatus => m_BuildStatus;
         public bool SupportsInputReplay =>
             m_ContextDescriptor.HasCharacterRuntime &&
             m_ContextDescriptor.SessionHost.SupportsInputReplay;
@@ -99,52 +83,8 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
         public bool IsInputRecording =>
             m_ContextDescriptor.HasCharacterRuntime &&
             m_ContextDescriptor.SessionHost.IsInputRecording;
-        public IReadOnlyList<string> ActorIds => m_ActorIds;
         public IReadOnlyList<BtsmtlScenePlaySkillOption> SkillOptions => m_SkillOptions;
         public event Action<BtsmtlScenePlayStatus> StatusChanged;
-
-        public bool TryQueueBackgroundCharacterBuild(
-            CharacterPipelineHost host,
-            out string error)
-        {
-            error = string.Empty;
-            if (host == null)
-            {
-                error = "Background Character build requires a CharacterPipelineHost.";
-                return false;
-            }
-            if (TryGetUnsavedAuthoringDependency(host.Definition, out string unsavedPath))
-            {
-                error = $"Authoring dependency '{unsavedPath}' has unsaved changes. Save the Character authoring assets before starting a Play build.";
-                return false;
-            }
-            if (!EditorApplication.isPlaying ||
-                (m_Status.State != BtsmtlScenePlayState.Running && m_Status.State != BtsmtlScenePlayState.Paused))
-            {
-                error = "Background Character build requires a running Scene Play Session.";
-                return false;
-            }
-            if (m_CharacterBuildTask != null && !m_CharacterBuildTask.IsCompleted)
-            {
-                error = "A background Character build is already running.";
-                return false;
-            }
-            try
-            {
-                m_CharacterBuildHost = host;
-                m_CharacterBuildTask = CharacterSimulationBuildOrchestrator.StartBackgroundCharacter(
-                    host.Definition,
-                    CharacterSimulationTargetCatalog.DefaultEditor(host.Definition));
-                return true;
-            }
-            catch (Exception exception)
-            {
-                m_CharacterBuildTask = null;
-                m_CharacterBuildHost = null;
-                error = exception.Message;
-                return false;
-            }
-        }
 
         void RestorePendingRequest()
         {
@@ -298,7 +238,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
 
             m_Request = request;
             m_ContextDescriptor = default;
-            m_ActorIds.Clear();
             m_SkillOptions.Clear();
             m_HasRequest = true;
             m_StopFailure = false;
@@ -351,14 +290,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
 
         public BtsmtlScenePlaySkillRequestResult RequestSkill(string actorId, string skillId)
         {
-            if (m_BuildStatus.State == BtsmtlScenePlayBuildState.Building ||
-                m_BuildStatus.State == BtsmtlScenePlayBuildState.Published)
-                return RejectSkill(
-                    BtsmtlScenePlaySkillRequestResultCode.RejectedProgramAdoptionPending,
-                    actorId,
-                    skillId,
-                    string.Empty,
-                    "Scene Play is waiting for the current Character Program adoption to complete before accepting a skill request.");
             if (m_Status.State != BtsmtlScenePlayState.Running)
                 return RejectSkill(
                     BtsmtlScenePlaySkillRequestResultCode.RejectedNotRunning,
@@ -469,8 +400,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                     option.SourceInputRequestId,
                     requestSequence,
                     m_Status.SceneGeneration,
-                    m_ContextDescriptor.SessionHost.ProgramEpoch.Value,
-                    m_ContextDescriptor.SessionHost.ProgramEpoch.SourceRevision.Value,
                     "The formal Character Control Source queued the skill input request.",
                     m_ContextDescriptor.SessionHost.ExecutionBranchId,
                     checkpointTick);
@@ -614,91 +543,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                 : Accepted(BtsmtlScenePlayOperation.Stop);
         }
 
-        public BtsmtlScenePlayCommandResult Build(string actorId)
-        {
-            if (m_Status.State != BtsmtlScenePlayState.Running &&
-                m_Status.State != BtsmtlScenePlayState.Paused)
-                return Rejected(
-                    BtsmtlScenePlayOperation.Build,
-                    BtsmtlScenePlayCommandResultCode.RejectedNotRunning,
-                    "Scene Play preview must be running or paused before a Character build.");
-            if (string.IsNullOrWhiteSpace(actorId))
-                return Rejected(
-                    BtsmtlScenePlayOperation.Build,
-                    BtsmtlScenePlayCommandResultCode.RejectedInvalidRequest,
-                    "Character build requires an explicit ActorId.");
-            if (!m_HasRequest || m_ContextDescriptor.Context == null)
-                return Rejected(
-                    BtsmtlScenePlayOperation.Build,
-                    BtsmtlScenePlayCommandResultCode.RejectedConfiguration,
-                    "Scene Play has no connected Character Actor context.");
-
-            CharacterPipelineHost host = null;
-            string requestedActorId = actorId.Trim();
-            for (int i = 0; i < m_ContextDescriptor.Actors.Count; i++)
-            {
-                BtsmtlScenePlayActorDescriptor actor = m_ContextDescriptor.Actors[i];
-                if (!string.Equals(actor.ActorId.Value, requestedActorId, StringComparison.Ordinal))
-                    continue;
-                if (host != null)
-                    return Rejected(
-                        BtsmtlScenePlayOperation.Build,
-                        BtsmtlScenePlayCommandResultCode.RejectedConfiguration,
-                        $"ActorId '{requestedActorId}' is ambiguous in the Scene Play context.");
-                host = actor.Host;
-            }
-            if (host == null)
-                return Rejected(
-                    BtsmtlScenePlayOperation.Build,
-                    BtsmtlScenePlayCommandResultCode.RejectedConfiguration,
-                    $"ActorId '{requestedActorId}' is not present in the connected Scene Play context.");
-            if (m_CharacterBuildTask != null && !m_CharacterBuildTask.IsCompleted)
-                return Rejected(
-                    BtsmtlScenePlayOperation.Build,
-                    BtsmtlScenePlayCommandResultCode.RejectedBusy,
-                    "A background Character build is already running.");
-            if (m_BuildStatus.State == BtsmtlScenePlayBuildState.Published)
-                return Rejected(
-                    BtsmtlScenePlayOperation.Build,
-                    BtsmtlScenePlayCommandResultCode.RejectedBusy,
-                    "The previous Character build is waiting for Session adoption at a Logic Tick boundary.");
-            m_BuildStartedAt = EditorApplication.timeSinceStartup;
-            if (!TryQueueBackgroundCharacterBuild(host, out string error))
-            {
-                m_BuildStartedAt = 0d;
-                return Rejected(
-                    BtsmtlScenePlayOperation.Build,
-                    BtsmtlScenePlayCommandResultCode.RejectedConfiguration,
-                    error);
-            }
-            m_BuildWasPaused = m_Status.State == BtsmtlScenePlayState.Paused;
-            m_BuildAdoptionHost = host;
-            m_BuildActorId = requestedActorId;
-            m_BuildSourceRevision = string.Empty;
-            m_BuildRequestedEpoch = 0;
-            m_BuildPublishedAt = 0d;
-            m_BuildElapsedSeconds = -1d;
-            m_LastBuildTimingNotificationAt = 0d;
-            m_BuildStatus = new BtsmtlScenePlayBuildStatus(
-                BtsmtlScenePlayBuildState.Building,
-                m_BuildActorId,
-                null,
-                "Background Character build is running.");
-            SetStatus(
-                BtsmtlScenePlayState.Building,
-                BtsmtlScenePlayOperation.Build,
-                m_Request.Identity,
-                m_Status.SceneGeneration,
-                BtsmtlScenePlayFailureStage.None,
-                string.Empty,
-                string.Empty);
-            PersistCoordinatorState(m_Status.SceneGeneration);
-            return new BtsmtlScenePlayCommandResult(
-                BtsmtlScenePlayCommandResultCode.Accepted,
-                BtsmtlScenePlayOperation.Build,
-                m_Status,
-                "Background Character build started; the current Program and Projection remain active until adoption at the next Logic Tick boundary.");
-        }
 
         public BtsmtlScenePlayCommandResult StartInputRecording()
         {
@@ -843,23 +687,15 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
 
         void OnEditorUpdate()
         {
-            PollBackgroundCharacterBuild();
-            PollProgramAdoption();
-            RefreshBuildTimingStatus();
             RestorePendingRequest();
             if (!m_HasRequest)
                 return;
             if (TryHandleLostRequest())
                 return;
             if ((m_Status.State == BtsmtlScenePlayState.Running ||
-                 m_Status.State == BtsmtlScenePlayState.Paused ||
-                 m_Status.State == BtsmtlScenePlayState.Building) &&
-                TryHandleRuntimeFault())
+                 m_Status.State == BtsmtlScenePlayState.Paused) &&
+                 TryHandleRuntimeFault())
                 return;
-            if (m_Status.State == BtsmtlScenePlayState.Building &&
-                m_BuildWasPaused &&
-                !EditorApplication.isPaused)
-                EditorApplication.isPaused = true;
             if (m_Status.State == BtsmtlScenePlayState.Running && EditorApplication.isPaused)
             {
                 SetStatus(
@@ -900,270 +736,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                 "Scene Play context did not register a ready formal Runtime Owner.");
         }
 
-        void PollBackgroundCharacterBuild()
-        {
-            if (m_CharacterBuildTask == null || !m_CharacterBuildTask.IsCompleted)
-                return;
-            Task<CharacterSimulationBackgroundBuildResult> task = m_CharacterBuildTask;
-            CharacterPipelineHost host = m_CharacterBuildHost;
-            m_CharacterBuildTask = null;
-            m_CharacterBuildHost = null;
-            if (!m_HasRequest || m_Status.State != BtsmtlScenePlayState.Building)
-                return;
-            try
-            {
-                CharacterSimulationBackgroundBuildResult result = task.GetAwaiter().GetResult();
-                if (!result.IsValid)
-                {
-                    SetBuildFailure(BuildReportMessage(result), null);
-                    RestoreAfterBuild(
-                        "preview_program_build_failed",
-                        BuildReportMessage(result),
-                        true);
-                    return;
-                }
-                if (!CharacterSimulationBuildOrchestrator.PublishBackgroundAndQueueAdoption(result, host, out string error))
-                {
-                    SimulationProgramAdoptionResult adoption =
-                        m_ContextDescriptor.SessionHost.LastProgramAdoption;
-                    if (adoption == null ||
-                        !string.Equals(
-                            adoption.Requested.SourceRevision.Value,
-                            result.Artifact.Header.SourceRevision.Value,
-                            StringComparison.Ordinal))
-                    {
-                        adoption = null;
-                    }
-                    SetBuildFailure(
-                        string.IsNullOrEmpty(error) ? "Program publication or adoption failed." : error,
-                        BuildTargetStatuses(result),
-                        adoption);
-                    RestoreAfterBuild(
-                        "preview_program_adoption_failed",
-                        string.IsNullOrEmpty(error) ? "Program publication or adoption failed." : error,
-                        true);
-                    return;
-                }
-                SimulationProgramAdoptionResult queuedAdoption = m_ContextDescriptor.SessionHost.LastProgramAdoption;
-                if (queuedAdoption == null || queuedAdoption.Requested.Value == 0)
-                {
-                    SetBuildFailure(
-                        "Session did not return a Program adoption request for the completed Build.",
-                        BuildTargetStatuses(result));
-                    RestoreAfterBuild(
-                        "preview_program_adoption_failed",
-                        "Session did not return a Program adoption request for the completed Build.",
-                        true);
-                    return;
-                }
-                m_BuildRequestedEpoch = queuedAdoption.Requested.Value;
-                m_BuildSourceRevision = result.Artifact.Header.SourceRevision.Value;
-                m_BuildElapsedSeconds = BuildElapsedSeconds();
-                m_BuildPublishedAt = EditorApplication.timeSinceStartup;
-                m_BuildStatus = new BtsmtlScenePlayBuildStatus(
-                    BtsmtlScenePlayBuildState.Published,
-                    m_BuildActorId,
-                    BuildTargetStatuses(result),
-                    "Program and Projection published; waiting for Session adoption at the next Logic Tick boundary.",
-                    m_BuildRequestedEpoch,
-                    0,
-                    BuildAdoptionReport(queuedAdoption),
-                    m_BuildElapsedSeconds,
-                    0d);
-                RestoreAfterBuild(
-                    string.Empty,
-                    "Background Program and Projection published; adoption is queued for the next Logic Tick boundary.",
-                    false);
-            }
-            catch (Exception exception)
-            {
-                SetBuildFailure(exception.Message, null);
-                RestoreAfterBuild("preview_program_build_failed", exception.Message, true);
-            }
-        }
-
-        void PollProgramAdoption()
-        {
-            if (m_BuildStatus.State != BtsmtlScenePlayBuildState.Published ||
-                !m_HasRequest ||
-                m_BuildAdoptionHost == null ||
-                !m_ContextDescriptor.HasCharacterRuntime ||
-                (m_Status.State != BtsmtlScenePlayState.Running &&
-                 m_Status.State != BtsmtlScenePlayState.Paused))
-                return;
-            SimulationProgramAdoptionResult adoption = m_ContextDescriptor.SessionHost.LastProgramAdoption;
-            if (adoption == null ||
-                adoption.Requested.Value != m_BuildRequestedEpoch ||
-                !string.Equals(adoption.Requested.SourceRevision.Value, m_BuildSourceRevision, StringComparison.Ordinal))
-                return;
-            if (adoption.IsApplied)
-            {
-                BuildSkillOptions(m_ContextDescriptor);
-                m_BuildStatus = new BtsmtlScenePlayBuildStatus(
-                    BtsmtlScenePlayBuildState.Adopted,
-                    m_BuildActorId,
-                    m_BuildStatus.Targets,
-                    $"Program Epoch {adoption.Current.Value} was adopted by the Session.",
-                    m_BuildRequestedEpoch,
-                    adoption.Current.Value,
-                    BuildAdoptionReport(adoption),
-                    m_BuildElapsedSeconds,
-                    AdoptionWaitElapsedSeconds());
-                m_BuildAdoptionHost = null;
-                StatusChanged?.Invoke(m_Status);
-                return;
-            }
-            if (adoption.Status == SimulationProgramAdoptionStatus.Rejected)
-            {
-                SetBuildFailure(adoption.Message, m_BuildStatus.Targets, adoption);
-                SetStatus(
-                    m_Status.State,
-                    BtsmtlScenePlayOperation.Build,
-                    m_Request.Identity,
-                    m_Status.SceneGeneration,
-                    BtsmtlScenePlayFailureStage.Product,
-                    adoption.Code,
-                    adoption.Message);
-                m_BuildAdoptionHost = null;
-            }
-        }
-
-        void RefreshBuildTimingStatus()
-        {
-            if (!m_HasRequest ||
-                m_BuildStatus.State != BtsmtlScenePlayBuildState.Building &&
-                m_BuildStatus.State != BtsmtlScenePlayBuildState.Published)
-                return;
-            double now = EditorApplication.timeSinceStartup;
-            if (now - m_LastBuildTimingNotificationAt < 0.25d)
-                return;
-            double buildElapsed = m_BuildStatus.State == BtsmtlScenePlayBuildState.Building
-                ? BuildElapsedSeconds()
-                : m_BuildStatus.BuildElapsedSeconds;
-            double adoptionWait = m_BuildStatus.State == BtsmtlScenePlayBuildState.Published
-                ? AdoptionWaitElapsedSeconds()
-                : 0d;
-            m_BuildStatus = new BtsmtlScenePlayBuildStatus(
-                m_BuildStatus.State,
-                m_BuildStatus.ActorId,
-                m_BuildStatus.Targets,
-                m_BuildStatus.Message,
-                m_BuildStatus.RequestedProgramEpoch,
-                m_BuildStatus.AdoptedProgramEpoch,
-                m_BuildStatus.Adoption,
-                buildElapsed,
-                adoptionWait);
-            m_LastBuildTimingNotificationAt = now;
-            StatusChanged?.Invoke(m_Status);
-        }
-
-        void RestoreAfterBuild(string failureCode, string message, bool failed)
-        {
-            if (!m_HasRequest || m_Status.State != BtsmtlScenePlayState.Building)
-                return;
-            BtsmtlScenePlayState state = m_BuildWasPaused
-                ? BtsmtlScenePlayState.Paused
-                : BtsmtlScenePlayState.Running;
-            SetStatus(
-                state,
-                BtsmtlScenePlayOperation.Build,
-                m_Request.Identity,
-                m_Status.SceneGeneration,
-                failed ? BtsmtlScenePlayFailureStage.Product : BtsmtlScenePlayFailureStage.None,
-                failureCode,
-                message);
-            m_BuildWasPaused = false;
-            PersistCoordinatorState(m_Status.SceneGeneration);
-        }
-
-        void SetBuildFailure(
-            string message,
-            IReadOnlyList<BtsmtlScenePlayBuildTargetStatus> targets,
-            SimulationProgramAdoptionResult adoption = null)
-        {
-            m_BuildStatus = new BtsmtlScenePlayBuildStatus(
-                BtsmtlScenePlayBuildState.Failed,
-                m_BuildActorId,
-                targets,
-                message,
-                m_BuildRequestedEpoch,
-                adoption?.IsApplied == true ? adoption.Current.Value : 0,
-                BuildAdoptionReport(adoption),
-                BuildElapsedSeconds(),
-                AdoptionWaitElapsedSeconds());
-            m_BuildAdoptionHost = null;
-        }
-
-        double BuildElapsedSeconds()
-        {
-            if (m_BuildElapsedSeconds >= 0d)
-                return m_BuildElapsedSeconds;
-            if (m_BuildStartedAt <= 0d)
-                return 0d;
-            return Math.Max(0d, EditorApplication.timeSinceStartup - m_BuildStartedAt);
-        }
-
-        double AdoptionWaitElapsedSeconds()
-        {
-            if (m_BuildPublishedAt <= 0d)
-                return 0d;
-            return Math.Max(0d, EditorApplication.timeSinceStartup - m_BuildPublishedAt);
-        }
-
-        static BtsmtlScenePlayProgramAdoptionReport BuildAdoptionReport(
-            SimulationProgramAdoptionResult adoption)
-        {
-            if (adoption == null)
-                return null;
-            return new BtsmtlScenePlayProgramAdoptionReport(
-                (BtsmtlScenePlayProgramAdoptionStatus)adoption.Status,
-                adoption.Current.Value,
-                adoption.Current.SourceRevision.Value,
-                adoption.Current.ProgramCatalogHash.ToString(),
-                adoption.Requested.Value,
-                adoption.Requested.SourceRevision.Value,
-                adoption.Requested.ProgramCatalogHash.ToString(),
-                adoption.Code,
-                adoption.Message);
-        }
-
-        static IReadOnlyList<BtsmtlScenePlayBuildTargetStatus> BuildTargetStatuses(
-            CharacterSimulationBackgroundBuildResult result)
-        {
-            if (result == null || result.TargetIdentities == null)
-                return Array.Empty<BtsmtlScenePlayBuildTargetStatus>();
-            var values = new List<BtsmtlScenePlayBuildTargetStatus>(result.TargetIdentities.Count);
-            for (int i = 0; i < result.TargetIdentities.Count; i++)
-            {
-                CharacterSimulationBackgroundBuildTargetIdentity identity = result.TargetIdentities[i];
-                values.Add(new BtsmtlScenePlayBuildTargetStatus(
-                    identity.NumericProfileId.Value,
-                    identity.ProgramId.Value,
-                    identity.SourceRevision.Value,
-                    identity.SemanticHash.Value.ToString(),
-                    identity.ProgramHash.ToString(),
-                    identity.LayoutHash.ToString(),
-                    identity.SourceMapEntryCount,
-                    identity.PresentationContractHash.ToString(),
-                    identity.PresentationProjectionRevision));
-            }
-            return values.AsReadOnly();
-        }
-
-        static string BuildReportMessage(CharacterSimulationBackgroundBuildResult result)
-        {
-            if (result?.Report != null)
-            {
-                for (int i = 0; i < result.Report.Messages.Count; i++)
-                {
-                    CharacterSimulationCompileMessage message = result.Report.Messages[i];
-                    if (message.Severity == CharacterSimulationCompileSeverity.Error)
-                        return message.ToString();
-                }
-            }
-            return "Background Character build did not produce a valid result.";
-        }
-
         bool TryHandleLostRequest()
         {
             bool active =
@@ -1171,7 +743,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                 m_Status.State == BtsmtlScenePlayState.Preparing ||
                 m_Status.State == BtsmtlScenePlayState.Running ||
                 m_Status.State == BtsmtlScenePlayState.Paused ||
-                m_Status.State == BtsmtlScenePlayState.Building ||
                 m_Status.State == BtsmtlScenePlayState.Resetting ||
                 m_Status.State == BtsmtlScenePlayState.Stopping;
             if (!active || EditorPlayModeSceneLauncher.IsPending ||
@@ -1333,13 +904,7 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
             if (!m_HasRequest || m_Status.State != BtsmtlScenePlayState.Resetting)
                 return;
             m_ContextDescriptor = default;
-            m_ActorIds.Clear();
             m_SkillOptions.Clear();
-            m_BuildStatus = BtsmtlScenePlayBuildStatus.Idle;
-            m_BuildAdoptionHost = null;
-            m_BuildActorId = string.Empty;
-            m_BuildSourceRevision = string.Empty;
-            m_BuildRequestedEpoch = 0;
             m_PreparationPolls = 0;
             m_PreparationStartedAt = EditorApplication.timeSinceStartup;
             m_ResumeAfterPreparation = m_ResetWasPaused;
@@ -1535,23 +1100,22 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
 
         void BuildSkillOptions(BtsmtlScenePlayContextDescriptor descriptor)
         {
-            m_ActorIds.Clear();
             for (int actorIndex = 0; actorIndex < descriptor.Actors.Count; actorIndex++)
             {
                 BtsmtlScenePlayActorDescriptor actor = descriptor.Actors[actorIndex];
-                m_ActorIds.Add(actor.ActorId.Value);
-                IReadOnlyList<CharacterSkillAuthoringDefinition> skills = actor.Definition.SkillDefinitions;
-                for (int skillIndex = 0; skillIndex < skills.Count; skillIndex++)
+                IReadOnlyList<AbilityGrant> grants = actor.Definition.AbilityGrants;
+                for (int grantIndex = 0; grantIndex < grants.Count; grantIndex++)
                 {
-                    CharacterSkillAuthoringDefinition skill = skills[skillIndex];
-                    if (skill == null)
+                    AbilityGrant grant = grants[grantIndex];
+                    GameplayAbilityDefinition ability = grant?.Ability;
+                    if (!ability)
                         continue;
                     m_SkillOptions.Add(new BtsmtlScenePlaySkillOption(
                         actor.ActorId.Value,
-                        skill.SkillId,
-                        skill.EntryGraphAuthoringId,
-                        skill.ActionProfile ? skill.ActionProfile.ActionId : string.Empty,
-                        skill.SourceInputRequestId));
+                        ability.AbilityId,
+                        ability.AbilityGraph?.AuthoringId ?? string.Empty,
+                        ability.AdmissionProfile ? ability.AdmissionProfile.ActionId : string.Empty,
+                        grant.SourceInputRequestId));
                 }
             }
             m_SkillOptions.Sort((left, right) =>
@@ -1561,7 +1125,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                     ? actor
                     : string.CompareOrdinal(left.SkillId, right.SkillId);
             });
-            m_ActorIds.Sort(StringComparer.Ordinal);
         }
 
         static bool TryValidateContextBeforePlay(
@@ -1603,11 +1166,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                     failureMessage = diagnostic.Message;
                     return false;
                 }
-                if (!TryValidatePublishedCharacterProducts(
-                        descriptor,
-                        out failureCode,
-                        out failureMessage))
-                    return false;
                 return true;
             }
             catch (Exception exception)
@@ -1621,88 +1179,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                 if (openedHere && scene.IsValid() && scene.isLoaded)
                     EditorSceneManager.CloseScene(scene, true);
             }
-        }
-
-        static bool TryValidatePublishedCharacterProducts(
-            BtsmtlScenePlayContextDescriptor descriptor,
-            out string failureCode,
-            out string failureMessage)
-        {
-            failureCode = string.Empty;
-            failureMessage = string.Empty;
-            for (int i = 0; i < descriptor.Actors.Count; i++)
-            {
-                BtsmtlScenePlayActorDescriptor actor = descriptor.Actors[i];
-                if (TryGetUnsavedAuthoringDependency(actor.Definition, out string unsavedPath))
-                {
-                    failureCode = "preview_character_authoring_unsaved";
-                    failureMessage = $"Actor '{actor.ActorId}' authoring dependency '{unsavedPath}' has unsaved changes. Save the Character authoring assets before Scene Play.";
-                    return false;
-                }
-                ProgramRevision sourceRevision;
-                ProgramId programId;
-                try
-                {
-                    sourceRevision = CharacterSemanticFrontendCompiler.ComputeSourceRevision(actor.Definition);
-                    programId = CharacterSemanticFrontendCompiler.ComputeProgramId(actor.Definition);
-                }
-                catch (Exception exception)
-                {
-                    failureCode = "preview_character_product_check_failed";
-                    failureMessage = $"Actor '{actor.ActorId}' authoring product check failed: {exception.Message}";
-                    return false;
-                }
-                if (!string.Equals(actor.Program.ProgramId, programId.Value, StringComparison.Ordinal) ||
-                    !string.Equals(actor.Projection.ProgramId, actor.Program.ProgramId, StringComparison.Ordinal))
-                {
-                    failureCode = "preview_character_product_mismatch";
-                    failureMessage = $"Actor '{actor.ActorId}' Program and Presentation Projection do not belong to the selected Character Definition.";
-                    return false;
-                }
-                if (!string.Equals(actor.Program.SourceRevision, sourceRevision.Value, StringComparison.Ordinal) ||
-                    !string.Equals(actor.Projection.SourceRevision, sourceRevision.Value, StringComparison.Ordinal))
-                {
-                    failureCode = "preview_character_build_required";
-                    failureMessage = $"Actor '{actor.ActorId}' authoring SourceRevision '{sourceRevision.Value}' differs from published Program '{actor.Program.SourceRevision}' or Projection '{actor.Projection.SourceRevision}'. Run the explicit Character Build before Scene Play.";
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        static bool TryGetUnsavedAuthoringDependency(
-            CharacterPipelineDefinition definition,
-            out string unsavedPath)
-        {
-            unsavedPath = string.Empty;
-            if (!definition)
-                return false;
-            string definitionPath = AssetDatabase.GetAssetPath(definition);
-            if (string.IsNullOrEmpty(definitionPath))
-                return false;
-            string[] dependencies = AssetDatabase.GetDependencies(definitionPath, true)
-                .Append(definitionPath)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-            for (int i = 0; i < dependencies.Length; i++)
-            {
-                string path = dependencies[i].Replace('\\', '/');
-                string extension = Path.GetExtension(path);
-                if (!string.Equals(extension, ".asset", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(extension, ".inputactions", StringComparison.OrdinalIgnoreCase))
-                    continue;
-                Type type = AssetDatabase.GetMainAssetTypeAtPath(path);
-                if (type == typeof(CharacterSimulationProgramAsset) ||
-                    type == typeof(CharacterPresentationProjectionAsset))
-                    continue;
-                UnityEngine.Object asset = AssetDatabase.LoadMainAssetAtPath(path);
-                if (asset && EditorUtility.IsDirty(asset))
-                {
-                    unsavedPath = path;
-                    return true;
-                }
-            }
-            return false;
         }
 
         BtsmtlScenePlayCommandResult FailAndStop(
@@ -1736,26 +1212,10 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
             m_HasRequest = false;
             m_Request = null;
             m_ContextDescriptor = default;
-            m_ActorIds.Clear();
             m_SkillOptions.Clear();
             m_ResetWasPaused = false;
             m_ResumeAfterPreparation = false;
-            m_BuildWasPaused = false;
             m_StopFailure = false;
-            if (m_CharacterBuildTask == null || m_CharacterBuildTask.IsCompleted)
-            {
-                m_CharacterBuildTask = null;
-                m_CharacterBuildHost = null;
-            }
-            m_BuildAdoptionHost = null;
-            m_BuildActorId = string.Empty;
-            m_BuildSourceRevision = string.Empty;
-            m_BuildRequestedEpoch = 0;
-            m_BuildStartedAt = 0d;
-            m_BuildPublishedAt = 0d;
-            m_BuildElapsedSeconds = -1d;
-            m_LastBuildTimingNotificationAt = 0d;
-            m_BuildStatus = BtsmtlScenePlayBuildStatus.Idle;
             m_PreparationPolls = 0;
             SessionState.EraseString(SceneGenerationKey);
             SessionState.EraseBool(ResumeAfterPreparationKey);
@@ -1883,13 +1343,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                 inputRequestId,
                 0,
                 m_Status.SceneGeneration,
-                m_ContextDescriptor.HasCharacterRuntime
-                    ? m_ContextDescriptor.SessionHost.ProgramEpoch.Value
-                    : 0,
-                m_ContextDescriptor.HasCharacterRuntime &&
-                m_ContextDescriptor.SessionHost.ProgramEpoch.IsValid
-                    ? m_ContextDescriptor.SessionHost.ProgramEpoch.SourceRevision.Value
-                    : string.Empty,
                 message);
 
         ulong NextSceneGeneration()

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -9,6 +10,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public abstract SimulationExecutionBackendDescriptor BuildPortableDescriptor();
         public abstract SimulationPipelinePassFactoryCatalog BuildPortableFactoryCatalog(
             SimulationPipelineDefinition pipeline);
+        public abstract ISimulationSessionCompositionPreparation CreateSessionPreparation(
+            SimulationSessionCompositionDefinition definition,
+            IReadOnlyList<ISimulationActorRegistration> registrations);
     }
 
 }

@@ -86,7 +86,7 @@ namespace ThirdPersonSimulation
                 !CompiledPipeline.Identity.Equals(Descriptor.Pipeline) ||
                 !CharacterRuntime.GameplayContentHash.Equals(Descriptor.GameplayContentHash) ||
                 InitialState.WorldState.NumericProfile != Descriptor.ExecutionTarget.NumericProfile ||
-                InitialState.WorldState.SolverId != Solver.Descriptor.ImplementationId ||
+                !InitialState.WorldState.SolverId.Equals(Solver.Descriptor.ImplementationId) ||
                 !string.Equals(InitialState.WorldState.SolverVersion, Solver.Descriptor.Version, StringComparison.Ordinal))
             {
                 throw Failure("float32_character_runtime_mismatch", "Float32 Character Runtime does not match the locked Session composition.");

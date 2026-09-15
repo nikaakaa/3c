@@ -1,4 +1,5 @@
 using FlowCanvas;
+using FlowCanvas.Nodes;
 using ParadoxNotion.Design;
 using UnityEngine;
 
@@ -9,6 +10,11 @@ namespace BTSMTL.EventGraphs
         [SerializeField] string m_InputId = string.Empty;
 
         public string InputId => m_InputId ?? string.Empty;
+
+        public override string name =>
+            string.IsNullOrEmpty(InputId)
+                ? base.name
+                : EventGraphHostInputDisplayNames.For(InputId);
 
         protected override void RegisterPorts()
         {
@@ -30,42 +36,63 @@ namespace BTSMTL.EventGraphs
         }
     }
 
-    [Name("Host Float Input")]
+    internal static class EventGraphHostInputDisplayNames
+    {
+        internal static string For(string inputId) => inputId switch
+        {
+            "presentation.velocity" => "Read Velocity",
+            "presentation.rotation" => "Read Rotation",
+            "presentation.grounded" => "Read Grounded",
+            "presentation.desired-planar-velocity" => "Read Desired Planar Velocity",
+            "presentation.desired-facing" => "Read Desired Facing",
+            "presentation.has-motion" => "Read Has Motion",
+            "presentation.locomotion-planar-basis" => "Read Locomotion Planar Basis",
+            _ => "Read " + inputId.Replace(".", " ").Replace("-", " ")
+        };
+    }
+
+    [Name("Read Host Float")]
     [Category("Host/Input")]
     [Description("Reads a declared host float input.")]
     public sealed class EventGraphFloatInputNode : EventGraphHostInputNode<float>
     {
     }
 
-    [Name("Host Int Input")]
+    [Name("Read Host Int")]
     [Category("Host/Input")]
     [Description("Reads a declared host integer input.")]
     public sealed class EventGraphIntInputNode : EventGraphHostInputNode<int>
     {
     }
 
-    [Name("Host Bool Input")]
+    [Name("Read Host Bool")]
     [Category("Host/Input")]
     [Description("Reads a declared host boolean input.")]
     public sealed class EventGraphBoolInputNode : EventGraphHostInputNode<bool>
     {
     }
 
-    [Name("Host Vector2 Input")]
+    [Name("Read Host Vector2")]
     [Category("Host/Input")]
     [Description("Reads a declared host Vector2 input.")]
     public sealed class EventGraphVector2InputNode : EventGraphHostInputNode<Vector2>
     {
     }
 
-    [Name("Host Vector3 Input")]
+    [Name("Read Host Vector3")]
     [Category("Host/Input")]
     [Description("Reads a declared host Vector3 input.")]
     public sealed class EventGraphVector3InputNode : EventGraphHostInputNode<Vector3>
     {
     }
 
-    [Name("Host Delta Seconds")]
+    [Name("Read Host Quaternion")]
+    [Category("Host/Input")]
+    public sealed class EventGraphQuaternionInputNode : EventGraphHostInputNode<Quaternion>
+    {
+    }
+
+    [Name("Read Delta Seconds")]
     [Category("Host/Input")]
     [Description("Reads the delta seconds supplied by the host.")]
     public sealed class EventGraphDeltaNode : FlowScriptNode
@@ -88,5 +115,59 @@ namespace BTSMTL.EventGraphs
     public static class EventGraphHostInputIds
     {
         public const string DeltaSeconds = "host.delta-seconds";
+    }
+
+    [Name("Extract Planar XZ")]
+    [Category("Values/Vector3")]
+    public sealed class EventGraphVector3PlanarNode : PureFunctionNode<Vector2, Vector3>
+    {
+        public override Vector2 Invoke(Vector3 value) => new Vector2(value.x, value.z);
+    }
+
+    [Name("Extract Vertical Speed")]
+    [Category("Values/Vector3")]
+    public sealed class EventGraphVector3YNode : PureFunctionNode<float, Vector3>
+    {
+        public override float Invoke(Vector3 value) => value.y;
+    }
+
+    [Name("Vector2 Magnitude")]
+    [Category("Values/Vector2")]
+    public sealed class EventGraphVector2MagnitudeNode : PureFunctionNode<float, Vector2>
+    {
+        public override float Invoke(Vector2 value) => value.magnitude;
+    }
+
+    [Name("Vector2 Normalize By Squared Magnitude")]
+    [Category("Values/Vector2")]
+    public sealed class EventGraphVector2NormalizeNode : PureFunctionNode<Vector2, Vector2, float>
+    {
+        public override Vector2 Invoke(Vector2 value, float minimumSquaredMagnitude) =>
+            minimumSquaredMagnitude <= 0f
+                ? value.normalized
+                : value.sqrMagnitude > minimumSquaredMagnitude
+                    ? value.normalized
+                    : Vector2.zero;
+    }
+
+    [Name("Vector2 Subtract")]
+    [Category("Values/Vector2")]
+    public sealed class EventGraphVector2SubtractNode : PureFunctionNode<Vector2, Vector2, Vector2>
+    {
+        public override Vector2 Invoke(Vector2 a, Vector2 b) => a - b;
+    }
+
+    [Name("Vector2 Signed Angle")]
+    [Category("Values/Vector2")]
+    public sealed class EventGraphVector2SignedAngleNode : PureFunctionNode<float, Vector2, Vector2>
+    {
+        public override float Invoke(Vector2 from, Vector2 to) => Vector2.SignedAngle(from, to);
+    }
+
+    [Name("Extract Current Forward")]
+    [Category("Values/Quaternion")]
+    public sealed class EventGraphQuaternionForwardNode : PureFunctionNode<Vector3, Quaternion>
+    {
+        public override Vector3 Invoke(Quaternion value) => value * Vector3.forward;
     }
 }

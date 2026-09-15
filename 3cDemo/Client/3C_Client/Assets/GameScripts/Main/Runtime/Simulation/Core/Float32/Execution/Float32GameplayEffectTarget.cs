@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation
             PortableEffectSpecState,
             Float32Scalar>
     {
-        readonly IFloat32AbilityExecutionStateTransaction m_Transaction;
+        readonly IFloat32AbilityDomainStatePort m_Transaction;
         readonly Float32GameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
         readonly ActorId m_ActorId;
@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation
         PortablePredictionRecord m_CurrentPrediction;
 
         public Float32GameplayEffectTarget(
-            IFloat32AbilityExecutionStateTransaction transaction,
+            IFloat32AbilityDomainStatePort transaction,
             Float32GameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
             SimulationTick tick,
@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation
             m_CommittedState = transaction.GetGameplayEffectAggregate();
             m_ActorId = actorId;
             m_Tick = tick;
-            m_TickRate = transaction.Installation.Data.TickRate;
+            m_TickRate = transaction.TickRate;
             m_AllocateHandle = allocateHandle ?? throw new ArgumentNullException(nameof(allocateHandle));
             m_CaptureAllocator = captureAllocator ?? throw new ArgumentNullException(nameof(captureAllocator));
             m_RestoreAllocator = restoreAllocator ?? throw new ArgumentNullException(nameof(restoreAllocator));

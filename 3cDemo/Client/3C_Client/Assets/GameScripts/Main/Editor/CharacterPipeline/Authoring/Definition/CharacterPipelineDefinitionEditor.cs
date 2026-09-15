@@ -12,66 +12,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [CustomEditor(typeof(CharacterPipelineDefinition))]
     public sealed class CharacterPipelineDefinitionEditor : UnityEditor.Editor
     {
-        enum ArtifactStatus
-        {
-            Missing,
-            Invalid,
-            Unchecked,
-            NeedsCompile,
-            Ready,
-            Stale
-        }
-
         readonly List<string> m_ConfigurationErrors = new List<string>();
         SerializedProperty m_ControlModuleId;
         SerializedProperty m_ControlParameters;
-        SerializedProperty m_SkillDefinitions;
-        SerializedProperty m_SkillGraphs;
+        SerializedProperty m_AbilityGrants;
         SerializedProperty m_SimulationTickRate;
-        SerializedProperty m_SimulationProgram;
-        SerializedProperty m_PresentationProjection;
         SerializedProperty m_InputProfile;
         SerializedProperty m_GameplayEffectProfile;
         SerializedProperty m_BodyMotionProfile;
-        SerializedProperty m_ActionProfiles;
+        SerializedProperty m_AdmissionProfiles;
         SerializedProperty m_BehaviorProfiles;
         SerializedProperty m_AnimationPresentationProfile;
 		SerializedProperty m_CameraProfile;
 		SerializedProperty m_EquipmentCapabilityEnabled;
 		SerializedProperty m_EquipmentProfile;
 		SerializedProperty m_EquipmentPresentationProfile;
-        CharacterSimulationCompileReport m_CompileReport;
-        string m_DiagnosticsError = string.Empty;
         bool m_ConfigurationValidated;
         bool m_ConfigurationValid;
-        bool m_ShowGeneratedArtifacts;
-        bool m_ShowDiagnostics;
-        CharacterSemanticIrCacheStatus m_IrCacheStatus;
-        string m_IrCacheMessage = string.Empty;
-        bool m_IrCacheInitialized;
-        ArtifactStatus m_ArtifactStatus;
-        bool m_ArtifactStatusInitialized;
 
         void OnEnable()
         {
             m_ControlModuleId = serializedObject.FindProperty("m_ControlModuleId");
             m_ControlParameters = serializedObject.FindProperty("m_ControlParameters");
-            m_SkillDefinitions = serializedObject.FindProperty("m_SkillDefinitions");
-            m_SkillGraphs = serializedObject.FindProperty("m_SkillGraphs");
+            m_AbilityGrants = serializedObject.FindProperty("m_AbilityGrants");
             m_SimulationTickRate = serializedObject.FindProperty("m_SimulationTickRate");
-            m_SimulationProgram = serializedObject.FindProperty("m_SimulationProgram");
-            m_PresentationProjection = serializedObject.FindProperty("m_PresentationProjection");
             m_InputProfile = serializedObject.FindProperty("m_InputProfile");
             m_GameplayEffectProfile = serializedObject.FindProperty("m_GameplayEffectProfile");
             m_BodyMotionProfile = serializedObject.FindProperty("m_BodyMotionProfile");
-            m_ActionProfiles = serializedObject.FindProperty("m_ActionProfiles");
+            m_AdmissionProfiles = serializedObject.FindProperty("m_AdmissionProfiles");
             m_BehaviorProfiles = serializedObject.FindProperty("m_BehaviorProfiles");
             m_AnimationPresentationProfile = serializedObject.FindProperty("m_AnimationPresentationProfile");
 			m_CameraProfile = serializedObject.FindProperty("m_CameraProfile");
 			m_EquipmentCapabilityEnabled = serializedObject.FindProperty("m_EquipmentCapabilityEnabled");
 			m_EquipmentProfile = serializedObject.FindProperty("m_EquipmentProfile");
 			m_EquipmentPresentationProfile = serializedObject.FindProperty("m_EquipmentPresentationProfile");
-            RefreshArtifactHeaderStatus(target as CharacterPipelineDefinition);
         }
 
         public override void OnInspectorGUI()
@@ -84,11 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_ConfigurationValidated = false;
                 m_ConfigurationValid = false;
                 m_ConfigurationErrors.Clear();
-                m_IrCacheInitialized = false;
-                m_ArtifactStatus = ArtifactStatus.NeedsCompile;
-                m_ArtifactStatusInitialized = true;
             }
-            DrawArtifactStatus();
             DrawNavigation();
         }
 
@@ -101,9 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.PropertyField(m_ControlModuleId, new GUIContent("Control Module"));
             EditorGUILayout.PropertyField(m_ControlParameters, new GUIContent("Parameters"), true);
             EditorGUILayout.Space(3f);
-            EditorGUILayout.LabelField("Skills", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(m_SkillDefinitions, new GUIContent("Definitions"), true);
-            EditorGUILayout.PropertyField(m_SkillGraphs, new GUIContent("Native Graphs"), true);
+            EditorGUILayout.LabelField("Gameplay Abilities", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(m_AbilityGrants, new GUIContent("Grants"), true);
             EditorGUILayout.Space(6f);
         }
 
@@ -131,198 +100,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 						: "Incomplete";
 				EditorGUILayout.TextField("Equipment State", equipmentState);
 			}
-            EditorGUILayout.PropertyField(m_ActionProfiles, new GUIContent("Actions"), true);
+            EditorGUILayout.PropertyField(m_AdmissionProfiles, new GUIContent("Admission Profiles"), true);
             EditorGUILayout.PropertyField(m_BehaviorProfiles, new GUIContent("Behaviors"), true);
             EditorGUILayout.Space(6f);
-        }
-
-        void DrawArtifactStatus()
-        {
-            CharacterPipelineDefinition definition = target as CharacterPipelineDefinition;
-            if (!definition)
-                return;
-
-            EditorGUILayout.LabelField("Artifact Status", EditorStyles.boldLabel);
-            if (!m_ArtifactStatusInitialized)
-                RefreshArtifactHeaderStatus(definition);
-            string status = GetArtifactStatusLabel(m_ArtifactStatus);
-            EditorGUILayout.HelpBox(
-                GetArtifactStatusMessage(status, m_ArtifactStatus),
-                GetArtifactStatusMessageType(m_ArtifactStatus));
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Compile"))
-            {
-                if (CharacterSimulationProgramBuildService.Build(definition, true))
-                {
-                    m_ArtifactStatus = ArtifactStatus.Ready;
-                    m_ArtifactStatusInitialized = true;
-                }
-                else if (m_ArtifactStatus != ArtifactStatus.NeedsCompile)
-                {
-                    RefreshArtifactHeaderStatus(definition);
-                }
-                m_CompileReport = null;
-                m_DiagnosticsError = string.Empty;
-                m_IrCacheInitialized = false;
-            }
-            if (GUILayout.Button("Refresh Status"))
-                RefreshExactArtifactStatus(definition);
-            if (GUILayout.Button("Diagnostics"))
-                RunDiagnostics(definition);
-            EditorGUILayout.EndHorizontal();
-
-            m_ShowGeneratedArtifacts = EditorGUILayout.Foldout(
-                m_ShowGeneratedArtifacts,
-                "Generated Artifacts",
-                true);
-            if (m_ShowGeneratedArtifacts)
-            {
-                using (new EditorGUI.IndentLevelScope())
-                using (new EditorGUI.DisabledScope(true))
-                {
-                    EditorGUILayout.PropertyField(m_SimulationProgram, new GUIContent("Program"));
-                    EditorGUILayout.PropertyField(m_PresentationProjection, new GUIContent("Projection"));
-                }
-                DrawArtifactMetadata(definition);
-                DrawSemanticIrArtifact(definition);
-            }
-
-            if (m_ShowDiagnostics)
-                DrawDiagnostics();
-            EditorGUILayout.Space(6f);
-        }
-
-        void RefreshArtifactHeaderStatus(CharacterPipelineDefinition definition)
-        {
-            m_ArtifactStatusInitialized = true;
-            if (!definition || !definition.SimulationProgram || !definition.PresentationProjection)
-            {
-                m_ArtifactStatus = ArtifactStatus.Missing;
-                return;
-            }
-            m_ArtifactStatus = CharacterSimulationProgramBuildService.HasPublishedArtifactHeader(definition)
-                ? ArtifactStatus.Unchecked
-                : ArtifactStatus.Invalid;
-        }
-
-        void RefreshExactArtifactStatus(CharacterPipelineDefinition definition)
-        {
-            RefreshArtifactHeaderStatus(definition);
-            if (m_ArtifactStatus != ArtifactStatus.Unchecked)
-                return;
-            m_ArtifactStatus = CharacterSimulationProgramBuildService.EvaluateExactArtifactStaleness(definition)
-                ? ArtifactStatus.Stale
-                : ArtifactStatus.Ready;
-        }
-
-        static string GetArtifactStatusLabel(ArtifactStatus status)
-        {
-            return status == ArtifactStatus.NeedsCompile ? "Needs Compile" : status.ToString();
-        }
-
-        static string GetArtifactStatusMessage(string label, ArtifactStatus status)
-        {
-            return status == ArtifactStatus.Unchecked
-                ? $"Program / Projection: {label}\nPublished headers exist. Use Refresh Status to compare the current authoring source."
-                : $"Program / Projection: {label}";
-        }
-
-        static MessageType GetArtifactStatusMessageType(ArtifactStatus status)
-        {
-            return status switch
-            {
-                ArtifactStatus.Ready => MessageType.Info,
-                ArtifactStatus.Unchecked or ArtifactStatus.NeedsCompile or ArtifactStatus.Stale => MessageType.Warning,
-                _ => MessageType.Error
-            };
-        }
-
-        static void DrawArtifactMetadata(CharacterPipelineDefinition definition)
-        {
-            CharacterSimulationProgramAsset program = definition.SimulationProgram;
-            CharacterPresentationProjectionAsset projection = definition.PresentationProjection;
-            if (!program || !projection)
-                return;
-
-            using (new EditorGUI.IndentLevelScope())
-            {
-                EditorGUILayout.LabelField("Compiler", program.CompilerVersion);
-                EditorGUILayout.LabelField("Numeric Profile", $"{program.NumericProfileId} / ABI {program.TargetAbiVersion}");
-                DrawIdentity("Source Revision", program.SourceRevision);
-                DrawIdentity("Program Hash", program.ProgramHash);
-                DrawIdentity("Presentation Contract", projection.ContractHash);
-                DrawIdentity("Projection Revision", projection.ProjectionRevision);
-            }
-        }
-
-        void DrawSemanticIrArtifact(CharacterPipelineDefinition definition)
-        {
-            if (!m_IrCacheInitialized)
-                RefreshIrCacheStatus(definition);
-            using (new EditorGUI.IndentLevelScope())
-            {
-                EditorGUILayout.LabelField("Semantic IR Cache", m_IrCacheStatus.ToString());
-                if (!string.IsNullOrEmpty(m_IrCacheMessage))
-                    EditorGUILayout.HelpBox(m_IrCacheMessage, m_IrCacheStatus == CharacterSemanticIrCacheStatus.Current ? MessageType.Info : MessageType.Warning);
-                if (GUILayout.Button("Open Semantic IR"))
-                    CharacterSemanticIrInspectorWindow.Open(definition);
-            }
-        }
-
-        void RefreshIrCacheStatus(CharacterPipelineDefinition definition)
-        {
-            m_IrCacheInitialized = true;
-            m_IrCacheStatus = CharacterSemanticIrCacheStatus.Missing;
-            m_IrCacheMessage = string.Empty;
-            if (!definition)
-                return;
-            string definitionPath = AssetDatabase.GetAssetPath(definition);
-            string definitionGuid = string.IsNullOrEmpty(definitionPath) ? string.Empty : AssetDatabase.AssetPathToGUID(definitionPath);
-            if (string.IsNullOrEmpty(definitionGuid))
-                return;
-            CharacterSemanticIrCacheResult cache = CharacterSemanticIrArtifactStore.Inspect(definitionGuid);
-            m_IrCacheStatus = cache.Status;
-            m_IrCacheMessage = cache.Message;
-        }
-
-        void RunDiagnostics(CharacterPipelineDefinition definition)
-        {
-            m_ShowDiagnostics = true;
-            m_DiagnosticsError = string.Empty;
-            try
-            {
-                CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.DryRun(definition);
-                m_CompileReport = result.Report;
-            }
-            catch (System.Exception exception)
-            {
-                m_CompileReport = null;
-                m_DiagnosticsError = exception.Message;
-            }
-        }
-
-        void DrawDiagnostics()
-        {
-            EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField("Compiler Diagnostics", EditorStyles.boldLabel);
-            if (!string.IsNullOrEmpty(m_DiagnosticsError))
-                EditorGUILayout.HelpBox(m_DiagnosticsError, MessageType.Error);
-            if (m_CompileReport == null)
-                return;
-
-            for (int i = 0; i < m_CompileReport.Messages.Count; i++)
-            {
-                CharacterSimulationCompileMessage message = m_CompileReport.Messages[i];
-                MessageType type = message.Severity == CharacterSimulationCompileSeverity.Error
-                    ? MessageType.Error
-                    : message.Severity == CharacterSimulationCompileSeverity.Warning
-                        ? MessageType.Warning
-                        : MessageType.Info;
-                EditorGUILayout.HelpBox(
-                    $"{message.Stage} / {message.Code}\n{message.SourceIdentity}\n{message.Message}",
-                    type);
-            }
         }
 
         void DrawNavigation()
@@ -332,7 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
 
             EditorGUILayout.LabelField("Navigation", EditorStyles.boldLabel);
-            DrawSkillNavigation(definition);
+            DrawAbilityNavigation(definition);
             EditorGUILayout.BeginHorizontal();
             using (new EditorGUI.DisabledScope(!definition.AnimationPresentationProfile))
             {
@@ -350,41 +130,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.HelpBox("Configuration is valid.", MessageType.Info);
         }
 
-        static void DrawSkillNavigation(CharacterPipelineDefinition definition)
+        static void DrawAbilityNavigation(CharacterPipelineDefinition definition)
         {
-            EditorGUILayout.LabelField("Skills", EditorStyles.boldLabel);
-            IReadOnlyList<CharacterSkillAuthoringDefinition> skills = definition.SkillDefinitions;
-            for (int i = 0; i < skills.Count; i++)
+            EditorGUILayout.LabelField("Gameplay Abilities", EditorStyles.boldLabel);
+            IReadOnlyList<AbilityGrant> grants = definition.AbilityGrants;
+            for (int i = 0; i < grants.Count; i++)
             {
-                CharacterSkillAuthoringDefinition skill = skills[i];
-                if (skill == null)
-                    continue;
-                BtsmtlSkillFlowGraph graph = FindSkillGraph(definition, skill.EntryGraphAuthoringId);
+                AbilityGrant grant = grants[i];
+                GameplayAbilityDefinition ability = grant?.Ability;
+                BtsmtlSkillFlowGraph graph = ability?.AbilityGraph;
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.LabelField(skill.SkillId, GUILayout.MinWidth(120f));
+                EditorGUILayout.LabelField(grant?.AbilityId ?? "<missing>", GUILayout.MinWidth(120f));
                 using (new EditorGUI.DisabledScope(!graph))
                 {
-                    if (GUILayout.Button("Open Skill Graph", GUILayout.Width(120f)))
-                        CharacterPipelineDefinitionTreeWindowUtility.OpenSkillGraph(definition, skill.EntryGraphAuthoringId);
+                    if (GUILayout.Button("Open Ability Graph", GUILayout.Width(140f)))
+                        NodeCanvas.Editor.GraphEditor.OpenWindow(graph);
                 }
                 EditorGUILayout.EndHorizontal();
-                if (!graph)
-                    EditorGUILayout.HelpBox($"Entry Graph not found: {skill.EntryGraphAuthoringId}", MessageType.Warning);
+                if (!ability)
+                    EditorGUILayout.HelpBox("AbilityGrant has no GameplayAbilityDefinition.", MessageType.Warning);
+                else if (!graph)
+                    EditorGUILayout.HelpBox($"Gameplay Ability '{ability.AbilityId}' has no AbilityGraph.", MessageType.Warning);
             }
-        }
-
-        static BtsmtlSkillFlowGraph FindSkillGraph(
-            CharacterPipelineDefinition definition,
-            string graphAuthoringId)
-        {
-            IReadOnlyList<BtsmtlSkillFlowGraph> graphs = definition.SkillGraphs;
-            for (int i = 0; i < graphs.Count; i++)
-            {
-                BtsmtlSkillFlowGraph graph = graphs[i];
-                if (graph && string.Equals(graph.AuthoringId, graphAuthoringId, System.StringComparison.Ordinal))
-                    return graph;
-            }
-            return null;
         }
 
         void ValidateConfiguration(CharacterPipelineDefinition definition)
@@ -392,15 +159,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ConfigurationErrors.Clear();
             m_ConfigurationValidated = true;
             m_ConfigurationValid = definition.CollectConfigurationErrors(m_ConfigurationErrors);
-        }
-
-        static void DrawIdentity(string label, string value)
-        {
-            EditorGUILayout.LabelField(label);
-            EditorGUILayout.SelectableLabel(
-                value ?? string.Empty,
-                EditorStyles.textField,
-                GUILayout.Height(EditorGUIUtility.singleLineHeight));
         }
 
         static void OpenAsset(Object asset)

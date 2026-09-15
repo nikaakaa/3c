@@ -41,7 +41,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Vector2 = 3,
         Enum = 4,
         UInt64 = 5,
-        Identity = 6
+        Identity = 6,
+        Vector3 = 7,
+        Quaternion = 8
     }
 
     public enum CharacterPresentationMotionPhase : byte
@@ -81,31 +83,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public static class CharacterPresentationFactSchema
     {
-        public const string Version = "character-presentation-fact/v3";
+        public const string Version = "character-presentation-fact/v4";
 
         public static readonly PresentationFactId Grounded = new PresentationFactId("presentation.grounded");
-        public static readonly PresentationFactId HorizontalSpeed = new PresentationFactId("presentation.horizontal-speed");
-        public static readonly PresentationFactId HorizontalAcceleration = new PresentationFactId("presentation.horizontal-acceleration");
-        public static readonly PresentationFactId VerticalSpeed = new PresentationFactId("presentation.vertical-speed");
-        public static readonly PresentationFactId MovementDirection = new PresentationFactId("presentation.movement-direction");
+        public static readonly PresentationFactId Velocity = new PresentationFactId("presentation.velocity");
+        public static readonly PresentationFactId Rotation = new PresentationFactId("presentation.rotation");
+        public static readonly PresentationFactId DesiredPlanarVelocity = new PresentationFactId("presentation.desired-planar-velocity");
+        public static readonly PresentationFactId DesiredFacing = new PresentationFactId("presentation.desired-facing");
+        public static readonly PresentationFactId HasMotion = new PresentationFactId("presentation.has-motion");
         public static readonly PresentationFactId LocomotionPlanarBasis = new PresentationFactId("presentation.locomotion-planar-basis");
-        public static readonly PresentationFactId DesiredDirection = new PresentationFactId("presentation.desired-direction");
-        public static readonly PresentationFactId FacingError = new PresentationFactId("presentation.facing-error");
-        public static readonly PresentationFactId MotionPhase = new PresentationFactId("presentation.motion-phase");
         public static readonly PresentationFactId MovementMode = new PresentationFactId("presentation.movement-mode");
         public static readonly PresentationFactId BodyDiscontinuityGeneration = new PresentationFactId("presentation.body-discontinuity-generation");
 
         static readonly CharacterPresentationFactDeclaration[] s_OrderedDeclarations =
         {
             new CharacterPresentationFactDeclaration(Grounded, PresentationFactValueKind.Bool),
-            new CharacterPresentationFactDeclaration(HorizontalSpeed, PresentationFactValueKind.Float),
-            new CharacterPresentationFactDeclaration(HorizontalAcceleration, PresentationFactValueKind.Float),
-            new CharacterPresentationFactDeclaration(VerticalSpeed, PresentationFactValueKind.Float),
-            new CharacterPresentationFactDeclaration(MovementDirection, PresentationFactValueKind.Vector2),
+            new CharacterPresentationFactDeclaration(Velocity, PresentationFactValueKind.Vector3),
+            new CharacterPresentationFactDeclaration(Rotation, PresentationFactValueKind.Quaternion),
+            new CharacterPresentationFactDeclaration(DesiredPlanarVelocity, PresentationFactValueKind.Vector2),
+            new CharacterPresentationFactDeclaration(DesiredFacing, PresentationFactValueKind.Vector2),
+            new CharacterPresentationFactDeclaration(HasMotion, PresentationFactValueKind.Bool),
             new CharacterPresentationFactDeclaration(LocomotionPlanarBasis, PresentationFactValueKind.Vector2),
-            new CharacterPresentationFactDeclaration(DesiredDirection, PresentationFactValueKind.Vector2),
-            new CharacterPresentationFactDeclaration(FacingError, PresentationFactValueKind.Float),
-            new CharacterPresentationFactDeclaration(MotionPhase, PresentationFactValueKind.Enum),
             new CharacterPresentationFactDeclaration(MovementMode, PresentationFactValueKind.Identity),
             new CharacterPresentationFactDeclaration(BodyDiscontinuityGeneration, PresentationFactValueKind.UInt64)
         };
@@ -163,6 +161,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool boolValue,
             float floatValue,
             Vector2 vector2Value,
+            Vector3 vector3Value,
+            Quaternion quaternionValue,
             int enumValue,
             ulong uint64Value,
             string identityValue)
@@ -171,6 +171,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             BoolValue = boolValue;
             FloatValue = floatValue;
             Vector2Value = vector2Value;
+            Vector3Value = vector3Value;
+            QuaternionValue = quaternionValue;
             EnumValue = enumValue;
             UInt64Value = uint64Value;
             IdentityValue = identityValue ?? string.Empty;
@@ -180,45 +182,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool BoolValue { get; }
         public float FloatValue { get; }
         public Vector2 Vector2Value { get; }
+        public Vector3 Vector3Value { get; }
+        public Quaternion QuaternionValue { get; }
         public int EnumValue { get; }
         public ulong UInt64Value { get; }
         public string IdentityValue { get; }
 
         public static CharacterPresentationFactValue FromBool(bool value) =>
-            new CharacterPresentationFactValue(PresentationFactValueKind.Bool, value, 0f, default, 0, 0, string.Empty);
+            new CharacterPresentationFactValue(PresentationFactValueKind.Bool, value, 0f, default, default, default, 0, 0, string.Empty);
 
         public static CharacterPresentationFactValue FromFloat(float value)
         {
             if (!float.IsFinite(value))
                 throw new ArgumentOutOfRangeException(nameof(value));
-            return new CharacterPresentationFactValue(PresentationFactValueKind.Float, false, value, default, 0, 0, string.Empty);
+            return new CharacterPresentationFactValue(PresentationFactValueKind.Float, false, value, default, default, default, 0, 0, string.Empty);
         }
 
         public static CharacterPresentationFactValue FromVector2(Vector2 value)
         {
             if (!float.IsFinite(value.x) || !float.IsFinite(value.y))
                 throw new ArgumentOutOfRangeException(nameof(value));
-            return new CharacterPresentationFactValue(PresentationFactValueKind.Vector2, false, 0f, value, 0, 0, string.Empty);
+            return new CharacterPresentationFactValue(PresentationFactValueKind.Vector2, false, 0f, value, default, default, 0, 0, string.Empty);
         }
 
-        public static CharacterPresentationFactValue FromMotionPhase(
-            CharacterPresentationMotionPhase value)
+        public static CharacterPresentationFactValue FromVector3(Vector3 value)
         {
-            if ((byte)value < (byte)CharacterPresentationMotionPhase.GroundedStationary ||
-                (byte)value > (byte)CharacterPresentationMotionPhase.AirborneFalling)
+            if (!float.IsFinite(value.x) || !float.IsFinite(value.y) || !float.IsFinite(value.z))
                 throw new ArgumentOutOfRangeException(nameof(value));
-            return new CharacterPresentationFactValue(
-                PresentationFactValueKind.Enum,
-                false,
-                0f,
-                default,
-                (int)value,
-                0,
-                string.Empty);
+            return new CharacterPresentationFactValue(PresentationFactValueKind.Vector3, false, 0f, default, value, default, 0, 0, string.Empty);
+        }
+
+        public static CharacterPresentationFactValue FromQuaternion(Quaternion value)
+        {
+            if (!float.IsFinite(value.x) || !float.IsFinite(value.y) ||
+                !float.IsFinite(value.z) || !float.IsFinite(value.w))
+                throw new ArgumentOutOfRangeException(nameof(value));
+            return new CharacterPresentationFactValue(PresentationFactValueKind.Quaternion, false, 0f, default, default, value, 0, 0, string.Empty);
         }
 
         public static CharacterPresentationFactValue FromUInt64(ulong value) =>
-            new CharacterPresentationFactValue(PresentationFactValueKind.UInt64, false, 0f, default, 0, value, string.Empty);
+            new CharacterPresentationFactValue(PresentationFactValueKind.UInt64, false, 0f, default, default, default, 0, value, string.Empty);
 
         public static CharacterPresentationFactValue FromIdentity(string value)
         {
@@ -228,6 +231,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PresentationFactValueKind.Identity,
                 false,
                 0f,
+                default,
+                default,
                 default,
                 0,
                 0,
@@ -257,15 +262,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SimulationTick simulationTick,
             double presentationTime,
             bool grounded,
-            float horizontalSpeed,
-            float horizontalAcceleration,
-            float verticalSpeed,
-            Vector2 movementDirection,
+            Vector3 velocity,
+            Quaternion rotation,
+            Vector2 desiredFacing,
+            bool hasMotion,
             Vector2 locomotionPlanarBasis,
             Vector2 desiredPlanarVelocity,
-            Vector2 desiredDirection,
-            float facingError,
-            CharacterPresentationMotionPhase motionPhase,
             string movementModeId,
             CommittedMovementPlaybackClock movementPlaybackClock,
             CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline,
@@ -274,16 +276,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!identity.IsValid || !simulationTick.IsValid ||
                 !double.IsFinite(presentationTime) || presentationTime < 0d ||
-                !float.IsFinite(horizontalSpeed) || horizontalSpeed < 0f ||
-                !float.IsFinite(horizontalAcceleration) || horizontalAcceleration < 0f ||
-                !float.IsFinite(verticalSpeed) ||
-                !IsFinite(movementDirection) || movementDirection.sqrMagnitude > 1.0001f ||
+                !IsFinite(velocity) || !IsFinite(rotation) ||
+                !IsFinite(desiredFacing) ||
                 !IsFinite(locomotionPlanarBasis) || locomotionPlanarBasis.sqrMagnitude > 1.0001f ||
                 !IsFinite(desiredPlanarVelocity) ||
-                !IsFinite(desiredDirection) || desiredDirection.sqrMagnitude > 1.0001f ||
-                !float.IsFinite(facingError) ||
-                (byte)motionPhase < (byte)CharacterPresentationMotionPhase.GroundedStationary ||
-                (byte)motionPhase > (byte)CharacterPresentationMotionPhase.AirborneFalling ||
                 string.IsNullOrWhiteSpace(movementModeId) ||
                 movementPlaybackClock.IsValid && movementPlaybackClock.AuthorityTick.Value > simulationTick.Value ||
                 movementPlaybackClock.IsValid != locomotionMotionTimeline.IsValid ||
@@ -297,15 +293,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SimulationTick = simulationTick;
             PresentationTime = presentationTime;
             Grounded = grounded;
-            HorizontalSpeed = horizontalSpeed;
-            HorizontalAcceleration = horizontalAcceleration;
-            VerticalSpeed = verticalSpeed;
-            MovementDirection = movementDirection;
+            Velocity = velocity;
+            Rotation = rotation;
+            DesiredFacing = desiredFacing;
+            HasMotion = hasMotion;
             LocomotionPlanarBasis = locomotionPlanarBasis;
             DesiredPlanarVelocity = desiredPlanarVelocity;
-            DesiredDirection = desiredDirection;
-            FacingError = facingError;
-            MotionPhase = motionPhase;
             MovementModeId = movementModeId.Trim();
             MovementPlaybackClock = movementPlaybackClock;
             LocomotionMotionTimeline = locomotionMotionTimeline;
@@ -317,15 +310,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public SimulationTick SimulationTick { get; }
         public double PresentationTime { get; }
         public bool Grounded { get; }
-        public float HorizontalSpeed { get; }
-        public float HorizontalAcceleration { get; }
-        public float VerticalSpeed { get; }
-        public Vector2 MovementDirection { get; }
+        public Vector3 Velocity { get; }
+        public Quaternion Rotation { get; }
+        public Vector2 DesiredFacing { get; }
+        public bool HasMotion { get; }
         public Vector2 LocomotionPlanarBasis { get; }
         public Vector2 DesiredPlanarVelocity { get; }
-        public Vector2 DesiredDirection { get; }
-        public float FacingError { get; }
-        public CharacterPresentationMotionPhase MotionPhase { get; }
         public string MovementModeId { get; }
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
         public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
@@ -351,22 +341,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             if (factId == CharacterPresentationFactSchema.Grounded)
                 value = CharacterPresentationFactValue.FromBool(Grounded);
-            else if (factId == CharacterPresentationFactSchema.HorizontalSpeed)
-                value = CharacterPresentationFactValue.FromFloat(HorizontalSpeed);
-            else if (factId == CharacterPresentationFactSchema.HorizontalAcceleration)
-                value = CharacterPresentationFactValue.FromFloat(HorizontalAcceleration);
-            else if (factId == CharacterPresentationFactSchema.VerticalSpeed)
-                value = CharacterPresentationFactValue.FromFloat(VerticalSpeed);
-            else if (factId == CharacterPresentationFactSchema.MovementDirection)
-                value = CharacterPresentationFactValue.FromVector2(MovementDirection);
+            else if (factId == CharacterPresentationFactSchema.Velocity)
+                value = CharacterPresentationFactValue.FromVector3(Velocity);
+            else if (factId == CharacterPresentationFactSchema.Rotation)
+                value = CharacterPresentationFactValue.FromQuaternion(Rotation);
+            else if (factId == CharacterPresentationFactSchema.DesiredPlanarVelocity)
+                value = CharacterPresentationFactValue.FromVector2(DesiredPlanarVelocity);
+            else if (factId == CharacterPresentationFactSchema.DesiredFacing)
+                value = CharacterPresentationFactValue.FromVector2(DesiredFacing);
+            else if (factId == CharacterPresentationFactSchema.HasMotion)
+                value = CharacterPresentationFactValue.FromBool(HasMotion);
             else if (factId == CharacterPresentationFactSchema.LocomotionPlanarBasis)
                 value = CharacterPresentationFactValue.FromVector2(LocomotionPlanarBasis);
-            else if (factId == CharacterPresentationFactSchema.DesiredDirection)
-                value = CharacterPresentationFactValue.FromVector2(DesiredDirection);
-            else if (factId == CharacterPresentationFactSchema.FacingError)
-                value = CharacterPresentationFactValue.FromFloat(FacingError);
-            else if (factId == CharacterPresentationFactSchema.MotionPhase)
-                value = CharacterPresentationFactValue.FromMotionPhase(MotionPhase);
             else if (factId == CharacterPresentationFactSchema.MovementMode)
                 value = CharacterPresentationFactValue.FromIdentity(MovementModeId);
             else if (factId == CharacterPresentationFactSchema.BodyDiscontinuityGeneration)
@@ -388,6 +374,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static bool IsFinite(Vector2 value) => float.IsFinite(value.x) && float.IsFinite(value.y);
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+
+        static bool IsFinite(Quaternion value) =>
+            float.IsFinite(value.x) && float.IsFinite(value.y) &&
+            float.IsFinite(value.z) && float.IsFinite(value.w);
     }
 
     internal sealed class CharacterPresentationFactProjector
@@ -397,8 +390,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new SortedDictionary<ulong, CharacterPresentationTrajectoryIntent>();
         readonly List<ulong> m_TrimIntentTicks = new List<ulong>();
 
-        CharacterPresentationFactFrame m_PreviousFrame;
-        Vector2 m_PreviousPlanarVelocity;
         double m_PresentationTime;
         ulong m_BodyBranchSequence;
         ulong m_BodyDiscontinuityGeneration;
@@ -470,41 +461,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 (double)bodyFrame.SampleAlpha;
             IntentSample intent = SampleIntent(sampleTick);
             Vector3 velocity = bodyFrame.VisibleVelocity;
-            var planarVelocity = new Vector2(velocity.x, velocity.z);
-            float speed = planarVelocity.magnitude;
-            Vector2 movementDirection = speed > 0.0001f ? planarVelocity / speed : Vector2.zero;
-            Vector2 desiredVelocity = intent.DesiredPlanarVelocity;
-            Vector2 desiredDirection = desiredVelocity.sqrMagnitude > 0.00000001f
-                ? desiredVelocity.normalized
-                : Vector2.zero;
-            Vector3 forward3 = bodyFrame.VisibleRotation * Vector3.forward;
-            var facing = new Vector2(forward3.x, forward3.z).normalized;
-            float facingError = Vector2.SignedAngle(facing, intent.DesiredFacing);
-            float acceleration = m_PreviousFrame.IsValid && presentationDeltaSeconds > 0f
-                ? (planarVelocity - m_PreviousPlanarVelocity).magnitude / presentationDeltaSeconds
-                : 0f;
             m_PresentationTime += presentationDeltaSeconds;
             var frame = new CharacterPresentationFactFrame(
                 new CharacterPresentationFactFrameIdentity(m_ActorId, renderFrame),
                 new SimulationTick(bodyFrame.CurrentTick),
                 m_PresentationTime,
                 bodyFrame.TargetGrounded,
-                speed,
-                acceleration,
-                velocity.y,
-                movementDirection,
+                velocity,
+                bodyFrame.VisibleRotation,
+                intent.DesiredFacing,
+                intent.HasMotion,
                 intent.LocomotionPlanarBasis,
                 intent.DesiredPlanarVelocity,
-                desiredDirection,
-                facingError,
-                ResolveMotionPhase(bodyFrame.TargetGrounded, intent.HasMotion, speed, velocity.y),
                 intent.MovementModeId,
                 intent.MovementPlaybackClock,
                 intent.LocomotionMotionTimeline,
                 intent.MovementPlaybackTime,
                 m_BodyDiscontinuityGeneration);
-            m_PreviousFrame = frame;
-            m_PreviousPlanarVelocity = planarVelocity;
             TrimIntents(bodyFrame.PreviousTick);
             return frame;
         }
@@ -513,8 +486,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_Intents.Clear();
             m_TrimIntentTicks.Clear();
-            m_PreviousFrame = default;
-            m_PreviousPlanarVelocity = default;
             m_PresentationTime = 0d;
             m_BodyBranchSequence = 0;
             m_BodyDiscontinuityGeneration = 0;
@@ -558,8 +529,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_Intents.Clear();
             m_TrimIntentTicks.Clear();
-            m_PreviousFrame = default;
-            m_PreviousPlanarVelocity = default;
             m_BodyBranchSequence = branchSequence;
             m_BodyDiscontinuityGeneration = branchSequence;
             m_LatestIntentTick = 0;
@@ -605,23 +574,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             for (int i = 0; i < m_TrimIntentTicks.Count; i++)
                 m_Intents.Remove(m_TrimIntentTicks[i]);
-        }
-
-        static CharacterPresentationMotionPhase ResolveMotionPhase(
-            bool grounded,
-            bool hasMotion,
-            float speed,
-            float verticalSpeed)
-        {
-            if (!grounded)
-            {
-                return verticalSpeed > 0f
-                    ? CharacterPresentationMotionPhase.AirborneRising
-                    : CharacterPresentationMotionPhase.AirborneFalling;
-            }
-            return hasMotion || speed > 0.0001f
-                ? CharacterPresentationMotionPhase.GroundedMoving
-                : CharacterPresentationMotionPhase.GroundedStationary;
         }
 
         readonly struct IntentSample

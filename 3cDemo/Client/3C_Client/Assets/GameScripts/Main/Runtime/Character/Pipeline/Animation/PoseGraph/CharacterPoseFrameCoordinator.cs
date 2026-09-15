@@ -439,6 +439,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void BeginEvaluateBarrier(
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame,
             CharacterPoseSourceFrameLease sourceLease,
             in CharacterPoseProgramPrepared prepared,
             Action enterEvaluateBarrier)
@@ -458,6 +459,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose Plan Presentation Fact frame is invalid.",
                     nameof(factFrame));
             }
+            if (!parameterFrame.IsValid)
+                throw new ArgumentException(
+                    "Pose Plan animation variable frame is invalid.",
+                    nameof(parameterFrame));
             if (!prepared.IsValid ||
                 prepared.Lineage.CompletionIdentity !=
                     m_FrameCompletionContext ||
@@ -486,7 +491,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_ActiveFrameLease,
                     in prepared,
                     in bodyFrame,
-                    in factFrame);
+                    in factFrame,
+                    in parameterFrame);
             }
         }
 

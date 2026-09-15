@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
@@ -33,7 +34,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RuntimeDebugSession session = RuntimeDebugSession.Shared;
                 if (Application.isPlaying && (!session.ViewModel.Attached || session.ViewModel.Target.HostInstanceId != hostInstanceId))
                     session.AttachToHost(hostInstanceId);
-                foreach (BtsmtlSkillFlowGraph graph in definition.SkillGraphs.Where(value => value))
+                IReadOnlyList<BtsmtlSkillFlowGraph> roots = definition.AbilityGraphs;
+                foreach (BtsmtlSkillFlowGraph graph in roots.Where(value => value))
                 {
                     string prefix = Label(graph.name) + " [" + graph.AuthoringId + "]/";
                     if (!Application.isPlaying)
@@ -44,8 +46,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     else
                         AddInstances(menu, prefix, definition, graph, session, session.ViewModel.Target.CharacterRuntimeId, default);
                 }
-                if (definition.SkillGraphs.Count == 0)
-                    menu.AddDisabledItem(new GUIContent("尚未配置原生技能根"));
+                if (roots.Count == 0)
+                    menu.AddDisabledItem(new GUIContent("尚未配置原生Ability根"));
             }
             menu.ShowAsContext();
         }

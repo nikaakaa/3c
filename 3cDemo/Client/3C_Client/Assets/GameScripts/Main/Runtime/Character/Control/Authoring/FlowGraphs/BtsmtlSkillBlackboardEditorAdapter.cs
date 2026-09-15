@@ -6,7 +6,6 @@ using FlowCanvas;
 using NodeCanvas.Editor;
 using NodeCanvas.Framework;
 using ParadoxNotion;
-using ParadoxNotion.Design;
 using TreeDesigner;
 using UnityEditor;
 using UnityEngine;
@@ -15,6 +14,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 {
     public static class BtsmtlSkillBlackboardEditorAdapter
     {
+        static readonly Color SeparatorColor = new(0f, 0f, 0f, 0.3f);
+
         static readonly (Type Type, string Label, string Name)[] LocalTypes =
         {
             (typeof(bool), "Boolean", "newBoolean"),
@@ -29,7 +30,9 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             if (!ReferenceEquals(blackboard, graph.blackboard))
                 return;
-            EditorUtils.Separator();
+            EditorGUILayout.Space(4f);
+            EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, 1f), SeparatorColor);
+            EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField("Skill Providers", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Character State · 只读", EditorStyles.miniLabel);
             EditorGUILayout.LabelField("Input / TargetData · 只读", EditorStyles.miniLabel);

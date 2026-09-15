@@ -170,7 +170,7 @@ namespace ThirdPersonGameplay.Networking
             SessionId = context.SessionId;
             SourceClockId = context.SourceClockId;
             TickRate = context.TickRate;
-            ProgramRuntime = context.ProgramRuntime;
+            CharacterRuntime = context.CharacterRuntime;
             ExecutionBackend = context.ExecutionBackend;
             WorldSolver = context.WorldSolver;
             WorldIdentity = context.WorldIdentity;
@@ -180,7 +180,7 @@ namespace ThirdPersonGameplay.Networking
         public SimulationSessionId SessionId { get; }
         public SimulationSourceClockId SourceClockId { get; }
         public int TickRate { get; }
-        public SimulationProgramRuntimeDescriptor ProgramRuntime { get; }
+        public SimulationCharacterRuntimeDescriptor CharacterRuntime { get; }
         public SimulationExecutionBackendDefinition ExecutionBackend { get; }
         public SimulationWorldSolverDefinitionDescriptor WorldSolver { get; }
         public SimulationWorldIdentityDescriptor WorldIdentity { get; }
@@ -233,17 +233,17 @@ namespace ThirdPersonGameplay.Networking
             SimulationSessionSourcePreparationContext context)
         {
             GameplayNetworkModelSourceRequirements requirements = Requirements;
-            if (!context.ProgramRuntime.NumericProfileId.Equals(requirements.NumericProfileId))
+            if (!context.CharacterRuntime.NumericProfileId.Equals(requirements.NumericProfileId))
             {
                 throw new InvalidOperationException(
                     $"Network Model '{requirements.ModelId}' requires NumericProfile '{requirements.NumericProfileId}', " +
-                    $"but the selected Program Runtime provides '{context.ProgramRuntime.NumericProfileId}'.");
+                    $"but the selected Character Runtime provides '{context.CharacterRuntime.NumericProfileId}'.");
             }
-            if (!context.ProgramRuntime.TargetAbiVersion.Equals(requirements.TargetAbiVersion))
+            if (!context.CharacterRuntime.TargetAbiVersion.Equals(requirements.TargetAbiVersion))
             {
                 throw new InvalidOperationException(
                     $"Network Model '{requirements.ModelId}' requires Target ABI '{requirements.TargetAbiVersion}', " +
-                    $"but the selected Program Runtime provides '{context.ProgramRuntime.TargetAbiVersion}'.");
+                    $"but the selected Character Runtime provides '{context.CharacterRuntime.TargetAbiVersion}'.");
             }
             ValidateLocalControlSourceCapabilities(context.Registrations, requirements);
             ISimulationSessionSourcePreparation preparation = CreateModelPreparation(

@@ -63,9 +63,9 @@ namespace BTSMTL.EventGraphs
             EventGraphHostContract contract,
             List<string> errors)
         {
-            for (int i = 0; i < variables.Descriptors.Count; i++)
+            for (int i = 0; i < variables.PublishedDescriptors.Count; i++)
             {
-                EventGraphVariableDescriptor variable = variables.Descriptors[i];
+                EventGraphVariableDescriptor variable = variables.PublishedDescriptors[i];
                 if (!contract.TryGetOutput(
                         variable.Reference.VariableId,
                         out EventGraphOutputDescriptor output))
@@ -80,9 +80,9 @@ namespace BTSMTL.EventGraphs
                         $"output '{variable.Reference.VariableId}' type '{output.ValueType.FullName}' does not match variable type '{variable.ValueType.FullName}'");
                 }
             }
-            if (contract.Outputs.Count != variables.Descriptors.Count)
+            if (contract.Outputs.Count != variables.PublishedDescriptors.Count)
                 errors.Add(
-                    $"host output count {contract.Outputs.Count} does not match variable declaration count {variables.Descriptors.Count}");
+                    $"host output count {contract.Outputs.Count} does not match published variable count {variables.PublishedDescriptors.Count}");
         }
 
         static void ValidateNodes(
@@ -278,6 +278,11 @@ namespace BTSMTL.EventGraphs
             {
                 inputId = vector3Input.InputId;
                 valueType = typeof(UnityEngine.Vector3);
+            }
+            else if (node is EventGraphQuaternionInputNode quaternionInput)
+            {
+                inputId = quaternionInput.InputId;
+                valueType = typeof(UnityEngine.Quaternion);
             }
             else if (node is EventGraphDeltaNode)
             {

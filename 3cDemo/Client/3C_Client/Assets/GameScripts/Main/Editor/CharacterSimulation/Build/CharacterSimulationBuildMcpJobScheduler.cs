@@ -9,8 +9,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     enum CharacterSimulationBuildKind
     {
-        Float32,
-        Fixed,
         TimelineFloat32,
         TimelineFixed
     }
@@ -184,8 +182,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 response = job.Kind switch
                 {
-                    CharacterSimulationBuildKind.Float32 => CharacterSimulationBuildMcpBridge.BuildFloat32(job.Parameters),
-                    CharacterSimulationBuildKind.Fixed => CharacterSimulationBuildMcpBridge.BuildFixed(job.Parameters),
                     CharacterSimulationBuildKind.TimelineFloat32 => CharacterSimulationBuildMcpBridge.BuildTimelineFloat32(job.Parameters),
                     CharacterSimulationBuildKind.TimelineFixed => CharacterSimulationBuildMcpBridge.BuildTimelineFixed(job.Parameters),
                     _ => new ErrorResponse("character_build_kind_unsupported")
@@ -294,7 +290,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             kind == CharacterSimulationBuildKind.TimelineFixed;
 
         static bool IsFixed(CharacterSimulationBuildKind kind) =>
-            kind == CharacterSimulationBuildKind.Fixed ||
             kind == CharacterSimulationBuildKind.TimelineFixed;
     }
 }

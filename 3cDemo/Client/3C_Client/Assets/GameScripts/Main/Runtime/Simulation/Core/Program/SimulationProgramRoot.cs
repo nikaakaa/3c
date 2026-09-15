@@ -6,8 +6,6 @@ namespace ThirdPersonSimulation
 {
     public enum SimulationProgramRootKind : byte
     {
-        Character = 1,
-        Timeline = 2,
         Ability = 3
     }
 
@@ -19,7 +17,7 @@ namespace ThirdPersonSimulation
             string entryIdentity,
             string contentIdentity)
         {
-            if (!Enum.IsDefined(typeof(SimulationProgramRootKind), kind))
+            if (kind != SimulationProgramRootKind.Ability)
                 throw new ArgumentOutOfRangeException(nameof(kind));
             Kind = kind;
             RootIdentity = SimulationIdentity.Require(rootIdentity, nameof(rootIdentity));
@@ -36,8 +34,6 @@ namespace ThirdPersonSimulation
             IsGuid(RootIdentity) &&
             IsEntryIdentity(Kind, EntryIdentity) &&
             IsHash(ContentIdentity);
-        public bool IsCharacter => Kind == SimulationProgramRootKind.Character;
-        public bool IsTimeline => Kind == SimulationProgramRootKind.Timeline;
         public bool IsAbility => Kind == SimulationProgramRootKind.Ability;
 
         public bool Equals(SimulationProgramRootDescriptor other) =>
@@ -67,17 +63,10 @@ namespace ThirdPersonSimulation
 
         static bool IsEntryIdentity(SimulationProgramRootKind kind, string value)
         {
-            string prefix = kind == SimulationProgramRootKind.Character
-                ? "control:"
-                : kind == SimulationProgramRootKind.Timeline
-                    ? "timeline:"
-                    : kind == SimulationProgramRootKind.Ability
-                        ? "ability:"
-                    : string.Empty;
-            return prefix.Length > 0 &&
+            return kind == SimulationProgramRootKind.Ability &&
                    !string.IsNullOrEmpty(value) &&
-                   value.StartsWith(prefix, StringComparison.Ordinal) &&
-                   value.Length > prefix.Length;
+                   value.StartsWith("ability:", StringComparison.Ordinal) &&
+                   value.Length > "ability:".Length;
         }
 
         static bool IsGuid(string value) => IsHex(value, 32);
@@ -107,7 +96,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<SemanticOperation> operations)
         {
             if (!root.IsValid)
-                throw new ArgumentException("Simulation Program root descriptor is invalid.", nameof(root));
+                throw new ArgumentException("Ability root descriptor is invalid.", nameof(root));
             if (references == null)
                 throw new ArgumentNullException(nameof(references));
             if (operations == null)
@@ -119,21 +108,21 @@ namespace ThirdPersonSimulation
                 if (reference != null &&
                     !reference.HasSourceOperation &&
                     reference.Kind == ProgramReferenceKind.Operation &&
-                    string.Equals(reference.Identity, "program:root-operation", StringComparison.Ordinal))
+                    string.Equals(reference.Identity, "ability:root-operation", StringComparison.Ordinal))
                 {
                     if (match != null)
-                        throw new InvalidDataException("Simulation Program root operation reference is duplicated.");
+                        throw new InvalidDataException("Ability root operation reference is duplicated.");
                     match = reference;
                 }
             }
             if (match == null)
-                throw new InvalidDataException("Simulation Program root operation reference is missing.");
+                throw new InvalidDataException("Ability root operation reference is missing.");
             if (match.TargetIndex < 0 || match.TargetIndex >= operations.Count)
-                throw new InvalidDataException("Simulation Program root operation reference targets an invalid operation.");
+                throw new InvalidDataException("Ability root operation reference targets an invalid operation.");
             if (!string.Equals(match.ExternalIdentity, root.EntryIdentity, StringComparison.Ordinal))
-                throw new InvalidDataException("Simulation Program root operation reference does not match the root entry identity.");
+                throw new InvalidDataException("Ability root operation reference does not match the root entry identity.");
             if (operations[match.TargetIndex].Code != SimulationOperationCode.Root)
-                throw new InvalidDataException("Simulation Program root operation reference does not target a Root operation.");
+                throw new InvalidDataException("Ability root operation reference does not target a Root operation.");
             return match;
         }
     }
@@ -145,7 +134,7 @@ namespace ThirdPersonSimulation
             if (writer == null)
                 throw new ArgumentNullException(nameof(writer));
             if (!root.IsValid)
-                throw new ArgumentException("Simulation Program root descriptor is invalid.", nameof(root));
+                throw new ArgumentException("Ability root descriptor is invalid.", nameof(root));
             writer.WriteByte((byte)root.Kind);
             writer.WriteString(root.RootIdentity);
             writer.WriteString(root.EntryIdentity);

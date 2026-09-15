@@ -189,7 +189,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     AssetDatabase.GUIDToAssetPath(guid));
                 if (!definition)
                     continue;
-                foreach (BtsmtlSkillFlowGraph root in definition.SkillGraphs ?? Array.Empty<BtsmtlSkillFlowGraph>())
+                IReadOnlyList<BtsmtlSkillFlowGraph> roots = definition.AbilityGraphs;
+                foreach (BtsmtlSkillFlowGraph root in roots ?? Array.Empty<BtsmtlSkillFlowGraph>())
                 {
                     if (!root)
                         continue;

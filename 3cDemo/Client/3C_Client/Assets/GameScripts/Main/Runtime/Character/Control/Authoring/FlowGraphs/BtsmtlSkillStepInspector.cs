@@ -24,12 +24,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                 if (mode != currentMode)
                     Change(graph, "修改并行完成方式", () => parallel.SetMode(mode));
             }
-            if (node is BtsmtlSkillStateFlowNode state)
-            {
-                var body = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField("状态内容", state.Body, typeof(BtsmtlSkillFlowGraph), false);
-                if (body != state.Body)
-                    Change(graph, "修改状态内容", () => state.SetBody(body));
-            }
             EditorGUILayout.LabelField("执行步骤", EditorStyles.boldLabel);
             IReadOnlyList<BtsmtlSkillStepAuthoringValue> steps =
                 BtsmtlSkillGraphAuthoringMetadata.ReadSteps(node);

@@ -1,13 +1,27 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.EventGraphs;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    public static class CharacterAnimationVariableIds
+    {
+        public const string HorizontalSpeed = "animation.horizontal-speed";
+        public const string VerticalSpeed = "animation.vertical-speed";
+        public const string MovementDirection = "animation.movement-direction";
+        public const string DesiredDirection = "animation.desired-direction";
+        public const string HorizontalAcceleration = "animation.horizontal-acceleration";
+        public const string FacingError = "animation.facing-error";
+        public const string MotionPhase = "animation.motion-phase";
+        public const string PreviousPlanarVelocity = "animation.history.previous-planar-velocity";
+        public const string HasPreviousSample = "animation.history.has-previous-sample";
+    }
+
     public sealed class CharacterAnimationVariableContract
     {
-        public const string Version = "character-animation-variable/v1";
+        public const string Version = "character-animation-variable/v2";
 
         public CharacterAnimationVariableContract(
             EventGraphVariableContract source)
@@ -20,23 +34,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string Revision => Source.Revision;
         public string ContractRevision => Version;
         public string LayoutId => Source.Layout.LayoutId;
-        public IReadOnlyList<EventGraphVariableDescriptor> Variables => Source.Descriptors;
+        public IReadOnlyList<EventGraphVariableDescriptor> Variables => Source.PublishedDescriptors;
 
         public EventGraphVariableDescriptor Require(string variableId) =>
-            Source.Require(variableId);
+            Source.PublishedDescriptors.FirstOrDefault(
+                value => string.Equals(
+                    value.Reference.VariableId,
+                    variableId,
+                    StringComparison.Ordinal)) ??
+            throw new InvalidOperationException(
+                $"Animation variable '{variableId}' is not published by the Character Animation Event Graph.");
 
         public bool TryGet(string variableId, out EventGraphVariableDescriptor descriptor)
         {
-            try
-            {
-                descriptor = Source.Require(variableId);
-                return true;
-            }
-            catch (InvalidOperationException)
-            {
-                descriptor = null;
-                return false;
-            }
+            descriptor = Source.PublishedDescriptors.FirstOrDefault(
+                value => string.Equals(
+                    value.Reference.VariableId,
+                    variableId,
+                    StringComparison.Ordinal));
+            return descriptor != null;
         }
     }
 

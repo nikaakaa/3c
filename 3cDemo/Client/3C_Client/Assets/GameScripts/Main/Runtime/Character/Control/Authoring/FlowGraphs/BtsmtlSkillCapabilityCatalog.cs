@@ -595,7 +595,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 {
                     BtsmtlSkillNodeAuthoringReferenceKind.InputValue => "input-value",
                     BtsmtlSkillNodeAuthoringReferenceKind.ActionRequest => "action-request",
-                    BtsmtlSkillNodeAuthoringReferenceKind.ActionProfile => "action-profile",
+                    BtsmtlSkillNodeAuthoringReferenceKind.AdmissionProfile => "admission-profile",
                     BtsmtlSkillNodeAuthoringReferenceKind.Asset => "asset",
                     _ => string.Empty
                 };
@@ -779,7 +779,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 return snapshot.DeclarationId;
             if (value is BtsmtlSkillBlackboardReference blackboard)
                 return blackboard.DeclarationId;
-            if (value is ActionProfile profile)
+            if (value is GameplayAbilityAdmissionProfile profile)
                 return profile.ActionId ?? string.Empty;
             if (value is GameplayEffectDefinition effect)
                 return effect.EffectId.Value ?? string.Empty;
@@ -850,16 +850,12 @@ namespace ThirdPersonCharacter.Control.Authoring
                     return remove.ProviderOwnerId;
                 case "windowType" when node is IActionWindowAuthoring window:
                     return window.WindowType;
-                case "actionProfile" when node is BtsmtlSkillCanActivateActionFlowNode admission:
-                    return admission.ActionProfile;
+                case "admissionProfile" when node is BtsmtlSkillCanActivateActionFlowNode admission:
+                    return admission.AdmissionProfile;
                 case "targetSnapshot" when node is BtsmtlSkillCanActivateActionFlowNode admission:
                     return new BtsmtlSkillTargetSnapshotReference(
                         admission.TargetSnapshotDeclarationId,
                         admission.TargetSnapshotOwnerId);
-                case "transitionType" when node is BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle:
-                    return lifecycle.TransitionType;
-                case "reason" when node is BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle:
-                    return lifecycle.Reason;
                 case "declarationId" when node is IBtsmtlSkillBlackboardAccessNode blackboard:
                     return blackboard.Variable.DeclarationId;
                 case "ownerId" when node is IBtsmtlSkillBlackboardAccessNode blackboard:

@@ -46,31 +46,32 @@ namespace ThirdPersonCharacter.Control.Authoring
     [BtsmtlSkillNodeKind("can-activate-action")]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.TargetSnapshotObject, "targetSnapshot")]
     [BtsmtlSkillNodeAuthoringReference(
-        "actionProfile",
-        BtsmtlSkillNodeAuthoringReferenceKind.ActionProfile,
-        "skill_action_profile_unresolved",
-        "Skill CanActivate节点的ActionProfile引用无法解析。",
-        typeof(ActionProfile))]
+        "admissionProfile",
+        BtsmtlSkillNodeAuthoringReferenceKind.AdmissionProfile,
+        "skill_admission_profile_unresolved",
+        "Skill CanActivate节点的GameplayAbilityAdmissionProfile引用无法解析。",
+        typeof(GameplayAbilityAdmissionProfile))]
     [BtsmtlSkillAuthoringField(
-        "actionProfile",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
+        "admissionProfile",
+        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
+        Optional = true)]
     [BtsmtlSkillAuthoringField(
         "targetSnapshot",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object,
         Optional = true)]
     public sealed class BtsmtlSkillCanActivateActionFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, ICanActivateActionAuthoring
     {
-        [SerializeField] ActionProfile m_ActionProfile;
+        [SerializeField] GameplayAbilityAdmissionProfile m_AdmissionProfile;
         [SerializeField] string m_TargetSnapshotDeclarationId;
         [SerializeField] string m_TargetSnapshotOwnerId;
-        public ActionProfile ActionProfile => m_ActionProfile;
+        public GameplayAbilityAdmissionProfile AdmissionProfile => m_AdmissionProfile;
         public string TargetSnapshotDeclarationId => m_TargetSnapshotDeclarationId ?? string.Empty;
         public string TargetSnapshotOwnerId => m_TargetSnapshotOwnerId ?? string.Empty;
 
-        public void Configure(ActionProfile profile, string snapshotDeclarationId, string snapshotOwnerId)
+        public void Configure(GameplayAbilityAdmissionProfile profile, string snapshotDeclarationId, string snapshotOwnerId)
         {
             CharacterActionAuthoringRules.ValidateTargetSnapshot(snapshotDeclarationId, snapshotOwnerId);
-            m_ActionProfile = profile;
+            m_AdmissionProfile = profile;
             m_TargetSnapshotDeclarationId = snapshotDeclarationId ?? string.Empty;
             m_TargetSnapshotOwnerId = snapshotOwnerId ?? string.Empty;
         }
@@ -78,57 +79,11 @@ namespace ThirdPersonCharacter.Control.Authoring
         protected override void RegisterPorts() => AddValueOutput<bool>("允许", RejectAuthoringValue<bool>, "m_Output");
     }
 
-    [Name("提交动作生命周期"), Category("BTSMTL/动作流程")]
-    [BtsmtlSkillNodeKind("submit-action-lifecycle")]
-    [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.ActionLifecycleTransition, "transitionType")]
-    [BtsmtlSkillNodeAuthoringReference(
-        "actionContext",
-        BtsmtlSkillNodeAuthoringReferenceKind.Asset,
-        "skill_action_context_unresolved",
-        "Skill Action Context引用无法解析。",
-        typeof(ActionContextSlot),
-        Optional = true)]
-    [BtsmtlSkillAuthoringField(
-        "actionContext",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
-        Optional = true)]
-    [BtsmtlSkillAuthoringField(
-        "transitionType",
-        typeof(ActionLifecycleTransitionType),
-        HasDefaultValue = true,
-        DefaultValue = CharacterActionAuthoringRules.DefaultLifecycleTransitionText)]
-    [BtsmtlSkillAuthoringField(
-        "reason",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.String,
-        Optional = true)]
-    public sealed class BtsmtlSkillSubmitActionLifecycleFlowNode : BtsmtlSkillFlowNode, ISubmitActionLifecycleAuthoring
-    {
-        [SerializeField] ActionContextSlot m_ActionContext;
-        [SerializeField] ActionLifecycleTransitionType m_TransitionType = CharacterActionAuthoringRules.DefaultLifecycleTransition;
-        [SerializeField] string m_Reason;
-        public ActionContextSlot ActionContext => m_ActionContext;
-        public ActionLifecycleTransitionType TransitionType => m_TransitionType;
-        public string Reason => m_Reason ?? string.Empty;
-
-        public void Configure(ActionContextSlot context, ActionLifecycleTransitionType transitionType, string reason)
-        {
-            CharacterActionAuthoringRules.ValidateLifecycle(transitionType);
-            m_ActionContext = context;
-            m_TransitionType = transitionType;
-            m_Reason = reason ?? string.Empty;
-        }
-
-        protected override void RegisterPorts()
-        {
-            AddFlowInput("执行", RejectAuthoringExecution, "Input");
-            AddValueOutput<bool>("已提交", RejectAuthoringValue<bool>, "m_Submitted");
-        }
-    }
-
     public interface IBtsmtlSkillCharacterStateNode
     {
         string FieldId { get; }
         string ProviderOwnerId { get; }
+        void Configure(string fieldId, string providerOwnerId);
     }
 
     [Name("移动与朝向夹角"), Category("BTSMTL/技能输入")]

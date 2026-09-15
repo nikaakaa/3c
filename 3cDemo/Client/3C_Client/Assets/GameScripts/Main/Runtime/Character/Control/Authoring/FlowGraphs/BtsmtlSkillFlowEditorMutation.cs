@@ -8,6 +8,7 @@ using FlowCanvas.Macros;
 using NodeCanvas.Editor;
 using NodeCanvas.Framework;
 using ParadoxNotion.Design;
+using ThirdPersonCharacter.ActionSystem;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,6 +18,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         sealed class Depth { internal int Value; }
         static readonly ConditionalWeakTable<FlowGraph, Depth> s_Depth = new();
+        static readonly ConditionalWeakTable<BtsmtlSkillNativeStateMachine, Depth> s_NativeDepth = new();
         static int s_BinderValidationDepth;
 
         public static void RequireActive(FlowGraph graph)
@@ -27,6 +29,9 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public static UnityEngine.Object UndoTarget(FlowGraph graph) =>
             s_Depth.TryGetValue(graph, out Depth depth) && depth.Value != 0 ? null : graph;
+
+        public static UnityEngine.Object UndoTarget(BtsmtlSkillNativeStateMachine machine) =>
+            s_NativeDepth.TryGetValue(machine, out Depth depth) && depth.Value != 0 ? null : machine;
 
         public static T Execute<T>(FlowGraph graph, string title, Func<T> mutation)
         {
@@ -39,6 +44,18 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         public static void Execute(FlowGraph graph, string title, Action mutation) =>
             Execute(graph, title, () => { mutation(); return true; });
+
+        public static T Execute<T>(BtsmtlSkillNativeStateMachine machine, string title, Func<T> mutation)
+        {
+            if (s_NativeDepth.TryGetValue(machine, out Depth depth) && depth.Value != 0)
+                return mutation();
+            T result = default;
+            Apply(machine, title, () => result = mutation());
+            return result;
+        }
+
+        public static void Execute(BtsmtlSkillNativeStateMachine machine, string title, Action mutation) =>
+            Execute(machine, title, () => { mutation(); return true; });
 
         public static void RequireRemovable(FlowGraph graph, Node node)
         {
@@ -257,6 +274,80 @@ namespace ThirdPersonCharacter.Control.Authoring
                     Undo.RevertAllDownToGroup(group);
                     foreach (UnityEngine.Object owner in undoOwners)
                         if (owner is FlowGraph ownerGraph)
+                            ownerGraph.SelfDeserialize();
+                    GraphEditorUtility.activeElement = null;
+                }
+                throw;
+            }
+            finally
+            {
+                depth.Value--;
+            }
+        }
+
+        public static void Apply(
+            BtsmtlSkillNativeStateMachine machine,
+            string title,
+            Action mutation,
+            bool recordUndo = true,
+            IEnumerable<UnityEngine.Object> additionalOwners = null)
+        {
+            if (machine == null || machine.isEditorReadOnly)
+                throw new InvalidOperationException("The native skill FSM is not writable.");
+            if (s_NativeDepth.TryGetValue(machine, out Depth existing) && existing.Value != 0)
+                throw new InvalidOperationException("A native Skill FSM mutation must join its existing transaction.");
+            Depth depth = s_NativeDepth.GetValue(machine, _ => new Depth());
+            FlowGraph root = null;
+            string path = AssetDatabase.GetAssetPath(machine);
+            if (!string.IsNullOrEmpty(path))
+            {
+                UnityEngine.Object main = AssetDatabase.LoadMainAssetAtPath(path);
+                root = main as FlowGraph;
+                if (root == null && main is GameplayAbilityDefinition ability)
+                    root = ability.AbilityGraph;
+            }
+            var undoOwners = new List<UnityEngine.Object> { machine };
+            if (root && !undoOwners.Contains(root))
+                undoOwners.Add(root);
+            foreach (UnityEngine.Object owner in additionalOwners ?? Array.Empty<UnityEngine.Object>())
+                if (owner && !undoOwners.Contains(owner))
+                    undoOwners.Add(owner);
+            foreach (UnityEngine.Object owner in undoOwners)
+                if (owner is Graph ownerGraph)
+                    ownerGraph.SelfSerialize();
+            HashSet<UnityEngine.Object> previousOwnedAssets = root ? BtsmtlSkillOwnedAssets.Collect(root) : null;
+            int group = -1;
+            if (recordUndo)
+            {
+                Undo.IncrementCurrentGroup();
+                group = Undo.GetCurrentGroup();
+                Undo.SetCurrentGroupName(title);
+                Undo.RegisterCompleteObjectUndo(undoOwners.ToArray(), title);
+            }
+            depth.Value++;
+            try
+            {
+                mutation();
+                BtsmtlSkillNativeStateMachineContract.Validate(machine, false);
+                if (root)
+                {
+                    BtsmtlSkillGraphClosure.Validate(root, false);
+                    BtsmtlSkillOwnedAssets.ReleaseUnreferenced(root, previousOwnedAssets);
+                }
+                machine.SelfSerialize();
+                foreach (UnityEngine.Object owner in undoOwners)
+                    EditorUtility.SetDirty(owner);
+                if (recordUndo)
+                    Undo.CollapseUndoOperations(group);
+            }
+            catch
+            {
+                if (recordUndo)
+                {
+                    Undo.FlushUndoRecordObjects();
+                    Undo.RevertAllDownToGroup(group);
+                    foreach (UnityEngine.Object owner in undoOwners)
+                        if (owner is Graph ownerGraph)
                             ownerGraph.SelfDeserialize();
                     GraphEditorUtility.activeElement = null;
                 }

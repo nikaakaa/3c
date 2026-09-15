@@ -102,12 +102,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                         return Command(operations.Reset());
                     case "stop":
                         return Command(operations.Stop());
-                    case "build":
-                    {
-                        BtsmtlScenePlayCommandResult buildResult =
-                            operations.Build(RequiredString(@params, "actor_id"));
-                        return Command(buildResult, operations.BuildStatus);
-                    }
                     case "record_start":
                         return Command(operations.StartInputRecording());
                     case "record_stop":
@@ -139,7 +133,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
         static object Describe(IBtsmtlScenePlayPreviewOperations operations)
         {
             BtsmtlScenePlayStatus status = operations.Status;
-            BtsmtlScenePlayBuildStatus build = operations.BuildStatus;
             return new
             {
                 state = status.State.ToString(),
@@ -159,18 +152,16 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
                     actor_id = option.ActorId,
                     skill_id = option.SkillId,
                     entry_graph_authoring_id = option.EntryGraphAuthoringId,
-                    action_profile_id = option.ActionProfileId,
+                    admission_profile_id = option.AdmissionProfileId,
                     source_input_request_id = option.SourceInputRequestId
                 }).ToArray(),
-                actor_ids = operations.ActorIds.ToArray(),
                 input_replay = new
                 {
                     supported = operations.SupportsInputReplay,
                     recording = operations.IsInputRecording
                 },
                 presentation_restore = operations.SupportsPresentationCheckpointRestore,
-                session_history = DescribeSessionHistory(status),
-                build = DescribeBuild(build)
+                session_history = DescribeSessionHistory(status)
             };
         }
 
@@ -223,61 +214,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
             status = DescribeStatus(result.Status)
         };
 
-        static object Command(
-            BtsmtlScenePlayCommandResult result,
-            BtsmtlScenePlayBuildStatus build) => new
-            {
-                success = result.Accepted,
-                code = result.Code.ToString(),
-                operation = result.Operation.ToString(),
-                message = result.Message,
-                status = DescribeStatus(result.Status),
-                build = DescribeBuild(build)
-            };
-
-        static object DescribeBuild(BtsmtlScenePlayBuildStatus build) => new
-        {
-            state = build.State.ToString(),
-            actor_id = build.ActorId,
-            message = build.Message,
-            requested_program_epoch = build.RequestedProgramEpoch,
-            adopted_program_epoch = build.AdoptedProgramEpoch,
-            build_elapsed_seconds = build.BuildElapsedSeconds,
-            adoption_wait_seconds = build.AdoptionWaitSeconds,
-            total_elapsed_seconds = build.TotalElapsedSeconds,
-            adoption = build.Adoption == null
-                ? null
-                : new
-                {
-                    status = build.Adoption.Status.ToString(),
-                    code = build.Adoption.Code,
-                    message = build.Adoption.Message,
-                    current = new
-                    {
-                        value = build.Adoption.CurrentProgramEpoch,
-                        source_revision = build.Adoption.CurrentSourceRevision,
-                        program_catalog_hash = build.Adoption.CurrentProgramCatalogHash
-                    },
-                    requested = new
-                    {
-                        value = build.Adoption.RequestedProgramEpoch,
-                        source_revision = build.Adoption.RequestedSourceRevision,
-                        program_catalog_hash = build.Adoption.RequestedProgramCatalogHash
-                    }
-                },
-            targets = build.Targets.Select(target => new
-            {
-                numeric_target_id = target.NumericTargetId,
-                program_id = target.ProgramId,
-                source_revision = target.SourceRevision,
-                semantic_hash = target.SemanticHash,
-                program_hash = target.ProgramHash,
-                layout_hash = target.LayoutHash,
-                source_map_entry_count = target.SourceMapEntryCount,
-                presentation_contract_hash = target.PresentationContractHash,
-                presentation_projection_revision = target.PresentationProjectionRevision
-            }).ToArray()
-        };
 
         static object Attach(
             IBtsmtlScenePlayPreviewOperations operations,
@@ -572,8 +508,6 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
             input_request_id = result.InputRequestId,
             input_sequence = result.InputSequence,
             scene_generation = result.SceneGeneration,
-            program_epoch = result.ProgramEpoch,
-            program_revision = result.ProgramRevision,
             execution_branch_id = result.ExecutionBranchId.ToString("N"),
             checkpoint_tick = result.CheckpointTick,
             message = result.Message

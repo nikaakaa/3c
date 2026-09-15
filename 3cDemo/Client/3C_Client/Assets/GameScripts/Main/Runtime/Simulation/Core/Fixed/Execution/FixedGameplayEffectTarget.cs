@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation.Fixed
             PortableEffectSpecState,
             FixedScalar>
     {
-        readonly IFixedAbilityExecutionStateTransaction m_Transaction;
+        readonly IFixedAbilityDomainStatePort m_Transaction;
         readonly FixedGameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
         readonly ActorId m_ActorId;
@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation.Fixed
         PortablePredictionRecord m_CurrentPrediction;
 
         public FixedGameplayEffectTarget(
-            IFixedAbilityExecutionStateTransaction transaction,
+            IFixedAbilityDomainStatePort transaction,
             FixedGameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
             SimulationTick tick,
@@ -58,7 +58,7 @@ namespace ThirdPersonSimulation.Fixed
             m_CommittedState = transaction.GetGameplayEffectAggregate();
             m_ActorId = actorId;
             m_Tick = tick;
-            m_TickRate = transaction.Installation.Data.TickRate;
+            m_TickRate = transaction.TickRate;
             m_AllocateHandle = allocateHandle ?? throw new ArgumentNullException(nameof(allocateHandle));
             m_CaptureAllocator = captureAllocator ?? throw new ArgumentNullException(nameof(captureAllocator));
             m_RestoreAllocator = restoreAllocator ?? throw new ArgumentNullException(nameof(restoreAllocator));

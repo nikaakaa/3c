@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
@@ -206,14 +207,15 @@ namespace ThirdPersonCharacter.Equipment
     public sealed class EquipmentFeatureRouteImplementation
     {
         [SerializeField] string m_RouteId;
-        [SerializeField] string m_SkillId;
+        [SerializeField] AbilityGrant m_AbilityGrant = new AbilityGrant();
         [SerializeField] string[] m_RequiredParameterIds = Array.Empty<string>();
         [SerializeField] string[] m_RequiredProducerIds = Array.Empty<string>();
 
         public string RouteIdValue => EquipmentSlotDefinition.Normalize(m_RouteId);
         public EquipmentActionRouteId RouteId => new EquipmentActionRouteId(RouteIdValue);
-        public string SkillIdValue => EquipmentSlotDefinition.Normalize(m_SkillId);
-        public CharacterSkillId SkillId => new CharacterSkillId(SkillIdValue);
+        public AbilityGrant AbilityGrant => m_AbilityGrant;
+        public string AbilityIdValue => m_AbilityGrant?.AbilityId ?? string.Empty;
+        public CharacterSkillId AbilityId => new CharacterSkillId(AbilityIdValue);
         public IReadOnlyList<string> RequiredParameterIds => m_RequiredParameterIds ?? Array.Empty<string>();
         public IReadOnlyList<string> RequiredProducerIds => m_RequiredProducerIds ?? Array.Empty<string>();
     }
@@ -360,15 +362,16 @@ namespace ThirdPersonCharacter.Equipment
                     errors?.Add($"{owner}: Route implementation '{routeId}' is absent from the Character Equipment Profile.");
                     valid = false;
                 }
-                if (string.IsNullOrEmpty(route.SkillIdValue))
+                if (string.IsNullOrEmpty(route.AbilityIdValue))
                 {
-                    errors?.Add($"{owner}: Route implementation '{routeId}' has no SkillId.");
+                    errors?.Add($"{owner}: Route implementation '{routeId}' has no AbilityId.");
                     valid = false;
                 }
-                else if (definition == null || !definition.SkillDefinitions.Any(value =>
-                             value != null && string.Equals(value.SkillId, route.SkillIdValue, StringComparison.Ordinal)))
+                else if (definition == null ||
+                         !definition.AbilityGrants.Any(value => value != null &&
+                             string.Equals(value.AbilityId, route.AbilityIdValue, StringComparison.Ordinal)))
                 {
-                    errors?.Add($"{owner}: Route implementation '{routeId}' references unknown Skill '{route.SkillIdValue}'.");
+                    errors?.Add($"{owner}: Route implementation '{routeId}' references unknown Ability '{route.AbilityIdValue}'.");
                     valid = false;
                 }
                 for (int parameterIndex = 0; parameterIndex < route.RequiredParameterIds.Count; parameterIndex++)

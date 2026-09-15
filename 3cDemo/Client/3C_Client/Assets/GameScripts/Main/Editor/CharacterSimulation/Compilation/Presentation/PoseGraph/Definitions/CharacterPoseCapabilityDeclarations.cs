@@ -114,7 +114,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         mutationBindingId: "presentation.pose-node",
                         validationBindingId: "presentation.pose-node",
                         compilerBindingId: string.Empty,
-                        documentCodecId: "presentation.pose-node",
                         authoringType: typeof(TPayload),
                         externalKind: CharacterPoseGraphAuthoringCapabilities.Get(kind).Value,
                         systemOwned: systemOwned,
@@ -140,8 +139,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 presentationKind: presentationKind,
                 mutationBindingId: "presentation.pose-state-machine",
                 validationBindingId: "presentation.pose-state-machine",
-                compilerBindingId: "presentation.pose-state-machine",
-                documentCodecId: "presentation.pose-state-machine");
+                compilerBindingId: "presentation.pose-state-machine");
         }
 
         internal static GraphAuthoringCapabilityDescriptor RuleOperation(
@@ -156,6 +154,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             "Presentation Fact",
                             GraphAuthoringFieldValueKind.IdentityReference,
                             "presentation-fact")),
+                    PoseTransitionRuleOperationKind.AnimationVariableInput =>
+                        Fields(Field(
+                            "parameter-id",
+                            "Animation Variable",
+                            GraphAuthoringFieldValueKind.IdentityReference,
+                            "animation-variable")),
                     PoseTransitionRuleOperationKind.BoolLiteral =>
                         Fields(BoolField(
                             "bool-literal",
@@ -229,6 +233,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 };
             bool canBeOutput =
                 kind == PoseTransitionRuleOperationKind.FactInput ||
+                kind == PoseTransitionRuleOperationKind.AnimationVariableInput ||
                 kind == PoseTransitionRuleOperationKind.BoolLiteral ||
                 kind == PoseTransitionRuleOperationKind.Not ||
                 kind == PoseTransitionRuleOperationKind.And ||
@@ -268,9 +273,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     "presentation.pose-transition-rule",
                 compilerBindingId:
                     "presentation.pose-transition-rule." +
-                    CharacterPoseGraphAuthoringCapabilities.ToKebabCase(kind.ToString()),
-                documentCodecId:
-                    "presentation.pose-transition-rule");
+                    CharacterPoseGraphAuthoringCapabilities.ToKebabCase(kind.ToString()));
         }
 
         static string RuleOperationDisplayName(
@@ -279,6 +282,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 PoseTransitionRuleOperationKind.FactInput =>
                     "Presentation Fact",
+                PoseTransitionRuleOperationKind.AnimationVariableInput =>
+                    "Animation Variable",
                 PoseTransitionRuleOperationKind.BoolLiteral =>
                     "Bool Literal",
                 PoseTransitionRuleOperationKind.FloatLiteral =>

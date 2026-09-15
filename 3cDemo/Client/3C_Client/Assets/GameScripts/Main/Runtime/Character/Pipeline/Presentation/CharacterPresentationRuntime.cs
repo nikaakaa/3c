@@ -54,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterPoseTuningTargetIdentity m_TuningTarget;
         CharacterPoseFrameTransaction m_PendingTransaction;
         CharacterPoseProgramPrepared m_PendingPreparedPose;
+        CharacterAnimationPoseInputFrame m_PendingParameterFrame;
         MotionMatchingFrameResolution m_PendingMotionMatchingResolution;
         AnimationPresentationDiagnosticsInterest m_PendingDiagnosticsInterest;
         AnimationPresentationDiagnosticsInterest m_PendingTraceInterest;
@@ -437,6 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in factFrame,
                 in parameterFrame,
                 m_ActorId);
+            m_PendingParameterFrame = parameterFrame;
             AnimationPresentationDiagnosticsInterest traceInterest =
                 AnimationPresentationTracePublisher.ResolveInterest(
                     diagnostics);
@@ -585,6 +587,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_PoseFrame.BeginEvaluateBarrier(
                     in bodyFrame,
                     in factFrame,
+                    in m_PendingParameterFrame,
                     m_PendingTransaction.SourceLease,
                     in m_PendingPreparedPose,
                     m_EnterEvaluateBarrier);
@@ -772,6 +775,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             m_PendingTransaction = null;
             m_PendingPreparedPose = default;
+            m_PendingParameterFrame = default;
             m_PendingMotionMatchingResolution = default;
             m_PendingDiagnosticsInterest = default;
             m_PendingTraceInterest = default;

@@ -21,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame,
             ulong completionIdentity)
         {
             m_Adapter = adapter ??
@@ -30,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationDeltaSeconds = presentationDeltaSeconds;
             BodyFrame = bodyFrame;
             FactFrame = factFrame;
+            ParameterFrame = parameterFrame;
             CompletionIdentity = completionIdentity;
             if (!IsValid)
             {
@@ -43,6 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal float PresentationDeltaSeconds { get; }
         internal CharacterBodyPresentationFrame BodyFrame { get; }
         internal CharacterPresentationFactFrame FactFrame { get; }
+        internal CharacterAnimationPoseInputFrame ParameterFrame { get; }
         internal ulong CompletionIdentity { get; }
         internal bool IsValid =>
             m_Adapter != null &&
@@ -52,6 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationDeltaSeconds >= 0f &&
             BodyFrame.IsValid &&
             FactFrame.IsValid &&
+            ParameterFrame.IsValid &&
             CompletionIdentity != 0;
 
         internal CharacterFootPlacementFrameInput BuildFootPlacement(
@@ -60,12 +64,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             CharacterBodyPresentationFrame bodyFrame = BodyFrame;
             CharacterPresentationFactFrame factFrame = FactFrame;
+            CharacterAnimationPoseInputFrame parameterFrame = ParameterFrame;
             return m_Adapter.BuildFootPlacement(
                 ActorId,
                 PresentationFrame,
                 PresentationDeltaSeconds,
                 in bodyFrame,
                 in factFrame,
+                in parameterFrame,
                 CompletionIdentity,
                 in inputBinding,
                 parameterIndex);

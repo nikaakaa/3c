@@ -82,6 +82,7 @@ namespace ThirdPersonSimulation.Fixed
             IReadOnlyList<SimulationIngress> ingress,
             FixedAbilityBodyFacts bodyFacts,
             IFixedAbilityExecutionStateTransaction transaction,
+            IFixedAbilityDomainStatePort domainState,
             FixedAbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -94,6 +95,7 @@ namespace ThirdPersonSimulation.Fixed
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
             BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -116,6 +118,7 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<SimulationIngress> Ingress { get; }
         public FixedAbilityBodyFacts BodyFacts { get; }
         internal IFixedAbilityExecutionStateTransaction Transaction { get; }
+        internal IFixedAbilityDomainStatePort DomainState { get; }
         internal FixedEventSequence EventSequence { get; }
         internal FixedFactSink Facts { get; }
         internal FixedPresentationSink Presentation { get; }
@@ -371,7 +374,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation, string channel)
         {
-            ulong sequence = m_Frame.Transaction.NextEventSequence();
+            ulong sequence = m_Frame.DomainState.NextEventSequence();
             if (generation == 0)
                 throw new ArgumentOutOfRangeException(nameof(generation));
             var activation = new ActivationId(source, generation);

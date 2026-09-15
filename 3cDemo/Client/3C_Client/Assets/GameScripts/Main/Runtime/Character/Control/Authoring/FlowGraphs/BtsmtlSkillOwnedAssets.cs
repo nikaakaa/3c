@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using FlowCanvas;
+using ThirdPersonCharacter.ActionSystem;
 using UnityEditor;
 using UnityEngine;
 
@@ -30,7 +31,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                     return;
                 if (asset != root)
                     result.Add(asset);
-                if (asset is FlowGraph graph && graph is IBtsmtlSkillFlowGraph)
+                if (asset is GameplayAbilityDefinition ability)
+                {
+                    Visit(ability.AbilityGraph);
+                }
+                else if (asset is FlowGraph graph && graph is IBtsmtlSkillFlowGraph)
                 {
                     foreach (FlowGraph child in BtsmtlSkillGraphClosure.Validate(graph, false))
                     {
@@ -40,6 +45,12 @@ namespace ThirdPersonCharacter.Control.Authoring
                             if (AssetDatabase.GetAssetPath(child) == path)
                                 Visit(timeline.TimelineAsset);
                     }
+                }
+                else if (asset is BtsmtlSkillNativeStateMachine machine)
+                {
+                    BtsmtlSkillNativeStateMachineContract.Validate(machine, false);
+                    foreach (BtsmtlSkillFlowGraph child in BtsmtlSkillNativeStateMachineContract.References(machine))
+                        Visit(child);
                 }
                 else if (asset is TimelineAsset timeline)
                 {

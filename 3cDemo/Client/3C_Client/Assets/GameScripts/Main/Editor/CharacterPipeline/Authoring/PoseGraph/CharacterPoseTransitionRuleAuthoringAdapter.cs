@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly CharacterPresentationPoseGraphAsset m_Asset;
         readonly PoseGraphId m_OwnerGraphId;
         readonly PoseNodeId m_OwnerNodeId;
+        readonly CharacterAnimationVariableContract m_AnimationVariables;
         CharacterPoseStateMachineDefinition m_Machine => m_Asset.RequireGraph(m_OwnerGraphId)
             .RequireNode(m_OwnerNodeId).RequirePayload<CharacterPoseStateMachineNodePayload>().StateMachine;
         readonly PoseStateTransitionId m_TransitionId;
@@ -23,7 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterPoseTransitionRuleDocument(
             CharacterPresentationPoseGraphAsset asset,
             CharacterPoseStateMachineDefinition machine,
-            PoseStateTransitionId transitionId)
+            PoseStateTransitionId transitionId,
+            CharacterAnimationVariableContract animationVariables = null)
         {
             m_Asset = asset
                 ? asset
@@ -36,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : throw new ArgumentException(
                     "Pose Transition identity is invalid.",
                     nameof(transitionId));
+            m_AnimationVariables = animationVariables;
             _ = Transition;
         }
 
@@ -68,6 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Machine;
         internal PoseStateTransitionId TransitionId =>
             m_TransitionId;
+        internal CharacterAnimationVariableContract AnimationVariables =>
+            m_AnimationVariables;
         internal CharacterPoseStateTransition Transition =>
             m_Machine.Transitions.Single(value =>
                 value.TransitionId.Equals(m_TransitionId));
@@ -281,6 +286,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     request,
                     operations,
                     order,
+                    ruleDocument.AnimationVariables,
                     ref outputId);
             }
             CharacterPoseTransitionRuleOperation[] nextOperations =
@@ -313,6 +319,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PoseTransitionRuleOperationId,
                 CharacterPoseTransitionRuleOperation> operations,
             IList<PoseTransitionRuleOperationId> order,
+            CharacterAnimationVariableContract animationVariables,
             ref PoseTransitionRuleOperationId outputId)
         {
             switch (request.Kind)
@@ -448,7 +455,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     operations[operationId] = SetField(
                         Require(operations, operationId),
                         request.FieldId.Value,
-                        request.Value);
+                        request.Value,
+                        animationVariables);
                     return;
                 }
                 case GraphAuthoringMutationKind.ExecuteCommand:
@@ -469,7 +477,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             .RequireSignature(
                                 Require(
                                     operations,
-                                    operationId));
+                                    operationId),
+                                animationVariables);
                     if (signature.Kind !=
                         PoseTransitionRuleValueKind.Bool)
                     {
@@ -488,7 +497,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterPoseTransitionRuleOperation SetField(
             CharacterPoseTransitionRuleOperation operation,
             string fieldId,
-            object value)
+            object value,
+            CharacterAnimationVariableContract animationVariables)
         {
             PresentationFactId factId = operation.FactId;
             bool boolLiteral = operation.BoolLiteral;
@@ -496,6 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string enumTypeId = operation.EnumTypeId;
             int enumLiteral = operation.EnumLiteral;
             string identityLiteral = operation.IdentityLiteral;
+            PoseParameterId parameterId = operation.ParameterId;
             switch (fieldId)
             {
                 case "fact-id":
@@ -504,6 +515,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         string.Empty);
                     _ = CharacterPoseTransitionRuleAuthoringSchema
                         .RequireFactSignature(factId);
+                    break;
+                case "parameter-id":
+                    parameterId = new PoseParameterId(
+                        value?.ToString() ??
+                        string.Empty);
+                    _ = CharacterPoseTransitionRuleAuthoringSchema
+                        .RequireAnimationVariableSignature(
+                            parameterId,
+                            animationVariables);
                     break;
                 case "bool-literal":
                     boolLiteral = Convert.ToBoolean(value);
@@ -551,7 +571,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 floatLiteral,
                 enumTypeId,
                 enumLiteral,
-                identityLiteral);
+                identityLiteral,
+                parameterId);
         }
 
         static CharacterPoseTransitionRuleOperation WithInputs(
@@ -568,7 +589,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 operation.FloatLiteral,
                 operation.EnumTypeId,
                 operation.EnumLiteral,
-                operation.IdentityLiteral);
+                operation.IdentityLiteral,
+                operation.ParameterId);
 
         static CharacterPoseTransitionRuleOperation Require(
             IDictionary<
@@ -657,7 +679,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 sourceSignature =
                     CharacterPoseTransitionRuleAuthoringSchema
-                        .RequireSignature(source);
+                        .RequireSignature(source, ruleDocument.AnimationVariables);
             }
             catch
             {
@@ -667,7 +689,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 target,
                 targetPortId.Value,
                 sourceSignature,
-                byId);
+                byId,
+                ruleDocument.AnimationVariables);
         }
 
         static bool Accepts(
@@ -676,7 +699,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RuleValueSignature source,
             IReadOnlyDictionary<
                 PoseTransitionRuleOperationId,
-                CharacterPoseTransitionRuleOperation> byId)
+                CharacterPoseTransitionRuleOperation> byId,
+            CharacterAnimationVariableContract animationVariables)
         {
             switch (target.Kind)
             {
@@ -710,7 +734,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     {
                         return source.Equals(
                             CharacterPoseTransitionRuleAuthoringSchema
-                                .RequireSignature(other));
+                                .RequireSignature(other, animationVariables));
                     }
                     catch
                     {
@@ -768,7 +792,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     }
 
     public sealed class CharacterPoseTransitionRuleDetailsDataSource :
-        IGraphAuthoringDetailsDataSource
+        IGraphAuthoringDetailsDataSource,
+        IGraphAuthoringFieldOptionSource
     {
         public object ReadField(
             IGraphAuthoringDocumentProjection document,
@@ -782,6 +807,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return field.FieldId.Value switch
             {
                 "fact-id" => operation.FactId.Value,
+                "parameter-id" => operation.ParameterId.Value,
                 "bool-literal" => operation.BoolLiteral,
                 "float-literal" => operation.FloatLiteral,
                 "enum-type-id" => operation.EnumTypeId,
@@ -798,6 +824,36 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IGraphAuthoringDocumentProjection document,
             GraphAuthoringSelection selection) =>
             Array.Empty<GraphAuthoringReadOnlyDetail>();
+
+        public bool TryGetFieldOptions(
+            IGraphAuthoringDocumentProjection document,
+            GraphAuthoringElementId elementId,
+            GraphAuthoringFieldDescriptor field,
+            out IReadOnlyList<GraphAuthoringFieldOption> options)
+        {
+            options = Array.Empty<GraphAuthoringFieldOption>();
+            if (!string.Equals(field?.PickerKind, "animation-variable", StringComparison.Ordinal))
+                return false;
+            CharacterPoseTransitionRuleDocument rule =
+                document as CharacterPoseTransitionRuleDocument ??
+                throw new ArgumentException(
+                    "Animation Variable options require a Pose Transition Rule document.",
+                    nameof(document));
+            options = rule.AnimationVariables?.Variables
+                .Where(value =>
+                    value != null &&
+                    (value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Bool ||
+                      value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Int32 ||
+                      value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Float32 ||
+                      value.ValueKind == BTSMTL.EventGraphs.EventGraphValueKind.Enum &&
+                      value.ValueType == typeof(CharacterPresentationMotionPhase)))
+                .OrderBy(value => value.Reference.VariableId, StringComparer.Ordinal)
+                .Select(value => new GraphAuthoringFieldOption(
+                    value.Reference.VariableId,
+                    value.Name))
+                .ToArray() ?? Array.Empty<GraphAuthoringFieldOption>();
+            return true;
+        }
 
         public IReadOnlyList<GraphAuthoringReadOnlyDetail>
             GetReferences(
@@ -824,7 +880,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 new GraphAuthoringReadOnlyDetail(
                     "Value Kind",
                     CharacterPoseTransitionRuleAuthoringSchema
-                        .RequireSignature(operation)
+                        .RequireSignature(operation, rule.AnimationVariables)
                         .ToString()),
                 new GraphAuthoringReadOnlyDetail(
                     "Rule Output",
@@ -885,6 +941,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         identityLiteral:
                         CharacterPresentationTrajectoryIntent
                             .StationaryMovementModeId),
+                PoseTransitionRuleOperationKind.AnimationVariableInput =>
+                    new CharacterPoseTransitionRuleOperation(
+                        operationId,
+                        kind,
+                        parameterId:
+                        AnimationPoseParameterIds.ActionWeight),
                 _ => new CharacterPoseTransitionRuleOperation(
                     operationId,
                     kind)
@@ -933,12 +995,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     static class CharacterPoseTransitionRuleAuthoringSchema
     {
         public static RuleValueSignature RequireSignature(
-            CharacterPoseTransitionRuleOperation operation)
+            CharacterPoseTransitionRuleOperation operation,
+            CharacterAnimationVariableContract animationVariables = null)
         {
             switch (operation.Kind)
             {
                 case PoseTransitionRuleOperationKind.FactInput:
                     return RequireFactSignature(operation.FactId);
+                case PoseTransitionRuleOperationKind.AnimationVariableInput:
+                    return RequireAnimationVariableSignature(
+                        operation.ParameterId,
+                        animationVariables);
                 case PoseTransitionRuleOperationKind.BoolLiteral:
                 case PoseTransitionRuleOperationKind.Not:
                 case PoseTransitionRuleOperationKind.And:
@@ -997,19 +1064,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PresentationFactValueKind.Float =>
                     new RuleValueSignature(
                         PoseTransitionRuleValueKind.Float),
-                PresentationFactValueKind.Enum
-                    when factId ==
-                         CharacterPresentationFactSchema
-                             .MotionPhase =>
-                    new RuleValueSignature(
-                        PoseTransitionRuleValueKind.Enum,
-                        PoseTransitionRuleEnumTypes
-                            .CharacterPresentationMotionPhase),
                 PresentationFactValueKind.Identity =>
                     new RuleValueSignature(
                         PoseTransitionRuleValueKind.Identity),
                 _ => throw new InvalidOperationException(
                     $"Presentation Fact '{factId}' is not a Bool, Float, Enum, or Identity Transition Rule input.")
+            };
+        }
+
+        public static RuleValueSignature RequireAnimationVariableSignature(
+            PoseParameterId parameterId,
+            CharacterAnimationVariableContract animationVariables)
+        {
+            if (!parameterId.IsValid || animationVariables == null ||
+                !animationVariables.TryGet(
+                    parameterId.Value,
+                    out BTSMTL.EventGraphs.EventGraphVariableDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"Animation Variable '{parameterId}' is not declared by the Character Animation Event Graph.");
+            }
+            return descriptor.ValueKind switch
+            {
+                BTSMTL.EventGraphs.EventGraphValueKind.Bool =>
+                    new RuleValueSignature(PoseTransitionRuleValueKind.Bool),
+                BTSMTL.EventGraphs.EventGraphValueKind.Float32 =>
+                    new RuleValueSignature(PoseTransitionRuleValueKind.Float),
+                BTSMTL.EventGraphs.EventGraphValueKind.Int32 =>
+                    new RuleValueSignature(PoseTransitionRuleValueKind.Int),
+                BTSMTL.EventGraphs.EventGraphValueKind.Enum
+                    when descriptor.ValueType == typeof(CharacterPresentationMotionPhase) =>
+                    new RuleValueSignature(
+                        PoseTransitionRuleValueKind.Enum,
+                        PoseTransitionRuleEnumTypes.CharacterPresentationMotionPhase),
+                _ => throw new InvalidOperationException(
+                    $"Animation Variable '{parameterId}' has unsupported Transition Rule type '{descriptor.ValueType.FullName}'.")
             };
         }
     }

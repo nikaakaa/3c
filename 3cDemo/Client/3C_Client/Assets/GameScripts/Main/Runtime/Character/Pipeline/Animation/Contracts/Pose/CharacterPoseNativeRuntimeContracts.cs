@@ -47,7 +47,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Evaluated = 4,
         Committed = 5,
         Discarded = 6,
-        Faulted = 7
+        Faulted = 7,
+        Validated = 8
     }
 
     internal readonly struct CharacterPoseNativeGraphPrepareRequest
@@ -242,7 +243,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy)
         {
-            if (!actorId.IsValid || !agent || !animancer || rig == null || !rigBinding || !rootHierarchy)
+            if (!actorId.IsValid || !agent || !animancer || rig == null || !rigBinding ||
+                !rootHierarchy)
                 throw new ArgumentException("Pose native instance context is incomplete.");
             rig.RequireValid();
             if (!string.Equals(rig.RigId, rigBinding.RigId, StringComparison.Ordinal) ||
@@ -354,6 +356,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 request.PreparedBinding.GraphId,
                 request.PreparedBinding.GraphRevision,
                 request.PreparedBinding.ResourceRevision,
+                failureCode == CharacterPoseNativeFailureCode.None
+                    ? CharacterPoseNativeFailureCode.GraphInvalid
+                    : failureCode,
+                message);
+
+        internal static CharacterPoseNativeAdoptedResult Failed(
+            in CharacterPoseNativeGraphPrepareResult preparation,
+            ulong resetGeneration,
+            CharacterPoseNativeFailureCode failureCode,
+            string message) =>
+            new CharacterPoseNativeAdoptedResult(
+                preparation.Request.ActorId,
+                0,
+                resetGeneration,
+                preparation.Request.Graph.GraphId,
+                preparation.Request.Graph.ContentRevision,
+                preparation.Request.ResourceRevision,
                 failureCode == CharacterPoseNativeFailureCode.None
                     ? CharacterPoseNativeFailureCode.GraphInvalid
                     : failureCode,
@@ -602,18 +621,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeSourceRequest(
             PoseNodeId nodeId,
             CharacterPresentationPoseSourceSlot sourceSlot,
-            bool required)
+            AnimationPoseSourceId sourceId,
+            bool required,
+            ulong scopeInstanceId)
         {
-            if (!nodeId.IsValid || !sourceSlot)
+            if (!nodeId.IsValid ||
+                !sourceId.IsValid ||
+                !sourceSlot && sourceId.SourceKind != AnimationPoseSourceKind.Timeline ||
+                scopeInstanceId == 0)
                 throw new ArgumentException("Pose native source request is invalid.");
             NodeId = nodeId;
             SourceSlot = sourceSlot;
+            SourceId = sourceId;
             Required = required;
+            ScopeInstanceId = scopeInstanceId;
         }
 
         internal PoseNodeId NodeId { get; }
         internal CharacterPresentationPoseSourceSlot SourceSlot { get; }
+        internal AnimationPoseSourceId SourceId { get; }
         internal bool Required { get; }
+        internal ulong ScopeInstanceId { get; }
     }
 
     internal readonly struct CharacterPoseNativeSourceDemand
@@ -624,10 +652,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!lineage.IsValid || requests == null)
                 throw new ArgumentException("Pose native source demand is invalid.");
-            var nodeIds = new HashSet<PoseNodeId>();
+            var requestKeys = new HashSet<(ulong, PoseNodeId, AnimationPoseSourceId)>();
             for (int i = 0; i < requests.Count; i++)
-                if (!requests[i].NodeId.IsValid || !requests[i].SourceSlot ||
-                    !nodeIds.Add(requests[i].NodeId))
+                if (!requests[i].NodeId.IsValid ||
+                    !requests[i].SourceSlot &&
+                    requests[i].SourceId.SourceKind != AnimationPoseSourceKind.Timeline ||
+                    !requests[i].SourceId.IsValid ||
+                    requests[i].ScopeInstanceId == 0 ||
+                    !requestKeys.Add((
+                        requests[i].ScopeInstanceId,
+                        requests[i].NodeId,
+                        requests[i].SourceId)))
                     throw new ArgumentException("Pose native source demand contains an invalid request.");
             Lineage = lineage;
             Requests = requests;
@@ -759,6 +794,76 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsPublished => Status == CharacterPoseNativeFrameStatus.Committed &&
             FailureCode == CharacterPoseNativeFailureCode.None &&
             AppliedCompletionIdentity == Lineage.CompletionIdentity;
+    }
+
+    internal readonly struct CharacterPoseNativeValidationResult
+    {
+        CharacterPoseNativeValidationResult(
+            in CharacterPoseNativeFrameLineage lineage,
+            CharacterPoseNativeFrameStatus status,
+            CharacterPoseNativeFailureCode failureCode,
+            string source,
+            string message)
+        {
+            if (!lineage.IsValid ||
+                status != CharacterPoseNativeFrameStatus.Validated &&
+                status != CharacterPoseNativeFrameStatus.Invalid &&
+                status != CharacterPoseNativeFrameStatus.Faulted ||
+                string.IsNullOrWhiteSpace(source) ||
+                string.IsNullOrWhiteSpace(message) ||
+                status == CharacterPoseNativeFrameStatus.Validated &&
+                failureCode != CharacterPoseNativeFailureCode.None ||
+                status != CharacterPoseNativeFrameStatus.Validated &&
+                failureCode == CharacterPoseNativeFailureCode.None)
+            {
+                throw new ArgumentException(
+                    "Pose native validation result is invalid.");
+            }
+            Lineage = lineage;
+            Status = status;
+            FailureCode = failureCode;
+            Source = source.Trim();
+            Message = message.Trim();
+        }
+
+        internal static CharacterPoseNativeValidationResult Succeeded(
+            in CharacterPoseNativeFrameLineage lineage,
+            string source,
+            string message) =>
+            new CharacterPoseNativeValidationResult(
+                in lineage,
+                CharacterPoseNativeFrameStatus.Validated,
+                CharacterPoseNativeFailureCode.None,
+                source,
+                message);
+
+        internal static CharacterPoseNativeValidationResult Failed(
+            in CharacterPoseNativeFrameLineage lineage,
+            CharacterPoseNativeFailureCode failureCode,
+            string source,
+            string message) =>
+            new CharacterPoseNativeValidationResult(
+                in lineage,
+                CharacterPoseNativeFrameStatus.Invalid,
+                failureCode == CharacterPoseNativeFailureCode.None
+                    ? CharacterPoseNativeFailureCode.FrameInvalid
+                    : failureCode,
+                source,
+                message);
+
+        internal CharacterPoseNativeFrameLineage Lineage { get; }
+        internal CharacterPoseNativeFrameStatus Status { get; }
+        internal CharacterPoseNativeFailureCode FailureCode { get; }
+        internal string Source { get; }
+        internal string Message { get; }
+        internal bool IsValid => Lineage.IsValid &&
+            !string.IsNullOrWhiteSpace(Source) &&
+            !string.IsNullOrWhiteSpace(Message) &&
+            (Status == CharacterPoseNativeFrameStatus.Validated
+                ? FailureCode == CharacterPoseNativeFailureCode.None
+                : FailureCode != CharacterPoseNativeFailureCode.None);
+        internal bool IsValidated => IsValid &&
+            Status == CharacterPoseNativeFrameStatus.Validated;
     }
 
     internal readonly struct CharacterPoseNativeNodeObservation

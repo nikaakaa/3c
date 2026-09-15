@@ -35,8 +35,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                 DrawWindow(graph, window);
             if (node is BtsmtlSkillCanActivateActionFlowNode admission)
                 DrawAdmission(graph, admission);
-            if (node is BtsmtlSkillSubmitActionLifecycleFlowNode lifecycle)
-                DrawLifecycle(graph, lifecycle);
             if (node is BtsmtlSkillMoveFacingAngleFlowNode moveFacing)
                 DrawMoveFacing(graph, moveFacing);
             if (node is BtsmtlSkillGameplayTagFlowNode tag)
@@ -51,6 +49,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 DrawRemoveGameplayEffect(graph, removeEffect);
             if (node is BtsmtlSkillStateMachineFlowNode stateMachine)
                 DrawStateMachine(graph, stateMachine);
+            if (node is BtsmtlSkillStateFlowNode state)
+                DrawState(graph, state);
             if (node is IBtsmtlSkillInputNode input)
                 DrawInput(graph, input);
             if (node is BtsmtlSkillBlackboardReadFlowNode<bool> booleanRead)
@@ -189,9 +189,9 @@ namespace ThirdPersonCharacter.Control.Authoring
 
         static void DrawAdmission(FlowGraph graph, BtsmtlSkillCanActivateActionFlowNode node)
         {
-            ActionProfile currentProfile = Read<ActionProfile>(node, "actionProfile");
+            GameplayAbilityAdmissionProfile currentProfile = Read<GameplayAbilityAdmissionProfile>(node, "admissionProfile");
             BtsmtlSkillTargetSnapshotReference currentSnapshot = Read<BtsmtlSkillTargetSnapshotReference>(node, "targetSnapshot");
-            ActionProfile profile = ObjectField("动作配置", currentProfile, typeof(ActionProfile));
+            GameplayAbilityAdmissionProfile profile = ObjectField("准入规则", currentProfile, typeof(GameplayAbilityAdmissionProfile));
             string declarationId = EditorGUILayout.DelayedTextField("目标声明", currentSnapshot.DeclarationId);
             string ownerId = EditorGUILayout.DelayedTextField("声明作用域", currentSnapshot.OwnerId);
             if (profile != currentProfile ||
@@ -200,28 +200,30 @@ namespace ThirdPersonCharacter.Control.Authoring
                 Change(graph, "修改动作准入", () => node.Configure(profile, declarationId, ownerId));
         }
 
-        static void DrawLifecycle(FlowGraph graph, BtsmtlSkillSubmitActionLifecycleFlowNode node)
-        {
-            ActionContextSlot currentContext = Read<ActionContextSlot>(node, "actionContext");
-            ActionLifecycleTransitionType currentTransition = Read<ActionLifecycleTransitionType>(node, "transitionType");
-            string currentReason = Read<string>(node, "reason");
-            ActionContextSlot context = ObjectField("动作上下文", currentContext, typeof(ActionContextSlot));
-            var transition = (ActionLifecycleTransitionType)EditorGUILayout.EnumPopup("生命周期", currentTransition);
-            string reason = EditorGUILayout.DelayedTextField("原因", currentReason);
-            if (context != currentContext || transition != currentTransition ||
-                !string.Equals(reason, currentReason, StringComparison.Ordinal))
-                Change(graph, "修改动作生命周期", () => node.Configure(context, transition, reason));
-        }
-
         static void DrawStateMachine(FlowGraph graph, BtsmtlSkillStateMachineFlowNode node)
         {
+            BtsmtlSkillNativeStateMachine current =
+                ReadGraphReference<BtsmtlSkillNativeStateMachine>(node, "graphId");
+            BtsmtlSkillNativeStateMachine value = (BtsmtlSkillNativeStateMachine)EditorGUILayout.ObjectField(
+                "原生状态机",
+                current,
+                typeof(BtsmtlSkillNativeStateMachine),
+                false);
+            if (value != current)
+                Change(graph, "修改技能状态机", () => node.SetStateMachine(value));
+        }
+
+        static void DrawState(FlowGraph graph, BtsmtlSkillStateFlowNode node)
+        {
+            BtsmtlSkillFlowGraph current =
+                ReadGraphReference<BtsmtlSkillFlowGraph>(node, "bodyGraphId");
             BtsmtlSkillFlowGraph value = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField(
-                "状态机页面",
-                node.StateMachine,
+                "状态内容",
+                current,
                 typeof(BtsmtlSkillFlowGraph),
                 false);
-            if (value != node.StateMachine)
-                Change(graph, "修改技能状态机", () => node.SetStateMachine(value));
+            if (value != current)
+                Change(graph, "修改状态内容", () => node.SetBody(value));
         }
 
         static void DrawInput(FlowGraph graph, IBtsmtlSkillInputNode node)
@@ -366,6 +368,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                 ? default
                 : new BtsmtlSkillBlackboardReference(declarationId, ownerId);
         }
+
+        static T ReadGraphReference<T>(FlowNode node, string fieldId) where T : class =>
+            BtsmtlSkillGraphAuthoringMetadata.ReadGraphReferences(node)
+                .SingleOrDefault(value => value.Definition.FieldId == fieldId)
+                .Target as T;
 
         internal static void DrawValueInputs(FlowGraph graph, FlowNode node)
         {

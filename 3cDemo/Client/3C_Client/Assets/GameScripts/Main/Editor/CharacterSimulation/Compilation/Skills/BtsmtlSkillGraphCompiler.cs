@@ -92,6 +92,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     graph.Route, contentHash: graph.ContentHash), context.CallerKind, context.CallerId, context.ClipId);
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
                 {
+                    if (reference.Kind == BtsmtlSkillGraphReferenceKind.StateMachine &&
+                        reference.NativeStateMachine != null)
+                    {
+                        m_Flow.EmitNativeStateMachine(
+                            reference,
+                            operations.Node(reference.Owner.UID),
+                            reference.NativeStateMachine,
+                            (childGraph, childOwner, childContext) => Compile(childGraph, childOwner, childContext),
+                            (edge, conditionOwner) => Compile(
+                                edge.Condition,
+                                conditionOwner,
+                                BtsmtlSkillInvocationContext.Condition(edge.Edge.UID, conditionOwner)).Entry);
+                        continue;
+                    }
                     OperationHandle childStateOwner = reference.Kind == BtsmtlSkillGraphReferenceKind.StateBody
                         ? operations.Node(reference.Owner.UID)
                         : stateOwner;

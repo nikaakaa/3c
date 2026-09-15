@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         ActionRequest,
         InputValue,
-        ActionProfile,
+        AdmissionProfile,
         Asset
     }
 

@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using BTSMTL.Timeline;
+using ThirdPersonCharacter.Pipeline;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
+
     public sealed class CharacterControlMotionCompilationRecord
     {
         internal CharacterControlMotionCompilationRecord(
@@ -32,7 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static IReadOnlyList<CharacterControlMotionCompilationRecord> Discover(
             IReadOnlyList<CharacterControlMotionDescriptor> descriptors,
             IReadOnlyList<CharacterCompositionRoot> roots,
-            IReadOnlyList<TimelineData> controlMotionTimelines,
+            IReadOnlyList<TimelineAsset> controlMotionTimelines,
             CharacterSimulationCompileReport report)
         {
             if (descriptors == null)
@@ -46,20 +48,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             for (int rootIndex = 0; rootIndex < roots.Count; rootIndex++)
                 Collect(roots[rootIndex].Occurrence);
 
+            int controlTimelinesSeen = 0;
+            int controlTracksSeen = 0;
+            int controlClipsCollected = 0;
             for (int timelineIndex = 0; timelineIndex < controlMotionTimelines?.Count; timelineIndex++)
             {
-                TimelineData timeline = controlMotionTimelines[timelineIndex];
+                TimelineAsset timeline = controlMotionTimelines[timelineIndex];
                 if (timeline == null)
                     continue;
-                for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+                controlTimelinesSeen++;
+                TimelineData timelineData = timeline.Data;
+                if (timelineData == null)
+                    continue;
+                for (int trackIndex = 0; trackIndex < timelineData.Tracks.Count; trackIndex++)
                 {
-                    if (timeline.Tracks[trackIndex] is not MotionCurveTrack track)
+                    controlTracksSeen++;
+                    if (timelineData.Tracks[trackIndex] is not MotionCurveTrack track)
                         continue;
                     for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                     {
                         if (track.Clips[clipIndex] is not MotionCurveClip clip)
                             continue;
-                        string identity = $"timeline:{timeline.AuthoringId}/clip:{clip.AuthoringId}";
+                        controlClipsCollected++;
+                        string identity = $"timeline:{timelineData.AuthoringId}/track:{track.AuthoringId}/clip:{clip.AuthoringId}";
                         if (!clips.TryGetValue(identity, out var matches))
                         {
                             matches = new List<(CharacterAuthoringGraphOccurrence, CharacterAuthoringTimelineRecord, MotionCurveClip)>();
@@ -81,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     report.DiscoveryError(
                         "control_motion_source_ambiguous",
                         descriptor.Binding,
-                        $"Control motion '{descriptor.Binding}' source '{descriptor.SourceMotionIdentity}' resolves to {matches?.Count ?? 0} clips.");
+                        $"Control motion '{descriptor.Binding}' source '{descriptor.SourceMotionIdentity}' resolves to {matches?.Count ?? 0} clips. [controlTimelines={controlMotionTimelines?.Count ?? 0} seen={controlTimelinesSeen} tracks={controlTracksSeen} controlClips={controlClipsCollected}]");
                     continue;
                 }
                 (CharacterAuthoringGraphOccurrence graph, CharacterAuthoringTimelineRecord timeline, MotionCurveClip clip) = matches[0];
@@ -104,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         {
                             if (track.Clips[clipIndex].Clip is not MotionCurveClip clip)
                                 continue;
-                            string identity = $"timeline:{timeline.Timeline.AuthoringId}/clip:{clip.AuthoringId}";
+                            string identity = $"timeline:{timeline.Timeline.AuthoringId}/track:{track.Track.AuthoringId}/clip:{clip.AuthoringId}";
                             if (!clips.TryGetValue(identity, out var matches))
                             {
                                 matches = new List<(CharacterAuthoringGraphOccurrence, CharacterAuthoringTimelineRecord, MotionCurveClip)>();

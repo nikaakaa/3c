@@ -105,49 +105,83 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 context.ResolveExternalAsset<CharacterPipelineDefinition>(context.DefinitionAssetPath, 0L);
             if (!definition)
                 throw new InvalidOperationException("Character Pipeline Definition is unavailable.");
-            CharacterSkillAuthoringDefinition legacy = definition.SkillDefinitions
-                .SingleOrDefault(value => value != null &&
-                    string.Equals(value.EntryGraphAuthoringId, graph.AuthoringId, StringComparison.Ordinal));
-            if (legacy != null)
-            {
-                ability.ConfigureAdmissionProfile(legacy.ActionProfile);
-                ability.ConfigureFollowUps(legacy.AllowedFollowUpSkillIds);
-                if (!definition.AbilityGrants.Any(value => value != null && value.Ability == ability))
-                {
-                    var grant = new AbilityGrant();
-                    grant.Configure(
-                        ability,
-                        legacy.SourceInputRequestId,
-                        legacy.ConsumeSourceInputRequest,
-                        legacy.TargetInputValueId,
-                        legacy.TargetKey);
-                    definition.SetAbilityGrants(definition.AbilityGrants.Concat(new[] { grant }));
-                }
-                if (LegacySkillsAreMigrated(definition))
-                {
-                    var retiredPaths = definition.SkillGraphs
-                        .Select(AssetDatabase.GetAssetPath)
-                        .Concat(definition.SkillDefinitions
-                            .Where(value => value != null && value.ActionContext != null)
-                            .Select(value => AssetDatabase.GetAssetPath(value.ActionContext)))
-                        .Where(value => !string.IsNullOrEmpty(value))
-                        .Distinct(StringComparer.Ordinal)
-                        .ToArray();
-                    definition.SetSkillDefinitions(Array.Empty<CharacterSkillAuthoringDefinition>());
-                    definition.SetSkillGraphs(Array.Empty<BtsmtlSkillFlowGraph>());
-                    foreach (string retiredPath in retiredPaths)
-                        context.DeleteAsset(retiredPath);
-                }
-            }
             EditorUtility.SetDirty(ability);
             EditorUtility.SetDirty(definition);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ForceReserializeAssets(new[] { context.DefinitionAssetPath });
         }
+
+        public static GameplayAbilityAdmissionProfile EnsureAdmissionProfileRoot(
+            BtsmtlAuthoringGenerationContext context,
+            string actionId,
+            string displayName,
+            string debugCategory,
+            GameplayTagId[] tags,
+            GameplayTagQuery requiredTags,
+            GameplayTagQuery blockTags,
+            GameplayTagQuery cancelTags,
+            ActionTargetRequirement targetRequirement,
+            int maxConcurrentInstances,
+            string retiredAssetPath)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            if (string.IsNullOrWhiteSpace(actionId))
+                throw new ArgumentException("Admission profile identity is required.", nameof(actionId));
+            string outputPath = context.OutputAssetPath;
+            GameplayAbilityAdmissionProfile profile =
+                AssetDatabase.LoadAssetAtPath<GameplayAbilityAdmissionProfile>(outputPath);
+            if (!profile)
+            {
+                if (AssetDatabase.LoadMainAssetAtPath(outputPath) != null)
+                    throw new InvalidOperationException($"Admission profile output '{outputPath}' is occupied by another asset type.");
+                int separator = outputPath.LastIndexOf('/');
+                string folder = separator > 0 ? outputPath.Substring(0, separator) : string.Empty;
+                if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
+                    throw new InvalidOperationException($"Admission profile output folder '{folder}' does not exist.");
+                profile = ScriptableObject.CreateInstance<GameplayAbilityAdmissionProfile>();
+                profile.name = string.IsNullOrWhiteSpace(displayName) ? actionId : displayName;
+                AssetDatabase.CreateAsset(profile, outputPath);
+            }
+            else if (!string.Equals(profile.ActionId, actionId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Admission profile output '{outputPath}' has identity '{profile.ActionId}', expected '{actionId}'.");
+            }
+
+            profile.ConfigureIdentity(actionId, displayName, debugCategory);
+            profile.ConfigureGameplayTags(tags);
+            profile.ConfigureRequiredTags(requiredTags?.All, requiredTags?.Any, requiredTags?.None);
+            profile.ConfigureBlockTags(blockTags?.All, blockTags?.Any, blockTags?.None);
+            profile.ConfigureCancelTags(cancelTags?.All, cancelTags?.Any, cancelTags?.None);
+            profile.ConfigureTargetRequirement(targetRequirement);
+            profile.ConfigureMaxConcurrentInstances(maxConcurrentInstances);
+            EditorUtility.SetDirty(profile);
+            if (!string.IsNullOrEmpty(retiredAssetPath) &&
+                !string.Equals(retiredAssetPath, outputPath, StringComparison.Ordinal))
+                context.DeleteAsset(retiredAssetPath);
+            AssetDatabase.SaveAssets();
+            return AssetDatabase.LoadAssetAtPath<GameplayAbilityAdmissionProfile>(outputPath);
+        }
+
+        public static GameplayAbilityAdmissionProfile EnsureAdmissionProfileRoot(
+            BtsmtlAuthoringGenerationContext context,
+            string actionId,
+            string displayName,
+            string debugCategory,
+            GameplayTagId[] tags,
+            GameplayTagQuery requiredTags,
+            GameplayTagQuery blockTags,
+            GameplayTagQuery cancelTags,
+            ActionTargetRequirement targetRequirement,
+            int maxConcurrentInstances) =>
+            EnsureAdmissionProfileRoot(context, actionId, displayName, debugCategory, tags, requiredTags, blockTags, cancelTags, targetRequirement, maxConcurrentInstances, null);
 
         public static void ConfigureAbility(
             BtsmtlAuthoringGenerationContext context,
             string debugCategory,
             GameplayTagId[] tags,
-            ActionProfile admissionProfile,
+            GameplayAbilityAdmissionProfile admissionProfile,
             GameplayEffectDefinition[] effects,
             GameplayAbilityEndRule[] endRules,
             GameplayAbilitySubgraphDependencyConfiguration[] subgraphDependencies,
@@ -170,6 +204,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 throw new InvalidOperationException("Character Pipeline Definition is unavailable.");
             ability.ConfigureMetadata(debugCategory, tags);
             ability.ConfigureAdmissionProfile(admissionProfile);
+            if (!definition.AdmissionProfiles.Contains(admissionProfile))
+                definition.SetAdmissionProfiles(definition.AdmissionProfiles.Concat(new[] { admissionProfile }));
             ability.ConfigureEffects(effects);
             ability.ConfigureEndRules(endRules);
             ability.ConfigureSubgraphDependencies(subgraphDependencies);
@@ -196,82 +232,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             EditorUtility.SetDirty(definition);
         }
 
-        static bool LegacySkillsAreMigrated(CharacterPipelineDefinition definition)
-        {
-            if (definition.SkillDefinitions.Count == 0)
-                return false;
-            for (int i = 0; i < definition.SkillDefinitions.Count; i++)
-            {
-                CharacterSkillAuthoringDefinition legacy = definition.SkillDefinitions[i];
-                if (legacy == null || !definition.AbilityGrants.Any(value => value != null &&
-                    string.Equals(value.AbilityId, legacy.SkillId, StringComparison.Ordinal)))
-                    return false;
-            }
-            return true;
-        }
-
-        public static BtsmtlSkillFlowGraph EnsureSkillRoot(
-            BtsmtlAuthoringGenerationContext context,
-            string identity,
-            string name)
-        {
-            CharacterPipelineDefinition definition =
-                context.ResolveExternalAsset<CharacterPipelineDefinition>(context.DefinitionAssetPath, 0L);
-            if (!definition)
-                throw new InvalidOperationException("Character Pipeline Definition is unavailable.");
-            string outputPath = context.OutputAssetPath;
-            BtsmtlSkillFlowGraph graph = AssetDatabase.LoadAssetAtPath<BtsmtlSkillFlowGraph>(outputPath);
-            if (graph)
-            {
-                if (!string.Equals(graph.AuthoringId, identity, StringComparison.Ordinal) ||
-                    graph.Role != BtsmtlSkillFlowGraphRole.Skill)
-                    throw new InvalidOperationException($"Skill output '{outputPath}' has a different identity or role.");
-            }
-            else
-            {
-                if (AssetDatabase.LoadMainAssetAtPath(outputPath) != null)
-                    throw new InvalidOperationException($"Skill output '{outputPath}' is occupied by another asset type.");
-                int separator = outputPath.LastIndexOf('/');
-                string folder = separator > 0 ? outputPath.Substring(0, separator) : string.Empty;
-                if (string.IsNullOrEmpty(folder) || !AssetDatabase.IsValidFolder(folder))
-                    throw new InvalidOperationException($"Skill output folder '{folder}' does not exist.");
-                BtsmtlSkillFlowGraph existing = definition.SkillGraphs.SingleOrDefault(value =>
-                    value && string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
-                if (existing)
-                    throw new InvalidOperationException($"Skill identity '{identity}' already belongs to '{AssetDatabase.GetAssetPath(existing)}'.");
-                graph = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
-                graph.name = string.IsNullOrWhiteSpace(name) ? identity : name;
-                graph.ConfigureIdentity(identity, BtsmtlSkillFlowGraphRole.Skill);
-                AssetDatabase.CreateAsset(graph, outputPath);
-                BtsmtlSkillFlowEditorMutation.Apply(
-                    graph,
-                    "创建技能根图",
-                    () => BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph),
-                    false);
-            }
-            if (!definition.SkillGraphs.Contains(graph))
-            {
-                definition.SetSkillGraphs(definition.SkillGraphs.Concat(new[] { graph }).ToArray());
-                EditorUtility.SetDirty(definition);
-            }
-            EditorUtility.SetDirty(graph);
-            return graph;
-        }
-
-        public static void BindSkillRoot(
-            BtsmtlAuthoringGenerationContext context,
-            BtsmtlSkillFlowGraph graph)
-        {
-            CharacterPipelineDefinition definition =
-                context.ResolveExternalAsset<CharacterPipelineDefinition>(context.DefinitionAssetPath, 0L);
-            if (!definition || graph == null)
-                throw new InvalidOperationException("Skill root binding requires a Definition and graph.");
-            if (definition.SkillGraphs.Contains(graph))
-                return;
-            definition.SetSkillGraphs(definition.SkillGraphs.Concat(new[] { graph }).ToArray());
-            EditorUtility.SetDirty(definition);
-        }
-
         public static BtsmtlSkillFlowGraph EnsureChildGraph(
             FlowGraph owner,
             string identity,
@@ -288,12 +248,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 if (existing.Role != role)
                     throw new InvalidOperationException($"Skill child graph identity '{identity}' has a different role.");
+                BtsmtlSkillGraphAssetFactory.EnsureRequiredAnchors(existing);
                 return existing;
             }
             return BtsmtlSkillFlowEditorMutation.Execute(owner, "创建技能子图", () =>
             {
                 BtsmtlSkillFlowGraph graph = BtsmtlSkillGraphAssetFactory.CreatePrivatePage(owner, role, name);
                 graph.ConfigureIdentity(identity, role);
+                BtsmtlSkillGraphAssetFactory.EnsureRequiredAnchors(graph);
                 EditorUtility.SetDirty(graph);
                 return graph;
             });

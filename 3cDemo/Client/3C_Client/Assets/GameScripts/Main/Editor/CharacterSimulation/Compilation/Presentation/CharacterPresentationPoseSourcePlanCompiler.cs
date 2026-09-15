@@ -342,14 +342,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     continue;
                 }
                 CharacterAnimationBlendSpacePlan reference = blendSpaces[planIndex];
-                if (!CharacterPresentationProgramParameterFrame.Supports(reference.XAxis.ParameterId) ||
-                    reference.AxisCount == 2 &&
-                    !CharacterPresentationProgramParameterFrame.Supports(reference.YAxis.ParameterId))
-                {
-                    errors?.Add(
-                        $"Blend Space Player '{operation.NodeId}' references an axis ParameterId without a formal Presentation Program Parameter provider.");
-                    continue;
-                }
                 bool consistent = true;
                 if (reference.Mode == CharacterAnimationBlendSpaceMode.Linear1D &&
                     player.InputRangePolicy != CharacterAnimationBlendSpaceInputRangePolicy.Clamp)

@@ -54,9 +54,25 @@ namespace ThirdPersonCharacter.Control.Authoring
             return BtsmtlSkillFlowEditorMutation.Execute(target, "复制技能节点及私有内容", () => plan.Apply(position));
         }
 
+        public static List<Node> CopyNative(
+            BtsmtlSkillNativeStateMachine target,
+            List<Node> nodes,
+            Vector2 position)
+        {
+            if (nodes == null || nodes.Distinct().Count() != nodes.Count || nodes.Any(node =>
+                node == null || !target.CanAuthorNodeType(node.GetType()) ||
+                node is BtsmtlSkillNativeEntryState || node is BtsmtlSkillNativeAnyState ||
+                node is BtsmtlSkillNativeExitState))
+                throw new InvalidOperationException("复制集合含有FSM系统锚点或未登记状态。");
+            var plan = s_Clipboard != null && nodes.SequenceEqual(s_Clipboard.Nodes)
+                ? new CopyPlan(target, nodes, s_Clipboard.Assets)
+                : new CopyPlan(target, nodes);
+            return BtsmtlSkillFlowEditorMutation.Execute(target, "复制技能FSM状态及私有内容", () => plan.Apply(position));
+        }
+
         sealed class CopyPlan
         {
-            readonly FlowGraph m_Target;
+            readonly Graph m_Target;
             readonly List<Node> m_Nodes;
             readonly string m_TargetPath;
             readonly List<AssetSnapshot> m_Sources = new();
@@ -65,7 +81,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             readonly Dictionary<string, string> m_GraphIds = new(StringComparer.Ordinal);
             internal List<AssetSnapshot> Snapshots => m_Sources;
 
-            internal CopyPlan(FlowGraph target, List<Node> nodes)
+            internal CopyPlan(Graph target, List<Node> nodes)
             {
                 m_Target = target;
                 m_Nodes = nodes.ToList();
@@ -77,7 +93,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                     throw new InvalidOperationException("复制私有内容前必须保存目标技能根。");
             }
 
-            internal CopyPlan(FlowGraph target, List<Node> nodes, List<AssetSnapshot> snapshots)
+            internal CopyPlan(Graph target, List<Node> nodes, List<AssetSnapshot> snapshots)
             {
                 m_Target = target;
                 m_Nodes = nodes.ToList();
@@ -107,6 +123,20 @@ namespace ThirdPersonCharacter.Control.Authoring
                         foreach (ScriptableObject reference in References(node))
                             Collect(reference);
                 }
+                else if (source is BtsmtlSkillNativeStateMachine machine)
+                {
+                    BtsmtlSkillNativeStateMachineContract.Validate(machine, false);
+                    snapshot.GraphId = machine.AuthoringId;
+                    snapshot.Nodes = Graph.CloneNodes(machine.allNodes.ToList());
+                    GraphSource metadata = machine.GetGraphSourceMetaDataCopy();
+                    metadata.localBlackboard = machine.GetGraphSource().localBlackboard;
+                    metadata.canvasGroups = machine.canvasGroups.ToList();
+                    snapshot.References = new List<UnityEngine.Object>();
+                    snapshot.Metadata = JSONSerializer.Serialize(typeof(GraphSource), metadata.Pack(machine), snapshot.References);
+                    foreach (Node node in machine.allNodes)
+                        foreach (ScriptableObject reference in References(node))
+                            Collect(reference);
+                }
                 else if (source is TimelineAsset timeline)
                 {
                     snapshot.Timeline = timeline.Data.Clone();
@@ -127,7 +157,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                     Undo.RegisterCreatedObjectUndo(copy, "复制技能私有内容");
                     m_Copies.Add(source.Source, copy);
                     if (source.Metadata != null)
-                        CopyMetadata(source, (FlowGraph)copy);
+                        CopyMetadata(source, (Graph)copy);
                 }
                 foreach (AssetSnapshot source in m_Sources.Where(value => value.Timeline != null))
                 {
@@ -140,21 +170,29 @@ namespace ThirdPersonCharacter.Control.Authoring
                 }
                 foreach (AssetSnapshot source in m_Sources.Where(value => value.Metadata != null))
                 {
-                    var copy = (FlowGraph)m_Copies[source.Source];
-                    BtsmtlSkillFlowEditorMutation.Apply(copy, "复制私有图拓扑", () =>
+                    var copy = (Graph)m_Copies[source.Source];
+                    void CopyGraph()
                     {
-                        List<Node> copied = ((IBtsmtlSkillFlowGraph)copy).DuplicateStructure(source.Nodes, default);
+                        List<Node> copied = copy is FlowGraph flow
+                            ? ((IBtsmtlSkillFlowGraph)flow).DuplicateStructure(source.Nodes, default)
+                            : ((BtsmtlSkillNativeStateMachine)copy).DuplicateNodesDirect(source.Nodes, default);
                         foreach (Node node in copied)
                             Remap(node);
-                    }, false);
+                    }
+                    if (copy is BtsmtlSkillNativeStateMachine native)
+                        BtsmtlSkillFlowEditorMutation.Apply(native, "复制私有FSM拓扑", CopyGraph, false);
+                    else
+                        BtsmtlSkillFlowEditorMutation.Apply((FlowGraph)copy, "复制私有图拓扑", CopyGraph, false);
                 }
-                List<Node> result = ((IBtsmtlSkillFlowGraph)m_Target).DuplicateStructure(m_Nodes, position);
+                List<Node> result = m_Target is FlowGraph targetFlow
+                    ? ((IBtsmtlSkillFlowGraph)targetFlow).DuplicateStructure(m_Nodes, position)
+                    : ((BtsmtlSkillNativeStateMachine)m_Target).DuplicateNodesDirect(m_Nodes, position);
                 foreach (Node node in result)
                     Remap(node);
                 return result;
             }
 
-            void CopyMetadata(AssetSnapshot source, FlowGraph target)
+            void CopyMetadata(AssetSnapshot source, Graph target)
             {
                 if (!target.Deserialize(source.Metadata, source.References, false))
                     throw new InvalidOperationException("复制技能图元数据失败。");
@@ -162,6 +200,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 m_GraphIds.Add(source.GraphId, identity);
                 if (target is BtsmtlSkillFlowGraph graph)
                     graph.ConfigureIdentity(identity, graph.Role);
+                else if (target is BtsmtlSkillNativeStateMachine machine)
+                    machine.ConfigureIdentity(identity);
                 else
                     ((BtsmtlSkillMacroGraph)target).ConfigureIdentity(identity);
             }
@@ -183,6 +223,11 @@ namespace ThirdPersonCharacter.Control.Authoring
                         break;
                     case BtsmtlSkillStateMachineFlowNode machine:
                         machine.SetStateMachine(Resolve(machine.StateMachine));
+                        if (machine.StateMachine != null && node.graph is IBtsmtlSkillFlowGraph owner)
+                            machine.StateMachine.ConfigureOwner(owner.AuthoringId, machine.UID);
+                        break;
+                    case BtsmtlSkillNativeState native:
+                        native.SetBody(Resolve(native.Body));
                         break;
                     case BtsmtlSkillStateFlowNode state:
                         state.SetBody(Resolve(state.Body));
@@ -200,13 +245,19 @@ namespace ThirdPersonCharacter.Control.Authoring
                         value.Configure(Remap(value.Variable), value.DeclaredType, value.FactContext);
                         break;
                     case BtsmtlSkillCanActivateActionFlowNode action:
-                        action.Configure(action.ActionProfile, action.TargetSnapshotDeclarationId, OwnerId(action.TargetSnapshotOwnerId));
+                        action.Configure(action.AdmissionProfile, action.TargetSnapshotDeclarationId, OwnerId(action.TargetSnapshotOwnerId));
                         break;
                 }
                 if (node is BtsmtlSkillCompositeFlowNode composite)
                     foreach (BtsmtlSkillStepPort step in composite.Steps)
                         step.Configure(step.Name, Resolve(step.Condition), step.Priority, step.AbortPolicy);
                 foreach (BtsmtlSkillFlowConnection transfer in node.outConnections.OfType<BtsmtlSkillFlowConnection>())
+                    transfer.Configure(
+                        Resolve(transfer.Condition),
+                        transfer.Priority,
+                        transfer.AbortPolicy,
+                        transfer.Order);
+                foreach (BtsmtlSkillNativeConnection transfer in node.outConnections.OfType<BtsmtlSkillNativeConnection>())
                     transfer.Configure(
                         Resolve(transfer.Condition),
                         transfer.Priority,
@@ -219,6 +270,9 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             if (node is MacroNodeWrapper macro) yield return macro.macro;
             if (node is BtsmtlSkillStateMachineFlowNode machine) yield return machine.StateMachine;
+            if (node is BtsmtlSkillNativeState native) yield return native.Body;
+            foreach (BtsmtlSkillNativeConnection transfer in node.outConnections.OfType<BtsmtlSkillNativeConnection>())
+                yield return transfer.Condition;
             if (node is BtsmtlSkillStateFlowNode state) yield return state.Body;
             if (node is BtsmtlSkillTimelineFlowNode timeline) yield return timeline.TimelineAsset;
             if (node is BtsmtlSkillCompositeFlowNode composite)

@@ -112,8 +112,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             var result = new Dictionary<string,
                 List<CharacterPresentationTimelineCallSite>>(StringComparer.Ordinal);
-            foreach (GameplayAbilityCompilationRecord skill in model.AbilityRecords)
-                foreach (BtsmtlSkillGraphOccurrence graph in skill.EntryGraph.EnumerateOccurrences())
+            foreach (GameplayAbilityCompilationRecord ability in model.AbilityRecords)
+                foreach (BtsmtlSkillGraphOccurrence graph in ability.EntryGraph.EnumerateOccurrences())
                     foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
                     {
                         string identity = timeline.Content.Timeline.AuthoringId;
@@ -211,6 +211,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 errors?.Add($"Animation producer '{producer.Identity}' Track source or Animation Channel binding is invalid.");
                 return null;
             }
+            if (!string.IsNullOrWhiteSpace(track.AnimationSlotId))
+                profile.RigDefinition.RequireAnimationSlot(new AnimationSlotId(track.AnimationSlotId));
             AnimationProducerPresentationBinding authoringBinding = profile.FindProducerBinding(producerId);
             if (authoringBinding == null)
             {
@@ -235,9 +237,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 if (!string.IsNullOrWhiteSpace(clip.BlendProfileId))
                     profile.RigDefinition.RequireBlendProfile(clip.BlendProfileId);
-                if (!string.IsNullOrWhiteSpace(track.AnimationSlotId))
-                    profile.RigDefinition.RequireAnimationSlot(
-                        new AnimationSlotId(track.AnimationSlotId));
                 try
                 {
                     _ = CharacterAnimationClipRegisteredCurveCatalog.ResolveIdentity(sourceClip);

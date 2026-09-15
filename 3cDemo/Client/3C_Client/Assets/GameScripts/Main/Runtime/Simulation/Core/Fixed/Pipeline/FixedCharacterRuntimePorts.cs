@@ -27,14 +27,46 @@ namespace ThirdPersonSimulation.Fixed
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
 
+        public static FixedCharacterRuntime Create(
+            IEnumerable<SimulationActorBinding> roster,
+            CharacterControlModuleCatalog controlModules)
+        {
+            SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
+            var values = roster == null ? new List<SimulationActorBinding>() : new List<SimulationActorBinding>(roster);
+            if (values.Count == 0 || values[0].AbilityData.Data.Count == 0)
+                throw new ArgumentException("Fixed Character Runtime factory requires an Ability TickRate.", nameof(roster));
+            return new FixedCharacterRuntime(
+                values,
+                target.NumericProfile,
+                values[0].AbilityData.Data[0].TickRate,
+                target.OperationSetVersion,
+                controlModules);
+        }
+
+        public static FixedCharacterRuntime Create(
+            IEnumerable<SimulationActorBinding> roster,
+            int tickRate,
+            CharacterControlModuleCatalog controlModules)
+        {
+            SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
+            return new FixedCharacterRuntime(
+                roster,
+                target.NumericProfile,
+                tickRate,
+                target.OperationSetVersion,
+                controlModules);
+        }
+
         public FixedCharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
             SimulationNumericProfile numericProfile,
             int tickRate,
-            OperationSetVersion operationSetVersion)
+            OperationSetVersion operationSetVersion,
+            CharacterControlModuleCatalog controlModules)
         {
             if (!numericProfile.IsValid || tickRate <= 0 || !operationSetVersion.IsValid)
                 throw new ArgumentException("Fixed Character Runtime execution identity is incomplete.");
+            ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             var values = roster == null
                 ? new List<SimulationActorBinding>()
                 : new List<SimulationActorBinding>(roster);
@@ -76,6 +108,8 @@ namespace ThirdPersonSimulation.Fixed
             TickRate = tickRate;
             OperationSetVersion = operationSetVersion;
             WorldCapability requiredWorldCapabilities = WorldCapability.None;
+            for (int i = 0; i < values.Count; i++)
+                requiredWorldCapabilities |= values[i].BodyMotionBinding.RequiredWorldCapability;
             for (int i = 0; i < m_Abilities.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = m_Abilities[i];
@@ -113,9 +147,50 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationNumericProfile NumericProfile { get; }
         public int TickRate { get; }
         public OperationSetVersion OperationSetVersion { get; }
+        public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         public GameplayContentHash GameplayContentHash { get; }
+
+        public FixedCharacterRuntimeState CreateInitialState(int actorIndex)
+        {
+            if (actorIndex < 0 || actorIndex >= Roster.Count)
+                throw new ArgumentOutOfRangeException(nameof(actorIndex));
+            SimulationActorBinding actor = Roster[actorIndex];
+            CharacterControlModuleContract control = ControlModules.RequireContract(actor.ControlRuntimeBinding.ModuleId);
+            CharacterControlRuntimeState controlState = CharacterControlRuntimeState.CreateInitial(
+                actor.ControlRuntimeBinding,
+                control);
+            FixedGameplayEffectRuntimeCatalog effectCatalog = actor.GameplayEffectRuntimeBinding == null
+                ? null
+                : new FixedGameplayEffectRuntimeCatalog(actor.GameplayEffectRuntimeBinding);
+            GameplayEffectStateAggregate effectState = effectCatalog == null
+                ? null
+                : GameplayEffectStateAggregate.CreateInitial(effectCatalog);
+            EquipmentStateAggregate equipmentState = null;
+            for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
+            {
+                FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
+                if (!installation.Data.Capabilities.HasGameplayCapability("Equipment"))
+                    continue;
+                if (actor.EquipmentRuntimeBinding == null)
+                    throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
+                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
+                    actor.EquipmentRuntimeBinding,
+                    installation.Data.CatalogEntries,
+                    installation.Data.References,
+                    installation.Data.Producers);
+                equipmentState = EquipmentStateAggregate.CreateInitial(layout);
+                break;
+            }
+            return FixedCharacterRuntimeState.CreateInitial(
+                actor.AbilityInstallations,
+                NumericProfile,
+                new GameplayContentHash(actor.GameplayContentHash),
+                controlState,
+                effectState,
+                equipmentState);
+        }
 
         static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)
         {

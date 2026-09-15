@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Control.Authoring;
@@ -49,13 +50,9 @@ namespace ThirdPersonCharacter.Pipeline
     {
         [SerializeField] string m_ControlModuleId;
         [SerializeField] CharacterControlParameterConfiguration[] m_ControlParameters = Array.Empty<CharacterControlParameterConfiguration>();
-        [SerializeField] CharacterSkillAuthoringDefinition[] m_SkillDefinitions = Array.Empty<CharacterSkillAuthoringDefinition>();
-#if UNITY_EDITOR
-        [SerializeField] BtsmtlSkillFlowGraph[] m_SkillGraphs = Array.Empty<BtsmtlSkillFlowGraph>();
-#endif
-        [SerializeField] TimelineData[] m_ControlMotionTimelines = Array.Empty<TimelineData>();
+        [SerializeField] AbilityGrant[] m_AbilityGrants = Array.Empty<AbilityGrant>();
+        [SerializeField] TimelineAsset[] m_ControlMotionTimelines = Array.Empty<TimelineAsset>();
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
-        [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
         [SerializeField] CharacterInputProfile m_InputProfile;
         [SerializeField] CharacterGameplayEffectProfile m_GameplayEffectProfile;
@@ -65,7 +62,7 @@ namespace ThirdPersonCharacter.Pipeline
         [SerializeField] bool m_EquipmentCapabilityEnabled;
         [SerializeField] CharacterEquipmentProfile m_EquipmentProfile;
         [SerializeField] CharacterEquipmentPresentationProfile m_EquipmentPresentationProfile;
-        [SerializeField] ActionProfile[] m_ActionProfiles = Array.Empty<ActionProfile>();
+        [SerializeField] GameplayAbilityAdmissionProfile[] m_AdmissionProfiles = Array.Empty<GameplayAbilityAdmissionProfile>();
         [SerializeField] GameplayBehaviorProfile[] m_BehaviorProfiles = Array.Empty<GameplayBehaviorProfile>();
 
         public string ControlModuleId => string.IsNullOrWhiteSpace(m_ControlModuleId)
@@ -73,15 +70,18 @@ namespace ThirdPersonCharacter.Pipeline
             : m_ControlModuleId.Trim();
         public IReadOnlyList<CharacterControlParameterConfiguration> ControlParameters =>
             m_ControlParameters ?? Array.Empty<CharacterControlParameterConfiguration>();
-        public IReadOnlyList<CharacterSkillAuthoringDefinition> SkillDefinitions =>
-            m_SkillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
+        public IReadOnlyList<AbilityGrant> AbilityGrants =>
+            m_AbilityGrants ?? Array.Empty<AbilityGrant>();
 #if UNITY_EDITOR
-        public IReadOnlyList<BtsmtlSkillFlowGraph> SkillGraphs => m_SkillGraphs;
+        public IReadOnlyList<BtsmtlSkillFlowGraph> AbilityGraphs =>
+            AbilityGrants
+                .Where(value => value != null && value.Ability != null && value.Ability.AbilityGraph != null)
+                .Select(value => value.Ability.AbilityGraph)
+                .ToArray();
 #endif
-        public IReadOnlyList<TimelineData> ControlMotionTimelines =>
-            m_ControlMotionTimelines ?? Array.Empty<TimelineData>();
+        public IReadOnlyList<TimelineAsset> ControlMotionTimelines =>
+            m_ControlMotionTimelines ?? Array.Empty<TimelineAsset>();
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
-        public CharacterSimulationProgramAsset SimulationProgram => m_SimulationProgram;
         public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection;
         public CharacterInputProfile InputProfile => m_InputProfile;
         public CharacterGameplayEffectProfile GameplayEffectProfile => m_GameplayEffectProfile;
@@ -91,8 +91,8 @@ namespace ThirdPersonCharacter.Pipeline
         public bool EquipmentCapabilityEnabled => m_EquipmentCapabilityEnabled;
         public CharacterEquipmentProfile EquipmentProfile => m_EquipmentProfile;
         public CharacterEquipmentPresentationProfile EquipmentPresentationProfile => m_EquipmentPresentationProfile;
-        public IReadOnlyList<ActionProfile> ActionProfiles =>
-            m_ActionProfiles ?? Array.Empty<ActionProfile>();
+        public IReadOnlyList<GameplayAbilityAdmissionProfile> AdmissionProfiles =>
+            m_AdmissionProfiles ?? Array.Empty<GameplayAbilityAdmissionProfile>();
         public IReadOnlyList<GameplayBehaviorProfile> BehaviorProfiles =>
             m_BehaviorProfiles ?? Array.Empty<GameplayBehaviorProfile>();
 
@@ -102,13 +102,13 @@ namespace ThirdPersonCharacter.Pipeline
             if (string.IsNullOrEmpty(behaviorId))
                 return false;
 
-            IReadOnlyList<ActionProfile> actionProfiles = ActionProfiles;
-            for (int i = 0; i < actionProfiles.Count; i++)
+            IReadOnlyList<GameplayAbilityAdmissionProfile> admissionProfiles = AdmissionProfiles;
+            for (int i = 0; i < admissionProfiles.Count; i++)
             {
-                ActionProfile actionProfile = actionProfiles[i];
-                if (actionProfile && string.Equals(actionProfile.BehaviorId, behaviorId, StringComparison.Ordinal))
+                GameplayAbilityAdmissionProfile admissionProfile = admissionProfiles[i];
+                if (admissionProfile && string.Equals(admissionProfile.BehaviorId, behaviorId, StringComparison.Ordinal))
                 {
-                    profile = actionProfile;
+                    profile = admissionProfile;
                     return true;
                 }
             }
@@ -143,111 +143,18 @@ namespace ThirdPersonCharacter.Pipeline
         public bool CollectConfigurationErrors(List<string> errors)
         {
             bool valid = true;
-            IReadOnlyList<ActionProfile> compiledActionProfiles = BuildCompiledActionProfileCatalog();
+            IReadOnlyList<GameplayAbilityAdmissionProfile> compiledAdmissionProfiles = BuildCompiledAdmissionProfileCatalog();
             if (string.IsNullOrEmpty(ControlModuleId))
             {
                 errors?.Add($"{name}: control module id is missing.");
                 valid = false;
             }
-            HashSet<string> skillIds = new HashSet<string>(StringComparer.Ordinal);
-            if (SkillDefinitions.Count == 0)
+            if (AbilityGrants.Count == 0)
             {
-                errors?.Add($"{name}: skill definition list is missing.");
+                errors?.Add($"{name}: ability grant list is missing.");
                 valid = false;
             }
-            for (int i = 0; i < SkillDefinitions.Count; i++)
-            {
-                CharacterSkillAuthoringDefinition skill = SkillDefinitions[i];
-                if (skill == null)
-                    continue;
-                if (string.IsNullOrEmpty(skill.SkillId) || !skillIds.Add(skill.SkillId))
-                {
-                    errors?.Add($"{name}: skill definition '{skill.SkillId}' is missing or duplicated.");
-                    valid = false;
-                }
-            }
-            for (int i = 0; i < SkillDefinitions.Count; i++)
-            {
-                CharacterSkillAuthoringDefinition skill = SkillDefinitions[i];
-                if (skill == null)
-                {
-                    errors?.Add($"{name}: skill definition #{i} is missing.");
-                    valid = false;
-                    continue;
-                }
-                if (string.IsNullOrEmpty(skill.EntryGraphAuthoringId))
-                {
-                    errors?.Add($"{name}: skill '{skill.SkillId}' entry graph identity is missing.");
-                    valid = false;
-                }
-                if (!skill.ActionProfile)
-                {
-                    errors?.Add($"{name}: skill '{skill.SkillId}' ActionProfile is missing.");
-                    valid = false;
-                }
-                else
-                {
-                    bool actionProfileRegistered = false;
-                    for (int profileIndex = 0; profileIndex < compiledActionProfiles.Count; profileIndex++)
-                    {
-                        if (ReferenceEquals(compiledActionProfiles[profileIndex], skill.ActionProfile))
-                        {
-                            actionProfileRegistered = true;
-                            break;
-                        }
-                    }
-                    if (!actionProfileRegistered)
-                    {
-                        errors?.Add($"{name}: skill '{skill.SkillId}' ActionProfile '{skill.ActionProfile.ActionId}' is not registered by the Definition catalog.");
-                        valid = false;
-                    }
-                }
-                if (!skill.ActionContext)
-                {
-                    errors?.Add($"{name}: skill '{skill.SkillId}' ActionContext is missing.");
-                    valid = false;
-                }
-
-                var dependencyIds = new HashSet<string>(StringComparer.Ordinal);
-                for (int dependencyIndex = 0; dependencyIndex < skill.SubgraphDependencies.Count; dependencyIndex++)
-                {
-                    CharacterSkillSubgraphDependencyConfiguration dependency = skill.SubgraphDependencies[dependencyIndex];
-                    if (dependency == null ||
-                        string.IsNullOrWhiteSpace(dependency.SubgraphIdentity) ||
-                        string.IsNullOrWhiteSpace(dependency.CallSiteIdentity))
-                    {
-                        errors?.Add($"{name}: skill '{skill.SkillId}' contains an incomplete subgraph dependency.");
-                        valid = false;
-                        continue;
-                    }
-                    string dependencyId = $"{dependency.SubgraphIdentity}\u001f{dependency.CallSiteIdentity}";
-                    if (!dependencyIds.Add(dependencyId))
-                    {
-                        errors?.Add($"{name}: skill '{skill.SkillId}' contains duplicate subgraph dependency '{dependency.SubgraphIdentity}/{dependency.CallSiteIdentity}'.");
-                        valid = false;
-                    }
-                }
-
-                var followUps = new HashSet<string>(StringComparer.Ordinal);
-                for (int followUpIndex = 0; followUpIndex < skill.AllowedFollowUpSkillIds.Count; followUpIndex++)
-                {
-                    string followUpId = skill.AllowedFollowUpSkillIds[followUpIndex];
-                    if (string.IsNullOrWhiteSpace(followUpId) ||
-                        string.Equals(followUpId, skill.SkillId, StringComparison.Ordinal) ||
-                        !followUps.Add(followUpId))
-                    {
-                        errors?.Add($"{name}: skill '{skill.SkillId}' contains an invalid, recursive, or duplicate follow-up skill '{followUpId}'.");
-                        valid = false;
-                        continue;
-                    }
-                    if (!skillIds.Contains(followUpId))
-                    {
-                        errors?.Add($"{name}: skill '{skill.SkillId}' references missing follow-up skill '{followUpId}'.");
-                        valid = false;
-                    }
-                }
-            }
-            IReadOnlyList<ActionProfile> profiles = ActionProfiles;
+            IReadOnlyList<GameplayAbilityAdmissionProfile> profiles = AdmissionProfiles;
             IReadOnlyList<GameplayBehaviorProfile> behaviorProfiles = BehaviorProfiles;
             if (profiles.Count == 0)
             {
@@ -301,10 +208,10 @@ namespace ThirdPersonCharacter.Pipeline
                 : Array.Empty<GameplayEffectDefinition>();
             for (int i = 0; i < profiles.Count; i++)
             {
-                ActionProfile profile = profiles[i];
+                GameplayAbilityAdmissionProfile profile = profiles[i];
                 if (!profile)
                 {
-                    errors?.Add($"{name}: action profile #{i} is missing.");
+                    errors?.Add($"{name}: admission profile #{i} is missing.");
                     valid = false;
                     continue;
                 }
@@ -358,7 +265,58 @@ namespace ThirdPersonCharacter.Pipeline
             }
 
             valid &= CollectEquipmentConfigurationErrors(ids, gameplayTagCatalog, errors);
+            if (AbilityGrants.Count != 0)
+                valid &= CollectAbilityGrantConfigurationErrors(compiledAdmissionProfiles, gameplayTagCatalog, errors);
 
+            return valid;
+        }
+
+        bool CollectAbilityGrantConfigurationErrors(
+            IReadOnlyList<GameplayAbilityAdmissionProfile> compiledAdmissionProfiles,
+            GameplayTagCatalogRuntimeData gameplayTagCatalog,
+            List<string> errors)
+        {
+            bool valid = true;
+            var abilityIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < AbilityGrants.Count; i++)
+            {
+                AbilityGrant grant = AbilityGrants[i];
+                if (grant == null)
+                {
+                    errors?.Add($"{name}: AbilityGrant #{i} is missing.");
+                    valid = false;
+                    continue;
+                }
+                valid &= grant.CollectConfigurationErrors(name, abilityIds, errors);
+                GameplayAbilityDefinition ability = grant.Ability;
+                if (!ability || !ability.AdmissionProfile)
+                    continue;
+                if (gameplayTagCatalog != null)
+                    valid &= ability.CollectTagConfigurationErrors(gameplayTagCatalog, errors);
+                bool registered = false;
+                for (int profileIndex = 0; profileIndex < compiledAdmissionProfiles.Count; profileIndex++)
+                {
+                    if (ReferenceEquals(compiledAdmissionProfiles[profileIndex], ability.AdmissionProfile))
+                    {
+                        registered = true;
+                        break;
+                    }
+                }
+                if (!registered)
+                {
+                    errors?.Add($"{name}: AbilityGrant '{grant.AbilityId}' admission profile '{ability.AdmissionProfile.ActionId}' is not registered by the Definition catalog.");
+                    valid = false;
+                }
+                for (int effectIndex = 0; effectIndex < ability.Effects.Count; effectIndex++)
+                {
+                    GameplayEffectDefinition effect = ability.Effects[effectIndex];
+                    if (!effect || !GameplayEffectProfile || !GameplayEffectProfile.EffectDefinitions.Contains(effect))
+                    {
+                        errors?.Add($"{name}: AbilityGrant '{grant.AbilityId}' effect #{effectIndex} is not registered by the Definition catalog.");
+                        valid = false;
+                    }
+                }
+            }
             return valid;
         }
 
@@ -397,9 +355,14 @@ namespace ThirdPersonCharacter.Pipeline
             m_ControlParameters = configurations.ToArray();
         }
 
-        public void SetSimulationProgram(CharacterSimulationProgramAsset simulationProgram)
+        public void SetAbilityGrants(IEnumerable<AbilityGrant> grants)
         {
-            m_SimulationProgram = simulationProgram;
+            m_AbilityGrants = (grants ?? System.Array.Empty<AbilityGrant>()).ToArray();
+        }
+
+        public void SetAdmissionProfiles(IEnumerable<GameplayAbilityAdmissionProfile> profiles)
+        {
+            m_AdmissionProfiles = (profiles ?? System.Array.Empty<GameplayAbilityAdmissionProfile>()).ToArray();
         }
 
         public void SetPresentationProjection(CharacterPresentationProjectionAsset presentationProjection)
@@ -407,21 +370,6 @@ namespace ThirdPersonCharacter.Pipeline
             m_PresentationProjection = presentationProjection;
         }
 
-        public void SetSkillDefinitions(CharacterSkillAuthoringDefinition[] skillDefinitions)
-        {
-            m_SkillDefinitions = skillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
-        }
-
-        public void SetSkillGraphs(BtsmtlSkillFlowGraph[] graphs)
-        {
-            if (graphs == null)
-                throw new ArgumentNullException(nameof(graphs));
-            var identities = new HashSet<string>(StringComparer.Ordinal);
-            foreach (BtsmtlSkillFlowGraph graph in graphs)
-                if (graph == null || graph.Role != BtsmtlSkillFlowGraphRole.Skill || !identities.Add(graph.AuthoringId))
-                    throw new ArgumentException("技能根图必须是身份唯一的正式Skill页面。", nameof(graphs));
-            m_SkillGraphs = (BtsmtlSkillFlowGraph[])graphs.Clone();
-        }
 #endif
     }
 }

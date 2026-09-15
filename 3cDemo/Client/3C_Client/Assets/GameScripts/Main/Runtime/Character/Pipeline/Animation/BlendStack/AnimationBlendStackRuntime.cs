@@ -766,6 +766,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return ReadEntry(index).EntryId;
         }
 
+        internal AnimationBlendEntryState GetEntryState(int index)
+        {
+            RequireAlive();
+            if ((uint)index >= (uint)m_EntryCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return ReadEntry(index);
+        }
+
         internal void GetCurrentRoutingEndpoint(
             out int sourceOwnerIndex,
             out AnimationBlendTransitionEndpointKind endpointKind)

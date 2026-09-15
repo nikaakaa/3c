@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -22,5 +23,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 throw new System.InvalidOperationException($"Pipeline Definition '{pipeline?.name}' has no Float32 runtime package provider.");
             return provider.BuildRuntimePackage().PassFactories;
         }
+
+        public override ISimulationSessionCompositionPreparation CreateSessionPreparation(
+            SimulationSessionCompositionDefinition definition,
+            IReadOnlyList<ISimulationActorRegistration> registrations) =>
+            new Float32SimulationSessionCompositionPreparation(definition, registrations);
     }
 }

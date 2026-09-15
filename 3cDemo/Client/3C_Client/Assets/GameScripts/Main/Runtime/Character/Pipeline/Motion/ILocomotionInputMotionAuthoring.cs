@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Motion
 
     public interface ICanActivateActionAuthoring
     {
-        ActionProfile ActionProfile { get; }
+        GameplayAbilityAdmissionProfile AdmissionProfile { get; }
         string TargetSnapshotDeclarationId { get; }
         string TargetSnapshotOwnerId { get; }
     }

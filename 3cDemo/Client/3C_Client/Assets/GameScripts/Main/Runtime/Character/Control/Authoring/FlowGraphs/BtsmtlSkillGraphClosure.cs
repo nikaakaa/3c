@@ -6,6 +6,7 @@ using BTSMTL.Timeline;
 using FlowCanvas;
 using FlowCanvas.Macros;
 using NodeCanvas.Framework;
+using ThirdPersonCharacter.ActionSystem;
 using UnityEditor;
 
 namespace ThirdPersonCharacter.Control.Authoring
@@ -14,11 +15,24 @@ namespace ThirdPersonCharacter.Control.Authoring
     {
         public static IReadOnlyList<FlowGraph> Validate(FlowGraph root, bool requireComplete)
         {
+            RequireAbilityRootOwnership(root);
             var result = new List<FlowGraph>();
             var active = new HashSet<FlowGraph>();
             var identities = new Dictionary<string, FlowGraph>(StringComparer.Ordinal);
             Visit(root, "skill", requireComplete, active, identities, result);
             return result.AsReadOnly();
+        }
+
+        static void RequireAbilityRootOwnership(FlowGraph root)
+        {
+            if (root is not BtsmtlSkillFlowGraph graph || !AssetDatabase.IsSubAsset(graph))
+                return;
+            string path = AssetDatabase.GetAssetPath(graph);
+            UnityEngine.Object mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
+            if (mainAsset is GameplayAbilityDefinition ability &&
+                (ability.AbilityGraph == null ||
+                 !string.Equals(AssetDatabase.GetAssetPath(ability.AbilityGraph), path, StringComparison.Ordinal)))
+                throw Error("skill", "Gameplay Ability私有图不属于其Definition拥有的AbilityGraph资产闭包。");
         }
 
         static void Visit(FlowGraph graph, string path, bool complete, HashSet<FlowGraph> active,
@@ -66,7 +80,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 if (node is BtsmtlSkillStateMachineFlowNode machine)
                 {
                     RequirePrivateOwnership(graph, machine.StateMachine, nodePath);
-                    VisitChild(machine.StateMachine, BtsmtlSkillFlowGraphRole.StateMachine, nodePath, complete, active, identities, result);
+                    ValidateNativeStateMachine(machine.StateMachine, nodePath, complete, active, identities, result);
                 }
                 if (node is BtsmtlSkillStateFlowNode state)
                 {
@@ -130,7 +144,41 @@ namespace ThirdPersonCharacter.Control.Authoring
             Visit(child, path, complete, active, identities, result);
         }
 
-        static void RequirePrivateOwnership(UnityEngine.Object owner, FlowGraph child, string path)
+        static void ValidateNativeStateMachine(
+            BtsmtlSkillNativeStateMachine machine,
+            string path,
+            bool complete,
+            HashSet<FlowGraph> active,
+            Dictionary<string, FlowGraph> identities,
+            List<FlowGraph> result)
+        {
+            if (machine == null)
+            {
+                if (complete)
+                    throw Error(path, "缺少原生状态机资产。");
+                return;
+            }
+            BtsmtlSkillNativeStateMachineContract.Validate(machine, complete);
+            foreach (BtsmtlSkillNativeState state in machine.allNodes.OfType<BtsmtlSkillNativeState>())
+            {
+                string statePath = $"{path}/fsm:{machine.AuthoringId}/state:{state.UID}";
+                if (state.Body != null)
+                {
+                    RequirePrivateOwnership(machine, state.Body, statePath);
+                    VisitChild(state.Body, BtsmtlSkillFlowGraphRole.StateBody, statePath,
+                        complete, active, identities, result);
+                }
+                foreach (BtsmtlSkillNativeConnection connection in state.outConnections.OfType<BtsmtlSkillNativeConnection>())
+                    if (connection.Condition != null)
+                    {
+                        RequirePrivateOwnership(machine, connection.Condition, $"{statePath}/edge:{connection.UID}");
+                        VisitChild(connection.Condition, BtsmtlSkillFlowGraphRole.ConditionRule,
+                            $"{statePath}/edge:{connection.UID}", complete, active, identities, result);
+                    }
+            }
+        }
+
+        static void RequirePrivateOwnership(UnityEngine.Object owner, UnityEngine.Object child, string path)
         {
             if (child != null && AssetDatabase.IsSubAsset(child) && AssetDatabase.GetAssetPath(owner) != AssetDatabase.GetAssetPath(child))
                 throw Error(path, "不能直接引用其他根的私有节点图，应使用明确的共享资产。");
@@ -142,12 +190,17 @@ namespace ThirdPersonCharacter.Control.Authoring
             var edges = new HashSet<string>(StringComparer.Ordinal);
             var anchors = new HashSet<string>(StringComparer.Ordinal);
             var occupied = new HashSet<Port>();
+            List<(BinderConnection edge, FlowNode node)> stateTransfers =
+                role == BtsmtlSkillFlowGraphRole.StateMachine ? new List<(BinderConnection edge, FlowNode node)>() : null;
             foreach (Node value in graph.allNodes)
             {
-                if (value is not FlowNode node || !graph.CanAuthorNodeType(node.GetType()))
+                if (value is not FlowNode node)
+                    throw Error(path, "页面包含未登记或不属于当前页面的节点。");
+                if (!graph.CanAuthorNodeType(node.GetType()))
                     throw Error(path, "页面包含未登记或不属于当前页面的节点。");
                 try
                 {
+                    node.GatherPorts();
                     BtsmtlSkillCapabilityCatalog.ProjectPorts(node);
                 }
                 catch (InvalidOperationException exception)
@@ -181,18 +234,36 @@ namespace ThirdPersonCharacter.Control.Authoring
                     if (source == null || target == null || source.type != target.type ||
                         source.IsFlowPort() != target.IsFlowPort())
                         throw Error($"{path}/edge:{edge.UID}", "端口缺失或声明类型不一致。");
-                    if ((source is FlowOutput && !occupied.Add(source)) ||
+                    bool stateTransferOutput = role == BtsmtlSkillFlowGraphRole.StateMachine &&
+                        node is IBtsmtlSkillStateStructureNode &&
+                        source is FlowOutput &&
+                        string.Equals(source.ID, "Transfer", StringComparison.Ordinal);
+                    if ((!stateTransferOutput && source is FlowOutput && !occupied.Add(source)) ||
                         (target is ValueInput && !occupied.Add(target)))
                         throw Error($"{path}/edge:{edge.UID}", "端口超过原生连接容量。");
-                    if (role == BtsmtlSkillFlowGraphRole.StateMachine && source is FlowOutput)
-                    {
-                        if (edge is not BtsmtlSkillFlowConnection transfer)
-                            throw Error($"{path}/edge:{edge.UID}", "状态机转移连线未携带转移数据，需要先执行资产迁移。");
-                        if (transfer.Priority < BtsmtlSkillFlowConnection.MinPriority)
-                            throw Error($"{path}/edge:{edge.UID}", "转移优先级不能为负。");
-                        if (node is BtsmtlSkillStateAnyFlowNode && transfer.Condition == null)
-                            throw Error($"{path}/edge:{edge.UID}", "任意状态的转移必须挂条件图。");
-                    }
+                    stateTransfers?.Add((edge, node));
+                }
+            }
+            if (stateTransfers != null)
+            {
+                var transfers = stateTransfers.Where(value => value.edge is BtsmtlSkillFlowConnection).ToList();
+                if (transfers.Count != stateTransfers.Count)
+                    throw Error(path, "状态机图存在不携带Transfer数据的转移连线。");
+                var orders = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var (edge, node) in stateTransfers)
+                {
+                    var transfer = (BtsmtlSkillFlowConnection)edge;
+                    if (edge.sourcePort is not FlowOutput ||
+                        !string.Equals(edge.sourcePortID, "Transfer", StringComparison.Ordinal) ||
+                        edge.targetPort is not FlowInput ||
+                        !string.Equals(edge.targetPortID, "StateIn", StringComparison.Ordinal))
+                        throw Error($"{path}/edge:{edge.UID}", "状态机转移必须连接Transfer到StateIn。");
+                    if (!orders.Add(node.UID + "\0" + transfer.Order))
+                        throw Error($"{path}/node:{node.UID}", "同一状态的转移order必须唯一。");
+                    if (transfer.Priority < BtsmtlSkillFlowConnection.MinPriority)
+                        throw Error($"{path}/edge:{edge.UID}", "转移优先级不能为负。");
+                    if (node is BtsmtlSkillStateAnyFlowNode && transfer.Condition == null)
+                        throw Error($"{path}/edge:{edge.UID}", "任意状态的转移必须挂条件图。");
                 }
             }
             var visiting = new HashSet<Node>();

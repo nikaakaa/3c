@@ -10,7 +10,9 @@ namespace BTSMTL.EventGraphs
         Int32 = 2,
         Float32 = 3,
         Vector2 = 4,
-        Vector3 = 5
+        Vector3 = 5,
+        Quaternion = 6,
+        Enum = 7
     }
 
     public static class EventGraphValueKinds
@@ -27,6 +29,10 @@ namespace BTSMTL.EventGraphs
                 kind = EventGraphValueKind.Vector2;
             else if (type == typeof(UnityEngine.Vector3))
                 kind = EventGraphValueKind.Vector3;
+            else if (type == typeof(UnityEngine.Quaternion))
+                kind = EventGraphValueKind.Quaternion;
+            else if (type != null && type.IsEnum)
+                kind = EventGraphValueKind.Enum;
             else
             {
                 kind = default;
@@ -42,6 +48,8 @@ namespace BTSMTL.EventGraphs
             EventGraphValueKind.Float32 => typeof(float),
             EventGraphValueKind.Vector2 => typeof(UnityEngine.Vector2),
             EventGraphValueKind.Vector3 => typeof(UnityEngine.Vector3),
+            EventGraphValueKind.Quaternion => typeof(UnityEngine.Quaternion),
+            EventGraphValueKind.Enum => typeof(System.Enum),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
 
@@ -55,6 +63,9 @@ namespace BTSMTL.EventGraphs
         readonly float m_FloatValue;
         readonly UnityEngine.Vector2 m_Vector2Value;
         readonly UnityEngine.Vector3 m_Vector3Value;
+        readonly UnityEngine.Quaternion m_QuaternionValue;
+        readonly Type m_EnumType;
+        readonly int m_EnumValue;
 
         EventGraphValue(
             EventGraphValueKind kind,
@@ -63,6 +74,29 @@ namespace BTSMTL.EventGraphs
             float floatValue,
             UnityEngine.Vector2 vector2Value,
             UnityEngine.Vector3 vector3Value)
+            : this(
+                kind,
+                boolValue,
+                intValue,
+                floatValue,
+                vector2Value,
+                vector3Value,
+                default,
+                null,
+                0)
+        {
+        }
+
+        EventGraphValue(
+            EventGraphValueKind kind,
+            bool boolValue,
+            int intValue,
+            float floatValue,
+            UnityEngine.Vector2 vector2Value,
+            UnityEngine.Vector3 vector3Value,
+            UnityEngine.Quaternion quaternionValue,
+            Type enumType,
+            int enumValue)
         {
             Kind = kind;
             m_BoolValue = boolValue;
@@ -70,6 +104,9 @@ namespace BTSMTL.EventGraphs
             m_FloatValue = floatValue;
             m_Vector2Value = vector2Value;
             m_Vector3Value = vector3Value;
+            m_QuaternionValue = quaternionValue;
+            m_EnumType = enumType;
+            m_EnumValue = enumValue;
         }
 
         public EventGraphValueKind Kind { get; }
@@ -119,6 +156,33 @@ namespace BTSMTL.EventGraphs
             }
         }
 
+        public UnityEngine.Quaternion QuaternionValue
+        {
+            get
+            {
+                RequireKind(EventGraphValueKind.Quaternion);
+                return m_QuaternionValue;
+            }
+        }
+
+        public Type EnumType
+        {
+            get
+            {
+                RequireKind(EventGraphValueKind.Enum);
+                return m_EnumType;
+            }
+        }
+
+        public int EnumValue
+        {
+            get
+            {
+                RequireKind(EventGraphValueKind.Enum);
+                return m_EnumValue;
+            }
+        }
+
         public static EventGraphValue FromBool(bool value) =>
             new EventGraphValue(EventGraphValueKind.Bool, value, 0, 0f, default, default);
 
@@ -146,6 +210,41 @@ namespace BTSMTL.EventGraphs
             return new EventGraphValue(EventGraphValueKind.Vector3, false, 0, 0f, default, value);
         }
 
+        public static EventGraphValue FromQuaternion(UnityEngine.Quaternion value)
+        {
+            if (!float.IsFinite(value.x) || !float.IsFinite(value.y) ||
+                !float.IsFinite(value.z) || !float.IsFinite(value.w))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value));
+            }
+            return new EventGraphValue(
+                EventGraphValueKind.Quaternion,
+                false,
+                0,
+                0f,
+                default,
+                default,
+                value,
+                null,
+                0);
+        }
+
+        public static EventGraphValue FromEnum(Enum value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            return new EventGraphValue(
+                EventGraphValueKind.Enum,
+                false,
+                0,
+                0f,
+                default,
+                default,
+                default,
+                value.GetType(),
+                Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture));
+        }
+
         public static EventGraphValue FromObject(object value)
         {
             if (value is bool boolValue)
@@ -158,6 +257,10 @@ namespace BTSMTL.EventGraphs
                 return FromVector2(vector2Value);
             if (value is UnityEngine.Vector3 vector3Value)
                 return FromVector3(vector3Value);
+            if (value is UnityEngine.Quaternion quaternionValue)
+                return FromQuaternion(quaternionValue);
+            if (value is Enum enumValue)
+                return FromEnum(enumValue);
             throw new ArgumentException(
                 $"Event graph value type '{value?.GetType().FullName ?? "null"}' is not supported.",
                 nameof(value));
@@ -170,6 +273,8 @@ namespace BTSMTL.EventGraphs
             EventGraphValueKind.Float32 => m_FloatValue,
             EventGraphValueKind.Vector2 => m_Vector2Value,
             EventGraphValueKind.Vector3 => m_Vector3Value,
+            EventGraphValueKind.Quaternion => m_QuaternionValue,
+            EventGraphValueKind.Enum => Enum.ToObject(m_EnumType, m_EnumValue),
             _ => throw new InvalidOperationException("Event graph value kind is invalid.")
         };
 
@@ -185,6 +290,10 @@ namespace BTSMTL.EventGraphs
                 return (T)(object)m_Vector2Value;
             if (typeof(T) == typeof(UnityEngine.Vector3) && Kind == EventGraphValueKind.Vector3)
                 return (T)(object)m_Vector3Value;
+            if (typeof(T) == typeof(UnityEngine.Quaternion) && Kind == EventGraphValueKind.Quaternion)
+                return (T)(object)m_QuaternionValue;
+            if (typeof(T).IsEnum && Kind == EventGraphValueKind.Enum && m_EnumType == typeof(T))
+                return (T)Enum.ToObject(typeof(T), m_EnumValue);
             throw new InvalidOperationException(
                 $"Event graph value kind '{Kind}' cannot be read as '{typeof(T).FullName}'.");
         }
@@ -229,12 +338,14 @@ namespace BTSMTL.EventGraphs
             EventGraphVariableReference reference,
             string name,
             Type valueType,
-            EventGraphValue initialValue)
+            EventGraphValue initialValue,
+            bool isExposedPublic = true)
         {
             if (!reference.IsValid)
                 throw new ArgumentException("Event graph variable reference is invalid.", nameof(reference));
             if (!EventGraphValueKinds.TryGet(valueType, out EventGraphValueKind kind) ||
-                kind != initialValue.Kind)
+                kind != initialValue.Kind ||
+                kind == EventGraphValueKind.Enum && initialValue.EnumType != valueType)
             {
                 throw new ArgumentException("Event graph variable type and initial value do not match.", nameof(valueType));
             }
@@ -243,6 +354,7 @@ namespace BTSMTL.EventGraphs
             ValueType = valueType;
             ValueKind = kind;
             InitialValue = initialValue;
+            IsExposedPublic = isExposedPublic;
         }
 
         public EventGraphVariableReference Reference { get; }
@@ -250,6 +362,7 @@ namespace BTSMTL.EventGraphs
         public Type ValueType { get; }
         public EventGraphValueKind ValueKind { get; }
         public EventGraphValue InitialValue { get; }
+        public bool IsExposedPublic { get; }
     }
 
     public sealed class EventGraphVariableLayoutEntry
@@ -282,6 +395,7 @@ namespace BTSMTL.EventGraphs
                 ? throw new ArgumentException("Event graph contract revision is missing.", nameof(contractRevision))
                 : contractRevision.Trim();
             EventGraphVariableDescriptor[] ordered = (descriptors ?? Array.Empty<EventGraphVariableDescriptor>())
+                .Where(value => value == null || value.IsExposedPublic)
                 .OrderBy(value => value?.Reference.VariableId, StringComparer.Ordinal)
                 .ToArray();
             var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -320,6 +434,7 @@ namespace BTSMTL.EventGraphs
     public sealed class EventGraphVariableContract
     {
         readonly EventGraphVariableDescriptor[] m_Descriptors;
+        readonly EventGraphVariableDescriptor[] m_PublishedDescriptors;
 
         public EventGraphVariableContract(
             string graphId,
@@ -328,17 +443,22 @@ namespace BTSMTL.EventGraphs
         {
             GraphId = string.IsNullOrWhiteSpace(graphId)
                 ? throw new ArgumentException("Event graph identity is missing.", nameof(graphId))
-                : graphId.Trim();
+            : graphId.Trim();
             Revision = string.IsNullOrWhiteSpace(revision)
                 ? throw new ArgumentException("Event graph revision is missing.", nameof(revision))
                 : revision.Trim();
             m_Descriptors = (descriptors ?? Array.Empty<EventGraphVariableDescriptor>()).ToArray();
+            m_PublishedDescriptors = m_Descriptors
+                .Where(value => value.IsExposedPublic)
+                .OrderBy(value => value.Reference.VariableId, StringComparer.Ordinal)
+                .ToArray();
             Layout = new EventGraphVariableLayout(GraphId, Revision, m_Descriptors);
         }
 
         public string GraphId { get; }
         public string Revision { get; }
         public IReadOnlyList<EventGraphVariableDescriptor> Descriptors => m_Descriptors;
+        public IReadOnlyList<EventGraphVariableDescriptor> PublishedDescriptors => m_PublishedDescriptors;
         public EventGraphVariableLayout Layout { get; }
 
         public EventGraphVariableDescriptor Require(string variableId)

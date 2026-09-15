@@ -86,17 +86,17 @@ namespace ThirdPersonCharacter.Pipeline.Motion
 
         protected override void OnStart()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
 
         protected override State OnUpdate()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
 
         protected override void DoAction()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
     }
 
@@ -114,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Motion
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
         }
     }
 

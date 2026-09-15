@@ -183,18 +183,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 "OnEnter" => graph.allNodes.OfType<BtsmtlSkillStateOnEnterFlowNode>().Single(),
                 "Root" => graph.allNodes.OfType<BtsmtlSkillRootFlowNode>().Single(),
-                "OnExit" => graph.allNodes.OfType<BtsmtlSkillStateOnExitFlowNode>().Single(),
                 _ => throw new ArgumentOutOfRangeException(nameof(port))
             };
             if (!body.Operations.Nodes.TryGetValue(entry.UID, out OperationHandle entryOperation))
                 throw new InvalidOperationException($"{state.Route}: StateBody入口'{port}'未编译。");
+            ProgramControlFlowKind kind = port == "OnExit"
+                ? ProgramControlFlowKind.Exit
+                : ProgramControlFlowKind.Enter;
             m_Builder.DeclareControlFlow(
                 $"{state.Route}/body-entry:{port}",
                 owner,
                 entryOperation,
                 port,
                 "Entry",
-                port == "OnExit" ? ProgramControlFlowKind.Exit : ProgramControlFlowKind.Enter,
+                kind,
                 order,
                 0,
                 ProgramAbortPolicy.None,

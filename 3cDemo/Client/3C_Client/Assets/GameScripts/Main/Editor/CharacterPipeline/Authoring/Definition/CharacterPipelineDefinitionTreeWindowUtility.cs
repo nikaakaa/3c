@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
 
@@ -7,12 +8,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public static bool OpenSkillGraph(CharacterPipelineDefinition definition, string graphAuthoringId)
         {
-            if (!definition || definition.SkillGraphs == null || definition.SkillGraphs.Count == 0)
+            if (!definition)
                 return false;
 
-            for (int i = 0; i < definition.SkillGraphs.Count; i++)
+            IReadOnlyList<BtsmtlSkillFlowGraph> graphs = definition.AbilityGraphs;
+            if (graphs == null || graphs.Count == 0)
+                return false;
+            for (int i = 0; i < graphs.Count; i++)
             {
-                BtsmtlSkillFlowGraph graph = definition.SkillGraphs[i];
+                BtsmtlSkillFlowGraph graph = graphs[i];
                 if (graph && string.Equals(graph.AuthoringId, graphAuthoringId, System.StringComparison.Ordinal))
                     return AssetDatabase.OpenAsset(graph);
             }

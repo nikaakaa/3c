@@ -84,28 +84,16 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     [Name("状态机入口"), Category("BTSMTL/技能状态"), DoNotList]
     [BtsmtlSkillNodeKind("@enter")]
-    public sealed class BtsmtlSkillStateEnterFlowNode : BtsmtlSkillCompositeFlowNode, IBtsmtlSkillStateStructureNode, IBtsmtlSkillSystemNode
+    public sealed class BtsmtlSkillStateEnterFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillStateStructureNode, IBtsmtlSkillSystemNode
     {
-        protected override bool HasExecutionInput => false;
-
-        protected override void RegisterPorts()
-        {
-            AddFlowOutput("转移", "Transfer");
-            base.RegisterPorts();
-        }
+        protected override void RegisterPorts() => AddFlowOutput("转移", "Transfer");
     }
 
     [Name("任意状态"), Category("BTSMTL/技能状态"), DoNotList]
     [BtsmtlSkillNodeKind("@any")]
-    public sealed class BtsmtlSkillStateAnyFlowNode : BtsmtlSkillCompositeFlowNode, IBtsmtlSkillStateStructureNode, IBtsmtlSkillSystemNode
+    public sealed class BtsmtlSkillStateAnyFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillStateStructureNode, IBtsmtlSkillSystemNode
     {
-        protected override bool HasExecutionInput => false;
-
-        protected override void RegisterPorts()
-        {
-            AddFlowOutput("转移", "Transfer");
-            base.RegisterPorts();
-        }
+        protected override void RegisterPorts() => AddFlowOutput("转移", "Transfer");
     }
 
     [Name("状态机出口"), Category("BTSMTL/技能状态"), DoNotList]
@@ -123,18 +111,18 @@ namespace ThirdPersonCharacter.Control.Authoring
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
     public sealed class BtsmtlSkillStateMachineFlowNode : BtsmtlSkillFlowNode, IGraphAssignable
     {
-        [SerializeField] BtsmtlSkillFlowGraph m_StateMachine;
-        public BtsmtlSkillFlowGraph StateMachine => m_StateMachine;
+        [SerializeField] BtsmtlSkillNativeStateMachine m_NativeStateMachine;
+        public BtsmtlSkillNativeStateMachine StateMachine => m_NativeStateMachine;
 
-        public void SetStateMachine(BtsmtlSkillFlowGraph graph)
+        public void SetStateMachine(BtsmtlSkillNativeStateMachine graph)
         {
             if (graph != null && graph.Role != BtsmtlSkillFlowGraphRole.StateMachine)
-                throw new ArgumentException("A state machine node requires a skill state machine graph.", nameof(graph));
-            m_StateMachine = graph;
+                throw new ArgumentException("状态机节点只能引用原生Skill FSM。", nameof(graph));
+            m_NativeStateMachine = graph;
         }
 
         protected override void RegisterPorts() => AddFlowInput("执行", RejectAuthoringExecution, "Input");
-        Graph IGraphAssignable.subGraph { get => m_StateMachine; set => SetStateMachine((BtsmtlSkillFlowGraph)value); }
+        Graph IGraphAssignable.subGraph { get => m_NativeStateMachine; set => SetStateMachine((BtsmtlSkillNativeStateMachine)value); }
         Graph IGraphAssignable.currentInstance { get => null; set => throw new InvalidOperationException("Skill state machines execute as compiled data."); }
         BBParameter IGraphAssignable.subGraphParameter => null;
         List<BBMappingParameter> IGraphAssignable.variablesMap
@@ -152,22 +140,16 @@ namespace ThirdPersonCharacter.Control.Authoring
     [Name("技能状态"), Category("BTSMTL/技能状态")]
     [BtsmtlSkillNodeKind("state")]
     [BtsmtlSkillGraphReference("bodyGraphId", BtsmtlSkillFlowGraphRole.StateBody)]
-    [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
     [BtsmtlSkillAuthoringField(
         "bodyGraphId",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
-    [BtsmtlSkillAuthoringField(
-        "steps",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object)]
-    public sealed class BtsmtlSkillStateFlowNode : BtsmtlSkillCompositeFlowNode, IBtsmtlSkillStateStructureNode, IGraphAssignable
+    public sealed class BtsmtlSkillStateFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillStateStructureNode, IGraphAssignable
     {
         [SerializeField] BtsmtlSkillFlowGraph m_Body;
         public BtsmtlSkillFlowGraph Body => m_Body;
-        protected override string ExecutionInputId => "StateIn";
-
         protected override void RegisterPorts()
         {
-            base.RegisterPorts();
+            AddFlowInput("进入", RejectAuthoringExecution, "StateIn");
             AddFlowOutput("转移", "Transfer");
         }
 

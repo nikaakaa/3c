@@ -630,9 +630,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void PrepareFrame(
             float deltaSeconds,
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame inputs,
             ICharacterPoseStateSourceRuntime sources)
         {
-            if (!float.IsFinite(deltaSeconds) || deltaSeconds < 0f || !facts.IsValid)
+            if (!float.IsFinite(deltaSeconds) || deltaSeconds < 0f ||
+                !facts.IsValid || !inputs.IsValid)
                 throw new ArgumentException("Pose StateMachine frame input is invalid.");
             if (sources == null)
                 throw new ArgumentNullException(nameof(sources));
@@ -657,15 +659,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (m_BlendDuration <= 0f || m_BlendElapsed >= m_BlendDuration)
                     CompleteStandardBlend(sources);
             }
-            PrepareTransitionDemand(in facts, sources);
+            PrepareTransitionDemand(in facts, in inputs, sources);
         }
 
         internal void EvaluateTransitions(
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame inputs,
             ICharacterPoseStateSourceRuntime sources)
         {
             if (!m_Initialized)
                 throw new InvalidOperationException("Pose StateMachine is not initialized.");
+            if (!inputs.IsValid)
+                throw new ArgumentException(
+                    "Pose StateMachine animation variable frame is invalid.",
+                    nameof(inputs));
             m_FrameFailure = default;
             m_CanPublishPose = EvaluateRequiredPose(sources);
             if (!m_CanPublishPose)
@@ -938,6 +945,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         CharacterPoseStateTransitionDescriptor SelectTransition(
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame inputs,
             ICharacterPoseStateSourceRuntime sources)
         {
             float remainingTime = GetStateRemainingTime(m_ActiveStateIndex, sources);
@@ -948,6 +956,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 bool result = CharacterPoseTransitionRuleRuntime.Evaluate(
                         transition.Rule,
                         in facts,
+                        in inputs,
                         m_TimeInState,
                         remainingTime,
                         m_RuleValues);
@@ -1029,10 +1038,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         CharacterPoseStateTransitionDescriptor SelectPredictiveTarget(
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame inputs,
             ICharacterPoseStateSourceRuntime sources)
         {
-            if (facts.MotionPhase !=
-                CharacterPresentationMotionPhase.GroundedMoving)
+            BTSMTL.EventGraphs.EventGraphValue motionPhase =
+                inputs.RequireValue(
+                    new PoseParameterId(CharacterAnimationVariableIds.MotionPhase));
+            if (motionPhase.Kind != BTSMTL.EventGraphs.EventGraphValueKind.Enum ||
+                motionPhase.EnumType != typeof(CharacterPresentationMotionPhase) ||
+                motionPhase.As<CharacterPresentationMotionPhase>() !=
+                    CharacterPresentationMotionPhase.GroundedMoving)
             {
                 return null;
             }
@@ -1056,6 +1071,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (CharacterPoseTransitionRuleRuntime.EvaluateProspectiveMovementMode(
                         transition.Rule,
                         in facts,
+                        in inputs,
                         m_TimeInState,
                         statePoseRemainingTime,
                         targetMovementMode,
@@ -1117,10 +1133,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void PrepareTransitionDemand(
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame inputs,
             ICharacterPoseStateSourceRuntime sources)
         {
             CharacterPoseStateTransitionDescriptor selected =
-                SelectTransition(in facts, sources);
+                SelectTransition(in facts, in inputs, sources);
             bool ruleSatisfied = selected != null;
             if (m_ActiveTransition != null &&
                 selected != null &&
@@ -1130,7 +1147,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             }
             if (selected == null)
-                selected = SelectPredictiveTarget(in facts, sources);
+                selected = SelectPredictiveTarget(in facts, in inputs, sources);
             if (selected == null)
             {
                 ClearPendingTarget(sources);
@@ -1656,6 +1673,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal static bool Evaluate(
             CharacterPoseTransitionRuleProgram program,
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame inputs,
             float timeInState,
             float statePoseRemainingTime,
             CharacterPoseTransitionRuleValue[] values)
@@ -1663,6 +1681,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return Evaluate(
                 program,
                 in facts,
+                in inputs,
                 timeInState,
                 statePoseRemainingTime,
                 string.Empty,
@@ -1672,6 +1691,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal static bool EvaluateProspectiveMovementMode(
             CharacterPoseTransitionRuleProgram program,
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame inputs,
             float timeInState,
             float statePoseRemainingTime,
             string movementMode,
@@ -1682,6 +1702,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return Evaluate(
                 program,
                 in facts,
+                in inputs,
                 timeInState,
                 0f,
                 movementMode,
@@ -1691,13 +1712,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         static bool Evaluate(
             CharacterPoseTransitionRuleProgram program,
             in CharacterPresentationFactFrame facts,
+            in CharacterAnimationPoseInputFrame inputs,
             float timeInState,
             float statePoseRemainingTime,
             string movementMode,
             CharacterPoseTransitionRuleValue[] values)
         {
             program.RequireValid();
-            if (!facts.IsValid || !float.IsFinite(timeInState) || timeInState < 0f ||
+            if (!facts.IsValid || !inputs.IsValid ||
+                !float.IsFinite(timeInState) || timeInState < 0f ||
                 !float.IsFinite(statePoseRemainingTime) || statePoseRemainingTime < 0f ||
                 values == null || values.Length < program.Operations.Count)
             {
@@ -1713,6 +1736,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         operation,
                         in facts,
                         movementMode),
+                    PoseTransitionRuleOperationCode.ReadAnimationVariable =>
+                        ReadAnimationVariable(
+                            operation,
+                            in inputs),
                     PoseTransitionRuleOperationCode.BoolLiteral => Bool(operation.BoolLiteral),
                     PoseTransitionRuleOperationCode.FloatLiteral => Float(operation.FloatLiteral),
                     PoseTransitionRuleOperationCode.EnumLiteral => Enum(operation.EnumLiteral),
@@ -1783,6 +1810,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             };
         }
 
+        static CharacterPoseTransitionRuleValue ReadAnimationVariable(
+            CharacterPoseTransitionRuleCompiledOperation operation,
+            in CharacterAnimationPoseInputFrame inputs)
+        {
+            if (!operation.ParameterId.IsValid)
+                throw new InvalidOperationException(
+                    "Animation Variable Transition Rule input identity is invalid.");
+            BTSMTL.EventGraphs.EventGraphValue value =
+                inputs.RequireValue(operation.ParameterId);
+            return value.Kind switch
+            {
+                BTSMTL.EventGraphs.EventGraphValueKind.Bool =>
+                    Bool(value.BoolValue),
+                BTSMTL.EventGraphs.EventGraphValueKind.Float32 =>
+                    Float(value.Float32Value),
+                BTSMTL.EventGraphs.EventGraphValueKind.Int32 =>
+                    Int(value.Int32Value),
+                BTSMTL.EventGraphs.EventGraphValueKind.Enum
+                    when value.EnumType == typeof(CharacterPresentationMotionPhase) =>
+                    Enum(value.EnumValue),
+                _ => throw new InvalidOperationException(
+                    $"Animation Variable '{operation.ParameterId}' cannot be read by a Pose Transition Rule.")
+            };
+        }
+
         static bool Equal(CharacterPoseTransitionRuleValue[] values, int a, int b)
         {
             CharacterPoseTransitionRuleValue left = Require(values, a);
@@ -1794,6 +1846,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 PoseTransitionRuleValueKind.Bool => left.BoolValue == right.BoolValue,
                 PoseTransitionRuleValueKind.Float => left.FloatValue == right.FloatValue,
                 PoseTransitionRuleValueKind.Enum => left.EnumValue == right.EnumValue,
+                PoseTransitionRuleValueKind.Int => left.EnumValue == right.EnumValue,
                 PoseTransitionRuleValueKind.Identity => string.Equals(
                     left.IdentityValue,
                     right.IdentityValue,
@@ -1830,6 +1883,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         static CharacterPoseTransitionRuleValue Float(float value) =>
             new CharacterPoseTransitionRuleValue(PoseTransitionRuleValueKind.Float, false, value, 0, string.Empty);
+
+        static CharacterPoseTransitionRuleValue Int(int value) =>
+            new CharacterPoseTransitionRuleValue(PoseTransitionRuleValueKind.Int, false, 0f, value, string.Empty);
 
         static CharacterPoseTransitionRuleValue Enum(int value) =>
             new CharacterPoseTransitionRuleValue(PoseTransitionRuleValueKind.Enum, false, 0f, value, string.Empty);

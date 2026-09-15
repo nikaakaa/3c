@@ -132,29 +132,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     EventGraphHostInputIds.DeltaSeconds,
                     typeof(float)),
                 new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.Velocity.Value,
+                    typeof(UnityEngine.Vector3)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.Rotation.Value,
+                    typeof(UnityEngine.Quaternion)),
+                new EventGraphInputDescriptor(
                     CharacterPresentationFactSchema.Grounded.Value,
                     typeof(bool)),
                 new EventGraphInputDescriptor(
-                    CharacterPresentationFactSchema.HorizontalSpeed.Value,
-                    typeof(float)),
-                new EventGraphInputDescriptor(
-                    CharacterPresentationFactSchema.HorizontalAcceleration.Value,
-                    typeof(float)),
-                new EventGraphInputDescriptor(
-                    CharacterPresentationFactSchema.VerticalSpeed.Value,
-                    typeof(float)),
-                new EventGraphInputDescriptor(
-                    CharacterPresentationFactSchema.MovementDirection.Value,
+                    CharacterPresentationFactSchema.DesiredPlanarVelocity.Value,
                     typeof(UnityEngine.Vector2)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.DesiredFacing.Value,
+                    typeof(UnityEngine.Vector2)),
+                new EventGraphInputDescriptor(
+                    CharacterPresentationFactSchema.HasMotion.Value,
+                    typeof(bool)),
                 new EventGraphInputDescriptor(
                     CharacterPresentationFactSchema.LocomotionPlanarBasis.Value,
-                    typeof(UnityEngine.Vector2)),
-                new EventGraphInputDescriptor(
-                    CharacterPresentationFactSchema.DesiredDirection.Value,
-                    typeof(UnityEngine.Vector2)),
-                new EventGraphInputDescriptor(
-                    CharacterPresentationFactSchema.FacingError.Value,
-                    typeof(float))
+                    typeof(UnityEngine.Vector2))
             };
             var outputs = new List<EventGraphOutputDescriptor>();
             for (int i = 0; i < variableContract.Variables.Count; i++)
@@ -216,6 +213,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 if (string.Equals(
                         inputId,
+                        CharacterPresentationFactSchema.Velocity.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Vector3,
+                        expectedKind,
+                        EventGraphValue.FromVector3(m_Fact.Velocity),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.Rotation.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Quaternion,
+                        expectedKind,
+                        EventGraphValue.FromQuaternion(m_Fact.Rotation),
+                        out value);
+                if (string.Equals(
+                        inputId,
                         CharacterPresentationFactSchema.Grounded.Value,
                         StringComparison.Ordinal))
                     return Read(
@@ -225,39 +240,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         out value);
                 if (string.Equals(
                         inputId,
-                        CharacterPresentationFactSchema.HorizontalSpeed.Value,
-                        StringComparison.Ordinal))
-                    return Read(
-                        EventGraphValueKind.Float32,
-                        expectedKind,
-                        EventGraphValue.FromFloat32(m_Fact.HorizontalSpeed),
-                        out value);
-                if (string.Equals(
-                        inputId,
-                        CharacterPresentationFactSchema.HorizontalAcceleration.Value,
-                        StringComparison.Ordinal))
-                    return Read(
-                        EventGraphValueKind.Float32,
-                        expectedKind,
-                        EventGraphValue.FromFloat32(m_Fact.HorizontalAcceleration),
-                        out value);
-                if (string.Equals(
-                        inputId,
-                        CharacterPresentationFactSchema.VerticalSpeed.Value,
-                        StringComparison.Ordinal))
-                    return Read(
-                        EventGraphValueKind.Float32,
-                        expectedKind,
-                        EventGraphValue.FromFloat32(m_Fact.VerticalSpeed),
-                        out value);
-                if (string.Equals(
-                        inputId,
-                        CharacterPresentationFactSchema.MovementDirection.Value,
+                        CharacterPresentationFactSchema.DesiredPlanarVelocity.Value,
                         StringComparison.Ordinal))
                     return Read(
                         EventGraphValueKind.Vector2,
                         expectedKind,
-                        EventGraphValue.FromVector2(m_Fact.MovementDirection),
+                        EventGraphValue.FromVector2(m_Fact.DesiredPlanarVelocity),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.DesiredFacing.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Vector2,
+                        expectedKind,
+                        EventGraphValue.FromVector2(m_Fact.DesiredFacing),
+                        out value);
+                if (string.Equals(
+                        inputId,
+                        CharacterPresentationFactSchema.HasMotion.Value,
+                        StringComparison.Ordinal))
+                    return Read(
+                        EventGraphValueKind.Bool,
+                        expectedKind,
+                        EventGraphValue.FromBool(m_Fact.HasMotion),
                         out value);
                 if (string.Equals(
                         inputId,
@@ -267,24 +273,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         EventGraphValueKind.Vector2,
                         expectedKind,
                         EventGraphValue.FromVector2(m_Fact.LocomotionPlanarBasis),
-                        out value);
-                if (string.Equals(
-                        inputId,
-                        CharacterPresentationFactSchema.DesiredDirection.Value,
-                        StringComparison.Ordinal))
-                    return Read(
-                        EventGraphValueKind.Vector2,
-                        expectedKind,
-                        EventGraphValue.FromVector2(m_Fact.DesiredDirection),
-                        out value);
-                if (string.Equals(
-                        inputId,
-                        CharacterPresentationFactSchema.FacingError.Value,
-                        StringComparison.Ordinal))
-                    return Read(
-                        EventGraphValueKind.Float32,
-                        expectedKind,
-                        EventGraphValue.FromFloat32(m_Fact.FacingError),
                         out value);
                 value = default;
                 return false;

@@ -165,8 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     },
                     mutationBindingId: "btsmtl.state-machine-transition",
                     validationBindingId: "btsmtl.state-machine-transition",
-                    compilerBindingId: "btsmtl.state-machine-transition",
-                    documentCodecId: "btsmtl.state-machine-transition")));
+                    compilerBindingId: "btsmtl.state-machine-transition")));
             s_Registered = true;
         }
 
@@ -335,6 +334,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterPoseAuthoringDisplayNames
     {
+        public static string ForParameter(PoseParameterId parameterId) =>
+            HumanizeIdentity(parameterId.Value, "Parameter");
+
+        public static string ForIdentity(string identity) =>
+            HumanizeIdentity(identity, "Unnamed");
+
         public static string StateMachine(
             CharacterPoseStateMachineDefinition machine) =>
             HumanizeIdentity(

@@ -34,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame parameterFrame,
             ulong completionIdentity,
             in AnimationPoseValueNativeReadBinding inputBinding,
             int parameterIndex)
@@ -69,6 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 inputBinding.PoseParameters[parameterIndex],
                 bodyFrame,
                 in factFrame,
+                in parameterFrame,
                 in input);
             return planningFrame;
         }

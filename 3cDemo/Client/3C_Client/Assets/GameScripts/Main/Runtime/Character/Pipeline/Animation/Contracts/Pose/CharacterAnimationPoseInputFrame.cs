@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.EventGraphs;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -7,18 +8,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal readonly struct CharacterAnimationPoseInputFrame
     {
         readonly CharacterAnimationVariableFrame m_VariableFrame;
-        readonly PoseParameterId[] m_ParameterIds;
 
         CharacterAnimationPoseInputFrame(
-            CharacterAnimationVariableFrame variableFrame,
-            PoseParameterId[] parameterIds)
+            CharacterAnimationVariableFrame variableFrame)
         {
             m_VariableFrame = variableFrame;
-            m_ParameterIds = parameterIds;
         }
 
         internal bool IsValid =>
-            m_VariableFrame != null && m_ParameterIds != null;
+            m_VariableFrame != null;
 
         internal bool IsPublishedVariableFrame => m_VariableFrame != null;
 
@@ -50,7 +48,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 ids[i] = parameterId;
             }
-            return new CharacterAnimationPoseInputFrame(frame, ids);
+            return new CharacterAnimationPoseInputFrame(frame);
+        }
+
+        internal static CharacterAnimationPoseInputFrame FromPublishedVariables(
+            CharacterAnimationVariableFrame frame,
+            CharacterPoseProgramImage posePlan)
+        {
+            if (posePlan == null)
+                throw new ArgumentNullException(nameof(posePlan));
+            var parameterIds = new List<PoseParameterId>();
+            for (int i = 0; i < posePlan.Parameters.Count; i++)
+            {
+                CharacterPresentationPoseParameterEntry parameter =
+                    posePlan.Parameters[i];
+                if (parameter.Usage == CharacterPoseParameterUsage.Control)
+                    parameterIds.Add(parameter.ParameterId);
+            }
+            for (int i = 0; i < posePlan.StateMachines.Count; i++)
+            {
+                CharacterPoseStateMachineDescriptor machine =
+                    posePlan.StateMachines[i];
+                for (int j = 0; j < machine.Transitions.Count; j++)
+                {
+                    CharacterPoseTransitionRuleProgram rule =
+                        machine.Transitions[j].Rule;
+                    for (int k = 0; k < rule.Operations.Count; k++)
+                    {
+                        CharacterPoseTransitionRuleCompiledOperation operation =
+                            rule.Operations[k];
+                        if (operation.Code ==
+                                PoseTransitionRuleOperationCode.ReadAnimationVariable)
+                        {
+                            parameterIds.Add(operation.ParameterId);
+                        }
+                    }
+                }
+            }
+            return FromPublishedVariables(frame, parameterIds.Distinct().ToArray());
         }
 
         internal bool TryRead(
@@ -63,14 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return false;
             }
             if (m_VariableFrame != null)
-            {
-                if (!Contains(parameterId))
-                {
-                    value = default;
-                    return false;
-                }
                 return m_VariableFrame.TryRead(parameterId.Value, out value);
-            }
             value = default;
             return false;
         }
@@ -92,14 +120,5 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return value.Float32Value;
         }
 
-        bool Contains(PoseParameterId parameterId)
-        {
-            for (int i = 0; i < m_ParameterIds.Length; i++)
-            {
-                if (m_ParameterIds[i].Equals(parameterId))
-                    return true;
-            }
-            return false;
-        }
     }
 }

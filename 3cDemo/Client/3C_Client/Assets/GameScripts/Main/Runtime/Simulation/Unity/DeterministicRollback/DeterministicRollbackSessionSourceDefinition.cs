@@ -13,12 +13,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
     public sealed class DeterministicRollbackSessionSourceDefinition : SimulationSessionSourceDefinition
     {
         [SerializeField, Min(1)] int m_TickRate = 30;
-        [SerializeField] FixedCharacterSimulationProgramAsset m_FixedProgram;
         [SerializeField] DeterministicRollbackPipelineDefinition m_Pipeline;
         [SerializeField] DeterministicKccWorldSolverDefinition m_WorldSolver;
         [SerializeField] RollbackEndpointAuthoringDefinition m_Endpoint;
 
-        public FixedCharacterSimulationProgramAsset FixedProgram => RequireProgramAsset();
         public DeterministicRollbackPipelineDefinition Pipeline => m_Pipeline ? m_Pipeline :
             throw new InvalidOperationException($"Rollback Source '{name}' requires a Pipeline Definition.");
         public DeterministicKccWorldSolverDefinition WorldSolver => m_WorldSolver ? m_WorldSolver :
@@ -45,23 +43,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             return new DeterministicRollbackSessionSourcePreparation(
                 context,
                 BuildModelDefinition(),
-                RequireEndpoint(),
-                RequireProgramAsset().Load());
+                RequireEndpoint());
         }
 
         public DeterministicRollbackModelDefinition BuildModelDefinition()
         {
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program =
-                RequireProgramAsset().Load();
-            if (program.Manifest.TickRate != RequireTickRate())
-                throw new InvalidOperationException($"Rollback Source '{name}' TickRate does not match its Fixed Program.");
             DeterministicRollbackPipelineDefinition pipeline = Pipeline;
             DeterministicKccWorldSolverDefinition solver = WorldSolver;
             return new DeterministicRollbackModelDefinition(
                 pipeline.BuildPolicy(),
-                program.Manifest.SemanticHash,
-                program.ProgramHash,
-                program.LayoutHash,
                 RequireTickRate(),
                 solver.LoadCollisionWorld().ContentHash,
                 solver.BuildKccIdentityHash(RequireTickRate()),
@@ -74,9 +64,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 ? m_TickRate
                 : throw new InvalidOperationException($"Rollback Source '{name}' requires a positive TickRate.");
         }
-
-        FixedCharacterSimulationProgramAsset RequireProgramAsset() => m_FixedProgram ? m_FixedProgram :
-            throw new InvalidOperationException($"Rollback Source '{name}' requires a Fixed Program asset.");
 
         RollbackEndpointAuthoringDefinition RequireEndpoint() => m_Endpoint ? m_Endpoint :
             throw new InvalidOperationException($"Rollback Source '{name}' requires an Endpoint Definition.");
@@ -96,24 +83,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public DeterministicRollbackSessionSourcePreparation(
             SimulationSessionSourcePreparationContext context,
             DeterministicRollbackModelDefinition model,
-            RollbackEndpointAuthoringDefinition endpointAuthoring,
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram expectedProgram)
+            RollbackEndpointAuthoringDefinition endpointAuthoring)
         {
             m_Context = context ?? throw new ArgumentNullException(nameof(context));
             m_Model = model ?? throw new ArgumentNullException(nameof(model));
             m_EndpointAuthoring = endpointAuthoring ? endpointAuthoring : throw new ArgumentNullException(nameof(endpointAuthoring));
-            if (expectedProgram == null)
-                throw new ArgumentNullException(nameof(expectedProgram));
-            ValidateComposition(context, model, expectedProgram);
+            ValidateComposition(context, model);
             m_Profile = endpointAuthoring.ResolvePeerProfile();
             IDeterministicRollbackSimulationActorRegistration local = RequireRegistrations(
                 context.Registrations,
-                expectedProgram,
                 m_Profile.ActorId);
             RollbackEndpointDefinition endpoint = endpointAuthoring.Build();
             if (!string.Equals(endpoint.SessionId, context.SessionId.Value, StringComparison.Ordinal))
                 throw new InvalidOperationException("Rollback Endpoint SessionId does not match the Session Composition.");
-            RollbackHandshake handshake = BuildHandshake(model, m_Profile.PeerId);
+            RollbackHandshake handshake = BuildHandshake(
+                model,
+                m_Profile.PeerId,
+                context.CharacterRuntime.GameplayContentHash);
             m_Peer = new RollbackPeerEndpoint(
                 endpoint,
                 handshake,
@@ -207,23 +193,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
 
         static void ValidateComposition(
             SimulationSessionSourcePreparationContext context,
-            DeterministicRollbackModelDefinition model,
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program)
+            DeterministicRollbackModelDefinition model)
         {
-            if (context.TickRate != model.TickRate || program.Manifest.TickRate != context.TickRate ||
-                !context.ProgramRuntime.NumericProfileId.Equals(FixedSimulationNumericProfile.Value.Id) ||
-                !context.ProgramRuntime.TargetAbiVersion.Equals(FixedSimulationNumericProfile.Value.AbiVersion) ||
+            if (context.TickRate != model.TickRate ||
+                !context.CharacterRuntime.NumericProfileId.Equals(FixedSimulationNumericProfile.Value.Id) ||
+                !context.CharacterRuntime.TargetAbiVersion.Equals(FixedSimulationNumericProfile.Value.AbiVersion) ||
                 context.ExecutionBackend is not FixedPassExecutionBackendDefinition ||
                 !context.WorldSolver.Identity.ConfigurationHash.Equals(model.KccIdentityHash) ||
                 !context.WorldIdentity.WorldConfigurationHash.Equals(model.CollisionWorldHash))
             {
-                throw new InvalidOperationException("Rollback Source Program, Backend, TickRate, world, or KCC identity does not match the Session Composition.");
+                throw new InvalidOperationException("Rollback Source Character Runtime, Backend, TickRate, world, or KCC identity does not match the Session Composition.");
             }
         }
 
         static IDeterministicRollbackSimulationActorRegistration RequireRegistrations(
             IReadOnlyList<ISimulationActorRegistration> registrations,
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram expectedProgram,
             ActorId localActorId)
         {
             IDeterministicRollbackSimulationActorRegistration local = null;
@@ -231,13 +215,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             {
                 if (registrations[i] is not IDeterministicRollbackSimulationActorRegistration registration)
                     throw new InvalidOperationException($"Actor '{registrations[i].ActorId}' is not a Deterministic Rollback Fixed registration.");
-                ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = registration.Program;
-                if (!program.Manifest.SemanticHash.Equals(expectedProgram.Manifest.SemanticHash) ||
-                    !program.ProgramHash.Equals(expectedProgram.ProgramHash) ||
-                    !program.LayoutHash.Equals(expectedProgram.LayoutHash))
-                {
-                    throw new InvalidOperationException($"Actor '{registration.ActorId}' Fixed Program does not match the Rollback Model.");
-                }
                 if (registration.ActorId.Equals(localActorId))
                     local = registration;
             }
@@ -265,14 +242,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new InvalidOperationException("Rollback Endpoint roster does not contain the selected local Peer/Player/Actor identity.");
         }
 
-        static RollbackHandshake BuildHandshake(DeterministicRollbackModelDefinition model, string peerId)
+        static RollbackHandshake BuildHandshake(
+            DeterministicRollbackModelDefinition model,
+            string peerId,
+            GameplayContentHash gameplayContentHash)
         {
             return new RollbackHandshake(
                 peerId,
                 model.ModelIdentity,
-                model.SemanticHash,
-                model.FixedProgramHash,
-                model.FixedLayoutHash,
+                gameplayContentHash,
                 model.TickRate,
                 model.CollisionWorldHash,
                 model.KccIdentityHash,

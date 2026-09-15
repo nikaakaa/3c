@@ -171,11 +171,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (GUILayout.Button("Compile", EditorStyles.toolbarButton))
                     workspace.CompilePoseProjection();
             }
-            using (new EditorGUI.DisabledScope(!workspace.m_Definition))
-            {
-                if (GUILayout.Button("Build", EditorStyles.toolbarButton))
-                    workspace.BuildDefinition();
-            }
         }
 
         internal CharacterPresentationProjectionAsset ProjectionContext => m_Projection;
@@ -345,11 +340,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             toolbar.Add(new Button(ValidateAuthoring) { text = "Validate" });
             toolbar.Add(new Button(SaveAuthoring) { text = "保存" });
             var compile = new Button(CompilePoseProjection) { text = "Compile" };
-            var build = new Button(BuildDefinition) { text = "Build" };
             compile.SetEnabled(m_Profile != null);
-            build.SetEnabled(m_Definition != null);
             toolbar.Add(compile);
-            toolbar.Add(build);
             m_LiveDebugToggle = new ToolbarToggle
             {
                 text = "运行观察"
@@ -1376,7 +1368,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (!ValidateAuthoringAndLocate())
                 return;
-            m_Status.text = "Pose graph data compile completed. Character Build publishes Projection and Program.";
+            m_Status.text = "Pose graph data compile completed.";
         }
 
         void ValidateAuthoring()
@@ -1581,27 +1573,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             m_Canvas?.ClearHighlights();
             m_StateMachineSurface?.ClearHighlights();
-        }
-
-        void BuildDefinition()
-        {
-            if (!m_Definition)
-            {
-                m_Status.text = "Build unavailable: no Character Definition context.";
-                return;
-            }
-            try
-            {
-                bool built = CharacterSimulationProgramBuildService.Build(m_Definition, true);
-                RefreshLinkedPoseWorkspaceStatus();
-                m_Status.text = built
-                    ? $"Build completed and published. · {m_LinkedPoseWorkspaceStatus}"
-                    : "Build failed. Inspect the formal report.";
-            }
-            catch (Exception exception)
-            {
-                m_Status.text = $"Build failed: {exception.Message}";
-            }
         }
 
         void Reload()

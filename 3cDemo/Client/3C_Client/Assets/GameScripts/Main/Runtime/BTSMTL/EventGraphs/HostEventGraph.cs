@@ -51,7 +51,8 @@ namespace BTSMTL.EventGraphs
                     new EventGraphVariableReference(AuthoringId, variable.ID),
                     variable.name,
                     variable.varType,
-                    EventGraphValue.FromObject(variable.value)));
+                    EventGraphValue.FromObject(variable.value),
+                    variable.isExposedPublic));
             }
             return new EventGraphVariableContract(
                 AuthoringId,

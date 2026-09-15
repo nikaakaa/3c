@@ -26,14 +26,46 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<Float32GameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
 
+        public static Float32CharacterRuntime Create(
+            IEnumerable<SimulationActorBinding> roster,
+            CharacterControlModuleCatalog controlModules)
+        {
+            SimulationExecutionTargetManifest target = Float32SimulationTarget.Manifest.ExecutionTarget;
+            var values = roster == null ? new List<SimulationActorBinding>() : new List<SimulationActorBinding>(roster);
+            if (values.Count == 0 || values[0].AbilityData.Data.Count == 0)
+                throw new ArgumentException("Float32 Character Runtime factory requires an Ability TickRate.", nameof(roster));
+            return new Float32CharacterRuntime(
+                values,
+                target.NumericProfile,
+                values[0].AbilityData.Data[0].TickRate,
+                target.OperationSetVersion,
+                controlModules);
+        }
+
+        public static Float32CharacterRuntime Create(
+            IEnumerable<SimulationActorBinding> roster,
+            int tickRate,
+            CharacterControlModuleCatalog controlModules)
+        {
+            SimulationExecutionTargetManifest target = Float32SimulationTarget.Manifest.ExecutionTarget;
+            return new Float32CharacterRuntime(
+                roster,
+                target.NumericProfile,
+                tickRate,
+                target.OperationSetVersion,
+                controlModules);
+        }
+
         public Float32CharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
             SimulationNumericProfile numericProfile,
             int tickRate,
-            OperationSetVersion operationSetVersion)
+            OperationSetVersion operationSetVersion,
+            CharacterControlModuleCatalog controlModules)
         {
             if (!numericProfile.IsValid || tickRate <= 0 || !operationSetVersion.IsValid)
                 throw new ArgumentException("Float32 Character Runtime execution identity is incomplete.");
+            ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             var values = roster == null
                 ? new List<SimulationActorBinding>()
                 : new List<SimulationActorBinding>(roster);
@@ -75,6 +107,8 @@ namespace ThirdPersonSimulation
             TickRate = tickRate;
             OperationSetVersion = operationSetVersion;
             WorldCapability requiredWorldCapabilities = WorldCapability.None;
+            for (int i = 0; i < values.Count; i++)
+                requiredWorldCapabilities |= values[i].BodyMotionBinding.RequiredWorldCapability;
             for (int i = 0; i < m_Abilities.Count; i++)
             {
                 Float32GameplayAbilityExecutionData ability = m_Abilities[i];
@@ -112,9 +146,58 @@ namespace ThirdPersonSimulation
         public SimulationNumericProfile NumericProfile { get; }
         public int TickRate { get; }
         public OperationSetVersion OperationSetVersion { get; }
+        public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         public GameplayContentHash GameplayContentHash { get; }
+
+        public Float32CharacterRuntimeState CreateInitialState(int actorIndex)
+        {
+            if (actorIndex < 0 || actorIndex >= Roster.Count)
+                throw new ArgumentOutOfRangeException(nameof(actorIndex));
+            SimulationActorBinding actor = Roster[actorIndex];
+            CharacterControlModuleContract control = ControlModules.RequireContract(actor.ControlRuntimeBinding.ModuleId);
+            CharacterControlRuntimeState controlState = CharacterControlRuntimeState.CreateInitial(
+                actor.ControlRuntimeBinding,
+                control);
+            Float32GameplayEffectRuntimeCatalog effectCatalog = actor.GameplayEffectRuntimeBinding == null
+                ? null
+                : new Float32GameplayEffectRuntimeCatalog(actor.GameplayEffectRuntimeBinding);
+            GameplayEffectStateAggregate effectState = effectCatalog == null
+                ? null
+                : GameplayEffectStateAggregate.CreateInitial(effectCatalog);
+            EquipmentStateAggregate equipmentState = null;
+            CreateEquipmentInitialState(actor, out equipmentState);
+            return Float32CharacterRuntimeState.CreateInitial(
+                actor.AbilityInstallations,
+                NumericProfile,
+                new GameplayContentHash(actor.GameplayContentHash),
+                controlState,
+                effectState,
+                equipmentState);
+        }
+
+        static void CreateEquipmentInitialState(
+            SimulationActorBinding actor,
+            out EquipmentStateAggregate equipmentState)
+        {
+            equipmentState = null;
+            for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
+            {
+                Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
+                if (!installation.Data.Capabilities.HasGameplayCapability("Equipment"))
+                    continue;
+                if (actor.EquipmentRuntimeBinding == null)
+                    throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
+                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
+                    actor.EquipmentRuntimeBinding,
+                    installation.Data.CatalogEntries,
+                    installation.Data.References,
+                    installation.Data.Producers);
+                equipmentState = EquipmentStateAggregate.CreateInitial(layout);
+                return;
+            }
+        }
 
         static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)
         {

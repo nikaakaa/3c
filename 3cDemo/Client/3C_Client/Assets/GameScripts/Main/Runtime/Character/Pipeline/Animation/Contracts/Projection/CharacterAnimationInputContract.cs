@@ -78,7 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             var hashParts = new List<string>
             {
-                "character-animation-input-contract/v2"
+                "character-animation-input-contract/v3"
             };
             for (int i = 0; i < m_Parameters.Length; i++)
             {

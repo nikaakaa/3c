@@ -311,9 +311,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ActiveTimeline = null;
         }
 
-        FlowGraph FindGraph(string identity) => m_Definition.SkillGraphs.Where(graph => graph != null)
+        FlowGraph FindGraph(string identity)
+        {
+            IReadOnlyList<BtsmtlSkillFlowGraph> roots = m_Definition.AbilityGraphs;
+            return roots.Where(graph => graph != null)
             .SelectMany(graph => BtsmtlSkillGraphClosure.Validate(graph, false)).Distinct()
             .Single(graph => ((IBtsmtlSkillFlowGraph)graph).AuthoringId == identity);
+        }
 
         static bool SameRelease(RuntimeInstanceKey left, RuntimeInstanceKey right) =>
             left.Kind == RuntimeInstanceKind.SkillExecution && left.CharacterRuntimeId == right.CharacterRuntimeId &&

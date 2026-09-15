@@ -12,7 +12,6 @@ namespace ThirdPersonGameplay.ScenePlay
         Resume = 3,
         Reset = 4,
         Stop = 5,
-        Build = 6,
         Restore = 7,
         Replay = 8,
         StartInputRecording = 9,
@@ -23,15 +22,13 @@ namespace ThirdPersonGameplay.ScenePlay
     {
         Idle = 1,
         Checking = 2,
-        NeedsBuild = 3,
         EnteringPlay = 4,
         Preparing = 5,
         Running = 6,
         Paused = 7,
         Resetting = 8,
         Stopping = 9,
-        Faulted = 10,
-        Building = 11
+        Faulted = 10
     }
 
     public enum BtsmtlScenePlayFailureStage : byte
@@ -158,8 +155,7 @@ namespace ThirdPersonGameplay.ScenePlay
             State == BtsmtlScenePlayState.Running ||
             State == BtsmtlScenePlayState.Paused ||
             State == BtsmtlScenePlayState.Resetting ||
-            State == BtsmtlScenePlayState.Stopping ||
-            State == BtsmtlScenePlayState.Building;
+            State == BtsmtlScenePlayState.Stopping;
         public bool HasFailure => FailureStage != BtsmtlScenePlayFailureStage.None;
 
         public static BtsmtlScenePlayStatus Idle => new BtsmtlScenePlayStatus(
@@ -199,20 +195,20 @@ namespace ThirdPersonGameplay.ScenePlay
             string actorId,
             string skillId,
             string entryGraphAuthoringId,
-            string actionProfileId,
+            string admissionProfileId,
             string sourceInputRequestId)
         {
             ActorId = actorId;
             SkillId = skillId ?? string.Empty;
             EntryGraphAuthoringId = entryGraphAuthoringId ?? string.Empty;
-            ActionProfileId = actionProfileId ?? string.Empty;
+            AdmissionProfileId = admissionProfileId ?? string.Empty;
             SourceInputRequestId = sourceInputRequestId ?? string.Empty;
         }
 
         public string ActorId { get; }
         public string SkillId { get; }
         public string EntryGraphAuthoringId { get; }
-        public string ActionProfileId { get; }
+        public string AdmissionProfileId { get; }
         public string SourceInputRequestId { get; }
     }
 
@@ -224,8 +220,7 @@ namespace ThirdPersonGameplay.ScenePlay
         RejectedSkillMissing = 3,
         RejectedInputRequestMissing = 4,
         RejectedSourceUnavailable = 5,
-        RejectedSkillAmbiguous = 6,
-        RejectedProgramAdoptionPending = 7
+        RejectedSkillAmbiguous = 6
     }
 
     public readonly struct BtsmtlScenePlaySkillRequestResult
@@ -237,8 +232,6 @@ namespace ThirdPersonGameplay.ScenePlay
             string inputRequestId,
             ulong inputSequence,
             ulong sceneGeneration,
-            ulong programEpoch,
-            string programRevision,
             string message,
             Guid executionBranchId = default,
             ulong checkpointTick = 0)
@@ -249,8 +242,6 @@ namespace ThirdPersonGameplay.ScenePlay
             InputRequestId = inputRequestId ?? string.Empty;
             InputSequence = inputSequence;
             SceneGeneration = sceneGeneration;
-            ProgramEpoch = programEpoch;
-            ProgramRevision = programRevision ?? string.Empty;
             Message = message ?? string.Empty;
             ExecutionBranchId = executionBranchId;
             CheckpointTick = checkpointTick;
@@ -262,151 +253,18 @@ namespace ThirdPersonGameplay.ScenePlay
         public string InputRequestId { get; }
         public ulong InputSequence { get; }
         public ulong SceneGeneration { get; }
-        public ulong ProgramEpoch { get; }
-        public string ProgramRevision { get; }
         public string Message { get; }
         public Guid ExecutionBranchId { get; }
         public ulong CheckpointTick { get; }
         public bool Accepted => Code == BtsmtlScenePlaySkillRequestResultCode.Accepted;
     }
 
-    public enum BtsmtlScenePlayBuildState : byte
-    {
-        Idle = 0,
-        Building = 1,
-        Published = 2,
-        Adopted = 3,
-        Failed = 4
-    }
-
-    public readonly struct BtsmtlScenePlayBuildTargetStatus
-    {
-        public BtsmtlScenePlayBuildTargetStatus(
-            string numericTargetId,
-            string programId,
-            string sourceRevision,
-            string semanticHash,
-            string programHash,
-            string layoutHash,
-            int sourceMapEntryCount,
-            string presentationContractHash,
-            string presentationProjectionRevision = "")
-        {
-            NumericTargetId = numericTargetId ?? string.Empty;
-            ProgramId = programId ?? string.Empty;
-            SourceRevision = sourceRevision ?? string.Empty;
-            SemanticHash = semanticHash ?? string.Empty;
-            ProgramHash = programHash ?? string.Empty;
-            LayoutHash = layoutHash ?? string.Empty;
-            SourceMapEntryCount = sourceMapEntryCount;
-            PresentationContractHash = presentationContractHash ?? string.Empty;
-            PresentationProjectionRevision = presentationProjectionRevision ?? string.Empty;
-        }
-
-        public string NumericTargetId { get; }
-        public string ProgramId { get; }
-        public string SourceRevision { get; }
-        public string SemanticHash { get; }
-        public string ProgramHash { get; }
-        public string LayoutHash { get; }
-        public int SourceMapEntryCount { get; }
-        public string PresentationContractHash { get; }
-        public string PresentationProjectionRevision { get; }
-    }
-
-    public enum BtsmtlScenePlayProgramAdoptionStatus : byte
-    {
-        Applied = 1,
-        Deferred = 2,
-        Rejected = 3
-    }
-
-    public sealed class BtsmtlScenePlayProgramAdoptionReport
-    {
-        public BtsmtlScenePlayProgramAdoptionReport(
-            BtsmtlScenePlayProgramAdoptionStatus status,
-            ulong currentProgramEpoch,
-            string currentSourceRevision,
-            string currentProgramCatalogHash,
-            ulong requestedProgramEpoch,
-            string requestedSourceRevision,
-            string requestedProgramCatalogHash,
-            string code,
-            string message)
-        {
-            Status = status;
-            CurrentProgramEpoch = currentProgramEpoch;
-            CurrentSourceRevision = currentSourceRevision ?? string.Empty;
-            CurrentProgramCatalogHash = currentProgramCatalogHash ?? string.Empty;
-            RequestedProgramEpoch = requestedProgramEpoch;
-            RequestedSourceRevision = requestedSourceRevision ?? string.Empty;
-            RequestedProgramCatalogHash = requestedProgramCatalogHash ?? string.Empty;
-            Code = code ?? string.Empty;
-            Message = message ?? string.Empty;
-        }
-
-        public BtsmtlScenePlayProgramAdoptionStatus Status { get; }
-        public ulong CurrentProgramEpoch { get; }
-        public string CurrentSourceRevision { get; }
-        public string CurrentProgramCatalogHash { get; }
-        public ulong RequestedProgramEpoch { get; }
-        public string RequestedSourceRevision { get; }
-        public string RequestedProgramCatalogHash { get; }
-        public string Code { get; }
-        public string Message { get; }
-    }
-
-    public readonly struct BtsmtlScenePlayBuildStatus
-    {
-        public BtsmtlScenePlayBuildStatus(
-            BtsmtlScenePlayBuildState state,
-            string actorId = "",
-            IReadOnlyList<BtsmtlScenePlayBuildTargetStatus> targets = null,
-            string message = "",
-            ulong requestedProgramEpoch = 0,
-            ulong adoptedProgramEpoch = 0,
-            BtsmtlScenePlayProgramAdoptionReport adoption = null,
-            double buildElapsedSeconds = 0d,
-            double adoptionWaitSeconds = 0d)
-        {
-            State = state;
-            ActorId = actorId ?? string.Empty;
-            Targets = targets ?? Array.Empty<BtsmtlScenePlayBuildTargetStatus>();
-            Message = message ?? string.Empty;
-            RequestedProgramEpoch = requestedProgramEpoch;
-            AdoptedProgramEpoch = adoptedProgramEpoch;
-            Adoption = adoption;
-            BuildElapsedSeconds = Math.Max(0d, buildElapsedSeconds);
-            AdoptionWaitSeconds = Math.Max(0d, adoptionWaitSeconds);
-        }
-
-        public BtsmtlScenePlayBuildState State { get; }
-        public string ActorId { get; }
-        public IReadOnlyList<BtsmtlScenePlayBuildTargetStatus> Targets { get; }
-        public string Message { get; }
-        public ulong RequestedProgramEpoch { get; }
-        public ulong AdoptedProgramEpoch { get; }
-        public BtsmtlScenePlayProgramAdoptionReport Adoption { get; }
-        public double BuildElapsedSeconds { get; }
-        public double AdoptionWaitSeconds { get; }
-        public double TotalElapsedSeconds => BuildElapsedSeconds + AdoptionWaitSeconds;
-        public bool IsActive => State == BtsmtlScenePlayBuildState.Building;
-        public bool IsPublished => State == BtsmtlScenePlayBuildState.Published;
-        public bool IsAdopted => State == BtsmtlScenePlayBuildState.Adopted;
-        public bool HasFailure => State == BtsmtlScenePlayBuildState.Failed;
-
-        public static BtsmtlScenePlayBuildStatus Idle =>
-            new BtsmtlScenePlayBuildStatus(BtsmtlScenePlayBuildState.Idle);
-    }
-
     public interface IBtsmtlScenePlayPreviewOperations
     {
         BtsmtlScenePlayStatus Status { get; }
-        BtsmtlScenePlayBuildStatus BuildStatus { get; }
         bool SupportsInputReplay { get; }
         bool SupportsPresentationCheckpointRestore { get; }
         bool IsInputRecording { get; }
-        IReadOnlyList<string> ActorIds { get; }
         System.Collections.Generic.IReadOnlyList<BtsmtlScenePlaySkillOption> SkillOptions { get; }
         event Action<BtsmtlScenePlayStatus> StatusChanged;
         BtsmtlScenePlayCommandResult Start(BtsmtlScenePlayRequest request);
@@ -414,7 +272,6 @@ namespace ThirdPersonGameplay.ScenePlay
         BtsmtlScenePlayCommandResult Resume();
         BtsmtlScenePlayCommandResult Reset();
         BtsmtlScenePlayCommandResult Stop();
-        BtsmtlScenePlayCommandResult Build(string actorId);
         BtsmtlScenePlayCommandResult StartInputRecording();
         BtsmtlScenePlayCommandResult StopInputRecording();
         BtsmtlScenePlayCommandResult ResumeFromTick(ulong tick);

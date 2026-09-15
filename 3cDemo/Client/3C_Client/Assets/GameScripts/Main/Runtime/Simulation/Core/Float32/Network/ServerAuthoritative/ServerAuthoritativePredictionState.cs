@@ -95,7 +95,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ServerAuthoritativePredictionState(
             ServerAuthoritativeModelPolicy policy,
             ServerAuthoritativePredictionRestorePort restore,
-            CharacterSimulationProgram program,
+            Float32CharacterRuntime characterRuntime,
             ServerAuthoritativePipelineCompatibilityIdentity compatibility,
             ServerAuthoritativeWorldIdentity authorityWorld,
             IEnumerable<ActorId> lockedRemoteActors)
@@ -109,7 +109,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 Policy.MaximumRemoteBodyExtrapolationTicks,
                 lockedRemoteActors);
             m_Journal = new ServerAuthoritativePredictionDispositionJournal(Policy.HistoryCapacity);
-            m_Reconciler = new ServerAuthoritativePredictionReconciler(program, compatibility, authorityWorld);
+            m_Reconciler = new ServerAuthoritativePredictionReconciler(characterRuntime, compatibility, authorityWorld);
         }
 
         public ServerAuthoritativeModelPolicy Policy { get; }
@@ -322,7 +322,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             SimulationComponentIdentity source,
             ServerAuthoritativeModelPolicy policy,
             ServerAuthoritativePredictionRestorePort restore,
-            CharacterSimulationProgram program,
+            Float32CharacterRuntime characterRuntime,
             ServerAuthoritativePipelineCompatibilityIdentity compatibility,
             ServerAuthoritativeWorldIdentity authorityWorld,
             IEnumerable<ActorId> lockedRemoteActors)
@@ -330,7 +330,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             State = new ServerAuthoritativePredictionState(
                 policy,
                 restore,
-                program,
+                characterRuntime,
                 compatibility,
                 authorityWorld,
                 lockedRemoteActors);

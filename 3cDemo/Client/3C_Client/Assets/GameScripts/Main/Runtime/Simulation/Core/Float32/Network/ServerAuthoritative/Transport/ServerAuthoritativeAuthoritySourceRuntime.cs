@@ -42,7 +42,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ServerAuthoritativeAuthoritySourcePolicy policy,
             ServerAuthoritativeAuthorityHostIdentity host,
             IEnumerable<ActorId> expectedActors,
-            CharacterSimulationProgram program,
+            Float32CharacterRuntime characterRuntime,
             IServerAuthoritativeAuthorityControlTransport control,
             IServerAuthoritativeAuthorityDataTransport data,
             ISimulationDiagnosticsSink diagnostics)
@@ -55,7 +55,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             m_Control = control ?? throw new ArgumentNullException(nameof(control));
             m_Data = data ?? throw new ArgumentNullException(nameof(data));
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
-            m_CheckpointLayout = new NetworkCheckpointLayout(program ?? throw new ArgumentNullException(nameof(program)));
+            m_CheckpointLayout = new NetworkCheckpointLayout(characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime)));
             var actors = expectedActors == null
                 ? new List<ActorId>()
                 : new List<ActorId>(expectedActors);

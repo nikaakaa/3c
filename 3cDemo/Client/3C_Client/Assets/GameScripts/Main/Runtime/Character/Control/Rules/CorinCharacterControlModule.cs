@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly string s_WalkLoopMotion = "locomotion:corin:walk-loop";
         static readonly string s_RunLoopMotion = "locomotion:corin:run-loop";
         static readonly string s_MovingTurnMotion = "locomotion:corin:moving-turn";
-        static readonly string s_MovingTurnSourceMotion = "timeline:8a6491b4-93fe-4002-a814-2ac6eb75e567/clip:e04f4e26-be58-4698-8905-36dcef1d5405";
+        static readonly string s_MovingTurnSourceMotion = "timeline:8a6491b4-93fe-4002-a814-2ac6eb75e567/track:9b2e235b-266b-47ef-8ecd-c2fa8a4207fc/clip:e04f4e26-be58-4698-8905-36dcef1d5405";
         static readonly CharacterControlModuleContract s_Contract = BuildContract();
 
         // UnityHFSM 是控制层状态机的执行引擎:Contract 构造时已按 Priority/Order/Id 排序,
@@ -127,14 +127,14 @@ namespace ThirdPersonCharacter.Control.Rules
             if (stateId != Idle)
                 m_State.WriteInt32(s_MotionElapsed, checked(elapsed + 1));
 
-            ulong completedDodgeForward = m_Read.CompletedSkillInstanceId(DodgeForward);
+            ulong completedDodgeForward = m_Read.CompletedAbilityInstanceId(DodgeForward);
             if (completedDodgeForward != 0 &&
                 m_State.ReadUInt64(s_DodgeForwardCompletionInstance) != completedDodgeForward)
             {
                 m_State.WriteUInt64(s_DodgeForwardCompletionInstance, completedDodgeForward);
                 m_State.WriteBoolean(s_DirectionalDodgeRunIntent, true);
             }
-            SubmitSkillRequests(stateId);
+            SubmitAbilityRequests(stateId);
         }
 
         void OnStateExit(CharacterControlStateId stateId)
@@ -158,17 +158,17 @@ namespace ThirdPersonCharacter.Control.Rules
                 "WalkStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
                 "RunLoopToRunStopping" => MoveBelow(m_Read),
                 "RunStoppingToIdle" => MotionElapsed(m_State) > 0 && MoveBelow(m_Read),
-                "MovingTurnToRunLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 30d) && m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
+                "MovingTurnToRunLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 "WalkStartToWalkStopping" => MoveBelow(m_Read),
                 "WalkStoppingToWalkStart" => MoveAbove(m_Read),
                 "RunStoppingToRunLoop" => MoveAbove(m_Read),
-                "MovingTurnToWalkStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 30d) && MoveBelow(m_Read),
+                "MovingTurnToWalkStopping" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && MoveBelow(m_Read),
                 "WalkLoopToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent),
                 "WalkStartToRunLoop" => m_State.ReadBoolean(s_DirectionalDodgeRunIntent),
                 "RunLoopToMovingTurn" => MoveAbove(m_Read) &&
                     m_Read.CompareInputDirectionToBodyYaw(s_MoveAxis, s_MovingTurnAngleThreshold, CharacterControlNumericComparison.GreaterOrEqual) &&
-                    !IsAttackActive(m_Read) && !m_Read.IsSkillActive(DodgeBack) && !m_Read.IsSkillActive(DodgeForward),
-                "MovingTurnToWalkLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 30d) && !m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
+                    !IsAttackActive(m_Read) && !m_Read.IsAbilityActive(DodgeBack) && !m_Read.IsAbilityActive(DodgeForward),
+                "MovingTurnToWalkLoop" => MotionElapsed(m_State) >= Ticks(m_Context, 28d / 60d) && !m_State.ReadBoolean(s_DirectionalDodgeRunIntent) && MoveAbove(m_Read),
                 _ => throw new InvalidOperationException($"Corin control transition '{transitionId}' is not implemented.")
             };
             Trace(
@@ -190,7 +190,7 @@ namespace ThirdPersonCharacter.Control.Rules
             return result;
         }
 
-        void SubmitSkillRequests(CharacterControlStateId stateId)
+        void SubmitAbilityRequests(CharacterControlStateId stateId)
         {
             SimulationExecutionSource source = Source(stateId);
             if (m_Read.HasInputRequest(s_DodgeRequest))
@@ -198,7 +198,7 @@ namespace ThirdPersonCharacter.Control.Rules
                 CharacterSkillId skill = m_Read.IsInputDirectionBehindBodyYaw(s_MoveAxis) ? DodgeBack : DodgeForward;
                 ulong replacementActionInstanceId = 0;
                 TryGetActiveAttackInstance(m_Read, out replacementActionInstanceId);
-                m_Output.SubmitSkill(new CharacterControlSkillRequest(
+                m_Output.SubmitAbility(new CharacterControlAbilityRequest(
                     source,
                     skill,
                     s_DodgeRequest,
@@ -208,7 +208,7 @@ namespace ThirdPersonCharacter.Control.Rules
             }
             if (m_Read.HasInputRequest(s_AttackRequest))
             {
-                m_Output.SubmitSkill(new CharacterControlSkillRequest(
+                m_Output.SubmitAbility(new CharacterControlAbilityRequest(
                     source,
                     Attack,
                     s_AttackRequest,
@@ -218,9 +218,9 @@ namespace ThirdPersonCharacter.Control.Rules
         }
 
         bool TryGetActiveAttackInstance(ICharacterControlReadPort read, out ulong instanceId) =>
-            read.TryGetActiveSkillInstanceId(Attack, out instanceId);
+            read.TryGetActiveAbilityInstanceId(Attack, out instanceId);
 
-        bool IsAttackActive(ICharacterControlReadPort read) => read.IsSkillActive(Attack);
+        bool IsAttackActive(ICharacterControlReadPort read) => read.IsAbilityActive(Attack);
 
         SimulationExecutionSource Source(CharacterControlStateId stateId) =>
             SimulationExecutionSource.FromCharacterControl(ModuleId, stateId, default);
@@ -304,7 +304,7 @@ namespace ThirdPersonCharacter.Control.Rules
                         0d,
                         0d,
                         CharacterControlMotionExecutionMode.Timed,
-                        28d / 30d,
+                        28d / 60d,
                         s_MovingTurnSourceMotion,
                         CharacterControlMotionDisplacementMode.SourceCurve,
                         CharacterControlMotionSpace.ActorLocal,

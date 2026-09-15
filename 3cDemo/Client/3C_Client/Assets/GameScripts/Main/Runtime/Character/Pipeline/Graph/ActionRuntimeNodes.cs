@@ -15,8 +15,8 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class ActivateActionInstanceNode : ActionNode, IActionContextAuthoring
     {
-        [SerializeField, ShowInPanel("Action Profile")]
-        ActionProfile m_ActionProfile;
+        [SerializeField, ShowInPanel("Admission Profile")]
+        GameplayAbilityAdmissionProfile m_AdmissionProfile;
 
         [SerializeField, ShowInPanel("Source Input Request Id")]
         string m_SourceInputRequestId;
@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         ActionActivationResult m_Result = ActionActivationResult.InvalidRequest;
 
         public override State ReturnState => m_Result == ActionActivationResult.Activated ? State.Success : State.Failure;
-        public ActionProfile ActionProfile => m_ActionProfile;
+        public GameplayAbilityAdmissionProfile AdmissionProfile => m_AdmissionProfile;
         public string SourceInputRequestId => m_SourceInputRequestId;
         public bool ConsumeSourceInputRequest => m_ConsumeSourceInputRequest;
         public string TargetKey => m_TargetKey;
@@ -49,14 +49,14 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
 #if UNITY_EDITOR
         public void ConfigureAuthoring(
-            ActionProfile actionProfile,
+            GameplayAbilityAdmissionProfile admissionProfile,
             string sourceInputRequestId,
             bool consumeSourceInputRequest,
             ActionContextSlot actionContext,
             string targetKey,
             PipelineBlackboardVariableReference targetSnapshotVariable)
         {
-            m_ActionProfile = actionProfile;
+            m_AdmissionProfile = admissionProfile;
             m_SourceInputRequestId = sourceInputRequestId ?? string.Empty;
             m_ConsumeSourceInputRequest = consumeSourceInputRequest;
             m_ActionContext = actionContext;
@@ -70,14 +70,14 @@ namespace ThirdPersonCharacter.Pipeline.Graph
             foreach (var reference in base.GetAssetReferences())
                 yield return reference;
 
-            yield return new NodeAssetReference(this, "m_ActionProfile", "Action Profile", m_ActionProfile, true);
+            yield return new NodeAssetReference(this, "m_AdmissionProfile", "Admission Profile", m_AdmissionProfile, true);
             yield return new NodeAssetReference(this, "m_ActionContext", "Action Context", m_ActionContext, false);
         }
 #endif
 
         protected override void DoAction()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through GameplayAbilityExecutionRuntime.");
         }
     }
 
@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void DoAction()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through GameplayAbilityExecutionRuntime.");
         }
     }
 
@@ -158,7 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through GameplayAbilityExecutionRuntime.");
         }
     }
 
@@ -168,8 +168,8 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
     public sealed class CanActivateActionInfoNode : ValueNode, ICanActivateActionAuthoring
     {
-        [SerializeField, ShowInPanel("Target Action Profile")]
-        ActionProfile m_ActionProfile;
+        [SerializeField, ShowInPanel("Target Admission Profile")]
+        GameplayAbilityAdmissionProfile m_AdmissionProfile;
 
         [SerializeField]
         PipelineBlackboardVariableReference m_TargetSnapshotVariable;
@@ -177,20 +177,20 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Allowed"), ReadOnly]
         BoolPropertyPort m_Output = new BoolPropertyPort();
 
-        public ActionProfile ActionProfile => m_ActionProfile;
+        public GameplayAbilityAdmissionProfile AdmissionProfile => m_AdmissionProfile;
         public PipelineBlackboardVariableReference TargetSnapshotVariable => m_TargetSnapshotVariable;
         public string TargetSnapshotDeclarationId => m_TargetSnapshotVariable.DeclarationId;
         public string TargetSnapshotOwnerId => m_TargetSnapshotVariable.DeclarationOwnerId;
 
 #if UNITY_EDITOR
         public void ConfigureAuthoring(
-            ActionProfile actionProfile,
+            GameplayAbilityAdmissionProfile admissionProfile,
             PipelineBlackboardVariableReference targetSnapshotVariable)
         {
             CharacterActionAuthoringRules.ValidateTargetSnapshot(
                 targetSnapshotVariable.DeclarationId,
                 targetSnapshotVariable.DeclarationOwnerId);
-            m_ActionProfile = actionProfile;
+            m_AdmissionProfile = admissionProfile;
             m_TargetSnapshotVariable = targetSnapshotVariable;
             OnNodeChangedCallback();
         }
@@ -200,13 +200,13 @@ namespace ThirdPersonCharacter.Pipeline.Graph
             foreach (NodeAssetReference reference in base.GetAssetReferences())
                 yield return reference;
 
-            yield return new NodeAssetReference(this, "m_ActionProfile", "Target Action Profile", m_ActionProfile, true);
+            yield return new NodeAssetReference(this, "m_AdmissionProfile", "Target Admission Profile", m_AdmissionProfile, true);
         }
 #endif
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through GameplayAbilityExecutionRuntime.");
         }
     }
 

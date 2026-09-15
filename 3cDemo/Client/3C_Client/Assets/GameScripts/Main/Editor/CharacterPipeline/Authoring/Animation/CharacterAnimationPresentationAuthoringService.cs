@@ -486,7 +486,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool requireAnimationChannel)
         {
             var entries = new Dictionary<AnimationProducerId, AnimationProducerAuthoringEntry>();
-            foreach (BtsmtlSkillFlowGraph root in definitionContext.SkillGraphs ?? Array.Empty<BtsmtlSkillFlowGraph>())
+            IReadOnlyList<BtsmtlSkillFlowGraph> roots = definitionContext.AbilityGraphs;
+            foreach (BtsmtlSkillFlowGraph root in roots ?? Array.Empty<BtsmtlSkillFlowGraph>())
             {
                 foreach (FlowGraph graph in BtsmtlSkillGraphClosure.Validate(root, true))
                 {

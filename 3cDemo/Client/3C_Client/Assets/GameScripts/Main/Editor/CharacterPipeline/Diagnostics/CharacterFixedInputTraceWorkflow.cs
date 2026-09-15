@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
@@ -17,6 +18,9 @@ using ThirdPersonSimulation.Fixed;
 using UnityEditor;
 using UnityEngine;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
+using CharacterSimulationInput = ThirdPersonSimulation.Fixed.CharacterSimulationInput;
+using SimulationInputValue = ThirdPersonSimulation.Fixed.SimulationInputValue;
+using SimulationInputValueKind = ThirdPersonSimulation.Fixed.SimulationInputValueKind;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
@@ -417,33 +421,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException("Canonical Fixed input recording has no Gameplay Lab variant identity.");
             if (host.SessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
                 return;
-            CaptureRecordedCameraHeading();
+            CaptureRecordedCameraHeading(host);
             FixedCharacterInputTraceModule.StartRecording();
             ClearPending();
             EditorApplication.isPaused = false;
             s_LastStatus = "Recording canonical character input per Fixed simulation Tick. Camera input remains live.";
         }
 
-        static void CaptureRecordedCameraHeading()
+        static void CaptureRecordedCameraHeading(FixedCharacterHost host)
         {
-            ThirdPersonCameraController controller =
-                UnityEngine.Object.FindObjectOfType<ThirdPersonCameraController>();
-            CameraBasisSnapshot basis = controller != null
-                ? controller.BasisSnapshot
+            CameraBasisSnapshot basis = host?.PresentationRuntime is CharacterSimulationPresentationRuntime runtime
+                ? runtime.CameraBasisSnapshot
                 : default;
             s_HasRecordedCameraYaw = basis.Valid;
             s_RecordedCameraYaw = basis.Valid ? basis.Yaw : 0f;
         }
 
-        static void ApplyRecordedCameraHeading(TraceDocument document)
+        static void ApplyRecordedCameraHeading(TraceDocument document, FixedCharacterHost host)
         {
             if (document == null || !document.has_camera_basis_yaw)
                 return;
-            ThirdPersonCameraController controller =
-                UnityEngine.Object.FindObjectOfType<ThirdPersonCameraController>();
-            if (controller == null)
-                return;
-            controller.ResetHeading(document.camera_basis_yaw_degrees);
+            if (host?.PresentationRuntime is not CharacterSimulationPresentationRuntime runtime)
+                throw new InvalidOperationException(
+                    "Camera trace replay requires the formal Camera Presentation runtime.");
+            runtime.SetCameraInitialState(new CameraInitialState(
+                document.camera_basis_yaw_degrees,
+                0f));
         }
 
         static void BeginReplay(TraceDocument document)
@@ -466,7 +469,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RequirePoseMatchesBody(current, initialBody);
                 s_ActiveReplayRuntimeIdentity =
                     ResolveReplayRuntimeIdentity(host);
-                ApplyRecordedCameraHeading(document);
+                ApplyRecordedCameraHeading(document, host);
                 ResetPendingDeadline();
                 if (captureFoot)
                 {
@@ -1579,11 +1582,108 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new SimulationTick(source.simulation_tick),
                     frame.Input);
             }
-            return new FixedCharacterInputTrace(
+            FixedCharacterInputTrace trace = new FixedCharacterInputTrace(
                 document.trace_id,
                 actorId,
                 document.tick_rate,
                 frames);
+            return InjectPinnedWorldCameraBasis(document, trace);
+        }
+
+        // 世界锚定回放：文档声明 has_camera_basis_yaw 时，对缺少相机basis输入的帧
+        // （旧版基线trace，v3时代未逐tick记录basis）注入由文档固定yaw合成的完整
+        // 相机basis。注入后基线的世界语义被钉死在文档yaw上，不再随相机实现、
+        // LookAxis符号约定或输入架构的后续演进而漂移；已携带逐tick basis的帧
+        // （当前架构录制的trace）保持原值不动。
+        static FixedCharacterInputTrace InjectPinnedWorldCameraBasis(
+            TraceDocument document,
+            FixedCharacterInputTrace trace)
+        {
+            if (trace == null || !document.has_camera_basis_yaw)
+                return trace;
+            double yawRadians = document.camera_basis_yaw_degrees * Math.PI / 180.0;
+            FixedScalar forwardX = FixedScalar.FromDouble(Math.Sin(yawRadians));
+            FixedScalar forwardZ = FixedScalar.FromDouble(Math.Cos(yawRadians));
+            FixedScalar rightX = FixedScalar.FromDouble(Math.Cos(yawRadians));
+            FixedScalar rightZ = FixedScalar.FromDouble(-Math.Sin(yawRadians));
+            FixedVector3 planarForward = new FixedVector3(forwardX, FixedScalar.Zero, forwardZ);
+            FixedVector3 planarRight = new FixedVector3(rightX, FixedScalar.Zero, rightZ);
+            FixedVector3 lookDirection = planarForward;
+            var frames = new FixedCharacterInputTraceFrame[trace.Frames.Count];
+            bool injected = false;
+            for (int i = 0; i < trace.Frames.Count; i++)
+            {
+                FixedCharacterInputTraceFrame frame = trace.Frames[i];
+                bool hasBasis = false;
+                for (int v = 0; v < frame.Input.Values.Count; v++)
+                {
+                    if (string.Equals(
+                            frame.Input.Values[v].InputId,
+                            CameraProgramOperationSchema.BasisValidInputId,
+                            StringComparison.Ordinal))
+                    {
+                        hasBasis = true;
+                        break;
+                    }
+                }
+                if (hasBasis)
+                {
+                    frames[i] = frame;
+                    continue;
+                }
+                FixedVector3 aimPoint = ResolvePinnedAimPoint(frame.Input, planarForward);
+                var values = new List<SimulationInputValue>(frame.Input.Values.Count + 5)
+                {
+                    SimulationInputValue.FromBoolean(
+                        CameraProgramOperationSchema.BasisValidInputId, true),
+                    SimulationInputValue.FromVector3(
+                        CameraProgramOperationSchema.BasisPlanarForwardInputId, planarForward),
+                    SimulationInputValue.FromVector3(
+                        CameraProgramOperationSchema.BasisPlanarRightInputId, planarRight),
+                    SimulationInputValue.FromVector3(
+                        CameraProgramOperationSchema.BasisLookDirectionInputId, lookDirection),
+                    SimulationInputValue.FromVector3(
+                        CameraProgramOperationSchema.BasisAimPointInputId, aimPoint)
+                };
+                values.AddRange(frame.Input.Values);
+                frames[i] = new FixedCharacterInputTraceFrame(
+                    frame.ActorId,
+                    frame.Tick,
+                    new CharacterSimulationInput(
+                        frame.Input.NumericProfile,
+                        frame.Input.TickSource,
+                        frame.Input.InputSourceIdentity,
+                        frame.Input.Sequence,
+                        values,
+                        frame.Input.Requests));
+                injected = true;
+            }
+            if (!injected)
+                return trace;
+            return new FixedCharacterInputTrace(
+                trace.TraceId,
+                trace.ActorId,
+                trace.TickRate,
+                frames);
+        }
+
+        // 钉死basis的AimPoint取帧内ActionTarget快照位置（与世界锚定一致）；
+        // 无可用目标位置时回退为相机前方10米的确定点。
+        static FixedVector3 ResolvePinnedAimPoint(
+            CharacterSimulationInput input,
+            FixedVector3 planarForward)
+        {
+            for (int i = 0; i < input.Values.Count; i++)
+            {
+                SimulationInputValue value = input.Values[i];
+                if (value.Kind == SimulationInputValueKind.ActionTargetSnapshot)
+                {
+                    FixedVector3 position = value.ActionTargetSnapshot.Position;
+                    if (position.SqrMagnitude > FixedScalar.Zero)
+                        return position;
+                }
+            }
+            return planarForward * FixedScalar.FromDouble(10d);
         }
 
         static string SaveDocument(TraceDocument document)

@@ -75,10 +75,10 @@ namespace ThirdPersonCharacter.Pipeline.Graph
             {
                 BaseNode node = graph.Nodes[nodeIndex];
                 if (node is ActivateActionInstanceNode activation &&
-                    activation.ActionProfile)
+                    activation.AdmissionProfile)
                 {
                     ValidateTargetReference(
-                        activation.ActionProfile,
+                        activation.AdmissionProfile,
                         activation.TargetSnapshotVariable,
                         path,
                         node,
@@ -86,10 +86,10 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                         issues);
                 }
                 else if (node is CanActivateActionInfoNode admission &&
-                         admission.ActionProfile)
+                         admission.AdmissionProfile)
                 {
                     ValidateTargetReference(
-                        admission.ActionProfile,
+                        admission.AdmissionProfile,
                         admission.TargetSnapshotVariable,
                         path,
                         node,
@@ -135,9 +135,9 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                     Add(issues, path, timeline, "motion_warp_action_activation_ambiguous", $"A MotionWarp Timeline must match exactly one Action activation; found {matchCount}.");
                     continue;
                 }
-                if (!match.ActionProfile || match.ActionProfile.TargetRequirement == ActionTargetRequirement.None)
+                if (!match.AdmissionProfile || match.AdmissionProfile.TargetRequirement == ActionTargetRequirement.None)
                 {
-                    Add(issues, path, timeline, "motion_warp_target_requirement_invalid", "A MotionWarp Timeline requires its ActionProfile to declare OptionalSnapshot or SnapshotRequired.");
+                    Add(issues, path, timeline, "motion_warp_target_requirement_invalid", "A MotionWarp Timeline requires its GameplayAbilityAdmissionProfile to declare OptionalSnapshot or SnapshotRequired.");
                 }
                 else if (!match.TargetSnapshotVariable.IsValid)
                 {
@@ -162,12 +162,12 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
                 for (int conditionNodeIndex = 0; conditionNodeIndex < condition.Nodes.Count; conditionNodeIndex++)
                 {
-                    if (condition.Nodes[conditionNodeIndex] is not CanActivateActionInfoNode admission || !admission.ActionProfile)
+                    if (condition.Nodes[conditionNodeIndex] is not CanActivateActionInfoNode admission || !admission.AdmissionProfile)
                         continue;
                     var matches = new List<ActivateActionInstanceNode>();
                     CollectMatchingActivations(
                         targetBody,
-                        admission.ActionProfile,
+                        admission.AdmissionProfile,
                         new HashSet<BaseTree>(),
                         matches);
                     string edgePath = $"{path}/edge:{edge.GUID}";
@@ -176,16 +176,16 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                         issues.Add(new ActionTargetAuthoringIssue(
                             edgePath,
                             "action_admission_activation_ambiguous",
-                            $"CanActivate '{admission.ActionProfile.ActionId}' must reach at least one matching activation below the target State body."));
+                            $"CanActivate '{admission.AdmissionProfile.ActionId}' must reach at least one matching activation below the target State body."));
                         continue;
                     }
                     PipelineBlackboardVariableReference query = admission.TargetSnapshotVariable;
-                    if (admission.ActionProfile.TargetRequirement != ActionTargetRequirement.None && !query.IsValid)
+                    if (admission.AdmissionProfile.TargetRequirement != ActionTargetRequirement.None && !query.IsValid)
                     {
                         issues.Add(new ActionTargetAuthoringIssue(
                             edgePath,
                             "action_target_snapshot_required",
-                            $"CanActivate '{admission.ActionProfile.ActionId}' requires a TargetSnapshot declaration."));
+                            $"CanActivate '{admission.AdmissionProfile.ActionId}' requires a TargetSnapshot declaration."));
                         continue;
                     }
                     for (int matchIndex = 0; matchIndex < matches.Count; matchIndex++)
@@ -199,7 +199,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
                         issues.Add(new ActionTargetAuthoringIssue(
                             edgePath,
                             "action_target_snapshot_declaration_mismatch",
-                            $"CanActivate and every reachable Activate '{admission.ActionProfile.ActionId}' must reference the same TargetSnapshot declaration."));
+                            $"CanActivate and every reachable Activate '{admission.AdmissionProfile.ActionId}' must reference the same TargetSnapshot declaration."));
                         break;
                     }
                 }
@@ -208,7 +208,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 
         static void CollectMatchingActivations(
             BaseTree graph,
-            ActionProfile profile,
+            GameplayAbilityAdmissionProfile profile,
             HashSet<BaseTree> visited,
             List<ActivateActionInstanceNode> output)
         {
@@ -217,7 +217,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
             for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
             {
                 BaseNode node = graph.Nodes[nodeIndex];
-                if (node is ActivateActionInstanceNode activation && activation.ActionProfile == profile)
+                if (node is ActivateActionInstanceNode activation && activation.AdmissionProfile == profile)
                     output.Add(activation);
                 if (node == null)
                     continue;
@@ -254,7 +254,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         }
 
         static void ValidateTargetReference(
-            ActionProfile profile,
+            GameplayAbilityAdmissionProfile profile,
             PipelineBlackboardVariableReference reference,
             string path,
             BaseNode node,

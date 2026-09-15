@@ -414,6 +414,65 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool HasPendingFrame => m_HasPending;
         internal bool HasPendingAssembledGoalSet =>
             m_HasPending && m_Pending.GoalSet.IsValid;
+        internal NativeSlice<CharacterFullBodyIkGoal> RequirePendingContributionGoals(
+            in CharacterFullBodyIkGoalContributionHeader header)
+        {
+            RequireRenderFrame(header.FrameSequence, header.CompletionIdentity);
+            if (!header.IsValid ||
+                !header.RigId.Equals(m_RigId) ||
+                !header.RigRevision.Equals(m_RigRevision) ||
+                header.GoalOffset < 0 ||
+                header.GoalOffset > m_Pending.ContributionGoals.Length -
+                header.GoalCount)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint pending Goal Contribution header is invalid.");
+            }
+            return new NativeSlice<CharacterFullBodyIkGoal>(
+                m_Pending.ContributionGoals,
+                header.GoalOffset,
+                header.GoalCount);
+        }
+        internal CharacterFullBodyIkGoalSet RequirePendingGoalSet(
+            in CharacterFullBodyIkGoalSetHeader header)
+        {
+            RequireRenderFrame(header.FrameSequence, header.CompletionIdentity);
+            if (!header.IsValid ||
+                !header.RigId.Equals(m_RigId) ||
+                !header.RigRevision.Equals(m_RigRevision) ||
+                header.GoalOffset > m_Pending.Goals.Length - header.GoalCount)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint pending Goal Set header is invalid.");
+            }
+            return new CharacterFullBodyIkGoalSet(
+                in header,
+                new NativeSlice<CharacterFullBodyIkGoal>(
+                    m_Pending.Goals,
+                    header.GoalOffset,
+                    header.GoalCount));
+        }
+        internal void BindPendingGoalSet(
+            in CharacterFullBodyIkGoalSet value)
+        {
+            RequireAlive();
+            if (!value.IsValid)
+                throw new ArgumentException(
+                    "Pose Constraint native Goal Set is invalid.",
+                    nameof(value));
+            CharacterFullBodyIkGoalSetHeader header = value.Header;
+            RequireRenderFrame(header.FrameSequence, header.CompletionIdentity);
+            if (!header.RigId.Equals(m_RigId) ||
+                !header.RigRevision.Equals(m_RigRevision) ||
+                header.GoalOffset > m_Pending.Goals.Length - header.GoalCount)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint native Goal Set lineage is invalid.");
+            }
+            for (int i = 0; i < header.GoalCount; i++)
+                m_Pending.Goals[header.GoalOffset + i] = value.Goals[i];
+            m_Pending.GoalSet = header;
+        }
         internal bool MatchesCommittedResult(
             in CharacterPoseConstraintResult result) =>
             m_HasCommitted &&

@@ -74,10 +74,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal CharacterRootOrientationWarpNativeControl Prepare(
-            in CharacterPresentationFactFrame factFrame)
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterAnimationPoseInputFrame inputs)
         {
-            if (!factFrame.IsValid)
+            if (!factFrame.IsValid || !inputs.IsValid)
                 throw new ArgumentException("Root Orientation Warp fact frame is invalid.", nameof(factFrame));
+            BTSMTL.EventGraphs.EventGraphValue facingValue =
+                inputs.RequireValue(
+                    new PoseParameterId(CharacterAnimationVariableIds.FacingError));
+            if (facingValue.Kind != BTSMTL.EventGraphs.EventGraphValueKind.Float32)
+                throw new InvalidOperationException(
+                    "Root Orientation Warp FacingError variable is not Float32.");
+            float facingError = facingValue.Float32Value;
             bool relevant = m_Sequence.IsRelevant;
             AnimationPoseSourceId sourceId = relevant
                 ? m_Sequence.SourceId
@@ -94,13 +102,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 m_Active.CapturedTargetAngle = Mathf.DeltaAngle(
                     0f,
-                    factFrame.FacingError);
+                    facingError);
                 m_Active.SourceId = sourceId;
                 m_Active.BodyDiscontinuityGeneration =
                     factFrame.BodyDiscontinuityGeneration;
             }
             m_Active.Relevant = true;
-            m_Active.CurrentFacingError = Mathf.DeltaAngle(0f, factFrame.FacingError);
+            m_Active.CurrentFacingError = Mathf.DeltaAngle(0f, facingError);
             m_Active.SourceYaw = m_Descriptor.YawCurve.Evaluate(
                 Mathf.Clamp(m_Sequence.SampleTime, 0f,
                     m_Descriptor.Duration));
@@ -108,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                    m_Descriptor.TotalYaw;
             m_Active.RootYawOffset = Mathf.DeltaAngle(
                 0f,
-                factFrame.FacingError -
+                facingError -
                 m_Active.CapturedTargetAngle +
                 m_Active.CapturedTargetAngle * authorProgress);
             return new CharacterRootOrientationWarpNativeControl(

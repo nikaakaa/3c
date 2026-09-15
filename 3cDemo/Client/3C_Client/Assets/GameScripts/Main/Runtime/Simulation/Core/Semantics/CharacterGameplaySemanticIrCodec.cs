@@ -32,8 +32,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Source revision is required.", nameof(sourceRevision));
             if (!semanticHash.IsValid)
                 throw new ArgumentException("Semantic hash is required.", nameof(semanticHash));
-            if (!root.IsValid)
-                throw new ArgumentException("Semantic IR root descriptor is required.", nameof(root));
+            if (!root.IsValid || !root.IsAbility)
+                throw new ArgumentException("Semantic IR requires an Ability root descriptor.", nameof(root));
             ProgramId = programId;
             OperationSetVersion = operationSetVersion;
             TickRate = tickRate;
@@ -81,8 +81,8 @@ namespace ThirdPersonSimulation
             var capabilities = new ProgramCapabilityManifest(gameplayCapabilities, requiredWorldCapabilities);
             m_GameplayCapabilities = new List<string>(capabilities.GameplayCapabilities).AsReadOnly();
             RequiredWorldCapabilities = capabilities.RequiredWorldCapabilities;
-            if (!root.IsValid)
-                throw new ArgumentException("Semantic IR artifact root descriptor is invalid.", nameof(root));
+            if (!root.IsValid || !root.IsAbility)
+                throw new ArgumentException("Semantic IR artifact requires an Ability root descriptor.", nameof(root));
             Root = root;
         }
 
@@ -123,8 +123,8 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplaySemanticIrCodec
     {
         const uint ArtifactMagic = 0x52495343;
-        const int ArtifactVersion = 14;
-        const int PayloadVersion = 14;
+        const int ArtifactVersion = 15;
+        const int PayloadVersion = 15;
 
         public static byte[] WriteArtifact(CharacterGameplaySemanticIr semanticIr)
         {
@@ -310,9 +310,6 @@ namespace ThirdPersonSimulation
         {
             writer.WriteInt32(PayloadVersion);
             WriteManifest(writer, semanticIr.Manifest);
-            writer.WriteBoolean(semanticIr.BodyMotion != null);
-            if (semanticIr.BodyMotion != null)
-                WriteBodyMotion(writer, semanticIr.BodyMotion);
             WriteTable(writer, semanticIr.Literals, WriteLiteral);
             WriteTable(writer, semanticIr.Operations, WriteOperation);
             WriteTable(writer, semanticIr.ConstantInputBindings, WriteConstantInputBinding);
@@ -334,9 +331,6 @@ namespace ThirdPersonSimulation
             if (reader.ReadInt32() != PayloadVersion)
                 throw new SemanticIrArtifactVersionException("Gameplay Semantic IR payload version is unsupported.");
             CharacterGameplaySemanticIrManifest manifest = ReadManifest(reader);
-            CharacterBodyMotionBinding bodyMotion = reader.ReadBoolean()
-                ? ReadBodyMotion(reader)
-                : null;
             SemanticLiteral[] literals = ReadTable(reader, ReadLiteral);
             SemanticOperation[] operations = ReadTable(reader, ReadOperation);
             SemanticConstantInputBinding[] constantInputBindings = ReadTable(reader, ReadConstantInputBinding);
@@ -353,7 +347,6 @@ namespace ThirdPersonSimulation
             reader.RequireComplete();
             return new CharacterGameplaySemanticIr(
                 manifest,
-                bodyMotion,
                 operations,
                 literals,
                 constantInputBindings,
@@ -367,25 +360,6 @@ namespace ThirdPersonSimulation
                 sourceMap,
                 producers,
                 graphCallFrames);
-        }
-
-        static void WriteBodyMotion(CanonicalWriter writer, CharacterBodyMotionBinding descriptor)
-        {
-            writer.WriteString(descriptor.SourceIdentity);
-            writer.WriteString(descriptor.ContentRevision.Value);
-            writer.WriteInt32(descriptor.SemanticVersion);
-            writer.WriteDouble(descriptor.GravityAcceleration);
-            writer.WriteDouble(descriptor.MaximumFallSpeed);
-        }
-
-        static CharacterBodyMotionBinding ReadBodyMotion(CanonicalReader reader)
-        {
-            return new CharacterBodyMotionBinding(
-                reader.ReadString(),
-                new StableHash(reader.ReadString()),
-                reader.ReadInt32(),
-                reader.ReadDouble(),
-                reader.ReadDouble());
         }
 
         static void WriteConstantInputBinding(CanonicalWriter writer, SemanticConstantInputBinding binding)

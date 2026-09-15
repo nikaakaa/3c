@@ -16,6 +16,151 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         StateBody
     }
 
+    public sealed class BtsmtlSkillNativeStateOccurrence
+    {
+        internal BtsmtlSkillNativeStateOccurrence(
+            BtsmtlSkillNativeState state,
+            string route,
+            BtsmtlSkillGraphOccurrence body)
+        {
+            State = state;
+            Route = route;
+            Body = body;
+        }
+
+        public BtsmtlSkillNativeState State { get; }
+        public string Route { get; }
+        public BtsmtlSkillGraphOccurrence Body { get; }
+    }
+
+    public sealed class BtsmtlSkillNativeEdgeOccurrence
+    {
+        internal BtsmtlSkillNativeEdgeOccurrence(
+            BtsmtlSkillNativeConnection edge,
+            string route,
+            BtsmtlSkillNativeState source,
+            BtsmtlSkillNativeState target,
+            int order,
+            int priority,
+            ProgramAbortPolicy abortPolicy,
+            BtsmtlSkillGraphOccurrence condition)
+        {
+            Edge = edge;
+            Route = route;
+            Source = source;
+            Target = target;
+            Order = order;
+            Priority = priority;
+            AbortPolicy = abortPolicy;
+            Condition = condition;
+        }
+
+        public BtsmtlSkillNativeConnection Edge { get; }
+        public string Route { get; }
+        public BtsmtlSkillNativeState Source { get; }
+        public BtsmtlSkillNativeState Target { get; }
+        public int Order { get; }
+        public int Priority { get; }
+        public ProgramAbortPolicy AbortPolicy { get; }
+        public BtsmtlSkillGraphOccurrence Condition { get; }
+    }
+
+    public sealed class BtsmtlSkillNativeStateMachineOccurrence
+    {
+        BtsmtlSkillNativeStateMachineOccurrence(
+            BtsmtlSkillNativeStateMachine machine,
+            string route,
+            string contentHash,
+            BtsmtlSkillNativeState entry,
+            BtsmtlSkillNativeState any,
+            BtsmtlSkillNativeState exit,
+            IEnumerable<BtsmtlSkillNativeStateOccurrence> states,
+            IEnumerable<BtsmtlSkillNativeEdgeOccurrence> edges)
+        {
+            Machine = machine;
+            Route = route;
+            ContentHash = contentHash;
+            Entry = entry;
+            Any = any;
+            Exit = exit;
+            States = Array.AsReadOnly(states.ToArray());
+            Edges = Array.AsReadOnly(edges.ToArray());
+        }
+
+        public BtsmtlSkillNativeStateMachine Machine { get; }
+        public string GraphId => Machine.AuthoringId;
+        public string Route { get; }
+        public string ContentHash { get; }
+        public BtsmtlSkillNativeState Entry { get; }
+        public BtsmtlSkillNativeState Any { get; }
+        public BtsmtlSkillNativeState Exit { get; }
+        public IReadOnlyList<BtsmtlSkillNativeStateOccurrence> States { get; }
+        public IReadOnlyList<BtsmtlSkillNativeEdgeOccurrence> Edges { get; }
+
+        public static BtsmtlSkillNativeStateMachineOccurrence Read(
+            BtsmtlSkillNativeStateMachine machine,
+            string route,
+            TimelineSemanticEmitterRegistry timelineEmitters,
+            CharacterSimulationCompileReport report)
+        {
+            if (machine == null)
+                throw new ArgumentNullException(nameof(machine));
+            if (string.IsNullOrWhiteSpace(route))
+                throw new ArgumentException("原生Skill FSM编译需要明确的调用路径。", nameof(route));
+            BtsmtlSkillNativeStateMachineContract.Validate(machine, true);
+            string contentHash = BtsmtlSkillNativeStateMachineContract.Fingerprint(machine);
+            var stateMap = machine.allNodes.OfType<BtsmtlSkillNativeState>()
+                .ToDictionary(value => value.UID, StringComparer.Ordinal);
+            var states = new List<BtsmtlSkillNativeStateOccurrence>();
+            foreach (BtsmtlSkillNativeState state in stateMap.Values.OrderBy(value => value.UID, StringComparer.Ordinal))
+            {
+                BtsmtlSkillGraphOccurrence body = state.Body == null
+                    ? null
+                    : BtsmtlSkillGraphOccurrence.Read(
+                        state.Body,
+                        $"{route}/state:{state.UID}/body:{state.Body.AuthoringId}",
+                        timelineEmitters,
+                        report);
+                states.Add(new BtsmtlSkillNativeStateOccurrence(state,
+                    $"{route}/state:{state.UID}", body));
+            }
+            var edges = new List<BtsmtlSkillNativeEdgeOccurrence>();
+            foreach (BtsmtlSkillNativeState state in stateMap.Values.OrderBy(value => value.UID, StringComparer.Ordinal))
+                foreach (BtsmtlSkillNativeConnection edge in state.outConnections
+                             .OfType<BtsmtlSkillNativeConnection>()
+                             .OrderBy(value => value.Order)
+                             .ThenBy(value => value.UID, StringComparer.Ordinal))
+                {
+                    var target = (BtsmtlSkillNativeState)edge.targetNode;
+                    BtsmtlSkillGraphOccurrence condition = edge.Condition == null
+                        ? null
+                        : BtsmtlSkillGraphOccurrence.Read(
+                            edge.Condition,
+                            $"{route}/edge:{edge.UID}/condition:{edge.Condition.AuthoringId}",
+                            timelineEmitters,
+                            report);
+                    edges.Add(new BtsmtlSkillNativeEdgeOccurrence(
+                        edge,
+                        $"{route}/edge:{edge.UID}",
+                        state,
+                        target,
+                        edge.Order,
+                        edge.Priority,
+                        edge.AbortPolicy,
+                        condition));
+                }
+            return new BtsmtlSkillNativeStateMachineOccurrence(
+                machine,
+                route,
+                contentHash,
+                stateMap.Values.First(value => value is BtsmtlSkillNativeEntryState),
+                stateMap.Values.First(value => value is BtsmtlSkillNativeAnyState),
+                stateMap.Values.First(value => value is BtsmtlSkillNativeExitState),
+                states,
+                edges);
+        }
+    }
+
     public sealed class BtsmtlSkillGraphReferenceOccurrence
     {
         internal BtsmtlSkillGraphReferenceOccurrence(FlowNode owner, BtsmtlSkillGraphReferenceKind kind,
@@ -28,11 +173,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Child = child;
         }
 
+        internal BtsmtlSkillGraphReferenceOccurrence(FlowNode owner, BtsmtlSkillGraphReferenceKind kind,
+            string callSiteIdentity, string ownerContentHash, BtsmtlSkillNativeStateMachineOccurrence nativeStateMachine)
+        {
+            Owner = owner;
+            Kind = kind;
+            CallSiteIdentity = callSiteIdentity;
+            OwnerContentHash = ownerContentHash;
+            NativeStateMachine = nativeStateMachine;
+        }
+
         public FlowNode Owner { get; }
         public BtsmtlSkillGraphReferenceKind Kind { get; }
         public string CallSiteIdentity { get; }
         public string OwnerContentHash { get; }
         public BtsmtlSkillGraphOccurrence Child { get; }
+        public BtsmtlSkillNativeStateMachineOccurrence NativeStateMachine { get; }
     }
 
     public sealed class BtsmtlSkillEdgeOccurrence
@@ -117,19 +273,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var timelines = new List<BtsmtlSkillTimelineOccurrence>();
             foreach (FlowNode node in nodes)
             {
-                foreach (BinderConnection edge in node.outConnections.Cast<BinderConnection>().OrderBy(edge => edge.UID, StringComparer.Ordinal))
+                IEnumerable<BinderConnection> outgoing = node.outConnections.Cast<BinderConnection>();
+                outgoing = ((IBtsmtlSkillFlowGraph)graph).Role == BtsmtlSkillFlowGraphRole.StateMachine
+                    ? outgoing.OrderBy(edge => edge is BtsmtlSkillFlowConnection transfer
+                        ? transfer.Order
+                        : int.MaxValue)
+                        .ThenBy(edge => edge.UID, StringComparer.Ordinal)
+                    : outgoing.OrderBy(edge => edge.UID, StringComparer.Ordinal);
+                foreach (BinderConnection edge in outgoing)
                 {
                     string edgeRoute = $"{route}/edge:{edge.UID}";
                     int order = 0;
                     int priority = 0;
                     ProgramAbortPolicy abortPolicy = ProgramAbortPolicy.None;
                     BtsmtlSkillGraphOccurrence condition = null;
-                    if (Role == BtsmtlSkillFlowGraphRole.StateMachine)
+                    if (((IBtsmtlSkillFlowGraph)graph).Role == BtsmtlSkillFlowGraphRole.StateMachine)
                     {
                         if (edge.sourcePort is not FlowOutput)
                             throw new InvalidOperationException($"{edgeRoute}: 状态机图连线必须从转移端口发出。");
                         if (edge is not BtsmtlSkillFlowConnection transfer)
-                            throw new InvalidOperationException($"{edgeRoute}: 状态机转移连线未携带转移数据，需要先执行资产迁移。");
+                            throw new InvalidOperationException($"{edgeRoute}: 状态机转移边必须是正式 BtsmtlSkillFlowConnection。");
+                        order = transfer.Order;
                         priority = transfer.Priority;
                         abortPolicy = transfer.AbortPolicy;
                         condition = transfer.Condition != null
@@ -161,7 +325,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         AddReference(node, BtsmtlSkillGraphReferenceKind.Macro, macro.macro);
                         break;
                     case BtsmtlSkillStateMachineFlowNode machine:
-                        AddReference(node, BtsmtlSkillGraphReferenceKind.StateMachine, machine.StateMachine);
+                        if (machine.StateMachine != null)
+                        {
+                            string callSite = $"{route}/node:{node.UID}/call:StateMachine";
+                            references.Add(new BtsmtlSkillGraphReferenceOccurrence(
+                                node,
+                                BtsmtlSkillGraphReferenceKind.StateMachine,
+                                callSite,
+                                hash,
+                                BtsmtlSkillNativeStateMachineOccurrence.Read(
+                                    machine.StateMachine,
+                                    $"{callSite}/fsm:{machine.StateMachine.AuthoringId}",
+                                    timelineEmitters,
+                                    report)));
+                        }
                         break;
                     case BtsmtlSkillStateFlowNode state:
                         AddReference(node, BtsmtlSkillGraphReferenceKind.StateBody, state.Body);
@@ -205,8 +382,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     foreach (BtsmtlSkillGraphOccurrence condition in edge.Condition.EnumerateOccurrences())
                         yield return condition;
             foreach (BtsmtlSkillGraphReferenceOccurrence reference in References)
-                foreach (BtsmtlSkillGraphOccurrence child in reference.Child.EnumerateOccurrences())
-                    yield return child;
+            {
+                if (reference.Child != null)
+                    foreach (BtsmtlSkillGraphOccurrence child in reference.Child.EnumerateOccurrences())
+                        yield return child;
+                if (reference.NativeStateMachine != null)
+                    foreach (BtsmtlSkillNativeStateOccurrence state in reference.NativeStateMachine.States)
+                        if (state.Body != null)
+                            foreach (BtsmtlSkillGraphOccurrence child in state.Body.EnumerateOccurrences())
+                                yield return child;
+                if (reference.NativeStateMachine != null)
+                    foreach (BtsmtlSkillNativeEdgeOccurrence edge in reference.NativeStateMachine.Edges)
+                        if (edge.Condition != null)
+                            foreach (BtsmtlSkillGraphOccurrence child in edge.Condition.EnumerateOccurrences())
+                                yield return child;
+            }
             foreach (BtsmtlSkillTimelineOccurrence timeline in Timelines)
                 foreach (BtsmtlSkillGraphOccurrence tree in timeline.Trees.Values)
                     foreach (BtsmtlSkillGraphOccurrence child in tree.EnumerateOccurrences())

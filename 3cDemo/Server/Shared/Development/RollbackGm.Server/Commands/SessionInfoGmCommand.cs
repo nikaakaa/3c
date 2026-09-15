@@ -12,7 +12,7 @@ public sealed class SessionInfoGmCommand : IGmCommandHandler
         id = "session.info",
         description = "查看当前 Relay 会话和已发布内容身份。",
         usage = "session.info",
-        resultContract = "thirdperson.rollback-gm.result.session-info/1"
+        resultContract = "thirdperson.rollback-gm.result.session-info/2"
     };
 
     public async Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation)
@@ -29,8 +29,7 @@ public sealed class SessionInfoGmCommand : IGmCommandHandler
                 GmResultField.Text("endpoint", "Gameplay UDP", value.Endpoint),
                 GmResultField.Text("modelIdentity", "模型", value.ModelIdentity),
                 GmResultField.Text("protocolIdentity", "协议", value.ProtocolIdentity),
-                GmResultField.Text("programId", "Program", value.ProgramId),
-                GmResultField.Text("programHash", "Program Hash", value.ProgramHash),
+                GmResultField.Text("gameplayContentHash", "Gameplay Content Hash", value.GameplayContentHash),
                 GmResultField.Signed("tickRate", "Tick Rate", value.TickRate),
                 GmResultField.Signed("maximumPredictionLeadTicks", "最大预测领先 Tick", value.MaximumPredictionLeadTicks),
                 GmResultField.Signed("confirmationDelayTicks", "确认延迟 Tick", value.ConfirmationDelayTicks)

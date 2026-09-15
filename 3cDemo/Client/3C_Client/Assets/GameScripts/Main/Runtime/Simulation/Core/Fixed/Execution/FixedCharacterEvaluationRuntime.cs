@@ -47,6 +47,7 @@ namespace ThirdPersonSimulation.Fixed
             var facts = new List<GameplayFact>();
             var presentation = new List<PresentationCommand>();
             var trace = new List<SimulationTraceRecord>();
+            var controlTrace = new List<SimulationTraceRecord>();
             try
             {
                 var serviceFactory = new FixedAbilityExecutionServiceFactory(
@@ -55,6 +56,19 @@ namespace ThirdPersonSimulation.Fixed
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
+                var controlMotion = new FixedCharacterControlMotionRuntime(
+                    abilityInput,
+                    bodyFacts,
+                    tick,
+                    characterRuntime.TickRate,
+                    actor.ControlRuntimeBinding.MotionBindings);
+                var controlTraceSink = new FixedCharacterControlTraceSink(
+                    controlTrace,
+                    characterRuntime.NumericProfile,
+                    actor.GameplayContentHash,
+                    actor.ActorId,
+                    tick,
+                    diagnosticsEnabled);
                 workspace.Reset();
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
@@ -85,28 +99,26 @@ namespace ThirdPersonSimulation.Fixed
                 new FixedCharacterInputRuntime(roleState.InputRequests, characterRuntime.InputRequestIds)
                     .ApplyRequests(input.Requests);
 
+                var control = new FixedCharacterControlRuntime(
+                    characterRuntime.ControlModules,
+                    actor.ControlRuntimeBinding,
+                    roleState,
+                    roleState.InputRequests,
+                    roleState.ActionState,
+                    actor.ActorId,
+                    tick,
+                    characterRuntime.TickRate,
+                    abilityInput,
+                    bodyFacts,
+                    controlMotion,
+                    controlTraceSink,
+                    actionRuntimes,
+                    (skill, window) => IsActionWindowActive(invocations, skill, window),
+                    route => ReadEquipmentActionContext(invocations, route));
+                control.Tick();
+                trace.AddRange(controlTrace);
                 if (invocations.Count != 0)
-                {
-                    FixedAbilityInvocationRuntime controlOwner = invocations[0];
-                    var control = new FixedCharacterControlRuntime(
-                        characterRuntime.ControlModules,
-                        actor.ControlRuntimeBinding,
-                        roleState,
-                        roleState.InputRequests,
-                        roleState.ActionState,
-                        actor.ActorId,
-                        tick,
-                        characterRuntime.TickRate,
-                        controlOwner.Frame.Input,
-                        controlOwner.Frame.BodyFacts,
-                        controlOwner.Input,
-                        controlOwner.Locomotion,
-                        controlOwner.Frame.Trace,
-                        actionRuntimes,
-                        (skill, window) => IsActionWindowActive(invocations, skill, window),
-                        route => ReadEquipmentActionContext(invocations, route));
-                    control.Tick();
-                }
+                    workspace.MotionContributions.AddRange(controlMotion.Contributions);
 
                 bool effectAdvanced = false;
                 for (int i = 0; i < invocations.Count; i++)
@@ -133,7 +145,9 @@ namespace ThirdPersonSimulation.Fixed
                 if (!effectAdvanced)
                     RequireNoGameplayEffectIngress(ingress);
 
-                ResolvedGameplayMotion gameplayMotion = ResolveMotion(results);
+                ResolvedGameplayMotion gameplayMotion = invocations.Count == 0
+                    ? controlMotion.Resolve()
+                    : ResolveMotion(results);
                 FixedScalar tickDelta = FixedScalar.One / FixedScalar.FromInt64(characterRuntime.TickRate);
                 BodyMotionPrepareResult bodyMotion = CharacterBodyMotionRuntime.Prepare(
                     actor.ActorId,

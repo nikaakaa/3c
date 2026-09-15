@@ -3,6 +3,301 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
+    internal sealed class Float32CharacterControlMotionRuntime
+    {
+        readonly Float32AbilityExecutionInput m_Input;
+        readonly Float32AbilityBodyFacts m_Body;
+        readonly SimulationTick m_Tick;
+        readonly int m_TickRate;
+        readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
+        readonly List<SimulationMotionContribution> m_Contributions =
+            new List<SimulationMotionContribution>();
+
+        public Float32CharacterControlMotionRuntime(
+            Float32AbilityExecutionInput input,
+            Float32AbilityBodyFacts body,
+            SimulationTick tick,
+            int tickRate,
+            CharacterControlMotionBindingCatalog controlMotionBindings)
+        {
+            m_Input = input ?? throw new ArgumentNullException(nameof(input));
+            if (!body.IsValid)
+                throw new ArgumentException("Float32 Character Control motion requires Body Facts.", nameof(body));
+            if (!tick.IsValid || tickRate <= 0)
+                throw new ArgumentException("Float32 Character Control motion identity is incomplete.");
+            m_Body = body;
+            m_Tick = tick;
+            m_TickRate = tickRate;
+            m_ControlMotionBindings = controlMotionBindings;
+        }
+
+        public IReadOnlyList<SimulationMotionContribution> Contributions => m_Contributions;
+
+        public void SubmitControl(
+            CharacterControlMotionRequest request,
+            CharacterControlMotionDescriptor descriptor)
+        {
+            SimulationInputValue input = ReadValue(request.Input.Value, SimulationInputValueKind.Vector2);
+            SubmitControl(
+                input.Vector2,
+                m_Body,
+                m_Tick,
+                m_TickRate,
+                m_ControlMotionBindings,
+                request,
+                descriptor,
+                m_Contributions.Add);
+        }
+
+        public ResolvedGameplayMotion Resolve()
+        {
+            Float32Vector3 additiveDisplacement = Float32Vector3.Zero;
+            Float32Scalar additiveYaw = Float32Scalar.Zero;
+            Float32Vector3 weightedDisplacement = Float32Vector3.Zero;
+            Float32Scalar weightedYaw = Float32Scalar.Zero;
+            Float32Scalar totalWeight = Float32Scalar.Zero;
+            SimulationMotionContribution overrideWinner = default;
+            Float32Vector3 overrideDisplacement = Float32Vector3.Zero;
+            Float32Scalar overrideYaw = Float32Scalar.Zero;
+            bool hasWeighted = false;
+            bool hasOverride = false;
+            for (int i = 0; i < m_Contributions.Count; i++)
+            {
+                SimulationMotionContribution contribution = m_Contributions[i];
+                Float32Vector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
+                    ? Float32Angle.RotatePlanar(contribution.Displacement, m_Body.Yaw)
+                    : contribution.Displacement;
+                switch (contribution.BlendMode)
+                {
+                    case SimulationMotionBlendMode.Additive:
+                        additiveDisplacement += resolved * contribution.Weight;
+                        additiveYaw += contribution.YawDegrees * contribution.Weight;
+                        break;
+                    case SimulationMotionBlendMode.WeightedBlend:
+                        weightedDisplacement += resolved * contribution.Weight;
+                        weightedYaw += contribution.YawDegrees * contribution.Weight;
+                        totalWeight += contribution.Weight;
+                        hasWeighted = true;
+                        break;
+                    case SimulationMotionBlendMode.Override:
+                        if (!hasOverride || contribution.Priority > overrideWinner.Priority)
+                        {
+                            overrideWinner = contribution;
+                            overrideDisplacement = resolved * contribution.Weight;
+                            overrideYaw = contribution.YawDegrees * contribution.Weight;
+                            hasOverride = true;
+                        }
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Motion contribution '{contribution.SourceIdentity}' has invalid blend mode '{contribution.BlendMode}'.");
+                }
+            }
+            if (!hasWeighted && !hasOverride && additiveDisplacement == Float32Vector3.Zero && additiveYaw == Float32Scalar.Zero)
+                return new ResolvedGameplayMotion(
+                    Float32Vector3.Zero,
+                    Float32Scalar.Zero,
+                    Float32Vector2.Zero,
+                    false,
+                    default,
+                    default,
+                    string.Empty,
+                    string.Empty);
+
+            Float32Vector3 displacement = additiveDisplacement;
+            Float32Scalar yaw = additiveYaw;
+            if (hasOverride)
+            {
+                displacement += overrideDisplacement;
+                yaw += overrideYaw;
+            }
+            else if (hasWeighted && totalWeight > Float32Scalar.Zero)
+            {
+                displacement += new Float32Vector3(
+                    weightedDisplacement.X / totalWeight,
+                    weightedDisplacement.Y / totalWeight,
+                    weightedDisplacement.Z / totalWeight);
+                yaw += weightedYaw / totalWeight;
+            }
+            if (!hasOverride || !overrideWinner.MovementPlaybackClock.IsValid)
+                throw new InvalidOperationException("Resolved Character Control motion has no committed Movement playback clock owner.");
+            return new ResolvedGameplayMotion(
+                displacement,
+                yaw,
+                overrideWinner.PlanarBasis,
+                displacement != Float32Vector3.Zero || yaw != Float32Scalar.Zero,
+                overrideWinner.MovementPlaybackClock,
+                overrideWinner.LocomotionTimeline,
+                string.Empty,
+                string.Empty);
+        }
+
+        internal static void SubmitControl(
+            Float32Vector2 move,
+            Float32AbilityBodyFacts body,
+            SimulationTick tick,
+            int tickRate,
+            CharacterControlMotionBindingCatalog controlMotionBindings,
+            CharacterControlMotionRequest request,
+            CharacterControlMotionDescriptor descriptor,
+            Action<SimulationMotionContribution> submit)
+        {
+            if (!body.IsValid || !tick.IsValid || tickRate <= 0)
+                throw new ArgumentException("Float32 Character Control motion identity is incomplete.");
+            if (request.Input != descriptor.Input || !string.Equals(request.Binding, descriptor.Binding, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Control motion request '{request.Binding}' does not match its declared motion.");
+            if (move.SqrMagnitude > Float32Scalar.One)
+                move = move.Normalized;
+            Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(tickRate);
+            Float32Scalar moveSpeed = Float32Scalar.FromDouble(descriptor.MoveSpeed);
+            Float32Scalar turnSpeed = Float32Scalar.FromDouble(descriptor.TurnSpeedDegrees);
+            Float32Scalar maxYaw = turnSpeed * delta;
+            Float32Vector3 displacement;
+            Float32Scalar yaw;
+            if (descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve)
+            {
+                CharacterControlMotionBinding source = controlMotionBindings == null
+                    ? throw new InvalidOperationException("Float32 Control motion bindings are not installed.")
+                    : controlMotionBindings.Require(descriptor.SourceMotionIdentity);
+                CharacterControlMotionDelta curveDelta = source.EvaluateDelta(
+                    request.ContinuousTicks / (double)tickRate,
+                    (request.ContinuousTicks + 1) / (double)tickRate);
+                displacement = new Float32Vector3(
+                    Float32Scalar.FromDouble(curveDelta.X),
+                    Float32Scalar.FromDouble(curveDelta.Y),
+                    Float32Scalar.FromDouble(curveDelta.Z));
+                yaw = Float32Scalar.FromDouble(curveDelta.Yaw);
+            }
+            else
+            {
+                displacement = new Float32Vector3(
+                    move.X * moveSpeed * delta,
+                    Float32Scalar.Zero,
+                    move.Y * moveSpeed * delta);
+                yaw = Float32Scalar.Zero;
+                if (move != Float32Vector2.Zero && maxYaw > Float32Scalar.Zero)
+                {
+                    Float32Yaw desired = Float32Angle.FromPlanarDirection(move);
+                    yaw = Float32Scalar.Clamp(Float32Angle.Delta(body.Yaw, desired), -maxYaw, maxYaw);
+                }
+            }
+            int continuousTicks = checked(request.ContinuousTicks + 1);
+            int durationTicks = descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
+                ? 0
+                : descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
+                ? checked((int)Math.Ceiling(descriptor.DurationSeconds * tickRate))
+                : 0;
+            var movementPlaybackClock = new CommittedMovementPlaybackClock(
+                request.Source.Identity,
+                request.PlaybackGeneration,
+                tick,
+                continuousTicks,
+                tickRate);
+            var locomotionTimeline = new CommittedLocomotionPlanarMotionTimeline(
+                request.Source.Identity,
+                request.PlaybackGeneration,
+                tick,
+                tickRate,
+                (displacement.X / delta).ToSingle(),
+                (displacement.Z / delta).ToSingle(),
+                (yaw / delta).ToSingle(),
+                turnSpeed.ToSingle(),
+                durationTicks,
+                string.Empty,
+                0f,
+                0f);
+            submit(new SimulationMotionContribution(
+                request.Source,
+                displacement,
+                yaw,
+                descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
+                    ? Float32Vector2.Zero
+                    : move,
+                descriptor.Space == CharacterControlMotionSpace.ActorLocal
+                    ? SimulationMotionContributionSpace.ActorLocal
+                    : SimulationMotionContributionSpace.World,
+                Float32Scalar.One,
+                descriptor.Priority,
+                SimulationMotionChannel.Locomotion,
+                SimulationMotionBlendMode.Override,
+                descriptor.ConsumeLowerChannels,
+                movementPlaybackClock,
+                locomotionTimeline));
+        }
+
+        SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)
+        {
+            for (int i = 0; i < m_Input.Values.Count; i++)
+            {
+                SimulationInputValue value = m_Input.Values[i];
+                if (!string.Equals(value.InputId, inputId, StringComparison.Ordinal))
+                    continue;
+                if (value.Kind != kind)
+                    throw new InvalidOperationException($"Input '{inputId}' is '{value.Kind}', expected '{kind}'.");
+                return value;
+            }
+            throw new InvalidOperationException($"Tick input does not contain required value '{inputId}'.");
+        }
+    }
+
+    internal sealed class Float32CharacterControlTraceSink
+    {
+        readonly List<SimulationTraceRecord> m_Records;
+        readonly SimulationNumericProfile m_NumericProfile;
+        readonly ProgramHash m_ContentHash;
+        readonly ActorId m_ActorId;
+        readonly SimulationTick m_Tick;
+        ulong m_Sequence;
+        readonly bool m_Enabled;
+
+        public Float32CharacterControlTraceSink(
+            List<SimulationTraceRecord> records,
+            SimulationNumericProfile numericProfile,
+            StableHash contentHash,
+            ActorId actorId,
+            SimulationTick tick,
+            bool enabled)
+        {
+            m_Records = records ?? throw new ArgumentNullException(nameof(records));
+            if (!numericProfile.IsValid || !contentHash.IsValid || !actorId.IsValid || !tick.IsValid)
+                throw new ArgumentException("Float32 Character Control trace identity is incomplete.");
+            m_NumericProfile = numericProfile;
+            m_ContentHash = new ProgramHash(contentHash);
+            m_ActorId = actorId;
+            m_Tick = tick;
+            m_Enabled = enabled;
+        }
+
+        public void Add(
+            SimulationExecutionSource source,
+            string code,
+            SimulationTraceSeverity severity,
+            string detail,
+            ulong generation = 0)
+        {
+            if (!m_Enabled)
+                return;
+            ulong sequence = checked(++m_Sequence);
+            if (generation == 0)
+                generation = 1;
+            var activation = new ActivationId(source, generation);
+            var header = new SimulationEventHeader(
+                m_NumericProfile,
+                EventId.Create(m_ContentHash, m_ActorId, activation, m_Tick, sequence, "Trace"),
+                m_ActorId,
+                m_Tick,
+                activation,
+                sequence,
+                "Trace");
+            m_Records.Add(new SimulationTraceRecord(
+                header,
+                severity,
+                "Character.Control",
+                code,
+                detail));
+        }
+    }
+
     internal sealed class Float32CharacterControlReadPort : ICharacterControlReadPort
     {
         readonly Float32AbilityExecutionInput m_Input;
@@ -208,21 +503,18 @@ namespace ThirdPersonSimulation
     internal sealed class Float32CharacterControlOutputPort : ICharacterControlOutputPort
     {
         readonly CharacterControlModuleContract m_ControlModule;
-        readonly Float32InputRuntime m_Input;
-        readonly Float32LocomotionRuntime m_Locomotion;
+        readonly Float32CharacterControlMotionRuntime m_Motion;
         readonly IReadOnlyDictionary<CharacterSkillId, Float32ActionRuntime> m_Actions;
-        readonly Float32TraceSink m_Trace;
+        readonly Float32CharacterControlTraceSink m_Trace;
 
         public Float32CharacterControlOutputPort(
             CharacterControlModuleContract controlModule,
-            Float32InputRuntime input,
-            Float32LocomotionRuntime locomotion,
+            Float32CharacterControlMotionRuntime motion,
             IReadOnlyDictionary<CharacterSkillId, Float32ActionRuntime> actions,
-            Float32TraceSink trace)
+            Float32CharacterControlTraceSink trace)
         {
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
-            m_Input = input ?? throw new ArgumentNullException(nameof(input));
-            m_Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
+            m_Motion = motion ?? throw new ArgumentNullException(nameof(motion));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
         }
@@ -230,7 +522,7 @@ namespace ThirdPersonSimulation
         public void SubmitMotion(CharacterControlMotionRequest request)
         {
             CharacterControlMotionDescriptor descriptor = RequireMotion(request.Binding);
-            m_Locomotion.SubmitControl(m_Input, request, descriptor);
+            m_Motion.SubmitControl(request, descriptor);
         }
 
         public bool SubmitAbility(CharacterControlAbilityRequest request) =>
@@ -284,9 +576,8 @@ namespace ThirdPersonSimulation
             int tickRate,
             Float32AbilityExecutionInput input,
             Float32AbilityBodyFacts body,
-            Float32InputRuntime inputRuntime,
-            Float32LocomotionRuntime locomotion,
-            Float32TraceSink trace,
+            Float32CharacterControlMotionRuntime motion,
+            Float32CharacterControlTraceSink trace,
             IReadOnlyDictionary<CharacterSkillId, Float32ActionRuntime> actions,
             Func<CharacterSkillId, string, bool> isActionWindowActive,
             Func<EquipmentActionRouteId, (bool Found, EquipmentActionContext Context)> tryReadEquipmentActionContext)
@@ -318,8 +609,7 @@ namespace ThirdPersonSimulation
                 tryReadEquipmentActionContext);
             m_Output = new Float32CharacterControlOutputPort(
                 m_Control.Contract,
-                inputRuntime,
-                locomotion,
+                motion,
                 actions,
                 trace);
         }

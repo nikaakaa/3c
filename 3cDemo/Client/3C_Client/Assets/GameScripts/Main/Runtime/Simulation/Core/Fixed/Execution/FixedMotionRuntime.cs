@@ -1270,97 +1270,16 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
-            if (request.Input != descriptor.Input || !string.Equals(request.Binding, descriptor.Binding, StringComparison.Ordinal))
-                throw new InvalidOperationException($"Control motion request '{request.Binding}' does not match its declared motion.");
-            FixedVector2 move = input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2).Vector2;
-            if (move.SqrMagnitude > FixedScalar.One)
-                move = move.Normalized;
-            FixedScalar delta = FixedScalar.One / FixedScalar.FromInt64(m_Ability.TickRate);
-            FixedScalar moveSpeed = FixedScalar.FromDouble(descriptor.MoveSpeed);
-            FixedScalar turnSpeed = FixedScalar.FromDouble(descriptor.TurnSpeedDegrees);
-            FixedScalar maxYaw = turnSpeed * delta;
-            FixedVector3 displacement;
-            FixedScalar yaw;
-            if (descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve)
-            {
-                ResolveControlSourceCurve(request, descriptor, out displacement, out yaw);
-            }
-            else
-            {
-                displacement = new FixedVector3(
-                    move.X * moveSpeed * delta,
-                    FixedScalar.Zero,
-                    move.Y * moveSpeed * delta);
-                yaw = FixedScalar.Zero;
-                if (move != FixedVector2.Zero && maxYaw > FixedScalar.Zero)
-                {
-                    FixedYaw desired = FixedAngle.FromPlanarDirection(move);
-                    yaw = FixedScalar.Clamp(FixedAngle.Delta(m_Frame.BodyFacts.Yaw, desired), -maxYaw, maxYaw);
-                }
-            }
-            int continuousTicks = checked(request.ContinuousTicks + 1);
-            int durationTicks = descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
-                ? 0
-                : descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
-                ? checked((int)Math.Ceiling(descriptor.DurationSeconds * m_Ability.TickRate))
-                : 0;
-            var movementPlaybackClock = new CommittedMovementPlaybackClock(
-                request.Source.Identity,
-                request.PlaybackGeneration,
-                m_Frame.Tick,
-                continuousTicks,
-                m_Ability.TickRate);
-            var locomotionTimeline = new CommittedLocomotionPlanarMotionTimeline(
-                request.Source.Identity,
-                request.PlaybackGeneration,
-                m_Frame.Tick,
-                m_Ability.TickRate,
-                (displacement.X / delta).ToSingle(),
-                (displacement.Z / delta).ToSingle(),
-                (yaw / delta).ToSingle(),
-                turnSpeed.ToSingle(),
-                durationTicks,
-                string.Empty,
-                0f,
-                0f);
-            m_Motion.Submit(new SimulationMotionContribution(
-                request.Source,
-                displacement,
-                yaw,
-                descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
-                    ? FixedVector2.Zero
-                    : move,
-                descriptor.Space == CharacterControlMotionSpace.ActorLocal
-                    ? SimulationMotionContributionSpace.ActorLocal
-                    : SimulationMotionContributionSpace.World,
-                FixedScalar.One,
-                descriptor.Priority,
-                SimulationMotionChannel.Locomotion,
-                SimulationMotionBlendMode.Override,
-                descriptor.ConsumeLowerChannels,
-                movementPlaybackClock,
-                locomotionTimeline));
-        }
-
-        void ResolveControlSourceCurve(
-            CharacterControlMotionRequest request,
-            CharacterControlMotionDescriptor descriptor,
-            out FixedVector3 displacement,
-            out FixedScalar yaw)
-        {
-            CharacterControlMotionBinding source = m_ControlMotionBindings == null
-                ? throw new InvalidOperationException("Fixed Control motion bindings are not installed.")
-                : m_ControlMotionBindings.Require(descriptor.SourceMotionIdentity);
-            double tickRate = m_Ability.TickRate;
-            CharacterControlMotionDelta delta = source.EvaluateDelta(
-                request.ContinuousTicks / tickRate,
-                (request.ContinuousTicks + 1) / tickRate);
-            displacement = new FixedVector3(
-                FixedScalar.FromDouble(delta.X),
-                FixedScalar.FromDouble(delta.Y),
-                FixedScalar.FromDouble(delta.Z));
-            yaw = FixedScalar.FromDouble(delta.Yaw);
-        }
+			FixedCharacterControlMotionRuntime.SubmitControl(
+				input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2).Vector2,
+				m_Frame.BodyFacts,
+				m_Frame.Tick,
+				m_Ability.TickRate,
+				m_ControlMotionBindings,
+				request,
+				descriptor,
+				m_Motion.Submit);
+		}
 
         CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(
             OperationControlCursor<TTarget> cursor,

@@ -4,6 +4,301 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
+    internal sealed class FixedCharacterControlMotionRuntime
+    {
+        readonly FixedAbilityExecutionInput m_Input;
+        readonly FixedAbilityBodyFacts m_Body;
+        readonly SimulationTick m_Tick;
+        readonly int m_TickRate;
+        readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
+        readonly List<SimulationMotionContribution> m_Contributions =
+            new List<SimulationMotionContribution>();
+
+        public FixedCharacterControlMotionRuntime(
+            FixedAbilityExecutionInput input,
+            FixedAbilityBodyFacts body,
+            SimulationTick tick,
+            int tickRate,
+            CharacterControlMotionBindingCatalog controlMotionBindings)
+        {
+            m_Input = input ?? throw new ArgumentNullException(nameof(input));
+            if (!body.IsValid)
+                throw new ArgumentException("Fixed Character Control motion requires Body Facts.", nameof(body));
+            if (!tick.IsValid || tickRate <= 0)
+                throw new ArgumentException("Fixed Character Control motion identity is incomplete.");
+            m_Body = body;
+            m_Tick = tick;
+            m_TickRate = tickRate;
+            m_ControlMotionBindings = controlMotionBindings;
+        }
+
+        public IReadOnlyList<SimulationMotionContribution> Contributions => m_Contributions;
+
+        public void SubmitControl(
+            CharacterControlMotionRequest request,
+            CharacterControlMotionDescriptor descriptor)
+        {
+            SimulationInputValue input = ReadValue(request.Input.Value, SimulationInputValueKind.Vector2);
+            SubmitControl(
+                input.Vector2,
+                m_Body,
+                m_Tick,
+                m_TickRate,
+                m_ControlMotionBindings,
+                request,
+                descriptor,
+                m_Contributions.Add);
+        }
+
+        public ResolvedGameplayMotion Resolve()
+        {
+            FixedVector3 additiveDisplacement = FixedVector3.Zero;
+            FixedScalar additiveYaw = FixedScalar.Zero;
+            FixedVector3 weightedDisplacement = FixedVector3.Zero;
+            FixedScalar weightedYaw = FixedScalar.Zero;
+            FixedScalar totalWeight = FixedScalar.Zero;
+            SimulationMotionContribution overrideWinner = default;
+            FixedVector3 overrideDisplacement = FixedVector3.Zero;
+            FixedScalar overrideYaw = FixedScalar.Zero;
+            bool hasWeighted = false;
+            bool hasOverride = false;
+            for (int i = 0; i < m_Contributions.Count; i++)
+            {
+                SimulationMotionContribution contribution = m_Contributions[i];
+                FixedVector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
+                    ? FixedAngle.RotatePlanar(contribution.Displacement, m_Body.Yaw)
+                    : contribution.Displacement;
+                switch (contribution.BlendMode)
+                {
+                    case SimulationMotionBlendMode.Additive:
+                        additiveDisplacement += resolved * contribution.Weight;
+                        additiveYaw += contribution.YawDegrees * contribution.Weight;
+                        break;
+                    case SimulationMotionBlendMode.WeightedBlend:
+                        weightedDisplacement += resolved * contribution.Weight;
+                        weightedYaw += contribution.YawDegrees * contribution.Weight;
+                        totalWeight += contribution.Weight;
+                        hasWeighted = true;
+                        break;
+                    case SimulationMotionBlendMode.Override:
+                        if (!hasOverride || contribution.Priority > overrideWinner.Priority)
+                        {
+                            overrideWinner = contribution;
+                            overrideDisplacement = resolved * contribution.Weight;
+                            overrideYaw = contribution.YawDegrees * contribution.Weight;
+                            hasOverride = true;
+                        }
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Motion contribution '{contribution.SourceIdentity}' has invalid blend mode '{contribution.BlendMode}'.");
+                }
+            }
+            if (!hasWeighted && !hasOverride && additiveDisplacement == FixedVector3.Zero && additiveYaw == FixedScalar.Zero)
+                return new ResolvedGameplayMotion(
+                    FixedVector3.Zero,
+                    FixedScalar.Zero,
+                    FixedVector2.Zero,
+                    false,
+                    default,
+                    default,
+                    string.Empty,
+                    string.Empty);
+
+            FixedVector3 displacement = additiveDisplacement;
+            FixedScalar yaw = additiveYaw;
+            if (hasOverride)
+            {
+                displacement += overrideDisplacement;
+                yaw += overrideYaw;
+            }
+            else if (hasWeighted && totalWeight > FixedScalar.Zero)
+            {
+                displacement += new FixedVector3(
+                    weightedDisplacement.X / totalWeight,
+                    weightedDisplacement.Y / totalWeight,
+                    weightedDisplacement.Z / totalWeight);
+                yaw += weightedYaw / totalWeight;
+            }
+            if (!hasOverride || !overrideWinner.MovementPlaybackClock.IsValid)
+                throw new InvalidOperationException("Resolved Character Control motion has no committed Movement playback clock owner.");
+            return new ResolvedGameplayMotion(
+                displacement,
+                yaw,
+                overrideWinner.PlanarBasis,
+                displacement != FixedVector3.Zero || yaw != FixedScalar.Zero,
+                overrideWinner.MovementPlaybackClock,
+                overrideWinner.LocomotionTimeline,
+                string.Empty,
+                string.Empty);
+        }
+
+        internal static void SubmitControl(
+            FixedVector2 move,
+            FixedAbilityBodyFacts body,
+            SimulationTick tick,
+            int tickRate,
+            CharacterControlMotionBindingCatalog controlMotionBindings,
+            CharacterControlMotionRequest request,
+            CharacterControlMotionDescriptor descriptor,
+            Action<SimulationMotionContribution> submit)
+        {
+            if (!body.IsValid || !tick.IsValid || tickRate <= 0)
+                throw new ArgumentException("Fixed Character Control motion identity is incomplete.");
+            if (request.Input != descriptor.Input || !string.Equals(request.Binding, descriptor.Binding, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Control motion request '{request.Binding}' does not match its declared motion.");
+            if (move.SqrMagnitude > FixedScalar.One)
+                move = move.Normalized;
+            FixedScalar delta = FixedScalar.One / FixedScalar.FromInt64(tickRate);
+            FixedScalar moveSpeed = FixedScalar.FromDouble(descriptor.MoveSpeed);
+            FixedScalar turnSpeed = FixedScalar.FromDouble(descriptor.TurnSpeedDegrees);
+            FixedScalar maxYaw = turnSpeed * delta;
+            FixedVector3 displacement;
+            FixedScalar yaw;
+            if (descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve)
+            {
+                CharacterControlMotionBinding source = controlMotionBindings == null
+                    ? throw new InvalidOperationException("Fixed Control motion bindings are not installed.")
+                    : controlMotionBindings.Require(descriptor.SourceMotionIdentity);
+                CharacterControlMotionDelta curveDelta = source.EvaluateDelta(
+                    request.ContinuousTicks / (double)tickRate,
+                    (request.ContinuousTicks + 1) / (double)tickRate);
+                displacement = new FixedVector3(
+                    FixedScalar.FromDouble(curveDelta.X),
+                    FixedScalar.FromDouble(curveDelta.Y),
+                    FixedScalar.FromDouble(curveDelta.Z));
+                yaw = FixedScalar.FromDouble(curveDelta.Yaw);
+            }
+            else
+            {
+                displacement = new FixedVector3(
+                    move.X * moveSpeed * delta,
+                    FixedScalar.Zero,
+                    move.Y * moveSpeed * delta);
+                yaw = FixedScalar.Zero;
+                if (move != FixedVector2.Zero && maxYaw > FixedScalar.Zero)
+                {
+                    FixedYaw desired = FixedAngle.FromPlanarDirection(move);
+                    yaw = FixedScalar.Clamp(FixedAngle.Delta(body.Yaw, desired), -maxYaw, maxYaw);
+                }
+            }
+            int continuousTicks = checked(request.ContinuousTicks + 1);
+            int durationTicks = descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
+                ? 0
+                : descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
+                ? checked((int)Math.Ceiling(descriptor.DurationSeconds * tickRate))
+                : 0;
+            var movementPlaybackClock = new CommittedMovementPlaybackClock(
+                request.Source.Identity,
+                request.PlaybackGeneration,
+                tick,
+                continuousTicks,
+                tickRate);
+            var locomotionTimeline = new CommittedLocomotionPlanarMotionTimeline(
+                request.Source.Identity,
+                request.PlaybackGeneration,
+                tick,
+                tickRate,
+                (displacement.X / delta).ToSingle(),
+                (displacement.Z / delta).ToSingle(),
+                (yaw / delta).ToSingle(),
+                turnSpeed.ToSingle(),
+                durationTicks,
+                string.Empty,
+                0f,
+                0f);
+            submit(new SimulationMotionContribution(
+                request.Source,
+                displacement,
+                yaw,
+                descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
+                    ? FixedVector2.Zero
+                    : move,
+                descriptor.Space == CharacterControlMotionSpace.ActorLocal
+                    ? SimulationMotionContributionSpace.ActorLocal
+                    : SimulationMotionContributionSpace.World,
+                FixedScalar.One,
+                descriptor.Priority,
+                SimulationMotionChannel.Locomotion,
+                SimulationMotionBlendMode.Override,
+                descriptor.ConsumeLowerChannels,
+                movementPlaybackClock,
+                locomotionTimeline));
+        }
+
+        SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)
+        {
+            for (int i = 0; i < m_Input.Values.Count; i++)
+            {
+                SimulationInputValue value = m_Input.Values[i];
+                if (!string.Equals(value.InputId, inputId, StringComparison.Ordinal))
+                    continue;
+                if (value.Kind != kind)
+                    throw new InvalidOperationException($"Input '{inputId}' is '{value.Kind}', expected '{kind}'.");
+                return value;
+            }
+            throw new InvalidOperationException($"Tick input does not contain required value '{inputId}'.");
+        }
+    }
+
+    internal sealed class FixedCharacterControlTraceSink
+    {
+        readonly List<SimulationTraceRecord> m_Records;
+        readonly SimulationNumericProfile m_NumericProfile;
+        readonly ProgramHash m_ContentHash;
+        readonly ActorId m_ActorId;
+        readonly SimulationTick m_Tick;
+        ulong m_Sequence;
+        readonly bool m_Enabled;
+
+        public FixedCharacterControlTraceSink(
+            List<SimulationTraceRecord> records,
+            SimulationNumericProfile numericProfile,
+            StableHash contentHash,
+            ActorId actorId,
+            SimulationTick tick,
+            bool enabled)
+        {
+            m_Records = records ?? throw new ArgumentNullException(nameof(records));
+            if (!numericProfile.IsValid || !contentHash.IsValid || !actorId.IsValid || !tick.IsValid)
+                throw new ArgumentException("Fixed Character Control trace identity is incomplete.");
+            m_NumericProfile = numericProfile;
+            m_ContentHash = new ProgramHash(contentHash);
+            m_ActorId = actorId;
+            m_Tick = tick;
+            m_Enabled = enabled;
+        }
+
+        public void Add(
+            SimulationExecutionSource source,
+            string code,
+            SimulationTraceSeverity severity,
+            string detail,
+            ulong generation = 0)
+        {
+            if (!m_Enabled)
+                return;
+            ulong sequence = checked(++m_Sequence);
+            if (generation == 0)
+                generation = 1;
+            var activation = new ActivationId(source, generation);
+            var header = new SimulationEventHeader(
+                m_NumericProfile,
+                EventId.Create(m_ContentHash, m_ActorId, activation, m_Tick, sequence, "Trace"),
+                m_ActorId,
+                m_Tick,
+                activation,
+                sequence,
+                "Trace");
+            m_Records.Add(new SimulationTraceRecord(
+                header,
+                severity,
+                "Character.Control",
+                code,
+                detail));
+        }
+    }
+
     internal sealed class FixedCharacterControlReadPort : ICharacterControlReadPort
     {
         readonly FixedAbilityExecutionInput m_Input;
@@ -209,21 +504,18 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedCharacterControlOutputPort : ICharacterControlOutputPort
     {
         readonly CharacterControlModuleContract m_ControlModule;
-        readonly FixedInputRuntime m_Input;
-        readonly FixedLocomotionRuntime m_Locomotion;
+        readonly FixedCharacterControlMotionRuntime m_Motion;
         readonly IReadOnlyDictionary<CharacterSkillId, FixedActionRuntime> m_Actions;
-        readonly FixedTraceSink m_Trace;
+        readonly FixedCharacterControlTraceSink m_Trace;
 
         public FixedCharacterControlOutputPort(
             CharacterControlModuleContract controlModule,
-            FixedInputRuntime input,
-            FixedLocomotionRuntime locomotion,
+            FixedCharacterControlMotionRuntime motion,
             IReadOnlyDictionary<CharacterSkillId, FixedActionRuntime> actions,
-            FixedTraceSink trace)
+            FixedCharacterControlTraceSink trace)
         {
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
-            m_Input = input ?? throw new ArgumentNullException(nameof(input));
-            m_Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
+            m_Motion = motion ?? throw new ArgumentNullException(nameof(motion));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
         }
@@ -231,7 +523,7 @@ namespace ThirdPersonSimulation.Fixed
         public void SubmitMotion(CharacterControlMotionRequest request)
         {
             CharacterControlMotionDescriptor descriptor = RequireMotion(request.Binding);
-            m_Locomotion.SubmitControl(m_Input, request, descriptor);
+            m_Motion.SubmitControl(request, descriptor);
         }
 
         public bool SubmitAbility(CharacterControlAbilityRequest request) =>
@@ -285,9 +577,8 @@ namespace ThirdPersonSimulation.Fixed
             int tickRate,
             FixedAbilityExecutionInput input,
             FixedAbilityBodyFacts body,
-            FixedInputRuntime inputRuntime,
-            FixedLocomotionRuntime locomotion,
-            FixedTraceSink trace,
+            FixedCharacterControlMotionRuntime motion,
+            FixedCharacterControlTraceSink trace,
             IReadOnlyDictionary<CharacterSkillId, FixedActionRuntime> actions,
             Func<CharacterSkillId, string, bool> isActionWindowActive,
             Func<EquipmentActionRouteId, (bool Found, EquipmentActionContext Context)> tryReadEquipmentActionContext)
@@ -319,8 +610,7 @@ namespace ThirdPersonSimulation.Fixed
                 tryReadEquipmentActionContext);
             m_Output = new FixedCharacterControlOutputPort(
                 m_Control.Contract,
-                inputRuntime,
-                locomotion,
+                motion,
                 actions,
                 trace);
         }

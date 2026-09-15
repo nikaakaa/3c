@@ -743,3 +743,9 @@
 - 提交 `58bed96ac`，Float32／Fixed 角色评估以 Invocation 的 `AbilityId` 建立动作控制映射，不再从安装数据重复读取技能身份。
 - 动作归属、动作窗口筛选和 Control 映射现在共用同一身份出口，未改变动作生命周期或角色输出。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除执行服务旧Ingress路径
+
+- 提交 `6d507f7fc`，删除 AbilityExecutionServiceSet 与 OperationControlRuntime 中无调用方的统一 Ingress、Gameplay Effect 推进入口，并移除 Frame／Invocation 的死 Ingress 参数。
+- 角色评估继续负责 Action／Gameplay Effect Ingress 分流和外层效果推进，Ability 服务只保留 Begin／End、局部 Tick 和实际领域服务，不改变执行顺序。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

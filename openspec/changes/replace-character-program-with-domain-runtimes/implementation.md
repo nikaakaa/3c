@@ -491,3 +491,9 @@
 - 提交 `37f60185f`，Float32／Fixed Evaluate 到 Finalize 之间的中间产品从 `PendingActorEvaluation` 统一为 `CharacterEvaluationResult`；同步更新结果批次、Pass 读写端口、Pipeline transaction、Backend product slot 和标准 Pass contract。
 - 产品合同从 `simulation.pending-actor-evaluations`／`target-pending-evaluations/1`／`actor/program/tick` 改为角色结果语义；这一步只清理旧 Program 命名，不改变角色候选状态、WorldSolve 请求、Finalize 消费和未消费结果生命周期。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；本步完成角色结果边界的命名收口，不将 2.1、2.6 或 3.2 的完整领域接线标记为完成。
+
+## 2026-09-16 技能执行服务组装移交调用方
+
+- 提交 `82bebd5dc`，Float32／Fixed `AbilityInvocationRuntime` 改为只接收 `AbilityExecutionAssembly`，不再在技能入口直接创建 Action、GameplayEffect、Equipment、Blackboard、Value、Motion、Locomotion、Control 和 Domain Runtime。
+- 角色评估侧的执行服务工厂统一完成上述模块组装，并把正式的 InstallationSet、角色 Control／Equipment binding 和当前执行帧传入各模块；技能局部状态、输入、workspace 和执行顺序保持不变，没有新建第二套执行器、fallback 或兼容路径。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；本步推进 D22 的调用方组装边界，但非角色调用方、typed 服务入口以及完整 Timeline／Pose 前端接线仍未完成，1.11 不标记为完成。

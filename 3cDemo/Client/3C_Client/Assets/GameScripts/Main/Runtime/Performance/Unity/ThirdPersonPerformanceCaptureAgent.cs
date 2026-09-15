@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Presentation;
-using ThirdPersonGameplay.Lab;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
@@ -257,7 +257,7 @@ namespace ThirdPersonPerformance.Runtime
             {
                 throw new InvalidDataException("Performance scenario or profile content identity is invalid.");
             }
-            if (!string.Equals(m_Scenario.ready_condition, "gameplay-lab.session-active+locked-roster+fixed-start-body+metric-catalog-registered", StringComparison.Ordinal) ||
+            if (!string.Equals(m_Scenario.ready_condition, "fixed-session-active+locked-roster+fixed-start-body+metric-catalog-registered", StringComparison.Ordinal) ||
                 !string.Equals(m_Scenario.capture_start_boundary, "after-fixed-input-warmup", StringComparison.Ordinal) ||
                 !string.Equals(m_Scenario.capture_end_boundary, "fixed-input-replay-completed", StringComparison.Ordinal))
             {
@@ -439,10 +439,18 @@ namespace ThirdPersonPerformance.Runtime
 
         bool RuntimeReadyCore()
         {
-            GameplayLabBootstrap bootstrap = GameplayLabBootstrap.Current;
-            bool runtimeReady = GameplayTickSystem.IsInitialized && bootstrap && bootstrap.SessionHost &&
-                                bootstrap.SessionHost.LifecycleState == SimulationSessionLifecycleState.Active &&
-                                bootstrap.SessionHost.RegistrationCount == 2 && GameplayTickSystem.Current.RenderFrame > 0;
+            SimulationSessionHost[] sessions = FindObjectsByType<SimulationSessionHost>(
+                FindObjectsInactive.Exclude,
+                FindObjectsSortMode.None);
+            FixedCharacterHost[] actors = FindObjectsByType<FixedCharacterHost>(
+                FindObjectsInactive.Exclude,
+                FindObjectsSortMode.None);
+            bool runtimeReady = GameplayTickSystem.IsInitialized &&
+                                sessions.Length == 1 &&
+                                sessions[0].LifecycleState == SimulationSessionLifecycleState.Active &&
+                                sessions[0].RegistrationCount == actors.Length &&
+                                actors.Length == 2 &&
+                                GameplayTickSystem.Current.RenderFrame > 0;
             if (!runtimeReady || IsOperation(PerformanceOperationKinds.Smoke))
                 return runtimeReady;
             FixedCharacterInputTraceStatus trace = FixedCharacterInputTraceModule.Status;

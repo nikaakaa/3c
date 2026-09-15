@@ -37,8 +37,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             [ToolParameter("Exact Fixed Input Trace JSON path. publish_scenario defaults to the workflow's last trace.", Required = false)]
             public string trace_path { get; set; }
 
-            [ToolParameter("Exact Gameplay Lab VariantId. Defaults to gameplay-lab.local-fixed-q32.32.", Required = false)]
-            public string variant_id { get; set; }
+            [ToolParameter("Exact Fixed runtime id. Defaults to character.fixed-local.", Required = false)]
+            public string runtime_id { get; set; }
 
         }
 
@@ -58,9 +58,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     {
                         string tracePath = parameters?["trace_path"]?.Value<string>() ??
                                            CharacterFixedInputTraceWorkflow.LastTracePath;
-                        string variantId = parameters?["variant_id"]?.Value<string>() ??
-                                           ThirdPersonPerformanceCaptureWorkflow.FixedVariantId;
-                        ThirdPersonPerformanceCaptureWorkflow.PublishScenario(variantId, tracePath);
+                        string runtimeId = parameters?["runtime_id"]?.Value<string>() ??
+                                           ThirdPersonPerformanceCaptureWorkflow.FixedRuntimeId;
+                        ThirdPersonPerformanceCaptureWorkflow.PublishScenario(runtimeId, tracePath);
                         return PerformanceMcpBridge.Success("Performance Scenario published.");
                     }
                     default:
@@ -98,8 +98,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             [ToolParameter("Stable job identity returned by start. status may omit it only when one latest matching job exists.", Required = false)]
             public string job_id { get; set; }
 
-            [ToolParameter("Exact Gameplay Lab VariantId. Defaults to gameplay-lab.local-fixed-q32.32.", Required = false)]
-            public string variant_id { get; set; }
+            [ToolParameter("Exact Fixed runtime id. Defaults to character.fixed-local.", Required = false)]
+            public string runtime_id { get; set; }
 
             [ToolParameter("Required instrumentation mode: MarkerOnly or Span.", Required = true)]
             public string instrumentation_mode { get; set; }
@@ -112,8 +112,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 return PerformanceMcpJobScheduler.Status(parameters?["job_id"]?.Value<string>(), "build_player");
             if (action != "start")
                 return new ErrorResponse("invalid_action", new { action });
-            string variantId = parameters?["variant_id"]?.Value<string>() ??
-                               ThirdPersonPerformanceCaptureWorkflow.FixedVariantId;
+            string runtimeId = parameters?["runtime_id"]?.Value<string>() ??
+                               ThirdPersonPerformanceCaptureWorkflow.FixedRuntimeId;
             string instrumentationModeText = parameters?["instrumentation_mode"]?.Value<string>()?.Trim();
             if (!Enum.TryParse(
                     instrumentationModeText,
@@ -131,7 +131,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 jobId =>
                 {
                     ThirdPersonPerformanceCaptureWorkflow.BuildPlayer(
-                        variantId,
+                        runtimeId,
                         jobId,
                         instrumentationMode);
                     return PerformanceMcpBridge.Success("Performance Player published.");
@@ -857,7 +857,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 manifest.created_utc,
                 manifest.completed_utc,
                 manifest.scenario_id,
-                manifest.variant_id,
+                manifest.runtime_id,
                 manifest.build_id,
                 manifest.hardware_identity,
                 manifest.metric_catalog_revision,

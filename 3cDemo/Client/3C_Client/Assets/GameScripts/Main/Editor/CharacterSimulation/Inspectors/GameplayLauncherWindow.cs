@@ -11,44 +11,6 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    public interface IGameplayLabLauncherOperations
-    {
-        GameplayLabLauncherState ReadState();
-        void Open();
-        void Play(int variantIndex);
-        void SyncAssets();
-    }
-
-    public readonly struct GameplayLabLauncherState
-    {
-        public GameplayLabLauncherState(string[] variantLabels, int selectedVariantIndex)
-        {
-            VariantLabels = variantLabels ?? throw new ArgumentNullException(nameof(variantLabels));
-            if (variantLabels.Length == 0 || selectedVariantIndex < 0 || selectedVariantIndex >= variantLabels.Length)
-                throw new ArgumentOutOfRangeException(nameof(selectedVariantIndex));
-            SelectedVariantIndex = selectedVariantIndex;
-        }
-
-        public string[] VariantLabels { get; }
-        public int SelectedVariantIndex { get; }
-    }
-
-    public static class GameplayLabLauncherRegistry
-    {
-        static IGameplayLabLauncherOperations s_Operations;
-
-        public static IGameplayLabLauncherOperations Operations => s_Operations;
-
-        public static void Register(IGameplayLabLauncherOperations operations)
-        {
-            if (operations == null)
-                throw new ArgumentNullException(nameof(operations));
-            if (s_Operations != null && s_Operations.GetType() != operations.GetType())
-                throw new InvalidOperationException("Gameplay Lab launcher operations are already registered.");
-            s_Operations = operations;
-        }
-    }
-
     public sealed class GameplayLauncherWindow : EditorWindow
     {
         const string BootstrapScene = "Assets/Scenes/Bootstrap.unity";
@@ -57,8 +19,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         BuildTarget m_BuildTarget;
         string m_ResourcePackageVersion = string.Empty;
         string m_MinimumClientBuildVersion = string.Empty;
-        string[] m_LabVariantLabels = Array.Empty<string>();
-        int m_LabVariantIndex;
         Vector2 m_Scroll;
         string m_DiagnosticSummary = string.Empty;
         double m_AutoSampleStopTime;
@@ -99,7 +59,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void OnEnable()
         {
             m_BuildTarget = EditorUserBuildSettings.activeBuildTarget;
-            RefreshGameplayLab();
             CaptureSamplingUiState();
             m_LastPerformanceStatus = ThirdPersonPerformanceCaptureWorkflow.Status;
             RefreshInputTraces();
@@ -170,12 +129,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void OnGUI()
         {
-            if (m_LabVariantLabels.Length == 0 && GameplayLabLauncherRegistry.Operations != null)
-                RefreshGameplayLab();
-
             m_Scroll = EditorGUILayout.BeginScrollView(m_Scroll);
-            DrawGameplayLab();
-            EditorGUILayout.Space(10f);
             DrawPerformanceCapture();
             EditorGUILayout.Space(10f);
             DrawNetworkTests();
@@ -263,49 +217,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        void DrawGameplayLab()
-        {
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                EditorGUILayout.LabelField("1. 单机 / Gameplay Lab", EditorStyles.boldLabel);
-                IGameplayLabLauncherOperations operations = GameplayLabLauncherRegistry.Operations;
-                if (operations == null)
-                {
-                    EditorGUILayout.HelpBox("Gameplay Lab launcher module is not registered.", MessageType.Error);
-                    return;
-                }
-                if (m_LabVariantLabels.Length == 0)
-                {
-                    EditorGUILayout.HelpBox("Gameplay Lab has no valid Session Variant.", MessageType.Error);
-                    if (GUILayout.Button("Refresh"))
-                        RefreshGameplayLab();
-                    return;
-                }
-
-                m_LabVariantIndex = EditorGUILayout.Popup(
-                    "Startup Variant",
-                    Mathf.Clamp(m_LabVariantIndex, 0, m_LabVariantLabels.Length - 1),
-                    m_LabVariantLabels);
-                EditorGUILayout.HelpBox("Local Session only. No CDN, Auth, Relay, or remote client is started.", MessageType.Info);
-                using (new EditorGUI.DisabledScope(IsBusy))
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Open Scene"))
-                        Execute(operations.Open);
-                    if (GUILayout.Button("Play Selected Variant"))
-                        Execute(() => operations.Play(m_LabVariantIndex));
-                    if (GUILayout.Button("Sync Debug Scene Assets"))
-                        Execute(() =>
-                        {
-                            operations.SyncAssets();
-                            RefreshGameplayLab();
-                        });
-                }
-                EditorGUILayout.Space(6f);
-                DrawFootLandingSampling();
-            }
-        }
-
         void DrawFootLandingSampling()
         {
             bool capturing = CharacterFootDiagnosticSampling.IsCapturing;
@@ -337,7 +248,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (!EditorApplication.isPlaying)
             {
                 EditorGUILayout.HelpBox(
-                    "先点击 Play Selected Variant。采样只在 Play Mode 开始；已完成的采样可在编辑模式下打开目录或分析。",
+                    "先启动 Fixed 会话。采样只在 Play Mode 开始；已完成的采样可在编辑模式下打开目录或分析。",
                     MessageType.None);
             }
             int samplerIndex = string.Equals(
@@ -623,6 +534,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 DrawPerformancePath("Smoke Gate", ThirdPersonPerformanceCaptureWorkflow.LastSmokeManifestPath);
                 DrawPerformancePath("Replay Gate", ThirdPersonPerformanceCaptureWorkflow.LastReplayManifestPath);
                 DrawPerformancePath("Baseline", ThirdPersonPerformanceCaptureWorkflow.BaselineManifestPath);
+                EditorGUILayout.LabelField("Runtime", ThirdPersonPerformanceCaptureWorkflow.FixedRuntimeId);
                 EditorGUILayout.LabelField("Run", ThirdPersonPerformanceCaptureWorkflow.Status);
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -631,14 +543,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         if (GUILayout.Button("Configure Toolchain"))
                             SchedulePerformance(ThirdPersonPerformanceCaptureWorkflow.ConfigureToolchain);
                         using (new EditorGUI.DisabledScope(
-                                   m_LabVariantLabels.Length == 0 ||
                                    m_SelectedInputTraceIndex < 0))
                         {
                             if (GUILayout.Button("Publish Scenario"))
                             {
-                                string variantId = m_LabVariantLabels[Mathf.Clamp(m_LabVariantIndex, 0, m_LabVariantLabels.Length - 1)];
                                 string tracePath = SelectedInputTracePath;
-                                SchedulePerformance(() => ThirdPersonPerformanceCaptureWorkflow.PublishScenario(variantId, tracePath));
+                                SchedulePerformance(() => ThirdPersonPerformanceCaptureWorkflow.PublishScenario(
+                                    ThirdPersonPerformanceCaptureWorkflow.FixedRuntimeId,
+                                    tracePath));
                             }
                         }
                     }
@@ -648,22 +560,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     using (new EditorGUI.DisabledScope(
                                IsBusy ||
                                ThirdPersonPerformanceCaptureWorkflow.IsRunRunning ||
-                               m_LabVariantLabels.Length == 0 ||
                                string.IsNullOrEmpty(ThirdPersonPerformanceCaptureWorkflow.ScenarioPath) ||
                                !File.Exists(ThirdPersonPerformanceCaptureWorkflow.ScenarioPath)))
                     {
                         if (GUILayout.Button("Build MarkerOnly Player"))
                         {
-                            string variantId = m_LabVariantLabels[Mathf.Clamp(m_LabVariantIndex, 0, m_LabVariantLabels.Length - 1)];
                             SchedulePerformance(() => ThirdPersonPerformanceCaptureWorkflow.BuildPlayer(
-                                variantId,
+                                ThirdPersonPerformanceCaptureWorkflow.FixedRuntimeId,
                                 PerformanceInstrumentationMode.MarkerOnly));
                         }
                         if (GUILayout.Button("Build Span Player"))
                         {
-                            string variantId = m_LabVariantLabels[Mathf.Clamp(m_LabVariantIndex, 0, m_LabVariantLabels.Length - 1)];
                             SchedulePerformance(() => ThirdPersonPerformanceCaptureWorkflow.BuildPlayer(
-                                variantId,
+                                ThirdPersonPerformanceCaptureWorkflow.FixedRuntimeId,
                                 PerformanceInstrumentationMode.Span));
                         }
                     }
@@ -730,6 +639,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     if (GUILayout.Button("Open WPA"))
                         Execute(ThirdPersonPerformanceCaptureWorkflow.OpenWpa);
                 }
+                DrawFootLandingSampling();
             }
         }
 
@@ -872,29 +782,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string message = $"Content: {result.ContentPath}\nPlayer: {result.PlayerPath}";
             Debug.Log($"Commercial client build completed. {message}");
             EditorUtility.DisplayDialog("3C Launcher", message, "OK");
-        }
-
-        void RefreshGameplayLab()
-        {
-            IGameplayLabLauncherOperations operations = GameplayLabLauncherRegistry.Operations;
-            if (operations == null)
-            {
-                m_LabVariantLabels = Array.Empty<string>();
-                m_LabVariantIndex = 0;
-                return;
-            }
-            try
-            {
-                GameplayLabLauncherState state = operations.ReadState();
-                m_LabVariantLabels = state.VariantLabels;
-                m_LabVariantIndex = state.SelectedVariantIndex;
-            }
-            catch (Exception exception)
-            {
-                m_LabVariantLabels = Array.Empty<string>();
-                m_LabVariantIndex = 0;
-                Debug.LogException(exception);
-            }
         }
 
         string PreviewContentPath()

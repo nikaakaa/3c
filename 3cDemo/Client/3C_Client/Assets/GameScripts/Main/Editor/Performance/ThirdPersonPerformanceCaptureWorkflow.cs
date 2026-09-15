@@ -6,7 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using ThirdPersonGameplay.Lab;
+using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
+using ThirdPersonSimulation;
 using ThirdPersonPerformance;
 using ThirdPersonPerformance.Editor;
 using ThirdPersonPerformance.Instrumentation;
@@ -23,8 +26,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     internal static class ThirdPersonPerformanceCaptureWorkflow
     {
-        internal const string FixedVariantId = "gameplay-lab.local-fixed-q32.32";
-        const string ScenePath = "Assets/Scenes/GameplayLab/GameplayLab.unity";
+        internal const string FixedRuntimeId = "character.fixed-local";
+        internal const string FixedScenePath = "Assets/Scenes/GameplayLab/GameplayLabFixed.unity";
+        const string FixedDefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
+        const string FixedCompositionPath = "Assets/Configs/Simulation/GameplayLab/Compositions/CorinGameplayLabFixedComposition.asset";
+        const string FixedBackendPath = "Assets/Configs/Simulation/DeterministicRollback/Pipelines/CorinFixedPassBackend.asset";
+        const string FixedPipelinePath = "Assets/Configs/Simulation/GameplayLab/Pipelines/StandardFixedLocalSimulationPipeline.asset";
+        const string FixedSourcePath = "Assets/Configs/Simulation/GameplayLab/Sources/LocalFixedSimulationSessionSource.asset";
+        const string FixedSolverPath = "Assets/Configs/Simulation/DeterministicRollback/World/CorinDeterministicKcc.asset";
+        const string FixedCollisionPath = "Assets/Configs/Simulation/DeterministicRollback/World/CorinDeterministicCollisionWorld.asset";
+        const string FixedRootPrefabPath = "Assets/Prefabs/GameplayLab/GameplayLabLocalFixed.prefab";
         const string CameraLookInputId = "LookAxis";
         const string ToolchainPreference = "ThirdPerson.Performance.ToolchainPath";
         const string ScenarioPreference = "ThirdPerson.Performance.ScenarioPath";
@@ -214,10 +225,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        public static void PublishScenario(string variantId, string tracePath)
+        public static void PublishScenario(string runtimeId, string tracePath)
         {
-            if (!string.Equals(variantId, FixedVariantId, StringComparison.Ordinal))
-                throw new InvalidOperationException($"Performance Scenario currently requires the formal Fixed Variant '{FixedVariantId}'.");
+            if (!string.Equals(runtimeId, FixedRuntimeId, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Performance Scenario requires the formal Fixed runtime '{FixedRuntimeId}'.");
             RequireFile(tracePath, "Fixed Input Trace");
             FixedInputTraceDocument input = ReadJson<FixedInputTraceDocument>(tracePath);
             if (string.IsNullOrWhiteSpace(input.trace_id) || string.IsNullOrWhiteSpace(input.actor_id) ||
@@ -225,17 +236,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 throw new InvalidDataException("Fixed Input Trace identity or frame closure is invalid.");
             }
-            RequireVariant(variantId).RequireComplete();
+            RequireFixedProductClosure();
             const int warmupLogicTicks = 180;
             if (input.frame_count <= warmupLogicTicks)
                 throw new InvalidDataException("Fixed Input Trace must contain both warmup and capture LogicTicks.");
-            string scenarioId = $"performance.{input.trace_id}.fixed.r3";
+            string scenarioId = $"performance.{input.trace_id}.fixed.r4";
             string root = Path.Combine(PerformanceRoot, "Scenarios", scenarioId);
             string scenarioPath = Path.Combine(root, "scenario.json");
             if (Directory.Exists(root))
             {
                 PerformanceScenarioDocument existing = ReadJson<PerformanceScenarioDocument>(scenarioPath);
-                if (!string.Equals(existing.variant_id, variantId, StringComparison.Ordinal) ||
+                if (!string.Equals(existing.runtime_id, runtimeId, StringComparison.Ordinal) ||
                     !string.Equals(existing.input_trace_hash, Sha256(tracePath), StringComparison.Ordinal))
                 {
                     throw new InvalidDataException($"Published Performance Scenario '{scenarioId}' already exists with another identity.");
@@ -302,11 +313,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 scenario_id = scenarioId,
                 revision = 1,
-                scene_path = ScenePath,
-                variant_id = variantId,
+                scene_path = FixedScenePath,
+                runtime_id = runtimeId,
                 actor_id = input.actor_id,
-                roster_identity = "gameplay-lab-player|gameplay-lab-target",
-                ready_condition = "gameplay-lab.session-active+locked-roster+fixed-start-body+metric-catalog-registered",
+                roster_identity = "fixed-player|fixed-target",
+                ready_condition = "fixed-session-active+locked-roster+fixed-start-body+metric-catalog-registered",
                 capture_start_boundary = "after-fixed-input-warmup",
                 capture_end_boundary = "fixed-input-replay-completed",
                 input_trace_path = Path.GetFileName(inputPath),
@@ -328,30 +339,29 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         public static void BuildPlayer(
-            string selectedVariantId,
+            string selectedRuntimeId,
             PerformanceInstrumentationMode instrumentationMode) =>
-            BuildPlayer(selectedVariantId, string.Empty, instrumentationMode);
+            BuildPlayer(selectedRuntimeId, string.Empty, instrumentationMode);
 
         internal static void BuildPlayer(
-            string selectedVariantId,
+            string selectedRuntimeId,
             string workspaceIdentity,
             PerformanceInstrumentationMode instrumentationMode)
         {
             PerformanceScenarioDocument scenario = RequireScenario();
-            if (!string.Equals(scenario.variant_id, selectedVariantId, StringComparison.Ordinal))
-                throw new InvalidOperationException("Selected Launcher Variant does not match the published Performance Scenario.");
-            GameplayLabSessionVariantDefinition variant = RequireVariant(scenario.variant_id);
-            variant.RequireComplete();
+            if (!string.Equals(scenario.runtime_id, selectedRuntimeId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Selected Fixed runtime does not match the published Performance Scenario.");
+            FixedPerformanceProductClosure closure = RequireFixedProductClosure();
             PerformanceInstrumentationBuildInput instrumentationInput =
                 ThirdPersonPerformanceInstrumentationCatalog.CreateBuildInput(
                     instrumentationMode,
                     ThirdPersonPerformanceInstrumentationCatalog.AssemblyNames);
             PerformanceBuildIdentity buildIdentity = CaptureBuildIdentity(
-                variant,
+                closure,
                 instrumentationMode,
                 instrumentationInput.Identity);
-            if (!AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath))
-                throw new FileNotFoundException("Gameplay Lab scene is missing.", ScenePath);
+            if (!AssetDatabase.LoadAssetAtPath<SceneAsset>(FixedScenePath))
+                throw new FileNotFoundException("Fixed performance scene is missing.", FixedScenePath);
             string workspaceId = string.IsNullOrWhiteSpace(workspaceIdentity)
                 ? Guid.NewGuid().ToString("N")
                 : workspaceIdentity;
@@ -377,7 +387,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
                 var options = new BuildPlayerOptions
                 {
-                    scenes = new[] { ScenePath },
+                    scenes = new[] { FixedScenePath },
                     locationPathName = executable,
                     target = BuildTarget.StandaloneWindows64,
                     targetGroup = BuildTargetGroup.Standalone,
@@ -416,7 +426,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     ScriptingImplementation.IL2CPP.ToString(),
                     "Development",
                     scenario.content_hash,
-                    buildIdentity.ProgramIdentity,
+                    buildIdentity.ContentIdentity,
                     buildIdentity.PipelineIdentity,
                     buildIdentity.ProjectionIdentity,
                     buildIdentity.SolverIdentity,
@@ -433,10 +443,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     build_target = BuildTarget.StandaloneWindows64.ToString(),
                     scripting_backend = ScriptingImplementation.IL2CPP.ToString(),
                     build_mode = "Development",
-                    scene_path = ScenePath,
+                    scene_path = FixedScenePath,
                     executable_path = RelativePath(candidate, executable),
                     scenario_catalog_path = RelativePath(candidate, Path.Combine(scenarioRoot, "scenario.json")),
-                    program_identity = buildIdentity.ProgramIdentity,
+                    content_identity = buildIdentity.ContentIdentity,
                     pipeline_identity = buildIdentity.PipelineIdentity,
                     projection_identity = buildIdentity.ProjectionIdentity,
                     solver_identity = buildIdentity.SolverIdentity,
@@ -756,30 +766,74 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return scenario;
         }
 
-        static GameplayLabSessionVariantDefinition RequireVariant(string variantId)
+        static FixedPerformanceProductClosure RequireFixedProductClosure()
         {
-            GameplayLabSessionVariantDefinition[] values = AssetDatabase.FindAssets("t:GameplayLabSessionVariantDefinition")
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .Select(AssetDatabase.LoadAssetAtPath<GameplayLabSessionVariantDefinition>)
-                .Where(value => value)
-                .Where(value => string.Equals(value.VariantId, variantId, StringComparison.Ordinal))
+            CharacterPipelineDefinition definition = NetworkTestProductAdapterUtility.RequireAsset<CharacterPipelineDefinition>(
+                FixedDefinitionPath);
+            SimulationSessionCompositionDefinition composition =
+                NetworkTestProductAdapterUtility.RequireAsset<SimulationSessionCompositionDefinition>(
+                    FixedCompositionPath);
+            FixedPassExecutionBackendDefinition backend =
+                NetworkTestProductAdapterUtility.RequireAsset<FixedPassExecutionBackendDefinition>(
+                    FixedBackendPath);
+            StandardFixedLocalSimulationPipelineDefinition pipeline =
+                NetworkTestProductAdapterUtility.RequireAsset<StandardFixedLocalSimulationPipelineDefinition>(
+                    FixedPipelinePath);
+            LocalFixedSimulationSessionSourceDefinition source =
+                NetworkTestProductAdapterUtility.RequireAsset<LocalFixedSimulationSessionSourceDefinition>(
+                    FixedSourcePath);
+            DeterministicKccWorldSolverDefinition solver =
+                NetworkTestProductAdapterUtility.RequireAsset<DeterministicKccWorldSolverDefinition>(
+                    FixedSolverPath);
+            DeterministicCollisionWorldAsset collision =
+                NetworkTestProductAdapterUtility.RequireAsset<DeterministicCollisionWorldAsset>(
+                    FixedCollisionPath);
+            GameObject runtimeRootPrefab =
+                NetworkTestProductAdapterUtility.RequireAsset<GameObject>(FixedRootPrefabPath);
+            composition.RequireComplete();
+            if (!string.Equals(composition.SessionId, "corin-gameplay-lab-fixed-local", StringComparison.Ordinal) ||
+                composition.TickRate != definition.SimulationTickRate ||
+                composition.ExecutionBackend != backend ||
+                composition.Pipeline != pipeline ||
+                composition.SessionSource != source ||
+                composition.WorldSolver != solver ||
+                solver.CollisionWorld != collision ||
+                !definition.InputProfile ||
+                !definition.PresentationProjection)
+            {
+                throw new InvalidOperationException("Fixed Performance runtime assets are not a closed formal Session Composition.");
+            }
+            SimulationSessionHost[] sessions = runtimeRootPrefab
+                .GetComponentsInChildren<SimulationSessionHost>(true);
+            FixedCharacterHost[] actors = runtimeRootPrefab
+                .GetComponentsInChildren<FixedCharacterHost>(true)
+                .OrderBy(value => value.ActorId.Value, StringComparer.Ordinal)
                 .ToArray();
-            if (values.Length != 1)
-                throw new InvalidOperationException($"Performance Scenario requires exactly one Variant '{variantId}', found {values.Length}.");
-            return values[0];
+            if (sessions.Length != 1 || actors.Length != 2 ||
+                !string.Equals(actors[0].ActorId.Value, "fixed-player", StringComparison.Ordinal) ||
+                !string.Equals(actors[1].ActorId.Value, "fixed-target", StringComparison.Ordinal) ||
+                actors.Any(value => value.CharacterDefinition != definition))
+            {
+                throw new InvalidOperationException("Fixed Performance runtime root does not contain the formal two-actor roster.");
+            }
+            return new FixedPerformanceProductClosure(
+                definition,
+                composition,
+                pipeline,
+                solver,
+                runtimeRootPrefab);
         }
 
         static PerformanceBuildIdentity CaptureBuildIdentity(
-            GameplayLabSessionVariantDefinition variant,
+            FixedPerformanceProductClosure closure,
             PerformanceInstrumentationMode instrumentationMode,
             string instrumentationIdentity)
         {
-            string programPath = AssetDatabase.GetAssetPath(variant.Program);
             return new PerformanceBuildIdentity(
-                $"{variant.DefinitionGuid}:{AssetDatabase.GetAssetDependencyHash(programPath)}",
-                variant.PipelineId,
-                variant.PresentationProjection.ProjectionRevision,
-                variant.SolverId,
+                NetworkTestProductAdapterUtility.FixedCharacterContentIdentity(closure.Definition),
+                closure.Pipeline.BuildPortableDescriptor().PipelineId.Value,
+                closure.Definition.PresentationProjection.ProjectionRevision,
+                closure.Solver.BuildKccIdentityHash(closure.Composition.TickRate).Value,
                 instrumentationIdentity,
                 instrumentationMode.ToString());
         }
@@ -1016,14 +1070,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         readonly struct PerformanceBuildIdentity
         {
             public PerformanceBuildIdentity(
-                string programIdentity,
+                string contentIdentity,
                 string pipelineIdentity,
                 string projectionIdentity,
                 string solverIdentity,
                 string instrumentationIdentity,
                 string instrumentationMode)
             {
-                ProgramIdentity = programIdentity;
+                ContentIdentity = contentIdentity;
                 PipelineIdentity = pipelineIdentity;
                 ProjectionIdentity = projectionIdentity;
                 SolverIdentity = solverIdentity;
@@ -1031,7 +1085,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 InstrumentationMode = instrumentationMode;
             }
 
-            public string ProgramIdentity { get; }
+            public string ContentIdentity { get; }
             public string PipelineIdentity { get; }
             public string ProjectionIdentity { get; }
             public string SolverIdentity { get; }
@@ -1040,12 +1094,35 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             public PerformanceBuildIdentity WithInstrumentationIdentity(string identity) =>
                 new PerformanceBuildIdentity(
-                    ProgramIdentity,
+                    ContentIdentity,
                     PipelineIdentity,
                     ProjectionIdentity,
                     SolverIdentity,
                     identity,
                     InstrumentationMode);
+        }
+
+        sealed class FixedPerformanceProductClosure
+        {
+            public FixedPerformanceProductClosure(
+                CharacterPipelineDefinition definition,
+                SimulationSessionCompositionDefinition composition,
+                StandardFixedLocalSimulationPipelineDefinition pipeline,
+                DeterministicKccWorldSolverDefinition solver,
+                GameObject runtimeRootPrefab)
+            {
+                Definition = definition;
+                Composition = composition;
+                Pipeline = pipeline;
+                Solver = solver;
+                RuntimeRootPrefab = runtimeRootPrefab;
+            }
+
+            public CharacterPipelineDefinition Definition { get; }
+            public SimulationSessionCompositionDefinition Composition { get; }
+            public StandardFixedLocalSimulationPipelineDefinition Pipeline { get; }
+            public DeterministicKccWorldSolverDefinition Solver { get; }
+            public GameObject RuntimeRootPrefab { get; }
         }
     }
 }

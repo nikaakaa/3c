@@ -8,7 +8,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCamera;
-using ThirdPersonCharacter.Editor.CharacterSimulation;
+using ThirdPersonCharacter.Editor.ProductStartup;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonGameplay.Tick;
@@ -36,8 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string projectionSourceRevision,
             string projectionSemanticHash,
             string projectionContractHash,
-            string worldRevision,
-            int launcherVariantIndex)
+            string worldRevision)
         {
             if (string.IsNullOrWhiteSpace(runtimeId) ||
                 string.IsNullOrWhiteSpace(runtimeContentHash) ||
@@ -48,8 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 string.IsNullOrWhiteSpace(projectionSourceRevision) ||
                 string.IsNullOrWhiteSpace(projectionSemanticHash) ||
                 string.IsNullOrWhiteSpace(projectionContractHash) ||
-                string.IsNullOrWhiteSpace(worldRevision) ||
-                launcherVariantIndex < 0)
+                string.IsNullOrWhiteSpace(worldRevision))
             {
                 throw new ArgumentException(
                     "Fixed input replay runtime identity is incomplete.");
@@ -64,7 +62,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ProjectionSemanticHash = projectionSemanticHash.Trim();
             ProjectionContractHash = projectionContractHash.Trim();
             WorldRevision = worldRevision.Trim();
-            LauncherVariantIndex = launcherVariantIndex;
         }
 
         internal string RuntimeId { get; }
@@ -77,7 +74,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal string ProjectionSemanticHash { get; }
         internal string ProjectionContractHash { get; }
         internal string WorldRevision { get; }
-        internal int LauncherVariantIndex { get; }
     }
 
     public readonly struct CharacterFixedInputTraceSummary
@@ -117,10 +113,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string DiagnosticReplayOperation = "diagnostic-replay";
         const string ScheduleCaptureOperation = "schedule-record";
         const string ScheduleReplayOperation = "schedule-replay";
-        const string PlayerActorId = "gameplay-lab-player";
+        const string PlayerActorId = "fixed-player";
+        const string FixedScenePath = "Assets/Scenes/GameplayLab/GameplayLabFixed.unity";
         const string PendingOperationKey = "ThirdPerson.CharacterInputTrace.PendingOperation.v1";
         const string PendingTraceIdKey = "ThirdPerson.CharacterInputTrace.PendingTraceId.v2";
-        const string PendingVariantKey = "ThirdPerson.CharacterInputTrace.PendingVariant.v1";
         const string PendingDeadlineKey = "ThirdPerson.CharacterInputTrace.PendingDeadline.v1";
         const string PendingLaunchPhaseKey = "ThirdPerson.CharacterInputTrace.PendingLaunchPhase.v1";
         const double PendingSeconds = 60d;
@@ -212,17 +208,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             FixedCharacterInputTraceModule.PrepareRecording(
                 new ActorId(PlayerActorId));
             s_LastFailure = string.Empty;
-            IGameplayLabLauncherOperations operations = RequireLauncher();
-            GameplayLabLauncherState state = operations.ReadState();
-            ArmPending("record", string.Empty, state.SelectedVariantIndex);
+            ArmPending("record", string.Empty);
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 EditorApplication.ExitPlaymode();
-                s_LastStatus = "Restarting Gameplay Lab before canonical Fixed input recording.";
+                s_LastStatus = "Restarting Fixed session before canonical input recording.";
                 return;
             }
             StartPendingPlayMode();
-            s_LastStatus = "Starting Gameplay Lab before canonical Fixed input recording.";
+            s_LastStatus = "Starting Fixed session before canonical input recording.";
         }
 
         public static string StopAndSaveRecording()
@@ -391,14 +385,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastFailure = string.Empty;
             s_LastTracePath = path;
             s_LastTraceId = document.trace_id;
-            GameplayLabLauncherState launcherState =
-                RequireLauncher().ReadState();
-            ArmPending(
-                operation,
-                document.trace_id,
-                launcherState.SelectedVariantIndex);
+            ArmPending(operation, document.trace_id);
             s_LastStatus =
-                $"Restarting Gameplay Lab for {operation} trace {document.trace_id}.";
+                $"Restarting Fixed session for {operation} trace {document.trace_id}.";
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 EditorApplication.ExitPlaymode();
@@ -417,8 +406,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             RequirePoseMatchesBody(pose, initialBody);
-            if (SessionState.GetInt(PendingVariantKey, -1) < 0)
-                throw new InvalidOperationException("Canonical Fixed input recording has no Gameplay Lab variant identity.");
             if (host.SessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
                 return;
             CaptureRecordedCameraHeading(host);
@@ -556,7 +543,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void TickPending()
         {
             if (DateTime.UtcNow.Ticks > ReadPendingDeadline())
-                throw new TimeoutException($"Canonical Fixed input {PendingOperation} timed out while starting Gameplay Lab.");
+                throw new TimeoutException($"Canonical Fixed input {PendingOperation} timed out while starting the Fixed session.");
             PendingLaunchPhase phase = ReadPendingLaunchPhase();
             if (phase == PendingLaunchPhase.ReadyToPlay)
             {
@@ -910,8 +897,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 projection_source_revision = identity.ProjectionSourceRevision,
                 projection_semantic_hash = identity.ProjectionSemanticHash,
                 projection_contract_hash = identity.ProjectionContractHash,
-                world_revision = identity.WorldRevision,
-                launcher_variant_index = identity.LauncherVariantIndex
+                world_revision = identity.WorldRevision
             };
 
         static ReplayFootSampleDocument ReadReplayFootSample()
@@ -1126,11 +1112,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AddReplayMismatch(mismatches, "projection_semantic_hash", baseline.projection_semantic_hash, candidate.projection_semantic_hash);
             AddReplayMismatch(mismatches, "projection_contract_hash", baseline.projection_contract_hash, candidate.projection_contract_hash);
             AddReplayMismatch(mismatches, "world_revision", baseline.world_revision, candidate.world_revision);
-            AddReplayMismatch(
-                mismatches,
-                "launcher_variant_index",
-                baseline.launcher_variant_index.ToString(CultureInfo.InvariantCulture),
-                candidate.launcher_variant_index.ToString(CultureInfo.InvariantCulture));
         }
 
         static void AddReplayMismatch(
@@ -1276,8 +1257,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             !string.IsNullOrWhiteSpace(identity.projection_source_revision) &&
             !string.IsNullOrWhiteSpace(identity.projection_semantic_hash) &&
             !string.IsNullOrWhiteSpace(identity.projection_contract_hash) &&
-            !string.IsNullOrWhiteSpace(identity.world_revision) &&
-            identity.launcher_variant_index >= 0;
+            !string.IsNullOrWhiteSpace(identity.world_revision);
 
         static void AppendRuntimeIdentityHash(
             IncrementalHash hash,
@@ -1293,7 +1273,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AppendHash(hash, identity.projection_semantic_hash);
             AppendHash(hash, identity.projection_contract_hash);
             AppendHash(hash, identity.world_revision);
-            AppendHash(hash, identity.launcher_variant_index.ToString(CultureInfo.InvariantCulture));
         }
 
         static string FindLatestReplayProofPath(string directory) =>
@@ -1323,11 +1302,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
             EnsurePendingTracePreparation();
-            IGameplayLabLauncherOperations operations = RequireLauncher();
-            int variantIndex = SessionState.GetInt(PendingVariantKey, -1);
             ResetPendingDeadline();
             WritePendingLaunchPhase(PendingLaunchPhase.AwaitingPlayMode);
-            operations.Play(variantIndex);
+            EditorPlayModeSceneLaunchResult result = EditorPlayModeSceneLauncher.Start(
+                new EditorPlayModeSceneLaunchRequest(
+                    FixedScenePath,
+                    "canonical-fixed-input",
+                    ownerId: "character-fixed-input-trace"));
+            if (!result.Accepted)
+                throw new InvalidOperationException(
+                    $"Fixed input Scene launch was rejected: {result.Message}");
         }
 
         static void OnPlayModeStateChanged(PlayModeStateChange state)
@@ -1436,10 +1420,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException("Foot Landing sampling is already active.");
         }
 
-        static IGameplayLabLauncherOperations RequireLauncher() =>
-            GameplayLabLauncherRegistry.Operations ??
-            throw new InvalidOperationException("Gameplay Lab launcher operations are not registered.");
-
         static bool TryResolvePlayerStartState(
             out FixedCharacterHost selectedHost,
             out FixedWorldBodyState initialBody,
@@ -1503,8 +1483,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 host.ProjectionAsset.SourceRevision,
                 host.ProjectionAsset.SemanticHash,
                 host.ProjectionAsset.ContractHash,
-                host.SessionHost.Composition.WorldRevision,
-                SessionState.GetInt(PendingVariantKey, -1));
+                host.SessionHost.Composition.WorldRevision);
         }
 
         static PoseRecord PoseFromBody(FixedWorldBodyState body) => new PoseRecord
@@ -1527,7 +1506,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (positionError > PositionTolerance || yawError > YawTolerance)
             {
                 throw new InvalidOperationException(
-                    $"Gameplay Lab LogicRoot does not match its formal InitialBody. " +
+                    $"Fixed LogicRoot does not match its formal InitialBody. " +
                     $"PositionError={positionError:0.###}, YawError={yawError:0.###}.");
             }
         }
@@ -1821,11 +1800,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return ReadDocument(ResolveTracePath(traceId), true);
         }
 
-        static void ArmPending(string operation, string traceId, int variantIndex)
+        static void ArmPending(string operation, string traceId)
         {
             SessionState.SetString(PendingOperationKey, operation);
             SessionState.SetString(PendingTraceIdKey, traceId ?? string.Empty);
-            SessionState.SetInt(PendingVariantKey, variantIndex);
             WritePendingLaunchPhase(
                 EditorApplication.isPlayingOrWillChangePlaymode
                     ? PendingLaunchPhase.AwaitingEditMode
@@ -1841,8 +1819,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 document.actor_id,
                 s_ActiveReplayRuntimeIdentity.RuntimeContentHash,
                 s_ActiveReplayRuntimeIdentity.TickRate,
-                document.frame_count,
-                s_ActiveReplayRuntimeIdentity.LauncherVariantIndex);
+                document.frame_count);
 
         static void BeginReplayTickDrive(int frameCount)
         {
@@ -1966,7 +1943,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             SessionState.EraseString(PendingOperationKey);
             SessionState.EraseString(PendingTraceIdKey);
-            SessionState.EraseInt(PendingVariantKey);
             SessionState.EraseString(PendingDeadlineKey);
             SessionState.EraseInt(PendingLaunchPhaseKey);
             s_PendingReplayDocument = null;
@@ -2045,7 +2021,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string projection_semantic_hash;
             public string projection_contract_hash;
             public string world_revision;
-            public int launcher_variant_index;
         }
 
         [Serializable]

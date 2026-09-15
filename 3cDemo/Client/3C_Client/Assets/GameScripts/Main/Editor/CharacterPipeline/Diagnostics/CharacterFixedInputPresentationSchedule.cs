@@ -20,15 +20,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string actorId,
             string runtimeContentHash,
             int tickRate,
-            int traceFrameCount,
-            int launcherVariantIndex)
+            int traceFrameCount)
         {
             if (string.IsNullOrWhiteSpace(traceId) ||
                 string.IsNullOrWhiteSpace(traceContentHash) ||
                 string.IsNullOrWhiteSpace(actorId) ||
                 string.IsNullOrWhiteSpace(runtimeContentHash) ||
-                tickRate <= 0 || traceFrameCount <= 0 ||
-                launcherVariantIndex < 0)
+                tickRate <= 0 || traceFrameCount <= 0)
             {
                 throw new ArgumentException(
                     "Fixed Input Presentation Schedule binding is incomplete.");
@@ -39,7 +37,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RuntimeContentHash = runtimeContentHash;
             TickRate = tickRate;
             TraceFrameCount = traceFrameCount;
-            LauncherVariantIndex = launcherVariantIndex;
         }
 
         internal string TraceId { get; }
@@ -48,7 +45,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal string RuntimeContentHash { get; }
         internal int TickRate { get; }
         internal int TraceFrameCount { get; }
-        internal int LauncherVariantIndex { get; }
     }
 
     internal readonly struct CharacterFixedInputPresentationScheduleRepresentativeEvidence
@@ -117,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterFixedInputPresentationSchedule
     {
         internal const string Schema =
-            "character-fixed-input-presentation-schedule/2";
+            "character-fixed-input-presentation-schedule/3";
         readonly ScheduleDocument m_Document;
 
         CharacterFixedInputPresentationSchedule(ScheduleDocument document)
@@ -173,7 +169,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 runtime_content_hash = binding.RuntimeContentHash,
                 tick_rate = binding.TickRate,
                 trace_frame_count = binding.TraceFrameCount,
-                launcher_variant_index = binding.LauncherVariantIndex,
                 source = "canonical-live-replay",
                 start_local_logic_tick = frames[0].StartLocalLogicTick,
                 end_local_logic_tick = frames[frames.Count - 1].EndLocalLogicTick,
@@ -238,8 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !string.Equals(m_Document.actor_id, binding.ActorId, StringComparison.Ordinal) ||
                 !string.Equals(m_Document.runtime_content_hash, binding.RuntimeContentHash, StringComparison.Ordinal) ||
                 m_Document.tick_rate != binding.TickRate ||
-                TraceFrameCount != binding.TraceFrameCount ||
-                m_Document.launcher_variant_index != binding.LauncherVariantIndex)
+                TraceFrameCount != binding.TraceFrameCount)
             {
                 throw new InvalidDataException(
                     "Presentation Schedule does not match the Fixed Trace binding.");
@@ -358,7 +352,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(hash, document.runtime_content_hash);
             Add(hash, document.tick_rate);
             Add(hash, document.trace_frame_count);
-            Add(hash, document.launcher_variant_index);
             Add(hash, document.start_local_logic_tick);
             Add(hash, document.end_local_logic_tick);
             RepresentativeDocument representative = document.representative;
@@ -419,7 +412,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string runtime_content_hash;
             public int tick_rate;
             public int trace_frame_count;
-            public int launcher_variant_index;
             public string source;
             public ulong start_local_logic_tick;
             public ulong end_local_logic_tick;

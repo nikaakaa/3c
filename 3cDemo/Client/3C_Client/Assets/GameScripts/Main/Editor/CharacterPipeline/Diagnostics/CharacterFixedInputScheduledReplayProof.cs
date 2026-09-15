@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFixedInputScheduledReplayProof
     {
-        const string Schema = "character-fixed-input-replay-proof/5";
+        const string Schema = "character-fixed-input-replay-proof/6";
 
         internal static CharacterFixedInputScheduledReplayProofResult Publish(
             in CharacterFixedInputPresentationScheduleBinding binding,
@@ -153,8 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     projection_source_revision = runtimeIdentity.ProjectionSourceRevision,
                     projection_semantic_hash = runtimeIdentity.ProjectionSemanticHash,
                     projection_contract_hash = runtimeIdentity.ProjectionContractHash,
-                    world_revision = runtimeIdentity.WorldRevision,
-                    launcher_variant_index = runtimeIdentity.LauncherVariantIndex
+                    world_revision = runtimeIdentity.WorldRevision
                 },
                 start_body_hash = fixedEvidence.StartBodyHash.ToString(),
                 fixed_frame_count = fixedFrames.Length,
@@ -407,7 +406,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(target, "projection_semantic_hash", baseline.projection_semantic_hash, candidate.projection_semantic_hash);
             Add(target, "projection_contract_hash", baseline.projection_contract_hash, candidate.projection_contract_hash);
             Add(target, "world_revision", baseline.world_revision, candidate.world_revision);
-            Add(target, "launcher_variant_index", baseline.launcher_variant_index, candidate.launcher_variant_index);
         }
 
         static string Format(object value) => value switch
@@ -480,7 +478,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Append(hash, identity.projection_semantic_hash);
             Append(hash, identity.projection_contract_hash);
             Append(hash, identity.world_revision);
-            Append(hash, identity.launcher_variant_index);
         }
 
         static void Append(IncrementalHash hash, object value)
@@ -542,8 +539,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             !string.IsNullOrWhiteSpace(identity.projection_source_revision) &&
             !string.IsNullOrWhiteSpace(identity.projection_semantic_hash) &&
             !string.IsNullOrWhiteSpace(identity.projection_contract_hash) &&
-            !string.IsNullOrWhiteSpace(identity.world_revision) &&
-            identity.launcher_variant_index >= 0;
+            !string.IsNullOrWhiteSpace(identity.world_revision);
 
         static void Write(string path, ProofDocument document)
         {
@@ -632,7 +628,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string projection_semantic_hash;
             public string projection_contract_hash;
             public string world_revision;
-            public int launcher_variant_index;
         }
 
         [Serializable]

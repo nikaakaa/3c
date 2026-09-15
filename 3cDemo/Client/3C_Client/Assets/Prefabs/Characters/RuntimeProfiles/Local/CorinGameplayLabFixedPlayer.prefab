@@ -2044,7 +2044,7 @@ MonoBehaviour:
   m_SessionHost: {fileID: 0}
   m_ControlSource: {fileID: 3129472328941274663}
   m_PresentationRole: 1
-  m_ActorId: gameplay-lab-player
+  m_ActorId: fixed-player
   m_WorldBodyBindingId: Corin.LocalBody
   m_RootHierarchy: {fileID: 4327894003054884887}
   m_BodyPresentationProfile: {fileID: 11400000, guid: 4791f09a9f8040b987d486eb6576cb0e,

@@ -9,16 +9,16 @@ namespace ThirdPersonPerformance
     public static class PerformanceCaptureSchemas
     {
         public const string Toolchain = "third-person-performance-toolchain/2";
-        public const string Scenario = "third-person-performance-scenario/2";
+        public const string Scenario = "third-person-performance-scenario/3";
         public const string CameraTrace = "third-person-performance-camera-trace/1";
         public const string Budget = "third-person-performance-budget/1";
         public const string Profile = "third-person-performance-profile/1";
-        public const string Player = "third-person-performance-player/1";
+        public const string Player = "third-person-performance-player/2";
         public const string Request = "third-person-performance-run-request/3";
         public const string Status = "third-person-performance-run-status/2";
         public const string RuntimeResult = "third-person-performance-runtime-result/3";
         public const string Gate = "third-person-performance-gate/1";
-        public const string Manifest = "third-person-performance-capture/1";
+        public const string Manifest = "third-person-performance-capture/2";
         public const string Summary = "third-person-performance-summary/2";
         public const string Comparison = "third-person-performance-comparison/1";
         public const string InstrumentationManifest = PerformanceInstrumentationIdentity.ManifestSchema;
@@ -98,7 +98,7 @@ namespace ThirdPersonPerformance
         public string scenario_id = string.Empty;
         public int revision;
         public string scene_path = string.Empty;
-        public string variant_id = string.Empty;
+        public string runtime_id = string.Empty;
         public string actor_id = string.Empty;
         public string roster_identity = string.Empty;
         public string ready_condition = string.Empty;
@@ -175,7 +175,7 @@ namespace ThirdPersonPerformance
         public string scene_path = string.Empty;
         public string executable_path = string.Empty;
         public string scenario_catalog_path = string.Empty;
-        public string program_identity = string.Empty;
+        public string content_identity = string.Empty;
         public string pipeline_identity = string.Empty;
         public string projection_identity = string.Empty;
         public string solver_identity = string.Empty;
@@ -496,7 +496,7 @@ namespace ThirdPersonPerformance
         public string completed_utc = string.Empty;
         public string scenario_id = string.Empty;
         public string scenario_hash = string.Empty;
-        public string variant_id = string.Empty;
+        public string runtime_id = string.Empty;
         public string roster_identity = string.Empty;
         public string build_id = string.Empty;
         public string build_mode = string.Empty;
@@ -505,7 +505,7 @@ namespace ThirdPersonPerformance
         public string toolchain_identity = string.Empty;
         public string budget_hash = string.Empty;
         public string capture_profile_hash = string.Empty;
-        public string program_identity = string.Empty;
+        public string content_identity = string.Empty;
         public string pipeline_identity = string.Empty;
         public string projection_identity = string.Empty;
         public string solver_identity = string.Empty;
@@ -553,7 +553,7 @@ namespace ThirdPersonPerformance
                 value.scenario_id,
                 value.revision,
                 value.scene_path,
-                value.variant_id,
+                value.runtime_id,
                 value.actor_id,
                 value.roster_identity,
                 value.ready_condition,

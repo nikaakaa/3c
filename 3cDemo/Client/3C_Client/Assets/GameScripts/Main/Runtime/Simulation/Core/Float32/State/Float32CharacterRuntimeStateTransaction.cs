@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation
         internal Float32CharacterRuntimeState Snapshot { get; }
     }
 
-    internal interface IFloat32AbilityExecutionStateTransaction : IDisposable
+    internal interface IFloat32SkillExecutionState : IDisposable
     {
         Float32GameplayAbilityExecutionInstallation Installation { get; }
         CharacterStateValue Get(int slotIndex);
@@ -31,7 +31,6 @@ namespace ThirdPersonSimulation
         void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
         Float32MotionWarpState GetMotionWarpState(OperationHandle operation);
         void SetMotionWarpState(OperationHandle operation, Float32MotionWarpState value);
-        void Abort();
     }
 
     internal interface IFloat32InputRequestStatePort
@@ -136,7 +135,7 @@ namespace ThirdPersonSimulation
         public SimulationTick Tick => m_Tick;
         public int TickRate => m_TickRate;
 
-        internal IFloat32AbilityExecutionStateTransaction BindAbility(
+        internal IFloat32SkillExecutionState BindAbility(
             Float32GameplayAbilityExecutionInstallation installation)
         {
             RequireActive();
@@ -144,7 +143,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(installation));
             if (!m_AbilityStates.TryGetValue(installation.Data.AbilityId, out Float32AbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' is not part of the Character runtime state.");
-            return new Float32AbilityExecutionStateTransaction(m_AbilityBindingIdentity, m_Tick, installation, state);
+            return new Float32SkillExecutionState(m_AbilityBindingIdentity, m_Tick, installation, state);
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -163,10 +162,10 @@ namespace ThirdPersonSimulation
             return m_ControlState;
         }
 
-        internal void AcceptAbility(IFloat32AbilityExecutionStateTransaction transaction)
+        internal void AcceptAbility(IFloat32SkillExecutionState skillState)
         {
             RequireActive();
-            if (!(transaction is Float32AbilityExecutionStateTransaction ability) ||
+            if (!(skillState is Float32SkillExecutionState ability) ||
                 !ReferenceEquals(ability.BindingIdentity, m_AbilityBindingIdentity))
             {
                 throw new InvalidOperationException("Float32 Ability transaction belongs to another Character runtime transaction.");
@@ -289,7 +288,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class Float32AbilityExecutionStateTransaction : IFloat32AbilityExecutionStateTransaction
+    internal sealed class Float32SkillExecutionState : IFloat32SkillExecutionState
     {
         readonly object m_BindingIdentity;
         readonly SimulationTick m_Tick;
@@ -299,10 +298,9 @@ namespace ThirdPersonSimulation
         readonly Dictionary<int, CharacterStateValue> m_StateValues;
         readonly Dictionary<int, Float32MotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionState;
-        bool m_Aborted;
         bool m_Disposed;
 
-        public Float32AbilityExecutionStateTransaction(
+        public Float32SkillExecutionState(
             object bindingIdentity,
             SimulationTick tick,
             Float32GameplayAbilityExecutionInstallation installation,
@@ -391,13 +389,6 @@ namespace ThirdPersonSimulation
                 m_MotionWarpStates.Remove(operation.Value);
         }
 
-        public void Abort()
-        {
-            RequireActive();
-            m_Aborted = true;
-            m_Disposed = true;
-        }
-
         public void Dispose()
         {
             m_Disposed = true;
@@ -416,10 +407,8 @@ namespace ThirdPersonSimulation
 
         void RequireActive()
         {
-            if (m_Aborted)
-                throw new InvalidOperationException("Float32 Ability candidate was aborted.");
             if (m_Disposed)
-                throw new ObjectDisposedException(nameof(Float32AbilityExecutionStateTransaction));
+                throw new ObjectDisposedException(nameof(Float32SkillExecutionState));
         }
     }
 }

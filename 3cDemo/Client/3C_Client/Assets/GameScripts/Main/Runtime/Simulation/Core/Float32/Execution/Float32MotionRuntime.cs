@@ -517,7 +517,7 @@ namespace ThirdPersonSimulation
     {
         readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32ActionStateStore m_Actions;
-        readonly IFloat32AbilityExecutionStateTransaction m_Transaction;
+        readonly IFloat32SkillExecutionState m_SkillState;
 
         public Float32MotionWarpTarget(
             Float32GameplayAbilityExecutionAccess access,
@@ -527,7 +527,7 @@ namespace ThirdPersonSimulation
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-            m_Transaction = m_Frame.Transaction ?? throw new InvalidOperationException("MotionWarp target requires an active Character state transaction.");
+            m_SkillState = m_Frame.SkillState ?? throw new InvalidOperationException("MotionWarp target requires an active Skill state.");
         }
 
         public void Reset(ProgramMotionModifierDescriptor descriptor)
@@ -537,7 +537,7 @@ namespace ThirdPersonSimulation
 
         void ResetState(ProgramMotionModifierDescriptor descriptor)
         {
-            m_Transaction.SetMotionWarpState(descriptor.Operation, default);
+            m_SkillState.SetMotionWarpState(descriptor.Operation, default);
         }
 
         public void TraceSourceNotResolved(ProgramMotionModifierDescriptor descriptor, OperationHandle resolvedOwner)
@@ -603,7 +603,7 @@ namespace ThirdPersonSimulation
                 Fail(MotionModifierDiagnosticCode.TargetSnapshotRequired, descriptor, $"Action '{action.ActionId}' has no immutable target snapshot for requirement '{requirement}'.");
             }
 
-            Float32MotionWarpState storedState = m_Transaction.GetMotionWarpState(descriptor.Operation);
+            Float32MotionWarpState storedState = m_SkillState.GetMotionWarpState(descriptor.Operation);
             bool active = storedState.Active;
             bool initialized = storedState.Initialized;
             Float32ActionInstanceReference storedReference = storedState.ActionInstance;
@@ -745,7 +745,7 @@ namespace ThirdPersonSimulation
             Float32Vector3 modifierPositionCorrection = warpedSourceDelta - rawSourceDelta;
             Float32Scalar modifierYawCorrection = warpedSourceYawDelta - rawSourceYawDelta;
             channel.ApplyCorrection(modifierPositionCorrection, modifierYawCorrection);
-            m_Transaction.SetMotionWarpState(
+            m_SkillState.SetMotionWarpState(
                 descriptor.Operation,
                 storedState.WithProgress(currentWarpedPosition, currentWarpedYaw, positionProgress, yawProgress));
             Trace(
@@ -861,7 +861,7 @@ namespace ThirdPersonSimulation
             Float32Scalar positionProgress,
             Float32Scalar yawProgress)
         {
-            m_Transaction.SetMotionWarpState(
+            m_SkillState.SetMotionWarpState(
                 descriptor.Operation,
                 new Float32MotionWarpState(
                     true,

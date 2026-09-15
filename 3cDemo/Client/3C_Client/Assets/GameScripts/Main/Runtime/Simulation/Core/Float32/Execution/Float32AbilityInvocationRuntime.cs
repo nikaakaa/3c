@@ -75,8 +75,8 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityInvocationRuntime : IDisposable
     {
-        readonly Action<IFloat32AbilityExecutionStateTransaction> m_AcceptAbility;
-        readonly IFloat32AbilityExecutionStateTransaction m_AbilityState;
+        readonly Action<IFloat32SkillExecutionState> m_AcceptAbility;
+        readonly IFloat32SkillExecutionState m_SkillState;
         readonly Float32AbilityExecutionWorkspace m_Workspace;
         readonly Float32AbilityExecutionFrame m_Frame;
         readonly Float32InputRuntime m_Input;
@@ -98,7 +98,7 @@ namespace ThirdPersonSimulation
         public Float32AbilityInvocationRuntime(
             Float32GameplayAbilityExecutionInstallation installation,
             Float32GameplayAbilityExecutionInstallationSet installations,
-            IFloat32AbilityExecutionStateTransaction abilityState,
+            IFloat32SkillExecutionState skillState,
             IFloat32AbilityExecutionSavepointPort savepointPort,
             ActorId actorId,
             SimulationTick tick,
@@ -113,7 +113,7 @@ namespace ThirdPersonSimulation
             IFloat32GameplayEffectStatePort gameplayEffectState,
             IFloat32EquipmentStatePort equipmentState,
             IFloat32AbilityExecutionServiceFactory serviceFactory,
-            Action<IFloat32AbilityExecutionStateTransaction> acceptAbility)
+            Action<IFloat32SkillExecutionState> acceptAbility)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             installations = installations ?? throw new ArgumentNullException(nameof(installations));
@@ -122,7 +122,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
-            m_AbilityState = abilityState ?? throw new ArgumentNullException(nameof(abilityState));
+            m_SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new Float32AbilityExecutionFrame(
@@ -132,7 +132,7 @@ namespace ThirdPersonSimulation
                 input,
                 ingress ?? Array.Empty<SimulationIngress>(),
                 bodyFacts,
-                m_AbilityState,
+                m_SkillState,
                 savepointPort,
                 inputRequests,
                 actionState,
@@ -238,8 +238,8 @@ namespace ThirdPersonSimulation
             RequireOpen();
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Float32 Ability invocation cannot accept its current candidate.");
-            m_AcceptAbility(m_AbilityState);
-            m_AbilityState.Dispose();
+            m_AcceptAbility(m_SkillState);
+            m_SkillState.Dispose();
             m_Accepted = true;
         }
 
@@ -254,7 +254,7 @@ namespace ThirdPersonSimulation
                 m_Completed = true;
             }
             if (!m_Accepted)
-                m_AbilityState.Abort();
+                m_SkillState.Dispose();
         }
 
         public void Dispose()
@@ -263,7 +263,7 @@ namespace ThirdPersonSimulation
                 return;
             if (!m_Accepted)
                 Abort();
-            m_AbilityState.Dispose();
+            m_SkillState.Dispose();
             m_Disposed = true;
         }
 

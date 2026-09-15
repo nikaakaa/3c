@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterRuntimeState Snapshot { get; }
     }
 
-    internal interface IFixedAbilityExecutionStateTransaction : IDisposable
+    internal interface IFixedSkillExecutionState : IDisposable
     {
         FixedGameplayAbilityExecutionInstallation Installation { get; }
         CharacterStateValue Get(int slotIndex);
@@ -31,7 +31,6 @@ namespace ThirdPersonSimulation.Fixed
         void SetAbilityExecutionState(GameplayAbilityExecutionAggregate<CharacterStateValue> state);
         FixedMotionWarpState GetMotionWarpState(OperationHandle operation);
         void SetMotionWarpState(OperationHandle operation, FixedMotionWarpState value);
-        void Abort();
     }
 
     internal interface IFixedInputRequestStatePort
@@ -136,7 +135,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationTick Tick => m_Tick;
         public int TickRate => m_TickRate;
 
-        internal IFixedAbilityExecutionStateTransaction BindAbility(
+        internal IFixedSkillExecutionState BindAbility(
             FixedGameplayAbilityExecutionInstallation installation)
         {
             RequireActive();
@@ -144,7 +143,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(installation));
             if (!m_AbilityStates.TryGetValue(installation.Data.AbilityId, out FixedAbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' is not part of the Character runtime state.");
-            return new FixedAbilityExecutionStateTransaction(m_AbilityBindingIdentity, m_Tick, installation, state);
+            return new FixedSkillExecutionState(m_AbilityBindingIdentity, m_Tick, installation, state);
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -163,10 +162,10 @@ namespace ThirdPersonSimulation.Fixed
             return m_ControlState;
         }
 
-        internal void AcceptAbility(IFixedAbilityExecutionStateTransaction transaction)
+        internal void AcceptAbility(IFixedSkillExecutionState skillState)
         {
             RequireActive();
-            if (!(transaction is FixedAbilityExecutionStateTransaction ability) ||
+            if (!(skillState is FixedSkillExecutionState ability) ||
                 !ReferenceEquals(ability.BindingIdentity, m_AbilityBindingIdentity))
             {
                 throw new InvalidOperationException("Fixed Ability transaction belongs to another Character runtime transaction.");
@@ -289,7 +288,7 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedAbilityExecutionStateTransaction : IFixedAbilityExecutionStateTransaction
+    internal sealed class FixedSkillExecutionState : IFixedSkillExecutionState
     {
         readonly object m_BindingIdentity;
         readonly SimulationTick m_Tick;
@@ -299,10 +298,9 @@ namespace ThirdPersonSimulation.Fixed
         readonly Dictionary<int, CharacterStateValue> m_StateValues;
         readonly Dictionary<int, FixedMotionWarpState> m_MotionWarpStates;
         GameplayAbilityExecutionAggregate<CharacterStateValue> m_AbilityExecutionState;
-        bool m_Aborted;
         bool m_Disposed;
 
-        public FixedAbilityExecutionStateTransaction(
+        public FixedSkillExecutionState(
             object bindingIdentity,
             SimulationTick tick,
             FixedGameplayAbilityExecutionInstallation installation,
@@ -391,13 +389,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_MotionWarpStates.Remove(operation.Value);
         }
 
-        public void Abort()
-        {
-            RequireActive();
-            m_Aborted = true;
-            m_Disposed = true;
-        }
-
         public void Dispose()
         {
             m_Disposed = true;
@@ -416,10 +407,8 @@ namespace ThirdPersonSimulation.Fixed
 
         void RequireActive()
         {
-            if (m_Aborted)
-                throw new InvalidOperationException("Fixed Ability candidate was aborted.");
             if (m_Disposed)
-                throw new ObjectDisposedException(nameof(FixedAbilityExecutionStateTransaction));
+                throw new ObjectDisposedException(nameof(FixedSkillExecutionState));
         }
     }
 }

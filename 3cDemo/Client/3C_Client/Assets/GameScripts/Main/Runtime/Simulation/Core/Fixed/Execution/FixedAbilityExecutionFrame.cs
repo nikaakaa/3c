@@ -98,7 +98,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
             FixedAbilityBodyFacts bodyFacts,
-            IFixedAbilityExecutionStateTransaction transaction,
+            IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
             IFixedInputRequestStatePort inputRequests,
             IFixedActionRuntimeStatePort actionState,
@@ -117,7 +117,7 @@ namespace ThirdPersonSimulation.Fixed
             Input = input ?? throw new ArgumentNullException(nameof(input));
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
             m_BodyFacts = bodyFacts;
-            Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             m_SavepointPort = savepointPort;
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
@@ -148,7 +148,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedAbilityBodyFacts BodyFacts => m_BodyFacts.IsValid
             ? m_BodyFacts
             : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");
-        internal IFixedAbilityExecutionStateTransaction Transaction { get; }
+        internal IFixedSkillExecutionState SkillState { get; }
         internal IFixedAbilityExecutionSavepointPort SavepointPort => m_SavepointPort ??
             throw new InvalidOperationException("Fixed Ability invocation has no execution savepoint service.");
         internal IFixedInputRequestStatePort InputRequests { get; }
@@ -353,7 +353,7 @@ namespace ThirdPersonSimulation.Fixed
             Require(slotIndex);
             if (m_Frame.TryGetSkillExecutionState(slotIndex, out CharacterStateValue value))
                 return value;
-            return m_Frame.Transaction.Get(slotIndex);
+            return m_Frame.SkillState.Get(slotIndex);
         }
 
         public void Set(int slotIndex, CharacterStateValue value)
@@ -361,7 +361,7 @@ namespace ThirdPersonSimulation.Fixed
             Require(slotIndex);
             if (m_Frame.TrySetSkillExecutionState(slotIndex, value))
                 return;
-            m_Frame.Transaction.Set(slotIndex, value);
+            m_Frame.SkillState.Set(slotIndex, value);
         }
 
         public void Reset(int slotIndex)
@@ -369,7 +369,7 @@ namespace ThirdPersonSimulation.Fixed
             Require(slotIndex);
             if (m_Frame.TryResetSkillExecutionState(slotIndex))
                 return;
-            m_Frame.Transaction.Reset(slotIndex);
+            m_Frame.SkillState.Reset(slotIndex);
         }
 
         void Require(int slotIndex)

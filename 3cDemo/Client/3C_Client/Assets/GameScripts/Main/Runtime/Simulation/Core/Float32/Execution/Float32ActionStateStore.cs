@@ -777,11 +777,11 @@ namespace ThirdPersonSimulation
 		}
 
 		GameplayAbilityExecutionAggregate<CharacterStateValue> IGameplayAbilityExecutionStorage<CharacterStateValue>.ReadAggregate() =>
-			m_Frame.Transaction.GetAbilityExecutionState();
+			m_Frame.SkillState.GetAbilityExecutionState();
 
 		void IGameplayAbilityExecutionStorage<CharacterStateValue>.WriteAggregate(
 			GameplayAbilityExecutionAggregate<CharacterStateValue> aggregate) =>
-			m_Frame.Transaction.SetAbilityExecutionState(aggregate);
+			m_Frame.SkillState.SetAbilityExecutionState(aggregate);
 
 		void MatchActive(
 			int index,

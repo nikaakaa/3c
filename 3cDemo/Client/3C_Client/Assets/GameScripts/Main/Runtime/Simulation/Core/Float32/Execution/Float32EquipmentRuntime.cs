@@ -352,7 +352,7 @@ namespace ThirdPersonSimulation
 				m_OutputSavepoint = frame.CreateOutputSavepoint();
 				m_Values = new CharacterStateValue[frame.Data.StateSlots.Count];
 				for (int i = 0; i < m_Values.Length; i++)
-					m_Values[i] = frame.Transaction.Get(i);
+					m_Values[i] = frame.SkillState.Get(i);
 			}
 
 			public void Complete()
@@ -370,7 +370,7 @@ namespace ThirdPersonSimulation
 				m_Frame.RestoreOutput(m_OutputSavepoint);
 			m_Frame.SavepointPort.Restore(m_Savepoint);
 				for (int i = 0; i < m_Values.Length; i++)
-					m_Frame.Transaction.Set(i, m_Values[i]);
+					m_Frame.SkillState.Set(i, m_Values[i]);
 				m_Completed = true;
 			}
 		}

@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
             Float32AbilityBodyFacts bodyFacts,
-            IFloat32AbilityExecutionStateTransaction transaction,
+            IFloat32SkillExecutionState skillState,
             IFloat32AbilityExecutionSavepointPort savepointPort,
             IFloat32InputRequestStatePort inputRequests,
             IFloat32ActionRuntimeStatePort actionState,
@@ -116,7 +116,7 @@ namespace ThirdPersonSimulation
             Input = input ?? throw new ArgumentNullException(nameof(input));
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
             m_BodyFacts = bodyFacts;
-            Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             m_SavepointPort = savepointPort;
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
@@ -147,7 +147,7 @@ namespace ThirdPersonSimulation
         public Float32AbilityBodyFacts BodyFacts => m_BodyFacts.IsValid
             ? m_BodyFacts
             : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");
-        internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
+        internal IFloat32SkillExecutionState SkillState { get; }
         internal IFloat32AbilityExecutionSavepointPort SavepointPort => m_SavepointPort ??
             throw new InvalidOperationException("Float32 Ability invocation has no execution savepoint service.");
         internal IFloat32InputRequestStatePort InputRequests { get; }
@@ -352,7 +352,7 @@ namespace ThirdPersonSimulation
             Require(slotIndex);
             if (m_Frame.TryGetSkillExecutionState(slotIndex, out CharacterStateValue value))
                 return value;
-            return m_Frame.Transaction.Get(slotIndex);
+            return m_Frame.SkillState.Get(slotIndex);
         }
 
         public void Set(int slotIndex, CharacterStateValue value)
@@ -360,7 +360,7 @@ namespace ThirdPersonSimulation
             Require(slotIndex);
             if (m_Frame.TrySetSkillExecutionState(slotIndex, value))
                 return;
-            m_Frame.Transaction.Set(slotIndex, value);
+            m_Frame.SkillState.Set(slotIndex, value);
         }
 
         public void Reset(int slotIndex)
@@ -368,7 +368,7 @@ namespace ThirdPersonSimulation
             Require(slotIndex);
             if (m_Frame.TryResetSkillExecutionState(slotIndex))
                 return;
-            m_Frame.Transaction.Reset(slotIndex);
+            m_Frame.SkillState.Reset(slotIndex);
         }
 
         void Require(int slotIndex)

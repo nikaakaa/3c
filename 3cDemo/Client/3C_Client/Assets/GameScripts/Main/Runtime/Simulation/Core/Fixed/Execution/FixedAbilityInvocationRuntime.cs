@@ -76,8 +76,8 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityInvocationRuntime : IDisposable
     {
-        readonly Action<IFixedAbilityExecutionStateTransaction> m_AcceptAbility;
-        readonly IFixedAbilityExecutionStateTransaction m_AbilityState;
+        readonly Action<IFixedSkillExecutionState> m_AcceptAbility;
+        readonly IFixedSkillExecutionState m_SkillState;
         readonly FixedAbilityExecutionWorkspace m_Workspace;
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedInputRuntime m_Input;
@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedAbilityInvocationRuntime(
             FixedGameplayAbilityExecutionInstallation installation,
             FixedGameplayAbilityExecutionInstallationSet installations,
-            IFixedAbilityExecutionStateTransaction abilityState,
+            IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
             ActorId actorId,
             SimulationTick tick,
@@ -114,7 +114,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedGameplayEffectStatePort gameplayEffectState,
             IFixedEquipmentStatePort equipmentState,
             IFixedAbilityExecutionServiceFactory serviceFactory,
-            Action<IFixedAbilityExecutionStateTransaction> acceptAbility)
+            Action<IFixedSkillExecutionState> acceptAbility)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             installations = installations ?? throw new ArgumentNullException(nameof(installations));
@@ -123,7 +123,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
-            m_AbilityState = abilityState ?? throw new ArgumentNullException(nameof(abilityState));
+            m_SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new FixedAbilityExecutionFrame(
@@ -133,7 +133,7 @@ namespace ThirdPersonSimulation.Fixed
                 input,
                 ingress ?? Array.Empty<SimulationIngress>(),
                 bodyFacts,
-                m_AbilityState,
+                m_SkillState,
                 savepointPort,
                 inputRequests,
                 actionState,
@@ -239,8 +239,8 @@ namespace ThirdPersonSimulation.Fixed
             RequireOpen();
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Fixed Ability invocation cannot accept its current candidate.");
-            m_AcceptAbility(m_AbilityState);
-            m_AbilityState.Dispose();
+            m_AcceptAbility(m_SkillState);
+            m_SkillState.Dispose();
             m_Accepted = true;
         }
 
@@ -255,7 +255,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Completed = true;
             }
             if (!m_Accepted)
-                m_AbilityState.Abort();
+                m_SkillState.Dispose();
         }
 
         public void Dispose()
@@ -264,7 +264,7 @@ namespace ThirdPersonSimulation.Fixed
                 return;
             if (!m_Accepted)
                 Abort();
-            m_AbilityState.Dispose();
+            m_SkillState.Dispose();
             m_Disposed = true;
         }
 

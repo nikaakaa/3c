@@ -258,7 +258,7 @@ namespace ThirdPersonSimulation
             {
                 try
                 {
-                    m_Target.AbortUnconsumedEvaluations();
+                    m_Target.DiscardUnconsumedEvaluations();
                 }
                 finally
                 {

@@ -104,7 +104,7 @@ namespace ThirdPersonSimulation
             catch
             {
                 for (int i = 0; i < m_Evaluations.Length; i++)
-                    m_Evaluations[i]?.AbortUnconsumed();
+                    m_Evaluations[i]?.DiscardUnconsumed();
                 throw;
             }
             finally

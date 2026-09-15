@@ -199,7 +199,7 @@ namespace ThirdPersonSimulation
         void BeginSimulationStep(TWorkingState workingState, TStep step);
         void SetCompletedSteps(IReadOnlyList<TCompletedStep> steps);
         void ClearTransientState();
-        void AbortUnconsumedEvaluations();
+        void DiscardUnconsumedEvaluations();
         SimulationSessionExecutionPlan<TStep> ReadExecutionPlan();
         void ValidateTargetExecutionPlan(
             SimulationSessionExecutionPlan<TStep> plan,

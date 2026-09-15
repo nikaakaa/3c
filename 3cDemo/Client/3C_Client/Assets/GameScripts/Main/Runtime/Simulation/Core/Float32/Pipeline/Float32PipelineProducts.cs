@@ -144,10 +144,10 @@ namespace ThirdPersonSimulation
         public SimulationTick Tick { get; private set; }
         public IReadOnlyList<Float32CharacterEvaluationResult> Evaluations => m_Evaluations;
 
-        internal void AbortUnconsumed()
+        internal void DiscardUnconsumed()
         {
             for (int i = 0; i < m_Evaluations.Length; i++)
-                m_Evaluations[i].AbortUnconsumed();
+                m_Evaluations[i].DiscardUnconsumed();
         }
     }
 

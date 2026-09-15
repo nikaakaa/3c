@@ -55,7 +55,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Consumed = true;
         }
 
-        internal void AbortUnconsumed()
+        internal void DiscardUnconsumed()
         {
             if (m_Consumed)
                 return;

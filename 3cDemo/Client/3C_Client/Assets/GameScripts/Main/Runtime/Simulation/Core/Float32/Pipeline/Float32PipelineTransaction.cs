@@ -268,10 +268,10 @@ namespace ThirdPersonSimulation
             m_CompletedStepPort.Clear();
         }
 
-        public void AbortUnconsumedEvaluations()
+        public void DiscardUnconsumedEvaluations()
         {
             if (m_CharacterEvaluationResults.HasValue)
-                m_CharacterEvaluationResults.Read().AbortUnconsumed();
+                m_CharacterEvaluationResults.Read().DiscardUnconsumed();
         }
 
         public SimulationSessionExecutionPlan<Float32SimulationStep> ReadExecutionPlan()

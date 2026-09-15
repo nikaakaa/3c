@@ -796,3 +796,9 @@
 
 - 提交 `730ccdc19`，Float32／Fixed 状态事务异常文本从旧的身份语义改为明确的 Tick／TickRate 时间语义，与已删除的 `ActorId` 参数保持一致。
 - 只修正诊断文本，不改变异常条件、状态提交或恢复行为；`ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 技能执行端口脱离角色状态实现
+
+- 提交 `dd5b69bc4`，将 Float32／Fixed 技能局部状态、输入请求、动作、句柄、事件、Gameplay Effect 与 Equipment 的 typed 端口移到 Ability 执行域；Control 状态绑定端口单独归入角色 Control 执行域。
+- 角色状态事务现在只实现这些调用方合同，不再同时定义技能执行合同；删除角色状态对象中没有调用方的 `RequireAbility` 出口。多技能聚合、角色事务提交、保存点恢复和状态编码行为不变。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using static ThirdPersonSimulation.SimulationProgramSemanticsCodec;
+using static ThirdPersonSimulation.GameplayAbilitySemanticsCodec;
 
 namespace ThirdPersonSimulation
 {

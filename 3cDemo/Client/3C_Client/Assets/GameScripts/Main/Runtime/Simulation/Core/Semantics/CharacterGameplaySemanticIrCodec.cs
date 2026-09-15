@@ -206,7 +206,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Gameplay Semantic IR tick rate is invalid.");
             var sourceRevision = new ProgramRevision(reader.ReadString());
             var semanticHash = new SemanticHash(new StableHash(reader.ReadString()));
-            int capabilityCount = SimulationProgramSemanticsCodec.ReadCount(reader);
+            int capabilityCount = GameplayAbilitySemanticsCodec.ReadCount(reader);
             var gameplayCapabilities = new string[capabilityCount];
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
@@ -297,15 +297,15 @@ namespace ThirdPersonSimulation
             WriteTable(writer, semanticIr.Literals, WriteLiteral);
             WriteTable(writer, semanticIr.Operations, WriteOperation);
             WriteTable(writer, semanticIr.ConstantInputBindings, WriteConstantInputBinding);
-            WriteTable(writer, semanticIr.ControlFlow, SimulationProgramSemanticsCodec.WriteControlFlow);
-            WriteTable(writer, semanticIr.References, SimulationProgramSemanticsCodec.WriteReference);
-            WriteTable(writer, semanticIr.GraphCallFrames, SimulationProgramSemanticsCodec.WriteGraphCallFrame);
-            WriteTable(writer, semanticIr.StateDeclarations, (target, value) => SimulationProgramSemanticsCodec.WriteStateSlot(target, value, true));
-            WriteTable(writer, semanticIr.Scopes, SimulationProgramSemanticsCodec.WriteScope);
-            WriteTable(writer, semanticIr.OutputChannels, SimulationProgramSemanticsCodec.WriteOutputChannel);
-            WriteTable(writer, semanticIr.CatalogEntries, SimulationProgramSemanticsCodec.WriteCatalogEntry);
-            WriteTable(writer, semanticIr.SourceMap, SimulationProgramSemanticsCodec.WriteSourceMap);
-            WriteTable(writer, semanticIr.Producers, SimulationProgramSemanticsCodec.WriteProducer);
+            WriteTable(writer, semanticIr.ControlFlow, GameplayAbilitySemanticsCodec.WriteControlFlow);
+            WriteTable(writer, semanticIr.References, GameplayAbilitySemanticsCodec.WriteReference);
+            WriteTable(writer, semanticIr.GraphCallFrames, GameplayAbilitySemanticsCodec.WriteGraphCallFrame);
+            WriteTable(writer, semanticIr.StateDeclarations, (target, value) => GameplayAbilitySemanticsCodec.WriteStateSlot(target, value, true));
+            WriteTable(writer, semanticIr.Scopes, GameplayAbilitySemanticsCodec.WriteScope);
+            WriteTable(writer, semanticIr.OutputChannels, GameplayAbilitySemanticsCodec.WriteOutputChannel);
+            WriteTable(writer, semanticIr.CatalogEntries, GameplayAbilitySemanticsCodec.WriteCatalogEntry);
+            WriteTable(writer, semanticIr.SourceMap, GameplayAbilitySemanticsCodec.WriteSourceMap);
+            WriteTable(writer, semanticIr.Producers, GameplayAbilitySemanticsCodec.WriteProducer);
         }
 
         static GameplayAbilitySemanticIr ReadPayload(byte[] bytes)
@@ -317,15 +317,15 @@ namespace ThirdPersonSimulation
             SemanticLiteral[] literals = ReadTable(reader, ReadLiteral);
             SemanticOperation[] operations = ReadTable(reader, ReadOperation);
             SemanticConstantInputBinding[] constantInputBindings = ReadTable(reader, ReadConstantInputBinding);
-            ProgramControlFlowEdge[] controlFlow = ReadTable(reader, SimulationProgramSemanticsCodec.ReadControlFlow);
-            ProgramReference[] references = ReadTable(reader, SimulationProgramSemanticsCodec.ReadReference);
-            ProgramGraphCallFrame[] graphCallFrames = ReadTable(reader, SimulationProgramSemanticsCodec.ReadGraphCallFrame);
-            ProgramStateSlot[] stateDeclarations = ReadTable(reader, SimulationProgramSemanticsCodec.ReadStateSlot);
-            ProgramScopeLayout[] scopes = ReadTable(reader, SimulationProgramSemanticsCodec.ReadScope);
-            ProgramOutputChannelLayout[] outputChannels = ReadTable(reader, SimulationProgramSemanticsCodec.ReadOutputChannel);
-            ProgramCatalogEntry[] catalogEntries = ReadTable(reader, SimulationProgramSemanticsCodec.ReadCatalogEntry);
-            ProgramSourceMapEntry[] sourceMap = ReadTable(reader, SimulationProgramSemanticsCodec.ReadSourceMap);
-            ProgramProducer[] producers = ReadTable(reader, SimulationProgramSemanticsCodec.ReadProducer);
+            ProgramControlFlowEdge[] controlFlow = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadControlFlow);
+            ProgramReference[] references = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadReference);
+            ProgramGraphCallFrame[] graphCallFrames = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadGraphCallFrame);
+            ProgramStateSlot[] stateDeclarations = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadStateSlot);
+            ProgramScopeLayout[] scopes = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadScope);
+            ProgramOutputChannelLayout[] outputChannels = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadOutputChannel);
+            ProgramCatalogEntry[] catalogEntries = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadCatalogEntry);
+            ProgramSourceMapEntry[] sourceMap = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadSourceMap);
+            ProgramProducer[] producers = ReadTable(reader, GameplayAbilitySemanticsCodec.ReadProducer);
             reader.RequireComplete();
             return new GameplayAbilitySemanticIr(
                 manifest,
@@ -382,7 +382,7 @@ namespace ThirdPersonSimulation
             var operationSetVersion = new OperationSetVersion(reader.ReadString());
             int tickRate = reader.ReadInt32();
             var sourceRevision = new ProgramRevision(reader.ReadString());
-            int capabilityCount = SimulationProgramSemanticsCodec.ReadCount(reader);
+            int capabilityCount = GameplayAbilitySemanticsCodec.ReadCount(reader);
             var gameplayCapabilities = new string[capabilityCount];
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
@@ -422,8 +422,8 @@ namespace ThirdPersonSimulation
         {
             int index = reader.ReadInt32();
             string identity = reader.ReadString();
-            SemanticLiteralKind kind = SimulationProgramSemanticsCodec.ReadEnum<SemanticLiteralKind>(reader.ReadByte());
-            SemanticNumericPrecision precision = SimulationProgramSemanticsCodec.ReadEnum<SemanticNumericPrecision>(reader.ReadByte());
+            SemanticLiteralKind kind = GameplayAbilitySemanticsCodec.ReadEnum<SemanticLiteralKind>(reader.ReadByte());
+            SemanticNumericPrecision precision = GameplayAbilitySemanticsCodec.ReadEnum<SemanticNumericPrecision>(reader.ReadByte());
             return kind switch
             {
                 SemanticLiteralKind.Boolean => SemanticLiteral.FromBoolean(index, identity, reader.ReadBoolean()),
@@ -466,11 +466,11 @@ namespace ThirdPersonSimulation
 
         static SemanticDataDocument ReadDocument(CanonicalReader reader)
         {
-            int count = SimulationProgramSemanticsCodec.ReadCount(reader);
+            int count = GameplayAbilitySemanticsCodec.ReadCount(reader);
             var tokens = new SemanticDataToken[count];
             for (int i = 0; i < count; i++)
             {
-                SemanticDataTokenKind kind = SimulationProgramSemanticsCodec.ReadEnum<SemanticDataTokenKind>(reader.ReadByte());
+                SemanticDataTokenKind kind = GameplayAbilitySemanticsCodec.ReadEnum<SemanticDataTokenKind>(reader.ReadByte());
                 tokens[i] = kind switch
                 {
                     SemanticDataTokenKind.Boolean => SemanticDataToken.FromBoolean(reader.ReadBoolean()),
@@ -478,7 +478,7 @@ namespace ThirdPersonSimulation
                     SemanticDataTokenKind.UInt32 => SemanticDataToken.FromUInt32(reader.ReadUInt32()),
                     SemanticDataTokenKind.UInt64 => SemanticDataToken.FromUInt64(reader.ReadUInt64()),
                     SemanticDataTokenKind.String => SemanticDataToken.FromString(reader.ReadString()),
-                    SemanticDataTokenKind.Number => SemanticDataToken.FromNumber(reader.ReadDouble(), reader.ReadString(), SimulationProgramSemanticsCodec.ReadEnum<SemanticNumericPrecision>(reader.ReadByte())),
+                    SemanticDataTokenKind.Number => SemanticDataToken.FromNumber(reader.ReadDouble(), reader.ReadString(), GameplayAbilitySemanticsCodec.ReadEnum<SemanticNumericPrecision>(reader.ReadByte())),
                     SemanticDataTokenKind.Bytes => SemanticDataToken.FromBytes(reader.ReadBytes()),
                     _ => throw new InvalidDataException($"Unsupported Semantic document token '{kind}'.")
                 };
@@ -491,9 +491,9 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(operation.Handle.Value);
             writer.WriteString(operation.TemplateIdentity);
             writer.WriteInt32((int)operation.Code);
-            SimulationProgramSemanticsCodec.WriteIntArray(writer, operation.Operands);
-            SimulationProgramSemanticsCodec.WriteIntArray(writer, operation.LiteralReferences);
-            SimulationProgramSemanticsCodec.WriteIntArray(writer, operation.StateSlots);
+            GameplayAbilitySemanticsCodec.WriteIntArray(writer, operation.Operands);
+            GameplayAbilitySemanticsCodec.WriteIntArray(writer, operation.LiteralReferences);
+            GameplayAbilitySemanticsCodec.WriteIntArray(writer, operation.StateSlots);
             writer.WriteInt32(operation.Integer0);
             writer.WriteInt32(operation.Integer1);
             writer.WriteUInt64(operation.Unsigned0);
@@ -508,10 +508,10 @@ namespace ThirdPersonSimulation
             return new SemanticOperation(
                 new OperationHandle(reader.ReadInt32()),
                 reader.ReadString(),
-                SimulationProgramSemanticsCodec.ReadEnum<SimulationOperationCode>(reader.ReadInt32()),
-                SimulationProgramSemanticsCodec.ReadIntArray(reader),
-                SimulationProgramSemanticsCodec.ReadIntArray(reader),
-                SimulationProgramSemanticsCodec.ReadIntArray(reader),
+                GameplayAbilitySemanticsCodec.ReadEnum<SimulationOperationCode>(reader.ReadInt32()),
+                GameplayAbilitySemanticsCodec.ReadIntArray(reader),
+                GameplayAbilitySemanticsCodec.ReadIntArray(reader),
+                GameplayAbilitySemanticsCodec.ReadIntArray(reader),
                 reader.ReadInt32(),
                 reader.ReadInt32(),
                 reader.ReadUInt64(),
@@ -530,7 +530,7 @@ namespace ThirdPersonSimulation
 
         static T[] ReadTable<T>(CanonicalReader reader, Func<CanonicalReader, T> read)
         {
-            int count = SimulationProgramSemanticsCodec.ReadCount(reader);
+            int count = GameplayAbilitySemanticsCodec.ReadCount(reader);
             var values = new T[count];
             for (int i = 0; i < count; i++)
                 values[i] = read(reader);

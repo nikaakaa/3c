@@ -4,7 +4,7 @@ using System.IO;
 
 namespace ThirdPersonSimulation
 {
-    internal static class SimulationProgramSemanticsCodec
+    internal static class GameplayAbilitySemanticsCodec
     {
         const int MaximumTableCount = 1000000;
         internal const int SourceMapStringTableVersion = 1;

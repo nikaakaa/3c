@@ -575,3 +575,9 @@
 - 提交 `ef7de8bfe`，Float32／Fixed `SimulationActorBinding` 的 `GameplayContentHash` 只纳入已安装 Ability 实际声明的 GameplayEffect／Equipment binding；未使用的多余 binding 不再改变角色内容身份。
 - 控制与 BodyMotion binding 仍始终属于角色执行身份；必需领域 binding 仍在安装或角色绑定阶段直接拒绝缺失，不引入空实现或兼容路径。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.10、1.11、2.1、2.6 的完整领域接线仍未完成。
+
+## 2026-09-16 诊断链路清理角色Program命名
+
+- 提交 `b603ac068`，将诊断版本从 `RuntimeProgramRevision` 改为 `RuntimeContentRevision`，字段统一为运行时身份、来源修订和内容 hash；诊断事件、Source Map、调试会话、时间线、Inspector、预览输出和三个角色 Host 同步更新。
+- 诊断 epoch 改为 `RuntimeEpoch`，Source Map 的非 Source 索引目标改为 `IndexedTarget`；删除诊断链路对角色 Program 的暗示。Ability Semantic IR、Pose 图和 Session 自身仍保留各自实际使用的 `Program` 产物命名，没有跨领域误改。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Unity 生成工程仍被既有 52 个源索引缺失错误阻断，未发现本步诊断程序集新增错误。未运行 Unity、测试或资产生成。

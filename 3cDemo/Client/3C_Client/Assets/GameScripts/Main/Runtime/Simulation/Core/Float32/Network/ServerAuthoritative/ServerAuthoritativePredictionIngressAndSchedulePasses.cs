@@ -534,7 +534,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             out IReadOnlyList<CharacterBodySample> selectedRemoteBodies)
         {
             if (characterRuntime.Roster.Count != 1 || characterRuntime.Roster[0].ActorId != current.ActorId)
-                throw new InvalidOperationException("Prediction Schedule owner does not match the Program roster.");
+                throw new InvalidOperationException("Prediction Schedule owner does not match the Character roster.");
             if (currentStepCount < 0 || currentStepCount > 2)
                 throw new ArgumentOutOfRangeException(nameof(currentStepCount));
             var steps = new List<Float32SimulationStep>();

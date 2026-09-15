@@ -115,7 +115,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 InitialState.Actors.Count != m_LockedRoster.Count ||
                 InitialState.WorldState.Bodies.Count != m_LockedRoster.Count)
             {
-                throw Failure("authority_roster_count_mismatch", "Authority Host roster does not match Program Runtime or initial state.");
+                throw Failure("authority_roster_count_mismatch", "Authority Host roster does not match Character Runtime or initial state.");
             }
             for (int i = 0; i < m_LockedRoster.Count; i++)
             {
@@ -235,7 +235,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 !request.CharacterRuntime.NumericProfile.Id.Equals(Descriptor.NumericProfileId) ||
                 !request.CharacterRuntime.NumericProfile.AbiVersion.Equals(Descriptor.TargetAbiVersion))
             {
-                throw Failure("authority_runtime_launcher_target_abi_mismatch", "Authority Runtime Launcher, Session Source, and Program Runtime Target ABI do not match.");
+                throw Failure("authority_runtime_launcher_target_abi_mismatch", "Authority Runtime Launcher, Session Source, and Character Runtime Target ABI do not match.");
             }
             return new ServerAuthoritativeAuthorityHostLaunchRequest(
                 request,

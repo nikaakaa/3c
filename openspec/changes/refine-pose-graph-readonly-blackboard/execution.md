@@ -959,3 +959,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - CharacterPoseNativeRoleRuntime.Reset 在图实例 generation 成功推进后调用 CharacterFinalPoseNativePublication.ResetToDefaults：属性 Writer 写默认值、旧 committed pose、pending lease 和 physical write 全部失效，Host 不能再读到旧 generation 的最终姿态。
 - CharacterPoseNativeRoleSession 暴露 Reset 与 TryObserve，正式消费方不再需要绕过 session 直接进入 Role/Graph 内部；观察仍只读取最近已提交的原生节点结果。
 - 本步只补 Pose 自身的 reset 结果发布与观察入口，仍不替共享 Host 构造 Source/Constraint/Final 实例。
+
+## 2026-09-15 r3 收口 Role Session Stop 入口
+
+- CharacterPoseNativeRoleSession 新增统一 Stop，优先通过 FrameCoordinator 关闭当前帧，再停止原生 Role；这样调用方不会绕过 coordinator 后留下已失效但仍标记打开的 frame。
+- 该入口配合已有的 Reset、TryObserve 和 Dispose，成为共享 Host 使用的统一 Stop/Dispose 生命周期消费面；Pose 侧继续不代装 Host 服务。
+- 本步只改 Pose 角色入口生命周期和 execution 记录；未运行 Unity、Build、Play 或资源刷新，也未提交 LFS。

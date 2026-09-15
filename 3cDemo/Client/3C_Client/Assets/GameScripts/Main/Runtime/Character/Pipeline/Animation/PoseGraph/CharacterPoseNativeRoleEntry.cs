@@ -33,6 +33,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             out CharacterPoseNativeNodeObservation observation) =>
             m_Role.TryObserve(nodeId, portId, out observation);
 
+        internal void Stop()
+        {
+            m_Frame.Stop();
+        }
+
         public void Dispose()
         {
             if (m_Disposed)

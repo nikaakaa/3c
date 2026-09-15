@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
+using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
@@ -116,6 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationProgramBuilder builder)
         {
             bool requiresGameplayEffect = false;
+            bool requiresEquipment = false;
             foreach (BtsmtlSkillGraphOccurrence occurrence in model.EntryGraph.EnumerateOccurrences())
             {
                 if (occurrence.Role == BtsmtlSkillFlowGraphRole.StateMachine)
@@ -127,10 +129,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     if (node is BtsmtlSkillApplyGameplayEffectFlowNode ||
                         node is BtsmtlSkillRemoveGameplayEffectFlowNode)
                         requiresGameplayEffect = true;
+                    if (node is ReadEquipmentIdentityNode ||
+                        node is ReadEquipmentParameterNode ||
+                        node is EquipmentChangeOperationNode)
+                        requiresEquipment = true;
                 }
             }
             if (requiresGameplayEffect)
                 builder.RequireGameplayCapability("GameplayEffect");
+            if (requiresEquipment)
+                builder.RequireGameplayCapability("Equipment");
         }
 
         static void DeclareAbilityCatalog(

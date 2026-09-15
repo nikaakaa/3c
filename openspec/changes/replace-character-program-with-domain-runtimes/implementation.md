@@ -248,3 +248,11 @@
 - `Float32CharacterRegistration` 从 `ThirdPersonSimulation.Unity` 移入新建的 `ThirdPersonSimulation.Float32.Unity` 桥接程序集（与 `ThirdPersonSimulation.Fixed.Unity` 同构）。原位置无 `ThirdPersonClient.Runtime` 引用却使用 Presentation／Diagnostics 类型，反向引用会形成循环依赖。该注册器当前无任何调用方，尚未接入 Host。
 - `Fixed`／`Float32SimulationSessionCompositionPreparation`：去掉 `new GameplayContentHash(...)` 多余包装，`SimulationCharacterRuntimeDescriptor` 直接接收 `GameplayContentHash`。
 - 验证：`ThirdPersonSimulation.Unity.csproj` 由 25 个错误降为 0 warning、0 error（本机 dotnet build，禁用 build server，结束执行 `dotnet build-server shutdown`）。`ThirdPersonClient.Runtime.csproj` 仍有 Pose 旧 `CharacterPoseProgramImage`／`CharacterPoseNative*Operation` 体系的中间断裂，属 Pose 窗口范围，本批不涉及；rollback Host、`CharacterPipelineHost`、DotRecast manifest 的旧 Program 消费者仍未接线。未运行 Unity、测试或资产生成。
+
+## 2026-09-15 Frontend按可达节点声明Equipment能力
+
+- 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。
+- 背景：`Equipment` 能力被 `Fixed`／`Float32SimulationActorBinding`、`GameplayAbilityExecutionInstallationSet`、`CharacterRuntimePorts`、`AbilityInvocationRuntime` 与 `NetworkTestProductAdapterUtility` 读取，用于决定是否创建角色装备状态分区与装配装备服务；但 Frontend 此前没有任何声明点，使用装备节点的技能其能力位恒为 false，角色装备状态不会初始化。
+- 按 D22／1.11 的口径，依赖角色事实的节点只要求自身需要的服务：使用装备节点才声明 Equipment，未使用不声明；装配阶段缺 binding 由 `SimulationActorBinding` 明确失败，不做空实现或全局启用。
+- 本切口不勾选 1.11：TreeClip 等非角色调用方尚未统一到 `AbilityInvocationRuntime` 同一执行入口，`PendingAbilityEvaluation` 仍强持角色事务，BodyFacts 仍要求必给。
+- 未编译验证：`ThirdPersonClient.Editor.csproj` 依赖的 `ThirdPersonClient.Runtime.csproj` 仍被 Pose 旧 `CharacterPoseProgramImage`／`CharacterPoseNative*Operation` 消费者的中间断裂阻断；本改动引用的类型均位于 `ThirdPersonClient.Runtime`，待该断裂收口后随 Editor 全量编译验证。未运行 Unity、测试或资产生成。

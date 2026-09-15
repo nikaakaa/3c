@@ -94,6 +94,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeFrameInput CurrentInput => m_Graph.CurrentInput;
         internal CharacterPoseNativePortValue LastCommittedOutput =>
             m_Graph.LastCommittedOutput;
+        internal CharacterPoseNativeFrameCoordinator CreateFrameCoordinator() =>
+            new CharacterPoseNativeFrameCoordinator(this);
 
         internal static CharacterPoseNativeGraphPrepareResult Prepare(
             ulong requestId,

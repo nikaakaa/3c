@@ -17,13 +17,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal static class NetworkTestProductAdapters
     {
         public static readonly INetworkTestProductBuildAdapter UnityAuthority = new UnityAuthorityNetworkTestProductAdapter();
-        public static readonly INetworkTestProductBuildAdapter DotRecastAuthority = new DotRecastAuthorityNetworkTestProductAdapter();
         public static readonly INetworkTestProductBuildAdapter DeterministicRollback = new DeterministicRollbackNetworkTestProductAdapter();
 
         public static readonly INetworkTestProductBuildAdapter[] All =
         {
             UnityAuthority,
-            DotRecastAuthority,
             DeterministicRollback
         };
     }

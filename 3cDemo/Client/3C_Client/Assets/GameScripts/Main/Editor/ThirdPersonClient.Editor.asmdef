@@ -17,7 +17,6 @@
         "ThirdPersonSimulation.UnityAuthority",
         "ThirdPersonSimulation.DotRecast",
         "ThirdPersonSimulation.DotRecast.Unity",
-        "ThirdPersonSimulation.DotRecastAuthority",
         "ThirdPersonSimulation.Fixed",
         "ThirdPersonSimulation.Fixed.Compiler",
         "ThirdPersonSimulation.DeterministicKcc",

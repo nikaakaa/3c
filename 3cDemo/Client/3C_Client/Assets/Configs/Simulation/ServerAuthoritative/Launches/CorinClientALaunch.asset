@@ -19,7 +19,7 @@ MonoBehaviour:
   m_OwnerActorId: corin-actor-a
   m_AuthorityHostProductId: thirdperson.authority-product.unity-worker.v1
   m_AuthorityHostRouteKind: 1
-  m_RemotePresentationBindingId: corin.remote-presentation
+  m_RemotePresentationTargetId: corin.remote-presentation
   m_DataBindHost: 127.0.0.1
   m_DataBindPort: 0
   m_DataAdvertisedHost: 

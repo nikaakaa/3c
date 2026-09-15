@@ -121,6 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public ICharacterSimulationGameplayOutputPort GameplayOutput => m_GameplayOutput;
         public CharacterPresentationProjectionAsset ProjectionAsset { get; }
         public CharacterPresentationProjection Projection { get; }
+        public CharacterPresentationProjection PresentationProjection => Projection;
         public ICharacterPresentationRuntime PresentationRuntime => m_PresentationRuntime;
         public ISimulationPresentationOutputPort PresentationOutput => m_PresentationOutput;
         public ISimulationDiagnosticsSink SimulationDiagnostics => m_Diagnostics;

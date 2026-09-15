@@ -19,7 +19,7 @@ MonoBehaviour:
   m_OwnerActorId: 
   m_AuthorityHostProductId: thirdperson.authority-product.unity-worker.v1
   m_AuthorityHostRouteKind: 1
-  m_RemotePresentationBindingId: 
+  m_RemotePresentationTargetId:
   m_DataBindHost: 0.0.0.0
   m_DataBindPort: 21000
   m_DataAdvertisedHost: 127.0.0.1

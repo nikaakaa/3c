@@ -172,24 +172,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
             try
             {
-                ServerAuthoritativeRemotePresentationSite site = null;
+                ServerAuthoritativeRemotePresentationHost host = null;
                 GameObject[] roots = scene.GetRootGameObjects();
                 for (int i = 0; i < roots.Length; i++)
                 {
-                    ServerAuthoritativeRemotePresentationSite[] candidates =
-                        roots[i].GetComponentsInChildren<ServerAuthoritativeRemotePresentationSite>(true);
+                    ServerAuthoritativeRemotePresentationHost[] candidates =
+                        roots[i].GetComponentsInChildren<ServerAuthoritativeRemotePresentationHost>(true);
                     for (int candidateIndex = 0; candidateIndex < candidates.Length; candidateIndex++)
                     {
-                        if (site)
-                            throw new InvalidOperationException($"ServerAuthoritative Scene '{scenePath}' has multiple Remote Presentation Sites.");
-                        site = candidates[candidateIndex];
+                        if (host)
+                            throw new InvalidOperationException($"ServerAuthoritative Scene '{scenePath}' has multiple Remote Presentation Hosts.");
+                        host = candidates[candidateIndex];
                     }
                 }
-                if (!site)
-                    throw new InvalidOperationException($"ServerAuthoritative Scene '{scenePath}' has no Remote Presentation Site.");
+                if (!host)
+                    throw new InvalidOperationException($"ServerAuthoritative Scene '{scenePath}' has no Remote Presentation Host.");
                 GameObject characterTemplate = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) ??
-                    throw new InvalidOperationException($"Remote Character Template is missing: {prefabPath}");
-                var serialized = new SerializedObject(site);
+                    throw new InvalidOperationException($"Remote Presentation Character Template is missing: {prefabPath}");
+                var serialized = new SerializedObject(host);
                 serialized.FindProperty("m_CharacterTemplate").objectReferenceValue = characterTemplate;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
                 EditorSceneManager.MarkSceneDirty(scene);

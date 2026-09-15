@@ -18,7 +18,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         [SerializeField] string m_OwnerActorId = string.Empty;
         [SerializeField] string m_AuthorityHostProductId = string.Empty;
         [SerializeField] ServerAuthoritativeAuthorityHostRouteKind m_AuthorityHostRouteKind;
-        [SerializeField] string m_RemotePresentationBindingId = string.Empty;
+        [SerializeField] string m_RemotePresentationTargetId = string.Empty;
         [SerializeField] string m_DataBindHost = string.Empty;
         [SerializeField, Min(0)] int m_DataBindPort;
         [SerializeField] string m_DataAdvertisedHost = string.Empty;
@@ -26,13 +26,13 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public ServerAuthoritativeProcessRole Role => Enum.IsDefined(typeof(ServerAuthoritativeProcessRole), m_Role)
             ? m_Role
             : throw new InvalidOperationException($"Launch Definition '{name}' requires an explicit process role.");
-        public string RemotePresentationBindingId
+        public string RemotePresentationTargetId
         {
             get
             {
                 if (Role == ServerAuthoritativeProcessRole.AuthorityWorker)
-                    throw new InvalidOperationException($"Authority launch '{name}' has no Remote Presentation binding.");
-                return Require(m_RemotePresentationBindingId, "RemotePresentationBindingId");
+                    throw new InvalidOperationException($"Authority launch '{name}' has no Remote Presentation target.");
+                return Require(m_RemotePresentationTargetId, "RemotePresentationTargetId");
             }
         }
 
@@ -58,9 +58,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             if (Role == ServerAuthoritativeProcessRole.AuthorityWorker)
             {
                 if (!string.IsNullOrWhiteSpace(m_PlayerId) || !string.IsNullOrWhiteSpace(m_OwnerActorId) ||
-                    !string.IsNullOrWhiteSpace(m_RemotePresentationBindingId))
+                    !string.IsNullOrWhiteSpace(m_RemotePresentationTargetId))
                 {
-                    throw new InvalidOperationException($"Authority launch '{name}' cannot own Player, Actor, or Remote Presentation identity.");
+                    throw new InvalidOperationException($"Authority launch '{name}' cannot own Player, Actor, or Remote Presentation target identity.");
                 }
                 return new ServerAuthoritativeProcessIdentity(
                     Role,
@@ -71,7 +71,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             }
             if (!string.IsNullOrWhiteSpace(m_WorkerId))
                 throw new InvalidOperationException($"Client launch '{name}' cannot own a WorkerId.");
-            _ = RemotePresentationBindingId;
+            _ = RemotePresentationTargetId;
             return new ServerAuthoritativeProcessIdentity(
                 Role,
                 roomId,
@@ -110,7 +110,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 dataPlane.AdvertisedEndPoint?.ToString() ?? string.Empty,
                 AuthorityHostProductId.Value,
                 AuthorityHostRouteKind.ToString(),
-                Role == ServerAuthoritativeProcessRole.AuthorityWorker ? string.Empty : RemotePresentationBindingId);
+                Role == ServerAuthoritativeProcessRole.AuthorityWorker ? string.Empty : RemotePresentationTargetId);
         }
 
         string Require(string value, string field) => string.IsNullOrWhiteSpace(value)
@@ -130,7 +130,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             string ownerActorId,
             HostProductId authorityHostProductId,
             ServerAuthoritativeAuthorityHostRouteKind authorityHostRouteKind,
-            string remotePresentationBindingId,
+            string remotePresentationTargetId,
             string dataBindHost,
             int dataBindPort,
             string dataAdvertisedHost)
@@ -142,7 +142,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_OwnerActorId = ownerActorId ?? string.Empty;
             m_AuthorityHostProductId = authorityHostProductId.IsValid ? authorityHostProductId.Value : string.Empty;
             m_AuthorityHostRouteKind = authorityHostRouteKind;
-            m_RemotePresentationBindingId = remotePresentationBindingId ?? string.Empty;
+            m_RemotePresentationTargetId = remotePresentationTargetId ?? string.Empty;
             m_DataBindHost = dataBindHost ?? string.Empty;
             m_DataBindPort = dataBindPort;
             m_DataAdvertisedHost = dataAdvertisedHost ?? string.Empty;

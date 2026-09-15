@@ -581,3 +581,9 @@
 - 提交 `b603ac068`，将诊断版本从 `RuntimeProgramRevision` 改为 `RuntimeContentRevision`，字段统一为运行时身份、来源修订和内容 hash；诊断事件、Source Map、调试会话、时间线、Inspector、预览输出和三个角色 Host 同步更新。
 - 诊断 epoch 改为 `RuntimeEpoch`，Source Map 的非 Source 索引目标改为 `IndexedTarget`；删除诊断链路对角色 Program 的暗示。Ability Semantic IR、Pose 图和 Session 自身仍保留各自实际使用的 `Program` 产物命名，没有跨领域误改。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Unity 生成工程仍被既有 52 个源索引缺失错误阻断，未发现本步诊断程序集新增错误。未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色结果解除世界请求强制依赖
+
+- 提交 `4a57086eb`，Float32／Fixed 角色评估结果允许没有实际的 `CharacterWorldSolveRequest`；结果仍校验 Actor、Tick 和候选状态，若存在 WorldRequest 则校验其身份一致。
+- 角色 Evaluate／Finalize Pass 在自己的角色世界流程边界明确要求每个 Actor 必须产出 WorldRequest，再创建 WorldSolveBatch 或消费 WorldSolveResult；角色现有行为不变，未来非角色 Ability 调用方无需伪造世界请求。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Float32／Fixed 生成工程仍分别被既有 28／24 个源索引缺失错误阻断，未运行 Unity、测试或资产生成。

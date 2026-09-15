@@ -308,60 +308,27 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 897384c07dbf45a419bfefa4e6db42e1, type: 3}
---- !u!1 &1263614750
-GameObject:
+--- !u!1001 &1263614753
+PrefabInstance:
   m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1263614752}
-  - component: {fileID: 1263614751}
-  m_Layer: 0
-  m_Name: Gameplay Lab Bootstrap
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1263614751
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1263614750}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6357f030f59b8fb42a11518ced2f206b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Variants:
-  - {fileID: 11400000, guid: c00d13ea42ba75d4ea0cca6f5f0d3371, type: 2}
-  - {fileID: 11400000, guid: 0fd8bd434b4bed0408f8276c8c7fde08, type: 2}
-  - {fileID: 11400000, guid: 0bdf6435f09d2654987f51931b4371fa, type: 2}
-  m_StartupVariantIndex: 0
-  m_ResourceProfile: {fileID: 11400000, guid: 1aecc695ee754e73ad1308cb2094f85f, type: 2}
---- !u!4 &1263614752
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1263614750}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+    m_RemovedComponents: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 811fdb16bc141fc48a8dd83da38018a8, type: 3}
+--- !u!4 &1263614754 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 810032168737561493, guid: 811fdb16bc141fc48a8dd83da38018a8, type: 3}
+  m_PrefabInstance: {fileID: 1263614753}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 1095437443}
   - {fileID: 524435432}
-  - {fileID: 1263614752}
+  - {fileID: 1263614754}

@@ -4,20 +4,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline;
-using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback;
-using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
-using ThirdPersonGameplay.Lab;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
-using ThirdPersonSimulation.Fixed;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
@@ -26,8 +21,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         internal const string DefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset";
         const string ConfigDirectory = "Assets/Configs/Simulation/DeterministicRollback";
-        internal const string FixedProgramPath = ConfigDirectory + "/Programs/CorinFixedProgram.asset";
-        const string FixedRuntimePath = ConfigDirectory + "/Programs/CorinFixedProgramRuntime.asset";
         const string BackendPath = ConfigDirectory + "/Pipelines/CorinFixedPassBackend.asset";
         internal const string PipelinePath = ConfigDirectory + "/Pipelines/CorinDeterministicRollbackPipeline.asset";
         const string CollisionPath = ConfigDirectory + "/World/CorinDeterministicCollisionWorld.asset";
@@ -35,9 +28,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal const string EndpointPath = ConfigDirectory + "/Networking/CorinRollbackEndpoint.asset";
         internal const string SourcePath = ConfigDirectory + "/Networking/CorinRollbackSessionSource.asset";
         const string CompositionPath = ConfigDirectory + "/Compositions/CorinRollbackComposition.asset";
+        const string RuntimeRootPrefabPath = "Assets/Prefabs/GameplayLab/GameplayLabDeterministicRollback.prefab";
         const string DebugScenePath = "Assets/Scenes/GameplayLab/GameplayLab.unity";
-        const string LocalFixedVariantPath = "Assets/Configs/Simulation/GameplayLab/Variants/GameplayLabLocalFixedVariant.asset";
-        const string RollbackVariantPath = "Assets/Configs/Simulation/GameplayLab/Variants/GameplayLabDeterministicRollbackVariant.asset";
         internal const string SessionId = "corin-deterministic-rollback-demo";
         const string MapId = "deterministic-rollback-demo";
 
@@ -46,9 +38,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public static void PrepareAssetsAndScenes()
         {
             RequireEditorIdle();
-            IGameplayLabLauncherOperations operations = GameplayLabLauncherRegistry.Operations ??
-                throw new InvalidOperationException("Gameplay Lab asset synchronization is not registered.");
-            operations.SyncAssets();
+            PrepareBuildInputs();
         }
 
         internal static void PrepareBuildInputs()
@@ -56,9 +46,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             DeterministicRollbackProductClosure closure = RequireProductClosure();
             ValidateSharedDebugScene(closure);
             Debug.Log(
-                $"Deterministic Rollback inputs are closed. Program={closure.Program.ProgramHash}; " +
-                $"Projection={closure.Projection.ProjectionRevision}; World={closure.Collision.ContentHash}; " +
-                $"KCC={closure.KccIdentityHash}");
+                $"Deterministic Rollback inputs are closed. Content={closure.GameplayContentHash}; " +
+                $"World={closure.Collision.ContentHash}; KCC={closure.KccIdentityHash}");
         }
 
         public static void Build(string candidateLabel) => NetworkTestProductBuildWorkflow.Build(
@@ -72,156 +61,82 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         internal static DeterministicRollbackProductClosure RequireProductClosure()
         {
-            GameplayLabSessionVariantDefinition local =
-                NetworkTestProductAdapterUtility.RequireAsset<GameplayLabSessionVariantDefinition>(
-                    LocalFixedVariantPath);
-            GameplayLabSessionVariantDefinition rollback =
-                NetworkTestProductAdapterUtility.RequireAsset<GameplayLabSessionVariantDefinition>(
-                    RollbackVariantPath);
-            if (local.IsExternalLaunchVariant || !rollback.IsExternalLaunchVariant)
-                throw new InvalidOperationException("Rollback Product requires exact Local Fixed and external Rollback Variants.");
-            local.ValidateComposition(local.Composition);
-            rollback.ValidateComposition(rollback.Composition);
-            if (!string.Equals(local.DefinitionGuid, rollback.DefinitionGuid, StringComparison.Ordinal) ||
-                local.Program != rollback.Program ||
-                local.PresentationProjection != rollback.PresentationProjection ||
-                local.WorldSolver != rollback.WorldSolver ||
-                local.CollisionWorld != rollback.CollisionWorld)
-            {
-                throw new InvalidOperationException(
-                    "Local Fixed and Rollback Variants do not share Program, Projection, KCC and Collision closure.");
-            }
-
-            string definitionPath = AssetDatabase.GUIDToAssetPath(rollback.DefinitionGuid);
-            if (!string.Equals(definitionPath, DefinitionPath, StringComparison.Ordinal))
-                throw new InvalidOperationException($"Rollback Variant targets another Character Definition: {definitionPath}");
-            CharacterPipelineDefinition definition =
-                NetworkTestProductAdapterUtility.RequireAsset<CharacterPipelineDefinition>(definitionPath);
-            if (!definition.InputProfile || definition.PresentationProjection != rollback.PresentationProjection)
-                throw new InvalidOperationException("Rollback Variant Character Definition or Projection reference is stale.");
-
-            FixedCharacterSimulationProgramAsset fixedProgram =
-                rollback.Program as FixedCharacterSimulationProgramAsset ??
-                throw new InvalidOperationException("Rollback Variant Fixed Program product has the wrong type.");
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = fixedProgram.Load();
-            CharacterPresentationProjectionAsset projection = rollback.PresentationProjection;
-            CharacterPresentationSemanticContract contract =
-                FixedCharacterPresentationContractAdapter.Create(program);
-            CharacterPresentationProjection publishedProjection = projection.Load(contract);
-            ProgramId expectedProgramId = CharacterSemanticFrontendCompiler.ComputeProgramId(definition);
-            ProgramRevision expectedSourceRevision = CharacterSemanticFrontendCompiler.ComputeSourceRevision(definition);
-            if (!string.Equals(fixedProgram.DefinitionGuid, rollback.DefinitionGuid, StringComparison.Ordinal) ||
-                !string.Equals(program.Manifest.ProgramId.Value, expectedProgramId.Value, StringComparison.Ordinal) ||
-                !string.Equals(program.Manifest.SourceRevision.Value, expectedSourceRevision.Value, StringComparison.Ordinal) ||
-                !string.Equals(publishedProjection.PresentationId, expectedProgramId.Value, StringComparison.Ordinal) ||
-                !string.Equals(publishedProjection.SourceRevision, expectedSourceRevision.Value, StringComparison.Ordinal) ||
-                !string.Equals(publishedProjection.SemanticHash, program.Manifest.SemanticHash.ToString(), StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("Rollback Variant Program or Projection is stale against its exact Definition.");
-            }
-            if (!CharacterPresentationProjectionCompiler.TryComputePublishedRevision(
-                    definition,
-                    contract,
-                    publishedProjection,
-                    out string expectedProjectionRevision) ||
-                !string.Equals(projection.ProjectionRevision, expectedProjectionRevision, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("Rollback Variant Presentation Projection revision is stale.");
-            }
-
-            SimulationSessionCompositionDefinition localComposition = local.Composition;
-            SimulationSessionCompositionDefinition rollbackComposition = rollback.Composition;
-            if (localComposition.ProgramRuntime != rollbackComposition.ProgramRuntime ||
-                localComposition.ExecutionBackend != rollbackComposition.ExecutionBackend ||
-                localComposition.WorldSolver != rollbackComposition.WorldSolver ||
-                localComposition.TickRate != rollbackComposition.TickRate ||
-                localComposition.RequiredWorldFeatures != rollbackComposition.RequiredWorldFeatures ||
-                !string.Equals(localComposition.WorldId, rollbackComposition.WorldId, StringComparison.Ordinal) ||
-                !string.Equals(localComposition.MapId, rollbackComposition.MapId, StringComparison.Ordinal) ||
-                !string.Equals(localComposition.WorldRevision, rollbackComposition.WorldRevision, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    "Local Fixed and Rollback Compositions differ outside Session Source and Network Model assembly.");
-            }
-            DeterministicRollbackSessionSourceDefinition source =
-                rollbackComposition.SessionSource as DeterministicRollbackSessionSourceDefinition ??
-                throw new InvalidOperationException("Rollback Variant Composition requires the formal Rollback Session Source.");
+            CharacterPipelineDefinition definition = NetworkTestProductAdapterUtility.RequireAsset<CharacterPipelineDefinition>(
+                DefinitionPath);
+            SimulationSessionCompositionDefinition composition =
+                NetworkTestProductAdapterUtility.RequireAsset<SimulationSessionCompositionDefinition>(CompositionPath);
+            FixedPassExecutionBackendDefinition backend =
+                NetworkTestProductAdapterUtility.RequireAsset<FixedPassExecutionBackendDefinition>(BackendPath);
             DeterministicRollbackPipelineDefinition pipeline =
-                rollbackComposition.Pipeline as DeterministicRollbackPipelineDefinition ??
-                throw new InvalidOperationException("Rollback Variant Composition requires the formal Rollback Pipeline.");
-            DeterministicKccWorldSolverDefinition solver =
-                rollback.WorldSolver as DeterministicKccWorldSolverDefinition ??
-                throw new InvalidOperationException("Rollback Variant World Solver product has the wrong type.");
+                NetworkTestProductAdapterUtility.RequireAsset<DeterministicRollbackPipelineDefinition>(PipelinePath);
             DeterministicCollisionWorldAsset collision =
-                rollback.CollisionWorld as DeterministicCollisionWorldAsset ??
-                throw new InvalidOperationException("Rollback Variant Collision product has the wrong type.");
-            if (source.FixedProgram != fixedProgram ||
-                source.Pipeline != pipeline ||
-                source.WorldSolver != solver ||
-                solver.CollisionWorld != collision ||
-                !string.Equals(collision.MapId, rollbackComposition.MapId, StringComparison.Ordinal))
+                NetworkTestProductAdapterUtility.RequireAsset<DeterministicCollisionWorldAsset>(CollisionPath);
+            DeterministicKccWorldSolverDefinition solver =
+                NetworkTestProductAdapterUtility.RequireAsset<DeterministicKccWorldSolverDefinition>(SolverPath);
+            RollbackEndpointAuthoringDefinition endpoint =
+                NetworkTestProductAdapterUtility.RequireAsset<RollbackEndpointAuthoringDefinition>(EndpointPath);
+            DeterministicRollbackSessionSourceDefinition source =
+                NetworkTestProductAdapterUtility.RequireAsset<DeterministicRollbackSessionSourceDefinition>(SourcePath);
+            GameObject runtimeRootPrefab =
+                NetworkTestProductAdapterUtility.RequireAsset<GameObject>(RuntimeRootPrefabPath);
+
+            composition.RequireComplete();
+            if (!string.Equals(composition.SessionId, SessionId, StringComparison.Ordinal) ||
+                !string.Equals(composition.MapId, MapId, StringComparison.Ordinal) ||
+                composition.TickRate != definition.SimulationTickRate ||
+                composition.ExecutionBackend != backend ||
+                composition.Pipeline != pipeline ||
+                composition.SessionSource != source ||
+                composition.WorldSolver != solver)
             {
-                throw new InvalidOperationException("Rollback Variant Composition contains split Program, Pipeline, KCC or Collision references.");
+                throw new InvalidOperationException("Rollback Session Composition does not match the formal domain assets.");
             }
+            if (source.Pipeline != pipeline || source.WorldSolver != solver || source.Endpoint != endpoint ||
+                solver.CollisionWorld != collision)
+            {
+                throw new InvalidOperationException("Rollback Session Source contains split Pipeline, KCC, Collision or Endpoint references.");
+            }
+
             DeterministicRollbackModelDefinition model = source.BuildModelDefinition();
-            string kccIdentityHash = solver.BuildKccIdentityHash(rollbackComposition.TickRate).Value;
-            if (!string.Equals(model.SemanticHash.ToString(), fixedProgram.SemanticHash, StringComparison.Ordinal) ||
-                !string.Equals(model.FixedProgramHash.ToString(), fixedProgram.ProgramHash, StringComparison.Ordinal) ||
+            string kccIdentityHash = solver.BuildKccIdentityHash(composition.TickRate).Value;
+            if (model.TickRate != composition.TickRate ||
                 !string.Equals(model.CollisionWorldHash.Value, collision.ContentHash, StringComparison.Ordinal) ||
                 !string.Equals(model.KccIdentityHash.Value, kccIdentityHash, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException("Rollback Model identity differs from the shared Variant closure.");
+                throw new InvalidOperationException("Rollback Model identity does not match the formal world closure.");
             }
-            return new DeterministicRollbackProductClosure(
-                local,
-                rollback,
-                definition,
-                fixedProgram,
-                program,
-                projection,
-                publishedProjection,
-                rollbackComposition,
-                source,
-                pipeline,
-                solver,
-                collision,
-                source.Endpoint,
-                model,
-                kccIdentityHash);
-        }
+            if (!definition.InputProfile || !definition.PresentationProjection)
+                throw new InvalidOperationException("Rollback Character Definition requires its Input Profile and Presentation Projection.");
 
-        static void ValidateSharedDebugScene(DeterministicRollbackProductClosure closure)
-        {
-            if (!AssetDatabase.LoadAssetAtPath<SceneAsset>(DebugScenePath))
-                throw new InvalidOperationException($"Shared Gameplay Debug Scene is missing: {DebugScenePath}");
-            GameplayLabSessionVariantDefinition variant = closure.RollbackVariant;
-            GameObject root = variant.RuntimeRootPrefab;
-            SimulationSessionHost session = root.GetComponentsInChildren<SimulationSessionHost>(true).SingleOrDefault() ??
-                throw new InvalidOperationException("Rollback runtime root requires exactly one SimulationSessionHost.");
-            RequireObjectReference(session, "m_Composition", closure.Composition);
-            DeterministicRollbackCharacterHost[] actors = root.GetComponentsInChildren<DeterministicRollbackCharacterHost>(true)
+            StableHash gameplayContentHash = NetworkTestProductAdapterUtility.FixedCharacterContentHash(definition);
+            SimulationSessionHost session = RequireSingle(
+                runtimeRootPrefab.GetComponentsInChildren<SimulationSessionHost>(true),
+                "Rollback runtime root requires exactly one SimulationSessionHost.");
+            RequireObjectReference(session, "m_Composition", composition);
+            DeterministicRollbackCharacterHost[] actors = runtimeRootPrefab
+                .GetComponentsInChildren<DeterministicRollbackCharacterHost>(true)
                 .OrderBy(value => value.ActorId.Value, StringComparer.Ordinal)
                 .ToArray();
             if (actors.Length != 2 ||
                 !string.Equals(actors[0].ActorId.Value, "rollback-actor-a", StringComparison.Ordinal) ||
                 !string.Equals(actors[1].ActorId.Value, "rollback-actor-b", StringComparison.Ordinal))
             {
-                throw new InvalidOperationException("Rollback runtime root must contain exactly two Fixed Actor Hosts.");
+                throw new InvalidOperationException("Rollback runtime root must contain exactly two formal Rollback Actor Hosts.");
             }
-            if (root.GetComponentsInChildren<CharacterPipelineHost>(true).Length != 0)
-                throw new InvalidOperationException("Rollback runtime root contains a legacy CharacterPipelineHost.");
             for (int i = 0; i < actors.Length; i++)
             {
-                if (actors[i].SessionHost != session)
-                    throw new InvalidOperationException($"Rollback Actor '{actors[i].ActorId}' targets another Session Host.");
-                RequireObjectReference(actors[i], "m_Endpoint", closure.Endpoint);
-                RequireObjectReference(actors[i], "m_Program", closure.ProgramAsset);
-                RequireObjectReference(actors[i], "m_PresentationProjection", closure.Projection);
-                RequireObjectReference(actors[i], "m_InputProfile", closure.Definition.InputProfile);
+                if (actors[i].SessionHost != session || actors[i].CharacterDefinition != definition)
+                    throw new InvalidOperationException("Rollback Actor Host does not target the formal Session or Character Definition.");
+                RequireObjectReference(actors[i], "m_Endpoint", endpoint);
+                RequireObjectReference(actors[i], "m_InputProfile", definition.InputProfile);
+                RequireObjectReference(actors[i], "m_CharacterDefinition", definition);
             }
-            DeterministicRollbackDemoStatusOverlay overlay =
-                root.GetComponentsInChildren<DeterministicRollbackDemoStatusOverlay>(true).SingleOrDefault() ??
-                throw new InvalidOperationException("Rollback runtime root requires exactly one diagnostics overlay.");
+            if (runtimeRootPrefab.GetComponentsInChildren<CharacterPipelineHost>(true).Length != 0)
+                throw new InvalidOperationException("Rollback runtime root contains a legacy CharacterPipelineHost.");
+
+            DeterministicRollbackDemoStatusOverlay overlay = RequireSingle(
+                runtimeRootPrefab.GetComponentsInChildren<DeterministicRollbackDemoStatusOverlay>(true),
+                "Rollback runtime root requires exactly one diagnostics overlay.");
             SerializedProperty overlayActors = new SerializedObject(overlay).FindProperty("m_Actors") ??
                 throw new InvalidOperationException("Rollback diagnostics overlay Actor binding is missing.");
             if (overlayActors.arraySize != actors.Length)
@@ -231,28 +146,51 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (overlayActors.GetArrayElementAtIndex(i).objectReferenceValue != actors[i])
                     throw new InvalidOperationException("Rollback diagnostics overlay Actor order is invalid.");
             }
-            variant.ValidateComposition(closure.Composition);
+
+            return new DeterministicRollbackProductClosure(
+                runtimeRootPrefab,
+                definition,
+                composition,
+                source,
+                pipeline,
+                solver,
+                collision,
+                endpoint,
+                model,
+                gameplayContentHash,
+                kccIdentityHash);
+        }
+
+        static void ValidateSharedDebugScene(DeterministicRollbackProductClosure closure)
+        {
+            if (!AssetDatabase.LoadAssetAtPath<SceneAsset>(DebugScenePath))
+                throw new InvalidOperationException($"Rollback Debug Scene is missing: {DebugScenePath}");
 
             Scene scene = EditorSceneManager.OpenScene(DebugScenePath, OpenSceneMode.Additive);
             try
             {
-                if (scene.GetRootGameObjects().SelectMany(value => value.GetComponentsInChildren<SimulationSessionHost>(true)).Any())
-                    throw new InvalidOperationException("Shared Gameplay Debug Scene cannot contain a pre-instantiated Session Host.");
-                GameplayLabBootstrap[] bootstraps = scene.GetRootGameObjects()
-                    .SelectMany(value => value.GetComponentsInChildren<GameplayLabBootstrap>(true))
+                GameObject[] roots = scene.GetRootGameObjects();
+                if (!roots.Any(value => string.Equals(value.name, closure.RuntimeRootPrefab.name, StringComparison.Ordinal)))
+                    throw new InvalidOperationException("Rollback Debug Scene must contain the formal Rollback runtime root Prefab.");
+                SimulationSessionHost session = RequireSingle(
+                    roots.SelectMany(value => value.GetComponentsInChildren<SimulationSessionHost>(true)).ToArray(),
+                    "Rollback Debug Scene requires exactly one SimulationSessionHost.");
+                RequireObjectReference(session, "m_Composition", closure.Composition);
+                DeterministicRollbackCharacterHost[] actors = roots
+                    .SelectMany(value => value.GetComponentsInChildren<DeterministicRollbackCharacterHost>(true))
+                    .OrderBy(value => value.ActorId.Value, StringComparer.Ordinal)
                     .ToArray();
-                if (bootstraps.Length != 1 ||
-                    !bootstraps[0].Variants.Contains(closure.LocalVariant) ||
-                    !bootstraps[0].Variants.Contains(variant))
-                    throw new InvalidOperationException(
-                        "Shared Gameplay Debug Scene must reference the exact Local Fixed and Deterministic Rollback Variants.");
-                DeterministicCollisionWorldAuthoring[] worlds = scene.GetRootGameObjects()
+                if (actors.Length != 2 || actors.Any(value => value.SessionHost != session))
+                    throw new InvalidOperationException("Rollback Debug Scene Actor Host roster is not bound to its Session Host.");
+                if (roots.SelectMany(value => value.GetComponentsInChildren<CharacterPipelineHost>(true)).Any())
+                    throw new InvalidOperationException("Rollback Debug Scene contains a legacy CharacterPipelineHost.");
+                DeterministicCollisionWorldAuthoring[] worlds = roots
                     .SelectMany(value => value.GetComponentsInChildren<DeterministicCollisionWorldAuthoring>(true))
                     .ToArray();
                 if (worlds.Length != 1 || worlds[0].Output != closure.Collision ||
                     !string.Equals(worlds[0].MapId, MapId, StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException("Shared Gameplay Debug Scene deterministic world binding is stale.");
+                    throw new InvalidOperationException("Rollback Debug Scene deterministic world binding is stale.");
                 }
             }
             finally
@@ -261,12 +199,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
+        static T RequireSingle<T>(T[] values, string error) where T : UnityEngine.Object
+        {
+            return values.Length == 1 ? values[0] : throw new InvalidOperationException(error);
+        }
+
         static void RequireObjectReference(Object target, string propertyName, Object expected)
         {
             SerializedProperty property = new SerializedObject(target).FindProperty(propertyName) ??
                 throw new InvalidOperationException($"Serialized property '{propertyName}' is missing on '{target.GetType().Name}'.");
             if (property.objectReferenceValue != expected)
-                throw new InvalidOperationException($"Rollback Peer Scene reference '{propertyName}' is stale on '{target.name}'.");
+                throw new InvalidOperationException($"Rollback Scene reference '{propertyName}' is stale on '{target.name}'.");
         }
 
         static void RequireEditorIdle()
@@ -279,13 +222,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal sealed class DeterministicRollbackProductClosure
     {
         public DeterministicRollbackProductClosure(
-            GameplayLabSessionVariantDefinition localVariant,
-            GameplayLabSessionVariantDefinition rollbackVariant,
+            GameObject runtimeRootPrefab,
             CharacterPipelineDefinition definition,
-            FixedCharacterSimulationProgramAsset programAsset,
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
-            CharacterPresentationProjectionAsset projection,
-            CharacterPresentationProjection publishedProjection,
             SimulationSessionCompositionDefinition composition,
             DeterministicRollbackSessionSourceDefinition source,
             DeterministicRollbackPipelineDefinition pipeline,
@@ -293,15 +231,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             DeterministicCollisionWorldAsset collision,
             RollbackEndpointAuthoringDefinition endpoint,
             DeterministicRollbackModelDefinition model,
+            StableHash gameplayContentHash,
             string kccIdentityHash)
         {
-            LocalVariant = localVariant;
-            RollbackVariant = rollbackVariant;
+            RuntimeRootPrefab = runtimeRootPrefab;
             Definition = definition;
-            ProgramAsset = programAsset;
-            Program = program;
-            Projection = projection;
-            PublishedProjection = publishedProjection;
             Composition = composition;
             Source = source;
             Pipeline = pipeline;
@@ -309,16 +243,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Collision = collision;
             Endpoint = endpoint;
             Model = model;
+            GameplayContentHash = gameplayContentHash;
             KccIdentityHash = kccIdentityHash;
         }
 
-        public GameplayLabSessionVariantDefinition LocalVariant { get; }
-        public GameplayLabSessionVariantDefinition RollbackVariant { get; }
+        public GameObject RuntimeRootPrefab { get; }
         public CharacterPipelineDefinition Definition { get; }
-        public FixedCharacterSimulationProgramAsset ProgramAsset { get; }
-        public ThirdPersonSimulation.Fixed.CharacterSimulationProgram Program { get; }
-        public CharacterPresentationProjectionAsset Projection { get; }
-        public CharacterPresentationProjection PublishedProjection { get; }
         public SimulationSessionCompositionDefinition Composition { get; }
         public DeterministicRollbackSessionSourceDefinition Source { get; }
         public DeterministicRollbackPipelineDefinition Pipeline { get; }
@@ -326,6 +256,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public DeterministicCollisionWorldAsset Collision { get; }
         public RollbackEndpointAuthoringDefinition Endpoint { get; }
         public DeterministicRollbackModelDefinition Model { get; }
+        public StableHash GameplayContentHash { get; }
+        public string GameplayContentIdentity => $"character-content={GameplayContentHash}";
         public string KccIdentityHash { get; }
     }
 
@@ -346,7 +278,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             DeterministicRollbackProductClosure closure =
                 DeterministicRollbackNetworkTestBuildAndRun.RequireProductClosure();
-            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program = closure.Program;
             DeterministicRollbackModelDefinition model = closure.Model;
             SimulationWorldSolverDefinitionDescriptor solverIdentity =
                 closure.Solver.BuildDescriptor(closure.Composition.TickRate);
@@ -362,7 +293,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 "Development, StrictMode",
                 ScriptingImplementation.IL2CPP,
                 "3cDemo/Tools/DeterministicRollback/Start-DeterministicRollbackDemo.ps1",
-                ProgramIdentity(program),
+                closure.GameplayContentIdentity,
                 closure.Pipeline.BuildPortableDescriptor().PipelineId.Value,
                 model.ModelIdentity.ToString(),
                 RollbackGmProductBuild.Topology,
@@ -371,22 +302,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 new[]
                 {
                     NetworkTestProductAdapterUtility.Field("gmProfileHash", AssetDatabase.GetAssetDependencyHash(RollbackGmProductBuild.ProfilePath).ToString()),
+                    NetworkTestProductAdapterUtility.Field("gameplayContentHash", closure.GameplayContentHash.Value),
                     NetworkTestProductAdapterUtility.Field("collisionWorldHash", closure.Collision.ContentHash),
-                    NetworkTestProductAdapterUtility.Field("contractHash", closure.Projection.ContractHash),
+                    NetworkTestProductAdapterUtility.Field("presentationContractHash", closure.Definition.PresentationProjection.ContractHash),
+                    NetworkTestProductAdapterUtility.Field("presentationRevision", closure.Definition.PresentationProjection.ProjectionRevision),
                     NetworkTestProductAdapterUtility.Field(
                         "kccId",
                         $"{solverIdentity.Identity.ComponentId}@{closure.KccIdentityHash}"),
                     NetworkTestProductAdapterUtility.Field("kccIdentityHash", closure.KccIdentityHash),
-                    NetworkTestProductAdapterUtility.Field("transport", "UDP"),
-                    NetworkTestProductAdapterUtility.Field("programHash", closure.ProgramAsset.ProgramHash),
-                    NetworkTestProductAdapterUtility.Field("programId", closure.ProgramAsset.ProgramId),
-                    NetworkTestProductAdapterUtility.Field(
-                        "projectionRevision",
-                        closure.Projection.ProjectionRevision),
-                    NetworkTestProductAdapterUtility.Field("semanticHash", closure.ProgramAsset.SemanticHash),
-                    NetworkTestProductAdapterUtility.Field(
-                        "sourceRevision",
-                        closure.ProgramAsset.SourceRevision)
+                    NetworkTestProductAdapterUtility.Field("transport", "UDP")
                 },
                 new[]
                 {
@@ -462,12 +386,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 protocolVersion = DeterministicRollbackModelIdentity.Protocol.SemanticVersion,
                 protocolSchemaHash = DeterministicRollbackModelIdentity.Protocol.SchemaHash.Value,
                 tickRate = model.TickRate,
-                programId = closure.ProgramAsset.ProgramId,
-                sourceRevision = closure.ProgramAsset.SourceRevision,
-                projectionRevision = closure.Projection.ProjectionRevision,
-                semanticHash = model.SemanticHash.ToString(),
-                fixedProgramHash = model.FixedProgramHash.ToString(),
-                fixedLayoutHash = model.FixedLayoutHash.ToString(),
+                gameplayContentHash = closure.GameplayContentHash.Value,
                 collisionWorldHash = model.CollisionWorldHash.Value,
                 kccIdentityHash = model.KccIdentityHash.Value,
                 offensiveRequestDelayTicks = policy.OffensiveRequestDelayTicks,
@@ -550,17 +469,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RollbackRoster expectedRoster = closure.Endpoint.BuildRoster();
             RollbackGmProductBuild.Validate(context, manifest);
             RollbackRoster actualRoster = serverManifest.BuildRoster();
-            if (!string.Equals(serverManifest.programId, closure.ProgramAsset.ProgramId, StringComparison.Ordinal) ||
-                !string.Equals(serverManifest.sourceRevision, closure.ProgramAsset.SourceRevision, StringComparison.Ordinal) ||
-                !string.Equals(serverManifest.projectionRevision, closure.Projection.ProjectionRevision, StringComparison.Ordinal) ||
-                !string.Equals(serverManifest.semanticHash, closure.ProgramAsset.SemanticHash, StringComparison.Ordinal) ||
-                !string.Equals(serverManifest.fixedProgramHash, closure.ProgramAsset.ProgramHash, StringComparison.Ordinal) ||
+            if (!string.Equals(serverManifest.gameplayContentHash, closure.GameplayContentHash.Value, StringComparison.Ordinal) ||
+                !string.Equals(serverManifest.modelId, closure.Model.ModelIdentity.ComponentId, StringComparison.Ordinal) ||
+                !string.Equals(serverManifest.modelVersion, closure.Model.ModelIdentity.SemanticVersion, StringComparison.Ordinal) ||
+                !string.Equals(serverManifest.modelConfigurationHash, closure.Model.ModelIdentity.ConfigurationHash.Value, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.collisionWorldHash, closure.Collision.ContentHash, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.kccIdentityHash, closure.KccIdentityHash, StringComparison.Ordinal) ||
+                serverManifest.tickRate != closure.Model.TickRate ||
                 serverManifest.maximumPredictionLeadTicks != closure.Model.Policy.MaximumPredictionLeadTicks ||
                 actualRoster.Entries.Count != expectedRoster.Entries.Count)
             {
-                throw new InvalidOperationException("Rollback Relay manifest does not match the exact Variant product closure.");
+                throw new InvalidOperationException("Rollback Relay manifest does not match the formal domain product closure.");
             }
             for (int i = 0; i < expectedRoster.Entries.Count; i++)
             {
@@ -574,8 +493,5 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
             }
         }
-
-        static string ProgramIdentity(ThirdPersonSimulation.Fixed.CharacterSimulationProgram program) =>
-            $"program={program.Manifest.ProgramId.Value};compiler={program.Manifest.CompilerVersion};operations={program.Manifest.OperationSetVersion};numeric={program.Manifest.NumericProfile.Id.Value};abi={program.Manifest.NumericProfile.AbiVersion.Value};programHash={program.ProgramHash};layoutHash={program.LayoutHash};stateCodec={ThirdPersonSimulation.Fixed.CharacterSimulationStateCodec.CodecIdentity};source={program.Manifest.SourceRevision.Value}";
     }
 }

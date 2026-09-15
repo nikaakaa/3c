@@ -6,6 +6,7 @@ using ThirdPersonCharacter.Pipeline;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
+using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
@@ -44,6 +45,30 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             return $"character-content={StableHash.Compute(parts.ToArray())}";
         }
+
+        public static StableHash FixedCharacterContentHash(CharacterPipelineDefinition definition)
+        {
+            if (!definition)
+                throw new ArgumentNullException(nameof(definition));
+            GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilities =
+                definition.LoadFixedCharacterAbilities();
+            CharacterControlRuntimeBinding control = definition.BuildControlRuntimeBinding(
+                CharacterControlRuntimeModuleCatalog.Create());
+            CharacterBodyMotionBinding bodyMotion = definition.BuildBodyMotionRuntimeBinding();
+            CharacterGameplayEffectRuntimeBinding gameplayEffects = definition.BuildGameplayEffectRuntimeBinding();
+            CharacterEquipmentRuntimeBinding equipment = definition.BuildEquipmentRuntimeBinding();
+            return new ThirdPersonSimulation.Fixed.SimulationActorBinding(
+                new ActorId("network-test-character"),
+                "network-test-body",
+                control,
+                bodyMotion,
+                gameplayEffects,
+                equipment,
+                abilities).GameplayContentHash;
+        }
+
+        public static string FixedCharacterContentIdentity(CharacterPipelineDefinition definition) =>
+            $"character-content={FixedCharacterContentHash(definition)}";
 
         static bool RequiresCapability(
             GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilities,

@@ -1019,3 +1019,8 @@
 
 - 提交 `55499152d`，Float32／Fixed Ability Execution Service Factory 改为直接接收执行数据和执行服务，不再接收整套 Ability Execution Context；Context 只保留 Invocation 组装执行帧所需的聚合边界。
 - 不改变技能运行模块装配、状态端口、领域服务注入或执行顺序；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除无消费者世界请求布局
+
+- 提交 `1572aee55`，删除 Ability Semantic Builder、Semantic IR、Float32／Fixed Ability 数据和 codec 中没有运行时消费者的 WorldRequest layout，并移除对应 Program 类型、引用种类及读写入口；角色世界请求继续由角色 Step 根据实际 BodyMotion 生成。
+- Semantic IR artifact 版本提升到 16，Float32／Fixed Ability artifact 与 payload 版本提升到 2，旧产物直接拒绝；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

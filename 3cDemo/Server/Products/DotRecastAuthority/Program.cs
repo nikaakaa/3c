@@ -34,7 +34,8 @@ try
             "ThirdPersonSimulation.DotRecast",
             "ThirdPersonSimulation.DotRecastAuthority",
             "ThirdPersonSimulation.ServerAuthoritative",
-            "ThirdPersonSimulation.ServerAuthoritative.Transport"
+            "ThirdPersonSimulation.ServerAuthoritative.Transport",
+            "ThirdPersonSimulation.CorinControl"
         },
         new[]
         {
@@ -47,7 +48,6 @@ try
         new[]
         {
             new ServerProductArtifactDescriptor("thirdperson.authority.manifest", "Authority/DotRecastAuthorityScene.manifest"),
-            new ServerProductArtifactDescriptor("thirdperson.authority.program", "Authority/Artifacts/CharacterProgram.csim"),
             new ServerProductArtifactDescriptor("thirdperson.authority.navigation", "Authority/Artifacts/NavigationSurface.navsurface")
         },
         () =>

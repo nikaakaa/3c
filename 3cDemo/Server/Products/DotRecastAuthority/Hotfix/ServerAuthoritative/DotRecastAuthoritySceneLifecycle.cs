@@ -5,6 +5,7 @@ using Fantasy.Platform.Net;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.DotRecastAuthority;
 using ThirdPersonSimulation.ServerAuthoritative;
+using ThirdPersonCharacter.Control.Rules;
 
 namespace Fantasy;
 
@@ -24,7 +25,9 @@ public sealed class DotRecastAuthoritySceneCreated : AsyncEventSystem<OnCreateSc
                 host.ServerPublishRoot,
                 DotRecastAuthoritySceneManifest.PublishDirectoryName,
                 DotRecastAuthoritySceneManifest.FileName);
-            host.LoadedManifest = DotRecastAuthoritySceneManifestLoader.LoadFile(host.ManifestPath);
+            host.LoadedManifest = DotRecastAuthoritySceneManifestLoader.LoadFile(
+                host.ManifestPath,
+                CorinCharacterControlModuleCatalog.Create());
             host.Diagnostics = new DotRecastAuthoritySceneDiagnostics(host.LoadedManifest.Manifest);
             DotRecastAuthoritySceneStartupArguments.RequireSceneIdentity(scene, host.LoadedManifest.Manifest);
             host.GateSceneAddress = DotRecastAuthoritySceneStartupArguments.RequireGateSceneAddress(scene);

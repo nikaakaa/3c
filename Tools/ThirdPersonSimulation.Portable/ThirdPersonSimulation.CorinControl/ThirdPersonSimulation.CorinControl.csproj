@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>ThirdPersonSimulation.CorinControl</AssemblyName>
+    <RootNamespace>ThirdPersonCharacter.Control.Rules</RootNamespace>
+    <ControlSourceRoot>$(MSBuildThisFileDirectory)..\..\..\3cDemo\Client\3C_Client\Assets\GameScripts\Main\Runtime\Character\Control\Rules</ControlSourceRoot>
+    <HfsmSourceRoot>$(MSBuildThisFileDirectory)..\..\..\3cDemo\Client\3C_Client\Packages\UnityHFSM\src</HfsmSourceRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(ControlSourceRoot)\CorinCharacterControlModule.cs" Link="Source\CorinCharacterControlModule.cs" />
+    <Compile Include="$(HfsmSourceRoot)\**\*.cs" LinkBase="Source\UnityHFSM" />
+    <ProjectReference Include="..\ThirdPersonSimulation.Core\ThirdPersonSimulation.Core.csproj" />
+  </ItemGroup>
+</Project>

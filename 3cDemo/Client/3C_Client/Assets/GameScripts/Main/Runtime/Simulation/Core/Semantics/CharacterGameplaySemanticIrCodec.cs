@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation
             int tickRate,
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
-            SimulationProgramRootDescriptor root)
+            GameplayAbilityRootDescriptor root)
         {
             if (!programId.IsValid)
                 throw new ArgumentException("Program id is required.", nameof(programId));
@@ -48,7 +48,7 @@ namespace ThirdPersonSimulation
         public int TickRate { get; }
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
-        public SimulationProgramRootDescriptor Root { get; }
+        public GameplayAbilityRootDescriptor Root { get; }
     }
 
     public sealed class CharacterGameplaySemanticIrArtifactHeader
@@ -67,7 +67,7 @@ namespace ThirdPersonSimulation
             SemanticHash semanticHash,
             IEnumerable<string> gameplayCapabilities,
             WorldCapability requiredWorldCapabilities,
-            SimulationProgramRootDescriptor root)
+            GameplayAbilityRootDescriptor root)
         {
             Magic = magic;
             ArtifactVersion = artifactVersion;
@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation
         public SemanticHash SemanticHash { get; }
         public IReadOnlyList<string> GameplayCapabilities => m_GameplayCapabilities;
         public WorldCapability RequiredWorldCapabilities { get; }
-        public SimulationProgramRootDescriptor Root { get; }
+        public GameplayAbilityRootDescriptor Root { get; }
     }
 
     public sealed class ValidatedSemanticIrArtifact
@@ -150,7 +150,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < semanticIr.Manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(semanticIr.Manifest.Capabilities.GameplayCapabilities[i]);
             writer.WriteUInt64((ulong)semanticIr.Manifest.Capabilities.RequiredWorldCapabilities);
-            SimulationProgramRootDescriptorCodec.Write(writer, semanticIr.Manifest.Root);
+            GameplayAbilityRootDescriptorCodec.Write(writer, semanticIr.Manifest.Root);
             writer.WriteBytes(payload);
             byte[] bytes = writer.ToArray();
             return ReadValidatedArtifact(
@@ -215,7 +215,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
             ulong worldCapabilityValue = reader.ReadUInt64();
-            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
+            GameplayAbilityRootDescriptor root = GameplayAbilityRootDescriptorCodec.Read(reader);
             const WorldCapability knownWorldCapabilities = WorldCapability.BodyMotion |
                                                            WorldCapability.Grounding |
                                                            WorldCapability.Collision |
@@ -392,7 +392,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(manifest.Capabilities.GameplayCapabilities[i]);
             writer.WriteUInt64((ulong)manifest.Capabilities.RequiredWorldCapabilities);
-            SimulationProgramRootDescriptorCodec.Write(writer, manifest.Root);
+            GameplayAbilityRootDescriptorCodec.Write(writer, manifest.Root);
         }
 
         static CharacterGameplaySemanticIrManifest ReadManifest(CanonicalReader reader)
@@ -407,7 +407,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
             WorldCapability worldCapabilities = (WorldCapability)reader.ReadUInt64();
-            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
+            GameplayAbilityRootDescriptor root = GameplayAbilityRootDescriptorCodec.Read(reader);
             return new CharacterGameplaySemanticIrManifest(
                 programId,
                 compilerVersion,

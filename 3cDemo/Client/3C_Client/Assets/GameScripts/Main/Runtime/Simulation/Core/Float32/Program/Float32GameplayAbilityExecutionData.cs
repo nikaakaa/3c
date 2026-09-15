@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
             ProgramCapabilityManifest capabilities,
-            SimulationProgramRootDescriptor root,
+            GameplayAbilityRootDescriptor root,
             string executionIdentity,
             StableHash stateSchemaHash,
             IEnumerable<SimulationOperationDefinition> operationDefinitions,
@@ -95,7 +95,7 @@ namespace ThirdPersonSimulation
         public SemanticHash SemanticHash { get; }
         public SimulationNumericProfile NumericProfile { get; }
         public ProgramCapabilityManifest Capabilities { get; }
-        public SimulationProgramRootDescriptor Root { get; }
+        public GameplayAbilityRootDescriptor Root { get; }
         public string ExecutionIdentity { get; }
         public StableHash StateSchemaHash { get; }
         public StableHash ContentHash { get; }
@@ -129,7 +129,7 @@ namespace ThirdPersonSimulation
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
             ProgramCapabilityManifest capabilities,
-            SimulationProgramRootDescriptor root,
+            GameplayAbilityRootDescriptor root,
             string executionIdentity,
             StableHash stateSchemaHash,
             IEnumerable<SimulationOperationDefinition> operationDefinitions,

@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation
                         workspace,
                         roleState.InputRequests,
                         roleState.ActionState,
-                        roleState,
+                        roleState.HandleAllocatorState,
                         roleState.EventSequenceState,
                         roleState,
                         roleState,

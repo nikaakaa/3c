@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedHandleAllocatorStatePort, IFixedGameplayEffectStatePort, IFixedEquipmentStatePort, IFixedControlRuntimeStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedGameplayEffectStatePort, IFixedEquipmentStatePort, IFixedControlRuntimeStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
@@ -110,12 +110,12 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterActionRuntimeState m_ActionState;
         readonly FixedCharacterInputRequestState m_InputRequestState;
         readonly FixedCharacterEventSequenceState m_EventSequenceState;
+        readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState;
         CharacterControlRuntimeStateTransaction m_ControlState;
         GameplayEffectStateAggregate m_GameplayEffectAggregate;
         SimulationGameplayEffectState m_GameplayEffectWorking;
         FixedGameplayEffectExecutionScratch m_GameplayEffectScratch;
         EquipmentStateAggregate m_EquipmentState;
-        ulong m_HandleAllocator;
         bool m_Disposed;
 
         public FixedCharacterRuntimeStateTransaction(
@@ -144,9 +144,9 @@ namespace ThirdPersonSimulation.Fixed
                 baseState.ActionEventSequence);
             m_InputRequestState = new FixedCharacterInputRequestState(m_Tick, baseState.InputRequests);
             m_EventSequenceState = new FixedCharacterEventSequenceState(baseState.EventSequence);
+            m_HandleAllocatorState = new FixedCharacterHandleAllocatorState(baseState.HandleAllocator);
             m_GameplayEffectAggregate = baseState.GameplayEffectState;
             m_EquipmentState = baseState.EquipmentState;
-            m_HandleAllocator = baseState.HandleAllocator;
         }
 
         public ActorId ActorId => m_ActorId;
@@ -200,30 +200,10 @@ namespace ThirdPersonSimulation.Fixed
             return Snapshot();
         }
 
-        public ulong NextHandleAllocator()
-        {
-            RequireActive();
-            m_HandleAllocator = checked(m_HandleAllocator + 1UL);
-            if (m_HandleAllocator == 0)
-                throw new OverflowException("Simulation handle allocator overflowed.");
-            return m_HandleAllocator;
-        }
-
-        public ulong CaptureHandleAllocator()
-        {
-            RequireActive();
-            return m_HandleAllocator;
-        }
-
-        public void RestoreHandleAllocator(ulong value)
-        {
-            RequireActive();
-            m_HandleAllocator = value;
-        }
-
         internal IFixedInputRequestStatePort InputRequests => m_InputRequestState;
         internal IFixedActionRuntimeStatePort ActionState => m_ActionState;
         internal IFixedEventSequenceStatePort EventSequenceState => m_EventSequenceState;
+        internal IFixedHandleAllocatorStatePort HandleAllocatorState => m_HandleAllocatorState;
 
         public SimulationGameplayEffectState GetGameplayEffectState(FixedGameplayEffectExecutionScratch scratch)
         {
@@ -303,6 +283,7 @@ namespace ThirdPersonSimulation.Fixed
             m_InputRequestState.Dispose();
             m_ActionState.Dispose();
             m_EventSequenceState.Dispose();
+            m_HandleAllocatorState.Dispose();
             m_Disposed = true;
         }
 
@@ -319,7 +300,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_InputRequestState.Capture(),
                 m_EventSequenceState.EventSequence,
                 m_ActionState.ActionEventSequence,
-                m_HandleAllocator,
+                m_HandleAllocatorState.HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectWorking?.Freeze() ?? m_GameplayEffectAggregate,
                 m_EquipmentState);
@@ -339,7 +320,7 @@ namespace ThirdPersonSimulation.Fixed
                 state.ActionEventSequence);
             m_InputRequestState.Restore(state.InputRequests);
             m_EventSequenceState.Restore(state.EventSequence);
-            m_HandleAllocator = state.HandleAllocator;
+            m_HandleAllocatorState.RestoreHandleAllocator(state.HandleAllocator);
             if (m_ControlState != null)
             {
                 if (state.ControlState == null)

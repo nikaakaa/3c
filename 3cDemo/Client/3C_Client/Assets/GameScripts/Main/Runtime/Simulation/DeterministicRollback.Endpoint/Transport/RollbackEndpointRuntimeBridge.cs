@@ -344,18 +344,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 if (!left[i].ActorId.Equals(right[i].ActorId))
                     return "actor-roster";
-                if (left[i].ActorHash.Equals(right[i].ActorHash))
-                    continue;
-                int count = Math.Min(left[i].Modules.Count, right[i].Modules.Count);
-                for (int module = 0; module < count; module++)
-                {
-                    if (!string.Equals(left[i].Modules[module].Key, right[i].Modules[module].Key, StringComparison.Ordinal) ||
-                        !left[i].Modules[module].Value.Equals(right[i].Modules[module].Value))
-                    {
-                        return $"actor:{left[i].ActorId}/module:{left[i].Modules[module].Key}";
-                    }
-                }
-                return $"actor:{left[i].ActorId}";
+                if (!left[i].GameplayContentHash.Equals(right[i].GameplayContentHash))
+                    return $"actor:{left[i].ActorId}/gameplay-content";
+                if (!left[i].CharacterStateHash.Equals(right[i].CharacterStateHash))
+                    return $"actor:{left[i].ActorId}/state";
             }
             return "world";
         }

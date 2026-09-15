@@ -26,7 +26,6 @@ namespace ThirdPersonSimulation.Fixed
                 : new Dictionary<int, FixedMotionWarpState>(motionWarpStates);
         }
 
-        internal FixedGameplayAbilityExecutionInstallation Installation => m_Installation;
         internal Dictionary<int, AbilityStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, FixedMotionWarpState> MotionWarpStates { get; }

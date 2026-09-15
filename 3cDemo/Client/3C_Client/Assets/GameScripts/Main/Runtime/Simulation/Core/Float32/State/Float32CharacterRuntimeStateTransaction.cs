@@ -21,7 +21,6 @@ namespace ThirdPersonSimulation
 
     internal interface IFloat32SkillExecutionState : IDisposable
     {
-        Float32GameplayAbilityExecutionInstallation Installation { get; }
         AbilityStateValue Get(int slotIndex);
         AbilityStateValue Get(TypedStateAddress address);
         void Set(int slotIndex, AbilityStateValue value);
@@ -319,8 +318,6 @@ namespace ThirdPersonSimulation
         }
 
         internal object BindingIdentity => m_BindingIdentity;
-
-        public Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
 
         public AbilityStateValue Get(int slotIndex) => Get(m_Layout.Address(slotIndex));
 

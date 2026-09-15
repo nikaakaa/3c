@@ -21,7 +21,6 @@ namespace ThirdPersonSimulation.Fixed
 
     internal interface IFixedSkillExecutionState : IDisposable
     {
-        FixedGameplayAbilityExecutionInstallation Installation { get; }
         AbilityStateValue Get(int slotIndex);
         AbilityStateValue Get(TypedStateAddress address);
         void Set(int slotIndex, AbilityStateValue value);
@@ -319,8 +318,6 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         internal object BindingIdentity => m_BindingIdentity;
-
-        public FixedGameplayAbilityExecutionInstallation Installation => m_Installation;
 
         public AbilityStateValue Get(int slotIndex) => Get(m_Layout.Address(slotIndex));
 

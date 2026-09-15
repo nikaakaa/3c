@@ -26,7 +26,6 @@ namespace ThirdPersonSimulation
                 : new Dictionary<int, Float32MotionWarpState>(motionWarpStates);
         }
 
-        internal Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
         internal Dictionary<int, AbilityStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, Float32MotionWarpState> MotionWarpStates { get; }

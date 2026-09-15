@@ -1094,3 +1094,8 @@
 
 - 提交 `d6621feb9`，将不再承载角色总 Program 语义的 `SimulationProgramSemantics` 源文件及 Unity `.meta` 改为 `SimulationGraphContracts`，删除旧文件路径。
 - 保留操作集、目录、World Capability、Camera schema 和 Graph source map 等仍被 Ability、网络与世界求解消费的合同；Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git，Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability操作集与值端口合同命名
+
+- 提交 `528c859e2`，将只服务 Ability 编译、执行布局、数值后端与网络目标合同的 `CharacterGameplayOperationSet`、`CharacterGameplayValuePortContracts` 统一为 `GameplayAbilityOperationSet`、`GameplayAbilityValuePortContracts`。
+- 保留 operation set 的字符串 ID、版本、操作顺序和 artifact 字节布局；本步只调整类型名与静态引用。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

@@ -11,13 +11,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     internal sealed class CharacterSemanticGameplayEffectCatalogEmitter
     {
         readonly CharacterAuthoringCompilationModel m_Model;
-        readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
         readonly GameplayAbilityCatalogIndex m_Index;
 
         public CharacterSemanticGameplayEffectCatalogEmitter(
             CharacterAuthoringCompilationModel model,
-            CharacterSimulationProgramBuilder builder,
+            GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report,
             GameplayAbilityCatalogIndex index)
         {

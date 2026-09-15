@@ -69,7 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     : GraphId;
     }
 
-    public sealed class CharacterSimulationProgramBuilder
+    public sealed class GameplayAbilitySemanticBuilder
     {
         sealed class GraphInvocationScope : IDisposable
         {
@@ -125,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly Dictionary<ProgramStateValueKind, int> m_DefaultConstants = new Dictionary<ProgramStateValueKind, int>();
         WorldCapability m_RequiredWorldCapabilities;
 
-        public CharacterSimulationProgramBuilder(
+        public GameplayAbilitySemanticBuilder(
             ProgramId programId,
             string compilerVersion,
             OperationSetVersion operationSetVersion,

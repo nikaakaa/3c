@@ -8,12 +8,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     internal sealed class CharacterSemanticCatalogReferenceEmitter
     {
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
-        readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
 
         public CharacterSemanticCatalogReferenceEmitter(
             GameplayAbilityCatalogIndex catalogIndex,
-            CharacterSimulationProgramBuilder builder,
+            GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report)
         {
             m_CatalogIndex = catalogIndex ?? throw new ArgumentNullException(nameof(catalogIndex));

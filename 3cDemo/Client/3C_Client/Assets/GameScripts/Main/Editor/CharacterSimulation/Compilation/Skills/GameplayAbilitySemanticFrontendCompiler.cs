@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     model.DefinitionGuid,
                     model.EntryIdentity,
                     model.SourceRevision.Value);
-                var builder = new CharacterSimulationProgramBuilder(
+                var builder = new GameplayAbilitySemanticBuilder(
                     model.ProgramId,
                     CompilerVersion,
                     OperationSetVersion,
@@ -113,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static void RequireGraphCapabilities(
             GameplayAbilityAuthoringCompilationModel model,
-            CharacterSimulationProgramBuilder builder)
+            GameplayAbilitySemanticBuilder builder)
         {
             foreach (BtsmtlSkillGraphOccurrence occurrence in model.EntryGraph.EnumerateOccurrences())
             {
@@ -127,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static void DeclareAbilityCatalog(
             GameplayAbilityAuthoringCompilationModel model,
             OperationHandle entry,
-            CharacterSimulationProgramBuilder builder,
+            GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report,
             CharacterSimulationSourceLocation source)
         {

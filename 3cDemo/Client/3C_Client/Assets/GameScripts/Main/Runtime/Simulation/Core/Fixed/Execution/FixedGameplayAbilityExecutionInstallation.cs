@@ -33,7 +33,6 @@ namespace ThirdPersonSimulation.Fixed
         public bool RequiresEquipment { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public GameplayAbilityExecutionIdentity Identity => Services.Identity;
-        public OperationExecutionTopology Topology => Layout.Topology;
         internal FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         internal EquipmentProgramLayout EquipmentLayout { get; }
         internal FixedGameplayAbilityExecutionServices Services { get; }

@@ -32,7 +32,6 @@ namespace ThirdPersonSimulation
         public bool RequiresEquipment { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public GameplayAbilityExecutionIdentity Identity => Services.Identity;
-        public OperationExecutionTopology Topology => Layout.Topology;
         internal Float32GameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         internal EquipmentProgramLayout EquipmentLayout { get; }
         internal Float32GameplayAbilityExecutionServices Services { get; }

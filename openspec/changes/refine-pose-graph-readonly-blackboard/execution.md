@@ -909,3 +909,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 该步解决了“没有正式角色入口”的类型与生命周期缺口；角色表现 Host 尚需把自身的 Profile、Rig、EventGraph 输入合同、真实 handler factory 和 Final 服务装配到该入口，下一步不能停留在只调用接口声明。
 - 入口补充暴露当前 Frame Lineage、Frame Input、OpenFrame 和最近已提交 Output，保证上层观察、Barrier 与采用结果继续使用同一实例/完成身份；提交为 `a11d4332d`。
 - 原生角色入口新增 `CharacterPoseNativeRoleDependencies`，以 typed 依赖一次接收 `CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、handler factory 和 `CharacterFinalPoseNativePublication`，并在入口停止/失败时按图、Final、Constraint、Source 顺序释放；提交为 `14ae1c1c1`。这只收口所有权，不把尚未装配的服务伪装成已接线。
+- 新增 `CharacterPoseNativeFrameCoordinator`，将单个角色帧的 `BeginFrame → PrepareFrame → PrepareEvaluation → Evaluate → ValidatePending → Commit/Discard` 收成唯一阶段驱动，持有单一帧租约并在准备失败、停止和释放时清理；提交为 `4fa391ee3`。它不创建第二时钟、不复制 Source/Constraint 状态，尚未替共享 Host 调用。

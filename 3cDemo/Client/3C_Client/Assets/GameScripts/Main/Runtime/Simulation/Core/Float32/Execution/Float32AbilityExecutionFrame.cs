@@ -68,6 +68,7 @@ namespace ThirdPersonSimulation
         readonly List<GameplayFact> m_Facts;
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
+        readonly Float32AbilityBodyFacts m_BodyFacts;
         IFloat32SkillExecutionStateAccess m_SkillExecutionStateAccess;
         ulong m_ActionTraceInstanceId;
         string m_ActionTraceSkillId = string.Empty;
@@ -92,7 +93,7 @@ namespace ThirdPersonSimulation
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
-            BodyFacts = bodyFacts;
+            m_BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
@@ -115,7 +116,9 @@ namespace ThirdPersonSimulation
         public SimulationTick Tick { get; }
         public Float32AbilityExecutionInput Input { get; }
         public IReadOnlyList<SimulationIngress> Ingress { get; }
-        public Float32AbilityBodyFacts BodyFacts { get; }
+        public Float32AbilityBodyFacts BodyFacts => m_BodyFacts.IsValid
+            ? m_BodyFacts
+            : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");
         internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
         internal IFloat32AbilityDomainStatePort DomainState { get; }
         internal Float32EventSequence EventSequence { get; }

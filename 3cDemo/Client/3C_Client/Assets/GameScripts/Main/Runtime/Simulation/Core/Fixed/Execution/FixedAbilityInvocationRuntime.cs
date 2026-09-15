@@ -94,7 +94,7 @@ namespace ThirdPersonSimulation.Fixed
             installations = installations ?? throw new ArgumentNullException(nameof(installations));
             m_DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
-            if (!actorId.IsValid || !tick.IsValid || !bodyFacts.IsValid)
+            if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
             if (input == null)
                 throw new ArgumentNullException(nameof(input));

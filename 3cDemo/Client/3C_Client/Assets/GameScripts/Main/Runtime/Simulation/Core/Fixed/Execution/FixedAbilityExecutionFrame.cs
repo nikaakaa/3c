@@ -69,6 +69,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly List<GameplayFact> m_Facts;
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
+        readonly FixedAbilityBodyFacts m_BodyFacts;
         IFixedSkillExecutionStateAccess m_SkillExecutionStateAccess;
         ulong m_ActionTraceInstanceId;
         string m_ActionTraceSkillId = string.Empty;
@@ -93,7 +94,7 @@ namespace ThirdPersonSimulation.Fixed
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
-            BodyFacts = bodyFacts;
+            m_BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
@@ -116,7 +117,9 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationTick Tick { get; }
         public FixedAbilityExecutionInput Input { get; }
         public IReadOnlyList<SimulationIngress> Ingress { get; }
-        public FixedAbilityBodyFacts BodyFacts { get; }
+        public FixedAbilityBodyFacts BodyFacts => m_BodyFacts.IsValid
+            ? m_BodyFacts
+            : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");
         internal IFixedAbilityExecutionStateTransaction Transaction { get; }
         internal IFixedAbilityDomainStatePort DomainState { get; }
         internal FixedEventSequence EventSequence { get; }

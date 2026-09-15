@@ -874,3 +874,8 @@
 - 提交 `5dcf9303d`，Float32／Fixed 的 InvocationRuntime、执行服务工厂和角色评估入口改接独立的 `AbilityExecutionContext`；Context 只携带已加载的执行数据、布局、服务以及按能力声明绑定的 Gameplay Effect／Equipment 资源。
 - 安装对象仍在角色装配边界创建并保留安装事实，技能执行入口不再接收或读取安装容器；没有复制第二份技能数据，也没有新增旧 Program 或兼容入口。
 - Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 清理网络入口旧Program语义
+
+- 提交 `d482ad0bf`，Authority 启动和 Prediction Schedule 的错误信息统一改为 `Character Runtime` 与 `Character roster`，不再把现行角色入口描述成已删除的 Program Runtime。
+- 只修正网络诊断语义，不改变 Authority／Prediction 的校验条件、计划生成或状态传输；Float32 目标工程编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

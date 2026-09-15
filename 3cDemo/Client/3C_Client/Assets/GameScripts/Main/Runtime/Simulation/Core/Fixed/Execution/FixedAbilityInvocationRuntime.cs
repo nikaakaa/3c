@@ -89,6 +89,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionWorkspace workspace,
             IFixedInputRequestStatePort inputRequests,
             IFixedActionRuntimeStatePort actionState,
+            IFixedHandleAllocatorStatePort handleAllocatorState,
             IFixedAbilityExecutionServiceFactory serviceFactory,
             Action<IFixedAbilityExecutionStateTransaction> acceptAbility)
         {
@@ -114,6 +115,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_DomainState,
                 inputRequests,
                 actionState,
+                handleAllocatorState,
                 m_Workspace);
 
             FixedGameplayAbilityExecutionAccess access = installation.Access;

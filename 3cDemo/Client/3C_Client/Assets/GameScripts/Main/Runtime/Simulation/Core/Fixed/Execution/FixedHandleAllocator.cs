@@ -13,11 +13,11 @@ namespace ThirdPersonSimulation.Fixed
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
         }
 
-        public ulong Next() => m_Frame.DomainState.NextHandleAllocator();
+        public ulong Next() => m_Frame.HandleAllocatorState.NextHandleAllocator();
 
-        public ulong Capture() => m_Frame.DomainState.CaptureHandleAllocator();
+        public ulong Capture() => m_Frame.HandleAllocatorState.CaptureHandleAllocator();
 
-        public void Restore(ulong value) => m_Frame.DomainState.RestoreHandleAllocator(value);
+        public void Restore(ulong value) => m_Frame.HandleAllocatorState.RestoreHandleAllocator(value);
     }
 }
 

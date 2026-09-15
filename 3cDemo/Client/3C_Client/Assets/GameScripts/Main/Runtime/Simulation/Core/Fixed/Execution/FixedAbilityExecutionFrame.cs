@@ -86,6 +86,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedAbilityDomainStatePort domainState,
             IFixedInputRequestStatePort inputRequests,
             IFixedActionRuntimeStatePort actionState,
+            IFixedHandleAllocatorStatePort handleAllocatorState,
             FixedAbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -101,6 +102,7 @@ namespace ThirdPersonSimulation.Fixed
             DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
+            HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -128,6 +130,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedAbilityDomainStatePort DomainState { get; }
         internal IFixedInputRequestStatePort InputRequests { get; }
         internal IFixedActionRuntimeStatePort ActionState { get; }
+        internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
         internal FixedEventSequence EventSequence { get; }
         internal FixedFactSink Facts { get; }
         internal FixedPresentationSink Presentation { get; }

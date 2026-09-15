@@ -61,15 +61,19 @@ namespace ThirdPersonSimulation.Fixed
         void SetActionInstances(IReadOnlyList<FixedActionInstanceState> actions);
     }
 
+    internal interface IFixedHandleAllocatorStatePort
+    {
+        ulong NextHandleAllocator();
+        ulong CaptureHandleAllocator();
+        void RestoreHandleAllocator(ulong value);
+    }
+
     internal interface IFixedAbilityDomainStatePort
     {
         ActorId ActorId { get; }
         SimulationTick Tick { get; }
         int TickRate { get; }
         ulong NextEventSequence();
-        ulong NextHandleAllocator();
-        ulong CaptureHandleAllocator();
-        void RestoreHandleAllocator(ulong value);
         SimulationGameplayEffectState GetGameplayEffectState(FixedGameplayEffectExecutionScratch scratch);
         GameplayEffectStateAggregate GetGameplayEffectAggregate();
         EquipmentStateAggregate GetEquipmentState();
@@ -81,7 +85,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;

@@ -85,6 +85,7 @@ namespace ThirdPersonSimulation
             IFloat32AbilityDomainStatePort domainState,
             IFloat32InputRequestStatePort inputRequests,
             IFloat32ActionRuntimeStatePort actionState,
+            IFloat32HandleAllocatorStatePort handleAllocatorState,
             Float32AbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -100,6 +101,7 @@ namespace ThirdPersonSimulation
             DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
+            HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -127,6 +129,7 @@ namespace ThirdPersonSimulation
         internal IFloat32AbilityDomainStatePort DomainState { get; }
         internal IFloat32InputRequestStatePort InputRequests { get; }
         internal IFloat32ActionRuntimeStatePort ActionState { get; }
+        internal IFloat32HandleAllocatorStatePort HandleAllocatorState { get; }
         internal Float32EventSequence EventSequence { get; }
         internal Float32FactSink Facts { get; }
         internal Float32PresentationSink Presentation { get; }

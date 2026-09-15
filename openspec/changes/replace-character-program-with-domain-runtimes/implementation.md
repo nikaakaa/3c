@@ -1134,3 +1134,8 @@
 
 - 删除已被 Git 跟踪但内容为空的 `Runtime/BTSMTL/Scripts/Interface.cs` 及其 Unity `.meta`；该文件没有类型、没有按文件路径引用，也不承载当前 Pose/Graph Interface 合同。
 - 本步只移除无行为占位物，不影响真正被 authoring 消费的 Interface 资产与 `InterfacePortId` 合同。
+
+## 2026-09-16 收回Ability效果定义编码入口
+
+- 提交 `82bfaf015`，将 Gameplay Effect 定义编码直接收回 `GameplayAbilitySemanticDependencyCatalogEmitter`，删除只剩静态转发的 `CharacterSemanticGameplayEffectCatalogEmitter` 与 `CharacterSemanticSourceFactory`。
+- 保留 Effect 定义字节、目录条目、版本和错误上报；本步只删除已无实例消费者的角色级包装，不新增兼容入口。

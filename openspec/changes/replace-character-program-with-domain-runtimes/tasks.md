@@ -17,7 +17,7 @@ D21领域分工提报DOMAIN-BOUNDARIES-20260914-02已审阅，具体接线按D22
 
 原8.2／8.4分别前置为0.1／0.2，后文不再重复列项；其它编号和已完成历史保持不变。共享文件中的有效技能／动画算法只做必要提取或解除旧载体类型依赖，不要求新Runtime完整可用后才删。1.6中的共享Timeline发射调用与旧转换Factory一起先退役，保留业务接线仍由原条目收口。
 
-- [ ] 0.1 先删除核心拥有的整角色Frontend／总Builder／BuildService、Program wrapper／旧codec／artifact、角色全局布局、失效缓存与共享旧构建入口，以及Program到Ability的转换Factory／FromProgram装配；同文件中仍需使用的技能编译算法和格式收窄为技能职责并正确命名。旧消费者的编译错误交由1.x／2.x／3.x／7.x接续，不为消错复活旧类型。Timeline／Pose专属旧链由对应任务先删，公共引用归核心处理。
+- [x] 0.1 先删除核心拥有的整角色Frontend／总Builder／BuildService、Program wrapper／旧codec／artifact、角色全局布局、失效缓存与共享旧构建入口，以及Program到Ability的转换Factory／FromProgram装配；同文件中仍需使用的技能编译算法和格式收窄为技能职责并正确命名。旧消费者的编译错误交由1.x／2.x／3.x／7.x接续，不为消错复活旧类型。Timeline／Pose专属旧链由对应任务先删，公共引用归核心处理。
 - [ ] 0.2 先删除旧Projection总包、wrapper／reader／生成发布入口及Image／整角色身份字段；保留实际Rig／源资源／动作／Slot／Camera数据与算法，混合文件只提取有效职责。6.3／6.4／6.6随后接回正式领域绑定，不建立替代总包、兼容别名或新旧开关。
 
 ## 1. 独立技能数据与领域合同

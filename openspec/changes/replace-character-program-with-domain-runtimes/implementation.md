@@ -452,3 +452,10 @@
 - 保留原有从角色状态读入、按帧递增、溢出拒绝、Savepoint／Restore／Commit 和 codec 编码语义；角色事务只负责在统一快照中读取并恢复该状态，不复制序号或建立旁路时钟。
 - 事件序号状态与角色事务同步释放。本步只完成事件序号 owner 拆分，角色级完整跨领域 Capture／Restore 和网络恢复接线仍未完成，1.11、2.6 仍未完成。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。对应 Center 改动记录未执行正式 after compile，原因仍是打开的 Unity Editor 占用本 worktree；未关闭 Editor，未运行 Unity、测试或资产生成。
+
+## 2026-09-15 角色句柄分配状态拆出
+
+- 提交 `8c176d703`，Float32／Fixed 新增独立的角色句柄分配状态，角色运行时事务不再实现 `HandleAllocatorStatePort`；Ability、GameplayEffect 和 Equipment 继续通过同一专用端口共享句柄分配事实。
+- 保留原有递增、溢出拒绝、捕获、恢复、Savepoint／Commit 和 codec 编码语义；角色事务只在统一快照中读出并恢复句柄状态，不复制分配器或引入旁路时钟。
+- 句柄状态与角色事务同步释放。本步只完成句柄 owner 拆分，角色级完整跨领域 Capture／Restore 和网络恢复接线仍未完成，1.11、2.6 仍未完成。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。对应 Center 正式 after compile 因打开的 Unity Editor 占用本 worktree 被 `WorkspaceEditorInUse` 拒绝；未关闭 Editor，未运行 Unity、测试或资产生成。

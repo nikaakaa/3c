@@ -88,6 +88,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedActionRuntimeStatePort actionState,
             IFixedHandleAllocatorStatePort handleAllocatorState,
             IFixedEventSequenceStatePort eventSequenceState,
+            IFixedGameplayEffectStatePort gameplayEffectState,
             FixedAbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -105,6 +106,7 @@ namespace ThirdPersonSimulation.Fixed
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
             EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
+            GameplayEffectState = gameplayEffectState ?? throw new ArgumentNullException(nameof(gameplayEffectState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -134,6 +136,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedActionRuntimeStatePort ActionState { get; }
         internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
         internal IFixedEventSequenceStatePort EventSequenceState { get; }
+        internal IFixedGameplayEffectStatePort GameplayEffectState { get; }
         internal FixedEventSequence EventSequence { get; }
         internal FixedFactSink Facts { get; }
         internal FixedPresentationSink Presentation { get; }

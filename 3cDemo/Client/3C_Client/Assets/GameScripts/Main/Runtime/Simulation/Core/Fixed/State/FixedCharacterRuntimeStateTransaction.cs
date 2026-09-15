@@ -73,13 +73,18 @@ namespace ThirdPersonSimulation.Fixed
         ulong NextEventSequence();
     }
 
+    internal interface IFixedGameplayEffectStatePort
+    {
+        int TickRate { get; }
+        SimulationGameplayEffectState GetGameplayEffectState(FixedGameplayEffectExecutionScratch scratch);
+        GameplayEffectStateAggregate GetGameplayEffectAggregate();
+    }
+
     internal interface IFixedAbilityDomainStatePort
     {
         ActorId ActorId { get; }
         SimulationTick Tick { get; }
         int TickRate { get; }
-        SimulationGameplayEffectState GetGameplayEffectState(FixedGameplayEffectExecutionScratch scratch);
-        GameplayEffectStateAggregate GetGameplayEffectAggregate();
         EquipmentStateAggregate GetEquipmentState();
         void SetEquipmentState(EquipmentStateAggregate state);
         void Abort();
@@ -89,7 +94,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort, IFixedEventSequenceStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort, IFixedEventSequenceStatePort, IFixedGameplayEffectStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;

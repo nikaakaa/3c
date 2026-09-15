@@ -43,6 +43,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException("Gameplay Effect evaluation is already active.");
             m_GameplayEffects = new FixedGameplayEffectTarget(
                 m_Frame.DomainState,
+                m_Frame.GameplayEffectState,
                 Access.Services.GameplayEffectCatalog,
                 m_Frame.ActorId,
                 m_Frame.Tick,

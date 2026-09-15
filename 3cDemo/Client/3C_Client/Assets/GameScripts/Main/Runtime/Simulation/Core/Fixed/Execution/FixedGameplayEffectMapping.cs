@@ -198,7 +198,7 @@ namespace ThirdPersonSimulation.Fixed
         void EnsureWorkingState()
         {
             if (m_State == null)
-                m_State = m_Transaction.GetGameplayEffectState(m_Scratch);
+                m_State = m_EffectState.GetGameplayEffectState(m_Scratch);
         }
 
         bool TrySecondsToTicks(FixedScalar seconds, out ulong ticks)
@@ -221,4 +221,3 @@ namespace ThirdPersonSimulation.Fixed
 
     }
 }
-

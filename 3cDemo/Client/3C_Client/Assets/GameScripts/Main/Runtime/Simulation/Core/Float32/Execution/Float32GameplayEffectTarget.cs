@@ -17,6 +17,7 @@ namespace ThirdPersonSimulation
             Float32Scalar>
     {
         readonly IFloat32AbilityDomainStatePort m_Transaction;
+        readonly IFloat32GameplayEffectStatePort m_EffectState;
         readonly Float32GameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
         readonly ActorId m_ActorId;
@@ -44,6 +45,7 @@ namespace ThirdPersonSimulation
 
         public Float32GameplayEffectTarget(
             IFloat32AbilityDomainStatePort transaction,
+            IFloat32GameplayEffectStatePort effectState,
             Float32GameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
             SimulationTick tick,
@@ -53,11 +55,12 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectExecutionScratch scratch)
         {
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            m_EffectState = effectState ?? throw new ArgumentNullException(nameof(effectState));
             m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-            m_CommittedState = transaction.GetGameplayEffectAggregate();
+            m_CommittedState = effectState.GetGameplayEffectAggregate();
             m_ActorId = actorId;
             m_Tick = tick;
-            m_TickRate = transaction.TickRate;
+            m_TickRate = effectState.TickRate;
             m_AllocateHandle = allocateHandle ?? throw new ArgumentNullException(nameof(allocateHandle));
             m_CaptureAllocator = captureAllocator ?? throw new ArgumentNullException(nameof(captureAllocator));
             m_RestoreAllocator = restoreAllocator ?? throw new ArgumentNullException(nameof(restoreAllocator));

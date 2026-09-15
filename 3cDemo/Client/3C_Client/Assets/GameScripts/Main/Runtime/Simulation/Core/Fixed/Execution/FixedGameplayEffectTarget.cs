@@ -18,6 +18,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar>
     {
         readonly IFixedAbilityDomainStatePort m_Transaction;
+        readonly IFixedGameplayEffectStatePort m_EffectState;
         readonly FixedGameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
         readonly ActorId m_ActorId;
@@ -45,6 +46,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedGameplayEffectTarget(
             IFixedAbilityDomainStatePort transaction,
+            IFixedGameplayEffectStatePort effectState,
             FixedGameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
             SimulationTick tick,
@@ -54,11 +56,12 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayEffectExecutionScratch scratch)
         {
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            m_EffectState = effectState ?? throw new ArgumentNullException(nameof(effectState));
             m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-            m_CommittedState = transaction.GetGameplayEffectAggregate();
+            m_CommittedState = effectState.GetGameplayEffectAggregate();
             m_ActorId = actorId;
             m_Tick = tick;
-            m_TickRate = transaction.TickRate;
+            m_TickRate = effectState.TickRate;
             m_AllocateHandle = allocateHandle ?? throw new ArgumentNullException(nameof(allocateHandle));
             m_CaptureAllocator = captureAllocator ?? throw new ArgumentNullException(nameof(captureAllocator));
             m_RestoreAllocator = restoreAllocator ?? throw new ArgumentNullException(nameof(restoreAllocator));

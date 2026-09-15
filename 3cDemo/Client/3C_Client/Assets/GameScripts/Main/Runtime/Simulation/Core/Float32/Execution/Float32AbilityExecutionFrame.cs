@@ -87,6 +87,7 @@ namespace ThirdPersonSimulation
             IFloat32ActionRuntimeStatePort actionState,
             IFloat32HandleAllocatorStatePort handleAllocatorState,
             IFloat32EventSequenceStatePort eventSequenceState,
+            IFloat32GameplayEffectStatePort gameplayEffectState,
             Float32AbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -104,6 +105,7 @@ namespace ThirdPersonSimulation
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
             EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
+            GameplayEffectState = gameplayEffectState ?? throw new ArgumentNullException(nameof(gameplayEffectState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -133,6 +135,7 @@ namespace ThirdPersonSimulation
         internal IFloat32ActionRuntimeStatePort ActionState { get; }
         internal IFloat32HandleAllocatorStatePort HandleAllocatorState { get; }
         internal IFloat32EventSequenceStatePort EventSequenceState { get; }
+        internal IFloat32GameplayEffectStatePort GameplayEffectState { get; }
         internal Float32EventSequence EventSequence { get; }
         internal Float32FactSink Facts { get; }
         internal Float32PresentationSink Presentation { get; }

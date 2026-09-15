@@ -1004,3 +1004,8 @@
 
 - 提交 `7b8d58b90`，Float32／Fixed Ability Execution Context 删除 Gameplay Effect 能力与目录绑定的重复校验；真实校验继续由安装构造和 Execution Services 完成。
 - Context 不再承担领域绑定判断，只保留技能数据、执行布局和服务集合；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 收窄领域服务工厂输入
+
+- 提交 `b0584f9ab`，Float32／Fixed Ability Domain Runtime Factory 改为直接接收 Gameplay Effect catalog 等 typed 领域输入，不再跨域接收整套 Ability Execution Context；Execution Service Factory 从正式服务集合传入目录。
+- 不改变领域服务创建顺序、技能状态端口和执行合同；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

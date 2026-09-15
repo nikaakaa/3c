@@ -22,13 +22,9 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < data.Data.Count; i++)
             {
                 Float32GameplayAbilityExecutionData ability = data.Data[i];
-                bool abilityRequiresGameplayEffects = ability.Capabilities.HasGameplayCapability("GameplayEffect");
-                requiresGameplayEffects |= abilityRequiresGameplayEffects;
-                requiresEquipment |= ability.Capabilities.HasGameplayCapability("Equipment");
-                CharacterGameplayEffectRuntimeBinding abilityEffectBinding = abilityRequiresGameplayEffects
-                    ? gameplayEffectBinding ?? throw new ArgumentNullException(nameof(gameplayEffectBinding))
-                    : null;
-                var installation = new Float32GameplayAbilityExecutionInstallation(ability, abilityEffectBinding);
+                var installation = new Float32GameplayAbilityExecutionInstallation(ability, gameplayEffectBinding);
+                requiresGameplayEffects |= installation.RequiresGameplayEffects;
+                requiresEquipment |= installation.RequiresEquipment;
                 values.Add(installation);
                 m_ByAbility.Add(installation.Data.AbilityId, installation);
             }

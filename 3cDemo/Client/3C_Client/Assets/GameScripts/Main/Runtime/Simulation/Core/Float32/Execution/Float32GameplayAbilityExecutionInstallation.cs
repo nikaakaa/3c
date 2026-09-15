@@ -9,16 +9,21 @@ namespace ThirdPersonSimulation
             CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
+            RequiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
+            RequiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
             Layout = Float32GameplayAbilityExecutionLayoutFactory.Create(Data);
-            GameplayEffectCatalog = CreateGameplayEffectCatalog(Data, gameplayEffectBinding);
+            GameplayEffectCatalog = CreateGameplayEffectCatalog(RequiresGameplayEffects, gameplayEffectBinding);
             Services = new Float32GameplayAbilityExecutionServices(
                 Data,
                 Layout,
                 BuildOperationSourcePaths(Layout),
+                RequiresGameplayEffects,
                 GameplayEffectCatalog);
         }
 
         public Float32GameplayAbilityExecutionData Data { get; }
+        public bool RequiresGameplayEffects { get; }
+        public bool RequiresEquipment { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public GameplayAbilityExecutionIdentity Identity => Services.Identity;
         public OperationExecutionTopology Topology => Layout.Topology;
@@ -27,16 +32,11 @@ namespace ThirdPersonSimulation
         internal Float32GameplayAbilityExecutionAccess Access => Services.Access;
 
         static Float32GameplayEffectRuntimeCatalog CreateGameplayEffectCatalog(
-            Float32GameplayAbilityExecutionData data,
+            bool enabled,
             CharacterGameplayEffectRuntimeBinding binding)
         {
-            bool enabled = data.Capabilities.HasGameplayCapability("GameplayEffect");
             if (!enabled)
-            {
-                if (binding != null)
-                    throw new InvalidOperationException("Ability execution received a Gameplay Effect binding while the capability is disabled.");
                 return null;
-            }
             return new Float32GameplayEffectRuntimeCatalog(binding ??
                 throw new ArgumentNullException(nameof(binding)));
         }

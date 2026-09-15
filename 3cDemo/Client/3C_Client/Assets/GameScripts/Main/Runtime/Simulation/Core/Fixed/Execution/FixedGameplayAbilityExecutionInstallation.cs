@@ -10,16 +10,21 @@ namespace ThirdPersonSimulation.Fixed
             CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
+            RequiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
+            RequiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
             Layout = FixedGameplayAbilityExecutionLayoutFactory.Create(Data);
-            GameplayEffectCatalog = CreateGameplayEffectCatalog(Data, gameplayEffectBinding);
+            GameplayEffectCatalog = CreateGameplayEffectCatalog(RequiresGameplayEffects, gameplayEffectBinding);
             Services = new FixedGameplayAbilityExecutionServices(
                 Data,
                 Layout,
                 BuildOperationSourcePaths(Layout),
+                RequiresGameplayEffects,
                 GameplayEffectCatalog);
         }
 
         public FixedGameplayAbilityExecutionData Data { get; }
+        public bool RequiresGameplayEffects { get; }
+        public bool RequiresEquipment { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public GameplayAbilityExecutionIdentity Identity => Services.Identity;
         public OperationExecutionTopology Topology => Layout.Topology;
@@ -28,16 +33,11 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedGameplayAbilityExecutionAccess Access => Services.Access;
 
         static FixedGameplayEffectRuntimeCatalog CreateGameplayEffectCatalog(
-            FixedGameplayAbilityExecutionData data,
+            bool enabled,
             CharacterGameplayEffectRuntimeBinding binding)
         {
-            bool enabled = data.Capabilities.HasGameplayCapability("GameplayEffect");
             if (!enabled)
-            {
-                if (binding != null)
-                    throw new InvalidOperationException("Ability execution received a Gameplay Effect binding while the capability is disabled.");
                 return null;
-            }
             return new FixedGameplayEffectRuntimeCatalog(binding ??
                 throw new ArgumentNullException(nameof(binding)));
         }

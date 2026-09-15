@@ -45,6 +45,7 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityExecutionData data,
             GameplayAbilityExecutionLayout layout,
             string[] operationSourcePaths,
+            bool requiresGameplayEffects,
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog)
         {
             if (data == null)
@@ -55,7 +56,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Ability execution services SourceMap index is incomplete.", nameof(operationSourcePaths));
             if (!ReferenceEquals(layout.Topology, data.Topology))
                 throw new InvalidOperationException("Ability execution layout topology does not match its data.");
-            if ((gameplayEffectCatalog != null) != data.Capabilities.HasGameplayCapability("GameplayEffect"))
+            if ((gameplayEffectCatalog != null) != requiresGameplayEffects)
                 throw new InvalidOperationException("Ability execution Gameplay Effect catalog does not match its declared capability.");
 
             m_Layout = layout;

@@ -23,13 +23,9 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < data.Data.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = data.Data[i];
-                bool abilityRequiresGameplayEffects = ability.Capabilities.HasGameplayCapability("GameplayEffect");
-                requiresGameplayEffects |= abilityRequiresGameplayEffects;
-                requiresEquipment |= ability.Capabilities.HasGameplayCapability("Equipment");
-                CharacterGameplayEffectRuntimeBinding abilityEffectBinding = abilityRequiresGameplayEffects
-                    ? gameplayEffectBinding ?? throw new ArgumentNullException(nameof(gameplayEffectBinding))
-                    : null;
-                var installation = new FixedGameplayAbilityExecutionInstallation(ability, abilityEffectBinding);
+                var installation = new FixedGameplayAbilityExecutionInstallation(ability, gameplayEffectBinding);
+                requiresGameplayEffects |= installation.RequiresGameplayEffects;
+                requiresEquipment |= installation.RequiresEquipment;
                 values.Add(installation);
                 m_ByAbility.Add(installation.Data.AbilityId, installation);
             }

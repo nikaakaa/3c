@@ -356,7 +356,7 @@ namespace ThirdPersonSimulation.Fixed
                     frame.Trace,
                     workspace.GameplayEffects);
             FixedEquipmentRuntime equipment = null;
-            if (installation.Data.Capabilities.HasGameplayCapability("Equipment") &&
+            if (installation.RequiresEquipment &&
                 m_EquipmentRuntimeBinding != null)
             {
                 EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
@@ -374,7 +374,7 @@ namespace ThirdPersonSimulation.Fixed
                     frame.Trace,
                     layout);
             }
-            bool equipmentEnabled = installation.Data.Capabilities.HasGameplayCapability("Equipment");
+            bool equipmentEnabled = installation.RequiresEquipment;
             if (equipmentEnabled && equipment == null)
                 throw new InvalidOperationException(
                     $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");

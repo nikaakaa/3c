@@ -382,3 +382,9 @@
 - 提交 `8aaca56b0`，从 Float32／Fixed `AbilityDomainStatePort` 移除事件序号分配，新增 `EventSequenceStatePort`；Ability 事件发射器只通过专用端口生成角色事件序号。
 - 事件序列仍由同一个角色状态事务保存、保存点恢复和最终提交，事件格式、排序和网络身份不变；本步继续收窄 Ability 可见的角色事务入口，不增加兼容路径。
 - Float32／Fixed portable 编译均为 0 warning、0 error，并已清理 .NET Host；未运行 Unity、测试或资产生成。本步推进 D22 的 Ability 基础服务边界，但不将 1.11 标记为完成。
+
+## 2026-09-15 AbilityGameplayEffect状态端口独立化
+
+- 提交 `ed332f7ec`，从 Float32／Fixed `AbilityDomainStatePort` 移除 GameplayEffect 工作态与已提交聚合态读取，新增专用 `GameplayEffectStatePort`；Effect Target、Mapping 和 Operation Runtime 只通过效果状态端口读取效果数据。
+- 保存点、恢复、释放与诊断仍由角色事务控制端口提供，效果状态没有复制到第二份容器，状态编码、回滚语义和最终提交路径不变；本步只分离状态消费职责，不保留旧总端口兼容入口。
+- Float32／Fixed portable 编译均为 0 warning、0 error，并已清理 .NET Host；未运行 Unity、测试或资产生成。本步推进 D22 的 GameplayEffect 边界，但不将 1.11 标记为完成。

@@ -21,7 +21,7 @@
 
 当前 goal 已把 Runtime 线纳入实现范围；本文件不向其它窗口派工，也不把规划文字当成实现证据。Runtime唯一执行清单放本 change 的 tasks 第12节；本文只定义合同、现有接线对账和文件分工，主方案1.5—1.7、3.8、8.2中的 Timeline 域内部分由该节承接，不复制第二套勾选清单。此前 Slate UI 的正确代码和提交保留，不因新增 Runtime 线回退或重做。
 
-Goal绑定：当前 goal「完成 Timeline owner 可负责的第12组直接内容 Runtime」只绑定本 change。`tasks.md` 第12节是唯一执行清单；`timeline-direct-runtime.md` 是唯一合同、边界与文件分工说明；`../replace-character-program-with-domain-runtimes/tasks.md` 的 1.5、1.6、3.8 只作为公共集成只读引用。goal完成判定以第12组逐项对应的真实接线为准，不以编译通过或接口存在为准。
+Goal绑定：当前 goal「完成 Timeline owner 可负责的第12组直接内容 Runtime」只绑定以下三个文档。唯一执行清单是 [openspec/changes/restyle-timeline-editor-slate-style/tasks.md](restyle-timeline-editor-slate-style/tasks.md) 第12节；唯一合同、边界与文件分工说明是 [openspec/changes/restyle-timeline-editor-slate-style/timeline-direct-runtime.md](timeline-direct-runtime.md)；公共集成只读引用是 [openspec/changes/replace-character-program-with-domain-runtimes/tasks.md](../replace-character-program-with-domain-runtimes/tasks.md) 的 1.5、1.6、3.8。goal完成判定以第12组逐项对应的真实接线为准，不以编译通过或接口存在为准。
 
 | 工作线 | 接收内容 | 不接管内容 |
 |---|---|---|

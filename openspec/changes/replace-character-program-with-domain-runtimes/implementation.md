@@ -1139,3 +1139,8 @@
 
 - 提交 `82bfaf015`，将 Gameplay Effect 定义编码直接收回 `GameplayAbilitySemanticDependencyCatalogEmitter`，删除只剩静态转发的 `CharacterSemanticGameplayEffectCatalogEmitter` 与 `CharacterSemanticSourceFactory`。
 - 保留 Effect 定义字节、目录条目、版本和错误上报；本步只删除已无实例消费者的角色级包装，不新增兼容入口。
+
+## 2026-09-16 删除无消费者的Control动作发现入口
+
+- 提交 `549f83ced`，删除仓库内没有调用方的 `CharacterControlMotionCompilationDiscovery` 及其 Unity `.meta`；该入口依赖旧角色级 Graph/Timeline 发现链，已不属于当前 Control 运行时装配。
+- 本步不删除仍被 Ability／Timeline 编译消费的共享时间记录和黑板声明，只移除孤立的角色级动作发现路径。

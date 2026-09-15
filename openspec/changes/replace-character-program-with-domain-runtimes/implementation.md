@@ -249,6 +249,14 @@
 - `Fixed`／`Float32SimulationSessionCompositionPreparation`：去掉 `new GameplayContentHash(...)` 多余包装，`SimulationCharacterRuntimeDescriptor` 直接接收 `GameplayContentHash`。
 - 验证：`ThirdPersonSimulation.Unity.csproj` 由 25 个错误降为 0 warning、0 error（本机 dotnet build，禁用 build server，结束执行 `dotnet build-server shutdown`）。`ThirdPersonClient.Runtime.csproj` 仍有 Pose 旧 `CharacterPoseProgramImage`／`CharacterPoseNative*Operation` 体系的中间断裂，属 Pose 窗口范围，本批不涉及；rollback Host、`CharacterPipelineHost`、DotRecast manifest 的旧 Program 消费者仍未接线。未运行 Unity、测试或资产生成。
 
+## 2026-09-15 Rollback运行时宿主接入独立Fixed Runtime
+
+- `DeterministicRollbackCharacterHost` 删除旧的 `FixedCharacterSimulationProgramAsset`、独立 Projection 序列化字段和 `programAsset.Load()`；Projection 从 `CharacterPipelineDefinition` 读取，技能执行数据由 Definition 的 `LoadFixedCharacterAbilities()` 生成，连同 Control／BodyMotion／GameplayEffect／Equipment binding 装配为 `SimulationActorBinding`，再创建 `FixedCharacterRuntime`。
+- Rollback 的 tick rate 统一取 `SimulationSessionHost.Composition.TickRate`，并与 Character Definition 校验；输入适配器直接接收正式 `CharacterControlModuleContract`，Presentation 只使用 Definition 的 Projection 和当前 Runtime tick rate。诊断修订号改为 Runtime actor identity、首个 Ability source revision 与 `GameplayContentHash`，不再从整角色 Program manifest 生成。
+- `DeterministicRollbackCharacterRegistration` 不再保存或暴露 `Program`、`ProgramIdentity`、`PresentationContract` 和重复的领域 binding；它持有 `FixedCharacterRuntime` 与同一 Runtime roster 中的 `SimulationActorBinding`，以 Runtime／binding 内容 hash 生成输出与诊断配置身份，Rollback Pass 继续从 registration 的正式 Runtime 接口取角色数据。
+- 这一步没有新增兼容字段或桥接。Rollback Editor authoring 调用方、`CharacterPipelineHost`、DotRecast manifest 和 Endpoint 仍有旧链路，分别留给其所属的 Editor／Network／Authority 接线；不能为了让中间工程暂时通过而复活旧 Program。
+- 验证：执行 `ThirdPersonSimulation.DeterministicRollback.Unity.csproj` 的 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore`，随后执行 `dotnet build-server shutdown`。构建被并行窗口已有的 Endpoint 旧 `RollbackHandshake`／`RollbackActorHash` 字段错误，以及 `Float32CharacterRegistration` 装配错误阻断；输出未出现本步两个 Rollback 文件的错误。未运行 Unity、测试或资产生成。
+
 ## 2026-09-15 Frontend按可达节点声明Equipment能力
 
 - 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。

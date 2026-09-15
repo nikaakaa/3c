@@ -388,3 +388,9 @@
 - 提交 `ed332f7ec`，从 Float32／Fixed `AbilityDomainStatePort` 移除 GameplayEffect 工作态与已提交聚合态读取，新增专用 `GameplayEffectStatePort`；Effect Target、Mapping 和 Operation Runtime 只通过效果状态端口读取效果数据。
 - 保存点、恢复、释放与诊断仍由角色事务控制端口提供，效果状态没有复制到第二份容器，状态编码、回滚语义和最终提交路径不变；本步只分离状态消费职责，不保留旧总端口兼容入口。
 - Float32／Fixed portable 编译均为 0 warning、0 error，并已清理 .NET Host；未运行 Unity、测试或资产生成。本步推进 D22 的 GameplayEffect 边界，但不将 1.11 标记为完成。
+
+## 2026-09-15 AbilityEquipment状态端口独立化
+
+- 提交 `e1c43e383`，从 Float32／Fixed `AbilityDomainStatePort` 移除 Equipment 状态读写，新增专用 `EquipmentStatePort`；Equipment Runtime 的装备槽、装备本地状态和变更写入只通过该端口完成。
+- 装备状态仍由同一个角色状态事务保存、保存点恢复和最终提交；装备运行时使用的保存点与诊断仍走事务控制入口，不复制状态、不增加兼容端口。
+- Float32／Fixed portable 编译均尝试执行并复现 Unity 生成 `.csproj` 缺少现有 `GameplayAbilityExecutionLayout.cs` 等源文件的既有索引阻断（Float32 29 个错误、Fixed 25 个错误，均为缺失类型）；两次均为 0 warning，并已清理 .NET Host。未运行 Unity、测试或资产生成。本步推进 D22 的 Equipment 边界，但不将 1.11 标记为完成。

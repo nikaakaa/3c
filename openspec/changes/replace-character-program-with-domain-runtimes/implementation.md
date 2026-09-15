@@ -400,3 +400,9 @@
 - 提交 `9325c2ecc`，删除混合的 Float32／Fixed `AbilityDomainStatePort`，改为只包含保存点创建、恢复、释放和诊断的 `AbilityTransactionControlPort`；Effect Control Port、Effect Target 与 Equipment Mutation Scope 改用该专用入口。
 - 角色身份字段和无消费者的角色事务 `Abort` 接口一并删除；角色状态仍由原有事务实例统一保存、回滚、最终提交或 Dispose，不建立第二条事务链。
 - 未重新编译：当前 Float32／Fixed 生成 `.csproj` 仍缺少现有 `GameplayAbilityExecutionLayout.cs` 等源文件，前一步已复现同一源索引阻断并清理 .NET Host；未运行 Unity、测试或资产生成。本步完成 D22 的 Ability 事务控制入口收口，但不将 1.11 标记为完成。
+
+## 2026-09-15 CharacterControl状态绑定端口独立化
+
+- 提交 `d20ea70a2`，新增 Float32／Fixed `ControlRuntimeStatePort`；Character Control Runtime 不再接收具体 `CharacterRuntimeStateTransaction`，只通过端口绑定 Control 状态事务。
+- Control 状态的编码、保存点恢复和角色事务最终提交路径不变；本步只移除 Control 对角色总事务实现类型的直接依赖，不创建第二份 Control 状态。
+- 未重新编译：仍受前述 Unity 生成 `.csproj` 缺少现有 Ability Layout 源文件的源索引阻断；未运行 Unity、测试或资产生成。本步推进 D22 的 Control 状态边界，但不将 1.11 标记为完成。

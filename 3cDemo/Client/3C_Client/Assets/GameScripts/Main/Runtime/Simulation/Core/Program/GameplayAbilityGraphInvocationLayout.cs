@@ -3,14 +3,14 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class ProgramGraphInvocationLayout
+    public sealed class GameplayAbilityGraphInvocationLayout
     {
         readonly Dictionary<string, ProgramSourceMapEntry> m_Invocations = new(StringComparer.Ordinal);
         readonly Dictionary<string, int> m_GenerationSlots = new(StringComparer.Ordinal);
         readonly int[] m_OperationGenerationSlots;
         readonly int[] m_OperationParentGenerationSlots;
 
-        public ProgramGraphInvocationLayout(IReadOnlyList<ProgramSourceMapEntry> sources, int operationCount,
+        public GameplayAbilityGraphInvocationLayout(IReadOnlyList<ProgramSourceMapEntry> sources, int operationCount,
             Func<OperationHandle, int> generationSlot)
         {
             m_OperationGenerationSlots = new int[operationCount];

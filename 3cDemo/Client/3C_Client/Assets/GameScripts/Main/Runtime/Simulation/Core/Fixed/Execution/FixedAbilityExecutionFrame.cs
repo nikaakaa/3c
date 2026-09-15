@@ -524,7 +524,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly HashSet<(int Operation, string Port, ProgramValuePortDirection Direction)> m_ValuePorts = new();
         readonly HashSet<string> m_EdgeIds = new(StringComparer.Ordinal);
-        readonly ProgramGraphInvocationLayout m_Invocations;
+        readonly GameplayAbilityGraphInvocationLayout m_Invocations;
         readonly Dictionary<(int Target, string Port), ProgramControlFlowEdge> m_ValueEdges = new();
         int m_ValueSampleCount;
         readonly FixedAbilityExecutionFrame m_Frame;
@@ -535,7 +535,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             m_Frame = frame;
             m_Sequence = sequence;
-            m_Invocations = new ProgramGraphInvocationLayout(frame.Data.SourceMap, frame.Layout.Operations.Count,
+            m_Invocations = new GameplayAbilityGraphInvocationLayout(frame.Data.SourceMap, frame.Layout.Operations.Count,
                 owner => frame.Layout.FindOperationStateSlot(owner, ProgramStateSemantic.RunnableActivationGeneration));
             foreach (ProgramSourceMapEntry source in frame.Data.SourceMap)
             {

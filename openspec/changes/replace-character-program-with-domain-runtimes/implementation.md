@@ -1044,3 +1044,8 @@
 
 - 提交 `4e494e8e9`，将仍被 Pose／Foot 资源编译器使用的稳定资产对象身份工具独立到 `CharacterPresentationAssetObjectIdentity`，删除没有调用方的 `CharacterPresentationProjectionCompiler` 总编译入口及旧 Unity 元数据。
 - 不删除现行 Pose、Foot、Camera 资源算法，也不建立新的整角色 Projection 总装配器；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability语义IR命名
+
+- 提交 `740185773`，将只由 Ability 编译器和 Float32／Fixed Target 编译器使用的 `CharacterGameplaySemanticIr`、Manifest、ArtifactHeader 与 Codec 统一重命名为 `GameplayAbilitySemanticIr` 对应类型，移除对角色级语义容器的误导。
+- 本步只调整源码命名和引用，不改变 Semantic IR artifact 17／17 的字节布局、版本或校验规则；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

@@ -89,6 +89,7 @@ namespace ThirdPersonSimulation
             IFloat32InputRequestStatePort inputRequests,
             IFloat32ActionRuntimeStatePort actionState,
             IFloat32HandleAllocatorStatePort handleAllocatorState,
+            IFloat32EventSequenceStatePort eventSequenceState,
             IFloat32AbilityExecutionServiceFactory serviceFactory,
             Action<IFloat32AbilityExecutionStateTransaction> acceptAbility)
         {
@@ -115,6 +116,7 @@ namespace ThirdPersonSimulation
                 inputRequests,
                 actionState,
                 handleAllocatorState,
+                eventSequenceState,
                 m_Workspace);
 
             Float32GameplayAbilityExecutionAccess access = installation.Access;

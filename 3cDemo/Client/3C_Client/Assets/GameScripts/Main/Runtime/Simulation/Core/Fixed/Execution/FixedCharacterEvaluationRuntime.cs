@@ -70,6 +70,7 @@ namespace ThirdPersonSimulation.Fixed
                         roleState,
                         roleState,
                         roleState,
+                        roleState,
                         new FixedCharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
                         roleState.AcceptAbility);
                     invocations.Add(invocation);

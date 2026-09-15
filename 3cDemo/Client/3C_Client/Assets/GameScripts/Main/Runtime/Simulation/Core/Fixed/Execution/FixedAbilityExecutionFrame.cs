@@ -87,6 +87,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedInputRequestStatePort inputRequests,
             IFixedActionRuntimeStatePort actionState,
             IFixedHandleAllocatorStatePort handleAllocatorState,
+            IFixedEventSequenceStatePort eventSequenceState,
             FixedAbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -103,6 +104,7 @@ namespace ThirdPersonSimulation.Fixed
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
+            EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -131,6 +133,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedInputRequestStatePort InputRequests { get; }
         internal IFixedActionRuntimeStatePort ActionState { get; }
         internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
+        internal IFixedEventSequenceStatePort EventSequenceState { get; }
         internal FixedEventSequence EventSequence { get; }
         internal FixedFactSink Facts { get; }
         internal FixedPresentationSink Presentation { get; }
@@ -386,7 +389,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation, string channel)
         {
-            ulong sequence = m_Frame.DomainState.NextEventSequence();
+            ulong sequence = m_Frame.EventSequenceState.NextEventSequence();
             if (generation == 0)
                 throw new ArgumentOutOfRangeException(nameof(generation));
             var activation = new ActivationId(source, generation);

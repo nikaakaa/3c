@@ -68,12 +68,16 @@ namespace ThirdPersonSimulation
         void RestoreHandleAllocator(ulong value);
     }
 
+    internal interface IFloat32EventSequenceStatePort
+    {
+        ulong NextEventSequence();
+    }
+
     internal interface IFloat32AbilityDomainStatePort
     {
         ActorId ActorId { get; }
         SimulationTick Tick { get; }
         int TickRate { get; }
-        ulong NextEventSequence();
         SimulationGameplayEffectState GetGameplayEffectState(Float32GameplayEffectExecutionScratch scratch);
         GameplayEffectStateAggregate GetGameplayEffectAggregate();
         EquipmentStateAggregate GetEquipmentState();
@@ -85,7 +89,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;

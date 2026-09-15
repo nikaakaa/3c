@@ -624,3 +624,9 @@
 - 提交 `0c6dbf953`，Float32／Fixed 的 Ability Action、Invocation 和执行服务工厂改用公开的安装解析服务接口，只依赖按 `CharacterSkillId` 获取安装的正式合同。
 - 角色 `GameplayAbilityExecutionInstallationSet` 继续作为当前调用方的实现，但不再作为技能执行链的具体编译依赖；现有跨技能动作解析、安装顺序和运行行为保持不变，没有新增旁路、兼容类型或第二套执行器。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 技能执行工厂移出角色评估文件
+
+- 提交 `b338e708f`，将 Float32／Fixed `AbilityExecutionServiceFactory` 从 `CharacterEvaluationRuntime` 的嵌套实现拆为独立 Ability 文件；角色评估文件只保留角色 Step 的评估、Ingress 处理和结果汇总。
+- 工厂继续由角色调用方创建并提供安装解析服务，仍按当前安装、执行帧和 Workspace 组装既有模块；没有改变状态提交、模块顺序或增加第二套执行器。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

@@ -889,3 +889,8 @@
 
 - 提交 `7f0005866`，Float32 Registration 直接发布 `PresentationProjection`，删除旧的 `Projection` 别名；Fixed Registration 删除没有消费者的 Projection 参数和属性。
 - Host 仍负责加载并装配表现投影，表现运行时继续接收同一投影数据；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除角色运行端口的Ability安装出口
+
+- 提交 `e544aa7bc`，删除 Float32／Fixed Character Runtime Port 中全项目无调用的 `GetAbilityInstallations`；角色 Pipeline 端口不再对外发布 Ability 安装容器。
+- 评估、状态和网络代码继续从角色绑定的正式装配边界取得实际执行数据，没有新增旁路；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

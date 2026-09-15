@@ -731,3 +731,9 @@
 - 提交 `36cfdbdbd`，删除 Float32／Fixed 技能局部状态接口与运行状态上的 `Installation` 属性；这些属性没有读取方。
 - 局部状态内部仍保留安装对象，用于快照构造和执行身份校验；状态槽、MotionWarp、提交与恢复路径不变。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 收窄动作绑定供应端口
+
+- 提交 `5369f0fb3`，Float32／Fixed ActionRuntime 改用 `I*AbilityActionBindingProvider`，只取得动作准入需要的 `GameplayAbilityExecutionBinding`，不再读取完整 Ability Installation。
+- 安装集合仍负责完整安装和角色装配；动作准入、生命周期、动作替换与控制命令使用同一 Binding 数据，未新增旁路或改变执行顺序。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

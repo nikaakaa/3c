@@ -100,7 +100,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 session = null;
                 return adopted;
             }
-            session = new CharacterPoseNativeRoleSession(role);
+            try
+            {
+                session = new CharacterPoseNativeRoleSession(role);
+            }
+            catch
+            {
+                role.Dispose();
+                session = null;
+                throw;
+            }
             return adopted;
         }
 
@@ -174,7 +183,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return adopted;
             }
             current.Dispose();
-            session = new CharacterPoseNativeRoleSession(role);
+            try
+            {
+                session = new CharacterPoseNativeRoleSession(role);
+            }
+            catch
+            {
+                role.Dispose();
+                session = null;
+                throw;
+            }
             return adopted;
         }
     }

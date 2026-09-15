@@ -994,3 +994,8 @@
 
 - 提交 `3c1077911`，Float32／Fixed Ability Execution Context 删除 Gameplay Effect catalog 的重复保存；安装查询和领域服务工厂统一从 Execution Services 读取唯一目录，Context 只保留自身的 Equipment 布局边界。
 - 不改变能力声明校验、Gameplay Effect 执行或状态格式；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 移出执行上下文Equipment布局
+
+- 提交 `b2b0f7efc`，Float32／Fixed Ability Execution Context 删除 Equipment layout 持有；安装对象在角色调用入口将已解析的领域 layout 显式传给 Domain Runtime Factory，Equipment 运行模块不再从技能上下文读取角色配置。
+- 保留安装阶段的能力声明／布局匹配校验、技能局部状态和外层角色事务；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

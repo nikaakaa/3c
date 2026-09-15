@@ -767,3 +767,9 @@
 - 提交 `d2a2e24a8`，Float32／Fixed `CharacterRuntimeState` 不再持有 Ability 安装集合；每个 Ability 分区只保存执行身份、局部状态、执行聚合和 MotionWarp 状态。
 - Ability 安装集合继续由运行装配创建，并只在状态 Codec 读入时解析布局、校验身份和验证分区数量；状态事务的快照、恢复和提交不再反向拥有内容安装对象。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 移除Ability分区重复Tick
+
+- 提交 `21068a8ff`，Float32／Fixed `AbilityRuntimeState` 删除未被消费的 `LastCompletedTick`；事务克隆、Codec 读入和初始状态不再把角色提交 Tick 复制到每个 Ability 分区。
+- 角色唯一保留 `CharacterRuntimeState.LastCompletedTick` 作为快照、恢复和网络步骤进度，Ability 分区只保存自身局部执行状态；没有改变状态字节格式或角色提交顺序。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

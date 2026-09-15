@@ -143,7 +143,7 @@ static class UnityAuthorityRegistrationMapper
         out string reason)
     {
         registration = null!;
-        if (request.Host == null || request.Protocol == null || request.Program == null ||
+        if (request.Host == null || request.Protocol == null || request.Runtime == null ||
             request.AuthorityPipeline == null || request.DataEndpoint == null || request.World == null)
         {
             reason = "Unity Authority Worker register message is incomplete.";
@@ -154,8 +154,8 @@ static class UnityAuthorityRegistrationMapper
             request.Host.HostProductId, request.Host.HostId,
             (ServerAuthoritativeAuthorityHostRouteKind)request.Host.RouteKind, request.Host.RoomId,
             request.Protocol.ModelProtocolVersion, request.Protocol.ModelId, request.Protocol.ModelConfigurationHash,
-            request.Protocol.EndpointId, request.Program.ProgramId, request.Program.ProgramHash, request.Program.LayoutHash,
-            request.Program.OperationSetId, request.Program.OperationSetVersion,
+            request.Protocol.EndpointId, request.Runtime.CharacterRuntimeHash, request.Runtime.StateCodecIdentity,
+            request.Runtime.CheckpointLayoutHash, request.Runtime.OperationSetId, request.Runtime.OperationSetVersion,
             request.AuthorityPipeline.PipelineId, request.AuthorityPipeline.PipelineHash,
             request.PredictionPipelineId, request.PredictionPipelineHash,
             request.AuthorityPipeline.BackendId, request.AuthorityPipeline.TickRate,

@@ -159,7 +159,7 @@ namespace ThirdPersonSimulation
             out EquipmentStateAggregate equipmentState)
         {
             equipmentState = null;
-            if (!actor.RequiresEquipment)
+            if (!actor.AbilityInstallations.RequiresEquipment)
                 return;
             EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.CompileRoleStateLayout(actor.EquipmentRuntimeBinding);
             equipmentState = EquipmentStateAggregate.CreateInitial(layout);

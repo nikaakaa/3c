@@ -142,7 +142,7 @@ namespace ThirdPersonSimulation.Fixed
                 ? null
                 : GameplayEffectStateAggregate.CreateInitial(effectCatalog);
             EquipmentStateAggregate equipmentState = null;
-            if (actor.RequiresEquipment)
+            if (actor.AbilityInstallations.RequiresEquipment)
             {
                 EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.CompileRoleStateLayout(actor.EquipmentRuntimeBinding);
                 equipmentState = EquipmentStateAggregate.CreateInitial(layout);

@@ -33,14 +33,12 @@ namespace ThirdPersonSimulation.Fixed
             }
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
-            RequiresEquipment = AbilityInstallations.RequiresEquipment;
             GameplayContentHash = ComputeGameplayContentHash(
                 controlRuntimeBinding,
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
-                AbilityInstallations,
-                RequiresEquipment);
+                AbilityInstallations);
         }
 
         public ActorId ActorId { get; }
@@ -49,7 +47,6 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
-        public bool RequiresEquipment { get; }
         public FixedGameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
         public StableHash GameplayContentHash { get; }
 
@@ -58,8 +55,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterBodyMotionBinding bodyMotion,
             CharacterGameplayEffectRuntimeBinding gameplayEffects,
             CharacterEquipmentRuntimeBinding equipment,
-            FixedGameplayAbilityExecutionInstallationSet abilities,
-            bool requiresEquipment)
+            FixedGameplayAbilityExecutionInstallationSet abilities)
         {
             var parts = new List<string>
             {
@@ -67,7 +63,7 @@ namespace ThirdPersonSimulation.Fixed
                 control.BindingHash.ToString(),
                 bodyMotion.BindingHash.ToString(),
                 abilities.GameplayEffectCatalog != null ? gameplayEffects.BindingHash.ToString() : string.Empty,
-                requiresEquipment ? equipment.BindingHash.ToString() : string.Empty
+                abilities.RequiresEquipment ? equipment.BindingHash.ToString() : string.Empty
             };
             for (int i = 0; i < abilities.Installations.Count; i++)
             {

@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             try
             {
                 var root = new GameplayAbilityRootDescriptor(
-                    SimulationProgramRootKind.Ability,
+                    SimulationRootKind.Ability,
                     model.DefinitionGuid,
                     model.EntryIdentity,
                     model.SourceRevision.Value);

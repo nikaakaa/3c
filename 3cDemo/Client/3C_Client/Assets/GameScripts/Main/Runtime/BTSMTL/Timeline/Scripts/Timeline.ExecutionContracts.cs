@@ -105,7 +105,7 @@ namespace BTSMTL.Timeline
     public readonly struct TimelinePlaybackObservation
     {
         public TimelinePlaybackObservation(
-            SimulationProgramRootKind rootKind,
+            SimulationRootKind rootKind,
             string rootIdentity,
             string entryIdentity,
             string contentIdentity,
@@ -129,7 +129,7 @@ namespace BTSMTL.Timeline
                 (bindingIds ?? Array.Empty<string>()).Select(value => value ?? string.Empty).ToList());
         }
 
-        public SimulationProgramRootKind RootKind { get; }
+        public SimulationRootKind RootKind { get; }
         public string RootIdentity { get; }
         public string EntryIdentity { get; }
         public string ContentIdentity { get; }
@@ -139,7 +139,7 @@ namespace BTSMTL.Timeline
         public TimelineRuntimePlaybackState State { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public IReadOnlyList<string> BindingIds { get; }
-        public bool IsValid => Enum.IsDefined(typeof(SimulationProgramRootKind), RootKind) &&
+        public bool IsValid => Enum.IsDefined(typeof(SimulationRootKind), RootKind) &&
                                !string.IsNullOrEmpty(RootIdentity) &&
                                !string.IsNullOrEmpty(EntryIdentity) &&
                                !string.IsNullOrEmpty(ContentIdentity);

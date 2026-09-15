@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public string ExecutionDataHash => m_ExecutionDataHash;
         public string StateSchemaHash => m_StateSchemaHash;
         public string CanonicalBytesHash => m_CanonicalBytesHash;
-        public SimulationProgramRootKind RootKind => (SimulationProgramRootKind)m_RootKind;
+        public SimulationRootKind RootKind => (SimulationRootKind)m_RootKind;
         public string RootIdentity => m_RootIdentity;
         public string EntryIdentity => m_EntryIdentity;
         public string ContentIdentity => m_ContentIdentity;
@@ -49,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public FixedGameplayAbilityExecutionData Load(GameplayAbilityProviderBinding providerBinding)
         {
             var root = new GameplayAbilityRootDescriptor(
-                (SimulationProgramRootKind)m_RootKind,
+                (SimulationRootKind)m_RootKind,
                 m_RootIdentity,
                 m_EntryIdentity,
                 m_ContentIdentity);

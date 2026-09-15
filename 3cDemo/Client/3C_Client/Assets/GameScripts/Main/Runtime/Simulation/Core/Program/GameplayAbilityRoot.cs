@@ -4,7 +4,7 @@ using System.IO;
 
 namespace ThirdPersonSimulation
 {
-    public enum SimulationProgramRootKind : byte
+    public enum SimulationRootKind : byte
     {
         Ability = 3
     }
@@ -12,12 +12,12 @@ namespace ThirdPersonSimulation
     public readonly struct GameplayAbilityRootDescriptor : IEquatable<GameplayAbilityRootDescriptor>
     {
         public GameplayAbilityRootDescriptor(
-            SimulationProgramRootKind kind,
+            SimulationRootKind kind,
             string rootIdentity,
             string entryIdentity,
             string contentIdentity)
         {
-            if (kind != SimulationProgramRootKind.Ability)
+            if (kind != SimulationRootKind.Ability)
                 throw new ArgumentOutOfRangeException(nameof(kind));
             Kind = kind;
             RootIdentity = SimulationIdentity.Require(rootIdentity, nameof(rootIdentity));
@@ -25,16 +25,16 @@ namespace ThirdPersonSimulation
             ContentIdentity = SimulationIdentity.Require(contentIdentity, nameof(contentIdentity));
         }
 
-        public SimulationProgramRootKind Kind { get; }
+        public SimulationRootKind Kind { get; }
         public string RootIdentity { get; }
         public string EntryIdentity { get; }
         public string ContentIdentity { get; }
         public bool IsValid =>
-            Enum.IsDefined(typeof(SimulationProgramRootKind), Kind) &&
+            Enum.IsDefined(typeof(SimulationRootKind), Kind) &&
             IsGuid(RootIdentity) &&
             IsEntryIdentity(Kind, EntryIdentity) &&
             IsHash(ContentIdentity);
-        public bool IsAbility => Kind == SimulationProgramRootKind.Ability;
+        public bool IsAbility => Kind == SimulationRootKind.Ability;
 
         public bool Equals(GameplayAbilityRootDescriptor other) =>
             Kind == other.Kind &&
@@ -61,9 +61,9 @@ namespace ThirdPersonSimulation
             GameplayAbilityRootDescriptor left,
             GameplayAbilityRootDescriptor right) => !left.Equals(right);
 
-        static bool IsEntryIdentity(SimulationProgramRootKind kind, string value)
+        static bool IsEntryIdentity(SimulationRootKind kind, string value)
         {
-            return kind == SimulationProgramRootKind.Ability &&
+            return kind == SimulationRootKind.Ability &&
                    !string.IsNullOrEmpty(value) &&
                    value.StartsWith("ability:", StringComparison.Ordinal) &&
                    value.Length > "ability:".Length;
@@ -146,7 +146,7 @@ namespace ThirdPersonSimulation
             if (reader == null)
                 throw new ArgumentNullException(nameof(reader));
             return new GameplayAbilityRootDescriptor(
-                (SimulationProgramRootKind)reader.ReadByte(),
+                (SimulationRootKind)reader.ReadByte(),
                 reader.ReadString(),
                 reader.ReadString(),
                 reader.ReadString());

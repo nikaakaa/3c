@@ -755,3 +755,9 @@
 - 提交 `cff0f464e`，删除 Float32／Fixed 角色状态事务未被消费的 `ActorId`、`Tick` 与 `TickRate` 属性。
 - 事务内部仍保留时间和速率，用于技能局部状态、Control 状态和 Gameplay Effect 状态构造；本步只收窄状态事务发布面。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 移除局部输入请求副本
+
+- 提交 `60a99e58d`，Float32／Fixed `AbilityExecutionInput` 不再携带角色级 `Requests` 列表；角色统一写入 `InputRequestState`，技能通过 `InputRequests` 端口查询和消费。
+- 保留数值输入和序列输入，多个 Ability 共享同一请求消费事实，未改变 Control 或技能执行顺序。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

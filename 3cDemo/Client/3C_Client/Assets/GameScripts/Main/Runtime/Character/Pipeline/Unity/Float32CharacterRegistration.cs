@@ -90,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 actorId,
                 ownerInstanceId,
                 OwnerName,
-                new AnimationPresentationProgramIdentity(projection),
+                new AnimationPresentationIdentity(projection),
                 animationSnapshotProvider);
             m_PresentationTarget = new CharacterPresentationFrameTarget(presentationRuntime);
             m_VisualRoot = visualRoot ? visualRoot : throw new ArgumentNullException(nameof(visualRoot));

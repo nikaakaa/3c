@@ -60,7 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             FixedSimulationActorBinding actorBinding,
             CharacterPresentationProjectionAsset projectionAsset,
             CharacterPresentationProjection projection,
-            AnimationPresentationProgramIdentity presentationProgramIdentity,
+            AnimationPresentationIdentity presentationIdentity,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
             IUnityFixedCharacterControlSourceRuntime controlSource,
@@ -117,7 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 actorId,
                 ownerInstanceId,
                 ownerName,
-                presentationProgramIdentity,
+                presentationIdentity,
                 animationSnapshotProvider);
             m_PresentationTarget =
                 new CharacterPresentationFrameTarget(presentationRuntime);

@@ -265,7 +265,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     actorBinding,
                     projectionAsset,
                     projection,
-                    new AnimationPresentationProgramIdentity(projection),
+                    new AnimationPresentationIdentity(projection),
                     Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                     initialBody,
                     controlSource,

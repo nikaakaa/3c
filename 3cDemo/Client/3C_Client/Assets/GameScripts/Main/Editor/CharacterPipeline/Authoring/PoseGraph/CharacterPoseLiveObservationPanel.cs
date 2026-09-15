@@ -206,7 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string graphId = m_Window.AssetContext?.Graph?.GraphId.Value;
             if (EditorApplication.isPlaying && !string.IsNullOrEmpty(graphId))
                 m_Choices.AddRange(AnimationPresentationRuntimeTargetRegistry.Targets.Where(target =>
-                    string.Equals(target.ProgramIdentity.PoseGraphId, graphId, StringComparison.Ordinal) && MatchesOwner(target))
+                    string.Equals(target.PresentationIdentity.PoseGraphId, graphId, StringComparison.Ordinal) && MatchesOwner(target))
                     .OrderBy(target => target.DisplayName, StringComparer.Ordinal).ThenBy(target => target.RuntimeInstanceId));
             if (m_Target != null && !m_Choices.Contains(m_Target))
             {

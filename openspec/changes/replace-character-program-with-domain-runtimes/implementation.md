@@ -288,6 +288,12 @@
 - 工作区继续校验 Definition、Animation Profile 与 Projection 是同一组作者上下文，然后直接读取 `CharacterPresentationProjectionAsset.Load()`；异常仍只作为作者状态返回，不把 Pose 工作区变成角色运行时装配入口。
 - 未运行 Unity 或测试；本步只移除旧 Program 读路径，Pose 节点与采样算法仍由 Pose 领域负责。
 
+## 2026-09-15 Presentation运行身份退出Program命名
+
+- `AnimationPresentationProgramIdentity` 改名为 `AnimationPresentationIdentity`，其实际身份只由 Projection revision、Pose graph revision 与 Pose plan hash 组成，不再把 Presentation 诊断目标称为角色 Program。
+- Fixed、Float32、Rollback 注册器和 Host 使用新 Presentation identity；Foot IK、Presentation Replication 采样元数据与 Pose 作者观察入口同步改名，采样算法和身份内容不变。
+- 未运行 Unity 或测试；本步只收口身份命名，未修改 Pose 内部状态或诊断算法。
+
 ## 2026-09-15 Frontend按可达节点声明Equipment能力
 
 - 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。

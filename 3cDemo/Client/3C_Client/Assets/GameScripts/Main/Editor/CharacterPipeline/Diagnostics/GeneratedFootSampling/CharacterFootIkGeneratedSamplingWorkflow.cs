@@ -220,7 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             var metadata = new CharacterFootIkCaptureMetadata(
                 sampleIdentity,
                 startedUtc,
-                target.ProgramIdentity,
+                target.PresentationIdentity,
                 target.RuntimeInstanceId,
                 target.HostInstanceId);
             var controller = new CharacterFootIkGeneratedCaptureController(

@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             ActorId actorId,
             FixedCharacterRuntime characterRuntime,
             FixedSimulationActorBinding characterBinding,
-            AnimationPresentationProgramIdentity presentationProgramIdentity,
+            AnimationPresentationIdentity presentationIdentity,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
             UnityFixedCharacterInputAdapter localInput,
@@ -111,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 actorId,
                 ownerInstanceId,
                 ownerName,
-                presentationProgramIdentity,
+                presentationIdentity,
                 animationSnapshotProvider);
             m_PresentationTarget =
                 new CharacterPresentationFrameTarget(presentationRuntime);

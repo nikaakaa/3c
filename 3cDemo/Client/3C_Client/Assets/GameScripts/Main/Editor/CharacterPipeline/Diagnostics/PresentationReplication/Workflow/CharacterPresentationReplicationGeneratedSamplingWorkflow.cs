@@ -193,7 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication.Edit
             var metadata = new CharacterPresentationReplicationCaptureMetadata(
                 sampleIdentity,
                 startedUtc,
-                target.ProgramIdentity,
+                target.PresentationIdentity,
                 target.RuntimeInstanceId,
                 target.HostInstanceId,
                 CharacterPresentationReplicationDiagnosticIdentity.ReferenceProfileId);

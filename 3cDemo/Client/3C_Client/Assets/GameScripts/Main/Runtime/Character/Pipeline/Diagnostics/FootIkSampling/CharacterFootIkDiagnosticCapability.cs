@@ -23,13 +23,13 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         public CharacterFootIkCaptureMetadata(
             Guid sampleIdentity,
             DateTime startedUtc,
-            in AnimationPresentationProgramIdentity program,
+            in AnimationPresentationIdentity presentation,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId)
         {
             if (sampleIdentity == Guid.Empty ||
                 startedUtc.Kind != DateTimeKind.Utc ||
-                !program.IsValid ||
+                !presentation.IsValid ||
                 targetRuntimeInstanceId == Guid.Empty ||
                 targetHostInstanceId == 0)
             {
@@ -37,8 +37,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             }
             SampleIdentity = sampleIdentity.ToString("N");
             StartedUtcTicks = startedUtc.Ticks;
-            ProgramIdentity =
-                $"{program.ProjectionRevision}|{program.PosePlanHash}";
+            PresentationIdentity =
+                $"{presentation.ProjectionRevision}|{presentation.PosePlanHash}";
             TargetRuntimeInstanceId = targetRuntimeInstanceId.ToString("N");
             TargetHostInstanceId = targetHostInstanceId;
         }
@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 
         [DiagnosticField]
         [DiagnosticGroup("capture-metadata")]
-        public string ProgramIdentity { get; }
+        public string PresentationIdentity { get; }
 
         [DiagnosticField]
         [DiagnosticGroup("capture-metadata")]

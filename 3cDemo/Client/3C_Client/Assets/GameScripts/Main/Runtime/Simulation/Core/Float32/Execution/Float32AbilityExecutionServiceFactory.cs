@@ -49,7 +49,7 @@ namespace ThirdPersonSimulation
                     frame.Trace,
                     workspace.GameplayEffects);
             Float32EquipmentRuntime equipment = null;
-            if (execution.RequiresEquipment)
+            if (execution.EquipmentLayout != null)
             {
                 equipment = new Float32EquipmentRuntime(
                     access,

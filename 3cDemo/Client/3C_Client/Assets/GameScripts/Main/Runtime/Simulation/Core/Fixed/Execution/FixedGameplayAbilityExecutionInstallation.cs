@@ -16,10 +16,10 @@ namespace ThirdPersonSimulation.Fixed
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
             bool requiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
-            RequiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
+            bool requiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
             if (requiresGameplayEffects != (gameplayEffectCatalog != null))
                 throw new InvalidOperationException("Fixed Ability execution context Gameplay Effect binding does not match its capability.");
-            if (RequiresEquipment != (equipmentLayout != null))
+            if (requiresEquipment != (equipmentLayout != null))
                 throw new InvalidOperationException("Fixed Ability execution context Equipment binding does not match its capability.");
             GameplayEffectCatalog = gameplayEffectCatalog;
             EquipmentLayout = equipmentLayout;
@@ -28,7 +28,6 @@ namespace ThirdPersonSimulation.Fixed
         public FixedGameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public FixedGameplayAbilityExecutionServices Services { get; }
-        public bool RequiresEquipment { get; }
         public FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         public EquipmentProgramLayout EquipmentLayout { get; }
     }

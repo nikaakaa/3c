@@ -15,10 +15,10 @@ namespace ThirdPersonSimulation
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
             bool requiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
-            RequiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
+            bool requiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
             if (requiresGameplayEffects != (gameplayEffectCatalog != null))
                 throw new InvalidOperationException("Float32 Ability execution context Gameplay Effect binding does not match its capability.");
-            if (RequiresEquipment != (equipmentLayout != null))
+            if (requiresEquipment != (equipmentLayout != null))
                 throw new InvalidOperationException("Float32 Ability execution context Equipment binding does not match its capability.");
             GameplayEffectCatalog = gameplayEffectCatalog;
             EquipmentLayout = equipmentLayout;
@@ -27,7 +27,6 @@ namespace ThirdPersonSimulation
         public Float32GameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public Float32GameplayAbilityExecutionServices Services { get; }
-        public bool RequiresEquipment { get; }
         public Float32GameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         public EquipmentProgramLayout EquipmentLayout { get; }
     }

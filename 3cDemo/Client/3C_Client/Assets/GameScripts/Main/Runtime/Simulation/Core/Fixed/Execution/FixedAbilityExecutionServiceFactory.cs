@@ -50,7 +50,7 @@ namespace ThirdPersonSimulation.Fixed
                     frame.Trace,
                     workspace.GameplayEffects);
             FixedEquipmentRuntime equipment = null;
-            if (execution.RequiresEquipment)
+            if (execution.EquipmentLayout != null)
             {
                 equipment = new FixedEquipmentRuntime(
                     access,

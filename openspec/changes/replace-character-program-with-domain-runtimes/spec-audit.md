@@ -353,8 +353,8 @@ ee2d02c2f当时新增`character-domain-runtime`的“领域迁移必须同时退
 | character-simulation-kernel | MODIFIED | Kernel Program Binding必须与共享Program Layout分离 | 2 | 原场景完整保留；领域运行／技能检查／原生Pose接管旧载体 |
 | character-simulation-kernel | MODIFIED | Evaluate与Finalize必须通过唯一Actor Output Lease冻结结果 | 1 | 原场景完整保留；领域运行／技能检查／原生Pose接管旧载体 |
 | btsmtl-semantic-ir-inspection | MODIFIED | Unity Editor 必须提供只读 Semantic IR Inspector | 2 | 原场景完整保留；领域运行／技能检查／原生Pose接管旧载体 |
-| btsmtl-semantic-ir-inspection | MODIFIED | 普通 DotNet Reader 必须显式读取 Semantic IR 与 Program Artifact | 2 | 原场景完整保留；领域运行／技能检查／原生Pose接管旧载体 |
-| btsmtl-semantic-ir-inspection | MODIFIED | Semantic IR与Target Program检查工具必须展示结构化Value输入 | 3 | 原场景完整保留；领域运行／技能检查／原生Pose接管旧载体 |
+| btsmtl-semantic-ir-inspection | REMOVED | 普通 DotNet Reader 必须显式读取 Semantic IR 与 Program Artifact | 2 | 旧 Reader 已删除，不建立替代入口 |
+| btsmtl-semantic-ir-inspection | MODIFIED | Semantic IR Inspector必须展示结构化Value输入 | 3 | 结构化输入观察保留在 Unity Editor Inspector |
 | btsmtl-timeline-editor-preview | MODIFIED | Timeline 编辑器预览目标来自正式管线预览目标 | 2 | 原场景完整保留；领域运行／技能检查／原生Pose接管旧载体 |
 | btsmtl-timeline-editor-preview | MODIFIED | Timeline preview session 必须隔离动画生命周期状态 | 4 | 原场景完整保留；领域运行／技能检查／原生Pose接管旧载体 |
 | btsmtl-timeline-editor-preview | MODIFIED | Timeline Preview 必须按正式阶段展示 TreeClip | 3 | 原场景完整保留；领域运行／技能检查／原生Pose接管旧载体 |

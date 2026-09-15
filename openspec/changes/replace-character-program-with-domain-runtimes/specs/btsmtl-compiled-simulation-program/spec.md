@@ -110,7 +110,7 @@ Program manifest MUST声明 NumericProfile、scalar/vector ABI、operation-set v
 #### Scenario: 生成 Corin Float32 Program
 
 - **WHEN** Float32 Target成功降低 Corin validated `.csir`
-- **THEN** build MUST发布一份可由普通 .NET Reader读取的正式 Float32 `.csim`
+- **THEN** build MUST发布一份可由 Float32 Ability runtime 直接加载的正式技能执行数据
 - **AND** Corin AbilityDataAsset MUST包装从该 store重读的同一 bytes
 
 #### Scenario: Program Artifact 写入中断

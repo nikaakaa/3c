@@ -84,7 +84,7 @@ Pose内部实现唯一清单由 `../refine-pose-graph-readonly-blackboard/tasks.
 
 - [ ] 7.1 将 Definition／Ability／Pose 的状态和操作入口按领域分离，取消整角色 Program／Projection 构建 UI，保持 Inspector 轻量读取。
 - [ ] 7.2 向预览owner提供正式领域装配和观察入口，消费Timeline／Pose自己的运行与采用事实；不在主实现新增预览播放器、图Factory或改写ScenePlay协调器。
-- [ ] 7.4 将技能 Inspector／普通 .NET Reader 改为独立 Ability 产物入口，保留精确来源导航和结构化值输入观察。
+- [ ] 7.4 将技能 Inspector 改为独立 Ability 产物入口，保留精确来源导航和结构化值输入观察；不保留普通 .NET Reader。
 - [ ] 7.5 向预览任务交付领域公开操作及准备／采用／运行观察结果，显示请求版本与实际版本；ScenePlay协调器由预览owner接入，不保留Character Build／ProgramEpoch或假全局版本。
 - [ ] 7.6 将核心技能／角色配置接口变化和精确依赖提供给C# authoring owner；Pose／Timeline定义与导出适配由各自既有owner接入，不覆盖正确生成实现。
 

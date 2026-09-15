@@ -653,3 +653,9 @@
 
 - 提交 `b956ce4c1`，将 Float32／Fixed Ability 分区值复制失败的诊断文本改为 Ability runtime state，和已完成的 `AbilityStateValue` 领域归属一致。
 - 只调整错误语义，不改变异常条件、状态复制、编码格式或运行路径；Core 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除Ability执行组装死出口
+
+- 提交 `dfbfce1c2`，Float32／Fixed `AbilityExecutionAssembly` 不再把 Invocation 未消费的 `ActionStateStore`、`ValueRuntime` 作为返回出口；这两个服务继续由执行组装内部和对应模块持有。
+- 本步只删除无消费者的组装出口，不改变服务创建、状态所有权、执行顺序或运行行为；未保留兼容属性或临时桥接。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

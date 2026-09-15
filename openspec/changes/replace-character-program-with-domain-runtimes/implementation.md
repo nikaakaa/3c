@@ -648,3 +648,8 @@
 - 提交 `0aa3ed1ab`，Float32／Fixed 的单个 Ability 安装只接收安装集合预编译的 `EquipmentProgramLayout`；`CharacterEquipmentRuntimeBinding` 只保留在角色安装集合装配边界。
 - 装备布局仍按每个 Ability 的目录、引用和 producer 编译一次，声明 Equipment 的能力仍在安装时必须拥有正式布局；运行时不增加延迟编译、空服务或兼容路径。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 统一Ability局部状态错误语义
+
+- 提交 `b956ce4c1`，将 Float32／Fixed Ability 分区值复制失败的诊断文本改为 Ability runtime state，和已完成的 `AbilityStateValue` 领域归属一致。
+- 只调整错误语义，不改变异常条件、状态复制、编码格式或运行路径；Core 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

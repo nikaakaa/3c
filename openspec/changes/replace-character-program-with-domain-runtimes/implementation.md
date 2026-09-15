@@ -1174,3 +1174,8 @@
 
 - 提交 `69c04af93`，将只被 Ability 与 Timeline 语义编译消费的 `CharacterSimulationCompileReport`、消息、阶段和严重级别统一为 `SimulationCompile*`，删除角色总编译命名。
 - 删除没有调用方的 Information、Warning、Target 和 Presentation 报告入口，保留 Discovery、Semantic Emission 与 Artifact Validation 的错误报告；不改变 Ability artifact 内容或 Timeline 语义产物。
+
+## 2026-09-16 删除孤立的角色Authoring拓扑链
+
+- 提交 `b5182996b`，删除没有外部消费者的 `CharacterAuthoringTopologyProjection`、`ActionTargetAuthoringValidation` 及 Unity `.meta`。
+- Ability 编译已经使用独立的 authoring compilation model；本步移除旧角色拓扑投影与动作目标验证残片，不改变 Ability 闭包发现、语义编译或运行时目标请求合同。

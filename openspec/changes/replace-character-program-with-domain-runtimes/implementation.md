@@ -425,3 +425,9 @@
 - Authority loader 读取独立 Ability artifact 后调用同一个 `GameplayAbilityProviderContract.RequireBinding`，因此 Unity Definition Load 与 Authority artifact Load 对成员存在性、值类型、合同版本和运行句柄使用同一条校验链；旧 manifest 直接拒绝，不保留兼容格式。
 - 角色调用的 InstallationSet 只向声明 GameplayEffect 的 Ability 安装传入 Effect binding，未声明该能力的 Ability 不会被错误拒绝；必需服务缺失仍直接失败，不创建空实现或第二套绑定路径。
 - Authority portable 编译仍被 Unity 生成 `ThirdPersonSimulation.Float32.csproj` 漏掉既有 Ability Layout 等源文件阻断（28 个缺失类型错误、0 warning）；编译结束已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成。
+
+## 2026-09-15 Ability按需服务入口收口
+
+- 提交 `ef197c18e`，Float32／Fixed `AbilityExecutionFrame` 不再强制接收事务控制、GameplayEffect 状态和 Equipment 状态；未提供时只有实际访问对应服务才明确抛出缺失错误，避免独立技能调用方伪造整套角色服务。
+- Float32／Fixed Equipment Runtime 允许 Equipment-only 技能在没有 GameplayEffect Runtime 时创建；装备标签、被动效果和效果输出提交仍在实际调用时要求 GameplayEffect 服务，普通装备状态读写不再被无关能力阻断。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.11 仍未完成，角色 Pending 结果与跨领域 Step 接线继续保留为后续边界。

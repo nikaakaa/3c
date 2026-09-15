@@ -625,6 +625,8 @@ namespace BTSMTL.Timeline.Editor
 
         void OnTimelineValueChanged()
         {
+            if (m_SourceSummary != null)
+                m_SourceSummary.text = CurrentSourceSummary();
             AuthoringRevisionChanged?.Invoke(this);
         }
     }

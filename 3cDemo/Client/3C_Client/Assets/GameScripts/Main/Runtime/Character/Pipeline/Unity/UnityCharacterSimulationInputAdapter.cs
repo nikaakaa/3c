@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         }
 
         public string SourceIdentity =>
-            $"UnityInputSystem/Float32/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
+            $"UnityInputSystem/CharacterControl/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
         public SimulationNumericProfile NumericProfile => Float32SimulationNumericProfile.Value;
         public CharacterControlSourceCapability Capabilities => m_ActionTargetProvider == null
             ? CharacterControlSourceCapability.None

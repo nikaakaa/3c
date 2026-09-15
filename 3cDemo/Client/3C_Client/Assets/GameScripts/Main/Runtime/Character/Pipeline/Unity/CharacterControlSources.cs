@@ -74,7 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     m_Values.Add(CreateNeutralValue(profile.InputValues[i]));
             }
             m_Values.Sort((left, right) => string.CompareOrdinal(left.InputId, right.InputId));
-            SourceIdentity = "neutral-character-inputs/float32";
+            SourceIdentity = "neutral-character-inputs/character-control";
         }
 
         public string SourceIdentity { get; }

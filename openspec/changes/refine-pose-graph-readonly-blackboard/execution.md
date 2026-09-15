@@ -921,3 +921,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `CharacterPoseNativeRoleRuntime` 增加已提交 Final Pose 读取、恢复初始姿态和写入默认值出口，角色上层只读消费 Publication 的 committed 结果；提交为 `55c57bc67`。不从节点或 Animancer weight 重建第二份最终姿态。
 - 新增 `CharacterPoseNativeRoleEntry` 与 `CharacterPoseNativeRoleSession`，把 Prepare、typed 依赖组装、原生实例 Create/Replace 和唯一 FrameCoordinator 组合成一个可持有的 Pose 角色实例入口；准备失败不构造依赖，替换失败不采用新实例；提交为 `ad3a47e0b`。共享 Host 尚未改动。
 - 2026-09-15 精确调用审计：`CharacterPoseNativeRoleEntry` 当前只有自身 Create/Replace 定义和内部依赖工厂调用，角色表现 runtime/Host 没有消费者调用点；四组 handler composition 也只有 `CharacterPoseNativeRoleDependencyFactory` 构造。旧 Presentation/Program/快照文件同时处于并行 staged 重建状态，本步不删除、不覆盖，下一步只接既有表现 runtime 提供的真实 Source/Constraint/Final 实例。
+- 修正 `CharacterPoseNativeRoleEntry` 在图实例已 Adopted、但 `RoleSession/FrameCoordinator` 构造失败时的释放路径；Create 与 Replace 都会销毁已采用的 role，避免半安装实例泄漏；提交为 `6127dee81`。

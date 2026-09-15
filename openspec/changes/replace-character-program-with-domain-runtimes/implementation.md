@@ -445,3 +445,10 @@
 - Ability ActionStore 与角色 Control 改用专用 Action 端口，共享同一份角色动作事实；角色事务仍负责单一 Savepoint／Restore／Commit，并在快照中读出、恢复该对象，既有动作准入、替换、实例生命周期、状态 codec 和统一角色 Step 不变。
 - Action 状态与角色事务同步释放，未保留旧总事务接口或第二份状态。本步只完成共享 Action 状态 owner 拆分，角色级完整 Capture／Restore 和跨领域结果接线仍未完成，1.11、2.6 仍未完成。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。本步 Center 正式 after compile 因打开的 Unity Editor 占用本 worktree 被 `WorkspaceEditorInUse` 拒绝；未关闭 Editor，未运行 Unity、测试或资产生成。
+
+## 2026-09-15 角色事件序号状态拆出
+
+- 提交 `dbe18ab1b`，Float32／Fixed 新增独立的角色事件序号状态，角色运行时事务不再实现 `EventSequenceStatePort`；Ability 的事件发射器改由专用端口取得角色级递增序号。
+- 保留原有从角色状态读入、按帧递增、溢出拒绝、Savepoint／Restore／Commit 和 codec 编码语义；角色事务只负责在统一快照中读取并恢复该状态，不复制序号或建立旁路时钟。
+- 事件序号状态与角色事务同步释放。本步只完成事件序号 owner 拆分，角色级完整跨领域 Capture／Restore 和网络恢复接线仍未完成，1.11、2.6 仍未完成。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。对应 Center 改动记录未执行正式 after compile，原因仍是打开的 Unity Editor 占用本 worktree；未关闭 Editor，未运行 Unity、测试或资产生成。

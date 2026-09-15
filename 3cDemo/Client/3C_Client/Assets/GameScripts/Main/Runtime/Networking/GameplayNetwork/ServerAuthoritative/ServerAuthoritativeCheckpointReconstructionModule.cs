@@ -143,7 +143,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             if (snapshotSequence == 0 || authorityTick == 0 || payload == null)
                 throw new InvalidOperationException("Full checkpoint identity or payload boundary is invalid.");
             if (!string.Equals(layoutHash, m_Layout.LayoutIdentity.ToString(), StringComparison.Ordinal))
-                throw new InvalidOperationException("Full checkpoint layout does not match the active Program.");
+                throw new InvalidOperationException("Full checkpoint layout does not match the active Character Runtime.");
             NetworkCheckpoint checkpoint = NetworkCheckpointCodec.ReadFull(m_Layout, payload);
             if (checkpoint.Baseline.ActorId != m_OwnerActor || checkpoint.Baseline.AuthorityTick.Value != authorityTick ||
                 checkpoint.Baseline.ConfirmedInputSequence != confirmedInputSequence ||

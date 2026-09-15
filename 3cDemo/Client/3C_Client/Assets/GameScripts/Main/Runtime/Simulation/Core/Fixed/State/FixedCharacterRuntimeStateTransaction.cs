@@ -112,6 +112,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState;
         readonly FixedCharacterGameplayEffectRuntimeState m_GameplayEffectState;
         readonly FixedCharacterEquipmentRuntimeState m_EquipmentState;
+        readonly object m_AbilityBindingIdentity = new object();
         CharacterControlRuntimeStateTransaction m_ControlState;
         bool m_Disposed;
 
@@ -160,7 +161,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(installation));
             if (!m_AbilityStates.TryGetValue(installation.Data.AbilityId, out FixedAbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' is not part of the Character runtime state.");
-            return new FixedAbilityExecutionStateTransaction(this, installation, state);
+            return new FixedAbilityExecutionStateTransaction(m_AbilityBindingIdentity, m_Tick, installation, state);
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -183,7 +184,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             if (!(transaction is FixedAbilityExecutionStateTransaction ability) ||
-                !ReferenceEquals(ability.Owner, this))
+                !ReferenceEquals(ability.BindingIdentity, m_AbilityBindingIdentity))
             {
                 throw new InvalidOperationException("Fixed Ability transaction belongs to another Character runtime transaction.");
             }
@@ -309,7 +310,8 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityExecutionStateTransaction : IFixedAbilityExecutionStateTransaction
     {
-        readonly FixedCharacterRuntimeStateTransaction m_Owner;
+        readonly object m_BindingIdentity;
+        readonly SimulationTick m_Tick;
         readonly FixedGameplayAbilityExecutionInstallation m_Installation;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly FixedGameplayAbilityExecutionData m_Ability;
@@ -320,11 +322,15 @@ namespace ThirdPersonSimulation.Fixed
         bool m_Disposed;
 
         public FixedAbilityExecutionStateTransaction(
-            FixedCharacterRuntimeStateTransaction owner,
+            object bindingIdentity,
+            SimulationTick tick,
             FixedGameplayAbilityExecutionInstallation installation,
             FixedAbilityRuntimeState state)
         {
-            m_Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            m_BindingIdentity = bindingIdentity ?? throw new ArgumentNullException(nameof(bindingIdentity));
+            if (!tick.IsValid)
+                throw new ArgumentException("Fixed Ability state transaction Tick is invalid.", nameof(tick));
+            m_Tick = tick;
             m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             m_Layout = installation.Layout;
             m_Ability = installation.Data;
@@ -333,7 +339,7 @@ namespace ThirdPersonSimulation.Fixed
             m_AbilityExecutionState = state.AbilityExecutionState.Clone();
         }
 
-        internal FixedCharacterRuntimeStateTransaction Owner => m_Owner;
+        internal object BindingIdentity => m_BindingIdentity;
 
         public FixedGameplayAbilityExecutionInstallation Installation => m_Installation;
 
@@ -421,7 +427,7 @@ namespace ThirdPersonSimulation.Fixed
             RequireActive();
             return new FixedAbilityRuntimeState(
                 m_Installation,
-                m_Owner.Tick.Value,
+                m_Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,
                 m_MotionWarpStates);

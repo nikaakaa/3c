@@ -112,6 +112,7 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterHandleAllocatorState m_HandleAllocatorState;
         readonly Float32CharacterGameplayEffectRuntimeState m_GameplayEffectState;
         readonly Float32CharacterEquipmentRuntimeState m_EquipmentState;
+        readonly object m_AbilityBindingIdentity = new object();
         CharacterControlRuntimeStateTransaction m_ControlState;
         bool m_Disposed;
 
@@ -160,7 +161,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(installation));
             if (!m_AbilityStates.TryGetValue(installation.Data.AbilityId, out Float32AbilityRuntimeState state))
                 throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' is not part of the Character runtime state.");
-            return new Float32AbilityExecutionStateTransaction(this, installation, state);
+            return new Float32AbilityExecutionStateTransaction(m_AbilityBindingIdentity, m_Tick, installation, state);
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -183,7 +184,7 @@ namespace ThirdPersonSimulation
         {
             RequireActive();
             if (!(transaction is Float32AbilityExecutionStateTransaction ability) ||
-                !ReferenceEquals(ability.Owner, this))
+                !ReferenceEquals(ability.BindingIdentity, m_AbilityBindingIdentity))
             {
                 throw new InvalidOperationException("Float32 Ability transaction belongs to another Character runtime transaction.");
             }
@@ -309,7 +310,8 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityExecutionStateTransaction : IFloat32AbilityExecutionStateTransaction
     {
-        readonly Float32CharacterRuntimeStateTransaction m_Owner;
+        readonly object m_BindingIdentity;
+        readonly SimulationTick m_Tick;
         readonly Float32GameplayAbilityExecutionInstallation m_Installation;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly Float32GameplayAbilityExecutionData m_Ability;
@@ -320,11 +322,15 @@ namespace ThirdPersonSimulation
         bool m_Disposed;
 
         public Float32AbilityExecutionStateTransaction(
-            Float32CharacterRuntimeStateTransaction owner,
+            object bindingIdentity,
+            SimulationTick tick,
             Float32GameplayAbilityExecutionInstallation installation,
             Float32AbilityRuntimeState state)
         {
-            m_Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            m_BindingIdentity = bindingIdentity ?? throw new ArgumentNullException(nameof(bindingIdentity));
+            if (!tick.IsValid)
+                throw new ArgumentException("Float32 Ability state transaction Tick is invalid.", nameof(tick));
+            m_Tick = tick;
             m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             m_Layout = installation.Layout;
             m_Ability = installation.Data;
@@ -333,7 +339,7 @@ namespace ThirdPersonSimulation
             m_AbilityExecutionState = state.AbilityExecutionState.Clone();
         }
 
-        internal Float32CharacterRuntimeStateTransaction Owner => m_Owner;
+        internal object BindingIdentity => m_BindingIdentity;
 
         public Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
 
@@ -421,7 +427,7 @@ namespace ThirdPersonSimulation
             RequireActive();
             return new Float32AbilityRuntimeState(
                 m_Installation,
-                m_Owner.Tick.Value,
+                m_Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,
                 m_MotionWarpStates);

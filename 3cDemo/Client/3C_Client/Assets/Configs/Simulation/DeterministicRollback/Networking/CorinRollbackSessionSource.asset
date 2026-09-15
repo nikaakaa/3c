@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: CorinRollbackSessionSource
   m_EditorClassIdentifier: 
   m_TickRate: 60
-  m_FixedProgram: {fileID: 11400000, guid: 91063668fd0eaa84d9b7d688aadbc90a, type: 2}
   m_Pipeline: {fileID: 11400000, guid: f79a3d2184cc3614398a6b9c88e00d46, type: 2}
   m_WorldSolver: {fileID: 11400000, guid: 329a97239e12fac4dbe21a2325533ccc, type: 2}
   m_Endpoint: {fileID: 11400000, guid: 8d74303ed678d11429d7e215a8949a08, type: 2}

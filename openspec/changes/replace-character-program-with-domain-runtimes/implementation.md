@@ -1164,3 +1164,8 @@
 
 - 提交 `32f8a6a44`，删除没有注册方和调用方的 `CharacterSimulationBuildMcpJobScheduler` 及其 Unity `.meta`。
 - 该调度器还引用仓库不存在的 `CharacterSimulationBuildMcpBridge`，不属于 Ability、Timeline、Control 或 Pose 的正式编译链；本步只移除旧 Character Build MCP 残片，不改变现行领域编译入口。
+
+## 2026-09-16 统一Ability编译发现文件名
+
+- 提交 `747c5f0c2`，将类型已经是 `GameplayAbilityCompilationDiscovery` 的源文件和 Unity `.meta` 从旧 `CharacterSkillCompilationDiscovery` 文件名迁移到 Ability 文件名。
+- 本步只清理路径命名，不改变 Ability grant 发现、关系校验和排序行为。

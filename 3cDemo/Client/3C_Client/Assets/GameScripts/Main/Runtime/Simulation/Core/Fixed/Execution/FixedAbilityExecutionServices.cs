@@ -6,6 +6,12 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedAbilityExecutionServiceSet : IFixedAbilityExecutionServices
     {
         readonly FixedAbilityExecutionFrame m_Frame;
+        readonly FixedActionRuntime m_Actions;
+        readonly FixedActionStateStore m_ActionStore;
+        readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
+        readonly FixedEquipmentRuntime m_Equipment;
+        readonly FixedValueRuntime m_Values;
+        readonly FixedBlackboardRuntime m_Blackboard;
 
         public FixedAbilityExecutionServiceSet(
             FixedAbilityExecutionFrame frame,
@@ -19,38 +25,32 @@ namespace ThirdPersonSimulation.Fixed
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             Target = target;
-            Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-            ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
-            GameplayEffects = gameplayEffects;
-            Equipment = equipment;
-            Values = values ?? throw new ArgumentNullException(nameof(values));
-            Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
+            m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            m_ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
+            m_GameplayEffects = gameplayEffects;
+            m_Equipment = equipment;
+            m_Values = values ?? throw new ArgumentNullException(nameof(values));
+            m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
         }
 
         public FixedAbilityExecutionTarget Target { get; }
-        public FixedActionRuntime Actions { get; }
-        public FixedActionStateStore ActionStore { get; }
-        public FixedGameplayEffectOperationRuntime GameplayEffects { get; }
-        public FixedEquipmentRuntime Equipment { get; }
-        public FixedValueRuntime Values { get; }
-        public FixedBlackboardRuntime Blackboard { get; }
 
         public void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
         {
             m_Frame.Trace.Begin(diagnosticsEnabled, captureValues, captureControlFlow);
-            ActionStore.BeginEvaluation();
-            Values.BeginEvaluation();
-            GameplayEffects?.BeginEvaluation();
-            Equipment?.BeginEvaluation();
-            Blackboard.BeginFrame();
+            m_ActionStore.BeginEvaluation();
+            m_Values.BeginEvaluation();
+            m_GameplayEffects?.BeginEvaluation();
+            m_Equipment?.BeginEvaluation();
+            m_Blackboard.BeginFrame();
         }
 
         public void EndEvaluation()
         {
-            Equipment?.EndEvaluation();
-            Blackboard.EndFrame();
-            GameplayEffects?.EndEvaluation();
-            ActionStore.EndEvaluation();
+            m_Equipment?.EndEvaluation();
+            m_Blackboard.EndFrame();
+            m_GameplayEffects?.EndEvaluation();
+            m_ActionStore.EndEvaluation();
         }
 
         public void ApplyIngress()
@@ -59,15 +59,15 @@ namespace ThirdPersonSimulation.Fixed
             {
                 SimulationIngress ingress = m_Frame.Ingress[i];
                 if (ingress.Header.Kind == SimulationIngressKind.ActionLifecycle)
-                    Actions.ApplyIngress(ingress);
+                    m_Actions.ApplyIngress(ingress);
                 else
-                    (GameplayEffects ?? throw new InvalidOperationException(
+                    (m_GameplayEffects ?? throw new InvalidOperationException(
                         "Ability execution received Gameplay Effect ingress without the declared Gameplay Effect service.")).ApplyIngress(ingress);
             }
         }
 
         public void AdvanceGameplayEffects() =>
-            (GameplayEffects ?? throw new InvalidOperationException(
+            (m_GameplayEffects ?? throw new InvalidOperationException(
                 "Ability execution attempted to advance Gameplay Effects without the declared Gameplay Effect service.")).Advance();
     }
 }

@@ -1009,3 +1009,8 @@
 
 - 提交 `b0584f9ab`，Float32／Fixed Ability Domain Runtime Factory 改为直接接收 Gameplay Effect catalog 等 typed 领域输入，不再跨域接收整套 Ability Execution Context；Execution Service Factory 从正式服务集合传入目录。
 - 不改变领域服务创建顺序、技能状态端口和执行合同；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除安装目录重复出口
+
+- 提交 `8d5c52c95`，Float32／Fixed Ability Installation 删除没有调用方的 Gameplay Effect catalog 转发；目录继续由安装集合和 Execution Services 持有，执行入口使用唯一正式来源。
+- 不改变 Gameplay Effect 绑定、领域服务创建或技能执行顺序；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

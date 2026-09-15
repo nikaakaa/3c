@@ -229,6 +229,7 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle => m_Cycle;
         public string SectionId => m_SectionId;
         public IReadOnlyList<string> ActiveClipIds => m_ActiveClipIdsView;
+        public IReadOnlyList<TimelineRuntimeTreeClipAssociation> ActiveTreeClipAssociations => CreateActiveTreeClipAssociations();
         public bool HasStopContext { get; private set; }
         public TimelinePlaybackStopContext StopContext { get; private set; }
 
@@ -437,6 +438,7 @@ namespace BTSMTL.Timeline.Runtime
             int cycle,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
+            IReadOnlyList<TimelineRuntimeTreeClipAssociation> activeTreeClipAssociations,
             bool hasStopContext,
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending)
@@ -462,12 +464,36 @@ namespace BTSMTL.Timeline.Runtime
             m_Cycle = cycle;
             m_SectionId = sectionId ?? string.Empty;
             m_InitialBoundaryPending = initialBoundaryPending;
+            if (!ValidateRestoredTreeClipAssociations(activeTreeClipAssociations))
+                return false;
             m_ActiveClipIds.Clear();
             for (int index = 0; index < (activeClipIds?.Count ?? 0); index++)
                 m_ActiveClipIds.Add(activeClipIds[index]);
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             State = state;
+            return true;
+        }
+
+        bool ValidateRestoredTreeClipAssociations(
+            IReadOnlyList<TimelineRuntimeTreeClipAssociation> associations)
+        {
+            List<TimelineRuntimeTreeClipAssociation> expected = CreateActiveTreeClipAssociations();
+            if ((associations?.Count ?? 0) != expected.Count)
+                return false;
+            for (int index = 0; index < expected.Count; index++)
+            {
+                TimelineRuntimeTreeClipAssociation actual = associations[index];
+                TimelineRuntimeTreeClipAssociation required = expected[index];
+                if (!string.Equals(actual.CallId, required.CallId, StringComparison.Ordinal) ||
+                    !string.Equals(actual.ClipAuthoringId, required.ClipAuthoringId, StringComparison.Ordinal) ||
+                    !string.Equals(actual.TrackAuthoringId, required.TrackAuthoringId, StringComparison.Ordinal) ||
+                    !string.Equals(actual.TreeGraphId, required.TreeGraphId, StringComparison.Ordinal) ||
+                    !string.Equals(actual.TreeGraphRevision, required.TreeGraphRevision, StringComparison.Ordinal) ||
+                    actual.Phase != required.Phase ||
+                    actual.Cycle != required.Cycle)
+                    return false;
+            }
             return true;
         }
 
@@ -521,6 +547,30 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (advance == null || !ReferenceEquals(advance.Owner, this) || !ReferenceEquals(m_PendingAdvance, advance))
                 throw new InvalidOperationException("Timeline Advance result does not belong to the active playback.");
+        }
+
+        List<TimelineRuntimeTreeClipAssociation> CreateActiveTreeClipAssociations()
+        {
+            var associations = new List<TimelineRuntimeTreeClipAssociation>();
+            for (int index = 0; index < Content.Clips.Count; index++)
+            {
+                TimelineContentClip clip = Content.Clips[index];
+                if (clip.TrackMuted || clip.StartFrame > m_CursorFrame || m_CursorFrame >= clip.EndFrame)
+                    continue;
+                if (!TimelineRuntimeEvaluator.TryResolveTreeClip(SourceTimeline, clip.AuthoringId, out TreeClip treeClip) ||
+                    !TimelineRuntimeEvaluator.TryGetTreeContract(Content, treeClip, out string treeGraphId, out string treeGraphRevision))
+                    continue;
+                associations.Add(new TimelineRuntimeTreeClipAssociation(
+                    TimelineRuntimeEvaluator.CreateTreeClipCallId(
+                        ExecutionIdentity, Generation, m_Cycle, clip.AuthoringId),
+                    clip.AuthoringId,
+                    clip.TrackAuthoringId,
+                    treeGraphId,
+                    treeGraphRevision,
+                    treeClip.ExecutionPhase,
+                    m_Cycle));
+            }
+            return associations;
         }
 
         void RefreshActiveState()
@@ -906,7 +956,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimeTreeClipEventKind eventKind,
             int frame,
             int cycle,
-            float normalizedTime)
+            float normalizedTime,
+            string callId)
         {
             ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
                 ? throw new ArgumentException("TreeClip identity is required.", nameof(clipAuthoringId))
@@ -925,6 +976,9 @@ namespace BTSMTL.Timeline.Runtime
             Frame = frame;
             Cycle = cycle;
             NormalizedTime = Mathf.Clamp01(normalizedTime);
+            CallId = string.IsNullOrWhiteSpace(callId)
+                ? throw new ArgumentException("TreeClip call identity is required.", nameof(callId))
+                : callId.Trim();
         }
 
         public string ClipAuthoringId { get; }
@@ -936,6 +990,46 @@ namespace BTSMTL.Timeline.Runtime
         public int Frame { get; }
         public int Cycle { get; }
         public float NormalizedTime { get; }
+        public string CallId { get; }
+    }
+
+    public readonly struct TimelineRuntimeTreeClipAssociation
+    {
+        public TimelineRuntimeTreeClipAssociation(
+            string callId,
+            string clipAuthoringId,
+            string trackAuthoringId,
+            string treeGraphId,
+            string treeGraphRevision,
+            TimelineTreeExecutionPhase phase,
+            int cycle)
+        {
+            CallId = string.IsNullOrWhiteSpace(callId)
+                ? throw new ArgumentException("TreeClip call identity is required.", nameof(callId))
+                : callId.Trim();
+            ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
+                ? throw new ArgumentException("TreeClip identity is required.", nameof(clipAuthoringId))
+                : clipAuthoringId.Trim();
+            TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
+                ? throw new ArgumentException("Tree Track identity is required.", nameof(trackAuthoringId))
+                : trackAuthoringId.Trim();
+            TreeGraphId = string.IsNullOrWhiteSpace(treeGraphId)
+                ? throw new ArgumentException("Tree graph identity is required.", nameof(treeGraphId))
+                : treeGraphId.Trim();
+            TreeGraphRevision = string.IsNullOrWhiteSpace(treeGraphRevision)
+                ? throw new ArgumentException("Tree graph revision is required.", nameof(treeGraphRevision))
+                : treeGraphRevision.Trim();
+            Phase = phase;
+            Cycle = cycle;
+        }
+
+        public string CallId { get; }
+        public string ClipAuthoringId { get; }
+        public string TrackAuthoringId { get; }
+        public string TreeGraphId { get; }
+        public string TreeGraphRevision { get; }
+        public TimelineTreeExecutionPhase Phase { get; }
+        public int Cycle { get; }
     }
 
     public enum TimelineRuntimeTreeClipEventKind : byte
@@ -1423,7 +1517,12 @@ namespace BTSMTL.Timeline.Runtime
                         : TimelineRuntimeTreeClipEventKind.Exit,
                     boundary.Frame,
                     boundary.Cycle,
-                    boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter ? 0f : 1f));
+                    boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter ? 0f : 1f,
+                    CreateTreeClipCallId(
+                        executionIdentity,
+                        generation,
+                        boundary.Cycle,
+                        treeClip.AuthoringId)));
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -1485,7 +1584,12 @@ namespace BTSMTL.Timeline.Runtime
                         TimelineRuntimeTreeClipEventKind.Update,
                         currentFrame,
                         currentCycle,
-                        local));
+                        local,
+                        CreateTreeClipCallId(
+                            executionIdentity,
+                            generation,
+                            currentCycle,
+                            treeClip.AuthoringId)));
                     traces.Add(new TimelineRuntimeTraceOutput(
                         timeline.AuthoringId,
                         treeTrack.AuthoringId,
@@ -1536,6 +1640,15 @@ namespace BTSMTL.Timeline.Runtime
                 traces);
         }
 
+        internal static string CreateTreeClipCallId(
+            TimelineExecutionIdentity executionIdentity,
+            ulong generation,
+            int cycle,
+            string clipAuthoringId)
+        {
+            return $"{executionIdentity.OwnerIdentity}:{executionIdentity.CallIdentity}:{executionIdentity.InstanceId}:{generation}:{cycle}:{clipAuthoringId}";
+        }
+
         internal static void ValidateTreeContracts(
             TimelineData timeline,
             TimelineContentUnit content,
@@ -1583,7 +1696,7 @@ namespace BTSMTL.Timeline.Runtime
             }
             return false;
         }
-        static bool TryResolveTreeClip(
+        internal static bool TryResolveTreeClip(
             TimelineData timeline,
             string authoringId,
             out TreeClip treeClip)

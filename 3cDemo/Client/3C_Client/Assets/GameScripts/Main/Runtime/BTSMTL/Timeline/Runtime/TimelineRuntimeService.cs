@@ -337,6 +337,7 @@ namespace BTSMTL.Timeline.Runtime
             SectionId = playback.SectionId;
             ActiveClipIds = new ReadOnlyCollection<string>(
                 new List<string>(playback.ActiveClipIds));
+            ActiveTreeClipAssociations = playback.ActiveTreeClipAssociations;
             HasStopContext = playback.HasStopContext;
             StopContext = playback.StopContext;
             InitialBoundaryPending = playback.InitialBoundaryPending;
@@ -355,6 +356,7 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle { get; }
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds { get; }
+        public IReadOnlyList<TimelineRuntimeTreeClipAssociation> ActiveTreeClipAssociations { get; }
         public bool HasStopContext { get; }
         public TimelinePlaybackStopContext StopContext { get; }
         public bool InitialBoundaryPending { get; }
@@ -629,6 +631,7 @@ namespace BTSMTL.Timeline.Runtime
                     snapshot.Cycle,
                     snapshot.SectionId,
                     snapshot.ActiveClipIds,
+                    snapshot.ActiveTreeClipAssociations,
                     snapshot.HasStopContext,
                     snapshot.StopContext,
                     snapshot.InitialBoundaryPending))

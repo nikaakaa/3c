@@ -28,22 +28,6 @@ namespace ThirdPersonSimulation
 
         public static Float32CharacterRuntime Create(
             IEnumerable<SimulationActorBinding> roster,
-            CharacterControlModuleCatalog controlModules)
-        {
-            SimulationExecutionTargetManifest target = Float32SimulationTarget.Manifest.ExecutionTarget;
-            var values = roster == null ? new List<SimulationActorBinding>() : new List<SimulationActorBinding>(roster);
-            if (values.Count == 0 || values[0].AbilityData.Data.Count == 0)
-                throw new ArgumentException("Float32 Character Runtime factory requires an Ability TickRate.", nameof(roster));
-            return new Float32CharacterRuntime(
-                values,
-                target.NumericProfile,
-                values[0].AbilityData.Data[0].TickRate,
-                target.OperationSetVersion,
-                controlModules);
-        }
-
-        public static Float32CharacterRuntime Create(
-            IEnumerable<SimulationActorBinding> roster,
             int tickRate,
             CharacterControlModuleCatalog controlModules)
         {

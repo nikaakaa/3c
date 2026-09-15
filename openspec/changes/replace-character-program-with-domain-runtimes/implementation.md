@@ -313,3 +313,10 @@
 - `CharacterPresentationProjection` 的序列化身份字段由 `m_ProgramId`／`ProgramId` 改为 `m_PresentationId`／`PresentationId`，Projection ABI 从 v15 升到 v16；旧 Projection 资产直接失效，不保留兼容字段。
 - Local Host、Rollback Editor 检查、Presentation Runtime、Motion Matching、Pose tuning target 与性能采样均改用 `PresentationId`；Projection 仍校验现有 semantic contract 和 Pose tuning layout 的正式版本，不建立转换路径。
 - 未运行 Unity 或测试；统一 Runtime 工程仍受 Unity 生成 csproj 引用已迁移 `Float32CharacterRegistration.cs` 旧路径的 `CS2001` 阻断，已执行 `dotnet build-server shutdown`。
+
+## 2026-09-15 Character Runtime禁止从首个Ability推断TickRate
+
+- 删除 `Float32CharacterRuntime.Create(roster, controlModules)` 与 `FixedCharacterRuntime.Create(roster, controlModules)` 两个隐式工厂入口。
+- Character Runtime 的 NumericProfile、TickRate、OperationSetVersion 现在只能由调用方从正式 Simulation Session／Execution Target 传入；Runtime 不再读取第一个 Ability 的 TickRate，也不再要求 roster 至少安装一个 Ability 才能创建。
+- 现有 Local、Fixed、Rollback 与 Session Composition Preparation 已使用显式 tick rate；DotRecast Authority 旧 manifest 仍调用被删除的入口，作为后续按独立 Ability artifact 迁移的明确断点。
+- 未运行 Unity 或测试；Runtime 工程编译按项目规则执行，若仍出现 Unity 生成工程的旧路径错误，只记录为生成索引阻断。

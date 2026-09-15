@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public OperationHandle Emit(
             SimulationSourceLocation source,
-            CharacterSimulationNodeEmission emission,
+            SimulationNodeEmission emission,
             IReadOnlyList<SimulationConstantInput> inputs)
         {
             var constants = new List<int>();

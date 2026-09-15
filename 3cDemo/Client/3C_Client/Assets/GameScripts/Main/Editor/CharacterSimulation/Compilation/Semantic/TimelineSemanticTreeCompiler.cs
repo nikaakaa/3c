@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     internal sealed class TimelineSemanticTreeCompiler
     {
-        readonly CharacterSimulationNodeEmitterRegistry m_NodeEmitters;
+        readonly SimulationNodeEmitterRegistry m_NodeEmitters;
         readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly SimulationCompileReport m_Report;
         readonly Dictionary<string, Dictionary<string, OperationHandle>> m_OperationsByRoute =
@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             GameplayAbilitySemanticBuilder builder,
             SimulationCompileReport report)
         {
-            m_NodeEmitters = CharacterSimulationNodeEmitterRegistry.CreateDefault();
+            m_NodeEmitters = SimulationNodeEmitterRegistry.CreateDefault();
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
         }
@@ -96,7 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             "Independent Timeline TreeClip cannot execute Character Blackboard nodes.");
                         continue;
                     }
-                    if (!m_NodeEmitters.TryGet(node.GetType(), out ICharacterSimulationNodeEmitter emitter))
+                    if (!m_NodeEmitters.TryGet(node.GetType(), out ISimulationNodeEmitter emitter))
                     {
                         m_Report.Error(
                             "timeline_tree_node_emitter_missing",
@@ -110,7 +110,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             node.GUID,
                             emitter.Emit(
                                 node,
-                                new CharacterSimulationNodeEmitterContext(graph, route, m_Builder)));
+                                new SimulationNodeEmitterContext(graph, route, m_Builder)));
                     }
                     catch (Exception exception)
                     {

@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             TimelineSemanticInvocation invocation = TimelineSemanticInvocation.ForCharacterGraph(timeline.Content.Route,
                 graph.GraphId, timeline.Node.UID, timeline.Node.PlaybackMode);
             m_Emitter.Emit(new TimelineSemanticEmissionRequest(timeline.Content, m_Builder, invocation, operation, stateOwner,
-                CharacterSimulationNodeEmitterContext.AssetIdentity(timeline.Node.ActionContext), (clip, owner) =>
+                SimulationNodeEmitterContext.AssetIdentity(timeline.Node.ActionContext), (clip, owner) =>
                 {
                     if (!timeline.Trees.TryGetValue(clip.Clip.AuthoringId, out BtsmtlSkillGraphOccurrence tree))
                         throw new InvalidOperationException($"{clip.Route}: 技能TreeClip没有原生节点图编译记录。");

@@ -8,11 +8,11 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal static class CharacterSimulationMotionNodeEmitterRegistration
+    internal static class SimulationMotionNodeEmitterRegistration
     {
-        public static void Register(CharacterSimulationNodeEmitterRegistry registry)
+        public static void Register(SimulationNodeEmitterRegistry registry)
         {
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<LocomotionInputMotionNode>(node => Locomotion(node, node.GUID)));
+            registry.Register(SimulationNodeEmitterRegistry.Simple<LocomotionInputMotionNode>(node => Locomotion(node, node.GUID)));
         }
 
         static LocomotionInputMotionExecutionMode RequireLocomotionExecution(ILocomotionInputMotionAuthoring node)
@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return mode;
         }
 
-        internal static CharacterSimulationNodeEmission Locomotion(ILocomotionInputMotionAuthoring node, string identity)
+        internal static SimulationNodeEmission Locomotion(ILocomotionInputMotionAuthoring node, string identity)
         {
             LocomotionInputMotionExecutionMode execution = RequireLocomotionExecution(node);
             LocomotionInputMotionDisplacementMode displacement = node.DisplacementMode;
@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 constants.Add(new KeyValuePair<string, object>("ActionMotionDuration", curve.Duration));
             }
 
-            return new CharacterSimulationNodeEmission(
+            return new SimulationNodeEmission(
                 SimulationOperationCode.LocomotionInputMotion,
                 integer0: (int)execution,
                 integer1: (int)displacement,

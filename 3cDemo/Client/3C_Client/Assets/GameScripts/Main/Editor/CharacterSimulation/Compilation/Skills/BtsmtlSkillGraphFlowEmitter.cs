@@ -94,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 };
                 operations[state.UID] = m_NativeOperations.Emit(
                     Source(machine, state),
-                    new CharacterSimulationNodeEmission(code, text0: state.Body?.AuthoringId),
+                    new SimulationNodeEmission(code, text0: state.Body?.AuthoringId),
                     Array.Empty<SimulationConstantInput>());
             }
             DeclareNativeEntry(reference, owner, operations[machine.Entry.UID], "StateMachine", 0, machine);

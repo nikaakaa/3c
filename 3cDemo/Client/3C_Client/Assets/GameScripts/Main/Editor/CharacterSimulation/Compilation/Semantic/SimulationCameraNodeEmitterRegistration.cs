@@ -5,18 +5,18 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal static class CharacterSimulationCameraNodeEmitterRegistration
+    internal static class SimulationCameraNodeEmitterRegistration
     {
-        public static void Register(CharacterSimulationNodeEmitterRegistry registry)
+        public static void Register(SimulationNodeEmitterRegistry registry)
         {
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Camera<RequestCameraStateNode>(RequestCameraState));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Camera<EmitCameraCueNode>(EmitCameraCue));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Camera<SetCameraResponseNode>(SetCameraResponse));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Camera<SetCameraTargetNode>(SetCameraTarget));
-            registry.Register(new CameraBasisCharacterSimulationNodeEmitter());
+            registry.Register(SimulationNodeEmitterRegistry.Camera<RequestCameraStateNode>(RequestCameraState));
+            registry.Register(SimulationNodeEmitterRegistry.Camera<EmitCameraCueNode>(EmitCameraCue));
+            registry.Register(SimulationNodeEmitterRegistry.Camera<SetCameraResponseNode>(SetCameraResponse));
+            registry.Register(SimulationNodeEmitterRegistry.Camera<SetCameraTargetNode>(SetCameraTarget));
+            registry.Register(new CameraBasisSimulationNodeEmitter());
         }
 
-        static CharacterSimulationNodeEmission RequestCameraState(RequestCameraStateNode node)
+        static SimulationNodeEmission RequestCameraState(RequestCameraStateNode node)
         {
             RequireDefined(node.Mode, nameof(node.Mode));
             RequireIdentity(node.SequenceId, nameof(node.SequenceId));
@@ -25,22 +25,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             RequireNonNegative(node.BlendInSeconds, nameof(node.BlendInSeconds));
             RequireNonNegative(node.BlendOutSeconds, nameof(node.BlendOutSeconds));
             RequireOptionalIdentity(node.TargetKey, nameof(node.TargetKey));
-            return new CharacterSimulationNodeEmission(
+            return new SimulationNodeEmission(
                 SimulationOperationCode.CameraStateRequest,
                 integer0: CameraProgramOperationSchema.PayloadVersion,
                 integer1: (int)node.Mode,
                 flags: (uint)node.InterruptPolicy,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(
+                constants: SimulationNodeEmitterRegistry.Fields(
                     ("Priority", node.Priority),
                     ("Weight", node.Weight),
                     ("SequenceId", node.SequenceId),
                     ("BlendInSeconds", node.BlendInSeconds),
                     ("BlendOutSeconds", node.BlendOutSeconds),
                     ("TargetKey", node.TargetKey),
-                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
+                    ("ActionContext", SimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
         }
 
-        static CharacterSimulationNodeEmission EmitCameraCue(EmitCameraCueNode node)
+        static SimulationNodeEmission EmitCameraCue(EmitCameraCueNode node)
         {
             RequireIdentity(node.CueId, nameof(node.CueId));
             RequireDefined(node.CueKind, nameof(node.CueKind));
@@ -48,41 +48,41 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             RequireOptionalIdentity(node.ResourceId, nameof(node.ResourceId));
             RequireNonNegative(node.Intensity, nameof(node.Intensity));
             RequireNonNegative(node.DurationSeconds, nameof(node.DurationSeconds));
-            return new CharacterSimulationNodeEmission(
+            return new SimulationNodeEmission(
                 SimulationOperationCode.CameraCue,
                 integer0: CameraProgramOperationSchema.PayloadVersion,
                 integer1: (int)node.CueKind,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(
+                constants: SimulationNodeEmitterRegistry.Fields(
                     ("CueId", node.CueId),
                     ("CueType", node.CueType),
                     ("ResourceId", node.ResourceId),
                     ("Intensity", node.Intensity),
                     ("DurationSeconds", node.DurationSeconds),
                     ("Priority", node.Priority),
-                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
+                    ("ActionContext", SimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
         }
 
-        static CharacterSimulationNodeEmission SetCameraResponse(SetCameraResponseNode node)
+        static SimulationNodeEmission SetCameraResponse(SetCameraResponseNode node)
         {
             RequireDefined(node.LookResponse, nameof(node.LookResponse));
             RequireUnit(node.ManualOrbitWeight, nameof(node.ManualOrbitWeight));
             RequireUnit(node.PitchResponseWeight, nameof(node.PitchResponseWeight));
             RequireUnit(node.YawResponseWeight, nameof(node.YawResponseWeight));
             RequireUnit(node.Weight, nameof(node.Weight));
-            return new CharacterSimulationNodeEmission(
+            return new SimulationNodeEmission(
                 SimulationOperationCode.CameraResponse,
                 integer0: CameraProgramOperationSchema.PayloadVersion,
                 integer1: (int)node.LookResponse,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(
+                constants: SimulationNodeEmitterRegistry.Fields(
                     ("ManualOrbitWeight", node.ManualOrbitWeight),
                     ("PitchResponseWeight", node.PitchResponseWeight),
                     ("YawResponseWeight", node.YawResponseWeight),
                     ("Priority", node.Priority),
                     ("Weight", node.Weight),
-                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
+                    ("ActionContext", SimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
         }
 
-        static CharacterSimulationNodeEmission SetCameraTarget(SetCameraTargetNode node)
+        static SimulationNodeEmission SetCameraTarget(SetCameraTargetNode node)
         {
             RequireOptionalIdentity(node.TargetKey, nameof(node.TargetKey));
             RequireOptionalIdentity(node.AnchorKey, nameof(node.AnchorKey));
@@ -95,18 +95,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                              (string.IsNullOrEmpty(node.PreferredBoneKey) ? 0 : CameraProgramOperationSchema.PreferredBoneKeyMask);
             if (targetMask == 0)
                 throw new InvalidOperationException("SetCameraTarget requires at least one formal target identity.");
-            return new CharacterSimulationNodeEmission(
+            return new SimulationNodeEmission(
                 SimulationOperationCode.CameraTarget,
                 integer0: CameraProgramOperationSchema.PayloadVersion,
                 integer1: targetMask,
-                constants: CharacterSimulationNodeEmitterRegistry.Fields(
+                constants: SimulationNodeEmitterRegistry.Fields(
                     ("TargetKey", node.TargetKey),
                     ("AnchorKey", node.AnchorKey),
                     ("AimPointKey", node.AimPointKey),
                     ("PreferredBoneKey", node.PreferredBoneKey),
                     ("Priority", node.Priority),
                     ("Weight", node.Weight),
-                    ("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
+                    ("ActionContext", SimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
         }
 
         static void RequireDefined<T>(T value, string field) where T : struct, Enum

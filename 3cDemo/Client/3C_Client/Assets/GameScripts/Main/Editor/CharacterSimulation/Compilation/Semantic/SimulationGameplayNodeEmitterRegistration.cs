@@ -5,29 +5,29 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal static class CharacterSimulationGameplayNodeEmitterRegistration
+    internal static class SimulationGameplayNodeEmitterRegistration
     {
-        public static void Register(CharacterSimulationNodeEmitterRegistry registry)
+        public static void Register(SimulationNodeEmitterRegistry registry)
         {
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<HasGameplayTagNode>(node => new CharacterSimulationNodeEmission(
+            registry.Register(SimulationNodeEmitterRegistry.Simple<HasGameplayTagNode>(node => new SimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectHasTag,
                 text0: TagIdentity(node.Tag.Value))));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<MatchGameplayTagQueryNode>(node => new CharacterSimulationNodeEmission(
+            registry.Register(SimulationNodeEmitterRegistry.Simple<MatchGameplayTagQueryNode>(node => new SimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectMatchTags,
                 constants: QueryFields(node.Query, "Query"))));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ReadGameplayAttributeNode>(node => new CharacterSimulationNodeEmission(
+            registry.Register(SimulationNodeEmitterRegistry.Simple<ReadGameplayAttributeNode>(node => new SimulationNodeEmission(
                 SimulationOperationCode.GameplayAttributeRead,
                 text0: AttributeIdentity(node.Attribute.Value))));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ApplyGameplayEffectNode>(ApplyGameplayEffect));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<RemoveGameplayEffectNode>(RemoveGameplayEffect));
+            registry.Register(SimulationNodeEmitterRegistry.Simple<ApplyGameplayEffectNode>(ApplyGameplayEffect));
+            registry.Register(SimulationNodeEmitterRegistry.Simple<RemoveGameplayEffectNode>(RemoveGameplayEffect));
         }
 
-        static CharacterSimulationNodeEmission ApplyGameplayEffect(ApplyGameplayEffectNode node)
+        static SimulationNodeEmission ApplyGameplayEffect(ApplyGameplayEffectNode node)
         {
             var constants = new List<KeyValuePair<string, object>>
             {
                 new KeyValuePair<string, object>("DefinitionRevision", node.Effect ? node.Effect.DefinitionRevision : 0U),
-                new KeyValuePair<string, object>("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(node.ActionContext)),
+                new KeyValuePair<string, object>("ActionContext", SimulationNodeEmitterContext.AssetIdentity(node.ActionContext)),
                 new KeyValuePair<string, object>("Predicted", node.Predicted)
             };
             for (int i = 0; i < node.SetByCallerValues.Count; i++)
@@ -35,13 +35,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string parameterId = node.SetByCallerValues[i].ParameterId;
                 constants.Add(new KeyValuePair<string, object>($"SetByCaller:{parameterId}", node.SetByCallerValues[i].Value));
             }
-            return new CharacterSimulationNodeEmission(
+            return new SimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectApply,
                 text0: EffectIdentity(node.Effect ? node.Effect.EffectId.Value : string.Empty),
                 constants: constants);
         }
 
-        static CharacterSimulationNodeEmission RemoveGameplayEffect(RemoveGameplayEffectNode node)
+        static SimulationNodeEmission RemoveGameplayEffect(RemoveGameplayEffectNode node)
         {
             var constants = new List<KeyValuePair<string, object>>
             {
@@ -49,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 new KeyValuePair<string, object>("Effect", EffectIdentity(node.Effect ? node.Effect.EffectId.Value : string.Empty))
             };
             constants.AddRange(QueryFields(node.EffectTagQuery, "Query"));
-            return new CharacterSimulationNodeEmission(
+            return new SimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectRemove,
                 integer0: (int)node.Selector,
                 constants: constants);

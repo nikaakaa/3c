@@ -11,9 +11,9 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    public readonly struct CharacterSimulationNodeEmission
+    public readonly struct SimulationNodeEmission
     {
-        public CharacterSimulationNodeEmission(SimulationOperationCode code, int integer0 = 0, int integer1 = 0, ulong unsigned0 = 0, string text0 = null, uint flags = 0, IEnumerable<KeyValuePair<string, object>> constants = null)
+        public SimulationNodeEmission(SimulationOperationCode code, int integer0 = 0, int integer1 = 0, ulong unsigned0 = 0, string text0 = null, uint flags = 0, IEnumerable<KeyValuePair<string, object>> constants = null)
         {
             Code = code;
             Integer0 = integer0;
@@ -32,13 +32,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public IReadOnlyList<KeyValuePair<string, object>> Constants { get; }
     }
 
-    public interface ICharacterSimulationNodeEmitter
+    public interface ISimulationNodeEmitter
     {
         Type SourceType { get; }
-        OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmitterContext context);
+        OperationHandle Emit(BaseNode node, SimulationNodeEmitterContext context);
     }
 
-    public sealed class CharacterSimulationNodeEmitterContext
+    public sealed class SimulationNodeEmitterContext
     {
         readonly BaseGraph m_Graph;
         readonly string m_GraphContentHash;
@@ -46,7 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly SimulationOperationEmitter m_OperationEmitter;
 
-        public CharacterSimulationNodeEmitterContext(BaseGraph graph, string route, GameplayAbilitySemanticBuilder builder)
+        public SimulationNodeEmitterContext(BaseGraph graph, string route, GameplayAbilitySemanticBuilder builder)
         {
             m_Graph = graph ?? throw new ArgumentNullException(nameof(graph));
             m_GraphContentHash = GraphAuthoringFingerprint.Compute(m_Graph);
@@ -57,12 +57,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public GameplayAbilitySemanticBuilder Builder => m_Builder;
 
-        public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmission emission)
+        public OperationHandle Emit(BaseNode node, SimulationNodeEmission emission)
         {
             return Emit(node, emission, string.Empty);
         }
 
-        public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmission emission, string portId)
+        public OperationHandle Emit(BaseNode node, SimulationNodeEmission emission, string portId)
         {
             SimulationSourceLocation source = Source(node, portId);
             List<CapturedValuePort> valuePorts = CaptureValuePorts(node, emission.Code);
@@ -216,11 +216,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     }
 
-    public sealed class CharacterSimulationNodeEmitterRegistry
+    public sealed class SimulationNodeEmitterRegistry
     {
-        readonly Dictionary<Type, ICharacterSimulationNodeEmitter> m_Emitters = new Dictionary<Type, ICharacterSimulationNodeEmitter>();
+        readonly Dictionary<Type, ISimulationNodeEmitter> m_Emitters = new Dictionary<Type, ISimulationNodeEmitter>();
 
-        public void Register(ICharacterSimulationNodeEmitter emitter)
+        public void Register(ISimulationNodeEmitter emitter)
         {
             if (emitter == null)
                 throw new ArgumentNullException(nameof(emitter));
@@ -228,33 +228,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new InvalidOperationException($"Emitter for '{emitter.SourceType.FullName}' is already registered.");
         }
 
-        public bool TryGet(Type sourceType, out ICharacterSimulationNodeEmitter emitter)
+        public bool TryGet(Type sourceType, out ISimulationNodeEmitter emitter)
         {
             return m_Emitters.TryGetValue(sourceType, out emitter);
         }
 
-        public static CharacterSimulationNodeEmitterRegistry CreateDefault()
+        public static SimulationNodeEmitterRegistry CreateDefault()
         {
-            var registry = new CharacterSimulationNodeEmitterRegistry();
-            CharacterSimulationCoreNodeEmitterRegistration.Register(registry);
-            CharacterSimulationInputNodeEmitterRegistration.Register(registry);
-            CharacterSimulationBlackboardNodeEmitterRegistration.Register(registry);
-            CharacterSimulationActionNodeEmitterRegistration.Register(registry);
-            CharacterSimulationCameraNodeEmitterRegistration.Register(registry);
-            CharacterSimulationGameplayNodeEmitterRegistration.Register(registry);
-            CharacterSimulationEquipmentNodeEmitterRegistration.Register(registry);
-            CharacterSimulationMotionNodeEmitterRegistration.Register(registry);
+            var registry = new SimulationNodeEmitterRegistry();
+            SimulationCoreNodeEmitterRegistration.Register(registry);
+            SimulationInputNodeEmitterRegistration.Register(registry);
+            SimulationBlackboardNodeEmitterRegistration.Register(registry);
+            SimulationActionNodeEmitterRegistration.Register(registry);
+            SimulationCameraNodeEmitterRegistration.Register(registry);
+            SimulationGameplayNodeEmitterRegistration.Register(registry);
+            SimulationEquipmentNodeEmitterRegistration.Register(registry);
+            SimulationMotionNodeEmitterRegistration.Register(registry);
             return registry;
         }
 
-        internal static ICharacterSimulationNodeEmitter Simple<T>(Func<T, CharacterSimulationNodeEmission> emit) where T : BaseNode
+        internal static ISimulationNodeEmitter Simple<T>(Func<T, SimulationNodeEmission> emit) where T : BaseNode
         {
-            return new SimpleCharacterSimulationNodeEmitter<T>(emit);
+            return new SimpleSimulationNodeEmitter<T>(emit);
         }
 
-        internal static ICharacterSimulationNodeEmitter Camera<T>(Func<T, CharacterSimulationNodeEmission> emit) where T : BaseNode
+        internal static ISimulationNodeEmitter Camera<T>(Func<T, SimulationNodeEmission> emit) where T : BaseNode
         {
-            return new CameraCharacterSimulationNodeEmitter<T>(emit);
+            return new CameraSimulationNodeEmitter<T>(emit);
         }
 
         internal static KeyValuePair<string, object>[] Fields(params (string Name, object Value)[] values)
@@ -266,35 +266,35 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 
-    sealed class SimpleCharacterSimulationNodeEmitter<T> : ICharacterSimulationNodeEmitter where T : BaseNode
+    sealed class SimpleSimulationNodeEmitter<T> : ISimulationNodeEmitter where T : BaseNode
     {
-        readonly Func<T, CharacterSimulationNodeEmission> m_Emit;
+        readonly Func<T, SimulationNodeEmission> m_Emit;
 
-        public SimpleCharacterSimulationNodeEmitter(Func<T, CharacterSimulationNodeEmission> emit)
+        public SimpleSimulationNodeEmitter(Func<T, SimulationNodeEmission> emit)
         {
             m_Emit = emit ?? throw new ArgumentNullException(nameof(emit));
         }
         public Type SourceType => typeof(T);
-        public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmitterContext context)
+        public OperationHandle Emit(BaseNode node, SimulationNodeEmitterContext context)
         {
             return context.Emit((T)node, m_Emit((T)node));
         }
     }
 
-    sealed class CameraCharacterSimulationNodeEmitter<T> : ICharacterSimulationNodeEmitter where T : BaseNode
+    sealed class CameraSimulationNodeEmitter<T> : ISimulationNodeEmitter where T : BaseNode
     {
-        readonly Func<T, CharacterSimulationNodeEmission> m_Emit;
+        readonly Func<T, SimulationNodeEmission> m_Emit;
 
-        public CameraCharacterSimulationNodeEmitter(Func<T, CharacterSimulationNodeEmission> emit)
+        public CameraSimulationNodeEmitter(Func<T, SimulationNodeEmission> emit)
         {
             m_Emit = emit ?? throw new ArgumentNullException(nameof(emit));
         }
 
         public Type SourceType => typeof(T);
 
-        public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmitterContext context)
+        public OperationHandle Emit(BaseNode node, SimulationNodeEmitterContext context)
         {
-            CharacterSimulationNodeEmission emission = m_Emit((T)node);
+            SimulationNodeEmission emission = m_Emit((T)node);
             SimulationSourceLocation source = context.Source(node, CameraProgramOperationSchema.OutputPortId);
             OperationHandle operation = context.Emit(node, emission, CameraProgramOperationSchema.OutputPortId);
             string producerIdentity = $"camera:{source.TemplateIdentity}";
@@ -317,16 +317,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 
-    sealed class CameraBasisCharacterSimulationNodeEmitter : ICharacterSimulationNodeEmitter
+    sealed class CameraBasisSimulationNodeEmitter : ISimulationNodeEmitter
     {
         public Type SourceType => typeof(ReadCameraBasisNode);
 
-        public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmitterContext context)
+        public OperationHandle Emit(BaseNode node, SimulationNodeEmitterContext context)
         {
             var cameraBasis = (ReadCameraBasisNode)node;
             OperationHandle operation = context.Emit(
                 cameraBasis,
-                new CharacterSimulationNodeEmission(
+                new SimulationNodeEmission(
                     SimulationOperationCode.CameraBasisRead,
                     integer0: CameraProgramOperationSchema.PayloadVersion));
             context.RecordOutputPorts(

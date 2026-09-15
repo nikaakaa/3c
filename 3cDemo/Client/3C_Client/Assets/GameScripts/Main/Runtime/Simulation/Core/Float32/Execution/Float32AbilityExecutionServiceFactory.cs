@@ -6,7 +6,7 @@ namespace ThirdPersonSimulation
     {
         public Float32AbilityExecutionAssembly Create(
             Float32GameplayAbilityExecutionInstallation installation,
-            IFloat32AbilityInstallationProvider installations,
+            IFloat32AbilityActionBindingProvider actionBindings,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace)
         {
@@ -55,7 +55,7 @@ namespace ThirdPersonSimulation
             Float32AbilityOperationControlRuntime control = null;
             Float32ActionRuntime actions = new Float32ActionRuntime(
                 access,
-                installations,
+                actionBindings,
                 frame,
                 input,
                 actionStore,

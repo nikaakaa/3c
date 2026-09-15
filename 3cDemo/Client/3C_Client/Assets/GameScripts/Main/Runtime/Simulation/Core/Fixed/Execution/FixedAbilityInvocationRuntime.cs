@@ -34,14 +34,14 @@ namespace ThirdPersonSimulation.Fixed
     {
         FixedAbilityExecutionAssembly Create(
             FixedGameplayAbilityExecutionInstallation installation,
-            IFixedAbilityInstallationProvider installations,
+            IFixedAbilityActionBindingProvider actionBindings,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace);
     }
 
-    public interface IFixedAbilityInstallationProvider
+    public interface IFixedAbilityActionBindingProvider
     {
-        FixedGameplayAbilityExecutionInstallation Require(CharacterSkillId abilityId);
+        GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId);
     }
 
     internal sealed class FixedAbilityExecutionAssembly
@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedAbilityInvocationRuntime(
             FixedGameplayAbilityExecutionInstallation installation,
-            IFixedAbilityInstallationProvider installations,
+            IFixedAbilityActionBindingProvider actionBindings,
             IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
             ActorId actorId,
@@ -117,7 +117,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             installation = installation ?? throw new ArgumentNullException(nameof(installation));
             AbilityId = installation.Data.AbilityId;
-            installations = installations ?? throw new ArgumentNullException(nameof(installations));
+            actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
@@ -145,7 +145,7 @@ namespace ThirdPersonSimulation.Fixed
 
             FixedAbilityExecutionAssembly assembly = serviceFactory.Create(
                 installation,
-                installations,
+                actionBindings,
                 m_Frame,
                 m_Workspace);
             m_Input = assembly.Input;

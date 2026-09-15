@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         public FixedAbilityExecutionAssembly Create(
             FixedGameplayAbilityExecutionInstallation installation,
-            IFixedAbilityInstallationProvider installations,
+            IFixedAbilityActionBindingProvider actionBindings,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace)
         {
@@ -56,7 +56,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityOperationControlRuntime control = null;
             FixedActionRuntime actions = new FixedActionRuntime(
                 access,
-                installations,
+                actionBindings,
                 frame,
                 input,
                 actionStore,

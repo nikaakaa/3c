@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation
 	internal sealed class Float32ActionRuntime : Float32OperationModule, IFloat32AbilityActionControlPort, IFloat32ActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>, IAbilityLifecyclePort<Float32ActionInstanceState>
 	{
 		readonly Float32AbilityExecutionFrame m_Frame;
-		readonly IFloat32AbilityInstallationProvider m_Installations;
+		readonly IFloat32AbilityActionBindingProvider m_ActionBindings;
 		readonly IFloat32InputPort m_InputRuntime;
 		readonly Float32ActionStateStore m_Actions;
 		readonly IFloat32BlackboardPort m_Blackboard;
@@ -25,7 +25,7 @@ namespace ThirdPersonSimulation
 
 		public Float32ActionRuntime(
 			Float32GameplayAbilityExecutionAccess access,
-			IFloat32AbilityInstallationProvider installations,
+			IFloat32AbilityActionBindingProvider actionBindings,
 			Float32AbilityExecutionFrame frame,
 			IFloat32InputPort inputRuntime,
 			Float32ActionStateStore actions,
@@ -39,7 +39,7 @@ namespace ThirdPersonSimulation
 			Func<OperationHandle, bool> isOperationStopComplete = null)
 			: base(access)
 		{
-			m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
+			m_ActionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_InputRuntime = inputRuntime ?? throw new ArgumentNullException(nameof(inputRuntime));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
@@ -258,7 +258,7 @@ namespace ThirdPersonSimulation
 		}
 
 		GameplayAbilityExecutionBinding RequireAbility(CharacterSkillId abilityId) =>
-			m_Installations.Require(abilityId).Data.Binding;
+			m_ActionBindings.RequireActionBinding(abilityId);
 
 		ActionAdmissionProfile RequireAdmissionProfile(SimulationOperation operation) =>
 			Access.Services.RequireAdmissionProfile(operation.Handle);

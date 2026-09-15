@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedActionRuntime : FixedOperationModule, IFixedAbilityActionControlPort, IFixedActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>, IActionSkillCommitPort<SimulationActionTargetSnapshot, FixedActionInstanceState>, IAbilityLifecyclePort<FixedActionInstanceState>
     {
         readonly FixedAbilityExecutionFrame m_Frame;
-        readonly IFixedAbilityInstallationProvider m_Installations;
+        readonly IFixedAbilityActionBindingProvider m_ActionBindings;
         readonly IFixedInputPort m_InputRuntime;
         readonly FixedActionStateStore m_Actions;
         readonly IFixedBlackboardPort m_Blackboard;
@@ -26,7 +26,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedActionRuntime(
             FixedGameplayAbilityExecutionAccess access,
-            IFixedAbilityInstallationProvider installations,
+            IFixedAbilityActionBindingProvider actionBindings,
             FixedAbilityExecutionFrame frame,
             IFixedInputPort inputRuntime,
             FixedActionStateStore actions,
@@ -40,7 +40,7 @@ namespace ThirdPersonSimulation.Fixed
             Func<OperationHandle, bool> isOperationStopComplete = null)
             : base(access)
         {
-            m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
+            m_ActionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_InputRuntime = inputRuntime ?? throw new ArgumentNullException(nameof(inputRuntime));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
@@ -259,7 +259,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         GameplayAbilityExecutionBinding RequireAbility(CharacterSkillId abilityId) =>
-            m_Installations.Require(abilityId).Data.Binding;
+            m_ActionBindings.RequireActionBinding(abilityId);
 
         ActionAdmissionProfile RequireAdmissionProfile(SimulationOperation operation) =>
             Access.Services.RequireAdmissionProfile(operation.Handle);

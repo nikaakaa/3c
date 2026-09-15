@@ -33,14 +33,14 @@ namespace ThirdPersonSimulation
     {
         Float32AbilityExecutionAssembly Create(
             Float32GameplayAbilityExecutionInstallation installation,
-            IFloat32AbilityInstallationProvider installations,
+            IFloat32AbilityActionBindingProvider actionBindings,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace);
     }
 
-    public interface IFloat32AbilityInstallationProvider
+    public interface IFloat32AbilityActionBindingProvider
     {
-        Float32GameplayAbilityExecutionInstallation Require(CharacterSkillId abilityId);
+        GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId);
     }
 
     internal sealed class Float32AbilityExecutionAssembly
@@ -96,7 +96,7 @@ namespace ThirdPersonSimulation
 
         public Float32AbilityInvocationRuntime(
             Float32GameplayAbilityExecutionInstallation installation,
-            IFloat32AbilityInstallationProvider installations,
+            IFloat32AbilityActionBindingProvider actionBindings,
             IFloat32SkillExecutionState skillState,
             IFloat32AbilityExecutionSavepointPort savepointPort,
             ActorId actorId,
@@ -116,7 +116,7 @@ namespace ThirdPersonSimulation
         {
             installation = installation ?? throw new ArgumentNullException(nameof(installation));
             AbilityId = installation.Data.AbilityId;
-            installations = installations ?? throw new ArgumentNullException(nameof(installations));
+            actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
@@ -144,7 +144,7 @@ namespace ThirdPersonSimulation
 
             Float32AbilityExecutionAssembly assembly = serviceFactory.Create(
                 installation,
-                installations,
+                actionBindings,
                 m_Frame,
                 m_Workspace);
             m_Input = assembly.Input;

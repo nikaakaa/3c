@@ -5,7 +5,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public sealed class FixedGameplayAbilityExecutionInstallationSet : IFixedAbilityInstallationProvider
+    public sealed class FixedGameplayAbilityExecutionInstallationSet : IFixedAbilityActionBindingProvider
     {
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionInstallation> m_Installations;
         readonly Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionInstallation> m_ByAbility;
@@ -72,6 +72,9 @@ namespace ThirdPersonSimulation.Fixed
             abilityId.IsValid && m_ByAbility.TryGetValue(abilityId, out FixedGameplayAbilityExecutionInstallation installation)
                 ? installation
                 : throw new InvalidOperationException($"Fixed Ability '{abilityId}' is not installed.");
+
+        public GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId) =>
+            Require(abilityId).Data.Binding;
 
         public bool TryGet(CharacterSkillId abilityId, out FixedGameplayAbilityExecutionInstallation installation)
         {

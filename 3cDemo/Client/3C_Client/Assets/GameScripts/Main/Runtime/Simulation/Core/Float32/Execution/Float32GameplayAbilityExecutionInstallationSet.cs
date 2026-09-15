@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class Float32GameplayAbilityExecutionInstallationSet : IFloat32AbilityInstallationProvider
+    public sealed class Float32GameplayAbilityExecutionInstallationSet : IFloat32AbilityActionBindingProvider
     {
         readonly ReadOnlyCollection<Float32GameplayAbilityExecutionInstallation> m_Installations;
         readonly Dictionary<CharacterSkillId, Float32GameplayAbilityExecutionInstallation> m_ByAbility;
@@ -71,6 +71,9 @@ namespace ThirdPersonSimulation
             abilityId.IsValid && m_ByAbility.TryGetValue(abilityId, out Float32GameplayAbilityExecutionInstallation installation)
                 ? installation
                 : throw new InvalidOperationException($"Float32 Ability '{abilityId}' is not installed.");
+
+        public GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId) =>
+            Require(abilityId).Data.Binding;
 
         public bool TryGet(CharacterSkillId abilityId, out Float32GameplayAbilityExecutionInstallation installation)
         {

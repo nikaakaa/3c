@@ -936,3 +936,8 @@
 
 - 提交 `a3712db16`，Float32／Fixed `SimulationActorBinding` 删除从 Ability 安装集合复制的 `RequiresEquipment` 字段；角色内容哈希和初始 Equipment 状态直接读取 `AbilityInstallations.RequiresEquipment`。
 - Ability 安装集合继续拥有能力需求事实，角色绑定不再复制一份角色层状态；不改变 Equipment 布局、能力声明或内容哈希结果。两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除预览旧Program版本读取
+
+- 提交 `0c16e8b8c`，Scene Play 历史观察删除不存在的 `SimulationProgramEpoch`／`session.ProgramEpoch` 读取和 `program_epoch`、`program_revision` 输出，改从正式 `SimulationSessionLaunchPlan` 发布 Session、执行目标、NumericProfile、Target ABI、OperationSet 与 Pipeline plan 身份。
+- 组合准备尚未完成时返回正式的 Session 状态，不制造旧 Program 版本；该 Unity Editor 文件未纳入当前两条 .NET 目标工程，未运行 Unity、测试或资产生成。

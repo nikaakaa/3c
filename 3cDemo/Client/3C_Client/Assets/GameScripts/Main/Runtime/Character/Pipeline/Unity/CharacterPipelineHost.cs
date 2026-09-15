@@ -427,7 +427,6 @@ namespace ThirdPersonCharacter.Pipeline
 					actorId,
 					characterRuntime,
 					actorBinding,
-					m_Definition.PresentationProjection,
 					projection,
 					m_WorldBodyBinding,
 					initialBody,

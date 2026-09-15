@@ -41,7 +41,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             ActorId actorId,
             Float32CharacterRuntime characterRuntime,
             SimulationActorBinding characterBinding,
-            CharacterPresentationProjectionAsset projectionAsset,
             CharacterPresentationProjection projection,
             Float32WorldBodyBinding worldBodyBinding,
             WorldBodyState initialBody,
@@ -72,7 +71,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             ActorId = actorId;
             m_CharacterRuntime = characterRuntime;
             m_CharacterBinding = characterBinding;
-            ProjectionAsset = projectionAsset ? projectionAsset : throw new ArgumentNullException(nameof(projectionAsset));
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             WorldBodyBinding = worldBodyBinding;
             InitialBody = initialBody;
@@ -119,7 +117,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public WorldBodyState InitialBody { get; }
         public IUnityCharacterControlSourceRuntime LocalControlSource => m_LocalControlSource;
         public ICharacterSimulationGameplayOutputPort GameplayOutput => m_GameplayOutput;
-        public CharacterPresentationProjectionAsset ProjectionAsset { get; }
         public CharacterPresentationProjection Projection { get; }
         public CharacterPresentationProjection PresentationProjection => Projection;
         public ICharacterPresentationRuntime PresentationRuntime => m_PresentationRuntime;

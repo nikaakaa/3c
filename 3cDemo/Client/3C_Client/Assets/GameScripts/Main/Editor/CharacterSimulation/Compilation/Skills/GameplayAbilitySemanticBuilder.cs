@@ -517,7 +517,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_GameplayCapabilities.Add(capability);
         }
 
-        public CharacterGameplaySemanticIr Build()
+        public GameplayAbilitySemanticIr Build()
         {
             ValidateSingleChildControlFlow();
             try
@@ -535,7 +535,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
             try
             {
-                var manifest = new CharacterGameplaySemanticIrManifest(
+                var manifest = new GameplayAbilitySemanticIrManifest(
                     m_ProgramId,
                     m_CompilerVersion,
                     m_OperationSetVersion,
@@ -543,7 +543,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_SourceRevision,
                     new GameplayAbilityCapabilityManifest(m_GameplayCapabilities),
                     m_Root);
-                return new CharacterGameplaySemanticIr(
+                return new GameplayAbilitySemanticIr(
                     manifest,
                     m_Operations,
                     m_Literals,

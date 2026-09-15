@@ -99,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     model.EntryIdentity,
                     abilitySource);
                 blackboard.DeclareScopes();
-                CharacterGameplaySemanticIr semanticIr = builder.Build();
+                GameplayAbilitySemanticIr semanticIr = builder.Build();
                 ValidatedSemanticIrArtifact artifact = ValidateArtifact(semanticIr, report, model.DefinitionPath);
                 if (artifact == null || !report.IsValid)
                     return GameplayAbilitySemanticFrontendResult.Failed(report);
@@ -215,7 +215,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static ValidatedSemanticIrArtifact ValidateArtifact(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             CharacterSimulationCompileReport report,
             string sourceIdentity)
         {
@@ -223,8 +223,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
             try
             {
-                ValidatedSemanticIrArtifact artifact = CharacterGameplaySemanticIrCodec.CreateValidatedArtifact(semanticIr);
-                return CharacterGameplaySemanticIrCodec.ReadValidatedArtifact(
+                ValidatedSemanticIrArtifact artifact = GameplayAbilitySemanticIrCodec.CreateValidatedArtifact(semanticIr);
+                return GameplayAbilitySemanticIrCodec.ReadValidatedArtifact(
                     artifact.ToArray(),
                     new SemanticIrLoadExpectation(
                         semanticIr.Manifest.ProgramId,

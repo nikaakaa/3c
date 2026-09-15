@@ -267,9 +267,9 @@ namespace ThirdPersonSimulation
         public SemanticValueKind ResolvedValueKind { get; }
     }
 
-    public sealed class CharacterGameplaySemanticIrManifest
+    public sealed class GameplayAbilitySemanticIrManifest
     {
-        public CharacterGameplaySemanticIrManifest(
+        public GameplayAbilitySemanticIrManifest(
             ProgramId programId,
             string compilerVersion,
             OperationSetVersion operationSetVersion,
@@ -300,7 +300,7 @@ namespace ThirdPersonSimulation
         public SimulationProgramRootDescriptor Root { get; }
     }
 
-    public sealed class CharacterGameplaySemanticIr
+    public sealed class GameplayAbilitySemanticIr
     {
         readonly ReadOnlyCollection<SemanticOperation> m_Operations;
         readonly ReadOnlyCollection<SemanticLiteral> m_Literals;
@@ -315,8 +315,8 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<ProgramSourceMapEntry> m_SourceMap;
         readonly ReadOnlyCollection<ProgramProducer> m_Producers;
 
-        public CharacterGameplaySemanticIr(
-            CharacterGameplaySemanticIrManifest manifest,
+        public GameplayAbilitySemanticIr(
+            GameplayAbilitySemanticIrManifest manifest,
             IEnumerable<SemanticOperation> operations,
             IEnumerable<SemanticLiteral> literals,
             IEnumerable<SemanticConstantInputBinding> constantInputBindings,
@@ -353,10 +353,10 @@ namespace ThirdPersonSimulation
                 m_Operations);
             ValidateReferences();
             ValidateGraphCallFrames();
-            SemanticHash = CharacterGameplaySemanticIrCodec.ComputeHash(this);
+            SemanticHash = GameplayAbilitySemanticIrCodec.ComputeHash(this);
         }
 
-        public CharacterGameplaySemanticIrManifest Manifest { get; }
+        public GameplayAbilitySemanticIrManifest Manifest { get; }
         public IReadOnlyList<SemanticOperation> Operations => m_Operations;
         public IReadOnlyList<SemanticLiteral> Literals => m_Literals;
         public IReadOnlyList<SemanticConstantInputBinding> ConstantInputBindings => m_ConstantInputBindings;
@@ -665,7 +665,7 @@ namespace ThirdPersonSimulation
 
     public static class ProgramMotionModifierCompiler
     {
-        public static IReadOnlyList<ProgramMotionModifierDescriptor> Compile(CharacterGameplaySemanticIr semanticIr)
+        public static IReadOnlyList<ProgramMotionModifierDescriptor> Compile(GameplayAbilitySemanticIr semanticIr)
         {
             if (semanticIr == null)
                 throw new ArgumentNullException(nameof(semanticIr));
@@ -681,7 +681,7 @@ namespace ThirdPersonSimulation
         }
 
         static ProgramMotionModifierDescriptor CompileMotionWarp(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             SemanticOperation operation,
             int descriptorIndex)
         {
@@ -761,7 +761,7 @@ namespace ThirdPersonSimulation
         }
 
         static void ValidateScaleSource(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             SemanticOperation operation,
             ProgramCatalogEntry warpCatalog,
             ProgramCatalogEntry sourceCatalog,
@@ -806,7 +806,7 @@ namespace ThirdPersonSimulation
         }
 
         static SemanticDataDocument RequireDocumentLiteral(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             ProgramCatalogEntry catalog,
             string name)
         {
@@ -895,7 +895,7 @@ namespace ThirdPersonSimulation
         }
 
         static void ValidateSourceAndOwner(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             SemanticOperation operation,
             ProgramCatalogEntry warpCatalog,
             ProgramCatalogEntry sourceCatalog,
@@ -973,7 +973,7 @@ namespace ThirdPersonSimulation
         }
 
         static ProgramCatalogEntry RequireOperationCatalog(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             OperationHandle operation,
             ProgramCatalogEntryKind kind,
             string label)
@@ -1000,7 +1000,7 @@ namespace ThirdPersonSimulation
         }
 
         static ProgramCatalogEntry RequireCatalog(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             ProgramCatalogEntryKind kind,
             string identity)
         {
@@ -1018,7 +1018,7 @@ namespace ThirdPersonSimulation
         }
 
         static bool ReferencesCatalog(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             OperationHandle operation,
             int catalogIndex)
         {
@@ -1035,7 +1035,7 @@ namespace ThirdPersonSimulation
         }
 
         static ProgramReference RequireSingleReference(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             OperationHandle operation,
             ProgramReferenceKind kind,
             string label)
@@ -1055,7 +1055,7 @@ namespace ThirdPersonSimulation
 
         static ProgramMotionWarpTranslationMode RequireTranslationMode(
             SemanticOperation operation,
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             ProgramCatalogEntry catalog)
         {
             int value = RequireInt32Literal(semanticIr, catalog, "TranslationMode");
@@ -1067,7 +1067,7 @@ namespace ThirdPersonSimulation
 
         static ProgramMotionWarpRotationMode RequireRotationMode(
             SemanticOperation operation,
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             ProgramCatalogEntry catalog)
         {
             int value = RequireInt32Literal(semanticIr, catalog, "RotationMode");
@@ -1078,7 +1078,7 @@ namespace ThirdPersonSimulation
         }
 
         static int RequireInt32Literal(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             ProgramCatalogEntry catalog,
             string name)
         {
@@ -1087,7 +1087,7 @@ namespace ThirdPersonSimulation
         }
 
         static TEnum RequireEnumLiteral<TEnum>(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             ProgramCatalogEntry catalog,
             string name)
             where TEnum : struct, Enum
@@ -1100,7 +1100,7 @@ namespace ThirdPersonSimulation
         }
 
         static int OptionalLiteral(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             ProgramCatalogEntry catalog,
             string name,
             SemanticLiteralKind kind,
@@ -1123,7 +1123,7 @@ namespace ThirdPersonSimulation
         }
 
         static int RequireLiteral(
-            CharacterGameplaySemanticIr semanticIr,
+            GameplayAbilitySemanticIr semanticIr,
             ProgramCatalogEntry catalog,
             string name,
             SemanticLiteralKind kind)

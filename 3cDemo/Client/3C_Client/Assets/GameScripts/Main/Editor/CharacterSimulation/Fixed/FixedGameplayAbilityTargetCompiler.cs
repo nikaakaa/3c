@@ -41,8 +41,8 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (artifact == null)
                 throw new ArgumentNullException(nameof(artifact));
-            CharacterGameplaySemanticIr semanticIr = artifact.SemanticIr;
-            CharacterGameplaySemanticIrArtifactHeader header = artifact.Header;
+            GameplayAbilitySemanticIr semanticIr = artifact.SemanticIr;
+            GameplayAbilitySemanticIrArtifactHeader header = artifact.Header;
             if (!semanticIr.Manifest.Root.IsAbility || !header.Root.IsAbility)
                 throw new InvalidOperationException("Fixed Ability Target requires an Ability Semantic IR artifact.");
             if (!semanticIr.Manifest.ProgramId.Equals(header.ProgramId) ||
@@ -77,7 +77,7 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        static void ValidateLiteralPrecision(CharacterGameplaySemanticIr semanticIr)
+        static void ValidateLiteralPrecision(GameplayAbilitySemanticIr semanticIr)
         {
             for (int i = 0; i < semanticIr.Literals.Count; i++)
             {
@@ -90,7 +90,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal static class FixedGameplayAbilityExecutionDataLowerer
     {
-        internal static FixedGameplayAbilityExecutionCompilationResult Lower(CharacterGameplaySemanticIr semanticIr)
+        internal static FixedGameplayAbilityExecutionCompilationResult Lower(GameplayAbilitySemanticIr semanticIr)
         {
             if (semanticIr == null)
                 throw new ArgumentNullException(nameof(semanticIr));

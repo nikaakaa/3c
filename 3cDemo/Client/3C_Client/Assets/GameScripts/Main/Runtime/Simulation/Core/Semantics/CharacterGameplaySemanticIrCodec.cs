@@ -51,11 +51,11 @@ namespace ThirdPersonSimulation
         public SimulationProgramRootDescriptor Root { get; }
     }
 
-    public sealed class CharacterGameplaySemanticIrArtifactHeader
+    public sealed class GameplayAbilitySemanticIrArtifactHeader
     {
         readonly ReadOnlyCollection<string> m_GameplayCapabilities;
 
-        internal CharacterGameplaySemanticIrArtifactHeader(
+        internal GameplayAbilitySemanticIrArtifactHeader(
             uint magic,
             int artifactVersion,
             int payloadVersion,
@@ -102,33 +102,33 @@ namespace ThirdPersonSimulation
         readonly byte[] m_CanonicalBytes;
 
         internal ValidatedSemanticIrArtifact(
-            CharacterGameplaySemanticIrArtifactHeader header,
+            GameplayAbilitySemanticIrArtifactHeader header,
             byte[] canonicalBytes,
-            CharacterGameplaySemanticIr semanticIr)
+            GameplayAbilitySemanticIr semanticIr)
         {
             Header = header ?? throw new ArgumentNullException(nameof(header));
             m_CanonicalBytes = canonicalBytes == null ? throw new ArgumentNullException(nameof(canonicalBytes)) : (byte[])canonicalBytes.Clone();
             SemanticIr = semanticIr ?? throw new ArgumentNullException(nameof(semanticIr));
         }
 
-        public CharacterGameplaySemanticIrArtifactHeader Header { get; }
+        public GameplayAbilitySemanticIrArtifactHeader Header { get; }
         public ReadOnlyMemory<byte> CanonicalBytes => m_CanonicalBytes;
-        public CharacterGameplaySemanticIr SemanticIr { get; }
+        public GameplayAbilitySemanticIr SemanticIr { get; }
         public byte[] ToArray() => (byte[])m_CanonicalBytes.Clone();
     }
 
-    public static class CharacterGameplaySemanticIrCodec
+    public static class GameplayAbilitySemanticIrCodec
     {
         const uint ArtifactMagic = 0x52495343;
         const int ArtifactVersion = 17;
         const int PayloadVersion = 17;
 
-        public static byte[] WriteArtifact(CharacterGameplaySemanticIr semanticIr)
+        public static byte[] WriteArtifact(GameplayAbilitySemanticIr semanticIr)
         {
             return CreateValidatedArtifact(semanticIr).ToArray();
         }
 
-        public static ValidatedSemanticIrArtifact CreateValidatedArtifact(CharacterGameplaySemanticIr semanticIr)
+        public static ValidatedSemanticIrArtifact CreateValidatedArtifact(GameplayAbilitySemanticIr semanticIr)
         {
             if (semanticIr == null)
                 throw new ArgumentNullException(nameof(semanticIr));
@@ -161,7 +161,7 @@ namespace ThirdPersonSimulation
                     semanticIr.Manifest.Root));
         }
 
-        public static CharacterGameplaySemanticIrArtifactHeader ReadArtifactHeader(byte[] bytes)
+        public static GameplayAbilitySemanticIrArtifactHeader ReadArtifactHeader(byte[] bytes)
         {
             return ReadEnvelope(bytes).Header;
         }
@@ -169,7 +169,7 @@ namespace ThirdPersonSimulation
         public static ValidatedSemanticIrArtifact ReadValidatedArtifact(byte[] bytes)
         {
             ArtifactEnvelope envelope = ReadEnvelope(bytes);
-            CharacterGameplaySemanticIr semanticIr = ReadPayload(envelope.Payload);
+            GameplayAbilitySemanticIr semanticIr = ReadPayload(envelope.Payload);
             ValidateHeaderAgainstPayload(envelope.Header, semanticIr);
             return new ValidatedSemanticIrArtifact(envelope.Header, bytes, semanticIr);
         }
@@ -181,7 +181,7 @@ namespace ThirdPersonSimulation
             return artifact;
         }
 
-        public static CharacterGameplaySemanticIr ReadArtifact(byte[] bytes, SemanticIrLoadExpectation expectation)
+        public static GameplayAbilitySemanticIr ReadArtifact(byte[] bytes, SemanticIrLoadExpectation expectation)
         {
             return ReadValidatedArtifact(bytes, expectation).SemanticIr;
         }
@@ -213,7 +213,7 @@ namespace ThirdPersonSimulation
             SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             byte[] payload = reader.ReadBytes();
             reader.RequireComplete();
-            var header = new CharacterGameplaySemanticIrArtifactHeader(
+            var header = new GameplayAbilitySemanticIrArtifactHeader(
                 magic,
                 artifactVersion,
                 payloadVersion,
@@ -230,9 +230,9 @@ namespace ThirdPersonSimulation
             return new ArtifactEnvelope(header, payload);
         }
 
-        static void ValidateHeaderAgainstPayload(CharacterGameplaySemanticIrArtifactHeader header, CharacterGameplaySemanticIr semanticIr)
+        static void ValidateHeaderAgainstPayload(GameplayAbilitySemanticIrArtifactHeader header, GameplayAbilitySemanticIr semanticIr)
         {
-            CharacterGameplaySemanticIrManifest manifest = semanticIr.Manifest;
+            GameplayAbilitySemanticIrManifest manifest = semanticIr.Manifest;
             if (!manifest.ProgramId.Equals(header.ProgramId) ||
                 !string.Equals(manifest.CompilerVersion, header.CompilerVersion, StringComparison.Ordinal) ||
                 !manifest.OperationSetVersion.Equals(header.OperationSetVersion) ||
@@ -246,7 +246,7 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static void ValidateExpectation(CharacterGameplaySemanticIrArtifactHeader header, SemanticIrLoadExpectation expectation)
+        static void ValidateExpectation(GameplayAbilitySemanticIrArtifactHeader header, SemanticIrLoadExpectation expectation)
         {
             if (!header.ProgramId.Equals(expectation.ProgramId))
                 throw new InvalidDataException($"Semantic IR ProgramId '{header.ProgramId}' does not match expected '{expectation.ProgramId}'.");
@@ -276,21 +276,21 @@ namespace ThirdPersonSimulation
             return true;
         }
 
-        public static SemanticHash ComputeHash(CharacterGameplaySemanticIr semanticIr)
+        public static SemanticHash ComputeHash(GameplayAbilitySemanticIr semanticIr)
         {
             using var writer = new CanonicalWriter();
             WritePayload(writer, semanticIr);
             return new SemanticHash(writer.ComputeHash());
         }
 
-        static byte[] WritePayload(CharacterGameplaySemanticIr semanticIr)
+        static byte[] WritePayload(GameplayAbilitySemanticIr semanticIr)
         {
             using var writer = new CanonicalWriter();
             WritePayload(writer, semanticIr);
             return writer.ToArray();
         }
 
-        static void WritePayload(CanonicalWriter writer, CharacterGameplaySemanticIr semanticIr)
+        static void WritePayload(CanonicalWriter writer, GameplayAbilitySemanticIr semanticIr)
         {
             writer.WriteInt32(PayloadVersion);
             WriteManifest(writer, semanticIr.Manifest);
@@ -308,12 +308,12 @@ namespace ThirdPersonSimulation
             WriteTable(writer, semanticIr.Producers, SimulationProgramSemanticsCodec.WriteProducer);
         }
 
-        static CharacterGameplaySemanticIr ReadPayload(byte[] bytes)
+        static GameplayAbilitySemanticIr ReadPayload(byte[] bytes)
         {
             var reader = new CanonicalReader(bytes);
             if (reader.ReadInt32() != PayloadVersion)
                 throw new SemanticIrArtifactVersionException("Gameplay Semantic IR payload version is unsupported.");
-            CharacterGameplaySemanticIrManifest manifest = ReadManifest(reader);
+            GameplayAbilitySemanticIrManifest manifest = ReadManifest(reader);
             SemanticLiteral[] literals = ReadTable(reader, ReadLiteral);
             SemanticOperation[] operations = ReadTable(reader, ReadOperation);
             SemanticConstantInputBinding[] constantInputBindings = ReadTable(reader, ReadConstantInputBinding);
@@ -327,7 +327,7 @@ namespace ThirdPersonSimulation
             ProgramSourceMapEntry[] sourceMap = ReadTable(reader, SimulationProgramSemanticsCodec.ReadSourceMap);
             ProgramProducer[] producers = ReadTable(reader, SimulationProgramSemanticsCodec.ReadProducer);
             reader.RequireComplete();
-            return new CharacterGameplaySemanticIr(
+            return new GameplayAbilitySemanticIr(
                 manifest,
                 operations,
                 literals,
@@ -362,7 +362,7 @@ namespace ThirdPersonSimulation
             return new SemanticConstantInputBinding(operation, port, constant, (SemanticValueKind)kindValue);
         }
 
-        static void WriteManifest(CanonicalWriter writer, CharacterGameplaySemanticIrManifest manifest)
+        static void WriteManifest(CanonicalWriter writer, GameplayAbilitySemanticIrManifest manifest)
         {
             writer.WriteString(manifest.ProgramId.Value);
             writer.WriteString(manifest.CompilerVersion);
@@ -375,7 +375,7 @@ namespace ThirdPersonSimulation
             SimulationProgramRootDescriptorCodec.Write(writer, manifest.Root);
         }
 
-        static CharacterGameplaySemanticIrManifest ReadManifest(CanonicalReader reader)
+        static GameplayAbilitySemanticIrManifest ReadManifest(CanonicalReader reader)
         {
             var programId = new ProgramId(reader.ReadString());
             string compilerVersion = reader.ReadString();
@@ -387,7 +387,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
             SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
-            return new CharacterGameplaySemanticIrManifest(
+            return new GameplayAbilitySemanticIrManifest(
                 programId,
                 compilerVersion,
                 operationSetVersion,
@@ -539,13 +539,13 @@ namespace ThirdPersonSimulation
 
         readonly struct ArtifactEnvelope
         {
-            public ArtifactEnvelope(CharacterGameplaySemanticIrArtifactHeader header, byte[] payload)
+            public ArtifactEnvelope(GameplayAbilitySemanticIrArtifactHeader header, byte[] payload)
             {
                 Header = header;
                 Payload = payload;
             }
 
-            public CharacterGameplaySemanticIrArtifactHeader Header { get; }
+            public GameplayAbilitySemanticIrArtifactHeader Header { get; }
             public byte[] Payload { get; }
         }
     }

@@ -40,8 +40,8 @@ namespace ThirdPersonSimulation
         {
             if (artifact == null)
                 throw new ArgumentNullException(nameof(artifact));
-            CharacterGameplaySemanticIr semanticIr = artifact.SemanticIr;
-            CharacterGameplaySemanticIrArtifactHeader header = artifact.Header;
+            GameplayAbilitySemanticIr semanticIr = artifact.SemanticIr;
+            GameplayAbilitySemanticIrArtifactHeader header = artifact.Header;
             if (!semanticIr.Manifest.Root.IsAbility || !header.Root.IsAbility)
                 throw new InvalidOperationException("Float32 Ability Target requires an Ability Semantic IR artifact.");
             if (!semanticIr.Manifest.ProgramId.Equals(header.ProgramId) ||
@@ -76,7 +76,7 @@ namespace ThirdPersonSimulation
             return result;
         }
 
-        static void ValidateLiteralPrecision(CharacterGameplaySemanticIr semanticIr)
+        static void ValidateLiteralPrecision(GameplayAbilitySemanticIr semanticIr)
         {
             for (int i = 0; i < semanticIr.Literals.Count; i++)
             {
@@ -89,7 +89,7 @@ namespace ThirdPersonSimulation
 
     static class Float32GameplayAbilityExecutionDataLowerer
     {
-        internal static Float32GameplayAbilityExecutionCompilationResult Lower(CharacterGameplaySemanticIr semanticIr)
+        internal static Float32GameplayAbilityExecutionCompilationResult Lower(GameplayAbilitySemanticIr semanticIr)
         {
             if (semanticIr == null)
                 throw new ArgumentNullException(nameof(semanticIr));

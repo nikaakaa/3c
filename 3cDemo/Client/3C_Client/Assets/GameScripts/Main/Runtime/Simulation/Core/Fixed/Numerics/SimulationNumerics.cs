@@ -62,8 +62,8 @@ namespace ThirdPersonSimulation.Fixed
             new SimulationExecutionTargetManifest(
                 "character-execution/fixed/v2",
                 FixedSimulationNumericProfile.Value,
-                CharacterGameplayOperationSet.Version,
-                CharacterGameplayOperationSet.Operations));
+                GameplayAbilityOperationSet.Version,
+                GameplayAbilityOperationSet.Operations));
 
         public static FixedSimulationTargetManifest Manifest => s_Manifest;
     }

@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation
             var operations = supportedOperations == null
                 ? Array.Empty<SimulationOperationCode>()
                 : supportedOperations.ToArray();
-            CharacterGameplayOperationSet.RequireCompleteBackend(operationSetVersion, operations, BackendIdentity);
+            GameplayAbilityOperationSet.RequireCompleteBackend(operationSetVersion, operations, BackendIdentity);
             m_SupportedOperations = Array.AsReadOnly(operations);
             Identity = StableHash.Compute(
                 "simulation-execution-target/1",

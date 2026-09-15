@@ -250,7 +250,7 @@ namespace ThirdPersonSimulation
         {
             if (binding.SourceKind != CompiledValueInputSourceKind.Operation)
                 throw new InvalidOperationException("Constant Value input has no source output port.");
-            IReadOnlyList<OperationValuePortDefinition> outputs = CharacterGameplayValuePortContracts
+            IReadOnlyList<OperationValuePortDefinition> outputs = GameplayAbilityValuePortContracts
                 .Require(Operation(binding.SourceOperation).Code, binding.SourceOperation, m_GraphCallFrames)
                 .Outputs;
             if (binding.SourceOutputPortIndex < 0 || binding.SourceOutputPortIndex >= outputs.Count)
@@ -389,7 +389,7 @@ namespace ThirdPersonSimulation
             var grouped = new CompiledValueInputBinding?[operationCount][];
             for (int i = 0; i < operationCount; i++)
             {
-                OperationValuePortContract contract = CharacterGameplayValuePortContracts.Require(
+                OperationValuePortContract contract = GameplayAbilityValuePortContracts.Require(
                     operations[i].Code,
                     operations[i].Handle,
                     graphCallFrames);
@@ -402,10 +402,10 @@ namespace ThirdPersonSimulation
                     continue;
                 SimulationOperation source = operations[edge.Source.Value];
                 SimulationOperation target = operations[edge.Target.Value];
-                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
+                OperationValuePortDefinition sourcePort = GameplayAbilityValuePortContracts
                     .Require(source.Code, source.Handle, graphCallFrames)
                     .RequireSelection(edge.SourcePort);
-                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts
+                OperationValuePortDefinition targetPort = GameplayAbilityValuePortContracts
                     .Require(target.Code, target.Handle, graphCallFrames)
                     .RequireInput(edge.TargetPort);
                 SemanticValueKind kind = GameplayAbilityExecutionValueResolver.ResolveOutputKind(
@@ -436,7 +436,7 @@ namespace ThirdPersonSimulation
             {
                 ProgramConstantInputBinding input = constantInputBindings[i];
                 SimulationOperation target = operations[input.TargetOperation.Value];
-                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts
+                OperationValuePortDefinition targetPort = GameplayAbilityValuePortContracts
                     .Require(target.Code, target.Handle, graphCallFrames)
                     .RequireInput(input.TargetPort);
                 GameplayAbilityExecutionValueResolver.RequireInputKind(
@@ -956,4 +956,3 @@ namespace ThirdPersonSimulation
         }
     }
 }
-

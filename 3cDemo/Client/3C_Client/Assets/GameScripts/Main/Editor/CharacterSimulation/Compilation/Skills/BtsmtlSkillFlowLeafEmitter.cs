@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         $"Skill node '{node.UID}' field '{field.Field.FieldId.Value}' is invalid.");
             CharacterSimulationNodeEmission emission = Describe(node);
             BtsmtlSkillNativeNodeCatalog.TryGet(node.GetType(), out BtsmtlSkillNativeNodeContract native);
-            OperationValuePortContract contract = CharacterGameplayValuePortContracts.Require(emission.Code);
+            OperationValuePortContract contract = GameplayAbilityValuePortContracts.Require(emission.Code);
             if (node.GetInputValuePorts().Count() != contract.Inputs.Count || node.GetOutputValuePorts().Count() != contract.Outputs.Count)
                 throw new InvalidOperationException($"Skill node '{node.UID}' does not match its compiled value port shape.");
             var inputs = new List<CharacterSimulationConstantInput>();

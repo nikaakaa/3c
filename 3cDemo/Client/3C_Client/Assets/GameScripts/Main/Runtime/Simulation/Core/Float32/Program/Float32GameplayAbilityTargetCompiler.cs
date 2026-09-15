@@ -50,8 +50,8 @@ namespace ThirdPersonSimulation
             {
                 throw new InvalidOperationException("Validated Semantic IR artifact identity is inconsistent.");
             }
-            CharacterGameplayOperationSet.RequireVersion(header.OperationSetVersion);
-            CharacterGameplayOperationSet.RequireCompleteBackend(
+            GameplayAbilityOperationSet.RequireVersion(header.OperationSetVersion);
+            GameplayAbilityOperationSet.RequireCompleteBackend(
                 header.OperationSetVersion,
                 Float32SimulationTarget.Manifest.ExecutionTarget.SupportedOperations,
                 Float32SimulationTarget.Manifest.ExecutionTarget.BackendIdentity);
@@ -98,8 +98,8 @@ namespace ThirdPersonSimulation
             Float32SimulationTargetManifest target = Float32SimulationTarget.Manifest;
             if (target.Profile != Float32SimulationNumericProfile.Value)
                 throw new InvalidOperationException("Float32 Numeric Target manifest is inconsistent.");
-            CharacterGameplayOperationSet.RequireVersion(semanticIr.Manifest.OperationSetVersion);
-            CharacterGameplayOperationSet.RequireCompleteBackend(
+            GameplayAbilityOperationSet.RequireVersion(semanticIr.Manifest.OperationSetVersion);
+            GameplayAbilityOperationSet.RequireCompleteBackend(
                 semanticIr.Manifest.OperationSetVersion,
                 target.ExecutionTarget.SupportedOperations,
                 target.ExecutionTarget.BackendIdentity);
@@ -115,7 +115,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < semanticIr.Operations.Count; i++)
             {
                 SemanticOperation operation = semanticIr.Operations[i];
-                CharacterGameplayOperationSet.RequireOperation(operation.Code);
+                GameplayAbilityOperationSet.RequireOperation(operation.Code);
                 string sourceIdentity = operation.Number0SourceIdentity.Length == 0
                     ? $"operation:{operation.Handle.Value}/number0"
                     : operation.Number0SourceIdentity;

@@ -482,7 +482,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             CharacterRuntimeHash = CharacterRuntime.GameplayContentHash.ToString(),
             StateCodecIdentity = CheckpointLayout.StateCodecIdentity,
             CheckpointLayoutHash = CheckpointLayout.LayoutIdentity.ToString(),
-            OperationSetId = CharacterGameplayOperationSet.Id,
+            OperationSetId = GameplayAbilityOperationSet.Id,
             OperationSetVersion = Compatibility.OperationSetVersion.Value
         };
 

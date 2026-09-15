@@ -211,14 +211,14 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public static class CharacterGameplayValuePortContracts
+    public static class GameplayAbilityValuePortContracts
     {
         static readonly ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract> s_Contracts = Build();
 
         public static OperationValuePortContract Require(SimulationOperationCode code)
         {
             if (!s_Contracts.TryGetValue(code, out OperationValuePortContract contract))
-                throw new InvalidOperationException($"Operation '{code}' has no Value port contract in '{CharacterGameplayOperationSet.Version.Value}'.");
+                throw new InvalidOperationException($"Operation '{code}' has no Value port contract in '{GameplayAbilityOperationSet.Version.Value}'.");
             return contract;
         }
 
@@ -301,9 +301,9 @@ namespace ThirdPersonSimulation
 		static ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract> Build()
 		{
 			var values = new Dictionary<SimulationOperationCode, OperationValuePortContract>();
-			for (int i = 0; i < CharacterGameplayOperationSet.Operations.Count; i++)
+			for (int i = 0; i < GameplayAbilityOperationSet.Operations.Count; i++)
 			{
-				SimulationOperationCode code = CharacterGameplayOperationSet.Operations[i];
+				SimulationOperationCode code = GameplayAbilityOperationSet.Operations[i];
 				values.Add(code, Empty(code));
 			}
 
@@ -369,7 +369,7 @@ namespace ThirdPersonSimulation
 			Set(values, Both(SimulationOperationCode.CommitEquipmentChange, new[] { Fixed("m_ChangeId", 0, SemanticValueKind.UInt64) }, new[] { Fixed("m_Committed", 0, SemanticValueKind.Boolean), Fixed("m_Failure", 1, SemanticValueKind.Int32) }));
 			Set(values, Both(SimulationOperationCode.CancelEquipmentChange, new[] { Fixed("m_ChangeId", 0, SemanticValueKind.UInt64) }, new[] { Fixed("m_Cancelled", 0, SemanticValueKind.Boolean), Fixed("m_Failure", 1, SemanticValueKind.Int32) }));
 
-			if (values.Count != CharacterGameplayOperationSet.Operations.Count)
+			if (values.Count != GameplayAbilityOperationSet.Operations.Count)
 				throw new InvalidOperationException("Value port contract table is incomplete.");
 			return new ReadOnlyDictionary<SimulationOperationCode, OperationValuePortContract>(values);
 		}

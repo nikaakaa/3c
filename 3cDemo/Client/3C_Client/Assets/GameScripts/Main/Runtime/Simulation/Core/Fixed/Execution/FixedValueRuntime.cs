@@ -332,7 +332,7 @@ namespace ThirdPersonSimulation.Fixed
                     if (!cursor.IsPredictiveEvaluation && (m_Frame.Trace.CaptureValues ||
                         m_Frame.Trace.CaptureControlFlow && input.SourceKind == CompiledValueInputSourceKind.Operation))
                     {
-                        string port = CharacterGameplayValuePortContracts.Require(operation.Code, operation.Handle, m_Ability.GraphCallFrames)
+                        string port = GameplayAbilityValuePortContracts.Require(operation.Code, operation.Handle, m_Ability.GraphCallFrames)
                             .Inputs[input.TargetPortIndex].Identity;
                         m_Frame.Trace.AddValue(operation, port, ProgramValuePortDirection.Input, value);
                         m_Frame.Trace.AddValueEdge(operation, port);

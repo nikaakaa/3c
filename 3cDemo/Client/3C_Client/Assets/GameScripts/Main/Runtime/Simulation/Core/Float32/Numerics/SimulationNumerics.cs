@@ -62,8 +62,8 @@ namespace ThirdPersonSimulation
                 new SimulationExecutionTargetManifest(
                     "character-execution/float32/v2",
                     Float32SimulationNumericProfile.Value,
-                    CharacterGameplayOperationSet.Version,
-                    CharacterGameplayOperationSet.Operations));
+                    GameplayAbilityOperationSet.Version,
+                    GameplayAbilityOperationSet.Operations));
 
         public static Float32SimulationTargetManifest Manifest => s_Manifest;
     }

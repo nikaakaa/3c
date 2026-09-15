@@ -32,7 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public static class GameplayAbilitySemanticFrontendCompiler
     {
         public const string CompilerVersion = "gameplay-ability-semantic-compiler/1";
-        public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
+        public static readonly OperationSetVersion OperationSetVersion = GameplayAbilityOperationSet.Version;
 
         public static GameplayAbilitySemanticFrontendResult Compile(GameplayAbilityDefinition definition)
         {

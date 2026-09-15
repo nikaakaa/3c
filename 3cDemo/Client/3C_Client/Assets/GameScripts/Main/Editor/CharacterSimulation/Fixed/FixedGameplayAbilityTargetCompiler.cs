@@ -51,8 +51,8 @@ namespace ThirdPersonSimulation.Fixed
             {
                 throw new InvalidOperationException("Validated Semantic IR artifact identity is inconsistent.");
             }
-            CharacterGameplayOperationSet.RequireVersion(header.OperationSetVersion);
-            CharacterGameplayOperationSet.RequireCompleteBackend(
+            GameplayAbilityOperationSet.RequireVersion(header.OperationSetVersion);
+            GameplayAbilityOperationSet.RequireCompleteBackend(
                 header.OperationSetVersion,
                 FixedSimulationTarget.Manifest.KernelSpecialization.SupportedOperations,
                 FixedSimulationTarget.Manifest.KernelSpecialization.BackendIdentity);
@@ -99,8 +99,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedSimulationTargetManifest target = FixedSimulationTarget.Manifest;
             if (target.Profile != FixedSimulationNumericProfile.Value)
                 throw new InvalidOperationException("Fixed Numeric Target manifest is inconsistent.");
-            CharacterGameplayOperationSet.RequireVersion(semanticIr.Manifest.OperationSetVersion);
-            CharacterGameplayOperationSet.RequireCompleteBackend(
+            GameplayAbilityOperationSet.RequireVersion(semanticIr.Manifest.OperationSetVersion);
+            GameplayAbilityOperationSet.RequireCompleteBackend(
                 semanticIr.Manifest.OperationSetVersion,
                 target.KernelSpecialization.SupportedOperations,
                 target.KernelSpecialization.BackendIdentity);
@@ -116,7 +116,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < semanticIr.Operations.Count; i++)
             {
                 SemanticOperation operation = semanticIr.Operations[i];
-                CharacterGameplayOperationSet.RequireOperation(operation.Code);
+                GameplayAbilityOperationSet.RequireOperation(operation.Code);
                 string sourceIdentity = operation.Number0SourceIdentity.Length == 0
                     ? $"operation:{operation.Handle.Value}/number0"
                     : operation.Number0SourceIdentity;

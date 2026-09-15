@@ -285,7 +285,7 @@ namespace ThirdPersonSimulation
         CancelEquipmentChange = 135,
     }
 
-    public static class CharacterGameplayOperationSet
+    public static class GameplayAbilityOperationSet
     {
         public const string Id = "character-gameplay-operations";
         public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/15");
@@ -370,7 +370,7 @@ namespace ThirdPersonSimulation
         {
             if (!s_Operations.Contains(code))
                 throw new InvalidOperationException($"Operation code '{(ushort)code}' is not supported by '{Version.Value}'.");
-            CharacterGameplayValuePortContracts.Require(code);
+            GameplayAbilityValuePortContracts.Require(code);
         }
 
         public static void RequireCompleteBackend(

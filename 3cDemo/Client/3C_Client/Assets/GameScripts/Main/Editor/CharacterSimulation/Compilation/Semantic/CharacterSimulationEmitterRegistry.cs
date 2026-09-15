@@ -107,7 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         List<CapturedValuePort> CaptureValuePorts(BaseNode node, SimulationOperationCode code)
         {
-            OperationValuePortContract contract = CharacterGameplayValuePortContracts.Require(code);
+            OperationValuePortContract contract = GameplayAbilityValuePortContracts.Require(code);
             var result = new List<CapturedValuePort>();
             List<NodeFieldAccessor> accessors = node.GetFieldAccessors().OrderBy(value => value.FieldKey, StringComparer.Ordinal).ToList();
             for (int i = 0; i < accessors.Count; i++)

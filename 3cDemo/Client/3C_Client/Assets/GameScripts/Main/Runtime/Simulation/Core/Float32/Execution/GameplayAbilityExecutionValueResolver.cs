@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException($"Value edge '{edge.Identity}' references an operation outside the Ability execution data.");
             }
             SimulationOperation source = operations[edge.Source.Value];
-            OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
+            OperationValuePortDefinition sourcePort = GameplayAbilityValuePortContracts
                 .Require(source.Code, source.Handle, graphCallFrames)
                 .RequireSelection(edge.SourcePort);
             return ResolveOutputKind(source, sourcePort, constants, references, stateSlots);
@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation
                 return port.FixedKind;
             if (operation.Code == SimulationOperationCode.BlackboardGet)
             {
-                return CharacterGameplayValuePortContracts.FromState(
+                return GameplayAbilityValuePortContracts.FromState(
                     stateSlots[RequireStateReference(references, operation)].ValueKind);
             }
             if (operation.Code == SimulationOperationCode.CharacterStateRead)
@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation
             SemanticValueKind expected = port.Constraint == OperationValuePortConstraint.Dynamic
                 ? operation.Code == SimulationOperationCode.CharacterStateRead
                     ? CharacterStateProviderFields.ValueKind(operation.Text0)
-                    : CharacterGameplayValuePortContracts.FromState(
+                    : GameplayAbilityValuePortContracts.FromState(
                         stateSlots[RequireStateReference(references, operation)].ValueKind)
                 : port.Resolve(kind);
             if (!port.Accepts(kind) ||
@@ -117,5 +117,4 @@ namespace ThirdPersonSimulation
         }
     }
 }
-
 

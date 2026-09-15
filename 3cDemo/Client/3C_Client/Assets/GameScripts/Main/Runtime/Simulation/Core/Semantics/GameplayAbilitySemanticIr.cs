@@ -396,7 +396,7 @@ namespace ThirdPersonSimulation
                 ProgramGraphParameterBinding binding = bindings[i];
                 if (binding.StateSlot >= m_StateDeclarations.Count)
                     throw new InvalidDataException($"Graph call frame '{frame.Identity}' parameter '{binding.ParameterName}' references an unknown state slot.");
-                SemanticValueKind actualKind = CharacterGameplayValuePortContracts.FromState(
+                SemanticValueKind actualKind = GameplayAbilityValuePortContracts.FromState(
                     m_StateDeclarations[binding.StateSlot].ValueKind);
                 if (actualKind != binding.ValueKind)
                     throw new InvalidDataException($"Graph call frame '{frame.Identity}' parameter '{binding.ParameterName}' state kind '{actualKind}' does not match '{binding.ValueKind}'.");
@@ -411,7 +411,7 @@ namespace ThirdPersonSimulation
                 edge.Target.Value < 0 || edge.Target.Value >= m_Operations.Count)
                 throw new InvalidDataException($"Value edge '{edge.Identity}' references an operation outside the table.");
             SemanticOperation source = m_Operations[edge.Source.Value];
-            OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
+            OperationValuePortDefinition sourcePort = GameplayAbilityValuePortContracts
                 .Require(source.Code, source.Handle, m_GraphCallFrames)
                 .RequireSelection(edge.SourcePort);
             return ResolveOutputKind(source, sourcePort);
@@ -419,11 +419,11 @@ namespace ThirdPersonSimulation
 
         void ValidateReferences()
         {
-            CharacterGameplayOperationSet.RequireVersion(Manifest.OperationSetVersion);
+            GameplayAbilityOperationSet.RequireVersion(Manifest.OperationSetVersion);
             for (int i = 0; i < m_Operations.Count; i++)
             {
                 SemanticOperation operation = m_Operations[i];
-                CharacterGameplayOperationSet.RequireOperation(operation.Code);
+                GameplayAbilityOperationSet.RequireOperation(operation.Code);
                 ValidateIndexes(operation.Operands, m_Operations.Count, $"Operation '{operation.Handle}' operand");
                 ValidateIndexes(operation.LiteralReferences, m_Literals.Count, $"Operation '{operation.Handle}' literal");
                 ValidateIndexes(operation.StateSlots, m_StateDeclarations.Count, $"Operation '{operation.Handle}' state");
@@ -475,10 +475,10 @@ namespace ThirdPersonSimulation
                 if (edge.Kind != ProgramControlFlowKind.Value)
                     continue;
                 SemanticOperation target = m_Operations[edge.Target.Value];
-                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
+                OperationValuePortDefinition sourcePort = GameplayAbilityValuePortContracts
                     .Require(source.Code, source.Handle, m_GraphCallFrames)
                     .RequireSelection(edge.SourcePort);
-                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts
+                OperationValuePortDefinition targetPort = GameplayAbilityValuePortContracts
                     .Require(target.Code, target.Handle, m_GraphCallFrames)
                     .RequireInput(edge.TargetPort);
                 SemanticValueKind sourceKind = ResolveOutputKind(source, sourcePort);
@@ -497,10 +497,10 @@ namespace ThirdPersonSimulation
                 if (binding.ConstantIndex < 0 || binding.ConstantIndex >= m_Literals.Count)
                     throw new InvalidDataException($"Constant input binding targets unknown literal '{binding.ConstantIndex}'.");
                 SemanticOperation target = m_Operations[binding.TargetOperation.Value];
-                OperationValuePortDefinition port = CharacterGameplayValuePortContracts
+                OperationValuePortDefinition port = GameplayAbilityValuePortContracts
                     .Require(target.Code, target.Handle, m_GraphCallFrames)
                     .RequireInput(binding.TargetPort);
-                SemanticValueKind literalKind = CharacterGameplayValuePortContracts.FromLiteral(m_Literals[binding.ConstantIndex].Kind);
+                SemanticValueKind literalKind = GameplayAbilityValuePortContracts.FromLiteral(m_Literals[binding.ConstantIndex].Kind);
                 SemanticValueKind expectedKind = ResolveInputKind(target, port, binding.ResolvedValueKind);
                 if (binding.ResolvedValueKind != literalKind ||
                     !port.Accepts(binding.ResolvedValueKind) ||
@@ -519,7 +519,7 @@ namespace ThirdPersonSimulation
             if (operation.Code == SimulationOperationCode.BlackboardGet)
                 return ResolveBlackboardKind(operation);
             if (operation.Code == SimulationOperationCode.Constant && operation.LiteralReferences.Count > 0)
-                return CharacterGameplayValuePortContracts.FromLiteral(m_Literals[operation.LiteralReferences[0]].Kind);
+                return GameplayAbilityValuePortContracts.FromLiteral(m_Literals[operation.LiteralReferences[0]].Kind);
             if (operation.Code == SimulationOperationCode.ReadEquipmentParameter)
             {
                 return (EquipmentParameterValueKind)operation.Integer0 switch
@@ -559,7 +559,7 @@ namespace ThirdPersonSimulation
             {
                 ProgramReference reference = m_References[i];
                 if (reference.Kind == ProgramReferenceKind.StateSlot && reference.SourceOperation.Equals(operation.Handle))
-                    return CharacterGameplayValuePortContracts.FromState(m_StateDeclarations[reference.TargetIndex].ValueKind);
+                    return GameplayAbilityValuePortContracts.FromState(m_StateDeclarations[reference.TargetIndex].ValueKind);
             }
             throw new InvalidDataException($"Blackboard operation '{operation.Handle}' has no compiled state address.");
         }
@@ -628,10 +628,10 @@ namespace ThirdPersonSimulation
                 if (left.TargetOperation.Value < 0 || left.TargetOperation.Value >= operations.Count ||
                     right.TargetOperation.Value < 0 || right.TargetOperation.Value >= operations.Count)
                     return string.CompareOrdinal(left.TargetPort, right.TargetPort);
-                OperationValuePortDefinition leftPort = CharacterGameplayValuePortContracts
+                OperationValuePortDefinition leftPort = GameplayAbilityValuePortContracts
                     .Require(operations[left.TargetOperation.Value].Code, operations[left.TargetOperation.Value].Handle, graphCallFrames)
                     .RequireInput(left.TargetPort);
-                OperationValuePortDefinition rightPort = CharacterGameplayValuePortContracts
+                OperationValuePortDefinition rightPort = GameplayAbilityValuePortContracts
                     .Require(operations[right.TargetOperation.Value].Code, operations[right.TargetOperation.Value].Handle, graphCallFrames)
                     .RequireInput(right.TargetPort);
                 int byOrder = leftPort.Order.CompareTo(rightPort.Order);

@@ -115,7 +115,7 @@ namespace BTSMTL.Timeline
         protected override void OutputValue()
         {
             throw new InvalidOperationException(
-                "TimelineTimeNode is authoring-only and must execute through a compiled Character Simulation Program.");
+                "TimelineTimeNode is authoring-only and must execute through the formal Timeline Runtime.");
         }
     }
     #endregion

@@ -26,7 +26,7 @@ namespace BTSMTL.Timeline
             TreeAuthoringRouteId authoringRoute)
         {
             throw new InvalidOperationException(
-                "TimelineRunningTree is authoring-only and must execute through a compiled Character Simulation Program.");
+                "TimelineRunningTree is authoring-only and must be consumed by the formal Timeline Runtime.");
         }
 
 #if UNITY_EDITOR

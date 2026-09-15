@@ -868,3 +868,9 @@
 - 提交 `b10f70523`，Float32／Fixed `AbilityExecutionAssembly` 对外继续发布 `I*AbilityActionControlPort`，Invocation 的动作 Ingress 改为通过 Assembly 内部的 `ActionRuntime` 访问具体实现。
 - 具体动作运行时只留在 Ability 执行域内部，角色调用方继续依赖窄端口；没有把实现类型重新泄漏到角色入口，也没有新增兼容路径。
 - 刷新本地生成的 Float32／Fixed 工程源码清单后，两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；生成的 `.csproj` 被 `.gitignore` 忽略，未作为业务源码提交，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 隔离安装容器与技能执行入口
+
+- 提交 `5dcf9303d`，Float32／Fixed 的 InvocationRuntime、执行服务工厂和角色评估入口改接独立的 `AbilityExecutionContext`；Context 只携带已加载的执行数据、布局、服务以及按能力声明绑定的 Gameplay Effect／Equipment 资源。
+- 安装对象仍在角色装配边界创建并保留安装事实，技能执行入口不再接收或读取安装容器；没有复制第二份技能数据，也没有新增旧 Program 或兼容入口。
+- Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

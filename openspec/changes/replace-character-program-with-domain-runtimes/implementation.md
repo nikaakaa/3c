@@ -600,3 +600,9 @@
 - 提交 `415afc3ba`，删除 Ability execution service factory 和技能 Locomotion runtime 中已失效的 `CharacterControlRuntimeBinding`、`SubmitControl` 入口；Ability 只保留技能图自己的 Locomotion 执行。
 - Control 的 SourceCurve 解析、角色输入读取和角色运动贡献全部由角色 Control motion runtime 拥有；没有保留“参数还在但职责已搬走”的兼容字段或隐式路径。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；本步未重新运行 Unity 生成工程，前一轮已复现 Float32／Fixed 既有 28／24 个源索引缺失错误，未运行测试或资产生成。
+
+## 2026-09-16 角色共享GameplayEffect目录
+
+- 提交 `78f6e21ff`，Float32／Fixed Ability 安装集合依据已安装 Ability 的能力事实只创建一次共享 `GameplayEffect` 运行时目录；单个 Ability 安装只接收目录，非 GameplayEffect Ability 继续不持有该服务。
+- 角色 Evaluate 和初始状态创建统一复用安装集合的目录，删除每个 Ability 安装、每次评估和初始状态阶段的重复 binding 解析；实际声明 GameplayEffect 时才要求正式 binding，不引入空实现或兼容入口。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Float32／Fixed 生成工程分别复现既有 28／24 个源索引缺失错误，未发现本步改动文件新增错误，未运行 Unity、测试或资产生成。

@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort, IFloat32ControlRuntimeStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32HandleAllocatorStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort, IFloat32ControlRuntimeStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
@@ -109,12 +109,12 @@ namespace ThirdPersonSimulation
             new Stack<Float32CharacterRuntimeStateSavepoint>();
         readonly Float32CharacterActionRuntimeState m_ActionState;
         readonly Float32CharacterInputRequestState m_InputRequestState;
+        readonly Float32CharacterEventSequenceState m_EventSequenceState;
         CharacterControlRuntimeStateTransaction m_ControlState;
         GameplayEffectStateAggregate m_GameplayEffectAggregate;
         SimulationGameplayEffectState m_GameplayEffectWorking;
         Float32GameplayEffectExecutionScratch m_GameplayEffectScratch;
         EquipmentStateAggregate m_EquipmentState;
-        ulong m_EventSequence;
         ulong m_HandleAllocator;
         bool m_Disposed;
 
@@ -143,9 +143,9 @@ namespace ThirdPersonSimulation
                 baseState.ActionInstances,
                 baseState.ActionEventSequence);
             m_InputRequestState = new Float32CharacterInputRequestState(m_Tick, baseState.InputRequests);
+            m_EventSequenceState = new Float32CharacterEventSequenceState(baseState.EventSequence);
             m_GameplayEffectAggregate = baseState.GameplayEffectState;
             m_EquipmentState = baseState.EquipmentState;
-            m_EventSequence = baseState.EventSequence;
             m_HandleAllocator = baseState.HandleAllocator;
         }
 
@@ -200,15 +200,6 @@ namespace ThirdPersonSimulation
             return Snapshot();
         }
 
-        public ulong NextEventSequence()
-        {
-            RequireActive();
-            m_EventSequence = checked(m_EventSequence + 1UL);
-            if (m_EventSequence == 0)
-                throw new OverflowException("Simulation event sequence overflowed.");
-            return m_EventSequence;
-        }
-
         public ulong NextHandleAllocator()
         {
             RequireActive();
@@ -232,6 +223,7 @@ namespace ThirdPersonSimulation
 
         internal IFloat32InputRequestStatePort InputRequests => m_InputRequestState;
         internal IFloat32ActionRuntimeStatePort ActionState => m_ActionState;
+        internal IFloat32EventSequenceStatePort EventSequenceState => m_EventSequenceState;
 
         public SimulationGameplayEffectState GetGameplayEffectState(Float32GameplayEffectExecutionScratch scratch)
         {
@@ -310,6 +302,7 @@ namespace ThirdPersonSimulation
             m_ControlState?.Dispose();
             m_InputRequestState.Dispose();
             m_ActionState.Dispose();
+            m_EventSequenceState.Dispose();
             m_Disposed = true;
         }
 
@@ -324,7 +317,7 @@ namespace ThirdPersonSimulation
                 m_ActionState.GetActionActivationRequests(),
                 m_ActionState.GetActionInstances(),
                 m_InputRequestState.Capture(),
-                m_EventSequence,
+                m_EventSequenceState.EventSequence,
                 m_ActionState.ActionEventSequence,
                 m_HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
@@ -345,7 +338,7 @@ namespace ThirdPersonSimulation
                 state.ActionInstances,
                 state.ActionEventSequence);
             m_InputRequestState.Restore(state.InputRequests);
-            m_EventSequence = state.EventSequence;
+            m_EventSequenceState.Restore(state.EventSequence);
             m_HandleAllocator = state.HandleAllocator;
             if (m_ControlState != null)
             {

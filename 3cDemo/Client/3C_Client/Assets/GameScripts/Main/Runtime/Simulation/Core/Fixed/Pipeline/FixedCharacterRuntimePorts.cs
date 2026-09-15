@@ -29,22 +29,6 @@ namespace ThirdPersonSimulation.Fixed
 
         public static FixedCharacterRuntime Create(
             IEnumerable<FixedCharacterRuntimeActor> roster,
-            CharacterControlModuleCatalog controlModules)
-        {
-            SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
-            var values = roster == null ? new List<FixedCharacterRuntimeActor>() : new List<FixedCharacterRuntimeActor>(roster);
-            if (values.Count == 0 || values[0].AbilityData.Data.Count == 0)
-                throw new ArgumentException("Fixed Character Runtime factory requires an Ability TickRate.", nameof(roster));
-            return new FixedCharacterRuntime(
-                values,
-                target.NumericProfile,
-                values[0].AbilityData.Data[0].TickRate,
-                target.OperationSetVersion,
-                controlModules);
-        }
-
-        public static FixedCharacterRuntime Create(
-            IEnumerable<FixedCharacterRuntimeActor> roster,
             int tickRate,
             CharacterControlModuleCatalog controlModules)
         {

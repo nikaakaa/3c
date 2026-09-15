@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace)
         {
-            Float32GameplayAbilityExecutionAccess access = installation.Access;
+            Float32GameplayAbilityExecutionAccess access = installation.Services.Access;
             Float32StatePort controlState = frame.CreateStatePort(
                 "Control",
                 installation.Services.ControlPolicy);

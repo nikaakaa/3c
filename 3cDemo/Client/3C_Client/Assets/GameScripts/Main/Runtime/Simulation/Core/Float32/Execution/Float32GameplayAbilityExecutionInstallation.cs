@@ -35,7 +35,6 @@ namespace ThirdPersonSimulation
         internal Float32GameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         internal EquipmentProgramLayout EquipmentLayout { get; }
         internal Float32GameplayAbilityExecutionServices Services { get; }
-        internal Float32GameplayAbilityExecutionAccess Access => Services.Access;
 
         static string[] BuildOperationSourcePaths(GameplayAbilityExecutionLayout layout)
         {

@@ -36,7 +36,6 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         internal EquipmentProgramLayout EquipmentLayout { get; }
         internal FixedGameplayAbilityExecutionServices Services { get; }
-        internal FixedGameplayAbilityExecutionAccess Access => Services.Access;
 
         static string[] BuildOperationSourcePaths(GameplayAbilityExecutionLayout layout)
         {

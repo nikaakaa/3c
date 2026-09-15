@@ -11,7 +11,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace)
         {
-            FixedGameplayAbilityExecutionAccess access = installation.Access;
+            FixedGameplayAbilityExecutionAccess access = installation.Services.Access;
             FixedStatePort controlState = frame.CreateStatePort(
                 "Control",
                 installation.Services.ControlPolicy);

@@ -223,3 +223,11 @@
 - 角色评估入口负责 `BindAbility`，构造完成后调用 `invocation.Accept()`，再由显式回调节点角色事务 `AcceptAbility`。Ability Invocation 内部不再保存 `Float32CharacterRuntimeStateTransaction` / `FixedCharacterRuntimeStateTransaction`，也不再接收完整 `CharacterSimulationInput` 和 `WorldBodyState`。
 - 本切口不宣称 1.11 已完成：Invocation 当前仍接收 Control / Equipment binding 并在内部装配 Gameplay Effect、Equipment、Control 等 runtime；Frontend 按可达节点声明能力、统一非角色调用方入口和删除无条件 Effect 要求仍是剩余工作。
 - `ThirdPersonSimulation.Float32.csproj` 与 `ThirdPersonSimulation.Fixed.csproj` 窄编译均为 0 warning、0 error；每次编译后已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成。
+
+## 2026-09-15 Ability领域服务装配外移
+
+- 提交 `a2ae94e02` 引入 `IFloat32AbilityExecutionServiceFactory` 与 `IFixedAbilityExecutionServiceFactory`。`Float32AbilityInvocationRuntime` / `FixedAbilityInvocationRuntime` 只通过 typed service factory 获取 Gameplay Effect、Equipment 和 Locomotion runtime，不再接收 Control binding、Equipment binding 或 Gameplay Effect scratch。
+- `Float32CharacterEvaluationRuntime` / `FixedCharacterEvaluationRuntime` 现在构造每个 Ability 的 execution workspace 和 `CharacterAbilityExecutionServiceFactory`，由角色调用方提供正式领域服务并负责 Bind / Accept。
+- Factory 按安装数据声明 Equipment 能力返回 Equipment runtime；缺 binding 时返回 null，Invocation 在实际需要 Equipment 的能力时显式失败。Gameplay Effect catalog 缺失时 Factory 返回 null，Invocation 在执行对应能力时显式失败。
+- 本切口继续不勾选 1.11：Frontend 仍需按可达节点声明 Gameplay Effect / Equipment / Character State 能力，TreeClip 等非角色调用方尚未统一到同一 factory 合同。
+- `ThirdPersonSimulation.Float32.csproj` 与 `ThirdPersonSimulation.Fixed.csproj` 窄编译均为 0 warning、0 error；每次编译后已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成。

@@ -104,7 +104,7 @@ namespace ThirdPersonSimulation
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
-                throw new ArgumentException("Float32 Character runtime transaction identity is incomplete.");
+                throw new ArgumentException("Float32 Character runtime transaction timing is incomplete.");
             m_Tick = tick;
             m_TickRate = tickRate;
             m_AbilityStates = new Dictionary<CharacterSkillId, Float32AbilityRuntimeState>();

@@ -104,7 +104,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!tick.IsValid || tickRate <= 0)
-                throw new ArgumentException("Fixed Character runtime transaction identity is incomplete.");
+                throw new ArgumentException("Fixed Character runtime transaction timing is incomplete.");
             m_Tick = tick;
             m_TickRate = tickRate;
             m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>();

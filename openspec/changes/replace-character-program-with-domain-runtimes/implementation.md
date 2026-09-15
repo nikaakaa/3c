@@ -264,6 +264,12 @@
 - `Float32CharacterRegistration` 放回 `ThirdPersonClient.Runtime` 所拥有的 Character Pipeline Unity 目录，与 `CharacterPipelineHost` 位于同一程序集边界；删除只承载该注册器且反向引用 `ThirdPersonClient.Runtime` 的 `ThirdPersonSimulation.Float32.Unity` 桥接程序集，避免 Host → 注册器 → Host 的循环依赖。注册器的 Unity GUID 保持不变，运行时类型命名空间不变。
 - 验证：`ThirdPersonSimulation.Unity.csproj` 和旧生成工程仍把已迁移注册器按旧路径编入，构建因此继续报告注册器缺少 Client Runtime Presentation／Diagnostics 引用；这是 Unity 重新生成程序集工程前的生成索引阻断，未出现 `CharacterPipelineHost.cs` 的错误。已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
 
+## 2026-09-15 BlendSpace预览退出旧Program读取
+
+- `CharacterAnimationBlendSpaceWindow` 的状态判断、已发布计划读取和相位预览现在只依赖 `CharacterPresentationProjectionAsset.Load()` 返回的正式 Projection；删除 `CharacterPipelineDefinition.SimulationProgram` 必须存在、`SimulationProgram.Load()` 和 `Float32CharacterPresentationContractAdapter` 组合。
+- 这条工具链的业务输入是 BlendSpace 的 Projection 计划与作者参数，不执行角色 Ability，也不需要整角色 Program identity；保留 Projection revision、BlendSpace content revision 和已有权重／相位算法校验，避免把工具职责扩成角色构建入口。
+- 未运行 Unity 或测试；当前 Editor 全量工程仍受并行窗口的 Pose 旧 `CharacterPoseProgramImage`／`CharacterPoseNative*Operation` 中间断裂影响，待对应 Pose 公共接线收口后统一编译。
+
 ## 2026-09-15 Frontend按可达节点声明Equipment能力
 
 - 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。

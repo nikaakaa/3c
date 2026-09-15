@@ -155,9 +155,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 context.Source.ClockId,
                 authorityTick.Value);
             var actorInputs = new List<SimulationPipelineActorInput<Float32StepInput>>();
-            for (int i = 0; i < readPorts.CharacterRuntime.Roster.Count; i++)
+            for (int i = 0; i < readPorts.CharacterRuntime.Runtime.Roster.Count; i++)
             {
-                ActorId actorId = readPorts.CharacterRuntime.Roster[i].ActorId;
+                ActorId actorId = readPorts.CharacterRuntime.Runtime.Roster[i].ActorId;
                 if (!m_Held.TryGetValue(actorId, out HeldAuthorityInput held))
                 {
                     writePorts.ExecutionPlan.Write(Pending(context, readPorts.CharacterRuntime));
@@ -293,9 +293,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         static SimulationActorRosterDescriptor Roster(IFloat32CharacterRuntimePort runtime)
         {
-            var actors = new ActorId[runtime.Roster.Count];
+            var actors = new ActorId[runtime.Runtime.Roster.Count];
             for (int i = 0; i < actors.Length; i++)
-                actors[i] = runtime.Roster[i].ActorId;
+                actors[i] = runtime.Runtime.Roster[i].ActorId;
             return new SimulationActorRosterDescriptor(actors);
         }
 

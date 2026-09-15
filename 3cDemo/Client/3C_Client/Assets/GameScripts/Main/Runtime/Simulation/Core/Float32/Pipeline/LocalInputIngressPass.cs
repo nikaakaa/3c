@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation
                 nextTick,
                 readPorts.CharacterRuntime.Runtime.NumericProfile,
                 readPorts.CharacterRuntime.Runtime.TickRate,
-                readPorts.CharacterRuntime.Roster,
+                readPorts.CharacterRuntime.Runtime.Roster,
                 observation);
             writePorts.CanonicalInputs.Write(frame.CanonicalInputs);
             writePorts.TypedIngress.Write(frame.TypedIngress);

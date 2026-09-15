@@ -58,13 +58,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RollbackIngressBatch batch = readPorts.Source.Read(
                 context.Source,
                 nextTick,
-                readPorts.CharacterRuntime.Roster) ??
+                readPorts.CharacterRuntime.Runtime.Roster) ??
                 throw new InvalidOperationException("Rollback input Source returned no ingress batch.");
-            if (batch.Predicted.Tick != nextTick || batch.Predicted.Actors.Count != readPorts.CharacterRuntime.Roster.Count)
+            if (batch.Predicted.Tick != nextTick || batch.Predicted.Actors.Count != readPorts.CharacterRuntime.Runtime.Roster.Count)
                 throw new InvalidOperationException("Rollback predicted bundle does not match the next Tick or locked roster.");
             for (int i = 0; i < batch.Predicted.Actors.Count; i++)
             {
-                if (!batch.Predicted.Actors[i].ActorId.Equals(readPorts.CharacterRuntime.Roster[i].ActorId))
+                if (!batch.Predicted.Actors[i].ActorId.Equals(readPorts.CharacterRuntime.Runtime.Roster[i].ActorId))
                     throw new InvalidOperationException("Rollback predicted bundle Actor order does not match the locked roster.");
             }
             for (int i = 0; i < batch.RelayedExplicitArrivals.Count; i++)

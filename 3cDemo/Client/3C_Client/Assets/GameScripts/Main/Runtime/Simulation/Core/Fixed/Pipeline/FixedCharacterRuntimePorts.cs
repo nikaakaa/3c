@@ -186,7 +186,6 @@ namespace ThirdPersonSimulation.Fixed
     public interface IFixedCharacterRuntimePort : ISimulationRuntimePort
     {
         FixedCharacterRuntime Runtime { get; }
-        IReadOnlyList<SimulationActorBinding> Roster { get; }
         int GetActorIndex(ActorId actorId);
     }
 
@@ -213,7 +212,6 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationPortDescriptor Descriptor { get; }
         public FixedCharacterRuntime Runtime { get; }
-        public IReadOnlyList<SimulationActorBinding> Roster => Runtime.Roster;
 
         public int GetActorIndex(ActorId actorId) =>
             m_ActorIndices.TryGetValue(actorId, out int index)

@@ -52,14 +52,14 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException("Ability Finalize Pass has no current Step.");
             if (evaluations.Tick != context.Tick || world.Tick != context.Tick || step.Tick != context.Tick ||
                 evaluations.Evaluations.Count != world.Results.Count ||
-                evaluations.Evaluations.Count != readPorts.CharacterRuntime.Roster.Count)
+                evaluations.Evaluations.Count != readPorts.CharacterRuntime.Runtime.Roster.Count)
                 throw new InvalidOperationException("Ability Finalize Pass inputs do not match the current Step roster.");
 
             for (int i = 0; i < evaluations.Evaluations.Count; i++)
             {
                 FixedCharacterEvaluationResult evaluation = evaluations.Evaluations[i];
                 CharacterWorldSolveResult worldResult = world.Results[i];
-                SimulationActorBinding actor = readPorts.CharacterRuntime.Roster[i];
+                SimulationActorBinding actor = readPorts.CharacterRuntime.Runtime.Roster[i];
                 if (!evaluation.ActorId.Equals(actor.ActorId) || !worldResult.ActorId.Equals(actor.ActorId))
                     throw new InvalidOperationException("Ability Finalize Pass Actor order does not match the locked roster.");
                 CharacterWorldSolveRequest expected = world.Request.Requests[i];

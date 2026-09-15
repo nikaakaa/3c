@@ -65,7 +65,7 @@ namespace ThirdPersonSimulation
             if (canonical == null || typed == null || characterRuntime == null)
                 throw new ArgumentNullException("Single-step Schedule input is missing.");
             if (context.Source.Kind != expectedSourceKind || !canonical.Source.Equals(context.Source) ||
-                canonical.Inputs.Count != characterRuntime.Roster.Count)
+                canonical.Inputs.Count != characterRuntime.Runtime.Roster.Count)
             {
                 throw new InvalidOperationException("Single-step Schedule input batch does not match the outer Tick or locked roster.");
             }

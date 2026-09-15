@@ -61,7 +61,7 @@ namespace ThirdPersonSimulation.Fixed
             if (canonical == null || typed == null || characterRuntime == null)
                 throw new ArgumentNullException("Fixed Local single-step Schedule input is missing.");
             if (context.Source.Kind != SimulationTickSourceKind.LocalLogic || !canonical.Source.Equals(context.Source) ||
-                canonical.Inputs.Count != characterRuntime.Roster.Count)
+                canonical.Inputs.Count != characterRuntime.Runtime.Roster.Count)
             {
                 throw new InvalidOperationException("Fixed Local single-step input batch does not match the outer Tick or locked roster.");
             }

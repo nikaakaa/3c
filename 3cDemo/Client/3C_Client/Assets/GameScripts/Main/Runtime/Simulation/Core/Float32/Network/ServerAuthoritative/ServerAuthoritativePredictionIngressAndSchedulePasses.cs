@@ -47,7 +47,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             RequireExecution();
             Float32CharacterRuntime characterRuntime = readPorts.CharacterRuntime.Runtime;
-            if (readPorts.CharacterRuntime.Roster.Count != 1)
+            if (readPorts.CharacterRuntime.Runtime.Roster.Count != 1)
                 throw new InvalidOperationException("Prediction Owner Input Pass requires a one-Actor simulation roster.");
             var nextTick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
             SimulationTickSourceIdentity modelSource = MapModelSource(context.Source);
@@ -56,7 +56,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 nextTick,
                 characterRuntime.NumericProfile,
                 characterRuntime.TickRate,
-                readPorts.CharacterRuntime.Roster,
+                readPorts.CharacterRuntime.Runtime.Roster,
                 readPorts.CommittedObservation.Read());
             SimulationPipelineActorInput<Float32StepInput> input = frame.CanonicalInputs.Inputs[0];
             writePorts.OwnerInput.Write(new OwnerCanonicalInputBatch(
@@ -533,7 +533,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             StableHash contactShapeConfigurationHash,
             out IReadOnlyList<CharacterBodySample> selectedRemoteBodies)
         {
-            if (characterRuntime.Roster.Count != 1 || characterRuntime.Roster[0].ActorId != current.ActorId)
+            if (characterRuntime.Runtime.Roster.Count != 1 || characterRuntime.Runtime.Roster[0].ActorId != current.ActorId)
                 throw new InvalidOperationException("Prediction Schedule owner does not match the Character roster.");
             if (currentStepCount < 0 || currentStepCount > 2)
                 throw new ArgumentOutOfRangeException(nameof(currentStepCount));

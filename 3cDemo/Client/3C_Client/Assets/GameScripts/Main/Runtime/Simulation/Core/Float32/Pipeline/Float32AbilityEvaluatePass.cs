@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation
                 context.Products.BindExclusiveWriter<Float32CharacterEvaluationResultBatch>(SimulationPipelineProducts.CharacterEvaluationResults),
                 context.Products.BindExclusiveWriter<WorldSolveBatchRequest>(SimulationPipelineProducts.WorldSolveBatchRequest));
             return new Float32StepPassRuntimeAdapter<Float32AbilityEvaluateReadPorts, Float32AbilityEvaluateWritePorts>(
-                new Float32AbilityEvaluatePassRuntime(context.Pass.Descriptor, reads.CharacterRuntime.Roster.Count),
+                new Float32AbilityEvaluatePassRuntime(context.Pass.Descriptor, reads.CharacterRuntime.Runtime.Roster.Count),
                 reads,
                 writes);
         }
@@ -63,7 +63,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Ability Evaluate Pass has no working state.");
             Float32SimulationStep step = readPorts.WorkingState.Step ??
                 throw new InvalidOperationException("Ability Evaluate Pass has no current Step.");
-            if (step.Tick != context.Tick || state.Actors.Count != readPorts.CharacterRuntime.Roster.Count ||
+            if (step.Tick != context.Tick || state.Actors.Count != readPorts.CharacterRuntime.Runtime.Roster.Count ||
                 state.Actors.Count != m_Evaluations.Length)
                 throw new InvalidOperationException("Ability Evaluate Pass Step does not match the working roster.");
 
@@ -72,7 +72,7 @@ namespace ThirdPersonSimulation
             {
                 for (int i = 0; i < m_Evaluations.Length; i++)
                 {
-                    SimulationActorBinding actor = readPorts.CharacterRuntime.Roster[i];
+                    SimulationActorBinding actor = readPorts.CharacterRuntime.Runtime.Roster[i];
                     if (!state.Actors[i].ActorId.Equals(actor.ActorId) ||
                         !state.WorldState.Bodies[i].ActorId.Equals(actor.ActorId) ||
                         !step.Inputs[i].ActorId.Equals(actor.ActorId))

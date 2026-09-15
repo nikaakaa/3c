@@ -1213,6 +1213,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (m_Disposed)
                 return;
+            StopInstance();
             if (m_Graph != null && m_Graph.isRunning)
                 m_Graph.Stop(false);
             m_Disposed = true;

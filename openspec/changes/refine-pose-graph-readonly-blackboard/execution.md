@@ -941,3 +941,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 首次安装调用 `Create`；已采用实例的图/资源替换调用 `Replace(current, ...)`，只有 `Adopted` 才交换当前 session。失败必须保留旧 session、释放未采用依赖，不把 `Prepare` 或图存在误报为已安装。
 - 每帧 Host 以同一次表现帧生成 `CharacterPoseNativeFrameInput`，调用 `session.Frame.BeginFrame` 取得本图活跃分支和 Source demand；唯一 Source/Animancer barrier 完成后调用 `PrepareEvaluation(barrierIdentity)`、`Evaluate`、`ValidatePending`、`Commit`。Barrier 前失败走 `Discard`，提交后的结果只从 `CharacterFinalPoseNativePublication` 消费；不得再调用旧 Program、全图 Worker 或第二次采样链。
 - 本节是共享 Host 的精确接线输入和阶段顺序，属于核心装配窗口的消费者修改；Pose 窗口不改交叉暂存的 Host/Presentation 文件、不创建空 composition、不补 fallback。当前 `rg` 仍只发现入口自身定义，故第 3 组任务不改为完成。
+
+## 2026-09-15 r3 修正原生 Dispose 生命周期
+
+- CharacterPoseNativeGraphRuntime.Dispose 现在先进入 StopInstance，再停止 FlowCanvas 图并释放 evaluator；在途帧会先 Discard，已启动节点会收到 Stop，旧 lease 和旧实例调用不能继续进入 evaluator。
+- 该修正服务第 3 组的 Reset/Replace/Stop/Dispose 生命周期要求：Dispose 不再绕过阶段清理直接销毁 evaluator，也不让打开帧在销毁路径上丢失失败边界。
+- 本步只改原生 Pose runtime 与本 execution 记录；未运行 Unity、Build、Play 或资源刷新，也未提交 LFS。

@@ -1074,3 +1074,8 @@
 
 - 提交 `c4c6e59e8`，将共享 `SimulationProgramRootKind` 重命名为 `SimulationRootKind`，并将 Ability root 合同文件与 Unity `.meta` 改为 `GameplayAbilityRoot`；Ability 数据资产、技能编译和 Timeline 观察合同统一使用新名称。
 - Timeline 仍与 Ability 共用同一个 root kind；本步不改变枚举值、root 序列化布局或版本。Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git，Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Control与Ability合同文件名
+
+- 提交 `e32914ebe`，将只包含正式 Control 与 Gameplay Ability 合同的 `CharacterControlProgramContracts`、`GameplayAbilityProgramContracts` 源文件及 Unity `.meta` 改为 `CharacterControlContracts`、`GameplayAbilityContracts`，删除旧 Program 文件路径。
+- 本步只调整路径，保留类型、GUID 和运行时行为；Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git，Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

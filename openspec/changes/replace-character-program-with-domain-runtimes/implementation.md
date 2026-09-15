@@ -636,3 +636,9 @@
 - 提交 `f3604a8d5`，Float32／Fixed 的 `CharacterStateValue` 统一改为 `AbilityStateValue`，同步状态槽、黑板／操作值、动作状态、执行帧、快照 Codec 与值观察合同。
 - 该值对象只表示单个 Ability 的状态和执行值；角色聚合状态仍由 `CharacterRuntimeState` 持有。此次不改变状态字节格式、布局索引、默认值或执行算法，旧类型和旧文件名已删除。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色内容身份显式消费能力事实
+
+- 提交 `5bf26da6d`，Float32／Fixed `SimulationActorBinding` 将安装集合汇总的 GameplayEffect／Equipment 能力事实显式传入角色内容 Hash 计算，删除静态计算对实例属性的隐式引用。
+- Hash 版本、控制与 BodyMotion binding、Ability 集合内容以及“只纳入实际声明能力”的过滤规则保持不变；本步只修正角色内容身份的输入边界。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

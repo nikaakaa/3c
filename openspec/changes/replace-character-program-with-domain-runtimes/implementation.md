@@ -587,3 +587,10 @@
 - 提交 `4a57086eb`，Float32／Fixed 角色评估结果允许没有实际的 `CharacterWorldSolveRequest`；结果仍校验 Actor、Tick 和候选状态，若存在 WorldRequest 则校验其身份一致。
 - 角色 Evaluate／Finalize Pass 在自己的角色世界流程边界明确要求每个 Actor 必须产出 WorldRequest，再创建 WorldSolveBatch 或消费 WorldSolveResult；角色现有行为不变，未来非角色 Ability 调用方无需伪造世界请求。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Float32／Fixed 生成工程仍分别被既有 28／24 个源索引缺失错误阻断，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色Control解除首个Ability运行时依赖
+
+- 提交 `a679201fc`，Float32／Fixed 角色 Evaluate 不再从 `invocations[0]` 借用 Ability 的输入、Locomotion 和 Trace；Control 改由角色自己的 Control motion、Control trace 和实际角色输入／Body facts 推进。
+- Control motion 的位移、转向、SourceCurve、Movement playback clock 和 locomotion timeline 解析只保留一份实现；有 Ability 时仍在原有技能运动仲裁入口汇合，无 Ability 时由角色 Control 自己解析，角色控制不再因技能集合为空而停止。
+- Control trace 使用角色内容身份和角色诊断边界写入结果，Ability 的局部动作协调仍由各自 Action runtime 提供；没有新增假 Ability、兼容入口或第二套技能执行器。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Float32／Fixed 生成工程仍分别复现既有 28／24 个源索引缺失错误，未发现本步改动文件新增错误，未运行 Unity、测试或资产生成。

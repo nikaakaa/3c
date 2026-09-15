@@ -1034,3 +1034,8 @@
 
 - 提交 `74229491a`，将只服务于 Ability 语义、Float32／Fixed 执行数据和编解码器的 `ProgramCapabilityManifest` 重命名为 `GameplayAbilityCapabilityManifest`，清除其对整个角色 Program 能力清单的误导。
 - 本步只调整类型命名和引用，不改变序列化布局、artifact 版本、能力集合内容或运行时边界；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除无消费者旧Presentation语义链
+
+- 提交 `ea4e7b4e5`，删除没有生产调用方的 `CharacterPresentationProducerCompiler`、`CharacterPresentationSemanticReader` 和 `CharacterSemanticIrArtifactStore` 及对应 Unity 元数据；三者只服务已撤销的整角色 Presentation Semantic／Projection 编译入口。
+- 保留 Ability 语义 IR、Ability 编译和现行 Pose／Camera／Timeline 领域实现，不为旧消费者增加兼容入口；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

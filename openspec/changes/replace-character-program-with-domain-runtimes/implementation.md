@@ -527,3 +527,9 @@
 - 提交 `2cdfe0b69`，将 Float32／Fixed 单个和集合加载入口统一为 `Load*AbilityExecutionData`／`Load*AbilityExecutionDataSet`，同步 Character Definition 与 DotRecast Authority 导出调用点。
 - 删除 `Load*GameplayAbility(ies)` 旧方法名，不保留兼容别名；加载行为仍是独立 Ability Data asset 的 Provider binding、artifact 读取与 execution data 组装，没有改变产物格式或安装顺序。
 - 本步为 Unity Runtime／Editor 调用入口纯命名收口，未重复执行完整 Unity 生成工程编译：上一轮已被既有 `TypedStateAddress`、`GameplayAbilityExecutionLayout` 等源索引缺失和 UGUI 包错误阻断；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 Ability集合校验完整执行身份
+
+- 提交 `da03adfc4`，Float32／Fixed Character Runtime 按 AbilityId 合并多个 Actor 的独立 execution data 时，新增 OperationSetVersion、NumericProfile 和 TickRate 校验，与已有 ContentHash、StateSchemaHash 一起组成完整执行身份。
+- 不再允许第一份 Ability 数据静默代表其它 Actor 的不一致版本；不改变 Ability artifact、布局、安装顺序或执行算法，仍在角色 Runtime 装配边界拒绝身份冲突。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.10、1.11、2.1、2.6 的完整领域接线仍未完成。

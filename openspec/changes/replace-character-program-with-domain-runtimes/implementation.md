@@ -894,3 +894,8 @@
 
 - 提交 `e544aa7bc`，删除 Float32／Fixed Character Runtime Port 中全项目无调用的 `GetAbilityInstallations`；角色 Pipeline 端口不再对外发布 Ability 安装容器。
 - 评估、状态和网络代码继续从角色绑定的正式装配边界取得实际执行数据，没有新增旁路；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 收窄运行端口领域绑定出口
+
+- 提交 `2f5d52d7b`，删除 Float32／Fixed Character Runtime Port 中未被消费的 Control、BodyMotion、GameplayEffect、Equipment 绑定查询。
+- 通用角色端口只保留实际被 Pass、网络和观察链消费的合同，领域配置继续由角色绑定和正式装配边界拥有；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

@@ -199,7 +199,7 @@ namespace ThirdPersonSimulation
                 Exclusive("simulation.canonical-inputs", "canonical-input-batch/1", "actor/input/source", SimulationPipelinePhaseMask.Ingress, SimulationPipelinePhaseMask.Ingress | SimulationPipelinePhaseMask.Schedule),
                 Exclusive("simulation.typed-ingress", "target-typed-ingress/1", "actor/fact/source", SimulationPipelinePhaseMask.Ingress, SimulationPipelinePhaseMask.Schedule | SimulationPipelinePhaseMask.Step),
                 Exclusive("simulation.execution-plan", "session-execution-plan/1", "restore/steps/provenance", SimulationPipelinePhaseMask.Schedule, SimulationPipelinePhaseMask.Step | SimulationPipelinePhaseMask.Egress, SimulationPipelineProductConsumption.BackendTerminal),
-                Exclusive("simulation.pending-actor-evaluations", "target-pending-evaluations/1", "actor/program/tick", SimulationPipelinePhaseMask.Step, SimulationPipelinePhaseMask.Step),
+                Exclusive("simulation.character-evaluation-results", "character-evaluation-results/1", "character/result/tick", SimulationPipelinePhaseMask.Step, SimulationPipelinePhaseMask.Step),
                 Exclusive("simulation.world-solve-batch-request", "target-world-request-batch/1", "actor/request/order", SimulationPipelinePhaseMask.Step, SimulationPipelinePhaseMask.Step),
                 Exclusive("simulation.world-solve-batch-result", "target-world-result-batch/1", "actor/result/order", SimulationPipelinePhaseMask.Step, SimulationPipelinePhaseMask.Step),
                 Append("simulation.finalized-step-result", "target-finalized-step/1", "actor/tick/event", SimulationPipelinePhaseMask.Step, SimulationPipelinePhaseMask.Step | SimulationPipelinePhaseMask.Egress),
@@ -212,7 +212,7 @@ namespace ThirdPersonSimulation
         public static SimulationPipelineProductContract CanonicalInputs => s_All[0];
         public static SimulationPipelineProductContract TypedIngress => s_All[1];
         public static SimulationPipelineProductContract ExecutionPlan => s_All[2];
-        public static SimulationPipelineProductContract PendingActorEvaluations => s_All[3];
+        public static SimulationPipelineProductContract CharacterEvaluationResults => s_All[3];
         public static SimulationPipelineProductContract WorldSolveBatchRequest => s_All[4];
         public static SimulationPipelineProductContract WorldSolveBatchResult => s_All[5];
         public static SimulationPipelineProductContract FinalizedStepResult => s_All[6];

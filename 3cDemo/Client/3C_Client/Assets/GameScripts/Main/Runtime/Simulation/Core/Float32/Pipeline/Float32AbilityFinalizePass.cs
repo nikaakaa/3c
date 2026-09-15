@@ -15,7 +15,7 @@ namespace ThirdPersonSimulation
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
             var reads = new Float32AbilityFinalizeReadPorts(
-                context.Products.BindExclusiveReader<Float32PendingEvaluationBatch>(SimulationPipelineProducts.PendingActorEvaluations),
+                context.Products.BindExclusiveReader<Float32CharacterEvaluationResultBatch>(SimulationPipelineProducts.CharacterEvaluationResults),
                 context.Products.BindExclusiveReader<WorldSolveBatchResult>(SimulationPipelineProducts.WorldSolveBatchResult),
                 context.BindTargetPort<IFloat32CharacterRuntimePort>(Float32PipelineRuntimePortIds.CharacterRuntime),
                 context.BindTargetPort<IFloat32WorkingStateReadPort>(Float32PipelineRuntimePortIds.WorkingState),
@@ -44,18 +44,18 @@ namespace ThirdPersonSimulation
             Float32AbilityFinalizeWritePorts writePorts)
         {
             RequireExecution();
-            Float32PendingEvaluationBatch pending = readPorts.Pending.Read();
+            Float32CharacterEvaluationResultBatch evaluations = readPorts.CharacterEvaluationResults.Read();
             WorldSolveBatchResult world = readPorts.World.Read();
             Float32SimulationStep step = readPorts.WorkingState.Step ??
                 throw new InvalidOperationException("Ability Finalize Pass has no current Step.");
-            if (pending.Tick != context.Tick || world.Tick != context.Tick || step.Tick != context.Tick ||
-                pending.Evaluations.Count != world.Results.Count ||
-                pending.Evaluations.Count != readPorts.CharacterRuntime.Roster.Count)
+            if (evaluations.Tick != context.Tick || world.Tick != context.Tick || step.Tick != context.Tick ||
+                evaluations.Evaluations.Count != world.Results.Count ||
+                evaluations.Evaluations.Count != readPorts.CharacterRuntime.Roster.Count)
                 throw new InvalidOperationException("Ability Finalize Pass inputs do not match the current Step roster.");
 
-            for (int i = 0; i < pending.Evaluations.Count; i++)
+            for (int i = 0; i < evaluations.Evaluations.Count; i++)
             {
-                Float32PendingActorEvaluation evaluation = pending.Evaluations[i];
+                Float32CharacterEvaluationResult evaluation = evaluations.Evaluations[i];
                 CharacterWorldSolveResult worldResult = world.Results[i];
                 SimulationActorBinding actor = readPorts.CharacterRuntime.Roster[i];
                 if (!evaluation.ActorId.Equals(actor.ActorId) || !worldResult.ActorId.Equals(actor.ActorId))
@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation
                     worldResult.FinalBody.ActorId != evaluation.ActorId)
                 {
                     throw new InvalidOperationException(
-                        $"World result '{worldResult.RequestId}' does not match pending request '{expected.RequestId}'.");
+                        $"World result '{worldResult.RequestId}' does not match character evaluation request '{expected.RequestId}'.");
                 }
                 var bodySample = new CharacterBodySample(
                     evaluation.ActorId,
@@ -107,20 +107,20 @@ namespace ThirdPersonSimulation
     public sealed class Float32AbilityFinalizeReadPorts : ISimulationPipelineReadPortSet
     {
         public Float32AbilityFinalizeReadPorts(
-            IReadOnlySimulationPipelineProductPort<Float32PendingEvaluationBatch> pending,
+            IReadOnlySimulationPipelineProductPort<Float32CharacterEvaluationResultBatch> characterEvaluationResults,
             IReadOnlySimulationPipelineProductPort<WorldSolveBatchResult> world,
             IFloat32CharacterRuntimePort characterRuntime,
             IFloat32WorkingStateReadPort workingState,
             IFloat32DiagnosticsRuntimePort diagnostics)
         {
-            Pending = pending ?? throw new ArgumentNullException(nameof(pending));
+            CharacterEvaluationResults = characterEvaluationResults ?? throw new ArgumentNullException(nameof(characterEvaluationResults));
             World = world ?? throw new ArgumentNullException(nameof(world));
             CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
             WorkingState = workingState ?? throw new ArgumentNullException(nameof(workingState));
             Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         }
 
-        public IReadOnlySimulationPipelineProductPort<Float32PendingEvaluationBatch> Pending { get; }
+        public IReadOnlySimulationPipelineProductPort<Float32CharacterEvaluationResultBatch> CharacterEvaluationResults { get; }
         public IReadOnlySimulationPipelineProductPort<WorldSolveBatchResult> World { get; }
         public IFloat32CharacterRuntimePort CharacterRuntime { get; }
         public IFloat32WorkingStateReadPort WorkingState { get; }

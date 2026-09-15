@@ -6,7 +6,7 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal static class FixedCharacterEvaluationRuntime
     {
-        public static FixedPendingActorEvaluation Evaluate(
+        public static FixedCharacterEvaluationResult Evaluate(
             FixedCharacterRuntime characterRuntime,
             SimulationActorBinding actor,
             FixedCharacterRuntimeState sourceState,
@@ -152,7 +152,7 @@ namespace ThirdPersonSimulation.Fixed
                     requiredCapabilities);
                 FixedCharacterRuntimeState candidateState = roleState.Commit();
                 roleState.Dispose();
-                return new FixedPendingActorEvaluation(
+                return new FixedCharacterEvaluationResult(
                     actor.ActorId,
                     tick,
                     candidateState,

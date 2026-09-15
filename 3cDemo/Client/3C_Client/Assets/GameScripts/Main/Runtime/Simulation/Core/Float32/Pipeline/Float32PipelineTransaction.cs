@@ -129,7 +129,7 @@ namespace ThirdPersonSimulation
         readonly IFloat32SimulationSessionSnapshotCodec m_SnapshotCodec;
         readonly IFloat32SimulationCommitter m_Committer;
         readonly Float32PipelineProductStore m_Products;
-        readonly IReadOnlySimulationPipelineProductPort<Float32PendingEvaluationBatch> m_PendingEvaluations;
+        readonly IReadOnlySimulationPipelineProductPort<Float32CharacterEvaluationResultBatch> m_CharacterEvaluationResults;
         readonly Float32WorkingStatePort m_WorkingStatePort;
         readonly Float32CompletedStepPort m_CompletedStepPort;
 
@@ -156,8 +156,8 @@ namespace ThirdPersonSimulation
             m_SnapshotCodec = snapshotCodec ?? throw new ArgumentNullException(nameof(snapshotCodec));
             m_Committer = committer ?? throw new ArgumentNullException(nameof(committer));
             m_Products = products ?? throw new ArgumentNullException(nameof(products));
-            m_PendingEvaluations = m_Products.GetRequired<Float32ExclusiveProductSlot<Float32PendingEvaluationBatch>>(
-                SimulationPipelineProducts.PendingActorEvaluations);
+            m_CharacterEvaluationResults = m_Products.GetRequired<Float32ExclusiveProductSlot<Float32CharacterEvaluationResultBatch>>(
+                SimulationPipelineProducts.CharacterEvaluationResults);
             m_WorkingStatePort = workingStatePort ?? throw new ArgumentNullException(nameof(workingStatePort));
             m_CompletedStepPort = completedStepPort ?? throw new ArgumentNullException(nameof(completedStepPort));
             _ = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
@@ -270,8 +270,8 @@ namespace ThirdPersonSimulation
 
         public void AbortUnconsumedEvaluations()
         {
-            if (m_PendingEvaluations.HasValue)
-                m_PendingEvaluations.Read().AbortUnconsumed();
+            if (m_CharacterEvaluationResults.HasValue)
+                m_CharacterEvaluationResults.Read().AbortUnconsumed();
         }
 
         public SimulationSessionExecutionPlan<Float32SimulationStep> ReadExecutionPlan()

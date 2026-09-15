@@ -5,7 +5,7 @@ namespace ThirdPersonSimulation
 {
     internal static class Float32CharacterEvaluationRuntime
     {
-        public static Float32PendingActorEvaluation Evaluate(
+        public static Float32CharacterEvaluationResult Evaluate(
             Float32CharacterRuntime characterRuntime,
             SimulationActorBinding actor,
             Float32CharacterRuntimeState sourceState,
@@ -151,7 +151,7 @@ namespace ThirdPersonSimulation
                     requiredCapabilities);
                 Float32CharacterRuntimeState candidateState = roleState.Commit();
                 roleState.Dispose();
-                return new Float32PendingActorEvaluation(
+                return new Float32CharacterEvaluationResult(
                     actor.ActorId,
                     tick,
                     candidateState,

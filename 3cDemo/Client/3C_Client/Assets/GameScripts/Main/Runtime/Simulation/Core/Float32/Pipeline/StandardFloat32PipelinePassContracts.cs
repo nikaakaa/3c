@@ -60,7 +60,7 @@ namespace ThirdPersonSimulation
             string.Empty,
             new[]
             {
-                Produce(SimulationPipelineProducts.PendingActorEvaluations),
+                Produce(SimulationPipelineProducts.CharacterEvaluationResults),
                 Produce(SimulationPipelineProducts.WorldSolveBatchRequest)
             },
             new[]
@@ -95,7 +95,7 @@ namespace ThirdPersonSimulation
             string.Empty,
             new[]
             {
-                Consume(SimulationPipelineProducts.PendingActorEvaluations),
+                Consume(SimulationPipelineProducts.CharacterEvaluationResults),
                 Consume(SimulationPipelineProducts.WorldSolveBatchResult),
                 Append(SimulationPipelineProducts.FinalizedStepResult)
             },

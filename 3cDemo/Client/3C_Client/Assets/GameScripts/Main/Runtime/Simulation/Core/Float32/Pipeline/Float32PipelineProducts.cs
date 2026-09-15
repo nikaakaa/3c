@@ -105,27 +105,27 @@ namespace ThirdPersonSimulation
         public ObservedWorldConstraintFrame ObservedWorldConstraints { get; }
     }
 
-    public sealed class Float32PendingEvaluationBatch
+    public sealed class Float32CharacterEvaluationResultBatch
     {
-        readonly Float32PendingActorEvaluation[] m_Evaluations;
+        readonly Float32CharacterEvaluationResult[] m_Evaluations;
 
-        internal Float32PendingEvaluationBatch(int actorCount)
+        internal Float32CharacterEvaluationResultBatch(int actorCount)
         {
             if (actorCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(actorCount));
-            m_Evaluations = new Float32PendingActorEvaluation[actorCount];
+            m_Evaluations = new Float32CharacterEvaluationResult[actorCount];
         }
 
-        internal Float32PendingEvaluationBatch Reset(
+        internal Float32CharacterEvaluationResultBatch Reset(
             SimulationTick tick,
-            Float32PendingActorEvaluation[] evaluations)
+            Float32CharacterEvaluationResult[] evaluations)
         {
             if (!tick.IsValid || evaluations == null || evaluations.Length != m_Evaluations.Length)
-                throw new ArgumentException("Pending evaluation batch workspace is invalid.");
+                throw new ArgumentException("Character evaluation result batch workspace is invalid.");
             for (int i = 0; i < evaluations.Length; i++)
             {
                 if (evaluations[i] == null)
-                    throw new ArgumentException("Pending evaluation batch contains a missing evaluation.", nameof(evaluations));
+                    throw new ArgumentException("Character evaluation result batch contains a missing evaluation.", nameof(evaluations));
             }
             Array.Copy(evaluations, m_Evaluations, evaluations.Length);
             Array.Sort(m_Evaluations, (left, right) => left.ActorId.CompareTo(right.ActorId));
@@ -134,7 +134,7 @@ namespace ThirdPersonSimulation
                 if (m_Evaluations[i].Tick != tick ||
                     i > 0 && m_Evaluations[i - 1].ActorId.Equals(m_Evaluations[i].ActorId))
                 {
-                    throw new ArgumentException("Pending evaluation batch identity is invalid.", nameof(evaluations));
+                    throw new ArgumentException("Character evaluation result batch identity is invalid.", nameof(evaluations));
                 }
             }
             Tick = tick;
@@ -142,7 +142,7 @@ namespace ThirdPersonSimulation
         }
 
         public SimulationTick Tick { get; private set; }
-        public IReadOnlyList<Float32PendingActorEvaluation> Evaluations => m_Evaluations;
+        public IReadOnlyList<Float32CharacterEvaluationResult> Evaluations => m_Evaluations;
 
         internal void AbortUnconsumed()
         {

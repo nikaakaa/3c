@@ -21,7 +21,7 @@ namespace ThirdPersonSimulation.Fixed
                 context.BindTargetPort<IFixedWorkingStateReadPort>(FixedPipelineRuntimePortIds.WorkingState),
                 context.BindDiagnosticsPort<IFixedDiagnosticsRuntimePort>(FixedPipelineRuntimePortIds.Diagnostics));
             var writes = new FixedAbilityEvaluateWritePorts(
-                context.Products.BindExclusiveWriter<FixedPendingEvaluationBatch>(SimulationPipelineProducts.PendingActorEvaluations),
+                context.Products.BindExclusiveWriter<FixedCharacterEvaluationResultBatch>(SimulationPipelineProducts.CharacterEvaluationResults),
                 context.Products.BindExclusiveWriter<WorldSolveBatchRequest>(SimulationPipelineProducts.WorldSolveBatchRequest));
             return new FixedStepPassRuntimeAdapter<FixedAbilityEvaluateReadPorts, FixedAbilityEvaluateWritePorts>(
                 new FixedAbilityEvaluatePassRuntime(context.Pass.Descriptor, reads.CharacterRuntime.Roster.Count),
@@ -34,10 +34,10 @@ namespace ThirdPersonSimulation.Fixed
         FixedPipelinePassRuntimeBase,
         ISimulationStepPassRuntime<FixedAbilityEvaluateReadPorts, FixedAbilityEvaluateWritePorts>
     {
-        readonly FixedPendingActorEvaluation[] m_Pending;
+        readonly FixedCharacterEvaluationResult[] m_Evaluations;
         readonly CharacterWorldSolveRequest[] m_Requests;
         readonly List<SimulationIngress>[] m_Ingress;
-        readonly FixedPendingEvaluationBatch m_PendingBatch;
+        readonly FixedCharacterEvaluationResultBatch m_EvaluationBatch;
 
         public FixedAbilityEvaluatePassRuntime(
             SimulationPipelinePassDescriptor descriptor,
@@ -46,10 +46,10 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (actorCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(actorCount));
-            m_Pending = new FixedPendingActorEvaluation[actorCount];
+            m_Evaluations = new FixedCharacterEvaluationResult[actorCount];
             m_Requests = new CharacterWorldSolveRequest[actorCount];
             m_Ingress = new List<SimulationIngress>[actorCount];
-            m_PendingBatch = new FixedPendingEvaluationBatch(actorCount);
+            m_EvaluationBatch = new FixedCharacterEvaluationResultBatch(actorCount);
             for (int i = 0; i < actorCount; i++)
                 m_Ingress[i] = new List<SimulationIngress>();
         }
@@ -65,13 +65,13 @@ namespace ThirdPersonSimulation.Fixed
             FixedSimulationStep step = readPorts.WorkingState.Step ??
                 throw new InvalidOperationException("Ability Evaluate Pass has no current Step.");
             if (step.Tick != context.Tick || state.Actors.Count != readPorts.CharacterRuntime.Roster.Count ||
-                state.Actors.Count != m_Pending.Length)
+                state.Actors.Count != m_Evaluations.Length)
                 throw new InvalidOperationException("Ability Evaluate Pass Step does not match the working roster.");
 
             PrepareIngress(step, readPorts.CharacterRuntime);
             try
             {
-                for (int i = 0; i < m_Pending.Length; i++)
+                for (int i = 0; i < m_Evaluations.Length; i++)
                 {
                     SimulationActorBinding actor = readPorts.CharacterRuntime.Roster[i];
                     if (!state.Actors[i].ActorId.Equals(actor.ActorId) ||
@@ -79,7 +79,7 @@ namespace ThirdPersonSimulation.Fixed
                         !step.Inputs[i].ActorId.Equals(actor.ActorId))
                         throw new InvalidOperationException("Ability Evaluate Pass Actor order does not match the locked roster.");
                     CharacterSimulationInput input = step.Inputs[i].Value.Input;
-                    m_Pending[i] = FixedCharacterEvaluationRuntime.Evaluate(
+                    m_Evaluations[i] = FixedCharacterEvaluationRuntime.Evaluate(
                         readPorts.CharacterRuntime.Runtime,
                         actor,
                         state.Actors[i].State,
@@ -92,22 +92,22 @@ namespace ThirdPersonSimulation.Fixed
                         valueInterest.IsValueCaptureRequested(actor.ActorId),
                         readPorts.Diagnostics.Sink is ISimulationControlTraceInterest controlInterest &&
                         controlInterest.IsControlCaptureRequested(actor.ActorId));
-                    m_Requests[i] = m_Pending[i].WorldRequest;
+                    m_Requests[i] = m_Evaluations[i].WorldRequest;
                 }
-                writePorts.PendingEvaluations.Write(m_PendingBatch.Reset(step.Tick, m_Pending));
+                writePorts.CharacterEvaluationResults.Write(m_EvaluationBatch.Reset(step.Tick, m_Evaluations));
                 writePorts.WorldBatch.Write(new WorldSolveBatchRequest(step.Tick, state.WorldState, m_Requests));
             }
             catch
             {
-                for (int i = 0; i < m_Pending.Length; i++)
-                    m_Pending[i]?.AbortUnconsumed();
+                for (int i = 0; i < m_Evaluations.Length; i++)
+                    m_Evaluations[i]?.AbortUnconsumed();
                 throw;
             }
             finally
             {
-                for (int i = 0; i < m_Pending.Length; i++)
+                for (int i = 0; i < m_Evaluations.Length; i++)
                 {
-                    m_Pending[i] = null;
+                    m_Evaluations[i] = null;
                     m_Requests[i] = null;
                     m_Ingress[i].Clear();
                 }
@@ -143,14 +143,14 @@ namespace ThirdPersonSimulation.Fixed
     public sealed class FixedAbilityEvaluateWritePorts : ISimulationPipelineWritePortSet
     {
         public FixedAbilityEvaluateWritePorts(
-            IExclusiveSimulationPipelineProductWriter<FixedPendingEvaluationBatch> pendingEvaluations,
+            IExclusiveSimulationPipelineProductWriter<FixedCharacterEvaluationResultBatch> characterEvaluationResults,
             IExclusiveSimulationPipelineProductWriter<WorldSolveBatchRequest> worldBatch)
         {
-            PendingEvaluations = pendingEvaluations ?? throw new ArgumentNullException(nameof(pendingEvaluations));
+            CharacterEvaluationResults = characterEvaluationResults ?? throw new ArgumentNullException(nameof(characterEvaluationResults));
             WorldBatch = worldBatch ?? throw new ArgumentNullException(nameof(worldBatch));
         }
 
-        public IExclusiveSimulationPipelineProductWriter<FixedPendingEvaluationBatch> PendingEvaluations { get; }
+        public IExclusiveSimulationPipelineProductWriter<FixedCharacterEvaluationResultBatch> CharacterEvaluationResults { get; }
         public IExclusiveSimulationPipelineProductWriter<WorldSolveBatchRequest> WorldBatch { get; }
     }
 }

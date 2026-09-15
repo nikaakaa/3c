@@ -4,14 +4,14 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public sealed class FixedPendingActorEvaluation
+    public sealed class FixedCharacterEvaluationResult
     {
         readonly IReadOnlyList<GameplayFact> m_GameplayFacts;
         readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
         readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
         bool m_Consumed;
 
-        internal FixedPendingActorEvaluation(
+        internal FixedCharacterEvaluationResult(
             ActorId actorId,
             SimulationTick tick,
             FixedCharacterRuntimeState candidateState,
@@ -22,13 +22,13 @@ namespace ThirdPersonSimulation.Fixed
             bool diagnosticsEnabled)
         {
             if (!actorId.IsValid || !tick.IsValid)
-                throw new ArgumentException("Fixed pending Character evaluation identity is incomplete.");
+                throw new ArgumentException("Fixed Character evaluation result identity is incomplete.");
             CandidateState = candidateState ?? throw new ArgumentNullException(nameof(candidateState));
             WorldRequest = worldRequest ?? throw new ArgumentNullException(nameof(worldRequest));
             if (worldRequest.ActorId != actorId || worldRequest.Tick != tick ||
                 candidateState.LastCompletedTick != tick.Value)
             {
-                throw new InvalidOperationException("Fixed pending Character evaluation binding is invalid.");
+                throw new InvalidOperationException("Fixed Character evaluation result binding is invalid.");
             }
             ActorId = actorId;
             Tick = tick;
@@ -50,7 +50,7 @@ namespace ThirdPersonSimulation.Fixed
         internal void Consume()
         {
             if (m_Consumed)
-                throw new InvalidOperationException("Fixed pending Character evaluation has already been consumed.");
+                throw new InvalidOperationException("Fixed Character evaluation result has already been consumed.");
             m_Consumed = true;
         }
 
@@ -66,7 +66,7 @@ namespace ThirdPersonSimulation.Fixed
             var result = values == null ? new List<T>() : new List<T>(values);
             for (int i = 0; i < result.Count; i++)
                 if (result[i] == null)
-                    throw new ArgumentException("Fixed pending Character evaluation contains a missing output.", nameof(values));
+                    throw new ArgumentException("Fixed Character evaluation result contains a missing output.", nameof(values));
             return result.AsReadOnly();
         }
     }

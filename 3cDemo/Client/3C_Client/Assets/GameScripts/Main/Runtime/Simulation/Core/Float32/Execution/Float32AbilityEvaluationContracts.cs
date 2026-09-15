@@ -3,14 +3,14 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class Float32PendingActorEvaluation
+    public sealed class Float32CharacterEvaluationResult
     {
         readonly IReadOnlyList<GameplayFact> m_GameplayFacts;
         readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
         readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
         bool m_Consumed;
 
-        internal Float32PendingActorEvaluation(
+        internal Float32CharacterEvaluationResult(
             ActorId actorId,
             SimulationTick tick,
             Float32CharacterRuntimeState candidateState,
@@ -21,13 +21,13 @@ namespace ThirdPersonSimulation
             bool diagnosticsEnabled)
         {
             if (!actorId.IsValid || !tick.IsValid)
-                throw new ArgumentException("Float32 pending Character evaluation identity is incomplete.");
+                throw new ArgumentException("Float32 Character evaluation result identity is incomplete.");
             CandidateState = candidateState ?? throw new ArgumentNullException(nameof(candidateState));
             WorldRequest = worldRequest ?? throw new ArgumentNullException(nameof(worldRequest));
             if (worldRequest.ActorId != actorId || worldRequest.Tick != tick ||
                 candidateState.LastCompletedTick != tick.Value)
             {
-                throw new InvalidOperationException("Float32 pending Character evaluation binding is invalid.");
+                throw new InvalidOperationException("Float32 Character evaluation result binding is invalid.");
             }
             ActorId = actorId;
             Tick = tick;
@@ -49,7 +49,7 @@ namespace ThirdPersonSimulation
         internal void Consume()
         {
             if (m_Consumed)
-                throw new InvalidOperationException("Float32 pending Character evaluation has already been consumed.");
+                throw new InvalidOperationException("Float32 Character evaluation result has already been consumed.");
             m_Consumed = true;
         }
 
@@ -65,7 +65,7 @@ namespace ThirdPersonSimulation
             var result = values == null ? new List<T>() : new List<T>(values);
             for (int i = 0; i < result.Count; i++)
                 if (result[i] == null)
-                    throw new ArgumentException("Float32 pending Character evaluation contains a missing output.", nameof(values));
+                    throw new ArgumentException("Float32 Character evaluation result contains a missing output.", nameof(values));
             return result.AsReadOnly();
         }
     }

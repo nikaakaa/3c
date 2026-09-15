@@ -131,7 +131,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedSimulationSessionSnapshotCodec m_SnapshotCodec;
         readonly IFixedSimulationCommitter m_Committer;
         readonly FixedPipelineProductStore m_Products;
-        readonly IReadOnlySimulationPipelineProductPort<FixedPendingEvaluationBatch> m_PendingEvaluations;
+        readonly IReadOnlySimulationPipelineProductPort<FixedCharacterEvaluationResultBatch> m_CharacterEvaluationResults;
         readonly FixedWorkingStatePort m_WorkingStatePort;
         readonly FixedCompletedStepPort m_CompletedStepPort;
 
@@ -158,8 +158,8 @@ namespace ThirdPersonSimulation.Fixed
             m_SnapshotCodec = snapshotCodec ?? throw new ArgumentNullException(nameof(snapshotCodec));
             m_Committer = committer ?? throw new ArgumentNullException(nameof(committer));
             m_Products = products ?? throw new ArgumentNullException(nameof(products));
-            m_PendingEvaluations = m_Products.GetRequired<FixedExclusiveProductSlot<FixedPendingEvaluationBatch>>(
-                SimulationPipelineProducts.PendingActorEvaluations);
+            m_CharacterEvaluationResults = m_Products.GetRequired<FixedExclusiveProductSlot<FixedCharacterEvaluationResultBatch>>(
+                SimulationPipelineProducts.CharacterEvaluationResults);
             m_WorkingStatePort = workingStatePort ?? throw new ArgumentNullException(nameof(workingStatePort));
             m_CompletedStepPort = completedStepPort ?? throw new ArgumentNullException(nameof(completedStepPort));
             _ = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
@@ -272,8 +272,8 @@ namespace ThirdPersonSimulation.Fixed
 
         public void AbortUnconsumedEvaluations()
         {
-            if (m_PendingEvaluations.HasValue)
-                m_PendingEvaluations.Read().AbortUnconsumed();
+            if (m_CharacterEvaluationResults.HasValue)
+                m_CharacterEvaluationResults.Read().AbortUnconsumed();
         }
 
         public SimulationSessionExecutionPlan<FixedSimulationStep> ReadExecutionPlan()

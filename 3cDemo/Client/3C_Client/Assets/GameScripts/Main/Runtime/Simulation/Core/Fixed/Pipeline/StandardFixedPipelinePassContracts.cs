@@ -34,7 +34,7 @@ namespace ThirdPersonSimulation.Fixed
             AbilityEvaluatePassId,
             new[]
             {
-                Produce(SimulationPipelineProducts.PendingActorEvaluations),
+                Produce(SimulationPipelineProducts.CharacterEvaluationResults),
                 Produce(SimulationPipelineProducts.WorldSolveBatchRequest)
             },
             new[]
@@ -48,7 +48,7 @@ namespace ThirdPersonSimulation.Fixed
             AbilityFinalizePassId,
             new[]
             {
-                Consume(SimulationPipelineProducts.PendingActorEvaluations),
+                Consume(SimulationPipelineProducts.CharacterEvaluationResults),
                 Consume(SimulationPipelineProducts.WorldSolveBatchResult),
                 Append(SimulationPipelineProducts.FinalizedStepResult)
             },

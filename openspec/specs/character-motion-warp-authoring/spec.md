@@ -105,7 +105,7 @@ MotionWarp所属动作 MAY声明`OptionalSnapshot`或`SnapshotRequired`。`None`
 #### Scenario: Warp 所属动作未声明需要目标
 
 - **WHEN** MotionWarp所在Timeline由`ActionTargetRequirement.None`的Action启动
-- **THEN** 编译 MUST失败并定位ActionProfile、Timeline与MotionWarpClip
+- **THEN** 编译 MUST失败并定位GameplayAbilityAdmissionProfile、Timeline与MotionWarpClip
 - **AND** 系统 MUST不在运行时把缺失目标解释为不Warp
 
 #### Scenario: 可选目标动作当前没有目标

@@ -156,7 +156,7 @@ Operation Set MUST声明MotionWarp operation schema、reference、state requirem
 
 ### Requirement: MotionWarp source 与 Action Context 必须在 Semantic 阶段闭合
 
-Frontend MUST验证MotionWarp source、Timeline owner、窗口、Action channel、Override语义、Action Context call site与ActionProfile target requirement。shared Timeline被多个TimelineNode引用时，每个可执行call site MUST满足同一要求；任一call site缺少Action Context MUST使编译失败。
+Frontend MUST验证MotionWarp source、Timeline owner、窗口、Action channel、Override语义、Action Context call site与GameplayAbilityAdmissionProfile target requirement。shared Timeline被多个TimelineNode引用时，每个可执行call site MUST满足同一要求；任一call site缺少Action Context MUST使编译失败。
 
 #### Scenario: Shared Timeline 被普通状态复用
 
@@ -211,4 +211,3 @@ Operation Set MUST为Equipment identity/parameter read、change begin/commit/can
 - **WHEN** Program target遇到未登记Equipment opcode
 - **THEN** compile/load MUST明确失败
 - **AND** runtime MUST不将其视为成功no-op
-

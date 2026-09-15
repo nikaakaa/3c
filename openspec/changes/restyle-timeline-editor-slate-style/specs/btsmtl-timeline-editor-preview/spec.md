@@ -33,6 +33,15 @@ Timeline 页面 MUST只拥有作者编辑、正式 Mutation/Undo 和被动 Runti
 - **AND** MUST NOT在原入口提前返回另一套ShowEmbedded列表、时间轴或独立鼠标分支
 - **AND** 原CutsceneTrack中的Editor方法 MAY为解除MonoBehaviour依赖迁入现有Editor模块并参数化，旧位置 MUST NOT继续保留重复绘制主体
 
+- **AND** 同名重载、partial/helper搬迁或共用类名 MUST NOT被当作已合并；正式来源的独立列表/Clip循环与简化拖动 MUST删除，已正确typed命令/帧/Undo MUST迁入共用原主体
+- **AND** 完成记录 MUST明确原主体保留和重复实现删除的具体位置，曲线显示、其它bug修复或编译结果 MUST NOT替代本项完成
+
+#### Scenario: 源区间比Clip短时的显示
+
+- **WHEN** MotionCurveClip使用1秒线性源区间而Clip持续2秒，且正式映射按源秒推进后保持终值
+- **THEN** 只读显示 MUST在对应第1秒到达终值并保持到Clip结束，MUST NOT自行拉伸源区间到2秒
+- **AND** 区间裁切 MUST沿正式映射/边界求值保留插值，MUST NOT把区间外所有key钳到同一端点；显示副本 MUST NOT回写源或进入运行数据
+
 #### Scenario: Slate UI编辑Clip范围
 
 - **WHEN** 作者在 Slate `CutsceneEditor` 中移动或裁剪一个 projection Clip

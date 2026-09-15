@@ -82,7 +82,7 @@
 
 正式业务API保留原有局部合法性判断，compiler保留完整产品约束。共享metadata只声明字段/端口并做自身一致性约束，不收集全角色内容再运行中央Validator。输出器仅检查能否完整表达对象与字段，不复制业务规则。
 
-GraphAuthoringCapabilityDescriptor目前仍有DocumentCodecId等协议字段。本任务在正式非Agent消费入口接通后删除仅供旧协议使用的字段与定义，保留真正服务UI、domain role、端口、正式方法或compiler的内容。不能因为类型名含Document就删掉领域编辑投影，也不能为避免编译依赖保留旧协议兼容字段。
+GraphAuthoringCapabilityDescriptor已删除仅供旧Agent协议使用的DocumentCodecId字段及其登记参数，继续保留真正服务UI、domain role、端口、正式方法和compiler的内容。不能因为类型名含Document就删掉仍有正式用途的领域编辑投影，也不能为避免编译依赖保留旧协议兼容字段。
 
 ### D5 r2下的来源与显式操作
 
@@ -136,6 +136,6 @@ GraphAuthoringCapabilityDescriptor目前仍有DocumentCodecId等协议字段。�
 
 - [只移动字段位置，仍由两套代码维护规则] → 两侧适配都改用共同定义，删除本任务拥有的重复规则。
 - [C#输出缺少正式读取/配置方式] → 缺口落回D3和所属领域API，不让输出器新建字段模型。
-- [共享协议字段仍被旧入口引用] → 等明确消费者改接后由本任务删共享字段；协议删除和JSON binding重写由C# authoring负责。
+- [共享协议字段仍被旧入口引用] → 已确认当前代码没有读取者，删除DocumentCodecId；协议删除和JSON binding重写仍由C# authoring负责。
 - [合法步骤/端口被误当旧协议] → 按实际业务用途区分，保留组合步骤、真实端口和正式引用。
 - [文档完成记录混入当前执行] → implementation保留原结果与失败证据，r2 tasks只列剩余实现，不列旧包重建或验证工作。

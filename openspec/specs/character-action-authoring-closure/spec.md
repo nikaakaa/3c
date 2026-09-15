@@ -3,16 +3,16 @@
 ## Purpose
 定义动作 profile、Graph activation request、Timeline Decision TreeClip 时间事实、Blackboard fact projection 和 Runtime Debug 的作者闭环。
 ## Requirements
-### Requirement: CharacterPipelineDefinition 必须配置 ActionProfile 库
-系统 MUST让 `CharacterPipelineDefinition` 持有正式 ActionProfile 列表。Compiler MUST将这些 profile 编译为 Program Action catalog，CharacterSimulationState 的 Action operation MUST只读取该 catalog。缺失、空 action id 或重复 action id MUST作为编译错误报告，不得通过字符串全局搜索或 fallback profile 继续运行。
+### Requirement: CharacterPipelineDefinition 必须配置 GameplayAbilityAdmissionProfile 库
+系统 MUST让 `CharacterPipelineDefinition` 持有正式 GameplayAbilityAdmissionProfile 列表。Compiler MUST将这些 profile 编译为 Program Action catalog，CharacterSimulationState 的 Action operation MUST只读取该 catalog。缺失、空 action id 或重复 action id MUST作为编译错误报告，不得通过字符串全局搜索或 fallback profile 继续运行。
 
 #### Scenario: 角色配置动作库
 - **WHEN** 作者打开 `CharacterPipelineDefinition`
-- **THEN** Inspector MUST 允许配置该角色可用的 ActionProfile 列表
+- **THEN** Inspector MUST 允许配置该角色可用的 GameplayAbilityAdmissionProfile 列表
 - **AND** 初始化 pipeline 时 MUST 注册这些 profile
 
 #### Scenario: 重复 action id
-- **WHEN** 两个 ActionProfile 使用同一个 action id
+- **WHEN** 两个 GameplayAbilityAdmissionProfile 使用同一个 action id
 - **THEN** 配置校验 MUST 报错
 - **AND** 系统 MUST NOT 随机选择其中一个作为 fallback
 
@@ -21,7 +21,7 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 #### Scenario: 创建格挡反击提交入口
 - **WHEN** 作者在 GuardState 的行为 Graph 中创建 action activation request 提交入口
-- **THEN** UI MUST 允许选择 `Guard.ParryCounter` ActionProfile
+- **THEN** UI MUST 允许选择 `Guard.ParryCounter` GameplayAbilityAdmissionProfile
 - **AND** UI MUST 允许选择 `Guard` 作为 source input request
 - **AND** UI MUST 允许填写 `LastAttacker` 作为 target key
 
@@ -30,13 +30,13 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 - **THEN** UI MUST不暴露Action级网络策略                                                     
 - **AND** Model Definition只配置fact-kind与producer coverage
 
-### Requirement: ActionProfile Inspector 必须是策略主编辑入口
+### Requirement: GameplayAbilityAdmissionProfile Inspector 必须是策略主编辑入口
 
-`ActionProfile` Inspector MUST是gameplay动作定义主入口，按Identity、Tags、Block/Cancel、Target和Debug分区展示。它 MUST不编辑Network Model的prediction、authority、replication、history或packet参数，也 MUST不提供packet preview或逐Action model policy导航。                                                                      
+`GameplayAbilityAdmissionProfile` Inspector MUST是gameplay动作准入定义主入口，按Identity、Tags、Block/Cancel、Target和Debug分区展示。它 MUST不编辑Network Model的prediction、authority、replication、history或packet参数，也 MUST不提供packet preview或逐Action model policy导航。
 
-#### Scenario: 编辑 Attack ActionProfile
+#### Scenario: 编辑 Attack GameplayAbilityAdmissionProfile
 
-- **WHEN** 作者选中 Attack ActionProfile
+- **WHEN** 作者选中 Attack GameplayAbilityAdmissionProfile
 - **THEN** UI MUST 展示动作身份与 gameplay 约束
 - **AND** MUST不显示逐Action网络字段或虚构的policy绑定
 
@@ -55,7 +55,7 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 ### Requirement: UI 闭环必须支持 Timeline 和非 Timeline 动作
 
-作者 MUST 能使用同一套 ActionProfile、Graph request submit UI、scope variable fact projection 和 Runtime Debug 配置 Timeline 动作与非 Timeline 动作。Timeline 时间窗口 MUST 使用 Decision TreeClip 写 scope variable；非 Timeline 持续窗口 MUST 使用具有显式 Action Context provenance 的 scope variable 写入。系统 MUST NOT 要求非 Timeline 动作创建虚假 Timeline，也 MUST NOT 保留 SubmitActionWindowSampleNode 作为第二输出路径。
+作者 MUST 能使用同一套 GameplayAbilityAdmissionProfile、Graph request submit UI、scope variable fact projection 和 Runtime Debug 配置 Timeline 动作与非 Timeline 动作。Timeline 时间窗口 MUST 使用 Decision TreeClip 写 scope variable；非 Timeline 持续窗口 MUST 使用具有显式 Action Context provenance 的 scope variable 写入。系统 MUST NOT 要求非 Timeline 动作创建虚假 Timeline，也 MUST NOT 保留 SubmitActionWindowSampleNode 作为第二输出路径。
 
 #### Scenario: Timeline 攻击
 
@@ -78,7 +78,7 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 - **WHEN** 作者选中 `Activate Action Instance` 或等价动作激活节点
 - **THEN** Inspector MUST 显示 `Output Action Context` 或等价业务字段
-- **AND** MUST 通过正式 `ActionProfile` 或等价动作定义资产确定动作身份
+- **AND** MUST 通过正式 `GameplayAbilityAdmissionProfile` 或等价动作定义资产确定动作身份
 - **AND** MUST NOT 要求作者手敲 `attack.handle`、`ActionId` 或等价字符串 key
 
 #### Scenario: 配置 Timeline 节点
@@ -89,26 +89,26 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 ### Requirement: 作者必须能显式配置动作退出语义
 
-系统 MUST 让作者在动作流程离开点配置退出语义，而不是只配置普通 graph exit。至少 MUST 支持 `Complete`、`Cancel`、`Interrupt` 和 `Abort`；`Reject` 和 `Correct` MAY 来自网络 decision。State Transition、Tree graceful abort 和 ForceStop MUST 保持分层：State.OnExit 或正式 lifecycle 节点负责业务 terminal transition，Tree edge、通用 Runnable stop 和 TimelineNode MUST NOT 自动推导动作语义。
+系统 MUST让Ability作者能配置`Complete`、`Cancel`、`Interrupt`和`Abort`的结束规则；`Reject`和`Correct` MAY来自网络decision。执行根完成、外部取消、替换/中断和强制终止 MUST先进入同一Ability lifecycle入口记录结果与原因，再由原owner停止内容。State.OnExit、Tree edge、通用Runnable stop和TimelineNode MUST不负责选择Ability业务终态，也不得通过作者回调重复提交。
 
 #### Scenario: 状态机正常结束攻击
 
 - **WHEN** 作者配置攻击正常完成
-- **THEN** root 或等价生命周期节点 MUST 提交 `Complete`
+- **THEN** 执行根完成 MUST 由Ability lifecycle入口记录 `Complete`
 - **AND** 完成 Transition MUST NOT 再提交第二条 terminal transition
 
 #### Scenario: 语义窗口替换动作
 
 - **WHEN** Attack leaf 在 root 完成前通过 ComboAccept、RecoveryEarly 或 RecoveryLate 离开
-- **THEN** source State.OnExit MUST 在 target 激活前提交 `Cancel(RecoveryCancel)`
+- **THEN** source Ability lifecycle入口 MUST 在target激活前提交 `Cancel(RecoveryCancel)`
 - **AND** source Timeline MUST 通过 State root stop 取消
 - **AND** target MUST 使用新的 Action Context
 #### Scenario: Parent Tree abort 攻击 SMNode
 
 - **WHEN** 攻击 StateMachineNode 因 Self、LowerPriority 或 Parent abort graceful stop
 - **AND** source Action Context 仍 active
-- **THEN** source State.OnExit MUST 能根据 StateExitContext 显式提交 `Cancel`、`Interrupt` 或 `Abort`
-- **AND** SM runtime MUST NOT 自动选择其中一种业务语义
+- **THEN** 外部请求入口 MUST 根据明确请求写入 `Cancel`、`Interrupt` 或 `Abort`
+- **AND** SM runtime MUST只停止State内容，不从StateExitContext反推Ability业务语义
 - **AND** parent Composite MUST 等待该 lifecycle 收口后启动 replacement
 
 #### Scenario: Pipeline ForceStop
@@ -130,12 +130,12 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 #### Scenario: Scope 离开
 
 - **WHEN** `ActionScope` 的子流程正常完成、被取消或被打断
-- **THEN** Scope MUST 将离开原因翻译为明确 `ActionLifecycleTransition`
+- **THEN** Scope若需要结束Ability MUST调用正式生命周期入口提交明确 `ActionLifecycleTransition`
 - **AND** MUST NOT 靠 scope 停止 tick 来隐式销毁动作事务
 
-### Requirement: 作者 UI 必须能从 ActionProfile 追到输出预览
+### Requirement: 作者 UI 必须能从 GameplayAbilityAdmissionProfile 追到输出预览
 
-作者 MUST从ActionProfile、Graph request、TreeClip projection和Runtime Debug追踪ActionId/ActionInstanceId与gameplay outputs。Model Debug MAY显示fact kind、ProducerId、packet与发送结果；ActionProfile MUST不持有expected packet或逐Action网络策略。                                         
+作者 MUST从GameplayAbilityAdmissionProfile、Graph request、TreeClip projection和Runtime Debug追踪ActionId/ActionInstanceId与gameplay outputs。Model Debug MAY显示fact kind、ProducerId、packet与发送结果；GameplayAbilityAdmissionProfile MUST不持有expected packet或逐Action网络策略。
 
 #### Scenario: 从 TreeClip 查看 HitWindow
 
@@ -146,7 +146,7 @@ Graph authoring UI MUST 提供普通 request submit authoring 入口，用于配
 
 ### Requirement: 非 Timeline 输出必须共享同一套策略解析
 
-Timeline与非Timeline动作 MUST产生相同GameplayFacts并以ActionId/ActionInstanceId关联。Model Egress MUST只按显式fact kind与producer coverage消费Finalize输出；ActionProfile、Node和Blackboard MUST不成为网络配置来源。                            
+Timeline与非Timeline动作 MUST产生相同GameplayFacts并以ActionId/ActionInstanceId关联。Model Egress MUST只按显式fact kind与producer coverage消费Finalize输出；GameplayAbilityAdmissionProfile、Node和Blackboard MUST不成为网络配置来源。
 
 #### Scenario: 非 Timeline GuardWindow
 
@@ -167,7 +167,7 @@ Runtime Debug MUST按 `ActionInstance` 展示GameplayFact、PresentationCommand�
 #### Scenario: 服务端纠正动作
 
 - **WHEN** 收到 ActionInstance Correct 或 Reject decision
-- **THEN** Debug MUST 显示对应 ActionProfile、ActionInstance、prediction key、incoming transition 和 reason
+- **THEN** Debug MUST 显示对应 GameplayAbilityAdmissionProfile、ActionInstance、prediction key、incoming transition 和 reason
 - **AND** 同tick存在body correction时Model Debug MUST记录restore/replay与ack
 
 ### Requirement: Timeline 攻击闭环不得依赖 RootTree 平铺测试输出
@@ -189,7 +189,7 @@ Timeline 攻击的时间事实 MUST 由 inline Timeline Decision TreeClip 写 ow
 
 ### Requirement: Full-body Action 必须通过唯一Motion arbitration事实公布Motor ownership
 
-Attack、Dodge与未来full-body Action MUST只通过正式Action/Motion arbitration事实声明是否取得Character Motor控制权。该事实 MAY由pipeline Blackboard承载，但 MUST只控制Locomotion Motion contribution，不得控制基础Pose是否输出。Locomotion Gameplay MUST只读Motor ownership，不得复制request、ActionProfile、Timeline、motion、window或lifecycle。Locomotion PoseStateMachine MUST继续根据committed Body与Intent生成基础Pose；系统 MUST删除`HasActionLocomotionOwnership -> ActionOverride -> RunLoop/Idle`表现路由和按动作种类选择恢复Pose State的事实。
+Attack、Dodge与未来full-body Action MUST只通过正式Action/Motion arbitration事实声明是否取得Character Motor控制权。该事实 MAY由pipeline Blackboard承载，但 MUST只控制Locomotion Motion contribution，不得控制基础Pose是否输出。Locomotion Gameplay MUST只读Motor ownership，不得复制request、GameplayAbilityAdmissionProfile、Timeline、motion、window或lifecycle。Locomotion PoseStateMachine MUST继续根据committed Body与Intent生成基础Pose；系统 MUST删除`HasActionLocomotionOwnership -> ActionOverride -> RunLoop/Idle`表现路由和按动作种类选择恢复Pose State的事实。
 
 #### Scenario: Full-body Action 激活
 
@@ -232,15 +232,15 @@ Decision TreeClip 与 owner-local Bool Frame scope variable MUST 是 Timeline Wi
 - **THEN** ValueNode MAY 读取
 - **AND** typed WindowType query MUST NOT 命中
 
-### Requirement: ActionProfile authoring必须支持Required Tag Query
+### Requirement: GameplayAbilityAdmissionProfile authoring必须支持Required Tag Query
 
-ActionProfile Inspector、Validator、Compiler、Program diagnostics与source revision MUST支持类型化Required Tag Query，并与现有Owned/Block/Cancel Tag Query使用同一Tag catalog和query authoring。空Required Query MUST显式表示Always；无效Tag、循环query或未登记Tag MUST失败。系统 MUST不增加EquipmentId枚举、WeaponType字段或装备专用If节点替代该通用条件。
+GameplayAbilityAdmissionProfile Inspector、Validator、Compiler、Program diagnostics与source revision MUST支持类型化Required Tag Query，并与现有Owned/Block/Cancel Tag Query使用同一Tag catalog和query authoring。空Required Query MUST显式表示Always；无效Tag、循环query或未登记Tag MUST失败。系统 MUST不增加EquipmentId枚举、WeaponType字段或装备专用If节点替代该通用条件。
 
 #### Scenario: 配置Sawblade Attack要求
 
 - **WHEN** 作者为Sawblade Attack配置`Equipment.Feature.CorinSawblade`
 - **THEN** Inspector与Compiler MUST保存类型化Required Query
-- **AND** ActionProfile MUST不保存MainWeapon asset引用
+- **AND** GameplayAbilityAdmissionProfile MUST不保存MainWeapon asset引用
 
 #### Scenario: Core Dodge无需装备
 
@@ -248,19 +248,19 @@ ActionProfile Inspector、Validator、Compiler、Program diagnostics与source re
 - **THEN** authoring MUST将其编译为Always
 - **AND** MUST不自动继承当前Feature Tag
 
-### Requirement: Equipment Route authoring必须引用正式ActionProfile和Input Request
+### Requirement: Equipment Route authoring必须引用正式GameplayAbilityAdmissionProfile和Input Request
 
-每个Feature Action Route MUST通过稳定RouteId引用一个正式ActionProfile，并由Profile Route catalog绑定现有Input RequestId和消费策略。Editor与Validator MUST显示和检查三者的精确identity；MUST不按Action显示名、InputAction名称、Graph节点名称或数组index匹配。
+每个Feature Action Route MUST通过稳定RouteId引用一个正式GameplayAbilityAdmissionProfile，并由Profile Route catalog绑定现有Input RequestId和消费策略。Editor与Validator MUST显示和检查三者的精确identity；MUST不按Action显示名、InputAction名称、Graph节点名称或数组index匹配。
 
 #### Scenario: PrimaryAction绑定Attack请求
 
 - **WHEN** Corin MainWeapon PrimaryAction Route绑定现有Attack RequestId
-- **THEN** Sawblade Feature实现 MUST引用自己的正式Attack ActionProfile
+- **THEN** Sawblade Feature实现 MUST引用自己的正式Attack GameplayAbilityAdmissionProfile
 - **AND** Host节点 MUST消费该Route定义而不是新增Raw Shift/Mouse绑定
 
 #### Scenario: Route引用删除的Action
 
-- **WHEN** Feature Route的ActionProfile不在合并Action catalog中
+- **WHEN** Feature Route的GameplayAbilityAdmissionProfile不在合并Action catalog中
 - **THEN** Validator MUST阻止发布
 - **AND** MUST不创建匿名ActionInstance
 

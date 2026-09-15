@@ -56,23 +56,23 @@ r4固定分工：Ability决定结束，代码自动停止清理；Timeline保留
 
 ## 7. GameplayAbilityDefinition完整入口
 
-- [ ] 7.1 将现有SkillDefinition职责迁为独立GameplayAbilityDefinition资产，集中技能身份、激活/阻断/取消/目标要求、已有效果引用及后续能力关系；技能专用规则由Ability拥有，显式共享规则保持唯一对象来源。
-- [ ] 7.2 将AbilityGraph及私有FSM/StateBody/Condition/Macro/Timeline归属Ability资产；角色/装备改为AbilityGrant精确引用和输入绑定，移除SkillDefinitions与SkillGraphs双重登记，保留业务identity与共享资源引用。
-- [ ] 7.3 建立统一Ability作者入口，在同一页面编辑规则、目标要求、执行图与资源，并显示共享规则来源；沿原生GraphEditor下钻私有内容，创建技能时自动建立内部拥有关系。
-- [ ] 7.4 将Skill专属类型和调用统一为AbilityGraph、AbilityExecution和AbilityExecutionContext，复用现有释放状态；普通Ability移除手配空ActionContextSlot，由当前执行上下文贯通节点与Timeline，保留合法非Skill业务和原准入分组/取消顺序。
-- [ ] 7.5 扩展公共C#工具的领域根支持，从GameplayAbilityDefinition完整输出外壳、规则、图、Timeline局部片段混合、Slot引用及声明范围的AbilityGrant挂接；跨动作混合规则保留动画owner引用，子图模式只处理子图及原owner，不依赖旧外壳或子资产GUID，不新增MCP入口。
-- [ ] 7.6 迁移Corin现有技能、共享Dodge规则和角色授予引用，删除被替代的Skill专属旧字段、类型、资产入口与兼容别名；不改变阈值、输入消费、目标、并发、取消、MovingTurn或Program执行行为。
-- [ ] 7.7 同步受本次改动影响的正式作者/编译/代码生成接口及规范命名，修订角色装配根与独立Ability资产合同；保留r2公共双工具边界，不扩展成本/冷却/等级或其它业务系统。
-- [ ] 7.8 将执行根完成、取消规则、外部中断/替换和强制终止请求汇入同一Ability生命周期入口，保留Complete/Cancel/Interrupt/Abort和原有效原因，先记录结束决定再停止内容，不从StateExitCause反推或在回调中重复提交。
-- [ ] 7.9 将状态退出、子图/Timeline停止、相关窗口和运行资源回收固定在原owner代码内，保留必要内部OnExit与ForceStop流程；移除Ability作者必配的OnExit清理节点/页及创建约束，不依赖作者连线保证释放。
-- [ ] 7.10 在原生命周期与播放通知中保持明确Ability/执行实例、结果/原因、Tick和producer关联，播放采样保留Timeline时间与局部片段权重，停止由代码自动请求；直接进入正式Presentation/Slot接口，不新增全局总线或动画EventGraph必经转发。
-- [ ] 7.11 对接现有动作Slot精确源/目标过渡及混合历史接口，保留Timeline局部混合、Slot跨播放规则与Pose基础转移各自唯一owner；旧逻辑停止后不继续窗口/效果/Motion，不因表现淡出等待，不在Ability/事件图中维护混合栈或复制动画算法。
-- [ ] 7.12 将两个Dodge旧ActionExit分支的有效条件迁入Ability结束规则/请求入口，删除Action Exit Selector、空Action Exit_To_Succeed_Rule、被替代Submit实例/私有包装及空作者OnExit；保持已清理根图、四种终态和正常连段，不重新生成旧壳或默认Complete兜底。
+- [x] 7.1 将现有SkillDefinition职责迁为独立GameplayAbilityDefinition资产，集中技能身份、激活/阻断/取消/目标要求、已有效果引用及后续能力关系；技能专用规则由Ability拥有，显式共享规则保持唯一对象来源。
+- [x] 7.2 将AbilityGraph及私有FSM/StateBody/Condition/Macro/Timeline归属Ability资产；角色/装备改为AbilityGrant精确引用和输入绑定，移除SkillDefinitions与SkillGraphs双重登记，保留业务identity与共享资源引用。
+- [x] 7.3 建立统一Ability作者入口，在同一页面编辑规则、目标要求、执行图与资源，并显示共享规则来源；沿原生GraphEditor下钻私有内容，创建技能时自动建立内部拥有关系。
+- [x] 7.4 将Skill专属类型和调用统一为AbilityGraph、AbilityExecution和AbilityExecutionContext，复用现有释放状态；普通Ability移除手配空ActionContextSlot，由当前执行上下文贯通节点与Timeline，保留合法非Skill业务和原准入分组/取消顺序。
+- [x] 7.5 扩展公共C#工具的领域根支持，从GameplayAbilityDefinition完整输出外壳、规则、图、Timeline局部片段混合、Slot引用及声明范围的AbilityGrant挂接；跨动作混合规则保留动画owner引用，子图模式只处理子图及原owner，不依赖旧外壳或子资产GUID，不新增MCP入口。
+- [x] 7.6 迁移Corin现有技能、共享Dodge规则和角色授予引用，删除被替代的Skill专属旧字段、类型、资产入口与兼容别名；不改变阈值、输入消费、目标、并发、取消、MovingTurn或Program执行行为。
+- [x] 7.7 同步受本次改动影响的正式作者/编译/代码生成接口及规范命名，修订角色装配根与独立Ability资产合同；保留r2公共双工具边界，不扩展成本/冷却/等级或其它业务系统。
+- [x] 7.8 将执行根完成、取消规则、外部中断/替换和强制终止请求汇入同一Ability生命周期入口，保留Complete/Cancel/Interrupt/Abort和原有效原因，先记录结束决定再停止内容，不从StateExitCause反推或在回调中重复提交。
+- [x] 7.9 将状态退出、子图/Timeline停止、相关窗口和运行资源回收固定在原owner代码内，保留必要内部OnExit与ForceStop流程；移除Ability作者必配的OnExit清理节点/页及创建约束，不依赖作者连线保证释放。
+- [x] 7.10 在原生命周期与播放通知中保持明确Ability/执行实例、结果/原因、Tick和producer关联，播放采样保留Timeline时间与局部片段权重，停止由代码自动请求；直接进入正式Presentation/Slot接口，不新增全局总线或动画EventGraph必经转发。
+- [x] 7.11 对接现有动作Slot精确源/目标过渡及混合历史接口，保留Timeline局部混合、Slot跨播放规则与Pose基础转移各自唯一owner；旧逻辑停止后不继续窗口/效果/Motion，不因表现淡出等待，不在Ability/事件图中维护混合栈或复制动画算法。
+- [x] 7.12 将两个Dodge旧ActionExit分支的有效条件迁入Ability结束规则/请求入口，删除Action Exit Selector、空Action Exit_To_Succeed_Rule、被替代Submit实例/私有包装及空作者OnExit；保持已清理根图、四种终态和正常连段，不重新生成旧壳或默认Complete兜底。
 
 ## 8. r5共享准入命名与StateBody系统锚点
 
-- [ ] 8.1 将ActionProfile类型、配置API、Inspector/菜单及GameplayAbilityDefinition.AdmissionProfile统一为GameplayAbilityAdmissionProfile；保留独立共享规则资产，移除准入内联/覆盖副本及旧类型别名。
+- [x] 8.1 将ActionProfile类型、配置API、Inspector/菜单及GameplayAbilityDefinition.AdmissionProfile统一为GameplayAbilityAdmissionProfile；保留独立共享规则资产，移除准入内联/覆盖副本及旧类型别名。
 - [ ] 8.2 迁移Corin准入资产到Abilities/AdmissionProfiles及明确新文件名，更新AbilityGrant、角色/Equipment、CanActivate/ActionTarget与全部正式序列化引用；保留Dodge单一共享对象、原分组identity和业务行为，删除废弃资产、.meta及无人使用的旧目录。
 - [ ] 8.3 统一依赖发现、语义编译、Program Catalog与Fixed/Float32所有准入消费者的命名和身份映射；公共export_code/generate_assets及生成源码输出新Profile合同和范围内唯一共享对象，移除旧入口，不新增并行catalog或执行状态。
 - [ ] 8.4 保留StateBody工厂已正确生成的OnEnter/Root/OnExit三系统锚点，补齐不可删除、OnExit不进作者菜单、正式图合同及C#重建/编译映射；仅由运行代码在State stop barrier调用OnExit清理，保留ForceStop释放，不恢复Action Exit/Submit作者清理链。
-- [ ] 8.5 同步btsmtl-sm-node-authoring、character-pipeline-definition-authoring、btsmtl-flowcanvas-authoring及所有受影响正式spec条款，清除两锚点例外、旧ActionProfile命名和准入内联要求，保留非Ability合法场景及既有完成记录。
+- [x] 8.5 同步btsmtl-sm-node-authoring、character-pipeline-definition-authoring、btsmtl-flowcanvas-authoring及所有受影响正式spec条款，清除两锚点例外、旧ActionProfile命名和准入内联要求，保留非Ability合法场景及既有完成记录。

@@ -7,7 +7,7 @@
 
 ### Requirement: Gameplay Behavior 必须提供稳定作者身份
 
-系统 MUST使用 `IGameplayBehaviorProfile` 或等价合同表达稳定 BehaviorId、BehaviorKind、display name、debug category 与 gameplay tags。Transaction MUST由 `ActionProfile` 提供，Effect MUST由 `GameplayEffectDefinition` 提供，通用 Stream/Event MAY由 `GameplayBehaviorProfile` 提供。Behavior identity MUST不替代 Graph operation、ActionInstance、GameplayFact、PresentationCommand 或 World request。
+系统 MUST使用 `IGameplayBehaviorProfile` 或等价合同表达稳定 BehaviorId、BehaviorKind、display name、debug category 与 gameplay tags。Transaction MUST由 `GameplayAbilityAdmissionProfile` 提供，Effect MUST由 `GameplayEffectDefinition` 提供，通用 Stream/Event MAY由 `GameplayBehaviorProfile` 提供。Behavior identity MUST不替代 Graph operation、ActionInstance、GameplayFact、PresentationCommand 或 World request。
 
 #### Scenario: 注册普通移动行为
 
@@ -17,7 +17,7 @@
 
 ### Requirement: Transaction 与 Effect 身份不得复制
 
-`ActionProfile.ActionId` MUST同时作为 Transaction BehaviorId；`GameplayEffectDefinition.EffectId` MUST同时作为 Effect BehaviorId。系统 MUST不要求同一 Action 或 Effect 再创建 generic `GameplayBehaviorProfile`，统一 registry MUST拒绝跨三类来源的重复 BehaviorId。
+`GameplayAbilityAdmissionProfile.ActionId` MUST同时作为 Transaction BehaviorId；`GameplayEffectDefinition.EffectId` MUST同时作为 Effect BehaviorId。系统 MUST不要求同一 Action 或 Effect 再创建 generic `GameplayBehaviorProfile`，统一 registry MUST拒绝跨三类来源的重复 BehaviorId。
 
 #### Scenario: Effect 与通用 Behavior 重名
 
@@ -57,7 +57,7 @@ Compiler MUST把 Action、generic Behavior 与 Gameplay Effect 的 BehaviorKind�
 
 ### Requirement: Behavior authoring 不得暴露模型执行参数
 
-ActionProfile、GameplayBehaviorProfile 与 GameplayEffectDefinition Inspector MUST只编辑 gameplay identity、tags和各自业务规则。Tick rate、packet cadence、history capacity、correction tolerance、reliable fact kinds 与 producer coverage MUST只出现在具体 Network Model authoring中。
+GameplayAbilityAdmissionProfile、GameplayBehaviorProfile 与 GameplayEffectDefinition Inspector MUST只编辑 gameplay identity、tags和各自业务规则。Tick rate、packet cadence、history capacity、correction tolerance、reliable fact kinds 与 producer coverage MUST只出现在具体 Network Model authoring中。
 
 #### Scenario: 编辑 Gameplay Effect
 

@@ -87,6 +87,8 @@
 
 系统 MUST 让普通 `SubTree` 只表达 `RootNode` 行为入口。`StateBehaviorSubTree` MUST 固定拥有 `OnEnter`、`RootNode` 和 `OnExit` 生命周期入口。`OnEnter` 和 `OnExit` MUST 使用普通 `RunnableNode` flow 链路，MUST NOT 成为 `StateMachineGraph` Transition 端点。State Transition 或父 Tree graceful stop 离开 active State 时 MUST 先停止 Root，再在当前 StateExitContext scope 内运行 OnExit。
 
+上述`StateBehaviorSubTree`合同不适用于GameplayAbility私有`AbilityGraph`中的`StateBody`。Ability StateBody MUST固定拥有一组不可删除、不可由作者菜单创建的`OnEnter`、`RootNode`和`OnExit`系统锚点；`OnExit`只由运行时代码在State stop barrier调用，不连接作者清理图、不决定Ability终态。状态退出、子内容停止和资源回收由Ability生命周期与运行模块内部代码完成，内部退出事实不得重新选择Ability终态。
+
 #### Scenario: 普通 SubTree
 
 - **WHEN** 用户创建普通 `SubTree`
@@ -98,6 +100,13 @@
 - **WHEN** 用户创建 `StateBehaviorSubTree`
 - **THEN** 新图 MUST 默认包含一个 `OnEnter`、一个 `RootNode` 和一个 `OnExit`
 - **AND** 缺失或重复生命周期入口 MUST 被校验报告为非法结构
+
+#### Scenario: GameplayAbility StateBody 系统锚点
+
+- **WHEN** 系统创建或重建GameplayAbility私有`StateBody`
+- **THEN** 图 MUST 固定包含`OnEnter`、`RootNode`和`OnExit`各一个系统锚点
+- **AND** `OnExit` MUST 不进入作者节点创建菜单且 MUST 不可删除
+- **AND** State stop barrier MUST 在状态正常停止完成前调用`OnExit`
 
 #### Scenario: State Transition 离开状态
 

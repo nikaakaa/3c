@@ -183,12 +183,12 @@ Compiled Action operations MUST只负责 profile 查询、activation 验证、Ac
 
 ### Requirement: Equipment Feature不得恢复旧Ability执行单元
 
-Equipment Feature MAY拥有被Compiler静态链接的普通inline graph和导出ActionProfile，但正式Runtime MUST不出现`ActionModule`、`AbilityAsset`、`IAbilityBody`、`AbilityTree`、Feature graph clone或按Feature调用Graph的Action接口。Feature owner metadata MUST只用于编译、source map、route entry和diagnostics，不得成为Action身份或第二membership table。
+Equipment Feature MAY拥有被Compiler静态链接的普通inline graph和导出GameplayAbilityAdmissionProfile，但正式Runtime MUST不出现`ActionModule`、`AbilityAsset`、`IAbilityBody`、`AbilityTree`、Feature graph clone或按Feature调用Graph的Action接口。Feature owner metadata MUST只用于编译、source map、route entry和diagnostics，不得成为Action身份或第二membership table。
 
 #### Scenario: Feature Action进入Runtime
 
 - **WHEN** Sawblade Route激活Attack
-- **THEN** 动作身份 MUST仍为Attack ActionProfile与新ActionInstanceId
+- **THEN** 动作身份 MUST仍为Attack GameplayAbilityAdmissionProfile与新ActionInstanceId
 - **AND** FeatureId MUST只作为Equipment Context/source metadata
 
 #### Scenario: 查找Action body
@@ -212,4 +212,3 @@ ActionInstance state MUST新增可选Equipment Context，包含SlotId、Equipmen
 - **WHEN** snapshot中的FeatureId不在当前Program catalog
 - **THEN** restore MUST失败
 - **AND** MUST不将context降级为None
-

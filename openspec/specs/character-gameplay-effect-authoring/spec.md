@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: CharacterPipelineDefinition 必须提供唯一 Gameplay Effect 配置入口
 
-`CharacterPipelineDefinition` MUST 直接持有一个 `CharacterGameplayEffectProfile`，由其声明该角色的初始 attributes、初始 loose tags、初始 effects 和可使用的 effect registry。Host、BTSMTL RootTree、ActionProfile 或场景组件 MUST NOT 再持有第二份角色 Gameplay Effect 配置。
+`CharacterPipelineDefinition` MUST 直接持有一个 `CharacterGameplayEffectProfile`，由其声明该角色的初始 attributes、初始 loose tags、初始 effects 和可使用的 effect registry。Host、BTSMTL RootTree、GameplayAbilityAdmissionProfile 或场景组件 MUST NOT 再持有第二份角色 Gameplay Effect 配置。
 
 #### Scenario: 配置 Corin 角色
 

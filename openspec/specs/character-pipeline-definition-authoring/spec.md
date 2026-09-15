@@ -6,7 +6,15 @@
 ## Requirements
 ### Requirement: CharacterPipelineDefinition 必须是配置装配根
 
-`CharacterPipelineDefinition` MUST只保存SimulationTickRate、ControlModuleId、SkillDefinitions、SkillGraphs、InputProfile、GameplayEffectProfile、BodyMotionProfile、ActionProfile、GameplayBehaviorProfile、CharacterAnimationPresentationProfile与generated Program/Projection的正式引用。Character Skill的执行根 MUST由每个SkillDefinition的`EntryGraphAuthoringId`精确定位到Definition.SkillGraphs；Definition MUST不保存Character RootTree，也 MUST不内联保存Animation Channel、PoseStateMachine、AnimationSlot、Pose Graph、Policy、Rig、producer binding、Graph、Timeline、runtime lifecycle或compiler report数据。
+`CharacterPipelineDefinition` MUST只保存SimulationTickRate、ControlModuleId、AbilityGrants、InputProfile、GameplayEffectProfile、BodyMotionProfile、GameplayAbilityAdmissionProfile、GameplayBehaviorProfile、CharacterAnimationPresentationProfile与generated Program/Projection的正式引用。每个Ability的执行根 MUST由`AbilityGrant`精确引用`GameplayAbilityDefinition`及其私有`AbilityGraph`；Definition MUST不保存Character RootTree，也 MUST不内联保存技能规则、FSM、Animation Channel、PoseStateMachine、AnimationSlot、Pose Graph、Policy、Rig、producer binding、Graph、Timeline、runtime lifecycle或compiler report数据。
+
+`GameplayAbilityDefinition` MUST是可独立打开的技能作者入口，拥有稳定Ability identity、准入规则、目标要求、效果引用、结束规则、后续Ability关系及唯一私有AbilityGraph。`AbilityGrant`只保存角色或装备授予引用、输入消费和目标绑定，不复制Ability规则或执行图。
+
+#### Scenario: 打开独立Gameplay Ability
+
+- **WHEN** 作者选择一个GameplayAbilityDefinition
+- **THEN** Inspector MUST能直接编辑该Ability的规则、资源、结束规则、后续Ability和私有AbilityGraph入口
+- **AND** MUST不要求作者再到CharacterPipelineDefinition拼装SkillDefinition、SkillGraph或空ActionContext
 
 #### Scenario: 打开角色Definition
 
@@ -113,7 +121,7 @@ Definition Inspector MUST以紧凑 Config References 作为默认作者界面。
 
 ### Requirement: Character authoring discovery必须支持显式composition roots
 
-Compiler discovery MUST从Definition.SkillGraphs按SkillDefinition.EntryGraphAuthoringId建立Character Skill canonical closure，并从Equipment Profile声明的全部Feature Persistent/Route graph建立其它composition roots，再递归解析各自正式Graph/Timeline引用。每个root MUST携带owner、role、Skill/Feature/Route identity和稳定source path。Compiler MUST不通过目录扫描、AssetDatabase全局查找、命名约定或运行时Loadout只发现部分Feature，也 MUST不回退到Character RootTree。
+Compiler discovery MUST从Definition.AbilityGrants及每个Ability的私有AbilityGraph建立Character Ability canonical closure，并从Equipment Profile声明的全部Feature Persistent/Route graph建立其它composition roots，再递归解析各自正式Graph/Timeline引用。每个root MUST携带owner、role、Ability/Feature/Route identity和稳定source path。Compiler MUST不通过目录扫描、AssetDatabase全局查找、命名约定或运行时Loadout只发现部分Feature，也 MUST不回退到Character RootTree。
 
 #### Scenario: 发现未装备Gun Feature
 
@@ -127,9 +135,9 @@ Compiler discovery MUST从Definition.SkillGraphs按SkillDefinition.EntryGraphAut
 - **THEN** discovery MUST失败并定位Feature/Route
 - **AND** MUST不把它当作Skill Graph或其它composition root的子图猜测owner
 
-### Requirement: Core与Feature ActionProfile必须合并为唯一catalog
+### Requirement: Core与Feature GameplayAbilityAdmissionProfile必须合并为唯一Action catalog
 
-Definition直接拥有的core ActionProfile与Equipment Feature导出的ActionProfile MUST按稳定ActionId合并、排序并校验为唯一Character Action catalog。Feature ownership MAY作为source metadata进入Program和diagnostics，但 MUST不成为第二个Action registry或运行时membership表。
+Definition直接拥有的core GameplayAbilityAdmissionProfile与Equipment Feature导出的GameplayAbilityAdmissionProfile MUST按稳定ActionId合并、排序并校验为唯一Character Action catalog。Feature ownership MAY作为source metadata进入Program和diagnostics，但 MUST不成为第二个Action registry或运行时membership表。
 
 #### Scenario: Core Dodge与Sawblade Attack编译
 
@@ -139,6 +147,6 @@ Definition直接拥有的core ActionProfile与Equipment Feature导出的ActionPr
 
 #### Scenario: 两个Feature重复ActionId
 
-- **WHEN** Sawblade与Gun导出相同ActionId但并非同一共享ActionProfile identity
+- **WHEN** Sawblade与Gun导出相同ActionId但并非同一共享GameplayAbilityAdmissionProfile identity
 - **THEN** Compiler MUST拒绝重复定义
 - **AND** MUST不按active Feature覆盖catalog条目

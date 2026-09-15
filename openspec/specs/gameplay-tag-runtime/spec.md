@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: Gameplay Tag 必须来自唯一正式 Catalog
 
-系统 MUST 使用 Gameplay Tag Catalog 声明稳定 TagId、显示信息和父子层级。运行时、ActionProfile、GameplayBehaviorProfile 和 GameplayEffectDefinition MUST 只引用 Catalog 中存在的 TagId。系统 MUST NOT 使用任意字符串、显示名或未注册路径作为运行时 Tag fallback。
+系统 MUST 使用 Gameplay Tag Catalog 声明稳定 TagId、显示信息和父子层级。运行时、GameplayAbilityAdmissionProfile、GameplayBehaviorProfile 和 GameplayEffectDefinition MUST 只引用 Catalog 中存在的 TagId。系统 MUST NOT 使用任意字符串、显示名或未注册路径作为运行时 Tag fallback。
 
 #### Scenario: 作者配置眩晕标签
 
@@ -15,7 +15,7 @@
 
 #### Scenario: 引用未注册标签
 
-- **WHEN** 某个 ActionProfile 或 Effect Definition 引用 Catalog 中不存在的 TagId
+- **WHEN** 某个 GameplayAbilityAdmissionProfile 或 Effect Definition 引用 Catalog 中不存在的 TagId
 - **THEN** 配置校验 MUST 失败
 - **AND** Runtime MUST NOT 临时创建字符串标签继续运行
 
@@ -31,7 +31,7 @@
 
 #### Scenario: 组合动作阻止条件
 
-- **WHEN** ActionProfile 要求 Any=`State.Control.Stunned, State.Dead` 且 None=`State.Defense.Invulnerable`
+- **WHEN** GameplayAbilityAdmissionProfile 要求 Any=`State.Control.Stunned, State.Dead` 且 None=`State.Defense.Invulnerable`
 - **THEN** Runtime MUST 按 Tag Query 的正式组合求值
 - **AND** MUST NOT 把列表顺序解释为优先级或隐式 OR/AND
 
@@ -53,7 +53,7 @@ Tag Container MUST 以稳定 source handle 记录 Character、ActionInstance 和
 
 ### Requirement: Action 与 Effect 必须共用唯一 Tag 状态
 
-系统 MUST NOT 存在 Action 私有持久 Tag 集合或字符串 `SetTag`。Action admission、BTSMTL Tag query 与 Gameplay Effect requirement MUST 读取 CharacterSimulationState 的唯一 Tag Container。Active source cancel query MAY 读取 ActionProfile 不可变 tag 定义，但 MUST NOT 保存第二份角色状态。
+系统 MUST NOT 存在 Action 私有持久 Tag 集合或字符串 `SetTag`。Action admission、BTSMTL Tag query 与 Gameplay Effect requirement MUST 读取 CharacterSimulationState 的唯一 Tag Container。Active source cancel query MAY 读取 GameplayAbilityAdmissionProfile 不可变 tag 定义，但 MUST NOT 保存第二份角色状态。
 
 #### Scenario: Stun 阻止攻击
 
@@ -92,4 +92,3 @@ Gameplay Tag query evaluator MUST同时服务Action Required、Block、Cancel与
 - **WHEN** Attack Required Query命中Sawblade而Block Query命中Stunned
 - **THEN** 通用Action admission MUST拒绝该动作
 - **AND** Equipment Route选择 MUST不覆盖Block结果
-

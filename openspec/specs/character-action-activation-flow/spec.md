@@ -15,7 +15,7 @@ Graph MUST 通过 `ActivateActionInstanceNode` 发射正式 operation。激活�
 
 ### Requirement: ActivateActionInstance 必须携带动作事务来源
 
-operation MUST 携带 ActionProfile identity、source request、InputSequence、source logic tick、target snapshot 和 source operation identity。服务端 tick MAY 出现在模型 decision 中，但 MUST NOT 替代本地来源 tick。
+operation MUST 携带 GameplayAbilityAdmissionProfile identity、source request、InputSequence、source logic tick、target snapshot 和 source operation identity。服务端 tick MAY 出现在模型 decision 中，但 MUST NOT 替代本地来源 tick。
 
 #### Scenario: 调试动作来源
 
@@ -60,7 +60,7 @@ Action runtime MUST 只负责 catalog/profile 查询、准入、ActionInstance �
 
 - **WHEN** GuardState 可启动 Guard 或 ParryCounter
 - **THEN** 分支 MUST 提交不同 activation request
-- **AND** StateNode MUST NOT 静态绑定唯一 ActionProfile
+- **AND** StateNode MUST NOT 静态绑定唯一 GameplayAbilityAdmissionProfile
 
 ### Requirement: 动作生命周期必须通过 typed transition 表达
 
@@ -111,7 +111,7 @@ ActionInstance 成功创建时，profile granted tags MUST 以 `action:<ActionIn
 
 ### Requirement: Target activation 不得隐式结束 Source Action
 
-`ActivateActionInstance` MUST 只在没有 active source Action 时创建 target。replacement MUST 先经过 source stop barrier 和 OnExit，由显式 lifecycle operation 关闭 source，再激活 target。系统 MUST NOT 自动 Cancel、覆盖 Context 或吞掉重复 terminal。
+`ActivateActionInstance` MUST 只在没有 active source Action 时创建 target。replacement MUST先由同一Ability lifecycle入口写入明确的`Interrupt`或`Cancel`终态，再经过source stop barrier停止内容，随后激活target。内部状态退出阶段只负责停止和回收，不得重新选择Ability终态。系统 MUST NOT 自动覆盖Context或吞掉重复terminal。
 
 #### Scenario: Source 尚未关闭
 
@@ -122,38 +122,38 @@ ActionInstance 成功创建时，profile granted tags MUST 以 `action:<ActionIn
 #### Scenario: Recovery 后启动 Dodge
 
 - **WHEN** Attack 到 Dodge replacement 提交
-- **THEN** Attack OnExit MUST 先 `Cancel(RecoveryCancel)`
+- **THEN** Attack lifecycle入口 MUST 先写入 `Cancel(RecoveryCancel)`
 - **AND** Dodge target MUST 随后创建独立 ActionInstance
 
-### Requirement: ActionProfile 必须类型化声明目标快照要求
+### Requirement: GameplayAbilityAdmissionProfile 必须类型化声明目标快照要求
 
-ActionProfile MUST使用`ActionTargetRequirement`明确声明`None`、`OptionalSnapshot`或`SnapshotRequired`，MUST不使用自由字符串TargetPolicy。Action catalog、Semantic IR和两个Numeric Target MUST保存同一typed值。未知值或缺失值 MUST在artifact发布前失败。配置MotionWarp的动作 MUST声明`OptionalSnapshot`或`SnapshotRequired`；声明`None`时 MUST在发布前失败。
+GameplayAbilityAdmissionProfile MUST使用`ActionTargetRequirement`明确声明`None`、`OptionalSnapshot`或`SnapshotRequired`，MUST不使用自由字符串TargetPolicy。Action catalog、Semantic IR和两个Numeric Target MUST保存同一typed值。未知值或缺失值 MUST在artifact发布前失败。配置MotionWarp的动作 MUST声明`OptionalSnapshot`或`SnapshotRequired`；声明`None`时 MUST在发布前失败。
 
 `OptionalSnapshot` MUST表达正式业务策略：有候选目标时ActionInstance固定保存目标快照并允许MotionWarp；无候选目标时动作仍可激活，MotionWarp MUST保留源MotionCurve并输出typed原因。该语义 MUST不通过捕获异常、静默禁用或运行时fallback实现。
 
 #### Scenario: 普通无目标闪避
 
-- **WHEN** Dodge ActionProfile声明`None`
+- **WHEN** Dodge GameplayAbilityAdmissionProfile声明`None`
 - **THEN** admission MAY在没有target snapshot时成功
 - **AND** 该动作 MUST不包含需要目标的MotionWarp
 
 #### Scenario: 目标攻击缺少快照
 
-- **WHEN** ActionProfile声明`SnapshotRequired`
+- **WHEN** GameplayAbilityAdmissionProfile声明`SnapshotRequired`
 - **AND** candidate target snapshot为None
 - **THEN** admission MUST返回`TargetSnapshotRequired`或等价typed原因
 - **AND** MUST不创建ActionInstance或启动Timeline
 
 #### Scenario: 可选目标攻击没有目标
 
-- **WHEN** Attack ActionProfile声明`OptionalSnapshot`
+- **WHEN** Attack GameplayAbilityAdmissionProfile声明`OptionalSnapshot`
 - **AND** candidate target snapshot为None
 - **THEN** admission MUST允许创建无目标快照的ActionInstance
 - **AND** 对应MotionWarp MUST保留源MotionCurve
 
 #### Scenario: 可选目标攻击获得目标
 
-- **WHEN** Attack ActionProfile声明`OptionalSnapshot`
+- **WHEN** Attack GameplayAbilityAdmissionProfile声明`OptionalSnapshot`
 - **AND** candidate target snapshot有效
 - **THEN** admission MUST允许动作激活
 - **AND** ActionInstance MUST固定保存该快照供MotionWarp使用
@@ -206,7 +206,7 @@ Action admission MUST在创建ActionInstance前使用当前Character transaction
 
 Action runtime MUST继续只处理Action catalog、admission、instance和lifecycle。Slot/Feature/Route entry选择 MUST由compiled Equipment Host处理；Graph、Timeline和equipment change执行 MUST留在各自operation模块。系统 MUST不恢复ActionModule、AbilityBody或ActionId到Graph callback registry。
 
-#### Scenario: Route已选择Attack ActionProfile
+#### Scenario: Route已选择Attack GameplayAbilityAdmissionProfile
 
 - **WHEN** Equipment Host解析出Sawblade PrimaryAction entry
 - **THEN** Action runtime MUST只接收正式Action activation request和Equipment Context
@@ -217,4 +217,3 @@ Action runtime MUST继续只处理Action catalog、admission、instance和lifecy
 - **WHEN** Dodge通过正式cancel规则结束Feature Action
 - **THEN** Action lifecycle MUST发布取消结果
 - **AND** compiled control lifecycle MUST按该结果abort Route body
-

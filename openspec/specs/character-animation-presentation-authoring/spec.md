@@ -121,7 +121,7 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: Blend Policy必须属于明确transition owner
 
-Blend Policy MUST属于明确的transition owner：PoseState Transition edge、AnimationSlot或保留的显式BlendStack。PoseState edge MUST保存该edge的`Standard Blend | Inertialization`、duration、`Linear | EaseIn | EaseOut | EaseInOut | Custom` Blend Mode、条件式强类型Custom Curve Asset与强类型Blend Profile；Custom MUST有Curve Asset，非Custom MUST不保留Curve Asset，非Hard Cut MUST有Blend Profile。AnimationSlot MUST按全部可达Action endpoint物化完整exact rule table；普通BlendStack MUST继续只管理连接到自身的多source历史。Timeline、Gameplay State edge、ClipPlayer、ActionProfile与Prefab MUST不保存第二份transition表，Animancer backend MUST不决定fade。
+Blend Policy MUST属于明确的transition owner：PoseState Transition edge、AnimationSlot或保留的显式BlendStack。PoseState edge MUST保存该edge的`Standard Blend | Inertialization`、duration、`Linear | EaseIn | EaseOut | EaseInOut | Custom` Blend Mode、条件式强类型Custom Curve Asset与强类型Blend Profile；Custom MUST有Curve Asset，非Custom MUST不保留Curve Asset，非Hard Cut MUST有Blend Profile。AnimationSlot MUST按全部可达Action endpoint物化完整exact rule table；普通BlendStack MUST继续只管理连接到自身的多source历史。Timeline、Gameplay State edge、ClipPlayer、GameplayAbilityAdmissionProfile与Prefab MUST不保存第二份transition表，Animancer backend MUST不决定fade。
 
 #### Scenario: Locomotion State transition
 

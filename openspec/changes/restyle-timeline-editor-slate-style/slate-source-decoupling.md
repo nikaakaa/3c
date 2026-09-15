@@ -70,6 +70,8 @@ TimelineEditorWindow
 
 ## 3. 决策D1：同一套原函数，不按数据来源分成两套UI
 
+2026-09-14 用户对反复未合并提出质疑，具体收口差异见[审阅A01](editor-wiring-audit.md#a01-两份绘制主体和简化拖动仍存在)。只能保留一份原列表/时间轴循环和鼠标算法；原入口提前返回同名binding重载仍是两套实现。主体合并与其它功能补丁分开记账，后者不能证明前者完成。RootMotion显示与正式求值时间不一致的补充见审阅A04，不能以只读曲线已经出现作为完整交付。
+
 保留 `OnGUI → ShowGroupsAndTracksList → ShowListGroups/ShowListTracks` 与 `ShowTimeLines → ActionClipWindow → ActionClipWrapper.OnClipGUI`。修改原函数所读集合、属性和命令。不增加 `ShowEmbeddedGroupsAndTracksList`、`ShowEmbeddedTimeLines`、另一份Clip wrapper事件分支或自行绘制曲线的函数。
 
 为解除实例依赖，允许把 `CutsceneTrack` 的原Editor方法和状态原样搬迁到现有Slate Editor模块，例如同一 `CutsceneEditorSurface` 的partial文件。迁移后旧方法只在仍有真实原生调用时作为薄转发，不能留下两份函数主体。参数名/类型和业务判定可以变；Rect计算、样式、事件消费顺序、GUI.Window、GUI.DragWindow和曲线Renderer调用链必须能追溯到原实现。

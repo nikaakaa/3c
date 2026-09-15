@@ -3,7 +3,9 @@
 ## Purpose
 
 定义BTSMTL Gameplay Graph与Character Presentation Pose Graph共享的唯一作者交互框架，同时保持各领域数据、Mutation、Validator、Compiler与Runtime语义隔离。Behavior Designer AI不注册为BTSMTL Graph domain。
+
 ## Requirements
+
 ### Requirement: Graph Authoring必须拥有唯一领域框架
 
 系统 MUST在BTSMTL作者层提供唯一Graph Authoring Domain Framework，统一承载Graph document、capability catalog、canvas、node view、port view、selection、clipboard、search、Details host、Navigator host、Mutation和diagnostics契约。BTSMTL Gameplay Graph与Character Presentation Pose Graph MUST分别适配该框架，但 MUST不共享正式序列化Graph基类、runtime node或compiler operation。
@@ -203,3 +205,35 @@ metadata的Editor查找实现 MAY生成不可编辑的静态索引，但该索�
 - **WHEN** 正式作者类型的C#实现或文件组织变化，但metadata的稳定kind、typed field、logical port和owner语义不变
 - **THEN** 原生UI与正式作者能力 MUST保持相同业务语义；C#调用按公开API更新
 - **AND** 不得仅因内部实现变化建立协议schema
+
+### Requirement: 共享metadata必须提供正式字段读取与配置绑定
+
+共享字段描述 MUST由所属领域的正式能力提供，包含稳定字段identity、typed值类型、默认值/可写性、必要约束，以及读取当前正式对象和调用正式配置API所需的绑定信息。人工UI、原节点适配、FlowCanvas和C#领域输出适配 MUST消费同一信息，不维护第二份节点/字段/owner模型。绑定只表达正式方法与参数对应，不保存源码模板、语法树或操作历史。
+
+#### Scenario: 输出器请求一个正式字段
+
+- **WHEN** C#领域输出适配按字段identity读取当前正式对象
+- **THEN** 共享合同 MUST给出当前typed值及所属领域的正式配置入口
+- **AND** 该配置入口 MUST与人工编辑使用同一业务规则
+
+#### Scenario: 某字段缺少读取或配置能力
+
+- **WHEN** 字段没有完整的正式读取或配置绑定
+- **THEN** 共享合同 MUST明确指出字段和缺失能力
+- **AND** 调用者 MUST不回退到私有字段反射、Agent JSON或另建字段表
+
+### Requirement: 共享端口结果必须来自领域正式声明
+
+完整端口形状 MUST由共享Capability、当前typed参数和正式动态接口决定，包含稳定identity、类型、方向、容量与顺序。各领域保持自己的能力模块、业务校验和创建/保存责任；共享层 MUST只组合正式声明，不建立中央角色Validator、业务节点全集副本或整包同步事务。调用者不能为了代码导出自行增加同义端口规则。
+
+#### Scenario: 人工连接与生成代码连接同一端口
+
+- **WHEN** 两个入口提交相同正式参数和连接目标
+- **THEN** 它们 MUST获得同一端口形状并调用原领域连接规则
+- **AND** 动态端口顺序 MUST保留真实业务顺序，不为源码排版重排
+
+#### Scenario: 新领域能力接入
+
+- **WHEN** 领域模块增加正式节点或引用能力
+- **THEN** 它 MUST通过唯一共享描述合同提供自身定义
+- **AND** 共享层不得接管该领域运行、Undo或保存实现

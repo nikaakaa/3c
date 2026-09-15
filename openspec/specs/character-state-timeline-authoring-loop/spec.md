@@ -8,7 +8,7 @@
 
 ### Requirement: Corin Skill Graph必须表达角色Gameplay流程层
 
-Character Skill Graph MUST作为对应Skill的Gameplay执行层，包含输入、Gameplay移动控制、Action StateMachine、Action Timeline和有限生命周期节点。角色主线状态与Movement规则属于C# ControlModule和Program State；Skill Graph不得重新承载角色总RootTree。Skill Graph MUST不平铺Idle、Walk、Run、Start、Stop、Turn等纯表现Pose State，持续Locomotion PoseStateMachine MUST只存在于Presentation Pose Graph。
+AbilityGraph MUST作为对应GameplayAbility的Gameplay执行层，包含输入、Gameplay移动控制、Action StateMachine、Action Timeline和有限Gameplay生命周期内容。角色主线状态与Movement规则属于C# ControlModule和Program State；AbilityGraph不得重新承载角色总RootTree。AbilityGraph MUST不平铺Idle、Walk、Run、Start、Stop、Turn等纯表现Pose State，持续Locomotion PoseStateMachine MUST只存在于Presentation Pose Graph。
 
 #### Scenario: 打开Corin Skill Graph
 
@@ -35,7 +35,7 @@ Corin BTSMTL Locomotion StateMachine MUST只表达输入准入、Gameplay moveme
 
 ### Requirement: Corin基础连招必须使用Action StateMachine和Timeline编排
 
-Corin外层Action StateMachine MUST只表达`None`、`Attack`和`Dodge`动作大类。Attack1至Attack5 MUST位于Attack State body内的nested StateMachine，DodgeBack与DodgeForward MUST位于Dodge State body内的nested StateMachine。具体leaf MUST唯一拥有ActionProfile、Action Context、inline Timeline、Window、Cue、Motion与lifecycle。连段、恢复取消与replacement MUST复用ConditionRuleGraph、State edge、Runnable stop、source OnExit、Action lifecycle和Timeline cancel，不得创建Action专用旁路。
+Corin外层Action StateMachine MUST只表达`None`、`Attack`和`Dodge`动作大类。Attack1至Attack5 MUST位于Attack State body内的nested StateMachine，DodgeBack与DodgeForward MUST位于Dodge State body内的nested StateMachine。具体Ability MUST唯一拥有GameplayAbilityAdmissionProfile、当前执行上下文、inline Timeline、Window、Cue、Motion与lifecycle。连段、恢复取消与replacement MUST复用ConditionRuleGraph、State edge、Runnable stop、Ability lifecycle和Timeline cancel，不得创建Action专用旁路或作者OnExit终态链。
 
 #### Scenario: Attack1进入Attack2
 

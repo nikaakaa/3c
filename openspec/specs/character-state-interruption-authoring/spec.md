@@ -1,11 +1,11 @@
 # character-state-interruption-authoring Specification
 
 ## Purpose
-定义State Transition与父Tree abort共用通用Runnable stop、source-exit、OnExit、Timeline cancel、Action lifecycle和Presentation Adapter的创作闭环。
+定义State Transition与父Tree abort共用通用Runnable stop、source-exit、内部状态退出、Timeline cancel、Ability lifecycle和Presentation Adapter的创作闭环。
 ## Requirements
 ### Requirement: 状态抢占必须复用分层停止协议
 
-Gameplay状态抢占authoring MUST继续表达通用Runnable stop、BTSMTL StateMachine transition、State.OnExit、Action lifecycle与有限Action Timeline producer release。Compiler MUST把它们生成为统一control-flow、stop barrier、Motion ownership与release operation；Program MUST在关闭source Action与Timeline Gameplay output后，为每个受影响的有限Action AnimationChannel输出至多一个producer command。持续Locomotion Pose transition MUST由PoseStateMachine处理，Program MUST不为视觉transition保持source Gameplay State active。
+Gameplay状态抢占authoring MUST继续表达通用Runnable stop、BTSMTL StateMachine transition、Ability lifecycle与有限Action Timeline producer release。Ability lifecycle MUST先记录source的明确终态，Compiler/runtime再把状态内容停止、Motion ownership和release operation收敛到统一stop barrier；Program MUST在关闭source Action与Timeline Gameplay output后，为每个受影响的有限Action AnimationChannel输出至多一个producer command。持续Locomotion Pose transition MUST由PoseStateMachine处理，Program MUST不为视觉transition保持source Gameplay State active。
 
 #### Scenario: Attack被Dodge抢占
 
@@ -32,16 +32,16 @@ Gameplay状态抢占authoring MUST继续表达通用Runnable stop、BTSMTL State
 
 StateMachine runtime MUST 将 `NodeStopContext` 或 State Transition 选择翻译为 transient `StateExitContext`。StateExitContext MUST 包含退出原因、source State、可选 target State、可选 Transition edge 和可选 parent Tree source/replacement identity。它 MUST NOT 写入 authoring asset、Pipeline Blackboard 或网络协议。
 
-#### Scenario: LowerPriority abort 进入 State.OnExit
+#### Scenario: LowerPriority abort 进入内部状态退出阶段
 
-- **WHEN** SMNode 因 parent LowerPriority abort 进入 active State.OnExit
-- **THEN** OnExit MUST 能读取退出来源为 Tree LowerPriority abort
+- **WHEN** SMNode 因 parent LowerPriority abort 停止 active State
+- **THEN** 内部停止阶段 MAY 读取退出来源为 Tree LowerPriority abort
 - **AND** target State identity MUST 为空
 - **AND** replacement Tree node identity MAY 可读
 
-### Requirement: 状态退出业务必须通过纯条件读取与显式 lifecycle 节点表达
+### Requirement: 状态退出条件与Ability生命周期必须分离
 
-Transition MUST 用 Action Context、Blackboard ValueNode、`ActionWindowActiveInfoNode`、`CanActivateActionInfoNode` 与通用逻辑节点组合。Timeline 时间门 MUST 只由 Decision TreeClip 写 owner-local declaration；ActionWindow projection MUST 是 WindowType、ActionInstance、WindowId 和 Digest 的唯一来源。条件只读当前帧 candidate，MUST NOT 建 cache、registry、历史副本或目标专用节点。source leaf MUST 显式提交 terminal；StateMachine 与 target activation MUST NOT 自动取消 source。
+Transition MUST 用 Action Context、Blackboard ValueNode、`ActionWindowActiveInfoNode`、`CanActivateActionInfoNode` 与通用逻辑节点组合。Timeline 时间门 MUST 只由 Decision TreeClip 写 owner-local declaration；ActionWindow projection MUST 是 WindowType、ActionInstance、WindowId 和 Digest 的唯一来源。条件只读当前帧 candidate，MUST NOT 建 cache、registry、历史副本或目标专用节点。Ability终态 MUST 由正式生命周期入口接受明确请求，StateMachine与target activation MUST只负责stop barrier，不从状态退出原因自动推导Ability终态。
 
 条件可见范围 MUST 只包含祖先 graph、所在 StateMachine 和 source StateNode 直接 body，不包含 target、兄弟 state 或后代 leaf。Compiler、C#作者API、Inspector、Validator 与 runtime MUST 同规则。内层 leaf 读本地 window；外层 category 只在 `state_root_completed` 后选目标，不得再读 leaf window。
 
@@ -54,7 +54,7 @@ Transition MUST 用 Action Context、Blackboard ValueNode、`ActionWindowActiveI
 #### Scenario: Action replacement
 
 - **WHEN** `ComboAccept` 或 `RecoveryEarly` 与 request、target admission 成立
-- **THEN** source MUST 显式 `Cancel(RecoveryCancel)` 后离开
+- **THEN** source Ability lifecycle MUST 先记录 `Cancel(RecoveryCancel)` 后离开
 - **AND** target MUST 在 stop barrier 后消费 request，MUST NOT 自动取消 source
 
 #### Scenario: Dodge RecoveryOpen
@@ -104,15 +104,15 @@ Tree与Gameplay StateMachine terminal MUST只由逻辑停止协议决定，MUST�
 
 ### Requirement: 嵌套 StateMachine 停止必须逐层复用同一 source-exit 协议
 
-当父 State root 中运行的嵌套 StateMachineNode 被 State transition、Tree graceful abort 或 ForceStop 停止时，stop context MUST 沿 execution path 逐层传播。内层 active State MUST 先停止 Root producer、运行 State.OnExit 并关闭 Action lifecycle；外层 State MUST 等待嵌套 StateMachineNode terminal 后完成自己的 OnExit。系统 MUST NOT 跳过内层 OnExit，也 MUST NOT 让父子 State 各自提交一条相同业务 terminal transition。
+当父 State root 中运行的嵌套 StateMachineNode 被 State transition、Tree graceful abort 或 ForceStop 停止时，stop context MUST 沿 execution path 逐层传播。Ability lifecycle MUST先在同一执行实例上记录业务终态；内层 active State MUST停止Root producer并回收自身内容，外层 State MUST等待嵌套StateMachineNode terminal后完成自己的内部退出阶段。系统 MUST NOT让父子State各自提交一条相同业务terminal transition。
 
 #### Scenario: 外层 Attack 被 Dodge replacement 抢占
 
 - **WHEN** 外层 Attack State 收到指向 Dodge 的 replacement stop
 - **AND** 内层 Attack1 仍 active
 - **THEN** Attack1 Timeline MUST 在逻辑 stop barrier 内停止 gameplay 采样
-- **AND** Attack1 OnExit MUST 根据原始 StateExitContext 提交一次 Cancel 或 Interrupt
-- **AND** 外层 Attack OnExit MUST NOT 再提交 Action lifecycle
+- **AND** Ability lifecycle MUST 根据明确replacement请求提交一次 Cancel 或 Interrupt
+- **AND** 内层及外层状态退出阶段 MUST NOT 再提交 Action lifecycle
 - **AND** replacement MUST 等待嵌套 stop 完成后启动
 
 #### Scenario: Parent Tree LowerPriority abort

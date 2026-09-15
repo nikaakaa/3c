@@ -174,7 +174,7 @@ Action不再作为技能作者层与Ability并列的“另一种技能”。迁�
 
 当前源码已有执行根成功/失败后的FinishFromControl，以及ActionSkillLifecycleFlow的Submit/Stop/Interrupt入口。OperationStateMachineRuntime在选定转移后先停止StateBody，再执行退出阶段，最后完成状态退出。ActionContextEnded经MapExitCause会落入TreeParentStop，已经不能区分外层Cancel/Interrupt等终态，不能拿它重新决定Ability结束结果。
 
-State.OnExit保留为代码内部生命周期，不作为当前Ability作者编排清理、动画释放或终态的入口。各模块自动释放自己拥有的内容。当前Dodge没有独立退出玩法，迁回结束责任后删除空作者OnExit节点/执行页，不为假想需求保留空包装；合法非Skill内部生命周期按实际消费者保留。
+State.OnExit保留为代码内部生命周期，不作为当前Ability作者编排清理、动画释放或终态的入口。StateBody资产固定生成不可删除、不可列入节点菜单的OnExit系统锚点，运行时在状态停止阶段调用它；该锚点没有作者清理图，不承载终态选择。各模块自动释放自己拥有的内容。当前Dodge没有独立退出玩法，迁回结束责任后删除空作者清理页和Submit分支，不为假想需求保留可编排包装；合法非Skill内部生命周期按实际消费者保留。
 
 Attack1到Attack2是Ability内部状态转换，不能结束整个Ability。Timeline完成也不必然结束Ability；只有执行根完成或明确结束请求才进入Ability生命周期。窗口/输入条件图保持纯求值，不能通过条件求值或退出回调偷偷写终态。
 
@@ -248,9 +248,9 @@ StateBody固定生成且仅有一组OnEnter、Root、OnExit系统锚点。正式
 | 本change D3.2/D12及清理场景禁止空OnExit页的含糊表述 | 删除的是作者清理图/Submit包装，保留不可删除的OnExit系统锚点；不得继续据旧文字删锚点 |
 | current `btsmtl-sm-node-authoring`的Ability StateBody只要求OnEnter/RootNode例外 | 下一轮实施同步改为三个系统锚点及代码stop barrier调用；普通非Ability生命周期场景保留 |
 | current `character-pipeline-definition-authoring`的ActionProfile和Core/Feature Action catalog用语 | 同步准入Profile、装配及catalog命名，保留共享分组合并/冲突语义，不复制第二catalog |
-| current `btsmtl-flowcanvas-authoring`及其他正式spec仍使用旧Profile或两锚点条款 | 随本轮整体消费者迁移更新对应条款和完整场景；本次active delta表达目标，不声称current已完成修订 |
+| current `btsmtl-flowcanvas-authoring`及其他正式spec仍使用旧Profile或两锚点条款 | 随本轮整体消费者迁移更新对应条款和完整场景；当前spec已清除旧Profile命名与两锚点例外 |
 
-当前只读代码显示`GameplayAbilityDefinition.AdmissionProfile`仍返回ActionProfile，CanActivate emitter及语义catalog仍写ActionProfile；StateBody工厂已生成/补齐三个锚点。下一轮保留已正确的三锚点实现，只补齐其余合同/消费者与资产，不能撤回到两锚点或把已删除Action Exit/Submit图恢复。tasks第8节承接增量，不重开第7节勾选，也不把旧完成记录当作r5完成。
+当前代码已将`GameplayAbilityDefinition.AdmissionProfile`、CanActivate/ActionTarget、语义catalog、Program binding和Fixed/Float32准入消费统一到`GameplayAbilityAdmissionProfile`；StateBody工厂、图合同和C#映射已固定三个锚点。剩余是等待Unity并行Timeline编译恢复后，用正式generate写入两个新Profile资产并重导出三份Ability资产；不能撤回到两锚点或恢复已删除Action Exit/Submit图。tasks第8节承接增量，不重开第7节勾选，也不把旧完成记录当作r5完成。
 
 ## Risks / Trade-offs
 

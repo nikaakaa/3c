@@ -17,7 +17,22 @@
 - 原业务节点与FlowCanvas节点共享输入身份、ActionContext、ActionWindow、CanActivate目标快照、生命周期、Gameplay、Blackboard和Locomotion authoring合同；Locomotion默认值与组合校验集中到同一业务规则。
 - 固定、条件和动态端口继续由共享Capability与唯一`GraphAuthoringNodePortShapeProjector`投影；已有TransferPayload、真实端口和普通组合步骤未被改写。
 
-当前已完成tasks 1.1、1.2、1.3、2.1、2.2、2.3、3.1、3.2、3.3、4.2和4.3。4.1仍未完成，因为共享`GraphAuthoringCapabilityDescriptor.DocumentCodecId`仍有其它正式领域调用方；Skill descriptor自身已不再写入该协议参数。并行Native FSM的Inspector改动只保留在工作树，不作为本记录提交范围。
+当前已完成tasks 1.1、1.2、1.3、2.1、2.2、2.3、3.1、3.2、3.3、4.1、4.2和4.3。本轮确认`GraphAuthoringCapabilityDescriptor.DocumentCodecId`在当前代码没有读取者，删除共享字段、构造参数和全部能力登记；并行Native FSM的Inspector改动只保留在工作树，不作为本记录提交范围。
+
+## 2026-09-13 旧Document codec字段清理
+
+- 从`GraphAuthoringCapabilityDescriptor`删除`DocumentCodecId`构造参数、赋值和属性。
+- 从BTSMTL共享Graph、Pose节点/状态机/Transition Rule和Skill状态机能力登记中删除旧codec标识传参。
+- 保留`MutationBindingId`、`ValidationBindingId`、`CompilerBindingId`、`AuthoringType`、`ExternalKind`、Graph role、端口和业务配置入口；本轮不改业务字段、运行逻辑、资产数据或C# authoring生成职责。
+- 以全仓库代码检索确认`DocumentCodecId`和`documentCodecId`无活动代码残留；剩余文字只存在本change的执行记录，已同步为完成口径。
+
+## 2026-09-13 收口凭证
+
+- 范围：共享Capability描述及其BTSMTL、Pose、FSM能力登记；不修改Unity资产、运行时数据或并行任务文件的业务内容。
+- 删除义务：退役旧Document codec登记字段，未增加迁移器、兼容字段或同步层。
+- 检查：活动代码检索无`DocumentCodecId`/`documentCodecId`；`BTSMTL.TreeDesigner.csproj`使用规定参数编译通过，0警告、0错误；`openspec validate unify-skill-authoring-data-model --strict`通过。
+- 边界：`ThirdPersonClient.Editor.csproj`完整编译曾被并行MSBuild/csc锁和子节点异常阻断，未产生本次字段删除的编译诊断；Unity Console未作为本change的资产验收入口，本轮没有Unity资产写入。
+- 恢复：代码可由本次Git diff反向恢复；change归档不改变代码恢复路径。
 
 ## 2026-09-13 r2字段与引用链收口
 

@@ -20,13 +20,13 @@ namespace ThirdPersonCharacter.Pipeline
         public IReadOnlyList<FixedGameplayAbilityDataAsset> FixedAbilityData =>
             m_FixedAbilityData ?? Array.Empty<FixedGameplayAbilityDataAsset>();
 
-        public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> LoadFloat32CharacterAbilities()
+        public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> LoadFloat32AbilitySet()
         {
             RequireAbilityDataCoverage(Float32AbilityData, asset => asset?.AbilityId, "Float32");
             return LoadFloat32GameplayAbilities(Float32AbilityData);
         }
 
-        public GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> LoadFixedCharacterAbilities()
+        public GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> LoadFixedAbilitySet()
         {
             RequireAbilityDataCoverage(FixedAbilityData, asset => asset?.AbilityId, "Fixed");
             return this.LoadFixedGameplayAbilities(FixedAbilityData);

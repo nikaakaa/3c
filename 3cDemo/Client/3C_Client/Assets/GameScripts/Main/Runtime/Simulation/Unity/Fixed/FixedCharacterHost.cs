@@ -187,7 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = characterDefinition.BuildGameplayEffectRuntimeBinding();
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
-                characterDefinition.LoadFixedCharacterAbilities();
+                characterDefinition.LoadFixedAbilitySet();
             FixedSimulationActorBinding actorBinding = new FixedSimulationActorBinding(
                 actorId,
                 Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),

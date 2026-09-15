@@ -147,7 +147,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = definition.BuildEquipmentRuntimeBinding();
             GameplayAbilityProviderBinding providerBinding = definition.BuildGameplayAbilityProviderBinding();
             GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilityData =
-                definition.LoadFloat32CharacterAbilities();
+                definition.LoadFloat32AbilitySet();
             var characterBindings = new SimulationActorBinding[request.Roster.Count];
             for (int i = 0; i < characterBindings.Length; i++)
             {

@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (!definition)
                 throw new ArgumentNullException(nameof(definition));
             GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilities =
-                definition.LoadFloat32CharacterAbilities();
+                definition.LoadFloat32AbilitySet();
             CharacterControlRuntimeBinding control = definition.BuildControlRuntimeBinding(
                 CharacterControlRuntimeModuleCatalog.Create());
             CharacterBodyMotionBinding bodyMotion = definition.BuildBodyMotionRuntimeBinding();
@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (!definition)
                 throw new ArgumentNullException(nameof(definition));
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilities =
-                definition.LoadFixedCharacterAbilities();
+                definition.LoadFixedAbilitySet();
             CharacterControlRuntimeBinding control = definition.BuildControlRuntimeBinding(
                 CharacterControlRuntimeModuleCatalog.Create());
             CharacterBodyMotionBinding bodyMotion = definition.BuildBodyMotionRuntimeBinding();

@@ -374,7 +374,7 @@ namespace ThirdPersonCharacter.Pipeline
 				CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = m_Definition.BuildGameplayEffectRuntimeBinding();
 				CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = m_Definition.BuildEquipmentRuntimeBinding();
 				GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilityData =
-					m_Definition.LoadFloat32CharacterAbilities();
+					m_Definition.LoadFloat32AbilitySet();
 				SimulationActorBinding actorBinding = new SimulationActorBinding(
 					actorId,
 					m_WorldBodyBinding.BindingId,

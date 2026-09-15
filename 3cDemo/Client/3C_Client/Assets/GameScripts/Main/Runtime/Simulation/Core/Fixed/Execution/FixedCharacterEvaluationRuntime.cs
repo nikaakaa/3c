@@ -259,7 +259,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             for (int i = 0; i < invocations.Count; i++)
             {
-                FixedEquipmentRuntime equipment = invocations[i].Equipment;
+                IEquipmentActionContextReader equipment = invocations[i].Equipment;
                 if (equipment == null || !equipment.HasActionRoute(route))
                     continue;
                 return equipment.TryReadActionContext(route, out EquipmentActionContext context)

@@ -85,7 +85,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedInputRuntime m_Input;
         readonly FixedActionRuntime m_Actions;
         readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
-        readonly FixedEquipmentRuntime m_Equipment;
+        readonly IEquipmentActionContextReader m_Equipment;
         readonly FixedBlackboardRuntime m_Blackboard;
         readonly FixedMotionAccumulator m_Motion;
         readonly FixedAbilityOperationControlRuntime m_Control;
@@ -161,7 +161,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedAbilityExecutionWorkspace Workspace => m_Workspace;
         public FixedActionRuntime Actions => m_Actions;
         public FixedGameplayEffectOperationRuntime GameplayEffects => m_GameplayEffects;
-        public FixedEquipmentRuntime Equipment => m_Equipment;
+        public IEquipmentActionContextReader Equipment => m_Equipment;
 
         public void BeginEvaluation(
             bool diagnosticsEnabled,

@@ -84,7 +84,7 @@ namespace ThirdPersonSimulation
         readonly Float32InputRuntime m_Input;
         readonly Float32ActionRuntime m_Actions;
         readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
-        readonly Float32EquipmentRuntime m_Equipment;
+        readonly IEquipmentActionContextReader m_Equipment;
         readonly Float32BlackboardRuntime m_Blackboard;
         readonly Float32MotionAccumulator m_Motion;
         readonly Float32AbilityOperationControlRuntime m_Control;
@@ -160,7 +160,7 @@ namespace ThirdPersonSimulation
         public Float32AbilityExecutionWorkspace Workspace => m_Workspace;
         public Float32ActionRuntime Actions => m_Actions;
         public Float32GameplayEffectOperationRuntime GameplayEffects => m_GameplayEffects;
-        public Float32EquipmentRuntime Equipment => m_Equipment;
+        public IEquipmentActionContextReader Equipment => m_Equipment;
 
         public void BeginEvaluation(
             bool diagnosticsEnabled,

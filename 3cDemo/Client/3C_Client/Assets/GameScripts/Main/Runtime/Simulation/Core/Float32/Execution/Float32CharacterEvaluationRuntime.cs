@@ -258,7 +258,7 @@ namespace ThirdPersonSimulation
         {
             for (int i = 0; i < invocations.Count; i++)
             {
-                Float32EquipmentRuntime equipment = invocations[i].Equipment;
+                IEquipmentActionContextReader equipment = invocations[i].Equipment;
                 if (equipment == null || !equipment.HasActionRoute(route))
                     continue;
                 return equipment.TryReadActionContext(route, out EquipmentActionContext context)

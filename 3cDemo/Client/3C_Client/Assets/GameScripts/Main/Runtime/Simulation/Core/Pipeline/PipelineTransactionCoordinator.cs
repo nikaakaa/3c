@@ -640,7 +640,6 @@ namespace ThirdPersonSimulation
             var context = new SimulationPipelineReconstructionContext(
                 m_Services.Descriptor.Identity,
                 m_Services.Plan.Identity,
-                m_Services.Descriptor.GameplayContentHash,
                 m_Services.Descriptor.Roster.RosterHash,
                 m_Target.BaselineWorldRevision);
             for (int i = 0; i < m_Services.ReconstructiblePasses.Count; i++)

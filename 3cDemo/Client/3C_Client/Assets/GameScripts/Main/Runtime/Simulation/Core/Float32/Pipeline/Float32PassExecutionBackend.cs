@@ -164,7 +164,6 @@ namespace ThirdPersonSimulation
                 var reconstructionContext = new SimulationPipelineReconstructionContext(
                     request.Descriptor.Identity,
                     request.CompiledPipeline.Identity,
-                    request.CharacterRuntime.GameplayContentHash,
                     request.Descriptor.Roster.RosterHash,
                     request.InitialState.WorldState.WorldRevision);
                 for (int i = 0; i < reconstructible.Count; i++)

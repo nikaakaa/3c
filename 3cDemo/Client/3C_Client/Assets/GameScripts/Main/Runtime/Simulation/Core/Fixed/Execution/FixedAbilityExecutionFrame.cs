@@ -23,12 +23,12 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<SimulationInputRequest> Requests { get; }
     }
 
-    internal readonly struct FixedAbilityBodyFacts
+    internal readonly struct FixedCharacterBodyFacts
     {
-        public FixedAbilityBodyFacts(ActorId actorId, WorldBodyState body)
+        public FixedCharacterBodyFacts(ActorId actorId, WorldBodyState body)
         {
             if (!actorId.IsValid || body.ActorId != actorId)
-                throw new ArgumentException("Fixed Ability body facts identity is incomplete.", nameof(body));
+                throw new ArgumentException("Fixed Character body facts identity is incomplete.", nameof(body));
             IsValid = true;
             Position = body.Position;
             Yaw = body.Yaw;
@@ -80,7 +80,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationTick tick,
             FixedAbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
-            FixedAbilityBodyFacts bodyFacts,
+            FixedCharacterBodyFacts bodyFacts,
             IFixedAbilityExecutionStateTransaction transaction,
             FixedAbilityExecutionWorkspace workspace)
         {
@@ -114,7 +114,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationTick Tick { get; }
         public FixedAbilityExecutionInput Input { get; }
         public IReadOnlyList<SimulationIngress> Ingress { get; }
-        public FixedAbilityBodyFacts BodyFacts { get; }
+        public FixedCharacterBodyFacts BodyFacts { get; }
         internal IFixedAbilityExecutionStateTransaction Transaction { get; }
         internal FixedEventSequence EventSequence { get; }
         internal FixedFactSink Facts { get; }

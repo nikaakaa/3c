@@ -76,7 +76,7 @@ namespace ThirdPersonSimulation.Fixed
                 tick,
                 new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests),
                 ingress ?? Array.Empty<SimulationIngress>(),
-                new FixedAbilityBodyFacts(actorId, body),
+                new FixedCharacterBodyFacts(actorId, body),
                 m_AbilityState,
                 roleState,
                 m_Workspace);

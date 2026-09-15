@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
             ProgramCapabilityManifest capabilities,
-            GameplayAbilityRootDescriptor root,
+            SimulationProgramRootDescriptor root,
             string executionIdentity,
             StableHash stateSchemaHash,
             IEnumerable<SimulationOperationDefinition> operationDefinitions,
@@ -95,7 +95,7 @@ namespace ThirdPersonSimulation
         public SemanticHash SemanticHash { get; }
         public SimulationNumericProfile NumericProfile { get; }
         public ProgramCapabilityManifest Capabilities { get; }
-        public GameplayAbilityRootDescriptor Root { get; }
+        public SimulationProgramRootDescriptor Root { get; }
         public string ExecutionIdentity { get; }
         public StableHash StateSchemaHash { get; }
         public StableHash ContentHash { get; }
@@ -129,7 +129,7 @@ namespace ThirdPersonSimulation
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
             ProgramCapabilityManifest capabilities,
-            GameplayAbilityRootDescriptor root,
+            SimulationProgramRootDescriptor root,
             string executionIdentity,
             StableHash stateSchemaHash,
             IEnumerable<SimulationOperationDefinition> operationDefinitions,
@@ -208,7 +208,7 @@ namespace ThirdPersonSimulation
                 ProgramReference reference = references[i];
                 if (!reference.HasSourceOperation &&
                     reference.Kind == ProgramReferenceKind.Operation &&
-                    string.Equals(reference.Identity, "ability:root-operation", StringComparison.Ordinal))
+                    string.Equals(reference.Identity, "program:root-operation", StringComparison.Ordinal))
                     return new OperationHandle(reference.TargetIndex);
             }
             throw new InvalidOperationException("Ability root operation reference is missing.");

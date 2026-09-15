@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         const uint InputMagic = 0x49415343;
         const uint BaselineMagic = 0x42415343;
         public const int InputSchemaVersion = 2;
-        public const int BaselineSchemaVersion = 4;
+        public const int BaselineSchemaVersion = 3;
         const int MaximumCollectionCount = 4096;
 
         public static byte[] WriteInput(CharacterSimulationInput input)
@@ -76,7 +76,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             SimulationNumericProfileCodec.Write(writer, baseline.NumericProfile);
             writer.WriteInt32(baseline.TargetAbiVersion.Value);
             writer.WriteString(baseline.StateCodecIdentity);
-            writer.WriteString(baseline.GameplayContentHash.ToString());
+            writer.WriteString(baseline.ProgramHash.ToString());
+            writer.WriteString(baseline.LayoutHash.ToString());
             writer.WriteString(baseline.OperationSetVersion.Value);
             writer.WriteBytes(baseline.CopyCharacterStateBytes());
             writer.WriteString(baseline.StateHash.ToString());
@@ -102,7 +103,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
             var targetAbiVersion = new TargetAbiVersion(reader.ReadInt32());
             string stateCodecIdentity = reader.ReadString();
-            var gameplayContentHash = new GameplayContentHash(new StableHash(reader.ReadString()));
+            var programHash = new ProgramHash(new StableHash(reader.ReadString()));
+            var layoutHash = new LayoutHash(new StableHash(reader.ReadString()));
             var operationSet = new OperationSetVersion(reader.ReadString());
             byte[] stateBytes = reader.ReadBytes();
             var stateHash = new CharacterStateHash(new StableHash(reader.ReadString()));
@@ -128,7 +130,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 numericProfile,
                 targetAbiVersion,
                 stateCodecIdentity,
-                gameplayContentHash,
+                programHash,
+                layoutHash,
                 operationSet,
                 stateBytes,
                 stateHash,

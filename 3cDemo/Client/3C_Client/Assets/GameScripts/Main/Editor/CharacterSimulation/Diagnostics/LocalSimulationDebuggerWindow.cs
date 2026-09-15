@@ -232,7 +232,7 @@ namespace ThirdPersonCharacter.Editor
                 status.TickSystemAvailable;
             SetButtons(active, status.Capability.SupportsRecording, status.Capability.SupportsReplay);
             m_StatusLabel.text = $"Status: {status.LifecycleState} | OuterTick {status.LatestOuterTick} | Failure {status.FailureSummary}";
-            m_IdentityLabel.text = $"Identity: Pipeline {status.Identity.Pipeline.Hash} | Content {status.Identity.GameplayContentHash}";
+            m_IdentityLabel.text = $"Identity: Pipeline {status.Identity.Pipeline.Hash} | Program {status.Identity.ProgramCatalogHash}";
             m_DriveLabel.text = $"Drive: {status.DriveStatus.Mode} | Clock {status.DriveStatus.PresentationClockMode} | LocalTick {status.DriveStatus.LocalLogicTick} | Alpha {status.DriveStatus.InterpolationAlpha:0.000}";
             string checkpointFailure = string.IsNullOrEmpty(status.LatestCheckpointFailure)
                 ? string.Empty

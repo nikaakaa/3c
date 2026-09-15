@@ -9,10 +9,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public sealed class BtsmtlSkillGraphFlowEmitter
     {
-        readonly GameplayAbilitySemanticBuilder m_Builder;
+        readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationOperationEmitter m_NativeOperations;
 
-        public BtsmtlSkillGraphFlowEmitter(GameplayAbilitySemanticBuilder builder)
+        public BtsmtlSkillGraphFlowEmitter(CharacterSimulationProgramBuilder builder)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_NativeOperations = new CharacterSimulationOperationEmitter(m_Builder);

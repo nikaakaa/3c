@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         const uint Magic = 0x50524244;
         const uint PayloadMagic = 0x4C505244;
-        const int Version = 7;
+        const int Version = 6;
 
         public static byte[] Write(RollbackProtocolEnvelope envelope)
         {
@@ -196,7 +196,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             writer.WriteString(value.PeerId);
             WriteComponentIdentity(writer, value.Model);
-            writer.WriteString(value.GameplayContentHash.ToString());
+            writer.WriteString(value.SemanticHash.ToString());
+            writer.WriteString(value.FixedProgramHash.ToString());
+            writer.WriteString(value.FixedLayoutHash.ToString());
             writer.WriteInt32(value.TickRate);
             writer.WriteString(value.CollisionWorldHash.Value);
             writer.WriteString(value.KccIdentityHash.Value);
@@ -210,7 +212,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return new RollbackHandshake(
                 reader.ReadString(),
                 ReadComponentIdentity(reader),
-                new GameplayContentHash(new StableHash(reader.ReadString())),
+                new SemanticHash(new StableHash(reader.ReadString())),
+                new ProgramHash(new StableHash(reader.ReadString())),
+                new LayoutHash(new StableHash(reader.ReadString())),
                 reader.ReadInt32(),
                 new StableHash(reader.ReadString()),
                 new StableHash(reader.ReadString()),

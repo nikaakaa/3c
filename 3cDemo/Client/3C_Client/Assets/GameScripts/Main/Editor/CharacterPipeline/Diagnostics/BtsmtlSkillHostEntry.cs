@@ -14,8 +14,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         internal static CharacterPipelineDefinition ResolveDefinition(UnityEngine.Object host)
         {
-            if (host is FixedCharacterHost fixedHost)
-                return fixedHost.CharacterDefinition;
+            if (host is CharacterPipelineHost character)
+                return character.Definition;
+            if (host is FixedCharacterHost fixedHost && fixedHost.ProgramAsset)
+                return AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(
+                    AssetDatabase.GUIDToAssetPath(fixedHost.ProgramAsset.DefinitionGuid));
             return null;
         }
 

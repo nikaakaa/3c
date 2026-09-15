@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             SimulationSessionId sessionId,
             SimulationSourceClockId sourceClockId,
             int tickRate,
-            SimulationCharacterRuntimeDescriptor characterRuntime,
+            SimulationProgramRuntimeDescriptor programRuntime,
             SimulationExecutionBackendDefinition executionBackend,
             SimulationWorldSolverDefinitionDescriptor worldSolver,
             SimulationWorldIdentityDescriptor worldIdentity,
@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             SessionId = sessionId;
             SourceClockId = sourceClockId;
             TickRate = tickRate;
-            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
+            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
             ExecutionBackend = executionBackend ? executionBackend : throw new ArgumentNullException(nameof(executionBackend));
             WorldSolver = worldSolver ?? throw new ArgumentNullException(nameof(worldSolver));
             WorldIdentity = worldIdentity ?? throw new ArgumentNullException(nameof(worldIdentity));
@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public SimulationSessionId SessionId { get; }
         public SimulationSourceClockId SourceClockId { get; }
         public int TickRate { get; }
-        public SimulationCharacterRuntimeDescriptor CharacterRuntime { get; }
+        public SimulationProgramRuntimeDescriptor ProgramRuntime { get; }
         public SimulationExecutionBackendDefinition ExecutionBackend { get; }
         public SimulationWorldSolverDefinitionDescriptor WorldSolver { get; }
         public SimulationWorldIdentityDescriptor WorldIdentity { get; }

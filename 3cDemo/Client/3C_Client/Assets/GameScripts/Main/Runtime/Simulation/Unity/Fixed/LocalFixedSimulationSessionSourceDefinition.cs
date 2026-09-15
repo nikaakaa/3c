@@ -96,11 +96,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             int maximumPendingRequests)
         {
             m_Context = context ?? throw new ArgumentNullException(nameof(context));
-            if (!context.CharacterRuntime.NumericProfileId.Equals(FixedSimulationNumericProfile.Value.Id) ||
-                !context.CharacterRuntime.TargetAbiVersion.Equals(FixedSimulationNumericProfile.Value.AbiVersion) ||
+            if (!context.ProgramRuntime.NumericProfileId.Equals(FixedSimulationNumericProfile.Value.Id) ||
+                !context.ProgramRuntime.TargetAbiVersion.Equals(FixedSimulationNumericProfile.Value.AbiVersion) ||
                 context.ExecutionBackend is not FixedPassExecutionBackendDefinition)
             {
-                throw new InvalidOperationException("Fixed Local Session Source requires the installed Fixed Character Runtime, Backend, and Standard Local Pipeline.");
+                throw new InvalidOperationException("Fixed Local Session Source requires the installed Fixed Program Runtime, Backend, and Standard Local Pipeline.");
             }
             var inputBindings = new FixedLocalSimulationInputBinding[context.Registrations.Count];
             var identityParts = new string[context.Registrations.Count + 5];

@@ -152,7 +152,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static string ShortName(INetworkTestProductBuildAdapter adapter) =>
             adapter == NetworkTestProductAdapters.DeterministicRollback ? "Rollback" :
-            adapter.ProductId;
+            adapter == NetworkTestProductAdapters.UnityAuthority ? "Unity Authority" :
+            "DotRecast";
 
         static void Execute(Action action)
         {

@@ -10,7 +10,7 @@ namespace BTSMTL.Diagnostics
         ulong m_Sequence;
         ulong m_LogicTick;
         ulong m_PresentationFrame;
-        ulong m_RuntimeEpoch;
+        ulong m_ProgramEpoch;
         Guid m_ExecutionBranchId;
         string m_SourceClockId = string.Empty;
         string m_SourceTickKind = string.Empty;
@@ -18,7 +18,7 @@ namespace BTSMTL.Diagnostics
         public RuntimeDiagnosticsContext(
             Guid characterRuntimeId,
             Guid sessionId,
-            RuntimeContentRevision revision,
+            RuntimeProgramRevision revision,
             IDebugSourceMap sourceMap,
             RuntimeDiagnosticsStore store)
         {
@@ -35,8 +35,8 @@ namespace BTSMTL.Diagnostics
 
         public Guid CharacterRuntimeId { get; }
         public Guid SessionId { get; }
-        public RuntimeContentRevision Revision { get; private set; }
-        public ulong RuntimeEpoch => m_RuntimeEpoch;
+        public RuntimeProgramRevision Revision { get; private set; }
+        public ulong ProgramEpoch => m_ProgramEpoch;
         public Guid ExecutionBranchId => m_ExecutionBranchId;
         public IDebugSourceMap SourceMap { get; private set; }
         public RuntimeDiagnosticsStore Store { get; }
@@ -46,7 +46,7 @@ namespace BTSMTL.Diagnostics
             ? m_InstanceStack.Peek()
             : RuntimeInstanceKey.Character(CharacterRuntimeId);
 
-        public void AdoptContent(RuntimeContentRevision revision, IDebugSourceMap sourceMap)
+        public void AdoptProgram(RuntimeProgramRevision revision, IDebugSourceMap sourceMap)
         {
             Revision = revision;
             SourceMap = sourceMap ?? throw new ArgumentNullException(nameof(sourceMap));
@@ -57,13 +57,13 @@ namespace BTSMTL.Diagnostics
             Store.ClearLiveState();
         }
 
-        public void SetRuntimeEpoch(ulong runtimeEpoch)
+        public void SetProgramEpoch(ulong programEpoch)
         {
-            if (runtimeEpoch == 0)
-                throw new ArgumentOutOfRangeException(nameof(runtimeEpoch));
-            if (m_RuntimeEpoch != 0 && runtimeEpoch < m_RuntimeEpoch)
-                throw new InvalidOperationException("Runtime diagnostics Epoch cannot move backwards.");
-            m_RuntimeEpoch = runtimeEpoch;
+            if (programEpoch == 0)
+                throw new ArgumentOutOfRangeException(nameof(programEpoch));
+            if (m_ProgramEpoch != 0 && programEpoch < m_ProgramEpoch)
+                throw new InvalidOperationException("Runtime diagnostics Program Epoch cannot move backwards.");
+            m_ProgramEpoch = programEpoch;
         }
 
         public void SetExecutionBranch(Guid executionBranchId)
@@ -157,7 +157,7 @@ namespace BTSMTL.Diagnostics
             Store.Publish(new RuntimeTraceEvent(
                 SessionId,
                 Revision,
-                m_RuntimeEpoch,
+                m_ProgramEpoch,
                 m_ExecutionBranchId,
                 domain,
                 channel,
@@ -184,4 +184,3 @@ namespace BTSMTL.Diagnostics
         }
     }
 }
-

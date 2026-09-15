@@ -24,7 +24,8 @@ public sealed record RollbackGmSessionSnapshot(
     string Endpoint,
     string ModelIdentity,
     string ProtocolIdentity,
-    string CharacterContentHash,
+    string ProgramId,
+    string ProgramHash,
     int TickRate,
     int MaximumPredictionLeadTicks,
     int ConfirmationDelayTicks);

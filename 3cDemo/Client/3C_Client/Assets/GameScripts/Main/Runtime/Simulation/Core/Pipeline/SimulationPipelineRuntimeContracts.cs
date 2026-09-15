@@ -247,19 +247,22 @@ namespace ThirdPersonSimulation
         public SimulationPipelineReconstructionContext(
             SimulationSessionCompositionIdentity session,
             SimulationPipelineIdentity pipeline,
+            GameplayContentHash gameplayContentHash,
             StableHash rosterHash,
             WorldRevision worldRevision)
         {
-            if (!session.IsValid || !pipeline.IsValid || !rosterHash.IsValid || string.IsNullOrEmpty(worldRevision.Value))
+            if (!session.IsValid || !pipeline.IsValid || !gameplayContentHash.IsValid || !rosterHash.IsValid || string.IsNullOrEmpty(worldRevision.Value))
                 throw new ArgumentException("Pass reconstruction context is incomplete.");
             Session = session;
             Pipeline = pipeline;
+            GameplayContentHash = gameplayContentHash;
             RosterHash = rosterHash;
             WorldRevision = worldRevision;
         }
 
         public SimulationSessionCompositionIdentity Session { get; }
         public SimulationPipelineIdentity Pipeline { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public StableHash RosterHash { get; }
         public WorldRevision WorldRevision { get; }
     }

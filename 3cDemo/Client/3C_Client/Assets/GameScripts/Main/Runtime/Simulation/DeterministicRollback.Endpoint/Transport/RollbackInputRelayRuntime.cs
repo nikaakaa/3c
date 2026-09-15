@@ -97,7 +97,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_RelayHandshake = new RollbackHandshake(
                 relayServerPeerId,
                 handshakeTemplate.Model,
-                handshakeTemplate.GameplayContentHash,
+                handshakeTemplate.SemanticHash,
+                handshakeTemplate.FixedProgramHash,
+                handshakeTemplate.FixedLayoutHash,
                 handshakeTemplate.TickRate,
                 handshakeTemplate.CollisionWorldHash,
                 handshakeTemplate.KccIdentityHash,

@@ -9,10 +9,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class BtsmtlSkillTimelineCompiler
     {
         readonly TimelineSemanticEmitter m_Emitter;
-        readonly GameplayAbilitySemanticBuilder m_Builder;
+        readonly CharacterSimulationProgramBuilder m_Builder;
         readonly Func<BtsmtlSkillGraphOccurrence, OperationHandle, BtsmtlSkillInvocationContext, BtsmtlSkillGraphCompilation> m_Compile;
 
-        public BtsmtlSkillTimelineCompiler(TimelineSemanticEmitterRegistry registry, GameplayAbilitySemanticBuilder builder,
+        public BtsmtlSkillTimelineCompiler(TimelineSemanticEmitterRegistry registry, CharacterSimulationProgramBuilder builder,
             Func<BtsmtlSkillGraphOccurrence, OperationHandle, BtsmtlSkillInvocationContext, BtsmtlSkillGraphCompilation> compile)
         {
             m_Emitter = new TimelineSemanticEmitter(registry);

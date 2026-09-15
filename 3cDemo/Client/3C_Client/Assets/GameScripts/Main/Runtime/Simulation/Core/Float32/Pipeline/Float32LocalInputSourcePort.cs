@@ -137,7 +137,7 @@ namespace ThirdPersonSimulation
             SimulationTick simulationTick,
             SimulationNumericProfile numericProfile,
             int tickRate,
-            IReadOnlyList<Float32CharacterRuntimeActor> roster,
+            IReadOnlyList<SimulationActorBinding> roster,
             CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw> committedObservation);
         byte[] CaptureState();
         void RestoreState(byte[] state);
@@ -198,7 +198,7 @@ namespace ThirdPersonSimulation
             SimulationTick simulationTick,
             SimulationNumericProfile numericProfile,
             int tickRate,
-            IReadOnlyList<Float32CharacterRuntimeActor> roster,
+            IReadOnlyList<SimulationActorBinding> roster,
             CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw> committedObservation)
         {
             if (source.Kind != SimulationTickSourceKind.LocalLogic || source.SourceTick <= m_LastReadSourceTick)
@@ -220,7 +220,7 @@ namespace ThirdPersonSimulation
             var inputs = new SimulationPipelineActorInput<Float32StepInput>[roster.Count];
             for (int i = 0; i < roster.Count; i++)
             {
-                Float32CharacterRuntimeActor actor = roster[i] ??
+                SimulationActorBinding actor = roster[i] ??
                     throw new InvalidOperationException("Local input Source roster contains a missing Actor binding.");
                 LocalSimulationInputBinding binding = m_Bindings[i];
                 ICharacterControlSourceRuntime controlSource = binding.ControlSource;

@@ -46,7 +46,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             OwnerInputIngressWrites writePorts)
         {
             RequireExecution();
-            Float32CharacterRuntime characterRuntime = readPorts.CharacterRuntime.Runtime;
+            SimulationProgramCatalog catalog = readPorts.CharacterRuntime.Catalog;
             if (readPorts.CharacterRuntime.Roster.Count != 1)
                 throw new InvalidOperationException("Prediction Owner Input Pass requires a one-Actor simulation roster.");
             var nextTick = new SimulationTick(checked(context.CurrentCompletedTick + 1));
@@ -54,8 +54,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             Float32LocalInputFrame frame = readPorts.Source.Read(
                 modelSource,
                 nextTick,
-                characterRuntime.NumericProfile,
-                characterRuntime.TickRate,
+                catalog.NumericProfile,
+                catalog.TickRate,
                 readPorts.CharacterRuntime.Roster,
                 readPorts.CommittedObservation.Read());
             SimulationPipelineActorInput<Float32StepInput> input = frame.CanonicalInputs.Inputs[0];
@@ -601,6 +601,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     ? SimulationSessionExecutionPlanStatus.NoStep
                     : SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
+                characterRuntime.Catalog.CatalogHash,
                 context.Pipeline.Hash,
                 new SimulationActorRosterDescriptor(new[] { current.ActorId }),
                 mappings,

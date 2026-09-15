@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public CharacterSemanticDomainBindingEmitter(
             GameplayAbilityCatalogIndex catalogIndex,
-            GameplayAbilitySemanticBuilder builder,
+            CharacterSimulationProgramBuilder builder,
             CharacterSimulationCompileReport report,
             CharacterSemanticBlackboardEmitter blackboard)
         {

@@ -81,6 +81,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationWorldSnapshot(
             SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
             SolverImplementationId solverId,
             string solverVersion,
             WorldRevision worldRevision,
@@ -89,9 +90,10 @@ namespace ThirdPersonSimulation.Fixed
             byte[] worldStateBytes,
             bool deterministicValidity)
         {
-            if (!numericProfile.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value) || !tick.IsValid)
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value) || !tick.IsValid)
                 throw new ArgumentException("Simulation World Snapshot header is incomplete.");
             NumericProfile = numericProfile;
+            GameplayContentHash = gameplayContentHash;
             SolverId = solverId;
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
@@ -113,6 +115,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public SimulationNumericProfile NumericProfile { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public SolverImplementationId SolverId { get; }
         public string SolverVersion { get; }
         public WorldRevision WorldRevision { get; }
@@ -154,7 +157,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < actors.Count; i++)
             {
                 SimulationActorState actor = actors[i];
-                FixedCharacterRuntimeActor binding = characterRuntime.Roster[i];
+                SimulationActorBinding binding = characterRuntime.Roster[i];
                 if (i > 0 && actors[i - 1].ActorId == actor.ActorId ||
                     worldState.Bodies[i].ActorId != actor.ActorId || binding.ActorId != actor.ActorId)
                 {
@@ -182,6 +185,7 @@ namespace ThirdPersonSimulation.Fixed
                 (solverCapabilities & WorldCapability.DeterministicReplay) != 0;
             return new SimulationWorldSnapshot(
                 characterRuntime.NumericProfile,
+                characterRuntime.GameplayContentHash,
                 worldState.SolverId,
                 worldState.SolverVersion,
                 worldState.WorldRevision,
@@ -269,8 +273,8 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
-            if (snapshot.NumericProfile != m_Runtime.NumericProfile)
-                throw new InvalidDataException("Snapshot Numeric Profile does not match the active Character Runtime.");
+            if (snapshot.NumericProfile != m_Runtime.NumericProfile || !snapshot.GameplayContentHash.Equals(m_Runtime.GameplayContentHash))
+                throw new InvalidDataException("Snapshot Numeric Profile or GameplayContentHash does not match the active Character Runtime.");
             if (!snapshot.SolverId.Equals(m_Current.WorldState.SolverId) ||
                 !string.Equals(snapshot.SolverVersion, m_Current.WorldState.SolverVersion, StringComparison.Ordinal) ||
                 !snapshot.WorldRevision.Equals(m_Current.WorldState.WorldRevision))
@@ -284,7 +288,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 SimulationActorSnapshot actorSnapshot = snapshot.Actors[i];
                 SimulationActorState currentActor = m_Current.Actors[i];
-                FixedCharacterRuntimeActor binding = m_Runtime.Roster[i];
+                SimulationActorBinding binding = m_Runtime.Roster[i];
                 if (actorSnapshot.ActorId != currentActor.ActorId ||
                     !actorSnapshot.GameplayContentHash.Equals(currentActor.State.GameplayContentHash) ||
                     binding.ActorId != actorSnapshot.ActorId)
@@ -314,7 +318,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < stateSet.Actors.Count; i++)
             {
                 SimulationActorState actor = stateSet.Actors[i];
-                FixedCharacterRuntimeActor binding = m_Runtime.Roster[i];
+                SimulationActorBinding binding = m_Runtime.Roster[i];
                 if (actor.ActorId != binding.ActorId)
                     throw new InvalidDataException($"Simulation state Actor '{actor.ActorId}' does not match the active Character Runtime roster.");
                 GameplayContentHash expected = new GameplayContentHash(binding.GameplayContentHash);
@@ -369,6 +373,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException("Simulation World Snapshot header is invalid.");
             var expectedHash = new SimulationWorldHash(new StableHash(reader.ReadString()));
             SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
+            var gameplayContentHash = new GameplayContentHash(new StableHash(reader.ReadString()));
             var solverId = new SolverImplementationId(reader.ReadString());
             string solverVersion = reader.ReadString();
             var worldRevision = new WorldRevision(reader.ReadString());
@@ -391,6 +396,7 @@ namespace ThirdPersonSimulation.Fixed
             reader.RequireComplete();
             var snapshot = new SimulationWorldSnapshot(
                 numericProfile,
+                gameplayContentHash,
                 solverId,
                 solverVersion,
                 worldRevision,
@@ -414,6 +420,7 @@ namespace ThirdPersonSimulation.Fixed
         static void WriteHashPayload(CanonicalWriter writer, SimulationWorldSnapshot snapshot)
         {
             SimulationNumericProfileCodec.Write(writer, snapshot.NumericProfile);
+            writer.WriteString(snapshot.GameplayContentHash.ToString());
             writer.WriteString(snapshot.SolverId.Value);
             writer.WriteString(snapshot.SolverVersion);
             writer.WriteString(snapshot.WorldRevision.Value);

@@ -44,19 +44,22 @@ namespace ThirdPersonSimulation
 
         public SimulationTickResult(
             SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
             SimulationTick tick,
             IEnumerable<SimulationActorTickResult> actors,
             WorldSolveBatchSummary worldSummary,
             SimulationWorldSnapshot candidateSnapshot)
         {
-            if (!numericProfile.IsValid || !tick.IsValid)
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !tick.IsValid)
                 throw new ArgumentException("Simulation result identity is incomplete.");
             NumericProfile = numericProfile;
+            GameplayContentHash = gameplayContentHash;
             Tick = tick;
             CandidateSnapshot = candidateSnapshot;
             if (candidateSnapshot != null &&
                 (candidateSnapshot.Tick != tick ||
-                 candidateSnapshot.NumericProfile != numericProfile))
+                 candidateSnapshot.NumericProfile != numericProfile ||
+                 !candidateSnapshot.GameplayContentHash.Equals(gameplayContentHash)))
                 throw new ArgumentException("Candidate snapshot identity does not match result identity.", nameof(candidateSnapshot));
             var values = actors == null ? new List<SimulationActorTickResult>() : new List<SimulationActorTickResult>(actors);
             values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
@@ -96,6 +99,7 @@ namespace ThirdPersonSimulation
         }
 
         public SimulationNumericProfile NumericProfile { get; }
+        public GameplayContentHash GameplayContentHash { get; }
         public SimulationTick Tick { get; }
         public IReadOnlyList<SimulationActorTickResult> Actors => m_Actors;
         public WorldSolveBatchSummary WorldSummary { get; }

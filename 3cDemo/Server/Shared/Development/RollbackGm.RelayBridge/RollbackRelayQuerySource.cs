@@ -25,7 +25,8 @@ public sealed class RollbackRelayQuerySource
             m_Runtime.LocalEndPoint.ToString(),
             $"{m_Manifest.candidate.modelId}@{m_Manifest.candidate.modelVersion}/{m_Manifest.candidate.modelConfigurationHash}",
             $"{m_Manifest.candidate.protocolId}@{m_Manifest.candidate.protocolVersion}/{m_Manifest.candidate.protocolSchemaHash}",
-            m_Manifest.candidate.characterContentHash,
+            m_Manifest.candidate.programId,
+            m_Manifest.candidate.fixedProgramHash,
             m_Manifest.candidate.tickRate,
             m_Manifest.candidate.maximumPredictionLeadTicks,
             m_Manifest.candidate.confirmationDelayTicks);

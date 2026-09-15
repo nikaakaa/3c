@@ -106,6 +106,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException("Restore validation requires complete Session dependencies.");
             if (!snapshot.CompositionIdentity.Equals(descriptor.Identity) ||
                 snapshot.Tick != directive.Tick || !snapshot.SnapshotHash.Equals(directive.SnapshotHash) ||
+                !snapshot.World.GameplayContentHash.Equals(characterRuntime.GameplayContentHash) ||
+                !directive.GameplayContentHash.Equals(characterRuntime.GameplayContentHash) ||
                 !snapshot.Pipeline.Pipeline.Equals(descriptor.Pipeline) ||
                 !directive.PipelineHash.Equals(descriptor.Pipeline.Hash) ||
                 !snapshot.Pipeline.Backend.Equals(descriptor.ExecutionBackend) ||

@@ -25,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!instance.IsValid || !eventView.Source.IsValid ||
                 !RuntimeDiagnosticsTargetRegistry.TryGet(instance.CharacterRuntimeId, out RuntimeDiagnosticsTarget target))
                 return false;
-            if (target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ContentRevision) ||
+            if (target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ProgramRevision) ||
                 !target.SourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) || !entry.Source.Equals(eventView.Source))
                 return false;
             CharacterPipelineDefinition definition = BtsmtlSkillHostEntry.ResolveDefinition(EditorUtility.InstanceIDToObject(target.HostInstanceId));
@@ -173,5 +173,3 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     }
 }
-
-

@@ -128,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         CharacterPoseRuntimeTraceProjection m_RuntimeTrace;
         CharacterPoseCanvasDetailsDataSource m_DetailsDataSource;
         CharacterPoseLiveObservationPanel m_ObservationPanel;
+        readonly CharacterPosePublishedProjectionReader m_PublishedReader = new CharacterPosePublishedProjectionReader();
         Action m_ShowDetails;
         CharacterPoseStateMachineDocument m_StateMachineDocument;
         CharacterPoseStateMachineEditorMutationAdapter m_StateMachineMutation;
@@ -169,6 +170,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 if (GUILayout.Button("Compile", EditorStyles.toolbarButton))
                     workspace.CompilePoseProjection();
+            }
+            using (new EditorGUI.DisabledScope(!workspace.m_Definition))
+            {
+                if (GUILayout.Button("Build", EditorStyles.toolbarButton))
+                    workspace.BuildDefinition();
             }
         }
 
@@ -339,8 +345,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             toolbar.Add(new Button(ValidateAuthoring) { text = "Validate" });
             toolbar.Add(new Button(SaveAuthoring) { text = "保存" });
             var compile = new Button(CompilePoseProjection) { text = "Compile" };
+            var build = new Button(BuildDefinition) { text = "Build" };
             compile.SetEnabled(m_Profile != null);
+            build.SetEnabled(m_Definition != null);
             toolbar.Add(compile);
+            toolbar.Add(build);
             m_LiveDebugToggle = new ToolbarToggle
             {
                 text = "运行观察"
@@ -1367,7 +1376,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (!ValidateAuthoringAndLocate())
                 return;
-            m_Status.text = "Pose graph data compile completed.";
+            m_Status.text = "Pose graph data compile completed. Character Build publishes Projection and Program.";
         }
 
         void ValidateAuthoring()
@@ -1572,6 +1581,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             m_Canvas?.ClearHighlights();
             m_StateMachineSurface?.ClearHighlights();
+        }
+
+        void BuildDefinition()
+        {
+            if (!m_Definition)
+            {
+                m_Status.text = "Build unavailable: no Character Definition context.";
+                return;
+            }
+            try
+            {
+                bool built = CharacterSimulationProgramBuildService.Build(m_Definition, true);
+                RefreshLinkedPoseWorkspaceStatus();
+                m_Status.text = built
+                    ? $"Build completed and published. · {m_LinkedPoseWorkspaceStatus}"
+                    : "Build failed. Inspect the formal report.";
+            }
+            catch (Exception exception)
+            {
+                m_Status.text = $"Build failed: {exception.Message}";
+            }
         }
 
         void Reload()
@@ -1807,20 +1837,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             projection = null;
             if (!m_Definition || !m_Profile || !m_Projection ||
+                !m_Definition.SimulationProgram ||
                 m_Definition.AnimationPresentationProfile != m_Profile ||
                 m_Definition.PresentationProjection != m_Projection)
             {
                 status =
-                    "Unavailable: one exact Definition, Profile and Presentation Projection context is required.";
+                    "Unavailable: one exact Definition, Profile, Simulation Program and Presentation Projection context is required.";
                 return false;
             }
-            try
+            if (!m_PublishedReader.TryRead(m_Definition.SimulationProgram, m_Projection, out projection, out string error))
             {
-                projection = m_Projection.Load();
-            }
-            catch (Exception exception)
-            {
-                status = "已发布产物不可用：" + exception.Message;
+                status = "已发布产物不可用：" + error;
                 return false;
             }
             status = "Ready";
@@ -2061,6 +2088,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             m_LiveDebugToggle?.SetValueWithoutNotify(enabled);
             SetLiveDebug(enabled);
+        }
+
+        internal void BindObservationContext(CharacterPipelineHost host)
+        {
+            if (!host || !host.Definition || m_Definition) return;
+            CharacterPipelineDefinition definition = host.Definition;
+            if (!definition.AnimationPresentationProfile || definition.AnimationPresentationProfile.PoseGraph != m_Asset) return;
+            m_Definition = definition;
+            m_Profile = definition.AnimationPresentationProfile;
+            m_Projection = definition.PresentationProjection;
+            Reload();
         }
 
         internal void RefreshRuntimeDetails() =>

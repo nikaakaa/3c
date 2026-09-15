@@ -23,37 +23,21 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedCharacterRuntime
     {
-        readonly ReadOnlyCollection<FixedCharacterRuntimeActor> m_Roster;
+        readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
 
-        public static FixedCharacterRuntime Create(
-            IEnumerable<FixedCharacterRuntimeActor> roster,
-            int tickRate,
-            CharacterControlModuleCatalog controlModules)
-        {
-            SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
-            return new FixedCharacterRuntime(
-                roster,
-                target.NumericProfile,
-                tickRate,
-                target.OperationSetVersion,
-                controlModules);
-        }
-
         public FixedCharacterRuntime(
-            IEnumerable<FixedCharacterRuntimeActor> roster,
+            IEnumerable<SimulationActorBinding> roster,
             SimulationNumericProfile numericProfile,
             int tickRate,
-            OperationSetVersion operationSetVersion,
-            CharacterControlModuleCatalog controlModules)
+            OperationSetVersion operationSetVersion)
         {
             if (!numericProfile.IsValid || tickRate <= 0 || !operationSetVersion.IsValid)
                 throw new ArgumentException("Fixed Character Runtime execution identity is incomplete.");
-            ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             var values = roster == null
-                ? new List<FixedCharacterRuntimeActor>()
-                : new List<FixedCharacterRuntimeActor>(roster);
+                ? new List<SimulationActorBinding>()
+                : new List<SimulationActorBinding>(roster);
             values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             if (values.Count == 0)
                 throw new ArgumentException("Fixed Character Runtime roster cannot be empty.", nameof(roster));
@@ -92,8 +76,6 @@ namespace ThirdPersonSimulation.Fixed
             TickRate = tickRate;
             OperationSetVersion = operationSetVersion;
             WorldCapability requiredWorldCapabilities = WorldCapability.None;
-            for (int i = 0; i < values.Count; i++)
-                requiredWorldCapabilities |= values[i].BodyMotionBinding.RequiredWorldCapability;
             for (int i = 0; i < m_Abilities.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = m_Abilities[i];
@@ -115,59 +97,27 @@ namespace ThirdPersonSimulation.Fixed
             var sortedRequestIds = new List<string>(requestIds);
             sortedRequestIds.Sort(StringComparer.Ordinal);
             m_InputRequestIds = sortedRequestIds.AsReadOnly();
+            var parts = new List<string>
+            {
+                "fixed-character-runtime/1",
+                RosterDescriptor.RosterHash.ToString()
+            };
+            for (int i = 0; i < values.Count; i++)
+                parts.Add(values[i].GameplayContentHash.ToString());
+            GameplayContentHash = new GameplayContentHash(StableHash.Compute(parts.ToArray()));
         }
 
-        public IReadOnlyList<FixedCharacterRuntimeActor> Roster => m_Roster;
+        public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
         public IReadOnlyList<FixedGameplayAbilityExecutionData> Abilities => m_Abilities;
         public SimulationActorRosterDescriptor RosterDescriptor { get; }
         public SimulationNumericProfile NumericProfile { get; }
         public int TickRate { get; }
         public OperationSetVersion OperationSetVersion { get; }
-        public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
+        public GameplayContentHash GameplayContentHash { get; }
 
-        public FixedCharacterRuntimeState CreateInitialState(int actorIndex)
-        {
-            if (actorIndex < 0 || actorIndex >= Roster.Count)
-                throw new ArgumentOutOfRangeException(nameof(actorIndex));
-            FixedCharacterRuntimeActor actor = Roster[actorIndex];
-            CharacterControlModuleContract control = ControlModules.RequireContract(actor.ControlRuntimeBinding.ModuleId);
-            CharacterControlRuntimeState controlState = CharacterControlRuntimeState.CreateInitial(
-                actor.ControlRuntimeBinding,
-                control);
-            FixedGameplayEffectRuntimeCatalog effectCatalog = actor.GameplayEffectRuntimeBinding == null
-                ? null
-                : new FixedGameplayEffectRuntimeCatalog(actor.GameplayEffectRuntimeBinding);
-            GameplayEffectStateAggregate effectState = effectCatalog == null
-                ? null
-                : GameplayEffectStateAggregate.CreateInitial(effectCatalog);
-            EquipmentStateAggregate equipmentState = null;
-            for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
-            {
-                FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
-                if (!installation.Data.Capabilities.HasGameplayCapability("Equipment"))
-                    continue;
-                if (actor.EquipmentRuntimeBinding == null)
-                    throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
-                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
-                    actor.EquipmentRuntimeBinding,
-                    installation.Data.CatalogEntries,
-                    installation.Data.References,
-                    installation.Data.Producers);
-                equipmentState = EquipmentStateAggregate.CreateInitial(layout);
-                break;
-            }
-            return FixedCharacterRuntimeState.CreateInitial(
-                actor.AbilityInstallations,
-                NumericProfile,
-                new GameplayContentHash(actor.GameplayContentHash),
-                controlState,
-                effectState,
-                equipmentState);
-        }
-
-        static ActorId[] ActorIds(IReadOnlyList<FixedCharacterRuntimeActor> values)
+        static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)
         {
             var result = new ActorId[values.Count];
             for (int i = 0; i < result.Length; i++)
@@ -179,7 +129,8 @@ namespace ThirdPersonSimulation.Fixed
     public interface IFixedCharacterRuntimePort : ISimulationRuntimePort
     {
         FixedCharacterRuntime Runtime { get; }
-        IReadOnlyList<FixedCharacterRuntimeActor> Roster { get; }
+        GameplayContentHash GameplayContentHash { get; }
+        IReadOnlyList<SimulationActorBinding> Roster { get; }
         SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
         CharacterControlRuntimeBinding GetControlRuntimeBinding(int actorIndex);
@@ -207,13 +158,14 @@ namespace ThirdPersonSimulation.Fixed
                 FixedPipelineRuntimePortIds.CharacterRuntime,
                 FixedPipelineRuntimePortIds.CharacterRuntimeSchema,
                 backend.ComponentId,
-                StableHash.Compute(backend.ToString(), Runtime.RosterDescriptor.RosterHash.ToString()),
+                StableHash.Compute(backend.ToString(), Runtime.GameplayContentHash.ToString()),
                 SimulationPortDirection.Input);
         }
 
         public SimulationPortDescriptor Descriptor { get; }
         public FixedCharacterRuntime Runtime { get; }
-        public IReadOnlyList<FixedCharacterRuntimeActor> Roster => Runtime.Roster;
+        public GameplayContentHash GameplayContentHash => Runtime.GameplayContentHash;
+        public IReadOnlyList<SimulationActorBinding> Roster => Runtime.Roster;
         public SimulationActorRosterDescriptor RosterDescriptor => Runtime.RosterDescriptor;
 
         public int GetActorIndex(ActorId actorId) =>

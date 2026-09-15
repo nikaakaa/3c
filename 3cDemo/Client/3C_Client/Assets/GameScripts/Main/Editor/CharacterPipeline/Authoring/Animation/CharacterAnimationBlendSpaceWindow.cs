@@ -961,6 +961,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 for (int i = 0; i < diagnostics.Count; i++)
                     AddReadOnly($"Artifact {i + 1}", $"{diagnostics[i].Status} · {diagnostics[i].BindingKey}");
             }
+            if (m_Window.Definition && m_Window.Definition.SimulationProgram && m_Window.Projection)
+            {
+                try
+                {
+                    CharacterSimulationProgram program = m_Window.Definition.SimulationProgram.Load();
+                    CharacterPresentationProjection projection = m_Window.Projection.Load(
+                        Float32CharacterPresentationContractAdapter.Create(program));
+                    for (int playerIndex = 0; playerIndex < projection.BlendSpacePlayers.Count; playerIndex++)
+                    {
+                        CharacterAnimationBlendSpacePlayerPlan player = projection.BlendSpacePlayers[playerIndex];
+                        bool matches =
+                            player.BlendSpacePlanIndex >= 0 &&
+                            player.BlendSpacePlanIndex <
+                            projection.BlendSpaces.Count &&
+                            projection.BlendSpaces[
+                                player.BlendSpacePlanIndex]
+                            .BlendSpaceId.Equals(
+                                m_Window.Asset.BlendSpaceId);
+                        if (matches)
+                            AddReadOnly($"Pose Graph Node {playerIndex + 1}", player.NodeId.Value);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    AddReadOnly("Compiled References", $"Unavailable · {exception.Message}");
+                }
+            }
         }
 
         void AddReadOnly(string label, string value)
@@ -1283,7 +1310,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_BottomDock = new BlendSpaceBottomDockAdapter(this);
             var commands = new[]
             {
-                new GraphAuthoringToolbarCommandDescriptor("compile", "Compile", GraphAuthoringToolbarCommandKind.ExplicitOperation, CompilePoseProjection)
+                new GraphAuthoringToolbarCommandDescriptor("compile", "Compile", GraphAuthoringToolbarCommandKind.ExplicitOperation, CompilePoseProjection),
+                new GraphAuthoringToolbarCommandDescriptor("build", "Build", GraphAuthoringToolbarCommandKind.ExplicitOperation, BuildDefinition)
             };
             return new GraphAuthoringDomainAdapters(
                 new BlendSpaceDocumentAdapter(this),
@@ -1421,7 +1449,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationBlendSpaceValidationReport report = CharacterAnimationBlendSpaceValidator.Validate(m_Asset);
             if (!report.IsValid)
                 return $"Invalid ({report.Issues.Count})";
-            if (!m_Definition || !m_Profile || !m_Projection)
+            if (!m_Definition || !m_Profile || !m_Projection || !m_Definition.SimulationProgram)
                 return "Missing Definition Context";
             if (EditorUtility.IsDirty(m_Profile) || EditorUtility.IsDirty(m_Definition))
                 return "Dirty";
@@ -1441,7 +1469,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             try
             {
-                CharacterPresentationProjection projection = m_Projection.Load();
+                CharacterSimulationProgram program = m_Definition.SimulationProgram.Load();
+                CharacterPresentationSemanticContract contract = Float32CharacterPresentationContractAdapter.Create(program);
+                CharacterPresentationProjection projection = m_Projection.Load(contract);
                 for (int i = 0; i < projection.BlendSpaces.Count; i++)
                 {
                     CharacterAnimationBlendSpacePlan candidate = projection.BlendSpaces[i];
@@ -1496,7 +1526,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             var times = new CharacterAnimationBlendSpaceTimePage(plan.Samples.Count);
             double effectiveTime = m_PreviewNormalizedTime * plan.ClockDurationSeconds;
-            CharacterPresentationProjection compiledProjection = m_Projection.Load();
+            CharacterSimulationProgram program = m_Definition.SimulationProgram.Load();
+            CharacterPresentationSemanticContract contract = Float32CharacterPresentationContractAdapter.Create(program);
+            CharacterPresentationProjection compiledProjection = m_Projection.Load(contract);
             if (!CharacterAnimationBlendSpacePhaseMapper.Map(
                     plan.CreatePhasePlan(compiledProjection.ClipPhasePlans),
                     effectiveTime,
@@ -1621,8 +1653,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterAnimationBlendSpaceValidationReport report =
                     CharacterAnimationBlendSpaceValidator.Validate(m_Asset);
                 message = report.IsValid
-                    ? "Blend Space graph data compile completed."
+                    ? "Blend Space graph data compile completed. Character Build publishes Projection and Program."
                     : $"Blend Space graph data compile failed: {report.Issues[0]}";
+            }
+            finally
+            {
+                SetBuilding(false);
+            }
+            m_BottomDock?.Report(message);
+        }
+
+        void BuildDefinition()
+        {
+            if (!m_Definition)
+            {
+                m_BottomDock?.Report("Build unavailable: the Blend Space has no unique Character Definition context.");
+                return;
+            }
+            SetBuilding(true);
+            string message;
+            try
+            {
+                bool success = CharacterSimulationProgramBuildService.Build(m_Definition, true);
+                message = success ? "Build completed and published." : "Build failed. Inspect the formal compile report.";
+            }
+            catch (Exception exception)
+            {
+                message = $"Build failed: {exception.Message}";
             }
             finally
             {

@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class BtsmtlSkillGraphCompiler
     {
-        readonly GameplayAbilitySemanticBuilder m_Builder;
+        readonly CharacterSimulationProgramBuilder m_Builder;
         readonly BtsmtlSkillFlowLeafEmitter m_Leaves;
         readonly BtsmtlSkillGraphFlowEmitter m_Flow;
         readonly BtsmtlSkillTimelineCompiler m_Timelines;
@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> m_BindDomain;
         readonly Dictionary<string, BtsmtlSkillGraphCompilation> m_Graphs = new(StringComparer.Ordinal);
 
-        public BtsmtlSkillGraphCompiler(GameplayAbilitySemanticBuilder builder,
+        public BtsmtlSkillGraphCompiler(CharacterSimulationProgramBuilder builder,
             Action<FlowNode, OperationHandle, string, CharacterSimulationSourceLocation> bindDomain,
             TimelineSemanticEmitterRegistry timelineEmitters, IBtsmtlSkillBlackboardCompilation blackboard,
             string controlModuleId,

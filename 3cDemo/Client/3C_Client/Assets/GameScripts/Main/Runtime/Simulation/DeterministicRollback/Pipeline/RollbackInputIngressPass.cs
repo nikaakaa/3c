@@ -24,7 +24,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new ArgumentNullException(nameof(context));
             var reads = new RollbackInputIngressReadPorts(
                 context.BindSourcePort<IRollbackInputSourcePort>(RollbackSourcePortContracts.InputPortId),
-                context.BindTargetPort<IFixedCharacterRuntimePort>(FixedPipelineRuntimePortIds.CharacterRuntime));
+                context.BindTargetPort<IFixedProgramRuntimePort>(FixedPipelineRuntimePortIds.ProgramRuntime));
             var writes = new RollbackInputIngressWritePorts(
                 context.Products.BindExclusiveWriter<RollbackIngressBatch>(RollbackPipelineProducts.Ingress));
             return new FixedIngressPassRuntimeAdapter<RollbackInputIngressReadPorts, RollbackInputIngressWritePorts>(
@@ -58,13 +58,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RollbackIngressBatch batch = readPorts.Source.Read(
                 context.Source,
                 nextTick,
-                readPorts.CharacterRuntime.Roster) ??
+                readPorts.ProgramRuntime.Roster) ??
                 throw new InvalidOperationException("Rollback input Source returned no ingress batch.");
-            if (batch.Predicted.Tick != nextTick || batch.Predicted.Actors.Count != readPorts.CharacterRuntime.Roster.Count)
+            if (batch.Predicted.Tick != nextTick || batch.Predicted.Actors.Count != readPorts.ProgramRuntime.Roster.Count)
                 throw new InvalidOperationException("Rollback predicted bundle does not match the next Tick or locked roster.");
             for (int i = 0; i < batch.Predicted.Actors.Count; i++)
             {
-                if (!batch.Predicted.Actors[i].ActorId.Equals(readPorts.CharacterRuntime.Roster[i].ActorId))
+                if (!batch.Predicted.Actors[i].ActorId.Equals(readPorts.ProgramRuntime.Roster[i].ActorId))
                     throw new InvalidOperationException("Rollback predicted bundle Actor order does not match the locked roster.");
             }
             for (int i = 0; i < batch.RelayedExplicitArrivals.Count; i++)
@@ -81,14 +81,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         public RollbackInputIngressReadPorts(
             IRollbackInputSourcePort source,
-            IFixedCharacterRuntimePort characterRuntime)
+            IFixedProgramRuntimePort programRuntime)
         {
             Source = source ?? throw new ArgumentNullException(nameof(source));
-            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
+            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
         }
 
         public IRollbackInputSourcePort Source { get; }
-        public IFixedCharacterRuntimePort CharacterRuntime { get; }
+        public IFixedProgramRuntimePort ProgramRuntime { get; }
     }
 
     public sealed class RollbackInputIngressWritePorts : ISimulationPipelineWritePortSet

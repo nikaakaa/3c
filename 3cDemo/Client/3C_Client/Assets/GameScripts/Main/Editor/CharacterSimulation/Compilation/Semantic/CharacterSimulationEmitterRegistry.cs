@@ -43,10 +43,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly BaseGraph m_Graph;
         readonly string m_GraphContentHash;
         readonly string m_Route;
-        readonly GameplayAbilitySemanticBuilder m_Builder;
+        readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationOperationEmitter m_OperationEmitter;
 
-        public CharacterSimulationNodeEmitterContext(BaseGraph graph, string route, GameplayAbilitySemanticBuilder builder)
+        public CharacterSimulationNodeEmitterContext(BaseGraph graph, string route, CharacterSimulationProgramBuilder builder)
         {
             m_Graph = graph ?? throw new ArgumentNullException(nameof(graph));
             m_GraphContentHash = GraphAuthoringFingerprint.Compute(m_Graph);
@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_OperationEmitter = new CharacterSimulationOperationEmitter(builder);
         }
 
-        public GameplayAbilitySemanticBuilder Builder => m_Builder;
+        public CharacterSimulationProgramBuilder Builder => m_Builder;
 
         public OperationHandle Emit(BaseNode node, CharacterSimulationNodeEmission emission)
         {

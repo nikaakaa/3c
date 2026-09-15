@@ -17,8 +17,8 @@ namespace BTSMTL.Diagnostics
         public RuntimeDiagnosticsContext Context { get; }
         public Guid CharacterRuntimeId => Context.CharacterRuntimeId;
         public Guid SessionId => Context.SessionId;
-        public RuntimeContentRevision Revision => Context.Revision;
-        public ulong RuntimeEpoch => Context.RuntimeEpoch;
+        public RuntimeProgramRevision Revision => Context.Revision;
+        public ulong ProgramEpoch => Context.ProgramEpoch;
         public Guid ExecutionBranchId => Context.ExecutionBranchId;
         public IDebugSourceMap SourceMap => Context.SourceMap;
         public RuntimeDiagnosticsStore Store => Context.Store;
@@ -95,5 +95,3 @@ namespace BTSMTL.Diagnostics
         }
     }
 }
-
-

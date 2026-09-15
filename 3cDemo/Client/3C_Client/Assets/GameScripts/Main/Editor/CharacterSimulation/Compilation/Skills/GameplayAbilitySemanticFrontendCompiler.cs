@@ -41,12 +41,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return GameplayAbilitySemanticFrontendResult.Failed(report);
             try
             {
-                var root = new GameplayAbilityRootDescriptor(
-                    GameplayAbilityRootKind.Ability,
+                var root = new SimulationProgramRootDescriptor(
+                    SimulationProgramRootKind.Ability,
                     model.DefinitionGuid,
                     model.EntryIdentity,
                     model.SourceRevision.Value);
-                var builder = new GameplayAbilitySemanticBuilder(
+                var builder = new CharacterSimulationProgramBuilder(
                     model.ProgramId,
                     CompilerVersion,
                     OperationSetVersion,
@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     return GameplayAbilitySemanticFrontendResult.Failed(report);
                 DeclareAbilityCatalog(model, graph.Entry, builder, report, abilitySource);
                 builder.DeclareReference(
-                    "ability:root-operation",
+                    "program:root-operation",
                     OperationHandle.Invalid,
                     ProgramReferenceKind.Operation,
                     graph.Entry.Value,
@@ -113,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static void RequireGraphCapabilities(
             GameplayAbilityAuthoringCompilationModel model,
-            GameplayAbilitySemanticBuilder builder)
+            CharacterSimulationProgramBuilder builder)
         {
             foreach (BtsmtlSkillGraphOccurrence occurrence in model.EntryGraph.EnumerateOccurrences())
             {
@@ -127,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static void DeclareAbilityCatalog(
             GameplayAbilityAuthoringCompilationModel model,
             OperationHandle entry,
-            GameplayAbilitySemanticBuilder builder,
+            CharacterSimulationProgramBuilder builder,
             CharacterSimulationCompileReport report,
             CharacterSimulationSourceLocation source)
         {

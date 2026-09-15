@@ -1,59 +1,54 @@
 using System;
-using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class Float32PendingActorEvaluation
+    public sealed class Float32PendingAbilityEvaluation
     {
-        readonly Float32CharacterRuntimeStateTransaction m_Transaction;
-        readonly IReadOnlyList<GameplayFact> m_GameplayFacts;
-        readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
-        readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
+        readonly IFloat32AbilityExecutionStateTransaction m_Transaction;
         bool m_Consumed;
 
-        internal Float32PendingActorEvaluation(
+        internal Float32PendingAbilityEvaluation(
+            Float32GameplayAbilityExecutionInstallation installation,
             ActorId actorId,
             SimulationTick tick,
-            Float32CharacterRuntimeState sourceState,
-            Float32CharacterRuntimeStateTransaction transaction,
+            Float32AbilityRuntimeState sourceState,
+            IFloat32AbilityExecutionStateTransaction transaction,
             CharacterWorldSolveRequest worldRequest,
-            IEnumerable<GameplayFact> gameplayFacts,
-            IEnumerable<PresentationCommand> presentationCommands,
-            IEnumerable<SimulationTraceRecord> traceRecords,
+            ResolvedGameplayMotion gameplayMotion,
             bool diagnosticsEnabled)
         {
+            Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 pending Ability evaluation identity is incomplete.");
             SourceState = sourceState ?? throw new ArgumentNullException(nameof(sourceState));
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             WorldRequest = worldRequest ?? throw new ArgumentNullException(nameof(worldRequest));
             if (worldRequest.ActorId != actorId || worldRequest.Tick != tick ||
-                transaction.ActorId != actorId || transaction.Tick != tick)
+                !worldRequest.NumericProfile.Equals(installation.Data.NumericProfile) ||
+                !transaction.Installation.Identity.Equals(installation.Identity))
             {
                 throw new InvalidOperationException("Float32 pending Ability evaluation binding is invalid.");
             }
             ActorId = actorId;
             Tick = tick;
-            m_GameplayFacts = Copy(gameplayFacts);
-            m_PresentationCommands = Copy(presentationCommands);
-            m_TraceRecords = Copy(traceRecords);
+            GameplayMotion = gameplayMotion;
             DiagnosticsEnabled = diagnosticsEnabled;
         }
 
+        public Float32GameplayAbilityExecutionInstallation Installation { get; }
+        public GameplayAbilityExecutionIdentity Identity => Installation.Identity;
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
         public CharacterWorldSolveRequest WorldRequest { get; }
+        public ResolvedGameplayMotion GameplayMotion { get; }
         public bool DiagnosticsEnabled { get; }
-        internal Float32CharacterRuntimeState SourceState { get; }
-        internal Float32CharacterRuntimeStateTransaction Transaction => m_Transaction;
-        internal IReadOnlyList<GameplayFact> GameplayFacts => m_GameplayFacts;
-        internal IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;
-        internal IReadOnlyList<SimulationTraceRecord> TraceRecords => m_TraceRecords;
+        internal Float32AbilityRuntimeState SourceState { get; }
+        internal IFloat32AbilityExecutionStateTransaction Transaction => m_Transaction;
 
-        internal Float32CharacterRuntimeStateTransaction ClaimForFinalize()
+        internal IFloat32AbilityExecutionStateTransaction ClaimForFinalize()
         {
             if (m_Consumed)
-                throw new InvalidOperationException("Float32 pending Actor evaluation has already been consumed.");
+                throw new InvalidOperationException("Float32 pending Ability evaluation has already been consumed.");
             m_Consumed = true;
             return m_Transaction;
         }
@@ -63,16 +58,7 @@ namespace ThirdPersonSimulation
             if (m_Consumed)
                 return;
             m_Consumed = true;
-            m_Transaction.Dispose();
-        }
-
-        static IReadOnlyList<T> Copy<T>(IEnumerable<T> values)
-        {
-            var result = values == null ? new List<T>() : new List<T>(values);
-            for (int i = 0; i < result.Count; i++)
-                if (result[i] == null)
-                    throw new ArgumentException("Float32 pending Actor evaluation contains a missing output.", nameof(values));
-            return result.AsReadOnly();
+            m_Transaction.Abort();
         }
     }
 }

@@ -582,7 +582,7 @@ namespace TreeDesigner.Editor
             string prefix = session.AttachmentState == RuntimeDebugAttachmentState.Ended ? "Ended | " :
                 session.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory ? "Capture | " :
                 session.AttachmentState == RuntimeDebugAttachmentState.Frozen ? "Frozen | " : string.Empty;
-            SetStatus($"{prefix}{view.Target.DisplayName} | epoch {view.Target.RuntimeEpoch} | {ShortInstance(instance)} | L{view.LatestLogicTick} P{view.LatestPresentationFrame} | {view.Target.Revision.ContentHash}");
+            SetStatus($"{prefix}{view.Target.DisplayName} | epoch {view.Target.ProgramEpoch} | {ShortInstance(instance)} | L{view.LatestLogicTick} P{view.LatestPresentationFrame} | {view.Target.Revision.ProgramHash}");
         }
 
         public void InvalidateRequests()
@@ -1409,5 +1409,3 @@ namespace TreeDesigner.Editor
         }
     }
 }
-
-

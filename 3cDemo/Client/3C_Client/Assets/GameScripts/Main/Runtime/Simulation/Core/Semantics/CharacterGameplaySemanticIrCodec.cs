@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation
             int tickRate,
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
-            GameplayAbilityRootDescriptor root)
+            SimulationProgramRootDescriptor root)
         {
             if (!programId.IsValid)
                 throw new ArgumentException("Program id is required.", nameof(programId));
@@ -32,8 +32,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Source revision is required.", nameof(sourceRevision));
             if (!semanticHash.IsValid)
                 throw new ArgumentException("Semantic hash is required.", nameof(semanticHash));
-            if (!root.IsValid || !root.IsAbility)
-                throw new ArgumentException("Semantic IR requires an Ability root descriptor.", nameof(root));
+            if (!root.IsValid)
+                throw new ArgumentException("Semantic IR root descriptor is required.", nameof(root));
             ProgramId = programId;
             OperationSetVersion = operationSetVersion;
             TickRate = tickRate;
@@ -48,7 +48,7 @@ namespace ThirdPersonSimulation
         public int TickRate { get; }
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
-        public GameplayAbilityRootDescriptor Root { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public sealed class CharacterGameplaySemanticIrArtifactHeader
@@ -67,7 +67,7 @@ namespace ThirdPersonSimulation
             SemanticHash semanticHash,
             IEnumerable<string> gameplayCapabilities,
             WorldCapability requiredWorldCapabilities,
-            GameplayAbilityRootDescriptor root)
+            SimulationProgramRootDescriptor root)
         {
             Magic = magic;
             ArtifactVersion = artifactVersion;
@@ -81,8 +81,8 @@ namespace ThirdPersonSimulation
             var capabilities = new ProgramCapabilityManifest(gameplayCapabilities, requiredWorldCapabilities);
             m_GameplayCapabilities = new List<string>(capabilities.GameplayCapabilities).AsReadOnly();
             RequiredWorldCapabilities = capabilities.RequiredWorldCapabilities;
-            if (!root.IsValid || !root.IsAbility)
-                throw new ArgumentException("Semantic IR artifact requires an Ability root descriptor.", nameof(root));
+            if (!root.IsValid)
+                throw new ArgumentException("Semantic IR artifact root descriptor is invalid.", nameof(root));
             Root = root;
         }
 
@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation
         public SemanticHash SemanticHash { get; }
         public IReadOnlyList<string> GameplayCapabilities => m_GameplayCapabilities;
         public WorldCapability RequiredWorldCapabilities { get; }
-        public GameplayAbilityRootDescriptor Root { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public sealed class ValidatedSemanticIrArtifact
@@ -123,8 +123,8 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplaySemanticIrCodec
     {
         const uint ArtifactMagic = 0x52495343;
-        const int ArtifactVersion = 15;
-        const int PayloadVersion = 15;
+        const int ArtifactVersion = 14;
+        const int PayloadVersion = 14;
 
         public static byte[] WriteArtifact(CharacterGameplaySemanticIr semanticIr)
         {
@@ -150,7 +150,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < semanticIr.Manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(semanticIr.Manifest.Capabilities.GameplayCapabilities[i]);
             writer.WriteUInt64((ulong)semanticIr.Manifest.Capabilities.RequiredWorldCapabilities);
-            GameplayAbilityRootDescriptorCodec.Write(writer, semanticIr.Manifest.Root);
+            SimulationProgramRootDescriptorCodec.Write(writer, semanticIr.Manifest.Root);
             writer.WriteBytes(payload);
             byte[] bytes = writer.ToArray();
             return ReadValidatedArtifact(
@@ -215,7 +215,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
             ulong worldCapabilityValue = reader.ReadUInt64();
-            GameplayAbilityRootDescriptor root = GameplayAbilityRootDescriptorCodec.Read(reader);
+            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             const WorldCapability knownWorldCapabilities = WorldCapability.BodyMotion |
                                                            WorldCapability.Grounding |
                                                            WorldCapability.Collision |
@@ -310,6 +310,9 @@ namespace ThirdPersonSimulation
         {
             writer.WriteInt32(PayloadVersion);
             WriteManifest(writer, semanticIr.Manifest);
+            writer.WriteBoolean(semanticIr.BodyMotion != null);
+            if (semanticIr.BodyMotion != null)
+                WriteBodyMotion(writer, semanticIr.BodyMotion);
             WriteTable(writer, semanticIr.Literals, WriteLiteral);
             WriteTable(writer, semanticIr.Operations, WriteOperation);
             WriteTable(writer, semanticIr.ConstantInputBindings, WriteConstantInputBinding);
@@ -331,6 +334,9 @@ namespace ThirdPersonSimulation
             if (reader.ReadInt32() != PayloadVersion)
                 throw new SemanticIrArtifactVersionException("Gameplay Semantic IR payload version is unsupported.");
             CharacterGameplaySemanticIrManifest manifest = ReadManifest(reader);
+            CharacterBodyMotionBinding bodyMotion = reader.ReadBoolean()
+                ? ReadBodyMotion(reader)
+                : null;
             SemanticLiteral[] literals = ReadTable(reader, ReadLiteral);
             SemanticOperation[] operations = ReadTable(reader, ReadOperation);
             SemanticConstantInputBinding[] constantInputBindings = ReadTable(reader, ReadConstantInputBinding);
@@ -347,6 +353,7 @@ namespace ThirdPersonSimulation
             reader.RequireComplete();
             return new CharacterGameplaySemanticIr(
                 manifest,
+                bodyMotion,
                 operations,
                 literals,
                 constantInputBindings,
@@ -360,6 +367,25 @@ namespace ThirdPersonSimulation
                 sourceMap,
                 producers,
                 graphCallFrames);
+        }
+
+        static void WriteBodyMotion(CanonicalWriter writer, CharacterBodyMotionBinding descriptor)
+        {
+            writer.WriteString(descriptor.SourceIdentity);
+            writer.WriteString(descriptor.ContentRevision.Value);
+            writer.WriteInt32(descriptor.SemanticVersion);
+            writer.WriteDouble(descriptor.GravityAcceleration);
+            writer.WriteDouble(descriptor.MaximumFallSpeed);
+        }
+
+        static CharacterBodyMotionBinding ReadBodyMotion(CanonicalReader reader)
+        {
+            return new CharacterBodyMotionBinding(
+                reader.ReadString(),
+                new StableHash(reader.ReadString()),
+                reader.ReadInt32(),
+                reader.ReadDouble(),
+                reader.ReadDouble());
         }
 
         static void WriteConstantInputBinding(CanonicalWriter writer, SemanticConstantInputBinding binding)
@@ -392,7 +418,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(manifest.Capabilities.GameplayCapabilities[i]);
             writer.WriteUInt64((ulong)manifest.Capabilities.RequiredWorldCapabilities);
-            GameplayAbilityRootDescriptorCodec.Write(writer, manifest.Root);
+            SimulationProgramRootDescriptorCodec.Write(writer, manifest.Root);
         }
 
         static CharacterGameplaySemanticIrManifest ReadManifest(CanonicalReader reader)
@@ -407,7 +433,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
             WorldCapability worldCapabilities = (WorldCapability)reader.ReadUInt64();
-            GameplayAbilityRootDescriptor root = GameplayAbilityRootDescriptorCodec.Read(reader);
+            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             return new CharacterGameplaySemanticIrManifest(
                 programId,
                 compilerVersion,

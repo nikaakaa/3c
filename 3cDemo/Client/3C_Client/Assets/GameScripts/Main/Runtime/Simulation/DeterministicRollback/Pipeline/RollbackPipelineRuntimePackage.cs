@@ -39,9 +39,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 new RollbackInputIngressPassRuntimeFactory(ResolveFactory(passFactoryCatalog, passes.Ingress), state),
                 new RollbackSchedulePassRuntimeFactory(ResolveFactory(passFactoryCatalog, passes.Schedule), policy, state),
-                new FixedAbilityEvaluatePassRuntimeFactory(),
                 new FixedWorldResolveBatchPassRuntimeFactory(),
-                new FixedAbilityFinalizePassRuntimeFactory(),
                 new RollbackHistoryPassRuntimeFactory(ResolveFactory(passFactoryCatalog, passes.History), state),
                 new RollbackHashEgressPassRuntimeFactory(ResolveFactory(passFactoryCatalog, passes.HashEgress), policy, state),
                 new RollbackOutputDispositionPassRuntimeFactory(ResolveFactory(passFactoryCatalog, passes.OutputDisposition))
@@ -87,9 +85,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 passes.CreateFactoryDescriptor(passes.Ingress),
                 passes.CreateFactoryDescriptor(passes.Schedule),
-                StandardFixedPipelinePassContracts.CreateFactoryDescriptor(StandardFixedPipelinePassContracts.AbilityEvaluate),
                 StandardFixedPipelinePassContracts.CreateFactoryDescriptor(StandardFixedPipelinePassContracts.WorldResolveBatch),
-                StandardFixedPipelinePassContracts.CreateFactoryDescriptor(StandardFixedPipelinePassContracts.AbilityFinalize),
                 passes.CreateFactoryDescriptor(passes.History),
                 passes.CreateFactoryDescriptor(passes.HashEgress),
                 passes.CreateFactoryDescriptor(passes.OutputDisposition)

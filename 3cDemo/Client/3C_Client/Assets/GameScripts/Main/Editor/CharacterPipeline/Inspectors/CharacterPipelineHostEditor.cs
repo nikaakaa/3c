@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
@@ -23,9 +26,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static RuntimeDiagnosticsCaptureDetail s_CaptureDetail =
             RuntimeDiagnosticsCaptureDetail.Evaluation;
 
+        internal static void DrawCharacterPipelineConfiguration(CharacterPipelineHost host)
+        {
+            DrawFootPlacementConfiguration(host);
+            DrawEquipmentConfiguration(host);
+        }
+
         internal static void DrawRuntimeDiagnostics(
             object interestOwner,
             int hostInstanceId,
+            CharacterPipelineDefinition definition,
             CharacterRuntimeDiagnosticsInspectorMode mode)
         {
             RuntimeDebugSession session = RuntimeDebugSession.Shared;
@@ -75,7 +85,56 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawBlackboard(view);
             DrawMotion(view);
             DrawCamera(view);
-            DrawPresentation(view);
+            DrawPresentation(definition, view);
+        }
+
+        static void DrawFootPlacementConfiguration(CharacterPipelineHost host)
+        {
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("World-Aware Presentation", EditorStyles.boldLabel);
+            CharacterWorldAwarePresentationBinding binding = host.WorldAwarePresentation;
+            using (new EditorGUI.DisabledScope(true))
+                EditorGUILayout.ObjectField("Binding", binding, typeof(CharacterWorldAwarePresentationBinding), true);
+            if (!binding)
+            {
+                EditorGUILayout.HelpBox("Character host requires an explicit World-Aware Presentation Binding.", MessageType.Error);
+                return;
+            }
+            try
+            {
+                binding.RequireValid();
+                if (binding.PresentationRoot != host.VisualRoot)
+                    throw new InvalidOperationException("World-Aware Presentation Root must match the Host Visual Root.");
+                EditorGUILayout.HelpBox("World-Aware Presentation Binding is valid. Foot Placement Profile and Calibration are owned by the Pose Graph node.", MessageType.Info);
+            }
+            catch (Exception exception)
+            {
+                EditorGUILayout.HelpBox(exception.Message, MessageType.Error);
+            }
+        }
+
+        static void DrawEquipmentConfiguration(CharacterPipelineHost host)
+        {
+            if (!host.Definition || !host.Definition.EquipmentCapabilityEnabled)
+                return;
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Equipment", EditorStyles.boldLabel);
+            CharacterEquipmentRigBindingCatalog catalog = host.EquipmentRigBindings;
+            using (new EditorGUI.DisabledScope(true))
+                EditorGUILayout.ObjectField("Rig Bindings", catalog, typeof(CharacterEquipmentRigBindingCatalog), true);
+            if (!catalog)
+            {
+                EditorGUILayout.HelpBox("Equipment-enabled Character Host requires an explicit Rig Binding Catalog.", MessageType.Error);
+                return;
+            }
+            var errors = new List<string>();
+            if (catalog.CollectConfigurationErrors(errors))
+            {
+                EditorGUILayout.HelpBox("Equipment Rig and Socket bindings are valid.", MessageType.Info);
+                return;
+            }
+            for (int i = 0; i < errors.Count; i++)
+                EditorGUILayout.HelpBox(errors[i], MessageType.Error);
         }
 
         static void DrawSimulation(RuntimeDebugViewModel view)
@@ -248,7 +307,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             });
         }
 
-        static void DrawPresentation(RuntimeDebugViewModel view)
+        static void DrawPresentation(CharacterPipelineDefinition definition, RuntimeDebugViewModel view)
         {
             IReadOnlyList<RuntimeDebugEventView> source = view.GetCurrentEvents(RuntimeTraceChannel.Animation);
             var events = new List<RuntimeDebugEventView>();
@@ -279,6 +338,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RuntimeTraceEventKind.MotionMatchingPoseSource,
                 RuntimeTraceEventKind.MotionMatchingReset,
                 RuntimeTraceEventKind.MotionMatchingFrame);
+            DrawMotionMatchingReplayCapture(definition, view, events);
             DrawAnimationGroup(
                 "Playback Lifecycle",
                 events,
@@ -291,6 +351,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawAnimationGroup("Presentation", events, RuntimeTraceEventKind.PresentationInterpolated);
         }
 
+        static void DrawMotionMatchingReplayCapture(
+            CharacterPipelineDefinition definition,
+            RuntimeDebugViewModel view,
+            IReadOnlyList<RuntimeDebugEventView> events)
+        {
+            EditorGUILayout.LabelField("Motion Matching Capability", "Available in project");
+            CharacterAnimationPresentationProfile profile = definition ? definition.AnimationPresentationProfile : null;
+            CharacterPresentationProjectionAsset projection = definition ? definition.PresentationProjection : null;
+            EditorGUILayout.LabelField("Definition Identity", AssetIdentity(definition));
+            EditorGUILayout.LabelField("Profile Identity", AssetIdentity(profile));
+            EditorGUILayout.LabelField("Projection Asset Identity", AssetIdentity(projection));
+            if (!AnimationPresentationRuntimeTargetRegistry.TryGet(
+                    view.Target.CharacterRuntimeId,
+                    out AnimationPresentationRuntimeTarget target))
+            {
+                EditorGUILayout.LabelField("Current Definition", "Runtime target unavailable");
+                return;
+            }
+            EditorGUILayout.LabelField(
+                "Current Definition",
+                target.MotionMatchingRuntimeEnabled ? "Enabled" : "Disabled");
+            if (!target.MotionMatchingRuntimeEnabled)
+                return;
+            string providerId = string.Empty;
+            for (int i = events.Count - 1; i >= 0; i--)
+            {
+                RuntimeTraceEventKind kind = events[i].Event.Kind;
+                if (kind is not RuntimeTraceEventKind.MotionMatchingQuery and
+                    not RuntimeTraceEventKind.MotionMatchingSelection)
+                {
+                    continue;
+                }
+                providerId = events[i].Event.Payload.OwnerId;
+                if (!string.IsNullOrWhiteSpace(providerId))
+                    break;
+            }
+            EditorGUILayout.LabelField("Active Provider", string.IsNullOrEmpty(providerId) ? "No searchable frame" : providerId);
+            if (!string.IsNullOrEmpty(providerId) &&
+                target.TryCaptureMotionMatchingSearchReplay(providerId, out MotionMatchingSearchReplayArtifact artifact))
+            {
+                EditorGUILayout.LabelField("MM Profile", artifact.ProfileId.Value);
+                EditorGUILayout.LabelField("Database", artifact.DatabaseIdentity.DatabaseId.Value);
+                EditorGUILayout.LabelField("Database Artifact", artifact.DatabaseIdentity.ContentHash.Value);
+                EditorGUILayout.LabelField("Runtime Projection", artifact.ProjectionIdentity);
+            }
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(providerId)))
+            {
+                if (GUILayout.Button("Capture Motion Matching Search Replay"))
+                    CaptureMotionMatchingSearchReplay(target, providerId);
+            }
+        }
+
         static string AssetIdentity(UnityEngine.Object asset)
         {
             if (!asset)
@@ -298,6 +410,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string path = AssetDatabase.GetAssetPath(asset);
             string guid = string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
             return string.IsNullOrEmpty(guid) ? asset.name : $"{asset.name} [{guid}]";
+        }
+
+        static void CaptureMotionMatchingSearchReplay(
+            AnimationPresentationRuntimeTarget target,
+            string providerId)
+        {
+            try
+            {
+                if (!target.TryCaptureMotionMatchingSearchReplay(providerId, out MotionMatchingSearchReplayArtifact artifact))
+                    throw new InvalidOperationException("The active Motion Matching provider has no completed Search to capture.");
+                string path = EditorUtility.SaveFilePanelInProject(
+                    "Capture Motion Matching Search Replay",
+                    $"{providerId}-search-replay",
+                    "bytes",
+                    "Choose the Search Replay Artifact path.");
+                if (string.IsNullOrEmpty(path))
+                    return;
+                File.WriteAllBytes(Path.GetFullPath(path), MotionMatchingSearchReplayArtifactCodec.Encode(artifact));
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                Selection.activeObject = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+            }
+            catch (Exception exception)
+            {
+                EditorUtility.DisplayDialog("Motion Matching Search Replay Capture Failed", exception.Message, "OK");
+            }
         }
 
         static void DrawFootPlacement(RuntimeDebugViewModel view)
@@ -416,6 +553,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
     }
 
+    [CustomEditor(typeof(CharacterPipelineHost))]
+    public sealed class CharacterPipelineHostEditor : UnityEditor.Editor
+    {
+        void OnEnable()
+        {
+            RuntimeDebugSession.Shared.Changed += Repaint;
+        }
+
+        void OnDisable()
+        {
+            RuntimeDebugSession.Shared.Changed -= Repaint;
+            RuntimeDebugSession.Shared.ReleaseLiveInterest(this);
+        }
+
+        public override void OnInspectorGUI()
+        {
+            DrawDefaultInspector();
+            CharacterPipelineHost host = target as CharacterPipelineHost;
+            if (host == null)
+                return;
+            CharacterRuntimeDiagnosticsInspector.DrawCharacterPipelineConfiguration(host);
+            CharacterRuntimeDiagnosticsInspector.DrawRuntimeDiagnostics(
+                this,
+                host.GetInstanceID(),
+                host.Definition,
+                CharacterRuntimeDiagnosticsInspectorMode.Complete);
+        }
+    }
+
     [CustomEditor(typeof(FixedCharacterHost))]
     public sealed class FixedCharacterHostEditor : UnityEditor.Editor
     {
@@ -439,6 +605,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterRuntimeDiagnosticsInspector.DrawRuntimeDiagnostics(
                 this,
                 host.GetInstanceID(),
+                null,
                 CharacterRuntimeDiagnosticsInspectorMode.FootPlacement);
         }
     }

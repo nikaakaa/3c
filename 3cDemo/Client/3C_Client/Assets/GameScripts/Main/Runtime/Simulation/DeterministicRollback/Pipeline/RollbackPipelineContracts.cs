@@ -139,7 +139,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         RollbackIngressBatch Read(
             SimulationTickSourceIdentity outerSource,
             SimulationTick nextSimulationTick,
-            IReadOnlyList<FixedCharacterRuntimeActor> roster);
+            IReadOnlyList<SimulationActorBinding> roster);
         IRollbackInputSourceCheckpoint CaptureCheckpoint();
         void RestoreCheckpoint(IRollbackInputSourceCheckpoint checkpoint);
         RollbackInputSourceDiagnosticsSnapshot CaptureDiagnostics();
@@ -265,9 +265,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 new[] { Schedule },
                 new[]
                 {
-                    StandardFixedPipelinePassContracts.AbilityEvaluate,
+                    StandardFixedPipelinePassContracts.ProgramEvaluate,
                     StandardFixedPipelinePassContracts.WorldResolveBatch,
-                    StandardFixedPipelinePassContracts.AbilityFinalize,
+                    StandardFixedPipelinePassContracts.ProgramFinalize,
                     History
                 },
                 new[] { HashEgress, OutputDisposition });

@@ -20,7 +20,7 @@ namespace ThirdPersonSimulation.Fixed
             string executionDataHash,
             string stateSchemaHash,
             string canonicalBytesHash,
-            GameplayAbilityRootDescriptor root)
+            SimulationProgramRootDescriptor root)
         {
             DefinitionGuid = definitionGuid;
             AbilityId = abilityId;
@@ -49,7 +49,7 @@ namespace ThirdPersonSimulation.Fixed
         public string ExecutionDataHash { get; }
         public string StateSchemaHash { get; }
         public string CanonicalBytesHash { get; }
-        public GameplayAbilityRootDescriptor Root { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public static class FixedGameplayAbilityExecutionDataCodec
@@ -75,7 +75,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteString(data.ContentHash.ToString());
             writer.WriteString(data.StateSchemaHash.ToString());
             WriteCapabilities(writer, data.Capabilities);
-            GameplayAbilityRootDescriptorCodec.Write(writer, data.Root);
+            SimulationProgramRootDescriptorCodec.Write(writer, data.Root);
             writer.WriteString(data.AbilityId.Value);
             writer.WriteBytes(payload);
             return writer.ToArray();
@@ -105,7 +105,7 @@ namespace ThirdPersonSimulation.Fixed
             string contentHash = reader.ReadString();
             string stateSchemaHash = reader.ReadString();
             ProgramCapabilityManifest capabilities = ReadCapabilities(reader);
-            GameplayAbilityRootDescriptor root = GameplayAbilityRootDescriptorCodec.Read(reader);
+            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             string abilityId = reader.ReadString();
             byte[] payload = reader.ReadBytes();
             reader.RequireComplete();
@@ -162,7 +162,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteString(data.ContentHash.ToString());
             writer.WriteString(data.StateSchemaHash.ToString());
             WriteCapabilities(writer, data.Capabilities);
-            GameplayAbilityRootDescriptorCodec.Write(writer, data.Root);
+            SimulationProgramRootDescriptorCodec.Write(writer, data.Root);
             writer.WriteString(data.AbilityId.Value);
             WriteTable(writer, data.Constants, WriteConstant);
             WriteTable(writer, data.OperationDefinitions, WriteOperationDefinition);
@@ -198,7 +198,7 @@ namespace ThirdPersonSimulation.Fixed
             StableHash contentHash = new StableHash(reader.ReadString());
             StableHash stateSchemaHash = new StableHash(reader.ReadString());
             ProgramCapabilityManifest capabilities = ReadCapabilities(reader);
-            GameplayAbilityRootDescriptor root = GameplayAbilityRootDescriptorCodec.Read(reader);
+            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             CharacterSkillId abilityId = new CharacterSkillId(reader.ReadString());
             ProgramConstant[] constants = ReadTable(reader, ReadConstant);
             SimulationOperationDefinition[] operationDefinitions = ReadTable(reader, ReadOperationDefinition);
@@ -267,7 +267,7 @@ namespace ThirdPersonSimulation.Fixed
             string executionIdentity,
             string contentHash,
             string stateSchemaHash,
-            GameplayAbilityRootDescriptor root,
+            SimulationProgramRootDescriptor root,
             FixedGameplayAbilityExecutionDataLoadExpectation expectation)
         {
             if (!string.Equals(compilerVersion, expectation.CompilerVersion, StringComparison.Ordinal) ||

@@ -76,7 +76,7 @@ namespace BTSMTL.Diagnostics.Editor
         }
 
         public RuntimeDebugFrozenDiagnostics Freeze(
-            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps)
+            IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> sourceMaps)
         {
             Refresh();
             return new RuntimeDebugFrozenDiagnostics(
@@ -90,7 +90,7 @@ namespace BTSMTL.Diagnostics.Editor
         public RuntimeDebugViewModel BuildCaptureView(
             RuntimeCaptureSnapshot snapshot,
             int historyOffset,
-            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps)
+            IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> sourceMaps)
         {
             return new RuntimeDebugFrozenDiagnostics(
                 m_LiveModel,
@@ -106,15 +106,15 @@ namespace BTSMTL.Diagnostics.Editor
     {
         readonly RuntimeDebugViewModel m_LiveModel;
         readonly RuntimeDebugSourceMapSnapshot m_SourceMap;
-        readonly RuntimeContentRevision m_Revision;
-        readonly IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> m_SourceMaps;
+        readonly RuntimeProgramRevision m_Revision;
+        readonly IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> m_SourceMaps;
 
         public RuntimeDebugFrozenDiagnostics(
             RuntimeDebugViewModel liveModel,
             RuntimeDebugSourceMapSnapshot sourceMap,
-            RuntimeContentRevision revision,
+            RuntimeProgramRevision revision,
             RuntimeCaptureSnapshot activeCapture,
-            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps = null)
+            IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> sourceMaps = null)
         {
             m_LiveModel = liveModel ?? RuntimeDebugViewModel.Detached;
             m_SourceMap = sourceMap ?? RuntimeDebugSourceMapSnapshot.Empty;
@@ -155,7 +155,7 @@ namespace BTSMTL.Diagnostics.Editor
                 var key = new RuntimeLiveStateKey(traceEvent.Channel, traceEvent.Source, traceEvent.RuntimeInstance, traceEvent.Kind);
                 RuntimeDebugSourceMapSnapshot sourceMap;
                 if (m_SourceMaps == null ||
-                    !m_SourceMaps.TryGetValue(traceEvent.ContentRevision, out sourceMap) ||
+                    !m_SourceMaps.TryGetValue(traceEvent.ProgramRevision, out sourceMap) ||
                     sourceMap == null)
                     sourceMap = RuntimeDebugSourceMapSnapshot.Empty;
                 view.Apply(key, traceEvent, sourceMap);
@@ -165,5 +165,3 @@ namespace BTSMTL.Diagnostics.Editor
         }
     }
 }
-
-

@@ -1,0 +1,30 @@
+{
+    "name": "ThirdPersonSimulation.ServerAuthoritative.Unity",
+    "rootNamespace": "ThirdPersonGameplay.Networking.ServerAuthoritative",
+    "references": [
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Float32",
+        "ThirdPersonSimulation.Unity",
+        "ThirdPersonSimulation.ServerAuthoritative",
+        "ThirdPersonSimulation.ServerAuthoritative.Transport",
+        "ThirdPersonSimulation.UnityAuthority",
+        "ThirdPersonGameplay.NetworkModel.Unity",
+        "ThirdPersonGameplay",
+        "ThirdPersonGameplay.FantasyClient",
+        "ThirdPersonGameplay.FantasyProtocol",
+        "ThirdPersonClient.Runtime",
+        "BTSMTL.Diagnostics",
+        "BTSMTL.Timeline",
+        "Fantasy.Unity",
+        "Kybernetik.Animancer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

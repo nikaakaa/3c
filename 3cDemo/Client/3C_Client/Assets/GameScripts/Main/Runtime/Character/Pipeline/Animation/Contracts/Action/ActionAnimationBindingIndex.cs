@@ -82,10 +82,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 out binding);
 
         public static ActionAnimationBindingIndex Build(
-            CharacterPresentationProjection projection)
+            CharacterPresentationProjection projection,
+            CharacterPresentationSemanticContract contract)
         {
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
+            if (contract == null)
+                throw new ArgumentNullException(nameof(contract));
+            projection.RequireContract(contract);
             projection.RequirePosePayload();
 
             var result = new ActionAnimationBindingIndex(projection);
@@ -109,10 +113,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPresentationProducerEntry producer =
                     projection.Producers[i];
                 if (producer == null ||
-                    producer.ProgramProducerIndex != i)
+                    producer.ProgramProducerIndex != i ||
+                    i >= contract.Producers.Count ||
+                    !string.Equals(
+                        producer.ProgramProducerIdentity,
+                        contract.Producers[i].Identity,
+                        StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"Presentation producer #{i} is not ordered by its Projection index.");
+                        $"Presentation producer #{i} does not match the Program manifest.");
                 }
                 if (producer.Kind !=
                     CharacterPresentationProducerKind.Animation)

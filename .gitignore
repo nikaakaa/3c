@@ -160,3 +160,12 @@ ExternalDownloads/ZZZ_Studio/
 /3cDemo/Client/3C_Client/Assets/Plugins/PSD2UIForm.meta
 Tools/code_audit.py
 Tools/dead_sizes.py
+
+# ACL 动画压缩缓存
+3cDemo/Client/3C_Client/Assets/AssetRaw/Product/Gameplay/ACL/
+
+# 诊断输入回放
+3cDemo/Client/3C_Client/Diagnostics/CharacterInputTraces/
+
+# 临时工作文件
+.tmp_*

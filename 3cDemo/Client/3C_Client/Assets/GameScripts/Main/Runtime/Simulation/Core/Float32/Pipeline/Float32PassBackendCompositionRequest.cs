@@ -6,7 +6,7 @@ namespace ThirdPersonSimulation
 {
     public sealed class Float32PassBackendCompositionRequest
     {
-        readonly ReadOnlyCollection<Float32CharacterRuntimeActor> m_Roster;
+        readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
         readonly ReadOnlyCollection<SimulationPortDescriptor> m_ExpectedSourcePorts;
         readonly ReadOnlyCollection<SimulationOutputRouteDescriptor> m_OutputRoutes;
         readonly ReadOnlyCollection<IDisposable> m_SourceResources;
@@ -62,7 +62,7 @@ namespace ThirdPersonSimulation
         public SimulationExecutionBackendDescriptor Backend { get; }
         public CompiledSimulationPipelinePlan CompiledPipeline { get; }
         public Float32CharacterRuntime CharacterRuntime { get; }
-        public IReadOnlyList<Float32CharacterRuntimeActor> Roster => m_Roster;
+        public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
         public SimulationWorldStateSet InitialState { get; }
         public SimulationPipelineInitialStateSource PipelineInitialState { get; }
         public SimulationRuntimePortSet SourcePorts { get; }
@@ -84,11 +84,12 @@ namespace ThirdPersonSimulation
             if (!Backend.Identity.Equals(Descriptor.ExecutionBackend) ||
                 !CompiledPipeline.Backend.Equals(Descriptor.ExecutionBackend) ||
                 !CompiledPipeline.Identity.Equals(Descriptor.Pipeline) ||
+                !CharacterRuntime.GameplayContentHash.Equals(Descriptor.GameplayContentHash) ||
                 InitialState.WorldState.NumericProfile != Descriptor.ExecutionTarget.NumericProfile ||
                 InitialState.WorldState.SolverId != Solver.Descriptor.ImplementationId ||
                 !string.Equals(InitialState.WorldState.SolverVersion, Solver.Descriptor.Version, StringComparison.Ordinal))
             {
-                throw Failure("float32_character_runtime_mismatch", "Float32 Character Runtime does not match the locked Target, Pipeline, World or Solver composition.");
+                throw Failure("float32_character_runtime_mismatch", "Float32 Character Runtime does not match the locked Session composition.");
             }
             SimulationExecutionBackendTargetSupport support = Backend.RequireTarget(
                 Descriptor.NumericProfileId,
@@ -134,7 +135,7 @@ namespace ThirdPersonSimulation
                 throw Failure("actor_roster_count_mismatch", "Character Runtime roster does not match Session descriptor and initial state.");
             for (int i = 0; i < m_Roster.Count; i++)
             {
-                Float32CharacterRuntimeActor binding = m_Roster[i];
+                SimulationActorBinding binding = m_Roster[i];
                 if (binding.ActorId != Descriptor.Roster.Actors[i] ||
                     binding.ActorId != InitialState.Actors[i].ActorId ||
                     binding.ActorId != InitialState.WorldState.Bodies[i].ActorId)
@@ -196,9 +197,9 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        static ReadOnlyCollection<Float32CharacterRuntimeActor> FreezeRoster(IEnumerable<Float32CharacterRuntimeActor> roster)
+        static ReadOnlyCollection<SimulationActorBinding> FreezeRoster(IEnumerable<SimulationActorBinding> roster)
         {
-            var values = roster == null ? new List<Float32CharacterRuntimeActor>() : new List<Float32CharacterRuntimeActor>(roster);
+            var values = roster == null ? new List<SimulationActorBinding>() : new List<SimulationActorBinding>(roster);
             values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             if (values.Count == 0)
                 throw new ArgumentException("Character Runtime roster cannot be empty.", nameof(roster));

@@ -6,22 +6,24 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 {
     internal sealed class ServerAuthoritativePredictionReconciler
     {
-        readonly Float32CharacterRuntime m_CharacterRuntime;
+        readonly CharacterSimulationProgram m_Program;
         readonly ServerAuthoritativePipelineCompatibilityIdentity m_Compatibility;
         readonly ServerAuthoritativeWorldIdentity m_AuthorityWorld;
 
         public ServerAuthoritativePredictionReconciler(
-            Float32CharacterRuntime characterRuntime,
+            CharacterSimulationProgram program,
             ServerAuthoritativePipelineCompatibilityIdentity compatibility,
             ServerAuthoritativeWorldIdentity authorityWorld)
         {
-            m_CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
+            m_Program = program ?? throw new ArgumentNullException(nameof(program));
             m_Compatibility = compatibility ?? throw new ArgumentNullException(nameof(compatibility));
             m_AuthorityWorld = authorityWorld ?? throw new ArgumentNullException(nameof(authorityWorld));
-            if (!m_CharacterRuntime.OperationSetVersion.Equals(m_Compatibility.OperationSetVersion) ||
-                m_CharacterRuntime.TickRate != m_Compatibility.TickRate)
+            if (m_Program.Manifest.ProgramId != m_Compatibility.ProgramId ||
+                !m_Program.ProgramHash.Equals(m_Compatibility.ProgramHash) ||
+                !m_Program.LayoutHash.Equals(m_Compatibility.LayoutHash) ||
+                !m_Program.Manifest.OperationSetVersion.Equals(m_Compatibility.OperationSetVersion))
             {
-                throw new InvalidOperationException("Prediction state Character Runtime does not match the locked ServerAuthoritative compatibility identity.");
+                throw new InvalidOperationException("Prediction state Program does not match the locked ServerAuthoritative compatibility identity.");
             }
             if ((m_AuthorityWorld.SolverCapabilities & m_Compatibility.AuthoritySolverRequiredCapabilities) !=
                 m_Compatibility.AuthoritySolverRequiredCapabilities)
@@ -36,35 +38,33 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (baseline == null)
                 throw new ArgumentNullException(nameof(baseline));
-            Float32CharacterRuntimeActor actor = RequireActor(baseline.ActorId);
-            GameplayContentHash actorContentHash = new GameplayContentHash(actor.GameplayContentHash);
-            if (baseline.NumericProfile != m_CharacterRuntime.NumericProfile ||
-                !baseline.TargetAbiVersion.Equals(m_CharacterRuntime.NumericProfile.AbiVersion) ||
-                !string.Equals(baseline.StateCodecIdentity, Float32CharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal) ||
-                !baseline.GameplayContentHash.Equals(actorContentHash) ||
+            if (baseline.NumericProfile != m_Program.Manifest.NumericProfile ||
+                !baseline.TargetAbiVersion.Equals(m_Program.Manifest.NumericProfile.AbiVersion) ||
+                !string.Equals(baseline.StateCodecIdentity, CharacterSimulationStateCodec.CodecIdentity, StringComparison.Ordinal) ||
+                !baseline.ProgramHash.Equals(m_Compatibility.ProgramHash) ||
+                !baseline.LayoutHash.Equals(m_Compatibility.LayoutHash) ||
                 !baseline.OperationSetVersion.Equals(m_Compatibility.OperationSetVersion) ||
                 !baseline.SolverId.Equals(m_AuthorityWorld.SolverId) ||
                 !string.Equals(baseline.SolverVersion, m_AuthorityWorld.SolverVersion, StringComparison.Ordinal) ||
                 baseline.SolverCapabilities != m_AuthorityWorld.SolverCapabilities ||
                 !baseline.WorldRevision.Equals(m_AuthorityWorld.WorldRevision))
             {
-                throw new InvalidOperationException("Authority baseline does not match the locked Character Runtime, operation-set, or Solver identity.");
+                throw new InvalidOperationException("Authority baseline does not match the locked Program, operation-set, or Solver identity.");
             }
             var actorSnapshot = new SimulationActorSnapshot(
                 baseline.ActorId,
-                baseline.GameplayContentHash,
+                m_Compatibility.ProgramId,
+                baseline.ProgramHash,
+                baseline.LayoutHash,
                 baseline.StateHash,
-                Float32CharacterRuntimeStateCodec.CodecIdentity,
+                CharacterSimulationStateCodec.CodecIdentity,
                 baseline.CopyCharacterStateBytes());
-            _ = actorSnapshot.Decode(
-                actor.AbilityInstallations,
-                actorContentHash,
-                actor.GameplayEffectRuntimeBinding,
-                actor.EquipmentRuntimeBinding);
+            _ = actorSnapshot.Decode(m_Program);
             if (firstHistory == null)
                 return;
             if (firstHistory.Input.ActorId != baseline.ActorId ||
-                !firstHistory.Character.GameplayContentHash.Equals(baseline.GameplayContentHash) ||
+                !firstHistory.Character.ProgramHash.Equals(baseline.ProgramHash) ||
+                !firstHistory.Character.LayoutHash.Equals(baseline.LayoutHash) ||
                 !firstHistory.World.WorldRevision.Equals(baseline.WorldRevision))
             {
                 throw new InvalidOperationException("Authority baseline identity does not match Prediction history.");
@@ -179,15 +179,18 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             SimulationActorSnapshot localActor = local.Actors[0];
             if (localActor.ActorId != baseline.ActorId ||
-                !localActor.GameplayContentHash.Equals(baseline.GameplayContentHash))
+                !localActor.ProgramHash.Equals(baseline.ProgramHash) ||
+                !localActor.LayoutHash.Equals(baseline.LayoutHash))
             {
-                throw new InvalidOperationException("Authority baseline cannot replace another Character Actor history frame.");
+                throw new InvalidOperationException("Authority baseline cannot replace another Program/Actor history frame.");
             }
             var actor = new SimulationActorSnapshot(
                 baseline.ActorId,
-                baseline.GameplayContentHash,
+                localActor.ProgramId,
+                baseline.ProgramHash,
+                baseline.LayoutHash,
                 baseline.StateHash,
-                Float32CharacterRuntimeStateCodec.CodecIdentity,
+                CharacterSimulationStateCodec.CodecIdentity,
                 baseline.CopyCharacterStateBytes());
             WorldSimulationState localWorld = local.DecodeWorldState();
             var world = new WorldSimulationState(
@@ -200,6 +203,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 localWorld.SolverStatePayload.ToArray());
             return new SimulationWorldSnapshot(
                 local.NumericProfile,
+                local.GameplayContentHash,
                 local.SolverId,
                 local.SolverVersion,
                 local.WorldRevision,
@@ -257,14 +261,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             float delta = MathF.Abs(left.Yaw.Degrees.Value - right.Yaw.Degrees.Value) % 360f;
             return Float32Scalar.FromSingle(delta > 180f ? 360f - delta : delta);
-        }
-
-        Float32CharacterRuntimeActor RequireActor(ActorId actorId)
-        {
-            for (int i = 0; i < m_CharacterRuntime.Roster.Count; i++)
-                if (m_CharacterRuntime.Roster[i].ActorId == actorId)
-                    return m_CharacterRuntime.Roster[i];
-            throw new InvalidOperationException($"Character Runtime has no Actor '{actorId}'.");
         }
     }
 

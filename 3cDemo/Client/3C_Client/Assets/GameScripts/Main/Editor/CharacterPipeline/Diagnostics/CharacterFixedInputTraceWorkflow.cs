@@ -1478,23 +1478,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterFixedInputReplayRuntimeIdentity
             ResolveReplayRuntimeIdentity(FixedCharacterHost host)
         {
-            if (host == null || host.Registration == null ||
+            if (host == null || !host.ProgramAsset ||
                 !host.ProjectionAsset || !host.SessionHost ||
                 !host.SessionHost.Composition)
             {
                 throw new InvalidOperationException(
                     "Fixed input replay runtime products are unavailable.");
             }
-            FixedCharacterRuntime runtime = host.Registration.CharacterRuntime;
-            if (runtime.Abilities.Count == 0)
-                throw new InvalidOperationException("Fixed input replay requires at least one installed Ability.");
-            FixedGameplayAbilityExecutionData ability = runtime.Abilities[0];
+            ThirdPersonSimulation.Fixed.CharacterSimulationProgram program =
+                host.ProgramAsset.Load();
             return new CharacterFixedInputReplayRuntimeIdentity(
-                $"fixed-character-runtime/{host.ActorId.Value}",
-                runtime.GameplayContentHash.ToString(),
-                ability.SourceRevision.Value,
-                ability.SemanticHash.ToString(),
-                runtime.TickRate,
+                program.Manifest.ProgramId.Value,
+                program.ProgramHash.ToString(),
+                program.Manifest.SourceRevision.Value,
+                program.Manifest.SemanticHash.ToString(),
+                program.Manifest.TickRate,
                 host.ProjectionAsset.ProjectionRevision,
                 host.ProjectionAsset.SourceRevision,
                 host.ProjectionAsset.SemanticHash,

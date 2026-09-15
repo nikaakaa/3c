@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
@@ -36,19 +35,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     public readonly struct CharacterControlSourceContext
     {
         public CharacterControlSourceContext(
-            ISimulationSessionActorHost owner,
-            ICameraBasisSnapshotProvider cameraBasis,
+            CharacterPipelineHost owner,
             CharacterPipelineDefinition definition,
             CharacterControlModuleContract controlModule)
         {
-            Owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            CameraBasis = cameraBasis ?? throw new ArgumentNullException(nameof(cameraBasis));
+            Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
         }
 
-        public ISimulationSessionActorHost Owner { get; }
-        public ICameraBasisSnapshotProvider CameraBasis { get; }
+        public CharacterPipelineHost Owner { get; }
         public CharacterPipelineDefinition Definition { get; }
         public CharacterControlModuleContract ControlModule { get; }
     }
@@ -74,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     m_Values.Add(CreateNeutralValue(profile.InputValues[i]));
             }
             m_Values.Sort((left, right) => string.CompareOrdinal(left.InputId, right.InputId));
-            SourceIdentity = "neutral-character-inputs/character-control";
+            SourceIdentity = "neutral-character-inputs/float32";
         }
 
         public string SourceIdentity { get; }

@@ -1,0 +1,560 @@
+using System;
+using System.Collections.Generic;
+using ThirdPersonCamera;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Presentation;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Pipeline.Animation
+{
+    public sealed partial class CharacterPresentationProjection
+    {
+        [SerializeField] CharacterPoseProgramImage m_PosePlan;
+        [SerializeField] AnimationBlendCurveCatalogPayload m_BlendCurveCatalog;
+        [SerializeField] AnimationBlendProfileCatalogPayload m_BlendProfileCatalog;
+        [SerializeField] CharacterAnimationRigPayload m_Rig;
+        [SerializeField] CharacterAnimationCompiledResourceDescriptor[] m_AnimationResources =
+            Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
+        [SerializeField] CharacterPresentationPoseSourcePlan[] m_PoseSources = Array.Empty<CharacterPresentationPoseSourcePlan>();
+        [SerializeField] CharacterAnimationBlendSpacePlan[] m_BlendSpaces = Array.Empty<CharacterAnimationBlendSpacePlan>();
+        [SerializeField] CharacterAnimationBlendSpacePlayerPlan[] m_BlendSpacePlayers = Array.Empty<CharacterAnimationBlendSpacePlayerPlan>();
+        [SerializeField] AnimationClipPhasePlan[] m_ClipPhasePlans = Array.Empty<AnimationClipPhasePlan>();
+        [SerializeField] AnimationSourcePhasePlan[] m_SourcePhasePlans = Array.Empty<AnimationSourcePhasePlan>();
+        [SerializeField] CharacterPoseTuningLayout m_TuningLayout;
+        [SerializeField] CharacterPoseTuningParameterBlock m_TuningDefaultBlock;
+        [SerializeField] string m_PublishedParameterRevision = string.Empty;
+        [SerializeField] CharacterPresentationAnimationPropertyBinding[] m_AnimationProperties = Array.Empty<CharacterPresentationAnimationPropertyBinding>();
+        [SerializeField] CharacterAnimationEventGraph m_AnimationEventGraph;
+        [NonSerialized] MotionMatchingProjectionPayload m_MotionMatching;
+        [SerializeField] byte[] m_MotionMatchingPayload = Array.Empty<byte>();
+        [SerializeField] UnityEngine.AnimationClip[] m_MotionMatchingNativeClips = Array.Empty<UnityEngine.AnimationClip>();
+
+        public CharacterPoseProgramImage PosePlan => m_PosePlan;
+        public AnimationBlendCurveCatalogPayload BlendCurveCatalog => m_BlendCurveCatalog;
+        public AnimationBlendProfileCatalogPayload BlendProfileCatalog => m_BlendProfileCatalog;
+        public CharacterAnimationRigPayload Rig => m_Rig;
+        public IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> AnimationResources =>
+            m_AnimationResources ?? Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
+        public IReadOnlyList<CharacterPresentationPoseSourcePlan> PoseSources =>
+            m_PoseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>();
+        public IReadOnlyList<CharacterAnimationBlendSpacePlan> BlendSpaces => m_BlendSpaces ?? Array.Empty<CharacterAnimationBlendSpacePlan>();
+        public IReadOnlyList<CharacterAnimationBlendSpacePlayerPlan> BlendSpacePlayers => m_BlendSpacePlayers ?? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>();
+        public IReadOnlyList<AnimationClipPhasePlan> ClipPhasePlans =>
+            m_ClipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>();
+        public IReadOnlyList<AnimationSourcePhasePlan> SourcePhasePlans =>
+            m_SourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>();
+        public MotionMatchingProjectionPayload MotionMatching => m_MotionMatching;
+        public CharacterPoseTuningLayout TuningLayout => m_TuningLayout;
+        public CharacterPoseTuningParameterBlock TuningDefaultBlock => m_TuningDefaultBlock;
+        public string PublishedParameterRevision => m_PublishedParameterRevision ?? string.Empty;
+        public IReadOnlyList<CharacterPresentationAnimationPropertyBinding> AnimationProperties =>
+            m_AnimationProperties ?? Array.Empty<CharacterPresentationAnimationPropertyBinding>();
+        public CharacterAnimationEventGraph AnimationEventGraph => m_AnimationEventGraph;
+
+        public bool TryGetPoseSource(
+            PresentationPoseSourceIndex sourceIndex,
+            out CharacterPresentationPoseSourcePlan source)
+        {
+            for (int i = 0; i < PoseSources.Count; i++)
+            {
+                CharacterPresentationPoseSourcePlan candidate = PoseSources[i];
+                if (candidate != null && candidate.SourceIndex == sourceIndex)
+                {
+                    source = candidate;
+                    return true;
+                }
+            }
+            source = null;
+            return false;
+        }
+
+        public bool TryGetSourcePhasePlan(
+            PresentationPoseSourceIndex sourceIndex,
+            out AnimationSourcePhasePlan plan)
+        {
+            for (int i = 0; i < SourcePhasePlans.Count; i++)
+            {
+                if (SourcePhasePlans[i] != null && SourcePhasePlans[i].SourceIndex == sourceIndex)
+                {
+                    plan = SourcePhasePlans[i];
+                    return true;
+                }
+            }
+            plan = null;
+            return false;
+        }
+
+        public void OnBeforeSerialize()
+        {
+            m_MotionMatchingPayload = MotionMatchingProjectionPayloadCodec.Encode(
+                m_MotionMatching,
+                out m_MotionMatchingNativeClips);
+        }
+
+        public void OnAfterDeserialize()
+        {
+            m_MotionMatching = MotionMatchingProjectionPayloadCodec.Decode(
+                m_MotionMatchingPayload,
+                m_MotionMatchingNativeClips);
+        }
+
+        public AnimationBlendNodePayload RequireBlendNode(PoseNodeId nodeId) => PosePlan.RequireBlendNode(nodeId);
+
+        internal static CharacterPresentationProjection Create(
+            CharacterPresentationSemanticContract contract,
+            CharacterPoseProgramImage posePlan,
+            AnimationBlendCurveCatalogPayload blendCurveCatalog,
+            AnimationBlendProfileCatalogPayload blendProfileCatalog,
+            CharacterAnimationRigPayload rig,
+            CharacterAnimationCompiledResourceDescriptor[] animationResources,
+            MotionMatchingProjectionPayload motionMatching,
+            CharacterPresentationPoseSourcePlan[] poseSources,
+            CharacterAnimationBlendSpacePlan[] blendSpaces,
+            CharacterAnimationBlendSpacePlayerPlan[] blendSpacePlayers,
+            AnimationClipPhasePlan[] clipPhasePlans,
+            AnimationSourcePhasePlan[] sourcePhasePlans,
+            CharacterPresentationProducerEntry[] producers,
+            AnimationFootAnalysisProjectionIdentity footAnalysis,
+            string projectionRevision,
+            EquipmentVisualProjectionBinding[] equipmentVisualBindings,
+            CharacterLinkedPoseProjectionPayload linkedPose,
+            CharacterCameraProjectionPayload camera,
+            CharacterPoseTuningLayout tuningLayout = null,
+            CharacterPoseTuningParameterBlock tuningDefaultBlock = null,
+            string publishedParameterRevision = "",
+            CharacterPresentationAnimationPropertyBinding[] animationProperties = null,
+            CharacterAnimationEventGraph animationEventGraph = null)
+        {
+            if (contract == null)
+                throw new ArgumentNullException(nameof(contract));
+            var projection = new CharacterPresentationProjection
+            {
+                m_AbiVersion = CurrentAbiVersion,
+                m_ProgramId = contract.ProgramId.Value,
+                m_SourceRevision = contract.SourceRevision.Value,
+                m_SemanticHash = contract.SemanticHash.ToString(),
+                m_ContractHash = contract.ContractHash.ToString(),
+                m_PosePlan = posePlan ?? throw new ArgumentNullException(nameof(posePlan)),
+                m_BlendCurveCatalog = blendCurveCatalog ?? throw new ArgumentNullException(nameof(blendCurveCatalog)),
+                m_BlendProfileCatalog = blendProfileCatalog ?? throw new ArgumentNullException(nameof(blendProfileCatalog)),
+                m_Rig = rig ?? throw new ArgumentNullException(nameof(rig)),
+                m_AnimationResources = animationResources ?? Array.Empty<CharacterAnimationCompiledResourceDescriptor>(),
+                m_MotionMatching = motionMatching,
+                m_PoseSources = poseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>(),
+                m_BlendSpaces = blendSpaces ?? Array.Empty<CharacterAnimationBlendSpacePlan>(),
+                m_BlendSpacePlayers = blendSpacePlayers ?? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>(),
+                m_ClipPhasePlans = clipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>(),
+                m_SourcePhasePlans = sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>(),
+                m_Producers = producers ?? Array.Empty<CharacterPresentationProducerEntry>(),
+                m_FootAnalysis = footAnalysis,
+                m_Camera = camera,
+                m_TuningLayout = tuningLayout,
+                m_TuningDefaultBlock = tuningDefaultBlock,
+                m_PublishedParameterRevision = publishedParameterRevision ?? string.Empty,
+                m_AnimationProperties = animationProperties ?? Array.Empty<CharacterPresentationAnimationPropertyBinding>(),
+                m_AnimationEventGraph = animationEventGraph
+                    ? animationEventGraph
+                    : throw new ArgumentNullException(nameof(animationEventGraph))
+            };
+            projection.SetEquipmentProjection(
+                projectionRevision,
+                equipmentVisualBindings);
+            projection.SetLinkedPoseProjection(linkedPose);
+            return projection;
+        }
+
+        public void RequireCameraPayload()
+        {
+            if (Camera == null)
+                throw new InvalidOperationException("Character Presentation Projection Camera payload is missing.");
+            Camera.RequireValid();
+        }
+
+        public void RequireTuningPayload()
+        {
+            if (TuningLayout == null || TuningDefaultBlock == null ||
+                string.IsNullOrWhiteSpace(PublishedParameterRevision))
+                throw new InvalidOperationException("Character Presentation Projection tuning payload is incomplete.");
+            TuningLayout.RequireValid();
+            TuningDefaultBlock.RequireValid(TuningLayout);
+            if (!string.Equals(TuningLayout.ProgramId, ProgramId, StringComparison.Ordinal) ||
+                !string.Equals(TuningLayout.ProjectionRevision, ProjectionRevision, StringComparison.Ordinal) ||
+                !string.Equals(TuningLayout.PosePlanHash, PosePlan.PlanHash, StringComparison.Ordinal) ||
+                !string.Equals(TuningLayout.RigId, Rig.RigId, StringComparison.Ordinal) ||
+                !string.Equals(TuningLayout.RigRevision, Rig.RigRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Character Presentation Projection tuning identity is stale.");
+            RequireStructuralTuningPayload();
+        }
+
+        void RequireStructuralTuningPayload()
+        {
+            for (int profileIndex = 0; profileIndex < PosePlan.FootPlacements.Count; profileIndex++)
+            {
+                CharacterPresentationFootPlacementDescriptor descriptor =
+                    PosePlan.FootPlacements[profileIndex];
+                CharacterFootLandingPredictionSettings landing =
+                    descriptor.Profile.LandingPrediction.Build();
+                CharacterFootGroundDetectionSettings ground =
+                    descriptor.Profile.GroundDetection.Build();
+                string ownerId = $"foot-placement-profile:{descriptor.Profile.ProfileId}";
+                for (int entryIndex = 0; entryIndex < TuningLayout.Entries.Count; entryIndex++)
+                {
+                    CharacterPoseTuningLayoutEntry entry = TuningLayout.Entries[entryIndex];
+                    if (!string.Equals(entry.OwnerId, ownerId, StringComparison.Ordinal) ||
+                        entry.Interaction != CharacterPoseTuningInteractionPolicy.Structural)
+                        continue;
+                    CharacterPoseTuningValue value = TuningDefaultBlock.GetValue(entry);
+                    if (entry.FieldId.EndsWith("/landing-prediction/hit-capacity", StringComparison.Ordinal) &&
+                        value.IntegerValue != landing.HitCapacity)
+                        throw new InvalidOperationException("Character Presentation Projection Foot Placement hit capacity is stale.");
+                    if (entry.FieldId.EndsWith("/ground-detection/segment-hit-capacity", StringComparison.Ordinal) &&
+                        value.IntegerValue != ground.SegmentHitCapacity)
+                        throw new InvalidOperationException("Character Presentation Projection Ground Detection segment hit capacity is stale.");
+                    if (entry.FieldId.EndsWith("/ground-detection/contact-capacity", StringComparison.Ordinal) &&
+                        value.IntegerValue != ground.ContactCapacity)
+                        throw new InvalidOperationException("Character Presentation Projection Ground Detection contact capacity is stale.");
+                }
+            }
+        }
+
+        internal void SetAnimationResources(
+            CharacterAnimationCompiledResourceDescriptor[] animationResources,
+            string projectionRevision)
+        {
+            m_AnimationResources = animationResources ?? Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
+            if (string.IsNullOrWhiteSpace(projectionRevision))
+                throw new ArgumentException("Projection revision is required.", nameof(projectionRevision));
+            SetEquipmentProjection(projectionRevision, m_EquipmentVisualBindings);
+        }
+
+        internal void SetTuningPayload(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock defaultBlock,
+            string publishedParameterRevision)
+        {
+            m_TuningLayout = layout ?? throw new ArgumentNullException(nameof(layout));
+            m_TuningDefaultBlock = defaultBlock ?? throw new ArgumentNullException(nameof(defaultBlock));
+            m_PublishedParameterRevision = string.IsNullOrWhiteSpace(publishedParameterRevision)
+                ? throw new ArgumentException("Published parameter revision is required.", nameof(publishedParameterRevision))
+                : publishedParameterRevision;
+            RequireTuningPayload();
+        }
+
+        public void RequirePosePayload(bool bindProjectionIdentity = true)
+        {
+            if (bindProjectionIdentity)
+                PosePlan?.BindProjectionIdentity(
+                    ProgramId,
+                    ProjectionRevision);
+            PosePlan?.RequireValid();
+            Rig?.RequireValid();
+            BlendCurveCatalog?.RequireValid();
+            BlendProfileCatalog?.RequireValid(Rig?.PoseBoneCount ?? 0, Rig?.RigId, Rig?.RigRevision);
+            if (PosePlan == null || Rig == null || BlendCurveCatalog == null || BlendProfileCatalog == null ||
+                !string.Equals(PosePlan.RigId, Rig.RigId, StringComparison.Ordinal) ||
+                !string.Equals(PosePlan.RigRevision, Rig.RigRevision, StringComparison.Ordinal) ||
+                PosePlan.PoseBoneCount != Rig.PoseBoneCount)
+            {
+                throw new InvalidOperationException("Character Presentation Projection Pose payload is incomplete or inconsistent.");
+            }
+
+            for (int i = 0; i < AnimationResources.Count; i++)
+            {
+                CharacterAnimationCompiledResourceDescriptor resource =
+                    AnimationResources[i] ??
+                    throw new InvalidOperationException($"Character Presentation Projection animation resource #{i} is missing.");
+                resource.RequireValid();
+                if (resource.ResourceIndex != i)
+                    throw new InvalidOperationException("Character Presentation Projection animation resource indices are not dense.");
+            }
+
+            var poseSourceIndices = new HashSet<PresentationPoseSourceIndex>();
+            for (int i = 0; i < PoseSources.Count; i++)
+            {
+                CharacterPresentationPoseSourcePlan source = PoseSources[i];
+                source?.RequireValid();
+                if (source == null || !poseSourceIndices.Add(source.SourceIndex) ||
+                    !string.Equals(source.RigId, Rig.RigId, StringComparison.Ordinal) ||
+                    !string.Equals(source.RigRevision, Rig.RigRevision, StringComparison.Ordinal) ||
+                    FootAnalysis == null || !FootAnalysis.IsEnabled ||
+                    !string.Equals(source.FootAnalysisIdentity, FootAnalysis.AnalysisSourceId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"Character Presentation Projection Pose source #{i} is inconsistent.");
+                }
+            }
+
+            RequireLinkedPosePosePlan(poseSourceIndices);
+
+            var blendNodes = new HashSet<PoseNodeId>();
+            for (int i = 0; i < PosePlan.BlendNodes.Count; i++)
+            {
+                AnimationBlendNodePayload blend = PosePlan.BlendNodes[i];
+                if (blend == null || !blendNodes.Add(blend.NodeId) || blend.StackPolicy == null)
+                    throw new InvalidOperationException($"Character Presentation Projection Blend Stack #{i} is inconsistent.");
+                blend.StackPolicy.RequireValid();
+                for (int transitionIndex = 0; transitionIndex < blend.Transitions.Count; transitionIndex++)
+                {
+                    AnimationBlendTransitionPayload transition = blend.Transitions[transitionIndex];
+                    if (transition == null)
+                        throw new InvalidOperationException($"Character Presentation Projection Blend Stack '{blend.NodeId}' transition #{transitionIndex} is missing.");
+                    transition.RequireValid(BlendCurveCatalog.Entries.Count, BlendProfileCatalog.Entries.Count);
+                }
+            }
+            RequireMotionMatchingPayload();
+            RequireBlendSpacePayload();
+            RequireAnimationPropertyPayload();
+        }
+
+        void RequireAnimationPropertyPayload()
+        {
+            var bindingIds = new HashSet<string>(StringComparer.Ordinal);
+            var parameterIds = new HashSet<PoseParameterId>();
+            for (int i = 0; i < AnimationProperties.Count; i++)
+            {
+                CharacterPresentationAnimationPropertyBinding binding = AnimationProperties[i];
+                binding?.RequireValid(PosePlan);
+                if (binding == null || !bindingIds.Add(binding.BindingId) || !parameterIds.Add(binding.ParameterId))
+                    throw new InvalidOperationException($"Character Presentation Projection animation property binding #{i} is missing or duplicated.");
+            }
+        }
+
+        void RequireLinkedPosePosePlan(HashSet<PresentationPoseSourceIndex> poseSourceIndices)
+        {
+            LinkedPose?.RequireValid();
+            if (LinkedPose == null ||
+                !string.Equals(LinkedPose.RigId, Rig.RigId, StringComparison.Ordinal) ||
+                !string.Equals(LinkedPose.RigRevision, Rig.RigRevision, StringComparison.Ordinal) ||
+                LinkedPose.Calls.Count != PosePlan.LinkedPoseCalls.Count)
+            {
+                throw new InvalidOperationException("Projection Linked Pose payload does not match the Pose Plan.");
+            }
+
+            var calls = new Dictionary<PoseNodeId, CharacterLinkedPoseCallProjectionDescriptor>();
+            for (int i = 0; i < LinkedPose.Calls.Count; i++)
+                calls.Add(LinkedPose.Calls[i].NodeId, LinkedPose.Calls[i]);
+            var selectors = new Dictionary<LinkedPoseGroupId, CharacterLinkedPoseCompiledSelectorDescriptor>();
+            for (int i = 0; i < LinkedPose.Selectors.Count; i++)
+                selectors.Add(LinkedPose.Selectors[i].GroupId, LinkedPose.Selectors[i]);
+            var implementations = new Dictionary<LinkedPoseImplementationId, CharacterLinkedPoseImplementationProjectionDescriptor>();
+            for (int i = 0; i < LinkedPose.Implementations.Count; i++)
+                implementations.Add(LinkedPose.Implementations[i].ImplementationId, LinkedPose.Implementations[i]);
+
+            for (int callIndex = 0; callIndex < PosePlan.LinkedPoseCalls.Count; callIndex++)
+            {
+                CharacterLinkedPoseCallPlanDescriptor planCall = PosePlan.LinkedPoseCalls[callIndex];
+                if (!calls.TryGetValue(planCall.NodeId, out CharacterLinkedPoseCallProjectionDescriptor projectionCall) ||
+                    projectionCall.GroupId != planCall.GroupId ||
+                    projectionCall.InterfaceId != planCall.InterfaceId ||
+                    projectionCall.InterfaceSignature != planCall.InterfaceSignature ||
+                    projectionCall.EntryId != planCall.EntryId ||
+                    !selectors.TryGetValue(planCall.GroupId, out CharacterLinkedPoseCompiledSelectorDescriptor selector) ||
+                    selector.CandidateImplementationIds.Count != planCall.FragmentIndices.Count)
+                {
+                    throw new InvalidOperationException($"Linked Pose Call '{planCall.NodeId}' Projection and Pose Plan contracts differ.");
+                }
+
+                var candidates = new HashSet<LinkedPoseImplementationId>();
+                for (int candidateIndex = 0; candidateIndex < selector.CandidateImplementationIds.Count; candidateIndex++)
+                    candidates.Add(new LinkedPoseImplementationId(selector.CandidateImplementationIds[candidateIndex]));
+                for (int fragmentOffset = 0; fragmentOffset < planCall.FragmentIndices.Count; fragmentOffset++)
+                {
+                    CharacterLinkedPoseEntryFragmentPlanDescriptor fragment =
+                        PosePlan.LinkedPoseFragments[planCall.FragmentIndices[fragmentOffset]];
+                    if (!candidates.Remove(fragment.ImplementationId) ||
+                        !implementations.TryGetValue(fragment.ImplementationId, out CharacterLinkedPoseImplementationProjectionDescriptor implementation) ||
+                        implementation.Revision != fragment.ImplementationRevision ||
+                        implementation.InterfaceId != fragment.InterfaceId ||
+                        implementation.InterfaceSignature != fragment.InterfaceSignature)
+                    {
+                        throw new InvalidOperationException($"Linked Pose Call '{planCall.NodeId}' candidate fragment '{fragment.ImplementationId}' is stale.");
+                    }
+
+                    CharacterLinkedPoseEntryFragmentDescriptor projectedEntry = null;
+                    for (int entryIndex = 0; entryIndex < implementation.Entries.Count; entryIndex++)
+                    {
+                        if (implementation.Entries[entryIndex].EntryId == fragment.EntryId)
+                        {
+                            projectedEntry = implementation.Entries[entryIndex];
+                            break;
+                        }
+                    }
+                    if (projectedEntry == null || projectedEntry.GraphId != fragment.GraphId ||
+                        !string.Equals(projectedEntry.GraphContentRevision, fragment.GraphRevision, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException($"Linked Pose fragment '{fragment.ImplementationId}/{fragment.EntryId}' graph revision is stale.");
+                    }
+                    for (int sourceOffset = 0; sourceOffset < fragment.SourceIndices.Count; sourceOffset++)
+                    {
+                        if (!poseSourceIndices.Contains(new PresentationPoseSourceIndex(fragment.SourceIndices[sourceOffset])))
+                            throw new InvalidOperationException($"Linked Pose fragment '{fragment.ImplementationId}/{fragment.EntryId}' references an absent Pose source.");
+                    }
+                }
+                if (candidates.Count != 0)
+                    throw new InvalidOperationException($"Linked Pose Call '{planCall.NodeId}' candidate closure is incomplete.");
+            }
+        }
+
+        void RequireBlendSpacePayload()
+        {
+            var referencedPlans = new HashSet<int>();
+            int operationCount = 0;
+            var playerNodes = new HashSet<PoseNodeId>();
+            for (int i = 0; i < PosePlan.OperationHeaders.Count; i++)
+            {
+                if (PosePlan.OperationHeaders[i].Code == CharacterPoseOperationCode.BlendSpacePlayer)
+                    operationCount++;
+            }
+            for (int i = 0; i < BlendSpacePlayers.Count; i++)
+            {
+                CharacterAnimationBlendSpacePlayerPlan player = BlendSpacePlayers[i];
+                player?.RequireValid(this);
+                if (player == null || !playerNodes.Add(player.NodeId))
+                    throw new InvalidOperationException($"Projection Blend Space Player plan #{i} is missing or duplicated.");
+                referencedPlans.Add(player.BlendSpacePlanIndex);
+                CharacterAnimationBlendSpacePlan plan =
+                    BlendSpaces[player.BlendSpacePlanIndex];
+                plan?.RequireValid(
+                    FootAnalysis != null && FootAnalysis.IsEnabled);
+                if (plan == null ||
+                    !string.Equals(
+                        plan.RigId,
+                        Rig.RigId,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(
+                        plan.RigRevision,
+                        Rig.RigRevision,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Blend Space Player '{player.NodeId}' plan Rig is inconsistent.");
+                }
+            }
+            if (operationCount != BlendSpacePlayers.Count)
+                throw new InvalidOperationException("Projection Blend Space Player operation count is inconsistent.");
+            if (referencedPlans.Count != BlendSpaces.Count)
+                throw new InvalidOperationException(
+                    "Projection retains an unreferenced Blend Space plan.");
+        }
+
+        void RequireMotionMatchingPayload()
+        {
+            PosePlan.RequireMotionMatchingPlan();
+            if (PosePlan.MotionMatchingNodes.Count == 0)
+            {
+                if (m_MotionMatching != null)
+                    throw new InvalidOperationException(
+                        "Projection has a Motion Matching payload without a MotionMatchingPose node.");
+                return;
+            }
+            if (m_MotionMatching == null)
+                throw new InvalidOperationException(
+                    "Projection MotionMatchingPose nodes require a Motion Matching payload.");
+            if (m_MotionMatching.NodeBindingCount != PosePlan.MotionMatchingNodes.Count)
+                throw new InvalidOperationException(
+                    "Projection Motion Matching node binding count does not match the Pose Plan.");
+            if (!string.Equals(m_MotionMatching.FeatureSchema.RigId, Rig.RigId, StringComparison.Ordinal) ||
+                !string.Equals(m_MotionMatching.FeatureSchema.RigRevision, Rig.RigRevision, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Projection Motion Matching Feature Schema Rig does not match the Presentation Rig.");
+            }
+            for (int databaseIndex = 0;
+                 databaseIndex < m_MotionMatching.DatabaseCount;
+                 databaseIndex++)
+            {
+                MotionMatchingDatabasePayload database =
+                    m_MotionMatching.GetDatabase(databaseIndex);
+                for (int clipIndex = 0;
+                     clipIndex < database.ClipBindingCount;
+                     clipIndex++)
+                {
+                    MotionMatchingClipBindingPayload binding =
+                        database.GetClipBinding(clipIndex);
+                    binding?.RequireValid();
+                    if (binding == null)
+                        throw new InvalidOperationException(
+                            $"Projection Motion Matching Database #{databaseIndex} clip binding #{clipIndex} is missing.");
+                    if (binding.Backend ==
+                            CharacterAnimationSamplingBackendKind.NativeClip &&
+                        binding.NativeScalarPage != null &&
+                        binding.NativeScalarPage.ParameterCount !=
+                            PosePlan.Parameters.Count)
+                    {
+                        throw new InvalidOperationException(
+                            "Projection Motion Matching Native Clip scalar page parameter count does not match the Pose Plan.");
+                    }
+                    if (binding.Backend ==
+                            CharacterAnimationSamplingBackendKind.Acl &&
+                        binding.NativeScalarPage != null)
+                    {
+                        throw new InvalidOperationException(
+                            "Projection Motion Matching ACL binding contains a Native scalar page.");
+                    }
+                }
+            }
+
+            var planNodes = new Dictionary<PoseNodeId, CharacterMotionMatchingPosePlanDescriptor>();
+            for (int i = 0; i < PosePlan.MotionMatchingNodes.Count; i++)
+            {
+                CharacterMotionMatchingPosePlanDescriptor node =
+                    PosePlan.MotionMatchingNodes[i];
+                if (!planNodes.TryAdd(node.NodeId, node))
+                {
+                    throw new InvalidOperationException(
+                        $"Motion Matching Pose Plan node '{node.NodeId}' is duplicated.");
+                }
+            }
+
+            var resolvedNodes = new HashSet<PoseNodeId>();
+            var resolvedDatabases = new HashSet<int>();
+            for (int i = 0; i < m_MotionMatching.NodeBindingCount; i++)
+            {
+                MotionMatchingNodeBindingPayload binding =
+                    m_MotionMatching.GetNodeBinding(i);
+                if (!planNodes.TryGetValue(
+                        binding.PoseNodeId,
+                        out CharacterMotionMatchingPosePlanDescriptor node) ||
+                    !resolvedNodes.Add(binding.PoseNodeId) ||
+                    node.BindingId != binding.BindingId ||
+                    node.BindingRevision != binding.BindingRevision ||
+                    node.ProfileId != m_MotionMatching.ProfileId ||
+                    node.ProfileRevision != m_MotionMatching.ProfileRevision ||
+                    node.ChooserId != binding.ChooserId ||
+                    node.ChooserRevision != binding.ChooserRevision ||
+                    node.SearchDomainId != binding.SearchDomainId ||
+                    node.FirstDatabaseIndex != binding.FirstDatabaseIndex ||
+                    node.DatabaseCount != binding.DatabaseCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Motion Matching node binding #{i} does not match its Pose Plan node.");
+                }
+                binding.Chooser.RequireDatabaseRange(
+                    binding.FirstDatabaseIndex,
+                    binding.DatabaseCount,
+                    m_MotionMatching.DatabaseCount);
+                for (int databaseOffset = 0; databaseOffset < binding.DatabaseCount; databaseOffset++)
+                {
+                    int databaseIndex = binding.FirstDatabaseIndex + databaseOffset;
+                    MotionMatchingDatabasePayload database =
+                        m_MotionMatching.GetDatabase(databaseIndex);
+                    if (!resolvedDatabases.Add(databaseIndex) || database == null ||
+                        database.SearchDomainId != binding.SearchDomainId ||
+                        database.ArtifactIdentity.FeatureSchemaId != m_MotionMatching.FeatureSchema.SchemaId ||
+                        database.ArtifactIdentity.FeatureSchemaRevision != m_MotionMatching.FeatureSchema.Revision ||
+                        !string.Equals(database.ArtifactIdentity.RigId, Rig.RigId, StringComparison.Ordinal) ||
+                        !string.Equals(database.ArtifactIdentity.RigRevision, Rig.RigRevision, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Motion Matching node '{binding.PoseNodeId}' Database payload #{databaseIndex} is stale or shared by another node binding.");
+                    }
+                }
+            }
+            if (resolvedNodes.Count != planNodes.Count ||
+                resolvedDatabases.Count != m_MotionMatching.DatabaseCount)
+            {
+                throw new InvalidOperationException(
+                    "Projection Motion Matching closure contains unresolved nodes or Databases.");
+            }
+        }
+    }
+}

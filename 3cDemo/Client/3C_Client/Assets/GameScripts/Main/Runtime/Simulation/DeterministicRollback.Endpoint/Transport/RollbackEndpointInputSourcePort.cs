@@ -107,7 +107,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public RollbackIngressBatch Read(
             SimulationTickSourceIdentity outerSource,
             SimulationTick nextSimulationTick,
-            IReadOnlyList<FixedCharacterRuntimeActor> roster)
+            IReadOnlyList<SimulationActorBinding> roster)
         {
             if (outerSource.Kind != SimulationTickSourceKind.LocalLogic || outerSource.SourceTick <= m_LastOuterSourceTick)
                 throw new InvalidOperationException("Rollback input Source requires a new LocalLogic outer Tick.");
@@ -276,7 +276,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         RollbackCanonicalInputBundle BuildPredictedBundle(
             SimulationTick tick,
             SimulationTickSourceIdentity source,
-            IReadOnlyList<FixedCharacterRuntimeActor> roster)
+            IReadOnlyList<SimulationActorBinding> roster)
         {
             var actors = new RollbackActorInputFrame[roster.Count];
             for (int i = 0; i < roster.Count; i++)
@@ -324,7 +324,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return new RollbackActorInputFrame(actorId, tick, sequence, input, provenance);
         }
 
-        void RequireRoster(IReadOnlyList<FixedCharacterRuntimeActor> roster)
+        void RequireRoster(IReadOnlyList<SimulationActorBinding> roster)
         {
             RollbackRoster endpointRoster = m_Peer.Roster;
             if (endpointRoster == null || roster.Count != endpointRoster.Entries.Count)
@@ -387,7 +387,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return value;
         }
 
-        void DrainCanonical(IReadOnlyList<FixedCharacterRuntimeActor> roster)
+        void DrainCanonical(IReadOnlyList<SimulationActorBinding> roster)
         {
             while (m_Peer.TryReceiveCanonicalBundle(out RollbackCanonicalInputBundle bundle))
             {

@@ -28,7 +28,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new ArgumentNullException(nameof(context));
             var reads = new RollbackScheduleReadPorts(
                 context.Products.BindExclusiveReader<RollbackIngressBatch>(RollbackPipelineProducts.Ingress),
-                context.BindTargetPort<IFixedCharacterRuntimePort>(FixedPipelineRuntimePortIds.CharacterRuntime));
+                context.BindTargetPort<IFixedProgramRuntimePort>(FixedPipelineRuntimePortIds.ProgramRuntime));
             var writes = new RollbackScheduleWritePorts(
                 context.Products.BindExclusiveWriter<SimulationSessionExecutionPlan<FixedSimulationStep>>(
                     SimulationPipelineProducts.ExecutionPlan));
@@ -62,25 +62,26 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             RequireExecution();
             RollbackIngressBatch ingress = readPorts.Ingress.Read();
-            writePorts.ExecutionPlan.Write(BuildPlan(context, ingress, readPorts.CharacterRuntime));
+            writePorts.ExecutionPlan.Write(BuildPlan(context, ingress, readPorts.ProgramRuntime));
         }
 
         SimulationSessionExecutionPlan<FixedSimulationStep> BuildPlan(
             SimulationPipelineScheduleContext context,
             RollbackIngressBatch ingress,
-            IFixedCharacterRuntimePort characterRuntime)
+            IFixedProgramRuntimePort programRuntime)
         {
             ulong nextTick = checked(context.CurrentCompletedTick + 1);
             if (ingress.Predicted.Tick.Value != nextTick)
                 throw new InvalidOperationException("Rollback ingress predicted Tick is not the next Simulation Tick.");
-            var roster = new SimulationActorRosterDescriptor(CollectActors(characterRuntime.Roster));
+            var roster = new SimulationActorRosterDescriptor(CollectActors(programRuntime.Roster));
             if (context.CurrentCompletedTick == 0 &&
                 m_State.Inputs.GetRequired(ingress.Predicted.Tick).Canonical == null)
             {
                 return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                     SimulationSessionExecutionPlanStatus.NoStep,
                     context.Source,
-                        context.Pipeline.Hash,
+                    programRuntime.Catalog.CatalogHash,
+                    context.Pipeline.Hash,
                     roster,
                     Array.Empty<SimulationPipelineStepSourceMapping>(),
                     null,
@@ -99,14 +100,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 if (recoveryTick.Value > context.CurrentCompletedTick)
                     throw new InvalidOperationException("Rollback recovery snapshot is newer than the completed simulation horizon.");
                 FixedSimulationSessionSnapshot snapshot = m_State.Snapshots.GetRequired(recoveryTick);
-                restore = BuildRestoreDirective(recoveryTick, snapshot, characterRuntime, context);
+                restore = BuildRestoreDirective(recoveryTick, snapshot, programRuntime, context);
                 m_State.MarkRecoveryScheduled(recoveryTick);
                 if (recoveryTick.Value < context.CurrentCompletedTick)
                     replayStart = new SimulationTick(checked(recoveryTick.Value + 1));
             }
             else if (m_State.TryGetRequiredRecovery(out _, out _))
             {
-                return BuildNoStep(context, roster);
+                return BuildNoStep(context, programRuntime.Catalog.CatalogHash, roster);
             }
             else if (m_State.TryFindEarliestMismatch(out SimulationTick mismatch) &&
                 mismatch.Value <= context.CurrentCompletedTick)
@@ -114,19 +115,19 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 if (mismatch.Value == 1)
                 {
                     m_State.RequireSnapshotRecovery(mismatch, "canonical-mismatch-without-tick-zero-snapshot");
-                    return BuildNoStep(context, roster);
+                    return BuildNoStep(context, programRuntime.Catalog.CatalogHash, roster);
                 }
                 var restoreTick = new SimulationTick(mismatch.Value - 1);
                 if (m_State.Snapshots.FloorTick == 0 || restoreTick.Value < m_State.Snapshots.FloorTick)
                 {
                     m_State.RequireSnapshotRecovery(mismatch, "canonical-mismatch-before-snapshot-history-floor");
-                    return BuildNoStep(context, roster);
+                    return BuildNoStep(context, programRuntime.Catalog.CatalogHash, roster);
                 }
                 FixedSimulationSessionSnapshot snapshot = m_State.Snapshots.GetRequired(restoreTick);
                 int depth = checked((int)(context.CurrentCompletedTick - mismatch.Value + 1));
                 if (depth > m_Policy.MaximumRollbackDepthTicks)
                     deepRecoveryReplay = true;
-                restore = BuildRestoreDirective(restoreTick, snapshot, characterRuntime, context);
+                restore = BuildRestoreDirective(restoreTick, snapshot, programRuntime, context);
                 replayStart = mismatch;
             }
             if (replayStart.IsValid)
@@ -154,7 +155,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (!canAdvancePrediction && steps.Count == 0 && restore == null)
             {
                 m_State.RecordPacedNoStep();
-                return BuildNoStep(context, roster);
+                return BuildNoStep(context, programRuntime.Catalog.CatalogHash, roster);
             }
             if (canAdvancePrediction || steps.Count == 0)
             {
@@ -173,6 +174,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
+                programRuntime.Catalog.CatalogHash,
                 context.Pipeline.Hash,
                 roster,
                 mappings,
@@ -186,11 +188,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static SimulationSessionExecutionPlan<FixedSimulationStep> BuildNoStep(
             SimulationPipelineScheduleContext context,
+            GameplayContentHash catalogHash,
             SimulationActorRosterDescriptor roster)
         {
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                 SimulationSessionExecutionPlanStatus.NoStep,
                 context.Source,
+                catalogHash,
                 context.Pipeline.Hash,
                 roster,
                 Array.Empty<SimulationPipelineStepSourceMapping>(),
@@ -203,12 +207,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
         static SimulationRestoreDirective BuildRestoreDirective(
             SimulationTick restoreTick,
             FixedSimulationSessionSnapshot snapshot,
-            IFixedCharacterRuntimePort characterRuntime,
+            IFixedProgramRuntimePort programRuntime,
             SimulationPipelineScheduleContext context)
         {
             return new SimulationRestoreDirective(
                 $"deterministic-rollback:{restoreTick.Value}",
                 restoreTick,
+                programRuntime.Catalog.CatalogHash,
                 context.Pipeline.Hash,
                 FixedPassExecutionBackend.BackendId,
                 FixedPassExecutionBackend.SemanticVersion,
@@ -252,7 +257,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 typedIngress);
         }
 
-        static ActorId[] CollectActors(IReadOnlyList<FixedCharacterRuntimeActor> roster)
+        static ActorId[] CollectActors(IReadOnlyList<SimulationActorBinding> roster)
         {
             var actors = new ActorId[roster.Count];
             for (int i = 0; i < roster.Count; i++)
@@ -265,14 +270,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
     {
         public RollbackScheduleReadPorts(
             IReadOnlySimulationPipelineProductPort<RollbackIngressBatch> ingress,
-            IFixedCharacterRuntimePort characterRuntime)
+            IFixedProgramRuntimePort programRuntime)
         {
             Ingress = ingress ?? throw new ArgumentNullException(nameof(ingress));
-            CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
+            ProgramRuntime = programRuntime ?? throw new ArgumentNullException(nameof(programRuntime));
         }
 
         public IReadOnlySimulationPipelineProductPort<RollbackIngressBatch> Ingress { get; }
-        public IFixedCharacterRuntimePort CharacterRuntime { get; }
+        public IFixedProgramRuntimePort ProgramRuntime { get; }
     }
 
     public sealed class RollbackScheduleWritePorts : ISimulationPipelineWritePortSet

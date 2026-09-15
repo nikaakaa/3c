@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -106,7 +106,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -121,7 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -160,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected bool TryReadBlackboardValue<T>(out T value)
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
 
         void ReportReadError(string message)
@@ -318,7 +318,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
 
         void ReportSourceError(string message)
@@ -370,7 +370,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 
@@ -398,7 +398,7 @@ namespace ThirdPersonCharacter.Pipeline.Input
 
         protected override void OutputValue()
         {
-            throw new InvalidOperationException($"{GetType().Name} must execute through the owning Ability execution runtime.");
+            throw new InvalidOperationException($"{GetType().Name} must execute through CharacterSimulationProgram.");
         }
     }
 

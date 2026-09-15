@@ -29,7 +29,8 @@ public sealed class SessionInfoGmCommand : IGmCommandHandler
                 GmResultField.Text("endpoint", "Gameplay UDP", value.Endpoint),
                 GmResultField.Text("modelIdentity", "模型", value.ModelIdentity),
                 GmResultField.Text("protocolIdentity", "协议", value.ProtocolIdentity),
-                GmResultField.Text("characterContentHash", "Character Content Hash", value.CharacterContentHash),
+                GmResultField.Text("programId", "Program", value.ProgramId),
+                GmResultField.Text("programHash", "Program Hash", value.ProgramHash),
                 GmResultField.Signed("tickRate", "Tick Rate", value.TickRate),
                 GmResultField.Signed("maximumPredictionLeadTicks", "最大预测领先 Tick", value.MaximumPredictionLeadTicks),
                 GmResultField.Signed("confirmationDelayTicks", "确认延迟 Tick", value.ConfirmationDelayTicks)

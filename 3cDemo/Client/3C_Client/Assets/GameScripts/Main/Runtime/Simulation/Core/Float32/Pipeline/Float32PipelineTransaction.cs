@@ -122,7 +122,7 @@ namespace ThirdPersonSimulation
         readonly IFloat32SimulationRestoreSource m_RestoreSource;
         readonly PipelineTransactionRuntimeServices m_Services;
         readonly Float32CharacterRuntime m_CharacterRuntime;
-        IReadOnlyList<Float32CharacterRuntimeActor> m_Roster;
+        IReadOnlyList<SimulationActorBinding> m_Roster;
         readonly SimulationWorldStateStore m_StateStore;
         readonly ICharacterWorldSolver m_Solver;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
@@ -188,6 +188,7 @@ namespace ThirdPersonSimulation
             return new SimulationSessionCheckpoint(
                 m_Services.Descriptor.SessionId,
                 snapshot.Tick,
+                m_CharacterRuntime.GameplayContentHash,
                 m_Services.Descriptor.Pipeline.Hash,
                 m_Services.Descriptor.ExecutionBackend.ComponentId,
                 m_Services.Descriptor.ExecutionBackend.SemanticVersion,
@@ -206,6 +207,7 @@ namespace ThirdPersonSimulation
             var directive = new SimulationRestoreDirective(
                 checkpoint.SnapshotId,
                 checkpoint.Tick,
+                checkpoint.GameplayContentHash,
                 checkpoint.PipelineHash,
                 checkpoint.BackendId,
                 checkpoint.BackendSemanticVersion,
@@ -286,7 +288,7 @@ namespace ThirdPersonSimulation
         {
             _ = outer;
             Float32CharacterRuntime characterRuntime = m_CharacterRuntime;
-            IReadOnlyList<Float32CharacterRuntimeActor> roster = m_Roster;
+            IReadOnlyList<SimulationActorBinding> roster = m_Roster;
             for (int stepIndex = 0; stepIndex < plan.Steps.Count; stepIndex++)
             {
                 Float32SimulationStep step = plan.Steps[stepIndex];
@@ -341,7 +343,7 @@ namespace ThirdPersonSimulation
             out PipelineTransactionStage stage)
         {
             SimulationPipelinePassId passId = pass.Descriptor.PassId;
-            if (passId.Equals(StandardFloat32PipelinePassContracts.AbilityEvaluate.PassId))
+            if (passId.Equals(StandardFloat32PipelinePassContracts.ProgramEvaluate.PassId))
             {
                 stage = PipelineTransactionStage.Evaluate;
                 return true;
@@ -351,7 +353,7 @@ namespace ThirdPersonSimulation
                 stage = PipelineTransactionStage.ResolveBatch;
                 return true;
             }
-            if (passId.Equals(StandardFloat32PipelinePassContracts.AbilityFinalize.PassId))
+            if (passId.Equals(StandardFloat32PipelinePassContracts.ProgramFinalize.PassId))
             {
                 stage = PipelineTransactionStage.Finalize;
                 return true;
@@ -377,7 +379,7 @@ namespace ThirdPersonSimulation
             Float32AppendProductSlot<Float32FinalizedActorResult> finalized = GetFinalizedSlot();
             int finalizedCount = finalized.UnsealedCount - finalizedStart;
             if (finalizedCount != m_Roster.Count)
-                throw Failure("finalized_actor_count_mismatch", "Ability Finalize Pass did not produce exactly one result per Actor.", SimulationSessionFailureStage.Step);
+                throw Failure("finalized_actor_count_mismatch", "Program Finalize Pass did not produce exactly one result per Actor.", SimulationSessionFailureStage.Step);
             List<SimulationActorTickResult> actorResults = workspace.ActorResults.Values;
             actorResults.Clear();
             workspace.ActorResults.EnsureCapacity(finalizedCount);
@@ -385,14 +387,14 @@ namespace ThirdPersonSimulation
             {
                 SimulationActorTickResult result = finalized.GetUnsealed(i).Value.Result;
                 if (result.Tick != step.Tick)
-                    throw Failure("finalized_actor_tick_mismatch", "Ability Finalize Pass produced a result for another Tick.", SimulationSessionFailureStage.Step);
+                    throw Failure("finalized_actor_tick_mismatch", "Program Finalize Pass produced a result for another Tick.", SimulationSessionFailureStage.Step);
                 actorResults.Add(result);
             }
             actorResults.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             for (int i = 0; i < actorResults.Count; i++)
             {
                 if (!actorResults[i].ActorId.Equals(m_Roster[i].ActorId))
-                    throw Failure("finalized_actor_roster_mismatch", "Ability Finalize Pass result roster does not match the locked roster.", SimulationSessionFailureStage.Step);
+                    throw Failure("finalized_actor_roster_mismatch", "Program Finalize Pass result roster does not match the locked roster.", SimulationSessionFailureStage.Step);
             }
             WorldSolveBatchResult worldResult = m_Products
                 .GetRequired<Float32ExclusiveProductSlot<WorldSolveBatchResult>>(
@@ -426,6 +428,7 @@ namespace ThirdPersonSimulation
                 : null;
             var tickResult = new SimulationTickResult(
                 m_CharacterRuntime.NumericProfile,
+                m_CharacterRuntime.GameplayContentHash,
                 step.Tick,
                 actorResults,
                 worldResult.Summary,

@@ -48,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         string m_BindingError = string.Empty;
         string m_ProducerInspectionError = string.Empty;
         string m_PoseSourceError = string.Empty;
+        string m_BuildMessage = string.Empty;
         string m_NewPoseSourceName = string.Empty;
         PresentationPoseSourceKind m_NewPoseSourceKind =
             PresentationPoseSourceKind.Clip;
@@ -872,6 +873,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
             if (GUILayout.Button("Refresh Definition Contexts"))
                 RefreshContexts();
+            CharacterPipelineDefinition context = SelectedContext;
+            using (new EditorGUI.DisabledScope(!context))
+            {
+                if (GUILayout.Button("Build Presentation Projection"))
+                {
+                    try
+                    {
+                        bool success = CharacterSimulationProgramBuildService.Build(context, true);
+                        m_BuildMessage = success
+                            ? "Build completed and published."
+                            : "Build failed. Inspect the formal compile report.";
+                    }
+                    catch (Exception exception)
+                    {
+                        m_BuildMessage = $"Build failed: {exception.Message}";
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(m_BuildMessage))
+                EditorGUILayout.HelpBox(m_BuildMessage, MessageType.Info);
             EditorGUILayout.Space(6f);
         }
 

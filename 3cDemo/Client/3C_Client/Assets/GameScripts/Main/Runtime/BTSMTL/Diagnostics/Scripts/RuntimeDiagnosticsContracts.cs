@@ -3,41 +3,41 @@ using UnityEngine;
 
 namespace BTSMTL.Diagnostics
 {
-    public readonly struct RuntimeContentRevision : IEquatable<RuntimeContentRevision>
+    public readonly struct RuntimeProgramRevision : IEquatable<RuntimeProgramRevision>
     {
-        public RuntimeContentRevision(string contentId, string sourceRevision, string contentHash)
+        public RuntimeProgramRevision(string programId, string sourceRevision, string programHash)
         {
-            ContentId = contentId ?? string.Empty;
+            ProgramId = programId ?? string.Empty;
             SourceRevision = sourceRevision ?? string.Empty;
-            ContentHash = contentHash ?? string.Empty;
+            ProgramHash = programHash ?? string.Empty;
         }
 
-        public string ContentId { get; }
+        public string ProgramId { get; }
         public string SourceRevision { get; }
-        public string ContentHash { get; }
-        public bool IsValid => !string.IsNullOrEmpty(ContentId) && !string.IsNullOrEmpty(SourceRevision) && !string.IsNullOrEmpty(ContentHash);
+        public string ProgramHash { get; }
+        public bool IsValid => !string.IsNullOrEmpty(ProgramId) && !string.IsNullOrEmpty(SourceRevision) && !string.IsNullOrEmpty(ProgramHash);
 
-        public bool Equals(RuntimeContentRevision other)
+        public bool Equals(RuntimeProgramRevision other)
         {
-            return string.Equals(ContentId, other.ContentId, StringComparison.Ordinal) &&
+            return string.Equals(ProgramId, other.ProgramId, StringComparison.Ordinal) &&
                    string.Equals(SourceRevision, other.SourceRevision, StringComparison.Ordinal) &&
-                   string.Equals(ContentHash, other.ContentHash, StringComparison.Ordinal);
+                   string.Equals(ProgramHash, other.ProgramHash, StringComparison.Ordinal);
         }
 
-        public override bool Equals(object obj) => obj is RuntimeContentRevision other && Equals(other);
+        public override bool Equals(object obj) => obj is RuntimeProgramRevision other && Equals(other);
 
         public override int GetHashCode()
         {
             unchecked
             {
-                int hash = ContentId?.GetHashCode() ?? 0;
+                int hash = ProgramId?.GetHashCode() ?? 0;
                 hash = hash * 31 + (SourceRevision?.GetHashCode() ?? 0);
-                hash = hash * 31 + (ContentHash?.GetHashCode() ?? 0);
+                hash = hash * 31 + (ProgramHash?.GetHashCode() ?? 0);
                 return hash;
             }
         }
 
-        public override string ToString() => $"{ContentId}@{SourceRevision}:{ContentHash}";
+        public override string ToString() => $"{ProgramId}@{SourceRevision}:{ProgramHash}";
     }
 
     public enum RuntimeSourceTargetKind
@@ -69,12 +69,12 @@ namespace BTSMTL.Diagnostics
 
         public RuntimeSourceTargetKind Kind { get; }
         public int Index { get; }
-        public bool IsCompiledTarget => Kind != RuntimeSourceTargetKind.Source;
+        public bool IsProgramTarget => Kind != RuntimeSourceTargetKind.Source;
         public static RuntimeSourceTarget Source => new RuntimeSourceTarget(RuntimeSourceTargetKind.Source, -1);
         public bool Equals(RuntimeSourceTarget other) => Kind == other.Kind && Index == other.Index;
         public override bool Equals(object obj) => obj is RuntimeSourceTarget other && Equals(other);
         public override int GetHashCode() => (int)Kind * 397 ^ Index;
-        public override string ToString() => IsCompiledTarget ? $"{Kind}:{Index}" : "Source";
+        public override string ToString() => IsProgramTarget ? $"{Kind}:{Index}" : "Source";
     }
 
     public enum RuntimeSourceElementKind
@@ -653,8 +653,8 @@ namespace BTSMTL.Diagnostics
     {
         public RuntimeTraceEvent(
             Guid sessionId,
-            RuntimeContentRevision contentRevision,
-            ulong runtimeEpoch,
+            RuntimeProgramRevision programRevision,
+            ulong programEpoch,
             Guid executionBranchId,
             RuntimeTraceDomain domain,
             RuntimeTraceChannel channel,
@@ -666,8 +666,8 @@ namespace BTSMTL.Diagnostics
             RuntimeTracePayload payload)
         {
             SessionId = sessionId;
-            ContentRevision = contentRevision;
-            RuntimeEpoch = runtimeEpoch;
+            ProgramRevision = programRevision;
+            ProgramEpoch = programEpoch;
             ExecutionBranchId = executionBranchId;
             Domain = domain;
             Channel = channel;
@@ -680,8 +680,8 @@ namespace BTSMTL.Diagnostics
         }
 
         public Guid SessionId { get; }
-        public RuntimeContentRevision ContentRevision { get; }
-        public ulong RuntimeEpoch { get; }
+        public RuntimeProgramRevision ProgramRevision { get; }
+        public ulong ProgramEpoch { get; }
         public Guid ExecutionBranchId { get; }
         public RuntimeTraceDomain Domain { get; }
         public RuntimeTraceChannel Channel { get; }
@@ -698,11 +698,9 @@ namespace BTSMTL.Diagnostics
         RuntimeDiagnosticsContext RuntimeDiagnostics { get; }
     }
 
-    public interface IRuntimeDebugContent
+    public interface IRuntimeDebugProgram
     {
-        RuntimeContentRevision Revision { get; }
+        RuntimeProgramRevision Revision { get; }
         IDebugSourceMap SourceMap { get; }
     }
 }
-
-

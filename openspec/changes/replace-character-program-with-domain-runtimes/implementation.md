@@ -170,14 +170,6 @@
 - Input request 由 Program catalog 只提供稳定 identity；`ProgramExecutionLayout` 按 identity 建立排序后的 request 列表，`CharacterSimulationState` 保存每个请求的 request id、sequence、source／expire tick、priority 和 consumed 状态。Float32／Fixed 的 Input runtime 不再持有自己的状态或 Input policy，而是经同一角色状态事务读写；事务的 savepoint／Restore、提交和清理都与其它角色分区共用。请求 codec 使用共享核心合同，角色状态 codec 与 Server Authority checkpoint 按同一字段顺序携带该分区，旧 Program state identity 和 payload format 由版本升级拒绝。这样 Input 的配置身份仍来自正式 Program catalog，运行值只有一个角色状态 owner；但 2.6 仍未完成，因为统一角色 Step 还没有把所有剩余领域分区的跨 Tick 状态一次性纳入同一套完整 Capture／Restore 合同。
 - Action activation request 现在由 `CharacterSimulationState.ActionActivationRequests` 持有，列表中的请求保留 Action、Skill、Context、输入序号、开始 Tick、目标快照、来源、装备上下文和替换实例身份。Action instance 现在由同一角色状态的 `ActionInstances` 列表持有，保留生命周期、执行 generation、目标快照、装备上下文、停止过渡和 segment generation。Float32／Fixed 的 ActionStateStore 不再创建 Action StatePort，也不再读写 Action Program slot；Stage、pending 查找、容量、实例复用、生命周期写入和清理统一经过主状态事务。状态 codec 和 Server Authority full／delta checkpoint 以独立 bytes 携带请求与实例，Program catalog 只提供 Action 容量与内容身份。Timeline retention 现在由 `TimelineRetainedActionContexts` 按 Timeline operation identity 持有，并由 Timeline control port 经事务读写；MotionWarp 完整聚合状态现在由 `MotionWarpStates` 按 MotionWarp operation identity 持有，MotionWarp target 经同一角色事务读写，两个分区都进入状态 codec 与 Server Authority checkpoint。
 
-## 2026-09-15 激进删除收据
-
-- 删除旧角色 Reader、总 Projection、Projection wrapper、Corin 生成 Projection 资产、旧 Pose Program 执行/帧事务/Final Publication/诊断快照/LinkedPose 会话及旧 Pose 观察工具；主要提交为 ba9ae624d、193a7af36、174c96700、22658cbbb、9ee3b6eed、11e52c77f、c6f9214b4、7d2cc2573、7e0b9118e、6edd7812c、1c46a2774、a2d1598fe。
-- 删除 Projection 编译报告阶段和 Editor 诊断入口中的失效总包参数；回滚输入 Pass 改读正式 CharacterRuntime 端口，提交为 032406adf、659d13926、ec9bf9470。
-- 保留 Native Pose 的 Graph、Role、FrameCoordinator、Source/Value/StateMachine/Constraint/Final handler 合同；这些是后续直接角色入口的唯一接线目标，不恢复旧 Program 或兼容 reader。
-- Residue：最新 main 仍有 Pose authoring、Presentation、Camera、Network 消费者引用旧总 Projection，Native Role 尚无生产 Host 调用点；这些是下一步接线，不代表迁移完成。
-- Verification：只完成主分支精确树扫描、提交范围检查和物理工作区脏改动核对；未运行 Unity、Play、Build 或资产刷新，因此不以本收据声明运行时闭环。
-
 ## 编译证据与阻断
 
 - Float32 core：`dotnet build 3cDemo/Client/3C_Client/ThirdPersonSimulation.Float32.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore` 成功，0 warnings、0 errors。

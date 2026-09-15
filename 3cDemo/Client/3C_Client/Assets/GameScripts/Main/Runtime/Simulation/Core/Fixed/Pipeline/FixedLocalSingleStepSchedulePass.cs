@@ -87,6 +87,7 @@ namespace ThirdPersonSimulation.Fixed
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
+                characterRuntime.GameplayContentHash,
                 context.Pipeline.Hash,
                 characterRuntime.RosterDescriptor,
                 new[]

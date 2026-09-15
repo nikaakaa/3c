@@ -148,11 +148,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class GameplayAbilitySemanticDependencyCatalogEmitter
     {
-        readonly GameplayAbilitySemanticBuilder m_Builder;
+        readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
         readonly GameplayAbilityCatalogIndex m_Index;
         public GameplayAbilitySemanticDependencyCatalogEmitter(
-            GameplayAbilitySemanticBuilder builder,
+            CharacterSimulationProgramBuilder builder,
             CharacterSimulationCompileReport report,
             GameplayAbilityCatalogIndex index)
         {

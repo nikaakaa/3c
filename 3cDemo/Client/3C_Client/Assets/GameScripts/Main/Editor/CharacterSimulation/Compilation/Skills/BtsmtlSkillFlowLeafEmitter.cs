@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly string m_GameplayProviderOwnerId;
 
         public BtsmtlSkillFlowLeafEmitter(
-            GameplayAbilitySemanticBuilder builder,
+            CharacterSimulationProgramBuilder builder,
             string controlModuleId,
             string inputProviderOwnerId,
             string gameplayProviderOwnerId)

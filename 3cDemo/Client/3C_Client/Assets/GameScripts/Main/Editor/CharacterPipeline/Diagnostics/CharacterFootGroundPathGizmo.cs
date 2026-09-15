@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -25,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawFootMotion(diagnostics.Left);
             DrawFootMotion(diagnostics.Right);
             DrawStrideHips(diagnostics.StrideHips);
+            DrawFinalPose(binding);
         }
 
         static void DrawStrideHips(in CharacterFootStrideHipsDiagnostics stride)
@@ -114,6 +116,89 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 motion.Core.OriginalSole,
                 Vector3.up,
                 0.06f);
+        }
+
+        static void DrawFinalPose(CharacterWorldAwarePresentationBinding binding)
+        {
+            CharacterPipelineHost host = binding.GetComponentInParent<CharacterPipelineHost>();
+            if (!host || !TryGetTarget(host.GetInstanceID(), out AnimationPresentationRuntimeTarget target) ||
+                !target.TryGetDebugView(out AnimationPresentationDebugView debugView))
+                return;
+            Animator animator = binding.GetComponentInChildren<Animator>();
+            if (!animator)
+                return;
+            CharacterFootIkCommittedCaptureViewLease foot =
+                debugView.PosePlan.FootIkCommittedCaptureView;
+            if (!foot.IsAvailable || !foot.PhysicalWriteAvailable)
+                return;
+            DrawFinalEffector(animator.transform, foot.LeftGoal, foot.LeftFoot, foot.LeftPhysicalAnkleComponentPosition, Color.cyan);
+            DrawFinalEffector(animator.transform, foot.RightGoal, foot.RightFoot, foot.RightPhysicalAnkleComponentPosition, Color.magenta);
+            DrawFinalPelvis(animator.transform, foot.Pelvis, foot.PhysicalPelvisComponentPosition);
+            CharacterAnimationRigBinding rigBinding = binding.GetComponent<CharacterAnimationRigBinding>();
+            if (!rigBinding)
+                return;
+            IReadOnlyList<Transform> bones = rigBinding.PhysicalBones;
+            for (int i = 0; i < bones.Count; i++)
+            {
+                Transform bone = bones[i];
+                if (!bone || !bone.parent || !bone.parent.IsChildOf(animator.transform))
+                    continue;
+                Handles.color = Color.red;
+                Handles.DrawLine(bone.parent.position, bone.position, 2f);
+            }
+        }
+
+        static bool TryGetTarget(int hostInstanceId, out AnimationPresentationRuntimeTarget target)
+        {
+            IReadOnlyList<AnimationPresentationRuntimeTarget> targets =
+                AnimationPresentationRuntimeTargetRegistry.Targets;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                if (targets[i].HostInstanceId == hostInstanceId)
+                {
+                    target = targets[i];
+                    return true;
+                }
+            }
+            target = null;
+            return false;
+        }
+
+        static void DrawFinalEffector(
+            Transform componentRoot,
+            CharacterFullBodyIkGoal goal,
+            CharacterFullBodyIkEffectorDiagnostics solved,
+            Vector3 physicalComponentPosition,
+            Color color)
+        {
+            Vector3 goalPosition = componentRoot.TransformPoint(goal.ComponentPosition);
+            Vector3 solvedPosition = componentRoot.TransformPoint(solved.SolvedComponentPosition);
+            Vector3 physicalPosition = componentRoot.TransformPoint(physicalComponentPosition);
+            Handles.color = Color.white;
+            Handles.DrawWireDisc(goalPosition, componentRoot.up, 0.08f);
+            Gizmos.color = color;
+            Gizmos.DrawSphere(solvedPosition, 0.045f);
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(physicalPosition, 0.055f);
+            Handles.color = color;
+            Handles.DrawLine(goalPosition, solvedPosition, 2f);
+            Handles.color = Color.red;
+            Handles.DrawLine(solvedPosition, physicalPosition, 2f);
+        }
+
+        static void DrawFinalPelvis(
+            Transform componentRoot,
+            CharacterFullBodyIkEffectorDiagnostics pelvis,
+            Vector3 physicalComponentPosition)
+        {
+            Vector3 solvedPosition = componentRoot.TransformPoint(pelvis.SolvedComponentPosition);
+            Vector3 physicalPosition = componentRoot.TransformPoint(physicalComponentPosition);
+            Gizmos.color = new Color(1f, 0.8f, 0.1f);
+            Gizmos.DrawSphere(solvedPosition, 0.05f);
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(physicalPosition, 0.06f);
+            Handles.color = Color.red;
+            Handles.DrawLine(solvedPosition, physicalPosition, 2f);
         }
 
         static void DrawLandingMarker(Vector3 position, Vector3 componentUp, Color color)

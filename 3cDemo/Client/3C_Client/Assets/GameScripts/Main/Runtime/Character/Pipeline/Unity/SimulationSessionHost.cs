@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline
             new SortedDictionary<ulong, SimulationSessionCheckpoint>();
         const int MaxCheckpointCount = 32;
         const ulong CheckpointInterval = 30;
-        ISimulationSessionCompositionPreparation m_Preparation;
+        SimulationSessionCompositionPreparation m_Preparation;
         SimulationSessionLaunchPlan m_LaunchPlan;
         ISimulationSessionRuntimeHandle m_Runtime;
         ISimulationSessionOutputLifecycle m_OutputLifecycle;
@@ -36,6 +36,8 @@ namespace ThirdPersonCharacter.Pipeline
         bool m_Quiesced;
         bool m_Disposed;
         ulong m_LastLogicTick;
+        SimulationProgramEpoch? m_PendingProgramEpoch;
+        SimulationProgramAdoptionResult m_LastProgramAdoption;
         Guid m_ExecutionBranchId = Guid.NewGuid();
         Guid m_ParentExecutionBranchId;
         ulong m_ExecutionBranchBaseTick;
@@ -48,6 +50,11 @@ namespace ThirdPersonCharacter.Pipeline
             m_Runtime?.Diagnostics ?? m_Preparation?.Diagnostics ?? m_LastDiagnostics;
         public int RegistrationCount => m_Registrations.Count;
         public bool IsQuiesced => m_Quiesced;
+        public SimulationProgramEpoch ProgramEpoch =>
+            m_Runtime is ISimulationSessionProgramAdoption adoption
+                ? adoption.ProgramEpoch
+                : default;
+        public SimulationProgramAdoptionResult LastProgramAdoption => m_LastProgramAdoption;
         public bool SupportsInputReplay => m_Runtime is ISimulationSessionInputReplayRuntime;
         public bool SupportsPresentationCheckpointRestore =>
             m_Registrations.Count != 0 &&
@@ -361,6 +368,54 @@ namespace ThirdPersonCharacter.Pipeline
             return true;
         }
 
+        public SimulationProgramAdoptionResult RequestProgramEpoch(SimulationProgramEpoch epoch)
+        {
+            RequireAlive();
+            if (!epoch.IsValid)
+                throw new ArgumentException("Program Epoch is invalid.", nameof(epoch));
+            if (m_Runtime is not ISimulationSessionProgramAdoption adoption)
+            {
+                m_LastProgramAdoption = new SimulationProgramAdoptionResult(
+                    SimulationProgramAdoptionStatus.Deferred,
+                    epoch,
+                    epoch,
+                    "session_program_adoption_pending",
+                    "Session runtime has not been prepared; Program Epoch remains queued.");
+                m_PendingProgramEpoch = epoch;
+                return m_LastProgramAdoption;
+            }
+            if (epoch.Value <= adoption.ProgramEpoch.Value)
+            {
+                m_LastProgramAdoption = new SimulationProgramAdoptionResult(
+                    SimulationProgramAdoptionStatus.Rejected,
+                    adoption.ProgramEpoch,
+                    epoch,
+                    "program_epoch_not_newer",
+                    "Program Epoch is not newer than the active Session Epoch.");
+                return m_LastProgramAdoption;
+            }
+            m_PendingProgramEpoch = epoch;
+            m_LastProgramAdoption = new SimulationProgramAdoptionResult(
+                SimulationProgramAdoptionStatus.Deferred,
+                adoption.ProgramEpoch,
+                epoch,
+                "program_epoch_queued",
+                "Program Epoch will be adopted at the next Logic Tick boundary.");
+            return m_LastProgramAdoption;
+        }
+
+        public SimulationProgramAdoptionResult RequestProgramEpoch(ProgramRevision sourceRevision)
+        {
+            RequireAlive();
+            if (!(m_Runtime is ISimulationSessionProgramAdoption adoption))
+            {
+                throw new InvalidOperationException("Program Epoch preparation requires an active Session runtime.");
+            }
+            var bindings = CollectProgramBindings();
+            SimulationProgramEpoch epoch = adoption.PrepareProgramEpoch(sourceRevision, bindings);
+            return RequestProgramEpoch(epoch);
+        }
+
         public void Quiesce()
         {
             RequireAlive();
@@ -451,6 +506,7 @@ namespace ThirdPersonCharacter.Pipeline
         {
             if (!ActorStartGatesReady())
                 return;
+            ApplyPendingProgramEpoch();
             m_OutputLifecycle.BeginLogicTick();
             m_Runtime.LogicTick(BuildRuntimeContext(context, m_LaunchPlan.Descriptor.SourceClockId));
             m_LastLogicTick = context.LocalLogicTick;
@@ -524,15 +580,20 @@ namespace ThirdPersonCharacter.Pipeline
 
         bool IsCheckpointCompatible(SimulationSessionCheckpoint checkpoint, out string error)
         {
+            if (!(m_Runtime is ISimulationSessionProgramAdoption adoption))
+            {
+                error = string.Empty;
+                return true;
+            }
             SimulationSessionCompositionDescriptor descriptor = m_Runtime.Descriptor;
             if (!checkpoint.SessionId.Equals(descriptor.SessionId))
             {
                 error = $"Checkpoint Tick '{checkpoint.Tick.Value}' belongs to Session '{checkpoint.SessionId}', but the active Session is '{descriptor.SessionId}'.";
                 return false;
             }
-            if (!checkpoint.GameplayContentHash.Equals(descriptor.GameplayContentHash))
+            if (!checkpoint.ProgramCatalogHash.Equals(adoption.ProgramEpoch.ProgramCatalogHash))
             {
-                error = $"Checkpoint Tick '{checkpoint.Tick.Value}' belongs to Gameplay Content '{checkpoint.GameplayContentHash}', but the active Session Content is '{descriptor.GameplayContentHash}'.";
+                error = $"Checkpoint Tick '{checkpoint.Tick.Value}' belongs to Program Catalog '{checkpoint.ProgramCatalogHash}', but the active Session Catalog is '{adoption.ProgramEpoch.ProgramCatalogHash}'.";
                 return false;
             }
             if (!checkpoint.PipelineHash.Equals(descriptor.Pipeline.Hash))
@@ -695,6 +756,66 @@ namespace ThirdPersonCharacter.Pipeline
                 m_Registrations[i].BindExecutionBranch(m_ExecutionBranchId);
         }
 
+        void ApplyPendingProgramEpoch()
+        {
+            if (!m_PendingProgramEpoch.HasValue)
+                return;
+            if (!(m_Runtime is ISimulationSessionProgramAdoption adoption))
+                return;
+            IReadOnlyList<ISimulationProgramBinding> bindings;
+            try
+            {
+                bindings = CollectProgramBindings();
+            }
+            catch (Exception exception)
+            {
+                m_LastProgramAdoption = new SimulationProgramAdoptionResult(
+                    SimulationProgramAdoptionStatus.Rejected,
+                    adoption.ProgramEpoch,
+                    m_PendingProgramEpoch.Value,
+                    "program_epoch_registration_missing",
+                    exception.Message);
+                for (int i = 0; i < m_Registrations.Count; i++)
+                    if (m_Registrations[i] is ISimulationProgramEpochRegistration registration)
+                        registration.DiscardProgramEpoch();
+                m_PendingProgramEpoch = null;
+                return;
+            }
+            m_LastProgramAdoption = adoption.AdoptProgramEpoch(m_PendingProgramEpoch.Value, bindings);
+            if (m_LastProgramAdoption.IsApplied)
+            {
+                for (int i = 0; i < m_Registrations.Count; i++)
+                {
+                    ((ISimulationProgramEpochRegistration)m_Registrations[i]).CommitProgramEpoch();
+                    m_Registrations[i].BindProgramEpoch(m_LastProgramAdoption.Current.Value);
+                }
+                m_PendingProgramEpoch = null;
+            }
+            else if (m_LastProgramAdoption.Status == SimulationProgramAdoptionStatus.Rejected)
+            {
+                for (int i = 0; i < m_Registrations.Count; i++)
+                    if (m_Registrations[i] is ISimulationProgramEpochRegistration registration)
+                        registration.DiscardProgramEpoch();
+                m_PendingProgramEpoch = null;
+            }
+        }
+
+        IReadOnlyList<ISimulationProgramBinding> CollectProgramBindings()
+        {
+            var bindings = new List<ISimulationProgramBinding>(m_Registrations.Count);
+            for (int i = 0; i < m_Registrations.Count; i++)
+            {
+                if (!(m_Registrations[i] is ISimulationProgramEpochRegistration registration) ||
+                    registration.ProgramBinding == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Actor '{m_Registrations[i].ActorId}' does not expose Program Epoch binding.");
+                }
+                bindings.Add(registration.ProgramBinding);
+            }
+            return bindings;
+        }
+
         void Awake()
         {
             if (!m_Composition)
@@ -816,8 +937,11 @@ namespace ThirdPersonCharacter.Pipeline
             m_Runtime = prepared.RuntimeHandle;
             m_OutputLifecycle = prepared.OutputLifecycle;
             m_OuterTickKind = prepared.OuterTickKind;
+            if (!(m_Runtime is ISimulationSessionProgramAdoption adoption))
+                throw new InvalidOperationException("Prepared Session Runtime does not expose the Program Epoch contract.");
             for (int i = 0; i < m_Registrations.Count; i++)
             {
+                m_Registrations[i].BindProgramEpoch(adoption.ProgramEpoch.Value);
                 m_Registrations[i].BindExecutionBranch(m_ExecutionBranchId);
             }
             m_Preparation.Dispose();

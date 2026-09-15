@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     }
 
     [CreateAssetMenu(fileName = "DeterministicKccWorldSolver", menuName = "3C/Simulation/Fixed/KCC World Solver")]
-    public sealed class DeterministicKccWorldSolverDefinition : FixedWorldSolverDefinition
+    public sealed class DeterministicKccWorldSolverDefinition : SimulationWorldSolverDefinition
     {
         [SerializeField] DeterministicCollisionWorldAsset m_CollisionWorld;
         [SerializeField] FixedRatioAuthoring m_Radius = new FixedRatioAuthoring(35, 100);
@@ -141,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 BuildConfiguration().ConfigurationHash);
         }
 
-        protected override ThirdPersonSimulation.Fixed.ICharacterWorldSolver CreateSolverCore(
+        public DeterministicKccWorldSolver CreateSolver(
             int tickRate,
             IReadOnlyList<IFixedSimulationActorRegistration> registrations)
         {

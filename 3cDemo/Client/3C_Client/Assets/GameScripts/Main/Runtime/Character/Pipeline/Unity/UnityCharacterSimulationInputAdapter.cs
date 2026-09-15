@@ -19,7 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         readonly CharacterInputProfile m_Profile;
         readonly CharacterControlModuleContract m_ControlModule;
         readonly ICameraBasisSnapshotProvider m_CameraBasis;
-        readonly ISimulationSessionActorHost m_Owner;
+        readonly CharacterPipelineHost m_Owner;
         readonly string m_ActionTargetInputValueId;
         readonly ICharacterActionTargetInputProvider m_ActionTargetProvider;
         readonly Dictionary<string, InputValueBinding> m_ValueBindings =
@@ -43,14 +43,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             CharacterInputProfile profile,
             CharacterControlModuleContract controlModule,
             ICameraBasisSnapshotProvider cameraBasis,
-            ISimulationSessionActorHost owner,
+            CharacterPipelineHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)
         {
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
             m_CameraBasis = cameraBasis ?? throw new ArgumentNullException(nameof(cameraBasis));
-            m_Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            m_Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             m_ActionTargetInputValueId = RequireIdentity(actionTargetInputValueId, nameof(actionTargetInputValueId));
             m_ActionTargetProvider = actionTargetProvider;
             var errors = new List<string>();
@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         }
 
         public string SourceIdentity =>
-            $"UnityInputSystem/CharacterControl/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
+            $"UnityInputSystem/Float32/{m_Profile.BindingGroup}/{m_ActionTargetInputValueId}/{(m_ActionTargetProvider == null ? "none" : m_ActionTargetProvider.ProviderIdentity)}";
         public SimulationNumericProfile NumericProfile => Float32SimulationNumericProfile.Value;
         public CharacterControlSourceCapability Capabilities => m_ActionTargetProvider == null
             ? CharacterControlSourceCapability.None

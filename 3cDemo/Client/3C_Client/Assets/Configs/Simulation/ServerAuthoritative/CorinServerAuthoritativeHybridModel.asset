@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 144c4189ea8045ada2970d6e21e0bb7d, type: 3}
+  m_Name: CorinServerAuthoritativeHybridModel
+  m_EditorClassIdentifier: 
+  m_Endpoint: {fileID: 11400000, guid: 8a10000000004d259d15000000000001, type: 2}
+  m_PredictionPipeline: {fileID: 11400000, guid: 8a20000000004d259d15000000000020, type: 2}
+  m_AuthorityPipeline: {fileID: 11400000, guid: 8a20000000004d259d15000000000021, type: 2}
+  m_SimulationTickRate: 60
+  m_CommandPacketRate: 30
+  m_SnapshotPacketRate: 20
+  m_CommandSlackTicks: 3
+  m_MaximumRemoteBodyExtrapolationTicks: 6
+  m_MaxGameplayDatagramBytes: 1200
+  m_HistoryCapacity: 256
+  m_MaximumInputLeadTicks: 8
+  m_MaximumInputLagTicks: 8
+  m_MaximumReplayTicksPerOuterTick: 64
+  m_BodyPositionTolerance: 0.05
+  m_BodyYawToleranceDegrees: 2
+  m_HardRecoveryPolicy: 1
+  m_MissingInputPolicy: 1
+  m_ReliableGameplayFactKinds: 15
+  m_ReliableProducerIds:
+  - producer:effect:Effect.Combat.Damage:cue:1:Cue.Combat.Damage
+  - producer:1ec9175b-a959-4960-af6b-4177f601425f:ec241d60-b292-47bf-8d33-f1bccb68521b
+  - producer:86e3cd9c-eab8-41b0-b2f5-e9a73c3cfa27:ddd84d90-c3aa-4944-8fc0-10527e379910
+  - producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:1819d573-4469-4f6c-a97e-fdf6640b04b1
+  - producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:8f921d22-e457-451a-be5e-140cbcb6a1ba:50e4d7ed-ef13-40fb-987a-a45bbeab3864
+  - producer:9fa96566-14a4-47e4-b6ea-c6c710ffbbcf:8f921d22-e457-451a-be5e-140cbcb6a1ba:aa2552ea-41a9-4b22-abe9-c10044aee5a3
+  - producer:001b250e-9f1c-44ab-a170-c43896e756ac:5cb744b3-207c-4c5e-8485-5b933cd7b7ad
+  - producer:001b250e-9f1c-44ab-a170-c43896e756ac:d7b05a68-5862-4308-a7f8-3f1fc264aee0:12a21aa9-516e-4b98-96db-9eeaf49de1a4
+  - producer:001b250e-9f1c-44ab-a170-c43896e756ac:d7b05a68-5862-4308-a7f8-3f1fc264aee0:222e03f9-de64-4381-9485-e09abbc2c0e7
+  - producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
+  - producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:e0242e32-6b30-43e8-a125-06cd47f45318:a50fcf55-d4cd-4ce2-b3af-86b9d2209813
+  - producer:10f4cb90-8b9a-4944-b77c-14efc9a3124d:e0242e32-6b30-43e8-a125-06cd47f45318:d662b1f3-3254-4436-9fd2-17a016248d6f
+  - producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:bfcf3ebe-5dce-4e83-82f8-07f5bad243e7:3d6bb677-fb2c-4643-b1d2-4e11ea91f605
+  - producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:bfcf3ebe-5dce-4e83-82f8-07f5bad243e7:78443466-1dad-468d-952d-e3146f710ed3
+  - producer:7b4f6ad5-7513-4a00-92f3-d34c3761d2f9:ce9ae6ae-b878-4ecf-92b5-56e3c161aaf9
+  - producer:40908a3b-5568-459b-b4f0-b871155dc226:321b312e-7450-4482-b10e-11066d42129c
+  - producer:40908a3b-5568-459b-b4f0-b871155dc226:b5cea8c7-86a3-4b7b-8d93-4d95c4340de9:0e5d6c74-38f8-4a44-ba1a-dfee356fb335
+  - producer:40908a3b-5568-459b-b4f0-b871155dc226:b5cea8c7-86a3-4b7b-8d93-4d95c4340de9:4f7c43e1-4655-4d1f-a4ff-696743dc2918
+  - producer:fd83f793-f3c3-4d28-abec-ccbef3f0f3d5:9f166e87-b3bc-48ca-a90a-7ef476cfe3bd
+  - producer:e7ea1649-1085-47f2-b9ab-4b013ecb78b3:762b4d39-92af-42f3-b8c0-7ac9be15afb7
+  - producer:04758f73-9b79-4142-ab05-5c4159ea6ba8:e1e9df79-5033-4856-857e-0060a28517f2
+  - producer:4e832b73-5961-4eb3-875d-d729555d1aa9:7e3c2795-f922-44d1-bb5b-b1dbe5baf99a
+  - producer:1fd891af-e93c-4208-b2d3-7f448e87d97a:681cd134-2253-4956-8ffb-55a893974192
+  - producer:68286aed-b84f-4b77-8906-a43806c41bfa:e9e8b58c-4813-4b9f-9e32-8b9f2b57d3f9
+  - producer:c6e83124-336e-4405-8d9d-0e6b28fd8103:dc73675d-ae72-48f0-9e57-edcbd0bb55ad

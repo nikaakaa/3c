@@ -6,7 +6,8 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedAbilityExecutionWorkspace
     {
-        readonly FixedGameplayEffectExecutionScratch m_GameplayEffects;
+        readonly FixedGameplayEffectExecutionScratch m_GameplayEffects =
+            new FixedGameplayEffectExecutionScratch();
         readonly FixedMotionExecutionScratch m_Motion =
             new FixedMotionExecutionScratch();
         readonly ActorExecutionWorkspace<
@@ -18,14 +19,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedMotionExecutionScratch> m_Shared;
 
         public FixedAbilityExecutionWorkspace()
-            : this(new FixedGameplayEffectExecutionScratch())
         {
-        }
-
-        internal FixedAbilityExecutionWorkspace(
-            FixedGameplayEffectExecutionScratch gameplayEffects)
-        {
-            m_GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
             m_Shared = new ActorExecutionWorkspace<
                 GameplayFact,
                 PresentationCommand,

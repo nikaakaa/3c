@@ -10,8 +10,105 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
+    internal sealed class CharacterLinkedPosePreviewGroupOption
+    {
+        public CharacterLinkedPosePreviewGroupOption(
+            LinkedPoseGroupId groupId,
+            string displayName,
+            bool supportsPreview,
+            IReadOnlyList<CharacterLinkedPoseImplementationAsset> implementations)
+        {
+            GroupId = groupId;
+            DisplayName = displayName ?? string.Empty;
+            SupportsPreview = supportsPreview;
+            Implementations = implementations ?? Array.Empty<CharacterLinkedPoseImplementationAsset>();
+        }
+
+        public LinkedPoseGroupId GroupId { get; }
+        public string DisplayName { get; }
+        public bool SupportsPreview { get; }
+        public IReadOnlyList<CharacterLinkedPoseImplementationAsset> Implementations { get; }
+    }
+
     internal static class CharacterLinkedPoseAuthoringService
     {
+        public static bool TryGetCompiledPreviewCatalog(
+            CharacterPipelineDefinition definition,
+            CharacterAnimationPresentationProfile profile,
+            CharacterPresentationProjectionAsset projectionAsset,
+            out IReadOnlyList<CharacterLinkedPosePreviewGroupOption> options,
+            out string status)
+        {
+            options = Array.Empty<CharacterLinkedPosePreviewGroupOption>();
+            if (!definition || !profile || !projectionAsset ||
+                definition.AnimationPresentationProfile != profile ||
+                definition.PresentationProjection != projectionAsset ||
+                !definition.SimulationProgram)
+            {
+                status = "Unavailable: exact Definition, Profile, Program and Projection context is required.";
+                return false;
+            }
+            try
+            {
+                CharacterSimulationProgram program = definition.SimulationProgram.Load();
+                CharacterPresentationSemanticContract contract =
+                    Float32CharacterPresentationContractAdapter.Create(program);
+                CharacterPresentationProjection projection = projectionAsset.Load(contract);
+                projection.RequirePosePayload();
+                var implementationById = profile.LinkedPoseImplementations
+                    .Where(value => value)
+                    .ToDictionary(value => value.ImplementationId, value => value);
+                var result = new List<CharacterLinkedPosePreviewGroupOption>();
+                for (int groupIndex = 0; groupIndex < projection.LinkedPose.Groups.Count; groupIndex++)
+                {
+                    CharacterLinkedPoseGroupProjectionDescriptor group = projection.LinkedPose.Groups[groupIndex];
+                    CharacterLinkedPoseGroupBinding binding = profile.LinkedPoseGroups
+                        .FirstOrDefault(value => value != null && value.GroupId == group.GroupId);
+                    CharacterLinkedPoseCompiledSelectorDescriptor selector = projection.LinkedPose.Selectors
+                        .FirstOrDefault(value => value != null && value.GroupId == group.GroupId);
+                    if (binding == null || selector == null)
+                    {
+                        status = $"Stale: compiled Linked Pose Group '{group.GroupId}' no longer matches the Profile.";
+                        return false;
+                    }
+                    var implementations = new List<CharacterLinkedPoseImplementationAsset>();
+                    for (int candidateIndex = 0; candidateIndex < selector.CandidateImplementationIds.Count; candidateIndex++)
+                    {
+                        LinkedPoseImplementationId implementationId =
+                            new LinkedPoseImplementationId(selector.CandidateImplementationIds[candidateIndex]);
+                        if (!implementationById.TryGetValue(implementationId, out CharacterLinkedPoseImplementationAsset implementation) ||
+                            implementation.IsStale ||
+                            !projection.LinkedPose.Implementations.Any(value =>
+                                value != null &&
+                                value.ImplementationId == implementationId &&
+                                value.Revision == implementation.Revision &&
+                                value.ContentHash == implementation.ContentHash &&
+                                value.InterfaceSignature == implementation.Interface.SignatureHash))
+                        {
+                            status = $"Stale: compiled Linked Pose candidate '{implementationId}' no longer matches the Profile.";
+                            return false;
+                        }
+                        implementations.Add(implementation);
+                    }
+                    bool supportsPreview = projection.LinkedPose.EquipmentSelectors
+                        .Any(value => value != null && value.Core.GroupId == group.GroupId);
+                    result.Add(new CharacterLinkedPosePreviewGroupOption(
+                        group.GroupId,
+                        binding.Interface ? binding.Interface.name : group.GroupId.Value,
+                        supportsPreview,
+                        implementations));
+                }
+                options = result;
+                status = result.Count == 0 ? "Unavailable: compiled Projection has no Linked Pose Group." : "Ready";
+                return result.Count > 0;
+            }
+            catch (Exception exception)
+            {
+                status = $"Unavailable: compiled Linked Pose catalog cannot be loaded: {exception.Message}";
+                return false;
+            }
+        }
+
         public static CharacterLinkedPoseInterfaceAsset CreateInterface(
             CharacterAnimationPresentationProfile profile,
             string displayName)

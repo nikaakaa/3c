@@ -51,8 +51,8 @@ namespace BTSMTL.Diagnostics.Editor
         public ulong EndPosition => End.Position;
         public ulong StartSequence => Start.Sequence;
         public ulong EndSequence => End.Sequence;
-        public ulong RuntimeEpoch => Start.RuntimeEpoch;
-        public RuntimeContentRevision ContentRevision => Start.ContentRevision;
+        public ulong ProgramEpoch => Start.ProgramEpoch;
+        public RuntimeProgramRevision ProgramRevision => Start.ProgramRevision;
         public string SkillId => Start.Payload.SkillId;
         public ulong ActionInstanceId => Start.Payload.ActionInstanceId;
         public string CallSiteId => Start.Payload.CallSiteId;
@@ -125,8 +125,8 @@ namespace BTSMTL.Diagnostics.Editor
         readonly IReadOnlyList<RuntimeTraceEvent> m_ExternalResults;
         readonly IReadOnlyList<Guid> m_SessionIds;
         readonly IReadOnlyList<Guid> m_ExecutionBranchIds;
-        readonly IReadOnlyList<RuntimeContentRevision> m_ContentRevisions;
-        readonly IReadOnlyList<ulong> m_RuntimeEpochs;
+        readonly IReadOnlyList<RuntimeProgramRevision> m_ProgramRevisions;
+        readonly IReadOnlyList<ulong> m_ProgramEpochs;
         readonly IReadOnlyList<RuntimeExecutionSourceClock> m_SourceClocks;
         readonly IReadOnlyList<Guid> m_CharacterRuntimeIds;
         readonly IReadOnlyList<RuntimeInstanceKey> m_RuntimeInstances;
@@ -148,8 +148,8 @@ namespace BTSMTL.Diagnostics.Editor
             var externalResults = new List<RuntimeTraceEvent>();
             var sessionIds = new List<Guid>();
             var executionBranchIds = new List<Guid>();
-            var contentRevisions = new List<RuntimeContentRevision>();
-            var runtimeEpochs = new List<ulong>();
+            var programRevisions = new List<RuntimeProgramRevision>();
+            var programEpochs = new List<ulong>();
             var sourceClocks = new List<RuntimeExecutionSourceClock>();
             var characterRuntimeIds = new List<Guid>();
             var runtimeInstances = new List<RuntimeInstanceKey>();
@@ -168,10 +168,10 @@ namespace BTSMTL.Diagnostics.Editor
                     sessionIds.Add(traceEvent.SessionId);
                 if (traceEvent.ExecutionBranchId != Guid.Empty && !executionBranchIds.Contains(traceEvent.ExecutionBranchId))
                     executionBranchIds.Add(traceEvent.ExecutionBranchId);
-                if (traceEvent.ContentRevision.IsValid && !contentRevisions.Contains(traceEvent.ContentRevision))
-                    contentRevisions.Add(traceEvent.ContentRevision);
-                if (traceEvent.RuntimeEpoch != 0 && !runtimeEpochs.Contains(traceEvent.RuntimeEpoch))
-                    runtimeEpochs.Add(traceEvent.RuntimeEpoch);
+                if (traceEvent.ProgramRevision.IsValid && !programRevisions.Contains(traceEvent.ProgramRevision))
+                    programRevisions.Add(traceEvent.ProgramRevision);
+                if (traceEvent.ProgramEpoch != 0 && !programEpochs.Contains(traceEvent.ProgramEpoch))
+                    programEpochs.Add(traceEvent.ProgramEpoch);
                 if (!string.IsNullOrEmpty(traceEvent.Payload.SourceClockId) &&
                     !string.IsNullOrEmpty(traceEvent.Payload.SourceTickKind))
                 {
@@ -208,8 +208,8 @@ namespace BTSMTL.Diagnostics.Editor
             m_ExternalResults = externalResults.AsReadOnly();
             m_SessionIds = sessionIds.AsReadOnly();
             m_ExecutionBranchIds = executionBranchIds.AsReadOnly();
-            m_ContentRevisions = contentRevisions.AsReadOnly();
-            m_RuntimeEpochs = runtimeEpochs.AsReadOnly();
+            m_ProgramRevisions = programRevisions.AsReadOnly();
+            m_ProgramEpochs = programEpochs.AsReadOnly();
             m_SourceClocks = sourceClocks.AsReadOnly();
             m_CharacterRuntimeIds = characterRuntimeIds.AsReadOnly();
             m_RuntimeInstances = runtimeInstances.AsReadOnly();
@@ -227,8 +227,8 @@ namespace BTSMTL.Diagnostics.Editor
         public IReadOnlyList<RuntimeTraceEvent> ExternalResults => m_ExternalResults;
         public IReadOnlyList<Guid> SessionIds => m_SessionIds;
         public IReadOnlyList<Guid> ExecutionBranchIds => m_ExecutionBranchIds;
-        public IReadOnlyList<RuntimeContentRevision> ContentRevisions => m_ContentRevisions;
-        public IReadOnlyList<ulong> RuntimeEpochs => m_RuntimeEpochs;
+        public IReadOnlyList<RuntimeProgramRevision> ProgramRevisions => m_ProgramRevisions;
+        public IReadOnlyList<ulong> ProgramEpochs => m_ProgramEpochs;
         public IReadOnlyList<RuntimeExecutionSourceClock> SourceClocks => m_SourceClocks;
         public IReadOnlyList<Guid> CharacterRuntimeIds => m_CharacterRuntimeIds;
         public IReadOnlyList<RuntimeInstanceKey> RuntimeInstances => m_RuntimeInstances;
@@ -304,8 +304,8 @@ namespace BTSMTL.Diagnostics.Editor
         public ulong Tick { get; }
         public RuntimeTraceEvent TraceEvent { get; }
         public string SnapshotIdentity { get; }
-        public RuntimeContentRevision Revision => TraceEvent.ContentRevision;
-        public ulong RuntimeEpoch => TraceEvent.RuntimeEpoch;
+        public RuntimeProgramRevision Revision => TraceEvent.ProgramRevision;
+        public ulong ProgramEpoch => TraceEvent.ProgramEpoch;
         public Guid ExecutionBranchId => TraceEvent.ExecutionBranchId;
         public RuntimeInstanceKey Instance => TraceEvent.RuntimeInstance;
         public bool HistoryComplete { get; }
@@ -389,7 +389,7 @@ namespace BTSMTL.Diagnostics.Editor
         internal static RuntimeExecutionTimeline Build(
             RuntimeCaptureSnapshot capture,
             RuntimeDebugSourceMapSnapshot sourceMap,
-            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
+            IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
             int historyOffset = 0,
             RuntimeInstanceKey instance = default)
         {
@@ -399,7 +399,7 @@ namespace BTSMTL.Diagnostics.Editor
         static RuntimeExecutionTimeline BuildCore(
             RuntimeCaptureSnapshot capture,
             RuntimeDebugSourceMapSnapshot sourceMap,
-            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
+            IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
             int historyOffset,
             RuntimeInstanceKey instance)
         {
@@ -425,8 +425,8 @@ namespace BTSMTL.Diagnostics.Editor
                 RuntimeSourceElementKey source = default;
                 RuntimeDebugSourceMapSnapshot eventSourceMap = null;
                 bool hasRevision = sourceMaps != null
-                    ? sourceMaps.TryGetValue(value.ContentRevision, out eventSourceMap)
-                    : sourceMap.Revision.Equals(value.ContentRevision);
+                    ? sourceMaps.TryGetValue(value.ProgramRevision, out eventSourceMap)
+                    : sourceMap.Revision.Equals(value.ProgramRevision);
                 if (sourceMaps == null && hasRevision)
                     eventSourceMap = sourceMap;
                 bool hasSource = hasRevision && handle.IsValid && eventSourceMap.TryResolve(handle, out source, out _);
@@ -438,8 +438,8 @@ namespace BTSMTL.Diagnostics.Editor
                     handle,
                     value.RuntimeInstance,
                     value.ExecutionBranchId,
-                    value.RuntimeEpoch,
-                    value.ContentRevision);
+                    value.ProgramEpoch,
+                    value.ProgramRevision);
                 if (value.Kind == RuntimeTraceEventKind.NodeWaiting)
                 {
                     if (open.TryGetValue(key, out PendingSpan waiting))
@@ -456,8 +456,8 @@ namespace BTSMTL.Diagnostics.Editor
                         handle,
                         value.RuntimeInstance,
                         value.ExecutionBranchId,
-                        value.RuntimeEpoch,
-                        value.ContentRevision);
+                        value.ProgramEpoch,
+                        value.ProgramRevision);
                     if (open.TryGetValue(nodeKey, out PendingSpan node))
                         node.Last = value;
                     continue;
@@ -467,8 +467,8 @@ namespace BTSMTL.Diagnostics.Editor
                     handle,
                     value.RuntimeInstance,
                     value.ExecutionBranchId,
-                    value.RuntimeEpoch,
-                    value.ContentRevision);
+                    value.ProgramEpoch,
+                    value.ProgramRevision);
                 if (IsWaitEnd(value.Kind) && open.TryGetValue(waitKey, out PendingSpan activeWait))
                 {
                     spans.Add(activeWait.Close(value));
@@ -543,7 +543,7 @@ namespace BTSMTL.Diagnostics.Editor
         internal static RuntimeExecutionHistory BuildHistory(
             RuntimeCaptureSnapshot capture,
             RuntimeDebugSourceMapSnapshot sourceMap,
-            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
+            IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> sourceMaps,
             int historyOffset = 0,
             RuntimeInstanceKey instance = default)
         {
@@ -572,8 +572,8 @@ namespace BTSMTL.Diagnostics.Editor
                 {
                     RuntimeDebugSourceMapSnapshot resolvedMap = sourceMap;
                     bool hasRevision = sourceMaps != null
-                        ? sourceMaps.TryGetValue(value.ContentRevision, out resolvedMap)
-                        : sourceMap != null && sourceMap.Revision.Equals(value.ContentRevision);
+                        ? sourceMaps.TryGetValue(value.ProgramRevision, out resolvedMap)
+                        : sourceMap != null && sourceMap.Revision.Equals(value.ProgramRevision);
                     if (!hasRevision || resolvedMap == null || !resolvedMap.TryGet(value.Source, out _))
                         unmappedEventCount++;
                 }
@@ -624,8 +624,8 @@ namespace BTSMTL.Diagnostics.Editor
                     var checkpointKey = new CheckpointKey(
                         pair.Key.Tick,
                         pair.Key.ExecutionBranchId,
-                        traceEvent.RuntimeEpoch,
-                        traceEvent.ContentRevision,
+                        traceEvent.ProgramEpoch,
+                        traceEvent.ProgramRevision,
                         traceEvent.Payload.RelatedElementId);
                     if (!checkpointKeys.Add(checkpointKey))
                         continue;
@@ -968,33 +968,33 @@ namespace BTSMTL.Diagnostics.Editor
             public CheckpointKey(
                 ulong tick,
                 Guid executionBranchId,
-                ulong runtimeEpoch,
-                RuntimeContentRevision contentRevision,
+                ulong programEpoch,
+                RuntimeProgramRevision programRevision,
                 string snapshotIdentity)
             {
                 Tick = tick;
                 ExecutionBranchId = executionBranchId;
-                RuntimeEpoch = runtimeEpoch;
-                ContentRevision = contentRevision;
+                ProgramEpoch = programEpoch;
+                ProgramRevision = programRevision;
                 SnapshotIdentity = snapshotIdentity ?? string.Empty;
             }
 
             readonly ulong Tick;
             readonly Guid ExecutionBranchId;
-            readonly ulong RuntimeEpoch;
-            readonly RuntimeContentRevision ContentRevision;
+            readonly ulong ProgramEpoch;
+            readonly RuntimeProgramRevision ProgramRevision;
             readonly string SnapshotIdentity;
 
             public bool Equals(CheckpointKey other) =>
                 Tick == other.Tick &&
                 ExecutionBranchId == other.ExecutionBranchId &&
-                RuntimeEpoch == other.RuntimeEpoch &&
-                ContentRevision.Equals(other.ContentRevision) &&
+                ProgramEpoch == other.ProgramEpoch &&
+                ProgramRevision.Equals(other.ProgramRevision) &&
                 string.Equals(SnapshotIdentity, other.SnapshotIdentity, StringComparison.Ordinal);
             public override bool Equals(object obj) => obj is CheckpointKey other && Equals(other);
             public override int GetHashCode()
             {
-                int hash = HashCode.Combine(Tick, ExecutionBranchId, RuntimeEpoch, ContentRevision);
+                int hash = HashCode.Combine(Tick, ExecutionBranchId, ProgramEpoch, ProgramRevision);
                 return hash * 397 ^ (SnapshotIdentity?.GetHashCode() ?? 0);
             }
         }
@@ -1113,35 +1113,35 @@ namespace BTSMTL.Diagnostics.Editor
                 RuntimeSourceElementHandle source,
                 RuntimeInstanceKey instance,
                 Guid executionBranchId,
-                ulong runtimeEpoch,
-                RuntimeContentRevision contentRevision)
+                ulong programEpoch,
+                RuntimeProgramRevision programRevision)
             {
                 Kind = kind;
                 Source = source;
                 Instance = instance;
                 ExecutionBranchId = executionBranchId;
-                RuntimeEpoch = runtimeEpoch;
-                ContentRevision = contentRevision;
+                ProgramEpoch = programEpoch;
+                ProgramRevision = programRevision;
             }
 
             readonly RuntimeExecutionSpanKind Kind;
             readonly RuntimeSourceElementHandle Source;
             readonly RuntimeInstanceKey Instance;
             readonly Guid ExecutionBranchId;
-            readonly ulong RuntimeEpoch;
-            readonly RuntimeContentRevision ContentRevision;
+            readonly ulong ProgramEpoch;
+            readonly RuntimeProgramRevision ProgramRevision;
 
             public bool Equals(SpanKey other) =>
                 Kind == other.Kind && Source.Equals(other.Source) && Instance.Equals(other.Instance) &&
                 ExecutionBranchId == other.ExecutionBranchId &&
-                RuntimeEpoch == other.RuntimeEpoch &&
-                ContentRevision.Equals(other.ContentRevision);
+                ProgramEpoch == other.ProgramEpoch &&
+                ProgramRevision.Equals(other.ProgramRevision);
             public override bool Equals(object obj) => obj is SpanKey other && Equals(other);
             public override int GetHashCode()
             {
                 int hash = HashCode.Combine((int)Kind, Source, Instance, ExecutionBranchId);
-                hash = hash * 397 + RuntimeEpoch.GetHashCode();
-                hash = hash * 397 + ContentRevision.GetHashCode();
+                hash = hash * 397 + ProgramEpoch.GetHashCode();
+                hash = hash * 397 + ProgramRevision.GetHashCode();
                 return hash;
             }
         }
@@ -1170,4 +1170,3 @@ namespace BTSMTL.Diagnostics.Editor
         }
     }
 }
-

@@ -201,6 +201,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     public sealed class ServerAuthoritativePipelineCompatibilityIdentity
     {
         public ServerAuthoritativePipelineCompatibilityIdentity(
+            ProgramId programId,
+            ProgramHash programHash,
+            LayoutHash layoutHash,
             OperationSetVersion operationSetVersion,
             int tickRate,
             SimulationPipelineIdentity predictionPipeline,
@@ -209,7 +212,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             WorldCapability predictionSolverRequiredCapabilities,
             WorldCapability authoritySolverRequiredCapabilities)
         {
-            if (!operationSetVersion.IsValid || tickRate <= 0 ||
+            if (!programId.IsValid || !programHash.IsValid || !layoutHash.IsValid || !operationSetVersion.IsValid || tickRate <= 0 ||
                 !predictionPipeline.IsValid || !authorityPipeline.IsValid || !backend.IsValid ||
                 backend.Role != SimulationComponentRole.ExecutionBackend ||
                 predictionSolverRequiredCapabilities == WorldCapability.None ||
@@ -217,6 +220,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 throw new ArgumentException("ServerAuthoritative Pipeline compatibility identity is incomplete.");
             }
+            ProgramId = programId;
+            ProgramHash = programHash;
+            LayoutHash = layoutHash;
             OperationSetVersion = operationSetVersion;
             TickRate = tickRate;
             PredictionPipeline = predictionPipeline;
@@ -226,6 +232,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             AuthoritySolverRequiredCapabilities = authoritySolverRequiredCapabilities;
             CompatibilityHash = StableHash.Compute(
                 "server-authoritative-pipeline-pair/2",
+                programId.Value,
+                programHash.ToString(),
+                layoutHash.ToString(),
                 operationSetVersion.Value,
                 tickRate.ToString(CultureInfo.InvariantCulture),
                 predictionPipeline.ToString(),
@@ -235,6 +244,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 Convert.ToUInt64(authoritySolverRequiredCapabilities, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture));
         }
 
+        public ProgramId ProgramId { get; }
+        public ProgramHash ProgramHash { get; }
+        public LayoutHash LayoutHash { get; }
         public OperationSetVersion OperationSetVersion { get; }
         public int TickRate { get; }
         public SimulationPipelineIdentity PredictionPipeline { get; }

@@ -87,10 +87,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public LocalSimulationSessionSourcePreparation(SimulationSessionSourcePreparationContext context)
         {
             m_Context = context ?? throw new ArgumentNullException(nameof(context));
-            if (!context.CharacterRuntime.NumericProfileId.Equals(Float32SimulationNumericProfile.Value.Id) ||
-                !context.CharacterRuntime.TargetAbiVersion.Equals(Float32SimulationNumericProfile.Value.AbiVersion))
+            if (!context.ProgramRuntime.NumericProfileId.Equals(Float32SimulationNumericProfile.Value.Id) ||
+                !context.ProgramRuntime.TargetAbiVersion.Equals(Float32SimulationNumericProfile.Value.AbiVersion))
             {
-                throw new InvalidOperationException("Local Session Source requires the installed Float32 Character Runtime.");
+                throw new InvalidOperationException("Local Session Source requires the installed Float32 Program Runtime.");
             }
             var inputBindings = new LocalSimulationInputBinding[context.Registrations.Count];
             var identityParts = new string[context.Registrations.Count + 4];
@@ -141,8 +141,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 StableHash.Compute(identityParts));
             m_Descriptor = LocalSimulationSessionSourceDefinition.CreateDescriptor(
                 identity,
-                context.CharacterRuntime.NumericProfileId,
-                context.CharacterRuntime.TargetAbiVersion);
+                context.ProgramRuntime.NumericProfileId,
+                context.ProgramRuntime.TargetAbiVersion);
             var inputPort = new Float32LocalInputSourcePort(identity, inputBindings);
             m_PreparedSource = new LocalSimulationSessionPreparedSource(
                 m_Descriptor,

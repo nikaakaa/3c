@@ -83,21 +83,24 @@ namespace ThirdPersonSimulation.DeterministicRollback
     public static class DeterministicRollbackModelIdentity
     {
         public const string ModelId = "thirdperson.network-model.deterministic-rollback";
-        public const string SemanticVersion = "7";
+        public const string SemanticVersion = "6";
         public const string PipelineId = "thirdperson.simulation.pipeline.deterministic-rollback";
         public const string PipelineRevision = "6";
         public const string BackendId = "thirdperson.simulation.backend.fixed-pass";
         public const string EndpointId = "thirdperson.network-endpoint.deterministic-rollback";
         public const string EndpointVersion = "4";
         public const string ProtocolId = "thirdperson.rollback-input-protocol";
-        public const int ProtocolVersion = 7;
+        public const int ProtocolVersion = 6;
 
         public static SimulationComponentIdentity BuildModel(
             DeterministicRollbackModelPolicy policy,
+            SemanticHash semanticHash,
+            ProgramHash fixedProgramHash,
+            LayoutHash fixedLayoutHash,
             StableHash collisionWorldHash,
             StableHash kccIdentityHash)
         {
-            if (policy == null ||
+            if (policy == null || !semanticHash.IsValid || !fixedProgramHash.IsValid || !fixedLayoutHash.IsValid ||
                 !collisionWorldHash.IsValid || !kccIdentityHash.IsValid)
             {
                 throw new ArgumentException("Deterministic Rollback Model identity is incomplete.");
@@ -107,8 +110,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 ModelId,
                 SemanticVersion,
                 StableHash.Compute(
-                    "deterministic-rollback-model/5",
+                    "deterministic-rollback-model/4",
                     policy.ConfigurationHash.Value,
+                    semanticHash.ToString(),
+                    fixedProgramHash.ToString(),
+                    fixedLayoutHash.ToString(),
                     collisionWorldHash.Value,
                     kccIdentityHash.Value,
                     FixedSimulationNumericProfile.Value.Id.Value,
@@ -123,14 +129,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ProtocolId,
             ProtocolVersion.ToString(),
             StableHash.Compute(
-                "deterministic-rollback-protocol-schema/4",
+                "deterministic-rollback-protocol-schema/3",
                 "handshake",
                 "roster",
                 "actor-input-batch",
                 "relayed-explicit-input-batch",
                 "canonical-bundle",
                 "canonical-confirmation",
-                "state-hash-with-character-content-v1",
+                "state-hash-with-role-content-v1",
                 "snapshot-request-with-routing",
                 "snapshot-response-with-routing-session-snapshot-v3"));
     }

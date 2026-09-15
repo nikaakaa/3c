@@ -1,0 +1,21 @@
+{
+    "name": "ThirdPersonCharacter.PresentationReplicationDiagnosticSampling",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication",
+    "references": [
+        "KK.GeneratedDiagnosticSampling.Annotations",
+        "KK.GeneratedDiagnosticSampling",
+        "ThirdPersonCharacter.Animation.TransitionRouting",
+        "ThirdPersonClient.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "KK_DIAGNOSTIC_SAMPLING"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

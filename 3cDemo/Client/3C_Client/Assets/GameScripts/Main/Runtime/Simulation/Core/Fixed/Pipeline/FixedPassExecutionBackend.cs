@@ -104,7 +104,7 @@ namespace ThirdPersonSimulation.Fixed
 
                 FixedPipelineProductStore products = request.ProductRuntimeFactories.CreateStore(request.CompiledPipeline.Products);
                 var stateStore = new SimulationWorldStateStore(request.CharacterRuntime, request.InitialState);
-                var characterRuntimePort = new FixedCharacterRuntimePort(
+                var programPort = new FixedCharacterRuntimePort(
                     request.Backend.Identity,
                     request.CharacterRuntime);
                 var workingStatePort = new FixedWorkingStatePort(request.Backend.Identity);
@@ -116,7 +116,7 @@ namespace ThirdPersonSimulation.Fixed
                 var diagnosticsPort = new FixedDiagnosticsRuntimePort(request.DiagnosticsIdentity, request.Diagnostics);
                 var targetPorts = new SimulationRuntimePortSet(new ISimulationRuntimePort[]
                 {
-                    characterRuntimePort,
+                    programPort,
                     workingStatePort,
                     completedStepPort,
                     committedObservationPort
@@ -165,6 +165,7 @@ namespace ThirdPersonSimulation.Fixed
                 var reconstructionContext = new SimulationPipelineReconstructionContext(
                     request.Descriptor.Identity,
                     request.CompiledPipeline.Identity,
+                    request.CharacterRuntime.GameplayContentHash,
                     request.Descriptor.Roster.RosterHash,
                     request.InitialState.WorldState.WorldRevision);
                 for (int i = 0; i < reconstructible.Count; i++)

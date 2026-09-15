@@ -50,12 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         void BeginLogicTick();
     }
 
-    public interface IFloat32CharacterRuntimeRegistration : IFloat32SimulationActorRegistration
-    {
-        Float32CharacterRuntimeActor CharacterBinding { get; }
-    }
-
-    public interface ILocalSimulationActorRegistration : IFloat32CharacterRuntimeRegistration
+    public interface ILocalSimulationActorRegistration : IFloat32SimulationActorRegistration
     {
         ICharacterControlSourceRuntime LocalControlSource { get; }
     }

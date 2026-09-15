@@ -33,7 +33,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal static void DrawRuntimeDiagnostics(
             object interestOwner,
             int hostInstanceId,
-            CharacterPipelineDefinition definition,
             CharacterRuntimeDiagnosticsInspectorMode mode)
         {
             RuntimeDebugSession session = RuntimeDebugSession.Shared;
@@ -497,7 +496,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterRuntimeDiagnosticsInspector.DrawRuntimeDiagnostics(
                 this,
                 host.GetInstanceID(),
-                host.Definition,
                 CharacterRuntimeDiagnosticsInspectorMode.Complete);
         }
     }
@@ -525,7 +523,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterRuntimeDiagnosticsInspector.DrawRuntimeDiagnostics(
                 this,
                 host.GetInstanceID(),
-                null,
                 CharacterRuntimeDiagnosticsInspectorMode.FootPlacement);
         }
     }

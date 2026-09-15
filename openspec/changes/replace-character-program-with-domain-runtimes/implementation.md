@@ -533,3 +533,9 @@
 - 提交 `da03adfc4`，Float32／Fixed Character Runtime 按 AbilityId 合并多个 Actor 的独立 execution data 时，新增 OperationSetVersion、NumericProfile 和 TickRate 校验，与已有 ContentHash、StateSchemaHash 一起组成完整执行身份。
 - 不再允许第一份 Ability 数据静默代表其它 Actor 的不一致版本；不改变 Ability artifact、布局、安装顺序或执行算法，仍在角色 Runtime 装配边界拒绝身份冲突。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.10、1.11、2.1、2.6 的完整领域接线仍未完成。
+
+## 2026-09-16 角色诊断改用Ability集合版本
+
+- 提交 `0fb20137c`，Float32／Fixed Character Runtime 根据排序后的完整 Ability 集合生成 `AbilitySetSourceRevision`，包含 Ability 身份、来源修订、内容 hash 和状态 Schema hash。
+- Character Pipeline、Fixed 和 Rollback Host 的诊断版本不再读取 `Abilities[0].SourceRevision`；角色诊断不再由某个 Ability 的排列顺序代表整套执行内容，角色 GameplayContentHash 和执行算法不变。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；Unity 完整生成工程仍受既有源索引与 UGUI 包错误阻断。

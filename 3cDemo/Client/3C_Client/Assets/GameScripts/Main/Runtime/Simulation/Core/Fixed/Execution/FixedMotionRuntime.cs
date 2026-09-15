@@ -1142,7 +1142,7 @@ namespace ThirdPersonSimulation.Fixed
             return Access.Services.RequireTimelineCurve(constant, $"{source.Identity}/{field}").Evaluate(normalized, FixedScalar.Zero);
         }
 
-        ProgramCurve Curve(int constantIndex, string name)
+        FixedGameplayAbilityCurve Curve(int constantIndex, string name)
         {
             ProgramConstant constant = RequireConstant(constantIndex, ProgramConstantKind.Bytes, name);
             return Access.Services.RequireTimelineCurve(constant, name);
@@ -1159,7 +1159,7 @@ namespace ThirdPersonSimulation.Fixed
             return m_Ability.Constants[index];
         }
 
-        static FixedScalar SampleProgress(ProgramCurve curve, FixedScalar normalized) =>
+        static FixedScalar SampleProgress(FixedGameplayAbilityCurve curve, FixedScalar normalized) =>
             FixedScalar.Clamp(curve.Evaluate(normalized, normalized), FixedScalar.Zero, FixedScalar.One);
 
         static FixedVector3 ClampMagnitude(FixedVector3 value, FixedScalar maximum)
@@ -1379,8 +1379,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar fromTime = FixedScalar.FromInt64(elapsedTicks) / tickRate;
             FixedScalar toTime = FixedScalar.FromInt64(checked(elapsedTicks + 1)) / tickRate;
             bool looping = (LocomotionInputMotionExecutionMode)operation.Integer0 == LocomotionInputMotionExecutionMode.Continuous;
-            ProgramCurve xCurve = Access.Services.RequireTimelineCurve(xConstant, xConstant.Identity);
-            ProgramCurve zCurve = Access.Services.RequireTimelineCurve(zConstant, zConstant.Identity);
+            FixedGameplayAbilityCurve xCurve = Access.Services.RequireTimelineCurve(xConstant, xConstant.Identity);
+            FixedGameplayAbilityCurve zCurve = Access.Services.RequireTimelineCurve(zConstant, zConstant.Identity);
             FixedScalar duration = durationConstant.Scalar;
             FixedScalar localX = SampleCumulative(xCurve, toTime, duration, looping) -
                 SampleCumulative(xCurve, fromTime, duration, looping);
@@ -1396,7 +1396,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static FixedScalar SampleCumulative(
-            ProgramCurve curve,
+            FixedGameplayAbilityCurve curve,
             FixedScalar time,
             FixedScalar duration,
             bool looping)

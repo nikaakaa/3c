@@ -33,7 +33,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly string[] m_OperationSourcePaths;
-        readonly IReadOnlyDictionary<int, ProgramCurve> m_ExecutionCurves;
+        readonly IReadOnlyDictionary<int, FixedGameplayAbilityCurve> m_ExecutionCurves;
         readonly PortableTagQuery[] m_TagQueries;
         readonly SimulationSetByCallerValue[][] m_SetByCallerValues;
         readonly IReadOnlyDictionary<GameplayCueProducerKey, ProgramProducer> m_GameplayCueProducers;
@@ -119,11 +119,11 @@ namespace ThirdPersonSimulation.Fixed
             Identity.Require(identity);
         }
 
-        public ProgramCurve RequireTimelineCurve(ProgramConstant constant, string identity)
+        public FixedGameplayAbilityCurve RequireTimelineCurve(ProgramConstant constant, string identity)
         {
             if (constant == null)
                 throw new ArgumentNullException(nameof(constant));
-            if (!m_ExecutionCurves.TryGetValue(constant.Index, out ProgramCurve curve))
+            if (!m_ExecutionCurves.TryGetValue(constant.Index, out FixedGameplayAbilityCurve curve))
                 throw new InvalidDataException($"Ability execution curve '{identity}' was not compiled into Ability execution services.");
             return curve;
         }
@@ -201,9 +201,9 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        static IReadOnlyDictionary<int, ProgramCurve> BuildExecutionCurves(FixedGameplayAbilityExecutionData data)
+        static IReadOnlyDictionary<int, FixedGameplayAbilityCurve> BuildExecutionCurves(FixedGameplayAbilityExecutionData data)
         {
-            var result = new Dictionary<int, ProgramCurve>();
+            var result = new Dictionary<int, FixedGameplayAbilityCurve>();
             for (int entryIndex = 0; entryIndex < data.CatalogEntries.Count; entryIndex++)
             {
                 ProgramCatalogEntry entry = data.CatalogEntries[entryIndex];
@@ -223,7 +223,7 @@ namespace ThirdPersonSimulation.Fixed
                     byte[] bytes = constant.Bytes.ToArray();
                     if (bytes.Length == 0)
                         throw new InvalidDataException($"Timeline curve '{entry.Identity}/{field.Name}' is empty.");
-                    result.Add(constant.Index, ProgramCurveCodec.Read(bytes));
+                    result.Add(constant.Index, FixedGameplayAbilityCurveCodec.Read(bytes));
                 }
             }
             for (int i = 0; i < data.Constants.Count; i++)
@@ -236,7 +236,7 @@ namespace ThirdPersonSimulation.Fixed
                 byte[] bytes = constant.Bytes.ToArray();
                 if (bytes.Length == 0)
                     throw new InvalidDataException($"Ability execution curve '{constant.Identity}' is empty.");
-                result.Add(constant.Index, ProgramCurveCodec.Read(bytes));
+                result.Add(constant.Index, FixedGameplayAbilityCurveCodec.Read(bytes));
             }
             return result;
         }

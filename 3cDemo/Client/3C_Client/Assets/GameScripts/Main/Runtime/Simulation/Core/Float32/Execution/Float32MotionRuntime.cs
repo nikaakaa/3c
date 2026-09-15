@@ -1138,7 +1138,7 @@ namespace ThirdPersonSimulation
             return Access.Services.RequireTimelineCurve(constant, $"{source.Identity}/{field}").Evaluate(normalized, Float32Scalar.Zero);
         }
 
-        ProgramCurve Curve(int constantIndex, string name)
+        Float32GameplayAbilityCurve Curve(int constantIndex, string name)
         {
             ProgramConstant constant = RequireConstant(constantIndex, ProgramConstantKind.Bytes, name);
             return Access.Services.RequireTimelineCurve(constant, name);
@@ -1155,7 +1155,7 @@ namespace ThirdPersonSimulation
             return m_Ability.Constants[index];
         }
 
-        static Float32Scalar SampleProgress(ProgramCurve curve, Float32Scalar normalized) =>
+        static Float32Scalar SampleProgress(Float32GameplayAbilityCurve curve, Float32Scalar normalized) =>
             Float32Scalar.Clamp(curve.Evaluate(normalized, normalized), Float32Scalar.Zero, Float32Scalar.One);
 
         static Float32Vector3 ClampMagnitude(Float32Vector3 value, Float32Scalar maximum)
@@ -1375,8 +1375,8 @@ namespace ThirdPersonSimulation
             Float32Scalar fromTime = Float32Scalar.FromInt64(elapsedTicks) / tickRate;
             Float32Scalar toTime = Float32Scalar.FromInt64(checked(elapsedTicks + 1)) / tickRate;
             bool looping = (LocomotionInputMotionExecutionMode)operation.Integer0 == LocomotionInputMotionExecutionMode.Continuous;
-            ProgramCurve xCurve = Access.Services.RequireTimelineCurve(xConstant, xConstant.Identity);
-            ProgramCurve zCurve = Access.Services.RequireTimelineCurve(zConstant, zConstant.Identity);
+            Float32GameplayAbilityCurve xCurve = Access.Services.RequireTimelineCurve(xConstant, xConstant.Identity);
+            Float32GameplayAbilityCurve zCurve = Access.Services.RequireTimelineCurve(zConstant, zConstant.Identity);
             Float32Scalar duration = durationConstant.Scalar;
             Float32Scalar localX = SampleCumulative(xCurve, toTime, duration, looping) -
                 SampleCumulative(xCurve, fromTime, duration, looping);
@@ -1392,7 +1392,7 @@ namespace ThirdPersonSimulation
         }
 
         static Float32Scalar SampleCumulative(
-            ProgramCurve curve,
+            Float32GameplayAbilityCurve curve,
             Float32Scalar time,
             Float32Scalar duration,
             bool looping)

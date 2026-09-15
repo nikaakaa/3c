@@ -6,9 +6,9 @@ using System.IO;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public readonly struct ProgramCurveKey
+    public readonly struct FixedGameplayAbilityCurveKey
     {
-        public ProgramCurveKey(FixedScalar time, FixedScalar value, FixedScalar inTangent, FixedScalar outTangent, FixedScalar inWeight, FixedScalar outWeight, int weightedMode)
+        public FixedGameplayAbilityCurveKey(FixedScalar time, FixedScalar value, FixedScalar inTangent, FixedScalar outTangent, FixedScalar inWeight, FixedScalar outWeight, int weightedMode)
         {
             Time = time;
             Value = value;
@@ -27,27 +27,27 @@ namespace ThirdPersonSimulation.Fixed
         public int WeightedMode { get; }
     }
 
-    public sealed class ProgramCurve
+    public sealed class FixedGameplayAbilityCurve
     {
-        readonly ReadOnlyCollection<ProgramCurveKey> m_Keys;
+        readonly ReadOnlyCollection<FixedGameplayAbilityCurveKey> m_Keys;
 
-        public ProgramCurve(int preWrapMode, int postWrapMode, IEnumerable<ProgramCurveKey> keys)
+        public FixedGameplayAbilityCurve(int preWrapMode, int postWrapMode, IEnumerable<FixedGameplayAbilityCurveKey> keys)
         {
             PreWrapMode = preWrapMode;
             PostWrapMode = postWrapMode;
-            var copied = keys == null ? new List<ProgramCurveKey>() : new List<ProgramCurveKey>(keys);
+            var copied = keys == null ? new List<FixedGameplayAbilityCurveKey>() : new List<FixedGameplayAbilityCurveKey>(keys);
             copied.Sort((left, right) => left.Time.CompareTo(right.Time));
             for (int i = 1; i < copied.Count; i++)
             {
                 if (copied[i - 1].Time == copied[i].Time)
-                    throw new ArgumentException($"Program Curve contains duplicate key time '{copied[i].Time}'.", nameof(keys));
+                    throw new ArgumentException($"Gameplay Ability Curve contains duplicate key time '{copied[i].Time}'.", nameof(keys));
             }
             m_Keys = copied.AsReadOnly();
         }
 
         public int PreWrapMode { get; }
         public int PostWrapMode { get; }
-        public IReadOnlyList<ProgramCurveKey> Keys => m_Keys;
+        public IReadOnlyList<FixedGameplayAbilityCurveKey> Keys => m_Keys;
 
         public FixedScalar Evaluate(FixedScalar time, FixedScalar fallback)
         {
@@ -67,8 +67,8 @@ namespace ThirdPersonSimulation.Fixed
                 else
                     high = middle;
             }
-            ProgramCurveKey from = m_Keys[low];
-            ProgramCurveKey to = m_Keys[high];
+            FixedGameplayAbilityCurveKey from = m_Keys[low];
+            FixedGameplayAbilityCurveKey to = m_Keys[high];
             FixedScalar duration = to.Time - from.Time;
             if (duration == FixedScalar.Zero)
                 return to.Value;
@@ -85,12 +85,12 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    public static class ProgramCurveCodec
+    public static class FixedGameplayAbilityCurveCodec
     {
         const uint Magic = 0x56525543;
         const int Version = 1;
 
-        public static byte[] Write(ProgramCurve curve)
+        public static byte[] Write(FixedGameplayAbilityCurve curve)
         {
             if (curve == null)
                 throw new ArgumentNullException(nameof(curve));
@@ -102,7 +102,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteInt32(curve.Keys.Count);
             for (int i = 0; i < curve.Keys.Count; i++)
             {
-                ProgramCurveKey key = curve.Keys[i];
+                FixedGameplayAbilityCurveKey key = curve.Keys[i];
                 writer.WriteScalar(key.Time);
                 writer.WriteScalar(key.Value);
                 writer.WriteScalar(key.InTangent);
@@ -114,20 +114,20 @@ namespace ThirdPersonSimulation.Fixed
             return writer.ToArray();
         }
 
-        public static ProgramCurve Read(byte[] bytes)
+        public static FixedGameplayAbilityCurve Read(byte[] bytes)
         {
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
-                throw new InvalidDataException("Program Curve header is invalid.");
+                throw new InvalidDataException("Gameplay Ability Curve header is invalid.");
             int preWrap = reader.ReadInt32();
             int postWrap = reader.ReadInt32();
             int count = reader.ReadInt32();
             if (count < 0 || count > 1000000)
-                throw new InvalidDataException($"Program Curve key count '{count}' is invalid.");
-            var keys = new ProgramCurveKey[count];
+                throw new InvalidDataException($"Gameplay Ability Curve key count '{count}' is invalid.");
+            var keys = new FixedGameplayAbilityCurveKey[count];
             for (int i = 0; i < count; i++)
             {
-                keys[i] = new ProgramCurveKey(
+                keys[i] = new FixedGameplayAbilityCurveKey(
                     reader.ReadScalar(),
                     reader.ReadScalar(),
                     reader.ReadScalar(),
@@ -137,7 +137,7 @@ namespace ThirdPersonSimulation.Fixed
                     reader.ReadInt32());
             }
             reader.RequireComplete();
-            return new ProgramCurve(preWrap, postWrap, keys);
+            return new FixedGameplayAbilityCurve(preWrap, postWrap, keys);
         }
     }
 }

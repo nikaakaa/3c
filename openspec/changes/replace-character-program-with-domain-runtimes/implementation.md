@@ -4,7 +4,7 @@
 
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
-- OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.9—1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。2.6 已开始收敛：Input request、Action activation request、Action instance、Timeline retention 和完整 MotionWarp 状态已进入角色状态分区，但控制机器内部状态、技能调用帧、目标、效果、装备和统一角色 Step 的完整 Capture／Restore 尚未闭合。
+- OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.9—1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。2.6 已开始收敛：Input request、Action activation request、Action instance、完整 MotionWarp 状态、GameplayEffect、Equipment 和 Control 已进入角色状态分区；Ability 下的 Timeline 保留态已删除，但控制机器内部状态、技能调用帧、目标、效果、装备和统一角色 Step 的完整 Capture／Restore 尚未闭合。
 - 按 D13—D15，Timeline 直接内容、播放私有状态和 Pose 原生图内部实现归各自既有任务；本窗口只接它们的 Prepare／Create、typed Pending、Commit／Discard、Stop 和采用事实，不复制其 cursor、节点状态或缓冲实现。核心继续负责 Host／Factory、Ability 最终数据与 Provider、角色 Step／快照／codec、网络／manifest、共享技能编译入口和总 Program／Projection 清理。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
@@ -168,7 +168,7 @@
 - `RandomState` 没有实际模拟运行时读写者，已从全局 Emitter、ProgramStateSemantic 和 owner 枚举中删除；随机节点仍可作为普通 Unity 节点存在，但不会借用角色模拟状态伪装成正式 RNG 服务。
 - `AbilityExecutionState` 现在由 `CharacterSimulationState.AbilityExecutionState` 持有，`GameplayAbilityExecutionManager` 的 Add／Remove／generation／局部值写入都通过 Float32／Fixed 主状态事务保存；`GameplayAbilityExecutionSlotMap` 只负责识别需要按 Ability 实例隔离的局部 Program 状态，不再提供角色级聚合存储。状态 codec 额外编码执行帧聚合，Server Authority checkpoint 使用独立 bytes 载荷；这仍不是 1.10 要求的独立 Ability execution data，Ability 资源本身仍从旧 Program 容器读取。
 - Input request 由 Program catalog 只提供稳定 identity；`ProgramExecutionLayout` 按 identity 建立排序后的 request 列表，`CharacterSimulationState` 保存每个请求的 request id、sequence、source／expire tick、priority 和 consumed 状态。Float32／Fixed 的 Input runtime 不再持有自己的状态或 Input policy，而是经同一角色状态事务读写；事务的 savepoint／Restore、提交和清理都与其它角色分区共用。请求 codec 使用共享核心合同，角色状态 codec 与 Server Authority checkpoint 按同一字段顺序携带该分区，旧 Program state identity 和 payload format 由版本升级拒绝。这样 Input 的配置身份仍来自正式 Program catalog，运行值只有一个角色状态 owner；但 2.6 仍未完成，因为统一角色 Step 还没有把所有剩余领域分区的跨 Tick 状态一次性纳入同一套完整 Capture／Restore 合同。
-- Action activation request 现在由 `CharacterSimulationState.ActionActivationRequests` 持有，列表中的请求保留 Action、Skill、Context、输入序号、开始 Tick、目标快照、来源、装备上下文和替换实例身份。Action instance 现在由同一角色状态的 `ActionInstances` 列表持有，保留生命周期、执行 generation、目标快照、装备上下文、停止过渡和 segment generation。Float32／Fixed 的 ActionStateStore 不再创建 Action StatePort，也不再读写 Action Program slot；Stage、pending 查找、容量、实例复用、生命周期写入和清理统一经过主状态事务。状态 codec 和 Server Authority full／delta checkpoint 以独立 bytes 携带请求与实例，Program catalog 只提供 Action 容量与内容身份。Timeline retention 现在由 `TimelineRetainedActionContexts` 按 Timeline operation identity 持有，并由 Timeline control port 经事务读写；MotionWarp 完整聚合状态现在由 `MotionWarpStates` 按 MotionWarp operation identity 持有，MotionWarp target 经同一角色事务读写，两个分区都进入状态 codec 与 Server Authority checkpoint。
+- Action activation request 现在由 `CharacterSimulationState.ActionActivationRequests` 持有，列表中的请求保留 Action、Skill、Context、输入序号、开始 Tick、目标快照、来源、装备上下文和替换实例身份。Action instance 现在由同一角色状态的 `ActionInstances` 列表持有，保留生命周期、执行 generation、目标快照、装备上下文、停止过渡和 segment generation。Float32／Fixed 的 ActionStateStore 不再创建 Action StatePort，也不再读写 Action Program slot；Stage、pending 查找、容量、实例复用、生命周期写入和清理统一经过主状态事务。状态 codec 和 Server Authority full／delta checkpoint 以独立 bytes 携带请求与实例，Program catalog 只提供 Action 容量与内容身份。Timeline 私有 retained action context 已从 Ability 状态、事务和角色状态 codec 删除；MotionWarp 完整聚合状态仍由 `MotionWarpStates` 按 MotionWarp operation identity 持有，MotionWarp target 经同一角色事务读写并进入状态 codec 与 Server Authority checkpoint。
 
 ## 编译证据与阻断
 
@@ -412,3 +412,9 @@
 - 提交 `e106d1310`、`d5d9e0bc7`，删除 Float32／Fixed Ability 状态、Ability 事务和角色状态 codec 中没有运行时消费者的 Timeline retained action context；同步删除 Ability execution layout 的 Timeline retention 索引，不再把 Timeline 私有播放状态挂在技能分区下。
 - Float32／Fixed 角色状态 codec 身份与 hash identity 升为 `/3`，旧状态载荷直接拒绝；MotionWarp 状态仍保留在技能执行状态分区，因为 Float32／Fixed Motion Runtime 当前确实读写它。Control 绑定端口的接口实现同时修正为公开成员，消除上一笔拆端口留下的接口实现错误。
 - Float32／Fixed portable 编译均按项目规则执行并清理 .NET Host：Float32 28 个错误、Fixed 24 个错误，均为 Unity 生成 `.csproj` 漏掉现有 Ability Layout 源文件导致的缺失类型，0 warning；此前的 `BindControl` 接口实现错误已不再出现。未运行 Unity、测试或资产生成。本步推进 D22 的 Timeline 状态归属边界，但不将 1.11 或 2.6 标记为完成。
+
+## 2026-09-15 Equipment角色状态布局脱离Ability安装
+
+- 提交 `a45c7272b`，新增 `EquipmentProgramLayoutCompiler.CompileRoleStateLayout`；Float32／Fixed 角色初始 Equipment 状态和角色状态 codec 直接从 `CharacterEquipmentRuntimeBinding` 编译角色级布局，不再从第一个声明 Equipment 的 Ability 读取 catalog、references 和 producers。
+- Ability 执行时仍使用自己的 operation reference 和 producer 校验；角色状态布局只负责 slots、features、items、routes、parameters 和 local states。这样角色状态不再依赖 Ability 安装顺序，也没有复制第二份 Equipment 配置或引入兼容路径。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error。Float32 仍被 Unity 生成 `.csproj` 漏掉 `GameplayAbilityExecutionLayout.cs` 等既有源文件阻断（28 个错误、0 warning）；Fixed 同一源索引阻断（24 个错误、0 warning）。每次编译后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

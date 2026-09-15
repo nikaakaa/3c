@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
     public interface IFixedCharacterRuntimeRegistration : IFixedSimulationActorRegistration
     {
-        ThirdPersonSimulation.Fixed.SimulationActorBinding CharacterBinding { get; }
+        ThirdPersonSimulation.Fixed.FixedCharacterRuntimeActor CharacterBinding { get; }
     }
 
     public interface IFixedLocalSimulationActorRegistration : IFixedCharacterRuntimeRegistration

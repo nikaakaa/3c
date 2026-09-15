@@ -178,12 +178,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 .ToArray();
             if (hosts.Length == 0)
                 throw new InvalidOperationException("Rollback Variant runtime root has no Character Runtime hosts.");
-            var bindings = new FixedSimulationActorBinding[hosts.Length];
+            var bindings = new FixedCharacterRuntimeActor[hosts.Length];
             for (int i = 0; i < hosts.Length; i++)
             {
                 if (hosts[i].CharacterDefinition != definition)
                     throw new InvalidOperationException("Rollback Variant Character Runtime hosts do not share the exact Character Definition.");
-                bindings[i] = new FixedSimulationActorBinding(
+                bindings[i] = new FixedCharacterRuntimeActor(
                     hosts[i].ActorId,
                     hosts[i].WorldBodyBindingId,
                     controlRuntimeBinding,

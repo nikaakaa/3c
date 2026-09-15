@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.Fixed
 {
     public sealed class FixedPassBackendCompositionRequest
     {
-        readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
+        readonly ReadOnlyCollection<FixedCharacterRuntimeActor> m_Roster;
         readonly ReadOnlyCollection<SimulationPortDescriptor> m_ExpectedSourcePorts;
         readonly ReadOnlyCollection<SimulationOutputRouteDescriptor> m_OutputRoutes;
         readonly ReadOnlyCollection<IDisposable> m_SourceResources;
@@ -63,7 +63,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationExecutionBackendDescriptor Backend { get; }
         public CompiledSimulationPipelinePlan CompiledPipeline { get; }
         public FixedCharacterRuntime CharacterRuntime { get; }
-        public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
+        public IReadOnlyList<FixedCharacterRuntimeActor> Roster => m_Roster;
         public SimulationWorldStateSet InitialState { get; }
         public SimulationPipelineInitialStateSource PipelineInitialState { get; }
         public SimulationRuntimePortSet SourcePorts { get; }
@@ -136,7 +136,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw Failure("actor_roster_count_mismatch", "Character Runtime roster does not match Session descriptor and initial state.");
             for (int i = 0; i < m_Roster.Count; i++)
             {
-                SimulationActorBinding binding = m_Roster[i];
+                FixedCharacterRuntimeActor binding = m_Roster[i];
                 if (binding.ActorId != Descriptor.Roster.Actors[i] ||
                     binding.ActorId != InitialState.Actors[i].ActorId ||
                     binding.ActorId != InitialState.WorldState.Bodies[i].ActorId)
@@ -198,9 +198,9 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        static ReadOnlyCollection<SimulationActorBinding> FreezeRoster(IEnumerable<SimulationActorBinding> roster)
+        static ReadOnlyCollection<FixedCharacterRuntimeActor> FreezeRoster(IEnumerable<FixedCharacterRuntimeActor> roster)
         {
-            var values = roster == null ? new List<SimulationActorBinding>() : new List<SimulationActorBinding>(roster);
+            var values = roster == null ? new List<FixedCharacterRuntimeActor>() : new List<FixedCharacterRuntimeActor>(roster);
             values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             if (values.Count == 0)
                 throw new ArgumentException("Character Runtime roster cannot be empty.", nameof(roster));

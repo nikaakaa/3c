@@ -12,7 +12,7 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
 using FixedCharacterBodySample = ThirdPersonSimulation.Fixed.CharacterBodySample;
-using FixedSimulationActorBinding = ThirdPersonSimulation.Fixed.SimulationActorBinding;
+using FixedCharacterRuntimeActor = ThirdPersonSimulation.Fixed.FixedCharacterRuntimeActor;
 using FixedSimulationActorTickResult = ThirdPersonSimulation.Fixed.SimulationActorTickResult;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 
@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
     {
         readonly UnityFixedCharacterInputAdapter m_LocalInput;
         readonly FixedCharacterRuntime m_CharacterRuntime;
-        readonly FixedSimulationActorBinding m_CharacterBinding;
+        readonly FixedCharacterRuntimeActor m_CharacterBinding;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
         readonly ICharacterPresentationRuntime m_PresentationRuntime;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             string ownerName,
             ActorId actorId,
             FixedCharacterRuntime characterRuntime,
-            FixedSimulationActorBinding characterBinding,
+            FixedCharacterRuntimeActor characterBinding,
             AnimationPresentationProgramIdentity presentationProgramIdentity,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
@@ -133,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public string OwnerIdentity => $"unity-deterministic-rollback-character/{OwnerInstanceId}";
         public ActorId ActorId { get; }
         public FixedCharacterRuntime CharacterRuntime => m_CharacterRuntime;
-        public FixedSimulationActorBinding CharacterBinding => m_CharacterBinding;
+        public FixedCharacterRuntimeActor CharacterBinding => m_CharacterBinding;
         public CharacterBodyMotionBinding BodyMotionBinding => m_CharacterBinding.BodyMotionBinding;
         public string WorldBodyBindingId { get; }
         public FixedWorldBodyState InitialBody { get; }

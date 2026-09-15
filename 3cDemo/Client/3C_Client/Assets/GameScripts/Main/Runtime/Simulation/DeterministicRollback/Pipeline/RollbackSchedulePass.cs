@@ -257,7 +257,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 typedIngress);
         }
 
-        static ActorId[] CollectActors(IReadOnlyList<SimulationActorBinding> roster)
+        static ActorId[] CollectActors(IReadOnlyList<FixedCharacterRuntimeActor> roster)
         {
             var actors = new ActorId[roster.Count];
             for (int i = 0; i < roster.Count; i++)

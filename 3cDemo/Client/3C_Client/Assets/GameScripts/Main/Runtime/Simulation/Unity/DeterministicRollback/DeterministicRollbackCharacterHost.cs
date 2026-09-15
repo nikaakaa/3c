@@ -155,7 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
                 characterDefinition.LoadFixedCharacterAbilities();
-            FixedSimulationActorBinding characterBinding = new FixedSimulationActorBinding(
+            FixedCharacterRuntimeActor characterBinding = new FixedCharacterRuntimeActor(
                 actorId,
                 Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                 controlRuntimeBinding,

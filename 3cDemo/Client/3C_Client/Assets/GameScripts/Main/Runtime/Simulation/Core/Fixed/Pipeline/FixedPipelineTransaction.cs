@@ -124,7 +124,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedSimulationRestoreSource m_RestoreSource;
         readonly PipelineTransactionRuntimeServices m_Services;
         readonly FixedCharacterRuntime m_CharacterRuntime;
-        IReadOnlyList<SimulationActorBinding> m_Roster;
+        IReadOnlyList<FixedCharacterRuntimeActor> m_Roster;
         readonly SimulationWorldStateStore m_StateStore;
         readonly ICharacterWorldSolver m_Solver;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
@@ -290,7 +290,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             _ = outer;
             FixedCharacterRuntime characterRuntime = m_CharacterRuntime;
-            IReadOnlyList<SimulationActorBinding> roster = m_Roster;
+            IReadOnlyList<FixedCharacterRuntimeActor> roster = m_Roster;
             for (int stepIndex = 0; stepIndex < plan.Steps.Count; stepIndex++)
             {
                 FixedSimulationStep step = plan.Steps[stepIndex];

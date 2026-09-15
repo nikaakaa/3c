@@ -14,7 +14,7 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using FixedSimulationActorBinding = ThirdPersonSimulation.Fixed.SimulationActorBinding;
+using FixedCharacterRuntimeActor = ThirdPersonSimulation.Fixed.FixedCharacterRuntimeActor;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 using FixedWorldCollisionSummary = ThirdPersonSimulation.Fixed.WorldCollisionSummary;
 
@@ -188,7 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
                 characterDefinition.LoadFixedCharacterAbilities();
-            FixedSimulationActorBinding actorBinding = new FixedSimulationActorBinding(
+            FixedCharacterRuntimeActor actorBinding = new FixedCharacterRuntimeActor(
                 actorId,
                 Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
                 controlRuntimeBinding,

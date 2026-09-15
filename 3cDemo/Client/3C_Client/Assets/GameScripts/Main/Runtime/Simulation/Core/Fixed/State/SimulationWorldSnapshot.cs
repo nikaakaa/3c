@@ -154,7 +154,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < actors.Count; i++)
             {
                 SimulationActorState actor = actors[i];
-                SimulationActorBinding binding = characterRuntime.Roster[i];
+                FixedCharacterRuntimeActor binding = characterRuntime.Roster[i];
                 if (i > 0 && actors[i - 1].ActorId == actor.ActorId ||
                     worldState.Bodies[i].ActorId != actor.ActorId || binding.ActorId != actor.ActorId)
                 {
@@ -284,7 +284,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 SimulationActorSnapshot actorSnapshot = snapshot.Actors[i];
                 SimulationActorState currentActor = m_Current.Actors[i];
-                SimulationActorBinding binding = m_Runtime.Roster[i];
+                FixedCharacterRuntimeActor binding = m_Runtime.Roster[i];
                 if (actorSnapshot.ActorId != currentActor.ActorId ||
                     !actorSnapshot.GameplayContentHash.Equals(currentActor.State.GameplayContentHash) ||
                     binding.ActorId != actorSnapshot.ActorId)
@@ -314,7 +314,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < stateSet.Actors.Count; i++)
             {
                 SimulationActorState actor = stateSet.Actors[i];
-                SimulationActorBinding binding = m_Runtime.Roster[i];
+                FixedCharacterRuntimeActor binding = m_Runtime.Roster[i];
                 if (actor.ActorId != binding.ActorId)
                     throw new InvalidDataException($"Simulation state Actor '{actor.ActorId}' does not match the active Character Runtime roster.");
                 GameplayContentHash expected = new GameplayContentHash(binding.GameplayContentHash);

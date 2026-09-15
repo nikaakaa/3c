@@ -139,7 +139,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         RollbackIngressBatch Read(
             SimulationTickSourceIdentity outerSource,
             SimulationTick nextSimulationTick,
-            IReadOnlyList<SimulationActorBinding> roster);
+            IReadOnlyList<FixedCharacterRuntimeActor> roster);
         IRollbackInputSourceCheckpoint CaptureCheckpoint();
         void RestoreCheckpoint(IRollbackInputSourceCheckpoint checkpoint);
         RollbackInputSourceDiagnosticsSnapshot CaptureDiagnostics();

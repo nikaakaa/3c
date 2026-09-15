@@ -23,16 +23,16 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedCharacterRuntime
     {
-        readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
+        readonly ReadOnlyCollection<FixedCharacterRuntimeActor> m_Roster;
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
 
         public static FixedCharacterRuntime Create(
-            IEnumerable<SimulationActorBinding> roster,
+            IEnumerable<FixedCharacterRuntimeActor> roster,
             CharacterControlModuleCatalog controlModules)
         {
             SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
-            var values = roster == null ? new List<SimulationActorBinding>() : new List<SimulationActorBinding>(roster);
+            var values = roster == null ? new List<FixedCharacterRuntimeActor>() : new List<FixedCharacterRuntimeActor>(roster);
             if (values.Count == 0 || values[0].AbilityData.Data.Count == 0)
                 throw new ArgumentException("Fixed Character Runtime factory requires an Ability TickRate.", nameof(roster));
             return new FixedCharacterRuntime(
@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public static FixedCharacterRuntime Create(
-            IEnumerable<SimulationActorBinding> roster,
+            IEnumerable<FixedCharacterRuntimeActor> roster,
             int tickRate,
             CharacterControlModuleCatalog controlModules)
         {
@@ -58,7 +58,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public FixedCharacterRuntime(
-            IEnumerable<SimulationActorBinding> roster,
+            IEnumerable<FixedCharacterRuntimeActor> roster,
             SimulationNumericProfile numericProfile,
             int tickRate,
             OperationSetVersion operationSetVersion,
@@ -68,8 +68,8 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Fixed Character Runtime execution identity is incomplete.");
             ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             var values = roster == null
-                ? new List<SimulationActorBinding>()
-                : new List<SimulationActorBinding>(roster);
+                ? new List<FixedCharacterRuntimeActor>()
+                : new List<FixedCharacterRuntimeActor>(roster);
             values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             if (values.Count == 0)
                 throw new ArgumentException("Fixed Character Runtime roster cannot be empty.", nameof(roster));
@@ -141,7 +141,7 @@ namespace ThirdPersonSimulation.Fixed
             GameplayContentHash = new GameplayContentHash(StableHash.Compute(parts.ToArray()));
         }
 
-        public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
+        public IReadOnlyList<FixedCharacterRuntimeActor> Roster => m_Roster;
         public IReadOnlyList<FixedGameplayAbilityExecutionData> Abilities => m_Abilities;
         public SimulationActorRosterDescriptor RosterDescriptor { get; }
         public SimulationNumericProfile NumericProfile { get; }
@@ -156,7 +156,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (actorIndex < 0 || actorIndex >= Roster.Count)
                 throw new ArgumentOutOfRangeException(nameof(actorIndex));
-            SimulationActorBinding actor = Roster[actorIndex];
+            FixedCharacterRuntimeActor actor = Roster[actorIndex];
             CharacterControlModuleContract control = ControlModules.RequireContract(actor.ControlRuntimeBinding.ModuleId);
             CharacterControlRuntimeState controlState = CharacterControlRuntimeState.CreateInitial(
                 actor.ControlRuntimeBinding,
@@ -192,7 +192,7 @@ namespace ThirdPersonSimulation.Fixed
                 equipmentState);
         }
 
-        static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)
+        static ActorId[] ActorIds(IReadOnlyList<FixedCharacterRuntimeActor> values)
         {
             var result = new ActorId[values.Count];
             for (int i = 0; i < result.Length; i++)
@@ -205,7 +205,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         FixedCharacterRuntime Runtime { get; }
         GameplayContentHash GameplayContentHash { get; }
-        IReadOnlyList<SimulationActorBinding> Roster { get; }
+        IReadOnlyList<FixedCharacterRuntimeActor> Roster { get; }
         SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
         CharacterControlRuntimeBinding GetControlRuntimeBinding(int actorIndex);
@@ -240,7 +240,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationPortDescriptor Descriptor { get; }
         public FixedCharacterRuntime Runtime { get; }
         public GameplayContentHash GameplayContentHash => Runtime.GameplayContentHash;
-        public IReadOnlyList<SimulationActorBinding> Roster => Runtime.Roster;
+        public IReadOnlyList<FixedCharacterRuntimeActor> Roster => Runtime.Roster;
         public SimulationActorRosterDescriptor RosterDescriptor => Runtime.RosterDescriptor;
 
         public int GetActorIndex(ActorId actorId) =>

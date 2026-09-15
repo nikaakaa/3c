@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         public static FixedPendingActorEvaluation Evaluate(
             FixedCharacterRuntime characterRuntime,
-            SimulationActorBinding actor,
+            FixedCharacterRuntimeActor actor,
             FixedCharacterRuntimeState sourceState,
             SimulationTick tick,
             CharacterSimulationInput input,

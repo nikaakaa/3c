@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
-using FixedActorBinding = ThirdPersonSimulation.Fixed.SimulationActorBinding;
+using FixedActorBinding = ThirdPersonSimulation.Fixed.FixedCharacterRuntimeActor;
 using FixedActorState = ThirdPersonSimulation.Fixed.SimulationActorState;
 using FixedCharacterRuntime = ThirdPersonSimulation.Fixed.FixedCharacterRuntime;
 using FixedCompositionRequest = ThirdPersonSimulation.Fixed.FixedSimulationSessionCompositionRequest;

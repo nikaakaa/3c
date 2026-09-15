@@ -9,7 +9,7 @@ using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using FixedCharacterBodySample = ThirdPersonSimulation.Fixed.CharacterBodySample;
-using FixedSimulationActorBinding = ThirdPersonSimulation.Fixed.SimulationActorBinding;
+using FixedCharacterRuntimeActor = ThirdPersonSimulation.Fixed.FixedCharacterRuntimeActor;
 using FixedSimulationActorTickResult = ThirdPersonSimulation.Fixed.SimulationActorTickResult;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 
@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     {
         readonly IUnityFixedCharacterControlSourceRuntime m_ControlSource;
         readonly FixedCharacterRuntime m_CharacterRuntime;
-        readonly FixedSimulationActorBinding m_ActorBinding;
+        readonly FixedCharacterRuntimeActor m_ActorBinding;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
         ICharacterPresentationRuntime m_PresentationRuntime;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             string ownerName,
             ActorId actorId,
             FixedCharacterRuntime characterRuntime,
-            FixedSimulationActorBinding actorBinding,
+            FixedCharacterRuntimeActor actorBinding,
             CharacterPresentationProjectionAsset projectionAsset,
             CharacterPresentationProjection projection,
             AnimationPresentationProgramIdentity presentationProgramIdentity,
@@ -139,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public string OwnerIdentity => $"unity-fixed-character/{OwnerInstanceId}";
         public ActorId ActorId { get; }
         public FixedCharacterRuntime CharacterRuntime => m_CharacterRuntime;
-        public FixedSimulationActorBinding CharacterBinding => m_ActorBinding;
+        public FixedCharacterRuntimeActor CharacterBinding => m_ActorBinding;
         public CharacterBodyMotionBinding BodyMotionBinding => m_BodyMotionBinding;
         public CharacterPresentationProjectionAsset ProjectionAsset { get; private set; }
         public CharacterPresentationProjection Projection { get; private set; }

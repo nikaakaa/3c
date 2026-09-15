@@ -119,7 +119,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public const string AuthorityRelativeDirectory = DotRecastAuthoritySceneManifest.PublishDirectoryName;
         public const string ManifestFileName = DotRecastAuthoritySceneManifest.FileName;
-        const string ProgramRelativePath = "Artifacts/CharacterProgram.csim";
+        const string AbilityRelativeDirectory = "Artifacts/Abilities";
         const string NavigationRelativePath = "Artifacts/NavigationSurface.navsurface";
 
         public static LoadedDotRecastAuthoritySceneManifest Export(
@@ -130,41 +130,43 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string authorityDirectory = Path.Combine(request.ServerPublishDirectory, AuthorityRelativeDirectory);
             RequireEmptyOutput(authorityDirectory);
             CharacterPipelineDefinition definition = request.CharacterDefinition;
-            CharacterSimulationProgramAsset programAsset = definition.SimulationProgram
-                ? definition.SimulationProgram
-                : throw new InvalidOperationException("Character Definition has no formal Simulation Program asset.");
-            string definitionPath = AssetDatabase.GetAssetPath(definition);
-            string definitionGuid = AssetDatabase.AssetPathToGUID(definitionPath);
-            CharacterSimulationProgram program = programAsset.Load();
-            byte[] programBytes = programAsset.CopyCanonicalArtifact();
+            ServerAuthoritativeAuthoritySessionSourceDefinition source = request.AuthoritySource;
+            ServerAuthoritativeSessionConfigurationDefinition configuration = source.Configuration;
+            configuration.RequireComplete();
+            if (definition.SimulationTickRate != configuration.SimulationTickRate)
+                throw new InvalidOperationException("Character Definition and Session Configuration TickRate do not match.");
+
+            SimulationExecutionBackendDescriptor backend = request.ExecutionBackend.BuildPortableDescriptor();
+            SimulationWorldSolverDefinitionDescriptor solver = request.WorldSolver.BuildDescriptor(configuration.SimulationTickRate);
+            DotRecastAuthorityHostProduct.Descriptor.RequireAuthoritySolver(solver);
             CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
-            CharacterControlRuntimeBinding controlRuntimeBinding = definition.BuildControlRuntimeBinding(
-                controlModules);
+            CharacterControlRuntimeBinding controlRuntimeBinding = definition.BuildControlRuntimeBinding(controlModules);
             CharacterBodyMotionBinding bodyMotionBinding = definition.BuildBodyMotionRuntimeBinding();
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = definition.BuildGameplayEffectRuntimeBinding();
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = definition.BuildEquipmentRuntimeBinding();
-            ProgramExecutionLayout.GetOrCreate(program, gameplayEffectRuntimeBinding, equipmentRuntimeBinding);
-            LoadedCharacterTargetProgramArtifact inspectedProgram = CharacterTargetProgramArtifactLoader.Inspect(definitionGuid, programBytes);
-            if (!inspectedProgram.Program.ProgramHash.Equals(program.ProgramHash) ||
-                !inspectedProgram.Program.LayoutHash.Equals(program.LayoutHash))
+            GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilityData =
+                definition.LoadFloat32CharacterAbilities();
+            var characterBindings = new SimulationActorBinding[request.Roster.Count];
+            for (int i = 0; i < characterBindings.Length; i++)
             {
-                throw new InvalidOperationException("Character Definition Program asset does not match its canonical artifact.");
+                DotRecastAuthorityActorExportBinding actor = request.Roster[i];
+                characterBindings[i] = new SimulationActorBinding(
+                    actor.Roster.ActorId,
+                    actor.WorldBodyBindingId,
+                    controlRuntimeBinding,
+                    bodyMotionBinding,
+                    gameplayEffectRuntimeBinding,
+                    equipmentRuntimeBinding,
+                    abilityData);
             }
-
-            ServerAuthoritativeAuthoritySessionSourceDefinition source = request.AuthoritySource;
-            ServerAuthoritativeSessionConfigurationDefinition model = source.Configuration;
-            model.RequireComplete();
-            if (definition.SimulationTickRate != model.SimulationTickRate || program.Manifest.TickRate != model.SimulationTickRate)
-                throw new InvalidOperationException("Character Definition, Program, and Authority Model TickRate do not match.");
-
-            SimulationExecutionBackendDescriptor backend = request.ExecutionBackend.BuildPortableDescriptor();
-            SimulationWorldSolverDefinitionDescriptor solver = request.WorldSolver.BuildDescriptor(model.SimulationTickRate);
-            DotRecastAuthorityHostProduct.Descriptor.RequireAuthoritySolver(solver);
-            ServerAuthoritativePipelineCompatibilityIdentity compatibility = model.BuildCompatibility(
-                program,
-                Float32ProgramRuntime.DescriptorDefinition,
+            Float32CharacterRuntime characterRuntime = Float32CharacterRuntime.Create(
+                characterBindings,
+                configuration.SimulationTickRate,
+                controlModules);
+            ServerAuthoritativePipelineCompatibilityIdentity compatibility = configuration.BuildCompatibility(
+                characterRuntime,
                 request.ExecutionBackend);
-            SimulationPipelineDescriptor authorityPipeline = model.AuthorityPipeline.BuildPortableDescriptor();
+            SimulationPipelineDescriptor authorityPipeline = configuration.AuthorityPipeline.BuildPortableDescriptor();
             ServerAuthoritativeAuthoritySourcePolicy sourcePolicy = source.BuildPolicy();
             SimulationSessionSourceAuthoringDescriptor sourceDescriptor = source.BuildAuthoringDescriptor();
             NavigationSurfaceAsset surfaceAsset = request.WorldSolver.NavigationSurface
@@ -175,17 +177,47 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             ActorContactShape contactShape = request.WorldSolver.ContactShape;
             ActorContactSolverConfiguration contactConfiguration = request.WorldSolver.ContactConfiguration;
 
+            var abilityBindings = new List<DotRecastAuthorityAbilityArtifactBinding>(definition.Float32AbilityData.Count);
+            var abilityArtifacts = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+            for (int i = 0; i < definition.Float32AbilityData.Count; i++)
+            {
+                GameplayAbilityDataAsset asset = definition.Float32AbilityData[i]
+                    ? definition.Float32AbilityData[i]
+                    : throw new InvalidOperationException("Character Definition contains a missing Float32 Ability Data asset.");
+                Float32GameplayAbilityExecutionData data = definition.LoadFloat32GameplayAbility(asset);
+                byte[] bytes = asset.CopyCanonicalArtifact();
+                string assetPath = AssetDatabase.GetAssetPath(asset);
+                string abilityGuid = AssetDatabase.AssetPathToGUID(assetPath);
+                string relativePath = $"{AbilityRelativeDirectory}/{data.AbilityId.Value}.ability";
+                if (!abilityArtifacts.TryAdd(relativePath, bytes))
+                    throw new InvalidOperationException($"Ability artifact path '{relativePath}' is duplicated.");
+                abilityBindings.Add(new DotRecastAuthorityAbilityArtifactBinding(
+                    relativePath,
+                    abilityGuid,
+                    data.AbilityId,
+                    data.ContentHash,
+                    data.StateSchemaHash,
+                    Float32GameplayAbilityExecutionDataCodec.ComputeCanonicalBytesHash(bytes),
+                    bytes.Length,
+                    data.CompilerVersion,
+                    data.OperationSetVersion,
+                    data.TickRate,
+                    data.SourceRevision,
+                    data.SemanticHash,
+                    data.NumericProfile.Id,
+                    data.NumericProfile.AbiVersion,
+                    data.ExecutionIdentity,
+                    data.Root,
+                    data.Capabilities.RequiredWorldCapabilities));
+            }
+
             var actorBindings = new DotRecastAuthorityActorBinding[request.Roster.Count];
             var routes = new SimulationOutputRouteDescriptor[request.Roster.Count];
             for (int i = 0; i < actorBindings.Length; i++)
             {
                 DotRecastAuthorityActorExportBinding actor = request.Roster[i];
-                CharacterSimulationState state = CharacterSimulationState.CreateInitial(
-                    program,
-                    CharacterControlRuntimeState.CreateInitial(
-                        controlRuntimeBinding,
-                        controlModules.RequireContract(controlRuntimeBinding.ModuleId)));
-                byte[] stateBytes = CharacterSimulationStateCodec.Write(state);
+                Float32CharacterRuntimeState state = characterRuntime.CreateInitialState(i);
+                byte[] stateBytes = Float32CharacterRuntimeStateCodec.Write(state);
                 if (actor.ContactShape != contactShape)
                     throw new InvalidOperationException($"DotRecast Authority Actor '{actor.Roster.ActorId}' contact shape does not match the World Solver configuration.");
                 routes[i] = actor.OutputRoute;
@@ -193,27 +225,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     actor.Roster,
                     actor.WorldBodyBindingId,
                     stateBytes,
-                    CharacterSimulationStateCodec.ComputeHash(state),
+                    Float32CharacterRuntimeStateCodec.ComputeHash(state),
                     actor.InitialBody,
                     actor.ContactShape,
                     actor.OutputRoute);
             }
 
-            var programBinding = new DotRecastAuthorityProgramArtifactBinding(
-                ProgramRelativePath,
-                definitionGuid,
-                program.Manifest.ProgramId,
-                program.ProgramHash,
-                program.LayoutHash,
-                CharacterTargetProgramArtifactLoader.ComputeBytesHash(programBytes),
-                programBytes.Length,
-                program.Manifest.CompilerVersion,
-                program.Manifest.OperationSetVersion,
-                program.Manifest.SourceRevision,
-                program.Manifest.SemanticHash,
-                program.Manifest.NumericProfile.Id,
-                program.Manifest.NumericProfile.AbiVersion,
-                program.Manifest.Capabilities.RequiredWorldCapabilities);
             var pipelineBinding = new DotRecastAuthorityPipelineBinding(
                 compatibility.PredictionPipeline,
                 compatibility.AuthorityPipeline,
@@ -222,7 +239,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 sourceDescriptor.Source,
                 sourceDescriptor.SourcePorts,
                 sourcePolicy,
-                model.ReplicationPolicy);
+                configuration.ReplicationPolicy);
             var worldBinding = new DotRecastAuthorityWorldBinding(
                 request.WorldId,
                 surface.MapId,
@@ -242,9 +259,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             var runtimeIdentities = new DotRecastAuthorityRuntimeIdentitySet(
                 request.SessionId,
                 request.SourceClockId,
-                Float32SimulationSessionComposer.BuildSnapshotCodecIdentity(Float32ProgramRuntime.DescriptorDefinition, backend),
+                Float32SimulationSessionComposer.BuildSnapshotCodecIdentity(
+                    Float32SimulationTarget.Manifest.ExecutionTarget,
+                    backend),
                 DotRecastAuthorityRuntimeIdentityCatalog.BuildCommitter(routes),
-                model.Endpoint.BuildIdentity(),
+                configuration.Endpoint.BuildIdentity(),
                 DotRecastAuthorityRuntimeIdentityCatalog.BuildDiagnostics(DotRecastAuthorityHostProduct.ProductId));
             var manifest = new DotRecastAuthoritySceneManifest(
                 DotRecastAuthorityHostProduct.ProductId,
@@ -252,7 +271,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.Scene,
                 request.RoomId,
                 request.DataEndpoint,
-                programBinding,
+                abilityBindings,
                 controlRuntimeBinding,
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
@@ -262,13 +281,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 runtimeIdentities,
                 actorBindings);
 
-            string artifactsDirectory = Path.Combine(authorityDirectory, "Artifacts");
-            Directory.CreateDirectory(artifactsDirectory);
-            File.WriteAllBytes(Path.Combine(authorityDirectory, ProgramRelativePath.Replace('/', Path.DirectorySeparatorChar)), programBytes);
-            File.WriteAllBytes(Path.Combine(authorityDirectory, NavigationRelativePath.Replace('/', Path.DirectorySeparatorChar)), surfaceBytes);
+            Directory.CreateDirectory(Path.Combine(authorityDirectory, AbilityRelativeDirectory.Replace('/', Path.DirectorySeparatorChar)));
+            foreach (KeyValuePair<string, byte[]> artifact in abilityArtifacts)
+                File.WriteAllBytes(
+                    Path.Combine(authorityDirectory, artifact.Key.Replace('/', Path.DirectorySeparatorChar)),
+                    artifact.Value);
+            File.WriteAllBytes(
+                Path.Combine(authorityDirectory, NavigationRelativePath.Replace('/', Path.DirectorySeparatorChar)),
+                surfaceBytes);
             string manifestPath = Path.Combine(authorityDirectory, ManifestFileName);
             File.WriteAllBytes(manifestPath, DotRecastAuthoritySceneManifestCodec.Write(manifest));
-            return DotRecastAuthoritySceneManifestLoader.LoadFile(manifestPath);
+            return DotRecastAuthoritySceneManifestLoader.LoadFile(manifestPath, controlModules);
         }
 
         static void RequireEmptyOutput(string outputDirectory)

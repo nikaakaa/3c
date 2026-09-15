@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public FixedGameplayAbilityExecutionData Load(GameplayAbilityProviderBinding providerBinding)
         {
-            var root = new SimulationProgramRootDescriptor(
+            var root = new GameplayAbilityRootDescriptor(
                 (SimulationProgramRootKind)m_RootKind,
                 m_RootIdentity,
                 m_EntryIdentity,

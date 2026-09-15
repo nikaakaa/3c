@@ -60,7 +60,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             NumericProfileId numericProfileId,
             TargetAbiVersion targetAbiVersion,
             string executionIdentity,
-            SimulationProgramRootDescriptor root)
+            GameplayAbilityRootDescriptor root)
         {
             RelativePath = DotRecastAuthorityRelativePath.Require(relativePath, nameof(relativePath));
             AbilityGuid = DotRecastAuthorityManifestIdentity.RequireGuid(abilityGuid);
@@ -102,7 +102,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         public NumericProfileId NumericProfileId { get; }
         public TargetAbiVersion TargetAbiVersion { get; }
         public string ExecutionIdentity { get; }
-        public SimulationProgramRootDescriptor Root { get; }
+        public GameplayAbilityRootDescriptor Root { get; }
     }
 
     public sealed class DotRecastAuthorityPipelineBinding

@@ -276,7 +276,7 @@ namespace ThirdPersonSimulation
             int tickRate,
             ProgramRevision sourceRevision,
             GameplayAbilityCapabilityManifest capabilities,
-            SimulationProgramRootDescriptor root)
+            GameplayAbilityRootDescriptor root)
         {
             if (!programId.IsValid || !operationSetVersion.IsValid || tickRate <= 0 || string.IsNullOrEmpty(sourceRevision.Value))
                 throw new ArgumentException("Semantic IR manifest is incomplete.");
@@ -297,7 +297,7 @@ namespace ThirdPersonSimulation
         public int TickRate { get; }
         public ProgramRevision SourceRevision { get; }
         public GameplayAbilityCapabilityManifest Capabilities { get; }
-        public SimulationProgramRootDescriptor Root { get; }
+        public GameplayAbilityRootDescriptor Root { get; }
     }
 
     public sealed class GameplayAbilitySemanticIr
@@ -347,7 +347,7 @@ namespace ThirdPersonSimulation
                 m_SourceMap,
                 m_Operations.Count,
                 m_StateDeclarations.Count);
-            SimulationProgramRootValidation.RequireEntryReference(
+            GameplayAbilityRootValidation.RequireEntryReference(
                 Manifest.Root,
                 m_References,
                 m_Operations);

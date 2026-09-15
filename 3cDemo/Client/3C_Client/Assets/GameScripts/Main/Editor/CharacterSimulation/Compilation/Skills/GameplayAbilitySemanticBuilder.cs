@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly OperationSetVersion m_OperationSetVersion;
         readonly int m_TickRate;
         readonly ProgramRevision m_SourceRevision;
-        readonly SimulationProgramRootDescriptor m_Root;
+        readonly GameplayAbilityRootDescriptor m_Root;
         readonly CharacterSimulationCompileReport m_Report;
         readonly List<SemanticOperation> m_Operations = new List<SemanticOperation>();
         readonly List<SemanticLiteral> m_Literals = new List<SemanticLiteral>();
@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             int tickRate,
             ProgramRevision sourceRevision,
             CharacterSimulationCompileReport report,
-            SimulationProgramRootDescriptor root)
+            GameplayAbilityRootDescriptor root)
         {
             m_ProgramId = programId;
             m_CompilerVersion = compilerVersion;
@@ -147,7 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         public CharacterSimulationCompileReport Report => m_Report;
-        public SimulationProgramRootDescriptor Root => m_Root;
+        public GameplayAbilityRootDescriptor Root => m_Root;
 
         public bool TryGetCatalogEntry(ProgramCatalogEntryKind kind, string identity, out int index)
         {
@@ -522,7 +522,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ValidateSingleChildControlFlow();
             try
             {
-                SimulationProgramRootValidation.RequireEntryReference(
+                GameplayAbilityRootValidation.RequireEntryReference(
                     m_Root,
                     m_References,
                     m_Operations);

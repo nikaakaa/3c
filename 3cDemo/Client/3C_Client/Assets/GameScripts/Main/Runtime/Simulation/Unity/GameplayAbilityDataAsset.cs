@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
         public Float32GameplayAbilityExecutionData Load(GameplayAbilityProviderBinding providerBinding)
         {
-            var root = new SimulationProgramRootDescriptor(
+            var root = new GameplayAbilityRootDescriptor(
                 (SimulationProgramRootKind)m_RootKind,
                 m_RootIdentity,
                 m_EntryIdentity,

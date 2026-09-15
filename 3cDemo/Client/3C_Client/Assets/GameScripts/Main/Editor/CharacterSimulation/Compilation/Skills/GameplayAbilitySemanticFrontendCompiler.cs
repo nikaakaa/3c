@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return GameplayAbilitySemanticFrontendResult.Failed(report);
             try
             {
-                var root = new SimulationProgramRootDescriptor(
+                var root = new GameplayAbilityRootDescriptor(
                     SimulationProgramRootKind.Ability,
                     model.DefinitionGuid,
                     model.EntryIdentity,

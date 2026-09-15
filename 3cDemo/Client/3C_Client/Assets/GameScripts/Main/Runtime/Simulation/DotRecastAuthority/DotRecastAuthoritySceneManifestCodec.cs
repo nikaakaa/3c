@@ -154,7 +154,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             writer.WriteString(ability.NumericProfileId.Value);
             writer.WriteInt32(ability.TargetAbiVersion.Value);
             writer.WriteString(ability.ExecutionIdentity);
-            SimulationProgramRootDescriptorCodec.Write(writer, ability.Root);
+            GameplayAbilityRootDescriptorCodec.Write(writer, ability.Root);
         }
 
         static DotRecastAuthorityAbilityArtifactBinding ReadAbilityArtifact(CanonicalReader reader)
@@ -175,7 +175,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 new NumericProfileId(reader.ReadString()),
                 new TargetAbiVersion(reader.ReadInt32()),
                 reader.ReadString(),
-                SimulationProgramRootDescriptorCodec.Read(reader));
+                GameplayAbilityRootDescriptorCodec.Read(reader));
         }
 
         static void WriteProviderBinding(CanonicalWriter writer, GameplayAbilityProviderBinding binding)

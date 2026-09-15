@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation
             int tickRate,
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
-            SimulationProgramRootDescriptor root)
+            GameplayAbilityRootDescriptor root)
         {
             if (!programId.IsValid)
                 throw new ArgumentException("Program id is required.", nameof(programId));
@@ -48,7 +48,7 @@ namespace ThirdPersonSimulation
         public int TickRate { get; }
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
-        public SimulationProgramRootDescriptor Root { get; }
+        public GameplayAbilityRootDescriptor Root { get; }
     }
 
     public sealed class GameplayAbilitySemanticIrArtifactHeader
@@ -66,7 +66,7 @@ namespace ThirdPersonSimulation
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             IEnumerable<string> gameplayCapabilities,
-            SimulationProgramRootDescriptor root)
+            GameplayAbilityRootDescriptor root)
         {
             Magic = magic;
             ArtifactVersion = artifactVersion;
@@ -94,7 +94,7 @@ namespace ThirdPersonSimulation
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
         public IReadOnlyList<string> GameplayCapabilities => m_GameplayCapabilities;
-        public SimulationProgramRootDescriptor Root { get; }
+        public GameplayAbilityRootDescriptor Root { get; }
     }
 
     public sealed class ValidatedSemanticIrArtifact
@@ -146,7 +146,7 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(semanticIr.Manifest.Capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < semanticIr.Manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(semanticIr.Manifest.Capabilities.GameplayCapabilities[i]);
-            SimulationProgramRootDescriptorCodec.Write(writer, semanticIr.Manifest.Root);
+            GameplayAbilityRootDescriptorCodec.Write(writer, semanticIr.Manifest.Root);
             writer.WriteBytes(payload);
             byte[] bytes = writer.ToArray();
             return ReadValidatedArtifact(
@@ -210,7 +210,7 @@ namespace ThirdPersonSimulation
             var gameplayCapabilities = new string[capabilityCount];
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
-            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
+            GameplayAbilityRootDescriptor root = GameplayAbilityRootDescriptorCodec.Read(reader);
             byte[] payload = reader.ReadBytes();
             reader.RequireComplete();
             var header = new GameplayAbilitySemanticIrArtifactHeader(
@@ -372,7 +372,7 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(manifest.Capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(manifest.Capabilities.GameplayCapabilities[i]);
-            SimulationProgramRootDescriptorCodec.Write(writer, manifest.Root);
+            GameplayAbilityRootDescriptorCodec.Write(writer, manifest.Root);
         }
 
         static GameplayAbilitySemanticIrManifest ReadManifest(CanonicalReader reader)
@@ -386,7 +386,7 @@ namespace ThirdPersonSimulation
             var gameplayCapabilities = new string[capabilityCount];
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
-            SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
+            GameplayAbilityRootDescriptor root = GameplayAbilityRootDescriptorCodec.Read(reader);
             return new GameplayAbilitySemanticIrManifest(
                 programId,
                 compilerVersion,

@@ -86,19 +86,15 @@ namespace ThirdPersonSimulation
         void SetEquipmentState(EquipmentStateAggregate state);
     }
 
-    internal interface IFloat32AbilityDomainStatePort
+    internal interface IFloat32AbilityTransactionControlPort
     {
-        ActorId ActorId { get; }
-        SimulationTick Tick { get; }
-        int TickRate { get; }
-        void Abort();
         Float32CharacterRuntimeStateSavepoint CreateSavepoint();
         void Restore(Float32CharacterRuntimeStateSavepoint savepoint);
         void Release(Float32CharacterRuntimeStateSavepoint savepoint);
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
@@ -350,15 +346,6 @@ namespace ThirdPersonSimulation
         {
             RequireActive();
             return new Float32CharacterRuntimeStateTransactionDiagnostics(m_Savepoints.Count);
-        }
-
-        public void Abort()
-        {
-            RequireActive();
-            if (m_Savepoints.Count != 0)
-                throw new InvalidOperationException("Character runtime state transaction has active savepoints.");
-            m_ControlState?.Abort();
-            m_Disposed = true;
         }
 
         public void Dispose()

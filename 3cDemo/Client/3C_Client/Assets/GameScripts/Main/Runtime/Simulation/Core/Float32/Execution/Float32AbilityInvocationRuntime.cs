@@ -54,7 +54,6 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityInvocationRuntime : IDisposable
     {
-        readonly IFloat32AbilityDomainStatePort m_DomainState;
         readonly Action<IFloat32AbilityExecutionStateTransaction> m_AcceptAbility;
         readonly IFloat32AbilityExecutionStateTransaction m_AbilityState;
         readonly Float32AbilityExecutionWorkspace m_Workspace;
@@ -79,7 +78,7 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityExecutionInstallation installation,
             Float32GameplayAbilityExecutionInstallationSet installations,
             IFloat32AbilityExecutionStateTransaction abilityState,
-            IFloat32AbilityDomainStatePort domainState,
+            IFloat32AbilityTransactionControlPort transactionControl,
             ActorId actorId,
             SimulationTick tick,
             Float32AbilityExecutionInput input,
@@ -97,7 +96,6 @@ namespace ThirdPersonSimulation
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             installations = installations ?? throw new ArgumentNullException(nameof(installations));
-            m_DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
@@ -114,7 +112,7 @@ namespace ThirdPersonSimulation
                 ingress ?? Array.Empty<SimulationIngress>(),
                 bodyFacts,
                 m_AbilityState,
-                m_DomainState,
+                transactionControl,
                 inputRequests,
                 actionState,
                 handleAllocatorState,

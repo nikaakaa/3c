@@ -82,7 +82,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<SimulationIngress> ingress,
             Float32AbilityBodyFacts bodyFacts,
             IFloat32AbilityExecutionStateTransaction transaction,
-            IFloat32AbilityDomainStatePort domainState,
+            IFloat32AbilityTransactionControlPort transactionControl,
             IFloat32InputRequestStatePort inputRequests,
             IFloat32ActionRuntimeStatePort actionState,
             IFloat32HandleAllocatorStatePort handleAllocatorState,
@@ -101,7 +101,7 @@ namespace ThirdPersonSimulation
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
             m_BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
-            DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
+            TransactionControl = transactionControl ?? throw new ArgumentNullException(nameof(transactionControl));
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
@@ -132,7 +132,7 @@ namespace ThirdPersonSimulation
             ? m_BodyFacts
             : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");
         internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
-        internal IFloat32AbilityDomainStatePort DomainState { get; }
+        internal IFloat32AbilityTransactionControlPort TransactionControl { get; }
         internal IFloat32InputRequestStatePort InputRequests { get; }
         internal IFloat32ActionRuntimeStatePort ActionState { get; }
         internal IFloat32HandleAllocatorStatePort HandleAllocatorState { get; }

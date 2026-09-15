@@ -55,7 +55,6 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityInvocationRuntime : IDisposable
     {
-        readonly IFixedAbilityDomainStatePort m_DomainState;
         readonly Action<IFixedAbilityExecutionStateTransaction> m_AcceptAbility;
         readonly IFixedAbilityExecutionStateTransaction m_AbilityState;
         readonly FixedAbilityExecutionWorkspace m_Workspace;
@@ -80,7 +79,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayAbilityExecutionInstallation installation,
             FixedGameplayAbilityExecutionInstallationSet installations,
             IFixedAbilityExecutionStateTransaction abilityState,
-            IFixedAbilityDomainStatePort domainState,
+            IFixedAbilityTransactionControlPort transactionControl,
             ActorId actorId,
             SimulationTick tick,
             FixedAbilityExecutionInput input,
@@ -98,7 +97,6 @@ namespace ThirdPersonSimulation.Fixed
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             installations = installations ?? throw new ArgumentNullException(nameof(installations));
-            m_DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
@@ -115,7 +113,7 @@ namespace ThirdPersonSimulation.Fixed
                 ingress ?? Array.Empty<SimulationIngress>(),
                 bodyFacts,
                 m_AbilityState,
-                m_DomainState,
+                transactionControl,
                 inputRequests,
                 actionState,
                 handleAllocatorState,

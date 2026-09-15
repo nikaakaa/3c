@@ -150,12 +150,12 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateSavepoint IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.CreateSavepoint()
         {
             EnsureWorkingState();
-            return m_Transaction.CreateSavepoint();
+            return m_TransactionControl.CreateSavepoint();
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.Restore(Float32CharacterRuntimeStateSavepoint savepoint) => m_Transaction.Restore(savepoint);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.Release(Float32CharacterRuntimeStateSavepoint savepoint) => m_Transaction.Release(savepoint);
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.SavepointIsActive(Float32CharacterRuntimeStateSavepoint savepoint) => m_Transaction.Diagnostics().SavepointDepth >= savepoint.Depth;
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.Restore(Float32CharacterRuntimeStateSavepoint savepoint) => m_TransactionControl.Restore(savepoint);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.Release(Float32CharacterRuntimeStateSavepoint savepoint) => m_TransactionControl.Release(savepoint);
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.SavepointIsActive(Float32CharacterRuntimeStateSavepoint savepoint) => m_TransactionControl.Diagnostics().SavepointDepth >= savepoint.Depth;
         ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.CaptureAllocator() => m_CaptureAllocator();
         void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.RestoreAllocator(ulong value) => m_RestoreAllocator(value);
         ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, Float32CharacterRuntimeStateSavepoint>.AllocateHandle() => m_AllocateHandle();

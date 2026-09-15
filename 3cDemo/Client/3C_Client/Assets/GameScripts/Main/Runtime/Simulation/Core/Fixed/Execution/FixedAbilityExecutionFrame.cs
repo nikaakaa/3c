@@ -83,7 +83,7 @@ namespace ThirdPersonSimulation.Fixed
             IReadOnlyList<SimulationIngress> ingress,
             FixedAbilityBodyFacts bodyFacts,
             IFixedAbilityExecutionStateTransaction transaction,
-            IFixedAbilityDomainStatePort domainState,
+            IFixedAbilityTransactionControlPort transactionControl,
             IFixedInputRequestStatePort inputRequests,
             IFixedActionRuntimeStatePort actionState,
             IFixedHandleAllocatorStatePort handleAllocatorState,
@@ -102,7 +102,7 @@ namespace ThirdPersonSimulation.Fixed
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
             m_BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
-            DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
+            TransactionControl = transactionControl ?? throw new ArgumentNullException(nameof(transactionControl));
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
@@ -133,7 +133,7 @@ namespace ThirdPersonSimulation.Fixed
             ? m_BodyFacts
             : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");
         internal IFixedAbilityExecutionStateTransaction Transaction { get; }
-        internal IFixedAbilityDomainStatePort DomainState { get; }
+        internal IFixedAbilityTransactionControlPort TransactionControl { get; }
         internal IFixedInputRequestStatePort InputRequests { get; }
         internal IFixedActionRuntimeStatePort ActionState { get; }
         internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; }

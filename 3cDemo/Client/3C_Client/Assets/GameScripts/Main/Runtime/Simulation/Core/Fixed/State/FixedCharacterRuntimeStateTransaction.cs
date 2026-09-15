@@ -86,19 +86,15 @@ namespace ThirdPersonSimulation.Fixed
         void SetEquipmentState(EquipmentStateAggregate state);
     }
 
-    internal interface IFixedAbilityDomainStatePort
+    internal interface IFixedAbilityTransactionControlPort
     {
-        ActorId ActorId { get; }
-        SimulationTick Tick { get; }
-        int TickRate { get; }
-        void Abort();
         FixedCharacterRuntimeStateSavepoint CreateSavepoint();
         void Restore(FixedCharacterRuntimeStateSavepoint savepoint);
         void Release(FixedCharacterRuntimeStateSavepoint savepoint);
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort, IFixedEventSequenceStatePort, IFixedGameplayEffectStatePort, IFixedEquipmentStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort, IFixedEventSequenceStatePort, IFixedGameplayEffectStatePort, IFixedEquipmentStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
@@ -350,15 +346,6 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             return new FixedCharacterRuntimeStateTransactionDiagnostics(m_Savepoints.Count);
-        }
-
-        public void Abort()
-        {
-            RequireActive();
-            if (m_Savepoints.Count != 0)
-                throw new InvalidOperationException("Character runtime state transaction has active savepoints.");
-            m_ControlState?.Abort();
-            m_Disposed = true;
         }
 
         public void Dispose()

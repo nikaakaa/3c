@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation.Fixed
             PortableEffectSpecState,
             FixedScalar>
     {
-        readonly IFixedAbilityDomainStatePort m_Transaction;
+        readonly IFixedAbilityTransactionControlPort m_TransactionControl;
         readonly IFixedGameplayEffectStatePort m_EffectState;
         readonly FixedGameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
@@ -45,7 +45,7 @@ namespace ThirdPersonSimulation.Fixed
         PortablePredictionRecord m_CurrentPrediction;
 
         public FixedGameplayEffectTarget(
-            IFixedAbilityDomainStatePort transaction,
+            IFixedAbilityTransactionControlPort transactionControl,
             IFixedGameplayEffectStatePort effectState,
             FixedGameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
@@ -55,7 +55,7 @@ namespace ThirdPersonSimulation.Fixed
             Action<ulong> restoreAllocator,
             FixedGameplayEffectExecutionScratch scratch)
         {
-            m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            m_TransactionControl = transactionControl ?? throw new ArgumentNullException(nameof(transactionControl));
             m_EffectState = effectState ?? throw new ArgumentNullException(nameof(effectState));
             m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             m_CommittedState = effectState.GetGameplayEffectAggregate();

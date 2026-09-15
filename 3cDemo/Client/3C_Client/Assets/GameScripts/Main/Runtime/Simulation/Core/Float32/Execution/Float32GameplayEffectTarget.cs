@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation
             PortableEffectSpecState,
             Float32Scalar>
     {
-        readonly IFloat32AbilityDomainStatePort m_Transaction;
+        readonly IFloat32AbilityTransactionControlPort m_TransactionControl;
         readonly IFloat32GameplayEffectStatePort m_EffectState;
         readonly Float32GameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation
         PortablePredictionRecord m_CurrentPrediction;
 
         public Float32GameplayEffectTarget(
-            IFloat32AbilityDomainStatePort transaction,
+            IFloat32AbilityTransactionControlPort transactionControl,
             IFloat32GameplayEffectStatePort effectState,
             Float32GameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
@@ -54,7 +54,7 @@ namespace ThirdPersonSimulation
             Action<ulong> restoreAllocator,
             Float32GameplayEffectExecutionScratch scratch)
         {
-            m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
+            m_TransactionControl = transactionControl ?? throw new ArgumentNullException(nameof(transactionControl));
             m_EffectState = effectState ?? throw new ArgumentNullException(nameof(effectState));
             m_Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             m_CommittedState = effectState.GetGameplayEffectAggregate();

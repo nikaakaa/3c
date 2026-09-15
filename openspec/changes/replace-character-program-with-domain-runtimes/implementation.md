@@ -1069,3 +1069,8 @@
 
 - 提交 `de96a82f0`，将内部类型已经统一为 `GameplayAbilitySemanticsCodec` 的源文件和 Unity `.meta` 从 `SimulationProgramSemanticsCodec` 改为 `GameplayAbilitySemanticsCodec`，删除旧文件路径。
 - Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一共享Simulation root命名
+
+- 提交 `c4c6e59e8`，将共享 `SimulationProgramRootKind` 重命名为 `SimulationRootKind`，并将 Ability root 合同文件与 Unity `.meta` 改为 `GameplayAbilityRoot`；Ability 数据资产、技能编译和 Timeline 观察合同统一使用新名称。
+- Timeline 仍与 Ability 共用同一个 root kind；本步不改变枚举值、root 序列化布局或版本。Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git，Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

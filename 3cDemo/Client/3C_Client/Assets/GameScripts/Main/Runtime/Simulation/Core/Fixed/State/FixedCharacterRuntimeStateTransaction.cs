@@ -98,13 +98,12 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedCharacterRuntimeStateTransaction(
             FixedCharacterRuntimeState baseState,
-            ActorId actorId,
             SimulationTick tick,
             int tickRate,
             FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog)
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
-            if (!actorId.IsValid || !tick.IsValid || tickRate <= 0)
+            if (!tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Fixed Character runtime transaction identity is incomplete.");
             m_Tick = tick;
             m_TickRate = tickRate;

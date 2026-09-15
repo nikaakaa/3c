@@ -33,7 +33,6 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
             var roleState = new Float32CharacterRuntimeStateTransaction(
                 sourceState,
-                actor.ActorId,
                 tick,
                 characterRuntime.TickRate,
                 effectCatalog);

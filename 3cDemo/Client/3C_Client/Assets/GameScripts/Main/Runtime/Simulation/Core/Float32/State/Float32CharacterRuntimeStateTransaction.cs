@@ -98,13 +98,12 @@ namespace ThirdPersonSimulation
 
         public Float32CharacterRuntimeStateTransaction(
             Float32CharacterRuntimeState baseState,
-            ActorId actorId,
             SimulationTick tick,
             int tickRate,
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog)
         {
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
-            if (!actorId.IsValid || !tick.IsValid || tickRate <= 0)
+            if (!tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Float32 Character runtime transaction identity is incomplete.");
             m_Tick = tick;
             m_TickRate = tickRate;

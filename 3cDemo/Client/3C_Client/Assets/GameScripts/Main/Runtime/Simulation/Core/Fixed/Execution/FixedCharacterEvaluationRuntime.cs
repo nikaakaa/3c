@@ -34,7 +34,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
             var roleState = new FixedCharacterRuntimeStateTransaction(
                 sourceState,
-                actor.ActorId,
                 tick,
                 characterRuntime.TickRate,
                 effectCatalog);

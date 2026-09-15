@@ -15,7 +15,8 @@ namespace ThirdPersonSimulation
             WorldBodyState beforeBody,
             bool diagnosticsEnabled,
             bool captureValues,
-            bool captureControlFlow)
+            bool captureControlFlow,
+            out CharacterWorldSolveRequest worldRequest)
         {
             if (characterRuntime == null)
                 throw new ArgumentNullException(nameof(characterRuntime));
@@ -151,7 +152,7 @@ namespace ThirdPersonSimulation
                     tickDelta);
                 WorldCapability requiredCapabilities = characterRuntime.RequiredWorldCapabilities |
                     actor.BodyMotionBinding.RequiredWorldCapability;
-                var worldRequest = new CharacterWorldSolveRequest(
+                worldRequest = new CharacterWorldSolveRequest(
                     characterRuntime.NumericProfile,
                     actor.ActorId,
                     new WorldRequestId(actor.ActorId, tick, 1),
@@ -166,11 +167,9 @@ namespace ThirdPersonSimulation
                     actor.ActorId,
                     tick,
                     candidateState,
-                    worldRequest,
                     facts,
                     presentation,
-                    trace,
-                    diagnosticsEnabled);
+                    trace);
             }
             catch
             {

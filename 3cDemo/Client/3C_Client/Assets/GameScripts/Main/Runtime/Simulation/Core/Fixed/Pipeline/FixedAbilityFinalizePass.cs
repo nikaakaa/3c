@@ -62,8 +62,7 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationActorBinding actor = readPorts.CharacterRuntime.Roster[i];
                 if (!evaluation.ActorId.Equals(actor.ActorId) || !worldResult.ActorId.Equals(actor.ActorId))
                     throw new InvalidOperationException("Ability Finalize Pass Actor order does not match the locked roster.");
-                CharacterWorldSolveRequest expected = evaluation.WorldRequest ??
-                    throw new InvalidOperationException("Fixed Character Finalize Pass requires a World solve request for every actor.");
+                CharacterWorldSolveRequest expected = world.Request.Requests[i];
                 if (worldResult.NumericProfile != readPorts.CharacterRuntime.Runtime.NumericProfile ||
                     !worldResult.RequestId.Equals(expected.RequestId) ||
                     worldResult.Tick != expected.Tick ||

@@ -79,6 +79,7 @@ namespace ThirdPersonSimulation.Fixed
                         !step.Inputs[i].ActorId.Equals(actor.ActorId))
                         throw new InvalidOperationException("Ability Evaluate Pass Actor order does not match the locked roster.");
                     CharacterSimulationInput input = step.Inputs[i].Value.Input;
+                    CharacterWorldSolveRequest worldRequest;
                     m_Evaluations[i] = FixedCharacterEvaluationRuntime.Evaluate(
                         readPorts.CharacterRuntime.Runtime,
                         actor,
@@ -91,9 +92,9 @@ namespace ThirdPersonSimulation.Fixed
                         readPorts.Diagnostics.Sink is ISimulationValueTraceInterest valueInterest &&
                         valueInterest.IsValueCaptureRequested(actor.ActorId),
                         readPorts.Diagnostics.Sink is ISimulationControlTraceInterest controlInterest &&
-                        controlInterest.IsControlCaptureRequested(actor.ActorId));
-                    m_Requests[i] = m_Evaluations[i].WorldRequest ??
-                        throw new InvalidOperationException("Fixed Character Evaluate Pass requires a World solve request for every actor.");
+                        controlInterest.IsControlCaptureRequested(actor.ActorId),
+                        out worldRequest);
+                    m_Requests[i] = worldRequest;
                 }
                 writePorts.CharacterEvaluationResults.Write(m_EvaluationBatch.Reset(step.Tick, m_Evaluations));
                 writePorts.WorldBatch.Write(new WorldSolveBatchRequest(step.Tick, state.WorldState, m_Requests));

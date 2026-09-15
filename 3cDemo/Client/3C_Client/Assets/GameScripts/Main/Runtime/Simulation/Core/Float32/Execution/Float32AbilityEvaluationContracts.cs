@@ -14,11 +14,9 @@ namespace ThirdPersonSimulation
             ActorId actorId,
             SimulationTick tick,
             Float32CharacterRuntimeState candidateState,
-            CharacterWorldSolveRequest worldRequest,
             IEnumerable<GameplayFact> gameplayFacts,
             IEnumerable<PresentationCommand> presentationCommands,
-            IEnumerable<SimulationTraceRecord> traceRecords,
-            bool diagnosticsEnabled)
+            IEnumerable<SimulationTraceRecord> traceRecords)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Character evaluation result identity is incomplete.");
@@ -27,21 +25,15 @@ namespace ThirdPersonSimulation
             {
                 throw new InvalidOperationException("Float32 Character evaluation result binding is invalid.");
             }
-            if (worldRequest != null && (worldRequest.ActorId != actorId || worldRequest.Tick != tick))
-                throw new InvalidOperationException("Float32 Character evaluation result World request binding is invalid.");
             ActorId = actorId;
             Tick = tick;
-            WorldRequest = worldRequest;
             m_GameplayFacts = Copy(gameplayFacts);
             m_PresentationCommands = Copy(presentationCommands);
             m_TraceRecords = Copy(traceRecords);
-            DiagnosticsEnabled = diagnosticsEnabled;
         }
 
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
-        public CharacterWorldSolveRequest WorldRequest { get; }
-        public bool DiagnosticsEnabled { get; }
         internal Float32CharacterRuntimeState CandidateState { get; }
         internal IReadOnlyList<GameplayFact> GameplayFacts => m_GameplayFacts;
         internal IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;

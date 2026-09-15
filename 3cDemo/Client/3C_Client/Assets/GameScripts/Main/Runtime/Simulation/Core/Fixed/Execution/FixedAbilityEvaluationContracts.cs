@@ -15,11 +15,9 @@ namespace ThirdPersonSimulation.Fixed
             ActorId actorId,
             SimulationTick tick,
             FixedCharacterRuntimeState candidateState,
-            CharacterWorldSolveRequest worldRequest,
             IEnumerable<GameplayFact> gameplayFacts,
             IEnumerable<PresentationCommand> presentationCommands,
-            IEnumerable<SimulationTraceRecord> traceRecords,
-            bool diagnosticsEnabled)
+            IEnumerable<SimulationTraceRecord> traceRecords)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Character evaluation result identity is incomplete.");
@@ -28,21 +26,15 @@ namespace ThirdPersonSimulation.Fixed
             {
                 throw new InvalidOperationException("Fixed Character evaluation result binding is invalid.");
             }
-            if (worldRequest != null && (worldRequest.ActorId != actorId || worldRequest.Tick != tick))
-                throw new InvalidOperationException("Fixed Character evaluation result World request binding is invalid.");
             ActorId = actorId;
             Tick = tick;
-            WorldRequest = worldRequest;
             m_GameplayFacts = Copy(gameplayFacts);
             m_PresentationCommands = Copy(presentationCommands);
             m_TraceRecords = Copy(traceRecords);
-            DiagnosticsEnabled = diagnosticsEnabled;
         }
 
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
-        public CharacterWorldSolveRequest WorldRequest { get; }
-        public bool DiagnosticsEnabled { get; }
         internal FixedCharacterRuntimeState CandidateState { get; }
         internal IReadOnlyList<GameplayFact> GameplayFacts => m_GameplayFacts;
         internal IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;

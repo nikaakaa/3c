@@ -27,12 +27,12 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [x] 1.1 将技能构建根迁为 GameplayAbilityDefinition，交付只包含其私有 Graph／FSM／条件／子图引用／Timeline 的发现模型与实际依赖修订。
 - [x] 1.2 已交付Ability根的技能操作、调用帧、黑板、常量、来源与能力前端，当前仍落入旧Program容器；最终独立执行数据和角色级状态迁出由1.8、1.10接续。
 - [x] 1.3 接入 Float32／Fixed 技能数值降低、唯一 codec 与 artifact store，交付按 Ability identity 保存和读取的正式产物。
-- [x] 1.4 已交付Input／Effect／Equipment／CharacterState的typed Provider种类、owner identity声明及Load身份检查入口；真实成员／类型／版本绑定由1.9接续。
+- [x] 1.4 已交付Input／Effect／Equipment／CharacterState的typed Provider种类、owner identity声明及Load身份检查入口；真实成员／类型／版本绑定由1.9收口。
 - [ ] 1.5 将Timeline owner的独立Prepare／CreatePlayback结果接入技能调用与非Skill调用装配；消费前确认数值目标、资源／成员和必要TreeClip服务已经实际匹配。现有准备实例不等同可推进播放，不能仅因IsReady或generation存在就报告完整可用；Advance／取消／Commit／Discard／Restore仍由Timeline交付并通过正式调用方接通。
 - [ ] 1.6 由主实现唯一修改BtsmtlSkillTimelineCompiler和共享技能调用入口，先删除其中Timeline轨道／Clip发射调用与专属适配，再接直接内容引用；保留TreeClip技能图编译与Step-scoped调用服务，不与Timeline任务共写该文件。
 
 - [x] 1.8 移出Ability前端无条件声明的GameplayEffectAggregate、runtime:rng、runtime:handle-allocator、runtime:fact-sequence等角色级状态，由原正式领域owner唯一提供；技能仅声明局部执行状态和必要服务引用。
-- [ ] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄；服务由对应领域拥有、调用方提供，技能只绑定自己声明需要的成员。角色调用场景中修正InstallationSet给全部技能传同一Effect binding、Installation却拒绝未声明Effect技能的矛盾；不要求所有调用方拥有角色配置，必需服务缺失仍失败，不用空实现或全局启用能力绕过。
+- [x] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄；服务由对应领域拥有、调用方提供，技能只绑定自己声明需要的成员。角色调用场景中修正InstallationSet给全部技能传同一Effect binding、Installation却拒绝未声明Effect技能的矛盾；不要求所有调用方拥有角色配置，必需服务缺失仍失败，不用空实现或全局启用能力绕过。
 - [ ] 1.10 将独立Ability数据的加载、格式、执行拓扑／布局接到Float32／Fixed实际执行与实例状态；复用已交付的自有拓扑和GameplayAbilityExecutionLayout，不能把创建布局视作执行完成。补齐读入到Tick／取消／恢复消费者，继续清除整角色Program解码／复制依赖，不恢复已撤回的FromProgram转换，保留必要技能编译与唯一技能格式。
 - [ ] 1.11 解除技能执行入口对角色装配的依赖：Float32／Fixed AbilityExecutionFrame只消费技能局部状态、调用输入／目标／时间和实际需要的typed服务，不强制接收CharacterRuntimeState、整角色Input／Body或在内部创建CharacterRuntimeStateTransaction；AbilityControlRuntime不再组装Control／Effect／Equipment领域模块，改调用外部正式服务。Frontend按可达节点声明能力，删除无条件GameplayEffect要求；依赖角色事实的节点只要求该事实服务。角色与TreeClip等调用方适配同一执行入口，禁止假角色、完整角色上下文包装或第二套技能执行器。
 

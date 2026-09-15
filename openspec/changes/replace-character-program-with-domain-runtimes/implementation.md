@@ -4,7 +4,7 @@
 
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
-- OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.9—1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。2.6 已开始收敛：Input request、Action activation request、Action instance、完整 MotionWarp 状态、GameplayEffect、Equipment 和 Control 已进入角色状态分区；Ability 下的 Timeline 保留态已删除，但控制机器内部状态、技能调用帧、目标、效果、装备和统一角色 Step 的完整 Capture／Restore 尚未闭合。
+- OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、1.9、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。2.6 已开始收敛：Input request、Action activation request、Action instance、完整 MotionWarp 状态、GameplayEffect、Equipment 和 Control 已进入角色状态分区；Ability 下的 Timeline 保留态已删除，但控制机器内部状态、技能调用帧、目标、效果、装备和统一角色 Step 的完整 Capture／Restore 尚未闭合。
 - 按 D13—D15，Timeline 直接内容、播放私有状态和 Pose 原生图内部实现归各自既有任务；本窗口只接它们的 Prepare／Create、typed Pending、Commit／Discard、Stop 和采用事实，不复制其 cursor、节点状态或缓冲实现。核心继续负责 Host／Factory、Ability 最终数据与 Provider、角色 Step／快照／codec、网络／manifest、共享技能编译入口和总 Program／Projection 清理。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
@@ -418,3 +418,10 @@
 - 提交 `a45c7272b`，新增 `EquipmentProgramLayoutCompiler.CompileRoleStateLayout`；Float32／Fixed 角色初始 Equipment 状态和角色状态 codec 直接从 `CharacterEquipmentRuntimeBinding` 编译角色级布局，不再从第一个声明 Equipment 的 Ability 读取 catalog、references 和 producers。
 - Ability 执行时仍使用自己的 operation reference 和 producer 校验；角色状态布局只负责 slots、features、items、routes、parameters 和 local states。这样角色状态不再依赖 Ability 安装顺序，也没有复制第二份 Equipment 配置或引入兼容路径。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error。Float32 仍被 Unity 生成 `.csproj` 漏掉 `GameplayAbilityExecutionLayout.cs` 等既有源文件阻断（28 个错误、0 warning）；Fixed 同一源索引阻断（24 个错误、0 warning）。每次编译后均已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-15 Authority加载复用Ability Provider合同
+
+- 提交 `ba920e296`，DotRecast Authority manifest 从 schema 9 升为 schema 10；导出时保存 Character Definition 生成的完整 Provider binding，包含 Provider owner、合同版本、成员值类型、成员修订和运行句柄。
+- Authority loader 读取独立 Ability artifact 后调用同一个 `GameplayAbilityProviderContract.RequireBinding`，因此 Unity Definition Load 与 Authority artifact Load 对成员存在性、值类型、合同版本和运行句柄使用同一条校验链；旧 manifest 直接拒绝，不保留兼容格式。
+- 角色调用的 InstallationSet 只向声明 GameplayEffect 的 Ability 安装传入 Effect binding，未声明该能力的 Ability 不会被错误拒绝；必需服务缺失仍直接失败，不创建空实现或第二套绑定路径。
+- Authority portable 编译仍被 Unity 生成 `ThirdPersonSimulation.Float32.csproj` 漏掉既有 Ability Layout 等源文件阻断（28 个缺失类型错误、0 warning）；编译结束已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成。

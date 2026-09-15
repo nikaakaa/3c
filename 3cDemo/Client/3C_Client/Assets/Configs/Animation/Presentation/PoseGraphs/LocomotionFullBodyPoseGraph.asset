@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-9068156287546697043
+--- !u!114 &-8822627664849689120
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -9,1251 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Corin_Pipeline_WalkStart_Inplace Source Binding
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.turn.sequence","m_DisplayName":"Moving
-    Turn Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_color":{"r":0.2156863,"g":0.4509804,"b":0.3607843,"a":1.0},"_position":{"x":-300.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.turn.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_color":{"r":0.5176471,"g":0.2156863,"b":0.2627451,"a":1.0},"_position":{"x":300.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"2b4ef9d52769067557e6652f38041b35","m_SourceNodeId":"corin.locomotion.turn.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.turn.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: 1092009602723442910}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 640.1047, y: 422.34897}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.locomotion.turn.graph
-  m_ContentRevision: ac59bb2391c34732a45f14be4321468a
-  m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &-6698807141751904778
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.locomotion.sequence","m_DisplayName":"Run
-    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_color":{"r":0.2156863,"g":0.4509804,"b":0.3607843,"a":1.0},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.locomotion.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_color":{"r":0.5176471,"g":0.2156863,"b":0.2627451,"a":1.0},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.locomotion.sequence-output","m_SourceNodeId":"corin.locomotion.locomotion.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.locomotion.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: 478874425122392373}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 640.2516, y: 422.44614}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.locomotion.locomotion.graph
-  m_ContentRevision: 570bc11c429e47b1aca42d354cd3ce74
-  m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &-5902724216996566138
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.control-rig.body.graph/input","m_DisplayName":"Control
-    Rig Input","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterGraphInputPosePayload"},"m_DynamicPorts":[{"m_PortId":"pose.local","m_DisplayName":"Input
-    Pose","m_Direction":2,"m_InterfacePortId":"entry.pose.input"},{"m_PortId":"foot-weight","m_DisplayName":"Foot
-    Placement Weight","m_Kind":3,"m_Direction":2,"m_Order":1,"m_InterfacePortId":"foot-placement-weight"}],"_position":{"x":-700.6666},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.control-rig.body.graph/foot-placement","m_DisplayName":"Foot
-    Placement","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterFootPlacementPosePayload"},"_position":{"x":-93.99992,"y":186.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"},{"m_NodeId":"corin.control-rig.body.graph/full-body-ik","m_DisplayName":"Full
-    Body IK","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterFullBodyIkPosePayload"},"m_DynamicPorts":[{"m_PortId":"goal-contribution.0","m_DisplayName":"Goal
-    Contribution","m_Kind":14}],"_position":{"x":305.3333,"y":53.33337},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"2"},{"m_NodeId":"corin.control-rig.body.graph/component-to-local","m_DisplayName":"Component
-    To Local","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterComponentToLocalPosePayload"},"_position":{"x":709.3333,"y":9.333313},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"3"},{"m_NodeId":"corin.control-rig.body.graph/output","m_DisplayName":"Control
-    Rig Output","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterGraphOutputPosePayload"},"m_DynamicPorts":[{"m_PortId":"pose.local","m_DisplayName":"Output
-    Pose","m_InterfacePortId":"entry.pose.output"}],"_position":{"x":1036.621,"y":3.063477},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"4"},{"m_NodeId":"corin.control-rig.body.graph/local-to-component","m_DisplayName":"Local
-    To Component","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterLocalToComponentPosePayload"},"_position":{"x":-312.0001,"y":-114.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"5"}],"connections":[{"m_EdgeId":"corin.control-rig.body/foot-weight","m_SourceNodeId":"corin.control-rig.body.graph/input","m_SourcePortId":"foot-weight","m_TargetNodeId":"corin.control-rig.body.graph/foot-placement","m_TargetPortId":"weight","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/input-pose","m_SourceNodeId":"corin.control-rig.body.graph/input","m_SourcePortId":"pose.local","m_TargetNodeId":"corin.control-rig.body.graph/local-to-component","m_TargetPortId":"local-pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"5"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/foot-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/foot-placement","m_SourcePortId":"contribution","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"goal-contribution.0","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/ik-to-local","m_SourceNodeId":"corin.control-rig.body.graph/full-body-ik","m_SourcePortId":"result","m_TargetNodeId":"corin.control-rig.body.graph/component-to-local","m_TargetPortId":"component-pose","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/local-to-output","m_SourceNodeId":"corin.control-rig.body.graph/component-to-local","m_SourcePortId":"local-pose","m_TargetNodeId":"corin.control-rig.body.graph/output","m_TargetPortId":"pose.local","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-foot","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/foot-placement","m_TargetPortId":"pose","_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"pose","_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences: []
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.control-rig.body.graph
-  m_ContentRevision: da0369f652b6406c983a1862758ac76e
-  m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &-5865765496217306459
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.stop.sequence","m_DisplayName":"Run
-    End Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.stop.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.stop.sequence-output","m_SourceNodeId":"corin.locomotion.stop.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.stop.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: 5371559075762468322}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.locomotion.stop.graph
-  m_ContentRevision: 583472b925a4475bb765106eaf22f941
-  m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &-5134182318206829311
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
-  m_Name: CorinFootPlacementProfile FootPlacementProfile
-  m_EditorClassIdentifier: 
-  m_Kind: 5
---- !u!114 &-4107042642224300456
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.control-rig.body.graph/input","m_DisplayName":"Control
-    Rig Input","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterGraphInputPosePayload"},"m_DynamicPorts":[{"m_PortId":"pose.local","m_DisplayName":"Input
-    Pose","m_Direction":2,"m_InterfacePortId":"entry.pose.input"},{"m_PortId":"foot-weight","m_DisplayName":"Foot
-    Placement Weight","m_Kind":3,"m_Direction":2,"m_Order":1,"m_InterfacePortId":"foot-placement-weight"}],"_position":{"x":-700.6666},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.control-rig.body.graph/foot-placement","m_DisplayName":"Foot
-    Placement","m_Payload":{"m_ProfileSlot":1,"m_CalibrationSlot":2,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterFootPlacementPosePayload"},"_position":{"x":-93.99992,"y":186.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"},{"m_NodeId":"corin.control-rig.body.graph/full-body-ik","m_DisplayName":"Full
-    Body IK","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterFullBodyIkPosePayload"},"m_DynamicPorts":[{"m_PortId":"goal-contribution.0","m_DisplayName":"Goal
-    Contribution","m_Kind":14}],"_position":{"x":305.3333,"y":53.33337},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"2"},{"m_NodeId":"corin.control-rig.body.graph/component-to-local","m_DisplayName":"Component
-    To Local","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterComponentToLocalPosePayload"},"_position":{"x":709.3333,"y":9.333313},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"3"},{"m_NodeId":"corin.control-rig.body.graph/output","m_DisplayName":"Control
-    Rig Output","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterGraphOutputPosePayload"},"m_DynamicPorts":[{"m_PortId":"pose.local","m_DisplayName":"Output
-    Pose","m_InterfacePortId":"entry.pose.output"}],"_position":{"x":1036.621,"y":3.063477},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"4"},{"m_NodeId":"corin.control-rig.body.graph/local-to-component","m_DisplayName":"Local
-    To Component","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterLocalToComponentPosePayload"},"_position":{"x":-312.0001,"y":-114.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"5"}],"connections":[{"m_EdgeId":"corin.control-rig.body/foot-weight","m_SourceNodeId":"corin.control-rig.body.graph/input","m_SourcePortId":"foot-weight","m_TargetNodeId":"corin.control-rig.body.graph/foot-placement","m_TargetPortId":"weight","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/input-pose","m_SourceNodeId":"corin.control-rig.body.graph/input","m_SourcePortId":"pose.local","m_TargetNodeId":"corin.control-rig.body.graph/local-to-component","m_TargetPortId":"local-pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"5"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/foot-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/foot-placement","m_SourcePortId":"contribution","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"goal-contribution.0","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/ik-to-local","m_SourceNodeId":"corin.control-rig.body.graph/full-body-ik","m_SourcePortId":"result","m_TargetNodeId":"corin.control-rig.body.graph/component-to-local","m_TargetPortId":"component-pose","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/local-to-output","m_SourceNodeId":"corin.control-rig.body.graph/component-to-local","m_SourcePortId":"local-pose","m_TargetNodeId":"corin.control-rig.body.graph/output","m_TargetPortId":"pose.local","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-foot","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/foot-placement","m_TargetPortId":"pose","_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"pose","_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: -5134182318206829311}
-  - {fileID: -82232618603658342}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.control-rig.body.graph
-  m_ContentRevision: 0546b8235aa14165867ee5d661183798
-  m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &-2101972089851896219
+--- !u!114 &-7307166977988170493
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1266,7 +25,7 @@ MonoBehaviour:
   m_Name: CorinPoseInertializationPolicy InertializationPolicy
   m_EditorClassIdentifier: 
   m_Kind: 2
---- !u!114 &-717291541171842409
+--- !u!114 &-3921232948358065235
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1276,9 +35,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_WalkLoop_Inplace Source Binding
+  m_Name: Corin_Pipeline_Idle_Inplace Source Binding
   m_EditorClassIdentifier: 
---- !u!114 &-369794949671118892
+--- !u!114 &-2979050784670951599
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1287,243 +46,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Corin_Pipeline_RunStart_Inplace Source Binding
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_DisplayName":"Walk
-    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_color":{"r":0.2156863,"g":0.4509804,"b":0.3607843,"a":1.0},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"392890fbd759c4cba656c9607b0ba5b8","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_color":{"r":0.5176471,"g":0.2156863,"b":0.2627451,"a":1.0},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"6363a088affe9653b8ee0d8a5576f4a0","m_SourceNodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_SourcePortId":"pose","m_TargetNodeId":"392890fbd759c4cba656c9607b0ba5b8","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: 3661276291319553980}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 640.25336, y: 422.44724}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: 239fb85af79509b36208db12ad91354f
-  m_ContentRevision: a596605c6718427e8d9c3719f07d0f6f
-  m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &-82232618603658342
+--- !u!114 &-2335344785742086560
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1536,7 +62,20 @@ MonoBehaviour:
   m_Name: CorinFootPlacementRigCalibration FootPlacementCalibration
   m_EditorClassIdentifier: 
   m_Kind: 6
---- !u!114 &-3131390755107029
+--- !u!114 &-1844466054010593893
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
+  m_Name: CorinLocomotionBlendProfile BlendProfile
+  m_EditorClassIdentifier: 
+  m_Kind: 9
+--- !u!114 &-1223974716485499172
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1546,7 +85,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_RunStart_Inplace Source Binding
+  m_Name: Corin_Pipeline_WalkLoop_Inplace Source Binding
+  m_EditorClassIdentifier: 
+--- !u!114 &-1125276244088184030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Corin_Pipeline_RunEnd_Inplace Source Binding
   m_EditorClassIdentifier: 
 --- !u!114 &11400000
 MonoBehaviour:
@@ -1560,16 +111,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c098d552eb42231449a0d29a2f0026cb, type: 3}
   m_Name: LocomotionFullBodyPoseGraph
   m_EditorClassIdentifier: 
-  m_Graph: {fileID: 8490708341471514960}
+  m_Graph: {fileID: 4059368495099081888}
   m_GraphCatalog:
-  - {fileID: 6937751544484679644}
-  - {fileID: 7835597318044098332}
-  - {fileID: -6698807141751904778}
-  - {fileID: -5865765496217306459}
-  - {fileID: -9068156287546697043}
-  - {fileID: -369794949671118892}
-  - {fileID: 5906950430624728954}
-  - {fileID: -4107042642224300456}
+  - {fileID: 447276072231417055}
+  - {fileID: 2402677218184211338}
+  - {fileID: 5072474735055970769}
+  - {fileID: 6698202936371809159}
+  - {fileID: 4210088017428885017}
+  - {fileID: 8946121524649710714}
+  - {fileID: 8640876822083672252}
+  - {fileID: 2504121604337729134}
   m_StateMachineLayouts:
   - m_StateMachineId: corin.locomotion
     m_Elements:
@@ -1588,582 +139,20 @@ MonoBehaviour:
     - m_ElementId: corin.locomotion.turn
       m_Position: {x: 420.27533, y: 587.21295}
   m_SourceSlots:
-  - {fileID: 8974593265747825976}
-  - {fileID: -3131390755107029}
-  - {fileID: 478874425122392373}
-  - {fileID: 5371559075762468322}
-  - {fileID: 3661276291319553980}
-  - {fileID: -717291541171842409}
-  - {fileID: 1092009602723442910}
+  - {fileID: -3921232948358065235}
+  - {fileID: -2979050784670951599}
+  - {fileID: 1131448872057909736}
+  - {fileID: -1125276244088184030}
+  - {fileID: -8822627664849689120}
+  - {fileID: -1223974716485499172}
+  - {fileID: 2468437558700976723}
   m_ResourceSlots:
-  - {fileID: 8358330576834098845}
-  - {fileID: 1032741082438072742}
-  - {fileID: -82232618603658342}
-  - {fileID: -5134182318206829311}
-  - {fileID: -2101972089851896219}
---- !u!114 &478874425122392373
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_RunLoop_Inplace Source Binding
-  m_EditorClassIdentifier: 
---- !u!114 &1032741082438072742
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
-  m_Name: CorinLocomotionBlendProfile BlendProfile
-  m_EditorClassIdentifier: 
-  m_Kind: 9
---- !u!114 &1092009602723442910
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_MovingTurn_Inplace Source Binding
-  m_EditorClassIdentifier: 
---- !u!114 &3661276291319553980
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_WalkStart_Inplace Source Binding
-  m_EditorClassIdentifier: 
---- !u!114 &4744350760488217751
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.pose-state-machine","m_DisplayName":"Locomotion
-    Pose State Machine","m_Payload":{"m_StateMachine":{"m_StateMachineId":"corin.locomotion","m_ContentRevision":"ddb056f8fb22414899b2692a569719d9","m_Entry":{"m_EntryId":"corin.locomotion.entry","m_TargetStateId":"corin.locomotion.idle"},"m_States":[{"m_StateId":"12a31544976ddf152639d62c6d19142c","m_DisplayName":"Walk
-    Loop","m_PoseGraphId":"658ab38fd39b80592ae222925f31e25c","m_OutputPoseNodeId":"8d4b1b80835e97d02b73d6e166a01be7"},{"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc","m_DisplayName":"Walk
-    Start","m_PoseGraphId":"239fb85af79509b36208db12ad91354f","m_OutputPoseNodeId":"392890fbd759c4cba656c9607b0ba5b8"},{"m_StateId":"corin.locomotion.idle","m_DisplayName":"Idle","m_PoseGraphId":"corin.locomotion.idle.graph","m_OutputPoseNodeId":"corin.locomotion.idle.output","m_AlwaysResetOnEntry":false},{"m_StateId":"corin.locomotion.locomotion","m_DisplayName":"Run
-    Loop","m_PoseGraphId":"corin.locomotion.locomotion.graph","m_OutputPoseNodeId":"corin.locomotion.locomotion.output"},{"m_StateId":"corin.locomotion.start","m_DisplayName":"Run
-    Start","m_PoseGraphId":"corin.locomotion.start.graph","m_OutputPoseNodeId":"corin.locomotion.start.output"},{"m_StateId":"corin.locomotion.stop","m_DisplayName":"Run
-    End","m_PoseGraphId":"corin.locomotion.stop.graph","m_OutputPoseNodeId":"corin.locomotion.stop.output"},{"m_StateId":"corin.locomotion.turn","m_DisplayName":"Turn","m_PoseGraphId":"corin.locomotion.turn.graph","m_OutputPoseNodeId":"corin.locomotion.turn.output"}],"m_Transitions":[{"m_TransitionId":"302210b10c4a90c560762163d676a267","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"corin.locomotion.locomotion","m_Rule":{"m_GraphId":"9b4c4a81eb819ee42e4e9cdc630d23e4","m_ContentRevision":"1ec15b66450bac27858696a767818588","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"40bdae207c51c1fc2df59c6572acfa18","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.idle"},"m_TargetStateId":"corin.locomotion.start","m_Rule":{"m_GraphId":"6992eda1701390294e2fef138c8de34e","m_ContentRevision":"a79fc9ad395fbdd8800d0d965c9ee4ce","m_Operations":[{"m_OperationId":"matches-run-loop-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"run-loop-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"run-loop-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-run-loop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"7d417c81b453fadaf9856d792c8faf13","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.locomotion","m_Rule":{"m_GraphId":"0d7eff3ee315c8479906e6e01aab8104","m_ContentRevision":"8eb9d0ea1c70486a9f6baf03f0a9ebd9","m_Operations":[{"m_OperationId":"gait-handoff-lead","m_Kind":3,"m_FloatLiteral":0.25},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"gait-handoff-lead"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"7f48553f9eb60254b61640cf9a1b513a","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"corin.locomotion.turn","m_Rule":{"m_GraphId":"089793dbf13a1cbed02f5c75ee4fe58c","m_ContentRevision":"a7cd3fd232f80dd3dffcbea69ecc9b90","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendLogic":2,"m_DurationSeconds":0.12,"m_BlendProfileSlot":1},{"m_TransitionId":"f1d65b9eddd4f346f2419609ce0a416f","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"corin.locomotion.idle","m_Rule":{"m_GraphId":"5a3fef35afb1a99e4dfc110b71e2e63b","m_ContentRevision":"6286a40cae89e209aa50898c9274261f","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"0008c49325737b578cec12feb827dea5","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":1,"m_Rule":{"m_GraphId":"99a39b3d4b0d878453cc4049fff8bff4","m_ContentRevision":"e9cc19dda89e4975a27f1362d98b30f3","m_Operations":[{"m_OperationId":"gait-handoff-lead","m_Kind":3,"m_FloatLiteral":0.3},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"gait-handoff-lead"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"05e5b9add547fee826645e126b6b4624","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":1,"m_Rule":{"m_GraphId":"21f4812b3d7cbe3effa54397ca44f281","m_ContentRevision":"6be79fde35a4291ec26395205be11e62","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendLogic":2,"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"0d49c1629146887a3419fa6bd508279e","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"corin.locomotion.stop","m_Priority":1,"m_Rule":{"m_GraphId":"6ed26e909dc0e1caabf8085b36214350","m_ContentRevision":"454e8b24da4e32ceed80c72d032bf15e","m_Operations":[{"m_OperationId":"matches-stationary-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"stationary-mode"},{"m_OperationId":"matches-stop-mode","m_Kind":7,"m_InputA":"matches-target-mode","m_InputB":"matches-stationary-mode"},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"stationary-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunStopping"}],"m_OutputOperationId":"matches-stop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"3377399d4663fc03b2849e4785dc3b87","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":1,"m_Rule":{"m_GraphId":"d72bfe0a17dd7d917beb25dcd0078e4a","m_ContentRevision":"70f626e635d06b4344576c792d781ad6","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendProfileSlot":1},{"m_TransitionId":"53821ab3ce20a0a5478a554ca981b4b4","m_Source":{"m_Kind":1,"m_StateId":"12a31544976ddf152639d62c6d19142c"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":1,"m_Rule":{"m_GraphId":"a291e438c6d69cc77912a55eb05dd3c7","m_ContentRevision":"fe72cb1928464ee3c32d7235f7828e7f","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"aa74311944c6a422e954c4a533743867","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.idle"},"m_TargetStateId":"89eeedab7b97adb04b02ef9abd06f8bc","m_Priority":1,"m_Rule":{"m_GraphId":"ae3d9c6b33afdbedaaa61b8fa3fefbbd","m_ContentRevision":"a06bff59b0691b8b054995c31fdec403","m_Operations":[{"m_OperationId":"matches-walk-loop-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"walk-loop-mode"},{"m_OperationId":"matches-walk-start-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"walk-start-mode"},{"m_OperationId":"matches-walk-start-or-loop-mode","m_Kind":7,"m_InputA":"matches-walk-start-mode","m_InputB":"matches-walk-loop-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"walk-loop-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"},{"m_OperationId":"walk-start-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkStart"}],"m_OutputOperationId":"matches-walk-start-or-loop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"b13f471ab426923ef2853aa54396dd36","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":1,"m_Rule":{"m_GraphId":"4a879dddf8a10bb78fe80c6e357ee716","m_ContentRevision":"dc1e648dee498b4cf37595c7cfcf3580","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"180facadacee8ff4398001cb31b253db","m_Source":{"m_Kind":1,"m_StateId":"12a31544976ddf152639d62c6d19142c"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":2,"m_Rule":{"m_GraphId":"17af0ab1c1636e43b70fa25417cee212","m_ContentRevision":"9434446258dd315e17a8f45c59906e91","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"60d8b8f78ddf3f3b107041883abe1da6","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"140eddf387db8112f13c270c4c846b5a","m_ContentRevision":"80c8259ddff0bbbcb0786098ceb9f5c6","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendProfileSlot":1},{"m_TransitionId":"a43513405b8ee76c57e356fe14fdf1d6","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"da80520f7dd2bc36d598a5f800fcdc4a","m_ContentRevision":"dba7076a94175304db46187d7cf1f610","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"corin.run-start-to-run-end-by-movement-mode","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.stop","m_Priority":2,"m_Rule":{"m_GraphId":"corin.rule.run-start-to-run-end-by-movement-mode","m_ContentRevision":"64e14b3c3d732da0f9e10196ab392bff","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"ee15c5d84a17111632903384c7eb6858","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"06967554bff21b3767dc63ca4eba0a52","m_ContentRevision":"51376459c020397fb622a18a44b1b282","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"66f76f17aecc26193781f127579e79d4","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":3,"m_Rule":{"m_GraphId":"23e0647396275941c4bf4d185ecfd783","m_ContentRevision":"5bcf482df5fe39099c49103737cfea92","m_Operations":[{"m_OperationId":"blend-duration","m_Kind":3,"m_FloatLiteral":0.15},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"blend-duration"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"corin.walk-start-to-idle-by-movement-mode","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":3,"m_Rule":{"m_GraphId":"corin.rule.walk-start-to-idle-by-movement-mode","m_ContentRevision":"365ee19c4a6630797ef637ebfb2026ff","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"1eec43ee148238b400c193d220769895","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.turn","m_Priority":4,"m_Rule":{"m_GraphId":"7e0a96fa2e91a6bc085c7b9cde36eb7c","m_ContentRevision":"76287a714bd04ca6a8bd58957dc79afe","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.12,"m_BlendProfileSlot":1},{"m_TransitionId":"b7817cf8df38719c6bf611cd20c7484b","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.turn","m_Priority":4,"m_Rule":{"m_GraphId":"3f26370671e31d9949f96bc3eea724c9","m_ContentRevision":"d6578954aa2f46b6a92293cefc9cc63d","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.12,"m_BlendProfileSlot":1}]},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseStateMachineNodePayload"},"_position":{"x":-464.5699,"y":-159.9571},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.inertialization","m_DisplayName":"Inertialization","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterInertializationPosePayload"},"_position":{"x":-300.0,"y":-75.33329},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"},{"m_NodeId":"corin.full-body-action.slot","m_DisplayName":"Full
-    Body Action Slot","m_Payload":{"m_SlotId":"corin.full-body-action","m_AnimationChannelId":"FullBodyAction","m_SelectionAvailability":2,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterAnimationSlotPosePayload"},"_position":{"x":-138.0,"y":-75.33329},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"2"},{"m_NodeId":"corin.control-rig.body.call","m_DisplayName":"Control
-    Rig: Body","m_Payload":{"m_Subgraph":{"m_PoseGraphId":"corin.control-rig.body.graph"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseSubgraphPayload"},"m_DynamicPorts":[{"m_PortId":"pose.input","m_DisplayName":"Input
-    Pose","m_InterfacePortId":"entry.pose.input"},{"m_PortId":"foot-weight.input","m_DisplayName":"Foot
-    Placement Weight","m_Kind":3,"m_Order":1,"m_InterfacePortId":"foot-placement-weight"},{"m_PortId":"pose.output","m_DisplayName":"Output
-    Pose","m_Direction":2,"m_Order":2,"m_InterfacePortId":"entry.pose.output"}],"_position":{"x":304.5858,"y":161.21},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"3"},{"m_NodeId":"1f9ab07f79e94a789095b9080b71880d","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":713.1459,"y":107.6775},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"4"},{"m_NodeId":"fd84c35ae6ed49a1b72703b92795c43c","m_DisplayName":"Foot
-    Placement Weight","m_Payload":{"m_ParameterId":"animation.foot-placement-weight","$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterProgramParameterInputPosePayload"},"_position":{"x":-181.7769,"y":239.2463},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"5"}],"connections":[{"m_EdgeId":"corin.locomotion.pose-state-machine-to-inertialization","m_SourceNodeId":"corin.locomotion.pose-state-machine","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.inertialization","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.locomotion.inertialization-to-full-body-action-slot","m_SourceNodeId":"corin.locomotion.inertialization","m_SourcePortId":"result","m_TargetNodeId":"corin.full-body-action.slot","m_TargetPortId":"source-pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.root-to-control-rig","m_SourceNodeId":"corin.full-body-action.slot","m_SourcePortId":"pose","m_TargetNodeId":"corin.control-rig.body.call","m_TargetPortId":"pose.input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig-to-output","m_SourceNodeId":"corin.control-rig.body.call","m_SourcePortId":"pose.output","m_TargetNodeId":"1f9ab07f79e94a789095b9080b71880d","m_TargetPortId":"pose","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.weight-to-control-rig","m_SourceNodeId":"fd84c35ae6ed49a1b72703b92795c43c","m_SourcePortId":"parameter","m_TargetNodeId":"corin.control-rig.body.call","m_TargetPortId":"foot-weight.input","_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: 0}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
-  m_ContentRevision: e2a81e5f653e4653a65b7f87668b707a
-  m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &5371559075762468322
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_RunEnd_Inplace Source Binding
-  m_EditorClassIdentifier: 
---- !u!114 &5906950430624728954
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"cff873cb4c0040670d27858670fcfb31","m_DisplayName":"Walk
-    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"4b9956bcabbd5e950a33d7b48cac1bca","m_SourceNodeId":"cff873cb4c0040670d27858670fcfb31","m_SourcePortId":"pose","m_TargetNodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: -717291541171842409}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: 658ab38fd39b80592ae222925f31e25c
-  m_ContentRevision: 813ea063048140c2af0e1efcde61f44c
-  m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &6937751544484679644
+  - {fileID: 4177065355598373836}
+  - {fileID: -1844466054010593893}
+  - {fileID: -2335344785742086560}
+  - {fileID: 5400234489284315176}
+  - {fileID: -7307166977988170493}
+--- !u!114 &447276072231417055
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2176,239 +165,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.idle.sequence","m_DisplayName":"Idle
-    Sequence","m_Payload":{"m_SourceSlot":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_color":{"r":0.2156863,"g":0.4509804,"b":0.3607843,"a":1.0},"_position":{"x":-220.6667},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.idle.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_color":{"r":0.5176471,"g":0.2156863,"b":0.2627451,"a":1.0},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.idle.sequence-output","m_SourceNodeId":"corin.locomotion.idle.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.idle.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+    Sequence","m_Payload":{"m_SourceSlot":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.6667},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.idle.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.idle.sequence-output","m_SourceNodeId":"corin.locomotion.idle.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.idle.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
-  - {fileID: 8974593265747825976}
+  - {fileID: -3921232948358065235}
   _graphSource:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 800.5732, y: 422.49988}
+    _translation: {x: 0, y: 0}
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_GraphId: corin.locomotion.idle.graph
-  m_ContentRevision: 9b9582e4bc0d416496b008756e5b0bdc
+  m_ContentRevision: adf36ccd1d9d42938740730a5c5b0cfc
   m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &7835597318044098332
+  m_Parameters: []
+--- !u!114 &1131448872057909736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Corin_Pipeline_RunLoop_Inplace Source Binding
+  m_EditorClassIdentifier: 
+--- !u!114 &2402677218184211338
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2421,239 +207,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.start.sequence","m_DisplayName":"Run
-    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_color":{"r":0.2156863,"g":0.4509804,"b":0.3607843,"a":1.0},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.start.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_color":{"r":0.5176471,"g":0.2156863,"b":0.2627451,"a":1.0},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.start.sequence-output","m_SourceNodeId":"corin.locomotion.start.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.start.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.start.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.start.sequence-output","m_SourceNodeId":"corin.locomotion.start.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.start.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
-  - {fileID: -3131390755107029}
+  - {fileID: -2979050784670951599}
   _graphSource:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 640.25165, y: 422.44592}
+    _translation: {x: 0, y: 0}
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_GraphId: corin.locomotion.start.graph
-  m_ContentRevision: 54fb4625ccf64def99ae7f8ba4999a7d
+  m_ContentRevision: 5f298213cf7d41008d559262ac44ebfc
   m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &8358330576834098845
+  m_Parameters: []
+--- !u!114 &2468437558700976723
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2662,11 +233,48 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
-  m_Name: CorinActionBlendPolicy BlendPolicy
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Corin_Pipeline_MovingTurn_Inplace Source Binding
   m_EditorClassIdentifier: 
-  m_Kind: 1
---- !u!114 &8490708341471514960
+--- !u!114 &2504121604337729134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.control-rig.body.graph/input","m_DisplayName":"Control
+    Rig Input","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterGraphInputPosePayload"},"m_DynamicPorts":[{"m_PortId":"pose.local","m_DisplayName":"Input
+    Pose","m_Direction":2,"m_InterfacePortId":"entry.pose.input"}],"_position":{"x":-700.6666},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.control-rig.body.graph/local-to-component","m_DisplayName":"Local
+    To Component","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterLocalToComponentPosePayload"},"_position":{"x":-338.6667,"y":-46.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"},{"m_NodeId":"corin.control-rig.body.graph/foot-placement","m_DisplayName":"Foot
+    Placement","m_Payload":{"m_ProfileSlot":1,"m_CalibrationSlot":2,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterFootPlacementPosePayload"},"_position":{"x":-51.75877,"y":224.2178},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"2"},{"m_NodeId":"corin.control-rig.body.graph/full-body-ik","m_DisplayName":"Full
+    Body IK","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterFullBodyIkPosePayload"},"m_DynamicPorts":[{"m_PortId":"goal-contribution.0","m_DisplayName":"Goal
+    Contribution","m_Kind":14}],"_position":{"x":363.0012,"y":133.1295},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"3"},{"m_NodeId":"corin.control-rig.body.graph/component-to-local","m_DisplayName":"Component
+    To Local","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterComponentToLocalPosePayload"},"_position":{"x":834.7273,"y":86.44727},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"4"},{"m_NodeId":"corin.control-rig.body.graph/output","m_DisplayName":"Control
+    Rig Output","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterGraphOutputPosePayload"},"m_DynamicPorts":[{"m_PortId":"pose.local","m_DisplayName":"Output
+    Pose","m_InterfacePortId":"entry.pose.output"}],"_position":{"x":1433.59,"y":66.09576},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"5"}],"connections":[{"m_EdgeId":"corin.control-rig.body/input-pose","m_SourceNodeId":"corin.control-rig.body.graph/input","m_SourcePortId":"pose.local","m_TargetNodeId":"corin.control-rig.body.graph/local-to-component","m_TargetPortId":"local-pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-foot","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/foot-placement","m_TargetPortId":"pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/foot-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/foot-placement","m_SourcePortId":"contribution","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"goal-contribution.0","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/ik-to-local","m_SourceNodeId":"corin.control-rig.body.graph/full-body-ik","m_SourcePortId":"result","m_TargetNodeId":"corin.control-rig.body.graph/component-to-local","m_TargetPortId":"component-pose","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/local-to-output","m_SourceNodeId":"corin.control-rig.body.graph/component-to-local","m_SourcePortId":"local-pose","m_TargetNodeId":"corin.control-rig.body.graph/output","m_TargetPortId":"pose.local","_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"5"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 5400234489284315176}
+  - {fileID: -2335344785742086560}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.control-rig.body.graph
+  m_ContentRevision: 2cace81b673e4dc684a96ec0a751270d
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &4059368495099081888
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2684,19 +292,17 @@ MonoBehaviour:
     Start","m_PoseGraphId":"239fb85af79509b36208db12ad91354f","m_OutputPoseNodeId":"392890fbd759c4cba656c9607b0ba5b8"},{"m_StateId":"corin.locomotion.idle","m_DisplayName":"Idle","m_PoseGraphId":"corin.locomotion.idle.graph","m_OutputPoseNodeId":"corin.locomotion.idle.output","m_AlwaysResetOnEntry":false},{"m_StateId":"corin.locomotion.locomotion","m_DisplayName":"Run
     Loop","m_PoseGraphId":"corin.locomotion.locomotion.graph","m_OutputPoseNodeId":"corin.locomotion.locomotion.output"},{"m_StateId":"corin.locomotion.start","m_DisplayName":"Run
     Start","m_PoseGraphId":"corin.locomotion.start.graph","m_OutputPoseNodeId":"corin.locomotion.start.output"},{"m_StateId":"corin.locomotion.stop","m_DisplayName":"Run
-    End","m_PoseGraphId":"corin.locomotion.stop.graph","m_OutputPoseNodeId":"corin.locomotion.stop.output"},{"m_StateId":"corin.locomotion.turn","m_DisplayName":"Turn","m_PoseGraphId":"corin.locomotion.turn.graph","m_OutputPoseNodeId":"corin.locomotion.turn.output"}],"m_Transitions":[{"m_TransitionId":"302210b10c4a90c560762163d676a267","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"corin.locomotion.locomotion","m_Rule":{"m_GraphId":"9b4c4a81eb819ee42e4e9cdc630d23e4","m_ContentRevision":"1ec15b66450bac27858696a767818588","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"40bdae207c51c1fc2df59c6572acfa18","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.idle"},"m_TargetStateId":"corin.locomotion.start","m_Rule":{"m_GraphId":"6992eda1701390294e2fef138c8de34e","m_ContentRevision":"a79fc9ad395fbdd8800d0d965c9ee4ce","m_Operations":[{"m_OperationId":"matches-run-loop-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"run-loop-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"run-loop-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-run-loop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"7d417c81b453fadaf9856d792c8faf13","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.locomotion","m_Rule":{"m_GraphId":"0d7eff3ee315c8479906e6e01aab8104","m_ContentRevision":"8eb9d0ea1c70486a9f6baf03f0a9ebd9","m_Operations":[{"m_OperationId":"gait-handoff-lead","m_Kind":3,"m_FloatLiteral":0.25},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"gait-handoff-lead"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"7f48553f9eb60254b61640cf9a1b513a","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"corin.locomotion.turn","m_Rule":{"m_GraphId":"089793dbf13a1cbed02f5c75ee4fe58c","m_ContentRevision":"a7cd3fd232f80dd3dffcbea69ecc9b90","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendLogic":2,"m_DurationSeconds":0.12,"m_BlendProfileSlot":1},{"m_TransitionId":"f1d65b9eddd4f346f2419609ce0a416f","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"corin.locomotion.idle","m_Rule":{"m_GraphId":"5a3fef35afb1a99e4dfc110b71e2e63b","m_ContentRevision":"6286a40cae89e209aa50898c9274261f","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"0008c49325737b578cec12feb827dea5","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":1,"m_Rule":{"m_GraphId":"99a39b3d4b0d878453cc4049fff8bff4","m_ContentRevision":"e9cc19dda89e4975a27f1362d98b30f3","m_Operations":[{"m_OperationId":"gait-handoff-lead","m_Kind":3,"m_FloatLiteral":0.3},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"gait-handoff-lead"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"05e5b9add547fee826645e126b6b4624","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":1,"m_Rule":{"m_GraphId":"21f4812b3d7cbe3effa54397ca44f281","m_ContentRevision":"6be79fde35a4291ec26395205be11e62","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendLogic":2,"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"0d49c1629146887a3419fa6bd508279e","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"corin.locomotion.stop","m_Priority":1,"m_Rule":{"m_GraphId":"6ed26e909dc0e1caabf8085b36214350","m_ContentRevision":"454e8b24da4e32ceed80c72d032bf15e","m_Operations":[{"m_OperationId":"matches-stationary-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"stationary-mode"},{"m_OperationId":"matches-stop-mode","m_Kind":7,"m_InputA":"matches-target-mode","m_InputB":"matches-stationary-mode"},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"stationary-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunStopping"}],"m_OutputOperationId":"matches-stop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"3377399d4663fc03b2849e4785dc3b87","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":1,"m_Rule":{"m_GraphId":"d72bfe0a17dd7d917beb25dcd0078e4a","m_ContentRevision":"70f626e635d06b4344576c792d781ad6","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendProfileSlot":1},{"m_TransitionId":"53821ab3ce20a0a5478a554ca981b4b4","m_Source":{"m_Kind":1,"m_StateId":"12a31544976ddf152639d62c6d19142c"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":1,"m_Rule":{"m_GraphId":"a291e438c6d69cc77912a55eb05dd3c7","m_ContentRevision":"fe72cb1928464ee3c32d7235f7828e7f","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"aa74311944c6a422e954c4a533743867","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.idle"},"m_TargetStateId":"89eeedab7b97adb04b02ef9abd06f8bc","m_Priority":1,"m_Rule":{"m_GraphId":"ae3d9c6b33afdbedaaa61b8fa3fefbbd","m_ContentRevision":"a06bff59b0691b8b054995c31fdec403","m_Operations":[{"m_OperationId":"matches-walk-loop-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"walk-loop-mode"},{"m_OperationId":"matches-walk-start-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"walk-start-mode"},{"m_OperationId":"matches-walk-start-or-loop-mode","m_Kind":7,"m_InputA":"matches-walk-start-mode","m_InputB":"matches-walk-loop-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"walk-loop-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"},{"m_OperationId":"walk-start-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkStart"}],"m_OutputOperationId":"matches-walk-start-or-loop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"b13f471ab426923ef2853aa54396dd36","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":1,"m_Rule":{"m_GraphId":"4a879dddf8a10bb78fe80c6e357ee716","m_ContentRevision":"dc1e648dee498b4cf37595c7cfcf3580","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"180facadacee8ff4398001cb31b253db","m_Source":{"m_Kind":1,"m_StateId":"12a31544976ddf152639d62c6d19142c"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":2,"m_Rule":{"m_GraphId":"17af0ab1c1636e43b70fa25417cee212","m_ContentRevision":"9434446258dd315e17a8f45c59906e91","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"60d8b8f78ddf3f3b107041883abe1da6","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"140eddf387db8112f13c270c4c846b5a","m_ContentRevision":"80c8259ddff0bbbcb0786098ceb9f5c6","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendProfileSlot":1},{"m_TransitionId":"a43513405b8ee76c57e356fe14fdf1d6","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"da80520f7dd2bc36d598a5f800fcdc4a","m_ContentRevision":"dba7076a94175304db46187d7cf1f610","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"corin.run-start-to-run-end-by-movement-mode","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.stop","m_Priority":2,"m_Rule":{"m_GraphId":"corin.rule.run-start-to-run-end-by-movement-mode","m_ContentRevision":"64e14b3c3d732da0f9e10196ab392bff","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"ee15c5d84a17111632903384c7eb6858","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"06967554bff21b3767dc63ca4eba0a52","m_ContentRevision":"51376459c020397fb622a18a44b1b282","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"66f76f17aecc26193781f127579e79d4","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":3,"m_Rule":{"m_GraphId":"23e0647396275941c4bf4d185ecfd783","m_ContentRevision":"5bcf482df5fe39099c49103737cfea92","m_Operations":[{"m_OperationId":"blend-duration","m_Kind":3,"m_FloatLiteral":0.15},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"blend-duration"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"corin.walk-start-to-idle-by-movement-mode","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":3,"m_Rule":{"m_GraphId":"corin.rule.walk-start-to-idle-by-movement-mode","m_ContentRevision":"365ee19c4a6630797ef637ebfb2026ff","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"1eec43ee148238b400c193d220769895","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.turn","m_Priority":4,"m_Rule":{"m_GraphId":"7e0a96fa2e91a6bc085c7b9cde36eb7c","m_ContentRevision":"76287a714bd04ca6a8bd58957dc79afe","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.12,"m_BlendProfileSlot":1},{"m_TransitionId":"b7817cf8df38719c6bf611cd20c7484b","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.turn","m_Priority":4,"m_Rule":{"m_GraphId":"3f26370671e31d9949f96bc3eea724c9","m_ContentRevision":"d6578954aa2f46b6a92293cefc9cc63d","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.12,"m_BlendProfileSlot":1}]},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseStateMachineNodePayload"},"_position":{"x":-464.5699,"y":-159.9571},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.inertialization","m_DisplayName":"Inertialization","m_Payload":{"m_PolicySlot":2,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterInertializationPosePayload"},"_position":{"x":-300.0,"y":-75.33329},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"},{"m_NodeId":"corin.full-body-action.slot","m_DisplayName":"Full
+    End","m_PoseGraphId":"corin.locomotion.stop.graph","m_OutputPoseNodeId":"corin.locomotion.stop.output"},{"m_StateId":"corin.locomotion.turn","m_DisplayName":"Turn","m_PoseGraphId":"corin.locomotion.turn.graph","m_OutputPoseNodeId":"corin.locomotion.turn.output"}],"m_Transitions":[{"m_TransitionId":"302210b10c4a90c560762163d676a267","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"corin.locomotion.locomotion","m_Rule":{"m_GraphId":"9b4c4a81eb819ee42e4e9cdc630d23e4","m_ContentRevision":"1ec15b66450bac27858696a767818588","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"40bdae207c51c1fc2df59c6572acfa18","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.idle"},"m_TargetStateId":"corin.locomotion.start","m_Rule":{"m_GraphId":"6992eda1701390294e2fef138c8de34e","m_ContentRevision":"a79fc9ad395fbdd8800d0d965c9ee4ce","m_Operations":[{"m_OperationId":"matches-run-loop-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"run-loop-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"run-loop-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-run-loop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"7d417c81b453fadaf9856d792c8faf13","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.locomotion","m_Rule":{"m_GraphId":"0d7eff3ee315c8479906e6e01aab8104","m_ContentRevision":"8eb9d0ea1c70486a9f6baf03f0a9ebd9","m_Operations":[{"m_OperationId":"gait-handoff-lead","m_Kind":3,"m_FloatLiteral":0.25},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"gait-handoff-lead"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"7f48553f9eb60254b61640cf9a1b513a","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"corin.locomotion.turn","m_Rule":{"m_GraphId":"089793dbf13a1cbed02f5c75ee4fe58c","m_ContentRevision":"a7cd3fd232f80dd3dffcbea69ecc9b90","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendLogic":2,"m_DurationSeconds":0.12,"m_BlendProfileSlot":1},{"m_TransitionId":"f1d65b9eddd4f346f2419609ce0a416f","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"corin.locomotion.idle","m_Rule":{"m_GraphId":"5a3fef35afb1a99e4dfc110b71e2e63b","m_ContentRevision":"6286a40cae89e209aa50898c9274261f","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"0008c49325737b578cec12feb827dea5","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":1,"m_Rule":{"m_GraphId":"99a39b3d4b0d878453cc4049fff8bff4","m_ContentRevision":"e9cc19dda89e4975a27f1362d98b30f3","m_Operations":[{"m_OperationId":"gait-handoff-lead","m_Kind":3,"m_FloatLiteral":0.3},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"gait-handoff-lead"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"05e5b9add547fee826645e126b6b4624","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":1,"m_Rule":{"m_GraphId":"21f4812b3d7cbe3effa54397ca44f281","m_ContentRevision":"6be79fde35a4291ec26395205be11e62","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendLogic":2,"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"0d49c1629146887a3419fa6bd508279e","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"corin.locomotion.stop","m_Priority":1,"m_Rule":{"m_GraphId":"6ed26e909dc0e1caabf8085b36214350","m_ContentRevision":"454e8b24da4e32ceed80c72d032bf15e","m_Operations":[{"m_OperationId":"matches-stationary-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"stationary-mode"},{"m_OperationId":"matches-stop-mode","m_Kind":7,"m_InputA":"matches-target-mode","m_InputB":"matches-stationary-mode"},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"stationary-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunStopping"}],"m_OutputOperationId":"matches-stop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"3377399d4663fc03b2849e4785dc3b87","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":1,"m_Rule":{"m_GraphId":"d72bfe0a17dd7d917beb25dcd0078e4a","m_ContentRevision":"70f626e635d06b4344576c792d781ad6","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendProfileSlot":1},{"m_TransitionId":"53821ab3ce20a0a5478a554ca981b4b4","m_Source":{"m_Kind":1,"m_StateId":"12a31544976ddf152639d62c6d19142c"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":1,"m_Rule":{"m_GraphId":"a291e438c6d69cc77912a55eb05dd3c7","m_ContentRevision":"fe72cb1928464ee3c32d7235f7828e7f","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"aa74311944c6a422e954c4a533743867","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.idle"},"m_TargetStateId":"89eeedab7b97adb04b02ef9abd06f8bc","m_Priority":1,"m_Rule":{"m_GraphId":"ae3d9c6b33afdbedaaa61b8fa3fefbbd","m_ContentRevision":"a06bff59b0691b8b054995c31fdec403","m_Operations":[{"m_OperationId":"matches-walk-loop-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"walk-loop-mode"},{"m_OperationId":"matches-walk-start-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"walk-start-mode"},{"m_OperationId":"matches-walk-start-or-loop-mode","m_Kind":7,"m_InputA":"matches-walk-start-mode","m_InputB":"matches-walk-loop-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"walk-loop-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"},{"m_OperationId":"walk-start-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkStart"}],"m_OutputOperationId":"matches-walk-start-or-loop-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"b13f471ab426923ef2853aa54396dd36","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":1,"m_Rule":{"m_GraphId":"4a879dddf8a10bb78fe80c6e357ee716","m_ContentRevision":"dc1e648dee498b4cf37595c7cfcf3580","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"180facadacee8ff4398001cb31b253db","m_Source":{"m_Kind":1,"m_StateId":"12a31544976ddf152639d62c6d19142c"},"m_TargetStateId":"corin.locomotion.locomotion","m_Priority":2,"m_Rule":{"m_GraphId":"17af0ab1c1636e43b70fa25417cee212","m_ContentRevision":"9434446258dd315e17a8f45c59906e91","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/RunLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"60d8b8f78ddf3f3b107041883abe1da6","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"140eddf387db8112f13c270c4c846b5a","m_ContentRevision":"80c8259ddff0bbbcb0786098ceb9f5c6","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_BlendProfileSlot":1},{"m_TransitionId":"a43513405b8ee76c57e356fe14fdf1d6","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.locomotion"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"da80520f7dd2bc36d598a5f800fcdc4a","m_ContentRevision":"dba7076a94175304db46187d7cf1f610","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"corin.run-start-to-run-end-by-movement-mode","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.stop","m_Priority":2,"m_Rule":{"m_GraphId":"corin.rule.run-start-to-run-end-by-movement-mode","m_ContentRevision":"64e14b3c3d732da0f9e10196ab392bff","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"ee15c5d84a17111632903384c7eb6858","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.turn"},"m_TargetStateId":"12a31544976ddf152639d62c6d19142c","m_Priority":2,"m_Rule":{"m_GraphId":"06967554bff21b3767dc63ca4eba0a52","m_ContentRevision":"51376459c020397fb622a18a44b1b282","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/WalkLoop"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.3,"m_BlendProfileSlot":1},{"m_TransitionId":"66f76f17aecc26193781f127579e79d4","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":3,"m_Rule":{"m_GraphId":"23e0647396275941c4bf4d185ecfd783","m_ContentRevision":"5bcf482df5fe39099c49103737cfea92","m_Operations":[{"m_OperationId":"blend-duration","m_Kind":3,"m_FloatLiteral":0.15},{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"ready-to-transition","m_Kind":6,"m_InputA":"matches-target-mode","m_InputB":"state-pose-ready"},{"m_OperationId":"state-pose-ready","m_Kind":13,"m_InputA":"state-pose-remaining-time","m_InputB":"blend-duration"},{"m_OperationId":"state-pose-remaining-time","m_Kind":15},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"ready-to-transition"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"corin.walk-start-to-idle-by-movement-mode","m_Source":{"m_Kind":1,"m_StateId":"89eeedab7b97adb04b02ef9abd06f8bc"},"m_TargetStateId":"corin.locomotion.idle","m_Priority":3,"m_Rule":{"m_GraphId":"corin.rule.walk-start-to-idle-by-movement-mode","m_ContentRevision":"365ee19c4a6630797ef637ebfb2026ff","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.stationary"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.15,"m_BlendProfileSlot":1},{"m_TransitionId":"1eec43ee148238b400c193d220769895","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.start"},"m_TargetStateId":"corin.locomotion.turn","m_Priority":4,"m_Rule":{"m_GraphId":"7e0a96fa2e91a6bc085c7b9cde36eb7c","m_ContentRevision":"76287a714bd04ca6a8bd58957dc79afe","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.12,"m_BlendProfileSlot":1},{"m_TransitionId":"b7817cf8df38719c6bf611cd20c7484b","m_Source":{"m_Kind":1,"m_StateId":"corin.locomotion.stop"},"m_TargetStateId":"corin.locomotion.turn","m_Priority":4,"m_Rule":{"m_GraphId":"3f26370671e31d9949f96bc3eea724c9","m_ContentRevision":"d6578954aa2f46b6a92293cefc9cc63d","m_Operations":[{"m_OperationId":"matches-target-mode","m_Kind":8,"m_InputA":"movement-mode","m_InputB":"target-mode"},{"m_OperationId":"movement-mode","m_Kind":1,"m_FactId":"presentation.movement-mode"},{"m_OperationId":"target-mode","m_Kind":16,"m_IdentityLiteral":"presentation.movement-mode.state/MovingTurn"}],"m_OutputOperationId":"matches-target-mode"},"m_DurationSeconds":0.12,"m_BlendProfileSlot":1}],"m_Aliases":[]},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseStateMachineNodePayload"},"_position":{"x":-611.2068,"y":-217.3669},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.inertialization","m_DisplayName":"Inertialization","m_Payload":{"m_PolicySlot":2,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterInertializationPosePayload"},"_position":{"x":-328.9987,"y":-76.42277},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"},{"m_NodeId":"corin.full-body-action.slot","m_DisplayName":"Full
     Body Action Slot","m_Payload":{"m_SlotId":"corin.full-body-action","m_AnimationChannelId":"FullBodyAction","m_SelectionAvailability":2,"m_BlendPolicySlot":3,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterAnimationSlotPosePayload"},"_position":{"x":-138.0,"y":-75.33329},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"2"},{"m_NodeId":"corin.control-rig.body.call","m_DisplayName":"Control
     Rig: Body","m_Payload":{"m_Subgraph":{"m_PoseGraphId":"corin.control-rig.body.graph"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseSubgraphPayload"},"m_DynamicPorts":[{"m_PortId":"pose.input","m_DisplayName":"Input
-    Pose","m_InterfacePortId":"entry.pose.input"},{"m_PortId":"foot-weight.input","m_DisplayName":"Foot
-    Placement Weight","m_Kind":3,"m_Order":1,"m_InterfacePortId":"foot-placement-weight"},{"m_PortId":"pose.output","m_DisplayName":"Output
-    Pose","m_Direction":2,"m_Order":2,"m_InterfacePortId":"entry.pose.output"}],"_position":{"x":304.5858,"y":161.21},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"3"},{"m_NodeId":"1f9ab07f79e94a789095b9080b71880d","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":713.1459,"y":107.6775},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"4"},{"m_NodeId":"fd84c35ae6ed49a1b72703b92795c43c","m_DisplayName":"Foot
-    Placement Weight","m_Payload":{"m_ParameterId":"animation.foot-placement-weight","$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterProgramParameterInputPosePayload"},"_position":{"x":-181.7769,"y":239.2463},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"5"}],"connections":[{"m_EdgeId":"corin.locomotion.pose-state-machine-to-inertialization","m_SourceNodeId":"corin.locomotion.pose-state-machine","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.inertialization","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.locomotion.inertialization-to-full-body-action-slot","m_SourceNodeId":"corin.locomotion.inertialization","m_SourcePortId":"result","m_TargetNodeId":"corin.full-body-action.slot","m_TargetPortId":"source-pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.root-to-control-rig","m_SourceNodeId":"corin.full-body-action.slot","m_SourcePortId":"pose","m_TargetNodeId":"corin.control-rig.body.call","m_TargetPortId":"pose.input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig-to-output","m_SourceNodeId":"corin.control-rig.body.call","m_SourcePortId":"pose.output","m_TargetNodeId":"1f9ab07f79e94a789095b9080b71880d","m_TargetPortId":"pose","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.weight-to-control-rig","m_SourceNodeId":"fd84c35ae6ed49a1b72703b92795c43c","m_SourcePortId":"parameter","m_TargetNodeId":"corin.control-rig.body.call","m_TargetPortId":"foot-weight.input","_sourceNode":{"$ref":"5"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+    Pose","m_InterfacePortId":"entry.pose.input"},{"m_PortId":"pose.output","m_DisplayName":"Output
+    Pose","m_Direction":2,"m_Order":2,"m_InterfacePortId":"entry.pose.output"}],"_position":{"x":310.344,"y":161.21},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"3"},{"m_NodeId":"1f9ab07f79e94a789095b9080b71880d","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":713.1459,"y":107.6775},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"4"}],"connections":[{"m_EdgeId":"corin.locomotion.pose-state-machine-to-inertialization","m_SourceNodeId":"corin.locomotion.pose-state-machine","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.inertialization","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.locomotion.inertialization-to-full-body-action-slot","m_SourceNodeId":"corin.locomotion.inertialization","m_SourcePortId":"result","m_TargetNodeId":"corin.full-body-action.slot","m_TargetPortId":"source-pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.root-to-control-rig","m_SourceNodeId":"corin.full-body-action.slot","m_SourcePortId":"pose","m_TargetNodeId":"corin.control-rig.body.call","m_TargetPortId":"pose.input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig-to-output","m_SourceNodeId":"corin.control-rig.body.call","m_SourcePortId":"pose.output","m_TargetNodeId":"1f9ab07f79e94a789095b9080b71880d","m_TargetPortId":"pose","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
-  - {fileID: 1032741082438072742}
-  - {fileID: -2101972089851896219}
-  - {fileID: 8358330576834098845}
+  - {fileID: -1844466054010593893}
+  - {fileID: -7307166977988170493}
+  - {fileID: 4177065355598373836}
   _graphSource:
     _version: 3.42
     _category: 
@@ -2706,225 +312,10 @@ MonoBehaviour:
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
-  m_ContentRevision: f62806ba4fd04b6da54c1f0058baa00f
+  m_ContentRevision: 5e2852cec5ec41bfa407d8f8a0788439
   m_Role: 1
-  m_Parameters:
-  - m_ParameterId: animation.action-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.foot-placement-weight
-    m_ValueType: 1
-    m_Usage: 1
-    m_Unit: 
-    m_DefaultValue: 1
-  - m_ParameterId: animation.blendshape.EB_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_Relax_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EB_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.EB_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.EYE_Wink_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Angry_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Close_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_L_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_Open_R_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Eye_u2199u2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u4E0B\u773C\u7751u2191_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u534A\u95ED_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u56F0\u6270_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: "animation.blendshape.Eye_\u8BA4\u771F_Corin"
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa1_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Aa2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaShout_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_AaTalk_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ee_Corin002
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Ii_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh2_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Laugh_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_UuOo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_Uu_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2197_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_oou2198_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2190oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2191_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2192oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2193_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2196oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u2199oo_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
-  - m_ParameterId: animation.blendshape.Mouth_u25b3_Corin
-    m_ValueType: 1
-    m_Usage: 2
-    m_Unit: percent
-    m_DefaultValue: 0
---- !u!114 &8974593265747825976
+  m_Parameters: []
+--- !u!114 &4177065355598373836
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2933,6 +324,170 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_Idle_Inplace Source Binding
+  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
+  m_Name: CorinActionBlendPolicy BlendPolicy
   m_EditorClassIdentifier: 
+  m_Kind: 1
+--- !u!114 &4210088017428885017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.turn.sequence","m_DisplayName":"Moving
+    Turn Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-246.0,"y":17.33331},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.turn.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":280.6667,"y":20.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"2b4ef9d52769067557e6652f38041b35","m_SourceNodeId":"corin.locomotion.turn.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.turn.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 2468437558700976723}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.locomotion.turn.graph
+  m_ContentRevision: c98ae23663b34b98bb4d52dd51d4e712
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &5072474735055970769
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.locomotion.sequence","m_DisplayName":"Run
+    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.locomotion.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.locomotion.sequence-output","m_SourceNodeId":"corin.locomotion.locomotion.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.locomotion.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 1131448872057909736}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.locomotion.locomotion.graph
+  m_ContentRevision: 65911da1edf24cff824945e32ef594f3
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &5400234489284315176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
+  m_Name: CorinFootPlacementProfile FootPlacementProfile
+  m_EditorClassIdentifier: 
+  m_Kind: 5
+--- !u!114 &6698202936371809159
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.stop.sequence","m_DisplayName":"Run
+    End Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.stop.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.stop.sequence-output","m_SourceNodeId":"corin.locomotion.stop.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.stop.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: -1125276244088184030}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.locomotion.stop.graph
+  m_ContentRevision: 05ef9011b64c48c3905d98cb114dc6e1
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &8640876822083672252
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"cff873cb4c0040670d27858670fcfb31","m_DisplayName":"Walk
+    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"4b9956bcabbd5e950a33d7b48cac1bca","m_SourceNodeId":"cff873cb4c0040670d27858670fcfb31","m_SourcePortId":"pose","m_TargetNodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: -1223974716485499172}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: 658ab38fd39b80592ae222925f31e25c
+  m_ContentRevision: 87cb5c28d2eb4301a1a2d007e9ccd191
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &8946121524649710714
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_DisplayName":"Walk
+    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"392890fbd759c4cba656c9607b0ba5b8","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"6363a088affe9653b8ee0d8a5576f4a0","m_SourceNodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_SourcePortId":"pose","m_TargetNodeId":"392890fbd759c4cba656c9607b0ba5b8","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: -8822627664849689120}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: 239fb85af79509b36208db12ad91354f
+  m_ContentRevision: b0d57d92d2e743658838dcfab979fe4c
+  m_Role: 1
+  m_Parameters: []

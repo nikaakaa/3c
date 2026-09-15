@@ -14,46 +14,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_ControlModuleId: character.corin.control
   m_ControlParameters: []
-  m_SkillDefinitions:
-  - m_SkillId: Attack
-    m_EntryGraphAuthoringId: 00ec42f6d5ede195dcf13e4e27fe7933
-    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
-    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
+  m_AbilityGrants:
+  - m_Ability: {fileID: 11400000, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
     m_SourceInputRequestId: Attack
     m_ConsumeSourceInputRequest: 1
     m_TargetInputValueId: ActionTarget
     m_TargetKey: 
-    m_SubgraphDependencies: []
-    m_AllowedFollowUpSkillIds: []
-  - m_SkillId: DodgeBack
-    m_EntryGraphAuthoringId: 5d6c5b40e613e36a79c647152961ea33
-    m_ActionProfile: {fileID: 11400000, guid: add8a25636588a543a6770231bea14b6, type: 2}
-    m_ActionContext: {fileID: 11400000, guid: 7294b270a227b32429a8159cdbfd96b3, type: 2}
+  - m_Ability: {fileID: 11400000, guid: 67424e487a089064c85e32792e482909, type: 2}
     m_SourceInputRequestId: Dodge
     m_ConsumeSourceInputRequest: 1
     m_TargetInputValueId: 
     m_TargetKey: 
-    m_SubgraphDependencies: []
-    m_AllowedFollowUpSkillIds: []
-  - m_SkillId: DodgeForward
-    m_EntryGraphAuthoringId: 12fd389b09dc017facc9250c3f9a4ff3
-    m_ActionProfile: {fileID: 11400000, guid: add8a25636588a543a6770231bea14b6, type: 2}
-    m_ActionContext: {fileID: 11400000, guid: 7294b270a227b32429a8159cdbfd96b3, type: 2}
+  - m_Ability: {fileID: 11400000, guid: 352b16179174b5542b10f199fe287ed6, type: 2}
     m_SourceInputRequestId: Dodge
     m_ConsumeSourceInputRequest: 1
     m_TargetInputValueId: 
     m_TargetKey: 
-    m_SubgraphDependencies: []
-    m_AllowedFollowUpSkillIds: []
-  m_SkillGraphs:
-  - {fileID: 11400000, guid: 74963f9f9cb1efb4ba59ca2b40303357, type: 2}
-  - {fileID: 11400000, guid: 50613fe9e197fad40a9a418cb76d167d, type: 2}
-  - {fileID: 11400000, guid: 7d6df97d08e3a904f8857de9952456c7, type: 2}
   m_ControlMotionTimelines:
   - {fileID: 11400000, guid: 6fbeaf0090c34c31a4a21216e3ccc966, type: 2}
   m_SimulationTickRate: 60
-  m_SimulationProgram: {fileID: 11400000, guid: 5740a6cfbfb0fe542ad6a6cb66fe1a80,
-    type: 2}
   m_PresentationProjection: {fileID: 11400000, guid: f365735adcfd49c4e96070df6bcd3bc4,
     type: 2}
   m_InputProfile: {fileID: 11400000, guid: be650df85b1e49ab9d1cefc91c6cc809, type: 2}

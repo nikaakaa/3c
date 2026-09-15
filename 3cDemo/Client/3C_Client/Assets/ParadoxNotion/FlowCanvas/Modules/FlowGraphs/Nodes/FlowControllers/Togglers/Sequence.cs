@@ -41,5 +41,14 @@ namespace FlowCanvas.Nodes
             AddFlowInput("Reset", (f) => { current = original; });
             AddValueOutput<int>("Current", () => { return current; });
         }
+
+        public void ConfigurePortCount(int portCount)
+        {
+            if (portCount < 2)
+                throw new System.ArgumentOutOfRangeException(nameof(portCount));
+            _portCount = portCount;
+            current = 0;
+            GatherPorts();
+        }
     }
 }

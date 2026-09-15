@@ -582,4 +582,6 @@ Shader "ZZZ/Restored/NapAvatarStandard"
             ENDHLSL
         }
     }
+
+    CustomEditor "ZZZRestored.NapAvatarStandardGUI"
 }

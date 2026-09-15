@@ -283,4 +283,6 @@ Shader "ZZZ/Restored/NapAvatarStandardEye"
             ENDHLSL
         }
     }
+
+    CustomEditor "ZZZRestored.NapAvatarStandardGUI"
 }

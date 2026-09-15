@@ -86,6 +86,14 @@ namespace FlowCanvas.Nodes
             }
         }
 
+        public void ConfigurePortCount(int portCount)
+        {
+            if (portCount < 2)
+                throw new System.ArgumentOutOfRangeException(nameof(portCount));
+            _portCount = portCount;
+            GatherPorts();
+        }
+
         IEnumerator Update(Flow f) {
             status = NodeCanvas.Framework.Status.Running;
             var totalLength = 0f;

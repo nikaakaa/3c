@@ -29,6 +29,7 @@ namespace NodeCanvas.Editor
 
         private UnityEngine.Object contextObject;
         private IBlackboard bb;
+        private IBlackboardEditorAdapter currentAdapter;
 
         private SerializedObject serializedContext;
         private SerializedProperty variablesProperty;
@@ -72,6 +73,7 @@ namespace NodeCanvas.Editor
             this.contextObject = overrideContextObject != null ? overrideContextObject : bb.unityContextObject;
             this.bb = bb;
             var adapter = contextObject as IBlackboardEditorAdapter;
+            this.currentAdapter = adapter;
 
             this.variablesProperty = null;
             if ( contextObject != null && PrefabUtility.IsPartOfPrefabInstance(contextObject) && bb.independantVariablesFieldName != null ) {
@@ -194,7 +196,9 @@ namespace NodeCanvas.Editor
             }
 
             ShowDataLabelGUI(data, index);
-            ShowDataFieldGUI(data, index);
+            using (new EditorGUI.DisabledScope(currentAdapter != null && currentAdapter.IsReadOnly)) {
+                ShowDataFieldGUI(data, index);
+            }
         }
 
         //Data label (left side)
@@ -233,11 +237,21 @@ namespace NodeCanvas.Editor
                 //not a separator
                 var wasFontStyle = GUI.skin.textField.fontStyle;
                 GUI.skin.textField.fontStyle = isVariablePrefabInstanceModified ? FontStyle.Bold : FontStyle.Normal;
-                var newName = EditorGUILayout.DelayedTextField(data.name, LAYOUT);
-                if ( data.name != newName ) {
-                    ExecuteMutation("Variable Name Change", () => data.name = newName);
+                if ( currentAdapter != null && currentAdapter.IsReadOnly ) {
+                    GUILayout.Label(data.name, Styles.leftLabel, LAYOUT);
+                    if ( currentAdapter.AllowVariablePick && e.type == EventType.MouseDown && e.button == 0 && GUILayoutUtility.GetLastRect().Contains(e.mousePosition) ) {
+                        pickedVariable = data;
+                        pickedVariableBlackboard = bb;
+                        GUIUtility.hotControl = 0;
+                        GUIUtility.keyboardControl = 0;
+                        e.Use();
+                    }
+                } else {
+                    var newName = EditorGUILayout.DelayedTextField(data.name, LAYOUT);
+                    if ( data.name != newName ) {
+                        ExecuteMutation("Variable Name Change", () => data.name = newName);
+                    }
                 }
-
                 GUI.skin.textField.fontStyle = wasFontStyle;
                 EditorGUI.indentLevel = 0;
             }

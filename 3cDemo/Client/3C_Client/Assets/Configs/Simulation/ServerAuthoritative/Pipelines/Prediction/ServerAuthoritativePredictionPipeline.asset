@@ -21,9 +21,9 @@ MonoBehaviour:
   m_SchedulePasses:
   - {fileID: 11400000, guid: 8a20000000004d259d15000000000012, type: 2}
   m_StepPasses:
-  - {fileID: 11400000, guid: 57a4000000004d259d15000000000004, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d400004d259d15000000000011, type: 2}
   - {fileID: 11400000, guid: 57a5000000004d259d15000000000005, type: 2}
-  - {fileID: 11400000, guid: 57a6000000004d259d15000000000006, type: 2}
+  - {fileID: 11400000, guid: a2b3c4d500004d259d15000000000012, type: 2}
   # Canonical order: history, output disposition, input command, remote presentation.
   m_EgressPasses:
   - {fileID: 11400000, guid: 8a20000000004d259d15000000000013, type: 2}

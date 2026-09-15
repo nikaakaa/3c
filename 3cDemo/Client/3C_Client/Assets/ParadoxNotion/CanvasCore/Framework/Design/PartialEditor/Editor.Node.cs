@@ -541,7 +541,7 @@ namespace NodeCanvas.Framework
             var menu = new GenericMenu();
             menu.AddItem(new GUIContent("Duplicate Selected Nodes"), false, () =>
               {
-                  var newNodes = Graph.CloneNodes(GraphEditorUtility.activeElements.OfType<Node>().ToList(), graph);
+                  var newNodes = graph.DuplicateNodes(GraphEditorUtility.activeElements.OfType<Node>().ToList());
                   GraphEditorUtility.activeElements = newNodes.Cast<IGraphElement>().ToList();
               });
             menu.AddItem(new GUIContent("Copy Selected Nodes"), false, () => { if (!graph.HandleEditorCommand("Copy", Vector2.zero)) { CopyBuffer.SetCache<Node[]>(Graph.CloneNodes(GraphEditorUtility.activeElements.OfType<Node>().ToList()).ToArray()); } });

@@ -14,7 +14,7 @@ namespace NodeCanvas.StateMachines
         public override bool canSelfConnect => false;
         public override int maxInConnections => -1;
         public override int maxOutConnections => -1;
-        sealed public override System.Type outConnectionType => typeof(FSMConnection);
+        public override System.Type outConnectionType => typeof(FSMConnection);
         sealed public override Alignment2x2 commentsAlignment => Alignment2x2.Bottom;
         sealed public override Alignment2x2 iconAlignment => Alignment2x2.Bottom;
 

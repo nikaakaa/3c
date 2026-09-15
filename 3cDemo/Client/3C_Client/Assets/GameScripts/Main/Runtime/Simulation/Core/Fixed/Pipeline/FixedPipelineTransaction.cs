@@ -428,7 +428,6 @@ namespace ThirdPersonSimulation.Fixed
                 : null;
             var tickResult = new SimulationTickResult(
                 m_CharacterRuntime.NumericProfile,
-                m_CharacterRuntime.GameplayContentHash,
                 step.Tick,
                 actorResults,
                 worldResult.Summary,

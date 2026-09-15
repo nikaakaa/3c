@@ -689,3 +689,9 @@
 - 提交 `814bfe327`，Float32／Fixed 角色 Control 改用 Ability 提供的 `I*AbilityActionControlPort`，只依赖 `ActivateFromControl` 与 `StopFromControl`；角色评估不再向 Control 暴露具体 `ActionRuntime` 字典。
 - `ActionRuntime` 继续拥有具体动作执行、准入和状态实现，Invocation 只向角色发布这两个正式命令能力；输入、动作状态和执行顺序保持不变，没有新增旁路或第二套动作执行器。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色通过装备只读端口读取动作上下文
+
+- 提交 `6553449ca`，扩展现有装备动作上下文合同为只读 Reader，角色评估通过 `IEquipmentActionContextReader` 查询路由和上下文；完整 Provider 仍只由 Ability ActionRuntime 使用。
+- 保留原有 `HasActionRoute` 先判、`TryReadActionContext` 再读的行为和无效路由处理，不复制装备状态或路由规则，不增加角色对 `EquipmentRuntime` 实现类的依赖。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

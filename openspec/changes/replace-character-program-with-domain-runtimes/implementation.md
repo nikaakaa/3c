@@ -1189,3 +1189,8 @@
 
 - 提交 `a34917af3`，将 Ability 与 Timeline 共享的 `CharacterSimulationSourceLocation` 从 Ability Builder 中拆到独立的 `SimulationSourceLocation` 文件，并清除旧类型引用。
 - 本步只调整共享编译合同的归属和命名；图、节点、边、时间线、声明、端口、内容哈希及 source map 的字段和身份计算保持不变。
+
+## 2026-09-16 统一Simulation节点发射器合同
+
+- 提交 `38faf72c4`，将节点发射结果、发射器接口、上下文、注册表、简单／Camera 发射器和各领域注册入口从 `CharacterSimulation*` 统一为 `Simulation*`，同时迁移对应 Unity 文件路径与 `.meta`。
+- 保留节点注册顺序、操作编码、值端口采集、Camera producer 和 source map 行为；本步只清理共享语义编译层的角色前缀和旧文件名。

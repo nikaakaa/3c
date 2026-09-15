@@ -3,7 +3,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public static class FixedProgramStateSchema
+    public static class FixedGameplayAbilityStateSchema
     {
         public static string CodecIdentity(ProgramStateValueKind kind)
         {

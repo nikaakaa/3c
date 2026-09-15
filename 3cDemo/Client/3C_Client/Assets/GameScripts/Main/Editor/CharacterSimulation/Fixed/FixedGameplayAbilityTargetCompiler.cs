@@ -159,7 +159,7 @@ namespace ThirdPersonSimulation.Fixed
                     source.OwnerKind,
                     source.Semantic,
                     source.OwnerIdentity,
-                    FixedProgramStateSchema.CodecIdentity(source.ValueKind),
+                    FixedGameplayAbilityStateSchema.CodecIdentity(source.ValueKind),
                     source.DefaultConstantIndex);
             }
             var constantInputs = new ProgramConstantInputBinding[semanticIr.ConstantInputBindings.Count];

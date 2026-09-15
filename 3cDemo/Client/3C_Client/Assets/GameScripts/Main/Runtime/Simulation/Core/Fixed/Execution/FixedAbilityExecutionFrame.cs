@@ -4,6 +4,19 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
+    internal interface IFixedAbilityExecutionSavepoint
+    {
+        int Depth { get; }
+    }
+
+    internal interface IFixedAbilityExecutionSavepointPort
+    {
+        IFixedAbilityExecutionSavepoint CreateSavepoint();
+        void Restore(IFixedAbilityExecutionSavepoint savepoint);
+        void Release(IFixedAbilityExecutionSavepoint savepoint);
+        int SavepointDepth { get; }
+    }
+
     internal sealed class FixedAbilityExecutionInput
     {
         public FixedAbilityExecutionInput(
@@ -70,7 +83,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
         readonly FixedAbilityBodyFacts m_BodyFacts;
-        readonly IFixedAbilityTransactionControlPort m_TransactionControl;
+        readonly IFixedAbilityExecutionSavepointPort m_TransactionControl;
         readonly IFixedGameplayEffectStatePort m_GameplayEffectState;
         readonly IFixedEquipmentStatePort m_EquipmentState;
         IFixedSkillExecutionStateAccess m_SkillExecutionStateAccess;
@@ -86,7 +99,7 @@ namespace ThirdPersonSimulation.Fixed
             IReadOnlyList<SimulationIngress> ingress,
             FixedAbilityBodyFacts bodyFacts,
             IFixedAbilityExecutionStateTransaction transaction,
-            IFixedAbilityTransactionControlPort transactionControl,
+            IFixedAbilityExecutionSavepointPort transactionControl,
             IFixedInputRequestStatePort inputRequests,
             IFixedActionRuntimeStatePort actionState,
             IFixedHandleAllocatorStatePort handleAllocatorState,
@@ -136,7 +149,7 @@ namespace ThirdPersonSimulation.Fixed
             ? m_BodyFacts
             : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");
         internal IFixedAbilityExecutionStateTransaction Transaction { get; }
-        internal IFixedAbilityTransactionControlPort TransactionControl => m_TransactionControl ??
+        internal IFixedAbilityExecutionSavepointPort TransactionControl => m_TransactionControl ??
             throw new InvalidOperationException("Fixed Ability invocation has no transaction control service.");
         internal IFixedInputRequestStatePort InputRequests { get; }
         internal IFixedActionRuntimeStatePort ActionState { get; }

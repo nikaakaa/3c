@@ -1,4 +1,4 @@
-﻿using ThirdPersonSimulation;
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,13 +11,13 @@ namespace ThirdPersonSimulation.Fixed
         PortableActiveEffectState,
         PortablePredictionRecord,
         PortableTagQuery,
-        FixedCharacterRuntimeStateSavepoint>,
+        IFixedAbilityExecutionSavepoint>,
         IGameplayEffectApplicationAdmissionPort<
             SimulationGameplayEffectApplication,
             PortableEffectSpecState,
             FixedScalar>
     {
-        readonly IFixedAbilityTransactionControlPort m_TransactionControl;
+        readonly IFixedAbilityExecutionSavepointPort m_TransactionControl;
         readonly IFixedGameplayEffectStatePort m_EffectState;
         readonly FixedGameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
@@ -36,7 +36,7 @@ namespace ThirdPersonSimulation.Fixed
             PortableActiveEffectState,
             PortablePredictionRecord,
             PortableTagQuery,
-            FixedCharacterRuntimeStateSavepoint> m_Control;
+            IFixedAbilityExecutionSavepoint> m_Control;
         readonly GameplayEffectApplicationAdmissionRuntime<
             SimulationGameplayEffectApplication,
             PortableEffectSpecState,
@@ -45,7 +45,7 @@ namespace ThirdPersonSimulation.Fixed
         PortablePredictionRecord m_CurrentPrediction;
 
         public FixedGameplayEffectTarget(
-            IFixedAbilityTransactionControlPort transactionControl,
+            IFixedAbilityExecutionSavepointPort transactionControl,
             IFixedGameplayEffectStatePort effectState,
             FixedGameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
@@ -79,7 +79,7 @@ namespace ThirdPersonSimulation.Fixed
                 PortableActiveEffectState,
                 PortablePredictionRecord,
                 PortableTagQuery,
-                FixedCharacterRuntimeStateSavepoint>(this);
+                IFixedAbilityExecutionSavepoint>(this);
             m_Admission = new GameplayEffectApplicationAdmissionRuntime<
                 SimulationGameplayEffectApplication,
                 PortableEffectSpecState,

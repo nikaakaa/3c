@@ -100,7 +100,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayAbilityExecutionInstallation installation,
             FixedGameplayAbilityExecutionInstallationSet installations,
             IFixedAbilityExecutionStateTransaction abilityState,
-            IFixedAbilityTransactionControlPort transactionControl,
+            IFixedAbilityExecutionSavepointPort transactionControl,
             ActorId actorId,
             SimulationTick tick,
             FixedAbilityExecutionInput input,

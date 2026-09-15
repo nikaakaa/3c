@@ -4,17 +4,8 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal readonly struct FixedCharacterRuntimeStateTransactionDiagnostics
-    {
-        public FixedCharacterRuntimeStateTransactionDiagnostics(int savepointDepth)
-        {
-            SavepointDepth = savepointDepth;
-        }
-
-        public int SavepointDepth { get; }
-    }
-
     internal sealed class FixedCharacterRuntimeStateSavepoint
+        : IFixedAbilityExecutionSavepoint
     {
         internal FixedCharacterRuntimeStateSavepoint(
             int depth,
@@ -24,7 +15,7 @@ namespace ThirdPersonSimulation.Fixed
             Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
         }
 
-        internal int Depth { get; }
+        public int Depth { get; }
         internal FixedCharacterRuntimeState Snapshot { get; }
     }
 
@@ -89,15 +80,7 @@ namespace ThirdPersonSimulation.Fixed
         CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema);
     }
 
-    internal interface IFixedAbilityTransactionControlPort
-    {
-        FixedCharacterRuntimeStateSavepoint CreateSavepoint();
-        void Restore(FixedCharacterRuntimeStateSavepoint savepoint);
-        void Release(FixedCharacterRuntimeStateSavepoint savepoint);
-        FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
-    }
-
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedControlRuntimeStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityExecutionSavepointPort, IFixedControlRuntimeStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
@@ -207,7 +190,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedGameplayEffectStatePort GameplayEffectState => m_GameplayEffectState;
         internal IFixedEquipmentStatePort EquipmentState => m_EquipmentState;
 
-        public FixedCharacterRuntimeStateSavepoint CreateSavepoint()
+        public IFixedAbilityExecutionSavepoint CreateSavepoint()
         {
             RequireActive();
             var savepoint = new FixedCharacterRuntimeStateSavepoint(m_Savepoints.Count + 1, Snapshot());
@@ -215,26 +198,22 @@ namespace ThirdPersonSimulation.Fixed
             return savepoint;
         }
 
-        public void Restore(FixedCharacterRuntimeStateSavepoint savepoint)
+        public void Restore(IFixedAbilityExecutionSavepoint savepoint)
         {
             RequireActive();
-            RequireTopSavepoint(savepoint);
-            Apply(savepoint.Snapshot);
+            FixedCharacterRuntimeStateSavepoint characterSavepoint = RequireTopSavepoint(savepoint);
+            Apply(characterSavepoint.Snapshot);
             m_Savepoints.Pop();
         }
 
-        public void Release(FixedCharacterRuntimeStateSavepoint savepoint)
+        public void Release(IFixedAbilityExecutionSavepoint savepoint)
         {
             RequireActive();
             RequireTopSavepoint(savepoint);
             m_Savepoints.Pop();
         }
 
-        public FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics()
-        {
-            RequireActive();
-            return new FixedCharacterRuntimeStateTransactionDiagnostics(m_Savepoints.Count);
-        }
+        public int SavepointDepth => m_Savepoints.Count;
 
         public void Dispose()
         {
@@ -295,10 +274,12 @@ namespace ThirdPersonSimulation.Fixed
             m_EquipmentState.Restore(state.EquipmentState);
         }
 
-        void RequireTopSavepoint(FixedCharacterRuntimeStateSavepoint savepoint)
+        FixedCharacterRuntimeStateSavepoint RequireTopSavepoint(IFixedAbilityExecutionSavepoint savepoint)
         {
-            if (savepoint == null || m_Savepoints.Count == 0 || !ReferenceEquals(savepoint, m_Savepoints.Peek()))
+            if (!(savepoint is FixedCharacterRuntimeStateSavepoint characterSavepoint) ||
+                m_Savepoints.Count == 0 || !ReferenceEquals(characterSavepoint, m_Savepoints.Peek()))
                 throw new InvalidOperationException("Character runtime state savepoint is stale or unbalanced.");
+            return characterSavepoint;
         }
 
         void RequireActive()

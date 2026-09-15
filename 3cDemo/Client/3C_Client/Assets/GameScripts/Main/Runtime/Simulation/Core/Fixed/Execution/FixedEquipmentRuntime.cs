@@ -341,7 +341,7 @@ namespace ThirdPersonSimulation.Fixed
 		sealed class MutationScope : IEquipmentMutationScope
 		{
 			readonly FixedAbilityExecutionFrame m_Frame;
-			readonly FixedCharacterRuntimeStateSavepoint m_Savepoint;
+			readonly IFixedAbilityExecutionSavepoint m_Savepoint;
 			readonly FixedAbilityOutputSavepoint m_OutputSavepoint;
 			readonly CharacterStateValue[] m_Values;
 			bool m_Completed;

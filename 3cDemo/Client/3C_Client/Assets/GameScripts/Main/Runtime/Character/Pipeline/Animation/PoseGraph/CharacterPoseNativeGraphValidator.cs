@@ -197,6 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     nodes,
                     graph.Connections,
                     boundary);
+                ValidateNativeTopology(graph, nodes, graph.Connections, boundary);
                 ValidateReferencedGraphs(graphAsset, graph, nodes, visiting, visited);
             }
             catch (CharacterPoseNativeGraphValidationException)
@@ -333,6 +334,175 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
         }
+
+        static void ValidateNativeTopology(
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyList<CharacterPoseCanvasNode> nodes,
+            IReadOnlyList<CharacterPoseCanvasConnection> connections,
+            BoundaryKind boundary)
+        {
+            PoseNodeId outputId = boundary == BoundaryKind.Boundary
+                ? nodes.Single(value => value.Kind == CharacterPoseNodeKind.GraphOutput).NodeId
+                : nodes.Single(value => value.Kind == CharacterPoseNodeKind.OutputPose).NodeId;
+            HashSet<PoseNodeId> activeNodes = CollectAncestors(connections, outputId);
+            var byId = nodes.ToDictionary(value => value.NodeId);
+
+            List<CharacterPoseCanvasNode> assemblers = activeNodes
+                .Where(nodeId => byId[nodeId].Kind == CharacterPoseNodeKind.FullBodyIkGoalAssembler)
+                .Select(nodeId => byId[nodeId])
+                .ToList();
+            List<CharacterPoseCanvasNode> solvers = activeNodes
+                .Where(nodeId => byId[nodeId].Kind == CharacterPoseNodeKind.FullBodyIk)
+                .Select(nodeId => byId[nodeId])
+                .ToList();
+            if (assemblers.Count > 1 || solvers.Count > 1 ||
+                assemblers.Count != solvers.Count)
+            {
+                Fail(
+                    CharacterPoseNativeFailureCode.GraphInvalid,
+                    graph.GraphId.Value,
+                    $"Pose output path must contain zero or one paired Goal Assembler and Full Body IK; found {assemblers.Count} and {solvers.Count}.");
+            }
+            if (assemblers.Count == 1)
+            {
+                HashSet<PoseNodeId> assemblerOutputs = CollectReachable(
+                    CreateForwardConnections(connections), assemblers[0].NodeId);
+                if (!assemblerOutputs.Contains(solvers[0].NodeId))
+                {
+                    Fail(
+                        CharacterPoseNativeFailureCode.GraphInvalid,
+                        $"{graph.GraphId}/{assemblers[0].NodeId}",
+                        "Pose Full Body Ik Goal Assembler is not connected to Full Body Ik.");
+                }
+            }
+
+            ValidateGoalSlots(graph, byId, activeNodes);
+            ValidateModifyBoneConflicts(graph, byId, activeNodes, connections);
+        }
+
+        static void ValidateGoalSlots(
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> byId,
+            HashSet<PoseNodeId> activeNodes)
+        {
+            var slots = new HashSet<CharacterFullBodyIkEffectorSlot>();
+            foreach (PoseNodeId nodeId in activeNodes)
+            {
+                if (byId[nodeId].Payload is not CharacterPoseBoneIkGoalsPayload payload)
+                    continue;
+                foreach (CharacterPoseBoneIkGoalBinding binding in payload.Bindings)
+                {
+                    if (!slots.Add(binding.EffectorSlot))
+                    {
+                        Fail(
+                            CharacterPoseNativeFailureCode.GraphInvalid,
+                            $"{graph.GraphId}/{nodeId}",
+                            $"Pose Full Body Ik Goal Slot '{binding.EffectorSlot}' is already supplied.");
+                    }
+                }
+            }
+        }
+
+        static void ValidateModifyBoneConflicts(
+            CharacterPoseCanvasGraph graph,
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseCanvasNode> byId,
+            HashSet<PoseNodeId> activeNodes,
+            IReadOnlyList<CharacterPoseCanvasConnection> connections)
+        {
+            var writersByBone = new Dictionary<AnimationBoneId, List<(PoseNodeId NodeId, ModifyBoneOperationMask Operations)>>();
+            foreach (PoseNodeId nodeId in activeNodes)
+            {
+                if (byId[nodeId].Payload is not CharacterModifyBonePosePayload payload ||
+                    payload.Operations == ModifyBoneOperationMask.None)
+                    continue;
+                if (!writersByBone.TryGetValue(payload.BoneId, out var writers))
+                {
+                    writers = new List<(PoseNodeId, ModifyBoneOperationMask)>();
+                    writersByBone.Add(payload.BoneId, writers);
+                }
+                writers.Add((nodeId, payload.Operations));
+            }
+
+            foreach (KeyValuePair<AnimationBoneId, List<(PoseNodeId NodeId, ModifyBoneOperationMask Operations)>> pair in writersByBone)
+            {
+                for (int left = 0; left < pair.Value.Count; left++)
+                {
+                    for (int right = left + 1; right < pair.Value.Count; right++)
+                    {
+                        ModifyBoneOperationMask overlap =
+                            pair.Value[left].Operations & pair.Value[right].Operations;
+                        if (overlap == ModifyBoneOperationMask.None)
+                            continue;
+                        HashSet<PoseNodeId> leftOutputs = CollectReachable(
+                            CreateForwardConnections(connections), pair.Value[left].NodeId);
+                        if (leftOutputs.Contains(pair.Value[right].NodeId))
+                            continue;
+                        HashSet<PoseNodeId> rightOutputs = CollectReachable(
+                            CreateForwardConnections(connections), pair.Value[right].NodeId);
+                        if (rightOutputs.Contains(pair.Value[left].NodeId))
+                            continue;
+                        Fail(
+                            CharacterPoseNativeFailureCode.GraphInvalid,
+                            $"{graph.GraphId}/{pair.Key}",
+                            $"Pose Modify Bone nodes '{pair.Value[left].NodeId}' and '{pair.Value[right].NodeId}' write conflicting operations on '{pair.Key}'.");
+                    }
+                }
+            }
+        }
+
+        static HashSet<PoseNodeId> CollectReachable(
+            IReadOnlyList<(PoseNodeId Source, PoseNodeId Target)> connections,
+            PoseNodeId outputId)
+        {
+            var outgoing = connections
+                .GroupBy(value => value.Source)
+                .ToDictionary(value => value.Key, value => value.Select(item => item.Target).ToList());
+            var reachable = new HashSet<PoseNodeId> { outputId };
+            var pending = new Queue<PoseNodeId>();
+            pending.Enqueue(outputId);
+            while (pending.Count != 0)
+            {
+                PoseNodeId current = pending.Dequeue();
+                if (!outgoing.TryGetValue(current, out List<PoseNodeId> targets))
+                    continue;
+                foreach (PoseNodeId target in targets)
+                {
+                    if (reachable.Add(target))
+                        pending.Enqueue(target);
+                }
+            }
+            return reachable;
+        }
+
+        static HashSet<PoseNodeId> CollectAncestors(
+            IReadOnlyList<CharacterPoseCanvasConnection> connections,
+            PoseNodeId outputId)
+        {
+            var incoming = connections
+                .GroupBy(value => value.TargetNodeId)
+                .ToDictionary(value => value.Key, value => value.Select(item => item.SourceNodeId).ToList());
+            var ancestors = new HashSet<PoseNodeId> { outputId };
+            var pending = new Queue<PoseNodeId>();
+            pending.Enqueue(outputId);
+            while (pending.Count != 0)
+            {
+                PoseNodeId current = pending.Dequeue();
+                if (!incoming.TryGetValue(current, out List<PoseNodeId> sources))
+                    continue;
+                foreach (PoseNodeId source in sources)
+                {
+                    if (ancestors.Add(source))
+                        pending.Enqueue(source);
+                }
+            }
+            return ancestors;
+        }
+
+        static IReadOnlyList<(PoseNodeId Source, PoseNodeId Target)> CreateForwardConnections(
+            IReadOnlyList<CharacterPoseCanvasConnection> connections) =>
+            connections
+                .Select(value => (value.SourceNodeId, value.TargetNodeId))
+                .ToList();
 
         static void ValidateReferencedGraphs(
             CharacterPresentationPoseGraphAsset graphAsset,

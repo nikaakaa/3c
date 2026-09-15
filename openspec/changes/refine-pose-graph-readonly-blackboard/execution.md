@@ -971,3 +971,10 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - CharacterPoseNativeRoleSession 新增 TryObserveFinalPose，只转发 Final Publication 中当前已 committed 的 ComposedAnimationPoseFrame；Pose 姿态、参数、贡献、Foot 特征和租约信息都来自同一帧，不暴露候选求值，也不重新求值。
 - 该入口与节点 TryObserve 分层：节点观察核对 Port/Instance/Completion，Final Watch 只在 Publication 存在有效 committed frame 时返回 true；Reset/Replace/Stop 后旧帧先失效，不会继续被读取。
 - 本步只补 Pose 观察消费面；未改共享 Host、Source/Constraint 装配、旧 Program 消费者，也未运行 Unity、Build、Play 或资源刷新。
+
+## 2026-09-15 r3 前置校验原生拓扑冲突
+
+- 原生图校验新增输出路径拓扑检查：Goal Assembler 与 Full Body IK 必须成对且最多一组，Goal Assembler 必须连到 Full Body IK；重复 Goal Slot 在装配前直接失败。
+- Modify Bone 的冲突检查只作用于真实输出路径：同骨同通道的两个并发写入会失败，串行节点仍保留既有算法语义。
+- 校验通过反向可达集合确定活跃节点，避免孤儿或未接线节点把静态校验误报成运行冲突；诊断继续携带 Graph、Node、Bone 或 Slot 身份，不生成 IR。
+- 本步只改 Pose 校验与本 execution 记录；未运行 Unity、Build、Play 或资源刷新，也未提交 LFS。

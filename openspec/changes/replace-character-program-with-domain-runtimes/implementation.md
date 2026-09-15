@@ -974,3 +974,8 @@
 
 - 提交 `f3db71d11`，Deterministic Rollback Character Registration 删除没有消费者的 `CharacterRuntime` 公开转发；内部 Runtime 继续用于角色归属校验、诊断身份和输出路由，正式注册接口只发布 `CharacterBinding` 等所需合同。
 - 不改变 Rollback 输入、网络诊断、表现提交或注册生命周期；静态检索确认删除项没有其它调用方。该 Unity 文件未运行 Unity、测试或资产生成。
+
+## 2026-09-16 移出Float32领域服务创建
+
+- 提交 `75380064c`，Float32 Ability 执行入口新增显式领域服务工厂，Gameplay Effect 与 Equipment 运行模块由角色评估入口注入，Ability Execution Service Factory 不再直接创建这两个领域模块。
+- 保留技能局部状态端口、输入／动作／句柄／事件顺序和外层角色事务；本步只改变服务创建归属，不改变执行结果或状态格式。`ThirdPersonSimulation.Float32.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

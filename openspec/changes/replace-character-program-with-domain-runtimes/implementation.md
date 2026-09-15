@@ -606,3 +606,9 @@
 - 提交 `78f6e21ff`，Float32／Fixed Ability 安装集合依据已安装 Ability 的能力事实只创建一次共享 `GameplayEffect` 运行时目录；单个 Ability 安装只接收目录，非 GameplayEffect Ability 继续不持有该服务。
 - 角色 Evaluate 和初始状态创建统一复用安装集合的目录，删除每个 Ability 安装、每次评估和初始状态阶段的重复 binding 解析；实际声明 GameplayEffect 时才要求正式 binding，不引入空实现或兼容入口。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Float32／Fixed 生成工程分别复现既有 28／24 个源索引缺失错误，未发现本步改动文件新增错误，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 Ability安装阶段预编译Equipment布局
+
+- 提交 `5bfdbb648`，Float32／Fixed Ability 安装集合将正式 `CharacterEquipmentRuntimeBinding` 传入安装边界；声明 Equipment 能力的安装在装配时生成不可变 `EquipmentProgramLayout`，不声明该能力的安装不创建装备布局。
+- Ability execution service factory 删除对角色 Equipment binding 的持有和逐帧 `Compile`；Equipment runtime 只接收安装阶段的 typed 布局，缺失正式 binding 或布局直接在安装边界拒绝，不保留延迟解析、空服务或兼容入口。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Float32／Fixed 生成工程分别复现既有 28／24 个源索引缺失错误，未发现本步改动文件新增错误，未运行 Unity、测试或资产生成。

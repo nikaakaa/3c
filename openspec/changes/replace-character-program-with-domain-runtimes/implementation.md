@@ -333,3 +333,28 @@
 - `Float32CharacterRuntimeStateCodec` 从程序集内部接口改为公开正式接口，保留现有 `Write`、`Read` 与 `ComputeHash` 的同一状态格式和校验规则。
 - DotRecast Authority 后续直接用当前 Float32 Runtime 的 Ability 安装集合、角色内容 hash 和领域状态读取初始状态；不再依赖旧 `CharacterSimulationState` 或整角色 Program reader。
 - 未运行 Unity 或测试；Float32 portable Runtime 编译按项目规则执行并清理 .NET Host。
+
+## 2026-09-15 角色旧Program入口与产品工具链清理
+
+- 提交 `061763694`、`30a9acbf3`、`85ffc2369`，从正式角色组合、回滚 Source 和 Fixed／Rollback 角色 Prefab 中删除悬空的 `Program`、`ProgramRuntime`、`FixedProgram` 与 `PresentationProjection` 序列化字段；运行时入口已经由 Character Definition、Session Composition 和正式 Presentation 数据提供。
+- 提交 `d01074187`，将只接收 Ability 根的 `CharacterSimulationProgramBuilder` 移到技能编译目录并改名为 `GameplayAbilitySemanticBuilder`，保留脚本 GUID；技能编译职责不再挂在角色 Program 目录和命名下。
+- 提交 `36c08802d`，删除只读取已不存在整角色产物的 `ThirdPersonSimulation.Reader` Program 入口和 `FixedProgramBuildTool`，同步删除仓库策略白名单；不保留旧 reader、兼容别名或空壳构建器。
+- 提交 `899c2d101`，删除无消费者的三份 GameplayLab Variant、两份生成角色 Program 资产、空 Variants 目录元文件及源清单中的失效资产登记。
+
+## 2026-09-15 回滚网络与Authority身份接回正式Runtime
+
+- 提交 `254dda56e`、`9f969dbb1`，回滚候选清单、Relay、GM 查询和差异诊断改用 `GameplayContentHash` 与 `CharacterStateHash`；旧 `Program`、角色模块和整角色布局字段不再进入网络握手、候选校验或差异定位。
+- 提交 `310226b1f`，Unity Authority 注册处理器从删除的 `request.Program` 改读现行 `request.Runtime`，使用 Character Runtime、State Codec、Checkpoint Layout、Operation Set 的正式身份完成注册映射；Unity Authority 服务端编译为 0 warning、0 error。
+- 提交 `8f7518e1c`，回滚网络测试产品直接从正式 Character Definition、Session Composition、Source、Pipeline、World Solver、Endpoint 取运行闭包；场景直接实例化双角色根 Prefab，不再经过旧 Bootstrap。
+
+## 2026-09-15 固定诊断与性能产品改用正式领域身份
+
+- 提交 `b63ccb28f`、`b450026b7`，固定性能场景和本地角色 Prefab 补齐正式 Character Definition；固定输入回放、性能采集和 Launcher 改用 `fixed-player`／`fixed-target`、`runtime_id`、`content_identity`，删除 Bootstrap、Session Variant、Launcher Registry 和角色 Program 元数据依赖。
+- 提交 `8bd8a914d`，网络产品清单将实际的 Character／Gameplay 内容身份从 `programIdentity` 改为 `contentIdentity`，候选清单 schema 从 3 升为 4 并要求内容身份存在。
+- 提交 `3b6ece2f9`，外部性能 Controller／Publisher 与共享性能契约对齐：BuildIdentity 读取 `content_identity`，采集 Manifest 记录 `runtime_id`／`content_identity`，删除 Variant 启动参数和比较字段；Controller 编译为 0 warning、0 error。
+
+## 2026-09-15 Ability执行服务边界收口
+
+- 提交 `ea53b69de`，修正 Float32 独立 Ability artifact 写入字段顺序，使其与 Fixed 产物和当前 codec 合同一致；Float32 portable 编译为 0 warning、0 error。
+- 提交 `f38cf726d`，Float32／Fixed Ability Invocation 不再因未提供 Body Facts 就拒绝创建；能力真正读取位置、速度、朝向、接地等角色事实时才通过按需服务明确失败，不用默认零值伪造事实。Float32／Fixed portable 编译均为 0 warning、0 error。
+- 当前仍未完成 1.11：Pending 角色结果仍携带外层角色事务和 WorldSolve 请求，InputRequests 尚未从角色状态聚合中移交给输入领域；Timeline 的真实播放结果、Pose 的真实采样结果和统一角色 Step 的跨领域提交仍待接线。未运行 Unity、测试或资产生成。

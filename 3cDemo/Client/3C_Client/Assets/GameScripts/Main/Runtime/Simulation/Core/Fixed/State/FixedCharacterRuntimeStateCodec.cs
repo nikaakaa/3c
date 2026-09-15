@@ -33,13 +33,14 @@ namespace ThirdPersonSimulation.Fixed
 
         public static FixedCharacterRuntimeState Read(
             byte[] bytes,
-            FixedGameplayAbilityExecutionInstallationSet installations,
-            GameplayContentHash expectedGameplayContentHash,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
-            CharacterEquipmentRuntimeBinding equipmentBinding)
+            SimulationActorBinding actor)
         {
-            if (bytes == null || installations == null)
-                throw new ArgumentNullException(bytes == null ? nameof(bytes) : nameof(installations));
+            if (bytes == null || actor == null)
+                throw new ArgumentNullException(bytes == null ? nameof(bytes) : nameof(actor));
+            FixedGameplayAbilityExecutionInstallationSet installations = actor.AbilityInstallations;
+            GameplayContentHash expectedGameplayContentHash = new GameplayContentHash(actor.GameplayContentHash);
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding = actor.GameplayEffectRuntimeBinding;
+            CharacterEquipmentRuntimeBinding equipmentBinding = actor.EquipmentRuntimeBinding;
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version ||
                 !string.Equals(reader.ReadString(), CodecIdentity, StringComparison.Ordinal))

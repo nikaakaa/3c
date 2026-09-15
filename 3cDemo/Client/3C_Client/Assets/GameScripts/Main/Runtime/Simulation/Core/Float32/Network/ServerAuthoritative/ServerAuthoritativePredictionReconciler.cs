@@ -58,10 +58,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 Float32CharacterRuntimeStateCodec.CodecIdentity,
                 baseline.CopyCharacterStateBytes());
             _ = actorSnapshot.Decode(
-                actor.AbilityInstallations,
-                actorContentHash,
-                actor.GameplayEffectRuntimeBinding,
-                actor.EquipmentRuntimeBinding);
+                actor);
             if (firstHistory == null)
                 return;
             if (firstHistory.Input.ActorId != baseline.ActorId ||

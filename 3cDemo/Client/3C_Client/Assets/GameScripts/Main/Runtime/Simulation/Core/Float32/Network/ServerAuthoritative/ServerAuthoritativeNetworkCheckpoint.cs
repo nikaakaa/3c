@@ -103,13 +103,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             CharacterStateHash expectedHash)
         {
             SimulationActorBinding actor = RequireActor(actorId);
-            GameplayContentHash contentHash = RequireActorContentHash(actorId);
             Float32CharacterRuntimeState state = Float32CharacterRuntimeStateCodec.Read(
                 bytes,
-                actor.AbilityInstallations,
-                contentHash,
-                actor.GameplayEffectRuntimeBinding,
-                actor.EquipmentRuntimeBinding);
+                actor);
             if (state.LastCompletedTick != tick.Value ||
                 !Float32CharacterRuntimeStateCodec.ComputeHash(state).Equals(expectedHash))
                 throw new InvalidDataException("Network checkpoint Character state does not match its Tick or hash.");

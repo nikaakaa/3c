@@ -262,13 +262,9 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 SimulationActorBinding characterBinding = characterRuntime.Roster[i];
                 if (binding.Roster.ActorId != characterBinding.ActorId)
                     throw new InvalidDataException("Manifest Actor roster does not match the Character Runtime roster.");
-                GameplayContentHash contentHash = new GameplayContentHash(characterBinding.GameplayContentHash);
                 Float32CharacterRuntimeState state = Float32CharacterRuntimeStateCodec.Read(
                     binding.CopyInitialCharacterStateBytes(),
-                    characterBinding.AbilityInstallations,
-                    contentHash,
-                    characterBinding.GameplayEffectRuntimeBinding,
-                    characterBinding.EquipmentRuntimeBinding);
+                    characterBinding);
                 CharacterStateHash stateHash = Float32CharacterRuntimeStateCodec.ComputeHash(state);
                 if (!stateHash.Equals(binding.InitialCharacterStateHash))
                     throw new InvalidDataException($"Initial Character state hash for Actor '{binding.Roster.ActorId}' does not match the manifest.");

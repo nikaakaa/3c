@@ -50,24 +50,19 @@ namespace ThirdPersonSimulation.Fixed
         internal byte[] StateBytesBuffer => m_StateBytes;
 
         public FixedCharacterRuntimeState Decode(
-            FixedGameplayAbilityExecutionInstallationSet installations,
-            GameplayContentHash expectedGameplayContentHash,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
-            CharacterEquipmentRuntimeBinding equipmentBinding)
+            SimulationActorBinding actor)
         {
             if (!string.Equals(StateCodecIdentity, FixedCharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal) ||
-                installations == null)
+                actor == null)
             {
                 throw new InvalidDataException($"Actor '{ActorId}' snapshot Ability binding is stale or mismatched.");
             }
-            if (!GameplayContentHash.Equals(expectedGameplayContentHash))
+            if (actor.ActorId != ActorId ||
+                !GameplayContentHash.Equals(new GameplayContentHash(actor.GameplayContentHash)))
                 throw new InvalidDataException($"Actor '{ActorId}' snapshot Character Runtime binding is stale or mismatched.");
             FixedCharacterRuntimeState state = FixedCharacterRuntimeStateCodec.Read(
                 m_StateBytes,
-                installations,
-                expectedGameplayContentHash,
-                gameplayEffectBinding,
-                equipmentBinding);
+                actor);
             if (!FixedCharacterRuntimeStateCodec.ComputeHash(state).Equals(StateHash))
                 throw new InvalidDataException($"Actor '{ActorId}' Character runtime state hash is invalid.");
             return state;
@@ -294,10 +289,7 @@ namespace ThirdPersonSimulation.Fixed
                     binding.ActorId != actorSnapshot.ActorId)
                     throw new InvalidDataException("Snapshot Actor roster or Ability binding does not match the active roster.");
                 FixedCharacterRuntimeState state = actorSnapshot.Decode(
-                    binding.AbilityInstallations,
-                    actorSnapshot.GameplayContentHash,
-                    binding.GameplayEffectRuntimeBinding,
-                    binding.EquipmentRuntimeBinding);
+                    binding);
                 if (state.LastCompletedTick != snapshot.Tick.Value)
                     throw new InvalidDataException($"Actor '{actorSnapshot.ActorId}' state Tick does not match Snapshot Tick.");
                 restoredActors[i] = new SimulationActorState(actorSnapshot.ActorId, state);

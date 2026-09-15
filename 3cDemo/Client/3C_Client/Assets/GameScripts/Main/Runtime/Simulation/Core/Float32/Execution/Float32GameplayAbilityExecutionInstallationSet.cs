@@ -75,14 +75,5 @@ namespace ThirdPersonSimulation
         public GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId) =>
             Require(abilityId).Data.Binding;
 
-        public bool TryGet(CharacterSkillId abilityId, out Float32GameplayAbilityExecutionInstallation installation)
-        {
-            if (!abilityId.IsValid)
-            {
-                installation = null;
-                return false;
-            }
-            return m_ByAbility.TryGetValue(abilityId, out installation);
-        }
     }
 }

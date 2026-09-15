@@ -76,14 +76,5 @@ namespace ThirdPersonSimulation.Fixed
         public GameplayAbilityExecutionBinding RequireActionBinding(CharacterSkillId abilityId) =>
             Require(abilityId).Data.Binding;
 
-        public bool TryGet(CharacterSkillId abilityId, out FixedGameplayAbilityExecutionInstallation installation)
-        {
-            if (!abilityId.IsValid)
-            {
-                installation = null;
-                return false;
-            }
-            return m_ByAbility.TryGetValue(abilityId, out installation);
-        }
     }
 }

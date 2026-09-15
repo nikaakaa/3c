@@ -925,3 +925,11 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - StateMachine Barrier 前增加 child Source demand 对父图汇总 demand 的身份核对，按 `(ScopeInstanceId, NodeId, SourceId)` 确认每项请求未丢失后才准备子图 Evaluate；提交为 `f5b42d43b`。
 - StateMachine 的非循环状态剩余时长改为 `max(ClipLength - InitialTime, 0) / PlayRate`，避免初始采样点造成 `StatePoseRemainingTime` 偏移；提交为 `32011c47e`。
 - StateMachine 对 `Inertialization` Transition 改为直接采用目标状态，只发布连续性变化给已有 Inertialization 节点；仅 `Standard Blend` 保留 StateMachine 内部双态混合，避免二次平滑；提交为 `c49c7849d`。
+
+## 2026-09-15 r3 当前 Pose 调用链对账
+
+- 入口链：`CharacterPoseNativeRoleEntry.Create/Replace` 先调用 `CharacterPoseNativeRoleRuntime.Prepare`，再由 `CharacterPoseNativeRoleDependencyFactory` 创建 `CharacterPoseNativeRoleDependencies`；依赖包把 Source module、Constraint runtime、四组 handler composition、Final Publication 和唯一 registry factory 交给 `CharacterPoseNativeRoleRuntime`，成功后由 `CharacterPoseNativeRoleSession` 持有 `CharacterPoseNativeFrameCoordinator`。
+- 节点链：`CharacterPoseNativeHandlerFactoryComposition` 只创建一个 `CharacterPoseNativeNodeHandlerRegistry`，按 Value/StateMachine、Source、Constraint、Managed 的固定顺序注册；GraphRuntime 克隆作者图，挂接 `CharacterPoseCanvasGraph`，以 FlowCanvas `Manual` 模式启动，再由 Native evaluator 按图输出可达节点驱动 handler。
+- 状态链：`CharacterPoseNativeStateMachineSource` 为当前 Actor/StateMachine 实例创建子图，父图只汇总子图的 typed Source demand；Barrier 后先验证 demand 身份，再准备和求值子图，Standard Transition 在本源内混合，Inertialization Transition 交给独立 Inertialization handler，子图结果最后沿父图完成身份返回。
+- 输出链：原生 handler 的候选页先经过自身 `ValidatePending`，再由 `CharacterPoseNativeFrameCoordinator` 交给唯一 Final Publication；Final Publication 完成整 Rig 检查、物理/属性写入和 committed frame，入口只提供 committed 读取，不从节点或 Animancer weight 重建结果。
+- 当前尚未闭合的唯一调用边界：仓库中仍没有角色表现 runtime/Host 对 `CharacterPoseNativeRoleEntry.Create/Replace` 的消费者调用；Source/Constraint 的具体实例也尚未在该共享装配中提供。该项是下一处实现接线，不是文档或验证阻塞；本记录不把入口结构当作角色运行验收。

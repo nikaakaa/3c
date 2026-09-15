@@ -239,3 +239,12 @@
 - StateMachine 和 Timeline 的原有能力声明保持不变；已删除按 Ability 全量无条件声明 Gameplay Effect 的路径。
 - `ThirdPersonClient.Editor.csproj` 全量编译被本机生成索引对 Fixed / Float32 新源的旧引用阻断；该基线错误出现在依赖 `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Float32.csproj`。Frontend 改动先通过语法审查提交，待 Unity 刷新生成索引后再做全量验证。
 - 未运行 Unity、测试或资产生成。
+
+## 2026-09-15 角色宿主与注册器退出旧Program/Projection必要条件
+
+- 提交 `2c25bc026`。基线 `dc581b621` 之前的 `886415fd7`（提交信息为清理 ACL 缓存，实际改动 569 个文件）把 `FixedCharacterHost.cs` 回退成旧 `FixedCharacterSimulationProgramAsset` 形态并删除 49 个核心文件；`dc581b621` 只恢复了核心文件，未恢复该 Host，导致 Host 引用已删除的 `FixedCharacterSimulationProgramAsset`、`CharacterSimulationProgram`、`CharacterPresentationContractAdapter`、`CharacterRuntimeDebugProgramBuilder`，`ThirdPersonSimulation.Unity.csproj` 报 25 个错误。本批按 `1c70d267c`（让 Fixed 角色宿主直接组装 Character Runtime）的权威形态重建。
+- `FixedCharacterHost`：删除 `m_Program` 与 `m_PresentationProjection` 序列化字段、`programAsset.Load()` 与 Program TickRate 比较；投影改从 `CharacterPipelineDefinition.PresentationProjection` 读取；技能数据改由 `LoadFixedCharacterAbilities()` 加载，经 `SimulationActorBinding` 装配 `FixedCharacterRuntime`；`tickRate` 由 `SessionHost.Composition.TickRate` 提供并与 Definition 校验（对应 design D22「NumericProfile／TickRate 由正式 Session／数值配置决定，不从第一个技能反推」）；诊断身份由 `program.Manifest` 改为 `RuntimeProgramRevision`。
+- `FixedCharacterRegistration` 与 `Float32CharacterRegistration`：移除 `CharacterPresentationSemanticContract` 参数、`PresentationContract` 属性与 `Projection.RequireContract` 调用。该合同运行时已无构造入口（`CharacterPresentationSemanticReader` 只在 Editor），且属性无消费者，属旧 Projection 必要条件。
+- `Float32CharacterRegistration` 从 `ThirdPersonSimulation.Unity` 移入新建的 `ThirdPersonSimulation.Float32.Unity` 桥接程序集（与 `ThirdPersonSimulation.Fixed.Unity` 同构）。原位置无 `ThirdPersonClient.Runtime` 引用却使用 Presentation／Diagnostics 类型，反向引用会形成循环依赖。该注册器当前无任何调用方，尚未接入 Host。
+- `Fixed`／`Float32SimulationSessionCompositionPreparation`：去掉 `new GameplayContentHash(...)` 多余包装，`SimulationCharacterRuntimeDescriptor` 直接接收 `GameplayContentHash`。
+- 验证：`ThirdPersonSimulation.Unity.csproj` 由 25 个错误降为 0 warning、0 error（本机 dotnet build，禁用 build server，结束执行 `dotnet build-server shutdown`）。`ThirdPersonClient.Runtime.csproj` 仍有 Pose 旧 `CharacterPoseProgramImage`／`CharacterPoseNative*Operation` 体系的中间断裂，属 Pose 窗口范围，本批不涉及；rollback Host、`CharacterPipelineHost`、DotRecast manifest 的旧 Program 消费者仍未接线。未运行 Unity、测试或资产生成。

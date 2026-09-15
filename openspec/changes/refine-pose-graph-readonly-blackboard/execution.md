@@ -924,3 +924,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 修正 `CharacterPoseNativeRoleEntry` 在图实例已 Adopted、但 `RoleSession/FrameCoordinator` 构造失败时的释放路径；Create 与 Replace 都会销毁已采用的 role，避免半安装实例泄漏；提交为 `6127dee81`。
 - StateMachine Barrier 前增加 child Source demand 对父图汇总 demand 的身份核对，按 `(ScopeInstanceId, NodeId, SourceId)` 确认每项请求未丢失后才准备子图 Evaluate；提交为 `f5b42d43b`。
 - StateMachine 的非循环状态剩余时长改为 `max(ClipLength - InitialTime, 0) / PlayRate`，避免初始采样点造成 `StatePoseRemainingTime` 偏移；提交为 `32011c47e`。
+- StateMachine 对 `Inertialization` Transition 改为直接采用目标状态，只发布连续性变化给已有 Inertialization 节点；仅 `Standard Blend` 保留 StateMachine 内部双态混合，避免二次平滑；提交为 `c49c7849d`。

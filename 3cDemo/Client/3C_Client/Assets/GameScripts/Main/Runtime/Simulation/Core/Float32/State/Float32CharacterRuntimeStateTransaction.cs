@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort, IFloat32ControlRuntimeStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort, IFloat32ControlRuntimeStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
@@ -107,8 +107,7 @@ namespace ThirdPersonSimulation
         readonly int m_TickRate;
         readonly Stack<Float32CharacterRuntimeStateSavepoint> m_Savepoints =
             new Stack<Float32CharacterRuntimeStateSavepoint>();
-        readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
-        readonly List<Float32ActionInstanceState> m_ActionInstances;
+        readonly Float32CharacterActionRuntimeState m_ActionState;
         readonly Float32CharacterInputRequestState m_InputRequestState;
         CharacterControlRuntimeStateTransaction m_ControlState;
         GameplayEffectStateAggregate m_GameplayEffectAggregate;
@@ -116,7 +115,6 @@ namespace ThirdPersonSimulation
         Float32GameplayEffectExecutionScratch m_GameplayEffectScratch;
         EquipmentStateAggregate m_EquipmentState;
         ulong m_EventSequence;
-        ulong m_ActionEventSequence;
         ulong m_HandleAllocator;
         bool m_Disposed;
 
@@ -140,13 +138,14 @@ namespace ThirdPersonSimulation
                 Float32AbilityRuntimeState state = baseState.Abilities[i];
                 m_AbilityStates.Add(state.AbilityIdentity.AbilityId, state.Clone(tick.Value));
             }
-            m_ActionActivationRequests = new List<SimulationActionActivationRequestState>(baseState.ActionActivationRequests);
-            m_ActionInstances = new List<Float32ActionInstanceState>(baseState.ActionInstances);
+            m_ActionState = new Float32CharacterActionRuntimeState(
+                baseState.ActionActivationRequests,
+                baseState.ActionInstances,
+                baseState.ActionEventSequence);
             m_InputRequestState = new Float32CharacterInputRequestState(m_Tick, baseState.InputRequests);
             m_GameplayEffectAggregate = baseState.GameplayEffectState;
             m_EquipmentState = baseState.EquipmentState;
             m_EventSequence = baseState.EventSequence;
-            m_ActionEventSequence = baseState.ActionEventSequence;
             m_HandleAllocator = baseState.HandleAllocator;
         }
 
@@ -210,15 +209,6 @@ namespace ThirdPersonSimulation
             return m_EventSequence;
         }
 
-        public ulong NextActionEventSequence()
-        {
-            RequireActive();
-            m_ActionEventSequence = checked(m_ActionEventSequence + 1UL);
-            if (m_ActionEventSequence == 0)
-                throw new OverflowException("Action event sequence overflowed.");
-            return m_ActionEventSequence;
-        }
-
         public ulong NextHandleAllocator()
         {
             RequireActive();
@@ -241,34 +231,7 @@ namespace ThirdPersonSimulation
         }
 
         internal IFloat32InputRequestStatePort InputRequests => m_InputRequestState;
-
-        public IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests()
-        {
-            RequireActive();
-            return m_ActionActivationRequests;
-        }
-
-        public void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests)
-        {
-            RequireActive();
-            m_ActionActivationRequests.Clear();
-            if (requests != null)
-                m_ActionActivationRequests.AddRange(requests);
-        }
-
-        public IReadOnlyList<Float32ActionInstanceState> GetActionInstances()
-        {
-            RequireActive();
-            return m_ActionInstances;
-        }
-
-        public void SetActionInstances(IReadOnlyList<Float32ActionInstanceState> actions)
-        {
-            RequireActive();
-            m_ActionInstances.Clear();
-            if (actions != null)
-                m_ActionInstances.AddRange(actions);
-        }
+        internal IFloat32ActionRuntimeStatePort ActionState => m_ActionState;
 
         public SimulationGameplayEffectState GetGameplayEffectState(Float32GameplayEffectExecutionScratch scratch)
         {
@@ -346,6 +309,7 @@ namespace ThirdPersonSimulation
             m_Savepoints.Clear();
             m_ControlState?.Dispose();
             m_InputRequestState.Dispose();
+            m_ActionState.Dispose();
             m_Disposed = true;
         }
 
@@ -357,11 +321,11 @@ namespace ThirdPersonSimulation
                 m_BaseState.GameplayContentHash,
                 m_Tick.Value,
                 m_AbilityStates.Values,
-                m_ActionActivationRequests,
-                m_ActionInstances,
+                m_ActionState.GetActionActivationRequests(),
+                m_ActionState.GetActionInstances(),
                 m_InputRequestState.Capture(),
                 m_EventSequence,
-                m_ActionEventSequence,
+                m_ActionState.ActionEventSequence,
                 m_HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectWorking?.Freeze() ?? m_GameplayEffectAggregate,
@@ -376,13 +340,12 @@ namespace ThirdPersonSimulation
                 Float32AbilityRuntimeState ability = state.Abilities[i];
                 m_AbilityStates.Add(ability.AbilityIdentity.AbilityId, ability.Clone(m_Tick.Value));
             }
-            m_ActionActivationRequests.Clear();
-            m_ActionActivationRequests.AddRange(state.ActionActivationRequests);
-            m_ActionInstances.Clear();
-            m_ActionInstances.AddRange(state.ActionInstances);
+            m_ActionState.Restore(
+                state.ActionActivationRequests,
+                state.ActionInstances,
+                state.ActionEventSequence);
             m_InputRequestState.Restore(state.InputRequests);
             m_EventSequence = state.EventSequence;
-            m_ActionEventSequence = state.ActionEventSequence;
             m_HandleAllocator = state.HandleAllocator;
             if (m_ControlState != null)
             {

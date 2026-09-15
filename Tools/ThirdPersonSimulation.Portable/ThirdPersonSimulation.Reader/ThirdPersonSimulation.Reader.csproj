@@ -9,7 +9,6 @@
     <RootNamespace>ThirdPersonSimulation.Reader</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ThirdPersonSimulation.Fixed\ThirdPersonSimulation.Fixed.csproj" />
-    <ProjectReference Include="..\ThirdPersonSimulation.Float32\ThirdPersonSimulation.Float32.csproj" />
+    <ProjectReference Include="..\ThirdPersonSimulation.Core\ThirdPersonSimulation.Core.csproj" />
   </ItemGroup>
 </Project>

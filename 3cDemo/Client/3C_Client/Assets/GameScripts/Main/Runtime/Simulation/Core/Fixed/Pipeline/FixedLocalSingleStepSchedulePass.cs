@@ -65,7 +65,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 throw new InvalidOperationException("Fixed Local single-step input batch does not match the outer Tick or locked roster.");
             }
-            IReadOnlyList<ActorId> actorIds = characterRuntime.RosterDescriptor.Actors;
+            IReadOnlyList<ActorId> actorIds = characterRuntime.Runtime.RosterDescriptor.Actors;
             for (int i = 0; i < actorIds.Count; i++)
             {
                 if (!canonical.Inputs[i].ActorId.Equals(actorIds[i]))
@@ -87,9 +87,9 @@ namespace ThirdPersonSimulation.Fixed
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                characterRuntime.GameplayContentHash,
+                characterRuntime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
-                characterRuntime.RosterDescriptor,
+                characterRuntime.Runtime.RosterDescriptor,
                 new[]
                 {
                     new SimulationPipelineStepSourceMapping(

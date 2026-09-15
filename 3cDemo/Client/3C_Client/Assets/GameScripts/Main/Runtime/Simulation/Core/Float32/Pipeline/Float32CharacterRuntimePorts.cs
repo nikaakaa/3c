@@ -192,9 +192,7 @@ namespace ThirdPersonSimulation
     public interface IFloat32CharacterRuntimePort : ISimulationRuntimePort
     {
         Float32CharacterRuntime Runtime { get; }
-        GameplayContentHash GameplayContentHash { get; }
         IReadOnlyList<SimulationActorBinding> Roster { get; }
-        SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
     }
 
@@ -221,9 +219,7 @@ namespace ThirdPersonSimulation
 
         public SimulationPortDescriptor Descriptor { get; }
         public Float32CharacterRuntime Runtime { get; }
-        public GameplayContentHash GameplayContentHash => Runtime.GameplayContentHash;
         public IReadOnlyList<SimulationActorBinding> Roster => Runtime.Roster;
-        public SimulationActorRosterDescriptor RosterDescriptor => Runtime.RosterDescriptor;
 
         public int GetActorIndex(ActorId actorId) =>
             m_ActorIndices.TryGetValue(actorId, out int index)

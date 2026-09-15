@@ -10,7 +10,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         SemanticEmission,
         ArtifactValidation,
         TargetLowering,
-        PresentationProjection
     }
 
     public enum CharacterSimulationCompileSeverity
@@ -71,7 +70,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public void EmissionError(string code, string sourceIdentity, string message) => Add(CharacterSimulationCompileStage.SemanticEmission, CharacterSimulationCompileSeverity.Error, code, sourceIdentity, message);
         public void TargetInformation(string code, string sourceIdentity, string message) => Add(CharacterSimulationCompileStage.TargetLowering, CharacterSimulationCompileSeverity.Information, code, sourceIdentity, message);
         public void TargetError(string code, string sourceIdentity, string message) => Add(CharacterSimulationCompileStage.TargetLowering, CharacterSimulationCompileSeverity.Error, code, sourceIdentity, message);
-        public void PresentationError(string code, string sourceIdentity, string message) => Add(CharacterSimulationCompileStage.PresentationProjection, CharacterSimulationCompileSeverity.Error, code, sourceIdentity, message);
         public void ArtifactError(string code, string sourceIdentity, string message) => Add(CharacterSimulationCompileStage.ArtifactValidation, CharacterSimulationCompileSeverity.Error, code, sourceIdentity, message);
 
         void Add(CharacterSimulationCompileStage stage, CharacterSimulationCompileSeverity severity, string code, string sourceIdentity, string message)

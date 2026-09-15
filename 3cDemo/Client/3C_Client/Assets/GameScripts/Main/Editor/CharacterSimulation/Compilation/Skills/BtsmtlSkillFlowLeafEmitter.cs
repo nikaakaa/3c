@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public sealed class BtsmtlSkillFlowLeafEmitter
     {
-        readonly CharacterSimulationOperationEmitter m_Emitter;
+        readonly SimulationOperationEmitter m_Emitter;
         readonly string m_ControlModuleId;
         readonly string m_InputProviderOwnerId;
         readonly string m_GameplayProviderOwnerId;
@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string inputProviderOwnerId,
             string gameplayProviderOwnerId)
         {
-            m_Emitter = new CharacterSimulationOperationEmitter(builder);
+            m_Emitter = new SimulationOperationEmitter(builder);
             m_ControlModuleId = controlModuleId ?? string.Empty;
             m_InputProviderOwnerId = inputProviderOwnerId ?? string.Empty;
             m_GameplayProviderOwnerId = gameplayProviderOwnerId ?? string.Empty;
@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             OperationValuePortContract contract = GameplayAbilityValuePortContracts.Require(emission.Code);
             if (node.GetInputValuePorts().Count() != contract.Inputs.Count || node.GetOutputValuePorts().Count() != contract.Outputs.Count)
                 throw new InvalidOperationException($"Skill node '{node.UID}' does not match its compiled value port shape.");
-            var inputs = new List<CharacterSimulationConstantInput>();
+            var inputs = new List<SimulationConstantInput>();
             foreach (ValueInput port in node.GetInputValuePorts().OrderBy(value => value.ID, StringComparer.Ordinal))
             {
                 string compiledPort = native != null ? native.Input(port.ID) : port.ID;
@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     value = string.Empty;
                 if (!definition.Accepts(kind))
                     throw new InvalidOperationException($"Skill port '{port.ID}' does not accept '{kind}'.");
-                inputs.Add(new CharacterSimulationConstantInput(compiledPort, kind, value, Source(node, graph, route, contentHash, port.ID)));
+                inputs.Add(new SimulationConstantInput(compiledPort, kind, value, Source(node, graph, route, contentHash, port.ID)));
             }
             foreach (ValueOutput port in node.GetOutputValuePorts())
                 if (!contract.RequireSelection(native != null ? native.Output(port.ID) : port.ID).Accepts(Kind(port.type)))

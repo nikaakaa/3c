@@ -4,9 +4,9 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    public readonly struct CharacterSimulationConstantInput
+    public readonly struct SimulationConstantInput
     {
-        public CharacterSimulationConstantInput(string portId, SemanticValueKind kind, object value, CharacterSimulationSourceLocation source)
+        public SimulationConstantInput(string portId, SemanticValueKind kind, object value, CharacterSimulationSourceLocation source)
         {
             PortId = portId;
             Kind = kind;
@@ -20,11 +20,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterSimulationSourceLocation Source { get; }
     }
 
-    public sealed class CharacterSimulationOperationEmitter
+    public sealed class SimulationOperationEmitter
     {
         readonly GameplayAbilitySemanticBuilder m_Builder;
 
-        public CharacterSimulationOperationEmitter(GameplayAbilitySemanticBuilder builder)
+        public SimulationOperationEmitter(GameplayAbilitySemanticBuilder builder)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }
@@ -32,13 +32,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public OperationHandle Emit(
             CharacterSimulationSourceLocation source,
             CharacterSimulationNodeEmission emission,
-            IReadOnlyList<CharacterSimulationConstantInput> inputs)
+            IReadOnlyList<SimulationConstantInput> inputs)
         {
             var constants = new List<int>();
-            var bindings = new List<(CharacterSimulationConstantInput Input, int Constant)>();
+            var bindings = new List<(SimulationConstantInput Input, int Constant)>();
             for (int i = 0; i < inputs.Count; i++)
             {
-                CharacterSimulationConstantInput input = inputs[i];
+                SimulationConstantInput input = inputs[i];
                 int constant = m_Builder.DeclareConstant(input.Source, "default-value", input.Value);
                 if (constant >= 0)
                 {

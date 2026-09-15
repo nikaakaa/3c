@@ -10,12 +10,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class BtsmtlSkillGraphFlowEmitter
     {
         readonly GameplayAbilitySemanticBuilder m_Builder;
-        readonly CharacterSimulationOperationEmitter m_NativeOperations;
+        readonly SimulationOperationEmitter m_NativeOperations;
 
         public BtsmtlSkillGraphFlowEmitter(GameplayAbilitySemanticBuilder builder)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
-            m_NativeOperations = new CharacterSimulationOperationEmitter(m_Builder);
+            m_NativeOperations = new SimulationOperationEmitter(m_Builder);
         }
 
         public void EmitEdges(BtsmtlSkillGraphOccurrence graph, BtsmtlSkillOperationBindings operations,
@@ -95,7 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 operations[state.UID] = m_NativeOperations.Emit(
                     Source(machine, state),
                     new CharacterSimulationNodeEmission(code, text0: state.Body?.AuthoringId),
-                    Array.Empty<CharacterSimulationConstantInput>());
+                    Array.Empty<SimulationConstantInput>());
             }
             DeclareNativeEntry(reference, owner, operations[machine.Entry.UID], "StateMachine", 0, machine);
             DeclareNativeEntry(reference, owner, operations[machine.Any.UID], "AnyState", 1, machine);

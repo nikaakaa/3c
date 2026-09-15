@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly string m_GraphContentHash;
         readonly string m_Route;
         readonly GameplayAbilitySemanticBuilder m_Builder;
-        readonly CharacterSimulationOperationEmitter m_OperationEmitter;
+        readonly SimulationOperationEmitter m_OperationEmitter;
 
         public CharacterSimulationNodeEmitterContext(BaseGraph graph, string route, GameplayAbilitySemanticBuilder builder)
         {
@@ -52,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_GraphContentHash = GraphAuthoringFingerprint.Compute(m_Graph);
             m_Route = route ?? string.Empty;
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
-            m_OperationEmitter = new CharacterSimulationOperationEmitter(builder);
+            m_OperationEmitter = new SimulationOperationEmitter(builder);
         }
 
         public GameplayAbilitySemanticBuilder Builder => m_Builder;
@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             CharacterSimulationSourceLocation source = Source(node, portId);
             List<CapturedValuePort> valuePorts = CaptureValuePorts(node, emission.Code);
-            var constantInputs = new List<CharacterSimulationConstantInput>();
+            var constantInputs = new List<SimulationConstantInput>();
             CaptureUnconnectedInputConstants(node, valuePorts, constantInputs);
             return m_OperationEmitter.Emit(source, emission, constantInputs);
         }
@@ -136,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void CaptureUnconnectedInputConstants(
             BaseNode node,
             IReadOnlyList<CapturedValuePort> ports,
-            List<CharacterSimulationConstantInput> constantInputs)
+            List<SimulationConstantInput> constantInputs)
         {
             for (int i = 0; i < ports.Count; i++)
             {
@@ -147,7 +147,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (IsPropertyInputLinked(node.GUID, portId, captured.FieldKey))
                     continue;
                 CharacterSimulationSourceLocation source = Source(node, portId);
-                constantInputs.Add(new CharacterSimulationConstantInput(portId, captured.Kind, captured.Port.GetValue(), source));
+                constantInputs.Add(new SimulationConstantInput(portId, captured.Kind, captured.Port.GetValue(), source));
             }
         }
 

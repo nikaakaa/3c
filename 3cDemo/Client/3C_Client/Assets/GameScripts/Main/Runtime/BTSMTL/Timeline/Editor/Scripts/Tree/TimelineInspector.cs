@@ -15,6 +15,7 @@ namespace BTSMTL.Timeline.Editor
     {
         VisualElement m_Root;
         string m_ConfigurationError;
+        string m_SourceRevision = string.Empty;
 
         void OnEnable()
         {
@@ -39,6 +40,7 @@ namespace BTSMTL.Timeline.Editor
                 return;
             m_Root.Clear();
             TimelineAsset asset = (TimelineAsset)target;
+            m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
             m_Root.Add(new Button(() => TimelineEditorWindow.Open(asset))
             {
                 text = "Open Timeline Editor"
@@ -136,6 +138,8 @@ namespace BTSMTL.Timeline.Editor
             bool muted = EditorGUILayout.Toggle("Muted", track.PersistentMuted);
             if (name == track.Name && muted == track.PersistentMuted)
                 return;
+            if (!TryBeginMutation(asset))
+                return;
             try
             {
                 asset.Data.ApplyModify(() =>
@@ -144,6 +148,7 @@ namespace BTSMTL.Timeline.Editor
                     track.PersistentMuted = muted;
                     asset.Data.Init();
                 }, "Edit Timeline Track");
+                m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
                 m_ConfigurationError = null;
             }
             catch (Exception exception)
@@ -158,6 +163,8 @@ namespace BTSMTL.Timeline.Editor
             int frame = Mathf.Max(0, EditorGUILayout.IntField("Frame", section.Frame));
             if (name == section.Name && frame == section.Frame)
                 return;
+            if (!TryBeginMutation(asset))
+                return;
             try
             {
                 asset.Data.ApplyModify(() =>
@@ -165,6 +172,7 @@ namespace BTSMTL.Timeline.Editor
                     asset.Data.ConfigureSection(section, name, frame);
                     asset.Data.Init();
                 }, "Edit Timeline Section");
+                m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
                 m_ConfigurationError = null;
             }
             catch (Exception exception)
@@ -175,6 +183,8 @@ namespace BTSMTL.Timeline.Editor
 
         void ApplyFrames(TimelineAsset asset, Clip clip, int startFrame, int endFrame, int selfEaseInFrame, int selfEaseOutFrame, int clipInFrame)
         {
+            if (!TryBeginMutation(asset))
+                return;
             try
             {
                 asset.Data.ApplyModify(() =>
@@ -187,6 +197,7 @@ namespace BTSMTL.Timeline.Editor
                     clip.Track.UpdateMix();
                     asset.Data.Init();
                 }, "Edit Timeline Clip Frames");
+                m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
                 m_ConfigurationError = null;
             }
             catch (Exception exception)
@@ -197,6 +208,8 @@ namespace BTSMTL.Timeline.Editor
 
         void ApplyConfiguration(TimelineAsset asset, Clip clip, TimelineAuthoringClipConfiguration configuration)
         {
+            if (!TryBeginMutation(asset))
+                return;
             try
             {
                 ITimelineAuthoringClipResolver resolver = new TimelineInspectorClipResolver(asset.Data);
@@ -205,12 +218,24 @@ namespace BTSMTL.Timeline.Editor
                     TimelineAuthoringClipBinding.Configure(asset.Data, clip, configuration, resolver);
                     asset.Data.Init();
                 }, "Edit Timeline Clip");
+                m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
                 m_ConfigurationError = null;
             }
             catch (Exception exception)
             {
                 m_ConfigurationError = exception.Message;
             }
+        }
+
+        bool TryBeginMutation(TimelineAsset asset)
+        {
+            string currentRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
+            if (string.IsNullOrEmpty(m_SourceRevision) ||
+                string.Equals(m_SourceRevision, currentRevision, StringComparison.Ordinal))
+                return true;
+            m_ConfigurationError = "Timeline 内容已被外部修改，当前 Inspector 修改未提交。";
+            Rebuild();
+            return false;
         }
 
         static PropertyInfo FindProperty(PropertyInfo[] properties, string propertyId)

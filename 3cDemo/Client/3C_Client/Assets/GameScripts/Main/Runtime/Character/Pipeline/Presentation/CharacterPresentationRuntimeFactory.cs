@@ -358,7 +358,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     new CharacterPoseTuningRuntimeBinding(
                         new CharacterPoseTuningTargetIdentity(
                             actorId.Value,
-                            projection.ProgramId,
+                            projection.PresentationId,
                             projection.ProjectionRevision,
                             projection.PosePlan.PlanHash,
                             projection.Rig.RigId,
@@ -387,7 +387,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     var cameraBindingRequest = new CameraBindingPreparationRequest(
                         $"camera-runtime|{actorId.Value}|{diagnostics.CharacterRuntimeId:N}",
-                        projection.ProgramId,
+                        projection.PresentationId,
                         projection.SourceRevision,
                         projection.Camera,
                         cameraRig,

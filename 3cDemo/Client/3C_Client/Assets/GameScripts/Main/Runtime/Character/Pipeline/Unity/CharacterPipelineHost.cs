@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline
 				new CharacterPoseTuningCandidate(
 					new CharacterPoseTuningTargetIdentity(
 						registration.ActorId.Value,
-						projection.ProgramId,
+						projection.PresentationId,
 						projection.ProjectionRevision,
 						projection.PosePlan.PlanHash,
 						projection.Rig.RigId,

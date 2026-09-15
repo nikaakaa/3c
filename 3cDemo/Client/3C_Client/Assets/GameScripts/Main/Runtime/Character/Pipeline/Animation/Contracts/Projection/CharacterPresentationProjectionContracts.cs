@@ -18,10 +18,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPresentationProjection : ISerializationCallbackReceiver
     {
-        public const string CurrentAbiVersion = "character-presentation-projection/v15";
+        public const string CurrentAbiVersion = "character-presentation-projection/v16";
 
         [SerializeField] string m_AbiVersion = string.Empty;
-        [SerializeField] string m_ProgramId = string.Empty;
+        [SerializeField] string m_PresentationId = string.Empty;
         [SerializeField] string m_SourceRevision = string.Empty;
         [SerializeField] string m_SemanticHash = string.Empty;
         [SerializeField] string m_ContractHash = string.Empty;
@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationFootAnalysisProjectionIdentity m_FootAnalysis;
         [SerializeField] CharacterCameraProjectionPayload m_Camera;
 
-        public string ProgramId => m_ProgramId;
+        public string PresentationId => m_PresentationId;
         public string AbiVersion => m_AbiVersion ?? string.Empty;
         public string SourceRevision => m_SourceRevision;
         public string SemanticHash => m_SemanticHash;
@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             get
             {
                 if (!string.Equals(AbiVersion, CurrentAbiVersion, StringComparison.Ordinal) ||
-                    string.IsNullOrEmpty(m_ProgramId) ||
+                    string.IsNullOrEmpty(m_PresentationId) ||
                     string.IsNullOrEmpty(m_SourceRevision) ||
                     string.IsNullOrEmpty(m_SemanticHash) ||
                     string.IsNullOrEmpty(m_ContractHash) ||
@@ -134,7 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
             if (!IsValid ||
-                !string.Equals(m_ProgramId, contract.ProgramId.Value, StringComparison.Ordinal) ||
+                !string.Equals(m_PresentationId, contract.ProgramId.Value, StringComparison.Ordinal) ||
                 !string.Equals(m_SourceRevision, contract.SourceRevision.Value, StringComparison.Ordinal) ||
                 !string.Equals(m_SemanticHash, contract.SemanticHash.ToString(), StringComparison.Ordinal) ||
                 !string.Equals(m_ContractHash, contract.ContractHash.ToString(), StringComparison.Ordinal) ||
@@ -157,8 +157,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 throw new InvalidOperationException(
                     $"Character Presentation Projection does not match the loaded semantic contract. " +
-                    $"Actual Valid={IsValid} ProjectionRevision={m_ProjectionRevision} Program={m_ProgramId} Source={m_SourceRevision} Semantic={m_SemanticHash} Contract={m_ContractHash} Producers={Producers.Count} InvalidProducer={invalidProducer}; " +
-                    $"Expected Program={contract.ProgramId.Value} Source={contract.SourceRevision.Value} Semantic={contract.SemanticHash} Contract={contract.ContractHash} Producers={contract.Producers.Count}.");
+                    $"Actual Valid={IsValid} ProjectionRevision={m_ProjectionRevision} Presentation={m_PresentationId} Source={m_SourceRevision} Semantic={m_SemanticHash} Contract={m_ContractHash} Producers={Producers.Count} InvalidProducer={invalidProducer}; " +
+                    $"Expected Presentation={contract.ProgramId.Value} Source={contract.SourceRevision.Value} Semantic={contract.SemanticHash} Contract={contract.ContractHash} Producers={contract.Producers.Count}.");
             }
             for (int i = 0; i < Producers.Count; i++)
             {

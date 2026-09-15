@@ -261,7 +261,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_TuningBinding = binding;
             m_TuningTarget = new CharacterPoseTuningTargetIdentity(
                 m_ActorId.Value,
-                m_Bindings.Projection.ProgramId,
+                m_Bindings.Projection.PresentationId,
                 m_Bindings.Projection.ProjectionRevision,
                 m_Bindings.Projection.PosePlan.PlanHash,
                 m_Bindings.Projection.Rig.RigId,
@@ -940,7 +940,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0,
                 presentationFrame,
                 bodyTick,
-                m_Bindings.Projection.ProgramId,
+                m_Bindings.Projection.PresentationId,
                 m_Bindings.Projection.PosePlan.PoseGraphId,
                 m_Bindings.Projection.PosePlan.ContentRevision,
                 m_Bindings.Projection.PosePlan.PlanHash,

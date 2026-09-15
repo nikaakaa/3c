@@ -440,7 +440,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Diagnostics.BeginPresentationFrame(context.RenderFrame);
             PerformanceInstrumentationContextRuntime.BeginActor(
                 PerformanceInstrumentationIdentity.Hash64(m_ActorId.Value),
-                PerformanceInstrumentationIdentity.Hash64(m_Projection.ProgramId),
+                PerformanceInstrumentationIdentity.Hash64(m_Projection.PresentationId),
                 PerformanceInstrumentationIdentity.Hash64(m_Projection.ContractHash));
             m_PerformanceContextActive = true;
             try

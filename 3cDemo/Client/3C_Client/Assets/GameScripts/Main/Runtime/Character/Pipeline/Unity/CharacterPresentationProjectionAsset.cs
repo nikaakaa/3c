@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     {
         [SerializeField] CharacterPresentationProjection m_Projection;
 
-        public string ProgramId => m_Projection?.ProgramId ?? string.Empty;
+        public string PresentationId => m_Projection?.PresentationId ?? string.Empty;
         public string SourceRevision => m_Projection?.SourceRevision ?? string.Empty;
         public string ProjectionRevision => m_Projection?.ProjectionRevision ?? string.Empty;
         public string SemanticHash => m_Projection?.SemanticHash ?? string.Empty;

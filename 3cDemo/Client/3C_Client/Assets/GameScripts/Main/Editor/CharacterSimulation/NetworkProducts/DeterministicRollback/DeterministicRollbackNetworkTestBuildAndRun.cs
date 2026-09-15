@@ -113,7 +113,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (!string.Equals(fixedProgram.DefinitionGuid, rollback.DefinitionGuid, StringComparison.Ordinal) ||
                 !string.Equals(program.Manifest.ProgramId.Value, expectedProgramId.Value, StringComparison.Ordinal) ||
                 !string.Equals(program.Manifest.SourceRevision.Value, expectedSourceRevision.Value, StringComparison.Ordinal) ||
-                !string.Equals(publishedProjection.ProgramId, expectedProgramId.Value, StringComparison.Ordinal) ||
+                !string.Equals(publishedProjection.PresentationId, expectedProgramId.Value, StringComparison.Ordinal) ||
                 !string.Equals(publishedProjection.SourceRevision, expectedSourceRevision.Value, StringComparison.Ordinal) ||
                 !string.Equals(publishedProjection.SemanticHash, program.Manifest.SemanticHash.ToString(), StringComparison.Ordinal))
             {

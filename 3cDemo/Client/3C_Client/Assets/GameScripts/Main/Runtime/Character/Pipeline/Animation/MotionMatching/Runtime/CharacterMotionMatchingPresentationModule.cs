@@ -337,7 +337,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 !m_Providers.ContainsKey(providerId) ||
                 !string.Equals(
                     query.ProjectionIdentity,
-                    $"{m_Projection.ProgramId}@{m_Projection.SourceRevision}:{m_Projection.ContractHash}",
+                    $"{m_Projection.PresentationId}@{m_Projection.SourceRevision}:{m_Projection.ContractHash}",
                     StringComparison.Ordinal))
                 throw new InvalidOperationException("Motion Matching preview query identity does not match this Module.");
             if (m_PreviewQuery != null)
@@ -756,7 +756,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                     throw new InvalidOperationException($"Motion Matching node binding '{binding.PoseNodeId}' does not resolve to one Projection source provider.");
                 var runtime =
                     new CharacterMotionMatchingProviderRuntime(
-                        $"{m_Projection.ProgramId}@{m_Projection.SourceRevision}:{m_Projection.ContractHash}",
+                        $"{m_Projection.PresentationId}@{m_Projection.SourceRevision}:{m_Projection.ContractHash}",
                         payload,
                         binding,
                         providerId,

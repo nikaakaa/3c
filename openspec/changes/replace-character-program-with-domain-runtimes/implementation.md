@@ -307,3 +307,9 @@
 - 按 D22／1.11 的口径，依赖角色事实的节点只要求自身需要的服务：使用装备节点才声明 Equipment，未使用不声明；装配阶段缺 binding 由 `SimulationActorBinding` 明确失败，不做空实现或全局启用。
 - 本切口不勾选 1.11：TreeClip 等非角色调用方尚未统一到 `AbilityInvocationRuntime` 同一执行入口，`PendingAbilityEvaluation` 仍强持角色事务，BodyFacts 仍要求必给。
 - 未编译验证：`ThirdPersonClient.Editor.csproj` 依赖的 `ThirdPersonClient.Runtime.csproj` 仍被 Pose 旧 `CharacterPoseProgramImage`／`CharacterPoseNative*Operation` 消费者的中间断裂阻断；本改动引用的类型均位于 `ThirdPersonClient.Runtime`，待该断裂收口后随 Editor 全量编译验证。未运行 Unity、测试或资产生成。
+
+## 2026-09-15 Projection身份退出Program字段
+
+- `CharacterPresentationProjection` 的序列化身份字段由 `m_ProgramId`／`ProgramId` 改为 `m_PresentationId`／`PresentationId`，Projection ABI 从 v15 升到 v16；旧 Projection 资产直接失效，不保留兼容字段。
+- Local Host、Rollback Editor 检查、Presentation Runtime、Motion Matching、Pose tuning target 与性能采样均改用 `PresentationId`；Projection 仍校验现有 semantic contract 和 Pose tuning layout 的正式版本，不建立转换路径。
+- 未运行 Unity 或测试；统一 Runtime 工程仍受 Unity 生成 csproj 引用已迁移 `Float32CharacterRegistration.cs` 旧路径的 `CS2001` 阻断，已执行 `dotnet build-server shutdown`。

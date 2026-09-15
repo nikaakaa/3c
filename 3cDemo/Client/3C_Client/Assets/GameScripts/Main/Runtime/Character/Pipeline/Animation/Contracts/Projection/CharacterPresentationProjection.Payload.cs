@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var projection = new CharacterPresentationProjection
             {
                 m_AbiVersion = CurrentAbiVersion,
-                m_ProgramId = contract.ProgramId.Value,
+                m_PresentationId = contract.ProgramId.Value,
                 m_SourceRevision = contract.SourceRevision.Value,
                 m_SemanticHash = contract.SemanticHash.ToString(),
                 m_ContractHash = contract.ContractHash.ToString(),
@@ -177,7 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Character Presentation Projection tuning payload is incomplete.");
             TuningLayout.RequireValid();
             TuningDefaultBlock.RequireValid(TuningLayout);
-            if (!string.Equals(TuningLayout.ProgramId, ProgramId, StringComparison.Ordinal) ||
+            if (!string.Equals(TuningLayout.ProgramId, PresentationId, StringComparison.Ordinal) ||
                 !string.Equals(TuningLayout.ProjectionRevision, ProjectionRevision, StringComparison.Ordinal) ||
                 !string.Equals(TuningLayout.PosePlanHash, PosePlan.PlanHash, StringComparison.Ordinal) ||
                 !string.Equals(TuningLayout.RigId, Rig.RigId, StringComparison.Ordinal) ||
@@ -244,7 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (bindProjectionIdentity)
                 PosePlan?.BindProjectionIdentity(
-                    ProgramId,
+                    PresentationId,
                     ProjectionRevision);
             PosePlan?.RequireValid();
             Rig?.RequireValid();

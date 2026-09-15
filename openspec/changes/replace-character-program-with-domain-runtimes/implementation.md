@@ -1114,3 +1114,8 @@
 
 - 提交 `bf9e8a57e`，将 Float32／Fixed Ability artifact 中的 `ProgramCurve`、曲线键和 codec 源文件及引用分别统一为 `Float32GameplayAbilityCurve`、`FixedGameplayAbilityCurve`，删除旧文件路径。
 - 曲线仍由 Ability 执行服务从常量字节读入并由 Motion 运行时采样；本步保留曲线字节编码、插值、wrap mode 和采样行为。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 收窄Ability调用状态边界
+
+- 提交 `88d467709`，为 Float32／Fixed Ability invocation 增加 typed state services bundle；执行器统一接收技能状态、savepoint、输入请求、动作、Effect、Equipment 和外层提交端口，不再以逐个角色事务参数构造调用。
+- 角色评估器仍负责提供这些正式端口并拥有外层提交；本步不改变 Ability 状态、执行顺序、Effect／Equipment 生命周期或结果提交行为。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

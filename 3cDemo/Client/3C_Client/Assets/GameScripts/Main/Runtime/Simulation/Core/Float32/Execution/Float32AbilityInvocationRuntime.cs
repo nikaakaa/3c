@@ -75,7 +75,7 @@ namespace ThirdPersonSimulation
                 tick,
                 new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests),
                 ingress ?? Array.Empty<SimulationIngress>(),
-                new Float32AbilityBodyFacts(actorId, body),
+                new Float32CharacterBodyFacts(actorId, body),
                 m_AbilityState,
                 roleState,
                 m_Workspace);

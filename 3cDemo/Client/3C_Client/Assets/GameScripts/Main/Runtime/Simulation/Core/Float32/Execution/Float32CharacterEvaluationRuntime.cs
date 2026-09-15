@@ -46,6 +46,7 @@ namespace ThirdPersonSimulation
             var facts = new List<GameplayFact>();
             var presentation = new List<PresentationCommand>();
             var trace = new List<SimulationTraceRecord>();
+            ResolvedGameplayMotion standaloneControlMotion = default;
             try
             {
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests);
@@ -91,6 +92,43 @@ namespace ThirdPersonSimulation
                         route => ReadEquipmentActionContext(invocations, route));
                     control.Tick();
                 }
+                else
+                {
+                    ICharacterControlModule controlModule = characterRuntime.ControlModules.Require(
+                        actor.ControlRuntimeBinding.ModuleId);
+                    actor.ControlRuntimeBinding.RequireContract(controlModule.Contract);
+                    var controlMotion = new Float32CharacterControlMotionRuntime(
+                        controlModule.Contract,
+                        actor.ControlRuntimeBinding,
+                        new Float32CharacterBodyFacts(actor.ActorId, beforeBody),
+                        tick,
+                        characterRuntime.TickRate,
+                        input.Values);
+                    var control = new Float32CharacterControlRuntime(
+                        characterRuntime.ControlModules,
+                        actor.ControlRuntimeBinding,
+                        roleState,
+                        actor.ActorId,
+                        tick,
+                        characterRuntime.TickRate,
+                        input,
+                        new Float32CharacterBodyFacts(actor.ActorId, beforeBody),
+                        controlMotion,
+                        (source, code, detail, generation) => AddControlTrace(
+                            trace,
+                            roleState,
+                            actor.ControlRuntimeBinding.BindingHash,
+                            characterRuntime.NumericProfile,
+                            actor.ActorId,
+                            tick,
+                            source,
+                            code,
+                            detail,
+                            generation,
+                            diagnosticsEnabled));
+                    control.Tick();
+                    standaloneControlMotion = control.Motion;
+                }
 
                 bool effectAdvanced = false;
                 for (int i = 0; i < invocations.Count; i++)
@@ -117,7 +155,9 @@ namespace ThirdPersonSimulation
                 if (!effectAdvanced)
                     RequireNoGameplayEffectIngress(ingress);
 
-                ResolvedGameplayMotion gameplayMotion = ResolveMotion(results);
+                ResolvedGameplayMotion gameplayMotion = invocations.Count == 0
+                    ? standaloneControlMotion
+                    : ResolveMotion(results);
                 Float32Scalar tickDelta = Float32Scalar.One / Float32Scalar.FromInt64(characterRuntime.TickRate);
                 BodyMotionPrepareResult bodyMotion = CharacterBodyMotionRuntime.Prepare(
                     actor.ActorId,
@@ -170,6 +210,48 @@ namespace ThirdPersonSimulation
                     continue;
                 invocation.ApplyActionIngress(value);
             }
+        }
+
+        static void AddControlTrace(
+            List<SimulationTraceRecord> trace,
+            Float32CharacterRuntimeStateTransaction state,
+            StableHash controlBindingHash,
+            SimulationNumericProfile numericProfile,
+            ActorId actorId,
+            SimulationTick tick,
+            SimulationExecutionSource source,
+            string code,
+            string detail,
+            ulong generation,
+            bool enabled)
+        {
+            if (!enabled)
+                return;
+            if (generation == 0)
+                generation = 1;
+            ActivationId activation = new ActivationId(source, generation);
+            ulong sequence = state.NextEventSequence();
+            EventId eventId = EventId.Create(
+                new ProgramHash(controlBindingHash),
+                actorId,
+                activation,
+                tick,
+                sequence,
+                "CharacterControl");
+            var header = new SimulationEventHeader(
+                numericProfile,
+                eventId,
+                actorId,
+                tick,
+                activation,
+                sequence,
+                "CharacterControl");
+            trace.Add(new SimulationTraceRecord(
+                header,
+                SimulationTraceSeverity.Information,
+                "CharacterControl",
+                code,
+                detail));
         }
 
         static void ApplyGameplayEffectIngress(

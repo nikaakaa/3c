@@ -22,12 +22,12 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationInputRequest> Requests { get; }
     }
 
-    internal readonly struct Float32AbilityBodyFacts
+    internal readonly struct Float32CharacterBodyFacts
     {
-        public Float32AbilityBodyFacts(ActorId actorId, WorldBodyState body)
+        public Float32CharacterBodyFacts(ActorId actorId, WorldBodyState body)
         {
             if (!actorId.IsValid || body.ActorId != actorId)
-                throw new ArgumentException("Float32 Ability body facts identity is incomplete.", nameof(body));
+                throw new ArgumentException("Float32 Character body facts identity is incomplete.", nameof(body));
             IsValid = true;
             Position = body.Position;
             Yaw = body.Yaw;
@@ -79,7 +79,7 @@ namespace ThirdPersonSimulation
             SimulationTick tick,
             Float32AbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
-            Float32AbilityBodyFacts bodyFacts,
+            Float32CharacterBodyFacts bodyFacts,
             IFloat32AbilityExecutionStateTransaction transaction,
             Float32AbilityExecutionWorkspace workspace)
         {
@@ -113,7 +113,7 @@ namespace ThirdPersonSimulation
         public SimulationTick Tick { get; }
         public Float32AbilityExecutionInput Input { get; }
         public IReadOnlyList<SimulationIngress> Ingress { get; }
-        public Float32AbilityBodyFacts BodyFacts { get; }
+        public Float32CharacterBodyFacts BodyFacts { get; }
         internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
         internal Float32EventSequence EventSequence { get; }
         internal Float32FactSink Facts { get; }

@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline
 		[SerializeField] List<CameraTargetBinding> m_CameraTargetBindings = new List<CameraTargetBinding>();
 		[SerializeField] string m_CameraLookInputValueId;
 
-		CharacterSimulationActorRegistration m_Registration;
+		Float32CharacterRegistration m_Registration;
 
 		public CharacterPipelineDefinition Definition => m_Definition;
 		public SimulationSessionHost SessionHost => m_SessionHost;
@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline
 		public string CameraLookInputValueId => string.IsNullOrWhiteSpace(m_CameraLookInputValueId)
 			? string.Empty
 			: m_CameraLookInputValueId.Trim();
-		public CharacterSimulationActorRegistration Registration => m_Registration;
+		public Float32CharacterRegistration Registration => m_Registration;
 		internal CharacterPoseTuningLayout LiveTuningLayout =>
 			(m_Registration?.PresentationRuntime as CharacterSimulationPresentationRuntime)?.TuningLayout;
 		internal CharacterPoseTuningParameterBlock LiveActiveTuningBlock =>
@@ -83,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline
 			CharacterPoseTuningParameterBlock block,
 			out string error)
 		{
-			CharacterSimulationActorRegistration registration = m_Registration;
+			Float32CharacterRegistration registration = m_Registration;
 			CharacterSimulationPresentationRuntime runtime =
 				registration?.PresentationRuntime as CharacterSimulationPresentationRuntime;
 			if (registration == null || runtime == null || block == null)
@@ -347,162 +347,93 @@ namespace ThirdPersonCharacter.Pipeline
 				Debug.LogError("LocalOwner camera anchors must belong to the VisualRoot presentation subtree.", this);
 				return false;
 			}
-			if (!m_Definition.SimulationProgram || !m_Definition.PresentationProjection)
+			if (!m_Definition.PresentationProjection)
 			{
-				Debug.LogError("CharacterPipelineHost requires compiled Program and Presentation Projection assets.", this);
+				Debug.LogError("CharacterPipelineHost requires a Character Presentation Projection asset.", this);
 				return false;
 			}
 
 			IUnityCharacterControlSourceRuntime inputAdapter = null;
 			ICharacterPresentationRuntime presentationRuntime = null;
 			RuntimeDiagnosticsTarget diagnosticsTarget = null;
-			CharacterSimulationActorRegistration registration = null;
+			Float32CharacterRegistration registration = null;
 			try
 			{
 				var actorId = new ActorId(ActorId);
 				if (m_WorldBodyBinding.ActorId != actorId)
 					throw new InvalidOperationException("CharacterPipelineHost ActorId does not match its World body binding.");
-				CharacterSimulationProgram program = m_Definition.SimulationProgram.Load();
-				CharacterPresentationSemanticContract presentationContract =
-					Float32CharacterPresentationContractAdapter.Create(program);
-				CharacterPresentationProjection projection = m_Definition.PresentationProjection.Load(
-					presentationContract);
-				m_AnimationRigBinding.RequireValid(projection.Rig);
-				CharacterRuntimeDebugProgram debugProgram = CharacterRuntimeDebugProgramBuilder.Build(program);
-				var diagnosticsContext = new RuntimeDiagnosticsContext(
-					Guid.NewGuid(),
-					Guid.NewGuid(),
-					debugProgram.Revision,
-					debugProgram.SourceMap,
-					new RuntimeDiagnosticsStore());
-				var diagnosticsAdapter = new CharacterSimulationDiagnosticsAdapter(diagnosticsContext, program);
-				diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
 				int tickRate = m_SessionHost.Composition
 					? m_SessionHost.Composition.TickRate
 					: throw new InvalidOperationException("SimulationSessionHost requires an explicit Composition Definition.");
-				if (program.Manifest.TickRate != tickRate || m_Definition.SimulationTickRate != tickRate)
-					throw new InvalidOperationException("Program, Character Definition, and Session Composition Tick rates must match exactly.");
-
+				if (m_Definition.SimulationTickRate != tickRate)
+					throw new InvalidOperationException("Character Definition and Session Composition Tick rates must match exactly.");
 				CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
 				CharacterControlRuntimeBinding controlRuntimeBinding = m_Definition.BuildControlRuntimeBinding(controlModules);
 				CharacterControlModuleContract controlModule = controlModules.RequireContract(controlRuntimeBinding.ModuleId);
 				CharacterBodyMotionBinding bodyMotionBinding = m_Definition.BuildBodyMotionRuntimeBinding();
 				CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = m_Definition.BuildGameplayEffectRuntimeBinding();
 				CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = m_Definition.BuildEquipmentRuntimeBinding();
-				inputAdapter = m_ControlSource.Create(new CharacterControlSourceContext(this, m_Definition, program, controlModule));
+				GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilityData =
+					m_Definition.LoadFloat32CharacterAbilities();
+				SimulationActorBinding actorBinding = new SimulationActorBinding(
+					actorId,
+					m_WorldBodyBinding.BindingId,
+					controlRuntimeBinding,
+					bodyMotionBinding,
+					gameplayEffectRuntimeBinding,
+					equipmentRuntimeBinding,
+					abilityData);
+				Float32CharacterRuntime characterRuntime = Float32CharacterRuntime.Create(
+					new[] { actorBinding },
+					tickRate,
+					controlModules);
+				CharacterPresentationProjection projection = CharacterPresentationRuntimeFactory.LoadProjection(
+					m_Definition.PresentationProjection);
+				m_AnimationRigBinding.RequireValid(projection.Rig);
+				RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
+					$"float32-character-runtime/{actorId.Value}",
+					characterRuntime.Abilities[0].SourceRevision.Value,
+					characterRuntime.GameplayContentHash.ToString());
+				var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
+				var diagnosticsContext = new RuntimeDiagnosticsContext(
+					Guid.NewGuid(),
+					Guid.NewGuid(),
+					diagnosticsRevision,
+					debugSourceMap,
+					new RuntimeDiagnosticsStore());
+				diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
+				inputAdapter = m_ControlSource.Create(new CharacterControlSourceContext(this, m_Definition, controlModule));
 				if (inputAdapter == null)
 					throw new InvalidOperationException("Character control source returned no input adapter.");
 				WorldBodyState initialBody = m_WorldBodyBinding.InitialBody;
 				PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
-				Func<
-					CharacterPresentationSemanticContract,
-					CharacterPresentationProjection,
-					CharacterPresentationRuntimeBinding> presentationRuntimeFactory =
-					(_, candidateProjection) =>
-						m_PresentationRole == CharacterPresentationRole.LocalOwner
-							? CharacterPresentationRuntimeFactory.CreateLocalOwner(
-								tickRate,
-								candidateProjection,
-								actorId,
-								m_Animancer,
-								m_AnimationRigBinding,
-								m_RootHierarchy,
-								CharacterPresentationBodyState.FromFloat32(initialBody),
-								m_BodyPresentationProfile,
-								m_WorldAwarePresentation,
-								physicsScene,
-								m_CameraRig,
-								m_CameraFollowAnchor,
-								m_CameraAimAnchor,
-								m_CameraTargetBindings,
-								inputAdapter is ICharacterPresentationLookInput candidateLookInput
-									? candidateLookInput
-									: throw new InvalidOperationException("LocalOwner control source must provide Presentation look input."),
-								m_CameraLookInputValueId,
-								m_EquipmentRigBindings,
-								m_SessionHost,
-								diagnosticsContext)
-							: CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-								tickRate,
-								candidateProjection,
-								actorId,
-								m_Animancer,
-								m_AnimationRigBinding,
-								m_RootHierarchy,
-								CharacterPresentationBodyState.FromFloat32(initialBody),
-								m_BodyPresentationProfile,
-								m_WorldAwarePresentation,
-								physicsScene,
-								m_EquipmentRigBindings,
-								m_SessionHost,
-								diagnosticsContext);
-				CharacterPresentationRuntimeBinding presentationBinding;
-				if (m_PresentationRole == CharacterPresentationRole.LocalOwner)
-				{
-					if (!(inputAdapter is ICharacterPresentationLookInput lookInput))
-						throw new InvalidOperationException("LocalOwner control source must provide Presentation look input.");
-					presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
-						tickRate,
-						projection,
-						actorId,
-						m_Animancer,
-						m_AnimationRigBinding,
-						m_RootHierarchy,
-						CharacterPresentationBodyState.FromFloat32(initialBody),
-						m_BodyPresentationProfile,
-						m_WorldAwarePresentation,
-						physicsScene,
-						m_CameraRig,
-						m_CameraFollowAnchor,
-						m_CameraAimAnchor,
-						m_CameraTargetBindings,
-						lookInput,
-						m_CameraLookInputValueId,
-						m_EquipmentRigBindings,
-						m_SessionHost,
-						diagnosticsContext);
-				}
-				else
-				{
-					presentationBinding = CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-						tickRate,
-						projection,
-						actorId,
-						m_Animancer,
-						m_AnimationRigBinding,
-						m_RootHierarchy,
-						CharacterPresentationBodyState.FromFloat32(initialBody),
-						m_BodyPresentationProfile,
-						m_WorldAwarePresentation,
-						physicsScene,
-						m_EquipmentRigBindings,
-						m_SessionHost,
-						diagnosticsContext);
-				}
+				CharacterPresentationRuntimeBinding presentationBinding = CreatePresentationRuntime(
+					projection,
+					actorId,
+					initialBody,
+					inputAdapter,
+					physicsScene,
+					diagnosticsContext,
+					tickRate,
+					true);
 				presentationRuntime = presentationBinding.Runtime;
 				var gameplayOutput = new CharacterSimulationGameplayOutputBuffer();
-				registration = new CharacterSimulationActorRegistration(
+				registration = new Float32CharacterRegistration(
 					GetInstanceID(),
 					name,
 					actorId,
-					m_Definition.SimulationProgram,
-					program,
+					characterRuntime,
+					actorBinding,
 					m_Definition.PresentationProjection,
 					projection,
-					presentationContract,
 					m_WorldBodyBinding,
 					initialBody,
 					inputAdapter,
 					gameplayOutput,
 					presentationRuntime,
-					diagnosticsAdapter,
+					ThirdPersonSimulation.NullSimulationDiagnosticsSink.Instance,
 					diagnosticsTarget,
-					m_RootHierarchy.VisualRoot,
-					presentationRuntimeFactory,
-					controlRuntimeBinding,
-					bodyMotionBinding,
-					gameplayEffectRuntimeBinding,
-					equipmentRuntimeBinding);
+					m_RootHierarchy.VisualRoot);
 				inputAdapter = null;
 				presentationRuntime = null;
 				diagnosticsTarget = null;
@@ -562,7 +493,7 @@ namespace ThirdPersonCharacter.Pipeline
 		{
 			if (m_Registration == null)
 				return;
-			CharacterSimulationActorRegistration registration = m_Registration;
+			Float32CharacterRegistration registration = m_Registration;
 			m_Registration = null;
 			if (m_SessionHost)
 			{

@@ -257,6 +257,13 @@
 - 这一步没有新增兼容字段或桥接。Rollback Editor authoring 调用方、`CharacterPipelineHost`、DotRecast manifest 和 Endpoint 仍有旧链路，分别留给其所属的 Editor／Network／Authority 接线；不能为了让中间工程暂时通过而复活旧 Program。
 - 验证：执行 `ThirdPersonSimulation.DeterministicRollback.Unity.csproj` 的 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false --no-restore`，随后执行 `dotnet build-server shutdown`。构建被并行窗口已有的 Endpoint 旧 `RollbackHandshake`／`RollbackActorHash` 字段错误，以及 `Float32CharacterRegistration` 装配错误阻断；输出未出现本步两个 Rollback 文件的错误。未运行 Unity、测试或资产生成。
 
+## 2026-09-15 本地Float32宿主退出旧Program
+
+- `CharacterPipelineHost` 不再读取 `CharacterPipelineDefinition.SimulationProgram`、调用 `Load()`、建立 `CharacterPresentationSemanticContract` 或创建旧 `CharacterSimulationActorRegistration`；它现在从 Definition 生成 Control／BodyMotion／GameplayEffect／Equipment binding，加载 Float32 Ability 执行数据，组装 `SimulationActorBinding` 与 `Float32CharacterRuntime`，再交给 `Float32CharacterRegistration`。
+- Local Host 的 tick rate 只取 `SimulationSessionHost.Composition.TickRate`，输入源只接收正式 `CharacterControlModuleContract`；Projection 通过 `CharacterPresentationRuntimeFactory.LoadProjection` 读取，诊断身份使用 Runtime actor、首个 Ability source revision 和 Runtime content hash。Presentation factory 复用宿主已有的正式创建路径，不再向注册器传入旧 Program 闭包。
+- `Float32CharacterRegistration` 放回 `ThirdPersonClient.Runtime` 所拥有的 Character Pipeline Unity 目录，与 `CharacterPipelineHost` 位于同一程序集边界；删除只承载该注册器且反向引用 `ThirdPersonClient.Runtime` 的 `ThirdPersonSimulation.Float32.Unity` 桥接程序集，避免 Host → 注册器 → Host 的循环依赖。注册器的 Unity GUID 保持不变，运行时类型命名空间不变。
+- 验证：`ThirdPersonSimulation.Unity.csproj` 和旧生成工程仍把已迁移注册器按旧路径编入，构建因此继续报告注册器缺少 Client Runtime Presentation／Diagnostics 引用；这是 Unity 重新生成程序集工程前的生成索引阻断，未出现 `CharacterPipelineHost.cs` 的错误。已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
 ## 2026-09-15 Frontend按可达节点声明Equipment能力
 
 - 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 的可达节点遍历中增加 Equipment 节点识别：`ReadEquipmentIdentityNode`、`ReadEquipmentParameterNode`、`EquipmentChangeOperationNode`（`ThirdPersonCharacter.Pipeline.Graph`），命中即 `RequireGameplayCapability("Equipment")`，与既有 GameplayEffect 的条件声明同类。

@@ -1104,3 +1104,8 @@
 
 - 提交 `bed3e045d`，将仅由 Gameplay Ability 执行帧消费的 `ProgramGraphInvocationLayout` 源文件、Unity `.meta` 和两个数值目标引用改为 `GameplayAbilityGraphInvocationLayout`，删除旧文件路径。
 - 保留图调用路径、生命周期代次槽、父调用代次槽和操作来源校验逻辑；本步不改变 source map 或执行布局。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Fixed Ability状态合同命名
+
+- 提交 `bd136a8f8`，将仅由 Fixed Gameplay Ability 目标编译器消费的 `FixedProgramStateSchema` 源文件、Unity `.meta` 和引用改为 `FixedGameplayAbilityStateSchema`，删除旧文件路径。
+- 保留各状态值类型的 codec identity 和校验规则；本步不改变 Fixed 状态格式。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

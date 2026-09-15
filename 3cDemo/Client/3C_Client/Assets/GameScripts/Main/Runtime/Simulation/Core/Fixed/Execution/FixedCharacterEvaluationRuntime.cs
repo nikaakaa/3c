@@ -89,7 +89,7 @@ namespace ThirdPersonSimulation.Fixed
                         serviceFactory,
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
-                    actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
+                    actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
 
                 new FixedCharacterInputRuntime(roleState.InputRequests, characterRuntime.InputRequestIds)

@@ -88,7 +88,7 @@ namespace ThirdPersonSimulation
                         serviceFactory,
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
-                    actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
+                    actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
 
                 new Float32CharacterInputRuntime(roleState.InputRequests, characterRuntime.InputRequestIds)

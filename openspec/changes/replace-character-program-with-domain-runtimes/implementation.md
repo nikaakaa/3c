@@ -563,3 +563,9 @@
 - 提交 `38e168ffc` 与 `b01bbc97c`，Float32／Fixed Ability Frame、GameplayEffect、Equipment 和调用运行时改用数值后端自己的执行级 Savepoint 接口；角色状态事务只作为当前 Character 调用方的实现。
 - 删除执行文件对 `Float32／FixedCharacterRuntimeStateSavepoint` 和角色事务诊断类型的直接依赖，保留角色快照的完整回滚内容、嵌套存档点顺序和 Effect／Equipment 原子恢复行为；没有新增第二套状态格式或兼容路径。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；独立 Ability 的非角色调用方装配仍需接入正式状态与服务提供者。
+
+## 2026-09-16 Ability存档点端口命名统一
+
+- 提交 `4aeafebe0`，将 Float32／Fixed Ability 执行内的 `TransactionControl` 统一改名为 `SavepointPort`，调用方传入的是执行级回滚能力，不再以角色事务命名。
+- 只收口边界命名和缺失服务错误信息，GameplayEffect／Equipment 的存档、恢复、释放顺序与行为不变。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；独立 Ability 的非角色调用方装配仍需接入正式状态与服务提供者。

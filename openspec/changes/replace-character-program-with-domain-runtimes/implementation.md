@@ -497,3 +497,9 @@
 - 提交 `82bebd5dc`，Float32／Fixed `AbilityInvocationRuntime` 改为只接收 `AbilityExecutionAssembly`，不再在技能入口直接创建 Action、GameplayEffect、Equipment、Blackboard、Value、Motion、Locomotion、Control 和 Domain Runtime。
 - 角色评估侧的执行服务工厂统一完成上述模块组装，并把正式的 InstallationSet、角色 Control／Equipment binding 和当前执行帧传入各模块；技能局部状态、输入、workspace 和执行顺序保持不变，没有新建第二套执行器、fallback 或兼容路径。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；本步推进 D22 的调用方组装边界，但非角色调用方、typed 服务入口以及完整 Timeline／Pose 前端接线仍未完成，1.11 不标记为完成。
+
+## 2026-09-16 角色Runtime显式接收执行身份
+
+- 提交 `7c66eb89f`，删除 Float32／Fixed `CharacterRuntime` 从全局 `SimulationTarget.Manifest` 读取 NumericProfile 和 OperationSetVersion 的静态工厂入口；Runtime 只保留接收 roster、NumericProfile、TickRate、OperationSetVersion 和 Control modules 的正式构造入口。
+- Session Composition 从 `SimulationSessionCompositionDefinition.ExecutionTarget` 取得执行身份；角色 Host、Fixed Rollback、ServerAuthoritative Source、DotRecast Authority 导出与加载均在装配边界显式传入数值配置、TickRate 和操作集版本。角色 Runtime 不再隐藏读取会话目标，也不保留旧工厂别名或兼容路径。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。完整 Unity Runtime 工程仍被既有生成工程源索引缺失的 `TypedStateAddress`、`GameplayAbilityExecutionLayout` 等 30 个错误及 Unity UGUI 包只读属性错误阻断；未运行 Unity、测试或资产生成。

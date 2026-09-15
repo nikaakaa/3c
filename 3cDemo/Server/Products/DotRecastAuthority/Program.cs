@@ -50,6 +50,10 @@ try
             new ServerProductArtifactDescriptor("thirdperson.authority.manifest", "Authority/DotRecastAuthorityScene.manifest"),
             new ServerProductArtifactDescriptor("thirdperson.authority.navigation", "Authority/Artifacts/NavigationSurface.navsurface")
         },
+        new[]
+        {
+            new ServerProductArtifactDirectoryDescriptor("thirdperson.authority.abilities", "Authority/Artifacts/Abilities")
+        },
         () =>
         {
             ServerAuthoritativeAuthorityHostRouteAdapterRegistry.Install(new DotRecastAuthorityHostRouteAdapter());

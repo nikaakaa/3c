@@ -77,6 +77,16 @@ public static class ServerProductBuildManifestWriter
             throw new InvalidDataException("Server product contains a forbidden dependency.");
         foreach (ServerProductArtifactDescriptor artifact in product.AuthorityArtifacts)
             manifest.AuthorityArtifacts.Add(Record(root, artifact.ArtifactId, artifact.RelativePath));
+        foreach (ServerProductArtifactDirectoryDescriptor directory in product.AuthorityArtifactDirectories)
+        {
+            foreach (string relativePath in ServerProductArtifactCatalog.EnumerateDirectoryFiles(root, directory))
+            {
+                manifest.AuthorityArtifacts.Add(Record(
+                    root,
+                    ServerProductArtifactCatalog.BuildArtifactId(directory, relativePath),
+                    relativePath));
+            }
+        }
         ServerProductArtifactClosureValidator.RequireExactFiles(root, product);
         foreach (string file in Directory.GetFiles(root, "*", SearchOption.AllDirectories)
                      .Select(value => Path.GetRelativePath(root, value).Replace('\\', '/'))

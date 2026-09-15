@@ -41,6 +41,7 @@ try
         },
         "Authority",
         Array.Empty<ServerProductArtifactDescriptor>(),
+        Array.Empty<ServerProductArtifactDirectoryDescriptor>(),
         () =>
         {
             ServerAuthoritativeAuthorityHostRouteAdapterRegistry.Install(new UnityAuthorityHostRouteAdapter());

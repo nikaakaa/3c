@@ -86,7 +86,10 @@ internal static class ServerProductBuildManifestReader
         ValidateModules(
             publishRoot,
             manifest.AuthorityArtifacts,
-            product.AuthorityArtifacts.Select(value => value.ArtifactId),
+            product.AuthorityArtifacts.Select(value => value.ArtifactId)
+                .Concat(product.AuthorityArtifactDirectories.SelectMany(directory =>
+                    ServerProductArtifactCatalog.EnumerateDirectoryFiles(publishRoot, directory)
+                        .Select(relativePath => ServerProductArtifactCatalog.BuildArtifactId(directory, relativePath)))),
             "Authority artifact");
         foreach (ServerProductFileRecord record in manifest.PortableDependencies)
             ValidateRecord(publishRoot, record, null);
@@ -130,6 +133,17 @@ internal static class ServerProductBuildManifestReader
                 string.Equals(value.ModuleId, descriptor.ArtifactId, StringComparison.Ordinal));
             if (!string.Equals(record.RelativePath, Normalize(descriptor.RelativePath), StringComparison.Ordinal))
                 throw new InvalidDataException($"Authority artifact '{descriptor.ArtifactId}' does not match the product definition.");
+        }
+        foreach (ServerProductArtifactDirectoryDescriptor directory in product.AuthorityArtifactDirectories)
+        {
+            foreach (string relativePath in ServerProductArtifactCatalog.EnumerateDirectoryFiles(publishRoot, directory))
+            {
+                string artifactId = ServerProductArtifactCatalog.BuildArtifactId(directory, relativePath);
+                ServerProductFileRecord record = manifest.AuthorityArtifacts.Single(value =>
+                    string.Equals(value.ModuleId, artifactId, StringComparison.Ordinal));
+                if (!string.Equals(record.RelativePath, relativePath, StringComparison.Ordinal))
+                    throw new InvalidDataException($"Authority artifact '{artifactId}' does not match the product definition.");
+            }
         }
         ServerProductArtifactClosureValidator.RequireExactFiles(publishRoot, product);
         HashSet<string> dependencyIds = manifest.PortableDependencies
@@ -266,10 +280,45 @@ internal static class ServerProductArtifactClosureValidator
             : Array.Empty<string>();
         string[] expected = product.AuthorityArtifacts
             .Select(value => Normalize(value.RelativePath))
+            .Concat(product.AuthorityArtifactDirectories.SelectMany(directory =>
+                ServerProductArtifactCatalog.EnumerateDirectoryFiles(publishRoot, directory)))
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (!actual.SequenceEqual(expected, StringComparer.OrdinalIgnoreCase))
             throw new InvalidDataException("Server product Authority artifact directory does not match its definition.");
+    }
+
+    static string Normalize(string value) => value.Replace('\\', '/');
+}
+
+internal static class ServerProductArtifactCatalog
+{
+    public static string[] EnumerateDirectoryFiles(
+        string publishRoot,
+        ServerProductArtifactDirectoryDescriptor directory)
+    {
+        string relativeDirectory = Normalize(directory.RelativePath).Trim('/');
+        string absoluteDirectory = Path.Combine(
+            publishRoot,
+            relativeDirectory.Replace('/', Path.DirectorySeparatorChar));
+        if (!Directory.Exists(absoluteDirectory))
+            throw new DirectoryNotFoundException($"Server product artifact directory is missing: {relativeDirectory}");
+        return Directory.GetFiles(absoluteDirectory, "*", SearchOption.AllDirectories)
+            .Select(value => Normalize(Path.GetRelativePath(publishRoot, value)))
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static string BuildArtifactId(
+        ServerProductArtifactDirectoryDescriptor directory,
+        string relativePath)
+    {
+        string directoryPath = Normalize(directory.RelativePath).Trim('/');
+        string filePath = Normalize(relativePath);
+        string localPath = filePath.StartsWith(directoryPath + "/", StringComparison.Ordinal)
+            ? filePath[(directoryPath.Length + 1)..]
+            : throw new InvalidDataException("Server product artifact is outside its declared directory.");
+        return $"{directory.ArtifactId}/{localPath}";
     }
 
     static string Normalize(string value) => value.Replace('\\', '/');

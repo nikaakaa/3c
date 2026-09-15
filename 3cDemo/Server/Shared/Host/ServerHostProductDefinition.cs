@@ -10,6 +10,8 @@ public sealed record ServerHotfixModuleDescriptor(
 
 public sealed record ServerProductArtifactDescriptor(string ArtifactId, string RelativePath);
 
+public sealed record ServerProductArtifactDirectoryDescriptor(string ArtifactId, string RelativePath);
+
 public sealed record ServerAuthorityHostProductDescriptor(
     string HostProductId,
     string RouteKind,
@@ -35,6 +37,7 @@ public sealed class ServerHostProductDefinition
         IReadOnlyList<string> forbiddenModuleIds,
         string authorityArtifactDirectory,
         IReadOnlyList<ServerProductArtifactDescriptor> authorityArtifacts,
+        IReadOnlyList<ServerProductArtifactDirectoryDescriptor> authorityArtifactDirectories,
         Action installProductRuntime)
     {
         ProductId = Require(productId, nameof(productId));
@@ -53,6 +56,8 @@ public sealed class ServerHostProductDefinition
         AuthorityArtifactDirectory = Require(authorityArtifactDirectory, nameof(authorityArtifactDirectory));
         AuthorityArtifacts = authorityArtifacts?.OrderBy(value => value.ArtifactId, StringComparer.Ordinal).ToArray() ??
             throw new ArgumentNullException(nameof(authorityArtifacts));
+        AuthorityArtifactDirectories = authorityArtifactDirectories?.OrderBy(value => value.ArtifactId, StringComparer.Ordinal).ToArray() ??
+            throw new ArgumentNullException(nameof(authorityArtifactDirectories));
         InstallProductRuntime = installProductRuntime ?? throw new ArgumentNullException(nameof(installProductRuntime));
         Validate();
     }
@@ -68,6 +73,7 @@ public sealed class ServerHostProductDefinition
     public IReadOnlyList<string> ForbiddenModuleIds { get; }
     public string AuthorityArtifactDirectory { get; }
     public IReadOnlyList<ServerProductArtifactDescriptor> AuthorityArtifacts { get; }
+    public IReadOnlyList<ServerProductArtifactDirectoryDescriptor> AuthorityArtifactDirectories { get; }
     public Action InstallProductRuntime { get; }
 
     void Validate()
@@ -85,7 +91,7 @@ public sealed class ServerHostProductDefinition
             if (AuthorityHost.ManifestSchemaVersion <= 0 || AuthorityHost.AuthoritySolverCapabilities == 0)
                 throw new InvalidOperationException("Server product Authority Host declaration is incomplete.");
         }
-        else if (AuthorityArtifacts.Count != 0)
+        else if (AuthorityArtifacts.Count != 0 || AuthorityArtifactDirectories.Count != 0)
         {
             throw new InvalidOperationException("A product without an Authority Host cannot declare Authority artifacts.");
         }
@@ -97,11 +103,34 @@ public sealed class ServerHostProductDefinition
         RequireUnique(ForbiddenModuleIds.Select(value => Require(value, nameof(ForbiddenModuleIds))), "forbidden ModuleId");
         RequireUnique(AuthorityArtifacts.Select(value => Require(value.ArtifactId, nameof(value.ArtifactId))), "Authority artifact");
         RequireUnique(AuthorityArtifacts.Select(value => Require(value.RelativePath, nameof(value.RelativePath))), "Authority artifact path");
+        RequireUnique(AuthorityArtifactDirectories.Select(value => Require(value.ArtifactId, nameof(value.ArtifactId))), "Authority artifact directory");
+        RequireUnique(AuthorityArtifactDirectories.Select(value => Require(value.RelativePath, nameof(value.RelativePath))), "Authority artifact directory path");
+        RequireUnique(
+            AuthorityArtifacts.Select(value => Require(value.ArtifactId, nameof(value.ArtifactId)))
+                .Concat(AuthorityArtifactDirectories.Select(value => Require(value.ArtifactId, nameof(value.ArtifactId)))),
+            "Authority artifact identity");
         string artifactRoot = NormalizeRelativePath(AuthorityArtifactDirectory);
         if (AuthorityArtifacts.Any(value =>
                 !NormalizeRelativePath(value.RelativePath).StartsWith(artifactRoot + "/", StringComparison.Ordinal)))
         {
             throw new InvalidOperationException("Authority artifact path is outside the product artifact directory.");
+        }
+        string[] directoryPaths = AuthorityArtifactDirectories
+            .Select(value => NormalizeRelativePath(value.RelativePath))
+            .ToArray();
+        if (directoryPaths.Any(value => !value.StartsWith(artifactRoot + "/", StringComparison.Ordinal)))
+            throw new InvalidOperationException("Authority artifact directory is outside the product artifact directory.");
+        if (directoryPaths.Select((value, index) => new { value, index }).Any(entry => directoryPaths
+                .Skip(entry.index + 1)
+                .Any(other => entry.value.StartsWith(other + "/", StringComparison.Ordinal) ||
+                    other.StartsWith(entry.value + "/", StringComparison.Ordinal))))
+        {
+            throw new InvalidOperationException("Authority artifact directories cannot overlap.");
+        }
+        if (AuthorityArtifacts.Any(value => directoryPaths.Any(directory =>
+                NormalizeRelativePath(value.RelativePath).StartsWith(directory + "/", StringComparison.Ordinal))))
+        {
+            throw new InvalidOperationException("A static Authority artifact cannot be inside a dynamic artifact directory.");
         }
         if (EntityModules.Any(value => value.MarkerType == null))
             throw new InvalidOperationException("Entity module marker type is required.");

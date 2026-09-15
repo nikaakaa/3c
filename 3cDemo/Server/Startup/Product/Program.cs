@@ -51,6 +51,7 @@ internal static class Program
                 },
                 "Authority",
                 Array.Empty<ServerProductArtifactDescriptor>(),
+                Array.Empty<ServerProductArtifactDirectoryDescriptor>(),
                 StartupServerDeploymentBoundary.Validate);
             if (args.Length > 0 &&
                 string.Equals(args[0], "--write-server-product-manifest", StringComparison.Ordinal))

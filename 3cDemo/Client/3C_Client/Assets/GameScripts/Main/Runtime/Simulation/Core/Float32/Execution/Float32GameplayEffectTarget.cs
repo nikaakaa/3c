@@ -10,13 +10,13 @@ namespace ThirdPersonSimulation
         PortableActiveEffectState,
         PortablePredictionRecord,
         PortableTagQuery,
-        Float32CharacterRuntimeStateSavepoint>,
+        IFloat32AbilityExecutionSavepoint>,
         IGameplayEffectApplicationAdmissionPort<
             SimulationGameplayEffectApplication,
             PortableEffectSpecState,
             Float32Scalar>
     {
-        readonly IFloat32AbilityTransactionControlPort m_TransactionControl;
+        readonly IFloat32AbilityExecutionSavepointPort m_TransactionControl;
         readonly IFloat32GameplayEffectStatePort m_EffectState;
         readonly Float32GameplayEffectRuntimeCatalog m_Catalog;
         readonly GameplayEffectStateAggregate m_CommittedState;
@@ -35,7 +35,7 @@ namespace ThirdPersonSimulation
             PortableActiveEffectState,
             PortablePredictionRecord,
             PortableTagQuery,
-            Float32CharacterRuntimeStateSavepoint> m_Control;
+            IFloat32AbilityExecutionSavepoint> m_Control;
         readonly GameplayEffectApplicationAdmissionRuntime<
             SimulationGameplayEffectApplication,
             PortableEffectSpecState,
@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation
         PortablePredictionRecord m_CurrentPrediction;
 
         public Float32GameplayEffectTarget(
-            IFloat32AbilityTransactionControlPort transactionControl,
+            IFloat32AbilityExecutionSavepointPort transactionControl,
             IFloat32GameplayEffectStatePort effectState,
             Float32GameplayEffectRuntimeCatalog catalog,
             ActorId actorId,
@@ -78,7 +78,7 @@ namespace ThirdPersonSimulation
                 PortableActiveEffectState,
                 PortablePredictionRecord,
                 PortableTagQuery,
-                Float32CharacterRuntimeStateSavepoint>(this);
+                IFloat32AbilityExecutionSavepoint>(this);
             m_Admission = new GameplayEffectApplicationAdmissionRuntime<
                 SimulationGameplayEffectApplication,
                 PortableEffectSpecState,

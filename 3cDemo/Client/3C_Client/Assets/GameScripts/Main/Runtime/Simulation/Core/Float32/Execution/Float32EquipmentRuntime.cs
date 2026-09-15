@@ -340,7 +340,7 @@ namespace ThirdPersonSimulation
 		sealed class MutationScope : IEquipmentMutationScope
 		{
 			readonly Float32AbilityExecutionFrame m_Frame;
-			readonly Float32CharacterRuntimeStateSavepoint m_Savepoint;
+			readonly IFloat32AbilityExecutionSavepoint m_Savepoint;
 			readonly Float32AbilityOutputSavepoint m_OutputSavepoint;
 			readonly CharacterStateValue[] m_Values;
 			bool m_Completed;

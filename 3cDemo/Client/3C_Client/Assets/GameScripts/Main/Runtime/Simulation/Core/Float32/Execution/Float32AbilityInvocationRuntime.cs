@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation
             Float32GameplayAbilityExecutionInstallation installation,
             Float32GameplayAbilityExecutionInstallationSet installations,
             IFloat32AbilityExecutionStateTransaction abilityState,
-            IFloat32AbilityTransactionControlPort transactionControl,
+            IFloat32AbilityExecutionSavepointPort transactionControl,
             ActorId actorId,
             SimulationTick tick,
             Float32AbilityExecutionInput input,

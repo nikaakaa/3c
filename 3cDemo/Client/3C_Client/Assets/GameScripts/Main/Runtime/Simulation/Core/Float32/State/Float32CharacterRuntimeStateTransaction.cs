@@ -4,17 +4,8 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation
 {
-    internal readonly struct Float32CharacterRuntimeStateTransactionDiagnostics
-    {
-        public Float32CharacterRuntimeStateTransactionDiagnostics(int savepointDepth)
-        {
-            SavepointDepth = savepointDepth;
-        }
-
-        public int SavepointDepth { get; }
-    }
-
     internal sealed class Float32CharacterRuntimeStateSavepoint
+        : IFloat32AbilityExecutionSavepoint
     {
         internal Float32CharacterRuntimeStateSavepoint(
             int depth,
@@ -24,7 +15,7 @@ namespace ThirdPersonSimulation
             Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
         }
 
-        internal int Depth { get; }
+        public int Depth { get; }
         internal Float32CharacterRuntimeState Snapshot { get; }
     }
 
@@ -89,15 +80,7 @@ namespace ThirdPersonSimulation
         CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema);
     }
 
-    internal interface IFloat32AbilityTransactionControlPort
-    {
-        Float32CharacterRuntimeStateSavepoint CreateSavepoint();
-        void Restore(Float32CharacterRuntimeStateSavepoint savepoint);
-        void Release(Float32CharacterRuntimeStateSavepoint savepoint);
-        Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
-    }
-
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32ControlRuntimeStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityExecutionSavepointPort, IFloat32ControlRuntimeStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
@@ -207,7 +190,7 @@ namespace ThirdPersonSimulation
         internal IFloat32GameplayEffectStatePort GameplayEffectState => m_GameplayEffectState;
         internal IFloat32EquipmentStatePort EquipmentState => m_EquipmentState;
 
-        public Float32CharacterRuntimeStateSavepoint CreateSavepoint()
+        public IFloat32AbilityExecutionSavepoint CreateSavepoint()
         {
             RequireActive();
             var savepoint = new Float32CharacterRuntimeStateSavepoint(m_Savepoints.Count + 1, Snapshot());
@@ -215,26 +198,22 @@ namespace ThirdPersonSimulation
             return savepoint;
         }
 
-        public void Restore(Float32CharacterRuntimeStateSavepoint savepoint)
+        public void Restore(IFloat32AbilityExecutionSavepoint savepoint)
         {
             RequireActive();
-            RequireTopSavepoint(savepoint);
-            Apply(savepoint.Snapshot);
+            Float32CharacterRuntimeStateSavepoint characterSavepoint = RequireTopSavepoint(savepoint);
+            Apply(characterSavepoint.Snapshot);
             m_Savepoints.Pop();
         }
 
-        public void Release(Float32CharacterRuntimeStateSavepoint savepoint)
+        public void Release(IFloat32AbilityExecutionSavepoint savepoint)
         {
             RequireActive();
             RequireTopSavepoint(savepoint);
             m_Savepoints.Pop();
         }
 
-        public Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics()
-        {
-            RequireActive();
-            return new Float32CharacterRuntimeStateTransactionDiagnostics(m_Savepoints.Count);
-        }
+        public int SavepointDepth => m_Savepoints.Count;
 
         public void Dispose()
         {
@@ -295,10 +274,12 @@ namespace ThirdPersonSimulation
             m_EquipmentState.Restore(state.EquipmentState);
         }
 
-        void RequireTopSavepoint(Float32CharacterRuntimeStateSavepoint savepoint)
+        Float32CharacterRuntimeStateSavepoint RequireTopSavepoint(IFloat32AbilityExecutionSavepoint savepoint)
         {
-            if (savepoint == null || m_Savepoints.Count == 0 || !ReferenceEquals(savepoint, m_Savepoints.Peek()))
+            if (!(savepoint is Float32CharacterRuntimeStateSavepoint characterSavepoint) ||
+                m_Savepoints.Count == 0 || !ReferenceEquals(characterSavepoint, m_Savepoints.Peek()))
                 throw new InvalidOperationException("Character runtime state savepoint is stale or unbalanced.");
+            return characterSavepoint;
         }
 
         void RequireActive()

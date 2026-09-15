@@ -3,6 +3,19 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
+    internal interface IFloat32AbilityExecutionSavepoint
+    {
+        int Depth { get; }
+    }
+
+    internal interface IFloat32AbilityExecutionSavepointPort
+    {
+        IFloat32AbilityExecutionSavepoint CreateSavepoint();
+        void Restore(IFloat32AbilityExecutionSavepoint savepoint);
+        void Release(IFloat32AbilityExecutionSavepoint savepoint);
+        int SavepointDepth { get; }
+    }
+
     internal sealed class Float32AbilityExecutionInput
     {
         public Float32AbilityExecutionInput(
@@ -69,7 +82,7 @@ namespace ThirdPersonSimulation
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
         readonly Float32AbilityBodyFacts m_BodyFacts;
-        readonly IFloat32AbilityTransactionControlPort m_TransactionControl;
+        readonly IFloat32AbilityExecutionSavepointPort m_TransactionControl;
         readonly IFloat32GameplayEffectStatePort m_GameplayEffectState;
         readonly IFloat32EquipmentStatePort m_EquipmentState;
         IFloat32SkillExecutionStateAccess m_SkillExecutionStateAccess;
@@ -85,7 +98,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<SimulationIngress> ingress,
             Float32AbilityBodyFacts bodyFacts,
             IFloat32AbilityExecutionStateTransaction transaction,
-            IFloat32AbilityTransactionControlPort transactionControl,
+            IFloat32AbilityExecutionSavepointPort transactionControl,
             IFloat32InputRequestStatePort inputRequests,
             IFloat32ActionRuntimeStatePort actionState,
             IFloat32HandleAllocatorStatePort handleAllocatorState,
@@ -135,7 +148,7 @@ namespace ThirdPersonSimulation
             ? m_BodyFacts
             : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");
         internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
-        internal IFloat32AbilityTransactionControlPort TransactionControl => m_TransactionControl ??
+        internal IFloat32AbilityExecutionSavepointPort TransactionControl => m_TransactionControl ??
             throw new InvalidOperationException("Float32 Ability invocation has no transaction control service.");
         internal IFloat32InputRequestStatePort InputRequests { get; }
         internal IFloat32ActionRuntimeStatePort ActionState { get; }

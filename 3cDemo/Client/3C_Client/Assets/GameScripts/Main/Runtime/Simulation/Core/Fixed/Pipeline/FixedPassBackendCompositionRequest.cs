@@ -85,12 +85,11 @@ namespace ThirdPersonSimulation.Fixed
             if (!Backend.Identity.Equals(Descriptor.ExecutionBackend) ||
                 !CompiledPipeline.Backend.Equals(Descriptor.ExecutionBackend) ||
                 !CompiledPipeline.Identity.Equals(Descriptor.Pipeline) ||
-                !CharacterRuntime.GameplayContentHash.Equals(Descriptor.GameplayContentHash) ||
                 InitialState.WorldState.NumericProfile != Descriptor.ExecutionTarget.NumericProfile ||
                 InitialState.WorldState.SolverId != Solver.Descriptor.ImplementationId ||
                 !string.Equals(InitialState.WorldState.SolverVersion, Solver.Descriptor.Version, StringComparison.Ordinal))
             {
-                throw Failure("fixed_character_runtime_mismatch", "Fixed Character Runtime does not match the locked Session composition.");
+                throw Failure("fixed_character_runtime_mismatch", "Fixed Character Runtime does not match the locked Target, Pipeline, World or Solver composition.");
             }
             SimulationExecutionBackendTargetSupport support = Backend.RequireTarget(
                 Descriptor.NumericProfileId,

@@ -5,15 +5,15 @@ using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal sealed class CharacterSemanticActionNodeBindingEmitter : ICharacterSemanticNodeBinding
+    internal sealed class GameplayAbilitySemanticActionNodeBindingEmitter : IGameplayAbilitySemanticNodeBinding
     {
-        readonly CharacterSemanticCatalogReferenceEmitter m_Catalog;
+        readonly GameplayAbilitySemanticCatalogReferenceEmitter m_Catalog;
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
         readonly GameplayAbilitySemanticBlackboardEmitter m_Blackboard;
         readonly CharacterSimulationCompileReport m_Report;
 
-        public CharacterSemanticActionNodeBindingEmitter(
-            CharacterSemanticCatalogReferenceEmitter catalog,
+        public GameplayAbilitySemanticActionNodeBindingEmitter(
+            GameplayAbilitySemanticCatalogReferenceEmitter catalog,
             GameplayAbilityCatalogIndex catalogIndex,
             GameplayAbilitySemanticBlackboardEmitter blackboard,
             CharacterSimulationCompileReport report)

@@ -4,7 +4,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal static class CharacterSemanticBehaviorCatalogFields
+    internal static class GameplayAbilitySemanticBehaviorCatalogFields
     {
         public static IEnumerable<ProgramCatalogField> Emit(
             IGameplayBehaviorProfile profile,

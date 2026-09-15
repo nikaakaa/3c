@@ -10,7 +10,7 @@ using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal interface ICharacterSemanticNodeBinding
+    internal interface IGameplayAbilitySemanticNodeBinding
     {
         bool TryBind(
             BaseNode node,
@@ -19,15 +19,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationSourceLocation source);
     }
 
-    internal sealed class CharacterSemanticDomainBindingEmitter
+    internal sealed class GameplayAbilitySemanticDomainBindingEmitter
     {
         readonly GameplayAbilitySemanticBlackboardEmitter m_Blackboard;
-        readonly IReadOnlyList<ICharacterSemanticNodeBinding> m_Bindings;
-        readonly CharacterSemanticCatalogReferenceEmitter m_Catalog;
+        readonly IReadOnlyList<IGameplayAbilitySemanticNodeBinding> m_Bindings;
+        readonly GameplayAbilitySemanticCatalogReferenceEmitter m_Catalog;
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
         readonly CharacterSimulationCompileReport m_Report;
 
-        public CharacterSemanticDomainBindingEmitter(
+        public GameplayAbilitySemanticDomainBindingEmitter(
             GameplayAbilityCatalogIndex catalogIndex,
             GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report,
@@ -41,15 +41,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(report));
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_Report = report;
-            var catalog = new CharacterSemanticCatalogReferenceEmitter(catalogIndex, builder, report);
+            var catalog = new GameplayAbilitySemanticCatalogReferenceEmitter(catalogIndex, builder, report);
             m_Catalog = catalog;
             m_CatalogIndex = catalogIndex;
-            m_Bindings = new ICharacterSemanticNodeBinding[]
+            m_Bindings = new IGameplayAbilitySemanticNodeBinding[]
             {
-                new CharacterSemanticInputNodeBindingEmitter(catalog, catalogIndex),
-                new CharacterSemanticEquipmentNodeBindingEmitter(catalog, catalogIndex),
-                new CharacterSemanticActionNodeBindingEmitter(catalog, catalogIndex, blackboard, report),
-                new CharacterSemanticGameplayNodeBindingEmitter(catalog, catalogIndex, report)
+                new GameplayAbilitySemanticInputNodeBindingEmitter(catalog, catalogIndex),
+                new GameplayAbilitySemanticEquipmentNodeBindingEmitter(catalog, catalogIndex),
+                new GameplayAbilitySemanticActionNodeBindingEmitter(catalog, catalogIndex, blackboard, report),
+                new GameplayAbilitySemanticGameplayNodeBindingEmitter(catalog, catalogIndex, report)
             };
         }
 

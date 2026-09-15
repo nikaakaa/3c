@@ -73,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 blackboard.CompileDeclarations();
                 if (model.Declarations.Count > 0)
                     builder.RequireGameplayCapability("PipelineBlackboard");
-                var domainBindings = new CharacterSemanticDomainBindingEmitter(
+                var domainBindings = new GameplayAbilitySemanticDomainBindingEmitter(
                     catalogIndex,
                     builder,
                     report,

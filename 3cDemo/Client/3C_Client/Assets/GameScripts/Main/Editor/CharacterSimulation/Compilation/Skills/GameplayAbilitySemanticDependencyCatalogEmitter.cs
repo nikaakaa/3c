@@ -290,7 +290,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var fields = new List<ProgramCatalogField>();
             if (profile is ThirdPersonGameplay.Contracts.IGameplayBehaviorProfile behavior)
             {
-                fields.AddRange(CharacterSemanticBehaviorCatalogFields.Emit(behavior, m_Builder, source));
+                fields.AddRange(GameplayAbilitySemanticBehaviorCatalogFields.Emit(behavior, m_Builder, source));
                 if (profile is GameplayAbilityAdmissionProfile admission)
                 {
                     fields.Add(m_Builder.ConstantField(source, "TargetRequirement", admission.TargetRequirement));

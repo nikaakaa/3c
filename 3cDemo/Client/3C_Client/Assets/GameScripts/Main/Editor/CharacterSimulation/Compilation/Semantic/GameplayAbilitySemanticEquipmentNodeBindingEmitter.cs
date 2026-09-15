@@ -4,13 +4,13 @@ using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal sealed class CharacterSemanticEquipmentNodeBindingEmitter : ICharacterSemanticNodeBinding
+    internal sealed class GameplayAbilitySemanticEquipmentNodeBindingEmitter : IGameplayAbilitySemanticNodeBinding
     {
-        readonly CharacterSemanticCatalogReferenceEmitter m_Catalog;
+        readonly GameplayAbilitySemanticCatalogReferenceEmitter m_Catalog;
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
 
-        public CharacterSemanticEquipmentNodeBindingEmitter(
-            CharacterSemanticCatalogReferenceEmitter catalog,
+        public GameplayAbilitySemanticEquipmentNodeBindingEmitter(
+            GameplayAbilitySemanticCatalogReferenceEmitter catalog,
             GameplayAbilityCatalogIndex catalogIndex)
         {
             m_Catalog = catalog;

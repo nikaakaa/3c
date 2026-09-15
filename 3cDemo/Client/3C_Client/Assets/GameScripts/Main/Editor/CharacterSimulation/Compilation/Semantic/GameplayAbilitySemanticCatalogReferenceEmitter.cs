@@ -5,13 +5,13 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal sealed class CharacterSemanticCatalogReferenceEmitter
+    internal sealed class GameplayAbilitySemanticCatalogReferenceEmitter
     {
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
         readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
 
-        public CharacterSemanticCatalogReferenceEmitter(
+        public GameplayAbilitySemanticCatalogReferenceEmitter(
             GameplayAbilityCatalogIndex catalogIndex,
             GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report)

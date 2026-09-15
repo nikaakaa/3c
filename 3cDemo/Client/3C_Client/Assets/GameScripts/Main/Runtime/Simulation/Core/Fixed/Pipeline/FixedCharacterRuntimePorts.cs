@@ -190,10 +190,6 @@ namespace ThirdPersonSimulation.Fixed
         IReadOnlyList<SimulationActorBinding> Roster { get; }
         SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
-        CharacterControlRuntimeBinding GetControlRuntimeBinding(int actorIndex);
-        CharacterBodyMotionBinding GetBodyMotionBinding(int actorIndex);
-        CharacterGameplayEffectRuntimeBinding GetGameplayEffectRuntimeBinding(int actorIndex);
-        CharacterEquipmentRuntimeBinding GetEquipmentRuntimeBinding(int actorIndex);
     }
 
     public sealed class FixedCharacterRuntimePort : IFixedCharacterRuntimePort
@@ -228,17 +224,6 @@ namespace ThirdPersonSimulation.Fixed
                 ? index
                 : throw new InvalidOperationException($"Actor '{actorId}' is not part of the locked Character Runtime roster.");
 
-        public CharacterControlRuntimeBinding GetControlRuntimeBinding(int actorIndex) =>
-            Roster[actorIndex].ControlRuntimeBinding;
-
-        public CharacterBodyMotionBinding GetBodyMotionBinding(int actorIndex) =>
-            Roster[actorIndex].BodyMotionBinding;
-
-        public CharacterGameplayEffectRuntimeBinding GetGameplayEffectRuntimeBinding(int actorIndex) =>
-            Roster[actorIndex].GameplayEffectRuntimeBinding;
-
-        public CharacterEquipmentRuntimeBinding GetEquipmentRuntimeBinding(int actorIndex) =>
-            Roster[actorIndex].EquipmentRuntimeBinding;
 
     }
 

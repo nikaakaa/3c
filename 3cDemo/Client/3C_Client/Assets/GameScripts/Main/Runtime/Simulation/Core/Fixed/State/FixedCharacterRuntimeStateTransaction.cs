@@ -78,14 +78,22 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         internal IFixedSkillExecutionState BindAbility(
-            FixedGameplayAbilityExecutionInstallation installation)
+            GameplayAbilityExecutionIdentity identity,
+            GameplayAbilityExecutionLayout layout,
+            FixedGameplayAbilityExecutionData ability)
         {
             RequireActive();
-            if (installation == null)
-                throw new ArgumentNullException(nameof(installation));
-            if (!m_AbilityStates.TryGetValue(installation.Data.AbilityId, out FixedAbilityRuntimeState state))
-                throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' is not part of the Character runtime state.");
-            return new FixedSkillExecutionState(m_AbilityBindingIdentity, m_Tick, installation, state);
+            if (!identity.IsValid)
+                throw new ArgumentException("Fixed Ability execution identity is incomplete.", nameof(identity));
+            if (layout == null)
+                throw new ArgumentNullException(nameof(layout));
+            if (ability == null)
+                throw new ArgumentNullException(nameof(ability));
+            if (ability.AbilityId != identity.AbilityId)
+                throw new ArgumentException("Fixed Ability execution data does not match its identity.", nameof(ability));
+            if (!m_AbilityStates.TryGetValue(identity.AbilityId, out FixedAbilityRuntimeState state))
+                throw new InvalidOperationException($"Ability '{identity.AbilityId}' is not part of the Character runtime state.");
+            return new FixedSkillExecutionState(m_AbilityBindingIdentity, identity, layout, ability, state);
         }
 
         public CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema)
@@ -215,8 +223,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedSkillExecutionState : IFixedSkillExecutionState
     {
         readonly object m_BindingIdentity;
-        readonly SimulationTick m_Tick;
-        readonly FixedGameplayAbilityExecutionInstallation m_Installation;
+        readonly GameplayAbilityExecutionIdentity m_Identity;
         readonly GameplayAbilityExecutionLayout m_Layout;
         readonly FixedGameplayAbilityExecutionData m_Ability;
         readonly Dictionary<int, AbilityStateValue> m_StateValues;
@@ -226,17 +233,20 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedSkillExecutionState(
             object bindingIdentity,
-            SimulationTick tick,
-            FixedGameplayAbilityExecutionInstallation installation,
+            GameplayAbilityExecutionIdentity identity,
+            GameplayAbilityExecutionLayout layout,
+            FixedGameplayAbilityExecutionData ability,
             FixedAbilityRuntimeState state)
         {
             m_BindingIdentity = bindingIdentity ?? throw new ArgumentNullException(nameof(bindingIdentity));
-            if (!tick.IsValid)
-                throw new ArgumentException("Fixed Ability state transaction Tick is invalid.", nameof(tick));
-            m_Tick = tick;
-            m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
-            m_Layout = installation.Layout;
-            m_Ability = installation.Data;
+            if (!identity.IsValid)
+                throw new ArgumentException("Fixed Ability execution identity is incomplete.", nameof(identity));
+            m_Identity = identity;
+            m_Layout = layout ?? throw new ArgumentNullException(nameof(layout));
+            m_Ability = ability ?? throw new ArgumentNullException(nameof(ability));
+            if (m_Ability.AbilityId != m_Identity.AbilityId)
+                throw new ArgumentException("Fixed Ability execution data does not match its identity.", nameof(ability));
+            state = state ?? throw new ArgumentNullException(nameof(state));
             m_StateValues = new Dictionary<int, AbilityStateValue>(state.StateValues);
             m_MotionWarpStates = new Dictionary<int, FixedMotionWarpState>(state.MotionWarpStates);
             m_AbilityExecutionState = state.AbilityExecutionState.Clone();
@@ -320,7 +330,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             return new FixedAbilityRuntimeState(
-                m_Installation.Identity,
+                m_Identity,
                 m_StateValues,
                 m_AbilityExecutionState,
                 m_MotionWarpStates);

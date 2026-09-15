@@ -71,7 +71,7 @@ namespace ThirdPersonSimulation.Fixed
                     var invocation = new FixedAbilityInvocationRuntime(
                         installation,
                         actor.AbilityInstallations,
-                        roleState.BindAbility(installation),
+                        roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
                         actor.ActorId,
                         tick,

@@ -70,7 +70,7 @@ namespace ThirdPersonSimulation
                     var invocation = new Float32AbilityInvocationRuntime(
                         installation,
                         actor.AbilityInstallations,
-                        roleState.BindAbility(installation),
+                        roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
                         actor.ActorId,
                         tick,

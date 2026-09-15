@@ -438,3 +438,10 @@
 - 角色事务仍是单一 Savepoint／Commit 的编排者，但输入请求的字典复制、读取和写入已由输入状态对象负责；事务快照与恢复继续调用该对象，角色状态 codec、角色 Step 和输入请求格式不变，没有复制状态或增加兼容路径。
 - 输入状态与角色事务绑定同一生命周期，事务释放时同步关闭输入端口，避免独立端口脱离当前角色 Step 后继续被使用。本步完成的是输入状态 owner 与消费入口拆分，不宣称角色总状态聚合已完成，1.11、2.6 仍未完成。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。Center 正式 compile 的修改前与修改后阶段均因打开的 Unity Editor 占用本 worktree 被 `WorkspaceEditorInUse` 拒绝；未关闭 Editor，未运行 Unity、测试或资产生成。
+
+## 2026-09-15 角色Action运行时状态拆出
+
+- 提交 `57f8460a3`，Float32／Fixed 新增独立的角色 Action 状态对象，统一持有 Action activation request、Action instance 和 Action event sequence；角色运行时事务不再实现 `ActionRuntimeStatePort`。
+- Ability ActionStore 与角色 Control 改用专用 Action 端口，共享同一份角色动作事实；角色事务仍负责单一 Savepoint／Restore／Commit，并在快照中读出、恢复该对象，既有动作准入、替换、实例生命周期、状态 codec 和统一角色 Step 不变。
+- Action 状态与角色事务同步释放，未保留旧总事务接口或第二份状态。本步只完成共享 Action 状态 owner 拆分，角色级完整 Capture／Restore 和跨领域结果接线仍未完成，1.11、2.6 仍未完成。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。本步 Center 正式 after compile 因打开的 Unity Editor 占用本 worktree 被 `WorkspaceEditorInUse` 拒绝；未关闭 Editor，未运行 Unity、测试或资产生成。

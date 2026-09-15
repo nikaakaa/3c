@@ -35,8 +35,8 @@
 
 | 编号 | 当前证据（客户端Main相对路径） | 整改 |
 | --- | --- | --- |
-| Q16 | Runtime/Simulation/Core/Float32/Execution/Float32AbilityExecutionFrame.cs:35—59要求角色Input／Body／State并创建CharacterRuntimeStateTransaction | 技能只拥有局部执行状态和所需服务；外层角色／World事务归调用方，两个数值目标统一收口 |
-| Q17 | Runtime/Simulation/Core/Float32/Execution/Float32AbilityControlRuntime.cs构造器接收Control／Equipment绑定并new Input／GameplayEffect／Equipment实现 | 把领域装配放回实际调用方，技能执行器调用正式服务，不套完整角色Context或新建第二执行器 |
+| Q16 | Float32／Fixed `AbilityExecutionFrame` 现在接收 `IFloat32／IFixedSkillExecutionState`、独立输入、可选 `BodyFacts` 及输入／动作／句柄／事件／效果／装备 typed port；角色事务只在 `CharacterEvaluationRuntime` 外层创建，保存点也只覆盖执行所需领域状态 | Frame 已不再创建或持有 `CharacterRuntimeState`；角色／World 事务仍归调用方，非角色调用方复用同一入口和完整候选提交还未接通 |
+| Q17 | 旧 `Float32AbilityControlRuntime`／`FixedAbilityControlRuntime` 已删除；当前 `Float32／FixedAbilityExecutionServiceFactory` 按技能声明创建执行局部模块，使用调用方提供的 typed state port，角色 `CharacterControlRuntime` 在角色评估入口独立装配 | 旧的完整角色 Context 和旧 Control 类路径已退出；技能模块的正式服务装配与非角色调用方接线仍需按1.11继续收口，不把现有角色工厂当作全部完成 |
 | Q18 | Editor/CharacterSimulation/Compilation/Skills/GameplayAbilitySemanticFrontendCompiler.cs:68无条件RequireGameplayCapability("GameplayEffect") | 按可达节点声明外部能力，不使用效果的技能不要求效果服务；真正缺失必需依赖仍失败 |
 
 独立Ability codec和以GameplayAbilityDefinition为根的编译入口是已有成果；它们不证明执行层独立。D19“角色持有服务”仅适用于角色调用场景，现已明确一般合同为领域拥有服务、调用方提供。新增三个规范场景覆盖无角色需求的技能、按需效果能力和外层丢弃，不新增测试任务，不修改代码或并行实施日志。

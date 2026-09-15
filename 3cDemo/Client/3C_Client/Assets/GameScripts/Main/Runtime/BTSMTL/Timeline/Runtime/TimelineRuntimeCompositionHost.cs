@@ -141,6 +141,12 @@ namespace BTSMTL.Timeline.Runtime
             return Service.TryGetDescriptor(handle, out descriptor);
         }
 
+        public IReadOnlyList<TimelineRuntimePlaybackDescriptor> GetPlaybackDescriptors()
+        {
+            EnsureAvailable();
+            return Service.GetPlaybackDescriptors();
+        }
+
         public bool TryGetCommittedEvaluation(
             TimelineRuntimePlaybackHandle handle,
             out TimelineRuntimeCommittedEvaluation evaluation)

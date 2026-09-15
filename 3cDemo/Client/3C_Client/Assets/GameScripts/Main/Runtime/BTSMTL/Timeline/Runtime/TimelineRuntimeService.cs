@@ -389,6 +389,14 @@ namespace BTSMTL.Timeline.Runtime
             s_ActiveServices.Add(this);
         }
 
+        public IReadOnlyList<TimelineRuntimePlaybackDescriptor> GetPlaybackDescriptors()
+        {
+            var result = new List<TimelineRuntimePlaybackDescriptor>();
+            foreach (TimelineRuntimePlayback playback in m_Playbacks.Values)
+                result.Add(new TimelineRuntimePlaybackDescriptor(playback));
+            return new ReadOnlyCollection<TimelineRuntimePlaybackDescriptor>(result);
+        }
+
         public static IReadOnlyList<TimelineRuntimePlaybackDescriptor> GetActivePlaybackDescriptors(
             string contentIdentity)
         {

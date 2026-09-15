@@ -182,7 +182,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writePorts.ExecutionPlan.Write(new SimulationSessionExecutionPlan<Float32SimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                readPorts.CharacterRuntime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
                 Roster(readPorts.CharacterRuntime),
                 new[]
@@ -283,7 +282,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             new SimulationSessionExecutionPlan<Float32SimulationStep>(
                 SimulationSessionExecutionPlanStatus.Pending,
                 context.Source,
-                runtime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
                 Roster(runtime),
                 Array.Empty<SimulationPipelineStepSourceMapping>(),

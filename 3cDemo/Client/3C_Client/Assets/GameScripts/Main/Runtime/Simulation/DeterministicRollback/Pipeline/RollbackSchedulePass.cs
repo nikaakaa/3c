@@ -80,8 +80,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                     SimulationSessionExecutionPlanStatus.NoStep,
                     context.Source,
-                    characterRuntime.Runtime.GameplayContentHash,
-                    context.Pipeline.Hash,
+                        context.Pipeline.Hash,
                     roster,
                     Array.Empty<SimulationPipelineStepSourceMapping>(),
                     null,
@@ -107,7 +106,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             else if (m_State.TryGetRequiredRecovery(out _, out _))
             {
-                return BuildNoStep(context, characterRuntime.Runtime.GameplayContentHash, roster);
+                return BuildNoStep(context, roster);
             }
             else if (m_State.TryFindEarliestMismatch(out SimulationTick mismatch) &&
                 mismatch.Value <= context.CurrentCompletedTick)
@@ -115,13 +114,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 if (mismatch.Value == 1)
                 {
                     m_State.RequireSnapshotRecovery(mismatch, "canonical-mismatch-without-tick-zero-snapshot");
-                    return BuildNoStep(context, characterRuntime.Runtime.GameplayContentHash, roster);
+                    return BuildNoStep(context, roster);
                 }
                 var restoreTick = new SimulationTick(mismatch.Value - 1);
                 if (m_State.Snapshots.FloorTick == 0 || restoreTick.Value < m_State.Snapshots.FloorTick)
                 {
                     m_State.RequireSnapshotRecovery(mismatch, "canonical-mismatch-before-snapshot-history-floor");
-                    return BuildNoStep(context, characterRuntime.Runtime.GameplayContentHash, roster);
+                    return BuildNoStep(context, roster);
                 }
                 FixedSimulationSessionSnapshot snapshot = m_State.Snapshots.GetRequired(restoreTick);
                 int depth = checked((int)(context.CurrentCompletedTick - mismatch.Value + 1));
@@ -155,7 +154,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (!canAdvancePrediction && steps.Count == 0 && restore == null)
             {
                 m_State.RecordPacedNoStep();
-                return BuildNoStep(context, characterRuntime.Runtime.GameplayContentHash, roster);
+                return BuildNoStep(context, roster);
             }
             if (canAdvancePrediction || steps.Count == 0)
             {
@@ -174,7 +173,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                characterRuntime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
                 roster,
                 mappings,
@@ -188,13 +186,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static SimulationSessionExecutionPlan<FixedSimulationStep> BuildNoStep(
             SimulationPipelineScheduleContext context,
-            GameplayContentHash catalogHash,
             SimulationActorRosterDescriptor roster)
         {
             return new SimulationSessionExecutionPlan<FixedSimulationStep>(
                 SimulationSessionExecutionPlanStatus.NoStep,
                 context.Source,
-                catalogHash,
                 context.Pipeline.Hash,
                 roster,
                 Array.Empty<SimulationPipelineStepSourceMapping>(),
@@ -213,7 +209,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return new SimulationRestoreDirective(
                 $"deterministic-rollback:{restoreTick.Value}",
                 restoreTick,
-                characterRuntime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
                 FixedPassExecutionBackend.BackendId,
                 FixedPassExecutionBackend.SemanticVersion,

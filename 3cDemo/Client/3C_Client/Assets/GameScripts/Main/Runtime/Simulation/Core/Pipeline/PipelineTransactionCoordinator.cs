@@ -573,7 +573,6 @@ namespace ThirdPersonSimulation
             SimulationSessionLogicTickContext outer)
         {
             if (plan == null || !plan.OuterSource.Equals(outer.Source) ||
-                !plan.GameplayContentHash.Equals(m_Services.Descriptor.GameplayContentHash) ||
                 !plan.PipelineHash.Equals(m_Services.Plan.Identity.Hash) ||
                 !plan.RosterHash.Equals(m_Services.Descriptor.Roster.RosterHash))
             {

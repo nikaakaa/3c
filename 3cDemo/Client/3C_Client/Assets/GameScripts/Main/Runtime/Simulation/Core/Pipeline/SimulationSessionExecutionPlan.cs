@@ -283,7 +283,6 @@ namespace ThirdPersonSimulation
         public SimulationSessionExecutionPlan(
             SimulationSessionExecutionPlanStatus status,
             SimulationTickSourceIdentity outerSource,
-            GameplayContentHash gameplayContentHash,
             SimulationPipelineHash pipelineHash,
             SimulationActorRosterDescriptor roster,
             IEnumerable<SimulationPipelineStepSourceMapping> sourceMappings,
@@ -293,7 +292,7 @@ namespace ThirdPersonSimulation
         {
             if (!Enum.IsDefined(typeof(SimulationSessionExecutionPlanStatus), status) ||
                 string.IsNullOrEmpty(outerSource.ClockId) || outerSource.SourceTick == 0 ||
-                !gameplayContentHash.IsValid || !pipelineHash.IsValid || roster == null)
+                !pipelineHash.IsValid || roster == null)
             {
                 throw new ArgumentException("Session ExecutionPlan identity is incomplete.");
             }
@@ -333,7 +332,6 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Restore Tick must precede the first ExecutionPlan Step.", nameof(restore));
             Status = status;
             OuterSource = outerSource;
-            GameplayContentHash = gameplayContentHash;
             PipelineHash = pipelineHash;
             RosterHash = roster.RosterHash;
             Restore = restore;
@@ -343,7 +341,6 @@ namespace ThirdPersonSimulation
 
         public SimulationSessionExecutionPlanStatus Status { get; }
         public SimulationTickSourceIdentity OuterSource { get; }
-        public GameplayContentHash GameplayContentHash { get; }
         public SimulationPipelineHash PipelineHash { get; }
         public StableHash RosterHash { get; }
         public IReadOnlyList<SimulationPipelineStepSourceMapping> SourceMappings => m_SourceMappings;

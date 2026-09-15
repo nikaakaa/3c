@@ -601,7 +601,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     ? SimulationSessionExecutionPlanStatus.NoStep
                     : SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
-                characterRuntime.Runtime.GameplayContentHash,
                 context.Pipeline.Hash,
                 new SimulationActorRosterDescriptor(new[] { current.ActorId }),
                 mappings,

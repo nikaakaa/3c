@@ -40,7 +40,9 @@ namespace ThirdPersonSimulation
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
-                abilityData);
+                abilityData,
+                RequiresGameplayEffects,
+                RequiresEquipment);
         }
 
         public ActorId ActorId { get; }
@@ -60,15 +62,17 @@ namespace ThirdPersonSimulation
             CharacterBodyMotionBinding bodyMotion,
             CharacterGameplayEffectRuntimeBinding gameplayEffects,
             CharacterEquipmentRuntimeBinding equipment,
-            GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilities)
+            GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilities,
+            bool requiresGameplayEffects,
+            bool requiresEquipment)
         {
             var parts = new List<string>
             {
                 "float32-simulation-actor-content/1",
                 control.BindingHash.ToString(),
                 bodyMotion.BindingHash.ToString(),
-                RequiresGameplayEffects ? gameplayEffects.BindingHash.ToString() : string.Empty,
-                RequiresEquipment ? equipment.BindingHash.ToString() : string.Empty
+                requiresGameplayEffects ? gameplayEffects.BindingHash.ToString() : string.Empty,
+                requiresEquipment ? equipment.BindingHash.ToString() : string.Empty
             };
             for (int i = 0; i < abilities.Data.Count; i++)
             {

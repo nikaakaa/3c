@@ -149,11 +149,12 @@ namespace ThirdPersonSimulation
                     bodyMotion.Motion,
                     bodyMotion.Plan,
                     requiredCapabilities);
+                Float32CharacterRuntimeState candidateState = roleState.Commit();
+                roleState.Dispose();
                 return new Float32PendingActorEvaluation(
                     actor.ActorId,
                     tick,
-                    sourceState,
-                    roleState,
+                    candidateState,
                     worldRequest,
                     facts,
                     presentation,

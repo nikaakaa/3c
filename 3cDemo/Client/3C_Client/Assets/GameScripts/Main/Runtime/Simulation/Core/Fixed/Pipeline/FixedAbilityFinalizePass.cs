@@ -62,53 +62,46 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationActorBinding actor = readPorts.CharacterRuntime.Roster[i];
                 if (!evaluation.ActorId.Equals(actor.ActorId) || !worldResult.ActorId.Equals(actor.ActorId))
                     throw new InvalidOperationException("Ability Finalize Pass Actor order does not match the locked roster.");
-                FixedCharacterRuntimeStateTransaction transaction = evaluation.ClaimForFinalize();
-                try
+                CharacterWorldSolveRequest expected = evaluation.WorldRequest;
+                if (worldResult.NumericProfile != readPorts.CharacterRuntime.Runtime.NumericProfile ||
+                    !worldResult.RequestId.Equals(expected.RequestId) ||
+                    worldResult.Tick != expected.Tick ||
+                    !worldResult.SolverId.Equals(world.SolverId) ||
+                    worldResult.FinalBody.ActorId != evaluation.ActorId)
                 {
-                    CharacterWorldSolveRequest expected = evaluation.WorldRequest;
-                    if (worldResult.NumericProfile != readPorts.CharacterRuntime.Runtime.NumericProfile ||
-                        !worldResult.RequestId.Equals(expected.RequestId) ||
-                        worldResult.Tick != expected.Tick ||
-                        !worldResult.SolverId.Equals(world.SolverId) ||
-                        worldResult.FinalBody.ActorId != evaluation.ActorId)
-                    {
-                        throw new InvalidOperationException(
-                            $"World result '{worldResult.RequestId}' does not match pending request '{expected.RequestId}'.");
-                    }
-                    var bodySample = new CharacterBodySample(
-                        evaluation.ActorId,
-                        evaluation.Tick,
-                        expected.BeforeBody,
-                        worldResult.FinalBody,
-                        worldResult.AppliedDisplacement,
-                        worldResult.AppliedYawDegrees);
-                    FixedCharacterRuntimeState finalState = transaction.Commit();
-                    var result = new SimulationActorTickResult(
-                        evaluation.ActorId,
-                        evaluation.Tick,
-                        finalState,
-                        FixedCharacterRuntimeStateCodec.ComputeHash(finalState),
-                        bodySample,
-                        expected.Motion,
-                        evaluation.GameplayFacts,
-                        evaluation.PresentationCommands,
-                        evaluation.TraceRecords);
-                    FixedPipelineDiagnostics.PublishOperations(
-                        readPorts.Diagnostics.Sink,
-                        result.TraceRecords,
-                        0);
-                    writePorts.Results.Append(
-                        new SimulationPipelineAppendEntryIdentity(
-                            actor.ActorId,
-                            context.Tick,
-                            1,
-                            step.Source),
-                        new FixedFinalizedActorResult(result));
+                    throw new InvalidOperationException(
+                        $"World result '{worldResult.RequestId}' does not match pending request '{expected.RequestId}'.");
                 }
-                finally
-                {
-                    transaction.Dispose();
-                }
+                var bodySample = new CharacterBodySample(
+                    evaluation.ActorId,
+                    evaluation.Tick,
+                    expected.BeforeBody,
+                    worldResult.FinalBody,
+                    worldResult.AppliedDisplacement,
+                    worldResult.AppliedYawDegrees);
+                FixedCharacterRuntimeState finalState = evaluation.CandidateState;
+                var result = new SimulationActorTickResult(
+                    evaluation.ActorId,
+                    evaluation.Tick,
+                    finalState,
+                    FixedCharacterRuntimeStateCodec.ComputeHash(finalState),
+                    bodySample,
+                    expected.Motion,
+                    evaluation.GameplayFacts,
+                    evaluation.PresentationCommands,
+                    evaluation.TraceRecords);
+                FixedPipelineDiagnostics.PublishOperations(
+                    readPorts.Diagnostics.Sink,
+                    result.TraceRecords,
+                    0);
+                writePorts.Results.Append(
+                    new SimulationPipelineAppendEntryIdentity(
+                        actor.ActorId,
+                        context.Tick,
+                        1,
+                        step.Source),
+                    new FixedFinalizedActorResult(result));
+                evaluation.Consume();
             }
         }
     }

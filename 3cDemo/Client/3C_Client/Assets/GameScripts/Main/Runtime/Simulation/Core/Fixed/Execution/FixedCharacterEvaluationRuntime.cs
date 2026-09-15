@@ -150,11 +150,12 @@ namespace ThirdPersonSimulation.Fixed
                     bodyMotion.Motion,
                     bodyMotion.Plan,
                     requiredCapabilities);
+                FixedCharacterRuntimeState candidateState = roleState.Commit();
+                roleState.Dispose();
                 return new FixedPendingActorEvaluation(
                     actor.ActorId,
                     tick,
-                    sourceState,
-                    roleState,
+                    candidateState,
                     worldRequest,
                     facts,
                     presentation,

@@ -808,3 +808,9 @@
 - 提交 `e21b48be1`，Float32／Fixed `CharacterRuntimeState.CreateInitial` 从完整 Ability 安装集合收窄为只接收 `GameplayAbilityExecutionIdentity` 列表；角色运行端口在装配边界提取身份后再创建状态分区。
 - 状态实现不再依赖安装对象类型，初始 Ability 分区排序、身份校验、后续事务提交和恢复链路保持不变；未引入第二份安装数据或兼容入口。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 收窄未消费结果的丢弃语义
+
+- 提交 `6e059cb7b`，Float32／Fixed 评估结果、结果批次、Pass 清理和 Pipeline transaction 的 `AbortUnconsumed` 统一改为 `DiscardUnconsumed`。
+- 失败清理仍只标记并丢弃未消费候选，不回滚或中止角色状态事务；命名与 1.11 的技能候选丢弃边界一致，没有改变外层提交和恢复行为。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

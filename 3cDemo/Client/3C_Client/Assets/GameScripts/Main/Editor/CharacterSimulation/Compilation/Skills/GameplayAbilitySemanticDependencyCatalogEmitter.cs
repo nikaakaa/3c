@@ -337,7 +337,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (!effect || !effect.EffectId.IsValid)
                 return;
-            SemanticDataDocument definition = CharacterSemanticGameplayEffectCatalogEmitter.EncodeDefinition(
+            SemanticDataDocument definition = EncodeGameplayEffectDefinition(
                 effect,
                 source,
                 m_Report);
@@ -441,6 +441,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 revision,
                 fields,
                 source);
+        }
+
+        static SemanticDataDocument EncodeGameplayEffectDefinition(
+            GameplayEffectDefinition effect,
+            CharacterSimulationSourceLocation source,
+            CharacterSimulationCompileReport report)
+        {
+            try
+            {
+                return GameplayEffectRuntimeDefinitionCodec.EncodeDefinition(effect, source.Identity);
+            }
+            catch (Exception exception)
+            {
+                report.Error("gameplay_effect_compile_failed", source.Identity, exception.Message);
+                return SemanticDataDocument.Empty;
+            }
         }
 
         static CharacterSimulationSourceLocation Source(

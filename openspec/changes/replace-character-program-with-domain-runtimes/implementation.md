@@ -683,3 +683,9 @@
 - 提交 `614a2d620`，Float32／Fixed Ability 图内部的操作控制器统一命名为 `AbilityOperationControlRuntime`，同步接口、实现文件、Unity 元数据和全部调用方。
 - `CharacterControlRuntime` 继续表示角色输入与运动控制；本步只消除两个领域的命名混淆，不改变操作图状态机、技能执行顺序或状态格式。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色通过Ability动作端口提交控制命令
+
+- 提交 `814bfe327`，Float32／Fixed 角色 Control 改用 Ability 提供的 `I*AbilityActionControlPort`，只依赖 `ActivateFromControl` 与 `StopFromControl`；角色评估不再向 Control 暴露具体 `ActionRuntime` 字典。
+- `ActionRuntime` 继续拥有具体动作执行、准入和状态实现，Invocation 只向角色发布这两个正式命令能力；输入、动作状态和执行顺序保持不变，没有新增旁路或第二套动作执行器。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

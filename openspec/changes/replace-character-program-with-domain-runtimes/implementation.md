@@ -1059,3 +1059,8 @@
 
 - 提交 `ced2fa4f8`，将只服务 Ability artifact、技能编译与 DotRecast Ability manifest 的 `SimulationProgramRootDescriptor`、`SimulationProgramRootValidation` 和 `SimulationProgramRootDescriptorCodec` 重命名为 `GameplayAbilityRootDescriptor`、`GameplayAbilityRootValidation` 与 `GameplayAbilityRootDescriptorCodec`。
 - 保留 Timeline 共用的 `SimulationProgramRootKind`；本步只调整类型名与引用，不改变 root 序列化布局、artifact 版本或 manifest schema。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除无消费者Projection写回入口
+
+- 提交 `120f02e3b`，删除 `CharacterPresentationProjectionAsset.SetCompiledProjection`；全仓没有任何调用方，旧 Projection 总编译入口已不存在，继续保留现有资产读取以及 Pose、Camera、Rig 和动作数据。
+- 本步不删除仍被运行时和作者工具消费的 Projection 数据，也不建立替代发布器；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

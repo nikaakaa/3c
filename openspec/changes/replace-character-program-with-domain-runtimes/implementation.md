@@ -926,3 +926,8 @@
 
 - 提交 `d7f8d3b54`，Float32／Fixed Ability 安装对象、安装集合和 SimulationActorBinding 删除没有消费者的 `RequiresGameplayEffects` 转发；角色内容哈希改从实际 `GameplayEffectCatalog` 是否存在判断，保留 `RequiresEquipment` 的现有状态布局和执行服务用途。
 - 不改变能力声明、Gameplay Effect 绑定校验、Equipment 绑定或内容哈希结果，只移除角色层重复字段；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除执行上下文的Effect需求标记
+
+- 提交 `7667c0457`，Float32／Fixed Ability 执行上下文删除没有消费者的 `RequiresGameplayEffects` 属性；GameplayEffect 能力改为构造阶段局部校验，执行服务继续接收它需要的绑定信息。
+- `RequiresEquipment` 继续保留给 Equipment 服务工厂和状态布局使用，不改变能力声明、Gameplay Effect 绑定校验或执行目录；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成。

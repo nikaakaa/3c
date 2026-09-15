@@ -102,50 +102,6 @@ namespace BTSMTL.Timeline
         void Add(TimelineTraceOutput output);
     }
 
-    public readonly struct TimelinePlaybackObservation
-    {
-        public TimelinePlaybackObservation(
-            SimulationProgramRootKind rootKind,
-            string rootIdentity,
-            string entryIdentity,
-            string contentIdentity,
-            string sourceRevision,
-            string programHash,
-            string layoutHash,
-            TimelineRuntimePlaybackState state,
-            TimelineExecutionIdentity executionIdentity,
-            IEnumerable<string> bindingIds)
-        {
-            RootKind = rootKind;
-            RootIdentity = rootIdentity ?? string.Empty;
-            EntryIdentity = entryIdentity ?? string.Empty;
-            ContentIdentity = contentIdentity ?? string.Empty;
-            SourceRevision = sourceRevision ?? string.Empty;
-            ProgramHash = programHash ?? string.Empty;
-            LayoutHash = layoutHash ?? string.Empty;
-            State = state;
-            ExecutionIdentity = executionIdentity;
-            BindingIds = new ReadOnlyCollection<string>(
-                (bindingIds ?? Array.Empty<string>()).Select(value => value ?? string.Empty).ToList());
-        }
-
-        public SimulationProgramRootKind RootKind { get; }
-        public string RootIdentity { get; }
-        public string EntryIdentity { get; }
-        public string ContentIdentity { get; }
-        public string SourceRevision { get; }
-        public string ProgramHash { get; }
-        public string LayoutHash { get; }
-        public TimelineRuntimePlaybackState State { get; }
-        public TimelineExecutionIdentity ExecutionIdentity { get; }
-        public IReadOnlyList<string> BindingIds { get; }
-        public bool IsValid => Enum.IsDefined(typeof(SimulationProgramRootKind), RootKind) &&
-                               !string.IsNullOrEmpty(RootIdentity) &&
-                               !string.IsNullOrEmpty(EntryIdentity) &&
-                               !string.IsNullOrEmpty(ContentIdentity);
-        public bool HasExecutionIdentity => ExecutionIdentity.IsValid;
-    }
-
     public readonly struct TimelineBindingValue
     {
         TimelineBindingValue(

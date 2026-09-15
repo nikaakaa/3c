@@ -979,3 +979,8 @@
 
 - 提交 `75380064c`，Float32 Ability 执行入口新增显式领域服务工厂，Gameplay Effect 与 Equipment 运行模块由角色评估入口注入，Ability Execution Service Factory 不再直接创建这两个领域模块。
 - 保留技能局部状态端口、输入／动作／句柄／事件顺序和外层角色事务；本步只改变服务创建归属，不改变执行结果或状态格式。`ThirdPersonSimulation.Float32.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 移出Fixed领域服务创建
+
+- 提交 `485039b64`，Fixed Ability 执行入口按 Float32 同一边界接入显式领域服务工厂，Gameplay Effect 与 Equipment 运行模块由角色评估入口注入，Ability Execution Service Factory 不再直接创建这两个领域模块。
+- 保留技能局部状态端口、输入／动作／句柄／事件顺序和外层角色事务；本步只改变服务创建归属，不改变执行结果或状态格式。`ThirdPersonSimulation.Fixed.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

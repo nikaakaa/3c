@@ -1144,3 +1144,8 @@
 
 - 提交 `549f83ced`，删除仓库内没有调用方的 `CharacterControlMotionCompilationDiscovery` 及其 Unity `.meta`；该入口依赖旧角色级 Graph/Timeline 发现链，已不属于当前 Control 运行时装配。
 - 本步不删除仍被 Ability／Timeline 编译消费的共享时间记录和黑板声明，只移除孤立的角色级动作发现路径。
+
+## 2026-09-16 拆出Ability与Timeline编译合同
+
+- 提交 `4d85acb76`，删除旧 `CharacterAuthoringCompilationModel`、`CharacterAuthoringDiscovery`、GraphSignature 及其混合源文件；将仍被使用的 Timeline 语义记录和 Ability 黑板合同迁入独立文件。
+- Ability 黑板声明改用 `GameplayAbilityAuthoringBlackboardDeclaration` 与对应快照命名；保留 Timeline 记录内容、黑板默认值／作用域／输入绑定和语义产物结构，不新增角色级编译兼容链。

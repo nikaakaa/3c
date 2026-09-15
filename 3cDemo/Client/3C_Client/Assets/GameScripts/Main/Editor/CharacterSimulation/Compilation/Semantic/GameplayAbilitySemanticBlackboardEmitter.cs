@@ -12,7 +12,7 @@ using BlackboardDeclaration = ThirdPersonCharacter.Pipeline.Simulation.Editor.Ga
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal sealed class CharacterSemanticBlackboardEmitter : IBtsmtlSkillBlackboardCompilation
+    internal sealed class GameplayAbilitySemanticBlackboardEmitter : IBtsmtlSkillBlackboardCompilation
     {
         readonly IReadOnlyDictionary<string, BlackboardDeclaration> m_Declarations;
         readonly GameplayAbilitySemanticBuilder m_Builder;
@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly Dictionary<string, ScopeRecord> m_Scopes = new Dictionary<string, ScopeRecord>(StringComparer.Ordinal);
         readonly List<GraphRoute> m_GraphStack = new List<GraphRoute>();
 
-        public CharacterSemanticBlackboardEmitter(
+        public GameplayAbilitySemanticBlackboardEmitter(
             IReadOnlyDictionary<string, BlackboardDeclaration> declarations,
             GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report)

@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     internal sealed class CharacterSemanticDomainBindingEmitter
     {
-        readonly CharacterSemanticBlackboardEmitter m_Blackboard;
+        readonly GameplayAbilitySemanticBlackboardEmitter m_Blackboard;
         readonly IReadOnlyList<ICharacterSemanticNodeBinding> m_Bindings;
         readonly CharacterSemanticCatalogReferenceEmitter m_Catalog;
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             GameplayAbilityCatalogIndex catalogIndex,
             GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report,
-            CharacterSemanticBlackboardEmitter blackboard)
+            GameplayAbilitySemanticBlackboardEmitter blackboard)
         {
             if (catalogIndex == null)
                 throw new ArgumentNullException(nameof(catalogIndex));

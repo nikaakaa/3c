@@ -69,7 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 var catalogIndex = new GameplayAbilityCatalogIndex();
                 var catalogEmitter = new GameplayAbilitySemanticDependencyCatalogEmitter(builder, report, catalogIndex);
                 GameplayAbilityProviderOwnerSet providers = catalogEmitter.Emit(model);
-                var blackboard = new CharacterSemanticBlackboardEmitter(model.Declarations, builder, report);
+                var blackboard = new GameplayAbilitySemanticBlackboardEmitter(model.Declarations, builder, report);
                 blackboard.CompileDeclarations();
                 if (model.Declarations.Count > 0)
                     builder.RequireGameplayCapability("PipelineBlackboard");

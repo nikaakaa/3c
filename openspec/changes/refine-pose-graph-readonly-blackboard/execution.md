@@ -913,3 +913,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `CharacterPoseNativeRoleRuntime.CreateFrameCoordinator` 暴露该唯一帧驱动给角色装配层，提交为 `242b74f3c`；仍未修改共享 Host，也未把入口存在写成 Host 已接线。
 - 新增 `CharacterPoseNativeStateMachineSource` 与注册入口；StateMachine 现在按状态创建/复用原生子图实例，汇总活跃子图 Source demand，直接消费同帧 Fact/EventGraph typed 输入选择 Transition，并在状态过渡、子图 Evaluate/Validate/Commit/Discard 中保持实例与完成身份；提交为 `895a9fc9b`。本步未恢复旧 Program/Image，也未修改共享 Host、图资产或验证链。
 - 新增 `CharacterPoseNativeValueHandlerRegistration`；从正式 Profile 资源绑定取得 Layered Bone Mask 与 Inertialization Policy，按当前原生图实例分配值节点 buffer，并集中注册 Pure Value、Inertialization 与 StateMachine handler，避免把 Foot 或其它角色数据写死在节点工厂；提交为 `c3b00aa3a`。Source/Constraint 的具体 owner 仍由下一层装配提供。
+- 新增 `CharacterPoseNativeSourceHandlerComposition`，把 Clip、BlendSpace、Selected、BlendStack、AnimationSlot 五类原生 Source handler 统一绑定到同一个 `CharacterPoseSourceModule`、Source lease 和显式 Player/采样/buffer factory；提交为 `9552167ba`。本步只集中真实 Source 注册，不创建第二套采样实现。

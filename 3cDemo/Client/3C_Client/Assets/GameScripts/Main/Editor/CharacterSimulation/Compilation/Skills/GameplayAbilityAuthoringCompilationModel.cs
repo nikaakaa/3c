@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public sealed class GameplayAbilityAuthoringCompilationModel
     {
-        readonly ReadOnlyDictionary<string, CharacterAuthoringBlackboardDeclaration> m_Declarations;
+        readonly ReadOnlyDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> m_Declarations;
 
         internal GameplayAbilityAuthoringCompilationModel(
             GameplayAbilityDefinition definition,
@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramId programId,
             ProgramRevision sourceRevision,
             BtsmtlSkillGraphOccurrence entryGraph,
-            IDictionary<string, CharacterAuthoringBlackboardDeclaration> declarations,
+            IDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> declarations,
             TimelineSemanticEmitterRegistry timelineEmitters)
         {
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
@@ -36,8 +36,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramId = programId;
             SourceRevision = sourceRevision;
             EntryGraph = entryGraph ?? throw new ArgumentNullException(nameof(entryGraph));
-            m_Declarations = new ReadOnlyDictionary<string, CharacterAuthoringBlackboardDeclaration>(
-                new SortedDictionary<string, CharacterAuthoringBlackboardDeclaration>(
+            m_Declarations = new ReadOnlyDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration>(
+                new SortedDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration>(
                     declarations ?? throw new ArgumentNullException(nameof(declarations)),
                     StringComparer.Ordinal));
             TimelineEmitters = timelineEmitters ?? throw new ArgumentNullException(nameof(timelineEmitters));
@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public int TickRate => GameplayTickSettings.DefaultLocalLogicTickRate;
         public string EntryIdentity => $"ability:{AbilityId.Value}";
         public BtsmtlSkillGraphOccurrence EntryGraph { get; }
-        public IReadOnlyDictionary<string, CharacterAuthoringBlackboardDeclaration> Declarations => m_Declarations;
+        public IReadOnlyDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> Declarations => m_Declarations;
         public TimelineSemanticEmitterRegistry TimelineEmitters { get; }
     }
 
@@ -115,18 +115,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     report);
                 if (!ValidateSubgraphDependencies(definition, entry, report))
                     return null;
-                var declarations = new Dictionary<string, CharacterAuthoringBlackboardDeclaration>(StringComparer.Ordinal);
+                var declarations = new Dictionary<string, GameplayAbilityAuthoringBlackboardDeclaration>(StringComparer.Ordinal);
                 foreach (BtsmtlSkillGraphOccurrence occurrence in entry.EnumerateOccurrences())
                     foreach (BtsmtlSkillBlackboardDeclaration declarationRecord in
                              ((IBtsmtlSkillFlowGraph)occurrence.Graph).BlackboardDeclarations)
                     {
-                        var declaration = new CharacterAuthoringBlackboardDeclaration(
+                        var declaration = new GameplayAbilityAuthoringBlackboardDeclaration(
                             occurrence.Graph,
                             declarationRecord,
                             occurrence.Route,
                             occurrence.ContentHash);
                         string identity = DeclarationIdentity(occurrence.GraphId, declarationRecord.VariableId);
-                        if (declarations.TryGetValue(identity, out CharacterAuthoringBlackboardDeclaration existing))
+                        if (declarations.TryGetValue(identity, out GameplayAbilityAuthoringBlackboardDeclaration existing))
                         {
                             if (!ReferenceEquals(existing.AuthoringDeclaration, declaration.AuthoringDeclaration))
                                 report.DiscoveryError("ability_blackboard_duplicate", occurrence.Route, $"Ability黑板声明'{identity}'指向不同变量。");

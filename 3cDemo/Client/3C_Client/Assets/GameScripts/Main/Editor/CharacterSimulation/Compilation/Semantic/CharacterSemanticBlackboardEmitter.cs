@@ -8,7 +8,7 @@ using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEngine;
-using BlackboardDeclaration = ThirdPersonCharacter.Pipeline.Simulation.Editor.CharacterAuthoringBlackboardDeclaration;
+using BlackboardDeclaration = ThirdPersonCharacter.Pipeline.Simulation.Editor.GameplayAbilityAuthoringBlackboardDeclaration;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             foreach (BlackboardDeclaration item in m_Declarations.Values)
             {
-                CharacterBlackboardDeclarationSnapshot declaration = item.Declaration;
+                GameplayAbilityBlackboardDeclarationSnapshot declaration = item.Declaration;
                 CharacterSimulationSourceLocation source = DeclarationSource(item, item.Route);
                 string identity = DeclarationIdentity(item.GraphId, declaration.DeclarationId);
                 var fields = new List<ProgramCatalogField>

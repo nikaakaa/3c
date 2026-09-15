@@ -33,6 +33,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             out CharacterPoseNativeNodeObservation observation) =>
             m_Role.TryObserve(nodeId, portId, out observation);
 
+        internal bool TryObserveFinalPose(out ComposedAnimationPoseFrame frame) =>
+            m_Role.TryGetCommittedPose(out frame);
+
         internal void Stop()
         {
             m_Frame.Stop();

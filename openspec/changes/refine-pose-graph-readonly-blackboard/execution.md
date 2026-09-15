@@ -965,3 +965,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - CharacterPoseNativeRoleSession 新增统一 Stop，优先通过 FrameCoordinator 关闭当前帧，再停止原生 Role；这样调用方不会绕过 coordinator 后留下已失效但仍标记打开的 frame。
 - 该入口配合已有的 Reset、TryObserve 和 Dispose，成为共享 Host 使用的统一 Stop/Dispose 生命周期消费面；Pose 侧继续不代装 Host 服务。
 - 本步只改 Pose 角色入口生命周期和 execution 记录；未运行 Unity、Build、Play 或资源刷新，也未提交 LFS。
+
+## 2026-09-15 r3 暴露已提交 Final Pose Watch
+
+- CharacterPoseNativeRoleSession 新增 TryObserveFinalPose，只转发 Final Publication 中当前已 committed 的 ComposedAnimationPoseFrame；Pose 姿态、参数、贡献、Foot 特征和租约信息都来自同一帧，不暴露候选求值，也不重新求值。
+- 该入口与节点 TryObserve 分层：节点观察核对 Port/Instance/Completion，Final Watch 只在 Publication 存在有效 committed frame 时返回 true；Reset/Replace/Stop 后旧帧先失效，不会继续被读取。
+- 本步只补 Pose 观察消费面；未改共享 Host、Source/Constraint 装配、旧 Program 消费者，也未运行 Unity、Build、Play 或资源刷新。

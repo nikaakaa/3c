@@ -17,7 +17,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString("server-authoritative-network-checkpoint-layout");
             writer.WriteInt32(SchemaVersion);
             writer.WriteString(Float32CharacterRuntimeStateCodec.CodecIdentity);
-            writer.WriteString(characterRuntime.GameplayContentHash.ToString());
             writer.WriteString(characterRuntime.NumericProfile.Id.Value);
             writer.WriteInt32(characterRuntime.NumericProfile.AbiVersion.Value);
             writer.WriteString(characterRuntime.OperationSetVersion.Value);

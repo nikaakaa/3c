@@ -18,8 +18,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             m_CharacterRuntime = characterRuntime ?? throw new ArgumentNullException(nameof(characterRuntime));
             m_Compatibility = compatibility ?? throw new ArgumentNullException(nameof(compatibility));
             m_AuthorityWorld = authorityWorld ?? throw new ArgumentNullException(nameof(authorityWorld));
-            if (!m_CharacterRuntime.GameplayContentHash.Equals(m_Compatibility.GameplayContentHash) ||
-                !m_CharacterRuntime.OperationSetVersion.Equals(m_Compatibility.OperationSetVersion) ||
+            if (!m_CharacterRuntime.OperationSetVersion.Equals(m_Compatibility.OperationSetVersion) ||
                 m_CharacterRuntime.TickRate != m_Compatibility.TickRate)
             {
                 throw new InvalidOperationException("Prediction state Character Runtime does not match the locked ServerAuthoritative compatibility identity.");

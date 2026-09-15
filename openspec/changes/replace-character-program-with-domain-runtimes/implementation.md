@@ -357,7 +357,7 @@
 
 - 提交 `ea53b69de`，修正 Float32 独立 Ability artifact 写入字段顺序，使其与 Fixed 产物和当前 codec 合同一致；Float32 portable 编译为 0 warning、0 error。
 - 提交 `f38cf726d`，Float32／Fixed Ability Invocation 不再因未提供 Body Facts 就拒绝创建；能力真正读取位置、速度、朝向、接地等角色事实时才通过按需服务明确失败，不用默认零值伪造事实。Float32／Fixed portable 编译均为 0 warning、0 error。
-- 当前仍未完成 1.11：Pending 角色结果仍携带外层角色事务和 WorldSolve 请求，InputRequests 尚未成为独立输入状态聚合；Timeline 的真实播放结果、Pose 的真实采样结果和统一角色 Step 的跨领域提交仍待接线。未运行 Unity、测试或资产生成。
+- 当前仍未完成 1.11：Pending 角色结果仍携带外层角色事务和 WorldSolve 请求；InputRequests 已从 Ability 总端口拆为独立共享消费入口，但底层仍由角色事务持有。Timeline 的真实播放结果、Pose 的真实采样结果和统一角色 Step 的跨领域提交仍待接线。未运行 Unity、测试或资产生成。
 
 ## 2026-09-15 Ability输入请求端口独立化
 
@@ -406,3 +406,9 @@
 - 提交 `d20ea70a2`，新增 Float32／Fixed `ControlRuntimeStatePort`；Character Control Runtime 不再接收具体 `CharacterRuntimeStateTransaction`，只通过端口绑定 Control 状态事务。
 - Control 状态的编码、保存点恢复和角色事务最终提交路径不变；本步只移除 Control 对角色总事务实现类型的直接依赖，不创建第二份 Control 状态。
 - 未重新编译：仍受前述 Unity 生成 `.csproj` 缺少现有 Ability Layout 源文件的源索引阻断；未运行 Unity、测试或资产生成。本步推进 D22 的 Control 状态边界，但不将 1.11 标记为完成。
+
+## 2026-09-15 Ability下Timeline保留态删除
+
+- 提交 `e106d1310`、`d5d9e0bc7`，删除 Float32／Fixed Ability 状态、Ability 事务和角色状态 codec 中没有运行时消费者的 Timeline retained action context；同步删除 Ability execution layout 的 Timeline retention 索引，不再把 Timeline 私有播放状态挂在技能分区下。
+- Float32／Fixed 角色状态 codec 身份与 hash identity 升为 `/3`，旧状态载荷直接拒绝；MotionWarp 状态仍保留在技能执行状态分区，因为 Float32／Fixed Motion Runtime 当前确实读写它。Control 绑定端口的接口实现同时修正为公开成员，消除上一笔拆端口留下的接口实现错误。
+- Float32／Fixed portable 编译均按项目规则执行并清理 .NET Host：Float32 28 个错误、Fixed 24 个错误，均为 Unity 生成 `.csproj` 漏掉现有 Ability Layout 源文件导致的缺失类型，0 warning；此前的 `BindControl` 接口实现错误已不再出现。未运行 Unity、测试或资产生成。本步推进 D22 的 Timeline 状态归属边界，但不将 1.11 或 2.6 标记为完成。

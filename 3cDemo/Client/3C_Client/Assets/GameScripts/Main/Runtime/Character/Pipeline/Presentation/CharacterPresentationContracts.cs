@@ -290,62 +290,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 
-    public readonly struct CharacterPresentationRuntimeDiagnosticsSnapshot
-    {
-        public CharacterPresentationRuntimeDiagnosticsSnapshot(
-            ulong bodyBranchReplacementCount,
-            ulong animationBranchReplacementCount,
-            float followerPositionCorrectionMeters,
-            float followerYawCorrectionDegrees,
-            CharacterPosePlanStageSnapshot posePlanStages,
-            bool hasAnimation,
-            AnimationPresentationRuntimeSnapshot animation)
-        {
-            BodyBranchReplacementCount = bodyBranchReplacementCount;
-            AnimationBranchReplacementCount = animationBranchReplacementCount;
-            FollowerPositionCorrectionMeters = followerPositionCorrectionMeters;
-            FollowerYawCorrectionDegrees = followerYawCorrectionDegrees;
-            PosePlanStages = posePlanStages;
-            HasAnimation = hasAnimation;
-            Animation = animation;
-        }
-
-        public ulong BodyBranchReplacementCount { get; }
-        public ulong AnimationBranchReplacementCount { get; }
-        public float FollowerPositionCorrectionMeters { get; }
-        public float FollowerYawCorrectionDegrees { get; }
-        public CharacterPosePlanStageSnapshot PosePlanStages { get; }
-        public bool HasAnimation { get; }
-        public AnimationPresentationRuntimeSnapshot Animation { get; }
-    }
-
-    public interface ICharacterPresentationRuntime : IDisposable
-    {
-        void CaptureBodyInterval(CharacterPresentationBodyInterval interval);
-        void CaptureBodyTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals);
-        void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections);
-        void CaptureTrajectoryIntent(CharacterPresentationTrajectoryIntent intent);
-        bool AcceptsTrajectoryIntent { get; }
-        ulong BodyResetSequence { get; }
-        void Publish(CharacterPresentationCommand command);
-        void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement);
-        void Retire(CharacterPresentationCommand command);
-        CharacterPresentationRuntimeDiagnosticsSnapshot CaptureDiagnostics();
-        void Reset();
-    }
-
-    public interface ICharacterPresentationCheckpointRuntime
-    {
-        bool SupportsCheckpointCapture { get; }
-        bool SupportsCheckpointRestore { get; }
-        bool TryCaptureCheckpoint(
-            SimulationSessionCheckpoint checkpoint,
-            out string error);
-        bool TryRestoreCheckpoint(
-            SimulationSessionCheckpoint checkpoint,
-            out string error);
-    }
-
     public readonly struct CharacterPresentationEventHeader
     {
         public CharacterPresentationEventHeader(

@@ -719,3 +719,9 @@
 - 提交 `e53c6b093`，Float32／Fixed Invocation 对角色只发布 `AbilityId`，角色评估不再读取 `invocation.Installation.Data.AbilityId`。
 - 安装对象仍只参与 Ability Invocation 的内部执行组装；动作归属与动作窗口筛选使用同一个技能身份事实，未改变执行顺序或运行结果。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除执行帧安装死出口
+
+- 提交 `0aa13c9c7`，删除 Float32／Fixed `AbilityExecutionFrame.Installation`；该属性只有构造赋值，没有读取方。
+- 执行帧继续按实际消费者持有 `Data`、`Layout` 与 `Services`，Invocation 内部组装仍使用安装对象，未改变技能执行行为或数据格式。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

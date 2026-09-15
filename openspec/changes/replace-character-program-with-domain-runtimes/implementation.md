@@ -394,3 +394,9 @@
 - 提交 `e1c43e383`，从 Float32／Fixed `AbilityDomainStatePort` 移除 Equipment 状态读写，新增专用 `EquipmentStatePort`；Equipment Runtime 的装备槽、装备本地状态和变更写入只通过该端口完成。
 - 装备状态仍由同一个角色状态事务保存、保存点恢复和最终提交；装备运行时使用的保存点与诊断仍走事务控制入口，不复制状态、不增加兼容端口。
 - Float32／Fixed portable 编译均尝试执行并复现 Unity 生成 `.csproj` 缺少现有 `GameplayAbilityExecutionLayout.cs` 等源文件的既有索引阻断（Float32 29 个错误、Fixed 25 个错误，均为缺失类型）；两次均为 0 warning，并已清理 .NET Host。未运行 Unity、测试或资产生成。本步推进 D22 的 Equipment 边界，但不将 1.11 标记为完成。
+
+## 2026-09-15 Ability事务控制端口收口
+
+- 提交 `9325c2ecc`，删除混合的 Float32／Fixed `AbilityDomainStatePort`，改为只包含保存点创建、恢复、释放和诊断的 `AbilityTransactionControlPort`；Effect Control Port、Effect Target 与 Equipment Mutation Scope 改用该专用入口。
+- 角色身份字段和无消费者的角色事务 `Abort` 接口一并删除；角色状态仍由原有事务实例统一保存、回滚、最终提交或 Dispose，不建立第二条事务链。
+- 未重新编译：当前 Float32／Fixed 生成 `.csproj` 仍缺少现有 `GameplayAbilityExecutionLayout.cs` 等源文件，前一步已复现同一源索引阻断并清理 .NET Host；未运行 Unity、测试或资产生成。本步完成 D22 的 Ability 事务控制入口收口，但不将 1.11 标记为完成。

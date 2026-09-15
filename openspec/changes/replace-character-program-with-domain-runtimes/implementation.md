@@ -485,3 +485,9 @@
 - 提交 `2a9ecd815`，Float32／Fixed Ability 状态事务改为自己持有 Tick 和不透明绑定身份，不再保存或回指具体 `CharacterRuntimeStateTransaction`；Ability 执行帧继续只依赖局部状态接口。
 - 角色聚合器仍唯一负责创建 Ability 状态事务、校验其绑定归属和接收快照，保留跨角色误接收拒绝，不复制状态、不创建第二条提交路径。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；本步推进 D22 的 Ability 局部状态边界，但 1.11 的完整外部 typed 服务执行入口仍未完成。
+
+## 2026-09-16 角色评估结果管线命名统一
+
+- 提交 `37f60185f`，Float32／Fixed Evaluate 到 Finalize 之间的中间产品从 `PendingActorEvaluation` 统一为 `CharacterEvaluationResult`；同步更新结果批次、Pass 读写端口、Pipeline transaction、Backend product slot 和标准 Pass contract。
+- 产品合同从 `simulation.pending-actor-evaluations`／`target-pending-evaluations/1`／`actor/program/tick` 改为角色结果语义；这一步只清理旧 Program 命名，不改变角色候选状态、WorldSolve 请求、Finalize 消费和未消费结果生命周期。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；本步完成角色结果边界的命名收口，不将 2.1、2.6 或 3.2 的完整领域接线标记为完成。

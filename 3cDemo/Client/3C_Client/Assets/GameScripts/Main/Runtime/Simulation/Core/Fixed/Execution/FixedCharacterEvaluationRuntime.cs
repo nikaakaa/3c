@@ -50,7 +50,6 @@ namespace ThirdPersonSimulation.Fixed
             ResolvedGameplayMotion standaloneControlMotion = default;
             try
             {
-                var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];

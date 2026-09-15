@@ -49,7 +49,6 @@ namespace ThirdPersonSimulation
             ResolvedGameplayMotion standaloneControlMotion = default;
             try
             {
-                var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];

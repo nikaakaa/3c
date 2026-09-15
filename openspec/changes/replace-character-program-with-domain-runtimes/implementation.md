@@ -862,3 +862,9 @@
 - 提交 `c1f8d59b1`，删除 Float32／Fixed Ability 安装对象的 `Access` 转发属性；执行服务工厂直接从 `ExecutionServices.Access` 取得访问合同。
 - Access 的所有权继续在执行服务，安装对象只保留角色评估、状态 Codec 和工厂实际需要的安装数据，不改变执行顺序或状态格式。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 保留动作端口的内部实现边界
+
+- 提交 `b10f70523`，Float32／Fixed `AbilityExecutionAssembly` 对外继续发布 `I*AbilityActionControlPort`，Invocation 的动作 Ingress 改为通过 Assembly 内部的 `ActionRuntime` 访问具体实现。
+- 具体动作运行时只留在 Ability 执行域内部，角色调用方继续依赖窄端口；没有把实现类型重新泄漏到角色入口，也没有新增兼容路径。
+- 刷新本地生成的 Float32／Fixed 工程源码清单后，两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；生成的 `.csproj` 被 `.gitignore` 忽略，未作为业务源码提交，未运行 Unity、测试或资产生成。

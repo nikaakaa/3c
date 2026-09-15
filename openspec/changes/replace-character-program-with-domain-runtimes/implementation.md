@@ -1089,3 +1089,8 @@
 
 - 提交 `572705a9c`，动画资源闭包分析不再调用已撤销的 `CharacterSemanticFrontendCompiler`；改为直接校验 `CharacterPipelineDefinition.AnimationPresentationProfile` 与传入 Profile 一致，删除旧 Editor namespace 依赖。
 - 保留 Pose 图遍历、动画源闭包收集、Clip 身份和分类逻辑；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Simulation Graph合同文件名
+
+- 提交 `d6621feb9`，将不再承载角色总 Program 语义的 `SimulationProgramSemantics` 源文件及 Unity `.meta` 改为 `SimulationGraphContracts`，删除旧文件路径。
+- 保留操作集、目录、World Capability、Camera schema 和 Graph source map 等仍被 Ability、网络与世界求解消费的合同；Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git，Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

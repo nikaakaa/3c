@@ -158,10 +158,18 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public FixedGameplayAbilityExecutionInstallation Installation { get; }
-        public FixedAbilityExecutionWorkspace Workspace => m_Workspace;
         public IFixedAbilityActionControlPort Actions => m_Actions;
         public bool HasGameplayEffects => m_GameplayEffects != null;
         public IEquipmentActionContextReader Equipment => m_Equipment;
+
+        public bool HasActionWindowProjection(string windowType)
+        {
+            IReadOnlyList<SimulationActionWindowProjectionCandidate> projections = m_Workspace.ActionWindowProjections;
+            for (int i = 0; i < projections.Count; i++)
+                if (string.Equals(projections[i].WindowType, windowType, StringComparison.Ordinal))
+                    return true;
+            return false;
+        }
 
         public void BeginEvaluation(
             bool diagnosticsEnabled,

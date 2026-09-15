@@ -240,15 +240,7 @@ namespace ThirdPersonSimulation.Fixed
                 FixedAbilityInvocationRuntime invocation = invocations[i];
                 if (invocation.Installation.Data.AbilityId != skillId)
                     continue;
-                IReadOnlyList<SimulationActionWindowProjectionCandidate> projections =
-                    invocation.Workspace.ActionWindowProjections;
-                for (int projectionIndex = 0; projectionIndex < projections.Count; projectionIndex++)
-                {
-                    SimulationActionWindowProjectionCandidate projection = projections[projectionIndex];
-                    if (string.Equals(projection.WindowType, windowType, StringComparison.Ordinal))
-                        return true;
-                }
-                return false;
+                return invocation.HasActionWindowProjection(windowType);
             }
             return false;
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
@@ -35,16 +36,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     public readonly struct CharacterControlSourceContext
     {
         public CharacterControlSourceContext(
-            CharacterPipelineHost owner,
+            ISimulationSessionActorHost owner,
+            ICameraBasisSnapshotProvider cameraBasis,
             CharacterPipelineDefinition definition,
             CharacterControlModuleContract controlModule)
         {
-            Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
+            Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            CameraBasis = cameraBasis ?? throw new ArgumentNullException(nameof(cameraBasis));
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
         }
 
-        public CharacterPipelineHost Owner { get; }
+        public ISimulationSessionActorHost Owner { get; }
+        public ICameraBasisSnapshotProvider CameraBasis { get; }
         public CharacterPipelineDefinition Definition { get; }
         public CharacterControlModuleContract ControlModule { get; }
     }

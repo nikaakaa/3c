@@ -17,14 +17,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
         public override IUnityCharacterControlSourceRuntime Create(CharacterControlSourceContext context)
         {
-            if (!context.Owner.CameraRig)
-                throw new InvalidOperationException("Player control source requires an explicit camera rig.");
             if (string.IsNullOrEmpty(ActionTargetInputValueId))
                 throw new InvalidOperationException("Player control source requires an explicit Action Target input value id.");
             return new UnityCharacterSimulationInputAdapter(
                 context.Definition.InputProfile,
                 context.ControlModule,
-                context.Owner.CameraRig,
+                context.CameraBasis,
                 context.Owner,
                 ActionTargetInputValueId,
                 m_ActionTargetProvider);

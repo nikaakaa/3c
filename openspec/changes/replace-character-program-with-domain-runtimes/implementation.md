@@ -231,3 +231,11 @@
 - Factory 按安装数据声明 Equipment 能力返回 Equipment runtime；缺 binding 时返回 null，Invocation 在实际需要 Equipment 的能力时显式失败。Gameplay Effect catalog 缺失时 Factory 返回 null，Invocation 在执行对应能力时显式失败。
 - 本切口继续不勾选 1.11：Frontend 仍需按可达节点声明 Gameplay Effect / Equipment / Character State 能力，TreeClip 等非角色调用方尚未统一到同一 factory 合同。
 - `ThirdPersonSimulation.Float32.csproj` 与 `ThirdPersonSimulation.Fixed.csproj` 窄编译均为 0 warning、0 error；每次编译后已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成。
+
+## 2026-09-15 Frontend按可达节点声明GameplayEffect
+
+- 提交 `d411b9de6` 在 `GameplayAbilitySemanticFrontendCompiler.RequireGraphCapabilities` 中遍历 `EntryGraph.EnumerateOccurrences()`，检查每个 occurrence 的 FlowNode。
+- 只有发现 `BtsmtlSkillApplyGameplayEffectFlowNode` 或 `BtsmtlSkillRemoveGameplayEffectFlowNode` 时，才调用 `RequireGameplayCapability("GameplayEffect")`。
+- StateMachine 和 Timeline 的原有能力声明保持不变；已删除按 Ability 全量无条件声明 Gameplay Effect 的路径。
+- `ThirdPersonClient.Editor.csproj` 全量编译被本机生成索引对 Fixed / Float32 新源的旧引用阻断；该基线错误出现在依赖 `ThirdPersonSimulation.Fixed.csproj` 和 `ThirdPersonSimulation.Float32.csproj`。Frontend 改动先通过语法审查提交，待 Unity 刷新生成索引后再做全量验证。
+- 未运行 Unity、测试或资产生成。

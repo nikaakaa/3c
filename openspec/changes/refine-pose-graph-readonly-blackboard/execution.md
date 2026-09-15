@@ -923,3 +923,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 2026-09-15 精确调用审计：`CharacterPoseNativeRoleEntry` 当前只有自身 Create/Replace 定义和内部依赖工厂调用，角色表现 runtime/Host 没有消费者调用点；四组 handler composition 也只有 `CharacterPoseNativeRoleDependencyFactory` 构造。旧 Presentation/Program/快照文件同时处于并行 staged 重建状态，本步不删除、不覆盖，下一步只接既有表现 runtime 提供的真实 Source/Constraint/Final 实例。
 - 修正 `CharacterPoseNativeRoleEntry` 在图实例已 Adopted、但 `RoleSession/FrameCoordinator` 构造失败时的释放路径；Create 与 Replace 都会销毁已采用的 role，避免半安装实例泄漏；提交为 `6127dee81`。
 - StateMachine Barrier 前增加 child Source demand 对父图汇总 demand 的身份核对，按 `(ScopeInstanceId, NodeId, SourceId)` 确认每项请求未丢失后才准备子图 Evaluate；提交为 `f5b42d43b`。
+- StateMachine 的非循环状态剩余时长改为 `max(ClipLength - InitialTime, 0) / PlayRate`，避免初始采样点造成 `StatePoseRemainingTime` 偏移；提交为 `32011c47e`。

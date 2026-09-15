@@ -115,13 +115,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             GameplayAbilityAuthoringCompilationModel model,
             CharacterSimulationProgramBuilder builder)
         {
+            bool requiresGameplayEffect = false;
             foreach (BtsmtlSkillGraphOccurrence occurrence in model.EntryGraph.EnumerateOccurrences())
             {
                 if (occurrence.Role == BtsmtlSkillFlowGraphRole.StateMachine)
                     builder.RequireGameplayCapability("StateMachine");
                 if (occurrence.Timelines.Count > 0)
                     builder.RequireGameplayCapability("Timeline");
+                foreach (FlowNode node in occurrence.Nodes)
+                {
+                    if (node is BtsmtlSkillApplyGameplayEffectFlowNode ||
+                        node is BtsmtlSkillRemoveGameplayEffectFlowNode)
+                        requiresGameplayEffect = true;
+                }
             }
+            if (requiresGameplayEffect)
+                builder.RequireGameplayCapability("GameplayEffect");
         }
 
         static void DeclareAbilityCatalog(

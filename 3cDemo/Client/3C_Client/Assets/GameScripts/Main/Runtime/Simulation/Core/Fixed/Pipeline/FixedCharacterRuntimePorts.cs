@@ -60,9 +60,12 @@ namespace ThirdPersonSimulation.Fixed
                     if (abilities.TryGetValue(ability.AbilityId, out FixedGameplayAbilityExecutionData existing))
                     {
                         if (!existing.ContentHash.Equals(ability.ContentHash) ||
-                            !existing.StateSchemaHash.Equals(ability.StateSchemaHash))
+                            !existing.StateSchemaHash.Equals(ability.StateSchemaHash) ||
+                            !existing.OperationSetVersion.Equals(ability.OperationSetVersion) ||
+                            !existing.NumericProfile.Equals(ability.NumericProfile) ||
+                            existing.TickRate != ability.TickRate)
                         {
-                            throw new InvalidOperationException($"Ability '{ability.AbilityId}' has different content across Character Runtime bindings.");
+                            throw new InvalidOperationException($"Ability '{ability.AbilityId}' has different execution identity across Character Runtime bindings.");
                         }
                     }
                     else

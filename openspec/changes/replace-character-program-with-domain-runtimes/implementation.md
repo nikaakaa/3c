@@ -984,3 +984,8 @@
 
 - 提交 `485039b64`，Fixed Ability 执行入口按 Float32 同一边界接入显式领域服务工厂，Gameplay Effect 与 Equipment 运行模块由角色评估入口注入，Ability Execution Service Factory 不再直接创建这两个领域模块。
 - 保留技能局部状态端口、输入／动作／句柄／事件顺序和外层角色事务；本步只改变服务创建归属，不改变执行结果或状态格式。`ThirdPersonSimulation.Fixed.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除执行上下文Equipment需求缓存
+
+- 提交 `75ae90703`，Float32／Fixed Ability 执行上下文删除从能力声明重复推导的 `RequiresEquipment`；安装构造阶段仍用局部值校验 Equipment 布局，领域服务工厂直接依据已解析布局创建 Equipment 运行模块。
+- 不改变能力声明、安装校验、Equipment 状态或执行顺序；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

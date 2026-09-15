@@ -228,9 +228,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_PendingTime);
                 if (transition != null)
                 {
-                    m_PendingTransition = transition;
-                    m_PendingTransitionElapsed = 0f;
-                    m_ContinuityIdentity = AllocateContinuityIdentity();
+                    if (transition.BlendLogic == AnimationTransitionBlendLogic.Inertialization)
+                    {
+                        m_PendingState = transition.TargetStateId;
+                        m_PendingTime = 0f;
+                        m_PendingTransition = null;
+                        m_PendingTransitionElapsed = 0f;
+                        m_ContinuityIdentity = AllocateContinuityIdentity();
+                    }
+                    else
+                    {
+                        m_PendingTransition = transition;
+                        m_PendingTransitionElapsed = 0f;
+                        m_ContinuityIdentity = AllocateContinuityIdentity();
+                    }
                 }
             }
             else

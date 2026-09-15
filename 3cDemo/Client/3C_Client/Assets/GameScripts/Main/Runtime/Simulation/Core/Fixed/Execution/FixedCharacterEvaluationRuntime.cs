@@ -73,7 +73,7 @@ namespace ThirdPersonSimulation.Fixed
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
                         roleState.EquipmentState,
-                        new FixedCharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
+                        new FixedCharacterAbilityExecutionServiceFactory(actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding),
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
                     actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
@@ -309,81 +309,153 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedCharacterAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
     {
-        readonly FixedGameplayAbilityExecutionInstallation installation;
-        readonly CharacterControlRuntimeBinding controlRuntimeBinding;
-        readonly CharacterEquipmentRuntimeBinding equipmentRuntimeBinding;
-        readonly FixedGameplayEffectExecutionScratch gameplayEffectScratch;
+        readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
+        readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
 
         public FixedCharacterAbilityExecutionServiceFactory(
-            FixedGameplayAbilityExecutionInstallation installation,
             CharacterControlRuntimeBinding controlRuntimeBinding,
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
-            FixedGameplayEffectExecutionScratch gameplayEffectScratch)
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {
-            this.installation = installation ?? throw new ArgumentNullException(nameof(installation));
-            this.controlRuntimeBinding = controlRuntimeBinding;
-            this.equipmentRuntimeBinding = equipmentRuntimeBinding;
-            this.gameplayEffectScratch = gameplayEffectScratch ?? throw new ArgumentNullException(nameof(gameplayEffectScratch));
+            m_ControlRuntimeBinding = controlRuntimeBinding;
+            m_EquipmentRuntimeBinding = equipmentRuntimeBinding;
         }
 
-        public FixedGameplayEffectOperationRuntime CreateGameplayEffects(
+        public FixedAbilityExecutionAssembly Create(
             FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionAccess access,
+            FixedGameplayAbilityExecutionInstallationSet installations,
             FixedAbilityExecutionFrame frame,
-            FixedActionStateStore actions,
-            FixedHandleAllocator handles,
-            FixedFactSink facts,
-            FixedPresentationSink presentation,
-            FixedTraceSink trace,
             FixedAbilityExecutionWorkspace workspace)
         {
-            return installation.GameplayEffectCatalog == null
+            FixedGameplayAbilityExecutionAccess access = installation.Access;
+            FixedStatePort controlState = frame.CreateStatePort(
+                "Control",
+                installation.Services.ControlPolicy);
+            FixedActionStateStore actionStore = new FixedActionStateStore(access, frame);
+            FixedInputRuntime input = new FixedInputRuntime(access, frame);
+            FixedHandleAllocator handles = new FixedHandleAllocator(access, frame);
+            FixedBlackboardRuntime blackboard = new FixedBlackboardRuntime(
+                access,
+                frame.CreateStatePort("Blackboard", installation.Services.BlackboardPolicy),
+                frame,
+                actionStore,
+                frame.Facts,
+                frame.Trace,
+                workspace);
+            FixedGameplayEffectOperationRuntime gameplayEffects = installation.GameplayEffectCatalog == null
                 ? null
                 : new FixedGameplayEffectOperationRuntime(
                     access,
                     frame,
-                    actions,
+                    actionStore,
                     handles,
-                    facts,
-                    presentation,
-                    trace,
+                    frame.Facts,
+                    frame.Presentation,
+                    frame.Trace,
                     workspace.GameplayEffects);
-        }
+            FixedEquipmentRuntime equipment = null;
+            if (installation.Data.Capabilities.HasGameplayCapability("Equipment") &&
+                m_EquipmentRuntimeBinding != null)
+            {
+                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
+                    m_EquipmentRuntimeBinding,
+                    installation.Data.CatalogEntries,
+                    installation.Data.References,
+                    installation.Data.Producers);
+                equipment = new FixedEquipmentRuntime(
+                    access,
+                    frame,
+                    actionStore,
+                    handles,
+                    gameplayEffects,
+                    frame.Facts,
+                    frame.Trace,
+                    layout);
+            }
+            bool equipmentEnabled = installation.Data.Capabilities.HasGameplayCapability("Equipment");
+            if (equipmentEnabled && equipment == null)
+                throw new InvalidOperationException(
+                    $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
 
-        public FixedEquipmentRuntime CreateEquipment(
-            FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionAccess access,
-            FixedAbilityExecutionFrame frame,
-            FixedActionStateStore actions,
-            FixedHandleAllocator handles,
-            FixedGameplayEffectOperationRuntime gameplayEffects)
-        {
-            if (!installation.Data.Capabilities.HasGameplayCapability("Equipment") || equipmentRuntimeBinding == null)
-                return null;
-            var layout = EquipmentProgramLayoutCompiler.Compile(
-                equipmentRuntimeBinding,
-                installation.Data.CatalogEntries,
-                installation.Data.References,
-                installation.Data.Producers);
-            return new FixedEquipmentRuntime(
+            FixedAbilityControlRuntime control = null;
+            FixedActionRuntime actions = new FixedActionRuntime(
                 access,
+                installations,
                 frame,
-                actions,
-                handles,
+                input,
+                actionStore,
+                blackboard,
                 gameplayEffects,
+                gameplayEffects,
+                handles,
                 frame.Facts,
                 frame.Trace,
-                layout);
-        }
-
-        public FixedLocomotionRuntime CreateLocomotion(
-            FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionAccess access,
-            FixedValueRuntime values,
-            FixedMotionAccumulator motion,
-            FixedAbilityExecutionFrame frame)
-        {
-            return new FixedLocomotionRuntime(access, values, motion, frame, controlRuntimeBinding);
+                equipment,
+                operation => control == null ||
+                    !control.IsActive(operation) && !control.IsStopping(operation));
+            FixedValueRuntime values = new FixedValueRuntime(
+                access,
+                input,
+                actionStore,
+                actions,
+                gameplayEffects,
+                equipment,
+                blackboard,
+                frame,
+                workspace);
+            FixedMotionAccumulator motion = new FixedMotionAccumulator(
+                access,
+                frame,
+                workspace.MotionContributions,
+                workspace.MotionWarpSamples,
+                actionStore);
+            FixedLocomotionRuntime locomotion = new FixedLocomotionRuntime(
+                access,
+                values,
+                motion,
+                frame,
+                m_ControlRuntimeBinding);
+            FixedAbilityExecutionTarget target = new FixedAbilityExecutionTarget(
+                access,
+                controlState,
+                frame.CreateOperationStateReset(),
+                values,
+                blackboard,
+                actions,
+                gameplayEffects,
+                equipment,
+                locomotion,
+                frame.Facts,
+                frame.Presentation,
+                frame.Trace);
+            var services = new FixedAbilityExecutionServiceSet(
+                frame,
+                target,
+                actions,
+                actionStore,
+                input,
+                gameplayEffects,
+                equipment,
+                values,
+                blackboard,
+                motion);
+            control = new FixedAbilityControlRuntime(installation, services);
+            FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
+                installation,
+                actions,
+                actionStore,
+                control);
+            return new FixedAbilityExecutionAssembly(
+                actionStore,
+                input,
+                actions,
+                gameplayEffects,
+                equipment,
+                values,
+                blackboard,
+                motion,
+                locomotion,
+                control,
+                domain);
         }
     }
 }

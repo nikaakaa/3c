@@ -26,31 +26,52 @@ namespace ThirdPersonSimulation.Fixed
 
     internal interface IFixedAbilityExecutionServiceFactory
     {
-        FixedGameplayEffectOperationRuntime CreateGameplayEffects(
+        FixedAbilityExecutionAssembly Create(
             FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionAccess access,
+            FixedGameplayAbilityExecutionInstallationSet installations,
             FixedAbilityExecutionFrame frame,
-            FixedActionStateStore actions,
-            FixedHandleAllocator handles,
-            FixedFactSink facts,
-            FixedPresentationSink presentation,
-            FixedTraceSink trace,
             FixedAbilityExecutionWorkspace workspace);
+    }
 
-        FixedEquipmentRuntime CreateEquipment(
-            FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionAccess access,
-            FixedAbilityExecutionFrame frame,
-            FixedActionStateStore actions,
-            FixedHandleAllocator handles,
-            FixedGameplayEffectOperationRuntime gameplayEffects);
-
-        FixedLocomotionRuntime CreateLocomotion(
-            FixedGameplayAbilityExecutionInstallation installation,
-            FixedGameplayAbilityExecutionAccess access,
+    internal sealed class FixedAbilityExecutionAssembly
+    {
+        public FixedAbilityExecutionAssembly(
+            FixedActionStateStore actionStore,
+            FixedInputRuntime input,
+            FixedActionRuntime actions,
+            FixedGameplayEffectOperationRuntime gameplayEffects,
+            FixedEquipmentRuntime equipment,
             FixedValueRuntime values,
+            FixedBlackboardRuntime blackboard,
             FixedMotionAccumulator motion,
-            FixedAbilityExecutionFrame frame);
+            FixedLocomotionRuntime locomotion,
+            FixedAbilityControlRuntime control,
+            FixedAbilityDomainRuntime domain)
+        {
+            ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
+            Input = input ?? throw new ArgumentNullException(nameof(input));
+            Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            GameplayEffects = gameplayEffects;
+            Equipment = equipment;
+            Values = values ?? throw new ArgumentNullException(nameof(values));
+            Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
+            Motion = motion ?? throw new ArgumentNullException(nameof(motion));
+            Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
+            Control = control ?? throw new ArgumentNullException(nameof(control));
+            Domain = domain ?? throw new ArgumentNullException(nameof(domain));
+        }
+
+        public FixedActionStateStore ActionStore { get; }
+        public FixedInputRuntime Input { get; }
+        public FixedActionRuntime Actions { get; }
+        public FixedGameplayEffectOperationRuntime GameplayEffects { get; }
+        public FixedEquipmentRuntime Equipment { get; }
+        public FixedValueRuntime Values { get; }
+        public FixedBlackboardRuntime Blackboard { get; }
+        public FixedMotionAccumulator Motion { get; }
+        public FixedLocomotionRuntime Locomotion { get; }
+        public FixedAbilityControlRuntime Control { get; }
+        public FixedAbilityDomainRuntime Domain { get; }
     }
 
     internal sealed class FixedAbilityInvocationRuntime : IDisposable
@@ -122,113 +143,22 @@ namespace ThirdPersonSimulation.Fixed
                 equipmentState,
                 m_Workspace);
 
-            FixedGameplayAbilityExecutionAccess access = installation.Access;
-            FixedStatePort controlState = m_Frame.CreateStatePort(
-                "Control",
-                installation.Services.ControlPolicy);
-            m_ActionStore = new FixedActionStateStore(access, m_Frame);
-            m_Input = new FixedInputRuntime(access, m_Frame);
-            var handles = new FixedHandleAllocator(access, m_Frame);
-            m_Blackboard = new FixedBlackboardRuntime(
-                access,
-                m_Frame.CreateStatePort("Blackboard", installation.Services.BlackboardPolicy),
-                m_Frame,
-                m_ActionStore,
-                m_Frame.Facts,
-                m_Frame.Trace,
-                m_Workspace);
-            m_GameplayEffects = serviceFactory.CreateGameplayEffects(
+            FixedAbilityExecutionAssembly assembly = serviceFactory.Create(
                 installation,
-                access,
-                m_Frame,
-                m_ActionStore,
-                handles,
-                m_Frame.Facts,
-                m_Frame.Presentation,
-                m_Frame.Trace,
-                m_Workspace);
-
-            m_Equipment = serviceFactory.CreateEquipment(
-                installation,
-                access,
-                m_Frame,
-                m_ActionStore,
-                handles,
-                m_GameplayEffects);
-            bool equipmentEnabled = installation.Data.Capabilities.HasGameplayCapability("Equipment");
-            if (equipmentEnabled && m_Equipment == null)
-                throw new InvalidOperationException(
-                    $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
-
-            FixedAbilityControlRuntime control = null;
-            m_Actions = new FixedActionRuntime(
-                access,
                 installations,
                 m_Frame,
-                m_Input,
-                m_ActionStore,
-                m_Blackboard,
-                m_GameplayEffects,
-                m_GameplayEffects,
-                handles,
-                m_Frame.Facts,
-                m_Frame.Trace,
-                m_Equipment,
-                operation => control == null ||
-                    !control.IsActive(operation) && !control.IsStopping(operation));
-            m_Values = new FixedValueRuntime(
-                access,
-                m_Input,
-                m_ActionStore,
-                m_Actions,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Blackboard,
-                m_Frame,
                 m_Workspace);
-            m_Motion = new FixedMotionAccumulator(
-                access,
-                m_Frame,
-                m_Workspace.MotionContributions,
-                m_Workspace.MotionWarpSamples,
-                m_ActionStore);
-            m_Locomotion = serviceFactory.CreateLocomotion(
-                installation,
-                access,
-                m_Values,
-                m_Motion,
-                m_Frame);
-            var target = new FixedAbilityExecutionTarget(
-                access,
-                controlState,
-                m_Frame.CreateOperationStateReset(),
-                m_Values,
-                m_Blackboard,
-                m_Actions,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Locomotion,
-                m_Frame.Facts,
-                m_Frame.Presentation,
-                m_Frame.Trace);
-            var services = new FixedAbilityExecutionServiceSet(
-                m_Frame,
-                target,
-                m_Actions,
-                m_ActionStore,
-                m_Input,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Values,
-                m_Blackboard,
-                m_Motion);
-            control = new FixedAbilityControlRuntime(installation, services);
-            m_Control = control;
-            m_Domain = new FixedAbilityDomainRuntime(
-                installation,
-                m_Actions,
-                m_ActionStore,
-                m_Control);
+            m_ActionStore = assembly.ActionStore;
+            m_Input = assembly.Input;
+            m_Actions = assembly.Actions;
+            m_GameplayEffects = assembly.GameplayEffects;
+            m_Equipment = assembly.Equipment;
+            m_Values = assembly.Values;
+            m_Blackboard = assembly.Blackboard;
+            m_Motion = assembly.Motion;
+            m_Locomotion = assembly.Locomotion;
+            m_Control = assembly.Control;
+            m_Domain = assembly.Domain;
         }
 
         public FixedGameplayAbilityExecutionInstallation Installation { get; }

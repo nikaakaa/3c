@@ -25,31 +25,52 @@ namespace ThirdPersonSimulation
 
     internal interface IFloat32AbilityExecutionServiceFactory
     {
-        Float32GameplayEffectOperationRuntime CreateGameplayEffects(
+        Float32AbilityExecutionAssembly Create(
             Float32GameplayAbilityExecutionInstallation installation,
-            Float32GameplayAbilityExecutionAccess access,
+            Float32GameplayAbilityExecutionInstallationSet installations,
             Float32AbilityExecutionFrame frame,
-            Float32ActionStateStore actions,
-            Float32HandleAllocator handles,
-            Float32FactSink facts,
-            Float32PresentationSink presentation,
-            Float32TraceSink trace,
             Float32AbilityExecutionWorkspace workspace);
+    }
 
-        Float32EquipmentRuntime CreateEquipment(
-            Float32GameplayAbilityExecutionInstallation installation,
-            Float32GameplayAbilityExecutionAccess access,
-            Float32AbilityExecutionFrame frame,
-            Float32ActionStateStore actions,
-            Float32HandleAllocator handles,
-            Float32GameplayEffectOperationRuntime gameplayEffects);
-
-        Float32LocomotionRuntime CreateLocomotion(
-            Float32GameplayAbilityExecutionInstallation installation,
-            Float32GameplayAbilityExecutionAccess access,
+    internal sealed class Float32AbilityExecutionAssembly
+    {
+        public Float32AbilityExecutionAssembly(
+            Float32ActionStateStore actionStore,
+            Float32InputRuntime input,
+            Float32ActionRuntime actions,
+            Float32GameplayEffectOperationRuntime gameplayEffects,
+            Float32EquipmentRuntime equipment,
             Float32ValueRuntime values,
+            Float32BlackboardRuntime blackboard,
             Float32MotionAccumulator motion,
-            Float32AbilityExecutionFrame frame);
+            Float32LocomotionRuntime locomotion,
+            Float32AbilityControlRuntime control,
+            Float32AbilityDomainRuntime domain)
+        {
+            ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
+            Input = input ?? throw new ArgumentNullException(nameof(input));
+            Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            GameplayEffects = gameplayEffects;
+            Equipment = equipment;
+            Values = values ?? throw new ArgumentNullException(nameof(values));
+            Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
+            Motion = motion ?? throw new ArgumentNullException(nameof(motion));
+            Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
+            Control = control ?? throw new ArgumentNullException(nameof(control));
+            Domain = domain ?? throw new ArgumentNullException(nameof(domain));
+        }
+
+        public Float32ActionStateStore ActionStore { get; }
+        public Float32InputRuntime Input { get; }
+        public Float32ActionRuntime Actions { get; }
+        public Float32GameplayEffectOperationRuntime GameplayEffects { get; }
+        public Float32EquipmentRuntime Equipment { get; }
+        public Float32ValueRuntime Values { get; }
+        public Float32BlackboardRuntime Blackboard { get; }
+        public Float32MotionAccumulator Motion { get; }
+        public Float32LocomotionRuntime Locomotion { get; }
+        public Float32AbilityControlRuntime Control { get; }
+        public Float32AbilityDomainRuntime Domain { get; }
     }
 
     internal sealed class Float32AbilityInvocationRuntime : IDisposable
@@ -121,113 +142,22 @@ namespace ThirdPersonSimulation
                 equipmentState,
                 m_Workspace);
 
-            Float32GameplayAbilityExecutionAccess access = installation.Access;
-            Float32StatePort controlState = m_Frame.CreateStatePort(
-                "Control",
-                installation.Services.ControlPolicy);
-            m_ActionStore = new Float32ActionStateStore(access, m_Frame);
-            m_Input = new Float32InputRuntime(access, m_Frame);
-            var handles = new Float32HandleAllocator(access, m_Frame);
-            m_Blackboard = new Float32BlackboardRuntime(
-                access,
-                m_Frame.CreateStatePort("Blackboard", installation.Services.BlackboardPolicy),
-                m_Frame,
-                m_ActionStore,
-                m_Frame.Facts,
-                m_Frame.Trace,
-                m_Workspace);
-            m_GameplayEffects = serviceFactory.CreateGameplayEffects(
+            Float32AbilityExecutionAssembly assembly = serviceFactory.Create(
                 installation,
-                access,
-                m_Frame,
-                m_ActionStore,
-                handles,
-                m_Frame.Facts,
-                m_Frame.Presentation,
-                m_Frame.Trace,
-                m_Workspace);
-
-            m_Equipment = serviceFactory.CreateEquipment(
-                installation,
-                access,
-                m_Frame,
-                m_ActionStore,
-                handles,
-                m_GameplayEffects);
-            bool equipmentEnabled = installation.Data.Capabilities.HasGameplayCapability("Equipment");
-            if (equipmentEnabled && m_Equipment == null)
-                throw new InvalidOperationException(
-                    $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
-
-            Float32AbilityControlRuntime control = null;
-            m_Actions = new Float32ActionRuntime(
-                access,
                 installations,
                 m_Frame,
-                m_Input,
-                m_ActionStore,
-                m_Blackboard,
-                m_GameplayEffects,
-                m_GameplayEffects,
-                handles,
-                m_Frame.Facts,
-                m_Frame.Trace,
-                m_Equipment,
-                operation => control == null ||
-                    !control.IsActive(operation) && !control.IsStopping(operation));
-            m_Values = new Float32ValueRuntime(
-                access,
-                m_Input,
-                m_ActionStore,
-                m_Actions,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Blackboard,
-                m_Frame,
                 m_Workspace);
-            m_Motion = new Float32MotionAccumulator(
-                access,
-                m_Frame,
-                m_Workspace.MotionContributions,
-                m_Workspace.MotionWarpSamples,
-                m_ActionStore);
-            m_Locomotion = serviceFactory.CreateLocomotion(
-                installation,
-                access,
-                m_Values,
-                m_Motion,
-                m_Frame);
-            var target = new Float32AbilityExecutionTarget(
-                access,
-                controlState,
-                m_Frame.CreateOperationStateReset(),
-                m_Values,
-                m_Blackboard,
-                m_Actions,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Locomotion,
-                m_Frame.Facts,
-                m_Frame.Presentation,
-                m_Frame.Trace);
-            var services = new Float32AbilityExecutionServiceSet(
-                m_Frame,
-                target,
-                m_Actions,
-                m_ActionStore,
-                m_Input,
-                m_GameplayEffects,
-                m_Equipment,
-                m_Values,
-                m_Blackboard,
-                m_Motion);
-            control = new Float32AbilityControlRuntime(installation, services);
-            m_Control = control;
-            m_Domain = new Float32AbilityDomainRuntime(
-                installation,
-                m_Actions,
-                m_ActionStore,
-                m_Control);
+            m_ActionStore = assembly.ActionStore;
+            m_Input = assembly.Input;
+            m_Actions = assembly.Actions;
+            m_GameplayEffects = assembly.GameplayEffects;
+            m_Equipment = assembly.Equipment;
+            m_Values = assembly.Values;
+            m_Blackboard = assembly.Blackboard;
+            m_Motion = assembly.Motion;
+            m_Locomotion = assembly.Locomotion;
+            m_Control = assembly.Control;
+            m_Domain = assembly.Domain;
         }
 
         public Float32GameplayAbilityExecutionInstallation Installation { get; }

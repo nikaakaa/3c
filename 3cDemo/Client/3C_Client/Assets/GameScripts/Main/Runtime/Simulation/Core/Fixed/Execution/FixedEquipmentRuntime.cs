@@ -31,7 +31,7 @@ namespace ThirdPersonSimulation.Fixed
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
 			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
-			m_GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
+			m_GameplayEffects = gameplayEffects;
             m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
             m_EquipmentLayout = equipmentLayout ?? throw new ArgumentNullException(nameof(equipmentLayout));
@@ -307,13 +307,13 @@ namespace ThirdPersonSimulation.Fixed
 			m_Frame.EquipmentState.SetEquipmentState(
 				m_Frame.EquipmentState.GetEquipmentState().WithLocalState(featureId, stateId, localState.DefaultValue));
 		}
-		void IEquipmentRuntimePort.SetTags(string sourceId, IReadOnlyList<string> tags) => m_GameplayEffects.SetEquipmentTags(sourceId, tags);
-		void IEquipmentRuntimePort.RemoveTags(string sourceId) => m_GameplayEffects.RemoveEquipmentTags(sourceId);
-		ulong IEquipmentRuntimePort.ApplyPassiveEffect(string effectId) => m_GameplayEffects.ApplyEquipmentPassive(effectId);
-		void IEquipmentRuntimePort.RemovePassiveEffect(ulong handle) => m_GameplayEffects.RemoveEquipmentPassive(handle);
+		void IEquipmentRuntimePort.SetTags(string sourceId, IReadOnlyList<string> tags) => RequireGameplayEffects().SetEquipmentTags(sourceId, tags);
+		void IEquipmentRuntimePort.RemoveTags(string sourceId) => RequireGameplayEffects().RemoveEquipmentTags(sourceId);
+		ulong IEquipmentRuntimePort.ApplyPassiveEffect(string effectId) => RequireGameplayEffects().ApplyEquipmentPassive(effectId);
+		void IEquipmentRuntimePort.RemovePassiveEffect(ulong handle) => RequireGameplayEffects().RemoveEquipmentPassive(handle);
 		IEquipmentMutationScope IEquipmentRuntimePort.BeginMutation() => new MutationScope(m_Frame);
-		void IEquipmentRuntimePort.CommitEffectOutputs(OperationHandle source) => m_GameplayEffects.CommitEquipmentMutation(RequireSource(source));
-		void IEquipmentRuntimePort.CancelEffectOutputs() => m_GameplayEffects.CancelEquipmentMutation();
+		void IEquipmentRuntimePort.CommitEffectOutputs(OperationHandle source) => RequireGameplayEffects().CommitEquipmentMutation(RequireSource(source));
+		void IEquipmentRuntimePort.CancelEffectOutputs() => RequireGameplayEffects().CancelEquipmentMutation();
 		void IEquipmentRuntimePort.EmitLifecycle(OperationHandle source, EquipmentSlotState before, EquipmentSlotState after, PendingEquipmentChangeState state, EquipmentChangeId changeId)
 		{
 			SimulationEventHeader header = m_Facts.Next(RequireSource(source));
@@ -334,6 +334,9 @@ namespace ThirdPersonSimulation.Fixed
 				throw new InvalidOperationException($"Equipment source Operation '{source}' does not match Program order.");
 			return operation;
 		}
+
+		FixedGameplayEffectOperationRuntime RequireGameplayEffects() => m_GameplayEffects ??
+			throw new InvalidOperationException("Fixed Equipment operation requires the Gameplay Effect service.");
 
 		sealed class MutationScope : IEquipmentMutationScope
 		{

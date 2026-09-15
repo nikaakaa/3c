@@ -69,6 +69,9 @@ namespace ThirdPersonSimulation
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
         readonly Float32AbilityBodyFacts m_BodyFacts;
+        readonly IFloat32AbilityTransactionControlPort m_TransactionControl;
+        readonly IFloat32GameplayEffectStatePort m_GameplayEffectState;
+        readonly IFloat32EquipmentStatePort m_EquipmentState;
         IFloat32SkillExecutionStateAccess m_SkillExecutionStateAccess;
         ulong m_ActionTraceInstanceId;
         string m_ActionTraceSkillId = string.Empty;
@@ -101,13 +104,13 @@ namespace ThirdPersonSimulation
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
             m_BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
-            TransactionControl = transactionControl ?? throw new ArgumentNullException(nameof(transactionControl));
+            m_TransactionControl = transactionControl;
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
             EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
-            GameplayEffectState = gameplayEffectState ?? throw new ArgumentNullException(nameof(gameplayEffectState));
-            EquipmentState = equipmentState ?? throw new ArgumentNullException(nameof(equipmentState));
+            m_GameplayEffectState = gameplayEffectState;
+            m_EquipmentState = equipmentState;
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -132,13 +135,16 @@ namespace ThirdPersonSimulation
             ? m_BodyFacts
             : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");
         internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
-        internal IFloat32AbilityTransactionControlPort TransactionControl { get; }
+        internal IFloat32AbilityTransactionControlPort TransactionControl => m_TransactionControl ??
+            throw new InvalidOperationException("Float32 Ability invocation has no transaction control service.");
         internal IFloat32InputRequestStatePort InputRequests { get; }
         internal IFloat32ActionRuntimeStatePort ActionState { get; }
         internal IFloat32HandleAllocatorStatePort HandleAllocatorState { get; }
         internal IFloat32EventSequenceStatePort EventSequenceState { get; }
-        internal IFloat32GameplayEffectStatePort GameplayEffectState { get; }
-        internal IFloat32EquipmentStatePort EquipmentState { get; }
+        internal IFloat32GameplayEffectStatePort GameplayEffectState => m_GameplayEffectState ??
+            throw new InvalidOperationException("Float32 Ability invocation has no Gameplay Effect state service.");
+        internal IFloat32EquipmentStatePort EquipmentState => m_EquipmentState ??
+            throw new InvalidOperationException("Float32 Ability invocation has no Equipment state service.");
         internal Float32EventSequence EventSequence { get; }
         internal Float32FactSink Facts { get; }
         internal Float32PresentationSink Presentation { get; }

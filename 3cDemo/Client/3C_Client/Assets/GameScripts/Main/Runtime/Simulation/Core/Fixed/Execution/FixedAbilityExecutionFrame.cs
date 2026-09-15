@@ -70,6 +70,9 @@ namespace ThirdPersonSimulation.Fixed
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
         readonly FixedAbilityBodyFacts m_BodyFacts;
+        readonly IFixedAbilityTransactionControlPort m_TransactionControl;
+        readonly IFixedGameplayEffectStatePort m_GameplayEffectState;
+        readonly IFixedEquipmentStatePort m_EquipmentState;
         IFixedSkillExecutionStateAccess m_SkillExecutionStateAccess;
         ulong m_ActionTraceInstanceId;
         string m_ActionTraceSkillId = string.Empty;
@@ -102,13 +105,13 @@ namespace ThirdPersonSimulation.Fixed
             Ingress = ingress ?? Array.Empty<SimulationIngress>();
             m_BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
-            TransactionControl = transactionControl ?? throw new ArgumentNullException(nameof(transactionControl));
+            m_TransactionControl = transactionControl;
             InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
             EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
-            GameplayEffectState = gameplayEffectState ?? throw new ArgumentNullException(nameof(gameplayEffectState));
-            EquipmentState = equipmentState ?? throw new ArgumentNullException(nameof(equipmentState));
+            m_GameplayEffectState = gameplayEffectState;
+            m_EquipmentState = equipmentState;
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -133,13 +136,16 @@ namespace ThirdPersonSimulation.Fixed
             ? m_BodyFacts
             : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");
         internal IFixedAbilityExecutionStateTransaction Transaction { get; }
-        internal IFixedAbilityTransactionControlPort TransactionControl { get; }
+        internal IFixedAbilityTransactionControlPort TransactionControl => m_TransactionControl ??
+            throw new InvalidOperationException("Fixed Ability invocation has no transaction control service.");
         internal IFixedInputRequestStatePort InputRequests { get; }
         internal IFixedActionRuntimeStatePort ActionState { get; }
         internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
         internal IFixedEventSequenceStatePort EventSequenceState { get; }
-        internal IFixedGameplayEffectStatePort GameplayEffectState { get; }
-        internal IFixedEquipmentStatePort EquipmentState { get; }
+        internal IFixedGameplayEffectStatePort GameplayEffectState => m_GameplayEffectState ??
+            throw new InvalidOperationException("Fixed Ability invocation has no Gameplay Effect state service.");
+        internal IFixedEquipmentStatePort EquipmentState => m_EquipmentState ??
+            throw new InvalidOperationException("Fixed Ability invocation has no Equipment state service.");
         internal FixedEventSequence EventSequence { get; }
         internal FixedFactSink Facts { get; }
         internal FixedPresentationSink Presentation { get; }

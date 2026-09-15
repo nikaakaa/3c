@@ -332,7 +332,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             SimulationSessionCompositionDefinition definition,
             IReadOnlyList<IFloat32CharacterRuntimeRegistration> registrations)
         {
-            var bindings = new SimulationActorBinding[registrations.Count];
+            var bindings = new Float32CharacterRuntimeActor[registrations.Count];
             for (int i = 0; i < bindings.Length; i++)
                 bindings[i] = registrations[i].CharacterBinding;
             return Float32CharacterRuntime.Create(

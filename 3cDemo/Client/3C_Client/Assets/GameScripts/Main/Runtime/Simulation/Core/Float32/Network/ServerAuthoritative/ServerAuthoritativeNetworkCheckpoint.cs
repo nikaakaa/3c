@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString(characterRuntime.OperationSetVersion.Value);
             for (int i = 0; i < characterRuntime.Roster.Count; i++)
             {
-                SimulationActorBinding actor = characterRuntime.Roster[i];
+                Float32CharacterRuntimeActor actor = characterRuntime.Roster[i];
                 writer.WriteString(actor.ActorId.Value);
                 writer.WriteString(actor.GameplayContentHash.ToString());
                 for (int abilityIndex = 0; abilityIndex < actor.AbilityData.Data.Count; abilityIndex++)
@@ -41,7 +41,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public string StateCodecIdentity => Float32CharacterRuntimeStateCodec.CodecIdentity;
         public StableHash LayoutIdentity { get; }
 
-        internal SimulationActorBinding RequireActor(ActorId actorId)
+        internal Float32CharacterRuntimeActor RequireActor(ActorId actorId)
         {
             for (int i = 0; i < m_CharacterRuntime.Roster.Count; i++)
                 if (m_CharacterRuntime.Roster[i].ActorId == actorId)
@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             OperationHandle operation,
             string executionPath)
         {
-            SimulationActorBinding actor = RequireActor(actorId);
+            Float32CharacterRuntimeActor actor = RequireActor(actorId);
             CompactProducer? found = null;
             for (int abilityIndex = 0; abilityIndex < actor.AbilityInstallations.Installations.Count; abilityIndex++)
             {
@@ -102,7 +102,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             byte[] bytes,
             CharacterStateHash expectedHash)
         {
-            SimulationActorBinding actor = RequireActor(actorId);
+            Float32CharacterRuntimeActor actor = RequireActor(actorId);
             GameplayContentHash contentHash = RequireActorContentHash(actorId);
             Float32CharacterRuntimeState state = Float32CharacterRuntimeStateCodec.Read(
                 bytes,
@@ -367,7 +367,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ServerAuthoritativeEventHorizon horizon,
             byte[] stateBytes)
         {
-            SimulationActorBinding actor = layout.RequireActor(actorId);
+            Float32CharacterRuntimeActor actor = layout.RequireActor(actorId);
             GameplayContentHash expectedContentHash = new GameplayContentHash(actor.GameplayContentHash);
             if (!contentHash.Equals(expectedContentHash))
                 throw new InvalidDataException("Network Checkpoint Character content identity is invalid.");

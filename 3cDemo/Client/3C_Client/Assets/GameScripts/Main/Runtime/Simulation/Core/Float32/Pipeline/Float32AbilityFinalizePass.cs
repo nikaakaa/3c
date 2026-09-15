@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation
             {
                 Float32PendingActorEvaluation evaluation = pending.Evaluations[i];
                 CharacterWorldSolveResult worldResult = world.Results[i];
-                SimulationActorBinding actor = readPorts.CharacterRuntime.Roster[i];
+                Float32CharacterRuntimeActor actor = readPorts.CharacterRuntime.Roster[i];
                 if (!evaluation.ActorId.Equals(actor.ActorId) || !worldResult.ActorId.Equals(actor.ActorId))
                     throw new InvalidOperationException("Ability Finalize Pass Actor order does not match the locked roster.");
                 Float32CharacterRuntimeStateTransaction transaction = evaluation.ClaimForFinalize();

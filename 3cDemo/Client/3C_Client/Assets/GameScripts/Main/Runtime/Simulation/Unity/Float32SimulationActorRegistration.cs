@@ -52,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
     public interface IFloat32CharacterRuntimeRegistration : IFloat32SimulationActorRegistration
     {
-        SimulationActorBinding CharacterBinding { get; }
+        Float32CharacterRuntimeActor CharacterBinding { get; }
     }
 
     public interface ILocalSimulationActorRegistration : IFloat32CharacterRuntimeRegistration

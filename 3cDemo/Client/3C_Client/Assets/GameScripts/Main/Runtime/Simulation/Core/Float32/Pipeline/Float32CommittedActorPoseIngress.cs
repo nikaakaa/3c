@@ -11,7 +11,7 @@ namespace ThirdPersonSimulation
             SimulationTick simulationTick,
             SimulationNumericProfile numericProfile,
             int tickRate,
-            IReadOnlyList<SimulationActorBinding> roster,
+            IReadOnlyList<Float32CharacterRuntimeActor> roster,
             CommittedActorPoseSnapshot<Float32Vector3, Float32Yaw> committedObservation)
         {
             if (source == null)

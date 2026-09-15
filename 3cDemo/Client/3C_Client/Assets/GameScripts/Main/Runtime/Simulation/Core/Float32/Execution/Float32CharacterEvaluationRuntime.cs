@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation
     {
         public static Float32PendingActorEvaluation Evaluate(
             Float32CharacterRuntime characterRuntime,
-            SimulationActorBinding actor,
+            Float32CharacterRuntimeActor actor,
             Float32CharacterRuntimeState sourceState,
             SimulationTick tick,
             CharacterSimulationInput input,

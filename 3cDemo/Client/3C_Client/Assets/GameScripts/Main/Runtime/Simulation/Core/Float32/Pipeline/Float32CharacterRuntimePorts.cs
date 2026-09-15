@@ -22,16 +22,16 @@ namespace ThirdPersonSimulation
 
     public sealed class Float32CharacterRuntime
     {
-        readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
+        readonly ReadOnlyCollection<Float32CharacterRuntimeActor> m_Roster;
         readonly ReadOnlyCollection<Float32GameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
 
         public static Float32CharacterRuntime Create(
-            IEnumerable<SimulationActorBinding> roster,
+            IEnumerable<Float32CharacterRuntimeActor> roster,
             CharacterControlModuleCatalog controlModules)
         {
             SimulationExecutionTargetManifest target = Float32SimulationTarget.Manifest.ExecutionTarget;
-            var values = roster == null ? new List<SimulationActorBinding>() : new List<SimulationActorBinding>(roster);
+            var values = roster == null ? new List<Float32CharacterRuntimeActor>() : new List<Float32CharacterRuntimeActor>(roster);
             if (values.Count == 0 || values[0].AbilityData.Data.Count == 0)
                 throw new ArgumentException("Float32 Character Runtime factory requires an Ability TickRate.", nameof(roster));
             return new Float32CharacterRuntime(
@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation
         }
 
         public static Float32CharacterRuntime Create(
-            IEnumerable<SimulationActorBinding> roster,
+            IEnumerable<Float32CharacterRuntimeActor> roster,
             int tickRate,
             CharacterControlModuleCatalog controlModules)
         {
@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation
         }
 
         public Float32CharacterRuntime(
-            IEnumerable<SimulationActorBinding> roster,
+            IEnumerable<Float32CharacterRuntimeActor> roster,
             SimulationNumericProfile numericProfile,
             int tickRate,
             OperationSetVersion operationSetVersion,
@@ -67,8 +67,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Float32 Character Runtime execution identity is incomplete.");
             ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             var values = roster == null
-                ? new List<SimulationActorBinding>()
-                : new List<SimulationActorBinding>(roster);
+                ? new List<Float32CharacterRuntimeActor>()
+                : new List<Float32CharacterRuntimeActor>(roster);
             values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             if (values.Count == 0)
                 throw new ArgumentException("Float32 Character Runtime roster cannot be empty.", nameof(roster));
@@ -140,7 +140,7 @@ namespace ThirdPersonSimulation
             GameplayContentHash = new GameplayContentHash(StableHash.Compute(parts.ToArray()));
         }
 
-        public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
+        public IReadOnlyList<Float32CharacterRuntimeActor> Roster => m_Roster;
         public IReadOnlyList<Float32GameplayAbilityExecutionData> Abilities => m_Abilities;
         public SimulationActorRosterDescriptor RosterDescriptor { get; }
         public SimulationNumericProfile NumericProfile { get; }
@@ -155,7 +155,7 @@ namespace ThirdPersonSimulation
         {
             if (actorIndex < 0 || actorIndex >= Roster.Count)
                 throw new ArgumentOutOfRangeException(nameof(actorIndex));
-            SimulationActorBinding actor = Roster[actorIndex];
+            Float32CharacterRuntimeActor actor = Roster[actorIndex];
             CharacterControlModuleContract control = ControlModules.RequireContract(actor.ControlRuntimeBinding.ModuleId);
             CharacterControlRuntimeState controlState = CharacterControlRuntimeState.CreateInitial(
                 actor.ControlRuntimeBinding,
@@ -178,7 +178,7 @@ namespace ThirdPersonSimulation
         }
 
         static void CreateEquipmentInitialState(
-            SimulationActorBinding actor,
+            Float32CharacterRuntimeActor actor,
             out EquipmentStateAggregate equipmentState)
         {
             equipmentState = null;
@@ -199,7 +199,7 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)
+        static ActorId[] ActorIds(IReadOnlyList<Float32CharacterRuntimeActor> values)
         {
             var result = new ActorId[values.Count];
             for (int i = 0; i < result.Length; i++)
@@ -212,7 +212,7 @@ namespace ThirdPersonSimulation
     {
         Float32CharacterRuntime Runtime { get; }
         GameplayContentHash GameplayContentHash { get; }
-        IReadOnlyList<SimulationActorBinding> Roster { get; }
+        IReadOnlyList<Float32CharacterRuntimeActor> Roster { get; }
         SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
         CharacterControlRuntimeBinding GetControlRuntimeBinding(int actorIndex);
@@ -247,7 +247,7 @@ namespace ThirdPersonSimulation
         public SimulationPortDescriptor Descriptor { get; }
         public Float32CharacterRuntime Runtime { get; }
         public GameplayContentHash GameplayContentHash => Runtime.GameplayContentHash;
-        public IReadOnlyList<SimulationActorBinding> Roster => Runtime.Roster;
+        public IReadOnlyList<Float32CharacterRuntimeActor> Roster => Runtime.Roster;
         public SimulationActorRosterDescriptor RosterDescriptor => Runtime.RosterDescriptor;
 
         public int GetActorIndex(ActorId actorId) =>

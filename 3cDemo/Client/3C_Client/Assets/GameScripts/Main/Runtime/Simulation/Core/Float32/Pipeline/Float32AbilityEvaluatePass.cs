@@ -72,7 +72,7 @@ namespace ThirdPersonSimulation
             {
                 for (int i = 0; i < m_Pending.Length; i++)
                 {
-                    SimulationActorBinding actor = readPorts.CharacterRuntime.Roster[i];
+                    Float32CharacterRuntimeActor actor = readPorts.CharacterRuntime.Roster[i];
                     if (!state.Actors[i].ActorId.Equals(actor.ActorId) ||
                         !state.WorldState.Bodies[i].ActorId.Equals(actor.ActorId) ||
                         !step.Inputs[i].ActorId.Equals(actor.ActorId))

@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         ISimulationPresentationCheckpointRuntime
     {
         readonly Float32CharacterRuntime m_CharacterRuntime;
-        readonly SimulationActorBinding m_CharacterBinding;
+        readonly Float32CharacterRuntimeActor m_CharacterBinding;
         readonly IUnityCharacterControlSourceRuntime m_LocalControlSource;
         readonly ICharacterSimulationGameplayOutputPort m_GameplayOutput;
         readonly ICharacterPresentationRuntime m_PresentationRuntime;
@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             string ownerName,
             ActorId actorId,
             Float32CharacterRuntime characterRuntime,
-            SimulationActorBinding characterBinding,
+            Float32CharacterRuntimeActor characterBinding,
             CharacterPresentationProjectionAsset projectionAsset,
             CharacterPresentationProjection projection,
             Float32WorldBodyBinding worldBodyBinding,
@@ -113,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public string OwnerIdentity => $"unity-character-host/{OwnerInstanceId}";
         public ActorId ActorId { get; }
         public Float32CharacterRuntime CharacterRuntime => m_CharacterRuntime;
-        public SimulationActorBinding CharacterBinding => m_CharacterBinding;
+        public Float32CharacterRuntimeActor CharacterBinding => m_CharacterBinding;
         public Float32WorldBodyBinding WorldBodyBinding { get; }
         public WorldBodyState InitialBody { get; }
         public IUnityCharacterControlSourceRuntime LocalControlSource => m_LocalControlSource;

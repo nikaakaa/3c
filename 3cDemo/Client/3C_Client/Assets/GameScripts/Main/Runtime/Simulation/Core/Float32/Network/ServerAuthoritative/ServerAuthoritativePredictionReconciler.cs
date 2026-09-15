@@ -37,7 +37,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             if (baseline == null)
                 throw new ArgumentNullException(nameof(baseline));
-            SimulationActorBinding actor = RequireActor(baseline.ActorId);
+            Float32CharacterRuntimeActor actor = RequireActor(baseline.ActorId);
             GameplayContentHash actorContentHash = new GameplayContentHash(actor.GameplayContentHash);
             if (baseline.NumericProfile != m_CharacterRuntime.NumericProfile ||
                 !baseline.TargetAbiVersion.Equals(m_CharacterRuntime.NumericProfile.AbiVersion) ||
@@ -261,7 +261,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return Float32Scalar.FromSingle(delta > 180f ? 360f - delta : delta);
         }
 
-        SimulationActorBinding RequireActor(ActorId actorId)
+        Float32CharacterRuntimeActor RequireActor(ActorId actorId)
         {
             for (int i = 0; i < m_CharacterRuntime.Roster.Count; i++)
                 if (m_CharacterRuntime.Roster[i].ActorId == actorId)

@@ -122,7 +122,7 @@ namespace ThirdPersonSimulation
         readonly IFloat32SimulationRestoreSource m_RestoreSource;
         readonly PipelineTransactionRuntimeServices m_Services;
         readonly Float32CharacterRuntime m_CharacterRuntime;
-        IReadOnlyList<SimulationActorBinding> m_Roster;
+        IReadOnlyList<Float32CharacterRuntimeActor> m_Roster;
         readonly SimulationWorldStateStore m_StateStore;
         readonly ICharacterWorldSolver m_Solver;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
@@ -288,7 +288,7 @@ namespace ThirdPersonSimulation
         {
             _ = outer;
             Float32CharacterRuntime characterRuntime = m_CharacterRuntime;
-            IReadOnlyList<SimulationActorBinding> roster = m_Roster;
+            IReadOnlyList<Float32CharacterRuntimeActor> roster = m_Roster;
             for (int stepIndex = 0; stepIndex < plan.Steps.Count; stepIndex++)
             {
                 Float32SimulationStep step = plan.Steps[stepIndex];

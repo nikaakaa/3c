@@ -997,6 +997,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             catch (Exception exception)
             {
+                StopInstance();
                 m_OutputCache.Clear();
                 m_Observations.Clear();
                 m_CommittedObservations.Clear();

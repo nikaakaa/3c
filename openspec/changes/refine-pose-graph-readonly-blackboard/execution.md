@@ -947,3 +947,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - CharacterPoseNativeGraphRuntime.Dispose 现在先进入 StopInstance，再停止 FlowCanvas 图并释放 evaluator；在途帧会先 Discard，已启动节点会收到 Stop，旧 lease 和旧实例调用不能继续进入 evaluator。
 - 该修正服务第 3 组的 Reset/Replace/Stop/Dispose 生命周期要求：Dispose 不再绕过阶段清理直接销毁 evaluator，也不让打开帧在销毁路径上丢失失败边界。
 - 本步只改原生 Pose runtime 与本 execution 记录；未运行 Unity、Build、Play 或资源刷新，也未提交 LFS。
+
+## 2026-09-15 r3 修正原生 Reset 失败边界
+
+- CharacterPoseNativeGraphRuntime.ResetInstance 现在在 Reset 中途失败时先执行 StopInstance，让打开帧 Discard、节点收到 Stop，并把实例切出 Started 状态；失败后不会继续以旧 generation 接受新的原生帧。
+- 这补齐第 3 组 Reset/Replace/Stop/Dispose 的失败边界：Reset 返回 Failed 不再伪装实例仍可继续工作，owner 只能释放或重新安装。
+- 本步只改原生 Pose runtime 与本 execution 记录；未运行 Unity、Build、Play 或资源刷新，也未提交 LFS。

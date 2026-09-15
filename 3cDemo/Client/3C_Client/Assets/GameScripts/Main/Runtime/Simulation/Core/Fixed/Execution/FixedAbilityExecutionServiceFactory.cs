@@ -3,29 +3,41 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
+    internal interface IFixedAbilityDomainRuntimeFactory
     {
-        public FixedAbilityExecutionAssembly Create(
+        FixedAbilityDomainRuntimeServices Create(
             FixedAbilityExecutionContext execution,
-            IFixedAbilityActionBindingProvider actionBindings,
+            FixedGameplayAbilityExecutionAccess access,
             FixedAbilityExecutionFrame frame,
+            FixedActionStateStore actionStore,
+            FixedHandleAllocator handles,
+            FixedAbilityExecutionWorkspace workspace);
+    }
+
+    internal readonly struct FixedAbilityDomainRuntimeServices
+    {
+        public FixedAbilityDomainRuntimeServices(
+            FixedGameplayEffectOperationRuntime gameplayEffects,
+            FixedEquipmentRuntime equipment)
+        {
+            GameplayEffects = gameplayEffects;
+            Equipment = equipment;
+        }
+
+        public FixedGameplayEffectOperationRuntime GameplayEffects { get; }
+        public FixedEquipmentRuntime Equipment { get; }
+    }
+
+    internal sealed class FixedAbilityDomainRuntimeFactory : IFixedAbilityDomainRuntimeFactory
+    {
+        public FixedAbilityDomainRuntimeServices Create(
+            FixedAbilityExecutionContext execution,
+            FixedGameplayAbilityExecutionAccess access,
+            FixedAbilityExecutionFrame frame,
+            FixedActionStateStore actionStore,
+            FixedHandleAllocator handles,
             FixedAbilityExecutionWorkspace workspace)
         {
-            FixedGameplayAbilityExecutionAccess access = execution.Services.Access;
-            FixedStatePort controlState = frame.CreateStatePort(
-                "Control",
-                execution.Services.ControlPolicy);
-            FixedActionStateStore actionStore = new FixedActionStateStore(access, frame);
-            FixedInputRuntime input = new FixedInputRuntime(access, frame);
-            FixedHandleAllocator handles = new FixedHandleAllocator(access, frame);
-            FixedBlackboardRuntime blackboard = new FixedBlackboardRuntime(
-                access,
-                frame.CreateStatePort("Blackboard", execution.Services.BlackboardPolicy),
-                frame,
-                actionStore,
-                frame.Facts,
-                frame.Trace,
-                workspace);
             FixedGameplayEffectOperationRuntime gameplayEffects = execution.GameplayEffectCatalog == null
                 ? null
                 : new FixedGameplayEffectOperationRuntime(
@@ -52,6 +64,44 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException(
                         $"Ability '{execution.Data.AbilityId}' requires the declared Equipment layout."));
             }
+            return new FixedAbilityDomainRuntimeServices(gameplayEffects, equipment);
+        }
+    }
+
+    internal sealed class FixedAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
+    {
+        public FixedAbilityExecutionAssembly Create(
+            FixedAbilityExecutionContext execution,
+            IFixedAbilityActionBindingProvider actionBindings,
+            IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
+            FixedAbilityExecutionFrame frame,
+            FixedAbilityExecutionWorkspace workspace)
+        {
+            domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
+            FixedGameplayAbilityExecutionAccess access = execution.Services.Access;
+            FixedStatePort controlState = frame.CreateStatePort(
+                "Control",
+                execution.Services.ControlPolicy);
+            FixedActionStateStore actionStore = new FixedActionStateStore(access, frame);
+            FixedInputRuntime input = new FixedInputRuntime(access, frame);
+            FixedHandleAllocator handles = new FixedHandleAllocator(access, frame);
+            FixedBlackboardRuntime blackboard = new FixedBlackboardRuntime(
+                access,
+                frame.CreateStatePort("Blackboard", execution.Services.BlackboardPolicy),
+                frame,
+                actionStore,
+                frame.Facts,
+                frame.Trace,
+                workspace);
+            FixedAbilityDomainRuntimeServices domainServices = domainRuntimeFactory.Create(
+                execution,
+                access,
+                frame,
+                actionStore,
+                handles,
+                workspace);
+            FixedGameplayEffectOperationRuntime gameplayEffects = domainServices.GameplayEffects;
+            FixedEquipmentRuntime equipment = domainServices.Equipment;
 
             FixedAbilityOperationControlRuntime control = null;
             FixedActionRuntime actions = new FixedActionRuntime(

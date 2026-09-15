@@ -49,6 +49,7 @@ namespace ThirdPersonSimulation.Fixed
             try
             {
                 var serviceFactory = new FixedAbilityExecutionServiceFactory();
+                var domainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
@@ -72,6 +73,7 @@ namespace ThirdPersonSimulation.Fixed
                     var invocation = new FixedAbilityInvocationRuntime(
                         installation.Execution,
                         actor.AbilityInstallations,
+                        domainRuntimeFactory,
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
                         actor.ActorId,

@@ -35,6 +35,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedAbilityExecutionAssembly Create(
             FixedAbilityExecutionContext execution,
             IFixedAbilityActionBindingProvider actionBindings,
+            IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace);
     }
@@ -99,6 +100,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedAbilityInvocationRuntime(
             FixedAbilityExecutionContext execution,
             IFixedAbilityActionBindingProvider actionBindings,
+            IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
             IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
             ActorId actorId,
@@ -118,6 +120,7 @@ namespace ThirdPersonSimulation.Fixed
             execution = execution ?? throw new ArgumentNullException(nameof(execution));
             AbilityId = execution.Data.AbilityId;
             actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
+            domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
@@ -147,6 +150,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionAssembly assembly = serviceFactory.Create(
                 execution,
                 actionBindings,
+                domainRuntimeFactory,
                 m_Frame,
                 m_Workspace);
             m_Input = assembly.Input;

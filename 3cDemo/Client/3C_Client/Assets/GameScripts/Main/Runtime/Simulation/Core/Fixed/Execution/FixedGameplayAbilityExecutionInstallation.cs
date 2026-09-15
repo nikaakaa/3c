@@ -72,8 +72,6 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public FixedGameplayAbilityExecutionData Data => m_Execution.Data;
-        public bool RequiresGameplayEffects => m_Execution.RequiresGameplayEffects;
-        public bool RequiresEquipment => m_Execution.RequiresEquipment;
         public GameplayAbilityExecutionLayout Layout => m_Execution.Layout;
         public GameplayAbilityExecutionIdentity Identity => m_Execution.Services.Identity;
         internal FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog => m_Execution.GameplayEffectCatalog;

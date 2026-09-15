@@ -34,8 +34,6 @@ namespace ThirdPersonSimulation
                 : null;
             if (hasEquipmentAbility && equipmentRuntimeBinding == null)
                 throw new ArgumentNullException(nameof(equipmentRuntimeBinding));
-            bool requiresGameplayEffects = false;
-            bool requiresEquipment = false;
             for (int i = 0; i < data.Data.Count; i++)
             {
                 Float32GameplayAbilityExecutionData ability = data.Data[i];
@@ -50,20 +48,16 @@ namespace ThirdPersonSimulation
                     ability,
                     gameplayEffectCatalog,
                     equipmentLayout);
-                requiresGameplayEffects |= installation.RequiresGameplayEffects;
-                requiresEquipment |= installation.RequiresEquipment;
                 values.Add(installation);
                 m_ByAbility.Add(installation.Data.AbilityId, installation);
             }
             values.Sort((left, right) => left.Data.AbilityId.CompareTo(right.Data.AbilityId));
             m_Installations = values.AsReadOnly();
-            RequiresGameplayEffects = requiresGameplayEffects;
-            RequiresEquipment = requiresEquipment;
+            RequiresEquipment = hasEquipmentAbility;
             GameplayEffectCatalog = gameplayEffectCatalog;
         }
 
         public IReadOnlyList<Float32GameplayAbilityExecutionInstallation> Installations => m_Installations;
-        public bool RequiresGameplayEffects { get; }
         public bool RequiresEquipment { get; }
         internal Float32GameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
 

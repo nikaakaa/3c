@@ -33,7 +33,6 @@ namespace ThirdPersonSimulation.Fixed
             }
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
-            RequiresGameplayEffects = AbilityInstallations.RequiresGameplayEffects;
             RequiresEquipment = AbilityInstallations.RequiresEquipment;
             GameplayContentHash = ComputeGameplayContentHash(
                 controlRuntimeBinding,
@@ -41,7 +40,6 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
                 AbilityInstallations,
-                RequiresGameplayEffects,
                 RequiresEquipment);
         }
 
@@ -51,7 +49,6 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
-        public bool RequiresGameplayEffects { get; }
         public bool RequiresEquipment { get; }
         public FixedGameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
         public StableHash GameplayContentHash { get; }
@@ -62,7 +59,6 @@ namespace ThirdPersonSimulation.Fixed
             CharacterGameplayEffectRuntimeBinding gameplayEffects,
             CharacterEquipmentRuntimeBinding equipment,
             FixedGameplayAbilityExecutionInstallationSet abilities,
-            bool requiresGameplayEffects,
             bool requiresEquipment)
         {
             var parts = new List<string>
@@ -70,7 +66,7 @@ namespace ThirdPersonSimulation.Fixed
                 "fixed-simulation-actor-content/1",
                 control.BindingHash.ToString(),
                 bodyMotion.BindingHash.ToString(),
-                requiresGameplayEffects ? gameplayEffects.BindingHash.ToString() : string.Empty,
+                abilities.GameplayEffectCatalog != null ? gameplayEffects.BindingHash.ToString() : string.Empty,
                 requiresEquipment ? equipment.BindingHash.ToString() : string.Empty
             };
             for (int i = 0; i < abilities.Installations.Count; i++)

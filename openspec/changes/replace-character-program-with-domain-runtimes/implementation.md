@@ -779,3 +779,9 @@
 - 提交 `0c9c9ee47`，Float32／Fixed `SimulationActorBinding` 不再同时发布 `AbilityData` 和 `AbilityInstallations`；角色运行、状态快照与 Authority checkpoint 统一从安装集合的 `Installation.Data` 读取。
 - 删除没有消费者的 `GetAbilityData` 角色运行端口，配置输入仍在装配时创建安装集合；内容 Hash、Ability 排序、NumericProfile 校验和执行路径保持一致，没有新增第二份数据入口。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除未使用的可选Ability查找
+
+- 提交 `237614267`，移除通用 Ability 数据集以及 Float32／Fixed 安装集合中没有调用方的 `TryGet` 出口。
+- 当前执行与状态恢复链路继续使用按身份必须取得的 `Require`；不保留可选读取旁路，也不改变安装排序、身份校验或执行行为。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

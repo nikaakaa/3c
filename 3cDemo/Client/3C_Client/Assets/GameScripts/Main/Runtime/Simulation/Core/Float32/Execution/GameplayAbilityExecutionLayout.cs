@@ -106,8 +106,6 @@ namespace ThirdPersonSimulation
         readonly HashSet<string> m_InputRequests;
         readonly string[] m_InputRequestIds;
         readonly IReadOnlyDictionary<string, int> m_ActionCapacities;
-        readonly HashSet<int> m_TimelineRetentionOperations;
-        readonly int[] m_TimelineRetentionOperationIds;
         readonly HashSet<int> m_MotionWarpOperations;
         readonly int[] m_MotionWarpOperationIds;
         readonly HashSet<int> m_SkillExecutionStateSlots;
@@ -183,11 +181,9 @@ namespace ThirdPersonSimulation
                 CatalogIndex,
                 out m_InputRequests,
                 out m_ActionCapacities,
-                out m_TimelineRetentionOperations,
                 out m_MotionWarpOperations,
                 out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots);
             m_InputRequestIds = SortedStrings(m_InputRequests);
-            m_TimelineRetentionOperationIds = SortedIndexes(m_TimelineRetentionOperations);
             m_MotionWarpOperationIds = SortedIndexes(m_MotionWarpOperations);
             m_ActionTargetSnapshotByOperation = BuildActionTargetSnapshotIndex(
                 m_Operations,
@@ -225,7 +221,6 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
         public IReadOnlyList<BlackboardInputStateBinding> BlackboardInputBindings => m_BlackboardInputBindings;
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
-        public IReadOnlyList<int> TimelineRetentionOperationIds => m_TimelineRetentionOperationIds;
         public IReadOnlyList<int> MotionWarpOperationIds => m_MotionWarpOperationIds;
 
         public SimulationOperation Operation(OperationHandle operation)
@@ -303,8 +298,6 @@ namespace ThirdPersonSimulation
             m_ActionCapacities.TryGetValue(actionId ?? string.Empty, out int capacity)
                 ? capacity
                 : throw new InvalidOperationException($"Ability '{AbilityId}' has no Action '{actionId}' capacity.");
-        public bool HasTimelineRetention(OperationHandle timeline) =>
-            timeline.IsValid && m_TimelineRetentionOperations.Contains(timeline.Value);
         public bool HasMotionWarp(OperationHandle operation) =>
             operation.IsValid && m_MotionWarpOperations.Contains(operation.Value);
         public bool IsSkillExecutionStateSlot(int slotIndex) => m_SkillExecutionStateSlots.Contains(slotIndex);
@@ -615,13 +608,11 @@ namespace ThirdPersonSimulation
             ProgramCatalogRuntimeIndex catalog,
             out HashSet<string> inputRequests,
             out IReadOnlyDictionary<string, int> actionCapacities,
-            out HashSet<int> timelineRetentionOperations,
             out HashSet<int> motionWarpOperations,
             out IReadOnlyDictionary<string, TypedStateAddress> actionTargetSnapshots)
         {
             var inputs = new HashSet<string>(StringComparer.Ordinal);
             var capacities = new Dictionary<string, int>(StringComparer.Ordinal);
-            var timelines = new HashSet<int>();
             var motionWarp = new HashSet<int>();
             var targets = new Dictionary<string, TypedStateAddress>(StringComparer.Ordinal);
             for (int i = 0; i < catalogEntries.Count; i++)
@@ -645,8 +636,6 @@ namespace ThirdPersonSimulation
             }
             for (int i = 0; i < operations.Count; i++)
             {
-                if (operations[i].Code == SimulationOperationCode.Timeline)
-                    timelines.Add(i);
                 if (operations[i].Code == SimulationOperationCode.TimelineMotionWarp)
                     motionWarp.Add(i);
             }
@@ -661,7 +650,6 @@ namespace ThirdPersonSimulation
             }
             inputRequests = inputs;
             actionCapacities = capacities;
-            timelineRetentionOperations = timelines;
             motionWarpOperations = motionWarp;
             actionTargetSnapshots = targets;
         }
@@ -968,5 +956,4 @@ namespace ThirdPersonSimulation
         }
     }
 }
-
 

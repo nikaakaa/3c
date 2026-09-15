@@ -8,9 +8,9 @@ namespace ThirdPersonSimulation.Fixed
     internal static class FixedCharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 2;
-        const string HashIdentity = "float32-character-runtime-state-hash/2";
-        public const string CodecIdentity = "float32-character-runtime-state/2";
+        const int Version = 3;
+        const string HashIdentity = "fixed-character-runtime-state-hash/3";
+        public const string CodecIdentity = "fixed-character-runtime-state/3";
 
         public static byte[] Write(FixedCharacterRuntimeState state)
         {
@@ -60,14 +60,12 @@ namespace ThirdPersonSimulation.Fixed
                 installation.Identity.Require(identity);
                 Dictionary<int, CharacterStateValue> stateValues = ReadValues(reader, installation.Layout);
                 GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
-                Dictionary<int, FixedActionInstanceReference> timelineRetainedActionContexts = ReadTimelineRetentions(reader, installation.Layout);
                 Dictionary<int, FixedMotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
                 abilities.Add(new FixedAbilityRuntimeState(
                     installation,
                     lastCompletedTick,
                     stateValues,
                     abilityExecutionState,
-                    timelineRetainedActionContexts,
                     motionWarpStates));
             }
             FixedGameplayAbilityExecutionInstallation equipmentInstallation = FindInstallationWithCapability(installations, "Equipment");
@@ -139,7 +137,6 @@ namespace ThirdPersonSimulation.Fixed
                 WriteIdentity(writer, ability.AbilityIdentity);
                 WriteValues(writer, ability.StateValues);
                 WriteAbilityExecutionState(writer, ability.AbilityExecutionState);
-                WriteTimelineRetentions(writer, ability.TimelineRetainedActionContexts);
                 WriteMotionWarpStates(writer, ability.MotionWarpStates);
             }
             WriteActionActivationRequests(writer, state.ActionActivationRequests);
@@ -434,41 +431,6 @@ namespace ThirdPersonSimulation.Fixed
                 actions.Add(action);
             }
             return actions;
-        }
-
-        static void WriteTimelineRetentions(
-            CanonicalWriter writer,
-            IReadOnlyDictionary<int, FixedActionInstanceReference> retentions)
-        {
-            var keys = new List<int>(retentions.Keys);
-            keys.Sort();
-            writer.WriteInt32(keys.Count);
-            for (int i = 0; i < keys.Count; i++)
-            {
-                writer.WriteInt32(keys[i]);
-                WriteActionReference(writer, retentions[keys[i]]);
-            }
-        }
-
-        static Dictionary<int, FixedActionInstanceReference> ReadTimelineRetentions(
-            CanonicalReader reader,
-            GameplayAbilityExecutionLayout layout)
-        {
-            int count = ReadCount(reader, layout.TimelineRetentionOperationIds.Count, "Fixed Timeline retention");
-            var values = new Dictionary<int, FixedActionInstanceReference>(count);
-            int previous = -1;
-            for (int i = 0; i < count; i++)
-            {
-                int operation = reader.ReadInt32();
-                if (operation < 0 || operation <= previous || !layout.HasTimelineRetention(new OperationHandle(operation)))
-                    throw new InvalidDataException("Fixed Timeline retention operation identities are invalid or not canonically ordered.");
-                FixedActionInstanceReference value = ReadActionReference(reader, layout);
-                if (!value.IsValid)
-                    throw new InvalidDataException("Fixed Timeline retention action identity is invalid.");
-                values.Add(operation, value);
-                previous = operation;
-            }
-            return values;
         }
 
         static void WriteMotionWarpStates(

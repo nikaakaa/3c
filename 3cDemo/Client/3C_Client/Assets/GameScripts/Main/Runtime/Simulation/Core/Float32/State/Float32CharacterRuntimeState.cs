@@ -14,7 +14,6 @@ namespace ThirdPersonSimulation
             ulong lastCompletedTick,
             IDictionary<int, CharacterStateValue> stateValues,
             GameplayAbilityExecutionAggregate<CharacterStateValue> abilityExecutionState,
-            IDictionary<int, Float32ActionInstanceReference> timelineRetainedActionContexts,
             IDictionary<int, Float32MotionWarpState> motionWarpStates)
         {
             m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -22,9 +21,6 @@ namespace ThirdPersonSimulation
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
                 new GameplayAbilityExecutionAggregate<CharacterStateValue>();
-            TimelineRetainedActionContexts = timelineRetainedActionContexts == null
-                ? new Dictionary<int, Float32ActionInstanceReference>()
-                : new Dictionary<int, Float32ActionInstanceReference>(timelineRetainedActionContexts);
             MotionWarpStates = motionWarpStates == null
                 ? new Dictionary<int, Float32MotionWarpState>()
                 : new Dictionary<int, Float32MotionWarpState>(motionWarpStates);
@@ -33,7 +29,6 @@ namespace ThirdPersonSimulation
         internal Float32GameplayAbilityExecutionInstallation Installation => m_Installation;
         internal Dictionary<int, CharacterStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<CharacterStateValue> AbilityExecutionState { get; }
-        internal Dictionary<int, Float32ActionInstanceReference> TimelineRetainedActionContexts { get; }
         internal Dictionary<int, Float32MotionWarpState> MotionWarpStates { get; }
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
         public ulong LastCompletedTick { get; }
@@ -44,7 +39,6 @@ namespace ThirdPersonSimulation
                 lastCompletedTick,
                 StateValues,
                 AbilityExecutionState,
-                TimelineRetainedActionContexts,
                 MotionWarpStates);
 
         static Dictionary<int, CharacterStateValue> CopyValues(IDictionary<int, CharacterStateValue> values)
@@ -157,7 +151,6 @@ namespace ThirdPersonSimulation
                 abilities[i] = new Float32AbilityRuntimeState(
                     installation,
                     0,
-                    null,
                     null,
                     null,
                     null);

@@ -1,21 +1,87 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    internal sealed class CharacterPoseNativeRoleDependencies : IDisposable
+    {
+        internal CharacterPoseNativeRoleDependencies(
+            CharacterPoseSourceModule source,
+            CharacterPoseConstraintRuntime constraints,
+            ICharacterPoseNativeNodeHandlerFactory handlerFactory,
+            CharacterFinalPoseNativePublication publication)
+        {
+            Source = source ?? throw new ArgumentNullException(nameof(source));
+            Constraints = constraints ??
+                throw new ArgumentNullException(nameof(constraints));
+            HandlerFactory = handlerFactory ??
+                throw new ArgumentNullException(nameof(handlerFactory));
+            Publication = publication ??
+                throw new ArgumentNullException(nameof(publication));
+        }
+
+        internal CharacterPoseSourceModule Source { get; }
+        internal CharacterPoseConstraintRuntime Constraints { get; }
+        internal ICharacterPoseNativeNodeHandlerFactory HandlerFactory { get; }
+        internal CharacterFinalPoseNativePublication Publication { get; }
+
+        public void Dispose()
+        {
+            Exception failure = null;
+            try
+            {
+                Publication.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+            try
+            {
+                Constraints.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null
+                    ? exception
+                    : new AggregateException(failure, exception);
+            }
+            try
+            {
+                Source.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null
+                    ? exception
+                    : new AggregateException(failure, exception);
+            }
+            if (failure != null)
+                throw failure;
+        }
+    }
+
     internal sealed class CharacterPoseNativeRoleRuntime : IDisposable
     {
         readonly CharacterPoseNativeGraphRuntime m_Graph;
         readonly CharacterFinalPoseNativePublication m_Publication;
+        readonly CharacterPoseConstraintRuntime m_Constraints;
+        readonly CharacterPoseSourceModule m_Source;
         bool m_Disposed;
 
         CharacterPoseNativeRoleRuntime(
             CharacterPoseNativeGraphRuntime graph,
-            CharacterFinalPoseNativePublication publication)
+            CharacterFinalPoseNativePublication publication,
+            CharacterPoseConstraintRuntime constraints = null,
+            CharacterPoseSourceModule source = null)
         {
             m_Graph = graph ?? throw new ArgumentNullException(nameof(graph));
             m_Publication = publication ??
                 throw new ArgumentNullException(nameof(publication));
+            m_Constraints = constraints;
+            m_Source = source;
         }
 
         internal CharacterPoseNativeGraphRuntime Graph => m_Graph;
@@ -92,6 +158,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong instanceId,
             ulong resetGeneration,
             string reason,
+            CharacterPoseNativeRoleDependencies dependencies,
+            out CharacterPoseNativeRoleRuntime runtime)
+        {
+            if (dependencies == null)
+                throw new ArgumentNullException(nameof(dependencies));
+            CharacterPoseNativeAdoptedResult adopted = Create(
+                in preparation,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                dependencies.HandlerFactory,
+                dependencies.Publication,
+                out CharacterPoseNativeGraphRuntime graph);
+            if (!adopted.IsAdopted)
+            {
+                dependencies.Dispose();
+                runtime = null;
+                return adopted;
+            }
+            runtime = new CharacterPoseNativeRoleRuntime(
+                graph,
+                dependencies.Publication,
+                dependencies.Constraints,
+                dependencies.Source);
+            return adopted;
+        }
+
+        internal static CharacterPoseNativeAdoptedResult Create(
+            in CharacterPoseNativeGraphPrepareResult preparation,
+            in CharacterPoseNativeInstanceContext context,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
             ICharacterPoseNativeNodeHandlerFactory handlerFactory,
             CharacterFinalPoseNativePublication publication,
             out CharacterPoseNativeRoleRuntime runtime)
@@ -136,6 +236,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 runtime = null;
                 throw;
             }
+        }
+
+        internal static CharacterPoseNativeAdoptedResult Replace(
+            CharacterPoseNativeRoleRuntime current,
+            in CharacterPoseNativeGraphPrepareResult preparation,
+            in CharacterPoseNativeInstanceContext context,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            CharacterPoseNativeRoleDependencies dependencies,
+            out CharacterPoseNativeRoleRuntime runtime)
+        {
+            if (dependencies == null)
+                throw new ArgumentNullException(nameof(dependencies));
+            CharacterPoseNativeAdoptedResult adopted = Replace(
+                current,
+                in preparation,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                dependencies.HandlerFactory,
+                dependencies.Publication,
+                out CharacterPoseNativeGraphRuntime graph);
+            if (!adopted.IsAdopted)
+            {
+                dependencies.Dispose();
+                runtime = null;
+                return adopted;
+            }
+            runtime = new CharacterPoseNativeRoleRuntime(
+                graph,
+                dependencies.Publication,
+                dependencies.Constraints,
+                dependencies.Source);
+            return adopted;
         }
 
         internal static CharacterPoseNativeAdoptedResult Replace(
@@ -300,7 +436,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Exception failure = null;
             try
             {
-                m_Publication.Dispose();
+                m_Graph.Dispose();
             }
             catch (Exception exception)
             {
@@ -308,7 +444,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             try
             {
-                m_Graph.Dispose();
+                m_Publication.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null
+                    ? exception
+                    : new AggregateException(failure, exception);
+            }
+            try
+            {
+                m_Constraints?.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null
+                    ? exception
+                    : new AggregateException(failure, exception);
+            }
+            try
+            {
+                m_Source?.Dispose();
             }
             catch (Exception exception)
             {

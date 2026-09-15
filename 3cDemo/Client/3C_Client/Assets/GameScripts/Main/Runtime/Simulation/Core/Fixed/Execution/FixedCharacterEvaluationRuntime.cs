@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
 
@@ -51,6 +51,8 @@ namespace ThirdPersonSimulation.Fixed
             {
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
+                var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
+                workspace.Reset();
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
@@ -64,9 +66,8 @@ namespace ThirdPersonSimulation.Fixed
                         abilityInput,
                         ingress,
                         bodyFacts,
-                        actor.ControlRuntimeBinding,
-                        actor.EquipmentRuntimeBinding,
-                        sharedEffectScratch,
+                        workspace,
+                        new FixedCharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
                     actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
@@ -296,5 +297,85 @@ namespace ThirdPersonSimulation.Fixed
                 actionOwner,
                 gameplayResultOwner);
         }
+
+    internal sealed class FixedCharacterAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
+    {
+        readonly FixedGameplayAbilityExecutionInstallation installation;
+        readonly CharacterControlRuntimeBinding controlRuntimeBinding;
+        readonly CharacterEquipmentRuntimeBinding equipmentRuntimeBinding;
+        readonly FixedGameplayEffectExecutionScratch gameplayEffectScratch;
+
+        public FixedCharacterAbilityExecutionServiceFactory(
+            FixedGameplayAbilityExecutionInstallation installation,
+            CharacterControlRuntimeBinding controlRuntimeBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
+            FixedGameplayEffectExecutionScratch gameplayEffectScratch)
+        {
+            this.installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            this.controlRuntimeBinding = controlRuntimeBinding;
+            this.equipmentRuntimeBinding = equipmentRuntimeBinding;
+            this.gameplayEffectScratch = gameplayEffectScratch ?? throw new ArgumentNullException(nameof(gameplayEffectScratch));
+        }
+
+        public FixedGameplayEffectOperationRuntime CreateGameplayEffects(
+            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionAccess access,
+            FixedAbilityExecutionFrame frame,
+            FixedActionStateStore actions,
+            FixedHandleAllocator handles,
+            FixedFactSink facts,
+            FixedPresentationSink presentation,
+            FixedTraceSink trace,
+            FixedAbilityExecutionWorkspace workspace)
+        {
+            return installation.GameplayEffectCatalog == null
+                ? null
+                : new FixedGameplayEffectOperationRuntime(
+                    access,
+                    frame,
+                    actions,
+                    handles,
+                    facts,
+                    presentation,
+                    trace,
+                    workspace.GameplayEffects);
+        }
+
+        public FixedEquipmentRuntime CreateEquipment(
+            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionAccess access,
+            FixedAbilityExecutionFrame frame,
+            FixedActionStateStore actions,
+            FixedHandleAllocator handles,
+            FixedGameplayEffectOperationRuntime gameplayEffects)
+        {
+            if (!installation.Data.Capabilities.HasGameplayCapability("Equipment") || equipmentRuntimeBinding == null)
+                return null;
+            var layout = EquipmentProgramLayoutCompiler.Compile(
+                equipmentRuntimeBinding,
+                installation.Data.CatalogEntries,
+                installation.Data.References,
+                installation.Data.Producers);
+            return new FixedEquipmentRuntime(
+                access,
+                frame,
+                actions,
+                handles,
+                gameplayEffects,
+                frame.Facts,
+                frame.Trace,
+                layout);
+        }
+
+        public FixedLocomotionRuntime CreateLocomotion(
+            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionAccess access,
+            FixedValueRuntime values,
+            FixedMotionAccumulator motion,
+            FixedAbilityExecutionFrame frame)
+        {
+            return new FixedLocomotionRuntime(access, values, motion, frame, controlRuntimeBinding);
+        }
     }
+}
 }

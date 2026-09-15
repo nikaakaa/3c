@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
@@ -50,6 +50,8 @@ namespace ThirdPersonSimulation
             {
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
+                var workspace = new Float32AbilityExecutionWorkspace(sharedEffectScratch);
+                workspace.Reset();
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
@@ -63,9 +65,8 @@ namespace ThirdPersonSimulation
                         abilityInput,
                         ingress,
                         bodyFacts,
-                        actor.ControlRuntimeBinding,
-                        actor.EquipmentRuntimeBinding,
-                        sharedEffectScratch,
+                        workspace,
+                        new Float32CharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
                     actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
@@ -295,5 +296,85 @@ namespace ThirdPersonSimulation
                 actionOwner,
                 gameplayResultOwner);
         }
+
+    internal sealed class Float32CharacterAbilityExecutionServiceFactory : IFloat32AbilityExecutionServiceFactory
+    {
+        readonly Float32GameplayAbilityExecutionInstallation installation;
+        readonly CharacterControlRuntimeBinding controlRuntimeBinding;
+        readonly CharacterEquipmentRuntimeBinding equipmentRuntimeBinding;
+        readonly Float32GameplayEffectExecutionScratch gameplayEffectScratch;
+
+        public Float32CharacterAbilityExecutionServiceFactory(
+            Float32GameplayAbilityExecutionInstallation installation,
+            CharacterControlRuntimeBinding controlRuntimeBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
+            Float32GameplayEffectExecutionScratch gameplayEffectScratch)
+        {
+            this.installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            this.controlRuntimeBinding = controlRuntimeBinding;
+            this.equipmentRuntimeBinding = equipmentRuntimeBinding;
+            this.gameplayEffectScratch = gameplayEffectScratch ?? throw new ArgumentNullException(nameof(gameplayEffectScratch));
+        }
+
+        public Float32GameplayEffectOperationRuntime CreateGameplayEffects(
+            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionAccess access,
+            Float32AbilityExecutionFrame frame,
+            Float32ActionStateStore actions,
+            Float32HandleAllocator handles,
+            Float32FactSink facts,
+            Float32PresentationSink presentation,
+            Float32TraceSink trace,
+            Float32AbilityExecutionWorkspace workspace)
+        {
+            return installation.GameplayEffectCatalog == null
+                ? null
+                : new Float32GameplayEffectOperationRuntime(
+                    access,
+                    frame,
+                    actions,
+                    handles,
+                    facts,
+                    presentation,
+                    trace,
+                    workspace.GameplayEffects);
+        }
+
+        public Float32EquipmentRuntime CreateEquipment(
+            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionAccess access,
+            Float32AbilityExecutionFrame frame,
+            Float32ActionStateStore actions,
+            Float32HandleAllocator handles,
+            Float32GameplayEffectOperationRuntime gameplayEffects)
+        {
+            if (!installation.Data.Capabilities.HasGameplayCapability("Equipment") || equipmentRuntimeBinding == null)
+                return null;
+            var layout = EquipmentProgramLayoutCompiler.Compile(
+                equipmentRuntimeBinding,
+                installation.Data.CatalogEntries,
+                installation.Data.References,
+                installation.Data.Producers);
+            return new Float32EquipmentRuntime(
+                access,
+                frame,
+                actions,
+                handles,
+                gameplayEffects,
+                frame.Facts,
+                frame.Trace,
+                layout);
+        }
+
+        public Float32LocomotionRuntime CreateLocomotion(
+            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionAccess access,
+            Float32ValueRuntime values,
+            Float32MotionAccumulator motion,
+            Float32AbilityExecutionFrame frame)
+        {
+            return new Float32LocomotionRuntime(access, values, motion, frame, controlRuntimeBinding);
+        }
     }
+}
 }

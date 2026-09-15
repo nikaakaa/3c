@@ -24,6 +24,35 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<SimulationTraceRecord> TraceRecords { get; }
     }
 
+    internal interface IFixedAbilityExecutionServiceFactory
+    {
+        FixedGameplayEffectOperationRuntime CreateGameplayEffects(
+            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionAccess access,
+            FixedAbilityExecutionFrame frame,
+            FixedActionStateStore actions,
+            FixedHandleAllocator handles,
+            FixedFactSink facts,
+            FixedPresentationSink presentation,
+            FixedTraceSink trace,
+            FixedAbilityExecutionWorkspace workspace);
+
+        FixedEquipmentRuntime CreateEquipment(
+            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionAccess access,
+            FixedAbilityExecutionFrame frame,
+            FixedActionStateStore actions,
+            FixedHandleAllocator handles,
+            FixedGameplayEffectOperationRuntime gameplayEffects);
+
+        FixedLocomotionRuntime CreateLocomotion(
+            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionAccess access,
+            FixedValueRuntime values,
+            FixedMotionAccumulator motion,
+            FixedAbilityExecutionFrame frame);
+    }
+
     internal sealed class FixedAbilityInvocationRuntime : IDisposable
     {
         readonly IFixedAbilityDomainStatePort m_DomainState;
@@ -57,9 +86,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
             FixedAbilityBodyFacts bodyFacts,
-            CharacterControlRuntimeBinding controlRuntimeBinding,
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
-            FixedGameplayEffectExecutionScratch gameplayEffectScratch,
+            FixedAbilityExecutionWorkspace workspace,
+            IFixedAbilityExecutionServiceFactory serviceFactory,
             Action<IFixedAbilityExecutionStateTransaction> acceptAbility)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -71,8 +99,7 @@ namespace ThirdPersonSimulation.Fixed
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
             m_AbilityState = abilityState ?? throw new ArgumentNullException(nameof(abilityState));
-            m_Workspace = new FixedAbilityExecutionWorkspace(
-                gameplayEffectScratch ?? new FixedGameplayEffectExecutionScratch());
+            m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new FixedAbilityExecutionFrame(
                 installation,
@@ -100,43 +127,28 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame.Facts,
                 m_Frame.Trace,
                 m_Workspace);
-            m_GameplayEffects = installation.GameplayEffectCatalog == null
-                ? null
-                : new FixedGameplayEffectOperationRuntime(
-                    access,
-                    m_Frame,
-                    m_ActionStore,
-                    handles,
-                    m_Frame.Facts,
-                    m_Frame.Presentation,
-                    m_Frame.Trace,
-                    m_Workspace.GameplayEffects);
+            m_GameplayEffects = serviceFactory.CreateGameplayEffects(
+                installation,
+                access,
+                m_Frame,
+                m_ActionStore,
+                handles,
+                m_Frame.Facts,
+                m_Frame.Presentation,
+                m_Frame.Trace,
+                m_Workspace);
 
-            m_Equipment = null;
+            m_Equipment = serviceFactory.CreateEquipment(
+                installation,
+                access,
+                m_Frame,
+                m_ActionStore,
+                handles,
+                m_GameplayEffects);
             bool equipmentEnabled = installation.Data.Capabilities.HasGameplayCapability("Equipment");
-            if (equipmentEnabled)
-            {
-                if (equipmentRuntimeBinding == null)
-                    throw new InvalidOperationException(
-                        $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
-                if (m_GameplayEffects == null)
-                    throw new InvalidOperationException(
-                        $"Ability '{installation.Data.AbilityId}' Equipment service requires Gameplay Effect service.");
-                EquipmentProgramLayout equipmentLayout = EquipmentProgramLayoutCompiler.Compile(
-                    equipmentRuntimeBinding,
-                    installation.Data.CatalogEntries,
-                    installation.Data.References,
-                    installation.Data.Producers);
-                m_Equipment = new FixedEquipmentRuntime(
-                    access,
-                    m_Frame,
-                    m_ActionStore,
-                    handles,
-                    m_GameplayEffects,
-                    m_Frame.Facts,
-                    m_Frame.Trace,
-                    equipmentLayout);
-            }
+            if (equipmentEnabled && m_Equipment == null)
+                throw new InvalidOperationException(
+                    $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
 
             FixedAbilityControlRuntime control = null;
             m_Actions = new FixedActionRuntime(
@@ -170,12 +182,12 @@ namespace ThirdPersonSimulation.Fixed
                 m_Workspace.MotionContributions,
                 m_Workspace.MotionWarpSamples,
                 m_ActionStore);
-            m_Locomotion = new FixedLocomotionRuntime(
+            m_Locomotion = serviceFactory.CreateLocomotion(
+                installation,
                 access,
                 m_Values,
                 m_Motion,
-                m_Frame,
-                controlRuntimeBinding);
+                m_Frame);
             var target = new FixedAbilityExecutionTarget(
                 access,
                 controlState,

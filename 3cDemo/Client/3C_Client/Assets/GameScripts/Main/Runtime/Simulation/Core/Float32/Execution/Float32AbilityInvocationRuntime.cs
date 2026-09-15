@@ -23,6 +23,35 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationTraceRecord> TraceRecords { get; }
     }
 
+    internal interface IFloat32AbilityExecutionServiceFactory
+    {
+        Float32GameplayEffectOperationRuntime CreateGameplayEffects(
+            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionAccess access,
+            Float32AbilityExecutionFrame frame,
+            Float32ActionStateStore actions,
+            Float32HandleAllocator handles,
+            Float32FactSink facts,
+            Float32PresentationSink presentation,
+            Float32TraceSink trace,
+            Float32AbilityExecutionWorkspace workspace);
+
+        Float32EquipmentRuntime CreateEquipment(
+            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionAccess access,
+            Float32AbilityExecutionFrame frame,
+            Float32ActionStateStore actions,
+            Float32HandleAllocator handles,
+            Float32GameplayEffectOperationRuntime gameplayEffects);
+
+        Float32LocomotionRuntime CreateLocomotion(
+            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionAccess access,
+            Float32ValueRuntime values,
+            Float32MotionAccumulator motion,
+            Float32AbilityExecutionFrame frame);
+    }
+
     internal sealed class Float32AbilityInvocationRuntime : IDisposable
     {
         readonly IFloat32AbilityDomainStatePort m_DomainState;
@@ -56,9 +85,8 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
             Float32AbilityBodyFacts bodyFacts,
-            CharacterControlRuntimeBinding controlRuntimeBinding,
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
-            Float32GameplayEffectExecutionScratch gameplayEffectScratch,
+            Float32AbilityExecutionWorkspace workspace,
+            IFloat32AbilityExecutionServiceFactory serviceFactory,
             Action<IFloat32AbilityExecutionStateTransaction> acceptAbility)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -70,8 +98,7 @@ namespace ThirdPersonSimulation
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
             m_AbilityState = abilityState ?? throw new ArgumentNullException(nameof(abilityState));
-            m_Workspace = new Float32AbilityExecutionWorkspace(
-                gameplayEffectScratch ?? new Float32GameplayEffectExecutionScratch());
+            m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new Float32AbilityExecutionFrame(
                 installation,
@@ -99,43 +126,28 @@ namespace ThirdPersonSimulation
                 m_Frame.Facts,
                 m_Frame.Trace,
                 m_Workspace);
-            m_GameplayEffects = installation.GameplayEffectCatalog == null
-                ? null
-                : new Float32GameplayEffectOperationRuntime(
-                    access,
-                    m_Frame,
-                    m_ActionStore,
-                    handles,
-                    m_Frame.Facts,
-                    m_Frame.Presentation,
-                    m_Frame.Trace,
-                    m_Workspace.GameplayEffects);
+            m_GameplayEffects = serviceFactory.CreateGameplayEffects(
+                installation,
+                access,
+                m_Frame,
+                m_ActionStore,
+                handles,
+                m_Frame.Facts,
+                m_Frame.Presentation,
+                m_Frame.Trace,
+                m_Workspace);
 
-            m_Equipment = null;
+            m_Equipment = serviceFactory.CreateEquipment(
+                installation,
+                access,
+                m_Frame,
+                m_ActionStore,
+                handles,
+                m_GameplayEffects);
             bool equipmentEnabled = installation.Data.Capabilities.HasGameplayCapability("Equipment");
-            if (equipmentEnabled)
-            {
-                if (equipmentRuntimeBinding == null)
-                    throw new InvalidOperationException(
-                        $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
-                if (m_GameplayEffects == null)
-                    throw new InvalidOperationException(
-                        $"Ability '{installation.Data.AbilityId}' Equipment service requires Gameplay Effect service.");
-                EquipmentProgramLayout equipmentLayout = EquipmentProgramLayoutCompiler.Compile(
-                    equipmentRuntimeBinding,
-                    installation.Data.CatalogEntries,
-                    installation.Data.References,
-                    installation.Data.Producers);
-                m_Equipment = new Float32EquipmentRuntime(
-                    access,
-                    m_Frame,
-                    m_ActionStore,
-                    handles,
-                    m_GameplayEffects,
-                    m_Frame.Facts,
-                    m_Frame.Trace,
-                    equipmentLayout);
-            }
+            if (equipmentEnabled && m_Equipment == null)
+                throw new InvalidOperationException(
+                    $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
 
             Float32AbilityControlRuntime control = null;
             m_Actions = new Float32ActionRuntime(
@@ -169,12 +181,12 @@ namespace ThirdPersonSimulation
                 m_Workspace.MotionContributions,
                 m_Workspace.MotionWarpSamples,
                 m_ActionStore);
-            m_Locomotion = new Float32LocomotionRuntime(
+            m_Locomotion = serviceFactory.CreateLocomotion(
+                installation,
                 access,
                 m_Values,
                 m_Motion,
-                m_Frame,
-                controlRuntimeBinding);
+                m_Frame);
             var target = new Float32AbilityExecutionTarget(
                 access,
                 controlState,

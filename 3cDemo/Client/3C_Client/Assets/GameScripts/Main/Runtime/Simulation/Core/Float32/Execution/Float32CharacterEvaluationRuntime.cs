@@ -48,6 +48,7 @@ namespace ThirdPersonSimulation
             try
             {
                 var serviceFactory = new Float32AbilityExecutionServiceFactory();
+                var domainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new Float32AbilityExecutionWorkspace(sharedEffectScratch);
@@ -71,6 +72,7 @@ namespace ThirdPersonSimulation
                     var invocation = new Float32AbilityInvocationRuntime(
                         installation.Execution,
                         actor.AbilityInstallations,
+                        domainRuntimeFactory,
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
                         actor.ActorId,

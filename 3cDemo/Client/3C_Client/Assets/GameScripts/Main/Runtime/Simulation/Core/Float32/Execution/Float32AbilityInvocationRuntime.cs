@@ -34,6 +34,7 @@ namespace ThirdPersonSimulation
         Float32AbilityExecutionAssembly Create(
             Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
+            IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace);
     }
@@ -98,6 +99,7 @@ namespace ThirdPersonSimulation
         public Float32AbilityInvocationRuntime(
             Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
+            IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
             IFloat32SkillExecutionState skillState,
             IFloat32AbilityExecutionSavepointPort savepointPort,
             ActorId actorId,
@@ -117,6 +119,7 @@ namespace ThirdPersonSimulation
             execution = execution ?? throw new ArgumentNullException(nameof(execution));
             AbilityId = execution.Data.AbilityId;
             actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
+            domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
@@ -146,6 +149,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionAssembly assembly = serviceFactory.Create(
                 execution,
                 actionBindings,
+                domainRuntimeFactory,
                 m_Frame,
                 m_Workspace);
             m_Input = assembly.Input;

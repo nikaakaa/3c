@@ -879,3 +879,8 @@
 
 - 提交 `d482ad0bf`，Authority 启动和 Prediction Schedule 的错误信息统一改为 `Character Runtime` 与 `Character roster`，不再把现行角色入口描述成已删除的 Program Runtime。
 - 只修正网络诊断语义，不改变 Authority／Prediction 的校验条件、计划生成或状态传输；Float32 目标工程编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除角色注册的Projection资产转发
+
+- 提交 `fe951d529`，Float32／Fixed Actor Registration 删除未被消费的 `CharacterPresentationProjectionAsset` 参数和属性；Host 在装配时仍加载并传递实际 `CharacterPresentationProjection` 给表现运行时。
+- 资产容器不再沿角色注册对象重复传播，Pose 数据、表现运行时和注册身份不变；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

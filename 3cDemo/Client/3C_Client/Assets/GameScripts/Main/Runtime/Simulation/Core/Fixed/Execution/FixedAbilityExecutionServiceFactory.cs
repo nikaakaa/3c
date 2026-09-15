@@ -113,7 +113,8 @@ namespace ThirdPersonSimulation.Fixed
                 blackboard);
             control = new FixedAbilityOperationControlRuntime(installation, services);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
-                installation,
+                installation.Data.Binding,
+                installation.Services,
                 actions,
                 actionStore,
                 control);

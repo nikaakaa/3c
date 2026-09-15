@@ -7,18 +7,21 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedAbilityDomainRuntime
     {
-        readonly FixedGameplayAbilityExecutionInstallation m_Installation;
+        readonly GameplayAbilityExecutionBinding m_Skill;
+        readonly IGameplayAbilityExecutionServices m_Services;
         readonly FixedActionRuntime m_Actions;
         readonly FixedActionStateStore m_ActionStore;
         readonly IFixedAbilityOperationControlRuntime m_Control;
 
         public FixedAbilityDomainRuntime(
-            FixedGameplayAbilityExecutionInstallation installation,
+            GameplayAbilityExecutionBinding skill,
+            IGameplayAbilityExecutionServices services,
             FixedActionRuntime actions,
             FixedActionStateStore actionStore,
             IFixedAbilityOperationControlRuntime control)
         {
-            m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            m_Skill = skill ?? throw new ArgumentNullException(nameof(skill));
+            m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionStore = actionStore ?? throw new ArgumentNullException(nameof(actionStore));
             m_Control = control ?? throw new ArgumentNullException(nameof(control));
@@ -27,7 +30,7 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.ability-tick")]
         public void Tick()
         {
-            GameplayAbilityExecutionBinding skill = m_Installation.Data.Binding;
+            GameplayAbilityExecutionBinding skill = m_Skill;
             var stoppingInstances = new HashSet<ulong>();
             IReadOnlyList<FixedActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
             for (int i = 0; i < actions.Count; i++)
@@ -173,7 +176,7 @@ namespace ThirdPersonSimulation.Fixed
                 action,
                 SimulationExecutionSource.FromSkillOperation(
                     skill.EntryOperation,
-                    m_Installation.Services.SourcePath(skill.EntryOperation)),
+                    m_Services.SourcePath(skill.EntryOperation)),
                 GameplayAbilityEndTriggerNames.ExecutionCompleted,
                 success ? AbilityLifecycleTransition.Complete : AbilityLifecycleTransition.Abort,
                 success ? "SkillCompleted" : "SkillExecutionFailed");

@@ -695,3 +695,9 @@
 - 提交 `6553449ca`，扩展现有装备动作上下文合同为只读 Reader，角色评估通过 `IEquipmentActionContextReader` 查询路由和上下文；完整 Provider 仍只由 Ability ActionRuntime 使用。
 - 保留原有 `HasActionRoute` 先判、`TryReadActionContext` 再读的行为和无效路由处理，不复制装备状态或路由规则，不增加角色对 `EquipmentRuntime` 实现类的依赖。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色以Ability能力事实驱动效果推进
+
+- 提交 `f202b5905`，Float32／Fixed 角色评估只读取 Invocation 的 `HasGameplayEffects` 能力事实，再调用既有 Gameplay Effect 推进入口；不再向角色暴露 `GameplayEffectOperationRuntime` 实现类。
+- Effect 服务仍由 Ability 执行组装内部持有，Ingress、Advance 和共享效果状态顺序不变；本步只收窄角色观察边界。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

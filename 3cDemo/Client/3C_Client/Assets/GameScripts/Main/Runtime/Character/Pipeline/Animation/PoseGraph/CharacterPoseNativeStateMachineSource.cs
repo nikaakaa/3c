@@ -1078,7 +1078,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     {
                         duration = Math.Max(
                             duration,
-                            binding.Clip.length / Mathf.Max(0.0001f, payload.PlayRate));
+                            Math.Max(0f, binding.Clip.length - payload.InitialTime) /
+                            Mathf.Max(0.0001f, payload.PlayRate));
                         hasFiniteDuration = true;
                     }
                 }

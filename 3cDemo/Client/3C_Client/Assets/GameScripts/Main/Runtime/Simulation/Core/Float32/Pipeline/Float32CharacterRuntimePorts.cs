@@ -152,17 +152,10 @@ namespace ThirdPersonSimulation
             out EquipmentStateAggregate equipmentState)
         {
             equipmentState = null;
-            for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
-            {
-                Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
-                if (!installation.Data.Capabilities.HasGameplayCapability("Equipment"))
-                    continue;
-                if (actor.EquipmentRuntimeBinding == null)
-                    throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
-                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.CompileRoleStateLayout(actor.EquipmentRuntimeBinding);
-                equipmentState = EquipmentStateAggregate.CreateInitial(layout);
+            if (!actor.RequiresEquipment)
                 return;
-            }
+            EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.CompileRoleStateLayout(actor.EquipmentRuntimeBinding);
+            equipmentState = EquipmentStateAggregate.CreateInitial(layout);
         }
 
         static ActorId[] ActorIds(IReadOnlyList<SimulationActorBinding> values)

@@ -37,6 +37,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Float32 Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
+            RequiresEquipment = requiresEquipment;
             AbilityInstallations = new Float32GameplayAbilityExecutionInstallationSet(
                 abilityData,
                 gameplayEffectRuntimeBinding);
@@ -54,6 +55,7 @@ namespace ThirdPersonSimulation
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
+        public bool RequiresEquipment { get; }
         public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> AbilityData { get; }
         public Float32GameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
         public StableHash GameplayContentHash { get; }

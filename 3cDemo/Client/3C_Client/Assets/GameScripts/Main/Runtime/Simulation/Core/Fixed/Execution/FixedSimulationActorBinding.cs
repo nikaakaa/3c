@@ -38,6 +38,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Fixed Actor Equipment service is required by an installed Ability.", nameof(equipmentRuntimeBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
+            RequiresEquipment = requiresEquipment;
             AbilityInstallations = new FixedGameplayAbilityExecutionInstallationSet(
                 abilityData,
                 gameplayEffectRuntimeBinding);
@@ -55,6 +56,7 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
+        public bool RequiresEquipment { get; }
         public GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> AbilityData { get; }
         public FixedGameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
         public StableHash GameplayContentHash { get; }

@@ -138,16 +138,10 @@ namespace ThirdPersonSimulation.Fixed
                 ? null
                 : GameplayEffectStateAggregate.CreateInitial(effectCatalog);
             EquipmentStateAggregate equipmentState = null;
-            for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
+            if (actor.RequiresEquipment)
             {
-                FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
-                if (!installation.Data.Capabilities.HasGameplayCapability("Equipment"))
-                    continue;
-                if (actor.EquipmentRuntimeBinding == null)
-                    throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
                 EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.CompileRoleStateLayout(actor.EquipmentRuntimeBinding);
                 equipmentState = EquipmentStateAggregate.CreateInitial(layout);
-                break;
             }
             return FixedCharacterRuntimeState.CreateInitial(
                 actor.AbilityInstallations,

@@ -931,3 +931,8 @@
 
 - 提交 `7667c0457`，Float32／Fixed Ability 执行上下文删除没有消费者的 `RequiresGameplayEffects` 属性；GameplayEffect 能力改为构造阶段局部校验，执行服务继续接收它需要的绑定信息。
 - `RequiresEquipment` 继续保留给 Equipment 服务工厂和状态布局使用，不改变能力声明、Gameplay Effect 绑定校验或执行目录；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成。
+
+## 2026-09-16 收回Equipment需求唯一归属
+
+- 提交 `a3712db16`，Float32／Fixed `SimulationActorBinding` 删除从 Ability 安装集合复制的 `RequiresEquipment` 字段；角色内容哈希和初始 Equipment 状态直接读取 `AbilityInstallations.RequiresEquipment`。
+- Ability 安装集合继续拥有能力需求事实，角色绑定不再复制一份角色层状态；不改变 Equipment 布局、能力声明或内容哈希结果。两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

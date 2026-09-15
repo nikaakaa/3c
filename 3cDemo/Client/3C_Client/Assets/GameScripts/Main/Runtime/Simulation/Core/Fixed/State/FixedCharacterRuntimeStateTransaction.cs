@@ -86,6 +86,11 @@ namespace ThirdPersonSimulation.Fixed
         void SetEquipmentState(EquipmentStateAggregate state);
     }
 
+    internal interface IFixedControlRuntimeStatePort
+    {
+        CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema);
+    }
+
     internal interface IFixedAbilityTransactionControlPort
     {
         FixedCharacterRuntimeStateSavepoint CreateSavepoint();
@@ -94,7 +99,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort, IFixedEventSequenceStatePort, IFixedGameplayEffectStatePort, IFixedEquipmentStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort, IFixedEventSequenceStatePort, IFixedGameplayEffectStatePort, IFixedEquipmentStatePort, IFixedControlRuntimeStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;

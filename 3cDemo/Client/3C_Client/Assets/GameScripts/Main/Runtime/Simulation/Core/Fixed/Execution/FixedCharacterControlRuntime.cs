@@ -277,7 +277,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedCharacterControlRuntime(
             CharacterControlModuleCatalog controlModules,
             CharacterControlRuntimeBinding binding,
-            FixedCharacterRuntimeStateTransaction roleState,
+            IFixedControlRuntimeStatePort controlState,
             IFixedInputRequestStatePort inputRequests,
             IFixedActionRuntimeStatePort actionState,
             ActorId actorId,
@@ -294,7 +294,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             controlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             m_Binding = binding ?? throw new ArgumentNullException(nameof(binding));
-            roleState = roleState ?? throw new ArgumentNullException(nameof(roleState));
+            controlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
             inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             actionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             if (!actorId.IsValid || !tick.IsValid || tickRate <= 0)
@@ -302,7 +302,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Control = controlModules.Require(binding.ModuleId);
             binding.RequireContract(m_Control.Contract);
             m_Schema = new CharacterControlStateSchema(m_Control.Contract);
-            m_State = roleState.BindControl(m_Schema);
+            m_State = controlState.BindControl(m_Schema);
             m_ActorId = actorId;
             m_Tick = tick;
             m_TickRate = tickRate;

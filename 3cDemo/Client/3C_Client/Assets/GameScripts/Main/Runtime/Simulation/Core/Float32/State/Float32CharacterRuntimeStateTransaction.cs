@@ -86,6 +86,11 @@ namespace ThirdPersonSimulation
         void SetEquipmentState(EquipmentStateAggregate state);
     }
 
+    internal interface IFloat32ControlRuntimeStatePort
+    {
+        CharacterControlRuntimeStateTransaction BindControl(CharacterControlStateSchema schema);
+    }
+
     internal interface IFloat32AbilityTransactionControlPort
     {
         Float32CharacterRuntimeStateSavepoint CreateSavepoint();
@@ -94,7 +99,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort, IFloat32ControlRuntimeStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;

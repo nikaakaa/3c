@@ -277,6 +277,7 @@ namespace ThirdPersonSimulation
             CharacterControlModuleCatalog controlModules,
             CharacterControlRuntimeBinding binding,
             Float32CharacterRuntimeStateTransaction roleState,
+            IFloat32InputRequestStatePort inputRequests,
             ActorId actorId,
             SimulationTick tick,
             int tickRate,
@@ -292,6 +293,7 @@ namespace ThirdPersonSimulation
             controlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             m_Binding = binding ?? throw new ArgumentNullException(nameof(binding));
             roleState = roleState ?? throw new ArgumentNullException(nameof(roleState));
+            inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             if (!actorId.IsValid || !tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Float32 Character Control runtime identity is incomplete.");
             m_Control = controlModules.Require(binding.ModuleId);
@@ -304,7 +306,7 @@ namespace ThirdPersonSimulation
             m_Read = new Float32CharacterControlReadPort(
                 input,
                 body,
-                requestId => HasInputRequest(roleState, requestId),
+                requestId => HasInputRequest(inputRequests, requestId),
                 parameter => Float32Scalar.FromDouble(binding.Parameters.ReadNumeric(parameter)),
                 skill => IsAbilityActive(roleState, skill),
                 skill => TryGetActiveAbilityInstanceId(roleState, skill),
@@ -338,7 +340,7 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        static bool HasInputRequest(Float32CharacterRuntimeStateTransaction state, string requestId)
+        static bool HasInputRequest(IFloat32InputRequestStatePort state, string requestId)
         {
             SimulationInputRequestState request = state.GetInputRequest(requestId);
             return request.IsValid && !request.Consumed && request.ExpireTick >= state.Tick.Value;

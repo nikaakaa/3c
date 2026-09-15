@@ -278,6 +278,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlModuleCatalog controlModules,
             CharacterControlRuntimeBinding binding,
             FixedCharacterRuntimeStateTransaction roleState,
+            IFixedInputRequestStatePort inputRequests,
             ActorId actorId,
             SimulationTick tick,
             int tickRate,
@@ -293,6 +294,7 @@ namespace ThirdPersonSimulation.Fixed
             controlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             m_Binding = binding ?? throw new ArgumentNullException(nameof(binding));
             roleState = roleState ?? throw new ArgumentNullException(nameof(roleState));
+            inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             if (!actorId.IsValid || !tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Fixed Character Control runtime identity is incomplete.");
             m_Control = controlModules.Require(binding.ModuleId);
@@ -305,7 +307,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Read = new FixedCharacterControlReadPort(
                 input,
                 body,
-                requestId => HasInputRequest(roleState, requestId),
+                requestId => HasInputRequest(inputRequests, requestId),
                 parameter => FixedScalar.FromDouble(binding.Parameters.ReadNumeric(parameter)),
                 skill => IsAbilityActive(roleState, skill),
                 skill => TryGetActiveAbilityInstanceId(roleState, skill),
@@ -339,7 +341,7 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
-        static bool HasInputRequest(FixedCharacterRuntimeStateTransaction state, string requestId)
+        static bool HasInputRequest(IFixedInputRequestStatePort state, string requestId)
         {
             SimulationInputRequestState request = state.GetInputRequest(requestId);
             return request.IsValid && !request.Consumed && request.ExpireTick >= state.Tick.Value;

@@ -87,6 +87,7 @@ namespace ThirdPersonSimulation.Fixed
             IReadOnlyList<SimulationIngress> ingress,
             FixedAbilityBodyFacts bodyFacts,
             FixedAbilityExecutionWorkspace workspace,
+            IFixedInputRequestStatePort inputRequests,
             IFixedAbilityExecutionServiceFactory serviceFactory,
             Action<IFixedAbilityExecutionStateTransaction> acceptAbility)
         {
@@ -110,6 +111,7 @@ namespace ThirdPersonSimulation.Fixed
                 bodyFacts,
                 m_AbilityState,
                 m_DomainState,
+                inputRequests,
                 m_Workspace);
 
             FixedGameplayAbilityExecutionAccess access = installation.Access;

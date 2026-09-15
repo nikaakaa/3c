@@ -83,6 +83,7 @@ namespace ThirdPersonSimulation
             Float32AbilityBodyFacts bodyFacts,
             IFloat32AbilityExecutionStateTransaction transaction,
             IFloat32AbilityDomainStatePort domainState,
+            IFloat32InputRequestStatePort inputRequests,
             Float32AbilityExecutionWorkspace workspace)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
@@ -96,6 +97,7 @@ namespace ThirdPersonSimulation
             m_BodyFacts = bodyFacts;
             Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
+            InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;
@@ -121,6 +123,7 @@ namespace ThirdPersonSimulation
             : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");
         internal IFloat32AbilityExecutionStateTransaction Transaction { get; }
         internal IFloat32AbilityDomainStatePort DomainState { get; }
+        internal IFloat32InputRequestStatePort InputRequests { get; }
         internal Float32EventSequence EventSequence { get; }
         internal Float32FactSink Facts { get; }
         internal Float32PresentationSink Presentation { get; }

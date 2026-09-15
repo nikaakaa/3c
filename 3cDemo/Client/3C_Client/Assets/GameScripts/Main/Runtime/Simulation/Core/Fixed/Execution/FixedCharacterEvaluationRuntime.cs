@@ -67,6 +67,7 @@ namespace ThirdPersonSimulation.Fixed
                         ingress,
                         bodyFacts,
                         workspace,
+                        roleState,
                         new FixedCharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
@@ -82,6 +83,7 @@ namespace ThirdPersonSimulation.Fixed
                     var control = new FixedCharacterControlRuntime(
                         characterRuntime.ControlModules,
                         actor.ControlRuntimeBinding,
+                        roleState,
                         roleState,
                         actor.ActorId,
                         tick,

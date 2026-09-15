@@ -33,7 +33,7 @@ namespace ThirdPersonSimulation
                 state = default;
                 return false;
             }
-            state = m_Frame.DomainState.GetInputRequest(requestId);
+            state = m_Frame.InputRequests.GetInputRequest(requestId);
             return state.IsValid && !state.Consumed && state.ExpireTick >= m_Frame.Tick.Value;
         }
 
@@ -41,9 +41,9 @@ namespace ThirdPersonSimulation
         {
             if (!m_Layout.HasInputRequest(requestId))
                 return;
-            SimulationInputRequestState state = m_Frame.DomainState.GetInputRequest(requestId);
+            SimulationInputRequestState state = m_Frame.InputRequests.GetInputRequest(requestId);
             if (state.IsValid && !state.Consumed)
-                m_Frame.DomainState.SetInputRequest(requestId, state.Consume());
+                m_Frame.InputRequests.SetInputRequest(requestId, state.Consume());
         }
 
         public SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)

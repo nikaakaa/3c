@@ -66,6 +66,7 @@ namespace ThirdPersonSimulation
                         ingress,
                         bodyFacts,
                         workspace,
+                        roleState,
                         new Float32CharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
@@ -81,6 +82,7 @@ namespace ThirdPersonSimulation
                     var control = new Float32CharacterControlRuntime(
                         characterRuntime.ControlModules,
                         actor.ControlRuntimeBinding,
+                        roleState,
                         roleState,
                         actor.ActorId,
                         tick,

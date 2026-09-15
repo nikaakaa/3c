@@ -45,6 +45,13 @@ namespace ThirdPersonSimulation.Fixed
         void Abort();
     }
 
+    internal interface IFixedInputRequestStatePort
+    {
+        SimulationTick Tick { get; }
+        SimulationInputRequestState GetInputRequest(string requestId);
+        void SetInputRequest(string requestId, SimulationInputRequestState state);
+    }
+
     internal interface IFixedAbilityDomainStatePort
     {
         ActorId ActorId { get; }
@@ -55,8 +62,6 @@ namespace ThirdPersonSimulation.Fixed
         ulong NextHandleAllocator();
         ulong CaptureHandleAllocator();
         void RestoreHandleAllocator(ulong value);
-        SimulationInputRequestState GetInputRequest(string requestId);
-        void SetInputRequest(string requestId, SimulationInputRequestState state);
         IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
         void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
         IReadOnlyList<FixedActionInstanceState> GetActionInstances();
@@ -72,7 +77,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;

@@ -86,6 +86,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<SimulationIngress> ingress,
             Float32AbilityBodyFacts bodyFacts,
             Float32AbilityExecutionWorkspace workspace,
+            IFloat32InputRequestStatePort inputRequests,
             IFloat32AbilityExecutionServiceFactory serviceFactory,
             Action<IFloat32AbilityExecutionStateTransaction> acceptAbility)
         {
@@ -109,6 +110,7 @@ namespace ThirdPersonSimulation
                 bodyFacts,
                 m_AbilityState,
                 m_DomainState,
+                inputRequests,
                 m_Workspace);
 
             Float32GameplayAbilityExecutionAccess access = installation.Access;

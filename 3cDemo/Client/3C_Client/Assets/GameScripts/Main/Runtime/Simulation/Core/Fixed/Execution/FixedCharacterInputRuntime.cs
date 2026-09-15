@@ -7,14 +7,14 @@ namespace ThirdPersonSimulation.Fixed
 {
     internal sealed class FixedCharacterInputRuntime
     {
-        readonly IFixedAbilityDomainStatePort m_DomainState;
+        readonly IFixedInputRequestStatePort m_InputRequests;
         readonly ReadOnlyCollection<string> m_RequestIds;
 
         public FixedCharacterInputRuntime(
-            IFixedAbilityDomainStatePort domainState,
+            IFixedInputRequestStatePort inputRequests,
             IEnumerable<string> requestIds)
         {
-            m_DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
+            m_InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             var values = new List<string>(requestIds ?? Array.Empty<string>());
             values.Sort(StringComparer.Ordinal);
             for (int i = 0; i < values.Count; i++)
@@ -33,8 +33,8 @@ namespace ThirdPersonSimulation.Fixed
             for (int requestIndex = 0; requestIndex < m_RequestIds.Count; requestIndex++)
             {
                 string requestId = m_RequestIds[requestIndex];
-                SimulationInputRequestState state = m_DomainState.GetInputRequest(requestId);
-                if (state.IsValid && state.ExpireTick < m_DomainState.Tick.Value)
+                SimulationInputRequestState state = m_InputRequests.GetInputRequest(requestId);
+                if (state.IsValid && state.ExpireTick < m_InputRequests.Tick.Value)
                     state = default;
                 for (int inputIndex = 0; inputIndex < requests.Count; inputIndex++)
                 {
@@ -52,7 +52,7 @@ namespace ThirdPersonSimulation.Fixed
                             request.Priority);
                     }
                 }
-                m_DomainState.SetInputRequest(requestId, state);
+                m_InputRequests.SetInputRequest(requestId, state);
             }
         }
     }

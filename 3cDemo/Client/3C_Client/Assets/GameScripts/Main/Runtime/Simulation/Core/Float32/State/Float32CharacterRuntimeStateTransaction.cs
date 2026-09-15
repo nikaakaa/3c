@@ -45,6 +45,13 @@ namespace ThirdPersonSimulation
         void Abort();
     }
 
+    internal interface IFloat32InputRequestStatePort
+    {
+        SimulationTick Tick { get; }
+        SimulationInputRequestState GetInputRequest(string requestId);
+        void SetInputRequest(string requestId, SimulationInputRequestState state);
+    }
+
     internal interface IFloat32AbilityDomainStatePort
     {
         ActorId ActorId { get; }
@@ -55,8 +62,6 @@ namespace ThirdPersonSimulation
         ulong NextHandleAllocator();
         ulong CaptureHandleAllocator();
         void RestoreHandleAllocator(ulong value);
-        SimulationInputRequestState GetInputRequest(string requestId);
-        void SetInputRequest(string requestId, SimulationInputRequestState state);
         IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests();
         void SetActionActivationRequests(IReadOnlyList<SimulationActionActivationRequestState> requests);
         IReadOnlyList<Float32ActionInstanceState> GetActionInstances();
@@ -72,7 +77,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort, IFloat32InputRequestStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;

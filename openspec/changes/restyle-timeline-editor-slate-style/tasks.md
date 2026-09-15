@@ -108,7 +108,7 @@
 - [x] 11.5 D3/D7：原Track/Clip/Section菜单和排序释放直接提交正式命令；Section不依赖directorGroup，显示边界不保存成Section，删除无正式合同的Actor/循环/任意组件创建命令。真实窗口验收仍未完成。
 - [x] 11.6 D5：原CurveRenderer/DopeSheetRenderer/参数工具只接正式Timeline-local曲线、编辑时间和事务通知，保留原key/切线/缩放算法；删除proxy假字段，保留局部Weight/Ease；Motion源XYZ/Yaw以同一参数行/DopeSheet/CurveEditor作只读Reference显示，只有source字段可配置并沿正式入口导航。提交 `081ba862b` 已接通Reference参数和只读原Renderer。
 - [x] 11.7 D6：原ActionClipInspector通用控件参数化并通过真实serialized owner接入Unity已有Inspector；普通字段走Read/Configure，选择不写代理context，不增加假Actor、假Unity Object或Timeline右侧自制面板。提交 `a25a05d10` 已将TimelineAsset Inspector改为typed字段和正式Configure；真实窗口验收仍未完成。
-- [ ] 11.8 D7：在现有Session/TimelineData mutation链收口手势、字段、菜单的一次提交、完整业务校验、source revision反馈与该次owner范围失败恢复；组件Undo退出BTSMTL编辑，选择/滚动不产生事务。真实窗口验收仍未完成。原ApplyModify回滚、差异提交和Track正式命令已保留；提交失败现在在 Slate 回调内完成重建和正式通知，不再把已回滚异常重新抛穿 IMGUI；选择合同现在携带当前 Timeline fingerprint revision；组合手势和owner范围失败恢复仍见审阅A07/A08。
+- [ ] 11.8 D7：在现有Session/TimelineData mutation链收口手势、字段、菜单的一次提交、完整业务校验、source revision反馈与该次owner范围失败恢复；组件Undo退出BTSMTL编辑，选择/滚动不产生事务。真实窗口验收仍未完成。原ApplyModify回滚、差异提交和Track正式命令已保留；提交失败现在在 Slate 回调内完成重建和正式通知，不再把已回滚异常重新抛穿 IMGUI；正式字段入口现在也先检查 Timeline fingerprint，外部修改时重建并丢弃过期字段写入；选择合同现在携带当前 Timeline fingerprint revision；组合手势和owner范围失败恢复仍见审阅A07/A08。
 - [x] 11.9 D8：原标尺/游标/步进/局部曲线吸附使用正式帧上下文，编辑不依赖Cutscene/Actor；保留原Runtime/History与Scene Play归属，实际采用读取领域报告，删除BTSMTL的Slate采样副作用，不擅自新增Play或实现领域工厂。真实窗口验收仍未完成。
 - [x] 11.10 D2/D8：正式入口切到无组件binding并删除BuildProjection/CreateChild/隐藏宿主、BtsmtlSlateGroup/Track/ActionClip及组件字典/扫描/销毁；删除无消费者的EditorModel与过时接口/meta，真实Slate组件与正式Actor/Camera资源不在删除范围
 - [x] 11.11 D5/D7：原选择、曲线缓存与Undo订阅按窗口/正式ID恢复和释放，改为可解除回调，关闭丢弃未提交草稿但不改已保存数据；原native/BTSMTL共用Renderer，不互相清空状态。提交 `bf07cf6e6` 已将Formal缓存清理收窄到Surface scope，提交 `8b7a0e2a3` 已恢复全部展开曲线轨道；真实关闭和未提交手势仍待主 Unity Editor 验收。

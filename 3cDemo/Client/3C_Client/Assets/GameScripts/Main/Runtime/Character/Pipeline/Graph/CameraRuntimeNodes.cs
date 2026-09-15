@@ -7,26 +7,10 @@ using UnityEngine;
 namespace ThirdPersonCharacter.Pipeline.Graph
 {
     [Serializable]
-    public abstract class CharacterSimulationOperationNode : ActionNode
-    {
-        protected sealed override void DoAction()
-        {
-        }
-    }
-
-    [Serializable]
-    public abstract class CharacterSimulationValueNode : ValueNode
-    {
-        protected sealed override void OutputValue()
-        {
-        }
-    }
-
-    [Serializable]
     [NodeName("Request Camera State")]
     [NodePath("Base/Action/Camera/Request Camera State")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class RequestCameraStateNode : CharacterSimulationOperationNode
+    public sealed class RequestCameraStateNode : SimulationOperationNode
     {
         [SerializeField, ShowInPanel("Mode")]
         CameraMode m_Mode = CameraMode.FreeLook;
@@ -75,7 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Emit Camera Cue")]
     [NodePath("Base/Action/Camera/Emit Camera Cue")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class EmitCameraCueNode : CharacterSimulationOperationNode
+    public sealed class EmitCameraCueNode : SimulationOperationNode
     {
         [SerializeField, ShowInPanel("Cue Id")]
         string m_CueId = "CameraCue";
@@ -120,7 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Set Camera Response")]
     [NodePath("Base/Action/Camera/Set Camera Response")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class SetCameraResponseNode : CharacterSimulationOperationNode
+    public sealed class SetCameraResponseNode : SimulationOperationNode
     {
         [SerializeField, ShowInPanel("Look Response")]
         CameraLookResponseMode m_LookResponse = CameraLookResponseMode.Full;
@@ -161,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Set Camera Target")]
     [NodePath("Base/Action/Camera/Set Camera Target")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class SetCameraTargetNode : CharacterSimulationOperationNode
+    public sealed class SetCameraTargetNode : SimulationOperationNode
     {
         [SerializeField, ShowInPanel("Target Key")]
         string m_TargetKey;
@@ -202,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Read Camera Basis")]
     [NodePath("Base/Value/Camera/Read Camera Basis")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ReadCameraBasisNode : CharacterSimulationValueNode
+    public sealed class ReadCameraBasisNode : SimulationValueNode
     {
         [SerializeField, PropertyPort(PortDirection.Output, "Valid"), ReadOnly]
         BoolPropertyPort m_Valid = new BoolPropertyPort();

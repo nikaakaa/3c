@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Read Equipment Identity")]
     [NodePath("Base/Value/Equipment/Read Identity")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ReadEquipmentIdentityNode : CharacterSimulationValueNode
+    public sealed class ReadEquipmentIdentityNode : SimulationValueNode
     {
         [SerializeField, ShowInPanel("Slot Id")]
         string m_SlotId;
@@ -56,7 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Read Equipment Parameter")]
     [NodePath("Base/Value/Equipment/Read Parameter")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ReadEquipmentParameterNode : CharacterSimulationValueNode
+    public sealed class ReadEquipmentParameterNode : SimulationValueNode
     {
         [SerializeField, ShowInPanel("Slot Id")]
         string m_SlotId;
@@ -98,7 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     }
 
     [Serializable]
-    public abstract class EquipmentChangeOperationNode : CharacterSimulationOperationNode
+    public abstract class EquipmentChangeOperationNode : SimulationOperationNode
     {
         [SerializeField, ShowInPanel("Slot Id")]
         string m_SlotId;
@@ -157,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     }
 
     [Serializable]
-    public abstract class EquipmentPendingChangeOperationNode : CharacterSimulationOperationNode
+    public abstract class EquipmentPendingChangeOperationNode : SimulationOperationNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Change Id")]
         EquipmentUInt64PropertyPort m_ChangeId = new EquipmentUInt64PropertyPort();

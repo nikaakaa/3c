@@ -2,6 +2,7 @@
 
 D22在原条目内的交付范围：1.11一并收口技能局部接口、按需服务、角色每帧工作迁出与无WorldRequest候选，取消不得Abort角色；2.6包含单一角色Step工作状态及输入共享消费/恢复，保留已完成多Ability/角色Hash；2.1/3.2将按Actor的Pending批次改为角色结果，汇集实际多技能/领域候选并接原Backend；3.1由正式Session提供NumericProfile/TickRate，技能只校验匹配；3.8接Timeline实际Advance/Stop候选和恢复，4.7/6.4接真实Pose服务至Host。以上为现有事项的完整含义，不新增checkbox或验证任务。
 
+2026-09-15主集成归属更新：`skill编译边界`实现窗口拥有D23定义的主集成装配。1.5／1.6、2.8、3.8、4.7／4.8仍是跨领域集成任务；Timeline、Pose和Skill各自域内实现清单不复制。主集成窗口负责装配和真实服务接线，不重写领域内部算法。
 2026-09-14执行更新（检查至dd0708d46及工作区）：旧根类型错误已撤回，28个编译文件删除及后续清理保留。核心已有独立技能安装／服务、角色绑定、新CharacterRuntime port和两个数值目标状态codec；但CharacterRuntimeState仍以单个Ability安装／Hash为根，效果绑定还会拒绝不使用该能力的技能，按D19纠正。Timeline已有数值／资源准备、游标Advance候选与Commit／Discard，仍缺跨边界Clip业务和完整停止／恢复。Pose已有多种值节点、Constraint适配和原生Final入口，StateMachine仍缺具体Source实现，角色Host仍走旧Program／Projection。原已完成小步只代表当时交付，不能用作最新运行完成事实。
 
 当前接线重点：核心1.10／2.1／2.6／6.4负责独立技能到角色入口；1.5／3.8消费Timeline真正可Advance／Commit／Discard／Restore的结果；4.7／6.1接Pose实际采样至最终姿态；3.1—3.6保留网络Pass职责并迁移领域状态。新增目录、布局、准备实例或节点注册均只记局部进展，未接完整不勾选。

@@ -206,6 +206,11 @@ Runtime MUST在Frame开始通过可消除的partial Query冻结Foot IK target in
 - **AND** generated Program handler MAY调用Editor／IL2CPP AOT Capture Program写入预分配packet，但PoseGraph Runtime MUST不解释Sampler字段、执行生成程序、生成CSV或保留Consumer／Binding／旧事件／View二次join
 
 
+#### Scenario: 离线诊断不进入PoseGraph
+
+- **WHEN** Host在Runtime之外对已封存Foot Artifact执行当前诊断Plan
+- **THEN** PoseGraph MUST不接收Plan、Operator结果、评分或报告
+- **AND** 离线诊断失败 MUST不影响PoseGraph运行状态或已封存Capture
 ### Requirement: Preview与正式Runtime必须复用同一Module Factory和Program Image
 
 Pose 预览与正式运行 MUST使用同一原生图实例规则、节点算法、Source／Constraint／Final Publication、表现帧事务及调参和完成语义。Adapter 可以提供不同 Fact、动作、World 和 Rig host；预览 MUST不创建旧 Image、简化执行器、第二 PlayableGraph 或默认 Foot 结果。

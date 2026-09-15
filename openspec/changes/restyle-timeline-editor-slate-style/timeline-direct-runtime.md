@@ -127,7 +127,7 @@ TimelineSemanticEmitterRegistry等文件若混合Camera/Motion或共享编译职
 - Advance和Stop进入同一调用方Step的接受/丢弃边界。RequestStop不得先清除未决Advance并永久改变已提交状态；明确当前候选与停止的关系，产生覆盖该实例清理的终止候选。Discard后保留前一次已提交游标、活动窗口和调用关系，不遗留半次取消；Commit只安装已检查候选，不重复执行Clip或先发布部分Gameplay结果。
 - Stop/ForceStop/ActionContextEnded只作用于准确播放identity/generation；技能正常取消不等于角色事务Abort。窗口和TreeClip的停止走真实服务，视觉尾部沿Slot。效果是否继续由其自身持续/绑定合同决定，不随Timeline结束统一移除。
 - TreeClip通过核心提供的同一独立技能入口执行。传入父播放/Clip/循环与子调用身份、时间和typed服务，取得真实状态及本Step结果；Timeline只保存调度与调用关联，不复制技能局部帧，不要求非运动技能产生WorldSolveRequest。
-- Timeline `TreeClipRequest` 携带 `TreeGraphId/TreeGraphRevision`；Prepare 用同一只读闭包校验 tree contract，缺失即失败。真实执行、Decision/Commit 与技能局部状态仍归 TreeClip service owner。
+- Timeline `TreeClipRequest` 携带精确 `TreeGraphId/TreeGraphRevision`：ID是只读闭包声明的`tree:<GraphAuthoringId>`，revision是同一`timeline.tree` dependency的`ContentHash`。Prepare用同一只读闭包校验tree contract；图、依赖或revision缺失/不匹配必须精确失败。TreeClip service是唯一解析和执行入口，必须拒绝fallback、自动最新版、默认图或静默替换；Decision/Commit与技能局部状态仍归该service owner。
 - Capture/PrepareRestore/ApplyRestore保存已提交私有状态及精确内容/schema/generation，核心组合角色/网络恢复并决定安装。非Skill使用同一正式Runtime；所需服务缺失精确失败，不造空技能/假Actor/空执行服务。
 - Timeline唯一修改内部内容、调度、候选及恢复。共享BtsmtlSkillTimelineCompiler、TreeClip执行、Host、角色状态/codec和外层Pipeline由核心唯一接线；Camera/Motion/Warp算法继续原owner。直接与核心实现协商实际接口阻塞，保留正确UI/源映射，不索取回执、不向规划窗口转发。
 

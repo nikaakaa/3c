@@ -83,3 +83,26 @@ Timeline MUST提供Float32/Fixed分型Capture/Restore，保存已提交cursor、
 - **WHEN** snapshot的内容revision、NumericTarget、schema或服务关联不匹配
 - **THEN** Restore MUST在安装前明确拒绝，MUST NOT从当前资产猜测旧内容或读取旧Program兼容包
 - **AND** 失败 MUST保持当前已提交状态，成功恢复也 MUST NOT重发已提交副作用或推进Pose图
+
+
+### Requirement: TreeClip必须通过精确图身份调用技能服务
+
+Timeline Runtime MUST为每个TreeClip候选携带`TreeGraphId`和`TreeGraphRevision`。`TreeGraphId` MUST是只读内容闭包声明的`tree:<GraphAuthoringId>`，`TreeGraphRevision` MUST是同一`timeline.tree` dependency的`ContentHash`。Timeline MUST NOT解析、加载、缓存、执行或改写目标图。TreeClip service MUST只解析完全匹配的正式图身份；图、依赖或revision缺失/不匹配 MUST产生精确失败。系统 MUST NOT使用fallback、自动最新版、默认图、兼容映射或静默替换。
+
+#### Scenario: 准备缺少tree contract
+
+- **WHEN** Timeline内容包含TreeClip，但只读闭包缺少对应`timeline.tree` dependency或`ContentHash`
+- **THEN** Prepare MUST返回精确的tree contract缺失失败，MUST NOT返回Ready或空服务
+- **AND** Runtime MUST NOT改用默认图、最新图或兼容身份
+
+#### Scenario: 图版本不匹配
+
+- **WHEN** TreeClip service收到的`TreeGraphRevision`与正式图身份不一致
+- **THEN** 本次TreeClip调用 MUST失败，调用方Step MUST按Commit/Discard边界处理候选
+- **AND** Runtime MUST NOT隐式替换revision、重编译成另一版本或绕过失败
+
+#### Scenario: 精确身份通过服务执行
+
+- **WHEN** 只读闭包中的tree dependency与正式图身份完全匹配
+- **THEN** Timeline MUST把同一`TreeGraphId`和`TreeGraphRevision`传给TreeClip service
+- **AND** Timeline MUST NOT在服务外解析或执行图，服务结果 MUST回到同一Step提交边界

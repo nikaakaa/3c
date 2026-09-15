@@ -407,6 +407,12 @@ Host/Registration/Session退出Program/Projection必要条件，安装真实领�
 
 本节细化现有character-domain-runtime增量中的技能独立、共享输入、统一Tick提交恢复与唯一实现归属，不恢复旧Program/Image路径。现行spec中旧总载体要求继续由本change已有delta替代，不新增第二份规范。最新并行代码若已修正某项，仅续接剩余消费者，不以历史审查回退正确实现。维持单一角色工作状态能保留同帧多技能修改，代价是共享服务与角色接线要一起完成；将每个技能作为完整角色事务会延续覆盖风险，不作为过渡方案。
 
+### D23. skill编译边界窗口拥有主集成装配
+
+2026-09-15用户确认：`skill编译边界`实现窗口拥有主集成装配。它负责把Ability、Timeline、Pose、Control、World、Camera、Cue、Snapshot和Preview接到同一角色Step；职责包括持有跨领域装配入口、注入真实TreeClip服务、汇集领域sink、组合外层快照并让预览消费运行观察。它不复制Timeline、Pose、Skill或Preview的领域内部算法；各领域owner继续维护自己的实现、数据和唯一任务清单。主集成窗口也不新增第二套播放器、假服务、通用事件总线、兜底路径或临时桥接。
+
+业务取舍：集中集成减少跨窗口接线和责任模糊，代价是该窗口范围扩大；必须保持领域owner的唯一实现边界，否则会把主集成窗口变成第二套Runtime。接口阻塞时只暴露typed合同和精确失败原因，不把缺失依赖伪装成成功。
+
 ## Risks / Trade-offs
 
 - [原生端口重复取值] → D3 的调用实例／阶段缓存；同一输入共享两条支路时源时间与求解只推进一次。

@@ -99,7 +99,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             worldAwarePresentation.RequireValid();
             PhysicsScene physicsScene = characterObject.scene.GetPhysicsScene();
             WorldBodyState initialBody = BuildInitialBody(actorId, rootHierarchy.LogicRoot);
-            RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
+            RuntimeContentRevision diagnosticsRevision = new RuntimeContentRevision(
                 $"float32-character-runtime/{actorId.Value}",
                 projection.SourceRevision,
                 characterRuntime.GameplayContentHash.ToString());

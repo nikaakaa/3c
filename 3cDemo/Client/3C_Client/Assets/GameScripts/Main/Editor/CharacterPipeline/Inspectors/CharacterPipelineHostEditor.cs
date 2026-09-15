@@ -205,9 +205,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField("Target", view.Target.DisplayName);
             EditorGUILayout.LabelField("Character", view.Target.CharacterRuntimeId.ToString("D"));
             EditorGUILayout.LabelField("Session", view.Target.SessionId.ToString("D"));
-            EditorGUILayout.LabelField("Program", view.Target.Revision.ProgramId);
+            EditorGUILayout.LabelField("Runtime", view.Target.Revision.RuntimeId);
             EditorGUILayout.LabelField("Source Revision", view.Target.Revision.SourceRevision);
-            EditorGUILayout.LabelField("Program Hash", view.Target.Revision.ProgramHash);
+            EditorGUILayout.LabelField("Content Hash", view.Target.Revision.ContentHash);
             EditorGUILayout.LabelField("Live Channels", view.Channels.ToString());
             EditorGUILayout.LabelField("Position", $"logic {view.LatestLogicTick}, presentation {view.LatestPresentationFrame}");
 

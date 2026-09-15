@@ -393,7 +393,7 @@ namespace ThirdPersonCharacter.Pipeline
 				CharacterPresentationProjection projection = CharacterPresentationRuntimeFactory.LoadProjection(
 					m_Definition.PresentationProjection);
 				m_AnimationRigBinding.RequireValid(projection.Rig);
-				RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
+				RuntimeContentRevision diagnosticsRevision = new RuntimeContentRevision(
 					$"float32-character-runtime/{actorId.Value}",
 					characterRuntime.AbilitySetSourceRevision,
 					characterRuntime.GameplayContentHash.ToString());

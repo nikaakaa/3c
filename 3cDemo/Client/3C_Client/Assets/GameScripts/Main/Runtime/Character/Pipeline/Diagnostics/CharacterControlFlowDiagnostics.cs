@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             {
                 if (source.TargetKind != ProgramSourceTargetKind.Reference || string.IsNullOrEmpty(source.EdgeId))
                     continue;
-                if (!context.SourceMap.TryGetProgramTarget(new RuntimeSourceTarget(RuntimeSourceTargetKind.Reference, source.TargetIndex), out RuntimeSourceElementHandle handle))
+                if (!context.SourceMap.TryGetIndexedTarget(new RuntimeSourceTarget(RuntimeSourceTargetKind.Reference, source.TargetIndex), out RuntimeSourceElementHandle handle))
                     throw new InvalidOperationException("编译控制边缺少诊断来源。");
                 if (handle.Kind == RuntimeSourceElementKind.Edge)
                     m_Edges.Add(edges[source.TargetIndex].Identity, new Projection(handle, source.SourceInvocationPath));

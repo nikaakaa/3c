@@ -50,30 +50,30 @@ namespace BTSMTL.Diagnostics
 
     public interface IDebugSourceMap
     {
-        RuntimeProgramRevision Revision { get; }
+        RuntimeContentRevision Revision { get; }
         IReadOnlyList<DebugSourceMapEntry> Entries { get; }
         IReadOnlyList<RuntimeGraphInvocation> GraphInvocations { get; }
         bool TryGet(RuntimeSourceElementHandle handle, out DebugSourceMapEntry entry);
         bool TryGetHandle(RuntimeSourceElementKey source, out RuntimeSourceElementHandle handle);
-        bool TryGetProgramTarget(RuntimeSourceTarget target, out RuntimeSourceElementHandle handle);
+        bool TryGetIndexedTarget(RuntimeSourceTarget target, out RuntimeSourceElementHandle handle);
         IReadOnlyList<RuntimeSourceElementHandle> FindHandles(RuntimeSourceElementKey source);
     }
 
-    public sealed class DebugSourceMap : IDebugSourceMap, IRuntimeDebugProgram
+    public sealed class DebugSourceMap : IDebugSourceMap, IRuntimeDebugSourceMap
     {
         readonly List<DebugSourceMapEntry> m_Entries = new List<DebugSourceMapEntry>();
         readonly Dictionary<int, DebugSourceMapEntry> m_ByHandle = new Dictionary<int, DebugSourceMapEntry>();
         readonly Dictionary<RuntimeSourceElementKey, List<RuntimeSourceElementHandle>> m_BySource = new Dictionary<RuntimeSourceElementKey, List<RuntimeSourceElementHandle>>();
-        readonly Dictionary<RuntimeSourceTarget, RuntimeSourceElementHandle> m_ByProgramTarget = new Dictionary<RuntimeSourceTarget, RuntimeSourceElementHandle>();
+        readonly Dictionary<RuntimeSourceTarget, RuntimeSourceElementHandle> m_ByIndexedTarget = new Dictionary<RuntimeSourceTarget, RuntimeSourceElementHandle>();
         bool m_Sealed;
         readonly List<RuntimeGraphInvocation> m_GraphInvocations = new();
 
-        public DebugSourceMap(RuntimeProgramRevision revision)
+        public DebugSourceMap(RuntimeContentRevision revision)
         {
             Revision = revision;
         }
 
-        public RuntimeProgramRevision Revision { get; }
+        public RuntimeContentRevision Revision { get; }
         public IDebugSourceMap SourceMap => this;
         public IReadOnlyList<DebugSourceMapEntry> Entries => m_Entries;
         public IReadOnlyList<RuntimeGraphInvocation> GraphInvocations => m_GraphInvocations;
@@ -107,8 +107,8 @@ namespace BTSMTL.Diagnostics
                 m_BySource.Add(source, handles);
             }
             handles.Add(handle);
-            if (target.IsProgramTarget && !m_ByProgramTarget.TryAdd(target, handle))
-                throw new InvalidOperationException($"Debug Source Map Program target is duplicated: {target}.");
+            if (target.IsIndexedTarget && !m_ByIndexedTarget.TryAdd(target, handle))
+                throw new InvalidOperationException($"Debug Source Map indexed target is duplicated: {target}.");
             return handle;
         }
 
@@ -154,9 +154,9 @@ namespace BTSMTL.Diagnostics
                 : Array.Empty<RuntimeSourceElementHandle>();
         }
 
-        public bool TryGetProgramTarget(RuntimeSourceTarget target, out RuntimeSourceElementHandle handle)
+        public bool TryGetIndexedTarget(RuntimeSourceTarget target, out RuntimeSourceElementHandle handle)
         {
-            if (target.IsProgramTarget && m_ByProgramTarget.TryGetValue(target, out handle))
+            if (target.IsIndexedTarget && m_ByIndexedTarget.TryGetValue(target, out handle))
                 return true;
             handle = default;
             return false;

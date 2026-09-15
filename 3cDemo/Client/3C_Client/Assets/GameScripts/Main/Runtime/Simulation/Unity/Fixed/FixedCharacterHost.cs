@@ -220,7 +220,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     FixedCharacterInputTraceModule.ResolveInitialBody(
                         BuildInitialBody(actorId, rootHierarchy.LogicRoot));
                 CharacterPresentationBodyState presentationBody = FixedUnityPresentationBoundary.Convert(initialBody);
-                RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
+                RuntimeContentRevision diagnosticsRevision = new RuntimeContentRevision(
                     $"fixed-character-runtime/{actorId.Value}",
                     characterRuntime.AbilitySetSourceRevision,
                     characterRuntime.GameplayContentHash.ToString());

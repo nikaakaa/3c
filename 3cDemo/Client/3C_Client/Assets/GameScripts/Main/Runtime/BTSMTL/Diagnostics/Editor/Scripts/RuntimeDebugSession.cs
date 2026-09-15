@@ -12,7 +12,7 @@ namespace BTSMTL.Diagnostics.Editor
         static readonly RuntimeDebugSession s_Shared;
 
         readonly Dictionary<object, LiveInterestLease> m_LiveInterests = new Dictionary<object, LiveInterestLease>();
-        readonly Dictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> m_SourceMaps = new Dictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot>();
+        readonly Dictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> m_SourceMaps = new Dictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot>();
         RuntimeDiagnosticsTarget m_Target;
         RuntimeDebugTargetProvider m_Provider;
         RuntimeDebugFrozenDiagnostics m_Frozen;
@@ -115,7 +115,7 @@ namespace BTSMTL.Diagnostics.Editor
         }
 
         public bool TryResolveHistoricalSource(
-            RuntimeProgramRevision revision,
+            RuntimeContentRevision revision,
             RuntimeSourceElementHandle handle,
             out RuntimeSourceElementKey source,
             out DebugSourceMapEntry entry)

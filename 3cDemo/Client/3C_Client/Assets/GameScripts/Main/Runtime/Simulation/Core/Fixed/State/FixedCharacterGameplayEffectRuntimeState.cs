@@ -61,9 +61,17 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             m_Aggregate = aggregate;
-            m_Working = m_Aggregate == null
-                ? null
-                : new SimulationGameplayEffectState(m_Catalog, m_Aggregate, m_Scratch);
+            if (m_Aggregate == null)
+            {
+                m_Working = null;
+                return;
+            }
+            if (m_Working == null)
+            {
+                m_Working = new SimulationGameplayEffectState(m_Catalog, m_Aggregate, m_Scratch);
+                return;
+            }
+            m_Working.Restore(m_Aggregate);
         }
 
         internal void Dispose()

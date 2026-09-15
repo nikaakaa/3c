@@ -4,19 +4,28 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation
 {
-    internal sealed class Float32CharacterRuntimeStateSavepoint
+    internal sealed class Float32AbilityExecutionSavepoint
         : IFloat32AbilityExecutionSavepoint
     {
-        internal Float32CharacterRuntimeStateSavepoint(
+        internal Float32AbilityExecutionSavepoint(
             int depth,
-            Float32CharacterRuntimeState snapshot)
+            GameplayEffectStateAggregate gameplayEffectState,
+            EquipmentStateAggregate equipmentState,
+            ulong handleAllocator,
+            ulong eventSequence)
         {
             Depth = depth;
-            Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
+            GameplayEffectState = gameplayEffectState;
+            EquipmentState = equipmentState;
+            HandleAllocator = handleAllocator;
+            EventSequence = eventSequence;
         }
 
         public int Depth { get; }
-        internal Float32CharacterRuntimeState Snapshot { get; }
+        internal GameplayEffectStateAggregate GameplayEffectState { get; }
+        internal EquipmentStateAggregate EquipmentState { get; }
+        internal ulong HandleAllocator { get; }
+        internal ulong EventSequence { get; }
     }
 
     internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityExecutionSavepointPort, IFloat32ControlRuntimeStatePort
@@ -25,8 +34,8 @@ namespace ThirdPersonSimulation
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
         readonly SimulationTick m_Tick;
         readonly int m_TickRate;
-        readonly Stack<Float32CharacterRuntimeStateSavepoint> m_Savepoints =
-            new Stack<Float32CharacterRuntimeStateSavepoint>();
+        readonly Stack<Float32AbilityExecutionSavepoint> m_Savepoints =
+            new Stack<Float32AbilityExecutionSavepoint>();
         readonly Float32CharacterActionRuntimeState m_ActionState;
         readonly Float32CharacterInputRequestState m_InputRequestState;
         readonly Float32CharacterEventSequenceState m_EventSequenceState;
@@ -125,7 +134,12 @@ namespace ThirdPersonSimulation
         public IFloat32AbilityExecutionSavepoint CreateSavepoint()
         {
             RequireActive();
-            var savepoint = new Float32CharacterRuntimeStateSavepoint(m_Savepoints.Count + 1, Snapshot());
+            var savepoint = new Float32AbilityExecutionSavepoint(
+                m_Savepoints.Count + 1,
+                m_GameplayEffectState.Capture(),
+                m_EquipmentState.Capture(),
+                m_HandleAllocatorState.HandleAllocator,
+                m_EventSequenceState.EventSequence);
             m_Savepoints.Push(savepoint);
             return savepoint;
         }
@@ -133,8 +147,11 @@ namespace ThirdPersonSimulation
         public void Restore(IFloat32AbilityExecutionSavepoint savepoint)
         {
             RequireActive();
-            Float32CharacterRuntimeStateSavepoint characterSavepoint = RequireTopSavepoint(savepoint);
-            Apply(characterSavepoint.Snapshot);
+            Float32AbilityExecutionSavepoint executionSavepoint = RequireTopSavepoint(savepoint);
+            m_GameplayEffectState.Restore(executionSavepoint.GameplayEffectState);
+            m_EquipmentState.Restore(executionSavepoint.EquipmentState);
+            m_HandleAllocatorState.RestoreHandleAllocator(executionSavepoint.HandleAllocator);
+            m_EventSequenceState.Restore(executionSavepoint.EventSequence);
             m_Savepoints.Pop();
         }
 
@@ -180,37 +197,12 @@ namespace ThirdPersonSimulation
                 m_EquipmentState.Capture());
         }
 
-        void Apply(Float32CharacterRuntimeState state)
+        Float32AbilityExecutionSavepoint RequireTopSavepoint(IFloat32AbilityExecutionSavepoint savepoint)
         {
-            m_AbilityStates.Clear();
-            for (int i = 0; i < state.Abilities.Count; i++)
-            {
-                Float32AbilityRuntimeState ability = state.Abilities[i];
-                m_AbilityStates.Add(ability.AbilityIdentity.AbilityId, ability.Clone());
-            }
-            m_ActionState.Restore(
-                state.ActionActivationRequests,
-                state.ActionInstances,
-                state.ActionEventSequence);
-            m_InputRequestState.Restore(state.InputRequests);
-            m_EventSequenceState.Restore(state.EventSequence);
-            m_HandleAllocatorState.RestoreHandleAllocator(state.HandleAllocator);
-            if (m_ControlState != null)
-            {
-                if (state.ControlState == null)
-                    throw new InvalidOperationException("Float32 Character runtime restore removed its bound Control state.");
-                m_ControlState.Restore(state.ControlState);
-            }
-            m_GameplayEffectState.Restore(state.GameplayEffectState);
-            m_EquipmentState.Restore(state.EquipmentState);
-        }
-
-        Float32CharacterRuntimeStateSavepoint RequireTopSavepoint(IFloat32AbilityExecutionSavepoint savepoint)
-        {
-            if (!(savepoint is Float32CharacterRuntimeStateSavepoint characterSavepoint) ||
-                m_Savepoints.Count == 0 || !ReferenceEquals(characterSavepoint, m_Savepoints.Peek()))
-                throw new InvalidOperationException("Character runtime state savepoint is stale or unbalanced.");
-            return characterSavepoint;
+            if (!(savepoint is Float32AbilityExecutionSavepoint executionSavepoint) ||
+                m_Savepoints.Count == 0 || !ReferenceEquals(executionSavepoint, m_Savepoints.Peek()))
+                throw new InvalidOperationException("Float32 Ability execution savepoint is stale or unbalanced.");
+            return executionSavepoint;
         }
 
         void RequireActive()

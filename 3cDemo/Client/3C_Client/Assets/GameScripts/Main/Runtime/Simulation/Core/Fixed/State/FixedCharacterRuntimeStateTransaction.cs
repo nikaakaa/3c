@@ -4,19 +4,28 @@ using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationA
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedCharacterRuntimeStateSavepoint
+    internal sealed class FixedAbilityExecutionSavepoint
         : IFixedAbilityExecutionSavepoint
     {
-        internal FixedCharacterRuntimeStateSavepoint(
+        internal FixedAbilityExecutionSavepoint(
             int depth,
-            FixedCharacterRuntimeState snapshot)
+            GameplayEffectStateAggregate gameplayEffectState,
+            EquipmentStateAggregate equipmentState,
+            ulong handleAllocator,
+            ulong eventSequence)
         {
             Depth = depth;
-            Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
+            GameplayEffectState = gameplayEffectState;
+            EquipmentState = equipmentState;
+            HandleAllocator = handleAllocator;
+            EventSequence = eventSequence;
         }
 
         public int Depth { get; }
-        internal FixedCharacterRuntimeState Snapshot { get; }
+        internal GameplayEffectStateAggregate GameplayEffectState { get; }
+        internal EquipmentStateAggregate EquipmentState { get; }
+        internal ulong HandleAllocator { get; }
+        internal ulong EventSequence { get; }
     }
 
     internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityExecutionSavepointPort, IFixedControlRuntimeStatePort
@@ -25,8 +34,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
         readonly SimulationTick m_Tick;
         readonly int m_TickRate;
-        readonly Stack<FixedCharacterRuntimeStateSavepoint> m_Savepoints =
-            new Stack<FixedCharacterRuntimeStateSavepoint>();
+        readonly Stack<FixedAbilityExecutionSavepoint> m_Savepoints =
+            new Stack<FixedAbilityExecutionSavepoint>();
         readonly FixedCharacterActionRuntimeState m_ActionState;
         readonly FixedCharacterInputRequestState m_InputRequestState;
         readonly FixedCharacterEventSequenceState m_EventSequenceState;
@@ -125,7 +134,12 @@ namespace ThirdPersonSimulation.Fixed
         public IFixedAbilityExecutionSavepoint CreateSavepoint()
         {
             RequireActive();
-            var savepoint = new FixedCharacterRuntimeStateSavepoint(m_Savepoints.Count + 1, Snapshot());
+            var savepoint = new FixedAbilityExecutionSavepoint(
+                m_Savepoints.Count + 1,
+                m_GameplayEffectState.Capture(),
+                m_EquipmentState.Capture(),
+                m_HandleAllocatorState.HandleAllocator,
+                m_EventSequenceState.EventSequence);
             m_Savepoints.Push(savepoint);
             return savepoint;
         }
@@ -133,8 +147,11 @@ namespace ThirdPersonSimulation.Fixed
         public void Restore(IFixedAbilityExecutionSavepoint savepoint)
         {
             RequireActive();
-            FixedCharacterRuntimeStateSavepoint characterSavepoint = RequireTopSavepoint(savepoint);
-            Apply(characterSavepoint.Snapshot);
+            FixedAbilityExecutionSavepoint executionSavepoint = RequireTopSavepoint(savepoint);
+            m_GameplayEffectState.Restore(executionSavepoint.GameplayEffectState);
+            m_EquipmentState.Restore(executionSavepoint.EquipmentState);
+            m_HandleAllocatorState.RestoreHandleAllocator(executionSavepoint.HandleAllocator);
+            m_EventSequenceState.Restore(executionSavepoint.EventSequence);
             m_Savepoints.Pop();
         }
 
@@ -180,37 +197,12 @@ namespace ThirdPersonSimulation.Fixed
                 m_EquipmentState.Capture());
         }
 
-        void Apply(FixedCharacterRuntimeState state)
+        FixedAbilityExecutionSavepoint RequireTopSavepoint(IFixedAbilityExecutionSavepoint savepoint)
         {
-            m_AbilityStates.Clear();
-            for (int i = 0; i < state.Abilities.Count; i++)
-            {
-                FixedAbilityRuntimeState ability = state.Abilities[i];
-                m_AbilityStates.Add(ability.AbilityIdentity.AbilityId, ability.Clone());
-            }
-            m_ActionState.Restore(
-                state.ActionActivationRequests,
-                state.ActionInstances,
-                state.ActionEventSequence);
-            m_InputRequestState.Restore(state.InputRequests);
-            m_EventSequenceState.Restore(state.EventSequence);
-            m_HandleAllocatorState.RestoreHandleAllocator(state.HandleAllocator);
-            if (m_ControlState != null)
-            {
-                if (state.ControlState == null)
-                    throw new InvalidOperationException("Fixed Character runtime restore removed its bound Control state.");
-                m_ControlState.Restore(state.ControlState);
-            }
-            m_GameplayEffectState.Restore(state.GameplayEffectState);
-            m_EquipmentState.Restore(state.EquipmentState);
-        }
-
-        FixedCharacterRuntimeStateSavepoint RequireTopSavepoint(IFixedAbilityExecutionSavepoint savepoint)
-        {
-            if (!(savepoint is FixedCharacterRuntimeStateSavepoint characterSavepoint) ||
-                m_Savepoints.Count == 0 || !ReferenceEquals(characterSavepoint, m_Savepoints.Peek()))
-                throw new InvalidOperationException("Character runtime state savepoint is stale or unbalanced.");
-            return characterSavepoint;
+            if (!(savepoint is FixedAbilityExecutionSavepoint executionSavepoint) ||
+                m_Savepoints.Count == 0 || !ReferenceEquals(executionSavepoint, m_Savepoints.Peek()))
+                throw new InvalidOperationException("Fixed Ability execution savepoint is stale or unbalanced.");
+            return executionSavepoint;
         }
 
         void RequireActive()

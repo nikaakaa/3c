@@ -1029,3 +1029,8 @@
 
 - 提交 `0ce1ae5a1`，Ability Capability Manifest、Float32／Fixed Character Runtime 和 DotRecast Authority manifest 删除 `RequiredWorldCapabilities` 技能镜像；世界能力只由 BodyMotion、角色配置、Session／Pipeline 与 Solver 正式计算。
 - Semantic IR artifact 版本提升到 17，Float32／Fixed Ability artifact 与 payload 版本提升到 3，DotRecast Authority manifest schema 提升到 11，旧产物直接拒绝；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability能力清单命名
+
+- 提交 `74229491a`，将只服务于 Ability 语义、Float32／Fixed 执行数据和编解码器的 `ProgramCapabilityManifest` 重命名为 `GameplayAbilityCapabilityManifest`，清除其对整个角色 Program 能力清单的误导。
+- 本步只调整类型命名和引用，不改变序列化布局、artifact 版本、能力集合内容或运行时边界；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

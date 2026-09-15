@@ -665,3 +665,9 @@
 - 提交 `fabad5762`，删除 Float32／Fixed `AbilityControlRuntime` 未被消费者使用的服务转发属性和 Cursor；`ServiceSet` 只保留控制器真正需要的 Target 与生命周期依赖。
 - 工厂不再把未由服务集合消费的 Input、Motion 传入集合；Input 仍由 Invocation 直接持有，Motion 仍由 Invocation 直接汇总，执行顺序和状态所有权不变。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 隐藏Ability执行服务内部依赖
+
+- 提交 `cbb2b6701`，Float32／Fixed `AbilityExecutionServiceSet` 将动作、效果、装备、值和黑板依赖改为私有字段，只通过控制器需要的 `Target` 与生命周期方法工作。
+- 删除具体实现上的无消费者属性，不改变服务持有关系、Ingress 分流、生命周期顺序或技能执行结果；未新增替代出口。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

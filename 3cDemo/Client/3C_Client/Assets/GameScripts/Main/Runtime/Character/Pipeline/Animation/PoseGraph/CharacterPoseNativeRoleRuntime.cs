@@ -49,6 +49,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal static CharacterPoseNativeAdoptedResult Create(
+            ulong requestId,
+            ActorId actorId,
+            CharacterAnimationPresentationProfile profile,
+            CharacterAnimationRigPayload rig,
+            CharacterAnimationInputContract inputContract,
+            string resourceRevision,
+            in CharacterPoseNativeInstanceContext context,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            ICharacterPoseNativeNodeHandlerFactory handlerFactory,
+            CharacterFinalPoseNativePublication publication,
+            out CharacterPoseNativeRoleRuntime runtime)
+        {
+            CharacterPoseNativeGraphPrepareResult preparation = Prepare(
+                requestId,
+                actorId,
+                profile,
+                rig,
+                inputContract,
+                resourceRevision);
+            return Create(
+                in preparation,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                handlerFactory,
+                publication,
+                out runtime);
+        }
+
+        internal static CharacterPoseNativeAdoptedResult Create(
             in CharacterPoseNativeGraphPrepareResult preparation,
             in CharacterPoseNativeInstanceContext context,
             ulong instanceId,
@@ -98,6 +131,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 runtime = null;
                 throw;
             }
+        }
+
+        internal static CharacterPoseNativeAdoptedResult Replace(
+            CharacterPoseNativeRoleRuntime current,
+            ulong requestId,
+            ActorId actorId,
+            CharacterAnimationPresentationProfile profile,
+            CharacterAnimationRigPayload rig,
+            CharacterAnimationInputContract inputContract,
+            string resourceRevision,
+            in CharacterPoseNativeInstanceContext context,
+            ulong instanceId,
+            ulong resetGeneration,
+            string reason,
+            ICharacterPoseNativeNodeHandlerFactory handlerFactory,
+            CharacterFinalPoseNativePublication publication,
+            out CharacterPoseNativeRoleRuntime runtime)
+        {
+            CharacterPoseNativeGraphPrepareResult preparation = Prepare(
+                requestId,
+                actorId,
+                profile,
+                rig,
+                inputContract,
+                resourceRevision);
+            return Replace(
+                current,
+                in preparation,
+                in context,
+                instanceId,
+                resetGeneration,
+                reason,
+                handlerFactory,
+                publication,
+                out runtime);
         }
 
         internal static CharacterPoseNativeAdoptedResult Replace(

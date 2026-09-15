@@ -1169,3 +1169,8 @@
 
 - 提交 `747c5f0c2`，将类型已经是 `GameplayAbilityCompilationDiscovery` 的源文件和 Unity `.meta` 从旧 `CharacterSkillCompilationDiscovery` 文件名迁移到 Ability 文件名。
 - 本步只清理路径命名，不改变 Ability grant 发现、关系校验和排序行为。
+
+## 2026-09-16 收窄Simulation编译诊断合同
+
+- 提交 `69c04af93`，将只被 Ability 与 Timeline 语义编译消费的 `CharacterSimulationCompileReport`、消息、阶段和严重级别统一为 `SimulationCompile*`，删除角色总编译命名。
+- 删除没有调用方的 Information、Warning、Target 和 Presentation 报告入口，保留 Discovery、Semantic Emission 与 Artifact Validation 的错误报告；不改变 Ability artifact 内容或 Timeline 语义产物。

@@ -114,14 +114,6 @@ namespace ThirdPersonSimulation
             var sortedRequestIds = new List<string>(requestIds);
             sortedRequestIds.Sort(StringComparer.Ordinal);
             m_InputRequestIds = sortedRequestIds.AsReadOnly();
-            var parts = new List<string>
-            {
-                "float32-character-runtime/1",
-                RosterDescriptor.RosterHash.ToString()
-            };
-            for (int i = 0; i < values.Count; i++)
-                parts.Add(values[i].GameplayContentHash.ToString());
-            GameplayContentHash = new GameplayContentHash(StableHash.Compute(parts.ToArray()));
         }
 
         public IReadOnlyList<Float32CharacterRuntimeActor> Roster => m_Roster;
@@ -133,7 +125,6 @@ namespace ThirdPersonSimulation
         public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
-        public GameplayContentHash GameplayContentHash { get; }
 
         public Float32CharacterRuntimeState CreateInitialState(int actorIndex)
         {
@@ -195,7 +186,6 @@ namespace ThirdPersonSimulation
     public interface IFloat32CharacterRuntimePort : ISimulationRuntimePort
     {
         Float32CharacterRuntime Runtime { get; }
-        GameplayContentHash GameplayContentHash { get; }
         IReadOnlyList<Float32CharacterRuntimeActor> Roster { get; }
         SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
@@ -224,13 +214,12 @@ namespace ThirdPersonSimulation
                 Float32PipelineRuntimePortIds.CharacterRuntime,
                 Float32PipelineRuntimePortIds.CharacterRuntimeSchema,
                 backend.ComponentId,
-                StableHash.Compute(backend.ToString(), Runtime.GameplayContentHash.ToString()),
+                StableHash.Compute(backend.ToString(), Runtime.RosterDescriptor.RosterHash.ToString()),
                 SimulationPortDirection.Input);
         }
 
         public SimulationPortDescriptor Descriptor { get; }
         public Float32CharacterRuntime Runtime { get; }
-        public GameplayContentHash GameplayContentHash => Runtime.GameplayContentHash;
         public IReadOnlyList<Float32CharacterRuntimeActor> Roster => Runtime.Roster;
         public SimulationActorRosterDescriptor RosterDescriptor => Runtime.RosterDescriptor;
 

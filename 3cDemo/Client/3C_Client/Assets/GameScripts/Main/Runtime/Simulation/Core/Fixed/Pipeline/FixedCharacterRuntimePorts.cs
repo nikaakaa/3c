@@ -115,14 +115,6 @@ namespace ThirdPersonSimulation.Fixed
             var sortedRequestIds = new List<string>(requestIds);
             sortedRequestIds.Sort(StringComparer.Ordinal);
             m_InputRequestIds = sortedRequestIds.AsReadOnly();
-            var parts = new List<string>
-            {
-                "fixed-character-runtime/1",
-                RosterDescriptor.RosterHash.ToString()
-            };
-            for (int i = 0; i < values.Count; i++)
-                parts.Add(values[i].GameplayContentHash.ToString());
-            GameplayContentHash = new GameplayContentHash(StableHash.Compute(parts.ToArray()));
         }
 
         public IReadOnlyList<FixedCharacterRuntimeActor> Roster => m_Roster;
@@ -134,7 +126,6 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
-        public GameplayContentHash GameplayContentHash { get; }
 
         public FixedCharacterRuntimeState CreateInitialState(int actorIndex)
         {
@@ -188,7 +179,6 @@ namespace ThirdPersonSimulation.Fixed
     public interface IFixedCharacterRuntimePort : ISimulationRuntimePort
     {
         FixedCharacterRuntime Runtime { get; }
-        GameplayContentHash GameplayContentHash { get; }
         IReadOnlyList<FixedCharacterRuntimeActor> Roster { get; }
         SimulationActorRosterDescriptor RosterDescriptor { get; }
         int GetActorIndex(ActorId actorId);
@@ -217,13 +207,12 @@ namespace ThirdPersonSimulation.Fixed
                 FixedPipelineRuntimePortIds.CharacterRuntime,
                 FixedPipelineRuntimePortIds.CharacterRuntimeSchema,
                 backend.ComponentId,
-                StableHash.Compute(backend.ToString(), Runtime.GameplayContentHash.ToString()),
+                StableHash.Compute(backend.ToString(), Runtime.RosterDescriptor.RosterHash.ToString()),
                 SimulationPortDirection.Input);
         }
 
         public SimulationPortDescriptor Descriptor { get; }
         public FixedCharacterRuntime Runtime { get; }
-        public GameplayContentHash GameplayContentHash => Runtime.GameplayContentHash;
         public IReadOnlyList<FixedCharacterRuntimeActor> Roster => Runtime.Roster;
         public SimulationActorRosterDescriptor RosterDescriptor => Runtime.RosterDescriptor;
 

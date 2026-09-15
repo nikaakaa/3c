@@ -773,3 +773,9 @@
 - 提交 `21068a8ff`，Float32／Fixed `AbilityRuntimeState` 删除未被消费的 `LastCompletedTick`；事务克隆、Codec 读入和初始状态不再把角色提交 Tick 复制到每个 Ability 分区。
 - 角色唯一保留 `CharacterRuntimeState.LastCompletedTick` 作为快照、恢复和网络步骤进度，Ability 分区只保存自身局部执行状态；没有改变状态字节格式或角色提交顺序。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 统一Ability安装数据来源
+
+- 提交 `0c9c9ee47`，Float32／Fixed `SimulationActorBinding` 不再同时发布 `AbilityData` 和 `AbilityInstallations`；角色运行、状态快照与 Authority checkpoint 统一从安装集合的 `Installation.Data` 读取。
+- 删除没有消费者的 `GetAbilityData` 角色运行端口，配置输入仍在装配时创建安装集合；内容 Hash、Ability 排序、NumericProfile 校验和执行路径保持一致，没有新增第二份数据入口。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

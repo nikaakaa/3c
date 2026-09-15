@@ -33,7 +33,7 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedAbilityExecutionServiceFactory
     {
         FixedAbilityExecutionAssembly Create(
-            FixedGameplayAbilityExecutionInstallation installation,
+            FixedAbilityExecutionContext execution,
             IFixedAbilityActionBindingProvider actionBindings,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace);
@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation.Fixed
         bool m_Disposed;
 
         public FixedAbilityInvocationRuntime(
-            FixedGameplayAbilityExecutionInstallation installation,
+            FixedAbilityExecutionContext execution,
             IFixedAbilityActionBindingProvider actionBindings,
             IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
@@ -115,8 +115,8 @@ namespace ThirdPersonSimulation.Fixed
             IFixedAbilityExecutionServiceFactory serviceFactory,
             Action<IFixedSkillExecutionState> acceptAbility)
         {
-            installation = installation ?? throw new ArgumentNullException(nameof(installation));
-            AbilityId = installation.Data.AbilityId;
+            execution = execution ?? throw new ArgumentNullException(nameof(execution));
+            AbilityId = execution.Data.AbilityId;
             actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
@@ -127,9 +127,9 @@ namespace ThirdPersonSimulation.Fixed
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new FixedAbilityExecutionFrame(
-                installation.Data,
-                installation.Layout,
-                installation.Services,
+                execution.Data,
+                execution.Layout,
+                execution.Services,
                 actorId,
                 tick,
                 input,
@@ -145,7 +145,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Workspace);
 
             FixedAbilityExecutionAssembly assembly = serviceFactory.Create(
-                installation,
+                execution,
                 actionBindings,
                 m_Frame,
                 m_Workspace);

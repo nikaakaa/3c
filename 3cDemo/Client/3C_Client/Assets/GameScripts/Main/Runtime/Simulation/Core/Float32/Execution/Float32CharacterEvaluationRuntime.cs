@@ -68,7 +68,7 @@ namespace ThirdPersonSimulation
                 {
                     Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
                     var invocation = new Float32AbilityInvocationRuntime(
-                        installation,
+                        installation.Execution,
                         actor.AbilityInstallations,
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,

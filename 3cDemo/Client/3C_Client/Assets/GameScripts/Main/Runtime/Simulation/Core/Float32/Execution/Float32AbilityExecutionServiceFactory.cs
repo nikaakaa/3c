@@ -5,27 +5,27 @@ namespace ThirdPersonSimulation
     internal sealed class Float32AbilityExecutionServiceFactory : IFloat32AbilityExecutionServiceFactory
     {
         public Float32AbilityExecutionAssembly Create(
-            Float32GameplayAbilityExecutionInstallation installation,
+            Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace)
         {
-            Float32GameplayAbilityExecutionAccess access = installation.Services.Access;
+            Float32GameplayAbilityExecutionAccess access = execution.Services.Access;
             Float32StatePort controlState = frame.CreateStatePort(
                 "Control",
-                installation.Services.ControlPolicy);
+                execution.Services.ControlPolicy);
             Float32ActionStateStore actionStore = new Float32ActionStateStore(access, frame);
             Float32InputRuntime input = new Float32InputRuntime(access, frame);
             Float32HandleAllocator handles = new Float32HandleAllocator(access, frame);
             Float32BlackboardRuntime blackboard = new Float32BlackboardRuntime(
                 access,
-                frame.CreateStatePort("Blackboard", installation.Services.BlackboardPolicy),
+                frame.CreateStatePort("Blackboard", execution.Services.BlackboardPolicy),
                 frame,
                 actionStore,
                 frame.Facts,
                 frame.Trace,
                 workspace);
-            Float32GameplayEffectOperationRuntime gameplayEffects = installation.GameplayEffectCatalog == null
+            Float32GameplayEffectOperationRuntime gameplayEffects = execution.GameplayEffectCatalog == null
                 ? null
                 : new Float32GameplayEffectOperationRuntime(
                     access,
@@ -37,7 +37,7 @@ namespace ThirdPersonSimulation
                     frame.Trace,
                     workspace.GameplayEffects);
             Float32EquipmentRuntime equipment = null;
-            if (installation.RequiresEquipment)
+            if (execution.RequiresEquipment)
             {
                 equipment = new Float32EquipmentRuntime(
                     access,
@@ -47,9 +47,9 @@ namespace ThirdPersonSimulation
                     gameplayEffects,
                     frame.Facts,
                     frame.Trace,
-                    installation.EquipmentLayout ??
+                    execution.EquipmentLayout ??
                     throw new InvalidOperationException(
-                        $"Ability '{installation.Data.AbilityId}' requires the declared Equipment layout."));
+                        $"Ability '{execution.Data.AbilityId}' requires the declared Equipment layout."));
             }
 
             Float32AbilityOperationControlRuntime control = null;
@@ -110,10 +110,10 @@ namespace ThirdPersonSimulation
                 equipment,
                 values,
                 blackboard);
-            control = new Float32AbilityOperationControlRuntime(installation.Data, services);
+            control = new Float32AbilityOperationControlRuntime(execution.Data, services);
             Float32AbilityDomainRuntime domain = new Float32AbilityDomainRuntime(
-                installation.Data.Binding,
-                installation.Services,
+                execution.Data.Binding,
+                execution.Services,
                 actions,
                 actionStore,
                 control);

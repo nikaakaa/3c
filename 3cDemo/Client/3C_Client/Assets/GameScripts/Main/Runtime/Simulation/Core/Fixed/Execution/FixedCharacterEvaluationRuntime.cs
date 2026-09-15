@@ -69,7 +69,7 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
                     var invocation = new FixedAbilityInvocationRuntime(
-                        installation,
+                        installation.Execution,
                         actor.AbilityInstallations,
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,

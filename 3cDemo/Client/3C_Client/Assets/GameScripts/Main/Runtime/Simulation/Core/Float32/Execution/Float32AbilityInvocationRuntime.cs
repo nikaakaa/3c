@@ -32,7 +32,7 @@ namespace ThirdPersonSimulation
     internal interface IFloat32AbilityExecutionServiceFactory
     {
         Float32AbilityExecutionAssembly Create(
-            Float32GameplayAbilityExecutionInstallation installation,
+            Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace);
@@ -96,7 +96,7 @@ namespace ThirdPersonSimulation
         bool m_Disposed;
 
         public Float32AbilityInvocationRuntime(
-            Float32GameplayAbilityExecutionInstallation installation,
+            Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
             IFloat32SkillExecutionState skillState,
             IFloat32AbilityExecutionSavepointPort savepointPort,
@@ -114,8 +114,8 @@ namespace ThirdPersonSimulation
             IFloat32AbilityExecutionServiceFactory serviceFactory,
             Action<IFloat32SkillExecutionState> acceptAbility)
         {
-            installation = installation ?? throw new ArgumentNullException(nameof(installation));
-            AbilityId = installation.Data.AbilityId;
+            execution = execution ?? throw new ArgumentNullException(nameof(execution));
+            AbilityId = execution.Data.AbilityId;
             actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
@@ -126,9 +126,9 @@ namespace ThirdPersonSimulation
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new Float32AbilityExecutionFrame(
-                installation.Data,
-                installation.Layout,
-                installation.Services,
+                execution.Data,
+                execution.Layout,
+                execution.Services,
                 actorId,
                 tick,
                 input,
@@ -144,7 +144,7 @@ namespace ThirdPersonSimulation
                 m_Workspace);
 
             Float32AbilityExecutionAssembly assembly = serviceFactory.Create(
-                installation,
+                execution,
                 actionBindings,
                 m_Frame,
                 m_Workspace);

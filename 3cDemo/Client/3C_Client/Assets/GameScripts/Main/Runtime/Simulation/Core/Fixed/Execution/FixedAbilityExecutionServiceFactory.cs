@@ -6,27 +6,27 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
     {
         public FixedAbilityExecutionAssembly Create(
-            FixedGameplayAbilityExecutionInstallation installation,
+            FixedAbilityExecutionContext execution,
             IFixedAbilityActionBindingProvider actionBindings,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace)
         {
-            FixedGameplayAbilityExecutionAccess access = installation.Services.Access;
+            FixedGameplayAbilityExecutionAccess access = execution.Services.Access;
             FixedStatePort controlState = frame.CreateStatePort(
                 "Control",
-                installation.Services.ControlPolicy);
+                execution.Services.ControlPolicy);
             FixedActionStateStore actionStore = new FixedActionStateStore(access, frame);
             FixedInputRuntime input = new FixedInputRuntime(access, frame);
             FixedHandleAllocator handles = new FixedHandleAllocator(access, frame);
             FixedBlackboardRuntime blackboard = new FixedBlackboardRuntime(
                 access,
-                frame.CreateStatePort("Blackboard", installation.Services.BlackboardPolicy),
+                frame.CreateStatePort("Blackboard", execution.Services.BlackboardPolicy),
                 frame,
                 actionStore,
                 frame.Facts,
                 frame.Trace,
                 workspace);
-            FixedGameplayEffectOperationRuntime gameplayEffects = installation.GameplayEffectCatalog == null
+            FixedGameplayEffectOperationRuntime gameplayEffects = execution.GameplayEffectCatalog == null
                 ? null
                 : new FixedGameplayEffectOperationRuntime(
                     access,
@@ -38,7 +38,7 @@ namespace ThirdPersonSimulation.Fixed
                     frame.Trace,
                     workspace.GameplayEffects);
             FixedEquipmentRuntime equipment = null;
-            if (installation.RequiresEquipment)
+            if (execution.RequiresEquipment)
             {
                 equipment = new FixedEquipmentRuntime(
                     access,
@@ -48,9 +48,9 @@ namespace ThirdPersonSimulation.Fixed
                     gameplayEffects,
                     frame.Facts,
                     frame.Trace,
-                    installation.EquipmentLayout ??
+                    execution.EquipmentLayout ??
                     throw new InvalidOperationException(
-                        $"Ability '{installation.Data.AbilityId}' requires the declared Equipment layout."));
+                        $"Ability '{execution.Data.AbilityId}' requires the declared Equipment layout."));
             }
 
             FixedAbilityOperationControlRuntime control = null;
@@ -111,10 +111,10 @@ namespace ThirdPersonSimulation.Fixed
                 equipment,
                 values,
                 blackboard);
-            control = new FixedAbilityOperationControlRuntime(installation.Data, services);
+            control = new FixedAbilityOperationControlRuntime(execution.Data, services);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
-                installation.Data.Binding,
-                installation.Services,
+                execution.Data.Binding,
+                execution.Services,
                 actions,
                 actionStore,
                 control);

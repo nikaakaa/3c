@@ -856,3 +856,9 @@
 - 提交 `f33ed358d`，删除 Float32／Fixed Ability 安装对象没有调用方的 `Topology` 属性；操作控制器直接从执行数据读取拓扑，安装对象不再重复发布同一份图结构信息。
 - 安装对象仍保留状态 Codec、服务工厂和角色评估实际使用的身份、布局及能力服务，不改变技能执行或恢复行为。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除安装对象Access转发
+
+- 提交 `c1f8d59b1`，删除 Float32／Fixed Ability 安装对象的 `Access` 转发属性；执行服务工厂直接从 `ExecutionServices.Access` 取得访问合同。
+- Access 的所有权继续在执行服务，安装对象只保留角色评估、状态 Codec 和工厂实际需要的安装数据，不改变执行顺序或状态格式。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

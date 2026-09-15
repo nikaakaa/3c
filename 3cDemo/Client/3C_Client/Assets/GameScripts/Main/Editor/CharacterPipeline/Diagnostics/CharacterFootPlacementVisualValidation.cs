@@ -205,7 +205,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawFoot(diagnostics.Left);
             DrawFoot(diagnostics.Right);
             DrawStride(diagnostics.StrideHips);
-            DrawFinalPose(binding);
         }
 
         static void DrawFoot(CharacterFootLandingPredictionFootDiagnostics foot)
@@ -249,85 +248,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             Line(stride.Core.StrideStart, stride.Core.StrideEnd, new Color(1f, 0.8f, 0.1f, 0.95f));
             Marker(stride.Observation.AnimatedPelvis + stride.Core.PelvisDelta, Vector3.up, new Color(1f, 0.8f, 0.1f, 1f), 0.09f);
-        }
-
-        static void DrawFinalPose(CharacterWorldAwarePresentationBinding binding)
-        {
-            CharacterPipelineHost host = binding.GetComponentInParent<CharacterPipelineHost>();
-            if (!host || !host.AnimationRigBinding || !host.AnimationRigBinding.Animator)
-                return;
-            if (!TryGetDebugViewForRoot(
-                    binding.PresentationRoot.GetInstanceID(),
-                    out AnimationPresentationRuntimeTarget target,
-                    out AnimationPresentationDebugView debugView))
-                return;
-            CharacterFootIkCommittedCaptureViewLease foot =
-                debugView.PosePlan.FootIkCommittedCaptureView;
-            if (!foot.IsAvailable)
-                return;
-            Transform root = host.AnimationRigBinding.Animator.transform;
-            DrawFinalEffector(root, foot.LeftGoal, foot.LeftFoot, foot.LeftPhysicalAnkleComponentPosition, Color.cyan);
-            DrawFinalEffector(root, foot.RightGoal, foot.RightFoot, foot.RightPhysicalAnkleComponentPosition, Color.magenta);
-            DrawFinalPelvis(root, foot.Pelvis, foot.PhysicalPelvisComponentPosition);
-            IReadOnlyList<Transform> bones = host.AnimationRigBinding.PhysicalBones;
-            for (int i = 0; i < bones.Count; i++)
-            {
-                Transform bone = bones[i];
-                if (!bone || !bone.parent || !bone.parent.IsChildOf(root))
-                    continue;
-                Line(bone.parent.position, bone.position, new Color(1f, 0.15f, 0.1f, 0.65f));
-            }
-        }
-
-        static bool TryGetDebugViewForRoot(
-            int rootInstanceId,
-            out AnimationPresentationRuntimeTarget target,
-            out AnimationPresentationDebugView debugView)
-        {
-            IReadOnlyList<AnimationPresentationRuntimeTarget> targets =
-                AnimationPresentationRuntimeTargetRegistry.Targets;
-            for (int i = 0; i < targets.Count; i++)
-            {
-                if (!targets[i].TryGetDebugView(out debugView) ||
-                    !debugView.PosePlan.FootIkCommittedCaptureView.IsAvailable ||
-                    debugView.PosePlan.FootIkCommittedCaptureView
-                        .LandingPrediction.RootInstanceId != rootInstanceId)
-                    continue;
-                target = targets[i];
-                return true;
-            }
-            target = null;
-            debugView = null;
-            return false;
-        }
-
-        static void DrawFinalEffector(
-            Transform root,
-            CharacterFullBodyIkGoal goal,
-            CharacterFullBodyIkEffectorDiagnostics solved,
-            Vector3 physical,
-            Color color)
-        {
-            Vector3 goalPosition = root.TransformPoint(goal.ComponentPosition);
-            Vector3 solvedPosition = root.TransformPoint(solved.SolvedComponentPosition);
-            Vector3 physicalPosition = root.TransformPoint(physical);
-            Marker(goalPosition, root.up, Color.white, 0.07f);
-            Marker(solvedPosition, root.up, color, 0.055f);
-            Marker(physicalPosition, root.up, Color.red, 0.065f);
-            Line(goalPosition, solvedPosition, color);
-            Line(solvedPosition, physicalPosition, Color.red);
-        }
-
-        static void DrawFinalPelvis(
-            Transform root,
-            CharacterFullBodyIkEffectorDiagnostics pelvis,
-            Vector3 physical)
-        {
-            Vector3 solved = root.TransformPoint(pelvis.SolvedComponentPosition);
-            Vector3 physicalPosition = root.TransformPoint(physical);
-            Marker(solved, root.up, new Color(1f, 0.8f, 0.1f, 1f), 0.075f);
-            Marker(physicalPosition, root.up, Color.red, 0.08f);
-            Line(solved, physicalPosition, Color.red);
         }
 
         static void Marker(Vector3 position, Vector3 normal, Color color, float size)

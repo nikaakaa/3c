@@ -216,8 +216,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 throw new InvalidOperationException("Rollback runtime root must contain exactly two Fixed Actor Hosts.");
             }
-            if (root.GetComponentsInChildren<CharacterPipelineHost>(true).Length != 0)
-                throw new InvalidOperationException("Rollback runtime root contains a legacy CharacterPipelineHost.");
             for (int i = 0; i < actors.Length; i++)
             {
                 if (actors[i].SessionHost != session)

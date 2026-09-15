@@ -2063,17 +2063,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SetLiveDebug(enabled);
         }
 
-        internal void BindObservationContext(CharacterPipelineHost host)
-        {
-            if (!host || !host.Definition || m_Definition) return;
-            CharacterPipelineDefinition definition = host.Definition;
-            if (!definition.AnimationPresentationProfile || definition.AnimationPresentationProfile.PoseGraph != m_Asset) return;
-            m_Definition = definition;
-            m_Profile = definition.AnimationPresentationProfile;
-            m_Projection = definition.PresentationProjection;
-            Reload();
-        }
-
         internal void RefreshRuntimeDetails() =>
             RefreshSelectedDetails();
 

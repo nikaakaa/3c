@@ -791,3 +791,8 @@
 - 提交 `e226d5a05`，Float32／Fixed 角色状态事务删除只用于有效性检查、但不参与状态处理的 `ActorId` 参数；角色评估入口不再向事务重复传递角色身份。
 - Actor 与 WorldBody 的身份匹配仍在角色评估边界完成，事务只接收角色状态、当前 Tick 和实际状态服务；没有改变状态提交、快照或恢复顺序。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 修正状态事务时间错误语义
+
+- 提交 `730ccdc19`，Float32／Fixed 状态事务异常文本从旧的身份语义改为明确的 Tick／TickRate 时间语义，与已删除的 `ActorId` 参数保持一致。
+- 只修正诊断文本，不改变异常条件、状态提交或恢复行为；`ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

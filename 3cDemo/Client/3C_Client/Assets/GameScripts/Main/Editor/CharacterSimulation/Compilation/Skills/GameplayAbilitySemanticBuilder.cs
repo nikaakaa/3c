@@ -102,7 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly int m_TickRate;
         readonly ProgramRevision m_SourceRevision;
         readonly GameplayAbilityRootDescriptor m_Root;
-        readonly CharacterSimulationCompileReport m_Report;
+        readonly SimulationCompileReport m_Report;
         readonly List<SemanticOperation> m_Operations = new List<SemanticOperation>();
         readonly List<SemanticLiteral> m_Literals = new List<SemanticLiteral>();
         readonly List<SemanticConstantInputBinding> m_ConstantInputBindings = new List<SemanticConstantInputBinding>();
@@ -129,7 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             OperationSetVersion operationSetVersion,
             int tickRate,
             ProgramRevision sourceRevision,
-            CharacterSimulationCompileReport report,
+            SimulationCompileReport report,
             GameplayAbilityRootDescriptor root)
         {
             m_ProgramId = programId;
@@ -146,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_OutputChannels.Add(new ProgramOutputChannelLayout(2, "Trace", ProgramOutputChannelKind.Trace));
         }
 
-        public CharacterSimulationCompileReport Report => m_Report;
+        public SimulationCompileReport Report => m_Report;
         public GameplayAbilityRootDescriptor Root => m_Root;
 
         public bool TryGetCatalogEntry(ProgramCatalogEntryKind kind, string identity, out int index)

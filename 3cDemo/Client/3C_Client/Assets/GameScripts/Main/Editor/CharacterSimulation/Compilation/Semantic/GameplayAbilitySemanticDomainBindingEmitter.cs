@@ -25,12 +25,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly IReadOnlyList<IGameplayAbilitySemanticNodeBinding> m_Bindings;
         readonly GameplayAbilitySemanticCatalogReferenceEmitter m_Catalog;
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
-        readonly CharacterSimulationCompileReport m_Report;
+        readonly SimulationCompileReport m_Report;
 
         public GameplayAbilitySemanticDomainBindingEmitter(
             GameplayAbilityCatalogIndex catalogIndex,
             GameplayAbilitySemanticBuilder builder,
-            CharacterSimulationCompileReport report,
+            SimulationCompileReport report,
             GameplayAbilitySemanticBlackboardEmitter blackboard)
         {
             if (catalogIndex == null)

@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public static GameplayAbilityAuthoringCompilationModel Discover(
             GameplayAbilityDefinition definition,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             if (report == null)
                 throw new ArgumentNullException(nameof(report));
@@ -71,7 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static GameplayAbilityAuthoringCompilationModel Discover(
             GameplayAbilityDefinition definition,
             TimelineSemanticEmitterRegistry timelineEmitters,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             if (report == null)
                 throw new ArgumentNullException(nameof(report));
@@ -156,7 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static bool ValidateSubgraphDependencies(
             GameplayAbilityDefinition definition,
             BtsmtlSkillGraphOccurrence entry,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             var calls = new Dictionary<string, BtsmtlSkillGraphReferenceOccurrence>(StringComparer.Ordinal);
             foreach (BtsmtlSkillGraphOccurrence occurrence in entry.EnumerateOccurrences())

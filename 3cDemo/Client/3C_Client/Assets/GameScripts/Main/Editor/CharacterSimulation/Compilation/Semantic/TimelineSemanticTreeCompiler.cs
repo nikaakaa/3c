@@ -13,14 +13,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         readonly CharacterSimulationNodeEmitterRegistry m_NodeEmitters;
         readonly GameplayAbilitySemanticBuilder m_Builder;
-        readonly CharacterSimulationCompileReport m_Report;
+        readonly SimulationCompileReport m_Report;
         readonly Dictionary<string, Dictionary<string, OperationHandle>> m_OperationsByRoute =
             new Dictionary<string, Dictionary<string, OperationHandle>>(StringComparer.Ordinal);
         readonly HashSet<string> m_ActiveGraphs = new HashSet<string>(StringComparer.Ordinal);
 
         public TimelineSemanticTreeCompiler(
             GameplayAbilitySemanticBuilder builder,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             m_NodeEmitters = CharacterSimulationNodeEmitterRegistry.CreateDefault();
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));

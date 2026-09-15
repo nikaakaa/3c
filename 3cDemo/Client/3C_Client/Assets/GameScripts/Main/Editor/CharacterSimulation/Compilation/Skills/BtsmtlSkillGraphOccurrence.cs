@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillNativeStateMachine machine,
             string route,
             TimelineSemanticEmitterRegistry timelineEmitters,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             if (machine == null)
                 throw new ArgumentNullException(nameof(machine));
@@ -253,7 +253,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public IReadOnlyList<BtsmtlSkillTimelineOccurrence> Timelines { get; }
 
         public static BtsmtlSkillGraphOccurrence Read(FlowGraph graph, string route,
-            TimelineSemanticEmitterRegistry timelineEmitters, CharacterSimulationCompileReport report)
+            TimelineSemanticEmitterRegistry timelineEmitters, SimulationCompileReport report)
         {
             if (string.IsNullOrWhiteSpace(route))
                 throw new ArgumentException("技能编译需要明确的调用路径。", nameof(route));
@@ -262,7 +262,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static BtsmtlSkillGraphOccurrence ReadOccurrence(FlowGraph graph, string route, Func<FlowGraph, string> contentHash,
-            TimelineSemanticEmitterRegistry timelineEmitters, CharacterSimulationCompileReport report)
+            TimelineSemanticEmitterRegistry timelineEmitters, SimulationCompileReport report)
         {
             string hash = contentHash(graph);
             if (string.IsNullOrWhiteSpace(hash))

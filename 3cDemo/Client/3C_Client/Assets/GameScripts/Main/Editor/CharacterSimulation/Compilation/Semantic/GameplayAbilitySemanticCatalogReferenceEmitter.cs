@@ -9,12 +9,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
         readonly GameplayAbilitySemanticBuilder m_Builder;
-        readonly CharacterSimulationCompileReport m_Report;
+        readonly SimulationCompileReport m_Report;
 
         public GameplayAbilitySemanticCatalogReferenceEmitter(
             GameplayAbilityCatalogIndex catalogIndex,
             GameplayAbilitySemanticBuilder builder,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             m_CatalogIndex = catalogIndex ?? throw new ArgumentNullException(nameof(catalogIndex));
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));

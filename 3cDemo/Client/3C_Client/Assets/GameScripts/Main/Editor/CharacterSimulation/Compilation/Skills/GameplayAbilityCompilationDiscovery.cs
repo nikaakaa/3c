@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static IReadOnlyList<GameplayAbilityCompilationRecord> DiscoverAbilities(
             IReadOnlyList<AbilityGrant> grants,
             TimelineSemanticEmitterRegistry timelineEmitters,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             if (grants == null || report == null)
                 throw new ArgumentNullException();
@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static void ValidateRelations(GameplayAbilityDefinition ability,
-            BtsmtlSkillGraphOccurrence entry, CharacterSimulationCompileReport report)
+            BtsmtlSkillGraphOccurrence entry, SimulationCompileReport report)
         {
             var calls = new Dictionary<string, BtsmtlSkillGraphReferenceOccurrence>(StringComparer.Ordinal);
             foreach (BtsmtlSkillGraphOccurrence graph in entry.EnumerateOccurrences())

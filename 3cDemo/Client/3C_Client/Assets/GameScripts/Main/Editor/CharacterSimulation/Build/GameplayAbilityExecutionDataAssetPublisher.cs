@@ -173,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return path.Replace('\\', '/');
         }
 
-        static string FormatReport(CharacterSimulationCompileReport report)
+        static string FormatReport(SimulationCompileReport report)
         {
             if (report == null || report.Messages.Count == 0)
                 return "Gameplay Ability compilation failed without a diagnostic.";

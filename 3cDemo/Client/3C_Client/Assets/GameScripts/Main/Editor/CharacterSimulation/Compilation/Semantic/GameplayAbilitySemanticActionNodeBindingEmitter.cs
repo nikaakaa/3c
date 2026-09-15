@@ -10,13 +10,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly GameplayAbilitySemanticCatalogReferenceEmitter m_Catalog;
         readonly GameplayAbilityCatalogIndex m_CatalogIndex;
         readonly GameplayAbilitySemanticBlackboardEmitter m_Blackboard;
-        readonly CharacterSimulationCompileReport m_Report;
+        readonly SimulationCompileReport m_Report;
 
         public GameplayAbilitySemanticActionNodeBindingEmitter(
             GameplayAbilitySemanticCatalogReferenceEmitter catalog,
             GameplayAbilityCatalogIndex catalogIndex,
             GameplayAbilitySemanticBlackboardEmitter blackboard,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             m_Catalog = catalog;
             m_CatalogIndex = catalogIndex;

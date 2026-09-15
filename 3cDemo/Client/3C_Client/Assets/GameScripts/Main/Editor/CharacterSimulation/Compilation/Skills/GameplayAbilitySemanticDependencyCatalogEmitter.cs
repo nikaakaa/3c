@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public static GameplayAbilityProviderOwnerSet Discover(
             BtsmtlSkillGraphOccurrence entry,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             if (entry == null)
                 throw new ArgumentNullException(nameof(entry));
@@ -116,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string route,
             string nodeId,
             BtsmtlSkillProviderKind kind,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             if (!CharacterSkillProviderOwners.IsAssetOwner(value))
             {
@@ -149,11 +149,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class GameplayAbilitySemanticDependencyCatalogEmitter
     {
         readonly GameplayAbilitySemanticBuilder m_Builder;
-        readonly CharacterSimulationCompileReport m_Report;
+        readonly SimulationCompileReport m_Report;
         readonly GameplayAbilityCatalogIndex m_Index;
         public GameplayAbilitySemanticDependencyCatalogEmitter(
             GameplayAbilitySemanticBuilder builder,
-            CharacterSimulationCompileReport report,
+            SimulationCompileReport report,
             GameplayAbilityCatalogIndex index)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
@@ -446,7 +446,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static SemanticDataDocument EncodeGameplayEffectDefinition(
             GameplayEffectDefinition effect,
             CharacterSimulationSourceLocation source,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             try
             {

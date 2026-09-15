@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         readonly IReadOnlyDictionary<string, BlackboardDeclaration> m_Declarations;
         readonly GameplayAbilitySemanticBuilder m_Builder;
-        readonly CharacterSimulationCompileReport m_Report;
+        readonly SimulationCompileReport m_Report;
         readonly Dictionary<string, int> m_ValueSlots = new Dictionary<string, int>(StringComparer.Ordinal);
         readonly Dictionary<string, ScopeRecord> m_Scopes = new Dictionary<string, ScopeRecord>(StringComparer.Ordinal);
         readonly List<GraphRoute> m_GraphStack = new List<GraphRoute>();
@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public GameplayAbilitySemanticBlackboardEmitter(
             IReadOnlyDictionary<string, BlackboardDeclaration> declarations,
             GameplayAbilitySemanticBuilder builder,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             m_Declarations = declarations ?? throw new ArgumentNullException(nameof(declarations));
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));

@@ -13,7 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public GameplayAbilitySemanticFrontendResult(
             ValidatedSemanticIrArtifact artifact,
             GameplayAbilityAuthoringCompilationModel compilationModel,
-            CharacterSimulationCompileReport report)
+            SimulationCompileReport report)
         {
             Artifact = artifact;
             CompilationModel = compilationModel;
@@ -22,10 +22,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public ValidatedSemanticIrArtifact Artifact { get; }
         public GameplayAbilityAuthoringCompilationModel CompilationModel { get; }
-        public CharacterSimulationCompileReport Report { get; }
+        public SimulationCompileReport Report { get; }
         public bool IsValid => Artifact != null && CompilationModel != null && Report.IsValid;
 
-        public static GameplayAbilitySemanticFrontendResult Failed(CharacterSimulationCompileReport report) =>
+        public static GameplayAbilitySemanticFrontendResult Failed(SimulationCompileReport report) =>
             new GameplayAbilitySemanticFrontendResult(null, null, report);
     }
 
@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public static GameplayAbilitySemanticFrontendResult Compile(GameplayAbilityDefinition definition)
         {
-            var report = new CharacterSimulationCompileReport();
+            var report = new SimulationCompileReport();
             GameplayAbilityAuthoringCompilationModel model = GameplayAbilityAuthoringDiscovery.Discover(definition, report);
             if (model == null || !report.IsValid)
                 return GameplayAbilitySemanticFrontendResult.Failed(report);
@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             GameplayAbilityAuthoringCompilationModel model,
             OperationHandle entry,
             GameplayAbilitySemanticBuilder builder,
-            CharacterSimulationCompileReport report,
+            SimulationCompileReport report,
             CharacterSimulationSourceLocation source)
         {
             GameplayAbilityAdmissionProfile profile = model.Definition.AdmissionProfile;
@@ -216,7 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static ValidatedSemanticIrArtifact ValidateArtifact(
             GameplayAbilitySemanticIr semanticIr,
-            CharacterSimulationCompileReport report,
+            SimulationCompileReport report,
             string sourceIdentity)
         {
             if (semanticIr == null || !report.IsValid)

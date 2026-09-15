@@ -473,3 +473,9 @@
 - Ability 继续通过专用装备端口访问状态，装备 mutation scope 仍走原有事务控制端口；角色事务只在统一 Savepoint／Restore／Commit 中捕获和恢复装备状态，保留装备规则、状态 codec 和角色 Step，不复制状态或增加兼容路径。
 - 装备状态与角色事务同步释放。本步只完成 Equipment 状态 owner 拆分，跨领域完整 Capture／Restore、网络恢复和 Pending 角色结果接线仍未完成，1.11、2.6 仍未完成。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。对应 Center 正式 after compile 因打开的 Unity Editor 占用本 worktree 被 `WorkspaceEditorInUse` 拒绝；未关闭 Editor，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色Pending结果脱离挂起事务
+
+- 提交 `64bb4008d`，Float32／Fixed Evaluate 在生成角色 WorldSolve 请求后完成角色状态事务的 Commit，并立即释放可变事务；Pending 结果改为保存不可变 `CandidateState`、World 请求和领域输出。
+- Finalize 直接校验并消费候选角色状态，不再跨 Pass Claim 或 Dispose 角色状态事务；`AbortUnconsumed` 只结束 Pending 的消费生命周期，失败时不会反向中止外层角色事务。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；按 D22 收口 Pending／事务所有权边界，但 1.11、2.1、2.6 的完整技能独立执行和角色跨领域结果接线仍未完成。

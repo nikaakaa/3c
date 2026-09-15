@@ -80,13 +80,17 @@ namespace ThirdPersonSimulation.Fixed
         GameplayEffectStateAggregate GetGameplayEffectAggregate();
     }
 
+    internal interface IFixedEquipmentStatePort
+    {
+        EquipmentStateAggregate GetEquipmentState();
+        void SetEquipmentState(EquipmentStateAggregate state);
+    }
+
     internal interface IFixedAbilityDomainStatePort
     {
         ActorId ActorId { get; }
         SimulationTick Tick { get; }
         int TickRate { get; }
-        EquipmentStateAggregate GetEquipmentState();
-        void SetEquipmentState(EquipmentStateAggregate state);
         void Abort();
         FixedCharacterRuntimeStateSavepoint CreateSavepoint();
         void Restore(FixedCharacterRuntimeStateSavepoint savepoint);
@@ -94,7 +98,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort, IFixedEventSequenceStatePort, IFixedGameplayEffectStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityDomainStatePort, IFixedInputRequestStatePort, IFixedActionRuntimeStatePort, IFixedHandleAllocatorStatePort, IFixedEventSequenceStatePort, IFixedGameplayEffectStatePort, IFixedEquipmentStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;

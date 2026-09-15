@@ -80,13 +80,17 @@ namespace ThirdPersonSimulation
         GameplayEffectStateAggregate GetGameplayEffectAggregate();
     }
 
+    internal interface IFloat32EquipmentStatePort
+    {
+        EquipmentStateAggregate GetEquipmentState();
+        void SetEquipmentState(EquipmentStateAggregate state);
+    }
+
     internal interface IFloat32AbilityDomainStatePort
     {
         ActorId ActorId { get; }
         SimulationTick Tick { get; }
         int TickRate { get; }
-        EquipmentStateAggregate GetEquipmentState();
-        void SetEquipmentState(EquipmentStateAggregate state);
         void Abort();
         Float32CharacterRuntimeStateSavepoint CreateSavepoint();
         void Restore(Float32CharacterRuntimeStateSavepoint savepoint);
@@ -94,7 +98,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityDomainStatePort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;

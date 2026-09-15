@@ -283,8 +283,8 @@ namespace ThirdPersonSimulation
 		ActorId IEquipmentRuntimePort.ActorId => m_Frame.ActorId;
 		ulong IEquipmentRuntimePort.Tick => m_Frame.Tick.Value;
 		EquipmentProgramLayout IEquipmentRuntimePort.Layout => m_EquipmentLayout;
-		public EquipmentStateAggregate ReadState() => m_Frame.DomainState.GetEquipmentState();
-		public void WriteState(EquipmentStateAggregate state) => m_Frame.DomainState.SetEquipmentState(state);
+		public EquipmentStateAggregate ReadState() => m_Frame.EquipmentState.GetEquipmentState();
+		public void WriteState(EquipmentStateAggregate state) => m_Frame.EquipmentState.SetEquipmentState(state);
 		EquipmentChangeId IEquipmentRuntimePort.AllocateChangeId() => new EquipmentChangeId(m_Handles.Next());
 		bool IEquipmentRuntimePort.HasActiveActionConflict(EquipmentSlotState slot, ulong sourceActionInstanceId)
 		{
@@ -303,8 +303,8 @@ namespace ThirdPersonSimulation
 		void IEquipmentRuntimePort.ResetLocalState(EquipmentFeatureId featureId, EquipmentLocalStateId stateId)
 		{
 			EquipmentProgramLocalState localState = m_EquipmentLayout.RequireLocalState(featureId, stateId);
-			m_Frame.DomainState.SetEquipmentState(
-				m_Frame.DomainState.GetEquipmentState().WithLocalState(featureId, stateId, localState.DefaultValue));
+			m_Frame.EquipmentState.SetEquipmentState(
+				m_Frame.EquipmentState.GetEquipmentState().WithLocalState(featureId, stateId, localState.DefaultValue));
 		}
 		void IEquipmentRuntimePort.SetTags(string sourceId, IReadOnlyList<string> tags) => m_GameplayEffects.SetEquipmentTags(sourceId, tags);
 		void IEquipmentRuntimePort.RemoveTags(string sourceId) => m_GameplayEffects.RemoveEquipmentTags(sourceId);

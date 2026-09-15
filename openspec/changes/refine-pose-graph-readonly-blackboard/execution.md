@@ -978,3 +978,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - Modify Bone 的冲突检查只作用于真实输出路径：同骨同通道的两个并发写入会失败，串行节点仍保留既有算法语义。
 - 校验通过反向可达集合确定活跃节点，避免孤儿或未接线节点把静态校验误报成运行冲突；诊断继续携带 Graph、Node、Bone 或 Slot 身份，不生成 IR。
 - 本步只改 Pose 校验与本 execution 记录；未运行 Unity、Build、Play 或资源刷新，也未提交 LFS。
+
+## 2026-09-15 r3 暴露实际安装版本
+
+- `CharacterPoseNativeRoleRuntime` 与 `CharacterPoseNativeRoleSession` 现在暴露已安装实例的 `GraphId`、`GraphRevision` 和 `ResourceRevision`；Create/Replace 成功后消费方读取的是实际采用绑定，不再只能记录入口参数或推断版本。
+- 这些版本来自同一次 PreparedBinding，与 InstanceId、ResetGeneration 和 FrameLineage 同源；Replace 失败继续保留旧 session 的旧身份。
+- 本步只补 Pose 侧安装结果观察面，不改共享 Host，也不创建第二份版本状态；未运行 Unity、Build、Play 或资源刷新。

@@ -88,6 +88,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterFinalPoseNativePublication Publication => m_Publication;
         internal ulong InstanceId => m_Graph.InstanceId;
         internal ulong ResetGeneration => m_Graph.ResetGeneration;
+        internal PoseGraphId GraphId => m_Graph.PreparedBinding.GraphId;
+        internal string GraphRevision => m_Graph.PreparedBinding.GraphRevision;
+        internal string ResourceRevision => m_Graph.PreparedBinding.ResourceRevision;
         internal bool IsStarted => m_Graph.IsStarted;
         internal bool HasOpenFrame => m_Graph.HasOpenFrame;
         internal CharacterPoseNativeFrameLineage CurrentLineage => m_Graph.CurrentLineage;

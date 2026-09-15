@@ -23,6 +23,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeFrameCoordinator Frame => m_Frame;
         internal ulong InstanceId => m_Role.InstanceId;
         internal ulong ResetGeneration => m_Role.ResetGeneration;
+        internal PoseGraphId GraphId => m_Role.GraphId;
+        internal string GraphRevision => m_Role.GraphRevision;
+        internal string ResourceRevision => m_Role.ResourceRevision;
 
         internal CharacterPoseNativeResetResult Reset(ulong resetGeneration) =>
             m_Role.Reset(resetGeneration);

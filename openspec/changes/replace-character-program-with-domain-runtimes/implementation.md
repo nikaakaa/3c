@@ -659,3 +659,9 @@
 - 提交 `dfbfce1c2`，Float32／Fixed `AbilityExecutionAssembly` 不再把 Invocation 未消费的 `ActionStateStore`、`ValueRuntime` 作为返回出口；这两个服务继续由执行组装内部和对应模块持有。
 - 本步只删除无消费者的组装出口，不改变服务创建、状态所有权、执行顺序或运行行为；未保留兼容属性或临时桥接。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 收窄Ability执行服务集合出口
+
+- 提交 `fabad5762`，删除 Float32／Fixed `AbilityControlRuntime` 未被消费者使用的服务转发属性和 Cursor；`ServiceSet` 只保留控制器真正需要的 Target 与生命周期依赖。
+- 工厂不再把未由服务集合消费的 Input、Motion 传入集合；Input 仍由 Invocation 直接持有，Motion 仍由 Invocation 直接汇总，执行顺序和状态所有权不变。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

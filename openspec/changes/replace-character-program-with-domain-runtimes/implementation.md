@@ -707,3 +707,9 @@
 - 提交 `fa4ce1dfc`，Float32／Fixed Invocation 对角色发布的 `Actions` 属性统一为 `I*AbilityActionControlPort`，移除具体 `ActionRuntime` 类型泄漏。
 - 内部动作执行实例、准入规则、状态写入和角色 Control 命令路径保持不变；本步只修正上一小步遗漏的实现类型出口。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 角色通过Ability事实读取动作窗口
+
+- 提交 `822451c48`，Float32／Fixed 角色 Control 不再读取 Ability Workspace 的可变动作窗口投影列表；Invocation 提供 `HasActionWindowProjection` 事实查询。
+- Ability 继续拥有 Workspace 和窗口匹配逻辑，角色只消费查询结果；动作窗口判定、调用顺序和输出数据不变，没有复制投影列表或新增旁路。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

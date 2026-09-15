@@ -545,3 +545,9 @@
 - 提交 `158c4531c`，Float32／Fixed `GameplayAbilityExecutionInstallationSet` 在构造时汇总已安装 Ability 的 `RequiresEquipment`，角色绑定与两个 Character State Codec 改为读取该集合事实。
 - 删除角色绑定和 State Codec 对安装列表的重复 Equipment 能力扫描；Equipment 缺失服务仍在角色绑定装配时拒绝，初始状态、快照格式、Equipment 布局和执行顺序不变。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.10、1.11、2.1、2.6 的完整领域接线仍未完成。
+
+## 2026-09-16 GameplayEffect能力集合事实收口
+
+- 提交 `5de615a69`，Float32／Fixed `GameplayAbilityExecutionInstallationSet` 汇总已安装 Ability 的 `RequiresGameplayEffects` 与 `RequiresEquipment`；角色初始状态和 Evaluate 只在 Ability 实际声明 GameplayEffect 时创建效果目录与状态。
+- 删除角色绑定对 GameplayEffect 能力的重复扫描；多余 GameplayEffect binding 不再创建角色级效果状态，缺失必需 binding 仍由安装集合拒绝，快照格式和执行算法不变。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.10、1.11、2.1、2.6 的完整领域接线仍未完成。

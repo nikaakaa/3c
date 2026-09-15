@@ -1084,3 +1084,8 @@
 
 - 提交 `69bd02fe6`，将已统一为 `GameplayAbilitySemanticIr` 的语义 IR 与 Codec 源文件及 Unity `.meta` 从 `CharacterGameplaySemanticIr` 改为 Ability 命名，删除旧角色级文件路径。
 - 本步只调整路径，保留 IR 类型、artifact 版本、字节格式与 GUID；Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git，Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 移除动画闭包旧语义编译依赖
+
+- 提交 `572705a9c`，动画资源闭包分析不再调用已撤销的 `CharacterSemanticFrontendCompiler`；改为直接校验 `CharacterPipelineDefinition.AnimationPresentationProfile` 与传入 Profile 一致，删除旧 Editor namespace 依赖。
+- 保留 Pose 图遍历、动画源闭包收集、Clip 身份和分类逻辑；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

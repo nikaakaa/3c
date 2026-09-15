@@ -314,6 +314,13 @@
 - Local Host、Rollback Editor 检查、Presentation Runtime、Motion Matching、Pose tuning target 与性能采样均改用 `PresentationId`；Projection 仍校验现有 semantic contract 和 Pose tuning layout 的正式版本，不建立转换路径。
 - 未运行 Unity 或测试；统一 Runtime 工程仍受 Unity 生成 csproj 引用已迁移 `Float32CharacterRegistration.cs` 旧路径的 `CS2001` 阻断，已执行 `dotnet build-server shutdown`。
 
+## 2026-09-15 DotRecast Authority manifest退出整角色Program载荷
+
+- Authority manifest 的单个 `CharacterProgram.csim` binding 改为已排序的 Ability artifact binding 集合；每个条目锁定 Ability GUID、AbilityId、执行内容 hash、状态 schema、canonical 字节 hash、编译／语义／数值 ABI、TickRate、执行身份和 root。
+- Authority loader 先按 manifest 读取并校验所有独立 Ability artifact，再装配当前 `SimulationActorBinding`、`Float32CharacterRuntime` 和公开的 `Float32CharacterRuntimeStateCodec`；初始状态按实际角色 Runtime 解码，网络 replication policy 也按当前 Ability producer catalog 校验。
+- Authority Scene Runtime 复用 loader 已建立的 Character Runtime，Source、Pipeline、初始角色状态不再接收或重建 `CharacterSimulationProgram`；Snapshot codec identity 改用正式 `Float32SimulationTarget.Manifest.ExecutionTarget`。
+- manifest schema 从 8 升为 9，旧整角色 Program manifest 直接拒绝。portable DotRecast Authority 工程已编译为 0 warning、0 error；未运行 Unity、测试或资产生成。
+
 ## 2026-09-15 Character Runtime禁止从首个Ability推断TickRate
 
 - 删除 `Float32CharacterRuntime.Create(roster, controlModules)` 与 `FixedCharacterRuntime.Create(roster, controlModules)` 两个隐式工厂入口。

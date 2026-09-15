@@ -45,7 +45,10 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             DotRecastAuthoritySceneIdentity scene = ReadScene(payloadReader);
             var roomId = new ServerAuthoritativeRoomId(payloadReader.ReadString());
             DotRecastAuthorityEndpointDescriptor data = ReadEndpoint(payloadReader);
-            DotRecastAuthorityProgramArtifactBinding program = ReadProgram(payloadReader);
+            int abilityCount = ReadCount(payloadReader, "ability artifact", 1024);
+            var abilities = new DotRecastAuthorityAbilityArtifactBinding[abilityCount];
+            for (int i = 0; i < abilityCount; i++)
+                abilities[i] = ReadAbilityArtifact(payloadReader);
             CharacterControlRuntimeBinding controlRuntimeBinding = ReadControlRuntimeBinding(payloadReader);
             CharacterBodyMotionBinding bodyMotionBinding = ReadBodyMotionBinding(payloadReader);
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding = ReadGameplayEffectRuntimeBinding(payloadReader);
@@ -64,7 +67,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 scene,
                 roomId,
                 data,
-                program,
+                abilities,
                 controlRuntimeBinding,
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
@@ -93,7 +96,9 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             WriteScene(writer, manifest.Scene);
             writer.WriteString(manifest.RoomId.Value);
             WriteEndpoint(writer, manifest.DataEndpoint);
-            WriteProgram(writer, manifest.Program);
+            writer.WriteInt32(manifest.Abilities.Count);
+            for (int i = 0; i < manifest.Abilities.Count; i++)
+                WriteAbilityArtifact(writer, manifest.Abilities[i]);
             WriteControlRuntimeBinding(writer, manifest.ControlRuntimeBinding);
             WriteBodyMotionBinding(writer, manifest.BodyMotionBinding);
             WriteGameplayEffectRuntimeBinding(writer, manifest.GameplayEffectRuntimeBinding);
@@ -129,40 +134,46 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         static DotRecastAuthorityEndpointDescriptor ReadEndpoint(CanonicalReader reader) =>
             new DotRecastAuthorityEndpointDescriptor(reader.ReadString(), reader.ReadInt32());
 
-        static void WriteProgram(CanonicalWriter writer, DotRecastAuthorityProgramArtifactBinding program)
+        static void WriteAbilityArtifact(CanonicalWriter writer, DotRecastAuthorityAbilityArtifactBinding ability)
         {
-            writer.WriteString(program.RelativePath);
-            writer.WriteString(program.DefinitionGuid);
-            writer.WriteString(program.ProgramId.Value);
-            writer.WriteString(program.ProgramHash.ToString());
-            writer.WriteString(program.LayoutHash.ToString());
-            writer.WriteString(program.ArtifactBytesHash.Value);
-            writer.WriteInt32(program.ArtifactByteLength);
-            writer.WriteString(program.CompilerVersion);
-            writer.WriteString(program.OperationSetVersion.Value);
-            writer.WriteString(program.SourceRevision.Value);
-            writer.WriteString(program.SemanticHash.ToString());
-            writer.WriteString(program.NumericProfileId.Value);
-            writer.WriteInt32(program.TargetAbiVersion.Value);
-            writer.WriteUInt64((ulong)program.RequiredWorldCapabilities);
+            writer.WriteString(ability.RelativePath);
+            writer.WriteString(ability.AbilityGuid);
+            writer.WriteString(ability.AbilityId.Value);
+            writer.WriteString(ability.ContentHash.Value);
+            writer.WriteString(ability.StateSchemaHash.Value);
+            writer.WriteString(ability.ArtifactBytesHash.Value);
+            writer.WriteInt32(ability.ArtifactByteLength);
+            writer.WriteString(ability.CompilerVersion);
+            writer.WriteString(ability.OperationSetVersion.Value);
+            writer.WriteInt32(ability.TickRate);
+            writer.WriteString(ability.SourceRevision.Value);
+            writer.WriteString(ability.SemanticHash.ToString());
+            writer.WriteString(ability.NumericProfileId.Value);
+            writer.WriteInt32(ability.TargetAbiVersion.Value);
+            writer.WriteString(ability.ExecutionIdentity);
+            SimulationProgramRootDescriptorCodec.Write(writer, ability.Root);
+            writer.WriteUInt64((ulong)ability.RequiredWorldCapabilities);
         }
 
-        static DotRecastAuthorityProgramArtifactBinding ReadProgram(CanonicalReader reader)
+        static DotRecastAuthorityAbilityArtifactBinding ReadAbilityArtifact(CanonicalReader reader)
         {
-            return new DotRecastAuthorityProgramArtifactBinding(
+            return new DotRecastAuthorityAbilityArtifactBinding(
                 reader.ReadString(),
                 reader.ReadString(),
-                new ProgramId(reader.ReadString()),
-                new ProgramHash(new StableHash(reader.ReadString())),
-                new LayoutHash(new StableHash(reader.ReadString())),
+                new CharacterSkillId(reader.ReadString()),
+                new StableHash(reader.ReadString()),
+                new StableHash(reader.ReadString()),
                 new StableHash(reader.ReadString()),
                 reader.ReadInt32(),
                 reader.ReadString(),
                 new OperationSetVersion(reader.ReadString()),
+                reader.ReadInt32(),
                 new ProgramRevision(reader.ReadString()),
                 new SemanticHash(new StableHash(reader.ReadString())),
                 new NumericProfileId(reader.ReadString()),
                 new TargetAbiVersion(reader.ReadInt32()),
+                reader.ReadString(),
+                SimulationProgramRootDescriptorCodec.Read(reader),
                 (WorldCapability)reader.ReadUInt64());
         }
 

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
-using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonSimulation.DotRecast;
 using ThirdPersonSimulation.ServerAuthoritative;
 using ThirdPersonSimulation.ServerAuthoritative.Transport;
@@ -86,7 +85,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                     manifest.Pipeline.SourcePolicy,
                     host,
                     actorIds,
-                    loaded.Program,
+                    loaded.CharacterRuntime,
                     control,
                     data,
                     diagnostics);
@@ -166,24 +165,14 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         ISimulationSessionRuntimeHandle LaunchRuntime()
         {
             DotRecastAuthoritySceneManifest manifest = m_Loaded.Manifest;
-            var actorBindings = new SimulationActorBinding[m_Loaded.Roster.Count];
             var bodyBindings = new DotRecastBodyBindingDescriptor[m_Loaded.Roster.Count];
             var initialActors = new SimulationActorState[m_Loaded.Roster.Count];
             var initialBodies = new WorldBodyState[m_Loaded.Roster.Count];
             var outputRoutes = new SimulationOutputRouteDescriptor[m_Loaded.Roster.Count];
-            CharacterControlModuleCatalog controlModules = CorinCharacterControlModuleCatalog.Create();
             for (int i = 0; i < m_Loaded.Roster.Count; i++)
             {
                 LoadedDotRecastAuthorityActor actor = m_Loaded.Roster[i];
                 ActorId actorId = actor.Binding.Roster.ActorId;
-                actorBindings[i] = new SimulationActorBinding(
-                    actorId,
-                    m_Loaded.Program,
-                    actor.Binding.WorldBodyBindingId,
-                    manifest.ControlRuntimeBinding,
-                    manifest.BodyMotionBinding,
-                    manifest.GameplayEffectRuntimeBinding,
-                    manifest.EquipmentRuntimeBinding);
                 bodyBindings[i] = new DotRecastBodyBindingDescriptor(
                     actor.Binding.WorldBodyBindingId,
                     actor.Binding.InitialBody,
@@ -193,9 +182,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 outputRoutes[i] = actor.Binding.OutputRoute;
             }
 
-            var characterRuntime = Float32CharacterRuntime.Create(
-                actorBindings,
-                controlModules);
+            Float32CharacterRuntime characterRuntime = m_Loaded.CharacterRuntime;
             DotRecastWorldSolver solver = null;
             try
             {
@@ -282,7 +269,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 !manifest.Pipeline.BackendIdentity.Equals(Float32PassExecutionBackend.Descriptor.Identity) ||
                 !manifest.Runtime.SnapshotCodec.Equals(
                     Float32SimulationSessionComposer.BuildSnapshotCodecIdentity(
-                        Float32CharacterRuntime.DescriptorDefinition,
+                        Float32SimulationTarget.Manifest.ExecutionTarget,
                         Float32PassExecutionBackend.Descriptor)))
             {
                 throw new InvalidOperationException("DotRecast Authority Scene manifest runtime identities are not canonical.");

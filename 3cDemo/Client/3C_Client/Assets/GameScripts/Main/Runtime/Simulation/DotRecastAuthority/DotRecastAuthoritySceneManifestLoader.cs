@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using ThirdPersonSimulation;
 using ThirdPersonSimulation.DotRecast;
 using ThirdPersonSimulation.ServerAuthoritative;
 
@@ -9,27 +10,30 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 {
     public sealed class LoadedDotRecastAuthorityActor
     {
-        public LoadedDotRecastAuthorityActor(DotRecastAuthorityActorBinding binding, CharacterSimulationState initialState)
+        public LoadedDotRecastAuthorityActor(
+            DotRecastAuthorityActorBinding binding,
+            SimulationActorBinding characterBinding,
+            Float32CharacterRuntimeState initialState)
         {
             Binding = binding ?? throw new ArgumentNullException(nameof(binding));
+            CharacterBinding = characterBinding ?? throw new ArgumentNullException(nameof(characterBinding));
             InitialState = initialState ?? throw new ArgumentNullException(nameof(initialState));
         }
 
         public DotRecastAuthorityActorBinding Binding { get; }
-        public CharacterSimulationState InitialState { get; }
+        public SimulationActorBinding CharacterBinding { get; }
+        public Float32CharacterRuntimeState InitialState { get; }
     }
 
     public sealed class LoadedDotRecastAuthoritySceneManifest
     {
-        readonly byte[] m_ProgramBytes;
         readonly byte[] m_NavigationSurfaceBytes;
         readonly ReadOnlyCollection<LoadedDotRecastAuthorityActor> m_Roster;
 
         internal LoadedDotRecastAuthoritySceneManifest(
             string manifestPath,
             DotRecastAuthoritySceneManifest manifest,
-            LoadedCharacterTargetProgramArtifact programArtifact,
-            byte[] programBytes,
+            Float32CharacterRuntime characterRuntime,
             NavigationSurfaceArtifact navigationSurface,
             byte[] navigationSurfaceBytes,
             ServerAuthoritativeAuthorityPipelineCatalogSet pipelineCatalog,
@@ -37,8 +41,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         {
             ManifestPath = manifestPath;
             Manifest = manifest;
-            ProgramArtifact = programArtifact;
-            m_ProgramBytes = (byte[])programBytes.Clone();
+            CharacterRuntime = characterRuntime;
             NavigationSurface = navigationSurface;
             m_NavigationSurfaceBytes = (byte[])navigationSurfaceBytes.Clone();
             PipelineCatalog = pipelineCatalog;
@@ -47,81 +50,127 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 
         public string ManifestPath { get; }
         public DotRecastAuthoritySceneManifest Manifest { get; }
-        public LoadedCharacterTargetProgramArtifact ProgramArtifact { get; }
-        public CharacterSimulationProgram Program => ProgramArtifact.Program;
+        public Float32CharacterRuntime CharacterRuntime { get; }
         public NavigationSurfaceArtifact NavigationSurface { get; }
         public ServerAuthoritativeAuthorityPipelineCatalogSet PipelineCatalog { get; }
         public IReadOnlyList<LoadedDotRecastAuthorityActor> Roster => m_Roster;
-        public byte[] CopyProgramBytes() => (byte[])m_ProgramBytes.Clone();
         public byte[] CopyNavigationSurfaceBytes() => (byte[])m_NavigationSurfaceBytes.Clone();
     }
 
     public static class DotRecastAuthoritySceneManifestLoader
     {
-        public static LoadedDotRecastAuthoritySceneManifest LoadFile(string manifestPath)
+        public static LoadedDotRecastAuthoritySceneManifest LoadFile(
+            string manifestPath,
+            CharacterControlModuleCatalog controlModules)
         {
             if (string.IsNullOrWhiteSpace(manifestPath))
                 throw new ArgumentException("An explicit DotRecast Authority Scene manifest path is required.", nameof(manifestPath));
+            if (controlModules == null)
+                throw new ArgumentNullException(nameof(controlModules));
             string fullManifestPath = Path.GetFullPath(manifestPath);
             if (!File.Exists(fullManifestPath))
                 throw new FileNotFoundException("DotRecast Authority Scene manifest does not exist.", fullManifestPath);
             byte[] manifestBytes = File.ReadAllBytes(fullManifestPath);
             DotRecastAuthoritySceneManifest manifest = DotRecastAuthoritySceneManifestCodec.Read(manifestBytes);
             string root = Path.GetDirectoryName(fullManifestPath) ?? throw new InvalidDataException("Manifest has no parent directory.");
-
-            string programPath = DotRecastAuthorityRelativePath.ResolveUnderRoot(root, manifest.Program.RelativePath);
+            GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilityData = LoadAbilities(manifest, root);
+            SimulationActorBinding[] characterBindings = BuildCharacterBindings(manifest, abilityData);
+            Float32CharacterRuntime characterRuntime = Float32CharacterRuntime.Create(
+                characterBindings,
+                manifest.Pipeline.TickRate,
+                controlModules);
             string surfacePath = DotRecastAuthorityRelativePath.ResolveUnderRoot(root, manifest.World.NavigationSurfaceRelativePath);
-            byte[] programBytes = ReadRequiredArtifact(programPath, "Program");
             byte[] surfaceBytes = ReadRequiredArtifact(surfacePath, "Navigation surface");
-            LoadedCharacterTargetProgramArtifact programArtifact = LoadProgram(manifest.Program, programBytes);
             NavigationSurfaceArtifact surface = LoadNavigationSurface(
                 manifest.World,
                 manifest.Roster[0].ContactShape,
                 surfaceBytes);
-            ServerAuthoritativeAuthorityPipelineCatalogSet pipelineCatalog = LoadPipeline(manifest, programArtifact.Program);
-            IReadOnlyList<LoadedDotRecastAuthorityActor> roster = LoadRoster(manifest, programArtifact.Program);
+            ServerAuthoritativeAuthorityPipelineCatalogSet pipelineCatalog = LoadPipeline(manifest, characterRuntime);
+            IReadOnlyList<LoadedDotRecastAuthorityActor> roster = LoadRoster(manifest, characterRuntime);
             return new LoadedDotRecastAuthoritySceneManifest(
                 fullManifestPath,
                 manifest,
-                programArtifact,
-                programBytes,
+                characterRuntime,
                 surface,
                 surfaceBytes,
                 pipelineCatalog,
                 roster);
         }
 
-        static LoadedCharacterTargetProgramArtifact LoadProgram(
-            DotRecastAuthorityProgramArtifactBinding expected,
+        static GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> LoadAbilities(
+            DotRecastAuthoritySceneManifest manifest,
+            string root)
+        {
+            var data = new List<Float32GameplayAbilityExecutionData>(manifest.Abilities.Count);
+            for (int i = 0; i < manifest.Abilities.Count; i++)
+            {
+                DotRecastAuthorityAbilityArtifactBinding expected = manifest.Abilities[i];
+                string path = DotRecastAuthorityRelativePath.ResolveUnderRoot(root, expected.RelativePath);
+                byte[] bytes = ReadRequiredArtifact(path, $"Ability '{expected.AbilityId}'");
+                data.Add(LoadAbility(expected, bytes));
+            }
+            return new GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData>(data, value => value.AbilityId);
+        }
+
+        static Float32GameplayAbilityExecutionData LoadAbility(
+            DotRecastAuthorityAbilityArtifactBinding expected,
             byte[] bytes)
         {
-            StableHash bytesHash = CharacterTargetProgramArtifactLoader.ComputeBytesHash(bytes);
+            StableHash bytesHash = Float32GameplayAbilityExecutionDataCodec.ComputeCanonicalBytesHash(bytes);
             if (bytes.Length != expected.ArtifactByteLength || !bytesHash.Equals(expected.ArtifactBytesHash))
-                throw new InvalidDataException("Program artifact bytes do not match the manifest.");
-            LoadedCharacterTargetProgramArtifact artifact = CharacterTargetProgramArtifactLoader.Inspect(expected.DefinitionGuid, bytes);
-            CharacterTargetProgramArtifactDescriptor actual = artifact.Descriptor;
-            if (!actual.ProgramId.Equals(expected.ProgramId) ||
-                !actual.ProgramHash.Equals(expected.ProgramHash) ||
-                !actual.LayoutHash.Equals(expected.LayoutHash) ||
-                !actual.CanonicalBytesHash.Equals(expected.ArtifactBytesHash) ||
-                actual.CanonicalByteLength != expected.ArtifactByteLength ||
-                !string.Equals(actual.CompilerVersion, expected.CompilerVersion, StringComparison.Ordinal) ||
-                !actual.OperationSetVersion.Equals(expected.OperationSetVersion) ||
-                !actual.SourceRevision.Equals(expected.SourceRevision) ||
-                !actual.SemanticHash.Equals(expected.SemanticHash) ||
-                !actual.NumericProfileId.Equals(expected.NumericProfileId) ||
-                !actual.TargetAbiVersion.Equals(expected.TargetAbiVersion) ||
-                actual.RequiredWorldCapabilities != expected.RequiredWorldCapabilities)
+                throw new InvalidDataException($"Ability '{expected.AbilityId}' artifact bytes do not match the manifest.");
+            Float32GameplayAbilityExecutionData data = Float32GameplayAbilityExecutionDataCodec.ReadArtifact(
+                bytes,
+                new Float32GameplayAbilityExecutionDataLoadExpectation(
+                    expected.AbilityGuid,
+                    expected.AbilityId.Value,
+                    expected.CompilerVersion,
+                    expected.OperationSetVersion.Value,
+                    expected.SourceRevision.Value,
+                    expected.SemanticHash.ToString(),
+                    expected.NumericProfileId.Value,
+                    expected.TargetAbiVersion.Value,
+                    expected.ExecutionIdentity,
+                    expected.ContentHash.ToString(),
+                    expected.StateSchemaHash.ToString(),
+                    expected.ArtifactBytesHash.ToString(),
+                    expected.Root));
+            if (!data.AbilityId.Equals(expected.AbilityId) ||
+                !data.ContentHash.Equals(expected.ContentHash) ||
+                !data.StateSchemaHash.Equals(expected.StateSchemaHash) ||
+                !data.OperationSetVersion.Equals(expected.OperationSetVersion) ||
+                data.TickRate != expected.TickRate ||
+                !data.SourceRevision.Equals(expected.SourceRevision) ||
+                !data.SemanticHash.Equals(expected.SemanticHash) ||
+                data.NumericProfile.Id != expected.NumericProfileId ||
+                data.NumericProfile.AbiVersion.Value != expected.TargetAbiVersion.Value ||
+                !string.Equals(data.ExecutionIdentity, expected.ExecutionIdentity, StringComparison.Ordinal) ||
+                data.Root != expected.Root ||
+                data.Capabilities.RequiredWorldCapabilities != expected.RequiredWorldCapabilities)
             {
-                throw new InvalidDataException("Program artifact identity does not match the manifest.");
+                throw new InvalidDataException($"Ability '{expected.AbilityId}' identity does not match the manifest.");
             }
-            if (!actual.NumericProfileId.Equals(Float32SimulationNumericProfile.Value.Id) ||
-                !actual.TargetAbiVersion.Equals(Float32SimulationNumericProfile.Value.AbiVersion) ||
-                !actual.OperationSetVersion.Equals(Float32SimulationTarget.Manifest.ExecutionTarget.OperationSetVersion))
+            return data;
+        }
+
+        static SimulationActorBinding[] BuildCharacterBindings(
+            DotRecastAuthoritySceneManifest manifest,
+            GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilityData)
+        {
+            var bindings = new SimulationActorBinding[manifest.Roster.Count];
+            for (int i = 0; i < bindings.Length; i++)
             {
-                throw new InvalidDataException("Program artifact does not target the formal Float32 Kernel ABI.");
+                DotRecastAuthorityActorBinding actor = manifest.Roster[i];
+                bindings[i] = new SimulationActorBinding(
+                    actor.Roster.ActorId,
+                    actor.WorldBodyBindingId,
+                    manifest.ControlRuntimeBinding,
+                    manifest.BodyMotionBinding,
+                    manifest.GameplayEffectRuntimeBinding,
+                    manifest.EquipmentRuntimeBinding,
+                    abilityData);
             }
-            return artifact;
+            return bindings;
         }
 
         static NavigationSurfaceArtifact LoadNavigationSurface(
@@ -174,15 +223,15 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 
         static ServerAuthoritativeAuthorityPipelineCatalogSet LoadPipeline(
             DotRecastAuthoritySceneManifest manifest,
-            CharacterSimulationProgram program)
+            Float32CharacterRuntime characterRuntime)
         {
             DotRecastAuthorityPipelineBinding expected = manifest.Pipeline;
             if (!expected.BackendIdentity.Equals(Float32PassExecutionBackend.Descriptor.Identity) ||
-                expected.TickRate != program.Manifest.TickRate)
+                expected.TickRate != characterRuntime.TickRate)
             {
-                throw new InvalidDataException("Authority Pipeline Backend or TickRate does not match the Program.");
+                throw new InvalidDataException("Authority Pipeline Backend or TickRate does not match the Character Runtime.");
             }
-            expected.ReplicationPolicy.RequireProgramCoverage(program);
+            expected.ReplicationPolicy.RequireCharacterCoverage(characterRuntime);
             ServerAuthoritativeAuthorityPipelineCatalogSet catalog = ServerAuthoritativeAuthorityPipelineCatalog.Create(
                 expected.SourcePolicy.ModelPolicy,
                 expected.ReplicationPolicy);
@@ -199,21 +248,28 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 
         static IReadOnlyList<LoadedDotRecastAuthorityActor> LoadRoster(
             DotRecastAuthoritySceneManifest manifest,
-            CharacterSimulationProgram program)
+            Float32CharacterRuntime characterRuntime)
         {
             var actors = new LoadedDotRecastAuthorityActor[manifest.Roster.Count];
             for (int i = 0; i < actors.Length; i++)
             {
                 DotRecastAuthorityActorBinding binding = manifest.Roster[i];
-                CharacterSimulationState state = CharacterSimulationStateCodec.Read(
+                SimulationActorBinding characterBinding = characterRuntime.Roster[i];
+                if (binding.Roster.ActorId != characterBinding.ActorId)
+                    throw new InvalidDataException("Manifest Actor roster does not match the Character Runtime roster.");
+                GameplayContentHash contentHash = new GameplayContentHash(characterBinding.GameplayContentHash);
+                Float32CharacterRuntimeState state = Float32CharacterRuntimeStateCodec.Read(
                     binding.CopyInitialCharacterStateBytes(),
-                    program);
-                CharacterStateHash stateHash = CharacterSimulationStateCodec.ComputeHash(state);
+                    characterBinding.AbilityInstallations,
+                    contentHash,
+                    characterBinding.GameplayEffectRuntimeBinding,
+                    characterBinding.EquipmentRuntimeBinding);
+                CharacterStateHash stateHash = Float32CharacterRuntimeStateCodec.ComputeHash(state);
                 if (!stateHash.Equals(binding.InitialCharacterStateHash))
                     throw new InvalidDataException($"Initial Character state hash for Actor '{binding.Roster.ActorId}' does not match the manifest.");
                 if (state.LastCompletedTick != 0)
                     throw new InvalidDataException($"Initial Character state for Actor '{binding.Roster.ActorId}' is not at Tick 0.");
-                actors[i] = new LoadedDotRecastAuthorityActor(binding, state);
+                actors[i] = new LoadedDotRecastAuthorityActor(binding, characterBinding, state);
             }
             return actors;
         }

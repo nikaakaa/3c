@@ -42,59 +42,69 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         public string SceneType { get; }
     }
 
-    public sealed class DotRecastAuthorityProgramArtifactBinding
+    public sealed class DotRecastAuthorityAbilityArtifactBinding
     {
-        public DotRecastAuthorityProgramArtifactBinding(
+        public DotRecastAuthorityAbilityArtifactBinding(
             string relativePath,
-            string definitionGuid,
-            ProgramId programId,
-            ProgramHash programHash,
-            LayoutHash layoutHash,
+            string abilityGuid,
+            CharacterSkillId abilityId,
+            StableHash contentHash,
+            StableHash stateSchemaHash,
             StableHash artifactBytesHash,
             int artifactByteLength,
             string compilerVersion,
             OperationSetVersion operationSetVersion,
+            int tickRate,
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             NumericProfileId numericProfileId,
             TargetAbiVersion targetAbiVersion,
+            string executionIdentity,
+            SimulationProgramRootDescriptor root,
             WorldCapability requiredWorldCapabilities)
         {
             RelativePath = DotRecastAuthorityRelativePath.Require(relativePath, nameof(relativePath));
-            DefinitionGuid = DotRecastAuthorityManifestIdentity.RequireDefinitionGuid(definitionGuid);
-            if (!programId.IsValid || !programHash.IsValid || !layoutHash.IsValid || !artifactBytesHash.IsValid ||
-                artifactByteLength <= 0 || !operationSetVersion.IsValid || !semanticHash.IsValid ||
-                !numericProfileId.IsValid || !targetAbiVersion.IsValid || requiredWorldCapabilities == WorldCapability.None)
+            AbilityGuid = DotRecastAuthorityManifestIdentity.RequireGuid(abilityGuid);
+            if (!abilityId.IsValid || !contentHash.IsValid || !stateSchemaHash.IsValid || !artifactBytesHash.IsValid ||
+                artifactByteLength <= 0 || !operationSetVersion.IsValid || tickRate <= 0 || !semanticHash.IsValid ||
+                !numericProfileId.IsValid || !targetAbiVersion.IsValid || string.IsNullOrWhiteSpace(executionIdentity) ||
+                !root.IsAbility)
             {
-                throw new ArgumentException("DotRecast Authority Program artifact binding is incomplete.");
+                throw new ArgumentException("DotRecast Authority Ability artifact binding is incomplete.");
             }
-            ProgramId = programId;
-            ProgramHash = programHash;
-            LayoutHash = layoutHash;
+            AbilityId = abilityId;
+            ContentHash = contentHash;
+            StateSchemaHash = stateSchemaHash;
             ArtifactBytesHash = artifactBytesHash;
             ArtifactByteLength = artifactByteLength;
             CompilerVersion = DotRecastAuthorityManifestIdentity.Require(compilerVersion, nameof(compilerVersion));
             OperationSetVersion = operationSetVersion;
+            TickRate = tickRate;
             SourceRevision = sourceRevision;
             SemanticHash = semanticHash;
             NumericProfileId = numericProfileId;
             TargetAbiVersion = targetAbiVersion;
+            ExecutionIdentity = DotRecastAuthorityManifestIdentity.Require(executionIdentity, nameof(executionIdentity));
+            Root = root;
             RequiredWorldCapabilities = requiredWorldCapabilities;
         }
 
         public string RelativePath { get; }
-        public string DefinitionGuid { get; }
-        public ProgramId ProgramId { get; }
-        public ProgramHash ProgramHash { get; }
-        public LayoutHash LayoutHash { get; }
+        public string AbilityGuid { get; }
+        public CharacterSkillId AbilityId { get; }
+        public StableHash ContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public StableHash ArtifactBytesHash { get; }
         public int ArtifactByteLength { get; }
         public string CompilerVersion { get; }
         public OperationSetVersion OperationSetVersion { get; }
+        public int TickRate { get; }
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
         public NumericProfileId NumericProfileId { get; }
         public TargetAbiVersion TargetAbiVersion { get; }
+        public string ExecutionIdentity { get; }
+        public SimulationProgramRootDescriptor Root { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
     }
 
@@ -289,6 +299,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 
     public sealed class DotRecastAuthoritySceneManifest
     {
+        readonly ReadOnlyCollection<DotRecastAuthorityAbilityArtifactBinding> m_Abilities;
         readonly ReadOnlyCollection<DotRecastAuthorityActorBinding> m_Roster;
 
         public DotRecastAuthoritySceneManifest(
@@ -297,7 +308,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             DotRecastAuthoritySceneIdentity scene,
             ServerAuthoritativeRoomId roomId,
             DotRecastAuthorityEndpointDescriptor dataEndpoint,
-            DotRecastAuthorityProgramArtifactBinding program,
+            IEnumerable<DotRecastAuthorityAbilityArtifactBinding> abilities,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterBodyMotionBinding bodyMotionBinding,
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
@@ -316,7 +327,6 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 throw new ArgumentException("DotRecast Authority Scene manifest requires a RoomId.", nameof(roomId));
             RoomId = roomId;
             DataEndpoint = dataEndpoint;
-            Program = program ?? throw new ArgumentNullException(nameof(program));
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding ?? throw new ArgumentNullException(nameof(gameplayEffectRuntimeBinding));
@@ -325,11 +335,28 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             World = world ?? throw new ArgumentNullException(nameof(world));
             Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             DotRecastAuthorityHostProduct.Descriptor.RequireAuthoritySolver(world.SolverDefinition);
-            if (pipeline.TickRate <= 0 || !program.NumericProfileId.Equals(Float32SimulationNumericProfile.Value.Id) ||
-                !program.TargetAbiVersion.Equals(Float32SimulationNumericProfile.Value.AbiVersion) ||
+            if (pipeline.TickRate <= 0 ||
                 !pipeline.BackendIdentity.Equals(Float32PassExecutionBackend.Descriptor.Identity))
             {
                 throw new ArgumentException("DotRecast Authority Scene manifest does not select the formal Float32/DotRecast target.");
+            }
+            var abilityValues = abilities == null
+                ? new List<DotRecastAuthorityAbilityArtifactBinding>()
+                : new List<DotRecastAuthorityAbilityArtifactBinding>(abilities);
+            abilityValues.Sort((left, right) => left.AbilityId.CompareTo(right.AbilityId));
+            if (abilityValues.Count == 0)
+                throw new ArgumentException("DotRecast Authority Scene manifest requires Ability artifacts.", nameof(abilities));
+            for (int i = 0; i < abilityValues.Count; i++)
+            {
+                if (abilityValues[i] == null || i > 0 && abilityValues[i - 1].AbilityId == abilityValues[i].AbilityId)
+                    throw new ArgumentException("DotRecast Authority Ability artifacts are missing or duplicated.", nameof(abilities));
+                if (!abilityValues[i].NumericProfileId.Equals(Float32SimulationNumericProfile.Value.Id) ||
+                    !abilityValues[i].TargetAbiVersion.Equals(Float32SimulationNumericProfile.Value.AbiVersion) ||
+                    abilityValues[i].TickRate != pipeline.TickRate ||
+                    !abilityValues[i].OperationSetVersion.Equals(Float32SimulationTarget.Manifest.ExecutionTarget.OperationSetVersion))
+                {
+                    throw new ArgumentException("DotRecast Authority Ability artifact does not target the formal Float32 Kernel ABI.", nameof(abilities));
+                }
             }
             var actors = roster == null ? new List<DotRecastAuthorityActorBinding>() : new List<DotRecastAuthorityActorBinding>(roster);
             actors.Sort((left, right) => left.Roster.ActorId.CompareTo(right.Roster.ActorId));
@@ -348,12 +375,13 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 world.ContactConfiguration);
             if (!expectedWorldConfigurationHash.Equals(world.WorldConfigurationHash))
                 throw new ArgumentException("DotRecast Authority Scene WorldConfigurationHash does not cover the contact configuration.", nameof(world));
+            m_Abilities = abilityValues.AsReadOnly();
             m_Roster = actors.AsReadOnly();
             ManifestHash = DotRecastAuthoritySceneManifestCodec.ComputeHash(this);
         }
 
         public const string Magic = "thirdperson.dotrecast-authority-scene-manifest";
-        public const int SchemaVersion = 8;
+        public const int SchemaVersion = 9;
         public const string PublishDirectoryName = "Authority";
         public const string FileName = "DotRecastAuthorityScene.manifest";
         public HostProductId HostProductId { get; }
@@ -361,7 +389,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         public DotRecastAuthoritySceneIdentity Scene { get; }
         public ServerAuthoritativeRoomId RoomId { get; }
         public DotRecastAuthorityEndpointDescriptor DataEndpoint { get; }
-        public DotRecastAuthorityProgramArtifactBinding Program { get; }
+        public IReadOnlyList<DotRecastAuthorityAbilityArtifactBinding> Abilities => m_Abilities;
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
@@ -409,10 +437,10 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 
     static class DotRecastAuthorityManifestIdentity
     {
-        public static string RequireDefinitionGuid(string value)
+        public static string RequireGuid(string value)
         {
             if (string.IsNullOrEmpty(value) || value.Length != 32)
-                throw new ArgumentException("Manifest Definition GUID is invalid.", nameof(value));
+                throw new ArgumentException("Manifest Ability GUID is invalid.", nameof(value));
             for (int i = 0; i < value.Length; i++)
             {
                 char character = value[i];
@@ -420,7 +448,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                       (character >= 'a' && character <= 'f') ||
                       (character >= 'A' && character <= 'F')))
                 {
-                    throw new ArgumentException("Manifest Definition GUID is invalid.", nameof(value));
+                    throw new ArgumentException("Manifest Ability GUID is invalid.", nameof(value));
                 }
             }
             return value;

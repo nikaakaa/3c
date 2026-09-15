@@ -785,3 +785,9 @@
 - 提交 `237614267`，移除通用 Ability 数据集以及 Float32／Fixed 安装集合中没有调用方的 `TryGet` 出口。
 - 当前执行与状态恢复链路继续使用按身份必须取得的 `Require`；不保留可选读取旁路，也不改变安装排序、身份校验或执行行为。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 移除状态事务无用Actor身份
+
+- 提交 `e226d5a05`，Float32／Fixed 角色状态事务删除只用于有效性检查、但不参与状态处理的 `ActorId` 参数；角色评估入口不再向事务重复传递角色身份。
+- Actor 与 WorldBody 的身份匹配仍在角色评估边界完成，事务只接收角色状态、当前 Tick 和实际状态服务；没有改变状态提交、快照或恢复顺序。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

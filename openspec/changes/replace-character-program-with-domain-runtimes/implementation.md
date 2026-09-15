@@ -820,3 +820,9 @@
 - 提交 `d3ee2c611`，Float32／Fixed 技能执行保存点删除整份 CharacterRuntimeState 快照，只保留 Gameplay Effect 聚合、Equipment 聚合、句柄分配器和事件序号；不再回滚 Ability 集合、Control、输入或动作状态。
 - Gameplay Effect 状态恢复改为复用已有工作对象并原地加载聚合，避免回滚后执行目标继续引用已脱离状态事务的旧工作对象；同步删除整角色保存点专用的无调用方恢复函数。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。Float32／Fixed 生成工程仍被既有 `.csproj` 对已删除源文件的索引阻断；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 执行帧直接使用技能局部状态
+
+- 提交 `e7e2a729d`，删除 Float32／Fixed `AbilityExecutionFrame` 状态回退中的旧 `Transaction` 引用，状态重置和读取统一回到当前调用方提供的技能局部状态。
+- 执行帧不再保留角色事务名称作为隐含入口；没有改变局部状态访问策略、操作状态语义或角色外层提交责任。
+- Float32／Fixed 生成工程仍因既有 `.csproj` 索引已删除源文件而未能进入源码编译；两次构建结束均已执行 `dotnet build-server shutdown`，未运行 Unity、测试或资产生成。

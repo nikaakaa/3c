@@ -921,3 +921,8 @@
 
 - 提交 `9bb7d331a`，Server Authoritative 完整 checkpoint 的布局不匹配错误改为 `active Character Runtime`，与当前状态布局 owner 一致。
 - 只修正网络诊断文本，不改变 checkpoint 的布局比较、canonical 解码、元数据校验或恢复流程；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除未消费的Effect需求标记
+
+- 提交 `d7f8d3b54`，Float32／Fixed Ability 安装对象、安装集合和 SimulationActorBinding 删除没有消费者的 `RequiresGameplayEffects` 转发；角色内容哈希改从实际 `GameplayEffectCatalog` 是否存在判断，保留 `RequiresEquipment` 的现有状态布局和执行服务用途。
+- 不改变能力声明、Gameplay Effect 绑定校验、Equipment 绑定或内容哈希结果，只移除角色层重复字段；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

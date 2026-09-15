@@ -1039,3 +1039,8 @@
 
 - 提交 `ea4e7b4e5`，删除没有生产调用方的 `CharacterPresentationProducerCompiler`、`CharacterPresentationSemanticReader` 和 `CharacterSemanticIrArtifactStore` 及对应 Unity 元数据；三者只服务已撤销的整角色 Presentation Semantic／Projection 编译入口。
 - 保留 Ability 语义 IR、Ability 编译和现行 Pose／Camera／Timeline 领域实现，不为旧消费者增加兼容入口；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除旧Projection总编译入口
+
+- 提交 `4e494e8e9`，将仍被 Pose／Foot 资源编译器使用的稳定资产对象身份工具独立到 `CharacterPresentationAssetObjectIdentity`，删除没有调用方的 `CharacterPresentationProjectionCompiler` 总编译入口及旧 Unity 元数据。
+- 不删除现行 Pose、Foot、Camera 资源算法，也不建立新的整角色 Projection 总装配器；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

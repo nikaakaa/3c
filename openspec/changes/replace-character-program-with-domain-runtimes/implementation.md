@@ -946,3 +946,9 @@
 
 - 提交 `b21454492`，Float32／Fixed Character Runtime State Codec、世界快照恢复、Float32 Authority checkpoint／Prediction 恢复和 DotRecast 初始状态读取统一接收 `SimulationActorBinding`；安装集合、Gameplay Effect／Equipment 绑定和角色内容身份由 Actor binding 唯一提供。
 - 不改变状态字节格式、Codec identity 或恢复校验，只删除调用方分散传参导致的跨角色拼接入口；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 收回运行端口名册出口
+
+- 提交 `b6fe042c1`，Float32／Fixed Character Runtime Port 删除对 `Runtime.Roster` 的重复发布；输入、Ability、Deterministic Rollback 和 Server Authoritative Prediction 链路统一从端口持有的 Character Runtime 读取名册。
+- Character Runtime 继续拥有名册排序、ActorId 索引和绑定事实，端口只提供 Runtime 与索引操作，不再形成第二个角色身份 owner；不改变输入顺序、Ability 评估、回滚校验或网络预测行为。
+- Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

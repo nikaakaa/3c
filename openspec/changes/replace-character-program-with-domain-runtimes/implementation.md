@@ -814,3 +814,9 @@
 - 提交 `6e059cb7b`，Float32／Fixed 评估结果、结果批次、Pass 清理和 Pipeline transaction 的 `AbortUnconsumed` 统一改为 `DiscardUnconsumed`。
 - 失败清理仍只标记并丢弃未消费候选，不回滚或中止角色状态事务；命名与 1.11 的技能候选丢弃边界一致，没有改变外层提交和恢复行为。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 技能执行保存点收窄到领域状态
+
+- 提交 `d3ee2c611`，Float32／Fixed 技能执行保存点删除整份 CharacterRuntimeState 快照，只保留 Gameplay Effect 聚合、Equipment 聚合、句柄分配器和事件序号；不再回滚 Ability 集合、Control、输入或动作状态。
+- Gameplay Effect 状态恢复改为复用已有工作对象并原地加载聚合，避免回滚后执行目标继续引用已脱离状态事务的旧工作对象；同步删除整角色保存点专用的无调用方恢复函数。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。Float32／Fixed 生成工程仍被既有 `.csproj` 对已删除源文件的索引阻断；未运行 Unity、测试或资产生成。

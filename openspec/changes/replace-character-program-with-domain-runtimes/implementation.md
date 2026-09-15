@@ -1184,3 +1184,8 @@
 
 - 提交 `9be61b6f9`，将 Ability 与 Timeline 语义编译共同使用的 `CharacterSimulationOperationEmitter`、`CharacterSimulationConstantInput` 及文件路径统一为 `SimulationOperationEmitter`、`SimulationConstantInput`。
 - 本步只清理共享语义发射器命名，保留常量声明、输入绑定、操作顺序和 source map 行为。
+
+## 2026-09-16 统一Simulation来源定位合同
+
+- 提交 `a34917af3`，将 Ability 与 Timeline 共享的 `CharacterSimulationSourceLocation` 从 Ability Builder 中拆到独立的 `SimulationSourceLocation` 文件，并清除旧类型引用。
+- 本步只调整共享编译合同的归属和命名；图、节点、边、时间线、声明、端口、内容哈希及 source map 的字段和身份计算保持不变。

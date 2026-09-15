@@ -1049,3 +1049,8 @@
 
 - 提交 `740185773`，将只由 Ability 编译器和 Float32／Fixed Target 编译器使用的 `CharacterGameplaySemanticIr`、Manifest、ArtifactHeader 与 Codec 统一重命名为 `GameplayAbilitySemanticIr` 对应类型，移除对角色级语义容器的误导。
 - 本步只调整源码命名和引用，不改变 Semantic IR artifact 17／17 的字节布局、版本或校验规则；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability语义编解码命名
+
+- 提交 `430b4ebb1`，将只服务 Ability 语义 IR 与 Float32／Fixed Ability artifact 编解码的 `SimulationProgramSemanticsCodec` 重命名为 `GameplayAbilitySemanticsCodec`，旧角色 Program 编解码命名不再出现在 Ability 入口。
+- 保留正式 `Program*` 图数据合同和 Root 合同；本步只调整类型名与静态引用，不改变序列化布局或版本。两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

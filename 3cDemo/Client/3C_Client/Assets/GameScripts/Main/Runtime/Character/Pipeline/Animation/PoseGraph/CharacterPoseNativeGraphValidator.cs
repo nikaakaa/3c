@@ -356,14 +356,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 .Select(nodeId => byId[nodeId])
                 .ToList();
             if (assemblers.Count > 1 || solvers.Count > 1 ||
-                assemblers.Count != solvers.Count)
+                solvers.Count == 1 && assemblers.Count == 0)
             {
                 Fail(
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     graph.GraphId.Value,
                     $"Pose output path must contain zero or one paired Goal Assembler and Full Body IK; found {assemblers.Count} and {solvers.Count}.");
             }
-            if (assemblers.Count == 1)
+            if (assemblers.Count == 1 && solvers.Count == 1)
             {
                 HashSet<PoseNodeId> assemblerOutputs = CollectReachable(
                     CreateForwardConnections(connections), assemblers[0].NodeId);

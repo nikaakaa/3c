@@ -49,7 +49,7 @@ namespace ThirdPersonSimulation
             foreach (KeyValuePair<int, AbilityStateValue> value in values)
             {
                 if (value.Key < 0 || !result.TryAdd(value.Key, value.Value))
-                    throw new ArgumentException("Character runtime state values are invalid or duplicated.", nameof(values));
+                    throw new ArgumentException("Ability runtime state values are invalid or duplicated.", nameof(values));
             }
             return result;
         }

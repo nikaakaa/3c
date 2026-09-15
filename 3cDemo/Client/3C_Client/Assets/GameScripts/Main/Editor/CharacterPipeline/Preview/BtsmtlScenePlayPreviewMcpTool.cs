@@ -188,12 +188,27 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
             }
 
             SimulationSessionHost session = descriptor.SessionHost;
-            SimulationProgramEpoch epoch = session.ProgramEpoch;
+            SimulationSessionLaunchPlan launchPlan = session.LaunchPlan;
+            if (launchPlan == null)
+            {
+                return new
+                {
+                    available = false,
+                    message = "The current Character Session has not completed composition preparation."
+                };
+            }
+            SimulationSessionCompositionDescriptor composition = launchPlan.Descriptor;
+            SimulationExecutionTargetManifest target = launchPlan.ExecutionTarget;
             return new
             {
                 available = true,
-                program_epoch = epoch.Value,
-                program_revision = epoch.SourceRevision.Value,
+                session_identity = composition.Identity.ToString(),
+                runtime_content_hash = launchPlan.GameplayContentHash.ToString(),
+                execution_target_identity = target.Identity.ToString(),
+                numeric_profile = target.NumericProfile.Id.Value,
+                target_abi_version = target.NumericProfile.AbiVersion.Value.ToString(),
+                operation_set_version = target.OperationSetVersion.Value,
+                pipeline_plan_hash = launchPlan.CompiledPipeline.PlanHash.ToString(),
                 execution_branch_id = session.ExecutionBranchId.ToString("N"),
                 parent_execution_branch_id = session.ParentExecutionBranchId.ToString("N"),
                 execution_branch_base_tick = session.ExecutionBranchBaseTick,

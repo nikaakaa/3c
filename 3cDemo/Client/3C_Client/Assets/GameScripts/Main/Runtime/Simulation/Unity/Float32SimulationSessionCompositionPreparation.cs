@@ -27,9 +27,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         {
             m_Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             m_Registrations = FreezeRoster(registrations);
-            m_CharacterRuntime = BuildCharacterRuntime(m_Definition, m_Registrations);
+            SimulationExecutionTargetManifest target = m_Definition.ExecutionTarget;
+            m_CharacterRuntime = BuildCharacterRuntime(m_Definition, m_Registrations, target);
             m_CharacterRuntimeDescriptor = new SimulationCharacterRuntimeDescriptor(
-                Float32SimulationTarget.Manifest.ExecutionTarget,
+                target,
                 m_CharacterRuntime.GameplayContentHash,
                 m_CharacterRuntime.RosterDescriptor);
             m_WorldSolverDescriptor = m_Definition.WorldSolver.BuildDescriptor(m_Definition.TickRate);
@@ -330,14 +331,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
         static Float32CharacterRuntime BuildCharacterRuntime(
             SimulationSessionCompositionDefinition definition,
-            IReadOnlyList<IFloat32CharacterRuntimeRegistration> registrations)
+            IReadOnlyList<IFloat32CharacterRuntimeRegistration> registrations,
+            SimulationExecutionTargetManifest target)
         {
             var bindings = new SimulationActorBinding[registrations.Count];
             for (int i = 0; i < bindings.Length; i++)
                 bindings[i] = registrations[i].CharacterBinding;
-            return Float32CharacterRuntime.Create(
+            return new Float32CharacterRuntime(
                 bindings,
+                target.NumericProfile,
                 definition.TickRate,
+                target.OperationSetVersion,
                 CharacterControlRuntimeModuleCatalog.Create());
         }
     }

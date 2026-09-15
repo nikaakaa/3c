@@ -40,9 +40,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             m_Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             m_Registrations = FreezeRoster(registrations);
-            m_CharacterRuntime = BuildCharacterRuntime(m_Definition, m_Registrations);
+            SimulationExecutionTargetManifest target = m_Definition.ExecutionTarget;
+            m_CharacterRuntime = BuildCharacterRuntime(m_Definition, m_Registrations, target);
             m_CharacterRuntimeDescriptor = new SimulationCharacterRuntimeDescriptor(
-                FixedSimulationTarget.Manifest.ExecutionTarget,
+                target,
                 m_CharacterRuntime.GameplayContentHash,
                 m_CharacterRuntime.RosterDescriptor);
             m_WorldSolverDescriptor = m_Definition.WorldSolver.BuildDescriptor(m_Definition.TickRate);
@@ -348,14 +349,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         static FixedCharacterRuntime BuildCharacterRuntime(
             SimulationSessionCompositionDefinition definition,
-            IReadOnlyList<FixedSimulationActorRegistration> registrations)
+            IReadOnlyList<FixedSimulationActorRegistration> registrations,
+            SimulationExecutionTargetManifest target)
         {
             var bindings = new FixedActorBinding[registrations.Count];
             for (int i = 0; i < bindings.Length; i++)
                 bindings[i] = registrations[i].CharacterBinding;
-            return FixedCharacterRuntime.Create(
+            return new FixedCharacterRuntime(
                 bindings,
+                target.NumericProfile,
                 definition.TickRate,
+                target.OperationSetVersion,
                 CharacterControlRuntimeModuleCatalog.Create());
         }
     }

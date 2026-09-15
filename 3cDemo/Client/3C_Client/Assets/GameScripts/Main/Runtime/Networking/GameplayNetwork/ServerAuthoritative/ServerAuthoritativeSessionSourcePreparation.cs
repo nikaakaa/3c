@@ -160,9 +160,11 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     throw new InvalidOperationException("ServerAuthoritative Source requires Float32 Character Runtime registrations.");
                 bindings[i] = registration.CharacterBinding;
             }
-            Float32CharacterRuntime runtime = Float32CharacterRuntime.Create(
+            Float32CharacterRuntime runtime = new Float32CharacterRuntime(
                 bindings,
+                context.CharacterRuntime.NumericProfile,
                 context.TickRate,
+                context.CharacterRuntime.OperationSetVersion,
                 CharacterControlRuntimeModuleCatalog.Create());
             if (!runtime.GameplayContentHash.Equals(context.CharacterRuntime.GameplayContentHash) ||
                 !runtime.RosterDescriptor.RosterHash.Equals(context.CharacterRuntime.Roster.RosterHash) ||

@@ -383,9 +383,12 @@ namespace ThirdPersonCharacter.Pipeline
 					gameplayEffectRuntimeBinding,
 					equipmentRuntimeBinding,
 					abilityData);
-				Float32CharacterRuntime characterRuntime = Float32CharacterRuntime.Create(
+				SimulationExecutionTargetManifest target = Float32SimulationTarget.Manifest.ExecutionTarget;
+				Float32CharacterRuntime characterRuntime = new Float32CharacterRuntime(
 					new[] { actorBinding },
+					target.NumericProfile,
 					tickRate,
+					target.OperationSetVersion,
 					controlModules);
 				CharacterPresentationProjection projection = CharacterPresentationRuntimeFactory.LoadProjection(
 					m_Definition.PresentationProjection);

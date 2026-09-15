@@ -162,9 +162,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
                 abilityData);
-            FixedCharacterRuntime characterRuntime = FixedCharacterRuntime.Create(
+            SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
+            FixedCharacterRuntime characterRuntime = new FixedCharacterRuntime(
                 new[] { actorBinding },
+                target.NumericProfile,
                 tickRate,
+                target.OperationSetVersion,
                 controlModules);
             bool local = endpoint.ResolvePeerProfile().ActorId == actorId;
             UnityFixedCharacterInputAdapter input = null;

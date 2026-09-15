@@ -26,20 +26,6 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<Float32GameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
 
-        public static Float32CharacterRuntime Create(
-            IEnumerable<SimulationActorBinding> roster,
-            int tickRate,
-            CharacterControlModuleCatalog controlModules)
-        {
-            SimulationExecutionTargetManifest target = Float32SimulationTarget.Manifest.ExecutionTarget;
-            return new Float32CharacterRuntime(
-                roster,
-                target.NumericProfile,
-                tickRate,
-                target.OperationSetVersion,
-                controlModules);
-        }
-
         public Float32CharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
             SimulationNumericProfile numericProfile,

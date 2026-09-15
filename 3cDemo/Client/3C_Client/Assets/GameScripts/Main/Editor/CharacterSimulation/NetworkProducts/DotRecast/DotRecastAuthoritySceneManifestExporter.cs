@@ -137,6 +137,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException("Character Definition and Session Configuration TickRate do not match.");
 
             SimulationExecutionBackendDescriptor backend = request.ExecutionBackend.BuildPortableDescriptor();
+            SimulationExecutionTargetManifest target = Float32SimulationTarget.Manifest.ExecutionTarget;
             SimulationWorldSolverDefinitionDescriptor solver = request.WorldSolver.BuildDescriptor(configuration.SimulationTickRate);
             DotRecastAuthorityHostProduct.Descriptor.RequireAuthoritySolver(solver);
             CharacterControlModuleCatalog controlModules = CharacterControlRuntimeModuleCatalog.Create();
@@ -160,9 +161,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     equipmentRuntimeBinding,
                     abilityData);
             }
-            Float32CharacterRuntime characterRuntime = Float32CharacterRuntime.Create(
+            Float32CharacterRuntime characterRuntime = new Float32CharacterRuntime(
                 characterBindings,
+                target.NumericProfile,
                 configuration.SimulationTickRate,
+                target.OperationSetVersion,
                 controlModules);
             ServerAuthoritativePipelineCompatibilityIdentity compatibility = configuration.BuildCompatibility(
                 characterRuntime,
@@ -261,7 +264,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 request.SessionId,
                 request.SourceClockId,
                 Float32SimulationSessionComposer.BuildSnapshotCodecIdentity(
-                    Float32SimulationTarget.Manifest.ExecutionTarget,
+                    target,
                     backend),
                 DotRecastAuthorityRuntimeIdentityCatalog.BuildCommitter(routes),
                 configuration.Endpoint.BuildIdentity(),

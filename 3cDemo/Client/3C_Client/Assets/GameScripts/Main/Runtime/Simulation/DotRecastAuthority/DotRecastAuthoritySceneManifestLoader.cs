@@ -73,11 +73,14 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             byte[] manifestBytes = File.ReadAllBytes(fullManifestPath);
             DotRecastAuthoritySceneManifest manifest = DotRecastAuthoritySceneManifestCodec.Read(manifestBytes);
             string root = Path.GetDirectoryName(fullManifestPath) ?? throw new InvalidDataException("Manifest has no parent directory.");
+            SimulationExecutionTargetManifest target = Float32SimulationTarget.Manifest.ExecutionTarget;
             GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> abilityData = LoadAbilities(manifest, root);
             SimulationActorBinding[] characterBindings = BuildCharacterBindings(manifest, abilityData);
-            Float32CharacterRuntime characterRuntime = Float32CharacterRuntime.Create(
+            Float32CharacterRuntime characterRuntime = new Float32CharacterRuntime(
                 characterBindings,
+                target.NumericProfile,
                 manifest.Pipeline.TickRate,
+                target.OperationSetVersion,
                 controlModules);
             string surfacePath = DotRecastAuthorityRelativePath.ResolveUnderRoot(root, manifest.World.NavigationSurfaceRelativePath);
             byte[] surfaceBytes = ReadRequiredArtifact(surfacePath, "Navigation surface");

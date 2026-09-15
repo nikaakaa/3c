@@ -27,20 +27,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly ReadOnlyCollection<FixedGameplayAbilityExecutionData> m_Abilities;
         readonly ReadOnlyCollection<string> m_InputRequestIds;
 
-        public static FixedCharacterRuntime Create(
-            IEnumerable<SimulationActorBinding> roster,
-            int tickRate,
-            CharacterControlModuleCatalog controlModules)
-        {
-            SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
-            return new FixedCharacterRuntime(
-                roster,
-                target.NumericProfile,
-                tickRate,
-                target.OperationSetVersion,
-                controlModules);
-        }
-
         public FixedCharacterRuntime(
             IEnumerable<SimulationActorBinding> roster,
             SimulationNumericProfile numericProfile,

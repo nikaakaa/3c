@@ -357,4 +357,10 @@
 
 - 提交 `ea53b69de`，修正 Float32 独立 Ability artifact 写入字段顺序，使其与 Fixed 产物和当前 codec 合同一致；Float32 portable 编译为 0 warning、0 error。
 - 提交 `f38cf726d`，Float32／Fixed Ability Invocation 不再因未提供 Body Facts 就拒绝创建；能力真正读取位置、速度、朝向、接地等角色事实时才通过按需服务明确失败，不用默认零值伪造事实。Float32／Fixed portable 编译均为 0 warning、0 error。
-- 当前仍未完成 1.11：Pending 角色结果仍携带外层角色事务和 WorldSolve 请求，InputRequests 尚未从角色状态聚合中移交给输入领域；Timeline 的真实播放结果、Pose 的真实采样结果和统一角色 Step 的跨领域提交仍待接线。未运行 Unity、测试或资产生成。
+- 当前仍未完成 1.11：Pending 角色结果仍携带外层角色事务和 WorldSolve 请求，InputRequests 尚未成为独立输入状态聚合；Timeline 的真实播放结果、Pose 的真实采样结果和统一角色 Step 的跨领域提交仍待接线。未运行 Unity、测试或资产生成。
+
+## 2026-09-15 Ability输入请求端口独立化
+
+- 提交 `319fa44f0`，从 Float32／Fixed `AbilityDomainStatePort` 移除 `GetInputRequest`／`SetInputRequest`，新增角色共享的 `InputRequestStatePort`；Ability 执行帧、Input 操作、角色输入聚合和 Control 读取各自只依赖输入请求端口。
+- 输入请求数据仍由同一个角色状态事务保存、保存点恢复和最终提交，角色状态 codec 不变；本步拆的是职责入口，不复制状态、不增加兼容实现，后续可在不改 Ability 执行器的前提下把输入状态聚合真正移出角色大事务。
+- Float32／Fixed portable 编译均为 0 warning、0 error，并已清理 .NET Host；未运行 Unity、测试或资产生成。本步推进 D22 的 Ability 端口边界，但不将 1.11 标记为完成。

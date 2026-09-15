@@ -47,11 +47,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         int m_MaximumBodySamples;
         ulong m_TrajectoryIntentSequence;
         bool m_Disposed;
-        readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
-        readonly CharacterBodyMotionBinding m_BodyMotionBinding;
-        readonly CharacterGameplayEffectRuntimeBinding m_GameplayEffectRuntimeBinding;
-        readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
-
         public FixedCharacterRegistration(
             int ownerInstanceId,
             string ownerName,
@@ -97,10 +92,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ControlSource = controlSource ?? throw new ArgumentNullException(nameof(controlSource));
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
-            m_ControlRuntimeBinding = m_ActorBinding.ControlRuntimeBinding;
-            m_BodyMotionBinding = m_ActorBinding.BodyMotionBinding;
-            m_GameplayEffectRuntimeBinding = m_ActorBinding.GameplayEffectRuntimeBinding;
-            m_EquipmentRuntimeBinding = m_ActorBinding.EquipmentRuntimeBinding;
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
@@ -136,7 +127,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public ActorId ActorId { get; }
         public FixedCharacterRuntime CharacterRuntime => m_CharacterRuntime;
         public FixedSimulationActorBinding CharacterBinding => m_ActorBinding;
-        public CharacterBodyMotionBinding BodyMotionBinding => m_BodyMotionBinding;
         public string WorldBodyBindingId { get; }
         public FixedWorldBodyState InitialBody { get; }
         public RuntimeDiagnosticsContext DiagnosticsContext { get; }

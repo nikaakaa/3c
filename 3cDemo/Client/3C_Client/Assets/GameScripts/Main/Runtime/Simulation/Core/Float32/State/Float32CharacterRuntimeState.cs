@@ -7,16 +7,18 @@ namespace ThirdPersonSimulation
 {
     public sealed class Float32AbilityRuntimeState
     {
-        readonly Float32GameplayAbilityExecutionInstallation m_Installation;
+        readonly GameplayAbilityExecutionIdentity m_AbilityIdentity;
 
         internal Float32AbilityRuntimeState(
-            Float32GameplayAbilityExecutionInstallation installation,
+            GameplayAbilityExecutionIdentity abilityIdentity,
             ulong lastCompletedTick,
             IDictionary<int, AbilityStateValue> stateValues,
             GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
             IDictionary<int, Float32MotionWarpState> motionWarpStates)
         {
-            m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            if (!abilityIdentity.IsValid)
+                throw new ArgumentException("Float32 Ability runtime state identity is incomplete.", nameof(abilityIdentity));
+            m_AbilityIdentity = abilityIdentity;
             LastCompletedTick = lastCompletedTick;
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
@@ -29,12 +31,12 @@ namespace ThirdPersonSimulation
         internal Dictionary<int, AbilityStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, Float32MotionWarpState> MotionWarpStates { get; }
-        public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
+        public GameplayAbilityExecutionIdentity AbilityIdentity => m_AbilityIdentity;
         public ulong LastCompletedTick { get; }
 
         internal Float32AbilityRuntimeState Clone(ulong lastCompletedTick) =>
             new Float32AbilityRuntimeState(
-                m_Installation,
+                m_AbilityIdentity,
                 lastCompletedTick,
                 StateValues,
                 AbilityExecutionState,
@@ -56,11 +58,9 @@ namespace ThirdPersonSimulation
 
     public sealed class Float32CharacterRuntimeState
     {
-        readonly Float32GameplayAbilityExecutionInstallationSet m_Installations;
         readonly ReadOnlyCollection<Float32AbilityRuntimeState> m_Abilities;
 
         internal Float32CharacterRuntimeState(
-            Float32GameplayAbilityExecutionInstallationSet installations,
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
             ulong lastCompletedTick,
@@ -75,7 +75,6 @@ namespace ThirdPersonSimulation
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
         {
-            m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
             NumericProfile = numericProfile;
@@ -85,13 +84,10 @@ namespace ThirdPersonSimulation
                 ? new List<Float32AbilityRuntimeState>()
                 : new List<Float32AbilityRuntimeState>(abilities);
             copied.Sort((left, right) => left.AbilityIdentity.AbilityId.CompareTo(right.AbilityIdentity.AbilityId));
-            if (copied.Count != m_Installations.Installations.Count)
-                throw new ArgumentException("Character runtime state must contain one partition for every installed Ability.", nameof(abilities));
             for (int i = 0; i < copied.Count; i++)
             {
                 if (copied[i] == null || i > 0 && copied[i - 1].AbilityIdentity.AbilityId == copied[i].AbilityIdentity.AbilityId)
                     throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.", nameof(abilities));
-                m_Installations.Require(copied[i].AbilityIdentity.AbilityId).Identity.Require(copied[i].AbilityIdentity);
             }
             m_Abilities = copied.AsReadOnly();
             ActionActivationRequests = new List<SimulationActionActivationRequestState>(
@@ -108,8 +104,6 @@ namespace ThirdPersonSimulation
             GameplayEffectState = gameplayEffectState;
             EquipmentState = equipmentState;
         }
-
-        internal Float32GameplayAbilityExecutionInstallationSet Installations => m_Installations;
 
         internal Float32AbilityRuntimeState RequireAbility(CharacterSkillId abilityId)
         {
@@ -148,14 +142,13 @@ namespace ThirdPersonSimulation
             {
                 Float32GameplayAbilityExecutionInstallation installation = installations.Installations[i];
                 abilities[i] = new Float32AbilityRuntimeState(
-                    installation,
+                    installation.Identity,
                     0,
                     null,
                     null,
                     null);
             }
             return new Float32CharacterRuntimeState(
-                installations,
                 numericProfile,
                 gameplayContentHash,
                 0,

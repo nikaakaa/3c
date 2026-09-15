@@ -7,16 +7,18 @@ namespace ThirdPersonSimulation.Fixed
 {
     public sealed class FixedAbilityRuntimeState
     {
-        readonly FixedGameplayAbilityExecutionInstallation m_Installation;
+        readonly GameplayAbilityExecutionIdentity m_AbilityIdentity;
 
         internal FixedAbilityRuntimeState(
-            FixedGameplayAbilityExecutionInstallation installation,
+            GameplayAbilityExecutionIdentity abilityIdentity,
             ulong lastCompletedTick,
             IDictionary<int, AbilityStateValue> stateValues,
             GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
             IDictionary<int, FixedMotionWarpState> motionWarpStates)
         {
-            m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            if (!abilityIdentity.IsValid)
+                throw new ArgumentException("Fixed Ability runtime state identity is incomplete.", nameof(abilityIdentity));
+            m_AbilityIdentity = abilityIdentity;
             LastCompletedTick = lastCompletedTick;
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
@@ -29,12 +31,12 @@ namespace ThirdPersonSimulation.Fixed
         internal Dictionary<int, AbilityStateValue> StateValues { get; }
         internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, FixedMotionWarpState> MotionWarpStates { get; }
-        public GameplayAbilityExecutionIdentity AbilityIdentity => m_Installation.Identity;
+        public GameplayAbilityExecutionIdentity AbilityIdentity => m_AbilityIdentity;
         public ulong LastCompletedTick { get; }
 
         internal FixedAbilityRuntimeState Clone(ulong lastCompletedTick) =>
             new FixedAbilityRuntimeState(
-                m_Installation,
+                m_AbilityIdentity,
                 lastCompletedTick,
                 StateValues,
                 AbilityExecutionState,
@@ -56,11 +58,9 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedCharacterRuntimeState
     {
-        readonly FixedGameplayAbilityExecutionInstallationSet m_Installations;
         readonly ReadOnlyCollection<FixedAbilityRuntimeState> m_Abilities;
 
         internal FixedCharacterRuntimeState(
-            FixedGameplayAbilityExecutionInstallationSet installations,
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
             ulong lastCompletedTick,
@@ -75,7 +75,6 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
         {
-            m_Installations = installations ?? throw new ArgumentNullException(nameof(installations));
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
             NumericProfile = numericProfile;
@@ -85,13 +84,10 @@ namespace ThirdPersonSimulation.Fixed
                 ? new List<FixedAbilityRuntimeState>()
                 : new List<FixedAbilityRuntimeState>(abilities);
             copied.Sort((left, right) => left.AbilityIdentity.AbilityId.CompareTo(right.AbilityIdentity.AbilityId));
-            if (copied.Count != m_Installations.Installations.Count)
-                throw new ArgumentException("Character runtime state must contain one partition for every installed Ability.", nameof(abilities));
             for (int i = 0; i < copied.Count; i++)
             {
                 if (copied[i] == null || i > 0 && copied[i - 1].AbilityIdentity.AbilityId == copied[i].AbilityIdentity.AbilityId)
                     throw new ArgumentException("Character runtime state Ability partitions are missing or duplicated.", nameof(abilities));
-                m_Installations.Require(copied[i].AbilityIdentity.AbilityId).Identity.Require(copied[i].AbilityIdentity);
             }
             m_Abilities = copied.AsReadOnly();
             ActionActivationRequests = new List<SimulationActionActivationRequestState>(
@@ -108,8 +104,6 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectState = gameplayEffectState;
             EquipmentState = equipmentState;
         }
-
-        internal FixedGameplayAbilityExecutionInstallationSet Installations => m_Installations;
 
         internal FixedAbilityRuntimeState RequireAbility(CharacterSkillId abilityId)
         {
@@ -148,14 +142,13 @@ namespace ThirdPersonSimulation.Fixed
             {
                 FixedGameplayAbilityExecutionInstallation installation = installations.Installations[i];
                 abilities[i] = new FixedAbilityRuntimeState(
-                    installation,
+                    installation.Identity,
                     0,
                     null,
                     null,
                     null);
             }
             return new FixedCharacterRuntimeState(
-                installations,
                 numericProfile,
                 gameplayContentHash,
                 0,

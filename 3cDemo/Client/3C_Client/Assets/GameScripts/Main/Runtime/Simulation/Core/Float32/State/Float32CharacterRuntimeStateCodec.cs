@@ -52,6 +52,8 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Float32 Character runtime state GameplayContentHash does not match the active Character Runtime.");
             ulong lastCompletedTick = reader.ReadUInt64();
             int abilityCount = ReadCount(reader, installations.Installations.Count, "Float32 Character Ability partition");
+            if (abilityCount != installations.Installations.Count)
+                throw new InvalidDataException("Float32 Character runtime state Ability partitions do not match the installed Ability set.");
             var abilities = new List<Float32AbilityRuntimeState>(abilityCount);
             for (int i = 0; i < abilityCount; i++)
             {
@@ -62,7 +64,7 @@ namespace ThirdPersonSimulation
                 GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState = ReadAbilityExecutionState(reader, installation.Layout);
                 Dictionary<int, Float32MotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
                 abilities.Add(new Float32AbilityRuntimeState(
-                    installation,
+                    identity,
                     lastCompletedTick,
                     stateValues,
                     abilityExecutionState,
@@ -103,7 +105,6 @@ namespace ThirdPersonSimulation
             }
             reader.RequireComplete();
             var state = new Float32CharacterRuntimeState(
-                installations,
                 numericProfile,
                 gameplayContentHash,
                 lastCompletedTick,

@@ -225,7 +225,6 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeState Snapshot()
         {
             return new FixedCharacterRuntimeState(
-                m_BaseState.Installations,
                 m_BaseState.NumericProfile,
                 m_BaseState.GameplayContentHash,
                 m_Tick.Value,
@@ -389,7 +388,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             RequireActive();
             return new FixedAbilityRuntimeState(
-                m_Installation,
+                m_Installation.Identity,
                 m_Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,

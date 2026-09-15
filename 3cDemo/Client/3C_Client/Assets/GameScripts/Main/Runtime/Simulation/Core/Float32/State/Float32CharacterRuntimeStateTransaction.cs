@@ -225,7 +225,6 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeState Snapshot()
         {
             return new Float32CharacterRuntimeState(
-                m_BaseState.Installations,
                 m_BaseState.NumericProfile,
                 m_BaseState.GameplayContentHash,
                 m_Tick.Value,
@@ -389,7 +388,7 @@ namespace ThirdPersonSimulation
         {
             RequireActive();
             return new Float32AbilityRuntimeState(
-                m_Installation,
+                m_Installation.Identity,
                 m_Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,

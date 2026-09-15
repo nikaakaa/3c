@@ -1179,3 +1179,8 @@
 
 - 提交 `b5182996b`，删除没有外部消费者的 `CharacterAuthoringTopologyProjection`、`ActionTargetAuthoringValidation` 及 Unity `.meta`。
 - Ability 编译已经使用独立的 authoring compilation model；本步移除旧角色拓扑投影与动作目标验证残片，不改变 Ability 闭包发现、语义编译或运行时目标请求合同。
+
+## 2026-09-16 统一Simulation操作发射器合同
+
+- 提交 `9be61b6f9`，将 Ability 与 Timeline 语义编译共同使用的 `CharacterSimulationOperationEmitter`、`CharacterSimulationConstantInput` 及文件路径统一为 `SimulationOperationEmitter`、`SimulationConstantInput`。
+- 本步只清理共享语义发射器命名，保留常量声明、输入绑定、操作顺序和 source map 行为。

@@ -30,9 +30,7 @@ namespace ThirdPersonSimulation
                 input.NumericProfile != characterRuntime.NumericProfile)
                 throw new InvalidOperationException("Float32 Character evaluation identity does not match the active Character Runtime.");
 
-            var effectCatalog = !actor.RequiresGameplayEffects || actor.GameplayEffectRuntimeBinding == null
-                ? null
-                : new Float32GameplayEffectRuntimeCatalog(actor.GameplayEffectRuntimeBinding);
+            Float32GameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
             var roleState = new Float32CharacterRuntimeStateTransaction(
                 sourceState,
                 actor.ActorId,

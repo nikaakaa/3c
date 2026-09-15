@@ -4,15 +4,17 @@ namespace ThirdPersonSimulation
 {
     public sealed class Float32GameplayAbilityExecutionInstallation
     {
-        public Float32GameplayAbilityExecutionInstallation(
+        internal Float32GameplayAbilityExecutionInstallation(
             Float32GameplayAbilityExecutionData data,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+            Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
             RequiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
             RequiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
+            if (RequiresGameplayEffects && gameplayEffectCatalog == null)
+                throw new ArgumentNullException(nameof(gameplayEffectCatalog));
             Layout = Float32GameplayAbilityExecutionLayoutFactory.Create(Data);
-            GameplayEffectCatalog = CreateGameplayEffectCatalog(RequiresGameplayEffects, gameplayEffectBinding);
+            GameplayEffectCatalog = RequiresGameplayEffects ? gameplayEffectCatalog : null;
             Services = new Float32GameplayAbilityExecutionServices(
                 Data,
                 Layout,
@@ -30,16 +32,6 @@ namespace ThirdPersonSimulation
         internal Float32GameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         internal Float32GameplayAbilityExecutionServices Services { get; }
         internal Float32GameplayAbilityExecutionAccess Access => Services.Access;
-
-        static Float32GameplayEffectRuntimeCatalog CreateGameplayEffectCatalog(
-            bool enabled,
-            CharacterGameplayEffectRuntimeBinding binding)
-        {
-            if (!enabled)
-                return null;
-            return new Float32GameplayEffectRuntimeCatalog(binding ??
-                throw new ArgumentNullException(nameof(binding)));
-        }
 
         static string[] BuildOperationSourcePaths(GameplayAbilityExecutionLayout layout)
         {

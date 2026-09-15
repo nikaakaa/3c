@@ -18,12 +18,24 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(data));
             var values = new List<FixedGameplayAbilityExecutionInstallation>();
             m_ByAbility = new Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionInstallation>();
+            bool hasGameplayEffectAbility = false;
+            for (int i = 0; i < data.Data.Count; i++)
+            {
+                FixedGameplayAbilityExecutionData ability = data.Data[i];
+                if (ability == null)
+                    throw new ArgumentException("Ability execution data contains a missing Ability.", nameof(data));
+                hasGameplayEffectAbility |= ability.Capabilities.HasGameplayCapability("GameplayEffect");
+            }
+            FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog = hasGameplayEffectAbility
+                ? new FixedGameplayEffectRuntimeCatalog(gameplayEffectBinding ??
+                    throw new ArgumentNullException(nameof(gameplayEffectBinding)))
+                : null;
             bool requiresGameplayEffects = false;
             bool requiresEquipment = false;
             for (int i = 0; i < data.Data.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = data.Data[i];
-                var installation = new FixedGameplayAbilityExecutionInstallation(ability, gameplayEffectBinding);
+                var installation = new FixedGameplayAbilityExecutionInstallation(ability, gameplayEffectCatalog);
                 requiresGameplayEffects |= installation.RequiresGameplayEffects;
                 requiresEquipment |= installation.RequiresEquipment;
                 values.Add(installation);
@@ -33,11 +45,13 @@ namespace ThirdPersonSimulation.Fixed
             m_Installations = values.AsReadOnly();
             RequiresGameplayEffects = requiresGameplayEffects;
             RequiresEquipment = requiresEquipment;
+            GameplayEffectCatalog = gameplayEffectCatalog;
         }
 
         public IReadOnlyList<FixedGameplayAbilityExecutionInstallation> Installations => m_Installations;
         public bool RequiresGameplayEffects { get; }
         public bool RequiresEquipment { get; }
+        internal FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
 
         public FixedGameplayAbilityExecutionInstallation Require(CharacterSkillId abilityId) =>
             abilityId.IsValid && m_ByAbility.TryGetValue(abilityId, out FixedGameplayAbilityExecutionInstallation installation)

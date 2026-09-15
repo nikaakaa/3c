@@ -31,9 +31,7 @@ namespace ThirdPersonSimulation.Fixed
                 input.NumericProfile != characterRuntime.NumericProfile)
                 throw new InvalidOperationException("Fixed Character evaluation identity does not match the active Character Runtime.");
 
-            var effectCatalog = !actor.RequiresGameplayEffects || actor.GameplayEffectRuntimeBinding == null
-                ? null
-                : new FixedGameplayEffectRuntimeCatalog(actor.GameplayEffectRuntimeBinding);
+            FixedGameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
             var roleState = new FixedCharacterRuntimeStateTransaction(
                 sourceState,
                 actor.ActorId,

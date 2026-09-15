@@ -5,15 +5,17 @@ namespace ThirdPersonSimulation.Fixed
 {
     public sealed class FixedGameplayAbilityExecutionInstallation
     {
-        public FixedGameplayAbilityExecutionInstallation(
+        internal FixedGameplayAbilityExecutionInstallation(
             FixedGameplayAbilityExecutionData data,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+            FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
             RequiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
             RequiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
+            if (RequiresGameplayEffects && gameplayEffectCatalog == null)
+                throw new ArgumentNullException(nameof(gameplayEffectCatalog));
             Layout = FixedGameplayAbilityExecutionLayoutFactory.Create(Data);
-            GameplayEffectCatalog = CreateGameplayEffectCatalog(RequiresGameplayEffects, gameplayEffectBinding);
+            GameplayEffectCatalog = RequiresGameplayEffects ? gameplayEffectCatalog : null;
             Services = new FixedGameplayAbilityExecutionServices(
                 Data,
                 Layout,
@@ -31,16 +33,6 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog { get; }
         internal FixedGameplayAbilityExecutionServices Services { get; }
         internal FixedGameplayAbilityExecutionAccess Access => Services.Access;
-
-        static FixedGameplayEffectRuntimeCatalog CreateGameplayEffectCatalog(
-            bool enabled,
-            CharacterGameplayEffectRuntimeBinding binding)
-        {
-            if (!enabled)
-                return null;
-            return new FixedGameplayEffectRuntimeCatalog(binding ??
-                throw new ArgumentNullException(nameof(binding)));
-        }
 
         static string[] BuildOperationSourcePaths(GameplayAbilityExecutionLayout layout)
         {

@@ -136,9 +136,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterControlRuntimeState controlState = CharacterControlRuntimeState.CreateInitial(
                 actor.ControlRuntimeBinding,
                 control);
-            FixedGameplayEffectRuntimeCatalog effectCatalog = !actor.RequiresGameplayEffects || actor.GameplayEffectRuntimeBinding == null
-                ? null
-                : new FixedGameplayEffectRuntimeCatalog(actor.GameplayEffectRuntimeBinding);
+            FixedGameplayEffectRuntimeCatalog effectCatalog = actor.AbilityInstallations.GameplayEffectCatalog;
             GameplayEffectStateAggregate effectState = effectCatalog == null
                 ? null
                 : GameplayEffectStateAggregate.CreateInitial(effectCatalog);

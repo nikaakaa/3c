@@ -112,7 +112,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < baseState.Abilities.Count; i++)
             {
                 Float32AbilityRuntimeState state = baseState.Abilities[i];
-                m_AbilityStates.Add(state.AbilityIdentity.AbilityId, state.Clone(tick.Value));
+                m_AbilityStates.Add(state.AbilityIdentity.AbilityId, state.Clone());
             }
             m_ActionState = new Float32CharacterActionRuntimeState(
                 baseState.ActionActivationRequests,
@@ -246,7 +246,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < state.Abilities.Count; i++)
             {
                 Float32AbilityRuntimeState ability = state.Abilities[i];
-                m_AbilityStates.Add(ability.AbilityIdentity.AbilityId, ability.Clone(m_Tick.Value));
+                m_AbilityStates.Add(ability.AbilityIdentity.AbilityId, ability.Clone());
             }
             m_ActionState.Restore(
                 state.ActionActivationRequests,
@@ -389,7 +389,6 @@ namespace ThirdPersonSimulation
             RequireActive();
             return new Float32AbilityRuntimeState(
                 m_Installation.Identity,
-                m_Tick.Value,
                 m_StateValues,
                 m_AbilityExecutionState,
                 m_MotionWarpStates);

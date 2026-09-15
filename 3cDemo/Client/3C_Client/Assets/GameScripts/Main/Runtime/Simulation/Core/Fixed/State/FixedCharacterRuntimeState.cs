@@ -11,7 +11,6 @@ namespace ThirdPersonSimulation.Fixed
 
         internal FixedAbilityRuntimeState(
             GameplayAbilityExecutionIdentity abilityIdentity,
-            ulong lastCompletedTick,
             IDictionary<int, AbilityStateValue> stateValues,
             GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
             IDictionary<int, FixedMotionWarpState> motionWarpStates)
@@ -19,7 +18,6 @@ namespace ThirdPersonSimulation.Fixed
             if (!abilityIdentity.IsValid)
                 throw new ArgumentException("Fixed Ability runtime state identity is incomplete.", nameof(abilityIdentity));
             m_AbilityIdentity = abilityIdentity;
-            LastCompletedTick = lastCompletedTick;
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
                 new GameplayAbilityExecutionAggregate<AbilityStateValue>();
@@ -32,12 +30,10 @@ namespace ThirdPersonSimulation.Fixed
         internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, FixedMotionWarpState> MotionWarpStates { get; }
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_AbilityIdentity;
-        public ulong LastCompletedTick { get; }
 
-        internal FixedAbilityRuntimeState Clone(ulong lastCompletedTick) =>
+        internal FixedAbilityRuntimeState Clone() =>
             new FixedAbilityRuntimeState(
                 m_AbilityIdentity,
-                lastCompletedTick,
                 StateValues,
                 AbilityExecutionState,
                 MotionWarpStates);
@@ -143,7 +139,6 @@ namespace ThirdPersonSimulation.Fixed
                 FixedGameplayAbilityExecutionInstallation installation = installations.Installations[i];
                 abilities[i] = new FixedAbilityRuntimeState(
                     installation.Identity,
-                    0,
                     null,
                     null,
                     null);

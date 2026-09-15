@@ -65,7 +65,6 @@ namespace ThirdPersonSimulation
                 Dictionary<int, Float32MotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
                 abilities.Add(new Float32AbilityRuntimeState(
                     identity,
-                    lastCompletedTick,
                     stateValues,
                     abilityExecutionState,
                     motionWarpStates));

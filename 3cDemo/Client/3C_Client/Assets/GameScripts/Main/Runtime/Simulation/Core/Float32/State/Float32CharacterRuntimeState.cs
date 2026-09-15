@@ -11,7 +11,6 @@ namespace ThirdPersonSimulation
 
         internal Float32AbilityRuntimeState(
             GameplayAbilityExecutionIdentity abilityIdentity,
-            ulong lastCompletedTick,
             IDictionary<int, AbilityStateValue> stateValues,
             GameplayAbilityExecutionAggregate<AbilityStateValue> abilityExecutionState,
             IDictionary<int, Float32MotionWarpState> motionWarpStates)
@@ -19,7 +18,6 @@ namespace ThirdPersonSimulation
             if (!abilityIdentity.IsValid)
                 throw new ArgumentException("Float32 Ability runtime state identity is incomplete.", nameof(abilityIdentity));
             m_AbilityIdentity = abilityIdentity;
-            LastCompletedTick = lastCompletedTick;
             StateValues = CopyValues(stateValues);
             AbilityExecutionState = abilityExecutionState?.Clone() ??
                 new GameplayAbilityExecutionAggregate<AbilityStateValue>();
@@ -32,12 +30,10 @@ namespace ThirdPersonSimulation
         internal GameplayAbilityExecutionAggregate<AbilityStateValue> AbilityExecutionState { get; }
         internal Dictionary<int, Float32MotionWarpState> MotionWarpStates { get; }
         public GameplayAbilityExecutionIdentity AbilityIdentity => m_AbilityIdentity;
-        public ulong LastCompletedTick { get; }
 
-        internal Float32AbilityRuntimeState Clone(ulong lastCompletedTick) =>
+        internal Float32AbilityRuntimeState Clone() =>
             new Float32AbilityRuntimeState(
                 m_AbilityIdentity,
-                lastCompletedTick,
                 StateValues,
                 AbilityExecutionState,
                 MotionWarpStates);
@@ -143,7 +139,6 @@ namespace ThirdPersonSimulation
                 Float32GameplayAbilityExecutionInstallation installation = installations.Installations[i];
                 abilities[i] = new Float32AbilityRuntimeState(
                     installation.Identity,
-                    0,
                     null,
                     null,
                     null);

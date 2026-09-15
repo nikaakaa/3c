@@ -65,7 +65,6 @@ namespace ThirdPersonSimulation.Fixed
                 Dictionary<int, FixedMotionWarpState> motionWarpStates = ReadMotionWarpStates(reader, installation.Layout);
                 abilities.Add(new FixedAbilityRuntimeState(
                     identity,
-                    lastCompletedTick,
                     stateValues,
                     abilityExecutionState,
                     motionWarpStates));

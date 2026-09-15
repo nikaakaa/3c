@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     model.DefinitionGuid,
                     model.EntryIdentity,
                     model.SourceRevision.Value);
-                var builder = new CharacterSimulationProgramBuilder(
+                var builder = new GameplayAbilitySemanticBuilder(
                     model.ProgramId,
                     CompilerVersion,
                     OperationSetVersion,
@@ -114,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static void RequireGraphCapabilities(
             GameplayAbilityAuthoringCompilationModel model,
-            CharacterSimulationProgramBuilder builder)
+            GameplayAbilitySemanticBuilder builder)
         {
             bool requiresGameplayEffect = false;
             bool requiresEquipment = false;
@@ -144,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static void DeclareAbilityCatalog(
             GameplayAbilityAuthoringCompilationModel model,
             OperationHandle entry,
-            CharacterSimulationProgramBuilder builder,
+            GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report,
             CharacterSimulationSourceLocation source)
         {

@@ -12,14 +12,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     internal sealed class TimelineSemanticTreeCompiler
     {
         readonly CharacterSimulationNodeEmitterRegistry m_NodeEmitters;
-        readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
         readonly Dictionary<string, Dictionary<string, OperationHandle>> m_OperationsByRoute =
             new Dictionary<string, Dictionary<string, OperationHandle>>(StringComparer.Ordinal);
         readonly HashSet<string> m_ActiveGraphs = new HashSet<string>(StringComparer.Ordinal);
 
         public TimelineSemanticTreeCompiler(
-            CharacterSimulationProgramBuilder builder,
+            GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report)
         {
             m_NodeEmitters = CharacterSimulationNodeEmitterRegistry.CreateDefault();

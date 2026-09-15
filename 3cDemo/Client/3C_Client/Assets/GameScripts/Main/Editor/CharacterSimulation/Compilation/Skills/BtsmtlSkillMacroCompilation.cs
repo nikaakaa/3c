@@ -12,13 +12,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public sealed class BtsmtlSkillMacroCompilation
     {
-        readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly BtsmtlSkillGraphOccurrence m_Graph;
         readonly List<ProgramGraphParameterBinding> m_Inputs = new();
         readonly List<ProgramGraphParameterBinding> m_Outputs = new();
         readonly List<int> m_StateSlots = new();
 
-        public BtsmtlSkillMacroCompilation(CharacterSimulationProgramBuilder builder, BtsmtlSkillGraphOccurrence graph,
+        public BtsmtlSkillMacroCompilation(GameplayAbilitySemanticBuilder builder, BtsmtlSkillGraphOccurrence graph,
             BtsmtlSkillOperationBindings operations)
         {
             m_Builder = builder;

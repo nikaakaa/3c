@@ -22,9 +22,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class CharacterSimulationOperationEmitter
     {
-        readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly GameplayAbilitySemanticBuilder m_Builder;
 
-        public CharacterSimulationOperationEmitter(CharacterSimulationProgramBuilder builder)
+        public CharacterSimulationOperationEmitter(GameplayAbilitySemanticBuilder builder)
         {
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }

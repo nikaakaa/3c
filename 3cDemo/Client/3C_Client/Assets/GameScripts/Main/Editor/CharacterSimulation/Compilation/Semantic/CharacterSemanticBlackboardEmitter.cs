@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     internal sealed class CharacterSemanticBlackboardEmitter : IBtsmtlSkillBlackboardCompilation
     {
         readonly IReadOnlyDictionary<string, BlackboardDeclaration> m_Declarations;
-        readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
         readonly Dictionary<string, int> m_ValueSlots = new Dictionary<string, int>(StringComparer.Ordinal);
         readonly Dictionary<string, ScopeRecord> m_Scopes = new Dictionary<string, ScopeRecord>(StringComparer.Ordinal);
@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public CharacterSemanticBlackboardEmitter(
             IReadOnlyDictionary<string, BlackboardDeclaration> declarations,
-            CharacterSimulationProgramBuilder builder,
+            GameplayAbilitySemanticBuilder builder,
             CharacterSimulationCompileReport report)
         {
             m_Declarations = declarations ?? throw new ArgumentNullException(nameof(declarations));

@@ -677,3 +677,9 @@
 - 提交 `ea4cc3cc1`，Float32／Fixed Ability Invocation 不再公开未被角色或执行流程消费的 Frame、Input、Blackboard、Motion、Locomotion、Control、Domain；ExecutionAssembly 也不再返回 Invocation 未使用的 Locomotion。
 - 角色继续直接消费 Actions、GameplayEffects、Equipment 和 Workspace，技能执行内部仍持有其它服务；本步只收窄组装边界，不改变执行顺序或结果。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 区分Ability操作控制命名
+
+- 提交 `614a2d620`，Float32／Fixed Ability 图内部的操作控制器统一命名为 `AbilityOperationControlRuntime`，同步接口、实现文件、Unity 元数据和全部调用方。
+- `CharacterControlRuntime` 继续表示角色输入与运动控制；本步只消除两个领域的命名混淆，不改变操作图状态机、技能执行顺序或状态格式。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

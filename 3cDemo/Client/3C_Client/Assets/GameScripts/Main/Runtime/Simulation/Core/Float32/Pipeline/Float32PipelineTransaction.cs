@@ -188,7 +188,6 @@ namespace ThirdPersonSimulation
             return new SimulationSessionCheckpoint(
                 m_Services.Descriptor.SessionId,
                 snapshot.Tick,
-                m_CharacterRuntime.GameplayContentHash,
                 m_Services.Descriptor.Pipeline.Hash,
                 m_Services.Descriptor.ExecutionBackend.ComponentId,
                 m_Services.Descriptor.ExecutionBackend.SemanticVersion,
@@ -207,7 +206,6 @@ namespace ThirdPersonSimulation
             var directive = new SimulationRestoreDirective(
                 checkpoint.SnapshotId,
                 checkpoint.Tick,
-                checkpoint.GameplayContentHash,
                 checkpoint.PipelineHash,
                 checkpoint.BackendId,
                 checkpoint.BackendSemanticVersion,

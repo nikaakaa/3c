@@ -55,17 +55,15 @@ namespace ThirdPersonSimulation
         public SimulationRestoreDirective(
             string snapshotId,
             SimulationTick tick,
-            GameplayContentHash gameplayContentHash,
             SimulationPipelineHash pipelineHash,
             string backendId,
             string backendSemanticVersion,
             StableHash snapshotHash)
         {
-            if (!tick.IsValid || !gameplayContentHash.IsValid || !pipelineHash.IsValid || !snapshotHash.IsValid)
+            if (!tick.IsValid || !pipelineHash.IsValid || !snapshotHash.IsValid)
                 throw new ArgumentException("Restore directive identity is incomplete.");
             SnapshotId = SimulationIdentity.Require(snapshotId, nameof(snapshotId));
             Tick = tick;
-            GameplayContentHash = gameplayContentHash;
             PipelineHash = pipelineHash;
             BackendId = SimulationIdentity.Require(backendId, nameof(backendId));
             BackendSemanticVersion = SimulationIdentity.Require(backendSemanticVersion, nameof(backendSemanticVersion));
@@ -74,7 +72,6 @@ namespace ThirdPersonSimulation
 
         public string SnapshotId { get; }
         public SimulationTick Tick { get; }
-        public GameplayContentHash GameplayContentHash { get; }
         public SimulationPipelineHash PipelineHash { get; }
         public string BackendId { get; }
         public string BackendSemanticVersion { get; }

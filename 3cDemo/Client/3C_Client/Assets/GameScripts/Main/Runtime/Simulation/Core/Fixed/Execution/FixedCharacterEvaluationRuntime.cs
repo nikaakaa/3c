@@ -49,6 +49,9 @@ namespace ThirdPersonSimulation.Fixed
             var trace = new List<SimulationTraceRecord>();
             try
             {
+                var serviceFactory = new FixedAbilityExecutionServiceFactory(
+                    actor.ControlRuntimeBinding,
+                    actor.EquipmentRuntimeBinding);
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
@@ -73,7 +76,7 @@ namespace ThirdPersonSimulation.Fixed
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
                         roleState.EquipmentState,
-                        new FixedCharacterAbilityExecutionServiceFactory(actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding),
+                        serviceFactory,
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
                     actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
@@ -307,12 +310,12 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayResultOwner);
         }
 
-    internal sealed class FixedCharacterAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
+    internal sealed class FixedAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
     {
         readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
         readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
 
-        public FixedCharacterAbilityExecutionServiceFactory(
+        public FixedAbilityExecutionServiceFactory(
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {

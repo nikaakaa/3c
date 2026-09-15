@@ -48,6 +48,9 @@ namespace ThirdPersonSimulation
             var trace = new List<SimulationTraceRecord>();
             try
             {
+                var serviceFactory = new Float32AbilityExecutionServiceFactory(
+                    actor.ControlRuntimeBinding,
+                    actor.EquipmentRuntimeBinding);
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new Float32AbilityExecutionWorkspace(sharedEffectScratch);
@@ -72,7 +75,7 @@ namespace ThirdPersonSimulation
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
                         roleState.EquipmentState,
-                        new Float32CharacterAbilityExecutionServiceFactory(actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding),
+                        serviceFactory,
                         roleState.AcceptAbility);
                     invocations.Add(invocation);
                     actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
@@ -306,12 +309,12 @@ namespace ThirdPersonSimulation
                 gameplayResultOwner);
         }
 
-    internal sealed class Float32CharacterAbilityExecutionServiceFactory : IFloat32AbilityExecutionServiceFactory
+    internal sealed class Float32AbilityExecutionServiceFactory : IFloat32AbilityExecutionServiceFactory
     {
         readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
         readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
 
-        public Float32CharacterAbilityExecutionServiceFactory(
+        public Float32AbilityExecutionServiceFactory(
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {

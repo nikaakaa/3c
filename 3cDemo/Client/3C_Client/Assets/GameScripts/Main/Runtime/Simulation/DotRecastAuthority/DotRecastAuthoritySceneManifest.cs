@@ -60,8 +60,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             NumericProfileId numericProfileId,
             TargetAbiVersion targetAbiVersion,
             string executionIdentity,
-            SimulationProgramRootDescriptor root,
-            WorldCapability requiredWorldCapabilities)
+            SimulationProgramRootDescriptor root)
         {
             RelativePath = DotRecastAuthorityRelativePath.Require(relativePath, nameof(relativePath));
             AbilityGuid = DotRecastAuthorityManifestIdentity.RequireGuid(abilityGuid);
@@ -86,7 +85,6 @@ namespace ThirdPersonSimulation.DotRecastAuthority
             TargetAbiVersion = targetAbiVersion;
             ExecutionIdentity = DotRecastAuthorityManifestIdentity.Require(executionIdentity, nameof(executionIdentity));
             Root = root;
-            RequiredWorldCapabilities = requiredWorldCapabilities;
         }
 
         public string RelativePath { get; }
@@ -105,7 +103,6 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         public TargetAbiVersion TargetAbiVersion { get; }
         public string ExecutionIdentity { get; }
         public SimulationProgramRootDescriptor Root { get; }
-        public WorldCapability RequiredWorldCapabilities { get; }
     }
 
     public sealed class DotRecastAuthorityPipelineBinding
@@ -383,7 +380,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
         }
 
         public const string Magic = "thirdperson.dotrecast-authority-scene-manifest";
-        public const int SchemaVersion = 10;
+        public const int SchemaVersion = 11;
         public const string PublishDirectoryName = "Authority";
         public const string FileName = "DotRecastAuthorityScene.manifest";
         public HostProductId HostProductId { get; }

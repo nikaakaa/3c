@@ -541,7 +541,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_OperationSetVersion,
                     m_TickRate,
                     m_SourceRevision,
-                    new ProgramCapabilityManifest(m_GameplayCapabilities, WorldCapability.None),
+                    new ProgramCapabilityManifest(m_GameplayCapabilities),
                     m_Root);
                 return new CharacterGameplaySemanticIr(
                     manifest,

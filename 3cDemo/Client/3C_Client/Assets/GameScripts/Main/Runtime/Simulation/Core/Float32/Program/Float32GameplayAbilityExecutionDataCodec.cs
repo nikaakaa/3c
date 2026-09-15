@@ -55,8 +55,8 @@ namespace ThirdPersonSimulation
     public static class Float32GameplayAbilityExecutionDataCodec
     {
         const uint ArtifactMagic = 0x46414244;
-        const int ArtifactVersion = 2;
-        const int PayloadVersion = 2;
+        const int ArtifactVersion = 3;
+        const int PayloadVersion = 3;
 
         public static byte[] WriteArtifact(Float32GameplayAbilityExecutionData data)
         {
@@ -288,7 +288,6 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(capabilities.GameplayCapabilities[i]);
-            writer.WriteUInt64((ulong)capabilities.RequiredWorldCapabilities);
         }
 
         static ProgramCapabilityManifest ReadCapabilities(CanonicalReader reader)
@@ -297,15 +296,14 @@ namespace ThirdPersonSimulation
             var values = new string[count];
             for (int i = 0; i < count; i++)
                 values[i] = reader.ReadString();
-            return new ProgramCapabilityManifest(values, (WorldCapability)reader.ReadUInt64());
+            return new ProgramCapabilityManifest(values);
         }
 
         static bool CapabilitiesEqual(
             ProgramCapabilityManifest left,
             ProgramCapabilityManifest right)
         {
-            if (left.RequiredWorldCapabilities != right.RequiredWorldCapabilities ||
-                left.GameplayCapabilities.Count != right.GameplayCapabilities.Count)
+            if (left.GameplayCapabilities.Count != right.GameplayCapabilities.Count)
                 return false;
             for (int i = 0; i < left.GameplayCapabilities.Count; i++)
             {

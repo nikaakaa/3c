@@ -211,8 +211,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     data.NumericProfile.Id,
                     data.NumericProfile.AbiVersion,
                     data.ExecutionIdentity,
-                    data.Root,
-                    data.Capabilities.RequiredWorldCapabilities));
+                    data.Root));
             }
 
             var actorBindings = new DotRecastAuthorityActorBinding[request.Roster.Count];

@@ -55,8 +55,8 @@ namespace ThirdPersonSimulation.Fixed
     public static class FixedGameplayAbilityExecutionDataCodec
     {
         const uint ArtifactMagic = 0x46414246;
-        const int ArtifactVersion = 2;
-        const int PayloadVersion = 2;
+        const int ArtifactVersion = 3;
+        const int PayloadVersion = 3;
 
         public static byte[] WriteArtifact(FixedGameplayAbilityExecutionData data)
         {
@@ -288,7 +288,6 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteInt32(capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(capabilities.GameplayCapabilities[i]);
-            writer.WriteUInt64((ulong)capabilities.RequiredWorldCapabilities);
         }
 
         static ProgramCapabilityManifest ReadCapabilities(CanonicalReader reader)
@@ -297,15 +296,14 @@ namespace ThirdPersonSimulation.Fixed
             var values = new string[count];
             for (int i = 0; i < count; i++)
                 values[i] = reader.ReadString();
-            return new ProgramCapabilityManifest(values, (WorldCapability)reader.ReadUInt64());
+            return new ProgramCapabilityManifest(values);
         }
 
         static bool CapabilitiesEqual(
             ProgramCapabilityManifest left,
             ProgramCapabilityManifest right)
         {
-            if (left.RequiredWorldCapabilities != right.RequiredWorldCapabilities ||
-                left.GameplayCapabilities.Count != right.GameplayCapabilities.Count)
+            if (left.GameplayCapabilities.Count != right.GameplayCapabilities.Count)
                 return false;
             for (int i = 0; i < left.GameplayCapabilities.Count; i++)
             {

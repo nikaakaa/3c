@@ -66,7 +66,6 @@ namespace ThirdPersonSimulation
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             IEnumerable<string> gameplayCapabilities,
-            WorldCapability requiredWorldCapabilities,
             SimulationProgramRootDescriptor root)
         {
             Magic = magic;
@@ -78,9 +77,8 @@ namespace ThirdPersonSimulation
             TickRate = tickRate;
             SourceRevision = sourceRevision;
             SemanticHash = semanticHash;
-            var capabilities = new ProgramCapabilityManifest(gameplayCapabilities, requiredWorldCapabilities);
+            var capabilities = new ProgramCapabilityManifest(gameplayCapabilities);
             m_GameplayCapabilities = new List<string>(capabilities.GameplayCapabilities).AsReadOnly();
-            RequiredWorldCapabilities = capabilities.RequiredWorldCapabilities;
             if (!root.IsValid || !root.IsAbility)
                 throw new ArgumentException("Semantic IR artifact requires an Ability root descriptor.", nameof(root));
             Root = root;
@@ -96,7 +94,6 @@ namespace ThirdPersonSimulation
         public ProgramRevision SourceRevision { get; }
         public SemanticHash SemanticHash { get; }
         public IReadOnlyList<string> GameplayCapabilities => m_GameplayCapabilities;
-        public WorldCapability RequiredWorldCapabilities { get; }
         public SimulationProgramRootDescriptor Root { get; }
     }
 
@@ -123,8 +120,8 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplaySemanticIrCodec
     {
         const uint ArtifactMagic = 0x52495343;
-        const int ArtifactVersion = 16;
-        const int PayloadVersion = 16;
+        const int ArtifactVersion = 17;
+        const int PayloadVersion = 17;
 
         public static byte[] WriteArtifact(CharacterGameplaySemanticIr semanticIr)
         {
@@ -149,7 +146,6 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(semanticIr.Manifest.Capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < semanticIr.Manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(semanticIr.Manifest.Capabilities.GameplayCapabilities[i]);
-            writer.WriteUInt64((ulong)semanticIr.Manifest.Capabilities.RequiredWorldCapabilities);
             SimulationProgramRootDescriptorCodec.Write(writer, semanticIr.Manifest.Root);
             writer.WriteBytes(payload);
             byte[] bytes = writer.ToArray();
@@ -214,17 +210,7 @@ namespace ThirdPersonSimulation
             var gameplayCapabilities = new string[capabilityCount];
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
-            ulong worldCapabilityValue = reader.ReadUInt64();
             SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
-            const WorldCapability knownWorldCapabilities = WorldCapability.BodyMotion |
-                                                           WorldCapability.Grounding |
-                                                           WorldCapability.Collision |
-                                                           WorldCapability.Reconstructible |
-                                                           WorldCapability.Snapshotable |
-                                                           WorldCapability.DeterministicReplay |
-                                                           WorldCapability.AirborneVerticalMotion;
-            if ((worldCapabilityValue & ~(ulong)knownWorldCapabilities) != 0)
-                throw new InvalidDataException("Gameplay Semantic IR world capability mask is invalid.");
             byte[] payload = reader.ReadBytes();
             reader.RequireComplete();
             var header = new CharacterGameplaySemanticIrArtifactHeader(
@@ -238,7 +224,6 @@ namespace ThirdPersonSimulation
                 sourceRevision,
                 semanticHash,
                 gameplayCapabilities,
-                (WorldCapability)worldCapabilityValue,
                 root);
             if (!SequenceEqual(gameplayCapabilities, header.GameplayCapabilities))
                 throw new InvalidDataException("Gameplay Semantic IR capability identities are not in canonical order.");
@@ -255,7 +240,6 @@ namespace ThirdPersonSimulation
                 !manifest.SourceRevision.Equals(header.SourceRevision) ||
                 !semanticIr.SemanticHash.Equals(header.SemanticHash) ||
                 manifest.Root != header.Root ||
-                manifest.Capabilities.RequiredWorldCapabilities != header.RequiredWorldCapabilities ||
                 !SequenceEqual(manifest.Capabilities.GameplayCapabilities, header.GameplayCapabilities))
             {
                 throw new InvalidDataException("Semantic IR artifact header does not match its payload manifest.");
@@ -388,7 +372,6 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(manifest.Capabilities.GameplayCapabilities.Count);
             for (int i = 0; i < manifest.Capabilities.GameplayCapabilities.Count; i++)
                 writer.WriteString(manifest.Capabilities.GameplayCapabilities[i]);
-            writer.WriteUInt64((ulong)manifest.Capabilities.RequiredWorldCapabilities);
             SimulationProgramRootDescriptorCodec.Write(writer, manifest.Root);
         }
 
@@ -403,7 +386,6 @@ namespace ThirdPersonSimulation
             var gameplayCapabilities = new string[capabilityCount];
             for (int i = 0; i < capabilityCount; i++)
                 gameplayCapabilities[i] = reader.ReadString();
-            WorldCapability worldCapabilities = (WorldCapability)reader.ReadUInt64();
             SimulationProgramRootDescriptor root = SimulationProgramRootDescriptorCodec.Read(reader);
             return new CharacterGameplaySemanticIrManifest(
                 programId,
@@ -411,7 +393,7 @@ namespace ThirdPersonSimulation
                 operationSetVersion,
                 tickRate,
                 sourceRevision,
-                new ProgramCapabilityManifest(gameplayCapabilities, worldCapabilities),
+                new ProgramCapabilityManifest(gameplayCapabilities),
                 root);
         }
 

@@ -150,8 +150,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 data.NumericProfile.Id != expected.NumericProfileId ||
                 data.NumericProfile.AbiVersion.Value != expected.TargetAbiVersion.Value ||
                 !string.Equals(data.ExecutionIdentity, expected.ExecutionIdentity, StringComparison.Ordinal) ||
-                data.Root != expected.Root ||
-                data.Capabilities.RequiredWorldCapabilities != expected.RequiredWorldCapabilities)
+                data.Root != expected.Root)
             {
                 throw new InvalidDataException($"Ability '{expected.AbilityId}' identity does not match the manifest.");
             }

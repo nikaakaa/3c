@@ -95,7 +95,6 @@ namespace ThirdPersonSimulation
                 {
                     throw new InvalidOperationException("Float32 Character Runtime Ability data uses inconsistent execution identities.");
                 }
-                requiredWorldCapabilities |= ability.Capabilities.RequiredWorldCapabilities;
             }
             RequiredWorldCapabilities = requiredWorldCapabilities;
             var requestIds = new HashSet<string>(StringComparer.Ordinal);

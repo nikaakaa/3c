@@ -1516,7 +1516,7 @@ namespace ThirdPersonSimulation
     {
         readonly ReadOnlyCollection<string> m_GameplayCapabilities;
 
-        public ProgramCapabilityManifest(IEnumerable<string> gameplayCapabilities, WorldCapability requiredWorldCapabilities)
+        public ProgramCapabilityManifest(IEnumerable<string> gameplayCapabilities)
         {
             var values = gameplayCapabilities == null ? new List<string>() : new List<string>(gameplayCapabilities);
             values.Sort(StringComparer.Ordinal);
@@ -1527,10 +1527,8 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException($"Duplicate gameplay capability '{values[i]}'.", nameof(gameplayCapabilities));
             }
             m_GameplayCapabilities = values.AsReadOnly();
-            RequiredWorldCapabilities = requiredWorldCapabilities;
         }
         public IReadOnlyList<string> GameplayCapabilities => m_GameplayCapabilities;
-        public WorldCapability RequiredWorldCapabilities { get; }
         public bool HasGameplayCapability(string capability)
         {
             if (string.IsNullOrEmpty(capability))

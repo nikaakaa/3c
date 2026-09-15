@@ -96,7 +96,6 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     throw new InvalidOperationException("Fixed Character Runtime Ability data uses inconsistent execution identities.");
                 }
-                requiredWorldCapabilities |= ability.Capabilities.RequiredWorldCapabilities;
             }
             RequiredWorldCapabilities = requiredWorldCapabilities;
             var requestIds = new HashSet<string>(StringComparer.Ordinal);

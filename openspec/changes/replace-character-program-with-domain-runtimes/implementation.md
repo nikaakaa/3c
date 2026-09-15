@@ -618,3 +618,9 @@
 - 提交 `6d886478b`，Float32／Fixed Ability 执行帧、动作状态、装备状态和 MotionWarp 改用 `IFloat32/FixedSkillExecutionState`；实现对象只保存单个技能调用分区，不再使用角色式 `...StateTransaction` 名称。
 - 删除技能局部状态接口上的 `Abort`，调用候选丢弃只释放该技能状态；角色 Step 的完整事务仍由 `CharacterRuntimeStateTransaction` 持有，技能接口不能借此中止外层角色提交。
 - Float32／Fixed 生成工程分别复现既有 28／24 个源索引缺失错误，未发现本步改名新增错误；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 技能安装解析脱离角色集合类型
+
+- 提交 `0c6dbf953`，Float32／Fixed 的 Ability Action、Invocation 和执行服务工厂改用公开的安装解析服务接口，只依赖按 `CharacterSkillId` 获取安装的正式合同。
+- 角色 `GameplayAbilityExecutionInstallationSet` 继续作为当前调用方的实现，但不再作为技能执行链的具体编译依赖；现有跨技能动作解析、安装顺序和运行行为保持不变，没有新增旁路、兼容类型或第二套执行器。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

@@ -68,8 +68,8 @@ namespace ThirdPersonSimulation
                 "float32-simulation-actor-content/1",
                 control.BindingHash.ToString(),
                 bodyMotion.BindingHash.ToString(),
-                gameplayEffects?.BindingHash.ToString() ?? string.Empty,
-                equipment?.BindingHash.ToString() ?? string.Empty
+                RequiresGameplayEffects ? gameplayEffects.BindingHash.ToString() : string.Empty,
+                RequiresEquipment ? equipment.BindingHash.ToString() : string.Empty
             };
             for (int i = 0; i < abilities.Data.Count; i++)
             {

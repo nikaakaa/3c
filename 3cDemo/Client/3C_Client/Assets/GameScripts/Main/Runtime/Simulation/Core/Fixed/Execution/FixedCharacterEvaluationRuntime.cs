@@ -49,7 +49,7 @@ namespace ThirdPersonSimulation.Fixed
             try
             {
                 var serviceFactory = new FixedAbilityExecutionServiceFactory();
-                var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests);
+                var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
                 var controlMotion = new FixedCharacterControlMotionRuntime(

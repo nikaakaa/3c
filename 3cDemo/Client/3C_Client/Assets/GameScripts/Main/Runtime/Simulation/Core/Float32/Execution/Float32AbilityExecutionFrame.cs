@@ -20,19 +20,16 @@ namespace ThirdPersonSimulation
     {
         public Float32AbilityExecutionInput(
             ulong sequence,
-            IReadOnlyList<SimulationInputValue> values,
-            IReadOnlyList<SimulationInputRequest> requests)
+            IReadOnlyList<SimulationInputValue> values)
         {
             if (sequence == 0)
                 throw new ArgumentOutOfRangeException(nameof(sequence));
             Sequence = sequence;
             Values = values ?? throw new ArgumentNullException(nameof(values));
-            Requests = requests ?? throw new ArgumentNullException(nameof(requests));
         }
 
         public ulong Sequence { get; }
         public IReadOnlyList<SimulationInputValue> Values { get; }
-        public IReadOnlyList<SimulationInputRequest> Requests { get; }
     }
 
     internal readonly struct Float32AbilityBodyFacts

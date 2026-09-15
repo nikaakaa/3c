@@ -48,7 +48,7 @@ namespace ThirdPersonSimulation
             try
             {
                 var serviceFactory = new Float32AbilityExecutionServiceFactory();
-                var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests);
+                var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new Float32AbilityExecutionWorkspace(sharedEffectScratch);
                 var controlMotion = new Float32CharacterControlMotionRuntime(

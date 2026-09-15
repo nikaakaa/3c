@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityDomainRuntime domain)
         {
             Input = input ?? throw new ArgumentNullException(nameof(input));
-            Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            ActionRuntime = actions ?? throw new ArgumentNullException(nameof(actions));
             GameplayEffects = gameplayEffects;
             Equipment = equipment;
             Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
@@ -67,7 +67,8 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public FixedInputRuntime Input { get; }
-        public IFixedAbilityActionControlPort Actions { get; }
+        public IFixedAbilityActionControlPort Actions => ActionRuntime;
+        internal FixedActionRuntime ActionRuntime { get; }
         public FixedGameplayEffectOperationRuntime GameplayEffects { get; }
         public FixedEquipmentRuntime Equipment { get; }
         public FixedBlackboardRuntime Blackboard { get; }
@@ -149,7 +150,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame,
                 m_Workspace);
             m_Input = assembly.Input;
-            m_Actions = assembly.Actions;
+            m_Actions = assembly.ActionRuntime;
             m_GameplayEffects = assembly.GameplayEffects;
             m_Equipment = assembly.Equipment;
             m_Blackboard = assembly.Blackboard;

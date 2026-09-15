@@ -1187,20 +1187,17 @@ namespace ThirdPersonSimulation
         readonly IFloat32ValueInputReader m_Values;
         readonly IFloat32MotionContributionSink m_Motion;
         readonly Float32AbilityExecutionFrame m_Frame;
-        readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
 
         public Float32LocomotionRuntime(
             Float32GameplayAbilityExecutionAccess access,
             IFloat32ValueInputReader values,
             IFloat32MotionContributionSink motion,
-            Float32AbilityExecutionFrame frame,
-            CharacterControlRuntimeBinding controlRuntimeBinding)
+            Float32AbilityExecutionFrame frame)
             : base(access)
         {
             m_Values = values ?? throw new ArgumentNullException(nameof(values));
             m_Motion = motion ?? throw new ArgumentNullException(nameof(motion));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_ControlMotionBindings = controlRuntimeBinding?.MotionBindings;
         }
 
         public void Submit<TTarget>(
@@ -1258,24 +1255,6 @@ namespace ThirdPersonSimulation
                 movementPlaybackClock,
                 locomotionTimeline));
         }
-
-        public void SubmitControl(
-            Float32InputRuntime input,
-            CharacterControlMotionRequest request,
-            CharacterControlMotionDescriptor descriptor)
-        {
-            if (input == null)
-                throw new ArgumentNullException(nameof(input));
-			Float32CharacterControlMotionRuntime.SubmitControl(
-				input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2).Vector2,
-				m_Frame.BodyFacts,
-				m_Frame.Tick,
-				m_Ability.TickRate,
-				m_ControlMotionBindings,
-				request,
-				descriptor,
-				m_Motion.Submit);
-		}
 
         CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(
             OperationControlCursor<TTarget> cursor,

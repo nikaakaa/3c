@@ -1191,20 +1191,17 @@ namespace ThirdPersonSimulation.Fixed
         readonly IFixedValueInputReader m_Values;
         readonly IFixedMotionContributionSink m_Motion;
         readonly FixedAbilityExecutionFrame m_Frame;
-        readonly CharacterControlMotionBindingCatalog m_ControlMotionBindings;
 
         public FixedLocomotionRuntime(
             FixedGameplayAbilityExecutionAccess access,
             IFixedValueInputReader values,
             IFixedMotionContributionSink motion,
-            FixedAbilityExecutionFrame frame,
-            CharacterControlRuntimeBinding controlRuntimeBinding)
+            FixedAbilityExecutionFrame frame)
             : base(access)
         {
             m_Values = values ?? throw new ArgumentNullException(nameof(values));
             m_Motion = motion ?? throw new ArgumentNullException(nameof(motion));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_ControlMotionBindings = controlRuntimeBinding?.MotionBindings;
         }
 
         public void Submit<TTarget>(
@@ -1262,24 +1259,6 @@ namespace ThirdPersonSimulation.Fixed
                 movementPlaybackClock,
                 locomotionTimeline));
         }
-
-        public void SubmitControl(
-            FixedInputRuntime input,
-            CharacterControlMotionRequest request,
-            CharacterControlMotionDescriptor descriptor)
-        {
-            if (input == null)
-                throw new ArgumentNullException(nameof(input));
-			FixedCharacterControlMotionRuntime.SubmitControl(
-				input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2).Vector2,
-				m_Frame.BodyFacts,
-				m_Frame.Tick,
-				m_Ability.TickRate,
-				m_ControlMotionBindings,
-				request,
-				descriptor,
-				m_Motion.Submit);
-		}
 
         CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(
             OperationControlCursor<TTarget> cursor,

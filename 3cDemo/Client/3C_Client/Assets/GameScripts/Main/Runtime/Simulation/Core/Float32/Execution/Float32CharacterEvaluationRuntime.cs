@@ -50,7 +50,6 @@ namespace ThirdPersonSimulation
             try
             {
                 var serviceFactory = new Float32AbilityExecutionServiceFactory(
-                    actor.ControlRuntimeBinding,
                     actor.EquipmentRuntimeBinding);
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
@@ -325,14 +324,11 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityExecutionServiceFactory : IFloat32AbilityExecutionServiceFactory
     {
-        readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
         readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
 
         public Float32AbilityExecutionServiceFactory(
-            CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {
-            m_ControlRuntimeBinding = controlRuntimeBinding;
             m_EquipmentRuntimeBinding = equipmentRuntimeBinding;
         }
 
@@ -428,8 +424,7 @@ namespace ThirdPersonSimulation
                 access,
                 values,
                 motion,
-                frame,
-                m_ControlRuntimeBinding);
+                frame);
             Float32AbilityExecutionTarget target = new Float32AbilityExecutionTarget(
                 access,
                 controlState,

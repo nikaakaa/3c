@@ -51,7 +51,6 @@ namespace ThirdPersonSimulation.Fixed
             try
             {
                 var serviceFactory = new FixedAbilityExecutionServiceFactory(
-                    actor.ControlRuntimeBinding,
                     actor.EquipmentRuntimeBinding);
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
@@ -326,14 +325,11 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
     {
-        readonly CharacterControlRuntimeBinding m_ControlRuntimeBinding;
         readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
 
         public FixedAbilityExecutionServiceFactory(
-            CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {
-            m_ControlRuntimeBinding = controlRuntimeBinding;
             m_EquipmentRuntimeBinding = equipmentRuntimeBinding;
         }
 
@@ -429,8 +425,7 @@ namespace ThirdPersonSimulation.Fixed
                 access,
                 values,
                 motion,
-                frame,
-                m_ControlRuntimeBinding);
+                frame);
             FixedAbilityExecutionTarget target = new FixedAbilityExecutionTarget(
                 access,
                 controlState,

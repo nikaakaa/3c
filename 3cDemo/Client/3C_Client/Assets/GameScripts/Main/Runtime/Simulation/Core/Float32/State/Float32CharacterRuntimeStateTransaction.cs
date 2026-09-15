@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32InputRequestStatePort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort, IFloat32ControlRuntimeStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32ActionRuntimeStatePort, IFloat32HandleAllocatorStatePort, IFloat32EventSequenceStatePort, IFloat32GameplayEffectStatePort, IFloat32EquipmentStatePort, IFloat32ControlRuntimeStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
@@ -109,7 +109,7 @@ namespace ThirdPersonSimulation
             new Stack<Float32CharacterRuntimeStateSavepoint>();
         readonly List<SimulationActionActivationRequestState> m_ActionActivationRequests;
         readonly List<Float32ActionInstanceState> m_ActionInstances;
-        readonly Dictionary<string, SimulationInputRequestState> m_InputRequests;
+        readonly Float32CharacterInputRequestState m_InputRequestState;
         CharacterControlRuntimeStateTransaction m_ControlState;
         GameplayEffectStateAggregate m_GameplayEffectAggregate;
         SimulationGameplayEffectState m_GameplayEffectWorking;
@@ -142,7 +142,7 @@ namespace ThirdPersonSimulation
             }
             m_ActionActivationRequests = new List<SimulationActionActivationRequestState>(baseState.ActionActivationRequests);
             m_ActionInstances = new List<Float32ActionInstanceState>(baseState.ActionInstances);
-            m_InputRequests = new Dictionary<string, SimulationInputRequestState>(baseState.InputRequests, StringComparer.Ordinal);
+            m_InputRequestState = new Float32CharacterInputRequestState(m_Tick, baseState.InputRequests);
             m_GameplayEffectAggregate = baseState.GameplayEffectState;
             m_EquipmentState = baseState.EquipmentState;
             m_EventSequence = baseState.EventSequence;
@@ -240,19 +240,7 @@ namespace ThirdPersonSimulation
             m_HandleAllocator = value;
         }
 
-        public SimulationInputRequestState GetInputRequest(string requestId)
-        {
-            RequireActive();
-            return m_InputRequests.TryGetValue(requestId ?? string.Empty, out SimulationInputRequestState state)
-                ? state
-                : default;
-        }
-
-        public void SetInputRequest(string requestId, SimulationInputRequestState state)
-        {
-            RequireActive();
-            m_InputRequests[requestId ?? string.Empty] = state;
-        }
+        internal IFloat32InputRequestStatePort InputRequests => m_InputRequestState;
 
         public IReadOnlyList<SimulationActionActivationRequestState> GetActionActivationRequests()
         {
@@ -357,6 +345,7 @@ namespace ThirdPersonSimulation
                 return;
             m_Savepoints.Clear();
             m_ControlState?.Dispose();
+            m_InputRequestState.Dispose();
             m_Disposed = true;
         }
 
@@ -370,7 +359,7 @@ namespace ThirdPersonSimulation
                 m_AbilityStates.Values,
                 m_ActionActivationRequests,
                 m_ActionInstances,
-                m_InputRequests,
+                m_InputRequestState.Capture(),
                 m_EventSequence,
                 m_ActionEventSequence,
                 m_HandleAllocator,
@@ -391,9 +380,7 @@ namespace ThirdPersonSimulation
             m_ActionActivationRequests.AddRange(state.ActionActivationRequests);
             m_ActionInstances.Clear();
             m_ActionInstances.AddRange(state.ActionInstances);
-            m_InputRequests.Clear();
-            foreach (KeyValuePair<string, SimulationInputRequestState> value in state.InputRequests)
-                m_InputRequests.Add(value.Key, value.Value);
+            m_InputRequestState.Restore(state.InputRequests);
             m_EventSequence = state.EventSequence;
             m_ActionEventSequence = state.ActionEventSequence;
             m_HandleAllocator = state.HandleAllocator;

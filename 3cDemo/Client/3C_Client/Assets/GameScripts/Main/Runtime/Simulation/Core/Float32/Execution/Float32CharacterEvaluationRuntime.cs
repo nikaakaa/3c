@@ -66,7 +66,7 @@ namespace ThirdPersonSimulation
                         ingress,
                         bodyFacts,
                         workspace,
-                        roleState,
+                        roleState.InputRequests,
                         roleState,
                         roleState,
                         roleState,
@@ -78,7 +78,7 @@ namespace ThirdPersonSimulation
                     actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
                 }
 
-                new Float32CharacterInputRuntime(roleState, characterRuntime.InputRequestIds)
+                new Float32CharacterInputRuntime(roleState.InputRequests, characterRuntime.InputRequestIds)
                     .ApplyRequests(input.Requests);
 
                 if (invocations.Count != 0)
@@ -88,7 +88,7 @@ namespace ThirdPersonSimulation
                         characterRuntime.ControlModules,
                         actor.ControlRuntimeBinding,
                         roleState,
-                        roleState,
+                        roleState.InputRequests,
                         roleState,
                         actor.ActorId,
                         tick,

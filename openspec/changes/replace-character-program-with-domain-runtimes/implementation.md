@@ -509,3 +509,9 @@
 - 提交 `7b16798c7`，将 Float32／Fixed `CharacterAbilityExecutionServiceFactory` 改为中性的 `AbilityExecutionServiceFactory`；角色 Evaluate 在一个 Step 内组装一次工厂，再把同一工厂传给该角色的所有 Ability Invocation。
 - 工厂仍接收当前调用方提供的 Control／Equipment binding，实际模块仍按当前 Ability、InstallationSet、ExecutionFrame 和 Workspace 创建；改变的是服务装配 owner 和生命周期，不复制执行器、不增加 TreeClip 旁路，也不把角色事务重新塞回技能入口。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。非角色调用方还未接线，1.11 继续保持未完成；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 独立Ability集合加载入口去角色编译命名
+
+- 提交 `0caed6059`，将 `CharacterPipelineDefinition.LoadFloat32CharacterAbilities`／`LoadFixedCharacterAbilities` 改为 `LoadFloat32AbilitySet`／`LoadFixedAbilitySet`，同步 Local Host、Fixed Host、Rollback Host、DotRecast Authority 导出和网络产品调用点。
+- 入口仍只负责校验 Definition 的 Ability grants 与独立 Data asset 一一对应，再通过既有 Provider binding 加载 Ability execution data；没有改变 artifact 字节格式、Provider 合同、安装顺序或执行状态。
+- 未重复执行完整 Unity 生成工程编译：该工程上一轮已被既有 `TypedStateAddress`、`GameplayAbilityExecutionLayout` 等源索引缺失和 UGUI 包错误阻断；本步已完成旧方法名的全仓源码残留检查，未运行 Unity、测试或资产生成。

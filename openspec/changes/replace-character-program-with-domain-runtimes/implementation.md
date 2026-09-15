@@ -1159,3 +1159,8 @@
 
 - 提交 `f26dfc52e`，将 Ability 专属的 Action、Input、Equipment、Gameplay、Catalog、Domain binding 与 Behavior semantic emitter 统一改为 `GameplayAbilitySemantic*`，同时更新节点绑定接口名和前端引用。
 - 本步只改类型名、文件路径和 Unity `.meta` 路径，保留节点可达性、Catalog 条目、provider owner 与黑板绑定行为。
+
+## 2026-09-16 删除无消费者的旧Build调度器
+
+- 提交 `32f8a6a44`，删除没有注册方和调用方的 `CharacterSimulationBuildMcpJobScheduler` 及其 Unity `.meta`。
+- 该调度器还引用仓库不存在的 `CharacterSimulationBuildMcpBridge`，不属于 Ability、Timeline、Control 或 Pose 的正式编译链；本步只移除旧 Character Build MCP 残片，不改变现行领域编译入口。

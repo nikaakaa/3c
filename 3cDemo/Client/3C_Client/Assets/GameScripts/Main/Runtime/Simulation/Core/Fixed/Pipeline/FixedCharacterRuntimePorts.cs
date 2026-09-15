@@ -194,7 +194,6 @@ namespace ThirdPersonSimulation.Fixed
         CharacterBodyMotionBinding GetBodyMotionBinding(int actorIndex);
         CharacterGameplayEffectRuntimeBinding GetGameplayEffectRuntimeBinding(int actorIndex);
         CharacterEquipmentRuntimeBinding GetEquipmentRuntimeBinding(int actorIndex);
-        FixedGameplayAbilityExecutionInstallationSet GetAbilityInstallations(int actorIndex);
     }
 
     public sealed class FixedCharacterRuntimePort : IFixedCharacterRuntimePort
@@ -241,8 +240,6 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterEquipmentRuntimeBinding GetEquipmentRuntimeBinding(int actorIndex) =>
             Roster[actorIndex].EquipmentRuntimeBinding;
 
-        public FixedGameplayAbilityExecutionInstallationSet GetAbilityInstallations(int actorIndex) =>
-            Roster[actorIndex].AbilityInstallations;
     }
 
     public interface IFixedWorkingStateReadPort : ISimulationRuntimePort

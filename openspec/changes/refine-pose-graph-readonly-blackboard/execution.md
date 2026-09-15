@@ -953,3 +953,9 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - CharacterPoseNativeGraphRuntime.ResetInstance 现在在 Reset 中途失败时先执行 StopInstance，让打开帧 Discard、节点收到 Stop，并把实例切出 Started 状态；失败后不会继续以旧 generation 接受新的原生帧。
 - 这补齐第 3 组 Reset/Replace/Stop/Dispose 的失败边界：Reset 返回 Failed 不再伪装实例仍可继续工作，owner 只能释放或重新安装。
 - 本步只改原生 Pose runtime 与本 execution 记录；未运行 Unity、Build、Play 或资源刷新，也未提交 LFS。
+
+## 2026-09-15 r3 接通 Reset 后的 Final Publication 失效
+
+- CharacterPoseNativeRoleRuntime.Reset 在图实例 generation 成功推进后调用 CharacterFinalPoseNativePublication.ResetToDefaults：属性 Writer 写默认值、旧 committed pose、pending lease 和 physical write 全部失效，Host 不能再读到旧 generation 的最终姿态。
+- CharacterPoseNativeRoleSession 暴露 Reset 与 TryObserve，正式消费方不再需要绕过 session 直接进入 Role/Graph 内部；观察仍只读取最近已提交的原生节点结果。
+- 本步只补 Pose 自身的 reset 结果发布与观察入口，仍不替共享 Host 构造 Source/Constraint/Final 实例。

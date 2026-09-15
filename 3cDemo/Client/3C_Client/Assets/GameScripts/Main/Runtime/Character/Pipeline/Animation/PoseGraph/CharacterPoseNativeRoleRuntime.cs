@@ -426,8 +426,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeFailureCode reason) =>
             m_Graph.Discard(lease, reason);
 
-        internal CharacterPoseNativeResetResult Reset(ulong resetGeneration) =>
-            m_Graph.ResetInstance(resetGeneration);
+        internal CharacterPoseNativeResetResult Reset(ulong resetGeneration)
+        {
+            CharacterPoseNativeResetResult result = m_Graph.ResetInstance(resetGeneration);
+            if (result.IsReset)
+                m_Publication.ResetToDefaults();
+            return result;
+        }
 
         internal void Stop() => m_Graph.StopInstance();
 

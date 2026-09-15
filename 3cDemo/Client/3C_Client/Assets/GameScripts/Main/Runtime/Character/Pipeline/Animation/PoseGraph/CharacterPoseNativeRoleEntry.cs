@@ -24,6 +24,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong InstanceId => m_Role.InstanceId;
         internal ulong ResetGeneration => m_Role.ResetGeneration;
 
+        internal CharacterPoseNativeResetResult Reset(ulong resetGeneration) =>
+            m_Role.Reset(resetGeneration);
+
+        internal bool TryObserve(
+            PoseNodeId nodeId,
+            PosePortId portId,
+            out CharacterPoseNativeNodeObservation observation) =>
+            m_Role.TryObserve(nodeId, portId, out observation);
+
         public void Dispose()
         {
             if (m_Disposed)

@@ -40,10 +40,17 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < data.Data.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = data.Data[i];
+                EquipmentProgramLayout equipmentLayout = ability.Capabilities.HasGameplayCapability("Equipment")
+                    ? EquipmentProgramLayoutCompiler.Compile(
+                        equipmentRuntimeBinding,
+                        ability.CatalogEntries,
+                        ability.References,
+                        ability.Producers)
+                    : null;
                 var installation = new FixedGameplayAbilityExecutionInstallation(
                     ability,
                     gameplayEffectCatalog,
-                    equipmentRuntimeBinding);
+                    equipmentLayout);
                 requiresGameplayEffects |= installation.RequiresGameplayEffects;
                 requiresEquipment |= installation.RequiresEquipment;
                 values.Add(installation);

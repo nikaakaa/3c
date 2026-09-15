@@ -7,24 +7,18 @@ namespace ThirdPersonSimulation
         internal Float32GameplayAbilityExecutionInstallation(
             Float32GameplayAbilityExecutionData data,
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
+            EquipmentProgramLayout equipmentLayout)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
             RequiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
             RequiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
             if (RequiresGameplayEffects && gameplayEffectCatalog == null)
                 throw new ArgumentNullException(nameof(gameplayEffectCatalog));
-            if (RequiresEquipment && equipmentRuntimeBinding == null)
-                throw new ArgumentNullException(nameof(equipmentRuntimeBinding));
+            if (RequiresEquipment && equipmentLayout == null)
+                throw new ArgumentNullException(nameof(equipmentLayout));
             Layout = Float32GameplayAbilityExecutionLayoutFactory.Create(Data);
             GameplayEffectCatalog = RequiresGameplayEffects ? gameplayEffectCatalog : null;
-            EquipmentLayout = RequiresEquipment
-                ? EquipmentProgramLayoutCompiler.Compile(
-                    equipmentRuntimeBinding,
-                    Data.CatalogEntries,
-                    Data.References,
-                    Data.Producers)
-                : null;
+            EquipmentLayout = RequiresEquipment ? equipmentLayout : null;
             Services = new Float32GameplayAbilityExecutionServices(
                 Data,
                 Layout,

@@ -884,3 +884,8 @@
 
 - 提交 `fe951d529`，Float32／Fixed Actor Registration 删除未被消费的 `CharacterPresentationProjectionAsset` 参数和属性；Host 在装配时仍加载并传递实际 `CharacterPresentationProjection` 给表现运行时。
 - 资产容器不再沿角色注册对象重复传播，Pose 数据、表现运行时和注册身份不变；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除注册对象旧Projection入口
+
+- 提交 `7f0005866`，Float32 Registration 直接发布 `PresentationProjection`，删除旧的 `Projection` 别名；Fixed Registration 删除没有消费者的 Projection 参数和属性。
+- Host 仍负责加载并装配表现投影，表现运行时继续接收同一投影数据；Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

@@ -52,7 +52,7 @@ namespace ThirdPersonSimulation
                         $"Ability '{installation.Data.AbilityId}' requires the declared Equipment layout."));
             }
 
-            Float32AbilityControlRuntime control = null;
+            Float32AbilityOperationControlRuntime control = null;
             Float32ActionRuntime actions = new Float32ActionRuntime(
                 access,
                 installations,
@@ -111,7 +111,7 @@ namespace ThirdPersonSimulation
                 equipment,
                 values,
                 blackboard);
-            control = new Float32AbilityControlRuntime(installation, services);
+            control = new Float32AbilityOperationControlRuntime(installation, services);
             Float32AbilityDomainRuntime domain = new Float32AbilityDomainRuntime(
                 installation,
                 actions,

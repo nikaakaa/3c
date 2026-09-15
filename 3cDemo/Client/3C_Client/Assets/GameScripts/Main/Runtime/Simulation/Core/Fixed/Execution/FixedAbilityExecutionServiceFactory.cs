@@ -53,7 +53,7 @@ namespace ThirdPersonSimulation.Fixed
                         $"Ability '{installation.Data.AbilityId}' requires the declared Equipment layout."));
             }
 
-            FixedAbilityControlRuntime control = null;
+            FixedAbilityOperationControlRuntime control = null;
             FixedActionRuntime actions = new FixedActionRuntime(
                 access,
                 installations,
@@ -112,7 +112,7 @@ namespace ThirdPersonSimulation.Fixed
                 equipment,
                 values,
                 blackboard);
-            control = new FixedAbilityControlRuntime(installation, services);
+            control = new FixedAbilityOperationControlRuntime(installation, services);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
                 installation,
                 actions,

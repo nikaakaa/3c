@@ -47,7 +47,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedEquipmentRuntime equipment,
             FixedBlackboardRuntime blackboard,
             FixedMotionAccumulator motion,
-            FixedAbilityControlRuntime control,
+            FixedAbilityOperationControlRuntime control,
             FixedAbilityDomainRuntime domain)
         {
             Input = input ?? throw new ArgumentNullException(nameof(input));
@@ -66,7 +66,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedEquipmentRuntime Equipment { get; }
         public FixedBlackboardRuntime Blackboard { get; }
         public FixedMotionAccumulator Motion { get; }
-        public FixedAbilityControlRuntime Control { get; }
+        public FixedAbilityOperationControlRuntime Control { get; }
         public FixedAbilityDomainRuntime Domain { get; }
     }
 
@@ -82,7 +82,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedEquipmentRuntime m_Equipment;
         readonly FixedBlackboardRuntime m_Blackboard;
         readonly FixedMotionAccumulator m_Motion;
-        readonly FixedAbilityControlRuntime m_Control;
+        readonly FixedAbilityOperationControlRuntime m_Control;
         readonly FixedAbilityDomainRuntime m_Domain;
         bool m_Begun;
         bool m_Completed;

@@ -46,7 +46,7 @@ namespace ThirdPersonSimulation
             Float32EquipmentRuntime equipment,
             Float32BlackboardRuntime blackboard,
             Float32MotionAccumulator motion,
-            Float32AbilityControlRuntime control,
+            Float32AbilityOperationControlRuntime control,
             Float32AbilityDomainRuntime domain)
         {
             Input = input ?? throw new ArgumentNullException(nameof(input));
@@ -65,7 +65,7 @@ namespace ThirdPersonSimulation
         public Float32EquipmentRuntime Equipment { get; }
         public Float32BlackboardRuntime Blackboard { get; }
         public Float32MotionAccumulator Motion { get; }
-        public Float32AbilityControlRuntime Control { get; }
+        public Float32AbilityOperationControlRuntime Control { get; }
         public Float32AbilityDomainRuntime Domain { get; }
     }
 
@@ -81,7 +81,7 @@ namespace ThirdPersonSimulation
         readonly Float32EquipmentRuntime m_Equipment;
         readonly Float32BlackboardRuntime m_Blackboard;
         readonly Float32MotionAccumulator m_Motion;
-        readonly Float32AbilityControlRuntime m_Control;
+        readonly Float32AbilityOperationControlRuntime m_Control;
         readonly Float32AbilityDomainRuntime m_Domain;
         bool m_Begun;
         bool m_Completed;

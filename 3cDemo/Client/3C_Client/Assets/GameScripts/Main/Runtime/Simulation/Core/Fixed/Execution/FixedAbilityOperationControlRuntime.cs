@@ -2,30 +2,30 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonPerformance.Instrumentation;
 
-namespace ThirdPersonSimulation
+namespace ThirdPersonSimulation.Fixed
 {
-    internal interface IFloat32AbilityExecutionServices
+    internal interface IFixedAbilityExecutionServices
     {
-        Float32AbilityExecutionTarget Target { get; }
+        FixedAbilityExecutionTarget Target { get; }
         void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
         void EndEvaluation();
         void ApplyIngress();
         void AdvanceGameplayEffects();
     }
 
-    internal sealed class Float32AbilityControlRuntime : IFloat32AbilityControlRuntime
+    internal sealed class FixedAbilityOperationControlRuntime : IFixedAbilityOperationControlRuntime
     {
-        readonly IFloat32AbilityExecutionServices m_Services;
-        OperationControlRuntime<Float32AbilityExecutionTarget> m_Runtime;
+        readonly IFixedAbilityExecutionServices m_Services;
+        OperationControlRuntime<FixedAbilityExecutionTarget> m_Runtime;
 
-        public Float32AbilityControlRuntime(
-            Float32GameplayAbilityExecutionInstallation installation,
-            IFloat32AbilityExecutionServices services)
+        public FixedAbilityOperationControlRuntime(
+            FixedGameplayAbilityExecutionInstallation installation,
+            IFixedAbilityExecutionServices services)
         {
             if (installation == null)
                 throw new ArgumentNullException(nameof(installation));
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
-            m_Runtime = new OperationControlRuntime<Float32AbilityExecutionTarget>(
+            m_Runtime = new OperationControlRuntime<FixedAbilityExecutionTarget>(
                 installation.Topology,
                 m_Services.Target,
                 checked(Math.Max(1024, installation.Data.Operations.Count * 128)));
@@ -36,7 +36,6 @@ namespace ThirdPersonSimulation
             m_Services.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
             m_Runtime.BeginEvaluation();
         }
-
         internal void EndEvaluation() => m_Services.EndEvaluation();
         internal void ApplyIngress() => m_Services.ApplyIngress();
         internal void AdvanceGameplayEffects() => m_Services.AdvanceGameplayEffects();
@@ -52,36 +51,36 @@ namespace ThirdPersonSimulation
         public ulong ReadGeneration(OperationHandle operation) => m_Runtime.ReadGeneration(operation);
     }
 
-    internal readonly struct Float32AbilityExecutionTarget :
-        IOperationControlTarget<Float32AbilityExecutionTarget>,
+    internal readonly struct FixedAbilityExecutionTarget :
+        IOperationControlTarget<FixedAbilityExecutionTarget>,
         IOperationControlEdgeTraceTarget
     {
-        readonly Float32GameplayAbilityExecutionAccess m_Access;
-        readonly Float32StatePort m_ControlState;
-        readonly Float32OperationStateReset m_ResetState;
-        readonly Float32ValueRuntime m_Values;
-        readonly Float32BlackboardRuntime m_Blackboard;
-        readonly Float32ActionRuntime m_Actions;
-        readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
-        readonly Float32EquipmentRuntime m_Equipment;
-        readonly Float32LocomotionRuntime m_Locomotion;
-        readonly Float32FactSink m_Facts;
-        readonly Float32PresentationSink m_Presentation;
-        readonly Float32TraceSink m_Trace;
+        readonly FixedGameplayAbilityExecutionAccess m_Access;
+        readonly FixedStatePort m_ControlState;
+        readonly FixedOperationStateReset m_ResetState;
+        readonly FixedValueRuntime m_Values;
+        readonly FixedBlackboardRuntime m_Blackboard;
+        readonly FixedActionRuntime m_Actions;
+        readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
+        readonly FixedEquipmentRuntime m_Equipment;
+        readonly FixedLocomotionRuntime m_Locomotion;
+        readonly FixedFactSink m_Facts;
+        readonly FixedPresentationSink m_Presentation;
+        readonly FixedTraceSink m_Trace;
 
-        public Float32AbilityExecutionTarget(
-            Float32GameplayAbilityExecutionAccess access,
-            Float32StatePort controlState,
-            Float32OperationStateReset resetState,
-            Float32ValueRuntime values,
-            Float32BlackboardRuntime blackboard,
-            Float32ActionRuntime actions,
-            Float32GameplayEffectOperationRuntime gameplayEffects,
-            Float32EquipmentRuntime equipment,
-            Float32LocomotionRuntime locomotion,
-            Float32FactSink facts,
-            Float32PresentationSink presentation,
-            Float32TraceSink trace)
+        public FixedAbilityExecutionTarget(
+            FixedGameplayAbilityExecutionAccess access,
+            FixedStatePort controlState,
+            FixedOperationStateReset resetState,
+            FixedValueRuntime values,
+            FixedBlackboardRuntime blackboard,
+            FixedActionRuntime actions,
+            FixedGameplayEffectOperationRuntime gameplayEffects,
+            FixedEquipmentRuntime equipment,
+            FixedLocomotionRuntime locomotion,
+            FixedFactSink facts,
+            FixedPresentationSink presentation,
+            FixedTraceSink trace)
         {
             m_Access = access;
             m_ControlState = controlState;
@@ -109,11 +108,11 @@ namespace ThirdPersonSimulation
             m_Trace.AddControlFlow(edge, selected, passed);
 
         public bool EvaluateCondition(
-            OperationControlCursor<Float32AbilityExecutionTarget> cursor,
+            OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             ProgramControlFlowEdge edge) => m_Values.EvaluateCondition(cursor, edge);
 
         public OperationExecutionResult ExecuteLeaf(
-            OperationControlCursor<Float32AbilityExecutionTarget> cursor,
+            OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             OperationExecutionDescriptor descriptor)
         {
             SimulationOperation operation = m_Access.Operation(descriptor.Handle);
@@ -143,7 +142,7 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.BeginEquipmentChange:
                 case SimulationOperationCode.CommitEquipmentChange:
                 case SimulationOperationCode.CancelEquipmentChange:
-                    using (Float32ValueInputLease inputs = m_Values.ReadInputs(cursor, operation))
+                    using (FixedValueInputLease inputs = m_Values.ReadInputs(cursor, operation))
                         return RequireEquipment().Execute(cursor, operation, inputs)
                             ? OperationExecutionResult.Success
                             : OperationExecutionResult.Failure;
@@ -174,7 +173,7 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.Constant:
                 case SimulationOperationCode.ReadEquipmentIdentity:
                 case SimulationOperationCode.ReadEquipmentParameter:
-                    return Float32ValueRuntime.ToBoolean(m_Values.Evaluate(cursor, operation.Handle))
+                    return FixedValueRuntime.ToBoolean(m_Values.Evaluate(cursor, operation.Handle))
                         ? OperationExecutionResult.Success
                         : OperationExecutionResult.Failure;
                 case SimulationOperationCode.Timeline:
@@ -214,12 +213,12 @@ namespace ThirdPersonSimulation
                         $"Timeline content operation '{descriptor.Code}' cannot execute as an Ability leaf.");
                 default:
                     throw new InvalidOperationException(
-                        $"Ability operation '{descriptor.Handle}' code '{descriptor.Code}' has no Float32 owner.");
+                        $"Ability operation '{descriptor.Handle}' code '{descriptor.Code}' has no Fixed owner.");
             }
         }
 
         OperationExecutionResult TickLocomotion(
-            OperationControlCursor<Float32AbilityExecutionTarget> cursor,
+            OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             SimulationOperation operation)
         {
             int slot = m_Access.RequireOperationSlot(operation.Handle, ProgramStateSemantic.LocomotionMotionElapsedTicks);
@@ -254,11 +253,11 @@ namespace ThirdPersonSimulation
                 : OperationExecutionResult.Running;
         }
 
-        Float32GameplayEffectOperationRuntime RequireGameplayEffects() => m_GameplayEffects ??
+        FixedGameplayEffectOperationRuntime RequireGameplayEffects() => m_GameplayEffects ??
             throw new InvalidOperationException(
                 "Ability operation requires the declared Gameplay Effect service.");
 
-        Float32EquipmentRuntime RequireEquipment() => m_Equipment ??
+        FixedEquipmentRuntime RequireEquipment() => m_Equipment ??
             throw new InvalidOperationException(
                 "Ability operation requires the declared Equipment service.");
 
@@ -267,12 +266,12 @@ namespace ThirdPersonSimulation
         }
 
         public void PrepareSubGraph(
-            OperationControlCursor<Float32AbilityExecutionTarget> cursor,
+            OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             OperationExecutionDescriptor operation) =>
             m_Values.PrepareSubGraph(cursor, m_Access.Operation(operation.Handle));
 
         public void ActivateScopes(
-            OperationControlCursor<Float32AbilityExecutionTarget> cursor,
+            OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             OperationExecutionDescriptor operation,
             ulong generation)
         {
@@ -290,13 +289,13 @@ namespace ThirdPersonSimulation
             m_ResetState.Reset(m_Access.Operation(operation.Handle));
 
         public OperationStopStatus ContinueLeafStop(
-            OperationControlCursor<Float32AbilityExecutionTarget> cursor,
+            OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             OperationExecutionDescriptor operation,
             OperationStopContext context) => throw new InvalidOperationException(
                 $"Ability operation '{m_Access.SourcePath(m_Access.Operation(operation.Handle))}' has no direct Timeline stop owner.");
 
         public void ForceStopLeaf(
-            OperationControlCursor<Float32AbilityExecutionTarget> cursor,
+            OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             OperationExecutionDescriptor operation,
             OperationStopContext context) => throw new InvalidOperationException(
                 $"Ability operation '{m_Access.SourcePath(m_Access.Operation(operation.Handle))}' has no direct Timeline stop owner.");
@@ -326,7 +325,7 @@ namespace ThirdPersonSimulation
                 GameplayFactKind.State,
                 $"state:{state.Value}",
                 phase.ToString(),
-                Float32Scalar.Zero));
+                FixedScalar.Zero));
         }
 
         public void NotifyStateTransition(
@@ -343,8 +342,8 @@ namespace ThirdPersonSimulation
                     header,
                     PresentationCommandKind.DomainEvent,
                     "domain/action-segment-changed",
-                    Float32Scalar.Zero,
-                    Float32Scalar.Zero,
+                    FixedScalar.Zero,
+                    FixedScalar.Zero,
                     sourceActionInstanceId: action.InstanceId,
                     domainPayload: $"prev:{exitingState.Value};next:{targetState.Value}"));
             }

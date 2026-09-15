@@ -1,6 +1,8 @@
-namespace ThirdPersonSimulation
+using ThirdPersonSimulation;
+
+namespace ThirdPersonSimulation.Fixed
 {
-    internal interface IFloat32AbilityControlRuntime
+    internal interface IFixedAbilityOperationControlRuntime
     {
         bool IsActive(OperationHandle operation);
         bool IsStopping(OperationHandle operation);

@@ -9,13 +9,13 @@ namespace ThirdPersonSimulation
         readonly Float32GameplayAbilityExecutionInstallation m_Installation;
         readonly Float32ActionRuntime m_Actions;
         readonly Float32ActionStateStore m_ActionStore;
-        readonly IFloat32AbilityControlRuntime m_Control;
+        readonly IFloat32AbilityOperationControlRuntime m_Control;
 
         public Float32AbilityDomainRuntime(
             Float32GameplayAbilityExecutionInstallation installation,
             Float32ActionRuntime actions,
             Float32ActionStateStore actionStore,
-            IFloat32AbilityControlRuntime control)
+            IFloat32AbilityOperationControlRuntime control)
         {
             m_Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));

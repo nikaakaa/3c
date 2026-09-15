@@ -900,3 +900,10 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 当前可执行的剩余工作已经从“阻塞”改记为“实现收口”：由实现窗口继续把原生 Create/Replace、唯一 Barrier、Source/Constraint/Final 消费者接到角色表现链，并在消费者迁移后删除仍有引用的旧 Program/Image/ExecutionView/Worker/Operation；不恢复 fallback、兼容 reader、第二运行链或伪造完成状态。
 - 当前静态事实仍保持如实记录：原生 Pose runtime 内已有创建、替换和阶段 API，旧 Presentation/Preview/Diagnostics/Projection 消费者仍存在旧 Program 依赖，角色 Host 尚未形成原生 Create/Replace 调用点。该事实用于指导下一步代码修改，不再作为停止推进的理由。
 - 本次只更新执行记录，不改用户或其它窗口的未提交代码、资产和既有审查结论；没有暂存或提交任何 LFS 文件。
+
+## 2026-09-15 r3 建立正式角色入口
+
+- 新增 `CharacterPoseNativeRoleRuntime`，由角色入口统一持有已采用的原生 Pose 图实例和 `CharacterFinalPoseNativePublication`；角色侧不再直接管理 GraphRuntime 的内部创建、替换和最终发布细节。
+- 入口把 `Prepare`、`Create/Replace`、`BeginFrame`、Source demand、Barrier 后 `Evaluate`、`ValidatePending`、Final `Commit`、`Discard`、`Reset`、`Stop`、`Observe` 与 `Dispose` 收成一条明确调用面；创建失败或替换失败会释放未采用的图与 Final 服务，不发布假采用结果。
+- 本步提交为 `a1a2d8587`、`533896f40`，只包含普通 C# 与 `.meta`，没有提交 LFS；未运行 Unity、Build、Play、图生成或验证。
+- 该步解决了“没有正式角色入口”的类型与生命周期缺口；角色表现 Host 尚需把自身的 Profile、Rig、EventGraph 输入合同、真实 handler factory 和 Final 服务装配到该入口，下一步不能停留在只调用接口声明。

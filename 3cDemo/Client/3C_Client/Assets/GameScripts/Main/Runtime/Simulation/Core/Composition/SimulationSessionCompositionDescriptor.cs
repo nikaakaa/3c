@@ -41,7 +41,6 @@ namespace ThirdPersonSimulation
             SimulationExecutionTargetManifest executionTarget,
             SimulationComponentIdentity executionBackend,
             SimulationPipelineIdentity pipeline,
-            GameplayContentHash gameplayContentHash,
             SimulationActorRosterDescriptor roster,
             SimulationComponentIdentity sessionSource,
             SimulationComponentIdentity worldSolver,
@@ -62,7 +61,7 @@ namespace ThirdPersonSimulation
             RequireRole(worldSolver, SimulationComponentRole.WorldSolver, nameof(worldSolver));
             RequireRole(snapshotCodec, SimulationComponentRole.SnapshotCodec, nameof(snapshotCodec));
             RequireRole(committer, SimulationComponentRole.Committer, nameof(committer));
-            if (!pipeline.IsValid || !gameplayContentHash.IsValid || roster == null || solverImplementationId.Equals(default))
+            if (!pipeline.IsValid || roster == null || solverImplementationId.Equals(default))
             {
                 throw new ArgumentException("Session composition identity is incomplete.");
             }
@@ -80,7 +79,6 @@ namespace ThirdPersonSimulation
             TickRate = tickRate;
             ExecutionBackend = executionBackend;
             Pipeline = pipeline;
-            GameplayContentHash = gameplayContentHash;
             Roster = roster;
             SessionSource = sessionSource;
             WorldSolver = worldSolver;
@@ -106,7 +104,6 @@ namespace ThirdPersonSimulation
         public OperationSetVersion OperationSetVersion => ExecutionTarget.OperationSetVersion;
         public SimulationComponentIdentity ExecutionBackend { get; }
         public SimulationPipelineIdentity Pipeline { get; }
-        public GameplayContentHash GameplayContentHash { get; private set; }
         public SimulationActorRosterDescriptor Roster { get; }
         public SimulationComponentIdentity SessionSource { get; }
         public SimulationComponentIdentity WorldSolver { get; }

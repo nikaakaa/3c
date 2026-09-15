@@ -25,7 +25,8 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityInvocationRuntime : IDisposable
     {
-        readonly Float32CharacterRuntimeStateTransaction m_RoleState;
+        readonly IFloat32AbilityDomainStatePort m_DomainState;
+        readonly Action<IFloat32AbilityExecutionStateTransaction> m_AcceptAbility;
         readonly IFloat32AbilityExecutionStateTransaction m_AbilityState;
         readonly Float32AbilityExecutionWorkspace m_Workspace;
         readonly Float32AbilityExecutionFrame m_Frame;
@@ -48,24 +49,27 @@ namespace ThirdPersonSimulation
         public Float32AbilityInvocationRuntime(
             Float32GameplayAbilityExecutionInstallation installation,
             Float32GameplayAbilityExecutionInstallationSet installations,
-            Float32CharacterRuntimeStateTransaction roleState,
+            IFloat32AbilityExecutionStateTransaction abilityState,
+            IFloat32AbilityDomainStatePort domainState,
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationInput input,
+            Float32AbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
-            WorldBodyState body,
+            Float32AbilityBodyFacts bodyFacts,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
-            Float32GameplayEffectExecutionScratch gameplayEffectScratch)
+            Float32GameplayEffectExecutionScratch gameplayEffectScratch,
+            Action<IFloat32AbilityExecutionStateTransaction> acceptAbility)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             installations = installations ?? throw new ArgumentNullException(nameof(installations));
-            m_RoleState = roleState ?? throw new ArgumentNullException(nameof(roleState));
-            if (!actorId.IsValid || !tick.IsValid || body.ActorId != actorId)
+            m_DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
+            m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
+            if (!actorId.IsValid || !tick.IsValid || !bodyFacts.IsValid)
                 throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
-            m_AbilityState = roleState.BindAbility(installation);
+            m_AbilityState = abilityState ?? throw new ArgumentNullException(nameof(abilityState));
             m_Workspace = new Float32AbilityExecutionWorkspace(
                 gameplayEffectScratch ?? new Float32GameplayEffectExecutionScratch());
             m_Workspace.Reset();
@@ -73,11 +77,11 @@ namespace ThirdPersonSimulation
                 installation,
                 actorId,
                 tick,
-                new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests),
+                input,
                 ingress ?? Array.Empty<SimulationIngress>(),
-                new Float32AbilityBodyFacts(actorId, body),
+                bodyFacts,
                 m_AbilityState,
-                roleState,
+                m_DomainState,
                 m_Workspace);
 
             Float32GameplayAbilityExecutionAccess access = installation.Access;
@@ -282,7 +286,7 @@ namespace ThirdPersonSimulation
             RequireOpen();
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Float32 Ability invocation cannot accept its current candidate.");
-            m_RoleState.AcceptAbility(m_AbilityState);
+            m_AcceptAbility(m_AbilityState);
             m_AbilityState.Dispose();
             m_Accepted = true;
         }

@@ -50,21 +50,24 @@ namespace ThirdPersonSimulation.Fixed
             try
             {
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests);
+                var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
                     var invocation = new FixedAbilityInvocationRuntime(
                         installation,
                         actor.AbilityInstallations,
+                        roleState.BindAbility(installation),
                         roleState,
                         actor.ActorId,
                         tick,
-                        input,
+                        abilityInput,
                         ingress,
-                        beforeBody,
+                        bodyFacts,
                         actor.ControlRuntimeBinding,
                         actor.EquipmentRuntimeBinding,
-                        sharedEffectScratch);
+                        sharedEffectScratch,
+                        roleState.AcceptAbility);
                     invocations.Add(invocation);
                     actionRuntimes.Add(installation.Data.AbilityId, invocation.Actions);
                 }

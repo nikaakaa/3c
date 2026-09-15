@@ -26,7 +26,8 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityInvocationRuntime : IDisposable
     {
-        readonly FixedCharacterRuntimeStateTransaction m_RoleState;
+        readonly IFixedAbilityDomainStatePort m_DomainState;
+        readonly Action<IFixedAbilityExecutionStateTransaction> m_AcceptAbility;
         readonly IFixedAbilityExecutionStateTransaction m_AbilityState;
         readonly FixedAbilityExecutionWorkspace m_Workspace;
         readonly FixedAbilityExecutionFrame m_Frame;
@@ -49,24 +50,27 @@ namespace ThirdPersonSimulation.Fixed
         public FixedAbilityInvocationRuntime(
             FixedGameplayAbilityExecutionInstallation installation,
             FixedGameplayAbilityExecutionInstallationSet installations,
-            FixedCharacterRuntimeStateTransaction roleState,
+            IFixedAbilityExecutionStateTransaction abilityState,
+            IFixedAbilityDomainStatePort domainState,
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationInput input,
+            FixedAbilityExecutionInput input,
             IReadOnlyList<SimulationIngress> ingress,
-            WorldBodyState body,
+            FixedAbilityBodyFacts bodyFacts,
             CharacterControlRuntimeBinding controlRuntimeBinding,
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
-            FixedGameplayEffectExecutionScratch gameplayEffectScratch)
+            FixedGameplayEffectExecutionScratch gameplayEffectScratch,
+            Action<IFixedAbilityExecutionStateTransaction> acceptAbility)
         {
             Installation = installation ?? throw new ArgumentNullException(nameof(installation));
             installations = installations ?? throw new ArgumentNullException(nameof(installations));
-            m_RoleState = roleState ?? throw new ArgumentNullException(nameof(roleState));
-            if (!actorId.IsValid || !tick.IsValid || body.ActorId != actorId)
+            m_DomainState = domainState ?? throw new ArgumentNullException(nameof(domainState));
+            m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
+            if (!actorId.IsValid || !tick.IsValid || !bodyFacts.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
-            m_AbilityState = roleState.BindAbility(installation);
+            m_AbilityState = abilityState ?? throw new ArgumentNullException(nameof(abilityState));
             m_Workspace = new FixedAbilityExecutionWorkspace(
                 gameplayEffectScratch ?? new FixedGameplayEffectExecutionScratch());
             m_Workspace.Reset();
@@ -74,11 +78,11 @@ namespace ThirdPersonSimulation.Fixed
                 installation,
                 actorId,
                 tick,
-                new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests),
+                input,
                 ingress ?? Array.Empty<SimulationIngress>(),
-                new FixedAbilityBodyFacts(actorId, body),
+                bodyFacts,
                 m_AbilityState,
-                roleState,
+                m_DomainState,
                 m_Workspace);
 
             FixedGameplayAbilityExecutionAccess access = installation.Access;
@@ -283,7 +287,7 @@ namespace ThirdPersonSimulation.Fixed
             RequireOpen();
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Fixed Ability invocation cannot accept its current candidate.");
-            m_RoleState.AcceptAbility(m_AbilityState);
+            m_AcceptAbility(m_AbilityState);
             m_AbilityState.Dispose();
             m_Accepted = true;
         }

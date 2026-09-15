@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation;
-using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -35,17 +34,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPipelineDefinition definition,
             CharacterAnimationPresentationProfile profile)
         {
-            CharacterSemanticFrontendResult frontend = CharacterSemanticFrontendCompiler.Compile(definition);
-            if (!frontend.IsValid)
+            if (!definition)
+                throw new ArgumentNullException(nameof(definition));
+            if (!profile)
+                throw new ArgumentNullException(nameof(profile));
+            if (definition.AnimationPresentationProfile != profile)
             {
-                throw new InvalidOperationException(
-                    "Character Definition Semantic Frontend is invalid:\n" +
-                    string.Join("\n", frontend.Report.Messages.Select(value => value.ToString())));
-            }
-            if (frontend.CompilationModel.AnimationPresentationProfile != profile)
-            {
-                throw new InvalidOperationException(
-                    "Character Definition Semantic Frontend uses a different AnimationPresentationProfile.");
+                throw new InvalidOperationException("Character Definition uses a different AnimationPresentationProfile.");
             }
 
             var categories = new Dictionary<AnimationClip, HashSet<string>>();

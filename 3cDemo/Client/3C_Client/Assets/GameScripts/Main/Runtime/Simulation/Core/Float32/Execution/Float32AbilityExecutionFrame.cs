@@ -88,7 +88,9 @@ namespace ThirdPersonSimulation
         OperationHandle m_ActionTraceEntryOperation = OperationHandle.Invalid;
 
         public Float32AbilityExecutionFrame(
-            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionData data,
+            GameplayAbilityExecutionLayout layout,
+            Float32GameplayAbilityExecutionServices services,
             ActorId actorId,
             SimulationTick tick,
             Float32AbilityExecutionInput input,
@@ -103,10 +105,9 @@ namespace ThirdPersonSimulation
             IFloat32EquipmentStatePort equipmentState,
             Float32AbilityExecutionWorkspace workspace)
         {
-            installation = installation ?? throw new ArgumentNullException(nameof(installation));
-            Data = installation.Data;
-            Layout = installation.Layout;
-            Services = installation.Services;
+            Data = data ?? throw new ArgumentNullException(nameof(data));
+            Layout = layout ?? throw new ArgumentNullException(nameof(layout));
+            Services = services ?? throw new ArgumentNullException(nameof(services));
             ActorId = actorId;
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));

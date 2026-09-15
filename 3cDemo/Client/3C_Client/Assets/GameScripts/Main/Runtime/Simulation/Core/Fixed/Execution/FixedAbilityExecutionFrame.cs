@@ -89,7 +89,9 @@ namespace ThirdPersonSimulation.Fixed
         OperationHandle m_ActionTraceEntryOperation = OperationHandle.Invalid;
 
         public FixedAbilityExecutionFrame(
-            FixedGameplayAbilityExecutionInstallation installation,
+            FixedGameplayAbilityExecutionData data,
+            GameplayAbilityExecutionLayout layout,
+            FixedGameplayAbilityExecutionServices services,
             ActorId actorId,
             SimulationTick tick,
             FixedAbilityExecutionInput input,
@@ -104,10 +106,9 @@ namespace ThirdPersonSimulation.Fixed
             IFixedEquipmentStatePort equipmentState,
             FixedAbilityExecutionWorkspace workspace)
         {
-            installation = installation ?? throw new ArgumentNullException(nameof(installation));
-            Data = installation.Data;
-            Layout = installation.Layout;
-            Services = installation.Services;
+            Data = data ?? throw new ArgumentNullException(nameof(data));
+            Layout = layout ?? throw new ArgumentNullException(nameof(layout));
+            Services = services ?? throw new ArgumentNullException(nameof(services));
             ActorId = actorId;
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));

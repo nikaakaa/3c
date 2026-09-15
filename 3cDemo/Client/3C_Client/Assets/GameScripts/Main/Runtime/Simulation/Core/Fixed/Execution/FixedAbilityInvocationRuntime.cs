@@ -126,7 +126,9 @@ namespace ThirdPersonSimulation.Fixed
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new FixedAbilityExecutionFrame(
-                installation,
+                installation.Data,
+                installation.Layout,
+                installation.Services,
                 actorId,
                 tick,
                 input,

@@ -125,7 +125,9 @@ namespace ThirdPersonSimulation
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new Float32AbilityExecutionFrame(
-                installation,
+                installation.Data,
+                installation.Layout,
+                installation.Services,
                 actorId,
                 tick,
                 input,

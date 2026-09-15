@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline
 				error = "Pose tuning requires an active Live Actor presentation runtime.";
 				return false;
 			}
-			CharacterPresentationProjection projection = registration.Projection;
+			CharacterPresentationProjection projection = registration.PresentationProjection;
 			if (projection.TuningLayout == null)
 			{
 				error = "Pose tuning payload is unavailable for this Live Actor.";

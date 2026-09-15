@@ -71,7 +71,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             ActorId = actorId;
             m_CharacterRuntime = characterRuntime;
             m_CharacterBinding = characterBinding;
-            Projection = projection ?? throw new ArgumentNullException(nameof(projection));
+            PresentationProjection = projection ?? throw new ArgumentNullException(nameof(projection));
             WorldBodyBinding = worldBodyBinding;
             InitialBody = initialBody;
             m_LocalControlSource = localControlSource;
@@ -117,8 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public WorldBodyState InitialBody { get; }
         public IUnityCharacterControlSourceRuntime LocalControlSource => m_LocalControlSource;
         public ICharacterSimulationGameplayOutputPort GameplayOutput => m_GameplayOutput;
-        public CharacterPresentationProjection Projection { get; }
-        public CharacterPresentationProjection PresentationProjection => Projection;
+        public CharacterPresentationProjection PresentationProjection { get; }
         public ICharacterPresentationRuntime PresentationRuntime => m_PresentationRuntime;
         public ISimulationPresentationOutputPort PresentationOutput => m_PresentationOutput;
         public ISimulationDiagnosticsSink SimulationDiagnostics => m_Diagnostics;

@@ -989,3 +989,8 @@
 
 - 提交 `75ae90703`，Float32／Fixed Ability 执行上下文删除从能力声明重复推导的 `RequiresEquipment`；安装构造阶段仍用局部值校验 Equipment 布局，领域服务工厂直接依据已解析布局创建 Equipment 运行模块。
 - 不改变能力声明、安装校验、Equipment 状态或执行顺序；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 收回GameplayEffect目录引用
+
+- 提交 `3c1077911`，Float32／Fixed Ability Execution Context 删除 Gameplay Effect catalog 的重复保存；安装查询和领域服务工厂统一从 Execution Services 读取唯一目录，Context 只保留自身的 Equipment 布局边界。
+- 不改变能力声明校验、Gameplay Effect 执行或状态格式；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

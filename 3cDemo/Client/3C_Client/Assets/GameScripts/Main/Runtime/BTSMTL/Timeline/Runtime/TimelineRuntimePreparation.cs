@@ -324,6 +324,7 @@ namespace BTSMTL.Timeline.Runtime
                 m_InitialBoundaryPending);
             TimelineRuntimeEvaluationResult evaluation = TimelineRuntimeEvaluator.Evaluate(
                 SourceTimeline,
+                Content,
                 m_CursorFrame,
                 m_Cycle,
                 nextFrame,
@@ -797,6 +798,13 @@ namespace BTSMTL.Timeline.Runtime
             try
             {
                 var errors = new List<string>();
+                TimelineRuntimeEvaluator.ValidateTreeContracts(request.Timeline, discovery.Content, errors);
+                if (errors.Count != 0)
+                    return TimelineRuntimePreparationResult.Failed(
+                        request.RequestId,
+                        request.ExecutionIdentity,
+                        request.NumericTarget,
+                        errors);
                 var dependencyHandles = new List<TimelineRuntimeDependencyHandle>(discovery.Content.Dependencies.Count);
                 for (int index = 0; index < discovery.Content.Dependencies.Count; index++)
                 {
@@ -892,6 +900,8 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeTreeClipRequest(
             string clipAuthoringId,
             string trackAuthoringId,
+            string treeGraphId,
+            string treeGraphRevision,
             TimelineTreeExecutionPhase phase,
             TimelineRuntimeTreeClipEventKind eventKind,
             int frame,
@@ -904,6 +914,12 @@ namespace BTSMTL.Timeline.Runtime
             TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
                 ? throw new ArgumentException("Tree Track identity is required.", nameof(trackAuthoringId))
                 : trackAuthoringId.Trim();
+            TreeGraphId = string.IsNullOrWhiteSpace(treeGraphId)
+                ? throw new ArgumentException("Tree graph identity is required.", nameof(treeGraphId))
+                : treeGraphId.Trim();
+            TreeGraphRevision = string.IsNullOrWhiteSpace(treeGraphRevision)
+                ? throw new ArgumentException("Tree graph revision is required.", nameof(treeGraphRevision))
+                : treeGraphRevision.Trim();
             Phase = phase;
             EventKind = eventKind;
             Frame = frame;
@@ -913,6 +929,8 @@ namespace BTSMTL.Timeline.Runtime
 
         public string ClipAuthoringId { get; }
         public string TrackAuthoringId { get; }
+        public string TreeGraphId { get; }
+        public string TreeGraphRevision { get; }
         public TimelineTreeExecutionPhase Phase { get; }
         public TimelineRuntimeTreeClipEventKind EventKind { get; }
         public int Frame { get; }
@@ -1239,6 +1257,7 @@ namespace BTSMTL.Timeline.Runtime
     {
         public static TimelineRuntimeEvaluationResult Evaluate(
             TimelineData timeline,
+            TimelineContentUnit content,
             int previousFrame,
             int previousCycle,
             int currentFrame,
@@ -1387,9 +1406,17 @@ namespace BTSMTL.Timeline.Runtime
                         boundary.AuthoringId,
                         out TreeClip treeClip))
                     continue;
+                if (!TryGetTreeContract(
+                        content,
+                        treeClip,
+                        out string treeGraphId,
+                        out string treeGraphRevision))
+                    continue;
                 treeClips.Add(new TimelineRuntimeTreeClipRequest(
                     treeClip.AuthoringId,
                     treeClip.Track.AuthoringId,
+                    treeGraphId,
+                    treeGraphRevision,
                     treeClip.ExecutionPhase,
                     boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter
                         ? TimelineRuntimeTreeClipEventKind.Enter
@@ -1441,11 +1468,19 @@ namespace BTSMTL.Timeline.Runtime
                     if (treeTrack.Clips[clipIndex] is not TreeClip treeClip ||
                         currentTime <= treeClip.StartTime || currentTime >= treeClip.EndTime)
                         continue;
+                    if (!TryGetTreeContract(
+                            content,
+                            treeClip,
+                            out string treeGraphId,
+                            out string treeGraphRevision))
+                        continue;
                     float duration = Mathf.Max(0.0001f, treeClip.DurationTime);
                     float local = Mathf.Clamp01((currentTime - treeClip.StartTime) / duration);
                     treeClips.Add(new TimelineRuntimeTreeClipRequest(
                         treeClip.AuthoringId,
                         treeTrack.AuthoringId,
+                        treeGraphId,
+                        treeGraphRevision,
                         treeClip.ExecutionPhase,
                         TimelineRuntimeTreeClipEventKind.Update,
                         currentFrame,
@@ -1501,6 +1536,53 @@ namespace BTSMTL.Timeline.Runtime
                 traces);
         }
 
+        internal static void ValidateTreeContracts(
+            TimelineData timeline,
+            TimelineContentUnit content,
+            List<string> errors)
+        {
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                if (timeline.Tracks[trackIndex] is not TreeTrack treeTrack)
+                    continue;
+                for (int clipIndex = 0; clipIndex < treeTrack.Clips.Count; clipIndex++)
+                {
+                    if (treeTrack.Clips[clipIndex] is not TreeClip treeClip)
+                        continue;
+                    if (!TimelineRuntimeEvaluator.TryGetTreeContract(
+                            content,
+                            treeClip,
+                            out string treeGraphId,
+                            out string treeGraphRevision))
+                        errors.Add(
+                            $"timeline_tree_contract_missing:{treeClip.AuthoringId}");
+                }
+            }
+        }
+
+        internal static bool TryGetTreeContract(
+            TimelineContentUnit content,
+            TreeClip treeClip,
+            out string treeGraphId,
+            out string treeGraphRevision)
+        {
+            treeGraphId = string.Empty;
+            treeGraphRevision = string.Empty;
+            if (content == null || treeClip?.ResolvedTree == null)
+                return false;
+            string identity = $"tree:{treeClip.ResolvedTree.GraphAuthoringId}";
+            for (int index = 0; index < content.Dependencies.Count; index++)
+            {
+                TimelineContentDependency dependency = content.Dependencies[index];
+                if (dependency.Kind != "timeline.tree" ||
+                    !string.Equals(dependency.Identity, identity, StringComparison.Ordinal))
+                    continue;
+                treeGraphId = identity;
+                treeGraphRevision = dependency.ContentHash;
+                return true;
+            }
+            return false;
+        }
         static bool TryResolveTreeClip(
             TimelineData timeline,
             string authoringId,

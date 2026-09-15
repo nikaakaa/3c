@@ -159,11 +159,7 @@ namespace ThirdPersonSimulation.Fixed
                     continue;
                 if (actor.EquipmentRuntimeBinding == null)
                     throw new InvalidOperationException($"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
-                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
-                    actor.EquipmentRuntimeBinding,
-                    installation.Data.CatalogEntries,
-                    installation.Data.References,
-                    installation.Data.Producers);
+                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.CompileRoleStateLayout(actor.EquipmentRuntimeBinding);
                 equipmentState = EquipmentStateAggregate.CreateInitial(layout);
                 break;
             }

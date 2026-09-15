@@ -59,6 +59,32 @@ namespace ThirdPersonSimulation
         {
             if (binding == null || catalog == null || references == null || producers == null)
                 throw new ArgumentNullException();
+            return Compile(binding, catalog, references, producers, true);
+        }
+
+        public static EquipmentProgramLayout CompileRoleStateLayout(
+            CharacterEquipmentRuntimeBinding binding)
+        {
+            if (binding == null)
+                throw new ArgumentNullException(nameof(binding));
+            return Compile(
+                binding,
+                Array.Empty<ProgramCatalogEntry>(),
+                Array.Empty<ProgramReference>(),
+                Array.Empty<ProgramProducer>(),
+                false);
+        }
+
+        static EquipmentProgramLayout Compile(
+            CharacterEquipmentRuntimeBinding binding,
+            IReadOnlyList<ProgramCatalogEntry> catalog,
+            IReadOnlyList<ProgramReference> references,
+            IReadOnlyList<ProgramProducer> producers,
+            bool validateProducerBindings)
+        {
+            if (binding == null || catalog == null || references == null ||
+                validateProducerBindings && producers == null)
+                throw new ArgumentNullException();
             var reader = new CanonicalReader(binding.CatalogBytes);
             if (reader.ReadInt32() != CharacterEquipmentRuntimeBinding.CatalogFormatVersion)
                 throw new InvalidDataException("Character Equipment runtime catalog format is unsupported.");
@@ -139,7 +165,8 @@ namespace ThirdPersonSimulation
             reader.RequireComplete();
             IReadOnlyList<EquipmentProgramOperationBinding> operationBindings = CompileOperationBindings(catalog, references);
             var layout = new EquipmentProgramLayout(true, slots, features, items, routes, routeImplementations, parametersByValue, localStates, operationBindings);
-            layout.ValidateProducerBindings(producers);
+            if (validateProducerBindings)
+                layout.ValidateProducerBindings(producers);
             return layout;
         }
 

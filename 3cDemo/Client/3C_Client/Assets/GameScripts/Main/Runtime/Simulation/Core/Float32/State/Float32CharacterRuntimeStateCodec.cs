@@ -68,10 +68,9 @@ namespace ThirdPersonSimulation
                     abilityExecutionState,
                     motionWarpStates));
             }
-            Float32GameplayAbilityExecutionInstallation equipmentInstallation = FindInstallationWithCapability(installations, "Equipment");
-            EquipmentProgramLayout equipmentLayout = equipmentInstallation == null || equipmentBinding == null
+            EquipmentProgramLayout equipmentLayout = !HasEquipmentCapability(installations) || equipmentBinding == null
                 ? null
-                : CreateEquipmentLayout(equipmentInstallation, equipmentBinding);
+                : EquipmentProgramLayoutCompiler.CompileRoleStateLayout(equipmentBinding);
             List<SimulationActionActivationRequestState> actionActivationRequests = ReadActionActivationRequests(reader, installations, equipmentLayout);
             List<Float32ActionInstanceState> actionInstances = ReadActionInstances(reader, installations, equipmentLayout);
             Dictionary<string, SimulationInputRequestState> inputRequests = ReadInputRequests(reader, installations);
@@ -713,32 +712,16 @@ namespace ThirdPersonSimulation
             return context;
         }
 
-        static EquipmentProgramLayout CreateEquipmentLayout(
-            Float32GameplayAbilityExecutionInstallation installation,
-            CharacterEquipmentRuntimeBinding binding)
-        {
-            if (binding == null)
-                throw new InvalidDataException("Float32 Character runtime state requires an Equipment binding.");
-            if (installation == null)
-                throw new InvalidDataException("Float32 Character runtime state Equipment layout has no Ability installation.");
-            return EquipmentProgramLayoutCompiler.Compile(
-                binding,
-                installation.Data.CatalogEntries,
-                installation.Data.References,
-                installation.Data.Producers);
-        }
-
-        static Float32GameplayAbilityExecutionInstallation FindInstallationWithCapability(
-            Float32GameplayAbilityExecutionInstallationSet installations,
-            string capability)
+        static bool HasEquipmentCapability(
+            Float32GameplayAbilityExecutionInstallationSet installations)
         {
             for (int i = 0; i < installations.Installations.Count; i++)
             {
                 Float32GameplayAbilityExecutionInstallation installation = installations.Installations[i];
-                if (installation.Data.Capabilities.HasGameplayCapability(capability))
-                    return installation;
+                if (installation.Data.Capabilities.HasGameplayCapability("Equipment"))
+                    return true;
             }
-            return null;
+            return false;
         }
 
         static void RequireSkillExecution(

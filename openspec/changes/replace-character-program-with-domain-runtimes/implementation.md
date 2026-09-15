@@ -364,3 +364,9 @@
 - 提交 `319fa44f0`，从 Float32／Fixed `AbilityDomainStatePort` 移除 `GetInputRequest`／`SetInputRequest`，新增角色共享的 `InputRequestStatePort`；Ability 执行帧、Input 操作、角色输入聚合和 Control 读取各自只依赖输入请求端口。
 - 输入请求数据仍由同一个角色状态事务保存、保存点恢复和最终提交，角色状态 codec 不变；本步拆的是职责入口，不复制状态、不增加兼容实现，后续可在不改 Ability 执行器的前提下把输入状态聚合真正移出角色大事务。
 - Float32／Fixed portable 编译均为 0 warning、0 error，并已清理 .NET Host；未运行 Unity、测试或资产生成。本步推进 D22 的 Ability 端口边界，但不将 1.11 标记为完成。
+
+## 2026-09-15 Ability动作状态端口独立化
+
+- 提交 `2397d7ac6`，从 Float32／Fixed `AbilityDomainStatePort` 移除 Action 实例、激活请求和 Action 事件序号，新增 `ActionRuntimeStatePort`；Ability ActionStore、Action 生命周期读取和角色 Control 活跃判断改用专用端口。
+- Action 数据仍由同一个角色状态事务保存、保存点恢复和最终提交，角色状态 codec 不变；本步只拆职责入口，保持一个提交／回滚路径，不创建第二份 Action 状态或兼容接口。
+- Float32／Fixed portable 编译均为 0 warning、0 error，并已清理 .NET Host；未运行 Unity、测试或资产生成。本步推进 D22 的 Control／Action 边界，但不将 1.11 标记为完成。

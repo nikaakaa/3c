@@ -155,13 +155,6 @@
       "assetPath": "Assets/Configs/Character/Corin/Pipeline/Graphs/SharedTimelines/CorinAttack1Timeline.asset",
       "owner": "SharedTimeline",
       "sourceIds": ["dump:corin:animations.all.v2", "dump:corin:config.typetree.v2"]
-    },
-    {
-      "identity": "asset:corin.fixed-program",
-      "assetGuid": "91063668fd0eaa84d9b7d688aadbc90a",
-      "assetPath": "Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset",
-      "owner": "FixedProgramProduct",
-      "sourceIds": ["asset:corin.definition"]
     }
   ],
   "gates": {

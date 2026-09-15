@@ -802,3 +802,9 @@
 - 提交 `dd5b69bc4`，将 Float32／Fixed 技能局部状态、输入请求、动作、句柄、事件、Gameplay Effect 与 Equipment 的 typed 端口移到 Ability 执行域；Control 状态绑定端口单独归入角色 Control 执行域。
 - 角色状态事务现在只实现这些调用方合同，不再同时定义技能执行合同；删除角色状态对象中没有调用方的 `RequireAbility` 出口。多技能聚合、角色事务提交、保存点恢复和状态编码行为不变。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 初始角色状态只接收Ability身份
+
+- 提交 `e21b48be1`，Float32／Fixed `CharacterRuntimeState.CreateInitial` 从完整 Ability 安装集合收窄为只接收 `GameplayAbilityExecutionIdentity` 列表；角色运行端口在装配边界提取身份后再创建状态分区。
+- 状态实现不再依赖安装对象类型，初始 Ability 分区排序、身份校验、后续事务提交和恢复链路保持不变；未引入第二份安装数据或兼容入口。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

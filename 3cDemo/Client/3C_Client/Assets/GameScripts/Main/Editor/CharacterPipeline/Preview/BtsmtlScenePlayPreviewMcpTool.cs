@@ -188,12 +188,9 @@ namespace ThirdPersonCharacter.Editor.CharacterPipeline.Preview
             }
 
             SimulationSessionHost session = descriptor.SessionHost;
-            SimulationProgramEpoch epoch = session.ProgramEpoch;
             return new
             {
                 available = true,
-                runtime_epoch = epoch.Value,
-                content_revision = epoch.SourceRevision.Value,
                 execution_branch_id = session.ExecutionBranchId.ToString("N"),
                 parent_execution_branch_id = session.ParentExecutionBranchId.ToString("N"),
                 execution_branch_base_tick = session.ExecutionBranchBaseTick,

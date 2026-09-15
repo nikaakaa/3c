@@ -46,7 +46,6 @@ namespace ThirdPersonSimulation
             Float32EquipmentRuntime equipment,
             Float32BlackboardRuntime blackboard,
             Float32MotionAccumulator motion,
-            Float32LocomotionRuntime locomotion,
             Float32AbilityControlRuntime control,
             Float32AbilityDomainRuntime domain)
         {
@@ -56,7 +55,6 @@ namespace ThirdPersonSimulation
             Equipment = equipment;
             Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             Motion = motion ?? throw new ArgumentNullException(nameof(motion));
-            Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
             Control = control ?? throw new ArgumentNullException(nameof(control));
             Domain = domain ?? throw new ArgumentNullException(nameof(domain));
         }
@@ -67,7 +65,6 @@ namespace ThirdPersonSimulation
         public Float32EquipmentRuntime Equipment { get; }
         public Float32BlackboardRuntime Blackboard { get; }
         public Float32MotionAccumulator Motion { get; }
-        public Float32LocomotionRuntime Locomotion { get; }
         public Float32AbilityControlRuntime Control { get; }
         public Float32AbilityDomainRuntime Domain { get; }
     }
@@ -84,7 +81,6 @@ namespace ThirdPersonSimulation
         readonly Float32EquipmentRuntime m_Equipment;
         readonly Float32BlackboardRuntime m_Blackboard;
         readonly Float32MotionAccumulator m_Motion;
-        readonly Float32LocomotionRuntime m_Locomotion;
         readonly Float32AbilityControlRuntime m_Control;
         readonly Float32AbilityDomainRuntime m_Domain;
         bool m_Begun;
@@ -150,22 +146,15 @@ namespace ThirdPersonSimulation
             m_Equipment = assembly.Equipment;
             m_Blackboard = assembly.Blackboard;
             m_Motion = assembly.Motion;
-            m_Locomotion = assembly.Locomotion;
             m_Control = assembly.Control;
             m_Domain = assembly.Domain;
         }
 
         public Float32GameplayAbilityExecutionInstallation Installation { get; }
-        public Float32AbilityExecutionFrame Frame => m_Frame;
         public Float32AbilityExecutionWorkspace Workspace => m_Workspace;
-        public Float32InputRuntime Input => m_Input;
         public Float32ActionRuntime Actions => m_Actions;
         public Float32GameplayEffectOperationRuntime GameplayEffects => m_GameplayEffects;
         public Float32EquipmentRuntime Equipment => m_Equipment;
-        public Float32BlackboardRuntime Blackboard => m_Blackboard;
-        public Float32MotionAccumulator Motion => m_Motion;
-        public Float32LocomotionRuntime Locomotion => m_Locomotion;
-        public Float32AbilityControlRuntime Control => m_Control;
 
         public void BeginEvaluation(
             bool diagnosticsEnabled,

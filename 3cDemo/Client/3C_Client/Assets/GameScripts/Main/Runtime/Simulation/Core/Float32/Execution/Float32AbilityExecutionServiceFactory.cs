@@ -124,7 +124,6 @@ namespace ThirdPersonSimulation
                 equipment,
                 blackboard,
                 motion,
-                locomotion,
                 control,
                 domain);
         }

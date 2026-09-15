@@ -47,7 +47,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedEquipmentRuntime equipment,
             FixedBlackboardRuntime blackboard,
             FixedMotionAccumulator motion,
-            FixedLocomotionRuntime locomotion,
             FixedAbilityControlRuntime control,
             FixedAbilityDomainRuntime domain)
         {
@@ -57,7 +56,6 @@ namespace ThirdPersonSimulation.Fixed
             Equipment = equipment;
             Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             Motion = motion ?? throw new ArgumentNullException(nameof(motion));
-            Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
             Control = control ?? throw new ArgumentNullException(nameof(control));
             Domain = domain ?? throw new ArgumentNullException(nameof(domain));
         }
@@ -68,7 +66,6 @@ namespace ThirdPersonSimulation.Fixed
         public FixedEquipmentRuntime Equipment { get; }
         public FixedBlackboardRuntime Blackboard { get; }
         public FixedMotionAccumulator Motion { get; }
-        public FixedLocomotionRuntime Locomotion { get; }
         public FixedAbilityControlRuntime Control { get; }
         public FixedAbilityDomainRuntime Domain { get; }
     }
@@ -85,7 +82,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedEquipmentRuntime m_Equipment;
         readonly FixedBlackboardRuntime m_Blackboard;
         readonly FixedMotionAccumulator m_Motion;
-        readonly FixedLocomotionRuntime m_Locomotion;
         readonly FixedAbilityControlRuntime m_Control;
         readonly FixedAbilityDomainRuntime m_Domain;
         bool m_Begun;
@@ -151,22 +147,15 @@ namespace ThirdPersonSimulation.Fixed
             m_Equipment = assembly.Equipment;
             m_Blackboard = assembly.Blackboard;
             m_Motion = assembly.Motion;
-            m_Locomotion = assembly.Locomotion;
             m_Control = assembly.Control;
             m_Domain = assembly.Domain;
         }
 
         public FixedGameplayAbilityExecutionInstallation Installation { get; }
-        public FixedAbilityExecutionFrame Frame => m_Frame;
         public FixedAbilityExecutionWorkspace Workspace => m_Workspace;
-        public FixedInputRuntime Input => m_Input;
         public FixedActionRuntime Actions => m_Actions;
         public FixedGameplayEffectOperationRuntime GameplayEffects => m_GameplayEffects;
         public FixedEquipmentRuntime Equipment => m_Equipment;
-        public FixedBlackboardRuntime Blackboard => m_Blackboard;
-        public FixedMotionAccumulator Motion => m_Motion;
-        public FixedLocomotionRuntime Locomotion => m_Locomotion;
-        public FixedAbilityControlRuntime Control => m_Control;
 
         public void BeginEvaluation(
             bool diagnosticsEnabled,

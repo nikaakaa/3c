@@ -1099,3 +1099,8 @@
 
 - 提交 `528c859e2`，将只服务 Ability 编译、执行布局、数值后端与网络目标合同的 `CharacterGameplayOperationSet`、`CharacterGameplayValuePortContracts` 统一为 `GameplayAbilityOperationSet`、`GameplayAbilityValuePortContracts`。
 - 保留 operation set 的字符串 ID、版本、操作顺序和 artifact 字节布局；本步只调整类型名与静态引用。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability图调用布局命名
+
+- 提交 `bed3e045d`，将仅由 Gameplay Ability 执行帧消费的 `ProgramGraphInvocationLayout` 源文件、Unity `.meta` 和两个数值目标引用改为 `GameplayAbilityGraphInvocationLayout`，删除旧文件路径。
+- 保留图调用路径、生命周期代次槽、父调用代次槽和操作来源校验逻辑；本步不改变 source map 或执行布局。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

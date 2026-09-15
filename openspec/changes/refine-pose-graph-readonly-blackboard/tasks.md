@@ -32,7 +32,7 @@
 
 DOMAIN-BOUNDARIES-20260914-03执行补充见design第12节：3.8—3.14沿真实Source/Barrier/求值/ValidatePending/Final完成服务、注入需求与结果消费，保留已有原生节点及算法；共享Host由核心4.7/6.4唯一接线。3.15/3.17覆盖实际generation/释放/采用结果；表现Discard不回滚已接受玩法Step，Pose历史不进入玩法快照。仅续接当前未完成部分，不复制checkbox，不把接口存在当完整交付；只通知本实现，不要求回执。
 
-2026-09-14当前接线口径（主方案D19）：除Clip／BlendSpace／Selected Player外，Blend／Layered／Additive等值节点已有算法，Constraint适配和CharacterFinalPoseNativePublication已有真实入口；Source准备也有新增，不能继续把这些全部列为“尚无代码”。但角色Host未接入，ICharacterPoseNativeStateMachineSource本次检索只有声明／引用、未见具体实现，StateMachine handler存在不能视为状态转换行为已接通。接续按3.8—3.14核对每类节点的真实服务、构造注入和下游消费者，完整事项仍未勾选；不增加空服务或通用外壳冒充业务完成。
+2026-09-14当前接线口径（主方案D19）：除Clip／BlendSpace／Selected Player外，Blend／Layered／Additive等值节点已有算法，Constraint适配和CharacterFinalPoseNativePublication已有真实入口；Source准备也有新增，不能继续把这些全部列为“尚无代码”。但角色Host未接入；ICharacterPoseNativeStateMachineSource已有CharacterPoseNativeStateMachineSource具体实现并接入唯一handler工厂，共享Host仍需提供真实装配与最终消费，StateMachine服务存在不能替代Host接线。接续按3.8—3.14核对每类节点的真实服务、构造注入和下游消费者，完整事项仍未勾选；不增加空服务或通用外壳冒充业务完成。
 
 主方案D17已明确删除优先；a31c27b79删除了Pose编译Pass和Timeline发射主链。3.18不再等待共享Host或全部消费者切换后才删旧Image专属代码，混合文件保留有效算法和作者定义。共享Host／Barrier外壳由核心tasks 4.7接入，本任务提供真实服务和结果，不复制公共装配。
 

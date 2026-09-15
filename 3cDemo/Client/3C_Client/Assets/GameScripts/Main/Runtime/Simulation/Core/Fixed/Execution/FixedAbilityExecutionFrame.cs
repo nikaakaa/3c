@@ -108,7 +108,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedEquipmentStatePort equipmentState,
             FixedAbilityExecutionWorkspace workspace)
         {
-            Installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            installation = installation ?? throw new ArgumentNullException(nameof(installation));
             Data = installation.Data;
             Layout = installation.Layout;
             Services = installation.Services;
@@ -135,7 +135,6 @@ namespace ThirdPersonSimulation.Fixed
             Trace = new FixedTraceSink(this, new FixedDiagnosticSequence(this));
         }
 
-        public FixedGameplayAbilityExecutionInstallation Installation { get; }
         public FixedGameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         internal FixedGameplayAbilityExecutionServices Services { get; }

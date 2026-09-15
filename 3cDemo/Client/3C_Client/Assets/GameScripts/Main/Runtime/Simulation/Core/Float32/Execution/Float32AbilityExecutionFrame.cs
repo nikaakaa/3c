@@ -107,7 +107,7 @@ namespace ThirdPersonSimulation
             IFloat32EquipmentStatePort equipmentState,
             Float32AbilityExecutionWorkspace workspace)
         {
-            Installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            installation = installation ?? throw new ArgumentNullException(nameof(installation));
             Data = installation.Data;
             Layout = installation.Layout;
             Services = installation.Services;
@@ -134,7 +134,6 @@ namespace ThirdPersonSimulation
             Trace = new Float32TraceSink(this, new Float32DiagnosticSequence(this));
         }
 
-        public Float32GameplayAbilityExecutionInstallation Installation { get; }
         public Float32GameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         internal Float32GameplayAbilityExecutionServices Services { get; }

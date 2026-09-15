@@ -594,3 +594,9 @@
 - Control motion 的位移、转向、SourceCurve、Movement playback clock 和 locomotion timeline 解析只保留一份实现；有 Ability 时仍在原有技能运动仲裁入口汇合，无 Ability 时由角色 Control 自己解析，角色控制不再因技能集合为空而停止。
 - Control trace 使用角色内容身份和角色诊断边界写入结果，Ability 的局部动作协调仍由各自 Action runtime 提供；没有新增假 Ability、兼容入口或第二套技能执行器。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Float32／Fixed 生成工程仍分别复现既有 28／24 个源索引缺失错误，未发现本步改动文件新增错误，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除Ability到Control的残留绑定
+
+- 提交 `415afc3ba`，删除 Ability execution service factory 和技能 Locomotion runtime 中已失效的 `CharacterControlRuntimeBinding`、`SubmitControl` 入口；Ability 只保留技能图自己的 Locomotion 执行。
+- Control 的 SourceCurve 解析、角色输入读取和角色运动贡献全部由角色 Control motion runtime 拥有；没有保留“参数还在但职责已搬走”的兼容字段或隐式路径。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；本步未重新运行 Unity 生成工程，前一轮已复现 Float32／Fixed 既有 28／24 个源索引缺失错误，未运行测试或资产生成。

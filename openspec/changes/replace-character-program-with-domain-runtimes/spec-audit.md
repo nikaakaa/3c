@@ -25,6 +25,14 @@
 
 这些是静态消费者证据，本轮未运行复现。新增规范场景补齐无运动技能结果、缺失事实拒绝、共享输入单次消费；不新增测试任务。现行角色／网络状态规范中的恢复和唯一提交职责保留，D20技能独立性保持，D21只组织既有约束与提请协调的文件分工。主规范仍由本change既有delta在实施归并时同步。
 
+## 2026-09-16实现链路核对
+
+本次对客户端 `Runtime` 与 `Editor` 源码做静态检索：没有发现 `CharacterSimulationProgram`、`SimulationProgramReader`、`ProgramReader` 或 `FromProgram` 的现行代码引用。Unity Ability 资产的读取入口已经直接调用 `Float32GameplayAbilityExecutionDataCodec.ReadArtifact` 与 `FixedGameplayAbilityExecutionDataCodec.ReadArtifact`，不再经角色 Program 产物转换或 reader。
+
+当前源码仍有两类名称不能混为一谈：技能独立执行数据内部保留 `Program*` 图格式结构，它描述技能自己的操作、常量、状态与来源映射，不是整角色 Program 入口；`CharacterPresentationProjection` 及其资产读取链仍是表现／Pose 总包，属于任务 0.2、4.7 的未完成迁移，不应被误报为角色 Program reader 已恢复，也不在本次技能边界小步中擅自删除。
+
+本轮实现继续将安装对象留在组合边界，并把执行帧、Control、Ability Domain 使用的输入收窄为独立数据、布局、绑定和服务；这些代码证据写入 `implementation.md`，不代表表现 Projection、Timeline 直接运行或完整 Host 接线已经完成。
+
 ### 协调记录使用边界
 
 已读取工作协调窗口最近状态，其确认三个实现已在推进；docs/coordination-progress.md顶部仍保留PARALLEL-20260914-DOMAIN-01当时“待分派”的审阅快照。本次提报请协调按当前已授权事实审阅D21，不以旧快照要求用户重复授权。协调记录的更新仍由协调窗口自己维护，本窗口不代写或发送日常回执。

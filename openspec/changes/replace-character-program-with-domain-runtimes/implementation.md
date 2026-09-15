@@ -838,3 +838,9 @@
 - 提交 `573b0bd28`，Float32／Fixed `AbilityDomainRuntime` 删除对完整 Ability 安装对象的持有，只接收 `GameplayAbilityExecutionBinding` 和 `IGameplayAbilityExecutionServices`；领域 Tick 与完成来源路径继续从明确的执行合同读取。
 - 服务工厂仍负责把安装对象拆成绑定和服务后组装领域运行时；没有复制安装数据，也没有为旧调用方保留兼容构造函数。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 控制运行时脱离安装容器
+
+- 提交 `8f416e2d9`，Float32／Fixed `AbilityOperationControlRuntime` 从完整 Ability 安装对象收窄为执行数据和控制服务，只从执行数据读取拓扑与操作数量。
+- 服务工厂继续作为组合边界，把安装对象拆成数据后创建控制运行时；Control 的状态目标、操作执行和停止语义不变，没有新增兼容构造函数。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

@@ -102,7 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     actorId.Value,
                     m_CharacterRuntime.GameplayContentHash.ToString(),
                     m_CharacterBinding.GameplayContentHash.ToString(),
-                    Projection.ProjectionRevision,
+                    PresentationProjection.ProjectionRevision,
                     WorldBodyBinding.BindingId,
                     VisualRootIdentity));
         }

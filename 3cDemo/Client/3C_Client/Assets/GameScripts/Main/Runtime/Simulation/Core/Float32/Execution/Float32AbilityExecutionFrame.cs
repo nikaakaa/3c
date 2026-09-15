@@ -242,13 +242,13 @@ namespace ThirdPersonSimulation
         {
             if (TryResetSkillExecutionState(slotIndex))
                 return;
-            Transaction.Reset(slotIndex);
+            SkillState.Reset(slotIndex);
         }
 
         internal AbilityStateValue ReadState(int slotIndex) =>
             TryGetSkillExecutionState(slotIndex, out AbilityStateValue value)
                 ? value
-                : Transaction.Get(slotIndex);
+                : SkillState.Get(slotIndex);
 
         internal void End()
         {

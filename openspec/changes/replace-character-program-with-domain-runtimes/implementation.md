@@ -1079,3 +1079,8 @@
 
 - 提交 `e32914ebe`，将只包含正式 Control 与 Gameplay Ability 合同的 `CharacterControlProgramContracts`、`GameplayAbilityProgramContracts` 源文件及 Unity `.meta` 改为 `CharacterControlContracts`、`GameplayAbilityContracts`，删除旧 Program 文件路径。
 - 本步只调整路径，保留类型、GUID 和运行时行为；Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git，Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability语义IR文件名
+
+- 提交 `69bd02fe6`，将已统一为 `GameplayAbilitySemanticIr` 的语义 IR 与 Codec 源文件及 Unity `.meta` 从 `CharacterGameplaySemanticIr` 改为 Ability 命名，删除旧角色级文件路径。
+- 本步只调整路径，保留 IR 类型、artifact 版本、字节格式与 GUID；Unity 生成的本地 Core 项目清单同步到新文件名但不纳入 Git，Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

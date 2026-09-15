@@ -701,3 +701,9 @@
 - 提交 `f202b5905`，Float32／Fixed 角色评估只读取 Invocation 的 `HasGameplayEffects` 能力事实，再调用既有 Gameplay Effect 推进入口；不再向角色暴露 `GameplayEffectOperationRuntime` 实现类。
 - Effect 服务仍由 Ability 执行组装内部持有，Ingress、Advance 和共享效果状态顺序不变；本步只收窄角色观察边界。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 收紧Ability动作端口类型
+
+- 提交 `fa4ce1dfc`，Float32／Fixed Invocation 对角色发布的 `Actions` 属性统一为 `I*AbilityActionControlPort`，移除具体 `ActionRuntime` 类型泄漏。
+- 内部动作执行实例、准入规则、状态写入和角色 Control 命令路径保持不变；本步只修正上一小步遗漏的实现类型出口。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

@@ -332,6 +332,7 @@ namespace BTSMTL.Timeline.Runtime
                 boundaries,
                 ExecutionIdentity,
                 Generation,
+                request.LogicTick,
                 m_InitialBoundaryPending);
             bool completes = !loop && nextFrame >= maxFrame;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
@@ -1055,6 +1056,61 @@ namespace BTSMTL.Timeline.Runtime
         public MotionWarpLimitPolicy LimitPolicy { get; }
     }
 
+    public readonly struct TimelineRuntimeTraceOutput
+    {
+        public TimelineRuntimeTraceOutput(
+            string timelineAuthoringId,
+            string trackAuthoringId,
+            string clipAuthoringId,
+            string code,
+            TimelineTraceSeverity severity,
+            string detail,
+            TimelineExecutionIdentity executionIdentity,
+            ulong generation,
+            ulong logicTick,
+            int frame,
+            int cycle)
+        {
+            TimelineAuthoringId = string.IsNullOrWhiteSpace(timelineAuthoringId)
+                ? throw new ArgumentException("Timeline identity is required.", nameof(timelineAuthoringId))
+                : timelineAuthoringId.Trim();
+            TrackAuthoringId = trackAuthoringId?.Trim() ?? string.Empty;
+            ClipAuthoringId = clipAuthoringId?.Trim() ?? string.Empty;
+            Code = string.IsNullOrWhiteSpace(code)
+                ? throw new ArgumentException("Timeline trace code is required.", nameof(code))
+                : code.Trim();
+            if (!executionIdentity.IsValid)
+                throw new ArgumentException("Timeline trace execution identity is required.", nameof(executionIdentity));
+            if (generation == 0)
+                throw new ArgumentOutOfRangeException(nameof(generation));
+            if (logicTick == 0)
+                throw new ArgumentOutOfRangeException(nameof(logicTick));
+            if (frame < 0)
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            if (cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(cycle));
+            Severity = severity;
+            Detail = detail ?? string.Empty;
+            ExecutionIdentity = executionIdentity;
+            Generation = generation;
+            LogicTick = logicTick;
+            Frame = frame;
+            Cycle = cycle;
+        }
+
+        public string TimelineAuthoringId { get; }
+        public string TrackAuthoringId { get; }
+        public string ClipAuthoringId { get; }
+        public string Code { get; }
+        public TimelineTraceSeverity Severity { get; }
+        public string Detail { get; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public ulong Generation { get; }
+        public ulong LogicTick { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+    }
+
     public sealed class TimelineRuntimeEvaluationResult
     {
         internal TimelineRuntimeEvaluationResult(
@@ -1068,7 +1124,8 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
             IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation,
             IReadOnlyList<TimelineRuntimeMotionWarpRequest> motionWarps,
-            IReadOnlyList<TimelineRuntimeClipSample> clipSamples)
+            IReadOnlyList<TimelineRuntimeClipSample> clipSamples,
+            IReadOnlyList<TimelineRuntimeTraceOutput> traces)
         {
             AnimationContributions = Copy(animations);
             MotionContributions = Copy(motions);
@@ -1081,6 +1138,7 @@ namespace BTSMTL.Timeline.Runtime
             ScenePresentation = Copy(scenePresentation);
             MotionWarps = Copy(motionWarps);
             ClipSamples = Copy(clipSamples);
+            Traces = Copy(traces);
         }
 
         public IReadOnlyList<TimelineAnimationContribution> AnimationContributions { get; }
@@ -1094,6 +1152,7 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
         public IReadOnlyList<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
         public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
+        public IReadOnlyList<TimelineRuntimeTraceOutput> Traces { get; }
 
         static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
         {
@@ -1188,6 +1247,7 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineRuntimeClipBoundary> boundaries,
             TimelineExecutionIdentity executionIdentity,
             ulong generation,
+            ulong logicTick,
             bool includeStartBoundary)
         {
             if (timeline == null)
@@ -1204,6 +1264,7 @@ namespace BTSMTL.Timeline.Runtime
             var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
             var motionWarps = new List<TimelineRuntimeMotionWarpRequest>();
             var clipSamples = new List<TimelineRuntimeClipSample>();
+            var traces = new List<TimelineRuntimeTraceOutput>();
             List<TimelineRuntimeEvaluationSegment> segments = BuildSegments(
                 previousFrame,
                 previousCycle,
@@ -1307,6 +1368,20 @@ namespace BTSMTL.Timeline.Runtime
                     boundary.Frame,
                     boundary.Cycle,
                     boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter ? 0f : 1f));
+                traces.Add(new TimelineRuntimeTraceOutput(
+                    timeline.AuthoringId,
+                    boundary.TrackAuthoringId,
+                    boundary.AuthoringId,
+                    boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter
+                        ? "timeline.clip.enter"
+                        : "timeline.clip.exit",
+                    TimelineTraceSeverity.Detail,
+                    $"Clip boundary {boundary.Kind}.",
+                    executionIdentity,
+                    generation,
+                    logicTick,
+                    boundary.Frame,
+                    boundary.Cycle));
                 if (!TryResolveTreeClip(
                         timeline,
                         boundary.AuthoringId,
@@ -1376,6 +1451,18 @@ namespace BTSMTL.Timeline.Runtime
                         currentFrame,
                         currentCycle,
                         local));
+                    traces.Add(new TimelineRuntimeTraceOutput(
+                        timeline.AuthoringId,
+                        treeTrack.AuthoringId,
+                        treeClip.AuthoringId,
+                        "timeline.treeclip.update",
+                        TimelineTraceSeverity.Detail,
+                        "TreeClip update candidate.",
+                        executionIdentity,
+                        generation,
+                        logicTick,
+                        currentFrame,
+                        currentCycle));
                 }
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
@@ -1410,7 +1497,8 @@ namespace BTSMTL.Timeline.Runtime
                 treeClips,
                 scenePresentation,
                 motionWarps,
-                clipSamples);
+                clipSamples,
+                traces);
         }
 
         static bool TryResolveTreeClip(

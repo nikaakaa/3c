@@ -907,3 +907,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 入口把 `Prepare`、`Create/Replace`、`BeginFrame`、Source demand、Barrier 后 `Evaluate`、`ValidatePending`、Final `Commit`、`Discard`、`Reset`、`Stop`、`Observe` 与 `Dispose` 收成一条明确调用面；创建失败或替换失败会释放未采用的图与 Final 服务，不发布假采用结果。
 - 本步提交为 `a1a2d8587`、`533896f40`，只包含普通 C# 与 `.meta`，没有提交 LFS；未运行 Unity、Build、Play、图生成或验证。
 - 该步解决了“没有正式角色入口”的类型与生命周期缺口；角色表现 Host 尚需把自身的 Profile、Rig、EventGraph 输入合同、真实 handler factory 和 Final 服务装配到该入口，下一步不能停留在只调用接口声明。
+- 入口补充暴露当前 Frame Lineage、Frame Input、OpenFrame 和最近已提交 Output，保证上层观察、Barrier 与采用结果继续使用同一实例/完成身份；提交为 `a11d4332d`。

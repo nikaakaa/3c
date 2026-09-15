@@ -83,7 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawBlackboard(view);
             DrawMotion(view);
             DrawCamera(view);
-            DrawPresentation(definition, view);
+            DrawPresentation(view);
         }
 
         static void DrawFootPlacementConfiguration(CharacterPipelineHost host)
@@ -305,7 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             });
         }
 
-        static void DrawPresentation(CharacterPipelineDefinition definition, RuntimeDebugViewModel view)
+        static void DrawPresentation(RuntimeDebugViewModel view)
         {
             IReadOnlyList<RuntimeDebugEventView> source = view.GetCurrentEvents(RuntimeTraceChannel.Animation);
             var events = new List<RuntimeDebugEventView>();

@@ -114,7 +114,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string playerBuildOptionsIdentity,
             ScriptingImplementation scriptingBackend,
             string launchScriptRelativePath,
-            string programIdentity,
+            string contentIdentity,
             string pipelineIdentity,
             string networkModelIdentity,
             string runtimeTopologyIdentity,
@@ -139,7 +139,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             PlayerBuildOptionsIdentity = Require(playerBuildOptionsIdentity, nameof(playerBuildOptionsIdentity));
             ScriptingBackend = scriptingBackend;
             LaunchScriptRelativePath = NormalizeRelative(launchScriptRelativePath, nameof(launchScriptRelativePath));
-            ProgramIdentity = Require(programIdentity, nameof(programIdentity));
+            ContentIdentity = Require(contentIdentity, nameof(contentIdentity));
             PipelineIdentity = Require(pipelineIdentity, nameof(pipelineIdentity));
             NetworkModelIdentity = Require(networkModelIdentity, nameof(networkModelIdentity));
             RuntimeTopologyIdentity = Require(runtimeTopologyIdentity, nameof(runtimeTopologyIdentity));
@@ -162,7 +162,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public string PlayerBuildOptionsIdentity { get; }
         public ScriptingImplementation ScriptingBackend { get; }
         public string LaunchScriptRelativePath { get; }
-        public string ProgramIdentity { get; }
+        public string ContentIdentity { get; }
         public string PipelineIdentity { get; }
         public string NetworkModelIdentity { get; }
         public string RuntimeTopologyIdentity { get; }
@@ -454,7 +454,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     internal static class NetworkTestProductBuildWorkflow
     {
-        const int ManifestSchemaVersion = 3;
+        const int ManifestSchemaVersion = 4;
 
         public static void Build(NetworkTestProductBuildRequest request)
         {
@@ -633,7 +633,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 sourceTreeHash = context.Candidate.SourceTreeHash,
                 builtAtUtc = builtAtUtc,
                 productId = descriptor.ProductId,
-                programIdentity = descriptor.ProgramIdentity,
+                contentIdentity = descriptor.ContentIdentity,
                 pipelineIdentity = descriptor.PipelineIdentity,
                 networkModelIdentity = descriptor.NetworkModelIdentity,
                 runtimeTopologyIdentity = descriptor.RuntimeTopologyIdentity,
@@ -681,8 +681,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (requireCandidateDirectory &&
                 !string.Equals(Path.GetFileName(context.ProductRoot), manifest.candidateId, StringComparison.Ordinal))
                 identityMismatches.Add("candidateDirectory");
-            if (!string.Equals(manifest.programIdentity, descriptor.ProgramIdentity, StringComparison.Ordinal))
-                identityMismatches.Add("programIdentity");
+            if (!string.Equals(manifest.contentIdentity, descriptor.ContentIdentity, StringComparison.Ordinal))
+                identityMismatches.Add("contentIdentity");
             if (!string.Equals(manifest.pipelineIdentity, descriptor.PipelineIdentity, StringComparison.Ordinal))
                 identityMismatches.Add("pipelineIdentity");
             if (!string.Equals(manifest.networkModelIdentity, descriptor.NetworkModelIdentity, StringComparison.Ordinal))

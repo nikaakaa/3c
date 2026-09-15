@@ -12,7 +12,7 @@ namespace ThirdPerson.NetworkTest.Contracts
         public string sourceTreeHash = string.Empty;
         public string builtAtUtc = string.Empty;
         public string productId = string.Empty;
-        public string programIdentity = string.Empty;
+        public string contentIdentity = string.Empty;
         public string pipelineIdentity = string.Empty;
         public string networkModelIdentity = string.Empty;
         public string runtimeTopologyIdentity = string.Empty;

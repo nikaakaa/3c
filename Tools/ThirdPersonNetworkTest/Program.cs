@@ -9,7 +9,7 @@ namespace ThirdPerson.NetworkTest.Orchestrator;
 
 static class Program
 {
-    const int CandidateSchema = 3;
+    const int CandidateSchema = 4;
     const int SlotSchema = 1;
     const int RunSchema = 1;
     static readonly JsonSerializerOptions JsonOptions = new()
@@ -189,7 +189,7 @@ static class Program
             candidate.sourceCommit,
             candidate.sourceTreeHash,
             candidate.builtAtUtc,
-            candidate.programIdentity,
+            candidate.contentIdentity,
             candidate.pipelineIdentity,
             tools = candidate.toolBundles.Select(value => $"{value.toolId}/{value.toolVersion}").ToArray(),
             slots = candidate.sessionPlan.supportedSlotIds
@@ -246,6 +246,7 @@ static class Program
             string.IsNullOrWhiteSpace(candidate.candidateId) ||
             string.IsNullOrWhiteSpace(candidate.candidateLabel) ||
             string.IsNullOrWhiteSpace(candidate.productId) ||
+            string.IsNullOrWhiteSpace(candidate.contentIdentity) ||
             !string.Equals(new DirectoryInfo(candidateRoot).Name, candidate.candidateId, StringComparison.Ordinal) ||
             !IsLowerHex(candidate.sourceCommit, 40) ||
             !IsLowerHex(candidate.sourceTreeHash, 40) ||

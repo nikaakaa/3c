@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             NetworkTestCandidateCatalogEntry candidate = product.Candidates[candidateIndex];
             NetworkTestProductBuildManifest manifest = candidate.Manifest;
             EditorGUILayout.LabelField("Source Commit", manifest.sourceCommit);
-            EditorGUILayout.LabelField("Program / Pipeline", $"{manifest.programIdentity}\n{manifest.pipelineIdentity}");
+            EditorGUILayout.LabelField("Content / Pipeline", $"{manifest.contentIdentity}\n{manifest.pipelineIdentity}");
             EditorGUILayout.LabelField(
                 "Tools",
                 string.Join(", ", manifest.toolBundles.Select(value => $"{value.toolId}/{value.toolVersion}")));

@@ -969,3 +969,8 @@
 
 - 提交 `481b6766d`，Float32 Character Registration 删除没有消费者的 `CharacterRuntime`、`DiagnosticsTarget` 和 `IsActivated` 公开转发；注册对象内部继续持有并使用正式 Runtime、诊断目标和激活状态。
 - 不改变注册接口要求、诊断注册生命周期、激活流程、输出路由或表现运行时；静态检索确认这些公开属性没有调用方。Unity 生成工程仍受既有 `ThirdPersonSimulation.Unity.csproj` 依赖缺失阻断，未修改或提交生成配置，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除回滚注册旧Runtime出口
+
+- 提交 `f3db71d11`，Deterministic Rollback Character Registration 删除没有消费者的 `CharacterRuntime` 公开转发；内部 Runtime 继续用于角色归属校验、诊断身份和输出路由，正式注册接口只发布 `CharacterBinding` 等所需合同。
+- 不改变 Rollback 输入、网络诊断、表现提交或注册生命周期；静态检索确认删除项没有其它调用方。该 Unity 文件未运行 Unity、测试或资产生成。

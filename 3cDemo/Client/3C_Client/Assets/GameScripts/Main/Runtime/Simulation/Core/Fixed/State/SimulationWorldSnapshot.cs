@@ -175,9 +175,9 @@ namespace ThirdPersonSimulation.Fixed
                     FixedCharacterRuntimeStateCodec.ComputeHash(actor.State),
                     FixedCharacterRuntimeStateCodec.CodecIdentity,
                     stateBytes);
-                for (int abilityIndex = 0; abilityIndex < binding.AbilityData.Data.Count; abilityIndex++)
+                for (int abilityIndex = 0; abilityIndex < binding.AbilityInstallations.Installations.Count; abilityIndex++)
                 {
-                    FixedGameplayAbilityExecutionData ability = binding.AbilityData.Data[abilityIndex];
+                    FixedGameplayAbilityExecutionData ability = binding.AbilityInstallations.Installations[abilityIndex].Data;
                     abilitiesDeterministic &= ability.NumericProfile.DeterministicReplay && ability.Capabilities.HasGameplayCapability("DeterministicReplay");
                 }
             }

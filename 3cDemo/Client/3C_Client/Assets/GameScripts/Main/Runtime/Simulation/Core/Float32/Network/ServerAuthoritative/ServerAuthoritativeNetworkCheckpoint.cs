@@ -26,9 +26,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 SimulationActorBinding actor = characterRuntime.Roster[i];
                 writer.WriteString(actor.ActorId.Value);
                 writer.WriteString(actor.GameplayContentHash.ToString());
-                for (int abilityIndex = 0; abilityIndex < actor.AbilityData.Data.Count; abilityIndex++)
+                for (int abilityIndex = 0; abilityIndex < actor.AbilityInstallations.Installations.Count; abilityIndex++)
                 {
-                    Float32GameplayAbilityExecutionData ability = actor.AbilityData.Data[abilityIndex];
+                    Float32GameplayAbilityExecutionData ability = actor.AbilityInstallations.Installations[abilityIndex].Data;
                     writer.WriteString(ability.AbilityId.Value);
                     writer.WriteString(ability.ContentHash.ToString());
                     writer.WriteString(ability.StateSchemaHash.ToString());

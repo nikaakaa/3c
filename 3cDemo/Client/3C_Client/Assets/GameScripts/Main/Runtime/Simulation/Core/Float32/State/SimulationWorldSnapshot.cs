@@ -175,9 +175,9 @@ namespace ThirdPersonSimulation
                     Float32CharacterRuntimeStateCodec.ComputeHash(actor.State),
                     Float32CharacterRuntimeStateCodec.CodecIdentity,
                     stateBytes);
-                for (int abilityIndex = 0; abilityIndex < binding.AbilityData.Data.Count; abilityIndex++)
+                for (int abilityIndex = 0; abilityIndex < binding.AbilityInstallations.Installations.Count; abilityIndex++)
                 {
-                    Float32GameplayAbilityExecutionData ability = binding.AbilityData.Data[abilityIndex];
+                    Float32GameplayAbilityExecutionData ability = binding.AbilityInstallations.Installations[abilityIndex].Data;
                     abilitiesDeterministic &= ability.NumericProfile.DeterministicReplay && ability.Capabilities.HasGameplayCapability("DeterministicReplay");
                 }
             }

@@ -21,19 +21,18 @@ namespace ThirdPersonSimulation.Fixed
             WorldBodyBindingId = SimulationIdentity.Require(worldBodyBindingId, nameof(worldBodyBindingId));
             ControlRuntimeBinding = controlRuntimeBinding ?? throw new ArgumentNullException(nameof(controlRuntimeBinding));
             BodyMotionBinding = bodyMotionBinding ?? throw new ArgumentNullException(nameof(bodyMotionBinding));
-            AbilityData = abilityData ?? throw new ArgumentNullException(nameof(abilityData));
-            for (int i = 0; i < abilityData.Data.Count; i++)
+            AbilityInstallations = new FixedGameplayAbilityExecutionInstallationSet(
+                abilityData ?? throw new ArgumentNullException(nameof(abilityData)),
+                gameplayEffectRuntimeBinding,
+                equipmentRuntimeBinding);
+            for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
             {
-                FixedGameplayAbilityExecutionData data = abilityData.Data[i];
+                FixedGameplayAbilityExecutionData data = AbilityInstallations.Installations[i].Data;
                 if (data.NumericProfile != FixedSimulationNumericProfile.Value)
                     throw new InvalidOperationException($"Ability '{data.AbilityId}' does not target Fixed.");
             }
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
-            AbilityInstallations = new FixedGameplayAbilityExecutionInstallationSet(
-                abilityData,
-                gameplayEffectRuntimeBinding,
-                equipmentRuntimeBinding);
             RequiresGameplayEffects = AbilityInstallations.RequiresGameplayEffects;
             RequiresEquipment = AbilityInstallations.RequiresEquipment;
             GameplayContentHash = ComputeGameplayContentHash(
@@ -41,7 +40,7 @@ namespace ThirdPersonSimulation.Fixed
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
-                abilityData,
+                AbilityInstallations,
                 RequiresGameplayEffects,
                 RequiresEquipment);
         }
@@ -54,7 +53,6 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
         public bool RequiresGameplayEffects { get; }
         public bool RequiresEquipment { get; }
-        public GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> AbilityData { get; }
         public FixedGameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
         public StableHash GameplayContentHash { get; }
 
@@ -63,7 +61,7 @@ namespace ThirdPersonSimulation.Fixed
             CharacterBodyMotionBinding bodyMotion,
             CharacterGameplayEffectRuntimeBinding gameplayEffects,
             CharacterEquipmentRuntimeBinding equipment,
-            GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilities,
+            FixedGameplayAbilityExecutionInstallationSet abilities,
             bool requiresGameplayEffects,
             bool requiresEquipment)
         {
@@ -75,9 +73,9 @@ namespace ThirdPersonSimulation.Fixed
                 requiresGameplayEffects ? gameplayEffects.BindingHash.ToString() : string.Empty,
                 requiresEquipment ? equipment.BindingHash.ToString() : string.Empty
             };
-            for (int i = 0; i < abilities.Data.Count; i++)
+            for (int i = 0; i < abilities.Installations.Count; i++)
             {
-                FixedGameplayAbilityExecutionData data = abilities.Data[i];
+                FixedGameplayAbilityExecutionData data = abilities.Installations[i].Data;
                 parts.Add(data.AbilityId.Value);
                 parts.Add(data.ContentHash.ToString());
                 parts.Add(data.StateSchemaHash.ToString());

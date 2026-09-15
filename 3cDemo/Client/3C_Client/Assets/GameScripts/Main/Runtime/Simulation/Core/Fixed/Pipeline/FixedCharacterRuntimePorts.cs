@@ -53,10 +53,11 @@ namespace ThirdPersonSimulation.Fixed
             var abilities = new Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionData>();
             for (int actorIndex = 0; actorIndex < values.Count; actorIndex++)
             {
-                IReadOnlyList<FixedGameplayAbilityExecutionData> actorAbilities = values[actorIndex].AbilityData.Data;
+                IReadOnlyList<FixedGameplayAbilityExecutionInstallation> actorAbilities =
+                    values[actorIndex].AbilityInstallations.Installations;
                 for (int abilityIndex = 0; abilityIndex < actorAbilities.Count; abilityIndex++)
                 {
-                    FixedGameplayAbilityExecutionData ability = actorAbilities[abilityIndex];
+                    FixedGameplayAbilityExecutionData ability = actorAbilities[abilityIndex].Data;
                     if (abilities.TryGetValue(ability.AbilityId, out FixedGameplayAbilityExecutionData existing))
                     {
                         if (!existing.ContentHash.Equals(ability.ContentHash) ||
@@ -190,7 +191,6 @@ namespace ThirdPersonSimulation.Fixed
         CharacterBodyMotionBinding GetBodyMotionBinding(int actorIndex);
         CharacterGameplayEffectRuntimeBinding GetGameplayEffectRuntimeBinding(int actorIndex);
         CharacterEquipmentRuntimeBinding GetEquipmentRuntimeBinding(int actorIndex);
-        GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> GetAbilityData(int actorIndex);
         FixedGameplayAbilityExecutionInstallationSet GetAbilityInstallations(int actorIndex);
     }
 
@@ -237,9 +237,6 @@ namespace ThirdPersonSimulation.Fixed
 
         public CharacterEquipmentRuntimeBinding GetEquipmentRuntimeBinding(int actorIndex) =>
             Roster[actorIndex].EquipmentRuntimeBinding;
-
-        public GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> GetAbilityData(int actorIndex) =>
-            Roster[actorIndex].AbilityData;
 
         public FixedGameplayAbilityExecutionInstallationSet GetAbilityInstallations(int actorIndex) =>
             Roster[actorIndex].AbilityInstallations;

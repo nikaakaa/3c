@@ -7,8 +7,8 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    [CustomEditor(typeof(ServerAuthoritativeHybridModelDefinition))]
-    public sealed class ServerAuthoritativeHybridModelDefinitionEditor : UnityEditor.Editor
+    [CustomEditor(typeof(ServerAuthoritativeSessionConfigurationDefinition))]
+    public sealed class ServerAuthoritativeSessionConfigurationDefinitionEditor : UnityEditor.Editor
     {
         SerializedProperty m_Endpoint;
         SerializedProperty m_PredictionPipeline;
@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             DrawCorrection();
             DrawReplicationCoverage();
             serializedObject.ApplyModifiedProperties();
-            DrawIdentity(target as ServerAuthoritativeHybridModelDefinition);
+            DrawIdentity(target as ServerAuthoritativeSessionConfigurationDefinition);
         }
 
         void DrawReferences()
@@ -113,10 +113,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField("Replication Coverage", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(m_ReliableGameplayFactKinds, new GUIContent("Reliable Fact Kinds"));
-            EditorGUILayout.PropertyField(m_ReliableProducerIds, new GUIContent("Program Producers"), true);
+            EditorGUILayout.PropertyField(m_ReliableProducerIds, new GUIContent("Reliable Producers"), true);
         }
 
-        static void DrawIdentity(ServerAuthoritativeHybridModelDefinition definition)
+        static void DrawIdentity(ServerAuthoritativeSessionConfigurationDefinition definition)
         {
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Resolved Identity", EditorStyles.boldLabel);
@@ -140,7 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     EditorGUILayout.TextField("Replication Policy", definition.ReplicationPolicy.ConfigurationHash.ToString());
                     EditorGUILayout.IntField("Covered Producers", definition.ReplicationPolicy.ReliableProducerIds.Count);
                 }
-                EditorGUILayout.HelpBox("ProgramHash, Solver identity and final PipelineHash values are resolved from the selected Session Composition during preparation.", MessageType.Info);
+                EditorGUILayout.HelpBox("Character runtime content, solver identity and final pipeline identity are resolved from the selected Session Composition during preparation.", MessageType.Info);
             }
             catch (Exception exception)
             {
@@ -149,6 +149,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         SerializedProperty Find(string name) => serializedObject.FindProperty(name) ??
-            throw new InvalidOperationException($"ServerAuthoritative Model Inspector cannot find serialized field '{name}'.");
+            throw new InvalidOperationException($"ServerAuthoritative Session Configuration Inspector cannot find serialized field '{name}'.");
     }
 }

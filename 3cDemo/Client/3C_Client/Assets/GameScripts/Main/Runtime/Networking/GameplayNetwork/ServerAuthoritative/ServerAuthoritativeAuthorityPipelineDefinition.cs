@@ -11,11 +11,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         SimulationPipelineDefinition,
         IFloat32SimulationPipelineRuntimePackageProvider
     {
-        [SerializeField] ServerAuthoritativeHybridModelDefinition m_Model;
+        [SerializeField] ServerAuthoritativeSessionConfigurationDefinition m_Configuration;
 
-        ServerAuthoritativeHybridModelDefinition Model => m_Model
-            ? m_Model
-            : throw new InvalidOperationException($"Authority Pipeline '{name}' requires its Model Definition.");
+        ServerAuthoritativeSessionConfigurationDefinition Configuration => m_Configuration
+            ? m_Configuration
+            : throw new InvalidOperationException($"Authority Pipeline '{name}' requires its Session Configuration.");
 
         public override SimulationPipelineDescriptor BuildPortableDescriptor()
         {
@@ -25,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         }
 
         internal ServerAuthoritativeAuthorityPipelineCatalogSet BuildPortableCatalog() =>
-            ServerAuthoritativeAuthorityPipelineCatalog.Create(Model.Policy, Model.ReplicationPolicy);
+            ServerAuthoritativeAuthorityPipelineCatalog.Create(Configuration.Policy, Configuration.ReplicationPolicy);
 
         public Float32SimulationPipelineRuntimePackage BuildRuntimePackage() =>
             BuildPortableCatalog().RuntimePackage;
@@ -41,9 +41,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         }
 
 #if UNITY_EDITOR
-        public void SetModel(ServerAuthoritativeHybridModelDefinition model)
+        public void SetConfiguration(ServerAuthoritativeSessionConfigurationDefinition configuration)
         {
-            m_Model = model ? model : throw new ArgumentNullException(nameof(model));
+            m_Configuration = configuration ? configuration : throw new ArgumentNullException(nameof(configuration));
         }
 #endif
     }

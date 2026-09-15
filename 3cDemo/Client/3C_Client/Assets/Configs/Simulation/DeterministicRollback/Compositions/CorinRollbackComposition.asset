@@ -18,7 +18,6 @@ MonoBehaviour:
   m_WorldRevision: corin-gameplay-lab-world-v1
   m_SourceClockId: deterministic-rollback-local-logic
   m_TickRate: 60
-  m_ProgramRuntime: {fileID: 11400000, guid: 348b012d9a33cb4478e576dc57c40737, type: 2}
   m_ExecutionBackend: {fileID: 11400000, guid: fc9f5ad7c1f396142903d5e601167ff0, type: 2}
   m_Pipeline: {fileID: 11400000, guid: f79a3d2184cc3614398a6b9c88e00d46, type: 2}
   m_SessionSource: {fileID: 11400000, guid: 9e60176ba2403f34f95cd366c50db9f1, type: 2}

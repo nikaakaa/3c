@@ -11,12 +11,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         SimulationPipelinePassDefinition,
         IFloat32SimulationPipelinePassRuntimeProvider
     {
-        [SerializeField] ServerAuthoritativeHybridModelDefinition m_Model;
+        [SerializeField] ServerAuthoritativeSessionConfigurationDefinition m_Configuration;
 
-        protected ServerAuthoritativeHybridModelDefinition Model => m_Model
-            ? m_Model
-            : throw new InvalidOperationException($"ServerAuthoritative Pass '{name}' requires its Model Definition.");
-        protected ServerAuthoritativeModelPolicy Policy => Model.Policy;
+        protected ServerAuthoritativeSessionConfigurationDefinition Configuration => m_Configuration
+            ? m_Configuration
+            : throw new InvalidOperationException($"ServerAuthoritative Pass '{name}' requires its Session Configuration.");
+        protected ServerAuthoritativeModelPolicy Policy => Configuration.Policy;
 
         protected sealed override SimulationPipelinePassDescriptor BuildPortableDescriptor(
             SimulationPipelinePassId passId,
@@ -35,9 +35,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             ServerAuthoritativePipelineProductSlots.All;
 
 #if UNITY_EDITOR
-        public void SetModel(ServerAuthoritativeHybridModelDefinition model)
+        public void SetConfiguration(ServerAuthoritativeSessionConfigurationDefinition configuration)
         {
-            m_Model = model ? model : throw new ArgumentNullException(nameof(model));
+            m_Configuration = configuration ? configuration : throw new ArgumentNullException(nameof(configuration));
         }
 #endif
     }

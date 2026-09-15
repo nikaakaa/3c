@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a03000000004d259d15000000000003, type: 3}
   m_Name: CorinAuthoritySessionSource
   m_EditorClassIdentifier: 
-  m_Model: {fileID: 11400000, guid: 8a10000000004d259d15000000000002, type: 2}
+  m_Configuration: {fileID: 11400000, guid: 8a10000000004d259d15000000000002, type: 2}
   m_Launch: {fileID: 11400000, guid: 8a10000000004d259d15000000000003, type: 2}
   m_MaxCatchUpTicksPerPump: 4
   m_MaxClockLagTicks: 120

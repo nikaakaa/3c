@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 144c4189ea8045ada2970d6e21e0bb7d, type: 3}
-  m_Name: CorinServerAuthoritativeHybridModel
+  m_Name: CorinServerAuthoritativeSessionConfiguration
   m_EditorClassIdentifier: 
   m_Endpoint: {fileID: 11400000, guid: 8a10000000004d259d15000000000001, type: 2}
   m_PredictionPipeline: {fileID: 11400000, guid: 8a20000000004d259d15000000000020, type: 2}

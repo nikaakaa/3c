@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_PassId: thirdperson.server-authoritative.prediction.correction-schedule
   m_ImplementationVersion: 3
-  m_Model: {fileID: 11400000, guid: 8a10000000004d259d15000000000002, type: 2}
+  m_Configuration: {fileID: 11400000, guid: 8a10000000004d259d15000000000002, type: 2}

@@ -12,14 +12,14 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public const string ComponentId = "thirdperson.session-source.server-authoritative-authority";
         public const string SemanticVersion = "2";
 
-        [SerializeField] ServerAuthoritativeHybridModelDefinition m_Model;
+        [SerializeField] ServerAuthoritativeSessionConfigurationDefinition m_Configuration;
         [SerializeField] ServerAuthoritativeLaunchDefinition m_Launch;
         [SerializeField, Min(1)] int m_MaxCatchUpTicksPerPump;
         [SerializeField, Min(1)] int m_MaxClockLagTicks;
 
-        public ServerAuthoritativeHybridModelDefinition Model => m_Model
-            ? m_Model
-            : throw new InvalidOperationException($"Authority Source '{name}' requires an explicit Model Definition.");
+        public ServerAuthoritativeSessionConfigurationDefinition Configuration => m_Configuration
+            ? m_Configuration
+            : throw new InvalidOperationException($"Authority Source '{name}' requires an explicit Session Configuration.");
         public ServerAuthoritativeLaunchDefinition Launch => m_Launch
             ? m_Launch
             : throw new InvalidOperationException($"Authority Source '{name}' requires an explicit Launch Definition.");
@@ -31,12 +31,12 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             if (MaxClockLagTicks < MaxCatchUpTicksPerPump)
                 throw new InvalidOperationException($"Authority Source '{name}' clock lag must cover one catch-up pump.");
             return new ServerAuthoritativeAuthoritySourcePolicy(
-                Model.Policy,
-                Model.Endpoint.DatagramQueueCapacity,
-                Model.Endpoint.ReliableQueueCapacity,
-                Model.Endpoint.ReliableQueueCapacity,
-                Model.Endpoint.ConnectTimeoutTicks,
-                Model.Endpoint.ControlHeartbeatTicks,
+                Configuration.Policy,
+                Configuration.Endpoint.DatagramQueueCapacity,
+                Configuration.Endpoint.ReliableQueueCapacity,
+                Configuration.Endpoint.ReliableQueueCapacity,
+                Configuration.Endpoint.ConnectTimeoutTicks,
+                Configuration.Endpoint.ControlHeartbeatTicks,
                 MaxCatchUpTicksPerPump,
                 MaxClockLagTicks);
         }
@@ -46,7 +46,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativeProcessIdentity process = Launch.BuildProcessIdentity();
             if (process.Role != ServerAuthoritativeProcessRole.AuthorityWorker)
                 throw new InvalidOperationException($"Authority Source '{name}' requires an AuthorityWorker launch role.");
-            return Model.BuildAuthoritySourceRequirements();
+            return Configuration.BuildAuthoritySourceRequirements();
         }
 
         protected override ISimulationSessionSourcePreparation CreateModelPreparation(
@@ -60,12 +60,12 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
 
 #if UNITY_EDITOR
         public void SetAuthoring(
-            ServerAuthoritativeHybridModelDefinition model,
+            ServerAuthoritativeSessionConfigurationDefinition configuration,
             ServerAuthoritativeLaunchDefinition launch,
             int maxCatchUpTicksPerPump,
             int maxClockLagTicks)
         {
-            m_Model = model ? model : throw new ArgumentNullException(nameof(model));
+            m_Configuration = configuration ? configuration : throw new ArgumentNullException(nameof(configuration));
             m_Launch = launch ? launch : throw new ArgumentNullException(nameof(launch));
             m_MaxCatchUpTicksPerPump = maxCatchUpTicksPerPump;
             m_MaxClockLagTicks = maxClockLagTicks;

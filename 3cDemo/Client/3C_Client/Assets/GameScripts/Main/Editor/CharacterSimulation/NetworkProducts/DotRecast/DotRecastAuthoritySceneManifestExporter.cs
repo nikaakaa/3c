@@ -152,7 +152,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
 
             ServerAuthoritativeAuthoritySessionSourceDefinition source = request.AuthoritySource;
-            ServerAuthoritativeHybridModelDefinition model = source.Model;
+            ServerAuthoritativeSessionConfigurationDefinition model = source.Configuration;
             model.RequireComplete();
             if (definition.SimulationTickRate != model.SimulationTickRate || program.Manifest.TickRate != model.SimulationTickRate)
                 throw new InvalidOperationException("Character Definition, Program, and Authority Model TickRate do not match.");

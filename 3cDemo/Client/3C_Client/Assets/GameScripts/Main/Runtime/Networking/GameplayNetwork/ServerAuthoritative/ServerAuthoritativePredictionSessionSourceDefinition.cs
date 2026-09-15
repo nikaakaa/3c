@@ -12,12 +12,12 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public const string ComponentId = "thirdperson.session-source.server-authoritative-prediction";
         public const string SemanticVersion = "2";
 
-        [SerializeField] ServerAuthoritativeHybridModelDefinition m_Model;
+        [SerializeField] ServerAuthoritativeSessionConfigurationDefinition m_Configuration;
         [SerializeField] ServerAuthoritativeLaunchDefinition m_Launch;
 
-        public ServerAuthoritativeHybridModelDefinition Model => m_Model
-            ? m_Model
-            : throw new InvalidOperationException($"Prediction Source '{name}' requires an explicit Model Definition.");
+        public ServerAuthoritativeSessionConfigurationDefinition Configuration => m_Configuration
+            ? m_Configuration
+            : throw new InvalidOperationException($"Prediction Source '{name}' requires an explicit Session Configuration.");
         public ServerAuthoritativeLaunchDefinition Launch => m_Launch
             ? m_Launch
             : throw new InvalidOperationException($"Prediction Source '{name}' requires an explicit Launch Definition.");
@@ -27,18 +27,18 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ServerAuthoritativeProcessIdentity process = Launch.BuildProcessIdentity();
             if (process.Role == ServerAuthoritativeProcessRole.AuthorityWorker)
                 throw new InvalidOperationException($"Prediction Source '{name}' requires a Client launch role.");
-            return Model.BuildPredictionSourceRequirements();
+            return Configuration.BuildPredictionSourceRequirements();
         }
 
         protected override ISimulationSessionSourcePreparation CreateModelPreparation(
             GameplayNetworkModelPreparationContext context,
             GameplayNetworkModelSourceRequirements requirements) =>
-            new ServerAuthoritativePredictionSourcePreparation(Model, Launch, context, requirements);
+            new ServerAuthoritativePredictionSourcePreparation(Configuration, Launch, context, requirements);
 
 #if UNITY_EDITOR
-        public void SetAuthoring(ServerAuthoritativeHybridModelDefinition model, ServerAuthoritativeLaunchDefinition launch)
+        public void SetAuthoring(ServerAuthoritativeSessionConfigurationDefinition configuration, ServerAuthoritativeLaunchDefinition launch)
         {
-            m_Model = model ? model : throw new ArgumentNullException(nameof(model));
+            m_Configuration = configuration ? configuration : throw new ArgumentNullException(nameof(configuration));
             m_Launch = launch ? launch : throw new ArgumentNullException(nameof(launch));
             _ = BuildAuthoringDescriptor();
         }

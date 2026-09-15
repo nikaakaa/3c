@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a20000000004d259d15000000000020, type: 3}
   m_Name: ServerAuthoritativeAuthorityPipeline
   m_EditorClassIdentifier: 
-  m_Model: {fileID: 11400000, guid: 8a10000000004d259d15000000000002, type: 2}
+  m_Configuration: {fileID: 11400000, guid: 8a10000000004d259d15000000000002, type: 2}
   m_PipelineId: thirdperson.simulation.pipeline.server-authoritative-authority
   m_Revision: 1
   m_SchemaVersion: 1

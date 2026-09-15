@@ -19,7 +19,6 @@ MonoBehaviour:
   m_SourceClockId: Corin.DotRecastAuthority.ClientB.LocalLogic
   m_TickRate: 60
   m_RequiredWorldFeatures: 160
-  m_ProgramRuntime: {fileID: 11400000, guid: a04d371ecd5c45a6a4c0fbf4e36fb9c8, type: 2}
   m_ExecutionBackend: {fileID: 11400000, guid: 57a1000000004d259d15000000000001, type: 2}
   m_Pipeline: {fileID: 11400000, guid: 8a20000000004d259d15000000000020, type: 2}
   m_SessionSource: {fileID: 11400000, guid: d0a2000000004d259d15000000000002, type: 2}

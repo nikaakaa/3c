@@ -386,7 +386,6 @@ namespace ThirdPersonSimulation
                 target,
                 request.Backend.Identity,
                 pipeline.Identity,
-                request.CharacterRuntime.GameplayContentHash,
                 request.CharacterRuntime.RosterDescriptor,
                 request.Source.Identity,
                 request.SolverDefinition.Identity,

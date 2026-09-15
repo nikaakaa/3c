@@ -1154,3 +1154,8 @@
 
 - 提交 `8cb440c72`，将只由 Gameplay Ability 前端使用的 `CharacterSemanticBlackboardEmitter` 及其参数类型引用统一为 `GameplayAbilitySemanticBlackboardEmitter`。
 - 本步只清理领域命名和文件路径，保留黑板目录字段、作用域、默认值、输入绑定与事实投影发射行为。
+
+## 2026-09-16 统一Ability语义绑定发射器命名
+
+- 提交 `f26dfc52e`，将 Ability 专属的 Action、Input、Equipment、Gameplay、Catalog、Domain binding 与 Behavior semantic emitter 统一改为 `GameplayAbilitySemantic*`，同时更新节点绑定接口名和前端引用。
+- 本步只改类型名、文件路径和 Unity `.meta` 路径，保留节点可达性、Catalog 条目、provider owner 与黑板绑定行为。

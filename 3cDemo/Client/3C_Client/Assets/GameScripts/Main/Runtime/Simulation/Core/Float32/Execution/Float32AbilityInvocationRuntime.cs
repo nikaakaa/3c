@@ -167,14 +167,7 @@ namespace ThirdPersonSimulation
                 tick,
                 input,
                 bodyFacts,
-                m_SkillState,
-                stateServices.SavepointPort,
-                stateServices.InputRequests,
-                stateServices.ActionState,
-                stateServices.HandleAllocatorState,
-                stateServices.EventSequenceState,
-                stateServices.GameplayEffectState,
-                stateServices.EquipmentState,
+                stateServices,
                 m_Workspace);
 
             Float32AbilityExecutionAssembly assembly = serviceFactory.Create(

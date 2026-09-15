@@ -110,7 +110,7 @@ namespace ThirdPersonSimulation
                 equipment,
                 values,
                 blackboard);
-            control = new Float32AbilityOperationControlRuntime(installation, services);
+            control = new Float32AbilityOperationControlRuntime(installation.Data, services);
             Float32AbilityDomainRuntime domain = new Float32AbilityDomainRuntime(
                 installation.Data.Binding,
                 installation.Services,

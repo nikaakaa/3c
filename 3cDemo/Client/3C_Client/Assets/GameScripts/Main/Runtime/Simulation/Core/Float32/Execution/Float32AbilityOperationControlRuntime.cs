@@ -17,16 +17,16 @@ namespace ThirdPersonSimulation
         OperationControlRuntime<Float32AbilityExecutionTarget> m_Runtime;
 
         public Float32AbilityOperationControlRuntime(
-            Float32GameplayAbilityExecutionInstallation installation,
+            Float32GameplayAbilityExecutionData data,
             IFloat32AbilityExecutionServices services)
         {
-            if (installation == null)
-                throw new ArgumentNullException(nameof(installation));
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
             m_Runtime = new OperationControlRuntime<Float32AbilityExecutionTarget>(
-                installation.Topology,
+                data.Topology,
                 m_Services.Target,
-                checked(Math.Max(1024, installation.Data.Operations.Count * 128)));
+                checked(Math.Max(1024, data.Operations.Count * 128)));
         }
 
         internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)

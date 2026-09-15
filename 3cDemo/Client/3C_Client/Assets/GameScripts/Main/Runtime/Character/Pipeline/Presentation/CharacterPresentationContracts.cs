@@ -346,20 +346,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out string error);
     }
 
-    public sealed class CharacterPresentationRuntimeBinding
-    {
-        public CharacterPresentationRuntimeBinding(
-            CharacterPresentationProjection projection,
-            ICharacterPresentationRuntime runtime)
-        {
-            Projection = projection ?? throw new ArgumentNullException(nameof(projection));
-            Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-        }
-
-        public CharacterPresentationProjection Projection { get; }
-        public ICharacterPresentationRuntime Runtime { get; }
-    }
-
     public readonly struct CharacterPresentationEventHeader
     {
         public CharacterPresentationEventHeader(

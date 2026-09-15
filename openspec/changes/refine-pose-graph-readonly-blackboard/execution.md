@@ -919,3 +919,4 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 新增 `CharacterPoseNativeHandlerFactoryComposition`，把 Value/StateMachine、Source、Constraint、Managed 四组注册收成唯一 `ICharacterPoseNativeNodeHandlerFactory`，注册顺序和节点能力由同一 registry 管理；提交为 `5bf5a30cf`。这一步完成 Pose 侧 handler factory 的结构收口，实例服务仍由正式装配注入。
 - 新增 `CharacterPoseNativeRoleDependencyFactory`，从已准备的图绑定、Rig、Source module、Constraint runtime、四组 handler composition、动画属性和玩家身份创建唯一 handler factory 与 `CharacterFinalPoseNativePublication`，形成可直接交给角色入口的 typed 依赖包；提交为 `07ebb0dee`。本步没有修改共享 Host 或创建第二套服务。
 - `CharacterPoseNativeRoleRuntime` 增加已提交 Final Pose 读取、恢复初始姿态和写入默认值出口，角色上层只读消费 Publication 的 committed 结果；提交为 `55c57bc67`。不从节点或 Animancer weight 重建第二份最终姿态。
+- 新增 `CharacterPoseNativeRoleEntry` 与 `CharacterPoseNativeRoleSession`，把 Prepare、typed 依赖组装、原生实例 Create/Replace 和唯一 FrameCoordinator 组合成一个可持有的 Pose 角色实例入口；准备失败不构造依赖，替换失败不采用新实例；提交为 `ad3a47e0b`。共享 Host 尚未改动。

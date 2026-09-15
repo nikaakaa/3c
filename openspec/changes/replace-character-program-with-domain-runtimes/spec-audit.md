@@ -19,9 +19,9 @@
 
 | 编号 | 当前源码位置（客户端Main相对路径） | 后续合同与任务 |
 | --- | --- | --- |
-| Q19 | Runtime/Simulation/Core/Float32/Execution/Float32AbilityEvaluationContracts.cs:24—25强制角色Transaction与WorldRequest，AbortUnconsumed调用角色事务Abort；Fixed有同类结构 | 1.11覆盖技能输出侧独立性：不运动的技能不要求世界请求，技能候选不拥有外层事务的终止权 |
-| Q20 | Runtime/Simulation/Core/Float32/State/Float32CharacterRuntimeState.cs中的Float32AbilityRuntimeState.InputRequests按技能保存；Float32InputRuntime.ClearRequest只更新当前技能的事务分区 | 2.6把共享请求消费交输入owner，技能只保存局部等待状态；明确相同来源／序号的请求只能共享一份消费事实 |
-| Q21 | Float32AbilityExecutionFrame.cs的BodyFacts具有IsValid，Float32ValueRuntime.cs:408—417直接读取字段，当前未找到IsValid消费检查；Fixed对应值读取也直接取字段 | 1.11把事实作为按需能力，实际读取缺失服务时明确失败；不能用默认结构的原点／零速度／false冒充角色事实 |
+| Q19 | `Float32AbilityEvaluationContracts.cs` 与 Fixed 对应结果已允许 `WorldRequest` 缺省，`DiscardUnconsumed` 只标记丢弃；角色 Evaluate／Finalize Pass 仍在自己的世界流程边界要求请求 | 1.11 的无运动技能与外层事务边界已接入角色结果层；后续保留非角色调用方复用同一 Ability 入口 |
+| Q20 | Float32／Fixed `AbilityRuntimeState` 只保存 Ability 身份、局部槽值、执行聚合和 MotionWarp；输入消费由角色事务的 `InputRequestState` 通过 typed port 提供 | 2.6 的共享请求消费已脱离 Ability 分区；继续保持角色统一保存、技能按需查询／消费 |
+| Q21 | `AbilityExecutionFrame.BodyFacts` 通过 `IsValid` getter 拒绝缺失事实；Value／Motion 读取均经该 getter，不能从无效默认结构取得位置、速度或朝向 | 1.11 的按需事实边界已具备；保留实际读取能力时明确失败，不把默认零值当真实事实 |
 
 这些是静态消费者证据，本轮未运行复现。新增规范场景补齐无运动技能结果、缺失事实拒绝、共享输入单次消费；不新增测试任务。现行角色／网络状态规范中的恢复和唯一提交职责保留，D20技能独立性保持，D21只组织既有约束与提请协调的文件分工。主规范仍由本change既有delta在实施归并时同步。
 

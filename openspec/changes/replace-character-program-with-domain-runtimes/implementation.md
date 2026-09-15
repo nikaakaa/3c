@@ -899,3 +899,9 @@
 
 - 提交 `2f5d52d7b`，删除 Float32／Fixed Character Runtime Port 中未被消费的 Control、BodyMotion、GameplayEffect、Equipment 绑定查询。
 - 通用角色端口只保留实际被 Pass、网络和观察链消费的合同，领域配置继续由角色绑定和正式装配边界拥有；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除运行端口重复身份出口
+
+- 提交 `cc52391ed`，Float32／Fixed Character Runtime Port 删除重复发布的 `GameplayContentHash` 与 `RosterDescriptor`；这两项身份数据继续由 `Float32/FixedCharacterRuntime` 持有，端口只发布 Runtime、Roster 和 Actor 索引。
+- 单步调度 Pass 改为从 `characterRuntime.Runtime` 读取名册与内容身份，调用链不再依赖端口的领域数据转发；没有新增兼容属性或第二份身份来源。
+- Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

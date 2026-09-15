@@ -24,14 +24,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             return projection;
         }
 
-#if UNITY_EDITOR
-        public void SetCompiledProjection(CharacterPresentationProjection projection)
-        {
-            if (projection == null || !projection.IsValid)
-                throw new ArgumentException("Compiled Character Presentation Projection is invalid.", nameof(projection));
-            projection.RequireTuningPayload();
-            m_Projection = projection;
-        }
-#endif
     }
 }

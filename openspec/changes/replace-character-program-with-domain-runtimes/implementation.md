@@ -521,3 +521,9 @@
 - 提交 `49bde3929`，Float32／Fixed `SimulationActorBinding` 在装配时汇总全部已安装 Ability 的 Equipment 能力，并公开角色级 `RequiresEquipment`；角色初始状态改为依据这一事实编译 Equipment 布局。
 - 删除 Character Runtime 端对 Ability 安装列表的重复扫描、首个 Equipment 能力短路和运行时缺失服务判断；缺失服务仍在角色绑定装配时拒绝，Equipment 状态所有权与既有角色事务、codec 和 Step 不变。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.11、2.1、2.6 的完整独立技能执行与跨领域结果接线仍未完成。
+
+## 2026-09-16 Ability执行数据加载命名统一
+
+- 提交 `2cdfe0b69`，将 Float32／Fixed 单个和集合加载入口统一为 `Load*AbilityExecutionData`／`Load*AbilityExecutionDataSet`，同步 Character Definition 与 DotRecast Authority 导出调用点。
+- 删除 `Load*GameplayAbility(ies)` 旧方法名，不保留兼容别名；加载行为仍是独立 Ability Data asset 的 Provider binding、artifact 读取与 execution data 组装，没有改变产物格式或安装顺序。
+- 本步为 Unity Runtime／Editor 调用入口纯命名收口，未重复执行完整 Unity 生成工程编译：上一轮已被既有 `TypedStateAddress`、`GameplayAbilityExecutionLayout` 等源索引缺失和 UGUI 包错误阻断；未运行 Unity、测试或资产生成。

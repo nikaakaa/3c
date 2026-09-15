@@ -132,7 +132,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public string OwnerName { get; }
         public string OwnerIdentity => $"unity-deterministic-rollback-character/{OwnerInstanceId}";
         public ActorId ActorId { get; }
-        public FixedCharacterRuntime CharacterRuntime => m_CharacterRuntime;
         public FixedSimulationActorBinding CharacterBinding => m_CharacterBinding;
         public string WorldBodyBindingId { get; }
         public FixedWorldBodyState InitialBody { get; }

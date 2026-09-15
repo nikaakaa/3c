@@ -389,7 +389,7 @@ namespace ThirdPersonCharacter.Pipeline
 					new[] { characterBinding },
 					tickRate,
 					controlModules);
-				RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
+				RuntimeContentRevision diagnosticsRevision = new RuntimeContentRevision(
 					$"float32-character-runtime/{actorId.Value}",
 					characterRuntime.Abilities[0].SourceRevision.Value,
 					characterRuntime.GameplayContentHash.ToString());
@@ -541,3 +541,5 @@ namespace ThirdPersonCharacter.Pipeline
 
 	}
 }
+
+

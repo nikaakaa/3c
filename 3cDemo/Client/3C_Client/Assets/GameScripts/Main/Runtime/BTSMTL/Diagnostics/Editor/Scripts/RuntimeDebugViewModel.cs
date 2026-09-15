@@ -12,15 +12,15 @@ namespace BTSMTL.Diagnostics.Editor
             CharacterRuntimeId = target?.CharacterRuntimeId ?? Guid.Empty;
             SessionId = target?.SessionId ?? Guid.Empty;
             Revision = target?.Revision ?? default;
-            ProgramEpoch = target?.ProgramEpoch ?? 0;
+            RuntimeEpoch = target?.RuntimeEpoch ?? 0;
         }
 
         public string DisplayName { get; }
         public int HostInstanceId { get; }
         public Guid CharacterRuntimeId { get; }
         public Guid SessionId { get; }
-        public RuntimeProgramRevision Revision { get; }
-        public ulong ProgramEpoch { get; }
+        public RuntimeContentRevision Revision { get; }
+        public ulong RuntimeEpoch { get; }
     }
 
     public readonly struct RuntimeDebugEventView
@@ -232,7 +232,7 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeCaptureSnapshot capture,
             int historyOffset,
             RuntimeInstanceKey instance,
-            IReadOnlyDictionary<RuntimeProgramRevision, RuntimeDebugSourceMapSnapshot> sourceMaps) =>
+            IReadOnlyDictionary<RuntimeContentRevision, RuntimeDebugSourceMapSnapshot> sourceMaps) =>
             RuntimeExecutionTimelineBuilder.BuildHistory(capture, m_SourceMap, sourceMaps, historyOffset, instance);
 
         internal void SetCoverage(long evictedStates, bool missedChanges)
@@ -464,9 +464,9 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugSourceMapSnapshot sourceMapOverride)
         {
             bool historical = sourceMapOverride != null;
-            if (!historical && !traceEvent.ProgramRevision.Equals(Target.Revision))
+            if (!historical && !traceEvent.ContentRevision.Equals(Target.Revision))
             {
-                m_Error = $"Trace revision mismatch: {traceEvent.ProgramRevision} != {Target.Revision}";
+                m_Error = $"Trace revision mismatch: {traceEvent.ContentRevision} != {Target.Revision}";
                 return;
             }
 
@@ -738,7 +738,7 @@ namespace BTSMTL.Diagnostics.Editor
         readonly IReadOnlyList<RuntimeGraphInvocation> m_GraphInvocations;
 
         RuntimeDebugSourceMapSnapshot(
-            RuntimeProgramRevision revision,
+            RuntimeContentRevision revision,
             Dictionary<RuntimeSourceElementHandle, DebugSourceMapEntry> entries,
             Dictionary<RuntimeSourceElementKey, string[]> hashes,
             IReadOnlyList<RuntimeGraphInvocation> invocations = null)
@@ -751,7 +751,7 @@ namespace BTSMTL.Diagnostics.Editor
                 m_Invocations.Add(invocation.Path, invocation);
         }
 
-        public RuntimeProgramRevision Revision { get; }
+        public RuntimeContentRevision Revision { get; }
         public IReadOnlyList<RuntimeGraphInvocation> GraphInvocations => m_GraphInvocations;
         public bool TryGetInvocation(string path, out RuntimeGraphInvocation invocation) => m_Invocations.TryGetValue(path, out invocation);
 
@@ -819,3 +819,5 @@ namespace BTSMTL.Diagnostics.Editor
         }
     }
 }
+
+

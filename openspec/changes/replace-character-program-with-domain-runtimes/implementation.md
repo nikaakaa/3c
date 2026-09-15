@@ -539,3 +539,9 @@
 - 提交 `0fb20137c`，Float32／Fixed Character Runtime 根据排序后的完整 Ability 集合生成 `AbilitySetSourceRevision`，包含 Ability 身份、来源修订、内容 hash 和状态 Schema hash。
 - Character Pipeline、Fixed 和 Rollback Host 的诊断版本不再读取 `Abilities[0].SourceRevision`；角色诊断不再由某个 Ability 的排列顺序代表整套执行内容，角色 GameplayContentHash 和执行算法不变。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；Unity 完整生成工程仍受既有源索引与 UGUI 包错误阻断。
+
+## 2026-09-16 Equipment能力集合事实收口
+
+- 提交 `158c4531c`，Float32／Fixed `GameplayAbilityExecutionInstallationSet` 在构造时汇总已安装 Ability 的 `RequiresEquipment`，角色绑定与两个 Character State Codec 改为读取该集合事实。
+- 删除角色绑定和 State Codec 对安装列表的重复 Equipment 能力扫描；Equipment 缺失服务仍在角色绑定装配时拒绝，初始状态、快照格式、Equipment 布局和执行顺序不变。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.10、1.11、2.1、2.6 的完整领域接线仍未完成。

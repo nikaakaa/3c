@@ -133,6 +133,14 @@ namespace BTSMTL.Timeline.Runtime
             return Service.TryGetDescriptor(handle, out descriptor);
         }
 
+        public bool TryGetPlaybackDescriptor(
+            TimelinePlaybackHandle handle,
+            out TimelineRuntimePlaybackDescriptor descriptor)
+        {
+            EnsureAvailable();
+            return Service.TryGetDescriptor(handle, out descriptor);
+        }
+
         public bool TryGetCommittedEvaluation(
             TimelineRuntimePlaybackHandle handle,
             out TimelineRuntimeCommittedEvaluation evaluation)
@@ -141,12 +149,38 @@ namespace BTSMTL.Timeline.Runtime
             return EvaluationBuffer.TryGetCommittedEvaluation(handle, out evaluation);
         }
 
+        public bool TryGetCommittedEvaluation(
+            TimelinePlaybackHandle handle,
+            out TimelineRuntimeCommittedEvaluation evaluation)
+        {
+            EnsureAvailable();
+            if (!handle.IsValid)
+            {
+                evaluation = default;
+                return false;
+            }
+            return EvaluationBuffer.TryGetCommittedEvaluation(new TimelineRuntimePlaybackHandle(handle.Value), out evaluation);
+        }
+
         public bool TryGetCommittedEvaluationResult(
             TimelineRuntimePlaybackHandle handle,
             out TimelineRuntimeEvaluationResult result)
         {
             EnsureAvailable();
             return EvaluationBuffer.TryGetCommitted(handle, out result);
+        }
+
+        public bool TryGetCommittedEvaluationResult(
+            TimelinePlaybackHandle handle,
+            out TimelineRuntimeEvaluationResult result)
+        {
+            EnsureAvailable();
+            if (!handle.IsValid)
+            {
+                result = null;
+                return false;
+            }
+            return EvaluationBuffer.TryGetCommitted(new TimelineRuntimePlaybackHandle(handle.Value), out result);
         }
 
         public bool RequestTimelinePlayback(

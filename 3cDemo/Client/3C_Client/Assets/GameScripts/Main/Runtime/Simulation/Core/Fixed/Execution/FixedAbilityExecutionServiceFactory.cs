@@ -38,7 +38,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedHandleAllocator handles,
             FixedAbilityExecutionWorkspace workspace)
         {
-            FixedGameplayEffectOperationRuntime gameplayEffects = execution.GameplayEffectCatalog == null
+            FixedGameplayEffectOperationRuntime gameplayEffects = execution.Services.GameplayEffectCatalog == null
                 ? null
                 : new FixedGameplayEffectOperationRuntime(
                     access,

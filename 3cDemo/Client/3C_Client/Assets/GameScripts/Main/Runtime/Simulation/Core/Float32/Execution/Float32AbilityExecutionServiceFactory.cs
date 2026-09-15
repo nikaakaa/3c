@@ -37,7 +37,7 @@ namespace ThirdPersonSimulation
             Float32HandleAllocator handles,
             Float32AbilityExecutionWorkspace workspace)
         {
-            Float32GameplayEffectOperationRuntime gameplayEffects = execution.GameplayEffectCatalog == null
+            Float32GameplayEffectOperationRuntime gameplayEffects = execution.Services.GameplayEffectCatalog == null
                 ? null
                 : new Float32GameplayEffectOperationRuntime(
                     access,

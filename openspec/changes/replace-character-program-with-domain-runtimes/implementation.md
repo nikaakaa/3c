@@ -737,3 +737,9 @@
 - 提交 `5369f0fb3`，Float32／Fixed ActionRuntime 改用 `I*AbilityActionBindingProvider`，只取得动作准入需要的 `GameplayAbilityExecutionBinding`，不再读取完整 Ability Installation。
 - 安装集合仍负责完整安装和角色装配；动作准入、生命周期、动作替换与控制命令使用同一 Binding 数据，未新增旁路或改变执行顺序。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 统一使用Ability身份事实
+
+- 提交 `58bed96ac`，Float32／Fixed 角色评估以 Invocation 的 `AbilityId` 建立动作控制映射，不再从安装数据重复读取技能身份。
+- 动作归属、动作窗口筛选和 Control 映射现在共用同一身份出口，未改变动作生命周期或角色输出。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

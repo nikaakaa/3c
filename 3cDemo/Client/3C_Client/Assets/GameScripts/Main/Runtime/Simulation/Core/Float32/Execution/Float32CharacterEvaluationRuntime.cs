@@ -71,7 +71,7 @@ namespace ThirdPersonSimulation
                         roleState.HandleAllocatorState,
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
-                        roleState,
+                        roleState.EquipmentState,
                         new Float32CharacterAbilityExecutionServiceFactory(installation, actor.ControlRuntimeBinding, actor.EquipmentRuntimeBinding, sharedEffectScratch),
                         roleState.AcceptAbility);
                     invocations.Add(invocation);

@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation
         Float32CharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32EquipmentStatePort, IFloat32ControlRuntimeStatePort
+    internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityTransactionControlPort, IFloat32ControlRuntimeStatePort
     {
         readonly Float32CharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, Float32AbilityRuntimeState> m_AbilityStates;
@@ -111,8 +111,8 @@ namespace ThirdPersonSimulation
         readonly Float32CharacterEventSequenceState m_EventSequenceState;
         readonly Float32CharacterHandleAllocatorState m_HandleAllocatorState;
         readonly Float32CharacterGameplayEffectRuntimeState m_GameplayEffectState;
+        readonly Float32CharacterEquipmentRuntimeState m_EquipmentState;
         CharacterControlRuntimeStateTransaction m_ControlState;
-        EquipmentStateAggregate m_EquipmentState;
         bool m_Disposed;
 
         public Float32CharacterRuntimeStateTransaction(
@@ -145,7 +145,7 @@ namespace ThirdPersonSimulation
                 m_TickRate,
                 gameplayEffectCatalog,
                 baseState.GameplayEffectState);
-            m_EquipmentState = baseState.EquipmentState;
+            m_EquipmentState = new Float32CharacterEquipmentRuntimeState(baseState.EquipmentState);
         }
 
         public ActorId ActorId => m_ActorId;
@@ -204,18 +204,7 @@ namespace ThirdPersonSimulation
         internal IFloat32EventSequenceStatePort EventSequenceState => m_EventSequenceState;
         internal IFloat32HandleAllocatorStatePort HandleAllocatorState => m_HandleAllocatorState;
         internal IFloat32GameplayEffectStatePort GameplayEffectState => m_GameplayEffectState;
-
-        public EquipmentStateAggregate GetEquipmentState()
-        {
-            RequireActive();
-            return m_EquipmentState ?? throw new InvalidOperationException("Character does not install Equipment state.");
-        }
-
-        public void SetEquipmentState(EquipmentStateAggregate state)
-        {
-            RequireActive();
-            m_EquipmentState = state ?? throw new ArgumentNullException(nameof(state));
-        }
+        internal IFloat32EquipmentStatePort EquipmentState => m_EquipmentState;
 
         public Float32CharacterRuntimeStateSavepoint CreateSavepoint()
         {
@@ -257,6 +246,7 @@ namespace ThirdPersonSimulation
             m_EventSequenceState.Dispose();
             m_HandleAllocatorState.Dispose();
             m_GameplayEffectState.Dispose();
+            m_EquipmentState.Dispose();
             m_Disposed = true;
         }
 
@@ -276,7 +266,7 @@ namespace ThirdPersonSimulation
                 m_HandleAllocatorState.HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectState.Capture(),
-                m_EquipmentState);
+                m_EquipmentState.Capture());
         }
 
         void Apply(Float32CharacterRuntimeState state)
@@ -301,7 +291,7 @@ namespace ThirdPersonSimulation
                 m_ControlState.Restore(state.ControlState);
             }
             m_GameplayEffectState.Restore(state.GameplayEffectState);
-            m_EquipmentState = state.EquipmentState;
+            m_EquipmentState.Restore(state.EquipmentState);
         }
 
         void RequireTopSavepoint(Float32CharacterRuntimeStateSavepoint savepoint)

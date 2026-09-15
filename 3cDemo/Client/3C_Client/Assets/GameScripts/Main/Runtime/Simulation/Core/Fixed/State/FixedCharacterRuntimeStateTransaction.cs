@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation.Fixed
         FixedCharacterRuntimeStateTransactionDiagnostics Diagnostics();
     }
 
-    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedEquipmentStatePort, IFixedControlRuntimeStatePort
+    internal sealed class FixedCharacterRuntimeStateTransaction : IFixedAbilityTransactionControlPort, IFixedControlRuntimeStatePort
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
@@ -111,8 +111,8 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedCharacterEventSequenceState m_EventSequenceState;
         readonly FixedCharacterHandleAllocatorState m_HandleAllocatorState;
         readonly FixedCharacterGameplayEffectRuntimeState m_GameplayEffectState;
+        readonly FixedCharacterEquipmentRuntimeState m_EquipmentState;
         CharacterControlRuntimeStateTransaction m_ControlState;
-        EquipmentStateAggregate m_EquipmentState;
         bool m_Disposed;
 
         public FixedCharacterRuntimeStateTransaction(
@@ -145,7 +145,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_TickRate,
                 gameplayEffectCatalog,
                 baseState.GameplayEffectState);
-            m_EquipmentState = baseState.EquipmentState;
+            m_EquipmentState = new FixedCharacterEquipmentRuntimeState(baseState.EquipmentState);
         }
 
         public ActorId ActorId => m_ActorId;
@@ -204,18 +204,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IFixedEventSequenceStatePort EventSequenceState => m_EventSequenceState;
         internal IFixedHandleAllocatorStatePort HandleAllocatorState => m_HandleAllocatorState;
         internal IFixedGameplayEffectStatePort GameplayEffectState => m_GameplayEffectState;
-
-        public EquipmentStateAggregate GetEquipmentState()
-        {
-            RequireActive();
-            return m_EquipmentState ?? throw new InvalidOperationException("Character does not install Equipment state.");
-        }
-
-        public void SetEquipmentState(EquipmentStateAggregate state)
-        {
-            RequireActive();
-            m_EquipmentState = state ?? throw new ArgumentNullException(nameof(state));
-        }
+        internal IFixedEquipmentStatePort EquipmentState => m_EquipmentState;
 
         public FixedCharacterRuntimeStateSavepoint CreateSavepoint()
         {
@@ -257,6 +246,7 @@ namespace ThirdPersonSimulation.Fixed
             m_EventSequenceState.Dispose();
             m_HandleAllocatorState.Dispose();
             m_GameplayEffectState.Dispose();
+            m_EquipmentState.Dispose();
             m_Disposed = true;
         }
 
@@ -276,7 +266,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_HandleAllocatorState.HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectState.Capture(),
-                m_EquipmentState);
+                m_EquipmentState.Capture());
         }
 
         void Apply(FixedCharacterRuntimeState state)
@@ -301,7 +291,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_ControlState.Restore(state.ControlState);
             }
             m_GameplayEffectState.Restore(state.GameplayEffectState);
-            m_EquipmentState = state.EquipmentState;
+            m_EquipmentState.Restore(state.EquipmentState);
         }
 
         void RequireTopSavepoint(FixedCharacterRuntimeStateSavepoint savepoint)

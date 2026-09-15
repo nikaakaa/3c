@@ -933,3 +933,11 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - 状态链：`CharacterPoseNativeStateMachineSource` 为当前 Actor/StateMachine 实例创建子图，父图只汇总子图的 typed Source demand；Barrier 后先验证 demand 身份，再准备和求值子图，Standard Transition 在本源内混合，Inertialization Transition 交给独立 Inertialization handler，子图结果最后沿父图完成身份返回。
 - 输出链：原生 handler 的候选页先经过自身 `ValidatePending`，再由 `CharacterPoseNativeFrameCoordinator` 交给唯一 Final Publication；Final Publication 完成整 Rig 检查、物理/属性写入和 committed frame，入口只提供 committed 读取，不从节点或 Animancer weight 重建结果。
 - 当前尚未闭合的唯一调用边界：仓库中仍没有角色表现 runtime/Host 对 `CharacterPoseNativeRoleEntry.Create/Replace` 的消费者调用；Source/Constraint 的具体实例也尚未在该共享装配中提供。该项是下一处实现接线，不是文档或验证阻塞；本记录不把入口结构当作角色运行验收。
+
+## 2026-09-15 r3 角色 Host 接线契约
+
+- Pose 侧交付的正式入口是 `CharacterPoseNativeRoleEntry.Create/Replace`，不是直接由 Host 操作 `CharacterPoseNativeGraphRuntime`。Host 必须提供 `CharacterAnimationPresentationProfile`、同一 Rig payload 与 Rig binding、`CharacterAnimationInputContract`、实际资源 revision、`CharacterPoseNativeInstanceContext`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、三组原生 handler composition、动画属性绑定、Player Node identity 列表和真实贡献容量。
+- `CharacterPoseNativeInstanceContext` 必须使用当前角色的 Actor、Host 组件、EventGraph 父 Blackboard、Animancer、Rig binding 和 Root Hierarchy；不能重新创建角色时钟、可变 Blackboard、Source、Constraint 或 IK 历史。`CharacterPoseNativeRoleDependencyFactory` 负责把这些已拥有的服务收成唯一 handler factory 与 `CharacterFinalPoseNativePublication`，Host 只持有返回的 `CharacterPoseNativeRoleSession`。
+- 首次安装调用 `Create`；已采用实例的图/资源替换调用 `Replace(current, ...)`，只有 `Adopted` 才交换当前 session。失败必须保留旧 session、释放未采用依赖，不把 `Prepare` 或图存在误报为已安装。
+- 每帧 Host 以同一次表现帧生成 `CharacterPoseNativeFrameInput`，调用 `session.Frame.BeginFrame` 取得本图活跃分支和 Source demand；唯一 Source/Animancer barrier 完成后调用 `PrepareEvaluation(barrierIdentity)`、`Evaluate`、`ValidatePending`、`Commit`。Barrier 前失败走 `Discard`，提交后的结果只从 `CharacterFinalPoseNativePublication` 消费；不得再调用旧 Program、全图 Worker 或第二次采样链。
+- 本节是共享 Host 的精确接线输入和阶段顺序，属于核心装配窗口的消费者修改；Pose 窗口不改交叉暂存的 Host/Presentation 文件、不创建空 composition、不补 fallback。当前 `rg` 仍只发现入口自身定义，故第 3 组任务不改为完成。

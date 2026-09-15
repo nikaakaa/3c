@@ -916,3 +916,8 @@
 
 - 提交 `522d66d2b`，Float32 Character Registration 的输出路由身份改从正式 `PresentationProjection` 读取 `ProjectionRevision`，清除迁移后残留的旧 `Projection` 别名访问。
 - 只修正注册对象的身份来源，不改变 Pose／Camera 投影数据、Host 装配或表现运行时；该 Unity 注册文件不在当前生成的 Float32／Fixed .NET 编译清单中，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 清理检查点旧Program提示
+
+- 提交 `9bb7d331a`，Server Authoritative 完整 checkpoint 的布局不匹配错误改为 `active Character Runtime`，与当前状态布局 owner 一致。
+- 只修正网络诊断文本，不改变 checkpoint 的布局比较、canonical 解码、元数据校验或恢复流程；未运行 Unity、测试或资产生成。

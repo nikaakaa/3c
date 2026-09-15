@@ -844,3 +844,9 @@
 - 提交 `8f416e2d9`，Float32／Fixed `AbilityOperationControlRuntime` 从完整 Ability 安装对象收窄为执行数据和控制服务，只从执行数据读取拓扑与操作数量。
 - 服务工厂继续作为组合边界，把安装对象拆成数据后创建控制运行时；Control 的状态目标、操作执行和停止语义不变，没有新增兼容构造函数。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 执行帧接收明确数据
+
+- 提交 `81dd0f398`，Float32／Fixed `AbilityExecutionFrame` 不再接收完整 Ability 安装对象，直接接收执行数据、执行布局和执行服务；Invocation 只在组合边界完成安装对象拆解。
+- Frame 的局部状态、输入、输出、诊断和领域服务访问保持原有顺序与来源；没有复制安装集合，也没有保留旧构造入口。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

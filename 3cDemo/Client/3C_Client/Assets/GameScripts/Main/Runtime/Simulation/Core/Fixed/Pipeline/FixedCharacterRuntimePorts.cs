@@ -77,6 +77,7 @@ namespace ThirdPersonSimulation.Fixed
             var abilityValues = new List<FixedGameplayAbilityExecutionData>(abilities.Values);
             abilityValues.Sort((left, right) => left.AbilityId.CompareTo(right.AbilityId));
             m_Abilities = abilityValues.AsReadOnly();
+            AbilitySetSourceRevision = ComputeAbilitySetSourceRevision(m_Abilities);
             NumericProfile = numericProfile;
             TickRate = tickRate;
             OperationSetVersion = operationSetVersion;
@@ -124,6 +125,7 @@ namespace ThirdPersonSimulation.Fixed
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
         public GameplayContentHash GameplayContentHash { get; }
+        public string AbilitySetSourceRevision { get; }
 
         public FixedCharacterRuntimeState CreateInitialState(int actorIndex)
         {
@@ -161,6 +163,21 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < result.Length; i++)
                 result[i] = values[i].ActorId;
             return result;
+        }
+
+        static string ComputeAbilitySetSourceRevision(
+            IReadOnlyList<FixedGameplayAbilityExecutionData> abilities)
+        {
+            var parts = new List<string> { "fixed-ability-set-revision/1" };
+            for (int i = 0; i < abilities.Count; i++)
+            {
+                FixedGameplayAbilityExecutionData ability = abilities[i];
+                parts.Add(ability.AbilityId.Value);
+                parts.Add(ability.SourceRevision.ToString());
+                parts.Add(ability.ContentHash.ToString());
+                parts.Add(ability.StateSchemaHash.ToString());
+            }
+            return StableHash.Compute(parts.ToArray()).ToString();
         }
     }
 

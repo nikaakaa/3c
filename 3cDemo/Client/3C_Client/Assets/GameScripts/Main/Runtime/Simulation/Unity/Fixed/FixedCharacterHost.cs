@@ -222,7 +222,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 CharacterPresentationBodyState presentationBody = FixedUnityPresentationBoundary.Convert(initialBody);
                 RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
                     $"fixed-character-runtime/{actorId.Value}",
-                    characterRuntime.Abilities[0].SourceRevision.Value,
+                    characterRuntime.AbilitySetSourceRevision,
                     characterRuntime.GameplayContentHash.ToString());
                 var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
                 var diagnosticsStore = new RuntimeDiagnosticsStore();

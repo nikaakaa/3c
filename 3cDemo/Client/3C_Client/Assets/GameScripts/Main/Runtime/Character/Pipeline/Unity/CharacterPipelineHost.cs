@@ -395,7 +395,7 @@ namespace ThirdPersonCharacter.Pipeline
 				m_AnimationRigBinding.RequireValid(projection.Rig);
 				RuntimeProgramRevision diagnosticsRevision = new RuntimeProgramRevision(
 					$"float32-character-runtime/{actorId.Value}",
-					characterRuntime.Abilities[0].SourceRevision.Value,
+					characterRuntime.AbilitySetSourceRevision,
 					characterRuntime.GameplayContentHash.ToString());
 				var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
 				var diagnosticsContext = new RuntimeDiagnosticsContext(

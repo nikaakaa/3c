@@ -82,7 +82,6 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedCharacterRuntimeState m_BaseState;
         readonly Dictionary<CharacterSkillId, FixedAbilityRuntimeState> m_AbilityStates;
-        readonly ActorId m_ActorId;
         readonly SimulationTick m_Tick;
         readonly int m_TickRate;
         readonly Stack<FixedCharacterRuntimeStateSavepoint> m_Savepoints =
@@ -107,7 +106,6 @@ namespace ThirdPersonSimulation.Fixed
             m_BaseState = baseState ?? throw new ArgumentNullException(nameof(baseState));
             if (!actorId.IsValid || !tick.IsValid || tickRate <= 0)
                 throw new ArgumentException("Fixed Character runtime transaction identity is incomplete.");
-            m_ActorId = actorId;
             m_Tick = tick;
             m_TickRate = tickRate;
             m_AbilityStates = new Dictionary<CharacterSkillId, FixedAbilityRuntimeState>();
@@ -129,10 +127,6 @@ namespace ThirdPersonSimulation.Fixed
                 baseState.GameplayEffectState);
             m_EquipmentState = new FixedCharacterEquipmentRuntimeState(baseState.EquipmentState);
         }
-
-        public ActorId ActorId => m_ActorId;
-        public SimulationTick Tick => m_Tick;
-        public int TickRate => m_TickRate;
 
         internal IFixedSkillExecutionState BindAbility(
             FixedGameplayAbilityExecutionInstallation installation)

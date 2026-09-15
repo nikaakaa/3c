@@ -832,3 +832,9 @@
 - 提交 `5d5d2a166`，Float32／Fixed `CharacterRuntimeStateTransaction.BindAbility` 从完整 Ability 安装对象收窄为执行身份、布局和执行数据；临时技能状态只保存这三项技能数据与局部状态，不再反向持有安装对象。
 - 角色评估仍在装配边界持有安装对象，并在创建调用运行时前拆出三项数据传给状态事务；没有新增兼容入口、第二份状态来源或改变安装集合的所有权。
 - Float32／Fixed 生成工程仍被既有 `.csproj` 对已删除 `*AbilityControlRuntime.cs`、`CharacterStateValue.cs` 的索引阻断；本步构建后已执行 `dotnet build-server shutdown`，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 Ability领域运行时脱离安装容器
+
+- 提交 `573b0bd28`，Float32／Fixed `AbilityDomainRuntime` 删除对完整 Ability 安装对象的持有，只接收 `GameplayAbilityExecutionBinding` 和 `IGameplayAbilityExecutionServices`；领域 Tick 与完成来源路径继续从明确的执行合同读取。
+- 服务工厂仍负责把安装对象拆成绑定和服务后组装领域运行时；没有复制安装数据，也没有为旧调用方保留兼容构造函数。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

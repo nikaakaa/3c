@@ -1054,3 +1054,8 @@
 
 - 提交 `430b4ebb1`，将只服务 Ability 语义 IR 与 Float32／Fixed Ability artifact 编解码的 `SimulationProgramSemanticsCodec` 重命名为 `GameplayAbilitySemanticsCodec`，旧角色 Program 编解码命名不再出现在 Ability 入口。
 - 保留正式 `Program*` 图数据合同和 Root 合同；本步只调整类型名与静态引用，不改变序列化布局或版本。两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability root合同命名
+
+- 提交 `ced2fa4f8`，将只服务 Ability artifact、技能编译与 DotRecast Ability manifest 的 `SimulationProgramRootDescriptor`、`SimulationProgramRootValidation` 和 `SimulationProgramRootDescriptorCodec` 重命名为 `GameplayAbilityRootDescriptor`、`GameplayAbilityRootValidation` 与 `GameplayAbilityRootDescriptorCodec`。
+- 保留 Timeline 共用的 `SimulationProgramRootKind`；本步只调整类型名与引用，不改变 root 序列化布局、artifact 版本或 manifest schema。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

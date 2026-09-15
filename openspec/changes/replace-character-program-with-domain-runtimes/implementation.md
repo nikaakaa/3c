@@ -1109,3 +1109,8 @@
 
 - 提交 `bd136a8f8`，将仅由 Fixed Gameplay Ability 目标编译器消费的 `FixedProgramStateSchema` 源文件、Unity `.meta` 和引用改为 `FixedGameplayAbilityStateSchema`，删除旧文件路径。
 - 保留各状态值类型的 codec identity 和校验规则；本步不改变 Fixed 状态格式。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Ability曲线合同命名
+
+- 提交 `bf9e8a57e`，将 Float32／Fixed Ability artifact 中的 `ProgramCurve`、曲线键和 codec 源文件及引用分别统一为 `Float32GameplayAbilityCurve`、`FixedGameplayAbilityCurve`，删除旧文件路径。
+- 曲线仍由 Ability 执行服务从常量字节读入并由 Motion 运行时采样；本步保留曲线字节编码、插值、wrap mode 和采样行为。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

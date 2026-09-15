@@ -36,6 +36,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionContext execution,
             IFixedAbilityActionBindingProvider actionBindings,
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
+            EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace);
     }
@@ -101,6 +102,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionContext execution,
             IFixedAbilityActionBindingProvider actionBindings,
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
+            EquipmentProgramLayout equipmentLayout,
             IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
             ActorId actorId,
@@ -151,6 +153,7 @@ namespace ThirdPersonSimulation.Fixed
                 execution,
                 actionBindings,
                 domainRuntimeFactory,
+                equipmentLayout,
                 m_Frame,
                 m_Workspace);
             m_Input = assembly.Input;

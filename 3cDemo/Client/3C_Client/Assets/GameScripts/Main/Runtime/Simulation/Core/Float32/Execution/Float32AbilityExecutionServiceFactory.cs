@@ -10,6 +10,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionFrame frame,
             Float32ActionStateStore actionStore,
             Float32HandleAllocator handles,
+            EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionWorkspace workspace);
     }
 
@@ -35,6 +36,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionFrame frame,
             Float32ActionStateStore actionStore,
             Float32HandleAllocator handles,
+            EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionWorkspace workspace)
         {
             Float32GameplayEffectOperationRuntime gameplayEffects = execution.Services.GameplayEffectCatalog == null
@@ -49,7 +51,7 @@ namespace ThirdPersonSimulation
                     frame.Trace,
                     workspace.GameplayEffects);
             Float32EquipmentRuntime equipment = null;
-            if (execution.EquipmentLayout != null)
+            if (equipmentLayout != null)
             {
                 equipment = new Float32EquipmentRuntime(
                     access,
@@ -59,9 +61,7 @@ namespace ThirdPersonSimulation
                     gameplayEffects,
                     frame.Facts,
                     frame.Trace,
-                    execution.EquipmentLayout ??
-                    throw new InvalidOperationException(
-                        $"Ability '{execution.Data.AbilityId}' requires the declared Equipment layout."));
+                    equipmentLayout);
             }
             return new Float32AbilityDomainRuntimeServices(gameplayEffects, equipment);
         }
@@ -73,6 +73,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
+            EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace)
         {
@@ -98,6 +99,7 @@ namespace ThirdPersonSimulation
                 frame,
                 actionStore,
                 handles,
+                equipmentLayout,
                 workspace);
             Float32GameplayEffectOperationRuntime gameplayEffects = domainServices.GameplayEffects;
             Float32EquipmentRuntime equipment = domainServices.Equipment;

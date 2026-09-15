@@ -35,6 +35,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
+            EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
             Float32AbilityExecutionWorkspace workspace);
     }
@@ -100,6 +101,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionContext execution,
             IFloat32AbilityActionBindingProvider actionBindings,
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
+            EquipmentProgramLayout equipmentLayout,
             IFloat32SkillExecutionState skillState,
             IFloat32AbilityExecutionSavepointPort savepointPort,
             ActorId actorId,
@@ -150,6 +152,7 @@ namespace ThirdPersonSimulation
                 execution,
                 actionBindings,
                 domainRuntimeFactory,
+                equipmentLayout,
                 m_Frame,
                 m_Workspace);
             m_Input = assembly.Input;

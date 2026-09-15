@@ -74,6 +74,7 @@ namespace ThirdPersonSimulation.Fixed
                         installation.Execution,
                         actor.AbilityInstallations,
                         domainRuntimeFactory,
+                        installation.EquipmentLayout,
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
                         actor.ActorId,

@@ -11,6 +11,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionFrame frame,
             FixedActionStateStore actionStore,
             FixedHandleAllocator handles,
+            EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionWorkspace workspace);
     }
 
@@ -36,6 +37,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionFrame frame,
             FixedActionStateStore actionStore,
             FixedHandleAllocator handles,
+            EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionWorkspace workspace)
         {
             FixedGameplayEffectOperationRuntime gameplayEffects = execution.Services.GameplayEffectCatalog == null
@@ -50,7 +52,7 @@ namespace ThirdPersonSimulation.Fixed
                     frame.Trace,
                     workspace.GameplayEffects);
             FixedEquipmentRuntime equipment = null;
-            if (execution.EquipmentLayout != null)
+            if (equipmentLayout != null)
             {
                 equipment = new FixedEquipmentRuntime(
                     access,
@@ -60,9 +62,7 @@ namespace ThirdPersonSimulation.Fixed
                     gameplayEffects,
                     frame.Facts,
                     frame.Trace,
-                    execution.EquipmentLayout ??
-                    throw new InvalidOperationException(
-                        $"Ability '{execution.Data.AbilityId}' requires the declared Equipment layout."));
+                    equipmentLayout);
             }
             return new FixedAbilityDomainRuntimeServices(gameplayEffects, equipment);
         }
@@ -74,6 +74,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionContext execution,
             IFixedAbilityActionBindingProvider actionBindings,
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
+            EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionFrame frame,
             FixedAbilityExecutionWorkspace workspace)
         {
@@ -99,6 +100,7 @@ namespace ThirdPersonSimulation.Fixed
                 frame,
                 actionStore,
                 handles,
+                equipmentLayout,
                 workspace);
             FixedGameplayEffectOperationRuntime gameplayEffects = domainServices.GameplayEffects;
             FixedEquipmentRuntime equipment = domainServices.Equipment;

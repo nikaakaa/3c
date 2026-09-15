@@ -8,30 +8,25 @@ namespace ThirdPersonSimulation.Fixed
         public FixedAbilityExecutionContext(
             FixedGameplayAbilityExecutionData data,
             GameplayAbilityExecutionLayout layout,
-            FixedGameplayAbilityExecutionServices services,
-            EquipmentProgramLayout equipmentLayout)
+            FixedGameplayAbilityExecutionServices services)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
             bool requiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
-            bool requiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
             if (requiresGameplayEffects != (Services.GameplayEffectCatalog != null))
                 throw new InvalidOperationException("Fixed Ability execution context Gameplay Effect binding does not match its capability.");
-            if (requiresEquipment != (equipmentLayout != null))
-                throw new InvalidOperationException("Fixed Ability execution context Equipment binding does not match its capability.");
-            EquipmentLayout = equipmentLayout;
         }
 
         public FixedGameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public FixedGameplayAbilityExecutionServices Services { get; }
-        public EquipmentProgramLayout EquipmentLayout { get; }
     }
 
     public sealed class FixedGameplayAbilityExecutionInstallation
     {
         readonly FixedAbilityExecutionContext m_Execution;
+        readonly EquipmentProgramLayout m_EquipmentLayout;
 
         internal FixedGameplayAbilityExecutionInstallation(
             FixedGameplayAbilityExecutionData data,
@@ -58,18 +53,18 @@ namespace ThirdPersonSimulation.Fixed
                 BuildOperationSourcePaths(layout),
                 requiresGameplayEffects,
                 executionGameplayEffectCatalog);
+            m_EquipmentLayout = executionEquipmentLayout;
             m_Execution = new FixedAbilityExecutionContext(
                 data,
                 layout,
-                services,
-                executionEquipmentLayout);
+                services);
         }
 
         public FixedGameplayAbilityExecutionData Data => m_Execution.Data;
         public GameplayAbilityExecutionLayout Layout => m_Execution.Layout;
         public GameplayAbilityExecutionIdentity Identity => m_Execution.Services.Identity;
         internal FixedGameplayEffectRuntimeCatalog GameplayEffectCatalog => m_Execution.Services.GameplayEffectCatalog;
-        internal EquipmentProgramLayout EquipmentLayout => m_Execution.EquipmentLayout;
+        internal EquipmentProgramLayout EquipmentLayout => m_EquipmentLayout;
         internal FixedGameplayAbilityExecutionServices Services => m_Execution.Services;
         internal FixedAbilityExecutionContext Execution => m_Execution;
 

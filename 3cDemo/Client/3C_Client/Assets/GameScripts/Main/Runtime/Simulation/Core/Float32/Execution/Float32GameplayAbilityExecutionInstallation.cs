@@ -7,30 +7,25 @@ namespace ThirdPersonSimulation
         public Float32AbilityExecutionContext(
             Float32GameplayAbilityExecutionData data,
             GameplayAbilityExecutionLayout layout,
-            Float32GameplayAbilityExecutionServices services,
-            EquipmentProgramLayout equipmentLayout)
+            Float32GameplayAbilityExecutionServices services)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
             Services = services ?? throw new ArgumentNullException(nameof(services));
             bool requiresGameplayEffects = Data.Capabilities.HasGameplayCapability("GameplayEffect");
-            bool requiresEquipment = Data.Capabilities.HasGameplayCapability("Equipment");
             if (requiresGameplayEffects != (Services.GameplayEffectCatalog != null))
                 throw new InvalidOperationException("Float32 Ability execution context Gameplay Effect binding does not match its capability.");
-            if (requiresEquipment != (equipmentLayout != null))
-                throw new InvalidOperationException("Float32 Ability execution context Equipment binding does not match its capability.");
-            EquipmentLayout = equipmentLayout;
         }
 
         public Float32GameplayAbilityExecutionData Data { get; }
         public GameplayAbilityExecutionLayout Layout { get; }
         public Float32GameplayAbilityExecutionServices Services { get; }
-        public EquipmentProgramLayout EquipmentLayout { get; }
     }
 
     public sealed class Float32GameplayAbilityExecutionInstallation
     {
         readonly Float32AbilityExecutionContext m_Execution;
+        readonly EquipmentProgramLayout m_EquipmentLayout;
 
         internal Float32GameplayAbilityExecutionInstallation(
             Float32GameplayAbilityExecutionData data,
@@ -57,18 +52,18 @@ namespace ThirdPersonSimulation
                 BuildOperationSourcePaths(layout),
                 requiresGameplayEffects,
                 executionGameplayEffectCatalog);
+            m_EquipmentLayout = executionEquipmentLayout;
             m_Execution = new Float32AbilityExecutionContext(
                 data,
                 layout,
-                services,
-                executionEquipmentLayout);
+                services);
         }
 
         public Float32GameplayAbilityExecutionData Data => m_Execution.Data;
         public GameplayAbilityExecutionLayout Layout => m_Execution.Layout;
         public GameplayAbilityExecutionIdentity Identity => m_Execution.Services.Identity;
         internal Float32GameplayEffectRuntimeCatalog GameplayEffectCatalog => m_Execution.Services.GameplayEffectCatalog;
-        internal EquipmentProgramLayout EquipmentLayout => m_Execution.EquipmentLayout;
+        internal EquipmentProgramLayout EquipmentLayout => m_EquipmentLayout;
         internal Float32GameplayAbilityExecutionServices Services => m_Execution.Services;
         internal Float32AbilityExecutionContext Execution => m_Execution;
 

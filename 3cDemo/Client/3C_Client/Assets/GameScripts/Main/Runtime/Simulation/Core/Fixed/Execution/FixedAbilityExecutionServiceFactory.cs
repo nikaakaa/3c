@@ -108,12 +108,10 @@ namespace ThirdPersonSimulation.Fixed
                 target,
                 actions,
                 actionStore,
-                input,
                 gameplayEffects,
                 equipment,
                 values,
-                blackboard,
-                motion);
+                blackboard);
             control = new FixedAbilityControlRuntime(installation, services);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
                 installation,

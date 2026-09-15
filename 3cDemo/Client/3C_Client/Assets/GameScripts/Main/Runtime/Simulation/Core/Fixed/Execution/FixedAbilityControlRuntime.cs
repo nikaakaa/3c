@@ -7,14 +7,6 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedAbilityExecutionServices
     {
         FixedAbilityExecutionTarget Target { get; }
-        FixedActionRuntime Actions { get; }
-        FixedActionStateStore ActionStore { get; }
-        FixedInputRuntime Input { get; }
-        FixedGameplayEffectOperationRuntime GameplayEffects { get; }
-        FixedEquipmentRuntime Equipment { get; }
-        FixedValueRuntime Values { get; }
-        FixedBlackboardRuntime Blackboard { get; }
-        FixedMotionAccumulator Motion { get; }
         void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
         void EndEvaluation();
         void ApplyIngress();
@@ -38,16 +30,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_Services.Target,
                 checked(Math.Max(1024, installation.Data.Operations.Count * 128)));
         }
-
-        internal FixedActionRuntime Actions => m_Services.Actions;
-        internal FixedActionStateStore ActionStore => m_Services.ActionStore;
-        internal FixedInputRuntime Input => m_Services.Input;
-        internal FixedGameplayEffectOperationRuntime GameplayEffects => m_Services.GameplayEffects;
-        internal FixedEquipmentRuntime Equipment => m_Services.Equipment;
-        internal FixedValueRuntime Values => m_Services.Values;
-        internal FixedBlackboardRuntime Blackboard => m_Services.Blackboard;
-        internal FixedMotionAccumulator Motion => m_Services.Motion;
-        internal OperationControlCursor<FixedAbilityExecutionTarget> Cursor => m_Runtime.Cursor;
 
         internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
         {

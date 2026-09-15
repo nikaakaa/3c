@@ -7,14 +7,6 @@ namespace ThirdPersonSimulation
     internal interface IFloat32AbilityExecutionServices
     {
         Float32AbilityExecutionTarget Target { get; }
-        Float32ActionRuntime Actions { get; }
-        Float32ActionStateStore ActionStore { get; }
-        Float32InputRuntime Input { get; }
-        Float32GameplayEffectOperationRuntime GameplayEffects { get; }
-        Float32EquipmentRuntime Equipment { get; }
-        Float32ValueRuntime Values { get; }
-        Float32BlackboardRuntime Blackboard { get; }
-        Float32MotionAccumulator Motion { get; }
         void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
         void EndEvaluation();
         void ApplyIngress();
@@ -38,16 +30,6 @@ namespace ThirdPersonSimulation
                 m_Services.Target,
                 checked(Math.Max(1024, installation.Data.Operations.Count * 128)));
         }
-
-        internal Float32ActionRuntime Actions => m_Services.Actions;
-        internal Float32ActionStateStore ActionStore => m_Services.ActionStore;
-        internal Float32InputRuntime Input => m_Services.Input;
-        internal Float32GameplayEffectOperationRuntime GameplayEffects => m_Services.GameplayEffects;
-        internal Float32EquipmentRuntime Equipment => m_Services.Equipment;
-        internal Float32ValueRuntime Values => m_Services.Values;
-        internal Float32BlackboardRuntime Blackboard => m_Services.Blackboard;
-        internal Float32MotionAccumulator Motion => m_Services.Motion;
-        internal OperationControlCursor<Float32AbilityExecutionTarget> Cursor => m_Runtime.Cursor;
 
         internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
         {

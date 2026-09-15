@@ -107,12 +107,10 @@ namespace ThirdPersonSimulation
                 target,
                 actions,
                 actionStore,
-                input,
                 gameplayEffects,
                 equipment,
                 values,
-                blackboard,
-                motion);
+                blackboard);
             control = new Float32AbilityControlRuntime(installation, services);
             Float32AbilityDomainRuntime domain = new Float32AbilityDomainRuntime(
                 installation,

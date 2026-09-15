@@ -125,6 +125,30 @@ namespace BTSMTL.Timeline.Runtime
             m_Composition.Stop(handle, stopContext);
         }
 
+        public bool TryGetPlaybackDescriptor(
+            TimelineRuntimePlaybackHandle handle,
+            out TimelineRuntimePlaybackDescriptor descriptor)
+        {
+            EnsureAvailable();
+            return Service.TryGetDescriptor(handle, out descriptor);
+        }
+
+        public bool TryGetCommittedEvaluation(
+            TimelineRuntimePlaybackHandle handle,
+            out TimelineRuntimeCommittedEvaluation evaluation)
+        {
+            EnsureAvailable();
+            return EvaluationBuffer.TryGetCommittedEvaluation(handle, out evaluation);
+        }
+
+        public bool TryGetCommittedEvaluationResult(
+            TimelineRuntimePlaybackHandle handle,
+            out TimelineRuntimeEvaluationResult result)
+        {
+            EnsureAvailable();
+            return EvaluationBuffer.TryGetCommitted(handle, out result);
+        }
+
         public bool RequestTimelinePlayback(
             TimelineData timeline,
             string sourceId,

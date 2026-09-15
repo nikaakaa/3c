@@ -466,3 +466,10 @@
 - Ability 继续通过专用效果端口访问按需服务；角色事务只在统一 Savepoint／Restore／Commit 中捕获和恢复效果状态，保留缺失服务拒绝、workspace 身份检查、效果规则、状态 codec 和角色 Step，不复制状态或增加兼容路径。
 - 效果状态与角色事务同步释放。本步只完成 GameplayEffect 状态 owner 拆分，跨领域完整 Capture／Restore、网络恢复和 Pending 角色结果接线仍未完成，1.11、2.6 仍未完成。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。对应 Center 正式 after compile 因打开的 Unity Editor 占用本 worktree 被 `WorkspaceEditorInUse` 拒绝；未关闭 Editor，未运行 Unity、测试或资产生成。
+
+## 2026-09-15 角色Equipment状态拆出
+
+- 提交 `348d0e94b`，Float32／Fixed 新增独立的角色 Equipment 状态，角色运行时事务不再实现 `EquipmentStatePort`；装备 aggregate 的读写、空状态拒绝和生命周期由装备状态 owner 管理。
+- Ability 继续通过专用装备端口访问状态，装备 mutation scope 仍走原有事务控制端口；角色事务只在统一 Savepoint／Restore／Commit 中捕获和恢复装备状态，保留装备规则、状态 codec 和角色 Step，不复制状态或增加兼容路径。
+- 装备状态与角色事务同步释放。本步只完成 Equipment 状态 owner 拆分，跨领域完整 Capture／Restore、网络恢复和 Pending 角色结果接线仍未完成，1.11、2.6 仍未完成。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。对应 Center 正式 after compile 因打开的 Unity Editor 占用本 worktree 被 `WorkspaceEditorInUse` 拒绝；未关闭 Editor，未运行 Unity、测试或资产生成。

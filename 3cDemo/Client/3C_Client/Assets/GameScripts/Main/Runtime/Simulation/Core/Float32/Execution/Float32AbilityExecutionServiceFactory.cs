@@ -105,7 +105,6 @@ namespace ThirdPersonSimulation
             var services = new Float32AbilityExecutionServiceSet(
                 frame,
                 target,
-                actions,
                 actionStore,
                 gameplayEffects,
                 equipment,

@@ -77,7 +77,6 @@ namespace ThirdPersonSimulation.Fixed
                         actor.ActorId,
                         tick,
                         abilityInput,
-                        ingress,
                         bodyFacts,
                         workspace,
                         roleState.InputRequests,

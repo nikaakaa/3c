@@ -76,7 +76,6 @@ namespace ThirdPersonSimulation
                         actor.ActorId,
                         tick,
                         abilityInput,
-                        ingress,
                         bodyFacts,
                         workspace,
                         roleState.InputRequests,

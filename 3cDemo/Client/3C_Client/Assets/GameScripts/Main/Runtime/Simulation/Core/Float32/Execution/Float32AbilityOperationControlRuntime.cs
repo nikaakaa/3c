@@ -9,8 +9,6 @@ namespace ThirdPersonSimulation
         Float32AbilityExecutionTarget Target { get; }
         void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
         void EndEvaluation();
-        void ApplyIngress();
-        void AdvanceGameplayEffects();
     }
 
     internal sealed class Float32AbilityOperationControlRuntime : IFloat32AbilityOperationControlRuntime
@@ -38,8 +36,6 @@ namespace ThirdPersonSimulation
         }
 
         internal void EndEvaluation() => m_Services.EndEvaluation();
-        internal void ApplyIngress() => m_Services.ApplyIngress();
-        internal void AdvanceGameplayEffects() => m_Services.AdvanceGameplayEffects();
         public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
 
         public bool IsActive(OperationHandle operation) => m_Runtime.IsActive(operation);

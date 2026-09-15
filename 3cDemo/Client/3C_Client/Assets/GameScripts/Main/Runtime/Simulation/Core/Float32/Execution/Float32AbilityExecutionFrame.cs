@@ -95,7 +95,6 @@ namespace ThirdPersonSimulation
             ActorId actorId,
             SimulationTick tick,
             Float32AbilityExecutionInput input,
-            IReadOnlyList<SimulationIngress> ingress,
             Float32AbilityBodyFacts bodyFacts,
             IFloat32SkillExecutionState skillState,
             IFloat32AbilityExecutionSavepointPort savepointPort,
@@ -114,7 +113,6 @@ namespace ThirdPersonSimulation
             ActorId = actorId;
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));
-            Ingress = ingress ?? Array.Empty<SimulationIngress>();
             m_BodyFacts = bodyFacts;
             SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             m_SavepointPort = savepointPort;
@@ -142,7 +140,6 @@ namespace ThirdPersonSimulation
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
         public Float32AbilityExecutionInput Input { get; }
-        public IReadOnlyList<SimulationIngress> Ingress { get; }
         public Float32AbilityBodyFacts BodyFacts => m_BodyFacts.IsValid
             ? m_BodyFacts
             : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");

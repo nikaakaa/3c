@@ -96,7 +96,6 @@ namespace ThirdPersonSimulation.Fixed
             ActorId actorId,
             SimulationTick tick,
             FixedAbilityExecutionInput input,
-            IReadOnlyList<SimulationIngress> ingress,
             FixedAbilityBodyFacts bodyFacts,
             IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
@@ -115,7 +114,6 @@ namespace ThirdPersonSimulation.Fixed
             ActorId = actorId;
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));
-            Ingress = ingress ?? Array.Empty<SimulationIngress>();
             m_BodyFacts = bodyFacts;
             SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             m_SavepointPort = savepointPort;
@@ -143,7 +141,6 @@ namespace ThirdPersonSimulation.Fixed
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
         public FixedAbilityExecutionInput Input { get; }
-        public IReadOnlyList<SimulationIngress> Ingress { get; }
         public FixedAbilityBodyFacts BodyFacts => m_BodyFacts.IsValid
             ? m_BodyFacts
             : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");

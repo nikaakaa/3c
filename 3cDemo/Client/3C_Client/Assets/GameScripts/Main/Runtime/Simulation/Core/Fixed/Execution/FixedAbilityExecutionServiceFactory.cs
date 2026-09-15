@@ -106,7 +106,6 @@ namespace ThirdPersonSimulation.Fixed
             var services = new FixedAbilityExecutionServiceSet(
                 frame,
                 target,
-                actions,
                 actionStore,
                 gameplayEffects,
                 equipment,

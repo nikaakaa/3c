@@ -15,8 +15,6 @@ namespace ThirdPersonRendering.ShapeProjection.Editor
         {
             LocalPrefabPath,
             "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab",
-            "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/DotRecast/CorinServerAuthoritativeDotRecastClient.prefab",
-            "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/UnityAuthority/CorinServerAuthoritativeUnityClient.prefab",
             "Assets/Prefabs/GameplayLab/GameplayLabLocalFixed.prefab"
         };
 

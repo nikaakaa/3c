@@ -15,34 +15,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         const string LocalCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
         const string RollbackCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
-        const string UnityAuthorityCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/UnityAuthority/CorinServerAuthoritativeUnityClient.prefab";
-
-        static readonly string[] PipelineProfiles =
-        {
-            LocalCorinPath,
-            UnityAuthorityCorinPath
-        };
-
         [MenuItem("Tools/3C/Characters/Synchronize Runtime Root Hierarchies")]
         public static void Synchronize()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Character Runtime Profile roots cannot be synchronized in Play Mode.");
             SynchronizePipelineProfile(LocalCorinPath, null);
-            GameObject templateRoot = PrefabUtility.LoadPrefabContents(LocalCorinPath);
-            try
-            {
-                CharacterPipelineHost templateHost = RequirePipelineHost(templateRoot, LocalCorinPath);
-                CharacterAnimationRigBinding templateRig = templateHost.AnimationRigBinding
-                    ? templateHost.AnimationRigBinding
-                    : throw new InvalidOperationException("Local Corin Runtime Profile has no Animation Rig Binding.");
-                for (int i = 1; i < PipelineProfiles.Length; i++)
-                    SynchronizePipelineProfile(PipelineProfiles[i], templateRig);
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(templateRoot);
-            }
             SynchronizeRollbackProfile();
             AssetDatabase.SaveAssets();
         }

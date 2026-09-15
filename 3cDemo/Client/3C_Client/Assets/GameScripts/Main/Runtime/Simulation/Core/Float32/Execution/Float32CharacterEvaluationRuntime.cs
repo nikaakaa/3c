@@ -69,26 +69,28 @@ namespace ThirdPersonSimulation
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
-                    var invocation = new Float32AbilityInvocationRuntime(
-                        installation.Execution,
-                        actor.AbilityInstallations,
-                        domainRuntimeFactory,
-                        installation.EquipmentLayout,
+                    var stateServices = new Float32AbilityInvocationStateServices(
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
-                        actor.ActorId,
-                        tick,
-                        abilityInput,
-                        bodyFacts,
-                        workspace,
                         roleState.InputRequests,
                         roleState.ActionState,
                         roleState.HandleAllocatorState,
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
                         roleState.EquipmentState,
-                        serviceFactory,
                         roleState.AcceptAbility);
+                    var invocation = new Float32AbilityInvocationRuntime(
+                        installation.Execution,
+                        actor.AbilityInstallations,
+                        domainRuntimeFactory,
+                        installation.EquipmentLayout,
+                        stateServices,
+                        actor.ActorId,
+                        tick,
+                        abilityInput,
+                        bodyFacts,
+                        workspace,
+                        serviceFactory);
                     invocations.Add(invocation);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }

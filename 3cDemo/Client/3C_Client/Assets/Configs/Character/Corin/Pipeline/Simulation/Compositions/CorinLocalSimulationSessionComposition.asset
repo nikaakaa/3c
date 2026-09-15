@@ -18,7 +18,6 @@ MonoBehaviour:
   m_WorldRevision: Local.World.v1
   m_SourceClockId: Local.Logic
   m_TickRate: 60
-  m_ProgramRuntime: {fileID: 11400000, guid: a04d371ecd5c45a6a4c0fbf4e36fb9c8, type: 2}
   m_ExecutionBackend: {fileID: 11400000, guid: 57a1000000004d259d15000000000001, type: 2}
   m_Pipeline: {fileID: 11400000, guid: 57a8000000004d259d15000000000008, type: 2}
   m_SessionSource: {fileID: 11400000, guid: 7f08b6b9628a49c3afe67e1129781687, type: 2}

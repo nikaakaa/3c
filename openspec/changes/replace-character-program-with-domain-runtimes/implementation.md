@@ -216,3 +216,10 @@
 ## 下一小步
 
 下一步进入删除后的核心接线：让保留的 Ability 执行入口直接消费 Float32／Fixed 独立 execution data，建立按 Ability 数据的执行布局和状态边界；不恢复角色 Program、全局 Layout 或转换 Factory。随后接入 D14 的 Timeline Prepare／CreatePlayback／Pending Commit／Discard、D15 的 Pose 阶段接口、2.1 的非旧 Program 角色工厂和 2.6 的统一 Step／快照收口。Timeline／Pose 内部状态不在本窗口重复实现。
+
+## 2026-09-15 Ability Invocation 状态依赖切口
+
+- 提交 `6907a4696` 将 Float32 与 Fixed 的 Ability Invocation 构造入口改为接收独立 `IFloat32AbilityExecutionStateTransaction` / `IFixedAbilityExecutionStateTransaction`、对应 `IFloat32AbilityDomainStatePort` / `IFixedAbilityDomainStatePort`、裁剪后的 Ability Execution Input 和 Body Facts，以及显式 accept 回调。
+- 角色评估入口负责 `BindAbility`，构造完成后调用 `invocation.Accept()`，再由显式回调节点角色事务 `AcceptAbility`。Ability Invocation 内部不再保存 `Float32CharacterRuntimeStateTransaction` / `FixedCharacterRuntimeStateTransaction`，也不再接收完整 `CharacterSimulationInput` 和 `WorldBodyState`。
+- 本切口不宣称 1.11 已完成：Invocation 当前仍接收 Control / Equipment binding 并在内部装配 Gameplay Effect、Equipment、Control 等 runtime；Frontend 按可达节点声明能力、统一非角色调用方入口和删除无条件 Effect 要求仍是剩余工作。
+- `ThirdPersonSimulation.Float32.csproj` 与 `ThirdPersonSimulation.Fixed.csproj` 窄编译均为 0 warning、0 error；每次编译后已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成。

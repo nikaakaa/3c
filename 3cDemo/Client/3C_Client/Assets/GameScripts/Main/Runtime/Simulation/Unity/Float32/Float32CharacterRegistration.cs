@@ -42,7 +42,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             SimulationActorBinding characterBinding,
             CharacterPresentationProjectionAsset projectionAsset,
             CharacterPresentationProjection projection,
-            CharacterPresentationSemanticContract presentationContract,
             Float32WorldBodyBinding worldBodyBinding,
             WorldBodyState initialBody,
             IUnityCharacterControlSourceRuntime localControlSource,
@@ -74,8 +73,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             m_CharacterBinding = characterBinding;
             ProjectionAsset = projectionAsset ? projectionAsset : throw new ArgumentNullException(nameof(projectionAsset));
             Projection = projection ?? throw new ArgumentNullException(nameof(projection));
-            PresentationContract = presentationContract ?? throw new ArgumentNullException(nameof(presentationContract));
-            Projection.RequireContract(PresentationContract);
             WorldBodyBinding = worldBodyBinding;
             InitialBody = initialBody;
             m_LocalControlSource = localControlSource;
@@ -123,7 +120,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public ICharacterSimulationGameplayOutputPort GameplayOutput => m_GameplayOutput;
         public CharacterPresentationProjectionAsset ProjectionAsset { get; }
         public CharacterPresentationProjection Projection { get; }
-        public CharacterPresentationSemanticContract PresentationContract { get; }
         public ICharacterPresentationRuntime PresentationRuntime => m_PresentationRuntime;
         public ISimulationPresentationOutputPort PresentationOutput => m_PresentationOutput;
         public ISimulationDiagnosticsSink SimulationDiagnostics => m_Diagnostics;

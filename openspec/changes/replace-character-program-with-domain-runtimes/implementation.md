@@ -569,3 +569,9 @@
 - 提交 `4aeafebe0`，将 Float32／Fixed Ability 执行内的 `TransactionControl` 统一改名为 `SavepointPort`，调用方传入的是执行级回滚能力，不再以角色事务命名。
 - 只收口边界命名和缺失服务错误信息，GameplayEffect／Equipment 的存档、恢复、释放顺序与行为不变。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；独立 Ability 的非角色调用方装配仍需接入正式状态与服务提供者。
+
+## 2026-09-16 角色内容身份按实际能力收口
+
+- 提交 `ef7de8bfe`，Float32／Fixed `SimulationActorBinding` 的 `GameplayContentHash` 只纳入已安装 Ability 实际声明的 GameplayEffect／Equipment binding；未使用的多余 binding 不再改变角色内容身份。
+- 控制与 BodyMotion binding 仍始终属于角色执行身份；必需领域 binding 仍在安装或角色绑定阶段直接拒绝缺失，不引入空实现或兼容路径。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。未运行 Unity、测试或资产生成；1.10、1.11、2.1、2.6 的完整领域接线仍未完成。

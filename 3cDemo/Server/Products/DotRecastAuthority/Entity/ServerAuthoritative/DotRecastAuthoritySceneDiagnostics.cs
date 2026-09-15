@@ -13,7 +13,7 @@ public sealed class DotRecastAuthoritySceneDiagnostics : ISimulationDiagnosticsS
         ArgumentNullException.ThrowIfNull(manifest);
         Identity =
             $"hostProduct={manifest.HostProductId};host={manifest.HostId};route=InProcessAuthorityScene;" +
-            $"program={manifest.Program.ProgramId}/{manifest.Program.ProgramHash};" +
+            $"abilities={manifest.Abilities.Count};tickRate={manifest.Pipeline.TickRate};" +
             $"backend={manifest.Pipeline.BackendIdentity};pipeline={manifest.Pipeline.Identity};source={manifest.Pipeline.Source.Identity};" +
             $"solver={manifest.World.SolverId}@{manifest.World.SolverVersion};world={manifest.World.WorldId};" +
             $"map={manifest.World.MapId};surface={manifest.World.NavigationSurfaceContentHash};query={manifest.World.QueryProfileHash};" +

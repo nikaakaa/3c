@@ -749,3 +749,9 @@
 - 提交 `6d507f7fc`，删除 AbilityExecutionServiceSet 与 OperationControlRuntime 中无调用方的统一 Ingress、Gameplay Effect 推进入口，并移除 Frame／Invocation 的死 Ingress 参数。
 - 角色评估继续负责 Action／Gameplay Effect Ingress 分流和外层效果推进，Ability 服务只保留 Begin／End、局部 Tick 和实际领域服务，不改变执行顺序。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。
+
+## 2026-09-16 删除状态事务身份死出口
+
+- 提交 `cff0f464e`，删除 Float32／Fixed 角色状态事务未被消费的 `ActorId`、`Tick` 与 `TickRate` 属性。
+- 事务内部仍保留时间和速率，用于技能局部状态、Control 状态和 Gameplay Effect 状态构造；本步只收窄状态事务发布面。
+- `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

@@ -612,3 +612,9 @@
 - 提交 `5bfdbb648`，Float32／Fixed Ability 安装集合将正式 `CharacterEquipmentRuntimeBinding` 传入安装边界；声明 Equipment 能力的安装在装配时生成不可变 `EquipmentProgramLayout`，不声明该能力的安装不创建装备布局。
 - Ability execution service factory 删除对角色 Equipment binding 的持有和逐帧 `Compile`；Equipment runtime 只接收安装阶段的 typed 布局，缺失正式 binding 或布局直接在安装边界拒绝，不保留延迟解析、空服务或兼容入口。
 - `ThirdPersonSimulation.Core.csproj` 编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`；Float32／Fixed 生成工程分别复现既有 28／24 个源索引缺失错误，未发现本步改动文件新增错误，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 收窄Ability局部状态边界
+
+- 提交 `6d886478b`，Float32／Fixed Ability 执行帧、动作状态、装备状态和 MotionWarp 改用 `IFloat32/FixedSkillExecutionState`；实现对象只保存单个技能调用分区，不再使用角色式 `...StateTransaction` 名称。
+- 删除技能局部状态接口上的 `Abort`，调用候选丢弃只释放该技能状态；角色 Step 的完整事务仍由 `CharacterRuntimeStateTransaction` 持有，技能接口不能借此中止外层角色提交。
+- Float32／Fixed 生成工程分别复现既有 28／24 个源索引缺失错误，未发现本步改名新增错误；未运行 Unity、测试或资产生成。

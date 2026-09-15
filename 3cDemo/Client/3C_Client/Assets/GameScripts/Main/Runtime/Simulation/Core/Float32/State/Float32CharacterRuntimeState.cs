@@ -116,21 +116,21 @@ namespace ThirdPersonSimulation
         internal EquipmentStateAggregate EquipmentState { get; }
 
         internal static Float32CharacterRuntimeState CreateInitial(
-            Float32GameplayAbilityExecutionInstallationSet installations,
+            IEnumerable<GameplayAbilityExecutionIdentity> abilityIdentities,
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
             CharacterControlRuntimeState controlState,
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
         {
-            if (installations == null)
-                throw new ArgumentNullException(nameof(installations));
-            var abilities = new Float32AbilityRuntimeState[installations.Installations.Count];
+            if (abilityIdentities == null)
+                throw new ArgumentNullException(nameof(abilityIdentities));
+            var identities = new List<GameplayAbilityExecutionIdentity>(abilityIdentities);
+            var abilities = new Float32AbilityRuntimeState[identities.Count];
             for (int i = 0; i < abilities.Length; i++)
             {
-                Float32GameplayAbilityExecutionInstallation installation = installations.Installations[i];
                 abilities[i] = new Float32AbilityRuntimeState(
-                    installation.Identity,
+                    identities[i],
                     null,
                     null,
                     null);

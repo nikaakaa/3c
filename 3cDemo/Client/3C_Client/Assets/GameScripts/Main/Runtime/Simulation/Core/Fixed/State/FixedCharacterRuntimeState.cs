@@ -116,21 +116,21 @@ namespace ThirdPersonSimulation.Fixed
         internal EquipmentStateAggregate EquipmentState { get; }
 
         internal static FixedCharacterRuntimeState CreateInitial(
-            FixedGameplayAbilityExecutionInstallationSet installations,
+            IEnumerable<GameplayAbilityExecutionIdentity> abilityIdentities,
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
             CharacterControlRuntimeState controlState,
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
         {
-            if (installations == null)
-                throw new ArgumentNullException(nameof(installations));
-            var abilities = new FixedAbilityRuntimeState[installations.Installations.Count];
+            if (abilityIdentities == null)
+                throw new ArgumentNullException(nameof(abilityIdentities));
+            var identities = new List<GameplayAbilityExecutionIdentity>(abilityIdentities);
+            var abilities = new FixedAbilityRuntimeState[identities.Count];
             for (int i = 0; i < abilities.Length; i++)
             {
-                FixedGameplayAbilityExecutionInstallation installation = installations.Installations[i];
                 abilities[i] = new FixedAbilityRuntimeState(
-                    installation.Identity,
+                    identities[i],
                     null,
                     null,
                     null);

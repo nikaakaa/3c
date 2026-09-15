@@ -147,8 +147,11 @@ namespace ThirdPersonSimulation.Fixed
                 EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.CompileRoleStateLayout(actor.EquipmentRuntimeBinding);
                 equipmentState = EquipmentStateAggregate.CreateInitial(layout);
             }
+            var abilityIdentities = new List<GameplayAbilityExecutionIdentity>(actor.AbilityInstallations.Installations.Count);
+            for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
+                abilityIdentities.Add(actor.AbilityInstallations.Installations[i].Identity);
             return FixedCharacterRuntimeState.CreateInitial(
-                actor.AbilityInstallations,
+                abilityIdentities,
                 NumericProfile,
                 new GameplayContentHash(actor.GameplayContentHash),
                 controlState,

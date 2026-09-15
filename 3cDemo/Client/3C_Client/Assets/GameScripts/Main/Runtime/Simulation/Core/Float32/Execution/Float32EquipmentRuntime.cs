@@ -348,7 +348,7 @@ namespace ThirdPersonSimulation
 			public MutationScope(Float32AbilityExecutionFrame frame)
 			{
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-				m_Savepoint = frame.TransactionControl.CreateSavepoint();
+				m_Savepoint = frame.SavepointPort.CreateSavepoint();
 				m_OutputSavepoint = frame.CreateOutputSavepoint();
 				m_Values = new CharacterStateValue[frame.Data.StateSlots.Count];
 				for (int i = 0; i < m_Values.Length; i++)
@@ -359,7 +359,7 @@ namespace ThirdPersonSimulation
 			{
 				if (m_Completed)
 					throw new InvalidOperationException("Equipment mutation scope is already completed.");
-				m_Frame.TransactionControl.Release(m_Savepoint);
+				m_Frame.SavepointPort.Release(m_Savepoint);
 				m_Completed = true;
 			}
 
@@ -368,7 +368,7 @@ namespace ThirdPersonSimulation
 				if (m_Completed)
 					return;
 				m_Frame.RestoreOutput(m_OutputSavepoint);
-			m_Frame.TransactionControl.Restore(m_Savepoint);
+			m_Frame.SavepointPort.Restore(m_Savepoint);
 				for (int i = 0; i < m_Values.Length; i++)
 					m_Frame.Transaction.Set(i, m_Values[i]);
 				m_Completed = true;

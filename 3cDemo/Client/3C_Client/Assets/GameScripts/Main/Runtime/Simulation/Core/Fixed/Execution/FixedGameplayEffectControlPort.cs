@@ -151,12 +151,12 @@ namespace ThirdPersonSimulation.Fixed
         IFixedAbilityExecutionSavepoint IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.CreateSavepoint()
         {
             EnsureWorkingState();
-            return m_TransactionControl.CreateSavepoint();
+            return m_SavepointPort.CreateSavepoint();
         }
 
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.Restore(IFixedAbilityExecutionSavepoint savepoint) => m_TransactionControl.Restore(savepoint);
-        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.Release(IFixedAbilityExecutionSavepoint savepoint) => m_TransactionControl.Release(savepoint);
-        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.SavepointIsActive(IFixedAbilityExecutionSavepoint savepoint) => m_TransactionControl.SavepointDepth >= savepoint.Depth;
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.Restore(IFixedAbilityExecutionSavepoint savepoint) => m_SavepointPort.Restore(savepoint);
+        void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.Release(IFixedAbilityExecutionSavepoint savepoint) => m_SavepointPort.Release(savepoint);
+        bool IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.SavepointIsActive(IFixedAbilityExecutionSavepoint savepoint) => m_SavepointPort.SavepointDepth >= savepoint.Depth;
         ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.CaptureAllocator() => m_CaptureAllocator();
         void IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.RestoreAllocator(ulong value) => m_RestoreAllocator(value);
         ulong IGameplayEffectControlPort<SimulationGameplayEffectApplication, PortableEffectSpecState, PortableActiveEffectState, PortablePredictionRecord, PortableTagQuery, IFixedAbilityExecutionSavepoint>.AllocateHandle() => m_AllocateHandle();

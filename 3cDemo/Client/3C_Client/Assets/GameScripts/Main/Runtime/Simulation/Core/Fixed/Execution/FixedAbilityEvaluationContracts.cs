@@ -24,14 +24,15 @@ namespace ThirdPersonSimulation.Fixed
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Character evaluation result identity is incomplete.");
             CandidateState = candidateState ?? throw new ArgumentNullException(nameof(candidateState));
-            WorldRequest = worldRequest ?? throw new ArgumentNullException(nameof(worldRequest));
-            if (worldRequest.ActorId != actorId || worldRequest.Tick != tick ||
-                candidateState.LastCompletedTick != tick.Value)
+            if (candidateState.LastCompletedTick != tick.Value)
             {
                 throw new InvalidOperationException("Fixed Character evaluation result binding is invalid.");
             }
+            if (worldRequest != null && (worldRequest.ActorId != actorId || worldRequest.Tick != tick))
+                throw new InvalidOperationException("Fixed Character evaluation result World request binding is invalid.");
             ActorId = actorId;
             Tick = tick;
+            WorldRequest = worldRequest;
             m_GameplayFacts = Copy(gameplayFacts);
             m_PresentationCommands = Copy(presentationCommands);
             m_TraceRecords = Copy(traceRecords);

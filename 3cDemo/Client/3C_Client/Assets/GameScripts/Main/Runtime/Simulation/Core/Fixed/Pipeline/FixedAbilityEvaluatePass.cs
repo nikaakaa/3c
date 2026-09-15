@@ -92,7 +92,8 @@ namespace ThirdPersonSimulation.Fixed
                         valueInterest.IsValueCaptureRequested(actor.ActorId),
                         readPorts.Diagnostics.Sink is ISimulationControlTraceInterest controlInterest &&
                         controlInterest.IsControlCaptureRequested(actor.ActorId));
-                    m_Requests[i] = m_Evaluations[i].WorldRequest;
+                    m_Requests[i] = m_Evaluations[i].WorldRequest ??
+                        throw new InvalidOperationException("Fixed Character Evaluate Pass requires a World solve request for every actor.");
                 }
                 writePorts.CharacterEvaluationResults.Write(m_EvaluationBatch.Reset(step.Tick, m_Evaluations));
                 writePorts.WorldBatch.Write(new WorldSolveBatchRequest(step.Tick, state.WorldState, m_Requests));

@@ -999,3 +999,8 @@
 
 - 提交 `b2b0f7efc`，Float32／Fixed Ability Execution Context 删除 Equipment layout 持有；安装对象在角色调用入口将已解析的领域 layout 显式传给 Domain Runtime Factory，Equipment 运行模块不再从技能上下文读取角色配置。
 - 保留安装阶段的能力声明／布局匹配校验、技能局部状态和外层角色事务；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除执行上下文重复校验
+
+- 提交 `7b8d58b90`，Float32／Fixed Ability Execution Context 删除 Gameplay Effect 能力与目录绑定的重复校验；真实校验继续由安装构造和 Execution Services 完成。
+- Context 不再承担领域绑定判断，只保留技能数据、执行布局和服务集合；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

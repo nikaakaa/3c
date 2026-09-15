@@ -33,7 +33,8 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedAbilityExecutionServiceFactory
     {
         FixedAbilityExecutionAssembly Create(
-            FixedAbilityExecutionContext execution,
+            FixedGameplayAbilityExecutionData executionData,
+            FixedGameplayAbilityExecutionServices executionServices,
             IFixedAbilityActionBindingProvider actionBindings,
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
@@ -150,7 +151,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_Workspace);
 
             FixedAbilityExecutionAssembly assembly = serviceFactory.Create(
-                execution,
+                execution.Data,
+                execution.Services,
                 actionBindings,
                 domainRuntimeFactory,
                 equipmentLayout,

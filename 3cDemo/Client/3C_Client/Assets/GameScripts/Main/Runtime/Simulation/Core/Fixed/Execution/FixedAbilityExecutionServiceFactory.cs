@@ -71,7 +71,8 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
     {
         public FixedAbilityExecutionAssembly Create(
-            FixedAbilityExecutionContext execution,
+            FixedGameplayAbilityExecutionData executionData,
+            FixedGameplayAbilityExecutionServices executionServices,
             IFixedAbilityActionBindingProvider actionBindings,
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
@@ -79,23 +80,23 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionWorkspace workspace)
         {
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
-            FixedGameplayAbilityExecutionAccess access = execution.Services.Access;
+            FixedGameplayAbilityExecutionAccess access = executionServices.Access;
             FixedStatePort controlState = frame.CreateStatePort(
                 "Control",
-                execution.Services.ControlPolicy);
+                executionServices.ControlPolicy);
             FixedActionStateStore actionStore = new FixedActionStateStore(access, frame);
             FixedInputRuntime input = new FixedInputRuntime(access, frame);
             FixedHandleAllocator handles = new FixedHandleAllocator(access, frame);
             FixedBlackboardRuntime blackboard = new FixedBlackboardRuntime(
                 access,
-                frame.CreateStatePort("Blackboard", execution.Services.BlackboardPolicy),
+                frame.CreateStatePort("Blackboard", executionServices.BlackboardPolicy),
                 frame,
                 actionStore,
                 frame.Facts,
                 frame.Trace,
                 workspace);
             FixedAbilityDomainRuntimeServices domainServices = domainRuntimeFactory.Create(
-                execution.Services.GameplayEffectCatalog,
+                executionServices.GameplayEffectCatalog,
                 access,
                 frame,
                 actionStore,
@@ -163,10 +164,10 @@ namespace ThirdPersonSimulation.Fixed
                 equipment,
                 values,
                 blackboard);
-            control = new FixedAbilityOperationControlRuntime(execution.Data, services);
+            control = new FixedAbilityOperationControlRuntime(executionData, services);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
-                execution.Data.Binding,
-                execution.Services,
+                executionData.Binding,
+                executionServices,
                 actions,
                 actionStore,
                 control);

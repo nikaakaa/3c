@@ -32,7 +32,8 @@ namespace ThirdPersonSimulation
     internal interface IFloat32AbilityExecutionServiceFactory
     {
         Float32AbilityExecutionAssembly Create(
-            Float32AbilityExecutionContext execution,
+            Float32GameplayAbilityExecutionData executionData,
+            Float32GameplayAbilityExecutionServices executionServices,
             IFloat32AbilityActionBindingProvider actionBindings,
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
@@ -149,7 +150,8 @@ namespace ThirdPersonSimulation
                 m_Workspace);
 
             Float32AbilityExecutionAssembly assembly = serviceFactory.Create(
-                execution,
+                execution.Data,
+                execution.Services,
                 actionBindings,
                 domainRuntimeFactory,
                 equipmentLayout,

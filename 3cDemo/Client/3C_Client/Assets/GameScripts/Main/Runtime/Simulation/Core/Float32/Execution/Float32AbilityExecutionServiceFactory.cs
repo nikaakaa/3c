@@ -70,7 +70,8 @@ namespace ThirdPersonSimulation
     internal sealed class Float32AbilityExecutionServiceFactory : IFloat32AbilityExecutionServiceFactory
     {
         public Float32AbilityExecutionAssembly Create(
-            Float32AbilityExecutionContext execution,
+            Float32GameplayAbilityExecutionData executionData,
+            Float32GameplayAbilityExecutionServices executionServices,
             IFloat32AbilityActionBindingProvider actionBindings,
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
@@ -78,23 +79,23 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionWorkspace workspace)
         {
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
-            Float32GameplayAbilityExecutionAccess access = execution.Services.Access;
+            Float32GameplayAbilityExecutionAccess access = executionServices.Access;
             Float32StatePort controlState = frame.CreateStatePort(
                 "Control",
-                execution.Services.ControlPolicy);
+                executionServices.ControlPolicy);
             Float32ActionStateStore actionStore = new Float32ActionStateStore(access, frame);
             Float32InputRuntime input = new Float32InputRuntime(access, frame);
             Float32HandleAllocator handles = new Float32HandleAllocator(access, frame);
             Float32BlackboardRuntime blackboard = new Float32BlackboardRuntime(
                 access,
-                frame.CreateStatePort("Blackboard", execution.Services.BlackboardPolicy),
+                frame.CreateStatePort("Blackboard", executionServices.BlackboardPolicy),
                 frame,
                 actionStore,
                 frame.Facts,
                 frame.Trace,
                 workspace);
             Float32AbilityDomainRuntimeServices domainServices = domainRuntimeFactory.Create(
-                execution.Services.GameplayEffectCatalog,
+                executionServices.GameplayEffectCatalog,
                 access,
                 frame,
                 actionStore,
@@ -162,10 +163,10 @@ namespace ThirdPersonSimulation
                 equipment,
                 values,
                 blackboard);
-            control = new Float32AbilityOperationControlRuntime(execution.Data, services);
+            control = new Float32AbilityOperationControlRuntime(executionData, services);
             Float32AbilityDomainRuntime domain = new Float32AbilityDomainRuntime(
-                execution.Data.Binding,
-                execution.Services,
+                executionData.Binding,
+                executionServices,
                 actions,
                 actionStore,
                 control);

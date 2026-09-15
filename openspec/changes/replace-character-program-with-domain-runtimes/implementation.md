@@ -376,3 +376,9 @@
 - 提交 `2a1a7bc48`，从 Float32／Fixed `AbilityDomainStatePort` 移除 Handle 分配、捕获和恢复操作，新增 `HandleAllocatorStatePort`；Ability 执行帧和句柄服务只通过专用端口操作角色句柄序列。
 - 句柄序列仍由同一个角色状态事务保存、保存点恢复和最终提交，未改变状态 codec、事件语义或网络身份；本步只收窄 Ability 可见的状态入口，不增加兼容路径。
 - Float32／Fixed portable 编译均为 0 warning、0 error，并已清理 .NET Host；未运行 Unity、测试或资产生成。本步推进 D22 的 Ability 基础服务边界，但不将 1.11 标记为完成。
+
+## 2026-09-15 Ability事件序号端口独立化
+
+- 提交 `8aaca56b0`，从 Float32／Fixed `AbilityDomainStatePort` 移除事件序号分配，新增 `EventSequenceStatePort`；Ability 事件发射器只通过专用端口生成角色事件序号。
+- 事件序列仍由同一个角色状态事务保存、保存点恢复和最终提交，事件格式、排序和网络身份不变；本步继续收窄 Ability 可见的角色事务入口，不增加兼容路径。
+- Float32／Fixed portable 编译均为 0 warning、0 error，并已清理 .NET Host；未运行 Unity、测试或资产生成。本步推进 D22 的 Ability 基础服务边界，但不将 1.11 标记为完成。

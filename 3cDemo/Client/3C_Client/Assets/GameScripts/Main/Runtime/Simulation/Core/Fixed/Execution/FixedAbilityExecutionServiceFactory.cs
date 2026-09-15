@@ -6,7 +6,7 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedAbilityDomainRuntimeFactory
     {
         FixedAbilityDomainRuntimeServices Create(
-            FixedAbilityExecutionContext execution,
+            FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog,
             FixedGameplayAbilityExecutionAccess access,
             FixedAbilityExecutionFrame frame,
             FixedActionStateStore actionStore,
@@ -32,7 +32,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedAbilityDomainRuntimeFactory : IFixedAbilityDomainRuntimeFactory
     {
         public FixedAbilityDomainRuntimeServices Create(
-            FixedAbilityExecutionContext execution,
+            FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog,
             FixedGameplayAbilityExecutionAccess access,
             FixedAbilityExecutionFrame frame,
             FixedActionStateStore actionStore,
@@ -40,7 +40,7 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionWorkspace workspace)
         {
-            FixedGameplayEffectOperationRuntime gameplayEffects = execution.Services.GameplayEffectCatalog == null
+            FixedGameplayEffectOperationRuntime gameplayEffects = gameplayEffectCatalog == null
                 ? null
                 : new FixedGameplayEffectOperationRuntime(
                     access,
@@ -95,7 +95,7 @@ namespace ThirdPersonSimulation.Fixed
                 frame.Trace,
                 workspace);
             FixedAbilityDomainRuntimeServices domainServices = domainRuntimeFactory.Create(
-                execution,
+                execution.Services.GameplayEffectCatalog,
                 access,
                 frame,
                 actionStore,

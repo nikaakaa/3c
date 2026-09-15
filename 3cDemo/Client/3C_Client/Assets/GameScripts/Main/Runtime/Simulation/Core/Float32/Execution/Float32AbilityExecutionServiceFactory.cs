@@ -5,7 +5,7 @@ namespace ThirdPersonSimulation
     internal interface IFloat32AbilityDomainRuntimeFactory
     {
         Float32AbilityDomainRuntimeServices Create(
-            Float32AbilityExecutionContext execution,
+            Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
             Float32GameplayAbilityExecutionAccess access,
             Float32AbilityExecutionFrame frame,
             Float32ActionStateStore actionStore,
@@ -31,7 +31,7 @@ namespace ThirdPersonSimulation
     internal sealed class Float32AbilityDomainRuntimeFactory : IFloat32AbilityDomainRuntimeFactory
     {
         public Float32AbilityDomainRuntimeServices Create(
-            Float32AbilityExecutionContext execution,
+            Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
             Float32GameplayAbilityExecutionAccess access,
             Float32AbilityExecutionFrame frame,
             Float32ActionStateStore actionStore,
@@ -39,7 +39,7 @@ namespace ThirdPersonSimulation
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionWorkspace workspace)
         {
-            Float32GameplayEffectOperationRuntime gameplayEffects = execution.Services.GameplayEffectCatalog == null
+            Float32GameplayEffectOperationRuntime gameplayEffects = gameplayEffectCatalog == null
                 ? null
                 : new Float32GameplayEffectOperationRuntime(
                     access,
@@ -94,7 +94,7 @@ namespace ThirdPersonSimulation
                 frame.Trace,
                 workspace);
             Float32AbilityDomainRuntimeServices domainServices = domainRuntimeFactory.Create(
-                execution,
+                execution.Services.GameplayEffectCatalog,
                 access,
                 frame,
                 actionStore,

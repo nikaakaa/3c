@@ -1014,3 +1014,8 @@
 
 - 提交 `8d5c52c95`，Float32／Fixed Ability Installation 删除没有调用方的 Gameplay Effect catalog 转发；目录继续由安装集合和 Execution Services 持有，执行入口使用唯一正式来源。
 - 不改变 Gameplay Effect 绑定、领域服务创建或技能执行顺序；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 收窄执行服务工厂输入
+
+- 提交 `55499152d`，Float32／Fixed Ability Execution Service Factory 改为直接接收执行数据和执行服务，不再接收整套 Ability Execution Context；Context 只保留 Invocation 组装执行帧所需的聚合边界。
+- 不改变技能运行模块装配、状态端口、领域服务注入或执行顺序；两条目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

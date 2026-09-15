@@ -193,7 +193,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 SimulationIngress value = ingress[i];
                 if (value.Header.Kind != SimulationIngressKind.ActionLifecycle ||
-                    !OwnsAction(sourceState, value.ActionLifecycle.ActionInstanceId, invocation.Installation.Data.AbilityId))
+                    !OwnsAction(sourceState, value.ActionLifecycle.ActionInstanceId, invocation.AbilityId))
                     continue;
                 invocation.ApplyActionIngress(value);
             }
@@ -238,7 +238,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < invocations.Count; i++)
             {
                 FixedAbilityInvocationRuntime invocation = invocations[i];
-                if (invocation.Installation.Data.AbilityId != skillId)
+                if (invocation.AbilityId != skillId)
                     continue;
                 return invocation.HasActionWindowProjection(windowType);
             }

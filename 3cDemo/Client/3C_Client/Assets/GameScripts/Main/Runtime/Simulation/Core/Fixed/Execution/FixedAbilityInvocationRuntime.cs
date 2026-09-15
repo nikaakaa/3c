@@ -115,7 +115,8 @@ namespace ThirdPersonSimulation.Fixed
             IFixedAbilityExecutionServiceFactory serviceFactory,
             Action<IFixedSkillExecutionState> acceptAbility)
         {
-            Installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            installation = installation ?? throw new ArgumentNullException(nameof(installation));
+            AbilityId = installation.Data.AbilityId;
             installations = installations ?? throw new ArgumentNullException(nameof(installations));
             m_AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
             if (!actorId.IsValid || !tick.IsValid)
@@ -157,7 +158,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Domain = assembly.Domain;
         }
 
-        public FixedGameplayAbilityExecutionInstallation Installation { get; }
+        public CharacterSkillId AbilityId { get; }
         public IFixedAbilityActionControlPort Actions => m_Actions;
         public bool HasGameplayEffects => m_GameplayEffects != null;
         public IEquipmentActionContextReader Equipment => m_Equipment;

@@ -488,7 +488,7 @@ internal sealed class PerformanceCaptureController
             _playerManifest.scripting_backend,
             _playerManifest.build_mode,
             _scenario.content_hash,
-            _playerManifest.program_identity,
+            _playerManifest.content_identity,
             _playerManifest.pipeline_identity,
             _playerManifest.projection_identity,
             _playerManifest.solver_identity,
@@ -576,7 +576,6 @@ internal sealed class PerformanceCaptureController
             Arguments =
                 $"--third-person-performance-request={Quote(_requestPath)} " +
                 $"--third-person-performance-port={transportPort.ToString(CultureInfo.InvariantCulture)} " +
-                $"--third-person-performance-variant={Quote(_scenario.variant_id)} " +
                 $"-logFile {Quote(playerLog)}"
         };
         _player = Process.Start(start) ?? throw new InvalidOperationException("Performance Player failed to start.");

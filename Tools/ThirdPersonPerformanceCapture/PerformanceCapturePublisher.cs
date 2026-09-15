@@ -946,7 +946,7 @@ internal static class PerformanceCapturePublisher
         AddConflict(conflicts, "manifest_schema", PerformanceCaptureSchemas.Manifest, baselineManifest.schema);
         AddConflict(conflicts, "status", PerformanceCaptureStatus.Completed.ToString(), baselineManifest.status);
         AddConflict(conflicts, "scenario_hash", scenario.content_hash, baselineManifest.scenario_hash);
-        AddConflict(conflicts, "variant_id", scenario.variant_id, baselineManifest.variant_id);
+        AddConflict(conflicts, "runtime_id", scenario.runtime_id, baselineManifest.runtime_id);
         AddConflict(conflicts, "roster_identity", scenario.roster_identity, baselineManifest.roster_identity);
         AddConflict(conflicts, "hardware_identity", hardware, baselineManifest.hardware_identity);
         AddConflict(conflicts, "metric_catalog_revision", runtime.metric_catalog_revision, baselineManifest.metric_catalog_revision);
@@ -1149,7 +1149,7 @@ internal static class PerformanceCapturePublisher
             completed_utc = runtime?.completed_utc ?? DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
             scenario_id = scenario?.scenario_id ?? string.Empty,
             scenario_hash = scenario?.content_hash ?? string.Empty,
-            variant_id = scenario?.variant_id ?? string.Empty,
+            runtime_id = scenario?.runtime_id ?? string.Empty,
             roster_identity = scenario?.roster_identity ?? string.Empty,
             build_id = playerManifest?.build_id ?? string.Empty,
             build_mode = playerManifest?.build_mode ?? string.Empty,
@@ -1158,7 +1158,7 @@ internal static class PerformanceCapturePublisher
             toolchain_identity = toolchainHash ?? string.Empty,
             budget_hash = request?.budget_hash ?? string.Empty,
             capture_profile_hash = request?.profile_hash ?? string.Empty,
-            program_identity = playerManifest?.program_identity ?? string.Empty,
+            content_identity = playerManifest?.content_identity ?? string.Empty,
             pipeline_identity = playerManifest?.pipeline_identity ?? string.Empty,
             projection_identity = playerManifest?.projection_identity ?? string.Empty,
             solver_identity = playerManifest?.solver_identity ?? string.Empty,

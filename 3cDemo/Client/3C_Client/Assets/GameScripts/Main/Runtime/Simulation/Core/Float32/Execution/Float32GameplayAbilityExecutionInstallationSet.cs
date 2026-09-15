@@ -11,30 +11,38 @@ namespace ThirdPersonSimulation
 
         public Float32GameplayAbilityExecutionInstallationSet(
             GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> data,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
             var values = new List<Float32GameplayAbilityExecutionInstallation>();
             m_ByAbility = new Dictionary<CharacterSkillId, Float32GameplayAbilityExecutionInstallation>();
             bool hasGameplayEffectAbility = false;
+            bool hasEquipmentAbility = false;
             for (int i = 0; i < data.Data.Count; i++)
             {
                 Float32GameplayAbilityExecutionData ability = data.Data[i];
                 if (ability == null)
                     throw new ArgumentException("Ability execution data contains a missing Ability.", nameof(data));
                 hasGameplayEffectAbility |= ability.Capabilities.HasGameplayCapability("GameplayEffect");
+                hasEquipmentAbility |= ability.Capabilities.HasGameplayCapability("Equipment");
             }
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog = hasGameplayEffectAbility
                 ? new Float32GameplayEffectRuntimeCatalog(gameplayEffectBinding ??
                     throw new ArgumentNullException(nameof(gameplayEffectBinding)))
                 : null;
+            if (hasEquipmentAbility && equipmentRuntimeBinding == null)
+                throw new ArgumentNullException(nameof(equipmentRuntimeBinding));
             bool requiresGameplayEffects = false;
             bool requiresEquipment = false;
             for (int i = 0; i < data.Data.Count; i++)
             {
                 Float32GameplayAbilityExecutionData ability = data.Data[i];
-                var installation = new Float32GameplayAbilityExecutionInstallation(ability, gameplayEffectCatalog);
+                var installation = new Float32GameplayAbilityExecutionInstallation(
+                    ability,
+                    gameplayEffectCatalog,
+                    equipmentRuntimeBinding);
                 requiresGameplayEffects |= installation.RequiresGameplayEffects;
                 requiresEquipment |= installation.RequiresEquipment;
                 values.Add(installation);

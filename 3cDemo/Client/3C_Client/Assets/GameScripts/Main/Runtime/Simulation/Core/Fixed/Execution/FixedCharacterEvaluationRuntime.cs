@@ -48,8 +48,7 @@ namespace ThirdPersonSimulation.Fixed
             var controlTrace = new List<SimulationTraceRecord>();
             try
             {
-                var serviceFactory = new FixedAbilityExecutionServiceFactory(
-                    actor.EquipmentRuntimeBinding);
+                var serviceFactory = new FixedAbilityExecutionServiceFactory();
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
@@ -323,14 +322,6 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
     {
-        readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
-
-        public FixedAbilityExecutionServiceFactory(
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
-        {
-            m_EquipmentRuntimeBinding = equipmentRuntimeBinding;
-        }
-
         public FixedAbilityExecutionAssembly Create(
             FixedGameplayAbilityExecutionInstallation installation,
             FixedGameplayAbilityExecutionInstallationSet installations,
@@ -364,14 +355,8 @@ namespace ThirdPersonSimulation.Fixed
                     frame.Trace,
                     workspace.GameplayEffects);
             FixedEquipmentRuntime equipment = null;
-            if (installation.RequiresEquipment &&
-                m_EquipmentRuntimeBinding != null)
+            if (installation.RequiresEquipment)
             {
-                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
-                    m_EquipmentRuntimeBinding,
-                    installation.Data.CatalogEntries,
-                    installation.Data.References,
-                    installation.Data.Producers);
                 equipment = new FixedEquipmentRuntime(
                     access,
                     frame,
@@ -380,12 +365,10 @@ namespace ThirdPersonSimulation.Fixed
                     gameplayEffects,
                     frame.Facts,
                     frame.Trace,
-                    layout);
+                    installation.EquipmentLayout ??
+                    throw new InvalidOperationException(
+                        $"Ability '{installation.Data.AbilityId}' requires the declared Equipment layout."));
             }
-            bool equipmentEnabled = installation.RequiresEquipment;
-            if (equipmentEnabled && equipment == null)
-                throw new InvalidOperationException(
-                    $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
 
             FixedAbilityControlRuntime control = null;
             FixedActionRuntime actions = new FixedActionRuntime(

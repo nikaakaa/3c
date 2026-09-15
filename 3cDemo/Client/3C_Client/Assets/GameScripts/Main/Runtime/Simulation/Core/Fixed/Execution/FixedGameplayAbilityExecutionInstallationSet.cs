@@ -12,30 +12,38 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedGameplayAbilityExecutionInstallationSet(
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> data,
-            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding)
+            CharacterGameplayEffectRuntimeBinding gameplayEffectBinding,
+            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
             var values = new List<FixedGameplayAbilityExecutionInstallation>();
             m_ByAbility = new Dictionary<CharacterSkillId, FixedGameplayAbilityExecutionInstallation>();
             bool hasGameplayEffectAbility = false;
+            bool hasEquipmentAbility = false;
             for (int i = 0; i < data.Data.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = data.Data[i];
                 if (ability == null)
                     throw new ArgumentException("Ability execution data contains a missing Ability.", nameof(data));
                 hasGameplayEffectAbility |= ability.Capabilities.HasGameplayCapability("GameplayEffect");
+                hasEquipmentAbility |= ability.Capabilities.HasGameplayCapability("Equipment");
             }
             FixedGameplayEffectRuntimeCatalog gameplayEffectCatalog = hasGameplayEffectAbility
                 ? new FixedGameplayEffectRuntimeCatalog(gameplayEffectBinding ??
                     throw new ArgumentNullException(nameof(gameplayEffectBinding)))
                 : null;
+            if (hasEquipmentAbility && equipmentRuntimeBinding == null)
+                throw new ArgumentNullException(nameof(equipmentRuntimeBinding));
             bool requiresGameplayEffects = false;
             bool requiresEquipment = false;
             for (int i = 0; i < data.Data.Count; i++)
             {
                 FixedGameplayAbilityExecutionData ability = data.Data[i];
-                var installation = new FixedGameplayAbilityExecutionInstallation(ability, gameplayEffectCatalog);
+                var installation = new FixedGameplayAbilityExecutionInstallation(
+                    ability,
+                    gameplayEffectCatalog,
+                    equipmentRuntimeBinding);
                 requiresGameplayEffects |= installation.RequiresGameplayEffects;
                 requiresEquipment |= installation.RequiresEquipment;
                 values.Add(installation);

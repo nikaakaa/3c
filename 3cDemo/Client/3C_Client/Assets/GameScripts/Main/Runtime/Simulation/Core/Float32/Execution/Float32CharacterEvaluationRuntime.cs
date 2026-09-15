@@ -47,8 +47,7 @@ namespace ThirdPersonSimulation
             var controlTrace = new List<SimulationTraceRecord>();
             try
             {
-                var serviceFactory = new Float32AbilityExecutionServiceFactory(
-                    actor.EquipmentRuntimeBinding);
+                var serviceFactory = new Float32AbilityExecutionServiceFactory();
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values, input.Requests);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
                 var workspace = new Float32AbilityExecutionWorkspace(sharedEffectScratch);
@@ -322,14 +321,6 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityExecutionServiceFactory : IFloat32AbilityExecutionServiceFactory
     {
-        readonly CharacterEquipmentRuntimeBinding m_EquipmentRuntimeBinding;
-
-        public Float32AbilityExecutionServiceFactory(
-            CharacterEquipmentRuntimeBinding equipmentRuntimeBinding)
-        {
-            m_EquipmentRuntimeBinding = equipmentRuntimeBinding;
-        }
-
         public Float32AbilityExecutionAssembly Create(
             Float32GameplayAbilityExecutionInstallation installation,
             Float32GameplayAbilityExecutionInstallationSet installations,
@@ -363,14 +354,8 @@ namespace ThirdPersonSimulation
                     frame.Trace,
                     workspace.GameplayEffects);
             Float32EquipmentRuntime equipment = null;
-            if (installation.RequiresEquipment &&
-                m_EquipmentRuntimeBinding != null)
+            if (installation.RequiresEquipment)
             {
-                EquipmentProgramLayout layout = EquipmentProgramLayoutCompiler.Compile(
-                    m_EquipmentRuntimeBinding,
-                    installation.Data.CatalogEntries,
-                    installation.Data.References,
-                    installation.Data.Producers);
                 equipment = new Float32EquipmentRuntime(
                     access,
                     frame,
@@ -379,12 +364,10 @@ namespace ThirdPersonSimulation
                     gameplayEffects,
                     frame.Facts,
                     frame.Trace,
-                    layout);
+                    installation.EquipmentLayout ??
+                    throw new InvalidOperationException(
+                        $"Ability '{installation.Data.AbilityId}' requires the declared Equipment layout."));
             }
-            bool equipmentEnabled = installation.RequiresEquipment;
-            if (equipmentEnabled && equipment == null)
-                throw new InvalidOperationException(
-                    $"Ability '{installation.Data.AbilityId}' requires the declared Equipment service.");
 
             Float32AbilityControlRuntime control = null;
             Float32ActionRuntime actions = new Float32ActionRuntime(

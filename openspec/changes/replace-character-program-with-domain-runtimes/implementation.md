@@ -958,3 +958,9 @@
 - 提交 `226a6cb90`，Fixed Character Registration 删除没有生命周期消费者的 Control、BodyMotion、GameplayEffect、Equipment 绑定缓存、构造赋值和 BodyMotion 转发属性；正式领域绑定继续由 `SimulationActorBinding` 持有。
 - 本步不改变注册身份、表现输出、世界身体或 Actor binding 校验，也没有把绑定配置迁移到新的旁路。静态检查确认删除项在注册对象中没有其它消费者。
 - `ThirdPersonSimulation.Fixed.Unity.csproj` 编译被现有生成工程依赖阻断：递归构建时 `ThirdPersonSimulation.Unity.csproj` 已有的 Float32 注册文件缺少 `ThirdPersonCharacter.Pipeline.Animation`／`CharacterPresentationProjection` 引用；不递归构建时又缺少既有 `ThirdPersonClient.Runtime.dll` 输出。该生成配置被 `.gitignore` 忽略，未修改或提交；两条 portable 数值工程未因本步重跑，未运行 Unity、测试或资产生成。
+
+## 2026-09-16 把名册索引归还Character Runtime
+
+- 提交 `a2b421e6f`，Float32／Fixed Character Runtime 接管 ActorId 到名册索引的派生查找；Character Runtime Port 删除重复索引字典和 `GetActorIndex` 出口，Ability Evaluate 通过端口持有的 Runtime 查找 Actor。
+- Character Runtime 继续沿用既有排序、重复 ActorId 校验和缺失 Actor 异常；注册对象的正式 Runtime 查找路径不变，端口只负责发布 Runtime 适配，不再拥有角色名册派生状态。
+- Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`；未运行 Unity、测试或资产生成。

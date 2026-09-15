@@ -201,7 +201,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 localWorld.SolverStatePayload.ToArray());
             return new SimulationWorldSnapshot(
                 local.NumericProfile,
-                local.GameplayContentHash,
                 local.SolverId,
                 local.SolverVersion,
                 local.WorldRevision,

@@ -1124,3 +1124,8 @@
 
 - 提交 `f9fa33ed9`，Float32／Fixed `AbilityExecutionFrame` 改为直接消费 invocation state services bundle；技能状态、savepoint、输入请求、动作、Effect 与 Equipment 端口只在一处展开。
 - 角色事务仍只由角色评估器组装并提供；本步保留服务缺失时的正式拒绝、执行顺序和状态生命周期。Float32／Fixed 目标工程均编译为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 删除空的旧Projection编译器文件
+
+- 提交 `adf414810`，删除已被 Git 跟踪但内容为空、没有 Unity `.meta`、没有任何引用的 `CharacterPresentationProjectionCompiler.cs`。
+- 本步只清理旧总链残留，不影响仍被使用的 Camera、Rig、Pose 和动画 Projection 编译器；无需改变运行时或 artifact 合同。

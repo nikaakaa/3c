@@ -1129,3 +1129,8 @@
 
 - 提交 `adf414810`，删除已被 Git 跟踪但内容为空、没有 Unity `.meta`、没有任何引用的 `CharacterPresentationProjectionCompiler.cs`。
 - 本步只清理旧总链残留，不影响仍被使用的 Camera、Rig、Pose 和动画 Projection 编译器；无需改变运行时或 artifact 合同。
+
+## 2026-09-16 删除空的BTSMTL接口占位文件
+
+- 删除已被 Git 跟踪但内容为空的 `Runtime/BTSMTL/Scripts/Interface.cs` 及其 Unity `.meta`；该文件没有类型、没有按文件路径引用，也不承载当前 Pose/Graph Interface 合同。
+- 本步只移除无行为占位物，不影响真正被 authoring 消费的 Interface 资产与 `InterfacePortId` 合同。

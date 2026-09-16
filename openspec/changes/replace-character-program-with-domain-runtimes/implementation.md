@@ -1209,3 +1209,8 @@
 
 - 提交 `8f1cfa132`，将 Unity／网络共用的 `CharacterSimulationGameplayOutputBuffer`、附加输出接口和 Gameplay 输出变化值统一为 `SimulationGameplayOutputBuffer`、`ISimulationGameplayOutputBuffer` 与 `SimulationGameplayOutputChange`，并迁移文件路径与 Unity `.meta`。
 - 保留每 Tick 的 BeginTick、Publish、Replace、Retire 生命周期和远端展示消费；底层 `ISimulationGameplayOutputPort` 正式合同不变。
+
+## 2026-09-16 统一Simulation输入合同
+
+- 提交 `dda535710`，将 Float32、Fixed、回放和 ServerAuthoritative 共用的 `CharacterSimulationInput` 统一为 `SimulationInput`，清除旧类型引用。
+- 保留输入值、输入请求、tick 来源、序列号、排序和网络编码布局，不保留旧类型别名；本次检查被现有执行层缺失的 `GameplayAbilityExecutionLayout`、`TypedStateAddress` 等类型阻塞，未发现 `SimulationInput` 本步新增错误。

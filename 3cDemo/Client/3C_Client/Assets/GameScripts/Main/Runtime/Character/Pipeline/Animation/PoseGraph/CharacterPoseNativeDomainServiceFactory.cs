@@ -98,7 +98,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Rig,
                 rigBinding,
                 m_Profile.PoseGraph.Graph.ContentRevision);
-            owned.Add(footPlacement);
             CharacterFinalIkFullBodySolver solver = CreateSolver();
             var constraints = new CharacterPoseConstraintRuntime(
                 footPlacement,
@@ -109,7 +108,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Resources.ContributionGoalCount,
                 m_Rig.RigId,
                 m_Rig.RigRevision);
-            owned.Add(constraints);
             var worldContext = new CharacterPoseWorldContextAdapter(
                 m_Profile.PoseGraph.Graph.GraphId.Value,
                 source,

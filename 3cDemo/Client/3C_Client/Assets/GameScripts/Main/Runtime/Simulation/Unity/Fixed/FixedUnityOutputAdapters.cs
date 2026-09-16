@@ -13,8 +13,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     public sealed class FixedUnityPresentationOutputAdapter : IFixedPresentationCommitOutputPort
     {
         readonly ActorId m_ActorId;
-        CharacterPresentationProjection m_Projection;
-        ICharacterPresentationRuntime m_Runtime;
+        ICharacterPresentationDomainRuntime m_Runtime;
         readonly int m_MaximumTrackedRecords;
         readonly Dictionary<EventId, ActivePresentationRecord> m_ByEvent =
             new Dictionary<EventId, ActivePresentationRecord>();
@@ -33,8 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public FixedUnityPresentationOutputAdapter(
             ActorId actorId,
-            CharacterPresentationProjection projection,
-            ICharacterPresentationRuntime runtime,
+            ICharacterPresentationDomainRuntime runtime,
             int maximumActiveRecords)
         {
             if (!actorId.IsValid)
@@ -42,7 +40,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (maximumActiveRecords <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maximumActiveRecords));
             m_ActorId = actorId;
-            m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             m_MaximumTrackedRecords = maximumActiveRecords;
         }
@@ -50,12 +47,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public int ActiveRecordCount => m_ByEvent.Count;
 
         internal void ReplaceRuntime(
-            CharacterPresentationProjection projection,
-            ICharacterPresentationRuntime runtime)
+            ICharacterPresentationDomainRuntime runtime)
         {
             if (m_CommitActive)
                 throw new InvalidOperationException("Fixed Presentation runtime cannot be replaced during an active commit.");
-            m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         }
 
@@ -473,12 +468,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         bool TryBuildStateKey(CharacterPresentationCommand command, out PresentationStateKey key)
         {
-            if (!m_Projection.TryGetProducer(command.ProducerId, out CharacterPresentationProducerEntry producer))
-                throw new InvalidOperationException($"Fixed Presentation producer '{command.ProducerId}' is absent from the Projection.");
             switch (command.Kind)
             {
                 case CharacterPresentationCommandKind.SelectProducer:
-                    key = new PresentationStateKey("animation-selection", producer.AnimationChannelId.Value, 0);
+                    key = new PresentationStateKey("animation-selection", command.ProducerId, 0);
                     return true;
                 case CharacterPresentationCommandKind.SampleProducer:
                     key = new PresentationStateKey("animation-sample", command.ProducerId, command.ProducerGeneration);
@@ -488,8 +481,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     key = new PresentationStateKey("animation-terminal", command.ProducerId, command.ProducerGeneration);
                     return true;
                 case CharacterPresentationCommandKind.ForceProducer:
-                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
-                        throw new InvalidOperationException("Force Presentation command requires a Camera producer.");
                     key = new PresentationStateKey("camera", command.ProducerId, command.ProducerGeneration);
                     return true;
                 case CharacterPresentationCommandKind.Camera:

@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public FixedCharacterControlSource ControlSource => m_ControlSource;
         public CinemachineCameraRigAdapter CameraRig => m_CameraRig;
         public CharacterPresentationRole PresentationRole => m_PresentationRole;
-        public ICharacterPresentationRuntime PresentationRuntime => m_Registration?.PresentationRuntime;
+        public ICharacterPresentationDomainRuntime PresentationRuntime => m_Registration?.PresentationRuntime;
         public FixedCharacterRegistration Registration => m_Registration;
         public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
         public Vector3 VisualPosition => m_RootHierarchy
@@ -204,7 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 target.OperationSetVersion,
                 controlModules);
             IUnityFixedCharacterControlSourceRuntime controlSource = null;
-            ICharacterPresentationRuntime presentation = null;
+            ICharacterPresentationDomainRuntime presentation = null;
             RuntimeDiagnosticsTarget diagnosticsTarget = null;
             FixedCharacterRegistration registration = null;
             try
@@ -257,7 +257,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 presentation = presentationBinding.Runtime;
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
                     actorId,
-                    presentationBinding.Projection,
                     presentation,
                     RequirePositive(m_MaximumActivePresentationRecords, nameof(m_MaximumActivePresentationRecords)));
                 registration = new FixedCharacterRegistration(

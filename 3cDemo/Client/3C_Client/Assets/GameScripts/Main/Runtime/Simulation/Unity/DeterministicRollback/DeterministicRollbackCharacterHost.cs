@@ -171,7 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 controlModules);
             bool local = endpoint.ResolvePeerProfile().ActorId == actorId;
             UnityFixedCharacterInputAdapter input = null;
-            ICharacterPresentationRuntime presentation = null;
+            ICharacterPresentationDomainRuntime presentation = null;
             RuntimeDiagnosticsTarget diagnosticsTarget = null;
             DeterministicRollbackCharacterRegistration registration = null;
             try
@@ -253,11 +253,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         diagnosticsContext);
                 }
                 presentation = presentationBinding.Runtime;
-                CharacterPresentationProjection projection = presentationBinding.Projection;
 
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
                     actorId,
-                    projection,
                     presentation,
                     RequirePositive(m_MaximumActivePresentationRecords, nameof(m_MaximumActivePresentationRecords)));
                 registration = new DeterministicRollbackCharacterRegistration(

@@ -1278,3 +1278,9 @@
 - Fixed 与 DeterministicRollback 角色注册不再创建、注册或注销已删除的 `AnimationPresentationRuntimeTarget` 与 `AnimationPresentationIdentity`；注册器不再把旧整包动画快照当作角色运行时的必要依赖。
 - DeterministicRollback 状态覆盖层移除旧全局 Pose Probe，避免继续从已撤销的旧 Presentation Snapshot／Operation 链读取姿态；后续观察只接 Pose owner 暴露的 Node／Port 与 committed Final Pose 合同。
 - 本步只清理已失效的诊断消费路径，不添加兼容类型或假观察结果；表现帧目标仍待下一步接入新的领域运行实例。
+
+## 2026-09-16 固定输出迁移到角色表现领域合同
+
+- Fixed 表现输出适配器不再持有或解析 `CharacterPresentationProjection`；动画选择的回滚状态键直接使用命令自身的 producer identity，ForceProducer 的相机状态键由命令种类决定，投影总包不再参与输出生命周期。
+- Fixed 与 DeterministicRollback 注册器改为依赖 `ICharacterPresentationDomainRuntime`，并直接把该领域实例注册到 `GameplayTickSystem` 的表现帧入口；checkpoint、Body、Trajectory、Equipment 与命令提交均从同一领域合同消费。
+- 新增表现领域公共合同和诊断快照类型，明确由领域运行时拥有帧驱动、命令生命周期、身体流、装备选择与 checkpoint 能力；本步没有新增旧接口别名或占位实现，Host 的实际领域装配在下一步闭合。

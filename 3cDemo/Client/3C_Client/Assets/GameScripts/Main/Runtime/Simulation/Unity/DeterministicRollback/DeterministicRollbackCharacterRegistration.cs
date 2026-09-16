@@ -24,11 +24,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
     {
         readonly UnityFixedCharacterInputAdapter m_LocalInput;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
-        readonly ICharacterPresentationRuntime m_PresentationRuntime;
+        readonly ICharacterPresentationDomainRuntime m_PresentationRuntime;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
-        readonly CharacterPresentationFrameTarget m_PresentationTarget;
         readonly FixedCharacterRuntime m_CharacterRuntime;
         readonly FixedSimulationActorBinding m_CharacterBinding;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
@@ -59,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             FixedWorldBodyState initialBody,
             UnityFixedCharacterInputAdapter localInput,
             FixedUnityPresentationOutputAdapter presentationOutput,
-            ICharacterPresentationRuntime presentationRuntime,
+            ICharacterPresentationDomainRuntime presentationRuntime,
             CharacterRootHierarchyBinding rootHierarchy,
             RuntimeDiagnosticsContext diagnosticsContext,
             RuntimeDiagnosticsTarget diagnosticsTarget,
@@ -100,8 +99,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
             m_DiagnosticsAdapter = ThirdPersonSimulation.Fixed.NullSimulationDiagnosticsSink.Instance;
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
-            m_PresentationTarget =
-                new CharacterPresentationFrameTarget(presentationRuntime);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"deterministic-rollback-output/{actorId.Value}",
                 "deterministic-rollback-fixed-output",
@@ -128,18 +125,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
         public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
         public bool SupportsPresentationCheckpointCapture =>
-            m_PresentationRuntime is ICharacterPresentationCheckpointRuntime checkpoint &&
-            checkpoint.SupportsCheckpointCapture;
+            m_PresentationRuntime.SupportsCheckpointCapture;
         public bool SupportsPresentationCheckpointRestore =>
-            m_PresentationRuntime is ICharacterPresentationCheckpointRuntime checkpoint &&
-            checkpoint.SupportsCheckpointCapture &&
-            checkpoint.SupportsCheckpointRestore;
+            m_PresentationRuntime.SupportsCheckpointRestore;
         public bool TryCapturePresentationCheckpoint(
             SimulationSessionCheckpoint checkpoint,
             out string error)
         {
-            if (m_PresentationRuntime is ICharacterPresentationCheckpointRuntime runtime)
-                return runtime.TryCaptureCheckpoint(checkpoint, out error);
+            if (m_PresentationRuntime.SupportsCheckpointCapture)
+                return m_PresentationRuntime.TryCaptureCheckpoint(checkpoint, out error);
             error = "Character Presentation runtime does not expose checkpoint capture.";
             return false;
         }
@@ -147,8 +141,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             SimulationSessionCheckpoint checkpoint,
             out string error)
         {
-            if (m_PresentationRuntime is ICharacterPresentationCheckpointRuntime restore)
-                return restore.TryRestoreCheckpoint(checkpoint, out error);
+            if (m_PresentationRuntime.SupportsCheckpointRestore)
+                return m_PresentationRuntime.TryRestoreCheckpoint(checkpoint, out error);
             error = "Character Presentation runtime does not expose checkpoint restore.";
             return false;
         }
@@ -164,7 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 snapshot = default;
                 return false;
             }
-            CharacterPresentationRuntimeDiagnosticsSnapshot presentation = m_PresentationRuntime.CaptureDiagnostics();
+            CharacterPresentationDomainDiagnosticsSnapshot presentation = m_PresentationRuntime.CaptureDiagnostics();
             snapshot = m_RuntimeState.CaptureDiagnostics(
                 m_OutputCommitter.CaptureLifecycleSnapshot(),
                 new RollbackPresentationDiagnosticsSnapshot(
@@ -209,7 +203,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 }
                 RuntimeDiagnosticsTargetRegistry.Register(m_DiagnosticsTarget);
                 m_DiagnosticsRegistered = true;
-                m_PresentationTarget.Activate();
+                if (!GameplayTickSystem.RegisterPresentationTarget(m_PresentationRuntime))
+                    throw new InvalidOperationException("Gameplay Tick System is not initialized.");
                 m_PresentationRegistered = true;
                 m_Activated = true;
             }
@@ -383,7 +378,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         {
             if (m_PresentationRegistered)
             {
-                TryRelease(m_PresentationTarget.Deactivate, failures);
+                TryRelease(() => GameplayTickSystem.UnregisterPresentationTarget(m_PresentationRuntime), failures);
                 m_PresentationRegistered = false;
             }
             if (m_DiagnosticsRegistered)

@@ -1199,3 +1199,8 @@
 
 - 提交 `a1b9749ed`，删除没有实例化方、且实现仓库不存在发布接口的 `CharacterAclAnimationArtifactPublishStage`；将仍被 Stager 与 Validator 使用的 `CharacterAclAnimationPublishGroup` 独立保留。
 - 保留 ACL 组 artifact、资源 descriptor、asset stem 和 Resource 回写合同，不改变现有校验与落盘链路。
+
+## 2026-09-16 统一Simulation运行时图基类
+
+- 提交 `f32676153`，将共享的 `CharacterSimulationOperationNode` 与 `CharacterSimulationValueNode` 从 Camera 节点文件抽到 `SimulationRuntimeNodes`，并统一为 `SimulationOperationNode` 与 `SimulationValueNode`。
+- Camera 与 Equipment 节点只改用新的中性基类；节点行为、序列化字段和继承层级保持不变。Fixed 运行时项目编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。

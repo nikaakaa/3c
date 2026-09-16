@@ -16,6 +16,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         menuName = "3C/Character/Pose Native Domain Resource Set")]
     public sealed class CharacterPoseNativeDomainResourceSet : ScriptableObject
     {
+        [SerializeField] string m_ResourcePackageName = string.Empty;
+        [SerializeField, Min(1)] long m_ResourceResidentBudgetBytes = 1;
         [SerializeField] CharacterPresentationPoseSourcePlan[] m_SourcePlans =
             Array.Empty<CharacterPresentationPoseSourcePlan>();
         [SerializeField] CharacterAnimationCompiledResourceDescriptor[] m_ResourceDescriptors =
@@ -33,6 +35,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] RootMotionCurveAsset[] m_RootOrientationCurves =
             Array.Empty<RootMotionCurveAsset>();
 
+        public string ResourcePackageName => string.IsNullOrWhiteSpace(m_ResourcePackageName)
+            ? throw new InvalidOperationException("Pose Native Resource Package Name is missing.")
+            : m_ResourcePackageName.Trim();
+        public long ResourceResidentBudgetBytes => m_ResourceResidentBudgetBytes;
         public IReadOnlyList<CharacterPresentationPoseSourcePlan> SourcePlans =>
             m_SourcePlans ?? Array.Empty<CharacterPresentationPoseSourcePlan>();
         public IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> ResourceDescriptors =>
@@ -166,6 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 }
+
 
 
 

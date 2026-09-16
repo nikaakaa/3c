@@ -52,6 +52,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FrameIdentity = frameIdentity;
         }
 
+        public bool HasOpenFrame => m_Lease.IsValid;
+
         public void CommitFrame()
         {
             RequireOpenFrame();

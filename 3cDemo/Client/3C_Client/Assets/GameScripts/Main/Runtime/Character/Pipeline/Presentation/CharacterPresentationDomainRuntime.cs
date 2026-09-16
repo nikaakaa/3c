@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -19,10 +20,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterEquipmentDomainRuntime m_Equipment;
         readonly CharacterCameraDomainRuntime m_Camera;
         readonly double m_PresentationTimePerTick;
+        CharacterPoseNativeDomainInstance m_PoseDomain;
+        CharacterAnimationResourceScope m_PoseResourceScope;
         CharacterAnimationVariableFrame m_EventFrame;
         CharacterPresentationTrajectoryIntent m_Trajectory;
         bool m_HasTrajectory;
         bool m_Disposed;
+        ulong m_NextPoseResetGeneration = 1;
 
         internal CharacterPresentationDomainRuntime(
             ActorId actorId,
@@ -46,6 +50,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_EventGraph = new CharacterAnimationEventGraphHost(
                 presentationProfile.EventGraph,
                 actorId);
+        }
+
+        PoseParameterId[] m_PoseParameterIds;
+
+        internal void BindPoseDomain(
+            CharacterPoseNativeDomainInstance poseDomain,
+            CharacterAnimationResourceScope resourceScope,
+            System.Collections.Generic.IReadOnlyList<CharacterPoseParameterDeclaration> poseParameterIds)
+        {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(CharacterPresentationDomainRuntime));
+            m_PoseDomain = poseDomain ?? throw new ArgumentNullException(nameof(poseDomain));
+            m_PoseResourceScope = resourceScope ?? throw new ArgumentNullException(nameof(resourceScope));
+            var ids = new PoseParameterId[poseParameterIds.Count];
+            for (int i = 0; i < ids.Length; i++)
+                ids[i] = poseParameterIds[i].ParameterId;
+            m_PoseParameterIds = ids;
         }
 
         public bool AcceptsTrajectoryIntent => true;
@@ -108,6 +129,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_EventFrame = null;
             m_Trajectory = default;
             m_HasTrajectory = false;
+            if (m_PoseDomain != null && m_PoseDomain.IsAdopted)
+            {
+                m_NextPoseResetGeneration++;
+                m_PoseDomain.Reset(m_NextPoseResetGeneration);
+            }
         }
 
         public CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics() =>
@@ -135,6 +161,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void PresentationFrame(GameplayPresentationFrameContext context)
         {
+            if (m_Disposed)
+                throw new ObjectDisposedException(nameof(CharacterPresentationDomainRuntime));
             m_Equipment?.Present();
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
             if (!bodyFrame.IsValid)
@@ -149,13 +177,82 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException(
                     $"Animation EventGraph update failed: {update.Failure.Message}");
             m_EventFrame = update.Frame;
+            RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context);
         }
+
+        void RunPoseFrame(
+            in CharacterBodyPresentationFrame bodyFrame,
+            in CharacterPresentationFactFrame factFrame,
+            CharacterAnimationVariableFrame eventFrame,
+            GameplayPresentationFrameContext context)
+        {
+            if (m_PoseDomain == null || !m_PoseDomain.IsAdopted)
+                return;
+            float deltaSeconds = Mathf.Max(0f, context.PresentationDeltaSeconds);
+            m_PoseDomain.BeginFrame(context.RenderFrame);
+            CharacterPoseNativePreparationResult preparation;
+            try
+            {
+                if (!m_PoseDomain.TryGetCommands(m_ActorId, context.RenderFrame, out var actionCommands))
+                    throw new InvalidOperationException("Pose Action command source did not produce the opened frame commands.");
+                var parameterFrame = CharacterAnimationPoseInputFrame.FromPublishedVariables(
+                    eventFrame,
+                    m_PoseParameterIds);
+                var frameInput = new CharacterPoseNativeFrameInput(
+                    m_ActorId,
+                    context.RenderFrame,
+                    context.RenderFrame,
+                    bodyFrame.CurrentTick,
+                    deltaSeconds,
+                    bodyFrame,
+                    factFrame,
+                    parameterFrame,
+                    actionCommands);
+                preparation = m_PoseDomain.Session.BeginFrame(in frameInput);
+                if (preparation.IsValid && preparation.Status == CharacterPoseNativeFrameStatus.Prepared)
+                {
+                    m_PoseDomain.Session.PrepareEvaluation(context.RenderFrame);
+                    CharacterPoseNativeEvaluationResult evaluation = m_PoseDomain.Session.Evaluate(context.RenderFrame);
+                    CharacterPoseNativeValidationResult validation = m_PoseDomain.Session.ValidatePending();
+                    if (validation.IsValidated)
+                    {
+                        CharacterPoseNativePublicationResult commit =
+                            m_PoseDomain.Session.Commit(false);
+                        if (commit.Status == CharacterPoseNativeFrameStatus.Committed)
+                            m_PoseDomain.CommitFrame();
+                        else
+                            m_PoseDomain.DiscardFrame();
+                    }
+                    else
+                    {
+                        m_PoseDomain.Session.Discard(
+                            validation.FailureCode != CharacterPoseNativeFailureCode.None
+                                ? validation.FailureCode
+                                : CharacterPoseNativeFailureCode.FrameInvalid);
+                        m_PoseDomain.DiscardFrame();
+                    }
+                }
+                else
+                {
+                    m_PoseDomain.DiscardFrame();
+                }
+            }
+            catch
+            {
+                m_PoseDomain.DiscardFrame();
+                throw;
+            }
+        }
+
+
 
         public void Dispose()
         {
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            m_PoseDomain?.Dispose();
+            m_PoseResourceScope?.Dispose();
             m_Camera?.Dispose();
             m_Equipment?.Dispose();
             m_EventGraph.Dispose();
@@ -214,6 +311,3 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 }
-
-
-

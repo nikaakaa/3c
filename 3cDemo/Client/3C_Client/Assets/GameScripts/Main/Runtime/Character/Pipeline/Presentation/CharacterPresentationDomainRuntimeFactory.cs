@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Diagnostics;
 using ThirdPersonCamera;
+using TEngine;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Unity.Resources;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -14,6 +18,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     public static class CharacterPresentationDomainRuntimeFactory
     {
+        static ulong m_NextRequestId = 1;
+
         public static ICharacterPresentationDomainRuntime Create(
             int tickRate,
             CharacterAnimationPresentationProfile animationPresentationProfile,
@@ -40,8 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RuntimeDiagnosticsContext diagnostics,
             bool initializeExternalState)
         {
-            _ = sessionHost;
-            _ = initializeExternalState;
             if (tickRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(tickRate));
             if (!animationPresentationProfile)
@@ -57,6 +61,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(bodyPresentationProfile));
             if (!worldAwarePresentation)
                 throw new ArgumentNullException(nameof(worldAwarePresentation));
+            if (sessionHost == null)
+                throw new ArgumentNullException(nameof(sessionHost));
             if (diagnostics == null)
                 throw new ArgumentNullException(nameof(diagnostics));
             if (!Enum.IsDefined(typeof(CharacterPresentationRole), presentationRole))
@@ -121,12 +127,70 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootHierarchy,
                 initialBody,
                 diagnostics);
-            return new CharacterPresentationDomainRuntime(actorId, body, tickRate, animationPresentationProfile, equipment, camera);
+
+            CharacterPoseNativeDomainInstance poseDomain = null;
+            CharacterAnimationResourceScope resourceScope = null;
+            var runtime = new CharacterPresentationDomainRuntime(
+                actorId, body, tickRate, animationPresentationProfile, equipment, camera);
+            try
+            {
+                if (poseResources)
+                {
+                    var inputContract = CharacterAnimationInputContract.Create(animationPresentationProfile);
+                    resourceScope = new CharacterAnimationResourceScope(
+                        new YooAssetCharacterAnimationAssetLoader(
+                            ModuleSystem.GetModule<IResourceModule>(),
+                            poseResources.ResourcePackageName),
+                        new CharacterAnimationResourceSettings(poseResources.ResourceResidentBudgetBytes));
+                    var inbox = new ActionPlaybackCommandInbox(64);
+                    var actionCommandSource = new CharacterPoseNativeActionCommandSource(actorId, inbox);
+                    var serviceFactory = new CharacterPoseNativeDomainServiceFactory(
+                        animationPresentationProfile,
+                        animationRig,
+                        inputContract,
+                        poseResources,
+                        resourceScope,
+                        actionCommandSource,
+                        runtime,
+                        worldAwarePresentation,
+                        sessionHost,
+                        physicsScene);
+                    var createResult = CharacterPoseNativeDomainRuntimeFactory.Create(
+                        NextRequestId(),
+                        actorId,
+                        animationPresentationProfile,
+                        animationRig,
+                        inputContract,
+                        inputContract.ContractHash,
+                        animancer,
+                        animationRigBinding,
+                        rootHierarchy,
+                        1,
+                        1,
+                        "presentation-domain-create",
+                        serviceFactory,
+                        out CharacterPoseNativeDomainSession session);
+                    if (!createResult.IsAdopted)
+                        throw new InvalidOperationException(
+                            $"Pose Native Domain creation failed: {createResult.FailureCode} {createResult.Message}");
+                    poseDomain = new CharacterPoseNativeDomainInstance(session, actionCommandSource);
+                    runtime.BindPoseDomain(poseDomain, resourceScope, inputContract.Parameters);
+                }
+                return runtime;
+            }
+            catch
+            {
+                poseDomain?.Dispose();
+                resourceScope?.Dispose();
+                runtime.Dispose();
+                throw;
+            }
+        }
+
+        static ulong NextRequestId()
+        {
+            m_NextRequestId++;
+            return m_NextRequestId;
         }
     }
 }
-
-
-
-
-

@@ -79,6 +79,7 @@ namespace ThirdPersonSimulation.Fixed
                     worldResult.FinalBody,
                     worldResult.AppliedDisplacement,
                     worldResult.AppliedYawDegrees);
+                evaluation.Consume();
                 FixedCharacterRuntimeState finalState = evaluation.CandidateState;
                 var result = new SimulationActorTickResult(
                     evaluation.ActorId,
@@ -101,7 +102,7 @@ namespace ThirdPersonSimulation.Fixed
                         1,
                         step.Source),
                     new FixedFinalizedActorResult(result));
-                evaluation.Consume();
+
             }
         }
     }

@@ -77,6 +77,7 @@ namespace ThirdPersonSimulation
                     worldResult.FinalBody,
                     worldResult.AppliedDisplacement,
                     worldResult.AppliedYawDegrees);
+                evaluation.Consume();
                 Float32CharacterRuntimeState finalState = evaluation.CandidateState;
                 var result = new SimulationActorTickResult(
                     evaluation.ActorId,
@@ -99,7 +100,7 @@ namespace ThirdPersonSimulation
                         1,
                         step.Source),
                     new Float32FinalizedActorResult(result));
-                evaluation.Consume();
+
             }
         }
     }

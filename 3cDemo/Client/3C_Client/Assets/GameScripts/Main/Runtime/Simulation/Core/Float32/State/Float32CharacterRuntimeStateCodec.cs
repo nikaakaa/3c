@@ -8,9 +8,9 @@ namespace ThirdPersonSimulation
     public static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 4;
-        const string HashIdentity = "float32-character-runtime-state-hash/4";
-        public const string CodecIdentity = "float32-character-runtime-state/4";
+        const int Version = 5;
+        const string HashIdentity = "float32-character-runtime-state-hash/5";
+        public const string CodecIdentity = "float32-character-runtime-state/5";
 
         public static byte[] Write(Float32CharacterRuntimeState state)
         {
@@ -106,6 +106,10 @@ namespace ThirdPersonSimulation
                 equipmentState = EquipmentStateAggregateCodec.Read(equipmentReader, equipmentLayout);
                 equipmentReader.RequireComplete();
             }
+            int timelineSnapshotCount = ReadCount(reader, 1024, "Float32 Character Timeline snapshot");
+            var timelineSnapshots = new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshotCount);
+            for (int i = 0; i < timelineSnapshotCount; i++)
+                timelineSnapshots.Add(ReadTimelineSnapshot(reader));
             reader.RequireComplete();
             var state = new Float32CharacterRuntimeState(
                 numericProfile,
@@ -121,7 +125,8 @@ namespace ThirdPersonSimulation
                 handleAllocator,
                 controlState,
                 gameplayEffectState,
-                equipmentState);
+                equipmentState,
+                timelineSnapshots);
             RequireCanonical(bytes, Write(state), "Float32 Character runtime state");
             return state;
         }
@@ -169,6 +174,113 @@ namespace ThirdPersonSimulation
                 EquipmentStateAggregateCodec.Write(equipmentWriter, state.EquipmentState);
                 writer.WriteBytes(equipmentWriter.ToArray());
             }
+            writer.WriteInt32(state.TimelineSnapshots.Count);
+            for (int i = 0; i < state.TimelineSnapshots.Count; i++)
+                WriteTimelineSnapshot(writer, state.TimelineSnapshots[i]);
+        }
+
+        static void WriteTimelineSnapshot(CanonicalWriter writer, AbilityTimelineRuntimeSnapshot snapshot)
+        {
+            writer.WriteInt32(snapshot.RuntimeHandle);
+            writer.WriteUInt64(snapshot.Generation);
+            writer.WriteString(snapshot.RequestId);
+            writer.WriteString(snapshot.OwnerIdentity);
+            writer.WriteString(snapshot.CallIdentity);
+            writer.WriteUInt64(snapshot.ExecutionInstanceId);
+            writer.WriteByte((byte)snapshot.PlaybackMode);
+            writer.WriteString(snapshot.ContentRevision);
+            writer.WriteByte((byte)snapshot.State);
+            writer.WriteInt32(snapshot.CursorFrame);
+            writer.WriteInt32(snapshot.Cycle);
+            writer.WriteString(snapshot.SectionId);
+            writer.WriteInt32(snapshot.ActiveClipIds.Count);
+            for (int i = 0; i < snapshot.ActiveClipIds.Count; i++)
+                writer.WriteString(snapshot.ActiveClipIds[i]);
+            writer.WriteBoolean(snapshot.HasStopContext);
+            writer.WriteByte((byte)snapshot.StopCause);
+            writer.WriteUInt64(snapshot.StopLocalLogicTick);
+            writer.WriteBoolean(snapshot.InitialBoundaryPending);
+            writer.WriteString(snapshot.TimelineId);
+            writer.WriteBoolean(snapshot.Loop);
+            writer.WriteString(snapshot.ActionContext.ActionId);
+            writer.WriteString(snapshot.ActionContext.ContextId);
+            writer.WriteUInt64(snapshot.ActionContext.InstanceId);
+            writer.WriteUInt64(snapshot.ActionContext.PredictionKey);
+            writer.WriteString(snapshot.ActionContext.SkillId.IsValid ? snapshot.ActionContext.SkillId.Value : string.Empty);
+            writer.WriteInt32(snapshot.ActionContext.SkillEntryOperation.IsValid ? snapshot.ActionContext.SkillEntryOperation.Value : -1);
+            writer.WriteUInt64(snapshot.ActionContext.SkillExecutionGeneration);
+            writer.WriteUInt64(snapshot.InputSequence);
+            writer.WriteUInt64(snapshot.StartTick.Value);
+        }
+
+        static AbilityTimelineRuntimeSnapshot ReadTimelineSnapshot(CanonicalReader reader)
+        {
+            int runtimeHandle = reader.ReadInt32();
+            ulong generation = reader.ReadUInt64();
+            string requestId = reader.ReadString();
+            string ownerIdentity = reader.ReadString();
+            string callIdentity = reader.ReadString();
+            ulong executionInstanceId = reader.ReadUInt64();
+            AbilityTimelineSnapshotMode playbackMode = ReadEnum<AbilityTimelineSnapshotMode>(reader.ReadByte());
+            string contentRevision = reader.ReadString();
+            AbilityTimelineSnapshotState state = ReadEnum<AbilityTimelineSnapshotState>(reader.ReadByte());
+            int cursorFrame = reader.ReadInt32();
+            int cycle = reader.ReadInt32();
+            string sectionId = reader.ReadString();
+            int clipCount = ReadCount(reader, 1024, "Float32 Character Timeline active clips");
+            var clips = new string[clipCount];
+            for (int i = 0; i < clipCount; i++)
+                clips[i] = reader.ReadString();
+            bool hasStopContext = reader.ReadBoolean();
+            AbilityTimelineSnapshotStopCause stopCause = ReadEnum<AbilityTimelineSnapshotStopCause>(reader.ReadByte());
+            ulong stopLocalLogicTick = reader.ReadUInt64();
+            bool initialBoundaryPending = reader.ReadBoolean();
+            string timelineId = reader.ReadString();
+            bool loop = reader.ReadBoolean();
+            string actionId = reader.ReadString();
+            string contextId = reader.ReadString();
+            ulong actionInstanceId = reader.ReadUInt64();
+            ulong predictionKey = reader.ReadUInt64();
+            string skillIdValue = reader.ReadString();
+            int skillEntryOperationValue = reader.ReadInt32();
+            ulong skillExecutionGeneration = reader.ReadUInt64();
+            ulong inputSequence = reader.ReadUInt64();
+            ulong startTickValue = reader.ReadUInt64();
+            if (runtimeHandle == 0 || generation == 0 || executionInstanceId == 0 || startTickValue == 0)
+                throw new InvalidDataException("Float32 Character runtime state Timeline snapshot identity is invalid.");
+            CharacterSkillId skillId = skillIdValue.Length == 0 ? default : new CharacterSkillId(skillIdValue);
+            OperationHandle skillEntryOperation = skillEntryOperationValue < 0 ? OperationHandle.Invalid : new OperationHandle(skillEntryOperationValue);
+            var actionContext = new TimelineActionContextIdentity(
+                actionId,
+                contextId,
+                actionInstanceId,
+                predictionKey,
+                skillId,
+                skillEntryOperation,
+                skillExecutionGeneration);
+            return new AbilityTimelineRuntimeSnapshot(
+                runtimeHandle,
+                generation,
+                requestId,
+                ownerIdentity,
+                callIdentity,
+                executionInstanceId,
+                playbackMode,
+                contentRevision,
+                state,
+                cursorFrame,
+                cycle,
+                sectionId,
+                clips,
+                hasStopContext,
+                stopCause,
+                stopLocalLogicTick,
+                initialBoundaryPending,
+                timelineId,
+                loop,
+                actionContext,
+                inputSequence,
+                new SimulationTick(startTickValue));
         }
 
         static void WriteIdentity(CanonicalWriter writer, GameplayAbilityExecutionIdentity identity)

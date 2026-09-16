@@ -2,6 +2,7 @@
 
 ## 当前状态
 
+- 2026-09-17：Timeline Advance／停止候选纳入 Float32／Fixed 角色状态统一边界：FixedCharacterRuntimeState 与 Float32CharacterRuntimeState 各自持有按 RuntimeHandle 排序去重的 typed AbilityTimelineRuntimeSnapshot 分区，评估结果只在 Consume（Commit）时捕获 Advance 快照并移除停止句柄，Discard 不写状态；两个 Canonical 状态 codec 以版本 5 序列化并哈希该分区，程序内 savepoint／Restore 经事务透传。Timeline runtime 的 ApplyRestore 回滚接线仍属后续批次。
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
 - OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、1.9、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。2.6 已开始收敛：Input request、Action activation request、Action instance、完整 MotionWarp 状态、GameplayEffect、Equipment 和 Control 已进入角色状态分区；Ability 下的 Timeline 保留态已删除，但控制机器内部状态、技能调用帧、目标、效果、装备和统一角色 Step 的完整 Capture／Restore 尚未闭合。

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation
@@ -55,6 +56,7 @@ namespace ThirdPersonSimulation
     public sealed class Float32CharacterRuntimeState
     {
         readonly ReadOnlyCollection<Float32AbilityRuntimeState> m_Abilities;
+        readonly ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> m_TimelineSnapshots;
 
         internal Float32CharacterRuntimeState(
             SimulationNumericProfile numericProfile,
@@ -70,7 +72,8 @@ namespace ThirdPersonSimulation
             ulong handleAllocator,
             CharacterControlRuntimeState controlState,
             GameplayEffectStateAggregate gameplayEffectState,
-            EquipmentStateAggregate equipmentState)
+            EquipmentStateAggregate equipmentState,
+            IEnumerable<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
         {
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
@@ -101,6 +104,14 @@ namespace ThirdPersonSimulation
             ControlState = controlState;
             GameplayEffectState = gameplayEffectState;
             EquipmentState = equipmentState;
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>());
+            snapshots.Sort((left, right) => left.RuntimeHandle.CompareTo(right.RuntimeHandle));
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                if (snapshots[i] == null || snapshots[i].RuntimeHandle == 0 || i > 0 && snapshots[i - 1].RuntimeHandle == snapshots[i].RuntimeHandle)
+                    throw new ArgumentException("Character runtime state Timeline snapshots are missing or duplicated.", nameof(timelineSnapshots));
+            }
+            m_TimelineSnapshots = snapshots.AsReadOnly();
         }
 
         public SimulationNumericProfile NumericProfile { get; }
@@ -123,6 +134,46 @@ namespace ThirdPersonSimulation
         internal CharacterControlRuntimeState ControlState { get; }
         internal GameplayEffectStateAggregate GameplayEffectState { get; }
         internal EquipmentStateAggregate EquipmentState { get; }
+        internal IReadOnlyList<AbilityTimelineRuntimeSnapshot> TimelineSnapshots => m_TimelineSnapshots;
+
+        internal Float32CharacterRuntimeState WithTimelineSnapshot(AbilityTimelineRuntimeSnapshot snapshot)
+        {
+            if (snapshot == null || snapshot.RuntimeHandle == 0)
+                throw new ArgumentException("Float32 Character Timeline snapshot is invalid.", nameof(snapshot));
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots);
+            snapshots.RemoveAll(value => value.RuntimeHandle == snapshot.RuntimeHandle);
+            snapshots.Add(snapshot);
+            return CloneWithTimelineSnapshots(snapshots);
+        }
+
+        internal Float32CharacterRuntimeState WithoutTimelineSnapshot(int runtimeHandle)
+        {
+            if (runtimeHandle == 0)
+                throw new ArgumentOutOfRangeException(nameof(runtimeHandle));
+            if (m_TimelineSnapshots.All(value => value.RuntimeHandle != runtimeHandle))
+                return this;
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots);
+            snapshots.RemoveAll(value => value.RuntimeHandle == runtimeHandle);
+            return CloneWithTimelineSnapshots(snapshots);
+        }
+
+        Float32CharacterRuntimeState CloneWithTimelineSnapshots(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots) =>
+            new Float32CharacterRuntimeState(
+                NumericProfile,
+                GameplayContentHash,
+                StateSchemaHash,
+                LastCompletedTick,
+                m_Abilities,
+                ActionActivationRequests,
+                ActionInstances,
+                InputRequests,
+                EventSequence,
+                ActionEventSequence,
+                HandleAllocator,
+                ControlState,
+                GameplayEffectState,
+                EquipmentState,
+                snapshots);
 
         internal static Float32CharacterRuntimeState CreateInitial(
             IEnumerable<GameplayAbilityExecutionIdentity> abilityIdentities,
@@ -159,7 +210,8 @@ namespace ThirdPersonSimulation
                 0,
                 controlState,
                 gameplayEffectState,
-                equipmentState);
+                equipmentState,
+                null);
         }
     }
 }

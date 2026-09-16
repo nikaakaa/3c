@@ -203,7 +203,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_HandleAllocatorState.HandleAllocator,
                 m_ControlState?.Capture() ?? m_BaseState.ControlState,
                 m_GameplayEffectState.Capture(),
-                m_EquipmentState.Capture());
+                m_EquipmentState.Capture(),
+                m_BaseState.TimelineSnapshots);
         }
 
         FixedAbilityExecutionSavepoint RequireTopSavepoint(IFixedAbilityExecutionSavepoint savepoint)

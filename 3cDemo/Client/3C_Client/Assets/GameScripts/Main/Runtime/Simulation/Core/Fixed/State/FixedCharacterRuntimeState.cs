@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation.Fixed
@@ -55,6 +56,7 @@ namespace ThirdPersonSimulation.Fixed
     public sealed class FixedCharacterRuntimeState
     {
         readonly ReadOnlyCollection<FixedAbilityRuntimeState> m_Abilities;
+        readonly ReadOnlyCollection<AbilityTimelineRuntimeSnapshot> m_TimelineSnapshots;
 
         internal FixedCharacterRuntimeState(
             SimulationNumericProfile numericProfile,
@@ -70,7 +72,8 @@ namespace ThirdPersonSimulation.Fixed
             ulong handleAllocator,
             CharacterControlRuntimeState controlState,
             GameplayEffectStateAggregate gameplayEffectState,
-            EquipmentStateAggregate equipmentState)
+            EquipmentStateAggregate equipmentState,
+            IEnumerable<AbilityTimelineRuntimeSnapshot> timelineSnapshots)
         {
             if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
@@ -101,6 +104,14 @@ namespace ThirdPersonSimulation.Fixed
             ControlState = controlState;
             GameplayEffectState = gameplayEffectState;
             EquipmentState = equipmentState;
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(timelineSnapshots ?? Array.Empty<AbilityTimelineRuntimeSnapshot>());
+            snapshots.Sort((left, right) => left.RuntimeHandle.CompareTo(right.RuntimeHandle));
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                if (snapshots[i] == null || snapshots[i].RuntimeHandle == 0 || i > 0 && snapshots[i - 1].RuntimeHandle == snapshots[i].RuntimeHandle)
+                    throw new ArgumentException("Character runtime state Timeline snapshots are missing or duplicated.", nameof(timelineSnapshots));
+            }
+            m_TimelineSnapshots = snapshots.AsReadOnly();
         }
 
         public SimulationNumericProfile NumericProfile { get; }
@@ -123,7 +134,46 @@ namespace ThirdPersonSimulation.Fixed
         internal CharacterControlRuntimeState ControlState { get; }
         internal GameplayEffectStateAggregate GameplayEffectState { get; }
         internal EquipmentStateAggregate EquipmentState { get; }
+        internal IReadOnlyList<AbilityTimelineRuntimeSnapshot> TimelineSnapshots => m_TimelineSnapshots;
 
+        internal FixedCharacterRuntimeState WithTimelineSnapshot(AbilityTimelineRuntimeSnapshot snapshot)
+        {
+            if (snapshot == null || snapshot.RuntimeHandle == 0)
+                throw new ArgumentException("Fixed Character Timeline snapshot is invalid.", nameof(snapshot));
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots);
+            snapshots.RemoveAll(value => value.RuntimeHandle == snapshot.RuntimeHandle);
+            snapshots.Add(snapshot);
+            return CloneWithTimelineSnapshots(snapshots);
+        }
+
+        internal FixedCharacterRuntimeState WithoutTimelineSnapshot(int runtimeHandle)
+        {
+            if (runtimeHandle == 0)
+                throw new ArgumentOutOfRangeException(nameof(runtimeHandle));
+            if (m_TimelineSnapshots.All(value => value.RuntimeHandle != runtimeHandle))
+                return this;
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots);
+            snapshots.RemoveAll(value => value.RuntimeHandle == runtimeHandle);
+            return CloneWithTimelineSnapshots(snapshots);
+        }
+
+        FixedCharacterRuntimeState CloneWithTimelineSnapshots(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots) =>
+            new FixedCharacterRuntimeState(
+                NumericProfile,
+                GameplayContentHash,
+                StateSchemaHash,
+                LastCompletedTick,
+                m_Abilities,
+                ActionActivationRequests,
+                ActionInstances,
+                InputRequests,
+                EventSequence,
+                ActionEventSequence,
+                HandleAllocator,
+                ControlState,
+                GameplayEffectState,
+                EquipmentState,
+                snapshots);
         internal static FixedCharacterRuntimeState CreateInitial(
             IEnumerable<GameplayAbilityExecutionIdentity> abilityIdentities,
             SimulationNumericProfile numericProfile,
@@ -159,7 +209,8 @@ namespace ThirdPersonSimulation.Fixed
                 0,
                 controlState,
                 gameplayEffectState,
-                equipmentState);
+                equipmentState,
+                null);
         }
     }
 }

@@ -1,4 +1,5 @@
 using ThirdPersonSimulation;
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 
 using System;
 using System.Collections.Generic;
@@ -10,10 +11,87 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal interface ICharacterPoseNativeActionCommandSource
     {
+        void BeginFrame(ulong frameIdentity);
+        void CommitFrame();
+        void DiscardFrame();
         bool TryGetCommands(
             ActorId actorId,
             ulong frameIdentity,
             out IReadOnlyList<ActionAnimationPlaybackCommand> commands);
+    }
+
+    internal sealed class CharacterPoseNativeActionCommandSource : ICharacterPoseNativeActionCommandSource
+    {
+        readonly ActionPlaybackCommandInbox m_Inbox;
+        readonly ActorId m_ActorId;
+        ActionPlaybackInboxReadLease m_Lease;
+        IReadOnlyList<ActionAnimationPlaybackCommand> m_Commands = Array.Empty<ActionAnimationPlaybackCommand>();
+        ulong m_FrameIdentity;
+
+        internal CharacterPoseNativeActionCommandSource(
+            ActorId actorId,
+            ActionPlaybackCommandInbox inbox)
+        {
+            if (!actorId.IsValid)
+                throw new ArgumentException("Pose Action command Actor identity is invalid.", nameof(actorId));
+            m_Inbox = inbox ?? throw new ArgumentNullException(nameof(inbox));
+            m_ActorId = actorId;
+        }
+
+        public void BeginFrame(ulong frameIdentity)
+        {
+            if (frameIdentity == 0)
+                throw new ArgumentException("Pose Action command frame identity is invalid.", nameof(frameIdentity));
+            if (m_Lease.IsValid)
+                throw new InvalidOperationException("Pose Action command frame is already open.");
+            m_Lease = m_Inbox.BeginRead();
+            var commands = new ActionAnimationPlaybackCommand[m_Inbox.Count];
+            for (int i = 0; i < m_Inbox.Count; i++)
+                commands[i] = m_Inbox[i].Command;
+            m_Commands = commands;
+            m_FrameIdentity = frameIdentity;
+        }
+
+        public void CommitFrame()
+        {
+            RequireOpenFrame();
+            m_Inbox.Commit(m_Lease);
+            ClearFrame();
+        }
+
+        public void DiscardFrame()
+        {
+            RequireOpenFrame();
+            m_Inbox.Discard(m_Lease);
+            ClearFrame();
+        }
+
+        public bool TryGetCommands(
+            ActorId actorId,
+            ulong frameIdentity,
+            out IReadOnlyList<ActionAnimationPlaybackCommand> commands)
+        {
+            if (!m_Lease.IsValid || actorId != m_ActorId || frameIdentity != m_FrameIdentity)
+            {
+                commands = Array.Empty<ActionAnimationPlaybackCommand>();
+                return false;
+            }
+            commands = m_Commands;
+            return true;
+        }
+
+        void RequireOpenFrame()
+        {
+            if (!m_Lease.IsValid)
+                throw new InvalidOperationException("Pose Action command frame is not open.");
+        }
+
+        void ClearFrame()
+        {
+            m_Lease = default;
+            m_Commands = Array.Empty<ActionAnimationPlaybackCommand>();
+            m_FrameIdentity = 0;
+        }
     }
 
     internal interface ICharacterPoseNativeEventFrameSource

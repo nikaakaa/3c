@@ -1418,3 +1418,8 @@
 - Pose Graph Workspace、Blend Space Window、Linked Pose、Profile Inspector 和输入回放证明改为只消费正式 Authoring / Host 数据；Projection Revision 不再作为运行身份，相机未组合时保持精确失败。
 - 修正 Network Test 适配器、DotRecast Manifest Loader、BTSMTL Timeline / FlowNode 读取的新合同；删除的 Editor 文件同步移出便携工程源列表。
 - ThirdPersonClient.Editor 便携工程当前 0 error，其他 Host 便携工程此前已通过；Pose 4.7 仍等正式 Pose Native 服务装配，不勾选。
+
+## 2026-09-16 定义Pose Action命令源帧事务
+
+- Pose Action 命令源接口补充 BeginFrame、CommitFrame、DiscardFrame，并新增基于 ActionPlaybackCommandInbox 的正式读取器；命令快照只在同帧暴露，提交时消费 inbox，放弃时保留命令。
+- Fixed.Unity 编译 0 error；该 Source 仍未接入表现领域，因为 Publisher、Timeline 和 Pose Native Services 尚未完整装配。

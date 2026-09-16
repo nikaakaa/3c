@@ -1445,3 +1445,10 @@
 - ScenePlay Coordinator 改为读取 Character Definition 的 Control Motion Timeline 长度、TimelineHost 活动播放和表现域观察；场景装配先清理旧 Session/Character，避免重复实例。
 - CharacterTimelineHost 的 TreeClip 服务不再静默吞掉请求；缺少组合服务时直接抛出精确失败，禁止假成功。
 - ThirdPersonClient.Runtime、ThirdPersonClient.Editor、ThirdPersonSimulation.Fixed.Unity 均已使用禁用 Build Server 的 dotnet build 验证通过，随后执行 build-server shutdown。
+
+## 2026-09-17 接入ScenePlay固定Timeline预览
+
+- CharacterTimelineHost 增加非 Skill 调用的公开预览入口，使用固定 TimelineData、sceneplay preview 来源和无 Ability 图绑定启动正式 Timeline Runtime。
+- 预览运行可显式取消，状态由 Timeline Runtime 返回；不伪造 ActionContext、TreeExecutionActivationScope 或 RuntimeGraph。
+- ScenePlay Coordinator 现在区分固定 Timeline 预览与 Ability 运行时播放事实：可选择 Control Motion Timeline、启动/取消预览，并继续观察 Activity 运行实例、Clip 采样与 Pose 发布事实。
+- ThirdPersonClient.Runtime 与 ThirdPersonClient.Editor 已使用禁用 Build Server 参数编译通过，随后执行 build-server shutdown。

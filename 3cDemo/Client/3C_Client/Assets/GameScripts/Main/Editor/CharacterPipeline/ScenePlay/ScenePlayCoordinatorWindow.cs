@@ -16,6 +16,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         SimulationSessionHost m_SessionHost;
         FixedCharacterHost m_CharacterHost;
         CharacterTimelineHost m_TimelineHost;
+        TimelineAsset m_PreviewTimeline;
+        TimelinePlaybackHandle m_PreviewHandle;
         readonly List<CharacterTimelinePlaybackObservation> m_TimelinePlaybacks = new List<CharacterTimelinePlaybackObservation>();
         Vector2 m_Scroll;
         string m_StatusText = "Ready";
@@ -60,8 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("ScenePlay Coordinator", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "ScenePlay 只读取领域运行事实。Timeline 播放由 Ability 启动，" +
-                "Pose 姿态由表现域发布。", MessageType.Info);
+                "ScenePlay 支持 Control Motion Timeline 固定预览，并读取 Ability 运行时 Timeline 与 Pose 事实。", MessageType.Info);
 
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("Setup", EditorStyles.boldLabel);
@@ -114,6 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             EditorGUILayout.LabelField("Timeline", EditorStyles.boldLabel);
             EditorGUILayout.ObjectField("TimelineHost", m_TimelineHost, typeof(CharacterTimelineHost), true);
             DrawTimelineLengths();
+            DrawTimelinePreview();
             DrawTimelinePlaybacks();
 
             EditorGUILayout.Space(8);
@@ -159,6 +161,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 EditorGUILayout.ObjectField(asset.Name, asset, typeof(TimelineAsset), false);
                 EditorGUILayout.LabelField($"    MaxFrame", asset.Data.MaxFrame.ToString());
                 EditorGUILayout.LabelField($"    Duration", $"{asset.Data.Duration:0.###}s");
+            }
+        }
+
+        void DrawTimelinePreview()
+        {
+            m_PreviewTimeline = (TimelineAsset)EditorGUILayout.ObjectField(
+                "Preview Timeline",
+                m_PreviewTimeline,
+                typeof(TimelineAsset),
+                false);
+            if (m_TimelineHost == null || !m_TimelineHost.IsInitialized)
+            {
+                EditorGUILayout.HelpBox("进入 Play 并完成角色装配后可预览 Timeline。", MessageType.None);
+                return;
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUI.enabled = m_PreviewTimeline && m_PreviewTimeline.Data != null && !m_TimelineHost.PreviewIsActive;
+                if (GUILayout.Button("Play Fixed Timeline"))
+                {
+                    if (m_TimelineHost.RequestPreviewTimelinePlayback(
+                            m_PreviewTimeline.Data,
+                            m_PreviewTimeline.name,
+                            TimelinePlaybackMode.Once,
+                            out m_PreviewHandle))
+                        SetStatus($"Fixed Timeline preview started: {m_PreviewHandle.Value}");
+                    else
+                        SetStatus("Fixed Timeline preview request failed.");
+                }
+                GUI.enabled = m_TimelineHost.PreviewIsActive;
+                if (GUILayout.Button("Cancel"))
+                {
+                    m_TimelineHost.CancelPreviewTimelinePlayback();
+                    m_PreviewHandle = TimelinePlaybackHandle.Invalid;
+                    SetStatus("Fixed Timeline preview cancelled.");
+                }
+                GUI.enabled = true;
+            }
+            EditorGUILayout.LabelField("PreviewHandle", m_PreviewHandle.IsValid ? m_PreviewHandle.Value.ToString() : "None");
+            if (m_PreviewHandle.IsValid)
+            {
+                TimelinePlaybackStatus status = m_TimelineHost.GetTimelinePlaybackStatus(m_PreviewHandle);
+                EditorGUILayout.LabelField("PreviewStatus", status.ToString());
+                if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
+                    m_PreviewHandle = TimelinePlaybackHandle.Invalid;
             }
         }
 

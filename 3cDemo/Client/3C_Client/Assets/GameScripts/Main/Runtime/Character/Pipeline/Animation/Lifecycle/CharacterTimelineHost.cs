@@ -113,9 +113,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
         readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
         ulong m_TickCounter;
+        TimelinePlaybackHandle m_PreviewHandle;
         bool m_Initialized;
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
+        public bool IsInitialized => m_Initialized && m_Host != null;
 
         internal void Initialize()
         {
@@ -167,6 +169,54 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 SourceName = sourceName ?? string.Empty
             });
             return true;
+        }
+
+        public bool RequestPreviewTimelinePlayback(
+            TimelineData timeline,
+            string sourceName,
+            TimelinePlaybackMode playbackMode,
+            out TimelinePlaybackHandle handle)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Timeline preview requires an initialized CharacterTimelineHost.");
+            if (timeline == null)
+                throw new ArgumentNullException(nameof(timeline));
+            if (m_PreviewHandle.IsValid)
+                throw new InvalidOperationException("Timeline preview already has an active playback.");
+            bool requested = RequestTimelinePlayback(
+                timeline,
+                "sceneplay.preview",
+                sourceName ?? timeline.Name,
+                default,
+                playbackMode,
+                default,
+                null,
+                out handle);
+            if (requested)
+                m_PreviewHandle = handle;
+            return requested;
+        }
+
+        public bool CancelPreviewTimelinePlayback()
+        {
+            if (!IsInitialized || !m_PreviewHandle.IsValid)
+                return false;
+            m_Host.Service.CancelTimelinePlayback(
+                m_PreviewHandle,
+                new TimelinePlaybackStopContext(TimelinePlaybackStopCause.SelfAbort, 0));
+            m_PreviewHandle = TimelinePlaybackHandle.Invalid;
+            return true;
+        }
+
+        public bool PreviewIsActive
+        {
+            get
+            {
+                if (!m_PreviewHandle.IsValid || m_Host == null)
+                    return false;
+                TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(m_PreviewHandle);
+                return status == TimelinePlaybackStatus.Requested || status == TimelinePlaybackStatus.Running;
+            }
         }
 
         public TimelinePlaybackStatus GetTimelinePlaybackStatus(TimelinePlaybackHandle handle)

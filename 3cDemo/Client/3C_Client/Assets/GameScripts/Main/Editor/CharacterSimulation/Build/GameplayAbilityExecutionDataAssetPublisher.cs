@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -41,6 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             abilities.Sort((left, right) => string.CompareOrdinal(left.AbilityId, right.AbilityId));
 
             var compiled = new List<CompiledAbility>(abilities.Count);
+            var abilityTimelineIdentities = new HashSet<string>(StringComparer.Ordinal);
+            var abilityTimelines = new List<TimelineAsset>();
             for (int i = 0; i < abilities.Count; i++)
             {
                 GameplayAbilityDefinition ability = abilities[i];
@@ -48,6 +51,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     GameplayAbilitySemanticFrontendCompiler.Compile(ability);
                 if (!semantic.IsValid)
                     throw new InvalidOperationException(FormatReport(semantic.Report));
+                var abilityTimelinesForAbility = new List<TimelineAsset>();
+                foreach (BtsmtlSkillGraphOccurrence occurrence in semantic.CompilationModel.EntryGraph.EnumerateOccurrences())
+                {
+                    foreach (BtsmtlSkillTimelineOccurrence timelineOccurrence in occurrence.Timelines)
+                    {
+                        TimelineAsset timeline = timelineOccurrence.Node.TimelineAsset;
+                        if (!timeline || timeline.Data == null)
+                            throw new InvalidOperationException($"Ability '{ability.AbilityId}' has an invalid Timeline reference.");
+                        if (abilityTimelineIdentities.Add(timeline.Data.AuthoringId))
+                        {
+                            abilityTimelinesForAbility.Add(timeline);
+                            abilityTimelines.Add(timeline);
+                        }
+                    }
+                }
                 compiled.Add(new CompiledAbility
                 {
                     Float32 = GameplayAbilityTargetCompiler.CompileFloat32(semantic.Artifact),
@@ -57,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         "float32AssetPath"),
                     FixedPath = RequireAssetPath(
                         $"{folder}/{ability.AbilityId}.FixedData.asset",
-                        "fixedAssetPath")
+                        "fixedAssetPath"),
                 });
             }
             for (int i = 0; i < compiled.Count; i++)
@@ -78,8 +96,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 EditorUtility.SetDirty(float32Assets[i]);
                 EditorUtility.SetDirty(fixedAssets[i]);
             }
+            var configuredTimelines = definition.ControlMotionTimelines;
+            var allTimelines = new List<TimelineAsset>(configuredTimelines.Count + abilityTimelines.Count);
+            var timelineIdentities = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < configuredTimelines.Count; i++)
+            {
+                TimelineAsset timeline = configuredTimelines[i];
+                if (!timeline || timeline.Data == null)
+                    throw new InvalidOperationException($"Character Pipeline Definition '{definition.name}' has an invalid configured Timeline.");
+                if (timelineIdentities.Add(timeline.Data.AuthoringId))
+                    allTimelines.Add(timeline);
+            }
+            for (int i = 0; i < abilityTimelines.Count; i++)
+            {
+                if (timelineIdentities.Add(abilityTimelines[i].Data.AuthoringId))
+                    allTimelines.Add(abilityTimelines[i]);
+            }
             definition.SetFloat32AbilityData(float32Assets);
             definition.SetFixedAbilityData(fixedAssets);
+            definition.SetControlMotionTimelines(allTimelines);
             EditorUtility.SetDirty(definition);
             AssetDatabase.SaveAssets();
             for (int i = 0; i < compiled.Count; i++)

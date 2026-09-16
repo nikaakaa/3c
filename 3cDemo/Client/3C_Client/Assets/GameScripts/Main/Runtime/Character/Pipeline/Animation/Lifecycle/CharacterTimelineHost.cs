@@ -434,6 +434,147 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (pending.Request.Playback != null && !m_Host.Service.DiscardStopTimelinePlayback(pending.Handle, pending.Request))
                 throw new InvalidOperationException($"Timeline stop '{pending.Handle.Value}' could not be discarded.");
         }
+        public AbilityTimelineRuntimeSnapshot CaptureAbilityTimelinePlayback(
+            TimelinePlaybackHandle handle,
+            AbilityTimelineStartRequest request)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Timeline capture requires an initialized CharacterTimelineHost.");
+            TimelineRuntimePlaybackSnapshot native = m_Host.Capture(new TimelineRuntimePlaybackHandle(handle.Value));
+            return new AbilityTimelineRuntimeSnapshot(
+                (int)native.Handle.Value,
+                native.Generation,
+                native.RequestId,
+                native.ExecutionIdentity.OwnerIdentity,
+                native.ExecutionIdentity.CallIdentity,
+                native.ExecutionIdentity.InstanceId,
+                MapSnapshotMode(native.PlaybackMode),
+                native.ContentRevision,
+                MapSnapshotState(native.State),
+                native.CursorFrame,
+                native.Cycle,
+                native.SectionId,
+                native.ActiveClipIds,
+                native.HasStopContext,
+                MapSnapshotStopCause(native.StopContext.Cause),
+                native.StopContext.LocalLogicTick,
+                native.InitialBoundaryPending,
+                request.TimelineId,
+                request.Loop,
+                request.ActionContext,
+                request.InputSequence,
+                request.Tick);
+        }
+
+        public int ApplyAbilityTimelineSnapshot(AbilityTimelineRuntimeSnapshot snapshot)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Timeline restore requires an initialized CharacterTimelineHost.");
+            if (snapshot == null)
+                throw new ArgumentNullException(nameof(snapshot));
+            if (!m_TimelineContent.TryGetValue(snapshot.TimelineId, out TimelineData timeline))
+                throw new KeyNotFoundException($"Ability Timeline content '{snapshot.TimelineId}' is not installed.");
+            var executionIdentity = new TimelineExecutionIdentity(
+                snapshot.OwnerIdentity,
+                snapshot.CallIdentity,
+                snapshot.ExecutionInstanceId);
+            TimelineRuntimePreparationResult preparation = m_Host.Prepare(
+                snapshot.RequestId,
+                timeline,
+                executionIdentity,
+                MapPlaybackMode(snapshot.PlaybackMode),
+                Array.Empty<TimelineCallBinding>());
+            if (!preparation.IsReady)
+                throw new InvalidOperationException($"Ability Timeline restore '{snapshot.RuntimeHandle}' failed preparation: {string.Join(" | ", preparation.Errors)}");
+            var stopCause = MapPlaybackStopCause(snapshot.StopCause);
+            var native = new TimelineRuntimePlaybackSnapshot(
+                new TimelineRuntimePlaybackHandle((ulong)snapshot.RuntimeHandle),
+                snapshot.Generation,
+                snapshot.RequestId,
+                executionIdentity,
+                preparation.PlaybackMode,
+                TimelineRuntimeNumericTarget.Float32,
+                snapshot.ContentRevision,
+                MapPlaybackState(snapshot.State),
+                snapshot.CursorFrame,
+                snapshot.Cycle,
+                snapshot.SectionId,
+                snapshot.ActiveClipIds,
+                Array.Empty<TimelineRuntimeTreeClipAssociation>(),
+                snapshot.HasStopContext,
+                new TimelinePlaybackStopContext(stopCause, snapshot.StopLocalLogicTick),
+                snapshot.InitialBoundaryPending);
+            TimelineRuntimeRestoreCandidate candidate = m_Host.PrepareRestore(native, preparation);
+            TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);
+            var handle = new TimelinePlaybackHandle(restored.Value);
+            m_ActivePlaybacks.Add(new ActivePlayback
+            {
+                Handle = handle,
+                Timeline = timeline,
+                SourceName = timeline.Name,
+                SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime,
+                CoreDriven = true
+            });
+            return checked((int)restored.Value);
+        }
+
+        static AbilityTimelineSnapshotMode MapSnapshotMode(TimelinePlaybackMode mode) => mode switch
+        {
+            TimelinePlaybackMode.Loop => AbilityTimelineSnapshotMode.Loop,
+            _ => AbilityTimelineSnapshotMode.Once
+        };
+
+        static TimelinePlaybackMode MapPlaybackMode(AbilityTimelineSnapshotMode mode) => mode switch
+        {
+            AbilityTimelineSnapshotMode.Loop => TimelinePlaybackMode.Loop,
+            _ => TimelinePlaybackMode.Once
+        };
+
+        static AbilityTimelineSnapshotState MapSnapshotState(TimelineRuntimePlaybackState state) => state switch
+        {
+            TimelineRuntimePlaybackState.Prepared => AbilityTimelineSnapshotState.Prepared,
+            TimelineRuntimePlaybackState.Running => AbilityTimelineSnapshotState.Running,
+            TimelineRuntimePlaybackState.Stopping => AbilityTimelineSnapshotState.Stopping,
+            TimelineRuntimePlaybackState.Completed => AbilityTimelineSnapshotState.Completed,
+            TimelineRuntimePlaybackState.Stopped => AbilityTimelineSnapshotState.Stopped,
+            TimelineRuntimePlaybackState.Failed => AbilityTimelineSnapshotState.Failed,
+            TimelineRuntimePlaybackState.Disposed => AbilityTimelineSnapshotState.Disposed,
+            _ => throw new InvalidOperationException("Timeline playback state is invalid.")
+        };
+
+        static TimelineRuntimePlaybackState MapPlaybackState(AbilityTimelineSnapshotState state) => state switch
+        {
+            AbilityTimelineSnapshotState.Prepared => TimelineRuntimePlaybackState.Prepared,
+            AbilityTimelineSnapshotState.Running => TimelineRuntimePlaybackState.Running,
+            AbilityTimelineSnapshotState.Stopping => TimelineRuntimePlaybackState.Stopping,
+            AbilityTimelineSnapshotState.Completed => TimelineRuntimePlaybackState.Completed,
+            AbilityTimelineSnapshotState.Stopped => TimelineRuntimePlaybackState.Stopped,
+            AbilityTimelineSnapshotState.Failed => TimelineRuntimePlaybackState.Failed,
+            AbilityTimelineSnapshotState.Disposed => TimelineRuntimePlaybackState.Disposed,
+            _ => throw new ArgumentOutOfRangeException(nameof(state))
+        };
+
+        static AbilityTimelineSnapshotStopCause MapSnapshotStopCause(TimelinePlaybackStopCause cause) => cause switch
+        {
+            TimelinePlaybackStopCause.SelfAbort => AbilityTimelineSnapshotStopCause.SelfAbort,
+            TimelinePlaybackStopCause.LowerPriorityAbort => AbilityTimelineSnapshotStopCause.LowerPriorityAbort,
+            TimelinePlaybackStopCause.ExplicitParentStop => AbilityTimelineSnapshotStopCause.ExplicitParentStop,
+            TimelinePlaybackStopCause.StateTransition => AbilityTimelineSnapshotStopCause.StateTransition,
+            TimelinePlaybackStopCause.Reset => AbilityTimelineSnapshotStopCause.Reset,
+            TimelinePlaybackStopCause.Shutdown => AbilityTimelineSnapshotStopCause.Shutdown,
+            _ => AbilityTimelineSnapshotStopCause.None
+        };
+
+        static TimelinePlaybackStopCause MapPlaybackStopCause(AbilityTimelineSnapshotStopCause cause) => cause switch
+        {
+            AbilityTimelineSnapshotStopCause.SelfAbort => TimelinePlaybackStopCause.SelfAbort,
+            AbilityTimelineSnapshotStopCause.LowerPriorityAbort => TimelinePlaybackStopCause.LowerPriorityAbort,
+            AbilityTimelineSnapshotStopCause.ExplicitParentStop => TimelinePlaybackStopCause.ExplicitParentStop,
+            AbilityTimelineSnapshotStopCause.StateTransition => TimelinePlaybackStopCause.StateTransition,
+            AbilityTimelineSnapshotStopCause.Reset => TimelinePlaybackStopCause.Reset,
+            AbilityTimelineSnapshotStopCause.Shutdown => TimelinePlaybackStopCause.Shutdown,
+            _ => TimelinePlaybackStopCause.SelfAbort
+        };
         public void CancelTimelinePlayback(
             TimelinePlaybackHandle handle,
             TimelinePlaybackStopContext stopContext)

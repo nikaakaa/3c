@@ -429,6 +429,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly CharacterTimelineHost m_Host;
         readonly IReadOnlyList<TimelineAsset> m_TimelineAssets;
         bool m_ContentInstalled;
+        readonly Dictionary<int, AbilityTimelineStartRequest> m_Requests =
+            new Dictionary<int, AbilityTimelineStartRequest>();
 
         public CharacterTimelineAbilityRuntime(
             CharacterTimelineHost host,
@@ -453,6 +455,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 out TimelinePlaybackHandle handle);
             if (!started)
                 throw new InvalidOperationException($"Ability Timeline '{request.TimelineId}' failed to start for Action '{request.ActionContext.ActionId}'.");
+            m_Requests[checked((int)handle.Value)] = request;
             return checked((int)handle.Value);
         }
 
@@ -475,6 +478,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public void Discard(IAbilityTimelinePending pending)
         {
             m_Host.DiscardTimelinePlayback((CharacterTimelinePendingAdvance)pending);
+        }
+        public AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle)
+        {
+            if (!m_Requests.TryGetValue(runtimeHandle, out AbilityTimelineStartRequest request))
+                throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' is not owned by this runtime.");
+            return m_Host.CaptureAbilityTimelinePlayback(
+                new TimelinePlaybackHandle((ulong)runtimeHandle),
+                request);
+        }
+
+        public int ApplyRestore(AbilityTimelineRuntimeSnapshot snapshot)
+        {
+            if (snapshot == null)
+                throw new ArgumentNullException(nameof(snapshot));
+            int restoredHandle = m_Host.ApplyAbilityTimelineSnapshot(snapshot);
+            m_Requests[restoredHandle] = new AbilityTimelineStartRequest(
+                snapshot.TimelineId,
+                snapshot.Loop,
+                snapshot.ActionContext,
+                snapshot.InputSequence,
+                snapshot.StartTick);
+            return restoredHandle;
         }
         public AbilityTimelineStopResult Stop(int runtimeHandle)
         {

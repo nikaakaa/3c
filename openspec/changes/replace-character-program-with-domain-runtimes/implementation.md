@@ -1493,3 +1493,12 @@
 - Timeline 播放观察新增 typed SourceKind；固定 ScenePlay 预览固定为 FixedPreview，Ability 运行时固定为 AbilityRuntime。
 - ScenePlay Coordinator 直接显示两种 Timeline 形态的来源类型，继续保留 Timeline 长度、ClipTime、NormalizedTime、Weight、Frame 和 Pose 观察。
 - ThirdPersonClient.Runtime 与 Editor 便携编译通过；构建后已执行 build-server shutdown。
+
+## 2026-09-17 接入Timeline typed快照与全部Ability内容
+
+- Core 新增 Ability Timeline typed Snapshot 合同，包含 runtime handle、generation、execution identity、cursor、cycle、active clips、stop context、原始启动请求和 Timeline identity。
+- Fixed 本地 Timeline Runtime 可以在 committed boundary Capture，并按同一 typed 数据重放 PrepareRestore / ApplyRestore；Core 不保存 Unity 原生对象，也不建 byte 桥。
+- Skill 编译器删除 Timeline leaf 的 Loop、TreeClipCycle、LogicTime 状态槽，Timeline leaf 只保留 runtime handle；TreeClip 操作自己的技能状态不合并。
+- Ability Data 发布器收集全部 Ability Graph 引用的 TimelineAsset 并写回 Definition，保留已有 Control Motion Timeline；普通 play 不再只依赖手工配置的 Attack1。
+- Core、Float32、Fixed、Fixed.Unity、Runtime、Editor 便携编译通过；构建后已执行 build-server shutdown。
+- 本步未勾选 3.8：typed Snapshot 还需接入完整 FixedCharacterRuntimeState codec、rollback history 和网络状态。

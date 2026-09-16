@@ -358,6 +358,21 @@ namespace ThirdPersonCharacter.Pipeline
             m_AbilityGrants = (grants ?? System.Array.Empty<AbilityGrant>()).ToArray();
         }
 
+        public void SetControlMotionTimelines(IEnumerable<TimelineAsset> timelines)
+        {
+            var values = new List<TimelineAsset>();
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            foreach (TimelineAsset timeline in timelines ?? Enumerable.Empty<TimelineAsset>())
+            {
+                if (!timeline || timeline.Data == null)
+                    throw new ArgumentException("Character Timeline content contains an invalid Timeline asset.", nameof(timelines));
+                if (!identities.Add(timeline.Data.AuthoringId))
+                    throw new ArgumentException($"Character Timeline content contains duplicated AuthoringId '{timeline.Data.AuthoringId}'.", nameof(timelines));
+                values.Add(timeline);
+            }
+            m_ControlMotionTimelines = values.ToArray();
+        }
+
         public void SetAdmissionProfiles(IEnumerable<GameplayAbilityAdmissionProfile> profiles)
         {
             m_AdmissionProfiles = (profiles ?? System.Array.Empty<GameplayAbilityAdmissionProfile>()).ToArray();

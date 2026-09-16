@@ -343,6 +343,43 @@ namespace BTSMTL.Timeline.Runtime
             InitialBoundaryPending = playback.InitialBoundaryPending;
         }
 
+        public TimelineRuntimePlaybackSnapshot(
+            TimelineRuntimePlaybackHandle handle,
+            ulong generation,
+            string requestId,
+            TimelineExecutionIdentity executionIdentity,
+            TimelinePlaybackMode playbackMode,
+            TimelineRuntimeNumericTarget numericTarget,
+            string contentRevision,
+            TimelineRuntimePlaybackState state,
+            int cursorFrame,
+            int cycle,
+            string sectionId,
+            IReadOnlyList<string> activeClipIds,
+            IReadOnlyList<TimelineRuntimeTreeClipAssociation> activeTreeClipAssociations,
+            bool hasStopContext,
+            TimelinePlaybackStopContext stopContext,
+            bool initialBoundaryPending)
+        {
+            Schema = CurrentSchema;
+            Handle = handle;
+            Generation = generation;
+            RequestId = requestId ?? string.Empty;
+            ExecutionIdentity = executionIdentity;
+            PlaybackMode = playbackMode;
+            NumericTarget = numericTarget;
+            ContentRevision = contentRevision ?? string.Empty;
+            State = state;
+            CursorFrame = cursorFrame;
+            Cycle = cycle;
+            SectionId = sectionId ?? string.Empty;
+            ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
+            ActiveTreeClipAssociations = activeTreeClipAssociations ?? Array.Empty<TimelineRuntimeTreeClipAssociation>();
+            HasStopContext = hasStopContext;
+            StopContext = stopContext;
+            InitialBoundaryPending = initialBoundaryPending;
+        }
+
         public string Schema { get; }
         public TimelineRuntimePlaybackHandle Handle { get; }
         public ulong Generation { get; }

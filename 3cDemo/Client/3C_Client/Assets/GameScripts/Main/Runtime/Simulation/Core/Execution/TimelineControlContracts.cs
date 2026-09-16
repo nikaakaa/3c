@@ -559,12 +559,139 @@ namespace ThirdPersonSimulation
         public AbilityTimelineRuntimeStatus Status { get; }
         public IAbilityTimelineStopPending Pending { get; }
     }
+    public enum AbilityTimelineSnapshotMode : byte
+    {
+        Once = 0,
+        Loop = 1
+    }
+
+    public enum AbilityTimelineSnapshotState : byte
+    {
+        Prepared = 0,
+        Running = 1,
+        Stopping = 2,
+        Completed = 3,
+        Stopped = 4,
+        Failed = 5,
+        Disposed = 6
+    }
+
+    public enum AbilityTimelineSnapshotStopCause : byte
+    {
+        None = 0,
+        SelfAbort = 1,
+        LowerPriorityAbort = 2,
+        ExplicitParentStop = 3,
+        StateTransition = 4,
+        Reset = 5,
+        Shutdown = 6
+    }
+
+    public sealed class AbilityTimelineRuntimeSnapshot
+    {
+        public AbilityTimelineRuntimeSnapshot(
+            int runtimeHandle,
+            ulong generation,
+            string requestId,
+            string ownerIdentity,
+            string callIdentity,
+            ulong executionInstanceId,
+            AbilityTimelineSnapshotMode playbackMode,
+            string contentRevision,
+            AbilityTimelineSnapshotState state,
+            int cursorFrame,
+            int cycle,
+            string sectionId,
+            IReadOnlyList<string> activeClipIds,
+            bool hasStopContext,
+            AbilityTimelineSnapshotStopCause stopCause,
+            ulong stopLocalLogicTick,
+            bool initialBoundaryPending,
+            string timelineId,
+            bool loop,
+            TimelineActionContextIdentity actionContext,
+            ulong inputSequence,
+            SimulationTick startTick)
+        {
+            if (runtimeHandle == 0)
+                throw new ArgumentOutOfRangeException(nameof(runtimeHandle));
+            if (generation == 0)
+                throw new ArgumentOutOfRangeException(nameof(generation));
+            RequestId = SimulationIdentity.Require(requestId, nameof(requestId));
+            OwnerIdentity = SimulationIdentity.Require(ownerIdentity, nameof(ownerIdentity));
+            CallIdentity = SimulationIdentity.Require(callIdentity, nameof(callIdentity));
+            if (executionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(executionInstanceId));
+            if (!Enum.IsDefined(typeof(AbilityTimelineSnapshotMode), playbackMode))
+                throw new ArgumentOutOfRangeException(nameof(playbackMode));
+            ContentRevision = SimulationIdentity.Require(contentRevision, nameof(contentRevision));
+            if (!Enum.IsDefined(typeof(AbilityTimelineSnapshotState), state))
+                throw new ArgumentOutOfRangeException(nameof(state));
+            if (cursorFrame < 0 || cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(cursorFrame));
+            SectionId = sectionId ?? string.Empty;
+            ActiveClipIds = Copy(activeClipIds);
+            StopCause = stopCause;
+            StopLocalLogicTick = stopLocalLogicTick;
+            if (hasStopContext && StopCause == AbilityTimelineSnapshotStopCause.None)
+                throw new ArgumentException("A Timeline stop context requires a stop cause.", nameof(stopCause));
+            TimelineId = SimulationIdentity.Require(timelineId, nameof(timelineId));
+            ActionContext = actionContext;
+            StartTick = startTick;
+            if (!startTick.IsValid)
+                throw new ArgumentException("Ability Timeline snapshot start tick is invalid.", nameof(startTick));
+            RuntimeHandle = runtimeHandle;
+            Generation = generation;
+            ExecutionInstanceId = executionInstanceId;
+            PlaybackMode = playbackMode;
+            State = state;
+            CursorFrame = cursorFrame;
+            Cycle = cycle;
+            HasStopContext = hasStopContext;
+            InitialBoundaryPending = initialBoundaryPending;
+            Loop = loop;
+            InputSequence = inputSequence;
+        }
+
+        public int RuntimeHandle { get; }
+        public ulong Generation { get; }
+        public string RequestId { get; }
+        public string OwnerIdentity { get; }
+        public string CallIdentity { get; }
+        public ulong ExecutionInstanceId { get; }
+        public AbilityTimelineSnapshotMode PlaybackMode { get; }
+        public string ContentRevision { get; }
+        public AbilityTimelineSnapshotState State { get; }
+        public int CursorFrame { get; }
+        public int Cycle { get; }
+        public string SectionId { get; }
+        public IReadOnlyList<string> ActiveClipIds { get; }
+        public bool HasStopContext { get; }
+        public AbilityTimelineSnapshotStopCause StopCause { get; }
+        public ulong StopLocalLogicTick { get; }
+        public bool InitialBoundaryPending { get; }
+        public string TimelineId { get; }
+        public bool Loop { get; }
+        public TimelineActionContextIdentity ActionContext { get; }
+        public ulong InputSequence { get; }
+        public SimulationTick StartTick { get; }
+
+        static IReadOnlyList<string> Copy(IReadOnlyList<string> values)
+        {
+            var result = values == null ? new List<string>() : new List<string>(values);
+            for (int i = 0; i < result.Count; i++)
+                result[i] = result[i] ?? string.Empty;
+            return result.AsReadOnly();
+        }
+    }
     public interface IAbilityTimelineRuntime
     {
         int Start(in AbilityTimelineStartRequest request);
         AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int deltaFrames);
         void Commit(IAbilityTimelinePending pending);
         void Discard(IAbilityTimelinePending pending);
+        AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle);
+        int ApplyRestore(AbilityTimelineRuntimeSnapshot snapshot);
         AbilityTimelineStopResult Stop(int runtimeHandle);
         void CommitStop(IAbilityTimelineStopPending pending);
         void DiscardStop(IAbilityTimelineStopPending pending);

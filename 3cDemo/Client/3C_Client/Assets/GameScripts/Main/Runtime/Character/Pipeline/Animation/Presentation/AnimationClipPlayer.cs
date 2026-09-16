@@ -363,25 +363,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal float Duration => m_Source.SourceDurationSeconds;
         internal CharacterClipPlayerClockSource ClockSource => m_Descriptor.ClockSource;
         internal float PlayRate => m_Descriptor.PlayRate;
-        internal AnimationFootStepObservationRuntimeSnapshot CreateFootStepObservationSnapshot(
-            float sourceWeight)
-        {
-            SampleFootMotion(
-                sourceWeight,
-                out float normalizedTime,
-                out AnimationFootMotionRuntimeSample left,
-                out AnimationFootMotionRuntimeSample right);
-            return new AnimationFootStepObservationRuntimeSnapshot(
-                NodeId,
-                SourceIndex,
-                SourceId,
-                m_Source.ClipIdentity,
-                sourceWeight,
-                normalizedTime,
-                left,
-                right);
-        }
-
         internal void CreateFootMotionSamples(
             float sourceWeight,
             out AnimationFootMotionRuntimeSample left,

@@ -298,218 +298,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
         }
 
-        sealed class SourceReleaseCompletionPage
-        {
-            readonly List<ActionBackendReleaseCompletion>
-                m_ActionBackend;
-            readonly List<AnimationSlotSourceReleaseCompletion>
-                m_ActionSlot;
-            readonly bool[] m_AcknowledgementMatches;
-            int m_ValidatedAcknowledgementCount;
-            bool m_AcknowledgementsValidated;
-
-            internal SourceReleaseCompletionPage(int sourceCapacity)
-            {
-                if (sourceCapacity < 0)
-                {
-                    throw new ArgumentOutOfRangeException(
-                        nameof(sourceCapacity));
-                }
-                int backendCapacity = checked(sourceCapacity * 2);
-                m_ActionBackend =
-                    new List<ActionBackendReleaseCompletion>(
-                        backendCapacity);
-                m_ActionSlot =
-                    new List<AnimationSlotSourceReleaseCompletion>(
-                        sourceCapacity);
-                m_AcknowledgementMatches = new bool[backendCapacity];
-            }
-
-            internal bool AcknowledgementsValidated =>
-                m_AcknowledgementsValidated;
-
-            internal void RequireActionBackendCapacity(
-                int additionalCount)
-            {
-                if (additionalCount < 0 ||
-                    checked(m_ActionBackend.Count + additionalCount) >
-                    m_ActionBackend.Capacity)
-                {
-                    throw new InvalidOperationException(
-                        "Action backend release completion capacity was exceeded.");
-                }
-            }
-
-            internal void Record(
-                in ActionBackendReleaseCompletion completion)
-            {
-                if (m_ActionBackend.Count >= m_ActionBackend.Capacity)
-                {
-                    throw new InvalidOperationException(
-                        "Action backend release completion journal capacity was exceeded.");
-                }
-                m_ActionBackend.Add(completion);
-            }
-
-            internal void Record(
-                in AnimationSlotSourceReleaseCompletion completion)
-            {
-                if (m_ActionSlot.Count >= m_ActionSlot.Capacity)
-                {
-                    throw new InvalidOperationException(
-                        "Animation Slot source release completion journal capacity was exceeded.");
-                }
-                m_ActionSlot.Add(completion);
-            }
-
-            internal void CopyActionBackend(
-                List<ActionBackendReleaseCompletion> destination)
-            {
-                if (destination == null)
-                    throw new ArgumentNullException(nameof(destination));
-                destination.Clear();
-                destination.AddRange(m_ActionBackend);
-            }
-
-            internal void CopyActionSlot(
-                List<AnimationSlotSourceReleaseCompletion> destination)
-            {
-                if (destination == null)
-                    throw new ArgumentNullException(nameof(destination));
-                destination.Clear();
-                destination.AddRange(m_ActionSlot);
-            }
-
-            internal void ValidateAcknowledgements(
-                IReadOnlyList<ActionBackendReleaseCompletion>
-                    completions)
-            {
-                if (completions == null)
-                    throw new ArgumentNullException(nameof(completions));
-                Array.Clear(
-                    m_AcknowledgementMatches,
-                    0,
-                    m_ActionBackend.Count);
-                for (int i = 0; i < completions.Count; i++)
-                {
-                    ActionBackendReleaseCompletion expected =
-                        completions[i];
-                    int matchIndex = -1;
-                    for (int candidateIndex = 0;
-                         candidateIndex < m_ActionBackend.Count;
-                         candidateIndex++)
-                    {
-                        ActionBackendReleaseCompletion candidate =
-                            m_ActionBackend[candidateIndex];
-                        if (!Matches(in candidate, in expected))
-                            continue;
-                        if (matchIndex >= 0 ||
-                            m_AcknowledgementMatches[candidateIndex])
-                        {
-                            throw new InvalidOperationException(
-                                "Action backend release completion is duplicated.");
-                        }
-                        matchIndex = candidateIndex;
-                    }
-                    if (matchIndex < 0)
-                    {
-                        throw new InvalidOperationException(
-                            "Action backend release completion acknowledgement is not exact.");
-                    }
-                    m_AcknowledgementMatches[matchIndex] = true;
-                }
-                m_ValidatedAcknowledgementCount =
-                    m_ActionBackend.Count;
-                m_AcknowledgementsValidated = true;
-            }
-
-            internal void ApplyAcknowledgements()
-            {
-                if (!m_AcknowledgementsValidated ||
-                    m_ActionBackend.Count !=
-                    m_ValidatedAcknowledgementCount)
-                {
-                    throw new InvalidOperationException(
-                        "Action backend release acknowledgements were not validated for the committed frame.");
-                }
-                int writeIndex = 0;
-                for (int readIndex = 0;
-                     readIndex < m_ValidatedAcknowledgementCount;
-                     readIndex++)
-                {
-                    if (m_AcknowledgementMatches[readIndex])
-                        continue;
-                    m_ActionBackend[writeIndex++] =
-                        m_ActionBackend[readIndex];
-                }
-                if (writeIndex < m_ActionBackend.Count)
-                {
-                    m_ActionBackend.RemoveRange(
-                        writeIndex,
-                        m_ActionBackend.Count - writeIndex);
-                }
-                ClearValidatedAcknowledgements();
-            }
-
-            internal void ClearActionSlot() => m_ActionSlot.Clear();
-
-            internal void ClearActionBackend() =>
-                m_ActionBackend.Clear();
-
-            internal void ClearValidatedAcknowledgements()
-            {
-                Array.Clear(
-                    m_AcknowledgementMatches,
-                    0,
-                    m_ValidatedAcknowledgementCount);
-                m_ValidatedAcknowledgementCount = 0;
-                m_AcknowledgementsValidated = false;
-            }
-
-            internal void Clear()
-            {
-                m_ActionBackend.Clear();
-                m_ActionSlot.Clear();
-                ClearValidatedAcknowledgements();
-            }
-
-            static bool Matches(
-                in ActionBackendReleaseCompletion left,
-                in ActionBackendReleaseCompletion right) =>
-                left.RequestIdentity == right.RequestIdentity &&
-                left.PlaybackId.Equals(right.PlaybackId) &&
-                left.Source.Equals(right.Source) &&
-                left.CompletionIdentity == right.CompletionIdentity;
-        }
-
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPoseSourceCatalog m_Catalog;
-        readonly CharacterPoseSourceTuningState m_Tuning;
         readonly CharacterPoseSourceReadinessJournal m_Readiness;
         readonly CharacterPoseSourceBackendSet m_Backends;
         readonly AnimancerPoseSamplingBackend m_NativeClipBackend;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly CharacterPoseSourceBindingPage m_BindingPage;
         readonly CharacterPoseSourceUsagePage m_UsagePage;
-        readonly ActionPresentationSamplingRuntime m_ActionSampling;
         readonly CharacterPoseMotionMatchingSourceRuntime
             m_MotionMatching;
         readonly SourceReleasePage m_ReleasePage;
-        readonly SourceReleaseCompletionPage m_ReleaseCompletions;
         readonly HashSet<AnimationPhysicalSourceIdentity>
             m_ReleaseValidationIdentities;
         readonly Playable m_PreviousOutputSource;
         readonly float m_PreviousOutputWeight;
         SourceFramePage m_FramePage;
-        ActionPresentationSamplingFrameTransaction m_ActionSamplingFrame;
         AnimationMixerPlayable m_SourceFanIn;
         int m_PreparedSourceCount;
         bool m_Disposed;
 
         internal CharacterPoseSourceModule(
             AnimancerComponent animancer,
-            CharacterPresentationProjection projection,
-            ActionAnimationBindingIndex actionBindings,
+            CharacterAnimationPresentationProfile profile,
             CharacterMotionMatchingPresentationModule motionMatching,
             CharacterAnimationRigBinding rigBinding,
             CharacterAnimationRigPayload rig,
@@ -524,8 +335,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Animancer = animancer
                 ? animancer
                 : throw new ArgumentNullException(nameof(animancer));
-            if (projection == null)
-                throw new ArgumentNullException(nameof(projection));
+            if (!profile)
+                throw new ArgumentNullException(nameof(profile));
             if (resourceScope == null)
                 throw new ArgumentNullException(nameof(resourceScope));
             m_Readiness = new CharacterPoseSourceReadinessJournal(
@@ -533,18 +344,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sourceCapacity,
                 clipCapacity);
             m_Catalog = new CharacterPoseSourceCatalog(
-                projection,
+                profile,
                 clipCapacity);
-            m_ActionSampling = new ActionPresentationSamplingRuntime(
-                actionBindings ??
-                throw new ArgumentNullException(nameof(actionBindings)));
             m_MotionMatching = motionMatching != null
                 ? new CharacterPoseMotionMatchingSourceRuntime(
                     motionMatching)
                 : null;
-            m_Tuning = new CharacterPoseSourceTuningState(
-                projection,
-                1);
             var physicalSources = new PhysicalPoseSourceRegistry(
                 sourceCapacity);
             AnimancerPoseSamplingBackend nativeClipBackend = null;
@@ -627,8 +432,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_UsagePage =
                 new CharacterPoseSourceUsagePage(sourceCapacity);
             m_ReleasePage = new SourceReleasePage(sourceCapacity);
-            m_ReleaseCompletions =
-                new SourceReleaseCompletionPage(sourceCapacity);
             m_ReleaseValidationIdentities =
                 new HashSet<AnimationPhysicalSourceIdentity>(
                     sourceCapacity);
@@ -638,121 +441,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal int Capacity => m_PhysicalSources.Capacity;
-        internal int ActionSamplingJournalCapacity =>
-            m_ActionSampling.JournalCapacity;
         internal CharacterPoseMotionMatchingSourceRuntime MotionMatching =>
             m_MotionMatching;
-
-        internal void BeginActionSamplingFrame(
-            ulong frameIdentity,
-            ulong presentationFrame,
-            bool captureDiagnostics)
-        {
-            if (m_ActionSamplingFrame?.IsValid == true)
-            {
-                throw new InvalidOperationException(
-                    "Pose Source Action sampling frame is already open.");
-            }
-            m_ActionSamplingFrame = m_ActionSampling.BeginFrame(
-                frameIdentity,
-                presentationFrame,
-                captureDiagnostics);
-        }
-
-        internal void ProjectActionPresentationSamples(
-            CharacterActionPlaybackRuntime actionRuntime,
-            CharacterActionPlaybackFrameTransaction actionTransaction,
-            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle,
-            double presentationSampleTick,
-            float presentationDeltaSeconds)
-        {
-            RequireActionSamplingFrame(actionTransaction.Identity);
-            m_ActionSampling.ProjectPresentationSamples(
-                m_ActionSamplingFrame,
-                actionRuntime,
-                actionTransaction,
-                lifecycle,
-                presentationSampleTick,
-                presentationDeltaSeconds);
-        }
-
-        internal void ResolveActionPresentationFrames(
-            ulong frameIdentity,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease workspaceLease)
-        {
-            RequireActionSamplingFrame(frameIdentity);
-            m_ActionSampling.ResolvePresentationFrames(
-                m_ActionSamplingFrame,
-                workspace,
-                workspaceLease);
-        }
-
-        internal void ValidateActionSamplingFrame(ulong frameIdentity)
-        {
-            RequireActionSamplingFrame(frameIdentity);
-            m_ActionSampling.ValidateFrame(m_ActionSamplingFrame);
-        }
-
-        internal void CommitActionSamplingFrame(ulong frameIdentity)
-        {
-            RequireActionSamplingFrame(frameIdentity);
-            m_ActionSampling.SealFrame(m_ActionSamplingFrame);
-            m_ActionSamplingFrame = null;
-        }
-
-        internal void DiscardActionSamplingFrame(ulong frameIdentity)
-        {
-            RequireActionSamplingFrame(frameIdentity);
-            m_ActionSampling.DiscardFrame(m_ActionSamplingFrame);
-            m_ActionSamplingFrame = null;
-        }
-
-        internal void BuildCommittedActionTimeSnapshots(
-            FixedCapacityFrameBuffer<ActionPresentationTimeSnapshot>
-                destination) =>
-            m_ActionSampling.BuildCommittedTimeSnapshots(destination);
-
-        internal void ResetActionSampling()
-        {
-            if (m_ActionSamplingFrame?.IsValid == true)
-            {
-                throw new InvalidOperationException(
-                    "Pose Source Action sampling cannot reset during a frame.");
-            }
-            m_ActionSampling.Reset();
-        }
-
-        internal CharacterPoseSourceTuningView RequireTuning(
-            ulong generation) =>
-            m_Tuning.RequireCommitted(generation);
-
-        internal string PrepareTuningCandidate(
-            CharacterPoseTuningLayout layout,
-            CharacterPoseTuningParameterBlock block,
-            ulong generation)
-        {
-            try
-            {
-                m_Tuning.PrepareCandidate(layout, block, generation);
-                return string.Empty;
-            }
-            catch (Exception exception)
-            {
-                return exception.Message;
-            }
-        }
-
-        internal void CommitTuningCandidate(ulong generation) =>
-            m_Tuning.CommitCandidate(generation);
-
-        internal void DiscardTuningCandidate() =>
-            m_Tuning.DiscardCandidate();
 
         internal CharacterPoseSourceFrameLease BeginFrame(
             in CharacterPoseNativeFrameLineage lineage)
         {
-            RequireActionSamplingFrame(lineage.FrameIdentity);
             m_ReleasePage.RequireEmpty();
             m_ReleaseValidationIdentities.Clear();
             CharacterPoseSourceFrameLease lease =
@@ -1569,57 +1263,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_PhysicalSources.CancelReleaseDiagnostics();
         }
 
-        internal bool ReleaseAcknowledgementsValidated =>
-            m_ReleaseCompletions.AcknowledgementsValidated;
-
-        internal void RequireActionBackendReleaseCompletionCapacity(
-            int additionalCount) =>
-            m_ReleaseCompletions.RequireActionBackendCapacity(
-                additionalCount);
-
-        internal void RecordReleaseCompletion(
-            in ActionBackendReleaseCompletion completion) =>
-            m_ReleaseCompletions.Record(in completion);
-
-        internal void RecordReleaseCompletion(
-            in AnimationSlotSourceReleaseCompletion completion) =>
-            m_ReleaseCompletions.Record(in completion);
-
-        internal void CopyActionBackendReleaseCompletions(
-            List<ActionBackendReleaseCompletion> destination) =>
-            m_ReleaseCompletions.CopyActionBackend(destination);
-
-        internal void CopyActionSlotReleaseCompletions(
-            List<AnimationSlotSourceReleaseCompletion> destination) =>
-            m_ReleaseCompletions.CopyActionSlot(destination);
-
-        internal void ValidateActionBackendReleaseAcknowledgements(
-            IReadOnlyList<ActionBackendReleaseCompletion>
-                completions) =>
-            m_ReleaseCompletions.ValidateAcknowledgements(completions);
-
-        internal void ApplyActionBackendReleaseAcknowledgements() =>
-            m_ReleaseCompletions.ApplyAcknowledgements();
-
-        internal void ClearValidatedReleaseAcknowledgements() =>
-            m_ReleaseCompletions.ClearValidatedAcknowledgements();
-
-        internal void ClearActionSlotReleaseCompletions() =>
-            m_ReleaseCompletions.ClearActionSlot();
-
-        internal void ClearActionBackendReleaseCompletions() =>
-            m_ReleaseCompletions.ClearActionBackend();
-
-        internal CharacterPoseSourceCommittedDiagnosticsView
-            CaptureCommittedDiagnostics(
-            in CharacterPoseSourceFrameResult sourceFrame) =>
-                m_PhysicalSources.CaptureCommittedDiagnostics(
-                    in sourceFrame);
-
-        internal void FreezeCommittedDiagnostics(
-            in CharacterPoseSourceFrameResult sourceFrame) =>
-            m_PhysicalSources.FreezeCommittedDiagnostics(in sourceFrame);
-
         internal ClipSamplePlan RequireDominantClipSample(
             AnimationPoseSourceId sourceId,
             PoseNodeId poseNodeId,
@@ -1648,7 +1291,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
             m_ReleaseValidationIdentities.Clear();
             m_ReleasePage.Clear();
-            m_ReleaseCompletions.Clear();
         }
 
         void Connect(
@@ -1791,7 +1433,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_BindingPage.Clear();
             m_UsagePage.Clear();
             m_ReleasePage.Clear();
-            m_ReleaseCompletions.Clear();
             DisposeStep(RestoreOutputAndDestroyFanIn, ref failure);
             DisposeStep(m_PhysicalSources.Dispose, ref failure);
             m_ReleaseValidationIdentities.Clear();
@@ -1848,17 +1489,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 failure = failure == null
                     ? exception
                     : new AggregateException(failure, exception);
-            }
-        }
-
-        void RequireActionSamplingFrame(ulong frameIdentity)
-        {
-            if (frameIdentity == 0 ||
-                m_ActionSamplingFrame?.IsValid != true ||
-                m_ActionSamplingFrame.Identity != frameIdentity)
-            {
-                throw new InvalidOperationException(
-                    "Pose Source Action sampling frame is stale.");
             }
         }
 

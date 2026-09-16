@@ -1338,3 +1338,8 @@
 
 - Float32 和 Fixed \CharacterRuntime\ 已按锁定 roster 计算 \GameplayContentHash\，输入是每个 Actor binding 的正式内容身份；状态 schema 再按 roster 与每个 Actor schema 聚合，未用单个 Ability ContentHash 代表整角色。
 - \CreateInitialState\ 把对应 Actor 的内容与状态 schema 写入角色状态；ServerAuthoritative、World Snapshot 和 Rollback 握手已在前面小步接入该 schema。当前对账证据覆盖双数值目标。
+
+## 2026-09-16 对账ServerAuthoritative领域状态恢复链
+
+- Reconciler 现在锁定 Character Runtime、state schema、operation set、NumericProfile、World Solver 与 revision；Authority baseline 先解码为完整 Actor Snapshot 后再参与恢复。
+- History record 持有完整 World Snapshot、Pipeline projection、Observed World Constraints 和 EventId journal；correction 决策仍比较 state hash 与 body position/yaw，恢复事务按 schema 合并 Pipeline 状态。

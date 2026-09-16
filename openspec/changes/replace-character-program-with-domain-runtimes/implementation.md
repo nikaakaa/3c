@@ -1343,3 +1343,7 @@
 
 - Reconciler 现在锁定 Character Runtime、state schema、operation set、NumericProfile、World Solver 与 revision；Authority baseline 先解码为完整 Actor Snapshot 后再参与恢复。
 - History record 持有完整 World Snapshot、Pipeline projection、Observed World Constraints 和 EventId journal；correction 决策仍比较 state hash 与 body position/yaw，恢复事务按 schema 合并 Pipeline 状态。
+
+## 2026-09-16 对账Fixed Rollback角色快照身份
+- Rollback 握手与 Snapshot codec 已锁定 GameplayContentHash 与 StateSchemaHash；Actor Snapshot 使用完整角色状态 schema，不再以单个 Ability 身份代表角色。
+- Runtime state 继续拥有输入排序、applied gameplay hash history、Relay/Confirmed horizon、恢复重放和 canonical confirmation 输出；RestoreSimulationProjection 仍按 confirmed horizon 修剪并推进历史。

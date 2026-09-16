@@ -1364,3 +1364,6 @@
 - 技能定位菜单不再识别旧 CharacterPipelineHost，只从 Fixed Character Host 解析正式 Character Definition。
 - 删除旧 Host 专属 Inspector、Foot Placement/Equipment Host 配置绘制和 Projection Asset 身份展示；Motion Matching 诊断继续读取 Animation Presentation Profile。
 - 本步只退出演示与诊断中的旧总 Host 入口，不改变 Fixed Host 运行链；其余旧 Host 引用随后按工具归属继续清理。
+
+## 2026-09-16 修复Timeline Capture语法边界
+- 补回 Timeline Runtime Service 中 Capture 方法缺失的方法体左括号；不改变 Capture 只允许已提交 Step 边界的约束。

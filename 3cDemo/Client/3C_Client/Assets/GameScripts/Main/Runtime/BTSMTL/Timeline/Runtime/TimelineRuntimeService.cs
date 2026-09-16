@@ -698,6 +698,7 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
+        {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
             if (playback.HasPendingAdvance || playback.HasPendingStop)

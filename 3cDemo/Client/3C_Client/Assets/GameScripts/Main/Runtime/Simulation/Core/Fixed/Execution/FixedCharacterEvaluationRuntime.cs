@@ -70,21 +70,19 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
-                    var stateServices = new FixedAbilityInvocationStateServices(
-                        roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
-                        roleState.ActionState,
-                        roleState.HandleAllocatorState,
-                        roleState.EventSequenceState,
-                        roleState.GameplayEffectState,
-                        roleState.EquipmentState);
                     var invocation = new FixedAbilityInvocationRuntime(
                         installation.Execution,
                         actor.AbilityInstallations,
                         domainRuntimeFactory,
                         installation.EquipmentLayout,
-                        stateServices,
+                        roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
                         roleState,
                         roleState.InputRequests,
+                        roleState.ActionState,
+                        roleState.HandleAllocatorState,
+                        roleState.EventSequenceState,
+                        roleState.GameplayEffectState,
+                        roleState.EquipmentState,
                         actor.ActorId,
                         tick,
                         abilityInput,

@@ -10,32 +10,6 @@ namespace ThirdPersonSimulation.Fixed
         void StopFromControl(CharacterControlAbilityStopRequest request);
     }
 
-    internal sealed class FixedAbilityInvocationStateServices
-    {
-        public FixedAbilityInvocationStateServices(
-            IFixedSkillExecutionState skillState,
-            IFixedActionRuntimeStatePort actionState,
-            IFixedHandleAllocatorStatePort handleAllocatorState,
-            IFixedEventSequenceStatePort eventSequenceState,
-            IFixedGameplayEffectStatePort gameplayEffectState,
-            IFixedEquipmentStatePort equipmentState)
-        {
-            SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
-            ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
-            HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
-            EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
-            GameplayEffectState = gameplayEffectState;
-            EquipmentState = equipmentState;
-        }
-
-        public IFixedSkillExecutionState SkillState { get; }
-        public IFixedActionRuntimeStatePort ActionState { get; }
-        public IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
-        public IFixedEventSequenceStatePort EventSequenceState { get; }
-        public IFixedGameplayEffectStatePort GameplayEffectState { get; }
-        public IFixedEquipmentStatePort EquipmentState { get; }
-    }
-
     internal sealed class FixedAbilityInvocationResult
     {
         public FixedAbilityInvocationResult(
@@ -131,9 +105,14 @@ namespace ThirdPersonSimulation.Fixed
             IFixedAbilityActionBindingProvider actionBindings,
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
-            FixedAbilityInvocationStateServices stateServices,
+            IFixedSkillExecutionState skillState,
             IFixedAbilityExecutionSavepointPort savepointPort,
             IFixedInputRequestStatePort inputRequests,
+            IFixedActionRuntimeStatePort actionState,
+            IFixedHandleAllocatorStatePort handleAllocatorState,
+            IFixedEventSequenceStatePort eventSequenceState,
+            IFixedGameplayEffectStatePort gameplayEffectState,
+            IFixedEquipmentStatePort equipmentState,
             ActorId actorId,
             SimulationTick tick,
             FixedAbilityExecutionInput input,
@@ -145,14 +124,14 @@ namespace ThirdPersonSimulation.Fixed
             AbilityId = execution.Data.AbilityId;
             actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
-            stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
+            skillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             savepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
             inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
-            m_SkillState = stateServices.SkillState;
+            m_SkillState = skillState;
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Workspace.Reset();
             m_Frame = new FixedAbilityExecutionFrame(
@@ -163,7 +142,12 @@ namespace ThirdPersonSimulation.Fixed
                 tick,
                 input,
                 bodyFacts,
-                stateServices,
+                skillState,
+                actionState,
+                handleAllocatorState,
+                eventSequenceState,
+                gameplayEffectState,
+                equipmentState,
                 m_Workspace);
 
             FixedAbilityExecutionAssembly assembly = serviceFactory.Create(

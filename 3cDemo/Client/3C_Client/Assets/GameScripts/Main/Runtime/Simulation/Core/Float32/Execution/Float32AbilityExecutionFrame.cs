@@ -94,7 +94,12 @@ namespace ThirdPersonSimulation
             SimulationTick tick,
             Float32AbilityExecutionInput input,
             Float32AbilityBodyFacts bodyFacts,
-            Float32AbilityInvocationStateServices stateServices,
+            IFloat32SkillExecutionState skillState,
+            IFloat32ActionRuntimeStatePort actionState,
+            IFloat32HandleAllocatorStatePort handleAllocatorState,
+            IFloat32EventSequenceStatePort eventSequenceState,
+            IFloat32GameplayEffectStatePort gameplayEffectState,
+            IFloat32EquipmentStatePort equipmentState,
             Float32AbilityExecutionWorkspace workspace)
         {
             Data = data ?? throw new ArgumentNullException(nameof(data));
@@ -104,13 +109,12 @@ namespace ThirdPersonSimulation
             Tick = tick;
             Input = input ?? throw new ArgumentNullException(nameof(input));
             m_BodyFacts = bodyFacts;
-            stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
-            SkillState = stateServices.SkillState;
-            ActionState = stateServices.ActionState;
-            HandleAllocatorState = stateServices.HandleAllocatorState;
-            EventSequenceState = stateServices.EventSequenceState;
-            m_GameplayEffectState = stateServices.GameplayEffectState;
-            m_EquipmentState = stateServices.EquipmentState;
+            SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
+            ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
+            HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
+            EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
+            m_GameplayEffectState = gameplayEffectState;
+            m_EquipmentState = equipmentState;
             workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Facts = workspace.Facts;
             m_Presentation = workspace.Presentation;

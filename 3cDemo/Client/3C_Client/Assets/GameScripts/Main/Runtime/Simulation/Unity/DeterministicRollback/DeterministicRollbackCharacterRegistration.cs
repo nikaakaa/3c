@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
         readonly ICharacterPresentationDomainRuntime m_PresentationRuntime;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
-        readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
+        readonly ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink m_DiagnosticsSink;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly FixedCharacterRuntime m_CharacterRuntime;
         readonly FixedSimulationActorBinding m_CharacterBinding;
@@ -97,7 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
-            m_DiagnosticsAdapter = ThirdPersonSimulation.Fixed.NullSimulationDiagnosticsSink.Instance;
+            m_DiagnosticsSink = ThirdPersonSimulation.Fixed.NullSimulationDiagnosticsSink.Instance;
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"deterministic-rollback-output/{actorId.Value}",
@@ -123,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public SimulationOutputRouteDescriptor OutputRoute { get; }
         public IFixedCharacterControlSourceRuntime RollbackInput => m_LocalInput;
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
-        public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
+        public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsSink;
         public bool SupportsPresentationCheckpointCapture =>
             m_PresentationRuntime.SupportsCheckpointCapture;
         public bool SupportsPresentationCheckpointRestore =>
@@ -162,8 +162,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             snapshot = m_RuntimeState.CaptureDiagnostics(
                 m_OutputCommitter.CaptureLifecycleSnapshot(),
                 new RollbackPresentationDiagnosticsSnapshot(
-                    presentation.BodyBranchReplacementCount,
-                    presentation.AnimationBranchReplacementCount,
+                    (ulong)presentation.BodyBranchReplacementCount,
+                    (ulong)presentation.AnimationBranchReplacementCount,
                     presentation.FollowerPositionCorrectionMeters,
                     presentation.FollowerYawCorrectionDegrees),
                 m_NetworkDiagnostics.CaptureNetworkDiagnostics());
@@ -183,8 +183,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_NetworkDiagnostics = networkDiagnostics ?? throw new ArgumentNullException(nameof(networkDiagnostics));
         }
 
-        public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash) =>
-            m_DiagnosticsAdapter.PublishCheckpoint(tick, snapshotIdentity, snapshotHash);
+        public void PublishCheckpoint(ulong tick, string snapshotIdentity, StableHash snapshotHash)
+        {
+        }
 
         public void BindExecutionBranch(Guid executionBranchId) =>
             DiagnosticsContext.SetExecutionBranch(executionBranchId);
@@ -420,3 +421,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
     }
 
 }
+
+

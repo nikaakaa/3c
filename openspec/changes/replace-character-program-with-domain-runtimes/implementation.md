@@ -1379,3 +1379,11 @@
 ## 2026-09-16 迁移运行诊断选择到正式Host
 - Rollback 产品校验只要求两个正式 DeterministicRollbackCharacterHost，删除对已退役 CharacterPipelineHost 的类型检查。
 - 运行诊断场景选择改为识别 FixedCharacterHost 或 DeterministicRollbackCharacterHost；旧总 Host 不再作为诊断入口。
+
+## 2026-09-16 建立表现领域运行时工厂底座
+
+- 新增 `CharacterPresentationDomainRuntimeFactory` 与领域运行时外壳，统一承接三类 Host 的现有工厂调用；Body 呈现流、Trajectory 捕获、命令事务入口、诊断快照与根层级校验先接入正式合同。
+- Simulated Actor 使用 Selected Body Stream，Local Owner 使用 Committed Body Stream；工厂按角色校验 Camera 输入，不建立默认相机或默认姿态。
+- Pose Graph 存在节点而 Source／Constraint／Handler／Final Publication 组合尚未由 Pose owner 暴露完整装配输入时，工厂立即失败；Camera、Equipment、checkpoint 也只暴露精确失败，不用占位结果冒充完成。
+- 清理 Rollback 注册器对已删除 `FixedCharacterSimulationDiagnosticsAdapter` 的引用，统一回到 Fixed Null Simulation Diagnostics Sink，并把 presentation 计数转换到 Rollback diagnostics 的 ulong 合同。
+- Fixed.Unity、ServerAuthoritative.Unity、DeterministicRollback.Unity 便携工程编译通过；本步不勾选 Pose 公共接线，Pose／Camera／Equipment 组合仍是后续闭合点。

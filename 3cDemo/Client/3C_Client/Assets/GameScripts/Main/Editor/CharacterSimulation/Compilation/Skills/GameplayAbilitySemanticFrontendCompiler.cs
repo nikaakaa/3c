@@ -106,7 +106,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             catch (Exception exception)
             {
-                report.EmissionError("ability_semantic_emission_failed", model.DefinitionPath, exception.Message);
+                report.EmissionError("ability_semantic_emission_failed", model.DefinitionPath, exception.ToString());
                 return GameplayAbilitySemanticFrontendResult.Failed(report);
             }
         }
@@ -123,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     builder.RequireGameplayCapability("StateMachine");
                 if (occurrence.Timelines.Count > 0)
                     builder.RequireGameplayCapability("Timeline");
-                foreach (BtsmtlSkillFlowNode node in occurrence.Nodes)
+                foreach (object node in occurrence.Nodes)
                 {
                     if (node is BtsmtlSkillApplyGameplayEffectFlowNode ||
                         node is BtsmtlSkillRemoveGameplayEffectFlowNode)

@@ -365,7 +365,7 @@ namespace ThirdPersonSimulation
             var subgraphs = new Dictionary<int, string>();
             var callSites = new Dictionary<int, string>();
             var followUps = new Dictionary<int, CharacterSkillId>();
-            var endRuleValues = new Dictionary<int, GameplayAbilityExecutionEndRule>();
+            var endRuleValues = new Dictionary<int, EndRuleData>();
             for (int i = 0; i < entry.Fields.Count; i++)
             {
                 ProgramCatalogField field = entry.Fields[i];
@@ -410,14 +410,14 @@ namespace ThirdPersonSimulation
                 .ToList();
             endRules = endRuleValues
                 .OrderBy(value => value.Key)
-                .Select(value => value.Value)
+                .Select(value => new GameplayAbilityExecutionEndRule(value.Value.Trigger, value.Value.Transition, value.Value.ActionWindowType, value.Value.Reason))
                 .ToList();
         }
 
         static void ReadEndRuleField(
             ProgramCatalogEntry entry,
             ProgramCatalogField field,
-            IDictionary<int, GameplayAbilityExecutionEndRule> values)
+            IDictionary<int, EndRuleData> values)
         {
             if (field.Kind != ProgramCatalogFieldKind.Identity)
                 throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' is not an identity.");
@@ -426,8 +426,8 @@ namespace ThirdPersonSimulation
             if (separator <= 0 || !int.TryParse(suffix.Substring(0, separator), out int index) || index < 0)
                 throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' is malformed.");
             string component = suffix.Substring(separator + 1);
-            if (!values.TryGetValue(index, out GameplayAbilityExecutionEndRule current))
-                current = new GameplayAbilityExecutionEndRule("ExecutionCompleted", 2, string.Empty, string.Empty);
+            if (!values.TryGetValue(index, out EndRuleData current))
+                current = new EndRuleData();
             string trigger = current.Trigger;
             int transition = current.Transition;
             string actionWindowType = current.ActionWindowType;
@@ -450,7 +450,15 @@ namespace ThirdPersonSimulation
                 default:
                     throw new InvalidDataException($"AbilityProgram '{entry.Identity}' end rule field '{field.Name}' has an unknown component.");
             }
-            values[index] = new GameplayAbilityExecutionEndRule(trigger, transition, actionWindowType, reason);
+            values[index] = new EndRuleData { Trigger = trigger, Transition = transition, ActionWindowType = actionWindowType, Reason = reason };
+        }
+
+        sealed class EndRuleData
+        {
+            public string Trigger = "ExecutionCompleted";
+            public int Transition = 2;
+            public string ActionWindowType = string.Empty;
+            public string Reason = string.Empty;
         }
 
         static void ReadDependencyField(

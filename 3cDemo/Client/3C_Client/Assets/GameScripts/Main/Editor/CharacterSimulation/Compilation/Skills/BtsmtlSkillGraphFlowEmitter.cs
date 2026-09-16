@@ -111,6 +111,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 DeclareNativeBodyEntry(machine, state, body, operations[state.State.UID], "Root", 1);
                 DeclareNativeBodyEntry(machine, state, body, operations[state.State.UID], "OnExit", 2);
             }
+            foreach (BtsmtlSkillNativeStateOccurrence state in machine.States)
+                m_Builder.DeclareReference(
+                    $"{state.Route}/state-machine-owner",
+                    operations[state.State.UID],
+                    ProgramReferenceKind.Operation,
+                    owner.Value,
+                    state.Route,
+                    Source(machine, state.State));
             foreach (BtsmtlSkillNativeEdgeOccurrence edge in machine.Edges)
             {
                 OperationHandle conditionOwner = edge.Source is BtsmtlSkillNativeEntryState ||
@@ -183,6 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 "OnEnter" => graph.allNodes.OfType<BtsmtlSkillStateOnEnterFlowNode>().Single(),
                 "Root" => graph.allNodes.OfType<BtsmtlSkillRootFlowNode>().Single(),
+                "OnExit" => graph.allNodes.OfType<BtsmtlSkillStateOnExitFlowNode>().Single(),
                 _ => throw new ArgumentOutOfRangeException(nameof(port))
             };
             if (!body.Operations.Nodes.TryGetValue(entry.UID, out OperationHandle entryOperation))

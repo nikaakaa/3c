@@ -1510,3 +1510,12 @@
 - Ability Data 发布器收集全部 Ability Graph 引用的 TimelineAsset 并写回 Definition，保留已有 Control Motion Timeline；普通 play 不再只依赖手工配置的 Attack1。
 - Core、Float32、Fixed、Fixed.Unity、Runtime、Editor 便携编译通过；构建后已执行 build-server shutdown。
 - 本步未勾选 3.8：typed Snapshot 还需接入完整 FixedCharacterRuntimeState codec、rollback history 和网络状态。
+
+## 2026-09-17 打通Corin Ability产物导出
+
+- CorinAttack 的 Can Activate Attack / Can Activate Dodge 节点补齐正式 admission profile 和 ActionTarget 快照声明；Generated authoring code 与持久化 Ability 图保持同一数据。
+- Ability InputValue catalog 声明 ValueType，来源解析 CharacterInputProfile，满足 Float32/Fixed provider contract。
+- Native StateMachine 为每个 State 声明 owner reference，并接上 StateBody OnExit 入口；TreeClip 资产引用改为精确类型校验。
+- EndRule catalog 字段改为先聚合再构造，避免 Trigger/Window 分字段中间态误判 ActionWindowClosed 缺 Window。
+- 重新发布 Attack、DodgeForward、DodgeBack 的 Float32/Fixed Ability Data，并把 Ability Timeline 写回 Corin definition。
+- Unity 全项目编译 0 error；Assembly-CSharp-Editor dotnet build 0 error，已执行 build-server shutdown。

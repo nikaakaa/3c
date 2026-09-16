@@ -348,7 +348,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         {
                             if (clip is not TreeClip treeClip)
                                 continue;
-                            var child = (BtsmtlSkillFlowGraph)treeClip.AssetTree;
+                            if (treeClip.AssetTree is not BtsmtlSkillFlowGraph child)
+                                throw new InvalidOperationException($"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/tree:{treeClip.AuthoringId}: TreeClip引用不是正式Skill图。");
                             trees.Add(treeClip.AuthoringId, ReadOccurrence(child,
                                 $"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/tree:{child.AuthoringId}",
                                 contentHash, report));
@@ -398,4 +399,3 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 }
-

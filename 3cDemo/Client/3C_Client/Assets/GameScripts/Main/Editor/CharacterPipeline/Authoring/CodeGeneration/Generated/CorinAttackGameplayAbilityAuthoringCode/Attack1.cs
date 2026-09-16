@@ -1,6 +1,7 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;
 using FlowCanvas.Nodes;
+using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEngine;
 
@@ -65,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.SetValue(node19, "m_Value", true);
             BtsmtlSkillAuthoringContract.Apply(node24, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", "7862fb9d08504eb5803abe60861e6b79"), new BtsmtlSkillAuthoringFieldValue("factContext", null), new BtsmtlSkillAuthoringFieldValue("ownerId", "894a4cd14e8db8f49003b0660b7660ed"), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
             BtsmtlSkillAuthoringCode.SetValue(node24, "m_Value", true);
-            BtsmtlSkillAuthoringContract.Apply(node27, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", null), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("", "")) });
+            BtsmtlSkillAuthoringContract.Apply(node27, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Dodge/CorinDodgeActionProfile.asset", 11400000L)), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
             BtsmtlSkillAuthoringContract.Apply(node30, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "RecoveryEarly") });
             BtsmtlSkillAuthoringContract.Apply(node32, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "Dodge"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
             BtsmtlSkillAuthoringContract.Apply(node41, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "MoveAxis"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });

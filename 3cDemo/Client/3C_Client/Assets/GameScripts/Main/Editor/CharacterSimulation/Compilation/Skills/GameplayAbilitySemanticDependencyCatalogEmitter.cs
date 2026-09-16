@@ -6,7 +6,9 @@ using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
+using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonSimulation;
+using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -200,7 +202,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     input.InputId,
                     input.ProviderOwnerId,
                     source,
-                    m_Index.InputValues);
+                    m_Index.InputValues,
+                    InputValueFields(m_Builder, source, input));
                 return;
             }
             if (node is BtsmtlSkillMoveFacingAngleFlowNode move)
@@ -378,9 +381,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string identity,
             string providerOwner,
             SimulationSourceLocation source,
-            HashSet<string> index)
+            HashSet<string> index,
+            IEnumerable<ProgramCatalogField> extraFields = null)
         {
-            DeclareIdentity(kind, identity, providerOwner, source, index, kind == ProgramCatalogEntryKind.InputRequest ? "input:request" : "input:value");
+            DeclareIdentity(kind, identity, providerOwner, source, index, kind == ProgramCatalogEntryKind.InputRequest ? "input:request" : "input:value", extraFields: extraFields);
+        }
+
+        static IEnumerable<ProgramCatalogField> InputValueFields(GameplayAbilitySemanticBuilder builder, SimulationSourceLocation source, IBtsmtlSkillInputNode input)
+        {
+            string owner = input.ProviderOwnerId;
+            string path = CharacterSkillProviderOwners.IsAssetOwner(owner)
+                ? AssetDatabase.GUIDToAssetPath(owner.Substring(CharacterSkillProviderOwners.AssetPrefix.Length))
+                : string.Empty;
+            CharacterInputProfile profile = AssetDatabase.LoadAssetAtPath<CharacterInputProfile>(path);
+            CharacterInputValueDefinition definition = profile == null
+                ? null
+                : profile.InputValues.FirstOrDefault(value => value != null && value.InputValueId == input.InputId);
+            if (definition == null)
+                yield break;
+            ProgramInputValueKind kind = definition.ValueType switch
+            {
+                CharacterInputValueType.Bool => ProgramInputValueKind.Boolean,
+                CharacterInputValueType.Float => ProgramInputValueKind.Scalar,
+                CharacterInputValueType.Vector2 => ProgramInputValueKind.Vector2,
+                _ => throw new InvalidOperationException($"Input value '{input.InputId}' has unsupported type '{definition.ValueType}'.")
+            };
+            yield return builder.ConstantField(source, "ValueType", (int)kind);
         }
 
         void DeclareTag(

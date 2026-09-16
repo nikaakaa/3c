@@ -26,17 +26,19 @@ namespace ThirdPersonSimulation
         public SimulationActorSnapshot(
             ActorId actorId,
             GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
             CharacterStateHash stateHash,
             string stateCodecIdentity,
             byte[] stateBytes)
         {
-            if (!actorId.IsValid || !gameplayContentHash.IsValid || !stateHash.IsValid ||
+            if (!actorId.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid || !stateHash.IsValid ||
                 !string.Equals(stateCodecIdentity, Float32CharacterRuntimeStateCodec.CodecIdentity, StringComparison.Ordinal))
             {
                 throw new ArgumentException("Actor snapshot identity is incomplete.");
             }
             ActorId = actorId;
             GameplayContentHash = gameplayContentHash;
+            StateSchemaHash = stateSchemaHash;
             StateHash = stateHash;
             StateCodecIdentity = stateCodecIdentity;
             m_StateBytes = stateBytes == null ? throw new ArgumentNullException(nameof(stateBytes)) : (byte[])stateBytes.Clone();
@@ -44,6 +46,7 @@ namespace ThirdPersonSimulation
 
         public ActorId ActorId { get; }
         public GameplayContentHash GameplayContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public CharacterStateHash StateHash { get; }
         public string StateCodecIdentity { get; }
         public ReadOnlyMemory<byte> StateBytes => m_StateBytes;
@@ -58,7 +61,8 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException($"Actor '{ActorId}' snapshot Ability binding is stale or mismatched.");
             }
             if (actor.ActorId != ActorId ||
-                !GameplayContentHash.Equals(new GameplayContentHash(actor.GameplayContentHash)))
+                !GameplayContentHash.Equals(new GameplayContentHash(actor.GameplayContentHash)) ||
+                !StateSchemaHash.Equals(actor.StateSchemaHash))
                 throw new InvalidDataException($"Actor '{ActorId}' snapshot Character Runtime binding is stale or mismatched.");
             Float32CharacterRuntimeState state = Float32CharacterRuntimeStateCodec.Read(
                 m_StateBytes,
@@ -77,6 +81,7 @@ namespace ThirdPersonSimulation
         public SimulationWorldSnapshot(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
             SolverImplementationId solverId,
             string solverVersion,
             WorldRevision worldRevision,
@@ -85,10 +90,11 @@ namespace ThirdPersonSimulation
             byte[] worldStateBytes,
             bool deterministicValidity)
         {
-            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value) || !tick.IsValid)
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value) || !tick.IsValid)
                 throw new ArgumentException("Simulation World Snapshot header is incomplete.");
             NumericProfile = numericProfile;
             GameplayContentHash = gameplayContentHash;
+            StateSchemaHash = stateSchemaHash;
             SolverId = solverId;
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
@@ -111,6 +117,7 @@ namespace ThirdPersonSimulation
 
         public SimulationNumericProfile NumericProfile { get; }
         public GameplayContentHash GameplayContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public SolverImplementationId SolverId { get; }
         public string SolverVersion { get; }
         public WorldRevision WorldRevision { get; }
@@ -161,12 +168,15 @@ namespace ThirdPersonSimulation
                 GameplayContentHash actorContentHash = new GameplayContentHash(binding.GameplayContentHash);
                 if (!actor.State.GameplayContentHash.Equals(actorContentHash))
                     throw new InvalidOperationException($"Actor '{actor.ActorId}' Character runtime state identity does not match Character Runtime binding.");
+                if (!actor.State.StateSchemaHash.Equals(binding.StateSchemaHash))
+                    throw new InvalidOperationException($"Actor '{actor.ActorId}' Character runtime state schema does not match Character Runtime binding.");
                 if (actor.State.NumericProfile != characterRuntime.NumericProfile)
                     throw new InvalidOperationException($"Actor '{actor.ActorId}' Character runtime state Numeric Profile does not match Character Runtime.");
                 byte[] stateBytes = Float32CharacterRuntimeStateCodec.Write(actor.State);
                 snapshots[i] = new SimulationActorSnapshot(
                     actor.ActorId,
                     actor.State.GameplayContentHash,
+                    actor.State.StateSchemaHash,
                     Float32CharacterRuntimeStateCodec.ComputeHash(actor.State),
                     Float32CharacterRuntimeStateCodec.CodecIdentity,
                     stateBytes);
@@ -181,6 +191,7 @@ namespace ThirdPersonSimulation
             return new SimulationWorldSnapshot(
                 characterRuntime.NumericProfile,
                 characterRuntime.GameplayContentHash,
+                characterRuntime.StateSchemaHash,
                 worldState.SolverId,
                 worldState.SolverVersion,
                 worldState.WorldRevision,
@@ -268,7 +279,8 @@ namespace ThirdPersonSimulation
         {
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
-            if (snapshot.NumericProfile != m_Runtime.NumericProfile || !snapshot.GameplayContentHash.Equals(m_Runtime.GameplayContentHash))
+            if (snapshot.NumericProfile != m_Runtime.NumericProfile || !snapshot.GameplayContentHash.Equals(m_Runtime.GameplayContentHash) ||
+                !snapshot.StateSchemaHash.Equals(m_Runtime.StateSchemaHash))
                 throw new InvalidDataException("Snapshot Numeric Profile or GameplayContentHash does not match the active Character Runtime.");
             if (!snapshot.SolverId.Equals(m_Current.WorldState.SolverId) ||
                 !string.Equals(snapshot.SolverVersion, m_Current.WorldState.SolverVersion, StringComparison.Ordinal) ||
@@ -286,6 +298,7 @@ namespace ThirdPersonSimulation
                 SimulationActorBinding binding = m_Runtime.Roster[i];
                 if (actorSnapshot.ActorId != currentActor.ActorId ||
                     !actorSnapshot.GameplayContentHash.Equals(currentActor.State.GameplayContentHash) ||
+                    !actorSnapshot.StateSchemaHash.Equals(currentActor.State.StateSchemaHash) ||
                     binding.ActorId != actorSnapshot.ActorId)
                     throw new InvalidDataException("Snapshot Actor roster or Ability binding does not match the active roster.");
                 Float32CharacterRuntimeState state = actorSnapshot.Decode(
@@ -316,6 +329,8 @@ namespace ThirdPersonSimulation
                 GameplayContentHash expected = new GameplayContentHash(binding.GameplayContentHash);
                 if (!actor.State.GameplayContentHash.Equals(expected))
                     throw new InvalidDataException($"Simulation state Actor '{actor.ActorId}' content identity does not match the active Character Runtime.");
+                if (!actor.State.StateSchemaHash.Equals(binding.StateSchemaHash))
+                    throw new InvalidDataException($"Simulation state Actor '{actor.ActorId}' schema identity does not match the active Character Runtime.");
             }
         }
 
@@ -333,6 +348,7 @@ namespace ThirdPersonSimulation
             {
                 if (candidate.Actors[i].ActorId != current.Actors[i].ActorId ||
                     !candidate.Actors[i].State.GameplayContentHash.Equals(current.Actors[i].State.GameplayContentHash) ||
+                    !candidate.Actors[i].State.StateSchemaHash.Equals(current.Actors[i].State.StateSchemaHash) ||
                     candidate.WorldState.Bodies[i].ActorId != current.WorldState.Bodies[i].ActorId)
                 {
                     throw new InvalidOperationException("Simulation state replacement changes the locked Actor or Ability binding.");
@@ -344,7 +360,7 @@ namespace ThirdPersonSimulation
     public static class SimulationWorldSnapshotCodec
     {
         const uint Magic = 0x504e5343;
-        const int Version = 5;
+        const int Version = 6;
 
         public static byte[] Write(SimulationWorldSnapshot snapshot)
         {
@@ -366,6 +382,7 @@ namespace ThirdPersonSimulation
             var expectedHash = new SimulationWorldHash(new StableHash(reader.ReadString()));
             SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
             var gameplayContentHash = new GameplayContentHash(new StableHash(reader.ReadString()));
+            var stateSchemaHash = new StableHash(reader.ReadString());
             var solverId = new SolverImplementationId(reader.ReadString());
             string solverVersion = reader.ReadString();
             var worldRevision = new WorldRevision(reader.ReadString());
@@ -380,6 +397,7 @@ namespace ThirdPersonSimulation
                 actors[i] = new SimulationActorSnapshot(
                     new ActorId(reader.ReadString()),
                     new GameplayContentHash(new StableHash(reader.ReadString())),
+                    new StableHash(reader.ReadString()),
                     new CharacterStateHash(new StableHash(reader.ReadString())),
                     reader.ReadString(),
                     reader.ReadBytes());
@@ -389,6 +407,7 @@ namespace ThirdPersonSimulation
             var snapshot = new SimulationWorldSnapshot(
                 numericProfile,
                 gameplayContentHash,
+                stateSchemaHash,
                 solverId,
                 solverVersion,
                 worldRevision,
@@ -413,6 +432,7 @@ namespace ThirdPersonSimulation
         {
             SimulationNumericProfileCodec.Write(writer, snapshot.NumericProfile);
             writer.WriteString(snapshot.GameplayContentHash.ToString());
+            writer.WriteString(snapshot.StateSchemaHash.ToString());
             writer.WriteString(snapshot.SolverId.Value);
             writer.WriteString(snapshot.SolverVersion);
             writer.WriteString(snapshot.WorldRevision.Value);
@@ -424,6 +444,7 @@ namespace ThirdPersonSimulation
                 SimulationActorSnapshot actor = snapshot.Actors[i];
                 writer.WriteString(actor.ActorId.Value);
                 writer.WriteString(actor.GameplayContentHash.ToString());
+                writer.WriteString(actor.StateSchemaHash.ToString());
                 writer.WriteString(actor.StateHash.ToString());
                 writer.WriteString(actor.StateCodecIdentity);
                 writer.WriteBytes(actor.StateBytesBuffer);

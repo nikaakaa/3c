@@ -55,6 +55,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var actorSnapshot = new SimulationActorSnapshot(
                 baseline.ActorId,
                 baseline.GameplayContentHash,
+                actor.StateSchemaHash,
                 baseline.StateHash,
                 Float32CharacterRuntimeStateCodec.CodecIdentity,
                 baseline.CopyCharacterStateBytes());
@@ -185,6 +186,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var actor = new SimulationActorSnapshot(
                 baseline.ActorId,
                 baseline.GameplayContentHash,
+                RequireActor(baseline.ActorId).StateSchemaHash,
                 baseline.StateHash,
                 Float32CharacterRuntimeStateCodec.CodecIdentity,
                 baseline.CopyCharacterStateBytes());
@@ -200,6 +202,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return new SimulationWorldSnapshot(
                 local.NumericProfile,
                 local.GameplayContentHash,
+                m_CharacterRuntime.StateSchemaHash,
                 local.SolverId,
                 local.SolverVersion,
                 local.WorldRevision,

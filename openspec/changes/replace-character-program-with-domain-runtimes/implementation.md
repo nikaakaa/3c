@@ -1257,3 +1257,8 @@
 
 - 删除没有调用方、仍引用已撤销整角色 Projection／Image 产物的 `CharacterPresentationPoseSourcePlanCompiler` 及其 Unity 元数据。
 - 保留运行时 Pose 源计划合同和实际被动画资源编译消费的源目录；本步只移除孤立的旧总编译入口，不新增替代编译器或兼容路径。
+
+## 2026-09-16 将角色状态Schema接入World快照
+
+- Float32／Fixed Actor Snapshot 和 World Snapshot 显式携带 `StateSchemaHash`，创建、恢复、连续发布及 canonical hash 均比较角色绑定的完整状态 schema。
+- World Snapshot codec 版本升为 6，旧格式直接拒绝；ServerAuthoritative Prediction 合并权威基线时使用正式 Actor binding 的 schema，不从单个 Ability 推断角色状态身份。

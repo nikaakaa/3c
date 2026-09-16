@@ -8,6 +8,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public override string SourceIdentity => "neutral-character-inputs/fixed-q32-32";
 
         public override IUnityFixedCharacterControlSourceRuntime Create(FixedCharacterControlSourceContext context) =>
-            new NeutralFixedCharacterSimulationInputAdapter(context.Definition.InputProfile);
+            new NeutralFixedSimulationInputAdapter(context.Definition.InputProfile);
     }
 }

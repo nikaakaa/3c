@@ -1302,3 +1302,8 @@
 - 远端表现 Host 改为从自身 Character Definition 的 Animation Presentation Profile 生成 Rig Payload，并交给表现领域工厂创建 SimulatedActor；不再加载或比较旧总 Projection。
 - ServerAuthoritative Prediction 远端 Claim 不再从本地角色注册器索取 Projection 身份，网络远端展示使用其正式 Host 配置的 Profile；远端命令仍拒绝 Camera producer，保持网络表现边界。
 - 远端帧目标直接实现 `IGameplayPresentationFrameTarget`，在 Gameplay Tick 的唯一表现帧内完成远端命令发布、领域表现帧推进和完成回调，移除旧 Worker Presentation Frame Target 继承路径。
+
+## 2026-09-16 清理Fixed空输入类型边界
+
+- FixedNeutralCharacterControlSource 改用现有 NeutralFixedSimulationInputAdapter，删除对已不存在 NeutralFixedCharacterSimulationInputAdapter 的引用。
+- 本步只统一 Fixed 本地空输入创建路径，不改变输入状态、排序或还原格式。

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Animancer;
 using BTSMTL.EventGraphs;
-using NodeCanvas.Framework;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -236,14 +235,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal CharacterPoseNativeInstanceContext(
             ActorId actorId,
-            Component agent,
-            IBlackboard parentBlackboard,
             AnimancerComponent animancer,
             CharacterAnimationRigPayload rig,
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy)
         {
-            if (!actorId.IsValid || !agent || !animancer || rig == null || !rigBinding ||
+            if (!actorId.IsValid || !animancer || rig == null || !rigBinding ||
                 !rootHierarchy)
                 throw new ArgumentException("Pose native instance context is incomplete.");
             rig.RequireValid();
@@ -253,8 +250,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Pose native instance Rig identity does not match its binding.");
             }
             ActorId = actorId;
-            Agent = agent;
-            ParentBlackboard = parentBlackboard;
             Animancer = animancer;
             Rig = rig;
             RigBinding = rigBinding;
@@ -262,13 +257,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal ActorId ActorId { get; }
-        internal Component Agent { get; }
-        internal IBlackboard ParentBlackboard { get; }
         internal AnimancerComponent Animancer { get; }
         internal CharacterAnimationRigPayload Rig { get; }
         internal CharacterAnimationRigBinding RigBinding { get; }
         internal CharacterRootHierarchyBinding RootHierarchy { get; }
-        internal bool IsValid => ActorId.IsValid && Agent && Animancer && Rig != null && RigBinding && RootHierarchy &&
+        internal bool IsValid => ActorId.IsValid && Animancer && Rig != null && RigBinding && RootHierarchy &&
             string.Equals(Rig.RigId, RigBinding.RigId, StringComparison.Ordinal) &&
             string.Equals(Rig.RigRevision, RigBinding.RigRevision, StringComparison.Ordinal);
     }

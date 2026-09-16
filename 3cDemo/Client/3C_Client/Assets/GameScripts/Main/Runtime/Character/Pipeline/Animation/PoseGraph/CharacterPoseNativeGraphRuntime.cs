@@ -440,8 +440,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             m_Graph.AttachNativeRuntime(this);
             m_Graph.StartGraph(
-                m_CreateRequest.Context.Agent,
-                m_CreateRequest.Context.ParentBlackboard,
+                m_CreateRequest.Context.Animancer,
+                null,
                 NodeCanvas.Framework.Graph.UpdateMode.Manual,
                 null);
         }

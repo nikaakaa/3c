@@ -119,6 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     out CharacterPoseNativeRoleRuntime role);
             if (!adopted.IsAdopted)
             {
+                dependencies.Dispose();
                 session = null;
                 return adopted;
             }
@@ -203,6 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     out CharacterPoseNativeRoleRuntime role);
             if (!adopted.IsAdopted)
             {
+                dependencies.Dispose();
                 session = null;
                 return adopted;
             }

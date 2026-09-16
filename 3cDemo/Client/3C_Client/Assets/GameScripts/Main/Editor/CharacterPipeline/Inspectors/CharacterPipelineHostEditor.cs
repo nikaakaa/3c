@@ -26,12 +26,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static RuntimeDiagnosticsCaptureDetail s_CaptureDetail =
             RuntimeDiagnosticsCaptureDetail.Evaluation;
 
-        internal static void DrawCharacterPipelineConfiguration(CharacterPipelineHost host)
-        {
-            DrawFootPlacementConfiguration(host);
-            DrawEquipmentConfiguration(host);
-        }
-
         internal static void DrawRuntimeDiagnostics(
             object interestOwner,
             int hostInstanceId,
@@ -86,55 +80,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             DrawMotion(view);
             DrawCamera(view);
             DrawPresentation(definition, view);
-        }
-
-        static void DrawFootPlacementConfiguration(CharacterPipelineHost host)
-        {
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("World-Aware Presentation", EditorStyles.boldLabel);
-            CharacterWorldAwarePresentationBinding binding = host.WorldAwarePresentation;
-            using (new EditorGUI.DisabledScope(true))
-                EditorGUILayout.ObjectField("Binding", binding, typeof(CharacterWorldAwarePresentationBinding), true);
-            if (!binding)
-            {
-                EditorGUILayout.HelpBox("Character host requires an explicit World-Aware Presentation Binding.", MessageType.Error);
-                return;
-            }
-            try
-            {
-                binding.RequireValid();
-                if (binding.PresentationRoot != host.VisualRoot)
-                    throw new InvalidOperationException("World-Aware Presentation Root must match the Host Visual Root.");
-                EditorGUILayout.HelpBox("World-Aware Presentation Binding is valid. Foot Placement Profile and Calibration are owned by the Pose Graph node.", MessageType.Info);
-            }
-            catch (Exception exception)
-            {
-                EditorGUILayout.HelpBox(exception.Message, MessageType.Error);
-            }
-        }
-
-        static void DrawEquipmentConfiguration(CharacterPipelineHost host)
-        {
-            if (!host.Definition || !host.Definition.EquipmentCapabilityEnabled)
-                return;
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Equipment", EditorStyles.boldLabel);
-            CharacterEquipmentRigBindingCatalog catalog = host.EquipmentRigBindings;
-            using (new EditorGUI.DisabledScope(true))
-                EditorGUILayout.ObjectField("Rig Bindings", catalog, typeof(CharacterEquipmentRigBindingCatalog), true);
-            if (!catalog)
-            {
-                EditorGUILayout.HelpBox("Equipment-enabled Character Host requires an explicit Rig Binding Catalog.", MessageType.Error);
-                return;
-            }
-            var errors = new List<string>();
-            if (catalog.CollectConfigurationErrors(errors))
-            {
-                EditorGUILayout.HelpBox("Equipment Rig and Socket bindings are valid.", MessageType.Info);
-                return;
-            }
-            for (int i = 0; i < errors.Count; i++)
-                EditorGUILayout.HelpBox(errors[i], MessageType.Error);
         }
 
         static void DrawSimulation(RuntimeDebugViewModel view)
@@ -358,10 +303,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             EditorGUILayout.LabelField("Motion Matching Capability", "Available in project");
             CharacterAnimationPresentationProfile profile = definition ? definition.AnimationPresentationProfile : null;
-            CharacterPresentationProjectionAsset projection = definition ? definition.PresentationProjection : null;
             EditorGUILayout.LabelField("Definition Identity", AssetIdentity(definition));
             EditorGUILayout.LabelField("Profile Identity", AssetIdentity(profile));
-            EditorGUILayout.LabelField("Projection Asset Identity", AssetIdentity(projection));
             if (!AnimationPresentationRuntimeTargetRegistry.TryGet(
                     view.Target.CharacterRuntimeId,
                     out AnimationPresentationRuntimeTarget target))
@@ -550,35 +493,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (GUILayout.Button("Open", GUILayout.Width(48f)) && !RuntimeDebugSourceNavigator.Open(eventView))
                 Debug.LogError($"Runtime debug source could not be resolved by exact authoring identity: {identity}");
             EditorGUILayout.EndHorizontal();
-        }
-    }
-
-    [CustomEditor(typeof(CharacterPipelineHost))]
-    public sealed class CharacterPipelineHostEditor : UnityEditor.Editor
-    {
-        void OnEnable()
-        {
-            RuntimeDebugSession.Shared.Changed += Repaint;
-        }
-
-        void OnDisable()
-        {
-            RuntimeDebugSession.Shared.Changed -= Repaint;
-            RuntimeDebugSession.Shared.ReleaseLiveInterest(this);
-        }
-
-        public override void OnInspectorGUI()
-        {
-            DrawDefaultInspector();
-            CharacterPipelineHost host = target as CharacterPipelineHost;
-            if (host == null)
-                return;
-            CharacterRuntimeDiagnosticsInspector.DrawCharacterPipelineConfiguration(host);
-            CharacterRuntimeDiagnosticsInspector.DrawRuntimeDiagnostics(
-                this,
-                host.GetInstanceID(),
-                host.Definition,
-                CharacterRuntimeDiagnosticsInspectorMode.Complete);
         }
     }
 

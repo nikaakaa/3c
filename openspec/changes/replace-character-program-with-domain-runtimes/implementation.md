@@ -1359,3 +1359,8 @@
 ## 2026-09-16 对账网络握手兼容身份
 - Rollback Handshake 锁定 Model、角色内容、状态 schema、TickRate、Collision World、KCC 和协议；ServerAuthoritative 兼容身份锁定内容、schema、operation set、TickRate、Pipeline 和 Backend。
 - 两边都不接受缺省兼容映射；身份不匹配直接失败，保留显式产品边界。
+
+## 2026-09-16 清理旧Host编辑器诊断入口
+- 技能定位菜单不再识别旧 CharacterPipelineHost，只从 Fixed Character Host 解析正式 Character Definition。
+- 删除旧 Host 专属 Inspector、Foot Placement/Equipment Host 配置绘制和 Projection Asset 身份展示；Motion Matching 诊断继续读取 Animation Presentation Profile。
+- 本步只退出演示与诊断中的旧总 Host 入口，不改变 Fixed Host 运行链；其余旧 Host 引用随后按工具归属继续清理。

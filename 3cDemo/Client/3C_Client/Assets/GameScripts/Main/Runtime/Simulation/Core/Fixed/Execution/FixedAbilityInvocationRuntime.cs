@@ -20,8 +20,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedHandleAllocatorStatePort handleAllocatorState,
             IFixedEventSequenceStatePort eventSequenceState,
             IFixedGameplayEffectStatePort gameplayEffectState,
-            IFixedEquipmentStatePort equipmentState,
-            Action<IFixedSkillExecutionState> acceptAbility)
+            IFixedEquipmentStatePort equipmentState)
         {
             SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
@@ -31,7 +30,6 @@ namespace ThirdPersonSimulation.Fixed
             EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
             GameplayEffectState = gameplayEffectState;
             EquipmentState = equipmentState;
-            AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
         }
 
         public IFixedSkillExecutionState SkillState { get; }
@@ -42,7 +40,6 @@ namespace ThirdPersonSimulation.Fixed
         public IFixedEventSequenceStatePort EventSequenceState { get; }
         public IFixedGameplayEffectStatePort GameplayEffectState { get; }
         public IFixedEquipmentStatePort EquipmentState { get; }
-        public Action<IFixedSkillExecutionState> AcceptAbility { get; }
     }
 
     internal sealed class FixedAbilityInvocationResult
@@ -117,7 +114,6 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityInvocationRuntime : IDisposable
     {
-        readonly Action<IFixedSkillExecutionState> m_AcceptAbility;
         readonly IFixedSkillExecutionState m_SkillState;
         readonly FixedAbilityExecutionWorkspace m_Workspace;
         readonly FixedAbilityExecutionFrame m_Frame;
@@ -152,7 +148,6 @@ namespace ThirdPersonSimulation.Fixed
             actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
             stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
-            m_AcceptAbility = stateServices.AcceptAbility;
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
             if (input == null)
@@ -264,12 +259,13 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        public void Accept()
+        public void Accept(Action<IFixedSkillExecutionState> acceptAbility)
         {
             RequireOpen();
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Fixed Ability invocation cannot accept its current candidate.");
-            m_AcceptAbility(m_SkillState);
+            acceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
+            acceptAbility(m_SkillState);
             m_SkillState.Dispose();
             m_Accepted = true;
         }

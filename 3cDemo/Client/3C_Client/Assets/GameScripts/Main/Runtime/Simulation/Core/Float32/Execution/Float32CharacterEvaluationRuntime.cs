@@ -77,8 +77,7 @@ namespace ThirdPersonSimulation
                         roleState.HandleAllocatorState,
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
-                        roleState.EquipmentState,
-                        roleState.AcceptAbility);
+                        roleState.EquipmentState);
                     var invocation = new Float32AbilityInvocationRuntime(
                         installation.Execution,
                         actor.AbilityInstallations,
@@ -138,7 +137,7 @@ namespace ThirdPersonSimulation
                     facts.AddRange(result.GameplayFacts);
                     presentation.AddRange(result.PresentationCommands);
                     trace.AddRange(result.TraceRecords);
-                    invocation.Accept();
+                    invocation.Accept(roleState.AcceptAbility);
                 }
 
                 if (!effectAdvanced)

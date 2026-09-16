@@ -78,8 +78,7 @@ namespace ThirdPersonSimulation.Fixed
                         roleState.HandleAllocatorState,
                         roleState.EventSequenceState,
                         roleState.GameplayEffectState,
-                        roleState.EquipmentState,
-                        roleState.AcceptAbility);
+                        roleState.EquipmentState);
                     var invocation = new FixedAbilityInvocationRuntime(
                         installation.Execution,
                         actor.AbilityInstallations,
@@ -139,7 +138,7 @@ namespace ThirdPersonSimulation.Fixed
                     facts.AddRange(result.GameplayFacts);
                     presentation.AddRange(result.PresentationCommands);
                     trace.AddRange(result.TraceRecords);
-                    invocation.Accept();
+                    invocation.Accept(roleState.AcceptAbility);
                 }
 
                 if (!effectAdvanced)

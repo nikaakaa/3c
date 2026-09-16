@@ -19,8 +19,7 @@ namespace ThirdPersonSimulation
             IFloat32HandleAllocatorStatePort handleAllocatorState,
             IFloat32EventSequenceStatePort eventSequenceState,
             IFloat32GameplayEffectStatePort gameplayEffectState,
-            IFloat32EquipmentStatePort equipmentState,
-            Action<IFloat32SkillExecutionState> acceptAbility)
+            IFloat32EquipmentStatePort equipmentState)
         {
             SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
             SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
@@ -30,7 +29,6 @@ namespace ThirdPersonSimulation
             EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
             GameplayEffectState = gameplayEffectState;
             EquipmentState = equipmentState;
-            AcceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
         }
 
         public IFloat32SkillExecutionState SkillState { get; }
@@ -41,7 +39,6 @@ namespace ThirdPersonSimulation
         public IFloat32EventSequenceStatePort EventSequenceState { get; }
         public IFloat32GameplayEffectStatePort GameplayEffectState { get; }
         public IFloat32EquipmentStatePort EquipmentState { get; }
-        public Action<IFloat32SkillExecutionState> AcceptAbility { get; }
     }
 
     internal sealed class Float32AbilityInvocationResult
@@ -116,7 +113,6 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityInvocationRuntime : IDisposable
     {
-        readonly Action<IFloat32SkillExecutionState> m_AcceptAbility;
         readonly IFloat32SkillExecutionState m_SkillState;
         readonly Float32AbilityExecutionWorkspace m_Workspace;
         readonly Float32AbilityExecutionFrame m_Frame;
@@ -151,7 +147,6 @@ namespace ThirdPersonSimulation
             actionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
             stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
-            m_AcceptAbility = stateServices.AcceptAbility;
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
             if (input == null)
@@ -263,12 +258,13 @@ namespace ThirdPersonSimulation
             return result;
         }
 
-        public void Accept()
+        public void Accept(Action<IFloat32SkillExecutionState> acceptAbility)
         {
             RequireOpen();
             if (!m_Completed || m_Accepted)
                 throw new InvalidOperationException("Float32 Ability invocation cannot accept its current candidate.");
-            m_AcceptAbility(m_SkillState);
+            acceptAbility = acceptAbility ?? throw new ArgumentNullException(nameof(acceptAbility));
+            acceptAbility(m_SkillState);
             m_SkillState.Dispose();
             m_Accepted = true;
         }

@@ -1272,3 +1272,9 @@
 
 - 删除没有调用方、只为旧总 Projection 生成 Blend、Pose Resource、Motion Matching、Equipment 和 Transition Rule 产物的五个编辑器编译器及 Unity 元数据。
 - 保留 Profile 源绑定收集和仍被动画资源构建消费的有效算法；不为已删除总包补建新的聚合编译入口。
+
+## 2026-09-16 删除旧动画诊断注册边界
+
+- Fixed 与 DeterministicRollback 角色注册不再创建、注册或注销已删除的 `AnimationPresentationRuntimeTarget` 与 `AnimationPresentationIdentity`；注册器不再把旧整包动画快照当作角色运行时的必要依赖。
+- DeterministicRollback 状态覆盖层移除旧全局 Pose Probe，避免继续从已撤销的旧 Presentation Snapshot／Operation 链读取姿态；后续观察只接 Pose owner 暴露的 Node／Port 与 committed Final Pose 合同。
+- 本步只清理已失效的诊断消费路径，不添加兼容类型或假观察结果；表现帧目标仍待下一步接入新的领域运行实例。

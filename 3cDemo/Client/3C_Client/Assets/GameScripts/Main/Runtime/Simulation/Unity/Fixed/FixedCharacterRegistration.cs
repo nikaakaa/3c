@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
-using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonGameplay.Tick;
@@ -28,7 +27,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
-        readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
         readonly CharacterPresentationFrameTarget m_PresentationTarget;
         readonly int m_MaximumActivePresentationRecords;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
@@ -41,7 +39,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         bool m_Activated;
         bool m_InputActivated;
         bool m_DiagnosticsRegistered;
-        bool m_AnimationDiagnosticsRegistered;
         bool m_PresentationRegistered;
         bool m_ResultCommitActive;
         int m_MaximumBodySamples;
@@ -53,7 +50,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ActorId actorId,
             FixedCharacterRuntime characterRuntime,
             FixedSimulationActorBinding actorBinding,
-            AnimationPresentationIdentity presentationIdentity,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
             IUnityFixedCharacterControlSourceRuntime controlSource,
@@ -97,15 +93,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
             m_DiagnosticsAdapter = ThirdPersonSimulation.Fixed.NullSimulationDiagnosticsSink.Instance;
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
-            var animationSnapshotProvider = presentationRuntime as IAnimationPresentationRuntimeSnapshotProvider ??
-                throw new ArgumentException("Fixed Presentation Runtime does not expose the Animation Presentation snapshot provider.", nameof(presentationRuntime));
-            m_AnimationDiagnosticsTarget = new AnimationPresentationRuntimeTarget(
-                diagnosticsTarget.CharacterRuntimeId,
-                actorId,
-                ownerInstanceId,
-                ownerName,
-                presentationIdentity,
-                animationSnapshotProvider);
             m_PresentationTarget =
                 new CharacterPresentationFrameTarget(presentationRuntime);
             OutputRoute = new SimulationOutputRouteDescriptor(
@@ -189,8 +176,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_InputActivated = true;
                 RuntimeDiagnosticsTargetRegistry.Register(m_DiagnosticsTarget);
                 m_DiagnosticsRegistered = true;
-                AnimationPresentationRuntimeTargetRegistry.Register(m_AnimationDiagnosticsTarget);
-                m_AnimationDiagnosticsRegistered = true;
                 m_PresentationTarget.Activate();
                 m_PresentationRegistered = true;
                 m_Activated = true;
@@ -208,7 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public void Deactivate()
         {
             if (!m_Activated && !m_InputActivated && !m_DiagnosticsRegistered &&
-                !m_AnimationDiagnosticsRegistered && !m_PresentationRegistered)
+                !m_PresentationRegistered)
                 return;
             var failures = new List<Exception>();
             ReleaseActivation(failures);
@@ -388,11 +373,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 TryRelease(m_PresentationTarget.Deactivate, failures);
                 m_PresentationRegistered = false;
-            }
-            if (m_AnimationDiagnosticsRegistered)
-            {
-                TryRelease(() => AnimationPresentationRuntimeTargetRegistry.Unregister(m_AnimationDiagnosticsTarget), failures);
-                m_AnimationDiagnosticsRegistered = false;
             }
             if (m_DiagnosticsRegistered)
             {

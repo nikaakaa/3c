@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
-using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -29,7 +28,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
-        readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
         readonly CharacterPresentationFrameTarget m_PresentationTarget;
         readonly FixedCharacterRuntime m_CharacterRuntime;
         readonly FixedSimulationActorBinding m_CharacterBinding;
@@ -45,7 +43,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         bool m_Activated;
         bool m_InputActivated;
         bool m_DiagnosticsRegistered;
-        bool m_AnimationDiagnosticsRegistered;
         bool m_PresentationRegistered;
         bool m_ResultCommitActive;
         int m_MaximumBodySamples;
@@ -58,7 +55,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             ActorId actorId,
             FixedCharacterRuntime characterRuntime,
             FixedSimulationActorBinding characterBinding,
-            AnimationPresentationIdentity presentationIdentity,
             string worldBodyBindingId,
             FixedWorldBodyState initialBody,
             UnityFixedCharacterInputAdapter localInput,
@@ -104,15 +100,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
             m_DiagnosticsAdapter = ThirdPersonSimulation.Fixed.NullSimulationDiagnosticsSink.Instance;
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
-            var animationSnapshotProvider = presentationRuntime as IAnimationPresentationRuntimeSnapshotProvider ??
-                throw new ArgumentException("Rollback Presentation Runtime does not expose the Animation Presentation snapshot provider.", nameof(presentationRuntime));
-            m_AnimationDiagnosticsTarget = new AnimationPresentationRuntimeTarget(
-                diagnosticsTarget.CharacterRuntimeId,
-                actorId,
-                ownerInstanceId,
-                ownerName,
-                presentationIdentity,
-                animationSnapshotProvider);
             m_PresentationTarget =
                 new CharacterPresentationFrameTarget(presentationRuntime);
             OutputRoute = new SimulationOutputRouteDescriptor(
@@ -222,8 +209,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 }
                 RuntimeDiagnosticsTargetRegistry.Register(m_DiagnosticsTarget);
                 m_DiagnosticsRegistered = true;
-                AnimationPresentationRuntimeTargetRegistry.Register(m_AnimationDiagnosticsTarget);
-                m_AnimationDiagnosticsRegistered = true;
                 m_PresentationTarget.Activate();
                 m_PresentationRegistered = true;
                 m_Activated = true;
@@ -241,7 +226,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public void Deactivate()
         {
             if (!m_Activated && !m_InputActivated && !m_DiagnosticsRegistered &&
-                !m_AnimationDiagnosticsRegistered && !m_PresentationRegistered)
+                !m_PresentationRegistered)
                 return;
             var failures = new List<Exception>();
             ReleaseActivation(failures);
@@ -400,11 +385,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             {
                 TryRelease(m_PresentationTarget.Deactivate, failures);
                 m_PresentationRegistered = false;
-            }
-            if (m_AnimationDiagnosticsRegistered)
-            {
-                TryRelease(() => AnimationPresentationRuntimeTargetRegistry.Unregister(m_AnimationDiagnosticsTarget), failures);
-                m_AnimationDiagnosticsRegistered = false;
             }
             if (m_DiagnosticsRegistered)
             {

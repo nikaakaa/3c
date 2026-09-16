@@ -1312,3 +1312,8 @@
 
 - Fixed 与 DeterministicRollback Character Host 删除已不存在的 CharacterPipelineTraceCommandLine.Enable 调用，诊断上下文仍由正式 Runtime Diagnostics Store 和 Target 承担。
 - 本步只清掉旧总链诊断入口，不新增命令解析或兼容类型。
+
+## 2026-09-16 公开Fixed角色装备状态读取
+
+- FixedCharacterRuntimeState 增加类型化 TryGetEquipmentState，Fixed Unity 注册器通过角色级状态读取装备聚合，不再依赖 Core 内部属性或单个 Ability 状态。
+- 本步只打开表现注册所需的只读状态边界；装备状态仍归角色状态分区拥有。

@@ -54,32 +54,5 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterAnimationBlendSpaceInputRangePolicy InputRangePolicy => m_InputRangePolicy;
         public int BlendSpacePlanIndex => m_BlendSpacePlanIndex;
 
-        public void RequireValid(CharacterPresentationProjection projection)
-        {
-            if (projection == null || !NodeId.IsValid || OperationIndex < 0 || OperationIndex >= projection.PosePlan.OperationHeaders.Count ||
-                !PresentationPoseSourceIndex.IsValid || PlayerIndex < 0 ||
-                XParameterIndex < 0 || XParameterIndex >= projection.PosePlan.Parameters.Count ||
-                YParameterIndex < -1 || YParameterIndex >= projection.PosePlan.Parameters.Count ||
-                !Enum.IsDefined(typeof(CharacterAnimationBlendSpaceInputRangePolicy), InputRangePolicy) ||
-                BlendSpacePlanIndex < 0 || BlendSpacePlanIndex >= projection.BlendSpaces.Count)
-                throw new InvalidOperationException("Blend Space Player plan is invalid.");
-            CharacterPoseOperationHeader operation =
-                projection.PosePlan.OperationHeaders[OperationIndex];
-            CharacterPosePlayerOperationPayload payload =
-                (CharacterPosePlayerOperationPayload)
-                projection.PosePlan.OperationPages.RequirePayload(operation);
-            if (operation.Code != CharacterPoseOperationCode.BlendSpacePlayer || operation.NodeId != NodeId ||
-                payload.SourceIndex != PresentationPoseSourceIndex ||
-                payload.PlayerIndex != PlayerIndex ||
-                projection.PosePlan.OperationPages.FindInputValueIndex(
-                    operation,
-                    CharacterPoseValueReferenceKind.Parameter) != XParameterIndex ||
-                projection.PosePlan.OperationPages.FindInputValueIndex(
-                    operation,
-                    CharacterPoseValueReferenceKind.Parameter,
-                    1) != YParameterIndex ||
-                payload.InputRangePolicy != InputRangePolicy)
-                throw new InvalidOperationException($"Blend Space Player '{NodeId}' operation binding is inconsistent.");
-        }
     }
 }

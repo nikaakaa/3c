@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BTSMTL.EventGraphs;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -49,43 +48,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ids[i] = parameterId;
             }
             return new CharacterAnimationPoseInputFrame(frame);
-        }
-
-        internal static CharacterAnimationPoseInputFrame FromPublishedVariables(
-            CharacterAnimationVariableFrame frame,
-            CharacterPoseProgramImage posePlan)
-        {
-            if (posePlan == null)
-                throw new ArgumentNullException(nameof(posePlan));
-            var parameterIds = new List<PoseParameterId>();
-            for (int i = 0; i < posePlan.Parameters.Count; i++)
-            {
-                CharacterPresentationPoseParameterEntry parameter =
-                    posePlan.Parameters[i];
-                if (parameter.Usage == CharacterPoseParameterUsage.Control)
-                    parameterIds.Add(parameter.ParameterId);
-            }
-            for (int i = 0; i < posePlan.StateMachines.Count; i++)
-            {
-                CharacterPoseStateMachineDescriptor machine =
-                    posePlan.StateMachines[i];
-                for (int j = 0; j < machine.Transitions.Count; j++)
-                {
-                    CharacterPoseTransitionRuleProgram rule =
-                        machine.Transitions[j].Rule;
-                    for (int k = 0; k < rule.Operations.Count; k++)
-                    {
-                        CharacterPoseTransitionRuleCompiledOperation operation =
-                            rule.Operations[k];
-                        if (operation.Code ==
-                                PoseTransitionRuleOperationCode.ReadAnimationVariable)
-                        {
-                            parameterIds.Add(operation.ParameterId);
-                        }
-                    }
-                }
-            }
-            return FromPublishedVariables(frame, parameterIds.Distinct().ToArray());
         }
 
         internal bool TryRead(

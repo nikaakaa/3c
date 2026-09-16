@@ -266,24 +266,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string BlendShapeName => m_BlendShapeName ?? string.Empty;
         public int BlendShapeIndex => m_BlendShapeIndex;
 
-        public void RequireValid(CharacterPoseProgramImage program)
-        {
-            if (program == null || string.IsNullOrWhiteSpace(BindingId) || !ParameterId.IsValid ||
-                ParameterIndex < 0 || ParameterIndex >= program.Parameters.Count ||
-                !float.IsFinite(DefaultValue) || string.IsNullOrWhiteSpace(RendererBindingId) ||
-                !ExpectedMesh || !CharacterAclHash.IsSha256(MeshContentHash) ||
-                string.IsNullOrWhiteSpace(BlendShapeName) || BlendShapeIndex < 0 ||
-                BlendShapeIndex >= ExpectedMesh.blendShapeCount ||
-                !string.Equals(ExpectedMesh.GetBlendShapeName(BlendShapeIndex), BlendShapeName, StringComparison.Ordinal))
-                throw new InvalidOperationException("Compiled animation property binding is invalid.");
-            CharacterPresentationPoseParameterEntry parameter = program.Parameters[ParameterIndex];
-            if (parameter == null || !parameter.ParameterId.Equals(ParameterId) ||
-                parameter.Usage != CharacterPoseParameterUsage.AnimatedProperty ||
-                parameter.ValueType != PoseParameterValueType.Float ||
-                !string.Equals(parameter.Unit, Unit, StringComparison.Ordinal) ||
-                parameter.DefaultValue != DefaultValue)
-                throw new InvalidOperationException($"Compiled animation property '{BindingId}' does not match its Pose parameter.");
-        }
     }
 
     public readonly struct CharacterAnimationPropertyValue

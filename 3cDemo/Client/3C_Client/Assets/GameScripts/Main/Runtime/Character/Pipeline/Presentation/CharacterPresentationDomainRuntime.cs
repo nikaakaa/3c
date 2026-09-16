@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly ActorId m_ActorId;
         readonly CharacterBodyPresentationRuntime m_Body;
         readonly CharacterAnimationEventGraphHost m_EventGraph;
+        readonly CharacterEquipmentDomainRuntime m_Equipment;
         readonly double m_PresentationTimePerTick;
         CharacterAnimationVariableFrame m_EventFrame;
         CharacterPresentationTrajectoryIntent m_Trajectory;
@@ -26,7 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActorId actorId,
             CharacterBodyPresentationRuntime body,
             int tickRate,
-            CharacterAnimationPresentationProfile presentationProfile)
+            CharacterAnimationPresentationProfile presentationProfile,
+            CharacterEquipmentDomainRuntime equipment)
         {
             m_ActorId = actorId;
             m_Body = body ?? throw new ArgumentNullException(nameof(body));
@@ -37,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(presentationProfile));
             if (!presentationProfile.EventGraph)
                 throw new InvalidOperationException("Presentation domain requires an Animation EventGraph.");
+            m_Equipment = equipment;
             m_EventGraph = new CharacterAnimationEventGraphHost(
                 presentationProfile.EventGraph,
                 actorId);
@@ -65,13 +68,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections)
         {
-            if (selections != null)
-            {
-                for (int i = 0; i < selections.Count; i++)
-                    RequireActor(selections[i].ActorId);
-            }
-            throw new InvalidOperationException(
-                "Equipment presentation requires a composed Equipment runtime.");
+            if (m_Equipment == null)
+                throw new InvalidOperationException(
+                    "Equipment presentation requires a composed Equipment runtime.");
+            m_Equipment.Capture(selections);
         }
 
         public void Publish(CharacterPresentationCommand command)
@@ -98,6 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void Reset()
         {
+            m_Equipment?.Reset();
             m_Body.Reset();
             m_EventGraph.Reset();
             m_EventFrame = null;
@@ -130,6 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void PresentationFrame(GameplayPresentationFrameContext context)
         {
+            m_Equipment?.Present();
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
             if (!bodyFrame.IsValid)
                 return;
@@ -149,6 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            m_Equipment?.Dispose();
             m_EventGraph.Dispose();
             m_Body.Dispose();
         }

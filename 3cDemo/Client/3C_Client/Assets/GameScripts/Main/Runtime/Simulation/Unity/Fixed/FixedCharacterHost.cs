@@ -357,6 +357,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 cameraTargetBindings,
                 lookInput,
                 lookInputId,
+                m_CharacterDefinition.EquipmentPresentationProfile,
                 m_EquipmentRigBindings,
                 m_SessionHost,
                 diagnostics,

@@ -137,6 +137,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     string.Empty,
                     null,
                     null,
+                    null,
                     diagnosticsContext,
                     true);
                 target = new ServerAuthoritativeRemotePresentationTarget(

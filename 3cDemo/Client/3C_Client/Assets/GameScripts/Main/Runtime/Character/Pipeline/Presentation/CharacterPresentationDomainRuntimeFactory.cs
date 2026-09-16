@@ -33,6 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             IReadOnlyList<CameraTargetBinding> cameraTargetBindings,
             ICharacterPresentationLookInput lookInput,
             string lookInputId,
+            CharacterEquipmentPresentationProfile equipmentPresentationProfile,
             CharacterEquipmentRigBindingCatalog equipmentRigBindings,
             SimulationSessionHost sessionHost,
             RuntimeDiagnosticsContext diagnostics,
@@ -81,6 +82,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 (cameraRig || followAnchor || aimAnchor || cameraTargetBindings is { Count: > 0 } || lookInput != null || !string.IsNullOrEmpty(lookInputId)))
                 throw new ArgumentException("Simulated Presentation cannot receive Camera owner inputs.");
 
+            bool hasEquipmentProfile = equipmentPresentationProfile;
+            bool hasEquipmentCatalog = equipmentRigBindings;
+            if (hasEquipmentProfile != hasEquipmentCatalog)
+                throw new ArgumentException("Equipment presentation profile or rig binding is incomplete.");
+            CharacterEquipmentDomainRuntime equipment = equipmentPresentationProfile
+                ? new CharacterEquipmentDomainRuntime(
+                    actorId,
+                    equipmentPresentationProfile,
+                    equipmentRigBindings,
+                    initializeExternalState)
+                : null;
             var body = new CharacterBodyPresentationRuntime(
                 actorId,
                 tickRate,
@@ -91,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootHierarchy,
                 initialBody,
                 diagnostics);
-            return new CharacterPresentationDomainRuntime(actorId, body, tickRate, animationPresentationProfile);
+            return new CharacterPresentationDomainRuntime(actorId, body, tickRate, animationPresentationProfile, equipment);
         }
     }
 }

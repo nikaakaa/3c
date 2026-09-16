@@ -1423,3 +1423,9 @@
 
 - Pose Action 命令源接口补充 BeginFrame、CommitFrame、DiscardFrame，并新增基于 ActionPlaybackCommandInbox 的正式读取器；命令快照只在同帧暴露，提交时消费 inbox，放弃时保留命令。
 - Fixed.Unity 编译 0 error；该 Source 仍未接入表现领域，因为 Publisher、Timeline 和 Pose Native Services 尚未完整装配。
+
+## 2026-09-16 接入Equipment表现领域运行时
+
+- 新增 Equipment Domain Runtime，直接消费 CharacterEquipmentPresentationProfile 与 CharacterEquipmentRigBindingCatalog，在构造时解析 Existing Rig 和 Spawned Visual 两条正式绑定，不存在兜底路径。
+- 表现领域 Runtime 现在把 Equipment Selection 事务交给该 Runtime，按帧 Present；Reset/Dispose 与领域生命周期同步。Fixed Host 从 Character Definition 传入 Equipment Presentation Profile，Rollback 与 Remote Host 显式保持未组合边界。
+- Fixed、DeterministicRollback、ServerAuthoritative 便携工程编译通过；Equipment Runtime 不再掩盖未组合能力，缺 Profile、缺 Rig Catalog 或未知 Visual Binding 都精确失败。

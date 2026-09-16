@@ -27,7 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             internal bool HasOpenFrame => m_Lease.IsValid;
 
             internal CharacterPoseSourceFrameLease Begin(
-                in CharacterPoseFrameLineage lineage)
+                in CharacterPoseNativeFrameLineage lineage)
             {
                 if (HasOpenFrame)
                 {
@@ -750,10 +750,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Tuning.DiscardCandidate();
 
         internal CharacterPoseSourceFrameLease BeginFrame(
-            in CharacterPoseFrameLineage lineage)
+            in CharacterPoseNativeFrameLineage lineage)
         {
             RequireActionSamplingFrame(lineage.FrameIdentity);
-            m_Tuning.RequireCommitted(lineage.TuningGeneration);
             m_ReleasePage.RequireEmpty();
             m_ReleaseValidationIdentities.Clear();
             CharacterPoseSourceFrameLease lease =
@@ -850,7 +849,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         {
             CharacterPoseSourceDemand demand =
                 m_FramePage.RequireDemand(lease);
-            CharacterPoseFrameLineage lineage = demand.Lineage;
+            CharacterPoseNativeFrameLineage lineage = demand.Lineage;
             return new CharacterPoseSourcePreparedResources(
                 in lineage,
                 m_BindingPage);

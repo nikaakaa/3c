@@ -609,18 +609,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_CommittedDiagnostics);
         }
         internal CharacterPoseConstraintFrameLease BeginFrame(
-            in CharacterPoseFrameLineage lineage,
+            in CharacterPoseNativeFrameLineage lineage,
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
             bool captureFootIkDiagnostics)
         {
             RequireAlive();
             if (m_HasPending)
                 throw new InvalidOperationException("Pose Constraint frame is already open.");
-            if (lineage.TuningGeneration != m_TuningGeneration)
-            {
-                throw new InvalidOperationException(
-                    "Pose Constraint tuning generation differs from the root frame.");
-            }
             var lease = new CharacterPoseConstraintFrameLease(in lineage);
             m_Pending = m_HasCommitted && ReferenceEquals(m_Committed, m_First)
                 ? m_Second
@@ -902,8 +897,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal CharacterPoseConstraintResult CompleteFrame(
             CharacterPoseConstraintFrameLease lease,
-            in CharacterPoseFrameLineage lineage,
-            AnimationPoseAvailability programAvailability,
+            in CharacterPoseNativeFrameLineage lineage,
+            AnimationPoseAvailability outputAvailability,
             AnimationPoseNativeInvalidReason outputInvalidReason,
             AnimationPoseNativeInvalidReason graphInvalidReason)
         {
@@ -968,7 +963,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 new CharacterPoseConstraintResult(
                     in lineage,
                     AnimationPresentationFrameOutcome.TypedInvalid,
-                    programAvailability == AnimationPoseAvailability.NoPose &&
+                    outputAvailability == AnimationPoseAvailability.NoPose &&
                     !solverProduced
                         ? AnimationPoseAvailability.NoPose
                         : AnimationPoseAvailability.Invalid,

@@ -13,41 +13,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterFinalPosePropertyWriter(
             CharacterAnimationRigBinding rigBinding,
-            CharacterPoseProgramImage program,
-            IReadOnlyList<CharacterPresentationAnimationPropertyBinding> bindings)
-        {
-            m_RigBinding = rigBinding ? rigBinding : throw new ArgumentNullException(nameof(rigBinding));
-            if (program == null)
-                throw new ArgumentNullException(nameof(program));
-            if (bindings == null)
-                throw new ArgumentNullException(nameof(bindings));
-            m_Bindings = new CharacterPresentationAnimationPropertyBinding[bindings.Count];
-            m_Renderers = new CharacterAnimationRendererBinding[bindings.Count];
-            m_InitialWeights = new float[bindings.Count];
-            var bindingIds = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < m_Bindings.Length; i++)
-            {
-                CharacterPresentationAnimationPropertyBinding binding = bindings[i] ??
-                    throw new InvalidOperationException("Final animation property binding is missing.");
-                binding.RequireValid(program);
-                if (!bindingIds.Add(binding.BindingId))
-                    throw new InvalidOperationException("Final animation property binding identity is duplicated.");
-                CharacterAnimationRendererBinding renderer =
-                    rigBinding.FindRendererBinding(binding.RendererBindingId);
-                if (renderer == null)
-                    throw new InvalidOperationException($"Final animation property '{binding.BindingId}' has no Renderer binding '{binding.RendererBindingId}'.");
-                m_Bindings[i] = binding;
-                m_Renderers[i] = renderer;
-                ValidateBinding(binding, renderer);
-                float initialWeight = renderer.Renderer.GetBlendShapeWeight(binding.BlendShapeIndex);
-                if (!float.IsFinite(initialWeight))
-                    throw new InvalidOperationException($"Final animation property '{binding.BindingId}' initial BlendShape weight is not finite.");
-                m_InitialWeights[i] = initialWeight;
-            }
-        }
-
-        internal CharacterFinalPosePropertyWriter(
-            CharacterAnimationRigBinding rigBinding,
             CharacterAnimationInputContract inputContract,
             IReadOnlyList<CharacterPresentationAnimationPropertyBinding> bindings)
         {

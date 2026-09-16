@@ -1333,3 +1333,8 @@
 
 - \Float32CharacterRuntimeState\ 增加与 Fixed 目标一致的类型化 \TryGetEquipmentState\，表现调用方读取角色级 Equipment 聚合时不再依赖目标私有实现细节。
 - 本步只打开跨数值目标一致的只读状态入口；状态所有权和 codec 布局不变。Float32 Core 编译为 0 warning、0 error，并已执行 \dotnet build-server shutdown\。
+
+## 2026-09-16 对账角色内容与状态Schema身份
+
+- Float32 和 Fixed \CharacterRuntime\ 已按锁定 roster 计算 \GameplayContentHash\，输入是每个 Actor binding 的正式内容身份；状态 schema 再按 roster 与每个 Actor schema 聚合，未用单个 Ability ContentHash 代表整角色。
+- \CreateInitialState\ 把对应 Actor 的内容与状态 schema 写入角色状态；ServerAuthoritative、World Snapshot 和 Rollback 握手已在前面小步接入该 schema。当前对账证据覆盖双数值目标。

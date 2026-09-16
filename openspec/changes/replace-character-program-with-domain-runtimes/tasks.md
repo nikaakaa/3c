@@ -48,7 +48,7 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [ ] 2.6 将Float32／Fixed CharacterRuntimeState与codec改为角色级领域聚合；控制／请求／效果／装备／序号归角色，多个技能按技能及调用实例分区，Timeline私有播放状态由Timeline提供，不挂在某一个Ability安装对象之下。以同一Step完整Capture／Restore控制机器、技能调用、目标及跨Tick运动状态，保留已有codec和算法的有效部分。
 
 2.6执行边界补充：多Ability聚合已经建立，继续移出AbilityRuntimeState中的共享InputRequests／Consumed记录。相同请求由输入领域保存一份消费状态，多个技能查询／消费同一事实；技能自身等待和局部变量仍独立。动作准入／替换沿既有Action规则接入，不把窗口统一交Timeline保存或在Control重写技能规则。
-- [ ] 2.7 将Actor roster、角色内容identity与状态schema接到完整领域状态，使用真实角色配置／技能集合／模块合同身份；删除CharacterRuntimeState.GameplayContentHash直接取单个Ability ContentHash的映射，快照不能挑一个技能身份代表整角色，保留角色、技能分区、World／Pipeline各自身份与完整恢复。
+- [x] 2.7 将Actor roster、角色内容identity与状态schema接到完整领域状态，使用真实角色配置／技能集合／模块合同身份；删除CharacterRuntimeState.GameplayContentHash直接取单个Ability ContentHash的映射，快照不能挑一个技能身份代表整角色，保留角色、技能分区、World／Pipeline各自身份与完整恢复。
 
 - [ ] 2.8 由角色工厂装配Ability／Timeline／Pose／Camera／Motion的分型准备结果，汇集各领域owner确认的实际采用事实与失败原因；核心只发布自己拥有的Ability安装事实，不替其它领域决定版本或状态。
 

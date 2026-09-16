@@ -1,5 +1,4 @@
 using System;
-using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation
@@ -54,7 +53,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     public interface IFloat32CharacterRuntimeRegistration : IFloat32SimulationActorRegistration
     {
         SimulationActorBinding CharacterBinding { get; }
-        CharacterPresentationProjection PresentationProjection { get; }
     }
 
     public interface ILocalSimulationActorRegistration : IFloat32CharacterRuntimeRegistration

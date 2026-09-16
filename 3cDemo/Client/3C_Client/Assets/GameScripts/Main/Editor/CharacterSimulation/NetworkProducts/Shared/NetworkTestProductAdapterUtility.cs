@@ -67,6 +67,27 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 abilities).GameplayContentHash;
         }
 
+        public static StableHash FixedCharacterStateSchemaHash(CharacterPipelineDefinition definition)
+        {
+            if (!definition)
+                throw new ArgumentNullException(nameof(definition));
+            GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilities =
+                definition.LoadFixedAbilitySet();
+            CharacterControlRuntimeBinding control = definition.BuildControlRuntimeBinding(
+                CharacterControlRuntimeModuleCatalog.Create());
+            CharacterBodyMotionBinding bodyMotion = definition.BuildBodyMotionRuntimeBinding();
+            CharacterGameplayEffectRuntimeBinding gameplayEffects = definition.BuildGameplayEffectRuntimeBinding();
+            CharacterEquipmentRuntimeBinding equipment = definition.BuildEquipmentRuntimeBinding();
+            return new ThirdPersonSimulation.Fixed.SimulationActorBinding(
+                new ActorId("network-test-character"),
+                "network-test-body",
+                control,
+                bodyMotion,
+                gameplayEffects,
+                equipment,
+                abilities).StateSchemaHash;
+        }
+
         public static string FixedCharacterContentIdentity(CharacterPipelineDefinition definition) =>
             $"character-content={FixedCharacterContentHash(definition)}";
 

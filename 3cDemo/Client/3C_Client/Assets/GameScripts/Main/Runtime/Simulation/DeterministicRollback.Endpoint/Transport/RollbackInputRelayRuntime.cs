@@ -98,6 +98,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 relayServerPeerId,
                 handshakeTemplate.Model,
                 handshakeTemplate.GameplayContentHash,
+                handshakeTemplate.StateSchemaHash,
                 handshakeTemplate.TickRate,
                 handshakeTemplate.CollisionWorldHash,
                 handshakeTemplate.KccIdentityHash,

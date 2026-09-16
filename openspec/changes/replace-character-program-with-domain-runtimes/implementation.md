@@ -1246,3 +1246,9 @@
 - ServerAuthoritative Float32 Character Runtime 汇总全 roster 的 `StateSchemaHash`，并将其加入 Pipeline Compatibility Identity 与 compatibility hash；网络握手沿原有 pair 比较入口拒绝状态布局不同的两端。
 - Prediction Reconciler 同时校验本地 Character Runtime 与锁定 compatibility 的 `GameplayContentHash`、`StateSchemaHash`、OperationSetVersion 和 TickRate；World、Pipeline、Backend 的既有身份校验保持不变。
 - 本步只补网络身份边界，不把 Timeline／Pose 状态塞进核心状态，也不改变 ServerAuthoritative 的 Ingress／Schedule／Step／Egress 顺序。
+
+## 2026-09-16 接入Rollback角色状态Schema握手
+
+- Fixed Character Runtime 汇总全 roster 的 `StateSchemaHash`，并由 Session Character Runtime descriptor 发布；Rollback 握手、Relay 握手模板和 Server Candidate manifest 都携带该身份，状态布局不一致时在网络建立阶段拒绝。
+- Rollback protocol 与 Server Candidate manifest 分别升级到新版本并拒绝旧格式；编辑器网络产品从同一 Fixed Actor binding 生成 manifest 状态 schema，不另建产品侧 hash。
+- Core、Fixed、DeterministicRollback、DeterministicRollback.Endpoint 便携工程均为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。Unity Editor 工程仍只受既有旧 Presentation／Host 悬空引用阻断。

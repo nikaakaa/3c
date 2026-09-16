@@ -109,6 +109,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException("Rollback Character Definition requires its Input Profile and Presentation Projection.");
 
             StableHash gameplayContentHash = NetworkTestProductAdapterUtility.FixedCharacterContentHash(definition);
+            StableHash stateSchemaHash = NetworkTestProductAdapterUtility.FixedCharacterStateSchemaHash(definition);
             SimulationSessionHost session = RequireSingle(
                 runtimeRootPrefab.GetComponentsInChildren<SimulationSessionHost>(true),
                 "Rollback runtime root requires exactly one SimulationSessionHost.");
@@ -158,6 +159,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 endpoint,
                 model,
                 gameplayContentHash,
+                stateSchemaHash,
                 kccIdentityHash);
         }
 
@@ -232,6 +234,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RollbackEndpointAuthoringDefinition endpoint,
             DeterministicRollbackModelDefinition model,
             StableHash gameplayContentHash,
+            StableHash stateSchemaHash,
             string kccIdentityHash)
         {
             RuntimeRootPrefab = runtimeRootPrefab;
@@ -244,6 +247,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Endpoint = endpoint;
             Model = model;
             GameplayContentHash = gameplayContentHash;
+            StateSchemaHash = stateSchemaHash;
             KccIdentityHash = kccIdentityHash;
         }
 
@@ -257,6 +261,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public RollbackEndpointAuthoringDefinition Endpoint { get; }
         public DeterministicRollbackModelDefinition Model { get; }
         public StableHash GameplayContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public string GameplayContentIdentity => $"character-content={GameplayContentHash}";
         public string KccIdentityHash { get; }
     }
@@ -387,6 +392,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 protocolSchemaHash = DeterministicRollbackModelIdentity.Protocol.SchemaHash.Value,
                 tickRate = model.TickRate,
                 gameplayContentHash = closure.GameplayContentHash.Value,
+                stateSchemaHash = closure.StateSchemaHash.Value,
                 collisionWorldHash = model.CollisionWorldHash.Value,
                 kccIdentityHash = model.KccIdentityHash.Value,
                 offensiveRequestDelayTicks = policy.OffensiveRequestDelayTicks,
@@ -470,6 +476,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RollbackGmProductBuild.Validate(context, manifest);
             RollbackRoster actualRoster = serverManifest.BuildRoster();
             if (!string.Equals(serverManifest.gameplayContentHash, closure.GameplayContentHash.Value, StringComparison.Ordinal) ||
+                !string.Equals(serverManifest.stateSchemaHash, closure.StateSchemaHash.Value, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.modelId, closure.Model.ModelIdentity.ComponentId, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.modelVersion, closure.Model.ModelIdentity.SemanticVersion, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.modelConfigurationHash, closure.Model.ModelIdentity.ConfigurationHash.Value, StringComparison.Ordinal) ||

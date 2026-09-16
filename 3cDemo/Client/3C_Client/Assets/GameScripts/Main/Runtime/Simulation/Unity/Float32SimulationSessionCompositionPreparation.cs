@@ -32,6 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             m_CharacterRuntimeDescriptor = new SimulationCharacterRuntimeDescriptor(
                 target,
                 m_CharacterRuntime.GameplayContentHash,
+                m_CharacterRuntime.StateSchemaHash,
                 m_CharacterRuntime.RosterDescriptor);
             m_WorldSolverDescriptor = m_Definition.WorldSolver.BuildDescriptor(m_Definition.TickRate);
             m_WorldIdentity = m_Definition.WorldSolver.BuildWorldIdentity(

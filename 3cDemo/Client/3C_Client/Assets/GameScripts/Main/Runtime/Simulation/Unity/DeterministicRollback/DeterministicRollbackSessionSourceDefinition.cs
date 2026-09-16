@@ -99,7 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             RollbackHandshake handshake = BuildHandshake(
                 model,
                 m_Profile.PeerId,
-                context.CharacterRuntime.GameplayContentHash);
+                context.CharacterRuntime.GameplayContentHash,
+                context.CharacterRuntime.StateSchemaHash);
             m_Peer = new RollbackPeerEndpoint(
                 endpoint,
                 handshake,
@@ -245,12 +246,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         static RollbackHandshake BuildHandshake(
             DeterministicRollbackModelDefinition model,
             string peerId,
-            GameplayContentHash gameplayContentHash)
+            GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash)
         {
             return new RollbackHandshake(
                 peerId,
                 model.ModelIdentity,
                 gameplayContentHash,
+                stateSchemaHash,
                 model.TickRate,
                 model.CollisionWorldHash,
                 model.KccIdentityHash,

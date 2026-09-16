@@ -29,6 +29,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             string peerId,
             SimulationComponentIdentity model,
             GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
             int tickRate,
             StableHash collisionWorldHash,
             StableHash kccIdentityHash,
@@ -36,6 +37,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             PeerId = SimulationIdentity.Require(peerId, nameof(peerId));
             if (!model.IsValid || model.Role != SimulationComponentRole.Model || !gameplayContentHash.IsValid ||
+                !stateSchemaHash.IsValid ||
                 tickRate <= 0 ||
                 !collisionWorldHash.IsValid || !kccIdentityHash.IsValid || !protocol.IsValid)
             {
@@ -43,6 +45,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             Model = model;
             GameplayContentHash = gameplayContentHash;
+            StateSchemaHash = stateSchemaHash;
             TickRate = tickRate;
             CollisionWorldHash = collisionWorldHash;
             KccIdentityHash = kccIdentityHash;
@@ -53,6 +56,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public string PeerId { get; }
         public SimulationComponentIdentity Model { get; }
         public GameplayContentHash GameplayContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public int TickRate { get; }
         public StableHash CollisionWorldHash { get; }
         public StableHash KccIdentityHash { get; }
@@ -61,10 +65,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public void RequireCompatible(RollbackHandshake other)
         {
             if (other == null || !Model.Equals(other.Model) || !GameplayContentHash.Equals(other.GameplayContentHash) ||
+                !StateSchemaHash.Equals(other.StateSchemaHash) ||
                 TickRate != other.TickRate || !CollisionWorldHash.Equals(other.CollisionWorldHash) ||
                 !KccIdentityHash.Equals(other.KccIdentityHash) || !Protocol.Equals(other.Protocol))
             {
-                throw new InvalidOperationException("Rollback handshake Character Runtime content, world, KCC, TickRate, Model, or protocol is incompatible.");
+                throw new InvalidOperationException("Rollback handshake Character Runtime content, state schema, world, KCC, TickRate, Model, or protocol is incompatible.");
             }
         }
     }

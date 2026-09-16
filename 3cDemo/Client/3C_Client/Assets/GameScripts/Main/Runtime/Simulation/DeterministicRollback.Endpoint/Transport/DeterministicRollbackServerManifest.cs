@@ -7,7 +7,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
     [Serializable]
     public sealed class DeterministicRollbackServerCandidateManifest
     {
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 3;
 
         public int schemaVersion;
         public string candidateId = string.Empty;
@@ -23,6 +23,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public string protocolSchemaHash = string.Empty;
         public int tickRate;
         public string gameplayContentHash = string.Empty;
+        public string stateSchemaHash = string.Empty;
         public string collisionWorldHash = string.Empty;
         public string kccIdentityHash = string.Empty;
         public int offensiveRequestDelayTicks;
@@ -46,7 +47,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (schemaVersion != CurrentSchemaVersion || string.IsNullOrWhiteSpace(candidateId) ||
                 string.IsNullOrWhiteSpace(productId) || string.IsNullOrWhiteSpace(relayServerPeerId) || tickRate <= 0 ||
-                string.IsNullOrWhiteSpace(gameplayContentHash) ||
+                string.IsNullOrWhiteSpace(gameplayContentHash) || string.IsNullOrWhiteSpace(stateSchemaHash) ||
                 !string.Equals(modelId, DeterministicRollbackModelIdentity.ModelId, StringComparison.Ordinal) ||
                 !string.Equals(modelVersion, DeterministicRollbackModelIdentity.SemanticVersion, StringComparison.Ordinal) ||
                 !string.Equals(protocolId, DeterministicRollbackModelIdentity.ProtocolId, StringComparison.Ordinal) ||
@@ -67,10 +68,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
             var values = new List<string>
             {
-                "deterministic-rollback-server-candidate/2",
+                "deterministic-rollback-server-candidate/3",
                 schemaVersion.ToString(), candidateId, productId, relayServerPeerId, modelId, modelVersion,
                 modelConfigurationHash, protocolId, protocolVersion, protocolSchemaHash, tickRate.ToString(),
                 gameplayContentHash,
+                stateSchemaHash,
                 collisionWorldHash, kccIdentityHash, offensiveRequestDelayTicks.ToString(),
                 confirmationDelayTicks.ToString(), historyLengthTicks.ToString(), hashCadenceTicks.ToString(),
                 maximumRollbackDepthTicks.ToString(), maximumPredictionLeadTicks.ToString(),
@@ -130,6 +132,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 modelVersion,
                 new StableHash(modelConfigurationHash)),
             new GameplayContentHash(new StableHash(gameplayContentHash)),
+            new StableHash(stateSchemaHash),
             tickRate,
             new StableHash(collisionWorldHash),
             new StableHash(kccIdentityHash),

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
+using FixedWorldSolver = ThirdPersonSimulation.Fixed.ICharacterWorldSolver;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
@@ -12,13 +13,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
     public abstract class FixedWorldSolverDefinition : SimulationWorldSolverDefinition
     {
-        internal ICharacterWorldSolver CreateSolver(
+        internal FixedWorldSolver CreateSolver(
             int tickRate,
             IReadOnlyList<IFixedSimulationActorRegistration> registrations) =>
             CreateSolverCore(tickRate, registrations) ?? throw new InvalidOperationException(
                 $"World Solver Definition '{name}' returned no Fixed solver.");
 
-        protected abstract ICharacterWorldSolver CreateSolverCore(
+        protected abstract FixedWorldSolver CreateSolverCore(
             int tickRate,
             IReadOnlyList<IFixedSimulationActorRegistration> registrations);
     }

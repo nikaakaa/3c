@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Simulation;
-using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation;
-using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
@@ -13,23 +11,17 @@ namespace ThirdPersonCharacter.Pipeline
     public sealed partial class CharacterPipelineDefinition
     {
         [SerializeField] GameplayAbilityDataAsset[] m_Float32AbilityData = Array.Empty<GameplayAbilityDataAsset>();
-        [SerializeField] FixedGameplayAbilityDataAsset[] m_FixedAbilityData = Array.Empty<FixedGameplayAbilityDataAsset>();
+        [SerializeField] UnityEngine.Object[] m_FixedAbilityData = Array.Empty<UnityEngine.Object>();
 
         public IReadOnlyList<GameplayAbilityDataAsset> Float32AbilityData =>
             m_Float32AbilityData ?? Array.Empty<GameplayAbilityDataAsset>();
-        public IReadOnlyList<FixedGameplayAbilityDataAsset> FixedAbilityData =>
-            m_FixedAbilityData ?? Array.Empty<FixedGameplayAbilityDataAsset>();
+        public IReadOnlyList<UnityEngine.Object> FixedAbilityData =>
+            m_FixedAbilityData ?? Array.Empty<UnityEngine.Object>();
 
         public GameplayAbilityExecutionDataSet<Float32GameplayAbilityExecutionData> LoadFloat32AbilitySet()
         {
             RequireAbilityDataCoverage(Float32AbilityData, asset => asset?.AbilityId, "Float32");
             return LoadFloat32AbilityExecutionDataSet(Float32AbilityData);
-        }
-
-        public GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> LoadFixedAbilitySet()
-        {
-            RequireAbilityDataCoverage(FixedAbilityData, asset => asset?.AbilityId, "Fixed");
-            return this.LoadFixedAbilityExecutionDataSet(FixedAbilityData);
         }
 
 #if UNITY_EDITOR
@@ -38,9 +30,9 @@ namespace ThirdPersonCharacter.Pipeline
             m_Float32AbilityData = (assets ?? Enumerable.Empty<GameplayAbilityDataAsset>()).ToArray();
         }
 
-        public void SetFixedAbilityData(IEnumerable<FixedGameplayAbilityDataAsset> assets)
+        public void SetFixedAbilityData(IEnumerable<UnityEngine.Object> assets)
         {
-            m_FixedAbilityData = (assets ?? Enumerable.Empty<FixedGameplayAbilityDataAsset>()).ToArray();
+            m_FixedAbilityData = (assets ?? Enumerable.Empty<UnityEngine.Object>()).ToArray();
         }
 #endif
 

@@ -53,7 +53,6 @@ namespace ThirdPersonCharacter.Pipeline
         [SerializeField] AbilityGrant[] m_AbilityGrants = Array.Empty<AbilityGrant>();
         [SerializeField] TimelineAsset[] m_ControlMotionTimelines = Array.Empty<TimelineAsset>();
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
-        [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
         [SerializeField] CharacterInputProfile m_InputProfile;
         [SerializeField] CharacterGameplayEffectProfile m_GameplayEffectProfile;
         [SerializeField] CharacterBodyMotionProfile m_BodyMotionProfile;
@@ -82,7 +81,6 @@ namespace ThirdPersonCharacter.Pipeline
         public IReadOnlyList<TimelineAsset> ControlMotionTimelines =>
             m_ControlMotionTimelines ?? Array.Empty<TimelineAsset>();
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
-        public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection;
         public CharacterInputProfile InputProfile => m_InputProfile;
         public CharacterGameplayEffectProfile GameplayEffectProfile => m_GameplayEffectProfile;
         public CharacterBodyMotionProfile BodyMotionProfile => m_BodyMotionProfile;
@@ -363,11 +361,6 @@ namespace ThirdPersonCharacter.Pipeline
         public void SetAdmissionProfiles(IEnumerable<GameplayAbilityAdmissionProfile> profiles)
         {
             m_AdmissionProfiles = (profiles ?? System.Array.Empty<GameplayAbilityAdmissionProfile>()).ToArray();
-        }
-
-        public void SetPresentationProjection(CharacterPresentationProjectionAsset presentationProjection)
-        {
-            m_PresentationProjection = presentationProjection;
         }
 
 #endif

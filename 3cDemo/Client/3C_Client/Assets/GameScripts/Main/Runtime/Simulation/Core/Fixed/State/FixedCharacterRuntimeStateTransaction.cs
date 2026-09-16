@@ -192,6 +192,7 @@ namespace ThirdPersonSimulation.Fixed
             return new FixedCharacterRuntimeState(
                 m_BaseState.NumericProfile,
                 m_BaseState.GameplayContentHash,
+                m_BaseState.StateSchemaHash,
                 m_Tick.Value,
                 m_AbilityStates.Values,
                 m_ActionState.GetActionActivationRequests(),

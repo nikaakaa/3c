@@ -156,6 +156,7 @@ namespace ThirdPersonSimulation
                 abilityIdentities,
                 NumericProfile,
                 new GameplayContentHash(actor.GameplayContentHash),
+                actor.StateSchemaHash,
                 controlState,
                 effectState,
                 equipmentState);

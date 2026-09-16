@@ -8,9 +8,9 @@ namespace ThirdPersonSimulation
     public static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 3;
-        const string HashIdentity = "float32-character-runtime-state-hash/3";
-        public const string CodecIdentity = "float32-character-runtime-state/3";
+        const int Version = 4;
+        const string HashIdentity = "float32-character-runtime-state-hash/4";
+        public const string CodecIdentity = "float32-character-runtime-state/4";
 
         public static byte[] Write(Float32CharacterRuntimeState state)
         {
@@ -51,6 +51,9 @@ namespace ThirdPersonSimulation
             GameplayContentHash gameplayContentHash = new GameplayContentHash(new StableHash(reader.ReadString()));
             if (!gameplayContentHash.Equals(expectedGameplayContentHash))
                 throw new InvalidDataException("Float32 Character runtime state GameplayContentHash does not match the active Character Runtime.");
+            StableHash stateSchemaHash = new StableHash(reader.ReadString());
+            if (!stateSchemaHash.Equals(actor.StateSchemaHash))
+                throw new InvalidDataException("Float32 Character runtime state StateSchemaHash does not match the active Character Runtime.");
             ulong lastCompletedTick = reader.ReadUInt64();
             int abilityCount = ReadCount(reader, installations.Installations.Count, "Float32 Character Ability partition");
             if (abilityCount != installations.Installations.Count)
@@ -107,6 +110,7 @@ namespace ThirdPersonSimulation
             var state = new Float32CharacterRuntimeState(
                 numericProfile,
                 gameplayContentHash,
+                stateSchemaHash,
                 lastCompletedTick,
                 abilities,
                 actionActivationRequests,
@@ -129,6 +133,7 @@ namespace ThirdPersonSimulation
             writer.WriteString(CodecIdentity);
             SimulationNumericProfileCodec.Write(writer, state.NumericProfile);
             writer.WriteString(state.GameplayContentHash.ToString());
+            writer.WriteString(state.StateSchemaHash.ToString());
             writer.WriteUInt64(state.LastCompletedTick);
             writer.WriteInt32(state.Abilities.Count);
             for (int i = 0; i < state.Abilities.Count; i++)

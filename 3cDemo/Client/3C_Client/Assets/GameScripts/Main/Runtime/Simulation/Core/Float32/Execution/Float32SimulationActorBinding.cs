@@ -32,6 +32,11 @@ namespace ThirdPersonSimulation
             }
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
+            StateSchemaHash = ComputeStateSchemaHash(
+                controlRuntimeBinding,
+                gameplayEffectRuntimeBinding,
+                equipmentRuntimeBinding,
+                AbilityInstallations);
             GameplayContentHash = ComputeGameplayContentHash(
                 controlRuntimeBinding,
                 bodyMotionBinding,
@@ -47,7 +52,32 @@ namespace ThirdPersonSimulation
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
         public Float32GameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
+        public StableHash StateSchemaHash { get; }
         public StableHash GameplayContentHash { get; }
+
+        static StableHash ComputeStateSchemaHash(
+            CharacterControlRuntimeBinding control,
+            CharacterGameplayEffectRuntimeBinding gameplayEffects,
+            CharacterEquipmentRuntimeBinding equipment,
+            Float32GameplayAbilityExecutionInstallationSet abilities)
+        {
+            var parts = new List<string>
+            {
+                "float32-character-state-schema/1",
+                control.BindingHash.ToString(),
+                abilities.GameplayEffectCatalog != null ? gameplayEffects.BindingHash.ToString() : string.Empty,
+                abilities.RequiresEquipment ? equipment.BindingHash.ToString() : string.Empty
+            };
+            for (int i = 0; i < abilities.Installations.Count; i++)
+            {
+                Float32GameplayAbilityExecutionData data = abilities.Installations[i].Data;
+                parts.Add(data.AbilityId.Value);
+                parts.Add(data.StateSchemaHash.ToString());
+                parts.Add(data.OperationSetVersion.Value);
+                parts.Add(data.NumericProfile.Id.ToString());
+            }
+            return StableHash.Compute(parts.ToArray());
+        }
 
         static StableHash ComputeGameplayContentHash(
             CharacterControlRuntimeBinding control,

@@ -59,6 +59,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterRuntimeState(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
             ulong lastCompletedTick,
             IEnumerable<FixedAbilityRuntimeState> abilities,
             IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
@@ -71,10 +72,11 @@ namespace ThirdPersonSimulation.Fixed
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
         {
-            if (!numericProfile.IsValid || !gameplayContentHash.IsValid)
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
             NumericProfile = numericProfile;
             GameplayContentHash = gameplayContentHash;
+            StateSchemaHash = stateSchemaHash;
             LastCompletedTick = lastCompletedTick;
             var copied = abilities == null
                 ? new List<FixedAbilityRuntimeState>()
@@ -103,6 +105,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationNumericProfile NumericProfile { get; }
         public GameplayContentHash GameplayContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public ulong LastCompletedTick { get; }
         public IReadOnlyList<FixedAbilityRuntimeState> Abilities => m_Abilities;
         internal List<SimulationActionActivationRequestState> ActionActivationRequests { get; }
@@ -119,6 +122,7 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<GameplayAbilityExecutionIdentity> abilityIdentities,
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
             CharacterControlRuntimeState controlState,
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
@@ -138,6 +142,7 @@ namespace ThirdPersonSimulation.Fixed
             return new FixedCharacterRuntimeState(
                 numericProfile,
                 gameplayContentHash,
+                stateSchemaHash,
                 0,
                 abilities,
                 null,

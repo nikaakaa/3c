@@ -59,6 +59,7 @@ namespace ThirdPersonSimulation
         internal Float32CharacterRuntimeState(
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
             ulong lastCompletedTick,
             IEnumerable<Float32AbilityRuntimeState> abilities,
             IEnumerable<SimulationActionActivationRequestState> actionActivationRequests,
@@ -71,10 +72,11 @@ namespace ThirdPersonSimulation
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
         {
-            if (!numericProfile.IsValid || !gameplayContentHash.IsValid)
+            if (!numericProfile.IsValid || !gameplayContentHash.IsValid || !stateSchemaHash.IsValid)
                 throw new ArgumentException("Character runtime state identity is incomplete.");
             NumericProfile = numericProfile;
             GameplayContentHash = gameplayContentHash;
+            StateSchemaHash = stateSchemaHash;
             LastCompletedTick = lastCompletedTick;
             var copied = abilities == null
                 ? new List<Float32AbilityRuntimeState>()
@@ -103,6 +105,7 @@ namespace ThirdPersonSimulation
 
         public SimulationNumericProfile NumericProfile { get; }
         public GameplayContentHash GameplayContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public ulong LastCompletedTick { get; }
         public IReadOnlyList<Float32AbilityRuntimeState> Abilities => m_Abilities;
         internal List<SimulationActionActivationRequestState> ActionActivationRequests { get; }
@@ -119,6 +122,7 @@ namespace ThirdPersonSimulation
             IEnumerable<GameplayAbilityExecutionIdentity> abilityIdentities,
             SimulationNumericProfile numericProfile,
             GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
             CharacterControlRuntimeState controlState,
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState)
@@ -138,6 +142,7 @@ namespace ThirdPersonSimulation
             return new Float32CharacterRuntimeState(
                 numericProfile,
                 gameplayContentHash,
+                stateSchemaHash,
                 0,
                 abilities,
                 null,

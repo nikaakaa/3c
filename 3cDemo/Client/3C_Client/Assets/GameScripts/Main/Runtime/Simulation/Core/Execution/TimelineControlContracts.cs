@@ -3,25 +3,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    public enum TimelinePlaybackStatus : byte
-    {
-        Dormant = 0,
-        Running = 2,
-        Succeeded = 3,
-        Stopping = 4,
-        Cancelled = 5,
-        Completing = 6
-    }
 
-    public enum TimelineTreeClipStatus : byte
-    {
-        Dormant = 0,
-        Enabling = 1,
-        Active = 2,
-        Disabling = 3,
-        StoppingRoot = 4,
-        Destroying = 5
-    }
 
     public enum TimelineClipTimePoint : byte
     {
@@ -569,87 +551,5 @@ namespace ThirdPersonSimulation
         void Stop(int runtimeHandle);
     }
 
-    public interface ITimelineControlStatePort
-    {
-        TimelinePlaybackStatus ReadPlayback(OperationHandle operation);
-        bool TryReadPlayback(OperationHandle operation, out TimelinePlaybackStatus status);
-        void WritePlayback(OperationHandle operation, TimelinePlaybackStatus status);
-        TimelineTreeClipStatus ReadTreeClipStatus(OperationHandle operation);
-        bool TryReadTreeClipStatus(OperationHandle operation, out TimelineTreeClipStatus status);
-        void WriteTreeClipStatus(OperationHandle operation, TimelineTreeClipStatus status);
-        bool ReadLoop(OperationHandle operation);
-        void WriteLoop(OperationHandle operation, bool loop);
-        int ReadCycle(OperationHandle operation);
-        bool TryReadCycle(OperationHandle operation, out int cycle);
-        void WriteCycle(OperationHandle operation, int cycle);
-        TimelineActionContextIdentity ReadRetainedActionContext(OperationHandle operation);
-        void WriteRetainedActionContext(OperationHandle operation, TimelineActionContextIdentity identity);
-    }
 
-    public interface ITimelineTargetLeaf<TTime>
-        where TTime : struct
-    {
-        bool DiagnosticsEnabled { get; }
-        TTime Zero { get; }
-        TTime One { get; }
-        TTime TickDelta { get; }
-        TTime Epsilon { get; }
-        int TimelineOperationCount { get; }
-        int Compare(TTime left, TTime right);
-        TTime FromInt32(int value);
-        TTime Add(TTime left, TTime right);
-        TTime Subtract(TTime left, TTime right);
-        TTime Multiply(TTime left, TTime right);
-        TTime Divide(TTime left, TTime right);
-        TTime Min(TTime left, TTime right);
-        TTime Max(TTime left, TTime right);
-        TTime Clamp(TTime value, TTime minimum, TTime maximum);
-        string Format(TTime value);
-        float ToSingle(TTime value);
-        OperationExecutionDescriptor TimelineOperationAt(int index);
-        OperationHandle TimelineOwner(OperationHandle child);
-        OperationExecutionDescriptor Operation(OperationHandle operation);
-        IReadOnlyList<ProgramControlFlowEdge> Edges(OperationHandle source, ProgramControlFlowKind kind);
-        string SourcePath(OperationHandle operation);
-        bool IsLoop(OperationHandle operation);
-        bool IsTrackMuted(OperationHandle operation);
-        IReadOnlyList<OperationHandle> AnimationProducerRepresentatives(OperationHandle timeline);
-        TTime TimelineDuration(OperationHandle operation);
-        int TimelineSectionCount(OperationHandle operation);
-        TimelineSectionDescriptor TimelineSectionAt(OperationHandle operation, int index);
-        TTime TimelineFrameTime(OperationHandle operation, int frame);
-        TTime ClipTime(OperationHandle operation, TimelineClipTimePoint point);
-        TTime ClipScalar(OperationHandle operation, TimelineClipScalarValue value);
-        TTime SampleCurve(OperationHandle operation, TimelineCurveChannel channel, TTime time, TTime fallback);
-        ProgramControlFlowEdge TreeClipEdge(OperationHandle operation, TimelineTreeClipEdgeKind kind);
-        TTime ReadLogicTime(OperationHandle operation);
-        void WriteLogicTime(OperationHandle operation, TTime value);
-        ulong ReadActivationGeneration(OperationHandle operation);
-        bool TryCaptureActionContext(OperationHandle operation, out TimelineActionContextIdentity identity);
-        bool IsActionContextCurrent(OperationHandle operation, TimelineActionContextIdentity identity);
-        IDisposable PushTimelineContext(
-            OperationHandle timeline,
-            OperationHandle clip,
-            int cycle,
-            TimelineActionContextIdentity identity);
-        void ResetTreeClipState(OperationHandle operation);
-        void SampleMotionCurve(
-            OperationHandle timeline,
-            OperationHandle operation,
-            TimelineSegment<TTime> segment);
-        void SampleMotionWarp(
-            OperationHandle operation,
-            TimelineSegment<TTime> segment,
-            TimelineActionContextIdentity actionContext);
-        void SampleTimelineClip(
-            OperationHandle timeline,
-            OperationHandle operation,
-            TimelineSegment<TTime> segment);
-        void CompleteTimeline(OperationHandle timeline, TTime time);
-        void ReleaseTimeline(OperationHandle timeline);
-        ulong TimelinePlaybackGeneration(OperationHandle timeline);
-        void EmitPresentation(TimelinePresentationOutput<TTime> output);
-        void EmitCue(TimelineCueOutput<TTime> output);
-        void EmitTrace(TimelineTraceOutput output);
-    }
 }

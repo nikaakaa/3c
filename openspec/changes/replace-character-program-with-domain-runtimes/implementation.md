@@ -1468,3 +1468,9 @@
 - 角色评估结果被消费时提交 Timeline advance，被放弃或评估中途异常时丢弃；Timeline 终态在 Host 内已完成时返回明确 Succeeded / Failed / Cancelled，不再把终态误报为 Running。
 - CharacterTimelineHost 的 Ability 推进统一走 Advance / Commit / Discard 合同，并把 Runtime 播放句柄转换隔离在 Timeline owner 内。
 - Float32、Fixed、Fixed.Unity、ThirdPersonClient.Runtime、ThirdPersonClient.Editor 便携编译通过；Unity 内运行表现仍由作者端到端验证。
+
+## 2026-09-17 删除核心旧Timeline私有状态合同
+
+- 删除无实现的 ITimelineControlStatePort 与 ITimelineTargetLeaf，同步移除核心里的旧 Timeline Playback / TreeClip 状态枚举。
+- Ability Timeline 的 Loop、cursor、活动 Clip 和 TreeClip 帧状态只归 Timeline owner / Ability 执行，不在核心维护第二份状态前提。
+- Float32、Fixed、Fixed.Unity、Runtime、Editor 便携编译通过；构建后已执行 build-server shutdown。

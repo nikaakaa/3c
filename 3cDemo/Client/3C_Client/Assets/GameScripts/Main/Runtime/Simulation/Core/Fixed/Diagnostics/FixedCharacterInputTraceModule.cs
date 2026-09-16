@@ -22,7 +22,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedCharacterInputTraceFrame(
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationInput input)
+            SimulationInput input)
         {
             if (!actorId.IsValid || !tick.IsValid || input == null ||
                 input.NumericProfile != FixedSimulationNumericProfile.Value ||
@@ -40,7 +40,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
-        public CharacterSimulationInput Input { get; }
+        public SimulationInput Input { get; }
     }
 
     public sealed class FixedCharacterInputTrace
@@ -268,7 +268,7 @@ namespace ThirdPersonSimulation.Fixed
             s_Mode == FixedCharacterInputTraceMode.Replaying ||
             s_Mode == FixedCharacterInputTraceMode.ReplayPaused;
 
-        public static bool IsReplayInput(CharacterSimulationInput input) =>
+        public static bool IsReplayInput(SimulationInput input) =>
             input != null &&
             input.InputSourceIdentity.StartsWith("FixedInputTrace/", StringComparison.Ordinal);
 
@@ -510,9 +510,9 @@ namespace ThirdPersonSimulation.Fixed
             s_LastCompletedTrace = null;
         }
 
-        public static CharacterSimulationInput Resolve(
+        public static SimulationInput Resolve(
             FixedCharacterInputBuildContext context,
-            CharacterSimulationInput liveInput)
+            SimulationInput liveInput)
         {
             if (liveInput == null)
                 throw new ArgumentNullException(nameof(liveInput));
@@ -553,9 +553,9 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static CharacterSimulationInput Record(
+        static SimulationInput Record(
             FixedCharacterInputBuildContext context,
-            CharacterSimulationInput liveInput)
+            SimulationInput liveInput)
         {
             if (s_RecordingFrames.Count == 0)
             {
@@ -575,7 +575,7 @@ namespace ThirdPersonSimulation.Fixed
             return liveInput;
         }
 
-        static CharacterSimulationInput Replay(
+        static SimulationInput Replay(
             FixedCharacterInputBuildContext context)
         {
             if (s_ReplayStartTick == 0)
@@ -585,7 +585,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException(
                     "Fixed character input replay Tick continuity changed.");
             FixedCharacterInputTraceFrame frame = s_Replay.Frames[s_ReplayIndex];
-            CharacterSimulationInput result = Remap(frame, context);
+            SimulationInput result = Remap(frame, context);
             ReplayFrameBuilder builder = s_ReplayEvidence[s_ReplayIndex];
             if (builder.ReplayTick != 0 || builder.InputHash.IsValid)
                 throw new InvalidOperationException(
@@ -606,11 +606,11 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        static CharacterSimulationInput HoldLastReplayFrame(
+        static SimulationInput HoldLastReplayFrame(
             FixedCharacterInputBuildContext context)
         {
             FixedCharacterInputTraceFrame frame = s_Replay.Frames[^1];
-            return new CharacterSimulationInput(
+            return new SimulationInput(
                 FixedSimulationNumericProfile.Value,
                 context.Source,
                 $"FixedInputTrace/{s_Replay.TraceId}",
@@ -619,7 +619,7 @@ namespace ThirdPersonSimulation.Fixed
                 Array.Empty<SimulationInputRequest>());
         }
 
-        static CharacterSimulationInput Remap(
+        static SimulationInput Remap(
             FixedCharacterInputTraceFrame frame,
             FixedCharacterInputBuildContext context)
         {
@@ -640,7 +640,7 @@ namespace ThirdPersonSimulation.Fixed
                         context.SimulationTick.Value),
                     request.Priority);
             }
-            return new CharacterSimulationInput(
+            return new SimulationInput(
                 FixedSimulationNumericProfile.Value,
                 context.Source,
                 $"FixedInputTrace/{s_Replay.TraceId}",
@@ -677,7 +677,7 @@ namespace ThirdPersonSimulation.Fixed
             left.Grounded == right.Grounded &&
             left.Collision == right.Collision;
 
-        static StableHash ComputeInputHash(CharacterSimulationInput input)
+        static StableHash ComputeInputHash(SimulationInput input)
         {
             var values = new List<string>(
                 5 + input.Values.Count * 15 + input.Requests.Count * 5)

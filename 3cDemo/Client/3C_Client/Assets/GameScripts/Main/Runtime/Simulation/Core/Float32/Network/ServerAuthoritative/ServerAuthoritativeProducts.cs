@@ -114,7 +114,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     public sealed class OwnerCanonicalInputBatch
     {
-        public OwnerCanonicalInputBatch(ActorId actorId, ulong sourceTick, ulong inputSequence, CharacterSimulationInput input)
+        public OwnerCanonicalInputBatch(ActorId actorId, ulong sourceTick, ulong inputSequence, SimulationInput input)
         {
             if (!actorId.IsValid || sourceTick == 0 || inputSequence == 0)
                 throw new ArgumentException("Owner canonical input identity is incomplete.");
@@ -129,7 +129,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ActorId ActorId { get; }
         public ulong SourceTick { get; }
         public ulong InputSequence { get; }
-        public CharacterSimulationInput Input { get; }
+        public SimulationInput Input { get; }
     }
 
     public readonly struct ServerAuthoritativeEventHorizon
@@ -287,7 +287,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     public sealed class AcceptedAuthorityInput
     {
-        public AcceptedAuthorityInput(ActorId actorId, ulong inputSequence, CharacterSimulationInput input)
+        public AcceptedAuthorityInput(ActorId actorId, ulong inputSequence, SimulationInput input)
         {
             if (!actorId.IsValid || inputSequence == 0)
                 throw new ArgumentException("Accepted authority input identity is incomplete.");
@@ -300,7 +300,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public ActorId ActorId { get; }
         public ulong InputSequence { get; }
-        public CharacterSimulationInput Input { get; }
+        public SimulationInput Input { get; }
     }
 
     public sealed class AcceptedAuthorityInputBatch

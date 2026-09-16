@@ -6,12 +6,12 @@ namespace ThirdPersonSimulation
 {
     public readonly struct Float32StepInput
     {
-        public Float32StepInput(CharacterSimulationInput input)
+        public Float32StepInput(SimulationInput input)
         {
             Input = input ?? throw new ArgumentNullException(nameof(input));
         }
 
-        public CharacterSimulationInput Input { get; }
+        public SimulationInput Input { get; }
     }
 
     public sealed class Float32CanonicalInputBatch

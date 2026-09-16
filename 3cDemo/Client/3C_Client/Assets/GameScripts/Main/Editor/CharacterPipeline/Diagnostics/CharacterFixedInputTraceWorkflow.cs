@@ -18,7 +18,7 @@ using ThirdPersonSimulation.Fixed;
 using UnityEditor;
 using UnityEngine;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
-using CharacterSimulationInput = ThirdPersonSimulation.Fixed.CharacterSimulationInput;
+using SimulationInput = ThirdPersonSimulation.Fixed.SimulationInput;
 using SimulationInputValue = ThirdPersonSimulation.Fixed.SimulationInputValue;
 using SimulationInputValueKind = ThirdPersonSimulation.Fixed.SimulationInputValueKind;
 
@@ -1631,7 +1631,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frames[i] = new FixedCharacterInputTraceFrame(
                     frame.ActorId,
                     frame.Tick,
-                    new CharacterSimulationInput(
+                    new SimulationInput(
                         frame.Input.NumericProfile,
                         frame.Input.TickSource,
                         frame.Input.InputSourceIdentity,
@@ -1652,7 +1652,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         // 钉死basis的AimPoint取帧内ActionTarget快照位置（与世界锚定一致）；
         // 无可用目标位置时回退为相机前方10米的确定点。
         static FixedVector3 ResolvePinnedAimPoint(
-            CharacterSimulationInput input,
+            SimulationInput input,
             FixedVector3 planarForward)
         {
             for (int i = 0; i < input.Values.Count; i++)

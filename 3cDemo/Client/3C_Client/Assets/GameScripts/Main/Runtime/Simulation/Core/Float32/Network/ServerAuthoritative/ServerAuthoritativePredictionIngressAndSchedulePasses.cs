@@ -620,7 +620,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 template.Input.TickSource.Kind,
                 template.Input.TickSource.ClockId,
                 targetTick);
-            var input = new CharacterSimulationInput(
+            var input = new SimulationInput(
                 template.Input.NumericProfile,
                 source,
                 template.Input.InputSourceIdentity,
@@ -636,7 +636,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             OwnerCanonicalInputBatch template,
             IReadOnlyList<SimulationInputRequest> requests)
         {
-            var input = new CharacterSimulationInput(
+            var input = new SimulationInput(
                 template.Input.NumericProfile,
                 template.Input.TickSource,
                 template.Input.InputSourceIdentity,
@@ -658,9 +658,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             OwnerCanonicalInputBatch input,
             ObservedWorldConstraintFrame observedWorldConstraints)
         {
-            CharacterSimulationInput rebound = input.Input.TickSource.Equals(source)
+            SimulationInput rebound = input.Input.TickSource.Equals(source)
                 ? input.Input
-                : new CharacterSimulationInput(
+                : new SimulationInput(
                     input.Input.NumericProfile,
                     source,
                     input.Input.InputSourceIdentity,

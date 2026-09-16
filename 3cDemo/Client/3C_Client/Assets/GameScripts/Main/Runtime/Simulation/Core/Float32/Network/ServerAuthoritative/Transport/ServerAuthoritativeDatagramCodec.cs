@@ -176,7 +176,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
     public sealed class CanonicalInputSample
     {
-        public CanonicalInputSample(ulong targetAuthorityTick, ulong inputSequence, CharacterSimulationInput input)
+        public CanonicalInputSample(ulong targetAuthorityTick, ulong inputSequence, SimulationInput input)
         {
             if (targetAuthorityTick == 0 || inputSequence == 0)
                 throw new ArgumentException("Canonical input sample identity is invalid.");
@@ -189,7 +189,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public ulong TargetAuthorityTick { get; }
         public ulong InputSequence { get; }
-        public CharacterSimulationInput Input { get; }
+        public SimulationInput Input { get; }
     }
 
     public sealed class CommandDatagram
@@ -322,7 +322,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             {
                 ulong targetTick = reader.ReadUInt64();
                 ulong inputSequence = reader.ReadUInt64();
-                CharacterSimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
+                SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
                 samples[i] = new CanonicalInputSample(targetTick, inputSequence, input);
             }
             reader.RequireComplete();

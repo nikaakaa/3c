@@ -94,7 +94,7 @@ namespace ThirdPersonSimulation.Fixed
     public interface IFixedCharacterControlSourceRuntime
     {
         string SourceIdentity { get; }
-        CharacterSimulationInput BuildInput(FixedCharacterInputBuildContext context);
+        SimulationInput BuildInput(FixedCharacterInputBuildContext context);
         byte[] CaptureState();
         void RestoreState(byte[] state);
         void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition);
@@ -250,7 +250,7 @@ namespace ThirdPersonSimulation.Fixed
                     m_OffensiveRequestDelayTicks,
                     m_MaximumPendingRequests,
                     committedObservation);
-                CharacterSimulationInput input = controlSource.BuildInput(context);
+                SimulationInput input = controlSource.BuildInput(context);
                 if (input == null || input.NumericProfile != FixedSimulationNumericProfile.Value ||
                     !input.TickSource.Equals(source) || input.Sequence != source.SourceTick)
                 {

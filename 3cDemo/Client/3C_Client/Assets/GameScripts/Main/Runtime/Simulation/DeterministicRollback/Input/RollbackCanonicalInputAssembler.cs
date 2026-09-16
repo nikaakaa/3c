@@ -165,7 +165,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 ActorId actorId = m_Roster.Entries[i].ActorId;
                 RollbackActorInputFrame source = m_Explicit[actorId][tick.Value];
-                var input = new CharacterSimulationInput(
+                var input = new SimulationInput(
                     FixedSimulationNumericProfile.Value,
                     new SimulationTickSourceIdentity(SimulationTickSourceKind.Authoritative, m_ClockId, tick.Value),
                     m_InputSourceIdentity,

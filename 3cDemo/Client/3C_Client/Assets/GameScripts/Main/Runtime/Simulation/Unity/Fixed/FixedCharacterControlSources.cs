@@ -4,7 +4,7 @@ using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using UnityEngine;
-using FixedCharacterSimulationInput = ThirdPersonSimulation.Fixed.CharacterSimulationInput;
+using FixedSimulationInput = ThirdPersonSimulation.Fixed.SimulationInput;
 using FixedSimulationInputRequest = ThirdPersonSimulation.Fixed.SimulationInputRequest;
 using FixedSimulationInputValue = ThirdPersonSimulation.Fixed.SimulationInputValue;
 
@@ -42,14 +42,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public abstract IUnityFixedCharacterControlSourceRuntime Create(FixedCharacterControlSourceContext context);
     }
 
-    public sealed class NeutralFixedCharacterSimulationInputAdapter : IUnityFixedCharacterControlSourceRuntime
+    public sealed class NeutralFixedSimulationInputAdapter : IUnityFixedCharacterControlSourceRuntime
     {
         readonly List<FixedSimulationInputValue> m_Values = new List<FixedSimulationInputValue>();
         bool m_Active;
         bool m_Disposed;
         ulong m_RenderFrame;
 
-        public NeutralFixedCharacterSimulationInputAdapter(CharacterInputProfile profile)
+        public NeutralFixedSimulationInputAdapter(CharacterInputProfile profile)
         {
             if (profile)
             {
@@ -82,12 +82,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_RenderFrame = renderFrame;
         }
 
-        public FixedCharacterSimulationInput BuildInput(FixedCharacterInputBuildContext context)
+        public FixedSimulationInput BuildInput(FixedCharacterInputBuildContext context)
         {
             RequireAlive();
             if (!m_Active || m_RenderFrame == 0)
                 throw new InvalidOperationException("Neutral Fixed Character input has no captured render frame.");
-            return new FixedCharacterSimulationInput(
+            return new FixedSimulationInput(
                 FixedSimulationNumericProfile.Value,
                 context.Source,
                 SourceIdentity,
@@ -150,7 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         void RequireAlive()
         {
             if (m_Disposed)
-                throw new ObjectDisposedException(nameof(NeutralFixedCharacterSimulationInputAdapter));
+                throw new ObjectDisposedException(nameof(NeutralFixedSimulationInputAdapter));
         }
     }
 }

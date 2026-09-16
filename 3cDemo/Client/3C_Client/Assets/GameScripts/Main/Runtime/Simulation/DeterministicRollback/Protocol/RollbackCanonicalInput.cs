@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ActorId actorId,
             SimulationTick tick,
             ulong inputSequence,
-            CharacterSimulationInput input,
+            SimulationInput input,
             RollbackInputProvenance provenance)
         {
             if (!actorId.IsValid || !tick.IsValid || inputSequence == 0 || input == null ||
@@ -80,7 +80,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
         public ulong InputSequence { get; }
-        public CharacterSimulationInput Input { get; }
+        public SimulationInput Input { get; }
         public RollbackInputProvenance Provenance { get; }
         public StableHash InputHash { get; }
         public StableHash GameplayHash { get; }

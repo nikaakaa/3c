@@ -163,7 +163,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     writePorts.ExecutionPlan.Write(Pending(context, readPorts.CharacterRuntime));
                     return;
                 }
-                CharacterSimulationInput input = BuildInput(held, authoritySource, authorityTick);
+                SimulationInput input = BuildInput(held, authoritySource, authorityTick);
                 actorInputs.Add(new SimulationPipelineActorInput<Float32StepInput>(
                     actorId,
                     held.InputSequence,
@@ -233,7 +233,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             }
         }
 
-        CharacterSimulationInput BuildInput(
+        SimulationInput BuildInput(
             HeldAuthorityInput held,
             SimulationTickSourceIdentity source,
             SimulationTick authorityTick)
@@ -248,7 +248,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             IReadOnlyList<SimulationInputRequest> requests = fresh
                 ? held.Input.Requests
                 : Array.Empty<SimulationInputRequest>();
-            return new CharacterSimulationInput(
+            return new SimulationInput(
                 held.Input.NumericProfile,
                 source,
                 held.Input.InputSourceIdentity,
@@ -351,7 +351,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ulong sequence = reader.ReadUInt64();
                 var acceptedTick = new SimulationTick(reader.ReadUInt64());
                 ulong consumedTick = reader.ReadUInt64();
-                CharacterSimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
+                SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
                 m_Held.Add(actorId, new HeldAuthorityInput(actorId, sequence, input, acceptedTick, consumedTick));
             }
             reader.RequireComplete();
@@ -362,7 +362,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             public HeldAuthorityInput(
                 ActorId actorId,
                 ulong inputSequence,
-                CharacterSimulationInput input,
+                SimulationInput input,
                 SimulationTick acceptedTick,
                 ulong lastConsumedTick = 0)
             {
@@ -375,7 +375,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
             public ActorId ActorId { get; }
             public ulong InputSequence { get; }
-            public CharacterSimulationInput Input { get; }
+            public SimulationInput Input { get; }
             public SimulationTick AcceptedTick { get; }
             public ulong LastConsumedTick { get; private set; }
             public void MarkConsumed(SimulationTick tick) => LastConsumedTick = tick.Value;

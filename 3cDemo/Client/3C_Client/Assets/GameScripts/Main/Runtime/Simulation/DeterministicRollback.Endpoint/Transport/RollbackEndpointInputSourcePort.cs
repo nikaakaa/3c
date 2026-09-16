@@ -256,7 +256,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_TickRate,
                 m_Policy.OffensiveRequestDelayTicks,
                 m_Policy.MaximumQueuedBundles);
-            CharacterSimulationInput localInput = m_InputAdapter.BuildInput(context) ??
+            SimulationInput localInput = m_InputAdapter.BuildInput(context) ??
                 throw new InvalidOperationException("Rollback local input Adapter returned no input.");
             if (localInput.NumericProfile != FixedSimulationNumericProfile.Value ||
                 !localInput.TickSource.Equals(source) || localInput.Sequence != inputSequence)
@@ -314,7 +314,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 provenance = RollbackInputProvenance.PredictedNeutral;
             }
             ulong sequence = previous?.InputSequence ?? tick.Value;
-            var input = new CharacterSimulationInput(
+            var input = new SimulationInput(
                 FixedSimulationNumericProfile.Value,
                 source,
                 m_PredictionSourceIdentity,

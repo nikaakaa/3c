@@ -13,7 +13,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public const int BaselineSchemaVersion = 4;
         const int MaximumCollectionCount = 4096;
 
-        public static byte[] WriteInput(CharacterSimulationInput input)
+        public static byte[] WriteInput(SimulationInput input)
         {
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
@@ -35,7 +35,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return writer.ToArray();
         }
 
-        public static CharacterSimulationInput ReadInput(byte[] bytes)
+        public static SimulationInput ReadInput(byte[] bytes)
         {
             var reader = Reader(bytes, InputMagic, InputSchemaVersion, "ServerAuthoritative canonical input");
             SimulationNumericProfile profile = SimulationNumericProfileCodec.Read(reader);
@@ -53,7 +53,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             for (int i = 0; i < requestCount; i++)
                 requests[i] = ReadInputRequest(reader);
             reader.RequireComplete();
-            var result = new CharacterSimulationInput(
+            var result = new SimulationInput(
                 profile,
                 new SimulationTickSourceIdentity(sourceKind, clockId, sourceTick),
                 inputSource,

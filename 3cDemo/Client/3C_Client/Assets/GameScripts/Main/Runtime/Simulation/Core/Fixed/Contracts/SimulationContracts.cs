@@ -73,12 +73,12 @@ namespace ThirdPersonSimulation.Fixed
         public int Priority { get; }
     }
 
-    public sealed class CharacterSimulationInput
+    public sealed class SimulationInput
     {
         readonly SimulationInputValue[] m_Values;
         readonly SimulationInputRequest[] m_Requests;
 
-        public CharacterSimulationInput(
+        public SimulationInput(
             SimulationNumericProfile numericProfile,
             SimulationTickSourceIdentity tickSource,
             string inputSourceIdentity,

@@ -232,7 +232,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return $"{Roster.ActorId}:commands={CommandPacketCount}/{CommandPayloadBytes}@{commandPacketsPerSecond:0.##}pps/{commandBytesPerSecond:0.##}Bps,packetGaps={PacketSequenceGaps},duplicates={DuplicatePackets},outOfOrder={OutOfOrderPackets},exact={ExactInputCount},held={HeldInputCount},neutral={NeutralInputCount},late={LateInputCount},lead={LastCommandLead},delta={DeltaSnapshotCount}@{snapshotPacketsPerSecond:0.##}pps/{snapshotBytesPerSecond:0.##}Bps,full={FullCheckpointCount},oversize={DeltaMtuExceededCount},lastBytes={LastDeltaPayloadBytes}";
         }
 
-        static CharacterSimulationInput Neutral(CharacterSimulationInput source, ulong authorityTick)
+        static SimulationInput Neutral(SimulationInput source, ulong authorityTick)
         {
             var values = new SimulationInputValue[source.Values.Count];
             for (int i = 0; i < values.Length; i++)
@@ -249,7 +249,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                     _ => throw new InvalidDataException($"Unsupported input value kind '{value.Kind}'.")
                 };
             }
-            return new CharacterSimulationInput(
+            return new SimulationInput(
                 source.NumericProfile,
                 new SimulationTickSourceIdentity(SimulationTickSourceKind.Authoritative, source.TickSource.ClockId, authorityTick),
                 source.InputSourceIdentity,

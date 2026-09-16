@@ -63,7 +63,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return bundle;
         }
 
-        public static StableHash ComputeInputHash(ActorId actorId, SimulationTick tick, CharacterSimulationInput input)
+        public static StableHash ComputeInputHash(ActorId actorId, SimulationTick tick, SimulationInput input)
         {
             using var writer = new CanonicalWriter();
             WriteInputPayload(writer, actorId, tick, input);
@@ -78,7 +78,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public static StableHash ComputeGameplayInputHash(
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationInput input)
+            SimulationInput input)
         {
             if (!actorId.IsValid || !tick.IsValid || input == null)
                 throw new ArgumentException("Rollback Gameplay input identity is incomplete.");
@@ -139,7 +139,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             CanonicalWriter writer,
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationInput input)
+            SimulationInput input)
         {
             writer.WriteString(actorId.Value);
             writer.WriteUInt64(tick.Value);
@@ -217,7 +217,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     reader.ReadUInt64(),
                     reader.ReadInt32());
             }
-            var input = new CharacterSimulationInput(
+            var input = new SimulationInput(
                 FixedSimulationNumericProfile.Value,
                 new SimulationTickSourceIdentity(sourceKind, clockId, sourceTick),
                 sourceIdentity,

@@ -238,7 +238,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             for (int i = 0; i < bundle.Actors.Count; i++)
             {
                 RollbackActorInputFrame actor = bundle.Actors[i];
-                var input = new CharacterSimulationInput(
+                var input = new SimulationInput(
                     FixedSimulationNumericProfile.Value,
                     source,
                     actor.Input.InputSourceIdentity,

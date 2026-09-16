@@ -10,7 +10,7 @@ using Float32CommittedActorPose = ThirdPersonSimulation.CommittedActorPose<Third
 
 namespace ThirdPersonCharacter.Pipeline.Simulation
 {
-    public sealed class UnityCharacterSimulationInputAdapter :
+    public sealed class UnitySimulationInputAdapter :
         IUnityCharacterControlSourceRuntime,
         ICharacterPresentationLookInput,
         ICharacterControlSourceRosterRuntime,
@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         bool m_Active;
         bool m_Disposed;
 
-        public UnityCharacterSimulationInputAdapter(
+        public UnitySimulationInputAdapter(
             CharacterInputProfile profile,
             CharacterControlModuleContract controlModule,
             ICameraBasisSnapshotProvider cameraBasis,
@@ -157,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             return false;
         }
 
-        public CharacterSimulationInput BuildInput(SimulationInputBuildContext context)
+        public SimulationInput BuildInput(SimulationInputBuildContext context)
         {
             RequireAlive();
             if (!m_Active || m_RenderFrame == 0)
@@ -189,7 +189,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     pending.Priority));
             }
             m_PendingRequests.Clear();
-            return new CharacterSimulationInput(
+            return new SimulationInput(
                 NumericProfile,
                 context.Source,
                 SourceIdentity,
@@ -436,7 +436,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         void RequireAlive()
         {
             if (m_Disposed)
-                throw new ObjectDisposedException(nameof(UnityCharacterSimulationInputAdapter));
+                throw new ObjectDisposedException(nameof(UnitySimulationInputAdapter));
         }
 
         static CharacterDirectionalInputConflictResolver CreateConflictResolver(
@@ -520,4 +520,3 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         }
     }
 }
-

@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation
             SimulationActorBinding actor,
             Float32CharacterRuntimeState sourceState,
             SimulationTick tick,
-            CharacterSimulationInput input,
+            SimulationInput input,
             IReadOnlyList<SimulationIngress> ingress,
             WorldBodyState beforeBody,
             bool diagnosticsEnabled,

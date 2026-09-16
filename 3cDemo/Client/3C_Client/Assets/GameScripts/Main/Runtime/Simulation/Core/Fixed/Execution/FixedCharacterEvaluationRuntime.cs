@@ -11,7 +11,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationActorBinding actor,
             FixedCharacterRuntimeState sourceState,
             SimulationTick tick,
-            CharacterSimulationInput input,
+            SimulationInput input,
             IReadOnlyList<SimulationIngress> ingress,
             WorldBodyState beforeBody,
             bool diagnosticsEnabled,

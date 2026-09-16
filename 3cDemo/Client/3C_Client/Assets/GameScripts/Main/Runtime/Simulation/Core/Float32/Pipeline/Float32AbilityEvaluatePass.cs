@@ -77,7 +77,7 @@ namespace ThirdPersonSimulation
                         !state.WorldState.Bodies[i].ActorId.Equals(actor.ActorId) ||
                         !step.Inputs[i].ActorId.Equals(actor.ActorId))
                         throw new InvalidOperationException("Ability Evaluate Pass Actor order does not match the locked roster.");
-                    CharacterSimulationInput input = step.Inputs[i].Value.Input;
+                    SimulationInput input = step.Inputs[i].Value.Input;
                     CharacterWorldSolveRequest worldRequest;
                     m_Evaluations[i] = Float32CharacterEvaluationRuntime.Evaluate(
                         readPorts.CharacterRuntime.Runtime,

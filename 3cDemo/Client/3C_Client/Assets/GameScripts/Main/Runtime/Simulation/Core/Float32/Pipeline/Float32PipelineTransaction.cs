@@ -297,7 +297,7 @@ namespace ThirdPersonSimulation
                 for (int i = 0; i < step.Inputs.Count; i++)
                 {
                     SimulationPipelineActorInput<Float32StepInput> input = step.Inputs[i];
-                    CharacterSimulationInput value = input.Value.Input;
+                    SimulationInput value = input.Value.Input;
                     if (!input.ActorId.Equals(roster[i].ActorId) || value == null ||
                         !value.NumericProfile.Equals(characterRuntime.NumericProfile) ||
                         !value.TickSource.Equals(step.Source) || value.Sequence != input.Sequence)

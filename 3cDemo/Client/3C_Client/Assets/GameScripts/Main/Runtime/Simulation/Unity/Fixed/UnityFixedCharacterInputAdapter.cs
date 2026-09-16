@@ -9,7 +9,7 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using FixedCharacterSimulationInput = ThirdPersonSimulation.Fixed.CharacterSimulationInput;
+using FixedSimulationInput = ThirdPersonSimulation.Fixed.SimulationInput;
 using FixedSimulationInputRequest = ThirdPersonSimulation.Fixed.SimulationInputRequest;
 using FixedSimulationInputValue = ThirdPersonSimulation.Fixed.SimulationInputValue;
 
@@ -144,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
         }
 
-        public FixedCharacterSimulationInput BuildInput(FixedCharacterInputBuildContext context)
+        public FixedSimulationInput BuildInput(FixedCharacterInputBuildContext context)
         {
             RequireAlive();
             if (!m_Active || m_RenderFrame == 0)
@@ -196,7 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
             if (emittedCount != 0)
                 m_PendingRequests.RemoveRange(0, emittedCount);
-            var liveInput = new FixedCharacterSimulationInput(
+            var liveInput = new FixedSimulationInput(
                 FixedSimulationNumericProfile.Value,
                 context.Source,
                 SourceIdentity,
@@ -634,4 +634,3 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 }
-

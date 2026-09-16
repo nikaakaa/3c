@@ -55,14 +55,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public abstract IUnityCharacterControlSourceRuntime Create(CharacterControlSourceContext context);
     }
 
-    public sealed class NeutralCharacterSimulationInputAdapter : IUnityCharacterControlSourceRuntime
+    public sealed class NeutralSimulationInputAdapter : IUnityCharacterControlSourceRuntime
     {
         readonly List<SimulationInputValue> m_Values = new List<SimulationInputValue>();
         bool m_Active;
         bool m_Disposed;
         ulong m_RenderFrame;
 
-        public NeutralCharacterSimulationInputAdapter(CharacterInputProfile profile)
+        public NeutralSimulationInputAdapter(CharacterInputProfile profile)
         {
             if (profile)
             {
@@ -97,12 +97,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             m_RenderFrame = renderFrame;
         }
 
-        public CharacterSimulationInput BuildInput(SimulationInputBuildContext context)
+        public SimulationInput BuildInput(SimulationInputBuildContext context)
         {
             RequireAlive();
             if (!m_Active || m_RenderFrame == 0 || context.NumericProfile != NumericProfile)
                 throw new InvalidOperationException("Neutral Character input received an incompatible build context.");
-            return new CharacterSimulationInput(
+            return new SimulationInput(
                 NumericProfile,
                 context.Source,
                 SourceIdentity,
@@ -136,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         void RequireAlive()
         {
             if (m_Disposed)
-                throw new ObjectDisposedException(nameof(NeutralCharacterSimulationInputAdapter));
+                throw new ObjectDisposedException(nameof(NeutralSimulationInputAdapter));
         }
     }
 }

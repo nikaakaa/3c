@@ -7,12 +7,12 @@ namespace ThirdPersonSimulation.Fixed
 {
     public readonly struct FixedStepInput
     {
-        public FixedStepInput(CharacterSimulationInput input)
+        public FixedStepInput(SimulationInput input)
         {
             Input = input ?? throw new ArgumentNullException(nameof(input));
         }
 
-        public CharacterSimulationInput Input { get; }
+        public SimulationInput Input { get; }
     }
 
     public sealed class FixedCanonicalInputBatch

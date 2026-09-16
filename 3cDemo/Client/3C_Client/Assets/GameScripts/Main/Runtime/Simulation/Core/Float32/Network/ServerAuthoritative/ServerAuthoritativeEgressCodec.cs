@@ -48,7 +48,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var actorId = new ActorId(reader.ReadString());
             ulong sourceTick = reader.ReadUInt64();
             ulong inputSequence = reader.ReadUInt64();
-            CharacterSimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
+            SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
             reader.RequireComplete();
             var result = new OwnerCanonicalInputBatch(actorId, sourceTick, inputSequence, input);
             RequireCanonical(bytes, WriteOwnerInput(result), "owner input");

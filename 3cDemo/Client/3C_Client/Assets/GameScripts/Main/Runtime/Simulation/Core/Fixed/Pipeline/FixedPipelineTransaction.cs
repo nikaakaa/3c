@@ -299,7 +299,7 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < step.Inputs.Count; i++)
                 {
                     SimulationPipelineActorInput<FixedStepInput> input = step.Inputs[i];
-                    CharacterSimulationInput value = input.Value.Input;
+                    SimulationInput value = input.Value.Input;
                     if (!input.ActorId.Equals(roster[i].ActorId) || value == null ||
                         !value.NumericProfile.Equals(characterRuntime.NumericProfile) ||
                         !value.TickSource.Equals(step.Source) || value.Sequence != input.Sequence)

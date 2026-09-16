@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation
         public Float32CharacterInputTraceFrame(
             ActorId actorId,
             SimulationTick tick,
-            CharacterSimulationInput input)
+            SimulationInput input)
         {
             if (!actorId.IsValid || !tick.IsValid || input == null ||
                 input.NumericProfile != Float32SimulationNumericProfile.Value ||
@@ -24,7 +24,7 @@ namespace ThirdPersonSimulation
 
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
-        public CharacterSimulationInput Input { get; }
+        public SimulationInput Input { get; }
     }
 
     public sealed class Float32CharacterInputTrace
@@ -79,7 +79,7 @@ namespace ThirdPersonSimulation
         public static bool IsRecording => s_Mode == Float32CharacterInputTraceMode.Recording;
         public static bool IsReplayActive => s_Mode == Float32CharacterInputTraceMode.Replaying;
 
-        public static bool IsReplayInput(CharacterSimulationInput input) =>
+        public static bool IsReplayInput(SimulationInput input) =>
             input != null &&
             input.InputSourceIdentity.StartsWith("Float32InputTrace/", StringComparison.Ordinal);
 
@@ -115,9 +115,9 @@ namespace ThirdPersonSimulation
             s_Mode = Float32CharacterInputTraceMode.Replaying;
         }
 
-        public static CharacterSimulationInput Resolve(
+        public static SimulationInput Resolve(
             SimulationInputBuildContext context,
-            CharacterSimulationInput liveInput)
+            SimulationInput liveInput)
         {
             if (liveInput == null)
                 throw new ArgumentNullException(nameof(liveInput));
@@ -138,7 +138,7 @@ namespace ThirdPersonSimulation
             if (s_ReplayStartTick == 0)
                 s_ReplayStartTick = context.SimulationTick.Value;
             Float32CharacterInputTraceFrame frame = s_Replay.Frames[s_ReplayIndex];
-            CharacterSimulationInput result = Remap(frame, context);
+            SimulationInput result = Remap(frame, context);
             s_ReplayIndex++;
             if (s_ReplayIndex == s_Replay.Frames.Count)
                 ResetActiveState();
@@ -156,7 +156,7 @@ namespace ThirdPersonSimulation
             s_LastCompletedTrace = null;
         }
 
-        static CharacterSimulationInput Remap(
+        static SimulationInput Remap(
             Float32CharacterInputTraceFrame frame,
             SimulationInputBuildContext context)
         {
@@ -172,7 +172,7 @@ namespace ThirdPersonSimulation
                     RemapTick(request.ExpireSimulationTick, frame.Tick.Value, replayTick),
                     request.Priority);
             }
-            return new CharacterSimulationInput(
+            return new SimulationInput(
                 Float32SimulationNumericProfile.Value,
                 context.Source,
                 $"Float32InputTrace/{s_Replay.TraceId}",

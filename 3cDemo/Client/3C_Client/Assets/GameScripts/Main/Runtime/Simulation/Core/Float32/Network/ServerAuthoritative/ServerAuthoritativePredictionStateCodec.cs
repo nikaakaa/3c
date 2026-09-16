@@ -128,7 +128,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 var actorId = new ActorId(reader.ReadString());
                 ulong sourceTick = reader.ReadUInt64();
                 ulong inputSequence = reader.ReadUInt64();
-                CharacterSimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
+                SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
                 var ownerInput = new OwnerCanonicalInputBatch(actorId, sourceTick, inputSequence, input);
                 var composition = new SimulationSessionCompositionIdentity(new StableHash(reader.ReadString()));
                 SimulationWorldSnapshot world = SimulationWorldSnapshotCodec.Read(reader.ReadBytes());

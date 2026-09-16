@@ -50,7 +50,7 @@ namespace ThirdPersonSimulation
         string SourceIdentity { get; }
         SimulationNumericProfile NumericProfile { get; }
         CharacterControlSourceCapability Capabilities { get; }
-        CharacterSimulationInput BuildInput(SimulationInputBuildContext context);
+        SimulationInput BuildInput(SimulationInputBuildContext context);
     }
 
     public interface ICharacterControlSourceInputRequestRuntime
@@ -234,7 +234,7 @@ namespace ThirdPersonSimulation
                     source.SourceTick,
                     tickRate,
                     committedObservation);
-                CharacterSimulationInput input = Float32CharacterInputTraceModule.Resolve(
+                SimulationInput input = Float32CharacterInputTraceModule.Resolve(
                     context,
                     controlSource.BuildInput(context));
                 if (input == null || input.NumericProfile != numericProfile ||

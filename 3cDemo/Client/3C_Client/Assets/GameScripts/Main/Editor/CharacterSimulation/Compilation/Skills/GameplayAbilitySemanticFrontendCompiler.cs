@@ -123,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     builder.RequireGameplayCapability("StateMachine");
                 if (occurrence.Timelines.Count > 0)
                     builder.RequireGameplayCapability("Timeline");
-                foreach (FlowNode node in occurrence.Nodes)
+                foreach (BtsmtlSkillFlowNode node in occurrence.Nodes)
                 {
                     if (node is BtsmtlSkillApplyGameplayEffectFlowNode ||
                         node is BtsmtlSkillRemoveGameplayEffectFlowNode)

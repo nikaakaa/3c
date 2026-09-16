@@ -338,7 +338,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             CharacterPipelineDefinition definition = null;
-            CharacterPresentationProjectionAsset projection = null;
             foreach (string guid in AssetDatabase.FindAssets("t:CharacterPipelineDefinition"))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
@@ -347,14 +346,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (!candidate || candidate.AnimationPresentationProfile != profile)
                     continue;
                 definition = candidate;
-                projection = candidate.PresentationProjection;
                 break;
             }
             CharacterPoseGraphWorkspace window =
                 CharacterPoseGraphWorkspace.Open(
                     profile.PoseGraph,
                     profile,
-                    projection,
                     definition);
             window.ShowLinkedPoseAsset(target);
         }

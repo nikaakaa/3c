@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation.DotRecastAuthority;
 using UnityEditor;
 
@@ -156,7 +157,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string expectedHash = RequireField(
                 NetworkTestProductBuildWorkflow.RequireArtifact(manifest, "dotrecast-authority-server").fields,
                 "authorityManifestHash");
-            LoadedDotRecastAuthoritySceneManifest loaded = DotRecastAuthoritySceneManifestLoader.LoadFile(authorityManifest);
+            LoadedDotRecastAuthoritySceneManifest loaded = DotRecastAuthoritySceneManifestLoader.LoadFile(authorityManifest, CharacterControlRuntimeModuleCatalog.Create());
             if (!string.Equals(loaded.Manifest.ManifestHash.ToString(), expectedHash, StringComparison.Ordinal))
                 throw new InvalidOperationException("DotRecast Authority manifest hash does not match the Network Test Product manifest.");
         }

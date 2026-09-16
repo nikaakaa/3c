@@ -284,6 +284,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             DeterministicRollbackModelDefinition model = closure.Model;
             SimulationWorldSolverDefinitionDescriptor solverIdentity =
                 closure.Solver.BuildDescriptor(closure.Composition.TickRate);
+            CharacterAnimationPresentationProfile animationProfile =
+                NetworkTestProductAdapterUtility.RequireAnimationPresentationProfile(closure.Definition);
             return new NetworkTestProductDescriptor(
                 ProductId,
                 DisplayName,
@@ -438,7 +440,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     NetworkTestArtifactFileUtility.Sha256(manifestPath),
                     new[]
                     {
-                        NetworkTestProductAdapterUtility.Field("protocol", model.Handshake.Protocol.ToString()),
+                        NetworkTestProductAdapterUtility.Field("protocol", DeterministicRollbackModelIdentity.Protocol.ProtocolId),
                         NetworkTestProductAdapterUtility.Field("maximumPredictionLeadTicks", policy.MaximumPredictionLeadTicks.ToString())
                     }),
                 gm

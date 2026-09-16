@@ -7,6 +7,8 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
+using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation

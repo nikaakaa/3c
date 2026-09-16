@@ -32,8 +32,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_TuningOnlyAuthoringChange = true;
             m_TuningOnlyAuthoringFingerprint = ComputePoseTuningAuthoringFingerprint();
             if (m_Status != null)
-                m_Status.text = "Unpublished Parameter · published Projection remains active.";
-            m_ObservationPanel?.Refresh();
+                m_Status.text = "Unpublished Parameter change.";
             RefreshSelectedDetails();
         }
 

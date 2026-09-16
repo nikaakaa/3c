@@ -329,18 +329,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                     machine.StateMachine,
                                     $"{callSite}/fsm:{machine.StateMachine.AuthoringId}",
                                     report)));
-                        break;
                         }
+                        break;
                     case BtsmtlSkillStateFlowNode state:
                         AddReference(node, BtsmtlSkillGraphReferenceKind.StateBody, state.Body);
                         break;
                 }
                 if (node is BtsmtlSkillTimelineFlowNode timeline)
                 {
-                    if (!timeline.Timeline)
+                    if (timeline.Timeline == null)
                         throw new InvalidOperationException($"{route}/node:{node.UID}/timeline: 技能Timeline引用缺失。");
                     var trees = new Dictionary<string, BtsmtlSkillGraphOccurrence>(StringComparer.Ordinal);
-                    foreach (Track track in timeline.Timeline.Data.Tracks)
+                    foreach (Track track in timeline.Timeline.Tracks)
                     {
                         if (track == null)
                             continue;

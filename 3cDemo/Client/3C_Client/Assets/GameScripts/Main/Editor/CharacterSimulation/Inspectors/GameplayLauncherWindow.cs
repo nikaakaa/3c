@@ -395,26 +395,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             DrawFixedInputTrace();
             EditorGUILayout.Space(4f);
-            EditorGUILayout.LabelField(
-                "Foot IK Visual Validation",
-                CharacterFootPlacementVisualValidation.IsEnabled ? "Enabled" : "Disabled");
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                using (new EditorGUI.DisabledScope(CharacterFootPlacementVisualValidation.IsEnabled))
-                {
-                    if (GUILayout.Button("Enable Visual Validation"))
-                        ExecuteSampling(CharacterFootPlacementVisualValidation.Enable);
-                }
-                using (new EditorGUI.DisabledScope(!CharacterFootPlacementVisualValidation.IsEnabled))
-                {
-                    if (GUILayout.Button("Disable Visual Validation"))
-                        ExecuteSampling(CharacterFootPlacementVisualValidation.Disable);
-                }
-            }
-            if (CharacterFootPlacementVisualValidation.IsEnabled)
-                EditorGUILayout.HelpBox(
-                    "Game/Scene View shows accepted landings, Ground Path, original/corrected soles, pelvis/foot goals, FBBIK and final physical bones.",
-                    MessageType.Info);
             if (!string.IsNullOrEmpty(m_DiagnosticSummary))
                 EditorGUILayout.HelpBox(m_DiagnosticSummary, MessageType.Info);
             if (!string.IsNullOrEmpty(samplesPath))

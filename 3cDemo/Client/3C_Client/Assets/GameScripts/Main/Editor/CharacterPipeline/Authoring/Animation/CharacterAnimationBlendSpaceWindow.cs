@@ -743,39 +743,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void DrawFootAnalysis(CharacterAnimationBlendSpaceSampleId selectedSampleId)
         {
+            _ = selectedSampleId;
             var foldout = new Foldout { text = "Foot Analysis Artifacts", value = false };
-            CharacterAnimationPresentationProfile profile = m_Window.Profile;
-            if (!profile)
-            {
-                foldout.Add(new HelpBox("Unavailable: no exact Presentation Profile context.", HelpBoxMessageType.Warning));
-                m_Content.Add(foldout);
-                return;
-            }
-            if (profile.FootPlacementAnalysisMode == CharacterFootPlacementAnalysisMode.Disabled)
-            {
-                foldout.Add(new Label("Disabled by Presentation Profile"));
-                m_Content.Add(foldout);
-                return;
-            }
-            IReadOnlyList<CharacterFootAnalysisArtifactDiagnostic> diagnostics =
-                CharacterProjectionFootAnalysisResolver.InspectBlendSpace(profile, m_Window.Asset);
-            string selectedKey = selectedSampleId.IsValid
-                ? AnimationFootAnalysisProjectionBuildData.BlendSpaceBindingKey(m_Window.Asset.BlendSpaceId, selectedSampleId)
-                : string.Empty;
-            for (int i = 0; i < diagnostics.Count; i++)
-            {
-                CharacterFootAnalysisArtifactDiagnostic diagnostic = diagnostics[i];
-                if (selectedSampleId.IsValid && !string.Equals(diagnostic.BindingKey, selectedKey, StringComparison.Ordinal))
-                    continue;
-                HelpBoxMessageType type = diagnostic.Status == AnimationFootAnalysisArtifactStatus.Ready
-                    ? HelpBoxMessageType.Info
-                    : diagnostic.Status == AnimationFootAnalysisArtifactStatus.Corrupt
-                        ? HelpBoxMessageType.Error
-                        : HelpBoxMessageType.Warning;
-                foldout.Add(new HelpBox(
-                    $"{diagnostic.Status} · {diagnostic.BindingKey}\n{diagnostic.Message}",
-                    type));
-            }
+            foldout.Add(new HelpBox("Unavailable: foot analysis is owned by the formal animation domain.", HelpBoxMessageType.Warning));
             m_Content.Add(foldout);
         }
 
@@ -898,44 +868,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void DrawLive()
         {
-            AddReadOnly("Source", "AnimationPresentationRuntimeSnapshot");
-            if (!m_Window.TryGetRuntimeSnapshot(out AnimationPresentationRuntimeSnapshot snapshot, out string status))
-            {
-                AddReadOnly("Status", status);
-                return;
-            }
-            AddReadOnly("Status", "Ready");
-            AddReadOnly("Projection Revision", m_Window.Projection ? m_Window.Projection.ProjectionRevision : "Unavailable");
-            bool found = false;
-            for (int playerIndex = 0; playerIndex < snapshot.BlendSpacePlayers.Count; playerIndex++)
-            {
-                AnimationBlendSpacePlayerRuntimeSnapshot player = snapshot.BlendSpacePlayers[playerIndex];
-                if (!player.BlendSpaceId.Equals(m_Window.Asset.BlendSpaceId))
-                    continue;
-                found = true;
-                AddReadOnly("NodeId", player.NodeId.Value);
-                AddReadOnly("Source", player.SourceId.ToString());
-                AddReadOnly("Parameter", $"raw ({player.RawX:0.###}, {player.RawY:0.###}) / processed ({player.X:0.###}, {player.Y:0.###})");
-                AddReadOnly("Canonical Phase", $"{player.CanonicalPhase.NormalizedPhase:0.###} / cycle {player.CanonicalPhase.Cycle}");
-                AddReadOnly("Pose Result", $"{player.PoseAvailability} / {player.InvalidReason}");
-                AnimationReadOnlyBuffer<AnimationBlendSpaceSampleRuntimeSnapshot> samples = snapshot.GetBlendSpaceSamples(playerIndex);
-                for (int sampleIndex = 0; sampleIndex < samples.Count; sampleIndex++)
-                {
-                    AnimationBlendSpaceSampleRuntimeSnapshot sample = samples[sampleIndex];
-                    AddReadOnly(
-                        $"Sample {sampleIndex + 1}",
-                        $"{sample.SampleId} / {sample.Weight:P2} / {sample.ClipTime:0.000}s / feature {(sample.HasFootFeatures ? $"{sample.FootAnalysisSourceId}@{sample.FootAnalysisVersion}/{sample.FootArtifactContentHash}" : "Unavailable")}");
-                }
-            }
-            if (!found)
-                AddReadOnly("Runtime Values", "Unavailable: the attached frame has no matching BlendSpacePlayer source.");
-            for (int i = 0; i < snapshot.Parameters.Count; i++)
-            {
-                AnimationPoseParameterSnapshot parameter = snapshot.Parameters[i];
-                AddReadOnly(
-                    $"Parameter {parameter.ParameterId}",
-                    parameter.Available ? parameter.Value.ToString("0.###") : "Unavailable");
-            }
+            AddReadOnly("Status", "Unavailable: runtime observation is owned by the domain host.");
+            return;
         }
 
         void DrawReferences()
@@ -945,8 +879,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AddObject("Presentation Profile", m_Window.Profile);
             AddObject("Pose Graph", m_Window.Profile ? m_Window.Profile.PoseGraph : null);
             AddObject("Rig", m_Window.Asset.Rig);
-            AddObject("Projection", m_Window.Projection);
-            AddReadOnly("Projection Revision", m_Window.Projection ? m_Window.Projection.ProjectionRevision : "Unavailable");
             for (int i = 0; i < m_Window.Asset.Samples.Count; i++)
             {
                 CharacterAnimationBlendSpaceSample sample = m_Window.Asset.Samples[i];
@@ -954,13 +886,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 AddObject($"Sample {sample.SampleId}", sample.Clip);
             }
-            if (m_Window.Profile)
-            {
-                IReadOnlyList<CharacterFootAnalysisArtifactDiagnostic> diagnostics =
-                    CharacterProjectionFootAnalysisResolver.InspectBlendSpace(m_Window.Profile, m_Window.Asset);
-                for (int i = 0; i < diagnostics.Count; i++)
-                    AddReadOnly($"Artifact {i + 1}", $"{diagnostics[i].Status} · {diagnostics[i].BindingKey}");
-            }
+
         }
 
         void AddReadOnly(string label, string value)
@@ -1131,7 +1057,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Content.Add(new HelpBox(status, HelpBoxMessageType.Warning));
                 return;
             }
-            m_Content.Add(new Label($"Projection {m_Window.Projection.ProjectionRevision}"));
+            m_Content.Add(new Label("Compiled animation plan unavailable"));
             m_Content.Add(new Label($"Phase {evaluation.Canonical.NormalizedPhase:0.000} · cycle {evaluation.Canonical.Cycle}"));
             for (int i = 0; i < evaluation.Weights.Count; i++)
             {
@@ -1226,7 +1152,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         [SerializeField] CharacterAnimationBlendSpaceAsset m_Asset;
         [SerializeField] CharacterAnimationPresentationProfile m_Profile;
-        [SerializeField] CharacterPresentationProjectionAsset m_Projection;
         [SerializeField] CharacterPipelineDefinition m_Definition;
         BlendSpaceGraphView m_GraphView;
         BlendSpaceMutationAdapter m_Mutation;
@@ -1239,16 +1164,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         float m_PreviewNormalizedTime;
         bool m_Building;
         readonly Guid m_AnimationDiagnosticsOwnerId = Guid.NewGuid();
-        AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
 
         internal CharacterAnimationBlendSpaceAsset Asset => m_Asset;
         internal CharacterAnimationPresentationProfile Profile => m_Profile;
-        internal CharacterPresentationProjectionAsset Projection => m_Projection;
         internal CharacterPipelineDefinition Definition => m_Definition;
         internal BlendSpaceGraphView GraphView => m_GraphView;
         internal Vector2 PreviewParameter => m_PreviewParameter;
         internal float PreviewNormalizedTime => m_PreviewNormalizedTime;
-        internal string RuntimeStatus => TryGetRuntimeSnapshot(out _, out string status) ? "Ready" : status;
+        internal string RuntimeStatus => "Unavailable";
 
         public static CharacterAnimationBlendSpaceEditorWindow Open(
             CharacterAnimationBlendSpaceAsset asset,
@@ -1332,11 +1255,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_Definition)
             {
                 m_Profile = m_Definition.AnimationPresentationProfile;
-                m_Projection = m_Definition.PresentationProjection;
-            }
+                }
             else
             {
-                ResolveExactContext(asset, out m_Definition, out m_Profile, out m_Projection);
+                ResolveExactContext(asset, out m_Definition, out m_Profile);
             }
             CharacterAnimationBlendSpaceAuthoringService.Initialize(m_Asset);
             m_PreviewParameter = m_Asset.Preview.Parameter;
@@ -1421,172 +1343,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationBlendSpaceValidationReport report = CharacterAnimationBlendSpaceValidator.Validate(m_Asset);
             if (!report.IsValid)
                 return $"Invalid ({report.Issues.Count})";
-            if (!m_Definition || !m_Profile || !m_Projection)
+            if (!m_Definition || !m_Profile)
                 return "Missing Definition Context";
             if (EditorUtility.IsDirty(m_Profile) || EditorUtility.IsDirty(m_Definition))
                 return "Dirty";
-            if (string.IsNullOrWhiteSpace(m_Projection.ProjectionRevision))
-                return "Build Required";
-            return "Published";
+            return "Valid";
         }
 
         internal bool TryResolveCompiledPlan(out CharacterAnimationBlendSpacePlan plan, out string status)
         {
             plan = null;
-            string buildState = ResolveBuildState();
-            if (!string.Equals(buildState, "Published", StringComparison.Ordinal))
-            {
-                status = $"Compiled preview unavailable: workspace state is {buildState}. Use explicit Compile/Build.";
-                return false;
-            }
-            try
-            {
-                CharacterPresentationProjection projection = m_Projection.Load();
-                for (int i = 0; i < projection.BlendSpaces.Count; i++)
-                {
-                    CharacterAnimationBlendSpacePlan candidate = projection.BlendSpaces[i];
-                    if (!candidate.BlendSpaceId.Equals(m_Asset.BlendSpaceId))
-                        continue;
-                    if (!string.Equals(candidate.ContentRevision, m_Asset.ContentRevision, StringComparison.Ordinal))
-                    {
-                        status = $"Compiled preview unavailable: Projection revision contains {candidate.ContentRevision}, authoring is {m_Asset.ContentRevision}.";
-                        return false;
-                    }
-                    candidate.RequireValid(false);
-                    plan = candidate;
-                    status = "Ready";
-                    return true;
-                }
-                status = $"Compiled preview unavailable: Projection has no Blend Space '{m_Asset.BlendSpaceId}'.";
-                return false;
-            }
-            catch (Exception exception)
-            {
-                status = $"Compiled preview unavailable: {exception.Message}";
-                return false;
-            }
+            status = "Compiled preview is unavailable until the animation domain exposes its formal resource plan.";
+            return false;
         }
 
         internal bool TryEvaluatePreview(out BlendSpacePreviewEvaluation evaluation, out string status)
         {
-            if (!TryResolveCompiledPlan(out CharacterAnimationBlendSpacePlan plan, out status))
-            {
-                evaluation = default;
-                return false;
-            }
-            return TryEvaluatePreview(plan, out evaluation, out status);
-        }
-
-        bool TryEvaluatePreview(
-            CharacterAnimationBlendSpacePlan plan,
-            out BlendSpacePreviewEvaluation evaluation,
-            out string status)
-        {
             evaluation = default;
-            var weights = new CharacterAnimationBlendSpaceWeightPage(plan.Samples.Count);
-            if (!CharacterAnimationBlendSpaceWeightEvaluator.Evaluate(
-                    plan.CreateSolverPlan(),
-                    m_PreviewParameter.x,
-                    m_PreviewParameter.y,
-                    weights,
-                    out CharacterAnimationBlendSpaceSolveFailure solveFailure))
-            {
-                status = $"Compiled weight evaluation failed: {solveFailure}.";
-                return false;
-            }
-            var times = new CharacterAnimationBlendSpaceTimePage(plan.Samples.Count);
-            double effectiveTime = m_PreviewNormalizedTime * plan.ClockDurationSeconds;
-            CharacterPresentationProjection compiledProjection = m_Projection.Load();
-            if (!CharacterAnimationBlendSpacePhaseMapper.Map(
-                    plan.CreatePhasePlan(compiledProjection.ClipPhasePlans),
-                    effectiveTime,
-                    0,
-                    times,
-                    out CharacterAnimationBlendSpaceCanonicalPhase canonical,
-                    out CharacterAnimationBlendSpacePhaseFailure phaseFailure))
-            {
-                status = $"Compiled phase evaluation failed: {phaseFailure}.";
-                return false;
-            }
-            evaluation = new BlendSpacePreviewEvaluation(weights, times, canonical);
-            status = "Ready";
-            return true;
-        }
-
-        internal bool TryGetRuntimeSnapshot(out AnimationPresentationRuntimeSnapshot snapshot, out string status)
-        {
-            snapshot = default;
-            RuntimeDebugViewModel viewModel = RuntimeDebugSession.Shared.ViewModel;
-            if (!viewModel.Attached || !AnimationPresentationRuntimeTargetRegistry.TryGet(
-                    viewModel.Target.CharacterRuntimeId,
-                    out AnimationPresentationRuntimeTarget target))
-            {
-                status = "Unavailable: no attached Animation Presentation runtime target.";
-                return false;
-            }
-            try
-            {
-                if (!target.TryGetDebugView(
-                        out AnimationPresentationDebugView debugView))
-                {
-                    status = "Unavailable: runtime target has no completed frame snapshot.";
-                    return false;
-                }
-                snapshot = debugView.PosePlan;
-            }
-            catch (InvalidOperationException)
-            {
-                status = "Stale: runtime target Projection revision changed.";
-                return false;
-            }
-            if (!m_Projection ||
-                !string.Equals(target.ProjectionRevision, m_Projection.ProjectionRevision, StringComparison.Ordinal) ||
-                !string.Equals(snapshot.ProjectionRevision, m_Projection.ProjectionRevision, StringComparison.Ordinal))
-            {
-                snapshot = default;
-                status = "Stale: runtime Projection revision does not match this workspace.";
-                return false;
-            }
-            for (int i = 0; i < snapshot.BlendSpacePlayers.Count; i++)
-            {
-                AnimationBlendSpacePlayerRuntimeSnapshot player = snapshot.BlendSpacePlayers[i];
-                if (!player.BlendSpaceId.Equals(m_Asset.BlendSpaceId))
-                    continue;
-                if (!string.Equals(player.ContentRevision, m_Asset.ContentRevision, StringComparison.Ordinal))
-                {
-                    snapshot = default;
-                    status = "Stale: runtime Blend Space content revision does not match this asset.";
-                    return false;
-                }
-                status = "Ready";
-                return true;
-            }
-            status = "Unavailable: attached runtime frame has no matching BlendSpacePlayer.";
+            status = "Compiled preview is unavailable until the animation domain exposes its formal resource plan.";
             return false;
         }
 
         internal void SetAnimationDiagnosticsInterest(bool enabled)
         {
-            RuntimeDebugViewModel viewModel =
-                RuntimeDebugSession.Shared.ViewModel;
-            AnimationPresentationRuntimeTarget target =
-                enabled && viewModel.Attached &&
-                AnimationPresentationRuntimeTargetRegistry.TryGet(
-                    viewModel.Target.CharacterRuntimeId,
-                    out AnimationPresentationRuntimeTarget resolved)
-                    ? resolved
-                    : null;
-            if (!ReferenceEquals(target, m_AnimationDiagnosticsTarget))
-            {
-                m_AnimationDiagnosticsTarget?.RemoveDiagnosticsInterest(
-                    m_AnimationDiagnosticsOwnerId);
-                m_AnimationDiagnosticsTarget = target;
-            }
-            m_AnimationDiagnosticsTarget?.SetDiagnosticsInterest(
-                m_AnimationDiagnosticsOwnerId,
-                AnimationPresentationDiagnosticsInterest.LiveState |
-                AnimationPresentationDiagnosticsInterest.FinalPoseDetail);
+            _ = enabled;
         }
+
 
         void OnRuntimeDebugSessionChanged()
         {
@@ -1640,12 +1422,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void ResolveExactContext(
             CharacterAnimationBlendSpaceAsset asset,
             out CharacterPipelineDefinition definition,
-            out CharacterAnimationPresentationProfile profile,
-            out CharacterPresentationProjectionAsset projection)
+            out CharacterAnimationPresentationProfile profile
+            )
         {
             definition = null;
             profile = null;
-            projection = null;
             string[] guids = AssetDatabase.FindAssets("t:CharacterPipelineDefinition");
             var matches = new List<CharacterPipelineDefinition>();
             for (int i = 0; i < guids.Length; i++)
@@ -1665,7 +1446,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             definition = matches[0];
             profile = definition.AnimationPresentationProfile;
-            projection = definition.PresentationProjection;
         }
 
         [UnityEditor.Callbacks.OnOpenAsset]

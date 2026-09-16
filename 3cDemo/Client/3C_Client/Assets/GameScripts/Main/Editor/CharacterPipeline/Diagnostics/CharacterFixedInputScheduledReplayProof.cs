@@ -149,10 +149,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     source_revision = runtimeIdentity.SourceRevision,
                     semantic_hash = runtimeIdentity.SemanticHash,
                     tick_rate = runtimeIdentity.TickRate,
-                    projection_revision = runtimeIdentity.ProjectionRevision,
-                    projection_source_revision = runtimeIdentity.ProjectionSourceRevision,
-                    projection_semantic_hash = runtimeIdentity.ProjectionSemanticHash,
-                    projection_contract_hash = runtimeIdentity.ProjectionContractHash,
                     world_revision = runtimeIdentity.WorldRevision
                 },
                 start_body_hash = fixedEvidence.StartBodyHash.ToString(),
@@ -401,10 +397,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(target, "source_revision", baseline.source_revision, candidate.source_revision);
             Add(target, "semantic_hash", baseline.semantic_hash, candidate.semantic_hash);
             Add(target, "runtime_tick_rate", baseline.tick_rate, candidate.tick_rate);
-            Add(target, "projection_revision", baseline.projection_revision, candidate.projection_revision);
-            Add(target, "projection_source_revision", baseline.projection_source_revision, candidate.projection_source_revision);
-            Add(target, "projection_semantic_hash", baseline.projection_semantic_hash, candidate.projection_semantic_hash);
-            Add(target, "projection_contract_hash", baseline.projection_contract_hash, candidate.projection_contract_hash);
             Add(target, "world_revision", baseline.world_revision, candidate.world_revision);
         }
 
@@ -473,10 +465,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Append(hash, identity.source_revision);
             Append(hash, identity.semantic_hash);
             Append(hash, identity.tick_rate);
-            Append(hash, identity.projection_revision);
-            Append(hash, identity.projection_source_revision);
-            Append(hash, identity.projection_semantic_hash);
-            Append(hash, identity.projection_contract_hash);
             Append(hash, identity.world_revision);
         }
 
@@ -535,10 +523,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             !string.IsNullOrWhiteSpace(identity.source_revision) &&
             !string.IsNullOrWhiteSpace(identity.semantic_hash) &&
             identity.tick_rate > 0 &&
-            !string.IsNullOrWhiteSpace(identity.projection_revision) &&
-            !string.IsNullOrWhiteSpace(identity.projection_source_revision) &&
-            !string.IsNullOrWhiteSpace(identity.projection_semantic_hash) &&
-            !string.IsNullOrWhiteSpace(identity.projection_contract_hash) &&
             !string.IsNullOrWhiteSpace(identity.world_revision);
 
         static void Write(string path, ProofDocument document)
@@ -623,10 +607,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string source_revision;
             public string semantic_hash;
             public int tick_rate;
-            public string projection_revision;
-            public string projection_source_revision;
-            public string projection_semantic_hash;
-            public string projection_contract_hash;
             public string world_revision;
         }
 

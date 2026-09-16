@@ -32,10 +32,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string sourceRevision,
             string semanticHash,
             int tickRate,
-            string projectionRevision,
-            string projectionSourceRevision,
-            string projectionSemanticHash,
-            string projectionContractHash,
             string worldRevision)
         {
             if (string.IsNullOrWhiteSpace(runtimeId) ||
@@ -43,10 +39,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 string.IsNullOrWhiteSpace(sourceRevision) ||
                 string.IsNullOrWhiteSpace(semanticHash) ||
                 tickRate <= 0 ||
-                string.IsNullOrWhiteSpace(projectionRevision) ||
-                string.IsNullOrWhiteSpace(projectionSourceRevision) ||
-                string.IsNullOrWhiteSpace(projectionSemanticHash) ||
-                string.IsNullOrWhiteSpace(projectionContractHash) ||
                 string.IsNullOrWhiteSpace(worldRevision))
             {
                 throw new ArgumentException(
@@ -57,10 +49,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             SourceRevision = sourceRevision.Trim();
             SemanticHash = semanticHash.Trim();
             TickRate = tickRate;
-            ProjectionRevision = projectionRevision.Trim();
-            ProjectionSourceRevision = projectionSourceRevision.Trim();
-            ProjectionSemanticHash = projectionSemanticHash.Trim();
-            ProjectionContractHash = projectionContractHash.Trim();
             WorldRevision = worldRevision.Trim();
         }
 
@@ -69,10 +57,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal string SourceRevision { get; }
         internal string SemanticHash { get; }
         internal int TickRate { get; }
-        internal string ProjectionRevision { get; }
-        internal string ProjectionSourceRevision { get; }
-        internal string ProjectionSemanticHash { get; }
-        internal string ProjectionContractHash { get; }
         internal string WorldRevision { get; }
     }
 
@@ -417,23 +401,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void CaptureRecordedCameraHeading(FixedCharacterHost host)
         {
-            CameraBasisSnapshot basis = host?.PresentationRuntime is CharacterSimulationPresentationRuntime runtime
-                ? runtime.CameraBasisSnapshot
-                : default;
-            s_HasRecordedCameraYaw = basis.Valid;
-            s_RecordedCameraYaw = basis.Valid ? basis.Yaw : 0f;
+            s_HasRecordedCameraYaw = false;
+            s_RecordedCameraYaw = 0f;
         }
 
         static void ApplyRecordedCameraHeading(TraceDocument document, FixedCharacterHost host)
         {
             if (document == null || !document.has_camera_basis_yaw)
                 return;
-            if (host?.PresentationRuntime is not CharacterSimulationPresentationRuntime runtime)
-                throw new InvalidOperationException(
-                    "Camera trace replay requires the formal Camera Presentation runtime.");
-            runtime.SetCameraInitialState(new CameraInitialState(
-                document.camera_basis_yaw_degrees,
-                0f));
+            throw new InvalidOperationException("Camera Presentation runtime is not composed.");
         }
 
         static void BeginReplay(TraceDocument document)
@@ -893,10 +869,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 source_revision = identity.SourceRevision,
                 semantic_hash = identity.SemanticHash,
                 tick_rate = identity.TickRate,
-                projection_revision = identity.ProjectionRevision,
-                projection_source_revision = identity.ProjectionSourceRevision,
-                projection_semantic_hash = identity.ProjectionSemanticHash,
-                projection_contract_hash = identity.ProjectionContractHash,
                 world_revision = identity.WorldRevision
             };
 
@@ -1107,10 +1079,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "runtime_tick_rate",
                 baseline.tick_rate.ToString(CultureInfo.InvariantCulture),
                 candidate.tick_rate.ToString(CultureInfo.InvariantCulture));
-            AddReplayMismatch(mismatches, "projection_revision", baseline.projection_revision, candidate.projection_revision);
-            AddReplayMismatch(mismatches, "projection_source_revision", baseline.projection_source_revision, candidate.projection_source_revision);
-            AddReplayMismatch(mismatches, "projection_semantic_hash", baseline.projection_semantic_hash, candidate.projection_semantic_hash);
-            AddReplayMismatch(mismatches, "projection_contract_hash", baseline.projection_contract_hash, candidate.projection_contract_hash);
             AddReplayMismatch(mismatches, "world_revision", baseline.world_revision, candidate.world_revision);
         }
 
@@ -1253,10 +1221,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             !string.IsNullOrWhiteSpace(identity.source_revision) &&
             !string.IsNullOrWhiteSpace(identity.semantic_hash) &&
             identity.tick_rate > 0 &&
-            !string.IsNullOrWhiteSpace(identity.projection_revision) &&
-            !string.IsNullOrWhiteSpace(identity.projection_source_revision) &&
-            !string.IsNullOrWhiteSpace(identity.projection_semantic_hash) &&
-            !string.IsNullOrWhiteSpace(identity.projection_contract_hash) &&
             !string.IsNullOrWhiteSpace(identity.world_revision);
 
         static void AppendRuntimeIdentityHash(
@@ -1268,10 +1232,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AppendHash(hash, identity.source_revision);
             AppendHash(hash, identity.semantic_hash);
             AppendHash(hash, identity.tick_rate.ToString(CultureInfo.InvariantCulture));
-            AppendHash(hash, identity.projection_revision);
-            AppendHash(hash, identity.projection_source_revision);
-            AppendHash(hash, identity.projection_semantic_hash);
-            AppendHash(hash, identity.projection_contract_hash);
             AppendHash(hash, identity.world_revision);
         }
 
@@ -1462,7 +1422,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ResolveReplayRuntimeIdentity(FixedCharacterHost host)
         {
             if (host == null || host.Registration == null ||
-                !host.ProjectionAsset || !host.SessionHost ||
+                !host.SessionHost ||
                 !host.SessionHost.Composition)
             {
                 throw new InvalidOperationException(
@@ -1479,10 +1439,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ability.SourceRevision.Value,
                 ability.SemanticHash.ToString(),
                 runtime.TickRate,
-                host.ProjectionAsset.ProjectionRevision,
-                host.ProjectionAsset.SourceRevision,
-                host.ProjectionAsset.SemanticHash,
-                host.ProjectionAsset.ContractHash,
                 host.SessionHost.Composition.WorldRevision);
         }
 
@@ -2016,10 +1972,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string source_revision;
             public string semantic_hash;
             public int tick_rate;
-            public string projection_revision;
-            public string projection_source_revision;
-            public string projection_semantic_hash;
-            public string projection_contract_hash;
             public string world_revision;
         }
 

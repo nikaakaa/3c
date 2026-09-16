@@ -69,63 +69,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        public static bool TryCompileCurrentBlock(
-            CharacterPresentationPoseGraphAsset asset,
-            CharacterAnimationPresentationProfile profile,
-            CharacterPresentationProjection projection,
-            CharacterPoseTuningLayout layout,
-            CharacterPoseTuningParameterBlock source,
-            out CharacterPoseTuningParameterBlock block,
-            out string error)
-        {
-            block = null;
-            error = string.Empty;
-            try
-            {
-                if (!asset || projection == null || layout == null || source == null)
-                    throw new InvalidOperationException("Pose tuning candidate context is incomplete.");
-                layout.RequireValid();
-                source.RequireValid(layout);
-                CharacterPoseTuningCompilationResult currentProfiles =
-                    CharacterPoseTuningLayoutCompiler.Compile(
-                        layout.ProgramId,
-                        projection);
-                if (!string.Equals(
-                        currentProfiles.Layout.LayoutHash,
-                        layout.LayoutHash,
-                        StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException(
-                        "Pose tuning layout changed and requires an explicit Character Build.");
-                }
-
-                CharacterPoseTuningParameterBlock result = source.Clone();
-                for (int i = 0; i < layout.Entries.Count; i++)
-                {
-                    CharacterPoseTuningLayoutEntry entry = layout.Entries[i];
-                    if (entry.Interaction !=
-                        CharacterPoseTuningInteractionPolicy.TunableDefault)
-                        continue;
-                    CharacterPoseTuningValue value = ReadCurrentValue(
-                        asset,
-                        profile,
-                        entry);
-                    result = CharacterPoseTuningCandidateCompiler.CompileBlock(
-                        layout,
-                        result,
-                        entry,
-                        value);
-                }
-                result.RequireValid(layout);
-                block = result;
-                return true;
-            }
-            catch (Exception exception)
-            {
-                error = exception.Message;
-                return false;
-            }
-        }
 
         static void Apply(
             CharacterPresentationPoseGraphAsset asset,

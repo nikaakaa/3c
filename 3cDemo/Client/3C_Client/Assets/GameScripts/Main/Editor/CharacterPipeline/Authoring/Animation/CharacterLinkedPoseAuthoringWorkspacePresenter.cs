@@ -178,8 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Summary("Groups", m_Window.ProfileContext.LinkedPoseGroups.Count.ToString());
             Summary("Implementations", m_Window.ProfileContext.LinkedPoseImplementations.Count.ToString());
             Summary("Selectors", m_Window.ProfileContext.LinkedPoseSelectors.Count.ToString());
-            m_Window.TryGetPublishedPosePlan(out _, out string projectionStatus);
-            Summary("Projection", projectionStatus);
+            Summary("Status", m_Window.CurrentPublishedStatus());
             AddAction("Create Interface", () =>
             {
                 try

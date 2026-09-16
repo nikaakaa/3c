@@ -1411,3 +1411,10 @@
 - 成功发布的 `CharacterAnimationVariableFrame` 通过 Pose owner 的 `ICharacterPoseNativeEventFrameSource` 合同按 Actor 和 RenderFrame 精确供给后续 Pose Native Runtime。
 - 修复 Pose Domain Contracts / Factory 的缺失 `ThirdPersonSimulation` 引用和 struct failed adoption 的可空构造错误。
 - Fixed.Unity 编译通过；Pose Source、Constraint、Handler composition 仍待正式装配，不勾选 4.7。
+
+## 2026-09-16 清理旧Pose观察与Projection消费
+
+- 删除旧 Pose Live Observation、Live Tuning、Runtime Trace、Pose Reset Observation、Foot Pose Watch、Generated Sampling Capture 及孤立 Phase / Motion Matching Projection 编辑器编译器。
+- Pose Graph Workspace、Blend Space Window、Linked Pose、Profile Inspector 和输入回放证明改为只消费正式 Authoring / Host 数据；Projection Revision 不再作为运行身份，相机未组合时保持精确失败。
+- 修正 Network Test 适配器、DotRecast Manifest Loader、BTSMTL Timeline / FlowNode 读取的新合同；删除的 Editor 文件同步移出便携工程源列表。
+- ThirdPersonClient.Editor 便携工程当前 0 error，其他 Host 便携工程此前已通过；Pose 4.7 仍等正式 Pose Native 服务装配，不勾选。

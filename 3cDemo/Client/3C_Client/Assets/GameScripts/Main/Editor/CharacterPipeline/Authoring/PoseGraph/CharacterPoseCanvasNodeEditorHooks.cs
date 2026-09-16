@@ -46,11 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     EditorStyles.miniLabel);
             }
 
-            if (CharacterPoseGraphWorkspace.TryGetNodeObservation(node, out GraphAuthoringRuntimeTraceProjection trace))
-            {
-                if (GUILayout.Button("Pose Watch")) CharacterPoseGraphWorkspace.WatchNode(node);
-            }
-
             if (CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind).Capability.ChildSurfaces.Count != 0 &&
                 GUILayout.Button("打开子图"))
                 node.TryOpenEditorChild();

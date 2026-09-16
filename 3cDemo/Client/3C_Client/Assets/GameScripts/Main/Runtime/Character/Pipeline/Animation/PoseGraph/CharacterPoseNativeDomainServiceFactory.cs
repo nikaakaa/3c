@@ -353,6 +353,127 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeInstanceContext context) =>
             throw new InvalidOperationException($"Pose Selected Player '{node.NodeId}' sample provider is not assembled.");
 
+        AnimationBlendStackRuntime CreateBlendStack(
+            CharacterPoseCanvasNode node,
+            CharacterPoseNativeInstanceContext context)
+        {
+            CharacterAnimationSlotPosePayload slotPayload =
+                node.Payload as CharacterAnimationSlotPosePayload;
+            CharacterBlendStackPosePayload stackPayload =
+                node.Payload as CharacterBlendStackPosePayload;
+            CharacterPoseResourceSlot policySlot = slotPayload != null
+                ? slotPayload.BlendPolicySlot
+                : stackPayload != null ? stackPayload.BlendPolicySlot : null;
+            if (policySlot == null)
+                throw new InvalidOperationException($"Pose Blend Stack '{node.NodeId}' has no blend policy slot.");
+            CharacterPoseResourceBinding binding =
+                m_Profile.FindPoseResourceBinding(policySlot) ??
+                throw new InvalidOperationException($"Pose Blend Stack '{node.NodeId}' has no blend policy resource binding.");
+            CharacterAnimationBlendPolicy policy = binding.Resource as CharacterAnimationBlendPolicy ??
+                throw new InvalidOperationException($"Pose Blend Stack '{node.NodeId}' blend policy resource is not a CharacterAnimationBlendPolicy.");
+            var stackPolicyPayload = new AnimationBlendStackPolicyPayload(policy.StackPolicy);
+            var transitions = new List<AnimationBlendTransitionPayload>();
+            var curveEntries = new List<AnimationBlendCurveCatalogEntry>();
+            var profileEntries = new List<AnimationBlendProfileCatalogEntry>();
+            BuildTransition(
+                policy.DefaultTransition, 0, transitions, curveEntries, profileEntries);
+            for (int i = 0; i < policy.Overrides.Count; i++)
+                BuildTransition(policy.Overrides[i].Rule, i + 1, transitions, curveEntries, profileEntries);
+            var slotPayload2 = new AnimationBlendNodePayload(
+                node.NodeId,
+                policy.PolicyId,
+                policy.Revision,
+                stackPolicyPayload,
+                transitions.ToArray(),
+                null);
+            var curveCatalog = new AnimationBlendCurveCatalogPayload(curveEntries.ToArray());
+            var profileCatalog = new AnimationBlendProfileCatalogPayload(profileEntries.ToArray());
+            AnimationSelectionAvailabilityPolicy availability = slotPayload != null
+                ? slotPayload.SelectionAvailability
+                : AnimationSelectionAvailabilityPolicy.RequireSelection;
+            AnimationChannelId channelId = slotPayload != null
+                ? slotPayload.AnimationChannelId
+                : default;
+            var stackBuffer = new CharacterPoseNativeNodePoseBuffer(
+                m_IndexByNode[node.NodeId],
+                m_Rig.PoseBoneCount,
+                Math.Max(1, m_InputContract.Parameters.Count),
+                m_Resources.ContributionCount);
+            try
+            {
+                var writeBinding = stackBuffer.RequireWriteBinding(1);
+                var runtime = new AnimationBlendStackRuntime(
+                    slotPayload2,
+                    channelId,
+                    default,
+                    default,
+                    availability,
+                    curveCatalog,
+                    profileCatalog,
+                    m_Rig,
+                    in writeBinding);
+                return runtime;
+            }
+            catch
+            {
+                stackBuffer.Dispose();
+                throw;
+            }
+        }
+
+        void BuildTransition(
+            CharacterAnimationBlendTransitionRule rule,
+            int index,
+            List<AnimationBlendTransitionPayload> transitions,
+            List<AnimationBlendCurveCatalogEntry> curveEntries,
+            List<AnimationBlendProfileCatalogEntry> profileEntries)
+        {
+            AnimationBlendCurvePayload curvePayload = BuildCurvePayload(rule);
+            curveEntries.Add(new AnimationBlendCurveCatalogEntry(curveEntries.Count, curvePayload));
+            var profilePayload = new AnimationBlendProfilePayload(
+                rule.BlendProfile, m_Profile.RigDefinition);
+            profileEntries.Add(new AnimationBlendProfileCatalogEntry(profileEntries.Count, profilePayload));
+            transitions.Add(new AnimationBlendTransitionPayload(
+                index,
+                AnimationBlendTransitionEndpointKind.SourceOwner,
+                $"owner/{index}",
+                index + 1,
+                AnimationBlendTransitionEndpointKind.SourceOwner,
+                $"owner/{index + 1}",
+                rule.BlendLogic,
+                rule.DurationSeconds,
+                curveEntries.Count - 1,
+                profileEntries.Count - 1));
+        }
+
+        static AnimationBlendCurvePayload BuildCurvePayload(CharacterAnimationBlendTransitionRule rule)
+        {
+            if (rule.BlendMode == CharacterAnimationBlendMode.Custom && rule.CustomBlendCurve)
+                return rule.CustomBlendCurve.Compile();
+            var keys = new CharacterAnimationBlendCurveKey[2];
+            switch (rule.BlendMode)
+            {
+                case CharacterAnimationBlendMode.Linear:
+                    keys[0] = new CharacterAnimationBlendCurveKey(0f, 0f, 1f, 1f);
+                    keys[1] = new CharacterAnimationBlendCurveKey(1f, 1f, 1f, 1f);
+                    break;
+                case CharacterAnimationBlendMode.EaseIn:
+                    keys[0] = new CharacterAnimationBlendCurveKey(0f, 0f, 0f, 0f);
+                    keys[1] = new CharacterAnimationBlendCurveKey(1f, 1f, 2f, 0f);
+                    break;
+                case CharacterAnimationBlendMode.EaseOut:
+                    keys[0] = new CharacterAnimationBlendCurveKey(0f, 0f, 0f, 2f);
+                    keys[1] = new CharacterAnimationBlendCurveKey(1f, 1f, 0f, 0f);
+                    break;
+                case CharacterAnimationBlendMode.EaseInOut:
+                default:
+                    keys[0] = new CharacterAnimationBlendCurveKey(0f, 0f, 0f, 0f);
+                    keys[1] = new CharacterAnimationBlendCurveKey(1f, 1f, 0f, 0f);
+                    break;
+            }
+            return new CharacterAnimationBlendCurve(keys).Compile();
+        }
+
         static AnimationBlendStackRuntime ThrowBlendStack(
             CharacterPoseCanvasNode node,
             CharacterPoseNativeInstanceContext context) =>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
+using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using FlowCanvas;
 using Unity.Collections;
 using UnityEngine;

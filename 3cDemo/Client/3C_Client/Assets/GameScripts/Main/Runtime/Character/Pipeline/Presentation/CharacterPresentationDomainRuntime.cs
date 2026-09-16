@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -53,6 +53,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         PoseParameterId[] m_PoseParameterIds;
+        ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher m_PoseActionPublisher;
+
+        internal void BindPoseActionPublisher(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher publisher)
+        {
+            m_PoseActionPublisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+        }
 
         internal void BindPoseDomain(
             CharacterPoseNativeDomainInstance poseDomain,
@@ -101,23 +107,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void Publish(CharacterPresentationCommand command)
         {
             RequireActor(command.Header.ActorId);
-            throw new InvalidOperationException(
-                "Presentation commands require composed Action and Timeline runtimes.");
+            m_PoseActionPublisher?.Publish(command);
         }
 
         public void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement)
         {
             RequireActor(current.Header.ActorId);
             RequireActor(replacement.Header.ActorId);
-            throw new InvalidOperationException(
-                "Presentation replacement requires composed Action and Timeline runtimes.");
+            m_PoseActionPublisher?.Replace(current, replacement);
         }
 
         public void Retire(CharacterPresentationCommand command)
         {
             RequireActor(command.Header.ActorId);
-            throw new InvalidOperationException(
-                "Presentation retirement requires composed Action and Timeline runtimes.");
+            m_PoseActionPublisher?.Retire(command);
         }
 
         public void Reset()

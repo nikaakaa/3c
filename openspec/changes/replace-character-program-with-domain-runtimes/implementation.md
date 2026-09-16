@@ -1398,3 +1398,9 @@
 - 删除旧 Preview Fixture、Foot Ground Path Gizmo、Foot Placement Visual Validation、Motion Matching Projection Payload Compiler、Foot Analysis Projection Resolver 和 Motion Matching Resource Projection Compiler。
 - 从正式 Host 诊断 Inspector 移除旧 `AnimationPresentationRuntimeTarget` 的 Motion Matching Replay 捕获链；保留事件分组展示，后续由 Pose owner 的 typed 观察接入。
 - 本步只删除已无正式 Runtime 的编辑器消费路径，不勾选 Pose 公共接线；Pose Graph Workspace 的旧观察 UI 仍在下一步单独收口。
+
+## 2026-09-16 收紧表现领域未组合能力边界
+
+- 表现领域底座不再缓存无法消费的 Presentation Command、Equipment selection 或 Trajectory；这些输入在 Action／Timeline／Pose、Equipment 或 Pose Runtime 未组合时立即精确失败。
+- Body Body Stream、PresentationFrame、Reset 和诊断快照继续走正式合同；未组合能力不产生默认姿态或静默丢命令。
+- Fixed.Unity 工程编译通过；该边界保持到 Pose／Action／Equipment 正式入口接入为止。

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
@@ -13,10 +12,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         readonly ActorId m_ActorId;
         readonly CharacterBodyPresentationRuntime m_Body;
-        readonly List<CharacterPresentationCommand> m_PendingCommands = new();
-        readonly List<CharacterPresentationCommand> m_ActiveCommands = new();
-        readonly List<CharacterPresentationTrajectoryIntent> m_PendingTrajectories = new();
-        readonly List<IReadOnlyList<EquipmentVisualSelection>> m_PendingEquipment = new();
         bool m_Disposed;
 
         internal CharacterPresentationDomainRuntime(
@@ -27,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Body = body ?? throw new ArgumentNullException(nameof(body));
         }
 
-        public bool AcceptsTrajectoryIntent => true;
+        public bool AcceptsTrajectoryIntent => false;
         public ulong BodyResetSequence => m_Body.ResetSequence;
         public bool SupportsCheckpointCapture => false;
         public bool SupportsCheckpointRestore => false;
@@ -40,53 +35,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void CaptureTrajectoryIntent(CharacterPresentationTrajectoryIntent intent)
         {
-            if (intent.ActorId != m_ActorId)
-                throw new InvalidOperationException("Presentation trajectory targets another Actor.");
-            m_PendingTrajectories.Add(intent);
+            RequireCommandActor(intent.ActorId);
+            throw new InvalidOperationException(
+                "Trajectory capture requires a composed Pose runtime.");
         }
 
         public void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections)
         {
-            if (selections == null || selections.Count == 0)
-                return;
-            for (int i = 0; i < selections.Count; i++)
+            if (selections != null)
             {
-                if (selections[i].ActorId != m_ActorId)
-                    throw new InvalidOperationException("Presentation equipment selection targets another Actor.");
+                for (int i = 0; i < selections.Count; i++)
+                    RequireCommandActor(selections[i].ActorId);
             }
-            m_PendingEquipment.Add(selections);
+            throw new InvalidOperationException(
+                "Equipment presentation requires a composed Equipment runtime.");
         }
 
         public void Publish(CharacterPresentationCommand command)
         {
-            RequireCommandActor(command);
-            m_PendingCommands.Add(command);
+            RequireCommandActor(command.Header.ActorId);
+            throw new InvalidOperationException(
+                "Presentation commands require composed Action, Timeline, and Pose runtimes.");
         }
 
         public void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement)
         {
-            RequireCommandActor(current);
-            RequireCommandActor(replacement);
-            int index = m_PendingCommands.FindIndex(command => command.Header.EventId.Equals(current.Header.EventId));
-            if (index < 0)
-                throw new InvalidOperationException($"Presentation replacement target '{current.Header.EventId}' is not pending.");
-            m_PendingCommands[index] = replacement;
+            RequireCommandActor(current.Header.ActorId);
+            RequireCommandActor(replacement.Header.ActorId);
+            throw new InvalidOperationException(
+                "Presentation replacement requires composed Action, Timeline, and Pose runtimes.");
         }
 
         public void Retire(CharacterPresentationCommand command)
         {
-            RequireCommandActor(command);
-            m_PendingCommands.RemoveAll(candidate => candidate.Header.EventId.Equals(command.Header.EventId));
+            RequireCommandActor(command.Header.ActorId);
+            throw new InvalidOperationException(
+                "Presentation retirement requires composed Action, Timeline, and Pose runtimes.");
         }
 
-        public void Reset()
-        {
-            m_Body.Reset();
-            m_PendingCommands.Clear();
-            m_ActiveCommands.Clear();
-            m_PendingTrajectories.Clear();
-            m_PendingEquipment.Clear();
-        }
+        public void Reset() => m_Body.Reset();
 
         public CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics() =>
             new(
@@ -97,25 +84,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public bool TryCaptureCheckpoint(SimulationSessionCheckpoint checkpoint, out string error)
         {
-            checkpoint = checkpoint ?? throw new ArgumentNullException(nameof(checkpoint));
+            if (checkpoint == null)
+                throw new ArgumentNullException(nameof(checkpoint));
             error = "Character Presentation checkpoint capture is not composed.";
             return false;
         }
 
         public bool TryRestoreCheckpoint(SimulationSessionCheckpoint checkpoint, out string error)
         {
-            checkpoint = checkpoint ?? throw new ArgumentNullException(nameof(checkpoint));
+            if (checkpoint == null)
+                throw new ArgumentNullException(nameof(checkpoint));
             error = "Character Presentation checkpoint restore is not composed.";
             return false;
         }
 
-        public void PresentationFrame(GameplayPresentationFrameContext context)
-        {
-            CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
-            if (!bodyFrame.IsValid)
-                return;
-            ApplyCommandTransaction();
-        }
+        public void PresentationFrame(GameplayPresentationFrameContext context) =>
+            m_Body.Present(context);
 
         public void Dispose()
         {
@@ -125,19 +109,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Body.Dispose();
         }
 
-        void ApplyCommandTransaction()
+        void RequireCommandActor(ActorId actorId)
         {
-            m_ActiveCommands.AddRange(m_PendingCommands);
-            m_PendingCommands.Clear();
-        }
-
-        void RequireCommandActor(CharacterPresentationCommand command)
-        {
-            if (command.Header.ActorId != m_ActorId)
-                throw new InvalidOperationException("Presentation command targets another Actor.");
+            if (actorId != m_ActorId)
+                throw new InvalidOperationException("Presentation input targets another Actor.");
         }
     }
 }
-
-
 

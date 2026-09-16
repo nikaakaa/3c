@@ -1,4 +1,4 @@
-{
+﻿{
     "name": "ThirdPersonClient.Runtime",
     "rootNamespace": "ThirdPersonCharacter",
     "references": [
@@ -21,6 +21,7 @@
         "BTSMTL.Diagnostics",
         "BTSMTL.Timeline",
         "BTSMTL.Timeline.Tree",
+        "BTSMTL.Timeline.Runtime",
         "BTSMTL.TreeDesigner",
         "NodeCanvas",
         "FlowCanvas",

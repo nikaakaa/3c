@@ -1,213 +1,88 @@
 # btsmtl-gameplay-semantic-ir Specification
 
 ## Purpose
-定义 Character authoring 到 numeric-neutral Gameplay Semantic IR 的唯一 Frontend、canonical artifact、稳定身份和非运行时边界，使不同 Numeric Target 共享业务语义而不共享目标 ABI。
+
+定义 BTSMTL Gameplay Graph 从作者数据到稳定图产物的编译边界。该规范只描述图自身的发现、校验、来源映射和数值降低，不再把 Character、Ability、Timeline、Pose、Control、Effect 或 Equipment 编成整角色 Program。
+
 ## Requirements
-### Requirement: Character Authoring 必须先编译为 Numeric-Neutral Semantic IR
 
-Compiler Frontend MUST以 CharacterPipelineDefinition 为唯一根，将全部可达 Graph、StateMachine、ConditionRuleGraph、Timeline、TreeClip、Blackboard、Action、Behavior、GameplayEffect 和 MotionCurve 编译为不可变 Gameplay Semantic IR。Frontend MUST先完成稳定 Authoring Discovery，再从唯一 discovered model 执行 Semantic Emission，并产出经过 canonical encode、decode、header 与 SemanticHash 校验的正式 artifact。IR MUST表达稳定 source identity、operation 语义、控制流、状态声明、数值字面量、producer identity 和能力要求；IR MUST不保存 Unity object、Float32 runtime value、Fixed runtime value、Network Model 或 mutable runtime state。Numeric Target MUST消费该 validated artifact，不得重新遍历 authoring 或直接接收 CharacterPipelineDefinition。
+### Requirement: 只有图拥有编译入口
 
-#### Scenario: 编译 Corin Semantic IR Artifact
+正式编译入口 MUST 接收一个明确的 Gameplay Graph 根及其可达子图、StateMachine、ConditionRuleGraph、Value Port 和 Graph-owned Blackboard 声明。CharacterPipelineDefinition 与 Ability 只提供装配、入口和引用，不得作为整角色编译根。TimelineData、AnimationClip、MotionCurve、Pose Graph、Control Module、GameplayEffect Profile 与 Equipment Profile 不得因为被引用就被展开进图产物。
 
-- **WHEN** Compiler Frontend 读取 Corin CharacterPipelineDefinition
-- **THEN** MUST只生成一份与 Numeric Target 无关且可 canonical 读取的 Semantic IR artifact
-- **AND** Float32 与 FixedQ32.32 Target MUST消费该 artifact，不得重新遍历节点生成另一套业务规则
+#### Scenario: 编译一个 Ability 使用的图
 
-#### Scenario: Frontend Discovery 失败
+- **WHEN** 作者从 Ability 入口请求其 Gameplay Graph 编译
+- **THEN** 编译器只发现该图及其声明的图依赖
+- **AND** 产物只包含图节点、边、常量、状态声明和来源映射
+- **AND** Ability 本身不生成独立 Ability Program 或整角色 Program
 
-- **WHEN** 可达 authoring 存在重复 identity、循环引用、缺失 owner 或缺失 Emitter
-- **THEN** Frontend MUST在 Semantic Emission 或 artifact publish 前失败并报告精确 source identity
-- **AND** MUST不跳过无效元素、读取旧 cache 或调用 Target Compiler
+#### Scenario: 图依赖越界
 
-### Requirement: Semantic IR Operation 必须由唯一 Emitter 定义
+- **WHEN** 图编译发现 Character、Timeline、Pose、Control、Effect 或 Equipment 的运行对象或作者资产
+- **THEN** 编译器 MUST 只记录稳定引用或报告越界
+- **AND** MUST 不把该对象复制为图内 operation、state slot 或 producer
 
-每个可执行 authoring type MUST由唯一 Frontend Emitter 生成 Semantic IR operation。Emitter MUST不读取 Local、ServerAuthoritative、Rollback、WorldSolver concrete type 或 Numeric Target 来改变业务控制流。Target 不支持某个 operation 时 MUST在 lowering 阶段明确失败，MUST不跳过 operation、改写规则或调用旧 runtime。
+### Requirement: 图闭包必须稳定且可追溯
 
-#### Scenario: Fixed Target 不支持某个 Operation
+Graph artifact MUST 保存稳定 graph identity、source revision、canonical dependency order、节点/边来源、端口 identity、常量来源和能力声明。Graph discovery MUST 拒绝重复 identity、循环依赖、缺失 owner、缺失节点定义、端口冲突和未声明的跨域依赖。
 
-- **WHEN** FixedQ32.32 Target 无法降低 Semantic IR 中的某个 operation
-- **THEN** target build MUST报告 operation source identity 与缺失 capability
-- **AND** MUST不生成 Rollback 专用节点或使用 Float32 evaluator fallback
+#### Scenario: 图顺序变化
 
-### Requirement: Semantic 数值字面量必须保持来源与精确降低边界
+- **WHEN** 作者只调整节点布局或不改变业务 identity 的连接顺序
+- **THEN** 编译器 MUST 按稳定 identity 生成 canonical graph bytes
+- **AND** Source Map MUST 继续指向原节点和端口
 
-Frontend MUST以 canonical source literal 保存 authoring 数值及其 source identity，不得在 IR 阶段提前量化为公共定点格式。Numeric Target MUST负责将 literal 转为自己的 scalar/vector 表示，并报告非法值、超范围、舍入或不支持的精度要求。
+#### Scenario: 图依赖缺失
 
-#### Scenario: 同一 MotionCurve 降低到不同 Target
+- **WHEN** 图引用的子图、节点定义或端口声明不存在
+- **THEN** 编译 MUST 失败并报告精确 source identity
+- **AND** MUST 不读取旧缓存、默认节点或其它同名对象
 
-- **WHEN** 同一 Semantic IR 分别交给 Float32 Target 与 FixedQ32.32 Target
-- **THEN** 两个 Target MUST从同一 source literal 独立生成各自 constant
-- **AND** Fixed lowering 的量化误差 MUST不改变 Float32 Program constant
+### Requirement: 图产物不得变成角色运行时
 
-### Requirement: Semantic IR 不得成为第二个 Runtime Interpreter
+Graph artifact MAY 被正式 Graph Runtime 读取，但 MUST 不成为 Character、Session、World 或 Presentation 的总运行入口。Runtime MUST 不从 authoring object 临时生成图副本，不从 stale artifact 回退作者对象，也 MUST 不通过图产物保存 Control、Timeline、Pose、World 或 Network Model 状态。
 
-Gameplay Semantic IR MUST只存在于编译和诊断边界。Unity Editor MAY将当前 canonical artifact 保存为 `Library` generated cache，但 MUST不把它创建为 ScriptableObject、Definition 配置字段、source-controlled authoring asset 或 Player 运行依赖。Runtime Host MUST加载已完成 target lowering 的 CharacterSimulationProgram，MUST不在运行时解释 IR、从 IR 临时生成 operation 或在 stale Program 时回退 IR 执行。
+#### Scenario: 图产物过期
 
-#### Scenario: Program Artifact 过期
+- **WHEN** Graph artifact 的 source revision、schema 或依赖 identity 与当前图不匹配
+- **THEN** 对应 Graph Runtime 请求 MUST 明确失败
+- **AND** Character Session MUST 不因此自动编译、猜测或替换其它领域数据
 
-- **WHEN** Host 发现 Program source revision 或 target manifest 与当前 Definition 不一致
-- **THEN** Host MUST拒绝创建 Session
-- **AND** MUST不直接解释 Semantic IR、读取 Library cache 或执行 authoring object
+### Requirement: 数值降低只服务图的数值语义
 
-#### Scenario: Library Cache 被清理
+图中的数值字面量 MUST 保留 canonical source literal 和类型来源。Float32 与 FixedQ32.32 MAY 按同一图语义分别降低数值节点，但结果 MUST 仍是图运行所需的数据，不得生成 Character Program、Character State ABI 或 Network Model 专属业务规则。Target 不支持图节点或数值类型时 MUST 在准备阶段明确失败。
 
-- **WHEN** 当前 Program/Projection 与 authoring source revision 匹配但 `.csir` cache 不存在
-- **THEN** Runtime MUST继续只按 Program/Projection 合同启动
-- **AND** Editor 在需要 Target build 或 IR inspection 时 MUST通过正式 Frontend 重建 artifact，不把 cache 缺失解释为 Runtime fallback
+#### Scenario: 同一图使用两个数值目标
 
-### Requirement: Semantic Identity 与 Target Artifact 必须可追溯
+- **WHEN** Float32 与 FixedQ32.32 为同一 Graph artifact 准备运行数据
+- **THEN** 两者 MUST 保持相同节点、边和业务语义
+- **AND** 只允许在数值表示、精度和 codec 层存在目标差异
 
-Semantic IR artifact MUST记录 ProgramId、CompilerVersion、OperationSetVersion、TickRate、SourceRevision、SemanticHash、capability manifest 与 canonical payload identity。每个 target Program manifest MUST记录同一 SemanticHash、source revision、compiler version、operation-set version、NumericProfile 和 required world capabilities；Program source map MUST能从 target operation、constant、state slot 和 producer 追溯回同一 Semantic IR/source identity。Artifact 路径、显示名或缓存时间 MUST不参与业务 identity。
+### Requirement: Ability、Timeline 与 Pose 必须保持领域边界
 
-#### Scenario: 比较 Float 与 Fixed Artifact
+Ability MUST 作为运行入口、引用集合和实例生命周期存在，不得再定义独立 Ability 编译链。Timeline MUST 直接消费正式 TimelineData、内容引用和播放私有状态，不生成 Timeline IR、Timeline operation 表或 Character Program operation。Pose MUST 使用正式 FlowCanvas 图实例和表现宿主，不生成 Pose IR、Pose ProgramImage 或第二套 Preview Runtime。
 
-- **WHEN** 两个 Program 来自相同 source revision 与 Semantic IR artifact 但使用不同 NumericProfile
-- **THEN** 两者 MUST具有相同 SemanticHash
-- **AND** MUST具有不同 ProgramHash 与可能不同的 LayoutHash
+#### Scenario: Ability 调用 Timeline
 
-#### Scenario: Semantic IR Cache 身份不匹配
+- **WHEN** Ability 请求播放一个 Timeline
+- **THEN** Ability 只提交调用 identity、参数和生命周期请求
+- **AND** Timeline Runtime MUST 直接准备和调度正式 TimelineData
+- **AND** 两者 MUST 不互相复制图、Timeline 内容或运行状态
 
-- **WHEN** cache 中的 ProgramId、CompilerVersion、OperationSetVersion、SourceRevision 或 SemanticHash 与当前 build expectation 不一致
-- **THEN** artifact loader MUST拒绝该 cache
-- **AND** MUST不按 Definition 名称、文件时间或旧 ProgramHash 近似接受
+#### Scenario: ScenePlay 观察 Ability
 
-### Requirement: Semantic IR Artifact 必须原子生成并可由普通 DotNet 读取
+- **WHEN** ScenePlay 选择一个 Ability 并开始正式 Session
+- **THEN** ScenePlay MUST 通过正式输入和请求入口启动 Ability
+- **AND** ScenePlay MUST 不创建 Ability Preview Player、Timeline Preview Session 或 Pose Fixture
+- **AND** Timeline UI 只能读取正式 binding、playback 和 completion 事实
 
-Frontend MUST使用 Core 中唯一 canonical codec 生成 Semantic IR artifact，并在发布前完成两次未修改 authoring 编译的 canonical bytes 比较、encode/decode round-trip 与 SemanticHash 校验。Unity artifact store MUST使用临时文件与原子替换发布当前 Definition cache；普通 .NET 项目 MUST从同一 portable Core source set读取相同 bytes，不复制 Unity serializer、DTO 或 schema。
+### Requirement: 旧整角色编译载体不得恢复
 
-#### Scenario: Frontend 重复编译未修改 Definition
+当前主线 MUST 不新增或恢复 `CharacterSimulationProgram`、`SimulationProgramCatalog`、整角色 `Program/Projection` Build、`ProgramEpoch` adoption、`.csim` 整角色 artifact、旧 Program Reader 或兼容 fallback。历史文档 MAY 保留旧名称作为迁移证据，但不得作为当前实现入口、规范要求或运行时依赖。
 
-- **WHEN** 同一 Definition、CompilerVersion、OperationSetVersion 与 source dependencies 未变化
-- **THEN** 两次 Frontend build MUST生成相同 canonical IR bytes 与 SemanticHash
-- **AND** artifact store MUST只发布完整通过校验的 bytes
+#### Scenario: 旧入口仍被调用
 
-#### Scenario: Artifact 写入中断
-
-- **WHEN** 新 artifact 在 encode、磁盘写入或重新读取校验阶段失败
-- **THEN** 当前 cache MUST不被部分文件替换
-- **AND** Target build MUST失败而不是读取临时文件或旧版本兼容格式
-
-### Requirement: Semantic IR Value输入必须遵守版本化Port Contract
-
-Character Gameplay Operation Set MUST为每个operation code声明numeric-neutral且版本化的Value input/output port contract。Contract MUST描述稳定port identity、canonical order、固定value kind或受约束kind group及允许转换。Semantic Frontend MUST使用该contract解析linked Value edge和未连接input constant，并 MUST在validated Semantic IR中保存每个constant input的target operation、target port、constant index与resolved value kind。`ProgramControlFlowEdge(kind=Value)` MUST继续是linked input唯一真值；系统 MUST不保存第二份linked binding或依赖constant identity字符串推导端口。
-
-#### Scenario: Linked Value输入通过合同解析
-
-- **WHEN** 一个InputScalar operation连接到Compare的Left端口
-- **THEN** Frontend MUST通过Operation Set合同解析source output和target input
-- **AND** Semantic IR MUST保留该Value edge且确认其resolved kind满足Compare约束
-
-#### Scenario: 未连接输入使用constant
-
-- **WHEN** Compare的Right端口没有Value edge并在authoring中保存数值常量
-- **THEN** Semantic IR MUST生成该literal及指向Compare/Right的结构化constant input binding
-- **AND** constant identity MUST不承担端口寻址语义
-
-#### Scenario: 受约束多态端口完成解析
-
-- **WHEN** Compare、And、Or、Not、BlackboardGet或BlackboardSet使用由上下文决定的Value kind
-- **THEN** Frontend MUST按operation contract、declaration reference和literal kind解析出确定的Semantic value kind
-- **AND** MUST不使用Unknown、Object、运行时反射或Target专用类型作为成功结果
-
-#### Scenario: Value来源或类型冲突
-
-- **WHEN** 同一target port存在两个Value edge、同时存在Value edge与constant binding、source output不存在或value kind不兼容
-- **THEN** Semantic artifact build MUST失败并报告source operation、target operation与port identity
-- **AND** MUST不发布近似IR、跳过binding或延迟到Runtime猜测
-
-### Requirement: MotionWarp authoring 必须编译为唯一 numeric-neutral operation
-
-Frontend MUST为每个合法MotionWarpClip生成唯一`TimelineMotionWarp` Semantic operation，并保存Translation Mode、Target Offset Space、Target Pose参数、Rotation Mode、Rotation Method、Limit Policy、当前mode实际消费的curve/rate、Timeline/Action Context provenance及到源MotionCurve operation的typed reference。IR MUST不保存Unity Transform、GameObject、AnimationCurve对象、Float32/Fixed累计pose或Solver类型，也 MUST不保存PositionWeight、YawWeight及其它未消费字段。
-
-#### Scenario: 编译带 MotionWarp 的动作 Timeline
-
-- **WHEN** Timeline包含合法MotionCurveClip和引用它的MotionWarpClip
-- **THEN** Semantic IR MUST包含两个独立operation
-- **AND** MotionWarp operation MUST通过typed reference唯一指向MotionCurve operation
-- **AND** SourceMap MUST能返回两个authoring clip
-
-### Requirement: MotionWarp轨迹solver必须保持Numeric-Neutral
-
-Gameplay Semantic IR MUST以typed字段表达MotionWarp source reference、Translation Mode、Target Offset Space、Target Pose参数、Rotation Mode、Rotation Method、Limit Policy及条件curve/rate。IR MUST不保存Float32/Fixed累计pose、Unity Transform、Animator Bone或运行时target对象。Float32与Fixed Target MUST从同一validated descriptor降低各自Program与state schema，不得重新遍历Timeline或发明Target专用mode。
-
-#### Scenario: 同一Corin IR降低两个Numeric Target
-
-- **WHEN** Corin IR包含SkewToTarget、ApproachDirection与ProgressCurve rotation
-- **THEN** Float32与Fixed Program MUST包含相同业务mode、offset空间、窗口和Limit Policy
-- **AND** 两者 MAY使用各自数值常量、curve codec和state slot identity
-- **AND** Fixed Target MUST不降级为旧总残差算法
-
-#### Scenario: IR包含未消费字段
-
-- **WHEN** Translation Mode或Rotation Method不消费某条curve或rate
-- **THEN** Frontend MUST拒绝含糊配置或从canonical descriptor中排除该字段
-- **AND** SemanticHash MUST不依赖Editor残留的未消费数据
-
-### Requirement: MotionWarp 必须成为两个 Numeric Target 的显式 capability
-
-Operation Set MUST声明MotionWarp operation schema、reference、state requirement与canonical modifier顺序。Float32和Fixed Target MUST显式声明支持或在Target编译时拒绝整个Program；系统 MUST不允许某个Network Model在runtime忽略未知Warp operation。
-
-#### Scenario: Target backend 缺少 MotionWarp
-
-- **WHEN** validated Semantic IR包含TimelineMotionWarp
-- **AND** 某Numeric Target没有完整实现该operation和state schema
-- **THEN** Target编译 MUST失败
-- **AND** MUST不生成会在运行时跳过Warp的Program
-
-### Requirement: MotionWarp source 与 Action Context 必须在 Semantic 阶段闭合
-
-Frontend MUST验证MotionWarp source、Timeline owner、窗口、Action channel、Override语义、Action Context call site与GameplayAbilityAdmissionProfile target requirement。shared Timeline被多个TimelineNode引用时，每个可执行call site MUST满足同一要求；任一call site缺少Action Context MUST使编译失败。
-
-#### Scenario: Shared Timeline 被普通状态复用
-
-- **WHEN** 一个包含MotionWarp的shared Timeline同时被动作状态和无Action Context状态引用
-- **THEN** Frontend MUST拒绝该Program
-- **AND** MUST不假定运行时只会走合法call site
-
-### Requirement: Semantic IR必须表达Character composition roots
-
-Validated Semantic IR MUST包含canonical root catalog，区分Character Root、Equipment Persistent与Equipment Route root，并保存root identity、serialized owner、FeatureId、RouteId、entry operation和source map。全部root MUST共享同一Operation Set、Graph identity规则、control topology验证和Value port contract。Semantic IR MUST不保存Unity Graph对象或为Feature建立第二种flow IR。
-
-#### Scenario: 编译多个Feature root
-
-- **WHEN** Equipment Profile包含Sawblade与Gun Feature
-- **THEN** Semantic IR MUST按稳定identity包含二者的Persistent/Route roots
-- **AND** 所有entry MUST指向同一validated operation table
-
-#### Scenario: Feature使用非法控制边
-
-- **WHEN** Feature graph包含RootTree同样不允许的control cycle
-- **THEN** 共享Semantic validation MUST拒绝
-- **AND** MUST不由Equipment compiler放宽规则
-
-### Requirement: Semantic IR必须使用numeric-neutral Equipment schema
-
-Semantic IR MUST表达Slot、Route、Equipment、Feature、Parameter schema/value、Initial Loadout、Presentation requirement、Action binding、Tag/Effect contribution、local state declaration、equipment operation与capability union。Scalar/Vector/Yaw值 MUST使用numeric-neutral canonical representation，并由Target lowering选择具体ABI。IR MUST不包含Float32 runtime类型、Unity asset引用、Network Model或visual instance。
-
-#### Scenario: 同一Corin源生成双Target
-
-- **WHEN** Float32与Fixed Compiler消费同一validated Semantic IR
-- **THEN** 两者 MUST解析相同Equipment/Feature/Route业务identity
-- **AND** numeric value MUST分别降低到目标类型
-
-#### Scenario: Target不支持Equipment operation
-
-- **WHEN** Fixed Target operation manifest缺少Feature实际使用的operation
-- **THEN** Target compile MUST拒绝整个Program
-- **AND** MUST不从IR删除该Feature或operation
-
-### Requirement: Equipment operation必须进入版本化Operation Set
-
-Operation Set MUST为Equipment identity/parameter read、change begin/commit/cancel、host entry/exit与route resolution声明稳定opcode、typed ports、state requirement、reference kind和failure result。Frontend、Float32与Fixed backend MUST使用同一semantic contract；新增或改变contract MUST提升Operation Set版本，MUST不通过字符串operation、反射或Feature回调扩展。
-
-#### Scenario: ReadEquipmentParameter端口
-
-- **WHEN** Graph读取Scalar参数
-- **THEN** Frontend MUST验证Context/Slot input、Parameter reference和Scalar output port
-- **AND** IR MUST保存稳定ParameterId而不是显示名
-
-#### Scenario: 未知Equipment opcode
-
-- **WHEN** Program target遇到未登记Equipment opcode
-- **THEN** compile/load MUST明确失败
-- **AND** runtime MUST不将其视为成功no-op
+- **WHEN** 新代码或新文档尝试通过整角色 Program/Projection 读取、构建或启动 Runtime
+- **THEN** 该路径 MUST 被视为迁移残留并删除或改接正式领域入口
+- **AND** MUST 不增加转发壳、兼容别名或空成功实现

@@ -82,12 +82,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 OperationHandle entry = macro?.Entry ?? FindEntry(graph, operations);
                 if (graph.Role == BtsmtlSkillFlowGraphRole.ConditionRule && !context.Owner.IsValid)
                     throw new InvalidOperationException("条件页必须继承明确的调用生命周期。");
-                OperationHandle invocationOwner = context.Owner.IsValid ? context.Owner : context.UseTimelineEnable
-                    ? operations.Node(graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single().UID)
-                    : entry;
-                m_Builder.DeclareGraphInvocation(invocationOwner, new SimulationSourceLocation(
+                SimulationSourceLocation invocationSource = new SimulationSourceLocation(
                     graph.Graph.GetType().FullName, graph.GraphId, string.Empty, string.Empty, string.Empty, string.Empty,
-                    graph.Route, contentHash: graph.ContentHash), context.CallerKind, context.CallerId, context.ClipId);
+                    graph.Route, contentHash: graph.ContentHash);
+                if (context.CallerKind == ProgramInvocationCallerKind.TimelineClip && !string.IsNullOrEmpty(context.ClipId))
+                {
+                    foreach (BtsmtlSkillTimelineHookFlowNode hook in graph.Nodes.OfType<BtsmtlSkillTimelineHookFlowNode>())
+                    {
+                        m_Builder.DeclareGraphInvocation(
+                            operations.Node(hook.UID),
+                            invocationSource,
+                            context.CallerKind,
+                            hook.Hook.ToString(),
+                            context.ClipId);
+                    }
+                }
+                else
+                {
+                    OperationHandle invocationOwner = context.Owner.IsValid ? context.Owner : context.UseTimelineEnable
+                        ? operations.Node(graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single().UID)
+                        : entry;
+                    m_Builder.DeclareGraphInvocation(invocationOwner, invocationSource, context.CallerKind, context.CallerId, context.ClipId);
+                }
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
                 {
                     if (reference.Kind == BtsmtlSkillGraphReferenceKind.StateMachine &&

@@ -435,7 +435,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 
-    public sealed class CharacterTimelineAbilityRuntime : IAbilityTimelineRuntime
+    public sealed class CharacterTimelineAbilityRuntime : IAbilityTimelineRuntime, IAbilityTreeClipInvokerHost
     {
         readonly CharacterTimelineHost m_Host;
         readonly IReadOnlyList<TimelineAsset> m_TimelineAssets;
@@ -490,6 +490,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             m_Host.DiscardTimelinePlayback((CharacterTimelinePendingAdvance)pending);
         }
+        public void PushTreeClipInvoker(IAbilityTreeClipInvoker invoker) =>
+            m_Host.PushTreeClipInvoker(invoker);
+
+        public void PopTreeClipInvoker() =>
+            m_Host.PopTreeClipInvoker();
+
         public AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle)
         {
             if (!m_Requests.TryGetValue(runtimeHandle, out AbilityTimelineStartRequest request))

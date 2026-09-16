@@ -684,6 +684,40 @@ namespace ThirdPersonSimulation
             return result.AsReadOnly();
         }
     }
+    public enum AbilityTreeClipHook : byte
+    {
+        OnEnable = 0,
+        OnDisable = 1,
+        OnDestroy = 2
+    }
+
+    public readonly struct AbilityTreeClipInvocation
+    {
+        public AbilityTreeClipInvocation(string clipAuthoringId, string treeGraphId, AbilityTreeClipHook hook)
+        {
+            ClipAuthoringId = SimulationIdentity.Require(clipAuthoringId, nameof(clipAuthoringId));
+            TreeGraphId = SimulationIdentity.Require(treeGraphId, nameof(treeGraphId));
+            if (!Enum.IsDefined(typeof(AbilityTreeClipHook), hook))
+                throw new ArgumentOutOfRangeException(nameof(hook));
+            Hook = hook;
+        }
+
+        public string ClipAuthoringId { get; }
+        public string TreeGraphId { get; }
+        public AbilityTreeClipHook Hook { get; }
+    }
+
+    public interface IAbilityTreeClipInvoker
+    {
+        bool InvokeTreeClip(in AbilityTreeClipInvocation invocation);
+    }
+
+    public interface IAbilityTreeClipInvokerHost
+    {
+        void PushTreeClipInvoker(IAbilityTreeClipInvoker invoker);
+        void PopTreeClipInvoker();
+    }
+
     public interface IAbilityTimelineRuntime
     {
         int Start(in AbilityTimelineStartRequest request);

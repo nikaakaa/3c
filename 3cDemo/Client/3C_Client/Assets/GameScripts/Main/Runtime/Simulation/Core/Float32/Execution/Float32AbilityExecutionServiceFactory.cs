@@ -154,6 +154,7 @@ namespace ThirdPersonSimulation
                 values,
                 motion,
                 frame);
+            var treeClipLink = new Float32TreeClipInvokerLink();
             Float32AbilityExecutionTarget target = new Float32AbilityExecutionTarget(
                 access,
                 controlState,
@@ -171,7 +172,8 @@ namespace ThirdPersonSimulation
                 actionStore,
                 workspace.TimelineAdvances,
                 workspace.TimelineStops,
-                frame.Tick);
+                frame.Tick,
+                treeClipLink);
             var services = new Float32AbilityExecutionServiceSet(
                 frame,
                 target,
@@ -182,7 +184,7 @@ namespace ThirdPersonSimulation
                 blackboard,
                 workspace.TimelineAdvances,
                 workspace.TimelineStops);
-            control = new Float32AbilityOperationControlRuntime(executionData, services);
+            control = new Float32AbilityOperationControlRuntime(executionData, services, treeClipLink);
             Float32AbilityDomainRuntime domain = new Float32AbilityDomainRuntime(
                 executionData.Binding,
                 executionServices,

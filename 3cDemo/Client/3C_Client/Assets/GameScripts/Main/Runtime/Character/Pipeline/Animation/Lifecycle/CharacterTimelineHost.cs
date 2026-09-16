@@ -52,14 +52,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
     }
 
-    internal sealed class CharacterTimelineMissingTreeClipService : ITimelineRuntimeTreeClipService
+    internal sealed class CharacterTimelineTreeClipService : ITimelineRuntimeTreeClipService
     {
-        public bool Consume(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context) =>
-            throw new InvalidOperationException($"Timeline TreeClip '{request.ClipAuthoringId}' requires a composed TreeClip service.");
+        readonly CharacterTimelineHost m_Host;
+
+        internal CharacterTimelineTreeClipService(CharacterTimelineHost host)
+        {
+            m_Host = host ?? throw new ArgumentNullException(nameof(host));
+        }
+
+        public bool Consume(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context)
+        {
+            if (request.EventKind == TimelineRuntimeTreeClipEventKind.Update)
+                return true;
+            IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker
+                ?? throw new InvalidOperationException($"Timeline TreeClip '{request.ClipAuthoringId}' requires an active Ability invoker.");
+            var invocation = new AbilityTreeClipInvocation(
+                request.ClipAuthoringId,
+                request.TreeGraphId,
+                request.EventKind == TimelineRuntimeTreeClipEventKind.Enter
+                    ? AbilityTreeClipHook.OnEnable
+                    : AbilityTreeClipHook.OnDisable);
+            return invoker.InvokeTreeClip(invocation);
+        }
+
         public void Discard(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context) { }
         public void Commit(TimelineRuntimeStepContext context) { }
         public void DiscardStep(TimelineRuntimeStepContext context) { }
-        public bool ConsumeStop(TimelineRuntimeStopRequest request) => false;
+        public bool ConsumeStop(TimelineRuntimeStopRequest request) => true;
         public void CommitStop(TimelineRuntimeStopRequest request) { }
         public void DiscardStop(TimelineRuntimeStopRequest request) { }
     }
@@ -167,7 +187,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         ulong m_TickCounter;
         TimelinePlaybackHandle m_PreviewHandle;
         TimelineRuntimeNumericTarget m_NumericTarget;
+        internal ThirdPersonSimulation.IAbilityTreeClipInvoker m_ActiveTreeClipInvoker;
         bool m_Initialized;
+
+        public void PushTreeClipInvoker(ThirdPersonSimulation.IAbilityTreeClipInvoker invoker)
+        {
+            if (invoker == null)
+                throw new ArgumentNullException(nameof(invoker));
+            if (m_ActiveTreeClipInvoker != null)
+                throw new InvalidOperationException("Timeline TreeClip invoker is already active.");
+            m_ActiveTreeClipInvoker = invoker;
+        }
+
+        public void PopTreeClipInvoker() => m_ActiveTreeClipInvoker = null;
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
         public bool IsInitialized => m_Initialized && m_Host != null;
@@ -186,7 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             var domainResolver = new CharacterTimelineDomainBindingResolver(
                 new[] { "self", "camera", "main" });
             var dependencyResolver = new CharacterTimelineDependencyResolver();
-            var treeClipService = new CharacterTimelineMissingTreeClipService();
+            var treeClipService = new CharacterTimelineTreeClipService(this);
 
             m_Host = new TimelineRuntimeCompositionHost(
                 contractCatalog,

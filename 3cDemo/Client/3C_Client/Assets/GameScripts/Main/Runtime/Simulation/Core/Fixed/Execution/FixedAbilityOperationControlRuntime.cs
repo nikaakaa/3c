@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using ThirdPersonPerformance.Instrumentation;
 
@@ -11,18 +12,31 @@ namespace ThirdPersonSimulation.Fixed
         void EndEvaluation();
     }
 
-    internal sealed class FixedAbilityOperationControlRuntime : IFixedAbilityOperationControlRuntime
+    internal sealed class FixedTreeClipInvokerLink
+    {
+        public IAbilityTreeClipInvoker Invoker;
+    }
+
+    internal sealed class FixedAbilityOperationControlRuntime : IFixedAbilityOperationControlRuntime, IAbilityTreeClipInvoker
     {
         readonly IFixedAbilityExecutionServices m_Services;
+        readonly Dictionary<string, OperationHandle> m_TreeClipEntries;
+        readonly string m_AbilityId;
+        readonly FixedTreeClipInvokerLink m_TreeClipLink = new FixedTreeClipInvokerLink();
         OperationControlRuntime<FixedAbilityExecutionTarget> m_Runtime;
 
         public FixedAbilityOperationControlRuntime(
             FixedGameplayAbilityExecutionData data,
-            IFixedAbilityExecutionServices services)
+            IFixedAbilityExecutionServices services,
+            FixedTreeClipInvokerLink treeClipLink)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
             m_Services = services ?? throw new ArgumentNullException(nameof(services));
+            m_TreeClipLink = treeClipLink ?? throw new ArgumentNullException(nameof(treeClipLink));
+            m_TreeClipLink.Invoker = this;
+            m_TreeClipEntries = BuildTreeClipEntries(data);
+            m_AbilityId = data.AbilityId.Value;
             m_Runtime = new OperationControlRuntime<FixedAbilityExecutionTarget>(
                 data.Topology,
                 m_Services.Target,
@@ -36,6 +50,44 @@ namespace ThirdPersonSimulation.Fixed
         }
         internal void EndEvaluation() => m_Services.EndEvaluation();
         public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
+
+        public bool InvokeTreeClip(in AbilityTreeClipInvocation invocation)
+        {
+            if (!m_TreeClipEntries.TryGetValue(TreeClipKey(invocation.ClipAuthoringId, invocation.Hook), out OperationHandle entry))
+            {
+                if (invocation.Hook != AbilityTreeClipHook.OnEnable)
+                    return false;
+                throw new InvalidOperationException(
+                    $"TreeClip '{invocation.ClipAuthoringId}' has no compiled OnEnable invocation in Ability '{m_AbilityId}'.");
+            }
+            OperationExecutionResult result = m_Runtime.Tick(entry);
+            if (result == OperationExecutionResult.Failure)
+                throw new InvalidOperationException(
+                    $"TreeClip '{invocation.ClipAuthoringId}' {invocation.Hook} invocation failed in Ability '{m_AbilityId}'.");
+            return true;
+        }
+
+        static string TreeClipKey(string clipAuthoringId, AbilityTreeClipHook hook) =>
+            string.Concat(clipAuthoringId, "|", hook.ToString("G"));
+
+        static Dictionary<string, OperationHandle> BuildTreeClipEntries(FixedGameplayAbilityExecutionData data)
+        {
+            var entries = new Dictionary<string, OperationHandle>(StringComparer.Ordinal);
+            foreach (ProgramSourceMapEntry entry in data.SourceMap)
+            {
+                if (entry.TargetKind != ProgramSourceTargetKind.GraphInvocation ||
+                    entry.InvocationCallerKind != ProgramInvocationCallerKind.TimelineClip ||
+                    string.IsNullOrEmpty(entry.InvocationCallerClipId) ||
+                    !Enum.TryParse(entry.InvocationCallerId, out AbilityTreeClipHook hook))
+                {
+                    continue;
+                }
+                if (!entries.TryAdd(TreeClipKey(entry.InvocationCallerClipId, hook), new OperationHandle(entry.TargetIndex)))
+                    throw new InvalidDataException(
+                        $"Ability '{data.AbilityId.Value}' has duplicate TreeClip invocation '{entry.InvocationCallerClipId}/{entry.InvocationCallerId}'.");
+            }
+            return entries;
+        }
 
         public bool IsActive(OperationHandle operation) => m_Runtime.IsActive(operation);
         public bool IsStopping(OperationHandle operation) => m_Runtime.IsStopping(operation);
@@ -66,6 +118,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         readonly FixedActionStateStore m_ActionState;
         readonly SimulationTick m_Tick;
+        readonly FixedTreeClipInvokerLink m_TreeClipLink;
         readonly List<IAbilityTimelinePending> m_TimelinePendingAdvances;
         readonly List<IAbilityTimelineStopPending> m_TimelinePendingStops;
 
@@ -86,7 +139,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedActionStateStore actionState,
             List<IAbilityTimelinePending> timelineAdvances,
             List<IAbilityTimelineStopPending> timelineStops,
-            SimulationTick tick)
+            SimulationTick tick,
+            FixedTreeClipInvokerLink treeClipLink)
         {
             m_Access = access;
             m_ControlState = controlState;
@@ -107,6 +161,7 @@ namespace ThirdPersonSimulation.Fixed
             m_TimelinePendingStops = timelineStops ??
                 throw new ArgumentNullException(nameof(timelineStops));
             m_Tick = tick;
+            m_TreeClipLink = treeClipLink;
         }
 
         public bool DiagnosticsEnabled => m_Trace.Enabled;
@@ -294,7 +349,18 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' did not return a runtime handle.");
                 m_ControlState.Set(slot, AbilityStateValue.FromInt32(runtimeHandle));
             }
-            AbilityTimelineTickResult tick = m_TimelineRuntime.Tick(runtimeHandle, m_Tick.Value, 1);
+            IAbilityTreeClipInvokerHost treeClipInvokerHost = m_TimelineRuntime as IAbilityTreeClipInvokerHost;
+            if (treeClipInvokerHost != null && m_TreeClipLink?.Invoker != null)
+                treeClipInvokerHost.PushTreeClipInvoker(m_TreeClipLink.Invoker);
+            AbilityTimelineTickResult tick;
+            try
+            {
+                tick = m_TimelineRuntime.Tick(runtimeHandle, m_Tick.Value, 1);
+            }
+            finally
+            {
+                treeClipInvokerHost?.PopTreeClipInvoker();
+            }
             if (tick.Pending != null)
                 m_TimelinePendingAdvances.Add(tick.Pending);
             return tick.Status switch

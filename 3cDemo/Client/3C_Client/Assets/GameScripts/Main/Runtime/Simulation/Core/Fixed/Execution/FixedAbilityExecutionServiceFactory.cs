@@ -157,6 +157,7 @@ namespace ThirdPersonSimulation.Fixed
                 values,
                 motion,
                 frame);
+            var treeClipLink = new FixedTreeClipInvokerLink();
             FixedAbilityExecutionTarget target = new FixedAbilityExecutionTarget(
                 access,
                 controlState,
@@ -174,7 +175,8 @@ namespace ThirdPersonSimulation.Fixed
                 actionStore,
                 workspace.TimelineAdvances,
                 workspace.TimelineStops,
-                frame.Tick);
+                frame.Tick,
+                treeClipLink);
             var services = new FixedAbilityExecutionServiceSet(
                 frame,
                 target,
@@ -185,7 +187,7 @@ namespace ThirdPersonSimulation.Fixed
                 blackboard,
                 workspace.TimelineAdvances,
                 workspace.TimelineStops);
-            control = new FixedAbilityOperationControlRuntime(executionData, services);
+            control = new FixedAbilityOperationControlRuntime(executionData, services, treeClipLink);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
                 executionData.Binding,
                 executionServices,

@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         void Activate();
         void Deactivate();
         void CaptureRenderFrame(ulong renderFrame);
+        void EnqueueRequest(string requestId);
     }
 
     public readonly struct FixedCharacterControlSourceContext
@@ -61,6 +62,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
 
         public string SourceIdentity { get; }
+
+        public void EnqueueRequest(string requestId) =>
+            throw new InvalidOperationException($"Neutral character input source has no request binding '{requestId}'.");
 
         public void Activate()
         {

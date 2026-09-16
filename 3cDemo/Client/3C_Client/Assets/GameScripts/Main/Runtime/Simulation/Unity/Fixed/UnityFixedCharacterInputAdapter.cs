@@ -144,6 +144,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
         }
 
+        public void EnqueueRequest(string requestId)
+        {
+            RequireAlive();
+            if (!m_Active)
+                throw new InvalidOperationException("Unity Fixed Input Adapter must be active before enqueuing a request.");
+            if (string.IsNullOrWhiteSpace(requestId))
+                throw new ArgumentException("Request id is required.", nameof(requestId));
+            for (int i = 0; i < m_RequestBindings.Count; i++)
+            {
+                if (string.Equals(m_RequestBindings[i].RequestId, requestId, StringComparison.Ordinal))
+                {
+                    RequestBinding binding = m_RequestBindings[i];
+                    m_PendingRequests.Add(new PendingRequest(
+                        binding.RequestId,
+                        NextRequestSequence(),
+                        m_RenderFrame,
+                        binding.BufferSeconds,
+                        binding.Priority,
+                        binding.TimingClass));
+                    return;
+                }
+            }
+            throw new InvalidOperationException($"Unity Fixed Input Adapter has no request binding '{requestId}'.");
+        }
+
         public FixedSimulationInput BuildInput(FixedCharacterInputBuildContext context)
         {
             RequireAlive();

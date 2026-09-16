@@ -2,6 +2,7 @@
 
 ## 当前状态
 
+- 2026-09-17：ScenePlay 预览获得 Ability 运行时正式触发操作：IUnityFixedCharacterControlSourceRuntime 新增 EnqueueRequest，Unity 输入适配器复用按键按下完全相同的 PendingRequest 管线（同一绑定、缓冲、优先级与 timing class）入队请求，Neutral 源显式拒绝；FixedCharacterHost.EnqueueAbilityInputRequest 作为领域公开操作校验注册与请求 id 后转发；ScenePlay 协调器按 Character Definition 的 AbilityGrant 列出 SourceInputRequestId 并提供 Trigger 按钮。请求经正式 Input ingress → Control 状态机 → Ability 激活 → Timeline Runtime 播放，不新建旁路执行器。
 - 2026-09-17：Timeline 数值目标改为正式接线：CharacterTimelineHost.Initialize 必须显式接收 TimelineRuntimeNumericTarget，组合宿主与快照 Restore 都使用同一目标，删除硬编码 Float32；SimulationExecutionBackendDefinition 新增抽象 TimelineNumericTarget，Float32／Fixed 后端各自声明，SimulationSessionHost 按已绑定组合暴露目标，表现工厂在初始化 Timeline Host 时传入。未知后端与未绑定组合按正式异常拒绝，不做默认值。
 - 2026-09-17：角色 Restore 事务接通 Timeline 快照回滚：Float32／Fixed 的 Character Restore 在 Session 发布后把恢复态中的 Timeline 快照逐条 ApplyRestore 回 Timeline runtime（句柄保持不变），并把旧状态中已不存在于恢复态的播放按正式 Stop／CommitStop 终止；Roster 绑定由 Pipeline 事务传入，Timeline runtime 的失败仍按正式异常抛出，不做假成功。
 - 2026-09-17：Timeline Advance／停止候选纳入 Float32／Fixed 角色状态统一边界：FixedCharacterRuntimeState 与 Float32CharacterRuntimeState 各自持有按 RuntimeHandle 排序去重的 typed AbilityTimelineRuntimeSnapshot 分区，评估结果只在 Consume（Commit）时捕获 Advance 快照并移除停止句柄，Discard 不写状态；两个 Canonical 状态 codec 以版本 5 序列化并哈希该分区，程序内 savepoint／Restore 经事务透传。Timeline runtime 的 ApplyRestore 回滚接线仍属后续批次。

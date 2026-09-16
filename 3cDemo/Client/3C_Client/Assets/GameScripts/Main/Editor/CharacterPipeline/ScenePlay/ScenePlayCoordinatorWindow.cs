@@ -3,6 +3,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using BTSMTL.Timeline;
+using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -112,6 +113,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             }
 
             EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Ability Runtime", EditorStyles.boldLabel);
+            DrawAbilityTriggers();
+
+            EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("Timeline", EditorStyles.boldLabel);
             EditorGUILayout.ObjectField("TimelineHost", m_TimelineHost, typeof(CharacterTimelineHost), true);
             DrawTimelineLengths();
@@ -141,6 +146,52 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             EditorGUILayout.LabelField("PoseResetGeneration", observation.PoseResetGeneration.ToString());
             EditorGUILayout.LabelField("PoseBones", observation.PoseBoneCount.ToString());
             EditorGUILayout.LabelField("PoseContributions", observation.PoseContributionCount.ToString());
+        }
+
+        void DrawAbilityTriggers()
+        {
+            if (m_CharacterHost == null || m_CharacterHost.CharacterDefinition == null)
+            {
+                EditorGUILayout.HelpBox("CharacterHost 不存在，先执行场景装配。", MessageType.Warning);
+                return;
+            }
+            if (!EditorApplication.isPlaying)
+            {
+                EditorGUILayout.HelpBox("进入 Play 后可触发 Ability 运行时 Timeline。", MessageType.None);
+                return;
+            }
+            IReadOnlyList<AbilityGrant> grants = m_CharacterHost.CharacterDefinition.AbilityGrants;
+            if (grants == null || grants.Count == 0)
+            {
+                EditorGUILayout.HelpBox("Character Definition 没有配置 Ability 授予。", MessageType.None);
+                return;
+            }
+            GUI.enabled = true;
+            for (int i = 0; i < grants.Count; i++)
+            {
+                AbilityGrant grant = grants[i];
+                if (grant == null || string.IsNullOrEmpty(grant.SourceInputRequestId))
+                    continue;
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField(grant.AbilityId, GUILayout.Width(160f));
+                    EditorGUILayout.LabelField($"request: {grant.SourceInputRequestId}");
+                    GUI.enabled = m_CharacterHost != null;
+                    if (GUILayout.Button("Trigger", GUILayout.Width(64f)))
+                    {
+                        try
+                        {
+                            m_CharacterHost.EnqueueAbilityInputRequest(grant.SourceInputRequestId);
+                            SetStatus($"Ability request '{grant.SourceInputRequestId}' enqueued.");
+                        }
+                        catch (System.Exception ex)
+                        {
+                            SetStatus($"Ability request failed: {ex.Message}");
+                        }
+                    }
+                    GUI.enabled = true;
+                }
+            }
         }
 
         void DrawTimelineLengths()

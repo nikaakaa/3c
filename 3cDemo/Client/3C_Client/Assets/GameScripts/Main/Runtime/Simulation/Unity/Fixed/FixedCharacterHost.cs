@@ -73,6 +73,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return true;
         }
 
+        public void EnqueueAbilityInputRequest(string requestId)
+        {
+            if (m_Registration == null)
+                throw new InvalidOperationException($"Fixed Character Host '{name}' has no active character registration.");
+            if (string.IsNullOrWhiteSpace(requestId))
+                throw new ArgumentException("Ability input request id is required.", nameof(requestId));
+            if (m_Registration.FixedControlSource is not IUnityFixedCharacterControlSourceRuntime controlSource)
+                throw new InvalidOperationException($"Fixed Character Host '{name}' control source does not support request enqueue.");
+            controlSource.EnqueueRequest(requestId);
+        }
+
 #if UNITY_EDITOR
         public void SetProfileAuthoring(
             CharacterPipelineDefinition characterDefinition,

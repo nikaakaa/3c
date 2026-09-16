@@ -1322,3 +1322,9 @@
 
 - SimulationSessionSourcePreparationContext 与 CreatePreparation 改为跨程序集正式入口，Fixed Session 准备不再依赖同程序集内部可见性。
 - Fixed 准备文件显式绑定 FixedSimulationTarget，消除按 Float32 目标解析时的类型缺口。
+
+## 2026-09-16 技能Timeline退出语义IR发射
+
+- 删除技能共享 Timeline Semantic Emitter、轨道／Clip记录、TreeClip语义编译器及其在 Ability Graph Compiler 中的二次发射调用；技能图叶子继续携带 timelineId 与 ActionContext 的精确内容引用。
+- Timeline 闭包发现改为直接遍历 TimelineAsset 的 Track 和 Clip，只为 TreeClip 保留技能图 Occurrence 编译；不再把 Timeline 内容编成第二份 IR 或 operation。
+- Ability Discovery / Authoring Model / Graph Compiler 的签名同步移除 Timeline emitter registry，避免残留旧编译入口。

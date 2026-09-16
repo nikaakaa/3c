@@ -81,7 +81,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 var graphCompiler = new BtsmtlSkillGraphCompiler(
                     builder,
                     domainBindings.Bind,
-                    model.TimelineEmitters,
                     blackboard,
                     providers.ControlModuleId,
                     providers.InputProviderOwnerId,

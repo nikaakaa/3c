@@ -34,14 +34,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly BtsmtlSkillFlowLeafEmitter m_Leaves;
         readonly BtsmtlSkillGraphFlowEmitter m_Flow;
-        readonly BtsmtlSkillTimelineCompiler m_Timelines;
         readonly IBtsmtlSkillBlackboardCompilation m_Blackboard;
         readonly Action<FlowNode, OperationHandle, string, SimulationSourceLocation> m_BindDomain;
         readonly Dictionary<string, BtsmtlSkillGraphCompilation> m_Graphs = new(StringComparer.Ordinal);
 
         public BtsmtlSkillGraphCompiler(GameplayAbilitySemanticBuilder builder,
             Action<FlowNode, OperationHandle, string, SimulationSourceLocation> bindDomain,
-            TimelineSemanticEmitterRegistry timelineEmitters, IBtsmtlSkillBlackboardCompilation blackboard,
+            IBtsmtlSkillBlackboardCompilation blackboard,
             string controlModuleId,
             string inputProviderOwnerId,
             string gameplayProviderOwnerId)
@@ -55,8 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 inputProviderOwnerId,
                 gameplayProviderOwnerId);
             m_Flow = new BtsmtlSkillGraphFlowEmitter(builder);
-            m_Timelines = new BtsmtlSkillTimelineCompiler(timelineEmitters, builder, Compile);
-        }
+            }
 
         public BtsmtlSkillGraphCompilation Compile(BtsmtlSkillGraphOccurrence graph, OperationHandle stateOwner) =>
             Compile(graph, stateOwner, default);
@@ -131,8 +129,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Flow.EmitEdges(graph, operations, stateOwner, (condition, owner) => Compile(condition.Condition, owner,
                     BtsmtlSkillInvocationContext.Condition(condition.Edge.UID,
                         condition.Edge.sourceNode is BtsmtlSkillStateFlowNode ? owner : invocationOwner)).Entry);
-                foreach (BtsmtlSkillTimelineOccurrence timeline in graph.Timelines)
-                    m_Timelines.Emit(graph, timeline, operations.Node(timeline.Node.UID), stateOwner);
                 PublishPortSources(graph, operations);
                 m_Blackboard.CompleteGraph(graph.Route, entry);
                 var result = new BtsmtlSkillGraphCompilation(entry, operations, macro);

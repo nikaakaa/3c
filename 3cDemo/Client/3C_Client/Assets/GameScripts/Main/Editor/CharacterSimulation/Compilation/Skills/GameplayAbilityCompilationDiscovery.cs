@@ -35,7 +35,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         public static IReadOnlyList<GameplayAbilityCompilationRecord> DiscoverAbilities(
             IReadOnlyList<AbilityGrant> grants,
-            TimelineSemanticEmitterRegistry timelineEmitters,
             SimulationCompileReport report)
         {
             if (grants == null || report == null)
@@ -62,7 +61,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     BtsmtlSkillGraphOccurrence entry = BtsmtlSkillGraphOccurrence.Read(
                         graph,
                         $"ability:{abilityId.Value}/graph:{graph.AuthoringId}",
-                        timelineEmitters,
                         report);
                     ValidateRelations(grant.Ability, entry, report);
                     result.Add(new GameplayAbilityCompilationRecord(grant, entry));

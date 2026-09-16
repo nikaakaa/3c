@@ -100,7 +100,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static BtsmtlSkillNativeStateMachineOccurrence Read(
             BtsmtlSkillNativeStateMachine machine,
             string route,
-            TimelineSemanticEmitterRegistry timelineEmitters,
             SimulationCompileReport report)
         {
             if (machine == null)
@@ -119,7 +118,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     : BtsmtlSkillGraphOccurrence.Read(
                         state.Body,
                         $"{route}/state:{state.UID}/body:{state.Body.AuthoringId}",
-                        timelineEmitters,
                         report);
                 states.Add(new BtsmtlSkillNativeStateOccurrence(state,
                     $"{route}/state:{state.UID}", body));
@@ -137,7 +135,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         : BtsmtlSkillGraphOccurrence.Read(
                             edge.Condition,
                             $"{route}/edge:{edge.UID}/condition:{edge.Condition.AuthoringId}",
-                            timelineEmitters,
                             report);
                     edges.Add(new BtsmtlSkillNativeEdgeOccurrence(
                         edge,
@@ -214,16 +211,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class BtsmtlSkillTimelineOccurrence
     {
-        internal BtsmtlSkillTimelineOccurrence(BtsmtlSkillTimelineFlowNode node, TimelineSemanticContentRecord content,
-            Dictionary<string, BtsmtlSkillGraphOccurrence> trees)
+        internal BtsmtlSkillTimelineOccurrence(BtsmtlSkillTimelineFlowNode node, Dictionary<string, BtsmtlSkillGraphOccurrence> trees)
         {
             Node = node;
-            Content = content;
             Trees = new System.Collections.ObjectModel.ReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence>(trees);
         }
 
         public BtsmtlSkillTimelineFlowNode Node { get; }
-        public TimelineSemanticContentRecord Content { get; }
         public IReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence> Trees { get; }
     }
 
@@ -252,17 +246,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public IReadOnlyList<BtsmtlSkillGraphReferenceOccurrence> References { get; }
         public IReadOnlyList<BtsmtlSkillTimelineOccurrence> Timelines { get; }
 
-        public static BtsmtlSkillGraphOccurrence Read(FlowGraph graph, string route,
-            TimelineSemanticEmitterRegistry timelineEmitters, SimulationCompileReport report)
+        public static BtsmtlSkillGraphOccurrence Read(FlowGraph graph, string route, SimulationCompileReport report)
         {
             if (string.IsNullOrWhiteSpace(route))
                 throw new ArgumentException("技能编译需要明确的调用路径。", nameof(route));
             BtsmtlSkillGraphClosure.Validate(graph, true);
-            return ReadOccurrence(graph, route, new BtsmtlSkillGraphFingerprint().Compute, timelineEmitters, report);
+            return ReadOccurrence(graph, route, new BtsmtlSkillGraphFingerprint().Compute, report);
         }
 
-        static BtsmtlSkillGraphOccurrence ReadOccurrence(FlowGraph graph, string route, Func<FlowGraph, string> contentHash,
-            TimelineSemanticEmitterRegistry timelineEmitters, SimulationCompileReport report)
+        static BtsmtlSkillGraphOccurrence ReadOccurrence(FlowGraph graph, string route, Func<FlowGraph, string> contentHash, SimulationCompileReport report)
         {
             string hash = contentHash(graph);
             if (string.IsNullOrWhiteSpace(hash))
@@ -297,7 +289,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         priority = transfer.Priority;
                         abortPolicy = transfer.AbortPolicy;
                         condition = transfer.Condition != null
-                            ? ReadOccurrence(transfer.Condition, $"{edgeRoute}/condition:{transfer.Condition.AuthoringId}", contentHash, timelineEmitters, report)
+                            ? ReadOccurrence(transfer.Condition, $"{edgeRoute}/condition:{transfer.Condition.AuthoringId}", contentHash, report)
                             : null;
                     }
                     else if (edge.sourcePort is FlowOutput && node is BtsmtlSkillCompositeFlowNode composite)
@@ -310,7 +302,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 priority = composite.Steps[i].Priority;
                                 abortPolicy = composite.Steps[i].AbortPolicy;
                                 condition = composite.Steps[i].Condition != null
-                                    ? ReadOccurrence(composite.Steps[i].Condition, $"{edgeRoute}/condition:{composite.Steps[i].Condition.AuthoringId}", contentHash, timelineEmitters, report)
+                                    ? ReadOccurrence(composite.Steps[i].Condition, $"{edgeRoute}/condition:{composite.Steps[i].Condition.AuthoringId}", contentHash, report)
                                     : null;
                                 break;
                             }
@@ -336,9 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 BtsmtlSkillNativeStateMachineOccurrence.Read(
                                     machine.StateMachine,
                                     $"{callSite}/fsm:{machine.StateMachine.AuthoringId}",
-                                    timelineEmitters,
                                     report)));
-                        }
                         break;
                     case BtsmtlSkillStateFlowNode state:
                         AddReference(node, BtsmtlSkillGraphReferenceKind.StateBody, state.Body);
@@ -346,21 +336,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 if (node is BtsmtlSkillTimelineFlowNode timeline)
                 {
-                    string timelineRoute = $"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}";
-                    TimelineSemanticContentDiscoveryResult content = TimelineSemanticContentDiscovery.Discover(
-                        timeline.Timeline, timelineRoute, timelineEmitters, report);
-                    if (!content.IsValid)
-                        throw new InvalidOperationException($"{timelineRoute}: Timeline内容发现失败。");
+                    if (!timeline.Timeline)
+                        throw new InvalidOperationException($"{route}/node:{node.UID}/timeline: 技能Timeline引用缺失。");
                     var trees = new Dictionary<string, BtsmtlSkillGraphOccurrence>(StringComparer.Ordinal);
-                    foreach (TimelineSemanticTrackRecord track in content.Content.Tracks)
-                        foreach (TimelineSemanticClipRecord clip in track.Clips)
-                            if (clip.Clip is TreeClip tree)
-                            {
-                                var child = (BtsmtlSkillFlowGraph)tree.AssetTree;
-                                trees.Add(tree.AuthoringId, ReadOccurrence(child,
-                                    $"{clip.Route}/tree:{child.AuthoringId}", contentHash, timelineEmitters, report));
-                            }
-                    timelines.Add(new BtsmtlSkillTimelineOccurrence(timeline, content.Content, trees));
+                    foreach (Track track in timeline.Timeline.Data.Tracks)
+                    {
+                        if (track == null)
+                            continue;
+                        foreach (Clip clip in track.Clips)
+                        {
+                            if (clip is not TreeClip treeClip)
+                                continue;
+                            var child = (BtsmtlSkillFlowGraph)treeClip.AssetTree;
+                            trees.Add(treeClip.AuthoringId, ReadOccurrence(child,
+                                $"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/tree:{child.AuthoringId}",
+                                contentHash, report));
+                        }
+                    }
+                    timelines.Add(new BtsmtlSkillTimelineOccurrence(timeline, trees));
                 }
             }
             return new BtsmtlSkillGraphOccurrence(graph, route, hash, nodes, edges, references, timelines);
@@ -370,7 +363,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string callSite = $"{route}/node:{owner.UID}/call:{kind}";
                 string childRoute = $"{callSite}/graph:{((IBtsmtlSkillFlowGraph)child).AuthoringId}";
                 references.Add(new BtsmtlSkillGraphReferenceOccurrence(owner, kind, callSite, hash,
-                    ReadOccurrence(child, childRoute, contentHash, timelineEmitters, report)));
+                    ReadOccurrence(child, childRoute, contentHash, report)));
             }
         }
 

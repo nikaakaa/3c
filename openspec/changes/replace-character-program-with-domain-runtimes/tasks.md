@@ -29,7 +29,7 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [x] 1.3 接入 Float32／Fixed 技能数值降低、唯一 codec 与 artifact store，交付按 Ability identity 保存和读取的正式产物。
 - [x] 1.4 已交付Input／Effect／Equipment／CharacterState的typed Provider种类、owner identity声明及Load身份检查入口；真实成员／类型／版本绑定由1.9收口。
 - [ ] 1.5 将Timeline owner的独立Prepare／CreatePlayback结果接入技能调用与非Skill调用装配；消费前确认数值目标、资源／成员和必要TreeClip服务已经实际匹配。现有准备实例不等同可推进播放，不能仅因IsReady或generation存在就报告完整可用；Advance／取消／Commit／Discard／Restore仍由Timeline交付并通过正式调用方接通。
-- [ ] 1.6 由主实现唯一修改BtsmtlSkillTimelineCompiler和共享技能调用入口，先删除其中Timeline轨道／Clip发射调用与专属适配，再接直接内容引用；保留TreeClip技能图编译与Step-scoped调用服务，不与Timeline任务共写该文件。
+- [x] 1.6 由主实现唯一修改BtsmtlSkillTimelineCompiler和共享技能调用入口，先删除其中Timeline轨道／Clip发射调用与专属适配，再接直接内容引用；保留TreeClip技能图编译与Step-scoped调用服务，不与Timeline任务共写该文件。
 
 - [x] 1.8 移出Ability前端无条件声明的GameplayEffectAggregate、runtime:rng、runtime:handle-allocator、runtime:fact-sequence等角色级状态，由原正式领域owner唯一提供；技能仅声明局部执行状态和必要服务引用。
 - [x] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄；服务由对应领域拥有、调用方提供，技能只绑定自己声明需要的成员。角色调用场景中修正InstallationSet给全部技能传同一Effect binding、Installation却拒绝未声明Effect技能的矛盾；不要求所有调用方拥有角色配置，必需服务缺失仍失败，不用空实现或全局启用能力绕过。

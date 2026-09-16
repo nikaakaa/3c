@@ -23,8 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramId programId,
             ProgramRevision sourceRevision,
             BtsmtlSkillGraphOccurrence entryGraph,
-            IDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> declarations,
-            TimelineSemanticEmitterRegistry timelineEmitters)
+            IDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> declarations)
         {
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             DefinitionPath = string.IsNullOrEmpty(definitionPath)
@@ -40,7 +39,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 new SortedDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration>(
                     declarations ?? throw new ArgumentNullException(nameof(declarations)),
                     StringComparer.Ordinal));
-            TimelineEmitters = timelineEmitters ?? throw new ArgumentNullException(nameof(timelineEmitters));
             AbilityId = new CharacterSkillId(definition.AbilityId);
         }
 
@@ -54,7 +52,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public string EntryIdentity => $"ability:{AbilityId.Value}";
         public BtsmtlSkillGraphOccurrence EntryGraph { get; }
         public IReadOnlyDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> Declarations => m_Declarations;
-        public TimelineSemanticEmitterRegistry TimelineEmitters { get; }
     }
 
     public static class GameplayAbilityAuthoringDiscovery
@@ -65,12 +62,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (report == null)
                 throw new ArgumentNullException(nameof(report));
-            return Discover(definition, TimelineSemanticEmitterRegistry.CreateDefault(), report);
+            return Discover(definition, report);
         }
 
         public static GameplayAbilityAuthoringCompilationModel Discover(
             GameplayAbilityDefinition definition,
-            TimelineSemanticEmitterRegistry timelineEmitters,
             SimulationCompileReport report)
         {
             if (report == null)
@@ -80,8 +76,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report.DiscoveryError("ability_definition_missing", "GameplayAbilityDefinition", "Gameplay Ability根资产缺失。");
                 return null;
             }
-            if (timelineEmitters == null)
-                throw new ArgumentNullException(nameof(timelineEmitters));
             try
             {
                 string path = AssetDatabase.GetAssetPath(definition);
@@ -111,7 +105,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 BtsmtlSkillGraphOccurrence entry = BtsmtlSkillGraphOccurrence.Read(
                     graph,
                     $"ability:{definition.AbilityId}/graph:{graph.AuthoringId}",
-                    timelineEmitters,
                     report);
                 if (!ValidateSubgraphDependencies(definition, entry, report))
                     return null;
@@ -143,8 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     new ProgramId($"ability:{guid}"),
                     sourceRevision,
                     entry,
-                    declarations,
-                    timelineEmitters);
+                    declarations);
             }
             catch (Exception exception)
             {

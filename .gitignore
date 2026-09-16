@@ -169,3 +169,4 @@ Tools/dead_sizes.py
 
 # 临时工作文件
 .tmp_*
+.codex/config.toml

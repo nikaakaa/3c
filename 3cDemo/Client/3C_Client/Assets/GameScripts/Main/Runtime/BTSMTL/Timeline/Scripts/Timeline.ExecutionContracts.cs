@@ -110,7 +110,7 @@ namespace BTSMTL.Timeline
             string entryIdentity,
             string contentIdentity,
             string sourceRevision,
-            string programHash,
+            string contentHash,
             string layoutHash,
             TimelineRuntimePlaybackState state,
             TimelineExecutionIdentity executionIdentity,
@@ -121,7 +121,7 @@ namespace BTSMTL.Timeline
             EntryIdentity = entryIdentity ?? string.Empty;
             ContentIdentity = contentIdentity ?? string.Empty;
             SourceRevision = sourceRevision ?? string.Empty;
-            ProgramHash = programHash ?? string.Empty;
+            ContentHash = contentHash ?? string.Empty;
             LayoutHash = layoutHash ?? string.Empty;
             State = state;
             ExecutionIdentity = executionIdentity;
@@ -134,7 +134,7 @@ namespace BTSMTL.Timeline
         public string EntryIdentity { get; }
         public string ContentIdentity { get; }
         public string SourceRevision { get; }
-        public string ProgramHash { get; }
+        public string ContentHash { get; }
         public string LayoutHash { get; }
         public TimelineRuntimePlaybackState State { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }

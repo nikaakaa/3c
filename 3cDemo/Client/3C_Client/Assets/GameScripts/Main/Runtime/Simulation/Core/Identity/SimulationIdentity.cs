@@ -143,17 +143,6 @@ namespace ThirdPersonSimulation
         public override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
     }
 
-    public readonly struct ProgramHash : IEquatable<ProgramHash>
-    {
-        public ProgramHash(StableHash value) { Value = value; }
-        public StableHash Value { get; }
-        public bool IsValid => Value.IsValid;
-        public bool Equals(ProgramHash other) => Value == other.Value;
-        public override bool Equals(object obj) => obj is ProgramHash other && Equals(other);
-        public override int GetHashCode() => Value.GetHashCode();
-        public override string ToString() => Value.ToString();
-    }
-
     public readonly struct LayoutHash : IEquatable<LayoutHash>
     {
         public LayoutHash(StableHash value) { Value = value; }
@@ -504,11 +493,11 @@ namespace ThirdPersonSimulation
         public override bool Equals(object obj) => obj is EventId other && Equals(other);
         public override int GetHashCode() => Value.GetHashCode();
         public override string ToString() => Value.ToString();
-        public static EventId Create(ProgramHash program, ActorId actor, ActivationId activation, SimulationTick tick, ulong sequence, string channel)
+        public static EventId Create(GameplayContentHash sourceContent, ActorId actor, ActivationId activation, SimulationTick tick, ulong sequence, string channel)
         {
-            if (!program.IsValid || !actor.IsValid || !activation.IsValid || !tick.IsValid || sequence == 0)
+            if (!sourceContent.IsValid || !actor.IsValid || !activation.IsValid || !tick.IsValid || sequence == 0)
                 throw new ArgumentException("Event identity is incomplete.");
-            return new EventId(StableHash.Compute(program.ToString(), actor.ToString(), activation.ToString(), tick.ToString(), sequence.ToString(CultureInfo.InvariantCulture), channel ?? string.Empty));
+            return new EventId(StableHash.Compute(sourceContent.ToString(), actor.ToString(), activation.ToString(), tick.ToString(), sequence.ToString(CultureInfo.InvariantCulture), channel ?? string.Empty));
         }
     }
 

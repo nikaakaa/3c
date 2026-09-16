@@ -451,7 +451,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 operation,
                 header.Activation.Source.ExecutionPath);
             var expectedEventId = EventId.Create(
-                new ProgramHash(producer.GameplayContentHash),
+                new GameplayContentHash(producer.GameplayContentHash),
                 actorId,
                 new ActivationId(
                     SimulationExecutionSource.FromSkillOperation(operation, producer.ExecutionPath),
@@ -492,7 +492,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var header = new SimulationEventHeader(
                 layout.CharacterRuntime.NumericProfile,
                 EventId.Create(
-                    new ProgramHash(producer.GameplayContentHash),
+                    new GameplayContentHash(producer.GameplayContentHash),
                     actorId,
                     activation,
                     authorityTick,

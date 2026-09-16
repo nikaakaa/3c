@@ -404,7 +404,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(generation));
             var activation = new ActivationId(source, generation);
             var eventId = EventId.Create(
-                new ProgramHash(m_Frame.Identity.ContentHash),
+                new GameplayContentHash(m_Frame.Identity.ContentHash),
                 m_Frame.ActorId,
                 activation,
                 m_Frame.Tick,
@@ -494,7 +494,7 @@ namespace ThirdPersonSimulation
                 generation = 1;
             var activation = new ActivationId(source, generation);
             var eventId = EventId.Create(
-                new ProgramHash(m_Frame.Identity.ContentHash),
+                new GameplayContentHash(m_Frame.Identity.ContentHash),
                 m_Frame.ActorId,
                 activation,
                 m_Frame.Tick,

@@ -245,7 +245,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly List<SimulationTraceRecord> m_Records;
         readonly SimulationNumericProfile m_NumericProfile;
-        readonly ProgramHash m_ContentHash;
+        readonly GameplayContentHash m_ContentHash;
         readonly ActorId m_ActorId;
         readonly SimulationTick m_Tick;
         ulong m_Sequence;
@@ -263,7 +263,7 @@ namespace ThirdPersonSimulation.Fixed
             if (!numericProfile.IsValid || !contentHash.IsValid || !actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Character Control trace identity is incomplete.");
             m_NumericProfile = numericProfile;
-            m_ContentHash = new ProgramHash(contentHash);
+            m_ContentHash = new GameplayContentHash(contentHash);
             m_ActorId = actorId;
             m_Tick = tick;
             m_Enabled = enabled;

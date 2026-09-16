@@ -1,6 +1,7 @@
 using System;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonSimulation;
 using ThirdPersonSimulation.ServerAuthoritative;
 using UnityEngine;
 
@@ -11,7 +12,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     public sealed class ServerAuthoritativeClientSceneBinding : MonoBehaviour
     {
         [SerializeField] SimulationSessionHost m_SessionHost;
-        [SerializeField] CharacterPipelineHost m_CharacterHost;
+        [SerializeField] MonoBehaviour m_CharacterHost;
         [SerializeField] SimulationSessionCompositionDefinition m_ClientAComposition;
         [SerializeField] SimulationSessionCompositionDefinition m_ClientBComposition;
 
@@ -45,7 +46,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     throw new InvalidOperationException("Selected Client Composition ActorId does not match the explicit launch identity.");
                 }
                 m_SessionHost.BindComposition(composition);
-                m_CharacterHost.BindSessionActor(m_SessionHost, process.ActorId);
+                if (m_CharacterHost is not IServerAuthoritativeLocalActorBinder binder)
+                    throw new InvalidOperationException("Client Scene Character Host does not implement the local Actor binding contract.");
+                binder.BindSessionActor(m_SessionHost, process.ActorId);
             }
             catch
             {
@@ -54,5 +57,10 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 throw;
             }
         }
+    }
+
+    internal interface IServerAuthoritativeLocalActorBinder
+    {
+        void BindSessionActor(SimulationSessionHost sessionHost, ActorId actorId);
     }
 }

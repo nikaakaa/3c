@@ -1367,3 +1367,7 @@
 
 ## 2026-09-16 修复Timeline Capture语法边界
 - 补回 Timeline Runtime Service 中 Capture 方法缺失的方法体左括号；不改变 Capture 只允许已提交 Step 边界的约束。
+
+## 2026-09-16 解耦ServerAuthoritative本地Actor绑定
+- Client Scene Binding 不再引用已删除的 CharacterPipelineHost；场景宿主字段改为正式 IServerAuthoritativeLocalActorBinder 合同。
+- 绑定前显式校验合同实现，失败原因不落入默认路径；新的 ServerAuthoritative 本地 Host 后续实现该合同。

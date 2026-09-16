@@ -1228,3 +1228,9 @@
 - 1.11 已完成。Float32／Fixed `AbilityExecutionFrame` 只接收技能局部状态、调用输入、BodyFacts 和角色调用方显式提供的 typed service，不再接收角色状态对象或创建角色事务。
 - 角色级候选提交、Savepoint、InputRequests、Action、Effect、Equipment、句柄和事件序号均由角色评估层装配；`AbilityControlRuntime` 只使用外部注入的领域服务，不组装角色模块。
 - 角色评估层保留唯一的角色事务、候选聚合和 WorldSolveRequest 创建；技能执行结果只包含自身运动、Gameplay、Presentation 和 Trace 候选。
+
+## 2026-09-16 对账独立Ability数据执行链
+
+- 1.10 已完成。Character Definition 从独立 Ability artifact 形成 Float32／Fixed 安装集合，安装集合提供每个技能自己的执行数据、执行身份与 `GameplayAbilityExecutionLayout`；角色评估层按安装项创建独立 invocation，并把 Tick、取消、调用实例状态与角色快照恢复接回现有 Pipeline。
+- Float32／Fixed runtime state codec 按技能身份和布局读写技能分区，角色级 Control、Input、Action、Gameplay Effect、Equipment、句柄及事件序号仍由角色状态持有；没有恢复整角色 Program 解码、FromProgram 转换或混合兼容入口。
+- Float32、Fixed、ServerAuthoritative、DeterministicRollback 核心项目编译均为 0 warning、0 error，并已分别执行 `dotnet build-server shutdown`。

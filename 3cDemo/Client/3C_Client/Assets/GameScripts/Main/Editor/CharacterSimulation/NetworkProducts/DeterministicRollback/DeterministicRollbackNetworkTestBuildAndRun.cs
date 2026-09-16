@@ -135,9 +135,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 RequireObjectReference(actors[i], "m_InputProfile", definition.InputProfile);
                 RequireObjectReference(actors[i], "m_CharacterDefinition", definition);
             }
-            if (runtimeRootPrefab.GetComponentsInChildren<CharacterPipelineHost>(true).Length != 0)
-                throw new InvalidOperationException("Rollback runtime root contains a legacy CharacterPipelineHost.");
-
             DeterministicRollbackDemoStatusOverlay overlay = RequireSingle(
                 runtimeRootPrefab.GetComponentsInChildren<DeterministicRollbackDemoStatusOverlay>(true),
                 "Rollback runtime root requires exactly one diagnostics overlay.");
@@ -187,8 +184,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .ToArray();
                 if (actors.Length != 2 || actors.Any(value => value.SessionHost != session))
                     throw new InvalidOperationException("Rollback Debug Scene Actor Host roster is not bound to its Session Host.");
-                if (roots.SelectMany(value => value.GetComponentsInChildren<CharacterPipelineHost>(true)).Any())
-                    throw new InvalidOperationException("Rollback Debug Scene contains a legacy CharacterPipelineHost.");
                 DeterministicCollisionWorldAuthoring[] worlds = roots
                     .SelectMany(value => value.GetComponentsInChildren<DeterministicCollisionWorldAuthoring>(true))
                     .ToArray();

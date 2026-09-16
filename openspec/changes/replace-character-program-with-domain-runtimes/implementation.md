@@ -1375,3 +1375,7 @@
 ## 2026-09-16 对齐Network Delta解码合同
 - Remote checkpoint 重建改为调用 NetworkCheckpointCodec 的最新 ReadDelta 合同；authority tick、acknowledged input、event horizon、remote actor 已包含在 delta payload 内。
 - 删除调用端的重复元数据参数，避免同一快照身份存在两个来源。
+
+## 2026-09-16 迁移运行诊断选择到正式Host
+- Rollback 产品校验只要求两个正式 DeterministicRollbackCharacterHost，删除对已退役 CharacterPipelineHost 的类型检查。
+- 运行诊断场景选择改为识别 FixedCharacterHost 或 DeterministicRollbackCharacterHost；旧总 Host 不再作为诊断入口。

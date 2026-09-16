@@ -561,12 +561,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Int32, ProgramStateOwnerKind.Timeline, ProgramStateSemantic.TimelinePlayback));
             }
-            if (code == SimulationOperationCode.TimelineTreeClip)
-            {
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Int32, ProgramStateOwnerKind.Timeline, ProgramStateSemantic.TimelinePlayback));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Int32, ProgramStateOwnerKind.Timeline, ProgramStateSemantic.TimelineTreeClipCycle));
-                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Scalar, ProgramStateOwnerKind.Timeline, ProgramStateSemantic.TimelineLogicTime));
-            }
             return slots;
         }
 

@@ -272,8 +272,7 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.StateExit:
                 case SimulationOperationCode.TimelineAnimation:
                 case SimulationOperationCode.TimelineMotionCurve:
-                case SimulationOperationCode.TimelineTreeClip:
-                case SimulationOperationCode.TimelineCue:
+                    case SimulationOperationCode.TimelineCue:
                 case SimulationOperationCode.TimelineCameraState:
                 case SimulationOperationCode.TimelineCameraCue:
                 case SimulationOperationCode.TimelineCameraResponse:

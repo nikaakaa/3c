@@ -1351,3 +1351,7 @@
 ## 2026-09-16 对账Gameplay Runtime组合职责
 - Fixed 与 Float32 会话组合现在消费 CharacterRuntime、执行 Backend、不可变 Pipeline 包、Source、WorldSolver、Diagnostics 和显式初始状态；没有 Program Runtime 安装残留。
 - SimulationPipelineCompiler 继续负责顺序、产品、能力校验和不可变启动身份；运行时请求只传入领域服务与状态。
+
+## 2026-09-16 对账领域执行Pass端口
+- Ingress、Schedule、Evaluate、WorldResolveBatch、Egress 和 Finalize 已通过 CharacterRuntimePort 获取领域执行服务；旧 ProgramRuntime port 没有消费者。
+- Backend 仍按不可变 Pipeline 顺序创建 pass runtime，Step 产品由原 owner 写入并在原子 Commit 中发布，未另起时钟或旁路执行链。

@@ -1214,3 +1214,11 @@
 
 - 提交 `dda535710`，将 Float32、Fixed、回放和 ServerAuthoritative 共用的 `CharacterSimulationInput` 统一为 `SimulationInput`，清除旧类型引用。
 - 保留输入值、输入请求、tick 来源、序列号、排序和网络编码布局，不保留旧类型别名；本次检查被现有执行层缺失的 `GameplayAbilityExecutionLayout`、`TypedStateAddress` 等类型阻塞，未发现 `SimulationInput` 本步新增错误。
+
+## 2026-09-16 收敛Ability角色边界
+
+- 提交 `5c1ea8076`，移除 Ability invocation 对角色级 `AcceptAbility` 回调的持有，由角色评估层在完成技能候选后显式提交。
+- 提交 `aedee7aa6`，将角色级 Savepoint 从 Ability 执行帧和技能状态服务中移出，只由角色评估层注入 Gameplay Effect 与 Equipment 领域。
+- 提交 `ff03fa03a`，将角色级 InputRequests 从 Ability 执行帧和技能状态服务中移出，由角色评估层注入 InputRuntime，保留同一请求的统一消费事实。
+- 提交 `b2cadd0b4`，删除混合的 `AbilityInvocationStateServices`，技能局部状态与角色级 Action、Effect、Equipment、句柄和序号端口改为显式装配。
+- Float32、Fixed、ServerAuthoritative 与 DeterministicRollback 核心项目均使用禁用 Build Server 参数编译通过，结果为 0 warning、0 error。

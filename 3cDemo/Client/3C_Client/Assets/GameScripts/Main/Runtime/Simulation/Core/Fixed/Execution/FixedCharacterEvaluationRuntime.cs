@@ -72,7 +72,6 @@ namespace ThirdPersonSimulation.Fixed
                     FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
                     var stateServices = new FixedAbilityInvocationStateServices(
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
-                        roleState,
                         roleState.InputRequests,
                         roleState.ActionState,
                         roleState.HandleAllocatorState,
@@ -85,6 +84,7 @@ namespace ThirdPersonSimulation.Fixed
                         domainRuntimeFactory,
                         installation.EquipmentLayout,
                         stateServices,
+                        roleState,
                         actor.ActorId,
                         tick,
                         abilityInput,

@@ -8,7 +8,8 @@ namespace ThirdPersonSimulation.Fixed
         IFixedGameplayTagQuery,
         IFixedGameplayEffectActionPort
     {
-        readonly FixedAbilityExecutionFrame m_Frame;
+		readonly FixedAbilityExecutionFrame m_Frame;
+		readonly IFixedAbilityExecutionSavepointPort m_SavepointPort;
         readonly IFixedActionContextReader m_Actions;
         readonly FixedHandleAllocator m_Handles;
         readonly FixedFactSink m_Facts;
@@ -17,18 +18,20 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedGameplayEffectExecutionScratch m_Scratch;
         FixedGameplayEffectTarget m_GameplayEffects;
 
-        public FixedGameplayEffectOperationRuntime(
-            FixedGameplayAbilityExecutionAccess access,
-            FixedAbilityExecutionFrame frame,
+		public FixedGameplayEffectOperationRuntime(
+			FixedGameplayAbilityExecutionAccess access,
+			IFixedAbilityExecutionSavepointPort savepointPort,
+			FixedAbilityExecutionFrame frame,
             IFixedActionContextReader actions,
             FixedHandleAllocator handles,
             FixedFactSink facts,
             FixedPresentationSink presentation,
             FixedTraceSink trace,
-            FixedGameplayEffectExecutionScratch scratch)
-            : base(access)
-        {
-            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+			FixedGameplayEffectExecutionScratch scratch)
+			: base(access)
+		{
+			m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
+			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
             m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
@@ -41,8 +44,8 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (m_GameplayEffects != null)
                 throw new InvalidOperationException("Gameplay Effect evaluation is already active.");
-            m_GameplayEffects = new FixedGameplayEffectTarget(
-                m_Frame.SavepointPort,
+			m_GameplayEffects = new FixedGameplayEffectTarget(
+				m_SavepointPort,
                 m_Frame.GameplayEffectState,
                 Access.Services.GameplayEffectCatalog,
                 m_Frame.ActorId,

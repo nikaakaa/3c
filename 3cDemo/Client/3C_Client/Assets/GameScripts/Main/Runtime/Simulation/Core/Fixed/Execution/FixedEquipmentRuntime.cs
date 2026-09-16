@@ -9,6 +9,7 @@ namespace ThirdPersonSimulation.Fixed
 		IEquipmentActionContextProvider
 	{
 		readonly FixedAbilityExecutionFrame m_Frame;
+		readonly IFixedAbilityExecutionSavepointPort m_SavepointPort;
 		readonly FixedActionStateStore m_Actions;
 		readonly FixedHandleAllocator m_Handles;
 		readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
@@ -19,15 +20,17 @@ namespace ThirdPersonSimulation.Fixed
 		readonly Dictionary<int, EquipmentChangeOutcome> m_Outcomes = new Dictionary<int, EquipmentChangeOutcome>();
 		public FixedEquipmentRuntime(
 			FixedGameplayAbilityExecutionAccess access,
+			IFixedAbilityExecutionSavepointPort savepointPort,
 			FixedAbilityExecutionFrame frame,
 			FixedActionStateStore actions,
 			FixedHandleAllocator handles,
             FixedGameplayEffectOperationRuntime gameplayEffects,
             FixedFactSink facts,
             FixedTraceSink trace,
-            EquipmentProgramLayout equipmentLayout)
+			EquipmentProgramLayout equipmentLayout)
 			: base(access)
 		{
+			m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
 			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
@@ -311,7 +314,7 @@ namespace ThirdPersonSimulation.Fixed
 		void IEquipmentRuntimePort.RemoveTags(string sourceId) => RequireGameplayEffects().RemoveEquipmentTags(sourceId);
 		ulong IEquipmentRuntimePort.ApplyPassiveEffect(string effectId) => RequireGameplayEffects().ApplyEquipmentPassive(effectId);
 		void IEquipmentRuntimePort.RemovePassiveEffect(ulong handle) => RequireGameplayEffects().RemoveEquipmentPassive(handle);
-		IEquipmentMutationScope IEquipmentRuntimePort.BeginMutation() => new MutationScope(m_Frame);
+		IEquipmentMutationScope IEquipmentRuntimePort.BeginMutation() => new MutationScope(m_Frame, m_SavepointPort);
 		void IEquipmentRuntimePort.CommitEffectOutputs(OperationHandle source) => RequireGameplayEffects().CommitEquipmentMutation(RequireSource(source));
 		void IEquipmentRuntimePort.CancelEffectOutputs() => RequireGameplayEffects().CancelEquipmentMutation();
 		void IEquipmentRuntimePort.EmitLifecycle(OperationHandle source, EquipmentSlotState before, EquipmentSlotState after, PendingEquipmentChangeState state, EquipmentChangeId changeId)
@@ -341,15 +344,17 @@ namespace ThirdPersonSimulation.Fixed
 		sealed class MutationScope : IEquipmentMutationScope
 		{
 			readonly FixedAbilityExecutionFrame m_Frame;
+			readonly IFixedAbilityExecutionSavepointPort m_SavepointPort;
 			readonly IFixedAbilityExecutionSavepoint m_Savepoint;
 			readonly FixedAbilityOutputSavepoint m_OutputSavepoint;
 			readonly AbilityStateValue[] m_Values;
 			bool m_Completed;
 
-			public MutationScope(FixedAbilityExecutionFrame frame)
+			public MutationScope(FixedAbilityExecutionFrame frame, IFixedAbilityExecutionSavepointPort savepointPort)
 			{
 				m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-				m_Savepoint = frame.SavepointPort.CreateSavepoint();
+				m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
+				m_Savepoint = m_SavepointPort.CreateSavepoint();
 			m_OutputSavepoint = frame.CreateOutputSavepoint();
                 m_Values = new AbilityStateValue[frame.Data.StateSlots.Count];
 			for (int i = 0; i < m_Values.Length; i++)
@@ -360,7 +365,7 @@ namespace ThirdPersonSimulation.Fixed
 			{
 				if (m_Completed)
 					throw new InvalidOperationException("Equipment mutation scope is already completed.");
-				m_Frame.SavepointPort.Release(m_Savepoint);
+				m_SavepointPort.Release(m_Savepoint);
 				m_Completed = true;
 			}
 
@@ -369,7 +374,7 @@ namespace ThirdPersonSimulation.Fixed
 				if (m_Completed)
 					return;
 			m_Frame.RestoreOutput(m_OutputSavepoint);
-			m_Frame.SavepointPort.Restore(m_Savepoint);
+				m_SavepointPort.Restore(m_Savepoint);
 			for (int i = 0; i < m_Values.Length; i++)
 				m_Frame.SkillState.Set(i, m_Values[i]);
 				m_Completed = true;

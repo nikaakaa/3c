@@ -8,6 +8,7 @@ namespace ThirdPersonSimulation
 		IFloat32GameplayEffectActionPort
 	{
 		readonly Float32AbilityExecutionFrame m_Frame;
+		readonly IFloat32AbilityExecutionSavepointPort m_SavepointPort;
 		readonly IFloat32ActionContextReader m_Actions;
 		readonly Float32HandleAllocator m_Handles;
 		readonly Float32FactSink m_Facts;
@@ -18,6 +19,7 @@ namespace ThirdPersonSimulation
 
 		public Float32GameplayEffectOperationRuntime(
 			Float32GameplayAbilityExecutionAccess access,
+			IFloat32AbilityExecutionSavepointPort savepointPort,
 			Float32AbilityExecutionFrame frame,
 			IFloat32ActionContextReader actions,
 			Float32HandleAllocator handles,
@@ -27,6 +29,7 @@ namespace ThirdPersonSimulation
 			Float32GameplayEffectExecutionScratch scratch)
 			: base(access)
 		{
+			m_SavepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
 			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
@@ -40,8 +43,8 @@ namespace ThirdPersonSimulation
 		{
 			if (m_GameplayEffects != null)
 				throw new InvalidOperationException("Gameplay Effect evaluation is already active.");
-            m_GameplayEffects = new Float32GameplayEffectTarget(
-                m_Frame.SavepointPort,
+			m_GameplayEffects = new Float32GameplayEffectTarget(
+				m_SavepointPort,
                 m_Frame.GameplayEffectState,
                 Access.Services.GameplayEffectCatalog,
                 m_Frame.ActorId,

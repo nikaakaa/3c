@@ -80,7 +80,6 @@ namespace ThirdPersonSimulation.Fixed
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
         readonly FixedAbilityBodyFacts m_BodyFacts;
-        readonly IFixedAbilityExecutionSavepointPort m_SavepointPort;
         readonly IFixedGameplayEffectStatePort m_GameplayEffectState;
         readonly IFixedEquipmentStatePort m_EquipmentState;
         IFixedSkillExecutionStateAccess m_SkillExecutionStateAccess;
@@ -108,7 +107,6 @@ namespace ThirdPersonSimulation.Fixed
             m_BodyFacts = bodyFacts;
             stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
             SkillState = stateServices.SkillState;
-            m_SavepointPort = stateServices.SavepointPort;
             InputRequests = stateServices.InputRequests;
             ActionState = stateServices.ActionState;
             HandleAllocatorState = stateServices.HandleAllocatorState;
@@ -137,8 +135,6 @@ namespace ThirdPersonSimulation.Fixed
             ? m_BodyFacts
             : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");
         internal IFixedSkillExecutionState SkillState { get; }
-        internal IFixedAbilityExecutionSavepointPort SavepointPort => m_SavepointPort ??
-            throw new InvalidOperationException("Fixed Ability invocation has no execution savepoint service.");
         internal IFixedInputRequestStatePort InputRequests { get; }
         internal IFixedActionRuntimeStatePort ActionState { get; }
         internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; }

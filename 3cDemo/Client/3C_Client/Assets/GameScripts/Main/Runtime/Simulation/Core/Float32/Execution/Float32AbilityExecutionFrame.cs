@@ -79,7 +79,6 @@ namespace ThirdPersonSimulation
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
         readonly Float32AbilityBodyFacts m_BodyFacts;
-        readonly IFloat32AbilityExecutionSavepointPort m_SavepointPort;
         readonly IFloat32GameplayEffectStatePort m_GameplayEffectState;
         readonly IFloat32EquipmentStatePort m_EquipmentState;
         IFloat32SkillExecutionStateAccess m_SkillExecutionStateAccess;
@@ -107,7 +106,6 @@ namespace ThirdPersonSimulation
             m_BodyFacts = bodyFacts;
             stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
             SkillState = stateServices.SkillState;
-            m_SavepointPort = stateServices.SavepointPort;
             InputRequests = stateServices.InputRequests;
             ActionState = stateServices.ActionState;
             HandleAllocatorState = stateServices.HandleAllocatorState;
@@ -136,8 +134,6 @@ namespace ThirdPersonSimulation
             ? m_BodyFacts
             : throw new InvalidOperationException("Float32 Ability invocation has no Body Facts service.");
         internal IFloat32SkillExecutionState SkillState { get; }
-        internal IFloat32AbilityExecutionSavepointPort SavepointPort => m_SavepointPort ??
-            throw new InvalidOperationException("Float32 Ability invocation has no execution savepoint service.");
         internal IFloat32InputRequestStatePort InputRequests { get; }
         internal IFloat32ActionRuntimeStatePort ActionState { get; }
         internal IFloat32HandleAllocatorStatePort HandleAllocatorState { get; }

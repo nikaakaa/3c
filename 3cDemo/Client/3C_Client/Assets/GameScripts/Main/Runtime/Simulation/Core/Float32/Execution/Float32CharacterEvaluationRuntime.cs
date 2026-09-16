@@ -71,7 +71,6 @@ namespace ThirdPersonSimulation
                     Float32GameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
                     var stateServices = new Float32AbilityInvocationStateServices(
                         roleState.BindAbility(installation.Identity, installation.Layout, installation.Data),
-                        roleState,
                         roleState.InputRequests,
                         roleState.ActionState,
                         roleState.HandleAllocatorState,
@@ -84,6 +83,7 @@ namespace ThirdPersonSimulation
                         domainRuntimeFactory,
                         installation.EquipmentLayout,
                         stateServices,
+                        roleState,
                         actor.ActorId,
                         tick,
                         abilityInput,

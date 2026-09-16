@@ -8,6 +8,7 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
             Float32GameplayAbilityExecutionAccess access,
             Float32AbilityExecutionFrame frame,
+            IFloat32AbilityExecutionSavepointPort savepointPort,
             Float32ActionStateStore actionStore,
             Float32HandleAllocator handles,
             EquipmentProgramLayout equipmentLayout,
@@ -34,6 +35,7 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectRuntimeCatalog gameplayEffectCatalog,
             Float32GameplayAbilityExecutionAccess access,
             Float32AbilityExecutionFrame frame,
+            IFloat32AbilityExecutionSavepointPort savepointPort,
             Float32ActionStateStore actionStore,
             Float32HandleAllocator handles,
             EquipmentProgramLayout equipmentLayout,
@@ -43,6 +45,7 @@ namespace ThirdPersonSimulation
                 ? null
                 : new Float32GameplayEffectOperationRuntime(
                     access,
+                    savepointPort,
                     frame,
                     actionStore,
                     handles,
@@ -55,6 +58,7 @@ namespace ThirdPersonSimulation
             {
                 equipment = new Float32EquipmentRuntime(
                     access,
+                    savepointPort,
                     frame,
                     actionStore,
                     handles,
@@ -76,6 +80,7 @@ namespace ThirdPersonSimulation
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
+            IFloat32AbilityExecutionSavepointPort savepointPort,
             Float32AbilityExecutionWorkspace workspace)
         {
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
@@ -98,6 +103,7 @@ namespace ThirdPersonSimulation
                 executionServices.GameplayEffectCatalog,
                 access,
                 frame,
+                savepointPort,
                 actionStore,
                 handles,
                 equipmentLayout,

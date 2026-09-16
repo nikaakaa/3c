@@ -2,6 +2,7 @@
 
 ## 当前状态
 
+- 2026-09-17：角色 Restore 事务接通 Timeline 快照回滚：Float32／Fixed 的 Character Restore 在 Session 发布后把恢复态中的 Timeline 快照逐条 ApplyRestore 回 Timeline runtime（句柄保持不变），并把旧状态中已不存在于恢复态的播放按正式 Stop／CommitStop 终止；Roster 绑定由 Pipeline 事务传入，Timeline runtime 的失败仍按正式异常抛出，不做假成功。
 - 2026-09-17：Timeline Advance／停止候选纳入 Float32／Fixed 角色状态统一边界：FixedCharacterRuntimeState 与 Float32CharacterRuntimeState 各自持有按 RuntimeHandle 排序去重的 typed AbilityTimelineRuntimeSnapshot 分区，评估结果只在 Consume（Commit）时捕获 Advance 快照并移除停止句柄，Discard 不写状态；两个 Canonical 状态 codec 以版本 5 序列化并哈希该分区，程序内 savepoint／Restore 经事务透传。Timeline runtime 的 ApplyRestore 回滚接线仍属后续批次。
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。

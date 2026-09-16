@@ -228,7 +228,7 @@ namespace ThirdPersonSimulation.Fixed
             var working = new FixedPipelineWorkingState(m_StateStore.Current);
             using var restore = new SimulationSessionRestoreTransaction(new ISimulationSessionRestoreParticipantTransaction[]
             {
-                new FixedCharacterRestoreTransaction(working, restored, snapshot.World.WorldHash.ToString()),
+                new FixedCharacterRestoreTransaction(working, restored, m_Roster, snapshot.World.WorldHash.ToString()),
                 new FixedWorldRestoreTransaction(working, m_Solver, restored, snapshot.World.WorldHash.ToString()),
                 pipeline
             });
@@ -333,7 +333,7 @@ namespace ThirdPersonSimulation.Fixed
                 services.StateParticipants);
             var transaction = new SimulationSessionRestoreTransaction(new ISimulationSessionRestoreParticipantTransaction[]
             {
-                new FixedCharacterRestoreTransaction(workingState, restored, snapshot.World.WorldHash.ToString()),
+                new FixedCharacterRestoreTransaction(workingState, restored, m_Roster, snapshot.World.WorldHash.ToString()),
                 new FixedWorldRestoreTransaction(workingState, m_Solver, restored, snapshot.World.WorldHash.ToString()),
                 pipeline
             });

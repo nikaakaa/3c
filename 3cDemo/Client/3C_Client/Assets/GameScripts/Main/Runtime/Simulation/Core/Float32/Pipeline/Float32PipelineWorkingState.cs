@@ -46,6 +46,7 @@ namespace ThirdPersonSimulation
         readonly Float32PipelineWorkingState m_Working;
         readonly SimulationWorldStateSet m_Previous;
         readonly SimulationWorldStateSet m_Restored;
+        readonly IReadOnlyList<SimulationActorBinding> m_Roster;
         bool m_Applied;
         bool m_Validated;
         bool m_Completed;
@@ -53,11 +54,13 @@ namespace ThirdPersonSimulation
         public Float32CharacterRestoreTransaction(
             Float32PipelineWorkingState working,
             SimulationWorldStateSet restored,
+            IReadOnlyList<SimulationActorBinding> roster,
             string identity)
         {
             m_Working = working ?? throw new ArgumentNullException(nameof(working));
             if (restored == null)
                 throw new ArgumentNullException(nameof(restored));
+            m_Roster = roster ?? throw new ArgumentNullException(nameof(roster));
             Identity = SimulationIdentity.Require(identity, nameof(identity));
             m_Previous = working.Current;
             m_Restored = restored;
@@ -89,7 +92,44 @@ namespace ThirdPersonSimulation
             RequireOpen();
             if (!m_Applied || !m_Validated)
                 throw new InvalidOperationException("Character restore transaction was not applied and validated before Session publish.");
+            RestoreTimelineSnapshots();
             m_Completed = true;
+        }
+
+        void RestoreTimelineSnapshots()
+        {
+            for (int i = 0; i < m_Restored.Actors.Count; i++)
+            {
+                SimulationActorState restoredActor = m_Restored.Actors[i];
+                SimulationActorState previousActor = FindActor(m_Previous, restoredActor.ActorId);
+                IAbilityTimelineRuntime timeline = m_Roster[i].TimelineRuntime;
+                var restoredHandles = new HashSet<int>();
+                for (int s = 0; s < restoredActor.State.TimelineSnapshots.Count; s++)
+                {
+                    AbilityTimelineRuntimeSnapshot snapshot = restoredActor.State.TimelineSnapshots[s];
+                    timeline.ApplyRestore(snapshot);
+                    restoredHandles.Add(snapshot.RuntimeHandle);
+                }
+                if (previousActor == null)
+                    continue;
+                for (int s = 0; s < previousActor.State.TimelineSnapshots.Count; s++)
+                {
+                    int runtimeHandle = previousActor.State.TimelineSnapshots[s].RuntimeHandle;
+                    if (restoredHandles.Contains(runtimeHandle))
+                        continue;
+                    AbilityTimelineStopResult stop = timeline.Stop(runtimeHandle);
+                    if (stop.Pending != null)
+                        timeline.CommitStop(stop.Pending);
+                }
+            }
+        }
+
+        static SimulationActorState FindActor(SimulationWorldStateSet state, ActorId actorId)
+        {
+            for (int i = 0; i < state.Actors.Count; i++)
+                if (state.Actors[i].ActorId.Equals(actorId))
+                    return state.Actors[i];
+            return null;
         }
 
         public void Rollback()

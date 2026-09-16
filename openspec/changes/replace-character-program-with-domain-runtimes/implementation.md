@@ -1252,3 +1252,8 @@
 - Fixed Character Runtime 汇总全 roster 的 `StateSchemaHash`，并由 Session Character Runtime descriptor 发布；Rollback 握手、Relay 握手模板和 Server Candidate manifest 都携带该身份，状态布局不一致时在网络建立阶段拒绝。
 - Rollback protocol 与 Server Candidate manifest 分别升级到新版本并拒绝旧格式；编辑器网络产品从同一 Fixed Actor binding 生成 manifest 状态 schema，不另建产品侧 hash。
 - Core、Fixed、DeterministicRollback、DeterministicRollback.Endpoint 便携工程均为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。Unity Editor 工程仍只受既有旧 Presentation／Host 悬空引用阻断。
+
+## 2026-09-16 删除孤立Pose源计划编译器
+
+- 删除没有调用方、仍引用已撤销整角色 Projection／Image 产物的 `CharacterPresentationPoseSourcePlanCompiler` 及其 Unity 元数据。
+- 保留运行时 Pose 源计划合同和实际被动画资源编译消费的源目录；本步只移除孤立的旧总编译入口，不新增替代编译器或兼容路径。

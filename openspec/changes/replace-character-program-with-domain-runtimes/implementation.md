@@ -1404,3 +1404,10 @@
 - 表现领域底座不再缓存无法消费的 Presentation Command、Equipment selection 或 Trajectory；这些输入在 Action／Timeline／Pose、Equipment 或 Pose Runtime 未组合时立即精确失败。
 - Body Body Stream、PresentationFrame、Reset 和诊断快照继续走正式合同；未组合能力不产生默认姿态或静默丢命令。
 - Fixed.Unity 工程编译通过；该边界保持到 Pose／Action／Equipment 正式入口接入为止。
+
+## 2026-09-16 接入EventGraph typed Frame源
+
+- 表现领域 Runtime 现在拥有正式 `CharacterAnimationEventGraphHost`，每帧由 Body Presentation 结果、最新 Trajectory Intent 和 tick 时间构造 typed Fact Frame，并要求 EventGraph 同帧成功发布；失败直接抛出，不允许旧帧或默认值继续参与。
+- 成功发布的 `CharacterAnimationVariableFrame` 通过 Pose owner 的 `ICharacterPoseNativeEventFrameSource` 合同按 Actor 和 RenderFrame 精确供给后续 Pose Native Runtime。
+- 修复 Pose Domain Contracts / Factory 的缺失 `ThirdPersonSimulation` 引用和 struct failed adoption 的可空构造错误。
+- Fixed.Unity 编译通过；Pose Source、Constraint、Handler composition 仍待正式装配，不勾选 4.7。

@@ -1,3 +1,5 @@
+using ThirdPersonSimulation;
+
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
@@ -193,7 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string source,
             string message) =>
             new CharacterPoseNativeDomainCreateResult(
-                null,
+                default,
                 null,
                 failureCode == CharacterPoseNativeFailureCode.None
                     ? CharacterPoseNativeFailureCode.GraphInvalid
@@ -218,3 +220,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsAdopted => Session != null;
     }
 }
+
+
+

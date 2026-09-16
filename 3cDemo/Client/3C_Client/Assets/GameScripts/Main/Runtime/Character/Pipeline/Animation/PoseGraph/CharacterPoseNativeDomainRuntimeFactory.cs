@@ -1,3 +1,5 @@
+using ThirdPersonSimulation;
+
 using System;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
@@ -318,3 +320,4 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 }
+

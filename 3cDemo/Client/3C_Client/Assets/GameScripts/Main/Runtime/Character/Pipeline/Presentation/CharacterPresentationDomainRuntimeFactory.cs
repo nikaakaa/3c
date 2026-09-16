@@ -91,9 +91,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootHierarchy,
                 initialBody,
                 diagnostics);
-            return new CharacterPresentationDomainRuntime(actorId, body);
+            return new CharacterPresentationDomainRuntime(actorId, body, tickRate, animationPresentationProfile);
         }
     }
 }
+
 
 

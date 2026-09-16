@@ -1222,3 +1222,9 @@
 - 提交 `ff03fa03a`，将角色级 InputRequests 从 Ability 执行帧和技能状态服务中移出，由角色评估层注入 InputRuntime，保留同一请求的统一消费事实。
 - 提交 `b2cadd0b4`，删除混合的 `AbilityInvocationStateServices`，技能局部状态与角色级 Action、Effect、Equipment、句柄和序号端口改为显式装配。
 - Float32、Fixed、ServerAuthoritative 与 DeterministicRollback 核心项目均使用禁用 Build Server 参数编译通过，结果为 0 warning、0 error。
+
+## 2026-09-16 完成Ability独立执行入口
+
+- 1.11 已完成。Float32／Fixed `AbilityExecutionFrame` 只接收技能局部状态、调用输入、BodyFacts 和角色调用方显式提供的 typed service，不再接收角色状态对象或创建角色事务。
+- 角色级候选提交、Savepoint、InputRequests、Action、Effect、Equipment、句柄和事件序号均由角色评估层装配；`AbilityControlRuntime` 只使用外部注入的领域服务，不组装角色模块。
+- 角色评估层保留唯一的角色事务、候选聚合和 WorldSolveRequest 创建；技能执行结果只包含自身运动、Gameplay、Presentation 和 Trace 候选。

@@ -34,7 +34,7 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [x] 1.8 移出Ability前端无条件声明的GameplayEffectAggregate、runtime:rng、runtime:handle-allocator、runtime:fact-sequence等角色级状态，由原正式领域owner唯一提供；技能仅声明局部执行状态和必要服务引用。
 - [x] 1.9 将Provider绑定补为真实提供者合同解析，覆盖被引用成员的存在性、值类型、实际合同版本及运行句柄；服务由对应领域拥有、调用方提供，技能只绑定自己声明需要的成员。角色调用场景中修正InstallationSet给全部技能传同一Effect binding、Installation却拒绝未声明Effect技能的矛盾；不要求所有调用方拥有角色配置，必需服务缺失仍失败，不用空实现或全局启用能力绕过。
 - [ ] 1.10 将独立Ability数据的加载、格式、执行拓扑／布局接到Float32／Fixed实际执行与实例状态；复用已交付的自有拓扑和GameplayAbilityExecutionLayout，不能把创建布局视作执行完成。补齐读入到Tick／取消／恢复消费者，继续清除整角色Program解码／复制依赖，不恢复已撤回的FromProgram转换，保留必要技能编译与唯一技能格式。
-- [ ] 1.11 解除技能执行入口对角色装配的依赖：Float32／Fixed AbilityExecutionFrame只消费技能局部状态、调用输入／目标／时间和实际需要的typed服务，不强制接收CharacterRuntimeState、整角色Input／Body或在内部创建CharacterRuntimeStateTransaction；AbilityControlRuntime不再组装Control／Effect／Equipment领域模块，改调用外部正式服务。Frontend按可达节点声明能力，删除无条件GameplayEffect要求；依赖角色事实的节点只要求该事实服务。角色与TreeClip等调用方适配同一执行入口，禁止假角色、完整角色上下文包装或第二套技能执行器。
+- [x] 1.11 解除技能执行入口对角色装配的依赖：Float32／Fixed AbilityExecutionFrame只消费技能局部状态、调用输入／目标／时间和实际需要的typed服务，不强制接收CharacterRuntimeState、整角色Input／Body或在内部创建CharacterRuntimeStateTransaction；AbilityControlRuntime不再组装Control／Effect／Equipment领域模块，改调用外部正式服务。Frontend按可达节点声明能力，删除无条件GameplayEffect要求；依赖角色事实的节点只要求该事实服务。角色与TreeClip等调用方适配同一执行入口，禁止假角色、完整角色上下文包装或第二套技能执行器。
 
 1.11执行边界补充：PendingAbilityEvaluation只承载技能局部候选及实际产生的领域请求，不强制附带CharacterWorldSolveRequest／角色事务，也不得在AbortUnconsumed内中止外层角色事务。BodyFacts等只读服务可以按需不提供，但实际读取该能力时必须拒绝缺失／无效数据，不接受默认结构的零值充当真实事实。
 

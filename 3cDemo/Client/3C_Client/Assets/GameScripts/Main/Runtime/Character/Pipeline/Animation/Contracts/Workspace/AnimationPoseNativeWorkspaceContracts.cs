@@ -684,7 +684,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    internal readonly struct AnimationPlayerPoseNativeWriteBinding
+    internal struct AnimationPlayerPoseNativeWriteBinding
     {
         internal AnimationPlayerPoseNativeWriteBinding(
             int physicalPlayerIndex,
@@ -789,24 +789,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CompletedAt = new NativeSlice<ulong>(aggregate.SlotCompletedAt, physicalSlotIndex, 1);
         }
 
-        internal AnimationPlayerPoseNativeRange Range { get; }
-        internal ulong CompletionIdentity { get; }
-        internal NativeSlice<AnimationLocalBonePose> DenseLocalPoses { get; }
-        internal NativeSlice<AnimationBlendBoneVelocity> DenseVelocities { get; }
-        internal NativeSlice<float> PoseParameters { get; }
-        internal NativeSlice<byte> PoseParameterAvailability { get; }
-        internal NativeSlice<AnimationPrimitivePoseContribution> Contributions { get; }
-        internal NativeSlice<float> DenseContributionWeights { get; }
-        internal NativeSlice<int> ContributionCount { get; }
-        internal NativeSlice<float> OutputWeight { get; }
-        internal NativeSlice<AnimationFootFeatureSample> LeftFootFeatures { get; }
-        internal NativeSlice<AnimationFootFeatureSample> RightFootFeatures { get; }
-        internal NativeSlice<byte> HasFootFeatures { get; }
-        internal NativeSlice<AnimationPoseAvailability> Availability { get; }
-        internal NativeSlice<ulong> ContinuityIdentity { get; }
-        internal NativeSlice<PoseDiscontinuityNative> Discontinuity { get; }
-        internal NativeSlice<AnimationPoseNativeInvalidReason> InvalidReason { get; }
-        internal NativeSlice<ulong> CompletedAt { get; }
+        internal AnimationPlayerPoseNativeRange Range;
+        internal ulong CompletionIdentity;
+        internal NativeSlice<AnimationLocalBonePose> DenseLocalPoses;
+        internal NativeSlice<AnimationBlendBoneVelocity> DenseVelocities;
+        internal NativeSlice<float> PoseParameters;
+        internal NativeSlice<byte> PoseParameterAvailability;
+        internal NativeSlice<AnimationPrimitivePoseContribution> Contributions;
+        internal NativeSlice<float> DenseContributionWeights;
+        internal NativeSlice<int> ContributionCount;
+        internal NativeSlice<float> OutputWeight;
+        internal NativeSlice<AnimationFootFeatureSample> LeftFootFeatures;
+        internal NativeSlice<AnimationFootFeatureSample> RightFootFeatures;
+        internal NativeSlice<byte> HasFootFeatures;
+        internal NativeSlice<AnimationPoseAvailability> Availability;
+        internal NativeSlice<ulong> ContinuityIdentity;
+        internal NativeSlice<PoseDiscontinuityNative> Discontinuity;
+        internal NativeSlice<AnimationPoseNativeInvalidReason> InvalidReason;
+        internal NativeSlice<ulong> CompletedAt;
     }
 
     internal readonly struct AnimationPoseValueNativeReadBinding

@@ -80,13 +80,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context)
             {
+                CharacterPoseNativePreparedBinding binding = preparedBinding;
                 IReadOnlyList<float> boneMask = m_BoneMaskFactory(node, context);
                 return CreateWithBuffer(
                     node,
                     in context,
                     buffer => new CharacterPoseNativeLayeredBoneBlendHandler(
                         node.NodeId,
-                        preparedBinding.Rig,
+                        binding.Rig,
                         boneMask,
                         buffer));
             }
@@ -94,6 +95,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal ICharacterPoseNativeNodeHandler CreateAdditive(
                 CharacterPoseCanvasNode node,
                 in CharacterPoseNativePreparedBinding preparedBinding,
+                in CharacterPoseNativeInstanceContext context) =>
+                CreateAdditiveWithBinding(
+                    node,
+                    preparedBinding,
+                    in context);
+
+            ICharacterPoseNativeNodeHandler CreateAdditiveWithBinding(
+                CharacterPoseCanvasNode node,
+                CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
@@ -106,6 +116,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal ICharacterPoseNativeNodeHandler CreateModifyBone(
                 CharacterPoseCanvasNode node,
                 in CharacterPoseNativePreparedBinding preparedBinding,
+                in CharacterPoseNativeInstanceContext context) =>
+                CreateModifyBoneWithBinding(
+                    node,
+                    preparedBinding,
+                    in context);
+
+            ICharacterPoseNativeNodeHandler CreateModifyBoneWithBinding(
+                CharacterPoseCanvasNode node,
+                CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
@@ -130,6 +149,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseCanvasNode node,
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
+                CreateSpaceConversionWithBinding(
+                    node,
+                    preparedBinding,
+                    in context);
+
+            ICharacterPoseNativeNodeHandler CreateSpaceConversionWithBinding(
+                CharacterPoseCanvasNode node,
+                CharacterPoseNativePreparedBinding preparedBinding,
+                in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,
                     in context,
@@ -142,6 +170,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal ICharacterPoseNativeNodeHandler CreateComponentToLocal(
                 CharacterPoseCanvasNode node,
                 in CharacterPoseNativePreparedBinding preparedBinding,
+                in CharacterPoseNativeInstanceContext context) =>
+                CreateComponentToLocalWithBinding(
+                    node,
+                    preparedBinding,
+                    in context);
+
+            ICharacterPoseNativeNodeHandler CreateComponentToLocalWithBinding(
+                CharacterPoseCanvasNode node,
+                CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context) =>
                 CreateWithBuffer(
                     node,

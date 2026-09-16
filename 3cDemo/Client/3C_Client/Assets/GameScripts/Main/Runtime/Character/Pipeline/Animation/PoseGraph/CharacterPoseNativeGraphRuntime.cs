@@ -195,8 +195,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     preparation.Message);
             }
             CharacterPoseNativeInstanceContext context = InstanceContext;
+            CharacterPoseNativePreparedBinding preparedBinding =
+                preparation.PreparedBinding;
             return Create(
-                in preparation.PreparedBinding,
+                in preparedBinding,
                 in context,
                 instanceId,
                 resetGeneration,

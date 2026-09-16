@@ -528,8 +528,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!result.IsValid)
                 throw new InvalidOperationException(
                     $"Full Body IK Goal Assembler '{NodeId}' returned an invalid Constraint result.");
+            CharacterFullBodyIkGoalSetHeader resultGoalSet = result.GoalSet;
             CharacterFullBodyIkGoalSet goalSet =
-                m_Service.RequireGoalSet(in result.GoalSet);
+                m_Service.RequireGoalSet(in resultGoalSet);
             m_Output = new CharacterPoseNativeFullBodyIkGoalsValue(
                 NodeId,
                 goalSet);
@@ -634,7 +635,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 CharacterPoseNativeFullBodyIkGoalsValue goals = runtime.ReadInput<
                     CharacterPoseNativeFullBodyIkGoalsValue>(node, "goals");
-                m_Service.BindGoalSet(in goals.Value);
+                CharacterFullBodyIkGoalSet goalSet = goals.Value;
+                m_Service.BindGoalSet(in goalSet);
             }
             m_WriteBinding = (m_PageIndex == 0
                     ? m_OutputBuffer

@@ -327,6 +327,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationLocalBonePose local = input.DenseLocalPoses[i];
                 if (!CharacterPoseConstraintMath.TryCreateComponent(
                         local,
+                        m_Rig.GetPoseParentIndex(i),
                         m_ComponentScratch,
                         0,
                         out CharacterComponentBonePose component))

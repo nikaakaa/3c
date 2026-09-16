@@ -352,7 +352,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 .Select(nodeId => byId[nodeId])
                 .ToList();
             List<CharacterPoseCanvasNode> solvers = activeNodes
-                .Where(nodeId => byId[nodeId].Kind == CharacterPoseNodeKind.FullBodyIk)
+                .Where(nodeId => byId[nodeId].Kind == CharacterPoseNodeKind.FullBodyIK)
                 .Select(nodeId => byId[nodeId])
                 .ToList();
             if (assemblers.Count > 1 || solvers.Count > 1 ||

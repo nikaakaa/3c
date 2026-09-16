@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using UnityEngine.Animations;
@@ -180,9 +181,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 else
                 {
+                    AnimationPoseSampleRequest actionRequest =
+                        source.ActionSample.Request;
                     m_Source.PrepareNativeActionSource(
                         sourceLease,
-                        in source.ActionSample.Request,
+                        in actionRequest,
                         in source.Capture,
                         stack.PoseNodeId);
                 }

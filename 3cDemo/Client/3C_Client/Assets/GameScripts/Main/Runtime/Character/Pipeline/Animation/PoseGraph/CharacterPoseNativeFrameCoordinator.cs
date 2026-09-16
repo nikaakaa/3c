@@ -52,9 +52,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void PrepareEvaluation(ulong barrierIdentity)
         {
             RequireOpen();
+            CharacterPoseNativeSourceDemand demand = m_Preparation.Demand;
             m_Role.PrepareEvaluation(
                 m_Lease,
-                in m_Preparation.Demand,
+                in demand,
                 barrierIdentity);
         }
 
@@ -62,9 +63,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong barrierIdentity)
         {
             RequireOpen();
+            CharacterPoseNativeSourceDemand demand = m_Preparation.Demand;
             m_Evaluation = m_Role.Evaluate(
                 m_Lease,
-                in m_Preparation.Demand,
+                in demand,
                 barrierIdentity);
             return m_Evaluation;
         }

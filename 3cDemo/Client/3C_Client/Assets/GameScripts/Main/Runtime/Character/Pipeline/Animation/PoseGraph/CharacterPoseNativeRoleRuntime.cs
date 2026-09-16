@@ -175,15 +175,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (dependencies == null)
                 throw new ArgumentNullException(nameof(dependencies));
-            CharacterPoseNativeAdoptedResult adopted = Create(
-                in preparation,
-                in context,
-                instanceId,
-                resetGeneration,
-                reason,
-                dependencies.HandlerFactory,
-                dependencies.Publication,
-                out CharacterPoseNativeGraphRuntime graph);
+            CharacterPoseNativePreparedBinding preparedBinding =
+                preparation.PreparedBinding;
+            CharacterPoseNativeGraphRuntime graph = null;
+            CharacterPoseNativeAdoptedResult adopted =
+                CharacterPoseNativeGraphRuntime.Create(
+                    in preparedBinding,
+                    in context,
+                    instanceId,
+                    resetGeneration,
+                    reason,
+                    dependencies.HandlerFactory,
+                    out graph);
             if (!adopted.IsAdopted)
             {
                 dependencies.Dispose();
@@ -223,9 +226,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeGraphRuntime graph = null;
             try
             {
+                CharacterPoseNativePreparedBinding preparedBinding =
+                    preparation.PreparedBinding;
                 CharacterPoseNativeAdoptedResult adopted =
                     CharacterPoseNativeGraphRuntime.Create(
-                        in preparation.PreparedBinding,
+                        in preparedBinding,
                         in context,
                         instanceId,
                         resetGeneration,
@@ -262,22 +267,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (dependencies == null)
                 throw new ArgumentNullException(nameof(dependencies));
-            CharacterPoseNativeAdoptedResult adopted = Replace(
-                current,
-                in preparation,
-                in context,
-                instanceId,
-                resetGeneration,
-                reason,
-                dependencies.HandlerFactory,
-                dependencies.Publication,
-                out CharacterPoseNativeGraphRuntime graph);
+            CharacterPoseNativePreparedBinding preparedBinding =
+                preparation.PreparedBinding;
+            CharacterPoseNativeGraphRuntime graph = null;
+            CharacterPoseNativeAdoptedResult adopted =
+                CharacterPoseNativeGraphRuntime.Replace(
+                    current.m_Graph,
+                    in preparedBinding,
+                    in context,
+                    instanceId,
+                    resetGeneration,
+                    reason,
+                    dependencies.HandlerFactory,
+                    out graph);
             if (!adopted.IsAdopted)
             {
                 dependencies.Dispose();
                 runtime = null;
                 return adopted;
             }
+            current.Dispose();
             runtime = new CharacterPoseNativeRoleRuntime(
                 graph,
                 dependencies.Publication,
@@ -349,10 +358,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeGraphRuntime graph = null;
             try
             {
+                CharacterPoseNativePreparedBinding preparedBinding =
+                    preparation.PreparedBinding;
                 CharacterPoseNativeAdoptedResult adopted =
                     CharacterPoseNativeGraphRuntime.Replace(
                         current.m_Graph,
-                        in preparation.PreparedBinding,
+                        in preparedBinding,
                         in context,
                         instanceId,
                         resetGeneration,

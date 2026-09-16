@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using FlowCanvas;
@@ -99,7 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             CharacterPoseCanvasNode node = runtime.Graph.RequireNode(NodeId);
-            if (node.Kind != Kind || node.SlotId != m_SlotId ||
+            if (node.Kind != Kind || node.AnimationSlotId != m_SlotId ||
                 node.SelectionAvailability != m_Availability)
             {
                 throw new InvalidOperationException(

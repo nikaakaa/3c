@@ -114,6 +114,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public override bool Equals(object obj) => obj is PosePortId other && Equals(other);
         public override int GetHashCode() => Value?.GetHashCode() ?? 0;
         public override string ToString() => Value ?? string.Empty;
+        public static bool operator ==(PosePortId left, PosePortId right) => left.Equals(right);
+        public static bool operator !=(PosePortId left, PosePortId right) => !left.Equals(right);
     }
 
     public readonly struct PoseInterfacePortId : IEquatable<PoseInterfacePortId>, IComparable<PoseInterfacePortId>

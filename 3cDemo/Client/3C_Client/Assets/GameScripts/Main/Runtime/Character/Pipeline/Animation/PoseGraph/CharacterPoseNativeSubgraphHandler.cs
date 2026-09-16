@@ -174,9 +174,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Pose subgraph '{NodeId}' has no prepared child demand.");
             }
             BindInputs(runtime, true);
+            CharacterPoseNativeSourceDemand childDemand = m_ChildPreparation.Demand;
             m_ChildEvaluation = m_Child.Evaluate(
                 m_ChildLease,
-                in m_ChildPreparation.Demand,
+                in childDemand,
                 barrierIdentity);
             if (!m_ChildEvaluation.IsValid ||
                 m_ChildEvaluation.Status != CharacterPoseNativeFrameStatus.Evaluated)
@@ -200,9 +201,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Pose subgraph '{NodeId}' has no prepared child demand.");
             }
+            CharacterPoseNativeSourceDemand childDemand = m_ChildPreparation.Demand;
             m_Child.PrepareEvaluation(
                 m_ChildLease,
-                in m_ChildPreparation.Demand,
+                in childDemand,
                 barrierIdentity);
         }
 

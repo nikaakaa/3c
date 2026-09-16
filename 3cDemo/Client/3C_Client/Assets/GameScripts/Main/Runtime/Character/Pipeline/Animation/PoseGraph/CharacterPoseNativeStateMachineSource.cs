@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.EventGraphs;
+using ThirdPersonCharacter.Animation.TransitionRouting;
 using Unity.Collections;
 using UnityEngine;
 
@@ -19,7 +20,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(profile));
             registry.Register(
                 CharacterPoseNodeKind.PoseStateMachine,
-                (node, preparedBinding, context) =>
+                (CharacterPoseCanvasNode node,
+                    in CharacterPoseNativePreparedBinding preparedBinding,
+                    in CharacterPoseNativeInstanceContext context) =>
                 {
                     CharacterPoseNativeStateMachineSource source = null;
                     CharacterPoseNativeNodePoseBuffer buffer = null;
@@ -221,10 +224,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             else if (m_PendingTransition == null)
             {
                 m_PendingTime = m_CommittedTime + input.DeltaSeconds;
+                CharacterPresentationFactFrame factFrame = input.FactFrame;
+                CharacterAnimationPoseInputFrame parameterFrame = input.ParameterFrame;
                 CharacterPoseStateTransition transition = SelectTransition(
                     m_PendingState,
-                    in input.FactFrame,
-                    in input.ParameterFrame,
+                    in factFrame,
+                    in parameterFrame,
                     m_PendingTime);
                 if (transition != null)
                 {
@@ -318,9 +323,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Pose StateMachine '{m_NodeId}' child source request '{expected.NodeId}/{expected.SourceId}' was lost before the evaluation barrier.");
                 }
+                CharacterPoseNativeSourceDemand childDemand = state.Preparation.Demand;
                 state.Graph.PrepareEvaluation(
                     state.Lease,
-                    in state.Preparation.Demand,
+                    in childDemand,
                     barrierIdentity);
             }
             m_EvaluationPrepared = true;
@@ -339,9 +345,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var values = new List<CharacterPoseNativeLocalPoseValue>();
             foreach (StateRuntime state in EnumerateActiveStates())
             {
+                CharacterPoseNativeSourceDemand demand = state.Preparation.Demand;
                 state.Evaluation = state.Graph.Evaluate(
                     state.Lease,
-                    in state.Preparation.Demand,
+                    in demand,
                     barrierIdentity);
                 if (!state.Evaluation.IsValid ||
                     state.Evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated ||
@@ -355,9 +362,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 values.Add(value);
             }
             if (values.Count == 1)
-                CopySingle(in values[0]);
+            {
+                CharacterPoseNativeLocalPoseValue value = values[0];
+                CopySingle(in value);
+            }
             else if (values.Count == 2)
-                BlendTransition(in values[0], in values[1]);
+            {
+                CharacterPoseNativeLocalPoseValue source = values[0];
+                CharacterPoseNativeLocalPoseValue target = values[1];
+                BlendTransition(in source, in target);
+            }
             else
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' has no active state output.");
@@ -664,9 +678,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                          targetVelocity.Scale * targetWeight * targetOutputWeight) /
                         totalWeight);
             }
-            BlendParameters(in sourcePose, in targetPose, sourceWeight, targetWeight, totalWeight, in output);
-            BlendContributions(in sourcePose, in targetPose, sourceWeight, targetWeight, totalWeight, in output);
-            BlendFeet(in sourcePose, in targetPose, sourceWeight * sourceOutputWeight, targetWeight * targetOutputWeight, in output);
+            BlendParameters(in sourcePose, in targetPose, sourceWeight, targetWeight, totalWeight, output);
+            BlendContributions(in sourcePose, in targetPose, sourceWeight, targetWeight, totalWeight, output);
+            BlendFeet(in sourcePose, in targetPose, sourceWeight * sourceOutputWeight, targetWeight * targetOutputWeight, output);
             output.OutputWeight[0] = Mathf.Clamp01(totalWeight);
             output.Availability[0] = AnimationPoseAvailability.Pose;
             output.ContinuityIdentity[0] = m_ContinuityIdentity;
@@ -683,7 +697,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float sourceWeight,
             float targetWeight,
             float totalWeight,
-            in AnimationPlayerPoseNativeWriteBinding output)
+            AnimationPlayerPoseNativeWriteBinding output)
         {
             for (int i = 0; i < output.PoseParameters.Length; i++)
             {
@@ -716,11 +730,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float sourceWeight,
             float targetWeight,
             float totalWeight,
-            in AnimationPlayerPoseNativeWriteBinding output)
+            AnimationPlayerPoseNativeWriteBinding output)
         {
             int count = 0;
-            AppendContributions(in source, sourceWeight / totalWeight, ref count, in output);
-            AppendContributions(in target, targetWeight / totalWeight, ref count, in output);
+            AppendContributions(in source, sourceWeight / totalWeight, ref count, output);
+            AppendContributions(in target, targetWeight / totalWeight, ref count, output);
             output.ContributionCount[0] = count;
         }
 
@@ -728,7 +742,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativePoseReadBinding input,
             float factor,
             ref int count,
-            in AnimationPlayerPoseNativeWriteBinding output)
+            AnimationPlayerPoseNativeWriteBinding output)
         {
             if (factor <= 0f)
                 return;
@@ -760,7 +774,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativePoseReadBinding target,
             float sourceWeight,
             float targetWeight,
-            in AnimationPlayerPoseNativeWriteBinding output)
+            AnimationPlayerPoseNativeWriteBinding output)
         {
             bool hasSource = source.HasFootFeatures[0] != 0;
             bool hasTarget = target.HasFootFeatures[0] != 0;

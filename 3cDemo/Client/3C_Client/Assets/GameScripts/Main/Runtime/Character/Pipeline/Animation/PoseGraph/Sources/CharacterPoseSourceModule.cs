@@ -681,7 +681,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     "Native Action source binding frame is stale.");
             PrepareActionAndConnect(
                 request,
-                in capture,
+                capture,
                 poseNodeId);
             m_PreparedSourceCount++;
         }
@@ -704,7 +704,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     "Native Provider source preparation is invalid.");
             }
             AnimationResolvedPoseSourceSample resolved =
-                ResolveProviderSample(in sample, sourceOwnerIndex);
+                ResolveProviderSample(sample, sourceOwnerIndex);
             if (!capture.SourceId.Equals(resolved.Request.SourceId))
                 throw new ArgumentException(
                     "Native Provider source capture is invalid.",
@@ -717,7 +717,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             PrepareProviderAndConnect(
                 resolved.Request,
                 sample,
-                in capture,
+                capture,
                 poseNodeId);
             m_PreparedSourceCount++;
         }
@@ -783,10 +783,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sample.ParameterPageId,
                 sample.PoseParameters,
                 sample.PoseParameterAvailability);
+            AnimationFootFeatureSample leftFootFeatures = sample.LeftFootFeatures;
+            AnimationFootFeatureSample rightFootFeatures = sample.RightFootFeatures;
             return new AnimationResolvedPoseSourceSample(
                 request,
-                in sample.LeftFootFeatures,
-                in sample.RightFootFeatures,
+                in leftFootFeatures,
+                in rightFootFeatures,
                 sample.HasFootFeatures);
         }
 

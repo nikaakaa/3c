@@ -192,7 +192,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Player.SetRelevant(true);
-            m_Player.SetParameterFrame(in input.ParameterFrame);
+            CharacterAnimationPoseInputFrame parameterFrame = input.ParameterFrame;
+            m_Player.SetParameterFrame(in parameterFrame);
             m_Player.Advance(input.DeltaSeconds);
             m_Capture = m_Player.PrepareCapture(input.DeltaSeconds);
             m_CapturePrepared = true;
@@ -246,12 +247,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ? m_OutputBuffer
                     : m_SecondaryOutputBuffer).RequireWriteBinding(
                 lineage.CompletionIdentity);
+            CharacterPoseSourceScalarReadView scalarReadView = source.ScalarReadView;
             m_Job = m_Player.PrepareJob(
                 lineage.CompletionIdentity,
                 in m_WriteBinding,
                 source.PhysicalIdentity,
                 source.SourceIndex,
-                in source.ScalarReadView);
+                in scalarReadView);
             if (!m_Playable.IsValid())
             {
                 m_Playable = runtime.InstanceContext.Animancer.Graph.InsertOutputJob(

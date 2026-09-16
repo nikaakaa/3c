@@ -356,6 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context)
             {
+                CharacterPoseNativeInstanceContext capturedContext = context;
                 AnimationBlendStackRuntime stack = null;
                 CharacterPoseNativeNodePoseBuffer buffer = null;
                 try
@@ -374,12 +375,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             m_SourceLeaseProvider,
                             (nodeId, sourceId) =>
                                 m_ActionSampleProvider(
-                                    context,
+                                    capturedContext,
                                     nodeId,
                                     sourceId),
                             (nodeId, sourceId) =>
                                 m_ProviderSampleProvider(
-                                    context,
+                                    capturedContext,
                                     nodeId,
                                     sourceId)),
                         buffer);
@@ -437,6 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterPoseNativePreparedBinding preparedBinding,
                 in CharacterPoseNativeInstanceContext context)
             {
+                CharacterPoseNativeInstanceContext capturedContext = context;
                 AnimationBlendStackRuntime stack = null;
                 CharacterPoseNativeNodePoseBuffer innerBuffer = null;
                 CharacterPoseNativeNodePoseBuffer outputBuffer = null;
@@ -457,12 +459,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             m_SourceLeaseProvider,
                             (nodeId, sourceId) =>
                                 m_ActionSampleProvider(
-                                    context,
+                                    capturedContext,
                                     nodeId,
                                     sourceId),
                             (nodeId, sourceId) =>
                                 m_ProviderSampleProvider(
-                                    context,
+                                    capturedContext,
                                     nodeId,
                                     sourceId)),
                         innerBuffer);

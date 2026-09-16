@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly string m_GraphRevision;
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterPoseSourceModule m_SourceModule;
-        readonly IReadOnlyList<PoseNodeId> m_PlayerNodeIds;
+        readonly PoseNodeId[] m_PlayerNodeIds;
         readonly CharacterFinalPosePhysicalWriter m_PhysicalWriter;
         readonly CharacterFinalPosePropertyWriter m_PropertyWriter;
         readonly CharacterPoseBoneKind[] m_BoneKinds;
@@ -165,7 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Rig = preparedBinding.Rig;
             m_SourceModule = sourceModule;
             m_PlayerNodeIds = new PoseNodeId[playerNodeIds.Count];
-            for (int i = 0; i < m_PlayerNodeIds.Count; i++)
+            for (int i = 0; i < m_PlayerNodeIds.Length; i++)
             {
                 if (!playerNodeIds[i].IsValid)
                     throw new ArgumentException(

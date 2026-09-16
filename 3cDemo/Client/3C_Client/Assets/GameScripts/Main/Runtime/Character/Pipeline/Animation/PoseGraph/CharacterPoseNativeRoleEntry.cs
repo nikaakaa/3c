@@ -94,8 +94,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     preparation.FailureCode,
                     preparation.Message);
             }
+            CharacterPoseNativePreparedBinding preparedBinding =
+                preparation.PreparedBinding;
             dependencies = CharacterPoseNativeRoleDependencyFactory.Create(
-                in preparation.PreparedBinding,
+                in preparedBinding,
                 context.RigBinding,
                 context.RootHierarchy,
                 source,
@@ -175,8 +177,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     preparation.FailureCode,
                     preparation.Message);
             }
+            CharacterPoseNativePreparedBinding preparedBinding =
+                preparation.PreparedBinding;
             dependencies = CharacterPoseNativeRoleDependencyFactory.Create(
-                in preparation.PreparedBinding,
+                in preparedBinding,
                 context.RigBinding,
                 context.RootHierarchy,
                 source,

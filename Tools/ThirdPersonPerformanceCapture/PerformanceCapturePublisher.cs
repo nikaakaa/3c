@@ -1160,7 +1160,7 @@ internal static class PerformanceCapturePublisher
             capture_profile_hash = request?.profile_hash ?? string.Empty,
             content_identity = playerManifest?.content_identity ?? string.Empty,
             pipeline_identity = playerManifest?.pipeline_identity ?? string.Empty,
-            projection_identity = playerManifest?.projection_identity ?? string.Empty,
+            pose_graph_revision = playerManifest?.pose_graph_revision ?? string.Empty,
             solver_identity = playerManifest?.solver_identity ?? string.Empty,
             instrumentation_identity = playerManifest?.instrumentation_identity ?? string.Empty,
             instrumentation_mode = playerManifest?.instrumentation_mode ?? string.Empty,

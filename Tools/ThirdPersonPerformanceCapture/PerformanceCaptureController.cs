@@ -490,7 +490,7 @@ internal sealed class PerformanceCaptureController
             _scenario.content_hash,
             _playerManifest.content_identity,
             _playerManifest.pipeline_identity,
-            _playerManifest.projection_identity,
+            _playerManifest.pose_graph_revision,
             _playerManifest.solver_identity,
             _playerManifest.instrumentation_identity,
             _playerManifest.instrumentation_mode,

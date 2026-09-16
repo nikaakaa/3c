@@ -3,6 +3,7 @@ using ThirdPerson.NetworkTest.Contracts;
 using System.Collections.Generic;
 using System.IO;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
@@ -12,6 +13,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     internal static class NetworkTestProductAdapterUtility
     {
+        public static CharacterAnimationPresentationProfile RequireAnimationPresentationProfile(
+            CharacterPipelineDefinition definition)
+        {
+            if (!definition)
+                throw new ArgumentNullException(nameof(definition));
+            CharacterAnimationPresentationProfile profile = definition.AnimationPresentationProfile;
+            if (!profile || !profile.PoseGraph || !profile.PoseGraph.Graph ||
+                !profile.PoseGraph.Graph.GraphId.IsValid ||
+                string.IsNullOrWhiteSpace(profile.PoseGraph.Graph.ContentRevision))
+            {
+                throw new InvalidOperationException(
+                    "Character Definition requires a complete Animation Presentation Profile and Pose Graph.");
+            }
+            return profile;
+        }
+
+        public static string AnimationInputContractHash(CharacterPipelineDefinition definition) =>
+            CharacterAnimationInputContract.Create(
+                RequireAnimationPresentationProfile(definition)).ContractHash;
+
         public static string CharacterContentIdentity(CharacterPipelineDefinition definition)
         {
             if (!definition)

@@ -1262,3 +1262,8 @@
 
 - Float32／Fixed Actor Snapshot 和 World Snapshot 显式携带 `StateSchemaHash`，创建、恢复、连续发布及 canonical hash 均比较角色绑定的完整状态 schema。
 - World Snapshot codec 版本升为 6，旧格式直接拒绝；ServerAuthoritative Prediction 合并权威基线时使用正式 Actor binding 的 schema，不从单个 Ability 推断角色状态身份。
+
+## 2026-09-16 清理产品入口旧Projection身份
+
+- 网络产品与性能构建入口改从 `CharacterAnimationPresentationProfile` 读取 Animation Input Contract、Pose Graph Id 和 Graph Revision；不再要求已删除的总 Projection 资产。
+- 性能玩家与运行请求字段将 `projection_identity` 改为 `pose_graph_revision`，同步唯一工具读写方，旧 JSON 字段不保留兼容别名。

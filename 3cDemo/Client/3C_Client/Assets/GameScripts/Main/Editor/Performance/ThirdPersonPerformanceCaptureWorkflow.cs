@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using ThirdPersonSimulation;
@@ -428,7 +429,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     scenario.content_hash,
                     buildIdentity.ContentIdentity,
                     buildIdentity.PipelineIdentity,
-                    buildIdentity.ProjectionIdentity,
+                    buildIdentity.PoseGraphRevision,
                     buildIdentity.SolverIdentity,
                     buildIdentity.InstrumentationIdentity,
                     buildIdentity.InstrumentationMode,
@@ -448,7 +449,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     scenario_catalog_path = RelativePath(candidate, Path.Combine(scenarioRoot, "scenario.json")),
                     content_identity = buildIdentity.ContentIdentity,
                     pipeline_identity = buildIdentity.PipelineIdentity,
-                    projection_identity = buildIdentity.ProjectionIdentity,
+                    pose_graph_revision = buildIdentity.PoseGraphRevision,
                     solver_identity = buildIdentity.SolverIdentity,
                     instrumentation_identity = buildIdentity.InstrumentationIdentity,
                     instrumentation_mode = buildIdentity.InstrumentationMode,
@@ -799,7 +800,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 composition.WorldSolver != solver ||
                 solver.CollisionWorld != collision ||
                 !definition.InputProfile ||
-                !definition.PresentationProjection)
+                !NetworkTestProductAdapterUtility.RequireAnimationPresentationProfile(definition))
             {
                 throw new InvalidOperationException("Fixed Performance runtime assets are not a closed formal Session Composition.");
             }
@@ -832,7 +833,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return new PerformanceBuildIdentity(
                 NetworkTestProductAdapterUtility.FixedCharacterContentIdentity(closure.Definition),
                 closure.Pipeline.BuildPortableDescriptor().PipelineId.Value,
-                closure.Definition.PresentationProjection.ProjectionRevision,
+                NetworkTestProductAdapterUtility.RequireAnimationPresentationProfile(closure.Definition)
+                    .PoseGraph.Graph.ContentRevision,
                 closure.Solver.BuildKccIdentityHash(closure.Composition.TickRate).Value,
                 instrumentationIdentity,
                 instrumentationMode.ToString());
@@ -1072,14 +1074,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public PerformanceBuildIdentity(
                 string contentIdentity,
                 string pipelineIdentity,
-                string projectionIdentity,
+                string poseGraphRevision,
                 string solverIdentity,
                 string instrumentationIdentity,
                 string instrumentationMode)
             {
                 ContentIdentity = contentIdentity;
                 PipelineIdentity = pipelineIdentity;
-                ProjectionIdentity = projectionIdentity;
+                PoseGraphRevision = poseGraphRevision;
                 SolverIdentity = solverIdentity;
                 InstrumentationIdentity = instrumentationIdentity;
                 InstrumentationMode = instrumentationMode;
@@ -1087,7 +1089,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             public string ContentIdentity { get; }
             public string PipelineIdentity { get; }
-            public string ProjectionIdentity { get; }
+            public string PoseGraphRevision { get; }
             public string SolverIdentity { get; }
             public string InstrumentationIdentity { get; }
             public string InstrumentationMode { get; }
@@ -1096,7 +1098,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 new PerformanceBuildIdentity(
                     ContentIdentity,
                     PipelineIdentity,
-                    ProjectionIdentity,
+                    PoseGraphRevision,
                     SolverIdentity,
                     identity,
                     InstrumentationMode);

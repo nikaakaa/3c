@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
@@ -105,8 +106,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 throw new InvalidOperationException("Rollback Model identity does not match the formal world closure.");
             }
-            if (!definition.InputProfile || !definition.PresentationProjection)
-                throw new InvalidOperationException("Rollback Character Definition requires its Input Profile and Presentation Projection.");
+            CharacterAnimationPresentationProfile animationProfile =
+                NetworkTestProductAdapterUtility.RequireAnimationPresentationProfile(definition);
+            if (!definition.InputProfile)
+                throw new InvalidOperationException("Rollback Character Definition requires its Input Profile.");
 
             StableHash gameplayContentHash = NetworkTestProductAdapterUtility.FixedCharacterContentHash(definition);
             StableHash stateSchemaHash = NetworkTestProductAdapterUtility.FixedCharacterStateSchemaHash(definition);
@@ -309,8 +312,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     NetworkTestProductAdapterUtility.Field("gmProfileHash", AssetDatabase.GetAssetDependencyHash(RollbackGmProductBuild.ProfilePath).ToString()),
                     NetworkTestProductAdapterUtility.Field("gameplayContentHash", closure.GameplayContentHash.Value),
                     NetworkTestProductAdapterUtility.Field("collisionWorldHash", closure.Collision.ContentHash),
-                    NetworkTestProductAdapterUtility.Field("presentationContractHash", closure.Definition.PresentationProjection.ContractHash),
-                    NetworkTestProductAdapterUtility.Field("presentationRevision", closure.Definition.PresentationProjection.ProjectionRevision),
+                    NetworkTestProductAdapterUtility.Field("animationInputContractHash", NetworkTestProductAdapterUtility.AnimationInputContractHash(closure.Definition)),
+                    NetworkTestProductAdapterUtility.Field("poseGraphId", animationProfile.PoseGraph.Graph.GraphId.Value),
+                    NetworkTestProductAdapterUtility.Field("poseGraphRevision", animationProfile.PoseGraph.Graph.ContentRevision),
                     NetworkTestProductAdapterUtility.Field(
                         "kccId",
                         $"{solverIdentity.Identity.ComponentId}@{closure.KccIdentityHash}"),

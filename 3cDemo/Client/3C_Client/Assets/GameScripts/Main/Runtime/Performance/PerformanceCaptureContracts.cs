@@ -177,7 +177,7 @@ namespace ThirdPersonPerformance
         public string scenario_catalog_path = string.Empty;
         public string content_identity = string.Empty;
         public string pipeline_identity = string.Empty;
-        public string projection_identity = string.Empty;
+        public string pose_graph_revision = string.Empty;
         public string solver_identity = string.Empty;
         public string instrumentation_identity = string.Empty;
         public string instrumentation_mode = string.Empty;
@@ -507,7 +507,7 @@ namespace ThirdPersonPerformance
         public string capture_profile_hash = string.Empty;
         public string content_identity = string.Empty;
         public string pipeline_identity = string.Empty;
-        public string projection_identity = string.Empty;
+        public string pose_graph_revision = string.Empty;
         public string solver_identity = string.Empty;
         public string hardware_identity = string.Empty;
         public string operating_system = string.Empty;

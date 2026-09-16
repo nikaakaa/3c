@@ -117,9 +117,9 @@ namespace BTSMTL.Diagnostics.Editor
             RuntimeDebugTargetResolutionStatus.Attached => string.Empty,
             RuntimeDebugTargetResolutionStatus.Ended => "Target ended. Showing frozen history.",
             RuntimeDebugTargetResolutionStatus.NotPlaying => "Enter Play Mode to inspect a runtime target.",
-            RuntimeDebugTargetResolutionStatus.ExplicitHostUnregistered => "The selected CharacterPipelineHost is not registered.",
-            RuntimeDebugTargetResolutionStatus.ExplicitHostSourceMissing => "The selected CharacterPipelineHost does not contain this authoring source.",
-            RuntimeDebugTargetResolutionStatus.ExplicitHostRevisionMismatch => "The selected CharacterPipelineHost was built from a different source revision.",
+            RuntimeDebugTargetResolutionStatus.ExplicitHostUnregistered => "The selected character host is not registered.",
+            RuntimeDebugTargetResolutionStatus.ExplicitHostSourceMissing => "The selected character host does not contain this authoring source.",
+            RuntimeDebugTargetResolutionStatus.ExplicitHostRevisionMismatch => "The selected character host was built from a different source revision.",
             RuntimeDebugTargetResolutionStatus.SourceMissing => "The attached trace does not contain this authoring source.",
             RuntimeDebugTargetResolutionStatus.RevisionMismatch => "The attached trace was built from a different source revision.",
             RuntimeDebugTargetResolutionStatus.NoExactTarget => "No registered target exactly matches this authoring source.",
@@ -130,3 +130,4 @@ namespace BTSMTL.Diagnostics.Editor
         };
     }
 }
+

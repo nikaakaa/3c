@@ -33,7 +33,6 @@ MonoBehaviour:
   m_ControlMotionTimelines:
   - {fileID: 11400000, guid: 6fbeaf0090c34c31a4a21216e3ccc966, type: 2}
   m_SimulationTickRate: 60
-  m_PresentationProjection: {fileID: 11400000, guid: f365735adcfd49c4e96070df6bcd3bc4,
     type: 2}
   m_InputProfile: {fileID: 11400000, guid: be650df85b1e49ab9d1cefc91c6cc809, type: 2}
   m_GameplayEffectProfile: {fileID: 11400000, guid: 4a39b2d9de6248bc99baf9561c18716d,
@@ -52,3 +51,4 @@ MonoBehaviour:
   m_BehaviorProfiles:
   - {fileID: 11400000, guid: 99e9d56129664ebbb07fbaa1a0bb7c30, type: 2}
   - {fileID: 11400000, guid: 4e38e0339f0e431ba4c15c9575166034, type: 2}
+

@@ -1387,3 +1387,8 @@
 - Pose Graph 存在节点而 Source／Constraint／Handler／Final Publication 组合尚未由 Pose owner 暴露完整装配输入时，工厂立即失败；Camera、Equipment、checkpoint 也只暴露精确失败，不用占位结果冒充完成。
 - 清理 Rollback 注册器对已删除 `FixedCharacterSimulationDiagnosticsAdapter` 的引用，统一回到 Fixed Null Simulation Diagnostics Sink，并把 presentation 计数转换到 Rollback diagnostics 的 ulong 合同。
 - Fixed.Unity、ServerAuthoritative.Unity、DeterministicRollback.Unity 便携工程编译通过；本步不勾选 Pose 公共接线，Pose／Camera／Equipment 组合仍是后续闭合点。
+
+## 2026-09-16 清理Definition残留Presentation Projection引用
+
+- 删除 Corin Character Pipeline Definition 中已无代码字段的 `m_PresentationProjection` 序列化残留，避免作者继续看到和恢复旧总 Projection 数据源。
+- 将运行诊断目标提示中的旧 `CharacterPipelineHost` 名称改为通用 character host，当前正式宿主由 Fixed、Rollback 与网络场景 Host 分领域承担。

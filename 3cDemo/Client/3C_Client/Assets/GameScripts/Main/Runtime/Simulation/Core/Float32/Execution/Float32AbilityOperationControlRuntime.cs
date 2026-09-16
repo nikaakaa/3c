@@ -8,6 +8,7 @@ namespace ThirdPersonSimulation
     {
         Float32AbilityExecutionTarget Target { get; }
         void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
+        IReadOnlyList<IAbilityTimelinePending> TimelineAdvances { get; }
         void EndEvaluation();
     }
 
@@ -67,6 +68,7 @@ namespace ThirdPersonSimulation
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         readonly Float32ActionStateStore m_ActionState;
         readonly SimulationTick m_Tick;
+        readonly List<IAbilityTimelinePending> m_TimelinePendingAdvances;
 
         public Float32AbilityExecutionTarget(
             Float32GameplayAbilityExecutionAccess access,
@@ -83,6 +85,7 @@ namespace ThirdPersonSimulation
             Float32TraceSink trace,
             IAbilityTimelineRuntime timelineRuntime,
             Float32ActionStateStore actionState,
+            List<IAbilityTimelinePending> timelineAdvances,
             SimulationTick tick)
         {
             m_Access = access;
@@ -99,6 +102,8 @@ namespace ThirdPersonSimulation
             m_Trace = trace;
             m_TimelineRuntime = timelineRuntime;
             m_ActionState = actionState;
+            m_TimelinePendingAdvances = timelineAdvances ??
+                throw new ArgumentNullException(nameof(timelineAdvances));
             m_Tick = tick;
         }
 
@@ -287,13 +292,16 @@ namespace ThirdPersonSimulation
                     throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' did not return a runtime handle.");
                 m_ControlState.Set(slot, AbilityStateValue.FromInt32(runtimeHandle));
             }
-            return m_TimelineRuntime.Tick(runtimeHandle, m_Tick.Value, 1) switch
+            AbilityTimelineTickResult tick = m_TimelineRuntime.Tick(runtimeHandle, m_Tick.Value, 1);
+            if (tick.Pending != null)
+                m_TimelinePendingAdvances.Add(tick.Pending);
+            return tick.Status switch
             {
                 AbilityTimelineRuntimeStatus.Running => OperationExecutionResult.Running,
                 AbilityTimelineRuntimeStatus.Succeeded => OperationExecutionResult.Success,
                 AbilityTimelineRuntimeStatus.Failed => OperationExecutionResult.Failure,
                 AbilityTimelineRuntimeStatus.Cancelled => OperationExecutionResult.Failure,
-                _ => throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' returned an invalid status.")
+                _ => throw new InvalidOperationException("Ability Timeline operation returned an invalid status.")
             };
         }
 

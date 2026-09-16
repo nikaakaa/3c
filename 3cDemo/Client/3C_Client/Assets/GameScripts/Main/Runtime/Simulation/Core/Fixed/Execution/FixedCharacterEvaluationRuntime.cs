@@ -46,13 +46,13 @@ namespace ThirdPersonSimulation.Fixed
             var presentation = new List<PresentationCommand>();
             var trace = new List<SimulationTraceRecord>();
             var controlTrace = new List<SimulationTraceRecord>();
+            var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
             try
             {
                 var serviceFactory = new FixedAbilityExecutionServiceFactory(actor.TimelineRuntime);
                 var domainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);
-                var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
                 var controlMotion = new FixedCharacterControlMotionRuntime(
                     abilityInput,
                     bodyFacts,
@@ -170,16 +170,34 @@ namespace ThirdPersonSimulation.Fixed
                     actor.ActorId,
                     tick,
                     candidateState,
+                    actor.TimelineRuntime,
                     facts,
                     presentation,
-                    trace);
+                    trace,
+                    workspace.TimelineAdvances);
             }
             catch
             {
+                DiscardTimelineAdvances(actor.TimelineRuntime, workspace);
                 for (int i = 0; i < invocations.Count; i++)
                     invocations[i].Dispose();
                 roleState.Dispose();
                 throw;
+            }
+        }
+
+        static void DiscardTimelineAdvances(
+            IAbilityTimelineRuntime timelineRuntime,
+            FixedAbilityExecutionWorkspace workspace)
+        {
+            if (timelineRuntime == null)
+                return;
+            IReadOnlyList<IAbilityTimelinePending> advances = workspace.TimelineAdvances;
+            for (int i = 0; i < advances.Count; i++)
+            {
+                if (advances[i] == null)
+                    throw new InvalidOperationException("Fixed Character evaluation has an empty Timeline advance.");
+                timelineRuntime.Discard(advances[i]);
             }
         }
 

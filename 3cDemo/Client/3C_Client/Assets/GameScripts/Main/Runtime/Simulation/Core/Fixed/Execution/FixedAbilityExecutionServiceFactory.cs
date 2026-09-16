@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
@@ -92,7 +93,6 @@ namespace ThirdPersonSimulation.Fixed
             IFixedInputRequestStatePort inputRequests,
             FixedAbilityExecutionWorkspace workspace)
         {
-            domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
             FixedGameplayAbilityExecutionAccess access = executionServices.Access;
             FixedStatePort controlState = frame.CreateStatePort(
                 "Control",
@@ -172,6 +172,7 @@ namespace ThirdPersonSimulation.Fixed
                 frame.Trace,
                 m_TimelineRuntime,
                 actionStore,
+                workspace.TimelineAdvances,
                 frame.Tick);
             var services = new FixedAbilityExecutionServiceSet(
                 frame,
@@ -180,7 +181,8 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayEffects,
                 equipment,
                 values,
-                blackboard);
+                blackboard,
+                workspace.TimelineAdvances);
             control = new FixedAbilityOperationControlRuntime(executionData, services);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
                 executionData.Binding,

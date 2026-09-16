@@ -45,13 +45,13 @@ namespace ThirdPersonSimulation
             var presentation = new List<PresentationCommand>();
             var trace = new List<SimulationTraceRecord>();
             var controlTrace = new List<SimulationTraceRecord>();
+            var workspace = new Float32AbilityExecutionWorkspace(sharedEffectScratch);
             try
             {
                 var serviceFactory = new Float32AbilityExecutionServiceFactory(actor.TimelineRuntime);
                 var domainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);
-                var workspace = new Float32AbilityExecutionWorkspace(sharedEffectScratch);
                 var controlMotion = new Float32CharacterControlMotionRuntime(
                     abilityInput,
                     bodyFacts,
@@ -171,14 +171,32 @@ namespace ThirdPersonSimulation
                     candidateState,
                     facts,
                     presentation,
-                    trace);
+                    trace,
+                    actor.TimelineRuntime,
+                    workspace.TimelineAdvances);
             }
             catch
             {
+                DiscardTimelineAdvances(actor.TimelineRuntime, workspace);
                 for (int i = 0; i < invocations.Count; i++)
                     invocations[i].Dispose();
                 roleState.Dispose();
                 throw;
+            }
+        }
+
+        static void DiscardTimelineAdvances(
+            IAbilityTimelineRuntime timelineRuntime,
+            Float32AbilityExecutionWorkspace workspace)
+        {
+            if (timelineRuntime == null)
+                return;
+            IReadOnlyList<IAbilityTimelinePending> advances = workspace.TimelineAdvances;
+            for (int i = 0; i < advances.Count; i++)
+            {
+                if (advances[i] == null)
+                    throw new InvalidOperationException("Float32 Character evaluation has an empty Timeline advance.");
+                timelineRuntime.Discard(advances[i]);
             }
         }
 

@@ -8,6 +8,8 @@ namespace ThirdPersonSimulation
         readonly IReadOnlyList<GameplayFact> m_GameplayFacts;
         readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
         readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
+        readonly IReadOnlyList<IAbilityTimelinePending> m_TimelineAdvances;
+        readonly IAbilityTimelineRuntime m_TimelineRuntime;
         bool m_Consumed;
 
         internal Float32CharacterEvaluationResult(
@@ -16,7 +18,9 @@ namespace ThirdPersonSimulation
             Float32CharacterRuntimeState candidateState,
             IEnumerable<GameplayFact> gameplayFacts,
             IEnumerable<PresentationCommand> presentationCommands,
-            IEnumerable<SimulationTraceRecord> traceRecords)
+            IEnumerable<SimulationTraceRecord> traceRecords,
+            IAbilityTimelineRuntime timelineRuntime,
+            IEnumerable<IAbilityTimelinePending> timelineAdvances)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Character evaluation result identity is incomplete.");
@@ -30,6 +34,8 @@ namespace ThirdPersonSimulation
             m_GameplayFacts = Copy(gameplayFacts);
             m_PresentationCommands = Copy(presentationCommands);
             m_TraceRecords = Copy(traceRecords);
+            m_TimelineRuntime = timelineRuntime;
+            m_TimelineAdvances = Copy(timelineAdvances);
         }
 
         public ActorId ActorId { get; }
@@ -43,6 +49,7 @@ namespace ThirdPersonSimulation
         {
             if (m_Consumed)
                 throw new InvalidOperationException("Float32 Character evaluation result has already been consumed.");
+            CompleteTimelineAdvances(true);
             m_Consumed = true;
         }
 
@@ -50,7 +57,23 @@ namespace ThirdPersonSimulation
         {
             if (m_Consumed)
                 return;
+            CompleteTimelineAdvances(false);
             m_Consumed = true;
+        }
+
+        void CompleteTimelineAdvances(bool commit)
+        {
+            if (m_TimelineRuntime == null)
+                return;
+            for (int i = 0; i < m_TimelineAdvances.Count; i++)
+            {
+                if (m_TimelineAdvances[i] == null)
+                    throw new InvalidOperationException("Float32 Character evaluation has an empty Timeline advance.");
+                if (commit)
+                    m_TimelineRuntime.Commit(m_TimelineAdvances[i]);
+                else
+                    m_TimelineRuntime.Discard(m_TimelineAdvances[i]);
+            }
         }
 
         static IReadOnlyList<T> Copy<T>(IEnumerable<T> values)

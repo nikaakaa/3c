@@ -456,19 +456,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return checked((int)handle.Value);
         }
 
-        public AbilityTimelineRuntimeStatus Tick(int runtimeHandle, ulong logicTick, int deltaFrames)
+        public AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int deltaFrames)
         {
-            TimelinePlaybackStatus status = m_Host.StepTimelinePlayback(
+            CharacterTimelinePendingAdvance pending = m_Host.AdvanceTimelinePlayback(
                 new TimelinePlaybackHandle((ulong)runtimeHandle), logicTick, deltaFrames);
-            return status switch
-            {
-                TimelinePlaybackStatus.Requested => AbilityTimelineRuntimeStatus.Running,
-                TimelinePlaybackStatus.Running => AbilityTimelineRuntimeStatus.Running,
-                TimelinePlaybackStatus.Succeeded => AbilityTimelineRuntimeStatus.Succeeded,
-                TimelinePlaybackStatus.Failed => AbilityTimelineRuntimeStatus.Failed,
-                TimelinePlaybackStatus.Cancelled => AbilityTimelineRuntimeStatus.Cancelled,
-                _ => throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' returned status '{status}'.")
-            };
+            if (pending == null)
+                throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' returned no pending advance.");
+            return new AbilityTimelineTickResult(pending.Status, pending);
+        }
+
+
+
+        public void Commit(IAbilityTimelinePending pending)
+        {
+            m_Host.CommitTimelinePlayback((CharacterTimelinePendingAdvance)pending);
+        }
+
+        public void Discard(IAbilityTimelinePending pending)
+        {
+            m_Host.DiscardTimelinePlayback((CharacterTimelinePendingAdvance)pending);
         }
 
         public void Stop(int runtimeHandle)

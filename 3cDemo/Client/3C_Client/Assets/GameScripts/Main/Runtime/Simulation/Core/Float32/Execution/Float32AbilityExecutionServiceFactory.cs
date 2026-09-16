@@ -169,6 +169,7 @@ namespace ThirdPersonSimulation
                 frame.Trace,
                 m_TimelineRuntime,
                 actionStore,
+                workspace.TimelineAdvances,
                 frame.Tick);
             var services = new Float32AbilityExecutionServiceSet(
                 frame,
@@ -177,7 +178,8 @@ namespace ThirdPersonSimulation
                 gameplayEffects,
                 equipment,
                 values,
-                blackboard);
+                blackboard,
+                workspace.TimelineAdvances);
             control = new Float32AbilityOperationControlRuntime(executionData, services);
             Float32AbilityDomainRuntime domain = new Float32AbilityDomainRuntime(
                 executionData.Binding,

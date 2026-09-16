@@ -1461,3 +1461,10 @@
 - Rollback、DotRecast、Network 产品装配暂时传入空运行绑定；若技能实际执行 Timeline 会精确失败，不伪装可用。TreeClip 服务仍缺正式组合，继续精确拒绝。
 - 本步未勾选 3.8：跨域 Commit/Discard、typed Capture/Restore、TreeClip 执行服务和完整停止候选还未接完。
 - ThirdPersonSimulation.Float32、ThirdPersonSimulation.Fixed、ThirdPersonSimulation.Fixed.Unity、ThirdPersonClient.Editor 编译通过；构建后已执行 build-server shutdown。
+
+## 2026-09-17 接入Ability Timeline角色级Commit边界
+
+- Fixed 与 Float32 Ability 执行在 Tick Timeline 时只生成 pending advance，不再把动画推进直接写入最终事实；角色评估结果成为唯一提交 owner。
+- 角色评估结果被消费时提交 Timeline advance，被放弃或评估中途异常时丢弃；Timeline 终态在 Host 内已完成时返回明确 Succeeded / Failed / Cancelled，不再把终态误报为 Running。
+- CharacterTimelineHost 的 Ability 推进统一走 Advance / Commit / Discard 合同，并把 Runtime 播放句柄转换隔离在 Timeline owner 内。
+- Float32、Fixed、Fixed.Unity、ThirdPersonClient.Runtime、ThirdPersonClient.Editor 便携编译通过；Unity 内运行表现仍由作者端到端验证。

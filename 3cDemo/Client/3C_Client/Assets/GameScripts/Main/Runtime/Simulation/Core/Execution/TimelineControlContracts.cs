@@ -541,10 +541,31 @@ namespace ThirdPersonSimulation
         public ulong InputSequence { get; }
     }
 
+    public interface IAbilityTimelinePending
+    {
+        int RuntimeHandle { get; }
+    }
+
+    public readonly struct AbilityTimelineTickResult
+    {
+        public AbilityTimelineTickResult(AbilityTimelineRuntimeStatus status, IAbilityTimelinePending pending)
+        {
+            Status = status;
+            Pending = pending;
+            if (status == AbilityTimelineRuntimeStatus.Running && pending == null)
+                throw new ArgumentException("A running Ability Timeline advance requires a pending commit candidate.");
+        }
+
+        public AbilityTimelineRuntimeStatus Status { get; }
+        public IAbilityTimelinePending Pending { get; }
+    }
+
     public interface IAbilityTimelineRuntime
     {
         int Start(in AbilityTimelineStartRequest request);
-        AbilityTimelineRuntimeStatus Tick(int runtimeHandle, ulong logicTick, int deltaFrames);
+        AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int deltaFrames);
+        void Commit(IAbilityTimelinePending pending);
+        void Discard(IAbilityTimelinePending pending);
         void Stop(int runtimeHandle);
     }
 

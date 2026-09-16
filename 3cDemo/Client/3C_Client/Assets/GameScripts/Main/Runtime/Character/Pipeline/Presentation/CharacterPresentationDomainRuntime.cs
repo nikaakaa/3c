@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -54,6 +54,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         PoseParameterId[] m_PoseParameterIds;
         ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher m_PoseActionPublisher;
+
+        internal bool TryGetPoseCommittedPose(out ComposedAnimationPoseFrame frame)
+        {
+            if (m_PoseDomain == null || !m_PoseDomain.IsAdopted)
+            {
+                frame = default;
+                return false;
+            }
+            return m_PoseDomain.Session.TryObserveFinalPose(out frame);
+        }
+
+        internal string PoseGraphRevision => m_PoseDomain != null && m_PoseDomain.IsAdopted
+            ? m_PoseDomain.Session.GraphRevision
+            : string.Empty;
+
+        internal ulong PoseInstanceId => m_PoseDomain != null && m_PoseDomain.IsAdopted
+            ? m_PoseDomain.Session.InstanceId
+            : 0;
+
+        internal ulong PoseResetGeneration => m_PoseDomain != null && m_PoseDomain.IsAdopted
+            ? m_PoseDomain.Session.ResetGeneration
+            : 0;
 
         internal void BindPoseActionPublisher(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher publisher)
         {

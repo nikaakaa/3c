@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong instanceId,
             ulong resetGeneration,
             string reason,
-            CharacterPoseNativeDomainServices services,
+            CharacterPoseNativeDomainServiceFactory serviceFactory,
             out CharacterPoseNativeDomainSession session)
         {
             session = null;
@@ -42,36 +42,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     instanceId,
                     resetGeneration,
                     reason,
-                    services);
+                    serviceFactory);
             if (!validation.IsAdopted)
                 return validation;
 
             CharacterPoseSourceModule source = null;
-            CharacterPoseConstraintRuntime constraints = null;
+            CharacterPoseNativeDomainServiceSet services = null;
             try
             {
                 int nodeCount = CountNodes(profile);
-                source = new CharacterPoseSourceModule(
+                source = CreateSource(
                     animancer,
                     profile,
                     rigBinding,
                     rig,
+                    inputContract,
                     nodeCount,
-                    nodeCount,
-                    nodeCount,
-                    nodeCount,
-                    nodeCount,
-                    services.ResourceScope,
-                    inputContract.Parameters.Count);
-                constraints = new CharacterPoseConstraintRuntime(
-                    services.Constraints.FootPlacement,
-                    services.Constraints.PoseBoneContributions,
-                    services.Constraints.GoalAssemblers,
-                    services.Constraints.Solver,
-                    services.Constraints.ContributionCount,
-                    services.Constraints.ContributionGoalCount,
-                    rig.RigId,
-                    rig.RigRevision);
+                    serviceFactory);
+                services = serviceFactory.Create(
+                    actorId,
+                    rigBinding,
+                    requestId,
+                    instanceId,
+                    resetGeneration,
+                    source,
+                    () => source.CurrentLease);
                 var context = new CharacterPoseNativeInstanceContext(
                     actorId,
                     animancer,
@@ -91,26 +86,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         resetGeneration,
                         reason,
                         source,
-                        constraints,
-                        services.SourceHandlers,
-                        services.ConstraintHandlers,
-                        services.ManagedHandlers,
-                        services.AnimationProperties,
-                        services.PlayerNodeIds,
-                        services.ContributionCapacity,
+                        services.Constraints,
+                        services.Services.SourceHandlers,
+                        services.Services.ConstraintHandlers,
+                        services.Services.ManagedHandlers,
+                        services.Services.AnimationProperties,
+                        services.Services.PlayerNodeIds,
+                        services.Services.ContributionCapacity,
                         out CharacterPoseNativeRoleSession roleSession);
                 if (!adopted.IsAdopted)
+                {
+                    services.Dispose();
                     return CharacterPoseNativeDomainCreateResult.Failed(adopted);
+                }
                 session = new CharacterPoseNativeDomainSession(
                     roleSession,
-                    services.ActionCommandSource,
-                    services.EventFrameSource);
+                    services.Services.ActionCommandSource,
+                    services.Services.EventFrameSource,
+                    services);
                 return CharacterPoseNativeDomainCreateResult.Ready(adopted, session);
             }
             catch (Exception exception)
             {
+                services?.Dispose();
                 source?.Dispose();
-                constraints?.Dispose();
                 return CharacterPoseNativeDomainCreateResult.Failed(
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     "CharacterPoseNativeDomainRuntimeFactory.Create",
@@ -132,7 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong instanceId,
             ulong resetGeneration,
             string reason,
-            CharacterPoseNativeDomainServices services,
+            CharacterPoseNativeDomainServiceFactory serviceFactory,
             out CharacterPoseNativeDomainSession session)
         {
             session = null;
@@ -155,36 +154,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     instanceId,
                     resetGeneration,
                     reason,
-                    services);
+                    serviceFactory);
             if (!validation.IsAdopted)
                 return validation;
 
             CharacterPoseSourceModule source = null;
-            CharacterPoseConstraintRuntime constraints = null;
+            CharacterPoseNativeDomainServiceSet services = null;
             try
             {
                 int nodeCount = CountNodes(profile);
-                source = new CharacterPoseSourceModule(
+                source = CreateSource(
                     animancer,
                     profile,
                     rigBinding,
                     rig,
+                    inputContract,
                     nodeCount,
-                    nodeCount,
-                    nodeCount,
-                    nodeCount,
-                    nodeCount,
-                    services.ResourceScope,
-                    inputContract.Parameters.Count);
-                constraints = new CharacterPoseConstraintRuntime(
-                    services.Constraints.FootPlacement,
-                    services.Constraints.PoseBoneContributions,
-                    services.Constraints.GoalAssemblers,
-                    services.Constraints.Solver,
-                    services.Constraints.ContributionCount,
-                    services.Constraints.ContributionGoalCount,
-                    rig.RigId,
-                    rig.RigRevision);
+                    serviceFactory);
+                services = serviceFactory.Create(
+                    actorId,
+                    rigBinding,
+                    requestId,
+                    instanceId,
+                    resetGeneration,
+                    source,
+                    () => source.CurrentLease);
                 var context = new CharacterPoseNativeInstanceContext(
                     actorId,
                     animancer,
@@ -205,31 +199,60 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         resetGeneration,
                         reason,
                         source,
-                        constraints,
-                        services.SourceHandlers,
-                        services.ConstraintHandlers,
-                        services.ManagedHandlers,
-                        services.AnimationProperties,
-                        services.PlayerNodeIds,
-                        services.ContributionCapacity,
+                        services.Constraints,
+                        services.Services.SourceHandlers,
+                        services.Services.ConstraintHandlers,
+                        services.Services.ManagedHandlers,
+                        services.Services.AnimationProperties,
+                        services.Services.PlayerNodeIds,
+                        services.Services.ContributionCapacity,
                         out CharacterPoseNativeRoleSession roleSession);
                 if (!adopted.IsAdopted)
+                {
+                    services.Dispose();
                     return CharacterPoseNativeDomainCreateResult.Failed(adopted);
+                }
                 session = new CharacterPoseNativeDomainSession(
                     roleSession,
-                    services.ActionCommandSource,
-                    services.EventFrameSource);
+                    services.Services.ActionCommandSource,
+                    services.Services.EventFrameSource,
+                    services);
                 return CharacterPoseNativeDomainCreateResult.Ready(adopted, session);
             }
             catch (Exception exception)
             {
+                services?.Dispose();
                 source?.Dispose();
-                constraints?.Dispose();
                 return CharacterPoseNativeDomainCreateResult.Failed(
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     "CharacterPoseNativeDomainRuntimeFactory.Replace",
                     exception.Message);
             }
+        }
+
+        static CharacterPoseSourceModule CreateSource(
+            AnimancerComponent animancer,
+            CharacterAnimationPresentationProfile profile,
+            CharacterAnimationRigBinding rigBinding,
+            CharacterAnimationRigPayload rig,
+            CharacterAnimationInputContract inputContract,
+            int nodeCount,
+            CharacterPoseNativeDomainServiceFactory serviceFactory)
+        {
+            if (serviceFactory == null)
+                throw new ArgumentNullException(nameof(serviceFactory));
+            return new CharacterPoseSourceModule(
+                animancer,
+                profile,
+                rigBinding,
+                rig,
+                nodeCount,
+                nodeCount,
+                nodeCount,
+                nodeCount,
+                nodeCount,
+                serviceFactory.ResourceScope,
+                inputContract.Parameters.Count);
         }
 
         static CharacterPoseNativeDomainCreateResult Validate(
@@ -245,7 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong instanceId,
             ulong resetGeneration,
             string reason,
-            CharacterPoseNativeDomainServices services)
+            CharacterPoseNativeDomainServiceFactory serviceFactory)
         {
             if (requestId == 0 || !actorId.IsValid)
                 return FailInput("request identity", CharacterPoseNativeFailureCode.ActorMissing);
@@ -263,21 +286,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return FailInput("Rig or Root Hierarchy binding", CharacterPoseNativeFailureCode.RigMissing);
             if (instanceId == 0 || resetGeneration == 0 || string.IsNullOrWhiteSpace(reason))
                 return FailInput("instance identity", CharacterPoseNativeFailureCode.GraphInvalid);
-            if (services == null)
-                return FailInput("domain services", CharacterPoseNativeFailureCode.ResourceMissing);
-            if (services.ResourceScope == null)
-                return FailInput("animation resource scope", CharacterPoseNativeFailureCode.ResourceMissing);
-            if (services.ActionCommandSource == null)
-                return FailInput("action command source", CharacterPoseNativeFailureCode.ResourceMissing);
-            if (services.EventFrameSource == null)
-                return FailInput("EventGraph typed Frame source", CharacterPoseNativeFailureCode.ResourceMissing);
-            if (services.SourceHandlers == null || services.ConstraintHandlers == null ||
-                services.ManagedHandlers == null)
-                return FailInput("handler composition", CharacterPoseNativeFailureCode.UnsupportedNode);
-            if (services.Constraints == null || services.Constraints.Solver == null)
-                return FailInput("Constraint runtime service", CharacterPoseNativeFailureCode.ConstraintFailed);
-            if (RequiresFootPlacement(profile) && services.Constraints.FootPlacement == null)
-                return FailInput("Foot Placement runtime service", CharacterPoseNativeFailureCode.ConstraintFailed);
+            if (serviceFactory == null)
+                return FailInput("domain service factory", CharacterPoseNativeFailureCode.ResourceMissing);
             return CharacterPoseNativeDomainCreateResult.Failed(
                 CharacterPoseNativeFailureCode.None,
                 string.Empty,
@@ -304,19 +314,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             return count > 0 ? count : throw new InvalidOperationException("Pose domain graph has no nodes.");
-        }
-
-        static bool RequiresFootPlacement(CharacterAnimationPresentationProfile profile)
-        {
-            foreach (CharacterPoseCanvasGraph graph in profile.PoseGraph.EnumerateGraphs())
-            {
-                foreach (CharacterPoseCanvasNode node in graph.Nodes)
-                {
-                    if (node != null && node.Kind == CharacterPoseNodeKind.FootPlacement)
-                        return true;
-                }
-            }
-            return false;
         }
     }
 }

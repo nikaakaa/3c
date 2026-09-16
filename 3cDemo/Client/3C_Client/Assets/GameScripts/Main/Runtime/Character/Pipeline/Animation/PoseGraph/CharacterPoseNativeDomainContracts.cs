@@ -177,15 +177,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeRoleSession m_Session;
         readonly ICharacterPoseNativeActionCommandSource m_ActionCommandSource;
         readonly ICharacterPoseNativeEventFrameSource m_EventFrameSource;
+        readonly CharacterPoseNativeDomainServiceSet m_Services;
 
         internal CharacterPoseNativeDomainSession(
             CharacterPoseNativeRoleSession session,
             ICharacterPoseNativeActionCommandSource actionCommandSource,
-            ICharacterPoseNativeEventFrameSource eventFrameSource)
+            ICharacterPoseNativeEventFrameSource eventFrameSource,
+            CharacterPoseNativeDomainServiceSet services)
         {
             m_Session = session ?? throw new ArgumentNullException(nameof(session));
             m_ActionCommandSource = actionCommandSource ?? throw new ArgumentNullException(nameof(actionCommandSource));
             m_EventFrameSource = eventFrameSource ?? throw new ArgumentNullException(nameof(eventFrameSource));
+            m_Services = services ?? throw new ArgumentNullException(nameof(services));
         }
 
         internal CharacterPoseNativeRoleSession RoleSession => m_Session;
@@ -239,7 +242,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             out CharacterAnimationVariableFrame frame) =>
             m_EventFrameSource.TryGetFrame(actorId, frameIdentity, out frame);
 
-        public void Dispose() => m_Session.Dispose();
+        public void Dispose()
+        {
+            m_Session.Dispose();
+            m_Services.Dispose();
+        }
     }
 
     internal sealed class CharacterPoseNativeDomainCreateResult
@@ -298,6 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsAdopted => Session != null;
     }
 }
+
 
 
 

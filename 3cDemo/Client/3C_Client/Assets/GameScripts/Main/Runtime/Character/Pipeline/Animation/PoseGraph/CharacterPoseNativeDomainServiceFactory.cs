@@ -58,10 +58,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             resources.RequireSourceCatalogComplete(profile);
         }
 
-        internal CharacterPoseNativeDomainServices Create(
+        internal CharacterAnimationResourceScope ResourceScope => m_ResourceScope;
+
+        internal CharacterPoseNativeDomainServiceSet Create(
             ActorId actorId,
             CharacterAnimationRigBinding rigBinding,
-            string posePlanHash,
             ulong requestId,
             ulong instanceId,
             ulong resetGeneration,
@@ -72,9 +73,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(source));
             if (sourceLeaseProvider == null)
                 throw new ArgumentNullException(nameof(sourceLeaseProvider));
+            var owned = new List<IDisposable>();
+            try
+            {
             CharacterPoseNativeSourceResourceCatalog sourceCatalog = m_Resources.CreateSourceCatalog(m_Rig, m_ResourceScope);
             CharacterPoseNativeConstraintResourceCatalog constraintCatalog = m_Resources.CreateConstraintCatalog(m_Rig);
+            owned.Add(constraintCatalog);
             CharacterPoseNativeManagedSourceResourceCatalog managedCatalog = m_Resources.CreateManagedCatalog(m_Profile, m_Rig);
+            owned.Add(managedCatalog);
             CharacterPoseNativeFootPlacementResource footResource = m_Resources.CreateFootPlacementResource(
                 m_World,
                 m_FutureBodyTranslationSource,
@@ -91,7 +97,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 actorId,
                 m_Rig,
                 rigBinding,
-                posePlanHash);
+                m_Profile.PoseGraph.Graph.ContentRevision);
+            owned.Add(footPlacement);
             CharacterFinalIkFullBodySolver solver = CreateSolver();
             var constraints = new CharacterPoseConstraintRuntime(
                 footPlacement,
@@ -102,6 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Resources.ContributionGoalCount,
                 m_Rig.RigId,
                 m_Rig.RigRevision);
+            owned.Add(constraints);
             var worldContext = new CharacterPoseWorldContextAdapter(
                 m_Profile.PoseGraph.Graph.GraphId.Value,
                 source,
@@ -144,7 +152,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ThrowRootOrientationCurve,
                 ThrowRootOrientationSource,
                 CreateBuffer);
-            return new CharacterPoseNativeDomainServices(
+            return new CharacterPoseNativeDomainServiceSet(
+                new CharacterPoseNativeDomainServices(
                 m_ResourceScope,
                 m_ActionCommandSource,
                 m_EventFrameSource,
@@ -160,7 +169,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 managedHandlers,
                 CompilePropertyBindings(),
                 CollectPlayerNodeIds(),
-                m_Resources.ContributionCount);
+                        m_Resources.ContributionCount),
+                constraints,
+                owned);
+            }
+            catch
+            {
+                for (int i = owned.Count - 1; i >= 0; i--)
+                    owned[i].Dispose();
+                throw;
+            }
         }
 
         AnimationClipPlayerRuntime CreateClipPlayer(
@@ -384,6 +402,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeInstanceContext context) =>
             throw new InvalidOperationException($"Root Orientation source '{node.NodeId}' is not assembled.");
     }
+
+internal sealed class CharacterPoseNativeDomainServiceSet : IDisposable
+{
+    readonly IReadOnlyList<IDisposable> m_OwnedResources;
+    bool m_Disposed;
+
+    internal CharacterPoseNativeDomainServiceSet(
+        CharacterPoseNativeDomainServices services,
+        CharacterPoseConstraintRuntime constraints,
+        IReadOnlyList<IDisposable> ownedResources)
+    {
+        Services = services ?? throw new ArgumentNullException(nameof(services));
+        Constraints = constraints ?? throw new ArgumentNullException(nameof(constraints));
+        m_OwnedResources = ownedResources ?? throw new ArgumentNullException(nameof(ownedResources));
+    }
+
+    internal CharacterPoseNativeDomainServices Services { get; }
+    internal CharacterPoseConstraintRuntime Constraints { get; }
+    public void Dispose()
+    {
+        if (m_Disposed)
+            return;
+        m_Disposed = true;
+        for (int i = m_OwnedResources.Count - 1; i >= 0; i--)
+            m_OwnedResources[i].Dispose();
+    }
+}
 }
 
 

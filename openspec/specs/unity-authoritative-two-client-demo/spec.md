@@ -15,7 +15,7 @@
 
 ### Requirement: Demo必须使用一个Authority Session连接两个Prediction Clients
 
-Authority Worker MUST运行一个包含Actor A/B的canonical Authority Session。Client A MUST只预测Actor A并显示Actor B remote；Client B MUST只预测Actor B并显示Actor A remote。两端 MUST连接同一Fantasy Room并共享相同Model/protocol/Program identity。
+Authority Worker MUST运行一个包含Actor A/B的canonical Authority Session。Client A MUST只预测Actor A并显示Actor B remote；Client B MUST只预测Actor B并显示Actor A remote。两端 MUST连接同一Fantasy Room并共享相同Model/protocol/Graph artifact与domain binding identity。
 
 #### Scenario: 完整Roster进入Active
 
@@ -23,14 +23,14 @@ Authority Worker MUST运行一个包含Actor A/B的canonical Authority Session�
 - **THEN** Room MUST锁定两个唯一Actor ownership
 - **AND** 三个Unity Session MUST使用匹配的Authority/Prediction Pipeline pair
 
-### Requirement: Demo三端必须加载同一Corin Program
+### Requirement: Demo三端必须加载同一Corin Graph与domain binding
 
-Authority Worker、Client A和Client B MUST从ProgramAsset exact-byte wrapper加载相同Corin Float32 canonical bytes，并在handshake校验ProgramHash、LayoutHash、operation-set和TickRate。任一identity不匹配 MUST阻止Session Active，MUST不运行时编译或选择旧Program。
+Authority Worker、Client A 和 Client B MUST 加载相同 Corin Graph artifact canonical bytes 与匹配的 domain binding manifest，并在 handshake 校验 GraphHash、SourceRevision、Graph operation-set、domain layout identity 和 TickRate。任一 identity 不匹配 MUST 阻止 Session Active，MUST 不在运行时编译、猜测或选择旧整角色编译产物。
 
-#### Scenario: Client B Program过期
+#### Scenario: Client B Graph或domain binding过期
 
-- **WHEN** Client B ProgramHash与worker不同
-- **THEN** join MUST失败并返回Program identity诊断
+- **WHEN** Client B GraphHash 或 domain binding identity 与 Worker 不同
+- **THEN** join MUST 失败并返回对应 identity 诊断
 
 ### Requirement: Demo必须覆盖Owner Prediction与Server Correction
 
@@ -54,7 +54,7 @@ Authority Worker MUST独立推进两个Corin的移动、转身、闪避、Run、
 
 ### Requirement: Demo必须保持Local与Hybrid为两个完整显式组合
 
-Standard Local composition MUST继续使用Local Source和Standard Local Pipeline；ServerAuthoritative Demo MUST使用Fantasy Source以及Prediction/Authority Pipeline。两者 MAY共享Corin Program Runtime、Float32 Backend、标准Step Pass和Unity Solver，但 MUST不共享mutable Session、History、Endpoint或Pipeline state，也 MUST不互为fallback。
+Standard Local composition MUST继续使用Local Source和Standard Local Pipeline；ServerAuthoritative Demo MUST使用Fantasy Source以及Prediction/Authority Pipeline。两者 MAY共享 Corin Graph Runtime、Float32 domain runtime、标准 Step Pass 和 Unity Solver，但 MUST不共享 mutable Session、History、Endpoint 或 Pipeline state，也 MUST不互为 fallback。
 
 #### Scenario: 选择Local Demo
 
@@ -63,7 +63,7 @@ Standard Local composition MUST继续使用Local Source和Standard Local Pipelin
 
 ### Requirement: Demo必须提供有界只读模型诊断
 
-Demo diagnostics MUST显示process role、Room/Session/Player/Actor、Program/Layout、Prediction/Authority Pipeline、Control/Data Endpoint、各通道packet/s与bytes/s、payload bytes、control heartbeat outstanding、应用层可靠/full checkpoint队列压力、UDP丢包/乱序、RTT、jitter、command lead、snapshot age、baseline命中、interpolation occupancy、prediction error、correction decision、restore tick、replayed ticks、hard recovery、ack cursor和EventId disposition。Diagnostics MUST不修改Source、Pipeline、History、Solver或Presentation。
+Demo diagnostics MUST显示 process role、Room/Session/Player/Actor、Graph/domain layout、Prediction/Authority Pipeline、Control/Data Endpoint、各通道 packet/s 与 bytes/s、payload bytes、control heartbeat outstanding、应用层可靠/full checkpoint 队列压力、UDP 丢包/乱序、RTT、jitter、command lead、snapshot age、baseline 命中、interpolation occupancy、prediction error、correction decision、restore tick、replayed ticks、hard recovery、ack cursor 和 EventId disposition。Diagnostics MUST 不修改 Source、Pipeline、History、Solver 或 Presentation。
 
 #### Scenario: Owner发生Replay
 

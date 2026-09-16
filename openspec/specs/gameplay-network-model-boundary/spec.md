@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: Gameplay Network Model 必须是 Session 级唯一装配
 
-Gameplay Network Model MUST作为`SimulationSessionSourceDefinition`的一种实现，通过实际runtime factory创建model session、Endpoint、history、显式Source ports与匹配Target ABI的Runtime Launcher。唯一`SimulationSessionHost` MUST使用同一Composition Definition将该Source与显式Program Runtime、Execution Backend、Pipeline Definition、WorldSolver、ProgramCatalog、roster、Committer和diagnostics组合。Common Host、target-specific Unity Composer与通用Pipeline runtime package builder MUST不硬编码已知Model、Prepared Source或Pipeline Definition具体类型。Character、Graph、Program、Kernel、Pipeline Backend和WorldSolver MUST不保存Model selection。Local Source MUST可独立使用同一Session Host，但 MUST不被声明为Network Model。
+Gameplay Network Model MUST作为`SimulationSessionSourceDefinition`的一种实现，通过实际runtime factory创建model session、Endpoint、history、显式Source ports与匹配Target ABI的Runtime Launcher。唯一`SimulationSessionHost` MUST使用同一Composition Definition将该Source与显式Graph/domain Runtime、Execution Backend、Pipeline Definition、WorldSolver、domain catalog、roster、Committer和diagnostics组合。Common Host、target-specific Unity Composer与通用Pipeline runtime package builder MUST不硬编码已知Model、Prepared Source或Pipeline Definition具体类型。Character、Graph、domain Runtime、Kernel、Pipeline Backend和WorldSolver MUST不保存Model selection。Local Source MUST可独立使用同一Session Host，但 MUST不被声明为Network Model。
 
 #### Scenario: 新增完整Float32 Network Model
 
@@ -21,7 +21,7 @@ Gameplay Network Model MUST作为`SimulationSessionSourceDefinition`的一种实
 
 ### Requirement: Model、Endpoint 和 Transport 必须分层
 
-每个 GameplayNetworkModelDefinition MUST通过自己的 EndpointDefinition与 runtime factory创建 endpoint/protocol adapter、history和 Source ports。Model模块 MAY提供模型专属 Pass Definition与 Pipeline Definition，但 Composition MUST显式选择 Pipeline，Model MUST不在 Host中隐藏注入。WorldSolver implementation、Program Runtime、Character authoring、Execution Backend和 Presentation playback MUST不归 Model。Endpoint/Transport MUST不改变模型的 input/history/restore/commit语义。
+每个 GameplayNetworkModelDefinition MUST通过自己的 EndpointDefinition与 runtime factory创建 endpoint/protocol adapter、history和 Source ports。Model模块 MAY提供模型专属 Pass Definition与 Pipeline Definition，但 Composition MUST显式选择 Pipeline，Model MUST不在 Host中隐藏注入。WorldSolver implementation、Graph/domain Runtime、Character authoring、Execution Backend和 Presentation playback MUST不归 Model。Endpoint/Transport MUST不改变模型的 input/history/restore/commit语义。
 
 #### Scenario: ServerAuthoritative 使用不同服务端 Solver
 
@@ -31,7 +31,7 @@ Gameplay Network Model MUST作为`SimulationSessionSourceDefinition`的一种实
 
 ### Requirement: 只允许选择完整实现的 Network Model
 
-Network Model只有在 ModelDefinition、Source runtime factory、EndpointDefinition、protocol capability、所选 Pipeline及全部模型 Pass factory、Program Runtime/Backend requirement、Solver capability requirement与 preparation合同完整时才 MAY被 Session composition选择。手写 capability位、存在 packet/session类、空 factory、旧 adapter或只有 Pipeline显示名 MUST不能让 Model被视为完整。Host MUST在 preparation Ready与 Pipeline compile后再次校验实际 LaunchPlan。
+Network Model只有在 ModelDefinition、Source runtime factory、EndpointDefinition、protocol capability、所选 Pipeline及全部模型 Pass factory、Graph/domain Runtime/Backend requirement、Solver capability requirement与 preparation合同完整时才 MAY被 Session composition选择。手写 capability位、存在 packet/session类、空 factory、旧 adapter或只有 Pipeline显示名 MUST不能让 Model被视为完整。Host MUST在 preparation Ready与 Pipeline compile后再次校验实际 LaunchPlan。
 
 #### Scenario: ServerAuthoritative 缺少 Correction Pass factory
 
@@ -61,7 +61,7 @@ Character Core MUST只暴露 CharacterSimulationInput、typed SimulationIngress�
 
 ### Requirement: Character 输入来源与运动权威必须正交
 
-Actor control input MUST由当前Source与Ingress/Schedule Pass产生；world constraint与body result MUST由Session装配的唯一WorldSolver和正式WorldSolve Pass产生。Program与Character state MUST不使用authority总控枚举或具体Network Model分支。Network Model Schedule MAY把权威观察到的非Program Actor轨迹编译为model-neutral、tick-bound World constraint，但 MUST不自行求解接触、不提交Body，也 MUST不让Packet、Endpoint或Presentation Transform进入Solver。后续模型 MAY为不同Program Actor提供不同input/ingress，但同一SimulationStep的world mutation仍必须经过统一batch Solver。
+Actor control input MUST由当前Source与Ingress/Schedule Pass产生；world constraint与body result MUST由Session装配的唯一WorldSolver和正式WorldSolve Pass产生。Graph/domain Runtime与Character state MUST不使用authority总控枚举或具体Network Model分支。Network Model Schedule MAY把权威观察到的非Character Actor轨迹编译为model-neutral、tick-bound World constraint，但 MUST不自行求解接触、不提交Body，也 MUST不让Packet、Endpoint或Presentation Transform进入Solver。后续模型 MAY为不同Character Actor提供不同input/ingress，但同一SimulationStep的world mutation仍必须经过统一batch Solver。
 
 #### Scenario: Local Session Owner
 
@@ -74,8 +74,8 @@ Actor control input MUST由当前Source与Ingress/Schedule Pass产生；world co
 
 - **WHEN** Model Source拥有远端Actor的权威Body timeline但没有其canonical input
 - **THEN** 声明观察接触能力的Schedule MAY产生ObservedKinematic World constraint
-- **AND** 唯一WorldSolver MUST只为本地Program actor提交FinalBody
-- **AND** MUST不把远端Actor伪装成CharacterPipeline RemoteProxy或第二Program actor
+- **AND** 唯一WorldSolver MUST只为本地Character actor提交FinalBody
+- **AND** MUST不把远端Actor伪装成CharacterPipeline RemoteProxy或第二Character actor
 
 #### Scenario: Model拥有远端canonical input
 
@@ -103,9 +103,9 @@ Float32 Simulation Step MUST显式携带按tick绑定、按ActorId稳定排序�
 
 Graph、StateMachine、Timeline、TreeClip、Blackboard、Action、Behavior、GameplayEffect 和各领域运行数据 MUST 不保存 ModelId、Endpoint、Transport、history、correction、rollback 或 WorldSolver implementation selection。Graph artifact MAY 只声明 model-neutral required capabilities；Network Model 仍由 Session Source、Pipeline Pass 和 Composition 显式选择。
 
-#### Scenario: 复用同一 Program
+#### Scenario: 复用同一Graph
 
-- **WHEN** 同一 Program被 Local Source与后续 Network Model Source使用
+- **WHEN** 同一 Graph artifact 被 Local Source与后续 Network Model Source使用
 - **THEN** BTSMTL authoring MUST保持不变
 
 ### Requirement: Network Model Pipeline 必须显式可见且可独立替换

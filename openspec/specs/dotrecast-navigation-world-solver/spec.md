@@ -122,7 +122,7 @@ start/final poly、area、filter、query status、visited count、clamp reason�
 
 #### Scenario: Authority完整roster batch
 
-- **WHEN** Authority以两个active Program actor执行同一World batch
+- **WHEN** Authority以两个active Character actor执行同一World batch
 - **THEN** 两个Actor MUST继续都产生FinalBody与WorldSolveResult
 - **AND** Observed合同 MUST不改变Authority对称求解
 
@@ -138,11 +138,11 @@ start/final poly、area、filter、query status、visited count、clamp reason�
 
 ### Requirement: DotRecast Navigation Surface Solver不得声明空中垂直能力
 
-当前DotRecastWorldSolver只通过nearest-poly、MoveAlongSurface、height projection与Surface reconstraint处理Navigation Surface运动，因此 MUST不声明`AirborneVerticalMotion`。需要该capability的Program与DotRecast Solver组合 MUST在Session Active前失败。DotRecast MUST不丢弃request Y、保持假Grounded、把Actor吸附到NavMesh、按Network Model关闭Body Motion、调用Unity Physics或隐藏Fixed KCC作为fallback来伪造支持。若非零Y request在组合校验之后仍到达Solver，Solver MUST明确失败，MUST不投影后返回成功。
+当前DotRecastWorldSolver只通过nearest-poly、MoveAlongSurface、height projection与Surface reconstraint处理Navigation Surface运动，因此 MUST不声明`AirborneVerticalMotion`。需要该capability的Graph/domain binding与DotRecast Solver组合 MUST在Session Active前失败。DotRecast MUST不丢弃request Y、保持假Grounded、把Actor吸附到NavMesh、按Network Model关闭Body Motion、调用Unity Physics或隐藏Fixed KCC作为fallback来伪造支持。若非零Y request在组合校验之后仍到达Solver，Solver MUST明确失败，MUST不投影后返回成功。
 
-#### Scenario: DotRecast组合需要重力的Corin Program
+#### Scenario: DotRecast组合需要重力的Corin domain binding
 
-- **WHEN** Composition发现Corin Program要求AirborneVerticalMotion
+- **WHEN** Composition发现Corin domain binding要求AirborneVerticalMotion
 - **AND** DotRecast descriptor未声明该capability
 - **THEN** Composition MUST明确拒绝并报告缺失能力
 - **AND** MUST不创建DotRecast runtime或发布部分Session资源

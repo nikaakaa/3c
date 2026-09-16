@@ -21,7 +21,7 @@ Authority Pipeline Pass顺序、config lowering、descriptor构造、Pass factor
 
 - **WHEN** transport将已校验command写入Actor queue
 - **THEN** portable Source MUST在outer tick边界消费并生成typed ingress
-- **AND** transport MUST不执行Program或missing-input决策
+- **AND** transport MUST不执行Graph/domain runtime或missing-input决策
 
 ### Requirement: Authority Control Transport必须只承载控制与可靠产品
 
@@ -35,7 +35,7 @@ Host-neutral control transport MUST只交换register、roster、ticket、heartbe
 
 ### Requirement: Authority Host必须通过唯一Launch Request调用Portable Composer
 
-Authority Host launch request MUST显式提供Program Runtime、Backend、Authority Pipeline、Source policy/ports、roster、WorldSolver、initial state、Committer、diagnostics和output routes，并调用唯一portable Float32 Composer。缺失或不兼容输入 MUST失败，不得选择默认组件或复制Composer。
+Authority Host launch request MUST显式提供Graph/domain Runtime、Backend、Authority Pipeline、Source policy/ports、roster、WorldSolver、initial state、Committer、diagnostics和output routes，并调用唯一portable Float32 Composer。缺失或不兼容输入 MUST失败，不得选择默认组件或复制Composer。
 
 #### Scenario: 普通.NET Host准备接入
 
@@ -45,7 +45,7 @@ Authority Host launch request MUST显式提供Program Runtime、Backend、Author
 
 ### Requirement: 具体Authority Host Profile必须由Host Product拥有
 
-neutral Simulation Core 与 ServerAuthoritative Model MUST只定义通用Program、ABI、Pipeline、Solver capability、protocol和Host product identity合同，MUST不枚举、构造或降低`UnityAuthorityWorker`、`DotRecastAuthorityScene`或未来具体Host Profile。Unity Authority Product与DotRecast Authority Product MUST分别拥有自己的Host Profile、launch lowering、solver capability声明与manifest fields。新增Authority backend MUST通过新增Product adapter接入，不得修改neutral Core或既有Product实现。
+neutral Simulation Core 与 ServerAuthoritative Model MUST只定义通用Graph/domain、ABI、Pipeline、Solver capability、protocol和Host product identity合同，MUST不枚举、构造或降低`UnityAuthorityWorker`、`DotRecastAuthorityScene`或未来具体Host Profile。Unity Authority Product与DotRecast Authority Product MUST分别拥有自己的Host Profile、launch lowering、solver capability声明与manifest fields。新增Authority backend MUST通过新增Product adapter接入，不得修改neutral Core或既有Product实现。
 
 #### Scenario: 生成Unity Authority Worker产品
 
@@ -74,4 +74,3 @@ Host product identity、handshake和build manifest MUST消费Product-owned Profi
 - **WHEN** launch或manifest仍携带已删除的Core-owned Profile schema
 - **THEN** Product composition MUST在创建Session前失败并报告schema/product identity
 - **AND** MUST不映射为当前Unity Authority Product
-

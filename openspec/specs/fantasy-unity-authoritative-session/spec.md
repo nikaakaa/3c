@@ -15,7 +15,7 @@
 
 ### Requirement: Worker注册必须先于Client Active并锁定权威Identity
 
-Authority Worker register MUST提交RoomId、process role、protocol version、ProgramHash、LayoutHash、operation-set、TickRate、Authority PipelineHash、Backend、Solver capability和gameplay data endpoint。Room MUST只接受一个完整且匹配的worker。Client MAY连接和等待，但在worker与完整roster就绪前 MUST不创建Active Prediction runtime或伪造Local gameplay。
+Authority Worker register MUST提交RoomId、process role、protocol version、GraphHash、domain layout identity、operation-set、TickRate、Authority PipelineHash、Backend、Solver capability和gameplay data endpoint。Room MUST只接受一个完整且匹配的worker。Client MAY连接和等待，但在worker与完整roster就绪前 MUST不创建Active Prediction runtime或伪造Local gameplay。
 
 #### Scenario: Client先于Worker连接
 
@@ -131,7 +131,7 @@ Authority Worker MUST按自己的60Hz authority clock持续生成双Actor World 
 
 ### Requirement: Routine Snapshot必须使用有界Delta Checkpoint
 
-Routine snapshot MUST使用ProgramHash/LayoutHash锁定且覆盖全部committed Character state slot的Network Checkpoint Layout，以已确认base snapshot为基准发送changed-slot bitset、changed values、owner body/world correction、remote body/producer、state/body hash、input ack和event horizon。它 MUST不携带逐slot codec字符串或当前`CharacterSimulationStateCodec`的完整canonical bytes，也 MUST不按复制policy省略Action、Timeline、Blackboard、GameplayEffect或Motion Modifier state。Client MUST重建并校验完整checkpoint后才向Correction Pipeline提交baseline。
+Routine snapshot MUST使用GraphHash/domain layout identity锁定且覆盖全部committed Character state slot的Network Checkpoint Layout，以已确认base snapshot为基准发送changed-slot bitset、changed values、owner body/world correction、remote body/producer、state/body hash、input ack和event horizon。它 MUST不携带逐slot codec字符串或当前`CharacterSimulationStateCodec`的完整canonical bytes，也 MUST不按复制policy省略Action、Timeline、Blackboard、GameplayEffect或Motion Modifier state。Client MUST重建并校验完整checkpoint后才向Correction Pipeline提交baseline。
 
 Full Checkpoint与Delta Snapshot MUST共享单调SnapshotSequence。Worker在未收到新base ack时 MUST继续相对最后已确认base发送新delta；Client发现SnapshotSequence缺口但仍拥有该BaseSnapshotSequence时 MUST继续重建，MUST不因单帧丢失阻塞后续snapshot或无条件请求Full Checkpoint。
 
@@ -182,7 +182,7 @@ Diagnostics MUST分别记录control、command、snapshot和reliable通道的pack
 
 ### Requirement: Fantasy回调必须只写Source边界队列
 
-Unity侧Fantasy callback MUST只验证消息外壳并写入Prediction或Authority Source receive queue。Program、Pipeline、Solver、History merge和Presentation提交 MUST只在GameplayTickSystem推进的正式Session runtime中执行。不得从网络callback运行SimulationTick、修改Transform或调用Animancer。
+Unity侧Fantasy callback MUST只验证消息外壳并写入Prediction或Authority Source receive queue。Graph/domain Runtime、Pipeline、Solver、History merge和Presentation提交 MUST只在GameplayTickSystem推进的正式Session runtime中执行。不得从网络callback运行SimulationTick、修改Transform或调用Animancer。
 
 #### Scenario: Client收到Authority Baseline
 
@@ -190,13 +190,13 @@ Unity侧Fantasy callback MUST只验证消息外壳并写入Prediction或Authorit
 - **THEN** Handler MUST将typed observation写入Source queue
 - **AND** Correction Schedule MUST在后续LogicTick消费
 
-### Requirement: Unity Player必须从ProgramAsset Canonical Bytes加载Program
+### Requirement: Unity Player必须从Graph artifact与domain manifest加载正式运行输入
 
-Authority Worker与Clients MUST从各自build中的ProgramAsset exact-byte wrapper加载相同canonical Float32 Program。Unity Player MUST不读取Editor `Library/*.csim`路径、不加载`.csir`、不运行authoring discovery或Numeric Target lowering。Room MUST只保存和比较identity，不保存Program对象。
+Authority Worker与Clients MUST从各自build中的正式 Graph artifact 与 domain manifest 加载相同的 GraphHash、SourceRevision、domain layout identity 和 Float32 runtime binding。Unity Player MUST不读取 Editor 缓存、不运行 authoring discovery 或 Numeric Target preparation。Room MUST只保存和比较 identity，不保存 Graph/domain runtime 对象。
 
-#### Scenario: Worker与Client ProgramHash不同
+#### Scenario: Worker与Client GraphHash不同
 
-- **WHEN** Client join identity与worker locked ProgramHash不同
+- **WHEN** Client join identity与worker locked GraphHash或domain layout identity不同
 - **THEN** Room MUST拒绝join
 - **AND** MUST不要求任一端运行时重新编译
 

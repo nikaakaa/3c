@@ -15,7 +15,7 @@
 
 ### Requirement: Prediction History必须是正式SnapshotParticipant
 
-Prediction History Pass MUST按SimulationTick有界保存owner canonical input、input sequence、由正式Character State codec产生的committed state canonical bytes、NumericProfile、Target ABI、ProgramHash、LayoutHash、State codec identity、owner World/body state、Prediction Pipeline snapshot、state/body hash、EventId journal cursor，以及该tick实际使用的`ObservedWorldConstraintFrame` canonical bytes与frame hash。History模块 MUST唯一拥有按authority tick排序的Remote Body timeline，并将其capture、restore与hash纳入同一正式SnapshotParticipant；MUST不保存active State Transaction、Pending evaluation、typed mutable partition或GameplayEffect working view，也 MUST不保存在Fantasy Session、MonoBehaviour、static或Character binding中。
+Prediction History Pass MUST按SimulationTick有界保存owner canonical input、input sequence、由正式Character State codec产生的committed state canonical bytes、NumericProfile、Target ABI、GraphHash、domain layout identity、State codec identity、owner World/body state、Prediction Pipeline snapshot、state/body hash、EventId journal cursor，以及该tick实际使用的`ObservedWorldConstraintFrame` canonical bytes与frame hash。History模块 MUST唯一拥有按authority tick排序的Remote Body timeline，并将其capture、restore与hash纳入同一正式SnapshotParticipant；MUST不保存active State Transaction、Pending evaluation、typed mutable partition或GameplayEffect working view，也 MUST不保存在Fantasy Session、MonoBehaviour、static或Character binding中。
 
 #### Scenario: 保存包含远端接触的未确认Tick
 
@@ -25,7 +25,7 @@ Prediction History Pass MUST按SimulationTick有界保存owner canonical input�
 
 ### Requirement: Authority Baseline必须覆盖完整Owner Gameplay恢复状态
 
-网络层 MUST以ProgramHash/LayoutHash锁定的Full/Delta Network Checkpoint表达owner权威状态。Client MUST先通过dense layout重建并校验完整committed Character state、owner body/world baseline、SimulationTick、NumericProfile、Target ABI、checkpoint schema、state/body hash、confirmed input sequence和confirmed EventId horizon，再产生`AuthoritativeActorBaseline`供Correction使用。Routine snapshot MUST不直接携带完整State codec bytes；仅包含position/yaw、motion delta或Animation state的消息 MUST不得用于gameplay reconciliation。
+网络层 MUST以GraphHash/domain layout identity锁定的Full/Delta Network Checkpoint表达owner权威状态。Client MUST先通过dense layout重建并校验完整committed Character state、owner body/world baseline、SimulationTick、NumericProfile、Target ABI、checkpoint schema、state/body hash、confirmed input sequence和confirmed EventId horizon，再产生`AuthoritativeActorBaseline`供Correction使用。Routine snapshot MUST不直接携带完整State codec bytes；仅包含position/yaw、motion delta或Animation state的消息 MUST不得用于gameplay reconciliation。
 
 #### Scenario: 收到Pose-only Snapshot
 

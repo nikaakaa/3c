@@ -44,7 +44,7 @@
 
 #### Scenario: Fixed Target 编译 Camera operation
 
-- **WHEN** Fixed Program 包含当前 operation-set version 的 Camera operation
+- **WHEN** Fixed Graph artifact 与 domain binding 包含当前 operation-set version 的 Camera operation
 - **THEN** Fixed Target MUST输出与 Float32 相同语义的强类型 PresentationCommand
 - **AND** Camera request MUST不进入 deterministic CharacterState、WorldState或Snapshot
 

@@ -38,7 +38,7 @@
 
 ### Requirement: Runtime Launcher只能增加启动约束并委托唯一Composer
 
-Float32 Runtime Launcher MUST只验证已经显式选择并降低完成的Composition Request。Launcher MUST不选择、替换或创建另一份Program Runtime、Execution Backend、Pipeline、Session Source或WorldSolver。所有合法Launcher最终 MUST调用唯一portable `Float32SimulationSessionComposer`创建compiled plan、Backend runtime、LaunchPlan与runtime handle。
+Float32 Runtime Launcher MUST只验证已经显式选择并降低完成的Composition Request。Launcher MUST不选择、替换或创建另一份Graph/domain Runtime、Execution Backend、Pipeline、Session Source或WorldSolver。所有合法Launcher最终 MUST调用唯一portable `Float32SimulationSessionComposer`创建compiled plan、Backend runtime、LaunchPlan与runtime handle。
 
 #### Scenario: Standard Launcher启动Local Session
 
@@ -69,7 +69,7 @@ Runtime Launcher、Runtime Package或portable Composer任一阶段失败时 MUST
 
 #### Scenario: Authority Launcher校验失败
 
-- **WHEN** locked roster与Program Runtime roster不一致
+- **WHEN** locked roster与Graph/domain Runtime roster不一致
 - **THEN** Authority Launcher MUST在调用portable Composer前失败
 - **AND** Composition MUST释放已取得资源且不改用Standard Launcher
 

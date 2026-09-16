@@ -23,7 +23,7 @@ Foot Placement MUST继续由当前保留的深`CharacterFootPlacementModule`接�
 #### Scenario: 重复执行Foot Placement
 
 - **WHEN** 同一Frame与Completion第二次请求执行同一个Foot Placement Operation
-- **THEN** Program Runtime MUST使该Operation completion与整帧Invalid并阻止Final Publication
+- **THEN** Graph/domain Runtime MUST使该Operation completion与整帧Invalid并阻止Final Publication
 - **AND** Constraint Module MUST不覆盖第一次结果或建立第二Foot Placement事务
 
 #### Scenario: Constraint完成后发布Final Pose

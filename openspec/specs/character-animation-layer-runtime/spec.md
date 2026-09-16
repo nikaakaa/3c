@@ -24,17 +24,17 @@
 
 #### Scenario: Action command引用未知binding
 
-- **WHEN** command的producer、channel或Slot binding不能精确匹配Projection
-- **THEN** Program与Projection组合校验 MUST失败
+- **WHEN** command的producer、channel或Slot binding不能精确匹配Presentation binding
+- **THEN** Graph/domain与Presentation binding组合校验 MUST失败
 - **AND** command MUST不进入Lifecycle或Pose Plan
 
 ### Requirement: 基础Pose必须由正式state-local source输出
 
-Base Pose、Idle、Move、Start、Stop、Turn与可选Motion Matching MUST来自Pose Graph中PoseStateMachine选择的ClipPlayer、BlendSpacePlayer或SelectedPosePlayer provider。Gameplay Program、Timeline与Action Lifecycle MUST不提供持续BaseLocomotion producer。Required source缺失或Clip Phase relation无效时 MUST报告typed Pending或Invalid，不得回退旧Sequence、默认Idle、bind pose或历史sample。
+Base Pose、Idle、Move、Start、Stop、Turn与可选Motion Matching MUST来自Pose Graph中PoseStateMachine选择的ClipPlayer、BlendSpacePlayer或SelectedPosePlayer provider。Gameplay domain、Timeline与Action Lifecycle MUST不提供持续BaseLocomotion producer。Required source缺失或Clip Phase relation无效时 MUST报告typed Pending或Invalid，不得回退旧Sequence、默认Idle、bind pose或历史sample。
 
 #### Scenario: Clip binding失效
 
-- **WHEN** active PoseState的Clip Binding与Projection identity不一致
+- **WHEN** active PoseState的Clip Binding与Presentation binding identity不一致
 - **THEN** provider MUST发布Invalid并阻止正式Pose提交
 - **AND** MUST不继续使用旧Sequence或上一帧source
 
@@ -66,7 +66,7 @@ Action producer MUST显式提交Select、Sample、Complete与Release command。�
 
 ### Requirement: PoseState source必须按provider demand和state relevance管理
 
-PoseStateMachine MUST只向相关State的显式source plan提交固定容量demand，并以Projection-local dense source index、PlayerNodeId、SourceGeneration、continuity identity和frame lease接收sample。Pending target MUST不启动transition，Ready target MAY进入Routing，Invalid MUST阻止正式publication。State离开active后只要transition仍需要其Pose，state relevance MUST保持source；release完成后 MUST精确清理。Pose source MUST不创建作者Source字符串、Gameplay PlaybackId或Action retention。
+PoseStateMachine MUST只向相关State的显式source plan提交固定容量demand，并以Presentation binding-local dense source index、PlayerNodeId、SourceGeneration、continuity identity和frame lease接收sample。Pending target MUST不启动transition，Ready target MAY进入Routing，Invalid MUST阻止正式publication。State离开active后只要transition仍需要其Pose，state relevance MUST保持source；release完成后 MUST精确清理。Pose source MUST不创建作者Source字符串、Gameplay PlaybackId或Action retention。
 
 #### Scenario: Start State切向Locomotion
 
@@ -132,29 +132,29 @@ Animancer source backend MUST只按完整Action playback或Presentation Pose sou
 - **THEN** backend MUST分别提供两个source capture
 - **AND** transition weight MUST只由对应owner计算
 
-### Requirement: Float32与Fixed必须共享同一Presentation Projection
+### Requirement: Float32与Fixed必须共享同一Presentation binding
 
-由同一 authoring identity、producer contract 和正式 Profile 生成的 Float32/Fixed domain binding MUST 引用同一套 Pose source binding、Action binding、Routing、Rig revision 和资源规则。Runtime MUST 不按 ProgramHash 复制、选择或降级 Presentation binding。任一 domain binding、Rig 或 authoring revision 不匹配 MUST 在 preparation 阶段失败。
+由同一 authoring identity、producer contract 和正式 Profile 生成的 Float32/Fixed domain binding MUST 引用同一套 Pose source binding、Action binding、Routing、Rig revision 和资源规则。Runtime MUST 不按 GraphHash 复制、选择或降级 Presentation binding。任一 domain binding、Rig 或 authoring revision 不匹配 MUST 在 preparation 阶段失败。
 
 #### Scenario: 构建Fixed wrapper
 
-- **WHEN** Fixed Program由当前Definition和Float32 Program生成
+- **WHEN** Fixed domain binding由当前Definition和Float32 domain binding生成
 - **THEN** wrapper MUST保留同一SemanticHash与Presentation contract
-- **AND** MUST不生成第二套动画Projection
+- **AND** MUST不生成第二套动画Presentation binding
 
 ### Requirement: Runtime、Preview和Live Debug必须使用同一事实源
 
 正式 Runtime、ScenePlay Action 观察、Pose Graph 观察、MM 查询观察和 Live Debug MUST 复用匹配 revision 的正式 Presentation binding、source backend、Routing、原生 Pose Graph 与 completion 语义。ScenePlay/Editor 入口 MUST 只提交正式输入或 domain request，不能提交 Preview fixture。Diagnostics MUST 按 Action playback identity 或 Provider/Player/Source/generation 显示各自生命周期、effective sample、transition、release 和 Pose contribution；不得从 Animancer weight 或 Animator 骨骼反推第二份事实。
 
-#### Scenario: Projection变为Stale
+#### Scenario: Presentation binding变为Stale
 
-- **WHEN** authoring revision变化而Projection尚未显式Build
+- **WHEN** authoring revision变化而Presentation binding尚未显式Preparation
 - **THEN** Preview与Runtime preparation MUST停止
-- **AND** MUST不创建临时Plan、旧Projection fallback或独立PlayableGraph
+- **AND** MUST不创建临时Plan、旧Presentation binding fallback或独立PlayableGraph
 
 ### Requirement: Locomotion Phase映射必须编入source-local计划
 
-Projection MUST把Locomotion Phase forward/inverse plan与可达relation编入对应source-local计划。每个relation plan MUST包含TransitionId、编译期固定leader、两侧秒域coverage与validation identity；Runtime MUST用`RelationIdentity + TransitionId + TransitionGeneration`建立唯一relation generation，并只用leader raw time、compiled forward phase、follower continuation cycle和compiled inverse plan求target effective Clip time。Runtime MUST不读取AnimationCurve、Profile、Foot Analysis artifact，不搜索Pose，也不得回退normalized time或旧Marker mapping。
+Presentation binding MUST把Locomotion Phase forward/inverse plan与可达relation编入对应source-local计划。每个relation plan MUST包含TransitionId、准备期固定leader、两侧秒域coverage与validation identity；Runtime MUST用`RelationIdentity + TransitionId + TransitionGeneration`建立唯一relation generation，并只用leader raw time、prepared forward phase、follower continuation cycle和prepared inverse plan求target effective Clip time。Runtime MUST不读取AnimationCurve、Profile、Foot Analysis artifact，不搜索Pose，也不得回退normalized time或旧Marker mapping。
 
 #### Scenario: RunLoop接任MovingTurn
 
@@ -164,12 +164,12 @@ Projection MUST把Locomotion Phase forward/inverse plan与可达relation编入�
 
 ### Requirement: Locomotion Phase relation必须服从Transition generation与Player continuation
 
-Compiler MUST按固定规则选择leader：两侧clock authority不同时`CommittedMovement`优先，同authority时outgoing source优先；候选必须覆盖完整Blend可见窗口，优先候选不足时 MAY选择另一侧，两侧都不足时 MUST Build失败。leader在一个relation generation内 MUST不按weight、sample、clock进度或有限端点动态变化。Transition replacement MUST先release旧generation再建立新generation；反向edge MUST使用自己的plan与generation。正常release MUST把最后effective time建立为follower自己的continuation anchor并删除relation generation；AlwaysResetOnEntry、branch replacement、Projection replacement、Presentation Reset与Dispose MUST清除不合法continuation和relation state。
+Presentation preparation MUST按固定规则选择leader：两侧clock authority不同时`CommittedMovement`优先，同authority时outgoing source优先；候选必须覆盖完整Blend可见窗口，优先候选不足时 MAY选择另一侧，两侧都不足时 MUST preparation失败。leader在一个relation generation内 MUST不按weight、sample、clock进度或有限端点动态变化。Transition replacement MUST先release旧generation再建立新generation；反向edge MUST使用自己的plan与generation。正常release MUST把最后effective time建立为follower自己的continuation anchor并删除relation generation；AlwaysResetOnEntry、branch replacement、Presentation binding replacement、Presentation Reset与Dispose MUST清除不合法continuation和relation state。
 
 #### Scenario: 同authority的Turn进入RunLoop
 
 - **WHEN** MovingTurn与RunLoop都使用CommittedMovement且MovingTurn coverage覆盖完整Blend窗口
-- **THEN** Compiler MUST把outgoing MovingTurn固定为该edge relation的leader
+- **THEN** Presentation preparation MUST把outgoing MovingTurn固定为该edge relation的leader
 - **AND** Runtime MUST不因RunLoop weight超过MovingTurn而换leader
 
 #### Scenario: Transition在Blend中被替换

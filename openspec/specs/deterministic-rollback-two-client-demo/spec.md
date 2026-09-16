@@ -9,7 +9,7 @@
 
 Player MUST使用唯一共享 GameplayLab 场景和显式 Rollback Variant，不恢复旧 Bootstrap／Peer Scene 分裂入口。
 
-每个Demo Run MUST从一个精确DeterministicRollback Candidate启动两个独立Unity Client、一个纯.NET Dedicated Relay和一个独立开发GM。两端 MUST加载相同CandidateId、Model、SemanticHash、Fixed ProgramHash、TickRate、CollisionWorldHash、KCC identity和stable actor roster。Relay MUST只拥有网络职责和GM窄只读查询桥，不执行Gameplay Program、KCC、Presentation或Unity Scene；GM MUST不参与gameplay handshake、canonical input、rollback history或hash。不同Slot中的Demo Run MUST拥有独立RunId、SessionId、endpoint、token、进程与日志。
+每个Demo Run MUST从一个精确DeterministicRollback Candidate启动两个独立Unity Client、一个纯.NET Dedicated Relay和一个独立开发GM。两端 MUST加载相同CandidateId、Model、GraphHash、Fixed domain layout/ABI、TickRate、CollisionWorldHash、KCC identity和stable actor roster。Relay MUST只拥有网络职责和GM窄只读查询桥，不执行Gameplay domain runtime、KCC、Presentation或Unity Scene；GM MUST不参与gameplay handshake、canonical input、rollback history或hash。不同Slot中的Demo Run MUST拥有独立RunId、SessionId、endpoint、token、进程与日志。
 
 #### Scenario: 双端开始模拟
 
@@ -56,7 +56,7 @@ Player MUST使用唯一共享 GameplayLab 场景和显式 Rollback Variant，不
 
 - **WHEN** Client A 与 Client B 加入 Demo
 - **THEN** Relay Server MUST校验全部deterministic identities后才允许SimulationTick推进
-- **AND** Server MUST不加载Fixed Program或Collision World内容
+- **AND** Server MUST不加载Fixed Graph/domain runtime或Collision World内容
 
 #### Scenario: Demo 启动产品
 
@@ -72,26 +72,26 @@ Player MUST使用唯一共享 GameplayLab 场景和显式 Rollback Variant，不
 
 ### Requirement: Demo 必须复用 Corin 同一 Gameplay Semantic Artifact
 
-两端 MUST使用与单机/ServerAuthoritative相同SourceRevision/SemanticHash的Corin `.csir`，并由Fixed Target生成相同Fixed Program。Fixed ProgramHash MAY且通常 MUST不同于Float32 ProgramHash。Rollback Presentation MUST通过正式Fixed Adapter生成与Frontend相同的`CharacterPresentationSemanticContract`并复用唯一target-neutral Projection，MUST不生成或加载Float32 Program作为Projection前置依赖。业务覆盖移动、转身、闪避、Run、Attack1/Attack2、连段、打断、Timeline TreeClip Window、motion curve和GameplayEffect。系统 MUST不使用rollback专用节点、业务图、第二semantic evaluator或第二Projection。
+两端 MUST 使用与单机/ServerAuthoritative相同 SourceRevision 的 Corin Graph artifact，并由 Fixed Target 准备相同 Fixed domain binding。Fixed GraphHash 与 Fixed domain identity MUST 与 Float32 的 numeric identity 分开记录。Rollback Presentation MUST 通过正式 Fixed Adapter 绑定与其它 Target 相同的 Pose/Action presentation contract，MUST 不生成或加载 Float32 的整角色编译产物作为前置依赖。业务覆盖移动、转身、闪避、Run、Attack1/Attack2、连段、打断、Timeline TreeClip Window、motion curve 和 GameplayEffect。系统 MUST 不使用 rollback 专用节点、业务图或第二 semantic evaluator。
 
 #### Scenario: 迟到 Combo Input
 
 - **WHEN** Attack2 request 的 canonical input 迟到
-- **THEN** 两端 MUST通过相同 Fixed Program restore/replay 得到相同 Action/Timeline state
+- **THEN** 两端 MUST通过相同 Fixed Graph/domain Runtime restore/replay 得到相同 Action/Timeline state
 
 #### Scenario: 修改 Corin Authoring 后构建 Rollback Player
 
 - **WHEN** 作者修改 BTSMTL、Timeline 或其它 Corin Character Definition依赖后执行Rollback Build
-- **THEN** Build入口 MUST先从当前Definition重新生成validated Semantic IR、Presentation contract与target-neutral Projection
-- **AND** MUST由唯一Fixed Target Adapter从同一Semantic IR生成Fixed Program artifact
-- **AND** MUST在Player Build前精确校验ProgramId、SourceRevision、SemanticHash、ContractHash与ordered producer contract
-- **AND** 任一身份不一致 MUST拒绝构建，MUST不复用旧Fixed Program、旧Projection或Float32 Projection前置产物
+- **THEN** Build入口 MUST先从当前Definition准备validated Graph artifact、Presentation contract与Fixed domain binding
+- **AND** MUST由唯一Fixed Target Adapter从同一Graph artifact准备Fixed domain runtime
+- **AND** MUST在Player Build前精确校验GraphHash、SourceRevision、domain layout identity与ordered producer contract
+- **AND** 任一身份不一致 MUST拒绝构建，MUST不复用旧整角色编译产物或其它 Target 的 domain binding
 
 #### Scenario: Fixed-only Rollback产品发布
 
 - **WHEN** Deterministic Rollback Product只声明Fixed Numeric Target
-- **THEN** 公共Build Orchestrator MUST只发布Fixed Program与同一target-neutral Projection
-- **AND** MUST不调用Float32 Target Compiler或写入Float32 Program wrapper
+- **THEN** 公共Build Orchestrator MUST只发布Fixed Graph/domain binding与同一 Presentation contract
+- **AND** MUST不调用Float32 Target preparation或写入Float32 domain wrapper
 
 ### Requirement: Demo 必须限制并明确世界能力范围
 

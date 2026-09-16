@@ -269,7 +269,7 @@ DeterministicRollback Peer MUST在Simulation执行阶段优先使用目标Tick�
 #### Scenario: 远端移动输入在执行前到达
 
 - **WHEN** Peer B在Tick T执行前收到Peer A的Tick T Relayed Explicit MoveAxis
-- **THEN** Fixed Program与KCC MUST用该输入生成Peer A的Tick T Body/动画输出
+- **THEN** Fixed Graph/domain Runtime与KCC MUST用该输入生成Peer A的Tick T Body/动画输出
 - **AND** Presentation MUST显示该predicted current branch
 
 #### Scenario: Canonical Bundle 内容相同

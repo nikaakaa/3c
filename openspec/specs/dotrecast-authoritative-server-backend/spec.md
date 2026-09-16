@@ -15,7 +15,7 @@ FantasyDotRecast MUST作为ServerAuthoritativeHybrid的独立Authority Host Prof
 
 ### Requirement: DotRecastAuthoritySceneManifest必须是Authority Scene唯一运行组合配置
 
-Manifest MUST以canonical bytes锁定Fantasy process/Authority Scene、Room、Data endpoint、Program、Backend、Authority Pipeline、Source policy、roster、HostProfile、Solver、World、NavigationSurfaceArtifact、QueryProfile、每Actor接触形状、接触求解配置、Transport、clock与diagnostics identity，并形成ManifestHash。全部文件 MUST使用受约束的相对路径；Authority Scene MUST不读取Unity YAML、Collider、默认目录、环境猜测或旧Worker schema。Manifest MUST不包含Fantasy Control endpoint、外部WorkerId或Worker process role。
+Manifest MUST以canonical bytes锁定Fantasy process/Authority Scene、Room、Data endpoint、Graph/domain binding、Backend、Authority Pipeline、Source policy、roster、HostProfile、Solver、World、NavigationSurfaceArtifact、QueryProfile、每Actor接触形状、接触求解配置、Transport、clock与diagnostics identity，并形成ManifestHash。全部文件 MUST使用受约束的相对路径；Authority Scene MUST不读取Unity YAML、Collider、默认目录、环境猜测或旧Worker schema。Manifest MUST不包含Fantasy Control endpoint、外部WorkerId或Worker process role。
 
 #### Scenario: Manifest的artifact路径逃逸
 
@@ -25,7 +25,7 @@ Manifest MUST以canonical bytes锁定Fantasy process/Authority Scene、Room、Da
 
 ### Requirement: DotRecast Authority必须运行在Fantasy Server的独立Authority Scene
 
-DotRecast Authority MUST由Fantasy Server内独立MultiThread Authority Scene拥有。该Scene MUST加载正式`.csim`、portable Authority Pipeline catalog、portable Source runtime、共享DotRecast Solver和同一Network Checkpoint codec，从manifest传入expected Authority PipelineIdentity并构造正式Authority Runtime Launcher，再由Launcher通过唯一Host launch request与Float32 Composer创建runtime。Gate Scene MUST继续只拥有Client control connection、Room与路由，MUST不执行Program、WorldSolver或读取gameplay datagram。
+DotRecast Authority MUST由Fantasy Server内独立MultiThread Authority Scene拥有。该Scene MUST加载正式 Graph artifact、domain binding、portable Authority Pipeline catalog、portable Source runtime、共享DotRecast Solver和同一Network Checkpoint codec，从manifest传入expected Authority PipelineIdentity并构造正式Authority Runtime Launcher，再由Launcher通过唯一Host launch request与Float32 Composer创建runtime。Gate Scene MUST继续只拥有Client control connection、Room与路由，MUST不执行Graph/domain Runtime、WorldSolver或读取gameplay datagram。
 
 #### Scenario: Authority Scene推进两个Actor
 
@@ -46,7 +46,7 @@ Gate Scene与DotRecast Authority Scene MUST通过正式Inner/Address协议交换
 
 #### Scenario: Gate锁定DotRecast Host
 
-- **WHEN** Authority Scene以完整Host、Program、Pipeline、Solver、World和Data endpoint identity注册
+- **WHEN** Authority Scene以完整Host、Graph/domain、Pipeline、Solver、World和Data endpoint identity注册
 - **THEN** Room MUST锁定唯一InProcess DotRecast Authority Host route
 - **AND** 后续roster与ticket MUST按该Scene Address精确路由
 
@@ -68,17 +68,17 @@ Authority Scene MUST在自身Scene线程使用单调时钟和manifest TickRate�
 
 ### Requirement: ServerAuthoritative握手必须锁定实际Host、Solver与World Identity
 
-External Unity Worker register、InProcess DotRecast Scene register和Client join MUST共同锁定AuthorityHostProfileId、HostId、SolverId/version/capabilities/features、WorldId、MapId、WorldRevision、NavigationSurfaceArtifactHash、DotRecastQueryProfileHash与WorldConfigurationHash；DotRecast WorldConfigurationHash MUST覆盖每Actor接触形状与接触求解配置。同时保持Program、Layout、operation-set、TickRate、Backend和Prediction/Authority Pipeline pair校验。Room MUST只校验和路由identity，MUST不替Client选择Solver。Client处理Join response并安装SessionId与Authority Host identity后 MUST发送正式`ClientJoinAccepted`；Gate MUST等locked roster内全部Client完成精确一次确认后才发布locked roster与ticket，不得依赖RPC response与push handler的到达或执行顺序。
+External Unity Worker register、InProcess DotRecast Scene register和Client join MUST共同锁定AuthorityHostProfileId、HostId、SolverId/version/capabilities/features、WorldId、MapId、WorldRevision、NavigationSurfaceArtifactHash、DotRecastQueryProfileHash与WorldConfigurationHash；DotRecast WorldConfigurationHash MUST覆盖每Actor接触形状与接触求解配置。同时保持GraphHash、domain layout、operation-set、TickRate、Backend和Prediction/Authority Pipeline pair校验。Room MUST只校验和路由identity，MUST不替Client选择Solver。Client处理Join response并安装SessionId与Authority Host identity后 MUST发送正式`ClientJoinAccepted`；Gate MUST等locked roster内全部Client完成精确一次确认后才发布locked roster与ticket，不得依赖RPC response与push handler的到达或执行顺序。
 
 #### Scenario: Client QueryProfile过期
 
-- **WHEN** Client Program与Artifact匹配但QueryProfileHash不同
+- **WHEN** Client Graph/domain binding与Artifact匹配但QueryProfileHash不同
 - **THEN** join MUST失败并返回明确world identity错误
 - **AND** Client MUST不进入Prediction Session或切换CC
 
 #### Scenario: Client Actor接触配置过期
 
-- **WHEN** Client与Authority的Program、NavigationSurfaceArtifact和QueryProfile匹配但Actor接触形状或接触求解配置不同
+- **WHEN** Client与Authority的Graph/domain binding、NavigationSurfaceArtifact和QueryProfile匹配但Actor接触形状或接触求解配置不同
 - **THEN** WorldConfigurationHash MUST不同且join MUST失败
 - **AND** Client MUST不进入Prediction Session或使用本地Collider配置继续运行
 
@@ -92,7 +92,7 @@ External Unity Worker register、InProcess DotRecast Scene register和Client joi
 
 ### Requirement: Client Command不得携带Pose Authority
 
-Client command MUST只携带canonical input、input sequence、target authority tick与route identity。Position、Transform、Body、applied displacement和DotRecast查询结果 MUST不进入Authority运动输入；Authority Scene MUST从自己的committed Character/World state执行Program与Solver。
+Client command MUST只携带canonical input、input sequence、target authority tick与route identity。Position、Transform、Body、applied displacement和DotRecast查询结果 MUST不进入Authority运动输入；Authority Scene MUST从自己的committed Character/World state执行Graph/domain Runtime与Solver。
 
 #### Scenario: Client预测领先
 
@@ -132,7 +132,7 @@ Unity Authority、DotRecast Authority与未来Rollback MUST使用不同Server/Pl
 
 ### Requirement: Build与Run必须分离且产物必须按模型隔离
 
-Unity Authority与DotRecast Authority MUST分别拥有显式Build入口、Product根、Player、Fantasy Server、Candidate manifest、candidate-owned启动adapter和日志目录。Build MUST从干净Git提交锁定CandidateId、Player target/options、Server configuration和Authority artifacts，只创建新的不可变Candidate目录且不启动进程。Unity Player MUST继续使用`StandaloneWindows64 + IL2CPP + Development + StrictMode`，Fantasy Server MUST继续使用Debug配置并记录实际编译选项。Unity Authority发布的`Fantasy.config` MUST只包含Gate Scene；DotRecast Authority发布的`Fantasy.config` MUST只包含Gate Scene与DotRecast Authority Scene，且Authority Scene manifest、Program和Navigation artifact MUST随Server以正式相对路径发布。Run MUST显式选择并校验一个Candidate及其Tool Bundle，不触发编译、publish、目录修复或latest选择。Unity Authority Session Plan MUST启动Fantasy Server、Unity Authority Worker、Client A和Client B；DotRecast Session Plan MUST只启动Fantasy Server、Client A和Client B。Candidate manifest MUST记录SourceCommit/Tree和BuiltAtUtc，MUST不使用`BuildId=yyyyMMdd-HHmmss`作为版本。两个Product根和全部Candidate MUST互不覆盖；每次Run MUST按Product与RunId建立RunManifest、状态和日志目录。未形成完整可运行闭环的Product MUST不注册占位Candidate或Run入口。
+Unity Authority与DotRecast Authority MUST分别拥有显式Build入口、Product根、Player、Fantasy Server、Candidate manifest、candidate-owned启动adapter和日志目录。Build MUST从干净Git提交锁定CandidateId、Player target/options、Server configuration和Authority artifacts，只创建新的不可变Candidate目录且不启动进程。Unity Player MUST继续使用`StandaloneWindows64 + IL2CPP + Development + StrictMode`，Fantasy Server MUST继续使用Debug配置并记录实际编译选项。Unity Authority发布的`Fantasy.config` MUST只包含Gate Scene；DotRecast Authority发布的`Fantasy.config` MUST只包含Gate Scene与DotRecast Authority Scene，且Authority Scene manifest、Graph/domain binding和Navigation artifact MUST随Server以正式相对路径发布。Run MUST显式选择并校验一个Candidate及其Tool Bundle，不触发编译、publish、目录修复或latest选择。Unity Authority Session Plan MUST启动Fantasy Server、Unity Authority Worker、Client A和Client B；DotRecast Session Plan MUST只启动Fantasy Server、Client A和Client B。Candidate manifest MUST记录SourceCommit/Tree和BuiltAtUtc，MUST不使用`BuildId=yyyyMMdd-HHmmss`作为版本。两个Product根和全部Candidate MUST互不覆盖；每次Run MUST按Product与RunId建立RunManifest、状态和日志目录。未形成完整可运行闭环的Product MUST不注册占位Candidate或Run入口。
 
 #### Scenario: 连续发布两次DotRecast环境
 

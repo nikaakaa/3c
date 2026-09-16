@@ -51,4 +51,4 @@ Character、Camera、Animation、Presentation和Scene Host MUST进入明确客�
 
 - **WHEN** Composition、Pipeline、Model、Endpoint、Solver或Scene组件脚本进入新程序集
 - **THEN** 现有资产 MUST继续通过原MonoScript GUID引用唯一类型
-- **AND** ProgramHash、PipelineHash、Composition identity与Model identity MUST不因程序集迁移改变
+- **AND** GraphHash、PipelineHash、Composition identity与Model identity MUST不因程序集迁移改变

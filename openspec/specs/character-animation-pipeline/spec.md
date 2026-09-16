@@ -35,7 +35,7 @@ Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；A
 
 ### Requirement: CharacterSimulationPresentationRuntime必须执行唯一原生Pose链
 
-SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application seam。其内部唯一`CharacterAnimationPresentationRuntime` MUST消费Committed Body/Intent、Program parameter与有限Action command并构造Presentation Fact，唯一拥有根`CharacterPoseFrameTransaction`，但 MUST只负责actor-local Tuning协调、Frame Lease、固定Module顺序、Animancer Evaluate Barrier、统一Seal/Discard/Fault和外部输入输出装配。根Transaction MUST只保存lineage、阶段、Module lease/result与Outcome，不得保存Module内部Workspace。
+SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application seam。其内部唯一`CharacterAnimationPresentationRuntime` MUST消费Committed Body/Intent、Presentation parameter与有限Action command并构造Presentation Fact，唯一拥有根`CharacterPoseFrameTransaction`，但 MUST只负责actor-local Tuning协调、Frame Lease、固定Module顺序、Animancer Evaluate Barrier、统一Seal/Discard/Fault和外部输入输出装配。根Transaction MUST只保存lineage、阶段、Module lease/result与Outcome，不得保存Module内部Workspace。
 
 正式运行 MUST 由唯一原生 FlowCanvas Pose Graph 实例执行 PoseStateMachine、Player、ActionPlaybackInput lifecycle、AnimationSlot、Local/Component Pose、Constraint 与 Output；唯一 `CharacterPoseSourceModule` 负责 source sample、Animancer/Playable 与物理 source 生命周期；唯一 `CharacterPoseConstraintRuntime` 负责 Foot Placement、PoseBone Goal、Goal Contribution、Assembler、唯一 Goal Set、FBBIK 与 BendHistory；唯一 `CharacterFinalPosePublication` 负责唯一 Committed/Pending Final Pose 物理页与 Physical Writer。图实例 MUST 按固定阶段调用各 Constraint 入口一次，Constraint Module MUST 不扫描 Graph 或维护第二份 Schedule。Module 间 MUST 只交换同 Frame、Completion、Graph、Rig 与 Tuning Generation lineage 的 typed Result。外层 Runtime、ScenePlay 与 Diagnostics MUST 不创建第二 Graph 实例、第二 Action lifecycle、第二 Constraint 事务、第二 Goal Set、第二 FBBIK、第二 Final Pose 页或第二 Writer。
 
@@ -43,14 +43,14 @@ Constraint外部Owner变化 MUST整体保留指定提交ad3527e103cc3235a63e8a1c
 
 #### Scenario: 正常执行Foot Placement与FBBIK
 
-- **WHEN** Program Runtime执行到Foot Placement和PoseBone Goal Operation并由Constraint Module形成合法Goal Set与FBBIK结果
-- **THEN** 同一Frame MUST只发布一个Constraint Result、一个Program Output和一个Final Publication Result
+- **WHEN** Native Pose Graph Runtime执行到Foot Placement和PoseBone Goal Operation并由Constraint Module形成合法Goal Set与FBBIK结果
+- **THEN** 同一Frame MUST只发布一个Constraint Result、一个Pose Output和一个Final Publication Result
 - **AND** 外层Runtime MUST不理解Foot Context、Goal workspace或BendHistory
 
 #### Scenario: Source target Pending
 
-- **WHEN** Program发布候选target Demand且Source Module返回Pending
-- **THEN** 是否保持当前合法State MUST只由Program节点语义决定并在Barrier前关闭Pending帧
+- **WHEN** Pose Graph Runtime发布候选target Demand且Source Module返回Pending
+- **THEN** 是否保持当前合法State MUST只由Graph节点语义决定并在Barrier前关闭Pending帧
 - **AND** Source Module MUST不选择State，外层Runtime MUST不使用旧Timeline或默认Idle补洞
 
 #### Scenario: Goal Slot重复
@@ -71,29 +71,29 @@ Pose Constraint Runtime MUST只保存一个Solver、一个Goal Set、一个BendH
 - **THEN** Physical Writer前验证 MUST失败并Discard根Pending Bank
 - **AND** 默认Result MUST不能被解释为本帧Solver成功
 
-#### Scenario: Profile修改后使用旧Projection
+#### Scenario: Profile修改后使用旧Presentation binding
 
 - **WHEN** Descriptor冻结的Profile Revision与当前唯一Profile Revision不一致
-- **THEN** Runtime构造 MUST拒绝旧Projection
+- **THEN** Runtime构造 MUST拒绝旧Presentation binding
 - **AND** MUST不把旧Plan identity与新Solver参数组合运行
 
 ### Requirement: 动画调试只能读取正式Snapshot
 
 系统 MUST 在 Frame 开始冻结 Live、Capture、Pose Watch 与 detail interest 及容量。Source、Graph、Constraint 和 Final Publication Module MUST 只在有匹配 interest 时从已完成 Pending Result 向各自固定诊断页深冻结数据；成功 Seal 后，唯一 Diagnostics Projector MUST 从匹配同一 lineage 与 Tuning Generation 的 Committed Result 生成只读 Snapshot。Snapshot MAY 包含 Action lifecycle、source readiness/usage、PoseState、Player、Transition、Slot、Blend、Inertialization、节点、Pose、Goal Contribution、Goal Set、FBBIK、Final Pose 与 Physical 结果，但 MUST 不参与运行计算。
 
-Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint Module或Final Publication的可变引用，不得读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推，也不得从Animancer weight重建事实。没有interest时 MUST跳过对应大页与逐骨骼复制，但正式执行结果不变。
+Diagnostics Projector MUST不持有Native Pose Graph Runtime、Source Module、Constraint Module或Final Publication的可变引用，不得读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推，也不得从Animancer weight重建事实。没有interest时 MUST跳过对应大页与逐骨骼复制，但正式执行结果不变。
 
-成功Seal后，Runtime Snapshot或具体`CharacterFootIkCommittedCaptureViewLease` MAY继续服务Live、Trace与Gizmo，但 Foot采样 MUST在同步Commit调用栈内从同一lineage的已提交Owner直接取得Left／Right与公共Fact Root，并以`in`执行一行target-scoped `DiagnosticEvent` partial调用，不得消费Runtime Snapshot、Capture View、万能Committed View、Consumer／Binding或第二事实页。帧开始的可选partial Query只决定是否冻结昂贵事实；Disabled构建中Event／Query调用及参数求值都必须消失。`generated-diagnostic-sampling-framework`唯一拥有通用AOT生成、typed packet、Capability Session、Writer和Host Finalizer合同，`character-foot-ik-diagnostic-sampling`只拥有字段分类、Sampler／Program Definitions和Editor workflow。PoseGraph不得认识Schema、Generated Program、packet、Host或字段映射。旧Foot单体Analyzer／Publisher、Diagnosis Store与旧格式兼容路径直接删除；独立Host-only Foot诊断器 MAY在Capability manifest完成后读取生成Artifact并执行当前Plan、Operator、评分与报告，但不得形成动画Runtime、PoseGraph或采样Session的第二报告状态机。
+成功Seal后，Runtime Snapshot或具体`CharacterFootIkCommittedCaptureViewLease` MAY继续服务Live、Trace与Gizmo，但 Foot采样 MUST在同步Commit调用栈内从同一lineage的已提交Owner直接取得Left／Right与公共Fact Root，并以`in`执行一行target-scoped `DiagnosticEvent` partial调用，不得消费Runtime Snapshot、Capture View、万能Committed View、Consumer／Binding或第二事实页。帧开始的可选partial Query只决定是否冻结昂贵事实；Disabled构建中Event／Query调用及参数求值都必须消失。`generated-diagnostic-sampling-framework`唯一拥有通用AOT生成、typed packet、Capability Session、Writer和Host Finalizer合同，`character-foot-ik-diagnostic-sampling`只拥有字段分类、Sampler／Graph Definitions和Editor workflow。PoseGraph不得认识Schema、Generated Graph artifact、packet、Host或字段映射。旧Foot单体Analyzer／Publisher、Diagnosis Store与旧格式兼容路径直接删除；独立Host-only Foot诊断器 MAY在Capability manifest完成后读取生成Artifact并执行当前Plan、Operator、评分与报告，但不得形成动画Runtime、PoseGraph或采样Session的第二报告状态机。
 
 #### Scenario: 导出每帧调试数据
 
 - **WHEN** 当前Frame成功Seal且存在匹配diagnostics interest
-- **THEN** Snapshot MUST只表达同一Frame、Completion、Program、Projection与Rig的Committed结果
+- **THEN** Snapshot MUST只表达同一Frame、Completion、Pose binding与Rig的Committed结果
 - **AND** 关闭或打开调试历史 MUST不改变正式播放、Goal或Final Pose
 
 #### Scenario: Module结果未提交
 
-- **WHEN** Program或Constraint Pending Result完成但后续Writer失败
+- **WHEN** Pose Graph或Constraint Pending Result完成但后续Writer失败
 - **THEN** Diagnostics MUST不发布该Pending结果
 - **AND** Projector MUST继续只见上一Committed Snapshot或Actor Fault事实
 
@@ -111,7 +111,7 @@ Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint 
 
 ### Requirement: 不得恢复Timeline或Preview分裂路径
 
-系统 MUST 只有一条正式 Timeline Runtime 路径和一条原生 Pose Graph 路径。两者只通过 committed Body/Intent、EventId 和有限 Action command 连接；不得保留旧 TimelinePlaybackScheduler、Timeline.Bind/Evaluate/Unbind、自主 TreeClip runtime、AnimationClip root motion、Animancer direct Play 或独立 PlayableGraph。Timeline UI、Pose Graph UI 与 MM UI MUST 只通过 ScenePlay 正式 Actor binding 观察，不得创建 `AnimationPreviewRuntime`、Preview Fixture、Program TreeClip 或独立 Simulation Session。
+系统 MUST 只有一条正式 Timeline Runtime 路径和一条原生 Pose Graph 路径。两者只通过 committed Body/Intent、EventId 和有限 Action command 连接；不得保留旧 TimelinePlaybackScheduler、Timeline.Bind/Evaluate/Unbind、自主 TreeClip runtime、AnimationClip root motion、Animancer direct Play 或独立 PlayableGraph。Timeline UI、Pose Graph UI 与 MM UI MUST 只通过 ScenePlay 正式 Actor binding 观察，不得创建 `AnimationPreviewRuntime`、Preview Fixture、Graph TreeClip 或独立 Simulation Session。
 
 #### Scenario: Runtime与Preview并存
 
@@ -131,7 +131,7 @@ Timeline Runtime MUST 在一个 SimulationTick 跨越 loop 边界时按尾段、
 
 ### Requirement: 动画command写入与消费权限必须单向
 
-Kernel Finalize MUST只写有限Action的EventId producer select/sample/complete/release command；SimulationCommitter MUST只按已校验OutputDisposition写presentation-owned queue；PresentationFrame MUST在外层事务中原子消费并acknowledge。Portable Core MUST只定义model-neutral command，不引用Unity Animation/Presentation模块；Presentation adapter MUST不反向修改Program或Character state。
+Kernel Finalize MUST只写有限Action的EventId producer select/sample/complete/release command；SimulationCommitter MUST只按已校验OutputDisposition写presentation-owned queue；PresentationFrame MUST在外层事务中原子消费并acknowledge。Portable Core MUST只定义model-neutral command，不引用Unity Animation/Presentation模块；Presentation adapter MUST不反向修改Graph/domain state或Character state。
 
 #### Scenario: 一个RenderFrame前发生多个SimulationTick
 
@@ -157,7 +157,7 @@ Action lifecycle MUST只以所选producer的第一份匹配generation的合法vi
 
 #### Scenario: 普通动画表现帧成功
 
-- **WHEN** 一个Actor使用合法Program Image完成普通Presentation Frame
+- **WHEN** 一个Actor使用合法Native Pose Graph完成普通Presentation Frame
 - **THEN** 各Module MUST直接写自己的Pending页并由根事务统一提升同lineage结果
 - **AND** 任一读者 MUST不观察到PoseState、Source、Foot、Goal、BendHistory或Final Pose的部分提交
 
@@ -165,7 +165,7 @@ Action lifecycle MUST只以所选producer的第一份匹配generation的合法vi
 
 - **WHEN** Pending Frame在Barrier前发现identity、容量、source ownership或binding非法
 - **THEN** 根事务 MUST Discard全部Module Pending页、journal和prepared resource
-- **AND** Program Image、Committed Actor State、Source ownership、Constraint Bank、Final Pose和Physical Bones MUST保持不变
+- **AND** Graph/domain binding、Committed Actor State、Source ownership、Constraint Bank、Final Pose和Physical Bones MUST保持不变
 
 #### Scenario: FBBIK后续阶段失败
 
@@ -193,13 +193,13 @@ Action lifecycle MUST只以所选producer的第一份匹配generation的合法vi
 
 - **WHEN** 当前Frame只释放一个旧source而其它source ownership不变
 - **THEN** Source Module MUST只记录对应预验证release mutation与deferred command
-- **AND** MUST不复制完整Physical Source Registry或把release字段写进Program Image
+- **AND** MUST不复制完整Physical Source Registry或把release字段写进Graph/domain binding
 
-#### Scenario: Program产生下一帧Pose
+#### Scenario: Pose Graph产生下一帧Pose
 
-- **WHEN** Program Runtime执行当前Frame全部Pose Operation
-- **THEN** MUST把Value与completion直接写入Program Runtime自有Frame Pending页并只向根Transaction返回typed lease/result
-- **AND** MUST不先复制上一Committed Value Workspace或通过旧Native Program持有两种寿命
+- **WHEN** Native Pose Graph Runtime执行当前Frame全部Pose Operation
+- **THEN** MUST把Value与completion直接写入Pose Runtime自有Frame Pending页并只向根Transaction返回typed lease/result
+- **AND** MUST不先复制上一Committed Value Workspace或通过旧整角色执行载体持有两种寿命
 
 #### Scenario: 本帧只有一个Action生命周期变化
 
@@ -217,23 +217,23 @@ Action lifecycle MUST只以所选producer的第一份匹配generation的合法vi
 
 唯一正式 Animancer Graph Evaluate MUST 继续作为动画表现帧不可逆 Barrier。进入 Barrier 前，根 Runtime MUST 先完成 Graph/Source/Constraint Tuning Candidate 原子 Generation 提升，再完成 Graph instance/Profile/Rig/World Context、Module 容量、source readiness/ownership、Diagnostics interest、Constraint 静态 binding、Final Writer binding 和 Frame lineage 验证；Pose Graph MUST 完成 Control 与 Source Demand，Source Module MUST 完成 sample/Playable/capture 准备，但不得提交 Actor State、source ownership、Constraint Bank、Final Pose 或 command acknowledgement。打开 Frame 后 MUST 不改变 Tuning Generation。
 
-Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operation、world-aware Constraint、Goal Assembly、FBBIK、Output和Final Publication。每个Operation MUST由Program Runtime调度一次；每个Constraint Family Operation MUST在自己的Stage位置调用一次Constraint Module对应入口，Constraint `Complete`只验证完整闭包；Writer MUST只由Final Publication执行一次。Barrier之后只可统一提升已验证Pending页、应用journal、acknowledge command、执行deferred release并发布结果；不得动态查找、编译、扩容、再次执行Operation或补算Diagnostics。
+Barrier内 MUST按唯一Pose Stage Schedule完成source capture、Pose Operation、world-aware Constraint、Goal Assembly、FBBIK、Output和Final Publication。每个Operation MUST由Native Pose Graph Runtime调度一次；每个Constraint Family Operation MUST在自己的Stage位置调用一次Constraint Module对应入口，Constraint `Complete`只验证完整闭包；Writer MUST只由Final Publication执行一次。Barrier之后只可统一提升已验证Pending页、应用journal、acknowledge command、执行deferred release并发布结果；不得动态查找、编译、扩容、再次执行Operation或补算Diagnostics。
 
 #### Scenario: Barrier前Source Module失败
 
 - **WHEN** Source sample或Prepared Resource在Barrier前Invalid
 - **THEN** Runtime MUST不调用Animancer Evaluate并Discard全部Pending结果
-- **AND** Program Runtime MUST不使用历史sample或默认Playable继续
+- **AND** Native Pose Graph Runtime MUST不使用历史sample或默认Playable继续
 
 #### Scenario: Barrier内Constraint失败
 
 - **WHEN** Animancer Evaluate已经产生Component Pose但Constraint Result Invalid
 - **THEN** Runtime MUST阻断后续Operation和Final Publication、Discard Pending并使Actor Runtime Faulted
-- **AND** MUST不提交已经推进的Program、Source或BendHistory局部状态
+- **AND** MUST不提交已经推进的Graph/domain binding、Source或BendHistory局部状态
 
 #### Scenario: Barrier成功完成
 
-- **WHEN** Program、Source、Constraint和Final Publication Result全部匹配同一lineage并完成
+- **WHEN** Pose Graph、Source、Constraint和Final Publication Result全部匹配同一lineage并完成
 - **THEN** 根Seal MUST只执行预验证的no-throw页切换、journal、acknowledgement与deferred release
 - **AND** Writer成功后 MUST不再运行可能失败的动画业务逻辑
 
@@ -257,7 +257,7 @@ Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operat
 
 - **WHEN** Graph Output、Constraint Result 和全部 Physical binding 合法
 - **THEN** Final Publication MUST在同一Barrier一次写入完整Pending Pose并发布匹配completion的Result
-- **AND** 根Seal MUST只提升该Result对应的Program、Source、Constraint与Final Pose页
+- **AND** 根Seal MUST只提升该Result对应的Pose Graph、Source、Constraint与Final Pose页
 
 #### Scenario: Pending Pose无效
 
@@ -273,7 +273,7 @@ Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operat
 
 ### Requirement: Physical Source资源生命周期必须延迟提交
 
-新Source Visual、Mixer、Capture Playable、Clip State与物理source slot MAY在Prepare阶段创建为prepared resource，但 MUST不在Seal前取代Committed ownership。Prepare失败 MUST只释放本帧新建prepared resource。Committed source的disconnect、destroy、slot reuse与backend release MUST只由成功帧的固定deferred lifecycle command执行；容量 MUST来自Projection并在Runtime创建或Prepare时严格验证，不得动态扩容或回退其它source。
+新Source Visual、Mixer、Capture Playable、Clip State与物理source slot MAY在Prepare阶段创建为prepared resource，但 MUST不在Seal前取代Committed ownership。Prepare失败 MUST只释放本帧新建prepared resource。Committed source的disconnect、destroy、slot reuse与backend release MUST只由成功帧的固定deferred lifecycle command执行；容量 MUST来自正式 Presentation binding 并在Runtime创建或Prepare时严格验证，不得动态扩容或回退其它source。
 
 #### Scenario: 新Action source准备后帧失败
 
@@ -309,19 +309,19 @@ Rollback产生的Action Select与Sample属于可重基的预测生命周期；Co
 
 ### Requirement: Foot Motion数据基础阶段不得改变Runtime动画行为
 
-Definition Build MUST把新增22条Foot Motion Data Curve计入AnimationClip Registered Curve Hash、dependency与Editor质量诊断，但在本change内 MUST不把它们降低为Presentation Projection Runtime payload、Pose Parameter、Foot State输入、Goal、Pelvis或FBBIK配置。
+Definition Build MUST把新增22条Foot Motion Data Curve计入AnimationClip Registered Curve Hash、dependency与Editor质量诊断，但在本change内 MUST不把它们降低为Presentation domain runtime payload、Pose Parameter、Foot State输入、Goal、Pelvis或FBBIK配置。
 
-Player Runtime MUST继续使用归档基线的Foot Placement数据与公式，不得读取`Clip Curves`接收器字段、AnimationClip EditorCurve、Library Artifact或未消费Projection字段。后续行为change只有在本change归档后 MAY按独立小步新增正式消费者。
+Player Runtime MUST继续使用归档基线的Foot Placement数据与公式，不得读取`Clip Curves`接收器字段、AnimationClip EditorCurve、Library Artifact或未消费domain字段。后续行为change只有在本change归档后 MAY按独立小步新增正式消费者。
 
 #### Scenario: 新曲线Apply后重建当前产品
 
 - **WHEN** Corin AnimationClip已经Apply合法Foot Motion Curve组并执行当前Definition Build
-- **THEN** Projection dependency revision MUST因Registered Curve Hash变化
+- **THEN** Presentation binding dependency revision MUST因Registered Curve Hash变化
 - **AND** 当前Runtime Foot Goal、状态、Pelvis和FBBIK行为 MUST保持基线逐帧语义
 
 #### Scenario: Player中不存在Editor Artifact
 
-- **WHEN** Player只包含已发布Program与Projection
+- **WHEN** Player只包含已发布Graph artifact与domain binding
 - **THEN** Player MUST不需要Library Foot Analysis Artifact或`Clip Curves`组件实例
 - **AND** 新Foot Motion Curve在没有正式消费者时 MUST不占用Runtime payload
 

@@ -8,7 +8,7 @@
 
 ### Requirement: Rollback Dedicated Relay Server必须是纯.NET网络产品
 
-系统 MUST提供受版本控制的`ThirdPerson.DeterministicRollback.Server` .NET 8 executable。该产品 MUST只引用既有 portable Core、Fixed identity、DeterministicRollback protocol、Endpoint/Relay runtime 及独立开发只读查询桥所需的 .NET HTTP 和查询合同。MUST不引用Unity、Fantasy、ServerAuthoritative、DotRecast、Animancer、Editor 或 GM 命令处理器程序集，不加载 Scene、Asset、Character Program 或 Collision World 内容。
+系统 MUST提供受版本控制的`ThirdPerson.DeterministicRollback.Server` .NET 8 executable。该产品 MUST只引用既有 portable Core、Fixed identity、DeterministicRollback protocol、Endpoint/Relay runtime 及独立开发只读查询桥所需的 .NET HTTP 和查询合同。MUST不引用Unity、Fantasy、ServerAuthoritative、DotRecast、Animancer、Editor 或 GM 命令处理器程序集，不加载 Scene、Asset、Character Graph/domain runtime 或 Collision World 内容。
 
 #### Scenario: Relay 查询运行状态
 
@@ -26,11 +26,11 @@
 
 - **WHEN** Server读取合法portable runtime manifest并监听endpoint
 - **THEN** MUST只创建handshake、roster、input fanout、canonical/confirmation与snapshot routing runtime
-- **AND** MUST不创建SimulationSession、Program、KCC或Presentation
+- **AND** MUST不创建SimulationSession、Graph/domain runtime、KCC或Presentation
 
 ### Requirement: Relay Server Runtime Manifest必须完整锁定会话身份
 
-Rollback Build adapter MUST在Candidate中锁定CandidateId、ProductId、expected client/actor roster、Model/Protocol、TickRate、MaximumPredictionLeadTicks、SemanticHash、Fixed ProgramHash、LayoutHash、CollisionWorldHash、KCC identity/capabilities、confirmation policy、capacity和snapshot source policy。每次Run MUST另行生成绑定Candidate manifest/hash、RunId、SessionId、listen/peer endpoint和role配置hash的Relay Run Manifest。Server MUST在监听前共同校验Candidate与Run，MUST不从Unity asset、环境目录、默认值或另一Run补齐缺失事实。
+Rollback Build adapter MUST在Candidate中锁定CandidateId、ProductId、expected client/actor roster、Model/Protocol、TickRate、MaximumPredictionLeadTicks、GraphHash、Fixed domain layout identity、CollisionWorldHash、KCC identity/capabilities、confirmation policy、capacity和snapshot source policy。每次Run MUST另行生成绑定Candidate manifest/hash、RunId、SessionId、listen/peer endpoint和role配置hash的Relay Run Manifest。Server MUST在监听前共同校验Candidate与Run，MUST不从Unity asset、环境目录、默认值或另一Run补齐缺失事实。
 
 #### Scenario: Run引用错误Candidate
 
@@ -38,9 +38,9 @@ Rollback Build adapter MUST在Candidate中锁定CandidateId、ProductId、expect
 - **THEN** Server MUST以明确退出码拒绝监听
 - **AND** MUST不等待Client连接后猜测版本
 
-#### Scenario: Manifest缺少ProgramHash
+#### Scenario: Manifest缺少GraphHash
 
-- **WHEN** Candidate静态身份缺少或包含无效Fixed ProgramHash
+- **WHEN** Candidate静态身份缺少或包含无效GraphHash或Fixed domain identity
 - **THEN** Relay MUST在读取Run endpoint前明确拒绝启动
 - **AND** MUST不从Client handshake、文件名或默认值补齐
 

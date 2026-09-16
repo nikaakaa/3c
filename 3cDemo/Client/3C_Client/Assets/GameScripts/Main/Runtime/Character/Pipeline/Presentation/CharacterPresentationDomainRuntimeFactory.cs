@@ -44,7 +44,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterEquipmentRigBindingCatalog equipmentRigBindings,
             SimulationSessionHost sessionHost,
             RuntimeDiagnosticsContext diagnostics,
-            bool initializeExternalState)
+            bool initializeExternalState,
+            ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost characterTimelineHost = null)
         {
             if (tickRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(tickRate));
@@ -176,6 +177,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     poseDomain = new CharacterPoseNativeDomainInstance(session, actionCommandSource);
                     runtime.BindPoseDomain(poseDomain, resourceScope, inputContract.Parameters);
                 }
+                if (characterTimelineHost != null)
+                    runtime.InitializeTimelineHost(characterTimelineHost);
                 return runtime;
             }
             catch

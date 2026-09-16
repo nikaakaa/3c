@@ -7,6 +7,8 @@ using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
+using ThirdPersonCharacter.Pipeline.ThirdPersonCamera;
+using Cinemachine;
 
 public static class CorinGameplayLabSceneSetup
 {
@@ -25,6 +27,7 @@ public static class CorinGameplayLabSceneSetup
             throw new InvalidOperationException($"CorinGameplayLabFixedPlayer prefab not found at '{PrefabPath}'.");
 
         EnsureGround();
+        EnsureMainCamera();
 
         var sessionGo = new GameObject("SimulationSession");
         var sessionHost = sessionGo.AddComponent<SimulationSessionHost>();
@@ -36,8 +39,11 @@ public static class CorinGameplayLabSceneSetup
         var fixedHost = characterGo.GetComponent<FixedCharacterHost>();
         if (fixedHost == null)
             throw new InvalidOperationException("Corin prefab is missing FixedCharacterHost.");
+
+        var cameraRig = EnsureCameraRig(characterGo.transform);
         var so = new SerializedObject(fixedHost);
         so.FindProperty("m_SessionHost").objectReferenceValue = sessionHost;
+        so.FindProperty("m_CameraRig").objectReferenceValue = cameraRig;
         so.ApplyModifiedProperties();
 
         EditorUtility.SetDirty(fixedHost);
@@ -53,6 +59,37 @@ public static class CorinGameplayLabSceneSetup
         if (!YooAssets.Initialized)
             resourceModule.Initialize();
         Debug.Log($"YooAsset initialized. DefaultPackage: {resourceModule.DefaultPackageName}, PlayMode: {resourceModule.PlayMode}");
+    }
+
+    static CinemachineCameraRigAdapter EnsureCameraRig(Transform characterRoot)
+    {
+        var existing = FindObjectOfType<CinemachineCameraRigAdapter>();
+        if (existing != null)
+            return existing;
+
+        var cameraGo = new GameObject("Main Camera");
+        var camera = cameraGo.AddComponent<Camera>();
+        camera.tag = "MainCamera";
+        cameraGo.transform.position = new Vector3(0f, 3f, -5f);
+        cameraGo.AddComponent<CinemachineBrain>();
+
+        var vcamGo = new GameObject("CM_VirtualCamera");
+        vcamGo.transform.SetParent(cameraGo.transform);
+        var vcam = vcamGo.AddComponent<CinemachineVirtualCamera>();
+        vcam.Priority = 10;
+
+        var rigGo = new GameObject("CameraRig");
+        var adapter = rigGo.AddComponent<CinemachineCameraRigAdapter>();
+        adapter.VirtualCamera = vcam;
+        adapter.Brain = cameraGo.GetComponent<CinemachineBrain>();
+
+        return adapter;
+    }
+
+    static void EnsureMainCamera()
+    {
+        if (Camera.main != null)
+            return;
     }
 
     static void EnsureGround()

@@ -79,6 +79,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge m_TimelineBridge;
 
+        internal void InitializeTimelineHost(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost timelineHost)
+        {
+            if (timelineHost == null)
+                throw new ArgumentNullException(nameof(timelineHost));
+            timelineHost.Initialize(m_PoseActionPublisher.Inbox);
+            BindTimelineBridge(new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge(
+                timelineHost.Host, m_PoseActionPublisher.Inbox));
+        }
+
         internal void BindTimelineBridge(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge bridge)
         {
             m_TimelineBridge = bridge ?? throw new ArgumentNullException(nameof(bridge));

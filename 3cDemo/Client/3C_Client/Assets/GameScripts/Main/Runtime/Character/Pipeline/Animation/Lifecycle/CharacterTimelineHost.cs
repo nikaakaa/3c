@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Runtime;
-using BTSMTL.Timeline.Tree;
 using ThirdPersonSimulation;
+using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
@@ -70,7 +70,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     {
         TimelineRuntimeCompositionHost m_Host;
         TimelineToActionCommandBridge m_Bridge;
-        ActionPlaybackCommandInbox m_Inbox;
         bool m_Initialized;
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
@@ -79,7 +78,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (m_Initialized)
                 return;
-            m_Inbox = inbox ?? throw new ArgumentNullException(nameof(inbox));
+            if (inbox == null)
+                throw new ArgumentNullException(nameof(inbox));
 
             var contractCatalog = new TimelineContractCatalog(Array.Empty<ITimelineContractProvider>());
             var callBindingSource = new TimelineRuntimeCallBindingSource(
@@ -98,15 +98,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Array.Empty<ITimelineRuntimeEvaluationSink>(),
                 treeClipService);
 
-            var publisher = new CharacterPoseActionCommandPublisher(
-                m_Inbox);
-            m_Bridge = new TimelineToActionCommandBridge(m_Host, publisher, default);
-
+            m_Bridge = new TimelineToActionCommandBridge(m_Host, inbox);
             m_Initialized = true;
-        }
-
-        internal void SetActorId(ThirdPersonSimulation.ActorId actorId)
-        {
         }
 
         public bool RequestTimelinePlayback(
@@ -124,26 +117,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 handle = TimelinePlaybackHandle.Invalid;
                 return false;
             }
-            var executionIdentity = new TimelineExecutionIdentity(sourceId, sourceName, (ulong)sourceId.GetHashCode());
-            var preparation = m_Host.Prepare(
-                $"{sourceId}/{sourceName}",
-                timeline,
-                executionIdentity,
-                playbackMode,
-                Array.Empty<TimelineCallBinding>());
-            if (preparation == null)
-            {
-                handle = TimelinePlaybackHandle.Invalid;
-                return false;
-            }
-            handle = preparation.Handle;
-            return preparation.Handle.IsValid;
+            return m_Host.RequestTimelinePlayback(
+                timeline, sourceId, sourceName, actionContext, playbackMode,
+                sourceActivation, sourceRuntimeGraph, out handle);
         }
 
-        public TimelinePlaybackStatus GetTimelinePlaybackStatus(TimelinePlaybackHandle handle)
+        public BTSMTL.Timeline.TimelinePlaybackStatus GetTimelinePlaybackStatus(TimelinePlaybackHandle handle)
         {
             if (!m_Initialized || m_Host == null || !handle.IsValid)
-                return TimelinePlaybackStatus.None;
+                return BTSMTL.Timeline.TimelinePlaybackStatus.None;
             return m_Host.Service.GetTimelinePlaybackStatus(handle);
         }
 

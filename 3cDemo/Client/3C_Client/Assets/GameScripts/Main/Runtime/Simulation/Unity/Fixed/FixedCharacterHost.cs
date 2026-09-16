@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Diagnostics;
@@ -249,7 +249,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     physicsScene,
                     diagnosticsContext,
                     tickRate,
-                    true);
+                    true,
+                    TryGetComponent<ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost>(out var tlHost) ? tlHost : null);
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
                     actorId,
                     presentation,
@@ -295,7 +296,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             PhysicsScene physicsScene,
             RuntimeDiagnosticsContext diagnostics,
             int tickRate,
-            bool initializeExternalState)
+            bool initializeExternalState,
+            ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost characterTimelineHost = null)
         {
             CharacterPresentationBodyState presentationBody = initialPresentationBody;
             if (m_Registration?.PresentationRuntime is ICharacterPresentationDomainRuntime current &&
@@ -362,7 +364,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_EquipmentRigBindings,
                 m_SessionHost,
                 diagnostics,
-                initializeExternalState);
+                initializeExternalState,
+                characterTimelineHost);
         }
 
         void DisposeRegistration()

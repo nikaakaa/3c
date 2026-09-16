@@ -8,6 +8,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     {
         readonly ActionPlaybackCommandInbox m_Inbox;
 
+        internal ActionPlaybackCommandInbox Inbox => m_Inbox;
+
         internal CharacterPoseActionCommandPublisher(ActionPlaybackCommandInbox inbox)
         {
             m_Inbox = inbox ?? throw new ArgumentNullException(nameof(inbox));

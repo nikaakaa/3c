@@ -1429,3 +1429,10 @@
 - 新增 Equipment Domain Runtime，直接消费 CharacterEquipmentPresentationProfile 与 CharacterEquipmentRigBindingCatalog，在构造时解析 Existing Rig 和 Spawned Visual 两条正式绑定，不存在兜底路径。
 - 表现领域 Runtime 现在把 Equipment Selection 事务交给该 Runtime，按帧 Present；Reset/Dispose 与领域生命周期同步。Fixed Host 从 Character Definition 传入 Equipment Presentation Profile，Rollback 与 Remote Host 显式保持未组合边界。
 - Fixed、DeterministicRollback、ServerAuthoritative 便携工程编译通过；Equipment Runtime 不再掩盖未组合能力，缺 Profile、缺 Rig Catalog 或未知 Visual Binding 都精确失败。
+
+## 2026-09-16 接入Camera表现领域运行时
+
+- Camera Profile 编译与 Binding Preparation 从编辑器职责迁入 Runtime Camera Contracts；LocalOwner 现在由 CharacterPipelineDefinition.CameraProfile 直接装配正式 Camera Domain Runtime。
+- Camera Domain Runtime 按帧消费 Body Presentation 结果、look input、target slots 与 Unity 环境查询，经过 Sequence / Effect / Collision 求值后写入 Cinemachine Rig；初始姿态、Body Reset 与表现领域 Reset/Dispose 联动。
+- Simulated 与 Remote Host 继续显式禁止 Camera 输入，不创建默认相机；LocalOwner 缺 Profile、Rig、目标锚点或 look input 时精确失败。
+- Fixed、DeterministicRollback、ServerAuthoritative 便携工程编译通过。

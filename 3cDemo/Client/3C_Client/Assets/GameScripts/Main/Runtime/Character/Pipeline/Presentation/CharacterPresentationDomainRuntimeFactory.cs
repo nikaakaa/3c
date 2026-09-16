@@ -33,13 +33,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             IReadOnlyList<CameraTargetBinding> cameraTargetBindings,
             ICharacterPresentationLookInput lookInput,
             string lookInputId,
+            CharacterCameraProfile cameraProfile,
             CharacterEquipmentPresentationProfile equipmentPresentationProfile,
             CharacterEquipmentRigBindingCatalog equipmentRigBindings,
             SimulationSessionHost sessionHost,
             RuntimeDiagnosticsContext diagnostics,
             bool initializeExternalState)
         {
-            _ = physicsScene;
             _ = sessionHost;
             _ = initializeExternalState;
             if (tickRate <= 0)
@@ -74,14 +74,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var poseGraph = animationPresentationProfile.PoseGraph ? animationPresentationProfile.PoseGraph.Graph : null;
             if (poseGraph != null && poseGraph.Nodes.Count > 0)
                 throw new InvalidOperationException("Pose Native Source, Constraint, and Handler composition is not yet bound to the presentation domain factory.");
-            if (presentationRole == CharacterPresentationRole.LocalOwner && cameraRig)
-                throw new InvalidOperationException("Camera domain runtime is not yet bound to the presentation domain factory.");
             if (presentationRole == CharacterPresentationRole.LocalOwner && (!followAnchor || !aimAnchor || lookInput == null || string.IsNullOrWhiteSpace(lookInputId)))
                 throw new ArgumentException("Local Presentation Camera inputs are incomplete.");
             if (presentationRole == CharacterPresentationRole.SimulatedActor &&
                 (cameraRig || followAnchor || aimAnchor || cameraTargetBindings is { Count: > 0 } || lookInput != null || !string.IsNullOrEmpty(lookInputId)))
                 throw new ArgumentException("Simulated Presentation cannot receive Camera owner inputs.");
 
+            bool hasCamera = cameraRig;
+            bool hasCameraInputs = followAnchor || aimAnchor || cameraTargetBindings is { Count: > 0 } || lookInput != null || !string.IsNullOrEmpty(lookInputId);
+            if (presentationRole == CharacterPresentationRole.LocalOwner && (!hasCamera || !cameraProfile || !hasCameraInputs))
+                throw new ArgumentException("Local Presentation Camera inputs are incomplete.");
+            if (presentationRole != CharacterPresentationRole.LocalOwner && (hasCamera || cameraProfile || hasCameraInputs))
+                throw new ArgumentException("Simulated Presentation cannot receive Camera owner inputs.");
+            CharacterCameraDomainRuntime camera = presentationRole == CharacterPresentationRole.LocalOwner
+                ? new CharacterCameraDomainRuntime(
+                    actorId,
+                    cameraProfile,
+                    cameraRig,
+                    cameraTargetBindings,
+                    initialBody,
+                    followAnchor,
+                    aimAnchor,
+                    lookInput,
+                    lookInputId,
+                    physicsScene,
+                    rootHierarchy,
+                    initializeExternalState)
+                : null;
             bool hasEquipmentProfile = equipmentPresentationProfile;
             bool hasEquipmentCatalog = equipmentRigBindings;
             if (hasEquipmentProfile != hasEquipmentCatalog)
@@ -103,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rootHierarchy,
                 initialBody,
                 diagnostics);
-            return new CharacterPresentationDomainRuntime(actorId, body, tickRate, animationPresentationProfile, equipment);
+            return new CharacterPresentationDomainRuntime(actorId, body, tickRate, animationPresentationProfile, equipment, camera);
         }
     }
 }

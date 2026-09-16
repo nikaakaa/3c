@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterBodyPresentationRuntime m_Body;
         readonly CharacterAnimationEventGraphHost m_EventGraph;
         readonly CharacterEquipmentDomainRuntime m_Equipment;
+        readonly CharacterCameraDomainRuntime m_Camera;
         readonly double m_PresentationTimePerTick;
         CharacterAnimationVariableFrame m_EventFrame;
         CharacterPresentationTrajectoryIntent m_Trajectory;
@@ -28,7 +29,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationRuntime body,
             int tickRate,
             CharacterAnimationPresentationProfile presentationProfile,
-            CharacterEquipmentDomainRuntime equipment)
+            CharacterEquipmentDomainRuntime equipment,
+            CharacterCameraDomainRuntime camera)
         {
             m_ActorId = actorId;
             m_Body = body ?? throw new ArgumentNullException(nameof(body));
@@ -40,6 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!presentationProfile.EventGraph)
                 throw new InvalidOperationException("Presentation domain requires an Animation EventGraph.");
             m_Equipment = equipment;
+            m_Camera = camera;
             m_EventGraph = new CharacterAnimationEventGraphHost(
                 presentationProfile.EventGraph,
                 actorId);
@@ -98,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void Reset()
         {
+            m_Camera?.Reset();
             m_Equipment?.Reset();
             m_Body.Reset();
             m_EventGraph.Reset();
@@ -135,6 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
             if (!bodyFrame.IsValid)
                 return;
+            m_Camera?.Present(bodyFrame, context);
             CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame);
             CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
                 in factFrame,
@@ -151,6 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            m_Camera?.Dispose();
             m_Equipment?.Dispose();
             m_EventGraph.Dispose();
             m_Body.Dispose();

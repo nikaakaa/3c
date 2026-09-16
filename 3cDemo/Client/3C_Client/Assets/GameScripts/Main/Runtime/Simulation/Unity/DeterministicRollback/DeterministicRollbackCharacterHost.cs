@@ -259,6 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     lookInputId,
                     null,
                     null,
+                    null,
                     sessionHost,
                     diagnosticsContext,
                     true);

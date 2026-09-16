@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -36,6 +36,8 @@ public static class CorinGameplayLabSceneSetup
         var characterGo = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         characterGo.name = "Corin";
         characterGo.transform.position = new Vector3(0f, 0.1f, 0f);
+        if (characterGo.GetComponent<ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost>() == null)
+            characterGo.AddComponent<ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost>();
         var fixedHost = characterGo.GetComponent<FixedCharacterHost>();
         if (fixedHost == null)
             throw new InvalidOperationException("Corin prefab is missing FixedCharacterHost.");

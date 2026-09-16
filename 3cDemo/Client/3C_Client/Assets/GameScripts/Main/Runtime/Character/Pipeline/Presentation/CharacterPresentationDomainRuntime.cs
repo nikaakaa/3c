@@ -189,6 +189,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_PoseDomain == null || !m_PoseDomain.IsAdopted)
                 return;
             float deltaSeconds = Mathf.Max(0f, context.PresentationDeltaSeconds);
+            m_PoseResourceScope.AdvancePreparation();
             m_PoseDomain.BeginFrame(context.RenderFrame);
             CharacterPoseNativePreparationResult preparation;
             try

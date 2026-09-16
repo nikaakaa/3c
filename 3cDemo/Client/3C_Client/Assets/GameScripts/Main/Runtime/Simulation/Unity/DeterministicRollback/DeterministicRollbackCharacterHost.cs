@@ -124,9 +124,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires an Endpoint Definition.");
             CharacterPipelineDefinition characterDefinition = m_CharacterDefinition ? m_CharacterDefinition :
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Character Pipeline Definition.");
-            CharacterPresentationProjectionAsset projectionAsset = characterDefinition.PresentationProjection ?
-                characterDefinition.PresentationProjection :
-                throw new InvalidOperationException($"Rollback Character Host '{name}' Definition requires a Presentation Projection asset.");
+            CharacterAnimationPresentationProfile animationPresentationProfile =
+                characterDefinition.AnimationPresentationProfile ?
+                characterDefinition.AnimationPresentationProfile :
+                throw new InvalidOperationException($"Rollback Character Host '{name}' Definition requires an Animation Presentation Profile.");
+            CharacterAnimationRigPayload animationRig = new CharacterAnimationRigPayload(
+                animationPresentationProfile.RigDefinition);
             CharacterRootHierarchyBinding rootHierarchy = m_RootHierarchy ? m_RootHierarchy :
                 throw new InvalidOperationException($"Rollback Character Host '{name}' requires a Root Hierarchy Binding.");
             rootHierarchy.RequireValid();
@@ -199,12 +202,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     debugSourceMap,
                     diagnosticsStore);
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
-                CharacterPresentationRuntimeBinding presentationBinding;
+                animationRigBinding.RequireValid(animationRig);
+                CinemachineCameraRigAdapter cameraRig = null;
+                Transform followAnchor = null;
+                Transform aimAnchor = null;
+                IReadOnlyList<CameraTargetBinding> cameraTargetBindings = null;
+                ICharacterPresentationLookInput lookInput = null;
+                string lookInputId = string.Empty;
                 if (local)
                 {
                     CharacterInputProfile inputProfile = m_InputProfile ? m_InputProfile :
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires an Input Profile.");
-                    CinemachineCameraRigAdapter cameraRig = m_CameraRig ? m_CameraRig :
+                    cameraRig = m_CameraRig ? m_CameraRig :
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires a Camera Rig.");
                     if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires camera follow and aim anchors.");
@@ -216,43 +225,43 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' camera anchors must belong to VisualRoot.");
                     }
                     input = new UnityFixedCharacterInputAdapter(inputProfile, controlModule, cameraRig);
-                    presentationBinding = CharacterPresentationRuntimeFactory.CreateLocalOwner(
-                        projectionAsset,
-                        tickRate,
-                        actorId,
-                        animancer,
-                        animationRigBinding,
-                        rootHierarchy,
-                        presentationBody,
-                        bodyPresentationProfile,
-                        worldAwarePresentation,
-                        physicsScene,
-                        cameraRig,
-                        m_CameraFollowAnchor,
-                        m_CameraAimAnchor,
-                        m_CameraTargetBindings,
-                        input,
-                        Require(m_CameraLookInputValueId, nameof(m_CameraLookInputValueId)),
-                        sessionHost,
-                        diagnosticsContext);
+                    followAnchor = m_CameraFollowAnchor;
+                    aimAnchor = m_CameraAimAnchor;
+                    cameraTargetBindings = m_CameraTargetBindings;
+                    lookInput = input;
+                    lookInputId = Require(m_CameraLookInputValueId, nameof(m_CameraLookInputValueId));
                 }
                 else
                 {
-                    presentationBinding = CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-                        projectionAsset,
-                        tickRate,
-                        actorId,
-                        animancer,
-                        animationRigBinding,
-                        rootHierarchy,
-                        presentationBody,
-                        bodyPresentationProfile,
-                        worldAwarePresentation,
-                        physicsScene,
-                        sessionHost,
-                        diagnosticsContext);
+                    if (m_CameraRig || m_CameraFollowAnchor || m_CameraAimAnchor ||
+                        m_CameraTargetBindings.Count != 0 || !string.IsNullOrEmpty(m_CameraLookInputValueId))
+                    {
+                        throw new InvalidOperationException($"Remote Rollback Character Host '{name}' cannot receive LocalOwner Camera configuration.");
+                    }
                 }
-                presentation = presentationBinding.Runtime;
+                presentation = CharacterPresentationDomainRuntimeFactory.Create(
+                    tickRate,
+                    animationPresentationProfile,
+                    animationRig,
+                    actorId,
+                    animancer,
+                    animationRigBinding,
+                    rootHierarchy,
+                    presentationBody,
+                    local ? CharacterPresentationRole.LocalOwner : CharacterPresentationRole.SimulatedActor,
+                    bodyPresentationProfile,
+                    worldAwarePresentation,
+                    physicsScene,
+                    cameraRig,
+                    followAnchor,
+                    aimAnchor,
+                    cameraTargetBindings,
+                    lookInput,
+                    lookInputId,
+                    null,
+                    sessionHost,
+                    diagnosticsContext,
+                    true);
 
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
                     actorId,

@@ -1290,3 +1290,9 @@
 - Fixed Character Host 不再暴露或读取 `CharacterPresentationProjectionAsset`，启动校验改为直接要求 `CharacterAnimationPresentationProfile`，Rig 校验也改用 Profile 的 Rig Definition。
 - Host 的表现创建返回 `ICharacterPresentationDomainRuntime`，LocalOwner 的 Camera、Look Input 与 SimulatedActor 的无相机约束保留在 Host，具体领域装配统一交给 `CharacterPresentationDomainRuntimeFactory`。
 - 本步只切断旧 Projection／Runtime Binding／Runtime Factory 入口，不添加旧类型别名、兼容分支或占位表现实现；领域工厂接线作为下一独立小步完成。
+
+## 2026-09-16 Rollback Host 移除旧 Projection 创建入口
+
+- Deterministic Rollback Character Host 与 Fixed Host 同步直接读取 Animation Presentation Profile 和 Rig Payload，LocalOwner 与 SimulatedActor 统一交由表现领域工厂创建。
+- Rollback Host 删除 Projection Load、旧 Runtime Binding 以及旧 Runtime Factory 调用，并明确远端角色不得携带本地 Camera 配置；本地输入仍沿现有 Unity Fixed Input Adapter 接入 Look Input。
+- 本步只清理 Rollback 的旧表现创建边界，不新增兼容路径或临时 Runtime；真实领域工厂继续作为后续独立接线。

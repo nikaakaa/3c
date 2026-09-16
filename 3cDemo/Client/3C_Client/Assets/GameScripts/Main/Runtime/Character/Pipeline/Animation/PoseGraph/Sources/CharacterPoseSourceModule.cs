@@ -340,7 +340,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sourceCapacity,
                 clipCapacity);
             m_Catalog = new CharacterPoseSourceCatalog(
-                profile,
                 clipCapacity);
             var physicalSources = new PhysicalPoseSourceRegistry(
                 sourceCapacity);
@@ -358,18 +357,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     rig,
                     sourceCapacity,
                     clipCapacity);
-                if (m_Catalog.HasAclResources)
-                {
-                    aclBackend = new CharacterAclPoseSamplingBackend(
-                        animancer,
-                        rigBinding,
-                        rig,
-                        sourceCapacity,
-                        clipCapacity,
-                        resourceScope,
-                        parameterCapacity);
-                    aclBackend.RegisterResourceClosure(m_Catalog);
-                }
+                aclBackend = new CharacterAclPoseSamplingBackend(
+                    animancer,
+                    rigBinding,
+                    rig,
+                    sourceCapacity,
+                    clipCapacity,
+                    resourceScope,
+                    parameterCapacity);
                 backendSet = new CharacterPoseSourceBackendSet(
                     nativeClipBackend,
                     aclBackend);
@@ -568,7 +563,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     clips,
                     m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                         ? default
-                        : m_Catalog.RequireClip(sourceId),
+                        : m_Catalog.Build(clips),
                     in capture,
                     poseNodeId);
             m_BindingPage.BindClip(bindingIndex, in binding);
@@ -606,7 +601,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     clips,
                     m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                         ? default
-                        : m_Catalog.RequireBlendSpace(bindingIndex),
+                        : m_Catalog.Build(clips),
                     in capture,
                     poseNodeId);
             m_BindingPage.BindBlendSpace(bindingIndex, in binding);
@@ -655,7 +650,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     sample.Clips,
                     m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                         ? default
-                        : m_Catalog.RequireMotionMatching(in sample),
+                        : m_Catalog.Build(sample.Clips),
                     in capture,
                     poseNodeId);
             m_BindingPage.BindDirect(bindingIndex, in binding);
@@ -897,8 +892,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     physical,
                     committed
                         ? default
-                        : m_Catalog.RequireAction(
-                            request.SourceOwnerIndex),
+                        : m_Catalog.Build(request.Clips),
                     in capture,
                     poseNodeId);
             Connect(physical, prepared);
@@ -927,8 +921,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     physical,
                     committed
                         ? default
-                        : m_Catalog.RequireMotionMatching(
-                            in sample),
+                        : m_Catalog.Build(request.Clips),
                     in capture,
                     poseNodeId);
             Connect(physical, prepared);
@@ -950,7 +943,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 clips,
                 m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                     ? default
-                    : m_Catalog.RequireMotionMatching(in sample),
+                    : m_Catalog.Build(clips),
                 in capture,
                 poseNodeId);
             m_BindingPage.BindDirect(bindingIndex, in binding);
@@ -971,7 +964,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 clips,
                 m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                     ? default
-                    : m_Catalog.RequireClip(sourceId),
+                    : m_Catalog.Build(clips),
                 in capture,
                 poseNodeId);
             m_BindingPage.BindClip(bindingIndex, in binding);
@@ -992,7 +985,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     clips,
                 m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                         ? default
-                        : m_Catalog.RequireBlendSpace(bindingIndex),
+                        : m_Catalog.Build(clips),
                     in capture,
                     poseNodeId);
             m_BindingPage.BindBlendSpace(

@@ -99,14 +99,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         public int ClipCapacity => m_ClipCapacity;
         public bool HasOpenFrame => m_FramePhase != FramePhase.Closed;
 
-        internal void RegisterResourceClosure(CharacterPoseSourceCatalog catalog)
-        {
-            RequireAvailable();
-            if (catalog == null)
-                throw new ArgumentNullException(nameof(catalog));
-            catalog.RegisterAclResources(m_Store);
-        }
-
         public void BeginFrame(CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();

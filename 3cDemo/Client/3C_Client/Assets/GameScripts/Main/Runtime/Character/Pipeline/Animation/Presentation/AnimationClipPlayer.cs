@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
@@ -294,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal AnimationClipPlayerRuntime(
             CharacterPresentationClipPlayerDescriptor descriptor,
             CharacterPresentationPoseSourcePlan source,
-            IReadOnlyList<CharacterPresentationPoseParameterEntry> parameters,
+            IReadOnlyList<CharacterPoseParameterDeclaration> parameters,
             int footPlacementWeightParameterIndex,
             CharacterAnimationRigPayload rig)
         {

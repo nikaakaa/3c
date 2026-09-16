@@ -1,5 +1,4 @@
 using System;
-using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections;
 
@@ -41,138 +40,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RigRevision.Equals(rigRevision);
     }
 
-    internal readonly struct CharacterPoseConstraintCommittedDiagnosticsView
-    {
-        internal CharacterPoseConstraintCommittedDiagnosticsView(
-            CharacterPoseConstraintRuntime.CommittedDiagnosticsPage page)
-        {
-            m_Page = page ?? throw new ArgumentNullException(nameof(page));
-            m_Identity = page.Identity;
-            if (!IsValid)
-                throw new ArgumentException(
-                    "Pose Constraint committed diagnostics are invalid.",
-                    nameof(page));
-        }
-
-        readonly CharacterPoseConstraintRuntime.CommittedDiagnosticsPage m_Page;
-        readonly ulong m_Identity;
-        internal bool IsValid =>
-            m_Page != null &&
-            m_Identity != 0 &&
-            m_Page.Identity == m_Identity &&
-            m_Page.Result.IsCompleted;
-        internal CharacterPoseConstraintResult Result
-        {
-            get
-            {
-                RequireValid();
-                return m_Page.Result;
-            }
-        }
-        internal CharacterFootLandingPredictionDiagnostics FootLandingPrediction
-        {
-            get
-            {
-                RequireValid();
-                return m_Page.FootLandingPrediction;
-            }
-        }
-        internal int FullBodyIkGoalContributionCount
-        {
-            get
-            {
-                RequireValid();
-                return m_Page.GoalContributionCount;
-            }
-        }
-        internal int FullBodyIkContributionGoalCount
-        {
-            get
-            {
-                RequireValid();
-                return m_Page.ContributionGoalCount;
-            }
-        }
-        internal CharacterFullBodyIkGoalContributionHeader
-            GetGoalContribution(int index)
-        {
-            RequireValid();
-            if ((uint)index >= (uint)m_Page.GoalContributionCount)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Page.GoalContributions[index];
-        }
-        internal CharacterFullBodyIkGoal GetContributionGoal(int index)
-        {
-            RequireValid();
-            if ((uint)index >= (uint)m_Page.ContributionGoalCount)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Page.ContributionGoals[index];
-        }
-        internal CharacterFullBodyIkGoalSetHeader GoalSet
-        {
-            get
-            {
-                RequireValid();
-                return m_Page.GoalSet;
-            }
-        }
-        internal CharacterFullBodyIkGoal GetGoal(int index)
-        {
-            RequireValid();
-            if ((uint)index >= (uint)m_Page.GoalCount)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Page.Goals[index];
-        }
-        internal CharacterFullBodyIkSolverDiagnostics Solver
-        {
-            get
-            {
-                RequireValid();
-                return m_Page.Solver;
-            }
-        }
-        internal int SolverEffectorCount
-        {
-            get
-            {
-                RequireValid();
-                return m_Page.SolverEffectorCount;
-            }
-        }
-        internal CharacterFullBodyIkEffectorDiagnostics GetSolverEffector(
-            int index)
-        {
-            RequireValid();
-            if ((uint)index >= (uint)m_Page.SolverEffectorCount)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Page.SolverEffectors[index];
-        }
-        internal int SolverLimbCount
-        {
-            get
-            {
-                RequireValid();
-                return m_Page.SolverLimbCount;
-            }
-        }
-        internal CharacterFullBodyIkLimbDiagnostics GetSolverLimb(int index)
-        {
-            RequireValid();
-            if ((uint)index >= (uint)m_Page.SolverLimbCount)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Page.SolverLimbs[index];
-        }
-
-        void RequireValid()
-        {
-            if (!IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Pose Constraint committed diagnostics lease is stale.");
-            }
-        }
-    }
-
     internal sealed class CharacterPoseConstraintRuntime : IDisposable
     {
         sealed class Bank
@@ -182,9 +49,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 int contributionGoalCount,
                 CharacterFootPlacementModule footPlacement)
             {
-                SolverEffectors = new CharacterFullBodyIkEffectorDiagnostics[
-                    CharacterFullBodyIkGoalSetHeader.MaximumGoalCount];
-                SolverLimbs = new CharacterFullBodyIkLimbDiagnostics[4];
                 Goals = new NativeArray<CharacterFullBodyIkGoal>(
                     CharacterFullBodyIkGoalSetHeader.MaximumGoalCount,
                     Allocator.Persistent,
@@ -203,11 +67,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             internal CharacterFullBodyIkSolverOutcome SolverOutcome;
             internal CharacterFullBodyIkBendHistory BendHistory;
-            internal CharacterFullBodyIkSolverDiagnostics SolverDiagnostics;
-            internal int SolverEffectorCount;
-            internal readonly CharacterFullBodyIkEffectorDiagnostics[] SolverEffectors;
-            internal int SolverLimbCount;
-            internal readonly CharacterFullBodyIkLimbDiagnostics[] SolverLimbs;
             internal CharacterFullBodyIkGoalSetHeader GoalSet;
             internal NativeArray<CharacterFullBodyIkGoal> Goals;
             internal NativeArray<CharacterFullBodyIkGoalContributionHeader>
@@ -216,24 +75,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal readonly CharacterFootPlacementBank FootPlacement;
             internal ulong Identity;
             internal CharacterPoseConstraintFrameLease Lease;
-            internal AnimationPresentationDiagnosticsInterest DiagnosticsInterest;
-            internal bool CaptureFootIkDiagnostics;
 
             internal void Begin(
                 in CharacterPoseConstraintFrameLease lease,
-                AnimationPresentationDiagnosticsInterest diagnosticsInterest,
-                bool captureFootIkDiagnostics,
                 Bank committed)
             {
                 Lease = lease;
-                DiagnosticsInterest = diagnosticsInterest;
-                CaptureFootIkDiagnostics = captureFootIkDiagnostics;
                 SolverOutcome = default;
-                SolverDiagnostics = default;
-                SolverEffectorCount = 0;
-                Array.Clear(SolverEffectors, 0, SolverEffectors.Length);
-                SolverLimbCount = 0;
-                Array.Clear(SolverLimbs, 0, SolverLimbs.Length);
                 GoalSet = default;
                 for (int i = 0; i < Goals.Length; i++)
                     Goals[i] = default;
@@ -247,21 +95,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     BendHistory = committed.BendHistory;
                 FootPlacement?.Begin(
                     committed?.FootPlacement,
-                    RequiresFootDiagnostics(diagnosticsInterest) ||
-                    captureFootIkDiagnostics);
+                    false);
             }
 
             internal void ClearPending()
             {
                 Lease = default;
-                DiagnosticsInterest = AnimationPresentationDiagnosticsInterest.None;
-                CaptureFootIkDiagnostics = false;
                 SolverOutcome = default;
-                SolverDiagnostics = default;
-                SolverEffectorCount = 0;
-                Array.Clear(SolverEffectors, 0, SolverEffectors.Length);
-                SolverLimbCount = 0;
-                Array.Clear(SolverLimbs, 0, SolverLimbs.Length);
                 GoalSet = default;
                 for (int i = 0; i < Goals.Length; i++)
                     Goals[i] = default;
@@ -284,44 +124,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        internal sealed class CommittedDiagnosticsPage
-        {
-            internal CommittedDiagnosticsPage(
-                int contributionCount,
-                int contributionGoalCount)
-            {
-                GoalContributions =
-                    new CharacterFullBodyIkGoalContributionHeader[
-                        contributionCount];
-                ContributionGoals = new CharacterFullBodyIkGoal[
-                    contributionGoalCount];
-                Goals = new CharacterFullBodyIkGoal[
-                    CharacterFullBodyIkGoalSetHeader.MaximumGoalCount];
-                SolverEffectors =
-                    new CharacterFullBodyIkEffectorDiagnostics[
-                        CharacterFullBodyIkGoalSetHeader.MaximumGoalCount];
-                SolverLimbs = new CharacterFullBodyIkLimbDiagnostics[4];
-            }
-
-            internal ulong Identity;
-            internal CharacterPoseConstraintResult Result;
-            internal CharacterFootLandingPredictionDiagnostics
-                FootLandingPrediction;
-            internal CharacterFullBodyIkGoalContributionHeader[]
-                GoalContributions;
-            internal CharacterFullBodyIkGoal[] ContributionGoals;
-            internal int GoalContributionCount;
-            internal int ContributionGoalCount;
-            internal CharacterFullBodyIkGoalSetHeader GoalSet;
-            internal CharacterFullBodyIkGoal[] Goals;
-            internal int GoalCount;
-            internal CharacterFullBodyIkSolverDiagnostics Solver;
-            internal CharacterFullBodyIkEffectorDiagnostics[] SolverEffectors;
-            internal int SolverEffectorCount;
-            internal CharacterFullBodyIkLimbDiagnostics[] SolverLimbs;
-            internal int SolverLimbCount;
-        }
-
         readonly CharacterFootPlacementModule m_FootPlacement;
         readonly CharacterPoseBoneContributionCatalog m_PoseBoneContributions;
         readonly CharacterFullBodyIkGoalAssemblerCatalog m_GoalAssemblers;
@@ -331,14 +133,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly FixedString64Bytes m_RigRevision;
         readonly Bank m_First;
         readonly Bank m_Second;
-        readonly CommittedDiagnosticsPage m_CommittedDiagnostics;
-
         Bank m_Committed;
         Bank m_Pending;
         CharacterPoseConstraintResult m_CommittedResult;
         CharacterPoseConstraintResult m_PendingResult;
         ulong m_NextBankIdentity = 1;
-        ulong m_NextDiagnosticsIdentity = 1;
         ulong m_TuningGeneration = 1;
         ulong m_CandidateTuningGeneration;
         bool m_CandidateResetOwnerState;
@@ -384,24 +183,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 contributionCount,
                 contributionGoalCount,
                 m_FootPlacement);
-            m_CommittedDiagnostics = new CommittedDiagnosticsPage(
-                contributionCount,
-                contributionGoalCount);
         }
 
         internal bool HasFootPlacement => m_FootPlacement != null;
         internal bool IsFullBodyIkPrepared => m_Solver.IsPrepared;
-        internal CharacterPoseConstraintTuningView RequireTuning(
-            ulong generation)
-        {
-            RequireAlive();
-            if (generation != m_TuningGeneration)
-            {
-                throw new InvalidOperationException(
-                    "Pose Constraint tuning generation is stale.");
-            }
-            return new CharacterPoseConstraintTuningView(generation);
-        }
         internal bool MatchesCompiledLayout(
             int contributionCount,
             int contributionGoalCount) =>
@@ -483,135 +268,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CommittedResult.SolverProduced == result.SolverProduced &&
             m_CommittedResult.FullBodyIk.AppliedGoalCount ==
             result.FullBodyIk.AppliedGoalCount;
-        internal void RequireCommittedFootIkCapture(
-            in CharacterPoseConstraintResult result)
-        {
-            RequireAlive();
-            if (!MatchesCommittedResult(in result) ||
-                !m_Committed.CaptureFootIkDiagnostics ||
-                m_Committed.FootPlacement?.Diagnostics.HasValue != true)
-            {
-                throw new InvalidOperationException(
-                    "Committed Foot IK capture facts are unavailable.");
-            }
-        }
-        internal CharacterFootLandingPredictionDiagnostics
-            CommittedFootLandingPrediction =>
-                m_Committed.FootPlacement.Diagnostics.Value;
-        internal CharacterFullBodyIkSolverDiagnostics
-            CommittedFullBodyIkSolver =>
-                m_Committed.SolverDiagnostics;
-        internal int CommittedSolverEffectorCount =>
-            m_Committed.SolverEffectorCount;
-        internal CharacterFullBodyIkEffectorDiagnostics
-            GetCommittedSolverEffector(int index) =>
-                m_Committed.SolverEffectors[index];
-        internal int CommittedSolverLimbCount =>
-            m_Committed.SolverLimbCount;
-        internal CharacterFullBodyIkLimbDiagnostics
-            GetCommittedSolverLimb(int index) =>
-                m_Committed.SolverLimbs[index];
-        void FreezeCommittedDiagnostics(
-            in CharacterPoseConstraintResult result,
-            AnimationPresentationDiagnosticsInterest interest,
-            bool captureFootIkDiagnostics)
-        {
-            RequireAlive();
-            if (interest == AnimationPresentationDiagnosticsInterest.None &&
-                    !captureFootIkDiagnostics ||
-                !MatchesCommittedResult(in result) ||
-                (interest & ~m_Committed.DiagnosticsInterest) != 0 ||
-                captureFootIkDiagnostics &&
-                !m_Committed.CaptureFootIkDiagnostics)
-            {
-                throw new InvalidOperationException(
-                    "Pose Constraint committed diagnostics request is invalid.");
-            }
-            CommittedDiagnosticsPage page = m_CommittedDiagnostics;
-            page.Identity = 0;
-            page.Result = result;
-            page.FootLandingPrediction = default;
-            page.GoalContributionCount = 0;
-            page.ContributionGoalCount = 0;
-            page.GoalSet = default;
-            page.GoalCount = 0;
-            page.Solver = default;
-            page.SolverEffectorCount = 0;
-            page.SolverLimbCount = 0;
-            if ((RequiresFootDiagnostics(interest) ||
-                 captureFootIkDiagnostics) &&
-                m_Committed.FootPlacement?.Diagnostics.HasValue == true)
-            {
-                page.FootLandingPrediction =
-                    m_Committed.FootPlacement.Diagnostics.Value;
-            }
-            if ((interest &
-                 AnimationPresentationDiagnosticsInterest.PoseWatch) != 0)
-            {
-                page.GoalContributionCount =
-                    m_Committed.GoalContributions.Length;
-                for (int i = 0; i < page.GoalContributionCount; i++)
-                {
-                    page.GoalContributions[i] =
-                        m_Committed.GoalContributions[i];
-                }
-                page.ContributionGoalCount =
-                    m_Committed.ContributionGoals.Length;
-                for (int i = 0; i < page.ContributionGoalCount; i++)
-                {
-                    page.ContributionGoals[i] =
-                        m_Committed.ContributionGoals[i];
-                }
-                page.GoalSet = m_Committed.GoalSet;
-                page.GoalCount = page.GoalSet.IsValid
-                    ? page.GoalSet.GoalCount
-                    : 0;
-                for (int i = 0; i < page.GoalCount; i++)
-                {
-                    page.Goals[i] = m_Committed.Goals[
-                        page.GoalSet.GoalOffset + i];
-                }
-            }
-            if (RequiresFullBodyIkDiagnostics(interest) ||
-                captureFootIkDiagnostics)
-            {
-                page.Solver = m_Committed.SolverDiagnostics;
-                page.SolverEffectorCount =
-                    m_Committed.SolverEffectorCount;
-                for (int i = 0; i < page.SolverEffectorCount; i++)
-                    page.SolverEffectors[i] = m_Committed.SolverEffectors[i];
-                page.SolverLimbCount = m_Committed.SolverLimbCount;
-                for (int i = 0; i < page.SolverLimbCount; i++)
-                    page.SolverLimbs[i] = m_Committed.SolverLimbs[i];
-            }
-            page.Identity = m_NextDiagnosticsIdentity++;
-        }
-
-        internal CharacterPoseConstraintCommittedDiagnosticsView
-            CaptureCommittedDiagnostics(
-            in CharacterPoseConstraintResult result,
-            AnimationPresentationDiagnosticsInterest interest,
-            bool captureFootIkDiagnostics)
-        {
-            RequireAlive();
-            if (interest == AnimationPresentationDiagnosticsInterest.None &&
-                    !captureFootIkDiagnostics ||
-                !MatchesCommittedResult(in result) ||
-                (interest & ~m_Committed.DiagnosticsInterest) != 0 ||
-                captureFootIkDiagnostics &&
-                !m_Committed.CaptureFootIkDiagnostics ||
-                m_CommittedDiagnostics.Result.Lineage != result.Lineage)
-            {
-                throw new InvalidOperationException(
-                    "Pose Constraint committed diagnostics are unavailable.");
-            }
-            return new CharacterPoseConstraintCommittedDiagnosticsView(
-                m_CommittedDiagnostics);
-        }
         internal CharacterPoseConstraintFrameLease BeginFrame(
-            in CharacterPoseNativeFrameLineage lineage,
-            AnimationPresentationDiagnosticsInterest diagnosticsInterest,
-            bool captureFootIkDiagnostics)
+            in CharacterPoseNativeFrameLineage lineage)
         {
             RequireAlive();
             if (m_HasPending)
@@ -622,8 +280,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 : m_First;
             m_Pending.Begin(
                 in lease,
-                diagnosticsInterest,
-                captureFootIkDiagnostics,
                 m_HasCommitted ? m_Committed : null);
             m_PendingResult = default;
             m_HasPending = true;
@@ -790,10 +446,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireRenderFrame(frameSequence, completionIdentity);
             if (!handle.IsValid || handle.FullBodyIkIndex != 0)
                 throw new ArgumentOutOfRangeException(nameof(handle));
-            bool recordDiagnostics =
-                RequiresFullBodyIkDiagnostics(
-                    m_Pending.DiagnosticsInterest) ||
-                m_Pending.CaptureFootIkDiagnostics;
             if (!m_Pending.GoalSet.IsValid)
                 throw new InvalidOperationException("Full Body IK requires the unique assembled Goal Set.");
             CharacterFullBodyIkResult result = m_Solver.SolvePrepared(
@@ -803,32 +455,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ref m_Pending.BendHistory,
                 frameSequence,
                 completionIdentity,
-                recordDiagnostics);
+                false);
             m_Pending.SolverOutcome = new CharacterFullBodyIkSolverOutcome(
                 frameSequence,
                 completionIdentity,
                 m_RigId,
                 m_RigRevision,
                 result);
-            if (recordDiagnostics)
-            {
-                int effectorCount = m_Solver.DiagnosticEffectorCount;
-                int limbCount = m_Solver.DiagnosticLimbCount;
-                if (effectorCount < 0 ||
-                    effectorCount > CharacterFullBodyIkGoalSetHeader.MaximumGoalCount ||
-                    limbCount < 0 || limbCount > 4)
-                {
-                    throw new InvalidOperationException(
-                        "Full Body IK diagnostics exceeded the root Bank capacity.");
-                }
-                m_Pending.SolverDiagnostics = m_Solver.Diagnostics;
-                m_Pending.SolverEffectorCount = effectorCount;
-                for (int i = 0; i < effectorCount; i++)
-                    m_Pending.SolverEffectors[i] = m_Solver.GetDiagnosticEffector(i);
-                m_Pending.SolverLimbCount = limbCount;
-                for (int i = 0; i < limbCount; i++)
-                    m_Pending.SolverLimbs[i] = m_Solver.GetDiagnosticLimb(i);
-            }
             return new CharacterFullBodyIkConstraintOperationResult(
                 in handle,
                 in result,
@@ -1006,15 +639,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasPending = false;
             m_FootPlacement?.PublishCommittedDiagnostics(
                 m_Committed.FootPlacement);
-            if (m_Committed.DiagnosticsInterest !=
-                    AnimationPresentationDiagnosticsInterest.None ||
-                m_Committed.CaptureFootIkDiagnostics)
-            {
-                FreezeCommittedDiagnostics(
-                    in m_CommittedResult,
-                    m_Committed.DiagnosticsInterest,
-                    m_Committed.CaptureFootIkDiagnostics);
-            }
         }
 
         internal void DiscardFrame(
@@ -1106,27 +730,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             bank.BendHistory = default;
             bank.SolverOutcome = default;
-            bank.SolverDiagnostics = default;
-            bank.SolverEffectorCount = 0;
-            Array.Clear(bank.SolverEffectors, 0, bank.SolverEffectors.Length);
-            bank.SolverLimbCount = 0;
-            Array.Clear(bank.SolverLimbs, 0, bank.SolverLimbs.Length);
         }
-
-        internal static bool RequiresFootDiagnostics(
-            AnimationPresentationDiagnosticsInterest interest) =>
-            (interest &
-             (AnimationPresentationDiagnosticsInterest.LiveState |
-              AnimationPresentationDiagnosticsInterest.Capture |
-              AnimationPresentationDiagnosticsInterest.PoseWatch)) != 0;
-
-        internal static bool RequiresFullBodyIkDiagnostics(
-            AnimationPresentationDiagnosticsInterest interest) =>
-            (interest &
-             (AnimationPresentationDiagnosticsInterest.LiveState |
-              AnimationPresentationDiagnosticsInterest.Capture |
-              AnimationPresentationDiagnosticsInterest.OperationDetail |
-              AnimationPresentationDiagnosticsInterest.PoseWatch)) != 0;
 
         void RequireAlive()
         {

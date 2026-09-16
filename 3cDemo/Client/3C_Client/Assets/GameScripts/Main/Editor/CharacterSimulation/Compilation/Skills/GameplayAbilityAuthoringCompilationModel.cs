@@ -56,14 +56,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public static class GameplayAbilityAuthoringDiscovery
     {
-        public static GameplayAbilityAuthoringCompilationModel Discover(
-            GameplayAbilityDefinition definition,
-            SimulationCompileReport report)
-        {
-            if (report == null)
-                throw new ArgumentNullException(nameof(report));
-            return Discover(definition, report);
-        }
 
         public static GameplayAbilityAuthoringCompilationModel Discover(
             GameplayAbilityDefinition definition,
@@ -228,3 +220,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 }
+

@@ -330,6 +330,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                     $"{callSite}/fsm:{machine.StateMachine.AuthoringId}",
                                     report)));
                         break;
+                        }
                     case BtsmtlSkillStateFlowNode state:
                         AddReference(node, BtsmtlSkillGraphReferenceKind.StateBody, state.Body);
                         break;
@@ -397,3 +398,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 }
+

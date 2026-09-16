@@ -1355,3 +1355,7 @@
 ## 2026-09-16 对账领域执行Pass端口
 - Ingress、Schedule、Evaluate、WorldResolveBatch、Egress 和 Finalize 已通过 CharacterRuntimePort 获取领域执行服务；旧 ProgramRuntime port 没有消费者。
 - Backend 仍按不可变 Pipeline 顺序创建 pass runtime，Step 产品由原 owner 写入并在原子 Commit 中发布，未另起时钟或旁路执行链。
+
+## 2026-09-16 对账网络握手兼容身份
+- Rollback Handshake 锁定 Model、角色内容、状态 schema、TickRate、Collision World、KCC 和协议；ServerAuthoritative 兼容身份锁定内容、schema、operation set、TickRate、Pipeline 和 Backend。
+- 两边都不接受缺省兼容映射；身份不匹配直接失败，保留显式产品边界。

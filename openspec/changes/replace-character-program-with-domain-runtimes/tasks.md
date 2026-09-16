@@ -58,7 +58,7 @@ Timeline原1.7的portable轨道／Clip数据以及原1.5—1.6的域内运行部
 - [x] 3.2 将保留Pass的旧ProgramRuntime port改接领域执行服务，恢复Evaluate／Finalize和WorldResolveBatch调用；保留Ingress／Schedule／Step／Egress顺序、Product owner、能力校验及Backend原子Commit，不为修引用错误删除这些职责或另起旁路时钟。
 - [x] 3.3 将 Authority baseline、Prediction History、Reconciler 和恢复事务迁到完整领域状态，保留 state/body 误差裁决、remote observed body 和 EventId journal。
 - [x] 3.4 将 Fixed Rollback 的角色快照与内容 identity 接到新状态格式，保留输入排序、History、Hash、恢复／重放、确认输出和 Relay-only 职责。
-- [ ] 3.5 更新握手与兼容 Pair，分别锁定控制／技能／配置内容、状态格式、NumericProfile、World／Solver 与 Pipeline／Backend 身份。
+- [x] 3.5 更新握手与兼容 Pair，分别锁定控制／技能／配置内容、状态格式、NumericProfile、World／Solver 与 Pipeline／Backend 身份。
 - [ ] 3.6 迁移 Unity Authority、普通 .NET Authority、Local／Fixed／Rollback 的显式 launch 和 manifest 读取；保留产品分工及原不支持能力的拒绝行为。
 - [ ] 3.7 升级实际改变的网络／状态／产品格式并删除旧 reader，使旧角色 Program 产物不能被新会话隐式接受。
 

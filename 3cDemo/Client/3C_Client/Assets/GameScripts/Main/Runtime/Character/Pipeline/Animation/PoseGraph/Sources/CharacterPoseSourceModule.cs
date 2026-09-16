@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
-using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -306,8 +305,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly CharacterPoseSourceBindingPage m_BindingPage;
         readonly CharacterPoseSourceUsagePage m_UsagePage;
-        readonly CharacterPoseMotionMatchingSourceRuntime
-            m_MotionMatching;
         readonly SourceReleasePage m_ReleasePage;
         readonly HashSet<AnimationPhysicalSourceIdentity>
             m_ReleaseValidationIdentities;
@@ -321,7 +318,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal CharacterPoseSourceModule(
             AnimancerComponent animancer,
             CharacterAnimationPresentationProfile profile,
-            CharacterMotionMatchingPresentationModule motionMatching,
             CharacterAnimationRigBinding rigBinding,
             CharacterAnimationRigPayload rig,
             int sourceCapacity,
@@ -346,10 +342,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Catalog = new CharacterPoseSourceCatalog(
                 profile,
                 clipCapacity);
-            m_MotionMatching = motionMatching != null
-                ? new CharacterPoseMotionMatchingSourceRuntime(
-                    motionMatching)
-                : null;
             var physicalSources = new PhysicalPoseSourceRegistry(
                 sourceCapacity);
             AnimancerPoseSamplingBackend nativeClipBackend = null;
@@ -441,9 +433,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal int Capacity => m_PhysicalSources.Capacity;
-        internal CharacterPoseMotionMatchingSourceRuntime MotionMatching =>
-            m_MotionMatching;
-
         internal CharacterPoseSourceFrameLease BeginFrame(
             in CharacterPoseNativeFrameLineage lineage)
         {
@@ -1427,8 +1416,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             RequireAlive();
             Exception failure = null;
             DisposeStep(m_Backends.Dispose, ref failure);
-            if (m_MotionMatching != null)
-                DisposeStep(m_MotionMatching.Dispose, ref failure);
             m_FramePage.Clear();
             m_BindingPage.Clear();
             m_UsagePage.Clear();

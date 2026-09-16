@@ -13,7 +13,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     {
         readonly HashSet<string> m_SupportedTargets;
         int m_NextHandle = 1;
-
         internal CharacterTimelineDomainBindingResolver(IEnumerable<string> supportedTargets)
         {
             m_SupportedTargets = new HashSet<string>(supportedTargets ?? Array.Empty<string>(), StringComparer.Ordinal);
@@ -41,7 +40,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
     internal sealed class CharacterTimelineDependencyResolver : ITimelineRuntimeDependencyResolver
     {
-        int m_NextHandle = 1;
 
         public bool TryResolve(
             TimelineContentDependency dependency,
@@ -49,9 +47,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             out TimelineRuntimeDependencyHandle handle,
             out string error)
         {
-            handle = new TimelineRuntimeDependencyHandle(m_NextHandle++);
-            error = string.Empty;
-            return true;
+            handle = TimelineRuntimeDependencyHandle.Invalid;
+            error = $"Timeline runtime dependency '{dependency.Identity}' requires a composed dependency service."; return false;
         }
     }
 

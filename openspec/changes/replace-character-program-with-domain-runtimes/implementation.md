@@ -1481,3 +1481,9 @@
 - Timeline Runtime 拆出 Request / Commit / Discard 停止阶段，消费器在请求阶段验证，实际停止与表现释放只在角色 Step 提交后完成。
 - 评估异常时 Timeline advance 和 stop candidate 都会精确丢弃，不留半提交播放或停止状态。
 - Float32、Fixed、Fixed.Unity、Runtime、Editor 便携编译通过；构建后已执行 build-server shutdown。
+
+## 2026-09-17 禁止Timeline依赖解析假成功
+
+- CharacterTimelineHost 的 Runtime 依赖解析不再生成假依赖句柄；缺少正式依赖服务时按依赖 Identity 返回精确失败。
+- 该边界保证带内容依赖的 Timeline 不会在缺少资源服务时伪装可运行。
+- ThirdPersonClient.Runtime 与 Editor 便携编译通过；构建后已执行 build-server shutdown。

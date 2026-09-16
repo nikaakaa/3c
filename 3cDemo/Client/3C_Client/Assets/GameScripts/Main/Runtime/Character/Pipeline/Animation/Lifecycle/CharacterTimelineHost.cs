@@ -64,6 +64,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public void DiscardStop(TimelineRuntimeStopRequest request) { }
     }
 
+    public enum CharacterTimelinePlaybackSourceKind : byte
+    {
+        None = 0,
+        FixedPreview = 1,
+        AbilityRuntime = 2
+    }
     public readonly struct CharacterTimelinePlaybackObservation
     {
         internal CharacterTimelinePlaybackObservation(
@@ -71,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelinePlaybackStatus status,
             TimelineData timeline,
             string sourceName,
+            CharacterTimelinePlaybackSourceKind sourceKind,
             float clipTime,
             float normalizedTime,
             float weight,
@@ -80,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Status = status;
             Timeline = timeline;
             SourceName = sourceName ?? string.Empty;
+            SourceKind = sourceKind;
             ClipTime = clipTime;
             NormalizedTime = normalizedTime;
             Weight = weight;
@@ -90,6 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public TimelinePlaybackStatus Status { get; }
         public TimelineData Timeline { get; }
         public string SourceName { get; }
+        public CharacterTimelinePlaybackSourceKind SourceKind { get; }
         public float ClipTime { get; }
         public float NormalizedTime { get; }
         public float Weight { get; }
@@ -143,6 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal TimelinePlaybackHandle Handle;
             internal TimelineData Timeline;
             internal string SourceName;
+            internal CharacterTimelinePlaybackSourceKind SourceKind;
             internal bool CoreDriven;
         }
 
@@ -195,6 +205,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             BaseGraph sourceRuntimeGraph,
             out TimelinePlaybackHandle handle)
         {
+            return RequestTimelinePlayback(
+                timeline,
+                sourceId,
+                sourceName,
+                actionContext,
+                playbackMode,
+                sourceActivation,
+                sourceRuntimeGraph,
+                CharacterTimelinePlaybackSourceKind.None,
+                out handle);
+        }
+
+        bool RequestTimelinePlayback(
+            TimelineData timeline,
+            string sourceId,
+            string sourceName,
+            TimelinePlaybackActionContext actionContext,
+            TimelinePlaybackMode playbackMode,
+            TreeExecutionActivationScope sourceActivation,
+            BaseGraph sourceRuntimeGraph,
+            CharacterTimelinePlaybackSourceKind sourceKind,
+            out TimelinePlaybackHandle handle)
+        {
             if (!m_Initialized || m_Host == null)
             {
                 handle = TimelinePlaybackHandle.Invalid;
@@ -209,6 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Handle = handle,
                 Timeline = timeline,
                 SourceName = sourceName ?? string.Empty,
+                SourceKind = sourceKind,
                 CoreDriven = false
             });
             return true;
@@ -251,6 +285,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 loop ? TimelinePlaybackMode.Loop : TimelinePlaybackMode.Once,
                 default,
                 null,
+                CharacterTimelinePlaybackSourceKind.AbilityRuntime,
                 out handle);
             if (requested)
             {
@@ -259,6 +294,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     if (m_ActivePlaybacks[i].Handle.Value == handle.Value)
                     {
                         ActivePlayback updated = m_ActivePlaybacks[i];
+                        updated.SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime;
                         updated.CoreDriven = true;
                         m_ActivePlaybacks[i] = updated;
                     }
@@ -324,6 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 playbackMode,
                 default,
                 null,
+                CharacterTimelinePlaybackSourceKind.FixedPreview,
                 out handle);
             if (requested)
                 m_PreviewHandle = handle;
@@ -442,6 +479,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     m_Host.Service.GetTimelinePlaybackStatus(active.Handle),
                     active.Timeline,
                     active.SourceName,
+                    active.SourceKind,
                     clipTime,
                     normalizedTime,
                     weight,

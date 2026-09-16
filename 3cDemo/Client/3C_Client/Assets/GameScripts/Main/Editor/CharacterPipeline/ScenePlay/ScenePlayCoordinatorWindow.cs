@@ -227,6 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 CharacterTimelinePlaybackObservation playback = m_TimelinePlaybacks[i];
                 EditorGUILayout.LabelField($"#{playback.Handle.Value}", playback.Status.ToString());
+                EditorGUILayout.LabelField("    SourceKind", playback.SourceKind.ToString());
                 EditorGUILayout.LabelField("    Source", string.IsNullOrEmpty(playback.SourceName) ? "None" : playback.SourceName);
                 if (playback.Timeline != null)
                 {

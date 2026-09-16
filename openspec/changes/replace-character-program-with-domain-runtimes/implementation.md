@@ -1487,3 +1487,9 @@
 - CharacterTimelineHost 的 Runtime 依赖解析不再生成假依赖句柄；缺少正式依赖服务时按依赖 Identity 返回精确失败。
 - 该边界保证带内容依赖的 Timeline 不会在缺少资源服务时伪装可运行。
 - ThirdPersonClient.Runtime 与 Editor 便携编译通过；构建后已执行 build-server shutdown。
+
+## 2026-09-17 分型ScenePlay Timeline来源
+
+- Timeline 播放观察新增 typed SourceKind；固定 ScenePlay 预览固定为 FixedPreview，Ability 运行时固定为 AbilityRuntime。
+- ScenePlay Coordinator 直接显示两种 Timeline 形态的来源类型，继续保留 Timeline 长度、ClipTime、NormalizedTime、Weight、Frame 和 Pose 观察。
+- ThirdPersonClient.Runtime 与 Editor 便携编译通过；构建后已执行 build-server shutdown。

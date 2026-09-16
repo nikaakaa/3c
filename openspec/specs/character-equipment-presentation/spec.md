@@ -1,7 +1,7 @@
 # character-equipment-presentation Specification
 
 ## Purpose
-定义装备 VisualBinding、Projection payload 与 Unity 外观实例的单向表现链路。
+定义装备 VisualBinding、正式 domain payload 与 Unity 外观实例的单向表现链路。
 ## Requirements
 ### Requirement: Equipment Gameplay route与表现配置必须分工
 
@@ -10,13 +10,13 @@ Equipment Feature MUST只声明Operation capability、World capability、Gamepla
 #### Scenario: Gun未来需要UpperBody表现
 
 - **WHEN** 未来Gun业务需要动态UpperBody Pose实现
-- **THEN** 系统 MUST由独立change定义Gameplay输入、Pose Graph/Projection schema与Runtime生命周期
+- **THEN** 系统 MUST由独立change定义Gameplay输入、Pose Graph/Presentation binding schema与Runtime生命周期
 - **AND** 当前Gun Feature MUST不声明兼容Layer、临时PoseNode或内嵌Presentation Profile
 
 #### Scenario: Gameplay producer route缺失
 
 - **WHEN** Feature声明的RequiredProducerId无法由其Gameplay route提供
-- **THEN** Program build MUST失败并定位Feature与producer
+- **THEN** Gameplay/domain binding preparation MUST失败并定位Feature与producer
 - **AND** Presentation MUST不为Equipment创建AnimationChannel、ActionPlaybackInput、Pose source或fallback producer
 
 ### Requirement: Equipment动画必须继续通过Timeline producer提交
@@ -37,7 +37,7 @@ Feature graph中的动画 MUST由正式Timeline AnimationTrack产生typed produc
 
 ### Requirement: 装备外观必须使用稳定显式binding
 
-`CharacterEquipmentPresentationProfile` MUST 包含按 VisualBindingId 索引的 Equipment visual catalog，并支持正式 `ExistingRigObject` 与 `SpawnedVisualAsset` binding。Equipment Presentation owner MUST 直接准备并绑定该 catalog，不得依赖整角色 Projection。两种 binding MUST 显式记录 Slot、Rig/Prefab、Renderer 或 Socket binding 及 local pose/lifecycle；MUST 不按 GameObject 名称、Transform 路径模糊匹配、Tag 或第一个子物体寻找外观。
+`CharacterEquipmentPresentationProfile` MUST 包含按 VisualBindingId 索引的 Equipment visual catalog，并支持正式 `ExistingRigObject` 与 `SpawnedVisualAsset` binding。Equipment Presentation owner MUST 直接准备并绑定该 catalog，不得依赖整角色编译产物。两种 binding MUST 显式记录 Slot、Rig/Prefab、Renderer 或 Socket binding 及 local pose/lifecycle；MUST 不按 GameObject 名称、Transform 路径模糊匹配、Tag 或第一个子物体寻找外观。
 
 #### Scenario: Corin锯刃使用现有Rig对象
 

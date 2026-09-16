@@ -1,7 +1,7 @@
 # character-action-instance-runtime Specification
 
 ## Purpose
-定义 compiled Action operation 与 `CharacterSimulationState` Action slots 的动作事务语义：动作身份通过 `ActivateActionInstance` operation、Action Context 和 lifecycle transition 表达，不通过节点身份、ActionModule、AbilityBody、ActionTree 或静态结构归属表达。
+定义 Graph-owned Action operation 与 `CharacterSimulationState` Action slots 的动作事务语义：动作身份通过 `ActivateActionInstance` operation、Action Context 和 lifecycle transition 表达，不通过节点身份、ActionModule、AbilityBody、ActionTree 或静态结构归属表达。
 ## Requirements
 ### Requirement: 旧节点 Action 身份链路必须删除
 系统 MUST 删除当前节点 Action 身份链路，并且 MUST NOT 保留兼容 alias、桥接字段或并行旧路径。清理范围 MUST 包含 `ActionModule`、`ActionIdentity`、`IActionIdentitySink`、显式 Action 节点，以及 GraphContext/PipelineOutput 中的 active action 写入链路。
@@ -53,13 +53,13 @@ CharacterSimulationState MUST 使用 typed ActionInstance state 表达一次被�
 
 #### Scenario: Compiled Graph 激活动作
 
-- **WHEN** Program执行ActivateActionInstance operation
-- **THEN** MUST在当前State Transaction创建稳定typed ActionInstance
+- **WHEN** Graph Runtime执行ActivateActionInstance operation
+- **THEN** Action Runtime MUST在当前State Transaction创建稳定typed ActionInstance
 
 #### Scenario: 外部确认动作
 
 - **WHEN** Model Ingress Pass提交Action confirm ingress
-- **THEN** Program MUST通过ActionInstanceId、PredictionKey或input sequence匹配本地typed实例
+- **THEN** Action Runtime MUST通过ActionInstanceId、PredictionKey或input sequence匹配本地typed实例
 - **AND** MUST不读取原始network packet
 
 #### Scenario: 动作生命周期变化
@@ -183,7 +183,7 @@ Action runtime MUST 只负责 profile 查询、activation 验证、ActionInstanc
 
 ### Requirement: Equipment Feature不得恢复旧Ability执行单元
 
-Equipment Feature MAY拥有被Compiler静态链接的普通inline graph和导出GameplayAbilityAdmissionProfile，但正式Runtime MUST不出现`ActionModule`、`AbilityAsset`、`IAbilityBody`、`AbilityTree`、Feature graph clone或按Feature调用Graph的Action接口。Feature owner metadata MUST只用于编译、source map、route entry和diagnostics，不得成为Action身份或第二membership table。
+Equipment Feature MAY拥有被Graph/domain preparation静态链接的普通inline graph和导出GameplayAbilityAdmissionProfile，但正式Runtime MUST不出现`ActionModule`、`AbilityAsset`、`IAbilityBody`、`AbilityTree`、Feature graph clone或按Feature调用Graph的Action接口。Feature owner metadata MUST只用于Graph artifact、source map、route entry和diagnostics，不得成为Action身份或第二membership table。
 
 #### Scenario: Feature Action进入Runtime
 
@@ -194,7 +194,7 @@ Equipment Feature MAY拥有被Compiler静态链接的普通inline graph和导出
 #### Scenario: 查找Action body
 
 - **WHEN** runtime需要执行已选择Route body
-- **THEN** compiled Equipment Host MUST使用Program entry index
+- **THEN** Equipment Host MUST使用Equipment domain catalog中的Graph entry
 - **AND** ActionInstance runtime MUST不加载AbilityBody
 
 ### Requirement: ActionInstance必须可选保存Equipment Context
@@ -209,6 +209,6 @@ ActionInstance state MUST新增可选Equipment Context，包含SlotId、Equipmen
 
 #### Scenario: 恢复未知Feature context
 
-- **WHEN** snapshot中的FeatureId不在当前Program catalog
+- **WHEN** snapshot中的FeatureId不在当前Equipment domain catalog
 - **THEN** restore MUST失败
 - **AND** MUST不将context降级为None

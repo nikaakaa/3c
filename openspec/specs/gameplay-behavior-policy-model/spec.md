@@ -1,7 +1,7 @@
 # gameplay-behavior-policy-model Specification
 
 ## Purpose
-定义 Gameplay 行为身份目录：Action、通用 Stream/Event 与 Gameplay Effect 使用稳定 BehaviorId、BehaviorKind、Tag 和调试元数据进入同一 Program catalog；网络策略继续归具体 Network Model，不由 BehaviorProfile 执行或隐式推导。
+定义 Gameplay 行为身份目录：Action、通用 Stream/Event 与 Gameplay Effect 使用稳定 BehaviorId、BehaviorKind、Tag 和调试元数据进入同一正式 domain catalog；网络策略继续归具体 Network Model，不由 BehaviorProfile 执行或隐式推导。
 
 ## Requirements
 
@@ -25,14 +25,14 @@
 - **THEN** `CharacterPipelineDefinition` 配置校验 MUST报告重复身份
 - **AND** Compiler MUST不按资产顺序选择其中一个
 
-### Requirement: Behavior identity 必须进入不可变 Program catalog
+### Requirement: Behavior identity 必须进入不可变 domain catalog
 
-Compiler MUST把 Action、generic Behavior 与 Gameplay Effect 的 BehaviorKind、display、debug category 与 tags 编译进目标 Program catalog。Target runtime MAY按明确 operation读取其需要的 Action或Effect catalog；generic Behavior catalog MUST不凭自身存在自动创建 operation、状态、fact 或网络消息。
+Graph/domain preparation MUST把 Action、generic Behavior 与 Gameplay Effect 的 BehaviorKind、display、debug category 与 tags 登记进目标 domain catalog。Target runtime MAY按明确 operation读取其需要的 Action或Effect catalog；generic Behavior catalog MUST不凭自身存在自动创建 operation、状态、fact 或网络消息。
 
 #### Scenario: 编译 Corin 行为目录
 
-- **WHEN** Character Frontend 编译 Corin Definition
-- **THEN** Program catalog MUST保存全部已注册行为的稳定 identity 与元数据
+- **WHEN** Character Graph frontend 准备 Corin Definition 的正式 domain binding
+- **THEN** domain catalog MUST保存全部已注册行为的稳定 identity 与元数据
 - **AND** 未被任何 operation引用的 generic Behavior MUST不产生隐藏执行路径
 
 ### Requirement: BehaviorKind 只分类作者身份
@@ -47,12 +47,12 @@ Compiler MUST把 Action、generic Behavior 与 Gameplay Effect 的 BehaviorKind�
 
 ### Requirement: Network Model 策略必须保持模型专属
 
-具体 Network Model MUST在自己的 Definition、Source 与 Pipeline Pass中显式保存并执行协议、history、correction与replication策略。当前 ServerAuthoritative 模型 MUST以显式 `GameplayFactKind` coverage和 Program ProducerId coverage决定可靠事实与producer输出；系统 MUST不虚构通用 Behavior policy resolver、逐Action policy表或逐Effect policy表。
+具体 Network Model MUST在自己的 Definition、Source 与 Pipeline Pass中显式保存并执行协议、history、correction与replication策略。当前 ServerAuthoritative 模型 MUST以显式 `GameplayFactKind` coverage 和正式 producer binding coverage 决定可靠事实与producer输出；系统 MUST不虚构通用 Behavior policy resolver、逐Action policy表或逐Effect policy表。
 
 #### Scenario: ServerAuthoritative 校验复制覆盖
 
-- **WHEN** Model Definition 与当前 Program 建立 compatibility identity
-- **THEN** `ServerAuthoritativeReplicationPolicy` MUST校验所需 GameplayFactKind 与全部 Program ProducerId coverage
+- **WHEN** Model Definition 与当前 domain binding 建立 compatibility identity
+- **THEN** `ServerAuthoritativeReplicationPolicy` MUST校验所需 GameplayFactKind 与全部正式 producer binding coverage
 - **AND** 缺失覆盖 MUST使配置失败，不得从 BehaviorProfile推导默认策略
 
 ### Requirement: Behavior authoring 不得暴露模型执行参数

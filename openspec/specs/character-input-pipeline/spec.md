@@ -1,7 +1,7 @@
 # character-input-pipeline Specification
 
 ## Purpose
-定义角色输入管线：`CharacterInputProfile` 将 Unity InputAction映射为 gameplay input value和 action request，`UnityCharacterSimulationInputAdapter`负责表现帧采样并生成 portable `CharacterSimulationInput`，Program state slots负责 request buffer与消费；预测历史只属于需要它的 Network Model SnapshotParticipant。
+定义角色输入管线：`CharacterInputProfile` 将 Unity InputAction 映射为 gameplay input value 和 action request，`UnityCharacterSimulationInputAdapter` 负责表现帧采样并生成 portable `CharacterSimulationInput`，正式 domain state slots 负责 request buffer 与消费；预测历史只属于需要它的 Network Model SnapshotParticipant。
 ## Requirements
 ### Requirement: 动作目标候选必须作为 portable typed input 进入 Simulation
 
@@ -19,9 +19,9 @@
 - **THEN** 目标候选 MUST按正式预测规则成为None
 - **AND** MUST不把上一个已知目标快照跨帧延续
 
-### Requirement: Neutral Input 必须从 Program 输入目录生成
+### Requirement: Neutral Input 必须从正式输入目录生成
 
-Neutral Input Source MUST依据已验证Program input catalog为每个continuous input value生成类型正确的neutral值，并始终生成空request集合。它 MUST覆盖Bool、Scalar、Vector2、Vector3、Yaw与`ActionTargetSnapshot`，MUST不按Corin输入名称硬编码，也 MUST不读取Unity InputAction、Camera、Scene或Character名称。
+Neutral Input Source MUST依据已验证 Input catalog 为每个 continuous input value 生成类型正确的 neutral 值，并始终生成空 request 集合。它 MUST 覆盖 Bool、Scalar、Vector2、Vector3、Yaw 与 `ActionTargetSnapshot`，MUST 不按 Corin 输入名称硬编码，也 MUST 不读取 Unity InputAction、Camera、Scene 或 Character 名称。
 
 #### Scenario: Neutral Actor 生成一帧输入
 
@@ -50,7 +50,7 @@ Neutral Input Source MUST依据已验证Program input catalog为每个continuous
 
 ### Requirement: Unity Input Adapter 每 tick 产出 CharacterSimulationInput
 
-`UnityCharacterSimulationInputAdapter` MUST在本地采样边界将 CharacterInputProfile/InputAction、Camera-relative direction和离散 request转换为 portable `CharacterSimulationInput`。Adapter、Source port、Pipeline product、Kernel和 Program之间 MUST只传递 portable input contract，MUST不保留第二个 `CharacterInputFrame`运行合同。
+`UnityCharacterSimulationInputAdapter` MUST在本地采样边界将 CharacterInputProfile/InputAction、Camera-relative direction 和离散 request 转换为 portable `CharacterSimulationInput`。Adapter、Source port、Pipeline product、Kernel 和正式 Graph/domain runtime 之间 MUST 只传递 portable input contract，MUST 不保留第二个 `CharacterInputFrame` 运行合同。
 
 #### Scenario: 采样移动与闪避
 
@@ -73,7 +73,7 @@ Neutral Input Source MUST依据已验证Program input catalog为每个continuous
 
 ### Requirement: 离散动作输入进入 request buffer
 
-系统 MUST将Attack、Dodge、Jump、Interact等离散动作输入编译进`CharacterSimulationInput.Requests`，并由Program声明的typed `InputRequestBuffer` state address维护可查询、可消费的committed状态。每个request MUST保存sequence、source tick、expire simulation tick、priority与consumed状态；request id MUST由Program Layout稳定绑定。写入、查询、过期与消费 MUST通过当前Character State Transaction的Input state port完成，不得创建第二个request buffer、opaque bytes镜像或每Tickrequest codec。
+系统 MUST将 Attack、Dodge、Jump、Interact 等离散动作输入写入 `CharacterSimulationInput.Requests`，并由正式 Input/domain layout 声明的 typed `InputRequestBuffer` state address 维护可查询、可消费的 committed 状态。每个 request MUST 保存 sequence、source tick、expire simulation tick、priority 与 consumed 状态；request id MUST 由 Input/domain layout 稳定绑定。写入、查询、过期与消费 MUST 通过当前 Character State Transaction 的 Input state port 完成，不得创建第二个 request buffer、opaque bytes 镜像或每 Tick request codec。
 
 #### Scenario: 硬直中预输入攻击
 
@@ -95,7 +95,7 @@ Neutral Input Source MUST依据已验证Program input catalog为每个continuous
 
 ### Requirement: GraphContext 读取同一输入帧和请求缓存
 
-Compiled input operation MUST从当前Actor input与CharacterSimulationState typed request buffer读取连续值和离散请求，并通过Program级request index访问预验证地址。Operation MUST不读取CharacterGraphContext、Unity InputAction、Camera、mutable CharacterPipelineFrame或执行runtime bytes decode。
+Graph input operation MUST 从当前 Actor input 与 CharacterSimulationState typed request buffer 读取连续值和离散请求，并通过正式 input binding 访问预验证地址。Operation MUST 不读取 CharacterGraphContext、Unity InputAction、Camera、mutable CharacterPipelineFrame 或执行 runtime bytes decode。
 
 #### Scenario: Attack request 被消费
 
@@ -104,7 +104,7 @@ Compiled input operation MUST从当前Actor input与CharacterSimulationState typ
 
 ### Requirement: Network Model 必须从正式输入与 Tick Result构造自己的命令
 
-Network Model Source与Pass MUST只从CharacterSimulationInput、SimulationTickResult、SimulationWorldSnapshot和正式Source products构造自己的packet/history。Program、Kernel和Unity Input Adapter MUST不保存packet、model policy或correction metadata。
+Network Model Source 与 Pass MUST 只从 CharacterSimulationInput、SimulationTickResult、SimulationWorldSnapshot 和正式 Source products 构造自己的 packet/history。Graph Runtime、Kernel 和 Unity Input Adapter MUST 不保存 packet、model policy 或 correction metadata。
 
 #### Scenario: ServerAuthoritative 构造命令
 
@@ -114,7 +114,7 @@ Network Model Source与Pass MUST只从CharacterSimulationInput、SimulationTickR
 
 ### Requirement: 输入历史只属于需要预测重放的 Model Source 或 Pass
 
-Input history MUST不再由公共CharacterInputStage、Program Runtime或标准Pipeline默认拥有。Local Session Source与Standard Local Pipeline MUST不创建replay history；ServerAuthoritative Prediction与DeterministicRollback MUST在自己的Source或明确有状态Pipeline Pass中保存匹配Numeric ABI的input history，并声明ExternalSource或SnapshotParticipant所有权。
+Input history MUST 不再由公共 CharacterInputStage、Graph Runtime 或标准 Pipeline 默认拥有。Local Session Source 与 Standard Local Pipeline MUST 不创建 replay history；ServerAuthoritative Prediction 与 DeterministicRollback MUST 在自己的 Source 或明确有状态 Pipeline Pass 中保存匹配 Numeric ABI 的 input history，并声明 ExternalSource 或 SnapshotParticipant 所有权。
 
 #### Scenario: Local Pipeline 提交输入
 
@@ -140,7 +140,7 @@ Input history MUST不再由公共CharacterInputStage、Program Runtime或标准P
 
 ### Requirement: Network Model 必须独立解释 Request Timing Class
 
-Input Adapter MUST先捕获带稳定request identity、capture sequence和timing class的动作事实；具体eligible Tick MUST由当前Session Source或Network Model timing policy决定。Standard Local与Preview MAY将全部类别映射为0 Tick；DeterministicRollback MAY为Offensive配置固定Tick延迟。BTSMTL、Program、Kernel和CharacterSimulationState MUST只消费已经eligible并写入`CharacterSimulationInput.Requests`的正式request，MUST不读取Network Model policy。
+Input Adapter MUST先捕获带稳定 request identity、capture sequence 和 timing class 的动作事实；具体 eligible Tick MUST 由当前 Session Source 或 Network Model timing policy 决定。Standard Local 与 Preview MAY 将全部类别映射为 0 Tick；DeterministicRollback MAY 为 Offensive 配置固定 Tick 延迟。BTSMTL、Graph Runtime、Kernel 和 CharacterSimulationState MUST 只消费已经 eligible 并写入 `CharacterSimulationInput.Requests` 的正式 request，MUST 不读取 Network Model policy。
 
 #### Scenario: 单机调试同一 Corin 输入配置
 
@@ -197,7 +197,7 @@ Local Session Preparation MUST 显式锁定每个 Actor 的 Control Source ident
 
 #### Scenario: 插件AI未写连续输入
 
-- **WHEN** 当前插件AI Tick没有写某个Program声明的continuous input
+- **WHEN** 当前插件AI Tick没有写某个Input/domain declaration声明的continuous input
 - **THEN** source MUST按该typed input catalog生成neutral值
 - **AND** MUST不延续上一Tick的MoveAxis或ActionTargetSnapshot
 

@@ -1,11 +1,11 @@
 # btsmtl-runtime-diagnostics Specification
 
 ## Purpose
-定义 Authoring identity、Program source map、Simulation/Presentation Trace、RuntimeDebugSession 与编辑器视图之间的只读诊断链路。
+定义 Authoring identity、Graph source map、Simulation/Presentation Trace、RuntimeDebugSession 与编辑器视图之间的只读诊断链路。
 ## Requirements
 ### Requirement: Runtime diagnostics 必须与执行对象布局解耦
 
-Runtime diagnostics MUST只依赖稳定 source identity、Program revision、operation handle、Actor/activation identity、SimulationTick、Debug Source Map 和 structured Trace。Editor MUST不持有或轮询 Character/World state mutable view、pending evaluation、runtime clone 或 WorldSolver object。
+Runtime diagnostics MUST只依赖稳定 source identity、Graph/domain revision、operation handle、Actor/activation identity、SimulationTick、Debug Source Map 和 structured Trace。Editor MUST不持有或轮询 Character/World state mutable view、pending evaluation、runtime clone 或 WorldSolver object。
 
 #### Scenario: Graph Editor 跟随 Runtime
 
@@ -36,7 +36,7 @@ Diagnostics MUST继续使用稳定authoring source与独立runtime instance iden
 
 ### Requirement: Debug Source Map 必须严格映射执行元素到 authoring source
 
-Compiler MUST为 operation、state slot、scope、Timeline segment、TreeClip、Action/Effect definition 和 presentation producer 生成严格 Source Map。断裂、歧义或 duplicate identity MUST使 Program build 失败。
+Graph preparation MUST为 operation、state slot、scope、Timeline segment、TreeClip、Action/Effect definition 和 presentation producer 生成严格 Source Map。断裂、歧义或 duplicate identity MUST使 Graph artifact preparation 失败。
 
 #### Scenario: 定位 Timeline Window
 
@@ -65,7 +65,7 @@ SimulationKernel、Pipeline Runtime/Pass、Session Source、WorldSolver adapter�
 
 #### Scenario: 一次 Motion 执行
 
-- **WHEN** Program Evaluate Pass生成 request且 WorldSolve Pass取得 Solver result
+- **WHEN** Graph Evaluate Pass生成 request且 WorldSolve Pass取得 Solver result
 - **THEN** Trace MUST区分 operation、Pass、request、solver result、Finalize、published body sample与 OutputDisposition
 - **AND** MUST保留当前 PipelineHash和内部 Step provenance
 
@@ -99,7 +99,7 @@ SimulationKernel、Pipeline Runtime/Pass、Session Source、WorldSolver adapter�
 
 ### Requirement: 每个 runtime target 必须拥有按需 Live State 与显式 Capture
 
-每个 Character Session diagnostics target MUST注册 metadata、Program revision、Pipeline/Backend identity、Source Map与默认 `None` 的 diagnostics store。Live State MUST只保存稳定键对应的当前事实；只有作者显式开始 Capture时才创建独立有界 Capture segment store。Capture达到容量后 MUST按完整 outer tick、SimulationStep或 presentation frame segment丢弃最旧数据。target结束时 runtime MUST释放 store；Editor MUST只保留已冻结的 current state或 Capture snapshot，不得继续持有 runtime target、Pass runtime或可写 store。
+每个 Character Session diagnostics target MUST注册 metadata、Graph/domain revision、Pipeline/Backend identity、Source Map与默认 `None` 的 diagnostics store。Live State MUST只保存稳定键对应的当前事实；只有作者显式开始 Capture时才创建独立有界 Capture segment store。Capture达到容量后 MUST按完整 outer tick、SimulationStep或 presentation frame segment丢弃最旧数据。target结束时 runtime MUST释放 store；Editor MUST只保留已冻结的 current state或 Capture snapshot，不得继续持有 runtime target、Pass runtime或可写 store。
 
 #### Scenario: Session Pipeline Runtime 结束
 
@@ -185,7 +185,7 @@ Graph 或 Timeline 进入 Live Debug 时 MUST 用当前 source identity 与 cont
 
 ### Requirement: Diagnostics 必须保持只读且不影响结果
 
-Runtime diagnostics、Debug Session 和 editor overlay MUST NOT 写入 Program state、Timeline operation time、Blackboard slots、Action instance state、Motion state、CharacterActionPlaybackRuntime、PoseState workspace、AnimationSlot、Animancer state、GameplayFacts 或作者资产。关闭或打开 diagnostics 后，相同输入和 tick 序列 MUST 产生相同 gameplay 与 presentation 结果。
+Runtime diagnostics、Debug Session 和 editor overlay MUST NOT 写入 Graph/domain state、Timeline operation time、Blackboard slots、Action instance state、Motion state、CharacterActionPlaybackRuntime、PoseState workspace、AnimationSlot、Animancer state、GameplayFacts 或作者资产。关闭或打开 diagnostics 后，相同输入和 tick 序列 MUST 产生相同 gameplay 与 presentation 结果。
 
 #### Scenario: 在历史位置 scrub
 

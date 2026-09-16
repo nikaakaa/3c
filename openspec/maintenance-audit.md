@@ -1,5 +1,17 @@
 # OpenSpec 整理与现行合同审计
 
+## 2026-09-16 领域运行与图编译边界收口
+
+本轮依据已确认的删除优先方向，更新现行 `project.md`、核心 Runtime/Graph/Timeline/Pose/Animation/Effect/Equipment/Session 规范，以及 `replace-character-program-with-domain-runtimes`、`rebuild-btsmtl-preview-with-scene-play`、`restyle-timeline-editor-slate-style` 的直接规划文档。
+
+- 当前编译边界收窄为 Graph 自身；Ability 只作为入口、引用和实例，不再定义独立 Ability 编译链。
+- Timeline 直接消费正式 TimelineData 和播放私有状态；ScenePlay 统一拥有场景生命周期、输入、运行采用和观察，Timeline UI 不拥有 evaluator、时钟或 Preview Runtime。
+- Pose 使用原生 FlowCanvas Graph instance；旧 Pose IR、ProgramImage、整角色 Projection 和窗口 Fact/Query Fixture 不再是当前入口。
+- Character 运行由 Control、Ability、Timeline、Effect、Equipment、Presentation、Pipeline、Session Source 和 WorldSolver 显式装配。
+- 历史 audit、implementation 和 archive 文档保留原时间点事实；其中出现旧 Program/Projection 名称不代表当前规范仍要求该路径。
+
+本轮继续收口中心运行规范：补齐 Animation Selection、Gameplay Pipeline Closure、Pose Runtime 与 Pose Graph 的缺失 Scenario，清理装备、GameplayEffect、Action、Input、Blackboard、Session Composition、Simulation Kernel、Pipeline Runtime、Semantic Graph Inspector、Vertical Motion、Network/Authority/Rollback、DotRecast 与双客户端 Demo 中残留的整角色 Program 运行主体口径。当前严格校验为 98/98 通过；本轮未修改实现代码、资产或并行窗口的 `.meta` 文件。
+
 ## 2026-09-12 Skill数据层专项交接
 
 本次只更新Skill节点数据规划入口，不重做下方2026-09-08全仓审计，也不把创建提案当作实现完成。

@@ -65,3 +65,9 @@ Pose Preview MUST 只作为 ScenePlay 对正式 Actor 的观察和输入入口�
 ### Requirement: Diagnostics 只能读取已提交事实
 
 Diagnostics MUST 读取带同一 lineage 的 Committed Pose、Source、Constraint 和 Final Publication 事实。Diagnostics、Pose Watch 和 UI MUST 不参与求值、不扫描节点重新计算、不从 Animancer weight 或 Transform 反推业务事实。
+
+#### Scenario: 观察已提交Pose
+
+- **WHEN** Live Debug 请求当前 Actor 的 Pose 状态
+- **THEN** Diagnostics MUST 只读取同一 lineage 的 Committed Pose、Source、Constraint 和 Final Publication
+- **AND** Pose Watch 与 UI MUST 不重新求值或修改 Actor-local runtime

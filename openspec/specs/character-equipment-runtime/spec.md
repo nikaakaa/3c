@@ -9,8 +9,8 @@ Equipment catalog、route entry、parameter constant 与 initial Loadout MUST �
 
 #### Scenario: 创建Corin Session
 
-- **WHEN** Session从Corin Program创建Actor state
-- **THEN** Equipment aggregate MUST按Program initial Loadout初始化
+- **WHEN** Session 从 Corin 的正式 domain binding 创建 Actor state
+- **THEN** Equipment aggregate MUST按正式 domain initial Loadout初始化
 - **AND** Host MUST不读取Equipment Profile资产补齐状态
 
 #### Scenario: Presentation查询装备
@@ -19,14 +19,14 @@ Equipment catalog、route entry、parameter constant 与 initial Loadout MUST �
 - **THEN** MUST消费committed Equipment projection
 - **AND** MUST不把Renderer activeSelf作为gameplay真相
 
-### Requirement: Equipment Host 必须只调度预编译入口
+### Requirement: Equipment Host 必须只调度正式Graph入口
 
-Persistent Feature Host与Action Route Host MUST按committed Slot/Feature/revision选择Program catalog中的唯一compiled entry，并通过现有compiled Runnable control lifecycle执行。Host MUST不tick Unity Graph、不调用Feature callback、不复制Sequence/Selector/StateMachine解释器。Unknown entry、重复entry或stale generation MUST明确失败。
+Persistent Feature Host与Action Route Host MUST按committed Slot/Feature/revision选择Equipment domain catalog中的唯一Graph entry，并通过正式 Graph Runtime 与 Runnable control lifecycle执行。Host MUST不tick Unity Graph、不调用Feature callback、不复制Sequence/Selector/StateMachine解释器。Unknown entry、重复entry或stale generation MUST明确失败。
 
 #### Scenario: PrimaryAction路由到Sawblade
 
 - **WHEN** MainWeapon committed Feature为Sawblade且PrimaryAction request到达
-- **THEN** Route Host MUST进入Sawblade的预编译Route entry
+- **THEN** Route Host MUST进入Sawblade的正式Graph Route entry
 - **AND** 后续StateMachine/Timeline MUST由现有operation runtime执行
 
 #### Scenario: 装备更换后旧generation恢复运行
@@ -101,12 +101,12 @@ Feature Route激活ActionInstance时 MUST捕获SlotId、EquipmentId、FeatureId�
 
 ### Requirement: Equipment Parameter读取必须类型化且有上下文
 
-`ReadEquipmentParameter` MUST通过Action Equipment Context或显式Slot/revision读取Program catalog中的Target typed constant，并验证Feature、ParameterId与value kind。缺少上下文、revision不匹配或类型错误 MUST使operation失败；系统 MUST不返回零、默认item值或当前Slot值作为fallback。
+`ReadEquipmentParameter` MUST通过Action Equipment Context或显式Slot/revision读取Equipment domain catalog中的Target typed constant，并验证Feature、ParameterId与value kind。缺少上下文、revision不匹配或类型错误 MUST使operation失败；系统 MUST不返回零、默认item值或当前Slot值作为fallback。
 
 #### Scenario: 攻击读取MotionScale
 
 - **WHEN** Sawblade Action通过自己的Equipment Context读取MotionScale
-- **THEN** operation MUST返回该Equipment编译后的Target scalar
+- **THEN** operation MUST返回该Equipment domain data中的Target scalar
 - **AND** MUST不访问Unity EquipmentDefinition资产
 
 #### Scenario: Core节点读取Feature参数
@@ -117,7 +117,7 @@ Feature Route激活ActionInstance时 MUST捕获SlotId、EquipmentId、FeatureId�
 
 ### Requirement: Feature local state必须按generation初始化和重置
 
-Feature local state MUST由Program State Layout声明，并只通过当前Character transaction读写。装备commit进入新generation时 MUST从Program canonical default初始化incoming state，outgoing state MUST被重置或释放；第一版 MUST不保存未装备物品实例状态。Restore/replay MUST按snapshot中的generation恢复相同状态。
+Feature local state MUST由Feature State Layout声明，并只通过当前Character transaction读写。装备commit进入新generation时 MUST从Feature canonical default初始化incoming state，outgoing state MUST被重置或释放；第一版 MUST不保存未装备物品实例状态。Restore/replay MUST按snapshot中的generation恢复相同状态。
 
 #### Scenario: 重新装备同一把武器
 
@@ -159,22 +159,22 @@ Float32与Fixed Target MUST分别为Equipment aggregate、Action Equipment Conte
 
 #### Scenario: Fixed Target缺少Equipment codec
 
-- **WHEN** Program声明Equipment capability但Fixed Target未安装完整state codec
-- **THEN** Fixed Program build MUST失败
+- **WHEN** Equipment domain声明Equipment capability但Fixed Target未安装完整state codec
+- **THEN** Fixed domain preparation MUST失败
 - **AND** MUST不复用Float32 bytes或跳过字段
 
-### Requirement: Equipment Runtime 必须拒绝未编译内容
+### Requirement: Equipment Runtime 必须拒绝未登记内容
 
-Session Active后Equipment request MUST只引用Program catalog中的EquipmentId，且目标Feature、Route、parameter schema和capability必须与Program identity一致。Unknown item、运行时新Feature、asset热加载或layout变更 MUST失败。系统 MUST不按资源路径、显示名或默认Loadout替代。
+Session Active后Equipment request MUST只引用Equipment domain catalog中的EquipmentId，且目标Feature、Route、parameter schema和capability必须与Equipment domain identity一致。Unknown item、运行时新Feature、asset热加载或layout变更 MUST失败。系统 MUST不按资源路径、显示名或默认Loadout替代。
 
-#### Scenario: 请求DLC武器但Program未包含
+#### Scenario: 请求DLC武器但正式catalog未包含
 
-- **WHEN** runtime收到未编译EquipmentId
+- **WHEN** runtime收到未登记EquipmentId
 - **THEN** request MUST返回UnknownEquipment
 - **AND** MUST不加载Resources或Addressables补齐
 
 #### Scenario: Snapshot来自不同装备catalog
 
-- **WHEN** snapshot Program/Layout identity与当前装备catalog不匹配
+- **WHEN** snapshot domain/layout identity与当前装备catalog不匹配
 - **THEN** restore MUST拒绝整份snapshot
 - **AND** MUST不逐Slot近似迁移

@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: Character Equipment 必须由唯一Profile拥有
 
-`CharacterPipelineDefinition` MUST只通过一个`CharacterEquipmentProfile`引用装备authoring。Profile MUST唯一拥有稳定Slot、Route、Equipment、Feature引用与initial Loadout catalog；Definition、RootTree、Prefab和Animation Profile MUST不复制同一装备catalog。Profile缺失时角色 MAY明确声明不支持装备；声明支持装备但Profile缺失或无效 MUST阻止Program发布，MUST不创建默认装备。
+`CharacterPipelineDefinition` MUST只通过一个`CharacterEquipmentProfile`引用装备authoring。Profile MUST唯一拥有稳定Slot、Route、Equipment、Feature引用与initial Loadout catalog；Definition、RootTree、Prefab和Animation Profile MUST不复制同一装备catalog。Profile缺失时角色 MAY明确声明不支持装备；声明支持装备但Profile缺失或无效 MUST阻止正式 Equipment domain binding 发布，MUST不创建默认装备。
 
 #### Scenario: Character声明装备能力
 
@@ -43,7 +43,7 @@ Profile MUST使用稳定`EquipmentSlotId`表达装配位置，并使用稳定`Eq
 
 - **WHEN** Sawblade Feature声明Scalar参数`MotionScale`
 - **THEN** Sawblade Equipment MUST恰好提供一个合法Scalar值
-- **AND** Compiler MUST按ParameterId降低为Target typed constant
+- **AND** Equipment domain preparation MUST按ParameterId准备Target typed constant
 
 #### Scenario: Item提供未知参数
 
@@ -53,11 +53,11 @@ Profile MUST使用稳定`EquipmentSlotId`表达装配位置，并使用稳定`Eq
 
 ### Requirement: FeatureDefinition 必须是静态链接的authoring单元
 
-`CharacterEquipmentFeatureDefinition` MUST拥有稳定FeatureId/revision、类型化Parameter schema、局部State declaration、Granted Tag、Passive Effect、Presentation Requirement、可选Persistent Graph和Action Route实现。它 MUST只作为Character Compiler输入，不得实现runtime Action/Ability接口、持有mutable gameplay state或启动独立Tick。
+`CharacterEquipmentFeatureDefinition` MUST拥有稳定FeatureId/revision、类型化Parameter schema、局部State declaration、Granted Tag、Passive Effect、Presentation Requirement、可选Persistent Graph和Action Route实现。它 MUST只作为Graph/domain preparation输入，不得实现runtime Action/Ability接口、持有mutable gameplay state或启动独立Tick。
 
 #### Scenario: 编译Sawblade Feature
 
-- **WHEN** Compiler发现Corin Equipment Profile引用Sawblade Feature
+- **WHEN** Graph/domain preparation发现Corin Equipment Profile引用Sawblade Feature
 - **THEN** MUST 把 Feature graph、catalog 与 state declaration 静态链接进 Equipment/Graph owner 的正式 domain data
 - **AND** Runtime MUST不加载Feature Unity asset解释业务
 
@@ -85,13 +85,13 @@ Persistent与Route body MUST是Feature serialized owner内的inline普通BTSMTL 
 
 ### Requirement: Feature必须显式声明Gameplay能力与路由需求
 
-Feature MUST声明其需要的Operation capability、World capability与Gameplay route所需ProducerId集合；Compiler MUST从实际graph再次推导并核对。Equipment Feature MUST不声明AnimationChannel、PoseNode、Player policy或动画空间拓扑，也 MUST不把RequiredProducerIds解释为Presentation binding。缺失声明、声明与实际使用不一致或Target不支持 MUST阻止Program发布。Feature MUST不把未安装能力标记为optional后继续生成部分Program。
+Feature MUST声明其需要的Operation capability、World capability与Gameplay route所需ProducerId集合；Graph/domain preparation MUST从实际graph再次推导并核对。Equipment Feature MUST不声明AnimationChannel、PoseNode、Player policy或动画空间拓扑，也 MUST不把RequiredProducerIds解释为Presentation binding。缺失声明、声明与实际使用不一致或Target不支持 MUST阻止正式 domain binding 发布。Feature MUST不把未安装能力标记为optional后继续生成部分domain data。
 
 #### Scenario: Gun引用Hitscan但项目未安装Combat能力
 
 - **WHEN** Gun Feature graph引用Hitscan operation而当前Operation Set/World不提供该能力
 - **THEN** Compiler MUST报告Feature、Route、Node和缺失capability
-- **AND** MUST拒绝整个目标Program
+- **AND** MUST拒绝整个目标 domain binding
 
 #### Scenario: Feature尝试要求UpperBody表现层
 
@@ -99,20 +99,20 @@ Feature MUST声明其需要的Operation capability、World capability与Gameplay
 - **THEN** authoring validator MUST拒绝该动画拓扑需求
 - **AND** Feature MUST不创建自己的Animation Profile或表现图入口
 
-### Requirement: Initial Loadout必须完整且可编译
+### Requirement: Initial Loadout必须完整且可发布
 
-Profile MUST为每个required Slot提供恰好一个已登记EquipmentId，optional Slot MAY显式为None。Initial Loadout MUST满足Route coverage、Feature capability、参数、Tag/Effect与Visual binding约束，并进入SourceRevision。缺失required item或引用未编译item MUST失败，MUST不选择catalog第一个item。
+Profile MUST为每个required Slot提供恰好一个已登记EquipmentId，optional Slot MAY显式为None。Initial Loadout MUST满足Route coverage、Feature capability、参数、Tag/Effect与Visual binding约束，并进入SourceRevision。缺失required item或引用未登记、无效的item MUST失败，MUST不选择catalog第一个item。
 
 #### Scenario: Corin初始装备锯刃
 
 - **WHEN** Corin MainWeapon Slot为required
 - **THEN** Initial Loadout MUST显式绑定CorinSawblade EquipmentId
-- **AND** Program initial state MUST由该identity生成
+- **AND** Session initial state MUST由该identity生成
 
 #### Scenario: Optional槽为空
 
 - **WHEN** Optional OffHand Slot显式配置None
-- **THEN** Compiler MUST保留None作为canonical loadout值
+- **THEN** domain preparation MUST保留None作为canonical loadout值
 - **AND** MUST不补默认盾牌或复制MainWeapon
 
 ### Requirement: 装备作者数据必须保持唯一稳定identity
@@ -129,4 +129,4 @@ Profile、Slot、Route、Equipment、Feature、Parameter、State declaration及i
 
 - **WHEN** Feature `.meta` identity改变
 - **THEN** SourceRevision MUST改变
-- **AND** 旧整角色 Program MUST 被判定过期
+- **AND** 旧整角色编译产物引用 MUST 被判定过期

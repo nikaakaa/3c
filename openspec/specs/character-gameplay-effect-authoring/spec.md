@@ -99,7 +99,7 @@ Effect definition MUST 以类型化 component authoring 声明 modifier、grante
 #### Scenario: Definition 闭包不完整
 
 - **WHEN** Effect 引用未注册 Tag、Attribute 或 Additional Effect
-- **THEN** Program build MUST失败并报告精确 authoring identity
+- **THEN** Gameplay Effect domain preparation MUST失败并报告精确 authoring identity
 
 ### Requirement: 旧轻量 GE 只能作为迁移参考
 

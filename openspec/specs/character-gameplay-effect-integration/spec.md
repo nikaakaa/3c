@@ -1,7 +1,7 @@
 # character-gameplay-effect-integration Specification
 
 ## Purpose
-规定 Gameplay Effect Program/State/operation 接入 Character Simulation 的唯一装配、固定 Tick、Self 命令、只读查询、事实投影和跨角色边界，保证 Unity Host 只做编译与装配，不复制 GE 规则或网络模型职责。
+规定 Gameplay Effect State/operation 接入 Character Simulation 的唯一装配、固定 Tick、Self 命令、只读查询、事实投影和跨角色边界，保证 Unity Host 只做 Graph/domain preparation 与装配，不复制 GE 规则或网络模型职责。
 ## Requirements
 ### Requirement: Character Simulation 必须唯一持有 Gameplay Effect State
 
@@ -9,8 +9,8 @@ GameplayEffect owner MUST 唯一持有校验后的 GameplayEffect catalog/operat
 
 #### Scenario: 创建 Corin Local Session
 
-- **WHEN** Host 加载 Corin Program
-- **THEN** GE state MUST按 Program layout 创建在 CharacterSimulationState
+- **WHEN** Host 加载 Corin 的正式 domain binding
+- **THEN** GE state MUST按 domain layout 创建在 CharacterSimulationState
 - **AND** MUST不再创建 CharacterGameplayEffectAdapter-owned runtime object
 
 ### Requirement: Character ActorId 必须由 Character 实例唯一拥有
@@ -24,7 +24,7 @@ Simulation Session roster MUST为每个 CharacterSimulationState 指定唯一 Ac
 
 ### Requirement: Character Gameplay Effect Adapter 必须保持薄翻译边界
 
-Unity authoring compiler adapter MUST只把 CharacterGameplayEffectProfile、EffectDefinition、Tag 与 Attribute 配置翻译为 portable Program catalog。运行时 model input adapter MUST只把 typed SimulationIngress 映射到已编译 operation input。任何 adapter MUST不重新实现 stacking、duration、period、magnitude 或 transaction 规则。
+Unity authoring adapter MUST只把 CharacterGameplayEffectProfile、EffectDefinition、Tag 与 Attribute 配置准备为 portable Effect domain catalog，并登记 Graph 可读取的 typed capability。运行时 model input adapter MUST只把 typed SimulationIngress 映射到正式 operation input。任何 adapter MUST不重新实现 stacking、duration、period、magnitude 或 transaction 规则。
 
 #### Scenario: 编译 EffectDefinition
 
@@ -48,7 +48,7 @@ Unity authoring compiler adapter MUST只把 CharacterGameplayEffectProfile、Eff
 - **THEN** Effect duration、period 和 journal MUST分别按每个 SimulationTick 推进
 - **AND** PresentationFrame MUST不额外推进 GameplayEffect
 
-### Requirement: Compiled BTSMTL operation 必须通过 Program state 使用 Gameplay Effect
+### Requirement: Graph operation 必须通过正式 state 使用 Gameplay Effect
 
 Graph/Ability operation MUST 只通过正式 GE query/command port 与当前 CharacterSimulationState 交互。Operation MUST 不持有独立 GE runtime object、Unity adapter、Container 或 Model policy；缺少所需 catalog/port declaration 时 Graph/Ability 准备 MUST 失败。
 

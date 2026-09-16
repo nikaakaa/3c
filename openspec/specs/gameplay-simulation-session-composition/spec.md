@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: SimulationSessionHost 必须是 Unity Session Composition 的唯一 owner
 
-Unity gameplay场景 MUST以唯一 `SimulationSessionHost` 持有 Session preparation、Composition Definition、compiled Pipeline plan、runtime handle、Actor launch roster、GameplayTickSystem logic registration与销毁顺序。单个 `CharacterPipelineHost` MUST不创建 Session Source、WorldSolver、Program Runtime、Execution Backend、Pipeline Runtime或独立 Logic target。一个 Active Session无论包含多少 Actor，MUST只存在一个 runtime handle和一个正式 world owner。
+Unity gameplay场景 MUST以唯一 `SimulationSessionHost` 持有 Session preparation、Composition Definition、compiled Pipeline plan、runtime handle、Actor launch roster、GameplayTickSystem logic registration与销毁顺序。单个 `CharacterPipelineHost` MUST不创建 Session Source、WorldSolver、Graph/domain Runtime、Execution Backend、Pipeline Runtime或独立 Logic target。一个 Active Session无论包含多少 Actor，MUST只存在一个 runtime handle和一个正式 world owner。
 
 #### Scenario: 两个 Actor 进入同一 Local Session
 
@@ -21,27 +21,27 @@ Unity gameplay场景 MUST以唯一 `SimulationSessionHost` 持有 Session prepar
 
 ### Requirement: Session Composition 必须显式选择五个组成部分
 
-`SimulationSessionCompositionDefinition` MUST显式引用一个 Program Runtime Definition、一个 Execution Backend Definition、一个 Pipeline Definition、一个 Session Source Definition与一个 WorldSolver Definition。Host MUST不通过 enum、类型名、已安装实现扫描、第一个可用对象或默认值选择任何组成部分。Local Source与 Gameplay Network Model Source MAY复用相同 composition contract，但 Local MUST不被声明为 Network Model。
+`SimulationSessionCompositionDefinition` MUST显式引用一个 Graph/domain Runtime Definition、一个 Execution Backend Definition、一个 Pipeline Definition、一个 Session Source Definition与一个 WorldSolver Definition。Host MUST不通过 enum、类型名、已安装实现扫描、第一个可用对象或默认值选择任何组成部分。Local Source与 Gameplay Network Model Source MAY复用相同 composition contract，但 Local MUST不被声明为 Network Model。
 
 #### Scenario: Local Float32 组合
 
-- **WHEN** 作者配置 Float32 Program Runtime、Float32 Pass Backend、Standard Local Pipeline、Local Session Source与 Unity CharacterController Solver
+- **WHEN** 作者配置 Float32 Graph/domain Runtime、Float32 Pass Backend、Standard Local Pipeline、Local Session Source与 Unity CharacterController Solver
 - **THEN** Host MUST只按五个显式引用创建组合
 - **AND** 缺少任一引用时 MUST在创建 Runtime前失败
 
 ### Requirement: Domain Runtime 与 Execution Backend 必须是独立选择维度
 
-Program Runtime Definition MUST只拥有 NumericProfile、Target ABI、Program/State/Kernel/Snapshot codec与 Target services；Execution Backend Definition MUST只拥有 Pipeline descriptor编译、Pass runtime、working transaction与 outer runtime handle创建。Target-specific Composer MUST强类型校验二者兼容。同一 Program Runtime MAY与多个兼容 Backend组合，但 Common Host MUST不做 Float/Fixed转换、反射调用或 runtime backend switch。
+Graph/domain Runtime Definition MUST只拥有 NumericProfile、Target ABI、Graph/domain state、Kernel、Snapshot codec与 Target services；Execution Backend Definition MUST只拥有 Pipeline descriptor编译、Pass runtime、working transaction与 outer runtime handle创建。Target-specific Composer MUST强类型校验二者兼容。同一 Graph/domain Runtime MAY与多个兼容 Backend组合，但 Common Host MUST不做 Float/Fixed转换、反射调用或 runtime backend switch。
 
 #### Scenario: 同一 Float32 Runtime 选择不同 Backend
 
-- **WHEN** 后续安装另一个明确支持 Float32 Program ABI的 Execution Backend
+- **WHEN** 后续安装另一个明确支持 Float32 domain ABI的 Execution Backend
 - **THEN** Composition MAY显式选择该 Backend与合法 Pipeline
-- **AND** MUST不修改 CharacterPipelineHost或把 Backend类型写进 Program
+- **AND** MUST不修改 CharacterPipelineHost或把 Backend类型写进 Graph/domain artifact
 
 ### Requirement: Session Source 必须通过 Preparation 产生完整 Launch Plan
 
-Session Source MUST 创建 `ISimulationSessionPreparation`，并只返回 Pending、Ready 或 Failed。只有 Ready preparation MAY 产生一次不可变 `SimulationSessionLaunchPlan`；Launch Plan MUST 包含 Session identity、TickRate、domain runtime/numeric ABI、Backend、compiled Pipeline plan/hash、领域 binding、完整 Actor roster、Source ports、Solver、Snapshot codec、Committer、initial Character/World/Pipeline state 与 diagnostics identity。Preparation MUST 不把半成品 Runtime 暴露给 Host，也 MUST 不在失败时切换其它 Source、Pipeline、Backend 或 Solver。
+Session Source MUST 创建 `ISimulationSessionPreparation`，并只返回 Pending、Ready 或 Failed。只有 Ready preparation MAY 产生一次不可变 `SimulationSessionLaunchPlan`；Launch Plan MUST 包含 Session identity、TickRate、Graph/domain runtime/numeric ABI、Backend、compiled Pipeline plan/hash、领域 binding、完整 Actor roster、Source ports、Solver、Snapshot codec、Committer、initial Character/World/Pipeline state 与 diagnostics identity。Preparation MUST 不把半成品 Runtime 暴露给 Host，也 MUST 不在失败时切换其它 Source、Pipeline、Backend 或 Solver。
 
 #### Scenario: Network Model 等待 roster
 
@@ -51,21 +51,21 @@ Session Source MUST 创建 `ISimulationSessionPreparation`，并只返回 Pendin
 
 ### Requirement: Session Host 必须使用 Numeric-Neutral Runtime Handle
 
-公共 Session Host MUST只持有 `ISimulationSessionRuntimeHandle` 与 `SimulationSessionCompositionDescriptor`。Runtime handle MUST提供外层 LogicTick、状态/身份查询与 Dispose，不得暴露 Float32/Fixed Program、Character/World/Pipeline state、Source、Solver、Snapshot或可变 World数据。Host MUST不转换 Numeric Target数据，也 MUST不解释 Pipeline Pass。
+公共 Session Host MUST只持有 `ISimulationSessionRuntimeHandle` 与 `SimulationSessionCompositionDescriptor`。Runtime handle MUST提供外层 LogicTick、状态/身份查询与 Dispose，不得暴露 Float32/Fixed Graph/domain runtime、Character/World/Pipeline state、Source、Solver、Snapshot或可变 World数据。Host MUST不转换 Numeric Target数据，也 MUST不解释 Pipeline Pass。
 
 #### Scenario: Fixed Rollback Session 接入 Host
 
-- **WHEN** Fixed Program Runtime与 Deterministic Backend返回合法 runtime handle
+- **WHEN** Fixed Graph/domain Runtime与 Deterministic Backend返回合法 runtime handle
 - **THEN** 同一个 SimulationSessionHost lifecycle MUST能推进该 handle
 - **AND** Host MUST不引用 Fixed scalar、Fixed state、Rollback Pass或 KCC具体类型
 
 ### Requirement: Target-specific Composer 必须唯一创建完整 Runtime
 
-每个已安装 Domain Runtime/Execution Backend 组合 MUST 通过唯一强类型 Composer 集中校验并创建领域 binding、compiled Pipeline plan、roster、initial state、Source ports、Control/Ability/Timeline services、WorldSolver、Snapshot codec、Committer 与 diagnostics。当前 Float32 Pass Backend MUST 只有一个位于 portable source set 的正式 Composer 入口。Unity target adapter MUST 只把五项显式 Composition 与 Actor registration 降低为一个完整 portable request，并通过 Prepared Source 显式提供的 Runtime Launcher 调用该 Composer。Runtime Launcher MAY 增加模型专属启动约束，但 MUST 不复制 Runtime 构造、Pipeline compile、LaunchPlan、identity 或 capability 校验。Common Host、Unity Composer、Character Host、ScenePlay 和 Demo MUST 不识别具体 Network Model、Prepared Source 或 Pipeline Definition 类型。
+每个已安装 Graph/domain Runtime/Execution Backend 组合 MUST 通过唯一强类型 Composer 集中校验并创建领域 binding、compiled Pipeline plan、roster、initial state、Source ports、Control/Ability/Timeline services、WorldSolver、Snapshot codec、Committer 与 diagnostics。当前 Float32 Pass Backend MUST 只有一个位于 portable source set 的正式 Composer 入口。Unity target adapter MUST 只把五项显式 Composition 与 Actor registration 降低为一个完整 portable request，并通过 Prepared Source 显式提供的 Runtime Launcher 调用该 Composer。Runtime Launcher MAY 增加模型专属启动约束，但 MUST 不复制 Runtime 构造、Pipeline compile、LaunchPlan、identity 或 capability 校验。Common Host、Unity Composer、Character Host、ScenePlay 和 Demo MUST 不识别具体 Network Model、Prepared Source 或 Pipeline Definition 类型。
 
 #### Scenario: Local 与 ServerAuthoritative Prediction 共用 Float32 基座
 
-- **WHEN** Local Pipeline与ServerAuthoritative Prediction Pipeline都选择Float32 Program Runtime和Float32 Pass Backend
+- **WHEN** Local Pipeline与ServerAuthoritative Prediction Pipeline都选择Float32 Graph/domain Runtime和Float32 Pass Backend
 - **THEN** 两者 MUST通过Standard Runtime Launcher进入同一个target-specific Composer
 - **AND** 差异 MUST存在于Source和Pipeline Pass，不得存在两份Float32 Session构造器
 
@@ -77,7 +77,7 @@ Session Source MUST 创建 `ISimulationSessionPreparation`，并只返回 Pendin
 
 #### Scenario: Fantasy DotRecast Authority Scene装配Float32 Session
 
-- **WHEN** Fantasy Server内DotRecast Authority Scene提供合法Float32 Program Runtime、Runtime Package、Source ports、Launcher、Solver与输出端口
+- **WHEN** Fantasy Server内DotRecast Authority Scene提供合法Float32 Graph/domain Runtime、Runtime Package、Source ports、Launcher、Solver与输出端口
 - **THEN** MUST调用与Unity相同的模型Launcher和portable Float32 Composer
 - **AND** MUST不复制Unity Composer、Pipeline compiler或LaunchPlan构造逻辑
 
@@ -99,7 +99,7 @@ Character Actor Host MUST 提供带显式 ActorId、Control/Ability/Timeline/Pre
 
 ### Requirement: Session Host 必须按正式 Tick 生命周期推进 Preparation 与 Runtime
 
-SimulationSessionHost MUST通过 GameplayTickSystem正式 Input/Logic target推进 Preparation与 Active Runtime，不得创建私有 Update、协程、Task loop或 Network Model专用 runner。Preparing状态 MUST不执行 Program Tick；Active状态每个 LocalLogicTick MUST只调用一次 runtime handle。该 handle MAY按 compiled ExecutionPlan执行零到多个内部 SimulationTick。Presentation target MAY按 Actor独立存在，但其注册和释放 MUST归当前 Active composition。
+SimulationSessionHost MUST通过 GameplayTickSystem正式 Input/Logic target推进 Preparation与 Active Runtime，不得创建私有 Update、协程、Task loop或 Network Model专用 runner。Preparing状态 MUST不执行 Gameplay Tick；Active状态每个 LocalLogicTick MUST只调用一次 runtime handle。该 handle MAY按 compiled ExecutionPlan执行零到多个内部 SimulationTick。Presentation target MAY按 Actor独立存在，但其注册和释放 MUST归当前 Active composition。
 
 #### Scenario: 一个外层 Tick 触发多个 Replay Step
 
@@ -113,7 +113,7 @@ Active descriptor MUST 记录 SessionId、source clock、TickRate、domain runti
 
 #### Scenario: Pipeline 要求 Solver 未支持能力
 
-- **WHEN** Program与 Pass capability union包含当前 Solver未声明的能力
+- **WHEN** Graph/domain binding与 Pass capability union包含当前 Solver未声明的能力
 - **THEN** Composer MUST拒绝创建 runtime handle
 - **AND** Host MUST不改用另一个 Solver、删除 Pass或忽略 capability
 
@@ -154,7 +154,7 @@ Session Composition MUST 从正式 Body Motion binding 和 domain capability uni
 
 #### Scenario: Solver缺少AirborneVerticalMotion
 
-- **WHEN** Program要求AirborneVerticalMotion但Solver descriptor不支持
+- **WHEN** Graph/domain binding要求AirborneVerticalMotion但Solver descriptor不支持
 - **THEN** Preparation MUST fail-closed
 - **AND** Runtime Launcher MUST不创建Session runtime
 

@@ -1,7 +1,7 @@
 # gameplay-performance-capture-workflow Specification
 
 ## Purpose
-TBD - created by archiving change add-gameplay-performance-capture-workflow. Update Purpose after archive.
+定义本地性能采集从显式 Request、Smoke/Replay Gate、Performance Player、Windows 采集、分析到原子产物发布的唯一工作流，保证采集工具不成为第二套 Gameplay 驱动链路。
 
 ## Requirements
 

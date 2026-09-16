@@ -1,7 +1,7 @@
 # btsmtl-skill-transfer-connections Specification
 
 ## Purpose
-TBD - created by archiving change add-skill-transfer-connections. Update Purpose after archive.
+定义技能状态机转移连线的条件、优先级、中止策略、正式 Mutation、编译来源和 Document 闭包，保证转移语义只由连线拥有，不恢复节点步骤转移旁路。
 
 ## Requirements
 

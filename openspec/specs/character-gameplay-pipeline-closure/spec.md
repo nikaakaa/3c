@@ -24,7 +24,7 @@ CharacterPipelineDefinition MUST 继续是角色 authoring 配置装配根，但
 
 - **WHEN** Session 准备 Corin Actor
 - **THEN** MUST 校验并绑定各领域正式 owner
-- **AND** MUST 不通过 ProgramHash、LayoutHash 或整包 Projection 作为唯一启动条件
+- **AND** MUST 不通过 GraphHash、domain layout identity 或整包绑定作为唯一启动条件
 
 ### Requirement: Graph 和 Timeline 必须只输出正式 gameplay facts
 
@@ -40,6 +40,13 @@ Graph、StateMachine 和 Timeline Runtime MUST 只更新 CharacterSimulationStat
 
 Control、Ability、Timeline 和 Motion owner MAY 产生 typed contribution，但只有统一 Motion accumulator、Body Motion Integrator 和 WorldSolver MAY 生成最终 WorldRequest/Body result。Timeline、Graph、Presentation 和 Unity Transform MUST 不拥有第二份运动真值。
 
+#### Scenario: 多个领域同时产生位移
+
+- **WHEN** Control、Ability 和 Timeline 在同一 Tick 产生多个 Motion contribution
+- **THEN** 统一 Motion accumulator MUST 按正式顺序合并贡献并交给 Body Motion Integrator
+- **AND** 只有 WorldSolver MUST 生成最终 Body result
+- **AND** Timeline、Graph 和 Transform MUST 不直接移动角色
+
 ### Requirement: Presentation 闭环必须只消费已提交事实
 
 Presentation MUST 消费 committed Body/Intent、Action playback、Pose Graph、Source、Constraint 和 Final Publication 的正式结果。它 MUST 不修改 Gameplay state、World state、Ability lifecycle 或 Timeline cursor。
@@ -54,22 +61,58 @@ Presentation MUST 消费 committed Body/Intent、Action playback、Pose Graph、
 
 Action Window、Motion、Effect、Attribute、Target、State 与完成事实 MUST 通过正式 GameplayFacts/Trace 输出。Editor MUST 不绑定 runtime clone、mutable state 或第二套诊断解释器。
 
+#### Scenario: Editor观察攻击窗口
+
+- **WHEN** 当前 Tick 已提交 Attack Window 和 Action completion
+- **THEN** GameplayFacts/Trace MUST 同时提供带 Actor、ActionInstance 和 Tick identity 的正式事实
+- **AND** Editor MUST 只读取这些事实，不得从 runtime clone 或动画权重重新解释窗口
+
 ### Requirement: ServerAuthoritative Gameplay 必须复用正式 domain Step
 
 Prediction Client 与 Authority Worker MUST 复用同一 Control、Ability、Timeline、Motion、Effect、World ResolveBatch 和 Finalize 业务合同。Owner/server/remote 差异 MUST 只存在于 Session Source、Ingress/Schedule/Egress Pass 和 Presentation registration，不得进入 Graph、Timeline、Effect 或 Motion 的业务语义。
+
+#### Scenario: Prediction与Authority执行同一Action
+
+- **WHEN** Prediction Client 与 Authority Worker 处理相同的 Action 输入序列
+- **THEN** 两端 MUST 复用相同的 Control、Ability、Timeline、Motion、Effect 和 Finalize 合同
+- **AND** 差异 MUST 只来自各自 Session Source、Pass 和 Presentation registration
 
 ### Requirement: Local 与 Hybrid 必须是显式且互不回退的完整组合
 
 Local、ServerAuthoritative 与 DeterministicRollback MUST 通过各自显式 Composition、Source、Backend、Pipeline 和 WorldSolver 装配。一个组合缺少能力时 MUST 明确失败，不得切换到另一个 Model、旧 Program、默认 Solver 或本地临时路径。
 
+#### Scenario: 组合缺少正式能力
+
+- **WHEN** 一个 Composition 缺少声明的 Backend 或 WorldSolver
+- **THEN** Session Prepare MUST 返回明确缺失能力
+- **AND** MUST 不切换到其它 Network Model、默认 Solver 或临时本地路径
+
 ### Requirement: 网络复制必须只消费正式 Finalized Output
 
 Network Model MUST 只消费正式 Finalized GameplayFacts、Body、Action playback 和 EventId disposition。Fantasy Handler、Room 和 Model Source MUST 不直接调用 Animancer、写 visual Transform 或决定 Animation transition。
+
+#### Scenario: 网络消费已Finalize结果
+
+- **WHEN** Session 完成当前 Tick 的 Finalize
+- **THEN** Network Model MUST 只读取 Finalized GameplayFacts、Body、Action playback 和 EventId disposition
+- **AND** Handler、Room 与 Model Source MUST 不直接修改表现对象或决定动画转换
 
 ### Requirement: Remote 表现必须属于正式 Committer 消费链
 
 Remote Body sample、有限 Action producer command 和 reliable EventId facts MUST 在 Prediction Pipeline 最终 Commit 边界进入 remote presentation output，并复用既有 Body interpolation、Presentation Fact、Action lifecycle、AnimationSlot 和原生 Pose Graph。不得创建远端专用播放器或 Projection。
 
+#### Scenario: 远端角色提交表现
+
+- **WHEN** Remote Prediction Pipeline 完成一个 Commit boundary
+- **THEN** Remote presentation MUST 从该边界取得 Body sample、Action playback 和 EventId facts
+- **AND** MUST 复用统一 interpolation、AnimationSlot 和 Native Pose Graph，不得创建远端专用播放器
+
 ### Requirement: Hybrid Diagnostics 必须沿统一 Source Map 与 Session Trace 关联
 
 Diagnostics MUST 按 ActorId、ActionInstanceId、SimulationTick、Graph source、World request/result、domain owner 和 EventId 展示输入、状态决策、Timeline window、Motion、Effect 与 committed Presentation。Diagnostics MUST 只读正式提交事实，不参与运行。
+
+#### Scenario: 按Trace定位一次Action
+
+- **WHEN** 作者从 Diagnostics 选择一个 ActionInstance 和 SimulationTick
+- **THEN** 系统 MUST 沿 Graph source、domain owner、World request/result 和 EventId 展示该次事实链
+- **AND** Diagnostics MUST 不修改任何运行状态或重新执行领域逻辑

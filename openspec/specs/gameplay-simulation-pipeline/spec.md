@@ -31,7 +31,7 @@ Pipeline schema MUST只定义 Ingress、Schedule、Step 与 Egress 四个顶层�
 
 #### Scenario: Pass 尝试跨阶段越权
 
-- **WHEN** Ingress Pass尝试直接替换 Character state或 Egress Pass尝试重新执行 Program operation
+- **WHEN** Ingress Pass尝试直接替换 Character state或 Egress Pass尝试重新执行 Graph/domain operation
 - **THEN** phase contract或 product ownership校验 MUST拒绝该组合
 - **AND** MUST不通过万能 Context 暴露越权写入口
 
@@ -69,11 +69,11 @@ Pipeline schema MUST只定义 Ingress、Schedule、Step 与 Egress 四个顶层�
 
 ### Requirement: Pipeline Compiler 必须在 Active 前完成完整兼容校验
 
-Pipeline Compiler MUST在 Runtime创建前校验 phase/order、Schedule唯一性、product producer/consumer、依赖环、Pass factory/version、Source port、Program Runtime ABI、Execution Backend semantic version、Solver capability、Replay/Restore requirement和 state ownership。编译 MUST产生稳定 PipelineHash和不可变 plan；unknown Pass、unknown product、缺失 factory或 unsupported capability MUST明确失败，不得跳过、替换或降级。
+Pipeline Compiler MUST在 Runtime创建前校验 phase/order、Schedule唯一性、product producer/consumer、依赖环、Pass factory/version、Source port、Graph/domain Runtime ABI、Execution Backend semantic version、Solver capability、Replay/Restore requirement和 state ownership。编译 MUST产生稳定 PipelineHash和不可变 plan；unknown Pass、unknown product、缺失 factory或 unsupported capability MUST明确失败，不得跳过、替换或降级。
 
 #### Scenario: Rollback Pass 配置到 Unity Local 组合
 
-- **WHEN** Pipeline Pass要求 DeterministicReplay和 Snapshotable Solver，但 composition使用 Float32 Local Program Runtime与 Unity CharacterController Solver
+- **WHEN** Pipeline Pass要求 DeterministicReplay和 Snapshotable Solver，但 composition使用 Float32 Local Graph/domain Runtime与 Unity CharacterController Solver
 - **THEN** Pipeline compile MUST在首 Tick前失败并列出缺失能力
 - **AND** MUST不删除 Rollback Pass或改用 Local单步执行
 
@@ -101,19 +101,19 @@ Session首次启动 MUST显式选择从已激活Pass捕获默认Pipeline state�
 - **THEN** Backend MUST在Pass激活后捕获该participant的Tick 0 canonical payload
 - **AND** Launch Plan MUST记录包含该participant的Pipeline state hash
 
-### Requirement: Program、Pipeline 与 Backend 身份必须相互独立并共同锁定
+### Requirement: Graph/domain、Pipeline 与 Backend 身份必须相互独立并共同锁定
 
-ProgramHash MUST只表示 Numeric Target Program，MUST不包含 Pipeline、Source、Backend、Solver或 Network Model。Active Session、Snapshot、diagnostics和后续网络 handshake MUST另外锁定 PipelineId/Revision/PipelineHash、BackendId/semantic version、SourceId和 Solver identity。同一 Program MAY由多个合法 Pipeline使用，但不同 PipelineHash或 Backend semantic version的 Session snapshot MUST不可互换。
+GraphHash 与 domain binding identity MUST分别表示 Graph artifact 与正式 domain 数据，MUST不包含 Pipeline、Source、Backend、Solver或 Network Model。Active Session、Snapshot、diagnostics和后续网络 handshake MUST另外锁定 PipelineId/Revision/PipelineHash、BackendId/semantic version、SourceId和 Solver identity。同一 Graph artifact MAY由多个合法 Pipeline使用，但不同 domain binding、PipelineHash 或 Backend semantic version 的 Session snapshot MUST不可互换。
 
-#### Scenario: 同一 Corin Program 用于 Local 与 Prediction
+#### Scenario: 同一Corin Graph用于Local与Prediction
 
-- **WHEN** Local Pipeline和 ServerAuthoritative Prediction Pipeline使用同一 Float32 Corin Program
-- **THEN** 两者 ProgramHash MAY相同
+- **WHEN** Local Pipeline和 ServerAuthoritative Prediction Pipeline使用同一 Float32 Corin Graph artifact
+- **THEN** 两者 GraphHash MAY相同
 - **AND** 两者 Session composition hash和 PipelineHash MUST不同
 
 ### Requirement: 普通扩展必须使用 Pass，完整执行技术替换必须使用 Backend
 
-新增 input validation、correction、history、replay scheduling、hash、snapshot export或其它能由四阶段产品合同表达的处理 MUST作为正式 Pass实现并复用已安装 Backend。需要更换状态布局、执行技术或 Pipeline执行机制的实现 MAY提供新的 Execution Backend，但该 Backend MUST消费 versioned Pipeline descriptor、声明支持的 Program Runtime ABI与 semantic version，并返回同一 numeric-neutral runtime handle。Network Model MUST不复制 Common Host、Commit事务或 BTSMTL业务 evaluator来伪装 Backend。
+新增 input validation、correction、history、replay scheduling、hash、snapshot export或其它能由四阶段产品合同表达的处理 MUST作为正式 Pass实现并复用已安装 Backend。需要更换状态布局、执行技术或 Pipeline执行机制的实现 MAY提供新的 Execution Backend，但该 Backend MUST消费 versioned Pipeline descriptor、声明支持的 Graph/domain Runtime ABI 与 semantic version，并返回同一 numeric-neutral runtime handle。Network Model MUST不复制 Common Host、Commit事务或 BTSMTL业务 evaluator来伪装 Backend。
 
 #### Scenario: 增加 Lag Compensation Pass
 
@@ -124,7 +124,7 @@ ProgramHash MUST只表示 Numeric Target Program，MUST不包含 Pipeline、Sour
 #### Scenario: 增加 ECS 执行实现
 
 - **WHEN** 第三方需要使用不同状态布局和 ECS执行 Pipeline
-- **THEN** 它 MUST提供新的 Execution Backend和匹配 Program Runtime ABI
+- **THEN** 它 MUST提供新的 Execution Backend和匹配 Graph/domain Runtime ABI
 - **AND** MUST不把 ECS状态塞进 Float32 CSharp Pass的隐藏字段
 
 ### Requirement: Standard Local Pipeline 必须保持唯一正式单机执行链

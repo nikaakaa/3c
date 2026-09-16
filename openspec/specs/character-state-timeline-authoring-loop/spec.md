@@ -8,7 +8,7 @@
 
 ### Requirement: Corin Skill Graph必须表达角色Gameplay流程层
 
-AbilityGraph MUST作为对应GameplayAbility的Gameplay执行层，包含输入、Gameplay移动控制、Action StateMachine、Action Timeline和有限Gameplay生命周期内容。角色主线状态与Movement规则属于C# ControlModule和Program State；AbilityGraph不得重新承载角色总RootTree。AbilityGraph MUST不平铺Idle、Walk、Run、Start、Stop、Turn等纯表现Pose State，持续Locomotion PoseStateMachine MUST只存在于Presentation Pose Graph。
+AbilityGraph MUST作为对应GameplayAbility的Gameplay执行层，包含输入、Gameplay移动控制、Action StateMachine、Action Timeline和有限Gameplay生命周期内容。角色主线状态与Movement规则属于C# ControlModule和正式 domain state；AbilityGraph不得重新承载角色总RootTree。AbilityGraph MUST不平铺Idle、Walk、Run、Start、Stop、Turn等纯表现Pose State，持续Locomotion PoseStateMachine MUST只存在于Presentation Pose Graph。
 
 #### Scenario: 打开Corin Skill Graph
 
@@ -68,7 +68,7 @@ Corin Locomotion Gameplay状态行为和基础连招状态行为 MUST默认保�
 
 ### Requirement: Corin有限Action Timeline必须默认使用inline Timeline
 
-Corin有限Action与真正包含Gameplay时序的移动行为 Timeline MUST默认保存为对应TimelineNode私有的inline TimelineData。纯Idle、Start、Loop、Stop与Turn动画 MUST使用Presentation Pose source，MUST不为其创建TimelineNode或inline Timeline。Compiler MUST把保留的inline/shared Timeline编译为同一不可变Program与Action Playback合同，不得创建runtime clone。
+Corin有限Action与真正包含Gameplay时序的移动行为 Timeline MUST默认保存为对应TimelineNode私有的inline TimelineData。纯Idle、Start、Loop、Stop与Turn动画 MUST使用Presentation Pose source，MUST不为其创建TimelineNode或inline Timeline。Graph/domain preparation MUST保留inline/shared Timeline引用并连接到正式 Action Playback 合同，不得创建runtime clone或Timeline专用编译产物。
 
 #### Scenario: 下钻Attack1 Timeline
 
@@ -184,7 +184,7 @@ Corin 迁移 MUST 先用 `AnimationClipAnalysisInputHash` 与新 Phase Validatio
 #### Scenario: 迁移后显式Build
 
 - **WHEN** Corin新schema Foot Analysis已Ready且正式authoring保存成功
-- **THEN** 作者 MUST显式触发Projection、Float32 Build与Fixed Build
+- **THEN** 作者 MUST显式触发 Graph preparation、Float32 domain preparation 与 Fixed domain preparation
 - **AND** 任一阶段失败 MUST保留明确typed diagnostic且不得发布混合revision
 
 ### Requirement: Corin Locomotion Transition必须统一使用Standard Blend

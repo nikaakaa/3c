@@ -39,7 +39,7 @@ Body Motion descriptor MUST显式保存有限负数`GravityAcceleration`、有�
 
 ### Requirement: 玩法Y位移不得消费或关闭重力
 
-ResolvedGameplayMotion的Y位移 MUST表达Timeline、Action或GameplayResult明确产生的作者位移。Prepare MUST将该Y位移与gravityDelta相加。Motion channel priority、`Override`、`ConsumeLowerChannels`与Program Motion Modifier MUST只解析玩法Motion，MUST不消费、覆盖或关闭环境重力。第一版 MUST不提供IgnoreGravity、GravityScale、OverrideVerticalVelocity或从MotionCurve delta推断跳跃动力的隐式规则。
+ResolvedGameplayMotion的Y位移 MUST表达Timeline、Action或GameplayResult明确产生的作者位移。Prepare MUST将该Y位移与gravityDelta相加。Motion channel priority、`Override`、`ConsumeLowerChannels`与正式 Motion Modifier MUST只解析玩法Motion，MUST不消费、覆盖或关闭环境重力。第一版 MUST不提供IgnoreGravity、GravityScale、OverrideVerticalVelocity或从MotionCurve delta推断跳跃动力的隐式规则。
 
 #### Scenario: Grounded攻击包含向上MotionCurve
 
@@ -70,23 +70,23 @@ Body Motion Finalize MUST只读取matching integration plan、Solver actual disp
 - **THEN** 向上的VerticalVelocity MUST被清零
 - **AND** Finalize MUST不在Solver之后补偿被阻挡的Y位移
 
-### Requirement: Body Motion配置必须是Program编译身份
+### Requirement: Body Motion配置必须是正式domain binding身份
 
 `CharacterPipelineDefinition` MUST 显式引用唯一 `CharacterBodyMotionProfile`。Motion owner MUST 使用 Profile identity、content revision、GravityAcceleration、MaximumFallSpeed 与 semantic version 准备对应 Target descriptor 和 required world capability。Runtime MUST 只读取正式 descriptor，MUST 不读取 Profile ScriptableObject、Blackboard、Scene 字段或缺失默认。
 
 #### Scenario: 两端使用不同Gravity配置
 
 - **WHEN** 两端Profile的GravityAcceleration或MaximumFallSpeed不同
-- **THEN** Program identity MUST不同
+- **THEN** Body Motion domain identity MUST不同
 - **AND** Session组合或网络握手 MUST在模拟前拒绝不匹配
 
 ### Requirement: AirborneVerticalMotion必须由Solver真实声明
 
 包含 Body Motion descriptor 的正式 domain runtime MUST 要求 `AirborneVerticalMotion` 通用 World Capability。Composition MUST 在 Session Active 前验证 Solver descriptor 真实支持该能力。Unity CharacterController 与 Deterministic KCC 只有在完整消费 XYZ request、分别报告稳定 Grounded 与方向性 Above/Below 并调用统一 Finalize 后才能声明该能力。当前 DotRecast Navigation Surface Solver MUST 不声明该能力，也 MUST 不通过丢弃 Y、NavMesh 投影、假 Grounded 或隐藏 fallback 继续运行。
 
-#### Scenario: Corin Program选择DotRecast Solver
+#### Scenario: Corin domain binding选择DotRecast Solver
 
-- **WHEN** Corin Program要求AirborneVerticalMotion但DotRecast descriptor不支持
+- **WHEN** Corin domain binding要求AirborneVerticalMotion但DotRecast descriptor不支持
 - **THEN** Composition MUST在创建Session runtime前失败
 - **AND** 错误 MUST明确列出缺失capability
 

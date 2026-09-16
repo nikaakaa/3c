@@ -59,3 +59,9 @@ Pose Graph 页面 MAY 提供作者编辑、目标选择和只读观察按钮，�
 ### Requirement: Live Debug 只能显示正式事实
 
 Live Debug MUST 通过 ScenePlay/Runtime Debug binding 显示 PoseState、Source、Transition、Slot、Constraint、Goal、FBBIK、Final Publication 和 completion trace。不得从 Animancer weight、Transform 或当前作者游标反推出第二份事实。
+
+#### Scenario: 查看Pose完成轨迹
+
+- **WHEN** ScenePlay 已提交一个带 completion trace 的 Pose Frame
+- **THEN** Live Debug MUST 显示正式 PoseState、Source、Transition、Slot、Constraint 和 Final Publication 事实
+- **AND** MUST 不从 Transform、Animancer weight 或作者游标推导另一份状态

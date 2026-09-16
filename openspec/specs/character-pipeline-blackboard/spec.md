@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: Pipeline Blackboard 必须统一图变量和运行时黑板
 
-Blackboard declaration、ExposedProperty authoring、Graph Data Catalog 和 scope/lifetime 语义 MUST继续是唯一黑板数据源。Compiler MUST将 declaration/reference 解析为 Program layout，Kernel MUST只通过 CharacterSimulationState Blackboard slots 读写。
+Blackboard declaration、ExposedProperty authoring、Graph Data Catalog 和 scope/lifetime 语义 MUST继续是唯一黑板数据源。Graph/domain preparation MUST将 declaration/reference 解析为 Graph/domain layout，Kernel MUST只通过 CharacterSimulationState Blackboard slots 读写。
 
 #### Scenario: Compiled ValueNode 读取变量
 
@@ -45,7 +45,7 @@ Blackboard declaration、ExposedProperty authoring、Graph Data Catalog 和 scop
 
 ### Requirement: ExposedProperty 必须成为 Pipeline Blackboard 的 authoring 表面
 
-BaseExposedProperty MUST继续是 Pipeline Blackboard declaration 的唯一 authoring/serialization 表面。Compiler MUST将 declaration owner、reference、scope、lifetime、default value 与 projection 编译进 Program layout；Runtime MUST不同时维护 CharacterGraphContext dictionary、局部散字段或第二 Blackboard service。
+BaseExposedProperty MUST继续是 Pipeline Blackboard declaration 的唯一 authoring/serialization 表面。Graph/domain preparation MUST将 declaration owner、reference、scope、lifetime、default value 与 projection 写入 Graph/domain layout；Runtime MUST不同时维护 CharacterGraphContext dictionary、局部散字段或第二 Blackboard service。
 
 #### Scenario: State body 创建 Local 变量
 
@@ -73,7 +73,7 @@ ConditionRuleGraph 中读取 Pipeline Blackboard variable 的节点 MUST 是纯 
 
 ### Requirement: Runtime Fact 和 Blackboard Variable 必须命名分层
 
-Blackboard variable MUST只表达 Program 内运行变量、调参值或当前 scope state；`SimulationActorTickResult` typed gameplay fact MUST表达当前 Tick 已发生、可记录、调试或由模型消费的事实。只有正式 fact projection MAY从当前 Blackboard write provenance 生成 typed fact。Model adapter 与 Committer MUST不直接读取 Blackboard key/value。
+Blackboard variable MUST只表达 Graph/domain 内运行变量、调参值或当前 scope state；`SimulationActorTickResult` typed gameplay fact MUST表达当前 Tick 已发生、可记录、调试或由模型消费的事实。只有正式 fact projection MAY从当前 Blackboard write provenance 生成 typed fact。Model adapter 与 Committer MUST不直接读取 Blackboard key/value。
 
 #### Scenario: Timeline 产出攻击窗口
 
@@ -89,7 +89,7 @@ Blackboard variable MUST只表达 Program 内运行变量、调参值或当前 s
 
 ### Requirement: Runtime value 必须按 declaration 与 scope owner 共同寻址
 
-Compiler MUST为declaration identity、Character、Graph activation、State execution path、ActionInstance和Frame owner生成稳定compiled address rule。Program layout MUST为每个scope owner分配稳定CompiledOwnerIndex；Kernel MUST使用`ScopeKind + CompiledOwnerIndex + Generation`的typed owner token隔离实例，MUST不使用runtime object reference、dictionary object identity、拼接字符串或显示路径作为真值地址。Character与Graph Config owner MUST在初始State建立；Graph、State和Action generation MUST来自各自正式lifecycle；Frame generation MUST来自当前SimulationTick。需要fact projection的真实写入 MUST保存typed write stamp，人类可读owner/provenance只能由diagnostics按需格式化。
+Graph/domain preparation MUST为declaration identity、Character、Graph activation、State execution path、ActionInstance和Frame owner生成稳定typed address rule。Graph/domain layout MUST为每个scope owner分配稳定CompiledOwnerIndex；Kernel MUST使用`ScopeKind + CompiledOwnerIndex + Generation`的typed owner token隔离实例，MUST不使用runtime object reference、dictionary object identity、拼接字符串或显示路径作为真值地址。Character与Graph Config owner MUST在初始State建立；Graph、State和Action generation MUST来自各自正式lifecycle；Frame generation MUST来自当前SimulationTick。需要fact projection的真实写入 MUST保存typed write stamp，人类可读owner/provenance只能由diagnostics按需格式化。
 
 #### Scenario: 两次State activation
 
@@ -106,7 +106,7 @@ Compiler MUST为declaration identity、Character、Graph activation、State exec
 #### Scenario: Diagnostics显示State owner
 
 - **WHEN** diagnostics实际请求Blackboard owner或write provenance
-- **THEN** formatter MAY通过Program SourceMap和typed token生成可读路径
+- **THEN** formatter MAY通过Graph SourceMap和typed token生成可读路径
 - **AND** 关闭diagnostics的正常Tick MUST不构造该字符串
 
 ### Requirement: Pipeline Blackboard authoring 必须提供上下文化分类视图
@@ -173,7 +173,7 @@ Pipeline Blackboard declaration MAY 保存一个显式 fact projection。ActionW
 - **WHEN** active Decision TreeClip 在当前 Tick 写入合法 ActionWindow-bound variable=true
 - **AND** 写入 provenance 包含有效 Action Context
 - **THEN** runtime MUST 记录一个本帧 projection candidate
-- **AND** Program 决策完成后的统一 projection MUST 最多生成一个对应 `ActionWindowFact`
+- **AND** Graph/domain 决策完成后的统一 projection MUST 最多生成一个对应 `ActionWindowFact`
 - **AND** 当前ServerAuthoritative模型没有ActionWindow packet映射时 MUST保持该fact为本地Gameplay输出，不得推导默认packet
 
 #### Scenario: 缺失 Action Context
@@ -263,7 +263,7 @@ Blackboard catalog source MUST 复用 Pipeline Blackboard 已有的 Graph/Transi
 
 ### Requirement: 嵌套状态机必须按 declaration owner 解析 State activation frame
 
-Nested StateMachine MUST使用 Program 中编译的 declaration owner 和完整 execution path 定位 State frame。Runtime MUST不从 Graph clone 或显示名推断 owner。
+Nested StateMachine MUST使用 Graph/domain layout 中准备的 declaration owner 和完整 execution path 定位 State frame。Runtime MUST不从 Graph clone 或显示名推断 owner。
 
 #### Scenario: 内层 State 读取自己的 Frame
 
@@ -282,7 +282,7 @@ GameplayTag、Attribute、ActiveEffect、stack、duration、period、inhibition 
 
 ### Requirement: InputDerived Blackboard 必须从正式 portable input 投影
 
-`InputDerived` declaration MUST显式保存唯一 `InputValueId`，并且只允许 Character scope、Spawn lifetime。Compiler MUST将 declaration、Program input catalog kind与typed Character State address编译为唯一 input-to-state binding；Float32与Fixed Evaluate MUST在Timeline Decision和Graph control之前，把当前 Tick同名同类型的portable input写入该slot。系统 MUST不按Blackboard key猜input，不从Presentation或Scene对象补值，也 MUST不在Host中建立第二条Blackboard直写路径。
+`InputDerived` declaration MUST显式保存唯一 `InputValueId`，并且只允许 Character scope、Spawn lifetime。Graph/domain preparation MUST将 declaration、formal Input catalog kind 与 typed Character State address准备为唯一 input-to-state binding；Float32与Fixed Evaluate MUST在Timeline Decision和Graph control之前，把当前 Tick同名同类型的portable input写入该slot。系统 MUST不按Blackboard key猜input，不从Presentation或Scene对象补值，也 MUST不在Host中建立第二条Blackboard直写路径。
 
 #### Scenario: 投影攻击目标输入
 
@@ -292,7 +292,7 @@ GameplayTag、Attribute、ActiveEffect、stack、duration、period、inhibition 
 
 #### Scenario: 输入类型与声明不一致
 
-- **WHEN**Program binding要求`ActionTargetSnapshot`但输入提交其它value kind
+- **WHEN** Input/domain binding要求`ActionTargetSnapshot`但输入提交其它value kind
 - **THEN**当前 Evaluate MUST明确失败
 - **AND**系统 MUST不写入默认对象、裸字符串或上一 Tick残留值后继续执行
                                                                                                 

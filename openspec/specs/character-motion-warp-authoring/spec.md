@@ -177,7 +177,7 @@ MotionWarp所属动作 MAY声明`OptionalSnapshot`或`SnapshotRequired`。`None`
 #### Scenario: 搜索 MotionWarp runtime 入口
 
 - **WHEN** 迁移完成后检查正式代码
-- **THEN** MUST只有Semantic IR到Target Program的MotionWarp执行链
+- **THEN** MUST只有Graph artifact到Target Motion domain binding的MotionWarp执行链
 - **AND** MUST不存在Timeline直接采样window或写Body/Transform的第二路径
 
 ### Requirement: MotionWarp进度曲线必须通过typed Timeline Channel编辑

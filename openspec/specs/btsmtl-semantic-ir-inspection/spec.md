@@ -1,68 +1,59 @@
 # btsmtl-semantic-ir-inspection Specification
 
 ## Purpose
-定义 Unity Editor 与普通 DotNet Reader 对 canonical Semantic IR artifact 的只读检查、身份校验和精确 Authoring SourceMap 导航能力。
+
+定义 Unity Editor 与普通 .NET Reader 对 canonical Gameplay Graph artifact 的只读检查、身份校验和精确 Authoring SourceMap 导航能力。该能力只检查 Graph 产物，不恢复 Character、Ability、Timeline、Pose 或整角色 Program Inspector。
+
 ## Requirements
-### Requirement: Unity Editor 必须提供只读 Semantic IR Inspector
 
-系统 MUST为 CharacterPipelineDefinition 提供显式打开的只读 Semantic IR Inspector。Inspector MUST从当前 validated `.csir` artifact 显示 Manifest、Operations、Literals、ControlFlow、StateSlots、Scopes、WorldRequests、OutputChannels、CatalogEntries、Producers 和 SourceMap，并支持按 operation code、identity 与精确 source identity 搜索。Inspector MUST不编辑 artifact、authoring 或 generated Program，也 MUST不在普通 Repaint 时自动运行 Frontend。
+### Requirement: Graph Inspector 必须只读显示正式Graph artifact
 
-#### Scenario: 查看 Corin StateMachine Operation
+系统 MUST 为正式 Gameplay Graph 提供显式打开的只读 Inspector。Inspector MUST 从当前 validated Graph artifact 显示 manifest、节点、边、端口、常量、Graph-owned Blackboard、能力声明和 SourceMap，并支持按 node/edge identity 与 source identity 搜索。Inspector MUST 不编辑 artifact、authoring 或 domain runtime，也 MUST 不在普通 Repaint 时自动运行 Graph preparation。
 
-- **WHEN** 作者从 Corin Definition 打开 Semantic IR Inspector 并选择一个 StateMachine operation
-- **THEN** Inspector MUST显示其 handle、operation code、operands、literal references、state slots、control-flow edges 与 source location
-- **AND** 显示内容 MUST来自当前 artifact，不得从 Graph 重新推断 operation table
+#### Scenario: 查看Corin StateMachine Graph
 
-#### Scenario: 当前 IR Cache 过期
+- **WHEN** 作者打开 Corin Ability 使用的 Graph 并选择一个 StateMachine 节点
+- **THEN** Inspector MUST 显示节点 identity、端口、状态声明、依赖和 source location
+- **AND** 显示内容 MUST 来自当前 Graph artifact，不得从运行时对象重新推断
 
-- **WHEN** Inspector 发现 cache SourceRevision 与当前 Definition 不一致
-- **THEN** MUST显示明确 stale 状态并停止展示旧 tables
-- **AND** MUST只通过作者显式 `Compile Semantic IR` 命令调用正式 Frontend，不在 Repaint 隐式刷新
+#### Scenario: Graph artifact过期
 
-### Requirement: Semantic IR SourceMap 导航必须使用精确 Authoring Identity
+- **WHEN** Inspector 发现 artifact source revision 或依赖 identity 与当前 Graph 不一致
+- **THEN** MUST 显示明确 stale 状态并停止展示旧 artifact 数据
+- **AND** MUST 只允许作者显式请求 Graph preparation，不得在 Repaint 隐式刷新
 
-Inspector MUST使用 artifact SourceMap 的 GraphId、NodeId、EdgeId、DeclarationId、TimelineId、TrackId 与 ClipId 解析 authoring 目标，并复用现有 Graph/Timeline 导航能力。无法精确解析的目标 MUST显示 unresolved；系统 MUST不按显示名、数组 index、asset path 片段、最近窗口或第一个匹配对象导航。
+### Requirement: Graph SourceMap 导航必须使用精确Authoring identity
 
-#### Scenario: 从 MotionCurve Operation 导航到 Clip
+Inspector MUST 使用 Graph artifact SourceMap 的 GraphId、NodeId、EdgeId、DeclarationId、TimelineId、TrackId 与 ClipId 解析 authoring 目标，并复用现有 Graph/Timeline 导航能力。无法精确解析的目标 MUST 显示 unresolved；系统 MUST 不按显示名、数组 index、asset path 片段、最近窗口或第一个匹配对象导航。
 
-- **WHEN** 作者选择一个具有完整 TimelineId、TrackId 与 ClipId 的 TimelineMotionCurve operation
-- **THEN** Inspector MUST打开或聚焦对应 Timeline 并选择精确 Clip
-- **AND** 同名 Clip 或其它 Timeline 中的相同显示名 MUST不被选中
+#### Scenario: 从Graph节点导航到Timeline Clip
 
-### Requirement: 普通 DotNet Reader 必须显式读取 Semantic IR 与 Program Artifact
+- **WHEN** 作者选择一个带有 TimelineId、TrackId 与 ClipId 的 Graph Timeline reference
+- **THEN** Inspector MUST 打开或聚焦对应 Timeline 并选择精确 Clip
+- **AND** 同名 Clip 或其它 Timeline 中的相同显示名 MUST 不被选中
 
-受版本控制的普通 .NET Reader MUST使用显式 `semantic-ir` 与 `program` 子命令读取 Core canonical artifact，并支持稳定 text/JSON 只读输出。`semantic-ir` MUST至少输出 header、table counts、operations、control flow、state slots、scopes、producers 与 source map；Reader MUST不引用 UnityEngine、Editor assembly 或复制 schema，也 MUST不把 JSON 输出重新导入为 build input。
+### Requirement: 普通DotNet Reader必须显式读取Graph artifact
 
-#### Scenario: DotNet 读取 Corin Semantic IR
+受版本控制的普通 .NET Reader MUST 使用正式 Graph artifact codec 读取 canonical Graph artifact，并支持稳定 text/JSON 只读输出。Reader MUST 不引用 UnityEngine、Editor assembly 或复制 schema，也 MUST 不把 JSON 输出重新导入为 Graph preparation input。
 
-- **WHEN** 普通 .NET 进程执行 `ThirdPersonSimulation.Reader semantic-ir <corin.csir>`
-- **THEN** MUST通过 Core codec 校验并输出 Corin ProgramId、SourceRevision、SemanticHash 与 IR table 摘要
-- **AND** MUST不加载 Unity project、ScriptableObject 或 Float32 Program Asset
+#### Scenario: DotNet读取Graph artifact
 
-#### Scenario: Reader 命令与 Artifact 类型不匹配
+- **WHEN** 普通 .NET 进程读取一个合法 Graph artifact
+- **THEN** MUST 通过 canonical codec 校验并输出 GraphId、SourceRevision、GraphHash 与结构摘要
+- **AND** MUST 不加载 Unity project、ScriptableObject 或 domain runtime state
 
-- **WHEN** 作者使用 `semantic-ir` 子命令读取 Program artifact，或使用 `program` 子命令读取 Semantic IR artifact
-- **THEN** Reader MUST返回非零退出码并报告明确格式错误
-- **AND** MUST不通过 magic 自动切换到另一个命令
+#### Scenario: Reader读取非Graph内容
 
-### Requirement: Semantic IR与Target Program检查工具必须展示结构化Value输入
+- **WHEN** Reader 收到 TimelineData、Pose binding 或旧整角色编译产物
+- **THEN** MUST 返回明确格式错误
+- **AND** MUST 不按 magic、名称或默认类型自动切换读取路径
 
-Unity Semantic IR Inspector与普通.NET portable Reader MUST直接读取artifact中的Value edge和constant input binding，并提供按target operation查看的Value Inputs section。输出 MUST显示target operation、target port、resolved value kind以及source operation/output port或constant index。工具 MUST不解析constant identity、反射authoring node或调用Runtime layout来重建缺失关系。
+### Requirement: Graph Value Input检查必须展示结构化来源
 
-#### Scenario: 在Inspector检查Compare输入
+Graph Inspector 与 portable Reader MUST 直接读取 Graph artifact 中的 Value edge 和 constant input binding，并提供按 Graph operation 查看 Value Inputs 的 section。输出 MUST 显示 target operation、target port、resolved value kind 以及 source operation/output port 或 constant index。工具 MUST 不解析 authoring node、反射 runtime layout 或重建缺失关系。
 
-- **WHEN** 作者在Semantic IR Inspector选择Value Inputs并定位一个Compare operation
-- **THEN** Inspector MUST分别显示Left与Right的结构化source和resolved kind
-- **AND** SourceMap导航 MUST仍定位原Graph port或constant source
+#### Scenario: 检查Compare输入
 
-#### Scenario: 普通DotNet读取Semantic artifact
-
-- **WHEN** portable Reader使用`semantic-ir --section value-inputs`读取正式`.csir`
-- **THEN** text与JSON输出 MUST包含Semantic constant input binding count和内容
-- **AND** 该命令 MUST不需要UnityEngine、UnityEditor或Character authoring asset
-
-#### Scenario: 普通DotNet读取Target Program
-
-- **WHEN** portable Reader使用`program --section value-inputs`读取正式Float32 Program
-- **THEN** 输出 MUST包含Target constant input binding及Program identity
-- **AND** 旧artifact版本 MUST明确失败，MUST不显示通过字符串推导的伪binding
+- **WHEN** 作者在 Inspector 选择一个 Compare operation 的 Value Inputs
+- **THEN** Inspector MUST 分别显示 Left 与 Right 的结构化 source 和 resolved kind
+- **AND** SourceMap 导航 MUST 仍能定位原 Graph port 或 constant source

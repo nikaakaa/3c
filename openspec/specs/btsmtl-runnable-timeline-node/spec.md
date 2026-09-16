@@ -63,10 +63,10 @@ Compiled TimelineNode operation MUST通过 Operation Execution Context 创建、
 - **WHEN** TimelineNode operation 首次进入
 - **THEN** MUST在当前 CharacterSimulationState activation slots 创建 request
 
-#### Scenario: Program 缺失 Timeline 数据
+#### Scenario: Graph Artifact 缺失 Timeline 数据
 
 - **WHEN** operation 引用的 compiled Timeline data 不存在
-- **THEN** Program build 或 runtime MUST明确失败
+- **THEN** Graph preparation 或 runtime MUST明确失败
 - **AND** MUST不搜索 TimelineAsset fallback
 
 ### Requirement: TimelineNode 播放状态隔离
@@ -75,7 +75,7 @@ Compiled TimelineNode operation MUST通过 Operation Execution Context 创建、
 
 #### Scenario: 两个角色播放同一 Timeline
 
-- **WHEN** 两个 Actor 使用同一 Program 中的 Timeline data
+- **WHEN** 两个 Actor 使用同一 Graph artifact 中的 Timeline data
 - **THEN** 它们 MUST使用各自 CharacterSimulationState 中的 playback slot
 
 ### Requirement: 保留 Timeline 驱动 Tree 链路
@@ -98,7 +98,7 @@ TreeTrack/TreeClip MUST编译为 Timeline decision/commit operation。Decision M
 
 ### Requirement: Timeline 动作事实必须来自 Timeline 轨道采样
 
-Compiled Timeline gameplay segment MUST产生 ActionWindow、MotionContribution 和 typed facts。Animation/Cue resource MUST通过 Presentation command 与 Projection 定位，MUST不进入 gameplay state。
+Compiled Timeline gameplay segment MUST产生 ActionWindow、MotionContribution 和 typed facts。Animation/Cue resource MUST通过 Presentation command 与正式 binding 定位，MUST不进入 gameplay state。
 
 #### Scenario: Attack Cancel Window
 
@@ -142,4 +142,4 @@ TimelineNode authoring MUST继续保存 Once/Loop mode，Compiler MUST将 mode �
 #### Scenario: Loop duration 非法
 
 - **WHEN** Loop Timeline duration 小于等于零
-- **THEN** Program 编译 MUST失败
+- **THEN** Graph preparation MUST失败

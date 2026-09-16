@@ -1,7 +1,7 @@
 # btsmtl-agent-authoring-document-sync Specification
 
 ## Purpose
-TBD - created by archiving change refactor-agent-authoring-attribute-driven. Update Purpose after archive.
+定义 Agent Authoring Document 与正式作者 metadata、Graph/Timeline/Presentation Mutation、事务 apply 和反向发布之间的唯一同步合同，保证 Agent 不维护第二套节点模型、字段规则或 owner 推断路径。
 
 ## Requirements
 

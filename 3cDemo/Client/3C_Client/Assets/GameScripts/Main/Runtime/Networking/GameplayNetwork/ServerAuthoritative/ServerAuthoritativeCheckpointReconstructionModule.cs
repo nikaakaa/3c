@@ -103,10 +103,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 checkpoint = NetworkCheckpointCodec.ReadDelta(
                     m_Layout,
                     baseline,
-                    new SimulationTick(snapshot.AuthorityTick),
-                    snapshot.AcknowledgedInputSequence,
-                    snapshot.ReliableEventHorizon,
-                    remoteActor,
                     snapshot.CopyDeltaPayload(),
                     out remote);
             }

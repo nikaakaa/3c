@@ -1371,3 +1371,7 @@
 ## 2026-09-16 解耦ServerAuthoritative本地Actor绑定
 - Client Scene Binding 不再引用已删除的 CharacterPipelineHost；场景宿主字段改为正式 IServerAuthoritativeLocalActorBinder 合同。
 - 绑定前显式校验合同实现，失败原因不落入默认路径；新的 ServerAuthoritative 本地 Host 后续实现该合同。
+
+## 2026-09-16 对齐Network Delta解码合同
+- Remote checkpoint 重建改为调用 NetworkCheckpointCodec 的最新 ReadDelta 合同；authority tick、acknowledged input、event horizon、remote actor 已包含在 delta payload 内。
+- 删除调用端的重复元数据参数，避免同一快照身份存在两个来源。

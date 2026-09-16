@@ -73,6 +73,11 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityExecutionServiceFactory : IFloat32AbilityExecutionServiceFactory
     {
+        readonly IAbilityTimelineRuntime m_TimelineRuntime;
+        public Float32AbilityExecutionServiceFactory(IAbilityTimelineRuntime timelineRuntime)
+        {
+            m_TimelineRuntime = timelineRuntime;
+        }
         public Float32AbilityExecutionAssembly Create(
             Float32GameplayAbilityExecutionData executionData,
             Float32GameplayAbilityExecutionServices executionServices,
@@ -161,7 +166,10 @@ namespace ThirdPersonSimulation
                 locomotion,
                 frame.Facts,
                 frame.Presentation,
-                frame.Trace);
+                frame.Trace,
+                m_TimelineRuntime,
+                actionStore,
+                frame.Tick);
             var services = new Float32AbilityExecutionServiceSet(
                 frame,
                 target,

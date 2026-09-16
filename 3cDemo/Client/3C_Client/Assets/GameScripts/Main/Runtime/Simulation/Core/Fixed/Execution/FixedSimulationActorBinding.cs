@@ -13,7 +13,8 @@ namespace ThirdPersonSimulation.Fixed
             CharacterBodyMotionBinding bodyMotionBinding,
             CharacterGameplayEffectRuntimeBinding gameplayEffectRuntimeBinding,
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding,
-            GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData)
+            GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData,
+            IAbilityTimelineRuntime timelineRuntime)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Actor identity is invalid.", nameof(actorId));
@@ -33,6 +34,7 @@ namespace ThirdPersonSimulation.Fixed
             }
             GameplayEffectRuntimeBinding = gameplayEffectRuntimeBinding;
             EquipmentRuntimeBinding = equipmentRuntimeBinding;
+            TimelineRuntime = timelineRuntime;
             StateSchemaHash = ComputeStateSchemaHash(
                 controlRuntimeBinding,
                 gameplayEffectRuntimeBinding,
@@ -52,6 +54,7 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
+        public IAbilityTimelineRuntime TimelineRuntime { get; }
         public FixedGameplayAbilityExecutionInstallationSet AbilityInstallations { get; }
         public StableHash StateSchemaHash { get; }
         public StableHash GameplayContentHash { get; }

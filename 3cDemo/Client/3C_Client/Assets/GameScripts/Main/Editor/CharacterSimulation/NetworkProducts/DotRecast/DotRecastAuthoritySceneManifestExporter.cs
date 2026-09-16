@@ -159,7 +159,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     bodyMotionBinding,
                     gameplayEffectRuntimeBinding,
                     equipmentRuntimeBinding,
-                    abilityData);
+                    abilityData,
+                    null);
             }
             Float32CharacterRuntime characterRuntime = new Float32CharacterRuntime(
                 characterBindings,

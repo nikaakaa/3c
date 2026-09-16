@@ -502,6 +502,52 @@ namespace ThirdPersonSimulation
         public TimelineActionContextIdentity ActionContext { get; }
     }
 
+    public enum AbilityTimelinePlaybackMode : byte
+    {
+        Once = 0,
+        Loop = 1
+    }
+
+    public enum AbilityTimelineRuntimeStatus : byte
+    {
+        Running = 1,
+        Succeeded = 2,
+        Failed = 3,
+        Cancelled = 4
+    }
+
+    public readonly struct AbilityTimelineStartRequest
+    {
+        public AbilityTimelineStartRequest(
+            string timelineId,
+            bool loop,
+            TimelineActionContextIdentity actionContext,
+            ulong inputSequence,
+            SimulationTick tick)
+        {
+            TimelineId = SimulationIdentity.Require(timelineId, nameof(timelineId));
+            Loop = loop;
+            InputSequence = inputSequence;
+            ActionContext = actionContext;
+            Tick = tick;
+            if (!tick.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(tick));
+        }
+
+        public string TimelineId { get; }
+        public bool Loop { get; }
+        public TimelineActionContextIdentity ActionContext { get; }
+        public SimulationTick Tick { get; }
+        public ulong InputSequence { get; }
+    }
+
+    public interface IAbilityTimelineRuntime
+    {
+        int Start(in AbilityTimelineStartRequest request);
+        AbilityTimelineRuntimeStatus Tick(int runtimeHandle, ulong logicTick, int deltaFrames);
+        void Stop(int runtimeHandle);
+    }
+
     public interface ITimelineControlStatePort
     {
         TimelinePlaybackStatus ReadPlayback(OperationHandle operation);

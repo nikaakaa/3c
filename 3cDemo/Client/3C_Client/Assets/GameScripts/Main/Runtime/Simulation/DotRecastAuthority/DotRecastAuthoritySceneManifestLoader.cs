@@ -172,7 +172,8 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                     manifest.BodyMotionBinding,
                     manifest.GameplayEffectRuntimeBinding,
                     manifest.EquipmentRuntimeBinding,
-                    abilityData);
+                    abilityData,
+                    null);
             }
             return bindings;
         }

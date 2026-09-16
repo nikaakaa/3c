@@ -107,11 +107,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal TimelinePlaybackHandle Handle;
             internal TimelineData Timeline;
             internal string SourceName;
+            internal bool CoreDriven;
         }
 
         TimelineRuntimeCompositionHost m_Host;
         readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
         readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
+        readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
         ulong m_TickCounter;
         TimelinePlaybackHandle m_PreviewHandle;
         bool m_Initialized;
@@ -166,9 +168,77 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             {
                 Handle = handle,
                 Timeline = timeline,
-                SourceName = sourceName ?? string.Empty
+                SourceName = sourceName ?? string.Empty,
+                CoreDriven = false
             });
             return true;
+        }
+
+        public void SetTimelineContent(IReadOnlyList<TimelineAsset> timelines)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Timeline content requires an initialized CharacterTimelineHost.");
+            if (timelines == null)
+                throw new ArgumentNullException(nameof(timelines));
+            m_TimelineContent.Clear();
+            for (int i = 0; i < timelines.Count; i++)
+            {
+                TimelineAsset asset = timelines[i];
+                if (!asset || asset.Data == null)
+                    throw new InvalidOperationException("Timeline content list contains an invalid Timeline asset.");
+                if (!m_TimelineContent.TryAdd(asset.Data.AuthoringId, asset.Data))
+                    throw new InvalidOperationException($"Timeline content identity '{asset.Data.AuthoringId}' is duplicated.");
+            }
+        }
+
+        public bool RequestAbilityTimelinePlayback(
+            string timelineId,
+            TimelinePlaybackActionContext actionContext,
+            bool loop,
+            out TimelinePlaybackHandle handle)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Ability Timeline requires an initialized CharacterTimelineHost.");
+            if (!actionContext.IsValid)
+                throw new ArgumentException("Ability Timeline Action context is invalid.", nameof(actionContext));
+            if (!m_TimelineContent.TryGetValue(timelineId, out TimelineData timeline))
+                throw new KeyNotFoundException($"Ability Timeline content '{timelineId}' is not installed.");
+            bool requested = RequestTimelinePlayback(
+                timeline,
+                actionContext.ActionId,
+                timeline.Name,
+                actionContext,
+                loop ? TimelinePlaybackMode.Loop : TimelinePlaybackMode.Once,
+                default,
+                null,
+                out handle);
+            if (requested)
+            {
+                for (int i = 0; i < m_ActivePlaybacks.Count; i++)
+                {
+                    if (m_ActivePlaybacks[i].Handle.Value == handle.Value)
+                    {
+                        ActivePlayback updated = m_ActivePlaybacks[i];
+                        updated.CoreDriven = true;
+                        m_ActivePlaybacks[i] = updated;
+                    }
+                }
+            }
+            return requested;
+        }
+
+        public TimelinePlaybackStatus StepTimelinePlayback(
+            TimelinePlaybackHandle handle,
+            ulong logicTick,
+            int deltaFrames)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Timeline stepping requires an initialized CharacterTimelineHost.");
+            TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(handle);
+            if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
+                return status;
+            m_Host.Service.Step(handle, logicTick, deltaFrames);
+            return m_Host.Service.GetTimelinePlaybackStatus(handle);
         }
 
         public bool RequestPreviewTimelinePlayback(
@@ -304,6 +374,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     m_ActivePlaybacks.Remove(active);
                     continue;
                 }
+                if (active.CoreDriven)
+                    continue;
                 m_Host.Service.Step(active.Handle, m_TickCounter, deltaFrames);
             }
         }

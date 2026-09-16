@@ -74,6 +74,13 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityExecutionServiceFactory : IFixedAbilityExecutionServiceFactory
     {
+        readonly IAbilityTimelineRuntime m_TimelineRuntime;
+
+        public FixedAbilityExecutionServiceFactory(IAbilityTimelineRuntime timelineRuntime)
+        {
+            m_TimelineRuntime = timelineRuntime;
+        }
+
         public FixedAbilityExecutionAssembly Create(
             FixedGameplayAbilityExecutionData executionData,
             FixedGameplayAbilityExecutionServices executionServices,
@@ -162,7 +169,10 @@ namespace ThirdPersonSimulation.Fixed
                 locomotion,
                 frame.Facts,
                 frame.Presentation,
-                frame.Trace);
+                frame.Trace,
+                m_TimelineRuntime,
+                actionStore,
+                frame.Tick);
             var services = new FixedAbilityExecutionServiceSet(
                 frame,
                 target,

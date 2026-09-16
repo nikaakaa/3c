@@ -63,6 +63,9 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedFactSink m_Facts;
         readonly FixedPresentationSink m_Presentation;
         readonly FixedTraceSink m_Trace;
+        readonly IAbilityTimelineRuntime m_TimelineRuntime;
+        readonly FixedActionStateStore m_ActionState;
+        readonly SimulationTick m_Tick;
 
         public FixedAbilityExecutionTarget(
             FixedGameplayAbilityExecutionAccess access,
@@ -76,7 +79,10 @@ namespace ThirdPersonSimulation.Fixed
             FixedLocomotionRuntime locomotion,
             FixedFactSink facts,
             FixedPresentationSink presentation,
-            FixedTraceSink trace)
+            FixedTraceSink trace,
+            IAbilityTimelineRuntime timelineRuntime,
+            FixedActionStateStore actionState,
+            SimulationTick tick)
         {
             m_Access = access;
             m_ControlState = controlState;
@@ -90,6 +96,9 @@ namespace ThirdPersonSimulation.Fixed
             m_Facts = facts;
             m_Presentation = presentation;
             m_Trace = trace;
+            m_TimelineRuntime = timelineRuntime;
+            m_ActionState = actionState;
+            m_Tick = tick;
         }
 
         public bool DiagnosticsEnabled => m_Trace.Enabled;
@@ -173,8 +182,7 @@ namespace ThirdPersonSimulation.Fixed
                         ? OperationExecutionResult.Success
                         : OperationExecutionResult.Failure;
                 case SimulationOperationCode.Timeline:
-                    throw new InvalidOperationException(
-                        $"Ability Timeline operation '{m_Access.SourcePath(operation)}' has no direct Timeline runtime binding.");
+                    return TickTimeline(operation);
                 case SimulationOperationCode.CameraStateRequest:
                 case SimulationOperationCode.CameraCue:
                 case SimulationOperationCode.CameraResponse:
@@ -249,6 +257,54 @@ namespace ThirdPersonSimulation.Fixed
                 : OperationExecutionResult.Running;
         }
 
+        OperationExecutionResult TickTimeline(SimulationOperation operation)
+        {
+            if (m_TimelineRuntime == null)
+                throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' has no Timeline runtime binding.");
+            int slot = m_Access.RequireOperationSlot(operation.Handle, ProgramStateSemantic.TimelinePlayback);
+            int runtimeHandle = m_ControlState.Get(slot).Int32;
+            if (runtimeHandle == 0)
+            {
+                if (!m_ActionState.TryGetCurrentSkillExecution(out FixedActionInstanceState action) || !action.IsActive)
+                    throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' has no active Action context.");
+                var actionContext = new TimelineActionContextIdentity(
+                    action.ActionId,
+                    action.ContextId,
+                    action.InstanceId,
+                    action.PredictionKey,
+                    action.SkillId,
+                    action.SkillEntryOperation,
+                    action.SkillExecutionGeneration);
+                var request = new AbilityTimelineStartRequest(
+                    operation.Text0,
+                    operation.Integer0 == (int)AbilityTimelinePlaybackMode.Loop,
+                    actionContext,
+                    action.InputSequence,
+                    m_Tick);
+                runtimeHandle = m_TimelineRuntime.Start(in request);
+                if (runtimeHandle == 0)
+                    throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' did not return a runtime handle.");
+                m_ControlState.Set(slot, AbilityStateValue.FromInt32(runtimeHandle));
+            }
+            return m_TimelineRuntime.Tick(runtimeHandle, m_Tick.Value, 1) switch
+            {
+                AbilityTimelineRuntimeStatus.Running => OperationExecutionResult.Running,
+                AbilityTimelineRuntimeStatus.Succeeded => OperationExecutionResult.Success,
+                AbilityTimelineRuntimeStatus.Failed => OperationExecutionResult.Failure,
+                AbilityTimelineRuntimeStatus.Cancelled => OperationExecutionResult.Failure,
+                _ => throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' returned an invalid status.")
+            };
+        }
+
+        int ReadTimelineRuntimeHandle(OperationExecutionDescriptor operation)
+        {
+            int slot = m_Access.RequireOperationSlot(operation.Handle, ProgramStateSemantic.TimelinePlayback);
+            int runtimeHandle = m_ControlState.Get(slot).Int32;
+            if (runtimeHandle == 0)
+                throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(m_Access.Operation(operation.Handle))}' is not started.");
+            return runtimeHandle;
+        }
+
         FixedGameplayEffectOperationRuntime RequireGameplayEffects() => m_GameplayEffects ??
             throw new InvalidOperationException(
                 "Ability operation requires the declared Gameplay Effect service.");
@@ -287,14 +343,30 @@ namespace ThirdPersonSimulation.Fixed
         public OperationStopStatus ContinueLeafStop(
             OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             OperationExecutionDescriptor operation,
-            OperationStopContext context) => throw new InvalidOperationException(
+            OperationStopContext context)
+        {
+            if (operation.Code == SimulationOperationCode.Timeline)
+            {
+                m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                return OperationStopStatus.Completed;
+            }
+            throw new InvalidOperationException(
                 $"Ability operation '{m_Access.SourcePath(m_Access.Operation(operation.Handle))}' has no direct Timeline stop owner.");
+        }
 
         public void ForceStopLeaf(
             OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             OperationExecutionDescriptor operation,
-            OperationStopContext context) => throw new InvalidOperationException(
+            OperationStopContext context)
+        {
+            if (operation.Code == SimulationOperationCode.Timeline)
+            {
+                m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                return;
+            }
+            throw new InvalidOperationException(
                 $"Ability operation '{m_Access.SourcePath(m_Access.Operation(operation.Handle))}' has no direct Timeline stop owner.");
+        }
 
         public void EmitTrace(
             OperationExecutionDescriptor operation,

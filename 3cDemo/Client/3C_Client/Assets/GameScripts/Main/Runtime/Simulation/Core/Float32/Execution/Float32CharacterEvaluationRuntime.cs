@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
@@ -47,7 +47,7 @@ namespace ThirdPersonSimulation
             var controlTrace = new List<SimulationTraceRecord>();
             try
             {
-                var serviceFactory = new Float32AbilityExecutionServiceFactory();
+                var serviceFactory = new Float32AbilityExecutionServiceFactory(actor.TimelineRuntime);
                 var domainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
                 var abilityInput = new Float32AbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new Float32AbilityBodyFacts(actor.ActorId, beforeBody);

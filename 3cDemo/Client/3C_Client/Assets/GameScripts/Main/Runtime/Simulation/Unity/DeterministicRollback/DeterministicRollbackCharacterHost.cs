@@ -164,7 +164,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
-                abilityData);
+                abilityData,
+                null);
             SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
             FixedCharacterRuntime characterRuntime = new FixedCharacterRuntime(
                 new[] { actorBinding },

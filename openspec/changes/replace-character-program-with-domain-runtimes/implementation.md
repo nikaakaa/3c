@@ -1452,3 +1452,12 @@
 - 预览运行可显式取消，状态由 Timeline Runtime 返回；不伪造 ActionContext、TreeExecutionActivationScope 或 RuntimeGraph。
 - ScenePlay Coordinator 现在区分固定 Timeline 预览与 Ability 运行时播放事实：可选择 Control Motion Timeline、启动/取消预览，并继续观察 Activity 运行实例、Clip 采样与 Pose 发布事实。
 - ThirdPersonClient.Runtime 与 ThirdPersonClient.Editor 已使用禁用 Build Server 参数编译通过，随后执行 build-server shutdown。
+
+## 2026-09-17 接入Ability Timeline直接运行绑定
+
+- 在 Simulation Core 增加 `IAbilityTimelineRuntime`、启动请求和运行状态合同；Float32／Fixed Ability leaf 的 `Timeline` 操作不再抛“缺绑定”，而是通过该合同启动、Tick、取消。
+- Timeline 调用句柄保存在原 Timeline Playback 状态槽；执行时从当前 Skill Execution 读取 ActionContext、InputSequence 和 Tick，Loop 由编译操作模式映射。
+- Fixed 本地 Host 注入 `CharacterTimelineAbilityRuntime`，把 Character Definition 的 Control Motion Timeline 安装到 `CharacterTimelineHost`；Ability Timeline 由角色 Tick 显式推进，不再被 Host MonoBehaviour 双驱动。
+- Rollback、DotRecast、Network 产品装配暂时传入空运行绑定；若技能实际执行 Timeline 会精确失败，不伪装可用。TreeClip 服务仍缺正式组合，继续精确拒绝。
+- 本步未勾选 3.8：跨域 Commit/Discard、typed Capture/Restore、TreeClip 执行服务和完整停止候选还未接完。
+- ThirdPersonSimulation.Float32、ThirdPersonSimulation.Fixed、ThirdPersonSimulation.Fixed.Unity、ThirdPersonClient.Editor 编译通过；构建后已执行 build-server shutdown。

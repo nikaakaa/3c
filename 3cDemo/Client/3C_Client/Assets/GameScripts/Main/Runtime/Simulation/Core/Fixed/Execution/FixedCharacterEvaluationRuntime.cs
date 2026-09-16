@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
 
@@ -48,7 +48,7 @@ namespace ThirdPersonSimulation.Fixed
             var controlTrace = new List<SimulationTraceRecord>();
             try
             {
-                var serviceFactory = new FixedAbilityExecutionServiceFactory();
+                var serviceFactory = new FixedAbilityExecutionServiceFactory(actor.TimelineRuntime);
                 var domainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
                 var abilityInput = new FixedAbilityExecutionInput(input.Sequence, input.Values);
                 var bodyFacts = new FixedAbilityBodyFacts(actor.ActorId, beforeBody);

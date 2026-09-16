@@ -87,7 +87,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 bodyMotion,
                 gameplayEffects,
                 equipment,
-                abilities).GameplayContentHash;
+                abilities,
+                null).GameplayContentHash;
         }
 
         public static StableHash FixedCharacterStateSchemaHash(CharacterPipelineDefinition definition)
@@ -108,7 +109,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 bodyMotion,
                 gameplayEffects,
                 equipment,
-                abilities).StateSchemaHash;
+                abilities,
+                null).StateSchemaHash;
         }
 
         public static string FixedCharacterContentIdentity(CharacterPipelineDefinition definition) =>

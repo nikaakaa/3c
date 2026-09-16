@@ -1,8 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Animancer;
+using BTSMTL.Timeline;
+using TimelinePlaybackStatus = BTSMTL.Timeline.TimelinePlaybackStatus;
 using BTSMTL.Diagnostics;
 using ThirdPersonCamera;
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -191,6 +194,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
                 characterDefinition.LoadFixedAbilitySet();
+            CharacterTimelineHost timelineHost = GetComponent<CharacterTimelineHost>();
+            if (timelineHost == null)
+                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a CharacterTimelineHost.");
+            var timelineRuntime = new CharacterTimelineAbilityRuntime(timelineHost, characterDefinition.ControlMotionTimelines);
             FixedSimulationActorBinding actorBinding = new FixedSimulationActorBinding(
                 actorId,
                 Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
@@ -198,7 +205,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 bodyMotionBinding,
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
-                abilityData);
+                abilityData,
+                timelineRuntime);
             SimulationExecutionTargetManifest target = FixedSimulationTarget.Manifest.ExecutionTarget;
             FixedCharacterRuntime characterRuntime = new FixedCharacterRuntime(
                 new[] { actorBinding },
@@ -413,6 +421,69 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return value > 0
                 ? value
                 : throw new InvalidOperationException($"Fixed Character Host requires a positive '{field}'.");
+        }
+    }
+
+    public sealed class CharacterTimelineAbilityRuntime : IAbilityTimelineRuntime
+    {
+        readonly CharacterTimelineHost m_Host;
+        readonly IReadOnlyList<TimelineAsset> m_TimelineAssets;
+        bool m_ContentInstalled;
+
+        public CharacterTimelineAbilityRuntime(
+            CharacterTimelineHost host,
+            IReadOnlyList<TimelineAsset> timelineAssets)
+        {
+            m_Host = host ?? throw new ArgumentNullException(nameof(host));
+            m_TimelineAssets = timelineAssets ?? throw new ArgumentNullException(nameof(timelineAssets));
+        }
+
+        public int Start(in AbilityTimelineStartRequest request)
+        {
+            InstallContent();
+            bool started = m_Host.RequestAbilityTimelinePlayback(
+                request.TimelineId,
+                new TimelinePlaybackActionContext(
+                    request.ActionContext.InstanceId,
+                    request.ActionContext.ActionId,
+                    request.ActionContext.PredictionKey,
+                    request.InputSequence,
+                    request.Tick.Value),
+                request.Loop,
+                out TimelinePlaybackHandle handle);
+            if (!started)
+                throw new InvalidOperationException($"Ability Timeline '{request.TimelineId}' failed to start for Action '{request.ActionContext.ActionId}'.");
+            return checked((int)handle.Value);
+        }
+
+        public AbilityTimelineRuntimeStatus Tick(int runtimeHandle, ulong logicTick, int deltaFrames)
+        {
+            TimelinePlaybackStatus status = m_Host.StepTimelinePlayback(
+                new TimelinePlaybackHandle((ulong)runtimeHandle), logicTick, deltaFrames);
+            return status switch
+            {
+                TimelinePlaybackStatus.Requested => AbilityTimelineRuntimeStatus.Running,
+                TimelinePlaybackStatus.Running => AbilityTimelineRuntimeStatus.Running,
+                TimelinePlaybackStatus.Succeeded => AbilityTimelineRuntimeStatus.Succeeded,
+                TimelinePlaybackStatus.Failed => AbilityTimelineRuntimeStatus.Failed,
+                TimelinePlaybackStatus.Cancelled => AbilityTimelineRuntimeStatus.Cancelled,
+                _ => throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' returned status '{status}'.")
+            };
+        }
+
+        public void Stop(int runtimeHandle)
+        {
+            m_Host.CancelTimelinePlayback(
+                new TimelinePlaybackHandle((ulong)runtimeHandle),
+                new TimelinePlaybackStopContext(TimelinePlaybackStopCause.SelfAbort, 0));
+        }
+
+        void InstallContent()
+        {
+            if (m_ContentInstalled)
+                return;
+            m_Host.SetTimelineContent(m_TimelineAssets);
+            m_ContentInstalled = true;
         }
     }
 }

@@ -377,21 +377,37 @@ namespace BTSMTL.Timeline.Runtime
             return m_Service.Prepare(request);
         }
 
-        public TimelineRuntimePlaybackHandle CreateStartedPlayback(
+        public TimelineRuntimePlaybackHandle CreatePlayback(
             TimelineRuntimePreparationResult preparation)
         {
-            TimelineRuntimePlaybackHandle handle = m_Service.CreatePlayback(preparation);
-            if (!m_Service.Start(handle))
-                throw new InvalidOperationException($"Timeline playback '{handle.Value}' could not start.");
-            return handle;
+            return m_Service.CreatePlayback(preparation);
         }
 
-        public TimelineRuntimeAdvanceResult Step(
+        public bool Start(TimelineRuntimePlaybackHandle handle)
+        {
+            return m_Service.Start(handle);
+        }
+
+        public TimelineRuntimeAdvanceResult Advance(
             TimelineRuntimePlaybackHandle handle,
             ulong logicTick,
             int deltaFrames)
         {
-            return m_Service.Step(handle, logicTick, deltaFrames);
+            return m_Service.Advance(handle, logicTick, deltaFrames);
+        }
+
+        public bool CommitAdvance(
+            TimelineRuntimePlaybackHandle handle,
+            TimelineRuntimeAdvanceResult advance)
+        {
+            return m_Service.CommitAdvance(handle, advance);
+        }
+
+        public bool DiscardAdvance(
+            TimelineRuntimePlaybackHandle handle,
+            TimelineRuntimeAdvanceResult advance)
+        {
+            return m_Service.DiscardAdvance(handle, advance);
         }
 
         public void Stop(
@@ -403,18 +419,24 @@ namespace BTSMTL.Timeline.Runtime
                 stopContext);
         }
 
-        public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
+        public TimelineRuntimePlaybackSnapshot Capture(
+            TimelineRuntimePlaybackHandle handle)
         {
             return m_Service.Capture(handle);
         }
 
-        public TimelineRuntimePlayback Restore(
+        public TimelineRuntimeRestoreCandidate PrepareRestore(
             TimelineRuntimePlaybackSnapshot snapshot,
             TimelineRuntimePreparationResult preparation)
         {
-            return m_Service.Restore(snapshot, preparation);
+            return m_Service.PrepareRestore(snapshot, preparation);
         }
 
+        public TimelineRuntimePlaybackHandle ApplyRestore(
+            TimelineRuntimeRestoreCandidate candidate)
+        {
+            return m_Service.ApplyRestore(candidate);
+        }
         public bool RequestTimelinePlayback(
             TimelineData timeline,
             string sourceId,

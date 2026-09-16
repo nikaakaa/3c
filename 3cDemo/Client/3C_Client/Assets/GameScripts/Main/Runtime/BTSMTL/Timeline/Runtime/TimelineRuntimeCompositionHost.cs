@@ -87,36 +87,65 @@ namespace BTSMTL.Timeline.Runtime
                 callBindings);
         }
 
-        public TimelineRuntimePlaybackHandle CreateStartedPlayback(
+        public TimelineRuntimePlaybackHandle CreatePlayback(
             TimelineRuntimePreparationResult preparation)
         {
             EnsureAvailable();
-            return m_Composition.CreateStartedPlayback(preparation);
+            return m_Composition.CreatePlayback(preparation);
         }
 
-        public TimelineRuntimeAdvanceResult Step(
+        public bool Start(TimelineRuntimePlaybackHandle handle)
+        {
+            EnsureAvailable();
+            return m_Composition.Start(handle);
+        }
+
+        public TimelineRuntimeAdvanceResult Advance(
             TimelineRuntimePlaybackHandle handle,
             ulong logicTick,
             int deltaFrames)
         {
             EnsureAvailable();
-            return m_Composition.Step(handle, logicTick, deltaFrames);
+            return m_Composition.Advance(handle, logicTick, deltaFrames);
         }
 
-        public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
+        public bool CommitAdvance(
+            TimelineRuntimePlaybackHandle handle,
+            TimelineRuntimeAdvanceResult advance)
+        {
+            EnsureAvailable();
+            return m_Composition.CommitAdvance(handle, advance);
+        }
+
+        public bool DiscardAdvance(
+            TimelineRuntimePlaybackHandle handle,
+            TimelineRuntimeAdvanceResult advance)
+        {
+            EnsureAvailable();
+            return m_Composition.DiscardAdvance(handle, advance);
+        }
+
+        public TimelineRuntimePlaybackSnapshot Capture(
+            TimelineRuntimePlaybackHandle handle)
         {
             EnsureAvailable();
             return m_Composition.Capture(handle);
         }
 
-        public TimelineRuntimePlayback Restore(
+        public TimelineRuntimeRestoreCandidate PrepareRestore(
             TimelineRuntimePlaybackSnapshot snapshot,
             TimelineRuntimePreparationResult preparation)
         {
             EnsureAvailable();
-            return m_Composition.Restore(snapshot, preparation);
+            return m_Composition.PrepareRestore(snapshot, preparation);
         }
 
+        public TimelineRuntimePlaybackHandle ApplyRestore(
+            TimelineRuntimeRestoreCandidate candidate)
+        {
+            EnsureAvailable();
+            return m_Composition.ApplyRestore(candidate);
+        }
         public void Stop(
             TimelineRuntimePlaybackHandle handle,
             TimelinePlaybackStopContext stopContext)

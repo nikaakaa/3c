@@ -362,6 +362,76 @@ namespace BTSMTL.Timeline.Runtime
         public bool InitialBoundaryPending { get; }
     }
 
+    public sealed class TimelineRuntimeRestoreCandidate
+    {
+        readonly TimelineRuntimePlaybackSnapshot m_Snapshot;
+        readonly TimelineRuntimePreparationResult m_Preparation;
+        readonly TimelineRuntimeService m_Service;
+
+        internal TimelineRuntimeRestoreCandidate(
+            TimelineRuntimeService service,
+            TimelineRuntimePlaybackSnapshot snapshot,
+            TimelineRuntimePreparationResult preparation)
+        {
+            m_Service = service ?? throw new ArgumentNullException(nameof(service));
+            m_Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
+            m_Preparation = preparation ?? throw new ArgumentNullException(nameof(preparation));
+            Validate();
+        }
+
+        public string Schema => m_Snapshot.Schema;
+        public TimelineRuntimePlaybackHandle Handle => m_Snapshot.Handle;
+        public ulong Generation => m_Snapshot.Generation;
+        public TimelineExecutionIdentity ExecutionIdentity => m_Snapshot.ExecutionIdentity;
+        public TimelineRuntimeNumericTarget NumericTarget => m_Snapshot.NumericTarget;
+        public string ContentRevision => m_Snapshot.ContentRevision;
+
+        internal TimelineRuntimePlaybackSnapshot Snapshot => m_Snapshot;
+        internal TimelineRuntimePreparationResult Preparation => m_Preparation;
+
+        internal void ValidateOwnedBy(TimelineRuntimeService service)
+        {
+            if (!ReferenceEquals(m_Service, service))
+                throw new InvalidOperationException("Timeline restore candidate belongs to another runtime service.");
+            Validate();
+        }
+
+        internal TimelineRuntimePlayback CreatePlayback()
+        {
+            TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
+                m_Preparation,
+                m_Snapshot.Handle,
+                m_Snapshot.Generation);
+            if (!playback.RestoreCommittedState(
+                    m_Snapshot.State,
+                    m_Snapshot.CursorFrame,
+                    m_Snapshot.Cycle,
+                    m_Snapshot.SectionId,
+                    m_Snapshot.ActiveClipIds,
+                    m_Snapshot.ActiveTreeClipAssociations,
+                    m_Snapshot.HasStopContext,
+                    m_Snapshot.StopContext,
+                    m_Snapshot.InitialBoundaryPending))
+                throw new InvalidOperationException("Timeline restore candidate is not a committed state.");
+            return playback;
+        }
+
+        void Validate()
+        {
+            if (!string.Equals(m_Snapshot.Schema, TimelineRuntimePlaybackSnapshot.CurrentSchema, StringComparison.Ordinal) ||
+                !m_Snapshot.Handle.IsValid ||
+                m_Snapshot.Generation == 0 ||
+                m_Snapshot.State == TimelineRuntimePlaybackState.Disposed ||
+                m_Snapshot.State == TimelineRuntimePlaybackState.Failed ||
+                !m_Preparation.IsReady ||
+                m_Snapshot.ExecutionIdentity != m_Preparation.ExecutionIdentity ||
+                !string.Equals(m_Snapshot.RequestId, m_Preparation.RequestId, StringComparison.Ordinal) ||
+                m_Snapshot.PlaybackMode != m_Preparation.PlaybackMode ||
+                m_Snapshot.NumericTarget != m_Preparation.NumericTarget ||
+                !string.Equals(m_Snapshot.ContentRevision, m_Preparation.ContentRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Timeline restore snapshot does not match the prepared content.");
+        }
+    }
     public sealed class TimelineRuntimeService : ITimelinePlaybackService, ITimelinePlaybackActionContextSource, IDisposable
     {
         static readonly List<TimelineRuntimeService> s_ActiveServices =
@@ -590,8 +660,44 @@ namespace BTSMTL.Timeline.Runtime
             return result;
         }
 
-        public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
+        public TimelineRuntimeAdvanceResult Advance(
+            TimelineRuntimePlaybackHandle handle,
+            ulong logicTick,
+            int deltaFrames)
         {
+            EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
+            TimelineRuntimeAdvanceResult result = playback.Advance(
+                new TimelineRuntimeAdvanceRequest(logicTick, deltaFrames));
+            Publish(playback);
+            return result;
+        }
+
+        public bool CommitAdvance(
+            TimelineRuntimePlaybackHandle handle,
+            TimelineRuntimeAdvanceResult advance)
+        {
+            EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
+            if (!playback.Commit(advance))
+                return false;
+            Publish(playback);
+            return true;
+        }
+
+        public bool DiscardAdvance(
+            TimelineRuntimePlaybackHandle handle,
+            TimelineRuntimeAdvanceResult advance)
+        {
+            EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
+            if (!playback.Discard(advance))
+                return false;
+            Publish(playback);
+            return true;
+        }
+
+        public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
             if (playback.HasPendingAdvance || playback.HasPendingStop)
@@ -599,48 +705,28 @@ namespace BTSMTL.Timeline.Runtime
             return new TimelineRuntimePlaybackSnapshot(playback);
         }
 
-        public TimelineRuntimePlayback Restore(
+        public TimelineRuntimeRestoreCandidate PrepareRestore(
             TimelineRuntimePlaybackSnapshot snapshot,
             TimelineRuntimePreparationResult preparation)
         {
             EnsureAvailable();
-            if (snapshot == null)
-                throw new ArgumentNullException(nameof(snapshot));
-            if (preparation == null || !preparation.IsReady)
-                throw new InvalidOperationException("Timeline playback Restore requires a ready preparation.");
-            if (!string.Equals(snapshot.Schema, TimelineRuntimePlaybackSnapshot.CurrentSchema, StringComparison.Ordinal) ||
-                !snapshot.Handle.IsValid ||
-                snapshot.Generation == 0 ||
-                 snapshot.State == TimelineRuntimePlaybackState.Disposed ||
-                 snapshot.State == TimelineRuntimePlaybackState.Failed ||
-                 snapshot.ExecutionIdentity != preparation.ExecutionIdentity ||
-                 !string.Equals(snapshot.RequestId, preparation.RequestId, StringComparison.Ordinal) ||
-                 snapshot.PlaybackMode != preparation.PlaybackMode ||
-                snapshot.NumericTarget != preparation.NumericTarget ||
-                !string.Equals(snapshot.ContentRevision, preparation.ContentRevision, StringComparison.Ordinal))
-                throw new InvalidOperationException("Timeline playback Restore snapshot does not match the prepared content.");
-            if (m_Playbacks.ContainsKey(snapshot.Handle.Value))
-                throw new InvalidOperationException($"Timeline playback handle '{snapshot.Handle.Value}' is already active.");
-            TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
-                preparation,
-                snapshot.Handle,
-                snapshot.Generation);
-            if (!playback.RestoreCommittedState(
-                    snapshot.State,
-                    snapshot.CursorFrame,
-                    snapshot.Cycle,
-                    snapshot.SectionId,
-                    snapshot.ActiveClipIds,
-                    snapshot.ActiveTreeClipAssociations,
-                    snapshot.HasStopContext,
-                    snapshot.StopContext,
-                    snapshot.InitialBoundaryPending))
-                throw new InvalidOperationException("Timeline playback Restore state is not a committed state.");
-            m_Playbacks.Add(snapshot.Handle.Value, playback);
-            Publish(playback);
-            return playback;
+            return new TimelineRuntimeRestoreCandidate(this, snapshot, preparation);
         }
 
+        public TimelineRuntimePlaybackHandle ApplyRestore(
+            TimelineRuntimeRestoreCandidate candidate)
+        {
+            EnsureAvailable();
+            if (candidate == null)
+                throw new ArgumentNullException(nameof(candidate));
+            candidate.ValidateOwnedBy(this);
+            if (m_Playbacks.ContainsKey(candidate.Handle.Value))
+                throw new InvalidOperationException($"Timeline playback handle '{candidate.Handle.Value}' is already active.");
+            TimelineRuntimePlayback playback = candidate.CreatePlayback();
+            m_Playbacks.Add(playback.Handle.Value, playback);
+            Publish(playback);
+            return playback.Handle;
+        }
         public bool TryGetDescriptor(
             TimelineRuntimePlaybackHandle handle,
             out TimelineRuntimePlaybackDescriptor descriptor)

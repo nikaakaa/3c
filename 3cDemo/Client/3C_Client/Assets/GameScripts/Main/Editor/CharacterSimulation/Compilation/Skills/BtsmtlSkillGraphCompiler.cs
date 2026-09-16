@@ -85,6 +85,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 SimulationSourceLocation invocationSource = new SimulationSourceLocation(
                     graph.Graph.GetType().FullName, graph.GraphId, string.Empty, string.Empty, string.Empty, string.Empty,
                     graph.Route, contentHash: graph.ContentHash);
+                OperationHandle invocationOwner = context.Owner.IsValid ? context.Owner : context.UseTimelineEnable
+                    ? operations.Node(graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single().UID)
+                    : entry;
                 if (context.CallerKind == ProgramInvocationCallerKind.TimelineClip && !string.IsNullOrEmpty(context.ClipId))
                 {
                     foreach (BtsmtlSkillTimelineHookFlowNode hook in graph.Nodes.OfType<BtsmtlSkillTimelineHookFlowNode>())
@@ -99,9 +102,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 else
                 {
-                    OperationHandle invocationOwner = context.Owner.IsValid ? context.Owner : context.UseTimelineEnable
-                        ? operations.Node(graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single().UID)
-                        : entry;
                     m_Builder.DeclareGraphInvocation(invocationOwner, invocationSource, context.CallerKind, context.CallerId, context.ClipId);
                 }
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)

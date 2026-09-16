@@ -420,7 +420,7 @@ namespace ThirdPersonCharacter.Pipeline
 					tickRate,
 					true);
 				presentationRuntime = presentationBinding.Runtime;
-				var gameplayOutput = new CharacterSimulationGameplayOutputBuffer();
+				var gameplayOutput = new SimulationGameplayOutputBuffer();
 				registration = new Float32CharacterRegistration(
 					GetInstanceID(),
 					name,

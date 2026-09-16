@@ -260,7 +260,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         readonly int m_TickRate;
         readonly Float32CharacterRuntime m_CharacterRuntime;
         readonly ICharacterPresentationRuntime m_Runtime;
-        readonly CharacterSimulationGameplayOutputBuffer m_Gameplay = new CharacterSimulationGameplayOutputBuffer();
+        readonly SimulationGameplayOutputBuffer m_Gameplay = new SimulationGameplayOutputBuffer();
         readonly ISimulationDiagnosticsSink m_Diagnostics;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly GameObject m_CharacterObject;
@@ -311,7 +311,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
 
         public string BindingId { get; }
         public ActorId ActorId { get; }
-        public IReadOnlyList<CharacterGameplayOutputChange> CurrentGameplayChanges => m_Gameplay.CurrentTickChanges;
+        public IReadOnlyList<SimulationGameplayOutputChange> CurrentGameplayChanges => m_Gameplay.CurrentTickChanges;
         public EventId LastReliableEventId => m_LastReliableEventId;
 
         public void Activate()

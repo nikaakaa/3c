@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         readonly Float32CharacterRuntime m_CharacterRuntime;
         readonly SimulationActorBinding m_CharacterBinding;
         readonly IUnityCharacterControlSourceRuntime m_LocalControlSource;
-        readonly ICharacterSimulationGameplayOutputPort m_GameplayOutput;
+        readonly ISimulationGameplayOutputBuffer m_GameplayOutput;
         readonly ICharacterPresentationRuntime m_PresentationRuntime;
         readonly ISimulationPresentationOutputPort m_PresentationOutput;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
@@ -45,7 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             Float32WorldBodyBinding worldBodyBinding,
             WorldBodyState initialBody,
             IUnityCharacterControlSourceRuntime localControlSource,
-            ICharacterSimulationGameplayOutputPort gameplayOutput,
+            ISimulationGameplayOutputBuffer gameplayOutput,
             ICharacterPresentationRuntime presentationRuntime,
             ISimulationDiagnosticsSink diagnostics,
             RuntimeDiagnosticsTarget diagnosticsTarget,
@@ -115,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public Float32WorldBodyBinding WorldBodyBinding { get; }
         public WorldBodyState InitialBody { get; }
         public IUnityCharacterControlSourceRuntime LocalControlSource => m_LocalControlSource;
-        public ICharacterSimulationGameplayOutputPort GameplayOutput => m_GameplayOutput;
+        public ISimulationGameplayOutputBuffer GameplayOutput => m_GameplayOutput;
         public CharacterPresentationProjection PresentationProjection { get; }
         public ICharacterPresentationRuntime PresentationRuntime => m_PresentationRuntime;
         public ISimulationPresentationOutputPort PresentationOutput => m_PresentationOutput;

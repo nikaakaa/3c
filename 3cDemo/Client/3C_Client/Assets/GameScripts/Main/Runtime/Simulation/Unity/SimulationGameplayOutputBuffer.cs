@@ -4,15 +4,15 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation
 {
-    public interface ICharacterSimulationGameplayOutputPort : ISimulationGameplayOutputPort
+    public interface ISimulationGameplayOutputBuffer : ISimulationGameplayOutputPort
     {
-        IReadOnlyList<CharacterGameplayOutputChange> CurrentTickChanges { get; }
+        IReadOnlyList<SimulationGameplayOutputChange> CurrentTickChanges { get; }
         void BeginTick();
     }
 
-    public readonly struct CharacterGameplayOutputChange
+    public readonly struct SimulationGameplayOutputChange
     {
-        CharacterGameplayOutputChange(
+        SimulationGameplayOutputChange(
             SimulationOutputDispositionKind kind,
             ActorId actorId,
             EventId sourceEventId,
@@ -50,9 +50,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public GameplayFact Fact { get; }
         public bool HasFact { get; }
 
-        public static CharacterGameplayOutputChange Publish(GameplayFact fact)
+        public static SimulationGameplayOutputChange Publish(GameplayFact fact)
         {
-            return new CharacterGameplayOutputChange(
+            return new SimulationGameplayOutputChange(
                 SimulationOutputDispositionKind.Publish,
                 fact.Header.ActorId,
                 fact.Header.EventId,
@@ -61,9 +61,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 true);
         }
 
-        public static CharacterGameplayOutputChange Replace(EventId targetEventId, GameplayFact fact)
+        public static SimulationGameplayOutputChange Replace(EventId targetEventId, GameplayFact fact)
         {
-            return new CharacterGameplayOutputChange(
+            return new SimulationGameplayOutputChange(
                 SimulationOutputDispositionKind.Replace,
                 fact.Header.ActorId,
                 fact.Header.EventId,
@@ -72,12 +72,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                 true);
         }
 
-        public static CharacterGameplayOutputChange Retire(
+        public static SimulationGameplayOutputChange Retire(
             ActorId actorId,
             EventId sourceEventId,
             EventId targetEventId)
         {
-            return new CharacterGameplayOutputChange(
+            return new SimulationGameplayOutputChange(
                 SimulationOutputDispositionKind.Retire,
                 actorId,
                 sourceEventId,
@@ -87,12 +87,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         }
     }
 
-    public sealed class CharacterSimulationGameplayOutputBuffer : ICharacterSimulationGameplayOutputPort
+    public sealed class SimulationGameplayOutputBuffer : ISimulationGameplayOutputBuffer
     {
-        readonly List<CharacterGameplayOutputChange> m_CurrentTickChanges =
-            new List<CharacterGameplayOutputChange>();
+        readonly List<SimulationGameplayOutputChange> m_CurrentTickChanges =
+            new List<SimulationGameplayOutputChange>();
 
-        public IReadOnlyList<CharacterGameplayOutputChange> CurrentTickChanges => m_CurrentTickChanges;
+        public IReadOnlyList<SimulationGameplayOutputChange> CurrentTickChanges => m_CurrentTickChanges;
 
         public void BeginTick()
         {
@@ -101,17 +101,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
         public void Publish(GameplayFact fact)
         {
-            m_CurrentTickChanges.Add(CharacterGameplayOutputChange.Publish(fact));
+            m_CurrentTickChanges.Add(SimulationGameplayOutputChange.Publish(fact));
         }
 
         public void Replace(EventId targetEventId, GameplayFact fact)
         {
-            m_CurrentTickChanges.Add(CharacterGameplayOutputChange.Replace(targetEventId, fact));
+            m_CurrentTickChanges.Add(SimulationGameplayOutputChange.Replace(targetEventId, fact));
         }
 
         public void Retire(ActorId actorId, EventId sourceEventId, EventId targetEventId)
         {
-            m_CurrentTickChanges.Add(CharacterGameplayOutputChange.Retire(actorId, sourceEventId, targetEventId));
+            m_CurrentTickChanges.Add(SimulationGameplayOutputChange.Retire(actorId, sourceEventId, targetEventId));
         }
     }
 }

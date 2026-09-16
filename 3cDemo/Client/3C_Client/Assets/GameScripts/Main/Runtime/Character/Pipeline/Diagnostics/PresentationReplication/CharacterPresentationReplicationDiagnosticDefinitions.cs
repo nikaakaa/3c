@@ -85,9 +85,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.PresentationReplication
         "animation",
         typeof(CharacterAnimationPresentationCaptureFrame))]
     [DiagnosticFactRoot(
-        "camera",
-        typeof(CharacterCameraPresentationCaptureFrame))]
-    [DiagnosticFactRoot(
         "facts",
         typeof(CharacterPresentationFactCaptureFrame))]
     [DiagnosticFactRoot(

@@ -555,31 +555,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireValid();
         }
 
-        internal CharacterFootPlacementModuleSettings BuildSettings(
-            CharacterPresentationProjection projection,
-            CharacterFootPlacementPoseRig rig)
-        {
-            if (projection == null || rig == null)
-                throw new ArgumentNullException(projection == null ? nameof(projection) : nameof(rig));
-            RequireValid();
-            projection.RequirePosePayload();
-            rig.RequireValid();
-            if (!string.Equals(projection.Rig.RigId, rig.Rig.RigId, StringComparison.Ordinal) ||
-                !string.Equals(projection.Rig.RigRevision, rig.Rig.RigRevision, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    "Foot Placement Profile build Rig identity is stale.");
-            }
-            return new CharacterFootPlacementModuleSettings(
-                ProfileId,
-                Revision,
-                projection.PosePlan.PlanHash,
-                CurrentSupportQuery.Build(),
-                LandingPrediction.Build(),
-                GroundDetection.Build(),
-                FootMotion.Build());
-        }
-
         static string RequireIdentity(string value, string field)
         {
             if (string.IsNullOrWhiteSpace(value) ||

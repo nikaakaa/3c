@@ -54,8 +54,8 @@ namespace ThirdPersonSimulation.Fixed
             GameplayAbilityOperationSet.RequireVersion(header.OperationSetVersion);
             GameplayAbilityOperationSet.RequireCompleteBackend(
                 header.OperationSetVersion,
-                FixedSimulationTarget.Manifest.KernelSpecialization.SupportedOperations,
-                FixedSimulationTarget.Manifest.KernelSpecialization.BackendIdentity);
+                FixedSimulationTarget.Manifest.ExecutionTarget.SupportedOperations,
+                FixedSimulationTarget.Manifest.ExecutionTarget.BackendIdentity);
             for (int i = 0; i < header.GameplayCapabilities.Count; i++)
             {
                 if (!s_SupportedGameplayCapabilities.Contains(header.GameplayCapabilities[i]))
@@ -102,8 +102,8 @@ namespace ThirdPersonSimulation.Fixed
             GameplayAbilityOperationSet.RequireVersion(semanticIr.Manifest.OperationSetVersion);
             GameplayAbilityOperationSet.RequireCompleteBackend(
                 semanticIr.Manifest.OperationSetVersion,
-                target.KernelSpecialization.SupportedOperations,
-                target.KernelSpecialization.BackendIdentity);
+                target.ExecutionTarget.SupportedOperations,
+                target.ExecutionTarget.BackendIdentity);
 
             var conversions = new List<FixedScalarConversion>();
             var constants = new ProgramConstant[semanticIr.Literals.Count];
@@ -165,12 +165,12 @@ namespace ThirdPersonSimulation.Fixed
             var constantInputs = new ProgramConstantInputBinding[semanticIr.ConstantInputBindings.Count];
             for (int i = 0; i < constantInputs.Length; i++)
             {
-                SemanticConstantInputBinding binding = semanticIr.ConstantInputBindings[i];
+                SemanticConstantInputBinding constantBinding = semanticIr.ConstantInputBindings[i];
                 constantInputs[i] = new ProgramConstantInputBinding(
-                    binding.TargetOperation,
-                    binding.TargetPort,
-                    binding.ConstantIndex,
-                    binding.ResolvedValueKind);
+                    constantBinding.TargetOperation,
+                    constantBinding.TargetPort,
+                    constantBinding.ConstantIndex,
+                    constantBinding.ResolvedValueKind);
             }
             GameplayAbilityExecutionCatalog catalog = new GameplayAbilityExecutionCatalog(
                 semanticIr.CatalogEntries,

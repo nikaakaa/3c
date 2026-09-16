@@ -48,8 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public ActorId SimulationActorId => ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
         public CharacterPipelineDefinition CharacterDefinition => m_CharacterDefinition;
-        public CharacterPresentationProjectionAsset ProjectionAsset =>
-            m_CharacterDefinition ? m_CharacterDefinition.PresentationProjection : null;
+        public CharacterAnimationPresentationProfile AnimationPresentationProfile =>
+            m_CharacterDefinition ? m_CharacterDefinition.AnimationPresentationProfile : null;
         public FixedCharacterControlSource ControlSource => m_ControlSource;
         public CinemachineCameraRigAdapter CameraRig => m_CameraRig;
         public CharacterPresentationRole PresentationRole => m_PresentationRole;
@@ -170,9 +170,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 : throw new InvalidOperationException($"Fixed Character Host '{name}' requires an Animation Rig Binding.");
             CharacterPipelineDefinition characterDefinition = m_CharacterDefinition ? m_CharacterDefinition :
                 throw new InvalidOperationException($"Fixed Character Host '{name}' requires a Character Pipeline Definition.");
-            CharacterPresentationProjectionAsset projectionAsset = characterDefinition.PresentationProjection ?
-                characterDefinition.PresentationProjection :
-                throw new InvalidOperationException($"Fixed Character Host '{name}' Definition requires a Presentation Projection asset.");
+            CharacterAnimationPresentationProfile animationPresentationProfile =
+                characterDefinition.AnimationPresentationProfile ?
+                characterDefinition.AnimationPresentationProfile :
+                throw new InvalidOperationException($"Fixed Character Host '{name}' Definition requires an Animation Presentation Profile.");
+            CharacterAnimationRigPayload animationRig = new CharacterAnimationRigPayload(
+                animationPresentationProfile.RigDefinition);
             ActorId actorId = ActorId;
             PhysicsScene physicsScene = gameObject.scene.GetPhysicsScene();
             int tickRate = sessionHost.Composition
@@ -234,19 +237,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     debugSourceMap,
                     diagnosticsStore);
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
-                CharacterPresentationProjection projection = CharacterPresentationRuntimeFactory.LoadProjection(
-                    projectionAsset);
-                animationRigBinding.RequireValid(projection.Rig);
-                if (projection.EquipmentVisualBindings.Count != 0 && !m_EquipmentRigBindings)
-                    throw new InvalidOperationException($"Fixed Character Host '{name}' requires an Equipment Rig Binding Catalog.");
-                if (projection.EquipmentVisualBindings.Count != 0)
-                    m_EquipmentRigBindings.RequireValid();
+                animationRigBinding.RequireValid(animationRig);
                 controlSource = controlSourceDefinition.Create(
                     new FixedCharacterControlSourceContext(this, characterDefinition, controlModule));
                 IUnityFixedCharacterControlSourceRuntime presentationControlSource = controlSource;
-                CharacterPresentationRuntimeBinding presentationBinding;
-                presentationBinding = CreatePresentationRuntime(
-                    projection,
+                presentation = CreatePresentationRuntime(
+                    animationPresentationProfile,
+                    animationRig,
                     actorId,
                     presentationBody,
                     presentationControlSource,
@@ -254,7 +251,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     diagnosticsContext,
                     tickRate,
                     true);
-                presentation = presentationBinding.Runtime;
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
                     actorId,
                     presentation,
@@ -291,8 +287,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
         }
 
-        CharacterPresentationRuntimeBinding CreatePresentationRuntime(
-            CharacterPresentationProjection projection,
+        ICharacterPresentationDomainRuntime CreatePresentationRuntime(
+            CharacterAnimationPresentationProfile animationPresentationProfile,
+            CharacterAnimationRigPayload animationRig,
             ActorId actorId,
             CharacterPresentationBodyState initialPresentationBody,
             IUnityFixedCharacterControlSourceRuntime controlSource,
@@ -302,16 +299,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             bool initializeExternalState)
         {
             CharacterPresentationBodyState presentationBody = initialPresentationBody;
-            if (m_Registration?.PresentationRuntime is CharacterSimulationPresentationRuntime current &&
+            if (m_Registration?.PresentationRuntime is ICharacterPresentationDomainRuntime current &&
                 current.TryGetLatestBody(out CharacterPresentationBodyState currentBody))
             {
                 presentationBody = currentBody;
             }
+            CinemachineCameraRigAdapter cameraRig = null;
+            Transform followAnchor = null;
+            Transform aimAnchor = null;
+            IReadOnlyList<CameraTargetBinding> cameraTargetBindings = null;
+            ICharacterPresentationLookInput lookInput = null;
+            string lookInputId = string.Empty;
             switch (m_PresentationRole)
             {
                 case CharacterPresentationRole.LocalOwner:
                 {
-                    CinemachineCameraRigAdapter cameraRig = m_CameraRig ? m_CameraRig :
+                    cameraRig = m_CameraRig ? m_CameraRig :
                         throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires a Camera Rig.");
                     if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
                         throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires camera follow and aim anchors.");
@@ -322,49 +325,43 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     {
                         throw new InvalidOperationException($"Local Fixed Character Host '{name}' camera anchors must belong to VisualRoot.");
                     }
-                    if (controlSource is not ICharacterPresentationLookInput lookInput)
+                    if (controlSource is not ICharacterPresentationLookInput lookInputContract)
                         throw new InvalidOperationException($"Local Fixed Character Host '{name}' Control Source has no look input contract.");
-                    return CharacterPresentationRuntimeFactory.CreateLocalOwner(
-                        tickRate,
-                        projection,
-                        actorId,
-                        m_Animancer,
-                        m_AnimationRigBinding,
-                        m_RootHierarchy,
-                        presentationBody,
-                        m_BodyPresentationProfile,
-                        m_WorldAwarePresentation,
-                        physicsScene,
-                        cameraRig,
-                        m_CameraFollowAnchor,
-                        m_CameraAimAnchor,
-                        m_CameraTargetBindings,
-                        lookInput,
-                        Require(m_CameraLookInputValueId, nameof(m_CameraLookInputValueId)),
-                        m_EquipmentRigBindings,
-                        m_SessionHost,
-                        diagnostics,
-                        initializeExternalState);
+                    followAnchor = m_CameraFollowAnchor;
+                    aimAnchor = m_CameraAimAnchor;
+                    cameraTargetBindings = m_CameraTargetBindings;
+                    lookInput = lookInputContract;
+                    lookInputId = Require(m_CameraLookInputValueId, nameof(m_CameraLookInputValueId));
+                    break;
                 }
                 case CharacterPresentationRole.SimulatedActor:
-                    return CharacterPresentationRuntimeFactory.CreateSimulatedActor(
-                        tickRate,
-                        projection,
-                        actorId,
-                        m_Animancer,
-                        m_AnimationRigBinding,
-                        m_RootHierarchy,
-                        presentationBody,
-                        m_BodyPresentationProfile,
-                        m_WorldAwarePresentation,
-                        physicsScene,
-                        m_EquipmentRigBindings,
-                        m_SessionHost,
-                        diagnostics,
-                        initializeExternalState);
+                    break;
                 default:
                     throw new InvalidOperationException($"Fixed Character Host '{name}' has an invalid Presentation Role.");
             }
+            return CharacterPresentationDomainRuntimeFactory.Create(
+                tickRate,
+                animationPresentationProfile,
+                animationRig,
+                actorId,
+                m_Animancer,
+                m_AnimationRigBinding,
+                m_RootHierarchy,
+                presentationBody,
+                m_PresentationRole,
+                m_BodyPresentationProfile,
+                m_WorldAwarePresentation,
+                physicsScene,
+                cameraRig,
+                followAnchor,
+                aimAnchor,
+                cameraTargetBindings,
+                lookInput,
+                lookInputId,
+                m_EquipmentRigBindings,
+                m_SessionHost,
+                diagnostics,
+                initializeExternalState);
         }
 
         void DisposeRegistration()

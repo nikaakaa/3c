@@ -1284,3 +1284,9 @@
 - Fixed 表现输出适配器不再持有或解析 `CharacterPresentationProjection`；动画选择的回滚状态键直接使用命令自身的 producer identity，ForceProducer 的相机状态键由命令种类决定，投影总包不再参与输出生命周期。
 - Fixed 与 DeterministicRollback 注册器改为依赖 `ICharacterPresentationDomainRuntime`，并直接把该领域实例注册到 `GameplayTickSystem` 的表现帧入口；checkpoint、Body、Trajectory、Equipment 与命令提交均从同一领域合同消费。
 - 新增表现领域公共合同和诊断快照类型，明确由领域运行时拥有帧驱动、命令生命周期、身体流、装备选择与 checkpoint 能力；本步没有新增旧接口别名或占位实现，Host 的实际领域装配在下一步闭合。
+
+## 2026-09-16 Fixed Host 移除旧 Projection 创建入口
+
+- Fixed Character Host 不再暴露或读取 `CharacterPresentationProjectionAsset`，启动校验改为直接要求 `CharacterAnimationPresentationProfile`，Rig 校验也改用 Profile 的 Rig Definition。
+- Host 的表现创建返回 `ICharacterPresentationDomainRuntime`，LocalOwner 的 Camera、Look Input 与 SimulatedActor 的无相机约束保留在 Host，具体领域装配统一交给 `CharacterPresentationDomainRuntimeFactory`。
+- 本步只切断旧 Projection／Runtime Binding／Runtime Factory 入口，不添加旧类型别名、兼容分支或占位表现实现；领域工厂接线作为下一独立小步完成。

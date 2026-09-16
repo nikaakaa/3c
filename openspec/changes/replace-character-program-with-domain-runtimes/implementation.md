@@ -1474,3 +1474,10 @@
 - 删除无实现的 ITimelineControlStatePort 与 ITimelineTargetLeaf，同步移除核心里的旧 Timeline Playback / TreeClip 状态枚举。
 - Ability Timeline 的 Loop、cursor、活动 Clip 和 TreeClip 帧状态只归 Timeline owner / Ability 执行，不在核心维护第二份状态前提。
 - Float32、Fixed、Fixed.Unity、Runtime、Editor 便携编译通过；构建后已执行 build-server shutdown。
+
+## 2026-09-17 接入Ability Timeline停止提交边界
+
+- Ability Timeline Stop 不再在技能评估中途直接取消；Fixed 与 Float32 只收集 stop candidate，角色评估结果统一负责 CommitStop 或 DiscardStop。
+- Timeline Runtime 拆出 Request / Commit / Discard 停止阶段，消费器在请求阶段验证，实际停止与表现释放只在角色 Step 提交后完成。
+- 评估异常时 Timeline advance 和 stop candidate 都会精确丢弃，不留半提交播放或停止状态。
+- Float32、Fixed、Fixed.Unity、Runtime、Editor 便携编译通过；构建后已执行 build-server shutdown。

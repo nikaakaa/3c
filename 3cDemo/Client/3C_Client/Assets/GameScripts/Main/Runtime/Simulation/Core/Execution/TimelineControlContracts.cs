@@ -542,13 +542,32 @@ namespace ThirdPersonSimulation
         public IAbilityTimelinePending Pending { get; }
     }
 
+    public interface IAbilityTimelineStopPending : IAbilityTimelinePending
+    {
+    }
+
+    public readonly struct AbilityTimelineStopResult
+    {
+        public AbilityTimelineStopResult(AbilityTimelineRuntimeStatus status, IAbilityTimelineStopPending pending)
+        {
+            Status = status;
+            Pending = pending;
+            if (status == AbilityTimelineRuntimeStatus.Running && pending == null)
+                throw new ArgumentException("A running Ability Timeline stop requires a pending commit candidate.");
+        }
+
+        public AbilityTimelineRuntimeStatus Status { get; }
+        public IAbilityTimelineStopPending Pending { get; }
+    }
     public interface IAbilityTimelineRuntime
     {
         int Start(in AbilityTimelineStartRequest request);
         AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int deltaFrames);
         void Commit(IAbilityTimelinePending pending);
         void Discard(IAbilityTimelinePending pending);
-        void Stop(int runtimeHandle);
+        AbilityTimelineStopResult Stop(int runtimeHandle);
+        void CommitStop(IAbilityTimelineStopPending pending);
+        void DiscardStop(IAbilityTimelineStopPending pending);
     }
 
 

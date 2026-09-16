@@ -174,15 +174,32 @@ namespace ThirdPersonSimulation.Fixed
                     facts,
                     presentation,
                     trace,
-                    workspace.TimelineAdvances);
+                    workspace.TimelineAdvances,
+                    workspace.TimelineStops);
             }
             catch
             {
                 DiscardTimelineAdvances(actor.TimelineRuntime, workspace);
+                DiscardTimelineStops(actor.TimelineRuntime, workspace);
                 for (int i = 0; i < invocations.Count; i++)
                     invocations[i].Dispose();
                 roleState.Dispose();
                 throw;
+            }
+        }
+
+        static void DiscardTimelineStops(
+            IAbilityTimelineRuntime timelineRuntime,
+            FixedAbilityExecutionWorkspace workspace)
+        {
+            if (timelineRuntime == null)
+                return;
+            IReadOnlyList<IAbilityTimelineStopPending> stops = workspace.TimelineStops;
+            for (int i = 0; i < stops.Count; i++)
+            {
+                if (stops[i] == null)
+                    throw new InvalidOperationException("Fixed Character evaluation has an empty Timeline stop.");
+                timelineRuntime.DiscardStop(stops[i]);
             }
         }
 

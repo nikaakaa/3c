@@ -9,6 +9,7 @@ namespace ThirdPersonSimulation
         readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
         readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
         readonly IReadOnlyList<IAbilityTimelinePending> m_TimelineAdvances;
+        readonly IReadOnlyList<IAbilityTimelineStopPending> m_TimelineStops;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         bool m_Consumed;
 
@@ -19,8 +20,8 @@ namespace ThirdPersonSimulation
             IEnumerable<GameplayFact> gameplayFacts,
             IEnumerable<PresentationCommand> presentationCommands,
             IEnumerable<SimulationTraceRecord> traceRecords,
-            IAbilityTimelineRuntime timelineRuntime,
-            IEnumerable<IAbilityTimelinePending> timelineAdvances)
+            IAbilityTimelineRuntime timelineRuntime,            IEnumerable<IAbilityTimelinePending> timelineAdvances,
+            IEnumerable<IAbilityTimelineStopPending> timelineStops)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Character evaluation result identity is incomplete.");
@@ -36,6 +37,7 @@ namespace ThirdPersonSimulation
             m_TraceRecords = Copy(traceRecords);
             m_TimelineRuntime = timelineRuntime;
             m_TimelineAdvances = Copy(timelineAdvances);
+            m_TimelineStops = Copy(timelineStops);
         }
 
         public ActorId ActorId { get; }
@@ -49,7 +51,7 @@ namespace ThirdPersonSimulation
         {
             if (m_Consumed)
                 throw new InvalidOperationException("Float32 Character evaluation result has already been consumed.");
-            CompleteTimelineAdvances(true);
+            CompleteTimelineOutputs(true);
             m_Consumed = true;
         }
 
@@ -57,11 +59,11 @@ namespace ThirdPersonSimulation
         {
             if (m_Consumed)
                 return;
-            CompleteTimelineAdvances(false);
+            CompleteTimelineOutputs(false);
             m_Consumed = true;
         }
 
-        void CompleteTimelineAdvances(bool commit)
+        void CompleteTimelineOutputs(bool commit)
         {
             if (m_TimelineRuntime == null)
                 return;
@@ -73,6 +75,15 @@ namespace ThirdPersonSimulation
                     m_TimelineRuntime.Commit(m_TimelineAdvances[i]);
                 else
                     m_TimelineRuntime.Discard(m_TimelineAdvances[i]);
+            }
+            for (int i = 0; i < m_TimelineStops.Count; i++)
+            {
+                if (m_TimelineStops[i] == null)
+                    throw new InvalidOperationException("Float32 Character evaluation has an empty Timeline stop.");
+                if (commit)
+                    m_TimelineRuntime.CommitStop(m_TimelineStops[i]);
+                else
+                    m_TimelineRuntime.DiscardStop(m_TimelineStops[i]);
             }
         }
 

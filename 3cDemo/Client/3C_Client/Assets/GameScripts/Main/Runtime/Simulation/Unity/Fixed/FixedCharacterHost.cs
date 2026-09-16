@@ -476,12 +476,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             m_Host.DiscardTimelinePlayback((CharacterTimelinePendingAdvance)pending);
         }
-
-        public void Stop(int runtimeHandle)
+        public AbilityTimelineStopResult Stop(int runtimeHandle)
         {
-            m_Host.CancelTimelinePlayback(
+            CharacterTimelinePendingStop pending = m_Host.RequestStopTimelinePlayback(
                 new TimelinePlaybackHandle((ulong)runtimeHandle),
                 new TimelinePlaybackStopContext(TimelinePlaybackStopCause.SelfAbort, 0));
+            if (pending == null)
+                throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' returned no stop candidate.");
+            return new AbilityTimelineStopResult(pending.Status, pending);
+        }
+
+        public void CommitStop(IAbilityTimelineStopPending pending)
+        {
+            m_Host.CommitStopTimelinePlayback((CharacterTimelinePendingStop)pending);
+        }
+
+        public void DiscardStop(IAbilityTimelineStopPending pending)
+        {
+            m_Host.DiscardStopTimelinePlayback((CharacterTimelinePendingStop)pending);
         }
 
         void InstallContent()

@@ -9,6 +9,7 @@ namespace ThirdPersonSimulation
         Float32AbilityExecutionTarget Target { get; }
         void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
         IReadOnlyList<IAbilityTimelinePending> TimelineAdvances { get; }
+        IReadOnlyList<IAbilityTimelineStopPending> TimelineStops { get; }
         void EndEvaluation();
     }
 
@@ -69,6 +70,7 @@ namespace ThirdPersonSimulation
         readonly Float32ActionStateStore m_ActionState;
         readonly SimulationTick m_Tick;
         readonly List<IAbilityTimelinePending> m_TimelinePendingAdvances;
+        readonly List<IAbilityTimelineStopPending> m_TimelinePendingStops;
 
         public Float32AbilityExecutionTarget(
             Float32GameplayAbilityExecutionAccess access,
@@ -86,6 +88,7 @@ namespace ThirdPersonSimulation
             IAbilityTimelineRuntime timelineRuntime,
             Float32ActionStateStore actionState,
             List<IAbilityTimelinePending> timelineAdvances,
+            List<IAbilityTimelineStopPending> timelineStops,
             SimulationTick tick)
         {
             m_Access = access;
@@ -104,6 +107,8 @@ namespace ThirdPersonSimulation
             m_ActionState = actionState;
             m_TimelinePendingAdvances = timelineAdvances ??
                 throw new ArgumentNullException(nameof(timelineAdvances));
+            m_TimelinePendingStops = timelineStops ??
+                throw new ArgumentNullException(nameof(timelineStops));
             m_Tick = tick;
         }
 
@@ -356,7 +361,9 @@ namespace ThirdPersonSimulation
         {
             if (operation.Code == SimulationOperationCode.Timeline)
             {
-                m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                var stop = m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                if (stop.Pending != null)
+                    m_TimelinePendingStops.Add(stop.Pending);
                 return OperationStopStatus.Completed;
             }
             throw new InvalidOperationException(
@@ -370,7 +377,9 @@ namespace ThirdPersonSimulation
         {
             if (operation.Code == SimulationOperationCode.Timeline)
             {
-                m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                var stop = m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                if (stop.Pending != null)
+                    m_TimelinePendingStops.Add(stop.Pending);
                 return;
             }
             throw new InvalidOperationException(

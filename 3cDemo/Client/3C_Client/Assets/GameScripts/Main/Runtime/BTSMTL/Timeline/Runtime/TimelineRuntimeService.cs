@@ -591,6 +591,50 @@ namespace BTSMTL.Timeline.Runtime
             }
         }
 
+        public bool RequestStopTimelinePlayback(
+            TimelinePlaybackHandle handle,
+            TimelinePlaybackStopContext stopContext,
+            out TimelineRuntimeStopRequest request)
+        {
+            EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
+            request = default;
+            if (!playback.RequestStop(stopContext))
+                return false;
+            request = new TimelineRuntimeStopRequest(playback, stopContext);
+            if (!m_StopConsumer.ConsumeStop(request))
+            {
+                playback.DiscardStop();
+                return false;
+            }
+            return true;
+        }
+
+        public bool CommitStopTimelinePlayback(TimelinePlaybackHandle handle, TimelineRuntimeStopRequest request)
+        {
+            EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
+            if (!playback.CommitStop())
+                return false;
+            if (m_StopConsumer is ITimelineRuntimeStopCommitConsumer commitConsumer)
+                commitConsumer.CommitStop(request);
+            if (!playback.CompleteStop())
+                throw new InvalidOperationException($"Timeline playback '{handle.Value}' Stop could not complete.");
+            Publish(playback);
+            return true;
+        }
+
+        public bool DiscardStopTimelinePlayback(TimelinePlaybackHandle handle, TimelineRuntimeStopRequest request)
+        {
+            EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
+            if (!playback.DiscardStop())
+                return false;
+            if (m_StopConsumer is ITimelineRuntimeStopCommitConsumer discardConsumer)
+                discardConsumer.DiscardStop(request);
+            Publish(playback);
+            return true;
+        }
         public TimelineRuntimePreparationResult Prepare(TimelineRuntimePrepareRequest request)
         {
             EnsureAvailable();

@@ -10,6 +10,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
         readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
         readonly IReadOnlyList<IAbilityTimelinePending> m_TimelineAdvances;
+        readonly IReadOnlyList<IAbilityTimelineStopPending> m_TimelineStops;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         bool m_Consumed;
 
@@ -21,7 +22,8 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<GameplayFact> gameplayFacts,
             IEnumerable<PresentationCommand> presentationCommands,
             IEnumerable<SimulationTraceRecord> traceRecords,
-            IReadOnlyList<IAbilityTimelinePending> timelineAdvances)
+            IReadOnlyList<IAbilityTimelinePending> timelineAdvances,
+            IReadOnlyList<IAbilityTimelineStopPending> timelineStops)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Character evaluation result identity is incomplete.");
@@ -35,6 +37,7 @@ namespace ThirdPersonSimulation.Fixed
             m_PresentationCommands = Copy(presentationCommands);
             m_TraceRecords = Copy(traceRecords);
             m_TimelineAdvances = Copy(timelineAdvances);
+            m_TimelineStops = Copy(timelineStops);
         }
 
         public ActorId ActorId { get; }
@@ -49,7 +52,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (m_Consumed)
                 throw new InvalidOperationException("Fixed Character evaluation result has already been consumed.");
-            CompleteTimelineAdvances(true);
+            CompleteTimelineOutputs(true);
             m_Consumed = true;
         }
 
@@ -57,11 +60,11 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (m_Consumed)
                 return;
-            CompleteTimelineAdvances(false);
+            CompleteTimelineOutputs(false);
             m_Consumed = true;
         }
 
-        void CompleteTimelineAdvances(bool commit)
+        void CompleteTimelineOutputs(bool commit)
         {
             if (m_TimelineRuntime == null || m_TimelineAdvances == null)
                 return;
@@ -73,6 +76,15 @@ namespace ThirdPersonSimulation.Fixed
                     m_TimelineRuntime.Commit(m_TimelineAdvances[i]);
                 else
                     m_TimelineRuntime.Discard(m_TimelineAdvances[i]);
+            }
+            for (int i = 0; i < m_TimelineStops.Count; i++)
+            {
+                if (m_TimelineStops[i] == null)
+                    throw new InvalidOperationException("Fixed Character evaluation has an empty Timeline stop.");
+                if (commit)
+                    m_TimelineRuntime.CommitStop(m_TimelineStops[i]);
+                else
+                    m_TimelineRuntime.DiscardStop(m_TimelineStops[i]);
             }
         }
 

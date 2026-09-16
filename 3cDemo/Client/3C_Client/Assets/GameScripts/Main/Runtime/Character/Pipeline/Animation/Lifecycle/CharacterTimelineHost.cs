@@ -119,6 +119,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public AbilityTimelineRuntimeStatus Status { get; }
         internal TimelineRuntimeAdvanceResult Result { get; }
     }
+    public sealed class CharacterTimelinePendingStop : IAbilityTimelineStopPending
+    {
+        internal CharacterTimelinePendingStop(
+            TimelinePlaybackHandle handle,
+            int runtimeHandle,
+            TimelineRuntimeStopRequest request,
+            AbilityTimelineRuntimeStatus status)
+        {
+            Handle = handle;
+            RuntimeHandle = runtimeHandle;
+            Request = request;
+            Status = status;
+        }
+
+        public TimelinePlaybackHandle Handle { get; }
+        public int RuntimeHandle { get; }
+        internal TimelineRuntimeStopRequest Request { get; }
+        public AbilityTimelineRuntimeStatus Status { get; }
+    }
     [DisallowMultipleComponent]
     public sealed class CharacterTimelineHost : MonoBehaviour, ITimelinePlaybackService
     {
@@ -136,6 +155,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
         readonly Dictionary<ulong, CharacterTimelinePendingAdvance> m_PendingAdvances =
             new Dictionary<ulong, CharacterTimelinePendingAdvance>();
+        readonly Dictionary<ulong, CharacterTimelinePendingStop> m_PendingStops =
+            new Dictionary<ulong, CharacterTimelinePendingStop>();
         ulong m_TickCounter;
         TimelinePlaybackHandle m_PreviewHandle;
         bool m_Initialized;
@@ -341,10 +362,52 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return m_Host.Service.GetTimelinePlaybackStatus(handle);
         }
 
-        public void CancelTimelinePlayback(TimelinePlaybackHandle handle, TimelinePlaybackStopContext stopContext)
+        public CharacterTimelinePendingStop RequestStopTimelinePlayback(
+            TimelinePlaybackHandle handle,
+            TimelinePlaybackStopContext stopContext)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Timeline stop requires an initialized CharacterTimelineHost.");
+            TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(handle);
+            if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
+                return new CharacterTimelinePendingStop(handle, 0, default, MapTerminalStatus(status));
+            if (!m_Host.Service.RequestStopTimelinePlayback(
+                    handle,
+                    stopContext,
+                    out TimelineRuntimeStopRequest request))
+                throw new InvalidOperationException($"Timeline stop '{handle.Value}' was rejected.");
+            var pending = new CharacterTimelinePendingStop(handle, (int)handle.Value, request, AbilityTimelineRuntimeStatus.Running);
+            m_PendingStops[handle.Value] = pending;
+            return pending;
+        }
+
+        public void CommitStopTimelinePlayback(CharacterTimelinePendingStop pending)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Timeline stop commit requires an initialized CharacterTimelineHost.");
+            if (pending == null || !m_PendingStops.Remove(pending.Handle.Value))
+                return;
+            if (pending.Request.Playback != null && !m_Host.Service.CommitStopTimelinePlayback(pending.Handle, pending.Request))
+                throw new InvalidOperationException($"Timeline stop '{pending.Handle.Value}' could not be committed.");
+        }
+
+        public void DiscardStopTimelinePlayback(CharacterTimelinePendingStop pending)
+        {
+            if (!IsInitialized)
+                throw new InvalidOperationException("Timeline stop discard requires an initialized CharacterTimelineHost.");
+            if (pending == null || !m_PendingStops.Remove(pending.Handle.Value))
+                return;
+            if (pending.Request.Playback != null && !m_Host.Service.DiscardStopTimelinePlayback(pending.Handle, pending.Request))
+                throw new InvalidOperationException($"Timeline stop '{pending.Handle.Value}' could not be discarded.");
+        }
+        public void CancelTimelinePlayback(
+            TimelinePlaybackHandle handle,
+            TimelinePlaybackStopContext stopContext)
         {
             if (!m_Initialized || m_Host == null || !handle.IsValid)
                 return;
+            if (m_PendingStops.TryGetValue(handle.Value, out CharacterTimelinePendingStop pendingStop))
+                CommitStopTimelinePlayback(pendingStop);
             if (m_PendingAdvances.TryGetValue(handle.Value, out CharacterTimelinePendingAdvance pending))
                 DiscardTimelinePlayback(pending);
             m_Host.Service.CancelTimelinePlayback(handle, stopContext);

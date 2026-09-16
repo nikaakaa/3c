@@ -67,6 +67,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedActionStateStore m_ActionState;
         readonly SimulationTick m_Tick;
         readonly List<IAbilityTimelinePending> m_TimelinePendingAdvances;
+        readonly List<IAbilityTimelineStopPending> m_TimelinePendingStops;
 
         public FixedAbilityExecutionTarget(
             FixedGameplayAbilityExecutionAccess access,
@@ -84,6 +85,7 @@ namespace ThirdPersonSimulation.Fixed
             IAbilityTimelineRuntime timelineRuntime,
             FixedActionStateStore actionState,
             List<IAbilityTimelinePending> timelineAdvances,
+            List<IAbilityTimelineStopPending> timelineStops,
             SimulationTick tick)
         {
             m_Access = access;
@@ -102,6 +104,8 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionState = actionState;
             m_TimelinePendingAdvances = timelineAdvances ??
                 throw new ArgumentNullException(nameof(timelineAdvances));
+            m_TimelinePendingStops = timelineStops ??
+                throw new ArgumentNullException(nameof(timelineStops));
             m_Tick = tick;
         }
 
@@ -354,7 +358,9 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (operation.Code == SimulationOperationCode.Timeline)
             {
-                m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                var stop = m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                if (stop.Pending != null)
+                    m_TimelinePendingStops.Add(stop.Pending);
                 return OperationStopStatus.Completed;
             }
             throw new InvalidOperationException(
@@ -368,7 +374,9 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (operation.Code == SimulationOperationCode.Timeline)
             {
-                m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                var stop = m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                if (stop.Pending != null)
+                    m_TimelinePendingStops.Add(stop.Pending);
                 return;
             }
             throw new InvalidOperationException(

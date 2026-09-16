@@ -173,6 +173,7 @@ namespace ThirdPersonSimulation.Fixed
                 m_TimelineRuntime,
                 actionStore,
                 workspace.TimelineAdvances,
+                workspace.TimelineStops,
                 frame.Tick);
             var services = new FixedAbilityExecutionServiceSet(
                 frame,
@@ -182,7 +183,8 @@ namespace ThirdPersonSimulation.Fixed
                 equipment,
                 values,
                 blackboard,
-                workspace.TimelineAdvances);
+                workspace.TimelineAdvances,
+                workspace.TimelineStops);
             control = new FixedAbilityOperationControlRuntime(executionData, services);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
                 executionData.Binding,

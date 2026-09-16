@@ -53,6 +53,8 @@ namespace ThirdPersonSimulation
             new HashSet<string>(StringComparer.Ordinal);
         public List<IAbilityTimelinePending> TimelineAdvances { get; } =
             new List<IAbilityTimelinePending>();
+        public List<IAbilityTimelineStopPending> TimelineStops { get; } =
+            new List<IAbilityTimelineStopPending>();
         public Stack<SimulationTimelineBlackboardContext> TimelineBlackboardContexts { get; } =
             new Stack<SimulationTimelineBlackboardContext>();
 
@@ -69,6 +71,7 @@ namespace ThirdPersonSimulation
             ActionWindowProjections.Clear();
             ActionWindowProjectionKeys.Clear();
             TimelineAdvances.Clear();
+            TimelineStops.Clear();
             TimelineBlackboardContexts.Clear();
             m_GameplayEffects.Reset();
             m_Motion.Reset();

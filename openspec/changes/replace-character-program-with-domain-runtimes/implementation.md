@@ -1392,3 +1392,9 @@
 
 - 删除 Corin Character Pipeline Definition 中已无代码字段的 `m_PresentationProjection` 序列化残留，避免作者继续看到和恢复旧总 Projection 数据源。
 - 将运行诊断目标提示中的旧 `CharacterPipelineHost` 名称改为通用 character host，当前正式宿主由 Fixed、Rollback 与网络场景 Host 分领域承担。
+
+## 2026-09-16 删除孤立旧Host观察和Projection编译器
+
+- 删除旧 Preview Fixture、Foot Ground Path Gizmo、Foot Placement Visual Validation、Motion Matching Projection Payload Compiler、Foot Analysis Projection Resolver 和 Motion Matching Resource Projection Compiler。
+- 从正式 Host 诊断 Inspector 移除旧 `AnimationPresentationRuntimeTarget` 的 Motion Matching Replay 捕获链；保留事件分组展示，后续由 Pose owner 的 typed 观察接入。
+- 本步只删除已无正式 Runtime 的编辑器消费路径，不勾选 Pose 公共接线；Pose Graph Workspace 的旧观察 UI 仍在下一步单独收口。

@@ -1328,3 +1328,8 @@
 - 删除技能共享 Timeline Semantic Emitter、轨道／Clip记录、TreeClip语义编译器及其在 Ability Graph Compiler 中的二次发射调用；技能图叶子继续携带 timelineId 与 ActionContext 的精确内容引用。
 - Timeline 闭包发现改为直接遍历 TimelineAsset 的 Track 和 Clip，只为 TreeClip 保留技能图 Occurrence 编译；不再把 Timeline 内容编成第二份 IR 或 operation。
 - Ability Discovery / Authoring Model / Graph Compiler 的签名同步移除 Timeline emitter registry，避免残留旧编译入口。
+
+## 2026-09-16 对齐Float32角色装备状态读取
+
+- \Float32CharacterRuntimeState\ 增加与 Fixed 目标一致的类型化 \TryGetEquipmentState\，表现调用方读取角色级 Equipment 聚合时不再依赖目标私有实现细节。
+- 本步只打开跨数值目标一致的只读状态入口；状态所有权和 codec 布局不变。Float32 Core 编译为 0 warning、0 error，并已执行 \dotnet build-server shutdown\。

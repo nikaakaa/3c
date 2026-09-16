@@ -107,6 +107,12 @@ namespace ThirdPersonSimulation
         public GameplayContentHash GameplayContentHash { get; }
         public StableHash StateSchemaHash { get; }
         public ulong LastCompletedTick { get; }
+
+        public bool TryGetEquipmentState(out EquipmentStateAggregate equipment)
+        {
+            equipment = EquipmentState;
+            return equipment != null;
+        }
         public IReadOnlyList<Float32AbilityRuntimeState> Abilities => m_Abilities;
         internal List<SimulationActionActivationRequestState> ActionActivationRequests { get; }
         internal List<Float32ActionInstanceState> ActionInstances { get; }

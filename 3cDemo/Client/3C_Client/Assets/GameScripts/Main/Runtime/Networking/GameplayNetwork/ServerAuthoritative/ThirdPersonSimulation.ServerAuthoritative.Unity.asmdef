@@ -13,6 +13,7 @@
         "ThirdPersonGameplay.FantasyClient",
         "ThirdPersonGameplay.FantasyProtocol",
         "ThirdPersonClient.Runtime",
+        "ThirdPersonCamera.Contracts",
         "BTSMTL.Diagnostics",
         "BTSMTL.Timeline",
         "Fantasy.Unity",

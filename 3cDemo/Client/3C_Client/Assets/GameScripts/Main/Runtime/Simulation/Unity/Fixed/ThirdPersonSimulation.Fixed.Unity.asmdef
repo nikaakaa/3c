@@ -12,6 +12,8 @@
         "GUID:8f6e9e98d8b94eb8a793b692eaf18b6b",
         "ThirdPersonGameplay",
         "BTSMTL.Diagnostics",
+        "BTSMTL.Timeline",
+        "BTSMTL.Timeline.Runtime",
         "Kybernetik.Animancer",
         "Cinemachine",
         "Unity.InputSystem"

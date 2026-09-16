@@ -209,7 +209,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 TimelineAsset asset = timelines[i];
                 if (!asset || asset.Data == null)
                     continue;
-                EditorGUILayout.ObjectField(asset.Name, asset, typeof(TimelineAsset), false);
+                EditorGUILayout.ObjectField(asset.name, asset, typeof(TimelineAsset), false);
                 EditorGUILayout.LabelField($"    MaxFrame", asset.Data.MaxFrame.ToString());
                 EditorGUILayout.LabelField($"    Duration", $"{asset.Data.Duration:0.###}s");
             }

@@ -1,5 +1,6 @@
 using System;
 using TEngine;
+using YooAsset;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -8,8 +9,8 @@ using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
-using ThirdPersonCharacter.Pipeline.ThirdPersonCamera;
 using Cinemachine;
+using ThirdPersonCamera;
 
 public static class CorinGameplayLabSceneSetup
 {
@@ -66,7 +67,7 @@ public static class CorinGameplayLabSceneSetup
 
     static CinemachineCameraRigAdapter EnsureCameraRig(Transform characterRoot)
     {
-        var existing = FindObjectOfType<CinemachineCameraRigAdapter>();
+        var existing = UnityEngine.Object.FindObjectOfType<CinemachineCameraRigAdapter>();
         if (existing != null)
             return existing;
 

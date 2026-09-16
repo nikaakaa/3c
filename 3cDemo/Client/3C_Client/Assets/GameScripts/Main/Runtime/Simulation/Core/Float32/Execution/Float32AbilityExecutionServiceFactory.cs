@@ -81,6 +81,7 @@ namespace ThirdPersonSimulation
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
             IFloat32AbilityExecutionSavepointPort savepointPort,
+            IFloat32InputRequestStatePort inputRequests,
             Float32AbilityExecutionWorkspace workspace)
         {
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
@@ -89,7 +90,7 @@ namespace ThirdPersonSimulation
                 "Control",
                 executionServices.ControlPolicy);
             Float32ActionStateStore actionStore = new Float32ActionStateStore(access, frame);
-            Float32InputRuntime input = new Float32InputRuntime(access, frame);
+            Float32InputRuntime input = new Float32InputRuntime(access, frame, inputRequests);
             Float32HandleAllocator handles = new Float32HandleAllocator(access, frame);
             Float32BlackboardRuntime blackboard = new Float32BlackboardRuntime(
                 access,

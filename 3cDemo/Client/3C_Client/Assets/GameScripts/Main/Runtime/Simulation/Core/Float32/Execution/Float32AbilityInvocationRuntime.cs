@@ -13,7 +13,6 @@ namespace ThirdPersonSimulation
     {
         public Float32AbilityInvocationStateServices(
             IFloat32SkillExecutionState skillState,
-            IFloat32InputRequestStatePort inputRequests,
             IFloat32ActionRuntimeStatePort actionState,
             IFloat32HandleAllocatorStatePort handleAllocatorState,
             IFloat32EventSequenceStatePort eventSequenceState,
@@ -21,7 +20,6 @@ namespace ThirdPersonSimulation
             IFloat32EquipmentStatePort equipmentState)
         {
             SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
-            InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
             EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
@@ -30,7 +28,6 @@ namespace ThirdPersonSimulation
         }
 
         public IFloat32SkillExecutionState SkillState { get; }
-        public IFloat32InputRequestStatePort InputRequests { get; }
         public IFloat32ActionRuntimeStatePort ActionState { get; }
         public IFloat32HandleAllocatorStatePort HandleAllocatorState { get; }
         public IFloat32EventSequenceStatePort EventSequenceState { get; }
@@ -68,6 +65,7 @@ namespace ThirdPersonSimulation
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
             IFloat32AbilityExecutionSavepointPort savepointPort,
+            IFloat32InputRequestStatePort inputRequests,
             Float32AbilityExecutionWorkspace workspace);
     }
 
@@ -134,6 +132,7 @@ namespace ThirdPersonSimulation
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityInvocationStateServices stateServices,
             IFloat32AbilityExecutionSavepointPort savepointPort,
+            IFloat32InputRequestStatePort inputRequests,
             ActorId actorId,
             SimulationTick tick,
             Float32AbilityExecutionInput input,
@@ -147,6 +146,7 @@ namespace ThirdPersonSimulation
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
             stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
             savepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
+            inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
             if (input == null)
@@ -173,6 +173,7 @@ namespace ThirdPersonSimulation
                 equipmentLayout,
                 m_Frame,
                 savepointPort,
+                inputRequests,
                 m_Workspace);
             m_Input = assembly.Input;
             m_Actions = assembly.ActionRuntime;

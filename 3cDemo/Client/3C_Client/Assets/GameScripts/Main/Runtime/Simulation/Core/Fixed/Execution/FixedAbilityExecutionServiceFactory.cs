@@ -82,6 +82,7 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionFrame frame,
             IFixedAbilityExecutionSavepointPort savepointPort,
+            IFixedInputRequestStatePort inputRequests,
             FixedAbilityExecutionWorkspace workspace)
         {
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
@@ -90,7 +91,7 @@ namespace ThirdPersonSimulation.Fixed
                 "Control",
                 executionServices.ControlPolicy);
             FixedActionStateStore actionStore = new FixedActionStateStore(access, frame);
-            FixedInputRuntime input = new FixedInputRuntime(access, frame);
+            FixedInputRuntime input = new FixedInputRuntime(access, frame, inputRequests);
             FixedHandleAllocator handles = new FixedHandleAllocator(access, frame);
             FixedBlackboardRuntime blackboard = new FixedBlackboardRuntime(
                 access,

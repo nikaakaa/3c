@@ -107,7 +107,6 @@ namespace ThirdPersonSimulation.Fixed
             m_BodyFacts = bodyFacts;
             stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
             SkillState = stateServices.SkillState;
-            InputRequests = stateServices.InputRequests;
             ActionState = stateServices.ActionState;
             HandleAllocatorState = stateServices.HandleAllocatorState;
             EventSequenceState = stateServices.EventSequenceState;
@@ -135,7 +134,6 @@ namespace ThirdPersonSimulation.Fixed
             ? m_BodyFacts
             : throw new InvalidOperationException("Fixed Ability invocation has no Body Facts service.");
         internal IFixedSkillExecutionState SkillState { get; }
-        internal IFixedInputRequestStatePort InputRequests { get; }
         internal IFixedActionRuntimeStatePort ActionState { get; }
         internal IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
         internal IFixedEventSequenceStatePort EventSequenceState { get; }

@@ -14,7 +14,6 @@ namespace ThirdPersonSimulation.Fixed
     {
         public FixedAbilityInvocationStateServices(
             IFixedSkillExecutionState skillState,
-            IFixedInputRequestStatePort inputRequests,
             IFixedActionRuntimeStatePort actionState,
             IFixedHandleAllocatorStatePort handleAllocatorState,
             IFixedEventSequenceStatePort eventSequenceState,
@@ -22,7 +21,6 @@ namespace ThirdPersonSimulation.Fixed
             IFixedEquipmentStatePort equipmentState)
         {
             SkillState = skillState ?? throw new ArgumentNullException(nameof(skillState));
-            InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             ActionState = actionState ?? throw new ArgumentNullException(nameof(actionState));
             HandleAllocatorState = handleAllocatorState ?? throw new ArgumentNullException(nameof(handleAllocatorState));
             EventSequenceState = eventSequenceState ?? throw new ArgumentNullException(nameof(eventSequenceState));
@@ -31,7 +29,6 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public IFixedSkillExecutionState SkillState { get; }
-        public IFixedInputRequestStatePort InputRequests { get; }
         public IFixedActionRuntimeStatePort ActionState { get; }
         public IFixedHandleAllocatorStatePort HandleAllocatorState { get; }
         public IFixedEventSequenceStatePort EventSequenceState { get; }
@@ -69,6 +66,7 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionFrame frame,
             IFixedAbilityExecutionSavepointPort savepointPort,
+            IFixedInputRequestStatePort inputRequests,
             FixedAbilityExecutionWorkspace workspace);
     }
 
@@ -135,6 +133,7 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentProgramLayout equipmentLayout,
             FixedAbilityInvocationStateServices stateServices,
             IFixedAbilityExecutionSavepointPort savepointPort,
+            IFixedInputRequestStatePort inputRequests,
             ActorId actorId,
             SimulationTick tick,
             FixedAbilityExecutionInput input,
@@ -148,6 +147,7 @@ namespace ThirdPersonSimulation.Fixed
             domainRuntimeFactory = domainRuntimeFactory ?? throw new ArgumentNullException(nameof(domainRuntimeFactory));
             stateServices = stateServices ?? throw new ArgumentNullException(nameof(stateServices));
             savepointPort = savepointPort ?? throw new ArgumentNullException(nameof(savepointPort));
+            inputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Ability invocation identity is incomplete.");
             if (input == null)
@@ -174,6 +174,7 @@ namespace ThirdPersonSimulation.Fixed
                 equipmentLayout,
                 m_Frame,
                 savepointPort,
+                inputRequests,
                 m_Workspace);
             m_Input = assembly.Input;
             m_Actions = assembly.ActionRuntime;

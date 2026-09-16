@@ -6,13 +6,16 @@ namespace ThirdPersonSimulation
     internal sealed class Float32InputRuntime : Float32OperationModule, IFloat32InputPort
     {
         readonly Float32AbilityExecutionFrame m_Frame;
+        readonly IFloat32InputRequestStatePort m_InputRequests;
 
         public Float32InputRuntime(
             Float32GameplayAbilityExecutionAccess access,
-            Float32AbilityExecutionFrame frame)
+            Float32AbilityExecutionFrame frame,
+            IFloat32InputRequestStatePort inputRequests)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+            m_InputRequests = inputRequests ?? throw new ArgumentNullException(nameof(inputRequests));
         }
 
         public void ApplyBlackboardInputBindings(IFloat32BlackboardPort blackboard)
@@ -33,7 +36,7 @@ namespace ThirdPersonSimulation
                 state = default;
                 return false;
             }
-            state = m_Frame.InputRequests.GetInputRequest(requestId);
+            state = m_InputRequests.GetInputRequest(requestId);
             return state.IsValid && !state.Consumed && state.ExpireTick >= m_Frame.Tick.Value;
         }
 
@@ -41,9 +44,9 @@ namespace ThirdPersonSimulation
         {
             if (!m_Layout.HasInputRequest(requestId))
                 return;
-            SimulationInputRequestState state = m_Frame.InputRequests.GetInputRequest(requestId);
+            SimulationInputRequestState state = m_InputRequests.GetInputRequest(requestId);
             if (state.IsValid && !state.Consumed)
-                m_Frame.InputRequests.SetInputRequest(requestId, state.Consume());
+                m_InputRequests.SetInputRequest(requestId, state.Consume());
         }
 
         public SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind)

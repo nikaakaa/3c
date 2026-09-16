@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -76,6 +76,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong PoseResetGeneration => m_PoseDomain != null && m_PoseDomain.IsAdopted
             ? m_PoseDomain.Session.ResetGeneration
             : 0;
+
+        ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge m_TimelineBridge;
+
+        internal void BindTimelineBridge(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge bridge)
+        {
+            m_TimelineBridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+        }
 
         internal void BindPoseActionPublisher(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterPoseActionCommandPublisher publisher)
         {
@@ -277,6 +284,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            m_TimelineBridge?.Dispose();
             m_PoseDomain?.Dispose();
             m_PoseResourceScope?.Dispose();
             m_Camera?.Dispose();

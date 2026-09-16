@@ -80,12 +80,12 @@ Composite、Decorator、Root、StateLifecycleNode、SubTreeNode 和其它拥有 
 
 ### Requirement: Tree 调度层不得越权产生业务生命周期
 
-通用 Tree 调度层 MUST只负责child选择、Runnable stop传播、pending stop barrier和结构执行结果。它 MUST不产生animation、camera、cue、GameplayEffect或network业务输出，也 MUST不因为表现需要改变合法Runnable result。正式Character runtime MUST由Compiler将相同interruption authoring编译为control-flow operation；Program operation在完成State/Action ownership决策后 MAY为每个AnimationChannelId输出唯一presentation producer command，但该输出不属于通用Tree scheduler生命周期，也不得通过`CharacterGraphContext`提交。
+通用 Tree 调度层 MUST 只负责 child 选择、Runnable stop 传播、pending stop barrier 和结构执行结果。它 MUST 不产生 animation、camera、cue、GameplayEffect 或 network 业务输出，也 MUST 不因为表现需要改变合法 Runnable result。正式 Character runtime MUST 由 Graph owner 将相同 interruption authoring 纳入图运行语义；Gameplay/Ability owner 在完成 State/Action ownership 决策后 MAY 为每个 AnimationChannelId 输出唯一 presentation producer command，但该输出不属于通用 Tree scheduler 生命周期，也不得通过 `CharacterGraphContext` 提交。
 
 #### Scenario: Selector抢占Attack SMNode
 
 - **WHEN** compiled LowerPriority replacement停止Attack StateMachine operation
-- **THEN** Program MUST传播stop context并等待descendant stop barrier
+- **THEN** Graph/Ability owner MUST 传播 stop context 并等待 descendant stop barrier
 - **AND** State/Action operation MUST在完成所有权决策后为每个受影响AnimationChannelId输出唯一producer command
 - **AND** 通用Tree scheduler MUST不生成animation release、Driver、handoff record或presentation command
 

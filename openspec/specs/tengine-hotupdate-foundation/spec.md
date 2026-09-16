@@ -78,12 +78,12 @@
 
 ### Requirement: BTSMTL authoring 和 runtime 主线必须保持统一
 
-项目 MUST保持 BTSMTL 作为 Graph、StateMachine、ConditionRuleGraph 与 Timeline 的唯一 authoring source，并以该 source编译出的 CharacterSimulationProgram作为正式 Character runtime主线。TEngine FSM/GameEvent MUST不绕过 Program operation直接驱动角色状态、Timeline、WorldSolver或Action lifecycle。
+项目 MUST 保持 BTSMTL 作为 Graph、StateMachine、ConditionRuleGraph 与 Timeline 的 authoring source，但正式 Character runtime 主线由 C# Control、Ability、Timeline、Presentation、Pipeline 和 Session 领域装配组成。Graph 只编译图自身的正式产物；Timeline 直接运行正式 TimelineData；TEngine FSM/GameEvent MUST 不绕过正式 domain owner 直接驱动角色状态、Timeline、WorldSolver 或 Action lifecycle。
 
 #### Scenario: 状态机 Transition 求值
 
 - **WHEN** Corin runtime判断 Transition
-- **THEN** MUST执行由 BTSMTL ConditionRuleGraph编译的 operation
+- **THEN** MUST 通过正式 Graph Runtime/Graph 事实入口执行由 BTSMTL ConditionRuleGraph 定义的条件
 - **AND** MUST不使用 TEngine FSM或旧 StateMachineGraphRuntime替代
 
 ### Requirement: Fantasy 必须保持最小权威服务端边界
@@ -174,4 +174,3 @@ TEngine Editor MUST以显式 request 和结构化 result 提供 HotFix DLL、Yoo
 - **WHEN** 开发者查看可用构建菜单
 - **THEN** 项目 MUST只公开项目拥有的商业客户端正式构建入口
 - **AND** TEngine 通用菜单 MUST不直接写入正式 Content 或 Players 分区
-

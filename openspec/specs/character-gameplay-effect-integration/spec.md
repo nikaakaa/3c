@@ -3,9 +3,9 @@
 ## Purpose
 规定 Gameplay Effect Program/State/operation 接入 Character Simulation 的唯一装配、固定 Tick、Self 命令、只读查询、事实投影和跨角色边界，保证 Unity Host 只做编译与装配，不复制 GE 规则或网络模型职责。
 ## Requirements
-### Requirement: Character Simulation 必须唯一持有 Gameplay Effect Program 与 State
+### Requirement: Character Simulation 必须唯一持有 Gameplay Effect State
 
-CharacterSimulationProgram MUST唯一包含编译后的 GameplayEffect catalog/operations，CharacterSimulationState MUST唯一保存当前 Actor 的 Tag、Attribute、ActiveEffect 与 journal。Runtime Host、Committer 和 Presentation MUST不持有第二份 GE runtime state                       ；Unity authoring adapter MUST只参与 Program 编译。
+GameplayEffect owner MUST 唯一持有校验后的 GameplayEffect catalog/operations，CharacterSimulationState MUST 唯一保存当前 Actor 的 Tag、Attribute、ActiveEffect 与 journal。Runtime Host、Committer 和 Presentation MUST 不持有第二份 GE runtime state；Unity authoring adapter MUST 只参与正式 Effect definition 准备。
 
 #### Scenario: 创建 Corin Local Session
 
@@ -40,7 +40,7 @@ Unity authoring compiler adapter MUST只把 CharacterGameplayEffectProfile、Eff
 
 - **WHEN** Ingress Pass在当前 ExecutionPlan中提交对本 Actor的合法 GameplayResult ingress
 - **THEN** Evaluate MUST在 Graph decision 前应用对应 Effect 与 granted tag
-- **AND** 同 Tick Program operation MUST能读取该 tag
+- **AND** 同 Tick 正式 Action/Graph owner MUST 能通过 GE query 读取该 tag
 
 #### Scenario: 单个 RenderFrame 执行多个逻辑 Tick
 
@@ -50,7 +50,7 @@ Unity authoring compiler adapter MUST只把 CharacterGameplayEffectProfile、Eff
 
 ### Requirement: Compiled BTSMTL operation 必须通过 Program state 使用 Gameplay Effect
 
-Compiled BTSMTL operation MUST只通过 Program 声明的 GE query/command operation 与当前 CharacterSimulationState交互。Operation MUST不持有独立 GE runtime object                       、Unity adapter、Container 或 Model policy；缺少所需 catalog/port declaration 时 Program 编译 MUST失败。
+Graph/Ability operation MUST 只通过正式 GE query/command port 与当前 CharacterSimulationState 交互。Operation MUST 不持有独立 GE runtime object、Unity adapter、Container 或 Model policy；缺少所需 catalog/port declaration 时 Graph/Ability 准备 MUST 失败。
 
 #### Scenario: Transition 查询 Stun Tag
 
@@ -78,7 +78,7 @@ Action operation MUST拥有 ActionInstance activation/lifecycle；GameplayEffect
 
 ### Requirement: 跨角色 Gameplay Effect 必须经过 GameplayResult 路由
 
-Program operation MAY直接提交当前 Actor Self command，但跨 Actor Effect MUST来自正式 GameplayResult/target routing，并以 typed SimulationIngress进入目标 Actor Evaluate。Graph、Timeline 和 Effect operation MUST不直接取得另一 Actor mutable state。
+Graph/Ability operation MAY 直接提交当前 Actor Self command，但跨 Actor Effect MUST 来自正式 GameplayResult/target routing，并以 typed SimulationIngress 进入目标 Actor Evaluate。Graph、Timeline 和 Effect operation MUST 不直接取得另一 Actor mutable state。
 
 #### Scenario: ActorA 命中 ActorB
 

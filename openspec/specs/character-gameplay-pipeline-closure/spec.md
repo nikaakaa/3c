@@ -1,120 +1,75 @@
 # character-gameplay-pipeline-closure Specification
 
 ## Purpose
-定义角色 Gameplay 管线闭环：输入、compiled Graph/StateMachine/Timeline/Action/Effect operation、Character/World state、batch WorldSolver、Committer、Presentation 和 Runtime Debug 必须走同一条正式 Program/Session 主线，不恢复旧 SO/config、对象解释器、旧播放器或 demo 临时桥接。
+
+定义角色 Gameplay 管线闭环：输入、Graph Runtime、Control、Ability、Timeline、Effect、Character/World state、batch WorldSolver、Committer、Presentation 和 Runtime Debug 必须走同一条正式 Session/Pipeline 主线。不恢复整角色 Program、整包 Projection、旧 SO/config、对象解释器、旧播放器或 demo 临时桥接。
+
 ## Requirements
+
 ### Requirement: 角色 Gameplay 管线必须形成 ActionInstance 事实闭环
 
-Input Adapter、compiled Graph/StateMachine、portable Action operation、compiled Timeline、CharacterSimulationState、WorldSimulationState与 Committer MUST通过同一 `Ingress -> Schedule -> Evaluate -> ResolveBatch -> Finalize -> Egress -> atomic Commit`主线形成 ActionInstance闭环。系统 MUST不保留第二套 deterministic node或 demo专用业务路径。
+Input Adapter、Graph Runtime、Control、Ability、Timeline、CharacterSimulationState、WorldSimulationState 与 Committer MUST 通过同一 `Ingress -> Schedule -> Evaluate -> ResolveBatch -> Finalize -> Egress -> atomic Commit` 主线形成 ActionInstance 闭环。系统 MUST 不保留第二套 deterministic node 或 demo 专用业务路径。
 
 #### Scenario: 本地 Attack1 进入 Attack2
 
-- **WHEN** CharacterSimulationInput 在 combo window 内提交第二次 Attack request
-- **THEN** compiled Action/StateMachine/Timeline MUST推进同一 ActionInstance 事实链
-- **AND** Committer MUST消费正式 presentation commands
+- **WHEN** 输入进入正式 Session 并满足 Ability/Action 准入
+- **THEN** Control、Ability、Graph 和 Timeline MUST 推进同一 ActionInstance 事实链
+- **AND** Committer MUST 只提交经过 WorldResolve 和 Finalize 的结果
 
-### Requirement: Authoring 装配必须从 CharacterPipelineDefinition 汇入 runtime
+### Requirement: Authoring 装配必须从 CharacterPipelineDefinition 汇入正式领域
 
-CharacterPipelineDefinition MUST继续是唯一 authoring 聚合根，但 Runtime Host MUST只加载与 source revision 匹配的 CharacterSimulationProgram 和 CharacterPresentationProjection。Host MUST不直接从 RootTree、Timeline、Action 或 Effect asset 创建 runtime clone。
+CharacterPipelineDefinition MUST 继续是角色 authoring 配置装配根，但 Runtime Host MUST 分别加载匹配 revision 的 Control、Ability、Timeline、Presentation、World 和 Input binding。Host MUST 不直接从 RootTree、Timeline、Action 或 Effect asset 创建 runtime clone，也 MUST 不加载整角色 Program/Projection。
 
 #### Scenario: 装配 Corin
 
-- **WHEN** Sandbox Host 创建 Corin
-- **THEN** MUST从同一 Definition 绑定 Program 与 Projection
+- **WHEN** Session 准备 Corin Actor
+- **THEN** MUST 校验并绑定各领域正式 owner
+- **AND** MUST 不通过 ProgramHash、LayoutHash 或整包 Projection 作为唯一启动条件
 
-### Requirement: Graph 和 Timeline 必须只输出 gameplay facts
+### Requirement: Graph 和 Timeline 必须只输出正式 gameplay facts
 
-Compiled Graph、StateMachine 和 Timeline operation MUST只更新 CharacterSimulationState pending evaluation，并输出 typed gameplay facts、world request 和 EventId presentation commands。它们 MUST不直接写 Transform、调用 Solver、发送 packet、播放动画或裁决命中。
+Graph、StateMachine 和 Timeline Runtime MUST 只更新 CharacterSimulationState pending evaluation，并输出 typed gameplay facts、WorldRequest 和 EventId presentation commands。它们 MUST 不直接写 Transform、调用 Solver、发送 packet、播放动画或裁决命中。
 
 #### Scenario: Timeline 输出 Dodge Motion
 
-- **WHEN** Dodge motion segment 在当前 Tick active
-- **THEN** Evaluate MUST产生 portable world request
-- **AND** Pipeline Runtime MUST在统一 batch中取得唯一 body result
+- **WHEN** Timeline 在当前 Tick 产生 Motion contribution
+- **THEN** contribution MUST 进入统一 Motion/World request 边界
+- **AND** Pipeline Runtime MUST 在统一 batch 中取得唯一 body result
 
 ### Requirement: Motion 闭环必须依赖正式仲裁而不是直接移动
 
-所有 gameplay motion MUST按 contribution resolve、modifier、portable world request、session batch solve、WorldSimulationState body result 与 Finalize 的唯一顺序执行。Pipeline restore/ingress MUST不注入第二条 motion/correction执行路径，Transform MUST不成为第二真值。
+Control、Ability、Timeline 和 Motion owner MAY 产生 typed contribution，但只有统一 Motion accumulator、Body Motion Integrator 和 WorldSolver MAY 生成最终 WorldRequest/Body result。Timeline、Graph、Presentation 和 Unity Transform MUST 不拥有第二份运动真值。
 
-#### Scenario: Solver 受到墙面限制
+### Requirement: Presentation 闭环必须只消费已提交事实
 
-- **WHEN** request 的目标位移被 Unity CharacterController 截断
-- **THEN** WorldSimulationState MUST记录 actual body result 而不是原 request
-
-### Requirement: Presentation 闭环必须只消费表现事实
-
-Presentation MUST只消费 Egress OutputDisposition允许并由 Committer提交的 BodyState sample与 EventId presentation command。Presentation MUST不读取 Graph clone、pending evaluation、WorldSolver object或 Character state mutable view，也 MUST不反向产生 Gameplay fact。
+Presentation MUST 消费 committed Body/Intent、Action playback、Pose Graph、Source、Constraint 和 Final Publication 的正式结果。它 MUST 不修改 Gameplay state、World state、Ability lifecycle 或 Timeline cursor。
 
 #### Scenario: Attack 动画播放
 
-- **WHEN** committed command 选择 Attack producer
-- **THEN** Presentation MUST通过 Projection 与现有 Animancer lifecycle 播放
-- **AND** MUST不重新决定 Action ownership
+- **WHEN** Ability 已提交有限 Action playback
+- **THEN** Presentation MUST 通过正式 AnimationSlot、原生 Pose Graph 和 Source lifecycle 播放
+- **AND** Timeline UI MUST 只显示正式 playback/completion 事实
 
-### Requirement: GameplayFacts 必须成为 demo 同步和 debug 的唯一事实出口
+### Requirement: GameplayFacts 必须成为同步和 Debug 的唯一事实出口
 
-`SimulationActorTickResult.GameplayFacts`、`PresentationCommands` 与 `CharacterBodySample` MUST成为recording、diagnostics和Model Egress的正式输出边界。Blackboard state、Program internal slot、WorldSolver internal state和Presentation runtime state MUST不被Model Pass直接读取。
+Action Window、Motion、Effect、Attribute、Target、State 与完成事实 MUST 通过正式 GameplayFacts/Trace 输出。Editor MUST 不绑定 runtime clone、mutable state 或第二套诊断解释器。
 
-#### Scenario: Action Window 输出
+### Requirement: ServerAuthoritative Gameplay 必须复用正式 domain Step
 
-- **WHEN** Timeline projection 生成 ActionWindow fact
-- **THEN** Tick result MUST保留 ActionInstance、WindowId、Tick 与 EventId
-- **AND** 后续 model/debug MUST从该 typed fact 消费
+Prediction Client 与 Authority Worker MUST 复用同一 Control、Ability、Timeline、Motion、Effect、World ResolveBatch 和 Finalize 业务合同。Owner/server/remote 差异 MUST 只存在于 Session Source、Ingress/Schedule/Egress Pass 和 Presentation registration，不得进入 Graph、Timeline、Effect 或 Motion 的业务语义。
 
-### Requirement: Runtime Debug 必须按 ActionInstance 展示完整链路
+### Requirement: Local 与 Hybrid 必须是显式且互不回退的完整组合
 
-Diagnostics MUST通过 Source Map 与 structured Trace 按 ActorId、ActionInstanceId、SimulationTick、operation、world request/result 和 EventId 展示输入、状态决策、Timeline window、motion、Effect 与 committed presentation。Editor MUST不绑定 runtime clone 或 mutable state。
+Local、ServerAuthoritative 与 DeterministicRollback MUST 通过各自显式 Composition、Source、Backend、Pipeline 和 WorldSolver 装配。一个组合缺少能力时 MUST 明确失败，不得切换到另一个 Model、旧 Program、默认 Solver 或本地临时路径。
 
-#### Scenario: 查看 Attack2 Tick
+### Requirement: 网络复制必须只消费正式 Finalized Output
 
-- **WHEN** Debug Session 定位 Attack2 ActionInstance
-- **THEN** MUST能关联对应 Program operation、world result 和 presentation command
+Network Model MUST 只消费正式 Finalized GameplayFacts、Body、Action playback 和 EventId disposition。Fantasy Handler、Room 和 Model Source MUST 不直接调用 Animancer、写 visual Transform 或决定 Animation transition。
 
-### Requirement: ServerAuthoritative Gameplay必须复用正式Program与Step Pass
+### Requirement: Remote 表现必须属于正式 Committer 消费链
 
-Prediction Client与Authority Worker MUST加载同一Corin Float32 Program并复用正式Program Evaluate、World ResolveBatch和Program Finalize Step Pass。Owner/server/remote差异 MUST只存在于Session Source、Ingress/Schedule/Egress Pass和Presentation registration，不得进入Graph、StateMachine、Timeline、Action、GameplayEffect或Motion operation。
+Remote Body sample、有限 Action producer command 和 reliable EventId facts MUST 在 Prediction Pipeline 最终 Commit 边界进入 remote presentation output，并复用既有 Body interpolation、Presentation Fact、Action lifecycle、AnimationSlot 和原生 Pose Graph。不得创建远端专用播放器或 Projection。
 
-#### Scenario: Authority Worker执行Dodge
+### Requirement: Hybrid Diagnostics 必须沿统一 Source Map 与 Session Trace 关联
 
-- **WHEN** Authority Source accepted command包含Actor A Dodge request
-- **THEN** Authority Pipeline MUST通过同一compiled Action/Timeline/Motion operation产生WorldRequest
-- **AND** MUST不调用model专属Dodge代码
-
-### Requirement: Local与Hybrid必须是显式且互不回退的完整组合
-
-Local gameplay MUST只由Standard Local Pipeline组合运行；Hybrid gameplay MUST由Prediction或Authority Pipeline组合运行。三种Pipeline MAY共享Program Runtime、Execution Backend、标准Step Pass和Solver实现，但 MUST不共享mutable state、Source、History或Endpoint，并 MUST不在失败时互相切换。
-
-#### Scenario: Fantasy连接失败
-
-- **WHEN** Hybrid Prediction Source preparation失败
-- **THEN** 当前Session MUST进入Failed
-- **AND** MUST不创建Standard Local Pipeline继续Corin gameplay
-
-### Requirement: 网络复制必须只消费正式Finalized Output
-
-Authority Replication Egress MUST只消费finalized Character/World state、typed GameplayFacts、Presentation commands和EventId；MUST不读取Program mutable slot、pending evaluation、Graph authoring、Unity Transform或Animancer state。Prediction command egress MUST只发送canonical input与identity，MUST不发送resolved displacement作为权威真值。
-
-#### Scenario: 复制Action Window
-
-- **WHEN** Authority Timeline生成ActionWindow fact
-- **THEN** Replication Egress MUST保留Actor、ActionInstance、Window、Tick和EventId
-- **AND** Fantasy Room MUST只路由该事实而不重新解释窗口语义
-
-### Requirement: Remote表现必须属于正式Committer消费链
-
-Remote Body sample、有限Action producer command和reliable EventId facts MUST在Prediction Pipeline最终Commit边界进入remote presentation output，并复用既有Body interpolation、Presentation Fact、Action lifecycle、AnimationSlot和Projection Pose Plan。Fantasy Handler、Room和Model Source MUST不直接调用Animancer、写visual Transform或决定Animation transition。
-
-#### Scenario: Remote Actor切换到Attack2动画
-
-- **WHEN** RemotePresentationEgress提交Authority producer select command
-- **THEN** CharacterActionPlaybackRuntime MUST提交Attack2 lifecycle，并由AnimationSlot与Projection Pose Plan播放
-- **AND** 网络层 MUST不发送AnimationClip或直接调用Play
-
-### Requirement: Hybrid Diagnostics必须沿统一Source Map与Session Trace关联
-
-Runtime diagnostics MUST能从authoring identity、Program operation、Prediction/Authority Pipeline Pass、SimulationTick、WorldRequest/Result、baseline、correction decision、EventId disposition和Presentation command形成只读关联。Diagnostics MUST不持有runtime clone、packet queue或mutable state。
-
-#### Scenario: 审查Attack纠偏
-
-- **WHEN** Attack2期间发生RestoreReplay
-- **THEN** Debug Session MUST关联Authority baseline、Replay steps、Action operation、EventId suppression和最终动画producer
+Diagnostics MUST 按 ActorId、ActionInstanceId、SimulationTick、Graph source、World request/result、domain owner 和 EventId 展示输入、状态决策、Timeline window、Motion、Effect 与 committed Presentation。Diagnostics MUST 只读正式提交事实，不参与运行。

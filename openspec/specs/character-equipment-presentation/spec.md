@@ -37,7 +37,7 @@ Feature graph中的动画 MUST由正式Timeline AnimationTrack产生typed produc
 
 ### Requirement: 装备外观必须使用稳定显式binding
 
-`CharacterEquipmentPresentationProfile` MUST包含按VisualBindingId索引的Equipment visual catalog，并支持正式`ExistingRigObject`与`SpawnedVisualAsset` binding。Projection compiler MUST把该catalog编译进Presentation Projection。两种binding MUST显式记录Slot、Rig/Prefab、Renderer或Socket binding及local pose/lifecycle；MUST不按GameObject名称、Transform路径模糊匹配、Tag或第一个子物体寻找外观。
+`CharacterEquipmentPresentationProfile` MUST 包含按 VisualBindingId 索引的 Equipment visual catalog，并支持正式 `ExistingRigObject` 与 `SpawnedVisualAsset` binding。Equipment Presentation owner MUST 直接准备并绑定该 catalog，不得依赖整角色 Projection。两种 binding MUST 显式记录 Slot、Rig/Prefab、Renderer 或 Socket binding 及 local pose/lifecycle；MUST 不按 GameObject 名称、Transform 路径模糊匹配、Tag 或第一个子物体寻找外观。
 
 #### Scenario: Corin锯刃使用现有Rig对象
 

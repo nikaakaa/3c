@@ -53,7 +53,7 @@
 
 ### Requirement: 技能构建必须只处理自身可达玩法内容
 
-技能构建 MUST以明确的 Ability 为根，只编译其私有图、FSM、条件、子图引用及 TreeClip 引用的技能图、局部状态和数值；Timeline／Motion 只作为真实内容和资源依赖，轨道／Clip 不编成技能操作。控制状态机、BodyMotion、全角色装备目录、Pose 图、相机和动画资源内容 MUST不进入技能执行数据。角色与装备授予 MUST引用同一技能数据，不按角色复制。缺失实际技能依赖 MUST明确报错。
+Graph 构建 MUST 以明确的 Graph 为根，只编译其私有图、FSM、条件、子图引用及 TreeClip 引用的图、局部状态和数值；Ability 只作为入口和引用集合，不生成独立 Ability 编译产物。Timeline/Motion 只作为真实内容和资源依赖，轨道/Clip 不编成图操作。控制状态机、BodyMotion、全角色装备目录、Pose 图、相机和动画资源内容 MUST 不进入图运行数据。角色与装备授予 MUST 引用同一图/内容数据，不按角色复制。缺失实际图依赖 MUST 明确报错。
 
 #### Scenario: 只修改攻击窗口
 - **WHEN** 作者修改一个 Ability 的攻击窗口且其公共接口未改变

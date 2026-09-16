@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: 状态抢占必须复用分层停止协议
 
-Gameplay状态抢占authoring MUST继续表达通用Runnable stop、BTSMTL StateMachine transition、Ability lifecycle与有限Action Timeline producer release。Ability lifecycle MUST先记录source的明确终态，Compiler/runtime再把状态内容停止、Motion ownership和release operation收敛到统一stop barrier；Program MUST在关闭source Action与Timeline Gameplay output后，为每个受影响的有限Action AnimationChannel输出至多一个producer command。持续Locomotion Pose transition MUST由PoseStateMachine处理，Program MUST不为视觉transition保持source Gameplay State active。
+Gameplay 状态抢占 authoring MUST 继续表达通用 Runnable stop、BTSMTL StateMachine transition、Ability lifecycle 与有限 Action Timeline producer release。Ability lifecycle MUST 先记录 source 的明确终态，Graph/domain runtime 再把状态内容停止、Motion ownership 和 release operation 收敛到统一 stop barrier；Gameplay/Ability owner MUST 在关闭 source Action 与 Timeline Gameplay output 后，为每个受影响的有限 Action AnimationChannel 输出至多一个 producer command。持续 Locomotion Pose transition MUST 由 PoseStateMachine 处理，Gameplay owner MUST 不为视觉 transition 保持 source Gameplay State active。
 
 #### Scenario: Attack被Dodge抢占
 
@@ -18,7 +18,7 @@ Gameplay状态抢占authoring MUST继续表达通用Runnable stop、BTSMTL State
 
 - **WHEN** LowerPriority replacement停止整个Gameplay StateMachine operation
 - **THEN** stop cause MUST沿active descendant传播
-- **AND** Program MUST释放受影响Action playback与Motion ownership
+- **AND** Gameplay/Ability owner MUST 释放受影响 Action playback 与 Motion ownership
 - **AND** MUST不读取PoseStateMachine active state
 
 #### Scenario: ForceStop

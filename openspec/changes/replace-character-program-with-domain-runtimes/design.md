@@ -1,6 +1,6 @@
 ## Context
 
-动机见 `proposal.md`。本设计采用本轮用户确认的组合：角色总 Program 退役、技能图独立编译、Timeline 内容直接调度、网络 Pass 保留、Pose 原生 FlowCanvas Runtime。此前 `docs/locomotion-skill-compilation-boundary-plan-2026-09-13.md` 中保留角色 Program、扩展统一 artifact 的方案只作历史评估，不作为本 change 的实施依据。
+动机见 `proposal.md`。本设计采用本轮用户确认的组合：角色总 Program 退役、Gameplay Graph 保留唯一图编译边界、Timeline 内容直接调度、网络 Pass 保留、Pose 原生 FlowCanvas Runtime。此前 `docs/locomotion-skill-compilation-boundary-plan-2026-09-13.md` 中保留角色 Program、扩展统一 artifact 的方案只作历史评估，不作为本 change 的实施依据。
 
 调查基于共享工作区，开始规划时仍有大量并行修改。以下源码定位是职责依据，实施前按当前文件内容接续，不回退其它窗口已正确工作。
 
@@ -35,17 +35,17 @@
 
 ## Decisions
 
-### D1. 角色运行由领域模块组合，技能是唯一 Gameplay 图执行数据
+### D1. 角色运行由领域模块组合，Gameplay Graph 是唯一图执行数据
 
 角色配置引用 ControlModule、控制配置、AbilityGrants、BodyMotion、Input、Effect、Equipment 和表现配置。实例工厂只做显式安装和绑定，不生成角色全局 operations、资源 catalog 或布局镜像。
 
 角色执行接口保留 `Evaluate → WorldResolveBatch → Finalize` 关系。Evaluate 依次消费输入、推进 C# Control 与 Ability、处理效果及运动贡献；WorldResolveBatch 仍一次处理同 Tick 全部 actor；Finalize 成功后才发布角色、世界与事实结果。业务调用用窄接口，不能把 Profile、World、network packet 和所有状态塞进万能 Context。
 
-Ability 编译输入是对应 `GameplayAbilityDefinition` 的私有图／FSM／条件／子图引用和 TreeClip 引用的技能图；Timeline 只作为精确内容依赖与调用接口输入，轨道／Clip 不进入技能 IR。共享技能只构建一次；授予、装备选择和实例目标在绑定／运行时提供，不为每个 Character Definition 复制技能。
+图编译输入是正式 Graph 根及其私有 FSM／条件／子图引用和 TreeClip 图引用；Timeline 只作为精确内容依赖与调用接口输入，轨道／Clip 不进入图 IR。Ability 只引用图、内容和运行 provider；授予、装备选择和实例目标在绑定／运行时提供，不为每个 Character Definition 复制独立 Ability 编译产物。
 
 现有数值中立语义处理只保留技能内容，产出独立可校验的 Ability 数据；Float32／Fixed 仅降低技能数值、状态和运算。目标执行数据不保存 C# Locomotion、BodyMotion、全装备目录或动画表现图。所有技能引用的领域 ID 在绑定时由对应模块解析，并在 Session Active 前报告缺失，不在每 Tick 扫描。
 
-**取舍：**独立技能数据利于图编排和两个数值目标／普通 .NET Host；全部改 C# 会取消作者图能力，全部改 FlowCanvas Runtime 则扩大到 Gameplay 确定性、快照及 Unity 依赖迁移，本次均不选择。原 Character Program 不能仅改名 `CompiledAbility` 后原样保留。
+**取舍：**保留图产物利于图编排和两个数值目标／普通 .NET Host；把所有业务改 C# 会取消作者图能力，把 Ability 本身做成独立编译产物又会恢复另一层总包。原 Character Program 不能仅改名 `CompiledAbility` 后原样保留。
 
 ### D2. 角色状态按模块归属，统一捕获不要求统一可执行 Program
 
@@ -83,7 +83,7 @@ Source 唯一拥有 ACL／Playable 采样与物理资源；Constraint 唯一拥�
 
 EventGraph 唯一声明和更新动画实例变量，成功更新后发布 Contract／Layout／typed Frame；Pose 只读。Pose 条件、BlendSpace 与其他消费者引用同一变量身份，不复制可写 Blackboard 或改用变量名称查找。初始化、变量类型、跨图可见性继续遵守已完成只读 Blackboard 合同。
 
-Ability／Timeline 自动产生带实例和 generation 的有限动作播放、采样、停止请求，直接交 ActionPlayback／Slot；EventGraph 不做必经转发或动作仲裁。Pose 使用 committed Body／Intent，Camera 继续消费表现输入；任何影响 Gameplay 命中／移动／目标判定的结果不得改从原生 Pose 或物理骨骼反推。
+Graph/Ability／Timeline 自动产生带实例和 generation 的有限动作播放、采样、停止请求，直接交 ActionPlayback／Slot；EventGraph 不做必经转发或动作仲裁。Pose 使用 committed Body／Intent，Camera 继续消费表现输入；任何影响 Gameplay 命中／移动／目标判定的结果不得改从原生 Pose 或物理骨骼反推。
 
 **取舍：**避免因为“都用 FlowCanvas”而把两个图合成一个更新 owner。保留各自输入职责只需要同一个宿主的顺序和 typed Frame，不需要第二套变量或时钟。
 
@@ -119,7 +119,7 @@ C# authoring 继续两个显式调用，使用同一领域字段、端口、Muta
 
 ### D9. Timeline直接调度正式内容，不编译轨道与Clip
 
-这是本轮明确决策，不留给实现选择：删除 Timeline 轨道／Clip 到 Semantic operation 的发射，正式 Timeline Runtime 直接消费只读轨道、区间、片段类型、参数、稳定 ClipId 和资源引用。技能图上的“调用 Timeline”节点仍可作为技能调用操作存在，但它只绑定 Timeline identity／内容版本／入参；不把 Timeline 内部再次展开成操作图。TreeClip 只引用已独立编译的技能执行入口，Decision／Commit、调用实例和取消传播继续由原生命周期管理。
+这是本轮明确决策，不留给实现选择：删除 Timeline 轨道／Clip 到 Semantic operation 的发射，正式 Timeline Runtime 直接消费只读轨道、区间、片段类型、参数、稳定 ClipId 和资源引用。Gameplay Graph 上的“调用 Timeline”节点只绑定 Timeline identity／内容版本／入参；不把 Timeline 内部再次展开成操作图。TreeClip 只引用正式 Graph Runtime 入口，Decision／Commit、调用实例和取消传播继续由原生命周期管理。
 
 不复活旧 TimelinePlayer，也不改用 Slate Cutscene Runtime。把现有正式 Timeline 调度、边界遍历、窗口和取消算法从读取 Program operations 改为读取正式时间轴内容，形成唯一 Timeline Runtime；技能调用与非 Skill 调用都经这个入口，只在调用上下文上不同。共享内容只读，每次播放拥有独立 cursor、loop／section、活动片段、目标、generation 与结束状态。
 

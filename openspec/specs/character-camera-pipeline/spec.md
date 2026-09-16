@@ -21,12 +21,12 @@
 
 ### Requirement: BTSMTL 和 Timeline 必须只提交相机请求
 
-系统 MUST让 BTSMTL 自定义节点和 Timeline 相机轨道只提交强类型相机请求，包括 `CameraSequenceRequest`、`CameraShakeRequest`、`CameraResponseRequest`、`CameraTargetSelectionRequest` 或读取 `CameraBasisSnapshot`。每个已公开 Camera Graph node MUST由唯一 Compiler emitter 降低为 versioned Program operation，并保留 Graph/Node authoring identity、端口与 Source Map；Float32 与 Fixed Target MUST按同一 operation 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、compiled Camera operation 和 Action operation MUST NOT直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST不把 Camera runtime state写入 Character/World simulation state。缺失字段、未知 operation 或 Target 未实现 MUST在 build/composition 明确失败，不得跳过或使用 runtime fallback。
+系统 MUST 让 BTSMTL 自定义节点和 Timeline 相机轨道只提交强类型相机请求，包括 `CameraSequenceRequest`、`CameraShakeRequest`、`CameraResponseRequest`、`CameraTargetSelectionRequest` 或读取 `CameraBasisSnapshot`。每个已公开 Camera Graph node MUST 由唯一 Graph emitter/typed binding 提供，保留 Graph/Node authoring identity、端口与 Source Map；Float32 与 Fixed Target MUST 按同一 domain 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、Camera binding 和 Action operation MUST NOT 直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST 不把 Camera runtime state 写入 Character/World simulation state。缺失字段、未知 binding 或 Target 未实现 MUST 在 prepare/composition 明确失败，不得跳过或使用 runtime fallback。
 
 #### Scenario: BTSMTL 请求瞄准相机
 
 - **WHEN** Aim 状态中的 RequestCameraSequence node 通过 Character Simulation Compiler 编译
-- **THEN** emitter MUST生成带稳定 Source Map 的 `CameraSequenceRequest(Aim)` Program operation
+- **THEN** Graph/Camera owner MUST 生成带稳定 Source Map 的 `CameraSequenceRequest(Aim)` domain request
 - **AND** Target leaf MUST通过 PresentationCommand 提交该请求
 - **AND** 节点 MUST NOT调用 `CinemachineFreeLook`、`Camera.main` 或 scene camera object
 

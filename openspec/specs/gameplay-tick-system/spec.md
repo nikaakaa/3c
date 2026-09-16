@@ -21,7 +21,7 @@ GameplayTickSystem MUST继续区分 fixed LocalLogicTick、PresentationFrame和�
 
 ### Requirement: GameplayTickSystem 必须由 TEngine frame source 驱动
 
-GameplayTickSystem MUST继续由 TEngine RootModule、UpdateDriver 或正式 runtime entry 提供 frame source。TEngine MUST不直接 Tick Program operation、单个 Character、WorldSolver、Network Model 或 Presentation adapter。Simulation Session logic target 与 Presentation target MUST通过 GameplayTickSystem 调度。
+GameplayTickSystem MUST 继续由 TEngine RootModule、UpdateDriver 或正式 runtime entry 提供 frame source。TEngine MUST 不直接 Tick Graph/Ability/Timeline domain、单个 Character、WorldSolver、Network Model 或 Presentation adapter。Simulation Session logic target 与 Presentation target MUST 通过 GameplayTickSystem 调度。
 
 #### Scenario: TEngine 驱动 Local Session
 

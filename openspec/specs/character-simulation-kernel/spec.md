@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: SimulationKernel 必须分离 Evaluate 与 Finalize
 
-SimulationKernel MUST提供无外部副作用的Evaluate与Finalize。Evaluate MUST只接收NumericProfile完全匹配的CharacterSimulationProgram、CharacterSimulationInput、committed CharacterSimulationState、SimulationIngress、SimulationTick和上一Tick body observation，创建当前Actor/Step唯一State Transaction，并输出持有该未提交transaction的PendingCharacterEvaluation与WorldRequest。Finalize MUST只接收同一target ABI、Program/Layout、Actor和Tick的pending evaluation及精确匹配的WorldSolverResult，继续写入同一transaction并在成功时输出新committed CharacterSimulationState与`SimulationActorTickResult`。Kernel MUST不读取Unity Time、Camera、InputAction、Transport、Network packet或Presentation object。
+SimulationKernel MUST 提供无外部副作用的 Evaluate 与 Finalize。Evaluate MUST 接收匹配 NumericProfile 的正式 Control/Ability domain input、CharacterSimulationInput、committed CharacterSimulationState、SimulationIngress、SimulationTick 和上一 Tick body observation，创建当前 Actor/Step 唯一 State Transaction，并输出持有该未提交 transaction 的 PendingCharacterEvaluation 与 WorldRequest。Finalize MUST 接收同一 target、Actor 和 Tick 的 pending evaluation 及精确匹配的 WorldSolverResult，继续写入同一 transaction，并在成功时输出新的 committed CharacterSimulationState 与 `SimulationActorTickResult`。Kernel MUST 不读取 Unity Time、Camera、InputAction、Transport、Network packet 或 Presentation object。
 
 #### Scenario: Local Session 推进一个角色
 
@@ -15,7 +15,7 @@ SimulationKernel MUST提供无外部副作用的Evaluate与Finalize。Evaluate M
 
 ### Requirement: Character State 必须通过单一 Target Transaction推进
 
-每个Actor的每个SimulationStep MUST以当前committed `CharacterSimulationState`为只读基线创建一个target-specific State Transaction。Program Evaluate与Program Finalize MUST读写同一个transaction；WorldSolver MUST只消费WorldRequest并不得访问transaction。Transaction MUST在Finalize全部校验和输出构造成功后恰好Commit一次，失败时MUST Abort且不得修改base state。Transaction MUST NOT进入Snapshot、History、Network payload、Pipeline participant state或Presentation。
+每个 Actor 的每个 SimulationStep MUST 以当前 committed `CharacterSimulationState` 为只读基线创建一个 target-specific State Transaction。Control、Ability、Effect、Equipment 与其它正式 domain Evaluate/Finalize MUST 读写同一个 transaction；WorldSolver MUST 只消费 WorldRequest 并不得访问 transaction。Transaction MUST 在 Finalize 全部校验和输出构造成功后恰好 Commit 一次，失败时 MUST Abort 且不得修改 base state。Transaction MUST NOT 进入 Snapshot、History、Network payload、Pipeline participant state 或 Presentation。
 
 #### Scenario: Evaluate与Finalize共享写集
 
@@ -31,7 +31,7 @@ SimulationKernel MUST提供无外部副作用的Evaluate与Finalize。Evaluate M
 
 ### Requirement: Committed Character State 必须使用类型化不可变存储
 
-Committed `CharacterSimulationState` MUST按Program State Layout保存类型化、不可变的state partitions。Runtime领域模块 MUST通过预验证typed address读写transaction，不得以opaque bytes、runtime decode cache、mutable object dictionary或字符串owner查找保存Gameplay状态。State Commit MUST复用未修改partition/page，并只冻结dirty write-set；不得为每个Tick固定复制全部StateSlot两次。
+Committed `CharacterSimulationState` MUST 按各领域正式 state schema 保存类型化、不可变的 state partitions。Runtime 领域模块 MUST 通过预验证 typed address 读写 transaction，不得以 opaque bytes、runtime decode cache、mutable object dictionary 或字符串 owner 查找保存 Gameplay 状态。State Commit MUST 复用未修改 partition/page，并只冻结 dirty write-set；不得为每个 Tick 固定复制全部领域状态两次。
 
 #### Scenario: 当前Tick只修改少量状态
 
@@ -39,9 +39,9 @@ Committed `CharacterSimulationState` MUST按Program State Layout保存类型化�
 - **THEN** Commit MUST复用其它未修改state pages与GameplayEffect aggregate
 - **AND** MUST NOT遍历并复制全部Program StateSlot作为Builder快照
 
-### Requirement: Simulation Session 必须锁定 ProgramCatalog 与 Actor roster
+### Requirement: Simulation Session 必须锁定领域 binding 与 Actor roster
 
-Session Pipeline Runtime MUST在启动前接收完整 SimulationProgramCatalog与 ordered Actor roster，并校验每个 ActorId的 ProgramId、LayoutHash与 World body binding。Session Active后 Catalog与 roster MUST不可变；Ingress/Schedule产品只能为已有 Actor提交 input/ingress，不能隐式 spawn、despawn、换 Program或加入未知 Actor。
+Session Pipeline Runtime MUST 在启动前接收完整领域 binding 与 ordered Actor roster，并校验每个 ActorId 的 Control、Ability、Timeline、Presentation、World body、Pipeline 和 Source identity。Session Active 后 binding 与 roster MUST 不可变；Ingress/Schedule 产品只能为已有 Actor 提交 input/ingress，不能隐式 spawn、despawn、替换领域 owner 或加入未知 Actor。
 
 #### Scenario: Schedule 提交未知 Actor 输入
 
@@ -66,7 +66,7 @@ CharacterSimulationState MUST只保存单Actor且会影响当前Commit后或未�
 
 ### Requirement: SimulationWorldSnapshot 必须原子 Capture 与 Restore
 
-Session snapshot MUST聚合ProgramCatalogHash、每Actor Program binding、BackendId/version、PipelineId/Hash、Pipeline state participant identity、State codec identity、Solver/world identity、SimulationTick、stable roster、全部committed CharacterSimulationState canonical bytes、WorldSimulationState与需要回滚的Pipeline state。Capture MUST只编码committed typed state，不得读取active State Transaction。Restore MUST在step loop开始前校验并原子替换完整working world，MUST不只恢复Transform、单Actor、部分Pass、部分领域aggregate或未提交transaction。
+Session snapshot MUST 聚合领域 binding identity、BackendId/version、PipelineId/Hash、Pipeline state participant identity、各领域 State codec identity、Solver/world identity、SimulationTick、stable roster、全部 committed CharacterSimulationState canonical bytes、WorldSimulationState 与需要回滚的 Pipeline state。Capture MUST 只编码 committed typed state，不得读取 active State Transaction。Restore MUST 在 step loop 开始前校验并原子替换完整 working world，MUST 不只恢复 Transform、单 Actor、部分 Pass、部分领域 aggregate 或未提交 transaction。
 
 #### Scenario: 恢复 Attack2 中的双 Actor Pipeline world
 
@@ -76,7 +76,7 @@ Session snapshot MUST聚合ProgramCatalogHash、每Actor Program binding、Backe
 
 ### Requirement: State Hash 必须区分 Character 与 World 有效性
 
-系统 MUST提供CharacterStateHash与SimulationWorldHash。CharacterStateHash MUST覆盖ProgramHash、NumericProfile、Target ABI、Character layout、State codec identity与canonical committed Character state bytes；MUST不覆盖active transaction、evaluation workspace或同Step transient motion。WorldHash MUST再覆盖ProgramCatalogHash、全部Actor binding、BackendId/semantic version、PipelineHash、Pipeline snapshot participant state、Solver identity/version、world revision、SimulationTick、stable roster与WorldSimulationState。只有Program Runtime、Backend、Pipeline全部Pass、Catalog全部Program与Solver都声明DeterministicReplay时，WorldHash MAY被声明为跨机器确定性判定。
+系统 MUST 提供 CharacterStateHash 与 SimulationWorldHash。CharacterStateHash MUST 覆盖各领域 binding identity、NumericProfile、Target ABI、Character state schema、State codec identity 与 canonical committed Character state bytes；MUST 不覆盖 active transaction、evaluation workspace 或同 Step transient motion。WorldHash MUST 再覆盖全部 Actor binding、BackendId/semantic version、PipelineHash、Pipeline snapshot participant state、Solver identity/version、world revision、SimulationTick、stable roster 与 WorldSimulationState。只有各正式 domain runtime、Backend、Pipeline 全部 Pass 与 Solver 都声明 DeterministicReplay 时，WorldHash MAY 被声明为跨机器确定性判定。
 
 #### Scenario: Unity Solver 产生本地 WorldHash
 
@@ -167,7 +167,7 @@ SimulationIngress MUST只承载 Core已声明的 typed Action lifecycle、Gamepl
 
 ### Requirement: SimulationActorTickResult 必须通过稳定 EventId 提交副作用
 
-Gameplay facts与 presentation commands MUST使用由 Program operation、ActorId、activation identity、SimulationTick与 local event sequence构成的稳定 EventId。Kernel MUST不播放动画、发送 packet或触发相机/VFX。Egress Pass MUST为外部事件生成带显式ActorId的Publish、Replace、Retire或 Suppress disposition；Execution Backend MUST核对本次EventId与Actor归属，并在 disposition与全部 working state校验后原子发布最终 state，再将 Plan交给 SimulationCommitter。需要跨Tick判断历史EventId的Egress MUST以SnapshotParticipant journal拥有该历史，Unity output adapter MUST不保存无界owner字典。
+Gameplay facts 与 presentation commands MUST 使用由正式 domain source、ActorId、activation identity、SimulationTick 与 local event sequence 构成的稳定 EventId。Kernel MUST 不播放动画、发送 packet 或触发相机/VFX。Egress Pass MUST 为外部事件生成带显式 ActorId 的 Publish、Replace、Retire 或 Suppress disposition；Execution Backend MUST 核对本次 EventId 与 Actor 归属，并在 disposition 与全部 working state 校验后原子发布最终 state，再将 Plan 交给 SimulationCommitter。需要跨 Tick 判断历史 EventId 的 Egress MUST 以 SnapshotParticipant journal 拥有该历史，Unity output adapter MUST 不保存无界 owner 字典。
 
 #### Scenario: Timeline 产生 Cue
 
@@ -241,7 +241,7 @@ Execution Backend MUST通过 portable Pipeline Transaction coordinator 先运行
 
 ### Requirement: Session Source 必须保持外部资源边界
 
-Session Source MUST只拥有 source clock、local input/endpoint、packet/history等外部资源及其显式 ports。它 MUST不执行 Program operation、不调用 WorldSolver、不获得 mutable Character/World/Pipeline working state、不驱动 Presentation，也 MUST不在 Common Host中隐藏注入 Pass。Local与 Network Model Source的差异 MUST通过显式 Source Definition和所选 Pipeline Pass表达。
+Session Source MUST 只拥有 source clock、local input/endpoint、packet/history 等外部资源及其显式 ports。它 MUST 不执行 Graph/Ability/Timeline domain 逻辑、不调用 WorldSolver、不获得 mutable Character/World/Pipeline working state、不驱动 Presentation，也 MUST 不在 Common Host 中隐藏注入 Pass。Local 与 Network Model Source 的差异 MUST 通过显式 Source Definition 和所选 Pipeline Pass 表达。
 
 #### Scenario: Network Model 提供 Correction 数据
 
@@ -341,7 +341,7 @@ operation topology、SourceMap index、Timeline compiled curve/segment lookup、
 
 ### Requirement: ProgramExecutionLayout必须预解析Tick热路径静态查询
 
-ProgramExecutionLayout MUST在Program Runtime composition时一次性构建按operation索引的连续Value input span、紧凑Timeline operation集合、Timeline child owner、State所属StateMachine/execution owner、固定语义edge、operation reference和named constant索引。Float32与Fixed Runtime MUST复用各自Program的immutable layout。正常Tick MUST不为这些查询遍历全部Program operation、解析端口字符串、建立端口HashSet、按字符串排序或执行LINQ materialization。Layout MUST只缓存路由，不得缓存依赖mutable state的Value结果。
+Graph/domain binding layout MUST 在 Runtime composition 时一次性构建按稳定 identity 索引的连续 Value input span、Timeline 内容引用、State 所属 Graph/domain owner、固定语义 edge、binding reference 和 named constant 索引。Float32 与 Fixed Runtime MUST 复用各自正式 immutable layout。正常 Tick MUST 不为这些查询遍历全部 Graph/domain binding、解析端口字符串、建立端口 HashSet、按字符串排序或执行 LINQ materialization。Layout MUST 只缓存路由，不得缓存依赖 mutable state 的 Value 结果。
 
 #### Scenario: 同一Condition跨Tick求值
 
@@ -363,7 +363,7 @@ ProgramExecutionLayout MUST在Program Runtime composition时一次性构建按op
 
 ### Requirement: Kernel Program Binding必须与共享Program Layout分离
 
-ProgramExecutionLayout与ProgramExecutionServices MUST只持有ProgramId、ProgramHash、LayoutHash、OperationSetVersion和NumericProfile等Program固有身份。具体Kernel backend MUST由Program Runtime创建独立`KernelProgramBinding`，并在Session运行前一次性验证Program、Layout、NumericProfile、Operation Set与backend完整性。同一Program MAY在不同合法Pipeline、Source、Solver或Network Model中复用同一Layout。Evaluate与Finalize MUST只执行O(1) binding identity或引用校验，MUST不重新枚举Program operation。
+Domain execution layout/services MUST 只持有各自 domain identity、schema、revision 和 NumericProfile 等正式身份。具体 Kernel backend MUST 由 Session Composer 创建独立 domain binding，并在 Session 运行前一次性验证 domain、layout、NumericProfile、operation/schema 与 backend 完整性。同一份 Graph/domain data MAY 在不同合法 Pipeline、Source、Solver 或 Network Model 中复用同一 immutable layout。Evaluate 与 Finalize MUST 只执行 O(1) binding identity 或引用校验，MUST 不重新枚举全部 Graph/domain data。
 
 #### Scenario: 同一Float32 Program用于Local与Authority
 

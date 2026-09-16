@@ -1,11 +1,11 @@
 # character-motion-simulation-boundary Specification
 
 ## Purpose
-定义 Character Program 产生 portable motion request、Simulation Session 批量调用唯一 WorldSolver、World state 保存逻辑 body 真值以及 Network Model 装配独立运动后端的边界。
+定义 Control、Ability、Timeline 与 Motion domain 产生 portable motion request、Simulation Session 批量调用唯一 WorldSolver、World state 保存逻辑 body 真值以及 Network Model 装配独立运动后端的边界。
 ## Requirements
 ### Requirement: 运动语义、世界约束执行和逻辑位姿必须分层
 
-Compiled motion operations MUST在Evaluate阶段产生当前Numeric Target的contribution；唯一Motion accumulator MUST按Channel、Priority、Weight、BlendMode与ConsumeLowerChannels将Locomotion和Timeline contribution解析为每Actor唯一`ResolvedGameplayMotion`。当前Target唯一Body Motion Integrator MUST在全部Program Motion Modifier之后，根据committed `WorldBodyState`与compiled descriptor生成每Actor唯一`CharacterMotionRequest`和同Step plan。正式Execution Backend的WorldSolve Pass MUST汇总当前Step全部Actor request并调用一次`ICharacterWorldSolver.ResolveBatch`；Solver提供真实applied displacement、稳定Grounded与Collision后 MUST通过Target唯一Body Motion Finalize提交VerticalVelocity，Program Finalize MUST再产生唯一`CharacterBodySample`与Motion GameplayFact。Graph、Timeline、Action、Source、Presentation与concrete Solver MUST不拥有第二份Motion仲裁、重力积分或逻辑Transform真值。
+Control、Ability、Timeline 与其它正式 Motion owner MUST 在 Evaluate 阶段产生当前 Numeric Target 的 typed contribution；唯一 Motion accumulator MUST 按 Channel、Priority、Weight、BlendMode 与 ConsumeLowerChannels 将 Locomotion 和 Timeline contribution 解析为每 Actor 唯一 `ResolvedGameplayMotion`。当前 Target 唯一 Body Motion Integrator MUST 根据 committed `WorldBodyState`、正式 Body Motion Profile 和领域 descriptor 生成每 Actor 唯一 `CharacterMotionRequest` 与同 Step plan。正式 Execution Backend 的 WorldSolve Pass MUST 汇总当前 Step 全部 Actor request 并调用一次 `ICharacterWorldSolver.ResolveBatch`；Solver 提供真实 applied displacement、稳定 Grounded 与 Collision 后 MUST 通过 Target 唯一 Body Motion Finalize 提交 VerticalVelocity，并发布唯一 `CharacterBodySample` 与 Motion GameplayFact。Graph、Timeline、Action、Source、Presentation 与 concrete Solver MUST 不拥有第二份 Motion 仲裁、重力积分或逻辑 Transform 真值。
 
 #### Scenario: Timeline MotionCurve 提交位移
 
@@ -84,7 +84,7 @@ Unity CharacterController引用、Move调用和场景 body binding MUST只存在
 
 ### Requirement: 确定性模拟必须属于独立完整 Network Model
 
-Deterministic KCC、CollisionWorldArtifact、canonical input bundle、Fixed Program/State/Kernel、Fixed `SimulationWorldStateSet/WorldSimulationState/SimulationWorldSnapshot` history、restore/replay、state hash、snapshot recovery 和 side-effect commit MUST共同属于完整 DeterministicRollback Network Model。该模型 MUST从与 Float32 模型相同的 validated Semantic IR artifact 生成独立 Fixed ABI，但 MUST不复用 Float32 CharacterSimulationProgram/SimulationKernel，也 MUST不使用 Unity CharacterController、DotRecast 或 ServerAuthoritative correction 作为 deterministic world execution。
+Deterministic KCC、CollisionWorldArtifact、canonical input bundle、Fixed domain state/runtime、Fixed `SimulationWorldStateSet/WorldSimulationState/SimulationWorldSnapshot` history、restore/replay、state hash、snapshot recovery 和 side-effect commit MUST 共同属于完整 DeterministicRollback Network Model。该模型 MAY 复用同一 Graph 语义和 authoring identity，但 MUST 不生成或依赖 Float32 CharacterSimulationProgram，也 MUST 不使用 Unity CharacterController、DotRecast 或 ServerAuthoritative correction 作为 deterministic world execution。
 
 #### Scenario: 完整安装 Rollback Model
 

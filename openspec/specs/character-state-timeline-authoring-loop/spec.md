@@ -99,13 +99,13 @@ Corin Gameplay MUST只为FullBodyAction及其它有限Gameplay-owned channel提�
 #### Scenario: Locomotion正常运行
 
 - **WHEN** 当前没有FullBodyAction且Body正在移动
-- **THEN** Program MUST不提交BaseLocomotion selection
+- **THEN** Gameplay/Ability owner MUST 不提交 BaseLocomotion selection
 - **AND** PoseStateMachine MUST从movement fact生成基础Pose
 
 #### Scenario: 同tick切换Locomotion与Action
 
 - **WHEN** 同一logic tick内Gameplay movement mode和Attack ownership均变化
-- **THEN** Program MUST只提交最终Gameplay Body事实与FullBodyAction playback
+- **THEN** Gameplay/Ability owner MUST 只提交最终 Gameplay Body 事实与 FullBodyAction playback
 - **AND** Locomotion Pose source MUST由同帧Presentation Fact独立选择
 
 ### Requirement: Corin必须使用PoseStateMachine加Action Slot的唯一表现拓扑
@@ -114,13 +114,13 @@ Corin Presentation Pose Graph MUST以typed Presentation Fact驱动Locomotion Pos
 
 #### Scenario: 编译Corin Pose Graph
 
-- **WHEN** Projection Compiler解析Corin Profile
+- **WHEN** Presentation binding owner 解析 Corin Profile
 - **THEN** MUST发现唯一Locomotion PoseStateMachine和唯一FullBodyAction AnimationSlot
 - **AND** MUST拒绝可达BaseLocomotion Gameplay Selection Input
 
 ### Requirement: Corin Pose source必须具有稳定binding与node-local policy
 
-Corin每个持续Locomotion Clip、Blend Space或Motion Matching source MUST由Player直接保存类型匹配的原生资源或typed资源参数；Projection Compiler MUST把全部Player资源降低为连续dense source index，不得保存作者source/provider字符串。每个有限Action Timeline producer MUST拥有稳定presentation identity、FullBodyAction channel binding、Slot／Group与直接AnimationClip resource binding。PoseState transition与Slot transition MUST分别来自对应node-local Policy；Gameplay State edge和Timeline MUST不保存另一份表现transition策略。
+Corin 每个持续 Locomotion Clip、Blend Space 或 Motion Matching source MUST 由 Player 直接保存类型匹配的原生资源或 typed 资源参数；Presentation binding owner MUST 把全部 Player 资源降低为连续 stable source binding，不得保存作者 source/provider 字符串。每个有限 Action Timeline producer MUST 拥有稳定 presentation identity、FullBodyAction channel binding、Slot/Group 与直接 AnimationClip resource binding。PoseState transition 与 Slot transition MUST 分别来自对应 node-local Policy；Gameplay State edge 和 Timeline MUST 不保存另一份表现 transition 策略。
 
 #### Scenario: 配置Run source
 
@@ -142,7 +142,7 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 
 - **WHEN** PoseStateMachine从Walk handoff到Run且两侧source endpoint属于Locomotion.Gait
 - **THEN** source-local relation MUST按compiled unwrapped Phase解析target sample time
-- **AND** Gameplay Program MUST不产生WalkLoop或RunLoop playback
+- **AND** Gameplay/Ability owner MUST 不产生 WalkLoop 或 RunLoop playback
 
 #### Scenario: 有限Locomotion素材与Loop不相容
 
@@ -179,7 +179,7 @@ Corin Walk、Run、Start与Turn Presentation Pose source MAY在同一Locomotion 
 
 ### Requirement: Corin生成产物必须显式重建
 
-Corin迁移 MUST先用`AnimationClipAnalysisInputHash`与新Phase Validation Descriptor显式重建Foot Analysis Artifact，再通过正式作者API写入注册Curve、Profile、Pose Graph与Timeline；Curve写回 MUST不使该Artifact stale。正式authoring保存成功后，Presentation Projection、Float32 Program wrapper与Fixed Program wrapper MUST通过精确Definition的正式显式Build入口按依赖顺序重建。Program MUST不包含BaseLocomotion animation producer；Projection MUST包含PoseStateMachine、Clip/BlendSpace state-local source、Locomotion Phase endpoint、AnimationSlot、完整Rig v4与唯一ordered Pose Plan。产物 MUST共享匹配的source revision闭包，不得自动Build、部分发布或使用旧wrapper、Clip plan或Phase relation。
+Corin 迁移 MUST 先用 `AnimationClipAnalysisInputHash` 与新 Phase Validation Descriptor 显式重建 Foot Analysis Artifact，再通过正式作者 API 写入注册 Curve、Profile、Pose Graph 与 Timeline；Curve 写回 MUST 不使该 Artifact stale。正式 authoring 保存成功后，各领域 binding、原生 Pose Graph 实例、Float32/Fixed domain data 与 Timeline 内容 MUST 通过精确 Definition 的正式显式 Prepare/Adopt 入口按依赖顺序重建。Gameplay/Ability owner MUST 不包含 BaseLocomotion animation producer；Presentation binding MUST 包含 PoseStateMachine、Clip/BlendSpace state-local source、Locomotion Phase endpoint、AnimationSlot、完整 Rig v4 与唯一 ordered Pose 规则。产物 MUST 共享匹配的 source revision 闭包，不得自动 Build、部分发布或使用旧 wrapper、Clip plan 或 Phase relation。
 
 #### Scenario: 迁移后显式Build
 

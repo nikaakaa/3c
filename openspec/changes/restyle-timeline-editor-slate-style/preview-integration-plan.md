@@ -46,7 +46,7 @@ SceneAsset、context身份与目标声明是正式输入，不能要求作者先
 | 内容变化 | 处理命令与真实owner | 预览应显示的结果 | 不允许的替代 |
 |---|---|---|---|
 | Timeline Prepare/CreatePlayback | Timeline Runtime独立准备内容identity/revision、NumericTarget、外部资源/成员和TreeClip服务，再按精确调用方创建实例；不发射Track/Clip operations | Pending/Ready或分型依赖失败；实际创建后报告Playback identity/generation及内容/资源版本 | 借用Ability Prepare、旧ProgramPlan、Slate播放器或假非Skill调用方 |
-| Skill及其引用Timeline | 技能独立编译/准备；调用Timeline只引用其直接内容版本和入参，不展开轨道/Clip；技能运行模块绑定版本 | 构建成功不等于当前实例已更新；活动实例保持启动时不可变技能版本，新版本用于后续实例；Session玩法identity变化按正式规则重新准备 | Character全量Build；强行给活动技能换版本；用整包Epoch判断 |
+| Graph/Ability及其引用Timeline | Graph 只编译图自身；Ability/调用方只准备正式引用、provider 和实例 binding；调用 Timeline 只引用其直接内容版本和入参，不展开轨道/Clip | 图/内容准备成功不等于当前实例已更新；活动实例保持启动时不可变的 binding，新版本用于后续实例；Session 玩法 identity 变化按正式规则重新准备 | Character 全量 Build；强行给活动实例换版本；用整包 Epoch 判断 |
 | Pose图及其绑定 | 同一正式原生Pose Factory显式重建实例，释放旧实例并重置播放/IK等历史 | 配置版本、实际实例generation/版本、重建成功/失败、历史已重置；图仍按原表现时钟执行 | Compile Pose Image；加载时生成隐藏操作表；承诺拓扑改动无损热替换 |
 | Camera配置/资源绑定 | 正式Camera绑定与Reset，由摄像机模块报告 | 目标、配置版本、实际绑定版本、Reset结果与失败原因 | UI计算采样、编相机总包或代写CameraBuilder；声称只改hash已生效 |
 | C#控制/控制配置 | 正式控制模块和角色装配/Session规则处理 | 是否需要重新准备、原因、配置与实际版本、完成/失败 | 编入技能或恢复Control总catalog；旧实例偷偷读取新字段 |

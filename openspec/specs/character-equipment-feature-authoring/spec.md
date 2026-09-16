@@ -58,7 +58,7 @@ Profile MUST使用稳定`EquipmentSlotId`表达装配位置，并使用稳定`Eq
 #### Scenario: 编译Sawblade Feature
 
 - **WHEN** Compiler发现Corin Equipment Profile引用Sawblade Feature
-- **THEN** MUST把Feature graph、catalog与state declaration静态链接进同一Character Program
+- **THEN** MUST 把 Feature graph、catalog 与 state declaration 静态链接进 Equipment/Graph owner 的正式 domain data
 - **AND** Runtime MUST不加载Feature Unity asset解释业务
 
 #### Scenario: Feature注册任意C#处理器
@@ -129,4 +129,4 @@ Profile、Slot、Route、Equipment、Feature、Parameter、State declaration及i
 
 - **WHEN** Feature `.meta` identity改变
 - **THEN** SourceRevision MUST改变
-- **AND** 旧Program MUST被判定过期
+- **AND** 旧整角色 Program MUST 被判定过期

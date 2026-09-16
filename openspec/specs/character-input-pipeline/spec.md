@@ -78,7 +78,7 @@ Neutral Input Source MUST依据已验证Program input catalog为每个continuous
 #### Scenario: 硬直中预输入攻击
 
 - **WHEN** 玩家在当前状态不可攻击时触发`Attack`
-- **THEN** Input Adapter MUST将`Attack`写入`CharacterSimulationInput.Requests`，Program MUST将其写入对应typed request state
+- **THEN** Input Adapter MUST 将 `Attack` 写入 `CharacterSimulationInput.Requests`，正式 Control/Ability owner MUST 将其写入对应 typed request state
 - **AND** 该request MUST在配置的buffer时间内保持可查询
 
 #### Scenario: 请求过期
@@ -146,7 +146,7 @@ Input Adapter MUST先捕获带稳定request identity、capture sequence和timing
 
 - **WHEN** Standard Local Session使用标记为Offensive的Attack request
 - **THEN** Local input adapter MAY在当前Tick立即写入该request
-- **AND** BTSMTL与Program MUST不需要Rollback专用节点
+- **AND** BTSMTL Graph 与正式 domain runtime MUST 不需要 Rollback 专用节点
 
 #### Scenario: Rollback 调度 Offensive Request
 
@@ -178,16 +178,16 @@ Input Adapter MUST先捕获带稳定request identity、capture sequence和timing
 
 ### Requirement: 玩家、插件AI与Neutral必须产出同一CharacterSimulationInput合同
 
-Character Control Source MAY来自Unity玩家设备、Neutral source或Behavior Designer插件任务，但进入Session Source、Character Program与Network Model的正式合同 MUST始终是匹配Numeric Target的`CharacterSimulationInput`。插件AI source MUST使用Character Program input/request catalog构造typed values与requests，MUST NOT增加AICommand、BotAction、第二request buffer或Character专用AI节点；插件行为状态不进入Character Simulation state。
+Character Control Source MAY 来自 Unity 玩家设备、Neutral source 或 Behavior Designer 插件任务，但进入 Session Source、正式 domain runtime 与 Network Model 的正式合同 MUST 始终是匹配 Numeric Target 的 `CharacterSimulationInput`。插件 AI source MUST 使用正式 input/request contract 构造 typed values 与 requests，MUST NOT 增加 AICommand、BotAction、第二 request buffer 或 Character 专用 AI 节点；插件行为状态不进入 Character Simulation state。
 
-Local Session Preparation MUST显式锁定每个Actor的Control Source identity、Numeric ABI、所需capability与Character Program binding。唯一Local Control Input Ingress MUST通过正式Committed Observation read port为需要World观察的source提供上一轮已提交Actor Body，并一次生成完整CanonicalInputBatch；`ISimulationInputAdapter`、AI source或CharacterPipelineHost MUST不自行查询Session、Scene或Presentation状态补齐观察。
+Local Session Preparation MUST 显式锁定每个 Actor 的 Control Source identity、Numeric ABI、所需 capability 与各领域 binding。唯一 Local Control Input Ingress MUST 通过正式 Committed Observation read port 为需要 World 观察的 source 提供上一轮已提交 Actor Body，并一次生成完整 CanonicalInputBatch；`ISimulationInputAdapter`、AI source 或 CharacterPipelineHost MUST 不自行查询 Session、Scene 或 Presentation 状态补齐观察。
 
 #### Scenario: 插件AI输出移动与攻击
 
 - **WHEN** Behavior Designer任务决定向目标移动并提交Attack
 - **THEN** MoveAxis MUST进入CharacterSimulationInput.Values
 - **AND** Attack MUST进入CharacterSimulationInput.Requests
-- **AND** Character Program MUST按与玩家输入相同的operation读取它们
+- **AND** 正式 Control/Ability owner MUST 按与玩家输入相同的 request contract 读取它们
 
 #### Scenario: 同一插件任务持续Running
 

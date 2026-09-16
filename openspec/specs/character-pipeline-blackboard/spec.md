@@ -78,7 +78,7 @@ Blackboard variable MUST只表达 Program 内运行变量、调参值或当前 s
 #### Scenario: Timeline 产出攻击窗口
 
 - **WHEN** Decision TreeClip 写入合法 ActionWindow-bound Frame variable
-- **THEN** Program MUST让后续 operation 读取该 variable
+- **THEN** Graph/Ability owner MUST 让后续 Graph/domain step 读取该 variable
 - **AND** projection MUST另外产生带 ActionInstance 与 EventId 的 ActionWindow fact
 
 #### Scenario: 本地调参变量
@@ -166,7 +166,7 @@ Decision TreeClip graph MUST 只包含允许的纯读取、值转换、条件组
 
 ### Requirement: Blackboard declaration 必须显式声明 fact projection
 
-Pipeline Blackboard declaration MAY保存一个显式fact projection。ActionWindow projection MUST只允许Bool、Frame scope、Frame lifetime和SyncFact policy，并 MUST保存稳定WindowType、WindowId与Digest。Projection MUST不保存Network Model policy；Program MUST只负责产生带ActionInstance与EventId的 `ActionWindowFact`。具体Model Egress只有在自己的正式fact-kind coverage支持ActionWindow时才可消费；GameplayAbilityAdmissionProfile、Blackboard declaration、Graph与Timeline MUST不复制模型配置。非法projection MUST由authoring validator和runtime拒绝，不得fallback为普通变量或默认Window。
+Pipeline Blackboard declaration MAY 保存一个显式 fact projection。ActionWindow projection MUST 只允许 Bool、Frame scope、Frame lifetime 和 SyncFact policy，并 MUST 保存稳定 WindowType、WindowId 与 Digest。Projection MUST 不保存 Network Model policy；Graph/Ability owner MUST 只负责产生带 ActionInstance 与 EventId 的 `ActionWindowFact`。具体 Model Egress 只有在自己的正式 fact-kind coverage 支持 ActionWindow 时才可消费；GameplayAbilityAdmissionProfile、Blackboard declaration、Graph 与 Timeline MUST 不复制模型配置。非法 projection MUST 由 authoring validator 和 runtime 拒绝，不得 fallback 为普通变量或默认 Window。
 
 #### Scenario: ActionWindow-bound Frame variable
 

@@ -385,7 +385,7 @@ CharacterSimulationState MUST使用由 Program handle、StateId、outer-to-inner
 
 ### Requirement: 嵌套 StateMachine runtime 必须维护完整 execution path
 
-Program MUST为嵌套 StateMachine 编译稳定 outer-to-inner execution path。CharacterSimulationState MUST按 Actor/Graph activation/path 隔离 State slot 与 Blackboard State frame，不得按 runtime object identity 寻址。
+Graph Runtime MUST 为嵌套 StateMachine 保持稳定 outer-to-inner execution path。CharacterSimulationState MUST 按 Actor/Graph activation/path 隔离 State slot 与 Blackboard State frame，不得按 runtime object identity 寻址。
 
 #### Scenario: 内外层同名 State
 
@@ -394,7 +394,7 @@ Program MUST为嵌套 StateMachine 编译稳定 outer-to-inner execution path。
 
 ### Requirement: StateMachine 运行时必须由 Compiled Operation 执行
 
-StateMachineNode、StateMachineGraph、StateNode、TransitionEdge 和 ConditionRuleGraph MUST编译为 CharacterSimulationProgram operation/table。Active、pending、exiting、transition、nested path 和 stop barrier MUST存入 CharacterSimulationState slot，MUST不由 StateMachineGraph runtime clone 持有。
+StateMachineNode、StateMachineGraph、StateNode、TransitionEdge 和 ConditionRuleGraph MUST 进入正式 Graph artifact 或 Graph Runtime 入口。Active、pending、exiting、transition、nested path 和 stop barrier MUST 由图 owner 的正式 state schema 保存，MUST 不被包装进整角色 CharacterSimulationProgram，也 MUST 不由隐藏 StateMachineGraph runtime clone 作为第二角色逻辑路径持有。
 
 #### Scenario: 进入嵌套状态机
 

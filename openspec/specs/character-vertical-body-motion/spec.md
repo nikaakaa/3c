@@ -8,7 +8,7 @@
 
 ### Requirement: 垂直Body Motion必须有唯一Prepare与Finalize阶段
 
-同一Actor/SimulationTick的玩法Motion在channel与Program Motion Modifier完成后 MUST形成唯一`ResolvedGameplayMotion`。当前Numeric Target的唯一Body Motion Integrator MUST在WorldSolver前通过`Prepare`把committed Body、compiled Body Motion descriptor、TickDelta与ResolvedGameplayMotion转换为唯一`CharacterMotionRequest`和同Step integration plan；WorldSolver返回真实applied displacement、Grounded与Collision后 MUST通过同一Target Integrator的`Finalize`形成committed vertical state。Graph、Timeline、Action、Presentation、Session Source、Network Model与concrete KCC MUST不拥有第二套重力积分或碰撞后垂直状态转换。
+同一 Actor/SimulationTick 的玩法 Motion 在各领域贡献与 Body Motion Profile 完成后 MUST 形成唯一 `ResolvedGameplayMotion`。当前 Numeric Target 的唯一 Body Motion Integrator MUST 在 WorldSolver 前通过 `Prepare` 把 committed Body、正式 Body Motion descriptor、TickDelta 与 ResolvedGameplayMotion 转换为唯一 `CharacterMotionRequest` 和同 Step integration plan；WorldSolver 返回真实 applied displacement、Grounded 与 Collision 后 MUST 通过同一 Target Integrator 的 `Finalize` 形成 committed vertical state。Graph、Timeline、Action、Presentation、Session Source、Network Model 与 concrete KCC MUST 不拥有第二套重力积分或碰撞后垂直状态转换。
 
 #### Scenario: Actor走出稳定支持面
 
@@ -72,7 +72,7 @@ Body Motion Finalize MUST只读取matching integration plan、Solver actual disp
 
 ### Requirement: Body Motion配置必须是Program编译身份
 
-`CharacterPipelineDefinition` MUST显式引用唯一`CharacterBodyMotionProfile`。Frontend MUST把Profile identity、content revision、GravityAcceleration、MaximumFallSpeed与semantic version编入Semantic IR；Float32/Fixed Program MUST编入对应Target descriptor、ProgramHash、source revision与required world capability。Runtime MUST只读取compiled descriptor，MUST不读取Profile ScriptableObject、Blackboard、Scene字段或缺失默认。
+`CharacterPipelineDefinition` MUST 显式引用唯一 `CharacterBodyMotionProfile`。Motion owner MUST 使用 Profile identity、content revision、GravityAcceleration、MaximumFallSpeed 与 semantic version 准备对应 Target descriptor 和 required world capability。Runtime MUST 只读取正式 descriptor，MUST 不读取 Profile ScriptableObject、Blackboard、Scene 字段或缺失默认。
 
 #### Scenario: 两端使用不同Gravity配置
 
@@ -82,7 +82,7 @@ Body Motion Finalize MUST只读取matching integration plan、Solver actual disp
 
 ### Requirement: AirborneVerticalMotion必须由Solver真实声明
 
-包含Body Motion descriptor的Program MUST要求`AirborneVerticalMotion`通用World Capability。Composition MUST在Session Active前验证Solver descriptor真实支持该能力。Unity CharacterController与Deterministic KCC只有在完整消费XYZ request、分别报告稳定Grounded与方向性Above/Below并调用统一Finalize后才能声明该能力。当前DotRecast Navigation Surface Solver MUST不声明该能力，也 MUST不通过丢弃Y、NavMesh投影、假Grounded或隐藏fallback继续运行。
+包含 Body Motion descriptor 的正式 domain runtime MUST 要求 `AirborneVerticalMotion` 通用 World Capability。Composition MUST 在 Session Active 前验证 Solver descriptor 真实支持该能力。Unity CharacterController 与 Deterministic KCC 只有在完整消费 XYZ request、分别报告稳定 Grounded 与方向性 Above/Below 并调用统一 Finalize 后才能声明该能力。当前 DotRecast Navigation Surface Solver MUST 不声明该能力，也 MUST 不通过丢弃 Y、NavMesh 投影、假 Grounded 或隐藏 fallback 继续运行。
 
 #### Scenario: Corin Program选择DotRecast Solver
 

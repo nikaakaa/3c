@@ -65,7 +65,8 @@ Ready与实际创建/安装是不同事实。Timeline owner确认实际Playback�
 
 此图是责任顺序，不新增第二个Step调度器。具体Decision/Commit阶段沿既有领域顺序与主实现统一Step协议接入；Timeline Commit函数不能再执行第二遍技能逻辑。
 
-Timeline决定某个TreeClip何时Enter/Update/Exit/Destroy、属于哪个循环/调用身份以及取消如何传播。TreeClip引用已独立编译的技能执行入口；技能代码准备、provider解析与实际图执行服务由主实现提供。接口应传稳定ClipId、父播放identity、循环/调用generation、阶段与typed入参，返回状态/结果及该服务的候选或正式调用引用。
+Timeline 决定某个 TreeClip 何时 Enter/Update/Exit/Destroy、属于哪个循环/调用 identity 以及取消如何传播。TreeClip 引用正式 Graph/Ability 运行入口；Graph/Ability 代码准备、provider 解析与实际图执行服务由正式 owner 提供。接口应传稳定 ClipId、父播放 identity、循环/调用 generation、阶段与 typed 入参，返回状态/结果及该服务的候选或正式调用引用。
+当前口径：TreeClip 子调用的 Graph/Ability 运行状态由正式 Graph/Ability service 唯一拥有；Timeline 只保存调度、调用 identity 和自己的生命周期位置，不复制图局部帧或可写状态。
 
 TreeClip Decision结果可以作为同Step内部输入，不允许提前发布角色事实。子调用的技能私有状态由技能服务唯一拥有，Timeline快照保存关联身份与自己的生命周期位置；需要恢复技能帧/局部变量时由核心对应快照分区恢复，不能两边各存一份可写技能状态。请求接受不等于已执行/已提交，停止完成也不能只清一个UI状态。
 

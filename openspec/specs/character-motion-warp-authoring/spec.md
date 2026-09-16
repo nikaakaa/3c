@@ -127,7 +127,7 @@ MotionWarp所属动作 MAY声明`OptionalSnapshot`或`SnapshotRequired`。`None`
 - **WHEN** 编译配置选择ScaleToTarget
 - **AND** source窗口终点平面长度为零
 - **THEN** Authoring与Semantic发布 MUST拒绝该配置
-- **AND** Runtime若收到违反该合同的Program MUST产生稳定invariant错误并定位Warp与source
+- **AND** Runtime 若收到违反该合同的正式 domain data MUST 产生稳定 invariant 错误并定位 Warp 与 source
 - **AND** MUST不切换成LinearToTarget
 
 #### Scenario: PreserveSource处理超限目标

@@ -11,7 +11,7 @@
 - **BREAKING**：取消 `CharacterSimulationProgram` 作为整个角色的执行、配置、资源和状态装配根。角色由 C# ControlModule、AbilityRuntime、Motion、Effect、Equipment 等正式模块装配；不以另一个总包或万能运行上下文改名保留旧职责。
 - **BREAKING**：Semantic 处理收窄为 Ability 的私有 Graph／FSM／条件／子图引用，以及 TreeClip 引用的技能图。保留 Float32／Fixed 数值目标、portable 技能数据、必要技能局部状态和来源映射；不把角色控制、BodyMotion、装备总目录或 Pose 资源继续编码进技能产物。
 - Skill独立覆盖执行层：技能只依赖自身执行数据／局部状态和声明需要的typed服务，不要求完整角色配置、状态或Body，不创建角色事务或组装角色领域模块。角色及其它正式调用方提供服务并控制外层提交；不使用效果的技能不被无条件要求GameplayEffect能力。此条补正原规划遗漏，具体见D20与任务1.11。
-- **BREAKING**：Timeline 轨道、Clip、区间、播放参数和 MotionWarp 配置作为正式时间轴数据直接调度，不编成 Semantic IR／Program operation。技能只保留调用 Timeline 的节点和精确内容引用；TreeClip 图独立编译。保留 portable 内容导出、资源绑定和目标数值准备，复用现有时间、窗口、取消、回绕和恢复语义，不接入 Slate Runtime 或第二播放器。
+- **BREAKING**：Timeline 轨道、Clip、区间、播放参数和 MotionWarp 配置作为正式时间轴数据直接调度，不编成 Semantic IR／Program operation。Gameplay Graph 只保留调用 Timeline 的图节点和精确内容引用；TreeClip 仍是图依赖，由正式 Graph Runtime 入口执行。保留 portable 内容表示、资源绑定和目标数值准备，复用现有时间、窗口、取消、回绕和恢复语义，不接入 Slate Runtime 或第二播放器。
 - 各领域分别提供技能、独立Timeline、Pose、Camera、Motion的准备／实际采用结果。Timeline独立Prepare／CreatePlayback不要求Ability外壳；Advance只生成Pending，调用方Step决定提交／丢弃，Timeline提供分型私有状态，核心只聚合。预览只消费真实领域操作与结果，不恢复 Character Build／ProgramEpoch 或创造假全局版本。
 - Camera 领域准备 Profile／资源到只读运行绑定，本任务只负责装配调用与旧 Projection 挂接迁出；运动曲线统一引用 RootMotionCurveAsset 和 Timeline 唯一时间映射，portable 数值运行不读取 Unity 资产。
 - 保留全部现有网络 Pipeline、四阶段 Pass、Backend、Source、WorldSolver、预测纠正、回滚、History、EventId disposition 与普通 .NET Authority 产品边界。仅迁移角色执行、玩法内容身份和完整状态快照接口，不撤销网络模型或改用固定 C# 网络流水线。
@@ -20,7 +20,7 @@
 - EventGraph 继续原生运行并唯一写入动画实例变量，Pose 只读其成功发布的 typed Frame。有限 Action／Timeline 直接提交现有播放生命周期请求，不经 EventGraph 转发。
 - Projection 中的 Pose ProgramImage 与全 Character Program 身份依赖退役；仍被消费的 Rig、ACL、动画资源、有限动作与 Camera 绑定迁回各自正式资源／实例绑定，资源烘焙不随技能构建触发。
 - 正式运行、Pose／Timeline 预览、Live Debug、C# authoring 和 Build／Run 产品入口共同迁移；旧产物、旧字段、旧 reader 与废弃 UI 同步退出，不保留双运行路径或运行时自动构建。
-- 按用户2026-09-14明确选择先大删除再接线：先删除整角色Program、Timeline操作码编译／ProgramPlan、Pose IR／Image及专属执行、转换、缓存和产物链，再把保留业务接入正式接口，不等旧消费者全部迁完才删除。允许中间提交编译失败或功能明确不可用，以剩余引用定位接线；不为维持旧体系编译增加桥接、占位类型或假成功。共享文件中的技能／动画算法保留并做必要提取；技能编译、Pipeline／Pass计划校验及ACL／Motion Matching／Foot资源处理继续保留。
+- 按用户 2026-09-14 明确选择先大删除再接线：先删除整角色 Program、Timeline 操作码编译／ProgramPlan、Pose IR／Image 及专属执行、转换、缓存和产物链，再把保留业务接入正式接口，不等旧消费者全部迁完才删除。允许中间提交编译失败或功能明确不可用，以剩余引用定位接线；不为维持旧体系编译增加桥接、占位类型或假成功。共享文件中的图、动画算法和资源处理保留并做必要提取；图编译、Pipeline／Pass 计划校验及 ACL／Motion Matching／Foot 资源处理继续保留，Ability 本身不新增独立编译链。
 - 本次只规划；保留当前正确算法、作者 identity、已发布 ACL 和其它窗口修改。Corin 是本次资产迁移对象，TrainingEnemy 的不稳定作者数据和未完成行为任务不纳入。
 
 ## Capabilities
@@ -28,12 +28,12 @@
 ### New Capabilities
 
 - `character-domain-runtime`：角色模块装配、完整玩法状态、资源引用和分领域构建身份。
-- `native-flowcanvas-pose-runtime`：原生 Pose 图执行、节点求值、资源与缓冲生命周期以及独立预览。
+- `native-flowcanvas-pose-runtime`：原生 Pose 图执行、节点求值、资源与缓冲生命周期以及 ScenePlay 正式 Actor 观察。
 
 ### Modified Capabilities
 
-- `btsmtl-gameplay-semantic-ir`：IR 只处理技能图逻辑与调用引用；Timeline 内容直接调度，不再以 Character 为必要根。
-- `btsmtl-compiled-simulation-program`：技能执行数据替代角色总 Program，角色模块状态和资源不再编入技能容器。
+- `btsmtl-gameplay-semantic-ir`：IR 只处理 Gameplay Graph 的逻辑、端口和调用引用；Timeline 内容直接调度，不再以 Character 或 Ability 为编译根。
+- `btsmtl-compiled-simulation-program`：图产物和领域运行数据替代旧角色总 Program；角色模块状态和资源不再被包装进统一容器。
 - `character-pipeline-definition-authoring`：角色配置与生成技能数据、表现资源的独立作者入口。
 - `character-state-timeline-authoring-loop`：角色 Locomotion 唯一归 C#，Ability／Timeline 继续拥有有限玩法生命周期。
 - `graph-authoring-domain-framework`：Pose 原生节点执行与技能编译的领域差异，保留共享字段、端口和作者 API。

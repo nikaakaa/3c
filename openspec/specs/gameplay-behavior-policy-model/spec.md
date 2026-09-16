@@ -13,7 +13,7 @@
 
 - **WHEN** `CharacterPipelineDefinition` 注册 `Movement.Locomotion.Move`
 - **THEN** 该行为 MUST具有稳定 BehaviorId 与 `GameplayBehaviorKind.Stream`
-- **AND** 普通移动 MUST继续由 input、Program operation 与 motion contribution执行
+- **AND** 普通移动 MUST 继续由 input、C# Control/domain runtime 与 motion contribution 执行
 
 ### Requirement: Transaction 与 Effect 身份不得复制
 

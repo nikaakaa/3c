@@ -3,9 +3,9 @@
 ## Purpose
 定义装备 catalog、typed state、切换事务、Feature Host 与 Action、Tag、GameplayEffect 集成的唯一运行时语义。
 ## Requirements
-### Requirement: Equipment Runtime 必须属于唯一Character Program和State
+### Requirement: Equipment Runtime 必须属于唯一Equipment Domain和State
 
-Equipment catalog、route entry、parameter constant与initial Loadout MUST编译进唯一Target Character Program；每个Actor的当前Slot、Equipment、Feature、revision、pending change、host generation、contribution handle与Feature local state MUST保存在唯一`CharacterSimulationState` typed aggregate。Runtime MUST不持有Unity Feature asset、Graph clone、MonoBehaviour module state或第二份equipment cache作为业务真相。
+Equipment catalog、route entry、parameter constant 与 initial Loadout MUST 由 Equipment owner 准备为唯一正式 domain data；每个 Actor 的当前 Slot、Equipment、Feature、revision、pending change、host generation、contribution handle 与 Feature local state MUST 保存在唯一 `CharacterSimulationState` typed aggregate。Runtime MUST 不持有 Unity Feature asset、Graph clone、MonoBehaviour module state 或第二份 equipment cache 作为业务真相。
 
 #### Scenario: 创建Corin Session
 
@@ -178,4 +178,3 @@ Session Active后Equipment request MUST只引用Program catalog中的EquipmentId
 - **WHEN** snapshot Program/Layout identity与当前装备catalog不匹配
 - **THEN** restore MUST拒绝整份snapshot
 - **AND** MUST不逐Slot近似迁移
-

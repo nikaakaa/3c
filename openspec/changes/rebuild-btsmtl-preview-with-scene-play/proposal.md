@@ -2,7 +2,7 @@
 
 技能图的通用观察接入由[独立观察变更](../finish-skill-runtime-observation/proposal.md)消费正式场景控制接口，原生FSM来源映射由[作者变更](../integrate-native-fsm-skill-authoring/proposal.md)提供；本变更仍唯一拥有受控预览启动、停止、重建与暂停，普通Play观察不强制经过场景预览协调器，不由图编辑器另建播放器。
 
-BTSMTL 的角色作者内容已明确收敛到技能，角色控制迁入 C#；完整角色预览需要在可配置独立 Unity 场景中运行相同的控制、动作服务、技能执行和表现链。已批准的 Timeline 独立使用方向还允许正式非 Skill 调用方使用同一内容执行。本变更统一两类目标的场景启动、准确实例观察、直接作者调参和退出恢复，并替换原先由作者窗口独立求值的预览路径；非 Skill 内容编译和运行由 Timeline change 提供，具体预览故障尚未复现，数据编译耗时也没有独立实测结论。
+BTSMTL 的角色作者内容已明确收敛到 Graph/Ability 入口，角色控制迁入 C#；完整角色预览需要在可配置独立 Unity 场景中运行相同的控制、动作服务、Graph/Ability、Timeline 和表现链。已批准的 Timeline 独立使用方向还允许正式非 Skill 调用方使用同一内容执行。本变更统一两类目标的场景启动、准确实例观察、直接作者调参和退出恢复，并替换原先由作者窗口独立求值的预览路径；非 Skill 内容的直接运行由 Timeline change 提供，具体预览故障尚未复现，数据准备耗时也没有独立实测结论。
 
 ## What Changes
 
@@ -10,12 +10,12 @@ BTSMTL 的角色作者内容已明确收敛到技能，角色控制迁入 C#；�
 - 作者选择以 Character Definition、SkillDefinition 和技能作者调用路径定位内容；运行观察以场景 generation、Session、Actor、ActionInstance、SkillProgram 和调用 generation 定位一次释放。技能可以为 Tree-only，也可以包含多个或嵌套 Timeline；Tree → Timeline → TreeClip → 子树完整保留。普通 Locomotion 与默认相机观察只需 Actor，不创建空技能或 ActionInstance。
 - 建立唯一 editor-only 场景预览协调器，扩展已有场景启动入口处理检查、进入 Play、目标连接、暂停、继续、试验重建、停止和失败恢复。Graph、技能工作区、Timeline、Pose Graph、Blend Space 和 MM 页面复用同一次受控运行，各自保留本地页面和观察绑定。
 - SessionHost、Actor、ActionInstance 与 Character Build 根要求只用于角色接入。独立 Timeline 消费 Timeline change 提供的精确 shared 内容根/产物、正式调用方、播放 identity、调用点和 generation，复用上述场景操作；不伪造 Character 或 Skill，不由预览推进 Timeline 时间或实现非 Skill 运行。
-- **BREAKING**：删除被替代的窗口级 Timeline/动画预览会话、Fact/Action/Query fixture、私有场景、时钟、独立 Motion 求值及其配置。共享作者交互、技能 Tree/局部状态机、正式编译和运行算法继续按主重构后的合同接入。
-- 运行中修改合法参数直接写入并保留正式作者资产，经唯一 Capability、Mutation、Validator 和 Undo 管理。当前实例只采用正式运行端口支持的参数；作者已修改、运行待生效、已采用、需要构建分别显示。技能内容、控制代码/模块合同和状态布局更新经正式发布并由新 Session 采用，不通过预览热换 Program。
+- **BREAKING**：删除被替代的窗口级 Timeline/动画预览会话、Fact/Action/Query fixture、私有场景、时钟、独立 Motion 求值及其配置。共享作者交互、Graph/Ability 局部状态机、正式 Graph 编译和各领域运行算法继续按主重构后的合同接入。
+- 运行中修改合法参数直接写入并保留正式作者资产，经唯一 Capability、Mutation、Validator 和 Undo 管理。当前实例只采用正式运行端口支持的参数；作者已修改、运行待生效、已采用、需要准备分别显示。Graph/Ability 内容、控制代码/模块合同和状态布局更新经正式发布并由新 Session 采用，不通过预览热换运行对象。
 - 消费主重构的唯一 Document v5 及各领域已批准的 domain 增量，控制 binding/参数、SkillDefinition/技能内容、Presentation 和独立 Timeline 沿各自唯一作者闭包同步；domain 集合不写死数量，不恢复已退役领域、角色图正文、v4 兼容入口或并行 SkillInstance 生命周期。场景配置、实际对象绑定与运行状态不进入 Document 的可写业务正文。
 - 重复输入与支持的参数调整在一次 Play 内进行；产物仍匹配时，重建试验按各正式 owner 的释放合同完整结束本轮运行并重载独立场景，角色路径释放旧 Session。编辑游标与 Capture 历史只定位内容/已记录结果，不通过 seek 修改运行状态。
 - 本 change 唯一负责受控场景预览生命周期。Camera change 只提供正式 Runtime、Projection、Rig/目标/物理绑定、正式重置和只读诊断；相机 fixture 若保留为场景输入，不得形成独立命令源、播放器或状态 seek。
-- 提供明确的构建并开始／构建并重启，角色路径检查控制模块 binding/版本、SkillProgram 目录与依赖、Program/State 布局、Numeric Target 和 Projection；独立 Timeline 消费其正式根构建和绑定检查。分别显示实际的数据构建、分析、发布、Play 进入及正式 owner 准备耗时；代码构建等待与内容数据构建分开。
+- 提供明确的准备并开始／准备并重启，角色路径检查控制模块 binding/版本、Graph/Ability 引用与依赖、领域 state schema、Numeric Target 和 Presentation/Timeline binding；独立 Timeline 消费其正式内容根和绑定检查。分别显示实际的数据准备、分析、发布、Play 进入及正式 owner 准备耗时；代码构建等待与内容数据准备分开。
 - 用主重构后有效的 Corin 正式资源交付独立预览场景。保护正确的 Motion/KCC/Pose/IK/相机/渲染算法，不修补 TrainingEnemy，也不借预览补齐未安装的战斗、VFX 或 Audio 能力。
 
 ## Capabilities

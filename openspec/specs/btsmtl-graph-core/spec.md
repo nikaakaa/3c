@@ -165,12 +165,12 @@
 
 ### Requirement: BaseGraph 承载运行上下文但不承担执行生命周期
 
-系统 MUST允许 `BaseGraph` 保存非序列化运行上下文，包括 `User`、`DeltaTime`和类型化上下文读取能力。`BaseGraph` MUST NOT拥有 `Running`、`State`、`UpdateTree`或 `ResetTree`。通用 BTSMTL解释器 MAY从 resolved authoring graph data创建隔离运行工作副本，但正式 Character runtime MUST将同一 authoring编译为 `CharacterSimulationProgram`，并由 Session Pipeline的标准 Program Step Pass执行，不得通过 `RunnableTree`、`StateMachineGraphRuntime`或运行时 Graph clone执行角色 Gameplay。两种用途 MUST不共享或回写运行状态。
+系统 MUST 允许 `BaseGraph` 保存非序列化运行上下文，包括 `User`、`DeltaTime` 和类型化上下文读取能力。`BaseGraph` MUST NOT 拥有 `Running`、`State`、`UpdateTree` 或 `ResetTree`。通用 BTSMTL 图入口 MAY 从 resolved authoring graph data 创建隔离运行工作副本；正式 Character runtime 按领域选择 Graph Runtime、C# Control、Timeline Runtime 或原生 Pose Graph，不得通过 `RunnableTree`、`StateMachineGraphRuntime` 或隐藏 Graph clone 创建整角色第二路径。不同用途 MUST 不共享或回写运行状态。
 
 #### Scenario: Character 正式运行
 
 - **WHEN** CharacterPipelineDefinition已生成有效 Program artifact且 Session Pipeline进入 Active
-- **THEN** Program Evaluate/Finalize Pass MUST只执行 Program operation
+- **THEN** 对应正式 Graph/Domain Evaluate/Finalize 入口 MUST 只执行其 owner 的图或领域规则
 - **AND** MUST不创建 BaseGraph运行工作副本或调用通用解释器
 
 #### Scenario: 非角色通用 RunnableTree tick
@@ -333,7 +333,7 @@ Timeline TreeClip 作为拥有下钻 Graph 的 authoring owner 时，编辑器 M
 
 ### Requirement: Graph 运行时初始化必须收敛到统一非虚入口
 
-明确保留的非 Character 通用解释器 MAY 通过 `BaseGraph` 公开非虚入口完成 root/nested route、runtime identity、节点、边和通用上下文初始化。正式 Character runtime MUST 不调用该入口；Character Graph、StateMachine 与 Timeline TreeClip 必须由 Compiler 解析为 Program operation。`TimelineRunningTree` MUST 不再提供 Character gameplay 专用运行时初始化入口。
+明确保留的非 Character 通用解释器 MAY 通过 `BaseGraph` 公开非虚入口完成 root/nested route、runtime identity、节点、边和通用上下文初始化。正式 Character runtime MUST 通过各领域公开入口接入；Character Graph、StateMachine 与 Timeline TreeClip 不得被统一解析为整角色 Program operation。`TimelineRunningTree` MUST 不再提供 Character gameplay 专用运行时初始化入口。
 
 #### Scenario: 初始化非 Character 嵌套 Graph
 

@@ -22,14 +22,14 @@ Foot Analysis 资源 MUST保存所消费内容的 canonical Hash，以及动画�
 - **AND** 发布结果 MUST仍按每个stable clip binding精确引用而不产生运行时字符串字典
 
 
-### Requirement: Character authoring 必须按显式 Numeric Target 生成 Simulation Program
+### Requirement: Graph authoring 必须按显式 Numeric Target 准备图运行数据
 
-系统 MUST把已校验的独立技能 artifact 降低为明确 Numeric Target 的技能执行数据。技能构建 MUST不以角色为必要根、不先构建 Pose，不生成完整角色 Program。Target MUST不接收 Unity 作者对象或 Frontend 私有 model；Float32／Fixed MUST保持同一技能语义，运行时 MUST不编译或解释 IR。角色模块通过正式绑定执行技能。
+系统 MUST 把已校验的 Graph artifact 准备为明确 Numeric Target 所需的图运行数据。Graph 准备 MUST 不以角色为必要根、不先构建 Pose，也不生成 Ability Program 或完整角色 Program。Target MUST 不接收 Unity 作者对象或 Frontend 私有 model；Float32/Fixed MUST 保持同一图语义，运行时 MUST 不编译或解释 IR。Ability 与角色模块通过正式 binding 执行图。
 
-#### Scenario: 编译 Corin Float32 Program
+#### Scenario: 准备 Corin Float32 图运行数据
 
-- **WHEN** 作者编译 Corin GameplayAbilityDefinition
-- **THEN** Frontend MUST先发布一份 validated Semantic IR artifact，Float32 Target MUST只从该 artifact 生成 Program
+- **WHEN** 作者为 Corin 的 Gameplay Graph 请求 Float32 准备
+- **THEN** Graph owner MUST 先发布 validated Graph artifact，Float32 Target MUST 只从该 artifact 准备图运行数据
 - **AND** Runtime MUST不递归 clone RootTree、StateMachine 或 Timeline graph
 
 #### Scenario: Target 收到未校验的内存 IR
@@ -39,25 +39,25 @@ Foot Analysis 资源 MUST保存所消费内容的 canonical Hash，以及动画�
 - **AND** MUST不因对象来自当前 Editor 进程就视为合法 build input
 
 
-### Requirement: Program 必须是不可变 portable 数据
+### Requirement: 图运行数据必须是不可变 portable 数据
 
-技能执行数据 MUST只包含技能 identity、语义／数值版本、操作与连接、技能局部状态布局、实际技能常量与引用、来源及能力要求，并保存自己的 canonical 数据 Hash。数据 MUST可由 Unity 与普通 .NET 读取，MUST不包含 Unity object、角色全部状态、控制代码、网络模型、世界对象或表现图。共享技能在不同角色实例中 MUST保持只读。
+图运行数据 MUST 只包含 Graph identity、语义/数值版本、节点与连接、图局部状态布局、常量与引用、来源及能力要求，并保存自己的 canonical 数据 Hash。数据 MUST 可由 Unity 与普通 .NET 读取，MUST 不包含 Unity object、角色全部状态、控制代码、网络模型、世界对象或表现图。共享 Graph 在不同 Ability/角色实例中 MUST 保持只读。
 
-#### Scenario: 纯 CSharp 加载 Program
+#### Scenario: 纯 CSharp 加载图运行数据
 
 - **WHEN** 普通 .NET Host加载 Float32 `.csim` bytes
-- **THEN** MUST不需要 UnityEngine、ScriptableObject、GameplayAbilityDefinition或 Pipeline asset才可解析 Program
-- **AND** MUST得到与 Unity AbilityDataAsset相同的 AbilityDataHash与 AbilityLayoutHash
+- **THEN** MUST 不需要 UnityEngine、ScriptableObject、GameplayAbilityDefinition 或 Pipeline asset 才可解析图运行数据
+- **AND** MUST 得到与 Unity 图 artifact 相同的 GraphDataHash 与 GraphLayoutHash
 
 
-### Requirement: Authoring type 必须通过唯一 Emitter 生成 Operation
+### Requirement: Graph authoring type 必须通过唯一 Emitter 生成图数据
 
-每个可执行技能图节点 MUST由唯一技能 emitter 生成调用／逻辑操作并保存来源、状态与接口要求，不按网络模型改变规则。Timeline轨道、Clip、MotionCurve和MotionWarp MUST不经过该 emitter；它们直接作为正式内容由唯一 Timeline Runtime 调度。TreeClip 引用的技能图仍通过同一技能 compiler 编译。
+每个可执行 Graph 节点 MUST 由唯一 Graph emitter 生成调用/逻辑数据并保存来源、状态与接口要求，不按网络模型改变规则。Timeline 轨道、Clip、MotionCurve 和 MotionWarp MUST 不经过该 emitter；它们直接作为正式内容由唯一 Timeline Runtime 调度。TreeClip 引用的图仍通过同一 Graph owner 准备。
 
 #### Scenario: 缺少 Emitter
 
 - **WHEN** 可达 authoring source 包含没有 Emitter 的可执行类型
-- **THEN** Program build MUST失败并报告精确 source identity
+- **THEN** Graph artifact build MUST 失败并报告精确 source identity
 - **AND** MUST不回退到 authoring node 虚方法执行
 
 

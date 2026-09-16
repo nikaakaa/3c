@@ -2,7 +2,7 @@
 
 ### Requirement: Timeline 编辑器预览目标来自正式管线预览目标
 
-系统 MUST使用`TimelinePreviewTarget`作为Timeline编辑器可选择的预览目标抽象，并由`CharacterPipelineHost`或等价正式角色管线目标实现它。正式角色管线预览目标 MUST沿`CharacterPipelineDefinition.AnimationPresentationProfile`与匹配的`动画实例绑定`取得Action Playback Input、AnimationSlot、Transition Routing、完整原生Pose图实例、Rig与有限Action producer source binding，并使用`AnimancerComponent`和显式`CharacterAnimationRigBinding`。Timeline Preview MUST不直接预览持续Locomotion Pose source；该工作由同一动画绑定上的Pose Graph Fact Preview承担。系统 MUST不使用TimelinePlayer、场景搜索、fallback target、Definition内联Presentation或第二份动画拓扑配置作为预览目标。
+ScenePlay MUST 作为 Timeline/Ability 预览目标的唯一正式入口，并由场景中声明的 Character/Presentation owner 提供实际 Actor binding。正式 Actor MUST 沿 CharacterPipelineDefinition 的正式 Profile、原生 Pose 图实例、Rig 与有限 Action producer source binding 取得 Action Playback Input 和 AnimationSlot，并使用正式 Animancer/Presentation binding。Timeline UI MUST 不直接创建持续 Locomotion、Pose Fact 或 Query fixture；系统 MUST 不使用 TimelinePlayer、场景搜索、fallback target、Definition 内联 Presentation 或第二份动画拓扑配置作为预览目标。
 
 #### Scenario: 选择预览目标
 
@@ -20,9 +20,9 @@
 - **AND** 系统 MUST不自动查找场景中的 Host 或 TimelinePlayer
 
 
-### Requirement: Timeline preview session 必须隔离动画生命周期状态
+### Requirement: Timeline UI 必须不拥有动画生命周期状态
 
-每个`TimelinePreviewSession` MUST拥有独立session identity、非零ActionInstance、playback generation、Action command inbox、session-local `CharacterActionPlaybackRuntime`、匹配动画绑定的AnimationSlot/原生Pose图实例 workspace、Animancer source backend与snapshot。它 MUST不读取角色runtime Action lifecycle、不与其它窗口共享command batch/state，也 MUST不把lifecycle、Slot、Player或Pose Graph状态写入Timeline asset。
+Timeline 页面 MUST 只拥有作者选择、ScenePlay 观察 binding、显示过滤和正式 Mutation/Undo。ActionInstance、playback generation、Action command、AnimationSlot、原生 Pose 图实例、Animancer source backend 与 snapshot MUST 由正式 ScenePlay/Session/Actor owner 拥有。Timeline UI MUST 不读取并复制一份可写 Action lifecycle，不与其它窗口建立第二 command batch/state，也 MUST 不把 lifecycle、Slot、Player 或 Pose Graph 状态写入 Timeline asset。
 
 #### Scenario: 两个 Preview 窗口
 

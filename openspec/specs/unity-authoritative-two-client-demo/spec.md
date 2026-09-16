@@ -49,7 +49,7 @@ Authority Worker MUST独立推进两个Corin的移动、转身、闪避、Run、
 #### Scenario: Client A输入Attack连段
 
 - **WHEN** Actor A canonical input包含合法Attack1到Attack2请求
-- **THEN** Authority Program MUST独立推进Action/Timeline/Window事实
+- **THEN** Authority 的正式 Control/Ability/Timeline domain MUST 独立推进 Action/Timeline/Window 事实
 - **AND** Client B MUST通过remote presentation output显示对应producer和可靠EventId
 
 ### Requirement: Demo必须保持Local与Hybrid为两个完整显式组合

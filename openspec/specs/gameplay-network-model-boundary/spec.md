@@ -101,7 +101,7 @@ Float32 Simulation Step MUST显式携带按tick绑定、按ActorId稳定排序�
 
 ### Requirement: BTSMTL Authoring 不得拥有 Network Model 配置
 
-Graph、StateMachine、Timeline、TreeClip、Blackboard、Action、Behavior、GameplayEffect 和 CharacterSimulationProgram MUST不保存 ModelId、Endpoint、Transport、history、correction、rollback 或 WorldSolver implementation selection。Program MAY只声明 model-neutral required capabilities。
+Graph、StateMachine、Timeline、TreeClip、Blackboard、Action、Behavior、GameplayEffect 和各领域运行数据 MUST 不保存 ModelId、Endpoint、Transport、history、correction、rollback 或 WorldSolver implementation selection。Graph artifact MAY 只声明 model-neutral required capabilities；Network Model 仍由 Session Source、Pipeline Pass 和 Composition 显式选择。
 
 #### Scenario: 复用同一 Program
 

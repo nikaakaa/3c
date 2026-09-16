@@ -29,7 +29,7 @@ Unity gameplay场景 MUST以唯一 `SimulationSessionHost` 持有 Session prepar
 - **THEN** Host MUST只按五个显式引用创建组合
 - **AND** 缺少任一引用时 MUST在创建 Runtime前失败
 
-### Requirement: Program Runtime 与 Execution Backend 必须是独立选择维度
+### Requirement: Domain Runtime 与 Execution Backend 必须是独立选择维度
 
 Program Runtime Definition MUST只拥有 NumericProfile、Target ABI、Program/State/Kernel/Snapshot codec与 Target services；Execution Backend Definition MUST只拥有 Pipeline descriptor编译、Pass runtime、working transaction与 outer runtime handle创建。Target-specific Composer MUST强类型校验二者兼容。同一 Program Runtime MAY与多个兼容 Backend组合，但 Common Host MUST不做 Float/Fixed转换、反射调用或 runtime backend switch。
 
@@ -41,7 +41,7 @@ Program Runtime Definition MUST只拥有 NumericProfile、Target ABI、Program/S
 
 ### Requirement: Session Source 必须通过 Preparation 产生完整 Launch Plan
 
-Session Source MUST创建 `ISimulationSessionPreparation`，并只返回 Pending、Ready或 Failed。只有 Ready preparation MAY产生一次不可变 `SimulationSessionLaunchPlan`；Launch Plan MUST包含 Session identity、TickRate、Program Runtime/Target ABI、Backend、compiled Pipeline plan/hash、ProgramCatalog、完整 Actor roster、Source ports、Solver、Snapshot codec、Committer、initial Character/World/Pipeline state与 diagnostics identity。Preparation MUST不把半成品 Runtime暴露给 Host，也 MUST不在失败时切换其它 Source、Pipeline、Backend或 Solver。
+Session Source MUST 创建 `ISimulationSessionPreparation`，并只返回 Pending、Ready 或 Failed。只有 Ready preparation MAY 产生一次不可变 `SimulationSessionLaunchPlan`；Launch Plan MUST 包含 Session identity、TickRate、domain runtime/numeric ABI、Backend、compiled Pipeline plan/hash、领域 binding、完整 Actor roster、Source ports、Solver、Snapshot codec、Committer、initial Character/World/Pipeline state 与 diagnostics identity。Preparation MUST 不把半成品 Runtime 暴露给 Host，也 MUST 不在失败时切换其它 Source、Pipeline、Backend 或 Solver。
 
 #### Scenario: Network Model 等待 roster
 
@@ -61,7 +61,7 @@ Session Source MUST创建 `ISimulationSessionPreparation`，并只返回 Pending
 
 ### Requirement: Target-specific Composer 必须唯一创建完整 Runtime
 
-每个已安装 Program Runtime/Execution Backend组合 MUST通过唯一强类型 Composer集中校验并创建ProgramCatalog、compiled Pipeline plan、roster、initial state、Source ports、Kernel services、WorldSolver、Snapshot codec、Committer与diagnostics。当前Float32 Pass Backend MUST只有一个位于portable source set的正式Composer入口。Unity target adapter MUST只把五项显式Composition与Actor registration降低为一个完整portable request，并通过Prepared Source显式提供的Runtime Launcher调用该Composer。Runtime Launcher MAY增加模型专属启动约束，但 MUST不复制Runtime构造、Pipeline compile、LaunchPlan、identity或capability校验。Common Host、Unity Composer、Character Host、Preview和Demo MUST不识别具体Network Model、Prepared Source或Pipeline Definition类型。
+每个已安装 Domain Runtime/Execution Backend 组合 MUST 通过唯一强类型 Composer 集中校验并创建领域 binding、compiled Pipeline plan、roster、initial state、Source ports、Control/Ability/Timeline services、WorldSolver、Snapshot codec、Committer 与 diagnostics。当前 Float32 Pass Backend MUST 只有一个位于 portable source set 的正式 Composer 入口。Unity target adapter MUST 只把五项显式 Composition 与 Actor registration 降低为一个完整 portable request，并通过 Prepared Source 显式提供的 Runtime Launcher 调用该 Composer。Runtime Launcher MAY 增加模型专属启动约束，但 MUST 不复制 Runtime 构造、Pipeline compile、LaunchPlan、identity 或 capability 校验。Common Host、Unity Composer、Character Host、ScenePlay 和 Demo MUST 不识别具体 Network Model、Prepared Source 或 Pipeline Definition 类型。
 
 #### Scenario: Local 与 ServerAuthoritative Prediction 共用 Float32 基座
 
@@ -83,7 +83,7 @@ Session Source MUST创建 `ISimulationSessionPreparation`，并只返回 Pending
 
 ### Requirement: Actor Registration 必须在 Active 前形成不可变 roster
 
-Character Actor Host MUST提供带显式ActorId、Program artifact、Projection、抽象Float32 World body binding、可选local input、Presentation/output port与diagnostics metadata的不可变registration。通用registration与Character Host MUST不暴露或要求`UnityCharacterControllerWorldBodyBinding`具体类型。每个具体WorldSolver Definition MUST在Active前校验binding实现与自己匹配；Unity CharacterController Solver MUST只接受CC binding，DotRecast Solver MUST只接受state-only DotRecast binding。Session preparation MUST在Active前校验ActorId唯一性、Program/Projection identity、ProgramCatalog binding、当前Pipeline/Source/Solver所需端口与initial state；Active后 MUST不增删Actor、不换Program、修改binding或切换Solver。
+Character Actor Host MUST 提供带显式 ActorId、Control/Ability/Timeline/Presentation binding、抽象 World body binding、可选 local input、Presentation/output port 与 diagnostics metadata 的不可变 registration。通用 registration 与 Character Host MUST 不暴露或要求 `UnityCharacterControllerWorldBodyBinding` 具体类型。每个具体 WorldSolver Definition MUST 在 Active 前校验 binding 实现与自己匹配；Unity CharacterController Solver MUST 只接受 CC binding，DotRecast Solver MUST 只接受 state-only DotRecast binding。Session preparation MUST 在 Active 前校验 ActorId 唯一性、各领域 identity、当前 Pipeline/Source/Solver 所需端口与 initial state；Active 后 MUST 不增删 Actor、替换领域 owner、修改 binding 或切换 Solver。
 
 #### Scenario: DotRecast Composition注册Actor
 
@@ -109,7 +109,7 @@ SimulationSessionHost MUST通过 GameplayTickSystem正式 Input/Logic target推�
 
 ### Requirement: Session Composition 必须锁定完整身份与真实 capability
 
-Active descriptor MUST记录 SessionId、source clock、TickRate、Program Runtime/NumericProfile/Target ABI、ProgramCatalogHash、roster、BackendId/semantic version、PipelineId/Revision/Hash、SourceId、Solver identity/version/capabilities、Snapshot codec、Committer与可选 Model/Endpoint identity。Composer MUST在首 Tick前校验所有 identity与 Program/Pass capability union；显示名、Inspector状态或 capability位 MUST不能代替实际对象和 factory校验。
+Active descriptor MUST 记录 SessionId、source clock、TickRate、domain runtime/NumericProfile/Target ABI、roster、BackendId/semantic version、PipelineId/Revision/Hash、SourceId、Solver identity/version/capabilities、Snapshot codec、Committer 与可选 Model/Endpoint identity。Composer MUST 在首 Tick 前校验所有 identity 与 domain/Pass capability union；显示名、Inspector 状态或 capability 位 MUST 不能代替实际对象和 factory 校验。
 
 #### Scenario: Pipeline 要求 Solver 未支持能力
 
@@ -150,7 +150,7 @@ Unity Float32 composition层 MUST提供唯一抽象WorldBodyBinding合同，包�
 
 ### Requirement: Composition必须校验Body Motion与Solver垂直能力
 
-Session Composition MUST从compiled ProgramCatalog读取Body Motion descriptor与required world capability union，并在Runtime Launcher创建Session前验证选定WorldSolver真实支持`AirborneVerticalMotion`。Capability校验 MUST不按Network Model、Scene、Actor或Host放宽；失败 MUST按现有owner释放已经准备的资源，MUST不切换Solver、关闭重力或使用Grounded-only fallback。错误 MUST包含Program Catalog identity、Solver identity、Solver capabilities与精确缺失能力。
+Session Composition MUST 从正式 Body Motion binding 和 domain capability union 读取 Body Motion descriptor，并在 Runtime Launcher 创建 Session 前验证选定 WorldSolver 真实支持 `AirborneVerticalMotion`。Capability 校验 MUST 不按 Network Model、Scene、Actor 或 Host 放宽；失败 MUST 按现有 owner 释放已经准备的资源，MUST 不切换 Solver、关闭重力或使用 Grounded-only fallback。错误 MUST 包含 domain binding identity、Solver identity、Solver capabilities 与精确缺失能力。
 
 #### Scenario: Solver缺少AirborneVerticalMotion
 
@@ -160,11 +160,11 @@ Session Composition MUST从compiled ProgramCatalog读取Body Motion descriptor�
 
 ### Requirement: Local Launch Plan必须锁定Control Source与Observation能力
 
-Local Session Preparation MUST为完整Actor roster显式生成不可变Control Source roster。每个entry MUST包含ActorId、Control Source identity、Numeric ABI、Character Program binding与所需runtime capability；Behavior Designer AI entry MUST同时绑定插件行为内容 identity、任务/插件版本、输入所有权与Committed Actor Pose observation schema。Launch Plan和Composition identity MUST包含这些binding。公共Host、Composer、Ingress与Source MUST不按具体插件类型、Actor名称、Tag、第一个可用实现或fallback选择Control Source，Active后 MUST不替换Control Source或Observation provider。
+Local Session Preparation MUST 为完整 Actor roster 显式生成不可变 Control Source roster。每个 entry MUST 包含 ActorId、Control Source identity、Numeric ABI、各领域 binding 与所需 runtime capability；Behavior Designer AI entry MUST 同时绑定插件行为内容 identity、任务/插件版本、输入所有权与 Committed Actor Pose observation schema。Launch Plan 和 Composition identity MUST 包含这些 binding。公共 Host、Composer、Ingress 与 Source MUST 不按具体插件类型、Actor 名称、Tag、第一个可用实现或 fallback 选择 Control Source，Active 后 MUST 不替换 Control Source 或 Observation provider。
 
 #### Scenario: Local插件AI Actor准备完成
 
-- **WHEN** AI Actor的Behavior Designer内容、Character Program、输入所有权与Committed Observation capability全部匹配
+- **WHEN** AI Actor 的 Behavior Designer 内容、各领域 binding、输入所有权与 Committed Observation capability 全部匹配
 - **THEN** Preparation MUST把其插件AI Control Source作为锁定Actor entry写入Launch Plan
 - **AND** Standard Runtime Launcher MUST沿现有target-specific Composer创建唯一Session runtime
 

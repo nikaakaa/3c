@@ -31,7 +31,7 @@ Pose Graph MUST只声明可复用的Source/Slot/Rig能力合同，不直接拥�
 #### Scenario: ClipPlayer解析RunLoop
 
 - **WHEN** ClipPlayer声明RunLoop Source Slot且Character Profile为该Slot提供RunLoop原生AnimationClip Binding
-- **THEN** Projection Compiler MUST从Graph Slot与Profile Binding生成dense source index
+- **THEN** Presentation binding owner MUST 从 Graph Slot 与 Profile Binding 生成稳定 source binding/index
 - **AND** MUST不经过Sequence资产、角色名或作者字符串查找
 
 ### Requirement: PoseStateMachine工作区必须对齐UE作者口径
@@ -46,7 +46,7 @@ Pose Graph Workspace MUST显示State Machine、State、Transition Rule、State A
 
 ### Requirement: Action producer authoring必须只允许有限Timeline Action
 
-`AnimationProducerPresentationBinding`、Profile Inspector与正式authoring mutation MUST只允许有限Action Timeline producer。Motion Matching、Blend Space与Clip source MUST只通过Player的typed Source Slot、Profile Binding和PoseState source provider配置，MUST不作为Gameplay producer或AnimationChannel candidate。Projection Compiler MUST分别建立Action-only binding index与Pose source/provider dense binding index。
+`AnimationProducerPresentationBinding`、Profile Inspector 与正式 authoring mutation MUST 只允许有限 Action Timeline producer。Motion Matching、Blend Space 与 Clip source MUST 只通过 Player 的 typed Source Slot、Profile Binding 和 PoseState source provider 配置，MUST 不作为 Gameplay producer 或 AnimationChannel candidate。Presentation binding owner MUST 分别建立 Action-only binding index 与 Pose source/provider dense binding index，不生成整角色 Projection。
 
 #### Scenario: 作者配置Locomotion Blend Space
 
@@ -99,7 +99,7 @@ Editor-only `CharacterFootPlacementAnalysisSource` MUST拥有稳定identity、�
 
 ### Requirement: Animation producer 必须拥有稳定 presentation identity
 
-每个有限Action Timeline animation producer MUST拥有稳定authoring producer identity。每个持续Pose source在authoring层 MUST由Player声明Graph-owned typed Source Slot，原生资源由Character Profile Binding提供；Pose Graph不得保存角色资源、Profile Binding或Source Id字符串。Projection Compiler MUST把Action identity写入Program source map与Projection binding，并把Graph Slot与Profile Binding降低为Projection-local dense source index与只读source map。Runtime MUST只在匹配Projection revision内使用dense source index、Player identity和generation，不得使用显示名、数组index、asset path或当前State名称作为fallback。
+每个有限 Action Timeline animation producer MUST 拥有稳定 authoring producer identity。每个持续 Pose source 在 authoring 层 MUST 由 Player 声明 Graph-owned typed Source Slot，原生资源由 Character Profile Binding 提供；Pose Graph 不得保存角色资源、Profile Binding 或 Source Id 字符串。Presentation binding owner MUST 把 Action identity、Graph Slot 与 Profile Binding 映射为稳定 source binding 和只读 source map。Runtime MUST 只在匹配 binding revision 内使用 source identity、Player identity 和 generation，不得使用显示名、数组 index、asset path 或当前 State 名称作为 fallback。
 
 #### Scenario: Timeline Track 重排
 
@@ -207,7 +207,7 @@ Equipment Feature authoring MUST不保存LayerId、BlendMode、OutputPolicy或Pr
 
 - **WHEN** Equipment route使用RequiredProducerIds校验Gameplay Graph实现完整性
 - **THEN** Semantic/Gameplay compiler MAY保留该纯route依赖
-- **AND** Projection Compiler MUST不把它解释为AnimationChannel、PoseNode或表现层producer binding
+- **AND** Presentation binding owner MUST 不把它解释为 AnimationChannel、PoseNode 或表现层 producer binding
 
 #### Scenario: 武器需要动态替换Pose Graph
 
@@ -285,7 +285,7 @@ Pose Graph Workspace、Navigator与Details MAY只读显示Action Timeline Segmen
 
 ### Requirement: Presentation Projection必须保存per-clip Phase与可达relation计划
 
-Projection Compiler MUST为每个Locomotion Group成员编译固定容量forward/inverse Phase plan，把Direct Clip或Blend Space降低为`AnimationSourcePhasePlan`，并只为PoseState实际可达edge保存source-to-source relation。Direct Clip endpoint MUST引用自身Clip plan；Blend Space endpoint MUST引用显式Phase Reference Sample作为clock carrier和全部Dynamic Sample的per-clip inverse plan。Relation MUST包含RelationIdentity、TransitionId、两侧source plan identity、编译期固定leader、正式clock authority、实际有限秒域coverage与Artifact validation identity。Foot Analysis质量门槛不通过 MUST阻止Projection发布。Projection MUST不保存Editor AnimationCurve、Phase Validation samples、Marker occurrence、pairwise warp knot或Sequence identity。
+Presentation binding owner MUST 为每个 Locomotion Group 成员准备固定容量 forward/inverse Phase plan，把 Direct Clip 或 Blend Space 映射为 `AnimationSourcePhasePlan`，并只为 PoseState 实际可达 edge 保存 source-to-source relation。Direct Clip endpoint MUST 引用自身 Clip plan；Blend Space endpoint MUST 引用显式 Phase Reference Sample 作为 clock carrier 和全部 Dynamic Sample 的 per-clip inverse plan。Relation MUST 包含 RelationIdentity、TransitionId、两侧 source plan identity、固定 leader、正式 clock authority、实际有限秒域 coverage 与 Artifact validation identity。Foot Analysis 质量门槛不通过 MUST 阻止该表现 binding 采用。表现 binding MUST 不保存 Editor AnimationCurve、Phase Validation samples、Marker occurrence、pairwise warp knot 或 Sequence identity。
 
 #### Scenario: MovingTurn实际只播放28帧
 

@@ -8,7 +8,7 @@
 
 ### Requirement: 持续Pose与有限Action控制边界必须分离
 
-持续Locomotion MUST由committed Body/Intent构造`CharacterPresentationFactFrame`，再由PoseStateMachine选择state-local `PresentationPoseSourceSample`。只有有限Action Timeline与其它明确Gameplay-owned有限动画 MAY使用AnimationChannelId、Program producer、`ActionAnimationPlaybackCommand`和AnimationPlaybackId。Projection Compiler MUST把Pose source binding、Action producer binding、PoseNode、Routing Plan、Rig与固定Pose Plan编入同一target-neutral Projection。Runtime MUST不读取旧BaseLocomotion channel、旧PoseSlot、Layer catalog、Animancer layer index、Profile layer order或旧LayerId。
+持续 Locomotion MUST 由 committed Body/Intent 构造 `CharacterPresentationFactFrame`，再由 PoseStateMachine 选择 state-local `PresentationPoseSourceSample`。只有有限 Action Timeline 与其它明确 Gameplay-owned 有限动画 MAY 使用 AnimationChannelId、Action producer、`ActionAnimationPlaybackCommand` 和 AnimationPlaybackId。正式 Presentation Profile、原生 Pose Graph、Action binding、Routing、Rig 与 Slot 由各自 owner 装配；Runtime MUST 不读取旧 BaseLocomotion channel、旧 PoseSlot、Layer catalog、Animancer layer index、Profile layer order 或旧 LayerId。
 
 #### Scenario: Locomotion持续输出
 
@@ -40,7 +40,7 @@ Base Pose、Idle、Move、Start、Stop、Turn与可选Motion Matching MUST来自
 
 ### Requirement: 动画帧必须按固定职责顺序执行
 
-每个PresentationFrame MUST按固定顺序读取committed Body/Intent与Program parameter、构造Fact、求值PoseStateMachine、提交target provider demand、解析readiness、采样state-local source、消费有限Action frame、执行Transition Routing与AnimationSlot、执行Local Pose composition与Virtual Bone派生、显式转换到Component Pose、执行Component Pose控制、让FootPlacement与PoseBone目标源发布typed Goal Contribution、由唯一Goal Assembler形成一个Goal Set、由唯一FullBodyIK求解Component Pose、显式转回Local Pose，最后发布FinalAnimationPoseFrame。Action visual sampler MUST只生成有限Action sample；PoseState provider MUST只处理其state-local source。任一阶段 MUST不重新仲裁其它阶段的选择或写回Gameplay。
+每个 PresentationFrame MUST 按固定顺序读取 committed Body/Intent 与正式 Presentation input，构造 Fact、求值 PoseStateMachine、提交 target provider demand、解析 readiness、采样 state-local source、消费有限 Action frame、执行 Transition Routing 与 AnimationSlot、执行 Local Pose composition 与 Virtual Bone 派生、显式转换到 Component Pose、执行 Component Pose 控制、让 FootPlacement 与 PoseBone 目标源发布 typed Goal Contribution、由唯一 Goal Assembler 形成一个 Goal Set、由唯一 FullBodyIK 求解 Component Pose、显式转回 Local Pose，最后发布 FinalAnimationPoseFrame。Action visual sampler MUST 只生成有限 Action sample；PoseState provider MUST 只处理其 state-local source。任一阶段 MUST 不重新仲裁其它阶段的选择或写回 Gameplay。
 
 #### Scenario: 攻击期间角色速度归零
 
@@ -134,7 +134,7 @@ Animancer source backend MUST只按完整Action playback或Presentation Pose sou
 
 ### Requirement: Float32与Fixed必须共享同一Presentation Projection
 
-由同一SemanticHash和producer contract生成的Float32 Program与Fixed Program wrapper MUST引用同一套Presentation Projection、Pose source binding、Action binding、Pose Plan、Routing Plan和Rig revision。Runtime MUST不按ProgramHash复制、选择或降级Projection。任一Program、Projection、Rig或authoring revision不匹配 MUST在preparation阶段失败。
+由同一 authoring identity、producer contract 和正式 Profile 生成的 Float32/Fixed domain binding MUST 引用同一套 Pose source binding、Action binding、Routing、Rig revision 和资源规则。Runtime MUST 不按 ProgramHash 复制、选择或降级 Presentation binding。任一 domain binding、Rig 或 authoring revision 不匹配 MUST 在 preparation 阶段失败。
 
 #### Scenario: 构建Fixed wrapper
 
@@ -144,7 +144,7 @@ Animancer source backend MUST只按完整Action playback或Presentation Pose sou
 
 ### Requirement: Runtime、Preview和Live Debug必须使用同一事实源
 
-正式Runtime、Action Timeline Preview、Pose Graph Fact Preview、MM Query Fixture和Live Debug MUST复用匹配revision的Projection、source backend、Routing Plan、Pose Plan与completion语义。Preview入口 MUST分别只提交Action command、Presentation Fact或state-local query fixture。Diagnostics MUST按Action playback identity或Provider/Player/Source/generation显示各自生命周期、effective sample、transition、release和Pose contribution；不得从Animancer weight或Animator骨骼反推第二份事实。
+正式 Runtime、ScenePlay Action 观察、Pose Graph 观察、MM 查询观察和 Live Debug MUST 复用匹配 revision 的正式 Presentation binding、source backend、Routing、原生 Pose Graph 与 completion 语义。ScenePlay/Editor 入口 MUST 只提交正式输入或 domain request，不能提交 Preview fixture。Diagnostics MUST 按 Action playback identity 或 Provider/Player/Source/generation 显示各自生命周期、effective sample、transition、release 和 Pose contribution；不得从 Animancer weight 或 Animator 骨骼反推第二份事实。
 
 #### Scenario: Projection变为Stale
 

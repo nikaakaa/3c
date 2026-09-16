@@ -5,7 +5,7 @@
 ## Requirements
 ### Requirement: CharacterPipelineHost 只负责装配和注册
 
-CharacterPipelineHost MUST只加载并校验 CharacterPipelineDefinition对应的 CharacterSimulationProgramAsset与 Projection，建立显式 ActorId、World body binding、可选 local input、模型无关的 Gameplay output change port、Presentation output port和 diagnostics metadata，并向显式 SimulationSessionHost提供不可变 Actor registration。Gameplay output port MUST只记录当前 Tick 已提交的 Publish、Replace与 Retire变更，不得解释 history、correction、rollback或 Network Model策略。CharacterPipelineHost MUST不创建 ProgramCatalog、Session Source、WorldSolver、Program Runtime、Execution Backend、Pipeline Runtime、Snapshot codec、Committer aggregate或 Logic target，也 MUST不选择 Network Model或 Pipeline。
+CharacterPipelineHost MUST 只加载并校验 CharacterPipelineDefinition 的正式 Control、Ability、Timeline、Presentation、Input、Body 和 diagnostics binding，建立显式 ActorId、World body binding、可选 local input、模型无关的 Gameplay output change port、Presentation output port 和 diagnostics metadata，并向显式 SimulationSessionHost 提供不可变 Actor registration。Gameplay output port MUST 只记录当前 Tick 已提交的 Publish、Replace 与 Retire 变更，不得解释 history、correction、rollback 或 Network Model 策略。CharacterPipelineHost MUST 不创建 Session Source、WorldSolver、Execution Backend、Pipeline Runtime、Snapshot codec、Committer aggregate 或 Logic target，也 MUST 不选择 Network Model 或 Pipeline。
 
 #### Scenario: 注册单机 Corin
 
@@ -21,7 +21,7 @@ CharacterPipelineHost MUST只加载并校验 CharacterPipelineDefinition对应�
 
 ### Requirement: Character ActorId 必须由 Host 单点装配
 
-每个 CharacterPipelineHost MUST显式提供唯一非空 ActorId，并在 Actor registration中绑定 ProgramId、ProgramHash、LayoutHash、World body与 Presentation identity。SimulationSessionHost MUST在 Active前验证完整 roster中 ActorId唯一且 binding精确匹配；Program operation、Projection、Solver、Pipeline Pass、Session Source与 Network Model MUST不生成替代 identity，Active后 MUST不修改 ActorId或 roster binding。
+每个 CharacterPipelineHost MUST 显式提供唯一非空 ActorId，并在 Actor registration 中绑定领域 identity、World body 与 Presentation identity。SimulationSessionHost MUST 在 Active 前验证完整 roster 中 ActorId 唯一且各领域 binding 精确匹配；Graph、Timeline、Solver、Pipeline Pass、Session Source 与 Network Model MUST 不生成替代 Actor identity，Active 后 MUST 不修改 ActorId 或 roster binding。
 
 #### Scenario: Local Corin 注册
 
@@ -40,7 +40,7 @@ Compiled Node 与 Timeline operation MUST只产生 state mutation、typed fact�
 
 ### Requirement: Timeline 和动画 tick 权威归属 pipeline
 
-Gameplay Timeline logic time MUST归Program与CharacterSimulationState并按SimulationTick推进；每个有限Action Sample command MUST只表达committed playback identity、raw visual time、cycle与time scale锚点，MUST不表达最终骨骼Pose或要求Player只在SimulationTick推进。有限Action projected visual time、PoseStateMachine、Clip/BlendSpace/MM source raw clock、source-local Phase endpoint、AnimationSlot、显式Player、Animancer source sampling与Pose Plan evaluation MUST归PresentationFrame。Pipeline Runtime MUST通过committed Body/Intent构造Presentation Fact，并通过有限Action producer/playback identity连接Timeline与Slot。Program MUST不读取PoseState、ClipPlayer、Phase relation、Slot或Pose Graph时间，Presentation MUST不推进Gameplay Timeline。系统 MUST不提供让同一Timeline在Gameplay-owned与Presentation-owned时钟之间切换的运行模式；有限Action与持续Pose source MUST由其正式authoring owner进入唯一对应链路。
+Gameplay Timeline logic time MUST 由正式 Timeline Runtime 按 SimulationTick 推进；每个有限 Action Sample command MUST 只表达 committed playback identity、raw visual time、cycle 与 time scale 锚点，MUST 不表达最终骨骼 Pose。有限 Action projected visual time、PoseStateMachine、Clip/BlendSpace/MM source raw clock、source-local Phase endpoint、AnimationSlot、显式 Player、Animancer source sampling 与原生 Pose Graph evaluation MUST 归 PresentationFrame。Pipeline Runtime MUST 通过 committed Body/Intent 构造 Presentation Fact，并通过有限 Action playback identity 连接 Timeline 与 Slot。Presentation MUST 不推进 Gameplay Timeline。系统 MUST 不提供让同一 Timeline 在多个 owner 时钟之间切换的运行模式；有限 Action 与持续 Pose source MUST 由各自正式 owner 进入唯一对应链路。
 
 #### Scenario: 无新 Logic Tick 的 RenderFrame
 
@@ -96,29 +96,29 @@ GameplayTickSystem MUST只注册 SimulationSessionHost/runtime handle作为同�
 
 ### Requirement: CharacterPipelineDefinition 持有角色输入合同
 
-CharacterPipelineDefinition MUST继续持有 InputProfile authoring identity；Compiler MUST将 InputId、value type、range、request policy 和量化规则写入 Program input catalog。Unity Input Adapter MUST引用同一 catalog转换设备输入，Kernel MUST不读取 InputProfile asset。
+CharacterPipelineDefinition MUST 继续持有 InputProfile authoring identity；正式 Input owner MUST 将 InputId、value type、range、request policy 和量化规则提供给 Input Adapter。Unity Input Adapter MUST 引用同一正式输入合同转换设备输入，Kernel MUST 不读取 InputProfile asset。
 
-#### Scenario: 编译 Move Input
+#### Scenario: 准备 Move Input
 
 - **WHEN** Definition 引用合法 InputProfile
-- **THEN** Program MUST包含对应 portable InputId/catalog
+- **THEN** Input owner MUST 提供对应 portable InputId/catalog
 
-### Requirement: CharacterPipelineDefinition 提供 RootTree authoring context
-系统 MUST 允许 editor 从 `CharacterPipelineDefinition` 打开 RootTree，并将 definition 和 input profile 作为 editor-only authoring context 传给 TreeWindow。该 context 只服务 authoring UI，不改变 runtime Graph 执行语义。
+### Requirement: CharacterPipelineDefinition 提供正式 Graph authoring context
+系统 MUST 允许 editor 从 `CharacterPipelineDefinition` 打开正式 Graph/Ability authoring，并将 definition、Ability grant 和 input profile 作为 editor-only authoring context 传给对应 Graph window。该 context 只服务 authoring UI，不创建 Character RootTree、不拥有运行时状态，也不改变正式 Graph Runtime 语义。
 
-#### Scenario: 从 Definition 打开 RootTree
-- **WHEN** 用户从 `CharacterPipelineDefinition` editor 打开 RootTree
-- **THEN** TreeWindow MUST 获得当前 definition 和 `InputProfile`
+#### Scenario: 从 Definition 打开 Graph
+- **WHEN** 用户从 `CharacterPipelineDefinition` editor 打开正式 Graph/Ability authoring
+- **THEN** GraphWindow MUST 获得当前 definition、Ability grant 和 `InputProfile`
 - **AND** Input authoring 素材区 MUST 使用该 context 展示输入定义
 
-#### Scenario: 多个 Definition 复用 RootTree
-- **WHEN** 多个 `CharacterPipelineDefinition` 引用同一个 RootTree
+#### Scenario: 多个 Definition 复用 Graph
+- **WHEN** 多个 `CharacterPipelineDefinition` 引用同一个正式 Graph
 - **THEN** Input authoring 素材区 MUST 使用打开入口传入的 definition
 - **AND** 系统 MUST NOT 通过 AssetDatabase 反查猜测唯一 definition
 
 ### Requirement: Pipeline 输出事实必须通过 GameplayFacts 边界产生
 
-Compiled Program MUST保持 `SimulationActorTickResult.GameplayFacts` 作为角色Gameplay事实边界。Blackboard variable MAY为Program operation提供运行上下文；只有显式合法fact projection才能产生 `ActionWindow` fact。Action、Effect、Attribute、Cue、Motion与State事实 MUST由各自正式operation生成；Presentation输出 MUST写入独立 `PresentationCommands`。Model Pass MUST只读取正式Tick result与Source products，MUST不直接读取Blackboard state。
+正式 Gameplay Runtime MUST 保持 `SimulationActorTickResult.GameplayFacts` 作为角色 Gameplay 事实边界。Graph variable MAY 为 Graph Runtime 提供运行上下文；只有显式合法 fact projection 才能产生 `ActionWindow` fact。Action、Effect、Attribute、Cue、Motion 与 State 事实 MUST 由各自正式 owner 生成；Presentation 输出 MUST 写入独立 `PresentationCommands`。Model Pass MUST 只读取正式 Tick result 与 Source products，MUST 不直接读取 Blackboard state。
 
 #### Scenario: 投影 Action Window
 
@@ -152,7 +152,7 @@ SimulationCommitter MUST使用presentation-owned持久队列保存未消费的�
 
 ### Requirement: PresentationFrame必须输出完整最终Pose Plan结果
 
-PresentationFrame MUST消费committed Body/Intent、构造typed Presentation Fact，并消费完整有限Action playback batch与Parameter page；随后按Projection编译的ordered stage table执行PoseState selection、State source demand、source-local Phase resolve、source capture、Action playback、AnimationSlot、Transition Routing、Local Pose composition、显式Local/Component转换、Component Pose控制、FootPlacement与PoseBone Goal Contribution、唯一Goal Assembler、唯一FullBodyIK、后续Pose stage与FinalPublication。只有唯一OutputPose及全部必需stage完成后才可由唯一final writer发布`FinalAnimationPoseFrame`并推进Camera；任一Fact、source、Phase endpoint、Player、Slot、转换、Pose operation、world query、Goal Contribution、Goal Assembly或FullBodyIK失败 MUST阻止部分最终结果发布，不得沿用上一帧、只发布pelvis Pose或绕过节点。
+PresentationFrame MUST 消费 committed Body/Intent、构造 typed Presentation Fact，并消费完整有限 Action playback batch 与 Parameter page；随后按正式 Pose Graph、Source、Constraint 和 Final Publication 顺序执行 PoseState selection、State source demand、source-local Phase resolve、source capture、Action playback、AnimationSlot、Transition Routing、Local Pose composition、显式 Local/Component 转换、Component Pose 控制、FootPlacement 与 PoseBone Goal Contribution、唯一 Goal Assembler、唯一 FullBodyIK、后续 Pose stage 与 FinalPublication。只有唯一 OutputPose 及全部必需阶段完成后才可由唯一 final writer 发布 `FinalAnimationPoseFrame` 并推进 Camera；任一 Fact、source、Phase endpoint、Player、Slot、转换、Pose 节点、world query、Goal Contribution、Goal Assembly 或 FullBodyIK 失败 MUST 阻止部分最终结果发布，不得沿用上一帧、只发布 pelvis Pose 或绕过节点。
 
 #### Scenario: Goal Contribution与Component Pose lineage不匹配
 
@@ -184,7 +184,7 @@ PresentationFrame MUST消费committed Body/Intent、构造typed Presentation Fac
 
 ### Requirement: Pipeline domain debug 必须进入统一 Trace
 
-Input、ingress、Program operation、StateMachine、Timeline、Blackboard、WorldRequest/Result、Action、Effect、commit、Animation、Foot Placement和Camera diagnostics MUST进入统一 structured Trace/view model。Inspector MUST不遍历旧stage、Final IK组件或runtime service私有集合形成平行调试链。Foot Placement trace MUST只读取正式Presentation snapshot，不得重新执行地面查询或solver。
+Input、ingress、Graph runtime、StateMachine、Timeline、Blackboard、WorldRequest/Result、Action、Effect、commit、Animation、Foot Placement 和 Camera diagnostics MUST 进入统一 structured Trace/view model。Inspector MUST 不遍历旧 stage、Final IK 组件或 runtime service 私有集合形成平行调试链。Foot Placement trace MUST 只读取正式 Presentation snapshot，不得重新执行地面查询或 solver。
 
 #### Scenario: 查看一次 Dodge Tick
 
@@ -197,25 +197,25 @@ Input、ingress、Program operation、StateMachine、Timeline、Blackboard、Wor
 - **THEN** 统一Trace MUST显示同帧Body、visible producer、surface、constraint reason和pelvis offset
 - **AND** Inspector MUST不直接读取Final IK mutable solver状态
 
-### Requirement: Program Finalize 必须提交逻辑侧唯一动画选择
+### Requirement: Gameplay/Ability Finalize 必须提交逻辑侧唯一动画选择
 
-Program Finalize MUST在State、Action、interruption与Timeline request处理后，为每个有限Gameplay-owned `AnimationChannelId`最多产生一个selected producer/playback command。持续BaseLocomotion MUST不再是Program animation channel；其表现输入 MUST来自committed Body/Intent的Presentation Fact。Committer、Projection、Slot与Pose Graph MUST不重新仲裁同一Action channel候选，Program MUST不读取PoseStateId、PoseNodeId、Bone Mask、Slot或Pose Graph topology决定winner。
+正式 Gameplay/Ability owner MUST 在 State、Action、interruption 与 Timeline request 处理后，为每个有限 Gameplay-owned `AnimationChannelId` 最多产生一个 selected producer/playback command。持续 BaseLocomotion MUST 不属于有限 Action channel；其表现输入 MUST 来自 committed Body/Intent 的 Presentation Fact。Committer、Slot 与 Pose Graph MUST 不重新仲裁同一 Action channel 候选，Gameplay owner MUST 不读取 PoseStateId、PoseNodeId、Bone Mask、Slot 或 Pose Graph topology 决定 Gameplay winner。
 
 #### Scenario: FullBodyAction所有权冲突
 
-- **WHEN** Program无法为FullBodyAction channel产生唯一Action selection
+- **WHEN** Gameplay/Ability owner 无法为 FullBodyAction channel 产生唯一 Action selection
 - **THEN** 当前 Tick MUST报告明确冲突
 - **AND** Slot MUST不选择默认赢家
 
 #### Scenario: Locomotion与Dodge并行
 
 - **WHEN** Body正在移动且FullBodyAction选择Dodge
-- **THEN** Program MUST提交Dodge command和普通Body结果
+- **THEN** Gameplay/Ability owner MUST 提交 Dodge command 和普通 Body 结果
 - **AND** Presentation MUST先求值Locomotion PoseStateMachine再由Slot组合Dodge
 
 ### Requirement: PresentationFrame必须原子提交动画播放与Pose节点生命周期
 
-PresentationFrame MUST在同一外层事务中提交Presentation Fact page、PoseStateMachine active/target state、Clip/BlendSpace/MM source usage、Phase relation/effective sample page、AnimationSlot state、BlendStack状态、Transition Routing capture/release、Inertialization、空间转换、Pose operation completion、world-aware plan、Component Pose solver结果和final publication。Reset、branch replacement或Projection replacement MUST按compiled stage与operation清理或重建全部stateful节点。Animancer Evaluate Barrier前失败 MUST只Discard Pending；stage失败已经跨过Barrier时 MUST阻断后续stage与final publication并使同一Actor Animation Presentation Runtime进入Faulted，不得恢复状态或Physical Bone快照。任何路径不得只提交Action playback、FootPlacement plan或中间Pose而保留旧Output。
+PresentationFrame MUST 在同一外层事务中提交 Presentation Fact page、PoseStateMachine active/target state、Clip/BlendSpace/MM source usage、Phase relation/effective sample page、AnimationSlot state、BlendStack 状态、Transition Routing capture/release、Inertialization、空间转换、Pose 节点 completion、world-aware plan、Component Pose solver 结果和 final publication。Reset、branch replacement 或 Graph revision replacement MUST 按正式 owner 清理或重建全部 stateful 节点。Animancer Evaluate Barrier 前失败 MUST 只 Discard Pending；stage 失败已经跨过 Barrier 时 MUST 阻断后续 stage 与 final publication 并使同一 Actor Animation Presentation Runtime 进入 Faulted，不得恢复状态或 Physical Bone 快照。任何路径不得只提交 Action playback、FootPlacement plan 或中间 Pose 而保留旧 Output。
 
 #### Scenario: Action Selection与首个Sample同批
 
@@ -232,12 +232,12 @@ PresentationFrame MUST在同一外层事务中提交Presentation Fact page、Pos
 
 ### Requirement: Compiled Program 必须编排唯一 Gameplay Effect 阶段
 
-Compiled Program MUST唯一拥有 GE catalog/operations，CharacterSimulationState MUST唯一拥有 GE state。Evaluate MUST开始并推进当前 Tick GE transaction，Finalize MUST唯一 drain change journal 并输出 facts；Host、Committer 与 Presentation MUST不持有第二份 GE runtime/state                              。
+GameplayEffect owner MUST 唯一拥有 GE catalog/operations，CharacterSimulationState MUST 唯一拥有 GE state。Evaluate MUST 开始并推进当前 Tick GE transaction，Finalize MUST 唯一 drain change journal 并输出 facts；Host、Committer 与 Presentation MUST 不持有第二份 GE runtime/state。
 
 #### Scenario: Local Tick 推进 Effect
 
 - **WHEN** Effect period 在当前 SimulationTick 到期
-- **THEN** Program MUST在当前 Tick产生唯一 ChangeSet facts
+- **THEN** Effect owner MUST 在当前 Tick 产生唯一 ChangeSet facts
 
 ### Requirement: Program Operation Execution Context 必须是唯一角色逻辑上下文
 
@@ -278,7 +278,7 @@ Kernel MUST为 operation提供只读 Program、SimulationTick、Actor input、Si
 
 每个Character Presentation Host或Remote Presentation Adapter MUST先严格加载所属Numeric Target Program或正式semantic producer manifest，再通过对应Adapter生成不可变`CharacterPresentationSemanticContract`。`CharacterPresentationProjectionAsset` MUST只提供一个按该contract加载Projection的Interface，并 MUST精确校验ProgramId、Gameplay SourceRevision、SemanticHash、ContractHash与ordered producer contract。Float32、Fixed、Rollback、Preview与Remote Presentation MUST不维护不同Projection匹配规则，也 MUST不按ProgramHash、NumericProfile或ABI选择Presentation资源。
 
-Numeric Target Program MUST继续由ProgramAsset、Catalog与Session composition精确校验ProgramHash、LayoutHash、NumericProfile、Target ABI和State codec。Presentation contract校验 MUST不替代或放宽该Program校验。
+Numeric Target domain data MUST 继续由正式 asset/binding、Catalog 与 Session composition 精确校验 NumericProfile、Target ABI 和 State codec。Presentation binding 校验 MUST 不替代或放宽 Gameplay/Ability/Timeline domain 校验。
 
 #### Scenario: Float32 Host创建Presentation
 

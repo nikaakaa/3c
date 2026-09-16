@@ -39,7 +39,7 @@
 
 #### Scenario: 动作触发 Timeline
 - **WHEN** 后续动作流程需要播放攻击或闪避 Timeline
-- **THEN** BTSMTL Timeline MUST编译为当前 Action body 的正式 Program operation
+- **THEN** BTSMTL Timeline MUST 作为正式 TimelineData 由当前 Action body 调度
 - **AND** Timeline gameplay 采样 MUST由 SimulationKernel 执行
 
 #### Scenario: 动作影响运动
@@ -49,7 +49,7 @@
 
 ### Requirement: 动作运行时必须使用 ActionInstance 表达一次动作实例
 
-CharacterSimulationState MUST使用typed ActionInstance state表达一次被接受的动作启动，并至少保存ActionId、ActionInstanceId、PredictionKey、input sequence、start SimulationTick、target snapshot、phase、state、last transition、transition tick、source tick与reason。Action activation request与target snapshot也 MUST使用正式typed state kind。外部确认 MUST通过typed SimulationIngress中的instance/prediction identity匹配，MUST不通过Graph path、Timeline asset或model packet identity确认动作。系统 MUST不保存独立Action lifecycle bytes或Action context镜像；active context MUST由Program级Action index与唯一typed ActionInstance解析。
+CharacterSimulationState MUST 使用 typed ActionInstance state 表达一次被接受的动作启动，并至少保存 ActionId、ActionInstanceId、PredictionKey、input sequence、start SimulationTick、target snapshot、phase、state、last transition、transition tick、source tick 与 reason。Action activation request 与 target snapshot 也 MUST 使用正式 typed state kind。外部确认 MUST 通过 typed SimulationIngress 中的 instance/prediction identity 匹配，MUST 不通过 Graph path、Timeline asset 或 model packet identity 确认动作。系统 MUST 不保存独立 Action lifecycle bytes 或 Action context 镜像；active context MUST 由 Action owner 的唯一 typed ActionInstance 解析。
 
 #### Scenario: Compiled Graph 激活动作
 
@@ -86,7 +86,7 @@ CharacterSimulationState MUST使用typed ActionInstance state表达一次被接�
 
 ### Requirement: Action operation runtime 必须是动作事务层而不是执行编排层
 
-Compiled Action operations MUST只负责 profile 查询、activation 验证、ActionInstance 创建和 lifecycle transition。它们 MUST不调用 Graph runtime、播放 Timeline、调用 WorldSolver、应用 model correction、播放 Cue 或裁决命中。Timeline、Motion 与 GameplayResult 通过 Program operation、world batch 和 typed facts继续处理。
+Action runtime MUST 只负责 profile 查询、activation 验证、ActionInstance 创建和 lifecycle transition。它 MUST 不调用 Graph runtime、播放 Timeline、调用 WorldSolver、应用 model correction、播放 Cue 或裁决命中。Timeline、Motion 与 GameplayResult 通过正式 domain owner、world batch 和 typed facts 继续处理。
 
 #### Scenario: 动作激活成功
 
@@ -141,7 +141,7 @@ Compiled Action operations MUST只负责 profile 查询、activation 验证、Ac
 #### Scenario: 删除 Ability body 接口
 - **WHEN** 检查正式runtime  
 - **THEN** 正式 runtime 中 MUST 不存在 `IAbilityBody`
-- **AND** BTSMTL authoring 编译出的 Program operation set MUST是唯一玩法执行语义
+- **AND** BTSMTL Graph authoring 产生的图语义与正式 domain owner MUST 是唯一玩法执行语义
 
 ### Requirement: Action operation runtime 必须区分 terminal 和 non-terminal transition
 

@@ -1204,3 +1204,8 @@
 
 - 提交 `f32676153`，将共享的 `CharacterSimulationOperationNode` 与 `CharacterSimulationValueNode` 从 Camera 节点文件抽到 `SimulationRuntimeNodes`，并统一为 `SimulationOperationNode` 与 `SimulationValueNode`。
 - Camera 与 Equipment 节点只改用新的中性基类；节点行为、序列化字段和继承层级保持不变。Fixed 运行时项目编译为 0 warning、0 error，并已执行 `dotnet build-server shutdown`。
+
+## 2026-09-16 统一Simulation Gameplay输出缓冲
+
+- 提交 `8f1cfa132`，将 Unity／网络共用的 `CharacterSimulationGameplayOutputBuffer`、附加输出接口和 Gameplay 输出变化值统一为 `SimulationGameplayOutputBuffer`、`ISimulationGameplayOutputBuffer` 与 `SimulationGameplayOutputChange`，并迁移文件路径与 Unity `.meta`。
+- 保留每 Tick 的 BeginTick、Publish、Replace、Retire 生命周期和远端展示消费；底层 `ISimulationGameplayOutputPort` 正式合同不变。

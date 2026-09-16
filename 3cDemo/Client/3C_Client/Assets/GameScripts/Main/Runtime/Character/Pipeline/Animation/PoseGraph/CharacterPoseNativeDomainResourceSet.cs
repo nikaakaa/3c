@@ -24,6 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<CharacterPoseBoneIkGoalBinding>();
         [SerializeField] int[] m_GoalAssemblerContributions = Array.Empty<int>();
         [SerializeField, Min(0)] int m_GoalSetValueCount;
+        [SerializeField, Min(1)] int m_ContributionCount = 1;
+        [SerializeField, Min(1)] int m_ContributionGoalCount = 1;
         [SerializeField] CharacterFootPlacementProfile m_FootPlacementProfile;
         [SerializeField] CharacterFootPlacementRigCalibration m_FootPlacementCalibration;
         [SerializeField] CharacterLinkedPoseImplementationAsset[] m_LinkedPoseImplementations =
@@ -40,6 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<int> GoalAssemblerContributions =>
             m_GoalAssemblerContributions ?? Array.Empty<int>();
         public int GoalSetValueCount => m_GoalSetValueCount;
+        public int ContributionCount => m_ContributionCount;
+        public int ContributionGoalCount => m_ContributionGoalCount;
         public CharacterFootPlacementProfile FootPlacementProfile => m_FootPlacementProfile;
         public CharacterFootPlacementRigCalibration FootPlacementCalibration => m_FootPlacementCalibration;
         public IReadOnlyList<CharacterLinkedPoseImplementationAsset> LinkedPoseImplementations =>
@@ -162,5 +166,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 }
+
 
 

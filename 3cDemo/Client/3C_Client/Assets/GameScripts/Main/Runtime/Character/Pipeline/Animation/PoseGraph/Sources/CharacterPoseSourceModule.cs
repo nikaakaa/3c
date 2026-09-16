@@ -428,6 +428,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal int Capacity => m_PhysicalSources.Capacity;
+        internal CharacterPoseSourceFrameLease CurrentLease => m_CurrentLease;
+
+        CharacterPoseSourceFrameLease m_CurrentLease;
+
         internal CharacterPoseSourceFrameLease BeginFrame(
             in CharacterPoseNativeFrameLineage lineage)
         {
@@ -449,6 +453,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 }
                 m_Readiness.Clear();
                 m_PreparedSourceCount = 0;
+                m_CurrentLease = lease;
                 return lease;
             }
             catch
@@ -1074,6 +1079,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_FramePage.Seal(lease);
             m_PhysicalSources.CommitFrame();
             m_PreparedSourceCount = 0;
+            m_CurrentLease = default;
         }
 
         internal void DiscardFrame(
@@ -1110,6 +1116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_ReleaseValidationIdentities.Clear();
             m_Readiness.Clear();
             m_PreparedSourceCount = 0;
+            m_CurrentLease = default;
             if (failure != null)
             {
                 throw new AggregateException(
@@ -1476,3 +1483,5 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
     }
 }
+
+

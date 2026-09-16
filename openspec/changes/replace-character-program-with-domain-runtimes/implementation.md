@@ -1436,3 +1436,11 @@
 - Camera Domain Runtime 按帧消费 Body Presentation 结果、look input、target slots 与 Unity 环境查询，经过 Sequence / Effect / Collision 求值后写入 Cinemachine Rig；初始姿态、Body Reset 与表现领域 Reset/Dispose 联动。
 - Simulated 与 Remote Host 继续显式禁止 Camera 输入，不创建默认相机；LocalOwner 缺 Profile、Rig、目标锚点或 look input 时精确失败。
 - Fixed、DeterministicRollback、ServerAuthoritative 便携工程编译通过。
+
+## 2026-09-17 接通ScenePlay领域观察
+
+- 修复 CharacterTimelineHost 的 Update 推进路径：活动播放用 TimelinePlaybackHandle 调用 Service.Step，去掉不存在的 Completing 状态和树句柄 Advance/CommitAdvance。
+- TimelineHost 不再自建 Action Inbox 桥接；表现域在 Pose Action Publisher 就绪后创建唯一 TimelineToActionCommandBridge，避免同一评估重复发布。
+- CharacterTimelineHost 公开活动播放观察，包含状态、Timeline 长度、最近动画 ClipTime/NormalizedTime/Weight；CharacterPresentationDomainRuntime 公开 Pose graph revision、instance、reset generation 和最终姿态统计。
+- ScenePlay Coordinator 改为读取 Character Definition 的 Control Motion Timeline 长度、TimelineHost 活动播放和表现域观察；场景装配先清理旧 Session/Character，避免重复实例。
+- ThirdPersonClient.Runtime、ThirdPersonClient.Editor、ThirdPersonSimulation.Fixed.Unity 均已使用禁用 Build Server 的 dotnet build 验证通过，随后执行 build-server shutdown。

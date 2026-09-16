@@ -4,6 +4,7 @@ using BTSMTL.Timeline;
 using BTSMTL.Timeline.Runtime;
 using ThirdPersonSimulation;
 using TreeDesigner;
+using TimelinePlaybackStatus = BTSMTL.Timeline.TimelinePlaybackStatus;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
@@ -65,21 +66,60 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public void DiscardStop(TimelineRuntimeStopRequest request) { }
     }
 
+    public readonly struct CharacterTimelinePlaybackObservation
+    {
+        internal CharacterTimelinePlaybackObservation(
+            TimelinePlaybackHandle handle,
+            TimelinePlaybackStatus status,
+            TimelineData timeline,
+            string sourceName,
+            float clipTime,
+            float normalizedTime,
+            float weight,
+            string clipAuthoringId)
+        {
+            Handle = handle;
+            Status = status;
+            Timeline = timeline;
+            SourceName = sourceName ?? string.Empty;
+            ClipTime = clipTime;
+            NormalizedTime = normalizedTime;
+            Weight = weight;
+            ClipAuthoringId = clipAuthoringId ?? string.Empty;
+        }
+
+        public TimelinePlaybackHandle Handle { get; }
+        public TimelinePlaybackStatus Status { get; }
+        public TimelineData Timeline { get; }
+        public string SourceName { get; }
+        public float ClipTime { get; }
+        public float NormalizedTime { get; }
+        public float Weight { get; }
+        public string ClipAuthoringId { get; }
+    }
+
     [DisallowMultipleComponent]
     public sealed class CharacterTimelineHost : MonoBehaviour, ITimelinePlaybackService
     {
+        struct ActivePlayback
+        {
+            internal TimelinePlaybackHandle Handle;
+            internal TimelineData Timeline;
+            internal string SourceName;
+        }
+
         TimelineRuntimeCompositionHost m_Host;
-        TimelineToActionCommandBridge m_Bridge;
+        readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
+        readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
+        ulong m_TickCounter;
         bool m_Initialized;
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
 
-        internal void Initialize(ActionPlaybackCommandInbox inbox)
+        internal void Initialize()
         {
             if (m_Initialized)
                 return;
-            if (inbox == null)
-                throw new ArgumentNullException(nameof(inbox));
 
             var contractCatalog = new TimelineContractCatalog(Array.Empty<ITimelineContractProvider>());
             var callBindingSource = new TimelineRuntimeCallBindingSource(
@@ -97,8 +137,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 dependencyResolver,
                 Array.Empty<ITimelineRuntimeEvaluationSink>(),
                 treeClipService);
-
-            m_Bridge = new TimelineToActionCommandBridge(m_Host, inbox);
             m_Initialized = true;
         }
 
@@ -117,15 +155,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 handle = TimelinePlaybackHandle.Invalid;
                 return false;
             }
-            return m_Host.RequestTimelinePlayback(
+            if (!m_Host.RequestTimelinePlayback(
                 timeline, sourceId, sourceName, actionContext, playbackMode,
-                sourceActivation, sourceRuntimeGraph, out handle);
+                sourceActivation, sourceRuntimeGraph, out handle))
+                return false;
+            m_ActivePlaybacks.Add(new ActivePlayback
+            {
+                Handle = handle,
+                Timeline = timeline,
+                SourceName = sourceName ?? string.Empty
+            });
+            return true;
         }
 
-        public BTSMTL.Timeline.TimelinePlaybackStatus GetTimelinePlaybackStatus(TimelinePlaybackHandle handle)
+        public TimelinePlaybackStatus GetTimelinePlaybackStatus(TimelinePlaybackHandle handle)
         {
             if (!m_Initialized || m_Host == null || !handle.IsValid)
-                return BTSMTL.Timeline.TimelinePlaybackStatus.None;
+                return TimelinePlaybackStatus.None;
             return m_Host.Service.GetTimelinePlaybackStatus(handle);
         }
 
@@ -136,9 +182,83 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Host.Service.CancelTimelinePlayback(handle, stopContext);
         }
 
+        public void CollectActivePlaybacks(List<CharacterTimelinePlaybackObservation> results)
+        {
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+            results.Clear();
+            if (!m_Initialized || m_Host == null)
+                return;
+            for (int i = 0; i < m_ActivePlaybacks.Count; i++)
+            {
+                ActivePlayback active = m_ActivePlaybacks[i];
+                ReadLatestSample(
+                    active.Handle,
+                    out float clipTime,
+                    out float normalizedTime,
+                    out float weight,
+                    out string clipAuthoringId);
+                results.Add(new CharacterTimelinePlaybackObservation(
+                    active.Handle,
+                    m_Host.Service.GetTimelinePlaybackStatus(active.Handle),
+                    active.Timeline,
+                    active.SourceName,
+                    clipTime,
+                    normalizedTime,
+                    weight,
+                    clipAuthoringId));
+            }
+        }
+
+        void ReadLatestSample(
+            TimelinePlaybackHandle handle,
+            out float clipTime,
+            out float normalizedTime,
+            out float weight,
+            out string clipAuthoringId)
+        {
+            clipTime = 0f;
+            normalizedTime = 0f;
+            weight = 0f;
+            clipAuthoringId = string.Empty;
+            if (!m_Host.TryGetCommittedEvaluationResult(handle, out TimelineRuntimeEvaluationResult result) ||
+                result == null || result.AnimationContributions.Count == 0)
+                return;
+            for (int i = 0; i < result.AnimationContributions.Count; i++)
+            {
+                TimelineAnimationContribution contribution = result.AnimationContributions[i];
+                if (contribution.Weight <= weight)
+                    continue;
+                weight = contribution.Weight;
+                clipTime = contribution.ClipTime;
+                normalizedTime = contribution.NormalizedTime;
+                clipAuthoringId = contribution.ClipAuthoringId;
+            }
+        }
+
+        void Update()
+        {
+            if (!m_Initialized || m_Host == null || m_ActivePlaybacks.Count == 0)
+                return;
+            m_TickCounter++;
+            int deltaFrames = Mathf.Max(1, Mathf.RoundToInt(Time.deltaTime * 60f));
+            m_PlaybackScan.Clear();
+            m_PlaybackScan.AddRange(m_ActivePlaybacks);
+            for (int i = 0; i < m_PlaybackScan.Count; i++)
+            {
+                ActivePlayback active = m_PlaybackScan[i];
+                TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
+                if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
+                {
+                    m_ActivePlaybacks.Remove(active);
+                    continue;
+                }
+                m_Host.Service.Step(active.Handle, m_TickCounter, deltaFrames);
+            }
+        }
+
         void OnDestroy()
         {
-            m_Bridge?.Dispose();
             m_Host?.Dispose();
         }
     }

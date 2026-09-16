@@ -290,6 +290,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float FollowerYawCorrectionDegrees { get; }
     }
 
+    public readonly struct CharacterPresentationDomainObservation
+    {
+        public CharacterPresentationDomainObservation(
+            bool poseComposed,
+            string poseGraphRevision,
+            ulong poseInstanceId,
+            ulong poseResetGeneration,
+            string poseAvailability,
+            int poseBoneCount,
+            int poseContributionCount,
+            ulong poseCompletionIdentity)
+        {
+            PoseComposed = poseComposed;
+            PoseGraphRevision = poseGraphRevision ?? string.Empty;
+            PoseInstanceId = poseInstanceId;
+            PoseResetGeneration = poseResetGeneration;
+            PoseAvailability = poseAvailability ?? string.Empty;
+            PoseBoneCount = poseBoneCount;
+            PoseContributionCount = poseContributionCount;
+            PoseCompletionIdentity = poseCompletionIdentity;
+        }
+
+        public bool PoseComposed { get; }
+        public string PoseGraphRevision { get; }
+        public ulong PoseInstanceId { get; }
+        public ulong PoseResetGeneration { get; }
+        public string PoseAvailability { get; }
+        public int PoseBoneCount { get; }
+        public int PoseContributionCount { get; }
+        public ulong PoseCompletionIdentity { get; }
+    }
+
     public interface ICharacterPresentationDomainRuntime :
         IDisposable,
         IGameplayPresentationFrameTarget
@@ -305,6 +337,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void Retire(CharacterPresentationCommand command);
         void Reset();
         CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics();
+        CharacterPresentationDomainObservation CaptureObservation();
         bool SupportsCheckpointCapture { get; }
         bool SupportsCheckpointRestore { get; }
         bool TryCaptureCheckpoint(SimulationSessionCheckpoint checkpoint, out string error);

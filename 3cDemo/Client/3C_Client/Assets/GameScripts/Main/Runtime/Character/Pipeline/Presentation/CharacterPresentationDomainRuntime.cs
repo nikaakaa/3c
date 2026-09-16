@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -83,7 +83,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (timelineHost == null)
                 throw new ArgumentNullException(nameof(timelineHost));
-            timelineHost.Initialize(m_PoseActionPublisher.Inbox);
+            if (m_PoseActionPublisher == null)
+                throw new InvalidOperationException("Timeline playback requires a composed Pose Action command publisher.");
+            timelineHost.Initialize();
             BindTimelineBridge(new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge(
                 timelineHost.Host, m_PoseActionPublisher.Inbox));
         }
@@ -120,6 +122,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public bool TryGetLatestBody(out CharacterPresentationBodyState body) =>
             m_Body.TryGetLatestBody(out body);
+
+        public CharacterPresentationDomainObservation CaptureObservation()
+        {
+            bool poseComposed = TryGetPoseCommittedPose(out ComposedAnimationPoseFrame pose);
+            return new CharacterPresentationDomainObservation(
+                poseComposed,
+                PoseGraphRevision,
+                PoseInstanceId,
+                PoseResetGeneration,
+                poseComposed ? pose.Availability.ToString() : string.Empty,
+                poseComposed ? pose.PoseBoneCount : 0,
+                poseComposed ? pose.Contributions.Count : 0,
+                poseComposed ? pose.CompletionIdentity : 0);
+        }
 
         public void CaptureBodyTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals) =>
             m_Body.CaptureTransaction(intervals);

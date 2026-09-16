@@ -1296,3 +1296,9 @@
 - Deterministic Rollback Character Host 与 Fixed Host 同步直接读取 Animation Presentation Profile 和 Rig Payload，LocalOwner 与 SimulatedActor 统一交由表现领域工厂创建。
 - Rollback Host 删除 Projection Load、旧 Runtime Binding 以及旧 Runtime Factory 调用，并明确远端角色不得携带本地 Camera 配置；本地输入仍沿现有 Unity Fixed Input Adapter 接入 Look Input。
 - 本步只清理 Rollback 的旧表现创建边界，不新增兼容路径或临时 Runtime；真实领域工厂继续作为后续独立接线。
+
+## 2026-09-16 ServerAuthoritative 远端移除旧 Projection 依赖
+
+- 远端表现 Host 改为从自身 Character Definition 的 Animation Presentation Profile 生成 Rig Payload，并交给表现领域工厂创建 SimulatedActor；不再加载或比较旧总 Projection。
+- ServerAuthoritative Prediction 远端 Claim 不再从本地角色注册器索取 Projection 身份，网络远端展示使用其正式 Host 配置的 Profile；远端命令仍拒绝 Camera producer，保持网络表现边界。
+- 远端帧目标直接实现 `IGameplayPresentationFrameTarget`，在 Gameplay Tick 的唯一表现帧内完成远端命令发布、领域表现帧推进和完成回调，移除旧 Worker Presentation Frame Target 继承路径。

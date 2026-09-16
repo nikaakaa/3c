@@ -290,7 +290,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     Launch.RemotePresentationTargetId,
                     remoteActorId,
                     CharacterRuntime,
-                    m_Owner.PresentationProjection,
                     Context.TickRate,
                     Diagnostics);
                 var committedOutput = new ServerAuthoritativePredictionCommittedOutputPort(send, remote, prediction);

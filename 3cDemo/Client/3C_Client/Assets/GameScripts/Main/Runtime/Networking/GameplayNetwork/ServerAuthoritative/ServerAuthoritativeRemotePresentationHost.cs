@@ -39,7 +39,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         internal ServerAuthoritativeRemotePresentationTarget Claim(
             ActorId actorId,
             Float32CharacterRuntime characterRuntime,
-            CharacterPresentationProjection ownerProjection,
             int tickRate,
             ISimulationDiagnosticsSink diagnostics)
         {
@@ -47,17 +46,19 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 throw new InvalidOperationException($"Remote Presentation Host '{BindingId}' is already claimed.");
             if (!isActiveAndEnabled)
                 throw new InvalidOperationException($"Remote Presentation Host '{BindingId}' is not active.");
-            if (!m_CharacterDefinition || !m_CharacterDefinition.PresentationProjection)
-                throw new InvalidOperationException($"Remote Presentation Host '{BindingId}' requires an explicit Character Presentation Projection.");
+            CharacterAnimationPresentationProfile profile = m_CharacterDefinition
+                ? m_CharacterDefinition.AnimationPresentationProfile
+                : null;
+            if (!profile)
+                throw new InvalidOperationException($"Remote Presentation Host '{BindingId}' requires an explicit Animation Presentation Profile.");
             if (!m_CharacterTemplate)
                 throw new InvalidOperationException($"Remote Presentation Host '{BindingId}' requires an explicit Character Root template.");
             if (tickRate <= 0 || !m_BodyPresentationProfile)
                 throw new InvalidOperationException($"Remote Presentation Host '{BindingId}' requires a formal Presentation Profile.");
-            if (characterRuntime == null || ownerProjection == null || diagnostics == null || !actorId.IsValid)
+            if (characterRuntime == null || diagnostics == null || !actorId.IsValid)
                 throw new ArgumentException("Remote Presentation Host claim identity is incomplete.");
 
-            CharacterPresentationProjection projection = m_CharacterDefinition.PresentationProjection.Load();
-            RequireProjectionMatch(projection, ownerProjection);
+            CharacterAnimationRigPayload animationRig = new CharacterAnimationRigPayload(profile.RigDefinition);
             GameObject characterObject = Instantiate(m_CharacterTemplate, m_SpawnPosition, Quaternion.Euler(m_SpawnEulerAngles));
             characterObject.name = $"{m_CharacterTemplate.name} [Remote {actorId.Value}]";
             CharacterRootHierarchyBinding rootHierarchy = characterObject.GetComponent<CharacterRootHierarchyBinding>();
@@ -83,7 +84,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 Destroy(characterObject);
                 throw new InvalidOperationException($"Remote Presentation Host '{BindingId}' PoseRoot requires Animancer, Animator, and Animation Rig Binding.");
             }
-            animationRigBinding.RequireValid(projection.Rig);
+            animationRigBinding.RequireValid(animationRig);
             if (animancer.Animator.transform != rootHierarchy.PoseRoot)
             {
                 Destroy(characterObject);
@@ -101,7 +102,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             WorldBodyState initialBody = BuildInitialBody(actorId, rootHierarchy.LogicRoot);
             RuntimeContentRevision diagnosticsRevision = new RuntimeContentRevision(
                 $"float32-character-runtime/{actorId.Value}",
-                projection.SourceRevision,
+                profile.PoseGraph.Graph.ContentRevision,
                 characterRuntime.GameplayContentHash.ToString());
             var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
             var diagnosticsContext = new RuntimeDiagnosticsContext(
@@ -111,25 +112,33 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 debugSourceMap,
                 new RuntimeDiagnosticsStore());
             var diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
-            ICharacterPresentationRuntime runtime = null;
+            ICharacterPresentationDomainRuntime runtime = null;
             ServerAuthoritativeRemotePresentationTarget target = null;
             try
             {
-                CharacterPresentationRuntimeBinding presentationBinding =
-                    CharacterPresentationRuntimeFactory.CreateObservedActor(
-                        tickRate,
-                        projection,
-                        actorId,
-                        animancer,
-                        animationRigBinding,
-                        rootHierarchy,
-                        CharacterPresentationBodyState.FromFloat32(initialBody),
-                        m_BodyPresentationProfile,
-                        worldAwarePresentation,
-                        physicsScene,
-                        null,
-                        diagnosticsContext);
-                runtime = presentationBinding.Runtime;
+                runtime = CharacterPresentationDomainRuntimeFactory.Create(
+                    tickRate,
+                    profile,
+                    animationRig,
+                    actorId,
+                    animancer,
+                    animationRigBinding,
+                    rootHierarchy,
+                    CharacterPresentationBodyState.FromFloat32(initialBody),
+                    CharacterPresentationRole.SimulatedActor,
+                    m_BodyPresentationProfile,
+                    worldAwarePresentation,
+                    physicsScene,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    string.Empty,
+                    null,
+                    null,
+                    diagnosticsContext,
+                    true);
                 target = new ServerAuthoritativeRemotePresentationTarget(
                     BindingId,
                     actorId,
@@ -182,21 +191,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 m_Target = null;
         }
 
-        static void RequireProjectionMatch(
-            CharacterPresentationProjection actual,
-            CharacterPresentationProjection expected)
-        {
-            if (actual == null || !actual.IsValid || expected == null || !expected.IsValid ||
-                !string.Equals(actual.PresentationId, expected.PresentationId, StringComparison.Ordinal) ||
-                !string.Equals(actual.SourceRevision, expected.SourceRevision, StringComparison.Ordinal) ||
-                !string.Equals(actual.SemanticHash, expected.SemanticHash, StringComparison.Ordinal) ||
-                !string.Equals(actual.ContractHash, expected.ContractHash, StringComparison.Ordinal) ||
-                !string.Equals(actual.ProjectionRevision, expected.ProjectionRevision, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("Remote Presentation Projection does not match the local Character Runtime Projection.");
-            }
-        }
-
         static WorldBodyState BuildInitialBody(ActorId actorId, Transform logicRoot)
         {
             Vector3 position = logicRoot.position;
@@ -242,7 +236,6 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             string bindingId,
             ActorId actorId,
             Float32CharacterRuntime characterRuntime,
-            CharacterPresentationProjection ownerProjection,
             int tickRate,
             ISimulationDiagnosticsSink diagnostics)
         {
@@ -251,7 +244,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 : bindingId.Trim();
             if (!s_Hosts.TryGetValue(identity, out ServerAuthoritativeRemotePresentationHost host) || !host)
                 throw new InvalidOperationException($"Remote Presentation Host '{identity}' is not registered by the active Client Scene.");
-            return host.Claim(actorId, characterRuntime, ownerProjection, tickRate, diagnostics);
+            return host.Claim(actorId, characterRuntime, tickRate, diagnostics);
         }
     }
 
@@ -259,7 +252,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     {
         readonly int m_TickRate;
         readonly Float32CharacterRuntime m_CharacterRuntime;
-        readonly ICharacterPresentationRuntime m_Runtime;
+        readonly ICharacterPresentationDomainRuntime m_Runtime;
         readonly SimulationGameplayOutputBuffer m_Gameplay = new SimulationGameplayOutputBuffer();
         readonly ISimulationDiagnosticsSink m_Diagnostics;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
@@ -285,7 +278,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             int tickRate,
             Float32CharacterRuntime characterRuntime,
             ISimulationDiagnosticsSink diagnostics,
-            ICharacterPresentationRuntime runtime,
+            ICharacterPresentationDomainRuntime runtime,
             RuntimeDiagnosticsTarget diagnosticsTarget,
             GameObject characterObject,
             CharacterRootHierarchyBinding rootHierarchy,
@@ -342,20 +335,22 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_Gameplay.BeginTick();
             CharacterPresentationBodyState finalBody = default;
             bool hasFinalBody = false;
+            var intervals = new List<CharacterPresentationBodyInterval>(batch.BodySamples.Count);
             for (int i = 0; i < batch.BodySamples.Count; i++)
             {
                 CharacterBodySample sample = batch.BodySamples[i];
-                m_Runtime.CaptureBodyInterval(
-                    CharacterPresentationBodyInterval.FromFloat32(
-                        sample,
-                        m_TickRate,
-                        batch.ResetBodyStream && i == 0
-                            ? CharacterPresentationBodyStreamUpdateKind.Reset
-                            : CharacterPresentationBodyStreamUpdateKind.Append));
+                intervals.Add(CharacterPresentationBodyInterval.FromFloat32(
+                    sample,
+                    m_TickRate,
+                    batch.ResetBodyStream && i == 0
+                        ? CharacterPresentationBodyStreamUpdateKind.Reset
+                        : CharacterPresentationBodyStreamUpdateKind.Append));
                 finalBody = CharacterPresentationBodyState.FromFloat32(sample.FinalBody);
                 hasFinalBody = true;
                 m_SelectedTick = sample.Tick.Value;
             }
+            if (intervals.Count != 0)
+                m_Runtime.CaptureBodyTransaction(intervals);
             for (int i = 0; i < batch.SampleCommands.Count; i++)
                 Enqueue(m_Commands, batch.SampleCommands[i].Header.Tick.Value, batch.SampleCommands[i]);
             for (int i = 0; i < batch.ReliableEvents.Count; i++)
@@ -495,22 +490,34 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         }
     }
 
-    internal sealed class ServerAuthoritativeRemotePresentationFrameTarget : CharacterPresentationFrameTarget
+    internal sealed class ServerAuthoritativeRemotePresentationFrameTarget : IGameplayPresentationFrameTarget
     {
         readonly ServerAuthoritativeRemotePresentationTarget m_Target;
 
         public ServerAuthoritativeRemotePresentationFrameTarget(
             ServerAuthoritativeRemotePresentationTarget target,
-            ICharacterPresentationRuntime runtime)
-            : base(runtime)
+            ICharacterPresentationDomainRuntime runtime)
         {
             m_Target = target ?? throw new ArgumentNullException(nameof(target));
+            m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         }
 
-        protected override bool PreparePresentationFrame(GameplayPresentationFrameContext context) =>
-            m_Target.PreparePresentationFrame(context);
+        readonly ICharacterPresentationDomainRuntime m_Runtime;
 
-        protected override void CompletePresentationFrame(GameplayPresentationFrameContext context) =>
+        public void PresentationFrame(GameplayPresentationFrameContext context)
+        {
+            if (!m_Target.PreparePresentationFrame(context))
+                return;
+            m_Runtime.PresentationFrame(context);
             m_Target.CompletePresentationFrame(context);
+        }
+
+        internal void Activate()
+        {
+            if (!GameplayTickSystem.RegisterPresentationTarget(this))
+                throw new InvalidOperationException("Gameplay Tick System is not initialized.");
+        }
+
+        internal void Deactivate() => GameplayTickSystem.UnregisterPresentationTarget(this);
     }
 }

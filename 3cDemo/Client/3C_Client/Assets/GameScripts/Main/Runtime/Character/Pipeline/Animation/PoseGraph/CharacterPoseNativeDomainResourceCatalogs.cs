@@ -237,7 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 value => value.GroupId.Value);
             m_MotionMatchingDatabases = BuildIndex(
                 motionMatchingDatabases,
-                value => value.ArtifactIdentity);
+                value => value.ArtifactIdentity.ContentHash.ToString());
             m_RootOrientationCurves = BuildIndex(
                 rootOrientationCurves,
                 value => value.name);

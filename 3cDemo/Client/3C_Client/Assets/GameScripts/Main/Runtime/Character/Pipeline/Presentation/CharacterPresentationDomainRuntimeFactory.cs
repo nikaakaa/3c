@@ -72,10 +72,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Presentation World-Aware binding must match the formal root hierarchy.");
 
             var poseGraph = animationPresentationProfile.PoseGraph ? animationPresentationProfile.PoseGraph.Graph : null;
-            if (poseGraph != null && poseGraph.Nodes.Count > 0)
-                throw new InvalidOperationException("Pose Native Source, Constraint, and Handler composition is not yet bound to the presentation domain factory.");
-            if (presentationRole == CharacterPresentationRole.LocalOwner && (!followAnchor || !aimAnchor || lookInput == null || string.IsNullOrWhiteSpace(lookInputId)))
-                throw new ArgumentException("Local Presentation Camera inputs are incomplete.");
+            CharacterPoseNativeDomainResourceSet poseResources = animationPresentationProfile.PoseNativeDomainResources;
+            if (poseGraph != null && poseGraph.Nodes.Count > 0 && !poseResources)
+                throw new InvalidOperationException("Pose Native Domain Resource Set is missing.");
             if (presentationRole == CharacterPresentationRole.SimulatedActor &&
                 (cameraRig || followAnchor || aimAnchor || cameraTargetBindings is { Count: > 0 } || lookInput != null || !string.IsNullOrEmpty(lookInputId)))
                 throw new ArgumentException("Simulated Presentation cannot receive Camera owner inputs.");
@@ -126,6 +125,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 }
+
+
 
 
 

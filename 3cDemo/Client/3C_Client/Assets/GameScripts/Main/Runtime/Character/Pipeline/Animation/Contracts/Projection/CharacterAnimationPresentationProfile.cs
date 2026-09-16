@@ -57,6 +57,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterLocomotionSyncGroup[] m_LocomotionSyncGroups =
             Array.Empty<CharacterLocomotionSyncGroup>();
         [SerializeField] CharacterFootPlacementAnalysisMode m_FootPlacementAnalysisMode;
+        [SerializeField] CharacterPoseNativeDomainResourceSet m_PoseNativeDomainResources;
+
         [SerializeField] string m_FootPlacementAnalysisSourceAssetGuid = string.Empty;
 
         public CharacterPresentationPoseGraphAsset PoseGraph => m_PoseGraph;
@@ -85,7 +87,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterLocomotionSyncGroup> LocomotionSyncGroups =>
             m_LocomotionSyncGroups ?? Array.Empty<CharacterLocomotionSyncGroup>();
         public CharacterFootPlacementAnalysisMode FootPlacementAnalysisMode => m_FootPlacementAnalysisMode;
-        public string FootPlacementAnalysisSourceAssetGuid => m_FootPlacementAnalysisSourceAssetGuid ?? string.Empty;
+        public CharacterPoseNativeDomainResourceSet PoseNativeDomainResources => m_PoseNativeDomainResources;
+
+        public string FootPlacementAnalysisSourceAssetGuid =>
+            m_FootPlacementAnalysisSourceAssetGuid ?? string.Empty;
 
         public AnimationProducerPresentationBinding FindProducerBinding(AnimationProducerId producerId)
         {
@@ -309,6 +314,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     errors?.Add($"{name}: {exception.Message}");
                     valid = false;
                 }
+            }
+            if (!m_PoseNativeDomainResources)
+            {
+                errors?.Add($"{name}: Pose Native Domain Resource Set is missing.");
+                valid = false;
             }
             if (includeActionResources)
             {
@@ -556,3 +566,4 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 }
+

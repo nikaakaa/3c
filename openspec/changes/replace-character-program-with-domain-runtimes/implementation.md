@@ -1267,3 +1267,8 @@
 
 - 网络产品与性能构建入口改从 `CharacterAnimationPresentationProfile` 读取 Animation Input Contract、Pose Graph Id 和 Graph Revision；不再要求已删除的总 Projection 资产。
 - 性能玩家与运行请求字段将 `projection_identity` 改为 `pose_graph_revision`，同步唯一工具读写方，旧 JSON 字段不保留兼容别名。
+
+## 2026-09-16 删除孤立Presentation编译入口
+
+- 删除没有调用方、只为旧总 Projection 生成 Blend、Pose Resource、Motion Matching、Equipment 和 Transition Rule 产物的五个编辑器编译器及 Unity 元数据。
+- 保留 Profile 源绑定收集和仍被动画资源构建消费的有效算法；不为已删除总包补建新的聚合编译入口。

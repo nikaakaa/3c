@@ -55,9 +55,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
     }
 
-    internal sealed class CharacterTimelineNoOpTreeClipService : ITimelineRuntimeTreeClipService
+    internal sealed class CharacterTimelineMissingTreeClipService : ITimelineRuntimeTreeClipService
     {
-        public bool Consume(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context) => false;
+        public bool Consume(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context) =>
+            throw new InvalidOperationException($"Timeline TreeClip '{request.ClipAuthoringId}' requires a composed TreeClip service.");
         public void Discard(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context) { }
         public void Commit(TimelineRuntimeStepContext context) { }
         public void DiscardStep(TimelineRuntimeStepContext context) { }
@@ -127,7 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             var domainResolver = new CharacterTimelineDomainBindingResolver(
                 new[] { "self", "camera", "main" });
             var dependencyResolver = new CharacterTimelineDependencyResolver();
-            var treeClipService = new CharacterTimelineNoOpTreeClipService();
+            var treeClipService = new CharacterTimelineMissingTreeClipService();
 
             m_Host = new TimelineRuntimeCompositionHost(
                 contractCatalog,

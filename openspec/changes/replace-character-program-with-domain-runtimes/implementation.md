@@ -1443,4 +1443,5 @@
 - TimelineHost 不再自建 Action Inbox 桥接；表现域在 Pose Action Publisher 就绪后创建唯一 TimelineToActionCommandBridge，避免同一评估重复发布。
 - CharacterTimelineHost 公开活动播放观察，包含状态、Timeline 长度、最近动画 ClipTime/NormalizedTime/Weight；CharacterPresentationDomainRuntime 公开 Pose graph revision、instance、reset generation 和最终姿态统计。
 - ScenePlay Coordinator 改为读取 Character Definition 的 Control Motion Timeline 长度、TimelineHost 活动播放和表现域观察；场景装配先清理旧 Session/Character，避免重复实例。
+- CharacterTimelineHost 的 TreeClip 服务不再静默吞掉请求；缺少组合服务时直接抛出精确失败，禁止假成功。
 - ThirdPersonClient.Runtime、ThirdPersonClient.Editor、ThirdPersonSimulation.Fixed.Unity 均已使用禁用 Build Server 的 dotnet build 验证通过，随后执行 build-server shutdown。

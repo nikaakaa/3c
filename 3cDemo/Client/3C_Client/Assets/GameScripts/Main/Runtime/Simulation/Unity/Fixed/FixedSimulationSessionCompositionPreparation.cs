@@ -5,6 +5,7 @@ using FixedActorBinding = ThirdPersonSimulation.Fixed.SimulationActorBinding;
 using FixedActorState = ThirdPersonSimulation.Fixed.SimulationActorState;
 using FixedCharacterRuntime = ThirdPersonSimulation.Fixed.FixedCharacterRuntime;
 using FixedCompositionRequest = ThirdPersonSimulation.Fixed.FixedSimulationSessionCompositionRequest;
+using FixedSimulationTarget = ThirdPersonSimulation.Fixed.FixedSimulationTarget;
 using FixedPassBackendCompositionResult = ThirdPersonSimulation.Fixed.FixedPassBackendCompositionResult;
 using FixedSimulationActorRegistration = ThirdPersonCharacter.Pipeline.Simulation.Fixed.IFixedCharacterRuntimeRegistration;
 using FixedSimulationSessionSnapshotCodec = ThirdPersonSimulation.Fixed.FixedSimulationSessionSnapshotCodec;

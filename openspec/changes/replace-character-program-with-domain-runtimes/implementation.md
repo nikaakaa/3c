@@ -1317,3 +1317,8 @@
 
 - FixedCharacterRuntimeState 增加类型化 TryGetEquipmentState，Fixed Unity 注册器通过角色级状态读取装备聚合，不再依赖 Core 内部属性或单个 Ability 状态。
 - 本步只打开表现注册所需的只读状态边界；装备状态仍归角色状态分区拥有。
+
+## 2026-09-16 开放Fixed会话Source准备合同
+
+- SimulationSessionSourcePreparationContext 与 CreatePreparation 改为跨程序集正式入口，Fixed Session 准备不再依赖同程序集内部可见性。
+- Fixed 准备文件显式绑定 FixedSimulationTarget，消除按 Float32 目标解析时的类型缺口。

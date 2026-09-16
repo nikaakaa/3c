@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
     public sealed class SimulationSessionSourcePreparationContext
     {
-        internal SimulationSessionSourcePreparationContext(
+        public SimulationSessionSourcePreparationContext(
             SimulationSessionId sessionId,
             SimulationSourceClockId sourceClockId,
             int tickRate,
@@ -96,7 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     {
         public abstract SimulationSessionSourceAuthoringDescriptor BuildAuthoringDescriptor();
 
-        internal ISimulationSessionSourcePreparation CreatePreparation(
+        public ISimulationSessionSourcePreparation CreatePreparation(
             SimulationSessionSourcePreparationContext context) =>
             CreatePreparationCore(context) ?? throw new InvalidOperationException(
                 $"Session Source Definition '{name}' returned no preparation.");

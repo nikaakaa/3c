@@ -4,6 +4,7 @@ using System.Linq;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonPerformance.Instrumentation;
+using BTSMTL.Timeline.Runtime;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -39,6 +40,16 @@ namespace ThirdPersonCharacter.Pipeline
         Guid m_ExecutionBranchId = Guid.NewGuid();
         Guid m_ParentExecutionBranchId;
         ulong m_ExecutionBranchBaseTick;
+
+        public TimelineRuntimeNumericTarget TimelineNumericTarget
+        {
+            get
+            {
+                if (m_Composition == null)
+                    throw new InvalidOperationException($"Simulation Session Host '{name}' requires a bound Session Composition to resolve the Timeline numeric target.");
+                return m_Composition.ExecutionBackend.TimelineNumericTarget;
+            }
+        }
 
         public SimulationSessionCompositionDefinition Composition => m_Composition;
         public SimulationSessionLifecycleState LifecycleState => m_State;

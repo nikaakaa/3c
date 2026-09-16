@@ -79,13 +79,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge m_TimelineBridge;
 
-        internal void InitializeTimelineHost(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost timelineHost)
+        internal void InitializeTimelineHost(
+            ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost timelineHost,
+            BTSMTL.Timeline.Runtime.TimelineRuntimeNumericTarget numericTarget)
         {
             if (timelineHost == null)
                 throw new ArgumentNullException(nameof(timelineHost));
             if (m_PoseActionPublisher == null)
                 throw new InvalidOperationException("Timeline playback requires a composed Pose Action command publisher.");
-            timelineHost.Initialize();
+            timelineHost.Initialize(numericTarget);
             BindTimelineBridge(new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge(
                 timelineHost.Host, m_PoseActionPublisher.Inbox));
         }

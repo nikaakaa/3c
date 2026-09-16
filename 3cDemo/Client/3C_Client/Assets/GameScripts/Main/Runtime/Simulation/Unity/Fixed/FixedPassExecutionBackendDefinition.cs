@@ -4,11 +4,15 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 
+using BTSMTL.Timeline.Runtime;
+
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
     [CreateAssetMenu(fileName = "FixedPassExecutionBackend", menuName = "3C/Simulation/Fixed/Pass Backend")]
     public sealed class FixedPassExecutionBackendDefinition : SimulationExecutionBackendDefinition
     {
+        public override TimelineRuntimeNumericTarget TimelineNumericTarget => TimelineRuntimeNumericTarget.Fixed;
+
         public override SimulationExecutionTargetManifest BuildExecutionTargetManifest() =>
             FixedSimulationTarget.Manifest.ExecutionTarget;
 

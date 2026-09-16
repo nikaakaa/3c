@@ -5,7 +5,8 @@
         "ThirdPersonPerformance.Contracts",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",
-        "ThirdPersonCharacter.Control.Rules"
+        "ThirdPersonCharacter.Control.Rules",
+        "BTSMTL.Timeline.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,12 +2,16 @@ using System.Collections.Generic;
 using ThirdPersonSimulation;
 using UnityEngine;
 
+using BTSMTL.Timeline.Runtime;
+
 namespace ThirdPersonCharacter.Pipeline.Simulation
 {
     [CreateAssetMenu(fileName = "Float32PassExecutionBackend", menuName = "3C/Simulation/Float32 Pass Execution Backend")]
     public sealed class Float32PassExecutionBackendDefinition :
         SimulationExecutionBackendDefinition
     {
+        public override TimelineRuntimeNumericTarget TimelineNumericTarget => TimelineRuntimeNumericTarget.Float32;
+
         public override SimulationExecutionTargetManifest BuildExecutionTargetManifest() =>
             Float32SimulationTarget.Manifest.ExecutionTarget;
 

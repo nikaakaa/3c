@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Diagnostics;
@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     runtime.BindPoseDomain(poseDomain, resourceScope, inputContract.Parameters);
                 }
                 if (characterTimelineHost != null)
-                    runtime.InitializeTimelineHost(characterTimelineHost);
+                    runtime.InitializeTimelineHost(characterTimelineHost, sessionHost.TimelineNumericTarget);
                 return runtime;
             }
             catch

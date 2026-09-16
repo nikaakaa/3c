@@ -166,15 +166,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             new Dictionary<ulong, CharacterTimelinePendingStop>();
         ulong m_TickCounter;
         TimelinePlaybackHandle m_PreviewHandle;
+        TimelineRuntimeNumericTarget m_NumericTarget;
         bool m_Initialized;
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
         public bool IsInitialized => m_Initialized && m_Host != null;
 
-        internal void Initialize()
+        internal void Initialize(TimelineRuntimeNumericTarget numericTarget)
         {
             if (m_Initialized)
                 return;
+            if (!Enum.IsDefined(typeof(TimelineRuntimeNumericTarget), numericTarget))
+                throw new ArgumentOutOfRangeException(nameof(numericTarget));
+            m_NumericTarget = numericTarget;
 
             var contractCatalog = new TimelineContractCatalog(Array.Empty<ITimelineContractProvider>());
             var callBindingSource = new TimelineRuntimeCallBindingSource(
@@ -186,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
             m_Host = new TimelineRuntimeCompositionHost(
                 contractCatalog,
-                TimelineRuntimeNumericTarget.Float32,
+                m_NumericTarget,
                 callBindingSource,
                 domainResolver,
                 dependencyResolver,
@@ -493,7 +497,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 snapshot.RequestId,
                 executionIdentity,
                 preparation.PlaybackMode,
-                TimelineRuntimeNumericTarget.Float32,
+                m_NumericTarget,
                 snapshot.ContentRevision,
                 MapPlaybackState(snapshot.State),
                 snapshot.CursorFrame,

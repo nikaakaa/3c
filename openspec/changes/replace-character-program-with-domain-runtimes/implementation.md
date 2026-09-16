@@ -1347,3 +1347,7 @@
 ## 2026-09-16 对账Fixed Rollback角色快照身份
 - Rollback 握手与 Snapshot codec 已锁定 GameplayContentHash 与 StateSchemaHash；Actor Snapshot 使用完整角色状态 schema，不再以单个 Ability 身份代表角色。
 - Runtime state 继续拥有输入排序、applied gameplay hash history、Relay/Confirmed horizon、恢复重放和 canonical confirmation 输出；RestoreSimulationProjection 仍按 confirmed horizon 修剪并推进历史。
+
+## 2026-09-16 对账Gameplay Runtime组合职责
+- Fixed 与 Float32 会话组合现在消费 CharacterRuntime、执行 Backend、不可变 Pipeline 包、Source、WorldSolver、Diagnostics 和显式初始状态；没有 Program Runtime 安装残留。
+- SimulationPipelineCompiler 继续负责顺序、产品、能力校验和不可变启动身份；运行时请求只传入领域服务与状态。

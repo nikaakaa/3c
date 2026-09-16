@@ -1307,3 +1307,8 @@
 
 - FixedNeutralCharacterControlSource 改用现有 NeutralFixedSimulationInputAdapter，删除对已不存在 NeutralFixedCharacterSimulationInputAdapter 的引用。
 - 本步只统一 Fixed 本地空输入创建路径，不改变输入状态、排序或还原格式。
+
+## 2026-09-16 移除Fixed Host旧诊断命令入口
+
+- Fixed 与 DeterministicRollback Character Host 删除已不存在的 CharacterPipelineTraceCommandLine.Enable 调用，诊断上下文仍由正式 Runtime Diagnostics Store 和 Target 承担。
+- 本步只清掉旧总链诊断入口，不新增命令解析或兼容类型。

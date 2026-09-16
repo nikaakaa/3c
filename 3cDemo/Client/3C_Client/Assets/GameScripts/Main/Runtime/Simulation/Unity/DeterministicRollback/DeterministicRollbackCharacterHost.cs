@@ -194,7 +194,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     characterRuntime.GameplayContentHash.ToString());
                 var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
                 var diagnosticsStore = new RuntimeDiagnosticsStore();
-                CharacterPipelineTraceCommandLine.Enable(diagnosticsStore);
                 var diagnosticsContext = new RuntimeDiagnosticsContext(
                     Guid.NewGuid(),
                     Guid.NewGuid(),

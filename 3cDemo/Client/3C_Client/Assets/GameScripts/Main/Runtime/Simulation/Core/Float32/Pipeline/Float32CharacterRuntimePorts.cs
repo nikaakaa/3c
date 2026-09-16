@@ -115,6 +115,14 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < values.Count; i++)
                 parts.Add(values[i].GameplayContentHash.ToString());
             GameplayContentHash = new GameplayContentHash(StableHash.Compute(parts.ToArray()));
+            var stateSchemaParts = new List<string>
+            {
+                "float32-character-runtime-state-schema/1",
+                RosterDescriptor.RosterHash.ToString()
+            };
+            for (int i = 0; i < values.Count; i++)
+                stateSchemaParts.Add(values[i].StateSchemaHash.ToString());
+            StateSchemaHash = StableHash.Compute(stateSchemaParts.ToArray());
         }
 
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
@@ -126,6 +134,7 @@ namespace ThirdPersonSimulation
         public CharacterControlModuleCatalog ControlModules { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
         public IReadOnlyList<string> InputRequestIds => m_InputRequestIds;
+        public StableHash StateSchemaHash { get; }
         public GameplayContentHash GameplayContentHash { get; }
         public string AbilitySetSourceRevision { get; }
 

@@ -19,6 +19,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             m_Compatibility = compatibility ?? throw new ArgumentNullException(nameof(compatibility));
             m_AuthorityWorld = authorityWorld ?? throw new ArgumentNullException(nameof(authorityWorld));
             if (!m_CharacterRuntime.GameplayContentHash.Equals(m_Compatibility.GameplayContentHash) ||
+                !m_CharacterRuntime.StateSchemaHash.Equals(m_Compatibility.StateSchemaHash) ||
                 !m_CharacterRuntime.OperationSetVersion.Equals(m_Compatibility.OperationSetVersion) ||
                 m_CharacterRuntime.TickRate != m_Compatibility.TickRate)
             {

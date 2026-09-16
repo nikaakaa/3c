@@ -1240,3 +1240,9 @@
 - 新增角色级 `StateSchemaHash`：由 Control 状态绑定、Gameplay Effect、Equipment 以及全部 Ability 的状态 schema、操作集版本和数值目标共同计算，不再把单个 Ability 身份当作整角色状态 schema。
 - Float32／Fixed 初始状态、Step 事务和 runtime state codec 均保存该身份；codec identity 与 hash 版本升到 4，读取时同时校验角色 `GameplayContentHash` 和 `StateSchemaHash`，旧状态格式不能被新会话隐式接受。
 - 本步不改变 World／Pipeline／Timeline 的状态所有权，也不勾选尚未完成的 2.6／2.7；只把角色状态自身的 schema 边界落到现有快照与网络恢复入口。
+
+## 2026-09-16 锁定ServerAuthoritative角色状态Schema
+
+- ServerAuthoritative Float32 Character Runtime 汇总全 roster 的 `StateSchemaHash`，并将其加入 Pipeline Compatibility Identity 与 compatibility hash；网络握手沿原有 pair 比较入口拒绝状态布局不同的两端。
+- Prediction Reconciler 同时校验本地 Character Runtime 与锁定 compatibility 的 `GameplayContentHash`、`StateSchemaHash`、OperationSetVersion 和 TickRate；World、Pipeline、Backend 的既有身份校验保持不变。
+- 本步只补网络身份边界，不把 Timeline／Pose 状态塞进核心状态，也不改变 ServerAuthoritative 的 Ingress／Schedule／Step／Egress 顺序。

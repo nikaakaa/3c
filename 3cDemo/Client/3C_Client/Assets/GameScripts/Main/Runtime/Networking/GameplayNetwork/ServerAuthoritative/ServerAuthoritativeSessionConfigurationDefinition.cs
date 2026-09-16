@@ -102,6 +102,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             SimulationPipelineIdentity authority = Identity(AuthorityPipeline.BuildPortableDescriptor());
             return new ServerAuthoritativePipelineCompatibilityIdentity(
                 characterRuntime.GameplayContentHash,
+                characterRuntime.StateSchemaHash,
                 characterRuntime.OperationSetVersion,
                 SimulationTickRate,
                 prediction,

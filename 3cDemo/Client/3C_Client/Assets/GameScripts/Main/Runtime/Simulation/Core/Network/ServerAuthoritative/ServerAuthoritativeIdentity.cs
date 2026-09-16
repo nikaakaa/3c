@@ -202,6 +202,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         public ServerAuthoritativePipelineCompatibilityIdentity(
             GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
             OperationSetVersion operationSetVersion,
             int tickRate,
             SimulationPipelineIdentity predictionPipeline,
@@ -210,7 +211,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             WorldCapability predictionSolverRequiredCapabilities,
             WorldCapability authoritySolverRequiredCapabilities)
         {
-            if (!gameplayContentHash.IsValid || !operationSetVersion.IsValid || tickRate <= 0 ||
+            if (!gameplayContentHash.IsValid || !stateSchemaHash.IsValid || !operationSetVersion.IsValid || tickRate <= 0 ||
                 !predictionPipeline.IsValid || !authorityPipeline.IsValid || !backend.IsValid ||
                 backend.Role != SimulationComponentRole.ExecutionBackend ||
                 predictionSolverRequiredCapabilities == WorldCapability.None ||
@@ -219,6 +220,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentException("ServerAuthoritative Pipeline compatibility identity is incomplete.");
             }
             GameplayContentHash = gameplayContentHash;
+            StateSchemaHash = stateSchemaHash;
             OperationSetVersion = operationSetVersion;
             TickRate = tickRate;
             PredictionPipeline = predictionPipeline;
@@ -227,8 +229,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             PredictionSolverRequiredCapabilities = predictionSolverRequiredCapabilities;
             AuthoritySolverRequiredCapabilities = authoritySolverRequiredCapabilities;
             CompatibilityHash = StableHash.Compute(
-                "server-authoritative-pipeline-pair/2",
+                "server-authoritative-pipeline-pair/3",
                 gameplayContentHash.ToString(),
+                stateSchemaHash.ToString(),
                 operationSetVersion.Value,
                 tickRate.ToString(CultureInfo.InvariantCulture),
                 predictionPipeline.ToString(),
@@ -239,6 +242,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         }
 
         public GameplayContentHash GameplayContentHash { get; }
+        public StableHash StateSchemaHash { get; }
         public OperationSetVersion OperationSetVersion { get; }
         public int TickRate { get; }
         public SimulationPipelineIdentity PredictionPipeline { get; }

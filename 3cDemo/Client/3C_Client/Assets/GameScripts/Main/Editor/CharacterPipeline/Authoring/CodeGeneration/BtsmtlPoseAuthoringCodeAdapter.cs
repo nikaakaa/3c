@@ -213,8 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return result;
         }
 
-        static string PoseGraphSection(CharacterPoseCanvasGraph graph, int index) =>
-            $"Graphs/{(string.IsNullOrWhiteSpace(graph.name) ? $"Graph{index}" : BtsmtlAuthoringCodeSyntax.Identifier(graph.name))}";
+        static string PoseGraphSection(CharacterPoseCanvasGraph graph, int index) => "Graphs";
 
         static int[] ResolveResourceBindingIndices(
             BtsmtlAuthoringCodeExportContext context,

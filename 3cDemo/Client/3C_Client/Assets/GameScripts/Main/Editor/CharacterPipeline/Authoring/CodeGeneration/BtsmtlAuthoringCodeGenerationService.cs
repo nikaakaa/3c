@@ -213,7 +213,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             OutputPlan plan = CreatePlan(context);
             Dictionary<string, HashSet<string>> namespaceSymbols =
-                BuildNamespaceSymbols(new[] { "System" }.Concat(context.Usings));
+                BuildNamespaceSymbols(new[]
+                {
+                    "System",
+                    "ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration"
+                }.Concat(context.Usings));
             var files = new List<BtsmtlAuthoringCodeSourceFile>
             {
                 CreateFile(entryPath, "Root", true, TrimHeader(BuildRootFile(context, plan), context.Request.NamespaceName, namespaceSymbols))

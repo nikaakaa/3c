@@ -118,19 +118,21 @@ namespace BTSMTL.Timeline.Editor
         bool m_ReadOnly;
         float? m_RuntimeVisualTime;
         float? m_HistoryVisualTime;
+        readonly Action m_ExternalRepaint;
 
         static BtsmtlSlateTimelineProjection s_Current;
 
-        BtsmtlSlateTimelineProjection(TimelineEditorOpenRequest request, Action<Clip> openSourceClip)
+        BtsmtlSlateTimelineProjection(TimelineEditorOpenRequest request, Action<Clip> openSourceClip, Action repaint)
         {
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
+            m_ExternalRepaint = repaint;
             m_Session = new TimelineEditorSessionContext(request);
             m_Binding = new BtsmtlSlateTimelineBinding(request, m_Session, openSourceClip);
             m_Binding.AuthoringIssue += OnBindingIssue;
             m_Binding.RepaintRequested += OnBindingRepaint;
             UnityEditor.Selection.activeObject = request.SerializedOwner;
             m_EmbeddedEditor = ScriptableObject.CreateInstance<CutsceneEditorSurface>();
-            m_EmbeddedEditor.InitializeEmbedded(m_Binding, null);
+            m_EmbeddedEditor.InitializeEmbedded(m_Binding, EmbeddedRepaint);
             m_EmbeddedEditor.ConfigureEmbeddedRuntimeTime(() => m_RuntimeVisualTime);
             m_EmbeddedEditor.ConfigureEmbeddedHistoryTime(() => m_HistoryVisualTime);
             m_EmbeddedEditor.ConfigureEmbeddedRuntimeState(IsRuntimeTrackActive, RuntimeClipStatus);
@@ -277,22 +279,24 @@ namespace BTSMTL.Timeline.Editor
 
         public static BtsmtlSlateTimelineProjection Open(
             TimelineEditorOpenRequest request,
-            Action<Clip> openSourceClip = null)
+            Action<Clip> openSourceClip,
+            Action repaint = null)
         {
             DisposeCurrent();
-            s_Current = new BtsmtlSlateTimelineProjection(request, openSourceClip);
+            s_Current = new BtsmtlSlateTimelineProjection(request, openSourceClip, repaint);
             return s_Current;
         }
 
         public static bool TryOpen(
             TimelineEditorOpenRequest request,
             Action<Clip> openSourceClip,
+            Action repaint,
             out BtsmtlSlateTimelineProjection projection,
             out string unavailableReason)
         {
             try
             {
-                projection = Open(request, openSourceClip);
+                projection = Open(request, openSourceClip, repaint);
                 unavailableReason = string.Empty;
                 return true;
             }
@@ -441,6 +445,11 @@ namespace BTSMTL.Timeline.Editor
             m_Binding.Rebuild();
             RestoreViewState(state);
             m_EmbeddedEditor.RequestEmbeddedRepaint();
+        }
+
+        void EmbeddedRepaint()
+        {
+            m_ExternalRepaint?.Invoke();
         }
 
         void ReportIssue(string message)

@@ -336,6 +336,11 @@ namespace BTSMTL.Timeline.Editor
             if (!BtsmtlSlateTimelineProjection.TryOpen(
                     openRequest,
                     OpenClip,
+                    () =>
+                    {
+                        if (m_SlateSurface != null)
+                            m_SlateSurface.MarkDirtyRepaint();
+                    },
                     out m_SlateProjection,
                     out string unavailableReason))
             {

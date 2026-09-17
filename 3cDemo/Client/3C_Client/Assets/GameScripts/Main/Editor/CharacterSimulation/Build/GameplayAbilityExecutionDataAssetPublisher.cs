@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 GameplayAbilityDefinition ability = abilities[i];
                 GameplayAbilitySemanticFrontendResult semantic =
-                    GameplayAbilitySemanticFrontendCompiler.Compile(ability);
+                    GameplayAbilitySemanticFrontendCompiler.Compile(ability, definition.SimulationTickRate);
                 if (!semantic.IsValid)
                     throw new InvalidOperationException(FormatReport(semantic.Report));
                 var abilityTimelinesForAbility = new List<TimelineAsset>();
@@ -122,40 +122,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        public static void Publish(
-            GameplayAbilityDefinition definition,
-            string float32AssetPath,
-            string fixedAssetPath)
-        {
-            if (!definition)
-                throw new ArgumentNullException(nameof(definition));
-            string float32Path = RequireAssetPath(float32AssetPath, nameof(float32AssetPath));
-            string fixedPath = RequireAssetPath(fixedAssetPath, nameof(fixedAssetPath));
-            if (string.Equals(float32Path, fixedPath, StringComparison.Ordinal))
-                throw new ArgumentException("Float32 and Fixed Ability Data paths must be different.");
-
-            GameplayAbilitySemanticFrontendResult semantic =
-                GameplayAbilitySemanticFrontendCompiler.Compile(definition);
-            if (!semantic.IsValid)
-                throw new InvalidOperationException(FormatReport(semantic.Report));
-            Float32GameplayAbilityExecutionCompilationResult float32 =
-                GameplayAbilityTargetCompiler.CompileFloat32(semantic.Artifact);
-            ThirdPersonSimulation.Fixed.FixedGameplayAbilityExecutionCompilationResult fixedData =
-                GameplayAbilityTargetCompiler.CompileFixed(semantic.Artifact);
-
-            ValidateAssetSlot<GameplayAbilityDataAsset>(float32Path);
-            ValidateAssetSlot<FixedGameplayAbilityDataAsset>(fixedPath);
-            GameplayAbilityDataAsset float32Asset = PrepareAsset<GameplayAbilityDataAsset>(float32Path);
-            FixedGameplayAbilityDataAsset fixedAsset = PrepareAsset<FixedGameplayAbilityDataAsset>(fixedPath);
-            float32Asset.SetCompiledExecutionData(float32);
-            fixedAsset.SetCompiledExecutionData(fixedData.Data);
-            EditorUtility.SetDirty(float32Asset);
-            EditorUtility.SetDirty(fixedAsset);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.ImportAsset(float32Path, ImportAssetOptions.ForceUpdate);
-            AssetDatabase.ImportAsset(fixedPath, ImportAssetOptions.ForceUpdate);
-        }
-
         static TAsset PrepareAsset<TAsset>(string path)
             where TAsset : ScriptableObject
         {
@@ -217,3 +183,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 }
+

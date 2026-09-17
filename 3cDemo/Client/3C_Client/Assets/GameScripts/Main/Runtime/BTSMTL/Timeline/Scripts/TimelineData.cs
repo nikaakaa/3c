@@ -26,9 +26,6 @@ namespace BTSMTL.Timeline
         List<TimelineExternalBindingDeclaration> m_ExternalBindings = new List<TimelineExternalBindingDeclaration>();
 
         [SerializeField]
-        float m_Scale = 1f;
-
-        [SerializeField]
         bool m_Loop;
 
         [NonSerialized]
@@ -42,7 +39,6 @@ namespace BTSMTL.Timeline
         public List<Track> Tracks => m_Tracks;
         public IReadOnlyList<TimelineSection> Sections => m_Sections;
         public IReadOnlyList<TimelineExternalBindingDeclaration> ExternalBindings => m_ExternalBindings;
-        public float Scale { get => m_Scale; set => m_Scale = value; }
         public bool Loop { get => m_Loop; set => m_Loop = value; }
         public UnityEngine.Object SerializedOwner => m_SerializedOwner;
         public string SerializedPropertyPath => m_SerializedPropertyPath ?? string.Empty;
@@ -402,3 +398,4 @@ namespace BTSMTL.Timeline
         void BindNestedSerializedOwner(UnityEngine.Object owner, string propertyPath);
     }
 }
+

@@ -66,6 +66,7 @@ namespace BTSMTL.Timeline
     [TimelineAuthoringProperty("cueType", TimelineAuthoringPropertyKind.Text, Trimmed = true)]
     public sealed class ActionCueClip : SignalClip
     {
+        public override ClipCapabilities Capabilities => ClipCapabilities.TickQuantized;
         public override string ContractKind => TimelineContractKinds.ActionCueClip;
 
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -103,3 +104,4 @@ namespace BTSMTL.Timeline
             });
     }
 }
+

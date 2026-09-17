@@ -163,7 +163,9 @@ namespace BTSMTL.Timeline.Editor
             string serializedPropertyPath,
             string ownershipLabel,
             ITimelineEditorRuntimeDebugBinding runtimeDebugBinding,
-            TimelineContractCatalog contractCatalog)
+            TimelineContractCatalog contractCatalog,
+            int previewFrameRate = TimelineUtility.FrameRate,
+            int tickRate = TimelineUtility.FrameRate)
         {
             Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
             SerializedOwner = serializedOwner ? serializedOwner : throw new ArgumentNullException(nameof(serializedOwner));
@@ -173,6 +175,12 @@ namespace BTSMTL.Timeline.Editor
             OwnershipLabel = ownershipLabel ?? string.Empty;
             RuntimeDebugBinding = runtimeDebugBinding;
             ContractCatalog = contractCatalog ?? throw new ArgumentNullException(nameof(contractCatalog));
+            if (previewFrameRate <= 0)
+                throw new ArgumentOutOfRangeException(nameof(previewFrameRate));
+            PreviewFrameRate = previewFrameRate;
+            if (tickRate <= 0)
+                throw new ArgumentOutOfRangeException(nameof(tickRate));
+            TickRate = tickRate;
         }
 
         public TimelineData Timeline { get; }
@@ -181,6 +189,8 @@ namespace BTSMTL.Timeline.Editor
         public string OwnershipLabel { get; }
         public ITimelineEditorRuntimeDebugBinding RuntimeDebugBinding { get; }
         public TimelineContractCatalog ContractCatalog { get; }
+        public int PreviewFrameRate { get; }
+        public int TickRate { get; }
     }
 
     public sealed class TimelineEditorSessionContext
@@ -201,7 +211,8 @@ namespace BTSMTL.Timeline.Editor
         public ITimelineEditorRuntimeDebugBinding RuntimeDebugBinding => m_Request.RuntimeDebugBinding;
         public TimelineEditorSelection Selection => m_Selection;
         public bool IsReadOnly => m_IsReadOnly != null && m_IsReadOnly();
-        public int FrameRate => TimelineUtility.FrameRate;
+        public int FrameRate => m_Request.PreviewFrameRate;
+        public int TickRate => m_Request.TickRate;
         public event Action<TimelineEditorSelection> SelectionChanged;
 
         internal void SetSelection(object target)
@@ -265,3 +276,5 @@ namespace BTSMTL.Timeline.Editor
         }
     }
 }
+
+

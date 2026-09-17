@@ -325,7 +325,8 @@ namespace BTSMTL.Timeline.Runtime
             ITimelineDomainBindingResolver domainResolver,
             ITimelineRuntimeDependencyResolver dependencyResolver,
             ITimelineRuntimeEvaluationSink evaluationSink,
-            ITimelineRuntimeTreeClipService treeClipService)
+            ITimelineRuntimeTreeClipService treeClipService,
+            int tickRate)
         {
             if (contractCatalog == null)
                 throw new ArgumentNullException(nameof(contractCatalog));
@@ -352,7 +353,7 @@ namespace BTSMTL.Timeline.Runtime
             var consumer = new TimelineRuntimeExecutionConsumer(
                 evaluationSink,
                 treeClipService);
-            m_Service = new TimelineRuntimeService(requestFactory, consumer, consumer);
+            m_Service = new TimelineRuntimeService(requestFactory, consumer, consumer, tickRate);
         }
 
         public TimelineRuntimeService Service => m_Service;
@@ -391,9 +392,10 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeAdvanceResult Advance(
             TimelineRuntimePlaybackHandle handle,
             ulong logicTick,
-            int deltaFrames)
+            int tickCount)
         {
-            return m_Service.Advance(handle, logicTick, deltaFrames);
+            return m_Service.Advance(handle, logicTick, tickCount);
+
         }
 
         public bool CommitAdvance(
@@ -476,3 +478,4 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 }
+

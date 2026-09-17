@@ -192,6 +192,7 @@ namespace ThirdPersonSimulation
             writer.WriteByte((byte)snapshot.State);
             writer.WriteInt32(snapshot.CursorFrame);
             writer.WriteInt32(snapshot.Cycle);
+            writer.WriteInt32(snapshot.FrameCarry);
             writer.WriteString(snapshot.SectionId);
             writer.WriteInt32(snapshot.ActiveClipIds.Count);
             for (int i = 0; i < snapshot.ActiveClipIds.Count; i++)
@@ -226,6 +227,7 @@ namespace ThirdPersonSimulation
             AbilityTimelineSnapshotState state = ReadEnum<AbilityTimelineSnapshotState>(reader.ReadByte());
             int cursorFrame = reader.ReadInt32();
             int cycle = reader.ReadInt32();
+            int frameCarry = reader.ReadInt32();
             string sectionId = reader.ReadString();
             int clipCount = ReadCount(reader, 1024, "Float32 Character Timeline active clips");
             var clips = new string[clipCount];
@@ -270,6 +272,7 @@ namespace ThirdPersonSimulation
                 state,
                 cursorFrame,
                 cycle,
+                frameCarry,
                 sectionId,
                 clips,
                 hasStopContext,
@@ -870,3 +873,4 @@ namespace ThirdPersonSimulation
         }
     }
 }
+

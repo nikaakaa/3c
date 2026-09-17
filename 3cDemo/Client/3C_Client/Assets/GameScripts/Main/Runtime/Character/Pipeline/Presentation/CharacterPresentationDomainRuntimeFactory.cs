@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     runtime.BindPoseDomain(poseDomain, resourceScope, inputContract.Parameters);
                 }
                 if (characterTimelineHost != null)
-                    runtime.InitializeTimelineHost(characterTimelineHost, sessionHost.TimelineNumericTarget);
+                    runtime.InitializeTimelineHost(characterTimelineHost, sessionHost.TimelineNumericTarget, sessionHost.TickRate);
                 return runtime;
             }
             catch
@@ -197,3 +197,4 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 }
+

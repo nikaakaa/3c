@@ -93,7 +93,7 @@ namespace BTSMTL.Timeline
 
 #if UNITY_EDITOR
         public override string Name => $"{m_ExecutionPhase} / {(m_AssetTree ? m_AssetTree.name : "Missing Graph")}";
-        public override ClipCapabilities Capabilities => ClipCapabilities.Resizable;
+        public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.TickQuantized;
 
         public TreeClip(Track track, int frame) : base(track, frame)
         {
@@ -146,3 +146,4 @@ namespace BTSMTL.Timeline
             });
     }
 }
+

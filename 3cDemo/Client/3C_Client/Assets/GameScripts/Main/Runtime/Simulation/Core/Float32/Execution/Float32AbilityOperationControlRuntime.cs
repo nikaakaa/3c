@@ -99,7 +99,9 @@ namespace ThirdPersonSimulation
                         $"Ability '{data.AbilityId.Value}' has duplicate TreeClip invocation '{entry.InvocationCallerClipId}/{entry.InvocationCallerId}'.");
             }
             return entries;
-        }        public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
+        }
+
+        public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
 
         public bool IsActive(OperationHandle operation) => m_Runtime.IsActive(operation);
         public bool IsStopping(OperationHandle operation) => m_Runtime.IsStopping(operation);

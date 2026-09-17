@@ -261,7 +261,6 @@ namespace BTSMTL.Timeline
             string name,
             int frameRate,
             int maxFrame,
-            float scale,
             bool loop,
             IReadOnlyList<TimelineContentTrack> tracks,
             IReadOnlyList<TimelineContentClip> clips,
@@ -275,7 +274,6 @@ namespace BTSMTL.Timeline
             Name = name ?? string.Empty;
             FrameRate = frameRate;
             MaxFrame = maxFrame;
-            Scale = scale;
             Loop = loop;
             Tracks = new ReadOnlyCollection<TimelineContentTrack>(new List<TimelineContentTrack>(tracks ?? Array.Empty<TimelineContentTrack>()));
             Clips = new ReadOnlyCollection<TimelineContentClip>(new List<TimelineContentClip>(clips ?? Array.Empty<TimelineContentClip>()));
@@ -290,7 +288,6 @@ namespace BTSMTL.Timeline
         public string Name { get; }
         public int FrameRate { get; }
         public int MaxFrame { get; }
-        public float Scale { get; }
         public bool Loop { get; }
         public IReadOnlyList<TimelineContentTrack> Tracks { get; }
         public IReadOnlyList<TimelineContentClip> Clips { get; }
@@ -501,7 +498,6 @@ namespace BTSMTL.Timeline
                     timeline.Name,
                     TimelineUtility.FrameRate,
                     maxFrame,
-                    timeline.Scale,
                     timeline.Loop,
                     tracks,
                     clips,

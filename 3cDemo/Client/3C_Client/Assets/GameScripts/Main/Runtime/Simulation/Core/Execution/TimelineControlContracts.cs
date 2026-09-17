@@ -601,6 +601,7 @@ namespace ThirdPersonSimulation
             AbilityTimelineSnapshotState state,
             int cursorFrame,
             int cycle,
+            int frameCarry,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
             bool hasStopContext,
@@ -629,6 +630,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(state));
             if (cursorFrame < 0 || cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cursorFrame));
+            FrameCarry = frameCarry;
             SectionId = sectionId ?? string.Empty;
             ActiveClipIds = Copy(activeClipIds);
             StopCause = stopCause;
@@ -664,6 +666,7 @@ namespace ThirdPersonSimulation
         public AbilityTimelineSnapshotState State { get; }
         public int CursorFrame { get; }
         public int Cycle { get; }
+        public int FrameCarry { get; }
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds { get; }
         public bool HasStopContext { get; }
@@ -735,7 +738,7 @@ namespace ThirdPersonSimulation
     public interface IAbilityTimelineRuntime
     {
         int Start(in AbilityTimelineStartRequest request);
-        AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int deltaFrames);
+        AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int tickCount);
         void Commit(IAbilityTimelinePending pending);
         void Discard(IAbilityTimelinePending pending);
         AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle);
@@ -747,3 +750,5 @@ namespace ThirdPersonSimulation
 
 
 }
+
+

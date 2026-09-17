@@ -49,6 +49,7 @@ namespace BTSMTL.Timeline.Editor
         public TimelineContractCatalog ContractCatalog => m_Request.ContractCatalog;
         public TimelineEditorSessionContext Session => m_Session;
         public int FrameRate => Mathf.Max(1, m_Session.FrameRate);
+        public int TickRate => Mathf.Max(1, m_Session.TickRate);
         public string DisplayName => Timeline.Name;
         public float Length => Timeline.Duration;
         public float Duration => Timeline.Duration;
@@ -1289,8 +1290,15 @@ namespace BTSMTL.Timeline.Editor
 
             float SnapTime(float value)
             {
-                int frame = Mathf.Max(0, Mathf.RoundToInt(value * m_Owner.FrameRate));
-                return frame / (float)m_Owner.FrameRate;
+                if (Source.IsTickQuantized())
+                {
+                    int tickStep = Mathf.Max(1, Mathf.RoundToInt((float)m_Owner.FrameRate / Mathf.Max(1, m_Owner.TickRate)));
+                    int frame = Mathf.Max(0, Mathf.RoundToInt(value * m_Owner.FrameRate));
+                    frame = frame - frame % tickStep;
+                    return frame / (float)m_Owner.FrameRate;
+                }
+                int snapped = Mathf.Max(0, Mathf.RoundToInt(value * m_Owner.FrameRate));
+                return snapped / (float)m_Owner.FrameRate;
             }
         }
 
@@ -1594,3 +1602,5 @@ namespace BTSMTL.Timeline.Editor
     }
 }
 #endif
+
+

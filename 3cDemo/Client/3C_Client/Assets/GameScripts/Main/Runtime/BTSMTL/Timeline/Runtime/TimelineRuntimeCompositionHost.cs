@@ -18,7 +18,8 @@ namespace BTSMTL.Timeline.Runtime
             ITimelineDomainBindingResolver domainResolver,
             ITimelineRuntimeDependencyResolver dependencyResolver,
             IEnumerable<ITimelineRuntimeEvaluationSink> evaluationSinks,
-            ITimelineRuntimeTreeClipService treeClipService)
+            ITimelineRuntimeTreeClipService treeClipService,
+            int tickRate)
         {
             if (evaluationSinks == null)
                 throw new ArgumentNullException(nameof(evaluationSinks));
@@ -43,7 +44,8 @@ namespace BTSMTL.Timeline.Runtime
                 domainResolver,
                 dependencyResolver,
                 fanout,
-                treeClipService);
+                treeClipService,
+                tickRate);
         }
 
         public TimelineRuntimeEvaluationBuffer EvaluationBuffer { get; } =
@@ -103,10 +105,10 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeAdvanceResult Advance(
             TimelineRuntimePlaybackHandle handle,
             ulong logicTick,
-            int deltaFrames)
+            int tickCount)
         {
             EnsureAvailable();
-            return m_Composition.Advance(handle, logicTick, deltaFrames);
+            return m_Composition.Advance(handle, logicTick, tickCount);
         }
 
         public bool CommitAdvance(
@@ -269,4 +271,4 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ObjectDisposedException(nameof(TimelineRuntimeCompositionHost));
         }
     }
-}
+    }

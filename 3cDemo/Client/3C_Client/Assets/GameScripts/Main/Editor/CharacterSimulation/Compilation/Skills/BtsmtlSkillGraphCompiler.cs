@@ -98,7 +98,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             context.CallerKind,
                             hook.Hook.ToString(),
                             context.ClipId);
-                    }                    m_Builder.DeclareGraphInvocation(
+                    }
+
+                    m_Builder.DeclareGraphInvocation(
                         entry,
                         invocationSource,
                         context.CallerKind,
@@ -118,7 +120,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
                 {
-
                     if (reference.Kind == BtsmtlSkillGraphReferenceKind.StateMachine &&
                         reference.NativeStateMachine != null)
                     {

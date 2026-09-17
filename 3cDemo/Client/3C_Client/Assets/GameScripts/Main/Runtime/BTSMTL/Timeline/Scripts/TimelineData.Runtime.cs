@@ -630,6 +630,10 @@ namespace BTSMTL.Timeline
         {
             return (Capabilities & ClipCapabilities.ClipInable) == ClipCapabilities.ClipInable;
         }
+        public bool IsTickQuantized()
+        {
+            return (Capabilities & ClipCapabilities.TickQuantized) == ClipCapabilities.TickQuantized;
+        }
     }
 
     public abstract partial class SignalClip
@@ -641,3 +645,4 @@ namespace BTSMTL.Timeline
     } 
 #endif
 }
+

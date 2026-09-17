@@ -52,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline
         }
 
         public SimulationSessionCompositionDefinition Composition => m_Composition;
+        public int TickRate => m_Composition.TickRate;
         public SimulationSessionLifecycleState LifecycleState => m_State;
         public SimulationSessionFailure Failure => m_Failure;
         public SimulationSessionLaunchPlan LaunchPlan => m_LaunchPlan;

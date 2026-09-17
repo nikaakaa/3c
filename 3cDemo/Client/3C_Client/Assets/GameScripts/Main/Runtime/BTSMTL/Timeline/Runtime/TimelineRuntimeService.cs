@@ -319,11 +319,12 @@ namespace BTSMTL.Timeline.Runtime
 
     public sealed class TimelineRuntimePlaybackSnapshot
     {
-        public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v2";
+        public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v3";
 
         internal TimelineRuntimePlaybackSnapshot(TimelineRuntimePlayback playback)
         {
             Schema = CurrentSchema;
+            TickRate = playback.TickRate;
             Handle = playback.Handle;
             Generation = playback.Generation;
             RequestId = playback.RequestId;
@@ -341,6 +342,7 @@ namespace BTSMTL.Timeline.Runtime
             HasStopContext = playback.HasStopContext;
             StopContext = playback.StopContext;
             InitialBoundaryPending = playback.InitialBoundaryPending;
+            FrameCarry = playback.FrameCarry;
         }
 
         public TimelineRuntimePlaybackSnapshot(
@@ -359,8 +361,11 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineRuntimeTreeClipAssociation> activeTreeClipAssociations,
             bool hasStopContext,
             TimelinePlaybackStopContext stopContext,
-            bool initialBoundaryPending)
+            bool initialBoundaryPending,
+            int frameCarry,
+            int tickRate)
         {
+            TickRate = tickRate;
             Schema = CurrentSchema;
             Handle = handle;
             Generation = generation;
@@ -378,6 +383,7 @@ namespace BTSMTL.Timeline.Runtime
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             InitialBoundaryPending = initialBoundaryPending;
+            FrameCarry = frameCarry;
         }
 
         public string Schema { get; }
@@ -397,6 +403,8 @@ namespace BTSMTL.Timeline.Runtime
         public bool HasStopContext { get; }
         public TimelinePlaybackStopContext StopContext { get; }
         public bool InitialBoundaryPending { get; }
+        public int FrameCarry { get; }
+        public int TickRate { get; }
     }
 
     public sealed class TimelineRuntimeRestoreCandidate
@@ -438,11 +446,13 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
                 m_Preparation,
                 m_Snapshot.Handle,
-                m_Snapshot.Generation);
+                m_Snapshot.Generation,
+                m_Service.TickRate);
             if (!playback.RestoreCommittedState(
                     m_Snapshot.State,
                     m_Snapshot.CursorFrame,
                     m_Snapshot.Cycle,
+                    m_Snapshot.FrameCarry,
                     m_Snapshot.SectionId,
                     m_Snapshot.ActiveClipIds,
                     m_Snapshot.ActiveTreeClipAssociations,
@@ -465,6 +475,7 @@ namespace BTSMTL.Timeline.Runtime
                 !string.Equals(m_Snapshot.RequestId, m_Preparation.RequestId, StringComparison.Ordinal) ||
                 m_Snapshot.PlaybackMode != m_Preparation.PlaybackMode ||
                 m_Snapshot.NumericTarget != m_Preparation.NumericTarget ||
+                m_Snapshot.TickRate != m_Service.TickRate ||
                 !string.Equals(m_Snapshot.ContentRevision, m_Preparation.ContentRevision, StringComparison.Ordinal))
                 throw new InvalidOperationException("Timeline restore snapshot does not match the prepared content.");
         }
@@ -477,6 +488,7 @@ namespace BTSMTL.Timeline.Runtime
         readonly ITimelineRuntimePlaybackRequestFactory m_RequestFactory;
         readonly ITimelineRuntimeStepConsumer m_StepConsumer;
         readonly ITimelineRuntimeStopConsumer m_StopConsumer;
+        readonly int m_TickRate;
         readonly Dictionary<ulong, TimelineRuntimePlayback> m_Playbacks =
             new Dictionary<ulong, TimelineRuntimePlayback>();
         ulong m_NextPlaybackHandle = 1;
@@ -486,15 +498,20 @@ namespace BTSMTL.Timeline.Runtime
         public event Action<TimelineRuntimePlaybackDescriptor> PlaybackChanged;
         public static event Action ObservationChanged;
         public string LastFailure { get; private set; } = string.Empty;
+        internal int TickRate => m_TickRate;
 
         public TimelineRuntimeService(
             ITimelineRuntimePlaybackRequestFactory requestFactory,
             ITimelineRuntimeStepConsumer stepConsumer,
-            ITimelineRuntimeStopConsumer stopConsumer)
+            ITimelineRuntimeStopConsumer stopConsumer,
+            int tickRate)
         {
             m_RequestFactory = requestFactory ?? throw new ArgumentNullException(nameof(requestFactory));
             m_StepConsumer = stepConsumer ?? throw new ArgumentNullException(nameof(stepConsumer));
             m_StopConsumer = stopConsumer ?? throw new ArgumentNullException(nameof(stopConsumer));
+            if (tickRate <= 0)
+                throw new ArgumentOutOfRangeException(nameof(tickRate));
+            m_TickRate = tickRate;
             s_ActiveServices.Add(this);
         }
 
@@ -563,7 +580,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
                 preparation,
                 runtimeHandle,
-                generation);
+                generation,
+                m_TickRate);
             if (!playback.Start())
                 return false;
             m_Playbacks.Add(runtimeHandle.Value, playback);
@@ -688,7 +706,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlayback playback = TimelineRuntimePreparation.CreatePlayback(
                 preparation,
                 handle,
-                generation);
+                generation,
+                m_TickRate);
             m_Playbacks.Add(handle.Value, playback);
             Publish(playback);
             return handle;
@@ -715,13 +734,13 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeAdvanceResult Step(
             TimelineRuntimePlaybackHandle handle,
             ulong logicTick,
-            int deltaFrames)
+            int tickCount)
         {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
             TimelineRuntimeAdvanceResult result = TimelineRuntimeStepCoordinator.Step(
                 playback,
-                new TimelineRuntimeAdvanceRequest(logicTick, deltaFrames),
+                new TimelineRuntimeAdvanceRequest(logicTick, tickCount),
                 m_StepConsumer);
             Publish(playback);
             return result;
@@ -730,12 +749,12 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeAdvanceResult Step(
             TimelinePlaybackHandle handle,
             ulong logicTick,
-            int deltaFrames)
+            int tickCount)
         {
             EnsureAvailable();
             TimelineRuntimeAdvanceResult result = TimelineRuntimeStepCoordinator.Step(
                 Require(handle),
-                new TimelineRuntimeAdvanceRequest(logicTick, deltaFrames),
+                new TimelineRuntimeAdvanceRequest(logicTick, tickCount),
                 m_StepConsumer);
             Publish(Require(handle));
             return result;
@@ -744,12 +763,12 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeAdvanceResult Advance(
             TimelineRuntimePlaybackHandle handle,
             ulong logicTick,
-            int deltaFrames)
+            int tickCount)
         {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
             TimelineRuntimeAdvanceResult result = playback.Advance(
-                new TimelineRuntimeAdvanceRequest(logicTick, deltaFrames));
+                new TimelineRuntimeAdvanceRequest(logicTick, tickCount));
             Publish(playback);
             return result;
         }
@@ -934,3 +953,7 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 }
+
+
+
+

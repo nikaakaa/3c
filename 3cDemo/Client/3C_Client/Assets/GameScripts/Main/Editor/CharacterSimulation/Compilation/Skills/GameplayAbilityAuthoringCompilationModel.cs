@@ -23,7 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramId programId,
             ProgramRevision sourceRevision,
             BtsmtlSkillGraphOccurrence entryGraph,
-            IDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> declarations)
+            IDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> declarations,
+            int tickRate)
         {
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             DefinitionPath = string.IsNullOrEmpty(definitionPath)
@@ -39,6 +40,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 new SortedDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration>(
                     declarations ?? throw new ArgumentNullException(nameof(declarations)),
                     StringComparer.Ordinal));
+            if (tickRate <= 0)
+                throw new ArgumentOutOfRangeException(nameof(tickRate));
+            TickRate = tickRate;
             AbilityId = new CharacterSkillId(definition.AbilityId);
         }
 
@@ -48,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public ProgramId ProgramId { get; }
         public ProgramRevision SourceRevision { get; }
         public CharacterSkillId AbilityId { get; }
-        public int TickRate => GameplayTickSettings.DefaultLocalLogicTickRate;
+        public int TickRate { get; }
         public string EntryIdentity => $"ability:{AbilityId.Value}";
         public BtsmtlSkillGraphOccurrence EntryGraph { get; }
         public IReadOnlyDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> Declarations => m_Declarations;
@@ -59,7 +63,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public static GameplayAbilityAuthoringCompilationModel Discover(
             GameplayAbilityDefinition definition,
-            SimulationCompileReport report)
+            SimulationCompileReport report,
+            int tickRate)
         {
             if (report == null)
                 throw new ArgumentNullException(nameof(report));
@@ -128,7 +133,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     new ProgramId($"ability:{guid}"),
                     sourceRevision,
                     entry,
-                    declarations);
+                    declarations,
+                    tickRate);
             }
             catch (Exception exception)
             {
@@ -220,4 +226,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 }
+
 

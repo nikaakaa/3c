@@ -90,7 +90,7 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
-        public override ClipCapabilities Capabilities => ClipCapabilities.Resizable;
+        public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.TickQuantized;
 
         public ScenePresentationParameterCurveClip(Track track, int frame) : base(track, frame)
         {
@@ -203,3 +203,4 @@ namespace BTSMTL.Timeline
         }
     }
 }
+

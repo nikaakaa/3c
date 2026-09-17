@@ -274,6 +274,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         TimelinePlaybackHandle m_PreviewHandle;
         TimelineRuntimeNumericTarget m_NumericTarget;
         internal ThirdPersonSimulation.IAbilityTreeClipInvoker m_ActiveTreeClipInvoker;
+        int m_TickRate;
         bool m_Initialized;
 
         public CharacterTimelineHost(string sourceName)
@@ -297,13 +298,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal TimelineRuntimeCompositionHost Host => m_Host;
         public bool IsInitialized => m_Initialized && m_Host != null;
 
-        internal void Initialize(TimelineRuntimeNumericTarget numericTarget)
+        internal void Initialize(TimelineRuntimeNumericTarget numericTarget, int tickRate)
         {
             if (m_Initialized)
                 return;
             if (!Enum.IsDefined(typeof(TimelineRuntimeNumericTarget), numericTarget))
                 throw new ArgumentOutOfRangeException(nameof(numericTarget));
             m_NumericTarget = numericTarget;
+            m_TickRate = tickRate;
 
             var contractCatalog = new TimelineContractCatalog(Array.Empty<ITimelineContractProvider>());
             var callBindingSource = new TimelineRuntimeCallBindingSource(
@@ -320,7 +322,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 domainResolver,
                 dependencyResolver,
                 Array.Empty<ITimelineRuntimeEvaluationSink>(),
-                treeClipService);
+                treeClipService,
+                tickRate);
             m_Initialized = true;
         }
 
@@ -436,14 +439,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public CharacterTimelinePendingAdvance AdvanceTimelinePlayback(
             TimelinePlaybackHandle handle,
             ulong logicTick,
-            int deltaFrames)
+            int tickCount)
         {
             if (!IsInitialized)
                 throw new InvalidOperationException("Timeline advancement requires an initialized CharacterTimelineHost.");
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(handle);
             if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
                 return new CharacterTimelinePendingAdvance(handle, 0, null, MapTerminalStatus(status));
-            TimelineRuntimeAdvanceResult advance = m_Host.Advance(new TimelineRuntimePlaybackHandle(handle.Value), logicTick, deltaFrames);
+            TimelineRuntimeAdvanceResult advance = m_Host.Advance(new TimelineRuntimePlaybackHandle(handle.Value), logicTick, tickCount);
             var pending = new CharacterTimelinePendingAdvance(handle, (int)handle.Value, advance, AbilityTimelineRuntimeStatus.Running);
             m_PendingAdvances[handle.Value] = pending;
             return pending;
@@ -607,6 +610,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 MapSnapshotState(native.State),
                 native.CursorFrame,
                 native.Cycle,
+                native.FrameCarry,
                 native.SectionId,
                 native.ActiveClipIds,
                 native.HasStopContext,
@@ -657,7 +661,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Array.Empty<TimelineRuntimeTreeClipAssociation>(),
                 snapshot.HasStopContext,
                 new TimelinePlaybackStopContext(stopCause, snapshot.StopLocalLogicTick),
-                snapshot.InitialBoundaryPending);
+                snapshot.InitialBoundaryPending,
+                snapshot.FrameCarry,
+                m_TickRate);
             TimelineRuntimeRestoreCandidate candidate = m_Host.PrepareRestore(native, preparation);
             TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);
             var handle = new TimelinePlaybackHandle(restored.Value);
@@ -847,3 +853,5 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
     }
 }
+
+

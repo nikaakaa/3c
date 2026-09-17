@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace BTSMTL.Timeline 
@@ -16,13 +16,14 @@ namespace BTSMTL.Timeline
         Resizable = 0x1,
         Mixable = 0x2,
         ClipInable = 0x4,
+        TickQuantized = 0x8,
     }
 
     public delegate void Evaluate(float deltaTime);
 
     public static class TimelineUtility
     {
-        public static int FrameRate = 60;
+        public const int FrameRate = 60;
         public static float MinEvaluateDeltaTime
         {
             get
@@ -61,3 +62,4 @@ namespace BTSMTL.Timeline
         }
     }
 }
+

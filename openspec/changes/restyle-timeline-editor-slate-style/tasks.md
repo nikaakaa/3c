@@ -1,3 +1,5 @@
+2026-09-17 决策对账：TreeDesigner 旧 UI 已整体废弃，编辑器只保留 FlowCanvas/NodeCanvas/Slate。TreeClip 图来源收敛为唯一 BtsmtlSkillFlowGraph（TimelineBody）：创建 TreeClip 即在 Timeline 资产容器内创建图子资产并绑定（AddObjectToAsset），FlowCanvas 直接打开编辑，也允许绑定既有图资产复用；inline/shared（TimelineRunningTree、BaseTreeAsset）来源、TreeClipAuthoringService 内联服务与决策校验删除；双击只走 FlowCanvas，缺图提示绑定；运行时闭包与 preparation 改走 graph.AuthoringId。同轮修复：嵌入 Slate 的 repaint 回调接线恢复拖动实时刷新；MotionCurveClip 拖动时源区间实时夹取在源资产时长内，提交不再 throw 整笔回滚。本清单不含测试与验证任务。
+
 2026-09-14 最新作者UI状态与具体修正以[editor-wiring-audit.md](editor-wiring-audit.md)为准。本轮只审阅和补文档；已正确代码不回退，与源码不符的整体勾选重开，源码已改不等于真实窗口已通过。
 
 2026-09-13 源码对账：ce21aec8f/afcb90056已恢复原Slate UI及正式新增/游标，仍创建隐藏组件代理，DirectProjection已删除。第11节按[源码解耦决策](slate-source-decoupling.md)重新展开为未完成实现项。第1–10节保留此前功能记录，但对已由当前源码证明不成立的勾选予以纠正；未重新核对的历史勾选不构成本次端到端声明。正确业务实现不回退。只在主线实施，不向旧worktree双写；不新增测试、手动验证、编译或校验任务。

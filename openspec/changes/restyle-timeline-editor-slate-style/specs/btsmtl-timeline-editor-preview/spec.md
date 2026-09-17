@@ -147,7 +147,7 @@ Timeline Editor MUST提供正式的 Add Track/Add Clip 作者入口；候选类�
 
 Slate 编辑对象、GUI整数ID和显示名称 MUST NOT成为 BTSMTL authoring identity 或第二业务数据。新增对象的正式 identity、ContractKind、Track/Clip relationship、typed properties 和外部资源引用 MUST由 Timeline owner/API生成并校验；新增完成后 MUST从 owner 重建 Slate projection。
 
-Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST使用正式支持的 inline/shared ownership 和 Graph/Tree 来源，inline 创建 MUST走既有正式 authoring API；Camera、Motion、Cue 和其它 typed Clip MUST使用对应的 authoring binding。系统 MUST允许作者主动创建不含 Clip 的合法 Track；MUST不因取消或失败留下半成品，不创建替代 AnimationClip、默认 Tree 或 fallback contract。
+Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST绑定唯一 BtsmtlSkillFlowGraph（TimelineBody）来源；创建 TreeClip MUST在 Timeline 资产容器内同步创建图子资产并绑定，也 MUST允许绑定既有图资产复用；系统 MUST不提供 inline/shared 树来源，缺图 TreeClip MUST在编辑提交与运行准备时显式报错；Camera、Motion、Cue 和其它 typed Clip MUST使用对应的 authoring binding。系统 MUST允许作者主动创建不含 Clip 的合法 Track；MUST不因取消或失败留下半成品，不创建替代 AnimationClip、默认 Tree 或 fallback contract。
 
 #### Scenario: 新增合法Track
 

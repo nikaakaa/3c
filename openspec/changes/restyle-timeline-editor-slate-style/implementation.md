@@ -144,3 +144,7 @@ dotnet build 3cDemo/Client/3C_Client/BTSMTL.Timeline.Editor.csproj --no-restore 
 - authoring revision 与 Character Program `SourceRevision` 属于不同正式哈希域，当前没有 owner 提供二者的 Timeline 调用级对应关系；Preview 只并列显示，不伪造“已采用”。
 - 最终联合窗口的关闭、重载、切页和绑定释放验收，以及基于真实 Unity Editor 操作的截图证据。
 - 当前无 Slate 对象入口需要在连接到正确的 `D:/Unity_Project_1/3C` Editor 后做一次真实打开、刷新、创建和曲线编辑验收；已连接的 Editor 是 `D:/Unity_Project_1/3C-parallel-test`，且本轮检查时尚未 ready，因此不能把该次连接当作主工作区证据。
+
+## TreeClip 图来源收敛（2026-09-17）
+
+TreeClip 不再有 inline/shared 树来源。图来源唯一为 BtsmtlSkillFlowGraph（TimelineBody）：创建 TreeClip 时在 Timeline 资产容器内 AddObjectToAsset 创建图子资产并绑定，也可绑定既有图资产复用；双击经既有 FlowCanvas 入口打开该图；缺图 TreeClip 在内容闭包报 timeline_tree_missing，编辑提交与运行准备同样显式失败。运行时 tree graph identity 统一为 graph.AuthoringId，与 BtsmtlSkillFlowGraph.CollectTimelineContentClosure 的依赖身份一致。同轮接入嵌入 Slate 面板的 repaint 回调，恢复拖动实时刷新；MotionCurveClip 的源区间在拖动时夹取于源资产时长内，提交路径不再因源区间越界 throw 整笔回滚。

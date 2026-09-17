@@ -165,7 +165,7 @@ Timeline 编辑不需要 Actor、Director、ScenePlay 或 Slate runtime 执行�
 |---|---|
 | Track | contract、名称及必填字段；Animation Channel/Slot 使用正式绑定 |
 | Animation Clip | 已有原生 AnimationClip、插入帧；长度按正式资源规则计算 |
-| TreeClip | 现有正式 inline/shared ownership、Graph/Tree 来源和阶段；inline 创建只走已有正式 API |
+| TreeClip | 唯一图来源为 BtsmtlSkillFlowGraph（TimelineBody）；创建 TreeClip 即在 Timeline 资产容器内创建图子资产并绑定；保留 Decision/Commit 阶段 |
 | MotionCurve | 正式RootMotionCurveAsset源引用、源区间/播放映射、Timeline帧范围及空间/通道等typed字段；字段由曲线迁移owner提供，UI不复制采样规则 |
 | MotionWarp | 当前 Timeline 中合法源 Motion Clip、窗口及 required target binding |
 | Camera/Cue/Scene 参数 | 该类型现有资源、参数或目标声明，不用 Slate Actor/Camera 替代 |

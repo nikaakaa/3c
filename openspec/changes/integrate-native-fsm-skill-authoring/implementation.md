@@ -122,4 +122,4 @@ Skill C#输出现在：
 
 - 失误记录：TreeClip图（TimelineBody）从活图语义迁移到编译语义时控制流未迁移——编译器只为TimelineClip caller声明hook invocation且未实际生效，运行期Update驱动缺失。作者可见形态（root纯输出、无控制输入流）自ebc41bfcc（2026-09-08）起变更；该断裂与形态变更均未按规矩同步报告与spec，btsmtl-runnable-timeline-node至今保留已删除的RootTree operation旧挂靠条款。此为本change实施链的流程失职，留痕备查。
 - 现状验证：解码Float32/Fixed执行产物，TimelineBody图身份1eac26e4、Root handle a7d4ffcf、TreeClip hook entry全部0命中；StateBody（894a4cd1）正常编译110处。窗口决策实际由TimelineData gameplay segment采样承担，TreeClip图内容为不执行的被引用逻辑。
-- 接通方案：编译期TimelineBody图完整编译并登记Root entry（clipId到handle），运行期Update事件驱动Root entry每帧TickPersistent，边界hook保持一次性；设计详见design r6章节，任务见tasks第9节。
+- 接通方案：编译期TimelineBody图完整编译并登记Root entry（clipId到handle），运行期Update事件驱动Root entry每帧TickPersistent，边界hook保持一次性；设计详见design r6章节，任务见tasks第9节。- 观察数据链发现：runtime节点debug可视化桥（BtsmtlSkillFlowObservation/GetNodeStatus、Timeline overlay、执行区间历史）本身已实现，但其invocation数据源为空——FixedCharacterHost仅创建空DebugSourceMap，AddGraphInvocation全仓无调用者；TreeClip图打开的观察匹配因调用条目缺失/多entry无CallerId区分而无法建立。已登记为tasks 9.6独立工作项（需先设计语义域到诊断域的SourceMap映射合同），不在本轮控制流接通范围内。

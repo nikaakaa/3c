@@ -17,6 +17,7 @@ namespace BTSMTL.Timeline.Editor
             var graph = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
             graph.name = string.IsNullOrWhiteSpace(graphName) ? "Timeline Tree" : graphName.Trim();
             graph.ConfigureIdentity(Guid.NewGuid().ToString("N"), BtsmtlSkillFlowGraphRole.TimelineBody);
+            BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph);
             AssetDatabase.AddObjectToAsset(graph, path);
             Undo.RegisterCreatedObjectUndo(graph, "创建TreeClip节点图");
             EditorUtility.SetDirty(container);

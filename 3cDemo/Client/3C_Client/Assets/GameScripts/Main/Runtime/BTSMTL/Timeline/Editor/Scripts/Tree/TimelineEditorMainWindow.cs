@@ -451,25 +451,12 @@ namespace BTSMTL.Timeline.Editor
                 AssetTreeOpened?.Invoke(m_SerializedOwner as TimelineAsset, assetClip);
                 return;
             }
-            if (!(clip is TreeClip treeClip) || treeClip.ResolvedTree == null)
+            if (clip is not TreeClip treeClip)
                 return;
-
-            BaseTreeWindow graphWindow = m_SourceGraphWindow;
-            if (!graphWindow)
-                graphWindow = TreeWindowUtility.TreeWindowUtilityInstance.OpenBaseTreeWindow();
-            if (m_SourceGraphWindow && m_SourceGraphWindow.AuthoringContext != null)
-                graphWindow.SetAuthoringContext(m_SourceGraphWindow.AuthoringContext);
-
-            string identity = $"{treeClip.Track?.Name}:{treeClip.StartFrame}:{treeClip.Name}";
-            graphWindow.PushTreePage(
-                treeClip.ResolvedTree,
-                treeClip.SharedTreeAsset,
-                treeClip.Name,
-                identity,
-                "TreeClip",
-                AuthoringPageKind.TreeClip);
-            graphWindow.Show();
-            graphWindow.Focus();
+            ShowNotification(new GUIContent(
+                treeClip.AssetTree
+                    ? "TreeClip 的正式 FlowCanvas SkillGraph 打开失败。"
+                    : "TreeClip 必须绑定正式 FlowCanvas SkillGraph。"));
         }
 
         static bool OpenAssetTree(TreeClip clip)

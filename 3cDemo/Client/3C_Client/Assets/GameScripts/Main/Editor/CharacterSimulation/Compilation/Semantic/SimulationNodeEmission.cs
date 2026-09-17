@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonSimulation;
-using UnityEditor;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -36,28 +34,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public string Text0 { get; }
         public uint Flags { get; }
         public IReadOnlyList<KeyValuePair<string, object>> Constants { get; }
-    }
-
-    public static class SimulationAssetIdentity
-    {
-        public static string Of(UnityEngine.Object asset)
-        {
-            if (!asset)
-                return string.Empty;
-            string path = AssetDatabase.GetAssetPath(asset);
-            string guid = string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
-            return string.IsNullOrEmpty(guid) ? string.Empty : $"asset:{guid}";
-        }
-    }
-
-    public static class SimulationNodeEmissionFields
-    {
-        public static KeyValuePair<string, object>[] Fields(params (string Name, object Value)[] values)
-        {
-            KeyValuePair<string, object>[] result = new KeyValuePair<string, object>[values.Length];
-            for (int i = 0; i < values.Length; i++)
-                result[i] = new KeyValuePair<string, object>(values[i].Name, values[i].Value);
-            return result;
-        }
     }
 }

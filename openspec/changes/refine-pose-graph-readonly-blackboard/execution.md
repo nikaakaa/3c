@@ -16,7 +16,7 @@
 | StateMachine注册注入 | 缺 | handler/source类在，RegisterStateMachine无调用方（3.9） |
 | LinkedPose/MotionMatching/History/EntryPose/RootOrientation源 | 缺 | 五个source接口无实现类（3.10） |
 | Action/Provider帧采样发布 | 缺 | PrepareFrameResult无调用方，技能动作每帧样本到不了Slot/BlendStack（3.11） |
-| BlendSpace/Selected播放器与变量帧消费 | 缺 | 资产→计划构建服务只在Editor预览；事件变量帧无handler消费者（3.11/3.16） |
+| BlendSpace/Selected播放器与变量帧消费 | 缺（决策已定） | 项目当前无BlendSpace资产与节点，作者窗口属agent生成面；用户决策采用装配期从资产现算计划，待首个资产/节点出现时与spec修正同批实现；事件变量帧无handler消费者（3.11/3.16） |
 
 结论：Corin现行PoseGraph内出现的节点类型已全部有正式装配，可端到端验证；上表四个"缺"是图里尚未使用的下一批能力。
 

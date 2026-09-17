@@ -172,13 +172,13 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 ### Requirement: Authoring节点与Runtime执行描述必须分离
 
-Graph Authoring Domain Framework MUST只理解稳定作者identity、typed payload、port与mutation，不得要求authoring node继承runtime node。领域compiler MUST把authoring graph编译为领域自己的中间表示和runtime program；Runtime性能枚举、线性index与switch MAY存在于compiled层，但 MUST不反向成为创建菜单、Details或C#作者参数。
+领域框架 MUST以唯一作者 identity、业务字段、typed ports 和 Mutation 提供 UI 与 C# 作者 API；执行方式 MUST由领域决定。Skill 作者图继续生成独立技能数据，Pose 与 EventGraph 使用原生运行实例。原生运行节点可以与作者节点同型，但可变状态只属于实例。运行时 offset、缓冲索引、缓存和 resource handle MUST不成为作者参数，也不得为原生 Pose 另编 IR。
 
 #### Scenario: Runtime增加优化字段
 
 - **WHEN** Pose Runtime为执行计划增加内部offset或buffer index
 - **THEN** Authoring capability、Details与C#作者参数 MUST不自动暴露该字段
-- **AND** Compiler MUST负责从Pose IR生成该内部值
+- **AND** 对应节点或资源模块 MUST在实例初始化时准备该内部值，不生成Pose IR
 
 ### Requirement: Formal authoring metadata必须是C#与UI共享的唯一语义来源
 

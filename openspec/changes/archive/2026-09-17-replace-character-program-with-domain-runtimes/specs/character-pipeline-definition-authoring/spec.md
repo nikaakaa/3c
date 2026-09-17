@@ -1,10 +1,4 @@
-# character-pipeline-definition-authoring Specification
-
-## Purpose
-
-定义 CharacterPipelineDefinition 作为角色 authoring 配置装配根的纯引用边界和紧凑 Inspector。Definition 只装配正式领域引用，不拥有整角色编译产物、Program/Projection 或运行状态。
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: CharacterPipelineDefinition 必须是配置装配根
 
@@ -27,6 +21,8 @@
 - **WHEN** Definition没有CharacterAnimationPresentationProfile引用
 - **THEN** 角色配置校验与实例准备 MUST报告明确错误
 - **AND** 系统 MUST不创建内联Profile、默认Pose Graph或从Blend Library猜测配置
+
+
 
 ### Requirement: Definition Inspector 必须分离作者配置与生成产物
 
@@ -69,6 +65,8 @@ Definition Inspector MUST以正式配置引用为主；技能产物、资源状�
 - **AND** foldout绘制本身 MUST不触发完整 stale 检查
 - **AND** Compiler Diagnostics MAY按显式命令运行完整 dry-run
 
+
+
 ### Requirement: Animation Presentation Profile 必须是唯一表现配置资产
 
 动画 Profile MUST继续唯一装配原生 Pose 图、Rig／Mask／Policy、FullBodyIK、源资源、有限动作绑定与分析资源引用。原生图 MUST唯一表达 PoseState、Player、Slot、Blend、空间转换、Control Rig 与目标求解拓扑，实例绑定 MUST从这些正式引用解析资源。Definition、技能图、Timeline、Prefab、运行节点或编辑窗口 MUST不复制角色级配置；不再要求编译 Projection 或 Image。内部必要目标打包由对应运行节点和 Constraint 模块负责，不暴露为作者必接的编译步骤。
@@ -91,6 +89,8 @@ Definition Inspector MUST以正式配置引用为主；技能产物、资源状�
 - **THEN** Inspector MUST只显示Animation Presentation Profile引用与Projection Ready/Stale/Missing摘要
 - **AND** MUST不运行Pose Graph Compiler或内联显示node、Clip、Group或mask参数
 
+
+
 ### Requirement: Body Motion Profile 必须是唯一垂直动力作者配置
 
 角色 MUST显式引用唯一 BodyMotion 配置，保存有限负数重力和有限正数最大下落速度。配置 MUST由运动模块在创建时按数值目标准备，进入角色玩法内容身份与能力要求，不进入技能操作／常量。Host、Scene、Network、WorldSolver、Blackboard MUST不保存第二份配置或补默认。
@@ -100,6 +100,8 @@ Definition Inspector MUST以正式配置引用为主；技能产物、资源状�
 - **WHEN** 作者尝试创建缺少Profile的CharacterPipelineDefinition
 - **THEN** 配置校验与角色实例准备 MUST明确失败
 - **AND** Runtime MUST不创建默认Profile或按Solver补值
+
+
 
 ### Requirement: Character Definition 必须通过两个配置引用安装Equipment能力
 
@@ -116,35 +118,3 @@ Definition Inspector MUST以正式配置引用为主；技能产物、资源状�
 - **WHEN** 作者选中CharacterPipelineDefinition
 - **THEN** Inspector MUST不序列化或绘制第二份generated Equipment catalog
 - **AND** 编译状态 MAY以只读摘要显示
-
-### Requirement: Character authoring discovery必须支持显式composition roots
-
-领域 discovery MUST 从 Definition.AbilityGrants、Ability 的私有 AbilityGraph 和 Equipment Profile 声明的 Feature Persistent/Route graph 建立明确的引用闭包。每个 root MUST 携带 owner、role、Ability/Feature/Route identity 和稳定 source path；Graph 编译只处理 Graph owner 的闭包，Timeline、Pose、Control 和其它领域只解析自己的正式引用。任何 discovery MUST 不通过目录扫描、AssetDatabase 全局查找、命名约定或运行时 Loadout 猜测 owner，也 MUST 不回退到 Character RootTree。
-
-#### Scenario: 发现未装备Gun Feature
-
-- **WHEN** Gun Equipment已在Corin Equipment Profile允许catalog中但不是initial Loadout
-- **THEN** 正式领域准备 MUST 仍发现并校验 Gun Feature roots
-- **AND** Session运行中切换到Gun MUST不需要重新发现Graph
-
-#### Scenario: Feature graph owner无法解析
-
-- **WHEN** inline graph缺失serialized owner或owner identity不一致
-- **THEN** discovery MUST失败并定位Feature/Route
-- **AND** MUST不把它当作Skill Graph或其它composition root的子图猜测owner
-
-### Requirement: Core与Feature GameplayAbilityAdmissionProfile必须合并为唯一Action catalog
-
-Definition 直接拥有的 core GameplayAbilityAdmissionProfile 与 Equipment Feature 导出的 GameplayAbilityAdmissionProfile MUST 按稳定 ActionId 合并、排序并校验为唯一 Character Action catalog。Feature ownership MAY 作为 source metadata 进入诊断，但 MUST 不成为第二个 Action registry 或运行时 membership 表；该 catalog 不得被包装成整角色 Program。
-
-#### Scenario: Core Dodge与Sawblade Attack准备
-
-- **WHEN** Corin Definition拥有Core Dodge且Sawblade Feature导出Attack
-- **THEN** Action owner MUST 生成一个包含二者的正式 Action catalog
-- **AND** Action runtime MUST通过同一ActionId lookup执行准入
-
-#### Scenario: 两个Feature重复ActionId
-
-- **WHEN** Sawblade与Gun导出相同ActionId但并非同一共享GameplayAbilityAdmissionProfile identity
-- **THEN** Compiler MUST拒绝重复定义
-- **AND** MUST不按active Feature覆盖catalog条目

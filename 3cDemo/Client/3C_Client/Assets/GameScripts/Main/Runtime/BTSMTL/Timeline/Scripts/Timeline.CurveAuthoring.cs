@@ -151,18 +151,9 @@ namespace BTSMTL.Timeline
         public static readonly TimelineCurveChannelId CameraCueWeight = Id("camera-cue.weight");
         public static readonly TimelineCurveChannelId CameraCueEaseIn = Id("camera-cue.ease-in");
         public static readonly TimelineCurveChannelId CameraCueEaseOut = Id("camera-cue.ease-out");
-        public static readonly TimelineCurveChannelId CameraOverrideWeight = Id("camera-override.weight");
-        public static readonly TimelineCurveChannelId CameraOverrideEaseIn = Id("camera-override.ease-in");
-        public static readonly TimelineCurveChannelId CameraOverrideEaseOut = Id("camera-override.ease-out");
-        public static readonly TimelineCurveChannelId CameraZoomWeight = Id("camera-zoom.weight");
-        public static readonly TimelineCurveChannelId CameraZoomEaseIn = Id("camera-zoom.ease-in");
-        public static readonly TimelineCurveChannelId CameraZoomEaseOut = Id("camera-zoom.ease-out");
-        public static readonly TimelineCurveChannelId CameraStretchWeight = Id("camera-stretch.weight");
-        public static readonly TimelineCurveChannelId CameraStretchEaseIn = Id("camera-stretch.ease-in");
-        public static readonly TimelineCurveChannelId CameraStretchEaseOut = Id("camera-stretch.ease-out");
-        public static readonly TimelineCurveChannelId CameraShotWeight = Id("camera-shot.weight");
-        public static readonly TimelineCurveChannelId CameraShotEaseIn = Id("camera-shot.ease-in");
-        public static readonly TimelineCurveChannelId CameraShotEaseOut = Id("camera-shot.ease-out");
+        public static readonly TimelineCurveChannelId CameraEffectWeight = Id("camera-effect.weight");
+        public static readonly TimelineCurveChannelId CameraEffectEaseIn = Id("camera-effect.ease-in");
+        public static readonly TimelineCurveChannelId CameraEffectEaseOut = Id("camera-effect.ease-out");
         public static readonly TimelineCurveChannelId ScenePresentationValue = Id("scene-presentation.value");
 
         static readonly TimelineCurveValueDomain Unit = TimelineCurveValueDomain.Bounded(0f, 1f);
@@ -221,18 +212,9 @@ namespace BTSMTL.Timeline
             D(CameraCueWeight, typeof(CameraCueClip), "Weight", C(255, 168, 214), Unit, One),
             D(CameraCueEaseIn, typeof(CameraCueClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
             D(CameraCueEaseOut, typeof(CameraCueClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
-            D(CameraOverrideWeight, typeof(CameraOverrideClip), "Weight", C(255, 196, 130), Unit, One),
-            D(CameraOverrideEaseIn, typeof(CameraOverrideClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
-            D(CameraOverrideEaseOut, typeof(CameraOverrideClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
-            D(CameraZoomWeight, typeof(CameraZoomClip), "Weight", C(255, 210, 130), Unit, One),
-            D(CameraZoomEaseIn, typeof(CameraZoomClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
-            D(CameraZoomEaseOut, typeof(CameraZoomClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
-            D(CameraStretchWeight, typeof(CameraStretchClip), "Weight", C(255, 180, 130), Unit, One),
-            D(CameraStretchEaseIn, typeof(CameraStretchClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
-            D(CameraStretchEaseOut, typeof(CameraStretchClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
-            D(CameraShotWeight, typeof(CameraShotClip), "Weight", C(220, 180, 255), Unit, One),
-            D(CameraShotEaseIn, typeof(CameraShotClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
-            D(CameraShotEaseOut, typeof(CameraShotClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
+            D(CameraEffectWeight, typeof(CameraEffectClip), "Weight", C(236, 190, 120), Unit, One),
+            D(CameraEffectEaseIn, typeof(CameraEffectClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
+            D(CameraEffectEaseOut, typeof(CameraEffectClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
             D(ScenePresentationValue, typeof(ScenePresentationParameterCurveClip), "Value", C(132, 224, 184), TimelineCurveValueDomain.Unbounded(0f, string.Empty), Zero)
         };
 
@@ -281,18 +263,9 @@ namespace BTSMTL.Timeline
                 CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueWeight => clip.WeightCurve,
                 CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueEaseIn => clip.EaseInCurve,
                 CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueEaseOut => clip.EaseOutCurve,
-                CameraOverrideClip clip when channelId == TimelineCurveChannelCatalog.CameraOverrideWeight => clip.WeightCurve,
-                CameraOverrideClip clip when channelId == TimelineCurveChannelCatalog.CameraOverrideEaseIn => clip.EaseInCurve,
-                CameraOverrideClip clip when channelId == TimelineCurveChannelCatalog.CameraOverrideEaseOut => clip.EaseOutCurve,
-                CameraZoomClip clip when channelId == TimelineCurveChannelCatalog.CameraZoomWeight => clip.WeightCurve,
-                CameraZoomClip clip when channelId == TimelineCurveChannelCatalog.CameraZoomEaseIn => clip.EaseInCurve,
-                CameraZoomClip clip when channelId == TimelineCurveChannelCatalog.CameraZoomEaseOut => clip.EaseOutCurve,
-                CameraStretchClip clip when channelId == TimelineCurveChannelCatalog.CameraStretchWeight => clip.WeightCurve,
-                CameraStretchClip clip when channelId == TimelineCurveChannelCatalog.CameraStretchEaseIn => clip.EaseInCurve,
-                CameraStretchClip clip when channelId == TimelineCurveChannelCatalog.CameraStretchEaseOut => clip.EaseOutCurve,
-                CameraShotClip clip when channelId == TimelineCurveChannelCatalog.CameraShotWeight => clip.WeightCurve,
-                CameraShotClip clip when channelId == TimelineCurveChannelCatalog.CameraShotEaseIn => clip.EaseInCurve,
-                CameraShotClip clip when channelId == TimelineCurveChannelCatalog.CameraShotEaseOut => clip.EaseOutCurve,
+                CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectWeight => clip.WeightCurve,
+                CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseIn => clip.EaseInCurve,
+                CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseOut => clip.EaseOutCurve,
                 ScenePresentationParameterCurveClip clip when channelId == TimelineCurveChannelCatalog.ScenePresentationValue => clip.ValueCurve,
                 _ => throw Unknown(owner, channelId)
             };
@@ -322,18 +295,9 @@ namespace BTSMTL.Timeline
                 case CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueWeight: clip.WeightCurve = copy; break;
                 case CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueEaseIn: clip.EaseInCurve = copy; break;
                 case CameraCueClip clip when channelId == TimelineCurveChannelCatalog.CameraCueEaseOut: clip.EaseOutCurve = copy; break;
-                case CameraOverrideClip clip when channelId == TimelineCurveChannelCatalog.CameraOverrideWeight: clip.WeightCurve = copy; break;
-                case CameraOverrideClip clip when channelId == TimelineCurveChannelCatalog.CameraOverrideEaseIn: clip.EaseInCurve = copy; break;
-                case CameraOverrideClip clip when channelId == TimelineCurveChannelCatalog.CameraOverrideEaseOut: clip.EaseOutCurve = copy; break;
-                case CameraZoomClip clip when channelId == TimelineCurveChannelCatalog.CameraZoomWeight: clip.WeightCurve = copy; break;
-                case CameraZoomClip clip when channelId == TimelineCurveChannelCatalog.CameraZoomEaseIn: clip.EaseInCurve = copy; break;
-                case CameraZoomClip clip when channelId == TimelineCurveChannelCatalog.CameraZoomEaseOut: clip.EaseOutCurve = copy; break;
-                case CameraStretchClip clip when channelId == TimelineCurveChannelCatalog.CameraStretchWeight: clip.WeightCurve = copy; break;
-                case CameraStretchClip clip when channelId == TimelineCurveChannelCatalog.CameraStretchEaseIn: clip.EaseInCurve = copy; break;
-                case CameraStretchClip clip when channelId == TimelineCurveChannelCatalog.CameraStretchEaseOut: clip.EaseOutCurve = copy; break;
-                case CameraShotClip clip when channelId == TimelineCurveChannelCatalog.CameraShotWeight: clip.WeightCurve = copy; break;
-                case CameraShotClip clip when channelId == TimelineCurveChannelCatalog.CameraShotEaseIn: clip.EaseInCurve = copy; break;
-                case CameraShotClip clip when channelId == TimelineCurveChannelCatalog.CameraShotEaseOut: clip.EaseOutCurve = copy; break;
+                case CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectWeight: clip.WeightCurve = copy; break;
+                case CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseIn: clip.EaseInCurve = copy; break;
+                case CameraEffectClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseOut: clip.EaseOutCurve = copy; break;
                 case ScenePresentationParameterCurveClip clip when channelId == TimelineCurveChannelCatalog.ScenePresentationValue: clip.SetValueCurve(copy); break;
                 default: throw Unknown(owner, channelId);
             }

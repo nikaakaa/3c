@@ -8,7 +8,7 @@ using UnityEngine;
 namespace ThirdPersonCamera
 {
 [CreateAssetMenu(fileName = "CameraOverrideTrack", menuName = "3C/Character/Camera/Override Track")]
-    public sealed class CameraOverrideTrackAsset : ScriptableObject
+    public sealed class CameraOverrideTrackAsset : CameraEffectAsset
     {
         public const string SchemaVersion = "character-camera-override-track/v1";
 
@@ -33,6 +33,8 @@ namespace ThirdPersonCamera
         public string TrackId => m_TrackId ?? string.Empty;
         public CameraOverrideTrackSettings Settings => m_Settings;
         public int Priority => m_Priority;
+        public override string EffectId => TrackId;
+        public override int EffectPriority => Priority;
         public string Tag => m_Tag ?? string.Empty;
         public bool ClearTracks => m_ClearTracks;
         public IReadOnlyList<string> ClearTags => m_ClearTags ?? Array.Empty<string>();

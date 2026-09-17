@@ -103,3 +103,16 @@
 - 瞬态请求统一走 Node 同时写为通用合同：音效、特效等其它域的帧触发表达按同一边界迁往 Node 后删除宿主轨道（ActionCueTrack 终态删除）；具体迁移属后续 change，本 change 只锁边界。
 - 已同步更新：specs/character-camera-authoring/spec.md（新增触发/排布划界与单一效果轨道 Requirement，扩展 Node 统一合同的删除清单）、proposal.md What Changes、design.md Decisions 0、tasks.md（6.6 扩展、新增 6.7/7.5）。本记录仅文档更新，未修改代码与资产。
 - 同日补齐其余 delta 与新边界对齐：specs/character-camera-pipeline/spec.md 新增 MODIFIED「BTSMTL 和 Timeline 必须只提交相机请求」（TreeClip Node 触发特写、唯一效果轨道窗口采样两个新场景，声明删除触发型轨道与按类型拆分轨道），生命周期 Requirement 补三类请求来源同合同；specs/character-csharp-authoring/spec.md 生成范围补唯一效果轨道并排除触发型/拆分轨道；specs/character-camera-source-parity/spec.md 映射落点按 Node 与唯一效果轨道两类记录；specs/btsmtl-timeline-editor-preview/spec.md 预览与 Live Debug 消费口径同步。主 spec（openspec/specs/）未直接修改，待 archive 合并。
+
+## 2026-09-17 6.7 效果轨道四合一实施
+
+按 tasks.md 6.7 将 Timeline 相机效果表达从四条按类型拆分的轨道收敛为唯一效果轨道，代码改动已全部完成：
+
+- 新增 CameraContracts/Authoring/CameraEffectAsset.cs：抽象基类，声明 EffectId/EffectPriority；CameraOverrideTrackAsset、CameraZoomAsset、CameraStretchAsset、CameraShotAsset 四个资产类继承并 override 现有 Id/Priority 属性，效果类型由资产实例自描述。
+- 重写 Timeline.CameraEffects.cs：删除 CameraResourceTrack 抽象基类、CameraOverrideTrack/CameraZoomTrack/CameraStretchTrack/CameraShotTrack 四条轨道与四个 Clip 类；新增唯一 CameraEffectTrack/CameraEffectClip（Clip 只含窗口、CameraEffectAsset 引用与 Weight/EaseIn/EaseOut 曲线）；采样按资产具体类型映射 TimelineCameraResourceKind，TimelineCameraResourceSample 结构不变，下游 payload/求值器/Projection 零改动；Shot 资源的真实 prefab 要求与裁剪面接管合同由资源自身校验保留。
+- 曲线 channel 收敛：Timeline.CurveAuthoring.cs 删除按类型 12 个 channel（camera-override/zoom/stretch/shot 各 weight/ease-in/ease-out）及对应注册与读写分支，新增通用 camera-effect.weight/ease-in/ease-out 3 个。
+- Timeline.Contracts.cs：8 个轨道/Clip kind 常量收敛为 camera-effect.track/camera-effect.clip。
+- 接线更新：TimelineRuntimePreparation 采样分支、TimelineClipCreationPopup 资源选择与校验（统一为 CameraEffectAsset）、TimelineAuthoringPropertyContract（effect 作者属性）、TimelineAuthoringClipBinding（from/to 四段合一）、Timeline.Camera.cs 合同目录表。
+- Corin 资产核查：Assets/Configs 下无任何旧四轨使用，资产迁移面为零，无兼容读法残留。
+- 编译证据：ThirdPersonCamera.Contracts.csproj 与 BTSMTL.Timeline.csproj 均以 --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false 窄编译通过，0 警告 0 错误，随后已执行 dotnet build-server shutdown。全局符号搜索确认旧轨道/Clip/channel 类型零残留。
+- 已知边界：BTSMTL.Timeline.Editor.csproj 窄编译报 20 个既有错误（BtsmtlSlateTimelineBinding.cs 等文件的 FlowCanvas 程序集引用缺失）——该文件是工作区既有用户未提交改动、不在本任务改动集内，错误与相机效果轨道无关；Editor 工程在纯 dotnet 下对 Unity 侧程序集引用解析本就不完整，Unity Editor 内编译才是最终判据。

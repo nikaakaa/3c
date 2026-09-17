@@ -8,7 +8,7 @@ using UnityEngine;
 namespace ThirdPersonCamera
 {
 [CreateAssetMenu(fileName = "CameraStretch", menuName = "3C/Character/Camera/Stretch")]
-    public sealed class CameraStretchAsset : ScriptableObject
+    public sealed class CameraStretchAsset : CameraEffectAsset
     {
         public const string SchemaVersion = "character-camera-stretch/v1";
 
@@ -62,6 +62,9 @@ namespace ThirdPersonCamera
         public float ElevationAngleMin => m_ElevationAngleMin;
         public float RecoilTime => m_RecoilTime;
         public int DataPriority => m_DataPriority;
+
+        public override string EffectId => StretchId;
+        public override int EffectPriority => DataPriority;
         public float EndElevationAngleMax => m_EndElevationAngleMax;
         public bool ApplyAimPointsCameraFollowYOffset => m_ApplyAimPointsCameraFollowYOffset;
         public bool ApplyRuntimeCamFollowYOffset => m_ApplyRuntimeCamFollowYOffset;

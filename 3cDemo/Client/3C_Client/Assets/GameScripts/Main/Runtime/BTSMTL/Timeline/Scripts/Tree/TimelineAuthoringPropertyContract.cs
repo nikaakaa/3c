@@ -69,14 +69,8 @@ namespace BTSMTL.Timeline
                 if (tree.AssetTree)
                     Add(result, clip, "assetTree", TimelineAuthoringPropertyKind.Object, tree.AssetTree);
             }
-            if (clip is CameraOverrideClip)
-                Add(result, clip, "overrideTrack", TimelineAuthoringPropertyKind.Object, configuration.CameraOverrideTrack);
-            if (clip is CameraZoomClip)
-                Add(result, clip, "zoom", TimelineAuthoringPropertyKind.Object, configuration.CameraZoom);
-            if (clip is CameraStretchClip)
-                Add(result, clip, "stretch", TimelineAuthoringPropertyKind.Object, configuration.CameraStretch);
-            if (clip is CameraShotClip)
-                Add(result, clip, "shot", TimelineAuthoringPropertyKind.Object, configuration.CameraShot);
+            if (clip is CameraEffectClip)
+                Add(result, clip, "effect", TimelineAuthoringPropertyKind.Object, configuration.CameraEffect);
             return result;
         }
 
@@ -273,10 +267,7 @@ namespace BTSMTL.Timeline
                 case "yawResponseWeight": configuration.YawResponseWeight = (float)value; break;
                 case "targetBindingId": configuration.TargetBindingId = (string)value; break;
                 case "parameterBindingId": configuration.ParameterBindingId = (string)value; break;
-                case "overrideTrack": configuration.CameraOverrideTrack = (CameraOverrideTrackAsset)value; break;
-                case "zoom": configuration.CameraZoom = (CameraZoomAsset)value; break;
-                case "stretch": configuration.CameraStretch = (CameraStretchAsset)value; break;
-                case "shot": configuration.CameraShot = (CameraShotAsset)value; break;
+                case "effect": configuration.CameraEffect = (CameraEffectAsset)value; break;
                 default: throw new InvalidOperationException($"未知Timeline作者属性：{propertyId}");
             }
         }

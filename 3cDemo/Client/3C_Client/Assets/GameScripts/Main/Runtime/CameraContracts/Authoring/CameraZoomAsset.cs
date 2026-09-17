@@ -8,7 +8,7 @@ using UnityEngine;
 namespace ThirdPersonCamera
 {
 [CreateAssetMenu(fileName = "CameraZoom", menuName = "3C/Character/Camera/Zoom")]
-    public sealed class CameraZoomAsset : ScriptableObject
+    public sealed class CameraZoomAsset : CameraEffectAsset
     {
         public const string SchemaVersion = "character-camera-zoom/v1";
 
@@ -47,6 +47,9 @@ namespace ThirdPersonCamera
         public float DelayTime => m_DelayTime;
         public float EndTime => m_EndTime;
         public CameraEffectStackingType PlayStackingType => m_PlayStackingType;
+
+        public override string EffectId => ZoomId;
+        public override int EffectPriority => DataPriority;
 
         public void RequireValid()
         {

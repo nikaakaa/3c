@@ -89,10 +89,7 @@ namespace BTSMTL.Timeline
         public float CameraDurationSeconds { get; set; }
         public string CameraSequenceId { get; set; }
         public string CameraResourceId { get; set; }
-        public CameraOverrideTrackAsset CameraOverrideTrack { get; set; }
-        public CameraZoomAsset CameraZoom { get; set; }
-        public CameraStretchAsset CameraStretch { get; set; }
-        public CameraShotAsset CameraShot { get; set; }
+        public CameraEffectAsset CameraEffect { get; set; }
         public AnimationCurve CameraWeightCurve { get; set; }
         public AnimationCurve CameraEaseInCurve { get; set; }
         public AnimationCurve CameraEaseOutCurve { get; set; }
@@ -182,30 +179,13 @@ namespace BTSMTL.Timeline
                 result.CameraEaseInCurve = cameraCue.EaseInCurve;
                 result.CameraEaseOutCurve = cameraCue.EaseOutCurve;
             }
-            if (clip is CameraResourceClip cameraResource)
+            if (clip is CameraEffectClip cameraResource)
             {
                 result.CameraWeightCurve = cameraResource.WeightCurve;
                 result.CameraEaseInCurve = cameraResource.EaseInCurve;
                 result.CameraEaseOutCurve = cameraResource.EaseOutCurve;
-                switch (cameraResource)
-                {
-                    case CameraOverrideClip cameraOverride:
-                        result.CameraResourceId = cameraOverride.OverrideTrack?.TrackId;
-                        result.CameraOverrideTrack = cameraOverride.OverrideTrack;
-                        break;
-                    case CameraZoomClip cameraZoom:
-                        result.CameraResourceId = cameraZoom.Zoom?.ZoomId;
-                        result.CameraZoom = cameraZoom.Zoom;
-                        break;
-                    case CameraStretchClip cameraStretch:
-                        result.CameraResourceId = cameraStretch.Stretch?.StretchId;
-                        result.CameraStretch = cameraStretch.Stretch;
-                        break;
-                    case CameraShotClip cameraShot:
-                        result.CameraResourceId = cameraShot.Shot?.ShotId;
-                        result.CameraShot = cameraShot.Shot;
-                        break;
-                }
+                result.CameraResourceId = cameraResource.Effect ? cameraResource.Effect.EffectId : null;
+                result.CameraEffect = cameraResource.Effect;
             }
             if (clip is CameraResponseClip cameraResponse)
             {
@@ -313,33 +293,12 @@ namespace BTSMTL.Timeline
                 cameraResponse.EaseInCurve = configuration.CameraEaseInCurve;
                 cameraResponse.EaseOutCurve = configuration.CameraEaseOutCurve;
             }
-            if (clip is CameraOverrideClip cameraOverride)
+            if (clip is CameraEffectClip cameraEffect)
             {
-                cameraOverride.OverrideTrack = configuration.CameraOverrideTrack;
-                cameraOverride.WeightCurve = configuration.CameraWeightCurve;
-                cameraOverride.EaseInCurve = configuration.CameraEaseInCurve;
-                cameraOverride.EaseOutCurve = configuration.CameraEaseOutCurve;
-            }
-            if (clip is CameraZoomClip cameraZoom)
-            {
-                cameraZoom.Zoom = configuration.CameraZoom;
-                cameraZoom.WeightCurve = configuration.CameraWeightCurve;
-                cameraZoom.EaseInCurve = configuration.CameraEaseInCurve;
-                cameraZoom.EaseOutCurve = configuration.CameraEaseOutCurve;
-            }
-            if (clip is CameraStretchClip cameraStretch)
-            {
-                cameraStretch.Stretch = configuration.CameraStretch;
-                cameraStretch.WeightCurve = configuration.CameraWeightCurve;
-                cameraStretch.EaseInCurve = configuration.CameraEaseInCurve;
-                cameraStretch.EaseOutCurve = configuration.CameraEaseOutCurve;
-            }
-            if (clip is CameraShotClip cameraShot)
-            {
-                cameraShot.Shot = configuration.CameraShot;
-                cameraShot.WeightCurve = configuration.CameraWeightCurve;
-                cameraShot.EaseInCurve = configuration.CameraEaseInCurve;
-                cameraShot.EaseOutCurve = configuration.CameraEaseOutCurve;
+                cameraEffect.Effect = configuration.CameraEffect;
+                cameraEffect.WeightCurve = configuration.CameraWeightCurve;
+                cameraEffect.EaseInCurve = configuration.CameraEaseInCurve;
+                cameraEffect.EaseOutCurve = configuration.CameraEaseOutCurve;
             }
             if (clip is ScenePresentationParameterCurveClip sceneParameter)
                 sceneParameter.ConfigureBindings(

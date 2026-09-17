@@ -64,14 +64,8 @@ namespace BTSMTL.Timeline
         public const string CameraCueClip = "camera-cue.clip";
         public const string CameraResponseTrack = "camera-response.track";
         public const string CameraResponseClip = "camera-response.clip";
-        public const string CameraOverrideTrack = "camera-override.track";
-        public const string CameraOverrideClip = "camera-override.clip";
-        public const string CameraZoomTrack = "camera-zoom.track";
-        public const string CameraZoomClip = "camera-zoom.clip";
-        public const string CameraStretchTrack = "camera-stretch.track";
-        public const string CameraStretchClip = "camera-stretch.clip";
-        public const string CameraShotTrack = "camera-shot.track";
-        public const string CameraShotClip = "camera-shot.clip";
+        public const string CameraEffectTrack = "camera-effect.track";
+        public const string CameraEffectClip = "camera-effect.clip";
         public const string ScenePresentationParameterTrack = "scene-presentation-parameter.track";
         public const string ScenePresentationParameterCurveClip = "scene-presentation-parameter.curve";
     }

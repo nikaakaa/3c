@@ -433,25 +433,10 @@ namespace BTSMTL.Timeline
                     TimelineCapability.Camera,
                     TimelineContractKinds.CameraResponseClip),
                 new TimelineTrackContract(
-                    TimelineContractKinds.CameraOverrideTrack,
+                    TimelineContractKinds.CameraEffectTrack,
                     TimelineTrackOverlapPolicy.Parallel,
                     TimelineCapability.Camera,
-                    TimelineContractKinds.CameraOverrideClip),
-                new TimelineTrackContract(
-                    TimelineContractKinds.CameraZoomTrack,
-                    TimelineTrackOverlapPolicy.Parallel,
-                    TimelineCapability.Camera,
-                    TimelineContractKinds.CameraZoomClip),
-                new TimelineTrackContract(
-                    TimelineContractKinds.CameraStretchTrack,
-                    TimelineTrackOverlapPolicy.Parallel,
-                    TimelineCapability.Camera,
-                    TimelineContractKinds.CameraStretchClip),
-                new TimelineTrackContract(
-                    TimelineContractKinds.CameraShotTrack,
-                    TimelineTrackOverlapPolicy.Parallel,
-                    TimelineCapability.Camera,
-                    TimelineContractKinds.CameraShotClip)
+                    TimelineContractKinds.CameraEffectClip)
             },
             new[]
             {
@@ -477,29 +462,8 @@ namespace BTSMTL.Timeline
                     true,
                     true),
                 new TimelineClipContract(
-                    TimelineContractKinds.CameraOverrideClip,
-                    TimelineContractKinds.CameraOverrideTrack,
-                    TimelineClipExecutionPhase.Commit,
-                    TimelineCapability.Camera,
-                    true,
-                    true),
-                new TimelineClipContract(
-                    TimelineContractKinds.CameraZoomClip,
-                    TimelineContractKinds.CameraZoomTrack,
-                    TimelineClipExecutionPhase.Commit,
-                    TimelineCapability.Camera,
-                    true,
-                    true),
-                new TimelineClipContract(
-                    TimelineContractKinds.CameraStretchClip,
-                    TimelineContractKinds.CameraStretchTrack,
-                    TimelineClipExecutionPhase.Commit,
-                    TimelineCapability.Camera,
-                    true,
-                    true),
-                new TimelineClipContract(
-                    TimelineContractKinds.CameraShotClip,
-                    TimelineContractKinds.CameraShotTrack,
+                    TimelineContractKinds.CameraEffectClip,
+                    TimelineContractKinds.CameraEffectTrack,
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Camera,
                     true,

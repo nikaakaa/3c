@@ -8,7 +8,7 @@ using UnityEngine;
 namespace ThirdPersonCamera
 {
 [CreateAssetMenu(fileName = "CameraShot", menuName = "3C/Character/Camera/Shot")]
-    public sealed class CameraShotAsset : ScriptableObject
+    public sealed class CameraShotAsset : CameraEffectAsset
     {
         public const string SchemaVersion = "character-camera-shot/v1";
 
@@ -52,6 +52,9 @@ namespace ThirdPersonCamera
         public CameraShotBlendSettings BlendOut => m_BlendOut;
         public bool BlendWithIgnoreLookAtTarget => m_BlendWithIgnoreLookAtTarget;
         public int Priority => m_Priority;
+
+        public override string EffectId => ShotId;
+        public override int EffectPriority => Priority;
         public string Tag => m_Tag ?? string.Empty;
 
         public void RequireValid()

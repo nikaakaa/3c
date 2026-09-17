@@ -5,32 +5,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal static class CharacterPoseNativeManagedNodeRegistration
     {
-        internal static void RegisterStateMachine(
-            this CharacterPoseNativeNodeHandlerRegistry registry,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
-                ICharacterPoseNativeStateMachineSource>
-                sourceFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
-                CharacterPoseNativeNodePoseBuffer>
-                bufferFactory)
-        {
-            RequireArguments(registry, sourceFactory, bufferFactory);
-            var creator = new Creator((node, context) =>
-                CreateSourceHandler(
-                    node,
-                    in context,
-                    sourceFactory,
-                    bufferFactory,
-                    (value, source, buffer) =>
-                        new CharacterPoseNativeStateMachineHandler(
-                            value.NodeId,
-                            source,
-                            buffer)));
-            registry.Register(
-                CharacterPoseNodeKind.PoseStateMachine,
-                creator.Create);
-        }
-
         internal static void RegisterLinkedPose(
             this CharacterPoseNativeNodeHandlerRegistry registry,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,

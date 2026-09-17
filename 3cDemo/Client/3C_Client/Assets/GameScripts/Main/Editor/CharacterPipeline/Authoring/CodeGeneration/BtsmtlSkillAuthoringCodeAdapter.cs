@@ -451,6 +451,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 string variable = Variable(context, graph, $"graph:{((IBtsmtlSkillAuthoringGraph)graph).AuthoringId}");
                 IBtsmtlSkillAuthoringGraph authoring = (IBtsmtlSkillAuthoringGraph)graph;
                 string expression;
+                bool canRunWithSectionDependencies = false;
                 if (ReferenceEquals(graph, root) && graph is BtsmtlSkillFlowGraph skillRoot &&
                     skillRoot.Role == BtsmtlSkillFlowGraphRole.Skill)
                 {
@@ -464,6 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 {
                     string ownerVariable = Variable(context, owner, $"graph:{((IBtsmtlSkillAuthoringGraph)owner).AuthoringId}");
                     expression = $"{TypeName(typeof(BtsmtlSkillAuthoringGraphCreationContract))}.EnsureOwnedGraph<{TypeName(graph.GetType())}>({ownerVariable}, {String(authoring.AuthoringId)}, typeof({TypeName(graph.GetType())}), {EnumValue(typeof(BtsmtlSkillFlowGraphRole), authoring.Role)}, {String(graph.name)})";
+                    canRunWithSectionDependencies = true;
                 }
                 else
                 {
@@ -471,7 +473,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         context.ReportError("skill_root_role_unsupported", authoring.AuthoringId, "只有Skill根图可以作为Definition生成根。");
                     expression = ExternalAsset(context, graph, graph.GetType());
                 }
-                context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Create, $"var {variable} = {expression};");
+                context.AddStatement(
+                    BtsmtlAuthoringCodeEmissionPhase.Create,
+                    $"var {variable} = {expression};",
+                    canRunWithSectionDependencies: canRunWithSectionDependencies);
             }
         }
 
@@ -484,13 +489,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 string variable = Variable(context, machine, $"fsm:{machine.AuthoringId}");
                 string expression;
+                bool canRunWithSectionDependencies = false;
                 if (owners.TryGetValue(machine, out FlowGraph owner) && BtsmtlSkillAuthoringClosure.IsPrivateSubAsset(machine, owner))
                 {
                     expression = $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureStateMachine({Variable(context, owner, $"graph:{((IBtsmtlSkillAuthoringGraph)owner).AuthoringId}")}, {String(machine.AuthoringId)}, {String(machine.name)}, {String(machine.OwnerGraphId)}, {String(machine.OwnerNodeId)})";
+                    canRunWithSectionDependencies = true;
                 }
                 else
                     expression = ExternalAsset(context, machine, machine.GetType());
-                context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Create, $"var {variable} = {expression};");
+                context.AddStatement(
+                    BtsmtlAuthoringCodeEmissionPhase.Create,
+                    $"var {variable} = {expression};",
+                    canRunWithSectionDependencies: canRunWithSectionDependencies);
             }
         }
 
@@ -504,13 +514,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 string variable = Variable(context, timeline, $"timeline-asset:{AssetDatabase.GetAssetPath(timeline)}");
                 string expression;
+                bool canRunWithSectionDependencies = false;
                 if (ReferenceEquals(timeline, root))
                     expression = $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureTimelineRoot(context, {String(timeline.Data.AuthoringId)}, {String(timeline.name)})";
                 else if (owners.TryGetValue(timeline, out FlowGraph owner) && BtsmtlSkillAuthoringClosure.IsPrivateSubAsset(timeline, root) && owner != null)
+                {
                     expression = $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureTimeline({Variable(context, owner, $"graph:{((IBtsmtlSkillAuthoringGraph)owner).AuthoringId}")}, {String(timeline.Data.AuthoringId)}, {String(timeline.name)})";
+                    canRunWithSectionDependencies = true;
+                }
                 else
                     expression = ExternalAsset(context, timeline, typeof(TimelineAsset));
-                context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Create, $"var {variable} = {expression};");
+                context.AddStatement(
+                    BtsmtlAuthoringCodeEmissionPhase.Create,
+                    $"var {variable} = {expression};",
+                    canRunWithSectionDependencies: canRunWithSectionDependencies);
             }
         }
 

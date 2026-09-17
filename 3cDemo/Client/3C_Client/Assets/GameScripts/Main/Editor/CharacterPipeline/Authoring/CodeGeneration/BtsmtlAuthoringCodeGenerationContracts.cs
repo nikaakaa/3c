@@ -122,14 +122,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
     internal readonly struct BtsmtlAuthoringCodeStatement
     {
-        public BtsmtlAuthoringCodeStatement(string sectionName, string text)
+        public BtsmtlAuthoringCodeStatement(
+            string sectionName,
+            string text,
+            bool canRunWithSectionDependencies)
         {
             SectionName = sectionName;
             Text = text;
+            CanRunWithSectionDependencies = canRunWithSectionDependencies;
         }
 
         public string SectionName { get; }
         public string Text { get; }
+        public bool CanRunWithSectionDependencies { get; }
     }
 
     internal readonly struct BtsmtlAuthoringCodeExternalAssetReference
@@ -377,7 +382,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public void AddStatement(
             BtsmtlAuthoringCodeEmissionPhase phase,
             string statement,
-            string sectionName = null)
+            string sectionName = null,
+            bool canRunWithSectionDependencies = false)
         {
             if (string.IsNullOrWhiteSpace(statement))
             {
@@ -394,7 +400,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     string.IsNullOrWhiteSpace(sectionName)
                         ? FindStatementSection(phase, statement)
                         : EnsureSection(sectionName, false),
-                    statement));
+                    statement,
+                    canRunWithSectionDependencies));
         }
 
         public void ReportError(string code, string subject, string message, string suggestion = null) =>

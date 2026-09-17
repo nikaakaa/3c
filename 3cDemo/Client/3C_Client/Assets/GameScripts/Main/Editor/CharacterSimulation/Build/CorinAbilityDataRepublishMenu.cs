@@ -19,6 +19,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 AssetDatabase.LoadAssetAtPath<CharacterPipelineDefinition>(DefinitionPath);
             if (definition == null)
                 throw new InvalidOperationException($"Corin Character Pipeline Definition '{DefinitionPath}' is missing.");
+            var configurationErrors = new System.Collections.Generic.List<string>();
+            if (!definition.CollectConfigurationErrors(configurationErrors))
+            {
+                throw new InvalidOperationException(
+                    $"Corin Character Pipeline Definition '{DefinitionPath}' is invalid.{Environment.NewLine}" +
+                    string.Join(Environment.NewLine, configurationErrors));
+            }
             GameplayAbilityExecutionDataAssetPublisher.PublishDefinition(definition, OutputFolder);
         }
     }

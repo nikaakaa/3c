@@ -249,12 +249,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var plan = new OutputPlan();
             foreach (BtsmtlAuthoringCodeEmissionPhase phase in Enum.GetValues(typeof(BtsmtlAuthoringCodeEmissionPhase)))
                 foreach (BtsmtlAuthoringCodeStatement statement in context.Statements(phase))
-                {
-                    var item = new StatementPlan(phase, statement.SectionName, statement.Text);
-                    item.Deferred = phase == BtsmtlAuthoringCodeEmissionPhase.RootBinding ||
-                        HasCrossNonRootReference(context, statement);
-                    plan.Statements.Add(item);
-                }
+                    plan.Statements.Add(
+                        new StatementPlan(
+                            phase,
+                            statement.SectionName,
+                            statement.Text,
+                            statement.CanRunWithSectionDependencies));
 
             foreach (BtsmtlAuthoringCodeExternalAssetReference asset in context.ExternalAssets)
             {
@@ -278,6 +278,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             foreach (KeyValuePair<string, string> value in context.VariableSections)
                 plan.VariableOwners[value.Key] = value.Value;
 
+            var sectionDependencies = new Dictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+            foreach (StatementPlan statement in plan.Statements)
+            {
+                if (statement.Phase == BtsmtlAuthoringCodeEmissionPhase.RootBinding)
+                {
+                    statement.Deferred = true;
+                    continue;
+                }
+                List<string> dependencies = ReferencedOwners(plan, statement)
+                    .Where(owner =>
+                        !string.Equals(owner, statement.SectionName, StringComparison.Ordinal) &&
+                        !string.Equals(owner, "Root", StringComparison.Ordinal))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+                if (dependencies.Count == 0)
+                    continue;
+                if (statement.Phase != BtsmtlAuthoringCodeEmissionPhase.Create ||
+                    !statement.CanRunWithSectionDependencies ||
+                    !AssignsLocalVariable(plan, statement))
+                {
+                    statement.Deferred = true;
+                    continue;
+                }
+                if (!sectionDependencies.TryGetValue(statement.SectionName, out SortedSet<string> owners))
+                {
+                    owners = new SortedSet<string>(StringComparer.Ordinal);
+                    sectionDependencies.Add(statement.SectionName, owners);
+                }
+                foreach (string owner in dependencies)
+                    owners.Add(owner);
+            }
+
             foreach (string variableName in context.VariableTypeNames.Keys)
             {
                 if (!context.IsVariableUsed(variableName) ||
@@ -295,7 +327,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     plan.Promoted.Add(variableName);
             }
 
-            foreach (string sectionName in context.Sections)
+            List<string> sectionNames = OrderSections(context.Sections, sectionDependencies);
+            foreach (string sectionName in sectionNames)
             {
                 if (string.Equals(sectionName, "Root", StringComparison.Ordinal))
                     continue;
@@ -306,6 +339,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             plan.Sections.Insert(0, new SectionPlan("Root"));
             foreach (SectionPlan section in plan.Sections)
             {
+                if (sectionDependencies.TryGetValue(section.Name, out SortedSet<string> dependencies))
+                    section.Dependencies.AddRange(dependencies);
                 foreach (string variableName in VariableOrder(context))
                     if (plan.Promoted.Contains(variableName) &&
                         plan.VariableOwners.TryGetValue(variableName, out string owner) &&
@@ -339,21 +374,64 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return plan;
         }
 
-        static bool HasCrossNonRootReference(
-            BtsmtlAuthoringCodeExportContext context,
-            BtsmtlAuthoringCodeStatement statement)
+        static IEnumerable<string> ReferencedOwners(OutputPlan plan, StatementPlan statement)
         {
-            foreach (string variableName in context.VariableTypeNames.Keys)
+            foreach (KeyValuePair<string, string> variable in plan.VariableOwners)
+                if (ContainsIdentifier(statement.Text, variable.Key))
+                    yield return variable.Value;
+        }
+
+        static bool AssignsLocalVariable(OutputPlan plan, StatementPlan statement)
+        {
+            string variableName = plan.VariableOwners.Keys
+                .Where(value =>
+                    statement.Text.StartsWith($"var {value} =", StringComparison.Ordinal) ||
+                    statement.Text.StartsWith($"{value} =", StringComparison.Ordinal))
+                .OrderByDescending(value => value.Length)
+                .FirstOrDefault();
+            return variableName != null &&
+                plan.VariableOwners.TryGetValue(variableName, out string owner) &&
+                string.Equals(owner, statement.SectionName, StringComparison.Ordinal);
+        }
+
+        static List<string> OrderSections(
+            IEnumerable<string> sectionNames,
+            IReadOnlyDictionary<string, SortedSet<string>> dependencies)
+        {
+            var names = sectionNames
+                .Where(value => !string.Equals(value, "Root", StringComparison.Ordinal))
+                .ToList();
+            var available = new HashSet<string>(names, StringComparer.Ordinal);
+            var states = new Dictionary<string, int>(StringComparer.Ordinal);
+            var result = new List<string>();
+
+            foreach (string name in names)
+                Visit(name);
+
+            return result;
+
+            void Visit(string name)
             {
-                if (!ContainsIdentifier(statement.Text, variableName) ||
-                    !context.VariableSections.TryGetValue(variableName, out string owner))
-                    continue;
-                if (string.Equals(owner, statement.SectionName, StringComparison.Ordinal) ||
-                    string.Equals(owner, "Root", StringComparison.Ordinal))
-                    continue;
-                return true;
+                if (!available.Contains(name))
+                    return;
+                if (!states.TryGetValue(name, out int state))
+                    state = 0;
+                if (state == 2)
+                    return;
+                if (state == 1)
+                    throw new InvalidOperationException($"C# authoring section dependency cycle at '{name}'.");
+                states[name] = 1;
+                if (dependencies.TryGetValue(name, out SortedSet<string> owners))
+                    foreach (string owner in owners)
+                    {
+                        if (!available.Contains(owner))
+                            throw new InvalidOperationException(
+                                $"C# authoring section '{name}' depends on missing section '{owner}'.");
+                        Visit(owner);
+                    }
+                states[name] = 2;
+                result.Add(name);
             }
-            return false;
         }
 
         static IEnumerable<string> VariableOrder(BtsmtlAuthoringCodeExportContext context)
@@ -405,13 +483,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             {
                 if (string.Equals(section.Name, "Root", StringComparison.Ordinal) || !section.HasStatements)
                     continue;
-                string arguments = section.UsesRoot
-                    ? "rootParts, context"
-                    : "context";
+                var arguments = new List<string>();
+                foreach (string dependency in section.Dependencies)
+                {
+                    SectionPlan dependencySection = plan.SectionByName[dependency];
+                    if (dependencySection.HasResult)
+                        arguments.Add(dependencySection.ResultParameterName);
+                }
+                if (section.UsesRoot)
+                    arguments.Add("rootParts");
+                arguments.Add("context");
                 writer.WriteLine(
                     section.HasResult
-                        ? $"var {section.ResultParameterName} = Build{SectionIdentifier(section.Name)}({arguments});"
-                        : $"Build{SectionIdentifier(section.Name)}({arguments});");
+                        ? $"var {section.ResultParameterName} = Build{SectionIdentifier(section.Name)}({string.Join(", ", arguments)});"
+                        : $"Build{SectionIdentifier(section.Name)}({string.Join(", ", arguments)});");
             }
             if (plan.FinalStatements.Count != 0)
                 writer.WriteLine($"FinalizeAuthoring({string.Join(", ", FinalArguments(plan))});");
@@ -462,6 +547,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             writer.OpenBlock();
             string resultType = section.HasResult ? section.ResultTypeName : "void";
             var parameters = new List<string>();
+            foreach (string dependency in section.Dependencies)
+            {
+                SectionPlan dependencySection = plan.SectionByName[dependency];
+                if (dependencySection.HasResult)
+                    parameters.Add($"{dependencySection.ResultTypeName} {dependencySection.ResultParameterName}");
+            }
             if (section.UsesRoot)
                 parameters.Add($"{plan.Root.ResultTypeName} rootParts");
             parameters.Add("BtsmtlAuthoringGenerationContext context");
@@ -838,6 +929,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             public bool HasStatements { get; set; }
             public bool UsesRoot { get; set; }
             public bool HasResult => PromotedVariables.Count != 0;
+            public List<string> Dependencies { get; } = new();
             public List<string> PromotedVariables { get; } = new();
             public List<BtsmtlAuthoringCodeExternalAssetReference> LocalAssets { get; } = new();
 
@@ -852,16 +944,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             public StatementPlan(
                 BtsmtlAuthoringCodeEmissionPhase phase,
                 string sectionName,
-                string text)
+                string text,
+                bool canRunWithSectionDependencies)
             {
                 Phase = phase;
                 SectionName = sectionName;
                 Text = text;
+                CanRunWithSectionDependencies = canRunWithSectionDependencies;
             }
 
             public BtsmtlAuthoringCodeEmissionPhase Phase { get; }
             public string SectionName { get; }
             public string Text { get; }
+            public bool CanRunWithSectionDependencies { get; }
             public bool Deferred { get; set; }
         }
 

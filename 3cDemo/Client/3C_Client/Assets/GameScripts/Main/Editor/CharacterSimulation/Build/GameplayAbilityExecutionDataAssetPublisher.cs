@@ -99,6 +99,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var configuredTimelines = definition.ControlMotionTimelines;
             var allTimelines = new List<TimelineAsset>(configuredTimelines.Count + abilityTimelines.Count);
             var timelineIdentities = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < abilityTimelines.Count; i++)
+                if (timelineIdentities.Add(abilityTimelines[i].Data.AuthoringId))
+                    allTimelines.Add(abilityTimelines[i]);
             for (int i = 0; i < configuredTimelines.Count; i++)
             {
                 TimelineAsset timeline = configuredTimelines[i];
@@ -106,11 +109,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     throw new InvalidOperationException($"Character Pipeline Definition '{definition.name}' has an invalid configured Timeline.");
                 if (timelineIdentities.Add(timeline.Data.AuthoringId))
                     allTimelines.Add(timeline);
-            }
-            for (int i = 0; i < abilityTimelines.Count; i++)
-            {
-                if (timelineIdentities.Add(abilityTimelines[i].Data.AuthoringId))
-                    allTimelines.Add(abilityTimelines[i]);
             }
             definition.SetFloat32AbilityData(float32Assets);
             definition.SetFixedAbilityData(fixedAssets);

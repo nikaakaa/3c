@@ -3633,9 +3633,8 @@ namespace Slate
                 }
                 wrapper.editorBinding.StartTime = xTime;
             }
-            var snappedX = TimeToPos(xTime);
-            if (Mathf.Abs(snappedX - xPos) > 0.5f)
-                clipRect.x = snappedX;
+            if (!ReferenceEquals(interactingClip, wrapper) || !wrapper.isDragging)
+                clipRect.x = TimeToPos(xTime);
 
             bool isSelected = wrapper.editorBinding.FormalClip != null
                 ? ReferenceEquals(embeddedTimeline?.Selected, wrapper.editorBinding.FormalClip)

@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-8822627664849689120
+--- !u!114 &-9221051540318466886
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -9,10 +9,58 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_WalkStart_Inplace Source Binding
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &-7307166977988170493
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.idle.sequence","m_DisplayName":"Idle
+    Sequence","m_Payload":{"m_SourceSlot":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.6667},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.idle.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.idle.sequence-output","m_SourceNodeId":"corin.locomotion.idle.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.idle.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: -2645411269419663801}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.locomotion.idle.graph
+  m_ContentRevision: adf36ccd1d9d42938740730a5c5b0cfc
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &-8900039342163942629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.turn.sequence","m_DisplayName":"Moving
+    Turn Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-246.0,"y":17.33331},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.turn.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":280.6667,"y":20.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"2b4ef9d52769067557e6652f38041b35","m_SourceNodeId":"corin.locomotion.turn.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.turn.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 6826403210904887930}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.locomotion.turn.graph
+  m_ContentRevision: c98ae23663b34b98bb4d52dd51d4e712
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &-5849264378725478179
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -22,34 +70,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
-  m_Name: CorinPoseInertializationPolicy InertializationPolicy
+  m_Name: CorinFootPlacementProfile FootPlacementProfile
   m_EditorClassIdentifier: 
-  m_Kind: 2
---- !u!114 &-3921232948358065235
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_Idle_Inplace Source Binding
-  m_EditorClassIdentifier: 
---- !u!114 &-2979050784670951599
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_RunStart_Inplace Source Binding
-  m_EditorClassIdentifier: 
---- !u!114 &-2335344785742086560
+  m_Kind: 5
+--- !u!114 &-5708191824285114883
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -59,10 +83,40 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
-  m_Name: CorinFootPlacementRigCalibration FootPlacementCalibration
+  m_Name: CorinActionBlendPolicy BlendPolicy
   m_EditorClassIdentifier: 
-  m_Kind: 6
---- !u!114 &-1844466054010593893
+  m_Kind: 1
+--- !u!114 &-3837962703175273894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.start.sequence","m_DisplayName":"Run
+    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.start.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.start.sequence-output","m_SourceNodeId":"corin.locomotion.start.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.start.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 6242652349391753679}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.locomotion.start.graph
+  m_ContentRevision: 5f298213cf7d41008d559262ac44ebfc
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &-2819830200314167010
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -75,7 +129,7 @@ MonoBehaviour:
   m_Name: CorinLocomotionBlendProfile BlendProfile
   m_EditorClassIdentifier: 
   m_Kind: 9
---- !u!114 &-1223974716485499172
+--- !u!114 &-2645411269419663801
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -85,9 +139,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_WalkLoop_Inplace Source Binding
+  m_Name: Corin_Pipeline_Idle_Inplace Source Binding
   m_EditorClassIdentifier: 
---- !u!114 &-1125276244088184030
+--- !u!114 &-2565681344851523176
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -99,6 +153,66 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
   m_Name: Corin_Pipeline_RunEnd_Inplace Source Binding
   m_EditorClassIdentifier: 
+--- !u!114 &-2336945144089209270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.stop.sequence","m_DisplayName":"Run
+    End Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.stop.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.stop.sequence-output","m_SourceNodeId":"corin.locomotion.stop.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.stop.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: -2565681344851523176}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.locomotion.stop.graph
+  m_ContentRevision: 05ef9011b64c48c3905d98cb114dc6e1
+  m_Role: 1
+  m_Parameters: []
+--- !u!114 &-1335471458784722657
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.locomotion.sequence","m_DisplayName":"Run
+    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.locomotion.output","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.locomotion.sequence-output","m_SourceNodeId":"corin.locomotion.locomotion.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.locomotion.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _objectReferences:
+  - {fileID: 0}
+  - {fileID: 8050897460272955977}
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_GraphId: corin.locomotion.locomotion.graph
+  m_ContentRevision: 65911da1edf24cff824945e32ef594f3
+  m_Role: 1
+  m_Parameters: []
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -111,16 +225,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c098d552eb42231449a0d29a2f0026cb, type: 3}
   m_Name: LocomotionFullBodyPoseGraph
   m_EditorClassIdentifier: 
-  m_Graph: {fileID: 4059368495099081888}
+  m_Graph: {fileID: 9197458619933369744}
   m_GraphCatalog:
-  - {fileID: 447276072231417055}
-  - {fileID: 2402677218184211338}
-  - {fileID: 5072474735055970769}
-  - {fileID: 6698202936371809159}
-  - {fileID: 4210088017428885017}
-  - {fileID: 8946121524649710714}
-  - {fileID: 8640876822083672252}
-  - {fileID: 2504121604337729134}
+  - {fileID: -9221051540318466886}
+  - {fileID: -3837962703175273894}
+  - {fileID: -1335471458784722657}
+  - {fileID: -2336945144089209270}
+  - {fileID: -8900039342163942629}
+  - {fileID: 3561850489297887021}
+  - {fileID: 2524347159718207363}
+  - {fileID: 6532423315664890970}
   m_StateMachineLayouts:
   - m_StateMachineId: corin.locomotion
     m_Elements:
@@ -139,20 +253,20 @@ MonoBehaviour:
     - m_ElementId: corin.locomotion.turn
       m_Position: {x: 420.27533, y: 587.21295}
   m_SourceSlots:
-  - {fileID: -3921232948358065235}
-  - {fileID: -2979050784670951599}
-  - {fileID: 1131448872057909736}
-  - {fileID: -1125276244088184030}
-  - {fileID: -8822627664849689120}
-  - {fileID: -1223974716485499172}
-  - {fileID: 2468437558700976723}
+  - {fileID: -2645411269419663801}
+  - {fileID: 6242652349391753679}
+  - {fileID: 8050897460272955977}
+  - {fileID: -2565681344851523176}
+  - {fileID: 3344833663789169170}
+  - {fileID: 8629324124613113230}
+  - {fileID: 6826403210904887930}
   m_ResourceSlots:
-  - {fileID: 4177065355598373836}
-  - {fileID: -1844466054010593893}
-  - {fileID: -2335344785742086560}
-  - {fileID: 5400234489284315176}
-  - {fileID: -7307166977988170493}
---- !u!114 &447276072231417055
+  - {fileID: -5708191824285114883}
+  - {fileID: -2819830200314167010}
+  - {fileID: 4412922592043435038}
+  - {fileID: -5849264378725478179}
+  - {fileID: 2906013293782627653}
+--- !u!114 &2524347159718207363
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -164,12 +278,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.idle.sequence","m_DisplayName":"Idle
-    Sequence","m_Payload":{"m_SourceSlot":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.6667},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.idle.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.idle.sequence-output","m_SourceNodeId":"corin.locomotion.idle.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.idle.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"cff873cb4c0040670d27858670fcfb31","m_DisplayName":"Walk
+    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"4b9956bcabbd5e950a33d7b48cac1bca","m_SourceNodeId":"cff873cb4c0040670d27858670fcfb31","m_SourcePortId":"pose","m_TargetNodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
-  - {fileID: -3921232948358065235}
+  - {fileID: 8629324124613113230}
   _graphSource:
     _version: 3.42
     _category: 
@@ -178,11 +292,24 @@ MonoBehaviour:
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.locomotion.idle.graph
-  m_ContentRevision: adf36ccd1d9d42938740730a5c5b0cfc
+  m_GraphId: 658ab38fd39b80592ae222925f31e25c
+  m_ContentRevision: 87cb5c28d2eb4301a1a2d007e9ccd191
   m_Role: 1
   m_Parameters: []
---- !u!114 &1131448872057909736
+--- !u!114 &2906013293782627653
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
+  m_Name: CorinPoseInertializationPolicy InertializationPolicy
+  m_EditorClassIdentifier: 
+  m_Kind: 2
+--- !u!114 &3344833663789169170
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -192,9 +319,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_RunLoop_Inplace Source Binding
+  m_Name: Corin_Pipeline_WalkStart_Inplace Source Binding
   m_EditorClassIdentifier: 
---- !u!114 &2402677218184211338
+--- !u!114 &3561850489297887021
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -206,12 +333,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.start.sequence","m_DisplayName":"Run
-    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.start.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.start.sequence-output","m_SourceNodeId":"corin.locomotion.start.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.start.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_DisplayName":"Walk
+    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"392890fbd759c4cba656c9607b0ba5b8","m_DisplayName":"Output
+    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"6363a088affe9653b8ee0d8a5576f4a0","m_SourceNodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_SourcePortId":"pose","m_TargetNodeId":"392890fbd759c4cba656c9607b0ba5b8","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
-  - {fileID: -2979050784670951599}
+  - {fileID: 3344833663789169170}
   _graphSource:
     _version: 3.42
     _category: 
@@ -220,11 +347,24 @@ MonoBehaviour:
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.locomotion.start.graph
-  m_ContentRevision: 5f298213cf7d41008d559262ac44ebfc
+  m_GraphId: 239fb85af79509b36208db12ad91354f
+  m_ContentRevision: b0d57d92d2e743658838dcfab979fe4c
   m_Role: 1
   m_Parameters: []
---- !u!114 &2468437558700976723
+--- !u!114 &4412922592043435038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
+  m_Name: CorinFootPlacementRigCalibration FootPlacementCalibration
+  m_EditorClassIdentifier: 
+  m_Kind: 6
+--- !u!114 &6242652349391753679
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -234,9 +374,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
-  m_Name: Corin_Pipeline_MovingTurn_Inplace Source Binding
+  m_Name: Corin_Pipeline_RunStart_Inplace Source Binding
   m_EditorClassIdentifier: 
---- !u!114 &2504121604337729134
+--- !u!114 &6532423315664890970
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -257,11 +397,12 @@ MonoBehaviour:
     Contribution","m_Kind":14}],"_position":{"x":363.0012,"y":133.1295},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"3"},{"m_NodeId":"corin.control-rig.body.graph/component-to-local","m_DisplayName":"Component
     To Local","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterComponentToLocalPosePayload"},"_position":{"x":834.7273,"y":86.44727},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"4"},{"m_NodeId":"corin.control-rig.body.graph/output","m_DisplayName":"Control
     Rig Output","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterGraphOutputPosePayload"},"m_DynamicPorts":[{"m_PortId":"pose.local","m_DisplayName":"Output
-    Pose","m_InterfacePortId":"entry.pose.output"}],"_position":{"x":1433.59,"y":66.09576},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"5"}],"connections":[{"m_EdgeId":"corin.control-rig.body/input-pose","m_SourceNodeId":"corin.control-rig.body.graph/input","m_SourcePortId":"pose.local","m_TargetNodeId":"corin.control-rig.body.graph/local-to-component","m_TargetPortId":"local-pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-foot","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/foot-placement","m_TargetPortId":"pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/foot-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/foot-placement","m_SourcePortId":"contribution","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"goal-contribution.0","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/ik-to-local","m_SourceNodeId":"corin.control-rig.body.graph/full-body-ik","m_SourcePortId":"result","m_TargetNodeId":"corin.control-rig.body.graph/component-to-local","m_TargetPortId":"component-pose","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/local-to-output","m_SourceNodeId":"corin.control-rig.body.graph/component-to-local","m_SourcePortId":"local-pose","m_TargetNodeId":"corin.control-rig.body.graph/output","m_TargetPortId":"pose.local","_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"5"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
+    Pose","m_InterfacePortId":"entry.pose.output"}],"_position":{"x":1433.59,"y":66.09576},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"5"},{"m_NodeId":"corin.control-rig.body.graph/goal-assembler","m_DisplayName":"Goal
+    Assembler","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterFullBodyIkGoalAssemblerPayload"},"_position":{"x":160.0,"y":178.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"6"}],"connections":[{"m_EdgeId":"corin.control-rig.body/input-pose","m_SourceNodeId":"corin.control-rig.body.graph/input","m_SourcePortId":"pose.local","m_TargetNodeId":"corin.control-rig.body.graph/local-to-component","m_TargetPortId":"local-pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-foot","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/foot-placement","m_TargetPortId":"pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/component-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/local-to-component","m_SourcePortId":"component-pose","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/foot-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/foot-placement","m_SourcePortId":"contribution","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"goal-contribution.0","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/ik-to-local","m_SourceNodeId":"corin.control-rig.body.graph/full-body-ik","m_SourcePortId":"result","m_TargetNodeId":"corin.control-rig.body.graph/component-to-local","m_TargetPortId":"component-pose","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/local-to-output","m_SourceNodeId":"corin.control-rig.body.graph/component-to-local","m_SourcePortId":"local-pose","m_TargetNodeId":"corin.control-rig.body.graph/output","m_TargetPortId":"pose.local","_sourceNode":{"$ref":"4"},"_targetNode":{"$ref":"5"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig.body/assembler-to-ik","m_SourceNodeId":"corin.control-rig.body.graph/goal-assembler","m_SourcePortId":"goals","m_TargetNodeId":"corin.control-rig.body.graph/full-body-ik","m_TargetPortId":"goals","_sourceNode":{"$ref":"6"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
-  - {fileID: 5400234489284315176}
-  - {fileID: -2335344785742086560}
+  - {fileID: -5849264378725478179}
+  - {fileID: 4412922592043435038}
   _graphSource:
     _version: 3.42
     _category: 
@@ -274,7 +415,43 @@ MonoBehaviour:
   m_ContentRevision: 2cace81b673e4dc684a96ec0a751270d
   m_Role: 1
   m_Parameters: []
---- !u!114 &4059368495099081888
+--- !u!114 &6826403210904887930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Corin_Pipeline_MovingTurn_Inplace Source Binding
+  m_EditorClassIdentifier: 
+--- !u!114 &8050897460272955977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Corin_Pipeline_RunLoop_Inplace Source Binding
+  m_EditorClassIdentifier: 
+--- !u!114 &8629324124613113230
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d98f7c1b67ec4b07ab3dd3656216c891, type: 3}
+  m_Name: Corin_Pipeline_WalkLoop_Inplace Source Binding
+  m_EditorClassIdentifier: 
+--- !u!114 &9197458619933369744
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -300,9 +477,9 @@ MonoBehaviour:
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":713.1459,"y":107.6775},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"4"}],"connections":[{"m_EdgeId":"corin.locomotion.pose-state-machine-to-inertialization","m_SourceNodeId":"corin.locomotion.pose-state-machine","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.inertialization","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.locomotion.inertialization-to-full-body-action-slot","m_SourceNodeId":"corin.locomotion.inertialization","m_SourcePortId":"result","m_TargetNodeId":"corin.full-body-action.slot","m_TargetPortId":"source-pose","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.root-to-control-rig","m_SourceNodeId":"corin.full-body-action.slot","m_SourcePortId":"pose","m_TargetNodeId":"corin.control-rig.body.call","m_TargetPortId":"pose.input","_sourceNode":{"$ref":"2"},"_targetNode":{"$ref":"3"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"},{"m_EdgeId":"corin.control-rig-to-output","m_SourceNodeId":"corin.control-rig.body.call","m_SourcePortId":"pose.output","m_TargetNodeId":"1f9ab07f79e94a789095b9080b71880d","m_TargetPortId":"pose","_sourceNode":{"$ref":"3"},"_targetNode":{"$ref":"4"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
-  - {fileID: -1844466054010593893}
-  - {fileID: -7307166977988170493}
-  - {fileID: 4177065355598373836}
+  - {fileID: -2819830200314167010}
+  - {fileID: 2906013293782627653}
+  - {fileID: -5708191824285114883}
   _graphSource:
     _version: 3.42
     _category: 
@@ -313,181 +490,5 @@ MonoBehaviour:
   _externalSerializationFile: {fileID: 0}
   m_GraphId: ed8ff472330e4057a900af3eae5dfb8f
   m_ContentRevision: 5e2852cec5ec41bfa407d8f8a0788439
-  m_Role: 1
-  m_Parameters: []
---- !u!114 &4177065355598373836
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
-  m_Name: CorinActionBlendPolicy BlendPolicy
-  m_EditorClassIdentifier: 
-  m_Kind: 1
---- !u!114 &4210088017428885017
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.turn.sequence","m_DisplayName":"Moving
-    Turn Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-246.0,"y":17.33331},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.turn.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":280.6667,"y":20.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"2b4ef9d52769067557e6652f38041b35","m_SourceNodeId":"corin.locomotion.turn.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.turn.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: 2468437558700976723}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.locomotion.turn.graph
-  m_ContentRevision: c98ae23663b34b98bb4d52dd51d4e712
-  m_Role: 1
-  m_Parameters: []
---- !u!114 &5072474735055970769
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.locomotion.sequence","m_DisplayName":"Run
-    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.locomotion.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.locomotion.sequence-output","m_SourceNodeId":"corin.locomotion.locomotion.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.locomotion.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: 1131448872057909736}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.locomotion.locomotion.graph
-  m_ContentRevision: 65911da1edf24cff824945e32ef594f3
-  m_Role: 1
-  m_Parameters: []
---- !u!114 &5400234489284315176
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4933ab3c8b0046f294c00d0fad471083, type: 3}
-  m_Name: CorinFootPlacementProfile FootPlacementProfile
-  m_EditorClassIdentifier: 
-  m_Kind: 5
---- !u!114 &6698202936371809159
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.stop.sequence","m_DisplayName":"Run
-    End Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.stop.output","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.stop.sequence-output","m_SourceNodeId":"corin.locomotion.stop.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.stop.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: -1125276244088184030}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: corin.locomotion.stop.graph
-  m_ContentRevision: 05ef9011b64c48c3905d98cb114dc6e1
-  m_Role: 1
-  m_Parameters: []
---- !u!114 &8640876822083672252
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"cff873cb4c0040670d27858670fcfb31","m_DisplayName":"Walk
-    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"4b9956bcabbd5e950a33d7b48cac1bca","m_SourceNodeId":"cff873cb4c0040670d27858670fcfb31","m_SourcePortId":"pose","m_TargetNodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: -1223974716485499172}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: 658ab38fd39b80592ae222925f31e25c
-  m_ContentRevision: 87cb5c28d2eb4301a1a2d007e9ccd191
-  m_Role: 1
-  m_Parameters: []
---- !u!114 &8946121524649710714
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5895bdd5dbdf1a469cbae3e79588c87, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_DisplayName":"Walk
-    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"392890fbd759c4cba656c9607b0ba5b8","m_DisplayName":"Output
-    Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"6363a088affe9653b8ee0d8a5576f4a0","m_SourceNodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_SourcePortId":"pose","m_TargetNodeId":"392890fbd759c4cba656c9607b0ba5b8","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
-  _objectReferences:
-  - {fileID: 0}
-  - {fileID: -8822627664849689120}
-  _graphSource:
-    _version: 3.42
-    _category: 
-    _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
-  _haltSerialization: 0
-  _externalSerializationFile: {fileID: 0}
-  m_GraphId: 239fb85af79509b36208db12ad91354f
-  m_ContentRevision: b0d57d92d2e743658838dcfab979fe4c
   m_Role: 1
   m_Parameters: []

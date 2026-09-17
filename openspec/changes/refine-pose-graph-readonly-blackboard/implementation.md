@@ -40,3 +40,9 @@
 - Root.cs已补goal-assembler节点（corin.control-rig.body.graph/goal-assembler）、goals→full-body-ik.goals连线与布局项，提交c76ff5c3f。
 - 阻塞：generate_assets前置的ThirdPersonClient.Editor编译被并行Timeline窗口的在途错误阻断（CharacterTimelineHost.cs 659-663行，非本域文件）。按skill口径记录阻塞、不修改他人文件、不轮询。
 - 恢复条件：并行窗口编译清零后重跑dotnet build ThirdPersonClient.Editor.csproj，0错误后执行btsmtl.generate_assets（同export参数），资产生效后GraphInvalid应消除；Play验证归用户。
+
+## GoalAssembler修复完成（2026-09-18）
+
+- generate_assets成功替换LocomotionFullBodyPoseGraph.asset；重新export_code验证资产内容含goal-assembler节点、FullBodyIkGoalAssemblerPayload与assembler-to-ik连线（goals→full-body-ik.goals），validator成对规则静态满足。
+- 过程中发现并绕过导出器缺陷：BtsmtlAuthoringCodeGenerationService的外部资产分类把Definition/Presentation Profile发为BuildRoot局部var，而FinalizeAuthoring经rootParts.asset/asset1消费，导致generate报"requires a Definition and Presentation Profile"。当前以生成源码内补parts.asset赋值绕过（再导出会被冲掉，需重打补丁）；分类漏FinalStatements使用的根因修复归authoring工具owner。
+- 静态校验：Editor编译0错误；validator成对规则以资产内容+源码规则核对通过。Play端到端验证归用户。

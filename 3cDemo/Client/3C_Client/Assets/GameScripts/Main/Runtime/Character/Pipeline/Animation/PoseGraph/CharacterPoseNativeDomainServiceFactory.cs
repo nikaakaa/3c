@@ -125,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ThrowBlendSpace,
                 ThrowSelectedPlayer,
                 ThrowSelectedSample,
-                ThrowBlendStack,
+                CreateBlendStack,
                 ThrowActionSample,
                 ThrowProviderSample,
                 RequireBindingIndex,
@@ -473,11 +473,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             return new CharacterAnimationBlendCurve(keys).Compile();
         }
-
-        static AnimationBlendStackRuntime ThrowBlendStack(
-            CharacterPoseCanvasNode node,
-            CharacterPoseNativeInstanceContext context) =>
-            throw new InvalidOperationException($"Pose Animation Slot '{node.NodeId}' lifecycle stack is not assembled.");
 
         static AnimationResolvedPoseSourceSample ThrowActionSample(
             CharacterPoseNativeInstanceContext context,

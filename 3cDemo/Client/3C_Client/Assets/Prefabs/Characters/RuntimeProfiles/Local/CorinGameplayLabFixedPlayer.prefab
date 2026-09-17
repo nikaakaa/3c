@@ -2056,7 +2056,9 @@ MonoBehaviour:
   m_CameraRig: {fileID: 0}
   m_CameraFollowAnchor: {fileID: 6263189988519251787}
   m_CameraAimAnchor: {fileID: 2725587179902061667}
-  m_CameraTargetBindings: []
+  m_CameraTargetBindings:
+  - key: camera.body
+    target: {fileID: 6263189988519251787}
   m_CameraLookInputValueId: LookAxis
   m_MaximumActivePresentationRecords: 128
 --- !u!1 &2645368658480728032

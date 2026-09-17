@@ -7,19 +7,21 @@ namespace BTSMTL.Diagnostics
     public readonly struct RuntimeGraphInvocation
     {
         public RuntimeGraphInvocation(string path, string graphId, string parentPath,
-            RuntimeSourceElementKey caller, string callerClipId)
+            RuntimeSourceElementKey caller, string callerClipId, string callerId)
         {
             Path = path;
             GraphId = graphId;
             ParentPath = parentPath ?? string.Empty;
             Caller = caller;
             CallerClipId = callerClipId ?? string.Empty;
+            CallerId = callerId ?? string.Empty;
         }
         public string Path { get; }
         public string GraphId { get; }
         public string ParentPath { get; }
         public RuntimeSourceElementKey Caller { get; }
         public string CallerClipId { get; }
+        public string CallerId { get; }
     }
 
     public readonly struct DebugSourceMapEntry
@@ -83,33 +85,6 @@ namespace BTSMTL.Diagnostics
             if (m_Sealed)
                 throw new InvalidOperationException("Debug Source Map is sealed.");
             m_GraphInvocations.Add(invocation);
-        }
-
-        public RuntimeSourceElementHandle Add(
-            RuntimeSourceElementKey source,
-            RuntimeSourceElementHandle parent,
-            string displayName,
-            string contentHash,
-            RuntimeSourceTarget target)
-        {
-            if (m_Sealed)
-                throw new InvalidOperationException("Debug Source Map is sealed.");
-            if (!source.IsValid)
-                throw new InvalidOperationException("Debug Source Map source identity is invalid.");
-
-            var handle = new RuntimeSourceElementHandle(m_Entries.Count + 1, source.Kind);
-            var entry = new DebugSourceMapEntry(handle, source, parent, displayName, contentHash, target);
-            m_Entries.Add(entry);
-            m_ByHandle.Add(handle.Value, entry);
-            if (!m_BySource.TryGetValue(source, out List<RuntimeSourceElementHandle> handles))
-            {
-                handles = new List<RuntimeSourceElementHandle>();
-                m_BySource.Add(source, handles);
-            }
-            handles.Add(handle);
-            if (target.IsIndexedTarget && !m_ByIndexedTarget.TryAdd(target, handle))
-                throw new InvalidOperationException($"Debug Source Map indexed target is duplicated: {target}.");
-            return handle;
         }
 
         public void Seal()

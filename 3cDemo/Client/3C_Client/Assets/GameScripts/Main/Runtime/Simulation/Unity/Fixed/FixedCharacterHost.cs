@@ -255,6 +255,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     characterRuntime.AbilitySetSourceRevision,
                     characterRuntime.GameplayContentHash.ToString());
                 var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
+                int abilityTargetIndexOffset = 0;
+                foreach (FixedGameplayAbilityExecutionData abilityEntryData in abilityData.Data)
+                {
+                    AbilityDebugSourceMapFiller.Fill(debugSourceMap, abilityTargetIndexOffset, abilityEntryData.SourceMap);
+                    abilityTargetIndexOffset += abilityEntryData.SourceMap.Count;
+                }
                 var diagnosticsStore = new RuntimeDiagnosticsStore();
                 var diagnosticsContext = new RuntimeDiagnosticsContext(
                     Guid.NewGuid(),
@@ -503,10 +509,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return checked((int)handle.Value);
         }
 
-        public AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int deltaFrames)
+        public AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int tickCount)
         {
             CharacterTimelinePendingAdvance pending = m_Host.AdvanceTimelinePlayback(
-                new TimelinePlaybackHandle((ulong)runtimeHandle), logicTick, deltaFrames);
+                new TimelinePlaybackHandle((ulong)runtimeHandle), logicTick, tickCount);
             if (pending == null)
                 throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' returned no pending advance.");
             return new AbilityTimelineTickResult(pending.Status, pending);
@@ -625,3 +631,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 }
+

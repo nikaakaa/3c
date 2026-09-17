@@ -291,7 +291,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             RuntimeGraphInvocation[] matches = m_Session.ViewModel.GraphInvocations.Where(value =>
                 value.ParentPath == m_ActiveTimeline.Scope.Path && value.GraphId == graph.AuthoringId &&
-                value.Caller.ElementAuthoringId == m_ActiveTimeline.NodeId && value.CallerClipId == clip.AuthoringId).ToArray();
+                value.Caller.ElementAuthoringId == m_ActiveTimeline.NodeId && value.CallerClipId == clip.AuthoringId &&
+                value.CallerId == "Root").ToArray();
             if (matches.Length != 1)
             {
                 GraphEditor.current?.ShowNotification(new GUIContent("TreeClip缺少唯一的同版本调用路径。"));

@@ -195,6 +195,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     characterRuntime.AbilitySetSourceRevision,
                     characterRuntime.GameplayContentHash.ToString());
                 var debugSourceMap = new DebugSourceMap(diagnosticsRevision);
+                int rollbackTargetIndexOffset = 0;
+                foreach (FixedGameplayAbilityExecutionData rollbackAbilityEntryData in abilityData.Data)
+                {
+                    AbilityDebugSourceMapFiller.Fill(debugSourceMap, rollbackTargetIndexOffset, rollbackAbilityEntryData.SourceMap);
+                    rollbackTargetIndexOffset += rollbackAbilityEntryData.SourceMap.Count;
+                }
                 var diagnosticsStore = new RuntimeDiagnosticsStore();
                 var diagnosticsContext = new RuntimeDiagnosticsContext(
                     Guid.NewGuid(),

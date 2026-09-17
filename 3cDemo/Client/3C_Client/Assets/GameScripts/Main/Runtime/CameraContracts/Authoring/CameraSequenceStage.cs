@@ -25,7 +25,8 @@ namespace ThirdPersonCamera
         public virtual void RequireValid(string source)
         {
             if (string.IsNullOrWhiteSpace(StageId) || !Enum.IsDefined(typeof(CameraSequenceStageKind), Kind))
-                throw new InvalidOperationException($"{source} contains an invalid Camera Sequence stage.");
+                throw new InvalidOperationException(
+                    $"{source} contains an invalid Camera Sequence stage. Type={GetType().FullName}, StageId='{StageId}', Kind={Kind}.");
         }
     }
 }

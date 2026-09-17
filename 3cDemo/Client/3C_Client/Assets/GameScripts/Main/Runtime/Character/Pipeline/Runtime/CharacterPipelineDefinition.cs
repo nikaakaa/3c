@@ -190,6 +190,9 @@ namespace ThirdPersonCharacter.Pipeline
                 valid &= m_AnimationPresentationProfile.CollectConfigurationErrors(errors);
             }
 
+            if (m_CameraProfile)
+                valid &= m_CameraProfile.CollectConfigurationErrors(errors);
+
             HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
             GameplayTagCatalogRuntimeData gameplayTagCatalog = null;
             if (!m_GameplayEffectProfile)

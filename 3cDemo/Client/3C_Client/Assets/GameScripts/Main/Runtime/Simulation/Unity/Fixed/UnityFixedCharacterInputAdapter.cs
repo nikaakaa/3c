@@ -420,11 +420,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             for (int i = 0; i < m_ControlModule.Motions.Count; i++)
             {
                 CharacterControlMotionDescriptor motion = m_ControlModule.Motions[i];
+                if (motion.Space == CharacterControlMotionSpace.ActorLocal)
+                    continue;
                 HashSet<string> targets = motion.Space == CharacterControlMotionSpace.CameraRelative
                     ? m_CameraRelativeVector2Ids
                     : m_WorldVector2Ids;
-                if (!targets.Add(motion.Input.Value))
-                    throw new InvalidOperationException($"Input '{motion.Input.Value}' is used by multiple Control motions.");
+                targets.Add(motion.Input.Value);
             }
             foreach (string inputId in m_CameraRelativeVector2Ids)
             {

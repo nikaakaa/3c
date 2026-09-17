@@ -241,6 +241,21 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
             CapturePopupPosition();
+            if (ContractCatalog.TryGetTrack(formalTrack.Source.ContractKind, out TimelineTrackContract contract) &&
+                contract.AllowedClipKinds.Count == 1 &&
+                string.Equals(contract.AllowedClipKinds[0], TimelineContractKinds.TreeClip, StringComparison.Ordinal))
+            {
+                CreateClip(new TimelineClipCreationRequest
+                {
+                    TrackAuthoringId = formalTrack.Source.AuthoringId,
+                    Kind = TimelineContractKinds.TreeClip,
+                    FrameRate = FrameRate,
+                    StartFrame = frame,
+                    EndFrame = frame + Mathf.Max(1, FrameRate / 20),
+                    DefaultEndFrame = frame + Mathf.Max(1, FrameRate / 20)
+                });
+                return;
+            }
             ShowAddClipMenu(formalTrack.Source.AuthoringId, frame);
         }
 

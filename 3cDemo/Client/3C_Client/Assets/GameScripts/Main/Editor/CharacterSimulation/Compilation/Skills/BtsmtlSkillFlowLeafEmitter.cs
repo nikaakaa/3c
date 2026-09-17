@@ -5,6 +5,9 @@ using BTSMTL.Timeline;
 using FlowCanvas;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCamera;
+using ThirdPersonCharacter.Pipeline.Motion;
+using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -16,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     public sealed class BtsmtlSkillFlowLeafEmitter
     {
         readonly SimulationOperationEmitter m_Emitter;
+        readonly GameplayAbilitySemanticBuilder m_Builder;
         readonly string m_ControlModuleId;
         readonly string m_InputProviderOwnerId;
         readonly string m_GameplayProviderOwnerId;
@@ -27,6 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string gameplayProviderOwnerId)
         {
             m_Emitter = new SimulationOperationEmitter(builder);
+            m_Builder = builder;
             m_ControlModuleId = controlModuleId ?? string.Empty;
             m_InputProviderOwnerId = inputProviderOwnerId ?? string.Empty;
             m_GameplayProviderOwnerId = gameplayProviderOwnerId ?? string.Empty;
@@ -48,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             OperationValuePortContract contract = GameplayAbilityValuePortContracts.Require(emission.Code);
             if (node.GetInputValuePorts().Count() != contract.Inputs.Count || node.GetOutputValuePorts().Count() != contract.Outputs.Count)
                 throw new InvalidOperationException($"Skill node '{node.UID}' does not match its compiled value port shape.");
+            SimulationSourceLocation sourceLocation = Source(node, graph, route, contentHash, string.Empty);
             var inputs = new List<SimulationConstantInput>();
             foreach (ValueInput port in node.GetInputValuePorts().OrderBy(value => value.ID, StringComparer.Ordinal))
             {
@@ -68,7 +74,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             foreach (ValueOutput port in node.GetOutputValuePorts())
                 if (!contract.RequireSelection(native != null ? native.Output(port.ID) : port.ID).Accepts(Kind(port.type)))
                     throw new InvalidOperationException($"Skill output '{port.ID}' has an incompatible declared type.");
-            return m_Emitter.Emit(Source(node, graph, route, contentHash, string.Empty), emission, inputs);
+            OperationHandle operation = m_Emitter.Emit(sourceLocation, emission, inputs);
+            if (CameraProgramOperationSchema.IsCameraPresentationOperation(emission.Code))
+                DeclareCameraProducer(operation, emission.Code, sourceLocation);
+            return operation;
+        }
+
+        void DeclareCameraProducer(
+            OperationHandle operation,
+            SimulationOperationCode code,
+            SimulationSourceLocation source)
+        {
+            string producerIdentity = $"camera:{source.TemplateIdentity}";
+            int producer = m_Builder.DeclareProducer(
+                producerIdentity,
+                CameraProgramOperationSchema.ChannelId,
+                source.TemplateIdentity,
+                ProgramOutputChannelKind.Presentation,
+                source);
+            if (producer < 0)
+                return;
+            m_Builder.DeclareReference(
+                $"{source.TemplateIdentity}/camera-producer",
+                operation,
+                ProgramReferenceKind.Producer,
+                producer,
+                producerIdentity,
+                source);
         }
 
         static SimulationNodeEmission Describe(FlowNode node)
@@ -91,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillTimelineHookFlowNode hook => new SimulationNodeEmission(SimulationOperationCode.TimelineEnter, integer0: (int)hook.Hook),
             BtsmtlSkillTimelineFlowNode timeline => new SimulationNodeEmission(SimulationOperationCode.Timeline,
                 integer0: (int)Field<BtsmtlSkillTimelineFlowNode, TimelinePlaybackMode>(timeline, "playbackMode"), text0: Identity(timeline, "timelineId"),
-                constants: SimulationNodeEmitterRegistry.Fields(("ActionContext", SimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillTimelineFlowNode, ActionContextSlot>(timeline, "actionContext"))))),
+                constants: SimulationNodeEmissionFields.Fields(("ActionContext", SimulationAssetIdentity.Of(Field<BtsmtlSkillTimelineFlowNode, ActionContextSlot>(timeline, "actionContext"))))),
             BtsmtlSkillStateMachineFlowNode machine => new SimulationNodeEmission(SimulationOperationCode.StateMachine, text0: Identity(machine, "graphId")),
             BtsmtlSkillStateFlowNode state => new SimulationNodeEmission(SimulationOperationCode.State, text0: Identity(state, "bodyGraphId")),
             BtsmtlSkillSequenceFlowNode => new SimulationNodeEmission(SimulationOperationCode.Sequence),
@@ -104,51 +136,189 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillActionRequestFlowNode input => Input(SimulationOperationCode.InputRequest, Field<BtsmtlSkillActionRequestFlowNode, string>(input, "inputId"), Field<BtsmtlSkillActionRequestFlowNode, string>(input, "providerOwnerId")),
             IBtsmtlSkillBlackboardReadNode blackboard => new SimulationNodeEmission(
                 SimulationOperationCode.BlackboardGet, text0: Field<IBtsmtlSkillBlackboardReadNode, string>(blackboard, "declarationId"),
-                constants: SimulationNodeEmitterRegistry.Fields(("DeclarationOwner", Field<IBtsmtlSkillBlackboardReadNode, string>(blackboard, "ownerId")))),
+                constants: SimulationNodeEmissionFields.Fields(("DeclarationOwner", Field<IBtsmtlSkillBlackboardReadNode, string>(blackboard, "ownerId")))),
             BtsmtlSkillBlackboardAccessFlowNode blackboard => new SimulationNodeEmission(
                 Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "accessMode") == "set" ? SimulationOperationCode.BlackboardSet : SimulationOperationCode.BlackboardGet,
                 integer0: Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "accessMode") == "set" ? 1 : 0,
                 text0: Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "declarationId"),
-                constants: SimulationNodeEmitterRegistry.Fields(("DeclarationOwner", Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "ownerId")),
-                    ("FactContext", SimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillBlackboardAccessFlowNode, UnityEngine.Object>(blackboard, "factContext"))))),
+                constants: SimulationNodeEmissionFields.Fields(("DeclarationOwner", Field<BtsmtlSkillBlackboardAccessFlowNode, string>(blackboard, "ownerId")),
+                    ("FactContext", SimulationAssetIdentity.Of(Field<BtsmtlSkillBlackboardAccessFlowNode, UnityEngine.Object>(blackboard, "factContext"))))),
             BtsmtlSkillMoveFacingAngleFlowNode move => new SimulationNodeEmission(
                 SimulationOperationCode.MoveFacingAngle,
-                constants: SimulationNodeEmitterRegistry.Fields(("ProviderOwner", Field<BtsmtlSkillMoveFacingAngleFlowNode, string>(move, "providerOwnerId")))),
+                constants: SimulationNodeEmissionFields.Fields(("ProviderOwner", Field<BtsmtlSkillMoveFacingAngleFlowNode, string>(move, "providerOwnerId")))),
             BtsmtlSkillCharacterStateVector3FlowNode state => CharacterState(Field<BtsmtlSkillCharacterStateVector3FlowNode, string>(state, "fieldId"), Field<BtsmtlSkillCharacterStateVector3FlowNode, string>(state, "providerOwnerId")),
             BtsmtlSkillCharacterStateScalarFlowNode state => CharacterState(Field<BtsmtlSkillCharacterStateScalarFlowNode, string>(state, "fieldId"), Field<BtsmtlSkillCharacterStateScalarFlowNode, string>(state, "providerOwnerId")),
             BtsmtlSkillCharacterStateYawFlowNode state => CharacterState(Field<BtsmtlSkillCharacterStateYawFlowNode, string>(state, "fieldId"), Field<BtsmtlSkillCharacterStateYawFlowNode, string>(state, "providerOwnerId")),
             BtsmtlSkillCharacterStateBooleanFlowNode state => CharacterState(Field<BtsmtlSkillCharacterStateBooleanFlowNode, string>(state, "fieldId"), Field<BtsmtlSkillCharacterStateBooleanFlowNode, string>(state, "providerOwnerId")),
-            BtsmtlSkillLocomotionFlowNode motion => SimulationMotionNodeEmitterRegistration.Locomotion(motion, motion.UID),
+            BtsmtlSkillLocomotionFlowNode motion => Locomotion(motion),
             BtsmtlSkillActionContextActiveFlowNode context => new SimulationNodeEmission(
-                SimulationOperationCode.ActionContextActive, text0: SimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillActionContextActiveFlowNode, ActionContextSlot>(context, "actionContext"))),
+                SimulationOperationCode.ActionContextActive, text0: SimulationAssetIdentity.Of(Field<BtsmtlSkillActionContextActiveFlowNode, ActionContextSlot>(context, "actionContext"))),
             BtsmtlSkillActionWindowActiveFlowNode window => new SimulationNodeEmission(
                 SimulationOperationCode.ActionWindowActive, text0: Field<BtsmtlSkillActionWindowActiveFlowNode, string>(window, "windowType")),
             BtsmtlSkillCanActivateActionFlowNode action => CanActivate(action),
             BtsmtlSkillGameplayTagFlowNode tag => new SimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectHasTag,
                 text0: TagIdentity(Field<BtsmtlSkillGameplayTagFlowNode, string>(tag, "tagId")),
-                constants: SimulationNodeEmitterRegistry.Fields(("ProviderOwner", Field<BtsmtlSkillGameplayTagFlowNode, string>(tag, "providerOwnerId")))),
+                constants: SimulationNodeEmissionFields.Fields(("ProviderOwner", Field<BtsmtlSkillGameplayTagFlowNode, string>(tag, "providerOwnerId")))),
             BtsmtlSkillGameplayTagQueryFlowNode query => new SimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectMatchTags,
                 constants: QueryFields(Field<BtsmtlSkillGameplayTagQueryFlowNode, GameplayTagQuery>(query, "query"), "Query", Field<BtsmtlSkillGameplayTagQueryFlowNode, string>(query, "providerOwnerId"))),
             BtsmtlSkillGameplayAttributeFlowNode attribute => new SimulationNodeEmission(
                 SimulationOperationCode.GameplayAttributeRead,
                 text0: AttributeIdentity(Field<BtsmtlSkillGameplayAttributeFlowNode, string>(attribute, "attributeId")),
-                constants: SimulationNodeEmitterRegistry.Fields(("ProviderOwner", Field<BtsmtlSkillGameplayAttributeFlowNode, string>(attribute, "providerOwnerId")))),
+                constants: SimulationNodeEmissionFields.Fields(("ProviderOwner", Field<BtsmtlSkillGameplayAttributeFlowNode, string>(attribute, "providerOwnerId")))),
             BtsmtlSkillApplyGameplayEffectFlowNode apply => new SimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectApply,
                 text0: EffectIdentity(EffectId(Field<BtsmtlSkillApplyGameplayEffectFlowNode, GameplayEffectDefinition>(apply, "effect"))),
-                constants: SimulationNodeEmitterRegistry.Fields(
+                constants: SimulationNodeEmissionFields.Fields(
                     ("DefinitionRevision", DefinitionRevision(Field<BtsmtlSkillApplyGameplayEffectFlowNode, GameplayEffectDefinition>(apply, "effect"))),
-                    ("ActionContext", SimulationNodeEmitterContext.AssetIdentity(Field<BtsmtlSkillApplyGameplayEffectFlowNode, ActionContextSlot>(apply, "actionContext"))),
+                    ("ActionContext", SimulationAssetIdentity.Of(Field<BtsmtlSkillApplyGameplayEffectFlowNode, ActionContextSlot>(apply, "actionContext"))),
                     ("Predicted", Field<BtsmtlSkillApplyGameplayEffectFlowNode, bool>(apply, "predicted")),
                     ("ProviderOwner", Field<BtsmtlSkillApplyGameplayEffectFlowNode, string>(apply, "providerOwnerId")))),
             BtsmtlSkillRemoveGameplayEffectFlowNode remove => new SimulationNodeEmission(
                 SimulationOperationCode.GameplayEffectRemove,
                 integer0: (int)Field<BtsmtlSkillRemoveGameplayEffectFlowNode, GameplayEffectRemoveSelector>(remove, "selector"),
                 constants: RemoveEffectFields(remove)),
+            RequestCameraStateNode request => CameraStateRequest(request),
+            RequestCameraEffectNode request => CameraEffectRequest(request),
+            SetCameraResponseNode response => CameraResponse(response),
+            SetCameraTargetNode target => CameraTarget(target),
+            ReadCameraBasisNode => new SimulationNodeEmission(
+                SimulationOperationCode.CameraBasisRead,
+                integer0: CameraProgramOperationSchema.PayloadVersion),
             _ => throw new InvalidOperationException($"Skill node '{node.GetType().Name}' has no leaf emission contract.")
             };
+        }
+
+        static SimulationNodeEmission CameraStateRequest(RequestCameraStateNode node)
+        {
+            string sequenceId = Field<RequestCameraStateNode, string>(node, "sequenceId");
+            if (string.IsNullOrWhiteSpace(sequenceId))
+                throw new InvalidOperationException("A camera state request has no sequence identity.");
+            return new SimulationNodeEmission(
+                SimulationOperationCode.CameraStateRequest,
+                integer0: CameraProgramOperationSchema.PayloadVersion,
+                integer1: (int)Field<RequestCameraStateNode, CameraMode>(node, "mode"),
+                flags: (uint)Field<RequestCameraStateNode, CameraInterruptPolicy>(node, "interruptPolicy"),
+                constants: SimulationNodeEmissionFields.Fields(
+                    ("Priority", Field<RequestCameraStateNode, int>(node, "priority")),
+                    ("Weight", Field<RequestCameraStateNode, float>(node, "weight")),
+                    ("SequenceId", sequenceId),
+                    ("BlendInSeconds", Field<RequestCameraStateNode, float>(node, "blendInSeconds")),
+                    ("BlendOutSeconds", Field<RequestCameraStateNode, float>(node, "blendOutSeconds")),
+                    ("TargetKey", Field<RequestCameraStateNode, string>(node, "targetKey")),
+                    ("ActionContext", SimulationAssetIdentity.Of(Field<RequestCameraStateNode, ActionContextSlot>(node, "actionContext")))));
+        }
+
+        static SimulationNodeEmission CameraEffectRequest(RequestCameraEffectNode node)
+        {
+            string requestId = Field<RequestCameraEffectNode, string>(node, "requestId");
+            string resourceId = Field<RequestCameraEffectNode, string>(node, "resourceId");
+            if (string.IsNullOrWhiteSpace(requestId) || string.IsNullOrWhiteSpace(resourceId))
+                throw new InvalidOperationException("A camera effect request has no request or resource identity.");
+            return new SimulationNodeEmission(
+                SimulationOperationCode.CameraEffectRequest,
+                integer0: CameraProgramOperationSchema.EffectPayloadVersion,
+                integer1: (int)Field<RequestCameraEffectNode, CameraEffectKind>(node, "effectKind"),
+                constants: SimulationNodeEmissionFields.Fields(
+                    ("RequestId", requestId),
+                    ("ResourceId", resourceId),
+                    ("Weight", Field<RequestCameraEffectNode, float>(node, "weight")),
+                    ("Priority", Field<RequestCameraEffectNode, int>(node, "priority")),
+                    ("ActionContext", SimulationAssetIdentity.Of(Field<RequestCameraEffectNode, ActionContextSlot>(node, "actionContext")))));
+        }
+
+        static SimulationNodeEmission CameraResponse(SetCameraResponseNode node) =>
+            new(
+                SimulationOperationCode.CameraResponse,
+                integer0: CameraProgramOperationSchema.PayloadVersion,
+                integer1: (int)Field<SetCameraResponseNode, CameraLookResponseMode>(node, "lookResponse"),
+                constants: SimulationNodeEmissionFields.Fields(
+                    ("ManualOrbitWeight", Field<SetCameraResponseNode, float>(node, "manualOrbitWeight")),
+                    ("PitchResponseWeight", Field<SetCameraResponseNode, float>(node, "pitchResponseWeight")),
+                    ("YawResponseWeight", Field<SetCameraResponseNode, float>(node, "yawResponseWeight")),
+                    ("Priority", Field<SetCameraResponseNode, int>(node, "priority")),
+                    ("Weight", Field<SetCameraResponseNode, float>(node, "weight")),
+                    ("ActionContext", SimulationAssetIdentity.Of(Field<SetCameraResponseNode, ActionContextSlot>(node, "actionContext")))));
+
+        static SimulationNodeEmission CameraTarget(SetCameraTargetNode node)
+        {
+            string targetKey = Field<SetCameraTargetNode, string>(node, "targetKey");
+            string anchorKey = Field<SetCameraTargetNode, string>(node, "anchorKey");
+            string aimPointKey = Field<SetCameraTargetNode, string>(node, "aimPointKey");
+            string preferredBoneKey = Field<SetCameraTargetNode, string>(node, "preferredBoneKey");
+            int targetMask = (string.IsNullOrEmpty(targetKey) ? 0 : CameraProgramOperationSchema.TargetKeyMask) |
+                             (string.IsNullOrEmpty(anchorKey) ? 0 : CameraProgramOperationSchema.AnchorKeyMask) |
+                             (string.IsNullOrEmpty(aimPointKey) ? 0 : CameraProgramOperationSchema.AimPointKeyMask) |
+                             (string.IsNullOrEmpty(preferredBoneKey) ? 0 : CameraProgramOperationSchema.PreferredBoneKeyMask);
+            if (targetMask == 0)
+                throw new InvalidOperationException("A camera target request has no target identity.");
+            return new SimulationNodeEmission(
+                SimulationOperationCode.CameraTarget,
+                integer0: CameraProgramOperationSchema.PayloadVersion,
+                integer1: targetMask,
+                constants: SimulationNodeEmissionFields.Fields(
+                    ("TargetKey", targetKey),
+                    ("AnchorKey", anchorKey),
+                    ("AimPointKey", aimPointKey),
+                    ("PreferredBoneKey", preferredBoneKey),
+                    ("Priority", Field<SetCameraTargetNode, int>(node, "priority")),
+                    ("Weight", Field<SetCameraTargetNode, float>(node, "weight")),
+                    ("ActionContext", SimulationAssetIdentity.Of(Field<SetCameraTargetNode, ActionContextSlot>(node, "actionContext")))));
+        }
+
+        static SimulationNodeEmission Locomotion(BtsmtlSkillLocomotionFlowNode node)
+        {
+            LocomotionInputMotionAuthoringRules.Validate(node);
+            LocomotionInputMotionDisplacementMode displacement = node.DisplacementMode;
+            var constants = new List<KeyValuePair<string, object>>
+            {
+                new("TurnSpeedDegrees", node.TurnSpeedDegrees),
+                new("DurationSeconds", node.DurationSeconds)
+            };
+            if (displacement == LocomotionInputMotionDisplacementMode.ConstantSpeed)
+            {
+                constants.Add(new KeyValuePair<string, object>("MoveSpeed", node.MoveSpeed));
+            }
+            else
+            {
+                RootMotionCurveAsset curve = node.ActionMotionCurve;
+                constants.Add(new KeyValuePair<string, object>("ActionMotionPositionX", BakeCurve(curve.LocalPositionX, $"{node.UID}/ActionMotionPositionX")));
+                constants.Add(new KeyValuePair<string, object>("ActionMotionPositionZ", BakeCurve(curve.LocalPositionZ, $"{node.UID}/ActionMotionPositionZ")));
+                constants.Add(new KeyValuePair<string, object>("ActionMotionDuration", curve.Duration));
+            }
+
+            return new SimulationNodeEmission(
+                SimulationOperationCode.LocomotionInputMotion,
+                integer0: (int)node.ExecutionMode,
+                integer1: (int)displacement,
+                flags: node.CameraRelative ? 1U : 0U,
+                constants: constants);
+        }
+
+        static SemanticDataDocument BakeCurve(AnimationCurve curve, string identity)
+        {
+            if (curve == null || curve.length == 0)
+                throw new InvalidOperationException($"Curve '{identity}' is empty.");
+            var writer = new SemanticDataWriter();
+            writer.WriteUInt32(0x56525543);
+            writer.WriteInt32(1);
+            writer.WriteInt32((int)curve.preWrapMode);
+            writer.WriteInt32((int)curve.postWrapMode);
+            writer.WriteInt32(curve.length);
+            for (int i = 0; i < curve.length; i++)
+            {
+                Keyframe key = curve.keys[i];
+                if (key.weightedMode != WeightedMode.None)
+                    throw new InvalidOperationException($"Curve '{identity}' key #{i} uses unsupported weighted tangents.");
+                writer.WriteNumber(key.time, $"{identity}[{i}].time");
+                writer.WriteNumber(key.value, $"{identity}[{i}].value");
+                writer.WriteNumber(key.inTangent, $"{identity}[{i}].inTangent");
+                writer.WriteNumber(key.outTangent, $"{identity}[{i}].outTangent");
+                writer.WriteInt32((int)key.weightedMode);
+            }
+
+            return writer.Build();
         }
 
         static TValue Field<TNode, TValue>(TNode node, string fieldId) =>
@@ -168,8 +338,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return new SimulationNodeEmission(
                 SimulationOperationCode.CanActivateAction,
                 text0: profile ? profile.ActionId : string.Empty,
-                constants: SimulationNodeEmitterRegistry.Fields(
-                    ("AdmissionProfile", SimulationNodeEmitterContext.AssetIdentity(profile)),
+                constants: SimulationNodeEmissionFields.Fields(
+                    ("AdmissionProfile", SimulationAssetIdentity.Of(profile)),
                     ("TargetSnapshotDeclaration", snapshot.DeclarationId),
                     ("TargetSnapshotOwner", snapshot.OwnerId)));
         }
@@ -231,7 +401,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return new SimulationNodeEmission(
                 code,
                 text0: identity,
-                constants: SimulationNodeEmitterRegistry.Fields(("ProviderOwner", providerOwnerId)));
+                constants: SimulationNodeEmissionFields.Fields(("ProviderOwner", providerOwnerId)));
         }
 
         static SimulationNodeEmission CharacterState(string fieldId, string providerOwnerId)
@@ -241,7 +411,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return new SimulationNodeEmission(
                 SimulationOperationCode.CharacterStateRead,
                 text0: fieldId,
-                constants: SimulationNodeEmitterRegistry.Fields(("ProviderOwner", providerOwnerId)));
+                constants: SimulationNodeEmissionFields.Fields(("ProviderOwner", providerOwnerId)));
         }
 
         static void ValidateCharacterStateNode(FlowNode node, string controlModuleId)

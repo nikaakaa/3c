@@ -447,8 +447,7 @@ namespace BTSMTL.Timeline.Editor
                     AssetTreeOpened?.Invoke(m_SerializedOwner as TimelineAsset, assetClip);
                     return;
                 }
-                AssetDatabase.OpenAsset(assetClip.AssetTree);
-                AssetTreeOpened?.Invoke(m_SerializedOwner as TimelineAsset, assetClip);
+                ShowNotification(new GUIContent("TreeClip 的正式 FlowCanvas SkillGraph 打开失败。"));
                 return;
             }
             if (clip is not TreeClip treeClip)

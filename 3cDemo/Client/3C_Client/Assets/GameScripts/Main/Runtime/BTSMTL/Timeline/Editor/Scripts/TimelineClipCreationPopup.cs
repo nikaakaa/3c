@@ -94,7 +94,10 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.BlendProfileId = EditorGUILayout.TextField("Blend Profile", m_Request.BlendProfileId);
             }
             else if (m_Request.Kind == TimelineContractKinds.TreeClip)
-                m_Request.Resource = EditorGUILayout.ObjectField("Graph / Tree", m_Request.Resource, typeof(UnityEngine.Object), false);
+            {
+                EditorGUILayout.LabelField("Graph / Tree", "Optional: empty creates an inline Timeline Tree.");
+                m_Request.Resource = EditorGUILayout.ObjectField(m_Request.Resource, typeof(UnityEngine.Object), false);
+            }
 
             if (m_Request.Kind == TimelineContractKinds.MotionCurveClip)
             {
@@ -207,10 +210,6 @@ namespace BTSMTL.Timeline.Editor
                 return "帧范围必须满足 Start < End。";
             if (m_Request.Kind == TimelineContractKinds.AnimationClip && m_Request.Resource is not UnityEngine.AnimationClip)
                 return "必须选择已有 AnimationClip。";
-            if (m_Request.Kind == TimelineContractKinds.TreeClip &&
-                m_Request.Resource is not BaseTreeAsset &&
-                m_Request.Resource is not ITimelineTreeGraphAsset)
-                return "必须选择正式 Timeline Tree 来源。";
             if (m_Request.Kind == TimelineContractKinds.MotionCurveClip)
             {
                 if (!m_Request.SourceCurve)

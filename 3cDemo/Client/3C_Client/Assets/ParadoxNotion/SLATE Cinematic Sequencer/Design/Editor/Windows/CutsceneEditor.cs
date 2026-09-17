@@ -3757,7 +3757,7 @@ namespace Slate
                                 if (formalInspectedParameters != null)
                                     formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
                                 if (e.type == EventType.ContextClick &&
-                                    Rect.MinMaxRect(trackPosRect.xMin, y, trackPosRect.xMax, y + value.DefaultHeight).Contains(e.mousePosition))
+                                    trackPosRect.Contains(e.mousePosition))
                                 {
                                     int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
                                     GenericMenu menu = new GenericMenu();

@@ -728,20 +728,12 @@ namespace BTSMTL.Timeline
     public static class TimelineAuthoringTypeCatalog
     {
         static readonly IReadOnlyDictionary<string, Type> s_TrackTypes = BuildTrackTypes();
-        static readonly IReadOnlyDictionary<string, Type> s_ClipTypes = BuildClipTypes();
 
         public static Type RequireTrackType(string kind)
         {
             return s_TrackTypes.TryGetValue(kind ?? string.Empty, out Type type)
                 ? type
                 : throw new InvalidOperationException($"Unknown Timeline Track authoring kind '{kind}'.");
-        }
-
-        public static Type RequireClipType(string kind)
-        {
-            return s_ClipTypes.TryGetValue(kind ?? string.Empty, out Type type)
-                ? type
-                : throw new InvalidOperationException($"Unknown Timeline Clip authoring kind '{kind}'.");
         }
 
         static IReadOnlyDictionary<string, Type> BuildTrackTypes()
@@ -754,25 +746,6 @@ namespace BTSMTL.Timeline
                     continue;
                 if (!result.TryAdd(track.ContractKind, type))
                     throw new InvalidOperationException($"Timeline Track kind '{track.ContractKind}' has multiple formal authoring types.");
-            }
-            return result;
-        }
-
-        static IReadOnlyDictionary<string, Type> BuildClipTypes()
-        {
-            var result = new Dictionary<string, Type>(StringComparer.Ordinal);
-            foreach (Type trackType in s_TrackTypes.Values.Distinct())
-            {
-                Track track = Activator.CreateInstance(trackType) as Track;
-                Type clipType = track?.ClipType;
-                if (clipType == null || clipType.IsAbstract || clipType.ContainsGenericParameters)
-                    continue;
-                if (Activator.CreateInstance(clipType, new object[] { null, 0 }) is not Clip clip ||
-                    string.IsNullOrWhiteSpace(clip.ContractKind))
-                    continue;
-                if (result.TryGetValue(clip.ContractKind, out Type existing) && existing != clipType)
-                    throw new InvalidOperationException($"Timeline Clip kind '{clip.ContractKind}' has multiple formal authoring types.");
-                result[clip.ContractKind] = clipType;
             }
             return result;
         }

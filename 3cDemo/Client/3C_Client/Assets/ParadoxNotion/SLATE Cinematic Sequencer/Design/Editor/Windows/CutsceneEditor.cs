@@ -3196,11 +3196,12 @@ namespace Slate
                 trackPosRect.Contains(e.mousePosition))
                 e.Use();
 
+            IReadOnlyList<IClipEditorBinding> clips = getClipBindings(track);
+            SelectFormalClipAtMouse(e, y, getDefaultHeight(track), clips);
             drawContent?.Invoke(track, trackPosRect, trackTimeRect);
             if ((!isActive(track) || isLocked(track)) && drawPostOverlay != null)
                 postWindowsGUI += () => drawPostOverlay(track, trackPosRect);
 
-            IReadOnlyList<IClipEditorBinding> clips = getClipBindings(track);
             for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
                 DrawTimelineClip(
                     centerRect,
@@ -3214,6 +3215,32 @@ namespace Slate
                     clips,
                     isActive(track),
                     getDefaultHeight(track));
+        }
+
+        void SelectFormalClipAtMouse(
+            Event e,
+            float y,
+            float height,
+            IReadOnlyList<IClipEditorBinding> clips)
+        {
+            if (embeddedTimeline == null || e.type != EventType.MouseDown || e.button != 0)
+                return;
+            for (int clipIndex = clips.Count - 1; clipIndex >= 0; clipIndex--)
+            {
+                IClipEditorBinding binding = clips[clipIndex];
+                if (binding.FormalClip == null)
+                    continue;
+                Rect clipRect = new Rect(
+                    TimeToPos(binding.StartTime),
+                    y,
+                    Mathf.Max(binding.Length / Mathf.Max(0.0001f, viewTime) * centerRect.width, 6f),
+                    height);
+                if (!clipRect.Contains(e.mousePosition))
+                    continue;
+                embeddedTimeline.Select(binding.FormalClip);
+                formalSelectionHandled = true;
+                return;
+            }
         }
 
         void DrawNativeTimelineTrackPreContent(CutsceneTrack track, Rect trackPosRect, Rect _)

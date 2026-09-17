@@ -22,7 +22,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 77e63dea703b5fd448c56f3035c32520, type: 2}
   m_AbilityInputProviderOwner: asset:be650df85b1e49ab9d1cefc91c6cc809
   m_AbilityGameplayEffectProviderOwner: asset:4a39b2d9de6248bc99baf9561c18716d
-  m_AbilityEquipmentProviderOwner:
+  m_AbilityEquipmentProviderOwner: 
   m_ControlModuleId: character.corin.control
   m_ControlParameters: []
   m_AbilityGrants:

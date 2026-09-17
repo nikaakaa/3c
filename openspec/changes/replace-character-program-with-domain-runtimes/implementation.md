@@ -1519,3 +1519,10 @@
 - EndRule catalog 字段改为先聚合再构造，避免 Trigger/Window 分字段中间态误判 ActionWindowClosed 缺 Window。
 - 重新发布 Attack、DodgeForward、DodgeBack 的 Float32/Fixed Ability Data，并把 Ability Timeline 写回 Corin definition。
 - Unity 全项目编译 0 error；Assembly-CSharp-Editor dotnet build 0 error，已执行 build-server shutdown。
+
+## 2026-09-17 修复Ability运行契约与TreeClip边界
+
+- Input request / Input value catalog revision 提升到 provider binding 的正式版本 2；Skill graph 黑板的 ActionTarget 输入绑定也声明为独立 InputValue，值为 ActionTargetSnapshot。
+- Character Pipeline 的 Input provider 汇集全部 AbilityGrant 的 TargetInputValueId，为 ActionTarget 输入生成正式 provider member；重新导出 Attack 数据。
+- TreeClip service 按 Timeline 来源区分：FixedPreview 只采样表现，不执行技能业务 Hook；AbilityRuntime 记录 Enter 后仍存活的 Clip，在 stop commit 时调用 OnDestroy，discard stop 时清空。
+- Runtime 与 Editor dotnet 编译 0 error，已执行 build-server shutdown；Unity 全项目编译 0 error。

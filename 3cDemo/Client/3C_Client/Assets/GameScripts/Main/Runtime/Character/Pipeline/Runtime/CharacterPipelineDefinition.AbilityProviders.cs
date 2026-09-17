@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.GameplayEffect;
 using ThirdPersonCharacter.Pipeline.Input;
@@ -22,7 +24,16 @@ namespace ThirdPersonCharacter.Pipeline
         {
             var providers = new List<GameplayAbilityProviderBindingEntry>();
             if (m_InputProfile)
-                providers.Add(BuildInputProvider(m_InputProfile, m_AbilityInputProviderOwner));
+            {
+                var actionTargetInputIds = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < AbilityGrants.Count; i++)
+                {
+                    AbilityGrant grant = AbilityGrants[i];
+                    if (grant?.Ability && !string.IsNullOrWhiteSpace(grant.TargetInputValueId))
+                        actionTargetInputIds.Add(grant.TargetInputValueId);
+                }
+                providers.Add(BuildInputProvider(m_InputProfile, m_AbilityInputProviderOwner, actionTargetInputIds));
+            }
             if (m_GameplayEffectProfile)
                 providers.Add(BuildGameplayEffectProvider(m_GameplayEffectProfile, m_AbilityGameplayEffectProviderOwner));
             if (m_EquipmentProfile)
@@ -74,7 +85,8 @@ namespace ThirdPersonCharacter.Pipeline
 
         static GameplayAbilityProviderBindingEntry BuildInputProvider(
             CharacterInputProfile profile,
-            string providerOwner)
+            string providerOwner,
+            IReadOnlyCollection<string> actionTargetInputIds)
         {
             RequireProviderOwner(providerOwner, "Input");
             var errors = new List<string>();
@@ -102,6 +114,21 @@ namespace ThirdPersonCharacter.Pipeline
                     GameplayAbilityProviderValueKind.None,
                     2,
                     InputRuntimeHandle(request.SourceAction)));
+            }
+            foreach (string actionTargetInputId in actionTargetInputIds)
+            {
+                if (string.IsNullOrWhiteSpace(actionTargetInputId))
+                    continue;
+                string inputId = actionTargetInputId.Trim();
+                if (members.Any(value => string.Equals(value.MemberIdentity, $"input:value:{inputId}", StringComparison.Ordinal)))
+                    continue;
+                members.Add(new GameplayAbilityProviderMemberBinding(
+                    GameplayAbilityProviderKind.Input,
+                    providerOwner,
+                    $"input:value:{inputId}",
+                    GameplayAbilityProviderValueKind.ActionTargetSnapshot,
+                    2,
+                    $"action-target:{inputId}"));
             }
             return new GameplayAbilityProviderBindingEntry(
                 GameplayAbilityProviderKind.Input,

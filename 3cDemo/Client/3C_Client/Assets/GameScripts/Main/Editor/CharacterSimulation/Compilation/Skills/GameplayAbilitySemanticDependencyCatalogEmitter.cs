@@ -175,6 +175,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             foreach (BtsmtlSkillGraphOccurrence occurrence in model.EntryGraph.EnumerateOccurrences())
                 foreach (FlowNode node in occurrence.Nodes)
                     DeclareNodeDependencies(model, occurrence, node, owners);
+            foreach (GameplayAbilityAuthoringBlackboardDeclaration item in model.Declarations.Values)
+            {
+                string inputValueId = item.Declaration.InputValueId;
+                if (string.IsNullOrWhiteSpace(inputValueId))
+                    continue;
+                DeclareInput(
+                    ProgramCatalogEntryKind.InputValue,
+                    inputValueId,
+                    owners.InputProviderOwnerId,
+                    BlackboardSource(item, "input-binding"),
+                    m_Index.InputValues,
+                    InputValueFields(m_Builder, BlackboardSource(item, "input-binding"), owners.InputProviderOwnerId, inputValueId, item.Declaration.ValueType));
+            }
             return owners;
         }
 
@@ -203,7 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     input.ProviderOwnerId,
                     source,
                     m_Index.InputValues,
-                    InputValueFields(m_Builder, source, input));
+                    InputValueFields(m_Builder, source, input.ProviderOwnerId, input.InputId));
                 return;
             }
             if (node is BtsmtlSkillMoveFacingAngleFlowNode move)
@@ -384,27 +397,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             HashSet<string> index,
             IEnumerable<ProgramCatalogField> extraFields = null)
         {
-            DeclareIdentity(kind, identity, providerOwner, source, index, kind == ProgramCatalogEntryKind.InputRequest ? "input:request" : "input:value", extraFields: extraFields);
+            DeclareIdentity(kind, identity, providerOwner, source, index, kind == ProgramCatalogEntryKind.InputRequest ? "input:request" : "input:value", 2, extraFields);
         }
 
-        static IEnumerable<ProgramCatalogField> InputValueFields(GameplayAbilitySemanticBuilder builder, SimulationSourceLocation source, IBtsmtlSkillInputNode input)
+        static IEnumerable<ProgramCatalogField> InputValueFields(
+            GameplayAbilitySemanticBuilder builder,
+            SimulationSourceLocation source,
+            string owner,
+            string inputId,
+            Type declaredValueType = null)
         {
-            string owner = input.ProviderOwnerId;
             string path = CharacterSkillProviderOwners.IsAssetOwner(owner)
                 ? AssetDatabase.GUIDToAssetPath(owner.Substring(CharacterSkillProviderOwners.AssetPrefix.Length))
                 : string.Empty;
             CharacterInputProfile profile = AssetDatabase.LoadAssetAtPath<CharacterInputProfile>(path);
             CharacterInputValueDefinition definition = profile == null
                 ? null
-                : profile.InputValues.FirstOrDefault(value => value != null && value.InputValueId == input.InputId);
+                : profile.InputValues.FirstOrDefault(value => value != null && value.InputValueId == inputId);
             if (definition == null)
+            {
+                if (declaredValueType == typeof(ActionTargetSnapshot))
+                {
+                    yield return builder.ConstantField(
+                        source,
+                        "ValueType",
+                        (int)ProgramInputValueKind.ActionTargetSnapshot);
+                }
                 yield break;
+            }
             ProgramInputValueKind kind = definition.ValueType switch
             {
                 CharacterInputValueType.Bool => ProgramInputValueKind.Boolean,
                 CharacterInputValueType.Float => ProgramInputValueKind.Scalar,
                 CharacterInputValueType.Vector2 => ProgramInputValueKind.Vector2,
-                _ => throw new InvalidOperationException($"Input value '{input.InputId}' has unsupported type '{definition.ValueType}'.")
+                _ => throw new InvalidOperationException($"Input value '{inputId}' has unsupported type '{definition.ValueType}'.")
             };
             yield return builder.ConstantField(source, "ValueType", (int)kind);
         }
@@ -484,6 +510,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return SemanticDataDocument.Empty;
             }
         }
+
+        static SimulationSourceLocation BlackboardSource(GameplayAbilityAuthoringBlackboardDeclaration item, string suffix) =>
+            new(
+                typeof(GameplayAbilityDefinition).FullName,
+                item.GraphId,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                $"{item.Route}/{suffix}",
+                contentHash: item.ContentHash);
 
         static SimulationSourceLocation Source(
             GameplayAbilityAuthoringCompilationModel model,

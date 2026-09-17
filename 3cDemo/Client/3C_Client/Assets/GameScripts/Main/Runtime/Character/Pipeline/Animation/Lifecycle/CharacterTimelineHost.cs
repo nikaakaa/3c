@@ -54,7 +54,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
     internal sealed class CharacterTimelineTreeClipService : ITimelineRuntimeTreeClipService
     {
+        sealed class ActiveTreeClip
+        {
+            public string ClipAuthoringId;
+            public string TreeGraphId;
+            public int Cycle;
+            public IAbilityTreeClipInvoker Invoker;
+        }
+
         readonly CharacterTimelineHost m_Host;
+        readonly Dictionary<ulong, List<ActiveTreeClip>> m_ActiveClips = new();
 
         internal CharacterTimelineTreeClipService(CharacterTimelineHost host)
         {
@@ -65,8 +74,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (request.EventKind == TimelineRuntimeTreeClipEventKind.Update)
                 return true;
+            if (!m_Host.IsAbilityRuntimePlayback(context.Playback.Handle))
+                return true;
             IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker
                 ?? throw new InvalidOperationException($"Timeline TreeClip '{request.ClipAuthoringId}' requires an active Ability invoker.");
+            if (request.EventKind == TimelineRuntimeTreeClipEventKind.Enter)
+            {
+                if (!m_ActiveClips.TryGetValue(context.Playback.Handle.Value, out List<ActiveTreeClip> clips))
+                {
+                    clips = new List<ActiveTreeClip>();
+                    m_ActiveClips[context.Playback.Handle.Value] = clips;
+                }
+                clips.RemoveAll(value => value.ClipAuthoringId == request.ClipAuthoringId && value.Cycle == request.Cycle);
+                clips.Add(new ActiveTreeClip
+                {
+                    ClipAuthoringId = request.ClipAuthoringId,
+                    TreeGraphId = request.TreeGraphId,
+                    Cycle = request.Cycle,
+                    Invoker = invoker
+                });
+            }
+            else if (request.EventKind == TimelineRuntimeTreeClipEventKind.Exit)
+            {
+                RemoveClip(context.Playback.Handle.Value, request.ClipAuthoringId, request.Cycle);
+            }
             var invocation = new AbilityTreeClipInvocation(
                 request.ClipAuthoringId,
                 request.TreeGraphId,
@@ -76,12 +107,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return invoker.InvokeTreeClip(invocation);
         }
 
-        public void Discard(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context) { }
+        public void Discard(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context)
+        {
+            if (request.EventKind == TimelineRuntimeTreeClipEventKind.Enter)
+                RemoveClip(context.Playback.Handle.Value, request.ClipAuthoringId, request.Cycle);
+        }
+
         public void Commit(TimelineRuntimeStepContext context) { }
         public void DiscardStep(TimelineRuntimeStepContext context) { }
         public bool ConsumeStop(TimelineRuntimeStopRequest request) => true;
-        public void CommitStop(TimelineRuntimeStopRequest request) { }
-        public void DiscardStop(TimelineRuntimeStopRequest request) { }
+
+        public void CommitStop(TimelineRuntimeStopRequest request)
+        {
+            if (!m_ActiveClips.TryGetValue(request.Handle.Value, out List<ActiveTreeClip> clips))
+                return;
+            m_ActiveClips.Remove(request.Handle.Value);
+            foreach (ActiveTreeClip clip in clips)
+            {
+                var invocation = new AbilityTreeClipInvocation(
+                    clip.ClipAuthoringId,
+                    clip.TreeGraphId,
+                    AbilityTreeClipHook.OnDestroy);
+                if (!clip.Invoker.InvokeTreeClip(invocation))
+                    continue;
+            }
+        }
+
+        public void DiscardStop(TimelineRuntimeStopRequest request) =>
+            m_ActiveClips.Remove(request.Handle.Value);
+
+        void RemoveClip(ulong handle, string clipAuthoringId, int cycle)
+        {
+            if (!m_ActiveClips.TryGetValue(handle, out List<ActiveTreeClip> clips))
+                return;
+            clips.RemoveAll(value => value.ClipAuthoringId == clipAuthoringId && value.Cycle == cycle);
+            if (clips.Count == 0)
+                m_ActiveClips.Remove(handle);
+        }
     }
 
     public enum CharacterTimelinePlaybackSourceKind : byte
@@ -412,6 +474,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 new TimelinePlaybackStopContext(TimelinePlaybackStopCause.SelfAbort, 0));
             m_PreviewHandle = TimelinePlaybackHandle.Invalid;
             return true;
+        }
+
+        internal bool IsAbilityRuntimePlayback(TimelineRuntimePlaybackHandle handle)
+        {
+            for (int i = 0; i < m_ActivePlaybacks.Count; i++)
+            {
+                if (m_ActivePlaybacks[i].Handle.Value == handle.Value &&
+                    m_ActivePlaybacks[i].SourceKind == CharacterTimelinePlaybackSourceKind.AbilityRuntime)
+                    return true;
+            }
+            return false;
         }
 
         public bool PreviewIsActive

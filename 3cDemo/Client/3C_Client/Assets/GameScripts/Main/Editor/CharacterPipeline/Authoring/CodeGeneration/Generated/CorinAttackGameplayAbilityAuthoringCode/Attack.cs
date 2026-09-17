@@ -1,5 +1,4 @@
 using System;
-using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;
 using UnityAnimationClip = UnityEngine.AnimationClip;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Control.Authoring;

@@ -1,7 +1,4 @@
-using System;
-using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;
 using FlowCanvas.Nodes;
-using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEngine;
 
@@ -51,13 +48,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var node208 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph44, typeof(BtsmtlSkillConditionResultFlowNode), "80c40d52-a358-4baa-b990-8f4961743d36", "条件结果", new Vector2(600f, 180f));
             var node209 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph44, typeof(BtsmtlSkillBlackboardScalarFlowNode), "b6cfc921-c2f8-4f9b-bd12-423cf1e954af", "StopThreshold", new Vector2(-520f, 45f));
             var node211 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph44, typeof(BtsmtlSkillInputMagnitudeFlowNode), "c8a6ff82-347d-4a84-993e-5c64a52f5409", "MoveAxis Magnitude", new Vector2(-520f, 0f));
-            BtsmtlSkillAuthoringContract.Apply(node165, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Attack/CorinAttackActionProfile.asset", 11400000L)), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
+            BtsmtlSkillAuthoringContract.Apply(node165, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", rootParts.asset4), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
             BtsmtlSkillAuthoringContract.Apply(node168, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "ComboAccept") });
             BtsmtlSkillAuthoringContract.Apply(node170, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "Attack"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
             BtsmtlSkillAuthoringContract.Apply(node185, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", "6225401bc79441dca5eaab16bdbc0644"), new BtsmtlSkillAuthoringFieldValue("factContext", null), new BtsmtlSkillAuthoringFieldValue("ownerId", "00ec42f6d5ede195dcf13e4e27fe7933"), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
             BtsmtlSkillAuthoringContract.Apply(node190, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", "f3f45c6944c247539e29c5b37ba6dede"), new BtsmtlSkillAuthoringFieldValue("factContext", null), new BtsmtlSkillAuthoringFieldValue("ownerId", "d0c0d504787f8e6989ba2bae6aa1a49a"), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
             BtsmtlSkillAuthoringContract.Apply(node195, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", "fd926414f6864445b2c3c2050a158d04"), new BtsmtlSkillAuthoringFieldValue("factContext", null), new BtsmtlSkillAuthoringFieldValue("ownerId", "d0c0d504787f8e6989ba2bae6aa1a49a"), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
-            BtsmtlSkillAuthoringContract.Apply(node198, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Dodge/CorinDodgeActionProfile.asset", 11400000L)), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
+            BtsmtlSkillAuthoringContract.Apply(node198, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", rootParts.asset22), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
             BtsmtlSkillAuthoringContract.Apply(node201, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "RecoveryEarly") });
             BtsmtlSkillAuthoringContract.Apply(node203, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "Dodge"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
             BtsmtlSkillAuthoringContract.Apply(node206, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "RecoveryLate") });

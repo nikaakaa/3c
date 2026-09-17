@@ -1,5 +1,4 @@
 using System;
-using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
@@ -18,9 +17,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             var parts = new RootParts();
             parts.asset = context.ResolveExternalAsset<BtsmtlSkillFlowGraph>("Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.SharedGraph.1eac26e4ad67ccfd6cfe9342d2ea92d7.asset", 11400000L);
-            var asset4 = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Attack/CorinAttackActionProfile.asset", 11400000L);
+            parts.asset4 = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Attack/CorinAttackActionProfile.asset", 11400000L);
+            parts.asset22 = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Dodge/CorinDodgeActionProfile.asset", 11400000L);
             parts.graph = BtsmtlSkillAuthoringCode.EnsureAbilityRoot(context, "Attack", "00ec42f6d5ede195dcf13e4e27fe7933", "Attack");
-            var node1 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph, typeof(BtsmtlSkillStateMachineFlowNode), "09a906ca-f0e7-467a-a0e2-4d7b47cd0896", "Attack Combo StateMachine", new Vector2(75.93559f, 118.6008f));
+            var node1 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph, typeof(BtsmtlSkillStateMachineFlowNode), "09a906ca-f0e7-467a-a0e2-4d7b47cd0896", "Attack Combo StateMachine", new Vector2(470f, 54.00002f));
             var node = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph, typeof(BtsmtlSkillRootFlowNode), "ec373e53-0dab-46f2-b04e-3423bbcf423c", "技能入口", new Vector2(-204f, 120.6666f));
             parts.stateMachine = BtsmtlSkillAuthoringCode.EnsureStateMachine(parts.graph, "afcdf84a5a348d0ec306739cfdcaa294", "Attack Combo StateMachine", "00ec42f6d5ede195dcf13e4e27fe7933", "09a906ca-f0e7-467a-a0e2-4d7b47cd0896");
             var state7 = BtsmtlSkillAuthoringCode.EnsureNativeState(parts.stateMachine, typeof(BtsmtlSkillNativeAnyState), "1a9b7ff7-0035-4684-bc92-a327e4c73217", "任意状态", new Vector2(69.33331f, 236f));
@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             endRule2.Configure(GameplayAbilityEndTrigger.ExecutionCompleted, ActionLifecycleTransitionType.Complete, "", "TimelineCompleted");
             var endRule3 = new GameplayAbilityEndRule();
             endRule3.Configure(GameplayAbilityEndTrigger.AbortRequested, ActionLifecycleTransitionType.Abort, "", "TreeAbort");
-            BtsmtlSkillAuthoringCode.ConfigureAbility(context, "", Array.Empty<GameplayTagId>(), asset4, Array.Empty<GameplayEffectDefinition>(), new[] { endRule, endRule1, endRule2, endRule3 }, Array.Empty<GameplayAbilitySubgraphDependencyConfiguration>(), Array.Empty<string>(), "Attack", true, "ActionTarget", "", false);
+            BtsmtlSkillAuthoringCode.ConfigureAbility(context, "", Array.Empty<GameplayTagId>(), parts.asset4, Array.Empty<GameplayEffectDefinition>(), new[] { endRule, endRule1, endRule2, endRule3 }, Array.Empty<GameplayAbilitySubgraphDependencyConfiguration>(), Array.Empty<string>(), "Attack", true, "ActionTarget", "", false);
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph, "1edc27e65f454837b415895f4b808048", "StopThreshold", typeof(Single), 0.05f, PipelineBlackboardVariableScope.Character, PipelineBlackboardVariableLifetime.Config, "Locomotion", null, null);
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph, "361015344dc440ee81193dd42bca2251", "Attack3Hit", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Windows", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "Hit", "Attack3Hit", 3001UL));
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph, "423b4949895d4fd38d25ee70e4b70602", "Attack1Hit", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Windows", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "Hit", "Attack1Hit", 1001UL));
@@ -272,6 +272,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             internal BtsmtlSkillNativeConnection stateEdge18;
             internal BtsmtlSkillNativeConnection stateEdge19;
             internal BtsmtlSkillFlowGraph asset;
+            internal GameplayAbilityAdmissionProfile asset4;
+            internal GameplayAbilityAdmissionProfile asset22;
         }
     }
 }

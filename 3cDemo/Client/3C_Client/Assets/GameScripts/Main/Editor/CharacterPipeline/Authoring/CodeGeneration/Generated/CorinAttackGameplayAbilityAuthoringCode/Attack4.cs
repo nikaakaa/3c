@@ -1,7 +1,4 @@
-using System;
-using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;
 using FlowCanvas.Nodes;
-using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEngine;
 
@@ -57,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var node175 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph37, typeof(BtsmtlSkillConditionResultFlowNode), "cee06b3f-d862-4d69-9a7d-3079f0e8322b", "条件结果", new Vector2(600f, 180f));
             var node178 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph37, typeof(BtsmtlSkillActionRequestFlowNode), "d142330f-66ab-46c0-a74d-bf4e5db6cfea", "Has Dodge Request", new Vector2(-360f, 0f));
             BtsmtlSkillAuthoringContract.Apply(node127, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "Attack"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
-            BtsmtlSkillAuthoringContract.Apply(node131, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Attack/CorinAttackActionProfile.asset", 11400000L)), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
+            BtsmtlSkillAuthoringContract.Apply(node131, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", rootParts.asset4), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
             BtsmtlSkillAuthoringContract.Apply(node132, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "ComboAccept") });
             BtsmtlSkillAuthoringContract.Apply(node141, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", "bf611f54e2cb477297162996345d8a34"), new BtsmtlSkillAuthoringFieldValue("factContext", null), new BtsmtlSkillAuthoringFieldValue("ownerId", "00ec42f6d5ede195dcf13e4e27fe7933"), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
             BtsmtlSkillAuthoringContract.Apply(node146, new[] { new BtsmtlSkillAuthoringFieldValue("accessMode", "set"), new BtsmtlSkillAuthoringFieldValue("declarationId", "f2d1e42a70ee492784a4dbe30a1e014f"), new BtsmtlSkillAuthoringFieldValue("factContext", null), new BtsmtlSkillAuthoringFieldValue("ownerId", "b2fa5183fe82ae10d37b83f3d03c931c"), new BtsmtlSkillAuthoringFieldValue("valueType", "bool") });
@@ -66,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringContract.Apply(node159, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "RecoveryLate") });
             BtsmtlSkillAuthoringContract.Apply(node162, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "MoveAxis"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
             BtsmtlSkillAuthoringContract.Apply(node164, new[] { new BtsmtlSkillAuthoringFieldValue("declarationId", "1edc27e65f454837b415895f4b808048"), new BtsmtlSkillAuthoringFieldValue("ownerId", "00ec42f6d5ede195dcf13e4e27fe7933") });
-            BtsmtlSkillAuthoringContract.Apply(node173, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Dodge/CorinDodgeActionProfile.asset", 11400000L)), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
+            BtsmtlSkillAuthoringContract.Apply(node173, new[] { new BtsmtlSkillAuthoringFieldValue("admissionProfile", rootParts.asset22), new BtsmtlSkillAuthoringFieldValue("targetSnapshot", new BtsmtlSkillTargetSnapshotReference("b33c8e0cff9e4fd1a23ffc15768d7e43", "00ec42f6d5ede195dcf13e4e27fe7933")) });
             BtsmtlSkillAuthoringContract.Apply(node176, new[] { new BtsmtlSkillAuthoringFieldValue("windowType", "RecoveryEarly") });
             BtsmtlSkillAuthoringContract.Apply(node178, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "Dodge"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
             var edge58 = BtsmtlSkillAuthoringCode.EnsureFlowConnection(parts.graph27, node127, "m_Output", node128, "a", "eba41a97-036b-4806-98f5-fd20ac4a7332");

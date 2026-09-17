@@ -1,5 +1,3 @@
-using System;
-using ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration;
 
 namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 {

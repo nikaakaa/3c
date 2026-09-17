@@ -1168,8 +1168,14 @@ namespace BTSMTL.Timeline.Editor
                     return;
                 float duration = Mathf.Max(1f / m_Owner.FrameRate, (currentEndFrame - currentStartFrame) / (float)m_Owner.FrameRate);
                 if (trimStart)
-                    m_SourceStartTime = motion.SourceStartTime + (currentStartFrame - originalStartFrame) / (float)m_Owner.FrameRate;
-                m_SourceEndTime = m_SourceStartTime + duration;
+                    m_SourceStartTime = Mathf.Clamp(
+                        motion.SourceStartTime + (currentStartFrame - originalStartFrame) / (float)m_Owner.FrameRate,
+                        0f,
+                        motion.SourceEndTime - 1f / m_Owner.FrameRate);
+                m_SourceEndTime = Mathf.Clamp(
+                    m_SourceStartTime + duration,
+                    m_SourceStartTime + 1f / m_Owner.FrameRate,
+                    motion.SourceCurve.Duration);
                 RefreshReferenceCurves();
             }
 

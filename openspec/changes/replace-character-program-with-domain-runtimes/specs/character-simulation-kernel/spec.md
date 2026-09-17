@@ -10,6 +10,12 @@ SimulationKernel MUST提供无外部副作用的Evaluate与Finalize。Evaluate M
 - **THEN** Evaluate MUST产生未提交transaction与world request
 - **AND** Finalize MUST等待匹配world result后才Commit新状态并产生输出
 
+#### Scenario: Local Session推进一个角色
+
+- **WHEN** Standard Local Pipeline为当前Actor提交SimulationTick与portable input
+- **THEN** Evaluate MUST产生未提交transaction与WorldRequest
+- **AND** Finalize MUST等待匹配WorldSolverResult后才Commit新状态并产生输出
+
 
 ### Requirement: Character State 必须通过单一 Target Transaction推进
 
@@ -59,6 +65,12 @@ Session snapshot MUST聚合GameplayContentCatalogHash、每Actor 领域运行绑
 - **WHEN** Schedule Plan请求恢复一个ActorA正在Attack2、ActorB正在移动且包含合法Pipeline participant状态的snapshot
 - **THEN** 两个typed Character state、World state与Pipeline state MUST在同一restore transaction中恢复
 - **AND** 任一payload、codec identity或PipelineHash失败时当前正式world MUST保持不变
+
+#### Scenario: 恢复双Actor攻击状态
+
+- **WHEN** Schedule请求恢复Actor A正在Attack2、Actor B正在移动且包含合法Pipeline participant state的Snapshot
+- **THEN** 两个typed Character state、World state与Pipeline state MUST在同一restore transaction中恢复
+- **AND** 任一payload、codec identity或PipelineHash失败时正式world MUST保持不变
 
 
 ### Requirement: State Hash 必须区分 Character 与 World 有效性

@@ -122,6 +122,12 @@ Float32 与 Fixed 角色 MUST按相同动画配置、原生 Pose 图、Rig、动
 - **THEN** Preview与Runtime preparation MUST停止
 - **AND** MUST不创建临时Plan、旧动画运行绑定 fallback或独立PlayableGraph
 
+#### Scenario: Presentation binding变为Stale
+
+- **WHEN** authoring revision变化而Presentation binding尚未显式Preparation
+- **THEN** Preview与Runtime preparation MUST停止
+- **AND** MUST不创建临时Plan、旧Presentation binding fallback或独立PlayableGraph
+
 
 ### Requirement: Locomotion Phase映射必须编入source-local计划
 

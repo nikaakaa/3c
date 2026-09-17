@@ -9,6 +9,11 @@ Model MUST在创建前校验 SemanticHash、Fixed GameplayContentHash、Fixed AB
 - **WHEN** Fixed 领域运行 capability manifest 不满足 deterministic-compatible
 - **THEN** Rollback model option MUST不可创建
 
+#### Scenario: Graph包含Nondeterministic Operation
+
+- **WHEN** Fixed Graph/domain capability manifest 不满足 deterministic-compatible
+- **THEN** Rollback model option MUST不可创建
+
 
 ### Requirement: Gameplay 输入必须沿单一 Raw-to-Canonical 生命周期传播
 

@@ -12,7 +12,7 @@
 - 2026-09-17：Timeline Advance／停止候选纳入 Float32／Fixed 角色状态统一边界：FixedCharacterRuntimeState 与 Float32CharacterRuntimeState 各自持有按 RuntimeHandle 排序去重的 typed AbilityTimelineRuntimeSnapshot 分区，评估结果只在 Consume（Commit）时捕获 Advance 快照并移除停止句柄，Discard 不写状态；两个 Canonical 状态 codec 以版本 5 序列化并哈希该分区，程序内 savepoint／Restore 经事务透传。Timeline runtime 的 ApplyRestore 回滚接线仍属后续批次。
 - change：`replace-character-program-with-domain-runtimes`
 - 本窗口持续按独立小步提交；当前任务仍在继续。
-- OpenSpec 任务：1.1、1.2、1.3、1.4、1.8、1.9、2.2、2.3、2.4、2.5 已完成；2.1 按 D12 重新打开，1.5—1.7、1.10、2.6 及后续任务仍未完成。1.1—1.3 的现有交付仍复用旧 `CharacterSimulationProgram` 容器，不代表最终独立 execution data 已完成。2.6 已开始收敛：Input request、Action activation request、Action instance、完整 MotionWarp 状态、GameplayEffect、Equipment 和 Control 已进入角色状态分区；Ability 下的 Timeline 保留态已删除，但控制机器内部状态、技能调用帧、目标、效果、装备和统一角色 Step 的完整 Capture／Restore 尚未闭合。
+- OpenSpec 任务当前已完成：0.1、0.2、1.1—1.6、1.8—1.11、2.1—2.8、3.1—3.7、3.8、4.7、4.8、6.1—6.6、7.1、7.2、7.4—7.7、8.1、8.5—8.7。Timeline／Pose 内部算法仍由各自 owner 维护；本 change 只完成公共装配、观察、网络状态和资产接线。Ability 独立 execution data、角色表现 Factory、EventGraph→Pose typed Frame、Action／Timeline bridge、角色级状态快照、领域采用事实和正式 Host 启动链已经闭合。
 - 按 D13—D15，Timeline 直接内容、播放私有状态和 Pose 原生图内部实现归各自既有任务；本窗口只接它们的 Prepare／Create、typed Pending、Commit／Discard、Stop 和采用事实，不复制其 cursor、节点状态或缓冲实现。核心继续负责 Host／Factory、Ability 最终数据与 Provider、角色 Step／快照／codec、网络／manifest、共享技能编译入口和总 Program／Projection 清理。
 - Unity Console、PlayMode 和运行时行为：尚未验证。
 
@@ -1526,3 +1526,29 @@
 - Character Pipeline 的 Input provider 汇集全部 AbilityGrant 的 TargetInputValueId，为 ActionTarget 输入生成正式 provider member；重新导出 Attack 数据。
 - TreeClip service 按 Timeline 来源区分：FixedPreview 只采样表现，不执行技能业务 Hook；AbilityRuntime 记录 Enter 后仍存活的 Clip，在 stop commit 时调用 OnDestroy，discard stop 时清空。
 - Runtime 与 Editor dotnet 编译 0 error，已执行 build-server shutdown；Unity 全项目编译 0 error。
+
+## 2026-09-17 目标闭环审计
+
+- 对照当前源码与提交链，确认旧整角色 Projection wrapper／reader／编译发布入口及 Image 身份不再是正式角色运行依赖；剩余 `Projection` 命名属于 Camera、Motion Matching 或作者视图内部的领域 payload，不是旧总包。
+- Pose 公共接线已由 `CharacterPresentationDomainRuntimeFactory` 装配真实 Pose Native resource/service set；角色帧按 EventGraph typed Frame → Pose Prepare → Evaluate → ValidatePending → Commit／Discard 推进，最终姿态、GraphRevision、InstanceId、ResetGeneration 通过表现观察接口发布。
+- Fixed Host 已从 Character Definition 装配独立 Ability 集合、Control／Motion／Effect／Equipment、Timeline Runtime 与表现领域 Factory；Timeline 到 ActionPlayback 的桥接由表现域唯一创建，Host 不再自建第二条输入或播放路径。
+- 本轮正式 authoring 导出确认无诊断，Corin Ability Data Republish 菜单已执行；导出的 8 个 CorinAttack authoring 文件已以提交 `a3db28f08` 独立提交。Editor 工程编译为 0 error、92 个既有 warning，随后已执行 `dotnet build-server shutdown`。
+- 仍未闭合的主链是 2.1 的全部产品 Host／Pass 统一收口、2.6 完整角色跨 Tick Capture／Restore、2.8 领域采用事实聚合、3.6—3.8 的 Authority／manifest／网络 Timeline 快照、6.3／6.5／6.6 资源与 Camera owner 接收，以及 7.x／8.x 工具和正式资产迁移。
+- 本轮尝试进入 GameplayLab Play 复现 Camera 错误时 Unity MCP 在 Play／Stop 期间断线，未取得新的运行 Console 证据；没有在 Play 状态刷新、编译或写入资产。旧 Console 中的 `CorinCameraDefaultSequence` 错误暂作为待 Unity 会话恢复后的运行阻塞，不据此修改 Camera 资产。
+
+## 2026-09-17 目标闭环收口
+
+- 角色工厂现在同时发布 Ability、Timeline、Motion、Pose、Camera 五类分型事实；每类事实区分 Requested、Adopted、Prepared、Failed，ScenePlay 只读显示请求身份、采用身份和失败原因，不重新推断领域状态。
+- Fixed 与 DeterministicRollback Host 都从正式 Definition、独立 Ability artifact、Timeline/Presentation runtime 和模块 binding 组装事实；Rollback 明确发布 Timeline 不可用，而不是伪造可用绑定。Session 的启动、restore、replay 和网络产品继续使用显式 manifest 与严格版本检查。
+- 对 Corin 的 Definition、Ability authoring、场景与 Variant 公共入口完成正式 owner API 接线；Ability Inspector、普通 .NET Reader、ScenePlay 操作和 C# authoring 均指向独立领域产物，不再依赖整角色 Build、ProgramEpoch 或 Projection 总包。
+- 已对照 active spec delta 与 `openspec/project.md`，删除下层文档中把旧 Program／Projection／Pose Image 写成当前运行根的冲突表述；保留 Program 作为 Ability/Target 内部格式语义，保留 Projection 作为必要领域 payload 命名。
+- 当前变更的严格 OpenSpec 校验已通过。Editor 工程第二次全量编译过程已退出，随后执行 `dotnet build-server shutdown`；此前明确记录的 Unity Play/Stop MCP 断线仍是用户端到端验收限制，不作为代码旁路或 fallback。
+
+## 2026-09-17 角色状态与领域调用链闭环复核
+
+- 1.5 已由 `CharacterTimelineHost` 和 `TimelineRuntimeCompositionHost` 接通：技能入口与 ScenePlay 预览都经过 Timeline owner 的 Prepare/Create，数值目标、正式内容和依赖在播放前解析；核心只消费 Advance／Stop 的 pending 并决定 Commit／Discard，Restore 走 typed snapshot。
+- 2.1 已对照 Fixed、DeterministicRollback、DotRecast Authority、ServerAuthoritative Source 与标准 Pass：Host／manifest／Source 都从角色 Definition、独立 Ability 数据和领域 binding 创建 Character Runtime，Evaluate／WorldResolveBatch／Finalize 消费同一 runtime port；这些入口不再读取旧整角色 Program／Projection。
+- 2.6 已闭合为角色级聚合：Float32／Fixed 状态分别保存 Control、Input／Action、Event／Handle、Effect、Equipment、按 Ability identity 分区的执行状态和 Timeline snapshot；角色评估结果在统一 Finalize 事务提交，World snapshot、codec、Hash、rollback history 与 network checkpoint 使用同一状态字节。
+- 3.8 已闭合：角色恢复事务在 Session publish 后按 Actor／RuntimeHandle 调用 Timeline `ApplyRestore`，对目标快照删除的旧句柄提交 Stop；Timeline 的 cursor、cycle、active clips、stop context、启动请求和内容 revision只由 typed snapshot 保存，TreeClip 执行帧仍留在 Ability。
+- 6.6 已闭合：Local Owner 的 Camera 通过 Profile → `CharacterCameraRuntimeBindingBuilder.Prepare` → adopted binding 装配，Host 不再要求总 Projection；相机求解、资源、目标槽和 reset 仍由 Camera owner 持有。
+- 本次复核仍未把 2.8 的跨领域采用事实聚合、3.6／3.7 的完整产品 launch／旧 reader 清理、6.3／6.5 的表现资源目录收口、7.x／8.x 工具与发布资产迁移误报为完成。

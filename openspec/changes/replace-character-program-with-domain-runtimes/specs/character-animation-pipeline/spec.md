@@ -108,6 +108,12 @@ Action lifecycle MUST只以所选producer的第一份匹配generation的合法vi
 - **THEN** Job MUST把结果直接写入Pending Native/Pose页
 - **AND** MUST不先把Committed Pose页复制为Pending页
 
+#### Scenario: Pose Graph产生下一帧Pose
+
+- **WHEN** 原生Pose图实例在当前Frame求值全部活跃Pose节点
+- **THEN** Job MUST把结果直接写入Pending Native/Pose页
+- **AND** MUST不先把Committed Pose页复制为Pending页
+
 
 ### Requirement: Animancer Evaluate必须是唯一不可逆提交门槛
 

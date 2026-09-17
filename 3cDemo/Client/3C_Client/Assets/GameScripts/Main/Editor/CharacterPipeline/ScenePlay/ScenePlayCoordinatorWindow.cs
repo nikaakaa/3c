@@ -105,6 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 EditorGUILayout.LabelField("Definition", m_CharacterHost.CharacterDefinition ? m_CharacterHost.CharacterDefinition.name : "None");
                 var profile = m_CharacterHost.AnimationPresentationProfile;
                 EditorGUILayout.LabelField("AnimationProfile", profile ? profile.name : "None");
+                DrawDomainFacts();
                 DrawPresentationObservation();
             }
             else
@@ -146,6 +147,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             EditorGUILayout.LabelField("PoseResetGeneration", observation.PoseResetGeneration.ToString());
             EditorGUILayout.LabelField("PoseBones", observation.PoseBoneCount.ToString());
             EditorGUILayout.LabelField("PoseContributions", observation.PoseContributionCount.ToString());
+        }
+
+        void DrawDomainFacts()
+        {
+            CharacterDomainRuntimeAssemblyFacts facts = m_CharacterHost.DomainFacts;
+            if (facts == null)
+            {
+                EditorGUILayout.HelpBox("领域采用事实尚未随角色注册发布。", MessageType.None);
+                return;
+            }
+            EditorGUILayout.LabelField("Domain Assembly Facts", EditorStyles.boldLabel);
+            for (int i = 0; i < facts.Facts.Count; i++)
+            {
+                CharacterDomainRuntimeFact fact = facts.Facts[i];
+                string identity = string.IsNullOrEmpty(fact.AdoptedIdentity)
+                    ? fact.RequestedIdentity
+                    : fact.AdoptedIdentity;
+                string detail = string.IsNullOrEmpty(fact.FailureReason)
+                    ? identity
+                    : $"{identity} | {fact.FailureReason}";
+                EditorGUILayout.LabelField(fact.Kind.ToString(), $"{fact.State} | {detail}");
+            }
         }
 
         void DrawAbilityTriggers()

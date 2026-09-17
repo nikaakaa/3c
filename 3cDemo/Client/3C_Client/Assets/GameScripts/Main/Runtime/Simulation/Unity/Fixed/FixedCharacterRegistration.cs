@@ -24,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly FixedSimulationActorBinding m_ActorBinding;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
         ICharacterPresentationDomainRuntime m_PresentationRuntime;
+        readonly CharacterDomainRuntimeAssemblyFacts m_DomainFacts;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
@@ -54,6 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             IUnityFixedCharacterControlSourceRuntime controlSource,
             FixedUnityPresentationOutputAdapter presentationOutput,
             ICharacterPresentationDomainRuntime presentationRuntime,
+            CharacterDomainRuntimeAssemblyFacts domainFacts,
             CharacterRootHierarchyBinding rootHierarchy,
             RuntimeDiagnosticsContext diagnosticsContext,
             RuntimeDiagnosticsTarget diagnosticsTarget,
@@ -87,6 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ControlSource = controlSource ?? throw new ArgumentNullException(nameof(controlSource));
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
+            m_DomainFacts = domainFacts ?? throw new ArgumentNullException(nameof(domainFacts));
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
@@ -117,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public SimulationOutputRouteDescriptor OutputRoute { get; private set; }
         public IFixedCharacterControlSourceRuntime FixedControlSource => m_ControlSource;
         public ICharacterPresentationDomainRuntime PresentationRuntime => m_PresentationRuntime;
+        public CharacterDomainRuntimeAssemblyFacts DomainFacts => m_DomainFacts;
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
         public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsAdapter;
         public bool SupportsPresentationCheckpointCapture =>

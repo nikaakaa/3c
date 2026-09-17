@@ -139,6 +139,35 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 poseComposed ? pose.CompletionIdentity : 0);
         }
 
+        public CharacterDomainRuntimeAssemblyFacts CaptureDomainFacts()
+        {
+            var facts = new List<CharacterDomainRuntimeFact>
+            {
+                m_PoseDomain != null && m_PoseDomain.IsAdopted
+                    ? new CharacterDomainRuntimeFact(
+                        CharacterDomainRuntimeFactKind.Pose,
+                        CharacterDomainRuntimeFactState.Adopted,
+                        $"pose:{PoseGraphRevision}",
+                        $"pose:{PoseGraphRevision}:{PoseInstanceId}:{PoseResetGeneration}",
+                        string.Empty)
+                    : new CharacterDomainRuntimeFact(
+                        CharacterDomainRuntimeFactKind.Pose,
+                        CharacterDomainRuntimeFactState.Unavailable,
+                        "pose",
+                        string.Empty,
+                        "Pose Native domain is not installed."),
+                m_Camera != null
+                    ? m_Camera.CaptureDomainFact()
+                    : new CharacterDomainRuntimeFact(
+                        CharacterDomainRuntimeFactKind.Camera,
+                        CharacterDomainRuntimeFactState.Unavailable,
+                        "camera",
+                        string.Empty,
+                        "Camera domain is owner-only for this presentation role.")
+            };
+            return new CharacterDomainRuntimeAssemblyFacts(facts);
+        }
+
         public void CaptureBodyTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals) =>
             m_Body.CaptureTransaction(intervals);
 

@@ -133,6 +133,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CameraBasisSnapshot BasisSnapshot => m_Rig.BasisSnapshot;
 
+        internal CharacterDomainRuntimeFact CaptureDomainFact() =>
+            new CharacterDomainRuntimeFact(
+                CharacterDomainRuntimeFactKind.Camera,
+                m_Adopted.Adopted
+                    ? CharacterDomainRuntimeFactState.Adopted
+                    : CharacterDomainRuntimeFactState.Failed,
+                $"camera:{m_Binding.ProfileId}:{m_Binding.ProfileRevision}",
+                m_Adopted.Adopted
+                    ? $"camera:{m_Adopted.ProfileId}:{m_Adopted.ProfileRevision}:{m_Adopted.InstanceId}"
+                    : string.Empty,
+                m_Adopted.Adopted ? string.Empty : m_Adopted.FailureMessage);
+
         internal void SetInitialState(in CameraInitialState state)
         {
             RequireAlive();

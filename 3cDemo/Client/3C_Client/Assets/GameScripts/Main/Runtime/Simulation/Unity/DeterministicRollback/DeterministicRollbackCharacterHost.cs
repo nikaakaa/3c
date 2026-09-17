@@ -60,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public CharacterAnimationRigBinding AnimationRigBinding => m_AnimationRigBinding;
         public Transform CameraFollowAnchor => m_CameraFollowAnchor;
         public Transform CameraAimAnchor => m_CameraAimAnchor;
+        public CharacterDomainRuntimeAssemblyFacts DomainFacts => m_Registration?.DomainFacts;
 
         public void ConfigureAnimationRigBinding(CharacterAnimationRigBinding binding)
         {
@@ -258,13 +259,35 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     cameraTargetBindings,
                     lookInput,
                     lookInputId,
-                    null,
+                    local ? characterDefinition.CameraProfile : null,
                     null,
                     null,
                     sessionHost,
                     diagnosticsContext,
                     true);
 
+                CharacterDomainRuntimeAssemblyFacts domainFacts =
+                    new CharacterDomainRuntimeAssemblyFacts(new[]
+                    {
+                        new CharacterDomainRuntimeFact(
+                            CharacterDomainRuntimeFactKind.Ability,
+                            CharacterDomainRuntimeFactState.Adopted,
+                            $"ability-set:{characterRuntime.AbilitySetSourceRevision}",
+                            $"ability-set:{characterRuntime.GameplayContentHash}",
+                            string.Empty),
+                        new CharacterDomainRuntimeFact(
+                            CharacterDomainRuntimeFactKind.Timeline,
+                            CharacterDomainRuntimeFactState.Unavailable,
+                            "timeline-set",
+                            string.Empty,
+                            "Deterministic Rollback Character Host has no Unity Timeline runtime binding."),
+                        new CharacterDomainRuntimeFact(
+                            CharacterDomainRuntimeFactKind.Motion,
+                            CharacterDomainRuntimeFactState.Adopted,
+                            $"motion:{actorBinding.BodyMotionBinding.SourceIdentity}:{actorBinding.BodyMotionBinding.ContentRevision}",
+                            $"motion:{actorBinding.BodyMotionBinding.BindingHash}",
+                            string.Empty)
+                    }).Merge(presentation.CaptureDomainFacts().Facts);
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
                     actorId,
                     presentation,
@@ -280,6 +303,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     input,
                     presentationOutput,
                     presentation,
+                    domainFacts,
                     rootHierarchy,
                     diagnosticsContext,
                     diagnosticsTarget,

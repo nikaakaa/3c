@@ -25,6 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly UnityFixedCharacterInputAdapter m_LocalInput;
         readonly FixedUnityPresentationOutputAdapter m_PresentationOutput;
         readonly ICharacterPresentationDomainRuntime m_PresentationRuntime;
+        readonly CharacterDomainRuntimeAssemblyFacts m_DomainFacts;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink m_DiagnosticsSink;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
@@ -59,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             UnityFixedCharacterInputAdapter localInput,
             FixedUnityPresentationOutputAdapter presentationOutput,
             ICharacterPresentationDomainRuntime presentationRuntime,
+            CharacterDomainRuntimeAssemblyFacts domainFacts,
             CharacterRootHierarchyBinding rootHierarchy,
             RuntimeDiagnosticsContext diagnosticsContext,
             RuntimeDiagnosticsTarget diagnosticsTarget,
@@ -94,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_LocalInput = localInput;
             m_PresentationOutput = presentationOutput ?? throw new ArgumentNullException(nameof(presentationOutput));
             m_PresentationRuntime = presentationRuntime ?? throw new ArgumentNullException(nameof(presentationRuntime));
+            m_DomainFacts = domainFacts ?? throw new ArgumentNullException(nameof(domainFacts));
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             DiagnosticsContext = diagnosticsContext ?? throw new ArgumentNullException(nameof(diagnosticsContext));
@@ -123,6 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public SimulationOutputRouteDescriptor OutputRoute { get; }
         public IFixedCharacterControlSourceRuntime RollbackInput => m_LocalInput;
         public IFixedPresentationCommitOutputPort PresentationOutput => m_PresentationOutput;
+        public CharacterDomainRuntimeAssemblyFacts DomainFacts => m_DomainFacts;
         public ThirdPersonSimulation.Fixed.ISimulationDiagnosticsSink SimulationDiagnostics => m_DiagnosticsSink;
         public bool SupportsPresentationCheckpointCapture =>
             m_PresentationRuntime.SupportsCheckpointCapture;

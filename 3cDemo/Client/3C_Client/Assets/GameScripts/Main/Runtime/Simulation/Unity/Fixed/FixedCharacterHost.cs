@@ -57,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public CinemachineCameraRigAdapter CameraRig => m_CameraRig;
         public CharacterPresentationRole PresentationRole => m_PresentationRole;
         public ICharacterPresentationDomainRuntime PresentationRuntime => m_Registration?.PresentationRuntime;
+        public CharacterDomainRuntimeAssemblyFacts DomainFacts => m_Registration?.DomainFacts;
         public FixedCharacterRegistration Registration => m_Registration;
         public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
         public Vector3 VisualPosition => m_RootHierarchy
@@ -270,6 +271,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     tickRate,
                     true,
                     TryGetComponent<ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost>(out var tlHost) ? tlHost : null);
+                timelineRuntime.Install();
+                CharacterDomainRuntimeAssemblyFacts domainFacts =
+                    new CharacterDomainRuntimeAssemblyFacts(new[]
+                    {
+                        new CharacterDomainRuntimeFact(
+                            CharacterDomainRuntimeFactKind.Ability,
+                            CharacterDomainRuntimeFactState.Adopted,
+                            $"ability-set:{characterRuntime.AbilitySetSourceRevision}",
+                            $"ability-set:{characterRuntime.GameplayContentHash}",
+                            string.Empty),
+                        timelineRuntime.CaptureDomainFact(),
+                        new CharacterDomainRuntimeFact(
+                            CharacterDomainRuntimeFactKind.Motion,
+                            CharacterDomainRuntimeFactState.Adopted,
+                            $"motion:{actorBinding.BodyMotionBinding.SourceIdentity}:{actorBinding.BodyMotionBinding.ContentRevision}",
+                            $"motion:{actorBinding.BodyMotionBinding.BindingHash}",
+                            string.Empty)
+                    }).Merge(presentation.CaptureDomainFacts().Facts);
                 var presentationOutput = new FixedUnityPresentationOutputAdapter(
                     actorId,
                     presentation,
@@ -285,6 +304,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     controlSource,
                     presentationOutput,
                     presentation,
+                    domainFacts,
                     rootHierarchy,
                     diagnosticsContext,
                     diagnosticsTarget,
@@ -518,6 +538,51 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 snapshot.StartTick);
             return restoredHandle;
         }
+
+        internal CharacterDomainRuntimeFact CaptureDomainFact()
+        {
+            if (m_TimelineAssets.Count == 0)
+            {
+                return new CharacterDomainRuntimeFact(
+                    CharacterDomainRuntimeFactKind.Timeline,
+                    CharacterDomainRuntimeFactState.Unavailable,
+                    "timeline-set",
+                    string.Empty,
+                    "Character Definition has no Timeline content.");
+            }
+
+            var revisionParts = new List<string> { "character-timeline-set/1" };
+            for (int i = 0; i < m_TimelineAssets.Count; i++)
+            {
+                TimelineAsset asset = m_TimelineAssets[i];
+                if (!asset || asset.Data == null)
+                {
+                    return new CharacterDomainRuntimeFact(
+                        CharacterDomainRuntimeFactKind.Timeline,
+                        CharacterDomainRuntimeFactState.Failed,
+                        $"timeline-set:{i}",
+                        string.Empty,
+                        $"Timeline content #{i} is invalid.");
+                }
+                revisionParts.Add(asset.Data.AuthoringId);
+                revisionParts.Add(TimelineAuthoringFingerprint.Compute(asset.Data));
+            }
+            string revision = StableHash.Compute(revisionParts.ToArray()).ToString();
+            return new CharacterDomainRuntimeFact(
+                CharacterDomainRuntimeFactKind.Timeline,
+                m_ContentInstalled
+                    ? CharacterDomainRuntimeFactState.Adopted
+                    : CharacterDomainRuntimeFactState.Prepared,
+                $"timeline-set:{revision}",
+                m_ContentInstalled ? $"timeline-set:{revision}" : string.Empty,
+                m_ContentInstalled ? string.Empty : "Timeline content has not been installed.");
+        }
+
+        internal void Install()
+        {
+            InstallContent();
+        }
+
         public AbilityTimelineStopResult Stop(int runtimeHandle)
         {
             CharacterTimelinePendingStop pending = m_Host.RequestStopTimelinePlayback(

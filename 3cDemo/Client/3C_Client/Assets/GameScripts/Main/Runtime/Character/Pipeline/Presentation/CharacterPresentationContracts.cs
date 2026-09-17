@@ -290,6 +290,92 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float FollowerYawCorrectionDegrees { get; }
     }
 
+    public enum CharacterDomainRuntimeFactKind : byte
+    {
+        Ability = 1,
+        Timeline = 2,
+        Pose = 3,
+        Camera = 4,
+        Motion = 5
+    }
+
+    public enum CharacterDomainRuntimeFactState : byte
+    {
+        Unavailable = 1,
+        Prepared = 2,
+        Adopted = 3,
+        Failed = 4
+    }
+
+    public readonly struct CharacterDomainRuntimeFact
+    {
+        public CharacterDomainRuntimeFact(
+            CharacterDomainRuntimeFactKind kind,
+            CharacterDomainRuntimeFactState state,
+            string requestedIdentity,
+            string adoptedIdentity,
+            string failureReason)
+        {
+            if (!Enum.IsDefined(typeof(CharacterDomainRuntimeFactKind), kind) ||
+                !Enum.IsDefined(typeof(CharacterDomainRuntimeFactState), state))
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            Kind = kind;
+            State = state;
+            RequestedIdentity = requestedIdentity ?? string.Empty;
+            AdoptedIdentity = adoptedIdentity ?? string.Empty;
+            FailureReason = failureReason ?? string.Empty;
+        }
+
+        public CharacterDomainRuntimeFactKind Kind { get; }
+        public CharacterDomainRuntimeFactState State { get; }
+        public string RequestedIdentity { get; }
+        public string AdoptedIdentity { get; }
+        public string FailureReason { get; }
+    }
+
+    public sealed class CharacterDomainRuntimeAssemblyFacts
+    {
+        readonly IReadOnlyList<CharacterDomainRuntimeFact> m_Facts;
+
+        public CharacterDomainRuntimeAssemblyFacts(IEnumerable<CharacterDomainRuntimeFact> facts)
+        {
+            var values = new List<CharacterDomainRuntimeFact>(facts ?? Array.Empty<CharacterDomainRuntimeFact>());
+            var kinds = new HashSet<CharacterDomainRuntimeFactKind>();
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (!kinds.Add(values[i].Kind))
+                    throw new ArgumentException($"Domain runtime fact kind '{values[i].Kind}' is duplicated.", nameof(facts));
+            }
+            values.Sort((left, right) => left.Kind.CompareTo(right.Kind));
+            m_Facts = values.AsReadOnly();
+        }
+
+        public IReadOnlyList<CharacterDomainRuntimeFact> Facts => m_Facts;
+
+        public bool TryGet(CharacterDomainRuntimeFactKind kind, out CharacterDomainRuntimeFact fact)
+        {
+            for (int i = 0; i < m_Facts.Count; i++)
+            {
+                if (m_Facts[i].Kind == kind)
+                {
+                    fact = m_Facts[i];
+                    return true;
+                }
+            }
+            fact = default;
+            return false;
+        }
+
+        public CharacterDomainRuntimeAssemblyFacts Merge(
+            IEnumerable<CharacterDomainRuntimeFact> additionalFacts)
+        {
+            var values = new List<CharacterDomainRuntimeFact>(m_Facts);
+            if (additionalFacts != null)
+                values.AddRange(additionalFacts);
+            return new CharacterDomainRuntimeAssemblyFacts(values);
+        }
+    }
+
     public readonly struct CharacterPresentationDomainObservation
     {
         public CharacterPresentationDomainObservation(
@@ -338,6 +424,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void Reset();
         CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics();
         CharacterPresentationDomainObservation CaptureObservation();
+        CharacterDomainRuntimeAssemblyFacts CaptureDomainFacts();
         bool SupportsCheckpointCapture { get; }
         bool SupportsCheckpointRestore { get; }
         bool TryCaptureCheckpoint(SimulationSessionCheckpoint checkpoint, out string error);

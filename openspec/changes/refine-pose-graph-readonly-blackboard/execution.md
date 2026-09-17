@@ -984,3 +984,14 @@ Input Pose source-local Foot curve -> FootPlacement internal weight read
 - `CharacterPoseNativeRoleRuntime` 与 `CharacterPoseNativeRoleSession` 现在暴露已安装实例的 `GraphId`、`GraphRevision` 和 `ResourceRevision`；Create/Replace 成功后消费方读取的是实际采用绑定，不再只能记录入口参数或推断版本。
 - 这些版本来自同一次 PreparedBinding，与 InstanceId、ResetGeneration 和 FrameLineage 同源；Replace 失败继续保留旧 session 的旧身份。
 - 本步只补 Pose 侧安装结果观察面，不改共享 Host，也不创建第二份版本状态；未运行 Unity、Build、Play 或资源刷新。
+
+## 2026-09-17 接通BlendStack装配并登记源层缺失接线
+
+- CharacterPoseNativeDomainServiceFactory 的 stackFactory 接线由 ThrowBlendStack 换成 CreateBlendStack，并删除该精确失败点；AnimationSlot 与 BlendStack 节点的栈运行时正式进入 SourceHandlerComposition（提交 372b2458b，ThirdPersonClient.Runtime 0 错误）。
+- 按 Corin 现图核对：LocomotionFullBodyPoseGraph 仅使用 ClipPlayer、AnimationSlot、StateMachine、FootPlacement、FullBodyIK、Inertialization、空间转换与 Output 节点；本次接线后图内全部源层节点类型都有正式装配，不再依赖未装配失败点。
+- 登记仍保留的精确失败（无正式服务，不得假成功）：
+  - LinkedPose、MotionMatching、HistoryCollector、EntryPose、RootOrientation 五个 ICharacterPoseNative*Source 接口全仓无实现类；ManagedSourceResourceCatalog 已有 RequireLinkedPose、CreateMotionMatchingSource、CreateHistoryCollector、RequireRootOrientationCurve 资源入口，但没有可交给 handler 的 source 实现。
+  - RegisterStateMachine 扩展与 ManagedSourceResourceCatalog.CreateStateMachine 均无调用方，PoseStateMachine 节点尚未有 handler 注册注入。
+  - ThrowActionSample、ThrowProviderSample：CharacterPoseSourceModule.PrepareFrameResult 全仓无调用方，Action/Provider 帧结果发布步骤不存在；PrepareNativeProviderSource 还要求 provider 样本为 MotionMatching kind。
+  - ThrowBlendSpace、ThrowSelectedPlayer、ThrowSelectedSample：BlendSpacePlan 的编译只存在于 Editor 侧（CharacterAnimationBlendSpaceWindow.TryResolveCompiledPlan、CharacterPresentationClipPlayerCompiler），运行时工厂没有 Asset→Plan 的正式服务；SelectedPlayer 还缺 PresentationPoseSourceProviderId 的 provider 注册。
+- 本步只改 Pose 域工厂与本 execution 记录；dotnet build ThirdPersonClient.Runtime.csproj（--disable-build-servers /nr:false /p:UseSharedCompilation=false）0 错误，结束已执行 dotnet build-server shutdown。

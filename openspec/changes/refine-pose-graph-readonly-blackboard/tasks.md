@@ -36,21 +36,21 @@ DOMAIN-BOUNDARIES-20260914-03执行补充见design第12节：3.8—3.14沿真实
 
 主方案D17已明确删除优先；a31c27b79删除了Pose编译Pass和Timeline发射主链。3.18不再等待共享Host或全部消费者切换后才删旧Image专属代码，混合文件保留有效算法和作者定义。共享Host／Barrier外壳由核心tasks 4.7接入，本任务提供真实服务和结果，不复制公共装配。
 
-- [ ] 3.1 提供Pose领域分型Prepare、Create/Replace、PrepareFrame、Evaluate、Commit、Discard、Stop/Dispose接口及真实准备/采用结果，明确请求、图/资源版本、实例、Reset代际和帧身份。
-- [ ] 3.2 将CharacterPoseCanvasGraph接入FlowCanvas原生初始化与Manual运行，移除Pose作者图的原生执行禁令，沿现有表现时钟驱动而不安装第二自动Update。
-- [ ] 3.3 将CharacterPoseCanvasNode、Connection和NativePorts改为真实原生typed绑定，提供Local/Component Pose、精确变量/Fact及目标结果端口，删除Editor占位输出。
-- [ ] 3.4 建立每Actor原生图及StatePose/Subgraph/Linked Pose调用实例生命周期，共享作者资产和资源只读，可变节点历史按调用实例隔离。
-- [ ] 3.5 在原生节点中按Actor、图调用实例、求值身份和阶段缓存结果，防止共享分支重复推进Player、状态转换、源采样、Foot/FBBIK或最终输出。
-- [ ] 3.6 将空间、必要输入、递归子图、悬空引用、唯一Output/Goal Set/FBBIK、目标槽和写冲突规则接到正式原生图校验/绑定入口，保留准确节点和引用链诊断，不生成IR。
-- [ ] 3.7 让原生运行、UI、Clipboard、Mutation和C# authoring共享同一Pose节点字段/端口/资源定义，移出仍有业务意义的规则后删除Image专属第二映射。
-- [ ] 3.8 实现同一原生图的源需求准备和姿态求值阶段，准备结果只表达活跃分支与source demand，求值仅在唯一Animancer Barrier完成后读取同次源结果。
+- [x] 3.1 提供Pose领域分型Prepare、Create/Replace、PrepareFrame、Evaluate、Commit、Discard、Stop/Dispose接口及真实准备/采用结果，明确请求、图/资源版本、实例、Reset代际和帧身份。
+- [x] 3.2 将CharacterPoseCanvasGraph接入FlowCanvas原生初始化与Manual运行，移除Pose作者图的原生执行禁令，沿现有表现时钟驱动而不安装第二自动Update。
+- [x] 3.3 将CharacterPoseCanvasNode、Connection和NativePorts改为真实原生typed绑定，提供Local/Component Pose、精确变量/Fact及目标结果端口，删除Editor占位输出。
+- [x] 3.4 建立每Actor原生图及StatePose/Subgraph/Linked Pose调用实例生命周期，共享作者资产和资源只读，可变节点历史按调用实例隔离。
+- [x] 3.5 在原生节点中按Actor、图调用实例、求值身份和阶段缓存结果，防止共享分支重复推进Player、状态转换、源采样、Foot/FBBIK或最终输出。
+- [x] 3.6 将空间、必要输入、递归子图、悬空引用、唯一Output/Goal Set/FBBIK、目标槽和写冲突规则接到正式原生图校验/绑定入口，保留准确节点和引用链诊断，不生成IR。
+- [x] 3.7 让原生运行、UI、Clipboard、Mutation和C# authoring共享同一Pose节点字段/端口/资源定义，移出仍有业务意义的规则后删除Image专属第二映射。
+- [x] 3.8 实现同一原生图的源需求准备和姿态求值阶段，准备结果只表达活跃分支与source demand，求值仅在唯一Animancer Barrier完成后读取同次源结果。
 - [ ] 3.9 将Player、PoseState、Slot、BlendStack和Inertialization的既有逻辑接入原生节点，保留准入、时间、权重、relevance、capture/release及Pending/Committed历史。保留已有Player和混合算法；补齐ICharacterPoseNativeStateMachineSource等具体服务实现、构造注入和实际输出消费者，不能以handler或接口声明数量判定完成。
 - [ ] 3.10 接入Phase同步、state-local source与Linked Pose正式绑定，保留实际资源身份、continuation、readiness和调用共享规则，不用插件通用FSM替换动画状态语义。
 - [ ] 3.11 将原生节点采样需求与结果交接接回唯一Source模块，保留ACL/Playable和现有资源准备/释放能力，不新增direct Play、资源副本或旧Image回退。已有Player Source binding必须由正式实例装配注入，并让同次Barrier后的采样进入实际姿态链，不能只完成binding类声明。
-- [ ] 3.12 让Foot、Goal聚合和FBBIK原生节点调用IK任务当前正式Constraint接口，保持输入与求解次序、单数Goal/输出，不复制Foot/IK状态或修改算法。
-- [ ] 3.13 实现按实例复用的节点输出缓冲、只读分支输入和明确租约释放，移除全图Value Lifetime/Workspace计划依赖；节点内部已有Native/Job算法由原owner管理。
-- [ ] 3.14 将原生Output接入唯一Final Publication，复用已新增CharacterFinalPoseNativePublication及物理／属性Writer入口，完成正式实例注入和最终消费者切换；保留整Rig预检查、完整骨骼写入、提交／丢弃及Barrier前后故障边界，不从节点另写Transform。共享Host由核心4.7接线，Final服务存在不等同角色已调用。
-- [ ] 3.15 完成原生实例Reset、Replacement与Stop/Dispose，先阻止旧调用、完成在途工作、失效旧generation并释放资源，实际安装成功后由Pose发布采用版本与重置结果。
+- [x] 3.12 让Foot、Goal聚合和FBBIK原生节点调用IK任务当前正式Constraint接口，保持输入与求解次序、单数Goal/输出，不复制Foot/IK状态或修改算法。
+- [x] 3.13 实现按实例复用的节点输出缓冲、只读分支输入和明确租约释放，移除全图Value Lifetime/Workspace计划依赖；节点内部已有Native/Job算法由原owner管理。
+- [x] 3.14 将原生Output接入唯一Final Publication，复用已新增CharacterFinalPoseNativePublication及物理／属性Writer入口，完成正式实例注入和最终消费者切换；保留整Rig预检查、完整骨骼写入、提交／丢弃及Barrier前后故障边界，不从节点另写Transform。共享Host由核心4.7接线，Final服务存在不等同角色已调用。
+- [x] 3.15 完成原生实例Reset、Replacement与Stop/Dispose，先阻止旧调用、完成在途工作、失效旧generation并释放资源，实际安装成功后由Pose发布采用版本与重置结果。
 - [ ] 3.16 将已完成Get/条件/BlendSpace的唯一EventGraph变量帧消费适配到原生端口与调用实例，保留只读范围、精确类型、曲线来源和Source Pending不回退事件状态的行为。
-- [ ] 3.17 从原生图、Node、Port、调用实例和已完成阶段结果发布节点观察与Pose Watch，保持订阅/租约释放，不为旧SourceMap生成隐藏Image或重新求值。
-- [ ] 3.18 按主方案D17先删除Pose IR、ProgramImage、Execution View、全图操作表/Worker编排和专属Compiler/产物入口，再处理保留消费者接线；混合文件只提取有效算法／作者规则，不等待Host全链完成才删。a31c27b79已完成编译Pass主链删除，剩余类型与消费者仍需收口；共享壳及总Projection引用交核心，不恢复加载期编译、兼容reader或双运行模式。
+- [x] 3.17 从原生图、Node、Port、调用实例和已完成阶段结果发布节点观察与Pose Watch，保持订阅/租约释放，不为旧SourceMap生成隐藏Image或重新求值。
+- [x] 3.18 按主方案D17先删除Pose IR、ProgramImage、Execution View、全图操作表/Worker编排和专属Compiler/产物入口，再处理保留消费者接线；混合文件只提取有效算法／作者规则，不等待Host全链完成才删。a31c27b79已完成编译Pass主链删除，剩余类型与消费者仍需收口；共享壳及总Projection引用交核心，不恢复加载期编译、兼容reader或双运行模式。

@@ -100,6 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ICharacterPoseNativeNodeHandler
     {
         readonly AnimationClipPlayerRuntime m_Player;
+        IActionPresentationClockPolicy m_ClockPolicy = FreeRunPresentationClockPolicy.Shared;
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly ICharacterPoseNativeClipSourceBinding m_SourceBinding;
@@ -119,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeClipPlayerHandler(
             AnimationClipPlayerRuntime player,
             CharacterPoseNativeNodePoseBuffer outputBuffer,
+            IActionPresentationClockPolicy clockPolicy)
             ICharacterPoseNativeClipSourceBinding sourceBinding)
         {
             m_Player = player ?? throw new ArgumentNullException(nameof(player));
@@ -127,6 +129,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceBinding = sourceBinding ??
                 throw new ArgumentNullException(nameof(sourceBinding));
             m_SecondaryOutputBuffer = m_OutputBuffer.CreateSibling();
+            m_ClockPolicy = clockPolicy ??
+                throw new ArgumentNullException(nameof(clockPolicy));
         }
 
         public PoseNodeId NodeId => m_Player.NodeId;
@@ -197,7 +201,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Player.SetRelevant(true);
-            m_Player.Advance(input.DeltaSeconds, m_Player.PlayRate);
+            ActionPresentationClockInstruction clockInstruction = m_ClockPolicy.Resolve(
+                m_Player,
+                default,
+                input.BodyTick,
+                input.DeltaSeconds);
+            if (clockInstruction.Kind == ActionPresentationClockCommandKind.SeekAbsoluteTime)
+                m_Player.SetRawClock(clockInstruction.AbsoluteTimeSeconds);
+            else
+                m_Player.Advance(clockInstruction.DeltaSeconds, clockInstruction.PlayRate);
             m_Capture = m_Player.PrepareCapture(
                 input.DeltaSeconds,
                 m_Player.PlayRate);
@@ -397,3 +409,5 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 }
+
+

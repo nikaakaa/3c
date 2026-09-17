@@ -45,7 +45,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterPoseNativeClipSourceModuleBinding(
                             source,
                             sourceLeaseProvider,
-                            bindingIndexFactory(node, context)));
+                            bindingIndexFactory(node, context)),
+                        FreeRunPresentationClockPolicy.Shared);
                 }
                 catch
                 {

@@ -743,8 +743,10 @@ namespace BTSMTL.Timeline.Editor
                 FrameRate = FrameRate,
                 StartFrame = frame,
                 EndFrame = frame + Mathf.Max(1, FrameRate / 20),
-                DefaultEndFrame = frame + Mathf.Max(1, FrameRate / 20)
+                DefaultEndFrame = frame + Mathf.Max(1, FrameRate / 20),
             };
+            if (kind == TimelineContractKinds.TreeClip)
+                request.NewTreeGraphName = "Timeline Tree";
             PopupWindow.Show(new Rect(m_PopupPosition, Vector2.zero), new TimelineClipCreationPopup(
                 request,
                 motionClipIds,

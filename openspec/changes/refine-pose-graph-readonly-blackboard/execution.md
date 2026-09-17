@@ -3,7 +3,7 @@
 
 ## 当前进度总览（2026-09-17，权威进度以tasks.md勾选为准）
 
-第3组任务14/18完成。架构层面已完全native：FlowCanvas原生图运行时、typed端口、每Actor实例、帧事务、Final Publication全部交付，旧IR/ProgramImage/Compiler零残留。剩余缺口全部集中在"源层与采样"：
+第3组任务16/18完成（3.9状态机经Register(profile)路径实为已接线，3.16变量帧消费深查确认为已闭合；此前两条缺口结论为浅查误报，已深查修正）。架构层面已完全native：FlowCanvas原生图运行时、typed端口、每Actor实例、帧事务、Final Publication全部交付，旧IR/ProgramImage/Compiler零残留。剩余缺口全部集中在"源层与采样"：
 
 | 能力 | 状态 | 证据/缺口 |
 |---|---|---|
@@ -13,10 +13,10 @@
 | FootPlacement/PoseBone/FBBIK约束 | 完成 | 3.12 |
 | ClipPlayer源装配 | 完成 | CreateClipPlayer |
 | BlendStack/AnimationSlot源装配 | 完成 | 372b2458b |
-| StateMachine注册注入 | 缺 | handler/source类在，RegisterStateMachine无调用方（3.9） |
-| LinkedPose/MotionMatching/History/EntryPose/RootOrientation源 | 缺 | 五个source接口无实现类（3.10） |
-| Action/Provider帧采样发布 | 缺 | PrepareFrameResult无调用方，技能动作每帧样本到不了Slot/BlendStack（3.11） |
-| BlendSpace/Selected播放器与变量帧消费 | 缺（决策已定） | 项目当前无BlendSpace资产与节点，作者窗口属agent生成面；用户决策采用装配期从资产现算计划，待首个资产/节点出现时与spec修正同批实现；事件变量帧无handler消费者（3.11/3.16） |
+| BlendSpace/Selected播放器 | 缺（决策已定） | 项目当前无BlendSpace资产与节点，作者窗口属agent生成面；用户决策采用装配期从资产现算计划，待首个资产/节点出现时与spec修正同批实现 |
+| LinkedPose/MotionMatching/History/EntryPose/RootOrientation源 | 缺 | 五个source接口无实现类，composition传Throw（3.10） |
+| Action帧采样发布 | 缺 | Timeline committed sample→AnimationResolvedPoseSourceSample桥缺失，PrepareFrameResult无调用方（3.11） |
+| 事件变量帧消费 | 完成 | 深查修正：RunPoseFrame每帧EventGraph.Update→FromPublishedVariables严格校验→FrameInput.ParameterFrame→Get节点RequireValue读取，链路已闭合（3.16） |
 
 结论：Corin现行PoseGraph内出现的节点类型已全部有正式装配，可端到端验证；上表四个"缺"是图里尚未使用的下一批能力。
 

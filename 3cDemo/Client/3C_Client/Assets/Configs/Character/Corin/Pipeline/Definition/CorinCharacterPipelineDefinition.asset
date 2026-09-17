@@ -42,14 +42,14 @@ MonoBehaviour:
     m_TargetInputValueId: 
     m_TargetKey: 
   m_ControlMotionTimelines:
-  - {fileID: 11400000, guid: 6fbeaf0090c34c31a4a21216e3ccc966, type: 2}
   - {fileID: 7999859642905170529, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
   - {fileID: 1204746802003447441, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
   - {fileID: 9108236439009699323, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
   - {fileID: 6609220109475648578, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
-  - {fileID: 11400000, guid: be588770448d17444828b566954e2709, type: 2}
+  - {fileID: 114000001, guid: 5408e4d0ba1b51442a8910fc94349070, type: 2}
   - {fileID: -6073946862826394644, guid: 67424e487a089064c85e32792e482909, type: 2}
   - {fileID: -7289415213675704551, guid: 352b16179174b5542b10f199fe287ed6, type: 2}
+  - {fileID: 11400000, guid: 6fbeaf0090c34c31a4a21216e3ccc966, type: 2}
   m_SimulationTickRate: 60
   m_InputProfile: {fileID: 11400000, guid: be650df85b1e49ab9d1cefc91c6cc809, type: 2}
   m_GameplayEffectProfile: {fileID: 11400000, guid: 4a39b2d9de6248bc99baf9561c18716d,

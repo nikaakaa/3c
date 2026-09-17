@@ -73,7 +73,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public bool Consume(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context)
         {
             if (request.EventKind == TimelineRuntimeTreeClipEventKind.Update)
+            {
+                if (!m_Host.IsAbilityRuntimePlayback(context.Playback.Handle))
+                    return true;
+                if (!m_ActiveClips.TryGetValue(context.Playback.Handle.Value, out List<ActiveTreeClip> activeClips) ||
+                    activeClips.Count == 0)
+                    return true;
+                ulong actionInstanceId = m_Host.RequireAbilityPlaybackActionInstanceId(context.Playback.Handle);
+                foreach (ActiveTreeClip clip in activeClips)
+                {
+                    var updateInvocation = new AbilityTreeClipInvocation(
+                        clip.ClipAuthoringId,
+                        clip.TreeGraphId,
+                        AbilityTreeClipHook.Root,
+                        clip.Cycle,
+                        actionInstanceId);
+                    if (!clip.Invoker.InvokeTreeClip(updateInvocation))
+                        return false;
+                }
                 return true;
+            }
             if (!m_Host.IsAbilityRuntimePlayback(context.Playback.Handle))
                 return true;
             IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker

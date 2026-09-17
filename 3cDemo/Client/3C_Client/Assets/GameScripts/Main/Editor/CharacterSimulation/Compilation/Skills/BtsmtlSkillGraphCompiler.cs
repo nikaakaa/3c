@@ -98,14 +98,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             context.CallerKind,
                             hook.Hook.ToString(),
                             context.ClipId);
-                    }
+                    }                    m_Builder.DeclareGraphInvocation(
+                        entry,
+                        invocationSource,
+                        context.CallerKind,
+                        "Root",
+                        context.ClipId);
                 }
                 else
                 {
                     m_Builder.DeclareGraphInvocation(invocationOwner, invocationSource, context.CallerKind, context.CallerId, context.ClipId);
                 }
+
+                foreach (BtsmtlSkillTimelineOccurrence timelineOccurrence in graph.Timelines)
+                {
+                    foreach (KeyValuePair<string, BtsmtlSkillGraphOccurrence> tree in timelineOccurrence.Trees)
+                        Compile(tree.Value, stateOwner,
+                            BtsmtlSkillInvocationContext.TreeClip(timelineOccurrence.Node.UID, tree.Key, false));
+                }
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
                 {
+
                     if (reference.Kind == BtsmtlSkillGraphReferenceKind.StateMachine &&
                         reference.NativeStateMachine != null)
                     {

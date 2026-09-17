@@ -688,7 +688,8 @@ namespace ThirdPersonSimulation
     {
         OnEnable = 0,
         OnDisable = 1,
-        OnDestroy = 2
+        OnDestroy = 2,
+        Root = 3
     }
 
     public readonly struct AbilityTreeClipInvocation

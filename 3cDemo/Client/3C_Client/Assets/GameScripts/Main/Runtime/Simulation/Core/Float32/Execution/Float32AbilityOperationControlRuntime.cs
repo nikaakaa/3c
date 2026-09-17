@@ -65,7 +65,9 @@ namespace ThirdPersonSimulation
             OperationExecutionResult result;
             try
             {
-                result = m_Runtime.Tick(entry);
+                result = invocation.Hook == AbilityTreeClipHook.Root
+                    ? m_Runtime.TickPersistent(entry)
+                    : m_Runtime.Tick(entry);
             }
             finally
             {

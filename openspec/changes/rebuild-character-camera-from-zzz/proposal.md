@@ -20,7 +20,8 @@
 - 保留默认 Sequence、鼠标角度叠加、同帧 Body pose 与最终 Pose 后执行 Camera 的现有链。修正连续平滑状态，明确输入限幅、Reset、响应裁决与切镜时间语义。
 - 在同一 Camera Runtime 内完成锁定/多目标构图、环境查询与碰撞约束，以及尚未闭合的 Override/Shake/Shot，扩展相应有限算法，不另起 Controller。
 - 保留已有 Zoom/Stretch，完整接线以源动作/事件→工程 TreeClip/相机特殊 Node→效果类型/ResourceId→时间/持续/取消的精确映射为输入。相机提供映射；同批 Corin TreeClip/生成源码由曲线迁移任务统一写入，18 个资源不等于 18 个已接通动作。
-- 动作相机请求统一由技能 Graph 内的 TreeClip 特殊 Node 表达。Node 只提交带 ActionContext、ResourceId 和生命周期的正式相机请求，不直接写 Camera、Cinemachine 或虚拟相机；Camera Runtime 继续唯一负责求解、叠加、碰撞和最终输出。动作链不再维护并行的 `CameraCueTrack`/`CameraCueClip` 或 `ActionCueClip(CueType: Camera)` 路径。
+- 动作相机请求统一由技能 Graph 内的 TreeClip 特殊 Node 表达。Node 只提交带 ActionContext、ResourceId 和生命周期的正式相机请求，不直接写 Camera、Cinemachine 或虚拟相机；Camera Runtime 继续唯一负责求解、叠加、碰撞和最终输出。动作链不再维护并行的 `CameraStateTrack`/`CameraResponseTrack`/`CameraCueTrack`/`CameraCueClip` 或 `ActionCueClip(CueType: Camera)` 路径。
+- **BREAKING**：Timeline 相机表达按触发与排布划界。瞬态触发一律走 TreeClip Node，持续效果窗口收敛为唯一效果轨道（Clip 只含窗口、资源引用与曲线，效果类型由资源自描述）；迁移后删除 CameraState/Response/Cue 三组触发型轨道与按类型拆分的四条效果轨道及其曲线 channel。瞬态请求统一走 Node 同时作为通用合同：音效、特效等其它域的帧触发表达按同一边界迁往 Node 后删除其宿主轨道，本 change 不扩大到其它域的具体迁移。
 - 作者层消费现有正式 Graph/Timeline/资源 API 及 `btsmtl.export_code`、`btsmtl.generate_assets`，删除已废弃的 Agent Document v4/v5 接入 delta。相机 C# 领域覆盖尚需实现对账，不宣称已经完整支持。
 - **BREAKING**：将记录/回放的相机初始状态与采样迁到正式 Presentation 合同，再删除旧 ThirdPersonCameraController、旧引用与孤立配置。保护既有诊断和 prefab 改动。
 - 统一输出前求解与 Cinemachine 落地的职责，扩展现有诊断快照解释输入、请求来源、混合、效果、碰撞与实际输出。

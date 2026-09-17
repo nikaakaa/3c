@@ -98,27 +98,35 @@ Landing、Goal、查询命中和diagnostics只属于Presentation。它们 MUST�
 
 ### Requirement: Foot Placement诊断必须只显示正式结果
 
-Runtime Result MUST与Diagnostics严格分型。Constraint Module MAY按Frame开始冻结的interest，从Pending Context、Observation、Resolved Result和Constraint阶段Result单向深冻结Phase Progress、Baseline、Envelope、Swing Correction、Residual、Anchor、Contact Progress、Ownership、Support Eligibility、Support、Pelvis、Goal与Solved结果；这些事实只能进入`CharacterPoseConstraintCommittedResult`。Physical Write与最终Physical Bone结果 MUST只由Final Publication冻结进`CharacterFinalPosePublicationCommittedResult`。
+Runtime Result MUST与Diagnostics严格分型。Foot、Landing、Ground Path、Pelvis、Goal、FBBIK与Final Publication MUST只按业务管线产生正式结果；PoseGraph MUST只拥有自己的Pending／Committed事务与Seal，并在成功Seal后的同步Commit调用栈内暴露现有只读事实，不得为了采样新增事实结构、Dimension类型、领域生命周期Event、Side metadata、packet、Session、Host或第二发布路径。
 
-Gizmo、Trace与Pose Watch MUST只读取各自允许的Committed页。Foot采样 MUST在成功Seal后的同步Commit调用栈内，从相同Frame、Completion、Program、Projection、Rig和Actor lineage的Constraint、Final Publication与当前Source已提交状态直接取得Left／Right与公共Fact Root，并以`in`执行一行target-scoped `DiagnosticEvent` partial调用；MUST不先组合或消费`CharacterFootIkCommittedCaptureViewLease`、Runtime Snapshot、Dimension View、Consumer／Binding或第二事实页。帧开始的可选partial Query只在匹配target订阅时要求Physical Writer冻结真实Physical Ankle事实；未订阅和Disabled构建不得执行该读取。`character-foot-ik-diagnostic-sampling`只提供字段分类、Sampler／Program Definitions和Editor workflow；`generated-diagnostic-sampling-framework`只拥有生成程序、typed packet、Capability Session与Writer／Reader。PoseGraph与Constraint不得拥有任一下游编译器、Schema、packet或Host知识。旧Foot单体Analyzer／Publisher、Diagnosis Store、旧CSV与历史兼容Reader直接删除；独立`character-foot-diagnostic-analysis`只在通用Host完成封存后读取生成Artifact并拥有Operator、当前Plan、七维评分和报告，Foot Runtime不维护其输入绑定或结果。固定输入回放 MUST通过同一Artifact Reader读取所需证据。Diagnostics MUST不查询世界、修改Context、选择Support、生成Goal、执行FBBIK、读取未冻结Physical Transform反推结果或把Constraint与Physical事实写回同一业务Bank。
+需要采样的现有真实readonly成员 MAY增加Conditional DiagnosticField。业务 MUST只在成功Seal后的既有PostCommit调用栈中调用一行带`DiagnosticEvent`的partial方法，并以in参数传入现有Left／Right与公共事实根；Generator生成typed dispatcher和Program handler。该接点 MUST不改变成员值、对象布局、业务执行顺序或无采样构建的运行闭包，也不得构造采样DTO、逐字段复制、按Metadata Side选择、重新执行World Query、坐标变换、Goal Assembly、FBBIK或Physical读取。
+
+Gizmo、Trace与Pose Watch MUST继续只读取各自允许的Committed事实。Generated Program MUST只读取本次PostCommit提供的根并写framework-owned packet；后台 MUST不持有业务page。通用Host与Editor workflow MUST只消费sealed packet与生成artifact，不得访问Pending Workspace、Vendor对象、场景Transform或可写Runtime Target。旧Foot单体Analyzer／Publisher、评分报告与Diagnosis Store MUST从采样链删除；独立Host-only Foot Analysis MAY按`add-schema-driven-diagnostic-analysis`只读Completed artifact恢复领域算法，不得反向读取Runtime或改变正式结果。
 
 #### Scenario: 捕获正式Foot事实
 
-- **WHEN** Foot、Pelvis、Goal、FBBIK、Pending Pose与Physical Writer均成功提交
-- **THEN** Foot采样 MUST从同一lineage的Constraint、Final Publication与当前Source已提交状态直接传入可对账冻结基线的正式事实；Live／Trace Projector MAY独立发布只读View
-- **AND** Diagnostics页归属变化 MUST不改变Runtime Result、Final Pose或Physical Writer输入
+- **WHEN** Foot、Pelvis、Goal、FBBIK与Final Publication在同一Frame和Completion成功Seal
+- **THEN** 既有PostCommit Owner MUST只调用一行Foot `DiagnosticEvent` partial方法，把现有左右脚与公共Fact Root交给同一个generated typed dispatcher
+- **AND** PoseGraph MUST不发布采样专用Event或第二事实页，Foot业务结果 MUST不因Sampler数量变化
+
+#### Scenario: 当前没有Foot采样
+
+- **WHEN** 构建未包含Foot Diagnostics或Session没有选择Foot Sampler
+- **THEN** Foot、Ground Path、Goal、FBBIK与Final Publication MUST只执行原业务链
+- **AND** MUST不构造采样事实、不执行额外坐标变换、不创建packet或保留采样interest
 
 #### Scenario: Writer失败
 
-- **WHEN** Constraint Result已经完成但Final Publication在Physical Writer前或Writer中失败
-- **THEN** Diagnostics MUST不发布本帧Pending Constraint或Physical结果
-- **AND** Projector MUST不为Foot Capture借用上一帧或发布第二Snapshot；Live／Pose Watch只能按各自既有合同保留上一Committed事实或正式Actor Fault
+- **WHEN** 当前帧在Seal前Discard或Final Publication失败
+- **THEN** Foot采样 MUST不提交该Frame的packet
+- **AND** MUST不借用上一帧、Pending结果、Pose Watch或当前Transform补成记录
 
-#### Scenario: 离线诊断Foot Artifact
+#### Scenario: 多个Sampler共享同一帧
 
-- **WHEN** 通用Host已经完成Foot Capability manifest、Schema和CSV封存
-- **THEN** 独立Foot诊断器 MAY读取这些不可变Artifact执行当前Plan
-- **AND** Foot Runtime、Constraint和Final Publication MUST不持有Analyzer、Plan、评分或报告引用
+- **WHEN** 同一个Program组合多个Foot Sampler
+- **THEN** Generated Program MUST从同一PostCommit根集合求字段并集
+- **AND** Foot查询、Ground page、Goal Assembly、FBBIK与Final Publication执行次数 MUST保持不变
 
 #### Scenario: 增加响应解释字段
 

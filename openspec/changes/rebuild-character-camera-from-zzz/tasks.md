@@ -42,7 +42,8 @@
 - [ ] 6.3 完成 evidence/source-cue-mapping.md 的源动作/事件→工程具体 TreeClip/Node→效果类型/ResourceId→时间/持续/取消映射；逐资源补齐证据和缺口。Counter/Normal_05 的 Zoom key 对齐不替代 TreeClip/Node 映射；Normal_01 当前仅有指定 Shake 线索，不按 Attack1 名称猜接线或用 Zoom 代替。
 - [ ] 6.4 从只接受 Profile 的 CharacterCameraProjectionBuilder 保留必要转换/引用检查，提供给角色装配调用的正式相机资源与只读运行绑定；分开 Editor-only 处理与 Player 绑定，独立资源流程保持原归属，不恢复角色全量 Build/整包 Projection，也不新增 Camera-only 临时发布入口或换名总包。
 - [ ] 6.5 由 Camera 提供绑定失败、Reset/替换、旧实例释放与实际采用身份，角色装配/Preview 调用同一领域入口；预览只观察真实结果，不自行求解相机或伪造已采用。
-- [ ] 6.6 将动作相机请求从 CameraCueTrack/CameraCueClip 与 ActionCueClip(CueType: Camera) 迁到 TreeClip 特殊 Node，保证一次性触发、循环、取消、自然结束和 seek/replay 使用稳定请求身份；迁移完成后删除旧动作 Cue 路径，不保留双轨。
+- [ ] 6.6 将动作相机请求从 CameraStateTrack/CameraResponseTrack、CameraCueTrack/CameraCueClip 与 ActionCueClip(CueType: Camera) 迁到 TreeClip 特殊 Node，保证一次性触发、循环、取消、自然结束和 seek/replay 使用稳定请求身份；迁移完成后删除旧动作 Cue 路径与三组触发型相机轨道，不保留双轨。
+- [ ] 6.7 将 CameraOverrideTrack/CameraZoomTrack/CameraStretchTrack/CameraShotTrack 四条按类型拆分的效果轨道合并为唯一效果轨道：Clip 只含窗口、效果资源引用与 Weight/EaseIn/EaseOut 曲线，效果类型由资源自描述；曲线 channel 由按类型 12 个收敛为通用 3 个；Shot 真实 prefab 要求与裁剪面接管合同不变；迁移已存在的真实资源引用后删除四条旧轨道与旧 channel，不保留兼容读法。
 
 ## 7. 诊断、迁移与删除
 
@@ -50,5 +51,6 @@
 - [ ] 7.2 将输入记录/回放的相机初始状态和采样迁到正式 Presentation 合同，保留现有用户改动，区分逻辑输入回放与镜头回放。
 - [ ] 7.3 在真实调用迁完后删除 ThirdPersonCameraController 及 meta、旧 FreeLook 朝向写入和无引用配置/资源，所有运行与诊断只走正式链。
 - [ ] 7.4 随实际迁移同步 Camera 自身规范与领域资源/绑定合同，配合领域运行时 owner 删除无消费者的旧总包绑定；本批 TreeClip/生成源码按曲线迁移单一写入，删除无消费者的旧 Camera Cue 路径，保留旧产物失败记录，不以旧程序集结果证明新代码。
+- [ ] 7.5 在 authoring 合同中写明瞬态请求统一走 Node 的通用边界：音效、特效等其它域的帧触发表达按同一边界迁往 Node 后删除宿主轨道；本 change 不执行其它域的具体迁移，MUST NOT 新增触发型轨道用法。
 
 任务分组表达依赖与职责，不替用户判定业务优先级。一个效果缺少来源不阻止独立且已授权的其它模块推进；删除/迁移撞到正在修改的正确代码时，记录具体冲突交用户决定。

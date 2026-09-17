@@ -92,3 +92,14 @@
 - 2026-09-17 用户确定动作相机请求统一采用 TreeClip 特殊 Node。此处只更新 OpenSpec 目标和证据口径，没有修改 Corin 资产、生成源码或 Camera Runtime；当前 ActionCueClip 是待迁移历史状态，不是已采用的 Camera 请求。
 - Unity 当前 `Editor.log` 的诊断编译只剩 `DGS003: Field 'ResponseMode'`；源码已改为 `int ResponseModeValue` 并保留 key `response-mode`，但 `Library/ScriptAssemblies/ThirdPersonClient.Runtime.dll` 反编译仍显示旧的 `CameraResponseMode ResponseMode`。这证明当前阻塞是旧 Runtime 程序集未更新，不能把它解释为现行 Camera 源码错误；未再触发刷新或全量构建。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。
+
+## 2026-09-17 Timeline 相机表达边界决策
+
+用户在审查 Timeline 相机轨道分工后确定最终边界，分界根为工作性质而非瞬态/持续：
+
+- 触发型工作（某帧做一件事）归 TreeClip Node；排布型工作（一段区间，需与其它区间在时间坐标系对齐）归 Timeline 轨道。排布必须活在时间坐标系里，Graph 没有拖拽对齐操作；时间轴随机访问天然支持 seek/回放，Graph 顺序执行需重放执行流。
+- 按此边界：CameraStateTrack、CameraResponseTrack、CameraCueTrack 三组与 ActionCueClip(CueType: Camera) 为触发型表达，迁 Node 后删除；效果窗口为排布型表达，且寿命经常长于动作实例（取消补间、招式结束镜头缓回），而 TreeClip 内一切活不过动作实例，故窗口保留在 Timeline、不内嵌 Node。
+- 四条按类型拆分的效果轨道（Override/Zoom/Stretch/Shot）结构重复，效果类型本应由资源自描述而非轨道承载，合并为唯一效果轨道；曲线 channel 按类型 12 个收敛为通用 3 个；Shot 的真实 prefab 要求与裁剪面接管合同在合并后不变。
+- 瞬态请求统一走 Node 同时写为通用合同：音效、特效等其它域的帧触发表达按同一边界迁往 Node 后删除宿主轨道（ActionCueTrack 终态删除）；具体迁移属后续 change，本 change 只锁边界。
+- 已同步更新：specs/character-camera-authoring/spec.md（新增触发/排布划界与单一效果轨道 Requirement，扩展 Node 统一合同的删除清单）、proposal.md What Changes、design.md Decisions 0、tasks.md（6.6 扩展、新增 6.7/7.5）。本记录仅文档更新，未修改代码与资产。
+- 同日补齐其余 delta 与新边界对齐：specs/character-camera-pipeline/spec.md 新增 MODIFIED「BTSMTL 和 Timeline 必须只提交相机请求」（TreeClip Node 触发特写、唯一效果轨道窗口采样两个新场景，声明删除触发型轨道与按类型拆分轨道），生命周期 Requirement 补三类请求来源同合同；specs/character-csharp-authoring/spec.md 生成范围补唯一效果轨道并排除触发型/拆分轨道；specs/character-camera-source-parity/spec.md 映射落点按 Node 与唯一效果轨道两类记录；specs/btsmtl-timeline-editor-preview/spec.md 预览与 Live Debug 消费口径同步。主 spec（openspec/specs/）未直接修改，待 archive 合并。

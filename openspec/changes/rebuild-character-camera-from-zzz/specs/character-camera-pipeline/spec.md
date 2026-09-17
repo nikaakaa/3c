@@ -1,5 +1,41 @@
 ## MODIFIED Requirements
 
+### Requirement: BTSMTL 和 Timeline 必须只提交相机请求
+
+系统 MUST 让 BTSMTL 自定义节点和 Timeline 相机表达只提交强类型相机请求，包括 `CameraSequenceRequest`、`CameraShakeRequest`、`CameraResponseRequest`、`CameraTargetSelectionRequest` 或读取 `CameraBasisSnapshot`。绑定动作实例的一次性触发 MUST 由 TreeClip 相机特殊 Node 提交；Timeline 中唯一的相机效果轨道 MUST 以窗口采样提交持续型强类型相机请求，窗口生命周期跟随时间轴时间。系统 MUST 不保留 CameraStateTrack、CameraResponseTrack、CameraCueTrack、CameraCueClip 或 `ActionCueClip(CueType: Camera)` 等触发型 Timeline 相机表达，MUST NOT 按效果类型拆分多条效果轨道。每个已公开 Camera Graph node MUST 由唯一 Graph emitter/typed binding 提供，保留 Graph/Node authoring identity、端口与 Source Map；Float32 与 Fixed Target MUST 按同一 domain 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、Camera binding 和 Action operation MUST NOT 直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST 不把 Camera runtime state 写入 Character/World simulation state。缺失字段、未知 binding 或 Target 未实现 MUST 在 prepare/composition 明确失败，不得跳过或使用 runtime fallback。
+
+#### Scenario: BTSMTL 请求瞄准相机
+
+- **WHEN** Aim 状态中的 RequestCameraSequence node 通过 Character Simulation Compiler 编译
+- **THEN** Graph/Camera owner MUST 生成带稳定 Source Map 的 `CameraSequenceRequest(Aim)` domain request
+- **AND** Target leaf MUST通过 PresentationCommand 提交该请求
+- **AND** 节点 MUST NOT调用 `CinemachineFreeLook`、`Camera.main` 或 scene camera object
+
+#### Scenario: TreeClip Node 触发技能特写
+
+- **WHEN** TreeClip 执行到带正式相机特殊 Node 的技能特写时点
+- **THEN** Node MUST 输出 `CameraSequenceRequest(SkillCloseup)` 并携带稳定 action/cycle/event 身份
+- **AND** 系统 MUST NOT 通过 Timeline 触发型相机 Clip 采样表达该触发
+
+#### Scenario: 唯一效果轨道窗口采样
+
+- **WHEN** 时间轴进入唯一相机效果轨道的某个资源窗口
+- **THEN** 窗口采样 MUST 提交该资源对应的持续型强类型相机请求
+- **AND** 动作取消时窗口 MUST 继续按时间轴合同自然退出，MUST NOT 随动作实例立即消失或突跳
+
+#### Scenario: Camera node 缺少目标配置
+
+- **WHEN** SetCameraTarget node 缺少正式 target identity或包含未知 target kind
+- **THEN** Compiler preflight MUST报告 node source identity并拒绝生成 Program
+- **AND** runtime MUST不把该 node 当成 Success 或选择默认 CameraTarget
+
+#### Scenario: Fixed Target 编译 Camera operation
+
+- **WHEN** Fixed Graph artifact 与 domain binding 包含当前 operation-set version 的 Camera operation
+- **THEN** Fixed Target MUST输出与 Float32 相同语义的强类型 PresentationCommand
+- **AND** Camera request MUST不进入 deterministic CharacterState、WorldState或Snapshot
+
+
 ### Requirement: Camera Sequence 必须使用注册的有限算法组合
 
 系统 MUST 使用 Profile 注册的默认 Sequence 与强类型 stage 计算构图。FramePlanner MUST 保留基础轨道与手动偏移的明确合成；SequenceTransition MUST 处理进入、退出、Cut、BlendIn、BlendOut，History MUST 按正式时间保持连续状态。字段必须具有明确单位、坐标空间、消费者和依赖，未知 stage、未闭合公式或无消费者字段 MUST 明确拒绝，不得以默认值或静默忽略发布。
@@ -124,7 +160,7 @@ Camera MUST 在采用前完整解析必需资源与 Rig/目标/物理上下文�
 
 ### Requirement: 相机请求生命周期必须保留稳定身份和同权裁决
 
-Sequence、Response、Target 和效果请求 MUST 使用明确的 source、generation、action instance、cycle 与 event 身份，按各自裁决域的稳定规则处理同权候选。自然结束、取消、事件撤销、Owner 销毁与业务目标失效 MUST 进入正式退出合同，不能靠字典插入顺序或通用 Weight=0 代替。相机不拥有独立网络回滚日志。
+请求 MAY 来自 TreeClip Node 瞬态提交、唯一 Timeline 效果轨道窗口采样或系统业务直提，三者提交同一种 typed request 并进入同一裁决域。Sequence、Response、Target 和效果请求 MUST 使用明确的 source、generation、action instance、cycle 与 event 身份，按各自裁决域的稳定规则处理同权候选。自然结束、取消、事件撤销、Owner 销毁与业务目标失效 MUST 进入正式退出合同，不能靠字典插入顺序或通用 Weight=0 代替。相机不拥有独立网络回滚日志。
 
 #### Scenario: 同权请求发生替换
 

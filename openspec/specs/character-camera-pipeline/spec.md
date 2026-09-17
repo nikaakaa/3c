@@ -21,7 +21,7 @@
 
 ### Requirement: BTSMTL 和 Timeline 必须只提交相机请求
 
-系统 MUST 让 BTSMTL 自定义节点和 Timeline 相机轨道只提交强类型相机请求，包括 `CameraSequenceRequest`、`CameraShakeRequest`、`CameraResponseRequest`、`CameraTargetSelectionRequest` 或读取 `CameraBasisSnapshot`。每个已公开 Camera Graph node MUST 由唯一 Graph emitter/typed binding 提供，保留 Graph/Node authoring identity、端口与 Source Map；Float32 与 Fixed Target MUST 按同一 domain 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、Camera binding 和 Action operation MUST NOT 直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST 不把 Camera runtime state 写入 Character/World simulation state。缺失字段、未知 binding 或 Target 未实现 MUST 在 prepare/composition 明确失败，不得跳过或使用 runtime fallback。
+系统 MUST 让 BTSMTL 自定义节点和 Timeline 相机表达只提交强类型相机请求，包括 `CameraSequenceRequest`、`CameraShakeRequest`、`CameraResponseRequest`、`CameraTargetSelectionRequest` 或读取 `CameraBasisSnapshot`。绑定动作实例的一次性触发 MUST 由 TreeClip 相机特殊 Node 提交；Timeline 中唯一的相机效果轨道 MUST 以窗口采样提交持续型强类型相机请求，窗口生命周期跟随时间轴时间。系统 MUST 不保留 CameraStateTrack、CameraResponseTrack、CameraCueTrack、CameraCueClip 或 `ActionCueClip(CueType: Camera)` 等触发型 Timeline 相机表达，MUST NOT 按效果类型拆分多条效果轨道。每个已公开 Camera Graph node MUST 由唯一 Graph emitter/typed binding 提供，保留 Graph/Node authoring identity、端口与 Source Map；Float32 与 Fixed Target MUST 按同一 domain 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、Camera binding 和 Action operation MUST NOT 直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST 不把 Camera runtime state 写入 Character/World simulation state。缺失字段、未知 binding 或 Target 未实现 MUST 在 prepare/composition 明确失败，不得跳过或使用 runtime fallback。
 
 #### Scenario: BTSMTL 请求瞄准相机
 
@@ -30,11 +30,17 @@
 - **AND** Target leaf MUST通过 PresentationCommand 提交该请求
 - **AND** 节点 MUST NOT调用 `CinemachineFreeLook`、`Camera.main` 或 scene camera object
 
-#### Scenario: Timeline 触发技能特写
+#### Scenario: TreeClip Node 触发技能特写
 
-- **WHEN** Timeline camera clip 采样到 SkillCloseup 窗口
-- **THEN** clip MUST输出 `CameraSequenceRequest(SkillCloseup)` 或等价 sample
-- **AND** Timeline MUST NOT直接修改 Cinemachine virtual camera priority
+- **WHEN** TreeClip 执行到带正式相机特殊 Node 的技能特写时点
+- **THEN** Node MUST 输出 `CameraSequenceRequest(SkillCloseup)` 并携带稳定 action/cycle/event 身份
+- **AND** 系统 MUST NOT 通过 Timeline 触发型相机 Clip 采样表达该触发
+
+#### Scenario: 唯一效果轨道窗口采样
+
+- **WHEN** 时间轴进入唯一相机效果轨道的某个资源窗口
+- **THEN** 窗口采样 MUST 提交该资源对应的持续型强类型相机请求
+- **AND** 动作取消时窗口 MUST 继续按时间轴合同自然退出，MUST NOT 随动作实例立即消失或突跳
 
 #### Scenario: Camera node 缺少目标配置
 
@@ -92,14 +98,29 @@
 - **THEN** Host、Network adapter和旧相机控制器 MUST不再修改同一个follow、aim、FOV或priority状态
 
 ### Requirement: Camera Sequence 必须使用注册的有限算法组合
-系统 MUST 使用 Profile 注册的默认序列和 typed stage 组合决定当前相机计划。Resolver MUST支持 priority、weight、source identity、action instance lifecycle、Cut、BlendIn 和 BlendOut；进入、退出和抢占必须实际作用于 CameraFramePlan，而不能只记录进度。尚未有来源消费者证据的 stage、字段或公式 MUST在编译或运行时明确失败，不得静默跳过、硬编码补齐或使用 fallback。
+
+系统 MUST 使用 Profile 注册的默认 Sequence 与强类型 stage 计算构图。FramePlanner MUST 保留基础轨道与手动偏移的明确合成；SequenceTransition MUST 处理进入、退出、Cut、BlendIn、BlendOut，History MUST 按正式时间保持连续状态。字段必须具有明确单位、坐标空间、消费者和依赖，未知 stage、未闭合公式或无消费者字段 MUST 明确拒绝，不得以默认值或静默忽略发布。
+
+#### Scenario: 默认镜头接收鼠标输入
+
+- **WHEN** 默认轨道已提供基础角度且本帧收到有效 Look
+- **THEN** 系统 MUST 按响应权叠加手动角度，不得被基础轨道覆盖
+- **AND** 普通推进 MUST 保持已定义的连续历史，只有明确 Reset 才重建相应状态
+
+#### Scenario: 作者配置无消费者字段
+
+- **WHEN** 一个字段被填写但当前算法未实现其语义
+- **THEN** 系统 MUST 定位字段并拒绝该配置，或在已确认迁移中删除该字段及全部配置入口
+- **AND** MUST 不把拷贝进 payload 或创建绑定对象当作字段已经生效
 
 #### Scenario: 默认序列
+
 - **WHEN** 本帧没有 active camera sequence request
 - **THEN** resolver MUST 使用 Profile 的正式默认 Sequence
 - **AND** 该默认状态 MUST NOT 需要 BTSMTL 每帧显式提交
 
 #### Scenario: 技能特写覆盖瞄准
+
 - **WHEN** 同一帧存在 Aim Sequence 和更高优先级 SkillCloseup Sequence
 - **THEN** resolver MUST 选择或混合到 SkillCloseup Sequence
 - **AND** debug MUST 能追踪获胜请求的 source id 或 action instance id
@@ -146,45 +167,58 @@
 - **AND** 缺失绑定 MUST 报告配置错误
 
 ### Requirement: Camera Effect owner 必须按固定顺序裁决表现
-系统 MUST 将 Override、Zoom、Stretch、Shake、Shot 和碰撞修正作为独立效果 owner 进行生命周期和顺序裁决。效果 MUST 在 Camera Sequence 生成基础 CameraFramePlan 后按固定顺序作用于该计划；CameraEffectEvaluator 只负责状态、顺序和生命周期转发，各效果 owner 负责自己的资源、时间和空间语义。尚未闭合的效果公式 MUST在编译或运行时明确失败。效果 owner MUST不绕过边界修改 Cinemachine 或 Unity Camera，也 MUST不通过扰动角色或 Follow/LookAt 目标伪造 Shake。
+
+系统 MUST 将 Override、Zoom、Stretch、Shake、Shot 和环境约束作为职责明确的求解阶段。各 effect owner MUST 拥有自身资源、时间、空间、组合和退出语义，CameraEffectEvaluator 只负责顺序及生命周期转发。所有影响镜头位姿的效果 MUST 在最终环境约束与 RigAdapter 应用之前完成。尚未闭合的资源或消费者 MUST 明确拒绝；补齐实现之前不得仅移除错误。
+
+#### Scenario: 受击效果接近墙体
+
+- **WHEN** 一个已支持效果改变镜头期望位置
+- **THEN** 该结果 MUST 继续进入统一环境约束，再交给 RigAdapter
+- **AND** 效果 MUST 不通过改变角色或 follow/aim Transform 伪造镜头位移
 
 #### Scenario: 命中帧震屏
-- **WHEN** Timeline 或 Graph 提交 `CameraShakeRequest`
-- **THEN** 内部 CharacterCameraPresentationRuntime MUST保留该请求的生命周期、顺序和 debug 来源
-- **AND** 未闭合的 Shake 消费语义 MUST阻止资源发布或明确报告不可用
-- **AND** Presentation runtime MUST NOT通过扰动 Follow/LookAt target 伪造震屏
+
+- **WHEN** TreeClip 内的相机特殊 Node 提交正式 CameraShakeRequest
+- **THEN** 内部 Camera Runtime MUST 保留请求的生命周期、顺序和 debug 来源，并交由对应 owner 求值
+- **AND** 未闭合的 Shake MUST 明确拒绝，不得改变角色或目标伪造效果
 
 #### Scenario: FOV 效果与特写同帧存在
-- **WHEN** 当前 Sequence 为 SkillCloseup
-- **AND** 本帧存在 Zoom 或其它已注册 FOV effect
-- **THEN** Camera Effect owner MUST 按固定顺序叠加 FOV 修正
-- **AND** debug MUST 能显示 FOV 来源
+
+- **WHEN** FOV 效果与专用特写请求在同帧有效
+- **THEN** 效果 owner MUST 按正式固定顺序和权重修正计划
+- **AND** MUST 不由各效果分别写入 Cinemachine lens 争夺结果
 
 ### Requirement: Cinemachine 必须是 CameraRigAdapter 实现细节
-系统 MUST通过 `ICameraRigAdapter` 的正式实现 `CinemachineCameraRigAdapter` 将 `CameraFramePlan` 应用到 Unity 相机系统。CharacterSimulationPresentationRuntime、BTSMTL 节点、Timeline clip 和 compiled Action operation MUST NOT直接依赖 Cinemachine 组件作为业务状态机。Adapter MAY使用 `CinemachineFreeLook`、virtual camera priority、FreeLook axis、Follow/LookAt、lens、noise 和 CinemachineBrain blend 实现输出。Adapter MUST NOT持有独立于 Presentation runtime 的 camera influence stack、target resolver 或动作生命周期裁决。
+
+系统 MUST 由 Character Presentation 内部的 Planner、Transition、History 与效果/环境约束阶段求解 CameraFramePlan，通过 ICameraRigAdapter 的 CinemachineCameraRigAdapter 实现应用位姿、镜头参数并回读 CameraRigResult/CameraBasisSnapshot。Cinemachine 组件 MUST 不重新裁决业务目标、手动输入、动作生命周期或叠加一套未声明的 orbit/damping。Brain 推进必须由正式相机输出时序唯一负责；业务节点和 Timeline MUST 不直接写 Camera 或虚拟相机状态。
 
 #### Scenario: 默认序列输出到 Cinemachine
-- **WHEN** `CameraFramePlan` 表达 follow point、aim point、FOV 和裁决后的 look delta
-- **THEN** Cinemachine adapter MAY 更新 FreeLook axis、Follow、LookAt 和 lens
-- **AND** Cinemachine MUST 负责最终相机位置、旋转、orbit 和 damping
-- **AND** FreeLook 是否生效 MUST来自 Presentation runtime 的计划而不是 Cinemachine 自己的业务判断
+
+- **WHEN** Adapter 收到最终 CameraFramePlan
+- **THEN** 它 MUST 应用该计划并推进明确绑定的 Brain，回读实际输出
+- **AND** MUST 不重新运行独立 FreeLook 输入或另一套跟随平滑
 
 #### Scenario: Shot 使用专用 virtual camera
-- **WHEN** `CameraFramePlan` 表达需要专用 Shot 承载的镜头
-- **THEN** adapter MAY 提升专用 virtual camera priority
-- **AND** priority 的生命周期 MUST由 Presentation runtime 控制
+
+- **WHEN** 已支持的 CameraFramePlan 声明需要专用 Shot 承载
+- **THEN** Adapter MAY 按正式计划切换明确绑定的 virtual camera 承载
+- **AND** priority、进入和退出生命周期 MUST 由 Presentation runtime 控制，不得另加业务裁决或重复混合
 
 ### Requirement: Camera debug 必须解释状态和输出
-系统 MUST提供或预留 camera debug 数据，说明当前 active sequence、active requests、source identity、action instance、priority、blend progress、response policy、target 来源、basis 和输出 CameraFramePlan。Debug MUST服务于动作镜头、输入响应和技能取消排查；未闭合资源或旧 Projection MUST显示明确不可用原因。
 
-#### Scenario: 排查技能后镜头残留
-- **WHEN** 技能 action instance 已结束
-- **THEN** debug MUST 能显示 action-scoped camera request 是否已经清理
-- **AND** 当前 camera mode MUST 能追踪到仍然 active 的请求来源
+系统 MUST 从同一 Runtime 状态提供原始/消费 Look、响应权、基准角和手动偏移、限幅、目标与请求来源、generation/action/cycle、时间域、blend、Reset、效果贡献、环境修正前后和最终 RigResult，并提供实际采用的资源/内容版本、绑定实例/代际与作者来源导航。诊断 MUST 不另算另一套相机；记录/回放 MUST 使用正式相机初始状态和输入合同，不依赖旧 Controller、整包 Projection 或隐式场景搜索。
 
 #### Scenario: 排查 look 不响应
-- **WHEN** 玩家移动鼠标但相机没有 orbit
-- **THEN** debug MUST 能显示当前 response policy 是否为 `Suppressed` 或低权重 `Weighted`
+
+- **WHEN** 作者查看当前相机诊断
+- **THEN** 诊断 MUST 能区分未采集、被响应抑制、已限幅、正在过渡或实际输出无效
+- **AND** MUST 提供对应帧号与配置/请求来源
+
+#### Scenario: 排查技能后镜头残留
+
+- **WHEN** 技能 action instance 已结束
+- **THEN** debug MUST 显示该 action-scoped camera request 是否已经清理或正在正式退出
+- **AND** 当前镜头 MUST 能追踪到仍然有效的请求来源与退出原因
 
 ### Requirement: 默认相机跟随必须使用统一表现根姿态
 系统 MUST让 `CharacterBodyPresentationRuntime` 基于正式 previous/current `CharacterBodySample` 和其显式 Body clock 策略生成唯一 `CharacterBodyPresentationFrame` 与 visible pose。默认 camera anchor MUST作为相对初始 logic body 的绑定偏移保存，并由内部 `CharacterCameraPresentationRuntime` 使用同一 visible pose 生成 follow point。系统 MUST不让默认相机在表现帧直接读取 logic body 或 camera anchor 子节点的离散世界坐标，也 MUST不维护第二份 pose 插值历史。
@@ -232,3 +266,50 @@ CameraSequenceClip与CameraResponseClip的Weight、Ease In与Ease Out曲线 MUST
 - **THEN** Curve Editor MUST只修改Camera Clip authoring
 - **AND** MUST不直接访问Cinemachine组件或写Camera Transform
 
+### Requirement: 相机资源与运行绑定必须按领域提供
+
+Camera MUST 提供正式相机资源、必要转换/引用检查和只读运行绑定，由角色装配调用。现有只接收 Profile 的 CharacterCameraProjectionBuilder 中仍有消费者的处理 MUST 按领域保留，payload 只表达相机需要的数据，不携带角色总 Program、非相机目录或整包 Projection。Editor-only 资源处理 MUST 不直接搬进 Player；需要加工的资源继续走原独立资源流程，不新增 Camera-only 临时发布入口、运行时补构建或另一个总包。
+
+技能 MUST 保持独立编译，控制和原生 Pose 不进入相机数据。资源/绑定身份变化 MUST 不重新打开已正确的 FramePlanner、轨道与鼠标叠加、History/Transition、Effect、Collision、Adapter、同帧 Body 和诊断算法。
+
+#### Scenario: 角色装配安装相机
+
+- **WHEN** 角色领域装配已取得 Profile、相机资源和明确环境输入
+- **THEN** 它 MUST 调用 Camera 的正式只读绑定入口并处理真实失败
+- **AND** MUST 不等待角色总 Program/整包 Projection 重发布
+
+#### Scenario: 只修改相机资源参数
+
+- **WHEN** 相机资源参数变化而技能请求种类、来源和时间合同未变
+- **THEN** 仅该资源处理及 Camera 内容/绑定身份 MUST 按真实依赖更新
+- **AND** MUST 不强制重建角色所有技能、Pose、网络 Pipeline 或其它资源
+
+### Requirement: 相机请求生命周期必须保留稳定身份和同权裁决
+
+请求 MAY 来自 TreeClip Node 瞬态提交、唯一 Timeline 效果轨道窗口采样或系统业务直提，三者提交同一种 typed request 并进入同一裁决域。Sequence、Response、Target 和效果请求 MUST 使用明确的 source、generation、action instance、cycle 与 event 身份，按各自裁决域的稳定规则处理同权候选。自然结束、取消、事件撤销、Owner 销毁与业务目标失效 MUST 进入正式退出合同，不能靠字典插入顺序或通用 Weight=0 代替。相机不拥有独立网络回滚日志。
+
+#### Scenario: 同权请求发生替换
+
+- **WHEN** 两个请求 priority 与 weight 相同
+- **THEN** resolver MUST 按声明的身份规则得出稳定结果并记录原因
+- **AND** 旧请求退出 MUST 不误删新 generation 或新 cycle 的请求
+
+### Requirement: 相机环境约束必须独立于平台查询实现
+
+相机环境约束 MUST 消费最终期望计划、显式物理场景、正式碰撞配置、近裁剪保护体、自身/层/触发器过滤、delta 与 Reset，并输出安全计划及原因。抽象求解 MUST 不直接查找 Unity 场景对象；Unity 查询实现只返回环境事实。系统 MUST 处理起点重叠、转角移动、缩回、恢复和无合法空间，不能以未约束位置作为静默补齐。
+
+#### Scenario: 镜头离开遮挡物
+
+- **WHEN** 环境重新允许更远的期望位置
+- **THEN** 系统 MUST 按正式恢复规则推进距离，且最终保护体仍满足本帧约束
+- **AND** MUST 不改写角色跟随目标来实现避障
+
+### Requirement: 相机必须提供实际采用与替换结果
+
+Camera MUST 在采用前完整解析必需资源与 Rig/目标/物理上下文，失败时返回精确资源或请求来源与原因，不宣称新绑定已采用。成功采用 MUST 发布实际资源/内容版本和绑定实例/代际。Reset/替换 MUST 通过同一领域生命周期停止旧调用、重置声明的镜头历史和释放旧资源，旧实例结果不得写入新绑定。Preview 只能调用这些入口并读取结果，不自算相机、不伪造已采用。
+
+#### Scenario: 新绑定缺少资源
+
+- **WHEN** 候选绑定缺少正式效果资源或明确 Shot prefab
+- **THEN** Camera MUST 报告对应身份与失败，实际采用状态 MUST 保持真实
+- **AND** MUST 不以旧 Projection、旧 DLL 或资源名称占位作为新结果

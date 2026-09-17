@@ -43,6 +43,16 @@ previous_implementation_revision: v3
 
 ## Decisions
 
+### 0. Timeline 相机表达按触发与排布划界（2026-09-17 v5 增补）
+
+用户确认的分界根不是瞬态/持续，而是工作性质：**触发型**工作（某帧做一件事，无排布需求）归 TreeClip Node；**排布型**工作（一段区间，要与其它区间在时间轴上对齐剪接）归 Timeline 轨道。排布型工作必须活在时间坐标系里——Graph 是拓扑图，没有拖拽对齐操作；时间轴是随机访问模型，seek/回放天然支持，Graph 顺序执行要重放执行流。
+
+按此边界落实三件事：
+
+1. CameraStateTrack、CameraResponseTrack、CameraCueTrack 三组是触发型表达，迁 Node 后删除；ActionCueClip(CueType: Camera) 同。瞬态请求统一走 Node 同时写为通用合同：音效、特效等其它域的帧触发表达按同一边界迁往 Node 后，宿主轨道整体删除；具体迁移属后续 change，本 change 只锁边界。
+2. 效果窗口是排布型表达且经常需要活得比动作实例长（取消补间、招式结束镜头缓回），而 TreeClip 内一切活不过动作实例，因此窗口不能内嵌 Node，保留在 Timeline。四条按类型拆分的效果轨道（Override/Zoom/Stretch/Shot）结构重复，合并为唯一效果轨道：Clip 只含窗口、资源引用与曲线，效果类型由资源自描述；Shot 的真实 prefab 要求与裁剪面接管合同不变。曲线 channel 由按类型 12 个收敛为通用 3 个。
+3. Camera Runtime 收到的请求合同不因来源变化：Node 瞬态提交、轨道窗口采样、系统直提（如锁定）最终都是同一种 typed request 进同一裁决域，来源多样、裁决统一。
+
 ### 1. 保留现有链路，补齐具体缺口
 
 保留的运行调用次序如下。装配输入改为领域资源和只读运行绑定，不修改这条链的算法及时序；下列类型沿当前源码定位，不表示需要恢复其旧总包构造入口。

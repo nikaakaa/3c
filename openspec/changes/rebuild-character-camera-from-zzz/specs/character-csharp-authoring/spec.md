@@ -2,7 +2,7 @@
 
 ### Requirement: 相机作者内容必须通过现有 C# 领域适配完整转换
 
-纳入生成范围的 Camera Profile、Sequence、Effect、Curve 以及 Graph 内 TreeClip 相机特殊 Node 请求 MUST 通过现有 btsmtl.export_code 与 btsmtl.generate_assets 的领域薄适配表达真实创建、参数、引用、顺序、共享资源和根绑定。系统 MUST 复用正式相机 API，不新增第三个作者工具、目录包、同步器或第二份 Camera 领域模型。无法完整表达的内容必须定位对象/字段并拒绝该范围导出，不得以占位代码报告成功。
+纳入生成范围的 Camera Profile、Sequence、Effect、Curve、Graph 内 TreeClip 相机特殊 Node 请求以及 Timeline 唯一相机效果轨道的窗口与资源引用表达 MUST 通过现有 btsmtl.export_code 与 btsmtl.generate_assets 的领域薄适配表达真实创建、参数、引用、顺序、共享资源和根绑定。触发型相机轨道（CameraStateTrack、CameraResponseTrack、CameraCueTrack、`ActionCueClip(CueType: Camera)`）与按效果类型拆分的四条效果轨道 MUST NOT 出现在生成产物或适配模型中。系统 MUST 复用正式相机 API，不新增第三个作者工具、目录包、同步器或第二份 Camera 领域模型。无法完整表达的内容必须定位对象/字段并拒绝该范围导出，不得以占位代码报告成功。
 
 #### Scenario: 导出包含共享相机资源的动作
 

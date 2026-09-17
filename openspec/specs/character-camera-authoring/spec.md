@@ -1,4 +1,9 @@
-## ADDED Requirements
+# character-camera-authoring Specification
+
+## Purpose
+TBD - Update Purpose after archive
+
+## Requirements
 
 ### Requirement: 相机配置必须由唯一正式 owner 装配
 

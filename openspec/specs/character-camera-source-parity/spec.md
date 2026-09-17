@@ -1,4 +1,9 @@
-## ADDED Requirements
+# character-camera-source-parity Specification
+
+## Purpose
+TBD - Update Purpose after archive
+
+## Requirements
 
 ### Requirement: 相机移植必须分开记录来源和当前实现证据
 

@@ -172,13 +172,26 @@ Details MUST只投影当前selection、当前capability与当前authoring mode�
 
 ### Requirement: Authoring节点与Runtime执行描述必须分离
 
-领域框架 MUST以唯一作者 identity、业务字段、typed ports 和 Mutation 提供 UI 与 C# 作者 API；执行方式 MUST由领域决定。Skill 作者图继续生成独立技能数据，Pose 与 EventGraph 使用原生运行实例。原生运行节点可以与作者节点同型，但可变状态只属于实例。运行时 offset、缓冲索引、缓存和 resource handle MUST不成为作者参数，也不得为原生 Pose 另编 IR。
+Graph Authoring Domain Framework MUST只理解稳定作者identity、typed payload、port与mutation。编译执行领域 MUST不要求authoring node继承runtime node，并 MUST继续把authoring graph编译为领域自己的中间表示和runtime program；Runtime性能枚举、线性index与switch可以继续存在于compiled层，但 MUST不反向成为创建菜单、Details或C#作者参数。
+
+采用公共C#作者入口不改变领域运行方式。明确采用原生执行的通用 EventGraph MUST复用其原生图实例与节点行为，通过宿主合同规定事件、输入输出、类型和生命周期，不要求再生成项目专用事件IR或解释器。原生实例 MUST与可编辑资产隔离。该执行边界 MUST不自动扩展到现有Skill、FSM或PoseGraph，不放开它们的作者图直接运行。
 
 #### Scenario: Runtime增加优化字段
 
 - **WHEN** Pose Runtime为执行计划增加内部offset或buffer index
-- **THEN** Authoring capability、Details与C#作者参数 MUST不自动暴露该字段
-- **AND** 对应节点或资源模块 MUST在实例初始化时准备该内部值，不生成Pose IR
+- **THEN** Authoring capability、Details与C#作者API MUST不自动暴露该字段
+- **AND** Compiler MUST负责从Pose IR生成该内部值
+
+#### Scenario: 原生事件图调用变量节点
+
+- **WHEN** 已明确采用原生执行的事件图使用宿主准入的 Get/Set
+- **THEN** 系统 MUST执行原生节点并遵守唯一变量合同
+- **AND** MUST不要求建立同义项目指令或启动另一个备用执行器
+
+#### Scenario: Pose作者图被尝试直接启动
+
+- **WHEN** 调用方试图因新增事件图能力而直接启动现有Pose作者图
+- **THEN** 系统 MUST继续拒绝，Pose MUST沿其唯一编译程序执行
 
 ### Requirement: Formal authoring metadata必须是C#与UI共享的唯一语义来源
 

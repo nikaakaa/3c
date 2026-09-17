@@ -46,12 +46,12 @@
 
 ### Requirement: Per-Bone Blend Profile必须依赖稳定Rig Identity
 
-`CharacterAnimationBlendProfile` MUST引用精确RigId与revision，并按稳定dense BoneId保存有限正duration multiplier。Compiler MUST拒绝未知BoneId、重复BoneId、非有限值、非正值与Rig不匹配。Runtime MUST不按骨骼名称、path、Humanoid枚举或层级搜索补全。
+`CharacterAnimationBlendProfile` MUST引用精确RigId与revision，并按稳定dense BoneId保存有限正duration multiplier。原生装配校验 MUST拒绝未知BoneId、重复BoneId、非有限值、非正值与Rig不匹配。Runtime MUST不按骨骼名称、path、Humanoid枚举或层级搜索补全。
 
 #### Scenario: Blend Profile与Rig不匹配
 
 - **WHEN** Blend Stack节点引用的Profile Rig identity与Pose Plan Rig不同
-- **THEN** Compiler MUST失败并定位节点与Profile
+- **THEN** 原生装配校验 MUST失败并定位节点与Profile
 
 ### Requirement: Animancer必须只作为Source Pose采样后端
 
@@ -65,28 +65,28 @@ Animancer MUST只按完整source identity创建AnimationClip state或producer内
 
 ### Requirement: Blend Stack节点必须由固定Animation Job输出统一Pose Value
 
-Runtime MUST按Rig bone count、节点数量和各节点容量预分配source、Stored、parameter、feature与weight Native workspace。每个节点 MUST原子提交不可变frame plan；source capture、节点blend job、下游Pose composition和final writer MUST位于同一PlayableGraph并在单次Evaluate中按编译依赖完成。节点 MUST输出统一Pose Value，MUST不读取Inertial residual、下游Bone Mask、执行跨分支Override/Additive、写Gameplay Body或写最终Animator Pose。
+Runtime MUST按Rig bone count、节点数量和各节点容量预分配source、Stored、parameter、feature与weight Native workspace。每个节点 MUST原子提交不可变frame plan；source capture、节点blend job、下游Pose composition和final writer MUST位于同一PlayableGraph并在单次Evaluate中按装配依赖完成。节点 MUST输出统一Pose Value，MUST不读取Inertial residual、下游Bone Mask、执行跨分支Override/Additive、写Gameplay Body或写最终Animator Pose。
 
 #### Scenario: 同一图包含两个Stack节点
 
-- **WHEN** 编译图同时包含Locomotion与Action两个Blend Stack节点
+- **WHEN** 同一图同时包含Locomotion与Action两个Blend Stack节点
 - **THEN** 两个节点 MUST分别发布匹配PoseNodeId的Pose Value
 - **AND** 下游LayeredBoneBlend MUST只按typed edge消费它们
 
 ### Requirement: Node-local Blend Policy必须是该节点唯一转场权威
 
-每个Blend Stack节点 MUST引用唯一`CharacterAnimationBlendPolicy`。Policy MUST保存容量、Stored Pose策略、`Linear | EaseIn | EaseOut | EaseInOut | Custom` Blend Mode、条件式强类型Custom Curve Asset、强类型Blend Profile、authoring default rule与exact source-target override；不得保存第二种inline curve作者格式。Compiler MUST把每条规则降低为canonical curve与dense profile，只枚举该节点可达Selection endpoint与Empty组合，并把default和override物化为完整CrossFade exact table；Runtime缺少pair MUST失败，MUST不fallback到默认时长、线性曲线、Inertial或Animancer fade。
+每个Blend Stack节点 MUST引用唯一`CharacterAnimationBlendPolicy`。Policy MUST保存容量、Stored Pose策略、`Linear | EaseIn | EaseOut | EaseInOut | Custom` Blend Mode、条件式强类型Custom Curve Asset、强类型Blend Profile、authoring default rule与exact source-target override；不得保存第二种inline curve作者格式。装配 MUST把每条规则降低为canonical curve与dense profile，只枚举该节点可达Selection endpoint与Empty组合，并把default和override物化为完整CrossFade exact table；Runtime缺少pair MUST失败，MUST不fallback到默认时长、线性曲线、Inertial或Animancer fade。
 
 #### Scenario: 两个节点复用同一Policy
 
 - **WHEN** 两个Blend Stack节点显式引用同一Policy资产
-- **THEN** Compiler MUST为两个节点分别生成可达exact table
+- **THEN** 装配 MUST为两个节点分别构建可达exact table
 - **AND** 两个运行时节点 MUST不共享mutable entry或clock状态
 
 #### Scenario: 可达pair缺失
 
 - **WHEN** 某节点可达source-target pair无法由default或override精确物化
-- **THEN** Compiler MUST失败并定位PoseNodeId与pair
+- **THEN** 原生装配 MUST失败并定位PoseNodeId与pair
 
 ### Requirement: Pose Value必须完整表达Stack输出
 

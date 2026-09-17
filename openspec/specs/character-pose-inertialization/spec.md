@@ -30,12 +30,12 @@ Pose Graph MUST提供单Pose输入、单Pose输出的`Inertialization`节点。�
 
 ### Requirement: Inertialization时间数学必须由触发owner唯一提供
 
-每个Inertialization节点 MUST引用唯一`CharacterPoseInertializationPolicy`，该Policy的response MUST只保存Pose Parameter filter与残差响应。PoseStateMachine上游 MUST由触发Transition edge提供duration、canonical curve与dense per-bone Blend Profile；AnimationSlot上游 MUST由Slot exact route提供相同时间数学；只有直接Player discontinuity没有上游transition owner时，Policy MUST保存并完整覆盖全部可达endpoint pair的`HardCut | Inertialize` exact temporal table。Compiler MUST按拓扑证明恰好一个temporal owner，同时存在或完全缺失 MUST失败，不得fallback。
+每个Inertialization节点 MUST引用唯一`CharacterPoseInertializationPolicy`，该Policy的response MUST只保存Pose Parameter filter与残差响应。PoseStateMachine上游 MUST由触发Transition edge提供duration、canonical curve与dense per-bone Blend Profile；AnimationSlot上游 MUST由Slot exact route提供相同时间数学；只有直接Player discontinuity没有上游transition owner时，Policy MUST保存并完整覆盖全部可达endpoint pair的`HardCut | Inertialize` exact temporal table。原生图校验 MUST按拓扑证明恰好一个temporal owner，同时存在或完全缺失 MUST失败，不得fallback。
 
 #### Scenario: 可达pair缺失
 
 - **WHEN** 某个Player endpoint pair无法物化exact rule
-- **THEN** Compiler MUST失败并定位Inertialization PoseNodeId与pair
+- **THEN** 原生图校验 MUST失败并定位Inertialization PoseNodeId与pair
 
 #### Scenario: PoseState Transition触发惯性化
 
@@ -84,12 +84,12 @@ Policy MUST为每个可达Pose Parameter显式声明`Inertialize | Snap`。Inert
 
 ### Requirement: Inertialization必须位于native Pose阶段且早于FootPlacement
 
-Compiler MUST证明Pose与Discontinuity来自同一直接Player identity，节点位于native Pose阶段并早于FootPlacement/world-aware IK。Runtime MUST在唯一PlayableGraph Evaluate中完成节点job，不得在FootPlacement后第二次写骨骼。
+原生图校验 MUST证明Pose与Discontinuity来自同一直接Player identity，节点位于native Pose阶段并早于FootPlacement/world-aware IK。Runtime MUST在唯一PlayableGraph Evaluate中完成节点job，不得在FootPlacement后第二次写骨骼。
 
 #### Scenario: 节点位于FootPlacement之后
 
 - **WHEN** 作者把Inertialization连接在FootPlacement输出之后
-- **THEN** Compiler MUST失败并定位非法阶段边
+- **THEN** 原生图校验 MUST失败并定位非法阶段边
 
 ### Requirement: Inertialization调试必须只读解释节点状态
 

@@ -1,4 +1,26 @@
+
 # PoseGraph只读Blackboard实施记录
+
+## 当前进度总览（2026-09-17，权威进度以tasks.md勾选为准）
+
+第3组任务14/18完成。架构层面已完全native：FlowCanvas原生图运行时、typed端口、每Actor实例、帧事务、Final Publication全部交付，旧IR/ProgramImage/Compiler零残留。剩余缺口全部集中在"源层与采样"：
+
+| 能力 | 状态 | 证据/缺口 |
+|---|---|---|
+| 原生图运行时、typed端口、每Actor实例 | 完成 | 3.2/3.3/3.4 |
+| 分型帧事务Prepare/Evaluate/Commit/Discard/Reset/Stop | 完成 | 3.1/3.8/3.15 |
+| Final Publication与Pose Watch | 完成 | 3.14/3.17 |
+| FootPlacement/PoseBone/FBBIK约束 | 完成 | 3.12 |
+| ClipPlayer源装配 | 完成 | CreateClipPlayer |
+| BlendStack/AnimationSlot源装配 | 完成 | 372b2458b |
+| StateMachine注册注入 | 缺 | handler/source类在，RegisterStateMachine无调用方（3.9） |
+| LinkedPose/MotionMatching/History/EntryPose/RootOrientation源 | 缺 | 五个source接口无实现类（3.10） |
+| Action/Provider帧采样发布 | 缺 | PrepareFrameResult无调用方，技能动作每帧样本到不了Slot/BlendStack（3.11） |
+| BlendSpace/Selected播放器与变量帧消费 | 缺 | 资产→计划构建服务只在Editor预览；事件变量帧无handler消费者（3.11/3.16） |
+
+结论：Corin现行PoseGraph内出现的节点类型已全部有正式装配，可端到端验证；上表四个"缺"是图里尚未使用的下一批能力。
+
+---
 
 ## 2026-09-12 当前小步
 

@@ -111,6 +111,9 @@ Skill C#输出现在：
 - 现行`openspec/specs`已清除旧`ActionProfile`命名和Ability StateBody两锚点例外，保留普通`StateBehaviorSubTree`的三入口生命周期合同；tasks.md的8.1与8.5已完成。
 - 为恢复Unity编译，`FixedGameplayAbilityDataAsset`中的Fixed Program类型已改为显式限定，消除了当前暴露的Fixed/通用Simulation命名歧义；这不改变Ability authoring或运行时合同。
 
-## r5 当前阻塞
+## r5 收口记录
 
-CharacterPipelineHost的Rules引用已由并行实现窗口收口，但Unity重载后继续暴露程序集边界错误：`DotRecastAuthoritySceneRuntime.cs(5,28)`找不到`ThirdPersonCharacter.Pipeline`。该错误已转交同一实现窗口。正式`generate_assets`仍未可用，尚未写入`Abilities/AdmissionProfiles`两个新Profile资产，也尚未用新Profile重导出三份Ability资产。未修改并行Timeline、Camera、SLATE或DotRecast文件，未运行Play或Unity Build。
+- 准入资产迁移已完成：旧Actions/Attack|Dodge/Corin*ActionProfile.asset通过git mv迁为Abilities/AdmissionProfiles/CorinAttackAdmissionProfile.asset与CorinDodgeAdmissionProfile.asset，GUID随.meta保留，Dodge单一共享对象继续被DodgeBack/DodgeForward共用；资产m_Name、生成Root.cs内ResolveExternalAsset/EnsureAdmissionProfileRoot路径字符串、corin-source-manifest.json的assetPath与owner命名同步更新；旧Pipeline/Actions目录及其全部.meta删除，全仓旧名旧路径仅剩本change delta的迁移场景描述。
+- 8.3消费者链静态审计通过：CompileDiscovery经Ability.AdmissionProfile、语义依赖目录按ActionId声明身份、Float32/Fixed ExecutionServices以ActionAdmissionProfile按operation/actionId双索引、export_code适配器输出唯一共享对象；现行Attack.Float32Data的m_OperationSetVersion为character-gameplay-operations/16。
+- 8.4 StateBody锚点合同静态审计通过：工厂生成/补齐三锚点、删除/剪切/清空/复制全链拒绝系统锚点、[DoNotList]与CapabilityCatalog过滤作者菜单、GraphClosure校验锚点唯一且齐备、编译器按Enter/Enter/Exit与order 0/1/2发射、运行时ContinueStateStop在stop barrier执行OnExit而ForceStopState仅ForceStop释放；Corin三张Ability资产已无Action Exit Selector/Submit清理链。
+- 8.2/8.3/8.4已在tasks.md勾选并附证据；本节替换原“r5当前阻塞”段，该段所述DotRecast程序集错误与generate_assets不可用均已由后续提交解决，不再作为当前状态。

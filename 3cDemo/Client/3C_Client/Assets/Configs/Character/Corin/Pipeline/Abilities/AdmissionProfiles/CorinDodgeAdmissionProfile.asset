@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bc7d900d60bf416f951c25f1a614420e, type: 3}
-  m_Name: CorinAttackActionProfile
+  m_Name: CorinDodgeAdmissionProfile
   m_EditorClassIdentifier: 
-  m_ActionId: Attack
-  m_DisplayName: Attack
+  m_ActionId: Dodge
+  m_DisplayName: Dodge
   m_DebugCategory: Local
   m_Tags:
-  - m_Value: Attack
+  - m_Value: Dodge
   m_RequiredTags:
     m_All: []
     m_Any: []
@@ -31,5 +31,5 @@ MonoBehaviour:
     - m_Value: Attack
     - m_Value: Dodge
     m_None: []
-  m_TargetRequirement: 2
+  m_TargetRequirement: 0
   m_MaxConcurrentInstances: 1

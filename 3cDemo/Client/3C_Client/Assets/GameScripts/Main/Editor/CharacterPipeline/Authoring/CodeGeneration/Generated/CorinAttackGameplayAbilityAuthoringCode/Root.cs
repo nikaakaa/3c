@@ -17,8 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         {
             var parts = new RootParts();
             parts.asset = context.ResolveExternalAsset<BtsmtlSkillFlowGraph>("Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.SharedGraph.1eac26e4ad67ccfd6cfe9342d2ea92d7.asset", 11400000L);
-            parts.asset4 = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Attack/CorinAttackActionProfile.asset", 11400000L);
-            parts.asset22 = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Dodge/CorinDodgeActionProfile.asset", 11400000L);
+            parts.asset4 = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Abilities/AdmissionProfiles/CorinAttackAdmissionProfile.asset", 11400000L);
+            parts.asset22 = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Abilities/AdmissionProfiles/CorinDodgeAdmissionProfile.asset", 11400000L);
             parts.graph = BtsmtlSkillAuthoringCode.EnsureAbilityRoot(context, "Attack", "00ec42f6d5ede195dcf13e4e27fe7933", "Attack");
             var node1 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph, typeof(BtsmtlSkillStateMachineFlowNode), "09a906ca-f0e7-467a-a0e2-4d7b47cd0896", "Attack Combo StateMachine", new Vector2(470f, 54.00002f));
             var node = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph, typeof(BtsmtlSkillRootFlowNode), "ec373e53-0dab-46f2-b04e-3423bbcf423c", "技能入口", new Vector2(-204f, 120.6666f));

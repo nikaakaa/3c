@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         static RootParts BuildRoot(BtsmtlAuthoringGenerationContext context)
         {
             var parts = new RootParts();
-            var asset = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Actions/Dodge/CorinDodgeActionProfile.asset", 11400000L);
+            var asset = context.ResolveExternalAsset<GameplayAbilityAdmissionProfile>("Assets/Configs/Character/Corin/Pipeline/Abilities/AdmissionProfiles/CorinDodgeAdmissionProfile.asset", 11400000L);
             parts.graph = BtsmtlSkillAuthoringCode.EnsureAbilityRoot(context, "DodgeForward", "12fd389b09dc017facc9250c3f9a4ff3", "DodgeForward");
             var node1 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph, typeof(BtsmtlSkillStateMachineFlowNode), "47098806-a9db-43fb-894a-783c38491e8c", "DodgeForward StateMachine", new Vector2(260f, 84f));
             var node = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph, typeof(BtsmtlSkillRootFlowNode), "a7c0040e-35e8-44d0-9de6-2df949cd76a2", "技能入口", new Vector2(-220.3514f, 84.09288f));

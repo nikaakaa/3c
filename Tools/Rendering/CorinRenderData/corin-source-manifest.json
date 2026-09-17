@@ -82,15 +82,15 @@
     {
       "identity": "asset:corin.action.attack",
       "assetGuid": "450722665af79c2468ff212811859458",
-      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Actions/Attack/CorinAttackActionProfile.asset",
-      "owner": "ActionProfile",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Abilities/AdmissionProfiles/CorinAttackAdmissionProfile.asset",
+      "owner": "AdmissionProfile",
       "sourceIds": ["dump:corin:animations.all.v2", "dump:corin:config.typetree.v2"]
     },
     {
       "identity": "asset:corin.action.dodge",
       "assetGuid": "add8a25636588a543a6770231bea14b6",
-      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Actions/Dodge/CorinDodgeActionProfile.asset",
-      "owner": "ActionProfile",
+      "assetPath": "Assets/Configs/Character/Corin/Pipeline/Abilities/AdmissionProfiles/CorinDodgeAdmissionProfile.asset",
+      "owner": "AdmissionProfile",
       "sourceIds": ["dump:corin:animations.all.v2", "dump:corin:config.typetree.v2"]
     },
     {

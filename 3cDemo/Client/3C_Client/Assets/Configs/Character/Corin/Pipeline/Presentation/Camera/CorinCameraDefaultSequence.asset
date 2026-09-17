@@ -23,7 +23,7 @@ MonoBehaviour:
     - rid: 330000000000000001
       type: {class: CameraFrameOnePointByTrackStage, ns: ThirdPersonCamera,
         asm: ThirdPersonCamera.Contracts}
-        data:
+      data:
         m_StageId: corin.camera.default.normal.orbit
         m_CameraOrbits:
         - m_Height: 2.2249999

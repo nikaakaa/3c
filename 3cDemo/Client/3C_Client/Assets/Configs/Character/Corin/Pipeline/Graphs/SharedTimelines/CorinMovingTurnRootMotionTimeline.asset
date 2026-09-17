@@ -1,5 +1,55 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-4584018876515762447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Timeline Tree
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"826dd10e-614a-49b7-bc6b-a0e60a2b93d2","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_verboseLevel":1,"_UID":"20763742-4295-49be-b60a-c582ca4d6f90","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"88f46767-6198-49a5-9e1f-d1d88ad36303","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"bcb48da9-6a8c-436e-a293-57aab92be362","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"1b078edf3e9647959d1d71b994e579ec","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 45, y: -137}
+    _zoomFactor: 0.90456283
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 1b078edf3e9647959d1d71b994e579ec
+  m_Role: 5
+  m_BlackboardDeclarations: []
+--- !u!114 &-1863878152842547518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Timeline Tree
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[],"connections":[],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"6fc6f7b5d4604d009dcf39c5d282fe81","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: -371, y: -136}
+    _zoomFactor: 0.2500927
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: 6fc6f7b5d4604d009dcf39c5d282fe81
+  m_Role: 5
+  m_BlackboardDeclarations: []
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17,6 +67,7 @@ MonoBehaviour:
     m_Name: CorinMovingTurnRootMotionTimeline
     m_Tracks:
     - rid: 207050398850875392
+    - rid: 207050521905463320
     m_Sections: []
     m_ExternalBindings: []
     m_Scale: 1
@@ -125,3 +176,24 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+    - rid: 207050521905463320
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: cd3bfa4b-0b9d-4c85-a6e8-e1d386bbb770
+        Name: tree
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050521905463328
+    - rid: 207050521905463328
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 99c7ff32-caad-4abf-8ad7-362b2c42099a
+        StartFrame: 14
+        EndFrame: 17
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_ExecutionPhase: 1
+        m_AssetTree: {fileID: -4584018876515762447}

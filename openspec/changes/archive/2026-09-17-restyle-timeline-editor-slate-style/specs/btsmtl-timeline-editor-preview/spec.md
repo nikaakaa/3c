@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Timeline Editor必须直接使用Slate CutsceneEditor作为实际编辑表面
 
@@ -115,32 +115,6 @@ Slate 对 proxy 的字段修改 MUST仅作为手势草稿。Adapter MUST通过 s
 - **THEN** 原手势 MUST按正式合同处理时长、ClipIn、源区间和局部曲线，MUST NOT只复制数据后修改Start/End冒充无损切分
 - **AND** Copy MUST捕获命令时的正式内容，Paste MUST生成新身份，不从后续可变的旧UI binding取得内容
 
-### Requirement: Preview与Live Debug控制必须归Graph Shell
-
-Scene Play Session、Runtime Trace、Follow/Pin、TreeClip ownership、Character/Actor target、Build、Skill request、Capture、History、Restore 和 Replay MUST由 Graph Shell/SkillGraph 与唯一 Scene Play coordinator 管理。Timeline 只读取正式 binding，将当前实际运行标记作为只读 overlay 显示；Timeline 不得控制运行对象或复制这些状态机。
-
-Embedded Slate Surface MUST NOT调用 Slate `Sample`、`Play`、`PlayableGraph` 或 Actor binding 来执行 Preview。Scene Play Session 与领域 owner 是唯一时间推进和输出 owner；Slate current time 只允许作为编辑游标和被动 overlay 的显示输入。
-
-#### Scenario: Graph Shell启动Scene Play
-
-- **WHEN** 作者在Graph Shell点击Scene Play、构建当前技能或Skill request
-- **THEN** 命令 MUST进入唯一 Scene Play coordinator 和正式 Session
-- **AND** Timeline MUST只接收正式 runtime binding/overlay，不创建本地播放器
-- **AND** Timeline 的作者编辑能力 MUST不因打开运行观察而复制或切换到另一个窗口
-
-#### Scenario: Scene Play期间编辑Timeline
-
-- **WHEN** 作者在同一 Scene Play Session 中拖动 Clip、修改 Curve 或 Section
-- **THEN** Timeline MUST通过正式 BTSMTL Mutation/Undo 写入作者 Timeline
-- **AND** Graph Shell MUST显示对应领域的配置版本、就绪结果、实际采用版本/实例及失败原因，MUST NOT恢复Character全量Build或统一ProgramEpoch采用
-- **AND** 活动技能实例 MUST保持启动时的不可变技能版本，新版本只用于后续实例；影响Session玩法identity的变化 MUST按正式规则重新准备，普通编辑本身 MUST NOT更换Session
-
-#### Scenario: Timeline只读观察运行
-
-- **WHEN** Scene Play coordinator 已产生正式 Runtime Trace
-- **THEN** Timeline MAY显示 active Track/Clip、logic/visual time、TreeClip phase 和 playback identity overlay
-- **AND** overlay MUST只读，Timeline 不得暂停、恢复、重置、恢复历史或回放运行对象
-
 ### Requirement: Timeline新增Track与Clip必须使用正式typed authoring contract
 
 Timeline Editor MUST提供正式的 Add Track/Add Clip 作者入口；候选类型 MUST来自当前 Timeline owner 的 `TimelineContractCatalog` 和 Track contract 的 allowed clip kinds。新增操作 MUST调用正式 `TimelineData.AddTrack`、`TimelineData.AddClip` 或其等价的唯一 typed Mutation API，并进入同一个 `TimelineEditorSessionContext`、Undo 和 owner revision。
@@ -180,8 +154,6 @@ Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST�
 - **THEN** 创建表单 MUST携带准确 Track identity、插入帧、contract 和 required typed fields
 - **AND** 资源选择、全部字段和 owner revision 校验成功后 MUST在同一正式事务创建对象，再投影为 Slate Clip
 - **AND** 成功后 MUST选中新对象；取消或失败 MUST不修改已有内容
-
-## ADDED Requirements
 
 ### Requirement: Timeline预览联动必须消费领域准备和实际采用报告
 
@@ -453,12 +425,3 @@ Timeline MUST保留编辑游标、整数帧输入和逐帧操作；编辑游标�
 - **THEN** 正式 Track/Clip identity、资源和帧范围 MUST保持，旧临时对象 MUST释放
 - **AND** MUST无新增 GUI、序列化或生命周期异常，异常处理 MUST基于完整堆栈而不是隐藏 Console
 
-### Requirement: 旧UI Toolkit仿制Timeline路径必须删除
-
-完成本 change 后，正式 Timeline 编辑入口 MUST不再依赖上一轮新增的 UI Toolkit Slate仿制 UXML/USS、独立 viewport、独立 zoom/pan、独立 Clip hit-test 或独立 rendering path。项目 MUST只保留 Slate `CutsceneEditor` 作为 Timeline 编辑表面和 BTSMTL Mutation 作为正式写入链。
-
-#### Scenario: 检查Timeline编辑入口
-
-- **WHEN** 工程编译并打开正式 Timeline入口
-- **THEN** 调用链 MUST能追溯到唯一 `TimelineEditorWindow` 中的 Slate 原有编辑 Surface
-- **AND** MUST不存在并行的旧 UI Toolkit Timeline窗口、仿 Slate皮肤或兼容开关

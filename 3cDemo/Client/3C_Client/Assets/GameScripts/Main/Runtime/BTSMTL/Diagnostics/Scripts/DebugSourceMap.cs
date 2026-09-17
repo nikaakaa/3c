@@ -80,6 +80,32 @@ namespace BTSMTL.Diagnostics
         public IReadOnlyList<DebugSourceMapEntry> Entries => m_Entries;
         public IReadOnlyList<RuntimeGraphInvocation> GraphInvocations => m_GraphInvocations;
 
+        public RuntimeSourceElementHandle Add(
+            RuntimeSourceElementKey source,
+            RuntimeSourceElementHandle parent,
+            string displayName,
+            string contentHash,
+            RuntimeSourceTarget target)
+        {
+            if (m_Sealed)
+                throw new InvalidOperationException("Debug Source Map is sealed.");
+            if (!source.IsValid)
+                throw new InvalidOperationException("Debug Source Map source identity is invalid.");
+
+            var handle = new RuntimeSourceElementHandle(m_Entries.Count + 1, source.Kind);
+            var entry = new DebugSourceMapEntry(handle, source, parent, displayName, contentHash, target);
+            m_Entries.Add(entry);
+            m_ByHandle.Add(handle.Value, entry);
+            if (!m_BySource.TryGetValue(source, out List<RuntimeSourceElementHandle> handles))
+            {
+                handles = new List<RuntimeSourceElementHandle>();
+                m_BySource.Add(source, handles);
+            }
+            handles.Add(handle);
+            if (target.IsIndexedTarget && !m_ByIndexedTarget.TryAdd(target, handle))
+                throw new InvalidOperationException($"Debug Source Map indexed target is duplicated: {target}");
+            return handle;
+        }
         public void AddGraphInvocation(RuntimeGraphInvocation invocation)
         {
             if (m_Sealed)

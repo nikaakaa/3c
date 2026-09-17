@@ -1,9 +1,10 @@
+using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
 
-namespace ThirdPersonCharacter.Pipeline.Simulation.Unity.Fixed
+namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
-    internal static class AbilityDebugSourceMapFiller
+    public static class AbilityDebugSourceMapFiller
     {
         public static void Fill(DebugSourceMap sourceMap, int targetIndexOffset, IReadOnlyList<ProgramSourceMapEntry> sources)
         {
@@ -53,3 +54,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Unity.Fixed
         }
     }
 }
+

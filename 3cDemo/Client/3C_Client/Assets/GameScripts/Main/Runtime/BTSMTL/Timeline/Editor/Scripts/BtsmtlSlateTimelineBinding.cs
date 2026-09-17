@@ -152,14 +152,12 @@ namespace BTSMTL.Timeline.Editor
                 return;
             float previousLength = Length;
             m_EditActive = false;
-            UnityEngine.Debug.Log("[TL-DBG] CommitEdit: revisionMatch=" + string.Equals(m_EditSourceRevision, m_SourceRevision, StringComparison.Ordinal) + " sourceCurrent=" + IsSourceCurrent() + " hasClipChanges=" + m_Clips.Values.Any(clip => clip.HasChanges()) + " hasSectionChanges=" + m_SectionsById.Values.Any(section => section.HasChanges()));
             if (!string.Equals(m_EditSourceRevision, m_SourceRevision, StringComparison.Ordinal) ||
                 !IsSourceCurrent())
             {
                 m_EditSourceRevision = string.Empty;
                 Rebuild();
                 ExpandViewToLength(previousLength);
-                UnityEngine.Debug.Log("[TL-DBG] 拉回分支1：外部修改判定丢弃");
                 ReportIssue("Timeline 内容已被外部修改，当前编辑已丢弃。");
                 return;
             }
@@ -173,7 +171,6 @@ namespace BTSMTL.Timeline.Editor
             }
             try
             {
-                UnityEngine.Debug.Log("[TL-DBG] 到达Apply提交");
                 m_Session.Apply(() =>
                 {
                     bool changed = false;
@@ -1110,6 +1107,7 @@ namespace BTSMTL.Timeline.Editor
             internal BtsmtlSlateTimelineBinding Owner => m_Owner;
             public BtsmtlTimelineTrackBinding Track => m_Track;
             IEmbeddedTimelineTrackBinding IEmbeddedTimelineClipBinding.Track => m_Track;
+            public bool IsTimeQuantized => Source.IsTickQuantized();
             public string AuthoringId => Source.AuthoringId;
             public string DisplayName => Source.Name;
             public string Info => Source is MotionCurveClip motion && motion.SourceCurve != null
@@ -1300,8 +1298,7 @@ namespace BTSMTL.Timeline.Editor
                     frame = frame - frame % tickStep;
                     return frame / (float)m_Owner.FrameRate;
                 }
-                int snapped = Mathf.Max(0, Mathf.RoundToInt(value * m_Owner.FrameRate));
-                return snapped / (float)m_Owner.FrameRate;
+                return Mathf.Max(0f, value);
             }
         }
 

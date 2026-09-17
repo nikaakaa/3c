@@ -75,6 +75,7 @@ namespace Slate
         IEmbeddedTimelineTrackBinding Track { get; }
         string Info { get; }
         bool IsActive { get; }
+        bool IsTimeQuantized { get; }
         bool IsValid { get; }
         bool IsCollapsed { get; set; }
         float StartTime { get; set; }
@@ -149,6 +150,7 @@ namespace Slate
         bool IsCollapsed { get; set; }
         bool IsLocked { get; set; }
         bool IsValid { get; }
+        bool IsTimeQuantized { get; }
         bool HasParameters { get; }
         bool HasActiveParameters { get; }
         bool CanScale { get; }
@@ -177,6 +179,7 @@ namespace Slate
         public string AuthoringId => NativeAction.GetInstanceID().ToString();
         public string Info => NativeAction.info;
         public IEmbeddedTimelineTrackBinding Track => null;
+        public bool IsTimeQuantized => true;
         public bool IsCollapsed { get => NativeAction.isCollapsed; set { } }
         public bool IsLocked { get => NativeAction.isLocked; set { } }
         public bool IsValid => NativeAction.isValid;
@@ -225,6 +228,7 @@ namespace Slate
             }
         }
         public bool CanScale => FormalClip.CanScale;
+        public bool IsTimeQuantized => FormalClip.IsTimeQuantized;
         public bool CanBlendIn => FormalClip.CanBlendIn;
         public bool CanBlendOut => FormalClip.CanBlendOut;
         public float StartTime { get => FormalClip.StartTime; set => FormalClip.StartTime = value; }

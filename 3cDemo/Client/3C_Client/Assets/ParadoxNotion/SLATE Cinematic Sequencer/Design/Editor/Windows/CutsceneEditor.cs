@@ -3551,7 +3551,7 @@ namespace Slate
                 Event e = Event.current;
                 float lastTime = xTime;
                 xTime = PosToTime(xPos + leftRect.width);
-                xTime = SnapTime(xTime);
+                if ( wrapper.editorBinding.IsTimeQuantized ) { xTime = SnapTime(xTime); }
                 xTime = Mathf.Clamp(xTime, 0f, maxTime - 0.1f);
 
                 if (multiSelection != null && multiSelection.Count > 1)
@@ -3570,7 +3570,7 @@ namespace Slate
 
                 if (multiSelection == null || multiSelection.Count < 1)
                 {
-                    float cursorTime = SnapTime(PosToTime(mousePosition.x));
+                    float cursorTime = wrapper.editorBinding.IsTimeQuantized ? SnapTime(PosToTime(mousePosition.x)) : PosToTime(mousePosition.x);
                     IClipEditorBinding preCursorBinding = trackBindings
                         .Where(value => value.AuthoringId != wrapper.editorBinding.AuthoringId && value.StartTime < cursorTime)
                         .LastOrDefault();
@@ -4078,7 +4078,8 @@ namespace Slate
                     foreach ( var clipWrapper in multiSelection ) {
                         var preTimeMin = preMultiSelectionRetimeMinMax.xMin;
                         var preTimeMax = preMultiSelectionRetimeMinMax.xMax;
-                        var pointerTime = SnapTime(PosToTime(mousePosition.x));
+                        var rawPointerTime = PosToTime(mousePosition.x);
+                        var pointerTime = clipWrapper.editorBinding.IsTimeQuantized ? SnapTime(rawPointerTime) : rawPointerTime;
 
                         var lerpMin = multiSelectionScaleDirection == -1 ? Mathf.Clamp(pointerTime, 0, preTimeMax) : preTimeMin;
                         var lerpMax = multiSelectionScaleDirection == 1 ? Mathf.Max(pointerTime, preTimeMin) : preTimeMax;
@@ -4345,7 +4346,7 @@ namespace Slate
                 hasActiveParameters = editorBinding.HasActiveParameters;
 
                 pointerTime = editor.PosToTime(editor.mousePosition.x);
-                snapedPointerTime = editor.SnapTime(pointerTime);
+                snapedPointerTime = editorBinding.IsTimeQuantized ? editor.SnapTime(pointerTime) : pointerTime;
 
                 allowScale = editorBinding.CanScale && editorBinding.Length > 0 && rect.width > SCALE_RECT_WIDTH * 2;
                 dragRect = new Rect(0, 0, rect.width, rect.height - ( hasActiveParameters ? CLIP_DOPESHEET_HEIGHT : 0 )).ExpandBy(allowScale ? -SCALE_RECT_WIDTH : 0, 0);

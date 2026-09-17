@@ -28,18 +28,18 @@ Corin 已识别的 81 Shake、18 Zoom、18 Stretch、4 Override 及属于单角�
 
 - **WHEN** 导入器已读取资源但未定位调用者
 - **THEN** 记录 MUST 区分资源存在与动作接通
-- **AND** MUST 不虚构 Timeline Clip 或绑定事件填补数量
+- **AND** MUST 不虚构 TreeClip Node 或绑定事件填补数量
 
 #### Scenario: 来源动作和工程动作名字相似
 
 - **WHEN** 来源记录 Attack_Normal_01，而工程存在名为 Attack1 的内容
-- **THEN** 映射 MUST 继续提供源事件→具体 Timeline/Clip 身份→效果类型/ResourceId→时间/持续/取消的证据，不能按名字认定对应
+- **THEN** 映射 MUST 继续提供源事件→具体 TreeClip/Node 身份→效果类型/ResourceId→时间/持续/取消的证据，不能按名字认定对应
 - **AND** 当前仅列出的 Corin_Attack_Normal_01_CamShake_A_01 MUST 保持 Shake 类型，不得用 Zoom 代替缺失资源
 
 #### Scenario: 部分 Zoom 资源键已经对齐
 
 - **WHEN** Attack_Counter 或 Attack_Normal_05 的来源 Zoom key 与正式资产 m_ZoomId 一致
-- **THEN** 记录 MUST 只认定资源键对齐，继续补工程 Timeline/Clip 和生命周期证据
+- **THEN** 记录 MUST 只认定资源键对齐，继续补工程 TreeClip/Node 和生命周期证据
 - **AND** 缺口 MUST 按具体资源记录，不要求用户凭空填写整张映射表
 
 ### Requirement: 数值语义与完整交付必须有对应去向

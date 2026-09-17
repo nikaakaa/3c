@@ -19,7 +19,8 @@
 - **BREAKING**：收口 Profile、Sequence 与相机领域资源/只读运行绑定的字段和单位，删除重复数据及对角色总 Program、整包 Projection 的依赖。相机提供必要转换和引用检查，角色装配由领域运行时迁移任务调用；不另建 Camera-only 发布入口或换名总包。
 - 保留默认 Sequence、鼠标角度叠加、同帧 Body pose 与最终 Pose 后执行 Camera 的现有链。修正连续平滑状态，明确输入限幅、Reset、响应裁决与切镜时间语义。
 - 在同一 Camera Runtime 内完成锁定/多目标构图、环境查询与碰撞约束，以及尚未闭合的 Override/Shake/Shot，扩展相应有限算法，不另起 Controller。
-- 保留已有 Zoom/Stretch，完整接线以源动作/事件→工程具体 Timeline/Clip→效果类型/ResourceId→时间/持续/取消的精确映射为输入。相机提供映射；同批 Corin Timeline 资产及生成源码由曲线迁移任务统一写入，18 个资源不等于 18 个已接通动作。
+- 保留已有 Zoom/Stretch，完整接线以源动作/事件→工程 TreeClip/相机特殊 Node→效果类型/ResourceId→时间/持续/取消的精确映射为输入。相机提供映射；同批 Corin TreeClip/生成源码由曲线迁移任务统一写入，18 个资源不等于 18 个已接通动作。
+- 动作相机请求统一由技能 Graph 内的 TreeClip 特殊 Node 表达。Node 只提交带 ActionContext、ResourceId 和生命周期的正式相机请求，不直接写 Camera、Cinemachine 或虚拟相机；Camera Runtime 继续唯一负责求解、叠加、碰撞和最终输出。动作链不再维护并行的 `CameraCueTrack`/`CameraCueClip` 或 `ActionCueClip(CueType: Camera)` 路径。
 - 作者层消费现有正式 Graph/Timeline/资源 API 及 `btsmtl.export_code`、`btsmtl.generate_assets`，删除已废弃的 Agent Document v4/v5 接入 delta。相机 C# 领域覆盖尚需实现对账，不宣称已经完整支持。
 - **BREAKING**：将记录/回放的相机初始状态与采样迁到正式 Presentation 合同，再删除旧 ThirdPersonCameraController、旧引用与孤立配置。保护既有诊断和 prefab 改动。
 - 统一输出前求解与 Cinemachine 落地的职责，扩展现有诊断快照解释输入、请求来源、混合、效果、碰撞与实际输出。
@@ -40,7 +41,9 @@
 
 ## Impact
 
-相机任务拥有 Camera 资源、Builder/payload、只读运行绑定、Timeline.Camera.cs 和自身诊断/算法。角色工厂与编译收窄由领域运行时迁移任务接入；同批 Corin Timeline 资产及生成源码由 `unify-timeline-motion-curve-source` 统一写入。仅公共版本/绑定迁移不重新打开已正确算法。网络 Pipeline/Pass、Float32/Fixed 和独立资源处理保留。
+相机任务拥有 Camera 资源、Builder/payload、只读运行绑定、TreeClip 相机请求合同/编译出口和自身诊断/算法。角色工厂与编译收窄由领域运行时迁移任务接入；同批 Corin TreeClip 资产及生成源码由 `unify-timeline-motion-curve-source` 统一写入。仅公共版本/绑定迁移不重新打开已正确算法。网络 Pipeline/Pass、Float32/Fixed 和独立资源处理保留。
+
+本修订不把现有 `CameraCueClip`/`ActionCueClip` 的当前磁盘状态写成已迁移结果；它们仍是待清理的历史表达。正式目标是单一 TreeClip Node 请求链，迁移完成后删除旧动作 Cue 路径，不保留兼容双轨。
 
 当前规范冲突：`character-camera-pipeline` 仍有 Cinemachine 必须负责全部 orbit/damping 的文字，而当前 Planner/History 已负责求值；本 delta 明确由项目求解、Adapter 落地。现行 C# 作者规范已删除旧目录包，本 change 不再要求恢复它。当前 spec 已没有旧 CameraStateResolver/Camera modifier requirement，不再保留针对不存在 requirement 的删除条目。
 

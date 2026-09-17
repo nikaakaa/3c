@@ -1,6 +1,6 @@
 # 当前摄像机代码与交付边界
 
-记录日期：2026-09-13。基于 D:/Unity_Project_1/3C 工作区调查，重写时 HEAD 为 0aa52f209。共享工作区并非干净提交快照，实施前需重读相关差异。本页是当前状态证据，不是第二份方案或端到端验收报告。
+记录日期：2026-09-13；最新设计口径：2026-09-17 v5。基于 D:/Unity_Project_1/3C 工作区调查，重写时 HEAD 为 0aa52f209。共享工作区并非干净提交快照，实施前需重读相关差异。本页是当前状态证据，不是第二份方案或端到端验收报告。
 
 ## 已有代码，保留而不重做
 
@@ -27,6 +27,7 @@
 8. CameraDebugSnapshot 与 CaptureFrame 已覆盖帧/逻辑 Tick、输入/响应、Sequence/Target 退出、效果、Reset、碰撞和最终输出；连续性/Cue 算子已消费退出合同，运行采样仍未取得。
 9. 工程源码中已无 ThirdPersonCameraController/旧 FreeLook 朝向写入；CharacterFixedInputTraceWorkflow 现在通过正式 CharacterSimulationPresentationRuntime 的 CameraBasis/InitialState 记录与恢复 yaw。
 10. 当前 C# 作者规范已替换旧 Agent 包；相机各资源和请求的完整 C# 导出/生成覆盖尚未逐项证明，不能因公共入口存在就勾选完成。
+11. 动作相机请求的正式目标已改为技能 Graph 内的 TreeClip 特殊 Node；当前 Corin 仍是通用 ActionCueClip，尚无正式 TreeClip/Node ResourceId 请求，因此本次设计更新不等于资产迁移完成。
 
 ## 当前 Unity 证据
 
@@ -36,7 +37,7 @@
 
 ## 旧文件清理与保留
 
-- 原 proposal/design/tasks 和 delta 本次按当前合同重写，去掉旧批次/旧 worktree 路由及 v4/v5 等已废弃计划。
+- 原 proposal/design/tasks 和 delta 已按当前合同收敛；2026-09-17 v5 进一步明确动作相机请求统一走 TreeClip 特殊 Node，旧 CameraCueClip/ActionCueClip(CueType: Camera) 仅作为待迁移历史状态。
 - 删除独立 docs/character-camera-plan-2026-09-13.md，内容收敛到本 change 的设计与本页。
 - 保留 source-baseline.md/source-behavior.md 的来源身份、数值、函数和未闭合项；它们是历史取证，不能当作今日实现进度。
 - 未修改旧 camera-zzz worktree、其它任务的协调记录、相机代码、资产或 current spec。

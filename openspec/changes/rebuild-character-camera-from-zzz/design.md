@@ -53,7 +53,7 @@ InputProfile / InputActions
 → Registration / ControlSource.CaptureRenderFrame
 → 本渲染帧 Look + 采样时的 CameraBasis
 
-正式 Graph / Timeline → 已提交 PresentationCommand
+正式 Graph 内 TreeClip / 相机特殊 Node → 已提交 PresentationCommand
 同帧 Body visible pose + 最终动画提交
 → CharacterSimulationPresentationRuntime.CompletePresentationFrame
 → 内部 CharacterCameraPresentationRuntime.Present
@@ -117,7 +117,7 @@ Override、Shake、Shot 按已有来源逐个补齐资源及消费者；先恢�
 
 ### 5. 领域资源、只读绑定、作者和诊断
 
-Profile 装配相机资源，技能的 Graph/Timeline 表达请求。技能内容仍独立编译；C# 控制与 Pose 原生图不被塞回相机或角色总包。相机的资源转换/引用解析只覆盖实际领域输入，实例创建时形成只读运行绑定，不每帧遍历作者资产，也不形成另一份可编辑配置。实例绑定不可序列化成新的发布总包；已有独立资源产品保持自己的处理与身份。相机内容变化更新自己的内容/绑定身份，不要求重建角色所有技能、Pose 和非相机资源。
+Profile 装配相机资源，技能 Graph 内的 TreeClip 特殊 Node 表达动作相机请求。技能内容仍独立编译；C# 控制与 Pose 原生图不被塞回相机或角色总包。相机的资源转换/引用解析只覆盖实际领域输入，实例创建时形成只读运行绑定，不每帧遍历作者资产，也不形成另一份可编辑配置。实例绑定不可序列化成新的发布总包；已有独立资源产品保持自己的处理与身份。相机内容变化更新自己的内容/绑定身份，不要求重建角色所有技能、Pose 和非相机资源。
 
 当前 `CharacterCameraProjectionBuilder.Build(CharacterCameraProfile)` 只接收 Profile，其必要字段转换、资源引用检查和 payload 可以按领域保留并改成合适名称，但旧名称和类型不代表必须保留整包 Projection。相机任务提供正式资源和绑定入口，领域运行时迁移任务从角色装配调用。Builder 位于 Editor 编译目录，不能因取消总包就直接搬到 Player：纯运行绑定逻辑与 Editor-only 的资源转换/导入边界要分开，真正资源处理继续走原有独立资源流程，不新增 Camera-only 临时发布入口、运行时补构建或另一个总包。
 
@@ -125,22 +125,41 @@ Profile 装配相机资源，技能的 Graph/Timeline 表达请求。技能内�
 
 UI 显示真实单位、支持范围、资源处理/技能编译各自状态及 Camera 实际采用身份；不在 OnInspectorGUI 编译或求值。通过现有 C# API 表达相机作者字段，不恢复目录包/同步器。Preview/ScenePlay 只调用领域绑定、Reset/替换及正式相机求值入口，并读取实际结果，不能自己解释 Profile、求解镜头或把“按钮操作成功”当成新绑定已采用。没有资源/绑定就由领域报告具体缺失，不等待旧全量 Build 恢复。
 
+### 5.3 动作相机请求统一走 TreeClip 特殊 Node
+
+动作相关的 Camera State、Effect、Response、Target 请求统一在技能 Graph 的 TreeClip 内通过相机特殊 Node 表达。当前已有的 `RequestCameraStateNode`、`EmitCameraCueNode`、`SetCameraResponseNode`、`SetCameraTargetNode` 和 `ReadCameraBasisNode` 是这条正式表达的基础；Node 只产生带稳定 ActionContext、来源身份、优先级、ResourceId 和生命周期的 typed Camera request，不直接写 Camera、Cinemachine 或虚拟相机。
+
+正式调用次序收窄为：
+
+```text
+Ability / TreeClip
+→ Camera 特殊 Node
+→ Camera operation / PresentationCommand
+→ CharacterCameraDomainRuntime
+→ Sequence / Response / Target / Effect / Environment
+→ CameraRigAdapter
+```
+
+Camera Domain Runtime 继续拥有默认轨道、鼠标输入、同帧 Body visible pose、平滑、效果叠加、碰撞和最终输出。TreeClip Node 只是动作时点的请求入口，不能变成第二套相机求解器。Node 的一次性触发、循环、取消、自然结束和 seek/replay 必须由正式 TreeClip 执行身份处理，不能在每个逻辑 tick 重复提交同一个请求。
+
+动作链不再维护并行的 `CameraCueTrack`/`CameraCueClip` 或 `ActionCueClip` 携带 `CueType: Camera` 的旧表达。来源映射的工程落点改为 TreeClip/Node 稳定身份；ResourceId、来源事件、时间和退出规则仍必须逐项取证，改用 Node 不会消除映射要求。Camera 资源继续作为独立资源存在，Node 只引用它，不复制资源参数或创建 Camera-only 发布路径。
+
 ### 5.1 本批写入责任与输入输出
 
 | 责任方 | 拥有和写入 | 提供给另一方的输入/输出 |
 |---|---|---|
-| Camera 本任务 | Camera 资源、Builder/payload、运行绑定、Timeline.Camera.cs；相机算法和诊断 | 资源身份与精确 Cue 映射；绑定成功/失败、Reset/替换、实际采用身份 |
+| Camera 本任务 | Camera 资源、Builder/payload、运行绑定、TreeClip 相机请求合同/编译出口；相机算法和诊断 | 资源身份与精确 TreeClip/Node 映射；绑定成功/失败、Reset/替换、实际采用身份 |
 | replace-character-program-with-domain-runtimes | 角色实例装配、总 Program/整包 Projection 退役、领域模块接线 | 调用 Camera 的正式资源/只读绑定；不重写相机算法 |
-| unify-timeline-motion-curve-source | 本批 Corin Timeline 资产及其生成 C# 的唯一写入 | 消费 Camera 精确映射，写入具体 Clip/Cue 引用；不反推来源效果公式 |
+| unify-timeline-motion-curve-source | 本批 Corin TreeClip 资产及其生成 C# 的唯一写入 | 消费 Camera 精确映射，写入具体 TreeClip/Node 请求；不反推来源效果公式 |
 | Preview/ScenePlay 任务 | 现有会话、交互、观察、暂停/推进 | 调用 Camera 提供的绑定/Reset/替换，展示 Camera 返回的真实采用身份 |
 
 本分工不改变未完成算法仍归相机的事实；公共版本或绑定调整不能成为重开正确 FramePlanner、轨道+鼠标偏移、History/Transition、Effect、Collision、Adapter、同帧 Body 及诊断行为的理由。同批 Timeline 资产和生成源码不能由 Camera 与曲线迁移各自重建。
 
 ### 5.2 精确来源映射，禁止按动作简称猜接线
 
-本任务交付 `evidence/source-cue-mapping.md`，逐行记录源文件/对象/事件、工程 Timeline 精确路径和稳定身份、Clip/Cue 身份、效果类型、ResourceId、原时钟/帧率、时间/持续/权重/取消规则及缺口。未知项按具体资源和具体证据列出，由任务继续取证，不要求用户凭空填整张表。
+本任务交付 `evidence/source-cue-mapping.md`，逐行记录源文件/对象/事件、工程 TreeClip/Node 精确路径和稳定身份、Node 请求身份、效果类型、ResourceId、原时钟/帧率、时间/持续/权重/取消规则及缺口。未知项按具体资源和具体证据列出，由任务继续取证，不要求用户凭空填整张表。
 
-协调输入确认 Attack_Counter 与 Attack_Normal_05 的部分 Zoom key 和正式资源 m_ZoomId 一致；本轮磁盘核对可见 Corin_Attack_Counter_CamZoom_01、Corin_Attack_Normal_05_CamZoom_01/02。key 一致不证明工程 Timeline/Clip 映射或触发时刻。Attack_Normal_01 资料当前只列 Corin_Attack_Normal_01_CamShake_A_01，不能按 Attack1 的名字认定工程对应，更不能用 Zoom 替代缺失 Shake。映射确认后由曲线迁移任务统一写本批 Timeline 与生成源码，Camera 仅提供精确 Cue 映射和资源/合同。
+协调输入确认 Attack_Counter 与 Attack_Normal_05 的部分 Zoom key 和正式资源 m_ZoomId 一致；本轮磁盘核对可见 Corin_Attack_Counter_CamZoom_01、Corin_Attack_Normal_05_CamZoom_01/02。key 一致不证明工程 TreeClip/Node 映射或触发时刻。Attack_Normal_01 资料当前只列 Corin_Attack_Normal_01_CamShake_A_01，不能按 Attack1 的名字认定工程对应，更不能用 Zoom 替代缺失 Shake。映射确认后由曲线迁移任务统一写本批 TreeClip 与生成源码，Camera 仅提供精确请求映射和资源/合同。
 
 诊断沿现有快照和采样算子扩展：原始/消费 Look、基准角/手动偏移/限幅、请求胜出原因、来源身份、时间域、blend、Reset、效果贡献、碰撞前后及 RigResult。记录/回放迁到正式相机初始状态合同后删除旧 Controller。纯 logic 输入回放不自动证明相机重放；需要记录相机初始状态、渲染帧 Look 和时间信息。
 
@@ -161,7 +180,7 @@ UI 显示真实单位、支持范围、资源处理/技能编译各自状态及 
 
 ## Migration Plan
 
-依赖顺序：领域资源/绑定合同与来源映射 → 相机必要转换和角色装配调用 → 曲线迁移统一写入 Timeline/生成源码 → 各领域实际采用/Reset/诊断 → 旧总包绑定与无消费者路径删除。原未完成算法继续按其来源依赖处理，已经正确的求值不重写。本轮只更新这些规划依赖，不执行此迁移序列。
+依赖顺序：领域资源/绑定合同与 TreeClip Node 请求合同及来源映射 → 相机必要转换和角色装配调用 → 曲线迁移统一写入 TreeClip/生成源码 → 各领域实际采用/Reset/诊断 → 旧总包绑定与 Camera Cue 无消费者路径删除。原未完成算法继续按其来源依赖处理，已经正确的求值不重写。本轮只更新这些规划依赖，不执行此迁移序列。
 
 迁移按实际受影响的 authoring、validator/hash、领域转换、payload/绑定和资源引用处理，取消整角色生成产物联动；资源加工需要的独立输出仍保留。旧 Controller/回放和 prefab 的已正确迁移保留，后续按当前差异接续，不重复删除或回退。本任务不修改 implementation.md 的真实旧域构建失败记录，也不以该记录证明新绑定已经采用。
 
@@ -178,7 +197,7 @@ UI 显示真实单位、支持范围、资源处理/技能编译各自状态及 
 | character-csharp-authoring | 已删除旧 Agent 目录包 | 删除废弃 capability delta，添加相机领域覆盖要求 |
 | btsmtl-compiled-simulation-program / 旧 Camera delta | 总 Program、整包 Projection、全量 Build 与已批准领域基线冲突 | 删除本 change 的旧 compiled-simulation delta；总包退役由领域迁移 owner 处理，相机只提供资源与绑定 |
 | replace-character-program-with-domain-runtimes D1/D5/D6/D8 | 技能独立编译，C# 控制、Pose 原生运行，表现按领域绑定 | Camera 接资源/只读绑定和实际采用身份，不创建总包或 Editor 逻辑运行时搬运 |
-| btsmtl-timeline-editor-preview：Continuous Curve | 已包含相机曲线和其它领域完整要求 | 不重复改写该 requirement；只添加相机状态接入与诊断约束 |
+| btsmtl-timeline-editor-preview：Continuous Curve | 已包含相机曲线和其它领域完整要求 | 不重复改写该 requirement；动作请求统一由 TreeClip Node 提交，Preview 只观察 Camera Runtime 结果 |
 | source-parity（本 change 新能力） | 原行为证据与项目已写代码不能互相替代 | 保留全范围和缺口，禁止以新增现状页宣布完整移植 |
 
 规划修订没有修改 current spec 或其它任务文档；delta 是协调后的目标约束。旧 current spec 尚存 Program/Projection 用语不撤销用户已批准的新基线，双方按上述 ownership 迁移。用户已授权原实现窗口继续，但文档修订不代表代码完成。后续如操作 Unity，编译期间禁止修改代码或反复刷新，Play 时不得 Build/Refresh，且每次工具显式指定实例。

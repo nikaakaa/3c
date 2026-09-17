@@ -40,7 +40,7 @@
 
 #### Scenario: 命中帧震屏
 
-- **WHEN** Timeline 或 Graph 提交正式 CameraShakeRequest
+- **WHEN** TreeClip 内的相机特殊 Node 提交正式 CameraShakeRequest
 - **THEN** 内部 Camera Runtime MUST 保留请求的生命周期、顺序和 debug 来源，并交由对应 owner 求值
 - **AND** 未闭合的 Shake MUST 明确拒绝，不得改变角色或目标伪造效果
 

@@ -1,6 +1,6 @@
 # 相机剩余实施任务
 
-修订 v4，2026-09-13，协调提案 camera-preview-timeline-domain-runtime-r1。用户已明确“更新完了让实现窗口继续做吧”，原实现窗口按本文调整后的领域责任与剩余合同继续，遵守同批 Timeline/生成源码由曲线迁移统一写入的分工。已有实现以 implementation.md 和当前代码为准，未勾选不是要求重做已正确算法。旧 Projection/旧 Runtime DLL 的真实记录保留，但不再等待 Character 全量 Build/整包 Projection 恢复。所有任务默认不新增测试，不包含验证或人工验收任务。
+修订 v5，2026-09-17，协调提案 camera-preview-timeline-domain-runtime-r1。用户已确定动作相机请求统一走技能 Graph 内的 TreeClip 特殊 Node；Camera Runtime 继续拥有求解和最终输出，旧 CameraCueClip/ActionCueClip(CueType: Camera) 不保留为并行路径。原实现窗口按本文调整后的领域责任与剩余合同继续，遵守同批 TreeClip/生成源码由曲线迁移统一写入的分工。已有实现以 implementation.md 和当前代码为准，未勾选不是要求重做已正确算法。旧 Projection/旧 Runtime DLL 的真实记录保留，但不再等待 Character 全量 Build/整包 Projection 恢复。所有任务默认不新增测试，不包含验证或人工验收任务。
 
 ## 1. 基础构图与输入合同
 
@@ -37,17 +37,18 @@
 
 ## 6. 相机资源、精确映射与领域绑定
 
-- [ ] 6.1 在相机资源、Builder/payload、运行绑定和 Timeline.Camera.cs 中闭合本领域字段、引用、单位和能力失败合同；保留真实曲线 owner，不在 Inspector 重绘中处理资源或编译，不改由其它 owner 负责的同批资产。
-- [ ] 6.2 通过现有 C# 领域 API 表达 Camera 资源和请求合同；本批 Corin Timeline 资产及生成源码由曲线迁移任务统一写入，相机只提供精确 Cue 映射与领域能力，不各自重建同一资产。
-- [ ] 6.3 完成 evidence/source-cue-mapping.md 的源动作/事件→工程具体 Timeline/Clip→效果类型/ResourceId→时间/持续/取消映射；逐资源补齐证据和缺口。Counter/Normal_05 的 Zoom key 对齐不替代 Timeline 映射；Normal_01 当前仅有指定 Shake 线索，不按 Attack1 名称猜接线或用 Zoom 代替。
+- [ ] 6.1 在相机资源、Builder/payload、运行绑定和 TreeClip Camera operation/emitter 中闭合本领域字段、引用、单位和能力失败合同；动作链不再新增或维护 CameraCueClip/CameraCueTrack，保留真实资源 owner，不在 Inspector 重绘中处理资源或编译，不改由其它 owner 负责的同批资产。
+- [ ] 6.2 通过现有 C# 领域 API 表达 Camera 资源和 TreeClip 特殊 Node 请求合同；本批 Corin TreeClip 资产及生成源码由曲线迁移任务统一写入，相机只提供精确 Node 映射与领域能力，不各自重建同一资产。
+- [ ] 6.3 完成 evidence/source-cue-mapping.md 的源动作/事件→工程具体 TreeClip/Node→效果类型/ResourceId→时间/持续/取消映射；逐资源补齐证据和缺口。Counter/Normal_05 的 Zoom key 对齐不替代 TreeClip/Node 映射；Normal_01 当前仅有指定 Shake 线索，不按 Attack1 名称猜接线或用 Zoom 代替。
 - [ ] 6.4 从只接受 Profile 的 CharacterCameraProjectionBuilder 保留必要转换/引用检查，提供给角色装配调用的正式相机资源与只读运行绑定；分开 Editor-only 处理与 Player 绑定，独立资源流程保持原归属，不恢复角色全量 Build/整包 Projection，也不新增 Camera-only 临时发布入口或换名总包。
 - [ ] 6.5 由 Camera 提供绑定失败、Reset/替换、旧实例释放与实际采用身份，角色装配/Preview 调用同一领域入口；预览只观察真实结果，不自行求解相机或伪造已采用。
+- [ ] 6.6 将动作相机请求从 CameraCueTrack/CameraCueClip 与 ActionCueClip(CueType: Camera) 迁到 TreeClip 特殊 Node，保证一次性触发、循环、取消、自然结束和 seek/replay 使用稳定请求身份；迁移完成后删除旧动作 Cue 路径，不保留双轨。
 
 ## 7. 诊断、迁移与删除
 
 - [ ] 7.1 保留已接通的 CameraDebugSnapshot 和采样行为，将旧 Projection 身份观察迁到 Camera 实际资源/内容/绑定实例身份，继续解释输入、来源、Reset、效果和碰撞，不重做算法或另建诊断状态源。
 - [ ] 7.2 将输入记录/回放的相机初始状态和采样迁到正式 Presentation 合同，保留现有用户改动，区分逻辑输入回放与镜头回放。
 - [ ] 7.3 在真实调用迁完后删除 ThirdPersonCameraController 及 meta、旧 FreeLook 朝向写入和无引用配置/资源，所有运行与诊断只走正式链。
-- [ ] 7.4 随实际迁移同步 Camera 自身规范与领域资源/绑定合同，配合领域运行时 owner 删除无消费者的旧总包绑定；本批 Timeline/生成源码按曲线迁移单一写入，保留旧产物失败记录，不以旧程序集结果证明新代码。
+- [ ] 7.4 随实际迁移同步 Camera 自身规范与领域资源/绑定合同，配合领域运行时 owner 删除无消费者的旧总包绑定；本批 TreeClip/生成源码按曲线迁移单一写入，删除无消费者的旧 Camera Cue 路径，保留旧产物失败记录，不以旧程序集结果证明新代码。
 
 任务分组表达依赖与职责，不替用户判定业务优先级。一个效果缺少来源不阻止独立且已授权的其它模块推进；删除/迁移撞到正在修改的正确代码时，记录具体冲突交用户决定。

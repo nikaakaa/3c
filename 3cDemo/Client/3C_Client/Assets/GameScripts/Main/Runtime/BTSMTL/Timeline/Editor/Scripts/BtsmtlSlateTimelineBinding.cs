@@ -245,15 +245,7 @@ namespace BTSMTL.Timeline.Editor
                 contract.AllowedClipKinds.Count == 1 &&
                 string.Equals(contract.AllowedClipKinds[0], TimelineContractKinds.TreeClip, StringComparison.Ordinal))
             {
-                CreateClip(new TimelineClipCreationRequest
-                {
-                    TrackAuthoringId = formalTrack.Source.AuthoringId,
-                    Kind = TimelineContractKinds.TreeClip,
-                    FrameRate = FrameRate,
-                    StartFrame = frame,
-                    EndFrame = frame + Mathf.Max(1, FrameRate / 20),
-                    DefaultEndFrame = frame + Mathf.Max(1, FrameRate / 20)
-                });
+                ShowClipCreationPopup(formalTrack.Source.AuthoringId, TimelineContractKinds.TreeClip, frame);
                 return;
             }
             ShowAddClipMenu(formalTrack.Source.AuthoringId, frame);

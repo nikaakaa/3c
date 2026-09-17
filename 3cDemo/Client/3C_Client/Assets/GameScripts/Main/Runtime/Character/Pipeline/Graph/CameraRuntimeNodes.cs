@@ -56,28 +56,22 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     }
 
     [Serializable]
-    [NodeName("Emit Camera Cue")]
-    [NodePath("Base/Action/Camera/Emit Camera Cue")]
+    [NodeName("Request Camera Effect")]
+    [NodePath("Base/Action/Camera/Request Camera Effect")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class EmitCameraCueNode : SimulationOperationNode
+    public sealed class RequestCameraEffectNode : SimulationOperationNode
     {
-        [SerializeField, ShowInPanel("Cue Id")]
-        string m_CueId = "CameraCue";
+        [SerializeField, ShowInPanel("Request Id")]
+        string m_RequestId = "CameraEffect";
 
-        [SerializeField, ShowInPanel("Cue Kind")]
-        CameraCueKind m_CueKind = CameraCueKind.Shake;
-
-        [SerializeField, ShowInPanel("Cue Type")]
-        string m_CueType = "Camera";
+        [SerializeField, ShowInPanel("Effect Kind")]
+        CameraEffectKind m_EffectKind = CameraEffectKind.Shake;
 
         [SerializeField, ShowInPanel("Resource Id")]
         string m_ResourceId;
 
-        [SerializeField, Min(0f), ShowInPanel("Intensity")]
-        float m_Intensity = 1f;
-
-        [SerializeField, Min(0f), ShowInPanel("Duration Seconds")]
-        float m_DurationSeconds = 0.2f;
+        [SerializeField, Range(0f, 1f), ShowInPanel("Weight")]
+        float m_Weight = 1f;
 
         [SerializeField, ShowInPanel("Priority")]
         int m_Priority;
@@ -88,12 +82,10 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Submitted"), ReadOnly]
         BoolPropertyPort m_Submitted = new BoolPropertyPort();
 
-        public string CueId => m_CueId;
-        public CameraCueKind CueKind => m_CueKind;
-        public string CueType => m_CueType;
+        public string RequestId => m_RequestId;
+        public CameraEffectKind EffectKind => m_EffectKind;
         public string ResourceId => m_ResourceId;
-        public float Intensity => m_Intensity;
-        public float DurationSeconds => m_DurationSeconds;
+        public float Weight => m_Weight;
         public int Priority => m_Priority;
         public ActionContextSlot ActionContext => m_ActionContext;
         public override State ReturnState => m_Submitted.Value ? State.Success : State.Failure;

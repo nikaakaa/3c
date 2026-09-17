@@ -103,7 +103,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 request.TreeGraphId,
                 request.EventKind == TimelineRuntimeTreeClipEventKind.Enter
                     ? AbilityTreeClipHook.OnEnable
-                    : AbilityTreeClipHook.OnDisable);
+                    : AbilityTreeClipHook.OnDisable,
+                request.Cycle,
+                m_Host.RequireAbilityPlaybackActionInstanceId(context.Playback.Handle));
             return invoker.InvokeTreeClip(invocation);
         }
 
@@ -127,7 +129,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 var invocation = new AbilityTreeClipInvocation(
                     clip.ClipAuthoringId,
                     clip.TreeGraphId,
-                    AbilityTreeClipHook.OnDestroy);
+                    AbilityTreeClipHook.OnDestroy,
+                    clip.Cycle,
+                    m_Host.RequireAbilityPlaybackActionInstanceId(request.Handle));
                 if (!clip.Invoker.InvokeTreeClip(invocation))
                     continue;
             }
@@ -236,6 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal string SourceName;
             internal CharacterTimelinePlaybackSourceKind SourceKind;
             internal bool CoreDriven;
+            internal ulong ActionInstanceId;
         }
 
         TimelineRuntimeCompositionHost m_Host;
@@ -341,7 +346,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Timeline = timeline,
                 SourceName = sourceName ?? string.Empty,
                 SourceKind = sourceKind,
-                CoreDriven = false
+                CoreDriven = false,
+                ActionInstanceId = actionContext.ActionInstanceId
             });
             return true;
         }
@@ -487,6 +493,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return false;
         }
 
+        internal ulong RequireAbilityPlaybackActionInstanceId(TimelineRuntimePlaybackHandle handle)
+        {
+            for (int i = 0; i < m_ActivePlaybacks.Count; i++)
+            {
+                if (m_ActivePlaybacks[i].Handle.Value != handle.Value)
+                    continue;
+                if (m_ActivePlaybacks[i].ActionInstanceId != 0)
+                    return m_ActivePlaybacks[i].ActionInstanceId;
+                break;
+            }
+            throw new InvalidOperationException($"Timeline playback '{handle.Value}' has no Action instance identity.");
+        }
+
         public bool PreviewIsActive
         {
             get
@@ -622,7 +641,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Timeline = timeline,
                 SourceName = timeline.Name,
                 SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime,
-                CoreDriven = true
+                CoreDriven = true,
+                ActionInstanceId = snapshot.ActionContext.InstanceId
             });
             return checked((int)restored.Value);
         }

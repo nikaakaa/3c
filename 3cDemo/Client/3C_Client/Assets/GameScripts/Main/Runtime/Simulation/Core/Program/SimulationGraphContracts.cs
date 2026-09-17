@@ -272,7 +272,7 @@ namespace ThirdPersonSimulation
         GameplayEffectApply = 113,
         GameplayEffectRemove = 114,
         CameraStateRequest = 120,
-        CameraCue = 121,
+        CameraEffectRequest = 121,
         CameraResponse = 122,
         CameraTarget = 123,
         CameraBasisRead = 124,
@@ -287,7 +287,7 @@ namespace ThirdPersonSimulation
     public static class GameplayAbilityOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/15");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/16");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -344,7 +344,7 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.GameplayEffectApply,
                 SimulationOperationCode.GameplayEffectRemove,
                 SimulationOperationCode.CameraStateRequest,
-                SimulationOperationCode.CameraCue,
+                SimulationOperationCode.CameraEffectRequest,
                 SimulationOperationCode.CameraResponse,
                 SimulationOperationCode.CameraTarget,
                 SimulationOperationCode.CameraBasisRead,
@@ -394,6 +394,7 @@ namespace ThirdPersonSimulation
     public static class CameraProgramOperationSchema
     {
         public const int PayloadVersion = 2;
+        public const int EffectPayloadVersion = 3;
         public static readonly AnimationChannelId ChannelId = new AnimationChannelId("Camera");
         public const string OutputPortId = "Submitted";
         public const string BasisValidPortId = "Valid";
@@ -419,7 +420,7 @@ namespace ThirdPersonSimulation
         public static bool IsCameraPresentationOperation(SimulationOperationCode code)
         {
             return code == SimulationOperationCode.CameraStateRequest ||
-                   code == SimulationOperationCode.CameraCue ||
+                   code == SimulationOperationCode.CameraEffectRequest ||
                    code == SimulationOperationCode.CameraResponse ||
                    code == SimulationOperationCode.CameraTarget;
         }
@@ -466,8 +467,11 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(literals));
             if (!IsCameraOperation(operation.Code))
                 return;
-            if (operation.Integer0 != PayloadVersion)
-                throw Invalid(operation, $"payload version '{operation.Integer0}' is unsupported; expected '{PayloadVersion}'");
+            int expectedPayloadVersion = operation.Code == SimulationOperationCode.CameraEffectRequest
+                ? EffectPayloadVersion
+                : PayloadVersion;
+            if (operation.Integer0 != expectedPayloadVersion)
+                throw Invalid(operation, $"payload version '{operation.Integer0}' is unsupported; expected '{expectedPayloadVersion}'");
             if (operation.Operands.Count != 0 || operation.Unsigned0 != 0 || operation.Number0 != 0d || operation.Text0.Length != 0)
                 throw Invalid(operation, "contains fields outside the Camera payload schema");
 
@@ -485,17 +489,15 @@ namespace ThirdPersonSimulation
                     RequireString(operation, literals, "ActionContext", false);
                     RequireFieldCount(operation, 7);
                     break;
-                case SimulationOperationCode.CameraCue:
-                    RequireEnum(operation, operation.Integer1, 0, 6, "CueKind");
+                case SimulationOperationCode.CameraEffectRequest:
+                    RequireEnum(operation, operation.Integer1, 1, 5, "EffectKind");
                     RequireFlags(operation, 0);
-                    RequireString(operation, literals, "CueId", true);
-                    RequireString(operation, literals, "CueType", true);
-                    RequireString(operation, literals, "ResourceId", false);
-                    RequireNonNegative(operation, literals, "Intensity");
-                    RequireNonNegative(operation, literals, "DurationSeconds");
+                    RequireString(operation, literals, "RequestId", true);
+                    RequireString(operation, literals, "ResourceId", true);
+                    RequireUnit(operation, literals, "Weight");
                     RequireInt32(operation, literals, "Priority");
                     RequireString(operation, literals, "ActionContext", false);
-                    RequireFieldCount(operation, 7);
+                    RequireFieldCount(operation, 5);
                     break;
                 case SimulationOperationCode.CameraResponse:
                     RequireEnum(operation, operation.Integer1, 0, 2, "LookResponse");
@@ -1533,6 +1535,242 @@ namespace ThirdPersonSimulation
                     return true;
             }
             return false;
+        }
+    }
+
+    public enum PresentationCameraRequestKind : byte
+    {
+        Sequence = 1,
+        Effect = 2,
+        Response = 3,
+        Target = 4
+    }
+
+    public enum PresentationCameraRequestLifecycle : byte
+    {
+        Activate = 1,
+        Retire = 2
+    }
+
+    public readonly struct PresentationCameraRequest
+    {
+        PresentationCameraRequest(
+            PresentationCameraRequestKind kind,
+            PresentationCameraRequestLifecycle lifecycle,
+            string requestId,
+            string actionContextId,
+            string sequenceId,
+            string resourceId,
+            string targetKey,
+            string anchorKey,
+            string aimPointKey,
+            string preferredBoneKey,
+            int mode,
+            int effectKind,
+            int interruptPolicy,
+            int priority,
+            float weight,
+            float blendInSeconds,
+            float blendOutSeconds,
+            float manualOrbitWeight,
+            float pitchWeight,
+            float yawWeight)
+        {
+            if (!Enum.IsDefined(typeof(PresentationCameraRequestKind), kind))
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            if (!Enum.IsDefined(typeof(PresentationCameraRequestLifecycle), lifecycle))
+                throw new ArgumentOutOfRangeException(nameof(lifecycle));
+            Kind = kind;
+            Lifecycle = lifecycle;
+            RequestId = Normalize(requestId);
+            ActionContextId = Normalize(actionContextId);
+            SequenceId = Normalize(sequenceId);
+            ResourceId = Normalize(resourceId);
+            TargetKey = Normalize(targetKey);
+            AnchorKey = Normalize(anchorKey);
+            AimPointKey = Normalize(aimPointKey);
+            PreferredBoneKey = Normalize(preferredBoneKey);
+            Mode = mode;
+            EffectKind = effectKind;
+            InterruptPolicy = interruptPolicy;
+            Priority = priority;
+            Weight = RequireFiniteNonNegative(weight, nameof(weight));
+            BlendInSeconds = RequireFiniteNonNegative(blendInSeconds, nameof(blendInSeconds));
+            BlendOutSeconds = RequireFiniteNonNegative(blendOutSeconds, nameof(blendOutSeconds));
+            ManualOrbitWeight = RequireUnit(manualOrbitWeight, nameof(manualOrbitWeight));
+            PitchWeight = RequireUnit(pitchWeight, nameof(pitchWeight));
+            YawWeight = RequireUnit(yawWeight, nameof(yawWeight));
+        }
+
+        public PresentationCameraRequestKind Kind { get; }
+        public PresentationCameraRequestLifecycle Lifecycle { get; }
+        public string RequestId { get; }
+        public string ActionContextId { get; }
+        public string SequenceId { get; }
+        public string ResourceId { get; }
+        public string TargetKey { get; }
+        public string AnchorKey { get; }
+        public string AimPointKey { get; }
+        public string PreferredBoneKey { get; }
+        public int Mode { get; }
+        public int EffectKind { get; }
+        public int InterruptPolicy { get; }
+        public int Priority { get; }
+        public float Weight { get; }
+        public float BlendInSeconds { get; }
+        public float BlendOutSeconds { get; }
+        public float ManualOrbitWeight { get; }
+        public float PitchWeight { get; }
+        public float YawWeight { get; }
+        public bool IsValid => Enum.IsDefined(typeof(PresentationCameraRequestKind), Kind) &&
+                               Enum.IsDefined(typeof(PresentationCameraRequestLifecycle), Lifecycle);
+
+        public static PresentationCameraRequest Sequence(
+            PresentationCameraRequestLifecycle lifecycle,
+            string sequenceId,
+            int mode,
+            int interruptPolicy,
+            int priority,
+            float weight,
+            float blendInSeconds,
+            float blendOutSeconds,
+            string targetKey,
+            string actionContextId) =>
+            new PresentationCameraRequest(
+                PresentationCameraRequestKind.Sequence,
+                lifecycle,
+                sequenceId,
+                actionContextId,
+                sequenceId,
+                string.Empty,
+                targetKey,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                mode,
+                0,
+                interruptPolicy,
+                priority,
+                weight,
+                blendInSeconds,
+                blendOutSeconds,
+                1f,
+                1f,
+                1f);
+
+        public static PresentationCameraRequest Effect(
+            PresentationCameraRequestLifecycle lifecycle,
+            string requestId,
+            int effectKind,
+            string resourceId,
+            int priority,
+            float weight,
+            string actionContextId) =>
+            new PresentationCameraRequest(
+                PresentationCameraRequestKind.Effect,
+                lifecycle,
+                requestId,
+                actionContextId,
+                string.Empty,
+                resourceId,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                0,
+                effectKind,
+                0,
+                priority,
+                weight,
+                0f,
+                0f,
+                1f,
+                1f,
+                1f);
+
+        public static PresentationCameraRequest Response(
+            PresentationCameraRequestLifecycle lifecycle,
+            int mode,
+            float manualOrbitWeight,
+            float pitchWeight,
+            float yawWeight,
+            int priority,
+            float weight,
+            string actionContextId) =>
+            new PresentationCameraRequest(
+                PresentationCameraRequestKind.Response,
+                lifecycle,
+                string.Empty,
+                actionContextId,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                mode,
+                0,
+                0,
+                priority,
+                weight,
+                0f,
+                0f,
+                manualOrbitWeight,
+                pitchWeight,
+                yawWeight);
+
+        public static PresentationCameraRequest Target(
+            PresentationCameraRequestLifecycle lifecycle,
+            string targetKey,
+            string anchorKey,
+            string aimPointKey,
+            string preferredBoneKey,
+            int priority,
+            float weight,
+            string actionContextId) =>
+            new PresentationCameraRequest(
+                PresentationCameraRequestKind.Target,
+                lifecycle,
+                string.Empty,
+                actionContextId,
+                string.Empty,
+                string.Empty,
+                targetKey,
+                anchorKey,
+                aimPointKey,
+                preferredBoneKey,
+                0,
+                0,
+                0,
+                priority,
+                weight,
+                0f,
+                0f,
+                1f,
+                1f,
+                1f);
+
+        static string Normalize(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+                throw new ArgumentException("Camera request identity must be trimmed.");
+            return value;
+        }
+
+        static float RequireFiniteNonNegative(float value, string name)
+        {
+            if (!float.IsFinite(value) || value < 0f)
+                throw new ArgumentOutOfRangeException(name);
+            return value;
+        }
+
+        static float RequireUnit(float value, string name)
+        {
+            if (!float.IsFinite(value) || value < 0f || value > 1f)
+                throw new ArgumentOutOfRangeException(name);
+            return value;
         }
     }
 }

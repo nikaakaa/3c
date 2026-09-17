@@ -138,7 +138,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int cycle = 0,
             ulong sourceActionInstanceId = 0,
             float visualTimeScale = 0f,
-            string domainPayload = null)
+            string domainPayload = null,
+            PresentationCameraRequest cameraRequest = default)
         {
             if (float.IsNaN(sampleTime) || float.IsInfinity(sampleTime) ||
                 float.IsNaN(weight) || float.IsInfinity(weight))
@@ -165,11 +166,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceActionInstanceId = sourceActionInstanceId;
             VisualTimeScale = visualTimeScale;
             DomainPayload = domainPayload ?? string.Empty;
+            CameraRequest = cameraRequest;
             if (kind == CharacterPresentationCommandKind.DomainEvent &&
                 (sourceActionInstanceId == 0 || string.IsNullOrWhiteSpace(DomainPayload)))
                 throw new ArgumentException("Domain event command requires an Action instance and payload.", nameof(domainPayload));
             if (kind != CharacterPresentationCommandKind.DomainEvent && DomainPayload.Length != 0)
                 throw new ArgumentException("Domain payload is only valid on Domain event commands.", nameof(domainPayload));
+            if (kind == CharacterPresentationCommandKind.Camera && !cameraRequest.IsValid)
+                throw new ArgumentException("Camera commands require a typed camera request.", nameof(cameraRequest));
+            if (kind != CharacterPresentationCommandKind.Camera && cameraRequest.IsValid)
+                throw new ArgumentException("Typed camera requests are only valid on Camera commands.", nameof(cameraRequest));
         }
 
         public CharacterPresentationEventHeader Header { get; }
@@ -182,6 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong SourceActionInstanceId { get; }
         public float VisualTimeScale { get; }
         public string DomainPayload { get; }
+        public PresentationCameraRequest CameraRequest { get; }
 
         public static CharacterPresentationCommand FromFloat32(PresentationCommand command)
         {
@@ -201,7 +208,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.Cycle,
                 command.SourceActionInstanceId,
                 command.VisualTimeScale.ToSingle(),
-                command.DomainPayload);
+                command.DomainPayload,
+                command.CameraRequest);
         }
 
         static bool IsPlaybackCommand(CharacterPresentationCommandKind kind)

@@ -60,7 +60,16 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException(
                     $"TreeClip '{invocation.ClipAuthoringId}' has no compiled OnEnable invocation in Ability '{m_AbilityId}'.");
             }
-            OperationExecutionResult result = m_Runtime.Tick(entry);
+            m_Services.Target.BeginTreeClipInvocation(invocation);
+            OperationExecutionResult result;
+            try
+            {
+                result = m_Runtime.Tick(entry);
+            }
+            finally
+            {
+                m_Services.Target.EndTreeClipInvocation();
+            }
             if (result == OperationExecutionResult.Failure)
                 throw new InvalidOperationException(
                     $"TreeClip '{invocation.ClipAuthoringId}' {invocation.Hook} invocation failed in Ability '{m_AbilityId}'.");
@@ -175,6 +184,13 @@ namespace ThirdPersonSimulation.Fixed
         public void TraceEdge(ProgramControlFlowEdge edge, bool selected, bool passed) =>
             m_Trace.AddControlFlow(edge, selected, passed);
 
+        internal void BeginTreeClipInvocation(in AbilityTreeClipInvocation invocation)
+        {
+            m_Presentation.BeginTreeClipInvocation(invocation, invocation.ActionInstanceId);
+        }
+
+        internal void EndTreeClipInvocation() => m_Presentation.EndTreeClipInvocation();
+
         public bool EvaluateCondition(
             OperationControlCursor<FixedAbilityExecutionTarget> cursor,
             ProgramControlFlowEdge edge) => m_Values.EvaluateCondition(cursor, edge);
@@ -247,11 +263,10 @@ namespace ThirdPersonSimulation.Fixed
                 case SimulationOperationCode.Timeline:
                     return TickTimeline(operation);
                 case SimulationOperationCode.CameraStateRequest:
-                case SimulationOperationCode.CameraCue:
                 case SimulationOperationCode.CameraResponse:
                 case SimulationOperationCode.CameraTarget:
-                    throw new InvalidOperationException(
-                        $"Ability operation '{m_Access.SourcePath(operation)}' cannot own a Camera presentation request.");
+                case SimulationOperationCode.CameraEffectRequest:
+                    return SubmitCameraRequest(operation);
                 case SimulationOperationCode.Root:
                 case SimulationOperationCode.Loop:
                 case SimulationOperationCode.Parallel:
@@ -370,6 +385,120 @@ namespace ThirdPersonSimulation.Fixed
                 AbilityTimelineRuntimeStatus.Cancelled => OperationExecutionResult.Failure,
                 _ => throw new InvalidOperationException("Ability Timeline operation returned an invalid status.")
             };
+        }
+
+        OperationExecutionResult SubmitCameraRequest(SimulationOperation operation)
+        {
+            if (!m_Presentation.HasTreeClipInvocation)
+                throw new InvalidOperationException(
+                    $"Camera operation '{m_Access.SourcePath(operation)}' must execute inside a TreeClip invocation.");
+            ulong actionInstanceId = m_Presentation.TreeClipActionInstanceId;
+            if (actionInstanceId == 0)
+                throw new InvalidOperationException(
+                    $"Camera operation '{m_Access.SourcePath(operation)}' has no active Action context.");
+            AbilityTreeClipInvocation invocation = m_Presentation.TreeClipInvocation;
+            PresentationCameraRequestLifecycle lifecycle = invocation.Hook == AbilityTreeClipHook.OnEnable
+                ? PresentationCameraRequestLifecycle.Activate
+                : PresentationCameraRequestLifecycle.Retire;
+            PresentationCameraRequest request = operation.Code switch
+            {
+                SimulationOperationCode.CameraStateRequest => PresentationCameraRequest.Sequence(
+                    lifecycle,
+                    RequireString(operation, "SequenceId"),
+                    operation.Integer1,
+                    checked((int)operation.Flags),
+                    RequireInt32(operation, "Priority"),
+                    RequireScalar(operation, "Weight"),
+                    RequireScalar(operation, "BlendInSeconds"),
+                    RequireScalar(operation, "BlendOutSeconds"),
+                    RequireOptionalString(operation, "TargetKey"),
+                    m_Access.GetStringConstant(operation, "ActionContext", string.Empty)),
+                SimulationOperationCode.CameraEffectRequest => PresentationCameraRequest.Effect(
+                    lifecycle,
+                    RequireString(operation, "RequestId"),
+                    operation.Integer1,
+                    RequireString(operation, "ResourceId"),
+                    RequireInt32(operation, "Priority"),
+                    RequireScalar(operation, "Weight"),
+                    m_Access.GetStringConstant(operation, "ActionContext", string.Empty)),
+                SimulationOperationCode.CameraResponse => PresentationCameraRequest.Response(
+                    lifecycle,
+                    operation.Integer1,
+                    RequireScalar(operation, "ManualOrbitWeight"),
+                    RequireScalar(operation, "PitchResponseWeight"),
+                    RequireScalar(operation, "YawResponseWeight"),
+                    RequireInt32(operation, "Priority"),
+                    RequireScalar(operation, "Weight"),
+                    m_Access.GetStringConstant(operation, "ActionContext", string.Empty)),
+                SimulationOperationCode.CameraTarget => PresentationCameraRequest.Target(
+                    lifecycle,
+                    RequireOptionalString(operation, "TargetKey"),
+                    RequireOptionalString(operation, "AnchorKey"),
+                    RequireOptionalString(operation, "AimPointKey"),
+                    RequireOptionalString(operation, "PreferredBoneKey"),
+                    RequireInt32(operation, "Priority"),
+                    RequireScalar(operation, "Weight"),
+                    m_Access.GetStringConstant(operation, "ActionContext", string.Empty)),
+                _ => throw new InvalidOperationException(
+                    $"Operation '{m_Access.SourcePath(operation)}' is not a Camera request.")
+            };
+            SimulationEventHeader header = m_Presentation.Next(operation);
+            m_Presentation.Add(new PresentationCommand(
+                header,
+                PresentationCommandKind.Camera,
+                RequireCameraProducer(operation),
+                FixedScalar.Zero,
+                FixedScalar.One,
+                header.Activation.Generation,
+                invocation.Cycle,
+                actionInstanceId,
+                cameraRequest: request));
+            return OperationExecutionResult.Success;
+        }
+
+        string RequireCameraProducer(SimulationOperation operation)
+        {
+            IReadOnlyList<ProgramReference> references = m_Access.References(operation.Handle, ProgramReferenceKind.Producer);
+            if (references.Count != 1 || string.IsNullOrWhiteSpace(references[0].ExternalIdentity))
+                throw new InvalidOperationException(
+                    $"Camera operation '{m_Access.SourcePath(operation)}' has no unique Camera producer identity.");
+            return references[0].ExternalIdentity;
+        }
+
+        int RequireInt32(SimulationOperation operation, string field)
+        {
+            ProgramConstant constant = RequireConstant(operation, field, ProgramConstantKind.Int32);
+            return constant.Int32;
+        }
+
+        float RequireScalar(SimulationOperation operation, string field)
+        {
+            ProgramConstant constant = RequireConstant(operation, field, ProgramConstantKind.Scalar);
+            return constant.Scalar.ToSingle();
+        }
+
+        string RequireString(SimulationOperation operation, string field)
+        {
+            ProgramConstant constant = RequireConstant(operation, field, ProgramConstantKind.String);
+            if (string.IsNullOrWhiteSpace(constant.Text))
+                throw new InvalidOperationException(
+                    $"Camera operation '{m_Access.SourcePath(operation)}' constant '{field}' is empty.");
+            return constant.Text;
+        }
+
+        string RequireOptionalString(SimulationOperation operation, string field) =>
+            m_Access.GetStringConstant(operation, field, string.Empty);
+
+        ProgramConstant RequireConstant(
+            SimulationOperation operation,
+            string field,
+            ProgramConstantKind kind)
+        {
+            ProgramConstant constant = m_Access.FindConstant(operation, field);
+            if (constant == null || constant.Kind != kind)
+                throw new InvalidOperationException(
+                    $"Camera operation '{m_Access.SourcePath(operation)}' constant '{field}' is missing or has kind '{constant?.Kind}'.");
+            return constant;
         }
 
         int ReadTimelineRuntimeHandle(OperationExecutionDescriptor operation)

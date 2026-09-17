@@ -447,6 +447,9 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedAbilityExecutionFrame m_Frame;
         readonly FixedEventSequence m_Sequence;
+        AbilityTreeClipInvocation m_TreeClipInvocation;
+        bool m_HasTreeClipInvocation;
+        ulong m_TreeClipActionInstanceId;
 
         public FixedPresentationSink(FixedAbilityExecutionFrame frame, FixedEventSequence sequence)
         {
@@ -458,6 +461,33 @@ namespace ThirdPersonSimulation.Fixed
             m_Sequence.Next(operation, "Presentation");
         public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation = 1) => m_Sequence.Next(source, generation, "Presentation");
         public void Add(PresentationCommand value) => m_Frame.AddPresentation(value);
+
+        internal bool HasTreeClipInvocation => m_HasTreeClipInvocation;
+        internal ulong TreeClipActionInstanceId => m_HasTreeClipInvocation ? m_TreeClipActionInstanceId : 0;
+        internal AbilityTreeClipInvocation TreeClipInvocation => m_HasTreeClipInvocation
+            ? m_TreeClipInvocation
+            : throw new InvalidOperationException("Camera presentation requires an active TreeClip invocation.");
+
+        internal void BeginTreeClipInvocation(in AbilityTreeClipInvocation invocation, ulong actionInstanceId)
+        {
+            if (m_HasTreeClipInvocation)
+                throw new InvalidOperationException("Presentation sink already has an active TreeClip invocation.");
+            if (actionInstanceId == 0)
+                throw new InvalidOperationException("TreeClip invocation requires an Action instance.");
+            m_TreeClipInvocation = invocation;
+            m_TreeClipActionInstanceId = actionInstanceId;
+            m_HasTreeClipInvocation = true;
+        }
+
+        internal void EndTreeClipInvocation()
+        {
+            if (!m_HasTreeClipInvocation)
+                throw new InvalidOperationException("Presentation sink has no active TreeClip invocation.");
+            m_TreeClipInvocation = default;
+            m_TreeClipActionInstanceId = 0;
+            m_HasTreeClipInvocation = false;
+        }
+
     }
 
     internal sealed class FixedDiagnosticSequence

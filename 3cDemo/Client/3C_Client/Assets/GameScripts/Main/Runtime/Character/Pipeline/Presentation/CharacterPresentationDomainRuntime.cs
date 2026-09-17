@@ -192,6 +192,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void Publish(CharacterPresentationCommand command)
         {
             RequireActor(command.Header.ActorId);
+            if (command.Kind == CharacterPresentationCommandKind.Camera)
+            {
+                if (m_Camera == null)
+                    throw new InvalidOperationException("Camera PresentationCommand reached a presentation without a Camera domain.");
+                m_Camera.Publish(command);
+                return;
+            }
             m_PoseActionPublisher?.Publish(command);
         }
 
@@ -199,12 +206,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             RequireActor(current.Header.ActorId);
             RequireActor(replacement.Header.ActorId);
+            if (current.Kind == CharacterPresentationCommandKind.Camera ||
+                replacement.Kind == CharacterPresentationCommandKind.Camera)
+            {
+                if (m_Camera == null)
+                    throw new InvalidOperationException("Camera PresentationCommand reached a presentation without a Camera domain.");
+                m_Camera.Replace(current, replacement);
+                return;
+            }
             m_PoseActionPublisher?.Replace(current, replacement);
         }
 
         public void Retire(CharacterPresentationCommand command)
         {
             RequireActor(command.Header.ActorId);
+            if (command.Kind == CharacterPresentationCommandKind.Camera)
+            {
+                if (m_Camera == null)
+                    throw new InvalidOperationException("Camera PresentationCommand reached a presentation without a Camera domain.");
+                m_Camera.Retire(command);
+                return;
+            }
             m_PoseActionPublisher?.Retire(command);
         }
 

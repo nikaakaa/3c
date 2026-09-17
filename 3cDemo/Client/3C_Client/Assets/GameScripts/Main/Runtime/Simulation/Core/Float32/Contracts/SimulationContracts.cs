@@ -598,7 +598,8 @@ namespace ThirdPersonSimulation
             int cycle = 0,
             ulong sourceActionInstanceId = 0,
             Float32Scalar visualTimeScale = default,
-            string domainPayload = null)
+            string domainPayload = null,
+            PresentationCameraRequest cameraRequest = default)
         {
             Header = header;
             Kind = kind;
@@ -610,6 +611,7 @@ namespace ThirdPersonSimulation
             SourceActionInstanceId = sourceActionInstanceId;
             VisualTimeScale = visualTimeScale;
             DomainPayload = domainPayload ?? string.Empty;
+            CameraRequest = cameraRequest;
             if (RequiresProducerGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             if (RequiresProducerGeneration(kind) && producerGeneration != header.Activation.Generation)
@@ -623,6 +625,10 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Domain event command requires an Action instance and payload.", nameof(domainPayload));
             if (kind != PresentationCommandKind.DomainEvent && !string.IsNullOrEmpty(domainPayload))
                 throw new ArgumentException("Domain payload is only valid on Domain event commands.", nameof(domainPayload));
+            if (kind == PresentationCommandKind.Camera && !cameraRequest.IsValid)
+                throw new ArgumentException("Camera commands require a typed camera request.", nameof(cameraRequest));
+            if (kind != PresentationCommandKind.Camera && cameraRequest.IsValid)
+                throw new ArgumentException("Typed camera requests are only valid on Camera commands.", nameof(cameraRequest));
             if (IsPlaybackSample(kind) && visualTimeScale < Float32Scalar.Zero)
                 throw new ArgumentOutOfRangeException(nameof(visualTimeScale));
         }
@@ -636,6 +642,7 @@ namespace ThirdPersonSimulation
         public ulong SourceActionInstanceId { get; }
         public string DomainPayload { get; }
         public Float32Scalar VisualTimeScale { get; }
+        public PresentationCameraRequest CameraRequest { get; }
 
         static bool IsPlaybackCommand(PresentationCommandKind kind)
         {

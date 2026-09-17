@@ -693,18 +693,31 @@ namespace ThirdPersonSimulation
 
     public readonly struct AbilityTreeClipInvocation
     {
-        public AbilityTreeClipInvocation(string clipAuthoringId, string treeGraphId, AbilityTreeClipHook hook)
+        public AbilityTreeClipInvocation(
+            string clipAuthoringId,
+            string treeGraphId,
+            AbilityTreeClipHook hook,
+            int cycle,
+            ulong actionInstanceId)
         {
             ClipAuthoringId = SimulationIdentity.Require(clipAuthoringId, nameof(clipAuthoringId));
             TreeGraphId = SimulationIdentity.Require(treeGraphId, nameof(treeGraphId));
             if (!Enum.IsDefined(typeof(AbilityTreeClipHook), hook))
                 throw new ArgumentOutOfRangeException(nameof(hook));
+            if (cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(cycle));
+            if (actionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(actionInstanceId));
             Hook = hook;
+            Cycle = cycle;
+            ActionInstanceId = actionInstanceId;
         }
 
         public string ClipAuthoringId { get; }
         public string TreeGraphId { get; }
         public AbilityTreeClipHook Hook { get; }
+        public int Cycle { get; }
+        public ulong ActionInstanceId { get; }
     }
 
     public interface IAbilityTreeClipInvoker

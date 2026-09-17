@@ -50,6 +50,26 @@ namespace ThirdPersonSimulation
         public ProgramConstant FindConstant(SimulationOperation operation, OperationNamedConstant field) =>
             Layout.FindNamedConstant(operation.Handle, field);
 
+        public ProgramConstant FindConstant(SimulationOperation operation, string field)
+        {
+            if (operation == null)
+                throw new ArgumentNullException(nameof(operation));
+            if (string.IsNullOrWhiteSpace(field))
+                throw new ArgumentException("Operation constant field is required.", nameof(field));
+            string suffix = "/constant/" + field;
+            ProgramConstant result = null;
+            for (int i = 0; i < operation.ConstantReferences.Count; i++)
+            {
+                ProgramConstant candidate = Data.Constants[operation.ConstantReferences[i]];
+                if (!candidate.Identity.EndsWith(suffix, StringComparison.Ordinal))
+                    continue;
+                if (result != null)
+                    throw new InvalidOperationException($"Operation '{operation.Handle}' constant '{field}' is duplicated.");
+                result = candidate;
+            }
+            return result;
+        }
+
         public ProgramCatalogEntry RequireCatalog(SimulationOperation operation, ProgramCatalogEntryKind kind) =>
             Layout.RequireCatalog(operation.Handle, kind);
 
@@ -69,6 +89,12 @@ namespace ThirdPersonSimulation
             Layout.TryGetCatalogIdentity(entry, field, out identity);
 
         public string GetStringConstant(SimulationOperation operation, OperationNamedConstant field, string fallback)
+        {
+            ProgramConstant constant = FindConstant(operation, field);
+            return constant != null && constant.Kind == ProgramConstantKind.String ? constant.Text : fallback;
+        }
+
+        public string GetStringConstant(SimulationOperation operation, string field, string fallback)
         {
             ProgramConstant constant = FindConstant(operation, field);
             return constant != null && constant.Kind == ProgramConstantKind.String ? constant.Text : fallback;

@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterCameraProjectionPayload m_Projection;
         readonly ICameraRigAdapter m_Rig;
         readonly CameraTargetBindingResolver m_TargetResolver;
+        readonly CameraSequenceRequestResolver m_SequenceResolver = new CameraSequenceRequestResolver();
         readonly CameraResponseRequestResolver m_ResponseResolver;
         readonly CharacterCameraSequenceEvaluator m_SequenceEvaluator;
         readonly CameraEffectEvaluator m_EffectEvaluator;
@@ -25,6 +26,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly Vector3 m_FollowBindPosition;
         readonly Vector3 m_AimBindPosition;
         readonly List<CameraTargetSnapshot> m_Targets = new List<CameraTargetSnapshot>();
+        readonly List<CameraSequenceRequest> m_SequenceRequests = new List<CameraSequenceRequest>();
+        readonly List<CameraResponseRequest> m_ResponseRequests = new List<CameraResponseRequest>();
+        readonly List<CameraTargetSelectionRequest> m_TargetRequests = new List<CameraTargetSelectionRequest>();
+        readonly List<CameraEffectRequest> m_EffectRequests = new List<CameraEffectRequest>();
+        readonly List<ActiveCameraRequest> m_ActiveRequests = new List<ActiveCameraRequest>();
         CameraSequenceRequest m_DefaultSequenceRequest;
         readonly CameraResponseRequest m_DefaultResponseRequest;
         ulong m_LastBodyResetSequence;
@@ -133,6 +139,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CameraBasisSnapshot BasisSnapshot => m_Rig.BasisSnapshot;
 
+        internal void Publish(CharacterPresentationCommand command)
+        {
+            RequireAlive();
+            RequireCameraCommand(command);
+            if (command.CameraRequest.Lifecycle == PresentationCameraRequestLifecycle.Retire)
+            {
+                Retire(command);
+                return;
+            }
+            RemoveMatching(command);
+            m_ActiveRequests.Add(new ActiveCameraRequest(command));
+        }
+
+        internal void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement)
+        {
+            RequireCameraCommand(current);
+            RequireCameraCommand(replacement);
+            Retire(current);
+            Publish(replacement);
+        }
+
+        internal void Retire(CharacterPresentationCommand command)
+        {
+            RequireAlive();
+            RequireCameraCommand(command);
+            RemoveMatching(command);
+        }
+
         internal CharacterDomainRuntimeFact CaptureDomainFact() =>
             new CharacterDomainRuntimeFact(
                 CharacterDomainRuntimeFactKind.Camera,
@@ -199,6 +233,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_EffectEvaluator.Reset();
             m_EnvironmentSolver.Reset();
             m_Rig.Reset();
+            m_SequenceRequests.Clear();
+            m_ResponseRequests.Clear();
+            m_TargetRequests.Clear();
+            m_EffectRequests.Clear();
+            m_ActiveRequests.Clear();
             m_LastBodyResetSequence = 0;
             m_PendingResetReason = CameraResetReason.Initialization;
         }
@@ -241,9 +280,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_TargetResolver.CaptureSlotSnapshots(
                 m_Projection.TargetSlots,
                 m_Targets);
+            CaptureRequests(
+                presentationFrame,
+                m_SequenceRequests,
+                m_ResponseRequests,
+                m_TargetRequests,
+                m_EffectRequests);
+            m_SequenceRequests.Insert(0, m_DefaultSequenceRequest);
+            CameraSequenceRequest sequence = m_SequenceResolver.Resolve(
+                m_SequenceRequests,
+                m_DefaultSequenceRequest.SequenceId);
             CameraResolvedTargetPlan resolvedTarget = m_TargetResolver.Resolve(
-                m_DefaultSequenceRequest,
-                Array.Empty<CameraTargetSelectionRequest>(),
+                sequence,
+                m_TargetRequests,
                 m_Targets);
             if (!resolvedTarget.Valid)
                 throw new InvalidOperationException(resolvedTarget.Error);
@@ -268,7 +317,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         true,
                         resolvedTarget.HasAimPoint));
                 }
-                m_DefaultSequenceRequest = m_DefaultSequenceRequest.WithTargetKey(resolvedTarget.SourceKey);
+                if (sequence.IsDefault)
+                    m_DefaultSequenceRequest = m_DefaultSequenceRequest.WithTargetKey(resolvedTarget.SourceKey);
+                else
+                    sequence = sequence.WithTargetKey(resolvedTarget.SourceKey);
             }
             var frameInput = new CameraFrameInput(
                 position,
@@ -285,17 +337,165 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 resetHistory,
                 resetReason,
                 m_Targets);
-            CameraResponseRequest response = m_ResponseResolver.Resolve(Array.Empty<CameraResponseRequest>());
+            CameraResponseRequest response = m_ResponseResolver.Resolve(m_ResponseRequests);
             CameraFramePlan plan = m_SequenceEvaluator.Evaluate(
                 in frameInput,
-                in m_DefaultSequenceRequest,
+                in sequence,
                 in response);
-            plan = m_EffectEvaluator.Resolve(plan, Array.Empty<CameraEffectRequest>(), in frameInput);
+            plan = m_EffectEvaluator.Resolve(plan, m_EffectRequests, in frameInput);
             plan = plan.WithPitchClamped(
                 m_Projection.Input.PitchLimit.x,
                 m_Projection.Input.PitchLimit.y);
             plan = m_EnvironmentSolver.Apply(plan, in frameInput);
             m_Rig.Apply(in plan);
+        }
+
+        void CaptureRequests(
+            ulong presentationFrame,
+            List<CameraSequenceRequest> sequences,
+            List<CameraResponseRequest> responses,
+            List<CameraTargetSelectionRequest> targets,
+            List<CameraEffectRequest> effects)
+        {
+            sequences.Clear();
+            responses.Clear();
+            targets.Clear();
+            effects.Clear();
+            for (int i = 0; i < m_ActiveRequests.Count; i++)
+            {
+                CharacterPresentationCommand command = m_ActiveRequests[i].Command;
+                PresentationCameraRequest payload = command.CameraRequest;
+                string eventId = command.Header.EventId.ToString();
+                switch (payload.Kind)
+                {
+                    case PresentationCameraRequestKind.Sequence:
+                        sequences.Add(new CameraSequenceRequest(
+                            payload.SequenceId,
+                            payload.Priority,
+                            payload.Weight,
+                            payload.BlendInSeconds,
+                            payload.BlendOutSeconds,
+                            payload.TargetKey,
+                            command.ProducerId,
+                            command.ProducerGeneration,
+                            command.SourceActionInstanceId,
+                            RequireSequenceInterruptPolicy(payload.InterruptPolicy),
+                            false,
+                            eventId,
+                            command.Cycle,
+                            command.SampleTime));
+                        break;
+                    case PresentationCameraRequestKind.Effect:
+                        effects.Add(new CameraEffectRequest(
+                            RequireEffectKind(payload.EffectKind),
+                            payload.ResourceId,
+                            payload.Weight,
+                            payload.Priority,
+                            command.ProducerId,
+                            command.ProducerGeneration,
+                            eventId,
+                            command.SourceActionInstanceId,
+                            command.Cycle,
+                            command.SampleTime));
+                        break;
+                    case PresentationCameraRequestKind.Response:
+                        responses.Add(new CameraResponseRequest(
+                            RequireResponseMode(payload.Mode),
+                            payload.ManualOrbitWeight,
+                            payload.PitchWeight,
+                            payload.YawWeight,
+                            payload.Priority,
+                            payload.Weight,
+                            command.ProducerId,
+                            command.ProducerGeneration,
+                            command.SourceActionInstanceId,
+                            eventId,
+                            command.Cycle,
+                            command.SampleTime));
+                        break;
+                    case PresentationCameraRequestKind.Target:
+                        targets.Add(new CameraTargetSelectionRequest(
+                            payload.TargetKey,
+                            payload.AnchorKey,
+                            payload.AimPointKey,
+                            payload.PreferredBoneKey,
+                            payload.Priority,
+                            payload.Weight,
+                            command.ProducerId,
+                            command.ProducerGeneration,
+                            command.SourceActionInstanceId,
+                            command.Cycle,
+                            eventId));
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Camera request kind '{payload.Kind}' is unsupported.");
+                }
+            }
+        }
+
+        void RemoveMatching(CharacterPresentationCommand command)
+        {
+            for (int i = m_ActiveRequests.Count - 1; i >= 0; i--)
+            {
+                if (SameRequest(m_ActiveRequests[i].Command, command))
+                    m_ActiveRequests.RemoveAt(i);
+            }
+        }
+
+        static bool SameRequest(CharacterPresentationCommand left, CharacterPresentationCommand right)
+        {
+            return left.Kind == CharacterPresentationCommandKind.Camera &&
+                   right.Kind == CharacterPresentationCommandKind.Camera &&
+                   string.Equals(left.ProducerId, right.ProducerId, StringComparison.Ordinal) &&
+                   left.SourceActionInstanceId == right.SourceActionInstanceId &&
+                   left.Cycle == right.Cycle &&
+                   left.CameraRequest.Kind == right.CameraRequest.Kind &&
+                   string.Equals(left.CameraRequest.RequestId, right.CameraRequest.RequestId, StringComparison.Ordinal) &&
+                   string.Equals(left.CameraRequest.SequenceId, right.CameraRequest.SequenceId, StringComparison.Ordinal);
+        }
+
+        static CameraSequenceInterruptPolicy RequireSequenceInterruptPolicy(int value)
+        {
+            if (!Enum.IsDefined(typeof(CameraSequenceInterruptPolicy), value))
+                throw new InvalidOperationException($"Camera sequence interrupt policy '{value}' is unsupported.");
+            return (CameraSequenceInterruptPolicy)value;
+        }
+
+        static CameraEffectKind RequireEffectKind(int value)
+        {
+            if (!Enum.IsDefined(typeof(CameraEffectKind), value))
+                throw new InvalidOperationException($"Camera effect kind '{value}' is unsupported.");
+            return (CameraEffectKind)value;
+        }
+
+        static CameraResponseMode RequireResponseMode(int value)
+        {
+            CameraResponseMode mode = value switch
+            {
+                0 => CameraResponseMode.Full,
+                1 => CameraResponseMode.Suppressed,
+                2 => CameraResponseMode.Weighted,
+                _ => throw new InvalidOperationException($"Camera response mode '{value}' is unsupported.")
+            };
+            return mode;
+        }
+
+        static void RequireCameraCommand(CharacterPresentationCommand command)
+        {
+            if (command.Kind != CharacterPresentationCommandKind.Camera || !command.CameraRequest.IsValid)
+                throw new InvalidOperationException("Camera domain received a non-camera presentation command.");
+            if (command.SourceActionInstanceId == 0)
+                throw new InvalidOperationException("Camera PresentationCommand requires an Action instance.");
+        }
+
+        readonly struct ActiveCameraRequest
+        {
+            public ActiveCameraRequest(CharacterPresentationCommand command)
+            {
+                Command = command;
+            }
+
+            public CharacterPresentationCommand Command { get; }
         }
 
         static CameraResetReason ResolveResetReason(CharacterBodyPresentationResetReason reason)

@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static void Register(SimulationNodeEmitterRegistry registry)
         {
             registry.Register(SimulationNodeEmitterRegistry.Camera<RequestCameraStateNode>(RequestCameraState));
-            registry.Register(SimulationNodeEmitterRegistry.Camera<EmitCameraCueNode>(EmitCameraCue));
+            registry.Register(SimulationNodeEmitterRegistry.Camera<RequestCameraEffectNode>(RequestCameraEffect));
             registry.Register(SimulationNodeEmitterRegistry.Camera<SetCameraResponseNode>(SetCameraResponse));
             registry.Register(SimulationNodeEmitterRegistry.Camera<SetCameraTargetNode>(SetCameraTarget));
             registry.Register(new CameraBasisSimulationNodeEmitter());
@@ -40,24 +40,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     ("ActionContext", SimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
         }
 
-        static SimulationNodeEmission EmitCameraCue(EmitCameraCueNode node)
+        static SimulationNodeEmission RequestCameraEffect(RequestCameraEffectNode node)
         {
-            RequireIdentity(node.CueId, nameof(node.CueId));
-            RequireDefined(node.CueKind, nameof(node.CueKind));
-            RequireIdentity(node.CueType, nameof(node.CueType));
-            RequireOptionalIdentity(node.ResourceId, nameof(node.ResourceId));
-            RequireNonNegative(node.Intensity, nameof(node.Intensity));
-            RequireNonNegative(node.DurationSeconds, nameof(node.DurationSeconds));
+            RequireIdentity(node.RequestId, nameof(node.RequestId));
+            RequireDefined(node.EffectKind, nameof(node.EffectKind));
+            RequireIdentity(node.ResourceId, nameof(node.ResourceId));
+            RequireUnit(node.Weight, nameof(node.Weight));
             return new SimulationNodeEmission(
-                SimulationOperationCode.CameraCue,
-                integer0: CameraProgramOperationSchema.PayloadVersion,
-                integer1: (int)node.CueKind,
+                SimulationOperationCode.CameraEffectRequest,
+                integer0: CameraProgramOperationSchema.EffectPayloadVersion,
+                integer1: (int)node.EffectKind,
                 constants: SimulationNodeEmitterRegistry.Fields(
-                    ("CueId", node.CueId),
-                    ("CueType", node.CueType),
+                    ("RequestId", node.RequestId),
                     ("ResourceId", node.ResourceId),
-                    ("Intensity", node.Intensity),
-                    ("DurationSeconds", node.DurationSeconds),
+                    ("Weight", node.Weight),
                     ("Priority", node.Priority),
                     ("ActionContext", SimulationNodeEmitterContext.AssetIdentity(node.ActionContext))));
         }

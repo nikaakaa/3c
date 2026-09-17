@@ -423,7 +423,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_Applied.Remove(sampleKey);
                 }
                 else if (string.Equals(key.Channel, "camera", StringComparison.Ordinal) &&
-                         baseline.Command.Weight <= 0f)
+                         baseline.Command.CameraRequest.Lifecycle == PresentationCameraRequestLifecycle.Retire)
                 {
                     RemoveHistory(key);
                     m_Applied.Remove(key);
@@ -484,7 +484,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     key = new PresentationStateKey("camera", command.ProducerId, command.ProducerGeneration);
                     return true;
                 case CharacterPresentationCommandKind.Camera:
-                    key = new PresentationStateKey("camera", command.ProducerId, command.ProducerGeneration);
+                    key = new PresentationStateKey("camera", command.ProducerId, 0, command.Cycle);
                     return true;
                 case CharacterPresentationCommandKind.Cue:
                 case CharacterPresentationCommandKind.Vfx:
@@ -518,7 +518,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 command.Cycle,
                 command.SourceActionInstanceId,
                 command.VisualTimeScale.ToSingle(),
-                command.DomainPayload);
+                command.DomainPayload,
+                command.CameraRequest);
         }
 
         readonly struct ActivePresentationRecord
@@ -535,22 +536,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         readonly struct PresentationStateKey : IEquatable<PresentationStateKey>, IComparable<PresentationStateKey>
         {
-            public PresentationStateKey(string channel, string producer, ulong generation)
+            public PresentationStateKey(string channel, string producer, ulong generation, int cycle = 0)
             {
+                if (cycle < 0)
+                    throw new ArgumentOutOfRangeException(nameof(cycle));
                 Channel = channel ?? string.Empty;
                 Producer = producer ?? string.Empty;
                 Generation = generation;
+                Cycle = cycle;
             }
 
             public string Channel { get; }
             public string Producer { get; }
             public ulong Generation { get; }
+            public int Cycle { get; }
             public bool Equals(PresentationStateKey other) =>
                 Generation == other.Generation &&
+                Cycle == other.Cycle &&
                 string.Equals(Channel, other.Channel, StringComparison.Ordinal) &&
                 string.Equals(Producer, other.Producer, StringComparison.Ordinal);
             public override bool Equals(object obj) => obj is PresentationStateKey other && Equals(other);
-            public override int GetHashCode() => HashCode.Combine(Channel, Producer, Generation);
+            public override int GetHashCode() => HashCode.Combine(Channel, Producer, Generation, Cycle);
             public int CompareTo(PresentationStateKey other)
             {
                 int channel = ChannelOrder(Channel).CompareTo(ChannelOrder(other.Channel));
@@ -560,9 +566,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 if (channel != 0)
                     return channel;
                 int producer = string.CompareOrdinal(Producer, other.Producer);
-                return producer != 0 ? producer : Generation.CompareTo(other.Generation);
+                if (producer != 0)
+                    return producer;
+                int generation = Generation.CompareTo(other.Generation);
+                return generation != 0 ? generation : Cycle.CompareTo(other.Cycle);
             }
-            public override string ToString() => $"{Channel}/{Producer}/{Generation}";
+            public override string ToString() => $"{Channel}/{Producer}/{Generation}/{Cycle}";
 
             static int ChannelOrder(string channel)
             {

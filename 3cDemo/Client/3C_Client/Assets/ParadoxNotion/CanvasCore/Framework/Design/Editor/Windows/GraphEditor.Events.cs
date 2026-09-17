@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR
+#if UNITY_EDITOR
 
 using System.Collections.Generic;
 using System.Linq;
@@ -157,7 +157,7 @@ namespace NodeCanvas.Editor
                 var isContext = e.type == EventType.ContextClick && !e.alt;
                 var isShortcut = e.type == EventType.KeyDown && e.keyCode == KeyCode.Space && GUIUtility.keyboardControl == 0 && !e.shift;
                 if ( isContext || isShortcut ) {
-                    GenericMenuBrowser.ShowAsync(e.mousePosition, "Add Node", graph.baseNodeType, () => { return GetAddNodeMenu(graph, canvasMousePos); });
+                    GenericMenuBrowser.Show(GetAddNodeMenu(graph, canvasMousePos), e.mousePosition, "Add Node", graph.baseNodeType);
                     e.Use();
                 }
             }

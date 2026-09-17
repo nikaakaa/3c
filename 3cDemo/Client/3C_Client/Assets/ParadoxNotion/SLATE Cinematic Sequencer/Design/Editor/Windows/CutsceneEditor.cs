@@ -3521,7 +3521,7 @@ namespace Slate
         {
             int id = UID(groupIndex, trackIndex, clipIndex);
             ActionClipWrapper wrapper;
-            if (!clipWrappers.TryGetValue(id, out wrapper) || !wrapper.Matches(currentBinding))
+            if (!clipWrappers.TryGetValue(id, out wrapper))
             {
                 wrapper = currentBinding.FormalClip != null
                     ? new ActionClipWrapper(currentBinding.FormalClip)
@@ -3533,6 +3533,10 @@ namespace Slate
                         clipWrappersMap[currentBinding.NativeAction] = wrapper;
                 }
             }
+            else if (!wrapper.Matches(currentBinding))
+            {
+                wrapper.editorBinding = currentBinding;
+            }
 
             wrapper.SetNeighbors(previousBinding, nextBinding);
             Rect clipRect = wrapper.rect;
@@ -3542,7 +3546,7 @@ namespace Slate
 
             float xTime = wrapper.editorBinding.StartTime;
             float xPos = clipRect.x;
-            if (ReferenceEquals(interactingClip, wrapper) && wrapper.isDragging && Event.current.type == EventType.MouseDrag)
+            if (ReferenceEquals(interactingClip, wrapper) && wrapper.isDragging)
             {
                 Event e = Event.current;
                 float lastTime = xTime;
@@ -4313,9 +4317,11 @@ namespace Slate
 
             public bool Matches(IClipEditorBinding candidate)
             {
-                return candidate != null &&
-                       (ReferenceEquals(editorBinding.FormalClip, candidate.FormalClip) ||
-                        ReferenceEquals(editorBinding.NativeAction, candidate.NativeAction));
+                if ( candidate == null ) { return false; }
+                if ( editorBinding.NativeAction != null || candidate.NativeAction != null ) {
+                    return ReferenceEquals(editorBinding.NativeAction, candidate.NativeAction);
+                }
+                return ReferenceEquals(editorBinding.FormalClip, candidate.FormalClip);
             }
 
             public void ResetInteraction() {

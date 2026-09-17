@@ -718,9 +718,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 if (!string.Equals(data.Name, timeline.name, StringComparison.Ordinal))
                     context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                         $"{dataVariable}.Name = {String(data.Name)};");
-                if (!Mathf.Approximately(data.Scale, 1f))
-                    context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
-                        $"{dataVariable}.Scale = {BtsmtlAuthoringCodeSyntax.FloatLiteral(data.Scale)};");
                 if (data.Loop)
                     context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                         $"{dataVariable}.Loop = true;");
@@ -1163,3 +1160,4 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         }
     }
 }
+

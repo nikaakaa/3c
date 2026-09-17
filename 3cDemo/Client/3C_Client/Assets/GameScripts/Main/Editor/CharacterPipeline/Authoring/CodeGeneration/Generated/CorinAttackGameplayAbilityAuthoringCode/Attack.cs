@@ -153,7 +153,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph38, "f3f45c6944c247539e29c5b37ba6dede", "RecoveryEarly", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/RecoveryEarly", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "RecoveryEarly", "Attack5RecoveryEarly", 5004UL));
             BtsmtlSkillAuthoringCode.EnsureBlackboardDeclaration(parts.graph38, "fd926414f6864445b2c3c2050a158d04", "RecoveryLate", typeof(Boolean), false, PipelineBlackboardVariableScope.Frame, PipelineBlackboardVariableLifetime.Frame, "Action/Attack/RecoveryLate", null, new PipelineBlackboardFactProjection(PipelineBlackboardFactProjectionKind.ActionWindow, "RecoveryLate", "Attack5MoveCancel", 5003UL));
             BtsmtlSkillAuthoringContract.Apply(node181, new[] { new BtsmtlSkillAuthoringFieldValue("actionContext", null), new BtsmtlSkillAuthoringFieldValue("timelineId", timeline4) });
-            parts.timelineData.Scale = 0.117767066f;
             BtsmtlSkillAuthoringCode.EnsureSection(parts.timelineData, "c196a52f-4b06-4310-8a8a-8699ef6a5620", "Attack", 0, "");
             ((AnimationTrack)track).SetAnimationChannelId(new AnimationChannelId("FullBodyAction"));
             ((AnimationTrack)track).SetAnimationSlotId("corin.full-body-action");

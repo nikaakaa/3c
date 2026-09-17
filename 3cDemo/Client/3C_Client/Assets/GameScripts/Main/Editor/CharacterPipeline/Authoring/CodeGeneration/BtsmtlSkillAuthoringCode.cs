@@ -331,7 +331,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (existing)
             {
                 existing.Data.Name = name ?? existing.Data.Name;
-                existing.Data.Scale = 1f;
                 existing.Data.Loop = false;
                 return existing;
             }
@@ -363,7 +362,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     existing.SetData(TimelineData.CreateDefault(name));
                 existing.Data.ConfigureAuthoringIdentity(identity);
                 existing.Data.Name = name;
-                existing.Data.Scale = 1f;
                 existing.Data.Loop = false;
                 EditorUtility.SetDirty(existing);
                 return existing;

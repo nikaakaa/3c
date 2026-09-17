@@ -230,8 +230,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal TimelineRuntimeStopRequest Request { get; }
         public AbilityTimelineRuntimeStatus Status { get; }
     }
-    [DisallowMultipleComponent]
-    public sealed class CharacterTimelineHost : MonoBehaviour, ITimelinePlaybackService
+    public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable
     {
         struct ActivePlayback
         {
@@ -251,11 +250,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             new Dictionary<ulong, CharacterTimelinePendingAdvance>();
         readonly Dictionary<ulong, CharacterTimelinePendingStop> m_PendingStops =
             new Dictionary<ulong, CharacterTimelinePendingStop>();
+        readonly string m_SourceName;
         ulong m_TickCounter;
         TimelinePlaybackHandle m_PreviewHandle;
         TimelineRuntimeNumericTarget m_NumericTarget;
         internal ThirdPersonSimulation.IAbilityTreeClipInvoker m_ActiveTreeClipInvoker;
         bool m_Initialized;
+
+        public CharacterTimelineHost(string sourceName)
+        {
+            m_SourceName = string.IsNullOrWhiteSpace(sourceName)
+                ? "character-timeline"
+                : sourceName.Trim();
+        }
 
         public void PushTreeClipInvoker(ThirdPersonSimulation.IAbilityTreeClipInvoker invoker)
         {
@@ -281,7 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
             var contractCatalog = new TimelineContractCatalog(Array.Empty<ITimelineContractProvider>());
             var callBindingSource = new TimelineRuntimeCallBindingSource(
-                name, "character-timeline", default);
+                m_SourceName, "character-timeline", default);
             var domainResolver = new CharacterTimelineDomainBindingResolver(
                 new[] { "self", "camera", "main" });
             var dependencyResolver = new CharacterTimelineDependencyResolver();
@@ -783,12 +790,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        void Update()
+        public void Update(float deltaTime)
         {
             if (!m_Initialized || m_Host == null || m_ActivePlaybacks.Count == 0)
                 return;
             m_TickCounter++;
-            int deltaFrames = Mathf.Max(1, Mathf.RoundToInt(Time.deltaTime * 60f));
+            int deltaFrames = Math.Max(1, (int)MathF.Round(deltaTime * 60f));
             m_PlaybackScan.Clear();
             m_PlaybackScan.AddRange(m_ActivePlaybacks);
             for (int i = 0; i < m_PlaybackScan.Count; i++)
@@ -806,9 +813,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        void OnDestroy()
+        public void Dispose()
         {
-            m_Host?.Dispose();
+            if (m_Host == null)
+                return;
+            m_Host.Dispose();
+            m_Host = null;
+            m_Initialized = false;
+            m_ActivePlaybacks.Clear();
+            m_PendingAdvances.Clear();
+            m_PendingStops.Clear();
+            m_PreviewHandle = TimelinePlaybackHandle.Invalid;
+            m_ActiveTreeClipInvoker = null;
         }
     }
 }

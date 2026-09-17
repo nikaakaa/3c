@@ -16,7 +16,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
     {
         SimulationSessionHost m_SessionHost;
         FixedCharacterHost m_CharacterHost;
-        CharacterTimelineHost m_TimelineHost;
         TimelineAsset m_PreviewTimeline;
         TimelinePlaybackHandle m_PreviewHandle;
         readonly List<CharacterTimelinePlaybackObservation> m_TimelinePlaybacks = new List<CharacterTimelinePlaybackObservation>();
@@ -51,9 +50,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         {
             m_SessionHost = FindObjectOfType<SimulationSessionHost>();
             m_CharacterHost = FindObjectOfType<FixedCharacterHost>();
-            m_TimelineHost = m_CharacterHost
-                ? m_CharacterHost.GetComponent<CharacterTimelineHost>()
-                : FindObjectOfType<CharacterTimelineHost>();
         }
 
         void OnGUI()
@@ -119,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("Timeline", EditorStyles.boldLabel);
-            EditorGUILayout.ObjectField("TimelineHost", m_TimelineHost, typeof(CharacterTimelineHost), true);
+            EditorGUILayout.LabelField("TimelineHost", m_CharacterHost != null && m_CharacterHost.TimelineHost != null ? "Ready" : "Pending");
             DrawTimelineLengths();
             DrawTimelinePreview();
             DrawTimelinePlaybacks();
@@ -245,17 +241,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 m_PreviewTimeline,
                 typeof(TimelineAsset),
                 false);
-            if (m_TimelineHost == null || !m_TimelineHost.IsInitialized)
+            CharacterTimelineHost timelineHost = m_CharacterHost != null ? m_CharacterHost.TimelineHost : null;
+            if (timelineHost == null || !timelineHost.IsInitialized)
             {
                 EditorGUILayout.HelpBox("进入 Play 并完成角色装配后可预览 Timeline。", MessageType.None);
                 return;
             }
             using (new EditorGUILayout.HorizontalScope())
             {
-                GUI.enabled = m_PreviewTimeline && m_PreviewTimeline.Data != null && !m_TimelineHost.PreviewIsActive;
+                GUI.enabled = m_PreviewTimeline && m_PreviewTimeline.Data != null && !timelineHost.PreviewIsActive;
                 if (GUILayout.Button("Play Fixed Timeline"))
                 {
-                    if (m_TimelineHost.RequestPreviewTimelinePlayback(
+                    if (timelineHost.RequestPreviewTimelinePlayback(
                             m_PreviewTimeline.Data,
                             m_PreviewTimeline.name,
                             TimelinePlaybackMode.Once,
@@ -264,10 +261,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     else
                         SetStatus("Fixed Timeline preview request failed.");
                 }
-                GUI.enabled = m_TimelineHost.PreviewIsActive;
+                GUI.enabled = timelineHost.PreviewIsActive;
                 if (GUILayout.Button("Cancel"))
                 {
-                    m_TimelineHost.CancelPreviewTimelinePlayback();
+                    timelineHost.CancelPreviewTimelinePlayback();
                     m_PreviewHandle = TimelinePlaybackHandle.Invalid;
                     SetStatus("Fixed Timeline preview cancelled.");
                 }
@@ -276,7 +273,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             EditorGUILayout.LabelField("PreviewHandle", m_PreviewHandle.IsValid ? m_PreviewHandle.Value.ToString() : "None");
             if (m_PreviewHandle.IsValid)
             {
-                TimelinePlaybackStatus status = m_TimelineHost.GetTimelinePlaybackStatus(m_PreviewHandle);
+                TimelinePlaybackStatus status = timelineHost.GetTimelinePlaybackStatus(m_PreviewHandle);
                 EditorGUILayout.LabelField("PreviewStatus", status.ToString());
                 if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
                     m_PreviewHandle = TimelinePlaybackHandle.Invalid;
@@ -285,12 +282,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
         void DrawTimelinePlaybacks()
         {
-            if (m_TimelineHost == null)
+            CharacterTimelineHost timelineHost = m_CharacterHost != null ? m_CharacterHost.TimelineHost : null;
+            if (timelineHost == null)
             {
-                EditorGUILayout.HelpBox("CharacterTimelineHost 不存在，先执行场景装配。", MessageType.Warning);
+                EditorGUILayout.HelpBox("Timeline 领域运行时尚未由 CharacterHost 创建。", MessageType.None);
                 return;
             }
-            m_TimelineHost.CollectActivePlaybacks(m_TimelinePlaybacks);
+            timelineHost.CollectActivePlaybacks(m_TimelinePlaybacks);
             EditorGUILayout.LabelField("ActivePlaybacks", m_TimelinePlaybacks.Count.ToString());
             if (m_TimelinePlaybacks.Count == 0)
             {

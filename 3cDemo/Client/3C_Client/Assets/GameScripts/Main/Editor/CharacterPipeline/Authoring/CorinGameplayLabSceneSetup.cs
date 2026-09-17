@@ -14,7 +14,7 @@ using ThirdPersonCamera;
 
 public static class CorinGameplayLabSceneSetup
 {
-    const string CompositionGuid = "e381b64b19ae421aa92161f8c0cbd5d4";
+    const string CompositionGuid = "79505af9210f85e43b5654aec3484cd8";
     const string PrefabPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinGameplayLabFixedPlayer.prefab";
 
     [MenuItem("3C/Setup/Corin GameplayLab Fixed Scene", priority = 0)]
@@ -38,8 +38,6 @@ public static class CorinGameplayLabSceneSetup
         var characterGo = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         characterGo.name = "Corin";
         characterGo.transform.position = new Vector3(0f, 0.1f, 0f);
-        if (characterGo.GetComponent<CharacterTimelineHost>() == null)
-            characterGo.AddComponent<CharacterTimelineHost>();
         var fixedHost = characterGo.GetComponent<FixedCharacterHost>();
         if (fixedHost == null)
             throw new InvalidOperationException("Corin prefab is missing FixedCharacterHost.");
@@ -48,6 +46,14 @@ public static class CorinGameplayLabSceneSetup
         var so = new SerializedObject(fixedHost);
         so.FindProperty("m_SessionHost").objectReferenceValue = sessionHost;
         so.FindProperty("m_CameraRig").objectReferenceValue = cameraRig;
+        Transform followAnchor = (Transform)so.FindProperty("m_CameraFollowAnchor").objectReferenceValue;
+        var bindings = so.FindProperty("m_CameraTargetBindings");
+        bindings.arraySize = 1;
+        var binding = bindings.GetArrayElementAtIndex(0);
+        binding.FindPropertyRelative("key").stringValue = ThirdPersonCamera.CameraTargetBindingKeys.Body;
+        binding.FindPropertyRelative("target").objectReferenceValue = followAnchor
+            ? followAnchor
+            : throw new InvalidOperationException("Corin prefab is missing a camera follow anchor.");
         so.ApplyModifiedProperties();
 
         EditorUtility.SetDirty(fixedHost);
@@ -69,13 +75,19 @@ public static class CorinGameplayLabSceneSetup
     {
         var existing = UnityEngine.Object.FindObjectOfType<CinemachineCameraRigAdapter>();
         if (existing != null)
+        {
+            if (existing.Brain == null)
+                throw new InvalidOperationException("Existing CinemachineCameraRigAdapter is missing CinemachineBrain.");
+            existing.Brain.m_UpdateMethod = CinemachineBrain.UpdateMethod.ManualUpdate;
             return existing;
+        }
 
         var cameraGo = new GameObject("Main Camera");
         var camera = cameraGo.AddComponent<Camera>();
         camera.tag = "MainCamera";
         cameraGo.transform.position = new Vector3(0f, 3f, -5f);
-        cameraGo.AddComponent<CinemachineBrain>();
+        var brain = cameraGo.AddComponent<CinemachineBrain>();
+        brain.m_UpdateMethod = CinemachineBrain.UpdateMethod.ManualUpdate;
 
         var vcamGo = new GameObject("CM_VirtualCamera");
         vcamGo.transform.SetParent(cameraGo.transform);
@@ -85,7 +97,7 @@ public static class CorinGameplayLabSceneSetup
         var rigGo = new GameObject("CameraRig");
         var adapter = rigGo.AddComponent<CinemachineCameraRigAdapter>();
         adapter.VirtualCamera = vcam;
-        adapter.Brain = cameraGo.GetComponent<CinemachineBrain>();
+        adapter.Brain = brain;
 
         return adapter;
     }

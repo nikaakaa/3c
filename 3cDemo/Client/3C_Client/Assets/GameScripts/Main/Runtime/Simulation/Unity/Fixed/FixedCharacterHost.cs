@@ -46,6 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField, Min(1)] int m_MaximumActivePresentationRecords = 128;
 
         FixedCharacterRegistration m_Registration;
+        CharacterTimelineHost m_TimelineHost;
 
         public ActorId ActorId => new ActorId(Require(m_ActorId, nameof(m_ActorId)));
         public ActorId SimulationActorId => ActorId;
@@ -163,6 +164,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             DisposeRegistration();
         }
 
+        void Update()
+        {
+            m_TimelineHost?.Update(Time.deltaTime);
+        }
+
+        public CharacterTimelineHost TimelineHost => m_TimelineHost;
+
         void EnsureRegistration()
         {
             if (m_Registration != null)
@@ -206,10 +214,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterEquipmentRuntimeBinding equipmentRuntimeBinding = characterDefinition.BuildEquipmentRuntimeBinding();
             GameplayAbilityExecutionDataSet<FixedGameplayAbilityExecutionData> abilityData =
                 characterDefinition.LoadFixedAbilitySet();
-            CharacterTimelineHost timelineHost = GetComponent<CharacterTimelineHost>();
-            if (timelineHost == null)
-                throw new InvalidOperationException($"Fixed Character Host '{name}' requires a CharacterTimelineHost.");
-            var timelineRuntime = new CharacterTimelineAbilityRuntime(timelineHost, characterDefinition.ControlMotionTimelines);
+            m_TimelineHost?.Dispose();
+            m_TimelineHost = new CharacterTimelineHost($"character-timeline/{name}");
+            var timelineRuntime = new CharacterTimelineAbilityRuntime(m_TimelineHost, characterDefinition.ControlMotionTimelines);
             FixedSimulationActorBinding actorBinding = new FixedSimulationActorBinding(
                 actorId,
                 Require(m_WorldBodyBindingId, nameof(m_WorldBodyBindingId)),
@@ -270,7 +277,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     diagnosticsContext,
                     tickRate,
                     true,
-                    TryGetComponent<ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost>(out var tlHost) ? tlHost : null);
+                    m_TimelineHost);
                 timelineRuntime.Install();
                 CharacterDomainRuntimeAssemblyFacts domainFacts =
                     new CharacterDomainRuntimeAssemblyFacts(new[]
@@ -322,6 +329,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 diagnosticsTarget?.Dispose();
                 presentation?.Dispose();
                 controlSource?.Dispose();
+                m_TimelineHost?.Dispose();
+                m_TimelineHost = null;
                 throw;
             }
         }
@@ -336,7 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             RuntimeDiagnosticsContext diagnostics,
             int tickRate,
             bool initializeExternalState,
-            ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost characterTimelineHost = null)
+            CharacterTimelineHost characterTimelineHost = null)
         {
             CharacterPresentationBodyState presentationBody = initialPresentationBody;
             if (m_Registration?.PresentationRuntime is ICharacterPresentationDomainRuntime current &&
@@ -398,7 +407,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 cameraTargetBindings,
                 lookInput,
                 lookInputId,
-                m_CharacterDefinition.CameraProfile,
+                m_PresentationRole == CharacterPresentationRole.LocalOwner ? m_CharacterDefinition.CameraProfile : null,
                 m_CharacterDefinition.EquipmentPresentationProfile,
                 m_EquipmentRigBindings,
                 m_SessionHost,
@@ -409,19 +418,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         void DisposeRegistration()
         {
-            if (m_Registration == null)
-                return;
-            FixedCharacterRegistration registration = m_Registration;
-            m_Registration = null;
-            if (m_SessionHost)
+            if (m_Registration != null)
             {
-                m_SessionHost.Stop();
-                m_SessionHost.ReleaseActor(registration);
+                FixedCharacterRegistration registration = m_Registration;
+                m_Registration = null;
+                if (m_SessionHost)
+                {
+                    m_SessionHost.Stop();
+                    m_SessionHost.ReleaseActor(registration);
+                }
+                else
+                {
+                    registration.Dispose();
+                }
             }
-            else
-            {
-                registration.Dispose();
-            }
+
+            m_TimelineHost?.Dispose();
+            m_TimelineHost = null;
         }
 
         static FixedWorldBodyState BuildInitialBody(ActorId actorId, Transform spawn)

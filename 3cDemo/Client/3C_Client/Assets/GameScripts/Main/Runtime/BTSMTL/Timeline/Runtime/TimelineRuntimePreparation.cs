@@ -1555,8 +1555,8 @@ namespace BTSMTL.Timeline.Runtime
                     cameraStateTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraStates);
                 else if (track is CameraResponseTrack cameraResponseTrack)
                     cameraResponseTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResponses);
-                else if (track is CameraResourceTrack cameraResourceTrack)
-                    cameraResourceTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResources);
+                else if (track is CameraEffectTrack cameraEffectTrack)
+                    cameraEffectTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResources);
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -1681,9 +1681,10 @@ namespace BTSMTL.Timeline.Runtime
         {
             treeGraphId = string.Empty;
             treeGraphRevision = string.Empty;
-            if (content == null || treeClip?.ResolvedTree == null)
+            var treeGraph = treeClip?.AssetTree as ITimelineTreeGraphAsset;
+            if (content == null || treeGraph == null)
                 return false;
-            string identity = $"tree:{treeClip.ResolvedTree.GraphAuthoringId}";
+            string identity = "tree:{treeGraph.AuthoringId}";
             for (int index = 0; index < content.Dependencies.Count; index++)
             {
                 TimelineContentDependency dependency = content.Dependencies[index];

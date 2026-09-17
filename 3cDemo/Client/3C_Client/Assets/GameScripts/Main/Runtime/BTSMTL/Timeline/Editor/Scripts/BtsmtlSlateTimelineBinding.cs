@@ -784,10 +784,19 @@ namespace BTSMTL.Timeline.Editor
                 Clip added = null;
                 if (!ApplyImmediate(() =>
                 {
+                    UnityEngine.Object treeGraph = null;
+                    if (request.Kind == TimelineContractKinds.TreeClip)
+                    {
+                        treeGraph = request.TreeGraph;
+                        if (treeGraph == null)
+                            treeGraph = TreeClipGraphCreation.CreateSubAsset(m_Request.SerializedOwner, request.NewTreeGraphName);
+                    }
                     added = request.Kind == TimelineContractKinds.AnimationClip
                         ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, request.StartFrame)
                         : request.Kind == TimelineContractKinds.MotionCurveClip
                             ? Timeline.AddClip(ContractCatalog, request.SourceCurve, track.Source, request.StartFrame)
+                        : treeGraph != null
+                            ? Timeline.AddClip(ContractCatalog, treeGraph, track.Source, request.StartFrame)
                         : request.Resource != null
                             ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, request.StartFrame)
                             : Timeline.AddClip(ContractCatalog, track.Source, request.StartFrame);

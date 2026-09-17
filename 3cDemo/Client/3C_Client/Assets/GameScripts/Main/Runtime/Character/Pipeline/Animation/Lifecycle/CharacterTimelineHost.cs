@@ -70,6 +70,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Host = host ?? throw new ArgumentNullException(nameof(host));
         }
 
+        public bool RequestTreeClipExit(TimelinePlaybackHandle handle, string clipAuthoringId)
+        {
+            if (!m_Host.IsInitialized)
+                return false;
+            return m_Host.Host.Service.RequestTreeClipExit(new TimelineRuntimePlaybackHandle(handle.Value), clipAuthoringId);
+        }
+
         public bool Consume(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context)
         {
             if (request.EventKind == TimelineRuntimeTreeClipEventKind.Update)
@@ -611,6 +618,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 native.CursorFrame,
                 native.Cycle,
                 native.FrameCarry,
+                native.TreeDecisionExits,
                 native.SectionId,
                 native.ActiveClipIds,
                 native.HasStopContext,
@@ -663,6 +671,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 new TimelinePlaybackStopContext(stopCause, snapshot.StopLocalLogicTick),
                 snapshot.InitialBoundaryPending,
                 snapshot.FrameCarry,
+                snapshot.TreeDecisionExits,
                 m_TickRate);
             TimelineRuntimeRestoreCandidate candidate = m_Host.PrepareRestore(native, preparation);
             TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);

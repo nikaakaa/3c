@@ -319,7 +319,7 @@ namespace BTSMTL.Timeline.Runtime
 
     public sealed class TimelineRuntimePlaybackSnapshot
     {
-        public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v3";
+        public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v4";
 
         internal TimelineRuntimePlaybackSnapshot(TimelineRuntimePlayback playback)
         {
@@ -343,6 +343,8 @@ namespace BTSMTL.Timeline.Runtime
             StopContext = playback.StopContext;
             InitialBoundaryPending = playback.InitialBoundaryPending;
             FrameCarry = playback.FrameCarry;
+            TreeDecisionExits = new ReadOnlyCollection<string>(
+                new List<string>(playback.ExitedTreeDecisionClips));
         }
 
         public TimelineRuntimePlaybackSnapshot(
@@ -363,6 +365,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending,
             int frameCarry,
+            IReadOnlyList<string> treeDecisionExits,
             int tickRate)
         {
             TickRate = tickRate;
@@ -384,6 +387,7 @@ namespace BTSMTL.Timeline.Runtime
             StopContext = stopContext;
             InitialBoundaryPending = initialBoundaryPending;
             FrameCarry = frameCarry;
+            TreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(treeDecisionExits ?? Array.Empty<string>()));
         }
 
         public string Schema { get; }
@@ -404,6 +408,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelinePlaybackStopContext StopContext { get; }
         public bool InitialBoundaryPending { get; }
         public int FrameCarry { get; }
+        public IReadOnlyList<string> TreeDecisionExits { get; }
         public int TickRate { get; }
     }
 
@@ -456,6 +461,7 @@ namespace BTSMTL.Timeline.Runtime
                     m_Snapshot.SectionId,
                     m_Snapshot.ActiveClipIds,
                     m_Snapshot.ActiveTreeClipAssociations,
+                    m_Snapshot.TreeDecisionExits,
                     m_Snapshot.HasStopContext,
                     m_Snapshot.StopContext,
                     m_Snapshot.InitialBoundaryPending))
@@ -758,6 +764,12 @@ namespace BTSMTL.Timeline.Runtime
                 m_StepConsumer);
             Publish(Require(handle));
             return result;
+        }
+
+        public bool RequestTreeClipExit(TimelineRuntimePlaybackHandle handle, string clipAuthoringId)
+        {
+            EnsureAvailable();
+            return Require(handle).RequestTreeClipExit(clipAuthoringId);
         }
 
         public TimelineRuntimeAdvanceResult Advance(

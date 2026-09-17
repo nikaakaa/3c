@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
@@ -602,6 +604,7 @@ namespace ThirdPersonSimulation
             int cursorFrame,
             int cycle,
             int frameCarry,
+            IReadOnlyList<string> treeDecisionExits,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
             bool hasStopContext,
@@ -630,7 +633,10 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(state));
             if (cursorFrame < 0 || cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cursorFrame));
+            if (treeDecisionExits == null)
+                throw new ArgumentNullException(nameof(treeDecisionExits));
             FrameCarry = frameCarry;
+            TreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(treeDecisionExits ?? Array.Empty<string>()));
             SectionId = sectionId ?? string.Empty;
             ActiveClipIds = Copy(activeClipIds);
             StopCause = stopCause;
@@ -667,6 +673,7 @@ namespace ThirdPersonSimulation
         public int CursorFrame { get; }
         public int Cycle { get; }
         public int FrameCarry { get; }
+        public IReadOnlyList<string> TreeDecisionExits { get; }
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds { get; }
         public bool HasStopContext { get; }

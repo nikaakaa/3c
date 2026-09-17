@@ -193,6 +193,9 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(snapshot.CursorFrame);
             writer.WriteInt32(snapshot.Cycle);
             writer.WriteInt32(snapshot.FrameCarry);
+            writer.WriteInt32(snapshot.TreeDecisionExits.Count);
+            for (int i = 0; i < snapshot.TreeDecisionExits.Count; i++)
+                writer.WriteString(snapshot.TreeDecisionExits[i]);
             writer.WriteString(snapshot.SectionId);
             writer.WriteInt32(snapshot.ActiveClipIds.Count);
             for (int i = 0; i < snapshot.ActiveClipIds.Count; i++)
@@ -228,6 +231,10 @@ namespace ThirdPersonSimulation
             int cursorFrame = reader.ReadInt32();
             int cycle = reader.ReadInt32();
             int frameCarry = reader.ReadInt32();
+            int treeDecisionExitCount = ReadCount(reader, 1024, "timeline tree decision exits");
+            var treeDecisionExits = new string[treeDecisionExitCount];
+            for (int i = 0; i < treeDecisionExitCount; i++)
+                treeDecisionExits[i] = reader.ReadString();
             string sectionId = reader.ReadString();
             int clipCount = ReadCount(reader, 1024, "Float32 Character Timeline active clips");
             var clips = new string[clipCount];
@@ -273,6 +280,7 @@ namespace ThirdPersonSimulation
                 cursorFrame,
                 cycle,
                 frameCarry,
+                treeDecisionExits,
                 sectionId,
                 clips,
                 hasStopContext,

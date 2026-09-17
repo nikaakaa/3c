@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using ThirdPersonSimulation;
@@ -185,6 +186,9 @@ namespace BTSMTL.Timeline.Runtime
     public sealed class TimelineRuntimePlayback : IDisposable
     {
         readonly List<string> m_ActiveClipIds = new List<string>();
+        readonly List<string> m_PendingTreeClipExits = new List<string>();
+        readonly List<string> m_ExitedTreeDecisionClips = new List<string>();
+        readonly List<string> m_AdvanceInjectedTreeClipExits = new List<string>();
         readonly ReadOnlyCollection<string> m_ActiveClipIdsView;
         TimelineRuntimeAdvanceResult m_PendingAdvance;
         TimelinePlaybackStopContext m_PendingStopContext;
@@ -233,6 +237,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePlaybackState State { get; private set; }
         public int CursorFrame => m_CursorFrame;
         public int TickRate => m_TickRate;
+        internal IReadOnlyList<string> ExitedTreeDecisionClips => m_ExitedTreeDecisionClips;
         internal int FrameCarry => m_FrameCarry;
         public int Cycle => m_Cycle;
         public string SectionId => m_SectionId;
@@ -284,6 +289,30 @@ namespace BTSMTL.Timeline.Runtime
             return true;
         }
 
+        public bool RequestTreeClipExit(string clipAuthoringId)
+        {
+            if (string.IsNullOrWhiteSpace(clipAuthoringId))
+                throw new ArgumentException("TreeClip exit identity is required.", nameof(clipAuthoringId));
+            string trimmed = clipAuthoringId.Trim();
+            if (m_PendingAdvance != null ||
+                m_PendingTreeClipExits.Contains(trimmed) ||
+                m_ExitedTreeDecisionClips.Contains(trimmed))
+                return false;
+            bool found = false;
+            for (int index = 0; index < Content.Clips.Count; index++)
+            {
+                if (Content.Clips[index].AuthoringId == trimmed)
+                {
+                    found = Content.Clips[index].ExitSource == TimelineClipExitSource.TreeDecision;
+                    break;
+                }
+            }
+            if (!found)
+                return false;
+            m_PendingTreeClipExits.Add(trimmed);
+            return true;
+        }
+
         public TimelineRuntimeAdvanceResult Advance(TimelineRuntimeAdvanceRequest request)
         {
             if (State != TimelineRuntimePlaybackState.Running)
@@ -315,7 +344,16 @@ namespace BTSMTL.Timeline.Runtime
             for (int index = 0; index < Content.Clips.Count; index++)
             {
                 TimelineContentClip clip = Content.Clips[index];
-                if (!clip.TrackMuted && clip.StartFrame <= nextFrame && nextFrame < clip.EndFrame)
+                if (clip.TrackMuted)
+                    continue;
+                if (clip.ExitSource == TimelineClipExitSource.TreeDecision)
+                {
+                    if (!m_ExitedTreeDecisionClips.Contains(clip.AuthoringId) &&
+                        clip.StartFrame <= nextFrame)
+                        activeClipIds.Add(clip.AuthoringId);
+                    continue;
+                }
+                if (clip.StartFrame <= nextFrame && nextFrame < clip.EndFrame)
                     activeClipIds.Add(clip.AuthoringId);
             }
             string sectionId = string.Empty;
@@ -333,7 +371,11 @@ namespace BTSMTL.Timeline.Runtime
                 nextCycle,
                 maxFrame,
                 loop,
-                m_InitialBoundaryPending);
+                m_InitialBoundaryPending,
+                m_ExitedTreeDecisionClips,
+                m_PendingTreeClipExits);
+            m_AdvanceInjectedTreeClipExits.Clear();
+            m_AdvanceInjectedTreeClipExits.AddRange(m_PendingTreeClipExits);
             TimelineRuntimeEvaluationResult evaluation = TimelineRuntimeEvaluator.Evaluate(
                 SourceTimeline,
                 Content,
@@ -346,7 +388,8 @@ namespace BTSMTL.Timeline.Runtime
                 ExecutionIdentity,
                 Generation,
                 request.LogicTick,
-                m_InitialBoundaryPending);
+                m_InitialBoundaryPending,
+                m_ExitedTreeDecisionClips);
             bool completes = !loop && nextFrame >= maxFrame;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
@@ -374,6 +417,13 @@ namespace BTSMTL.Timeline.Runtime
             m_ActiveClipIds.Clear();
             for (int index = 0; index < advance.ActiveClipIds.Count; index++)
                 m_ActiveClipIds.Add(advance.ActiveClipIds[index]);
+            for (int index = 0; index < m_AdvanceInjectedTreeClipExits.Count; index++)
+            {
+                string exitedClipId = m_AdvanceInjectedTreeClipExits[index];
+                m_PendingTreeClipExits.Remove(exitedClipId);
+                if (!m_ExitedTreeDecisionClips.Contains(exitedClipId))
+                    m_ExitedTreeDecisionClips.Add(exitedClipId);
+            }
             m_PendingAdvance = null;
             if (advance.Completes)
                 State = TimelineRuntimePlaybackState.Completed;
@@ -383,6 +433,9 @@ namespace BTSMTL.Timeline.Runtime
         public bool Discard(TimelineRuntimeAdvanceResult advance)
         {
             RequirePendingAdvance(advance);
+            for (int index = 0; index < m_AdvanceInjectedTreeClipExits.Count; index++)
+                m_PendingTreeClipExits.Remove(m_AdvanceInjectedTreeClipExits[index]);
+            m_AdvanceInjectedTreeClipExits.Clear();
             m_PendingAdvance = null;
             return true;
         }
@@ -451,6 +504,7 @@ namespace BTSMTL.Timeline.Runtime
             string sectionId,
             IReadOnlyList<string> activeClipIds,
             IReadOnlyList<TimelineRuntimeTreeClipAssociation> activeTreeClipAssociations,
+            IReadOnlyList<string> exitedTreeDecisionClips,
             bool hasStopContext,
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending)
@@ -484,6 +538,8 @@ namespace BTSMTL.Timeline.Runtime
             m_ActiveClipIds.Clear();
             for (int index = 0; index < (activeClipIds?.Count ?? 0); index++)
                 m_ActiveClipIds.Add(activeClipIds[index]);
+            for (int index = 0; index < (exitedTreeDecisionClips?.Count ?? 0); index++)
+                m_ExitedTreeDecisionClips.Add(exitedTreeDecisionClips[index]);
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             State = state;
@@ -614,7 +670,9 @@ namespace BTSMTL.Timeline.Runtime
             int nextCycle,
             int maxFrame,
             bool loop,
-            bool initialBoundaryPending)
+            bool initialBoundaryPending,
+            IReadOnlyList<string> exitedTreeDecisionClips,
+            IReadOnlyList<string> pendingTreeClipExits)
         {
             var result = new List<TimelineRuntimeClipBoundary>();
             if (maxFrame <= 0)
@@ -633,6 +691,19 @@ namespace BTSMTL.Timeline.Runtime
                 TimelineContentClip clip = Content.Clips[clipIndex];
                 if (clip.TrackMuted)
                     continue;
+                bool treeDecision = clip.ExitSource == TimelineClipExitSource.TreeDecision;
+                if (treeDecision && System.Linq.Enumerable.Contains(exitedTreeDecisionClips, clip.AuthoringId))
+                    continue;
+                if (treeDecision && pendingTreeClipExits.Contains(clip.AuthoringId))
+                {
+                    result.Add(new TimelineRuntimeClipBoundary(
+                        clip.AuthoringId,
+                        clip.TrackAuthoringId,
+                        nextFrame,
+                        nextCycle,
+                        TimelineRuntimeClipBoundaryKind.Exit));
+                    continue;
+                }
                 for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
                 {
                     AddBoundary(
@@ -645,6 +716,8 @@ namespace BTSMTL.Timeline.Runtime
                         nextAbsolute,
                         maxFrame,
                         initialBoundaryPending);
+                    if (treeDecision)
+                        continue;
                     AddBoundary(
                         result,
                         clip,
@@ -1380,7 +1453,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineExecutionIdentity executionIdentity,
             ulong generation,
             ulong logicTick,
-            bool includeStartBoundary)
+            bool includeStartBoundary,
+            IReadOnlyList<string> exitedTreeDecisionClips)
         {
             if (timeline == null)
                 throw new ArgumentNullException(nameof(timeline));
@@ -1586,7 +1660,15 @@ namespace BTSMTL.Timeline.Runtime
                 for (int clipIndex = 0; clipIndex < treeTrack.Clips.Count; clipIndex++)
                 {
                     if (treeTrack.Clips[clipIndex] is not TreeClip treeClip ||
-                        currentTime <= treeClip.StartTime || currentTime >= treeClip.EndTime)
+                        treeTrack.PersistentMuted)
+                        continue;
+                    bool treeDecisionExit =
+                        treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
+                    if (System.Linq.Enumerable.Contains(exitedTreeDecisionClips, treeClip.AuthoringId))
+                        continue;
+                    if (currentTime <= treeClip.StartTime)
+                        continue;
+                    if (!treeDecisionExit && currentTime >= treeClip.EndTime)
                         continue;
                     if (!TryGetTreeContract(
                             content,

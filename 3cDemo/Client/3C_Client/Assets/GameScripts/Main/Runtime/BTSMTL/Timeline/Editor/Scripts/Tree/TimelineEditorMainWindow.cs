@@ -16,7 +16,6 @@ namespace BTSMTL.Timeline.Editor
     {
         public static event Action<TimelineAsset> AssetOpened;
         public static event Action<TimelineAsset, TreeClip> AssetTreeOpened;
-        public static event Func<TreeClip, bool> TreeClipOpenRequested;
         internal static event Action<TimelineEditorWindow> WindowOpened;
         public static event Action<TimelineEditorWindow> WindowClosed;
         public static event Action<TimelineEditorWindow> AuthoringRevisionChanged;
@@ -442,11 +441,6 @@ namespace BTSMTL.Timeline.Editor
             }
             if (clip is TreeClip assetClip && assetClip.AssetTree)
             {
-                if (OpenAssetTree(assetClip))
-                {
-                    AssetTreeOpened?.Invoke(m_SerializedOwner as TimelineAsset, assetClip);
-                    return;
-                }
                 AssetDatabase.OpenAsset(assetClip.AssetTree);
                 AssetTreeOpened?.Invoke(m_SerializedOwner as TimelineAsset, assetClip);
                 return;
@@ -470,16 +464,6 @@ namespace BTSMTL.Timeline.Editor
                 AuthoringPageKind.TreeClip);
             graphWindow.Show();
             graphWindow.Focus();
-        }
-
-        static bool OpenAssetTree(TreeClip clip)
-        {
-            if (TreeClipOpenRequested == null)
-                return false;
-            foreach (Func<TreeClip, bool> handler in TreeClipOpenRequested.GetInvocationList())
-                if (handler(clip))
-                    return true;
-            return false;
         }
 
         bool MatchesSourceNode(TimelineNode node)

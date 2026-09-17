@@ -116,3 +116,13 @@
 - Corin 资产核查：Assets/Configs 下无任何旧四轨使用，资产迁移面为零，无兼容读法残留。
 - 编译证据：ThirdPersonCamera.Contracts.csproj 与 BTSMTL.Timeline.csproj 均以 --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false 窄编译通过，0 警告 0 错误，随后已执行 dotnet build-server shutdown。全局符号搜索确认旧轨道/Clip/channel 类型零残留。
 - 已知边界：BTSMTL.Timeline.Editor.csproj 窄编译报 20 个既有错误（BtsmtlSlateTimelineBinding.cs 等文件的 FlowCanvas 程序集引用缺失）——该文件是工作区既有用户未提交改动、不在本任务改动集内，错误与相机效果轨道无关；Editor 工程在纯 dotnet 下对 Unity 侧程序集引用解析本就不完整，Unity Editor 内编译才是最终判据。
+
+## 2026-09-17 C# 工厂能力对账（6.1/6.2 证据）
+
+响应"曲线迁移能否走工厂"的核问，按产物与源码对账：
+
+- Timeline 生成已实现并已使用：产物 CorinAttackGameplayAbilityAuthoringCode/Attack.cs 含 EnsureTimeline、Timeline 资产 ResolveExternalAsset 引用、TimelineAuthoringPropertyContract.Apply 属性写入；CorinAttack1Timeline 拆分为 Attack1Main/End 等片段后产物引用路径同步。
+- 运行编译侧相机 Node emitter 就绪：BtsmtlSkillFlowLeafEmitter.cs 含 RequestCameraStateNode/RequestCameraEffectNode/SetCameraResponseNode 分支与 DeclareCameraProducer，图内存在相机 Node 即可编译为 PresentationCommand。
+- 产物中现有 Attack1CameraCue~Attack5CameraCue 为旧通用 ActionCueClip(CueType: Camera) 形态，属待迁移旧合同，不作为相机 Node 生成证据。
+- 导出侧相机 Node 走 FlowNode 泛化机制，无实例验证；首次写入后按 vidence/curve-migration-playbook.md 验收步骤确认，失败则补导出侧缺口。
+- 新增 vidence/curve-migration-playbook.md 曲线迁移操作单：逐条写入步骤、四条已确认行的落点（Counter/Normal_05/End_2 可写，Normal_01 因 Shake 资源缺失暂不可写）、工厂验收命令与旧 Cue 删除要求。

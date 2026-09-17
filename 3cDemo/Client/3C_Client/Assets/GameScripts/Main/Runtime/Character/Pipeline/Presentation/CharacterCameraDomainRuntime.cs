@@ -198,6 +198,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector2 look = m_Input.TryGetLatchedVector2(m_LookInputId, out Vector2 value)
                 ? value
                 : Vector2.zero;
+            if (!UnityEngine.Application.isFocused)
+                look = Vector2.zero;
             bool resetHistory = m_PendingResetReason != CameraResetReason.None ||
                 bodyFrame.ResetSequence != m_LastBodyResetSequence;
             CameraResetReason resetReason = m_PendingResetReason != CameraResetReason.None

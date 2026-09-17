@@ -126,3 +126,10 @@
 - 产物中现有 Attack1CameraCue~Attack5CameraCue 为旧通用 ActionCueClip(CueType: Camera) 形态，属待迁移旧合同，不作为相机 Node 生成证据。
 - 导出侧相机 Node 走 FlowNode 泛化机制，无实例验证；首次写入后按 vidence/curve-migration-playbook.md 验收步骤确认，失败则补导出侧缺口。
 - 新增 vidence/curve-migration-playbook.md 曲线迁移操作单：逐条写入步骤、四条已确认行的落点（Counter/Normal_05/End_2 可写，Normal_01 因 Shake 资源缺失暂不可写）、工厂验收命令与旧 Cue 删除要求。
+
+## 2026-09-17 1.4 / 3.1 / 4.5 / Normal_01 Shake 资源
+
+- **1.4 失焦/暂停输入合同**：CharacterCameraDomainRuntime.Present 在读取 Look 后增加 Application.isFocused == false 丢弃分支——失焦期间本帧 Look 视为零，已锁存的积压输入随本次消费被丢弃，恢复后从当前角度继续，无回弹。暂停沿表现帧驱动自然停止（帧不推进则 Present 不执行），恢复从当前状态继续，不新建鼠标读取路径。假设记录：失焦丢弃而非冻结为 3C 默认行为，如需改为"失焦冻结画面方向"须改写本合同。ThirdPersonClient.Runtime 窄编译 1 警告 0 错误。
+- **3.1 来源定位**：eplication-guide/analysis/基础镜头.md（3028 行）含完整 cameraLockBossConfig（LT_LOOKATOFFSET 进入/退出曲线、BOSS_POLAR_OFFSET_X/Y、POLAR 曲线、POLARLERPRATIO=0.5、POLARLERPTIME=2、DISPOLAR 全套）及 Default_Normal 全解码字段（Orbits/ScreenYTrack/ROTATE_STATETRANSITION 3 秒等）。实体取景并非无来源；3.1 剩余工作改为该配置与内置公式的逐字段对账，tasks.md 已更新任务描述。
+- **4.5 证据**：新增 vidence/effect-composition-order.md：五阶段顺序依据（Override 定基准→Zoom/Stretch 修正→Shake 扰动→Shot 整帧替换仍受环境检→Environment 收尾）与 Shake 后 Basis 合同（BasisSnapshot 反映含 Shake 实际输出，动作采样感知震屏后方向，无第二干净 Basis 源）。
+- **Normal_01 Shake 资源**：新建 Corin_Attack_Normal_01_CamShake_A_01.asset（character-camera-shake/v1），m_ShakeId 与来源 attle:27:0/1/2/3 的 shakeConfigKey 一致；曲线复用通用曲线资产 c6b42d65...；振幅/频率/持续来源未提供，按 3C 标准轻震默认填写并在资产内注释声明为自有标准非还原值；m_StandardConfigKey 保留来源 key。解锁曲线迁移操作单中 Normal_01 的 Node 写入前置。

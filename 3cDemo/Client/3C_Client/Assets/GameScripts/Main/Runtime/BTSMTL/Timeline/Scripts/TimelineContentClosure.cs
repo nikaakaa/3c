@@ -159,6 +159,7 @@ namespace BTSMTL.Timeline
             int startFrame,
             int endFrame,
             TimelineClipExecutionPhase executionPhase,
+            TimelineClipExitSource exitSource,
             TimelineCapability capabilities,
             bool supportsStop,
             bool trackMuted,
@@ -171,6 +172,7 @@ namespace BTSMTL.Timeline
             StartFrame = startFrame;
             EndFrame = endFrame;
             ExecutionPhase = executionPhase;
+            ExitSource = exitSource;
             Capabilities = capabilities;
             SupportsStop = supportsStop;
             TrackMuted = trackMuted;
@@ -184,6 +186,7 @@ namespace BTSMTL.Timeline
         public int StartFrame { get; }
         public int EndFrame { get; }
         public TimelineClipExecutionPhase ExecutionPhase { get; }
+        public TimelineClipExitSource ExitSource { get; }
         public TimelineCapability Capabilities { get; }
         public bool SupportsStop { get; }
         public bool TrackMuted { get; }
@@ -387,6 +390,9 @@ namespace BTSMTL.Timeline
                     TimelineClipExecutionPhase executionPhase = clipContract.DefaultExecutionPhase;
                     if (clip is ITimelineClipExecutionPhaseSource phaseSource)
                         executionPhase = phaseSource.TimelineExecutionPhase;
+                    TimelineClipExitSource exitSource = TimelineClipExitSource.FrameBoundary;
+                    if (clip is ITimelineClipExitSource exitSourceSource)
+                        exitSource = exitSourceSource.ClipExitSource;
                     if (!clipContract.SupportsExecutionPhase(executionPhase))
                     {
                         errors.Add($"timeline_clip_execution_phase:{clip.AuthoringId}:phase '{executionPhase}' is not supported by '{clipContract.Kind}'.");
@@ -441,6 +447,7 @@ namespace BTSMTL.Timeline
                         clip.StartFrame,
                         clip.EndFrame,
                         executionPhase,
+                        exitSource,
                         clipContract.Capabilities,
                         clipContract.SupportsStop,
                         track.PersistentMuted,

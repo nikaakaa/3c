@@ -43,6 +43,17 @@ namespace BTSMTL.Timeline
         TimelineClipExecutionPhase TimelineExecutionPhase { get; }
     }
 
+    public enum TimelineClipExitSource : byte
+    {
+        FrameBoundary = 0,
+        TreeDecision = 1
+    }
+
+    public interface ITimelineClipExitSource
+    {
+        TimelineClipExitSource ClipExitSource { get; }
+    }
+
     public delegate void TimelineClipContractValidator(Clip clip, List<string> errors);
     public delegate void TimelineContentContractValidator(TimelineData timeline, List<string> errors);
 

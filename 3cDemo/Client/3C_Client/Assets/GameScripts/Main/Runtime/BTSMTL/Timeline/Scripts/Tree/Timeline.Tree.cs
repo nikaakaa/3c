@@ -46,12 +46,15 @@ namespace BTSMTL.Timeline
 
     [Serializable]
     [ScriptGuid("31085f11443fe1347b871c5d69db3774"), Color(201, 060, 032)]
-    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource
+    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource
     {
         public override string ContractKind => TimelineContractKinds.TreeClip;
 
         [SerializeField, ShowInInspector, OnValueChanged("OnClipChanged", "RepaintInspector")]
         TimelineTreeExecutionPhase m_ExecutionPhase = TimelineTreeExecutionPhase.Commit;
+
+        [SerializeField, ShowInInspector, OnValueChanged("OnClipChanged", "RepaintInspector")]
+        TimelineClipExitSource m_ExitSource = TimelineClipExitSource.FrameBoundary;
 
         [SerializeField]
         ScriptableObject m_AssetTree;
@@ -59,6 +62,17 @@ namespace BTSMTL.Timeline
         public ScriptableObject AssetTree => m_AssetTree;
 
         public TimelineTreeExecutionPhase ExecutionPhase => m_ExecutionPhase;
+        public TimelineClipExitSource ClipExitSource => m_ExitSource;
+
+        public void SetExitSource(TimelineClipExitSource source)
+        {
+            if (!Enum.IsDefined(typeof(TimelineClipExitSource), source))
+                throw new ArgumentOutOfRangeException(nameof(source), source, "TimelineTree exit source is invalid.");
+            m_ExitSource = source;
+#if UNITY_EDITOR
+            OnClipChanged();
+#endif
+        }
         public TimelineClipExecutionPhase TimelineExecutionPhase =>
             m_ExecutionPhase == TimelineTreeExecutionPhase.Decision
                 ? TimelineClipExecutionPhase.Decision

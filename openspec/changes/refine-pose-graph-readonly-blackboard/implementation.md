@@ -33,3 +33,10 @@
 ## 编译证据
 
 - dotnet build ThirdPersonClient.Runtime.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false：0错误；结束已执行dotnet build-server shutdown。
+
+## GoalAssembler修复执行记录（2026-09-17，阻塞中）
+
+- 已按agent工厂链路执行：btsmtl_export_code成功导出（Definition新路径Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset，旧路径被并行Corin资产重组移动）。
+- Root.cs已补goal-assembler节点（corin.control-rig.body.graph/goal-assembler）、goals→full-body-ik.goals连线与布局项，提交c76ff5c3f。
+- 阻塞：generate_assets前置的ThirdPersonClient.Editor编译被并行Timeline窗口的在途错误阻断（CharacterTimelineHost.cs 659-663行，非本域文件）。按skill口径记录阻塞、不修改他人文件、不轮询。
+- 恢复条件：并行窗口编译清零后重跑dotnet build ThirdPersonClient.Editor.csproj，0错误后执行btsmtl.generate_assets（同export参数），资产生效后GraphInvalid应消除；Play验证归用户。

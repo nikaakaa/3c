@@ -78,15 +78,31 @@ Compiled TimelineNode operation MUST通过 Operation Execution Context 创建、
 - **WHEN** 两个 Actor 使用同一 Graph artifact 中的 Timeline data
 - **THEN** 它们 MUST使用各自 CharacterSimulationState 中的 playback slot
 
-### Requirement: 保留 Timeline 驱动 Tree 链路
+### Requirement: TreeClip 编译为 TimelineBody 图 operation invocation
 
-TreeTrack/TreeClip MUST编译为 Timeline decision/commit operation。Decision MUST在 RootTree operation 前只写 Frame Blackboard，Commit MUST在 RootTree operation 后执行 Enter/Update/Exit/Destroy 生命周期。系统 MUST不恢复 Timeline.Bind/Evaluate/Unbind 自主播放路径。
+TreeTrack/TreeClip MUST将其 AssetTree（TimelineBody 图）编译为正式 operations：TimelineClip caller MUST按 clip 声明 OnEnable、OnDisable、OnDestroy 三个边界 hook entry 与 Root（技能入口）entry，SourceMap MUST按 clipId 登记 Root handle 供运行时查询。系统 MUST不恢复 Timeline.Bind/Evaluate/Unbind 自主播放路径。
 
 #### Scenario: Decision TreeClip 穿过 Loop 边界
 
 - **WHEN** 一个 SimulationTick 穿过 Timeline loop 边界
 - **THEN** compiled evaluator MUST按尾段、中间 cycle 和头段顺序求值
 - **AND** Frame Blackboard MUST保持唯一结果
+
+### Requirement: TimelineBody 图系统锚点与轮询语义
+
+TimelineBody 图 MUST 固定拥有片段启用、技能入口（Root）、片段停用、片段销毁四个系统锚点；锚点 MUST 不可单独删除且 MUST NOT 进入作者节点创建菜单。技能入口（Root）为轮询根：clip 活跃期间运行时 MUST 每帧 tick Root 的控制流链，Root 链完成 MUST 作为 clip 主体完成事实；片段启用/停用/销毁为一次性边界钩子，触发完成后 MUST 即收尾。锚点的被进入由 TimelineClip 调度编译合成，锚点 MUST NOT 依赖图内输入连线。
+
+#### Scenario: TreeClip 播放期每帧轮询
+
+- **WHEN** TreeClip 处于活跃播放区间
+- **THEN** 运行时 MUST 每帧从 Root operation 沿其控制流链执行
+- **AND** Root 链的成功完成 MUST 作为该 clip 主体完成事实
+
+#### Scenario: TreeClip 边界与释放
+
+- **WHEN** clip 进入、退出或播放被强制释放
+- **THEN** 对应边界钩子 MUST 只触发一次并即时收尾
+- **AND** ForceStop MUST NOT 等待动画 fade 或网络确认
 
 ### Requirement: TimelineNode 不参与状态机同层状态
 系统 MUST 保持 `TimelineNode` 为状态内部行为节点。`TimelineNode` MUST NOT 被解释为 `StateMachineGraph` 的同层 State，也 MUST NOT 成为 Transition 端点。

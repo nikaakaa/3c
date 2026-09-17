@@ -76,3 +76,11 @@ r4固定分工：Ability决定结束，代码自动停止清理；Timeline保留
 - [x] 8.3 统一依赖发现、语义编译、Program Catalog与Fixed/Float32所有准入消费者的命名和身份映射；公共export_code/generate_assets及生成源码输出新Profile合同和范围内唯一共享对象，移除旧入口，不新增并行catalog或执行状态。证据：CompileDiscovery经Ability.AdmissionProfile取唯一Profile；语义依赖目录DeclareAction按ActionId声明身份；Float32/Fixed ExecutionServices以ActionAdmissionProfile按operation与actionId双索引；export_code适配器输出EnsureAdmissionProfileRoot与ConfigureAdmissionProfile且Dodge仅输出唯一共享对象；现行Attack.Float32Data的m_OperationSetVersion为character-gameplay-operations/16，全仓运行/编辑器代码无ActionProfile旧命名。
 - [x] 8.4 保留StateBody工厂已正确生成的OnEnter/Root/OnExit三系统锚点，补齐不可删除、OnExit不进作者菜单、正式图合同及C#重建/编译映射；仅由运行代码在State stop barrier调用OnExit清理，保留ForceStop释放，不恢复Action Exit/Submit作者清理链。证据：PopulateAnchors与EnsureRequiredAnchors固定生成/补齐三锚点；RequireRemovable、Delete/Cut命令、Clear与Copy均拒绝系统锚点；锚点节点[DoNotList]且CapabilityCatalog按IsAnchor过滤作者菜单；GraphClosure校验锚点不重复且RequiredAnchors齐备；FlowEmitter以Single校验并按ProgramControlFlowKind Enter/Enter/Exit与order 0/1/2声明OnEnter/Root/OnExit；运行时ContinueStateStop在stop barrier执行OnExit子图，ForceStopState只ForceStop释放；Corin三张Ability资产已无Action Exit Selector/Submit清理链。
 - [x] 8.5 同步btsmtl-sm-node-authoring、character-pipeline-definition-authoring、btsmtl-flowcanvas-authoring及所有受影响正式spec条款，清除两锚点例外、旧ActionProfile命名和准入内联要求，保留非Ability合法场景及既有完成记录。
+
+## 9. r6 TreeClip控制流接通
+
+- [ ] 9.1 定位TimelineBody图被编译跳过的根因：closure已将TreeClip AssetTree收进正式闭包，但Compile未为其生成operations（Float32/Fixed产物中图身份1eac26e4、Root handle、hook entry全部0命中），修复为TimelineBody图按正式reference路径完整编译，不留跳过分支。
+- [ ] 9.2 编译期Root entry登记：TimelineClip caller时除OnEnable/OnDisable/OnDestroy三个hook外，将Root（技能入口）声明为图entry invocation，SourceMap按clipId登记Root handle供运行时查询；重导出Corin Attack后产物须含TimelineBody图身份、Root、hook entry。
+- [ ] 9.3 运行期每帧驱动：AbilityTreeClipHook增加Root条目；CharacterTimelineTreeClipService.Consume的Update分支对活跃TreeClip的Root entry调用TickPersistent，Fixed/Float32两侧InvokeTreeClip同步支持；Root连的控制流（Child边）每帧执行，Root链Success即clip主体完成事实；边界hook保持一次性。
+- [ ] 9.4 回滚同构验证：TreeClip Root轮询状态全部存C#显式状态槽（runnable lifecycle与cursor），Local Fixed回滚重放与State的TickState同构；dotnet build带--disable-build-servers零错误后shutdown；端到端连段窗口由用户验收。
+- [ ] 9.5 spec收口：btsmtl-runnable-timeline-node删除RootTree operation旧挂靠条款，写入现行合同（TreeClip编译为TimelineBody operations、Root轮询根每帧tick、hook一次性边界、锚点不可删不进作者菜单）；清理其他spec的RootTree operation残留表述。

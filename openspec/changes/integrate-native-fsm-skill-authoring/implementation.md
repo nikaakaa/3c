@@ -117,3 +117,9 @@ Skill C#输出现在：
 - 8.3消费者链静态审计通过：CompileDiscovery经Ability.AdmissionProfile、语义依赖目录按ActionId声明身份、Float32/Fixed ExecutionServices以ActionAdmissionProfile按operation/actionId双索引、export_code适配器输出唯一共享对象；现行Attack.Float32Data的m_OperationSetVersion为character-gameplay-operations/16。
 - 8.4 StateBody锚点合同静态审计通过：工厂生成/补齐三锚点、删除/剪切/清空/复制全链拒绝系统锚点、[DoNotList]与CapabilityCatalog过滤作者菜单、GraphClosure校验锚点唯一且齐备、编译器按Enter/Enter/Exit与order 0/1/2发射、运行时ContinueStateStop在stop barrier执行OnExit而ForceStopState仅ForceStop释放；Corin三张Ability资产已无Action Exit Selector/Submit清理链。
 - 8.2/8.3/8.4已在tasks.md勾选并附证据；本节替换原“r5当前阻塞”段，该段所述DotRecast程序集错误与generate_assets不可用均已由后续提交解决，不再作为当前状态。
+
+## r6 TreeClip控制流断裂报告
+
+- 失误记录：TreeClip图（TimelineBody）从活图语义迁移到编译语义时控制流未迁移——编译器只为TimelineClip caller声明hook invocation且未实际生效，运行期Update驱动缺失。作者可见形态（root纯输出、无控制输入流）自ebc41bfcc（2026-09-08）起变更；该断裂与形态变更均未按规矩同步报告与spec，btsmtl-runnable-timeline-node至今保留已删除的RootTree operation旧挂靠条款。此为本change实施链的流程失职，留痕备查。
+- 现状验证：解码Float32/Fixed执行产物，TimelineBody图身份1eac26e4、Root handle a7d4ffcf、TreeClip hook entry全部0命中；StateBody（894a4cd1）正常编译110处。窗口决策实际由TimelineData gameplay segment采样承担，TreeClip图内容为不执行的被引用逻辑。
+- 接通方案：编译期TimelineBody图完整编译并登记Root entry（clipId到handle），运行期Update事件驱动Root entry每帧TickPersistent，边界hook保持一次性；设计详见design r6章节，任务见tasks第9节。

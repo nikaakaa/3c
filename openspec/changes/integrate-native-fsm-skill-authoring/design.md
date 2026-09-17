@@ -270,3 +270,19 @@ StateBody固定生成且仅有一组OnEnter、Root、OnExit系统锚点。正式
 - baseline: remove-agent-authoring-use-native-csharp/design.md r2，2026-09-13
 - scope: 只更新本目录proposal/design/tasks/specs；r2已有勾选和implementation记录保留，新增Ability任务不含验证任务。
 - dispatch: 未向规划、实现或协调窗口发送消息；本次不修改业务代码/资产。
+
+## r6 TreeClip控制流接通设计
+
+背景：TreeClip图（TimelineBody）从活图语义迁移到编译语义时控制流断裂。closure已将TreeClip AssetTree收进正式闭包，但编译器只为TimelineClip caller声明hook invocation且未实际生效——Float32/Fixed产物中TimelineBody图身份（1eac26e4等）、Root handle、hook entry全部缺失；运行期CharacterTimelineTreeClipService.Consume的Update分支直接空转。窗口决策实际由TimelineData gameplay segment采样链承担，TreeClip图内容成为不执行的被引用死逻辑。该断裂自ebc41bfcc（2026-09-08）建立编译图锚点起存在，长期未报告。
+
+编译设计：
+- TimelineBody图按正式reference路径完整编译，与StateBody同构：节点、控制流边（Child kind）、黑板声明照常生成operations，不留跳过分支。
+- TimelineClip caller声明四个entry：OnEnable、OnDisable、OnDestroy三个hook加Root（技能入口）entry；SourceMap按clipId登记各entry handle，运行时经InvokeTreeClip通道查询。
+- Root operation为结构节点（TickSingleChild单Child边），作者在图上从技能入口连出的控制流即其Child边。
+
+运行设计：
+- Timeline每帧Advance对活跃TreeClip发出Update事件；Consume的Update分支对Root entry调TickPersistent——root连的控制流每帧循环执行。
+- Root链Success即clip主体完成事实，驱动完成判定与转移预测；OnEnable/OnDisable在clip进出边界一次性触发，OnDestroy在播放停止释放时一次性触发。
+- 全部轮询状态（runnable lifecycle、cursor）存C#显式状态槽，回滚重放与State的TickState同构。
+
+作者形态：四锚点端口暂维持现状（纯输出、不可删、不进作者菜单），root的被进入由调度合成；视觉输入接缝待控制流接通并经用户验收后再单独定。

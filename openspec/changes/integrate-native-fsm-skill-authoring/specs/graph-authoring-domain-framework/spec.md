@@ -135,6 +135,17 @@ Graph Authoring Domain Framework MUST只理解稳定作者identity、typed paylo
 - **THEN** Authoring capability、Details与C#作者API MUST不自动暴露该字段
 - **AND** Compiler MUST负责从Pose IR生成该内部值
 
+#### Scenario: 原生事件图调用变量节点
+
+- **WHEN** 已明确采用原生执行的事件图使用宿主准入的 Get/Set
+- **THEN** 系统 MUST执行原生节点并遵守唯一变量合同
+- **AND** MUST不要求建立同义项目指令或启动另一个备用执行器
+
+#### Scenario: Pose作者图被尝试直接启动
+
+- **WHEN** 调用方试图因新增事件图能力而直接启动现有Pose作者图
+- **THEN** 系统 MUST继续拒绝，Pose MUST沿其唯一编译程序执行
+
 ## ADDED Requirements
 
 ### Requirement: FSM有效资产操作必须独立于退役协议

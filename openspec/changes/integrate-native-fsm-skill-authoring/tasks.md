@@ -79,8 +79,8 @@ r4固定分工：Ability决定结束，代码自动停止清理；Timeline保留
 
 ## 9. r6 TreeClip控制流接通
 
-- [ ] 9.1 定位TimelineBody图被编译跳过的根因：closure已将TreeClip AssetTree收进正式闭包，但Compile未为其生成operations（Float32/Fixed产物中图身份1eac26e4、Root handle、hook entry全部0命中），修复为TimelineBody图按正式reference路径完整编译，不留跳过分支。
-- [ ] 9.2 编译期Root entry登记：TimelineClip caller时除OnEnable/OnDisable/OnDestroy三个hook外，将Root（技能入口）声明为图entry invocation，SourceMap按clipId登记Root handle供运行时查询；重导出Corin Attack后产物须含TimelineBody图身份、Root、hook entry。
-- [ ] 9.3 运行期每帧驱动：AbilityTreeClipHook增加Root条目；CharacterTimelineTreeClipService.Consume的Update分支对活跃TreeClip的Root entry调用TickPersistent，Fixed/Float32两侧InvokeTreeClip同步支持；Root连的控制流（Child边）每帧执行，Root链Success即clip主体完成事实；边界hook保持一次性。
-- [ ] 9.4 回滚同构验证：TreeClip Root轮询状态全部存C#显式状态槽（runnable lifecycle与cursor），Local Fixed回滚重放与State的TickState同构；dotnet build带--disable-build-servers零错误后shutdown；端到端连段窗口由用户验收。
-- [ ] 9.5 spec收口：btsmtl-runnable-timeline-node删除RootTree operation旧挂靠条款，写入现行合同（TreeClip编译为TimelineBody operations、Root轮询根每帧tick、hook一次性边界、锚点不可删不进作者菜单）；清理其他spec的RootTree operation残留表述。
+- [x] 9.1 定位TimelineBody图被编译跳过的根因：closure已将TreeClip AssetTree收进正式闭包，但Compile未为其生成operations（Float32/Fixed产物中图身份1eac26e4、Root handle、hook entry全部0命中），修复为TimelineBody图按正式reference路径完整编译，不留跳过分支。
+- [x] 9.2 编译期Root entry登记：TimelineClip caller时除OnEnable/OnDisable/OnDestroy三个hook外，将Root（技能入口）声明为图entry invocation，SourceMap按clipId登记Root handle供运行时查询；重导出Corin Attack后产物须含TimelineBody图身份、Root、hook entry。
+- [x] 9.3 运行期每帧驱动：AbilityTreeClipHook增加Root条目；CharacterTimelineTreeClipService.Consume的Update分支对活跃TreeClip的Root entry调用TickPersistent，Fixed/Float32两侧InvokeTreeClip同步支持；Root连的控制流（Child边）每帧执行，Root链Success即clip主体完成事实；边界hook保持一次性。
+- [x] 9.4 回滚同构验证：TreeClip Root轮询状态全部存C#显式状态槽（runnable lifecycle与cursor），Local Fixed回滚重放与State的TickState同构；dotnet build带--disable-build-servers零错误后shutdown；端到端连段窗口由用户验收。
+- [x] 9.5 spec收口：btsmtl-runnable-timeline-node删除RootTree operation旧挂靠条款，写入现行合同（TreeClip编译为TimelineBody operations、Root轮询根每帧tick、hook一次性边界、锚点不可删不进作者菜单）；清理其他spec的RootTree operation残留表述。

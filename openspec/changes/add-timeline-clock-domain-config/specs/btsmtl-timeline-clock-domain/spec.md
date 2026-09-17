@@ -2,7 +2,7 @@
 
 ### Requirement: Timeline 时钟域必须以 tick 为唯一权威
 
-Timeline 逻辑判定 MUST 以整数 tick 为唯一权威时钟：clip enter/exit、cue、TreeClip、Tick lifetime 绑定的判定 MUST 使用整数 tick 比较。秒与归一化时间 MUST 只是派生读数，供采样、显示与表现插值使用。Timeline 时间换算率 MUST 来自 pipeline tick 率配置并随准备上下文注入，MUST NOT 依赖 static 可变全局字段。
+Timeline 逻辑判定 MUST 以整数 tick 为唯一权威时钟：clip enter/exit、cue、TreeClip、Tick lifetime 绑定的判定 MUST 使用整数 tick 比较。秒与归一化时间 MUST 只是派生读数，供采样、显示与表现插值使用。Timeline 帧基准（timeline 帧率）是资产存储语义的固定常量，MUST NOT 依赖 static 可变全局字段；tick 率 MUST 来自 pipeline 正式配置，两者仅在推进换算处相乘。
 
 #### Scenario: 默认配置下行为不变
 
@@ -29,19 +29,26 @@ Timeline 逻辑判定 MUST 以整数 tick 为唯一权威时钟：clip enter/exi
 - **WHEN** 播放被回滚到含累加器余数的快照并重放
 - **THEN** 后续推进 MUST 与首次播放逐 tick 一致
 
-### Requirement: 表现必须消费 committed 事件流并连续插值
+### Requirement: 表现时间驱动模式必须是业务策略而非固定实现
 
-Timeline 动画贡献 MUST 作为 committed 事件流交付表现层，表现动画时间 MUST 由相邻 committed 采样点之间按表现时钟连续插值得出，MUST NOT 回滚、MUST NOT 逐 tick 跳变。修正瞬间 MUST 从当前可见状态平滑接管。逻辑消费动画时间的场景（motion curve、foot window、motion warp）MUST 使用 tick 域数据，MUST NOT 读取表现私有动画时钟。
+Timeline 表现层的时间驱动 MUST 是显式业务策略，以策略对象（`IActionPresentationClockPolicy`）注入播放器：策略实现 MUST 完整封装该模式下播放器时钟的每帧行为，播放器消费点 MUST NOT 因模式产生分支。业务 MAY 选择自由播策略（按渲染 delta 自走，非确定、不回滚），MAY 选择 committed 采样插值跟随策略（动画时间为逻辑时间轴的连续函数，支持修正重演）。无论哪种模式，逻辑消费动画时间的场景（motion curve、foot window、motion warp）MUST 使用 tick 域数据，MUST NOT 读取表现私有动画时钟。跟随模式的能力组件 MUST 保持可用，其采用与否由具体业务装配决定，MUST NOT 强制全业务统一。
 
-#### Scenario: 渲染帧平滑播放
+#### Scenario: 表现自由播业务
 
-- **WHEN** committed 采样点匀速推进且渲染帧率高于 tick 率
-- **THEN** 表现动画时间 MUST 为采样点间连续插值，不产生逐 tick 阶梯
+- **WHEN** 业务装配自由播策略
+- **THEN** 播放器时钟 MUST 按渲染 delta 平滑推进，收到播放事件后 MUST NOT 被 tick 采样阶梯约束
 
-#### Scenario: 回滚修正
+#### Scenario: 策略注入即插件开关
 
-- **WHEN** 回滚重放替换已表现分支的 committed 样本
-- **THEN** 表现 MUST 按新 committed 历史平滑接管，动画时钟 MUST NOT 倒退或硬重置
+- **WHEN** 新业务需要不同的表现时钟行为
+- **THEN** MUST 通过新增策略实现并在装配时注入接入
+- **AND** 播放器消费点与既有策略实现 MUST NOT 被修改
+
+#### Scenario: 跟随逻辑时间轴业务
+
+- **WHEN** 业务选择 committed 插值跟随模式
+- **THEN** 表现动画时间 MUST 由 committed 采样点之间连续插值得出
+- **AND** 回滚重放替换 committed 分支时 MUST 从当前可见状态平滑接管，不倒退、不硬重置
 
 ### Requirement: 编辑器吸附粒度必须等于 tick 步长
 
@@ -61,3 +68,6 @@ Timeline 编辑器 clip/cue 边界吸附粒度 MUST 等于会话 tick 步长（`
 
 - **WHEN** 反序列化含旧 Scale 字段的历史 Timeline 资产
 - **THEN** 系统 MUST 忽略该数据且不保留字段定义
+
+
+

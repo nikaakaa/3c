@@ -75,3 +75,14 @@
 ## 与归档条款的协调
 
 归档后的 `btsmtl-timeline-editor-preview` 现行 spec 中"Timeline必须使用正式帧率统一编辑时间"条款声明"作者帧 MUST 不自动解释为 Runtime Logic Tick"。本 change 与其兼容：作者帧是编辑器作者域单位，吸附步长配置化（默认取 `1/tickRate`）不改变"帧经显式换算进运行时"的语义；"编辑器预览刻度 MAY 与运行时 tick 率独立配置"即该条款的延续。
+
+## 表现时钟策略模式设计（2026-09-17 定稿）
+
+表现层时间驱动以策略对象插件化：新增 `IActionPresentationClockPolicy` 合同（`DriveClock(player, channelId, presentationSampleTick, presentationDeltaSeconds)`），把"这一帧播放器时钟怎么走"完整封装在策略实现里，播放器消费点一行调度、零模式分支。
+
+- `FreeRunPresentationClockPolicy`：`player.Advance(deltaSeconds, PlayRate)`——自由播，当前角色动画业务装配用，行为与现状逐帧一致；
+- `CommittedFollowPresentationClockPolicy`：组合 `Registry`（Select/Sample/Complete/Release 生命周期、channel→playback 映射）+ `History`（committed 采样序列）+ `Projector`（窗口插值），`TryProject` 成功时 `SetRawClock(插值连续时间)`，窗口缺失时退化自走；内部分支属于策略自身语义，消费点不可见；
+- 消费点：`CharacterPoseNativeClipPlayerHandler.PrepareFrame` 的 `m_Player.Advance(...)` 替换为 `m_ClockPolicy.DriveClock(...)`；
+- 装配开关：`CharacterPresentationDomainRuntimeFactory` 按业务注入策略实例；新业务接入 = 新增策略实现 + 装配注入，消费点与既有实现不修改。
+
+取舍：跟随模式（表现回滚重演）只有格斗类业务需要，普通动作游戏做它属性能负担，因此 FreeRun 为默认装配；CommittedFollow 作为可选能力保留（你规划的插值组件即该模式实现），不接主链、不实例化零开销。

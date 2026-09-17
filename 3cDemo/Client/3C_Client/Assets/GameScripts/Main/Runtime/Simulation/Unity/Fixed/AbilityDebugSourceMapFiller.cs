@@ -12,10 +12,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 if (source.TargetKind == ProgramSourceTargetKind.OptimizedAway)
                     continue;
-                ProgramSourceTargetKind targetKind =
-                    source.TargetKind == ProgramSourceTargetKind.OperationPort
-                        ? ProgramSourceTargetKind.Operation
-                        : source.TargetKind;
                 RuntimeSourceElementKind kind =
                     source.TargetKind == ProgramSourceTargetKind.GraphInvocation
                         ? RuntimeSourceElementKind.Graph
@@ -28,7 +24,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                                     : RuntimeSourceElementKind.Node;
                 string elementId = kind == RuntimeSourceElementKind.Graph ? source.GraphId : source.NodeId;
                 var key = new RuntimeSourceElementKey(kind, source.GraphId, elementId, source.TimelineId, source.TrackId, source.ClipId);
-                var target = new RuntimeSourceTarget(MapTargetKind(targetKind), targetIndexOffset + source.TargetIndex);
+                var target = source.TargetKind == ProgramSourceTargetKind.OperationPort
+                    || source.TargetKind == ProgramSourceTargetKind.GraphInvocation
+                        ? RuntimeSourceTarget.Source
+                        : new RuntimeSourceTarget(MapTargetKind(source.TargetKind), targetIndexOffset + source.TargetIndex);
                 sourceMap.Add(key, default, source.DisplayPath, source.ContentHash, target);
                 if (source.TargetKind == ProgramSourceTargetKind.GraphInvocation)
                 {
@@ -48,7 +47,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 ProgramSourceTargetKind.Reference => RuntimeSourceTargetKind.Reference,
                 ProgramSourceTargetKind.Producer => RuntimeSourceTargetKind.Producer,
                 ProgramSourceTargetKind.CatalogEntry => RuntimeSourceTargetKind.CatalogEntry,
-                ProgramSourceTargetKind.GraphInvocation => RuntimeSourceTargetKind.Reference,
                 _ => RuntimeSourceTargetKind.Operation
             };
         }

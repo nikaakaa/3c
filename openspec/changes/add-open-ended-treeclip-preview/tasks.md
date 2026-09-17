@@ -17,6 +17,6 @@
 
 ## 3. 预览观察显示
 
-- [ ] 3.1 ScenePlay 预览观察链发布开放 clip 的生长状态（活跃、未定型、游标位置）
-- [ ] 3.2 Timeline 窗口开放 clip 可视 End 跟随 Runtime 游标，定型后固定于实际退出位置
-- [ ] 3.3 循环等待类 clip 同规则显示，playback 停止定型；不新增 clip 级退出判定
+- [x] 3.1 ScenePlay 预览观察链发布开放 clip 的生长状态（活跃、未定型、游标位置）
+- [x] 3.2 Timeline 窗口开放 clip 可视 End 跟随 Runtime 游标，定型后固定于实际退出位置
+- [x] 3.3 循环等待类 clip 同规则显示，playback 停止定型；不新增 clip 级退出判定（由3.1/3.2通用显示规则覆盖，无独立实现项）

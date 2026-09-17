@@ -204,6 +204,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                          !string.IsNullOrEmpty(source.ClipAuthoringId))
                     activeClips[source.ClipAuthoringId] = item.Event.Payload.Status;
             }
+            foreach (Track track in timeline.Tracks)
+            {
+                if (track is not TreeTrack treeTrack)
+                    continue;
+                foreach (Clip clip in treeTrack.Clips)
+                {
+                    if (clip is TreeClip treeClip &&
+                        treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision &&
+                        activeClips.ContainsKey(clip.AuthoringId))
+                        activeClips[clip.AuthoringId] = "open";
+                }
+            }
             if (m_Session.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory)
                 window.ApplyHistoryObservation(summary.VisualTime, activeTracks, activeClips);
             else

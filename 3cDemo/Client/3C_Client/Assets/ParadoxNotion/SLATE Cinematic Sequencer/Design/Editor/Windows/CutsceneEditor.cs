@@ -3679,7 +3679,23 @@ namespace Slate
                 ? embeddedRuntimeClipStatus?.Invoke(wrapper.editorBinding.FormalClip.AuthoringId)
                 : null;
             if (!string.IsNullOrEmpty(runtimeStatus))
+            {
                 GUI.Label(clipRect, runtimeStatus, Styles.centerLabel);
+                if (runtimeStatus == "open" && embeddedRuntimeTime != null)
+                {
+                    float? growTime = embeddedRuntimeTime();
+                    if (growTime.HasValue)
+                    {
+                        float growEndX = TimeToPos(growTime.Value);
+                        if (growEndX > clipRect.xMax)
+                        {
+                            GUI.color = new Color(0.25f, 0.85f, 1f, 0.35f);
+                            GUI.Box(new Rect(clipRect.xMax, clipRect.yMin + 1f, growEndX - clipRect.xMax, clipRect.height - 2f), string.Empty, Styles.clipBoxHorizontalStyle);
+                            GUI.color = Color.white;
+                        }
+                    }
+                }
+            }
             float nextPosX = TimeToPos(nextBinding != null ? nextBinding.StartTime : viewTimeMax);
             float previousPosX = TimeToPos(previousBinding != null ? previousBinding.EndTime : viewTimeMin);
             wrapper.editorBinding.DrawClipGUIExternal(

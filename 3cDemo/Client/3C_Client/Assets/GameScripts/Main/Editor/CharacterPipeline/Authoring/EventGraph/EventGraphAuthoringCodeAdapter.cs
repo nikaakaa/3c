@@ -365,7 +365,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
         {
             if (variableNode.parameter == null ||
                 !variableNode.parameter.useBlackboard ||
-                variableNode.parameter.varRef == null)
+                string.IsNullOrEmpty(variableNode.parameter.targetVariableID))
             {
                 context.ReportError(
                     "event_graph_variable_node_unbound",
@@ -373,9 +373,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.EventGraph
                     "事件图Get/Set节点没有绑定正式Blackboard变量。");
                 return;
             }
-            Variable variable = variableNode.parameter.varRef;
-            if (node.graph is not HostEventGraph graph ||
-                !graph.blackboard.variables.Values.Contains(variable))
+            Variable variable = null;
+            if (node.graph is HostEventGraph graph)
+                variable = graph.blackboard.variables.Values.FirstOrDefault(value =>
+                    string.Equals(value.ID, variableNode.parameter.targetVariableID, StringComparison.Ordinal));
+            if (variable == null)
             {
                 context.ReportError(
                     "event_graph_variable_node_external_binding",

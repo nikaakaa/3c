@@ -230,14 +230,16 @@ namespace BTSMTL.EventGraphs
             if (node is not ParameterVariableNode parameterNode ||
                 parameterNode.parameter == null ||
                 !parameterNode.parameter.useBlackboard ||
-                parameterNode.parameter.varRef == null)
+                string.IsNullOrEmpty(parameterNode.parameter.targetVariableID))
             {
                 errors.Add($"variable node '{node.UID}' is not bound to a local Blackboard variable");
                 return;
             }
-            if (!graph.blackboard.variables.Values.Contains(parameterNode.parameter.varRef))
+            Variable variable = graph.blackboard.variables.Values.FirstOrDefault(value =>
+                string.Equals(value.ID, parameterNode.parameter.targetVariableID, StringComparison.Ordinal));
+            if (variable == null)
                 errors.Add($"variable node '{node.UID}' references an external Blackboard variable");
-            if (parameterNode.parameter.varRef.varType != parameterNode.parameter.varType)
+            else if (variable.varType != parameterNode.parameter.varType)
                 errors.Add($"variable node '{node.UID}' has a mismatched variable type");
             if (node is SetVariable<float> floatSet && floatSet.perSecond ||
                 node is SetVariable<UnityEngine.Vector3> vectorSet && vectorSet.perSecond)

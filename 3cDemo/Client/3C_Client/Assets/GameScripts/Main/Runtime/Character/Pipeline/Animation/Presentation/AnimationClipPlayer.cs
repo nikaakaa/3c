@@ -844,7 +844,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SampleTime = (float)Math.Min(continuousTime, duration);
         }
 
-        void SetRawClock(double continuousTime)
+        internal void SetRawClock(double continuousTime)
         {
             if (!double.IsFinite(continuousTime) || continuousTime < 0d)
                 throw new ArgumentOutOfRangeException(nameof(continuousTime));

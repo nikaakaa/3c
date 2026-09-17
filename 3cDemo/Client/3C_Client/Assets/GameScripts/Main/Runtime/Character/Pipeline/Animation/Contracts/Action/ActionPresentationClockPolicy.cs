@@ -1,7 +1,7 @@
 using System;
 using ThirdPersonSimulation;
 
-namespace ThirdPersonCharacter.Pipeline.Animation
+namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
     internal enum ActionPresentationClockCommandKind : byte
     {
@@ -57,3 +57,4 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 }
+

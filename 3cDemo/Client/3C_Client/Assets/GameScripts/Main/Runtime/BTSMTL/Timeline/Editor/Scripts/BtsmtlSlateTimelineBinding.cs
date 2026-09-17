@@ -152,12 +152,14 @@ namespace BTSMTL.Timeline.Editor
                 return;
             float previousLength = Length;
             m_EditActive = false;
+            UnityEngine.Debug.Log("[TL-DBG] CommitEdit: revisionMatch=" + string.Equals(m_EditSourceRevision, m_SourceRevision, StringComparison.Ordinal) + " sourceCurrent=" + IsSourceCurrent() + " hasClipChanges=" + m_Clips.Values.Any(clip => clip.HasChanges()) + " hasSectionChanges=" + m_SectionsById.Values.Any(section => section.HasChanges()));
             if (!string.Equals(m_EditSourceRevision, m_SourceRevision, StringComparison.Ordinal) ||
                 !IsSourceCurrent())
             {
                 m_EditSourceRevision = string.Empty;
                 Rebuild();
                 ExpandViewToLength(previousLength);
+                UnityEngine.Debug.Log("[TL-DBG] 拉回分支1：外部修改判定丢弃");
                 ReportIssue("Timeline 内容已被外部修改，当前编辑已丢弃。");
                 return;
             }
@@ -171,6 +173,7 @@ namespace BTSMTL.Timeline.Editor
             }
             try
             {
+                UnityEngine.Debug.Log("[TL-DBG] 到达Apply提交");
                 m_Session.Apply(() =>
                 {
                     bool changed = false;

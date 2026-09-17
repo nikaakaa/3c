@@ -120,8 +120,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeClipPlayerHandler(
             AnimationClipPlayerRuntime player,
             CharacterPoseNativeNodePoseBuffer outputBuffer,
+            ICharacterPoseNativeClipSourceBinding sourceBinding,
             IActionPresentationClockPolicy clockPolicy)
-            ICharacterPoseNativeClipSourceBinding sourceBinding)
         {
             m_Player = player ?? throw new ArgumentNullException(nameof(player));
             m_OutputBuffer = outputBuffer ??

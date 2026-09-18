@@ -21,6 +21,9 @@ ScenePlay 是 Preview 的唯一正式运行底座，不是第四种产品形态�
 - **明确轻量更新边界**：参数、曲线、Clip 时间和可兼容内容修改可以在同一 Session 内后台准备并在安全边界采用；代码、状态布局、Composition 或不兼容运行结构不能承诺无感，必须明确显示需要重建或新 Session。
 - **建立 RuntimeDebug 观察形态**：RuntimeDebug 只消费正式 RuntimeDebugSession、SourceMap、Trace、Playback 和提交快照；RootTree 进入子图时显示对应 FlowCanvas，进入 Timeline 时显示对应 Slate Timeline，离开后回到父调用路径。
 - **统一工具表面**：复用现有 Graph Shell、FlowCanvas 和 Slate CutsceneEditor 的绘制与交互基础；不新建 Dashboard、第二曲线编辑器、第二 Timeline Renderer、事件中心或独立播放器。
+- **固定唯一 UI 归属**：三种形态直接位于现有 `TimelineEditorWindow`，不得新增独立 Workbench、Session Dashboard 或预览设置面板；工具栏只保留 Profile、形态菜单、Session 菜单和一行状态。
+- **固定唯一预览配置**：使用一个 `BtsmtlScenePlayProfile` ScriptableObject 保存 Scene、ContextId 和默认 ActorId。Timeline 只选择 Profile；详细配置只在 SO Inspector，不保存 Session、运行 identity、revision、播放时间或调试状态。
+- **收紧 Session 操作入口**：Start、Pause、Resume、Stop，以及内容 Prepare、Publish、Adopt 都归入同一个 Session 菜单；不把流程按钮铺在 Timeline 顶栏上。
 - **保留 CMC 的正确经验**：可以参考 CMC 的预热、手动刷新和局部缓存重建体验，但不得使用 CMC MontagePlayer 或其独立 PlayableGraph 作为 BTSMTL Preview 真相。
 - **清理旧口径**：文档不再把 Preview 等同于用户必须显式点击 Unity Play，也不再把 RuntimeDebug overlay 当成完整 Runtime Preview；Unity Play Mode 是承载实现细节，产品入口由 Workbench 管理。
 
@@ -51,14 +54,13 @@ ScenePlay 是 Preview 的唯一正式运行底座，不是第四种产品形态�
 ## Product Boundary
 
 ```text
-Authoring Runtime Workbench
-├─ Authoring
-│  ├─ FlowCanvas / RootTree / 子图
-│  └─ Slate Timeline / Track / Clip / Curve
-├─ Preview
-│  └─ ScenePlay Session 驱动的真实场景与可编辑作者面
-└─ RuntimeDebug
-   └─ 同一 Session 的只读调用栈观察
+TimelineEditorWindow
+├─ Authoring：原 Slate 作者面
+├─ Preview：原 Slate 作者面 + ScenePlay
+└─ RuntimeDebug：同一位置的只读运行观察
+
+BtsmtlScenePlayProfile
+└─ Scene / ContextId / DefaultActorId
 
 唯一运行底座：ScenePlay Session
 ```

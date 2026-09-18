@@ -1,5 +1,12 @@
 # 预览迁移事实审计
 
+## 本轮工具面收口
+
+- `BtsmtlScenePlayProfile` 是 Timeline 预览入口的唯一配置资产，保存正式 Scene、ContextId 和 DefaultActorId；窗口不再重复展开这些字段。
+- `TimelineEditorWindow` 继续承载 Authoring、Preview 和 RuntimeDebug 三种形态，主体仍是原 Slate Timeline。
+- 入口工具栏只保留 Profile、形态菜单、Session 菜单和一行状态；Start、Pause、Resume、Stop 以及 Prepare、Publish、Adopt 全部收进 Session 菜单，避免把流程按钮铺满编辑器。
+- 这一步只收口产品工具形态和入口，不把现有作者 Timeline 伪装成“动态运行时 Timeline”；RootTree 驱动的运行时投影仍以正式 RuntimeDebug 事实为准，未执行内容不会因为作者资产存在就被声称为已执行。
+
 ## 基线与接口状态
 
 | 追溯点 | 实际内容 | 本 change 可消费范围 |
@@ -1001,3 +1008,43 @@ owner 结论：合同在 Runtime/Gameplay 与 Simulation/Core，场景上下文�
 ZZZ Default_Normal 参考值（供后续手感调参）：FOV 50、默认仰角 0.6、CameraLocateRadius 3.75、平滑时间 0.15、轨道 (2.225,2.5)/(0.225,3.75)/(-0.775,2.2)、ScreenY Top 0.5/Middle 0.5/Bottom 0.35、阻尼 Horizontal/Vertical 0.5、Drag 轴 X MaxSpeed 1550/Y MaxSpeed 25（AccelTime 0.2/DecelTime 0.1，InvertInput false）。当前投影轨道与 ScreenY 数据与 dump 一致；灵敏度 0.12/0.12 为唯一无 dump 依据的授权值，手感仍不满意时优先调它并考虑按 ZZZ CameraAxis 模型补平滑。
 
 验证：Unity 全量编译 0 error；构图/手感回归由用户端到端执行。
+
+## 2026-09-18 Authoring Runtime Workbench 首个代码闭环
+
+> 纠正：本节最初新增的独立 `AuthoringRuntimeWorkbenchWindow` 产品归属错误。正式产品必须回到原 `TimelineEditorWindow`；独立窗口及菜单应删除。Scene、Context 和 Actor 改由单一 `BtsmtlScenePlayProfile` SO 配置，Timeline 不承载详细设置表单。以下内容仅保留底层链路追溯，不再作为最终 UI 结论。
+
+本批把文档中的三种产品形态落到一个统一编辑器入口，代码入口为
+`Assets/GameScripts/Main/Editor/CharacterPipeline/ScenePlay/AuthoringRuntimeWorkbenchWindow.cs`，实际窗口类型为
+`AuthoringRuntimeWorkbenchWindow`，菜单改为 `3C/Authoring Runtime/Workbench`。
+
+已落地的运行链：
+
+- Authoring 只提供现有 `RuntimeDebugSourceNavigator`、`GraphEditor` 和 `TimelineEditorWindow` 的正式打开入口，不创建 runtime clone、窗口播放器或本地业务时钟。
+- Preview 通过 `EditorPlayModeSceneLauncher.Start` 启动当前正式 Scene，并只通过 `FixedCharacterHost.EnqueueAbilityInputRequest` 触发 Ability；窗口不再直接调用 Timeline 播放接口。
+- Preview 的 Pause、Resume、Step 和 Stop 通过 `LocalSimulationDebugControlService` 或 `SimulationSessionHost.Stop` 提交给正式 Session owner。
+- RuntimeDebug 通过 `RuntimeDebugSession.Shared` 连接当前 Actor，使用正式 Trace/SourceMap/Playback 事实，并通过 `RuntimeDebugSourceNavigator.Open` 回到 FlowCanvas/Slate 当前 source；窗口切换只释放或获取 live interest，不创建第二 Session。
+- Workbench 顶部同时显示 Session、Actor、作者资产依赖 revision、RuntimeDebug content revision；RuntimeDebug 另外显示 Runtime Epoch、Capture/Frozen/Live 状态。
+
+旧路径清理：
+
+- 删除 `CharacterTimelineHost.RequestPreviewTimelinePlayback`、`CancelPreviewTimelinePlayback`、`PreviewIsActive`、`FixedPreview` source kind 和 `sceneplay.preview` 标识。
+- 当前源码不再存在 `ScenePlayCoordinatorWindow`、`RequestPreviewTimelinePlayback`、`FixedPreview` 或 `sceneplay.preview` 的引用。
+
+本批补齐了 Timeline 内容 owner 的正式 Prepare/Publish/Adopt 边界：`CharacterTimelineHost` 使用现行 `TimelineTreeContractComposition` 做内容发现和校验，Prepare 生成不可变 revision plan，Publish 封存当前 revision，Adopt 只在 identity 拓扑和作者/content revision 未过期时更新未来正式 playback 的内容；当前活动 playback 保持原快照。拓扑变化和过期 plan 明确拒绝，不混合旧调用栈与新 SourceMap。
+
+仍未伪造的能力：Graph/Composition/Scene/Actor roster/C# 代码等非 Timeline 拓扑的全量热采用，以及历史快照的独立运行 projection，仍由各领域正式 owner 提供；本批不创建替代接口或 fallback 路径。
+
+RuntimeDebug 现在有显式 Follow current runtime source；它按当前 RuntimeDebug event 的 source identity 延迟导航到 FlowCanvas 或 Slate。Slate Timeline 只有被 RuntimeDebug 绑定的窗口才允许显示 runtime projection 并切换只读，普通 Authoring Timeline 不再接受运行 overlay。
+
+验证：`ThirdPersonClient.Editor.csproj` 使用 `dotnet build --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 error；完成后已执行 `dotnet build-server shutdown`。
+
+## 2026-09-18 原 Timeline 编辑器归属纠正
+
+- 删除独立 `AuthoringRuntimeWorkbenchWindow` 源码、Unity meta 和菜单入口。
+- `TimelineEditorWindow` 通过 `ITimelineWorkspaceModeController` 接收角色 Editor 的 ScenePlay 实现，程序集方向仍为角色 Editor 依赖 Timeline Editor，不让 Timeline Editor 反向依赖角色 runtime。
+- 原 Timeline 顶部新增唯一紧凑工具条：`BtsmtlScenePlayProfile` 资产、`Authoring/Preview/RuntimeDebug` 模式菜单、Session 菜单和一行状态。没有 Scene、Context、Actor、Composition、World、Camera 的展开表单。
+- `Prepare/Publish/Adopt` 只在 Preview 中按当前状态出现；Authoring 和 RuntimeDebug 不显示这三个命令。
+- 新增 `CorinGameplayPreviewProfile.asset`，引用正式 `BtsmtlPreview.unity`、Context `btsmtl-preview` 和默认 Actor `fixed-player`。Profile 不保存任何运行态。
+- `BtsmtlSkillRuntimeObservationAutoBinder` 只有在 Timeline 工作形态为 RuntimeDebug 时才自动绑定 FlowCanvas 运行观察，Preview 不再污染作者图。
+
+验证：`ThirdPersonClient.Editor.csproj` 按统一 build 参数编译成功，0 error；构建服务器已关闭。

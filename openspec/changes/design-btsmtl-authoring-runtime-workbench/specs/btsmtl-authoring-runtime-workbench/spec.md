@@ -83,6 +83,28 @@ Workbench MAY 复用 Slate 的时间尺、Track、Clip、缩放、滚动和绘�
 - **THEN** Slate MUST 使用 Runtime observation projection 显示真实 playback、Track、Clip、游标和生命周期
 - **AND** Slate MUST NOT 通过完整作者 TimelineData 补齐未执行内容或自行估算时间
 
+### Requirement: 三种形态必须位于原 Timeline 编辑器
+
+Authoring、Preview 和 RuntimeDebug MUST 直接接入现有 `TimelineEditorWindow`。系统 MUST NOT 新增独立 Workbench、Session Dashboard、Preview Timeline 或 RuntimeDebug Timeline。Timeline 顶部 MUST 只保留 Preview Profile、三态切换、一个 Session 菜单和一行状态；Prepare、Publish、Adopt 等内容采用命令 MUST 位于 Session 菜单中，不得作为常驻按钮平铺。
+
+#### Scenario: 作者切换工作形态
+
+- **WHEN** 作者在原 Timeline 编辑器切换 Authoring、Preview 或 RuntimeDebug
+- **THEN** 主体 MUST 始终使用原 Slate 区域
+- **AND** 系统 MUST NOT 打开平行总控窗口或复制 Timeline 编辑面
+- **AND** 场景、Context、Actor 与内容采用命令 MUST 不在 Timeline 顶部重复展开
+
+### Requirement: Scene 与 Actor 必须由单一 Profile 选择
+
+系统 MUST 使用 `BtsmtlScenePlayProfile` ScriptableObject 保存正式 Scene、ContextId 和 DefaultActorId。Timeline Editor MUST 只选择 Profile，不得展开 Scene、Context、Actor、Composition、World 或 Camera 的重复配置。Profile MUST NOT 保存 Session、runtime identity、revision、播放时间、暂停或诊断状态。
+
+#### Scenario: 使用 Profile 进入 Preview
+
+- **WHEN** 作者在 Timeline Editor 选择 Preview
+- **THEN** 系统 MUST 从当前 Profile 读取 Scene、ContextId 和 DefaultActorId
+- **AND** ScenePlay MUST 校验 Context 与 Actor roster 后连接正式 Session
+- **AND** Profile 无效时 MUST 只显示失败原因并拒绝伪造运行目标
+
 ### Requirement: 首次进入 Preview 必须显示真实准备阶段
 
 Workbench MUST 不要求用户手动操作 Unity Play 按钮；首次进入 Preview 可以存在场景、Session、资源和领域 Prepare 等待，但 MUST 显示真实阶段、失败原因和采用状态。系统 MUST NOT 为了隐藏等待创建 Edit Mode 假 Runtime 或 CMC 平行播放器。进入 Preview 后，正常作者修改 MUST 尽量保持 Scene、Session、Actor 和 RuntimeDebug 绑定不变。

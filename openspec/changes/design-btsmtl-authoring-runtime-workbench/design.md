@@ -95,14 +95,15 @@ Ability
 
 ## 4. 工具表面
 
-工作台只提供能回答当前任务的最小工具：
+产品主体就是现有 `TimelineEditorWindow`，不再存在独立 Workbench 窗口。它只提供能回答当前任务的最小工具：
 
 ```text
-顶部：Session / Actor / Ability / 当前采用版本 / 准备状态
-主区：当前 Authoring、Preview 或 RuntimeDebug 表面
-导航：当前 Graph / 子图 / Timeline / TreeClip 调用路径
-底部：必要的采用结果、失败原因和当前选中对象详情
+顶部：ScenePlay Profile + Authoring / Preview / RuntimeDebug + Session 菜单
+主区：原 Slate Timeline
+状态：一行显示 Session、版本差异或失败原因
 ```
+
+`Session` 菜单统一承载 `Start Preview`、`Pause`、`Resume`、`Stop`，以及内容采用链路的 `Prepare`、`Publish`、`Adopt`。这些命令按当前状态显示或禁用，不在 Timeline 顶栏增加常驻按钮。Scene、Context 和 Default Actor 只在 `BtsmtlScenePlayProfile` Inspector 中配置，Timeline 顶栏只选择 Profile 资产。
 
 Authoring 和 Preview 可以使用 FlowCanvas 与 Slate 的可编辑表面；RuntimeDebug 复用同一视觉表面但切换为只读 projection。可以复用 Slate 的时间尺、Track、Clip、缩放、滚动和绘制算法，但 Runtime projection 不得直接复用 Authoring projection 作为数据源。
 
@@ -113,6 +114,18 @@ Authoring 和 Preview 可以使用 FlowCanvas 与 Slate 的可编辑表面；Run
 - 第二套 Timeline Renderer、曲线编辑器或播放器；
 - Runtime 资产保存页、运行状态 Inspector 副本；
 - CMC 兼容入口、fallback Preview 或本地隐藏时钟。
+
+### 4.1 ScenePlay Profile
+
+`BtsmtlScenePlayProfile` 是唯一预览入口配置，字段只包含：
+
+- `Scene`：正式 ScenePlay 场景资产；
+- `ContextId`：该场景中的正式 ScenePlay Context；
+- `DefaultActorId`：Context roster 中默认绑定的 Actor。
+
+Profile 不保存 Session、Actor runtime identity、当前 revision、运行时间、暂停状态、Capture、History 或窗口选择。这些状态仍由 ScenePlay、正式 Actor host 和 RuntimeDebugSession 拥有。
+
+Timeline 顶部只显示 Profile 资产选择、三种形态切换和 Session 菜单。Scene、Context 与 Actor 的详细编辑只出现在 Profile Inspector。Profile 无效时只显示一条错误和定位 Profile 的入口，不展开配置表单；当前窗口不重复显示 Scene、Context 或 Actor 字段。
 
 ## 5. Preview 更新边界
 

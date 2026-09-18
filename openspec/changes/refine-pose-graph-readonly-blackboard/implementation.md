@@ -118,3 +118,13 @@
 
 - 详情日志到手：status=Faulted, output=null——子图Evaluate内部异常转Faulted，不是completion错位。但诊断分支有缺陷：评估合同允许Faulted为有效结果（FailureCode非零即通过IsValid），走了对照分支没输出Message。修正（7f73670d8）：按Status==Evaluated分流，非Evaluated输出status/failureCode/Source/Message真因。下一轮Play即得子图内部真实异常。
 - 参数边界确认（已实现已提交）：Control参数由InputContract构造校验强制只经事件图typed变量帧（未发布/类型不符精确失败）；AnimatedProperty（blendshape与FootPlacementWeight）只由CharacterFinalPosePropertyWriter消费，BlendSpace等读取侧有用途检查守卫。合同入运行时架构spec（57a76e426），含阶段门Warning收口期责任条款。
+
+## 参数单路消费强制点核实（2026-09-19）
+
+- 图内参数节点（CharacterPoseNativeGraphEvaluator参数node.Initialize）：声明必须Usage==Control且IsBlackboardInput，否则抛"does not reference a read-only EventGraph Control parameter"——图内不存在AnimatedProperty参数节点。
+- 表现侧变量帧（CharacterPresentationDomainRuntime构造）：m_PoseParameterIds只收集Control参数，CharacterAnimationPoseInputFrame.FromPublishedVariables消费面天然不含AnimatedProperty。
+- 唯一属性写入（CharacterFinalPosePropertyWriter:103）：只接受AnimatedProperty参数，Final Publication属性页单路写入。
+- 混合节点守卫（AnimationBlendSpacePlayerRuntime:610）：AnimatedProperty参数在变量读取路径被用途检查拒绝。
+- 合同构造（CharacterAnimationInputContract:252/403/412）：Control必须事件图发布且类型一致；AnimatedProperty仅由blendshape绑定与FootPlacementWeight声明产生。
+- 结论：Control→事件图变量帧、AnimatedProperty→Final Publication Property Writer两条链各自单路，无交叉查询点、无伪装填充路径；合同文本见character-pose-graph-runtime-architecture spec（57a76e426）。
+- 剩余问题不变：①子图Local Pose真因待下一轮Play日志（诊断分支已修正，7f73670d8）；②3.19源模块死面清理；③评估阶段Job完成时机按日志收口。

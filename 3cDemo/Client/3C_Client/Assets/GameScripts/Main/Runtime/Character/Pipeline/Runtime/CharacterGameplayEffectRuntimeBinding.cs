@@ -106,6 +106,67 @@ namespace ThirdPersonCharacter.Pipeline
                         }
                     }
                     break;
+                case GameplayAttackCollisionComponentDefinition collision:
+                    writer.WriteInt32((int)collision.Kind);
+                    writer.WriteNumber(collision.CenterOffset.x, $"{source}/Component[{index}].CenterOffset.x");
+                    writer.WriteNumber(collision.CenterOffset.y, $"{source}/Component[{index}].CenterOffset.y");
+                    writer.WriteNumber(collision.CenterOffset.z, $"{source}/Component[{index}].CenterOffset.z");
+                    writer.WriteNumber(collision.Width, $"{source}/Component[{index}].Width");
+                    writer.WriteNumber(collision.Height, $"{source}/Component[{index}].Height");
+                    writer.WriteNumber(collision.Depth, $"{source}/Component[{index}].Depth");
+                    writer.WriteNumber(collision.FanAngle, $"{source}/Component[{index}].FanAngle");
+                    writer.WriteNumber(collision.Radius, $"{source}/Component[{index}].Radius");
+                    writer.WriteNumber(collision.InvalidRadius, $"{source}/Component[{index}].InvalidRadius");
+                    writer.WriteNumber(collision.InvalidAngle, $"{source}/Component[{index}].InvalidAngle");
+                    writer.WriteInt32(collision.FollowDirectionType);
+                    writer.WriteInt32(collision.CoreDistance);
+                    writer.WriteBoolean(collision.IsSubtractive);
+                    writer.WriteNumber(collision.HitInterval, $"{source}/Component[{index}].HitInterval");
+                    writer.WriteInt32(collision.AliveMaxHitCount);
+                    writer.WriteInt32(collision.UnitMaxHitCount);
+                    writer.WriteBoolean(collision.FollowAttacker);
+                    break;
+                case GameplayAttackPropertyComponentDefinition attack:
+                    writer.WriteString(attack.SourceKey);
+                    writer.WriteInt32(attack.HitType);
+                    writer.WriteInt32(attack.HitStrengthType);
+                    writer.WriteInt32(attack.CombatTags.Count);
+                    for (int i = 0; i < attack.CombatTags.Count; i++)
+                        writer.WriteString(attack.CombatTags[i]);
+                    WriteMagnitude(writer, attack.DamagePercentage, source, $"Component[{index}].DamagePercentage");
+                    WriteMagnitude(writer, attack.AddedDamage, source, $"Component[{index}].AddedDamage");
+                    WriteMagnitude(writer, attack.BreakStunRatio, source, $"Component[{index}].BreakStunRatio");
+                    WriteMagnitude(writer, attack.ElementAccumulation, source, $"Component[{index}].ElementAccumulation");
+                    WriteMagnitude(writer, attack.ExhaustedAccumulation, source, $"Component[{index}].ExhaustedAccumulation");
+                    WriteMagnitude(writer, attack.ExhaustedChase, source, $"Component[{index}].ExhaustedChase");
+                    writer.WriteInt32(attack.DamageElement);
+                    writer.WriteInt32(attack.DamageHitType);
+                    writer.WriteInt32(attack.DamageBreakLevel);
+                    WriteMagnitude(writer, attack.DamageBreakLevelProbability, source, $"Component[{index}].DamageBreakLevelProbability");
+                    writer.WriteInt32(attack.TriggerBuffLevel);
+                    writer.WriteInt32(attack.DestructionClass);
+                    writer.WriteInt32(attack.DestructionDurability);
+                    writer.WriteInt32(attack.OverrideDamageStaggerLevel);
+                    writer.WriteInt32(attack.DamageTextId);
+                    writer.WriteInt32(attack.DamageTextWaitMilliseconds);
+                    writer.WriteInt32(attack.FrameHalt);
+                    writer.WriteInt32(attack.AttackerFrameHalt);
+                    writer.WriteInt32(attack.GroundHitEffectId);
+                    writer.WriteInt32(attack.SkyHitEffectId);
+                    writer.WriteInt32(attack.DownHitEffectId);
+                    writer.WriteString(attack.StandardConfigKey);
+                    writer.WriteString(attack.AbilityTargetKey);
+                    writer.WriteBoolean(attack.IsCauseStun);
+                    writer.WriteBoolean(attack.IsHeavyAttack);
+                    writer.WriteBoolean(attack.IsCauseExhausted);
+                    writer.WriteBoolean(attack.IsHeal);
+                    writer.WriteBoolean(attack.IsIndirect);
+                    writer.WriteBoolean(attack.HitsEnemy);
+                    writer.WriteBoolean(attack.HitsAllied);
+                    writer.WriteBoolean(attack.HitsNeutral);
+                    writer.WriteBoolean(attack.UseAbilityTargetKey);
+                    writer.WriteBoolean(attack.BanDamage);
+                    break;
                 case GameplayCueBindingComponentDefinition cue:
                     writer.WriteString(cue.CueId);
                     writer.WriteInt32((int)cue.Trigger);

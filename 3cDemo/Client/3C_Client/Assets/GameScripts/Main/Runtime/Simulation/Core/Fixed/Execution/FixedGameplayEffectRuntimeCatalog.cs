@@ -106,6 +106,13 @@ namespace ThirdPersonSimulation.Fixed
         Constant = 1
     }
 
+    internal enum PortableAttackCollisionKind : byte
+    {
+        Box = 0,
+        BoxContinuous = 1,
+        FanWithHeight = 2
+    }
+
     internal enum PortableCueTrigger : byte
     {
         OnActive = 0,
@@ -346,6 +353,181 @@ namespace ThirdPersonSimulation.Fixed
 
         public string CueId { get; }
         public PortableCueTrigger Trigger { get; }
+    }
+
+    internal sealed class PortableAttackCollisionComponent : PortableEffectComponent
+    {
+        public PortableAttackCollisionComponent(
+            PortableAttackCollisionKind kind,
+            FixedVector3 centerOffset,
+            FixedScalar width,
+            FixedScalar height,
+            FixedScalar depth,
+            FixedScalar fanAngle,
+            FixedScalar radius,
+            FixedScalar invalidRadius,
+            FixedScalar invalidAngle,
+            int followDirectionType,
+            int coreDistance,
+            bool isSubtractive,
+            FixedScalar hitInterval,
+            int aliveMaxHitCount,
+            int unitMaxHitCount,
+            bool followAttacker)
+        {
+            Kind = kind;
+            CenterOffset = centerOffset;
+            Width = width;
+            Height = height;
+            Depth = depth;
+            FanAngle = fanAngle;
+            Radius = radius;
+            InvalidRadius = invalidRadius;
+            InvalidAngle = invalidAngle;
+            FollowDirectionType = followDirectionType;
+            CoreDistance = coreDistance;
+            IsSubtractive = isSubtractive;
+            HitInterval = hitInterval;
+            AliveMaxHitCount = aliveMaxHitCount;
+            UnitMaxHitCount = unitMaxHitCount;
+            FollowAttacker = followAttacker;
+        }
+
+        public PortableAttackCollisionKind Kind { get; }
+        public FixedVector3 CenterOffset { get; }
+        public FixedScalar Width { get; }
+        public FixedScalar Height { get; }
+        public FixedScalar Depth { get; }
+        public FixedScalar FanAngle { get; }
+        public FixedScalar Radius { get; }
+        public FixedScalar InvalidRadius { get; }
+        public FixedScalar InvalidAngle { get; }
+        public int FollowDirectionType { get; }
+        public int CoreDistance { get; }
+        public bool IsSubtractive { get; }
+        public FixedScalar HitInterval { get; }
+        public int AliveMaxHitCount { get; }
+        public int UnitMaxHitCount { get; }
+        public bool FollowAttacker { get; }
+    }
+
+    internal sealed class PortableAttackPropertyComponent : PortableEffectComponent
+    {
+        public PortableAttackPropertyComponent(
+            string sourceKey,
+            int hitType,
+            int hitStrengthType,
+            string[] combatTags,
+            PortableMagnitude damagePercentage,
+            PortableMagnitude addedDamage,
+            PortableMagnitude breakStunRatio,
+            PortableMagnitude elementAccumulation,
+            PortableMagnitude exhaustedAccumulation,
+            PortableMagnitude exhaustedChase,
+            int damageElement,
+            int damageHitType,
+            int damageBreakLevel,
+            PortableMagnitude damageBreakLevelProbability,
+            int triggerBuffLevel,
+            int destructionClass,
+            int destructionDurability,
+            int overrideDamageStaggerLevel,
+            int damageTextId,
+            int damageTextWaitMilliseconds,
+            int frameHalt,
+            int attackerFrameHalt,
+            int groundHitEffectId,
+            int skyHitEffectId,
+            int downHitEffectId,
+            string standardConfigKey,
+            string abilityTargetKey,
+            bool isCauseStun,
+            bool isHeavyAttack,
+            bool isCauseExhausted,
+            bool isHeal,
+            bool isIndirect,
+            bool hitsEnemy,
+            bool hitsAllied,
+            bool hitsNeutral,
+            bool useAbilityTargetKey,
+            bool banDamage)
+        {
+            SourceKey = SimulationIdentity.Require(sourceKey, nameof(sourceKey));
+            HitType = hitType;
+            HitStrengthType = hitStrengthType;
+            CombatTags = combatTags ?? Array.Empty<string>();
+            DamagePercentage = damagePercentage;
+            AddedDamage = addedDamage;
+            BreakStunRatio = breakStunRatio;
+            ElementAccumulation = elementAccumulation;
+            ExhaustedAccumulation = exhaustedAccumulation;
+            ExhaustedChase = exhaustedChase;
+            DamageElement = damageElement;
+            DamageHitType = damageHitType;
+            DamageBreakLevel = damageBreakLevel;
+            DamageBreakLevelProbability = damageBreakLevelProbability;
+            TriggerBuffLevel = triggerBuffLevel;
+            DestructionClass = destructionClass;
+            DestructionDurability = destructionDurability;
+            OverrideDamageStaggerLevel = overrideDamageStaggerLevel;
+            DamageTextId = damageTextId;
+            DamageTextWaitMilliseconds = damageTextWaitMilliseconds;
+            FrameHalt = frameHalt;
+            AttackerFrameHalt = attackerFrameHalt;
+            GroundHitEffectId = groundHitEffectId;
+            SkyHitEffectId = skyHitEffectId;
+            DownHitEffectId = downHitEffectId;
+            StandardConfigKey = standardConfigKey ?? string.Empty;
+            AbilityTargetKey = abilityTargetKey ?? string.Empty;
+            IsCauseStun = isCauseStun;
+            IsHeavyAttack = isHeavyAttack;
+            IsCauseExhausted = isCauseExhausted;
+            IsHeal = isHeal;
+            IsIndirect = isIndirect;
+            HitsEnemy = hitsEnemy;
+            HitsAllied = hitsAllied;
+            HitsNeutral = hitsNeutral;
+            UseAbilityTargetKey = useAbilityTargetKey;
+            BanDamage = banDamage;
+        }
+
+        public string SourceKey { get; }
+        public int HitType { get; }
+        public int HitStrengthType { get; }
+        public string[] CombatTags { get; }
+        public PortableMagnitude DamagePercentage { get; }
+        public PortableMagnitude AddedDamage { get; }
+        public PortableMagnitude BreakStunRatio { get; }
+        public PortableMagnitude ElementAccumulation { get; }
+        public PortableMagnitude ExhaustedAccumulation { get; }
+        public PortableMagnitude ExhaustedChase { get; }
+        public int DamageElement { get; }
+        public int DamageHitType { get; }
+        public int DamageBreakLevel { get; }
+        public PortableMagnitude DamageBreakLevelProbability { get; }
+        public int TriggerBuffLevel { get; }
+        public int DestructionClass { get; }
+        public int DestructionDurability { get; }
+        public int OverrideDamageStaggerLevel { get; }
+        public int DamageTextId { get; }
+        public int DamageTextWaitMilliseconds { get; }
+        public int FrameHalt { get; }
+        public int AttackerFrameHalt { get; }
+        public int GroundHitEffectId { get; }
+        public int SkyHitEffectId { get; }
+        public int DownHitEffectId { get; }
+        public string StandardConfigKey { get; }
+        public string AbilityTargetKey { get; }
+        public bool IsCauseStun { get; }
+        public bool IsHeavyAttack { get; }
+        public bool IsCauseExhausted { get; }
+        public bool IsHeal { get; }
+        public bool IsIndirect { get; }
+        public bool HitsEnemy { get; }
+        public bool HitsAllied { get; }
+        public bool HitsNeutral { get; }
+        public bool UseAbilityTargetKey { get; }
+        public bool BanDamage { get; }
     }
 
     internal sealed class PortableEffectDefinition
@@ -635,6 +817,67 @@ namespace ThirdPersonSimulation.Fixed
                     }
                     result[i] = new PortableAdditionalEffectsComponent(effects);
                 }
+                else if (type.EndsWith(".GameplayAttackCollisionComponentDefinition", StringComparison.Ordinal))
+                {
+                    result[i] = new PortableAttackCollisionComponent(
+                        EnumValue<PortableAttackCollisionKind>(reader.ReadInt32(), "attack collision kind"),
+                        reader.ReadVector3(),
+                        sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                        sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                        sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                        sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                        sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                        sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                        sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadBoolean(),
+                        sourceDouble ? FixedScalar.FromDouble(reader.ReadDouble()) : reader.ReadScalar(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadBoolean());
+                }
+                else if (type.EndsWith(".GameplayAttackPropertyComponentDefinition", StringComparison.Ordinal))
+                {
+                    result[i] = new PortableAttackPropertyComponent(
+                        reader.ReadString(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        ReadStrings(reader, false),
+                        ReadMagnitude(reader, sourceDouble),
+                        ReadMagnitude(reader, sourceDouble),
+                        ReadMagnitude(reader, sourceDouble),
+                        ReadMagnitude(reader, sourceDouble),
+                        ReadMagnitude(reader, sourceDouble),
+                        ReadMagnitude(reader, sourceDouble),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        ReadMagnitude(reader, sourceDouble),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32(),
+                        reader.ReadString(),
+                        reader.ReadString(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean(),
+                        reader.ReadBoolean());
+                }
                 else if (type.EndsWith(".GameplayCueBindingComponentDefinition", StringComparison.Ordinal))
                 {
                     result[i] = new PortableCueComponent(
@@ -729,6 +972,19 @@ namespace ThirdPersonSimulation.Fixed
                         if (!m_Effects.ContainsKey(additional.Effects[i].EffectId))
                             throw new InvalidDataException($"Gameplay Effect '{owner.Id}' references missing Additional Effect '{additional.Effects[i].EffectId}'.");
                     }
+                    break;
+                case PortableAttackCollisionComponent:
+                    break;
+                case PortableAttackPropertyComponent attackComponent:
+                    for (int i = 0; i < attackComponent.CombatTags.Length; i++)
+                        SimulationIdentity.Require(attackComponent.CombatTags[i], "CombatTag");
+                    ValidateMagnitude(owner.Id, attackComponent.DamagePercentage);
+                    ValidateMagnitude(owner.Id, attackComponent.AddedDamage);
+                    ValidateMagnitude(owner.Id, attackComponent.BreakStunRatio);
+                    ValidateMagnitude(owner.Id, attackComponent.ElementAccumulation);
+                    ValidateMagnitude(owner.Id, attackComponent.ExhaustedAccumulation);
+                    ValidateMagnitude(owner.Id, attackComponent.ExhaustedChase);
+                    ValidateMagnitude(owner.Id, attackComponent.DamageBreakLevelProbability);
                     break;
                 case PortableCueComponent:
                     break;

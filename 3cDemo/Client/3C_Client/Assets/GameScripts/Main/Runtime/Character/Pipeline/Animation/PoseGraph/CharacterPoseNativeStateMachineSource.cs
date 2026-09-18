@@ -358,8 +358,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     !value.Native.IsValid ||
                     value.Native.CompletionIdentity != lineage.CompletionIdentity)
                 {
+                    string detail = state.Evaluation.IsValid
+                        ? $"status={state.Evaluation.Status}, output={state.Evaluation.Output?.GetType().Name ?? "null"}, outputCompletion={(state.Evaluation.Output is CharacterPoseNativeLocalPoseValue v && v.Native.IsValid ? v.Native.CompletionIdentity.ToString() : "invalid")}, expectedCompletion={lineage.CompletionIdentity}"
+                        : $"invalid result ({state.Evaluation.Source}): {state.Evaluation.Message}";
                     throw new InvalidOperationException(
-                        $"Pose StateMachine '{m_NodeId}' state '{state.Definition.StateId}' did not produce the current Local Pose.");
+                        $"Pose StateMachine '{m_NodeId}' state '{state.Definition.StateId}' did not produce the current Local Pose ({detail}).");
                 }
                 values.Add(value);
             }

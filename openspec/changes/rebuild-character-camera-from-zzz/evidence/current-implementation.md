@@ -25,9 +25,9 @@
 6. Camera Override/Shake/Shot 仍要求正式资源与 Projection 闭包；Shot 缺 prefab/VCam 或不支持的时钟会明确失败，不能用占位资源补齐。
 7. Collision 已有正式 PhysicsScene 查询、收缩/恢复、起点重叠、无合法空间和输出诊断链；Corin 当前碰撞开关与 Unity 动态运行仍未验收。
 8. CameraDebugSnapshot 与 CaptureFrame 已覆盖帧/逻辑 Tick、输入/响应、Sequence/Target 退出、效果、Reset、碰撞和最终输出；连续性/Cue 算子已消费退出合同，运行采样仍未取得。
-9. 工程源码中已无 ThirdPersonCameraController/旧 FreeLook 朝向写入；CharacterFixedInputTraceWorkflow 现在通过正式 CharacterSimulationPresentationRuntime 的 CameraBasis/InitialState 记录与恢复 yaw。
+9. 工程源码中已无 ThirdPersonCameraController/旧 FreeLook 朝向写入；Fixed Trace v4 通过正式 Presentation `CameraBasis` 记录初始 heading，并通过 `CameraInitialState` 恢复。Fixed 模型使用逐 tick trace basis；视觉镜头回放仍不是全量确定合同。
 10. 当前 C# 作者规范已替换旧 Agent 包；相机各资源和请求的完整 C# 导出/生成覆盖尚未逐项证明，不能因公共入口存在就勾选完成。
-11. 动作相机请求的正式目标已改为技能 Graph 内的 TreeClip 特殊 Node；当前 Corin 仍是通用 ActionCueClip，尚无正式 TreeClip/Node ResourceId 请求，因此本次设计更新不等于资产迁移完成。
+11. 动作相机请求的正式目标是技能 Graph 内的 TreeClip 特殊 Node；Corin Normal_05 Zoom 与 Normal_01 Shake 已有 Node/Resource，Counter 与 End_2 仍缺 Node。已落点的持续、取消和目标语义还未闭合。
 
 ## 当前 Unity 证据
 
@@ -50,3 +50,9 @@
 - [RigAdapter：应用与实际结果回读](D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Character/Camera/Runtime/CinemachineCameraRigAdapter.cs:51)
 - [Projection：尚未发布的碰撞消费者](D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/CameraContracts/Projection/CharacterCameraProjectionPayload.cs:176)
 - [输入回放：正式 Camera Presentation 初始状态](D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterPipeline/Diagnostics/CharacterFixedInputTraceWorkflow.cs:430)
+
+## 2026-09-19 Fixed Replay Camera 结论
+
+- `character-fixed-input-trace/4` 的 camera heading 字段来自 `ICharacterPresentationDomainRuntime.TryGetCameraBasis().Yaw`，回放传给正式 `SetCameraInitialState`。
+- Fixed Body replay 使用逐 tick input payload；需要 camera basis 的控制模块在 payload 内带完整 basis，缺失时按 trace heading 注入确定值。`LogicLockedPresentation + Step(1)` 保证 presentation delta 为 fixed delta。
+- 结论边界：`CameraInitialState(yaw,pitch)` 只是 Planner 初始角，不是相机全量快照；fixed Body proof 可确定，Camera visual proof 还缺 pitch、逐帧 basis/look 和 unscaled 时钟效果等价。

@@ -35,7 +35,7 @@
 | 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Effect/Response Node、Camera Resource 合同、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Presentation Projection 校验每个 Camera Producer 的 Sequence/Effect ResourceId 属于同一 Camera Projection；Attack1 Shake 和 Attack5 Zoom 已完成 `export_code`/`generate_assets` 正式闭环；Shot、Override 及其余效果的真实作者引用仍缺少闭包。 |
 | 6.3 Corin 动作资源可达性 | 部分完成 | Normal_05 Zoom 与 Normal_01 Shake 已落到技能 Graph 的 `RequestCameraEffectNode`，旧 CameraCue 已删除；Counter Zoom 与 Normal_05 End_2 Zoom 还没有独立 Node 落点。来源侧仍缺效果持续时间、目标/取消语义等完整映射，也不能虚构剩余 81 Shake/4 Override 的项目触发关系。 |
 | 6.4-6.5 正式发布与 Preview/ScenePlay | 暂停全量入口 | 用户明确要求删除会触发十几分钟全量 Character Build 的入口；已移除 Character Float32/Fixed MCP 注册与 CLI 入口，底层正式 Orchestrator 保留但当前没有新的增量发布入口，旧 job 不接受其产物。 |
-| 7.1-7.2 诊断与输入回放迁移 | 部分完成 | DebugSnapshot、采样帧、Reset/响应/Sequence 退出/目标退出/碰撞字段和 Effect table/operator 已接入；Camera PresentationCaptureFrame 从正式 PresentationFrameContext 写入 RenderFrame/LocalLogicTick，输入回放仍改读正式 Presentation CameraBasis/InitialState，保留用户已有注入改动；Unity 重载后的实时证据仍待返回。 |
+| 7.1-7.2 诊断与输入回放迁移 | 部分完成 | DebugSnapshot、采样帧、Reset/响应/Sequence 退出/目标退出/碰撞字段和 Effect table/operator 已接入；Camera PresentationCaptureFrame 从正式 PresentationFrameContext 写入 RenderFrame/LocalLogicTick。Fixed Trace v4 记录初始 camera heading，回放通过正式 `CameraInitialState` 初始化 Camera Presentation；Fixed 模型消费 trace 内逐 tick camera basis。视觉相机回放仍不完整：Look 仍为本地实时输入，初始 pitch 不入 trace，实时时钟效果也不等价。 |
 | 7.3-7.4 删除与合同同步 | 部分完成 | 已删除无引用 ThirdPersonCameraController 及 meta、旧 FreeLook 朝向写入引用和无消费者 Locking/ChangeAvatar 配置；生成 Projection 和部分历史文档仍需正式发布后对账。 |
 
 ## 已确认的实施阻塞边界
@@ -144,3 +144,12 @@ cameraLockBossConfig 与工程 ApplyEntityPointFrame/ApplyTwoPointFrame 逐字�
 - 迁移菜单改为检查已有 Node 的 `EffectKind`/`ResourceId`，不一致时走同一个正式合同重写。实际执行结果：Attack1 命中图写入 `Corin_Attack_Normal_01_CamShake_A_01`，Attack5 命中图写入 `Corin_Attack_Normal_05_CamZoom_01`；两条旧 CameraCue 已删除。
 - `btsmtl.export_code` 成功重建 Attack 闭包：`Attack1.cs` 生成 `RequestCameraEffectNode` 与 `resourceId` Apply，`Attack5.cs` 额外生成 `effectKind=Zoom`。`btsmtl.generate_assets` 成功替换 `CorinAttackGameplayAbilityDefinition.asset`，诊断为 0。
 - ThirdPersonClient.Editor 全量依赖编译 0 错误后执行生成；结束后已 shutdown build server。没有 Play、截图或端到端镜头验收。
+
+## 2026-09-19 Fixed Replay 的 Camera Presentation 对账
+
+- Trace schema `character-fixed-input-trace/4` 增加 `has_camera_basis_yaw` 与 `camera_basis_yaw_degrees`；录制起点从 `ICharacterPresentationDomainRuntime.TryGetCameraBasis` 读取 `CameraBasisSnapshot.Yaw`。回放起点调用 `SetCameraInitialState(new CameraInitialState(yaw, 0))`。
+- `CameraInitialState` 的正式语义是 Camera Presentation FramePlanner 的初始手动 yaw/pitch offset，不是完整相机世界快照。相机位置、目标、roll、FOV、效果和历史都由正式初始 Body、Profile/DefaultSequence、显式目标绑定、空效果状态和重置边界派生；因此“只有 yaw/pitch”对该合同是完整的，但不能把该结构当作视觉相机全量回放状态。
+- Fixed 模型的确定性不依赖这个初始 heading 单独撑起：`UnityFixedCharacterInputAdapter` 在需要 camera basis 的控制模块中把完整 `CameraBasisSnapshot` 写入逐 tick `SimulationInput`；trace 的 `input_payload_base64` 因此包含这些值。旧 trace 缺 basis 时，`InjectPinnedWorldCameraBasis` 用 trace heading 合成确定 basis。schema hash 覆盖 heading flag/value 和每帧 payload。
+- 标准 replay drive 是 `LogicLockedPresentation` + `Step(1)`；`BeginReplayTickDrive` 先发第一帧，`AdvanceReplayTickDrive` 校验 replay count 不越过 issued count 后再发下一帧。LogicLocked 模式下已推进一 tick 的 presentation delta 固定为 fixed delta。Cinemachine Brain 配置为 Manual Update，并由 `CinemachineCameraRigAdapter.Apply` 唯一推进。fixed Body proof 在该 drive 下是确定的。
+- 但 Camera Presentation 的视觉 basis 还不能宣称全量确定：录制时鼠标 Look 保持 live，trace 只保存初始 yaw；初始 pitch 硬编码 0；`RealtimeVibration`/`IgnoreTimeScale` 的相机效果还会消费 unscaled delta。这些只影响本地镜头观察，不应倒灌 fixed Body proof；要比较镜头本身，需要单独逐帧 camera basis trace、输入抑制或正式镜头回放合同。
+- GameplayLab 的 fixed-player 绑定是正式配置：`GameplayLabLocalFixed.prefab` 实例化 `CorinGameplayLabFixedPlayer.prefab`，把 `FixedCharacterHost.m_CameraRig` 指向同一 prefab 内的 `CinemachineCameraRigAdapter`；pipeline definition 指向 Camera Profile；anchors、`camera.body` target binding 和 `LookAxis` 在 prefab 中序列化。`CharacterPresentationDomainRuntimeFactory` 强制 LocalOwner 必须同时提供 rig/profile/anchors/target/input，`CharacterCameraRuntimeBindingBuilder` 再从 Profile 编译只读 Projection。没有临时场景搜索桥。

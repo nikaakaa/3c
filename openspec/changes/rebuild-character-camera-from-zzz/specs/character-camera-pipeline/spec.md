@@ -120,6 +120,32 @@
 
 ## ADDED Requirements
 
+### Requirement: Fixed 回放必须区分 Fixed Body 与 Camera 视觉确定性
+
+`CameraInitialState` MUST 只表示 Camera Presentation FramePlanner 的初始 yaw/pitch offset；相机位置、目标、roll、镜头历史和效果历史 MUST 由正式初始 Body、Profile/DefaultSequence、显式目标绑定、空效果状态或明确 Reset 边界派生。它 MUST NOT 被解释为完整相机世界快照。
+
+Fixed replay MUST checkpoint 正式 Body，按 trace 逐 tick 重放 `SimulationInput`。被 Fixed 模型消费的 camera basis MUST 进入 trace payload；缺失 basis 的旧 trace MAY 按 trace heading 注入确定 basis，但注入规则 MUST 进入内容 hash。标准 replay MUST 使用显式 one-fixed-tick-per-presentation-frame drive 和 logic-locked presentation clock。
+
+Camera Presentation 的视觉 basis MAY 继续由本地 live look 驱动。系统 MUST NOT 把缺少逐帧 camera look/basis/effect-clock 证据的视觉镜头声明为确定性回放结果；需要比较视觉镜头时 MUST 提供正式逐帧 basis trace、输入抑制或明确的镜头回放合同。
+
+#### Scenario: 恢复 Fixed replay 初始朝向
+
+- **WHEN** trace 声明 camera heading 且 LocalOwner Camera runtime 存在
+- **THEN** replay MUST 通过正式 Presentation `SetCameraInitialState` 写入 Planner 初始角
+- **AND** 缺少 Camera runtime MUST 失败，不得静默使用场景相机
+
+#### Scenario: 重放被模型消费的 camera basis
+
+- **WHEN** Fixed trace 帧包含 camera basis input
+- **THEN** Fixed 模型 MUST 重放 trace 中的 basis，不得读取 live Camera 替换
+- **AND** body replay hash MUST 与逐 tick input/body evidence 对应
+
+#### Scenario: 视觉镜头确定性声明
+
+- **WHEN** replay 只固定初始 heading 而 Look 仍为本地 live input
+- **THEN** 文档 MUST 只宣称 fixed Body/model replay 确定
+- **AND** Camera visual basis MUST 保持未证明或改用正式镜头回放合同
+
 ### Requirement: 相机资源与运行绑定必须按领域提供
 
 Camera MUST 提供正式相机资源、必要转换/引用检查和只读运行绑定，由角色装配调用。现有只接收 Profile 的 CharacterCameraProjectionBuilder 中仍有消费者的处理 MUST 按领域保留，payload 只表达相机需要的数据，不携带角色总 Program、非相机目录或整包 Projection。Editor-only 资源处理 MUST 不直接搬进 Player；需要加工的资源继续走原独立资源流程，不新增 Camera-only 临时发布入口、运行时补构建或另一个总包。

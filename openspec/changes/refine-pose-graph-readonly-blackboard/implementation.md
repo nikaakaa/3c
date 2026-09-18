@@ -56,3 +56,13 @@
 - 诊断透传补全（审计发现的真实缺口）：AdoptedResult原无Source属性，validator的Origin在RoleEntry边界丢失；validator外层catch与工厂catch重包装异常只拷Message丢类型名。修复：AdoptedResult新增Source（preparation重载内部取preparation.Source，请求重载显式传Pose/Create与Pose/Replace）；DomainCreateResult.Failed(adopted)改用adoption.Source；重包装消息统一为"类型名: 消息"；创建失败日志追加Source字段。提交960d117f7（内容与工作区改动一致，由并行窗口代为入库）。
 - 编译证据：ThirdPersonClient.Runtime.csproj与ThirdPersonClient.Editor.csproj均0错误0警告（--disable-build-servers /nr:false /p:UseSharedCompilation=false），结束后已执行dotnet build-server shutdown。
 - 后续：gate修复后validator首次真实运行，Play端到端验证归用户；若仍有结构失败，日志将携带来源与异常类型名可直接定位。3.11的clip集与源id映射合同仍待Timeline owner确认。
+
+
+## ResourceSet编译工具链重建（2026-09-18）
+
+- 运行日志定位：gate修复后暴露下一层真实失败 Compiled Presentation Clip source 'Moving Turn' is invalid（CharacterPresentationClipSourcePlan.RequireValid）。
+- 静态审计结论：CorinPoseNativeDomainResourceSet.asset共28条source plans，0条含m_FootStepObservation（v2合同硬性要求），全部指向旧clip guid；并行窗口已把Profile七条locomotion源绑定换绑ZZZ新clip。CorinFootPlacementAnalysisSource.asset同样只覆盖旧clip（4个引用），无新clip的Motion Reference绑定。
+- 工具链缺口（源码证据）：全仓无任何m_SourcePlans写入方；CharacterPresentationFootEventCompiler.CompileFootStepObservation零调用方；旧总编译器CharacterPresentationPoseSourcePlanCompiler（412行）在15d742722被删，删除记录明确"不新增替代编译器"。ResourceSet资产（82a25af8d）为一次性灌入，从未有正式重建入口。
+- 重建（本次）：ResourceSet新增internal ReplaceSourcePlans变更合同（空表/空条目/索引重复精确失败，RequireValid逐条校验）；新增编辑器CharacterPoseNativeDomainResourceSetCompiler，链路=Profile源目录（CharacterPresentationPoseSourceCompiler.Compile）→逐clip ResolveIdentity+ValidateFootMotionGroupRequired+FootPlacementWeight曲线→AnimationFootAnalysisArtifactBuilder.Build正式分析产物→CompileFootStepObservation→低层plan构造器，NativeClip后端scalarPage=null合法；菜单3C/Character/Animation/Compile Pose Domain Resource Set，操作选中的Presentation Profile。BlendSpace等其他绑定类型显式报不支持，不做容忍。
+- 编译证据：ThirdPersonClient.Editor.csproj 0错误（92条警告均为并行窗口ACL文件预存CS0649）；强制参数+build-server shutdown已执行。
+- 待办（运行该菜单的前置）：CorinFootPlacementAnalysisSource需为新ZZZ clip补Motion Reference绑定（authoring决策：每个target clip对应哪条motion reference，归Corin资产owner），随后artifact首次Build会自动生成到Library/CharacterFootAnalysis；Timeline编译错误清零后一起验证。

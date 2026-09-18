@@ -6,57 +6,56 @@
 
 | 组 | 状态数 | 3C 归属 | 当前结论 |
 |---|---:|---|---|
-| NormalAttack | 12 | Control + Attack Ability + Timeline | 五段主链已有 3C 简化执行链；End/Explode 状态和保持键分支还未完整对齐。 |
-| BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | AttackProperty payload 已就位；战斗 Clip、Timeline 和 Ability 执行状态尚未进入 3C。 |
-| RushAttack | 8 | Control + Attack Ability + Timeline + Pose | AttackProperty payload 已就位；战斗 Clip、Timeline 和 Ability 执行状态尚未进入 3C。 |
+| NormalAttack | 12 | Control + Attack Ability + Timeline | 已精确对账：12状态全部有真实Clip绑定（End/Explode全同名精确；`Attack_Normal_05_End_2`实际绑`Attack_Normal_05_B`）。 |
+| BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | 已精确对账：18状态全部有真实Clip绑定，Branch_01/03大量共享Branch_02与Branch_Loop/Walk共享Motion；缺的是Timeline/Pose binding与Ability状态，不是Clip。 |
+| RushAttack | 8 | Control + Attack Ability + Timeline + Pose | 已精确对账：8状态全部有真实Clip绑定（`Attack_Rush_Enhance`实际绑`Enhance_Start`，Enhance_End复用`Attack_Rush_Explode`）；缺Timeline/Pose binding与Ability状态。 |
 | AidCounterAttack | 20 | Control + Combat/Aid Ability + Timeline | 仅有效果/镜头证据，没有正式 3C Aid/Counter 执行链。 |
 | EvadeHit | 8 | Control + Pose + Hit feedback | Dodge 已有正式 Ability；Hit/HitFly 还没有完整 3C 链。 |
 | Switch | 11 | Control + Switch Ability | SwitchIn/SwitchOut 还没有正式 Control 请求与 Switch Ability。 |
 
 ## 状态到 Clip 对照
 
-Clip 证据只按精确同名导出记录；没有同名 Clip 就写 `missing`，不用近似名冒充证据。同名状态仍可能引用共享 Motion，需要后续结合 Motion/BlendTree 精确对账。
+精确对账口径（2026-09-19 Normal/Branch/Rush 已完成）：以控制器状态自带 BlendTree 叶子的 Clip 引用（FileId/PathId/Name）为唯一绑定证据，导出清单核对存在性；同名只是特例，共享 Motion 与非同名绑定均已标出。38 个状态全部有真实绑定，引用 Clip 全部已导出，无 missing；此前按状态名猜的 missing 行已全部改写为实际绑定。
 
 | 状态组 | ZZZ 状态 | Clip 证据 | 3C 缺口 |
 |---|---|---|---|
-| NormalAttack | `Attack_Normal_01` | `Attack_Normal_01` | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_01_End` | `Attack_Normal_01_End` | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_02` | `Attack_Normal_02` | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_02_End` | `Attack_Normal_02_End` | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_03` | `Attack_Normal_03` | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_03_End` | `Attack_Normal_03_End` | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_03_Explode` | `Attack_Normal_03_Explode` | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_04` | `Attack_Normal_04` | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_04_End` | `Attack_Normal_04_End` | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_05` | `Attack_Normal_05` | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_05_End` | `Attack_Normal_05_End` | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_05_End_2` | `missing` | 五段简化链已覆盖主命中；细分状态待对齐 |
-| BranchAttack | `Attack_Branch_01` | `Attack_Branch_01` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_01_End` | `Attack_Branch_01_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_01_Explode` | `Attack_Branch_01_Explode` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_01_NotExplode` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_02` | `Attack_Branch_02` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_02_End` | `Attack_Branch_02_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_02_Explode` | `Attack_Branch_02_Explode` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_02_Loop` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_02_Walk` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_03` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_03_End` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_03_Enhance_Loop` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_03_Enhance_Walk` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_03_Explode` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_03_Loop` | `Attack_Branch_03_Loop` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Shake` | `Attack_Branch_03_Shake` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Walk` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| BranchAttack | `Attack_Branch_03_Walk_Shake` | `Attack_Branch_03_Walk_Shake` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush` | `Attack_Rush` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_End` | `Attack_Rush_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance` | `Attack_Rush_Enhance` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance_End` | `Attack_Rush_Enhance_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance_Explode` | `Attack_Rush_Enhance_Explode` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance_Explode_End` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| RushAttack | `Attack_Rush_Enhance_Loop` | `Attack_Rush_Enhance_Loop` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Explode` | `Attack_Rush_Explode` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
+| NormalAttack | `Attack_Normal_01` | `Attack_Normal_01` | 精确同名绑定（BlendTree单叶，已导出） |
+| NormalAttack | `Attack_Normal_01_End` | `Attack_Normal_01_End` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_02` | `Attack_Normal_02` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_02_End` | `Attack_Normal_02_End` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_03` | `Attack_Normal_03` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_03_End` | `Attack_Normal_03_End` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_03_Explode` | `Attack_Normal_03_Explode` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_04` | `Attack_Normal_04` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_04_End` | `Attack_Normal_04_End` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_05` | `Attack_Normal_05` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_05_End` | `Attack_Normal_05_End` | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_05_End_2` | `Attack_Normal_05_B` | 非同名：状态实际绑定`Attack_Normal_05_B`（已导出），状态名≠Clip名 |
+| BranchAttack | `Attack_Branch_01` | `Attack_Branch_01` | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_01_End` | `Attack_Branch_01_End` | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_01_Explode` | `Attack_Branch_01_Explode` | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_01_NotExplode` | `Attack_Branch_01_Explode` | 共享Motion：与`Attack_Branch_01_Explode`状态绑同一Clip（已导出），NotExplode语义差异在转移条件不在Motion |
+| BranchAttack | `Attack_Branch_02` | `Attack_Branch_02` | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_02_End` | `Attack_Branch_02_End` | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_02_Explode` | `Attack_Branch_02_Explode` | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_02_Loop` | `Attack_Branch_Loop` | 共享Motion：Branch_Loop为Branch_02/03_Loop共享（已导出） |
+| BranchAttack | `Attack_Branch_02_Walk` | `Attack_Branch_Walk` | 共享Motion：Branch_Walk（已导出），非Branch_02专属 |
+| BranchAttack | `Attack_Branch_03` | `Attack_Branch_02` | 共享Motion：Branch_03主体复用Branch_02 Clip（已导出） |
+| BranchAttack | `Attack_Branch_03_End` | `Attack_Branch_02_End` | 共享Motion：复用Branch_02_End（已导出） |
+| BranchAttack | `Attack_Branch_03_Enhance_Loop` | `Attack_Branch_03_Loop` | 共享Motion：与Branch_03_Loop同Clip（已导出），增强差异在参数/转移 |
+| BranchAttack | `Attack_Branch_03_Enhance_Walk` | `Attack_Branch_03_Walk_Loop` | 共享Motion：与Branch_03_Walk同Clip（已导出） |
+| BranchAttack | `Attack_Branch_03_Explode` | `Attack_Branch_02_Explode` | 共享Motion：复用Branch_02_Explode（已导出） |
+| BranchAttack | `Attack_Branch_03_Loop` | `Attack_Branch_Loop` | 共享Motion：Branch_Loop（已导出） |
+| BranchAttack | `Attack_Branch_03_Shake` | `Attack_Branch_03_Shake` | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_03_Walk` | `Attack_Branch_03_Walk_Loop` | 精确绑定（非同名后缀_Loop，已导出） |
+| BranchAttack | `Attack_Branch_03_Walk_Shake` | `Attack_Branch_03_Walk_Shake` | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush` | `Attack_Rush` | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush_End` | `Attack_Rush_End` | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush_Enhance` | `Attack_Rush_Enhance_Start` | 非同名：状态实际绑定`Attack_Rush_Enhance_Start`（已导出） |
+| RushAttack | `Attack_Rush_Enhance_End` | `Attack_Rush_Explode` | 共享Motion：复用`Attack_Rush_Explode`（已导出） |
+| RushAttack | `Attack_Rush_Enhance_Explode` | `Attack_Rush_Enhance_Explode` | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush_Enhance_Explode_End` | `Attack_Rush_Enhance_End` | 共享Motion：复用Enhance_End状态所绑Clip（已导出） |
+| RushAttack | `Attack_Rush_Enhance_Loop` | `Attack_Rush_Enhance_Loop` | 精确同名绑定（已导出） | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
 | AidCounterAttack | `Attack_AssaultAid` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
 | AidCounterAttack | `Attack_AssaultAid_End` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
 | AidCounterAttack | `Attack_BeHitAid` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |

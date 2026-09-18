@@ -48,6 +48,7 @@ namespace BTSMTL.Timeline.Editor
         {
             m_Source = source;
             m_SourceSnapshot = source.Clone();
+            m_SourceSnapshot.Init();
             m_Playback = playback;
             m_Runtime = TimelineData.CreateDefault($"{m_SourceSnapshot.Name} [Runtime]");
             m_Runtime.ConfigureAuthoringIdentity(m_SourceSnapshot.AuthoringId);
@@ -67,6 +68,12 @@ namespace BTSMTL.Timeline.Editor
             if (runtimeTrack == null)
                 return false;
             Clip runtimeClip = ManagedReferenceCloneUtility.Clone(sourceClip);
+            if (runtimeClip is TreeClip treeClip &&
+                treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision)
+            {
+                runtimeClip.EndFrame = Math.Max(runtimeClip.StartFrame + 1, m_SourceSnapshot.MaxFrame);
+                runtimeClip.FrameToTime();
+            }
             int sourceIndex = sourceTrack.Clips.IndexOf(sourceClip);
             int insertIndex = runtimeTrack.Clips.Count;
             for (int index = 0; index < runtimeTrack.Clips.Count; index++)

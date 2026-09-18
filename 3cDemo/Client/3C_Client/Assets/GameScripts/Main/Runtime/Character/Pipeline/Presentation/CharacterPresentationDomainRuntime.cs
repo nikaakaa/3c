@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonGameplay.Tick;
@@ -19,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterAnimationEventGraphHost m_EventGraph;
         readonly CharacterEquipmentDomainRuntime m_Equipment;
         readonly CharacterCameraDomainRuntime m_Camera;
+        readonly IActionPresentationClockCoordinator m_PresentationClockCoordinator;
         readonly double m_PresentationTimePerTick;
         CharacterPoseNativeDomainInstance m_PoseDomain;
         CharacterAnimationResourceScope m_PoseResourceScope;
@@ -34,7 +36,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int tickRate,
             CharacterAnimationPresentationProfile presentationProfile,
             CharacterEquipmentDomainRuntime equipment,
-            CharacterCameraDomainRuntime camera)
+            CharacterCameraDomainRuntime camera,
+            IActionPresentationClockCoordinator presentationClockCoordinator)
         {
             m_ActorId = actorId;
             m_Body = body ?? throw new ArgumentNullException(nameof(body));
@@ -47,6 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Presentation domain requires an Animation EventGraph.");
             m_Equipment = equipment;
             m_Camera = camera;
+            m_PresentationClockCoordinator = presentationClockCoordinator;
             m_EventGraph = new CharacterAnimationEventGraphHost(
                 presentationProfile.EventGraph,
                 actorId);
@@ -237,6 +241,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Equipment?.Reset();
             m_Body.Reset();
             m_EventGraph.Reset();
+            m_PresentationClockCoordinator?.Reset();
             m_EventFrame = null;
             m_Trajectory = default;
             m_HasTrajectory = false;
@@ -307,6 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (!m_PoseDomain.TryGetCommands(m_ActorId, context.RenderFrame, out var actionCommands))
                     throw new InvalidOperationException("Pose Action command source did not produce the opened frame commands.");
+                m_PresentationClockCoordinator?.BeginFrame(actionCommands);
                 var parameterFrame = CharacterAnimationPoseInputFrame.FromPublishedVariables(
                     eventFrame,
                     m_PoseParameterIds);
@@ -315,6 +321,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.RenderFrame,
                     context.RenderFrame,
                     bodyFrame.CurrentTick,
+                    bodyFrame.CurrentTick + deltaSeconds / m_PresentationTimePerTick,
                     deltaSeconds,
                     bodyFrame,
                     factFrame,
@@ -331,9 +338,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterPoseNativePublicationResult commit =
                             m_PoseDomain.Session.Commit(false);
                         if (commit.Status == CharacterPoseNativeFrameStatus.Committed)
+                        {
                             m_PoseDomain.CommitFrame();
+                            m_PresentationClockCoordinator?.CommitFrame();
+                        }
                         else
+                        {
                             m_PoseDomain.DiscardFrame();
+                            m_PresentationClockCoordinator?.DiscardFrame();
+                        }
                     }
                     else
                     {
@@ -342,16 +355,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                 ? validation.FailureCode
                                 : CharacterPoseNativeFailureCode.FrameInvalid);
                         m_PoseDomain.DiscardFrame();
+                        m_PresentationClockCoordinator?.DiscardFrame();
                     }
                 }
                 else
                 {
                     m_PoseDomain.DiscardFrame();
+                    m_PresentationClockCoordinator?.DiscardFrame();
                 }
             }
             catch
             {
                 m_PoseDomain.DiscardFrame();
+                m_PresentationClockCoordinator?.DiscardFrame();
                 throw;
             }
         }
@@ -366,6 +382,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_TimelineBridge?.Dispose();
             m_PoseDomain?.Dispose();
             m_PoseResourceScope?.Dispose();
+            m_PresentationClockCoordinator?.Dispose();
             m_Camera?.Dispose();
             m_Equipment?.Dispose();
             m_EventGraph.Dispose();

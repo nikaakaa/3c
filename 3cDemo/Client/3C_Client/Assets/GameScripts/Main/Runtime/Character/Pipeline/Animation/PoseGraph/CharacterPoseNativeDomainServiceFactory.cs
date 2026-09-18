@@ -26,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterWorldAwarePresentationBinding m_World;
         readonly ICharacterFutureBodyTranslationSource m_FutureBodyTranslationSource;
         readonly PhysicsScene m_PhysicsScene;
+        readonly Func<CharacterPoseCanvasNode, IActionPresentationClockPolicy> m_ClockPolicyFactory;
         readonly Dictionary<CharacterPresentationPoseSourceSlot, int> m_SourceIndexBySlot;
         readonly Dictionary<PoseNodeId, int> m_IndexByNode;
 
@@ -39,7 +40,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ICharacterPoseNativeEventFrameSource eventFrameSource,
             CharacterWorldAwarePresentationBinding world,
             ICharacterFutureBodyTranslationSource futureBodyTranslationSource,
-            PhysicsScene physicsScene)
+            PhysicsScene physicsScene,
+            Func<CharacterPoseCanvasNode, IActionPresentationClockPolicy> clockPolicyFactory)
         {
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
@@ -50,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_EventFrameSource = eventFrameSource ?? throw new ArgumentNullException(nameof(eventFrameSource));
             m_World = world ? world : throw new ArgumentNullException(nameof(world));
             m_FutureBodyTranslationSource = futureBodyTranslationSource ?? throw new ArgumentNullException(nameof(futureBodyTranslationSource));
+            m_ClockPolicyFactory = clockPolicyFactory ?? throw new ArgumentNullException(nameof(clockPolicyFactory));
             if (!physicsScene.IsValid())
                 throw new ArgumentException("Pose domain requires a valid PhysicsScene.", nameof(physicsScene));
             m_PhysicsScene = physicsScene;
@@ -129,7 +132,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ThrowActionSample,
                 ThrowProviderSample,
                 RequireBindingIndex,
-                CreateBuffer);
+                CreateBuffer,
+                m_ClockPolicyFactory);
             var constraintHandlers = new CharacterPoseNativeConstraintHandlerComposition(
                 constraintService,
                 (node, context) => new CharacterFootPlacementConstraintHandle(0, 0, 0, 0, 0),

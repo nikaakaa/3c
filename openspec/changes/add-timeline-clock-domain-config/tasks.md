@@ -23,9 +23,9 @@
 
 - [x] 4.1 结论（2026-09-17）：当前角色动画业务的形态确认为表现独立时钟——动画表现按渲染 delta 平滑推进、不消费逻辑采样、不回滚；该形态是业务选择之一，见 4.2
 - [x] 4.2 `ActionCommittedSampleHistory`/`ActionPresentationSampleProjector`/`ActionAnimationPlaybackLifecycleRegistry` 保留为"跟随逻辑时间轴"模式的通用能力组件；当前角色动画业务采用独立时钟模式，不采用该组件；组件依赖的 `AbilityTimelineRuntimeSnapshot.FrameCarry` 字段已随本轮快照改造就位
-- [ ] 4.3 新增表现时钟策略合同 `IActionPresentationClockPolicy`（DriveClock 封装时钟行为）：`FreeRunPresentationClockPolicy`（按渲染 delta 自走，当前角色动画装配用）与 `CommittedFollowPresentationClockPolicy`（组合 Registry+History+Projector，committed 采样间插值驱动，回放/观战等业务用）
-- [ ] 4.4 `CharacterPoseNativeClipPlayerHandler.PrepareFrame` 消费点接入策略调用（`m_ClockPolicy.DriveClock(...)` 一行替换现有 `m_Player.Advance` 自走），播放器零分支；非 timeline 播放器装配 FreeRun 或不挂策略，行为不变
-- [ ] 4.5 装配开关：`CharacterPresentationDomainRuntimeFactory` 按业务注入策略实例——角色动画注入 FreeRun（行为与现状逐帧一致），回放/观战等需要表现跟随逻辑的业务注入 CommittedFollow 并接通 Registry 命令喂入
+- [x] 4.3 新增表现时钟策略合同 `IActionPresentationClockPolicy`（DriveClock 封装时钟行为）：`FreeRunPresentationClockPolicy`（按渲染 delta 自走，当前角色动画装配用）与 `CommittedFollowPresentationClockPolicy`（组合 Registry+History+Projector，committed 采样间插值驱动，回放/观战等业务用）
+- [x] 4.4 `CharacterPoseNativeClipPlayerHandler.PrepareFrame` 消费点接入策略调用（`m_ClockPolicy.DriveClock(...)` 一行替换现有 `m_Player.Advance` 自走），播放器零分支；非 timeline 播放器装配 FreeRun 或不挂策略，行为不变
+- [x] 4.5 装配开关：`CharacterPresentationDomainRuntimeFactory` 按业务注入策略实例——角色动画注入 FreeRun（行为与现状逐帧一致），回放/观战等需要表现跟随逻辑的业务注入 CommittedFollow 并接通 Registry 命令喂入
 
 ## 5. 编辑器吸附
 

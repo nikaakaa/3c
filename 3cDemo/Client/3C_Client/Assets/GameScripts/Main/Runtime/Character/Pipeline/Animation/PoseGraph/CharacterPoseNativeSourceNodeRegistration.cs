@@ -18,15 +18,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bindingIndexFactory,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext,
                 CharacterPoseNativeNodePoseBuffer>
-                bufferFactory)
+                bufferFactory,
+            Func<CharacterPoseCanvasNode, IActionPresentationClockPolicy> clockPolicyFactory)
         {
-            RequireArguments(
+            RequireClipPlayerArguments(
                 registry,
                 source,
                 sourceLeaseProvider,
                 playerFactory,
                 bindingIndexFactory,
-                bufferFactory);
+                bufferFactory,
+                clockPolicyFactory);
             var creator = new Creator((node, preparedBinding, context) =>
             {
                 AnimationClipPlayerRuntime player = null;
@@ -46,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             source,
                             sourceLeaseProvider,
                             bindingIndexFactory(node, context)),
-                        FreeRunPresentationClockPolicy.Shared);
+                        clockPolicyFactory(node));
                 }
                 catch
                 {
@@ -239,6 +241,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             registry.Register(
                 CharacterPoseNodeKind.AnimationSlot,
                 creator.Create);
+        }
+
+        static void RequireClipPlayerArguments(
+            CharacterPoseNativeNodeHandlerRegistry registry,
+            CharacterPoseSourceModule source,
+            Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
+            Delegate playerFactory,
+            Delegate bindingIndexFactory,
+            Delegate bufferFactory,
+            Delegate clockPolicyFactory)
+        {
+            if (registry == null)
+                throw new ArgumentNullException(nameof(registry));
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            if (sourceLeaseProvider == null)
+                throw new ArgumentNullException(nameof(sourceLeaseProvider));
+            if (playerFactory == null)
+                throw new ArgumentNullException(nameof(playerFactory));
+            if (bindingIndexFactory == null)
+                throw new ArgumentNullException(nameof(bindingIndexFactory));
+            if (bufferFactory == null)
+                throw new ArgumentNullException(nameof(bufferFactory));
+            if (clockPolicyFactory == null)
+                throw new ArgumentNullException(nameof(clockPolicyFactory));
         }
 
         static void RequireArguments(

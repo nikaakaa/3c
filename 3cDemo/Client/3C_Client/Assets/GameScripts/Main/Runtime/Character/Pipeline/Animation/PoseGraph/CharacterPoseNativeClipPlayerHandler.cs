@@ -201,15 +201,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Player.SetRelevant(true);
-            ActionPresentationClockInstruction clockInstruction = m_ClockPolicy.Resolve(
+            m_ClockPolicy.DriveClock(
                 m_Player,
-                default,
-                input.BodyTick,
+                node.AnimationChannelId,
+                input.PresentationSampleTick,
                 input.DeltaSeconds);
-            if (clockInstruction.Kind == ActionPresentationClockCommandKind.SeekAbsoluteTime)
-                m_Player.SetRawClock(clockInstruction.AbsoluteTimeSeconds);
-            else
-                m_Player.Advance(clockInstruction.DeltaSeconds, clockInstruction.PlayRate);
             m_Capture = m_Player.PrepareCapture(
                 input.DeltaSeconds,
                 m_Player.PlayRate);

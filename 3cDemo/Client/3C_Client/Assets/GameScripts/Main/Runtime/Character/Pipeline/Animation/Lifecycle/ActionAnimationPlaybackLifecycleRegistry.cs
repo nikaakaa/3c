@@ -232,6 +232,58 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public int Count => m_CommittedCount;
         public bool HasActiveMutation => m_ActiveLease.IsValid;
+
+        internal bool TryGetLatestPlayback(
+            AnimationChannelId animationChannelId,
+            out AnimationPlaybackId playbackId,
+            out ActionAnimationPlaybackLifecyclePhase phase)
+        {
+            playbackId = default;
+            phase = default;
+            bool found = false;
+            for (int i = 0; i < m_PendingCount; i++)
+                ConsiderEntry(
+                    m_PendingEntries[i],
+                    animationChannelId,
+                    ref found,
+                    ref playbackId,
+                    ref phase);
+            for (int i = 0; i < m_CommittedEntries.Length; i++)
+            {
+                Entry entry = m_CommittedEntries[i];
+                if (FindPending(entry.PlaybackId) >= 0)
+                    continue;
+                ConsiderEntry(
+                    entry,
+                    animationChannelId,
+                    ref found,
+                    ref playbackId,
+                    ref phase);
+            }
+            return found;
+        }
+
+        static void ConsiderEntry(
+            Entry entry,
+            AnimationChannelId animationChannelId,
+            ref bool found,
+            ref AnimationPlaybackId playbackId,
+            ref ActionAnimationPlaybackLifecyclePhase phase)
+        {
+            if (!entry.Occupied ||
+                animationChannelId.IsValid &&
+                !entry.AnimationChannelId.Equals(animationChannelId) ||
+                !entry.HasCommittedRawSample ||
+                entry.Phase == ActionAnimationPlaybackLifecyclePhase.Retired)
+            {
+                return;
+            }
+            if (found && entry.PlaybackId.Generation <= playbackId.Generation)
+                return;
+            playbackId = entry.PlaybackId;
+            phase = entry.Phase;
+            found = true;
+        }
         internal int CommandMutationCapacity =>
             m_CommandMutationHeaders.Length;
 

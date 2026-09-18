@@ -559,6 +559,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong frameIdentity,
             ulong presentationFrame,
             ulong bodyTick,
+            double presentationSampleTick,
             float deltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
@@ -566,6 +567,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IReadOnlyList<ActionAnimationPlaybackCommand> actionCommands)
         {
             if (!actorId.IsValid || frameIdentity == 0 || presentationFrame == 0 || bodyTick == 0 ||
+                !double.IsFinite(presentationSampleTick) || presentationSampleTick < bodyTick ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f || !bodyFrame.IsValid ||
                 !factFrame.IsValid || !parameterFrame.IsValid || actionCommands == null)
             {
@@ -575,6 +577,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FrameIdentity = frameIdentity;
             PresentationFrame = presentationFrame;
             BodyTick = bodyTick;
+            PresentationSampleTick = presentationSampleTick;
             DeltaSeconds = deltaSeconds;
             BodyFrame = bodyFrame;
             FactFrame = factFrame;
@@ -589,13 +592,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong FrameIdentity { get; }
         internal ulong PresentationFrame { get; }
         internal ulong BodyTick { get; }
+        internal double PresentationSampleTick { get; }
         internal float DeltaSeconds { get; }
         internal CharacterBodyPresentationFrame BodyFrame { get; }
         internal CharacterPresentationFactFrame FactFrame { get; }
         internal CharacterAnimationPoseInputFrame ParameterFrame { get; }
         internal IReadOnlyList<ActionAnimationPlaybackCommand> ActionCommands { get; }
         internal bool IsValid => ActorId.IsValid && FrameIdentity != 0 && PresentationFrame != 0 &&
-            BodyTick != 0 && float.IsFinite(DeltaSeconds) && DeltaSeconds >= 0f && BodyFrame.IsValid &&
+            BodyTick != 0 && double.IsFinite(PresentationSampleTick) && PresentationSampleTick >= BodyTick &&
+            float.IsFinite(DeltaSeconds) && DeltaSeconds >= 0f && BodyFrame.IsValid &&
             FactFrame.IsValid && ParameterFrame.IsValid && ActionCommands != null;
     }
 

@@ -8,6 +8,7 @@ using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Unity.Resources;
@@ -131,8 +132,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             CharacterPoseNativeDomainInstance poseDomain = null;
             CharacterAnimationResourceScope resourceScope = null;
+            IActionPresentationClockCoordinator presentationClockCoordinator =
+                presentationRole == CharacterPresentationRole.SimulatedActor
+                    ? new CommittedFollowPresentationClockCoordinator()
+                    : null;
             var runtime = new CharacterPresentationDomainRuntime(
-                actorId, body, tickRate, animationPresentationProfile, equipment, camera);
+                actorId,
+                body,
+                tickRate,
+                animationPresentationProfile,
+                equipment,
+                camera,
+                presentationClockCoordinator);
             try
             {
                 if (poseResources)
@@ -155,7 +166,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         runtime,
                         worldAwarePresentation,
                         sessionHost,
-                        physicsScene);
+                        physicsScene,
+                        node => presentationClockCoordinator != null
+                            ? presentationClockCoordinator.CreatePolicy()
+                            : FreeRunPresentationClockPolicy.Shared);
                     var createResult = CharacterPoseNativeDomainRuntimeFactory.Create(
                         NextRequestId(),
                         actorId,

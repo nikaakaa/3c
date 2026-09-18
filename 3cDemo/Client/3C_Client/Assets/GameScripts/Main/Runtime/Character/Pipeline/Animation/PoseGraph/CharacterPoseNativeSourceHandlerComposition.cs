@@ -18,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Func<CharacterPoseNativeInstanceContext, PoseNodeId, AnimationPoseSourceId, PresentationPoseSourceSample> m_ProviderSampleProvider;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, int> m_BindingIndexFactory;
         readonly Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, CharacterPoseNativeNodePoseBuffer> m_BufferFactory;
+        readonly Func<CharacterPoseCanvasNode, IActionPresentationClockPolicy> m_ClockPolicyFactory;
 
         internal CharacterPoseNativeSourceHandlerComposition(
             CharacterPoseSourceModule source,
@@ -30,7 +31,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Func<CharacterPoseNativeInstanceContext, PoseNodeId, AnimationPoseSourceId, AnimationResolvedPoseSourceSample> actionSampleProvider,
             Func<CharacterPoseNativeInstanceContext, PoseNodeId, AnimationPoseSourceId, PresentationPoseSourceSample> providerSampleProvider,
             Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, int> bindingIndexFactory,
-            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, CharacterPoseNativeNodePoseBuffer> bufferFactory)
+            Func<CharacterPoseCanvasNode, CharacterPoseNativeInstanceContext, CharacterPoseNativeNodePoseBuffer> bufferFactory,
+            Func<CharacterPoseCanvasNode, IActionPresentationClockPolicy> clockPolicyFactory)
         {
             m_Source = source ?? throw new ArgumentNullException(nameof(source));
             m_SourceLeaseProvider = sourceLeaseProvider ?? throw new ArgumentNullException(nameof(sourceLeaseProvider));
@@ -43,6 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ProviderSampleProvider = providerSampleProvider ?? throw new ArgumentNullException(nameof(providerSampleProvider));
             m_BindingIndexFactory = bindingIndexFactory ?? throw new ArgumentNullException(nameof(bindingIndexFactory));
             m_BufferFactory = bufferFactory ?? throw new ArgumentNullException(nameof(bufferFactory));
+            m_ClockPolicyFactory = clockPolicyFactory ?? throw new ArgumentNullException(nameof(clockPolicyFactory));
         }
 
         internal void Register(CharacterPoseNativeNodeHandlerRegistry registry)
@@ -54,7 +57,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SourceLeaseProvider,
                 m_ClipPlayerFactory,
                 m_BindingIndexFactory,
-                m_BufferFactory);
+                m_BufferFactory,
+                m_ClockPolicyFactory);
             registry.RegisterBlendSpacePlayer(
                 m_Source,
                 m_SourceLeaseProvider,

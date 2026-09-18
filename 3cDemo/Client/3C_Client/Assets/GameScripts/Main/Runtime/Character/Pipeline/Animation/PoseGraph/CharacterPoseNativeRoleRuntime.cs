@@ -69,6 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterFinalPoseNativePublication m_Publication;
         readonly CharacterPoseConstraintRuntime m_Constraints;
         readonly CharacterPoseSourceModule m_Source;
+        CharacterPoseSourceFrameLease m_SourceLease;
         bool m_Disposed;
 
         CharacterPoseNativeRoleRuntime(
@@ -257,8 +258,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseNativeFrameLease BeginFrame(
-            in CharacterPoseNativeFrameInput input) =>
-            m_Graph.BeginFrame(in input);
+            in CharacterPoseNativeFrameInput input)
+        {
+            CharacterPoseNativeFrameLease lease = m_Graph.BeginFrame(in input);
+            if (m_Source == null)
+                return lease;
+            CharacterPoseNativeFrameLineage openLineage = lease.Lineage;
+            try
+            {
+                m_SourceLease = m_Source.BeginFrame(in openLineage);
+                return lease;
+            }
+            catch
+            {
+                m_Graph.Discard(lease, CharacterPoseNativeFailureCode.FrameInvalid);
+                throw;
+            }
+        }
 
         internal CharacterPoseNativePreparationResult PrepareFrame(
             CharacterPoseNativeFrameLease lease) =>
@@ -295,17 +311,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativePublicationResult Commit(
             CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeEvaluationResult evaluation,
-            bool captureFootIkDiagnostics) =>
-            m_Graph.Commit(
+            bool captureFootIkDiagnostics)
+        {
+            CharacterPoseNativePublicationResult result = m_Graph.Commit(
                 lease,
                 in evaluation,
                 m_Publication,
                 captureFootIkDiagnostics);
+            if (m_Source != null)
+            {
+                m_Source.CommitFrame(m_SourceLease);
+                m_SourceLease = default;
+            }
+            return result;
+        }
 
         internal void Discard(
             CharacterPoseNativeFrameLease lease,
-            CharacterPoseNativeFailureCode reason) =>
+            CharacterPoseNativeFailureCode reason)
+        {
             m_Graph.Discard(lease, reason);
+            if (m_Source != null && m_SourceLease.IsValid)
+            {
+                m_Source.DiscardFrame(m_SourceLease);
+                m_SourceLease = default;
+            }
+        }
 
         internal CharacterPoseNativeResetResult Reset(ulong resetGeneration)
         {
@@ -315,7 +346,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return result;
         }
 
-        internal void Stop() => m_Graph.StopInstance();
+        internal void Stop()
+        {
+            if (m_Source != null && m_SourceLease.IsValid)
+            {
+                m_Source.DiscardFrame(m_SourceLease);
+                m_SourceLease = default;
+            }
+            m_Graph.StopInstance();
+        }
 
         internal bool TryObserve(
             PoseNodeId nodeId,

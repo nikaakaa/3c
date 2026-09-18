@@ -1074,9 +1074,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void CommitFrame(
             CharacterPoseSourceFrameLease lease)
         {
-            m_FramePage.RequireReady(lease);
+            m_FramePage.RequireOpen(lease);
             m_Backends.CommitFrame(lease);
-            m_FramePage.Seal(lease);
+            m_FramePage.Discard(lease);
             m_PhysicalSources.CommitFrame();
             m_PreparedSourceCount = 0;
             m_CurrentLease = default;

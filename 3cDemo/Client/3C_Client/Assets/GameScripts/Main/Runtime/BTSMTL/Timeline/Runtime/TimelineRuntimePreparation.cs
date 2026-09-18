@@ -1162,6 +1162,52 @@ namespace BTSMTL.Timeline.Runtime
         public string CallId { get; }
     }
 
+    public readonly struct TimelineRuntimeMarkerRequest
+    {
+        public TimelineRuntimeMarkerRequest(
+            string markerAuthoringId,
+            string trackAuthoringId,
+            string graphId,
+            string graphRevision,
+            int frame,
+            int cycle,
+            ulong generation,
+            string callId)
+        {
+            MarkerAuthoringId = string.IsNullOrWhiteSpace(markerAuthoringId)
+                ? throw new ArgumentException("Timeline Marker identity is required.", nameof(markerAuthoringId))
+                : markerAuthoringId.Trim();
+            TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
+                ? throw new ArgumentException("Timeline Track identity is required.", nameof(trackAuthoringId))
+                : trackAuthoringId.Trim();
+            GraphId = string.IsNullOrWhiteSpace(graphId)
+                ? throw new ArgumentException("Timeline Marker graph identity is required.", nameof(graphId))
+                : graphId.Trim();
+            GraphRevision = string.IsNullOrWhiteSpace(graphRevision)
+                ? throw new ArgumentException("Timeline Marker graph revision is required.", nameof(graphRevision))
+                : graphRevision.Trim();
+            if (frame < 0 || cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            Generation = generation == 0
+                ? throw new ArgumentOutOfRangeException(nameof(generation))
+                : generation;
+            CallId = string.IsNullOrWhiteSpace(callId)
+                ? throw new ArgumentException("Timeline Marker call identity is required.", nameof(callId))
+                : callId.Trim();
+            Frame = frame;
+            Cycle = cycle;
+        }
+
+        public string MarkerAuthoringId { get; }
+        public string TrackAuthoringId { get; }
+        public string GraphId { get; }
+        public string GraphRevision { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+        public ulong Generation { get; }
+        public string CallId { get; }
+    }
+
     public readonly struct TimelineRuntimeTreeClipAssociation
     {
         public TimelineRuntimeTreeClipAssociation(
@@ -1216,6 +1262,8 @@ namespace BTSMTL.Timeline.Runtime
             ulong generation,
             string markerAuthoringId,
             ulong traversalIndex,
+            string graphId,
+            string graphRevision,
             int frame,
             int cycle)
         {
@@ -1227,6 +1275,12 @@ namespace BTSMTL.Timeline.Runtime
             MarkerAuthoringId = string.IsNullOrWhiteSpace(markerAuthoringId)
                 ? throw new ArgumentException("Timeline presentation event marker identity is required.", nameof(markerAuthoringId))
                 : markerAuthoringId.Trim();
+            GraphId = string.IsNullOrWhiteSpace(graphId)
+                ? throw new ArgumentException("Timeline presentation marker graph identity is required.", nameof(graphId))
+                : graphId.Trim();
+            GraphRevision = string.IsNullOrWhiteSpace(graphRevision)
+                ? throw new ArgumentException("Timeline presentation marker graph revision is required.", nameof(graphRevision))
+                : graphRevision.Trim();
             if (frame < 0 || cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(frame));
             TraversalIndex = traversalIndex;
@@ -1241,6 +1295,8 @@ namespace BTSMTL.Timeline.Runtime
         public ulong Generation { get; }
         public string MarkerAuthoringId { get; }
         public ulong TraversalIndex { get; }
+        public string GraphId { get; }
+        public string GraphRevision { get; }
         public int Frame { get; }
         public int Cycle { get; }
     }
@@ -1440,6 +1496,7 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineCameraResourceSample> cameraResources,
             IReadOnlyList<TimelineActionCueSample> actionCues,
             IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
+            IReadOnlyList<TimelineRuntimeMarkerRequest> markers,
             IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation,
             IReadOnlyList<TimelineRuntimeMotionWarpRequest> motionWarps,
             IReadOnlyList<TimelineRuntimeClipSample> clipSamples,
@@ -1453,6 +1510,7 @@ namespace BTSMTL.Timeline.Runtime
             CameraResources = Copy(cameraResources);
             ActionCues = Copy(actionCues);
             TreeClips = Copy(treeClips);
+            Markers = Copy(markers);
             ScenePresentation = Copy(scenePresentation);
             MotionWarps = Copy(motionWarps);
             ClipSamples = Copy(clipSamples);
@@ -1462,6 +1520,7 @@ namespace BTSMTL.Timeline.Runtime
                 MotionWarps,
                 ActionCues,
                 TreeClips,
+                Markers,
                 ClipSamples,
                 Traces);
         }
@@ -1474,6 +1533,7 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineCameraResourceSample> CameraResources { get; }
         public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
         public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
+        public IReadOnlyList<TimelineRuntimeMarkerRequest> Markers { get; }
         public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
         public IReadOnlyList<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
         public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
@@ -1494,6 +1554,7 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<TimelineRuntimeMotionWarpRequest> motionWarps,
             IReadOnlyList<TimelineActionCueSample> actionCues,
             IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
+            IReadOnlyList<TimelineRuntimeMarkerRequest> markers,
             IReadOnlyList<TimelineRuntimeClipSample> clipSamples,
             IReadOnlyList<TimelineRuntimeTraceOutput> traces)
         {
@@ -1501,6 +1562,7 @@ namespace BTSMTL.Timeline.Runtime
             MotionWarps = motionWarps;
             ActionCues = actionCues;
             TreeClips = treeClips;
+            Markers = markers;
             ClipSamples = clipSamples;
             Traces = traces;
         }
@@ -1509,6 +1571,7 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
         public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
         public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
+        public IReadOnlyList<TimelineRuntimeMarkerRequest> Markers { get; }
         public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
         public IReadOnlyList<TimelineRuntimeTraceOutput> Traces { get; }
     }
@@ -1685,6 +1748,7 @@ namespace BTSMTL.Timeline.Runtime
             var cameraResources = new List<TimelineCameraResourceSample>();
             var actionCues = new List<TimelineActionCueSample>();
             var treeClips = new List<TimelineRuntimeTreeClipRequest>();
+            var markers = new List<TimelineRuntimeMarkerRequest>();
             var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
             var motionWarps = new List<TimelineRuntimeMotionWarpRequest>();
             var clipSamples = new List<TimelineRuntimeClipSample>();
@@ -1699,6 +1763,17 @@ namespace BTSMTL.Timeline.Runtime
                 frameRate);
             Func<Clip, bool> logicClipFilter = clip =>
                 HasProjection(content, clip, TimelineExecutionDomain.Logic);
+            AppendMarkerRequests(
+                content,
+                executionIdentity,
+                generation,
+                previousFrame,
+                previousCycle,
+                currentFrame,
+                currentCycle,
+                loop,
+                includeStartBoundary,
+                markers);
             for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
             {
                 TimelineRuntimeEvaluationSegment segment = segments[segmentIndex];
@@ -1992,10 +2067,81 @@ namespace BTSMTL.Timeline.Runtime
                 cameraResources,
                 actionCues,
                 treeClips,
+                markers,
                 scenePresentation,
                 motionWarps,
                 clipSamples,
                 traces);
+        }
+
+        static void AppendMarkerRequests(
+            TimelineContentUnit content,
+            TimelineExecutionIdentity executionIdentity,
+            ulong generation,
+            int previousFrame,
+            int previousCycle,
+            int currentFrame,
+            int currentCycle,
+            bool loop,
+            bool includeStartBoundary,
+            List<TimelineRuntimeMarkerRequest> markers)
+        {
+            int maxFrame = Math.Max(0, content.MaxFrame);
+            if (maxFrame <= 0)
+                return;
+            long previousAbsolute = (long)previousCycle * maxFrame + previousFrame;
+            long currentAbsolute = (long)currentCycle * maxFrame + currentFrame;
+            if (currentAbsolute < previousAbsolute)
+                throw new InvalidOperationException("Timeline logic cursor moved backward without a generation reset.");
+            int firstCycle = loop ? previousCycle : 0;
+            int lastCycle = loop ? currentCycle : 0;
+            for (int index = 0; index < content.Markers.Count; index++)
+            {
+                TimelineContentMarker contentMarker = content.Markers[index];
+                if (!contentMarker.ExecutionPolicy.IsLogic)
+                    continue;
+                for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
+                {
+                    long absolute = (long)cycle * maxFrame + contentMarker.Frame;
+                    bool initial = includeStartBoundary && absolute == previousAbsolute;
+                    if ((!initial && absolute <= previousAbsolute) || absolute > currentAbsolute)
+                        continue;
+                    Track track = FindTrack(content, contentMarker.TrackAuthoringId);
+                    TimelineMarker marker = track?.Markers.FirstOrDefault(candidate =>
+                        candidate != null && candidate.AuthoringId == contentMarker.MarkerId);
+                    if (marker?.Graph is not ITimelineTreeGraphAsset graph ||
+                        !TryGetTreeGraphContract(content, graph, out string graphId, out string graphRevision))
+                        throw new InvalidOperationException($"Timeline Marker '{contentMarker.MarkerId}' graph contract is missing.");
+                    markers.Add(new TimelineRuntimeMarkerRequest(
+                        contentMarker.MarkerId,
+                        contentMarker.TrackAuthoringId,
+                        graphId,
+                        graphRevision,
+                        contentMarker.Frame,
+                        cycle,
+                        generation,
+                        CreateMarkerCallId(executionIdentity, generation, cycle, contentMarker.MarkerId)));
+                }
+            }
+        }
+
+        static Track FindTrack(TimelineContentUnit content, string authoringId)
+        {
+            for (int index = 0; index < content.Tracks.Count; index++)
+            {
+                if (string.Equals(content.Tracks[index].AuthoringId, authoringId, StringComparison.Ordinal))
+                    return content.SourceTracks[index];
+            }
+            return null;
+        }
+
+        internal static string CreateMarkerCallId(
+            TimelineExecutionIdentity executionIdentity,
+            ulong generation,
+            int cycle,
+            string markerAuthoringId)
+        {
+            return $"{executionIdentity.OwnerIdentity}:{executionIdentity.CallIdentity}:{executionIdentity.InstanceId}:{generation}:{cycle}:{markerAuthoringId}";
         }
 
         internal static string CreateTreeClipCallId(
@@ -2039,9 +2185,21 @@ namespace BTSMTL.Timeline.Runtime
         {
             treeGraphId = string.Empty;
             treeGraphRevision = string.Empty;
-            var treeGraph = treeClip?.AssetTree as ITimelineTreeGraphAsset;
-            if (content == null || treeGraph == null)
+            return treeClip?.AssetTree is ITimelineTreeGraphAsset treeGraph &&
+                   TryGetTreeGraphContract(content, treeGraph, out treeGraphId, out treeGraphRevision);
+        }
+
+        internal static bool TryGetTreeGraphContract(
+            TimelineContentUnit content,
+            ITimelineTreeGraphAsset graph,
+            out string treeGraphId,
+            out string treeGraphRevision)
+        {
+            treeGraphId = string.Empty;
+            treeGraphRevision = string.Empty;
+            if (content == null || graph == null)
                 return false;
+            var treeGraph = graph;
             string identity = $"tree:{treeGraph.AuthoringId}";
             for (int index = 0; index < content.Dependencies.Count; index++)
             {
@@ -2055,6 +2213,7 @@ namespace BTSMTL.Timeline.Runtime
             }
             return false;
         }
+
         internal static bool TryResolveTreeClip(
             TimelineData timeline,
             string authoringId,

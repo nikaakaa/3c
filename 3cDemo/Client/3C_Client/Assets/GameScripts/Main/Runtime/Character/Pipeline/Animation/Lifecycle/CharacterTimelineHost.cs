@@ -223,6 +223,54 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     }
 
 
+    internal sealed class CharacterTimelineMarkerService : ITimelineRuntimeMarkerService
+    {
+        readonly CharacterTimelineHost m_Host;
+
+        internal CharacterTimelineMarkerService(CharacterTimelineHost host)
+        {
+            m_Host = host ?? throw new ArgumentNullException(nameof(host));
+        }
+
+        public bool Consume(TimelineRuntimeMarkerRequest request, TimelineRuntimeStepContext context)
+        {
+            if (!m_Host.IsAbilityRuntimePlayback(context.Playback.Handle))
+                return true;
+            IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker
+                ?? throw new InvalidOperationException($"Timeline Marker '{request.MarkerAuthoringId}' requires an active Ability invoker.");
+            var invocation = new AbilityTreeClipInvocation(
+                request.MarkerAuthoringId,
+                request.GraphId,
+                AbilityTreeClipHook.OnEnable,
+                request.Cycle,
+                m_Host.RequireAbilityPlaybackActionInstanceId(context.Playback.Handle),
+                checked((int)context.Playback.Handle.Value));
+            return invoker.InvokeTreeClip(invocation);
+        }
+
+        public void Discard(TimelineRuntimeMarkerRequest request, TimelineRuntimeStepContext context)
+        {
+        }
+
+        public void Commit(TimelineRuntimeStepContext context)
+        {
+        }
+
+        public void DiscardStep(TimelineRuntimeStepContext context)
+        {
+        }
+
+        public bool ConsumeStop(TimelineRuntimeStopRequest request) => true;
+
+        public void CommitStop(TimelineRuntimeStopRequest request)
+        {
+        }
+
+        public void DiscardStop(TimelineRuntimeStopRequest request)
+        {
+        }
+    }
+
     public sealed class CharacterTimelinePendingAdvance : IAbilityTimelinePending
     {
         internal CharacterTimelinePendingAdvance(
@@ -347,6 +395,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 new[] { "self", "camera", "main" });
             var dependencyResolver = new CharacterTimelineDependencyResolver();
             var treeClipService = new CharacterTimelineTreeClipService(this);
+            var markerService = new CharacterTimelineMarkerService(this);
 
             m_Host = new TimelineRuntimeCompositionHost(
                 contractCatalog,
@@ -356,6 +405,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 dependencyResolver,
                 Array.Empty<ITimelineRuntimeEvaluationSink>(),
                 treeClipService,
+                markerService,
                 tickRate);
             m_Host.CommittedEvaluation += OnCommittedTimelineEvaluation;
             m_Host.StopCommitted += OnTimelineStopCommitted;
@@ -894,6 +944,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException($"Timeline advance '{pending.Handle.Value}' could not be discarded.");
         }
 
+
+        void InvokePresentationMarkers(TimelineRuntimePresentationFrame frame)
+        {
+            if (frame.Events.Count == 0)
+                return;
+            if (!IsAbilityRuntimePlayback(frame.Handle))
+                throw new InvalidOperationException($"Timeline Presentation Marker playback '{frame.Handle.Value}' requires an Ability runtime.");
+            IAbilityTreeClipInvoker invoker = m_ActiveTreeClipInvoker
+                ?? throw new InvalidOperationException($"Timeline Presentation Marker playback '{frame.Handle.Value}' requires an active Ability invoker.");
+            ulong actionInstanceId = RequireAbilityPlaybackActionInstanceId(frame.Handle);
+            for (int index = 0; index < frame.Events.Count; index++)
+            {
+                TimelineRuntimePresentationEvent marker = frame.Events[index];
+                var invocation = new AbilityTreeClipInvocation(
+                    marker.MarkerAuthoringId,
+                    marker.GraphId,
+                    AbilityTreeClipHook.OnEnable,
+                    marker.Cycle,
+                    actionInstanceId,
+                    checked((int)frame.Handle.Value));
+                if (!invoker.InvokeTreeClip(invocation))
+                    throw new InvalidOperationException($"Timeline Presentation Marker '{marker.MarkerAuthoringId}' invocation failed.");
+            }
+        }
 
         internal bool IsAbilityRuntimePlayback(TimelineRuntimePlaybackHandle handle)
         {
@@ -1580,6 +1654,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         out TimelineRuntimePresentationFrame frame);
                 if (presented)
                 {
+                    InvokePresentationMarkers(frame);
                     PresentationFrameProduced?.Invoke(frame);
                     PublishTimelineVisualTime(active, frame);
                 }

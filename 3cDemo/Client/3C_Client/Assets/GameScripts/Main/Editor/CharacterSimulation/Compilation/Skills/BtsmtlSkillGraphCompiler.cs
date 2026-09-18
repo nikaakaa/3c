@@ -90,22 +90,36 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     : entry;
                 if (context.CallerKind == ProgramInvocationCallerKind.TimelineClip && !string.IsNullOrEmpty(context.ClipId))
                 {
-                    foreach (BtsmtlSkillTimelineHookFlowNode hook in graph.Nodes.OfType<BtsmtlSkillTimelineHookFlowNode>())
+                    if (context.UseTimelineEnable)
                     {
+                        BtsmtlSkillTimelineEnableFlowNode enable =
+                            graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single();
                         m_Builder.DeclareGraphInvocation(
-                            operations.Node(hook.UID),
+                            operations.Node(enable.UID),
                             invocationSource,
                             context.CallerKind,
-                            hook.Hook.ToString(),
+                            enable.Hook.ToString(),
                             context.ClipId);
                     }
+                    else
+                    {
+                        foreach (BtsmtlSkillTimelineHookFlowNode hook in graph.Nodes.OfType<BtsmtlSkillTimelineHookFlowNode>())
+                        {
+                            m_Builder.DeclareGraphInvocation(
+                                operations.Node(hook.UID),
+                                invocationSource,
+                                context.CallerKind,
+                                hook.Hook.ToString(),
+                                context.ClipId);
+                        }
 
-                    m_Builder.DeclareGraphInvocation(
-                        entry,
-                        invocationSource,
-                        context.CallerKind,
-                        "Root",
-                        context.ClipId);
+                        m_Builder.DeclareGraphInvocation(
+                            entry,
+                            invocationSource,
+                            context.CallerKind,
+                            "Root",
+                            context.ClipId);
+                    }
                 }
                 else
                 {
@@ -117,6 +131,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     foreach (KeyValuePair<string, BtsmtlSkillGraphOccurrence> tree in timelineOccurrence.Trees)
                         Compile(tree.Value, stateOwner,
                             BtsmtlSkillInvocationContext.TreeClip(timelineOccurrence.Node.UID, tree.Key, false));
+                    foreach (KeyValuePair<string, BtsmtlSkillGraphOccurrence> marker in timelineOccurrence.MarkerTrees)
+                        Compile(marker.Value, stateOwner,
+                            BtsmtlSkillInvocationContext.TreeClip(timelineOccurrence.Node.UID, marker.Key, true));
                 }
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
                 {

@@ -211,14 +211,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class BtsmtlSkillTimelineOccurrence
     {
-        internal BtsmtlSkillTimelineOccurrence(BtsmtlSkillTimelineFlowNode node, Dictionary<string, BtsmtlSkillGraphOccurrence> trees)
+        internal BtsmtlSkillTimelineOccurrence(
+            BtsmtlSkillTimelineFlowNode node,
+            Dictionary<string, BtsmtlSkillGraphOccurrence> trees,
+            Dictionary<string, BtsmtlSkillGraphOccurrence> markerTrees)
         {
             Node = node;
             Trees = new System.Collections.ObjectModel.ReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence>(trees);
+            MarkerTrees = new System.Collections.ObjectModel.ReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence>(markerTrees);
         }
 
         public BtsmtlSkillTimelineFlowNode Node { get; }
         public IReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence> Trees { get; }
+        public IReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence> MarkerTrees { get; }
     }
 
     public sealed class BtsmtlSkillGraphOccurrence
@@ -340,6 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     if (timeline.Timeline == null)
                         throw new InvalidOperationException($"{route}/node:{node.UID}/timeline: 技能Timeline引用缺失。");
                     var trees = new Dictionary<string, BtsmtlSkillGraphOccurrence>(StringComparer.Ordinal);
+                    var markerTrees = new Dictionary<string, BtsmtlSkillGraphOccurrence>(StringComparer.Ordinal);
                     foreach (Track track in timeline.Timeline.Tracks)
                     {
                         if (track == null)
@@ -355,7 +361,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 contentHash, report));
                         }
                     }
-                    timelines.Add(new BtsmtlSkillTimelineOccurrence(timeline, trees));
+                    foreach (Track track in timeline.Timeline.Tracks)
+                    {
+                        if (track == null)
+                            continue;
+                        foreach (TimelineMarker marker in track.Markers)
+                        {
+                            if (marker == null)
+                                continue;
+                            if (marker.Graph is not BtsmtlSkillFlowGraph child)
+                                throw new InvalidOperationException($"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{marker.AuthoringId}: Marker引用不是正式Skill图。");
+                            ValidateMarkerGraph(child, $"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{marker.AuthoringId}");
+                            markerTrees.Add(marker.AuthoringId, ReadOccurrence(child,
+                                $"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{child.AuthoringId}",
+                                contentHash, report));
+                        }
+                    }
+                    timelines.Add(new BtsmtlSkillTimelineOccurrence(timeline, trees, markerTrees));
                 }
             }
             return new BtsmtlSkillGraphOccurrence(graph, route, hash, nodes, edges, references, timelines);
@@ -367,6 +389,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 references.Add(new BtsmtlSkillGraphReferenceOccurrence(owner, kind, callSite, hash,
                     ReadOccurrence(child, childRoute, contentHash, report)));
             }
+        }
+
+        static void ValidateMarkerGraph(BtsmtlSkillFlowGraph graph, string route)
+        {
+            if (graph == null || graph.Role != BtsmtlSkillFlowGraphRole.TimelineBody)
+                throw new InvalidOperationException($"{route}/graph: Marker触发图必须是TimelineBody。");
+            if (graph.allNodes.Cast<FlowNode>().OfType<BtsmtlSkillRootFlowNode>().Count() != 1)
+                throw new InvalidOperationException($"{route}/graph: Marker触发图必须有且只有一个Root。");
+            if (graph.allNodes.Cast<FlowNode>().OfType<BtsmtlSkillTimelineEnableFlowNode>().Count() != 1)
+                throw new InvalidOperationException($"{route}/graph: Marker触发图必须有且只有一个OnEnable入口。");
+            if (graph.allNodes.Cast<FlowNode>().OfType<BtsmtlSkillTimelineDisableFlowNode>().Any() ||
+                graph.allNodes.Cast<FlowNode>().OfType<BtsmtlSkillTimelineDestroyFlowNode>().Any())
+                throw new InvalidOperationException($"{route}/graph: Marker触发图只允许OnEnable回调。");
+            if (graph.allNodes.Cast<FlowNode>().OfType<BtsmtlSkillTimelineExitRequestFlowNode>().Any())
+                throw new InvalidOperationException($"{route}/graph: Marker触发图不能使用结束片段节点。");
         }
 
         public IEnumerable<BtsmtlSkillGraphOccurrence> EnumerateOccurrences()
@@ -393,9 +430,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                                 yield return child;
             }
             foreach (BtsmtlSkillTimelineOccurrence timeline in Timelines)
+            {
                 foreach (BtsmtlSkillGraphOccurrence tree in timeline.Trees.Values)
                     foreach (BtsmtlSkillGraphOccurrence child in tree.EnumerateOccurrences())
                         yield return child;
+                foreach (BtsmtlSkillGraphOccurrence tree in timeline.MarkerTrees.Values)
+                    foreach (BtsmtlSkillGraphOccurrence child in tree.EnumerateOccurrences())
+                        yield return child;
+            }
         }
     }
 }

@@ -21,6 +21,7 @@ namespace BTSMTL.Timeline.Runtime
             ITimelineRuntimeDependencyResolver dependencyResolver,
             IEnumerable<ITimelineRuntimeEvaluationSink> evaluationSinks,
             ITimelineRuntimeTreeClipService treeClipService,
+            ITimelineRuntimeMarkerService markerService,
             int tickRate)
         {
             if (evaluationSinks == null)
@@ -48,6 +49,7 @@ namespace BTSMTL.Timeline.Runtime
                 dependencyResolver,
                 fanout,
                 treeClipService,
+                markerService,
                 tickRate);
         }
 

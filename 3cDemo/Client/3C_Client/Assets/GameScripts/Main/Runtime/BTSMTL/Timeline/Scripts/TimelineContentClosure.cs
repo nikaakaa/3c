@@ -127,11 +127,15 @@ namespace BTSMTL.Timeline
             string markerId,
             string trackAuthoringId,
             TimelineClipExecutionPolicy executionPolicy,
-            int frame)
+            int frame,
+            string graphId,
+            string graphRevision)
         {
             MarkerId = Require(markerId, nameof(markerId));
             TrackAuthoringId = Require(trackAuthoringId, nameof(trackAuthoringId));
             ExecutionPolicy = executionPolicy;
+            GraphId = Require(graphId, nameof(graphId));
+            GraphRevision = Require(graphRevision, nameof(graphRevision));
             Frame = frame < 0 ? throw new ArgumentOutOfRangeException(nameof(frame)) : frame;
         }
 
@@ -139,6 +143,8 @@ namespace BTSMTL.Timeline
         public string TrackAuthoringId { get; }
         public TimelineClipExecutionPolicy ExecutionPolicy { get; }
         public int Frame { get; }
+        public string GraphId { get; }
+        public string GraphRevision { get; }
 
         static string Require(string value, string name)
         {
@@ -301,6 +307,7 @@ namespace BTSMTL.Timeline
             IReadOnlyList<TimelineContentTrack> tracks,
             IReadOnlyList<TimelineContentClip> clips,
             IReadOnlyList<TimelineContentMarker> markers,
+            IReadOnlyList<Track> sourceTracks,
             IReadOnlyList<TimelineContentSection> sections,
             IReadOnlyList<TimelineBindingDeclaration> bindings,
             IReadOnlyList<TimelineContentDependency> dependencies)
@@ -313,6 +320,7 @@ namespace BTSMTL.Timeline
             MaxFrame = maxFrame;
             Loop = loop;
             Tracks = new ReadOnlyCollection<TimelineContentTrack>(new List<TimelineContentTrack>(tracks ?? Array.Empty<TimelineContentTrack>()));
+            SourceTracks = new ReadOnlyCollection<Track>(new List<Track>(sourceTracks ?? Array.Empty<Track>()));
             Clips = new ReadOnlyCollection<TimelineContentClip>(new List<TimelineContentClip>(clips ?? Array.Empty<TimelineContentClip>()));
             Markers = new ReadOnlyCollection<TimelineContentMarker>(new List<TimelineContentMarker>(markers ?? Array.Empty<TimelineContentMarker>()));
             Sections = new ReadOnlyCollection<TimelineContentSection>(new List<TimelineContentSection>(sections ?? Array.Empty<TimelineContentSection>()));
@@ -328,6 +336,7 @@ namespace BTSMTL.Timeline
         public int MaxFrame { get; }
         public bool Loop { get; }
         public IReadOnlyList<TimelineContentTrack> Tracks { get; }
+        public IReadOnlyList<Track> SourceTracks { get; }
         public IReadOnlyList<TimelineContentClip> Clips { get; }
         public IReadOnlyList<TimelineContentMarker> Markers { get; }
         public IReadOnlyList<TimelineContentSection> Sections { get; }
@@ -405,11 +414,23 @@ namespace BTSMTL.Timeline
                         continue;
                     }
                     markerGraph.CollectTimelineContentClosure(closure, $"marker:{marker.AuthoringId}");
+                    string graphIdentity = $"tree:{markerGraph.AuthoringId}";
+                    string graphRevision = string.Empty;
+                    for (int dependencyIndex = 0; dependencyIndex < closure.Dependencies.Count; dependencyIndex++)
+                    {
+                        if (string.Equals(closure.Dependencies[dependencyIndex].Identity, graphIdentity, StringComparison.Ordinal))
+                        {
+                            graphRevision = closure.Dependencies[dependencyIndex].ContentHash;
+                            break;
+                        }
+                    }
                     markers.Add(new TimelineContentMarker(
                         marker.AuthoringId,
                         track.AuthoringId,
                         TimelineClipExecutionPolicy.FromDomain(marker.ExecutionDomain),
-                        marker.Frame));
+                        marker.Frame,
+                        graphIdentity,
+                        graphRevision));
                 }
                 tracks.Add(new TimelineContentTrack(
                     track.AuthoringId,
@@ -592,6 +613,7 @@ namespace BTSMTL.Timeline
                     tracks,
                     clips,
                     markers,
+                    timeline.Tracks,
                     sections,
                     bindings,
                     dependencies),

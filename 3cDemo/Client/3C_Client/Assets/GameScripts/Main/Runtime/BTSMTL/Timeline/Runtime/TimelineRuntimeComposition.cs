@@ -474,6 +474,8 @@ namespace BTSMTL.Timeline.Runtime
                     playback.Generation,
                     markerId,
                     traversalIndex,
+                    transition.Marker.GraphId,
+                    transition.Marker.GraphRevision,
                     transition.Frame,
                     transition.Cycle));
             }
@@ -624,6 +626,7 @@ namespace BTSMTL.Timeline.Runtime
             ITimelineRuntimeDependencyResolver dependencyResolver,
             ITimelineRuntimeEvaluationSink evaluationSink,
             ITimelineRuntimeTreeClipService treeClipService,
+            ITimelineRuntimeMarkerService markerService,
             int tickRate)
         {
             if (contractCatalog == null)
@@ -638,6 +641,8 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ArgumentNullException(nameof(evaluationSink));
             if (treeClipService == null)
                 throw new ArgumentNullException(nameof(treeClipService));
+            if (markerService == null)
+                throw new ArgumentNullException(nameof(markerService));
             m_ContractCatalog = contractCatalog;
             m_NumericTarget = numericTarget;
             m_DomainResolver = domainResolver;
@@ -650,7 +655,8 @@ namespace BTSMTL.Timeline.Runtime
                 callBindingSource);
             var consumer = new TimelineRuntimeExecutionConsumer(
                 evaluationSink,
-                treeClipService);
+                treeClipService,
+                markerService);
             m_Service = new TimelineRuntimeService(requestFactory, consumer, consumer, tickRate);
         }
 

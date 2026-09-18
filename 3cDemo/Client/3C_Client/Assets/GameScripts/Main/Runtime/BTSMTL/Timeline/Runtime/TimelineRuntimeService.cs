@@ -167,6 +167,17 @@ namespace BTSMTL.Timeline.Runtime
         void DiscardStop(TimelineRuntimeStopRequest request);
     }
 
+    public interface ITimelineRuntimeMarkerService
+    {
+        bool Consume(TimelineRuntimeMarkerRequest request, TimelineRuntimeStepContext context);
+        void Discard(TimelineRuntimeMarkerRequest request, TimelineRuntimeStepContext context);
+        void Commit(TimelineRuntimeStepContext context);
+        void DiscardStep(TimelineRuntimeStepContext context);
+        bool ConsumeStop(TimelineRuntimeStopRequest request);
+        void CommitStop(TimelineRuntimeStopRequest request);
+        void DiscardStop(TimelineRuntimeStopRequest request);
+    }
+
     public interface ITimelineRuntimeStopConsumer
     {
         bool ConsumeStop(TimelineRuntimeStopRequest request);
@@ -214,19 +225,36 @@ namespace BTSMTL.Timeline.Runtime
     {
         readonly ITimelineRuntimeEvaluationSink m_EvaluationSink;
         readonly ITimelineRuntimeTreeClipService m_TreeClipService;
+        readonly ITimelineRuntimeMarkerService m_MarkerService;
         readonly Dictionary<ulong, int> m_ConsumedTreeClipCounts =
+            new Dictionary<ulong, int>();
+        readonly Dictionary<ulong, int> m_ConsumedMarkerCounts =
             new Dictionary<ulong, int>();
 
         public TimelineRuntimeExecutionConsumer(
             ITimelineRuntimeEvaluationSink evaluationSink,
-            ITimelineRuntimeTreeClipService treeClipService)
+            ITimelineRuntimeTreeClipService treeClipService,
+            ITimelineRuntimeMarkerService markerService)
         {
             m_EvaluationSink = evaluationSink ?? throw new ArgumentNullException(nameof(evaluationSink));
             m_TreeClipService = treeClipService ?? throw new ArgumentNullException(nameof(treeClipService));
+            m_MarkerService = markerService ?? throw new ArgumentNullException(nameof(markerService));
         }
 
         public TimelineRuntimeStepDecision Consume(TimelineRuntimeStepContext context)
         {
+            int consumedMarkerCount = 0;
+            m_ConsumedMarkerCounts[context.Playback.Handle.Value] = 0;
+            for (; consumedMarkerCount < context.Advance.Evaluation.Markers.Count; consumedMarkerCount++)
+            {
+                TimelineRuntimeMarkerRequest marker = context.Advance.Evaluation.Markers[consumedMarkerCount];
+                if (!m_MarkerService.Consume(marker, context))
+                    break;
+                m_ConsumedMarkerCounts[context.Playback.Handle.Value] = consumedMarkerCount + 1;
+            }
+            if (consumedMarkerCount != context.Advance.Evaluation.Markers.Count)
+                return TimelineRuntimeStepDecision.Discard;
+
             int consumedTreeClipCount = 0;
             m_ConsumedTreeClipCounts[context.Playback.Handle.Value] = 0;
             for (; consumedTreeClipCount < context.Advance.Evaluation.TreeClips.Count; consumedTreeClipCount++)
@@ -245,12 +273,14 @@ namespace BTSMTL.Timeline.Runtime
 
         public bool ConsumeStop(TimelineRuntimeStopRequest request)
         {
-            return m_TreeClipService.ConsumeStop(request) &&
+            return m_MarkerService.ConsumeStop(request) &&
+                   m_TreeClipService.ConsumeStop(request) &&
                    m_EvaluationSink.ConsumeStop(request);
         }
 
         public void Commit(TimelineRuntimeStepContext context)
         {
+            m_MarkerService.Commit(context);
             m_TreeClipService.Commit(context);
             m_EvaluationSink.Commit(context);
             m_ConsumedTreeClipCounts.Remove(context.Playback.Handle.Value);
@@ -260,25 +290,34 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (!m_ConsumedTreeClipCounts.TryGetValue(context.Playback.Handle.Value, out int count))
                 count = 0;
+            if (m_ConsumedMarkerCounts.TryGetValue(context.Playback.Handle.Value, out int markerCount))
+                for (int index = 0; index < markerCount; index++)
+                    m_MarkerService.Discard(context.Advance.Evaluation.Markers[index], context);
             for (int index = 0; index < count; index++)
                 m_TreeClipService.Discard(context.Advance.Evaluation.TreeClips[index], context);
+            m_MarkerService.DiscardStep(context);
             m_TreeClipService.DiscardStep(context);
             m_EvaluationSink.Discard(context);
             m_ConsumedTreeClipCounts.Remove(context.Playback.Handle.Value);
+            m_ConsumedMarkerCounts.Remove(context.Playback.Handle.Value);
         }
 
         public void CommitStop(TimelineRuntimeStopRequest request)
         {
+            m_MarkerService.CommitStop(request);
             m_TreeClipService.CommitStop(request);
             m_EvaluationSink.CommitStop(request);
             m_ConsumedTreeClipCounts.Remove(request.Handle.Value);
+            m_ConsumedMarkerCounts.Remove(request.Handle.Value);
         }
 
         public void DiscardStop(TimelineRuntimeStopRequest request)
         {
+            m_MarkerService.DiscardStop(request);
             m_TreeClipService.DiscardStop(request);
             m_EvaluationSink.DiscardStop(request);
             m_ConsumedTreeClipCounts.Remove(request.Handle.Value);
+            m_ConsumedMarkerCounts.Remove(request.Handle.Value);
         }
     }
 

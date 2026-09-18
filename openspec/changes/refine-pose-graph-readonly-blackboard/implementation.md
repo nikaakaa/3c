@@ -113,3 +113,8 @@
 - 生成→编译→装配→帧推进链路已通：域创建、图启动、源模块开帧、绑定Prepare、根图与子图Evaluate均进入；唯一断点在子图Local Pose产出校验，五条件（结果无效/status非Evaluated/输出非LocalPose/Native无效/completion不等）静态无法区分。
 - 诊断增强（38c2a27c3）：StateMachineSource.Evaluate失败异常携带详情——有效结果输出status/输出端口类型/输出completion与期望completion对照，无效结果输出子图Source与Message；下一轮Play按详情直接定位（首要嫌疑：native Job完成时机逐帧错位，同步评估屏障在新管线无调用方）。
 - 输入/输出/Timeline交接合同已入运行时架构spec（8090f9076）：帧输入显式字段、事件图typed变量帧只读消费、输出带CompletionIdentity的typed端口值与四类阶段结果、Timeline唯一交接点为已提交Action command集与Fact帧事实。
+
+## 子图Local Pose诊断修正与参数边界确认（2026-09-19）
+
+- 详情日志到手：status=Faulted, output=null——子图Evaluate内部异常转Faulted，不是completion错位。但诊断分支有缺陷：评估合同允许Faulted为有效结果（FailureCode非零即通过IsValid），走了对照分支没输出Message。修正（7f73670d8）：按Status==Evaluated分流，非Evaluated输出status/failureCode/Source/Message真因。下一轮Play即得子图内部真实异常。
+- 参数边界确认（已实现已提交）：Control参数由InputContract构造校验强制只经事件图typed变量帧（未发布/类型不符精确失败）；AnimatedProperty（blendshape与FootPlacementWeight）只由CharacterFinalPosePropertyWriter消费，BlendSpace等读取侧有用途检查守卫。合同入运行时架构spec（57a76e426），含阶段门Warning收口期责任条款。

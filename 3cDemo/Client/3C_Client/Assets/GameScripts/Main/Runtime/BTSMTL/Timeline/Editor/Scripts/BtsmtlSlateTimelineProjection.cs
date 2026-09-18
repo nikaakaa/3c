@@ -118,6 +118,7 @@ namespace BTSMTL.Timeline.Editor
         bool m_ReadOnly;
         float? m_RuntimeVisualTime;
         float? m_HistoryVisualTime;
+        string m_RuntimeTimelineRevision = string.Empty;
         readonly Action m_ExternalRepaint;
 
         static BtsmtlSlateTimelineProjection s_Current;
@@ -342,6 +343,49 @@ namespace BTSMTL.Timeline.Editor
             m_RuntimeVisualTime = Mathf.Max(0f, visualTime);
             m_HistoryVisualTime = null;
             SetRuntimeState(activeTracks, activeClips);
+            m_EmbeddedEditor.RequestEmbeddedRepaint();
+        }
+
+        public void ApplyRuntimeTimeline(
+            TimelineData runtimeTimeline,
+            float visualTime,
+            IReadOnlyDictionary<string, string> activeTracks,
+            IReadOnlyDictionary<string, string> activeClips)
+        {
+            if (runtimeTimeline == null)
+                return;
+            string revision = TimelineAuthoringFingerprint.Compute(runtimeTimeline);
+            if (!string.Equals(m_RuntimeTimelineRevision, revision, StringComparison.Ordinal))
+            {
+                m_Binding.ReplaceTimeline(runtimeTimeline);
+                m_RuntimeTimelineRevision = revision;
+            }
+            ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
+        }
+
+        public void ApplyHistoryTimeline(
+            TimelineData runtimeTimeline,
+            float visualTime,
+            IReadOnlyDictionary<string, string> activeTracks,
+            IReadOnlyDictionary<string, string> activeClips)
+        {
+            if (runtimeTimeline == null)
+                return;
+            string revision = TimelineAuthoringFingerprint.Compute(runtimeTimeline);
+            if (!string.Equals(m_RuntimeTimelineRevision, revision, StringComparison.Ordinal))
+            {
+                m_Binding.ReplaceTimeline(runtimeTimeline);
+                m_RuntimeTimelineRevision = revision;
+            }
+            ApplyHistoryOverlay(visualTime, activeTracks, activeClips);
+        }
+
+        public void ClearRuntimeTimeline()
+        {
+            if (string.IsNullOrEmpty(m_RuntimeTimelineRevision))
+                return;
+            m_Binding.ReplaceTimeline(m_Request.Timeline);
+            m_RuntimeTimelineRevision = string.Empty;
             m_EmbeddedEditor.RequestEmbeddedRepaint();
         }
 

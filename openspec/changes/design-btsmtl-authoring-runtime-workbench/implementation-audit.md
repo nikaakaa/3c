@@ -5,7 +5,8 @@
 - `BtsmtlScenePlayProfile` 是 Timeline 预览入口的唯一配置资产，保存正式 Scene、ContextId 和 DefaultActorId；窗口不再重复展开这些字段。
 - `TimelineEditorWindow` 继续承载 Authoring、Preview 和 RuntimeDebug 三种形态，主体仍是原 Slate Timeline。
 - 入口工具栏只保留 Profile、形态菜单、Session 菜单和一行状态；Start、Pause、Resume、Stop 以及 Prepare、Publish、Adopt 全部收进 Session 菜单，避免把流程按钮铺满编辑器。
-- 这一步只收口产品工具形态和入口，不把现有作者 Timeline 伪装成“动态运行时 Timeline”；RootTree 驱动的运行时投影仍以正式 RuntimeDebug 事实为准，未执行内容不会因为作者资产存在就被声称为已执行。
+- RuntimeDebug 的当前 playback 现在按正式事件集合维护已见 Track / Clip，并把过滤后的只读 `TimelineData` 快照交给 Slate binding；未执行内容不会因为作者资产存在就进入运行时面。
+- 这一步完成的是单个 playback 的动态 Timeline 内容投影；FlowCanvas 与 Timeline 之间的调用栈导航仍由现有 `BtsmtlSkillObservationSession` 管理，不把跨多个 Timeline 的自动页面切换扩大描述为已完成。
 
 ## 基线与接口状态
 

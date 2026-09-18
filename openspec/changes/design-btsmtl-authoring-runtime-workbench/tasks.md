@@ -11,41 +11,42 @@
 
 ## 2. 工作台外壳
 
-- [ ] 2.1 在现有 Graph Shell / Timeline Workspace 中提供 Authoring、Preview、RuntimeDebug 三种工作形态
-- [ ] 2.2 三种形态共用 Session、Actor、Ability、Revision 和当前调用目标显示，不新增 Dashboard 或平行控制器
-- [ ] 2.3 页面切换只改变本地视图和 interest，不能创建或销毁第二个 Scene、Actor、Session、时钟或执行器
+- [x] 2.1 在原 `TimelineEditorWindow` 中提供 Authoring、Preview、RuntimeDebug 三种工作形态，删除独立 Workbench 窗口
+- [x] 2.2 三种形态共用 Session、Actor、Ability、Revision 和当前调用目标显示，不新增 Dashboard 或平行控制器
+- [x] 2.3 页面切换只改变本地视图和 interest，不能创建或销毁第二个 Scene、Actor、Session、时钟或执行器
 - [ ] 2.4 将 Start、Pause、Resume、Stop、Build、Adopt、History 和 Restore 归入正式 ScenePlay / Runtime owner，工具表面只提交请求并显示结果
+- [x] 2.5 新增唯一 `BtsmtlScenePlayProfile` SO，只保存 Scene、ContextId、DefaultActorId；Timeline 顶部只选择 Profile，不展开详细设置
 
 ## 3. Authoring 形态
 
-- [ ] 3.1 保留 FlowCanvas、RootTree、子图、Timeline、Track、Clip、Curve 和参数的正式编辑入口
-- [ ] 3.2 Authoring 只写唯一作者数据，经 Mutation、Validator、Undo 和 Export；不创建 runtime clone 或本地播放会话
-- [ ] 3.3 编辑游标、选择、缩放和布局保持窗口本地，不进入 Session、Snapshot 或作者资产
-- [ ] 3.4 Slate 与 FlowCanvas 继续作为作者表面，不新建第二套编辑器和数据模型
+- [x] 3.1 保留 FlowCanvas、RootTree、子图、Timeline、Track、Clip、Curve 和参数的正式编辑入口
+- [x] 3.2 Authoring 只写唯一作者数据，经 Mutation、Validator、Undo 和 Export；不创建 runtime clone 或本地播放会话
+- [x] 3.3 编辑游标、选择、缩放和布局保持窗口本地，不进入 Session、Snapshot 或作者资产
+- [x] 3.4 Slate 与 FlowCanvas 继续作为作者表面，不新建第二套编辑器和数据模型
 
 ## 4. Preview 形态
 
-- [ ] 4.1 进入 Preview 时创建或连接唯一正式 ScenePlay Session，并显示真实准备阶段
-- [ ] 4.2 Preview 使用正式 Scene、Actor、Ability、RootTree、Timeline、Pose、Motion、Camera、World 和输入链产生结果
+- [x] 4.1 进入 Preview 时创建或连接唯一正式 ScenePlay Session，并显示真实准备阶段
+- [x] 4.2 Preview 使用正式 Scene、Actor、Ability、RootTree、Timeline、Pose、Motion、Camera、World 和输入链产生结果
 - [ ] 4.3 作者修改通过 Export、Prepare、Publish 和 Adopt 进入当前 Session，不退出 Scene、Session 或 Actor
 - [ ] 4.4 兼容参数和内容修改按正式安全边界采用，分别显示作者已修改、准备中、待采用、已采用和应用失败
 - [ ] 4.5 不兼容拓扑、状态布局、Composition、Scene、Actor roster、C# 代码和运行模块变化明确要求重建或新 Session
-- [ ] 4.6 不使用 Timeline 私有播放器、CMC MontagePlayer、Pose fixture 或 Edit Mode 假 Runtime 作为 Preview 执行路径
+- [x] 4.6 不使用 Timeline 私有播放器、CMC MontagePlayer、Pose fixture 或 Edit Mode 假 Runtime 作为 Preview 执行路径
 
 ## 5. RuntimeDebug 形态
 
-- [ ] 5.1 RuntimeDebug 只消费 RuntimeDebugSession、SourceMap、Trace、Playback、Snapshot、Capture/History 和正式提交事实
-- [ ] 5.2 RootTree / 子图执行时显示 source-mapped FlowCanvas 只读状态，Timeline / TreeClip 执行时显示对应 Slate 只读状态
-- [ ] 5.3 调用栈变化时在 FlowCanvas 与 Slate 之间自动切换，返回父调用方时恢复父路径
-- [ ] 5.4 未执行的 Graph、Timeline、Track 和 Clip 不提前显示；并发 playback 使用 identity、调用点和 generation 隔离
-- [ ] 5.5 历史观察使用记录时的 SourceMap 和事实，不用当前作者资产重新求值；RuntimeDebug 不写作者数据
+- [x] 5.1 RuntimeDebug 只消费 RuntimeDebugSession、SourceMap、Trace、Playback、Snapshot、Capture/History 和正式提交事实
+- [x] 5.2 RootTree / 子图执行时显示 source-mapped FlowCanvas 只读状态，Timeline / TreeClip 执行时显示对应 Slate 只读状态
+- [x] 5.3 调用栈变化时在 FlowCanvas 与 Slate 之间自动切换，返回父调用方时恢复父路径
+- [x] 5.4 未执行的 Graph、Timeline、Track 和 Clip 不提前显示；并发 playback 使用 identity、调用点和 generation 隔离
+- [x] 5.5 历史观察使用记录时的 SourceMap 和事实，不用当前作者资产重新求值；RuntimeDebug 不写作者数据
 
 ## 6. Slate / FlowCanvas 工具接入
 
-- [ ] 6.1 复用 Slate 时间尺、Track、Clip、缩放、滚动和绘制能力，复用 FlowCanvas 画布和导航能力
-- [ ] 6.2 分离 Authoring projection、Preview projection 和 RuntimeDebug projection 的数据来源
-- [ ] 6.3 RuntimeDebug 的 Slate 内容按正式 Runtime observation 动态创建，不从完整作者 TimelineData 补齐运行内容
-- [ ] 6.4 RuntimeDebug 的 Graph/Timeline 切换不创建额外窗口、额外播放器或额外时钟
+- [x] 6.1 复用 Slate 时间尺、Track、Clip、缩放、滚动和绘制能力，复用 FlowCanvas 画布和导航能力
+- [x] 6.2 分离 Authoring projection、Preview projection 和 RuntimeDebug projection 的数据来源
+- [x] 6.3 RuntimeDebug 的 Slate 内容按正式 Runtime observation 动态创建，不从完整作者 TimelineData 补齐运行内容
+- [x] 6.4 RuntimeDebug 的 Graph/Timeline 切换不创建额外窗口、额外播放器或额外时钟
 
 ## 7. 版本与轻量更新
 

@@ -19,6 +19,7 @@ namespace BTSMTL.Timeline.Editor
         readonly Dictionary<string, BtsmtlTimelineTrackBinding> m_Tracks = new Dictionary<string, BtsmtlTimelineTrackBinding>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlTimelineClipBinding> m_Clips = new Dictionary<string, BtsmtlTimelineClipBinding>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlTimelineSectionBinding> m_SectionsById = new Dictionary<string, BtsmtlTimelineSectionBinding>(StringComparer.Ordinal);
+        TimelineData m_Timeline;
         string m_SourceRevision;
         IEmbeddedTimelineElementBinding m_Selected;
         Clip m_CopiedClip;
@@ -39,13 +40,14 @@ namespace BTSMTL.Timeline.Editor
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
             m_Session = session ?? throw new ArgumentNullException(nameof(session));
             m_OpenSourceClip = openSourceClip;
-            m_SourceRevision = TimelineAuthoringFingerprint.Compute(request.Timeline);
+            m_Timeline = request.Timeline;
+            m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Timeline);
             m_ViewTimeMin = 0f;
             m_ViewTimeMax = Mathf.Max(1f / FrameRate, Timeline.Duration);
             BuildBindings();
         }
 
-        public TimelineData Timeline => m_Request.Timeline;
+        public TimelineData Timeline => m_Timeline;
         public TimelineContractCatalog ContractCatalog => m_Request.ContractCatalog;
         public TimelineEditorSessionContext Session => m_Session;
         public int FrameRate => Mathf.Max(1, m_Session.FrameRate);
@@ -565,6 +567,17 @@ namespace BTSMTL.Timeline.Editor
                 Select(section);
             else
                 Select(null);
+        }
+
+        public void ReplaceTimeline(TimelineData timeline)
+        {
+            m_Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
+            m_Timeline.Init();
+            m_SourceRevision = TimelineAuthoringFingerprint.Compute(m_Timeline);
+            m_ViewTimeMax = Mathf.Max(1f / FrameRate, m_Timeline.Duration);
+            m_CurrentFrame = Mathf.Clamp(m_CurrentFrame, 0, m_Timeline.MaxFrame);
+            Rebuild();
+            RequestRepaint();
         }
 
         bool ApplyImmediate(Action mutation, string undoName)

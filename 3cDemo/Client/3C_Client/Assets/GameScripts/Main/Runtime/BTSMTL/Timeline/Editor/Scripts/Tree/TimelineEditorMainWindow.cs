@@ -247,6 +247,28 @@ namespace BTSMTL.Timeline.Editor
             m_SlateProjection?.ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
         }
 
+        public void ApplyRuntimeTimelineObservation(
+            TimelineData runtimeTimeline,
+            float visualTime,
+            IReadOnlyDictionary<string, string> activeTracks,
+            IReadOnlyDictionary<string, string> activeClips)
+        {
+            if (!m_RuntimeObservationReadOnly)
+                return;
+            m_SlateProjection?.ApplyRuntimeTimeline(runtimeTimeline, visualTime, activeTracks, activeClips);
+        }
+
+        public void ApplyHistoryTimelineObservation(
+            TimelineData runtimeTimeline,
+            float visualTime,
+            IReadOnlyDictionary<string, string> activeTracks,
+            IReadOnlyDictionary<string, string> activeClips)
+        {
+            if (!m_RuntimeObservationReadOnly)
+                return;
+            m_SlateProjection?.ApplyHistoryTimeline(runtimeTimeline, visualTime, activeTracks, activeClips);
+        }
+
         public void ApplyHistoryObservation(
             float visualTime,
             IReadOnlyDictionary<string, string> activeTracks,
@@ -262,10 +284,18 @@ namespace BTSMTL.Timeline.Editor
             m_SlateProjection?.ClearRuntimeOverlay();
         }
 
+        public void ClearRuntimeTimelineObservation()
+        {
+            m_SlateProjection?.ClearRuntimeTimeline();
+            m_SlateProjection?.ClearRuntimeOverlay();
+        }
+
         public void SetRuntimeObservationReadOnly(bool readOnly)
         {
             m_RuntimeObservationReadOnly = readOnly;
             m_SlateProjection?.SetRuntimeReadOnly(readOnly);
+            if (!readOnly)
+                m_SlateProjection?.ClearRuntimeTimeline();
             if (!readOnly)
                 m_SlateProjection?.ClearRuntimeOverlay();
         }

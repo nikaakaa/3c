@@ -3,18 +3,18 @@
 ## grill 定案（2026-09-17）
 
 - 预览载体：ScenePlay 会话观察（现行 `btsmtl-timeline-editor-preview` spec 口径），不引入编辑器本地即时预览；`CharacterTimelineHost.Update(deltaTime)` 的 preview handle 路径是遗留代码，不作为本 change 载体。
-- 变长内容两类：树决定退出的 TreeClip（格挡、蓄力等待）；循环等待类（活跃至 playback 停止，无 clip 级退出）。
-- 退出来源分类：`FrameBoundary`（现状默认）/ `TreeDecision`（clip 级，树退出事件，timeline 继续）/ `PlaybackBound`（播放级，随 playback 停止定型）。循环等待类归 `PlaybackBound`，不硬拆 clip 级退出——转场判定属 ability program 播放级职责，拆到 clip 级会让 program 与 timeline 互相等待。
-- 可视化：可视 End 跟随 Runtime 游标、退出定型，视觉区分从简（不要求特殊样式）。
+- 变长内容两类：树决定退出的 Logic TreeClip（格挡、蓄力等待）；循环等待类（活跃至 playback 停止，无 clip 级退出）。
+- 退出来源分类仅适用于 Logic 投影：`FrameBoundary`（现状默认）/ `TreeDecision`（clip 级，树退出事件，timeline 继续）/ `PlaybackBound`（播放级，随 playback 停止定型）。循环等待类归 `PlaybackBound`，不硬拆 clip 级退出——转场判定属 ability program 播放级职责，拆到 clip 级会让 program 与 timeline 互相等待。Presentation Marker 的触发、替换与取消由表现游标合同处理，不能借用 `TreeDecision`。
+- 可视化：Logic TreeClip 的可视 End 跟随 Runtime 游标、退出定型，视觉区分从简（不要求特殊样式）。
 
 ## runtime 回传通道
 
-现状：TreeClip Enter/Exit 全部由 StartFrame/EndFrame 帧边界产生（`TimelineRuntimePreparation` 评估器按 clip 区间边界输出 `TimelineRuntimeTreeClipRequest`），树侧 Enable/Disable/Destroy hook 节点方向为 timeline → 树，无回传。作者不能在树逻辑满足条件时主动结束 clip。
+现状：Logic TreeClip Enter/Exit 全部由 StartFrame/EndFrame 帧边界产生（`TimelineRuntimePreparation` 评估器按 clip 区间边界输出 `TimelineRuntimeTreeClipRequest`），树侧 Enable/Disable/Destroy hook 节点方向为 timeline → 树，无回传。作者不能在树逻辑满足条件时主动结束 clip。
 
 新增通道：
 
-1. **退出来源标记**：TreeClip 序列化字段标记退出来源（默认 FrameBoundary）。标记 TreeDecision 的 clip，评估器到达 EndFrame 后不再产出 Exit，改为维持活跃。
-2. **退出事件上报**：树侧新增作者可见的“结束片段”节点，编译为正式 `TimelineClipExitRequest` operation。节点在 TreeClip invocation上下文中执行时，携带当前 playback handle 与 clip authoring id 调用 Timeline runtime 接收端；runtime 产生真实 Exit 边界请求，进入既有 Advance/Commit 协议（候选 → 调用方 Step 提交），不旁路提交路径。若事件发生在当前 Advance 的树更新内，先挂起为本 Advance 的产物：当前 Advance commit 后转成下一个 Advance 的 pending exit，当前 Advance discard 则丢弃。
+1. **退出来源标记**：Logic TreeClip 序列化字段标记退出来源（默认 FrameBoundary）。标记 TreeDecision 的 clip，评估器到达 EndFrame 后不再产出 Exit，改为维持活跃。Presentation-only TreeClip 必须拒绝 `TreeDecision`，DualProjection 只把它交给 Logic 投影。
+2. **退出事件上报**：Logic TreeClip 的树侧新增作者可见的“结束片段”节点，编译为正式 `TimelineClipExitRequest` operation。节点在 Logic TreeClip invocation上下文中执行时，携带当前 playback handle 与 clip authoring id 调用 Timeline runtime 接收端；runtime 产生真实 Exit 边界请求，进入既有 Advance/Commit 协议（候选 → 调用方 Step 提交），不旁路提交路径。若事件发生在当前 Advance 的树更新内，先挂起为本 Advance 的产物：当前 Advance commit 后转成下一个 Advance 的 pending exit，当前 Advance discard 则丢弃。
 3. **确定性**：已定型退出与 pending 退出都属于播放实例状态，进既有快照体系；回滚重放时退出边界由重放的树执行结果和恢复的 pending 状态重现，不由表现层记忆。
 
 ## 预览显示

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BTSMTL.EventGraphs;
+using ThirdPersonSimulation;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using Unity.Collections;
 using UnityEngine;
@@ -509,10 +511,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (state.Graph != null)
                 return;
             ulong requestId = AllocateRequestId();
-            ulong instanceId = AllocateChildInstanceId(parent.InstanceId);
+            ulong instanceId = AllocateChildInstanceId(parent.InstanceId, state.Definition.StateId.Value);
             CharacterPoseNativeAdoptedResult adopted = parent.CreateChild(
                 requestId,
                 state.Definition.PoseGraphId,
+                CharacterPoseNativeGraphBoundary.State,
                 instanceId,
                 parent.ResetGeneration,
                 $"state/{m_NodeId}/{state.Definition.StateId}",
@@ -1137,15 +1140,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_NextRequestId++;
         }
 
-        ulong AllocateChildInstanceId(ulong parentInstanceId)
+        ulong AllocateChildInstanceId(ulong parentInstanceId, string stateId)
         {
+            if (string.IsNullOrWhiteSpace(stateId))
+                throw new ArgumentNullException(nameof(stateId));
             if (m_NextChildInstanceId == ulong.MaxValue)
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' child instance identity was exhausted.");
-            ulong child = checked(parentInstanceId * 4099UL + m_NextChildInstanceId++);
+            string stableHash = StableHash.Compute(
+                parentInstanceId.ToString(CultureInfo.InvariantCulture),
+                stateId,
+                m_NextChildInstanceId.ToString(CultureInfo.InvariantCulture)).Value;
+            m_NextChildInstanceId++;
+            ulong child = Convert.ToUInt64(stableHash.Substring(0, 16), 16);
             if (child == 0 || child == parentInstanceId)
                 throw new InvalidOperationException(
-                    $"Pose StateMachine '{m_NodeId}' child instance identity is invalid.");
+                    $"Pose StateMachine '{m_NodeId}' child instance identity for state '{stateId}' collided with its parent instance.");
             return child;
         }
 

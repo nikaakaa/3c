@@ -60,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 runtime.CreateChild(
                     m_RequestId,
                     m_CallNode.Subgraph.PoseGraphId,
+                    CharacterPoseNativeGraphBoundary.Subgraph,
                     m_InstanceId,
                     m_ResetGeneration,
                     m_Reason,
@@ -264,7 +265,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void Stop(CharacterPoseNativeGraphRuntime runtime)
         {
-            if (m_Disposed || m_Child == null)
+            if (m_Disposed || m_Child == null || m_Child.Graph == null)
                 return;
             if (m_Child.Graph.isRunning)
                 m_Child.Graph.Stop(false);

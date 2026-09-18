@@ -21,7 +21,7 @@
 
 ## 4. 表现样本历史修正
 
-- [x] 4.1 角色动画表现时钟按 Clip 显式分责：`PresentationDelta` 按渲染 delta 自走，`CommittedMovement` 跟随正式 Committed Movement playback clock；两者都不把逻辑采样阶梯直接暴露给表现
+- [x] 4.1 角色动画表现时钟保留两种时间域：`PresentationDelta` 按渲染 delta 自走，`CommittedMovement` 读取逻辑 locomotion 进度；`CommittedMovementPlaybackClock` 只作为逻辑事实，不新增第三时钟
 - [x] 4.2 `ActionCommittedSampleHistory`/`ActionPresentationSampleProjector`/`ActionAnimationPlaybackLifecycleRegistry` 保留为 `CommittedFollow` 通用能力；回放/观战的带 channel Action 可按 committed 采样插值，普通 locomotion 不消费这条历史链
 - [x] 4.3 表现时钟策略合同 `IActionPresentationClockPolicy` 统一封装 `DriveClock`：`FreeRunPresentationClockPolicy`、`CommittedMovementPresentationClockPolicy`、`CommittedFollowPresentationClockPolicy`
 - [x] 4.4 `CharacterPoseNativeClipPlayerHandler.PrepareFrame` 只调用 `m_ClockPolicy.DriveClock(...)`，播放器不包含模式分支；策略同时接收正式 `CharacterPresentationFactFrame`，从中读取 Committed Movement clock
@@ -34,6 +34,15 @@
 ## 6. 缩放字段清理
 
 - [x] 6.1 删除 `TimelineData.m_Scale`、`Scale` 属性及 `TimelineContentClosure` 指纹传递链
+
+## 7. Track / Clip 执行域与表现 TreeClip 事件
+
+- [x] 7.1 为 Timeline Track / Clip authoring 合同增加 `Logic`、`Presentation` 与 `DualProjection` 执行域；历史资产缺少字段时固定解释为 `Logic`，保持 Model-neutral
+- [x] 7.2 保持 Runtime 直接遍历正式只读 Timeline 内容；按当前 Advance / Present 形成 Logic Evaluation 与 Presentation Evaluation 结果分区，不生成 Semantic operation 或常驻操作表
+- [x] 7.3 新增 PresentationFrame 驱动的表现游标与 evaluation 路径，不改变现有 Logic Tick 推进和 Commit / Discard 协议
+- [x] 7.4 为 Presentation TreeClip 新增 typed Presentation Marker（identity、时间、Pulse/Stateful 生命周期类型、payload binding）；该域不得绑定或执行 TimelineBody 图
+- [ ] 7.5 将 DualProjection TreeClip 的既有 AssetTree 固定为 Logic 投影，并把同一 Clip 的 Marker 输出分流到 Presentation Evaluation；AssetTree 不得在 PresentationFrame 重复执行
+- [x] 7.6 将 Presentation Event identity 定义为 playback handle、generation、clip、marker 与 traversal index；实现同帧去重、循环重触发、分支 replace、停止 cancel 与 generation reset
 
 
 

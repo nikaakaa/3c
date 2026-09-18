@@ -1381,6 +1381,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 evaluation.Cycle);
             PublishActiveTimelineElements(active, evaluation, time);
             PublishTreeClipEvents(active, evaluation, time);
+            PublishActionCueEvents(active, evaluation, time);
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(
                 new TimelinePlaybackHandle(evaluation.Handle.Value));
             if (status == TimelinePlaybackStatus.Succeeded)
@@ -1396,6 +1397,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 RuntimeTraceEventKind.TimelineStopped,
                 "Stopped",
                 request.Reason.Cause.ToString());
+        }
+
+        void PublishActionCueEvents(
+            ActivePlayback active,
+            TimelineRuntimeCommittedEvaluation evaluation,
+            float time)
+        {
+            IReadOnlyList<TimelineActionCueSample> cues = evaluation.Evaluation?.ActionCues;
+            if (cues == null)
+                return;
+            for (int index = 0; index < cues.Count; index++)
+            {
+                TimelineActionCueSample cue = cues[index];
+                PublishTimelineEvent(
+                    active,
+                    RuntimeTraceDomain.Logic,
+                    RuntimeTraceEventKind.ActionCueSubmitted,
+                    RuntimeSourceElementKey.Timeline(cue.SourceId),
+                    cue.CueType,
+                    cue.TrackName,
+                    time,
+                    evaluation.Cycle,
+                    default,
+                    cue.CueId);
+            }
         }
 
         void PublishActiveTimelineElements(

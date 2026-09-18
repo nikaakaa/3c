@@ -16,6 +16,8 @@ namespace ThirdPersonCamera
             new List<PendingRetirement>();
         readonly List<CameraEffectRuntimeState> m_VisibleStates =
             new List<CameraEffectRuntimeState>();
+        readonly HashSet<CameraEffectEventKey> m_CompletedEvents =
+            new HashSet<CameraEffectEventKey>();
 
         public CameraEffectEvaluator(CharacterCameraProjectionPayload projection)
         {
@@ -40,6 +42,7 @@ namespace ThirdPersonCamera
             m_Contributions.Clear();
             m_PendingRetirements.Clear();
             m_VisibleStates.Clear();
+            m_CompletedEvents.Clear();
         }
 
         public void RetireScope(
@@ -76,6 +79,12 @@ namespace ThirdPersonCamera
                 sourceActionInstanceId,
                 cycle,
                 reason);
+            m_CompletedEvents.Remove(new CameraEffectEventKey(
+                eventId,
+                generation,
+                sourceId,
+                sourceActionInstanceId,
+                cycle));
             m_PendingRetirements.Add(new PendingRetirement(
                 eventId,
                 generation,
@@ -133,6 +142,8 @@ namespace ThirdPersonCamera
             {
                 CameraEffectRequest request = requests[i];
                 ICameraEffectOwner owner = RequireOwner(request.Kind);
+                if (m_CompletedEvents.Contains(CameraEffectEventKey.From(request)))
+                    continue;
                 if (owner.UpdatesBySource)
                 {
                     CameraEffectRuntimeState existing = m_States.FindSource(request);
@@ -201,7 +212,10 @@ namespace ThirdPersonCamera
                         m_States.RemoveAt(i);
                 }
                 else if (owner.IsExpired(active))
+                {
+                    m_CompletedEvents.Add(CameraEffectEventKey.From(active.Request));
                     m_States.RemoveAt(i);
+                }
             }
         }
 
@@ -267,6 +281,61 @@ namespace ThirdPersonCamera
             public ulong SourceActionInstanceId { get; }
             public int Cycle { get; }
             public CameraPresentationStopReason Reason { get; }
+        }
+
+        readonly struct CameraEffectEventKey : IEquatable<CameraEffectEventKey>
+        {
+            public CameraEffectEventKey(
+                string eventId,
+                ulong generation,
+                string sourceId,
+                ulong sourceActionInstanceId,
+                int cycle)
+            {
+                EventId = eventId ?? string.Empty;
+                Generation = generation;
+                SourceId = sourceId ?? string.Empty;
+                SourceActionInstanceId = sourceActionInstanceId;
+                Cycle = cycle;
+            }
+
+            public string EventId { get; }
+            public ulong Generation { get; }
+            public string SourceId { get; }
+            public ulong SourceActionInstanceId { get; }
+            public int Cycle { get; }
+
+            public static CameraEffectEventKey From(CameraEffectRequest request) =>
+                new CameraEffectEventKey(
+                    request.EventId,
+                    request.Generation,
+                    request.SourceId,
+                    request.SourceActionInstanceId,
+                    request.Cycle);
+
+            public bool Equals(CameraEffectEventKey other) =>
+                Generation == other.Generation &&
+                SourceActionInstanceId == other.SourceActionInstanceId &&
+                Cycle == other.Cycle &&
+                string.Equals(EventId, other.EventId, StringComparison.Ordinal) &&
+                string.Equals(SourceId, other.SourceId, StringComparison.Ordinal);
+
+            public override bool Equals(object obj) =>
+                obj is CameraEffectEventKey other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = 17;
+                    hash = hash * 31 + StringComparer.Ordinal.GetHashCode(EventId);
+                    hash = hash * 31 + Generation.GetHashCode();
+                    hash = hash * 31 + StringComparer.Ordinal.GetHashCode(SourceId);
+                    hash = hash * 31 + SourceActionInstanceId.GetHashCode();
+                    hash = hash * 31 + Cycle;
+                    return hash;
+                }
+            }
         }
     }
 }

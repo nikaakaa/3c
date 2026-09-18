@@ -148,7 +148,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Retire(command);
                 return;
             }
-            RemoveMatching(command);
+            for (int i = m_ActiveRequests.Count - 1; i >= 0; i--)
+            {
+                CharacterPresentationCommand active = m_ActiveRequests[i].Command;
+                if (!SameRequest(active, command))
+                    continue;
+                RetireRuntimeRequest(active, CameraPresentationStopReason.EventRevoked);
+                m_ActiveRequests.RemoveAt(i);
+            }
             m_ActiveRequests.Add(new ActiveCameraRequest(command));
         }
 
@@ -164,7 +171,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             RequireAlive();
             RequireCameraCommand(command);
-            RemoveMatching(command);
+            CameraPresentationStopReason reason = command.CameraRequest.Lifecycle ==
+                PresentationCameraRequestLifecycle.Retire
+                    ? CameraPresentationStopReason.NaturalComplete
+                    : CameraPresentationStopReason.EventRevoked;
+            for (int i = m_ActiveRequests.Count - 1; i >= 0; i--)
+            {
+                CharacterPresentationCommand active = m_ActiveRequests[i].Command;
+                if (!SameRequest(active, command))
+                    continue;
+                RetireRuntimeRequest(active, reason);
+                m_ActiveRequests.RemoveAt(i);
+            }
         }
 
         internal CharacterDomainRuntimeFact CaptureDomainFact() =>
@@ -435,12 +453,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        void RemoveMatching(CharacterPresentationCommand command)
+        void RetireRuntimeRequest(
+            CharacterPresentationCommand command,
+            CameraPresentationStopReason reason)
         {
-            for (int i = m_ActiveRequests.Count - 1; i >= 0; i--)
+            PresentationCameraRequest request = command.CameraRequest;
+            switch (request.Kind)
             {
-                if (SameRequest(m_ActiveRequests[i].Command, command))
-                    m_ActiveRequests.RemoveAt(i);
+                case PresentationCameraRequestKind.Sequence:
+                    m_SequenceEvaluator.Retire(
+                        command.ProducerId,
+                        command.ProducerGeneration,
+                        command.SourceActionInstanceId,
+                        command.Cycle,
+                        request.BlendOutSeconds,
+                        reason);
+                    break;
+                case PresentationCameraRequestKind.Effect:
+                    m_EffectEvaluator.Retire(
+                        command.Header.EventId.ToString(),
+                        command.ProducerGeneration,
+                        command.ProducerId,
+                        command.SourceActionInstanceId,
+                        command.Cycle,
+                        reason);
+                    break;
             }
         }
 

@@ -76,3 +76,5 @@
 - 实例身份：presentation装配原对每个host硬编码instanceId=1（子图id=parent*4099+seq也随之跨host相同），fixed-player与fixed-target存在实例身份冲突；改为StableHash.Compute(actorId.Value)派生，跨host唯一、跨轮次稳定、非零校验。
 - 双FixedCharacterHost隔离：各自Registration独立持有表现运行时，SessionHost按ActorId去重注册，注册销毁链各自独立，无互相接管路径。
 - 编译验证：Runtime全量编译被Timeline窗口在途TimelineData.cs（52个语法错误，非本域文件）阻塞；本域6个改动文件无任何错误输出。同一trace两轮ReplayProof验证待Timeline清零后由Play侧执行。
+
+- 子图实例身份溢出修复（04d587e16）：父实例身份改为64位Actor哈希后，原checked(parent*4099+seq)必然Overflow；子实例身份改为StableHash(父实例身份,子图节点Id,序列)取前16位hex，天然防溢出、跨Host唯一、跨轮次稳定，零值与父身份碰撞显式抛错。

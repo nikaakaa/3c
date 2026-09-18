@@ -54,4 +54,5 @@
 - [ ] 8.6 Attack3 `Attack_Normal_03_Explode` 独立状态分段：承载状态本地 frame=1 的 `AttackProperty_02` cue，不压回主段全局轴
 - [ ] 8.7 Attack5 `End / End_2` 分支边界：frame=47 后不再共用无状态选择的连续 Timeline
 - [ ] 8.8 `Attack_Normal_05_End_2` 正式 Timeline 绑定：承载 15 个状态本地 cue，不借用普通 End 段
-- [ ] 8.9 状态本地 cue 重映射合同：payload 保留原始 `CueId` 与播放身份，状态 id / 本地帧 / 分支身份可调和；删除 Attack5 frame=64 多余 `_01_02`
+- [x] 8.9 删除 Attack5 frame=64 多余 `_01_02` cue：重建 `CorinAttackGameplayAbilityDefinition`，固定输入 Replay 1121 帧逐帧 matched 且 aggregate matched
+- [ ] 8.10 状态本地 cue 重映射合同：payload 保留原始 `CueId` 与播放身份，状态 id / 本地帧 / 分支身份可调和

@@ -366,6 +366,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 out runtime);
         }
 
+        void AttachAndStart()
+        {
+            RequireAlive();
+            m_Graph.AttachNativeRuntime(this);
+            m_Graph.StartGraph(
+                m_CreateRequest.Context.Animancer,
+                null,
+                NodeCanvas.Framework.Graph.UpdateMode.Manual,
+                null);
+        }
+
+        void InitializeGraph()
+        {
+            RequireAlive();
+            if (m_Initialized)
+                throw new InvalidOperationException("Pose native graph is already initialized.");
+            CharacterPoseNativeGraphValidator.RequireValid(
+                m_PreparedBinding.GraphAsset,
+                m_Graph,
+                m_PreparedBinding.Boundary);
+            m_Evaluator.Initialize(this);
+            m_Initialized = true;
+        }
         internal CharacterPoseNativeFrameLease BeginFrame(
             in CharacterPoseNativeFrameInput input)
         {

@@ -219,7 +219,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static ulong ResolvePoseInstanceId(ActorId actorId)
         {
-            ulong instanceId = StableHash.Compute(actorId.Value).Value;
+            string stableHash = StableHash.Compute(actorId.Value).Value;
+            ulong instanceId = Convert.ToUInt64(stableHash.Substring(0, 16), 16);
             return instanceId != 0
                 ? instanceId
                 : throw new InvalidOperationException(

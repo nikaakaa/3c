@@ -95,12 +95,9 @@ namespace BTSMTL.Timeline
                 {
                     Clip clip = track.Clips[clipIndex];
                     changed |= clip?.EnsureAuthoringIdentity() ?? false;
-                    if (clip is not ITimelinePresentationMarkerSource markerSource ||
-                        markerSource.PresentationMarkers == null)
-                        continue;
-                    for (int markerIndex = 0; markerIndex < markerSource.PresentationMarkers.Count; markerIndex++)
-                        changed |= markerSource.PresentationMarkers[markerIndex]?.EnsureAuthoringIdentity() ?? false;
                 }
+                for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
+                    changed |= track.Markers[markerIndex]?.EnsureAuthoringIdentity() ?? false;
             }
             for (int i = 0; i < m_Sections.Count; i++)
                 changed |= m_Sections[i]?.EnsureAuthoringIdentity() ?? false;
@@ -127,6 +124,8 @@ namespace BTSMTL.Timeline
                     if (clip is ITimelineOwnedAuthoringIdentity owner)
                         owner.RegenerateOwnedAuthoringIdentity();
                 }
+                for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
+                    track.Markers[markerIndex]?.RegenerateAuthoringIdentity();
             }
             for (int i = 0; i < m_Sections.Count; i++)
                 m_Sections[i]?.RegenerateAuthoringIdentity();
@@ -175,18 +174,15 @@ namespace BTSMTL.Timeline
                             errors?.Add($"Timeline '{Name}' clip #{i}:{clipIndex} has a missing or duplicate authoring identity.");
                             valid = false;
                         }
-                        if (clip is not ITimelinePresentationMarkerSource markerSource ||
-                            markerSource.PresentationMarkers == null)
-                            continue;
-                        for (int markerIndex = 0; markerIndex < markerSource.PresentationMarkers.Count; markerIndex++)
+                    }
+                    for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
+                    {
+                        TimelineMarker marker = track.Markers[markerIndex];
+                        if (marker == null || !AuthoringIdentity.IsValid(marker.AuthoringId) ||
+                            !identities.Add(marker.AuthoringId))
                         {
-                            TimelinePresentationMarker marker = markerSource.PresentationMarkers[markerIndex];
-                            if (marker == null || !AuthoringIdentity.IsValid(marker.AuthoringId) ||
-                                !identities.Add(marker.AuthoringId))
-                            {
-                                errors?.Add($"Timeline '{Name}' clip '{clip.AuthoringId}' marker #{markerIndex} has a missing or duplicate authoring identity.");
-                                valid = false;
-                            }
+                            errors?.Add($"Timeline '{Name}' track '{track.AuthoringId}' marker #{markerIndex} has a missing or duplicate authoring identity.");
+                            valid = false;
                         }
                     }
                 }

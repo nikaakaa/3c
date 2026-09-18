@@ -125,3 +125,14 @@ Pose 实例 instanceId MUST 从 ActorId 稳定哈希派生、MUST 非零，并�
 - **WHEN** fixed-player 与 fixed-target 各自创建 Pose 域
 - **THEN** 两者的实例身份与子图实例身份 MUST 不同
 - **AND** 任一 Host 的 Pose 域销毁 MUST NOT 影响另一 Host 的帧推进
+
+### Requirement: 编辑器残留清理 MUST NOT 销毁运行中挂接的 Pose 瞬态图
+
+Pose 运行实例的图是未持久化的瞬态克隆。编辑器 restore/残留清理 MUST 只销毁无 Native Runtime 挂接的瞬态图；凡存在 Native Runtime 挂接（含运行中）的瞬态图 MUST 保留，其生命周期由唯一 owner 链管理。清理 MUST NOT 经由图对象销毁回调间接触发已挂接原生运行时的 Dispose。
+
+#### Scenario: Play 中脚本重编译触发编辑器 restore
+
+- **WHEN** Play 运行中发生程序集重载并进入编辑器 restore 清理
+- **THEN** 运行中已挂接 Native Runtime 的瞬态 Pose 图 MUST 全部保留
+- **AND** Pose 域帧推进 MUST NOT 因该清理出现任何 ObjectDisposed 异常
+- **AND** 无 Native Runtime 挂接的编辑态瞬态残留 MUST 仍被清理

@@ -13,6 +13,7 @@ Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源�
 - 其他控制器：MainCity、NPC、UI 共 5 份，可用于区分战斗与展示状态来源。
 - 目标领域：Control 状态、Ability 转移条件、Timeline 起止、Pose 状态选择。
 - 抄录优先级：最高；先对齐战斗主控制器，不抄 UI/NPC 表现。
+- 当前状态对照：[zzz-corin-controller-map.md](zzz-corin-controller-map.md)
 
 ### 2. Animation Clip
 

@@ -66,9 +66,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
         {
             if (graph == null)
                 throw new InvalidOperationException("目标子图缺失: " + nodeName);
-            if (graph.allNodes.OfType<RequestCameraEffectNode>()
-                .Any(node => string.Equals(node.name, nodeName, StringComparison.Ordinal)))
-                return 0;
+            RequestCameraEffectNode existing = graph.allNodes.OfType<RequestCameraEffectNode>()
+                .FirstOrDefault(node => string.Equals(node.name, nodeName, StringComparison.Ordinal));
+            if (existing != null)
+            {
+                if (existing.EffectKind == effectKind &&
+                    string.Equals(existing.ResourceId, resourceId, StringComparison.Ordinal))
+                    return 0;
+                BtsmtlSkillAuthoringContract.Apply(existing, new[]
+                {
+                    new BtsmtlSkillAuthoringFieldValue("effectKind", effectKind),
+                    new BtsmtlSkillAuthoringFieldValue("resourceId", resourceId)
+                });
+                EditorUtility.SetDirty(definition);
+                return 1;
+            }
             var node = (RequestCameraEffectNode)CodeGeneration.BtsmtlSkillAuthoringCode.EnsureFlowNode(
                 graph, typeof(RequestCameraEffectNode), Guid.NewGuid().ToString("D"), nodeName, position);
             BtsmtlSkillAuthoringContract.Apply(node, new[]

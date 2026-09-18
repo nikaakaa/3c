@@ -29,11 +29,11 @@
 | 2.1-2.3 平滑、裁决与连续性 | 完成 | WorldBasicHistory 普通推进保留速度；Sequence/Response/Target 同权裁决统一，零权 Sequence 不再抢占；切镜使用显式 BlendIn，未配置时使用 Profile RotationTransitionSeconds。 |
 | 2.4 生命周期 | 部分完成 | Sequence/Effect 请求保留 source/generation/action/cycle/event 身份并区分结束原因；ForceTeardown 现在按 `Cancel` 退休同 scope 的效果，保留已有 FadeOut/诊断链；Unity Owner 销毁和正式产物运行尚未取得当前 Editor 证据。 |
 | 3.1-3.2 锁定和多目标构图 | 部分完成 | 目标槽、显式目标切换、双点/多点/实体计划已接线；运行中目标 Transform 失效会按 `TargetInvalid` 移除对应目标请求并重新解析默认/剩余目标，启动时漏绑仍作为配置错误抛出；不自动选敌；未被 Planner 消费的 Entity frame/rotation policy 字段已删除，当前内置实体构图公式仍没有 ZZZ 来源闭包。 |
-| 4.1-4.3 Zoom/Stretch/Shake/Override | 部分完成 | 曲线、时钟、权重、叠加、空间和生命周期已进入 Projection/evaluator；Camera Resource Track 已注册为 typed Camera request；当前 Corin 只有 Zoom/Stretch 正式资源，Shake/Override 没有来源触发闭包。 |
+| 4.1-4.3 Zoom/Stretch/Shake/Override | 部分完成 | 曲线、时钟、权重、叠加、空间和生命周期已进入 Projection/evaluator；当前 Corin 有 Zoom/Stretch 和 Normal_01 Shake 正式资源；Shake 消费者、Override 与真实来源触发闭包仍未完成。 |
 | 4.4-4.5 Shot 与固定效果顺序 | 部分完成 | Shot 编译要求真实 prefab 和标准 VCam，Adapter 支持显式 Shot rig binding；已知来源 prefab 尚未进入工程；顺序固定为 Override→Zoom→Stretch→Shake→Shot→Environment。 |
 | 5.1-5.3 碰撞与环境约束 | 完成代码接线 | 新增正式查询接口、PhysicsScene 实现、自身过滤、层/触发器、近裁剪保护、收缩/恢复/起点重叠/无合法空间结果，并接到诊断；Corin 当前 Collision 仍关闭，未做动态运行验收。 |
-| 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Cue/Resource Track 字段、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Presentation Projection 现在还会校验每个 Camera Producer 的 Sequence/Effect ResourceId 属于同一 Camera Projection；Camera Prepare/AdoptBinding 领域合同已接入角色装配 owner，Factory 先准备并校验 Projection/Rig/目标/环境，再采用 Actor/Instance 绑定，相机运行时只消费已采用的资源绑定；动作相机请求的正式目标已调整为 TreeClip 特殊 Node，现有 CameraCueClip/Track 只保留为待迁移旧合同；Shot 及效果真实作者引用仍缺少闭包。 |
-| 6.3 Corin 动作资源可达性 | 部分完成 | ZZZ 动作 JSON 已逐对象核对 Counter、Normal_05 主动作/End_2 和 Normal_01：确认 Zoom/Stretch 的来源事件身份、`normalizedTime`、动作片段 StopTime，以及 Normal_01 只有 Shake；工程已保留 18 Zoom/18 Stretch 资源，但现有 Corin ActionCue 仍没有正式 TreeClip/Node 请求和 ResourceId，Timeline/Clip 与来源动作的稳定映射尚未闭合，也不能虚构剩余 81 Shake/4 Override 的项目触发关系。 |
+| 6.1-6.2 作者、导出与生成 | 部分完成 | CameraState/Effect/Response Node、Camera Resource 合同、Graph/Timeline emitter、Projection compiler 和资源校验已接入；Presentation Projection 校验每个 Camera Producer 的 Sequence/Effect ResourceId 属于同一 Camera Projection；Attack1 Shake 和 Attack5 Zoom 已完成 `export_code`/`generate_assets` 正式闭环；Shot、Override 及其余效果的真实作者引用仍缺少闭包。 |
+| 6.3 Corin 动作资源可达性 | 部分完成 | Normal_05 Zoom 与 Normal_01 Shake 已落到技能 Graph 的 `RequestCameraEffectNode`，旧 CameraCue 已删除；Counter Zoom 与 Normal_05 End_2 Zoom 还没有独立 Node 落点。来源侧仍缺效果持续时间、目标/取消语义等完整映射，也不能虚构剩余 81 Shake/4 Override 的项目触发关系。 |
 | 6.4-6.5 正式发布与 Preview/ScenePlay | 暂停全量入口 | 用户明确要求删除会触发十几分钟全量 Character Build 的入口；已移除 Character Float32/Fixed MCP 注册与 CLI 入口，底层正式 Orchestrator 保留但当前没有新的增量发布入口，旧 job 不接受其产物。 |
 | 7.1-7.2 诊断与输入回放迁移 | 部分完成 | DebugSnapshot、采样帧、Reset/响应/Sequence 退出/目标退出/碰撞字段和 Effect table/operator 已接入；Camera PresentationCaptureFrame 从正式 PresentationFrameContext 写入 RenderFrame/LocalLogicTick，输入回放仍改读正式 Presentation CameraBasis/InitialState，保留用户已有注入改动；Unity 重载后的实时证据仍待返回。 |
 | 7.3-7.4 删除与合同同步 | 部分完成 | 已删除无引用 ThirdPersonCameraController 及 meta、旧 FreeLook 朝向写入引用和无消费者 Locking/ChangeAvatar 配置；生成 Projection 和部分历史文档仍需正式发布后对账。 |
@@ -73,7 +73,7 @@
 - 当前 `Editor.log` 已给出 Build 阶段证据：ACL 清单扫描耗时 `19941ms`；170 个已发布动画资源的复用判定耗时 `47196ms`；动画目录阶段总计 `67141ms`，随后仍在处理 7 个 ACL 动画片段。该耗时属于全量 Character Build 的 ACL/资源发布阶段，不是 Camera 求解或 Camera Contracts 编译。
 - 按用户要求删除全量 Character Build 入口：移除 `character.build_float32_products`、`character.build_fixed_products`、对应 Scheduler 的 Character BuildKind 分支和 `CorinFixedBuildCli`；Timeline 专用入口保留。删除后不再调用 Character 全量 Build。
 - 外部来源 `D:/ZZZ_Dump/output/corin_replication/20260904_corin_attack_event_index_v3.json` 记录 108 个攻击事件，其中 `CameraShakeKey` 有 104 个非空引用、Zoom/Stretch 字段为空、Override 字段有数值引用；复刻资料的资源统计为 Shake 81、Zoom 18、Stretch 18、Override 4。公共 Shake 标准配置正文仍未定位，工程当前只有 18 Zoom/18 Stretch 正式资源，因此没有伪造 Shake/Override 资源或触发映射。
-- 外部动作索引 `D:/ZZZ_Dump/output/corin_replication/replication-guide/data/actions/*.json` 的 `cameraKeys` 已逐动作解析：当前样本明确反查出 Shake 34 个、Stretch 10 个、Zoom 10 个资源键；其中 `sm0-011-Attack_Counter` 同时存在 Shake/Stretch/Zoom typed keys。该证据只确认来源可达性，未替代 3C Graph/Timeline 的正式 CameraCue request。
+- 外部动作索引 `D:/ZZZ_Dump/output/corin_replication/replication-guide/data/actions/*.json` 的 `cameraKeys` 已逐动作解析：当前样本明确反查出 Shake 34 个、Stretch 10 个、Zoom 10 个资源键；其中 `sm0-011-Attack_Counter` 同时存在 Shake/Stretch/Zoom typed keys。该证据只确认来源可达性，未替代 3C 技能 Graph/Timeline 的正式相机 Node request。
 - `CharacterCameraPresentationRuntime.Present` 已把 `GameplayPresentationFrameContext.RenderFrame` 与 `LocalLogicTick` 传入 `CharacterPresentationReplicationCaptureFrame`；这是静态链路证据，不等价于 Unity Console 或运行时回放通过。该修改发生在 Unity 增量重载期间，实时结果待实例恢复后读取。
 - `4fb7111ea`：Camera target resolver/runtime 已区分配置漏绑与运行时目标失效：前者继续在正式绑定校验处失败，后者移除使用失效 key 的目标请求、记录 `TargetInvalid` 到 `CameraDebugSnapshot` 并重新走当前正式目标裁决；没有新增自动选敌或默认目标补齐路径。
 - `53ef18bc8`：Camera PresentationCaptureFrame 已同步采集 `TargetRetired`、`TargetStopReason`、`TargetRetiredKey`，目标失效退出原因进入同一只读采样合同；当前仍只有静态证据，未宣称 Unity 运行时通过。
@@ -88,7 +88,7 @@
 - `555e6b69f`：`CameraDebugSnapshot` 保存 BindingId、Profile/Revision、Actor/Instance 和 Adopted 状态，`CharacterSimulationPresentationRuntime` 暴露同一采用结果；诊断现在可以区分“相机对象存在”和“正式 Camera binding 已采用”。
 - `411223fd0`：`TimelineCameraCueSample` 现在保留 `CameraCueClip.ResourceId`，CameraCue 语义 emitter 在空 ResourceId 时直接失败，作者属性不再把 ResourceId 标为可选；`BTSMTL.Timeline.csproj` 窄编译 14 秒通过，0 个警告、0 个错误，随后已执行 `dotnet build-server shutdown`。这收口了历史 Timeline Camera Cue 合同，但根据 v5 决策它不再是动作相机的最终表达；不替 TreeClip 迁移任务写入 Corin 同批资产。
 - 当前提交后的 `ThirdPersonCamera.Contracts.csproj` 使用 `--no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 窄编译通过，耗时约 22 秒，0 个错误、2 个 Unity Test Runner 既有警告；编译后已执行 `dotnet build-server shutdown`。该结果只证明 Camera Contracts 静态编译，不证明 `ThirdPersonClient.Runtime`、Unity Console 或 Play 行为。
-- 来源映射本轮已读取 `D:/ZZZ_Dump/output/corin_replication/replication-guide/data/actions/`：Counter 的 Zoom 事件为 `battle:23:23/24`；Normal_05 主动作的 Zoom 01 为 `battle:36:19/20`，End_2 的 Zoom 02 为 `battle:38:18/19`；Normal_01 只有 `Corin_Attack_Normal_01_CamShake_A_01`，四个攻击事件归一化时间为约 `0.412/0.432/0.452/0.471`。对应工程目前仍是通用 `ActionCueClip`，未写入 TreeClip/Node ResourceId；曲线迁移任务后续统一把已确认映射写入 TreeClip/生成源码。
+- 来源映射本轮已读取 `D:/ZZZ_Dump/output/corin_replication/replication-guide/data/actions/`：Counter 的 Zoom 事件为 `battle:23:23/24`；Normal_05 主动作的 Zoom 01 为 `battle:36:19/20`，End_2 的 Zoom 02 为 `battle:38:18/19`；Normal_01 只有 `Corin_Attack_Normal_01_CamShake_A_01`，四个攻击事件归一化时间为约 `0.412/0.432/0.452/0.471`。Normal_05 Zoom 与 Normal_01 Shake 已于 2026-09-18 写入技能 Graph Node 并重建生成源码；Counter 与 End_2 仍未接线。
 - 2026-09-17 用户确定动作相机请求统一采用 TreeClip 特殊 Node。此处只更新 OpenSpec 目标和证据口径，没有修改 Corin 资产、生成源码或 Camera Runtime；当前 ActionCueClip 是待迁移历史状态，不是已采用的 Camera 请求。
 - Unity 当前 `Editor.log` 的诊断编译只剩 `DGS003: Field 'ResponseMode'`；源码已改为 `int ResponseModeValue` 并保留 key `response-mode`，但 `Library/ScriptAssemblies/ThirdPersonClient.Runtime.dll` 反编译仍显示旧的 `CameraResponseMode ResponseMode`。这证明当前阻塞是旧 Runtime 程序集未更新，不能把它解释为现行 Camera 源码错误；未再触发刷新或全量构建。
 - 本窗口未新增测试，符合项目规则；生成 Projection 的旧 v1 产物没有手工伪造为 v2，等待正式 Character Build 发布。
@@ -124,16 +124,23 @@
 - Timeline 生成已实现并已使用：产物 CorinAttackGameplayAbilityAuthoringCode/Attack.cs 含 EnsureTimeline、Timeline 资产 ResolveExternalAsset 引用、TimelineAuthoringPropertyContract.Apply 属性写入；CorinAttack1Timeline 拆分为 Attack1Main/End 等片段后产物引用路径同步。
 - 运行编译侧相机 Node emitter 就绪：BtsmtlSkillFlowLeafEmitter.cs 含 RequestCameraStateNode/RequestCameraEffectNode/SetCameraResponseNode 分支与 DeclareCameraProducer，图内存在相机 Node 即可编译为 PresentationCommand。
 - 产物中现有 Attack1CameraCue~Attack5CameraCue 为旧通用 ActionCueClip(CueType: Camera) 形态，属待迁移旧合同，不作为相机 Node 生成证据。
-- 导出侧相机 Node 走 FlowNode 泛化机制，无实例验证；首次写入后按 vidence/curve-migration-playbook.md 验收步骤确认，失败则补导出侧缺口。
-- 新增 vidence/curve-migration-playbook.md 曲线迁移操作单：逐条写入步骤、四条已确认行的落点（Counter/Normal_05/End_2 可写，Normal_01 因 Shake 资源缺失暂不可写）、工厂验收命令与旧 Cue 删除要求。
+- 导出侧相机 Node 走 FlowNode 泛化机制，无实例验证；首次写入后按 evidence/curve-migration-playbook.md 验收步骤确认，失败则补导出侧缺口。
+- 新增 evidence/curve-migration-playbook.md 曲线迁移操作单：逐条写入步骤、四条已确认行的落点（Counter/Normal_05/End_2 可写，Normal_01 因 Shake 资源缺失暂不可写）、工厂验收命令与旧 Cue 删除要求。
 
 ## 2026-09-17 1.4 / 3.1 / 4.5 / Normal_01 Shake 资源
 
 - **1.4 失焦/暂停输入合同**：CharacterCameraDomainRuntime.Present 在读取 Look 后增加 Application.isFocused == false 丢弃分支——失焦期间本帧 Look 视为零，已锁存的积压输入随本次消费被丢弃，恢复后从当前角度继续，无回弹。暂停沿表现帧驱动自然停止（帧不推进则 Present 不执行），恢复从当前状态继续，不新建鼠标读取路径。假设记录：失焦丢弃而非冻结为 3C 默认行为，如需改为"失焦冻结画面方向"须改写本合同。ThirdPersonClient.Runtime 窄编译 1 警告 0 错误。
-- **3.1 来源定位**：eplication-guide/analysis/基础镜头.md（3028 行）含完整 cameraLockBossConfig（LT_LOOKATOFFSET 进入/退出曲线、BOSS_POLAR_OFFSET_X/Y、POLAR 曲线、POLARLERPRATIO=0.5、POLARLERPTIME=2、DISPOLAR 全套）及 Default_Normal 全解码字段（Orbits/ScreenYTrack/ROTATE_STATETRANSITION 3 秒等）。实体取景并非无来源；3.1 剩余工作改为该配置与内置公式的逐字段对账，tasks.md 已更新任务描述。
-- **4.5 证据**：新增 vidence/effect-composition-order.md：五阶段顺序依据（Override 定基准→Zoom/Stretch 修正→Shake 扰动→Shot 整帧替换仍受环境检→Environment 收尾）与 Shake 后 Basis 合同（BasisSnapshot 反映含 Shake 实际输出，动作采样感知震屏后方向，无第二干净 Basis 源）。
-- **Normal_01 Shake 资源**：新建 Corin_Attack_Normal_01_CamShake_A_01.asset（character-camera-shake/v1），m_ShakeId 与来源 attle:27:0/1/2/3 的 shakeConfigKey 一致；曲线复用通用曲线资产 c6b42d65...；振幅/频率/持续来源未提供，按 3C 标准轻震默认填写并在资产内注释声明为自有标准非还原值；m_StandardConfigKey 保留来源 key。解锁曲线迁移操作单中 Normal_01 的 Node 写入前置。
+- **3.1 来源定位**：`D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis/基础镜头.md`（3028 行）含完整 cameraLockBossConfig（LT_LOOKATOFFSET 进入/退出曲线、BOSS_POLAR_OFFSET_X/Y、POLAR 曲线、POLARLERPRATIO=0.5、POLARLERPTIME=2、DISPOLAR 全套）及 Default_Normal 全解码字段（Orbits/ScreenYTrack/ROTATE_STATETRANSITION 3 秒等）。实体取景并非无来源；3.1 剩余工作改为该配置与内置公式的逐字段对账，tasks.md 已更新任务描述。
+- **4.5 证据**：新增 evidence/effect-composition-order.md：五阶段顺序依据（Override 定基准→Zoom/Stretch 修正→Shake 扰动→Shot 整帧替换仍受环境检→Environment 收尾）与 Shake 后 Basis 合同（BasisSnapshot 反映含 Shake 实际输出，动作采样感知震屏后方向，无第二干净 Basis 源）。
+- **Normal_01 Shake 资源**：新建 Corin_Attack_Normal_01_CamShake_A_01.asset（character-camera-shake/v1），m_ShakeId 与来源 battle:27:0/1/2/3 的 shakeConfigKey 一致；曲线复用通用曲线资产 c6b42d65...；振幅/频率/持续来源未提供，按 3C 标准轻震默认填写并在资产内注释声明为自有标准非还原值；m_StandardConfigKey 保留来源 key。解锁曲线迁移操作单中 Normal_01 的 Node 写入前置。
 
 ## 2026-09-17 3.1 逐字段对账完成
 
-cameraLockBossConfig 与工程 ApplyEntityPointFrame/ApplyTwoPointFrame 逐字段对账完成，结果见 vidence/entity-framing-parity.md：工程为通用几何取景分支（包围盒中心 + FOV 半角拟合），ZZZ 的极角区间 + 曲线驱动 + 2 秒极角 LERP 为未还原边界；另发现工程缺最大距离上限（LT_MAX_RANGE=50 对应物）。是否按极角方案还原属业务决策，本 change 不擅自重写现有公式。
+cameraLockBossConfig 与工程 ApplyEntityPointFrame/ApplyTwoPointFrame 逐字段对账完成，结果见 evidence/entity-framing-parity.md：工程为通用几何取景分支（包围盒中心 + FOV 半角拟合），ZZZ 的极角区间 + 曲线驱动 + 2 秒极角 LERP 为未还原边界；另发现工程缺最大距离上限（LT_MAX_RANGE=50 对应物）。是否按极角方案还原属业务决策，本 change 不擅自重写现有公式。
+
+## 2026-09-18 相机 Node 工厂闭环
+
+- `BtsmtlSkillCapabilityCatalog` 补齐 `RequestCameraStateNode` 与 `RequestCameraEffectNode` 的正式读取 case；`BtsmtlSkillAuthoringContract` 补齐两者的正式 Apply 分发。此前迁移菜单能创建 Node，但字段写入入口缺失，重跑又按“已有同名 Node”跳过，导出诊断暴露两个 `resourceId` 都是空。
+- 迁移菜单改为检查已有 Node 的 `EffectKind`/`ResourceId`，不一致时走同一个正式合同重写。实际执行结果：Attack1 命中图写入 `Corin_Attack_Normal_01_CamShake_A_01`，Attack5 命中图写入 `Corin_Attack_Normal_05_CamZoom_01`；两条旧 CameraCue 已删除。
+- `btsmtl.export_code` 成功重建 Attack 闭包：`Attack1.cs` 生成 `RequestCameraEffectNode` 与 `resourceId` Apply，`Attack5.cs` 额外生成 `effectKind=Zoom`。`btsmtl.generate_assets` 成功替换 `CorinAttackGameplayAbilityDefinition.asset`，诊断为 0。
+- ThirdPersonClient.Editor 全量依赖编译 0 错误后执行生成；结束后已 shutdown build server。没有 Play、截图或端到端镜头验收。

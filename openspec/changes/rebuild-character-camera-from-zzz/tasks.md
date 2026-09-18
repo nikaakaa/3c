@@ -18,7 +18,7 @@
 
 ## 3. 锁定和多目标构图
 
-- [ ] 3.1 通过正式目标输入完成锁定、双点/多点及实体取景消费者，包含构图约束、手动修正和过渡，不在相机内自动选敌。ZZZ 来源对账完成：基础镜头.md cameraLockBossConfig 与工程几何分支逐字段对账见 vidence/entity-framing-parity.md；来源的极角曲线驱动（POLAR_OFFSET/POLARCURVE/2 秒 LERP）为未还原边界，工程几何分支保留，是否还原极角取景属后续决策。
+- [ ] 3.1 通过正式目标输入完成锁定、双点/多点及实体取景消费者，包含构图约束、手动修正和过渡，不在相机内自动选敌。ZZZ 来源对账完成：基础镜头.md cameraLockBossConfig 与工程几何分支逐字段对账见 evidence/entity-framing-parity.md；来源的极角曲线驱动（POLAR_OFFSET/POLARCURVE/2 秒 LERP）为未还原边界，工程几何分支保留，是否还原极角取景属后续决策。
 - [x] 3.2 接通目标切换与目标失效结束请求；正常业务解锁与漏绑配置错误分别处理，不靠默认目标补齐缺失绑定。
 
 ## 4. 效果完整实现
@@ -38,8 +38,8 @@
 ## 6. 相机资源、精确映射与领域绑定
 
 - [ ] 6.1 在相机资源、Builder/payload、运行绑定和 TreeClip Camera operation/emitter 中闭合本领域字段、引用、单位和能力失败合同；动作链不再新增或维护 CameraCueClip/CameraCueTrack，保留真实资源 owner，不在 Inspector 重绘中处理资源或编译，不改由其它 owner 负责的同批资产。
-- [ ] 6.2 通过现有 C# 领域 API 表达 Camera 资源和 TreeClip 特殊 Node 请求合同；本批 Corin TreeClip 资产及生成源码由曲线迁移任务统一写入，相机只提供精确 Node 映射与领域能力，不各自重建同一资产。
-- [ ] 6.3 完成 evidence/source-cue-mapping.md 的源动作/事件→工程具体 TreeClip/Node→效果类型/ResourceId→时间/持续/取消映射；逐资源补齐证据和缺口。Counter/Normal_05 的 Zoom key 对齐不替代 TreeClip/Node 映射；Normal_01 当前仅有指定 Shake 线索，不按 Attack1 名称猜接线或用 Zoom 代替。
+- [x] 6.2 通过现有 C# 领域 API 表达 Camera 资源和 TreeClip 特殊 Node 请求合同；本批 Corin TreeClip 资产及生成源码由曲线迁移任务统一写入，相机只提供精确 Node 映射与领域能力，不各自重建同一资产。
+- [ ] 6.3 完成 evidence/source-cue-mapping.md 的源动作/事件→工程具体 TreeClip/Node→效果类型/ResourceId→时间/持续/取消映射；Normal_05 Zoom 与 Normal_01 Shake 已有 Node/Resource 落点，Counter 与 End_2 仍缺 Node。已落点的持续/取消/目标语义仍未闭合，不按资源名或序号猜接线。
 - [ ] 6.4 从只接受 Profile 的 CharacterCameraProjectionBuilder 保留必要转换/引用检查，提供给角色装配调用的正式相机资源与只读运行绑定；分开 Editor-only 处理与 Player 绑定，独立资源流程保持原归属，不恢复角色全量 Build/整包 Projection，也不新增 Camera-only 临时发布入口或换名总包。
 - [ ] 6.5 由 Camera 提供绑定失败、Reset/替换、旧实例释放与实际采用身份，角色装配/Preview 调用同一领域入口；预览只观察真实结果，不自行求解相机或伪造已采用。
 - [ ] 6.6 将动作相机请求从 CameraStateTrack/CameraResponseTrack、CameraCueTrack/CameraCueClip 与 ActionCueClip(CueType: Camera) 迁到 TreeClip 特殊 Node，保证一次性触发、循环、取消、自然结束和 seek/replay 使用稳定请求身份；迁移完成后删除旧动作 Cue 路径与三组触发型相机轨道，不保留双轨。

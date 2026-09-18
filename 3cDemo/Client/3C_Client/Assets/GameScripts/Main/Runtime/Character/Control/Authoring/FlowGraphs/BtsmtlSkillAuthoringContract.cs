@@ -11,6 +11,7 @@ using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Effects;
+using ThirdPersonCamera;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using TreeDesigner.Authoring;
@@ -243,6 +244,25 @@ namespace ThirdPersonCharacter.Control.Authoring
                 contextActive.SetActionContext((ActionContextSlot)values["actionContext"]);
             if (node is BtsmtlSkillActionWindowActiveFlowNode window && values.ContainsKey("windowType"))
                 window.SetWindowType((string)values["windowType"]);
+            if (node is RequestCameraStateNode cameraState)
+                cameraState.Configure(
+                    values.TryGetValue("mode", out object cameraMode) ? (CameraMode)cameraMode : cameraState.Mode,
+                    values.TryGetValue("sequenceId", out object cameraSequence) ? (string)cameraSequence : cameraState.SequenceId,
+                    values.TryGetValue("priority", out object cameraPriority) ? (int)cameraPriority : cameraState.Priority,
+                    values.TryGetValue("weight", out object cameraWeight) ? (float)cameraWeight : cameraState.Weight,
+                    values.TryGetValue("blendInSeconds", out object blendIn) ? (float)blendIn : cameraState.BlendInSeconds,
+                    values.TryGetValue("blendOutSeconds", out object blendOut) ? (float)blendOut : cameraState.BlendOutSeconds,
+                    values.TryGetValue("targetKey", out object targetKey) ? (string)targetKey : cameraState.TargetKey,
+                    values.TryGetValue("actionContext", out object stateContext) ? (ActionContextSlot)stateContext : cameraState.ActionContext,
+                    values.TryGetValue("interruptPolicy", out object interruptPolicy) ? (CameraInterruptPolicy)interruptPolicy : cameraState.InterruptPolicy);
+            if (node is RequestCameraEffectNode cameraEffect)
+                cameraEffect.Configure(
+                    values.TryGetValue("requestId", out object effectRequest) ? (string)effectRequest : cameraEffect.RequestId,
+                    values.TryGetValue("effectKind", out object effectKind) ? (CameraEffectKind)effectKind : cameraEffect.EffectKind,
+                    values.TryGetValue("resourceId", out object effectResource) ? (string)effectResource : cameraEffect.ResourceId,
+                    values.TryGetValue("weight", out object effectWeight) ? (float)effectWeight : cameraEffect.Weight,
+                    values.TryGetValue("priority", out object effectPriority) ? (int)effectPriority : cameraEffect.Priority,
+                    values.TryGetValue("actionContext", out object effectContext) ? (ActionContextSlot)effectContext : cameraEffect.ActionContext);
             if (node is BtsmtlSkillCanActivateActionFlowNode admission && values.ContainsKey("admissionProfile"))
             {
                 BtsmtlSkillTargetSnapshotReference snapshot = values.TryGetValue("targetSnapshot", out object snapshotValue)

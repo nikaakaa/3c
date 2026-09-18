@@ -2,7 +2,7 @@
 
 ### Requirement: Timeline必须直接执行同一正式只读内容
 
-Timeline Runtime MUST直接消费正式轨道、Clip类型/区间/参数/顺序、Section、稳定身份及资源引用，MUST NOT把轨道/Clip编为Semantic operation或在加载时生成操作表。执行域只允许在当前 `Advance` 或 `Present` 调用中把直接遍历的结果分成 Logic Evaluation 与 Presentation Evaluation；该结果 MUST NOT成为常驻编译产物、第二份内容或跨播放复用的执行语言。技能调用操作 MAY引用Timeline identity/revision及入参，但 MUST NOT展开其内部执行。技能与真实非Skill调用 MUST使用同一Runtime，MUST NOT恢复旧TimelinePlayer、TimelineRunningTree自主播放器或Slate Runtime。
+Timeline Runtime MUST直接消费正式轨道、Marker、Clip类型/区间/参数/顺序、Section、稳定身份及资源引用，MUST NOT把轨道/Clip编为Semantic operation或在加载时生成操作表。执行域只允许在当前 `Advance` 或 `Present` 调用中把直接遍历的结果分成 Logic Evaluation 与 Presentation Evaluation；该结果 MUST NOT成为常驻编译产物、第二份内容或跨播放复用的执行语言。技能调用操作 MAY引用Timeline identity/revision及入参，但 MUST NOT展开其内部执行。技能与真实非Skill调用 MUST使用同一Runtime，MUST NOT恢复旧TimelinePlayer、TimelineRunningTree自主播放器或Slate Runtime。
 
 #### Scenario: 技能与独立调用复用内容
 

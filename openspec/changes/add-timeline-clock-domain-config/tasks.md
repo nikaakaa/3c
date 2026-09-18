@@ -40,12 +40,12 @@
 - [x] 7.1 为 Timeline Track / Clip authoring 合同增加 `Logic`、`Presentation` 与 `DualProjection` 执行域；历史资产缺少字段时固定解释为 `Logic`，保持 Model-neutral
 - [x] 7.2 保持 Runtime 直接遍历正式只读 Timeline 内容；按当前 Advance / Present 形成 Logic Evaluation 与 Presentation Evaluation 结果分区，不生成 Semantic operation 或常驻操作表
 - [x] 7.3 新增 PresentationFrame 驱动的表现游标与 evaluation 路径，不改变现有 Logic Tick 推进和 Commit / Discard 协议
-- [ ] 7.4 Marker 重构为与 Clip 同级的点触发实体：TimelineData 内容模型（Track 持有 Marker 列表）、内容闭包与指纹纳入；废弃 clip 子列表与 Pulse/Stateful 区间模型（含拆除已落码的对应实现）
+- [x] 7.4 Marker 重构为与 Clip 同级的点触发实体：TimelineData 内容模型（Track 持有 Marker 列表）、内容闭包与指纹纳入；废弃 clip 子列表与 Pulse/Stateful 区间模型（含拆除已落码的对应实现）
 - [ ] 7.5 将 DualProjection TreeClip 的既有 AssetTree 固定为 Logic 投影，并把同一 Clip 的 Marker 输出分流到 Presentation Evaluation；AssetTree 不得在 PresentationFrame 重复执行
 - [ ] 7.7 Presentation Event 与相机/场景采样下游消费者接线：特效、音效、相机与表现动画域按稳定 EventId 调和消费，MUST NOT 写 Gameplay fact（表现动画贡献已接 ActionPlaybackCommandInbox，其余为剩余落点）
 - [ ] 7.8 Marker 触发图合同：仅暴露 OnEnable 回调的触发图引用与编译；Logic 域经 Advance / Commit 确定性触发，Presentation 域经表现游标跨点触发
-- [ ] 7.9 Marker 作者 UI：Slate 时间轴轨上 Marker 点的创建、绘制、拖拽与选中，触发图引用编辑
-- [ ] 7.6 Presentation Marker 事件 identity 定义为 playback handle、generation、marker 与 traversal index：同一次经过只交付一次、循环重触发换新 index、停止或 generation 变化后旧 generation 不再触发（遍历身份与去重已落码，Stateful 活动集调和与 ClipId 组成待拆除重写）
+- [x] 7.9 Marker 作者 UI：Slate 时间轴轨上 Marker 点的创建、绘制、拖拽与选中，触发图引用编辑
+- [x] 7.6 Presentation Marker 事件 identity 定义为 playback handle、generation、marker 与 traversal index：同一次经过只交付一次、循环重触发换新 index、停止或 generation 变化后旧 generation 不再触发
 
 
 

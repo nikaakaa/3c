@@ -70,6 +70,24 @@ namespace Slate
         IEmbeddedTimelineClipBinding SelectedClip { get; }
     }
 
+    public interface IEmbeddedTimelineMarkerBinding : IEmbeddedTimelineElementBinding
+    {
+        IEmbeddedTimelineTrackBinding Track { get; }
+        int Frame { get; }
+    }
+
+    public interface IEmbeddedTimelineMarkerTrackBinding : IEmbeddedTimelineTrackBinding
+    {
+        IReadOnlyList<IEmbeddedTimelineMarkerBinding> Markers { get; }
+    }
+
+    public interface IEmbeddedTimelineMarkerEditing
+    {
+        void AddMarker(IEmbeddedTimelineTrackBinding track, int frame);
+        void DeleteMarker(IEmbeddedTimelineMarkerBinding marker);
+        void MoveMarker(IEmbeddedTimelineMarkerBinding marker, int frame);
+    }
+
     public interface IEmbeddedTimelineClipBinding : IEmbeddedTimelineElementBinding
     {
         IEmbeddedTimelineTrackBinding Track { get; }

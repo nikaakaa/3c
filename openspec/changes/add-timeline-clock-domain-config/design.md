@@ -126,4 +126,4 @@ TreeClip 必须把图执行和表现触发拆成两个明确来源：
 
 2026-09-19 用户定案：Marker 重构为与 Clip 同级的点触发实体，废除 `Pulse`/`Stateful` 区间模型与 clip 子列表方案；Marker 触发图仅 OnEnable 回调，域归属（Logic tick / Presentation frame）决定推进者，不同领域各自独立实现。
 
-这部分是当前 Timeline change 的后续未完成工作。现有逻辑 TreeClip runtime 不得被宣称为已经支持表现时钟 TreeClip；当前仅把逻辑 TreeClip 事件镜像到表现层也不等价于 Marker 由 PresentationFrame 驱动。
+当前落地状态：Track 已直接持有 Marker 列表；闭包/指纹包含 Marker 与触发图；旧 Pulse / Stateful / Clip 子列表实现已删除；Presentation 事件已使用 `handle:generation:markerId:traversalIndex`；Slate 轨道已支持 Marker 创建、绘制、拖拽、选中与触发图编辑。剩余工作是 Marker 编译与双域触发消费接线。现有逻辑 TreeClip runtime 不得被宣称为已经支持表现时钟 TreeClip；仅输出 Presentation Marker 事件也不等价于已完成触发图消费。

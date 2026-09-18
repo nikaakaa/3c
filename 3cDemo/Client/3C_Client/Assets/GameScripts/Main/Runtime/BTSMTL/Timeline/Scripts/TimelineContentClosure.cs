@@ -121,38 +121,31 @@ namespace BTSMTL.Timeline
         public IReadOnlyList<TimelineContentCurveKey> Keys { get; }
     }
 
-    public readonly struct TimelineContentPresentationMarker
+    public readonly struct TimelineContentMarker
     {
-        public TimelineContentPresentationMarker(
-            string authoringId,
-            int frame,
-            int endFrame,
-            TimelinePresentationMarkerLifetime lifetime,
-            TimelineContentBindingUse payloadBinding)
+        public TimelineContentMarker(
+            string markerId,
+            string trackAuthoringId,
+            TimelineClipExecutionPolicy executionPolicy,
+            int frame)
         {
-            AuthoringId = string.IsNullOrWhiteSpace(authoringId)
-                ? throw new ArgumentException("Timeline presentation marker identity is required.", nameof(authoringId))
-                : authoringId.Trim();
-            if (frame < 0 || endFrame < frame ||
-                !Enum.IsDefined(typeof(TimelinePresentationMarkerLifetime), lifetime))
-            {
-                throw new ArgumentOutOfRangeException(nameof(frame));
-            }
-            if (lifetime == TimelinePresentationMarkerLifetime.Pulse && endFrame != frame)
-                throw new ArgumentException("Timeline Pulse marker cannot have a duration.", nameof(endFrame));
-            if (lifetime == TimelinePresentationMarkerLifetime.Stateful && endFrame <= frame)
-                throw new ArgumentException("Timeline Stateful marker requires a positive duration.", nameof(endFrame));
-            Frame = frame;
-            EndFrame = endFrame;
-            Lifetime = lifetime;
-            PayloadBinding = payloadBinding;
+            MarkerId = Require(markerId, nameof(markerId));
+            TrackAuthoringId = Require(trackAuthoringId, nameof(trackAuthoringId));
+            ExecutionPolicy = executionPolicy;
+            Frame = frame < 0 ? throw new ArgumentOutOfRangeException(nameof(frame)) : frame;
         }
 
-        public string AuthoringId { get; }
+        public string MarkerId { get; }
+        public string TrackAuthoringId { get; }
+        public TimelineClipExecutionPolicy ExecutionPolicy { get; }
         public int Frame { get; }
-        public int EndFrame { get; }
-        public TimelinePresentationMarkerLifetime Lifetime { get; }
-        public TimelineContentBindingUse PayloadBinding { get; }
+
+        static string Require(string value, string name)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? throw new ArgumentException("Timeline content identity is required.", name)
+                : value.Trim();
+        }
     }
 
     public sealed class TimelineContentClosureBuilder
@@ -199,7 +192,6 @@ namespace BTSMTL.Timeline
             bool supportsStop,
             bool trackMuted,
             IReadOnlyList<TimelineContentBindingUse> bindings,
-            IReadOnlyList<TimelineContentPresentationMarker> presentationMarkers = null,
             IReadOnlyList<TimelineContentCurve> curves = null)
         {
             AuthoringId = Require(authoringId, nameof(authoringId));
@@ -214,8 +206,6 @@ namespace BTSMTL.Timeline
             SupportsStop = supportsStop;
             TrackMuted = trackMuted;
             Bindings = new ReadOnlyCollection<TimelineContentBindingUse>(new List<TimelineContentBindingUse>(bindings ?? Array.Empty<TimelineContentBindingUse>()));
-            PresentationMarkers = new ReadOnlyCollection<TimelineContentPresentationMarker>(
-                new List<TimelineContentPresentationMarker>(presentationMarkers ?? Array.Empty<TimelineContentPresentationMarker>()));
             Curves = new ReadOnlyCollection<TimelineContentCurve>(new List<TimelineContentCurve>(curves ?? Array.Empty<TimelineContentCurve>()));
         }
 
@@ -231,7 +221,6 @@ namespace BTSMTL.Timeline
         public bool SupportsStop { get; }
         public bool TrackMuted { get; }
         public IReadOnlyList<TimelineContentBindingUse> Bindings { get; }
-        public IReadOnlyList<TimelineContentPresentationMarker> PresentationMarkers { get; }
         public IReadOnlyList<TimelineContentCurve> Curves { get; }
 
         static string Require(string value, string name)
@@ -311,6 +300,7 @@ namespace BTSMTL.Timeline
             bool loop,
             IReadOnlyList<TimelineContentTrack> tracks,
             IReadOnlyList<TimelineContentClip> clips,
+            IReadOnlyList<TimelineContentMarker> markers,
             IReadOnlyList<TimelineContentSection> sections,
             IReadOnlyList<TimelineBindingDeclaration> bindings,
             IReadOnlyList<TimelineContentDependency> dependencies)
@@ -324,6 +314,7 @@ namespace BTSMTL.Timeline
             Loop = loop;
             Tracks = new ReadOnlyCollection<TimelineContentTrack>(new List<TimelineContentTrack>(tracks ?? Array.Empty<TimelineContentTrack>()));
             Clips = new ReadOnlyCollection<TimelineContentClip>(new List<TimelineContentClip>(clips ?? Array.Empty<TimelineContentClip>()));
+            Markers = new ReadOnlyCollection<TimelineContentMarker>(new List<TimelineContentMarker>(markers ?? Array.Empty<TimelineContentMarker>()));
             Sections = new ReadOnlyCollection<TimelineContentSection>(new List<TimelineContentSection>(sections ?? Array.Empty<TimelineContentSection>()));
             Bindings = new ReadOnlyCollection<TimelineBindingDeclaration>(new List<TimelineBindingDeclaration>(bindings ?? Array.Empty<TimelineBindingDeclaration>()));
             Dependencies = new ReadOnlyCollection<TimelineContentDependency>(new List<TimelineContentDependency>(dependencies ?? Array.Empty<TimelineContentDependency>()));
@@ -338,6 +329,7 @@ namespace BTSMTL.Timeline
         public bool Loop { get; }
         public IReadOnlyList<TimelineContentTrack> Tracks { get; }
         public IReadOnlyList<TimelineContentClip> Clips { get; }
+        public IReadOnlyList<TimelineContentMarker> Markers { get; }
         public IReadOnlyList<TimelineContentSection> Sections { get; }
         public IReadOnlyList<TimelineBindingDeclaration> Bindings { get; }
         public IReadOnlyList<TimelineContentDependency> Dependencies { get; }
@@ -381,6 +373,7 @@ namespace BTSMTL.Timeline
                 return new TimelineContentDiscoveryResult(null, errors);
 
             var clips = new List<TimelineContentClip>();
+            var markers = new List<TimelineContentMarker>();
             var tracks = new List<TimelineContentTrack>();
             var sections = new List<TimelineContentSection>();
             var closure = new TimelineContentClosureBuilder();
@@ -398,6 +391,25 @@ namespace BTSMTL.Timeline
                         clipAuthoringIds.Add(clip.AuthoringId);
                     if (clip != null && clip.EndFrame > maxFrame)
                         maxFrame = clip.EndFrame;
+                }
+                for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
+                {
+                    TimelineMarker marker = track.Markers[markerIndex];
+                    if (marker == null)
+                        continue;
+                    if (marker.Frame > maxFrame)
+                        maxFrame = marker.Frame;
+                    if (marker.Graph is not ITimelineTreeGraphAsset markerGraph || !markerGraph.IsTimelineTree)
+                    {
+                        errors.Add($"Timeline Marker '{marker.AuthoringId}' requires a Timeline trigger graph.");
+                        continue;
+                    }
+                    markerGraph.CollectTimelineContentClosure(closure, $"marker:{marker.AuthoringId}");
+                    markers.Add(new TimelineContentMarker(
+                        marker.AuthoringId,
+                        track.AuthoringId,
+                        TimelineClipExecutionPolicy.FromDomain(marker.ExecutionDomain),
+                        marker.Frame));
                 }
                 tracks.Add(new TimelineContentTrack(
                     track.AuthoringId,
@@ -444,7 +456,6 @@ namespace BTSMTL.Timeline
                         continue;
                     }
                     var bindingUses = new List<TimelineContentBindingUse>();
-                    var presentationMarkers = new List<TimelineContentPresentationMarker>();
                     var curves = new List<TimelineContentCurve>();
                     var curveDescriptors = new List<TimelineCurveChannelDescriptor>();
                     TimelineCurveChannelCatalog.CollectForTrack(track, curveDescriptors);
@@ -486,30 +497,6 @@ namespace BTSMTL.Timeline
                                 bindingUses.Add(new TimelineContentBindingUse(use.BindingId, use.ValueKind, use.Access, use.Lifetime, use.TargetBindingId));
                         }
                     }
-                    if (clip is ITimelinePresentationMarkerSource markerSource &&
-                        markerSource.PresentationMarkers != null)
-                    {
-                        for (int markerIndex = 0; markerIndex < markerSource.PresentationMarkers.Count; markerIndex++)
-                        {
-                            TimelinePresentationMarker marker = markerSource.PresentationMarkers[markerIndex];
-                            if (marker == null || marker.PayloadBinding == null)
-                                continue;
-                            TimelineExternalBindingUse payload = marker.PayloadBinding;
-                            var payloadBinding = new TimelineContentBindingUse(
-                                payload.BindingId,
-                                payload.ValueKind,
-                                payload.Access,
-                                payload.Lifetime,
-                                payload.TargetBindingId);
-                            bindingUses.Add(payloadBinding);
-                            presentationMarkers.Add(new TimelineContentPresentationMarker(
-                                marker.AuthoringId,
-                                marker.Frame,
-                                marker.EndFrame,
-                                marker.Lifetime,
-                                payloadBinding));
-                        }
-                    }
                     clips.Add(new TimelineContentClip(
                         clip.AuthoringId,
                         clipContract.Kind,
@@ -524,7 +511,6 @@ namespace BTSMTL.Timeline
                         clipContract.SupportsStop,
                         track.PersistentMuted,
                         bindingUses,
-                        presentationMarkers,
                         curves));
                     if (clip is ITimelineContentClosureSource closureSource)
                         closureSource.CollectContentClosure(closure);
@@ -546,6 +532,11 @@ namespace BTSMTL.Timeline
                     binding.Lifetime));
             }
             clips.Sort((left, right) => string.CompareOrdinal(left.AuthoringId, right.AuthoringId));
+            markers.Sort((left, right) =>
+            {
+                int frame = left.Frame.CompareTo(right.Frame);
+                return frame != 0 ? frame : string.CompareOrdinal(left.MarkerId, right.MarkerId);
+            });
             sections.Sort((left, right) =>
             {
                 int frame = left.Frame.CompareTo(right.Frame);
@@ -581,19 +572,13 @@ namespace BTSMTL.Timeline
                 hashParts.Add(clips[i].AuthoringId);
                 hashParts.Add(clips[i].ExecutionPolicy.Domain.ToString("G"));
                 hashParts.Add(clips[i].ExecutionPolicy.OutputKind.ToString("G"));
-                for (int markerIndex = 0; markerIndex < clips[i].PresentationMarkers.Count; markerIndex++)
-                {
-                    TimelineContentPresentationMarker marker = clips[i].PresentationMarkers[markerIndex];
-                    hashParts.Add(marker.AuthoringId);
-                    hashParts.Add(marker.Frame.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    hashParts.Add(marker.EndFrame.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    hashParts.Add(marker.Lifetime.ToString("G"));
-                    hashParts.Add(marker.PayloadBinding.BindingId);
-                    hashParts.Add(marker.PayloadBinding.ValueKind.ToString("G"));
-                    hashParts.Add(marker.PayloadBinding.Access.ToString("G"));
-                    hashParts.Add(marker.PayloadBinding.Lifetime.ToString("G"));
-                    hashParts.Add(marker.PayloadBinding.TargetBindingId);
-                }
+            }
+            for (int i = 0; i < markers.Count; i++)
+            {
+                hashParts.Add(markers[i].MarkerId);
+                hashParts.Add(markers[i].ExecutionPolicy.Domain.ToString("G"));
+                hashParts.Add(markers[i].ExecutionPolicy.OutputKind.ToString("G"));
+                hashParts.Add(markers[i].Frame.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
             return new TimelineContentDiscoveryResult(
                 new TimelineContentUnit(
@@ -606,6 +591,7 @@ namespace BTSMTL.Timeline
                     timeline.Loop,
                     tracks,
                     clips,
+                    markers,
                     sections,
                     bindings,
                     dependencies),

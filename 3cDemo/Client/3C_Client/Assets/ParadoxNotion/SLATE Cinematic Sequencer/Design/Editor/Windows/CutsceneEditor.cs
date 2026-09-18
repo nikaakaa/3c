@@ -377,6 +377,7 @@ namespace Slate
         [System.NonSerialized] private IEmbeddedTimelineTrackBinding formalPickedTrack;
         [System.NonSerialized] private IEmbeddedTimelineTrackBinding formalResizingTrack;
         [System.NonSerialized] private IEmbeddedTimelineSectionBinding formalDraggedSection;
+        [System.NonSerialized] private IEmbeddedTimelineMarkerBinding formalDraggedMarker;
         [System.NonSerialized] private bool formalSelectionHandled;
 
         [System.NonSerialized] private CutsceneTrack copyTrack;
@@ -3777,11 +3778,13 @@ namespace Slate
                                 TrackEditorGUI.DrawClipCurves(e, trackPosRect, trackTimeRect, TimeToPos, value, ref inspected);
                                 if (formalInspectedParameters != null)
                                     formalInspectedParameters[inspectionKey] = inspected ?? string.Empty;
+                                DrawEmbeddedTimelineMarkers(e, value, trackPosRect);
                                 if (e.type == EventType.ContextClick &&
                                     trackPosRect.Contains(e.mousePosition))
                                 {
                                     int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
                                     GenericMenu menu = new GenericMenu();
+                                    menu.AddItem(new GUIContent("Add Marker"), false, () => (embeddedTimeline as IEmbeddedTimelineMarkerEditing)?.AddMarker(value, frame));
                                     menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(value, frame));
                                     if (embeddedTimeline.CanPasteClip)
                                         menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(value, frame));
@@ -3805,6 +3808,44 @@ namespace Slate
                 interactingClip.ResetInteraction();
                 interactingClip = null;
             }
+        }
+
+        void DrawEmbeddedTimelineMarkers(Event e, IEmbeddedTimelineTrackBinding track, Rect trackRect)
+        {
+            if (track is not IEmbeddedTimelineMarkerTrackBinding markerTrack)
+                return;
+            IReadOnlyList<IEmbeddedTimelineMarkerBinding> markers = markerTrack.Markers;
+            for (int index = 0; index < markers.Count; index++)
+            {
+                IEmbeddedTimelineMarkerBinding marker = markers[index];
+                float x = TimeToPos(marker.Frame / (float)embeddedTimeline.FrameRate);
+                Rect markerRect = new Rect(x - 5f, trackRect.y + 5f, 10f, trackRect.height - 10f);
+                bool selected = ReferenceEquals(embeddedTimeline.Selected, marker);
+                GUI.color = selected ? Color.yellow : Color.white;
+                GUI.DrawTexture(markerRect, whiteTexture);
+                GUI.color = Color.white;
+                if (markerRect.Contains(e.mousePosition) && e.type == EventType.MouseDown && e.button == 0)
+                {
+                    embeddedTimeline.Select(marker);
+                    formalDraggedMarker = marker;
+                    e.Use();
+                }
+                if (markerRect.Contains(e.mousePosition) && e.type == EventType.ContextClick)
+                {
+                    var menu = new GenericMenu();
+                    menu.AddItem(new GUIContent("Delete Marker"), false, () => (embeddedTimeline as IEmbeddedTimelineMarkerEditing)?.DeleteMarker(marker));
+                    menu.ShowAsContext();
+                    e.Use();
+                }
+            }
+            if (formalDraggedMarker != null && e.type == EventType.MouseDrag && e.button == 0)
+            {
+                int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(e.mousePosition.x) * embeddedTimeline.FrameRate));
+                (embeddedTimeline as IEmbeddedTimelineMarkerEditing)?.MoveMarker(formalDraggedMarker, frame);
+                e.Use();
+            }
+            if (e.rawType == EventType.MouseUp && formalDraggedMarker != null)
+                formalDraggedMarker = null;
         }
 
         void ShowSections(Rect rect, IEmbeddedTimelineBinding timeline)

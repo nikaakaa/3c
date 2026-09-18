@@ -24,6 +24,13 @@ namespace BTSMTL.Timeline
         ScenePresentationParameter = 1 << 6
     }
 
+    public interface ITimelineTreeGraphAsset
+    {
+        string AuthoringId { get; }
+        bool IsTimelineTree { get; }
+        void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath);
+    }
+
     public enum TimelineTrackOverlapPolicy : byte
     {
         Reject = 1,
@@ -157,124 +164,6 @@ namespace BTSMTL.Timeline
     public interface ITimelineTerminalFrameAlignedClip
     {
         bool AlignTerminalFrame(int terminalFrame);
-    }
-
-    public enum TimelinePresentationMarkerLifetime : byte
-    {
-        Pulse = 1,
-        Stateful = 2
-    }
-
-    public interface ITimelinePresentationMarkerSource
-    {
-        IReadOnlyList<TimelinePresentationMarker> PresentationMarkers { get; }
-    }
-
-    [Serializable]
-    public sealed class TimelinePresentationMarker
-    {
-        [SerializeField]
-        string m_AuthoringId;
-
-        [SerializeField]
-        int m_Frame;
-
-        [SerializeField]
-        int m_EndFrame;
-
-        [SerializeField]
-        TimelinePresentationMarkerLifetime m_Lifetime = TimelinePresentationMarkerLifetime.Pulse;
-
-        [SerializeField]
-        TimelineExternalBindingUse m_PayloadBinding;
-
-        public string AuthoringId => m_AuthoringId ?? string.Empty;
-        public int Frame => m_Frame;
-        public int EndFrame => m_EndFrame;
-        public TimelinePresentationMarkerLifetime Lifetime => m_Lifetime;
-        public TimelineExternalBindingUse PayloadBinding => m_PayloadBinding;
-
-        public static TimelinePresentationMarker Create(
-            int frame,
-            TimelinePresentationMarkerLifetime lifetime,
-            int endFrame,
-            TimelineExternalBindingUse payloadBinding)
-        {
-            var marker = new TimelinePresentationMarker
-            {
-                m_AuthoringId = AuthoringIdentity.Create()
-            };
-            marker.Configure(frame, lifetime, endFrame, payloadBinding);
-            return marker;
-        }
-
-        public void Configure(
-            int frame,
-            TimelinePresentationMarkerLifetime lifetime,
-            int endFrame,
-            TimelineExternalBindingUse payloadBinding)
-        {
-            if (frame < 0 || endFrame < frame ||
-                !Enum.IsDefined(typeof(TimelinePresentationMarkerLifetime), lifetime) ||
-                payloadBinding == null)
-            {
-                throw new ArgumentException("Timeline presentation marker is invalid.");
-            }
-            if (lifetime == TimelinePresentationMarkerLifetime.Pulse && endFrame != frame)
-                throw new ArgumentException("Timeline Pulse marker cannot have a duration.", nameof(endFrame));
-            if (lifetime == TimelinePresentationMarkerLifetime.Stateful && endFrame <= frame)
-                throw new ArgumentException("Timeline Stateful marker requires a positive duration.", nameof(endFrame));
-            m_Frame = frame;
-            m_EndFrame = endFrame;
-            m_Lifetime = lifetime;
-            m_PayloadBinding = payloadBinding;
-        }
-
-        public bool Validate(out string error)
-        {
-            if (!AuthoringIdentity.IsValid(AuthoringId))
-            {
-                error = "marker identity is invalid";
-                return false;
-            }
-            if (Frame < 0 || !Enum.IsDefined(typeof(TimelinePresentationMarkerLifetime), Lifetime))
-            {
-                error = "marker time or lifetime is invalid";
-                return false;
-            }
-            if (Lifetime == TimelinePresentationMarkerLifetime.Pulse && EndFrame != Frame)
-            {
-                error = "pulse marker cannot have a duration";
-                return false;
-            }
-            if (Lifetime == TimelinePresentationMarkerLifetime.Stateful && EndFrame <= Frame)
-            {
-                error = "stateful marker requires a positive duration";
-                return false;
-            }
-            if (PayloadBinding == null || string.IsNullOrWhiteSpace(PayloadBinding.BindingId))
-            {
-                error = "marker payload binding is required";
-                return false;
-            }
-            error = string.Empty;
-            return true;
-        }
-
-#if UNITY_EDITOR
-        public bool EnsureAuthoringIdentity()
-        {
-            if (AuthoringIdentity.IsValid(m_AuthoringId))
-                return false;
-            m_AuthoringId = AuthoringIdentity.Create();
-            return true;
-        }
-
-        public void RegenerateAuthoringIdentity()
-        {
-            m_AuthoringId = AuthoringIdentity.Create();
-        }
-#endif
     }
 
     public delegate void TimelineClipContractValidator(Clip clip, List<string> errors);
@@ -980,7 +869,6 @@ namespace BTSMTL.Timeline
                     if (trackContract.OverlapPolicy == TimelineTrackOverlapPolicy.Reject)
                         ValidateRejectedOverlap(track, clipIndex, clip, errors);
                     ValidateBindingUses(timeline, clip, errors);
-                    ValidatePresentationMarkers(timeline, clip, errors);
                 }
             }
 
@@ -1068,56 +956,6 @@ namespace BTSMTL.Timeline
             }
         }
 
-        static void ValidatePresentationMarkers(TimelineData timeline, Clip clip, List<string> errors)
-        {
-            if (clip is not ITimelinePresentationMarkerSource source)
-                return;
-            IReadOnlyList<TimelinePresentationMarker> markers = source.PresentationMarkers;
-            if (markers == null)
-            {
-                errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' has no presentation marker list.");
-                return;
-            }
-            var identities = new HashSet<string>(StringComparer.Ordinal);
-            for (int index = 0; index < markers.Count; index++)
-            {
-                TimelinePresentationMarker marker = markers[index];
-                string markerError = string.Empty;
-                if (marker == null || !marker.Validate(out markerError) ||
-                    !identities.Add(marker?.AuthoringId ?? string.Empty))
-                {
-                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker #{index} is invalid: {markerError}.");
-                    continue;
-                }
-                if (marker.Frame < clip.StartFrame || marker.Frame >= clip.EndFrame ||
-                    marker.EndFrame > clip.EndFrame)
-                {
-                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker '{marker.AuthoringId}' is outside the clip frame range.");
-                }
-                TimelineExternalBindingUse payload = marker.PayloadBinding;
-                if (payload == null || !timeline.TryGetExternalBinding(payload.BindingId, out TimelineExternalBindingDeclaration declaration))
-                {
-                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker '{marker.AuthoringId}' references a missing payload binding.");
-                    continue;
-                }
-                if (payload.Access != TimelineBindingAccess.Input ||
-                    payload.Lifetime != TimelineBindingLifetime.Call ||
-                    !string.IsNullOrEmpty(payload.TargetBindingId))
-                {
-                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker '{marker.AuthoringId}' payload must be a Call Input binding.");
-                    continue;
-                }
-                var signature = new TimelineBindingDeclaration(
-                    declaration.BindingId,
-                    declaration.Domain,
-                    declaration.ParameterId,
-                    declaration.ValueKind,
-                    declaration.Access,
-                    declaration.Lifetime);
-                if (!payload.Matches(signature))
-                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker '{marker.AuthoringId}' payload binding does not match its declaration.");
-            }
-        }
     }
 
 #if UNITY_EDITOR

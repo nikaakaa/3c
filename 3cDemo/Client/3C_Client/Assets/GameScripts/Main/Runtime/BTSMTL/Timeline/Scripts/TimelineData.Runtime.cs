@@ -78,6 +78,10 @@ namespace BTSMTL.Timeline
         protected List<Clip> m_Clips = new List<Clip>();
         public List<Clip> Clips => m_Clips;
 
+        [SerializeField]
+        List<TimelineMarker> m_Markers = new List<TimelineMarker>();
+        public List<TimelineMarker> Markers => m_Markers;
+
         public Action OnUpdateMix;
         public Action OnMutedStateChanged;
 
@@ -95,6 +99,8 @@ namespace BTSMTL.Timeline
                 if (clip.EndFrame > MaxFrame)
                     MaxFrame = clip.EndFrame;
             }
+            foreach (var marker in m_Markers)
+                marker?.Init(this);
 
         }
 
@@ -117,6 +123,23 @@ namespace BTSMTL.Timeline
         public void RegenerateAuthoringIdentity()
         {
             m_AuthoringId = AuthoringIdentity.Create();
+        }
+
+        public TimelineMarker AddMarker(int frame)
+        {
+            if (frame < 0)
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            var marker = new TimelineMarker();
+            marker.EnsureAuthoringIdentity();
+            marker.Configure(frame, null);
+            m_Markers.Add(marker);
+            return marker;
+        }
+
+        public void RemoveMarker(TimelineMarker marker)
+        {
+            if (marker == null || !m_Markers.Remove(marker))
+                throw new ArgumentException("Timeline Marker is not owned by this Track.", nameof(marker));
         }
 
         public void ConfigureAuthoringIdentity(string authoringId)

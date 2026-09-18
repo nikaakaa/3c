@@ -1208,74 +1208,41 @@ namespace BTSMTL.Timeline.Runtime
         Exit = 3
     }
 
-    public enum TimelineRuntimePresentationEventKind : byte
-    {
-        Pulse = 1,
-        Activate = 2,
-        Cancel = 3
-    }
-
     public readonly struct TimelineRuntimePresentationEvent
     {
         public TimelineRuntimePresentationEvent(
             TimelineRuntimePlaybackHandle playbackHandle,
             TimelineExecutionIdentity executionIdentity,
             ulong generation,
-            string trackAuthoringId,
-            string clipAuthoringId,
             string markerAuthoringId,
             ulong traversalIndex,
-            TimelineRuntimePresentationEventKind kind,
             int frame,
-            int cycle,
-            float normalizedTime,
-            TimelineContentBindingUse payloadBinding,
-            TimelineBindingValue payload)
+            int cycle)
         {
             if (!playbackHandle.IsValid || !executionIdentity.IsValid || generation == 0 || traversalIndex == 0)
                 throw new ArgumentException("Timeline presentation event execution identity is invalid.", nameof(executionIdentity));
             PlaybackHandle = playbackHandle;
             ExecutionIdentity = executionIdentity;
             Generation = generation;
-            TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
-                ? throw new ArgumentException("Timeline presentation event track identity is required.", nameof(trackAuthoringId))
-                : trackAuthoringId.Trim();
-            ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
-                ? throw new ArgumentException("Timeline presentation event clip identity is required.", nameof(clipAuthoringId))
-                : clipAuthoringId.Trim();
             MarkerAuthoringId = string.IsNullOrWhiteSpace(markerAuthoringId)
                 ? throw new ArgumentException("Timeline presentation event marker identity is required.", nameof(markerAuthoringId))
                 : markerAuthoringId.Trim();
-            if (!Enum.IsDefined(typeof(TimelineRuntimePresentationEventKind), kind))
-                throw new ArgumentOutOfRangeException(nameof(kind));
-            if (frame < 0 || cycle < 0 || !float.IsFinite(normalizedTime) ||
-                string.IsNullOrWhiteSpace(payloadBinding.BindingId) ||
-                payload.ValueKind != payloadBinding.ValueKind)
+            if (frame < 0 || cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(frame));
             TraversalIndex = traversalIndex;
-            Kind = kind;
             Frame = frame;
             Cycle = cycle;
-            NormalizedTime = Mathf.Clamp01(normalizedTime);
-            PayloadBinding = payloadBinding;
-            Payload = payload;
-            Identity = $"{PlaybackHandle.Value}:{Generation}:{ClipAuthoringId}:{MarkerAuthoringId}:{TraversalIndex}";
+            Identity = $"{PlaybackHandle.Value}:{Generation}:{MarkerAuthoringId}:{TraversalIndex}";
         }
 
         public string Identity { get; }
         public TimelineRuntimePlaybackHandle PlaybackHandle { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public ulong Generation { get; }
-        public string TrackAuthoringId { get; }
-        public string ClipAuthoringId { get; }
         public string MarkerAuthoringId { get; }
         public ulong TraversalIndex { get; }
-        public TimelineRuntimePresentationEventKind Kind { get; }
         public int Frame { get; }
         public int Cycle { get; }
-        public float NormalizedTime { get; }
-        public TimelineContentBindingUse PayloadBinding { get; }
-        public TimelineBindingValue Payload { get; }
     }
 
     public readonly struct TimelineRuntimeClipSample

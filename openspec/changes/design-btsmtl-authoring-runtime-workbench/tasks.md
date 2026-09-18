@@ -45,7 +45,7 @@
 
 - [x] 6.1 复用 Slate 时间尺、Track、Clip、缩放、滚动和绘制能力，复用 FlowCanvas 画布和导航能力
 - [x] 6.2 分离 Authoring projection、Preview projection 和 RuntimeDebug projection 的数据来源
-- [x] 6.3 RuntimeDebug 的 Slate 内容按正式 Runtime observation 动态创建，不从完整作者 TimelineData 补齐运行内容
+- [x] 6.3 RuntimeDebug 的 Slate 内容按正式 Runtime observation 动态维护为只读 TimelineData 投影，不把未执行的作者 Track / Clip 补进运行内容
 - [x] 6.4 RuntimeDebug 的 Graph/Timeline 切换不创建额外窗口、额外播放器或额外时钟
 
 ## 7. 版本与轻量更新

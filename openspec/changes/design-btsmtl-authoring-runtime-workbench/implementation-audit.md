@@ -7,6 +7,7 @@
 - 入口工具栏只保留 Profile、形态菜单、Session 菜单和一行状态；Start、Pause、Resume、Stop 以及 Prepare、Publish、Adopt 全部收进 Session 菜单，避免把流程按钮铺满编辑器。
 - RuntimeDebug 的当前 playback 现在按正式事件集合维护已见 Track / Clip，并把过滤后的只读 `TimelineData` 快照交给 Slate binding；未执行内容不会因为作者资产存在就进入运行时面。
 - 这一步完成的是单个 playback 的动态 Timeline 内容投影；FlowCanvas 与 Timeline 之间的调用栈导航仍由现有 `BtsmtlSkillObservationSession` 管理，不把跨多个 Timeline 的自动页面切换扩大描述为已完成。
+- 2026-09-18：`BTSMTL.Timeline.Editor.csproj` 与 `ThirdPersonClient.Editor.csproj` 窄编译均为 0 个错误；只保留仓库既有警告。编译结束后已执行 `dotnet build-server shutdown`。
 
 ## 基线与接口状态
 

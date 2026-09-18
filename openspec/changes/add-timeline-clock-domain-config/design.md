@@ -10,7 +10,7 @@
 2. `FixedAbilityOperationControlRuntime.TickTimeline` 写死 `deltaFrames = 1`，即"1 个逻辑 tick 恒等于 1 个 timeline 帧"，tick 率偏离 60 时播放速度与 cue/TreeClip 判定时刻全部错位；
 3. `GameplayAbilityAuthoringCompilationModel.TickRate` 直接返回 const 60，ability 编译产物时长换算与 pipeline 配置脱钩。
 
-项目是帧同步（确定性回滚）项目：逻辑域必须是固定 tick 整数域且可回滚；表现层确认不回滚，只消费 committed 事件流并连续插值。tick 率从 const 收敛为 pipeline 正式配置（`CharacterPipelineDefinition.m_SimulationTickRate` 已有序列化口子；现行 `gameplay-tick-system` spec 已要求 tick 率来自正式配置），Timeline 域接入该配置。默认 60:60 下行为与现状一致，资产零迁移。
+项目需要同时承载 Local、Prediction、Server Authority、Rollback 与 Replay 等 Network Model：逻辑域必须是固定 tick 整数域并按所选模型执行；表现域保持独立连续推进，默认消费表现 delta，再由角色表现域按 Network Model 选择自由播放、平滑纠正、硬切或严格跟随逻辑采样。`CommittedMovementPlaybackClock` 是逻辑时钟派生的 locomotion 进度事实，不是第三个时间域。tick 率从 const 收敛为 pipeline 正式配置（`CharacterPipelineDefinition.m_SimulationTickRate` 已有序列化口子；现行 `gameplay-tick-system` spec 已要求 tick 率来自正式配置），Timeline 域接入该配置。默认 60:60 下行为与现状一致，资产零迁移。
 
 ## 调研证据
 
@@ -68,22 +68,59 @@
 ## 与现行 spec / 其他文档关系
 
 - `gameplay-tick-system`（tick 率配置化、表现插值 alpha）与本决策一致，不修改其文档，Timeline 是其下游消费者；
-- `character-presentation-interpolation`（表现不回滚、连续状态保持、分支替换整批更新）与本决策一致，Timeline 动画贡献遵守它；
-- 本 change 既有 delta `btsmtl-timeline-direct-runtime` 的"Timeline 唯一时间 owner 负责帧/秒/Tick"措辞由本专题新增 capability `btsmtl-timeline-clock-domain` 细化为"tick 权威 + 秒读数"，无冲突；
-- `btsmtl-runnable-timeline-node` 的播放隔离与停止语义不受影响。
+- `character-presentation-interpolation`（表现不回滚、连续状态保持、分支替换整批更新）是本 change 的表现侧约束；Network Model 级 locomotion plan 由独立的 `add-network-model-locomotion-presentation-policy` change 负责；
+- `btsmtl-timeline-direct-runtime` 需要补充“直接内容遍历下的双域 evaluation”边界：Logic / Presentation 输出不是 Semantic operation 或预生成操作表；
+- `btsmtl-runnable-timeline-node` 需要把既有 TimelineBody 图限定为 Logic TreeClip，并给 Presentation TreeClip 规定无图执行的 Marker 来源；
+- `character-animation-pipeline` 需要记录表现 Marker 在 PresentationFrame 消费、不得写 Gameplay fact 的调用边界。
 
 ## 与归档条款的协调
 
 归档后的 `btsmtl-timeline-editor-preview` 现行 spec 中"Timeline必须使用正式帧率统一编辑时间"条款声明"作者帧 MUST 不自动解释为 Runtime Logic Tick"。本 change 与其兼容：作者帧是编辑器作者域单位，吸附步长配置化（默认取 `1/tickRate`）不改变"帧经显式换算进运行时"的语义；"编辑器预览刻度 MAY 与运行时 tick 率独立配置"即该条款的延续。
 
-## 表现时钟策略模式设计（2026-09-17 定稿）
+## 表现时钟策略模式设计（2026-09-18 修订）
 
-表现层时间驱动以策略对象插件化：新增 `IActionPresentationClockPolicy` 合同（`DriveClock(player, channelId, presentationSampleTick, factFrame, presentationDeltaSeconds)`），把"这一帧播放器时钟怎么走"完整封装在策略实现里，播放器消费点一行调度、零模式分支。
+运行时只有两个时间域：逻辑时钟与表现时钟。`CommittedMovementPlaybackClock` 不是第三个时钟，而是逻辑时钟产生的 locomotion 进度事实，供表现层在需要时采样。
 
-- `FreeRunPresentationClockPolicy`：`player.Advance(deltaSeconds, PlayRate)`——表现独立连续推进；
-- `CommittedMovementPresentationClockPolicy`：从正式 `CharacterPresentationFactFrame.MovementPlaybackClock` 读取已提交 locomotion 时钟，调用 `SynchronizeMovementClock`，用于作者明确标记为 `CommittedMovement` 的 locomotion Clip；
-- `CommittedFollowPresentationClockPolicy`：组合 `Registry`（Select/Sample/Complete/Release 生命周期、channel→playback 映射）+ `History`（committed 采样序列）+ `Projector`（窗口插值），`TryProject` 成功时 `SetRawClock(插值连续时间)`，窗口缺失时回到该 Clip 的自由推进语义；内部分支属于策略自身语义，消费点不可见；
-- 消费点：`CharacterPoseNativeClipPlayerHandler.PrepareFrame` 的 `m_Player.Advance(...)` 替换为 `m_ClockPolicy.DriveClock(...)`；
-- 装配开关：`CharacterPresentationDomainRuntimeFactory` 按 Clip 的 `CharacterClipPlayerClockSource` 选择 FreeRun 或 CommittedMovement；SimulatedActor 为 channel-bound Action 额外提供 CommittedFollow coordinator。
+表现层时间驱动以策略对象插件化：`IActionPresentationClockPolicy` 的 `DriveClock(player, channelId, presentationSampleTick, factFrame, presentationDeltaSeconds)` 完整封装播放器每帧如何推进，播放器消费点只调用策略，不判断网络模型。
 
-取舍：普通 locomotion 需要跟随已提交移动时钟，否则起步、循环和停止会脱离正式 movement playback；纯表现 Clip 继续使用 FreeRun；CommittedFollow 只为需要按 committed Action sample 重演的回放/观战链实例化。
+- `FreeRunPresentationClockPolicy`：`player.Advance(deltaSeconds, PlayRate)`，作为普通表现的默认模式；
+- `CommittedMovementPresentationClockPolicy`：读取 `CharacterPresentationFactFrame` 中的逻辑 locomotion 进度，供明确要求逻辑跟随的表现域使用；
+- `CommittedFollowPresentationClockPolicy`：组合 Registry、History 与 Projector，对带 channel 的 committed Action 采样做连续投影，供回放、观战或严格动作域使用；
+- 消费点：`CharacterPoseNativeClipPlayerHandler.PrepareFrame` 只调用 `m_ClockPolicy.DriveClock(...)`；
+- 装配边界：本 Timeline change 只在表现播放器层提供 FreeRun、CommittedMovement 与 CommittedFollow 策略；Network Model 级 locomotion 表现策略由独立 locomotion change 装配，避免把 Timeline 时钟改造和 locomotion 网络装配混成一条变更。
+
+取舍：通用表现默认按表现时钟自由播放；业务需要严格重演时再装配逻辑跟随。这样不强迫普通表现承担确定性采样成本，也保留回放、回滚与关键动作接入严格逻辑采样的入口。
+
+## Timeline 执行域拆分（2026-09-18 新增）
+
+Timeline 不能把所有 Track / Clip 都绑定到同一个推进路径。运行时只有 Logic Tick 与 Presentation Frame 两个时间域；内容执行域为 `Logic`、`Presentation` 或 `DualProjection`：
+
+```text
+Logic
+    SimulationTick 推进
+    负责 Gameplay 判断、TreeClip 决策、Cue、Window、Action 状态
+    可进入 Commit / Discard / Rollback
+
+Presentation
+    PresentationFrame 推进
+    负责动画、特效、音效、相机和表现事件
+    不生成 Gameplay fact，不修改 SimulationState
+
+DualProjection
+    同一作者内容同时提供 Logic 与 Presentation 投影
+    不是第三个时钟，不把同一张 TimelineBody 图在两个时钟各执行一次
+```
+
+Track 合同持有默认执行域，Clip 只能在 Track 允许的范围内声明有效域；历史资产缺少该字段时固定按 `Logic` 解释。Clip 不保存 ModelId、Endpoint、Transport、Rollback 或具体时钟实现。`DualProjection` 只表示内容拥有两种输出，不意味着额外时钟或额外播放实例。
+
+Timeline Runtime 仍直接读取正式只读 TimelineData。`Advance` 与 `Present` 分别在当前推进中遍历所需内容、形成 Logic Evaluation 或 Presentation Evaluation；两者是当前调用的结果分区，MUST NOT 被实现成预编译 Semantic operation、常驻操作表或第二份 Timeline 内容。
+
+TreeClip 必须把图执行和表现触发拆成两个明确来源：
+
+- Logic TreeClip：既有 `AssetTree` / TimelineBody 图只在逻辑 Tick 评估 Enter / Update / Exit，输出逻辑请求，进入既有 Commit / Discard 链；`TreeDecision` 退出也只作用于这一侧；
+- Presentation TreeClip：只持有 typed Presentation Marker（marker identity、时间、`Pulse` / `Stateful` 生命周期类型和正式 payload binding），表现帧按视觉游标跨越 Marker 输出事件；它不得绑定或执行 TimelineBody 图；
+- DualProjection TreeClip：同一 Clip 同时持有 Logic `AssetTree` 与 Presentation Marker。两侧由同一 Clip identity 关联，但 AssetTree 只执行一次，永远不在 PresentationFrame 执行。
+
+每个 Presentation Event 的稳定身份由 `PlaybackHandle`、`Generation`、`ClipId`、`MarkerId` 与 `TraversalIndex` 组成；`TraversalIndex` 是该 playback generation 下穿过 Marker 的循环/经过序号。Marker 必须声明 `Pulse` 或 `Stateful`：`Pulse` 只在跨越时交付一次，不进入活动集；`Stateful` 在其有效区间进入活动集。相同 identity 在同一可见分支只交付一次；循环再次经过 Marker 必须获得新的 `TraversalIndex`。表现游标重采样、停止或分支替换时，消费者以完整 Stateful 事件集调和：保留相同 identity、取消旧分支消失的 identity、交付新 identity。该调和只能改变表现状态，不能写 Gameplay fact。
+
+这部分是当前 Timeline change 的后续未完成工作。现有逻辑 TreeClip runtime 不得被宣称为已经支持表现时钟 TreeClip；当前仅把逻辑 TreeClip 事件镜像到表现层也不等价于 Marker 由 PresentationFrame 驱动。

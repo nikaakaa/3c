@@ -42,6 +42,7 @@
 - [x] 7.3 新增 PresentationFrame 驱动的表现游标与 evaluation 路径，不改变现有 Logic Tick 推进和 Commit / Discard 协议
 - [x] 7.4 为 Presentation TreeClip 新增 typed Presentation Marker（identity、时间、Pulse/Stateful 生命周期类型、payload binding）；该域不得绑定或执行 TimelineBody 图
 - [ ] 7.5 将 DualProjection TreeClip 的既有 AssetTree 固定为 Logic 投影，并把同一 Clip 的 Marker 输出分流到 Presentation Evaluation；AssetTree 不得在 PresentationFrame 重复执行
+- [ ] 7.7 Presentation Event 与相机/场景采样下游消费者接线：特效、音效、相机与表现动画域按稳定 EventId 调和消费，MUST NOT 写 Gameplay fact（表现动画贡献已接 ActionPlaybackCommandInbox，其余为剩余落点）
 - [x] 7.6 将 Presentation Event identity 定义为 playback handle、generation、clip、marker 与 traversal index；实现同帧去重、循环重触发、分支 replace、停止 cancel 与 generation reset
 
 

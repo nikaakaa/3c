@@ -94,6 +94,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPoseCanvasGraph graph = graphs[i];
                 if (!graph || EditorUtility.IsPersistent(graph))
                     continue;
+                if (graph.NativeRuntime != null)
+                    continue;
                 if (GraphEditor.currentGraph == graph)
                     GraphEditor.current.Close();
                 UnityEngine.Object.DestroyImmediate(graph);

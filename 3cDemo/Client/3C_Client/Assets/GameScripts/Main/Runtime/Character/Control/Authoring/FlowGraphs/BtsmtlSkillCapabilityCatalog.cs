@@ -896,6 +896,36 @@ namespace ThirdPersonCharacter.Control.Authoring
                     return macro.macro is BtsmtlSkillMacroGraph graph
                         ? graph.AuthoringId
                         : string.Empty;
+                case "mode" when node is RequestCameraStateNode cameraState:
+                    return cameraState.Mode;
+                case "sequenceId" when node is RequestCameraStateNode cameraState:
+                    return cameraState.SequenceId;
+                case "priority" when node is RequestCameraStateNode cameraState:
+                    return cameraState.Priority;
+                case "weight" when node is RequestCameraStateNode cameraState:
+                    return cameraState.Weight;
+                case "blendInSeconds" when node is RequestCameraStateNode cameraState:
+                    return cameraState.BlendInSeconds;
+                case "blendOutSeconds" when node is RequestCameraStateNode cameraState:
+                    return cameraState.BlendOutSeconds;
+                case "targetKey" when node is RequestCameraStateNode cameraState:
+                    return cameraState.TargetKey;
+                case "interruptPolicy" when node is RequestCameraStateNode cameraState:
+                    return cameraState.InterruptPolicy;
+                case "actionContext" when node is RequestCameraStateNode cameraState:
+                    return cameraState.ActionContext;
+                case "requestId" when node is RequestCameraEffectNode cameraEffect:
+                    return cameraEffect.RequestId;
+                case "effectKind" when node is RequestCameraEffectNode cameraEffect:
+                    return cameraEffect.EffectKind;
+                case "resourceId" when node is RequestCameraEffectNode cameraEffect:
+                    return cameraEffect.ResourceId;
+                case "weight" when node is RequestCameraEffectNode cameraEffect:
+                    return cameraEffect.Weight;
+                case "priority" when node is RequestCameraEffectNode cameraEffect:
+                    return cameraEffect.Priority;
+                case "actionContext" when node is RequestCameraEffectNode cameraEffect:
+                    return cameraEffect.ActionContext;
                 default:
                     throw new InvalidOperationException(
                         $"Skill节点 '{node.GetType().Name}' 没有字段 '{fieldId}' 的正式读取入口。");

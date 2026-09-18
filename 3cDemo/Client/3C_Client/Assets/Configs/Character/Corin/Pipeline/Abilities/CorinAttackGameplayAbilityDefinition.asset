@@ -609,7 +609,7 @@ MonoBehaviour:
   m_Name: Decision Attack5Hit
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"0f1fd664-33df-44bf-8e83-e82a3caf6822","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"f2d16ae4-4acb-41c9-92c1-b1afcae1bb36","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"6225401bc79441dca5eaab16bdbc0644","m_OwnerId":"00ec42f6d5ede195dcf13e4e27fe7933"},"m_ValueType":0,"_UID":"fad0f316-daa7-47fa-9284-56f6144623ef","_name":"Set
-    Attack2Hit","_position":{"x":320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"409b788f-7b4a-4e03-ae38-0664b0ed7b4d","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"2378333f-ce0c-4f60-bf69-f01bcc591053","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"c4931a91-9791-48df-9571-b7a0f9cb13e8","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"47990a9445e2bdec6a74d1f4522332ff","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+    Attack2Hit","_position":{"x":320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"409b788f-7b4a-4e03-ae38-0664b0ed7b4d","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"2378333f-ce0c-4f60-bf69-f01bcc591053","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"},{"_UID":"baa09250-708d-4044-a90e-3e4e018aa926","_name":"Corin_Attack_Normal_05_Zoom_Node","_position":{"x":360.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"c4931a91-9791-48df-9571-b7a0f9cb13e8","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"47990a9445e2bdec6a74d1f4522332ff","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences: []
   _graphSource:
     _version: 3.42
@@ -946,7 +946,6 @@ MonoBehaviour:
       m_Frame: 0
       m_NextSectionId: 
     m_ExternalBindings: []
-    m_Scale: 0.117767066
     m_Loop: 0
   references:
     version: 2
@@ -970,7 +969,6 @@ MonoBehaviour:
         m_PersistentMuted: 0
         m_Clips:
         - rid: 665191780990845508
-        - rid: 665191780990845509
     - rid: 665191780990845504
       type: {class: MotionCurveTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -1176,19 +1174,6 @@ MonoBehaviour:
         ClipInFrame: 0
         CueId: Attack1GameplayCue
         CueType: Gameplay
-    - rid: 665191780990845509
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: a50fcf55-d4cd-4ce2-b3af-86b9d2209813
-        StartFrame: 24
-        EndFrame: 25
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
-        ClipInFrame: 0
-        CueId: Attack1CameraCue
-        CueType: Camera
     - rid: 665191780990845510
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -1387,6 +1372,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 114000002}
     - rid: 665191780990845513
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -1400,6 +1386,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 114000003}
     - rid: 665191780990845514
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -1413,6 +1400,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 114000004}
     - rid: 665191780990845515
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -1426,6 +1414,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 114000005}
     - rid: 665191803296677992
       type: {class: MotionWarpTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -1536,7 +1525,7 @@ MonoBehaviour:
   m_Name: Decision Attack1Hit
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"b43ece1c-87fe-419b-ab79-80bc31b2f31c","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"a7d4ffcf-87d0-4a0a-9f21-1b6983eb4a2a","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"423b4949895d4fd38d25ee70e4b70602","m_OwnerId":"00ec42f6d5ede195dcf13e4e27fe7933"},"m_ValueType":0,"_inputPortValues":{"m_Value":{"$content":true,"$type":"System.Boolean"}},"_UID":"10981503-e757-4c4d-a227-a5ed0b5dec44","_name":"Set
-    Attack1Hit","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"42753d81-94dc-43b1-9ce5-b4ad64542f0a","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"a937f675-27a7-4a9c-86ee-217b6ecdb158","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"b795c215-b546-49ff-8777-1d0f8e0185bf","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"1eac26e4ad67ccfd6cfe9342d2ea92d7","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+    Attack1Hit","$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"42753d81-94dc-43b1-9ce5-b4ad64542f0a","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"a937f675-27a7-4a9c-86ee-217b6ecdb158","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"},{"_UID":"b55d75dd-5b56-4cd3-90aa-95ff0ad4dd22","_name":"Corin_Attack_Normal_01_Shake_Node","_position":{"x":360.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.RequestCameraEffectNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"b795c215-b546-49ff-8777-1d0f8e0185bf","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"1eac26e4ad67ccfd6cfe9342d2ea92d7","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences: []
   _graphSource:
     _version: 3.42
@@ -1784,7 +1773,6 @@ MonoBehaviour:
     - rid: 207050438612877323
     m_Sections: []
     m_ExternalBindings: []
-    m_Scale: 1
     m_Loop: 0
   references:
     version: 2
@@ -2321,6 +2309,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 3348614451701167143}
     - rid: 207050438612877325
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -2334,6 +2323,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 3
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 6942571526568422829}
     - rid: 207050438612877326
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -2347,6 +2337,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 4195809031538708240}
     - rid: 207050438612877371
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -2360,6 +2351,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 1029093293035819120}
 --- !u!114 &2881805319160728456
 MonoBehaviour:
@@ -2724,7 +2716,6 @@ MonoBehaviour:
     - rid: 207050438612877369
     m_Sections: []
     m_ExternalBindings: []
-    m_Scale: 1
     m_Loop: 0
   references:
     version: 2
@@ -3042,6 +3033,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: -2484288986480383195}
     - rid: 207050438612877364
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -3055,6 +3047,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 6693837534795556610}
     - rid: 207050438612877365
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -3068,6 +3061,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: -8167014581780197970}
     - rid: 207050438612877366
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -3076,21 +3070,7 @@ MonoBehaviour:
         Name: Action Cue
         m_PersistentMuted: 0
         m_Clips:
-        - rid: 207050438612877367
         - rid: 207050438612877368
-    - rid: 207050438612877367
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 3b26dcef-1d55-478e-a59a-5312a72f9bb4
-        StartFrame: 24
-        EndFrame: 25
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
-        ClipInFrame: 0
-        CueId: Attack5CameraCue
-        CueType: Camera
     - rid: 207050438612877368
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -3447,7 +3427,6 @@ MonoBehaviour:
     - rid: 207050438612877338
     m_Sections: []
     m_ExternalBindings: []
-    m_Scale: 1
     m_Loop: 0
   references:
     version: 2
@@ -3984,6 +3963,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 8823563092797898876}
     - rid: 207050438612877340
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -3997,6 +3977,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 4543710769292310889}
     - rid: 207050438612877341
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -4010,6 +3991,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: -4812538147775276677}
     - rid: 207050438612877372
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -4023,6 +4005,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 6264845888259740218}
 --- !u!114 &8022151124549127005
 MonoBehaviour:
@@ -4124,7 +4107,6 @@ MonoBehaviour:
     - rid: 207050438612877355
     m_Sections: []
     m_ExternalBindings: []
-    m_Scale: 1
     m_Loop: 0
   references:
     version: 2
@@ -4443,6 +4425,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: -3755222623046793182}
     - rid: 207050438612877349
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -4456,6 +4439,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: 9036229574908285600}
     - rid: 207050438612877350
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -4469,6 +4453,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: -6672077517517524189}
     - rid: 207050438612877351
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -4482,6 +4467,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
+        m_ExitSource: 0
         m_AssetTree: {fileID: -4803222074373020198}
     - rid: 207050438612877352
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}

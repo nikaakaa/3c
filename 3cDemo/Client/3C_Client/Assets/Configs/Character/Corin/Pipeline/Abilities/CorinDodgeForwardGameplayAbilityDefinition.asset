@@ -73,13 +73,10 @@ MonoBehaviour:
     - rid: 207050438612877387
     m_Sections: []
     m_ExternalBindings: []
-    m_Scale: 1
     m_Loop: 0
   references:
     version: 2
     RefIds:
-    - rid: -2
-      type: {class: , ns: , asm: }
     - rid: 207050438612877382
       type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -101,9 +98,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_InlineTree:
-          rid: -2
-        m_SharedTreeAsset: {fileID: 0}
+        m_ExitSource: 0
         m_AssetTree: {fileID: -7652454408741459237}
     - rid: 207050438612877384
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -117,9 +112,7 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_InlineTree:
-          rid: -2
-        m_SharedTreeAsset: {fileID: 0}
+        m_ExitSource: 0
         m_AssetTree: {fileID: -7135324045220957111}
     - rid: 207050438612877385
       type: {class: AnimationTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -135,8 +128,8 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e9d429f1-595e-475a-b647-444a6e069c92
-        StartFrame: 0
-        EndFrame: 141
+        StartFrame: 7
+        EndFrame: 148
         OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
@@ -157,7 +150,7 @@ MonoBehaviour:
             inWeight: 0
             outWeight: 0
           - serializedVersion: 3
-            time: 1
+            time: 0.9999977
             value: 1
             inSlope: 0
             outSlope: 0
@@ -175,15 +168,15 @@ MonoBehaviour:
             time: 0
             value: 0
             inSlope: 0
-            outSlope: 1
+            outSlope: 1.0000027
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
             outWeight: 0
           - serializedVersion: 3
-            time: 1
+            time: 0.9999977
             value: 1
-            inSlope: 1
+            inSlope: 1.0000027
             outSlope: 0
             tangentMode: 0
             weightedMode: 0
@@ -199,15 +192,15 @@ MonoBehaviour:
             time: 0
             value: 0
             inSlope: 0
-            outSlope: 1
+            outSlope: 1.0000027
             tangentMode: 0
             weightedMode: 0
             inWeight: 0
             outWeight: 0
           - serializedVersion: 3
-            time: 1
+            time: 0.9999977
             value: 1
-            inSlope: 1
+            inSlope: 1.0000027
             outSlope: 0
             tangentMode: 0
             weightedMode: 0
@@ -331,14 +324,14 @@ MonoBehaviour:
   m_Name: Decision RecoveryOpen
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"50a3ad51-d102-46c6-8f59-3556f8101df7","_name":"\u7247\u6bb5\u542f\u7528","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"b2376875-f4a0-4c2a-adaf-a6e4c0278a82","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Variable":{"m_DeclarationId":"4a7a79cd9fc14a8f807d3d9580548cc1","m_OwnerId":"01974466-06fd-4295-a76e-74a85e118390"},"m_ValueType":0,"_UID":"b2552514-5758-45ae-9201-f7293a7478c2","_name":"Set
-    RecoveryOpen","_position":{"x":320.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"0b17a643-0e7a-45d5-8d97-238ace861568","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"8855643c-4b97-411e-bca9-e19ae9542912","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"124777d1-9bbf-4292-9ca7-4b89326a8ed4","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"49c3ae7850d26f945fc7ef1aed38c456","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+    RecoveryOpen","_position":{"x":357.1542,"y":268.9257},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillBlackboardSetFlowNode","$id":"2"},{"_UID":"0b17a643-0e7a-45d5-8d97-238ace861568","_name":"\u7247\u6bb5\u505c\u7528","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"8855643c-4b97-411e-bca9-e19ae9542912","_name":"\u7247\u6bb5\u9500\u6bc1","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"124777d1-9bbf-4292-9ca7-4b89326a8ed4","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"49c3ae7850d26f945fc7ef1aed38c456","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences: []
   _graphSource:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
+    _translation: {x: -38, y: -188}
+    _zoomFactor: 0.7962157
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: 49c3ae7850d26f945fc7ef1aed38c456
@@ -393,7 +386,7 @@ MonoBehaviour:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 219, y: 53}
+    _translation: {x: 255, y: 195}
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
@@ -423,7 +416,7 @@ MonoBehaviour:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 214, y: 137}
+    _translation: {x: -60, y: 234}
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}

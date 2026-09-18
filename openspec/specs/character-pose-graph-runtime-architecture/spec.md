@@ -97,3 +97,31 @@ Diagnostics MUST 读取带同一 lineage 的 Committed Pose、Source、Constrain
 - **WHEN** 任一声明 Renderer、Mesh revision 或属性索引在整体预验证时无效
 - **THEN** Final Publication MUST 阻止本次骨骼和属性的全部写入
 - **AND** MUST 不先提交骨骼后丢弃属性，也不得读取旧 Renderer 数值补成当前帧
+
+
+### Requirement: Pose 域实例生命周期必须单 owner 且运行期不可替换
+
+Pose 域会话 MUST 由唯一包装器（CharacterPoseNativeDomainInstance）持有，表现运行时 MUST 是该包装器的唯一 owner 并在自己的 Dispose 中销毁 Pose 域；装配工厂的失败清理 MUST 只是幂等二次销毁。Pose 实例在宿主生命周期内 MUST 不提供运行中 Replace、Swap 或第二实例接管；FrameCoordinator、RoleRuntime、GraphRuntime MUST 单向持有，不暴露反向替换入口。子图 child 实例 MUST 由 Subgraph Handler 独占持有并随 evaluator 级联销毁。
+
+#### Scenario: 固定输入回放第二轮推进
+
+- **WHEN** 同一 Actor 的固定输入 Replay 进行第二轮
+- **THEN** Pose 域 MUST 复用同一实例并按递增 resetGeneration 重置状态
+- **AND** 重置失败 MUST 以携带 FailureCode 与 Message 的异常精确抛出
+- **AND** 系统 MUST NOT 在旧实例销毁后仍允许任何路径继续推进其帧事务
+
+#### Scenario: 表现运行时销毁
+
+- **WHEN** 表现运行时 Dispose
+- **THEN** 其持有的 Pose 域会话 MUST 被同一时间销毁
+- **AND** 已销毁实例上的任何帧推进 MUST 得到明确的 ObjectDisposed 异常
+
+### Requirement: Pose 实例身份必须按 Actor 稳定派生且跨 Host 唯一
+
+Pose 实例 instanceId MUST 从 ActorId 稳定哈希派生、MUST 非零，并在同一 Actor 的多轮回放间保持稳定；子图实例身份 MUST 从父实例身份派生。不同 Host（如 fixed-player 与 fixed-target）的 Pose 实例与子图实例身份 MUST 不相同，任何以实例身份为键的状态 MUST 不跨 Host 命中。
+
+#### Scenario: 两个 Fixed Character Host 同时装配
+
+- **WHEN** fixed-player 与 fixed-target 各自创建 Pose 域
+- **THEN** 两者的实例身份与子图实例身份 MUST 不同
+- **AND** 任一 Host 的 Pose 域销毁 MUST NOT 影响另一 Host 的帧推进

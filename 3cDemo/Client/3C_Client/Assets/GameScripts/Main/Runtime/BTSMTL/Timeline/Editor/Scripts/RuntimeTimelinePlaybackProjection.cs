@@ -71,7 +71,7 @@ namespace BTSMTL.Timeline.Editor
             if (runtimeClip is TreeClip treeClip &&
                 treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision)
             {
-                runtimeClip.EndFrame = Math.Max(runtimeClip.StartFrame + 1, m_SourceSnapshot.MaxFrame);
+                runtimeClip.EndFrame = m_SourceSnapshot.MaxFrame;
                 runtimeClip.FrameToTime();
             }
             int sourceIndex = sourceTrack.Clips.IndexOf(sourceClip);

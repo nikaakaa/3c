@@ -43,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     resetGeneration,
                     reason,
                     serviceFactory);
-            if (!validation.IsAdopted)
+            if (validation.IsFailure)
                 return validation;
 
             CharacterPoseSourceModule source = null;
@@ -155,7 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     resetGeneration,
                     reason,
                     serviceFactory);
-            if (!validation.IsAdopted)
+            if (validation.IsFailure)
                 return validation;
 
             CharacterPoseSourceModule source = null;
@@ -288,10 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return FailInput("instance identity", CharacterPoseNativeFailureCode.GraphInvalid);
             if (serviceFactory == null)
                 return FailInput("domain service factory", CharacterPoseNativeFailureCode.ResourceMissing);
-            return CharacterPoseNativeDomainCreateResult.Failed(
-                CharacterPoseNativeFailureCode.None,
-                string.Empty,
-                string.Empty);
+            return CharacterPoseNativeDomainCreateResult.Valid();
         }
 
         static CharacterPoseNativeDomainCreateResult FailInput(

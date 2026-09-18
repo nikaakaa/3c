@@ -299,12 +299,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 "CharacterPoseNativeDomainRuntimeFactory",
                 adoption.Message);
 
+        internal static CharacterPoseNativeDomainCreateResult Valid() =>
+            new CharacterPoseNativeDomainCreateResult(
+                default,
+                null,
+                CharacterPoseNativeFailureCode.None,
+                string.Empty,
+                string.Empty);
+
         internal CharacterPoseNativeAdoptedResult Adoption { get; }
         internal CharacterPoseNativeDomainSession Session { get; }
         internal CharacterPoseNativeFailureCode FailureCode { get; }
         internal string Source { get; }
         internal string Message { get; }
         internal bool IsAdopted => Session != null;
+        internal bool IsFailure => FailureCode != CharacterPoseNativeFailureCode.None;
     }
 }
 

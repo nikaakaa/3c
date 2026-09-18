@@ -463,12 +463,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             catch (Exception exception)
             {
                 m_Stage = CharacterPoseNativeExecutionStage.Prepare;
+                string message = $"{exception.GetType().Name}: {exception.Message}";
+                if (!m_CompletedLineage.IsValid)
+                    throw new InvalidOperationException(
+                        $"Pose frame prepare failed on an invalid lineage. {message}", exception);
                 return new CharacterPoseNativePreparationResult(
                     in m_CompletedLineage,
                     CharacterPoseNativeFrameStatus.Invalid,
                     CharacterPoseNativeFailureCode.FrameInvalid,
                     "Pose/Prepare",
-                    exception.Message,
+                    message,
                     default);
             }
         }

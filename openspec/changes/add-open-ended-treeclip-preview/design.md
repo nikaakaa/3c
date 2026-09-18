@@ -9,13 +9,13 @@
 
 ## runtime 回传通道
 
-现状：TreeClip Enter/Exit 全部由 StartFrame/EndFrame 帧边界产生（`TimelineRuntimePreparation` 评估器按 clip 区间边界输出 `TimelineRuntimeTreeClipRequest`），树侧 Enable/Disable/Destroy hook 节点方向为 timeline → 树，无回传。
+现状：TreeClip Enter/Exit 全部由 StartFrame/EndFrame 帧边界产生（`TimelineRuntimePreparation` 评估器按 clip 区间边界输出 `TimelineRuntimeTreeClipRequest`），树侧 Enable/Disable/Destroy hook 节点方向为 timeline → 树，无回传。作者不能在树逻辑满足条件时主动结束 clip。
 
 新增通道：
 
 1. **退出来源标记**：TreeClip 序列化字段标记退出来源（默认 FrameBoundary）。标记 TreeDecision 的 clip，评估器到达 EndFrame 后不再产出 Exit，改为维持活跃。
-2. **退出事件上报**：树侧 TimelineDisable 钩子执行或树完成时，经现有 TreeClip 调用链（`CharacterTimelineTreeClipService` 的 ActiveTreeClip 通道）向 Timeline runtime 上报该 clip 退出；runtime 产生真实 Exit 边界请求，进入既有 Advance/Commit 协议（候选 → 调用方 Step 提交），不旁路提交路径。
-3. **确定性**：回传事件属于播放实例状态，进既有快照体系；回滚重放时退出边界由重放的树执行结果重现，不由表现层记忆。
+2. **退出事件上报**：树侧新增作者可见的“结束片段”节点，编译为正式 `TimelineClipExitRequest` operation。节点在 TreeClip invocation上下文中执行时，携带当前 playback handle 与 clip authoring id 调用 Timeline runtime 接收端；runtime 产生真实 Exit 边界请求，进入既有 Advance/Commit 协议（候选 → 调用方 Step 提交），不旁路提交路径。若事件发生在当前 Advance 的树更新内，先挂起为本 Advance 的产物：当前 Advance commit 后转成下一个 Advance 的 pending exit，当前 Advance discard 则丢弃。
+3. **确定性**：已定型退出与 pending 退出都属于播放实例状态，进既有快照体系；回滚重放时退出边界由重放的树执行结果和恢复的 pending 状态重现，不由表现层记忆。
 
 ## 预览显示
 

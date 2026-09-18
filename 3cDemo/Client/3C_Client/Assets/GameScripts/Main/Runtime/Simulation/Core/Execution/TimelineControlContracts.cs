@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
@@ -605,6 +604,7 @@ namespace ThirdPersonSimulation
             int cycle,
             int frameCarry,
             IReadOnlyList<string> treeDecisionExits,
+            IReadOnlyList<string> pendingTreeDecisionExits,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
             bool hasStopContext,
@@ -635,8 +635,11 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(cursorFrame));
             if (treeDecisionExits == null)
                 throw new ArgumentNullException(nameof(treeDecisionExits));
+            if (pendingTreeDecisionExits == null)
+                throw new ArgumentNullException(nameof(pendingTreeDecisionExits));
             FrameCarry = frameCarry;
             TreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(treeDecisionExits ?? Array.Empty<string>()));
+            PendingTreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(pendingTreeDecisionExits ?? Array.Empty<string>()));
             SectionId = sectionId ?? string.Empty;
             ActiveClipIds = Copy(activeClipIds);
             StopCause = stopCause;
@@ -674,6 +677,7 @@ namespace ThirdPersonSimulation
         public int Cycle { get; }
         public int FrameCarry { get; }
         public IReadOnlyList<string> TreeDecisionExits { get; }
+        public IReadOnlyList<string> PendingTreeDecisionExits { get; }
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds { get; }
         public bool HasStopContext { get; }
@@ -709,7 +713,8 @@ namespace ThirdPersonSimulation
             string treeGraphId,
             AbilityTreeClipHook hook,
             int cycle,
-            ulong actionInstanceId)
+            ulong actionInstanceId,
+            int timelineRuntimeHandle)
         {
             ClipAuthoringId = SimulationIdentity.Require(clipAuthoringId, nameof(clipAuthoringId));
             TreeGraphId = SimulationIdentity.Require(treeGraphId, nameof(treeGraphId));
@@ -719,9 +724,12 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             if (actionInstanceId == 0)
                 throw new ArgumentOutOfRangeException(nameof(actionInstanceId));
+            if (timelineRuntimeHandle == 0)
+                throw new ArgumentOutOfRangeException(nameof(timelineRuntimeHandle));
             Hook = hook;
             Cycle = cycle;
             ActionInstanceId = actionInstanceId;
+            TimelineRuntimeHandle = timelineRuntimeHandle;
         }
 
         public string ClipAuthoringId { get; }
@@ -729,6 +737,7 @@ namespace ThirdPersonSimulation
         public AbilityTreeClipHook Hook { get; }
         public int Cycle { get; }
         public ulong ActionInstanceId { get; }
+        public int TimelineRuntimeHandle { get; }
     }
 
     public interface IAbilityTreeClipInvoker
@@ -753,6 +762,7 @@ namespace ThirdPersonSimulation
         AbilityTimelineStopResult Stop(int runtimeHandle);
         void CommitStop(IAbilityTimelineStopPending pending);
         void DiscardStop(IAbilityTimelineStopPending pending);
+        bool RequestTreeClipExit(int runtimeHandle, string clipAuthoringId);
     }
 
 

@@ -70,6 +70,18 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
     }
 
+    [Name("结束片段"), Category("BTSMTL/Timeline")]
+    [BtsmtlSkillNodeKind("timelineClipExitRequest")]
+    public sealed class BtsmtlSkillTimelineExitRequestFlowNode : BtsmtlSkillFlowNode
+    {
+        protected override void RegisterPorts() => AddFlowInput("执行", RejectAuthoringExecution, "Input");
+
+        protected override void OnNodeInspectorGUI()
+        {
+            BtsmtlSkillNodeInspector.Draw(this);
+        }
+    }
+
     public enum BtsmtlSkillTimelineHook
     {
         OnEnable,

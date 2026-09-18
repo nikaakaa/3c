@@ -94,7 +94,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         clip.TreeGraphId,
                         AbilityTreeClipHook.Root,
                         clip.Cycle,
-                        actionInstanceId);
+                        actionInstanceId,
+                        checked((int)context.Playback.Handle.Value));
                     if (!clip.Invoker.InvokeTreeClip(updateInvocation))
                         return false;
                 }
@@ -131,7 +132,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     ? AbilityTreeClipHook.OnEnable
                     : AbilityTreeClipHook.OnDisable,
                 request.Cycle,
-                m_Host.RequireAbilityPlaybackActionInstanceId(context.Playback.Handle));
+                m_Host.RequireAbilityPlaybackActionInstanceId(context.Playback.Handle),
+                checked((int)context.Playback.Handle.Value));
             return invoker.InvokeTreeClip(invocation);
         }
 
@@ -157,7 +159,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     clip.TreeGraphId,
                     AbilityTreeClipHook.OnDestroy,
                     clip.Cycle,
-                    m_Host.RequireAbilityPlaybackActionInstanceId(request.Handle));
+                    m_Host.RequireAbilityPlaybackActionInstanceId(request.Handle),
+                    checked((int)request.Handle.Value));
                 if (!clip.Invoker.InvokeTreeClip(invocation))
                     continue;
             }
@@ -598,6 +601,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (pending.Request.Playback != null && !m_Host.Service.DiscardStopTimelinePlayback(pending.Handle, pending.Request))
                 throw new InvalidOperationException($"Timeline stop '{pending.Handle.Value}' could not be discarded.");
         }
+        public bool RequestAbilityTreeClipExit(int runtimeHandle, string clipAuthoringId)
+        {
+            if (!IsInitialized)
+                return false;
+            return m_Host.Service.RequestTreeClipExit(
+                new TimelineRuntimePlaybackHandle((ulong)runtimeHandle),
+                clipAuthoringId);
+        }
+
         public AbilityTimelineRuntimeSnapshot CaptureAbilityTimelinePlayback(
             TimelinePlaybackHandle handle,
             AbilityTimelineStartRequest request)
@@ -619,6 +631,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 native.Cycle,
                 native.FrameCarry,
                 native.TreeDecisionExits,
+                native.PendingTreeDecisionExits,
                 native.SectionId,
                 native.ActiveClipIds,
                 native.HasStopContext,
@@ -672,6 +685,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 snapshot.InitialBoundaryPending,
                 snapshot.FrameCarry,
                 snapshot.TreeDecisionExits,
+                snapshot.PendingTreeDecisionExits,
                 m_TickRate);
             TimelineRuntimeRestoreCandidate candidate = m_Host.PrepareRestore(native, preparation);
             TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);

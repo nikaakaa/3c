@@ -120,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BtsmtlSkillStateRootCompletedFlowNode => new SimulationNodeEmission(SimulationOperationCode.StateRootCompleted),
             BtsmtlSkillStateExitCauseFlowNode cause => new SimulationNodeEmission(SimulationOperationCode.StateExitCause, integer0: (int)Field<BtsmtlSkillStateExitCauseFlowNode, BtsmtlSkillStateExitCause>(cause, "cause")),
             BtsmtlSkillLoopFlowNode loop => new SimulationNodeEmission(SimulationOperationCode.Loop, integer0: (int)Field<BtsmtlSkillLoopFlowNode, BtsmtlSkillLoopStopType>(loop, "stopType")),
+            BtsmtlSkillTimelineExitRequestFlowNode => new SimulationNodeEmission(SimulationOperationCode.TimelineClipExitRequest),
             BtsmtlSkillTimelineHookFlowNode hook => new SimulationNodeEmission(SimulationOperationCode.TimelineEnter, integer0: (int)hook.Hook),
             BtsmtlSkillTimelineFlowNode timeline => new SimulationNodeEmission(SimulationOperationCode.Timeline,
                 integer0: (int)Field<BtsmtlSkillTimelineFlowNode, TimelinePlaybackMode>(timeline, "playbackMode"), text0: Identity(timeline, "timelineId"),

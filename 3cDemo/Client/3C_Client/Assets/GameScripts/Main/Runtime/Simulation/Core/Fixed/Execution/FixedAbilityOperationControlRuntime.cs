@@ -264,6 +264,8 @@ namespace ThirdPersonSimulation.Fixed
                         : OperationExecutionResult.Failure;
                 case SimulationOperationCode.Timeline:
                     return TickTimeline(operation);
+                case SimulationOperationCode.TimelineClipExitRequest:
+                    return RequestTreeClipExit(operation);
                 case SimulationOperationCode.CameraStateRequest:
                 case SimulationOperationCode.CameraResponse:
                 case SimulationOperationCode.CameraTarget:
@@ -334,6 +336,19 @@ namespace ThirdPersonSimulation.Fixed
             return committedTicks >= requiredTicks
                 ? OperationExecutionResult.Success
                 : OperationExecutionResult.Running;
+        }
+
+        OperationExecutionResult RequestTreeClipExit(SimulationOperation operation)
+        {
+            if (m_TimelineRuntime == null)
+                throw new InvalidOperationException($"Timeline operation '{m_Access.SourcePath(operation)}' has no Timeline runtime binding.");
+            if (!m_Presentation.HasTreeClipInvocation)
+                throw new InvalidOperationException($"Timeline Clip exit operation '{m_Access.SourcePath(operation)}' must execute inside a TreeClip invocation.");
+            AbilityTreeClipInvocation invocation = m_Presentation.TreeClipInvocation;
+            _ = m_TimelineRuntime.RequestTreeClipExit(
+                invocation.TimelineRuntimeHandle,
+                invocation.ClipAuthoringId);
+            return OperationExecutionResult.Success;
         }
 
         OperationExecutionResult TickTimeline(SimulationOperation operation)

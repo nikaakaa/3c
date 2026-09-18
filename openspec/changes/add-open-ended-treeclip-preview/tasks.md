@@ -11,7 +11,7 @@
 ## 2. 树退出回传与 Exit 边界
 
 - [x] 2.1 评估器对 TreeDecision clip 到达 EndFrame 后维持活跃、不产出 Exit
-- [x] 2.2 （2026-09-18 决策b）Timeline侧接收端落地：`CharacterTimelineTreeClipService.RequestTreeClipExit`/`TimelineRuntimeService.RequestTreeClipExit` 上行入口就位；树侧program触发节点（结束片段）归program编译域另行立项，端到端定型暂由playback停止兜底
+- [x] 2.2 （2026-09-18 决策b）Timeline侧接收端落地：`CharacterTimelineTreeClipService.RequestTreeClipExit`/`TimelineRuntimeService.RequestTreeClipExit` 上行入口就位
 - [x] 2.3 Timeline runtime 接收退出事件产生真实 Exit 边界请求，走既有 Advance/Commit 协议
 - [x] 2.4 回传事件进入播放快照体系，回滚重放时退出边界由重放结果重现
 
@@ -20,3 +20,9 @@
 - [x] 3.1 ScenePlay 预览观察链发布开放 clip 的生长状态（活跃、未定型、游标位置）
 - [x] 3.2 Timeline 窗口开放 clip 可视 End 跟随 Runtime 游标，定型后固定于实际退出位置
 - [x] 3.3 循环等待类 clip 同规则显示，playback 停止定型；不新增 clip 级退出判定（由3.1/3.2通用显示规则覆盖，无独立实现项）
+
+## 4. 树侧触发节点
+
+- [x] 4.1 新增作者可见的“结束片段”Timeline Body节点，编译为正式 `TimelineClipExitRequest` operation
+- [x] 4.2 Fixed/Float32 Ability执行域在TreeClip invocation上下文内触发退出请求，并接入Timeline接收端
+- [x] 4.3 pending树退出进入播放状态；当前Advance discard时丢弃，commit后由下一个Advance注入真实Exit边界，回滚重放可重建

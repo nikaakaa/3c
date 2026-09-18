@@ -9,7 +9,7 @@ Timeline 里的 TreeClip 承载格挡、蓄力等待等由树内部逻辑决定�
 ## What Changes
 
 - **开放时长 TreeClip 合同**：TreeClip 增加显式退出来源标记（默认帧边界保持现状；标记为树决定退出的 clip，EndFrame 降级为最短持有时长，到点前不许退、到点后由树退出事件产生真实 Exit 边界）。
-- **树退出回传通道**：树侧退出事件（TimelineDisable 钩子或树完成）回传 Timeline runtime，产生该 clip 的真实 Exit 边界并定型；timeline 在 Exit 后继续走后续内容。
+- **树退出回传通道**：树侧新增“结束片段”节点；执行到该节点时向 Timeline runtime 请求退出，产生该 clip 的真实 Exit 边界并定型；timeline 在 Exit 后继续走后续内容。
 - **循环等待类不设 clip 级退出**：循环等待输入/转场的内容（如蓄力循环）活跃至所属 playback 被外部停止/转场为止，不新增 clip 级独立退出判定——转场判定本属 ability program 播放级职责。
 - **预览观察显示**：ScenePlay 预览观察中，开放时长 TreeClip 的可视 End 跟随 Runtime 游标实时增长，树退出事件到达时定型；循环等待类同样跟随游标至 playback 停止定型。显示数据全部消费正式 Runtime 已发布事实，不新增 UI 私有时钟或采样。
 
@@ -25,7 +25,7 @@ Timeline 里的 TreeClip 承载格挡、蓄力等待等由树内部逻辑决定�
 
 ## Impact
 
-- 代码面：Timeline runtime（退出来源标记、树退出回传通道、Exit 边界产生）、树侧 hook 节点（TimelineDisable/树完成的事件上报）、ScenePlay 预览观察链（开放 clip 的可视 End 显示）。UI 不新增时钟、不伪造采样。
+- 代码面：Timeline runtime（退出来源标记、树退出回传通道、Exit 边界产生）、树侧“结束片段”节点与 program 编译执行链、ScenePlay 预览观察链（开放 clip 的可视 End 显示）。UI 不新增时钟、不伪造采样。
 - 前置依赖：时钟域 change（`add-timeline-clock-domain-config`）的策略合同与装配开关收尾；其实施提交 `8a508f68e`、`6104e6387` 已落码主体。
 - 存量兼容：默认帧边界语义不变，未标记的 TreeClip 与全部既有 clip 行为零变化；Corin 等存量资产无需迁移。
 - 与现行 spec 对比：`btsmtl-timeline-editor-preview` 现行条款（ScenePlay 独占生命周期、UI 只读、消费正式 Runtime 事实、多实例 Pin/Follow）全部保持；本 change 只新增开放时长内容的显示与退出语义，不修改既有条款。`preview-integration-plan` 中"不做假延长"禁令继续有效——本 change 的变长显示依据是 runtime 真实退出事件，不是 UI 补长。

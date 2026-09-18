@@ -535,6 +535,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public void PopTreeClipInvoker() =>
             m_Host.PopTreeClipInvoker();
 
+        public bool RequestTreeClipExit(int runtimeHandle, string clipAuthoringId) =>
+            m_Host.RequestAbilityTreeClipExit(runtimeHandle, clipAuthoringId);
+
         public AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle)
         {
             if (!m_Requests.TryGetValue(runtimeHandle, out AbilityTimelineStartRequest request))

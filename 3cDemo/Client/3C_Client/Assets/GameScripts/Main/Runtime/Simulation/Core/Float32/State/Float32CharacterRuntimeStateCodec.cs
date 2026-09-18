@@ -8,9 +8,9 @@ namespace ThirdPersonSimulation
     public static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 5;
-        const string HashIdentity = "float32-character-runtime-state-hash/5";
-        public const string CodecIdentity = "float32-character-runtime-state/5";
+        const int Version = 6;
+        const string HashIdentity = "float32-character-runtime-state-hash/6";
+        public const string CodecIdentity = "float32-character-runtime-state/6";
 
         public static byte[] Write(Float32CharacterRuntimeState state)
         {
@@ -196,6 +196,9 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(snapshot.TreeDecisionExits.Count);
             for (int i = 0; i < snapshot.TreeDecisionExits.Count; i++)
                 writer.WriteString(snapshot.TreeDecisionExits[i]);
+            writer.WriteInt32(snapshot.PendingTreeDecisionExits.Count);
+            for (int i = 0; i < snapshot.PendingTreeDecisionExits.Count; i++)
+                writer.WriteString(snapshot.PendingTreeDecisionExits[i]);
             writer.WriteString(snapshot.SectionId);
             writer.WriteInt32(snapshot.ActiveClipIds.Count);
             for (int i = 0; i < snapshot.ActiveClipIds.Count; i++)
@@ -235,6 +238,10 @@ namespace ThirdPersonSimulation
             var treeDecisionExits = new string[treeDecisionExitCount];
             for (int i = 0; i < treeDecisionExitCount; i++)
                 treeDecisionExits[i] = reader.ReadString();
+            int pendingTreeDecisionExitCount = ReadCount(reader, 1024, "Float32 Character Timeline pending tree decision exits");
+            var pendingTreeDecisionExits = new string[pendingTreeDecisionExitCount];
+            for (int i = 0; i < pendingTreeDecisionExitCount; i++)
+                pendingTreeDecisionExits[i] = reader.ReadString();
             string sectionId = reader.ReadString();
             int clipCount = ReadCount(reader, 1024, "Float32 Character Timeline active clips");
             var clips = new string[clipCount];
@@ -281,6 +288,7 @@ namespace ThirdPersonSimulation
                 cycle,
                 frameCarry,
                 treeDecisionExits,
+                pendingTreeDecisionExits,
                 sectionId,
                 clips,
                 hasStopContext,

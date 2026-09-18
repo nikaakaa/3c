@@ -189,6 +189,7 @@ namespace BTSMTL.Timeline.Runtime
         readonly List<string> m_PendingTreeClipExits = new List<string>();
         readonly List<string> m_ExitedTreeDecisionClips = new List<string>();
         readonly List<string> m_AdvanceInjectedTreeClipExits = new List<string>();
+        readonly List<string> m_AdvanceProducedTreeClipExits = new List<string>();
         readonly ReadOnlyCollection<string> m_ActiveClipIdsView;
         TimelineRuntimeAdvanceResult m_PendingAdvance;
         TimelinePlaybackStopContext m_PendingStopContext;
@@ -294,9 +295,9 @@ namespace BTSMTL.Timeline.Runtime
             if (string.IsNullOrWhiteSpace(clipAuthoringId))
                 throw new ArgumentException("TreeClip exit identity is required.", nameof(clipAuthoringId));
             string trimmed = clipAuthoringId.Trim();
-            if (m_PendingAdvance != null ||
-                m_PendingTreeClipExits.Contains(trimmed) ||
-                m_ExitedTreeDecisionClips.Contains(trimmed))
+            if (m_PendingTreeClipExits.Contains(trimmed) ||
+                m_ExitedTreeDecisionClips.Contains(trimmed) ||
+                m_AdvanceProducedTreeClipExits.Contains(trimmed))
                 return false;
             bool found = false;
             for (int index = 0; index < Content.Clips.Count; index++)
@@ -309,7 +310,10 @@ namespace BTSMTL.Timeline.Runtime
             }
             if (!found)
                 return false;
-            m_PendingTreeClipExits.Add(trimmed);
+            if (m_PendingAdvance != null)
+                m_AdvanceProducedTreeClipExits.Add(trimmed);
+            else
+                m_PendingTreeClipExits.Add(trimmed);
             return true;
         }
 
@@ -425,6 +429,9 @@ namespace BTSMTL.Timeline.Runtime
                     m_ExitedTreeDecisionClips.Add(exitedClipId);
             }
             m_PendingAdvance = null;
+            for (int index = 0; index < m_AdvanceProducedTreeClipExits.Count; index++)
+                m_PendingTreeClipExits.Add(m_AdvanceProducedTreeClipExits[index]);
+            m_AdvanceProducedTreeClipExits.Clear();
             if (advance.Completes)
                 State = TimelineRuntimePlaybackState.Completed;
             return true;
@@ -436,6 +443,7 @@ namespace BTSMTL.Timeline.Runtime
             for (int index = 0; index < m_AdvanceInjectedTreeClipExits.Count; index++)
                 m_PendingTreeClipExits.Remove(m_AdvanceInjectedTreeClipExits[index]);
             m_AdvanceInjectedTreeClipExits.Clear();
+            m_AdvanceProducedTreeClipExits.Clear();
             m_PendingAdvance = null;
             return true;
         }
@@ -495,6 +503,7 @@ namespace BTSMTL.Timeline.Runtime
         internal bool HasPendingStop => m_StopPending;
         internal bool HasPendingAdvance => m_PendingAdvance != null;
         internal bool InitialBoundaryPending => m_InitialBoundaryPending;
+        internal IReadOnlyList<string> PendingTreeDecisionClips => m_PendingTreeClipExits;
 
         internal bool RestoreCommittedState(
             TimelineRuntimePlaybackState state,
@@ -505,6 +514,7 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<string> activeClipIds,
             IReadOnlyList<TimelineRuntimeTreeClipAssociation> activeTreeClipAssociations,
             IReadOnlyList<string> exitedTreeDecisionClips,
+            IReadOnlyList<string> pendingTreeDecisionClips,
             bool hasStopContext,
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending)
@@ -540,6 +550,8 @@ namespace BTSMTL.Timeline.Runtime
                 m_ActiveClipIds.Add(activeClipIds[index]);
             for (int index = 0; index < (exitedTreeDecisionClips?.Count ?? 0); index++)
                 m_ExitedTreeDecisionClips.Add(exitedTreeDecisionClips[index]);
+            for (int index = 0; index < (pendingTreeDecisionClips?.Count ?? 0); index++)
+                m_PendingTreeClipExits.Add(pendingTreeDecisionClips[index]);
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             State = state;

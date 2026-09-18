@@ -46,3 +46,9 @@ Replay 已 matched，可以进入 ZZZ Corin 正式数据抄录阶段；抄录必
 - 帧对账：`compared:1121`，`divergent_frame_count:0`，`first_frame_mismatches:[]`。
 - Aggregate 对账为 `mismatch`，差异字段只有 `runtime_content_hash`、`source_revision`、`semantic_hash`；这是 AttackProperty 扩展到全量 `108` 个 key、命中效果编号改为 `uint` 并重建 Fixed/Float32 Ability 数据后的预期内容变化。
 - 结论：运行数据没有回归；本轮 proof 成为全量 AttackProperty 内容版本的第一份逐帧 matched 证据。
+
+## Attack5 多余 cue 删除后复验
+
+- 新 Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/369327502f7a4add8a21a19a7713d24d/20260919-071255-632-9d555f9c1fb0410782f9d8317d5279a3.json`。
+- 帧对账：`compared:1121`，`divergent_frame_count:0`，`first_frame_mismatches:[]`。
+- Aggregate 对账为 `matched`，`aggregate_mismatches:[]`；删除 Attack5 frame=64 多余 `_01_02` cue 并重建 Ability 资产后，运行数据没有回归。

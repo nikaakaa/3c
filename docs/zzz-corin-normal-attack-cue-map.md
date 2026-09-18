@@ -1,0 +1,113 @@
+# ZZZ Corin Normal Attack Cue 对照
+
+本文只对齐 Normal Attack 3 / 5 的 AnimatorEvent 与当前 BTSMTL Timeline cue。证据来自 `variants/battle-0.json`、主战斗控制器和 `CorinAttackGameplayAbilityAuthoringCode/Attack.cs`。
+
+## 状态边界
+
+| 源状态 | 转移目标 | 帧条件 | 关键条件 |
+|---|---|---:|---|
+| `Attack_Normal_03` | `Attack_Normal_03_Explode` | 45 | `FrameCount mode=9 value=45; Bool_IsClicking mode=2 value=0; Bool_HoldAttackA mode=2 value=0` |
+| `Attack_Normal_03` | `Attack_Normal_03_Explode` | 45 | `FrameCount mode=9 value=45; Trigger_SawExplode mode=1 value=0` |
+| `Attack_Normal_03` | `Attack_Normal_03_Explode` | 80 | `` |
+| `Attack_Normal_05` | `Attack_Normal_05_End` | 47 | `FrameCount mode=9 value=47; Bool_IsClicking mode=2 value=0; Bool_HoldAttackA mode=2 value=0; Bool_IsAttackLanded_ATK5 mode=2 value=0` |
+| `Attack_Normal_05` | `Attack_Normal_05_End` | 90 | `` |
+| `Attack_Normal_05` | `Attack_Normal_05_End_2` | 47 | `FrameCount mode=9 value=47; Bool_IsClicking mode=2 value=0; Bool_HoldAttackA mode=2 value=0; Bool_IsAttackLanded_ATK5 mode=1 value=0` |
+| `Attack_Normal_05` | `Attack_Normal_05_End_2` | 47 | `FrameCount mode=9 value=47; Trigger_SawExplode mode=1 value=0` |
+| `Attack_Normal_05` | `Attack_Normal_05_End_2` | 47 | `FrameCount mode=9 value=47; Trigger_AttackLanded mode=1 value=0` |
+
+## 当前 / 源事件差异
+
+| 状态 / Pattern | 源事件数 | 当前 AttackProperty cue 数 | 差异 |
+|---|---:|---:|---|
+| `Corin_Attack_Normal_03` | 20 | 20 | 主段 20 个 cue 帧和 key 完全一致；Explode 状态另缺 1 个 cue |
+| `Corin_Attack_Normal_03_Explode` | 1 | 0 | 当前缺本状态本地 cue |
+| `Corin_Attack_Normal_05` | 15 | 15 | frame=64 多出的 `_01_02` cue 已删除，当前帧和 key 与源一致 |
+| `Corin_Attack_Normal_05_End` | 0 | 0 | 无 AttackProperty cue |
+| `Corin_Attack_Normal_05_End_2` | 15 | 0 | 当前五段 Timeline 缺全部 15 个 End_2 本地 cue |
+
+## 缺失 / 多余 cue 明细
+
+### `Corin_Attack_Normal_03`
+
+| 来源帧 | AnimEventID | 当前帧 | 结论 |
+|---:|---|---:|---|
+| 40 | `Corin_Attack_Normal_03_AttackProperty_01_01` | 40 | 一致 |
+| 42 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 42 | 一致 |
+| 44 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 44 | 一致 |
+| 46 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 46 | 一致 |
+| 48 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 48 | 一致 |
+| 50 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 50 | 一致 |
+| 52 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 52 | 一致 |
+| 54 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 54 | 一致 |
+| 56 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 56 | 一致 |
+| 58 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 58 | 一致 |
+| 60 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 60 | 一致 |
+| 62 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 62 | 一致 |
+| 64 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 64 | 一致 |
+| 66 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 66 | 一致 |
+| 68 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 68 | 一致 |
+| 70 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 70 | 一致 |
+| 72 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 72 | 一致 |
+| 74 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 74 | 一致 |
+| 76 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 76 | 一致 |
+| 78 | `Corin_Attack_Normal_03_AttackProperty_01_02` | 78 | 一致 |
+
+### `Corin_Attack_Normal_03_Explode`
+
+| 来源帧 | AnimEventID | 当前帧 | 结论 |
+|---:|---|---:|---|
+| 1 | `Corin_Attack_Normal_03_AttackProperty_02` | - | 缺失 |
+
+### `Corin_Attack_Normal_05`
+
+| 来源帧 | AnimEventID | 当前帧 | 结论 |
+|---:|---|---:|---|
+| 36 | `Corin_Attack_Normal_05_AttackProperty_01_01` | 36 | 一致 |
+| 38 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 38 | 一致 |
+| 40 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 40 | 一致 |
+| 42 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 42 | 一致 |
+| 44 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 44 | 一致 |
+| 46 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 46 | 一致 |
+| 48 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 48 | 一致 |
+| 50 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 50 | 一致 |
+| 52 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 52 | 一致 |
+| 54 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 54 | 一致 |
+| 56 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 56 | 一致 |
+| 58 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 58 | 一致 |
+| 60 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 60 | 一致 |
+| 62 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 62 | 一致 |
+| 64 | `Corin_Attack_Normal_05_AttackProperty_02` | 64 | 一致 |
+| - | `Corin_Attack_Normal_05_AttackProperty_01_02` | 64 | 多余 |
+
+### `Corin_Attack_Normal_05_End`
+
+| 来源帧 | AnimEventID | 当前帧 | 结论 |
+|---:|---|---:|---|
+
+### `Corin_Attack_Normal_05_End_2`
+
+| 来源帧 | AnimEventID | 当前帧 | 结论 |
+|---:|---|---:|---|
+| 1 | `Corin_Attack_Normal_05_AttackProperty_03` | - | 缺失 |
+| 10 | `Corin_Attack_Normal_05_AttackProperty_04_01` | - | 缺失 |
+| 12 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 14 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 16 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 18 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 20 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 22 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 24 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 26 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 28 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 30 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 32 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 34 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+| 36 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
+
+## 收口要求
+
+1. Attack3 Explode 必须拥有独立状态本地时间；其 frame=1 的 `Corin_Attack_Normal_03_AttackProperty_02` 不能塞进主段全局轴。
+2. Attack5 的 frame=47 是 End / End_2 分支选择点；两个分支不能继续共用一条无状态选择的连续 Timeline。
+3. `Corin_Attack_Normal_05_End_2` 的 15 个本地 AttackProperty cue 必须挂在 End_2 分支；不得用普通 End 段或主段全局帧替代。
+4. Attack5 frame=64 多出的 `_01_02` cue 已删除；对应 Ability 资产已重建，1121 帧固定输入 Replay 逐帧 matched。
+5. 修复后必须重建对应 Ability/Timeline 资产，并复跑固定输入 Replay。

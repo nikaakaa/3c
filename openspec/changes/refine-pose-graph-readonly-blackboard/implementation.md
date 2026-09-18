@@ -78,3 +78,5 @@
 - 编译验证：Runtime全量编译被Timeline窗口在途TimelineData.cs（52个语法错误，非本域文件）阻塞；本域6个改动文件无任何错误输出。同一trace两轮ReplayProof验证待Timeline清零后由Play侧执行。
 
 - 子图实例身份溢出修复（04d587e16）：父实例身份改为64位Actor哈希后，原checked(parent*4099+seq)必然Overflow；子实例身份改为StableHash(父实例身份,子图节点Id,序列)取前16位hex，天然防溢出、跨Host唯一、跨轮次稳定，零值与父身份碰撞显式抛错。
+
+- ODE二次复盘（Play复现）：Editor.log显示自动退出由PlayModeErrorAutoExit对首错的响应触发；最终会话进入Play后无主异常、首帧BeginFrame即ObjectDisposed——静态三轮审计（包装器/表现/注册/静态tick驻留/回滚宿主/子图child全链）确认主线所有权闭合下该状态不可达，判定存在审计链外销毁者；GraphRuntime.Dispose入口已加正式销毁溯源日志（实例/图/启动状态+调用栈），下次运行按日志指认越权销毁者后收口修复。

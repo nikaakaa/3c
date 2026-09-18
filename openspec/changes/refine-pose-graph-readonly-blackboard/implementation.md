@@ -89,3 +89,12 @@
 - spec口径入档（38d9da97e）：character-pose-graph-runtime-architecture新增单owner不可运行期替换、repeat replay同实例按递增resetGeneration重置且失败精确抛错、Actor派生实例身份跨Host唯一三条合同。
 - 失败归一化二次异常修复（6a90d57d3）：PrepareFrame catch把原始异常转Failed结果时，若exception.Message为空，CharacterPoseNativePreparationResult构造器因source/message非空白合同自身抛ArgumentException吞掉真正根因（Replay推进报"Pose native preparation result is invalid"即此形态）。修复：包装消息统一为"类型名: 消息"保证非空；CompletedLineage无效时带InnerException抛InvalidOperationException显式上抛，不再构造非法结果。
 - 编译证据：ThirdPersonClient.Runtime.csproj与ThirdPersonClient.Editor.csproj均0错误（--disable-build-servers /nr:false /p:UseSharedCompilation=false），结束后已执行dotnet build-server shutdown。固定输入Replay录制重跑与端到端验证归用户Play侧。
+
+## 源模块帧生命周期接回（2026-09-19）
+
+- 现象：StateMachine子图溢出与帧谱合同修复后，Replay推进报 Native Clip source 'corin.locomotion.idle.sequence' has no active source frame（ClipSourceModuleBinding.Prepare ← ClipPlayerHandler.PrepareEvaluation ← StateMachineSource.PrepareEvaluation）。
+- 根因：CharacterPoseSourceModule.BeginFrame全仓零调用方。旧Program/Projection执行壳（9ee3b6eed删除的797行CharacterPoseFrameCoordinator）是唯一驱动方，删除时模块帧生命周期未接回新管线；CurrentLease恒为默认值，所有Clip/BlendSpace/Slot绑定的Prepare必然失败。这不是路由或子图建帧问题——子图与根图共享同一域级模块，模块帧从没开过。
+- 接线（8d824d0bf）：RoleRuntime持有模块生命周期——根图BeginFrame成功后按开帧谱（completion==0）打开模块帧，失败回滚丢弃图帧再上抛；Commit成功后模块收帧；Discard/Stop时模块同步丢弃。子图经StateMachineSource共享根帧的模块租约。
+- CommitFrame合同对齐（8d824d0bf）：旧合同要求demand/result页完成装配才许收帧，但装配链生产者（BindDemand/PrepareFrameResult）随执行壳删除后零调用，新管线永远无法满足。收帧改为开帧校验+后端CommitFrame+物理源CommitFrame+页面清理；已提交源不重连（PrepareNativeClipPlayer按ContainsCommitted跳过catalog重建），每帧仅pending登记走正常提交。
+- 死面登记：模块BindDemand/RequireDemand/PrepareFrameResult/RequirePendingReady/SealReadiness/HasPreparedSource/RequirePreparedResources/EnterEvaluateBarrier/CaptureUsage/ClearUsage/RequireTuning及FramePage的demand/result半边在新管线零调用方，属执行壳残留，待专门清理pass统一删除。
+- 编译证据：Runtime 0错误（强制参数+build-server shutdown）。Play侧Replay重跑归用户。

@@ -55,7 +55,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 50a95d93dc3549dfa250f5abecab291b, type: 2}
   - {fileID: 11400000, guid: 22888a80d7e04178a09768be62af92be, type: 2}
   - {fileID: 11400000, guid: bccc68648e194901bbd09d174895d5ae, type: 2}
-  m_Shakes: []
+  m_Shakes:
+  - {fileID: 11400000, guid: 4f18a92c63b74d0e8a25c7f61b93e0d4, type: 2}
   m_Shots: []
   m_Curves:
   - {fileID: 11400000, guid: f8baca8f539149579421eebd926e3191, type: 2}

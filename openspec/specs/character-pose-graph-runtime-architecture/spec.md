@@ -166,3 +166,23 @@ Pose 运行实例的图是未持久化的瞬态克隆。编辑器 restore/残留
 - **WHEN** 根图 Evaluate 内部异常被转为 Faulted 结果
 - **THEN** 表现运行时 MUST 丢弃当前帧并记录来源与消息
 - **AND** MUST NOT 将 Faulted 结果传入 ValidatePending 或 Commit
+
+### Requirement: Pose 帧输入输出必须是显式合同
+
+Pose 帧输入 MUST 是经校验的显式合同：ActorId、FrameIdentity、PresentationFrame、BodyTick、有限 presentation sample tick、非负 DeltaSeconds、Body/Fact/Parameter 帧与已提交 Action command 集；缺失或非法字段 MUST 在帧入口精确失败。Parameter 帧来自事件图唯一 typed 变量帧的只读消费，Source-local 曲线按曲线合同提供，MUST NOT 复制变量声明或接受 Gameplay mutable address。Pose 帧输出 MUST 是带当前 CompletionIdentity 的 typed 端口值：图内为 Local Pose 与 Discontinuity 值，根图输出经唯一 Final Publication 发布 Committed/Pending 物理页；任何端口值 MUST 在被消费前验证 completion 与 lineage 匹配。每阶段对外只交换 Preparation/Demand、Evaluation、Validation、Publication 四类 typed 结果，MUST NOT 暴露模块内部 Workspace。
+
+#### Scenario: 变量帧缺失
+
+- **WHEN** Parameter 帧构造遇到未发布或重复声明的动画变量
+- **THEN** 帧构造 MUST 精确失败并指认变量
+- **AND** 运行链 MUST NOT 以默认值或上一帧结果补位
+
+### Requirement: Pose 域与 Timeline 只在 Action command 与观察两点交接
+
+Pose 域消费 Timeline 的唯一运行输入是按帧打开的已提交 Action playback command 集（SimulationTick 提交、PresentationFrame 采样），经唯一 Action command source 与 ActionPlaybackInput/Slot 节点进入姿态链；Timeline 的表现事件只作为事实进入 Fact 帧供条件消费。Pose 域 MUST NOT 解析 Timeline Track、推进 Timeline 时钟、创建 Timeline producer 或消费未提交样本；Timeline 侧 MUST NOT 读取 Pose 内部状态，观察只能走正式 Committed 结果与节点观察租约。
+
+#### Scenario: 攻击 Timeline 与状态机并行
+
+- **WHEN** 攻击 Timeline 在 PresentationFrame 采样而状态机推进 Run
+- **THEN** 两者 MUST 只经各自帧合同交换事实与命令
+- **AND** 任一侧失败 MUST NOT 阻塞另一侧的阶段推进

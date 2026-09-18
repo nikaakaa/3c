@@ -22,6 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string NodeId;
             internal string GraphAuthoringId;
             internal Scope Scope;
+            internal RuntimeInstanceKey GraphInstance;
         }
         sealed class Scope
         {
@@ -78,8 +79,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         bool m_CaptureValues;
         TimelineCaller m_PendingTimeline;
         TimelineCaller m_ActiveTimeline;
-        readonly HashSet<string> m_RuntimeSeenTracks = new HashSet<string>(StringComparer.Ordinal);
-        readonly HashSet<string> m_RuntimeSeenClips = new HashSet<string>(StringComparer.Ordinal);
 
         BtsmtlSkillObservationSession(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeDebugSession session, Scope scope)
         {
@@ -174,97 +173,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TimelineEditorWindow window = TimelineEditorWindow.FindOpen(m_ActiveTimeline.Asset);
             if (window == null)
                 return;
-            TimelineData timeline = m_ActiveTimeline.Asset.Data;
-            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries =
-                m_Session.ViewModel.GetTimelinePlaybackSummaries(
-                    timeline.AuthoringId,
-                    m_ActiveTimeline.GraphAuthoringId);
-            RuntimeTimelinePlaybackDebugSummary[] matches = summaries
-                .Where(value => string.Equals(
-                    value.Provenance.SourceNodeAuthoringId,
-                    m_ActiveTimeline.NodeId,
-                    StringComparison.Ordinal))
-                .ToArray();
-            if (matches.Length != 1 || !matches[0].Playback.IsValid)
+            RuntimeInstanceKey scope = m_ActiveTimeline.GraphInstance.IsValid
+                ? m_ActiveTimeline.GraphInstance
+                : m_ActiveTimeline.Scope?.Resolve(m_Session.ViewModel) ?? default;
+            if (!scope.IsValid)
             {
                 window.ClearRuntimeTimelineObservation();
-                if (matches.Length > 1)
-                    window.SetRuntimeObservationStatus("当前 Timeline 对应多个运行调用，请从 SkillGraph 选择具体实例。");
+                window.SetRuntimeObservationStatus("当前 Timeline 缺少唯一的运行调用路径。");
                 return;
             }
-            RuntimeTimelinePlaybackDebugSummary summary = matches[0];
-
-            var activeTracks = new Dictionary<string, string>(StringComparer.Ordinal);
-            var activeClips = new Dictionary<string, string>(StringComparer.Ordinal);
-            IReadOnlyList<RuntimeDebugEventView> events = m_Session.ViewModel.GetTimelineCurrentEvents(
-                timeline.AuthoringId,
-                summary.Playback,
-                m_ActiveTimeline.GraphAuthoringId);
-            foreach (RuntimeDebugEventView item in events)
-            {
-                RuntimeSourceElementKey source = item.Source;
-                if (source.Kind == RuntimeSourceElementKind.Track && !string.IsNullOrEmpty(source.TrackAuthoringId))
-                {
-                    m_RuntimeSeenTracks.Add(source.TrackAuthoringId);
-                    activeTracks[source.TrackAuthoringId] = item.Event.Payload.Status;
-                }
-                else if ((source.Kind == RuntimeSourceElementKind.Clip || source.Kind == RuntimeSourceElementKind.TreeClip) &&
-                         !string.IsNullOrEmpty(source.ClipAuthoringId))
-                {
-                    m_RuntimeSeenClips.Add(source.ClipAuthoringId);
-                    if (!string.IsNullOrEmpty(source.TrackAuthoringId))
-                        m_RuntimeSeenTracks.Add(source.TrackAuthoringId);
-                    activeClips[source.ClipAuthoringId] = item.Event.Payload.Status;
-                }
-            }
-            foreach (Track track in timeline.Tracks)
-            {
-                if (track is not TreeTrack treeTrack)
-                    continue;
-                foreach (Clip clip in treeTrack.Clips)
-                {
-                    if (clip is TreeClip treeClip &&
-                        treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision &&
-                        activeClips.ContainsKey(clip.AuthoringId))
-                        activeClips[clip.AuthoringId] = "open";
-                }
-            }
-            TimelineData runtimeTimeline = BuildRuntimeTimeline(
-                timeline,
-                m_RuntimeSeenTracks,
-                m_RuntimeSeenClips);
-            if (m_Session.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory)
-                window.ApplyHistoryTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);
-            else
-                window.ApplyRuntimeTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);
-        }
-
-        static TimelineData BuildRuntimeTimeline(
-            TimelineData source,
-            ISet<string> seenTracks,
-            ISet<string> seenClips)
-        {
-            TimelineData runtime = source.Clone();
-            runtime.Name = $"{source.Name} [Runtime]";
-            for (int trackIndex = runtime.Tracks.Count - 1; trackIndex >= 0; trackIndex--)
-            {
-                Track track = runtime.Tracks[trackIndex];
-                if (track == null)
-                {
-                    runtime.Tracks.RemoveAt(trackIndex);
-                    continue;
-                }
-                for (int clipIndex = track.Clips.Count - 1; clipIndex >= 0; clipIndex--)
-                {
-                    Clip clip = track.Clips[clipIndex];
-                    if (clip == null || !seenClips.Contains(clip.AuthoringId))
-                        track.Clips.RemoveAt(clipIndex);
-                }
-                if (!seenTracks.Contains(track.AuthoringId) && track.Clips.Count == 0)
-                    runtime.Tracks.RemoveAt(trackIndex);
-            }
-            runtime.Init();
-            return runtime;
+            window.SetRuntimeObservationScope(scope);
+            TimelineRuntimeObservationBridge.RefreshWindow(window);
         }
 
         void ClearTimelineOverlay()
@@ -330,15 +249,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Asset = node.TimelineAsset,
                 NodeId = node.UID,
                 GraphAuthoringId = m_PageGraphAuthoringId,
-                Scope = m_PageScope
+                Scope = m_PageScope,
+                GraphInstance = m_Observation?.Instance ?? default
             };
         }
 
         void OnTimelineAssetOpened(TimelineAsset asset)
         {
             ClearTimelineOverlay();
-            m_RuntimeSeenTracks.Clear();
-            m_RuntimeSeenClips.Clear();
             m_ActiveTimeline = m_PendingTimeline?.Asset == asset ? m_PendingTimeline : null;
             m_PendingTimeline = null;
             if (m_ActiveTimeline != null)

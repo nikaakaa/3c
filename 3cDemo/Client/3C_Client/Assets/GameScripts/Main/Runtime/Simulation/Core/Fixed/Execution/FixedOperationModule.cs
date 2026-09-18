@@ -113,6 +113,23 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(operation));
             return Services.SourcePath(operation.Handle);
         }
+
+        public ProgramSourceMapEntry RequireOperationSource(SimulationOperation operation)
+        {
+            if (operation == null)
+                throw new ArgumentNullException(nameof(operation));
+            ProgramSourceMapEntry result = null;
+            for (int index = 0; index < Data.SourceMap.Count; index++)
+            {
+                ProgramSourceMapEntry source = Data.SourceMap[index];
+                if (source.TargetKind != ProgramSourceTargetKind.Operation || source.TargetIndex != operation.Handle.Value)
+                    continue;
+                if (result != null)
+                    throw new InvalidOperationException($"Operation '{operation.Handle}' has multiple source entries.");
+                result = source;
+            }
+            return result ?? throw new InvalidOperationException($"Operation '{operation.Handle}' has no source entry.");
+        }
     }
 
     internal abstract class FixedOperationModule

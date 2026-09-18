@@ -543,7 +543,10 @@ namespace BTSMTL.Diagnostics
             string stateId,
             Guid stateMachineGraphRuntimeId,
             ulong stateActivationGeneration,
-            string sourceName)
+            string sourceName,
+            string sourceInvocationPath = "",
+            int sourceOperationIndex = -1,
+            ulong skillExecutionGeneration = 0)
         {
             SourceGraphAuthoringId = sourceGraphAuthoringId ?? string.Empty;
             SourceNodeAuthoringId = sourceNodeAuthoringId ?? string.Empty;
@@ -554,6 +557,9 @@ namespace BTSMTL.Diagnostics
             StateMachineGraphRuntimeId = stateMachineGraphRuntimeId;
             StateActivationGeneration = stateActivationGeneration;
             SourceName = sourceName ?? string.Empty;
+            SourceInvocationPath = sourceInvocationPath ?? string.Empty;
+            SourceOperationIndex = sourceOperationIndex;
+            SkillExecutionGeneration = skillExecutionGeneration;
         }
 
         public string SourceGraphAuthoringId { get; }
@@ -565,10 +571,16 @@ namespace BTSMTL.Diagnostics
         public Guid StateMachineGraphRuntimeId { get; }
         public ulong StateActivationGeneration { get; }
         public string SourceName { get; }
+        public string SourceInvocationPath { get; }
+        public int SourceOperationIndex { get; }
+        public ulong SkillExecutionGeneration { get; }
         public bool IsValid => !string.IsNullOrEmpty(SourceGraphAuthoringId) &&
                                !string.IsNullOrEmpty(SourceNodeAuthoringId) &&
-                               SourceGraphRuntimeId != Guid.Empty &&
-                               SourceActivationGeneration != 0;
+                               SourceActivationGeneration != 0 &&
+                               (SourceGraphRuntimeId != Guid.Empty || HasProgramInvocation);
+        public bool HasProgramInvocation => !string.IsNullOrEmpty(SourceInvocationPath) &&
+                                            SourceOperationIndex >= 0 &&
+                                            SkillExecutionGeneration != 0;
         public bool HasStateActivation => !string.IsNullOrEmpty(StateMachineGraphAuthoringId) &&
                                           !string.IsNullOrEmpty(StateId) &&
                                           StateMachineGraphRuntimeId != Guid.Empty &&

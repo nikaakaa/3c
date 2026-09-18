@@ -48,7 +48,8 @@ namespace BTSMTL.Timeline
             IsLooping = isLooping && clipLoopDuration > 0f;
             ClipLoopStartTime = clipLoopStartTime;
             ClipLoopDuration = Mathf.Max(0f, clipLoopDuration);
-            ContinuousClipTime = IsLooping ? clipTime + Mathf.Max(0, cycleIndex) * ClipLoopDuration : clipTime;
+            Cycle = Mathf.Max(0, cycleIndex);
+            ContinuousClipTime = IsLooping ? clipTime + Cycle * ClipLoopDuration : clipTime;
         }
 
         public int TrackIndex { get; }
@@ -69,6 +70,7 @@ namespace BTSMTL.Timeline
         public bool IsLooping { get; }
         public float ClipLoopStartTime { get; }
         public float ClipLoopDuration { get; }
+        public int Cycle { get; }
         public float ContinuousClipTime { get; }
     }
 
@@ -146,7 +148,8 @@ namespace BTSMTL.Timeline
             string sourceName,
             ICollection<TimelineAnimationContribution> animationContributions,
             bool isLooping,
-            int cycleIndex)
+            int cycleIndex,
+            Func<Clip, bool> clipFilter = null)
         {
             if (m_PersistentMuted)
                 return;
@@ -156,6 +159,10 @@ namespace BTSMTL.Timeline
                 Clip clip = Clips[clipIndex];
                 if (clip is not AnimationClip animationClip || !animationClip.Clip)
                     continue;
+                if (clipFilter != null && !clipFilter(animationClip))
+                {
+                    continue;
+                }
 
                 if (!TrySampleClip(animationClip, timelineTime, out float clipTime, out float normalizedTime, out float weight))
                     continue;
@@ -289,6 +296,8 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.AnimationTrack,
                     TimelineTrackOverlapPolicy.Blend,
                     TimelineCapability.Animation,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent,
                     TimelineContractKinds.AnimationClip)
             },
             new[]
@@ -299,7 +308,9 @@ namespace BTSMTL.Timeline
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Animation,
                     true,
-                    true)
+                    true,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent)
             },
             ValidateAnimationContent);
 

@@ -106,6 +106,38 @@ namespace ThirdPersonSimulation
         public override int GetHashCode() => HashCode.Combine(ActionId, ContextId, InstanceId, PredictionKey, SkillId, SkillEntryOperation, SkillExecutionGeneration);
     }
 
+    public readonly struct AbilityTimelineInvocationSource
+    {
+        public AbilityTimelineInvocationSource(
+            int operationIndex,
+            string graphAuthoringId,
+            string nodeAuthoringId,
+            string graphInvocationPath,
+            ulong invocationGeneration)
+        {
+            if (operationIndex < 0)
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            OperationIndex = operationIndex;
+            GraphAuthoringId = SimulationIdentity.Require(graphAuthoringId, nameof(graphAuthoringId));
+            NodeAuthoringId = SimulationIdentity.Require(nodeAuthoringId, nameof(nodeAuthoringId));
+            GraphInvocationPath = SimulationIdentity.Require(graphInvocationPath, nameof(graphInvocationPath));
+            if (invocationGeneration == 0)
+                throw new ArgumentOutOfRangeException(nameof(invocationGeneration));
+            InvocationGeneration = invocationGeneration;
+        }
+
+        public int OperationIndex { get; }
+        public string GraphAuthoringId { get; }
+        public string NodeAuthoringId { get; }
+        public string GraphInvocationPath { get; }
+        public ulong InvocationGeneration { get; }
+        public bool IsValid => OperationIndex >= 0 &&
+                               !string.IsNullOrEmpty(GraphAuthoringId) &&
+                               !string.IsNullOrEmpty(NodeAuthoringId) &&
+                               !string.IsNullOrEmpty(GraphInvocationPath) &&
+                               InvocationGeneration != 0;
+    }
+
     public readonly struct TimelineSegment<TTime>
         where TTime : struct
     {
@@ -505,13 +537,19 @@ namespace ThirdPersonSimulation
             string timelineId,
             bool loop,
             TimelineActionContextIdentity actionContext,
+            AbilityTimelineInvocationSource invocationSource,
             ulong inputSequence,
             SimulationTick tick)
         {
             TimelineId = SimulationIdentity.Require(timelineId, nameof(timelineId));
+            if (!actionContext.IsValid || !actionContext.HasSkillExecution || actionContext.SkillExecutionGeneration == 0)
+                throw new ArgumentException("Ability Timeline Action context is incomplete.", nameof(actionContext));
+            if (!invocationSource.IsValid)
+                throw new ArgumentException("Ability Timeline invocation source is incomplete.", nameof(invocationSource));
             Loop = loop;
             InputSequence = inputSequence;
             ActionContext = actionContext;
+            InvocationSource = invocationSource;
             Tick = tick;
             if (!tick.IsValid)
                 throw new ArgumentOutOfRangeException(nameof(tick));
@@ -520,6 +558,7 @@ namespace ThirdPersonSimulation
         public string TimelineId { get; }
         public bool Loop { get; }
         public TimelineActionContextIdentity ActionContext { get; }
+        public AbilityTimelineInvocationSource InvocationSource { get; }
         public SimulationTick Tick { get; }
         public ulong InputSequence { get; }
     }
@@ -614,6 +653,7 @@ namespace ThirdPersonSimulation
             string timelineId,
             bool loop,
             TimelineActionContextIdentity actionContext,
+            AbilityTimelineInvocationSource invocationSource,
             ulong inputSequence,
             SimulationTick startTick)
         {
@@ -647,7 +687,12 @@ namespace ThirdPersonSimulation
             if (hasStopContext && StopCause == AbilityTimelineSnapshotStopCause.None)
                 throw new ArgumentException("A Timeline stop context requires a stop cause.", nameof(stopCause));
             TimelineId = SimulationIdentity.Require(timelineId, nameof(timelineId));
+            if (!actionContext.IsValid || !actionContext.HasSkillExecution || actionContext.SkillExecutionGeneration == 0)
+                throw new ArgumentException("Ability Timeline snapshot Action context is incomplete.", nameof(actionContext));
+            if (!invocationSource.IsValid)
+                throw new ArgumentException("Ability Timeline snapshot invocation source is incomplete.", nameof(invocationSource));
             ActionContext = actionContext;
+            InvocationSource = invocationSource;
             StartTick = startTick;
             if (!startTick.IsValid)
                 throw new ArgumentException("Ability Timeline snapshot start tick is invalid.", nameof(startTick));
@@ -687,6 +732,7 @@ namespace ThirdPersonSimulation
         public string TimelineId { get; }
         public bool Loop { get; }
         public TimelineActionContextIdentity ActionContext { get; }
+        public AbilityTimelineInvocationSource InvocationSource { get; }
         public ulong InputSequence { get; }
         public SimulationTick StartTick { get; }
 
@@ -767,5 +813,4 @@ namespace ThirdPersonSimulation
 
 
 }
-
 

@@ -38,6 +38,106 @@ namespace BTSMTL.Timeline
         DecisionAndCommit = 3
     }
 
+    public enum TimelineExecutionDomain : byte
+    {
+        Logic = 1,
+        Presentation = 2,
+        DualProjection = 3
+    }
+
+    [Flags]
+    public enum TimelineExecutionDomainMask : byte
+    {
+        None = 0,
+        Logic = 1 << 0,
+        Presentation = 1 << 1,
+        DualProjection = 1 << 2
+    }
+
+    public enum TimelineOutputKind : byte
+    {
+        GameplayFact = 1,
+        PresentationEvent = 2,
+        DualProjection = 3
+    }
+
+    public static class TimelineExecutionDomains
+    {
+        public static TimelineExecutionDomain Normalize(TimelineExecutionDomain domain)
+        {
+            return Enum.IsDefined(typeof(TimelineExecutionDomain), domain)
+                ? domain
+                : TimelineExecutionDomain.Logic;
+        }
+
+        public static TimelineExecutionDomainMask ToMask(TimelineExecutionDomain domain)
+        {
+            return Normalize(domain) switch
+            {
+                TimelineExecutionDomain.Logic => TimelineExecutionDomainMask.Logic,
+                TimelineExecutionDomain.Presentation => TimelineExecutionDomainMask.Presentation,
+                TimelineExecutionDomain.DualProjection => TimelineExecutionDomainMask.DualProjection,
+                _ => throw new ArgumentOutOfRangeException(nameof(domain))
+            };
+        }
+
+        public static TimelineOutputKind ToOutputKind(TimelineExecutionDomain domain)
+        {
+            return Normalize(domain) switch
+            {
+                TimelineExecutionDomain.Logic => TimelineOutputKind.GameplayFact,
+                TimelineExecutionDomain.Presentation => TimelineOutputKind.PresentationEvent,
+                TimelineExecutionDomain.DualProjection => TimelineOutputKind.DualProjection,
+                _ => throw new ArgumentOutOfRangeException(nameof(domain))
+            };
+        }
+
+        public static bool HasProjection(
+            TimelineExecutionDomain contentDomain,
+            TimelineExecutionDomain projectionDomain)
+        {
+            if (projectionDomain != TimelineExecutionDomain.Logic &&
+                projectionDomain != TimelineExecutionDomain.Presentation)
+            {
+                throw new ArgumentOutOfRangeException(nameof(projectionDomain));
+            }
+            return projectionDomain == TimelineExecutionDomain.Logic
+                ? Normalize(contentDomain) != TimelineExecutionDomain.Presentation
+                : Normalize(contentDomain) != TimelineExecutionDomain.Logic;
+        }
+    }
+
+    public readonly struct TimelineClipExecutionPolicy
+    {
+        public TimelineClipExecutionPolicy(
+            TimelineExecutionDomain domain,
+            TimelineOutputKind outputKind)
+        {
+            if (!Enum.IsDefined(typeof(TimelineExecutionDomain), domain) ||
+                !Enum.IsDefined(typeof(TimelineOutputKind), outputKind))
+            {
+                throw new ArgumentOutOfRangeException(nameof(domain));
+            }
+            Domain = domain;
+            OutputKind = outputKind;
+        }
+
+        public static TimelineClipExecutionPolicy FromDomain(TimelineExecutionDomain domain)
+        {
+            TimelineExecutionDomain normalized = TimelineExecutionDomains.Normalize(domain);
+            return new TimelineClipExecutionPolicy(
+                normalized,
+                TimelineExecutionDomains.ToOutputKind(normalized));
+        }
+
+        public TimelineExecutionDomain Domain { get; }
+        public TimelineOutputKind OutputKind { get; }
+        public bool IsLogic => Domain == TimelineExecutionDomain.Logic ||
+                               Domain == TimelineExecutionDomain.DualProjection;
+        public bool IsPresentation => Domain == TimelineExecutionDomain.Presentation ||
+                                      Domain == TimelineExecutionDomain.DualProjection;
+    }
+
     public interface ITimelineClipExecutionPhaseSource
     {
         TimelineClipExecutionPhase TimelineExecutionPhase { get; }
@@ -52,6 +152,124 @@ namespace BTSMTL.Timeline
     public interface ITimelineClipExitSource
     {
         TimelineClipExitSource ClipExitSource { get; }
+    }
+
+    public enum TimelinePresentationMarkerLifetime : byte
+    {
+        Pulse = 1,
+        Stateful = 2
+    }
+
+    public interface ITimelinePresentationMarkerSource
+    {
+        IReadOnlyList<TimelinePresentationMarker> PresentationMarkers { get; }
+    }
+
+    [Serializable]
+    public sealed class TimelinePresentationMarker
+    {
+        [SerializeField]
+        string m_AuthoringId;
+
+        [SerializeField]
+        int m_Frame;
+
+        [SerializeField]
+        int m_EndFrame;
+
+        [SerializeField]
+        TimelinePresentationMarkerLifetime m_Lifetime = TimelinePresentationMarkerLifetime.Pulse;
+
+        [SerializeField]
+        TimelineExternalBindingUse m_PayloadBinding;
+
+        public string AuthoringId => m_AuthoringId ?? string.Empty;
+        public int Frame => m_Frame;
+        public int EndFrame => m_EndFrame;
+        public TimelinePresentationMarkerLifetime Lifetime => m_Lifetime;
+        public TimelineExternalBindingUse PayloadBinding => m_PayloadBinding;
+
+        public static TimelinePresentationMarker Create(
+            int frame,
+            TimelinePresentationMarkerLifetime lifetime,
+            int endFrame,
+            TimelineExternalBindingUse payloadBinding)
+        {
+            var marker = new TimelinePresentationMarker
+            {
+                m_AuthoringId = AuthoringIdentity.Create()
+            };
+            marker.Configure(frame, lifetime, endFrame, payloadBinding);
+            return marker;
+        }
+
+        public void Configure(
+            int frame,
+            TimelinePresentationMarkerLifetime lifetime,
+            int endFrame,
+            TimelineExternalBindingUse payloadBinding)
+        {
+            if (frame < 0 || endFrame < frame ||
+                !Enum.IsDefined(typeof(TimelinePresentationMarkerLifetime), lifetime) ||
+                payloadBinding == null)
+            {
+                throw new ArgumentException("Timeline presentation marker is invalid.");
+            }
+            if (lifetime == TimelinePresentationMarkerLifetime.Pulse && endFrame != frame)
+                throw new ArgumentException("Timeline Pulse marker cannot have a duration.", nameof(endFrame));
+            if (lifetime == TimelinePresentationMarkerLifetime.Stateful && endFrame <= frame)
+                throw new ArgumentException("Timeline Stateful marker requires a positive duration.", nameof(endFrame));
+            m_Frame = frame;
+            m_EndFrame = endFrame;
+            m_Lifetime = lifetime;
+            m_PayloadBinding = payloadBinding;
+        }
+
+        public bool Validate(out string error)
+        {
+            if (!AuthoringIdentity.IsValid(AuthoringId))
+            {
+                error = "marker identity is invalid";
+                return false;
+            }
+            if (Frame < 0 || !Enum.IsDefined(typeof(TimelinePresentationMarkerLifetime), Lifetime))
+            {
+                error = "marker time or lifetime is invalid";
+                return false;
+            }
+            if (Lifetime == TimelinePresentationMarkerLifetime.Pulse && EndFrame != Frame)
+            {
+                error = "pulse marker cannot have a duration";
+                return false;
+            }
+            if (Lifetime == TimelinePresentationMarkerLifetime.Stateful && EndFrame <= Frame)
+            {
+                error = "stateful marker requires a positive duration";
+                return false;
+            }
+            if (PayloadBinding == null || string.IsNullOrWhiteSpace(PayloadBinding.BindingId))
+            {
+                error = "marker payload binding is required";
+                return false;
+            }
+            error = string.Empty;
+            return true;
+        }
+
+#if UNITY_EDITOR
+        public bool EnsureAuthoringIdentity()
+        {
+            if (AuthoringIdentity.IsValid(m_AuthoringId))
+                return false;
+            m_AuthoringId = AuthoringIdentity.Create();
+            return true;
+        }
+
+        public void RegenerateAuthoringIdentity()
+        {
+            m_AuthoringId = AuthoringIdentity.Create();
+        }
+#endif
     }
 
     public delegate void TimelineClipContractValidator(Clip clip, List<string> errors);
@@ -321,6 +539,27 @@ namespace BTSMTL.Timeline
             string kind,
             TimelineTrackOverlapPolicy overlapPolicy,
             TimelineCapability capabilities,
+            TimelineExecutionDomain executionDomain,
+            TimelineOutputKind outputKind,
+            params string[] allowedClipKinds)
+            : this(
+                kind,
+                overlapPolicy,
+                capabilities,
+                executionDomain,
+                outputKind,
+                TimelineExecutionDomains.ToMask(executionDomain),
+                allowedClipKinds)
+        {
+        }
+
+        public TimelineTrackContract(
+            string kind,
+            TimelineTrackOverlapPolicy overlapPolicy,
+            TimelineCapability capabilities,
+            TimelineExecutionDomain executionDomain,
+            TimelineOutputKind outputKind,
+            TimelineExecutionDomainMask allowedExecutionDomains,
             params string[] allowedClipKinds)
         {
             Kind = Require(kind, nameof(kind));
@@ -329,11 +568,20 @@ namespace BTSMTL.Timeline
             m_AllowedClipKinds = Array.AsReadOnly((string[])allowedClipKinds.Clone());
             OverlapPolicy = overlapPolicy;
             Capabilities = capabilities;
+            ExecutionPolicy = new TimelineClipExecutionPolicy(executionDomain, outputKind);
+            AllowedExecutionDomains = allowedExecutionDomains;
+            if (AllowedExecutionDomains == TimelineExecutionDomainMask.None ||
+                (AllowedExecutionDomains & TimelineExecutionDomains.ToMask(executionDomain)) == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(allowedExecutionDomains));
+            }
         }
 
         public string Kind { get; }
         public TimelineTrackOverlapPolicy OverlapPolicy { get; }
         public TimelineCapability Capabilities { get; }
+        public TimelineClipExecutionPolicy ExecutionPolicy { get; }
+        public TimelineExecutionDomainMask AllowedExecutionDomains { get; }
         public IReadOnlyList<string> AllowedClipKinds => m_AllowedClipKinds;
 
         public bool AllowsClip(string clipKind)
@@ -345,6 +593,9 @@ namespace BTSMTL.Timeline
             }
             return false;
         }
+
+        public bool SupportsExecutionDomain(TimelineExecutionDomain domain) =>
+            (AllowedExecutionDomains & TimelineExecutionDomains.ToMask(domain)) != 0;
 
         static string Require(string value, string name)
         {
@@ -365,6 +616,8 @@ namespace BTSMTL.Timeline
             TimelineCapability capabilities,
             bool supportsStop,
             bool requiresPositiveDuration,
+            TimelineExecutionDomain executionDomain,
+            TimelineOutputKind outputKind,
             params TimelineBindingRequirement[] bindings)
             : this(
                 kind,
@@ -373,6 +626,9 @@ namespace BTSMTL.Timeline
                 capabilities,
                 supportsStop,
                 requiresPositiveDuration,
+                executionDomain,
+                outputKind,
+                TimelineExecutionDomains.ToMask(executionDomain),
                 null,
                 bindings)
         {
@@ -385,6 +641,61 @@ namespace BTSMTL.Timeline
             TimelineCapability capabilities,
             bool supportsStop,
             bool requiresPositiveDuration,
+            TimelineExecutionDomain executionDomain,
+            TimelineOutputKind outputKind,
+            TimelineExecutionDomainMask allowedExecutionDomains,
+            params TimelineBindingRequirement[] bindings)
+            : this(
+                kind,
+                trackKind,
+                executionPhase,
+                capabilities,
+                supportsStop,
+                requiresPositiveDuration,
+                executionDomain,
+                outputKind,
+                allowedExecutionDomains,
+                null,
+                bindings)
+        {
+        }
+
+        public TimelineClipContract(
+            string kind,
+            string trackKind,
+            TimelineClipExecutionPhase executionPhase,
+            TimelineCapability capabilities,
+            bool supportsStop,
+            bool requiresPositiveDuration,
+            TimelineExecutionDomain executionDomain,
+            TimelineOutputKind outputKind,
+            TimelineClipContractValidator validator,
+            params TimelineBindingRequirement[] bindings)
+            : this(
+                kind,
+                trackKind,
+                executionPhase,
+                capabilities,
+                supportsStop,
+                requiresPositiveDuration,
+                executionDomain,
+                outputKind,
+                TimelineExecutionDomains.ToMask(executionDomain),
+                validator,
+                bindings)
+        {
+        }
+
+        public TimelineClipContract(
+            string kind,
+            string trackKind,
+            TimelineClipExecutionPhase executionPhase,
+            TimelineCapability capabilities,
+            bool supportsStop,
+            bool requiresPositiveDuration,
+            TimelineExecutionDomain executionDomain,
+            TimelineOutputKind outputKind,
+            TimelineExecutionDomainMask allowedExecutionDomains,
             TimelineClipContractValidator validator,
             params TimelineBindingRequirement[] bindings)
         {
@@ -397,6 +708,13 @@ namespace BTSMTL.Timeline
             Capabilities = capabilities;
             SupportsStop = supportsStop;
             RequiresPositiveDuration = requiresPositiveDuration;
+            ExecutionPolicy = new TimelineClipExecutionPolicy(executionDomain, outputKind);
+            AllowedExecutionDomains = allowedExecutionDomains;
+            if (AllowedExecutionDomains == TimelineExecutionDomainMask.None ||
+                (AllowedExecutionDomains & TimelineExecutionDomains.ToMask(executionDomain)) == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(allowedExecutionDomains));
+            }
             Validator = validator;
             m_Bindings = Array.AsReadOnly(bindings == null
                 ? Array.Empty<TimelineBindingRequirement>()
@@ -410,11 +728,16 @@ namespace BTSMTL.Timeline
         public TimelineCapability Capabilities { get; }
         public bool SupportsStop { get; }
         public bool RequiresPositiveDuration { get; }
+        public TimelineClipExecutionPolicy ExecutionPolicy { get; }
+        public TimelineExecutionDomainMask AllowedExecutionDomains { get; }
         public TimelineClipContractValidator Validator { get; }
         public IReadOnlyList<TimelineBindingRequirement> Bindings => m_Bindings;
 
         public bool SupportsExecutionPhase(TimelineClipExecutionPhase phase) =>
             (SupportedExecutionPhases & phase) == phase;
+
+        public bool SupportsExecutionDomain(TimelineExecutionDomain domain) =>
+            (AllowedExecutionDomains & TimelineExecutionDomains.ToMask(domain)) != 0;
 
         static string Require(string value, string name)
         {
@@ -615,6 +938,10 @@ namespace BTSMTL.Timeline
                     errors?.Add($"Timeline '{timeline.Name}' track #{trackIndex} has unknown contract kind '{track.ContractKind}'.");
                     continue;
                 }
+                if (track.HasExplicitExecutionDomain && !trackContract.SupportsExecutionDomain(track.ExecutionDomain))
+                {
+                    errors?.Add($"Timeline '{timeline.Name}' track '{track.AuthoringId}' uses unsupported execution domain '{track.ExecutionDomain}'.");
+                }
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
                     Clip clip = track.Clips[clipIndex];
@@ -630,6 +957,13 @@ namespace BTSMTL.Timeline
                     }
                     if (!trackContract.AllowsClip(clipContract.Kind) || !string.Equals(clipContract.TrackKind, trackContract.Kind, StringComparison.Ordinal))
                         errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' is not allowed on track '{track.AuthoringId}'.");
+                    TimelineExecutionDomain executionDomain = clip.ResolveExecutionDomain(track.ExecutionDomain);
+                    if (clip.HasExplicitExecutionDomain &&
+                        (!trackContract.SupportsExecutionDomain(executionDomain) ||
+                         !clipContract.SupportsExecutionDomain(executionDomain)))
+                    {
+                        errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' uses unsupported execution domain '{executionDomain}'.");
+                    }
                     if (clip.StartFrame < 0 || clip.EndFrame < clip.StartFrame || clipContract.RequiresPositiveDuration && clip.Duration <= 0)
                         errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' has an invalid frame range.");
                     TimelineClipExecutionPhase executionPhase = clipContract.DefaultExecutionPhase;
@@ -641,6 +975,7 @@ namespace BTSMTL.Timeline
                     if (trackContract.OverlapPolicy == TimelineTrackOverlapPolicy.Reject)
                         ValidateRejectedOverlap(track, clipIndex, clip, errors);
                     ValidateBindingUses(timeline, clip, errors);
+                    ValidatePresentationMarkers(timeline, clip, errors);
                 }
             }
 
@@ -725,6 +1060,57 @@ namespace BTSMTL.Timeline
                     declaration.Lifetime);
                 if (!use.Matches(signature))
                     errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' has an external binding use mismatch for '{use.BindingId}'.");
+            }
+        }
+
+        static void ValidatePresentationMarkers(TimelineData timeline, Clip clip, List<string> errors)
+        {
+            if (clip is not ITimelinePresentationMarkerSource source)
+                return;
+            IReadOnlyList<TimelinePresentationMarker> markers = source.PresentationMarkers;
+            if (markers == null)
+            {
+                errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' has no presentation marker list.");
+                return;
+            }
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            for (int index = 0; index < markers.Count; index++)
+            {
+                TimelinePresentationMarker marker = markers[index];
+                string markerError = string.Empty;
+                if (marker == null || !marker.Validate(out markerError) ||
+                    !identities.Add(marker?.AuthoringId ?? string.Empty))
+                {
+                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker #{index} is invalid: {markerError}.");
+                    continue;
+                }
+                if (marker.Frame < clip.StartFrame || marker.Frame >= clip.EndFrame ||
+                    marker.EndFrame > clip.EndFrame)
+                {
+                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker '{marker.AuthoringId}' is outside the clip frame range.");
+                }
+                TimelineExternalBindingUse payload = marker.PayloadBinding;
+                if (payload == null || !timeline.TryGetExternalBinding(payload.BindingId, out TimelineExternalBindingDeclaration declaration))
+                {
+                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker '{marker.AuthoringId}' references a missing payload binding.");
+                    continue;
+                }
+                if (payload.Access != TimelineBindingAccess.Input ||
+                    payload.Lifetime != TimelineBindingLifetime.Call ||
+                    !string.IsNullOrEmpty(payload.TargetBindingId))
+                {
+                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker '{marker.AuthoringId}' payload must be a Call Input binding.");
+                    continue;
+                }
+                var signature = new TimelineBindingDeclaration(
+                    declaration.BindingId,
+                    declaration.Domain,
+                    declaration.ParameterId,
+                    declaration.ValueKind,
+                    declaration.Access,
+                    declaration.Lifetime);
+                if (!payload.Matches(signature))
+                    errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' marker '{marker.AuthoringId}' payload binding does not match its declaration.");
             }
         }
     }

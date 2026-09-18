@@ -261,6 +261,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     AbilityDebugSourceMapFiller.Fill(debugSourceMap, abilityTargetIndexOffset, abilityEntryData.SourceMap);
                     abilityTargetIndexOffset += abilityEntryData.SourceMap.Count;
                 }
+                CharacterTimelineDebugSourceMapFiller.Fill(
+                    debugSourceMap,
+                    characterDefinition.ControlMotionTimelines);
                 var diagnosticsStore = new RuntimeDiagnosticsStore();
                 var diagnosticsContext = new RuntimeDiagnosticsContext(
                     Guid.NewGuid(),
@@ -269,6 +272,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     debugSourceMap,
                     diagnosticsStore);
                 diagnosticsTarget = new RuntimeDiagnosticsTarget(name, GetInstanceID(), diagnosticsContext);
+                m_TimelineHost.AttachRuntimeDiagnostics(diagnosticsContext);
                 animationRigBinding.RequireValid(animationRig);
                 controlSource = controlSourceDefinition.Create(
                     new FixedCharacterControlSourceContext(this, characterDefinition, controlModule));
@@ -506,13 +510,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             InstallContent();
             bool started = m_Host.RequestAbilityTimelinePlayback(
                 request.TimelineId,
-                new TimelinePlaybackActionContext(
-                    request.ActionContext.InstanceId,
-                    request.ActionContext.ActionId,
-                    request.ActionContext.PredictionKey,
-                    request.InputSequence,
-                    request.Tick.Value),
+                request.ActionContext,
                 request.Loop,
+                request.InvocationSource,
+                request.InputSequence,
+                request.Tick,
                 out TimelinePlaybackHandle handle);
             if (!started)
                 throw new InvalidOperationException($"Ability Timeline '{request.TimelineId}' failed to start for Action '{request.ActionContext.ActionId}'.");
@@ -567,6 +569,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 snapshot.TimelineId,
                 snapshot.Loop,
                 snapshot.ActionContext,
+                snapshot.InvocationSource,
                 snapshot.InputSequence,
                 snapshot.StartTick);
             return restoredHandle;

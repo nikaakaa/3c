@@ -53,6 +53,12 @@ namespace BTSMTL.Timeline
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public virtual string ContractKind => string.Empty;
 
+        [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
+        TimelineExecutionDomain m_ExecutionDomain;
+
+        public TimelineExecutionDomain ExecutionDomain => TimelineExecutionDomains.Normalize(m_ExecutionDomain);
+        public bool HasExplicitExecutionDomain => Enum.IsDefined(typeof(TimelineExecutionDomain), m_ExecutionDomain);
+
         [SerializeField]
         protected bool m_PersistentMuted;
         public bool PersistentMuted
@@ -93,6 +99,13 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
+        public void ConfigureExecutionDomain(TimelineExecutionDomain executionDomain)
+        {
+            if (!Enum.IsDefined(typeof(TimelineExecutionDomain), executionDomain))
+                throw new ArgumentOutOfRangeException(nameof(executionDomain));
+            m_ExecutionDomain = executionDomain;
+        }
+
         public bool EnsureAuthoringIdentity()
         {
             if (AuthoringIdentity.IsValid(m_AuthoringId))
@@ -121,6 +134,9 @@ namespace BTSMTL.Timeline
         [SerializeField]
         string m_AuthoringId;
 
+        [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
+        TimelineExecutionDomain m_ExecutionDomain;
+
         #region Frame
         public int StartFrame;
         public int EndFrame;
@@ -135,6 +151,9 @@ namespace BTSMTL.Timeline
         public int Duration => EndFrame - StartFrame;
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public virtual string ContractKind => string.Empty;
+        public bool HasExplicitExecutionDomain => Enum.IsDefined(typeof(TimelineExecutionDomain), m_ExecutionDomain);
+        public TimelineExecutionDomain ExecutionDomain => ResolveExecutionDomain(
+            Track != null ? Track.ExecutionDomain : TimelineExecutionDomain.Logic);
         #endregion
 
         #region Time
@@ -162,7 +181,21 @@ namespace BTSMTL.Timeline
             FrameToTime();
         }
 
+        public TimelineExecutionDomain ResolveExecutionDomain(TimelineExecutionDomain trackExecutionDomain)
+        {
+            return HasExplicitExecutionDomain
+                ? TimelineExecutionDomains.Normalize(m_ExecutionDomain)
+                : TimelineExecutionDomains.Normalize(trackExecutionDomain);
+        }
+
 #if UNITY_EDITOR
+        public void ConfigureExecutionDomain(TimelineExecutionDomain executionDomain)
+        {
+            if (!Enum.IsDefined(typeof(TimelineExecutionDomain), executionDomain))
+                throw new ArgumentOutOfRangeException(nameof(executionDomain));
+            m_ExecutionDomain = executionDomain;
+        }
+
         public bool EnsureAuthoringIdentity()
         {
             if (AuthoringIdentity.IsValid(m_AuthoringId))
@@ -290,8 +323,9 @@ namespace BTSMTL.Timeline
             if (catalog == null)
                 throw new ArgumentNullException(nameof(catalog));
             Track track = Activator.CreateInstance(type) as Track;
-            catalog.RequireTrack(track?.ContractKind);
+            TimelineTrackContract contract = catalog.RequireTrack(track?.ContractKind);
             track.RegenerateAuthoringIdentity();
+            track.ConfigureExecutionDomain(contract.ExecutionPolicy.Domain);
             track.Name = type.Name.Replace("Track", string.Empty);
             m_Tracks.Add(track);
             Init();
@@ -309,6 +343,7 @@ namespace BTSMTL.Timeline
             try
             {
                 catalog.RequireClipPlacement(track, clip);
+                clip.ConfigureExecutionDomain(track.ExecutionDomain);
             }
             catch
             {
@@ -326,6 +361,7 @@ namespace BTSMTL.Timeline
             try
             {
                 catalog.RequireClipPlacement(track, clip);
+                clip.ConfigureExecutionDomain(track.ExecutionDomain);
             }
             catch
             {
@@ -485,6 +521,7 @@ namespace BTSMTL.Timeline
         {
             Clip clip = Activator.CreateInstance(ClipType, this, frame) as Clip;
             clip.RegenerateAuthoringIdentity();
+            clip.ConfigureExecutionDomain(ExecutionDomain);
             m_Clips.Add(clip);
             return clip;
         }

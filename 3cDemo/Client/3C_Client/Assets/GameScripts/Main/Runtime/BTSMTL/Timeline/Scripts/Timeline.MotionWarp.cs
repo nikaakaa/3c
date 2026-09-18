@@ -610,6 +610,8 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.MotionWarpTrack,
                     TimelineTrackOverlapPolicy.Parallel,
                     TimelineCapability.MotionWarp,
+                    TimelineExecutionDomain.Logic,
+                    TimelineOutputKind.GameplayFact,
                     TimelineContractKinds.MotionWarpClip)
             },
             new[]
@@ -620,7 +622,9 @@ namespace BTSMTL.Timeline
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.MotionWarp,
                     true,
-                    true)
+                    true,
+                    TimelineExecutionDomain.Logic,
+                    TimelineOutputKind.GameplayFact)
             });
     }
 }

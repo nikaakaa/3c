@@ -93,6 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ? m_PoseDomain.Session.ResetGeneration
             : 0;
 
+        ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost m_TimelineHost;
         ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge m_TimelineBridge;
 
         internal void InitializeTimelineHost(
@@ -104,9 +105,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(timelineHost));
             if (m_PoseActionPublisher == null)
                 throw new InvalidOperationException("Timeline playback requires a composed Pose Action command publisher.");
+            m_TimelineHost = timelineHost;
             timelineHost.Initialize(numericTarget, tickRate);
             BindTimelineBridge(new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge(
-                timelineHost.Host, m_PoseActionPublisher.Inbox));
+                timelineHost, m_PoseActionPublisher.Inbox));
         }
 
         internal void BindTimelineBridge(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge bridge)
@@ -337,6 +339,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
             if (!bodyFrame.IsValid)
                 return;
+            m_TimelineHost?.Present(context);
             m_Camera?.Present(bodyFrame, context);
             CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame);
             CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
@@ -470,6 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             m_Disposed = true;
             m_TimelineBridge?.Dispose();
+            m_TimelineHost = null;
             m_PoseDomain?.Dispose();
             m_PoseResourceScope?.Dispose();
             m_PresentationClockCoordinator?.Dispose();

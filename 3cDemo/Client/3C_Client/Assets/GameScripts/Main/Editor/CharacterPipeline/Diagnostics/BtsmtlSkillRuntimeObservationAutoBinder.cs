@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using BTSMTL.Timeline.Editor;
 using FlowCanvas;
 using NodeCanvas.Editor;
 using NodeCanvas.Framework;
@@ -57,7 +58,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!s_Dirty || s_Opening)
                 return;
             s_Dirty = false;
-            if (!Application.isPlaying || GraphEditor.current == null ||
+            if (TimelineWorkspaceModeBridge.ActiveMode != TimelineWorkspaceMode.RuntimeDebug ||
+                !Application.isPlaying || GraphEditor.current == null ||
                 GraphEditor.rootGraph is not BtsmtlSkillFlowGraph graph ||
                 graph.Role != BtsmtlSkillFlowGraphRole.Skill)
             {

@@ -1588,7 +1588,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     status != TimelinePlaybackStatus.Running &&
                     !presented)
                 {
-                    PresentationPlaybackEnded?.Invoke(active.Handle);
+                    PresentationPlaybackEnded?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value));
                     m_ActivePlaybacks.RemoveAt(index);
                 }
             }

@@ -8,9 +8,9 @@ namespace ThirdPersonSimulation.Fixed
     internal static class FixedCharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 6;
-        const string HashIdentity = "fixed-character-runtime-state-hash/6";
-        public const string CodecIdentity = "fixed-character-runtime-state/6";
+        const int Version = 7;
+        const string HashIdentity = "fixed-character-runtime-state-hash/7";
+        public const string CodecIdentity = "fixed-character-runtime-state/7";
 
         public static byte[] Write(FixedCharacterRuntimeState state)
         {
@@ -216,6 +216,11 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteString(snapshot.ActionContext.SkillId.IsValid ? snapshot.ActionContext.SkillId.Value : string.Empty);
             writer.WriteInt32(snapshot.ActionContext.SkillEntryOperation.IsValid ? snapshot.ActionContext.SkillEntryOperation.Value : -1);
             writer.WriteUInt64(snapshot.ActionContext.SkillExecutionGeneration);
+            writer.WriteInt32(snapshot.InvocationSource.OperationIndex);
+            writer.WriteString(snapshot.InvocationSource.GraphAuthoringId);
+            writer.WriteString(snapshot.InvocationSource.NodeAuthoringId);
+            writer.WriteString(snapshot.InvocationSource.GraphInvocationPath);
+            writer.WriteUInt64(snapshot.InvocationSource.InvocationGeneration);
             writer.WriteUInt64(snapshot.InputSequence);
             writer.WriteUInt64(snapshot.StartTick.Value);
         }
@@ -260,6 +265,11 @@ namespace ThirdPersonSimulation.Fixed
             string skillIdValue = reader.ReadString();
             int skillEntryOperationValue = reader.ReadInt32();
             ulong skillExecutionGeneration = reader.ReadUInt64();
+            int invocationOperationIndex = reader.ReadInt32();
+            string invocationGraphAuthoringId = reader.ReadString();
+            string invocationNodeAuthoringId = reader.ReadString();
+            string invocationPath = reader.ReadString();
+            ulong invocationGeneration = reader.ReadUInt64();
             ulong inputSequence = reader.ReadUInt64();
             ulong startTickValue = reader.ReadUInt64();
             if (runtimeHandle == 0 || generation == 0 || executionInstanceId == 0 || startTickValue == 0)
@@ -274,6 +284,12 @@ namespace ThirdPersonSimulation.Fixed
                 skillId,
                 skillEntryOperation,
                 skillExecutionGeneration);
+            var invocationSource = new AbilityTimelineInvocationSource(
+                invocationOperationIndex,
+                invocationGraphAuthoringId,
+                invocationNodeAuthoringId,
+                invocationPath,
+                invocationGeneration);
             return new AbilityTimelineRuntimeSnapshot(
                 runtimeHandle,
                 generation,
@@ -298,6 +314,7 @@ namespace ThirdPersonSimulation.Fixed
                 timelineId,
                 loop,
                 actionContext,
+                invocationSource,
                 inputSequence,
                 new SimulationTick(startTickValue));
         }
@@ -889,4 +906,3 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 }
-

@@ -119,17 +119,22 @@ namespace BTSMTL.Timeline.Editor
         Label m_Status;
         VisualElement m_WorkspaceModeControls;
         bool m_RuntimeObservationReadOnly;
+        RuntimeInstanceKey m_RuntimeObservationScope;
+        RuntimeInstanceKey m_RuntimeObservationPlayback;
 
         public TimelineData Timeline => m_Timeline;
         public UnityEngine.Object SourceGraphWindow => m_SourceGraphWindow;
         public string SourceGraphAuthoringId => m_SourceGraphAuthoringId ?? string.Empty;
         public string SourceNodeAuthoringId => m_SourceNodeGuid ?? string.Empty;
+        public TimelineAsset SourceAsset => m_SerializedOwner as TimelineAsset;
         public bool RuntimeObservationReadOnly => m_RuntimeObservationReadOnly;
+        public RuntimeInstanceKey RuntimeObservationScope => m_RuntimeObservationScope;
+        public RuntimeInstanceKey RuntimeObservationPlayback => m_RuntimeObservationPlayback;
         public string AuthoringRevision => m_Timeline == null
             ? string.Empty
             : TimelineAuthoringFingerprint.Compute(m_Timeline);
 
-        internal IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> GetRuntimeObservationSummaries()
+        public IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> GetRuntimeObservationSummaries()
         {
             if (m_Timeline == null)
                 return Array.Empty<RuntimeTimelinePlaybackDebugSummary>();
@@ -138,13 +143,13 @@ namespace BTSMTL.Timeline.Editor
                     m_Timeline.AuthoringId,
                     SourceGraphAuthoringId);
             if (string.IsNullOrEmpty(SourceNodeAuthoringId))
-                return summaries;
-            return summaries
+                return FilterRuntimeScope(summaries);
+            return FilterRuntimeScope(summaries
                 .Where(value => string.Equals(
                     value.Provenance.SourceNodeAuthoringId,
                     SourceNodeAuthoringId,
                     StringComparison.Ordinal))
-                .ToArray();
+                .ToArray());
         }
 
         internal bool TryResolveRuntimeObservation(
@@ -152,6 +157,20 @@ namespace BTSMTL.Timeline.Editor
             out string message)
         {
             IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
+            if (m_RuntimeObservationPlayback.IsValid)
+            {
+                for (int index = 0; index < summaries.Count; index++)
+                {
+                    if (!summaries[index].Playback.Equals(m_RuntimeObservationPlayback))
+                        continue;
+                    summary = summaries[index];
+                    message = string.Empty;
+                    return true;
+                }
+                summary = default;
+                message = "已选择的运行 Timeline 实例不在当前调用路径中。";
+                return false;
+            }
             if (summaries.Count == 1 && summaries[0].Playback.IsValid)
             {
                 summary = summaries[0];
@@ -165,25 +184,79 @@ namespace BTSMTL.Timeline.Editor
             return false;
         }
 
-        internal bool TryResolveDirectRuntimeObservation(
-            out TimelineRuntimePlaybackDescriptor descriptor,
-            out string message)
+        public void SetRuntimeObservationScope(RuntimeInstanceKey scope)
         {
-            IReadOnlyList<TimelineRuntimePlaybackDescriptor> descriptors =
-                TimelineRuntimeService.GetActivePlaybackDescriptors($"timeline:{m_Timeline?.AuthoringId ?? string.Empty}");
-            if (descriptors.Count == 1 && descriptors[0].IsValid &&
-                (descriptors[0].State == TimelineRuntimePlaybackState.Running ||
-                 descriptors[0].State == TimelineRuntimePlaybackState.Stopping))
+            if (m_RuntimeObservationScope.Equals(scope))
+                return;
+            m_RuntimeObservationScope = scope;
+            m_RuntimeObservationPlayback = default;
+            ClearRuntimeTimelineObservation();
+        }
+
+        public bool SelectRuntimeObservationPlayback(RuntimeInstanceKey playback)
+        {
+            if (playback.Kind != RuntimeInstanceKind.TimelinePlayback)
+                return false;
+            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries = GetRuntimeObservationSummaries();
+            for (int index = 0; index < summaries.Count; index++)
             {
-                descriptor = descriptors[0];
-                message = string.Empty;
+                if (!summaries[index].Playback.Equals(playback))
+                    continue;
+                if (m_RuntimeObservationPlayback.Equals(playback))
+                    return true;
+                m_RuntimeObservationPlayback = playback;
+                ClearRuntimeTimelineObservation();
                 return true;
             }
-            descriptor = default;
-            message = descriptors.Count > 1
-                ? "当前 Timeline 对应多个 direct runtime 调用，请从 Graph Shell 选择具体实例。"
-                : string.Empty;
             return false;
+        }
+
+        internal void ClearRuntimeObservationSelection()
+        {
+            m_RuntimeObservationScope = default;
+            m_RuntimeObservationPlayback = default;
+        }
+
+        IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> FilterRuntimeScope(
+            IReadOnlyList<RuntimeTimelinePlaybackDebugSummary> summaries)
+        {
+            if (!m_RuntimeObservationScope.IsValid || summaries.Count == 0)
+                return summaries;
+            var filtered = new List<RuntimeTimelinePlaybackDebugSummary>(summaries.Count);
+            for (int index = 0; index < summaries.Count; index++)
+            {
+                RuntimeTimelinePlaybackDebugSummary summary = summaries[index];
+                RuntimeTimelinePlaybackProvenance provenance = summary.Provenance;
+                if (!provenance.IsValid)
+                    continue;
+                if (m_RuntimeObservationScope.Kind == RuntimeInstanceKind.SkillExecution)
+                {
+                    if (!provenance.HasProgramInvocation ||
+                        string.IsNullOrEmpty(m_RuntimeObservationScope.CallSiteId) ||
+                        m_RuntimeObservationScope.ActionInstanceId == 0 ||
+                        m_RuntimeObservationScope.ActivationGeneration == 0 ||
+                        m_RuntimeObservationScope.InvocationGeneration == 0 ||
+                        summary.Playback.ActionInstanceId != m_RuntimeObservationScope.ActionInstanceId ||
+                        provenance.SkillExecutionGeneration != m_RuntimeObservationScope.ActivationGeneration ||
+                        provenance.SourceActivationGeneration != m_RuntimeObservationScope.InvocationGeneration ||
+                        !string.Equals(provenance.SourceInvocationPath, m_RuntimeObservationScope.CallSiteId, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+                    filtered.Add(summary);
+                    continue;
+                }
+                if (m_RuntimeObservationScope.GraphRuntimeId != Guid.Empty &&
+                    provenance.SourceGraphRuntimeId != m_RuntimeObservationScope.GraphRuntimeId)
+                    continue;
+                ulong scopeGeneration = m_RuntimeObservationScope.InvocationGeneration != 0
+                    ? m_RuntimeObservationScope.InvocationGeneration
+                    : m_RuntimeObservationScope.ActivationGeneration;
+                if (scopeGeneration != 0 && provenance.SourceActivationGeneration != scopeGeneration)
+                    continue;
+                filtered.Add(summary);
+            }
+            return filtered;
         }
 
         public bool FocusSource(string trackAuthoringId, string clipAuthoringId)
@@ -237,16 +310,6 @@ namespace BTSMTL.Timeline.Editor
             return null;
         }
 
-        public void ApplyRuntimeObservation(
-            float visualTime,
-            IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
-        {
-            if (!m_RuntimeObservationReadOnly)
-                return;
-            m_SlateProjection?.ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
-        }
-
         public void ApplyRuntimeTimelineObservation(
             TimelineData runtimeTimeline,
             float visualTime,
@@ -269,21 +332,6 @@ namespace BTSMTL.Timeline.Editor
             m_SlateProjection?.ApplyHistoryTimeline(runtimeTimeline, visualTime, activeTracks, activeClips);
         }
 
-        public void ApplyHistoryObservation(
-            float visualTime,
-            IReadOnlyDictionary<string, string> activeTracks,
-            IReadOnlyDictionary<string, string> activeClips)
-        {
-            if (!m_RuntimeObservationReadOnly)
-                return;
-            m_SlateProjection?.ApplyHistoryOverlay(visualTime, activeTracks, activeClips);
-        }
-
-        public void ClearRuntimeObservation()
-        {
-            m_SlateProjection?.ClearRuntimeOverlay();
-        }
-
         public void ClearRuntimeTimelineObservation()
         {
             m_SlateProjection?.ClearRuntimeTimeline();
@@ -294,6 +342,8 @@ namespace BTSMTL.Timeline.Editor
         {
             m_RuntimeObservationReadOnly = readOnly;
             m_SlateProjection?.SetRuntimeReadOnly(readOnly);
+            if (!readOnly)
+                ClearRuntimeObservationSelection();
             if (!readOnly)
                 m_SlateProjection?.ClearRuntimeTimeline();
             if (!readOnly)
@@ -309,6 +359,7 @@ namespace BTSMTL.Timeline.Editor
         {
             m_SourceGraphAuthoringId = graphAuthoringId ?? string.Empty;
             m_SourceNodeGuid = sourceNodeAuthoringId ?? string.Empty;
+            ClearRuntimeObservationSelection();
         }
 
         void BindAsset(TimelineAsset asset, string sourceGraphAuthoringId, string sourceNodeGuid)
@@ -317,6 +368,7 @@ namespace BTSMTL.Timeline.Editor
                 throw new ArgumentNullException(nameof(asset));
             m_SourceGraphOwner = null;
             m_RuntimeObservationReadOnly = false;
+            ClearRuntimeObservationSelection();
             Bind(
                 asset.Data,
                 asset,
@@ -411,6 +463,7 @@ namespace BTSMTL.Timeline.Editor
             if (sourceGraphAuthoringId != null)
                 m_SourceGraphAuthoringId = sourceGraphAuthoringId;
             m_SourceNodeGuid = sourceNodeGuid ?? string.Empty;
+            ClearRuntimeObservationSelection();
             titleContent = new GUIContent("Timeline Editor");
             m_Timeline = timeline;
 
@@ -481,6 +534,7 @@ namespace BTSMTL.Timeline.Editor
             m_SourceGraphWindow = null;
             m_SourceGraphOwner = null;
             m_SourceNode = null;
+            ClearRuntimeObservationSelection();
             BuildUnboundView();
         }
 
@@ -730,13 +784,16 @@ namespace BTSMTL.Timeline.Editor
     }
 
     [InitializeOnLoad]
-    static class TimelineRuntimeObservationBridge
+    public static class TimelineRuntimeObservationBridge
     {
+        static readonly Dictionary<TimelineEditorWindow, Dictionary<RuntimeInstanceKey, RuntimeTimelinePlaybackProjection>> s_Projections =
+            new Dictionary<TimelineEditorWindow, Dictionary<RuntimeInstanceKey, RuntimeTimelinePlaybackProjection>>();
+
         static TimelineRuntimeObservationBridge()
         {
             RuntimeDebugSession.Shared.Changed += Refresh;
-            TimelineRuntimeService.ObservationChanged += Refresh;
             TimelineEditorWindow.WindowOpened += RefreshWindow;
+            TimelineEditorWindow.WindowClosed += ReleaseWindow;
         }
 
         static void Refresh()
@@ -746,9 +803,15 @@ namespace BTSMTL.Timeline.Editor
                 Refresh(windows[index]);
         }
 
-        internal static void RefreshWindow(TimelineEditorWindow window)
+        public static void RefreshWindow(TimelineEditorWindow window)
         {
             Refresh(window);
+        }
+
+        static void ReleaseWindow(TimelineEditorWindow window)
+        {
+            if (window != null)
+                s_Projections.Remove(window);
         }
 
         static void Refresh(TimelineEditorWindow window)
@@ -757,35 +820,42 @@ namespace BTSMTL.Timeline.Editor
                 return;
             if (!window.RuntimeObservationReadOnly)
             {
-                window.ClearRuntimeObservation();
+                ReleaseWindow(window);
+                window.ClearRuntimeTimelineObservation();
                 return;
             }
-            if (!window.TryResolveRuntimeObservation(
+            if (window.TryResolveRuntimeObservation(
                     out RuntimeTimelinePlaybackDebugSummary summary,
                     out string observationMessage))
             {
-                if (window.TryResolveDirectRuntimeObservation(
-                        out TimelineRuntimePlaybackDescriptor direct,
-                        out string directMessage))
-                {
-                    ApplyDirectRuntimeObservation(window, direct);
-                    return;
-                }
-                window.ClearRuntimeObservation();
-                string message = !string.IsNullOrEmpty(observationMessage)
-                    ? observationMessage
-                    : directMessage;
-                if (!string.IsNullOrEmpty(message))
-                    window.SetRuntimeObservationStatus(message);
+                ApplyRuntimeTimelineObservation(window, summary);
+                return;
+            }
+            ReleaseWindow(window);
+            window.ClearRuntimeTimelineObservation();
+            if (!string.IsNullOrEmpty(observationMessage))
+                window.SetRuntimeObservationStatus(observationMessage);
+        }
+
+        static void ApplyRuntimeTimelineObservation(
+            TimelineEditorWindow window,
+            RuntimeTimelinePlaybackDebugSummary summary)
+        {
+            if (!TimelineRuntimePlaybackSnapshotRegistry.TryGet(summary.Playback, out TimelineData sourceTimeline))
+            {
+                window.ClearRuntimeTimelineObservation();
+                window.SetRuntimeObservationStatus("当前 Timeline 实例没有冻结运行内容。");
                 return;
             }
             var activeTracks = new Dictionary<string, string>(StringComparer.Ordinal);
             var activeClips = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (RuntimeDebugEventView item in RuntimeDebugSession.Shared.ViewModel.GetTimelineCurrentEvents(
-                         window.Timeline.AuthoringId,
-                         summary.Playback,
-                         window.SourceGraphAuthoringId))
+            IReadOnlyList<RuntimeDebugEventView> events = RuntimeDebugSession.Shared.ViewModel.GetTimelineCurrentEvents(
+                sourceTimeline.AuthoringId,
+                summary.Playback,
+                summary.Provenance.SourceGraphAuthoringId);
+            for (int index = 0; index < events.Count; index++)
             {
+                RuntimeDebugEventView item = events[index];
                 RuntimeSourceElementKey source = item.Source;
                 string status = !string.IsNullOrEmpty(item.Event.Payload.Status)
                     ? item.Event.Payload.Status
@@ -796,39 +866,50 @@ namespace BTSMTL.Timeline.Editor
                          !string.IsNullOrEmpty(source.ClipAuthoringId))
                     activeClips[source.ClipAuthoringId] = status;
             }
-            window.ApplyRuntimeObservation(summary.VisualTime, activeTracks, activeClips);
+            RuntimeTimelinePlaybackProjection projection = GetProjection(window, summary.Playback);
+            TimelineData runtimeTimeline = projection.Update(sourceTimeline, summary.Playback, events);
+            MarkOpenTreeClips(runtimeTimeline, activeClips);
+            if (RuntimeDebugSession.Shared.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory)
+                window.ApplyHistoryTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);
+            else
+                window.ApplyRuntimeTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);
         }
 
-        static void ApplyDirectRuntimeObservation(
+        static RuntimeTimelinePlaybackProjection GetProjection(
             TimelineEditorWindow window,
-            TimelineRuntimePlaybackDescriptor descriptor)
+            RuntimeInstanceKey playback)
         {
-            var activeClips = new Dictionary<string, string>(StringComparer.Ordinal);
-            var activeClipIds = new HashSet<string>(descriptor.ActiveClipIds, StringComparer.Ordinal);
-            for (int index = 0; index < descriptor.ActiveClipIds.Count; index++)
-                activeClips[descriptor.ActiveClipIds[index]] = descriptor.State.ToString();
-
-            var activeTracks = new Dictionary<string, string>(StringComparer.Ordinal);
-            for (int trackIndex = 0; trackIndex < window.Timeline.Tracks.Count; trackIndex++)
+            if (!s_Projections.TryGetValue(window, out Dictionary<RuntimeInstanceKey, RuntimeTimelinePlaybackProjection> byPlayback))
             {
-                Track track = window.Timeline.Tracks[trackIndex];
-                if (track == null)
+                byPlayback = new Dictionary<RuntimeInstanceKey, RuntimeTimelinePlaybackProjection>();
+                s_Projections.Add(window, byPlayback);
+            }
+            if (!byPlayback.TryGetValue(playback, out RuntimeTimelinePlaybackProjection projection))
+            {
+                projection = new RuntimeTimelinePlaybackProjection();
+                byPlayback.Add(playback, projection);
+            }
+            return projection;
+        }
+
+        static void MarkOpenTreeClips(
+            TimelineData timeline,
+            IDictionary<string, string> activeClips)
+        {
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                if (timeline.Tracks[trackIndex] is not TreeTrack track)
                     continue;
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
-                    Clip clip = track.Clips[clipIndex];
-                    if (clip != null && activeClipIds.Contains(clip.AuthoringId))
-                    {
-                        activeTracks[track.AuthoringId] = descriptor.State.ToString();
-                        break;
-                    }
+                    if (track.Clips[clipIndex] is TreeClip treeClip &&
+                        treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision &&
+                        activeClips.ContainsKey(treeClip.AuthoringId))
+                        activeClips[treeClip.AuthoringId] = "open";
                 }
             }
-
-            float visualTime = descriptor.CursorFrame /
-                (float)Mathf.Max(1, TimelineUtility.FrameRate);
-            window.ApplyRuntimeObservation(visualTime, activeTracks, activeClips);
         }
+
     }
 }
 

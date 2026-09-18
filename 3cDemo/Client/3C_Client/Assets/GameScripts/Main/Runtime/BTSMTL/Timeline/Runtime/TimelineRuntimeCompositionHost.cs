@@ -9,6 +9,8 @@ namespace BTSMTL.Timeline.Runtime
     public sealed class TimelineRuntimeCompositionHost : ITimelinePlaybackService, IDisposable
     {
         readonly TimelineRuntimeComposition m_Composition;
+        readonly TimelineRuntimePresentationDriver m_PresentationDriver =
+            new TimelineRuntimePresentationDriver();
         bool m_Disposed;
 
         public TimelineRuntimeCompositionHost(
@@ -25,7 +27,8 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ArgumentNullException(nameof(evaluationSinks));
             var sinks = new List<ITimelineRuntimeEvaluationSink>
             {
-                EvaluationBuffer
+                EvaluationBuffer,
+                m_PresentationDriver
             };
             foreach (ITimelineRuntimeEvaluationSink sink in evaluationSinks)
             {
@@ -71,6 +74,38 @@ namespace BTSMTL.Timeline.Runtime
         {
             add => EvaluationBuffer.StopCommitted += value;
             remove => EvaluationBuffer.StopCommitted -= value;
+        }
+
+        public bool TryPresent(
+            TimelineRuntimePlaybackHandle handle,
+            ulong presentationFrame,
+            float presentationDeltaSeconds,
+            float interpolationAlpha,
+            out TimelineRuntimePresentationFrame frame)
+        {
+            EnsureAvailable();
+            return m_PresentationDriver.TryPresent(
+                Service,
+                handle,
+                presentationFrame,
+                presentationDeltaSeconds,
+                interpolationAlpha,
+                out frame);
+        }
+
+        public bool TryPresent(
+            TimelinePlaybackHandle handle,
+            ulong presentationFrame,
+            float presentationDeltaSeconds,
+            float interpolationAlpha,
+            out TimelineRuntimePresentationFrame frame)
+        {
+            return TryPresent(
+                new TimelineRuntimePlaybackHandle(handle.Value),
+                presentationFrame,
+                presentationDeltaSeconds,
+                interpolationAlpha,
+                out frame);
         }
 
         public TimelineRuntimePreparationResult Prepare(
@@ -261,6 +296,7 @@ namespace BTSMTL.Timeline.Runtime
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            m_PresentationDriver.Clear();
             m_Composition.Dispose();
             EvaluationBuffer.Clear();
         }

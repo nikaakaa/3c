@@ -254,6 +254,461 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    public sealed class TimelineRuntimePresentationDriver : ITimelineRuntimeEvaluationSink
+    {
+        static readonly TimelineRuntimePresentationOperations s_EmptyOperations =
+            new TimelineRuntimePresentationOperations(
+                Array.Empty<TimelineAnimationContribution>(),
+                Array.Empty<TimelineCameraStateSample>(),
+                Array.Empty<TimelineCameraCueSample>(),
+                Array.Empty<TimelineCameraResponseSample>(),
+                Array.Empty<TimelineCameraResourceSample>(),
+                Array.Empty<TimelineRuntimeScenePresentationSample>());
+
+        readonly Dictionary<ulong, PresentationPlaybackState> m_Playbacks =
+            new Dictionary<ulong, PresentationPlaybackState>();
+
+        public bool TryPresent(
+            TimelineRuntimeService service,
+            TimelineRuntimePlaybackHandle handle,
+            ulong presentationFrame,
+            float presentationDeltaSeconds,
+            float interpolationAlpha,
+            out TimelineRuntimePresentationFrame frame)
+        {
+            if (service == null)
+                throw new ArgumentNullException(nameof(service));
+            if (!handle.IsValid || presentationFrame == 0 ||
+                !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
+                !float.IsFinite(interpolationAlpha) || interpolationAlpha < 0f || interpolationAlpha > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(presentationFrame));
+            }
+            if (!service.TryGetPlayback(handle, out TimelineRuntimePlayback playback))
+            {
+                frame = default;
+                return false;
+            }
+
+            bool hasState = m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state);
+            if (!hasState)
+            {
+                if (playback.State == TimelineRuntimePlaybackState.Stopping ||
+                    playback.State == TimelineRuntimePlaybackState.Stopped ||
+                    playback.State == TimelineRuntimePlaybackState.Disposed)
+                {
+                    frame = default;
+                    return false;
+                }
+                state = new PresentationPlaybackState(playback.Generation);
+                m_Playbacks.Add(handle.Value, state);
+            }
+
+            var events = new List<TimelineRuntimePresentationEvent>();
+            if (state.Generation != playback.Generation)
+            {
+                AppendCancellations(state, events);
+                state = new PresentationPlaybackState(playback.Generation);
+                m_Playbacks[handle.Value] = state;
+            }
+
+            if (state.HasCachedFrame)
+            {
+                if (presentationFrame == state.LastPresentationFrame)
+                {
+                    frame = state.CachedFrame;
+                    return false;
+                }
+                if (presentationFrame < state.LastPresentationFrame)
+                    throw new InvalidOperationException("Timeline presentation frame moved backward without a generation reset.");
+            }
+
+            if (state.StopCommitted)
+            {
+                AppendCancellations(state, events);
+                state.Finished = true;
+                if (events.Count == 0)
+                {
+                    m_Playbacks.Remove(handle.Value);
+                    frame = default;
+                    return false;
+                }
+                frame = new TimelineRuntimePresentationFrame(
+                    playback,
+                    presentationFrame,
+                    presentationDeltaSeconds,
+                    interpolationAlpha,
+                    s_EmptyOperations,
+                    events);
+                state.Cache(frame);
+                return true;
+            }
+
+            if (state.Finished)
+            {
+                m_Playbacks.Remove(handle.Value);
+                frame = default;
+                return false;
+            }
+
+            int maxFrame = Math.Max(0, playback.Content.MaxFrame);
+            bool loop = playback.PlaybackMode == TimelinePlaybackMode.Loop;
+            float previousFrame = state.CursorFrame;
+            int previousCycle = state.Cycle;
+            AdvanceCursor(
+                state,
+                maxFrame,
+                loop,
+                playback.Content.FrameRate,
+                presentationDeltaSeconds,
+                out float currentFrame,
+                out int currentCycle);
+            TimelineRuntimePresentationOperations operations = TimelineRuntimePresentationEvaluator.Evaluate(
+                playback,
+                previousFrame,
+                previousCycle,
+                currentFrame,
+                currentCycle,
+                loop,
+                !state.HasPresented);
+            AppendMarkerEvents(
+                playback,
+                state,
+                previousFrame,
+                previousCycle,
+                currentFrame,
+                currentCycle,
+                loop,
+                !state.HasPresented,
+                events);
+            state.CursorFrame = currentFrame;
+            state.Cycle = currentCycle;
+            state.HasPresented = true;
+            if (!loop && currentFrame >= maxFrame)
+                state.Finished = true;
+            frame = new TimelineRuntimePresentationFrame(
+                playback,
+                presentationFrame,
+                presentationDeltaSeconds,
+                interpolationAlpha,
+                operations,
+                events);
+            state.Cache(frame);
+            return true;
+        }
+
+        public bool Consume(TimelineRuntimeStepContext context) => true;
+
+        public void Commit(TimelineRuntimeStepContext context)
+        {
+        }
+
+        public void Discard(TimelineRuntimeStepContext context)
+        {
+        }
+
+        public bool ConsumeStop(TimelineRuntimeStopRequest request) => true;
+
+        public void CommitStop(TimelineRuntimeStopRequest request)
+        {
+            if (m_Playbacks.TryGetValue(request.Handle.Value, out PresentationPlaybackState state))
+            {
+                state.StopCommitted = true;
+                state.ClearCachedFrame();
+            }
+        }
+
+        public void DiscardStop(TimelineRuntimeStopRequest request)
+        {
+        }
+
+        public void Clear()
+        {
+            m_Playbacks.Clear();
+        }
+
+        static void AdvanceCursor(
+            PresentationPlaybackState state,
+            int maxFrame,
+            bool loop,
+            int frameRate,
+            float deltaSeconds,
+            out float currentFrame,
+            out int currentCycle)
+        {
+            currentFrame = state.CursorFrame;
+            currentCycle = state.Cycle;
+            if (maxFrame <= 0)
+                return;
+            double requested = state.CursorFrame + deltaSeconds * Math.Max(1, frameRate);
+            if (loop)
+            {
+                long cycleDelta = (long)Math.Floor(requested / maxFrame);
+                if (cycleDelta > 4096 || cycleDelta > int.MaxValue - state.Cycle)
+                    throw new InvalidOperationException("Timeline presentation cursor crossed an unsupported cycle range.");
+                currentCycle = state.Cycle + (int)cycleDelta;
+                currentFrame = (float)(requested - cycleDelta * maxFrame);
+                return;
+            }
+            currentFrame = (float)Math.Min(requested, maxFrame);
+        }
+
+        static void AppendMarkerEvents(
+            TimelineRuntimePlayback playback,
+            PresentationPlaybackState state,
+            float previousFrame,
+            int previousCycle,
+            float currentFrame,
+            int currentCycle,
+            bool loop,
+            bool includeStartBoundary,
+            List<TimelineRuntimePresentationEvent> events)
+        {
+            int maxFrame = Math.Max(0, playback.Content.MaxFrame);
+            if (maxFrame <= 0)
+                return;
+            double previousAbsolute = previousCycle * (double)maxFrame + previousFrame;
+            double currentAbsolute = currentCycle * (double)maxFrame + currentFrame;
+            if (currentAbsolute < previousAbsolute)
+                throw new InvalidOperationException("Timeline presentation cursor moved backward without a generation reset.");
+            int firstCycle = loop ? previousCycle : 0;
+            int lastCycle = loop ? currentCycle : 0;
+            var transitions = new List<PresentationMarkerTransition>();
+            for (int clipIndex = 0; clipIndex < playback.Content.Clips.Count; clipIndex++)
+            {
+                TimelineContentClip clip = playback.Content.Clips[clipIndex];
+                if (clip.TrackMuted || !clip.ExecutionPolicy.IsPresentation || clip.PresentationMarkers.Count == 0)
+                    continue;
+                for (int markerIndex = 0; markerIndex < clip.PresentationMarkers.Count; markerIndex++)
+                {
+                    TimelineContentPresentationMarker marker = clip.PresentationMarkers[markerIndex];
+                    for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
+                    {
+                        double startAbsolute = cycle * (double)maxFrame + marker.Frame;
+                        if (Crosses(startAbsolute, previousAbsolute, currentAbsolute, includeStartBoundary))
+                        {
+                            transitions.Add(new PresentationMarkerTransition(
+                                clip,
+                                marker,
+                                cycle,
+                                marker.Frame,
+                                true,
+                                startAbsolute));
+                        }
+                        if (marker.Lifetime == TimelinePresentationMarkerLifetime.Stateful)
+                        {
+                            double endAbsolute = cycle * (double)maxFrame + marker.EndFrame;
+                            if (Crosses(endAbsolute, previousAbsolute, currentAbsolute, false))
+                            {
+                                transitions.Add(new PresentationMarkerTransition(
+                                    clip,
+                                    marker,
+                                    cycle,
+                                    marker.EndFrame,
+                                    false,
+                                    endAbsolute));
+                            }
+                        }
+                    }
+                }
+            }
+            transitions.Sort(PresentationMarkerTransition.Compare);
+            for (int index = 0; index < transitions.Count; index++)
+            {
+                PresentationMarkerTransition transition = transitions[index];
+                if (transition.Marker.Lifetime == TimelinePresentationMarkerLifetime.Pulse)
+                {
+                    events.Add(CreateEvent(
+                        playback,
+                        state,
+                        transition.Clip,
+                        transition.Marker,
+                        transition.Cycle,
+                        transition.Frame,
+                        TimelineRuntimePresentationEventKind.Pulse));
+                    continue;
+                }
+                string key = CreateStatefulKey(transition.Clip.AuthoringId, transition.Marker.AuthoringId, transition.Cycle);
+                if (transition.IsStart)
+                {
+                    if (state.ActiveStateful.ContainsKey(key))
+                        continue;
+                    TimelineRuntimePresentationEvent activated = CreateEvent(
+                        playback,
+                        state,
+                        transition.Clip,
+                        transition.Marker,
+                        transition.Cycle,
+                        transition.Frame,
+                        TimelineRuntimePresentationEventKind.Activate);
+                    state.ActiveStateful.Add(key, activated);
+                    events.Add(activated);
+                    continue;
+                }
+                if (!state.ActiveStateful.TryGetValue(key, out TimelineRuntimePresentationEvent active))
+                    continue;
+                state.ActiveStateful.Remove(key);
+                events.Add(CreateCancellation(active, transition.Frame, transition.Cycle));
+            }
+        }
+
+        static TimelineRuntimePresentationEvent CreateEvent(
+            TimelineRuntimePlayback playback,
+            PresentationPlaybackState state,
+            TimelineContentClip clip,
+            TimelineContentPresentationMarker marker,
+            int cycle,
+            int frame,
+            TimelineRuntimePresentationEventKind kind)
+        {
+            if (!playback.PreparedBindings.CallInput.TryGet(marker.PayloadBinding.BindingId, out TimelineBindingValue payload))
+                throw new InvalidOperationException($"Timeline presentation marker '{marker.AuthoringId}' payload binding is missing.");
+            if (state.NextTraversalIndex == 0)
+                throw new InvalidOperationException("Timeline presentation marker traversal identity is exhausted.");
+            ulong traversalIndex = state.NextTraversalIndex++;
+            float duration = Math.Max(1, clip.EndFrame - clip.StartFrame);
+            float normalizedTime = Math.Clamp((frame - clip.StartFrame) / duration, 0f, 1f);
+            return new TimelineRuntimePresentationEvent(
+                playback.Handle,
+                playback.ExecutionIdentity,
+                playback.Generation,
+                clip.TrackAuthoringId,
+                clip.AuthoringId,
+                marker.AuthoringId,
+                traversalIndex,
+                kind,
+                frame,
+                cycle,
+                normalizedTime,
+                marker.PayloadBinding,
+                payload);
+        }
+
+        static void AppendCancellations(
+            PresentationPlaybackState state,
+            List<TimelineRuntimePresentationEvent> events)
+        {
+            if (state.ActiveStateful.Count == 0)
+                return;
+            var active = new List<TimelineRuntimePresentationEvent>(state.ActiveStateful.Values);
+            active.Sort((left, right) => string.CompareOrdinal(left.Identity, right.Identity));
+            for (int index = 0; index < active.Count; index++)
+                events.Add(CreateCancellation(active[index], active[index].Frame, active[index].Cycle));
+            state.ActiveStateful.Clear();
+        }
+
+        static TimelineRuntimePresentationEvent CreateCancellation(
+            TimelineRuntimePresentationEvent active,
+            int frame,
+            int cycle)
+        {
+            return new TimelineRuntimePresentationEvent(
+                active.PlaybackHandle,
+                active.ExecutionIdentity,
+                active.Generation,
+                active.TrackAuthoringId,
+                active.ClipAuthoringId,
+                active.MarkerAuthoringId,
+                active.TraversalIndex,
+                TimelineRuntimePresentationEventKind.Cancel,
+                frame,
+                cycle,
+                active.NormalizedTime,
+                active.PayloadBinding,
+                active.Payload);
+        }
+
+        static bool Crosses(
+            double position,
+            double previousPosition,
+            double currentPosition,
+            bool includeStartBoundary)
+        {
+            return includeStartBoundary && position == previousPosition ||
+                   position > previousPosition && position <= currentPosition;
+        }
+
+        static string CreateStatefulKey(string clipAuthoringId, string markerAuthoringId, int cycle)
+        {
+            return $"{clipAuthoringId}|{markerAuthoringId}|{cycle}";
+        }
+
+        sealed class PresentationPlaybackState
+        {
+            public PresentationPlaybackState(ulong generation)
+            {
+                Generation = generation;
+            }
+
+            public readonly Dictionary<string, TimelineRuntimePresentationEvent> ActiveStateful =
+                new Dictionary<string, TimelineRuntimePresentationEvent>(StringComparer.Ordinal);
+            public ulong Generation { get; }
+            public ulong NextTraversalIndex = 1;
+            public float CursorFrame;
+            public int Cycle;
+            public bool HasPresented;
+            public bool StopCommitted;
+            public bool Finished;
+            public bool HasCachedFrame;
+            public ulong LastPresentationFrame;
+            public TimelineRuntimePresentationFrame CachedFrame;
+
+            public void Cache(TimelineRuntimePresentationFrame frame)
+            {
+                CachedFrame = frame;
+                LastPresentationFrame = frame.PresentationFrame;
+                HasCachedFrame = true;
+            }
+
+            public void ClearCachedFrame()
+            {
+                CachedFrame = default;
+                LastPresentationFrame = 0;
+                HasCachedFrame = false;
+            }
+        }
+
+        readonly struct PresentationMarkerTransition
+        {
+            public PresentationMarkerTransition(
+                TimelineContentClip clip,
+                TimelineContentPresentationMarker marker,
+                int cycle,
+                int frame,
+                bool isStart,
+                double absoluteFrame)
+            {
+                Clip = clip;
+                Marker = marker;
+                Cycle = cycle;
+                Frame = frame;
+                IsStart = isStart;
+                AbsoluteFrame = absoluteFrame;
+            }
+
+            public TimelineContentClip Clip { get; }
+            public TimelineContentPresentationMarker Marker { get; }
+            public int Cycle { get; }
+            public int Frame { get; }
+            public bool IsStart { get; }
+            public double AbsoluteFrame { get; }
+
+            public static int Compare(PresentationMarkerTransition left, PresentationMarkerTransition right)
+            {
+                int position = left.AbsoluteFrame.CompareTo(right.AbsoluteFrame);
+                if (position != 0)
+                    return position;
+                int direction = left.IsStart.CompareTo(right.IsStart);
+                if (direction != 0)
+                    return direction;
+                int clip = string.CompareOrdinal(left.Clip.AuthoringId, right.Clip.AuthoringId);
+                return clip != 0
+                    ? clip
+                    : string.CompareOrdinal(left.Marker.AuthoringId, right.Marker.AuthoringId);
+            }
+        }
+    }
+
     public sealed class TimelineRuntimeEvaluationFanout : ITimelineRuntimeEvaluationSink
     {
         readonly ReadOnlyCollection<ITimelineRuntimeEvaluationSink> m_Sinks;

@@ -198,6 +198,7 @@ namespace BTSMTL.Timeline.Runtime
         int m_Cycle;
         string m_SectionId = string.Empty;
         bool m_InitialBoundaryPending;
+        ulong m_LastCommittedLogicTick;
         readonly int m_TickRate;
         int m_FrameCarry;
 
@@ -238,6 +239,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePlaybackState State { get; private set; }
         public int CursorFrame => m_CursorFrame;
         public int TickRate => m_TickRate;
+        public ulong LastCommittedLogicTick => m_LastCommittedLogicTick;
         internal IReadOnlyList<string> ExitedTreeDecisionClips => m_ExitedTreeDecisionClips;
         internal int FrameCarry => m_FrameCarry;
         public int Cycle => m_Cycle;
@@ -304,7 +306,8 @@ namespace BTSMTL.Timeline.Runtime
             {
                 if (Content.Clips[index].AuthoringId == trimmed)
                 {
-                    found = Content.Clips[index].ExitSource == TimelineClipExitSource.TreeDecision;
+                    found = Content.Clips[index].ExecutionPolicy.IsLogic &&
+                            Content.Clips[index].ExitSource == TimelineClipExitSource.TreeDecision;
                     break;
                 }
             }
@@ -348,7 +351,7 @@ namespace BTSMTL.Timeline.Runtime
             for (int index = 0; index < Content.Clips.Count; index++)
             {
                 TimelineContentClip clip = Content.Clips[index];
-                if (clip.TrackMuted)
+                if (clip.TrackMuted || !clip.ExecutionPolicy.IsLogic)
                     continue;
                 if (clip.ExitSource == TimelineClipExitSource.TreeDecision)
                 {
@@ -416,6 +419,7 @@ namespace BTSMTL.Timeline.Runtime
             RequirePendingAdvance(advance);
             m_CursorFrame = advance.Frame;
             m_Cycle = advance.Cycle;
+            m_LastCommittedLogicTick = advance.LogicTick;
             m_SectionId = advance.SectionId;
             m_InitialBoundaryPending = false;
             m_ActiveClipIds.Clear();
@@ -611,7 +615,8 @@ namespace BTSMTL.Timeline.Runtime
                     if (!string.Equals(clip.AuthoringId, clipId, StringComparison.Ordinal))
                         continue;
                     found = true;
-                    if (clip.TrackMuted || clip.StartFrame > cursorFrame || cursorFrame >= clip.EndFrame)
+                    if (clip.TrackMuted || !clip.ExecutionPolicy.IsLogic ||
+                        clip.StartFrame > cursorFrame || cursorFrame >= clip.EndFrame)
                         return false;
                     break;
                 }
@@ -638,7 +643,8 @@ namespace BTSMTL.Timeline.Runtime
             for (int index = 0; index < Content.Clips.Count; index++)
             {
                 TimelineContentClip clip = Content.Clips[index];
-                if (clip.TrackMuted || clip.StartFrame > m_CursorFrame || m_CursorFrame >= clip.EndFrame)
+                if (clip.TrackMuted || !clip.ExecutionPolicy.IsLogic ||
+                    clip.StartFrame > m_CursorFrame || m_CursorFrame >= clip.EndFrame)
                     continue;
                 if (!TimelineRuntimeEvaluator.TryResolveTreeClip(SourceTimeline, clip.AuthoringId, out TreeClip treeClip) ||
                     !TimelineRuntimeEvaluator.TryGetTreeContract(Content, treeClip, out string treeGraphId, out string treeGraphRevision))
@@ -662,7 +668,8 @@ namespace BTSMTL.Timeline.Runtime
             for (int index = 0; index < Content.Clips.Count; index++)
             {
                 TimelineContentClip clip = Content.Clips[index];
-                if (!clip.TrackMuted && clip.StartFrame <= m_CursorFrame && m_CursorFrame < clip.EndFrame)
+                if (!clip.TrackMuted && clip.ExecutionPolicy.IsLogic &&
+                    clip.StartFrame <= m_CursorFrame && m_CursorFrame < clip.EndFrame)
                     m_ActiveClipIds.Add(clip.AuthoringId);
             }
             m_SectionId = string.Empty;
@@ -701,7 +708,7 @@ namespace BTSMTL.Timeline.Runtime
             for (int clipIndex = 0; clipIndex < Content.Clips.Count; clipIndex++)
             {
                 TimelineContentClip clip = Content.Clips[clipIndex];
-                if (clip.TrackMuted)
+                if (clip.TrackMuted || !clip.ExecutionPolicy.IsLogic)
                     continue;
                 bool treeDecision = clip.ExitSource == TimelineClipExitSource.TreeDecision;
                 if (treeDecision && System.Linq.Enumerable.Contains(exitedTreeDecisionClips, clip.AuthoringId))
@@ -1061,6 +1068,7 @@ namespace BTSMTL.Timeline.Runtime
             int frame,
             int cycle,
             float normalizedTime,
+            ulong generation,
             string callId)
         {
             ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
@@ -1080,6 +1088,9 @@ namespace BTSMTL.Timeline.Runtime
             Frame = frame;
             Cycle = cycle;
             NormalizedTime = Mathf.Clamp01(normalizedTime);
+            Generation = generation == 0
+                ? throw new ArgumentOutOfRangeException(nameof(generation))
+                : generation;
             CallId = string.IsNullOrWhiteSpace(callId)
                 ? throw new ArgumentException("TreeClip call identity is required.", nameof(callId))
                 : callId.Trim();
@@ -1094,6 +1105,7 @@ namespace BTSMTL.Timeline.Runtime
         public int Frame { get; }
         public int Cycle { get; }
         public float NormalizedTime { get; }
+        public ulong Generation { get; }
         public string CallId { get; }
     }
 
@@ -1141,6 +1153,76 @@ namespace BTSMTL.Timeline.Runtime
         Enter = 1,
         Update = 2,
         Exit = 3
+    }
+
+    public enum TimelineRuntimePresentationEventKind : byte
+    {
+        Pulse = 1,
+        Activate = 2,
+        Cancel = 3
+    }
+
+    public readonly struct TimelineRuntimePresentationEvent
+    {
+        public TimelineRuntimePresentationEvent(
+            TimelineRuntimePlaybackHandle playbackHandle,
+            TimelineExecutionIdentity executionIdentity,
+            ulong generation,
+            string trackAuthoringId,
+            string clipAuthoringId,
+            string markerAuthoringId,
+            ulong traversalIndex,
+            TimelineRuntimePresentationEventKind kind,
+            int frame,
+            int cycle,
+            float normalizedTime,
+            TimelineContentBindingUse payloadBinding,
+            TimelineBindingValue payload)
+        {
+            if (!playbackHandle.IsValid || !executionIdentity.IsValid || generation == 0 || traversalIndex == 0)
+                throw new ArgumentException("Timeline presentation event execution identity is invalid.", nameof(executionIdentity));
+            PlaybackHandle = playbackHandle;
+            ExecutionIdentity = executionIdentity;
+            Generation = generation;
+            TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
+                ? throw new ArgumentException("Timeline presentation event track identity is required.", nameof(trackAuthoringId))
+                : trackAuthoringId.Trim();
+            ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
+                ? throw new ArgumentException("Timeline presentation event clip identity is required.", nameof(clipAuthoringId))
+                : clipAuthoringId.Trim();
+            MarkerAuthoringId = string.IsNullOrWhiteSpace(markerAuthoringId)
+                ? throw new ArgumentException("Timeline presentation event marker identity is required.", nameof(markerAuthoringId))
+                : markerAuthoringId.Trim();
+            if (!Enum.IsDefined(typeof(TimelineRuntimePresentationEventKind), kind))
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            if (frame < 0 || cycle < 0 || !float.IsFinite(normalizedTime) ||
+                string.IsNullOrWhiteSpace(payloadBinding.BindingId) ||
+                payload.ValueKind != payloadBinding.ValueKind)
+                throw new ArgumentOutOfRangeException(nameof(frame));
+            TraversalIndex = traversalIndex;
+            Kind = kind;
+            Frame = frame;
+            Cycle = cycle;
+            NormalizedTime = Mathf.Clamp01(normalizedTime);
+            PayloadBinding = payloadBinding;
+            Payload = payload;
+            Identity = $"{PlaybackHandle.Value}:{Generation}:{ClipAuthoringId}:{MarkerAuthoringId}:{TraversalIndex}";
+        }
+
+        public string Identity { get; }
+        public TimelineRuntimePlaybackHandle PlaybackHandle { get; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public ulong Generation { get; }
+        public string TrackAuthoringId { get; }
+        public string ClipAuthoringId { get; }
+        public string MarkerAuthoringId { get; }
+        public ulong TraversalIndex { get; }
+        public TimelineRuntimePresentationEventKind Kind { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+        public float NormalizedTime { get; }
+        public TimelineContentBindingUse PayloadBinding { get; }
+        public TimelineBindingValue Payload { get; }
     }
 
     public readonly struct TimelineRuntimeClipSample
@@ -1355,6 +1437,13 @@ namespace BTSMTL.Timeline.Runtime
             MotionWarps = Copy(motionWarps);
             ClipSamples = Copy(clipSamples);
             Traces = Copy(traces);
+            LogicOperations = new TimelineRuntimeLogicOperations(
+                MotionContributions,
+                MotionWarps,
+                ActionCues,
+                TreeClips,
+                ClipSamples,
+                Traces);
         }
 
         public IReadOnlyList<TimelineAnimationContribution> AnimationContributions { get; }
@@ -1369,12 +1458,107 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
         public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
         public IReadOnlyList<TimelineRuntimeTraceOutput> Traces { get; }
+        public TimelineRuntimeLogicOperations LogicOperations { get; }
 
         static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
         {
             return new ReadOnlyCollection<T>(
                 new List<T>(values ?? Array.Empty<T>()));
         }
+    }
+
+    public sealed class TimelineRuntimeLogicOperations
+    {
+        internal TimelineRuntimeLogicOperations(
+            IReadOnlyList<TimelineMotionCurveContribution> motionContributions,
+            IReadOnlyList<TimelineRuntimeMotionWarpRequest> motionWarps,
+            IReadOnlyList<TimelineActionCueSample> actionCues,
+            IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
+            IReadOnlyList<TimelineRuntimeClipSample> clipSamples,
+            IReadOnlyList<TimelineRuntimeTraceOutput> traces)
+        {
+            MotionContributions = motionContributions;
+            MotionWarps = motionWarps;
+            ActionCues = actionCues;
+            TreeClips = treeClips;
+            ClipSamples = clipSamples;
+            Traces = traces;
+        }
+
+        public IReadOnlyList<TimelineMotionCurveContribution> MotionContributions { get; }
+        public IReadOnlyList<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
+        public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
+        public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
+        public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
+        public IReadOnlyList<TimelineRuntimeTraceOutput> Traces { get; }
+    }
+
+    public sealed class TimelineRuntimePresentationOperations
+    {
+        internal TimelineRuntimePresentationOperations(
+            IReadOnlyList<TimelineAnimationContribution> animationContributions,
+            IReadOnlyList<TimelineCameraStateSample> cameraStates,
+            IReadOnlyList<TimelineCameraCueSample> cameraCues,
+            IReadOnlyList<TimelineCameraResponseSample> cameraResponses,
+            IReadOnlyList<TimelineCameraResourceSample> cameraResources,
+            IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation)
+        {
+            AnimationContributions = Copy(animationContributions);
+            CameraStates = Copy(cameraStates);
+            CameraCues = Copy(cameraCues);
+            CameraResponses = Copy(cameraResponses);
+            CameraResources = Copy(cameraResources);
+            ScenePresentation = Copy(scenePresentation);
+        }
+
+        public IReadOnlyList<TimelineAnimationContribution> AnimationContributions { get; }
+        public IReadOnlyList<TimelineCameraStateSample> CameraStates { get; }
+        public IReadOnlyList<TimelineCameraCueSample> CameraCues { get; }
+        public IReadOnlyList<TimelineCameraResponseSample> CameraResponses { get; }
+        public IReadOnlyList<TimelineCameraResourceSample> CameraResources { get; }
+        public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
+        static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
+        {
+            return new ReadOnlyCollection<T>(new List<T>(values ?? Array.Empty<T>()));
+        }
+    }
+
+    public readonly struct TimelineRuntimePresentationFrame
+    {
+        internal TimelineRuntimePresentationFrame(
+            TimelineRuntimePlayback playback,
+            ulong presentationFrame,
+            float presentationDeltaSeconds,
+            float interpolationAlpha,
+            TimelineRuntimePresentationOperations operations,
+            IReadOnlyList<TimelineRuntimePresentationEvent> events)
+        {
+            if (playback == null || !playback.Handle.IsValid || playback.Generation == 0 || presentationFrame == 0 ||
+                !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
+                !float.IsFinite(interpolationAlpha) || interpolationAlpha < 0f || interpolationAlpha > 1f ||
+                operations == null)
+                throw new ArgumentException("Timeline presentation frame is invalid.");
+            Handle = playback.Handle;
+            Generation = playback.Generation;
+            LogicTick = playback.LastCommittedLogicTick;
+            PresentationFrame = presentationFrame;
+            PresentationDeltaSeconds = presentationDeltaSeconds;
+            InterpolationAlpha = interpolationAlpha;
+            ExecutionIdentity = playback.ExecutionIdentity;
+            Operations = operations;
+            Events = new ReadOnlyCollection<TimelineRuntimePresentationEvent>(
+                new List<TimelineRuntimePresentationEvent>(events ?? Array.Empty<TimelineRuntimePresentationEvent>()));
+        }
+
+        public TimelineRuntimePlaybackHandle Handle { get; }
+        public ulong Generation { get; }
+        public ulong LogicTick { get; }
+        public ulong PresentationFrame { get; }
+        public float PresentationDeltaSeconds { get; }
+        public float InterpolationAlpha { get; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public TimelineRuntimePresentationOperations Operations { get; }
+        public IReadOnlyList<TimelineRuntimePresentationEvent> Events { get; }
     }
 
     public enum TimelineRuntimeStepDecision : byte
@@ -1493,12 +1677,16 @@ namespace BTSMTL.Timeline.Runtime
                 Math.Max(0, timeline.MaxFrame),
                 loop,
                 frameRate);
+            Func<Clip, bool> logicClipFilter = clip =>
+                HasProjection(content, clip, TimelineExecutionDomain.Logic);
             for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
             {
                 TimelineRuntimeEvaluationSegment segment = segments[segmentIndex];
                 for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
                 {
                     Track track = timeline.Tracks[trackIndex];
+                    if (track == null)
+                        continue;
                     if (track is AnimationTrack animationTrack)
                     {
                         animationTrack.Sample(
@@ -1509,7 +1697,8 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.Name,
                             animations,
                             loop,
-                            segment.Cycle);
+                            segment.Cycle,
+                            logicClipFilter);
                     }
                     else if (track is MotionCurveTrack motionTrack)
                     {
@@ -1518,7 +1707,8 @@ namespace BTSMTL.Timeline.Runtime
                             segment.CurrentTime,
                             timeline.AuthoringId,
                             timeline.Name,
-                            motions);
+                            motions,
+                            logicClipFilter);
                     }
                     else if (track is CameraCueTrack cameraCueTrack)
                     {
@@ -1528,7 +1718,8 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.AuthoringId,
                             timeline.Name,
                             cameraCues,
-                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f);
+                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f,
+                            logicClipFilter);
                     }
                     else if (track is ActionCueTrack actionCueTrack)
                     {
@@ -1538,13 +1729,15 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.AuthoringId,
                             timeline.Name,
                             actionCues,
-                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f);
+                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f,
+                            logicClipFilter);
                     }
                     else if (track is MotionWarpTrack motionWarpTrack && !track.PersistentMuted)
                     {
                         for (int clipIndex = 0; clipIndex < motionWarpTrack.Clips.Count; clipIndex++)
                         {
                             if (motionWarpTrack.Clips[clipIndex] is not MotionWarpClip motionWarpClip ||
+                                !logicClipFilter(motionWarpClip) ||
                                 segment.CurrentTime <= motionWarpClip.StartTime ||
                                 segment.PreviousTime >= motionWarpClip.EndTime)
                                 continue;
@@ -1578,6 +1771,11 @@ namespace BTSMTL.Timeline.Runtime
             for (int boundaryIndex = 0; boundaryIndex < (boundaries?.Count ?? 0); boundaryIndex++)
             {
                 TimelineRuntimeClipBoundary boundary = boundaries[boundaryIndex];
+                if (!TryResolveClip(timeline, boundary.AuthoringId, out Clip boundaryClip) ||
+                    !logicClipFilter(boundaryClip))
+                {
+                    continue;
+                }
                 clipSamples.Add(new TimelineRuntimeClipSample(
                     boundary.AuthoringId,
                     boundary.TrackAuthoringId,
@@ -1607,6 +1805,8 @@ namespace BTSMTL.Timeline.Runtime
                         boundary.AuthoringId,
                         out TreeClip treeClip))
                     continue;
+                if (!TimelineClipExecutionPolicy.FromDomain(treeClip.ExecutionDomain).IsLogic)
+                    continue;
                 if (!TryGetTreeContract(
                         content,
                         treeClip,
@@ -1625,6 +1825,7 @@ namespace BTSMTL.Timeline.Runtime
                     boundary.Frame,
                     boundary.Cycle,
                     boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter ? 0f : 1f,
+                    generation,
                     CreateTreeClipCallId(
                         executionIdentity,
                         generation,
@@ -1638,6 +1839,7 @@ namespace BTSMTL.Timeline.Runtime
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
                     if (track.Clips[clipIndex] is not ScenePresentationParameterCurveClip clip ||
+                        !logicClipFilter(clip) ||
                         currentTime < clip.StartTime || currentTime > clip.EndTime)
                         continue;
                     float duration = Mathf.Max(0.0001f, clip.DurationTime);
@@ -1658,12 +1860,29 @@ namespace BTSMTL.Timeline.Runtime
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
                 Track track = timeline.Tracks[trackIndex];
+                if (track == null)
+                    continue;
                 if (track is CameraStateTrack cameraStateTrack)
-                    cameraStateTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraStates);
+                    cameraStateTrack.Sample(
+                        currentTime,
+                        timeline.AuthoringId,
+                        timeline.Name,
+                        cameraStates,
+                        logicClipFilter);
                 else if (track is CameraResponseTrack cameraResponseTrack)
-                    cameraResponseTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResponses);
+                    cameraResponseTrack.Sample(
+                        currentTime,
+                        timeline.AuthoringId,
+                        timeline.Name,
+                        cameraResponses,
+                        logicClipFilter);
                 else if (track is CameraEffectTrack cameraEffectTrack)
-                    cameraEffectTrack.Sample(currentTime, timeline.AuthoringId, timeline.Name, cameraResources);
+                    cameraEffectTrack.Sample(
+                        currentTime,
+                        timeline.AuthoringId,
+                        timeline.Name,
+                        cameraResources,
+                        logicClipFilter);
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -1672,7 +1891,8 @@ namespace BTSMTL.Timeline.Runtime
                 for (int clipIndex = 0; clipIndex < treeTrack.Clips.Count; clipIndex++)
                 {
                     if (treeTrack.Clips[clipIndex] is not TreeClip treeClip ||
-                        treeTrack.PersistentMuted)
+                        treeTrack.PersistentMuted ||
+                        !logicClipFilter(treeClip))
                         continue;
                     bool treeDecisionExit =
                         treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
@@ -1700,6 +1920,7 @@ namespace BTSMTL.Timeline.Runtime
                         currentFrame,
                         currentCycle,
                         local,
+                        generation,
                         CreateTreeClipCallId(
                             executionIdentity,
                             generation,
@@ -1722,12 +1943,14 @@ namespace BTSMTL.Timeline.Runtime
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
                 Track track = timeline.Tracks[trackIndex];
-                if (track.PersistentMuted)
+                if (track == null || track.PersistentMuted)
                     continue;
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
                     Clip clip = track.Clips[clipIndex];
-                    if (clip == null || currentTime <= clip.StartTime || currentTime >= clip.EndTime)
+                    if (clip == null ||
+                        !logicClipFilter(clip) ||
+                        currentTime <= clip.StartTime || currentTime >= clip.EndTime)
                         continue;
                     float duration = Mathf.Max(0.0001f, clip.DurationTime);
                     clipSamples.Add(new TimelineRuntimeClipSample(
@@ -1769,22 +1992,22 @@ namespace BTSMTL.Timeline.Runtime
             TimelineContentUnit content,
             List<string> errors)
         {
-            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            for (int clipIndex = 0; clipIndex < content.Clips.Count; clipIndex++)
             {
-                if (timeline.Tracks[trackIndex] is not TreeTrack treeTrack)
+                TimelineContentClip contentClip = content.Clips[clipIndex];
+                if (!contentClip.ExecutionPolicy.IsLogic ||
+                    !TimelineRuntimeEvaluator.TryResolveTreeClip(
+                        timeline,
+                        contentClip.AuthoringId,
+                        out TreeClip treeClip))
                     continue;
-                for (int clipIndex = 0; clipIndex < treeTrack.Clips.Count; clipIndex++)
-                {
-                    if (treeTrack.Clips[clipIndex] is not TreeClip treeClip)
-                        continue;
-                    if (!TimelineRuntimeEvaluator.TryGetTreeContract(
-                            content,
-                            treeClip,
-                            out string treeGraphId,
-                            out string treeGraphRevision))
-                        errors.Add(
-                            $"timeline_tree_contract_missing:{treeClip.AuthoringId}");
-                }
+                if (!TimelineRuntimeEvaluator.TryGetTreeContract(
+                        content,
+                        treeClip,
+                        out string treeGraphId,
+                        out string treeGraphRevision))
+                    errors.Add(
+                        $"timeline_tree_contract_missing:{treeClip.AuthoringId}");
             }
         }
 
@@ -1799,7 +2022,7 @@ namespace BTSMTL.Timeline.Runtime
             var treeGraph = treeClip?.AssetTree as ITimelineTreeGraphAsset;
             if (content == null || treeGraph == null)
                 return false;
-            string identity = "tree:{treeGraph.AuthoringId}";
+            string identity = $"tree:{treeGraph.AuthoringId}";
             for (int index = 0; index < content.Dependencies.Count; index++)
             {
                 TimelineContentDependency dependency = content.Dependencies[index];
@@ -1831,6 +2054,56 @@ namespace BTSMTL.Timeline.Runtime
                 }
             }
             treeClip = null;
+            return false;
+        }
+
+        internal static bool HasProjection(
+            TimelineContentUnit content,
+            Clip clip,
+            TimelineExecutionDomain projectionDomain)
+        {
+            if (content == null)
+                throw new ArgumentNullException(nameof(content));
+            if (clip == null)
+                return false;
+            for (int index = 0; index < content.Clips.Count; index++)
+            {
+                TimelineContentClip contentClip = content.Clips[index];
+                if (!string.Equals(contentClip.AuthoringId, clip.AuthoringId, StringComparison.Ordinal))
+                    continue;
+                return projectionDomain switch
+                {
+                    TimelineExecutionDomain.Logic => contentClip.ExecutionPolicy.IsLogic,
+                    TimelineExecutionDomain.Presentation => contentClip.ExecutionPolicy.IsPresentation,
+                    _ => throw new ArgumentOutOfRangeException(nameof(projectionDomain))
+                };
+            }
+            throw new InvalidOperationException(
+                $"Timeline content does not contain clip '{clip.AuthoringId}'.");
+        }
+
+        static bool TryResolveClip(
+            TimelineData timeline,
+            string authoringId,
+            out Clip clip)
+        {
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                Track track = timeline.Tracks[trackIndex];
+                if (track == null)
+                    continue;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    Clip candidate = track.Clips[clipIndex];
+                    if (candidate != null &&
+                        string.Equals(candidate.AuthoringId, authoringId, StringComparison.Ordinal))
+                    {
+                        clip = candidate;
+                        return true;
+                    }
+                }
+            }
+            clip = null;
             return false;
         }
 
@@ -1886,6 +2159,184 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    internal static class TimelineRuntimePresentationEvaluator
+    {
+        public static TimelineRuntimePresentationOperations Evaluate(
+            TimelineRuntimePlayback playback,
+            float previousFrame,
+            int previousCycle,
+            float currentFrame,
+            int currentCycle,
+            bool loop,
+            bool includeStartBoundary)
+        {
+            if (playback == null)
+                throw new ArgumentNullException(nameof(playback));
+            TimelineData timeline = playback.SourceTimeline;
+            int frameRate = Math.Max(1, playback.Content.FrameRate);
+            int maxFrame = Math.Max(0, playback.Content.MaxFrame);
+            var animations = new List<TimelineAnimationContribution>();
+            var cameraStates = new List<TimelineCameraStateSample>();
+            var cameraCues = new List<TimelineCameraCueSample>();
+            var cameraResponses = new List<TimelineCameraResponseSample>();
+            var cameraResources = new List<TimelineCameraResourceSample>();
+            var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
+            List<TimelineRuntimePresentationSegment> segments = BuildSegments(
+                previousFrame,
+                previousCycle,
+                currentFrame,
+                currentCycle,
+                maxFrame,
+                loop,
+                frameRate);
+            Func<Clip, bool> presentationClipFilter = clip =>
+                TimelineRuntimeEvaluator.HasProjection(
+                    playback.Content,
+                    clip,
+                    TimelineExecutionDomain.Presentation);
+            for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
+            {
+                TimelineRuntimePresentationSegment segment = segments[segmentIndex];
+                for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+                {
+                    Track track = timeline.Tracks[trackIndex];
+                    if (track == null)
+                        continue;
+                    if (track is AnimationTrack animationTrack)
+                    {
+                        animationTrack.Sample(
+                            segment.PreviousTime,
+                            segment.CurrentTime,
+                            trackIndex,
+                            timeline.AuthoringId,
+                            timeline.Name,
+                            animations,
+                            loop,
+                            segment.Cycle,
+                            presentationClipFilter);
+                    }
+                    else if (track is CameraCueTrack cameraCueTrack)
+                    {
+                        cameraCueTrack.Sample(
+                            segment.PreviousTime,
+                            segment.CurrentTime,
+                            timeline.AuthoringId,
+                            timeline.Name,
+                            cameraCues,
+                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f,
+                            presentationClipFilter);
+                    }
+                }
+            }
+            float currentTime = currentFrame / frameRate;
+            int sampledFrame = Mathf.Clamp(Mathf.FloorToInt(currentFrame), 0, maxFrame);
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                Track track = timeline.Tracks[trackIndex];
+                if (track == null)
+                    continue;
+                if (track is CameraStateTrack cameraStateTrack)
+                    cameraStateTrack.Sample(
+                        currentTime,
+                        timeline.AuthoringId,
+                        timeline.Name,
+                        cameraStates,
+                        presentationClipFilter);
+                else if (track is CameraResponseTrack cameraResponseTrack)
+                    cameraResponseTrack.Sample(
+                        currentTime,
+                        timeline.AuthoringId,
+                        timeline.Name,
+                        cameraResponses,
+                        presentationClipFilter);
+                else if (track is CameraEffectTrack cameraEffectTrack)
+                    cameraEffectTrack.Sample(
+                        currentTime,
+                        timeline.AuthoringId,
+                        timeline.Name,
+                        cameraResources,
+                        presentationClipFilter);
+                else if (track is ScenePresentationParameterTrack sceneTrack && !track.PersistentMuted)
+                {
+                    for (int clipIndex = 0; clipIndex < sceneTrack.Clips.Count; clipIndex++)
+                    {
+                        if (sceneTrack.Clips[clipIndex] is not ScenePresentationParameterCurveClip clip ||
+                            !presentationClipFilter(clip) ||
+                            currentTime < clip.StartTime || currentTime > clip.EndTime)
+                        {
+                            continue;
+                        }
+                        float duration = Mathf.Max(0.0001f, clip.DurationTime);
+                        float local = Mathf.Clamp01((currentTime - clip.StartTime) / duration);
+                        scenePresentation.Add(new TimelineRuntimeScenePresentationSample(
+                            clip.AuthoringId,
+                            clip.TargetBindingId,
+                            clip.ParameterBindingId,
+                            clip.ParameterValueKind,
+                            clip.ValueCurve.Evaluate(local),
+                            local,
+                            sampledFrame,
+                            currentCycle,
+                            playback.ExecutionIdentity,
+                            playback.Generation));
+                    }
+                }
+            }
+            return new TimelineRuntimePresentationOperations(
+                animations,
+                cameraStates,
+                cameraCues,
+                cameraResponses,
+                cameraResources,
+                scenePresentation);
+        }
+
+        static List<TimelineRuntimePresentationSegment> BuildSegments(
+            float previousFrame,
+            int previousCycle,
+            float currentFrame,
+            int currentCycle,
+            int maxFrame,
+            bool loop,
+            int frameRate)
+        {
+            var result = new List<TimelineRuntimePresentationSegment>();
+            if (!loop || currentCycle == previousCycle || maxFrame <= 0)
+            {
+                result.Add(new TimelineRuntimePresentationSegment(
+                    previousFrame / frameRate,
+                    currentFrame / frameRate,
+                    currentCycle));
+                return result;
+            }
+            if (currentCycle < previousCycle || currentCycle - previousCycle > 4096)
+                throw new InvalidOperationException("Timeline presentation evaluation crossed an invalid cycle range.");
+            float maxTime = maxFrame / (float)frameRate;
+            result.Add(new TimelineRuntimePresentationSegment(
+                previousFrame / frameRate,
+                maxTime,
+                previousCycle));
+            for (int cycle = previousCycle + 1; cycle < currentCycle; cycle++)
+                result.Add(new TimelineRuntimePresentationSegment(0f, maxTime, cycle));
+            result.Add(new TimelineRuntimePresentationSegment(0f, currentFrame / frameRate, currentCycle));
+            return result;
+        }
+    }
+
+    readonly struct TimelineRuntimePresentationSegment
+    {
+        public TimelineRuntimePresentationSegment(float previousTime, float currentTime, int cycle)
+        {
+            PreviousTime = previousTime;
+            CurrentTime = currentTime;
+            Cycle = cycle;
+        }
+
+        public float PreviousTime { get; }
+        public float CurrentTime { get; }
+        public int Cycle { get; }
+    }
+
     readonly struct TimelineRuntimeEvaluationSegment
     {
         public TimelineRuntimeEvaluationSegment(float previousTime, float currentTime, int cycle)
@@ -1900,8 +2351,3 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle { get; }
     }
 }
-
-
-
-
-

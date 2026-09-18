@@ -5,9 +5,9 @@
 - `BtsmtlScenePlayProfile` 是 Timeline 预览入口的唯一配置资产，保存正式 Scene、ContextId 和 DefaultActorId；窗口不再重复展开这些字段。
 - `TimelineEditorWindow` 继续承载 Authoring、Preview 和 RuntimeDebug 三种形态，主体仍是原 Slate Timeline。
 - 入口工具栏只保留 Profile、形态菜单、Session 菜单和一行状态；Start、Pause、Resume、Stop、Export、Prepare、Publish、Adopt 以及 RuntimeDebug 的 Capture、History、Resume Live 全部收进 Session 菜单，避免把流程按钮铺满编辑器。
-- RuntimeDebug 的当前 playback 现在按正式事件集合维护已见 Track / Clip，并把过滤后的只读 `TimelineData` 快照交给 Slate binding；未执行内容不会因为作者资产存在就进入运行时面。
+- RuntimeDebug 先按 RootTree 正式调用事实锁定 Graph、节点、调用路径、操作索引和 invocation generation，再选择对应 playback；`CharacterTimelineHost` 在 playback 创建时冻结实际内容，窗口按 `{窗口, playback identity}` 维护只读投影。投影只从该 playback 的正式事件吸收已见 Track / Clip，未执行内容不会因为作者资产存在就进入运行时面。
 - 这一步完成的是单个 playback 的动态 Timeline 内容投影；FlowCanvas 与 Timeline 之间的调用栈导航仍由现有 `BtsmtlSkillObservationSession` 管理，不把跨多个 Timeline 的自动页面切换扩大描述为已完成。
-- 2026-09-18：`BTSMTL.Timeline.Editor.csproj` 与 `ThirdPersonClient.Editor.csproj` 窄编译均为 0 个错误；只保留仓库既有警告。编译结束后已执行 `dotnet build-server shutdown`。
+- 2026-09-18：`BTSMTL.Timeline.Runtime.csproj`、`BTSMTL.Timeline.Editor.csproj`、`ThirdPersonClient.Runtime.csproj` 与 `ThirdPersonClient.Editor.csproj` 均编译通过；输出只包含仓库既有警告。编译结束后已执行 `dotnet build-server shutdown`。
 
 ## 基线与接口状态
 

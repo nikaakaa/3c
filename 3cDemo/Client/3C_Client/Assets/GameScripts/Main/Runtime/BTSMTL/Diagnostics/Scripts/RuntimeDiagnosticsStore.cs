@@ -387,7 +387,10 @@ namespace BTSMTL.Diagnostics
                    string.Equals(left.StateId, right.StateId, StringComparison.Ordinal) &&
                    left.StateMachineGraphRuntimeId.Equals(right.StateMachineGraphRuntimeId) &&
                    left.StateActivationGeneration == right.StateActivationGeneration &&
-                   string.Equals(left.SourceName, right.SourceName, StringComparison.Ordinal);
+                   string.Equals(left.SourceName, right.SourceName, StringComparison.Ordinal) &&
+                   string.Equals(left.SourceInvocationPath, right.SourceInvocationPath, StringComparison.Ordinal) &&
+                   left.SourceOperationIndex == right.SourceOperationIndex &&
+                   left.SkillExecutionGeneration == right.SkillExecutionGeneration;
         }
     }
 

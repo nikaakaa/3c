@@ -934,12 +934,17 @@ namespace BTSMTL.Timeline.Runtime
             return false;
         }
 
-        bool TryGet(TimelineRuntimePlaybackHandle handle, out TimelineRuntimePlayback playback)
+        internal bool TryGetPlayback(TimelineRuntimePlaybackHandle handle, out TimelineRuntimePlayback playback)
         {
             if (handle.IsValid && m_Playbacks.TryGetValue(handle.Value, out playback))
                 return true;
             playback = null;
             return false;
+        }
+
+        bool TryGet(TimelineRuntimePlaybackHandle handle, out TimelineRuntimePlayback playback)
+        {
+            return TryGetPlayback(handle, out playback);
         }
 
         TimelineRuntimePlayback Require(TimelineRuntimePlaybackHandle handle)
@@ -971,7 +976,6 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 }
-
 
 
 

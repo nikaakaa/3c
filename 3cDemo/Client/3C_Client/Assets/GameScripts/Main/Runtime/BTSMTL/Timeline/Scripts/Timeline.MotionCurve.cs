@@ -86,7 +86,8 @@ namespace BTSMTL.Timeline
             float timelineTime,
             string sourceId,
             string sourceName,
-            ICollection<TimelineMotionCurveContribution> contributions)
+            ICollection<TimelineMotionCurveContribution> contributions,
+            Func<Clip, bool> clipFilter = null)
         {
             if (m_PersistentMuted || contributions == null)
                 return;
@@ -95,6 +96,10 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not MotionCurveClip motionCurveClip)
                     continue;
+                if (clipFilter != null && !clipFilter(motionCurveClip))
+                {
+                    continue;
+                }
 
                 if (!TrySampleClip(motionCurveClip, previousTimelineTime, timelineTime, out TimelineMotionCurveContribution contribution))
                     continue;
@@ -461,6 +466,8 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.MotionCurveTrack,
                     TimelineTrackOverlapPolicy.Blend,
                     TimelineCapability.BodyMotion,
+                    TimelineExecutionDomain.Logic,
+                    TimelineOutputKind.GameplayFact,
                     TimelineContractKinds.MotionCurveClip)
             },
             new[]
@@ -471,7 +478,9 @@ namespace BTSMTL.Timeline
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.BodyMotion,
                     true,
-                    true)
+                    true,
+                    TimelineExecutionDomain.Logic,
+                    TimelineOutputKind.GameplayFact)
             });
     }
 }

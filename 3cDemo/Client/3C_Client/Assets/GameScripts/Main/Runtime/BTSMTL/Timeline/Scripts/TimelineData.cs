@@ -92,7 +92,15 @@ namespace BTSMTL.Timeline
                 if (track is ITimelineTrackOwnedAuthoringIdentity identityOwner)
                     changed |= identityOwner.EnsureOwnedAuthoringIdentities();
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
-                    changed |= track.Clips[clipIndex]?.EnsureAuthoringIdentity() ?? false;
+                {
+                    Clip clip = track.Clips[clipIndex];
+                    changed |= clip?.EnsureAuthoringIdentity() ?? false;
+                    if (clip is not ITimelinePresentationMarkerSource markerSource ||
+                        markerSource.PresentationMarkers == null)
+                        continue;
+                    for (int markerIndex = 0; markerIndex < markerSource.PresentationMarkers.Count; markerIndex++)
+                        changed |= markerSource.PresentationMarkers[markerIndex]?.EnsureAuthoringIdentity() ?? false;
+                }
             }
             for (int i = 0; i < m_Sections.Count; i++)
                 changed |= m_Sections[i]?.EnsureAuthoringIdentity() ?? false;
@@ -166,6 +174,19 @@ namespace BTSMTL.Timeline
                         {
                             errors?.Add($"Timeline '{Name}' clip #{i}:{clipIndex} has a missing or duplicate authoring identity.");
                             valid = false;
+                        }
+                        if (clip is not ITimelinePresentationMarkerSource markerSource ||
+                            markerSource.PresentationMarkers == null)
+                            continue;
+                        for (int markerIndex = 0; markerIndex < markerSource.PresentationMarkers.Count; markerIndex++)
+                        {
+                            TimelinePresentationMarker marker = markerSource.PresentationMarkers[markerIndex];
+                            if (marker == null || !AuthoringIdentity.IsValid(marker.AuthoringId) ||
+                                !identities.Add(marker.AuthoringId))
+                            {
+                                errors?.Add($"Timeline '{Name}' clip '{clip.AuthoringId}' marker #{markerIndex} has a missing or duplicate authoring identity.");
+                                valid = false;
+                            }
                         }
                     }
                 }

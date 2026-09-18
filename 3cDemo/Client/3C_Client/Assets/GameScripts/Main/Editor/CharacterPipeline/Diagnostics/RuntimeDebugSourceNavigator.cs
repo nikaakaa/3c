@@ -22,15 +22,39 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             RuntimeTraceEvent trace = eventView.Event;
             RuntimeInstanceKey instance = trace.RuntimeInstance;
+            RuntimeDebugSession session = RuntimeDebugSession.Shared;
             if (!instance.IsValid || !eventView.Source.IsValid ||
                 !RuntimeDiagnosticsTargetRegistry.TryGet(instance.CharacterRuntimeId, out RuntimeDiagnosticsTarget target))
                 return false;
-            if (target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ContentRevision) ||
-                !target.SourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) || !entry.Source.Equals(eventView.Source))
+            if (session.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
+            {
+                if (!session.TryResolveHistoricalSource(
+                        trace.ContentRevision,
+                        trace.Source,
+                        out RuntimeSourceElementKey historicalSource,
+                        out DebugSourceMapEntry historicalEntry) ||
+                    !historicalSource.Equals(eventView.Source) ||
+                    !historicalEntry.Source.Equals(eventView.Source))
+                    return false;
+            }
+            else if (target.SessionId != trace.SessionId || !target.Revision.Equals(trace.ContentRevision) ||
+                     !target.SourceMap.TryGet(trace.Source, out DebugSourceMapEntry entry) ||
+                     !entry.Source.Equals(eventView.Source))
+            {
                 return false;
+            }
             CharacterPipelineDefinition definition = BtsmtlSkillHostEntry.ResolveDefinition(EditorUtility.InstanceIDToObject(target.HostInstanceId));
-            if (!definition || !RuntimeDebugSession.Shared.AttachToTarget(instance.CharacterRuntimeId))
+            if (!definition)
                 return false;
+            if (session.AttachmentState is not RuntimeDebugAttachmentState.CaptureHistory and
+                not RuntimeDebugAttachmentState.Ended &&
+                !session.AttachToTarget(instance.CharacterRuntimeId))
+                return false;
+            if (eventView.Source.Kind is RuntimeSourceElementKind.Timeline or RuntimeSourceElementKind.Track or
+                RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip)
+            {
+                return OpenTimelineSource(definition, instance, trace.Payload.TimelinePlayback);
+            }
             return Open(definition, eventView.Source, instance);
         }
 
@@ -52,6 +76,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return nativeGraphs.Length == 1 && OpenSkillGraph(definition, nativeGraphs[0], source, instance);
             }
             return false;
+        }
+
+        static bool OpenTimelineSource(
+            CharacterPipelineDefinition definition,
+            RuntimeInstanceKey instance,
+            RuntimeTimelinePlaybackProvenance provenance)
+        {
+            if (!provenance.IsValid ||
+                string.IsNullOrEmpty(provenance.SourceGraphAuthoringId) ||
+                string.IsNullOrEmpty(provenance.SourceNodeAuthoringId))
+            {
+                return false;
+            }
+            return Open(
+                definition,
+                RuntimeSourceElementKey.Node(
+                    provenance.SourceGraphAuthoringId,
+                    provenance.SourceNodeAuthoringId),
+                instance);
         }
 
         static bool OpenSkillGraph(CharacterPipelineDefinition definition, FlowGraph graph, RuntimeSourceElementKey source, RuntimeInstanceKey instance)
@@ -94,6 +137,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     timelineNode.TimelineAsset,
                     ((IBtsmtlSkillFlowGraph)graph).AuthoringId,
                     timelineNode.UID);
+                if (timelineWindow != null && UnityEngine.Application.isPlaying && instance.IsValid)
+                {
+                    timelineWindow.SetRuntimeObservationReadOnly(true);
+                    RuntimeInstanceKey playback = ResolveTimelinePlayback(instance);
+                    if (playback.IsValid)
+                        timelineWindow.SelectRuntimeObservationPlayback(playback);
+                }
                 return timelineWindow != null && timelineWindow.FocusSource(
                     source.Kind == RuntimeSourceElementKind.Timeline ? string.Empty : source.TrackAuthoringId,
                     source.Kind is RuntimeSourceElementKind.Clip or RuntimeSourceElementKind.TreeClip ? source.ClipAuthoringId : string.Empty);
@@ -101,6 +151,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (UnityEngine.Application.isPlaying && instance.IsValid)
                 BtsmtlSkillObservationSession.Open(definition, graph, RuntimeDebugSession.Shared, instance);
             return true;
+        }
+
+        static RuntimeInstanceKey ResolveTimelinePlayback(RuntimeInstanceKey instance)
+        {
+            if (instance.Kind == RuntimeInstanceKind.TimelinePlayback)
+                return instance;
+            return instance.Kind == RuntimeInstanceKind.TreeClip
+                ? RuntimeInstanceKey.Timeline(
+                    instance.CharacterRuntimeId,
+                    instance.SourceOperationIndex,
+                    instance.TimelinePlaybackId,
+                    instance.ActionInstanceId)
+                : default;
         }
 
         public static bool OpenGraph(BaseTree graph, string elementAuthoringId, object authoringContext = null)

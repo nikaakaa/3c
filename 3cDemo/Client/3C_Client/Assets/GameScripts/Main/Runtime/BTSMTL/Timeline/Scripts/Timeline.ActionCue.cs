@@ -33,7 +33,8 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             ICollection<TimelineActionCueSample> cues,
-            bool includeStartBoundary = false)
+            bool includeStartBoundary = false,
+            Func<Clip, bool> clipFilter = null)
         {
             if (m_PersistentMuted || cues == null)
                 return;
@@ -42,6 +43,10 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not ActionCueClip actionCueClip)
                     continue;
+                if (clipFilter != null && !clipFilter(actionCueClip))
+                {
+                    continue;
+                }
 
                 if ((includeStartBoundary && Mathf.Abs(actionCueClip.StartTime) <= 0.000001f) ||
                     previousTime < actionCueClip.StartTime && actionCueClip.StartTime <= timelineTime)
@@ -90,6 +95,8 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.ActionCueTrack,
                     TimelineTrackOverlapPolicy.Parallel,
                     TimelineCapability.Cue,
+                    TimelineExecutionDomain.Logic,
+                    TimelineOutputKind.GameplayFact,
                     TimelineContractKinds.ActionCueClip)
             },
             new[]
@@ -100,7 +107,9 @@ namespace BTSMTL.Timeline
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Cue,
                     false,
-                    false)
+                    false,
+                    TimelineExecutionDomain.Logic,
+                    TimelineOutputKind.GameplayFact)
             });
     }
 }

@@ -107,6 +107,8 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.ScenePresentationParameterTrack,
                     TimelineTrackOverlapPolicy.Parallel,
                     TimelineCapability.ScenePresentationParameter,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent,
                     TimelineContractKinds.ScenePresentationParameterCurveClip)
             },
             new[]
@@ -118,6 +120,8 @@ namespace BTSMTL.Timeline
                     TimelineCapability.ScenePresentationParameter,
                     true,
                     true,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent,
                     ValidateClip)
             },
             ValidateTimeline);

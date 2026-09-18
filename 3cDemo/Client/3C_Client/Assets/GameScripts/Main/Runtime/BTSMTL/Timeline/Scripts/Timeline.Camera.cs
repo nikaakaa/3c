@@ -154,7 +154,12 @@ namespace BTSMTL.Timeline
     {
         public override string ContractKind => TimelineContractKinds.CameraStateTrack;
 
-        public void Sample(float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraStateSample> states)
+        public void Sample(
+            float timelineTime,
+            string sourceId,
+            string sourceName,
+            ICollection<TimelineCameraStateSample> states,
+            Func<Clip, bool> clipFilter = null)
         {
             if (m_PersistentMuted || states == null)
                 return;
@@ -163,6 +168,10 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not CameraStateClip cameraClip)
                     continue;
+                if (clipFilter != null && !clipFilter(cameraClip))
+                {
+                    continue;
+                }
 
                 if (!TrySampleClip(cameraClip, timelineTime, out float weight))
                     continue;
@@ -253,7 +262,8 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             ICollection<TimelineCameraCueSample> cues,
-            bool includeStartBoundary = false)
+            bool includeStartBoundary = false,
+            Func<Clip, bool> clipFilter = null)
         {
             if (m_PersistentMuted || cues == null)
                 return;
@@ -262,6 +272,10 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not CameraCueClip cueClip)
                     continue;
+                if (clipFilter != null && !clipFilter(cueClip))
+                {
+                    continue;
+                }
 
                 if ((includeStartBoundary && Mathf.Abs(cueClip.StartTime) <= 0.000001f) ||
                     previousTime < cueClip.StartTime && cueClip.StartTime <= timelineTime)
@@ -331,7 +345,12 @@ namespace BTSMTL.Timeline
     {
         public override string ContractKind => TimelineContractKinds.CameraResponseTrack;
 
-        public void Sample(float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraResponseSample> responses)
+        public void Sample(
+            float timelineTime,
+            string sourceId,
+            string sourceName,
+            ICollection<TimelineCameraResponseSample> responses,
+            Func<Clip, bool> clipFilter = null)
         {
             if (m_PersistentMuted || responses == null)
                 return;
@@ -340,6 +359,10 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not CameraResponseClip responseClip)
                     continue;
+                if (clipFilter != null && !clipFilter(responseClip))
+                {
+                    continue;
+                }
 
                 if (!TrySampleClip(responseClip, timelineTime, out float weight))
                     continue;
@@ -421,21 +444,29 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.CameraStateTrack,
                     TimelineTrackOverlapPolicy.Blend,
                     TimelineCapability.Camera,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent,
                     TimelineContractKinds.CameraStateClip),
                 new TimelineTrackContract(
                     TimelineContractKinds.CameraCueTrack,
                     TimelineTrackOverlapPolicy.Parallel,
                     TimelineCapability.Camera,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent,
                     TimelineContractKinds.CameraCueClip),
                 new TimelineTrackContract(
                     TimelineContractKinds.CameraResponseTrack,
                     TimelineTrackOverlapPolicy.Blend,
                     TimelineCapability.Camera,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent,
                     TimelineContractKinds.CameraResponseClip),
                 new TimelineTrackContract(
                     TimelineContractKinds.CameraEffectTrack,
                     TimelineTrackOverlapPolicy.Parallel,
                     TimelineCapability.Camera,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent,
                     TimelineContractKinds.CameraEffectClip)
             },
             new[]
@@ -446,28 +477,36 @@ namespace BTSMTL.Timeline
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Camera,
                     true,
-                    true),
+                    true,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent),
                 new TimelineClipContract(
                     TimelineContractKinds.CameraCueClip,
                     TimelineContractKinds.CameraCueTrack,
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Camera,
                     false,
-                    false),
+                    false,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent),
                 new TimelineClipContract(
                     TimelineContractKinds.CameraResponseClip,
                     TimelineContractKinds.CameraResponseTrack,
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Camera,
                     true,
-                    true),
+                    true,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent),
                 new TimelineClipContract(
                     TimelineContractKinds.CameraEffectClip,
                     TimelineContractKinds.CameraEffectTrack,
                     TimelineClipExecutionPhase.Commit,
                     TimelineCapability.Camera,
                     true,
-                    true)
+                    true,
+                    TimelineExecutionDomain.Presentation,
+                    TimelineOutputKind.PresentationEvent)
             });
     }
 

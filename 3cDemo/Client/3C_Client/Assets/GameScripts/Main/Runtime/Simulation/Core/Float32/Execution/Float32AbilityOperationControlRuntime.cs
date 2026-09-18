@@ -376,6 +376,7 @@ namespace ThirdPersonSimulation
                     operation.Text0,
                     operation.Integer0 == (int)AbilityTimelinePlaybackMode.Loop,
                     actionContext,
+                    CreateTimelineInvocationSource(operation),
                     action.InputSequence,
                     m_Tick);
                 runtimeHandle = m_TimelineRuntime.Start(in request);
@@ -405,6 +406,23 @@ namespace ThirdPersonSimulation
                 AbilityTimelineRuntimeStatus.Cancelled => OperationExecutionResult.Failure,
                 _ => throw new InvalidOperationException("Ability Timeline operation returned an invalid status.")
             };
+        }
+
+        AbilityTimelineInvocationSource CreateTimelineInvocationSource(SimulationOperation operation)
+        {
+            ProgramSourceMapEntry source = m_Access.RequireOperationSource(operation);
+            int generationSlot = m_Access.RequireOperationSlot(
+                operation.Handle,
+                ProgramStateSemantic.RunnableActivationGeneration);
+            ulong generation = m_ControlState.Get(generationSlot).UInt64;
+            if (generation == 0)
+                throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' has no active invocation generation.");
+            return new AbilityTimelineInvocationSource(
+                operation.Handle.Value,
+                source.GraphId,
+                source.NodeId,
+                source.GraphInvocationPath,
+                generation);
         }
 
         OperationExecutionResult SubmitCameraRequest(SimulationOperation operation)

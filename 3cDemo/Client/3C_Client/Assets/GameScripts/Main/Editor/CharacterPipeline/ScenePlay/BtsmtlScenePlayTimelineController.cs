@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         {
             TimelineWorkspaceModeBridge.Register(s_Controller);
             EditorApplication.playModeStateChanged += s_Controller.OnPlayModeChanged;
+            EditorApplication.projectChanged += s_Controller.Refresh;
             RuntimeDebugSession.Shared.Changed += s_Controller.Refresh;
         }
 
@@ -60,8 +61,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             public Controller()
             {
                 int mode = SessionState.GetInt(ModeStateKey, (int)TimelineWorkspaceMode.Authoring);
-                m_Mode = Enum.IsDefined(typeof(TimelineWorkspaceMode), mode)
-                    ? (TimelineWorkspaceMode)mode
+                TimelineWorkspaceMode persistedMode = (TimelineWorkspaceMode)mode;
+                m_Mode = Enum.IsDefined(typeof(TimelineWorkspaceMode), persistedMode)
+                    ? persistedMode
                     : TimelineWorkspaceMode.Authoring;
                 string profileGuid = SessionState.GetString(ProfileGuidStateKey, DefaultProfileGuid);
                 m_Profile = AssetDatabase.LoadAssetAtPath<BtsmtlScenePlayProfile>(
@@ -428,6 +430,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     controls.Mode.text = ModeLabel(m_Mode);
                     controls.Profile.SetValueWithoutNotify(m_Profile);
                 }
+                if (m_Mode == TimelineWorkspaceMode.Authoring &&
+                    m_Profile != null &&
+                    m_Profile.IsValid &&
+                    string.Equals(m_Status, "请先选择有效的 ScenePlay Profile。", StringComparison.Ordinal))
+                    m_Status = "Profile 已选择。";
             }
 
             void SetStatus(string message)

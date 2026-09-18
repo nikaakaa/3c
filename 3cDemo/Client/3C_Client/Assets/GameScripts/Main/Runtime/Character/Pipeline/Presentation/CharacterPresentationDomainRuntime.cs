@@ -454,6 +454,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     m_PoseDomain.Session.PrepareEvaluation(context.RenderFrame);
                     CharacterPoseNativeEvaluationResult evaluation = m_PoseDomain.Session.Evaluate(context.RenderFrame);
+                    if (evaluation.Status != CharacterPoseNativeFrameStatus.Evaluated)
+                    {
+                        Debug.LogWarning(
+                            $"Pose frame evaluation faulted ({evaluation.Source}): {evaluation.Message}");
+                        m_PoseDomain.Session.Discard(
+                            evaluation.FailureCode != CharacterPoseNativeFailureCode.None
+                                ? evaluation.FailureCode
+                                : CharacterPoseNativeFailureCode.FrameInvalid);
+                        m_PoseDomain.DiscardFrame();
+                        m_PresentationClockCoordinator?.DiscardFrame();
+                        return;
+                    }
                     CharacterPoseNativeValidationResult validation = m_PoseDomain.Session.ValidatePending();
                     if (validation.IsValidated)
                     {

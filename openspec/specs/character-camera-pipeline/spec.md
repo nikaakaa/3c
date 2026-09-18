@@ -21,7 +21,7 @@
 
 ### Requirement: BTSMTL 和 Timeline 必须只提交相机请求
 
-系统 MUST 让 BTSMTL 自定义节点和 Timeline 相机表达只提交强类型相机请求，包括 `CameraSequenceRequest`、`CameraShakeRequest`、`CameraResponseRequest`、`CameraTargetSelectionRequest` 或读取 `CameraBasisSnapshot`。绑定动作实例的一次性触发 MUST 由 TreeClip 相机特殊 Node 提交；Timeline 中唯一的相机效果轨道 MUST 以窗口采样提交持续型强类型相机请求，窗口生命周期跟随时间轴时间。系统 MUST 不保留 CameraStateTrack、CameraResponseTrack、CameraCueTrack、CameraCueClip 或 `ActionCueClip(CueType: Camera)` 等触发型 Timeline 相机表达，MUST NOT 按效果类型拆分多条效果轨道。每个已公开 Camera Graph node MUST 由唯一 Graph emitter/typed binding 提供，保留 Graph/Node authoring identity、端口与 Source Map；Float32 与 Fixed Target MUST 按同一 domain 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、Camera binding 和 Action operation MUST NOT 直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST 不把 Camera runtime state 写入 Character/World simulation state。缺失字段、未知 binding 或 Target 未实现 MUST 在 prepare/composition 明确失败，不得跳过或使用 runtime fallback。
+系统 MUST 让 BTSMTL 自定义节点和 Timeline 相机表达只提交强类型相机请求，包括 `CameraSequenceRequest`、`CameraShakeRequest`、`CameraResponseRequest`、`CameraTargetSelectionRequest` 或读取 `CameraBasisSnapshot`。绑定动作实例的一次性触发 MUST 由 TreeClip 相机特殊 Node 提交；Timeline 中唯一的相机效果轨道 MUST 以窗口采样提交持续型强类型相机请求，窗口生命周期跟随时间轴时间。系统 MUST 不保留 CameraStateTrack、CameraResponseTrack、CameraCueTrack、CameraCueClip 或 `ActionCueClip(CueType: Camera)` 等触发型 Timeline 相机表达，MUST NOT 按效果类型拆分多条效果轨道。每个已公开 Camera Graph node MUST 由唯一 Graph emitter/typed binding 提供，保留 Graph/Node authoring identity、端口与 Source Map；Float32 与 Fixed Target MUST 按同一 domain 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、Camera binding 和 Action operation MUST NOT 直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST 不把 Camera runtime state 写入 Character/World simulation state。缺失字段、未知 binding 或 Target 未实现 MUST 在 prepare/composition 明确失败，不得跳过或使用 runtime fallback。Timeline `ActionCueTrack` 的 committed 领域事件 MUST NOT 作为相机输入；Camera 只消费 TreeClip 相机特殊 Node、唯一效果轨道窗口采样或系统业务直提。
 
 #### Scenario: BTSMTL 请求瞄准相机
 
@@ -48,6 +48,11 @@
 - **THEN** Compiler preflight MUST报告 node source identity并拒绝生成 Program
 - **AND** runtime MUST不把该 node 当成 Success 或选择默认 CameraTarget
 
+#### Scenario: ActionCue 不是相机入口
+
+- **WHEN** Logic Timeline 提交 `CueType=AttackProperty` 或其它非相机 ActionCue
+- **THEN** Camera MUST NOT 订阅、解释该事件或伪造镜头请求
+- **AND** 相机触发仍 MUST 来自 TreeClip 相机特殊 Node 或唯一效果轨道窗口
 #### Scenario: Fixed Target 编译 Camera operation
 
 - **WHEN** Fixed Graph artifact 与 domain binding 包含当前 operation-set version 的 Camera operation

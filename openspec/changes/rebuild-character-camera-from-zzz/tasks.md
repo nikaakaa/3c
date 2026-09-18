@@ -42,7 +42,7 @@
 - [ ] 6.3 完成 evidence/source-cue-mapping.md 的源动作/事件→工程具体 TreeClip/Node→效果类型/ResourceId→时间/持续/取消映射；Normal_05 Zoom 与 Normal_01 Shake 已有 Node/Resource 落点，Counter 与 End_2 仍缺 Node。Normal_05 Zoom 与 Normal_01 Shake 已证明 Node 从 TimelineBody root 可达；持续/取消/目标语义与 Counter、End_2 仍未闭合，不按资源名或序号猜接线。
 - [ ] 6.4 从只接受 Profile 的 CharacterCameraProjectionBuilder 保留必要转换/引用检查，提供给角色装配调用的正式相机资源与只读运行绑定；分开 Editor-only 处理与 Player 绑定，独立资源流程保持原归属，不恢复角色全量 Build/整包 Projection，也不新增 Camera-only 临时发布入口或换名总包。
 - [ ] 6.5 由 Camera 提供绑定失败、Reset/替换、旧实例释放与实际采用身份，角色装配/Preview 调用同一领域入口；预览只观察真实结果，不自行求解相机或伪造已采用。
-- [ ] 6.6 将动作相机请求从 CameraStateTrack/CameraResponseTrack、CameraCueTrack/CameraCueClip 与 ActionCueClip(CueType: Camera) 迁到 TreeClip 特殊 Node，保证一次性触发、循环、取消、自然结束和 seek/replay 使用稳定请求身份；迁移完成后删除旧动作 Cue 路径与三组触发型相机轨道，不保留双轨。
+- [ ] 6.6 将动作相机请求从 CameraStateTrack/CameraResponseTrack、CameraCueTrack/CameraCueClip 与 ActionCueClip(CueType: Camera) 迁到 TreeClip 特殊 Node，保证一次性触发、循环、取消、自然结束和 seek/replay 使用稳定请求身份；`CueType=AttackProperty` 的 committed ActionCue 归 Attack/GameplayEffect 消费，MUST NOT 订阅为相机输入。迁移完成后删除旧动作 Cue 路径与三组触发型相机轨道，不保留双轨。
 - [x] 6.7 将 CameraOverrideTrack/CameraZoomTrack/CameraStretchTrack/CameraShotTrack 四条按类型拆分的效果轨道合并为唯一效果轨道：Clip 只含窗口、效果资源引用与 Weight/EaseIn/EaseOut 曲线，效果类型由资源自描述；曲线 channel 由按类型 12 个收敛为通用 3 个；Shot 真实 prefab 要求与裁剪面接管合同不变；迁移已存在的真实资源引用后删除四条旧轨道与旧 channel，不保留兼容读法。
 
 ## 7. 诊断、迁移与删除

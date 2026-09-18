@@ -43,8 +43,13 @@ Timeline 中的相机表达 MUST 按工作性质划分：绑定动作实例的�
 
 ### Requirement: 动作相机请求必须统一由 TreeClip 特殊 Node 表达
 
-技能动作中的 Camera State、Effect、Response、Target 请求 MUST 通过正式 TreeClip 内的相机特殊 Node 表达。Node MUST 只提交带稳定 ActionContext、来源身份、ResourceId 和生命周期的 typed Camera request，不得直接写 Camera、Cinemachine 或虚拟相机。动作链 MUST 不再为同一请求维护 CameraStateTrack、CameraResponseTrack、CameraCueTrack、CameraCueClip 或 `ActionCueClip(CueType: Camera)` 的并行表达。瞬态请求统一由 Node 表达是通用合同：音效、特效等其它域的帧触发表达 MUST 按同一边界迁往 Node，其宿主轨道在迁移完成后整体删除，MUST NOT 新增触发型轨道用法。
+技能动作中的 Camera State、Effect、Response、Target 请求 MUST 通过正式 TreeClip 内的相机特殊 Node 表达。Node MUST 只提交带稳定 ActionContext、来源身份、ResourceId 和生命周期的 typed Camera request，不得直接写 Camera、Cinemachine 或虚拟相机。动作链 MUST 不再为同一请求维护 CameraStateTrack、CameraResponseTrack、CameraCueTrack、CameraCueClip 或 `ActionCueClip(CueType: Camera)` 的并行表达。瞬态请求统一由 Node 表达是通用合同：音效、特效等其它域的帧触发表达 MUST 按同一边界迁往 Node，其宿主轨道在迁移完成后整体删除，MUST NOT 新增触发型轨道用法。Timeline `ActionCueTrack` 的 `CueType/CueId` committed 事件归各自业务领域解释，MUST NOT 被相机订阅或转换成相机请求。
 
+#### Scenario: 攻击属性Cue不驱动相机
+
+- **WHEN** Timeline 提交 `CueType=AttackProperty`、`CueId=Corin_Attack_...` 的 ActionCue
+- **THEN** Timeline MUST 只发布 committed 事件，Camera MUST NOT 将其解释为 Shake/Zoom 请求
+- **AND** Attack1 Shake 与 Attack5 Zoom MUST 继续由各自的 TimelineBody root 可达相机 Node 触发
 #### Scenario: 动作在指定时点触发镜头效果
 
 - **WHEN** TreeClip 执行到一个带正式相机特殊 Node 的动作时点

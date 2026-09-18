@@ -33,3 +33,4 @@
 Camera 提供已确认映射行和相机资源/运行绑定。曲线迁移任务在其拥有的同批 TreeClip 与生成源码中落实对应 Node 请求，双方不分别重建同一资产。Camera 的绑定结果须报告实际采用的资源与请求身份；预览展示这一真实结果，不从表中推测运行镜头已经生效。
 
 当前已写入 Attack1/Attack5 技能 Graph、root 可达并行分支、同批生成源码和既有 Camera 资源引用；Counter 与 End_2 还没有工程 Node。旧 Projection 和旧域 DLL 的调用结果均不能补充这里缺失的工程身份或来源证据。
+`4429787fd` 后，Timeline 中的 `AttackProperty` ActionCue 是 Logic commit 后发布给 Attack/GameplayEffect 领域的 committed 事件；Camera 不订阅该事件。Attack1 Shake 与 Attack5 Zoom 的正式相机输入仍由 `16f00f61a` 的 TimelineBody root 可达相机 Node 提供。`9fe8ea317` 的固定 Trace 零分歧覆盖 AttackProperty 固定逻辑，不覆盖镜头输出或 Camera Effect Replay。

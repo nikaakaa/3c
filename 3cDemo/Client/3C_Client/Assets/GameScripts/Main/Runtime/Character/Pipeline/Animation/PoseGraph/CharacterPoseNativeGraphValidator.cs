@@ -22,34 +22,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal static class CharacterPoseNativeGraphValidator
     {
-        enum BoundaryKind : byte
-        {
-            Root = 1,
-            State = 2,
-            Boundary = 3
-        }
-
         internal static void RequireValid(
             CharacterPresentationPoseGraphAsset graphAsset,
-            CharacterPoseCanvasGraph root)
+            CharacterPoseCanvasGraph root,
+            CharacterPoseNativeGraphBoundary boundary)
         {
             if (!graphAsset || root == null)
                 Fail(CharacterPoseNativeFailureCode.GraphMissing, "Pose", "Pose graph asset or root graph is missing.");
             var visiting = new HashSet<PoseGraphId>();
-            var visited = new Dictionary<PoseGraphId, BoundaryKind>();
-            ValidateGraph(graphAsset, root, BoundaryKind.Root, visiting, visited);
+            var visited = new Dictionary<PoseGraphId, CharacterPoseNativeGraphBoundary>();
+            ValidateGraph(graphAsset, root, boundary, visiting, visited);
         }
 
         static void ValidateGraph(
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterPoseCanvasGraph graph,
-            BoundaryKind boundary,
+            CharacterPoseNativeGraphBoundary boundary,
             ISet<PoseGraphId> visiting,
-            IDictionary<PoseGraphId, BoundaryKind> visited)
+            IDictionary<PoseGraphId, CharacterPoseNativeGraphBoundary> visited)
         {
             if (!graph.GraphId.IsValid)
                 Fail(CharacterPoseNativeFailureCode.GraphInvalid, "Pose Graph", "Pose graph identity is invalid.");
-            if (visited.TryGetValue(graph.GraphId, out BoundaryKind previousBoundary))
+            if (visited.TryGetValue(graph.GraphId, out CharacterPoseNativeGraphBoundary previousBoundary))
             {
                 if (previousBoundary != boundary)
                 {
@@ -268,15 +262,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasGraph graph,
             IReadOnlyList<CharacterPoseCanvasNode> nodes,
             IReadOnlyList<CharacterPoseCanvasConnection> connections,
-            BoundaryKind boundary)
+            CharacterPoseNativeGraphBoundary boundary)
         {
             int outputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
             int graphInputCount = nodes.Count(value =>
                 value.Kind == CharacterPoseNodeKind.GraphInput ||
                 value.Kind == CharacterPoseNodeKind.EntryPoseInput);
             int graphOutputCount = nodes.Count(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
-            bool graphBoundary = boundary == BoundaryKind.Boundary;
-            bool rootOrState = boundary == BoundaryKind.Root || boundary == BoundaryKind.State;
+            bool graphBoundary = boundary == CharacterPoseNativeGraphBoundary.Subgraph;
+            bool rootOrState = boundary == CharacterPoseNativeGraphBoundary.Root ||
+                boundary == CharacterPoseNativeGraphBoundary.State;
             if (rootOrState &&
                 (outputCount != 1 || graphInputCount != 0 || graphOutputCount != 0) ||
                 graphBoundary &&
@@ -339,9 +334,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasGraph graph,
             IReadOnlyList<CharacterPoseCanvasNode> nodes,
             IReadOnlyList<CharacterPoseCanvasConnection> connections,
-            BoundaryKind boundary)
+            CharacterPoseNativeGraphBoundary boundary)
         {
-            PoseNodeId outputId = boundary == BoundaryKind.Boundary
+            PoseNodeId outputId = boundary == CharacterPoseNativeGraphBoundary.Subgraph
                 ? nodes.Single(value => value.Kind == CharacterPoseNodeKind.GraphOutput).NodeId
                 : nodes.Single(value => value.Kind == CharacterPoseNodeKind.OutputPose).NodeId;
             HashSet<PoseNodeId> activeNodes = CollectAncestors(connections, outputId);
@@ -509,7 +504,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseCanvasGraph graph,
             IReadOnlyList<CharacterPoseCanvasNode> nodes,
             ISet<PoseGraphId> visiting,
-            IDictionary<PoseGraphId, BoundaryKind> visited)
+            IDictionary<PoseGraphId, CharacterPoseNativeGraphBoundary> visited)
         {
             foreach (CharacterPoseCanvasNode node in nodes)
             {
@@ -522,7 +517,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         ValidateGraph(
                             graphAsset,
                             graphAsset.RequireGraph(state.PoseGraphId),
-                            BoundaryKind.State,
+                            CharacterPoseNativeGraphBoundary.State,
                             visiting,
                             visited);
                 }
@@ -536,7 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ValidateGraph(
                         graphAsset,
                         child,
-                        BoundaryKind.Boundary,
+                        CharacterPoseNativeGraphBoundary.Subgraph,
                         visiting,
                         visited);
                 }
@@ -548,7 +543,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ValidateGraph(
                         graphAsset,
                         entryGraph,
-                        BoundaryKind.Boundary,
+                        CharacterPoseNativeGraphBoundary.Subgraph,
                         visiting,
                         visited);
                 }

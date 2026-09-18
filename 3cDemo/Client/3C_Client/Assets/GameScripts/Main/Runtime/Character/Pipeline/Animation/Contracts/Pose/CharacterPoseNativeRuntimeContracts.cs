@@ -17,6 +17,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Failed = 5
     }
 
+    internal enum CharacterPoseNativeGraphBoundary : byte
+    {
+        Root = 1,
+        State = 2,
+        Subgraph = 3
+    }
+
     internal enum CharacterPoseNativeFailureCode : byte
     {
         None = 0,
@@ -60,13 +67,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationPresentationProfile profile,
             CharacterAnimationRigPayload rig,
             CharacterAnimationInputContract inputContract,
-            string resourceRevision)
+            string resourceRevision,
+            CharacterPoseNativeGraphBoundary boundary)
         {
             if (requestId == 0 || !actorId.IsValid)
                 throw new ArgumentException("Pose native graph request identity is invalid.");
             if (!graphAsset || graph == null || profile == null || rig == null || inputContract == null)
                 throw new ArgumentException("Pose native graph request binding is incomplete.");
-            if (!graph.GraphId.IsValid || string.IsNullOrWhiteSpace(graph.ContentRevision))
+            if (!graph.GraphId.IsValid || string.IsNullOrWhiteSpace(graph.ContentRevision) ||
+                !Enum.IsDefined(typeof(CharacterPoseNativeGraphBoundary), boundary))
                 throw new ArgumentException("Pose native graph request graph identity is invalid.");
             if (profile.PoseGraph != graphAsset ||
                 !graphAsset.TryGetGraph(graph.GraphId, out CharacterPoseCanvasGraph resolved) ||
@@ -88,6 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Rig = rig;
             InputContract = inputContract;
             ResourceRevision = resourceRevision.Trim();
+            Boundary = boundary;
         }
 
         internal ulong RequestId { get; }
@@ -98,11 +108,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterAnimationRigPayload Rig { get; }
         internal CharacterAnimationInputContract InputContract { get; }
         internal string ResourceRevision { get; }
+        internal CharacterPoseNativeGraphBoundary Boundary { get; }
         internal bool IsValid =>
             RequestId != 0 && ActorId.IsValid && GraphAsset && Graph != null && Profile != null &&
             Rig != null && InputContract != null && Graph.GraphId.IsValid &&
             !string.IsNullOrWhiteSpace(Graph.ContentRevision) &&
             !string.IsNullOrWhiteSpace(ResourceRevision) &&
+            Enum.IsDefined(typeof(CharacterPoseNativeGraphBoundary), Boundary) &&
             !string.IsNullOrWhiteSpace(InputContract.ContractHash);
     }
 
@@ -120,6 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Profile = request.Profile;
             Rig = request.Rig;
             InputContract = request.InputContract;
+            Boundary = request.Boundary;
             GraphId = request.Graph.GraphId;
             GraphRevision = request.Graph.ContentRevision;
             RigId = request.Rig.RigId;
@@ -135,6 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterAnimationPresentationProfile Profile { get; }
         internal CharacterAnimationRigPayload Rig { get; }
         internal CharacterAnimationInputContract InputContract { get; }
+        internal CharacterPoseNativeGraphBoundary Boundary { get; }
         internal PoseGraphId GraphId { get; }
         internal string GraphRevision { get; }
         internal string RigId { get; }
@@ -146,6 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Rig != null && InputContract != null && GraphId.IsValid &&
             !string.IsNullOrWhiteSpace(GraphRevision) && !string.IsNullOrWhiteSpace(RigId) &&
             !string.IsNullOrWhiteSpace(RigRevision) && !string.IsNullOrWhiteSpace(ResourceRevision) &&
+            Enum.IsDefined(typeof(CharacterPoseNativeGraphBoundary), Boundary) &&
             !string.IsNullOrWhiteSpace(InputContractHash);
     }
 

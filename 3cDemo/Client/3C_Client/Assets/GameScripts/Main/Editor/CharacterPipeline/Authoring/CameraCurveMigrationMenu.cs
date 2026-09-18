@@ -11,6 +11,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
     internal static class CameraCurveMigrationMenu
     {
         const string DefinitionPath = "Assets/Configs/Character/Corin/Pipeline/Abilities/CorinAttackGameplayAbilityDefinition.asset";
+        const string CameraProfilePath = "Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/CorinCharacterCameraProfile.asset";
+        const string AttackNormal01ShakePath = "Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Corin_Attack_Normal_01_CamShake_A_01.asset";
+        const string DefaultCurve02Path = "Assets/Configs/Character/Corin/Pipeline/Presentation/Camera/Camera_Default_Curve_02.asset";
 
         [MenuItem("3C/Camera/Apply Corin Curve Migration")]
         public static void Apply()
@@ -46,6 +49,88 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
 
             AssetDatabase.SaveAssets();
             Debug.Log($"[CameraCurveMigration] 相机节点写入 {applied} 处；旧 Attack1/Attack5 CameraCue 已删除。连线由作者在图窗口完成。");
+        }
+
+        [MenuItem("3C/Camera/Validate Corin Camera Profile")]
+        public static void ValidateCorinCameraProfile()
+        {
+            CharacterCameraProfile profile = AssetDatabase.LoadAssetAtPath<CharacterCameraProfile>(CameraProfilePath);
+            if (profile == null)
+                throw new InvalidOperationException("相机 Profile 缺失: " + CameraProfilePath);
+            foreach (CameraShakeAsset shake in profile.Shakes)
+            {
+                try
+                {
+                    shake.RequireValid();
+                    Debug.Log($"[CameraProfileValidation] Shake OK: {shake.name}");
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogError(
+                        $"[CameraProfileValidation] Shake invalid: {shake.name}; " +
+                        $"schema={shake.Schema}; id={shake.ShakeId}; " +
+                        $"fadeIn={(shake.FadeInCurve ? shake.FadeInCurve.name : "<null>")}; " +
+                        $"fadeOut={(shake.FadeOutCurve ? shake.FadeOutCurve.name : "<null>")}; " +
+                        $"curve={(shake.Curve ? shake.Curve.name : "<null>")}; " +
+                        $"space={shake.ShakeCenterSpace}; stacking={shake.PlayStackingType}; " +
+                        $"total={shake.ShakeTotalTime}; frequency={shake.Frequency}; reason={exception.Message}");
+                }
+            }
+            try
+            {
+                profile.RequireValid();
+                Debug.Log($"[CameraProfileValidation] Profile OK: {profile.name}");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError($"[CameraProfileValidation] Profile invalid: {exception.Message}");
+            }
+        }
+
+        [MenuItem("3C/Camera/Repair Corin Attack Normal 01 Shake")]
+        public static void RepairCorinAttackNormal01Shake()
+        {
+            CameraShakeAsset shake = AssetDatabase.LoadAssetAtPath<CameraShakeAsset>(AttackNormal01ShakePath);
+            CameraCurveAsset curve = AssetDatabase.LoadAssetAtPath<CameraCurveAsset>(DefaultCurve02Path);
+            if (shake == null || curve == null)
+                throw new InvalidOperationException("Corin Attack Normal 01 Shake 或默认曲线缺失。");
+            var serialized = new SerializedObject(shake);
+            serialized.FindProperty("m_Schema").stringValue = CameraShakeAsset.SchemaVersion;
+            serialized.FindProperty("m_ShakeId").stringValue = "Corin_Attack_Normal_01_CamShake_A_01";
+            serialized.FindProperty("m_ShakeType").intValue = 0;
+            serialized.FindProperty("m_CameraShakePropertyConfig").intValue = 0;
+            serialized.FindProperty("m_AngleVertical").floatValue = 0.6f;
+            serialized.FindProperty("m_NoiseAngle").floatValue = 1.2f;
+            serialized.FindProperty("m_RadiusLength").floatValue = 0f;
+            serialized.FindProperty("m_DistanceToPlane").floatValue = 0f;
+            serialized.FindProperty("m_NoiseRatio").floatValue = 0.5f;
+            serialized.FindProperty("m_ShakeTotalTime").floatValue = 0.25f;
+            serialized.FindProperty("m_Frequency").floatValue = 12f;
+            serialized.FindProperty("m_RollAmplitude").floatValue = 0.5f;
+            serialized.FindProperty("m_PitchAmplitude").floatValue = 0.4f;
+            serialized.FindProperty("m_YawAmplitude").floatValue = 0.6f;
+            serialized.FindProperty("m_ShakeCenterSpace").intValue = (int)CameraSpace.LocalAvatar;
+            serialized.FindProperty("m_RealtimeVibration").boolValue = true;
+            serialized.FindProperty("m_DissipationMode").intValue = 0;
+            serialized.FindProperty("m_ImpactRadius").floatValue = 0f;
+            serialized.FindProperty("m_DissipationDistance").floatValue = 0f;
+            serialized.FindProperty("m_CustomCurveKey").stringValue = string.Empty;
+            serialized.FindProperty("m_FadeInDuration").floatValue = 0.02f;
+            serialized.FindProperty("m_FadeInCurve").objectReferenceValue = curve;
+            serialized.FindProperty("m_FadeOutDuration").floatValue = 0.08f;
+            serialized.FindProperty("m_FadeOutCurve").objectReferenceValue = curve;
+            serialized.FindProperty("m_Curve").objectReferenceValue = curve;
+            serialized.FindProperty("m_IgnoreTimeScale").boolValue = false;
+            serialized.FindProperty("m_PlayStackingType").intValue = (int)CameraEffectStackingType.Replace;
+            serialized.FindProperty("m_PlayPriority").intValue = 0;
+            serialized.FindProperty("m_DataPriority").intValue = 0;
+            serialized.FindProperty("m_StandardConfigKey").stringValue = "Corin_Attack_Normal_01_CamShake_A_01";
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(shake);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(AttackNormal01ShakePath, ImportAssetOptions.ForceUpdate);
+            shake.RequireValid();
+            Debug.Log("[CameraCurveMigration] 已重新序列化 Corin Attack Normal 01 Shake 资源。");
         }
 
         static BtsmtlSkillFlowGraph FindGraph(BtsmtlSkillFlowGraph[] graphs, string authoringId)

@@ -12,8 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69e7758d6cdf44d2ba88711821334cc7, type: 3}
   m_Name: Corin_Attack_Normal_01_CamShake_A_01
   m_EditorClassIdentifier: 
-  # 来源 sm0-038-Attack_Normal_01.json：battle:27:0/1/2/3 四个 AttackProperty 事件(0.412/0.432/0.452/0.471)指向本 key。
-  # 来源未提供振幅/频率/持续正文，以下数值为 3C 标准轻震默认，属 3C 自有标准，非 ZZZ 还原值。
   m_Schema: character-camera-shake/v1
   m_ShakeId: Corin_Attack_Normal_01_CamShake_A_01
   m_ShakeType: 0

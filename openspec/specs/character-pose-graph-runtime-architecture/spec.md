@@ -186,3 +186,21 @@ Pose 域消费 Timeline 的唯一运行输入是按帧打开的已提交 Action 
 - **WHEN** 攻击 Timeline 在 PresentationFrame 采样而状态机推进 Run
 - **THEN** 两者 MUST 只经各自帧合同交换事实与命令
 - **AND** 任一侧失败 MUST NOT 阻塞另一侧的阶段推进
+
+### Requirement: 动画参数必须按用途单路消费
+
+`CharacterPoseParameterUsage.Control` 参数 MUST 只经事件图 typed 变量帧进入姿态链（状态机条件、BlendSpace 参数等只读消费），Input Contract 构造 MUST 校验每个 Control 参数已被事件图发布且类型一致，未发布或类型不符 MUST 精确失败。`CharacterPoseParameterUsage.AnimatedProperty` 参数（BlendShape 属性与 FootPlacementWeight 等曲线）MUST 只由唯一 Pose Property Writer（Final Publication 属性写入路径）消费，MUST NOT 进入事件图变量消费或第二写入方。两类参数 MUST NOT 交叉消费或建立第二供给路径。
+
+#### Scenario: Control 参数未被事件图发布
+
+- **WHEN** Input Contract 构造遇到事件图未发布的 Control 参数
+- **THEN** 构造 MUST 精确失败并指认参数与变量
+- **AND** 系统 MUST NOT 以默认值或隐式变量补位
+
+#### Scenario: AnimatedProperty 被变量路径消费
+
+- **WHEN** 变量消费或混合节点试图读取 AnimatedProperty 用途参数
+- **THEN** 该读取 MUST 被用途检查拒绝
+- **AND** 属性写入 MUST 保持唯一 Property Writer 路径
+
+阶段门触发的 Warning 日志是收口期诊断：其职责是把被阶段门丢弃结果的来源与真实消息暴露到运行日志，供下一轮定位；对应根因收口后 MUST 随修复一并移除，MUST NOT 作为常驻运行日志保留。

@@ -110,6 +110,8 @@ namespace BTSMTL.EventGraphs
                     errors.Add($"node '{node.UID}' type '{node.GetType().FullName}' is not registered");
                     continue;
                 }
+                if (node is FlowNode nodeToValidate)
+                    nodeToValidate.GatherPorts();
                 switch (capability.Kind)
                 {
                     case EventGraphCapabilityKind.InitializationEvent:

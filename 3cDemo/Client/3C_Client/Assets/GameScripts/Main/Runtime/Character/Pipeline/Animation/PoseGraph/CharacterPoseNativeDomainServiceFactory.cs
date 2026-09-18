@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
@@ -149,7 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ThrowHistorySource,
                 ThrowEntryPose,
                 (node, context) => requestId,
-                (node, context) => AllocateSubgraphInstanceId(instanceId),
+                (node, context) => AllocateSubgraphInstanceId(instanceId, node.NodeId.Value),
                 (node, context) => resetGeneration,
                 (node, context) => $"pose-subgraph/{node.NodeId}",
                 ThrowRootOrientationCurve,
@@ -281,13 +282,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 contributionCapacity);
         }
 
-        ulong AllocateSubgraphInstanceId(ulong parentInstanceId)
+        ulong AllocateSubgraphInstanceId(ulong parentInstanceId, string subgraphNodeId)
         {
+            if (string.IsNullOrWhiteSpace(subgraphNodeId))
+                throw new ArgumentNullException(nameof(subgraphNodeId));
             if (m_NextSubgraphInstanceSequence == ulong.MaxValue)
                 throw new InvalidOperationException("Pose subgraph instance identity was exhausted.");
-            ulong child = checked(parentInstanceId * 4099UL + m_NextSubgraphInstanceSequence++);
+            string stableHash = StableHash.Compute(
+                parentInstanceId.ToString(CultureInfo.InvariantCulture),
+                subgraphNodeId,
+                m_NextSubgraphInstanceSequence.ToString(CultureInfo.InvariantCulture)).Value;
+            m_NextSubgraphInstanceSequence++;
+            ulong child = Convert.ToUInt64(stableHash.Substring(0, 16), 16);
             if (child == 0 || child == parentInstanceId)
-                throw new InvalidOperationException("Pose subgraph instance identity is invalid.");
+                throw new InvalidOperationException(
+                    $"Pose subgraph instance identity for '{subgraphNodeId}' collided with its parent instance.");
             return child;
         }
 

@@ -29,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly Func<CharacterPoseCanvasNode, IActionPresentationClockPolicy> m_ClockPolicyFactory;
         readonly Dictionary<CharacterPresentationPoseSourceSlot, int> m_SourceIndexBySlot;
         readonly Dictionary<PoseNodeId, int> m_IndexByNode;
+        ulong m_NextSubgraphInstanceSequence = 1;
 
         internal CharacterPoseNativeDomainServiceFactory(
             CharacterAnimationPresentationProfile profile,
@@ -148,7 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ThrowHistorySource,
                 ThrowEntryPose,
                 (node, context) => requestId,
-                (node, context) => instanceId,
+                (node, context) => AllocateSubgraphInstanceId(instanceId),
                 (node, context) => resetGeneration,
                 (node, context) => $"pose-subgraph/{node.NodeId}",
                 ThrowRootOrientationCurve,
@@ -223,12 +224,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         CharacterFinalIkFullBodySolver CreateSolver()
         {
-            var parents = new NativeArray<int>(m_Rig.PhysicalBoneCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            var parents = new NativeArray<int>(m_Rig.PoseBoneCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             var virtualBones = new NativeArray<CharacterVirtualBoneDescriptor>(m_Rig.VirtualBoneCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             try
             {
-                for (int i = 0; i < m_Rig.PhysicalBoneCount; i++)
-                    parents[i] = m_Rig.PhysicalBones[i].ParentPhysicalIndex;
+                for (int i = 0; i < m_Rig.PoseBoneCount; i++)
+                    parents[i] = m_Rig.GetPoseParentIndex(i);
                 for (int i = 0; i < m_Rig.VirtualBoneCount; i++)
                 {
                     CharacterAnimationVirtualBonePayload bone = m_Rig.VirtualBones[i];
@@ -251,12 +252,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         CharacterPoseNativeNodePoseBuffer CreateBuffer(
             CharacterPoseCanvasNode node,
-            CharacterPoseNativeInstanceContext context) =>
-            new CharacterPoseNativeNodePoseBuffer(
+            CharacterPoseNativeInstanceContext context)
+        {
+            int contributionCapacity = m_Resources.ContributionCount;
+            if (node.Kind == CharacterPoseNodeKind.AnimationSlot ||
+                node.Kind == CharacterPoseNodeKind.BlendStack)
+            {
+                CharacterAnimationSlotPosePayload slotPayload =
+                    node.Payload as CharacterAnimationSlotPosePayload;
+                CharacterBlendStackPosePayload stackPayload =
+                    node.Payload as CharacterBlendStackPosePayload;
+                CharacterPoseResourceSlot policySlot = slotPayload != null
+                    ? slotPayload.BlendPolicySlot
+                    : stackPayload != null ? stackPayload.BlendPolicySlot : null;
+                CharacterPoseResourceBinding binding = policySlot == null
+                    ? null
+                    : m_Profile.FindPoseResourceBinding(policySlot);
+                CharacterAnimationBlendPolicy policy = binding?.Resource as CharacterAnimationBlendPolicy;
+                if (policy == null)
+                    throw new InvalidOperationException(
+                        $"Pose Blend Stack '{node.NodeId}' has no valid blend policy resource.");
+                contributionCapacity = checked(policy.StackPolicy.MaxActiveSourceEntries + 1);
+            }
+            return new CharacterPoseNativeNodePoseBuffer(
                 m_IndexByNode[node.NodeId],
                 m_Rig.PoseBoneCount,
                 Math.Max(1, m_InputContract.Parameters.Count),
-                m_Resources.ContributionCount);
+                contributionCapacity);
+        }
+
+        ulong AllocateSubgraphInstanceId(ulong parentInstanceId)
+        {
+            if (m_NextSubgraphInstanceSequence == ulong.MaxValue)
+                throw new InvalidOperationException("Pose subgraph instance identity was exhausted.");
+            ulong child = checked(parentInstanceId * 4099UL + m_NextSubgraphInstanceSequence++);
+            if (child == 0 || child == parentInstanceId)
+                throw new InvalidOperationException("Pose subgraph instance identity is invalid.");
+            return child;
+        }
 
         int RequireBindingIndex(
             CharacterPoseCanvasNode node,
@@ -402,7 +435,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_IndexByNode[node.NodeId],
                 m_Rig.PoseBoneCount,
                 Math.Max(1, m_InputContract.Parameters.Count),
-                m_Resources.ContributionCount);
+                checked(policy.StackPolicy.MaxActiveSourceEntries + 1));
             try
             {
                 var writeBinding = stackBuffer.RequireWriteBinding(1);
@@ -433,10 +466,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             List<AnimationBlendProfileCatalogEntry> profileEntries)
         {
             AnimationBlendCurvePayload curvePayload = BuildCurvePayload(rule);
-            curveEntries.Add(new AnimationBlendCurveCatalogEntry(curveEntries.Count, curvePayload));
+            int curveIndex = RequireOrAddCurve(curveEntries, curvePayload);
             var profilePayload = new AnimationBlendProfilePayload(
                 rule.BlendProfile, m_Profile.RigDefinition);
-            profileEntries.Add(new AnimationBlendProfileCatalogEntry(profileEntries.Count, profilePayload));
+            int profileIndex = RequireOrAddProfile(profileEntries, profilePayload);
             transitions.Add(new AnimationBlendTransitionPayload(
                 index,
                 AnimationBlendTransitionEndpointKind.SourceOwner,
@@ -446,8 +479,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 $"owner/{index + 1}",
                 rule.BlendLogic,
                 rule.DurationSeconds,
-                curveEntries.Count - 1,
-                profileEntries.Count - 1));
+                curveIndex,
+                profileIndex));
+        }
+
+        static int RequireOrAddCurve(
+            List<AnimationBlendCurveCatalogEntry> entries,
+            AnimationBlendCurvePayload curve)
+        {
+            string hash = StableHash.Compute(AnimationBlendCanonicalPayload.CurveKey(curve)).ToString();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                AnimationBlendCurveCatalogEntry existing = entries[i];
+                if (!string.Equals(existing.CanonicalHash, hash, StringComparison.Ordinal))
+                    continue;
+                if (!AnimationBlendCanonicalPayload.CurveEquals(existing.Curve, curve))
+                    throw new InvalidOperationException(
+                        $"Animation Blend Curve canonical hash collision occurs at entry #{i}.");
+                return existing.Index;
+            }
+            int index = entries.Count;
+            entries.Add(new AnimationBlendCurveCatalogEntry(index, curve));
+            return index;
+        }
+
+        static int RequireOrAddProfile(
+            List<AnimationBlendProfileCatalogEntry> entries,
+            AnimationBlendProfilePayload profile)
+        {
+            string hash = StableHash.Compute(AnimationBlendCanonicalPayload.ProfileKey(profile)).ToString();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                AnimationBlendProfileCatalogEntry existing = entries[i];
+                if (!string.Equals(existing.Profile.ProfileId, profile.ProfileId, StringComparison.Ordinal))
+                    continue;
+                if (!string.Equals(existing.CanonicalHash, hash, StringComparison.Ordinal) ||
+                    !AnimationBlendCanonicalPayload.ProfileEquals(existing.Profile, profile))
+                {
+                    throw new InvalidOperationException(
+                        $"Animation Blend Profile identity '{profile.ProfileId}' has conflicting payloads.");
+                }
+                return existing.Index;
+            }
+            int index = entries.Count;
+            entries.Add(new AnimationBlendProfileCatalogEntry(index, profile));
+            return index;
         }
 
         static AnimationBlendCurvePayload BuildCurvePayload(CharacterAnimationBlendTransitionRule rule)

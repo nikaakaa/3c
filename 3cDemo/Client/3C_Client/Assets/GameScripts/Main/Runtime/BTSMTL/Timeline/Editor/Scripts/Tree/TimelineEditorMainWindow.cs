@@ -12,6 +12,46 @@ using UnityEngine.UIElements;
 
 namespace BTSMTL.Timeline.Editor
 {
+    public enum TimelineWorkspaceMode : byte
+    {
+        Authoring = 0,
+        Preview = 1,
+        RuntimeDebug = 2
+    }
+
+    public interface ITimelineWorkspaceModeController
+    {
+        VisualElement CreateControls(TimelineEditorWindow window);
+        void ApplyToWindow(TimelineEditorWindow window);
+        void OnWindowClosed(TimelineEditorWindow window);
+    }
+
+    public static class TimelineWorkspaceModeBridge
+    {
+        static ITimelineWorkspaceModeController s_Controller;
+
+        public static TimelineWorkspaceMode ActiveMode { get; private set; } = TimelineWorkspaceMode.Authoring;
+
+        public static void Register(ITimelineWorkspaceModeController controller)
+        {
+            s_Controller = controller;
+        }
+
+        public static void SetActiveMode(TimelineWorkspaceMode mode)
+        {
+            ActiveMode = mode;
+        }
+
+        public static VisualElement CreateControls(TimelineEditorWindow window) =>
+            s_Controller?.CreateControls(window);
+
+        public static void ApplyToWindow(TimelineEditorWindow window) =>
+            s_Controller?.ApplyToWindow(window);
+
+        public static void OnWindowClosed(TimelineEditorWindow window) =>
+            s_Controller?.OnWindowClosed(window);
+    }
+
     public sealed class TimelineEditorWindow : EditorWindow
     {
         public static event Action<TimelineAsset> AssetOpened;
@@ -77,11 +117,14 @@ namespace BTSMTL.Timeline.Editor
         ObjectField m_SharedTimelineField;
         Label m_SourceSummary;
         Label m_Status;
+        VisualElement m_WorkspaceModeControls;
+        bool m_RuntimeObservationReadOnly;
 
         public TimelineData Timeline => m_Timeline;
         public UnityEngine.Object SourceGraphWindow => m_SourceGraphWindow;
         public string SourceGraphAuthoringId => m_SourceGraphAuthoringId ?? string.Empty;
         public string SourceNodeAuthoringId => m_SourceNodeGuid ?? string.Empty;
+        public bool RuntimeObservationReadOnly => m_RuntimeObservationReadOnly;
         public string AuthoringRevision => m_Timeline == null
             ? string.Empty
             : TimelineAuthoringFingerprint.Compute(m_Timeline);
@@ -199,6 +242,8 @@ namespace BTSMTL.Timeline.Editor
             IReadOnlyDictionary<string, string> activeTracks,
             IReadOnlyDictionary<string, string> activeClips)
         {
+            if (!m_RuntimeObservationReadOnly)
+                return;
             m_SlateProjection?.ApplyRuntimeOverlay(visualTime, activeTracks, activeClips);
         }
 
@@ -207,12 +252,22 @@ namespace BTSMTL.Timeline.Editor
             IReadOnlyDictionary<string, string> activeTracks,
             IReadOnlyDictionary<string, string> activeClips)
         {
+            if (!m_RuntimeObservationReadOnly)
+                return;
             m_SlateProjection?.ApplyHistoryOverlay(visualTime, activeTracks, activeClips);
         }
 
         public void ClearRuntimeObservation()
         {
             m_SlateProjection?.ClearRuntimeOverlay();
+        }
+
+        public void SetRuntimeObservationReadOnly(bool readOnly)
+        {
+            m_RuntimeObservationReadOnly = readOnly;
+            m_SlateProjection?.SetRuntimeReadOnly(readOnly);
+            if (!readOnly)
+                m_SlateProjection?.ClearRuntimeOverlay();
         }
 
         public void SetRuntimeObservationStatus(string message)
@@ -231,6 +286,7 @@ namespace BTSMTL.Timeline.Editor
             if (!asset)
                 throw new ArgumentNullException(nameof(asset));
             m_SourceGraphOwner = null;
+            m_RuntimeObservationReadOnly = false;
             Bind(
                 asset.Data,
                 asset,
@@ -353,6 +409,7 @@ namespace BTSMTL.Timeline.Editor
             }
 
             m_SlateProjection.AuthoringIssue += OnAuthoringIssue;
+            TimelineWorkspaceModeBridge.ApplyToWindow(this);
 
             AssetOpened?.Invoke(serializedOwner as TimelineAsset);
             WindowOpened?.Invoke(this);
@@ -485,6 +542,7 @@ namespace BTSMTL.Timeline.Editor
         void OnDisable()
         {
             WindowClosed?.Invoke(this);
+            TimelineWorkspaceModeBridge.OnWindowClosed(this);
             DisposeView();
         }
 
@@ -541,6 +599,9 @@ namespace BTSMTL.Timeline.Editor
             toolbar.Add(m_BackButton);
             toolbar.Add(m_SharedTimelineField);
             toolbar.Add(m_SourceSummary);
+            m_WorkspaceModeControls = TimelineWorkspaceModeBridge.CreateControls(this);
+            if (m_WorkspaceModeControls != null)
+                toolbar.Add(m_WorkspaceModeControls);
             toolbar.Add(m_Status);
             return toolbar;
         }
@@ -664,6 +725,11 @@ namespace BTSMTL.Timeline.Editor
         {
             if (!window || window.Timeline == null)
                 return;
+            if (!window.RuntimeObservationReadOnly)
+            {
+                window.ClearRuntimeObservation();
+                return;
+            }
             if (!window.TryResolveRuntimeObservation(
                     out RuntimeTimelinePlaybackDebugSummary summary,
                     out string observationMessage))

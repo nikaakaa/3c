@@ -32,11 +32,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             internal ObjectField Profile;
             internal ToolbarMenu Mode;
             internal ToolbarMenu Session;
-            internal Label Status;
         }
 
         sealed class Controller : ITimelineWorkspaceModeController
         {
+            const string ModeStateKey = "ThirdPersonCharacter.ScenePlay.Timeline.Mode";
+            const string ProfileGuidStateKey = "ThirdPersonCharacter.ScenePlay.Timeline.ProfileGuid";
+            const string DefaultProfileGuid = "f6a23791f8784a9f9ee35efd2ecbfcb7";
             const RuntimeTraceChannel TraceChannels =
                 RuntimeTraceChannel.Graph |
                 RuntimeTraceChannel.StateMachine |
@@ -57,12 +59,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             public Controller()
             {
+                int mode = SessionState.GetInt(ModeStateKey, (int)TimelineWorkspaceMode.Authoring);
+                m_Mode = Enum.IsDefined(typeof(TimelineWorkspaceMode), mode)
+                    ? (TimelineWorkspaceMode)mode
+                    : TimelineWorkspaceMode.Authoring;
+                string profileGuid = SessionState.GetString(ProfileGuidStateKey, DefaultProfileGuid);
                 m_Profile = AssetDatabase.LoadAssetAtPath<BtsmtlScenePlayProfile>(
-                    "Assets/Configs/Character/Corin/Pipeline/Preview/CorinGameplayPreviewProfile.asset");
+                    AssetDatabase.GUIDToAssetPath(profileGuid));
+                TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
             }
 
             public VisualElement CreateControls(TimelineEditorWindow window)
             {
+                for (int i = m_Controls.Count - 1; i >= 0; i--)
+                    if (m_Controls[i].Window == window)
+                        m_Controls.RemoveAt(i);
                 var controls = new Controls
                 {
                     Window = window,
@@ -73,29 +84,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         value = m_Profile
                     },
                     Mode = new ToolbarMenu { text = ModeLabel(m_Mode) },
-                    Session = new ToolbarMenu { text = "Session" },
-                    Status = new Label(m_Status)
+                    Session = new ToolbarMenu { text = "Session" }
                 };
-                controls.Profile.style.width = 190f;
+                controls.Profile.style.width = 170f;
                 controls.Profile.tooltip = "唯一 ScenePlay Profile；详细 Scene / Context / Actor 配置在 Profile Inspector。";
                 controls.Profile.RegisterValueChangedCallback(evt =>
                 {
                     m_Profile = evt.newValue as BtsmtlScenePlayProfile;
+                    string path = AssetDatabase.GetAssetPath(m_Profile);
+                    SessionState.SetString(
+                        ProfileGuidStateKey,
+                        string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path));
                     SetStatus(m_Profile == null ? "未选择 ScenePlay Profile。" : m_Profile.IsValid ? "Profile 已选择。" : "ScenePlay Profile 配置无效。");
                 });
-                AddModeActions(controls.Mode, window);
-                AddSessionActions(controls.Session, window);
-                var toolbar = new Toolbar();
-                toolbar.Add(controls.Profile);
-                toolbar.Add(controls.Mode);
-                toolbar.Add(controls.Session);
-                controls.Status.style.marginLeft = 6f;
-                controls.Status.style.flexGrow = 1f;
-                toolbar.Add(controls.Status);
+                AddModeActions(controls.Mode);
+                AddSessionActions(controls.Session);
+                var container = new VisualElement();
+                container.style.flexDirection = FlexDirection.Row;
+                container.Add(controls.Profile);
+                container.Add(controls.Mode);
+                container.Add(controls.Session);
                 m_Controls.Add(controls);
                 RefreshControls();
                 ApplyToWindow(window);
-                return toolbar;
+                return container;
             }
 
             public void ApplyToWindow(TimelineEditorWindow window)
@@ -115,10 +127,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void OnPlayModeChanged(PlayModeStateChange state)
             {
+                if (state == PlayModeStateChange.EnteredPlayMode)
+                {
+                    if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
+                        EditorApplication.delayCall += AttachRuntimeDebug;
+                    else if (m_Mode == TimelineWorkspaceMode.Preview)
+                        SetStatus("Preview | ScenePlay 已连接。");
+                }
                 if (state == PlayModeStateChange.ExitingPlayMode)
                 {
                     ReleaseRuntimeInterest();
                     m_Mode = TimelineWorkspaceMode.Authoring;
+                    SessionState.SetInt(ModeStateKey, (int)m_Mode);
                     TimelineWorkspaceModeBridge.SetActiveMode(m_Mode);
                     SetStatus("Authoring");
                 }
@@ -132,30 +152,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     ApplyToWindow(m_Controls[i].Window);
             }
 
-            void AddModeActions(ToolbarMenu menu, TimelineEditorWindow window)
+            void AddModeActions(ToolbarMenu menu)
             {
-                menu.menu.AppendAction("Authoring", _ => SetMode(TimelineWorkspaceMode.Authoring, window));
-                menu.menu.AppendAction("Preview", _ => SetMode(TimelineWorkspaceMode.Preview, window));
-                menu.menu.AppendAction("RuntimeDebug", _ => SetMode(TimelineWorkspaceMode.RuntimeDebug, window));
+                AppendModeAction(menu, TimelineWorkspaceMode.Authoring);
+                AppendModeAction(menu, TimelineWorkspaceMode.Preview);
+                AppendModeAction(menu, TimelineWorkspaceMode.RuntimeDebug);
             }
 
-            void AddSessionActions(ToolbarMenu menu, TimelineEditorWindow window)
+            void AppendModeAction(ToolbarMenu menu, TimelineWorkspaceMode mode)
+            {
+                menu.menu.AppendAction(
+                    ModeLabel(mode),
+                    _ => SetMode(mode),
+                    _ => m_Mode == mode
+                        ? DropdownMenuAction.Status.Checked
+                        : DropdownMenuAction.Status.Normal);
+            }
+
+            void AddSessionActions(ToolbarMenu menu)
             {
                 menu.menu.AppendAction(
                     "Start Preview",
-                    _ => SetMode(TimelineWorkspaceMode.Preview, window),
+                    _ => SetMode(TimelineWorkspaceMode.Preview),
                     _ => m_Profile != null && m_Profile.IsValid && !EditorApplication.isPlaying
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
                 menu.menu.AppendAction(
                     "Pause",
-                    _ => SubmitSessionCommand(window, true),
+                    _ => SubmitSessionCommand(true),
                     _ => HasSessionHost()
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
                 menu.menu.AppendAction(
                     "Resume",
-                    _ => SubmitSessionCommand(window, false),
+                    _ => SubmitSessionCommand(false),
                     _ => HasSessionHost()
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
@@ -186,12 +216,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         : DropdownMenuAction.Status.Disabled);
             }
 
-            void SetMode(TimelineWorkspaceMode mode, TimelineEditorWindow window)
+            void SetMode(TimelineWorkspaceMode mode)
             {
                 if (mode == TimelineWorkspaceMode.Authoring)
                 {
                     ReleaseRuntimeInterest();
                     m_Mode = mode;
+                    SessionState.SetInt(ModeStateKey, (int)m_Mode);
                     TimelineWorkspaceModeBridge.SetActiveMode(mode);
                     SetStatus("Authoring");
                     return;
@@ -203,7 +234,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 }
                 if (mode == TimelineWorkspaceMode.Preview)
                 {
+                    ReleaseRuntimeInterest();
                     m_Mode = mode;
+                    SessionState.SetInt(ModeStateKey, (int)m_Mode);
                     TimelineWorkspaceModeBridge.SetActiveMode(mode);
                     if (!EditorApplication.isPlaying)
                         StartPreview();
@@ -212,8 +245,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     return;
                 }
                 m_Mode = mode;
+                SessionState.SetInt(ModeStateKey, (int)m_Mode);
                 TimelineWorkspaceModeBridge.SetActiveMode(mode);
-                AttachRuntimeDebug();
+                if (!EditorApplication.isPlaying)
+                    StartPreview();
+                else
+                    AttachRuntimeDebug();
             }
 
             void StartPreview()
@@ -235,7 +272,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 SetStatus("ScenePlay 已提交停止。");
             }
 
-            void SubmitSessionCommand(TimelineEditorWindow window, bool pause)
+            void SubmitSessionCommand(bool pause)
             {
                 SimulationSessionHost host = UnityEngine.Object.FindObjectOfType<SimulationSessionHost>();
                 if (!host)
@@ -296,8 +333,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 FixedCharacterHost[] hosts = UnityEngine.Object.FindObjectsByType<FixedCharacterHost>(FindObjectsSortMode.None);
                 if (hosts.Length == 0)
                     return null;
-                if (m_Profile == null || string.IsNullOrEmpty(m_Profile.DefaultActorId))
-                    return hosts.Length == 1 ? hosts[0] : null;
+                if (m_Profile == null)
+                    return null;
                 for (int i = 0; i < hosts.Length; i++)
                     if (string.Equals(hosts[i].ActorId.Value, m_Profile.DefaultActorId, StringComparison.Ordinal))
                         return hosts[i];
@@ -318,7 +355,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 FixedCharacterHost host = ResolveActorHost();
                 CharacterTimelineHost timelineHost = host?.TimelineHost;
-                if (!timelineHost || host.CharacterDefinition == null)
+                if (timelineHost == null || host.CharacterDefinition == null)
                 {
                     SetStatus("当前 Actor 没有可用 Timeline Host。");
                     return;
@@ -340,7 +377,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 FixedCharacterHost host = ResolveActorHost();
                 CharacterTimelineHost timelineHost = host?.TimelineHost;
-                if (!timelineHost || !timelineHost.TryPublishContentAdoption(
+                if (timelineHost == null)
+                {
+                    SetStatus("当前 Actor 没有可用 Timeline Host。");
+                    return;
+                }
+                if (!timelineHost.TryPublishContentAdoption(
                         m_PendingPlan,
                         out CharacterTimelineContentPublication publication,
                         out string error))
@@ -356,7 +398,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 FixedCharacterHost host = ResolveActorHost();
                 CharacterTimelineHost timelineHost = host?.TimelineHost;
-                if (!timelineHost || !timelineHost.TryAdoptContent(
+                if (timelineHost == null)
+                {
+                    SetStatus("当前 Actor 没有可用 Timeline Host。");
+                    return;
+                }
+                if (!timelineHost.TryAdoptContent(
                         m_PublishedContent,
                         out CharacterTimelineContentAdoptionReport report))
                 {
@@ -380,7 +427,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     }
                     controls.Mode.text = ModeLabel(m_Mode);
                     controls.Profile.SetValueWithoutNotify(m_Profile);
-                    controls.Status.text = m_Status;
                 }
             }
 

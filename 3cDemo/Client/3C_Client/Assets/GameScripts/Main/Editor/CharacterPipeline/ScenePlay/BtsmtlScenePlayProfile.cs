@@ -14,6 +14,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         public string ScenePath => m_Scene ? AssetDatabase.GetAssetPath(m_Scene) : string.Empty;
         public string ContextId => m_ContextId?.Trim() ?? string.Empty;
         public string DefaultActorId => m_DefaultActorId?.Trim() ?? string.Empty;
-        public bool IsValid => m_Scene && !string.IsNullOrEmpty(ScenePath) && !string.IsNullOrEmpty(ContextId);
+        public bool IsValid => m_Scene &&
+                               !string.IsNullOrEmpty(ScenePath) &&
+                               !string.IsNullOrEmpty(ContextId) &&
+                               !string.IsNullOrEmpty(DefaultActorId);
     }
 }

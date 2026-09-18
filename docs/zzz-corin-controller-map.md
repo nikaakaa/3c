@@ -6,9 +6,9 @@
 
 | 组 | 状态数 | 3C 归属 | 当前结论 |
 |---|---:|---|---|
-| NormalAttack | 12 | Control + Attack Ability + Timeline | 五段主链已有 3C 简化执行链；End/Explode 状态和保持键分支还未完整对齐。 |
-| BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | AttackProperty payload 已就位；多个状态复用其他 Branch Motion，必须按 Motion 引用而不是状态名抄录。 |
-| RushAttack | 8 | Control + Attack Ability + Timeline + Pose | AttackProperty payload 已就位；Enhance 分支存在跨名 Motion 引用，需要先对齐 Timeline 起止。 |
+| NormalAttack | 12 | Control + Attack Ability + Timeline | 已精确对账：12状态全部有真实Clip绑定（End/Explode全同名精确；`Attack_Normal_05_End_2`实际绑`Attack_Normal_05_B`）。 |
+| BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | 已精确对账：18状态全部有真实Clip绑定，Branch_01/03大量共享Branch_02与Branch_Loop/Walk共享Motion；缺的是Timeline/Pose binding与Ability状态，不是Clip。 |
+| RushAttack | 8 | Control + Attack Ability + Timeline + Pose | 已精确对账：8状态全部有真实Clip绑定（`Attack_Rush_Enhance`实际绑`Enhance_Start`，Enhance_End复用`Attack_Rush_Explode`）；缺Timeline/Pose binding与Ability状态。 |
 | AidCounterAttack | 20 | Control + Combat/Aid Ability + Timeline | 仅有效果/镜头证据，没有正式 3C Aid/Counter 执行链；AssaultAid 只有 raw Motion。 |
 | EvadeHit | 8 | Control + Pose + Hit feedback | Dodge 已有正式 Ability；Hit/HitFly 状态复用 Front/Back Motion，还没有完整 3C 链。 |
 | Switch | 11 | Control + Switch Ability | SwitchIn/SwitchOut 还没有正式 Control 请求与 Switch Ability。 |
@@ -23,48 +23,48 @@
 
 ## 状态到 Motion 对照
 
-只使用控制器 BlendTree 的实际 `Clip` 引用；状态名和 Motion 名不同时不做近似猜测。`raw-only` 表示现有导出包还不能直接进 Unity。
+只使用控制器 BlendTree 的实际 `Clip` 引用；状态名和 Motion 名不同时不做近似猜测。`raw-only` 表示现有导出包还不能直接进 Unity。Normal/Branch/Rush 已完成 BlendTree 叶子精确对账；共享 Motion 和非同名绑定逐行标注。
 
 | 状态组 | ZZZ 状态 | Motion 证据 | 证据类型 | 3C 缺口 |
 |---|---|---|---|---|
-| NormalAttack | `Attack_Normal_01` | `Attack_Normal_01` | exported-anim | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_01_End` | `Attack_Normal_01_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_02` | `Attack_Normal_02` | exported-anim | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_02_End` | `Attack_Normal_02_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_03` | `Attack_Normal_03` | exported-anim | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_03_End` | `Attack_Normal_03_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_03_Explode` | `Attack_Normal_03_Explode` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_04` | `Attack_Normal_04` | exported-anim | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_04_End` | `Attack_Normal_04_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_05` | `Attack_Normal_05` | exported-anim | 已由现有五段简化链覆盖 |
-| NormalAttack | `Attack_Normal_05_End` | `Attack_Normal_05_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
-| NormalAttack | `Attack_Normal_05_End_2` | `Attack_Normal_05_B` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
-| BranchAttack | `Attack_Branch_01` | `Attack_Branch_01` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_01_End` | `Attack_Branch_01_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_01_Explode` | `Attack_Branch_01_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_01_NotExplode` | `Attack_Branch_01_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_02` | `Attack_Branch_02` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_02_End` | `Attack_Branch_02_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_02_Explode` | `Attack_Branch_02_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_02_Loop` | `Attack_Branch_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_02_Walk` | `Attack_Branch_Walk` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03` | `Attack_Branch_02` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_End` | `Attack_Branch_02_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Enhance_Loop` | `Attack_Branch_03_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Enhance_Walk` | `Attack_Branch_03_Walk_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Explode` | `Attack_Branch_02_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Loop` | `Attack_Branch_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Shake` | `Attack_Branch_03_Shake` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Walk` | `Attack_Branch_03_Walk_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| BranchAttack | `Attack_Branch_03_Walk_Shake` | `Attack_Branch_03_Walk_Shake` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush` | `Attack_Rush` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_End` | `Attack_Rush_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance` | `Attack_Rush_Enhance_Start` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance_End` | `Attack_Rush_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance_Explode` | `Attack_Rush_Enhance_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance_Explode_End` | `Attack_Rush_Enhance_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Enhance_Loop` | `Attack_Rush_Enhance_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
-| RushAttack | `Attack_Rush_Explode` | `Attack_Rush_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| NormalAttack | `Attack_Normal_01` | `Attack_Normal_01` | exported-anim | 精确同名绑定（BlendTree单叶，已导出） |
+| NormalAttack | `Attack_Normal_01_End` | `Attack_Normal_01_End` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_02` | `Attack_Normal_02` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_02_End` | `Attack_Normal_02_End` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_03` | `Attack_Normal_03` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_03_End` | `Attack_Normal_03_End` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_03_Explode` | `Attack_Normal_03_Explode` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_04` | `Attack_Normal_04` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_04_End` | `Attack_Normal_04_End` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_05` | `Attack_Normal_05` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_05_End` | `Attack_Normal_05_End` | exported-anim | 精确同名绑定（已导出） |
+| NormalAttack | `Attack_Normal_05_End_2` | `Attack_Normal_05_B` | exported-anim | 非同名：状态实际绑定`Attack_Normal_05_B`（已导出），状态名≠Clip名 |
+| BranchAttack | `Attack_Branch_01` | `Attack_Branch_01` | exported-anim | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_01_End` | `Attack_Branch_01_End` | exported-anim | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_01_Explode` | `Attack_Branch_01_Explode` | exported-anim | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_01_NotExplode` | `Attack_Branch_01_Explode` | exported-anim | 共享Motion：与`Attack_Branch_01_Explode`状态绑同一Clip（已导出），NotExplode语义差异在转移条件不在Motion |
+| BranchAttack | `Attack_Branch_02` | `Attack_Branch_02` | exported-anim | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_02_End` | `Attack_Branch_02_End` | exported-anim | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_02_Explode` | `Attack_Branch_02_Explode` | exported-anim | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_02_Loop` | `Attack_Branch_Loop` | exported-anim | 共享Motion：Branch_Loop为Branch_02/03_Loop共享（已导出） |
+| BranchAttack | `Attack_Branch_02_Walk` | `Attack_Branch_Walk` | exported-anim | 共享Motion：Branch_Walk（已导出），非Branch_02专属 |
+| BranchAttack | `Attack_Branch_03` | `Attack_Branch_02` | exported-anim | 共享Motion：Branch_03主体复用Branch_02 Clip（已导出） |
+| BranchAttack | `Attack_Branch_03_End` | `Attack_Branch_02_End` | exported-anim | 共享Motion：复用Branch_02_End（已导出） |
+| BranchAttack | `Attack_Branch_03_Enhance_Loop` | `Attack_Branch_03_Loop` | exported-anim | 共享Motion：与Branch_03_Loop同Clip（已导出），增强差异在参数/转移 |
+| BranchAttack | `Attack_Branch_03_Enhance_Walk` | `Attack_Branch_03_Walk_Loop` | exported-anim | 共享Motion：与Branch_03_Walk同Clip（已导出） |
+| BranchAttack | `Attack_Branch_03_Explode` | `Attack_Branch_02_Explode` | exported-anim | 共享Motion：复用Branch_02_Explode（已导出） |
+| BranchAttack | `Attack_Branch_03_Loop` | `Attack_Branch_Loop` | exported-anim | 共享Motion：Branch_Loop（已导出） |
+| BranchAttack | `Attack_Branch_03_Shake` | `Attack_Branch_03_Shake` | exported-anim | 精确同名绑定（已导出） |
+| BranchAttack | `Attack_Branch_03_Walk` | `Attack_Branch_03_Walk_Loop` | exported-anim | 精确绑定（非同名后缀_Loop，已导出） |
+| BranchAttack | `Attack_Branch_03_Walk_Shake` | `Attack_Branch_03_Walk_Shake` | exported-anim | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush` | `Attack_Rush` | exported-anim | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush_End` | `Attack_Rush_End` | exported-anim | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush_Enhance` | `Attack_Rush_Enhance_Start` | exported-anim | 非同名：状态实际绑定`Attack_Rush_Enhance_Start`（已导出） |
+| RushAttack | `Attack_Rush_Enhance_End` | `Attack_Rush_Explode` | exported-anim | 共享Motion：复用`Attack_Rush_Explode`（已导出） |
+| RushAttack | `Attack_Rush_Enhance_Explode` | `Attack_Rush_Enhance_Explode` | exported-anim | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush_Enhance_Explode_End` | `Attack_Rush_Enhance_End` | exported-anim | 共享Motion：复用Enhance_End状态所绑Clip（已导出） |
+| RushAttack | `Attack_Rush_Enhance_Loop` | `Attack_Rush_Enhance_Loop` | exported-anim | 精确同名绑定（已导出） |
+| RushAttack | `Attack_Rush_Explode` | `Attack_Rush_Explode` | exported-anim | 精确同名绑定（已导出） |
 | AidCounterAttack | `Attack_AssaultAid` | `AssaultAid` | raw-only | 先补 `.anim` 解码，再建立 Timeline、Pose binding 与 Ability 状态 |
 | AidCounterAttack | `Attack_AssaultAid_End` | `AssaultAid_End` | raw-only | 先补 `.anim` 解码，再建立 Timeline、Pose binding 与 Ability 状态 |
 | AidCounterAttack | `Attack_BeHitAid` | `Attack_Counter` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |

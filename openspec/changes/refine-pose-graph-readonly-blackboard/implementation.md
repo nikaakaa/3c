@@ -98,3 +98,11 @@
 - CommitFrame合同对齐（8d824d0bf）：旧合同要求demand/result页完成装配才许收帧，但装配链生产者（BindDemand/PrepareFrameResult）随执行壳删除后零调用，新管线永远无法满足。收帧改为开帧校验+后端CommitFrame+物理源CommitFrame+页面清理；已提交源不重连（PrepareNativeClipPlayer按ContainsCommitted跳过catalog重建），每帧仅pending登记走正常提交。
 - 死面登记：模块BindDemand/RequireDemand/PrepareFrameResult/RequirePendingReady/SealReadiness/HasPreparedSource/RequirePreparedResources/EnterEvaluateBarrier/CaptureUsage/ClearUsage/RequireTuning及FramePage的demand/result半边在新管线零调用方，属执行壳残留，待专门清理pass统一删除。
 - 编译证据：Runtime 0错误（强制参数+build-server shutdown）。Play侧Replay重跑归用户。
+
+## RunPoseFrame评估状态门补齐（2026-09-19）
+
+- 现象：源模块生命周期接回后Replay推进到ValidatePending报 Pose native pending validation input is invalid（GraphRuntime.ValidatePending:693），PlayModeErrorAutoExit杀Play，Trace无法保存。
+- 定案：693门三条件（result无效/lineage不等/status非Evaluated）中唯一可达是第三个——根图Evaluate内部异常被catch转Faulted结果返回，而RunPoseFrame只gate了preparation没gate evaluation，Faulted结果直冲ValidatePending触发合同异常。lineage由同帧m_CompletedLineage构造不可能不等，Evaluated结果IsValid恒真。
+- 修复（3e99c84c1）：RunPoseFrame评估后状态门——非Evaluated时Warning日志携带evaluation.Source与Message（把被吞的底层真因暴露到下一轮Play日志），按失败码Discard会话并丢弃表现帧，录制不再被合同异常打断。
+- 待办：下一轮Play按Warning日志指认的底层Evaluate失败收口（静态候选：native playable Job完成时机与EnterEvaluateBarrier零调用——同步评估屏障属旧执行壳流程，新管线未接；ClipPlayerHandler.CompleteFrame的CompletedAt检查可能每帧错帧）。
+- 编译证据：Runtime 0错误（强制参数+shutdown）。Play验证归用户。

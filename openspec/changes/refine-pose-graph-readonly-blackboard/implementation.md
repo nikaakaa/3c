@@ -82,3 +82,10 @@
 - ODE二次复盘（Play复现）：Editor.log显示自动退出由PlayModeErrorAutoExit对首错的响应触发；最终会话进入Play后无主异常、首帧BeginFrame即ObjectDisposed——静态三轮审计（包装器/表现/注册/静态tick驻留/回滚宿主/子图child全链）确认主线所有权闭合下该状态不可达，判定存在审计链外销毁者；GraphRuntime.Dispose入口已加正式销毁溯源日志（实例/图/启动状态+调用栈），下次运行按日志指认越权销毁者后收口修复。
 
 - ODE根因定案与修复（2866df5d6）：销毁溯源日志指认越权销毁者为PoseCanvasGraphEditorEntryPoint.Restore的DestroyTransientPoseGraphs——Editor delay call把Play中运行时正挂接的正式瞬态图当编辑态残留DestroyImmediate，经OnGraphObjectDestroy反调Dispose。修复：清理增加NativeRuntime挂接判据，仅清理无挂接残留；溯源诊断完成使命移除。spec同步新增"编辑器残留清理MUST NOT销毁运行中挂接的Pose瞬态图"条款。
+## 图启动初始化恢复、校验边界显式化与失败归一化修复（2026-09-19）
+
+- 图启动初始化恢复（7eb4133e7，另一窗口代为落地）：前轮激进清理误删AttachAndStart/InitializeGraph调用链，恢复后图可正常启动挂接；Actor稳定哈希→instanceId转换同步修正（actorId.Value为hex字符串，取前16位Convert.ToUInt64(hex.Substring(0,16),16)），与子图StableHash派生口径一致。
+- 校验边界显式化（33d3c144b）：隐式边界推断删除，BoundaryKind收敛为合同层CharacterPoseNativeGraphBoundary枚举，PrepareRequest与PreparedBinding全程携带；根图/子图校验按实例边界判定，不再依赖位置猜测。
+- spec口径入档（38d9da97e）：character-pose-graph-runtime-architecture新增单owner不可运行期替换、repeat replay同实例按递增resetGeneration重置且失败精确抛错、Actor派生实例身份跨Host唯一三条合同。
+- 失败归一化二次异常修复（6a90d57d3）：PrepareFrame catch把原始异常转Failed结果时，若exception.Message为空，CharacterPoseNativePreparationResult构造器因source/message非空白合同自身抛ArgumentException吞掉真正根因（Replay推进报"Pose native preparation result is invalid"即此形态）。修复：包装消息统一为"类型名: 消息"保证非空；CompletedLineage无效时带InnerException抛InvalidOperationException显式上抛，不再构造非法结果。
+- 编译证据：ThirdPersonClient.Runtime.csproj与ThirdPersonClient.Editor.csproj均0错误（--disable-build-servers /nr:false /p:UseSharedCompilation=false），结束后已执行dotnet build-server shutdown。固定输入Replay录制重跑与端到端验证归用户Play侧。

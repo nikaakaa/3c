@@ -41,19 +41,19 @@ Preview 允许作者继续编辑正式数据。修改流程为：
 
 ```text
 作者 Mutation / Undo
-→ 导出作者闭包
-→ 后台 Prepare / Build
-→ 发布新的内容 revision
+→ Export 冻结作者 Timeline 闭包
+→ Prepare 校验当前 Host、内容代次与兼容拓扑
+→ Publish 封存本次 Export
 → 正式 adoption barrier
-→ 同一 Session 继续运行并采用
+→ 同一 Session 的后续 playback 采用新内容
 ```
 
 Preview 的目标是“在真实场景里改了之后会怎样”。因此 UI 必须同时让作者知道：
 
 - 当前 ScenePlay Session、Actor、Ability 和调用目标；
-- 作者版本与当前运行采用版本；
-- 修改是否只影响下一帧、下一次激活、下一次调用，还是必须重新发布；
-- 运行继续使用旧版本时，旧版本和新版本分别是什么。
+- 作者版本、已采用版本、已导出/准备/发布版本；
+- Session generation 与 RuntimeDebug target revision；
+- 修改是否只影响下一次正式调用，还是必须重新导出或新 Session。
 
 ### 2.3 RuntimeDebug
 
@@ -103,7 +103,7 @@ Ability
 状态：一行显示 Session、版本差异或失败原因
 ```
 
-`Session` 菜单统一承载 `Start Preview`、`Pause`、`Resume`、`Stop`，以及内容采用链路的 `Prepare`、`Publish`、`Adopt`。这些命令按当前状态显示或禁用，不在 Timeline 顶栏增加常驻按钮。Scene、Context 和 Default Actor 只在 `BtsmtlScenePlayProfile` Inspector 中配置，Timeline 顶栏只选择 Profile 资产。
+`Session` 菜单统一承载 `Start Preview`、`Pause`、`Resume`、`Stop`，内容采用链路的 `Export`、`Prepare`、`Publish`、`Adopt`，以及 RuntimeDebug 的 `Capture`、`History`、`Resume Live`。这些命令按当前状态显示或禁用，不在 Timeline 顶栏增加常驻按钮。Scene、Context 和 Default Actor 只在 `BtsmtlScenePlayProfile` Inspector 中配置，Timeline 顶栏只选择 Profile 资产。
 
 Authoring 和 Preview 可以使用 FlowCanvas 与 Slate 的可编辑表面；RuntimeDebug 复用同一视觉表面但切换为只读 projection。可以复用 Slate 的时间尺、Track、Clip、缩放、滚动和绘制算法，但 Runtime projection 不得直接复用 Authoring projection 作为数据源。
 
@@ -120,10 +120,10 @@ Authoring 和 Preview 可以使用 FlowCanvas 与 Slate 的可编辑表面；Run
 `BtsmtlScenePlayProfile` 是唯一预览入口配置，字段只包含：
 
 - `Scene`：正式 ScenePlay 场景资产；
-- `ContextId`：该场景中的正式 ScenePlay Context；
-- `DefaultActorId`：Context roster 中默认绑定的 Actor。
+- `ContextId`：该场景中正式 `SimulationSessionCompositionDefinition.SessionId`；
+- `DefaultActorId`：该 Session roster 中默认绑定的 Actor。
 
-Profile 不保存 Session、Actor runtime identity、当前 revision、运行时间、暂停状态、Capture、History 或窗口选择。这些状态仍由 ScenePlay、正式 Actor host 和 RuntimeDebugSession 拥有。
+Profile 不保存 Session、Actor runtime identity、当前 revision、运行时间、暂停状态、Capture、History 或窗口选择。这些状态仍由 ScenePlay、正式 Actor host 和 RuntimeDebugSession 拥有。连接时先按 `ContextId` 找唯一正式 Session，再仅在该 Session 内找 `DefaultActorId`；缺失或不唯一都拒绝连接，不能退回全场景名称匹配。
 
 Timeline 顶部只显示 Profile 资产选择、三种形态切换和 Session 菜单。Scene、Context 与 Actor 的详细编辑只出现在 Profile Inspector。Profile 无效时只显示一条错误和定位 Profile 的入口，不展开配置表单；当前窗口不重复显示 Scene、Context 或 Actor 字段。
 
@@ -131,11 +131,11 @@ Timeline 顶部只显示 Profile 资产选择、三种形态切换和 Session �
 
 ### 5.1 可以轻量采用的修改
 
-参数、曲线、Clip 时间、窗口值和正式合同允许的内容变化，可以在同一 Session 内后台导出和准备。旧版本在准备期间继续运行；新版本只能在正式安全边界采用。UI 显示 `作者已修改`、`准备中`、`待采用`、`已采用` 或 `应用失败`，不得把 Mutation 成功直接画成 Runtime 已生效。
+参数、曲线、Clip 时间、窗口值和正式合同允许的内容变化，可以在同一 Session 内 Export 和 Prepare。Export 冻结作者闭包；Plan 记录当前 Timeline Host 会话标识与内容代次；Publish 和 Adopt 都重新核对作者/content revision。旧版本在准备和发布期间继续运行；新版本只能在正式安全边界采用，且只影响后续 playback。UI 显示 `作者已修改`、`已导出`、`已准备`、`待采用`、`已采用` 或 `已拒绝/失败`，不得把 Mutation 成功直接画成 Runtime 已生效。
 
 ### 5.2 需要明确边界的修改
 
-节点/连接/Track/Clip 拓扑、Graph 依赖、状态布局、Composition、Scene、Actor roster、C# 代码和运行模块变化，不承诺当前活动实例原地无感替换。兼容的内容 revision 可以延迟到下一次调用或正式 adoption barrier；不兼容的版本必须显示需要重新发布、重建或新 Session。
+节点/连接/Track/Clip 拓扑、Graph 依赖、状态布局、Composition、Scene、Actor roster、C# 代码和运行模块变化，不承诺当前活动实例原地无感替换。Track/Clip identity 或合同拓扑变化会在 Prepare/Publish/Adopt 被拒绝；其它 Session 结构变化必须重新建立正式 Session。兼容的内容 revision 可以延迟到下一次调用或正式 adoption barrier；不兼容的版本必须显示需要重新发布、重建或新 Session。
 
 不能出现一半旧调用栈、一半新 Graph、旧 Snapshot 对新 SourceMap 或旧 Playback 对新状态布局的混合状态。
 
@@ -174,5 +174,5 @@ RuntimeDebug 的时间、活跃集合、Clip 生长、退出原因和历史位�
 - Slate 和 FlowCanvas 是工具表面，不是业务状态所有者。
 - ScenePlay 拥有运行生命周期；Workbench 不推进业务帧。
 - RuntimeDebug 只消费 SourceMap 和提交事实；不从作者资产猜运行结果。
-- 当前运行版本、作者版本和待采用版本必须分开显示。
+- 作者版本、已采用版本、已导出/准备/发布版本、Session generation 和 RuntimeDebug target revision 必须分开显示。
 - CMC 只能提供体验参考，不能形成平行执行路径。

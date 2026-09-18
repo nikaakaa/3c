@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: CorinGameplayPreviewProfile
   m_EditorClassIdentifier: 
   m_Scene: {fileID: 102900000, guid: 7c268906406444dcbe943f04986321ba, type: 3}
-  m_ContextId: btsmtl-preview
+  m_ContextId: corin-gameplay-lab-fixed-local
   m_DefaultActorId: fixed-player

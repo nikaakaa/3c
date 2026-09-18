@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Runtime;
 using ThirdPersonSimulation;
+using ThirdPersonGameplay.Tick;
 using TreeDesigner;
 using TimelinePlaybackStatus = BTSMTL.Timeline.TimelinePlaybackStatus;
 using UnityEngine;
@@ -182,8 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     public enum CharacterTimelinePlaybackSourceKind : byte
     {
         None = 0,
-        FixedPreview = 1,
-        AbilityRuntime = 2
+        AbilityRuntime = 1
     }
     public readonly struct CharacterTimelinePlaybackObservation
     {
@@ -268,23 +270,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal string SourceName;
             internal CharacterTimelinePlaybackSourceKind SourceKind;
             internal bool CoreDriven;
+            internal TimelinePlaybackActionContext ActionContext;
             internal ulong ActionInstanceId;
+            internal RuntimeInstanceKey RuntimeInstance;
+            internal RuntimeTimelinePlaybackProvenance Provenance;
+            internal bool TerminalPublished;
         }
 
         TimelineRuntimeCompositionHost m_Host;
         readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
         readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
+        readonly Guid m_ContentSessionIdentity = Guid.NewGuid();
         readonly Dictionary<ulong, CharacterTimelinePendingAdvance> m_PendingAdvances =
             new Dictionary<ulong, CharacterTimelinePendingAdvance>();
         readonly Dictionary<ulong, CharacterTimelinePendingStop> m_PendingStops =
             new Dictionary<ulong, CharacterTimelinePendingStop>();
         readonly string m_SourceName;
         ulong m_TickCounter;
-        TimelinePlaybackHandle m_PreviewHandle;
         TimelineRuntimeNumericTarget m_NumericTarget;
+        TimelineAsset[] m_AuthoringTimelineContent = Array.Empty<TimelineAsset>();
         internal ThirdPersonSimulation.IAbilityTreeClipInvoker m_ActiveTreeClipInvoker;
+        RuntimeDiagnosticsContext m_Diagnostics;
         int m_TickRate;
+        ulong m_ContentGeneration;
         bool m_Initialized;
 
         public CharacterTimelineHost(string sourceName)
@@ -307,6 +316,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
         public bool IsInitialized => m_Initialized && m_Host != null;
+        public string AuthoringContentRevision { get; private set; } = string.Empty;
+        public string ContentRevision { get; private set; } = string.Empty;
+        public ulong ContentGeneration => m_ContentGeneration;
+        public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
+        public event Action<TimelineRuntimePlaybackHandle> PresentationPlaybackEnded;
+
+        public void AttachRuntimeDiagnostics(RuntimeDiagnosticsContext diagnostics)
+        {
+            if (diagnostics == null)
+                throw new ArgumentNullException(nameof(diagnostics));
+            if (m_Diagnostics != null && !ReferenceEquals(m_Diagnostics, diagnostics))
+                throw new InvalidOperationException("CharacterTimelineHost already belongs to another RuntimeDiagnosticsContext.");
+            m_Diagnostics = diagnostics;
+        }
 
         internal void Initialize(TimelineRuntimeNumericTarget numericTarget, int tickRate)
         {
@@ -317,7 +340,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_NumericTarget = numericTarget;
             m_TickRate = tickRate;
 
-            var contractCatalog = new TimelineContractCatalog(Array.Empty<ITimelineContractProvider>());
+            TimelineContractCatalog contractCatalog = TimelineTreeContractComposition.Create();
             var callBindingSource = new TimelineRuntimeCallBindingSource(
                 m_SourceName, "character-timeline", default);
             var domainResolver = new CharacterTimelineDomainBindingResolver(
@@ -334,6 +357,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Array.Empty<ITimelineRuntimeEvaluationSink>(),
                 treeClipService,
                 tickRate);
+            m_Host.CommittedEvaluation += OnCommittedTimelineEvaluation;
+            m_Host.StopCommitted += OnTimelineStopCommitted;
             m_Initialized = true;
         }
 
@@ -356,6 +381,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 sourceActivation,
                 sourceRuntimeGraph,
                 CharacterTimelinePlaybackSourceKind.None,
+                -1,
+                CreatePlaybackProvenance(sourceId, sourceName, sourceActivation, sourceRuntimeGraph),
                 out handle);
         }
 
@@ -368,6 +395,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TreeExecutionActivationScope sourceActivation,
             BaseGraph sourceRuntimeGraph,
             CharacterTimelinePlaybackSourceKind sourceKind,
+            int sourceOperationIndex,
+            RuntimeTimelinePlaybackProvenance provenance,
             out TimelinePlaybackHandle handle)
         {
             if (!m_Initialized || m_Host == null)
@@ -375,19 +404,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 handle = TimelinePlaybackHandle.Invalid;
                 return false;
             }
+            TimelineData playbackTimeline = timeline?.Clone();
             if (!m_Host.RequestTimelinePlayback(
-                timeline, sourceId, sourceName, actionContext, playbackMode,
+                playbackTimeline, sourceId, sourceName, actionContext, playbackMode,
                 sourceActivation, sourceRuntimeGraph, out handle))
                 return false;
-            m_ActivePlaybacks.Add(new ActivePlayback
+            var active = new ActivePlayback
             {
                 Handle = handle,
-                Timeline = timeline,
+                Timeline = playbackTimeline,
                 SourceName = sourceName ?? string.Empty,
                 SourceKind = sourceKind,
                 CoreDriven = false,
-                ActionInstanceId = actionContext.ActionInstanceId
-            });
+                ActionContext = actionContext,
+                ActionInstanceId = actionContext.ActionInstanceId,
+                RuntimeInstance = CreateRuntimeInstance(handle, actionContext.ActionInstanceId, sourceOperationIndex),
+                Provenance = provenance
+            };
+            m_ActivePlaybacks.Add(active);
+            PublishPlaybackSnapshot(active);
+            PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineRequested, "Requested", string.Empty);
+            PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineStarted, "Running", string.Empty);
             return true;
         }
 
@@ -397,38 +434,413 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException("Timeline content requires an initialized CharacterTimelineHost.");
             if (timelines == null)
                 throw new ArgumentNullException(nameof(timelines));
+            if (!TryComputeContentRevisions(timelines, out string authoringRevision, out string contentRevision, out List<string> errors))
+                throw new InvalidOperationException(string.Join(" | ", errors));
+            if (!TryFreezeContent(timelines, out List<CharacterTimelineContentSnapshot> snapshots, out errors))
+                throw new InvalidOperationException(string.Join(" | ", errors));
+            m_AuthoringTimelineContent = timelines.ToArray();
+            InstallTimelineContent(snapshots, authoringRevision, contentRevision);
+        }
+
+        void InstallTimelineContent(
+            IReadOnlyList<CharacterTimelineContentSnapshot> snapshots,
+            string authoringRevision,
+            string contentRevision)
+        {
+            if (snapshots == null || snapshots.Count == 0)
+                throw new ArgumentException("Timeline content snapshots are required.", nameof(snapshots));
             m_TimelineContent.Clear();
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                CharacterTimelineContentSnapshot snapshot = snapshots[i];
+                TimelineData timeline = snapshot?.CloneData();
+                if (timeline == null)
+                    throw new InvalidOperationException("Timeline content snapshot is invalid.");
+                if (!m_TimelineContent.TryAdd(timeline.AuthoringId, timeline))
+                    throw new InvalidOperationException($"Timeline content identity '{timeline.AuthoringId}' is duplicated.");
+            }
+            AuthoringContentRevision = authoringRevision ?? string.Empty;
+            ContentRevision = contentRevision ?? string.Empty;
+            m_ContentGeneration = checked(m_ContentGeneration + 1);
+        }
+
+        public bool TryExportContent(
+            out CharacterTimelineContentExport export,
+            out string error)
+        {
+            export = null;
+            error = string.Empty;
+            if (!IsInitialized)
+            {
+                error = "Timeline content export requires an initialized CharacterTimelineHost.";
+                return false;
+            }
+            if (!TryGetCurrentContentRevisions(
+                    out string authoringRevision,
+                    out string contentRevision,
+                    out List<string> errors))
+            {
+                error = string.Join(" | ", errors);
+                return false;
+            }
+            if (!TryFreezeContent(m_AuthoringTimelineContent, out List<CharacterTimelineContentSnapshot> snapshots, out errors))
+            {
+                error = string.Join(" | ", errors);
+                return false;
+            }
+            export = new CharacterTimelineContentExport(snapshots, authoringRevision, contentRevision);
+            return true;
+        }
+
+        public bool TryPrepareContentAdoption(
+            CharacterTimelineContentExport export,
+            out CharacterTimelineContentAdoptionPlan plan,
+            out string error)
+        {
+            plan = null;
+            error = string.Empty;
+            if (!IsInitialized)
+            {
+                error = "Timeline content adoption requires an initialized CharacterTimelineHost.";
+                return false;
+            }
+            if (!TryValidateCurrentExport(export, out error))
+                return false;
+            if (!HasCompatibleContentTopology(export.Snapshots))
+            {
+                error = "Timeline content topology or contract changed; a new Session is required.";
+                return false;
+            }
+            plan = new CharacterTimelineContentAdoptionPlan(
+                export,
+                m_ContentSessionIdentity,
+                m_ContentGeneration,
+                true,
+                string.Equals(ContentRevision, export.ContentRevision, StringComparison.Ordinal)
+                    ? "Timeline content is already adopted."
+                    : "Timeline content is prepared for adoption at the next formal playback boundary.");
+            return true;
+        }
+
+        public bool TryAdoptContent(
+            CharacterTimelineContentPublication publication,
+            out CharacterTimelineContentAdoptionReport report)
+        {
+            CharacterTimelineContentAdoptionPlan plan = publication?.Plan;
+            if (!IsInitialized)
+            {
+                report = new CharacterTimelineContentAdoptionReport(
+                    CharacterTimelineContentAdoptionState.Rejected,
+                    publication?.AuthoringRevision,
+                    publication?.ContentRevision,
+                    "Timeline content adoption requires an initialized CharacterTimelineHost.");
+                return false;
+            }
+            if (publication == null || !publication.IsValid)
+            {
+                report = new CharacterTimelineContentAdoptionReport(
+                    CharacterTimelineContentAdoptionState.Rejected,
+                    publication?.AuthoringRevision,
+                    publication?.ContentRevision,
+                    "Timeline content publication is invalid.");
+                return false;
+            }
+            if (plan == null || !plan.IsValid || !plan.IsCompatible)
+            {
+                report = new CharacterTimelineContentAdoptionReport(
+                    CharacterTimelineContentAdoptionState.Rejected,
+                    plan?.AuthoringRevision,
+                    plan?.ContentRevision,
+                    "Timeline content adoption plan is invalid or incompatible.");
+                return false;
+            }
+            if (!TryValidateCurrentPlan(plan, out string validationError))
+            {
+                report = new CharacterTimelineContentAdoptionReport(
+                    CharacterTimelineContentAdoptionState.Rejected,
+                    plan.AuthoringRevision,
+                    plan.ContentRevision,
+                    validationError);
+                return false;
+            }
+            if (!HasCompatibleContentTopology(plan.Snapshots))
+            {
+                report = new CharacterTimelineContentAdoptionReport(
+                    CharacterTimelineContentAdoptionState.Rejected,
+                    plan.AuthoringRevision,
+                    plan.ContentRevision,
+                    "Timeline content topology or contract changed after preparation; a new Session is required.");
+                return false;
+            }
+            InstallTimelineContent(plan.Snapshots, plan.AuthoringRevision, plan.ContentRevision);
+            report = new CharacterTimelineContentAdoptionReport(
+                CharacterTimelineContentAdoptionState.Adopted,
+                AuthoringContentRevision,
+                ContentRevision,
+                "Timeline content adopted for future formal playback activations.");
+            return true;
+        }
+
+        public bool TryPublishContentAdoption(
+            CharacterTimelineContentAdoptionPlan plan,
+            out CharacterTimelineContentPublication publication,
+            out string error)
+        {
+            publication = null;
+            error = string.Empty;
+            if (!IsInitialized)
+            {
+                error = "Timeline content publication requires an initialized CharacterTimelineHost.";
+                return false;
+            }
+            if (plan == null || !plan.IsValid || !plan.IsCompatible)
+            {
+                error = "Timeline content adoption plan is invalid or incompatible.";
+                return false;
+            }
+            if (!TryValidateCurrentPlan(plan, out error))
+                return false;
+            if (!HasCompatibleContentTopology(plan.Snapshots))
+            {
+                error = "Timeline content topology or contract changed; a new Session is required.";
+                return false;
+            }
+            publication = new CharacterTimelineContentPublication(
+                plan,
+                "Timeline content publication is sealed for the next formal adoption boundary.");
+            return true;
+        }
+
+        bool TryValidateCurrentPlan(
+            CharacterTimelineContentAdoptionPlan plan,
+            out string error)
+        {
+            if (plan == null || !plan.IsValid || !plan.IsCompatible)
+            {
+                error = "Timeline content adoption plan is invalid or incompatible.";
+                return false;
+            }
+            if (plan.SessionIdentity != m_ContentSessionIdentity)
+            {
+                error = "Timeline content adoption plan belongs to another Session.";
+                return false;
+            }
+            if (plan.SessionContentGeneration != m_ContentGeneration)
+            {
+                error = "Timeline content changed after preparation; export again before adoption.";
+                return false;
+            }
+            return TryValidateCurrentExport(plan.Export, out error);
+        }
+
+        bool TryValidateCurrentExport(
+            CharacterTimelineContentExport export,
+            out string error)
+        {
+            if (export == null || !export.IsValid)
+            {
+                error = "Timeline content export is invalid.";
+                return false;
+            }
+            if (!TryGetCurrentContentRevisions(
+                    out string authoringRevision,
+                    out string contentRevision,
+                    out List<string> errors))
+            {
+                error = string.Join(" | ", errors);
+                return false;
+            }
+            if (!string.Equals(export.AuthoringRevision, authoringRevision, StringComparison.Ordinal) ||
+                !string.Equals(export.ContentRevision, contentRevision, StringComparison.Ordinal))
+            {
+                error = "Timeline authoring changed after export; export again before preparing or adopting.";
+                return false;
+            }
+            error = string.Empty;
+            return true;
+        }
+
+        bool HasCompatibleContentTopology(IReadOnlyList<CharacterTimelineContentSnapshot> snapshots)
+        {
+            if (snapshots == null || snapshots.Count != m_TimelineContent.Count)
+                return false;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                CharacterTimelineContentSnapshot snapshot = snapshots[i];
+                if (snapshot == null ||
+                    !m_TimelineContent.TryGetValue(snapshot.TimelineAuthoringId, out TimelineData installed) ||
+                    !HasSameTopology(installed, snapshot.CloneData()))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool HasSameTopology(TimelineData installed, TimelineData candidate)
+        {
+            if (installed == null || candidate == null || installed.Tracks.Count != candidate.Tracks.Count)
+                return false;
+            for (int trackIndex = 0; trackIndex < installed.Tracks.Count; trackIndex++)
+            {
+                Track installedTrack = installed.Tracks[trackIndex];
+                Track candidateTrack = candidate.Tracks[trackIndex];
+                if (installedTrack == null || candidateTrack == null ||
+                    !string.Equals(installedTrack.AuthoringId, candidateTrack.AuthoringId, StringComparison.Ordinal) ||
+                    !string.Equals(installedTrack.ContractKind, candidateTrack.ContractKind, StringComparison.Ordinal) ||
+                    installedTrack.Clips.Count != candidateTrack.Clips.Count)
+                    return false;
+                for (int clipIndex = 0; clipIndex < installedTrack.Clips.Count; clipIndex++)
+                {
+                    Clip installedClip = installedTrack.Clips[clipIndex];
+                    Clip candidateClip = candidateTrack.Clips[clipIndex];
+                    if (installedClip == null || candidateClip == null ||
+                        !string.Equals(installedClip.AuthoringId, candidateClip.AuthoringId, StringComparison.Ordinal) ||
+                        !string.Equals(installedClip.ContractKind, candidateClip.ContractKind, StringComparison.Ordinal))
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        public bool TryGetCurrentAuthoringContentRevision(
+            out string authoringRevision,
+            out string error)
+        {
+            if (TryGetCurrentContentRevisions(out authoringRevision, out _, out List<string> errors))
+            {
+                error = string.Empty;
+                return true;
+            }
+            error = string.Join(" | ", errors);
+            return false;
+        }
+
+        bool TryGetCurrentContentRevisions(
+            out string authoringRevision,
+            out string contentRevision,
+            out List<string> errors)
+        {
+            return TryComputeContentRevisions(
+                m_AuthoringTimelineContent,
+                out authoringRevision,
+                out contentRevision,
+                out errors);
+        }
+
+        static bool TryFreezeContent(
+            IReadOnlyList<TimelineAsset> timelines,
+            out List<CharacterTimelineContentSnapshot> snapshots,
+            out List<string> errors)
+        {
+            snapshots = new List<CharacterTimelineContentSnapshot>();
+            errors = new List<string>();
+            if (timelines == null || timelines.Count == 0)
+            {
+                errors.Add("Timeline content list is empty.");
+                return false;
+            }
+            var identities = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < timelines.Count; i++)
             {
                 TimelineAsset asset = timelines[i];
                 if (!asset || asset.Data == null)
-                    throw new InvalidOperationException("Timeline content list contains an invalid Timeline asset.");
-                if (!m_TimelineContent.TryAdd(asset.Data.AuthoringId, asset.Data))
-                    throw new InvalidOperationException($"Timeline content identity '{asset.Data.AuthoringId}' is duplicated.");
+                {
+                    errors.Add($"Timeline content #{i} is missing.");
+                    continue;
+                }
+                if (!identities.Add(asset.Data.AuthoringId))
+                {
+                    errors.Add($"Timeline content identity '{asset.Data.AuthoringId}' is duplicated.");
+                    continue;
+                }
+                snapshots.Add(new CharacterTimelineContentSnapshot(asset.Data));
             }
+            return errors.Count == 0;
+        }
+
+        static bool TryComputeContentRevisions(
+            IReadOnlyList<TimelineAsset> timelines,
+            out string authoringRevision,
+            out string contentRevision,
+            out List<string> errors)
+        {
+            authoringRevision = string.Empty;
+            contentRevision = string.Empty;
+            errors = new List<string>();
+            if (timelines == null || timelines.Count == 0)
+            {
+                errors.Add("Timeline content list is empty.");
+                return false;
+            }
+            TimelineContractCatalog catalog = TimelineTreeContractComposition.Create();
+            var identities = new HashSet<string>(StringComparer.Ordinal);
+            var authoringParts = new List<string>(timelines.Count);
+            var contentParts = new List<string>(timelines.Count);
+            for (int i = 0; i < timelines.Count; i++)
+            {
+                TimelineAsset asset = timelines[i];
+                if (!asset || asset.Data == null)
+                {
+                    errors.Add($"Timeline content #{i} is missing.");
+                    continue;
+                }
+                if (!identities.Add(asset.Data.AuthoringId))
+                {
+                    errors.Add($"Timeline content identity '{asset.Data.AuthoringId}' is duplicated.");
+                    continue;
+                }
+                TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(asset, catalog);
+                if (!discovery.IsValid)
+                {
+                    for (int errorIndex = 0; errorIndex < discovery.Errors.Count; errorIndex++)
+                        errors.Add($"{asset.name}: {discovery.Errors[errorIndex]}");
+                    continue;
+                }
+                authoringParts.Add($"{asset.Data.AuthoringId}:{TimelineAuthoringFingerprint.Compute(asset.Data)}");
+                contentParts.Add($"{asset.Data.AuthoringId}:{discovery.Content.ContentHash}");
+            }
+            if (errors.Count != 0)
+                return false;
+            authoringRevision = SourceContentHasher.Hash(authoringParts.ToArray());
+            contentRevision = SourceContentHasher.Hash(contentParts.ToArray());
+            return true;
         }
 
         public bool RequestAbilityTimelinePlayback(
             string timelineId,
-            TimelinePlaybackActionContext actionContext,
+            TimelineActionContextIdentity actionContext,
             bool loop,
+            AbilityTimelineInvocationSource invocationSource,
+            ulong inputSequence,
+            SimulationTick tick,
             out TimelinePlaybackHandle handle)
         {
             if (!IsInitialized)
                 throw new InvalidOperationException("Ability Timeline requires an initialized CharacterTimelineHost.");
-            if (!actionContext.IsValid)
+            if (!actionContext.IsValid || !actionContext.HasSkillExecution || actionContext.SkillExecutionGeneration == 0)
                 throw new ArgumentException("Ability Timeline Action context is invalid.", nameof(actionContext));
+            if (!invocationSource.IsValid)
+                throw new ArgumentException("Ability Timeline invocation source is invalid.", nameof(invocationSource));
+            if (!tick.IsValid)
+                throw new ArgumentOutOfRangeException(nameof(tick));
             if (!m_TimelineContent.TryGetValue(timelineId, out TimelineData timeline))
                 throw new KeyNotFoundException($"Ability Timeline content '{timelineId}' is not installed.");
+            var playbackActionContext = new TimelinePlaybackActionContext(
+                actionContext.InstanceId,
+                actionContext.ActionId,
+                actionContext.PredictionKey,
+                inputSequence,
+                tick.Value);
             bool requested = RequestTimelinePlayback(
                 timeline,
                 actionContext.ActionId,
                 timeline.Name,
-                actionContext,
+                playbackActionContext,
                 loop ? TimelinePlaybackMode.Loop : TimelinePlaybackMode.Once,
                 default,
                 null,
                 CharacterTimelinePlaybackSourceKind.AbilityRuntime,
+                invocationSource.OperationIndex,
+                CreateAbilityPlaybackProvenance(invocationSource, actionContext, timeline.Name),
                 out handle);
             if (requested)
             {
@@ -483,44 +895,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
 
-        public bool RequestPreviewTimelinePlayback(
-            TimelineData timeline,
-            string sourceName,
-            TimelinePlaybackMode playbackMode,
-            out TimelinePlaybackHandle handle)
-        {
-            if (!IsInitialized)
-                throw new InvalidOperationException("Timeline preview requires an initialized CharacterTimelineHost.");
-            if (timeline == null)
-                throw new ArgumentNullException(nameof(timeline));
-            if (m_PreviewHandle.IsValid)
-                throw new InvalidOperationException("Timeline preview already has an active playback.");
-            bool requested = RequestTimelinePlayback(
-                timeline,
-                "sceneplay.preview",
-                sourceName ?? timeline.Name,
-                default,
-                playbackMode,
-                default,
-                null,
-                CharacterTimelinePlaybackSourceKind.FixedPreview,
-                out handle);
-            if (requested)
-                m_PreviewHandle = handle;
-            return requested;
-        }
-
-        public bool CancelPreviewTimelinePlayback()
-        {
-            if (!IsInitialized || !m_PreviewHandle.IsValid)
-                return false;
-            m_Host.Service.CancelTimelinePlayback(
-                m_PreviewHandle,
-                new TimelinePlaybackStopContext(TimelinePlaybackStopCause.SelfAbort, 0));
-            m_PreviewHandle = TimelinePlaybackHandle.Invalid;
-            return true;
-        }
-
         internal bool IsAbilityRuntimePlayback(TimelineRuntimePlaybackHandle handle)
         {
             for (int i = 0; i < m_ActivePlaybacks.Count; i++)
@@ -545,15 +919,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             throw new InvalidOperationException($"Timeline playback '{handle.Value}' has no Action instance identity.");
         }
 
-        public bool PreviewIsActive
+        internal bool TryGetPlaybackActionContext(
+            TimelineRuntimePlaybackHandle handle,
+            out TimelinePlaybackActionContext actionContext)
         {
-            get
+            for (int i = 0; i < m_ActivePlaybacks.Count; i++)
             {
-                if (!m_PreviewHandle.IsValid || m_Host == null)
-                    return false;
-                TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(m_PreviewHandle);
-                return status == TimelinePlaybackStatus.Requested || status == TimelinePlaybackStatus.Running;
+                ActivePlayback active = m_ActivePlaybacks[i];
+                if (active.Handle.Value == handle.Value && active.ActionContext.IsValid)
+                {
+                    actionContext = active.ActionContext;
+                    return true;
+                }
             }
+            actionContext = default;
+            return false;
         }
 
         public TimelinePlaybackStatus GetTimelinePlaybackStatus(TimelinePlaybackHandle handle)
@@ -641,6 +1021,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 request.TimelineId,
                 request.Loop,
                 request.ActionContext,
+                request.InvocationSource,
                 request.InputSequence,
                 request.Tick);
         }
@@ -657,9 +1038,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 snapshot.OwnerIdentity,
                 snapshot.CallIdentity,
                 snapshot.ExecutionInstanceId);
+            TimelineData playbackTimeline = timeline.Clone();
             TimelineRuntimePreparationResult preparation = m_Host.Prepare(
                 snapshot.RequestId,
-                timeline,
+                playbackTimeline,
                 executionIdentity,
                 MapPlaybackMode(snapshot.PlaybackMode),
                 Array.Empty<TimelineCallBinding>());
@@ -690,15 +1072,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelineRuntimeRestoreCandidate candidate = m_Host.PrepareRestore(native, preparation);
             TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);
             var handle = new TimelinePlaybackHandle(restored.Value);
-            m_ActivePlaybacks.Add(new ActivePlayback
+            var active = new ActivePlayback
             {
                 Handle = handle,
-                Timeline = timeline,
-                SourceName = timeline.Name,
+                Timeline = playbackTimeline,
+                SourceName = playbackTimeline.Name,
                 SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime,
                 CoreDriven = true,
-                ActionInstanceId = snapshot.ActionContext.InstanceId
-            });
+                ActionContext = new TimelinePlaybackActionContext(
+                    snapshot.ActionContext.InstanceId,
+                    snapshot.ActionContext.ActionId,
+                    snapshot.ActionContext.PredictionKey,
+                    snapshot.InputSequence,
+                    snapshot.StartTick.Value),
+                ActionInstanceId = snapshot.ActionContext.InstanceId,
+                RuntimeInstance = CreateRuntimeInstance(
+                    handle,
+                    snapshot.ActionContext.InstanceId,
+                    snapshot.InvocationSource.OperationIndex),
+                Provenance = CreateAbilityPlaybackProvenance(
+                    snapshot.InvocationSource,
+                    snapshot.ActionContext,
+                    playbackTimeline.Name)
+            };
+            m_ActivePlaybacks.Add(active);
+            PublishPlaybackSnapshot(active);
+            PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineStarted, "Restored", string.Empty);
             return checked((int)restored.Value);
         }
 
@@ -770,6 +1169,314 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (m_PendingAdvances.TryGetValue(handle.Value, out CharacterTimelinePendingAdvance pending))
                 DiscardTimelinePlayback(pending);
             m_Host.Service.CancelTimelinePlayback(handle, stopContext);
+        }
+
+        RuntimeInstanceKey CreateRuntimeInstance(
+            TimelinePlaybackHandle handle,
+            ulong actionInstanceId,
+            int sourceOperationIndex)
+        {
+            return m_Diagnostics == null
+                ? default
+                : RuntimeInstanceKey.Timeline(
+                    m_Diagnostics.CharacterRuntimeId,
+                    sourceOperationIndex,
+                    handle.Value,
+                    actionInstanceId);
+        }
+
+        static RuntimeTimelinePlaybackProvenance CreatePlaybackProvenance(
+            string sourceId,
+            string sourceName,
+            TreeExecutionActivationScope sourceActivation,
+            BaseGraph sourceRuntimeGraph)
+        {
+            if (sourceRuntimeGraph == null)
+                return default;
+            if (!sourceActivation.IsValid)
+                throw new InvalidOperationException("Timeline playback source activation is invalid.");
+            StateMachineExecutionScope state = sourceActivation.StateMachineExecutionPath.Leaf;
+            return new RuntimeTimelinePlaybackProvenance(
+                sourceRuntimeGraph.GraphAuthoringId,
+                sourceId,
+                sourceRuntimeGraph.RuntimeId,
+                sourceActivation.ActivationId.Generation,
+                state.StateMachineGraphOwnerId,
+                state.StateId,
+                state.StateMachineGraphRuntimeId,
+                state.ActivationGeneration,
+                sourceName);
+        }
+
+        static RuntimeTimelinePlaybackProvenance CreateAbilityPlaybackProvenance(
+            AbilityTimelineInvocationSource invocationSource,
+            TimelineActionContextIdentity actionContext,
+            string sourceName)
+        {
+            if (!invocationSource.IsValid)
+                throw new ArgumentException("Ability Timeline invocation source is invalid.", nameof(invocationSource));
+            if (!actionContext.IsValid || !actionContext.HasSkillExecution || actionContext.SkillExecutionGeneration == 0)
+                throw new ArgumentException("Ability Timeline Action context is invalid.", nameof(actionContext));
+            return new RuntimeTimelinePlaybackProvenance(
+                invocationSource.GraphAuthoringId,
+                invocationSource.NodeAuthoringId,
+                Guid.Empty,
+                invocationSource.InvocationGeneration,
+                string.Empty,
+                string.Empty,
+                Guid.Empty,
+                0,
+                sourceName,
+                invocationSource.GraphInvocationPath,
+                invocationSource.OperationIndex,
+                actionContext.SkillExecutionGeneration);
+        }
+
+        void PublishPlaybackSnapshot(ActivePlayback active)
+        {
+            if (!active.RuntimeInstance.IsValid || active.Timeline == null)
+                return;
+            TimelineRuntimePlaybackSnapshotRegistry.Publish(active.RuntimeInstance, active.Timeline);
+        }
+
+        void OnCommittedTimelineEvaluation(TimelineRuntimeCommittedEvaluation evaluation)
+        {
+            if (!TryGetActivePlayback(evaluation.Handle, out ActivePlayback active))
+                return;
+            float time = evaluation.Frame / (float)TimelineUtility.FrameRate;
+            PublishTimelineEvent(
+                active,
+                RuntimeTraceDomain.Logic,
+                RuntimeTraceEventKind.TimelineLogicTime,
+                RuntimeSourceElementKey.Timeline(active.Timeline.AuthoringId),
+                "Running",
+                string.Empty,
+                time,
+                evaluation.Cycle);
+            PublishActiveTimelineElements(active, evaluation, time);
+            PublishTreeClipEvents(active, evaluation, time);
+            TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(
+                new TimelinePlaybackHandle(evaluation.Handle.Value));
+            if (status == TimelinePlaybackStatus.Succeeded)
+                PublishTerminal(active.Handle, RuntimeTraceEventKind.TimelineCompleted, "Completed", string.Empty);
+            else if (status == TimelinePlaybackStatus.Failed)
+                PublishTerminal(active.Handle, RuntimeTraceEventKind.TimelineCancelled, "Failed", "RuntimeFailure");
+        }
+
+        void OnTimelineStopCommitted(TimelineRuntimeStopRequest request)
+        {
+            PublishTerminal(
+                new TimelinePlaybackHandle(request.Handle.Value),
+                RuntimeTraceEventKind.TimelineStopped,
+                "Stopped",
+                request.Reason.Cause.ToString());
+        }
+
+        void PublishActiveTimelineElements(
+            ActivePlayback active,
+            TimelineRuntimeCommittedEvaluation evaluation,
+            float time)
+        {
+            if (active.Timeline == null)
+                return;
+            var activeTracks = new HashSet<string>(StringComparer.Ordinal);
+            IReadOnlyList<string> activeClipIds = evaluation.Evaluation?.ClipSamples != null
+                ? evaluation.Evaluation.ClipSamples.Select(value => value.ClipAuthoringId).ToArray()
+                : Array.Empty<string>();
+            if (m_Host.TryGetPlaybackDescriptor(active.Handle, out TimelineRuntimePlaybackDescriptor descriptor))
+                activeClipIds = descriptor.ActiveClipIds;
+            for (int index = 0; index < activeClipIds.Count; index++)
+            {
+                if (!TryFindClip(active.Timeline, activeClipIds[index], out Track track, out Clip clip))
+                    continue;
+                if (activeTracks.Add(track.AuthoringId))
+                {
+                    PublishTimelineEvent(
+                        active,
+                        RuntimeTraceDomain.Logic,
+                        RuntimeTraceEventKind.TrackActive,
+                        RuntimeSourceElementKey.Track(active.Timeline.AuthoringId, track.AuthoringId),
+                        "Active",
+                        string.Empty,
+                        time,
+                        evaluation.Cycle);
+                }
+                PublishTimelineEvent(
+                    active,
+                    RuntimeTraceDomain.Logic,
+                    RuntimeTraceEventKind.ClipActive,
+                    RuntimeSourceElementKey.Clip(
+                        active.Timeline.AuthoringId,
+                        track.AuthoringId,
+                        clip.AuthoringId,
+                        clip is TreeClip),
+                    "Active",
+                    string.Empty,
+                    time,
+                    evaluation.Cycle);
+            }
+        }
+
+        void PublishTreeClipEvents(
+            ActivePlayback active,
+            TimelineRuntimeCommittedEvaluation evaluation,
+            float time)
+        {
+            IReadOnlyList<TimelineRuntimeTreeClipRequest> requests = evaluation.Evaluation?.TreeClips;
+            if (requests == null)
+                return;
+            for (int index = 0; index < requests.Count; index++)
+            {
+                TimelineRuntimeTreeClipRequest request = requests[index];
+                RuntimeTraceEventKind kind = request.EventKind switch
+                {
+                    TimelineRuntimeTreeClipEventKind.Enter => RuntimeTraceEventKind.TreeClipEntered,
+                    TimelineRuntimeTreeClipEventKind.Update => RuntimeTraceEventKind.TreeClipUpdated,
+                    TimelineRuntimeTreeClipEventKind.Exit => RuntimeTraceEventKind.TreeClipExited,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+                RuntimeInstanceKey treeClip = RuntimeInstanceKey.TreeClip(
+                    active.RuntimeInstance.CharacterRuntimeId,
+                    active.Provenance.SourceGraphRuntimeId,
+                    active.RuntimeInstance.SourceOperationIndex,
+                    active.Handle.Value,
+                    request.Cycle,
+                    active.ActionInstanceId);
+                PublishTimelineEvent(
+                    active,
+                    RuntimeTraceDomain.Logic,
+                    kind,
+                    RuntimeSourceElementKey.Clip(
+                        active.Timeline.AuthoringId,
+                        request.TrackAuthoringId,
+                        request.ClipAuthoringId,
+                        true),
+                    request.EventKind.ToString(),
+                    string.Empty,
+                    time,
+                    request.Cycle,
+                    treeClip,
+                    request.TreeGraphId);
+            }
+        }
+
+        void PublishTimelineVisualTime(ActivePlayback active, TimelineRuntimePresentationFrame frame)
+        {
+            if (!m_Host.TryGetPlaybackDescriptor(active.Handle, out TimelineRuntimePlaybackDescriptor descriptor))
+                return;
+            PublishTimelineEvent(
+                active,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.TimelineVisualTime,
+                RuntimeSourceElementKey.Timeline(active.Timeline.AuthoringId),
+                "Presented",
+                string.Empty,
+                descriptor.CursorFrame / (float)TimelineUtility.FrameRate,
+                descriptor.Cycle,
+                default,
+                string.Empty);
+        }
+
+        void PublishTerminal(
+            TimelinePlaybackHandle handle,
+            RuntimeTraceEventKind kind,
+            string status,
+            string cause)
+        {
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                ActivePlayback active = m_ActivePlaybacks[index];
+                if (active.Handle.Value != handle.Value || active.TerminalPublished)
+                    continue;
+                active.TerminalPublished = true;
+                m_ActivePlaybacks[index] = active;
+                PublishTimelineLifecycle(active, kind, status, cause);
+                return;
+            }
+        }
+
+        void PublishTimelineLifecycle(
+            ActivePlayback active,
+            RuntimeTraceEventKind kind,
+            string status,
+            string cause)
+        {
+            if (active.Timeline == null)
+                return;
+            PublishTimelineEvent(
+                active,
+                RuntimeTraceDomain.Lifecycle,
+                kind,
+                RuntimeSourceElementKey.Timeline(active.Timeline.AuthoringId),
+                status,
+                cause,
+                0f,
+                0);
+        }
+
+        void PublishTimelineEvent(
+            ActivePlayback active,
+            RuntimeTraceDomain domain,
+            RuntimeTraceEventKind kind,
+            RuntimeSourceElementKey source,
+            string status,
+            string cause,
+            float time,
+            int cycle,
+            RuntimeInstanceKey runtimeInstance = default,
+            string relatedElementId = "")
+        {
+            if (m_Diagnostics == null || !active.RuntimeInstance.IsValid)
+                return;
+            m_Diagnostics.Publish(
+                RuntimeTraceChannel.Timeline,
+                domain,
+                kind,
+                source,
+                runtimeInstance.IsValid ? runtimeInstance : active.RuntimeInstance,
+                new RuntimeTracePayload
+                {
+                    Name = active.Timeline.Name,
+                    Status = status,
+                    Cause = cause,
+                    RelatedElementId = relatedElementId,
+                    ActionInstanceId = active.ActionInstanceId,
+                    ActivationGeneration = active.Provenance.SourceActivationGeneration,
+                    Time = time,
+                    Cycle = cycle,
+                    TimelinePlayback = active.Provenance
+                });
+        }
+
+        bool TryGetActivePlayback(TimelineRuntimePlaybackHandle handle, out ActivePlayback active)
+        {
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                active = m_ActivePlaybacks[index];
+                if (active.Handle.Value == handle.Value)
+                    return true;
+            }
+            active = default;
+            return false;
+        }
+
+        static bool TryFindClip(TimelineData timeline, string clipAuthoringId, out Track track, out Clip clip)
+        {
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                track = timeline.Tracks[trackIndex];
+                if (track == null)
+                    continue;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    clip = track.Clips[clipIndex];
+                    if (clip != null && string.Equals(clip.AuthoringId, clipAuthoringId, StringComparison.Ordinal))
+                        return true;
+                }
+            }
+            track = null;
+            clip = null;
+            return false;
         }
 
         static AbilityTimelineRuntimeStatus MapTerminalStatus(TimelinePlaybackStatus status)
@@ -851,13 +1558,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 ActivePlayback active = m_PlaybackScan[i];
                 TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
                 if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
-                {
-                    m_ActivePlaybacks.Remove(active);
                     continue;
-                }
                 if (active.CoreDriven)
                     continue;
                 m_Host.Service.Step(active.Handle, m_TickCounter, deltaFrames);
+            }
+        }
+
+        public void Present(in GameplayPresentationFrameContext context)
+        {
+            if (!m_Initialized || m_Host == null || m_ActivePlaybacks.Count == 0)
+                return;
+            for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
+            {
+                ActivePlayback active = m_ActivePlaybacks[index];
+                bool presented = m_Host.TryPresent(
+                        active.Handle,
+                        context.RenderFrame,
+                        context.PresentationDeltaSeconds,
+                        context.InterpolationAlpha,
+                        out TimelineRuntimePresentationFrame frame);
+                if (presented)
+                {
+                    PresentationFrameProduced?.Invoke(frame);
+                    PublishTimelineVisualTime(active, frame);
+                }
+                TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
+                if (status != TimelinePlaybackStatus.Requested &&
+                    status != TimelinePlaybackStatus.Running &&
+                    !presented)
+                {
+                    PresentationPlaybackEnded?.Invoke(active.Handle);
+                    m_ActivePlaybacks.RemoveAt(index);
+                }
             }
         }
 
@@ -865,16 +1598,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (m_Host == null)
                 return;
+            m_Host.CommittedEvaluation -= OnCommittedTimelineEvaluation;
+            m_Host.StopCommitted -= OnTimelineStopCommitted;
             m_Host.Dispose();
             m_Host = null;
             m_Initialized = false;
             m_ActivePlaybacks.Clear();
             m_PendingAdvances.Clear();
             m_PendingStops.Clear();
-            m_PreviewHandle = TimelinePlaybackHandle.Invalid;
             m_ActiveTreeClipInvoker = null;
+            m_Diagnostics = null;
         }
     }
 }
-
-

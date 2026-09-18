@@ -14,7 +14,7 @@
 
 - **WHEN** 用户处于 Preview
 - **THEN** Preview MUST 连接正式 ScenePlay Session、Scene、Actor、Ability、RootTree、Timeline、Pose、Motion、Camera 和 World
-- **AND** 作者修改 MUST 通过正式 Mutation、Export、Prepare 和 Adopt 进入运行
+- **AND** 作者修改 MUST 通过正式 Mutation、Export、Prepare、Publish 和 Adopt 进入运行
 - **AND** Preview MUST 不使用独立 Timeline 播放器、CMC MontagePlayer 或 Pose fixture 代替正式运行链
 
 #### Scenario: 只读观察运行事实
@@ -41,7 +41,7 @@
 
 ### Requirement: Preview 作者修改必须经过发布与采用边界
 
-Preview 中的作者修改 MUST 先写入正式作者数据，再通过 Export、Prepare、发布 revision 和正式 adoption barrier 进入 Session。旧 revision 在新 revision 准备期间 MUST 继续运行；UI MUST 分别显示作者版本、运行采用版本、准备状态和失败原因。Mutation 成功 MUST NOT 被解释为 Runtime 已生效。
+Preview 中的作者修改 MUST 先写入正式作者数据，再通过 Export、Prepare、Publish 和正式 adoption barrier 进入 Session。Export MUST 冻结作者 Timeline 闭包；Plan MUST 绑定当前 Timeline Host 会话标识与内容代次；Publish 和 Adopt MUST 重新校验作者/content revision。旧 revision 在新 revision 准备期间 MUST 继续运行，活动 playback MUST 保持自己的冻结内容；UI MUST 分别显示作者版本、运行采用版本、导出/准备/发布状态、Session generation、RuntimeDebug target revision 和失败原因。Mutation 成功 MUST NOT 被解释为 Runtime 已生效。
 
 #### Scenario: 兼容内容修改
 
@@ -49,6 +49,12 @@ Preview 中的作者修改 MUST 先写入正式作者数据，再通过 Export�
 - **THEN** 当前 Scene 和 Session MUST 保持运行
 - **AND** 新 revision MUST 在正式安全边界采用
 - **AND** Preview MUST 显示 `作者已修改`、`准备中`、`待采用` 或 `已采用` 的真实状态
+
+#### Scenario: 作者在导出后继续修改
+
+- **WHEN** 作者在 Export、Prepare 或 Publish 后继续修改同一 Timeline 闭包
+- **THEN** 旧 Export、Plan 和 Publication MUST 被拒绝或作废
+- **AND** 用户 MUST 重新 Export，旧内容 MUST NOT 覆盖新的作者版本或当前采用版本
 
 #### Scenario: 不兼容结构修改
 
@@ -85,7 +91,7 @@ Workbench MAY 复用 Slate 的时间尺、Track、Clip、缩放、滚动和绘�
 
 ### Requirement: 三种形态必须位于原 Timeline 编辑器
 
-Authoring、Preview 和 RuntimeDebug MUST 直接接入现有 `TimelineEditorWindow`。系统 MUST NOT 新增独立 Workbench、Session Dashboard、Preview Timeline 或 RuntimeDebug Timeline。Timeline 顶部 MUST 只保留 Preview Profile、三态切换、一个 Session 菜单和一行状态；Prepare、Publish、Adopt 等内容采用命令 MUST 位于 Session 菜单中，不得作为常驻按钮平铺。
+Authoring、Preview 和 RuntimeDebug MUST 直接接入现有 `TimelineEditorWindow`。系统 MUST NOT 新增独立 Workbench、Session Dashboard、Preview Timeline 或 RuntimeDebug Timeline。Timeline 顶部 MUST 只保留 Preview Profile、三态切换、一个 Session 菜单和一行状态；Export、Prepare、Publish、Adopt、Capture、History、Resume Live 等命令 MUST 位于 Session 菜单中，不得作为常驻按钮平铺。
 
 #### Scenario: 作者切换工作形态
 
@@ -102,7 +108,7 @@ Authoring、Preview 和 RuntimeDebug MUST 直接接入现有 `TimelineEditorWind
 
 - **WHEN** 作者在 Timeline Editor 选择 Preview
 - **THEN** 系统 MUST 从当前 Profile 读取 Scene、ContextId 和 DefaultActorId
-- **AND** ScenePlay MUST 校验 Context 与 Actor roster 后连接正式 Session
+- **AND** ScenePlay MUST 先将 ContextId 精确匹配正式 Composition 的 SessionId，再在该 Session roster 中校验唯一 Actor
 - **AND** Profile 无效时 MUST 只显示失败原因并拒绝伪造运行目标
 
 ### Requirement: 首次进入 Preview 必须显示真实准备阶段

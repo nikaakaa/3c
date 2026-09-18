@@ -40,6 +40,7 @@ namespace ThirdPersonCharacter.Pipeline
         Guid m_ExecutionBranchId = Guid.NewGuid();
         Guid m_ParentExecutionBranchId;
         ulong m_ExecutionBranchBaseTick;
+        ulong m_SessionGeneration = 1;
 
         public TimelineRuntimeNumericTarget TimelineNumericTarget
         {
@@ -76,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline
         public Guid ExecutionBranchId => m_ExecutionBranchId;
         public Guid ParentExecutionBranchId => m_ParentExecutionBranchId;
         public ulong ExecutionBranchBaseTick => m_ExecutionBranchBaseTick;
+        public ulong SessionGeneration => m_SessionGeneration;
         public bool TryCaptureCheckpointNow(out ulong checkpointTick, out string error)
         {
             checkpointTick = 0;
@@ -1053,6 +1055,7 @@ namespace ThirdPersonCharacter.Pipeline
             m_ExecutionBranchBaseTick = 0;
             m_LastLogicTick = 0;
             m_OuterTickKind = default;
+            m_SessionGeneration = checked(m_SessionGeneration + 1);
         }
 
         static void TryCleanup(Action cleanup, List<Exception> failures)

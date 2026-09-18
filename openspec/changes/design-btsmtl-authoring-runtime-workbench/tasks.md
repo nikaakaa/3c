@@ -14,7 +14,7 @@
 - [x] 2.1 在原 `TimelineEditorWindow` 中提供 Authoring、Preview、RuntimeDebug 三种工作形态，删除独立 Workbench 窗口
 - [x] 2.2 三种形态共用 Session、Actor、Ability、Revision 和当前调用目标显示，不新增 Dashboard 或平行控制器
 - [x] 2.3 页面切换只改变本地视图和 interest，不能创建或销毁第二个 Scene、Actor、Session、时钟或执行器
-- [ ] 2.4 将 Start、Pause、Resume、Stop、Build、Adopt、History 和 Restore 归入正式 ScenePlay / Runtime owner，工具表面只提交请求并显示结果
+- [x] 2.4 将 Start、Pause、Resume、Stop、Export、Prepare、Publish、Adopt、Capture、History 和 Resume Live 归入正式 ScenePlay / Runtime owner，工具表面只提交请求并显示结果
 - [x] 2.5 新增唯一 `BtsmtlScenePlayProfile` SO，只保存 Scene、ContextId、DefaultActorId；Timeline 顶部只选择 Profile，不展开详细设置
 
 ## 3. Authoring 形态
@@ -28,9 +28,9 @@
 
 - [x] 4.1 进入 Preview 时创建或连接唯一正式 ScenePlay Session，并显示真实准备阶段
 - [x] 4.2 Preview 使用正式 Scene、Actor、Ability、RootTree、Timeline、Pose、Motion、Camera、World 和输入链产生结果
-- [ ] 4.3 作者修改通过 Export、Prepare、Publish 和 Adopt 进入当前 Session，不退出 Scene、Session 或 Actor
-- [ ] 4.4 兼容参数和内容修改按正式安全边界采用，分别显示作者已修改、准备中、待采用、已采用和应用失败
-- [ ] 4.5 不兼容拓扑、状态布局、Composition、Scene、Actor roster、C# 代码和运行模块变化明确要求重建或新 Session
+- [x] 4.3 作者修改通过 Export、Prepare、Publish 和 Adopt 进入当前 Session，不退出 Scene、Session 或 Actor
+- [x] 4.4 兼容参数和内容修改按正式安全边界采用，分别显示作者已修改、已导出、已准备、待采用、已采用和应用失败
+- [x] 4.5 不兼容 Timeline 拓扑、状态布局、Composition、Scene、Actor roster、C# 代码和运行模块变化明确拒绝混用并要求重建或新 Session
 - [x] 4.6 不使用 Timeline 私有播放器、CMC MontagePlayer、Pose fixture 或 Edit Mode 假 Runtime 作为 Preview 执行路径
 
 ## 5. RuntimeDebug 形态
@@ -50,10 +50,10 @@
 
 ## 7. 版本与轻量更新
 
-- [ ] 7.1 将作者版本、运行采用版本、准备版本、Session generation 和 RuntimeDebug revision 分开显示
-- [ ] 7.2 后台 Prepare 期间保留旧版本运行，过期结果不能覆盖新的作者修改或当前采用版本
-- [ ] 7.3 兼容内容在正式 adoption barrier 采用，不兼容内容拒绝混合旧调用栈、旧 Snapshot 和新 SourceMap
-- [ ] 7.4 将 CwcMontage 仅登记为预热、手动刷新和局部缓存重建的体验参考，不接入正式执行链
+- [x] 7.1 将作者版本、运行采用版本、导出/准备/发布版本、Session generation 和 RuntimeDebug revision 分开显示
+- [x] 7.2 Prepare 与 Publish 期间保留旧版本运行，过期结果不能覆盖新的作者修改或当前采用版本
+- [x] 7.3 兼容内容在正式 adoption barrier 采用，不兼容内容拒绝混合旧调用栈、旧 Snapshot 和新 SourceMap
+- [x] 7.4 将 CwcMontage 仅登记为预热、手动刷新和局部缓存重建的体验参考，不接入正式执行链
 
 ## 8. 文档与清理
 

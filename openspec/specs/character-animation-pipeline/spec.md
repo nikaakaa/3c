@@ -111,13 +111,13 @@ Diagnostics Projector MUST不持有Native Pose Graph Runtime、Source Module、C
 
 ### Requirement: 不得恢复Timeline或Preview分裂路径
 
-系统 MUST只有一条技能 Timeline 运行路径和一条原生 Pose 图运行路径，通过 committed Body／Intent、EventId 和有限动作请求连接。旧 TimelinePlaybackScheduler、自主 TreeClip runtime、图外 root motion、Animancer direct Play 或独立 PlayableGraph MUST不得恢复。Timeline Preview MUST通过正式 Action adapter 接入同一表现运行，Pose Preview 与 MM Fixture 使用各自 typed 输入适配，不运行另一份姿态执行器。
+系统 MUST只有一条技能 Timeline 运行路径和一条原生 Pose 图运行路径，通过 committed Body／Intent、EventId 和有限动作请求连接。旧 TimelinePlaybackScheduler、自主 TreeClip runtime、图外 root motion、Animancer direct Play 或独立 PlayableGraph MUST不得恢复。Timeline Preview MUST只通过正式 ScenePlay Session 观察同一表现运行，不创建 Preview 专用 Action adapter、动作状态或姿态执行器；Pose Preview 与 MM Fixture 使用各自 typed 输入适配，不运行另一份姿态执行器。
 
 #### Scenario: Runtime与Preview并存
 
-- **WHEN** Editor预览Attack Timeline且游戏运行Corin Program
-- **THEN** Preview state MUST不影响CharacterSimulationState
-- **AND** Live Runtime MUST独占执行技能运行操作
+- **WHEN** 作者在正式 ScenePlay Session 中观察 Attack Timeline
+- **THEN** Timeline 的调用、状态和表现 MUST全部来自正在运行的 Corin Program
+- **AND** TimelineEditorWindow MUST不创建或修改独立 Preview state，Live Runtime MUST独占执行技能运行操作
 
 ### Requirement: Timeline回绕必须完整采样Gameplay边界
 

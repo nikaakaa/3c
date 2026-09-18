@@ -8,20 +8,20 @@
 
 ### Requirement: ScenePlay 必须拥有预览生命周期
 
-ScenePlay 协调器 MUST 统一拥有 Start、Pause、Resume、Reset、Stop、Build、Ability 请求、Live Debug、Capture、History、Restore 和 Replay。TimelineEditorWindow MUST 只提交作者选择、输入和请求，并消费正式 binding、状态和只读事实。
+ScenePlay 的正式 Session、Actor 和 RuntimeDebug owner MUST 统一拥有 Start、Pause、Resume、Stop、Ability 输入、Live Debug、Capture、History、Restore 和 Replay。TimelineEditorWindow 的 Session 菜单 MUST 先用 Profile 的 ContextId 精确定位 Composition SessionId，再在该 Session 内定位 Actor；窗口只提交请求，并消费正式 binding、状态和只读事实。
 
 #### Scenario: 从编辑器开始一次 Ability 预览
 
-- **WHEN** 作者在 ScenePlay 中选择 Character、Ability 和 Timeline 观察入口并点击 Start
+- **WHEN** 作者在 TimelineEditorWindow 选择 Profile 并点击 Start Preview
 - **THEN** ScenePlay MUST 加载声明的正式场景并启动唯一 Session/Actor
 - **AND** Ability MUST 通过正式输入和请求入口启动
 - **AND** Timeline UI MUST 绑定实际 playback identity 后开始观察
 
 #### Scenario: 暂停与停止
 
-- **WHEN** 作者点击 Pause、Resume、Reset 或 Stop
+- **WHEN** 作者点击 Pause、Resume 或 Stop
 - **THEN** ScenePlay MUST 调用正式 Session/Presentation/Timeline 生命周期
-- **AND** Timeline UI MUST 不自行推进时间、不清理角色状态、不创建新播放实例
+- **AND** Timeline UI MUST 不自行推进时间、不清理角色状态、不创建新播放实例；Capture、History 和 Resume Live 只调用 RuntimeDebugSession
 
 ### Requirement: Timeline UI 不得拥有运行时执行状态
 
@@ -90,7 +90,7 @@ Timeline Editor MUST 通过 Timeline owner 的正式 Mutation、Validator 和 Un
 
 - **WHEN** 作者拖动 key 或修改曲线 Inspector 值
 - **THEN** UI MUST 只生成一次正式 Mutation/Undo
-- **AND** 修改后的内容 MUST 通过正式 revision/Build/Prepare 进入后续 ScenePlay
+- **AND** 修改后的内容 MUST 通过正式 Export/Prepare/Publish/Adopt 进入后续 ScenePlay
 - **AND** 当前活动播放不得被窗口静默替换
 
 ### Requirement: 旧窗口预览路径必须删除
@@ -103,14 +103,14 @@ Timeline Editor MUST 通过 Timeline owner 的正式 Mutation、Validator 和 Un
 - **THEN** 播放、暂停、重置和停止入口 MUST 指向 ScenePlay/正式 Runtime 合同
 - **AND** MUST 不存在窗口级第二套执行路径或兼容别名
 
-### Requirement: Timeline预览必须复用原生Pose实现
+### Requirement: Timeline Preview 必须观察唯一正式动作与 Pose 运行
 
-有限动作 Timeline Preview MUST继续使用自己的 session-local 动作状态与正式 Action adapter，绑定同一原生 Pose Factory、资源、Slot、Source 和最终输出规则。它 MUST不要求旧角色 Program／Pose Image，不执行 Gameplay 或树逻辑，也不读取活动角色私有状态；持续 Locomotion 预览继续归 Pose 入口。
+有限动作 Timeline Preview MUST只观察正式 Session 中由 Ability、RootTree、Timeline Runtime、原生 Pose Factory、资源、Slot、Source 和最终输出规则共同产生的结果。窗口 MUST不保存 session-local 动作状态、不创建 Action adapter、不执行 Gameplay 或树逻辑，也不读取活动角色私有状态；持续 Locomotion 仍由正式 Pose 运行链拥有。
 
 #### Scenario: 在同一动画配置上预览有限动作
-- **WHEN** 作者预览一个合法有限动作 Timeline
-- **THEN** 预览 MUST通过动作请求进入原生 Pose 实例，保留动作时间与 Slot 混合语义
-- **AND** MUST不创建另一套动画执行器或生成临时角色 Program
+- **WHEN** 正式 Session 执行一个合法有限动作 Timeline
+- **THEN** Preview MUST观察同一原生 Pose 实例产生的动作时间与 Slot 混合事实
+- **AND** MUST不创建另一套动画执行器、临时角色 Program 或 Preview 专用动作状态
 
 ### Requirement: 预览接入必须以领域实际准备和采用事实为准
 

@@ -460,7 +460,7 @@ Host/Registration/Session退出Program/Projection必要条件，安装真实领�
 | `refactor-character-pose-graph-architecture` | 已正确的算法、Source／Constraint／Final Publication、状态与事务所有权 | ProgramImage／操作索引／全图 Worker 专属工作被原生节点迁移替代；不能把已完成算法回退 |
 | `refine-pose-graph-readonly-blackboard`、`add-flowcanvas-event-graph` | 唯一变量声明／Set／typed Frame 和 Pose 只读消费 | 只把 Pose 编译句柄绑定改为原生节点绑定，不接管变量写入业务 |
 | `integrate-native-fsm-skill-authoring`、`add-skill-transfer-connections` | GameplayAbilityDefinition、原生 FSM 作者组织、生命周期、条件／连线语义 | 技能输出从角色总 Program 迁为独立技能数据；不复活旧 ActionExit 或其它已清理作者结构 |
-| `rebuild-btsmtl-preview-with-scene-play`、`finish-skill-runtime-observation` | 正式会话观察、暂停／推进、身份与来源、用户交互 | 由本任务提供真实领域操作与采用结果，预览任务自己接 ScenePlay协调器；不保留 Character Build／ProgramEpoch，也不构造假全局版本 |
+| `design-btsmtl-authoring-runtime-workbench`、`finish-skill-runtime-observation` | 正式会话观察、暂停／推进、身份与来源、用户交互 | 由本任务提供真实领域操作与采用结果，预览任务自己接 ScenePlay协调器；不保留 Character Build／ProgramEpoch，也不构造假全局版本 |
 | `rebuild-character-camera-from-zzz` | Camera Builder／payload／Timeline.Camera.cs、Profile／资源准备与求解 | 本任务仅调用其分型准备接口、迁移角色装配与旧 Projection 挂接 |
 | 现行运动源规范／C# authoring原owner | 已完成RootMotionCurveAsset、MotionCurveClip／MotionWarp与时间映射迁移；历史change已归档 | 本任务消费当前正式绑定，不重做已完成迁移；共享字段修改仍交原owner |
 | `restyle-timeline-editor-slate-style` | Slate 源码、Timeline内容 UI／编辑／保存 | 本任务不接管 Slate 编辑代码；播放仍由正式 Timeline Runtime 拥有 |

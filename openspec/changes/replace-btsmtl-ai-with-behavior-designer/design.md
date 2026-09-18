@@ -193,7 +193,7 @@ Authority Replication 对完整 Actor roster 产生既有状态/动作/结果。
 - `refactor-btsmtl-authoring-architecture`：其 design 中保留 AI RootTree/AIIntentProgram、Document 两域以及 task 5.6 由本提案的删除目标替代；技能/C# 控制/Action/状态布局仍归原变更。本次不要求整份主重构完成才开展独立工作，但接线必须使用实际已形成的正式输入与动作合同，不能镜像另一套接口。
 - Document 继续对齐主重构正在形成的唯一 v5 目标；本变更移除该目标中的 AIController domain，不另起插件 schema。当前 installed v4 与目标 v5 的迁移仍只有一条正式发布链，旧 AI package 不被转换为插件图。其它非 AI domain 的新增只来自其正式变更，不能借删除 AI 顺带撤销。
 - `decouple-timeline-from-skill`：保留其独立 Timeline 目标和共享 TreeClip/编译/执行提取。插件 AI 不直接调用技能/非技能 Timeline，不决定独立 Timeline 的生命周期；涉及 Document 的共同文件合并为“已有非 AI domains + 该变更正式 Timeline domain”。
-- `rebuild-btsmtl-preview-with-scene-play`：场景预览继续拥有正式 Session 控制；只替换旧 AI 作者/诊断引用，不恢复窗口播放器或插件图直接改角色的预览路径。
+- `design-btsmtl-authoring-runtime-workbench`：Authoring Runtime Workbench 继续拥有正式 Session 控制；只替换旧 AI 作者/诊断引用，不恢复窗口播放器或插件图直接改角色的预览路径。
 - Pose、Foot、Camera、Performance、Development Center 等变更只复用其已声明合同。本次不覆盖其未提交修改、不修复无关 baseline、不发送自动实施指令。
 
 主重构精确交接清单：

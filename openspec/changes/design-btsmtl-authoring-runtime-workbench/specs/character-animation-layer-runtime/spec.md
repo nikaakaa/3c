@@ -10,6 +10,12 @@
 - **THEN** 受控预览与新的正式运行准备 MUST停止使用旧产物
 - **AND** MUST不创建临时 Plan、旧产物补充路径或独立 PlayableGraph
 
+#### Scenario: Presentation binding变为Stale
+
+- **WHEN** authoring revision变化而Presentation binding尚未显式Preparation
+- **THEN** Preview与Runtime preparation MUST停止
+- **AND** MUST不创建临时Plan、旧Presentation binding fallback或独立PlayableGraph
+
 #### Scenario: 合法参数已经修改
 
 - **WHEN** 作者仅修改正式运行调参合同支持的字段

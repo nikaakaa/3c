@@ -109,7 +109,7 @@ Pose Bottom Dock 不再创建独立 Preview Scene、隐藏相机、局部 Animat
 
 ## EXEC-SCENEPLAY-20260906-01 执行记录
 
-本节对应 `D:/Unity_Project_1/3C/openspec/changes/rebuild-btsmtl-preview-with-scene-play/design.md` 的“执行协作与当前批次”。本批次只在 `D:/Unity_Project_1/3C-worktrees/btsmtl-scene-play-preview` 的 `codex/btsmtl-scene-play-preview` 分支继续原授权，不修改 `D:/Unity_Project_1/3C/docs/coordination-progress.md`，不整支合并 ACL、Timeline 或 Camera provider 分支，也没有建立第二条执行路径。
+本节对应 `D:/Unity_Project_1/3C/openspec/changes/design-btsmtl-authoring-runtime-workbench/design.md` 的“执行协作与当前批次”。本批次只在 `D:/Unity_Project_1/3C-worktrees/btsmtl-scene-play-preview` 的 `codex/btsmtl-scene-play-preview` 分支继续原授权，不修改 `D:/Unity_Project_1/3C/docs/coordination-progress.md`，不整支合并 ACL、Timeline 或 Camera provider 分支，也没有建立第二条执行路径。
 
 ### 源码身份与依赖核对
 
@@ -324,7 +324,7 @@ Replay capability 现在公开真实 `IsInputRecording` 状态，Float32/Fixed T
 
 ## 2026-09-09 验证记录
 
-- OpenSpec：`openspec validate rebuild-btsmtl-preview-with-scene-play --type change --strict --json --no-interactive` 通过。
+- OpenSpec：`openspec validate design-btsmtl-authoring-runtime-workbench --type change --strict --json --no-interactive` 通过。
 - 静态：`git diff --check` 通过，预览 worktree 当前 clean；当前功能提交最新为 `90cd127fa`，后续提交只更新审计、TreeClip 盘点和 review 文档。
 - Unity：手动 batch `btsmtl-preview-replay-compile-20260909.log` 曾只记录到 Package Manager 注册完成，随后进程无进一步输出并被停止；该次不作为编译证据。此前正式 Center Run `c4c620ae0c4d4712812d591f0c5d3d56` 完成 `compile`。新增 Target identity report 初次编译由 `47aebafc4c664564832734ea8b2654ad` 抓到类型错误，已由 `af27a0aba`、`37a091e99` 修复；正式 Run `3df678e58c9f466ab93a4600ca5d5aad` 完成，Unity 日志出现 `*** Tundra build success` 并正常退出，未检出 `error CS`。局部 History 边界修正后的正式 Run `95e50007eb5d4d2381d4e4c612b22137` 同样完成并出现 `*** Tundra build success`。PresentationFrame Action snapshot 关联的 Run `3911cace9846414695b4a91abc42999f` 出现 `*** Tundra build success`、无 `error CS`，但 Unity 在 assembly reload 后未自行退出，已停止我启动的 batch 进程；其后的 `dc8472e1a` 只调整既有 TimelinePlayback identity 到同一 PresentationFrame 的选择闭包，尚未获得独立正式编译结论。直接 batch 也再次卡在 Package Manager 注册后，无新 CS 结论。RunHost 没有生成额外结果文件，因此这里只认定已编译部分完成，不扩大为当前最终 HEAD 完整业务通过。
 - Center：继续使用 `79a0588a3f9047b4889ac40e9e698cc9`，已写入上述提交范围、验证缺口和未闭合项；没有新建第二条 Change 记录。
@@ -563,7 +563,7 @@ Timeline 窗口的完整 Capture 原先只订阅 Timeline、Animation 和 Motion
 
 `7b90bdd45` 同时收紧了 Timeline 上层程序集依赖：Scene Play 合同由已经使用它的 Tree Editor 消费，`BTSMTL.Timeline.Editor` 不再额外引用 `ThirdPersonGameplay`。本轮没有执行 Build、Play 或测试。
 
-本轮随后执行 `openspec validate "rebuild-btsmtl-preview-with-scene-play" --type change --strict`，返回 `Change 'rebuild-btsmtl-preview-with-scene-play' is valid`。该结果只证明当前 change 文档结构和 delta 格式有效，不替代 Unity/C# 编译、Scene Play 或用户端到端验收。
+本轮随后执行 `openspec validate "design-btsmtl-authoring-runtime-workbench" --type change --strict`，返回 `Change 'design-btsmtl-authoring-runtime-workbench' is valid`。该结果只证明当前 change 文档结构和 delta 格式有效，不替代 Unity/C# 编译、Scene Play 或用户端到端验收。
 
 提交 `9eddc87c1` 修正空 Capture/无匹配实例的诊断状态：`RuntimeExecutionTimeline` 与 `RuntimeExecutionHistory` 只有在实际收到事件时才标记为完整，避免把空记录当成可查看或可恢复历史。该修正不改变捕获容量、checkpoint 或正式 Session 状态。
 
@@ -898,7 +898,7 @@ Scene Play 期间 Timeline 仍然可编辑。Clip/Curve/Section 修改通过正�
 
 ## 2026-09-11 主线单线化
 
-用户决定本change转入主线单线执行：分支`codex/btsmtl-scene-play-preview`（tip `4b7f7544e`，"同步预览曲线轨道聚焦优化"）与其worktree自当日起停止接收新提交，只作为尚未复制内容的来源和历史追溯。本文件自当日起落在主线`openspec/changes/rebuild-btsmtl-preview-with-scene-play/`并作为唯一实现记录；此前897行历史记录原样保留自worktree。
+用户决定本change转入主线单线执行：分支`codex/btsmtl-scene-play-preview`（tip `4b7f7544e`，"同步预览曲线轨道聚焦优化"）与其worktree自当日起停止接收新提交，只作为尚未复制内容的来源和历史追溯。本文件自当日起落在主线`openspec/changes/design-btsmtl-authoring-runtime-workbench/`并作为唯一实现记录；此前897行历史记录原样保留自worktree。
 
 后续由用户按范围指定、把分支成果逐块复制进主线（cherry-pick或文件级复制）。每批复制在此登记「分支提交↔主线提交」对应关系，并同步主线版tasks.md勾选；复制前确认主线tip与目标文件无其它窗口的未提交改动。单线化时主线tip为`f8bc2d853`（"补齐Timeline脚本绑定meta并清理已删除资源引用"）。
 

@@ -11,7 +11,7 @@
 2026-09-14 PARALLEL-20260914-DOMAIN-01：本任务新增直接Timeline Runtime规划，详见[timeline-direct-runtime.md](timeline-direct-runtime.md)，与原Slate UI线分开。这里的“分开”只表示职责和 owner 分开，不表示把 Runtime 从当前 goal 删除；Timeline Runtime 按 tasks 第12节推进，ScenePlay协调器仍拥有场景预览接入，不能因本任务接收内容Runtime就代写预览协调器。
 
 - Timeline窗口只拥有作者编辑、帧游标、正式Undo、源导航和真实运行/历史标记；不创建Slate播放器、另一个采样器或预览Session。
-- SkillGraph/Graph Shell承载共享预览控制；场景选择、准备、运行、暂停、结束和领域变化后的实际采用由rebuild-btsmtl-preview-with-scene-play原协调器及正式运行模块拥有。
+- SkillGraph/Graph Shell承载共享预览控制；场景选择、准备、运行、暂停、结束和领域变化后的实际采用由`design-btsmtl-authoring-runtime-workbench`原协调器及正式运行模块拥有。
 - Game/Scene视图显示真实角色与相机。Timeline编辑不需要Slate Actor/Director；真实预览对象由正式场景/领域工厂管理。
 - 删除本联动方案中的Character全量Build、整包CharacterPresentationProjection、统一ProgramEpoch采用与Document/v7前置。也不能把它们改名为一个新角色总包、全局版本对象或隐藏Pose Image。
 - 保留独立技能数据、源资源处理、网络Pipeline/Pass、Float32/Fixed、正式Session/World和领域算法。图编辑不会触发运行时偷偷补构建。
@@ -120,7 +120,7 @@ Timeline正式编辑/Undo
 |---|---|---|
 | Timeline直接内容Runtime/portable/播放私有状态 | 本任务新增Runtime线 | 独立Prepare/CreatePlayback、Advance候选与Commit/Discard/Stop、分型Capture/Restore；核心接总Step/快照 |
 | Slate编辑源码、Timeline UI适配 | Timeline任务 | 原UI、正式字段/命令、导航、只读版本与运行标记 |
-| ScenePlay协调器、场景准备、运行采用/历史 | rebuild-btsmtl-preview-with-scene-play原owner | 提供/消费第4节信息，不由Timeline复制实现 |
+| ScenePlay协调器、场景准备、运行采用/历史 | `design-btsmtl-authoring-runtime-workbench`原owner | 提供/消费第4节信息，不由Timeline复制实现 |
 | Timeline.MotionCurve/MotionWarp与源配置binding | unify-timeline-motion-curve-source | UI消费typed字段和源导航；保留局部Weight/Ease |
 | Timeline.Camera.cs、Camera正式绑定/Reset | 摄像机任务 | UI消费正式参数和Reset结果，不代写CameraBuilder |
 | 角色领域装配、独立技能、原生Pose Factory接线 | replace-character-program-with-domain-runtimes | 预览经原owner取得就绪与实际版本，不恢复角色总包 |

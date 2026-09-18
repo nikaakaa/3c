@@ -311,7 +311,7 @@ Animation Clip MUST只能选择已存在的原生 AnimationClip；TreeClip MUST�
 
 Timeline与Graph Shell的公共接入 MUST遵循replace-character-program-with-domain-runtimes领域装配合同。角色总Program、整包Projection、统一ProgramEpoch、旧Document/v7 MUST NOT成为作者编辑、场景准备或运行采用的前置；MUST NOT换名创建新的角色总包。Slate原UI、TimelineData、现有编辑Session/Undo及typed接线 MUST保留。
 
-原rebuild-btsmtl-preview-with-scene-play协调器与正式运行模块 MUST继续拥有预览生命周期和领域采用。共同接口 MUST表达场景/context/目标/Session generation、领域内容与配置版本、就绪结果、实际采用版本或实例、失败阶段和原因。Timeline UI MUST仅消费对应报告与导航，不代写角色工厂、CameraBuilder或技能编译器。
+原 `design-btsmtl-authoring-runtime-workbench` 协调器与正式运行模块 MUST继续拥有 Authoring Runtime Workbench 的生命周期和领域采用。共同接口 MUST表达场景/context/目标/Session generation、领域内容与配置版本、就绪结果、实际采用版本或实例、失败阶段和原因。Timeline UI MUST仅消费对应报告与导航，不代写角色工厂、CameraBuilder或技能编译器。
 
 #### Scenario: 各领域处理作者变化
 

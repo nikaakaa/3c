@@ -1,6 +1,9 @@
 using System;
 using System.Linq;
 using ThirdPersonCharacter.ActionSystem;
+using FlowCanvas;
+using NodeCanvas.Framework;
+using ThirdPersonSimulation;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCamera;
 using UnityEditor;
@@ -35,14 +38,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
                 "Corin_Attack_Normal_01_Shake_Node",
                 CameraEffectKind.Shake,
                 "Corin_Attack_Normal_01_CamShake_A_01",
-                new Vector2(360f, 460f));
+                new Vector2(360f, 460f),
+                "b55d75dd-5b56-4cd3-90aa-95ff0ad4dd22",
+                "0e21a562-15a3-4d02-960f-1f5fa94ef22f",
+                "1b6fa94a-33d5-4fbd-96af-4f52f1c1f421",
+                "e7c927bb-0706-4106-8d7e-d752fc9df427",
+                "d4c2aeb7-5842-448e-9c7f-16558d9dfc53");
             applied += EnsureCameraEffect(
                 definition,
                 FindGraph(graphs, "47990a9445e2bdec6a74d1f4522332ff"),
                 "Corin_Attack_Normal_05_Zoom_Node",
                 CameraEffectKind.Zoom,
                 "Corin_Attack_Normal_05_CamZoom_01",
-                new Vector2(360f, 460f));
+                new Vector2(360f, 460f),
+                "baa09250-708d-4044-a90e-3e4e018aa926",
+                "2248ac76-d9ec-4bd9-a772-a76a09a26f6a",
+                "80b7ff9e-2214-4b83-8f68-3198ac36a4c1",
+                "863fd5a3-0f36-4ee2-9560-1e6f4f549d90",
+                "98df6307-0b02-4348-bdf7-f3b98eb63a7f");
 
             RemoveLegacyCue("Attack1CameraCue");
             RemoveLegacyCue("Attack5CameraCue");
@@ -147,27 +160,56 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
             string nodeName,
             CameraEffectKind effectKind,
             string resourceId,
-            Vector2 position)
+            Vector2 position,
+            string nodeAuthoringId,
+            string branchAuthoringId,
+            string rootEdgeAuthoringId,
+            string cameraEdgeAuthoringId,
+            string hitEdgeAuthoringId)
         {
             if (graph == null)
                 throw new InvalidOperationException("目标子图缺失: " + nodeName);
-            RequestCameraEffectNode existing = graph.allNodes.OfType<RequestCameraEffectNode>()
-                .FirstOrDefault(node => string.Equals(node.name, nodeName, StringComparison.Ordinal));
-            if (existing != null)
+            RequestCameraEffectNode node = graph.allNodes.OfType<RequestCameraEffectNode>()
+                .FirstOrDefault(value => string.Equals(value.name, nodeName, StringComparison.Ordinal));
+            if (node != null && !string.Equals(node.UID, nodeAuthoringId, StringComparison.Ordinal))
             {
-                if (existing.EffectKind == effectKind &&
-                    string.Equals(existing.ResourceId, resourceId, StringComparison.Ordinal))
-                    return 0;
-                BtsmtlSkillAuthoringContract.Apply(existing, new[]
-                {
-                    new BtsmtlSkillAuthoringFieldValue("effectKind", effectKind),
-                    new BtsmtlSkillAuthoringFieldValue("resourceId", resourceId)
-                });
-                EditorUtility.SetDirty(definition);
-                return 1;
+                graph.RemoveNode(node, false);
+                node = null;
             }
-            var node = (RequestCameraEffectNode)CodeGeneration.BtsmtlSkillAuthoringCode.EnsureFlowNode(
-                graph, typeof(RequestCameraEffectNode), Guid.NewGuid().ToString("D"), nodeName, position);
+            if (node == null)
+                node = (RequestCameraEffectNode)CodeGeneration.BtsmtlSkillAuthoringCode.EnsureFlowNode(
+                    graph, typeof(RequestCameraEffectNode), nodeAuthoringId, nodeName, position);
+            var trigger = graph.allNodes.OfType<BtsmtlSkillRootFlowNode>().Single();
+            var originalTargets = trigger.outConnections.OfType<BinderConnection>()
+                .Where(value => value.sourcePortID == "Output")
+                .Select(value => value.targetNode)
+                .OfType<FlowNode>()
+                .Where(value => value.UID != branchAuthoringId && value.UID != nodeAuthoringId)
+                .ToArray();
+            graph.DisconnectPort(trigger.GetOutputPort("Output"));
+            var branch = graph.allNodes.OfType<BtsmtlSkillParallelFlowNode>().FirstOrDefault(
+                value => string.Equals(value.UID, branchAuthoringId, StringComparison.Ordinal));
+            if (branch == null)
+                branch = (BtsmtlSkillParallelFlowNode)CodeGeneration.BtsmtlSkillAuthoringCode.EnsureFlowNode(
+                    graph, typeof(BtsmtlSkillParallelFlowNode), branchAuthoringId, "相机与命中分支", new Vector2(240f, 260f));
+            BtsmtlSkillAuthoringContract.Apply(branch, new[]
+            {
+                new BtsmtlSkillAuthoringFieldValue("steps", new[]
+                {
+                    BtsmtlSkillAuthoringContract.CreateStep("camera", "相机", null, 0, ProgramAbortPolicy.None),
+                    BtsmtlSkillAuthoringContract.CreateStep("hit", "命中", null, 0, ProgramAbortPolicy.None)
+                })
+            });
+            CodeGeneration.BtsmtlSkillAuthoringCode.EnsureFlowConnection(
+                graph, trigger, "Output", branch, "Input", rootEdgeAuthoringId);
+            CodeGeneration.BtsmtlSkillAuthoringCode.EnsureFlowConnection(
+                graph, branch, branch.Steps[0].Id, node, "Input", cameraEdgeAuthoringId);
+            for (int i = 0; i < originalTargets.Length; i++)
+                CodeGeneration.BtsmtlSkillAuthoringCode.EnsureFlowConnection(
+                    graph, branch, branch.Steps[1].Id, originalTargets[i], "Input", hitEdgeAuthoringId);
+            if (node.EffectKind == effectKind &&
+                string.Equals(node.ResourceId, resourceId, StringComparison.Ordinal))
+                return 0;
             BtsmtlSkillAuthoringContract.Apply(node, new[]
             {
                 new BtsmtlSkillAuthoringFieldValue("effectKind", effectKind),

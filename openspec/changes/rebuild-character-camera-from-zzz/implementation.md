@@ -160,3 +160,10 @@ cameraLockBossConfig 与工程 ApplyEntityPointFrame/ApplyTwoPointFrame 逐字�
 - Corin 来源对账使用 `D:/ZZZ_Dump/output/corin_replication/replication-guide/data/actions/*.json` 的 `cameraKeys` 与正式 Camera 资源双向对账。已闭合的示例是 `Attack1` → `Corin_Attack_Normal_01_CamShake_A_01` 的 TreeClip `RequestCameraEffectNode`，以及 `Attack5` → `Corin_Attack_Normal_05_CamZoom_01` 的 Zoom Node；对应 `btsmtl.export_code` / `generate_assets` 已通过正式合同写回。`Attack_Counter` 与 `Attack_End_2` 仍缺正式 Node/资源映射，不能按名字或资源数量补齐。
 - Timeline/TreeClip 相机表达只是正式消费入口：触发型动作请求由 TreeClip 相机特殊 Node 提交给 Camera Runtime；持续效果窗口由唯一 Timeline 效果轨道采样后提交同类 typed request。Camera Runtime 继续拥有资源解释、生命周期、叠加、碰撞和最终输出。作者资产和生成源码必须通过正式 C# 领域 API 写入，不允许 Timeline 再建第二套 Camera domain。
 - 尚未接入的部分按能力隔离：Shake/Override/Shot 消费者、Zoom/Stretch 的真实动作时钟/取消语义、持续窗口资源接线、`Attack_Counter`/`Attack_End_2` 映射、绑定失败与采用合同收口仍在 `tasks.md` 中。`3C/Camera/Validate Corin Camera Profile` 当前通过 Normal01 Shake 和 Profile 校验，只证明资产合同有效，不证明动作端到端镜头已还原。
+
+## 2026-09-19 Corin 攻击相机事件链对账
+
+- 正式输入事件只能是 Timeline 领域事件：`TimelineRuntimePresentationFrame.Events` 的 Presentation Marker 进入 `CharacterTimelineHost.InvokePresentationMarkers`，以 `AbilityTreeClipHook.OnEnable` 调用 TimelineBody 图；`RequestCameraEffectNode` 挂在 root 可达流上后，把 typed `CameraEffectRequest` 转成 PresentationCommand。攻击定义里的 `AttackProperty` cue、动作 JSON 和命中帧数组都不是相机直接输入。
+- 参数来源固定为：请求身份/效果类型/ResourceId/weight/priority 来自 TreeClip 特殊 Node；实际数值曲线、时长、空间、叠加和衰减由 `ResourceId` 在 Camera Profile 只读 Projection 中解析。Camera 不读取攻击配置、Zdumpy JSON、资源文件名或 `AttackProperty` 表。
+- 生命周期合同是 `action instance + cycle + producer + request id + event id` 稳定身份；自然结束由效果 owner 的资源时长/淡出裁决，取消/事件撤销/Owner 销毁走 Camera domain Retire。Replay 必须复现同一 event identity 和同一 Presentation delta；Shake 的 realtime 分支只影响镜头观察，不倒灌 fixed Body。
+- Corin Attack 闭包已重新写回 Attack1 Shake 与 Attack5 Zoom 的 Node，删除旧 CameraCue，并通过 TimelineBody 内的并行分支让 root 同时驱动相机 Node 与原命中/黑板链路。`btsmtl.generate_assets` 已替换 Ability Definition 且诊断为 0；`ThirdPersonClient.Editor` 编译 0 错误，Corin Profile/Normal01 Shake 校验通过。此证据仍是 authoring/静态消费链证据，不替代运行时镜头采样或 Replay 验证。

@@ -101,3 +101,7 @@ Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源�
 2026-09-19：AttackProperty 导入范围扩展到 ZZZ Corin 全量 `108` 个 key；目录保持 `Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties`。`GroundHitEffectId`、`SkyHitEffectId`、`DownHitEffectId` 按原始无符号效果编号进入 `GameplayEffectDefinition`、Fixed/Float32 Portable catalog 和 Runtime binding。Effect Profile 现登记 `109` 个定义：`108` 个 AttackProperty 加既有 `CorinDamageEffect`。Ability 依赖由 `Attack.FixedData.asset`、`Attack.Float32Data.asset` 和正式 Ability asset 承载。
 
 Timeline 侧边界同步收口：ActionCue 只在 Logic commit 后发布 `CueType=AttackProperty` 的稳定领域事件；`CueId` 继续保留原始 `Corin_Attack_*_AttackProperty_*` key。Timeline runtime 不解析命中效果编号、碰撞形状或属性数值；这些 payload 由 GameplayEffect Profile 与 Ability 执行域消费。
+
+2026-09-19：主战斗控制器状态对照已建立，`101` 个状态中 `97` 个已有 `.anim` Motion、`2` 个只有 raw `.dat`、`2` 个无 Motion。Normal/Branch/Rush 已按 BlendTree 实际 Clip 引用对账，非同名与共享 Motion 逐行标注；详见 [zzz-corin-controller-map.md](zzz-corin-controller-map.md)。
+
+2026-09-19：Timeline 复核确认现有五段 Normal Timeline 只能粗表达 Attack 1/2/4 线性 End；Attack3 Explode、Attack5 End/End_2 分支、End2 Timeline 绑定和状态本地 cue 重映射是具名缺口。Branch/Rush 不混入现有五段 Timeline；详见 [zzz-corin-normal-attack-timeline-review.md](zzz-corin-normal-attack-timeline-review.md)。

@@ -70,7 +70,7 @@
 - `gameplay-tick-system`（tick 率配置化、表现插值 alpha）与本决策一致，不修改其文档，Timeline 是其下游消费者；
 - `character-presentation-interpolation`（表现不回滚、连续状态保持、分支替换整批更新）是本 change 的表现侧约束；Network Model 级 locomotion plan 由独立的 `add-network-model-locomotion-presentation-policy` change 负责；
 - `btsmtl-timeline-direct-runtime` 需要补充“直接内容遍历下的双域 evaluation”边界：Logic / Presentation 输出不是 Semantic operation 或预生成操作表；
-- `btsmtl-runnable-timeline-node` 需要把既有 TimelineBody 图限定为 Logic TreeClip，并给 Presentation TreeClip 规定无图执行的 Marker 来源；
+- `btsmtl-runnable-timeline-node` 需要把既有 TimelineBody 图限定为 Logic TreeClip，并规定 Marker 为与 Clip 同级的点触发实体；
 - `character-animation-pipeline` 需要记录表现 Marker 在 PresentationFrame 消费、不得写 Gameplay fact 的调用边界。
 
 ## 与归档条款的协调
@@ -118,9 +118,12 @@ Timeline Runtime 仍直接读取正式只读 TimelineData。`Advance` 与 `Prese
 TreeClip 必须把图执行和表现触发拆成两个明确来源：
 
 - Logic TreeClip：既有 `AssetTree` / TimelineBody 图只在逻辑 Tick 评估 Enter / Update / Exit，输出逻辑请求，进入既有 Commit / Discard 链；`TreeDecision` 退出也只作用于这一侧；
-- Presentation TreeClip：只持有 typed Presentation Marker（marker identity、时间、`Pulse` / `Stateful` 生命周期类型和正式 payload binding），表现帧按视觉游标跨越 Marker 输出事件；它不得绑定或执行 TimelineBody 图；
+- Presentation TreeClip：由 PresentationFrame 游标推进的表现安全 TreeClip，只产出表现结果，不得绑定或执行 Logic TimelineBody 图，不得产生 Gameplay fact；
+- Marker：与 Clip 同级的点触发实体——单帧、稳定 MarkerId、触发图仅暴露 OnEnable 回调；域归属决定由 SimulationTick（Advance / Commit）或 PresentationFrame 推进，不同域独立推进互不等待；
 - DualProjection TreeClip：同一 Clip 同时持有 Logic `AssetTree` 与 Presentation Marker。两侧由同一 Clip identity 关联，但 AssetTree 只执行一次，永远不在 PresentationFrame 执行。
 
-每个 Presentation Event 的稳定身份由 `PlaybackHandle`、`Generation`、`ClipId`、`MarkerId` 与 `TraversalIndex` 组成；`TraversalIndex` 是该 playback generation 下穿过 Marker 的循环/经过序号。Marker 必须声明 `Pulse` 或 `Stateful`：`Pulse` 只在跨越时交付一次，不进入活动集；`Stateful` 在其有效区间进入活动集。相同 identity 在同一可见分支只交付一次；循环再次经过 Marker 必须获得新的 `TraversalIndex`。表现游标重采样、停止或分支替换时，消费者以完整 Stateful 事件集调和：保留相同 identity、取消旧分支消失的 identity、交付新 identity。该调和只能改变表现状态，不能写 Gameplay fact。
+每个 Presentation Marker 事件的稳定身份由 `PlaybackHandle`、`Generation`、`MarkerId` 与 `TraversalIndex` 组成；`TraversalIndex` 是该 playback generation 下穿过 Marker 的循环/经过序号。Marker 是单帧点触发：同一次经过只交付一次，循环再次经过获得新的 `TraversalIndex`；playback 停止或 generation 变化后旧 generation 的 Marker 不再触发。触发只改变表现状态，不能写 Gameplay fact。
+
+2026-09-19 用户定案：Marker 重构为与 Clip 同级的点触发实体，废除 `Pulse`/`Stateful` 区间模型与 clip 子列表方案；Marker 触发图仅 OnEnable 回调，域归属（Logic tick / Presentation frame）决定推进者，不同领域各自独立实现。
 
 这部分是当前 Timeline change 的后续未完成工作。现有逻辑 TreeClip runtime 不得被宣称为已经支持表现时钟 TreeClip；当前仅把逻辑 TreeClip 事件镜像到表现层也不等价于 Marker 由 PresentationFrame 驱动。

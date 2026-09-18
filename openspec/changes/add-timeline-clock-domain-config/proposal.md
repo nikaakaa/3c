@@ -15,7 +15,7 @@
 - 逻辑判定域收敛为整数 tick：clip enter/exit、cue、TreeClip、Tick lifetime 绑定的判定全部用整数 tick 比较；秒与归一化时间是派生读数，供采样、显示与表现插值使用。
 - Timeline Track / Clip 增加显式执行域，区分 `Logic`、`Presentation` 与 `DualProjection`；`DualProjection` 是同一作者内容的双侧投影，不是第三个时钟，也不把具体 Network Model 或具体时钟实现写入 Clip。
 - Timeline Runtime 继续直接遍历正式只读 Timeline 内容；每次逻辑或表现推进只形成对应域的 evaluation 输出，不把 Track / Clip 预编译成 Semantic operation 或常驻操作表。Logic 输出由 SimulationTick 推进，Presentation 输出由 PresentationFrame 推进。
-- TreeClip 的 Gameplay 决策继续走逻辑链；表现侧使用 TreeClip 持有的 typed Presentation Marker，不执行 TimelineBody 图。一个 TreeClip 同时具有两类内容时，既有 AssetTree 只属于 Logic 投影，Marker 属于 Presentation 投影。
+- TreeClip 的 Gameplay 决策继续走逻辑链；表现侧触发改为与 Clip 同级的 Marker 点实体：单帧、稳定 MarkerId、可挂仅 OnEnable 回调的触发图；Marker 的域归属决定由 SimulationTick（Advance / Commit）或 PresentationFrame 推进。TreeClip 的图只属于其执行域，DualProjection 的图只在逻辑侧执行一次。
 - Presentation Event 使用播放实例、generation、clip、marker 与循环经过序号组成稳定身份；表现游标重采样、分支替换或停止时按 keep / replace / cancel 调和，不再强制等待逻辑 Tick。
 - `TimelineUtility.FrameRate` static 字段删除；运行时换算率从 pipeline tick 率配置注入，编辑器会话使用独立预览刻度。
 - `TickTimeline` 的 `deltaFrames` 按 tick 率与 timeline 帧率比率整数累加换算，累加器余数进入 Timeline 回滚快照。
@@ -30,18 +30,18 @@
 
 ### New Capabilities
 
-- `btsmtl-timeline-clock-domain`：Timeline 时钟域正式合同——tick 唯一权威、比率确定性推进与累加器快照、直接内容的双域 evaluation、表现 TreeClip Marker 事件生命周期、编辑器吸附粒度、Scale 残留清理。
+- `btsmtl-timeline-clock-domain`：Timeline 时钟域正式合同——tick 唯一权威、比率确定性推进与累加器快照、直接内容的双域 evaluation、与 Clip 同级的 Marker 点触发实体与事件生命周期、编辑器吸附粒度、Scale 残留清理。
 
 ### Modified Capabilities
 
 - `btsmtl-timeline-direct-runtime`：保持直接消费正式内容的原则，同时明确双域 evaluation 只是当前推进的输出分区，不是 Semantic operation 或第二执行语言。
-- `btsmtl-runnable-timeline-node`：既有 TimelineBody 图只属于 Logic TreeClip；Presentation TreeClip 改为 typed Marker 事件源，`TreeDecision` 退出只作用于 Logic 投影。
+- `btsmtl-runnable-timeline-node`：既有 TimelineBody 图只属于 Logic TreeClip；Marker 改为与 Clip 同级的点触发实体，触发图仅暴露 OnEnable 回调，`TreeDecision` 退出只作用于 Logic 投影。
 - `character-animation-pipeline`：补充 Timeline Track / Clip 执行域、PresentationFrame 事件输出与 Gameplay fact 隔离。
 
 `gameplay-tick-system`、`character-presentation-interpolation` 与 `gameplay-network-model-boundary` 是本 change 的约束，不在本 change 内改写。Network Model 级 locomotion plan 由独立的 `add-network-model-locomotion-presentation-policy` change 收口。
 
 ## Impact
 
-- 代码面：`TimelineUtility`、Track / Clip 执行域合同、typed Presentation Marker、`FixedAbilityOperationControlRuntime`、`TimelineRuntimePreparation`（快照扩展累加器与逻辑 evaluation）、Timeline Presentation Runtime（表现游标、事件调和与消费）、`GameplayAbilityAuthoringCompilationModel`、`CharacterPipelineDefinition` 配置链路、`BtsmtlSlateTimelineBinding` 吸附、`ActionCommittedSampleHistory` 审计。
+- 代码面：`TimelineUtility`、Track / Clip / Marker 执行域合同、同级 Marker 点实体、`FixedAbilityOperationControlRuntime`、`TimelineRuntimePreparation`（快照扩展累加器与逻辑 evaluation）、Timeline Presentation Runtime（表现游标、事件调和与消费）、`GameplayAbilityAuthoringCompilationModel`、`CharacterPipelineDefinition` 配置链路、`BtsmtlSlateTimelineBinding` 吸附、`ActionCommittedSampleHistory` 审计。
 - 资产面：历史 Track / Clip 缺少执行域时有效值固定为 `Logic`，保持既有行为；新建 Presentation Marker 才产生新表现事件，不对历史资产做自动转换。
 - 与现行 spec 对比：`gameplay-tick-system` 与 `character-presentation-interpolation` 条款一致不动；本 change 显式修改 direct runtime、runnable TreeClip 与 animation pipeline 三处合同，避免把双域输出误解为第二 Timeline runtime。`add-open-ended-treeclip-preview` 的 `TreeDecision` 退出合同只覆盖 Logic 投影，表现 Marker 不通过该回传通道结束。

@@ -12,20 +12,24 @@ Logic TreeClip 与 DualProjection TreeClip 的 Logic 投影 MUST将其 AssetTree
 
 ## ADDED Requirements
 
-### Requirement: Presentation TreeClip必须只以Marker产生表现事件
+### Requirement: Marker 是与 Clip 同级的点触发实体且触发图仅暴露 OnEnable
 
-Presentation TreeClip MUST通过 typed Presentation Marker 产生特效、音效、相机或表现动画事件。Marker MUST保留稳定MarkerId、作者时间、`Pulse` 或 `Stateful` 生命周期类型与正式payload binding；它们 MUST由 PresentationFrame 的视觉游标跨越产生事件。DualProjection TreeClip 的 Marker 与其 Logic AssetTree 共用 Clip identity，但两者不得共享执行入口或互相写入状态。`TreeDecision` 与“结束片段”节点只属于 Logic AssetTree，不得成为 Presentation Marker 的结束或触发机制。
+Timeline Marker MUST是与 Clip 同级的一等内容实体：单帧点、稳定 MarkerId、触发帧与触发图引用。Marker 的触发图 MUST只暴露 OnEnable 一个回调：触发时 MUST只执行该入口一次，MUST NOT进入 Update / Exit / Disable 生命周期。Marker 的推进者由其域归属决定：Logic 域 Marker MUST经 SimulationTick Advance / Commit 确定性触发；Presentation 域 Marker MUST经 PresentationFrame 游标跨点触发并只改变表现状态。`TreeDecision` 与“结束片段”节点只属于 Logic TreeClip 的 AssetTree，Marker 触发图 MUST NOT包含它们。
 
-#### Scenario: Presentation TreeClip没有逻辑图
+#### Scenario: 表现域 Marker 触发
 
-- **WHEN** 作者创建只包含表现事件的 Presentation TreeClip
-- **THEN** 作者数据 MUST只保存 Marker 与表现 binding
-- **AND** 准备阶段 MUST拒绝为该 Clip 绑定或执行 TimelineBody 图
-- **AND** 表现事件 MUST不产生 Frame Blackboard、Gameplay fact 或 TreeClip Commit / Discard 候选
+- **WHEN** 表现游标跨过 Presentation Marker 的触发点
+- **THEN** 其触发图 MUST只执行 OnEnable 入口一次
+- **AND** MUST NOT产生 Gameplay fact 或 Frame Blackboard
 
-#### Scenario: DualProjection TreeClip同时含图与Marker
+#### Scenario: 逻辑域 Marker 触发
 
-- **WHEN** 一个 Clip 同时拥有 Logic AssetTree 与 Presentation Marker
-- **THEN** Logic Tick MUST只执行 AssetTree
-- **AND** PresentationFrame MUST只遍历 Marker
-- **AND** 同一图不得因多个PresentationFrame被重复执行
+- **WHEN** SimulationTick 跨过 Logic Marker 的触发点
+- **THEN** 其触发图 MUST经 Advance / Commit 协议执行 OnEnable 入口一次
+- **AND** 同一经过 Discard 后 MUST不产生执行残留
+
+#### Scenario: 与 Clip 同级共存
+
+- **WHEN** 作者在同一 Timeline 使用 Clip 与 Marker
+- **THEN** Marker MUST作为与 Clip 同级的内容实体创建、存储与推进
+- **AND** Marker MUST NOT作为 Clip 的子列表存在

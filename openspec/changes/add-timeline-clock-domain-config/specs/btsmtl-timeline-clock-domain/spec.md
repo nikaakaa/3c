@@ -93,51 +93,58 @@ Timeline Runtime MUST继续直接遍历正式只读 Timeline 内容。`Advance` 
 - **THEN** Cue、Window、Gameplay TreeClip 和 Action lifecycle MUST按 SimulationTick 推进
 - **AND** Enter / Update / Exit MUST进入既有 Commit / Discard 事务
 
-### Requirement: TreeClip 必须分离逻辑图执行与表现 Marker
+### Requirement: TreeClip 图执行必须只由其执行域推进
 
-Logic TreeClip 的既有 `AssetTree` / TimelineBody 图 MUST只在 SimulationTick 执行；其 Enter / Update / Exit、`TreeDecision` 退出与 Commit / Discard MUST只属于 Logic 投影。Presentation TreeClip MUST以 typed Presentation Marker（MarkerId、时间、`Pulse` 或 `Stateful` 生命周期类型与正式 payload binding）作为唯一表现事件源，MUST NOT绑定或执行 TimelineBody 图。`DualProjection` TreeClip MAY同时持有 Logic `AssetTree` 与 Presentation Marker，但 AssetTree MUST只执行一次，且 MUST NOT在 PresentationFrame 执行。
-
-#### Scenario: Presentation TreeClip 跨过 Marker
-
-- **WHEN** Presentation TreeClip 的视觉游标跨过特效、音效、相机或表现动画 Marker
-- **THEN** PresentationFrame MUST产生对应 Presentation Event
-- **AND** 该事件 MUST不等待下一次 SimulationTick
-- **AND** 该事件 MUST不进入 Gameplay Commit / Discard 事实链
+Logic TreeClip 的既有 `AssetTree` / TimelineBody 图 MUST只在 SimulationTick 执行；其 Enter / Update / Exit、`TreeDecision` 退出与 Commit / Discard MUST只属于 Logic 投影。Presentation 轨的 TreeClip MUST由 PresentationFrame 游标推进，内容 MUST限于表现安全范围，MUST NOT产生 Gameplay fact、canonical input 或 SimulationState，MUST NOT进入 Gameplay Commit / Discard 事实链。DualProjection TreeClip 的 AssetTree MUST只在 SimulationTick 执行一次，MUST NOT在 PresentationFrame 执行。
 
 #### Scenario: TreeDecision 只作用于逻辑投影
 
 - **WHEN** DualProjection TreeClip 的 Logic `AssetTree` 请求 `TreeDecision` 退出
 - **THEN** 该请求 MUST只按既有 Logic Advance / Commit 协议改变 Logic TreeClip 生命周期
-- **AND** Presentation Marker MUST继续由表现游标与 playback 生命周期处理，不得执行 AssetTree 或产生 Gameplay fact
+- **AND** 表现侧 MUST继续由表现游标处理，不得执行 AssetTree 或产生 Gameplay fact
 
-### Requirement: Presentation Event 必须具有可调和的稳定生命周期
+### Requirement: Marker 必须是与 Clip 同级的点触发实体
 
-Presentation Event 的 `EventId` MUST由 `PlaybackHandle`、`Generation`、`ClipId`、`MarkerId` 与 `TraversalIndex` 组成。`TraversalIndex` MUST标识同一 playback generation 对该 Marker 的循环/经过次序：同一经过在多次 PresentationFrame 重采样时保持同一 identity，下一次循环经过 MUST产生新的 identity。Marker MUST声明 `Pulse` 或 `Stateful`：`Pulse` 只在跨越时交付一次，不进入活动事件集；`Stateful` 在有效区间内参与完整活动集调和。Presentation runtime MUST对 `Stateful` 事件进行调和：相同 identity keep、旧分支不再存在的 identity cancel、新 identity add。调和、去重与 cancel MUST只改变表现状态，MUST NOT写 Gameplay fact、canonical input、SimulationState 或 rollback 决策。
+Timeline Marker MUST是与 Clip 同级的一等内容实体：单帧点触发，持有稳定 MarkerId、触发帧、执行域归属与一张仅暴露 OnEnable 回调的触发图引用。Marker MUST NOT携带持续区间或 Stateful 生命周期，MUST NOT作为任何 Clip 的子内容存在。Marker 的推进者由其域归属决定：Logic 域 Marker MUST由 SimulationTick 经 Advance / Commit 推进并触发其触发图 OnEnable；Presentation 域 Marker MUST由 PresentationFrame 的视觉游标跨点触发。不同域的 Marker MUST独立推进，MUST NOT共用游标或互相等待。
+
+#### Scenario: 表现域 Marker 被视觉游标跨过
+
+- **WHEN** Presentation Marker 的触发点被表现游标跨过
+- **THEN** PresentationFrame MUST产生携带稳定 EventId 的表现事件并触发其触发图 OnEnable
+- **AND** 该触发 MUST不等待 SimulationTick，MUST不进入 Gameplay Commit / Discard 事实链
+
+#### Scenario: 逻辑域 Marker 被 tick 跨过
+
+- **WHEN** Logic Marker 的触发点被 SimulationTick 跨过
+- **THEN** runtime MUST经既有 Advance / Commit 协议触发其触发图 OnEnable 一次
+- **AND** 同一经过在 Discard 后 MUST不产生执行残留，Commit 后 MUST不得重复触发
+
+#### Scenario: 与 Clip 同级共存
+
+- **WHEN** 同一 Timeline 同时包含 Clip 与 Marker
+- **THEN** 两者 MUST各自按自己的域推进，互不从属
+- **AND** Marker 的创建、存储与指纹 MUST与 Clip 平级处理
+### Requirement: Presentation Marker 事件必须具有稳定身份且只交付一次
+
+Presentation Marker 事件的 `EventId` MUST由 `PlaybackHandle`、`Generation`、`MarkerId` 与 `TraversalIndex` 组成。`TraversalIndex` MUST标识同一 playback generation 对该 Marker 的循环/经过次序：同一次经过被多个 PresentationFrame 重采样时 MUST只交付一次，下一次循环经过 MUST产生新的 identity。playback 停止或 generation 变化后，旧 generation 的 Marker MUST不再触发。触发 MUST只改变表现状态，MUST NOT写 Gameplay fact、canonical input、SimulationState 或 rollback 决策。
 
 #### Scenario: 同一 Marker 被多次表现帧采样
 
-- **WHEN** 同一 `EventId` 所在的 Marker 区间被多个 PresentationFrame 重复采样
-- **THEN** 消费端 MUST只接收一次 add
-- **AND** 后续采样 MUST把该事件视为 keep
+- **WHEN** 同一次经过的触发点被多个 PresentationFrame 重复重采样
+- **THEN** 该 `EventId` MUST只交付一次
+- **AND** 后续采样 MUST NOT重复触发
 
-#### Scenario: 循环再次经过同一 Marker
+#### Scenario: 循环再次经过
 
-- **WHEN** 同一 playback generation 完成一次循环并再次跨过相同 ClipId 与 MarkerId
+- **WHEN** 同一 playback generation 完成一次循环并再次跨过相同 Marker
 - **THEN** 新事件 MUST使用新的 `TraversalIndex`
 - **AND** 消费端 MUST能够再次触发该 Marker
 
-#### Scenario: 分支替换或停止
+#### Scenario: 停止或分支替换
 
-- **WHEN** 表现游标重采样到替换分支，或对应 playback 停止、generation 变化
-- **THEN** Runtime MUST保留仍存在的相同 `EventId`、cancel 已消失或已停止 generation 的活动事件，并 add 新分支事件
+- **WHEN** playback 停止或 generation 变化
+- **THEN** 旧 generation 的 Marker MUST不再触发
 - **AND** MUST NOT通过 Logic Commit / Discard 重放、补写或撤销 Gameplay 事实
-
-#### Scenario: 一次性与持续表现事件
-
-- **WHEN** `Pulse` Marker 被重复重采样，或 `Stateful` Marker 因 playback 停止离开有效区间
-- **THEN** `Pulse` MUST只交付一次且不得伪造 cancel
-- **AND** `Stateful` MUST按其 `EventId` 收到 keep 或 cancel
-
 ### Requirement: 编辑器吸附粒度必须等于 tick 步长
 
 Timeline 编辑器 clip/cue 边界吸附粒度 MUST 等于会话 tick 步长（`1/tickRate`），MUST NOT 提供运行时无法表示的亚 tick 位置。编辑器预览刻度 MAY 与运行时 tick 率独立配置。

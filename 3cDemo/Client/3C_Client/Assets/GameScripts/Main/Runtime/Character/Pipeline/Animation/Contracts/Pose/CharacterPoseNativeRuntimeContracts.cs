@@ -306,11 +306,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string graphRevision,
             string resourceRevision,
             CharacterPoseNativeFailureCode failureCode,
+            string source,
             string message)
         {
             if (!actorId.IsValid || resetGeneration == 0 || !graphId.IsValid ||
                 string.IsNullOrWhiteSpace(graphRevision) || string.IsNullOrWhiteSpace(resourceRevision) ||
-                string.IsNullOrWhiteSpace(message) ||
+                string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(message) ||
                 failureCode == CharacterPoseNativeFailureCode.None && instanceId == 0 ||
                 failureCode != CharacterPoseNativeFailureCode.None && instanceId != 0)
             {
@@ -323,6 +324,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             GraphRevision = graphRevision.Trim();
             ResourceRevision = resourceRevision.Trim();
             FailureCode = failureCode;
+            Source = source.Trim();
             Message = message.Trim();
         }
 
@@ -336,11 +338,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 request.PreparedBinding.GraphRevision,
                 request.PreparedBinding.ResourceRevision,
                 CharacterPoseNativeFailureCode.None,
+                "Pose",
                 "Pose graph instance was adopted.");
 
         internal static CharacterPoseNativeAdoptedResult Failed(
             in CharacterPoseNativeCreateInstanceRequest request,
             CharacterPoseNativeFailureCode failureCode,
+            string source,
             string message) =>
             new CharacterPoseNativeAdoptedResult(
                 request.Context.ActorId,
@@ -352,6 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 failureCode == CharacterPoseNativeFailureCode.None
                     ? CharacterPoseNativeFailureCode.GraphInvalid
                     : failureCode,
+                source,
                 message);
 
         internal static CharacterPoseNativeAdoptedResult Failed(
@@ -369,6 +374,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 failureCode == CharacterPoseNativeFailureCode.None
                     ? CharacterPoseNativeFailureCode.GraphInvalid
                     : failureCode,
+                preparation.Source,
                 message);
 
         internal ActorId ActorId { get; }
@@ -378,6 +384,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal string GraphRevision { get; }
         internal string ResourceRevision { get; }
         internal CharacterPoseNativeFailureCode FailureCode { get; }
+        internal string Source { get; }
         internal string Message { get; }
         internal bool IsAdopted => FailureCode == CharacterPoseNativeFailureCode.None && InstanceId != 0;
     }

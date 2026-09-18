@@ -209,7 +209,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Fail(
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     graph.GraphId.Value,
-                    exception.Message);
+                    $"{exception.GetType().Name}: {exception.Message}");
             }
             finally
             {

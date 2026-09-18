@@ -173,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         out CharacterPoseNativeDomainSession session);
                     if (!createResult.IsAdopted)
                         throw new InvalidOperationException(
-                            $"Pose Native Domain creation failed: {createResult.FailureCode} {createResult.Message}");
+                            $"Pose Native Domain creation failed: {createResult.FailureCode} {createResult.Source} {createResult.Message}");
                     poseDomain = new CharacterPoseNativeDomainInstance(session, actionCommandSource);
                     runtime.BindPoseDomain(poseDomain, resourceScope, inputContract.Parameters);
                 }

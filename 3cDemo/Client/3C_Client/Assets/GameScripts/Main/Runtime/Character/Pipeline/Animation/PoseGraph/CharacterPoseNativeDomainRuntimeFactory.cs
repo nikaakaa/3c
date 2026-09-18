@@ -113,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return CharacterPoseNativeDomainCreateResult.Failed(
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     "CharacterPoseNativeDomainRuntimeFactory.Create",
-                    exception.Message);
+                    $"{exception.GetType().Name}: {exception.Message}");
             }
         }
 
@@ -226,7 +226,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return CharacterPoseNativeDomainCreateResult.Failed(
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     "CharacterPoseNativeDomainRuntimeFactory.Replace",
-                    exception.Message);
+                    $"{exception.GetType().Name}: {exception.Message}");
             }
         }
 

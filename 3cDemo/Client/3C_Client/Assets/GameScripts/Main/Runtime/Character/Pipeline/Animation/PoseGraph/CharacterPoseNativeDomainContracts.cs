@@ -296,7 +296,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 adoption,
                 null,
                 adoption.FailureCode,
-                "CharacterPoseNativeDomainRuntimeFactory",
+                adoption.Source,
                 adoption.Message);
 
         internal static CharacterPoseNativeDomainCreateResult Valid() =>

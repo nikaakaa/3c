@@ -278,7 +278,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseNativePreparationStatus.Failed,
                     CharacterPoseNativeFailureCode.GraphInvalid,
                     request.Graph?.GraphId.Value ?? "Pose",
-                    exception.Message);
+                    $"{exception.GetType().Name}: {exception.Message}");
             }
         }
 
@@ -311,7 +311,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return CharacterPoseNativeAdoptedResult.Failed(
                     in request,
                     CharacterPoseNativeFailureCode.GraphInvalid,
-                    exception.Message);
+                    "Pose/Create",
+                    $"{exception.GetType().Name}: {exception.Message}");
             }
         }
 
@@ -403,7 +404,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return CharacterPoseNativeAdoptedResult.Failed(
                     in request,
                     CharacterPoseNativeFailureCode.Disposed,
-                    exception.Message);
+                    "Pose/Replace",
+                    $"{exception.GetType().Name}: {exception.Message}");
             }
         }
 

@@ -1,7 +1,7 @@
 # character-camera-authoring Specification
 
 ## Purpose
-TBD - Update Purpose after archive
+定义 Profile、Sequence、Effect 和 Curve 的唯一作者 owner，以及 TreeClip Node 与唯一 Timeline 效果轨道向 Camera Runtime 提交请求的正式边界。
 
 ## Requirements
 

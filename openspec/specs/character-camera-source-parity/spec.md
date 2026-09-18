@@ -1,7 +1,7 @@
 # character-camera-source-parity Specification
 
 ## Purpose
-TBD - Update Purpose after archive
+定义 ZZZ/Corin 相机来源资源、动作调用、3C 资产与运行消费之间的逐项证据边界；资源存在不等于动作已接通。
 
 ## Requirements
 

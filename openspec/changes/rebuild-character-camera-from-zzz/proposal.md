@@ -44,8 +44,8 @@
 
 相机任务拥有 Camera 资源、Builder/payload、只读运行绑定、TreeClip 相机请求合同/编译出口和自身诊断/算法。角色工厂与编译收窄由领域运行时迁移任务接入；同批 Corin TreeClip 资产及生成源码由 `unify-timeline-motion-curve-source` 统一写入。仅公共版本/绑定迁移不重新打开已正确算法。网络 Pipeline/Pass、Float32/Fixed 和独立资源处理保留。
 
-本修订不把现有 `CameraCueClip`/`ActionCueClip` 的当前磁盘状态写成已迁移结果；它们仍是待清理的历史表达。正式目标是单一 TreeClip Node 请求链，迁移完成后删除旧动作 Cue 路径，不保留兼容双轨。
+本修订不把 `CameraCueClip`/`ActionCueClip` 的历史状态写成已迁移结果；当前只有已确认映射的动作迁到 TreeClip Node，其余历史 Cue 必须等映射和消费者闭合后删除。正式目标是单一 TreeClip Node 请求链，Timeline/TreeClip 只作为正式相机请求消费入口，迁移完成后删除旧动作 Cue 路径，不保留兼容双轨。
 
-当前规范冲突：`character-camera-pipeline` 仍有 Cinemachine 必须负责全部 orbit/damping 的文字，而当前 Planner/History 已负责求值；本 delta 明确由项目求解、Adapter 落地。现行 C# 作者规范已删除旧目录包，本 change 不再要求恢复它。当前 spec 已没有旧 CameraStateResolver/Camera modifier requirement，不再保留针对不存在 requirement 的删除条目。
+现行规范已与主链一致：`character-camera-pipeline` 由项目内部求解 CameraFramePlan，Cinemachine 只由 Adapter 落地；C# 作者规范已删除旧目录包；相机 spec 也没有旧 CameraStateResolver/Camera modifier requirement。后续提案只需维护剩余消费者、映射和清理合同，不恢复总包 Projection、旧触发轨道或第二套 Timeline Camera domain。
 
 旧 `btsmtl-compiled-simulation-program` delta 要求相机进入整包 Projection 并等待 Character 全量 Build，已删除；其仍必要的资源转换、依赖检查与身份要求改归相机领域绑定 delta。旧 current spec 的总 Program/Projection 要求由领域运行时迁移任务统一退役，不能借旧文字恢复总包。本次只落规划和 delta，不改写其它任务文件或宣称代码迁移已完成。

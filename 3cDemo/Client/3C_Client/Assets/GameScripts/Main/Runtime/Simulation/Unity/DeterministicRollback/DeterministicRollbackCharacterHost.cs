@@ -246,6 +246,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         throw new InvalidOperationException($"Remote Rollback Character Host '{name}' cannot receive LocalOwner Camera configuration.");
                     }
                 }
+                PreparedCharacterLocomotionPresentationBinding locomotionBinding = local
+                    ? CharacterLocomotionPresentationComposition.PrepareRollbackLocal(
+                        sessionHost.Composition,
+                        bodyPresentationProfile)
+                    : CharacterLocomotionPresentationComposition.PrepareRollbackRemote(
+                        sessionHost.Composition,
+                        bodyPresentationProfile);
                 presentation = CharacterPresentationDomainRuntimeFactory.Create(
                     tickRate,
                     animationPresentationProfile,
@@ -256,7 +263,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     rootHierarchy,
                     presentationBody,
                     local ? CharacterPresentationRole.LocalOwner : CharacterPresentationRole.SimulatedActor,
-                    bodyPresentationProfile,
+                    locomotionBinding,
                     worldAwarePresentation,
                     physicsScene,
                     cameraRig,

@@ -394,6 +394,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 default:
                     throw new InvalidOperationException($"Fixed Character Host '{name}' has an invalid Presentation Role.");
             }
+            PreparedCharacterLocomotionPresentationBinding locomotionBinding =
+                CharacterLocomotionPresentationComposition.PrepareLocal(
+                    m_SessionHost.Composition,
+                    m_BodyPresentationProfile);
             return CharacterPresentationDomainRuntimeFactory.Create(
                 tickRate,
                 animationPresentationProfile,
@@ -404,7 +408,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_RootHierarchy,
                 presentationBody,
                 m_PresentationRole,
-                m_BodyPresentationProfile,
+                locomotionBinding,
                 m_WorldAwarePresentation,
                 physicsScene,
                 cameraRig,

@@ -809,6 +809,7 @@ namespace BTSMTL.Diagnostics
                 RuntimeTraceEventKind.MotionMatchingPoseSource or
                 RuntimeTraceEventKind.MotionMatchingFrame or
                 RuntimeTraceEventKind.PresentationInterpolated or
+                RuntimeTraceEventKind.LocomotionPresentation or
                 RuntimeTraceEventKind.FootPlacementSnapshot or
                 RuntimeTraceEventKind.CameraSnapshot or
                 RuntimeTraceEventKind.CameraRequest => RuntimeDiagnosticsCaptureDetail.Continuous,

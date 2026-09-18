@@ -144,12 +144,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    public enum CharacterClipPlayerClockSource : byte
-    {
-        PresentationDelta = 0,
-        CommittedMovement = 1
-    }
-
     [Serializable]
     public sealed class CharacterClipPlayerPosePayload : CharacterPoseNodePayload
     {
@@ -157,32 +151,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] float m_PlayRate = 1f;
         [SerializeField] float m_InitialTime;
         [SerializeField] bool m_LoopAnimation = true;
-        [SerializeField] CharacterClipPlayerClockSource m_ClockSource;
+        [SerializeField] bool m_IsLocomotionParticipant;
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.ClipPlayer;
         public CharacterClipPoseSourceSlot SourceSlot => m_SourceSlot;
         public float PlayRate => m_PlayRate;
         public float InitialTime => m_InitialTime;
         public bool LoopAnimation => m_LoopAnimation;
-        public CharacterClipPlayerClockSource ClockSource => m_ClockSource;
+        public bool IsLocomotionParticipant => m_IsLocomotionParticipant;
         public CharacterClipPlayerPosePayload() { }
         public CharacterClipPlayerPosePayload(
             CharacterClipPoseSourceSlot sourceSlot,
             float playRate,
             float initialTime,
             bool loopAnimation,
-            CharacterClipPlayerClockSource clockSource)
+            bool isLocomotionParticipant)
         {
             if (!sourceSlot)
                 throw new ArgumentNullException(nameof(sourceSlot));
             if (!float.IsFinite(playRate) || playRate <= 0f || !float.IsFinite(initialTime) || initialTime < 0f)
                 throw new ArgumentOutOfRangeException(nameof(playRate));
-            if (!Enum.IsDefined(typeof(CharacterClipPlayerClockSource), clockSource))
-                throw new ArgumentException("Clip clock binding is invalid.");
             m_SourceSlot = sourceSlot;
             m_PlayRate = playRate;
             m_InitialTime = initialTime;
             m_LoopAnimation = loopAnimation;
-            m_ClockSource = clockSource;
+            m_IsLocomotionParticipant = isLocomotionParticipant;
         }
 
     }

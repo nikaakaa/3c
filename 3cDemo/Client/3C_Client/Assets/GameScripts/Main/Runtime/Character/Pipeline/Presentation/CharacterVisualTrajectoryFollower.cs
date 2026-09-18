@@ -91,7 +91,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Settings = settings;
         }
 
-        public CharacterVisualTrajectoryMode Mode => m_Settings.TrajectoryMode;
+        public CharacterBodyCorrectionMode CorrectionMode => m_Settings.CorrectionMode;
 
         public void Reset(CharacterVisualTrajectorySample target)
         {
@@ -110,7 +110,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void Retarget(CharacterVisualTrajectorySample target)
         {
-            if (!m_Initialized || m_Settings.TrajectoryMode == CharacterVisualTrajectoryMode.Direct)
+            if (!m_Initialized || m_Settings.CorrectionMode == CharacterBodyCorrectionMode.Direct)
             {
                 Reset(target);
                 return;
@@ -138,7 +138,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!m_Initialized)
                 Reset(target);
-            if (m_Settings.TrajectoryMode == CharacterVisualTrajectoryMode.Direct)
+            if (m_Settings.CorrectionMode == CharacterBodyCorrectionMode.Direct)
             {
                 Reset(target);
                 return BuildResult();

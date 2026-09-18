@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -17,6 +18,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         readonly ActorId m_ActorId;
         readonly CharacterBodyPresentationRuntime m_Body;
+        readonly PreparedCharacterLocomotionPresentationBinding m_LocomotionBinding;
+        readonly RuntimeDiagnosticsContext m_Diagnostics;
         readonly CharacterAnimationEventGraphHost m_EventGraph;
         readonly CharacterEquipmentDomainRuntime m_Equipment;
         readonly CharacterCameraDomainRuntime m_Camera;
@@ -26,21 +29,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterAnimationResourceScope m_PoseResourceScope;
         CharacterAnimationVariableFrame m_EventFrame;
         CharacterPresentationTrajectoryIntent m_Trajectory;
+        CharacterLocomotionPresentationFactLineage m_LastLocomotionFactLineage;
+        LocomotionPresentationFailureCode m_LocomotionFailureCode;
         bool m_HasTrajectory;
+        bool m_HasPoseDiscontinuityIdentity;
+        ulong m_PoseDiscontinuityIdentity;
         bool m_Disposed;
         ulong m_NextPoseResetGeneration = 1;
 
         internal CharacterPresentationDomainRuntime(
             ActorId actorId,
             CharacterBodyPresentationRuntime body,
+            PreparedCharacterLocomotionPresentationBinding locomotionBinding,
             int tickRate,
             CharacterAnimationPresentationProfile presentationProfile,
             CharacterEquipmentDomainRuntime equipment,
             CharacterCameraDomainRuntime camera,
-            IActionPresentationClockCoordinator presentationClockCoordinator)
+            IActionPresentationClockCoordinator presentationClockCoordinator,
+            RuntimeDiagnosticsContext diagnostics)
         {
             m_ActorId = actorId;
             m_Body = body ?? throw new ArgumentNullException(nameof(body));
+            locomotionBinding.RequireValid();
+            m_LocomotionBinding = locomotionBinding;
+            m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
             if (tickRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(tickRate));
             m_PresentationTimePerTick = 1d / tickRate;
@@ -124,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public bool AcceptsTrajectoryIntent => true;
         public ulong BodyResetSequence => m_Body.ResetSequence;
+        public CharacterLocomotionBodySource LocomotionBodySource => m_LocomotionBinding.BodySource;
         public bool SupportsCheckpointCapture => false;
         public bool SupportsCheckpointRestore => false;
 
@@ -173,17 +186,46 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return new CharacterDomainRuntimeAssemblyFacts(facts);
         }
 
-        public void CaptureBodyTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals) =>
-            m_Body.CaptureTransaction(intervals);
+        public void CaptureBodyStream(IReadOnlyList<CharacterPresentationBodyInterval> intervals) =>
+            m_Body.CaptureStreamTransaction(intervals);
 
-        public void CaptureTrajectoryIntent(CharacterPresentationTrajectoryIntent intent)
+        public CharacterLocomotionPresentationFactLineage CreateLocomotionFactLineage(
+            in CommittedMovementPlaybackClock movementClock) =>
+            m_LocomotionBinding.CreateFactLineage(in movementClock);
+
+        public LocomotionPresentationFailureCode CaptureTrajectoryIntent(
+            CharacterPresentationTrajectoryIntent intent)
         {
             if (intent.ActorId != m_ActorId)
                 throw new InvalidOperationException("Presentation trajectory targets another Actor.");
             if (intent.ResetSequence != m_Body.ResetSequence)
                 throw new InvalidOperationException("Presentation trajectory reset generation is stale.");
+            CharacterLocomotionPresentationFactLineage locomotionFactLineage = intent.LocomotionFactLineage;
+            CommittedMovementPlaybackClock movementPlaybackClock = intent.MovementPlaybackClock;
+            CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline = intent.LocomotionMotionTimeline;
+            LocomotionPresentationFailureCode failureCode = m_LocomotionBinding.ValidateFact(
+                in locomotionFactLineage,
+                in movementPlaybackClock,
+                in locomotionMotionTimeline);
+            if (failureCode != LocomotionPresentationFailureCode.None)
+            {
+                m_LocomotionFailureCode = failureCode;
+                PublishLocomotionDiagnostics();
+                return failureCode;
+            }
+            if (m_HasPoseDiscontinuityIdentity &&
+                m_PoseDiscontinuityIdentity != intent.PoseDiscontinuityIdentity)
+            {
+                ResetPose();
+            }
+            m_PoseDiscontinuityIdentity = intent.PoseDiscontinuityIdentity;
+            m_HasPoseDiscontinuityIdentity = true;
             m_Trajectory = intent;
+            m_LastLocomotionFactLineage = intent.LocomotionFactLineage;
+            m_LocomotionFailureCode = LocomotionPresentationFailureCode.None;
             m_HasTrajectory = true;
+            PublishLocomotionDiagnostics();
+            return LocomotionPresentationFailureCode.None;
         }
 
         public void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections)
@@ -244,12 +286,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PresentationClockCoordinator?.Reset();
             m_EventFrame = null;
             m_Trajectory = default;
+            m_LastLocomotionFactLineage = default;
+            m_LocomotionFailureCode = LocomotionPresentationFailureCode.None;
             m_HasTrajectory = false;
-            if (m_PoseDomain != null && m_PoseDomain.IsAdopted)
-            {
-                m_NextPoseResetGeneration++;
-                m_PoseDomain.Reset(m_NextPoseResetGeneration);
-            }
+            m_HasPoseDiscontinuityIdentity = false;
+            m_PoseDiscontinuityIdentity = 0;
+            ResetPose();
+            PublishLocomotionDiagnostics();
         }
 
         public CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics() =>
@@ -257,7 +300,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0,
                 0,
                 m_Body.FollowerPositionCorrectionMeters,
-                m_Body.FollowerYawCorrectionDegrees);
+                m_Body.FollowerYawCorrectionDegrees,
+                new CharacterLocomotionPresentationDiagnosticSnapshot(
+                    m_LocomotionBinding.PlanIdentity,
+                    m_LocomotionBinding.ClockMode,
+                    m_LocomotionBinding.BodySource,
+                    m_LocomotionBinding.CorrectionMode,
+                    m_LocomotionBinding.BodyProfileIdentity,
+                    m_LastLocomotionFactLineage,
+                    m_Body.ResetSequence,
+                    m_Body.ResetReason,
+                    m_LocomotionFailureCode));
 
         public bool TryCaptureCheckpoint(SimulationSessionCheckpoint checkpoint, out string error)
         {
@@ -279,6 +332,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(CharacterPresentationDomainRuntime));
+            m_Diagnostics.BeginPresentationFrame(context.RenderFrame);
             m_Equipment?.Present();
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
             if (!bodyFrame.IsValid)
@@ -293,7 +347,43 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException(
                     $"Animation EventGraph update failed: {update.Failure.Message}");
             m_EventFrame = update.Frame;
+            if (m_LocomotionBinding.RequiresMovementFact && !m_HasTrajectory)
+            {
+                m_LocomotionFailureCode = LocomotionPresentationFailureCode.MissingMovementFact;
+                PublishLocomotionDiagnostics();
+                return;
+            }
+            PublishLocomotionDiagnostics();
             RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context);
+        }
+
+        void PublishLocomotionDiagnostics()
+        {
+            if (!m_Diagnostics.ShouldPublish(
+                    RuntimeTraceChannel.Animation,
+                    RuntimeTraceEventKind.LocomotionPresentation))
+            {
+                return;
+            }
+            CharacterLocomotionPresentationFactLineage lineage = m_LastLocomotionFactLineage;
+            m_Diagnostics.Publish(
+                RuntimeTraceChannel.Animation,
+                RuntimeTraceDomain.Presentation,
+                RuntimeTraceEventKind.LocomotionPresentation,
+                RuntimeSourceElementHandle.Invalid,
+                RuntimeInstanceKey.Character(m_Diagnostics.CharacterRuntimeId),
+                new RuntimeTracePayload
+                {
+                    Status = m_LocomotionFailureCode == LocomotionPresentationFailureCode.None
+                        ? "Ready"
+                        : "Rejected",
+                    Name = "LocomotionPresentation",
+                    Cause = m_LocomotionFailureCode.ToString(),
+                    OwnerId = m_LocomotionBinding.PlanIdentity,
+                    RelatedElementId = lineage.MovementSegmentIdentity,
+                    Detail = $"plan={m_LocomotionBinding.PlanIdentity};clockMode={m_LocomotionBinding.ClockMode};bodySource={m_LocomotionBinding.BodySource};correctionMode={m_LocomotionBinding.CorrectionMode};profile={m_LocomotionBinding.BodyProfileIdentity};lineagePlan={lineage.PlanIdentity};lineageBodySource={lineage.BodySource};movementClock={lineage.MovementClockIdentity};lineageGeneration={lineage.LineageGeneration};movementSegment={lineage.MovementSegmentIdentity};resetSequence={m_Body.ResetSequence};resetReason={m_Body.ResetReason};failure={m_LocomotionFailureCode}",
+                    Value = DebugValueSnapshot.Capture((int)m_LocomotionFailureCode)
+                });
         }
 
         void RunPoseFrame(
@@ -427,7 +517,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_HasTrajectory && m_Trajectory.MovementPlaybackClock.IsValid
                     ? m_Trajectory.MovementPlaybackClock.ElapsedSeconds
                     : 0d,
-                m_Body.ResetSequence);
+                m_Body.ResetSequence,
+                m_HasTrajectory ? m_Trajectory.LocomotionFactLineage : default,
+                m_HasTrajectory ? m_Trajectory.PoseDiscontinuityIdentity : 0);
+        }
+
+        void ResetPose()
+        {
+            if (m_PoseDomain == null || !m_PoseDomain.IsAdopted)
+                return;
+            m_NextPoseResetGeneration++;
+            m_PoseDomain.Reset(m_NextPoseResetGeneration);
         }
 
         static Vector2 NormalizeFacing(Vector3 forward)

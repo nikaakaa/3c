@@ -126,7 +126,9 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     rootHierarchy,
                     CharacterPresentationBodyState.FromFloat32(initialBody),
                     CharacterPresentationRole.SimulatedActor,
-                    m_BodyPresentationProfile,
+                    CharacterLocomotionPresentationComposition.PrepareServerAuthorityRemote(
+                        string.Concat("server-authority-remote/", BindingId, "/", actorId.Value),
+                        m_BodyPresentationProfile),
                     worldAwarePresentation,
                     physicsScene,
                     null,
@@ -352,7 +354,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 m_SelectedTick = sample.Tick.Value;
             }
             if (intervals.Count != 0)
-                m_Runtime.CaptureBodyTransaction(intervals);
+                m_Runtime.CaptureBodyStream(intervals);
             for (int i = 0; i < batch.SampleCommands.Count; i++)
                 Enqueue(m_Commands, batch.SampleCommands[i].Header.Tick.Value, batch.SampleCommands[i]);
             for (int i = 0; i < batch.ReliableEvents.Count; i++)

@@ -426,6 +426,7 @@ namespace BTSMTL.Diagnostics
         MotionMatchingPoseSource,
         MotionMatchingReset,
         PresentationInterpolated,
+        LocomotionPresentation,
         CameraSnapshot,
         CameraRequest,
         CameraShakeRequest,

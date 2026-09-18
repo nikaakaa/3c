@@ -31,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState initialBody,
             CharacterPresentationRole presentationRole,
-            CharacterBodyPresentationProfile bodyPresentationProfile,
+            PreparedCharacterLocomotionPresentationBinding locomotionBinding,
             CharacterWorldAwarePresentationBinding worldAwarePresentation,
             PhysicsScene physicsScene,
             CinemachineCameraRigAdapter cameraRig,
@@ -59,16 +59,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentException("Presentation Animancer is incomplete.", nameof(animancer));
             if (!animationRigBinding || !rootHierarchy)
                 throw new ArgumentException("Presentation rig or root hierarchy binding is incomplete.");
-            if (!bodyPresentationProfile)
-                throw new ArgumentNullException(nameof(bodyPresentationProfile));
             if (!worldAwarePresentation)
                 throw new ArgumentNullException(nameof(worldAwarePresentation));
-            if (sessionHost == null)
+            if (characterTimelineHost != null && sessionHost == null)
                 throw new ArgumentNullException(nameof(sessionHost));
             if (diagnostics == null)
                 throw new ArgumentNullException(nameof(diagnostics));
             if (!Enum.IsDefined(typeof(CharacterPresentationRole), presentationRole))
                 throw new ArgumentOutOfRangeException(nameof(presentationRole));
+            locomotionBinding.RequireValid();
+            CharacterBodyPresentationProfile bodyPresentationProfile = locomotionBinding.BodyProfile;
 
             rootHierarchy.RequireValid();
             worldAwarePresentation.RequireValid();
@@ -122,9 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var body = new CharacterBodyPresentationRuntime(
                 actorId,
                 tickRate,
-                presentationRole == CharacterPresentationRole.LocalOwner
-                    ? CharacterBodyPresentationSourceMode.CommittedStream
-                    : CharacterBodyPresentationSourceMode.SelectedStream,
+                locomotionBinding.RuntimeBodySource,
                 bodyPresentationProfile.BuildSettings(),
                 rootHierarchy,
                 initialBody,
@@ -136,14 +134,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentationRole == CharacterPresentationRole.SimulatedActor
                     ? new CommittedFollowPresentationClockCoordinator()
                     : null;
+            IActionPresentationClockPolicy locomotionClockPolicy =
+                locomotionBinding.ClockMode == CharacterLocomotionClockMode.CommittedMovement
+                    ? new CommittedMovementPresentationClockPolicy()
+                    : FreeRunPresentationClockPolicy.Shared;
             var runtime = new CharacterPresentationDomainRuntime(
                 actorId,
                 body,
+                locomotionBinding,
                 tickRate,
                 animationPresentationProfile,
                 equipment,
                 camera,
-                presentationClockCoordinator);
+                presentationClockCoordinator,
+                diagnostics);
             try
             {
                 if (poseResources)
@@ -167,8 +171,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         worldAwarePresentation,
                         sessionHost,
                         physicsScene,
-                        node => node.ClipClockSource == CharacterClipPlayerClockSource.CommittedMovement
-                            ? new CommittedMovementPresentationClockPolicy()
+                        node => node.IsLocomotionParticipant
+                            ? locomotionClockPolicy
                             : presentationClockCoordinator != null && node.AnimationChannelId.IsValid
                                 ? presentationClockCoordinator.CreatePolicy()
                                 : FreeRunPresentationClockPolicy.Shared);

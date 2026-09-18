@@ -22,6 +22,323 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Reset = 2
     }
 
+    public enum CharacterLocomotionClockMode : byte
+    {
+        FreeRun = 1,
+        CommittedMovement = 2
+    }
+
+    public enum CharacterLocomotionBodySource : byte
+    {
+        CommittedStream = 1,
+        SelectedStream = 2
+    }
+
+    [Flags]
+    public enum CharacterLocomotionPresentationSourceCapability : byte
+    {
+        None = 0,
+        CommittedBodyStream = 1 << 0,
+        SelectedBodyStream = 1 << 1,
+        CommittedMovementFact = 1 << 2
+    }
+
+    public enum LocomotionPresentationFailureCode : byte
+    {
+        None = 0,
+        MissingPlan = 1,
+        InvalidPlan = 2,
+        MissingBodyProfile = 3,
+        InvalidBodyProfile = 4,
+        BodySourceUnavailable = 5,
+        MissingMovementFact = 6,
+        PlanIdentityMismatch = 7,
+        BodySourceMismatch = 8,
+        LineageGenerationMismatch = 9,
+        MovementSegmentMismatch = 10
+    }
+
+    public readonly struct CharacterLocomotionPresentationPlan
+    {
+        public CharacterLocomotionPresentationPlan(
+            string identity,
+            CharacterLocomotionClockMode clockMode,
+            CharacterLocomotionBodySource bodySource)
+        {
+            Identity = identity?.Trim() ?? string.Empty;
+            ClockMode = clockMode;
+            BodySource = bodySource;
+        }
+
+        public string Identity { get; }
+        public CharacterLocomotionClockMode ClockMode { get; }
+        public CharacterLocomotionBodySource BodySource { get; }
+        public bool IsSpecified =>
+            !string.IsNullOrWhiteSpace(Identity) ||
+            ClockMode != 0 ||
+            BodySource != 0;
+        public bool IsValid =>
+            !string.IsNullOrWhiteSpace(Identity) &&
+            Enum.IsDefined(typeof(CharacterLocomotionClockMode), ClockMode) &&
+            Enum.IsDefined(typeof(CharacterLocomotionBodySource), BodySource);
+        public bool RequiresMovementFact => ClockMode == CharacterLocomotionClockMode.CommittedMovement;
+
+        internal CharacterBodyPresentationSourceMode RuntimeBodySource =>
+            BodySource == CharacterLocomotionBodySource.CommittedStream
+                ? CharacterBodyPresentationSourceMode.CommittedStream
+                : CharacterBodyPresentationSourceMode.SelectedStream;
+    }
+
+    public readonly struct CharacterLocomotionPresentationFactLineage
+    {
+        public CharacterLocomotionPresentationFactLineage(
+            string planIdentity,
+            CharacterLocomotionBodySource bodySource,
+            string movementClockIdentity,
+            ulong lineageGeneration,
+            string movementSegmentIdentity)
+        {
+            PlanIdentity = planIdentity?.Trim() ?? string.Empty;
+            BodySource = bodySource;
+            MovementClockIdentity = movementClockIdentity?.Trim() ?? string.Empty;
+            LineageGeneration = lineageGeneration;
+            MovementSegmentIdentity = movementSegmentIdentity?.Trim() ?? string.Empty;
+        }
+
+        public string PlanIdentity { get; }
+        public CharacterLocomotionBodySource BodySource { get; }
+        public string MovementClockIdentity { get; }
+        public ulong LineageGeneration { get; }
+        public string MovementSegmentIdentity { get; }
+        public bool IsValid =>
+            !string.IsNullOrWhiteSpace(PlanIdentity) &&
+            Enum.IsDefined(typeof(CharacterLocomotionBodySource), BodySource) &&
+            !string.IsNullOrWhiteSpace(MovementClockIdentity) &&
+            LineageGeneration != 0 &&
+            !string.IsNullOrWhiteSpace(MovementSegmentIdentity);
+
+        internal static CharacterLocomotionPresentationFactLineage Create(
+            in CharacterLocomotionPresentationPlan plan,
+            in CommittedMovementPlaybackClock movementClock)
+        {
+            if (!plan.IsValid || !movementClock.IsValid)
+                return default;
+            string movementSegmentIdentity =
+                string.Concat(movementClock.OwnerIdentity, "/", movementClock.Generation.ToString());
+            return new CharacterLocomotionPresentationFactLineage(
+                plan.Identity,
+                plan.BodySource,
+                movementClock.OwnerIdentity,
+                movementClock.Generation,
+                movementSegmentIdentity);
+        }
+    }
+
+    public readonly struct CharacterLocomotionPresentationPreparationRequest
+    {
+        public CharacterLocomotionPresentationPreparationRequest(
+            CharacterLocomotionPresentationPlan plan,
+            CharacterBodyPresentationProfile bodyProfile,
+            CharacterLocomotionPresentationSourceCapability sourceCapabilities,
+            CharacterLocomotionPresentationFactLineage strictFactLineage = default)
+        {
+            Plan = plan;
+            BodyProfile = bodyProfile;
+            SourceCapabilities = sourceCapabilities;
+            StrictFactLineage = strictFactLineage;
+        }
+
+        public CharacterLocomotionPresentationPlan Plan { get; }
+        public CharacterBodyPresentationProfile BodyProfile { get; }
+        public CharacterLocomotionPresentationSourceCapability SourceCapabilities { get; }
+        public CharacterLocomotionPresentationFactLineage StrictFactLineage { get; }
+    }
+
+    public readonly struct PreparedCharacterLocomotionPresentationBinding
+    {
+        readonly CharacterBodyPresentationProfile m_BodyProfile;
+        readonly CharacterLocomotionPresentationFactLineage m_StrictFactLineage;
+
+        internal PreparedCharacterLocomotionPresentationBinding(
+            CharacterLocomotionPresentationPlan plan,
+            CharacterBodyPresentationProfile bodyProfile,
+            string bodyProfileIdentity,
+            CharacterLocomotionPresentationFactLineage strictFactLineage)
+        {
+            Plan = plan;
+            m_BodyProfile = bodyProfile;
+            BodyProfileIdentity = bodyProfileIdentity;
+            m_StrictFactLineage = strictFactLineage;
+        }
+
+        public CharacterLocomotionPresentationPlan Plan { get; }
+        public string PlanIdentity => Plan.Identity;
+        public CharacterLocomotionClockMode ClockMode => Plan.ClockMode;
+        public CharacterLocomotionBodySource BodySource => Plan.BodySource;
+        public CharacterBodyCorrectionMode CorrectionMode => m_BodyProfile.CorrectionMode;
+        public string BodyProfileIdentity { get; }
+        public CharacterLocomotionPresentationFactLineage StrictFactLineage => m_StrictFactLineage;
+        public bool RequiresMovementFact => Plan.RequiresMovementFact;
+        public bool IsValid =>
+            Plan.IsValid &&
+            m_BodyProfile &&
+            !string.IsNullOrWhiteSpace(BodyProfileIdentity) &&
+            Enum.IsDefined(typeof(CharacterBodyCorrectionMode), CorrectionMode) &&
+            (!RequiresMovementFact || m_StrictFactLineage.IsValid);
+
+        internal CharacterBodyPresentationProfile BodyProfile => m_BodyProfile;
+        internal CharacterBodyPresentationSourceMode RuntimeBodySource => Plan.RuntimeBodySource;
+
+        public CharacterLocomotionPresentationFactLineage CreateFactLineage(
+            in CommittedMovementPlaybackClock movementClock)
+        {
+            CharacterLocomotionPresentationPlan plan = Plan;
+            return CharacterLocomotionPresentationFactLineage.Create(in plan, in movementClock);
+        }
+
+        public LocomotionPresentationFailureCode ValidateFact(
+            in CharacterLocomotionPresentationFactLineage factLineage,
+            in CommittedMovementPlaybackClock movementClock,
+            in CommittedLocomotionPlanarMotionTimeline locomotionTimeline)
+        {
+            if (!RequiresMovementFact)
+                return LocomotionPresentationFailureCode.None;
+            if (!movementClock.IsValid || !factLineage.IsValid)
+                return LocomotionPresentationFailureCode.MissingMovementFact;
+            if (!string.Equals(factLineage.PlanIdentity, PlanIdentity, StringComparison.Ordinal))
+                return LocomotionPresentationFailureCode.PlanIdentityMismatch;
+            if (factLineage.BodySource != BodySource)
+                return LocomotionPresentationFailureCode.BodySourceMismatch;
+            if (factLineage.LineageGeneration != movementClock.Generation ||
+                factLineage.LineageGeneration != m_StrictFactLineage.LineageGeneration)
+            {
+                return LocomotionPresentationFailureCode.LineageGenerationMismatch;
+            }
+            string movementSegmentIdentity = string.Concat(
+                movementClock.OwnerIdentity,
+                "/",
+                movementClock.Generation.ToString());
+            if (!string.Equals(factLineage.MovementClockIdentity, movementClock.OwnerIdentity, StringComparison.Ordinal) ||
+                !string.Equals(factLineage.MovementSegmentIdentity, movementSegmentIdentity, StringComparison.Ordinal) ||
+                !string.Equals(factLineage.MovementClockIdentity, m_StrictFactLineage.MovementClockIdentity, StringComparison.Ordinal) ||
+                !string.Equals(factLineage.MovementSegmentIdentity, m_StrictFactLineage.MovementSegmentIdentity, StringComparison.Ordinal) ||
+                !locomotionTimeline.IsValid ||
+                !locomotionTimeline.Matches(movementClock))
+            {
+                return LocomotionPresentationFailureCode.MovementSegmentMismatch;
+            }
+            return LocomotionPresentationFailureCode.None;
+        }
+
+        internal void RequireValid()
+        {
+            if (!IsValid)
+                throw new InvalidOperationException("Prepared locomotion presentation binding is invalid.");
+        }
+    }
+
+    public readonly struct CharacterLocomotionPresentationPreparationResult
+    {
+        internal CharacterLocomotionPresentationPreparationResult(
+            PreparedCharacterLocomotionPresentationBinding binding,
+            LocomotionPresentationFailureCode failureCode,
+            string message)
+        {
+            Binding = binding;
+            FailureCode = failureCode;
+            Message = message ?? string.Empty;
+        }
+
+        public PreparedCharacterLocomotionPresentationBinding Binding { get; }
+        public LocomotionPresentationFailureCode FailureCode { get; }
+        public string Message { get; }
+        public bool Succeeded => FailureCode == LocomotionPresentationFailureCode.None && Binding.IsValid;
+    }
+
+    public static class CharacterLocomotionPresentationPreparation
+    {
+        public static CharacterLocomotionPresentationPreparationResult Prepare(
+            in CharacterLocomotionPresentationPreparationRequest request)
+        {
+            CharacterLocomotionPresentationPlan plan = request.Plan;
+            if (!plan.IsSpecified)
+                return Failure(LocomotionPresentationFailureCode.MissingPlan, "Locomotion presentation plan is missing.");
+            if (!plan.IsValid)
+                return Failure(LocomotionPresentationFailureCode.InvalidPlan, "Locomotion presentation plan is invalid.");
+            if (!request.BodyProfile)
+                return Failure(LocomotionPresentationFailureCode.MissingBodyProfile, "Body presentation profile is missing.");
+            string profileIdentity = request.BodyProfile.name?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(profileIdentity))
+                return Failure(LocomotionPresentationFailureCode.InvalidBodyProfile, "Body presentation profile identity is missing.");
+            try
+            {
+                request.BodyProfile.BuildSettings();
+            }
+            catch (Exception exception)
+            {
+                return Failure(LocomotionPresentationFailureCode.InvalidBodyProfile, exception.Message);
+            }
+            if (!SupportsBodySource(request.SourceCapabilities, plan.BodySource))
+            {
+                return Failure(
+                    LocomotionPresentationFailureCode.BodySourceUnavailable,
+                    $"Locomotion presentation Body source '{plan.BodySource}' is unavailable.");
+            }
+            if (plan.RequiresMovementFact)
+            {
+                if ((request.SourceCapabilities & CharacterLocomotionPresentationSourceCapability.CommittedMovementFact) == 0 ||
+                    !request.StrictFactLineage.IsValid)
+                {
+                    return Failure(
+                        LocomotionPresentationFailureCode.MissingMovementFact,
+                        "Committed locomotion presentation requires an explicit movement fact lineage.");
+                }
+                CharacterLocomotionPresentationFactLineage lineage = request.StrictFactLineage;
+                LocomotionPresentationFailureCode lineageFailure = ValidatePreparationLineage(
+                    in plan,
+                    in lineage);
+                if (lineageFailure != LocomotionPresentationFailureCode.None)
+                    return Failure(lineageFailure, "Committed locomotion presentation fact lineage does not match its plan.");
+            }
+            return new CharacterLocomotionPresentationPreparationResult(
+                new PreparedCharacterLocomotionPresentationBinding(
+                    plan,
+                    request.BodyProfile,
+                    profileIdentity,
+                    request.StrictFactLineage),
+                LocomotionPresentationFailureCode.None,
+                string.Empty);
+        }
+
+        static bool SupportsBodySource(
+            CharacterLocomotionPresentationSourceCapability capabilities,
+            CharacterLocomotionBodySource bodySource) =>
+            bodySource == CharacterLocomotionBodySource.CommittedStream
+                ? (capabilities & CharacterLocomotionPresentationSourceCapability.CommittedBodyStream) != 0
+                : (capabilities & CharacterLocomotionPresentationSourceCapability.SelectedBodyStream) != 0;
+
+        static LocomotionPresentationFailureCode ValidatePreparationLineage(
+            in CharacterLocomotionPresentationPlan plan,
+            in CharacterLocomotionPresentationFactLineage lineage)
+        {
+            if (!string.Equals(lineage.PlanIdentity, plan.Identity, StringComparison.Ordinal))
+                return LocomotionPresentationFailureCode.PlanIdentityMismatch;
+            if (lineage.BodySource != plan.BodySource)
+                return LocomotionPresentationFailureCode.BodySourceMismatch;
+            if (lineage.LineageGeneration == 0)
+                return LocomotionPresentationFailureCode.LineageGenerationMismatch;
+            return LocomotionPresentationFailureCode.None;
+        }
+
+        static CharacterLocomotionPresentationPreparationResult Failure(
+            LocomotionPresentationFailureCode failureCode,
+            string message) =>
+            new CharacterLocomotionPresentationPreparationResult(
+                default,
+                failureCode,
+                message);
+    }
+
     public readonly struct CharacterPresentationBodyInterval
     {
         public CharacterPresentationBodyInterval(
@@ -259,6 +576,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 LinearVelocity { get; }
         public bool Grounded { get; }
 
+        public bool KinematicallyMatches(in CharacterPresentationBodyState other) =>
+            ActorId == other.ActorId &&
+            Position == other.Position &&
+            Rotation == other.Rotation &&
+            LinearVelocity == other.LinearVelocity &&
+            Grounded == other.Grounded;
+
         public static CharacterPresentationBodyState FromFloat32(WorldBodyState body)
         {
             return new CharacterPresentationBodyState(
@@ -284,18 +608,56 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int bodyBranchReplacementCount,
             int animationBranchReplacementCount,
             float followerPositionCorrectionMeters,
-            float followerYawCorrectionDegrees)
+            float followerYawCorrectionDegrees,
+            CharacterLocomotionPresentationDiagnosticSnapshot locomotion)
         {
             BodyBranchReplacementCount = bodyBranchReplacementCount;
             AnimationBranchReplacementCount = animationBranchReplacementCount;
             FollowerPositionCorrectionMeters = followerPositionCorrectionMeters;
             FollowerYawCorrectionDegrees = followerYawCorrectionDegrees;
+            Locomotion = locomotion;
         }
 
         public int BodyBranchReplacementCount { get; }
         public int AnimationBranchReplacementCount { get; }
         public float FollowerPositionCorrectionMeters { get; }
         public float FollowerYawCorrectionDegrees { get; }
+        public CharacterLocomotionPresentationDiagnosticSnapshot Locomotion { get; }
+    }
+
+    public readonly struct CharacterLocomotionPresentationDiagnosticSnapshot
+    {
+        public CharacterLocomotionPresentationDiagnosticSnapshot(
+            string planIdentity,
+            CharacterLocomotionClockMode clockMode,
+            CharacterLocomotionBodySource bodySource,
+            CharacterBodyCorrectionMode correctionMode,
+            string bodyProfileIdentity,
+            CharacterLocomotionPresentationFactLineage factLineage,
+            ulong resetSequence,
+            CharacterBodyPresentationResetReason resetReason,
+            LocomotionPresentationFailureCode failureCode)
+        {
+            PlanIdentity = planIdentity ?? string.Empty;
+            ClockMode = clockMode;
+            BodySource = bodySource;
+            CorrectionMode = correctionMode;
+            BodyProfileIdentity = bodyProfileIdentity ?? string.Empty;
+            FactLineage = factLineage;
+            ResetSequence = resetSequence;
+            ResetReason = resetReason;
+            FailureCode = failureCode;
+        }
+
+        public string PlanIdentity { get; }
+        public CharacterLocomotionClockMode ClockMode { get; }
+        public CharacterLocomotionBodySource BodySource { get; }
+        public CharacterBodyCorrectionMode CorrectionMode { get; }
+        public string BodyProfileIdentity { get; }
+        public CharacterLocomotionPresentationFactLineage FactLineage { get; }
+        public ulong ResetSequence { get; }
+        public CharacterBodyPresentationResetReason ResetReason { get; }
+        public LocomotionPresentationFailureCode FailureCode { get; }
     }
 
     public enum CharacterDomainRuntimeFactKind : byte
@@ -422,9 +784,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         bool AcceptsTrajectoryIntent { get; }
         ulong BodyResetSequence { get; }
+        CharacterLocomotionBodySource LocomotionBodySource { get; }
         bool TryGetLatestBody(out CharacterPresentationBodyState body);
-        void CaptureBodyTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals);
-        void CaptureTrajectoryIntent(CharacterPresentationTrajectoryIntent intent);
+        void CaptureBodyStream(IReadOnlyList<CharacterPresentationBodyInterval> intervals);
+        CharacterLocomotionPresentationFactLineage CreateLocomotionFactLineage(
+            in CommittedMovementPlaybackClock movementClock);
+        LocomotionPresentationFailureCode CaptureTrajectoryIntent(
+            CharacterPresentationTrajectoryIntent intent);
         void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections);
         void Publish(CharacterPresentationCommand command);
         void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement);

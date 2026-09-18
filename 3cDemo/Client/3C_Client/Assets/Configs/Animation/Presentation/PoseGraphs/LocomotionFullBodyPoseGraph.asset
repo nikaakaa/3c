@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.idle.sequence","m_DisplayName":"Idle
-    Sequence","m_Payload":{"m_SourceSlot":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.6667},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.idle.output","m_DisplayName":"Output
+    Sequence","m_Payload":{"m_SourceSlot":1,"m_IsLocomotionParticipant":true,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.6667},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.idle.output","m_DisplayName":"Output
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.idle.sequence-output","m_SourceNodeId":"corin.locomotion.idle.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.idle.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
@@ -43,7 +43,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.turn.sequence","m_DisplayName":"Moving
-    Turn Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-246.0,"y":17.33331},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.turn.output","m_DisplayName":"Output
+    Turn Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_IsLocomotionParticipant":true,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-246.0,"y":17.33331},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.turn.output","m_DisplayName":"Output
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":280.6667,"y":20.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"2b4ef9d52769067557e6652f38041b35","m_SourceNodeId":"corin.locomotion.turn.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.turn.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
@@ -99,7 +99,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.start.sequence","m_DisplayName":"Run
-    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.start.output","m_DisplayName":"Output
+    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_IsLocomotionParticipant":true,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.start.output","m_DisplayName":"Output
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.start.sequence-output","m_SourceNodeId":"corin.locomotion.start.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.start.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
@@ -166,7 +166,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.stop.sequence","m_DisplayName":"Run
-    End Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.stop.output","m_DisplayName":"Output
+    End Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_IsLocomotionParticipant":true,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.stop.output","m_DisplayName":"Output
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.stop.sequence-output","m_SourceNodeId":"corin.locomotion.stop.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.stop.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
@@ -196,7 +196,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"corin.locomotion.locomotion.sequence","m_DisplayName":"Run
-    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.locomotion.output","m_DisplayName":"Output
+    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_IsLocomotionParticipant":true,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"corin.locomotion.locomotion.output","m_DisplayName":"Output
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"corin.locomotion.locomotion.sequence-output","m_SourceNodeId":"corin.locomotion.locomotion.sequence","m_SourcePortId":"pose","m_TargetNodeId":"corin.locomotion.locomotion.output","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
@@ -279,7 +279,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"cff873cb4c0040670d27858670fcfb31","m_DisplayName":"Walk
-    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_DisplayName":"Output
+    Loop Sequence","m_Payload":{"m_SourceSlot":1,"m_IsLocomotionParticipant":true,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_DisplayName":"Output
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"4b9956bcabbd5e950a33d7b48cac1bca","m_SourceNodeId":"cff873cb4c0040670d27858670fcfb31","m_SourcePortId":"pose","m_TargetNodeId":"8d4b1b80835e97d02b73d6e166a01be7","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}
@@ -334,7 +334,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasGraph","nodes":[{"m_NodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_DisplayName":"Walk
-    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_ClockSource":1,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"392890fbd759c4cba656c9607b0ba5b8","m_DisplayName":"Output
+    Start Sequence","m_Payload":{"m_SourceSlot":1,"m_LoopAnimation":false,"m_IsLocomotionParticipant":true,"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterClipPlayerPosePayload"},"_position":{"x":-220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"0"},{"m_NodeId":"392890fbd759c4cba656c9607b0ba5b8","m_DisplayName":"Output
     Pose","m_Payload":{"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterOutputPosePayload"},"_position":{"x":220.0},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasNode","$id":"1"}],"connections":[{"m_EdgeId":"6363a088affe9653b8ee0d8a5576f4a0","m_SourceNodeId":"a60a24c736273ce8e07e2aaf8b3403f8","m_SourcePortId":"pose","m_TargetNodeId":"392890fbd759c4cba656c9607b0ba5b8","m_TargetPortId":"pose","_sourceNode":{"$ref":"0"},"_targetNode":{"$ref":"1"},"$type":"ThirdPersonCharacter.Pipeline.Animation.CharacterPoseCanvasConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{}}}'
   _objectReferences:
   - {fileID: 0}

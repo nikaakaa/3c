@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    public enum CharacterVisualTrajectoryMode : byte
+    public enum CharacterBodyCorrectionMode : byte
     {
         Direct = 1,
         BoundedCorrection = 2
@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "3C/Character/Body Presentation Profile")]
     public sealed class CharacterBodyPresentationProfile : ScriptableObject
     {
-        [SerializeField] CharacterVisualTrajectoryMode m_TrajectoryMode = CharacterVisualTrajectoryMode.Direct;
+        [SerializeField] CharacterBodyCorrectionMode m_CorrectionMode = CharacterBodyCorrectionMode.Direct;
         [SerializeField, Min(0.001f)] float m_PositionHalfLifeSeconds = 0.04f;
         [SerializeField, Min(0.001f)] float m_MaximumHorizontalErrorMeters = 0.18f;
         [SerializeField, Min(0.0001f)] float m_PositionSettleDistanceMeters = 0.005f;
@@ -22,10 +22,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField, Min(0.01f)] float m_MaximumYawErrorDegrees = 12f;
         [SerializeField, Min(0.001f)] float m_YawSettleDegrees = 0.25f;
 
+        public CharacterBodyCorrectionMode CorrectionMode => m_CorrectionMode;
+
         internal CharacterBodyPresentationSettings BuildSettings()
         {
             var settings = new CharacterBodyPresentationSettings(
-                m_TrajectoryMode,
+                m_CorrectionMode,
                 m_PositionHalfLifeSeconds,
                 m_MaximumHorizontalErrorMeters,
                 m_PositionSettleDistanceMeters,
@@ -40,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal readonly struct CharacterBodyPresentationSettings
     {
         public CharacterBodyPresentationSettings(
-            CharacterVisualTrajectoryMode trajectoryMode,
+            CharacterBodyCorrectionMode correctionMode,
             float positionHalfLifeSeconds,
             float maximumPositionErrorMeters,
             float positionSettleDistanceMeters,
@@ -48,7 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float maximumYawErrorDegrees,
             float yawSettleDegrees)
         {
-            TrajectoryMode = trajectoryMode;
+            CorrectionMode = correctionMode;
             PositionHalfLifeSeconds = positionHalfLifeSeconds;
             MaximumPositionErrorMeters = maximumPositionErrorMeters;
             PositionSettleDistanceMeters = positionSettleDistanceMeters;
@@ -57,7 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             YawSettleDegrees = yawSettleDegrees;
         }
 
-        public CharacterVisualTrajectoryMode TrajectoryMode { get; }
+        public CharacterBodyCorrectionMode CorrectionMode { get; }
         public float PositionHalfLifeSeconds { get; }
         public float MaximumPositionErrorMeters { get; }
         public float PositionSettleDistanceMeters { get; }
@@ -67,13 +69,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void RequireValid(string owner)
         {
-            if (TrajectoryMode != CharacterVisualTrajectoryMode.Direct &&
-                TrajectoryMode != CharacterVisualTrajectoryMode.BoundedCorrection)
+            if (CorrectionMode != CharacterBodyCorrectionMode.Direct &&
+                CorrectionMode != CharacterBodyCorrectionMode.BoundedCorrection)
             {
                 throw new InvalidOperationException(
-                    $"Body Presentation Profile '{owner}' has an unknown trajectory mode.");
+                    $"Body Presentation Profile '{owner}' has an unknown correction mode.");
             }
-            if (TrajectoryMode == CharacterVisualTrajectoryMode.Direct)
+            if (CorrectionMode == CharacterBodyCorrectionMode.Direct)
                 return;
             if (!IsPositiveFinite(PositionHalfLifeSeconds) ||
                 !IsPositiveFinite(MaximumPositionErrorMeters) ||

@@ -1216,7 +1216,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     result.Add(new GraphAuthoringReadOnlyDetail("Play Rate", clip.PlayRate.ToString("0.###")));
                     result.Add(new GraphAuthoringReadOnlyDetail("Initial Time", clip.InitialTime.ToString("0.###")));
                     result.Add(new GraphAuthoringReadOnlyDetail("Loop", clip.LoopAnimation ? "Yes" : "No"));
-                    result.Add(new GraphAuthoringReadOnlyDetail("Clock", clip.ClockSource.ToString()));
+                    result.Add(new GraphAuthoringReadOnlyDetail("Locomotion", clip.IsLocomotionParticipant ? "Yes" : "No"));
                     break;
                 case CharacterBlendSpacePlayerPosePayload blendSpace:
                     result.Add(new GraphAuthoringReadOnlyDetail("Source Slot", blendSpace.SourceSlot ? blendSpace.SourceSlot.name : "Missing"));

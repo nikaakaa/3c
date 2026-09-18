@@ -284,14 +284,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                         FixedUnityPresentationBoundary.Convert(sample.FinalBody),
                         yawVelocityDegreesPerSecond));
                 }
-                m_PresentationRuntime.CaptureBodyTransaction(intervals);
+                m_PresentationRuntime.CaptureBodyStream(intervals);
                 foreach (FixedSimulationActorTickResult result in m_PendingTrajectoryResults.Values)
                 {
-                    m_PresentationRuntime.CaptureTrajectoryIntent(
+                    LocomotionPresentationFailureCode failureCode =
+                        m_PresentationRuntime.CaptureTrajectoryIntent(
                         CreateTrajectoryIntent(
                             result,
                             checked(++m_TrajectoryIntentSequence),
                             m_PresentationRuntime.BodyResetSequence));
+                    if (failureCode != LocomotionPresentationFailureCode.None)
+                    {
+                        throw new InvalidOperationException(
+                            $"Fixed Actor '{ActorId}' locomotion presentation rejected Fact: {failureCode}.");
+                    }
                 }
                 foreach (EquipmentVisualSelection[] selections in m_PendingEquipmentSelections.Values)
                     m_PresentationRuntime.CaptureEquipmentSelections(selections);
@@ -317,16 +323,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ResultCommitActive = false;
         }
 
-        static CharacterPresentationTrajectoryIntent CreateTrajectoryIntent(
+        CharacterPresentationTrajectoryIntent CreateTrajectoryIntent(
             FixedSimulationActorTickResult result,
             ulong sourceSequence,
             ulong resetSequence)
         {
             FixedVector3 velocity = result.Motion.RequestedVelocity;
             FixedVector2 basis = result.Motion.LocomotionPlanarBasis;
+            CommittedMovementPlaybackClock movementClock =
+                result.Motion.MovementPlaybackClock;
             var desiredVelocity = new UnityEngine.Vector2(
                 velocity.X.ToSingle(),
                 velocity.Z.ToSingle());
+            CharacterLocomotionPresentationFactLineage factLineage =
+                m_PresentationRuntime.CreateLocomotionFactLineage(in movementClock);
             return new CharacterPresentationTrajectoryIntent(
                 result.ActorId,
                 result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
@@ -342,12 +352,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 CharacterPresentationTrajectoryIntent.HasPlanarMotion(desiredVelocity),
                 result.BodySample.FinalBody.Grounded,
                 CharacterPresentationTrajectoryIntent.ResolveMovementModeId(
-                    result.Motion.MovementPlaybackClock.OwnerIdentity,
+                    movementClock.OwnerIdentity,
                     result.Motion.ActionOwnerIdentity,
                     result.Motion.GameplayResultOwnerIdentity),
-                result.Motion.MovementPlaybackClock,
+                movementClock,
                 result.Motion.LocomotionTimeline,
-                resetSequence);
+                resetSequence,
+                factLineage,
+                CharacterPresentationTrajectoryIntent.ResolvePoseDiscontinuityIdentity(
+                    in movementClock));
         }
 
         public void Dispose()

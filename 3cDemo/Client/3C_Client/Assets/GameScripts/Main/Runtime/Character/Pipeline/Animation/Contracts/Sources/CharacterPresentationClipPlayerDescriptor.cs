@@ -6,7 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed class CharacterPresentationClipPlayerDescriptor
     {
-        public const string SchemaVersion = "character-presentation-clip-player/v5";
+        public const string SchemaVersion = "character-presentation-clip-player/v6";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] int m_Index;
@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] float m_PlayRate = 1f;
         [SerializeField] float m_InitialTime;
         [SerializeField] bool m_LoopAnimation;
-        [SerializeField] CharacterClipPlayerClockSource m_ClockSource;
+        [SerializeField] bool m_IsLocomotionParticipant;
         [SerializeField] int m_PlayerIndex = -1;
 
         public CharacterPresentationClipPlayerDescriptor(
@@ -25,13 +25,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float playRate,
             float initialTime,
             bool loopAnimation,
-            CharacterClipPlayerClockSource clockSource,
+            bool isLocomotionParticipant,
             int playerIndex)
         {
             if (index < 0 || !nodeId.IsValid || !presentationPoseSourceIndex.IsValid ||
                 !float.IsFinite(playRate) || playRate <= 0f ||
-                !float.IsFinite(initialTime) || initialTime < 0f || playerIndex < 0 ||
-                !Enum.IsDefined(typeof(CharacterClipPlayerClockSource), clockSource))
+                !float.IsFinite(initialTime) || initialTime < 0f || playerIndex < 0)
             {
                 throw new ArgumentException("Compiled Clip Player descriptor is invalid.");
             }
@@ -41,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PlayRate = playRate;
             m_InitialTime = initialTime;
             m_LoopAnimation = loopAnimation;
-            m_ClockSource = clockSource;
+            m_IsLocomotionParticipant = isLocomotionParticipant;
             m_PlayerIndex = playerIndex;
         }
 
@@ -55,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float PlayRate => m_PlayRate;
         public float InitialTime => m_InitialTime;
         public bool LoopAnimation => m_LoopAnimation;
-        public CharacterClipPlayerClockSource ClockSource => m_ClockSource;
+        public bool IsLocomotionParticipant => m_IsLocomotionParticipant;
         public int PlayerIndex => m_PlayerIndex;
 
         public void RequireValid()
@@ -63,8 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!string.Equals(Version, SchemaVersion, StringComparison.Ordinal) ||
                 Index < 0 || !NodeId.IsValid || !PresentationPoseSourceIndex.IsValid ||
                 !float.IsFinite(PlayRate) || PlayRate <= 0f ||
-                !float.IsFinite(InitialTime) || InitialTime < 0f || PlayerIndex < 0 ||
-                !Enum.IsDefined(typeof(CharacterClipPlayerClockSource), ClockSource))
+                !float.IsFinite(InitialTime) || InitialTime < 0f || PlayerIndex < 0)
             {
                 throw new InvalidOperationException("Compiled Clip Player descriptor is invalid.");
             }

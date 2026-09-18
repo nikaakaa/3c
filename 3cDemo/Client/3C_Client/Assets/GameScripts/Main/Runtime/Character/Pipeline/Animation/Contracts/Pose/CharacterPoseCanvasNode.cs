@@ -190,9 +190,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             (m_Payload as CharacterClipPlayerPosePayload)?.PlayRate ?? 1f;
         public float ClipInitialTime =>
             (m_Payload as CharacterClipPlayerPosePayload)?.InitialTime ?? 0f;
-        public CharacterClipPlayerClockSource ClipClockSource =>
-            (m_Payload as CharacterClipPlayerPosePayload)?.ClockSource ??
-            CharacterClipPlayerClockSource.PresentationDelta;
+        public bool IsLocomotionParticipant =>
+            (m_Payload as CharacterClipPlayerPosePayload)?.IsLocomotionParticipant ?? false;
         public CharacterPoseStateMachineDefinition PoseStateMachine =>
             (m_Payload as CharacterPoseStateMachineNodePayload)?.StateMachine;
         public AnimationSlotId AnimationSlotId =>

@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         SelectedStream = 2
     }
 
-    internal enum CharacterBodyPresentationResetReason : byte
+    public enum CharacterBodyPresentationResetReason : byte
     {
         Initialization = 1,
         CommittedBranchReplacement = 2,
@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float sampleAlpha,
             float sampleAgeSeconds,
             CharacterBodyPresentationSourceMode sourceMode,
-            CharacterVisualTrajectoryMode trajectoryMode,
+            CharacterBodyCorrectionMode correctionMode,
             CharacterVisualTrajectorySample target,
             CharacterVisualTrajectoryResult visible,
             Vector3 sourceTranslationDelta,
@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentOutOfRangeException(nameof(sampleAgeSeconds));
             SampleAgeSeconds = sampleAgeSeconds;
             SourceMode = sourceMode;
-            TrajectoryMode = trajectoryMode;
+            CorrectionMode = correctionMode;
             VisiblePosition = visible.Position;
             VisibleRotation = visible.Rotation;
             VisibleVelocity = visible.Velocity;
@@ -81,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong AnimationSampleTick => CurrentTick;
         public float AnimationSampleAlpha => SampleAlpha;
         public CharacterBodyPresentationSourceMode SourceMode { get; }
-        public CharacterVisualTrajectoryMode TrajectoryMode { get; }
+        public CharacterBodyCorrectionMode CorrectionMode { get; }
         public Vector3 VisiblePosition { get; }
         public Quaternion VisibleRotation { get; }
         public Vector3 VisibleVelocity { get; }
@@ -208,26 +208,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return false;
         }
 
-        public void Capture(CharacterPresentationBodyInterval interval)
-        {
-            RequireAlive();
-            if (interval.ActorId != m_ActorId)
-                throw new InvalidOperationException("Presentation Body interval targets another Actor.");
-            if (m_SourceMode == CharacterBodyPresentationSourceMode.CommittedStream)
-                CaptureCommitted(interval);
-            else
-                CaptureSelected(interval);
-        }
-
-        public void CaptureTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
+        public void CaptureStreamTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
         {
             RequireAlive();
             if (intervals == null || intervals.Count == 0)
                 throw new ArgumentException("Presentation Body transaction requires at least one interval.", nameof(intervals));
-            if (m_SourceMode != CharacterBodyPresentationSourceMode.CommittedStream)
+            if (m_SourceMode == CharacterBodyPresentationSourceMode.SelectedStream)
             {
-                throw new InvalidOperationException(
-                    "Presentation Body transaction is only valid for a committed simulation stream.");
+                ValidateSelectedTransaction(intervals);
+                for (int i = 0; i < intervals.Count; i++)
+                    CaptureSelected(intervals[i]);
+                return;
             }
             ValidateCommittedTransaction(intervals);
             bool replacesBranch = ReplacesCommittedBranch(intervals[0]);
@@ -251,6 +242,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 m_BranchReplacementCount = checked(m_BranchReplacementCount + 1);
                 RetargetCommittedBranch();
+            }
+        }
+
+        void ValidateSelectedTransaction(IReadOnlyList<CharacterPresentationBodyInterval> intervals)
+        {
+            for (int i = 0; i < intervals.Count; i++)
+            {
+                CharacterPresentationBodyInterval interval = intervals[i];
+                if (interval.ActorId != m_ActorId)
+                    throw new InvalidOperationException("Presentation Body interval targets another Actor.");
+                if (i == 0)
+                {
+                    if (interval.UpdateKind == CharacterPresentationBodyStreamUpdateKind.Append &&
+                        (!m_HasSelectedTail ||
+                         interval.PreviousTick != m_SelectedTailTick ||
+                         !interval.PreviousBody.KinematicallyMatches(m_SelectedTailBody) ||
+                         interval.CurrentTick <= m_LatestTick))
+                    {
+                        throw new InvalidOperationException(
+                            "Selected Presentation Body transaction requires an explicit Reset for a discontinuous stream.");
+                    }
+                    continue;
+                }
+                CharacterPresentationBodyInterval previous = intervals[i - 1];
+                if (interval.UpdateKind != CharacterPresentationBodyStreamUpdateKind.Append ||
+                    interval.PreviousTick != previous.CurrentTick ||
+                    !interval.PreviousBody.KinematicallyMatches(previous.CurrentBody))
+                {
+                    throw new InvalidOperationException(
+                        "Selected Presentation Body transaction is discontinuous after its first interval.");
+                }
             }
         }
 
@@ -600,7 +622,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.SampleAlpha,
                 sampleAgeSeconds,
                 m_SourceMode,
-                m_Follower.Mode,
+                m_Follower.CorrectionMode,
                 target.Sample,
                 visible,
                 target.SourceTranslationDelta,
@@ -638,7 +660,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Status = frame.CorrectionActive ? "Correcting" : "Settled",
                     Time = frame.SampleAlpha,
                     SecondaryTime = presentationDeltaSeconds,
-                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};trajectory={frame.TrajectoryMode};sampleAge={frame.SampleAgeSeconds:0.####};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};groundedInterval={frame.GroundedBefore}->{frame.GroundedAfter};sourceDelta={frame.SourceTranslationDelta};visibleDelta={frame.VisibleTranslationDelta};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};logicRoot={m_RootHierarchy.LogicRoot.position};visualRootLocal={m_RootHierarchy.VisualRoot.localPosition};visualRootWorld={m_RootHierarchy.VisualRoot.position};poseRootLocal={m_RootHierarchy.PoseRoot.localPosition};poseRootWorld={m_RootHierarchy.PoseRoot.position};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
+                    Detail = $"{frame.PreviousTick}->{frame.CurrentTick};source={frame.SourceMode};correctionMode={frame.CorrectionMode};sampleAge={frame.SampleAgeSeconds:0.####};target={frame.TargetPosition};targetYaw={frame.TargetRotation.eulerAngles.y:0.###};targetVelocity={frame.TargetVelocity};targetYawVelocity={frame.TargetYawVelocityDegreesPerSecond:0.###};grounded={frame.TargetGrounded};groundedInterval={frame.GroundedBefore}->{frame.GroundedAfter};sourceDelta={frame.SourceTranslationDelta};visibleDelta={frame.VisibleTranslationDelta};visual={frame.VisiblePosition};visualYaw={frame.VisibleRotation.eulerAngles.y:0.###};visualVelocity={frame.VisibleVelocity};visualYawVelocity={frame.VisibleYawVelocityDegreesPerSecond:0.###};positionError={frame.PositionError:0.####};yawError={frame.RotationError:0.###};correctionVelocity={frame.CorrectionPositionVelocity};yawCorrectionVelocity={frame.CorrectionYawVelocityDegreesPerSecond:0.###};logicRoot={m_RootHierarchy.LogicRoot.position};visualRootLocal={m_RootHierarchy.VisualRoot.localPosition};visualRootWorld={m_RootHierarchy.VisualRoot.position};poseRootLocal={m_RootHierarchy.PoseRoot.localPosition};poseRootWorld={m_RootHierarchy.PoseRoot.position};active={frame.CorrectionActive};clamped={frame.CorrectionClamped};settled={frame.CorrectionSettled};branchRevision={frame.ResetSequence};resetReason={frame.ResetReason}",
                     Value = DebugValueSnapshot.Capture(frame.VisiblePosition)
                 });
         }

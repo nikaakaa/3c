@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -30,7 +31,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             string movementModeId,
             CommittedMovementPlaybackClock movementPlaybackClock,
             CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline,
-            ulong resetSequence)
+            ulong resetSequence,
+            CharacterLocomotionPresentationFactLineage locomotionFactLineage,
+            ulong poseDiscontinuityIdentity)
         {
             if (!actorId.IsValid || !currentTick.IsValid || sourceSequence == 0 ||
                 !IsFinite(locomotionPlanarBasis) || locomotionPlanarBasis.sqrMagnitude > 1.0001f ||
@@ -40,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 movementPlaybackClock.IsValid && movementPlaybackClock.AuthorityTick != currentTick ||
                 movementPlaybackClock.IsValid != locomotionMotionTimeline.IsValid ||
                 locomotionMotionTimeline.IsValid && !locomotionMotionTimeline.Matches(movementPlaybackClock) ||
-                string.IsNullOrWhiteSpace(movementModeId))
+                string.IsNullOrWhiteSpace(movementModeId) || poseDiscontinuityIdentity == 0)
                 throw new ArgumentException("Character Presentation Trajectory Intent is incomplete.");
             if (previousTick.IsValid && previousTick.Value >= currentTick.Value)
                 throw new ArgumentException("Character Presentation Trajectory Intent tick interval is not increasing.");
@@ -59,6 +62,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             MovementPlaybackClock = movementPlaybackClock;
             LocomotionMotionTimeline = locomotionMotionTimeline;
             ResetSequence = resetSequence;
+            LocomotionFactLineage = locomotionFactLineage;
+            PoseDiscontinuityIdentity = poseDiscontinuityIdentity;
         }
 
         public ActorId ActorId { get; }
@@ -76,39 +81,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
         public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
         public ulong ResetSequence { get; }
+        public CharacterLocomotionPresentationFactLineage LocomotionFactLineage { get; }
+        public ulong PoseDiscontinuityIdentity { get; }
 
-        public static CharacterPresentationTrajectoryIntent FromFloat32(
-            SimulationActorTickResult result,
-            ulong sourceSequence,
-            ulong resetSequence)
-        {
-            if (result == null)
-                throw new ArgumentNullException(nameof(result));
-            Float32Vector3 velocity = result.Motion.RequestedVelocity;
-            Float32Vector2 basis = result.Motion.LocomotionPlanarBasis;
-            var desiredVelocity = new Vector2(velocity.X.ToSingle(), velocity.Z.ToSingle());
-            return new CharacterPresentationTrajectoryIntent(
-                result.ActorId,
-                result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
-                result.Tick,
-                sourceSequence,
-                new Vector2(basis.X.ToSingle(), basis.Y.ToSingle()),
-                desiredVelocity,
-                ResolveDesiredFacing(
-                    desiredVelocity,
-                    result.BodySample.FinalBody.Yaw.Degrees.ToSingle()),
-                float.MaxValue,
-                float.MaxValue,
-                HasPlanarMotion(desiredVelocity),
-                result.BodySample.FinalBody.Grounded,
-                ResolveMovementModeId(
-                    result.Motion.MovementPlaybackClock.OwnerIdentity,
-                    result.Motion.ActionOwnerIdentity,
-                    result.Motion.GameplayResultOwnerIdentity),
-                result.Motion.MovementPlaybackClock,
-                result.Motion.LocomotionTimeline,
-                resetSequence);
-        }
+        public static ulong ResolvePoseDiscontinuityIdentity(
+            in CommittedMovementPlaybackClock movementPlaybackClock) =>
+            movementPlaybackClock.IsValid ? movementPlaybackClock.Generation : 1;
 
         public static string ResolveMovementModeId(
             string locomotionOwnerIdentity,

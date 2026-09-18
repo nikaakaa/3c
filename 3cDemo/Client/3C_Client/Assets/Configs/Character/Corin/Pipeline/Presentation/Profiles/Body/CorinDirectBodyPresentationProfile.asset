@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f9d1199dbf3481ea83ea8f9de397cb8, type: 3}
   m_Name: CorinDirectBodyPresentationProfile
   m_EditorClassIdentifier:
-  m_TrajectoryMode: 1
+  m_CorrectionMode: 1
   m_PositionHalfLifeSeconds: 0.04
   m_MaximumHorizontalErrorMeters: 0.18
   m_PositionSettleDistanceMeters: 0.005

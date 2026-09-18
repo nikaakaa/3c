@@ -272,7 +272,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CommittedMovementPlaybackClock movementPlaybackClock,
             CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline,
             double movementPlaybackTime,
-            ulong bodyDiscontinuityGeneration)
+            ulong bodyDiscontinuityGeneration,
+            CharacterLocomotionPresentationFactLineage locomotionFactLineage,
+            ulong poseDiscontinuityIdentity)
         {
             if (!identity.IsValid || !simulationTick.IsValid ||
                 !double.IsFinite(presentationTime) || presentationTime < 0d ||
@@ -304,6 +306,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             LocomotionMotionTimeline = locomotionMotionTimeline;
             MovementPlaybackTime = movementPlaybackTime;
             BodyDiscontinuityGeneration = bodyDiscontinuityGeneration;
+            LocomotionFactLineage = locomotionFactLineage;
+            PoseDiscontinuityIdentity = poseDiscontinuityIdentity;
         }
 
         public CharacterPresentationFactFrameIdentity Identity { get; }
@@ -321,6 +325,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
         public double MovementPlaybackTime { get; }
         public ulong BodyDiscontinuityGeneration { get; }
+        public CharacterLocomotionPresentationFactLineage LocomotionFactLineage { get; }
+        public ulong PoseDiscontinuityIdentity { get; }
         public bool IsValid => Identity.IsValid && SimulationTick.IsValid && BodyDiscontinuityGeneration != 0;
 
         public bool TryRead(
@@ -477,7 +483,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 intent.MovementPlaybackClock,
                 intent.LocomotionMotionTimeline,
                 intent.MovementPlaybackTime,
-                m_BodyDiscontinuityGeneration);
+                m_BodyDiscontinuityGeneration,
+                intent.LocomotionFactLineage,
+                intent.PoseDiscontinuityIdentity);
             TrimIntents(bodyFrame.PreviousTick);
             return frame;
         }
@@ -586,7 +594,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string movementModeId,
                 CommittedMovementPlaybackClock movementPlaybackClock,
                 CommittedLocomotionPlanarMotionTimeline locomotionMotionTimeline,
-                double movementPlaybackTime)
+                double movementPlaybackTime,
+                CharacterLocomotionPresentationFactLineage locomotionFactLineage,
+                ulong poseDiscontinuityIdentity)
             {
                 if (string.IsNullOrWhiteSpace(movementModeId))
                     throw new ArgumentException("Presentation Intent sample is incomplete.", nameof(movementModeId));
@@ -598,6 +608,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 MovementPlaybackClock = movementPlaybackClock;
                 LocomotionMotionTimeline = locomotionMotionTimeline;
                 MovementPlaybackTime = movementPlaybackTime;
+                LocomotionFactLineage = locomotionFactLineage;
+                PoseDiscontinuityIdentity = poseDiscontinuityIdentity;
             }
 
             internal Vector2 LocomotionPlanarBasis { get; }
@@ -608,6 +620,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal CommittedMovementPlaybackClock MovementPlaybackClock { get; }
             internal CommittedLocomotionPlanarMotionTimeline LocomotionMotionTimeline { get; }
             internal double MovementPlaybackTime { get; }
+            internal CharacterLocomotionPresentationFactLineage LocomotionFactLineage { get; }
+            internal ulong PoseDiscontinuityIdentity { get; }
 
             internal static IntentSample From(CharacterPresentationTrajectoryIntent intent) =>
                 new IntentSample(
@@ -618,7 +632,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     intent.MovementModeId,
                     intent.MovementPlaybackClock,
                     intent.LocomotionMotionTimeline,
-                    intent.MovementPlaybackClock.ElapsedSeconds);
+                    intent.MovementPlaybackClock.ElapsedSeconds,
+                    intent.LocomotionFactLineage,
+                    intent.PoseDiscontinuityIdentity);
 
             internal static IntentSample Lerp(
                 CharacterPresentationTrajectoryIntent previous,
@@ -663,7 +679,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     useCurrentDiscrete
                         ? current.LocomotionMotionTimeline
                         : previous.LocomotionMotionTimeline,
-                    movementPlaybackTime);
+                    movementPlaybackTime,
+                    useCurrentDiscrete
+                        ? current.LocomotionFactLineage
+                        : previous.LocomotionFactLineage,
+                    useCurrentDiscrete
+                        ? current.PoseDiscontinuityIdentity
+                        : previous.PoseDiscontinuityIdentity);
             }
         }
     }

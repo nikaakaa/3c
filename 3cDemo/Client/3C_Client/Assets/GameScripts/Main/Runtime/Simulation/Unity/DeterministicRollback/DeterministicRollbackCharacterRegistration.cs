@@ -36,6 +36,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
             new SortedDictionary<ulong, FixedSimulationActorTickResult>();
 
+        bool m_HasSelectedPresentationTail;
+        ulong m_SelectedPresentationTailTick;
+        CharacterPresentationBodyState m_SelectedPresentationTailBody;
+
         RollbackRuntimeState m_RuntimeState;
         RollbackOutputCommitter m_OutputCommitter;
         IRollbackNetworkDiagnosticsSource m_NetworkDiagnostics;
@@ -288,28 +292,48 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     return;
                 var intervals = new List<CharacterPresentationBodyInterval>(m_PendingBodySamples.Count);
                 FixedCharacterBodySample finalSample = default;
+                bool selectedStream = m_PresentationRuntime.LocomotionBodySource ==
+                    CharacterLocomotionBodySource.SelectedStream;
                 foreach (FixedCharacterBodySample sample in m_PendingBodySamples.Values)
                 {
                     finalSample = sample;
                     float yawVelocityDegreesPerSecond =
                         sample.AppliedYawDegrees.ToSingle() * m_CharacterRuntime.TickRate;
+                    CharacterPresentationBodyState previousBody =
+                        FixedUnityPresentationBoundary.Convert(sample.BeforeBody);
+                    CharacterPresentationBodyState currentBody =
+                        FixedUnityPresentationBoundary.Convert(sample.FinalBody);
                     intervals.Add(new CharacterPresentationBodyInterval(
                         sample.Tick.Value - 1,
-                        FixedUnityPresentationBoundary.Convert(sample.BeforeBody),
+                        previousBody,
                         sample.Tick.Value,
-                        FixedUnityPresentationBoundary.Convert(sample.FinalBody),
-                        yawVelocityDegreesPerSecond));
+                        currentBody,
+                        yawVelocityDegreesPerSecond,
+                        selectedStream && intervals.Count == 0 &&
+                        RequiresSelectedPresentationReset(
+                            sample.Tick.Value - 1,
+                            in previousBody)
+                            ? CharacterPresentationBodyStreamUpdateKind.Reset
+                            : CharacterPresentationBodyStreamUpdateKind.Append));
                 }
-                m_PresentationRuntime.CaptureBodyTransaction(intervals);
+                m_PresentationRuntime.CaptureBodyStream(intervals);
+                CharacterPresentationBodyState finalBody = FixedUnityPresentationBoundary.Convert(finalSample.FinalBody);
+                if (selectedStream)
+                    CaptureSelectedPresentationTail(finalSample.Tick.Value, in finalBody);
                 foreach (FixedSimulationActorTickResult result in m_PendingTrajectoryResults.Values)
                 {
-                    m_PresentationRuntime.CaptureTrajectoryIntent(
+                    LocomotionPresentationFailureCode failureCode =
+                        m_PresentationRuntime.CaptureTrajectoryIntent(
                         CreateTrajectoryIntent(
                             result,
                             checked(++m_TrajectoryIntentSequence),
                             m_PresentationRuntime.BodyResetSequence));
+                    if (failureCode != LocomotionPresentationFailureCode.None)
+                    {
+                        throw new InvalidOperationException(
+                            $"Rollback Actor '{ActorId}' locomotion presentation rejected Fact: {failureCode}.");
+                    }
                 }
-                CharacterPresentationBodyState finalBody = FixedUnityPresentationBoundary.Convert(finalSample.FinalBody);
                 m_RootHierarchy.ApplyLogicPose(finalBody.Position, finalBody.Rotation);
             }
             finally
@@ -329,16 +353,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             m_ResultCommitActive = false;
         }
 
-        static CharacterPresentationTrajectoryIntent CreateTrajectoryIntent(
+        CharacterPresentationTrajectoryIntent CreateTrajectoryIntent(
             FixedSimulationActorTickResult result,
             ulong sourceSequence,
             ulong resetSequence)
         {
             FixedVector3 velocity = result.Motion.RequestedVelocity;
             FixedVector2 basis = result.Motion.LocomotionPlanarBasis;
+            CommittedMovementPlaybackClock movementClock =
+                result.Motion.MovementPlaybackClock;
             var desiredVelocity = new UnityEngine.Vector2(
                 velocity.X.ToSingle(),
                 velocity.Z.ToSingle());
+            CharacterLocomotionPresentationFactLineage factLineage =
+                m_PresentationRuntime.CreateLocomotionFactLineage(in movementClock);
             return new CharacterPresentationTrajectoryIntent(
                 result.ActorId,
                 result.Tick.Value > 1 ? new SimulationTick(result.Tick.Value - 1) : default,
@@ -354,12 +382,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 CharacterPresentationTrajectoryIntent.HasPlanarMotion(desiredVelocity),
                 result.BodySample.FinalBody.Grounded,
                 CharacterPresentationTrajectoryIntent.ResolveMovementModeId(
-                    result.Motion.MovementPlaybackClock.OwnerIdentity,
+                    movementClock.OwnerIdentity,
                     result.Motion.ActionOwnerIdentity,
                     result.Motion.GameplayResultOwnerIdentity),
-                result.Motion.MovementPlaybackClock,
+                movementClock,
                 result.Motion.LocomotionTimeline,
-                resetSequence);
+                resetSequence,
+                factLineage,
+                CharacterPresentationTrajectoryIntent.ResolvePoseDiscontinuityIdentity(
+                    in movementClock));
+        }
+
+        bool RequiresSelectedPresentationReset(
+            ulong previousTick,
+            in CharacterPresentationBodyState previousBody) =>
+            !m_HasSelectedPresentationTail ||
+            previousTick != m_SelectedPresentationTailTick ||
+            !previousBody.KinematicallyMatches(m_SelectedPresentationTailBody);
+
+        void CaptureSelectedPresentationTail(
+            ulong tick,
+            in CharacterPresentationBodyState body)
+        {
+            m_HasSelectedPresentationTail = true;
+            m_SelectedPresentationTailTick = tick;
+            m_SelectedPresentationTailBody = body;
         }
 
         public void Dispose()

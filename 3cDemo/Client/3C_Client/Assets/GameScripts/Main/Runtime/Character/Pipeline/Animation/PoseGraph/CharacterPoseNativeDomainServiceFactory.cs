@@ -52,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ActionCommandSource = actionCommandSource ?? throw new ArgumentNullException(nameof(actionCommandSource));
             m_EventFrameSource = eventFrameSource ?? throw new ArgumentNullException(nameof(eventFrameSource));
             m_World = world ? world : throw new ArgumentNullException(nameof(world));
-            m_FutureBodyTranslationSource = futureBodyTranslationSource ?? throw new ArgumentNullException(nameof(futureBodyTranslationSource));
+            m_FutureBodyTranslationSource = futureBodyTranslationSource;
             m_ClockPolicyFactory = clockPolicyFactory ?? throw new ArgumentNullException(nameof(clockPolicyFactory));
             if (!physicsScene.IsValid())
                 throw new ArgumentException("Pose domain requires a valid PhysicsScene.", nameof(physicsScene));
@@ -201,7 +201,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 payload.PlayRate,
                 payload.InitialTime,
                 payload.LoopAnimation,
-                payload.ClockSource,
+                payload.IsLocomotionParticipant,
                 m_IndexByNode[node.NodeId]);
             int footIndex = RequireParameterIndex(AnimationPoseParameterIds.FootPlacementWeight);
             return new AnimationClipPlayerRuntime(descriptor, plan, m_InputContract.Parameters, footIndex, m_Rig);

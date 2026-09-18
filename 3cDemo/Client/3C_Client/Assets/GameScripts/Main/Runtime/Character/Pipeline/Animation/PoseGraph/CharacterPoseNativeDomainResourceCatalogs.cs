@@ -100,7 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_Calibration = calibration ? calibration : throw new ArgumentNullException(nameof(calibration));
             m_World = world ? world : throw new ArgumentNullException(nameof(world));
-            m_FutureBodyTranslationSource = futureBodyTranslationSource ?? throw new ArgumentNullException(nameof(futureBodyTranslationSource));
+            m_FutureBodyTranslationSource = futureBodyTranslationSource;
             m_WorldQuery = worldQuery ?? throw new ArgumentNullException(nameof(worldQuery));
             m_Profile.RequireValid();
             m_Calibration.RequireValid();

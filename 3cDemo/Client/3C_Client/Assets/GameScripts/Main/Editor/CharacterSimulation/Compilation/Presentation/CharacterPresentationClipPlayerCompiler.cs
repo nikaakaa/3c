@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payload.PlayRate,
                 payload.InitialTime,
                 payload.LoopAnimation,
-                payload.ClockSource,
+                payload.IsLocomotionParticipant,
                 playerIndex);
         }
     }

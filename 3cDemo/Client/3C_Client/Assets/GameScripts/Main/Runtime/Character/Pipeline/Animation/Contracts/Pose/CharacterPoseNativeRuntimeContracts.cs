@@ -518,12 +518,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal string InputContractHash { get; }
         internal ulong InstanceId { get; }
         internal ulong ResetGeneration { get; }
-        internal bool IsOpenValid => ActorId.IsValid && FrameIdentity != 0 && CompletionIdentity == 0 &&
+        internal bool HasValidFrameFields => ActorId.IsValid && FrameIdentity != 0 &&
             PresentationFrame != 0 && BodyTick != 0 && GraphId.IsValid &&
             !string.IsNullOrWhiteSpace(GraphRevision) && !string.IsNullOrWhiteSpace(RigId) &&
             !string.IsNullOrWhiteSpace(RigRevision) && !string.IsNullOrWhiteSpace(InputContractHash) &&
             InstanceId != 0 && ResetGeneration != 0;
-        internal bool IsValid => IsOpenValid && CompletionIdentity != 0;
+        internal bool IsOpenValid => HasValidFrameFields && CompletionIdentity == 0;
+        internal bool IsValid => HasValidFrameFields && CompletionIdentity != 0;
         internal CharacterPoseNativeFrameLineage WithCompletion(ulong completionIdentity) =>
             new CharacterPoseNativeFrameLineage(
                 ActorId,
@@ -670,20 +671,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage,
             IReadOnlyList<CharacterPoseNativeSourceRequest> requests)
         {
-            if (!lineage.IsValid || requests == null)
-                throw new ArgumentException("Pose native source demand is invalid.");
+            if (!lineage.IsValid)
+                throw new ArgumentException(
+                    "Pose native source demand lineage is invalid " +
+                    $"(actor={lineage.ActorId}, frame={lineage.FrameIdentity}, " +
+                    $"completion={lineage.CompletionIdentity}, instance={lineage.InstanceId}, " +
+                    $"resetGeneration={lineage.ResetGeneration}).");
+            if (requests == null)
+                throw new ArgumentNullException(nameof(requests));
             var requestKeys = new HashSet<(ulong, PoseNodeId, AnimationPoseSourceId)>();
             for (int i = 0; i < requests.Count; i++)
-                if (!requests[i].NodeId.IsValid ||
-                    !requests[i].SourceSlot &&
-                    requests[i].SourceId.SourceKind != AnimationPoseSourceKind.Timeline ||
-                    !requests[i].SourceId.IsValid ||
-                    requests[i].ScopeInstanceId == 0 ||
-                    !requestKeys.Add((
-                        requests[i].ScopeInstanceId,
-                        requests[i].NodeId,
-                        requests[i].SourceId)))
-                    throw new ArgumentException("Pose native source demand contains an invalid request.");
+            {
+                CharacterPoseNativeSourceRequest request = requests[i];
+                string requestDescription =
+                    $"index={i}, nodeId={request.NodeId.Value}, sourceId={request.SourceId}, " +
+                    $"sourceSlot={request.SourceSlot}, scopeInstanceId={request.ScopeInstanceId}";
+                if (!request.NodeId.IsValid ||
+                    !request.SourceId.IsValid ||
+                    !request.SourceSlot &&
+                    request.SourceId.SourceKind != AnimationPoseSourceKind.Timeline ||
+                    request.ScopeInstanceId == 0)
+                    throw new ArgumentException(
+                        "Pose native source demand contains an invalid request " +
+                        $"({requestDescription}).");
+                if (!requestKeys.Add((
+                        request.ScopeInstanceId,
+                        request.NodeId,
+                        request.SourceId)))
+                    throw new ArgumentException(
+                        "Pose native source demand contains a duplicate request " +
+                        $"({requestDescription}).");
+            }
             Lineage = lineage;
             Requests = requests;
         }

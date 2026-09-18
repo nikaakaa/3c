@@ -1,102 +1,111 @@
 # ZZZ Corin 主战斗控制器抄录对照
 
-本文只对照主战斗控制器 `Avatar_Female_Size01_Corin_Controller__1291803240_00335DAA.json`，不包含 MainCity、NPC、UI。它是后续 Control/Ability/Timeline/Pose 抄录的唯一状态对照入口；具体资产仍按正式领域 owner 和 C# authoring 链路落盘。
+本文只对照主战斗控制器 `Avatar_Female_Size01_Corin_Controller__1291803240_00335DAA.json`，不包含 MainCity、NPC、UI。它是 Control/Ability/Timeline/Pose 抄录的唯一状态对照入口；具体资产仍按正式领域 owner 和 C# authoring 链路落盘。
 
 ## 分组结论
 
 | 组 | 状态数 | 3C 归属 | 当前结论 |
 |---|---:|---|---|
-| NormalAttack | 12 | Control + Attack Ability + Timeline | 已精确对账：12状态全部有真实Clip绑定（End/Explode全同名精确；`Attack_Normal_05_End_2`实际绑`Attack_Normal_05_B`）。 |
-| BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | 已精确对账：18状态全部有真实Clip绑定，Branch_01/03大量共享Branch_02与Branch_Loop/Walk共享Motion；缺的是Timeline/Pose binding与Ability状态，不是Clip。 |
-| RushAttack | 8 | Control + Attack Ability + Timeline + Pose | 已精确对账：8状态全部有真实Clip绑定（`Attack_Rush_Enhance`实际绑`Enhance_Start`，Enhance_End复用`Attack_Rush_Explode`）；缺Timeline/Pose binding与Ability状态。 |
-| AidCounterAttack | 20 | Control + Combat/Aid Ability + Timeline | 仅有效果/镜头证据，没有正式 3C Aid/Counter 执行链。 |
-| EvadeHit | 8 | Control + Pose + Hit feedback | Dodge 已有正式 Ability；Hit/HitFly 还没有完整 3C 链。 |
+| NormalAttack | 12 | Control + Attack Ability + Timeline | 五段主链已有 3C 简化执行链；End/Explode 状态和保持键分支还未完整对齐。 |
+| BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | AttackProperty payload 已就位；多个状态复用其他 Branch Motion，必须按 Motion 引用而不是状态名抄录。 |
+| RushAttack | 8 | Control + Attack Ability + Timeline + Pose | AttackProperty payload 已就位；Enhance 分支存在跨名 Motion 引用，需要先对齐 Timeline 起止。 |
+| AidCounterAttack | 20 | Control + Combat/Aid Ability + Timeline | 仅有效果/镜头证据，没有正式 3C Aid/Counter 执行链；AssaultAid 只有 raw Motion。 |
+| EvadeHit | 8 | Control + Pose + Hit feedback | Dodge 已有正式 Ability；Hit/HitFly 状态复用 Front/Back Motion，还没有完整 3C 链。 |
 | Switch | 11 | Control + Switch Ability | SwitchIn/SwitchOut 还没有正式 Control 请求与 Switch Ability。 |
 
-## 状态到 Clip 对照
+## Motion 证据统计
 
-精确对账口径（2026-09-19 Normal/Branch/Rush 已完成）：以控制器状态自带 BlendTree 叶子的 Clip 引用（FileId/PathId/Name）为唯一绑定证据，导出清单核对存在性；同名只是特例，共享 Motion 与非同名绑定均已标出。38 个状态全部有真实绑定，引用 Clip 全部已导出，无 missing；此前按状态名猜的 missing 行已全部改写为实际绑定。
+| 证据类型 | 状态数 | 含义 |
+|---|---:|---|
+| exported-anim | 97 | 控制器 Motion 引用已有 `.anim` 导出 |
+| raw-only | 2 | 控制器 Motion 引用只有 raw `.dat`，尚未解码成 `.anim` |
+| no-motion | 2 | PlaceHolder/InstantOut 等无 Motion 状态 |
 
-| 状态组 | ZZZ 状态 | Clip 证据 | 3C 缺口 |
-|---|---|---|---|
-| NormalAttack | `Attack_Normal_01` | `Attack_Normal_01` | 精确同名绑定（BlendTree单叶，已导出） |
-| NormalAttack | `Attack_Normal_01_End` | `Attack_Normal_01_End` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_02` | `Attack_Normal_02` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_02_End` | `Attack_Normal_02_End` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_03` | `Attack_Normal_03` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_03_End` | `Attack_Normal_03_End` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_03_Explode` | `Attack_Normal_03_Explode` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_04` | `Attack_Normal_04` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_04_End` | `Attack_Normal_04_End` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_05` | `Attack_Normal_05` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_05_End` | `Attack_Normal_05_End` | 精确同名绑定（已导出） |
-| NormalAttack | `Attack_Normal_05_End_2` | `Attack_Normal_05_B` | 非同名：状态实际绑定`Attack_Normal_05_B`（已导出），状态名≠Clip名 |
-| BranchAttack | `Attack_Branch_01` | `Attack_Branch_01` | 精确同名绑定（已导出） |
-| BranchAttack | `Attack_Branch_01_End` | `Attack_Branch_01_End` | 精确同名绑定（已导出） |
-| BranchAttack | `Attack_Branch_01_Explode` | `Attack_Branch_01_Explode` | 精确同名绑定（已导出） |
-| BranchAttack | `Attack_Branch_01_NotExplode` | `Attack_Branch_01_Explode` | 共享Motion：与`Attack_Branch_01_Explode`状态绑同一Clip（已导出），NotExplode语义差异在转移条件不在Motion |
-| BranchAttack | `Attack_Branch_02` | `Attack_Branch_02` | 精确同名绑定（已导出） |
-| BranchAttack | `Attack_Branch_02_End` | `Attack_Branch_02_End` | 精确同名绑定（已导出） |
-| BranchAttack | `Attack_Branch_02_Explode` | `Attack_Branch_02_Explode` | 精确同名绑定（已导出） |
-| BranchAttack | `Attack_Branch_02_Loop` | `Attack_Branch_Loop` | 共享Motion：Branch_Loop为Branch_02/03_Loop共享（已导出） |
-| BranchAttack | `Attack_Branch_02_Walk` | `Attack_Branch_Walk` | 共享Motion：Branch_Walk（已导出），非Branch_02专属 |
-| BranchAttack | `Attack_Branch_03` | `Attack_Branch_02` | 共享Motion：Branch_03主体复用Branch_02 Clip（已导出） |
-| BranchAttack | `Attack_Branch_03_End` | `Attack_Branch_02_End` | 共享Motion：复用Branch_02_End（已导出） |
-| BranchAttack | `Attack_Branch_03_Enhance_Loop` | `Attack_Branch_03_Loop` | 共享Motion：与Branch_03_Loop同Clip（已导出），增强差异在参数/转移 |
-| BranchAttack | `Attack_Branch_03_Enhance_Walk` | `Attack_Branch_03_Walk_Loop` | 共享Motion：与Branch_03_Walk同Clip（已导出） |
-| BranchAttack | `Attack_Branch_03_Explode` | `Attack_Branch_02_Explode` | 共享Motion：复用Branch_02_Explode（已导出） |
-| BranchAttack | `Attack_Branch_03_Loop` | `Attack_Branch_Loop` | 共享Motion：Branch_Loop（已导出） |
-| BranchAttack | `Attack_Branch_03_Shake` | `Attack_Branch_03_Shake` | 精确同名绑定（已导出） |
-| BranchAttack | `Attack_Branch_03_Walk` | `Attack_Branch_03_Walk_Loop` | 精确绑定（非同名后缀_Loop，已导出） |
-| BranchAttack | `Attack_Branch_03_Walk_Shake` | `Attack_Branch_03_Walk_Shake` | 精确同名绑定（已导出） |
-| RushAttack | `Attack_Rush` | `Attack_Rush` | 精确同名绑定（已导出） |
-| RushAttack | `Attack_Rush_End` | `Attack_Rush_End` | 精确同名绑定（已导出） |
-| RushAttack | `Attack_Rush_Enhance` | `Attack_Rush_Enhance_Start` | 非同名：状态实际绑定`Attack_Rush_Enhance_Start`（已导出） |
-| RushAttack | `Attack_Rush_Enhance_End` | `Attack_Rush_Explode` | 共享Motion：复用`Attack_Rush_Explode`（已导出） |
-| RushAttack | `Attack_Rush_Enhance_Explode` | `Attack_Rush_Enhance_Explode` | 精确同名绑定（已导出） |
-| RushAttack | `Attack_Rush_Enhance_Explode_End` | `Attack_Rush_Enhance_End` | 共享Motion：复用Enhance_End状态所绑Clip（已导出） |
-| RushAttack | `Attack_Rush_Enhance_Loop` | `Attack_Rush_Enhance_Loop` | 精确同名绑定（已导出） | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| AidCounterAttack | `Attack_AssaultAid` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_AssaultAid_End` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_BeHitAid` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_BeHitAid_End` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_BeHitAid_Explode` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_Counter` | `Attack_Counter` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| AidCounterAttack | `Attack_Counter_End` | `Attack_Counter_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| AidCounterAttack | `Attack_Counter_Explode` | `Attack_Counter_Explode` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| AidCounterAttack | `Attack_Counter_NotExplode` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_ParryAid_H` | `Attack_ParryAid_H` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| AidCounterAttack | `Attack_ParryAid_H_End` | `Attack_ParryAid_H_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| AidCounterAttack | `Attack_ParryAid_H_Start` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_ParryAid_L` | `Attack_ParryAid_L` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| AidCounterAttack | `Attack_ParryAid_L_End` | `Attack_ParryAid_L_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| AidCounterAttack | `Attack_ParryAid_L_Start` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_ParrySolo_H` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_ParrySolo_H_End` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_ParrySolo_L` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_ParrySolo_L_End` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| AidCounterAttack | `Attack_ParrySolo_Start` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| EvadeHit | `Evade_Back` | `Evade_Back` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| EvadeHit | `Evade_Front` | `Evade_Front` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| EvadeHit | `HitFly_B` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| EvadeHit | `HitFly_F` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| EvadeHit | `Hit_H_B` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| EvadeHit | `Hit_H_F` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| EvadeHit | `Hit_L_B` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| EvadeHit | `Hit_L_F` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| Switch | `SwitchIn_Attack` | `SwitchIn_Attack` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| Switch | `SwitchIn_Attack_End` | `SwitchIn_Attack_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| Switch | `SwitchIn_Attack_Ex` | `SwitchIn_Attack_Ex` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| Switch | `SwitchIn_Attack_Ex_End` | `SwitchIn_Attack_Ex_End` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| Switch | `SwitchIn_Attack_Ex_Start` | `SwitchIn_Attack_Ex_Start` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
-| Switch | `SwitchIn_Attack_Explode` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| Switch | `SwitchIn_Attack_Explode_End` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| Switch | `SwitchIn_Attack_Landed` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| Switch | `SwitchIn_Normal` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| Switch | `SwitchOut_Attack` | `missing` | 缺精确同名 Clip；先查 Motion/BlendTree，不能伪造资产 |
-| Switch | `SwitchOut_Normal` | `SwitchOut_Normal` | Clip 可导入；需要 Timeline、Pose binding 与 Ability 状态 |
+## 状态到 Motion 对照
 
-## 非表现 fallback 转移
+只使用控制器 BlendTree 的实际 `Clip` 引用；状态名和 Motion 名不同时不做近似猜测。`raw-only` 表示现有导出包还不能直接进 Unity。
+
+| 状态组 | ZZZ 状态 | Motion 证据 | 证据类型 | 3C 缺口 |
+|---|---|---|---|---|
+| NormalAttack | `Attack_Normal_01` | `Attack_Normal_01` | exported-anim | 已由现有五段简化链覆盖 |
+| NormalAttack | `Attack_Normal_01_End` | `Attack_Normal_01_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
+| NormalAttack | `Attack_Normal_02` | `Attack_Normal_02` | exported-anim | 已由现有五段简化链覆盖 |
+| NormalAttack | `Attack_Normal_02_End` | `Attack_Normal_02_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
+| NormalAttack | `Attack_Normal_03` | `Attack_Normal_03` | exported-anim | 已由现有五段简化链覆盖 |
+| NormalAttack | `Attack_Normal_03_End` | `Attack_Normal_03_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
+| NormalAttack | `Attack_Normal_03_Explode` | `Attack_Normal_03_Explode` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
+| NormalAttack | `Attack_Normal_04` | `Attack_Normal_04` | exported-anim | 已由现有五段简化链覆盖 |
+| NormalAttack | `Attack_Normal_04_End` | `Attack_Normal_04_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
+| NormalAttack | `Attack_Normal_05` | `Attack_Normal_05` | exported-anim | 已由现有五段简化链覆盖 |
+| NormalAttack | `Attack_Normal_05_End` | `Attack_Normal_05_End` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
+| NormalAttack | `Attack_Normal_05_End_2` | `Attack_Normal_05_B` | exported-anim | 五段简化链已覆盖主命中；细分状态待对齐 |
+| BranchAttack | `Attack_Branch_01` | `Attack_Branch_01` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_01_End` | `Attack_Branch_01_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_01_Explode` | `Attack_Branch_01_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_01_NotExplode` | `Attack_Branch_01_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_02` | `Attack_Branch_02` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_02_End` | `Attack_Branch_02_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_02_Explode` | `Attack_Branch_02_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_02_Loop` | `Attack_Branch_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_02_Walk` | `Attack_Branch_Walk` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03` | `Attack_Branch_02` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03_End` | `Attack_Branch_02_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03_Enhance_Loop` | `Attack_Branch_03_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03_Enhance_Walk` | `Attack_Branch_03_Walk_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03_Explode` | `Attack_Branch_02_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03_Loop` | `Attack_Branch_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03_Shake` | `Attack_Branch_03_Shake` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03_Walk` | `Attack_Branch_03_Walk_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| BranchAttack | `Attack_Branch_03_Walk_Shake` | `Attack_Branch_03_Walk_Shake` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| RushAttack | `Attack_Rush` | `Attack_Rush` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| RushAttack | `Attack_Rush_End` | `Attack_Rush_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| RushAttack | `Attack_Rush_Enhance` | `Attack_Rush_Enhance_Start` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| RushAttack | `Attack_Rush_Enhance_End` | `Attack_Rush_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| RushAttack | `Attack_Rush_Enhance_Explode` | `Attack_Rush_Enhance_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| RushAttack | `Attack_Rush_Enhance_Explode_End` | `Attack_Rush_Enhance_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| RushAttack | `Attack_Rush_Enhance_Loop` | `Attack_Rush_Enhance_Loop` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| RushAttack | `Attack_Rush_Explode` | `Attack_Rush_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_AssaultAid` | `AssaultAid` | raw-only | 先补 `.anim` 解码，再建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_AssaultAid_End` | `AssaultAid_End` | raw-only | 先补 `.anim` 解码，再建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_BeHitAid` | `Attack_Counter` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_BeHitAid_End` | `Attack_Counter_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_BeHitAid_Explode` | `Attack_Counter_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_Counter` | `Attack_Counter` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_Counter_End` | `Attack_Counter_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_Counter_Explode` | `Attack_Counter_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_Counter_NotExplode` | `Attack_Counter_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParryAid_H` | `Attack_ParryAid_H` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParryAid_H_End` | `Attack_ParryAid_H_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParryAid_H_Start` | `Attack_ParryAid_Start` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParryAid_L` | `Attack_ParryAid_L` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParryAid_L_End` | `Attack_ParryAid_L_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParryAid_L_Start` | `Attack_ParryAid_Start` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParrySolo_H` | `Attack_ParryAid_H` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParrySolo_H_End` | `Attack_ParryAid_H_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParrySolo_L` | `Attack_ParryAid_L` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParrySolo_L_End` | `Attack_ParryAid_L_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| AidCounterAttack | `Attack_ParrySolo_Start` | `Attack_ParryAid_Start` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| EvadeHit | `Evade_Back` | `Evade_Back` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| EvadeHit | `Evade_Front` | `Evade_Front` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| EvadeHit | `HitFly_B` | `HitFly_Back` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| EvadeHit | `HitFly_F` | `HitFly_Front` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| EvadeHit | `Hit_H_B` | `Hit_H_Back` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| EvadeHit | `Hit_H_F` | `Hit_H_Front` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| EvadeHit | `Hit_L_B` | `Hit_L_Back` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| EvadeHit | `Hit_L_F` | `Hit_L_Front` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Attack` | `SwitchIn_Attack_02` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Attack_End` | `SwitchIn_Attack_02_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Attack_Ex` | `SwitchIn_Attack_Ex` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Attack_Ex_End` | `SwitchIn_Attack_Ex_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Attack_Ex_Start` | `SwitchIn_Attack_Ex_Start` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Attack_Explode` | `SwitchIn_Attack_02_Explode` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Attack_Explode_End` | `SwitchIn_Attack_02_Explode_End` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Attack_Landed` | `SwitchIn_Attack_02_Landed` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchIn_Normal` | `SiwtchIn_Normal` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchOut_Attack` | `Evade_Back` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+| Switch | `SwitchOut_Normal` | `SwitchOut_Normal` | exported-anim | 按 Motion 引用建立 Timeline、Pose binding 与 Ability 状态 |
+
+## 非 `special_*` 转移
 
 下表保留 ZZZ 目标不是 `special_*` 的转移；`special_*` 是宿主层外部状态路由，不直接抄成 3C FSM 边。条件字段保留原始名，后面由 Control/Ability 翻译成 Action Request、Action Window 或事件图变量。
 
@@ -266,7 +275,7 @@
 ## 主控收口规则
 
 1. Normal Attack 先收口五段主链的连段窗口与攻击命中；不把 Rush/Branch 伪造成普通连段。
-2. Branch/Rush 必须等战斗 Clip 进入正式 Pose 资产、Timeline 拥有起止/命中帧后，再生成 Ability 状态；不允许只凭 AttackProperty 创建不可播放状态。
+2. Branch/Rush 必须按控制器实际 Motion 引用进入 Pose 资产，并由 Timeline 拥有起止/命中帧后，再生成 Ability 状态；不允许只凭 AttackProperty 创建不可播放状态。
 3. `special_*` 不作为图内状态抄录；它对应外部切换、队伍 Aid、受伤收口等宿主路由，必须先落到 3C Control/Aid 请求边界。
 4. 所有状态身份保留 ZZZ 原名作为业务对照；3C 资产命名使用正式 `Corin_` 前缀，不使用 `Clone`、`Copy` 或临时序号。
 5. 本表更新时必须同步 `docs/zzz-corin-copy-sources.md` 的进度；没有对应正式资产落盘不得把状态写成已迁移。

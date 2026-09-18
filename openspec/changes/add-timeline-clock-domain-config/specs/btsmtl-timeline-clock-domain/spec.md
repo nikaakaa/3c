@@ -31,7 +31,7 @@ Timeline 逻辑判定 MUST 以整数 tick 为唯一权威时钟：clip enter/exi
 
 ### Requirement: 表现时间驱动模式必须是业务策略而非固定实现
 
-Timeline 表现层的时间驱动 MUST 是显式业务策略，以策略对象（`IActionPresentationClockPolicy`）注入播放器：策略实现 MUST 完整封装该模式下播放器时钟的每帧行为，播放器消费点 MUST NOT 因模式产生分支。业务 MAY 选择自由播策略（按渲染 delta 自走，非确定、不回滚），MAY 选择 committed 采样插值跟随策略（动画时间为逻辑时间轴的连续函数，支持修正重演）。无论哪种模式，逻辑消费动画时间的场景（motion curve、foot window、motion warp）MUST 使用 tick 域数据，MUST NOT 读取表现私有动画时钟。跟随模式的能力组件 MUST 保持可用，其采用与否由具体业务装配决定，MUST NOT 强制全业务统一。
+Timeline 表现层的时间驱动 MUST 是显式业务策略，以策略对象（`IActionPresentationClockPolicy`）注入播放器：策略实现 MUST 完整封装该模式下播放器时钟的每帧行为，播放器消费点 MUST NOT 因模式产生分支。业务 MAY 选择自由播策略（按渲染 delta 自走，非确定、不回滚），MAY 选择 committed movement clock 跟随策略（消费正式 `CharacterPresentationFactFrame.MovementPlaybackClock`），MAY 选择 committed Action sample 插值跟随策略（动画时间为 committed 逻辑采样的连续函数，支持修正重演）。无论哪种模式，逻辑消费动画时间的场景（motion curve、foot window、motion warp）MUST 使用 tick 域数据，MUST NOT 读取表现私有动画时钟。各跟随模式的能力组件 MUST 保持可用，其采用与否由具体业务和 Clip clock source 装配决定，MUST NOT 强制全业务统一。
 
 #### Scenario: 表现自由播业务
 
@@ -43,6 +43,12 @@ Timeline 表现层的时间驱动 MUST 是显式业务策略，以策略对象�
 - **WHEN** 新业务需要不同的表现时钟行为
 - **THEN** MUST 通过新增策略实现并在装配时注入接入
 - **AND** 播放器消费点与既有策略实现 MUST NOT 被修改
+
+#### Scenario: CommittedMovement Clip 跟随正式移动时钟
+
+- **WHEN** Clip 的 `CharacterClipPlayerClockSource` 为 `CommittedMovement`
+- **THEN** 播放器 MUST 从正式 `CharacterPresentationFactFrame.MovementPlaybackClock` 驱动连续时间
+- **AND** 同一 Committed movement clock identity 下的渲染帧 MUST 不因渲染帧率变化而改变 Clip 的逻辑经过时长
 
 #### Scenario: 跟随逻辑时间轴业务
 

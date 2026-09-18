@@ -78,11 +78,12 @@
 
 ## 表现时钟策略模式设计（2026-09-17 定稿）
 
-表现层时间驱动以策略对象插件化：新增 `IActionPresentationClockPolicy` 合同（`DriveClock(player, channelId, presentationSampleTick, presentationDeltaSeconds)`），把"这一帧播放器时钟怎么走"完整封装在策略实现里，播放器消费点一行调度、零模式分支。
+表现层时间驱动以策略对象插件化：新增 `IActionPresentationClockPolicy` 合同（`DriveClock(player, channelId, presentationSampleTick, factFrame, presentationDeltaSeconds)`），把"这一帧播放器时钟怎么走"完整封装在策略实现里，播放器消费点一行调度、零模式分支。
 
-- `FreeRunPresentationClockPolicy`：`player.Advance(deltaSeconds, PlayRate)`——自由播，当前角色动画业务装配用，行为与现状逐帧一致；
-- `CommittedFollowPresentationClockPolicy`：组合 `Registry`（Select/Sample/Complete/Release 生命周期、channel→playback 映射）+ `History`（committed 采样序列）+ `Projector`（窗口插值），`TryProject` 成功时 `SetRawClock(插值连续时间)`，窗口缺失时退化自走；内部分支属于策略自身语义，消费点不可见；
+- `FreeRunPresentationClockPolicy`：`player.Advance(deltaSeconds, PlayRate)`——表现独立连续推进；
+- `CommittedMovementPresentationClockPolicy`：从正式 `CharacterPresentationFactFrame.MovementPlaybackClock` 读取已提交 locomotion 时钟，调用 `SynchronizeMovementClock`，用于作者明确标记为 `CommittedMovement` 的 locomotion Clip；
+- `CommittedFollowPresentationClockPolicy`：组合 `Registry`（Select/Sample/Complete/Release 生命周期、channel→playback 映射）+ `History`（committed 采样序列）+ `Projector`（窗口插值），`TryProject` 成功时 `SetRawClock(插值连续时间)`，窗口缺失时回到该 Clip 的自由推进语义；内部分支属于策略自身语义，消费点不可见；
 - 消费点：`CharacterPoseNativeClipPlayerHandler.PrepareFrame` 的 `m_Player.Advance(...)` 替换为 `m_ClockPolicy.DriveClock(...)`；
-- 装配开关：`CharacterPresentationDomainRuntimeFactory` 按业务注入策略实例；新业务接入 = 新增策略实现 + 装配注入，消费点与既有实现不修改。
+- 装配开关：`CharacterPresentationDomainRuntimeFactory` 按 Clip 的 `CharacterClipPlayerClockSource` 选择 FreeRun 或 CommittedMovement；SimulatedActor 为 channel-bound Action 额外提供 CommittedFollow coordinator。
 
-取舍：跟随模式（表现回滚重演）只有格斗类业务需要，普通动作游戏做它属性能负担，因此 FreeRun 为默认装配；CommittedFollow 作为可选能力保留（你规划的插值组件即该模式实现），不接主链、不实例化零开销。
+取舍：普通 locomotion 需要跟随已提交移动时钟，否则起步、循环和停止会脱离正式 movement playback；纯表现 Clip 继续使用 FreeRun；CommittedFollow 只为需要按 committed Action sample 重演的回放/观战链实例化。

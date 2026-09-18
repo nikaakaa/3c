@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -130,10 +131,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ObjectDisposedException(nameof(CharacterPresentationDomainRuntime));
             m_PoseDomain = poseDomain ?? throw new ArgumentNullException(nameof(poseDomain));
             m_PoseResourceScope = resourceScope ?? throw new ArgumentNullException(nameof(resourceScope));
-            var ids = new PoseParameterId[poseParameterIds.Count];
-            for (int i = 0; i < ids.Length; i++)
-                ids[i] = poseParameterIds[i].ParameterId;
-            m_PoseParameterIds = ids;
+            var ids = new List<PoseParameterId>();
+            for (int i = 0; i < poseParameterIds.Count; i++)
+            {
+                CharacterPoseParameterDeclaration parameter = poseParameterIds[i];
+                if (parameter.Usage == CharacterPoseParameterUsage.Control)
+                    ids.Add(parameter.ParameterId);
+            }
+            m_PoseParameterIds = ids.ToArray();
         }
 
         public bool AcceptsTrajectoryIntent => true;
@@ -141,6 +146,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterLocomotionBodySource LocomotionBodySource => m_LocomotionBinding.BodySource;
         public bool SupportsCheckpointCapture => false;
         public bool SupportsCheckpointRestore => false;
+
+        public bool TryGetCameraBasis(out CameraBasisSnapshot basis)
+        {
+            if (m_Camera == null)
+            {
+                basis = CameraBasisSnapshot.Invalid;
+                return false;
+            }
+            basis = m_Camera.BasisSnapshot;
+            return basis.Valid;
+        }
+
+        public void SetCameraInitialState(in CameraInitialState state)
+        {
+            if (m_Camera == null)
+                throw new InvalidOperationException("Presentation runtime has no composed Camera domain.");
+            m_Camera.SetInitialState(in state);
+        }
 
         public bool TryGetLatestBody(out CharacterPresentationBodyState body) =>
             m_Body.TryGetLatestBody(out body);
@@ -341,7 +364,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             m_TimelineHost?.Present(context);
             m_Camera?.Present(bodyFrame, context);
-            CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame);
+            CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
             CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
                 in factFrame,
                 Mathf.Max(0f, context.PresentationDeltaSeconds),
@@ -493,11 +516,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         CharacterPresentationFactFrame CreateFactFrame(
-            in CharacterBodyPresentationFrame bodyFrame)
+            in CharacterBodyPresentationFrame bodyFrame,
+            ulong renderFrame)
         {
             var identity = new CharacterPresentationFactFrameIdentity(
                 m_ActorId,
-                bodyFrame.CurrentTick);
+                renderFrame);
             Vector2 desiredVelocity = m_HasTrajectory ? m_Trajectory.DesiredPlanarVelocity : Vector2.zero;
             Vector2 desiredFacing = m_HasTrajectory
                 ? m_Trajectory.DesiredFacing
@@ -531,7 +555,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_PoseDomain == null || !m_PoseDomain.IsAdopted)
                 return;
             m_NextPoseResetGeneration++;
-            m_PoseDomain.Reset(m_NextPoseResetGeneration);
+            CharacterPoseNativeResetResult result = m_PoseDomain.Reset(m_NextPoseResetGeneration);
+            if (!result.IsReset)
+                throw new InvalidOperationException(
+                    $"Pose graph reset failed: {result.FailureCode} {result.Message}");
         }
 
         static Vector2 NormalizeFacing(Vector3 forward)

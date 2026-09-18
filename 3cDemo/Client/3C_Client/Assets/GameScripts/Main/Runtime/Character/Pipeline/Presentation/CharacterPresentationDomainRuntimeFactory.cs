@@ -159,6 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             poseResources.ResourcePackageName),
                         new CharacterAnimationResourceSettings(poseResources.ResourceResidentBudgetBytes));
                     var inbox = new ActionPlaybackCommandInbox(64);
+                    runtime.BindPoseActionPublisher(new CharacterPoseActionCommandPublisher(inbox));
                     var actionCommandSource = new CharacterPoseNativeActionCommandSource(actorId, inbox);
                     var serviceFactory = new CharacterPoseNativeDomainServiceFactory(
                         animationPresentationProfile,
@@ -186,7 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         animancer,
                         animationRigBinding,
                         rootHierarchy,
-                        1,
+                        ResolvePoseInstanceId(actorId),
                         1,
                         "presentation-domain-create",
                         serviceFactory,
@@ -215,6 +216,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_NextRequestId++;
             return m_NextRequestId;
         }
+
+        static ulong ResolvePoseInstanceId(ActorId actorId)
+        {
+            ulong instanceId = StableHash.Compute(actorId.Value).Value;
+            return instanceId != 0
+                ? instanceId
+                : throw new InvalidOperationException(
+                    $"Pose instance identity for actor '{actorId.Value}' hashed to zero.");
+        }
     }
 }
-

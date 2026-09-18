@@ -152,7 +152,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPoseNativeGraphPrepareResult PrepareChild(
             ulong requestId,
-            PoseGraphId graphId)
+            PoseGraphId graphId,
+            CharacterPoseNativeGraphBoundary boundary)
         {
             RequireAlive();
             CharacterPoseCanvasGraph graph =
@@ -165,13 +166,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PreparedBinding.Profile,
                 m_PreparedBinding.Rig,
                 m_PreparedBinding.InputContract,
-                m_PreparedBinding.ResourceRevision);
+                m_PreparedBinding.ResourceRevision,
+                boundary);
             return Prepare(in request);
         }
 
         internal CharacterPoseNativeAdoptedResult CreateChild(
             ulong requestId,
             PoseGraphId graphId,
+            CharacterPoseNativeGraphBoundary boundary,
             ulong instanceId,
             ulong resetGeneration,
             string reason,
@@ -184,7 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose child graph cannot reuse its parent instance identity.",
                     nameof(instanceId));
             CharacterPoseNativeGraphPrepareResult preparation =
-                PrepareChild(requestId, graphId);
+                PrepareChild(requestId, graphId, boundary);
             if (!preparation.IsReady)
             {
                 runtime = null;
@@ -210,6 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseNativeAdoptedResult CreateChild(
             ulong requestId,
             PoseGraphId graphId,
+            CharacterPoseNativeGraphBoundary boundary,
             ulong instanceId,
             ulong resetGeneration,
             string reason,
@@ -224,7 +228,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose child graph cannot reuse its parent instance identity.",
                     nameof(instanceId));
             CharacterPoseNativeGraphPrepareResult preparation =
-                PrepareChild(requestId, graphId);
+                PrepareChild(requestId, graphId, boundary);
             if (!preparation.IsReady)
             {
                 runtime = null;
@@ -257,7 +261,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             try
             {
-                CharacterPoseNativeGraphValidator.RequireValid(request.GraphAsset, request.Graph);
+                CharacterPoseNativeGraphValidator.RequireValid(
+                    request.GraphAsset,
+                    request.Graph,
+                    request.Boundary);
                 return CharacterPoseNativeGraphPrepareResult.Ready(
                     in request,
                     new CharacterPoseNativePreparedBinding(in request));
@@ -357,107 +364,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 reason,
                 handlers,
                 out runtime);
-        }
-
-        internal static CharacterPoseNativeAdoptedResult Replace(
-            CharacterPoseNativeGraphRuntime current,
-            in CharacterPoseNativePreparedBinding preparedBinding,
-            in CharacterPoseNativeInstanceContext context,
-            ulong instanceId,
-            ulong resetGeneration,
-            string reason,
-            IReadOnlyList<ICharacterPoseNativeNodeHandler> handlers,
-            out CharacterPoseNativeGraphRuntime runtime)
-        {
-            if (current == null)
-                throw new ArgumentNullException(nameof(current));
-            var request = new CharacterPoseNativeCreateInstanceRequest(
-                in preparedBinding,
-                in context,
-                instanceId,
-                resetGeneration,
-                reason);
-            runtime = null;
-            CharacterPoseNativeAdoptedResult adopted = Create(
-                in preparedBinding,
-                in context,
-                instanceId,
-                resetGeneration,
-                reason,
-                handlers,
-                out runtime);
-            if (!adopted.IsAdopted)
-                return adopted;
-            try
-            {
-                if (ReferenceEquals(current, runtime))
-                    throw new InvalidOperationException(
-                        "Pose native replacement cannot reuse the current instance.");
-                current.StopInstance();
-                current.Dispose();
-                return adopted;
-            }
-            catch (Exception exception)
-            {
-                runtime?.Dispose();
-                runtime = null;
-                return CharacterPoseNativeAdoptedResult.Failed(
-                    in request,
-                    CharacterPoseNativeFailureCode.Disposed,
-                    "Pose/Replace",
-                    $"{exception.GetType().Name}: {exception.Message}");
-            }
-        }
-
-        internal static CharacterPoseNativeAdoptedResult Replace(
-            CharacterPoseNativeGraphRuntime current,
-            in CharacterPoseNativePreparedBinding preparedBinding,
-            in CharacterPoseNativeInstanceContext context,
-            ulong instanceId,
-            ulong resetGeneration,
-            string reason,
-            ICharacterPoseNativeNodeHandlerFactory factory,
-            out CharacterPoseNativeGraphRuntime runtime)
-        {
-            if (factory == null)
-                throw new ArgumentNullException(nameof(factory));
-            IReadOnlyList<ICharacterPoseNativeNodeHandler> handlers =
-                factory.Create(in preparedBinding, in context);
-            if (handlers == null)
-                throw new InvalidOperationException(
-                    "Pose native handler factory returned no handler list.");
-            return Replace(
-                current,
-                in preparedBinding,
-                in context,
-                instanceId,
-                resetGeneration,
-                reason,
-                handlers,
-                out runtime);
-        }
-
-        void AttachAndStart()
-        {
-            RequireAlive();
-            m_Graph.AttachNativeRuntime(this);
-            m_Graph.StartGraph(
-                m_CreateRequest.Context.Animancer,
-                null,
-                NodeCanvas.Framework.Graph.UpdateMode.Manual,
-                null);
-        }
-
-        void InitializeGraph()
-        {
-            RequireAlive();
-            if (m_Initialized)
-                throw new InvalidOperationException("Pose native graph is already initialized.");
-            CharacterPoseNativeGraphValidator.RequireValid(
-                m_PreparedBinding.GraphAsset,
-                m_Graph);
-            m_Evaluator.Initialize(this);
-            m_Initialized = true;
         }
 
         internal CharacterPoseNativeFrameLease BeginFrame(

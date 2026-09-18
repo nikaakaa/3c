@@ -127,7 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 profile,
                 rig,
                 inputContract,
-                resourceRevision);
+                resourceRevision,
+                CharacterPoseNativeGraphBoundary.Root);
             return CharacterPoseNativeGraphRuntime.Prepare(in request);
         }
 
@@ -243,140 +244,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     runtime = null;
                     return adopted;
                 }
-                runtime = new CharacterPoseNativeRoleRuntime(graph, publication);
-                return adopted;
-            }
-            catch
-            {
-                graph?.Dispose();
-                publication.Dispose();
-                runtime = null;
-                throw;
-            }
-        }
-
-        internal static CharacterPoseNativeAdoptedResult Replace(
-            CharacterPoseNativeRoleRuntime current,
-            in CharacterPoseNativeGraphPrepareResult preparation,
-            in CharacterPoseNativeInstanceContext context,
-            ulong instanceId,
-            ulong resetGeneration,
-            string reason,
-            CharacterPoseNativeRoleDependencies dependencies,
-            out CharacterPoseNativeRoleRuntime runtime)
-        {
-            if (dependencies == null)
-                throw new ArgumentNullException(nameof(dependencies));
-            CharacterPoseNativePreparedBinding preparedBinding =
-                preparation.PreparedBinding;
-            CharacterPoseNativeGraphRuntime graph = null;
-            CharacterPoseNativeAdoptedResult adopted =
-                CharacterPoseNativeGraphRuntime.Replace(
-                    current.m_Graph,
-                    in preparedBinding,
-                    in context,
-                    instanceId,
-                    resetGeneration,
-                    reason,
-                    dependencies.HandlerFactory,
-                    out graph);
-            if (!adopted.IsAdopted)
-            {
-                dependencies.Dispose();
-                runtime = null;
-                return adopted;
-            }
-            current.Dispose();
-            runtime = new CharacterPoseNativeRoleRuntime(
-                graph,
-                dependencies.Publication,
-                dependencies.Constraints,
-                dependencies.Source);
-            return adopted;
-        }
-
-        internal static CharacterPoseNativeAdoptedResult Replace(
-            CharacterPoseNativeRoleRuntime current,
-            ulong requestId,
-            ActorId actorId,
-            CharacterAnimationPresentationProfile profile,
-            CharacterAnimationRigPayload rig,
-            CharacterAnimationInputContract inputContract,
-            string resourceRevision,
-            in CharacterPoseNativeInstanceContext context,
-            ulong instanceId,
-            ulong resetGeneration,
-            string reason,
-            ICharacterPoseNativeNodeHandlerFactory handlerFactory,
-            CharacterFinalPoseNativePublication publication,
-            out CharacterPoseNativeRoleRuntime runtime)
-        {
-            CharacterPoseNativeGraphPrepareResult preparation = Prepare(
-                requestId,
-                actorId,
-                profile,
-                rig,
-                inputContract,
-                resourceRevision);
-            return Replace(
-                current,
-                in preparation,
-                in context,
-                instanceId,
-                resetGeneration,
-                reason,
-                handlerFactory,
-                publication,
-                out runtime);
-        }
-
-        internal static CharacterPoseNativeAdoptedResult Replace(
-            CharacterPoseNativeRoleRuntime current,
-            in CharacterPoseNativeGraphPrepareResult preparation,
-            in CharacterPoseNativeInstanceContext context,
-            ulong instanceId,
-            ulong resetGeneration,
-            string reason,
-            ICharacterPoseNativeNodeHandlerFactory handlerFactory,
-            CharacterFinalPoseNativePublication publication,
-            out CharacterPoseNativeRoleRuntime runtime)
-        {
-            if (current == null)
-                throw new ArgumentNullException(nameof(current));
-            if (!preparation.IsReady)
-            {
-                publication?.Dispose();
-                runtime = null;
-                return CharacterPoseNativeAdoptedResult.Failed(
-                    in preparation,
-                    resetGeneration,
-                    preparation.FailureCode,
-                    preparation.Message);
-            }
-            if (publication == null)
-                throw new ArgumentNullException(nameof(publication));
-            CharacterPoseNativeGraphRuntime graph = null;
-            try
-            {
-                CharacterPoseNativePreparedBinding preparedBinding =
-                    preparation.PreparedBinding;
-                CharacterPoseNativeAdoptedResult adopted =
-                    CharacterPoseNativeGraphRuntime.Replace(
-                        current.m_Graph,
-                        in preparedBinding,
-                        in context,
-                        instanceId,
-                        resetGeneration,
-                        reason,
-                        handlerFactory,
-                        out graph);
-                if (!adopted.IsAdopted)
-                {
-                    publication.Dispose();
-                    runtime = null;
-                    return adopted;
-                }
-                current.Dispose();
                 runtime = new CharacterPoseNativeRoleRuntime(graph, publication);
                 return adopted;
             }

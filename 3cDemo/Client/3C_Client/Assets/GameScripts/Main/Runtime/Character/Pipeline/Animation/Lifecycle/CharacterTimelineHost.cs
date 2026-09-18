@@ -326,6 +326,62 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public ActivationId Activation { get; }
     }
 
+    public readonly struct TimelineActionCueEvent
+    {
+        public TimelineActionCueEvent(
+            EventId eventId,
+            string eventName,
+            string cueId,
+            TimelineRuntimePlaybackHandle handle,
+            ulong generation,
+            ulong logicTick,
+            int frame,
+            int cycle,
+            TimelineExecutionIdentity executionIdentity,
+            string contentRevision,
+            string sourceId,
+            string trackAuthoringId,
+            string clipAuthoringId)
+        {
+            if (!eventId.IsValid || string.IsNullOrWhiteSpace(eventName) || string.IsNullOrWhiteSpace(cueId) ||
+                !handle.IsValid || generation == 0 || logicTick == 0 || frame < 0 || cycle < 0 ||
+                !executionIdentity.IsValid || string.IsNullOrWhiteSpace(contentRevision) ||
+                string.IsNullOrWhiteSpace(sourceId) || string.IsNullOrWhiteSpace(trackAuthoringId) ||
+                string.IsNullOrWhiteSpace(clipAuthoringId))
+            {
+                throw new ArgumentException("Timeline ActionCue event is incomplete.");
+            }
+
+            EventId = eventId;
+            EventName = eventName.Trim();
+            CueId = cueId.Trim();
+            Handle = handle;
+            Generation = generation;
+            LogicTick = logicTick;
+            Frame = frame;
+            Cycle = cycle;
+            ExecutionIdentity = executionIdentity;
+            ContentRevision = contentRevision.Trim();
+            SourceId = sourceId.Trim();
+            TrackAuthoringId = trackAuthoringId.Trim();
+            ClipAuthoringId = clipAuthoringId.Trim();
+        }
+
+        public EventId EventId { get; }
+        public string EventName { get; }
+        public string CueId { get; }
+        public TimelineRuntimePlaybackHandle Handle { get; }
+        public ulong Generation { get; }
+        public ulong LogicTick { get; }
+        public int Frame { get; }
+        public int Cycle { get; }
+        public TimelineExecutionIdentity ExecutionIdentity { get; }
+        public string ContentRevision { get; }
+        public string SourceId { get; }
+        public string TrackAuthoringId { get; }
+        public string ClipAuthoringId { get; }
+    }
+
     public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable
     {
         struct ActivePlayback
@@ -386,6 +442,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public ulong ContentGeneration => m_ContentGeneration;
         public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
         public event Action<TimelineRuntimePlaybackHandle> PresentationPlaybackEnded;
+        public event Action<TimelineActionCueEvent> ActionCueCommitted;
 
         public void AttachRuntimeDiagnostics(RuntimeDiagnosticsContext diagnostics)
         {
@@ -1410,6 +1467,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             for (int index = 0; index < cues.Count; index++)
             {
                 TimelineActionCueSample cue = cues[index];
+                var committed = new TimelineActionCueEvent(
+                    new EventId(StableHash.Compute(
+                        "timeline.action-cue.committed",
+                        evaluation.Handle.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        evaluation.Generation.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        evaluation.LogicTick.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        evaluation.Cycle.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        index.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        cue.ClipAuthoringId,
+                        cue.CueId,
+                        cue.CueType)),
+                    cue.CueType,
+                    cue.CueId,
+                    evaluation.Handle,
+                    evaluation.Generation,
+                    evaluation.LogicTick,
+                    evaluation.Frame,
+                    evaluation.Cycle,
+                    evaluation.ExecutionIdentity,
+                    evaluation.ContentRevision,
+                    cue.SourceId,
+                    cue.TrackName,
+                    cue.ClipAuthoringId);
+                ActionCueCommitted?.Invoke(committed);
                 PublishTimelineEvent(
                     active,
                     RuntimeTraceDomain.Logic,

@@ -110,3 +110,19 @@ Timeline Runtime MUST为每个TreeClip候选携带`TreeGraphId`和`TreeGraphRevi
 - **WHEN** 只读闭包中的tree dependency与正式图身份完全匹配
 - **THEN** Timeline MUST把同一`TreeGraphId`和`TreeGraphRevision`传给TreeClip service
 - **AND** Timeline MUST NOT在服务外解析或执行图，服务结果 MUST回到同一Step提交边界
+
+### Requirement: ActionCue必须只发布committed领域事件
+
+`ActionCueTrack` MUST 只把 Logic 执行域的跨点转成 committed 领域事件；`EventName` MUST 使用作者配置的 `CueType`，业务键 MUST 使用 `CueId`。事件 MUST 在 SimulationTick Advance 被接受后通过 `CharacterTimelineHost.ActionCueCommitted` 发布，payload MUST 包含稳定 `EventId`、playback handle、generation、`LogicTick`、frame/cycle、execution identity、content revision、source/track/clip authoring id、`EventName` 和 `CueId`。Timeline runtime MUST NOT 在 ActionCue 内解析领域 payload、直接驱动 Camera/VFX/Audio、写 Gameplay fact 或改由 PresentationFrame 重发。
+
+#### Scenario: Corin攻击属性cue被提交
+
+- **WHEN** Logic Timeline 跨过 `CueType=AttackProperty` 的 ActionCue
+- **THEN** runtime MUST 只发布事件名为 `AttackProperty` 的 committed ActionCue
+- **AND** Ability/Attack 领域 MUST 按稳定 `CueId` 和完整 playback identity 解释该事件
+
+#### Scenario: 领域消费方未装配
+
+- **WHEN** 某个 `CueType` 没有领域订阅者
+- **THEN** Timeline MUST 保持事件为已提交事实和 trace
+- **AND** MUST NOT伪造 Camera、VFX、Audio 或 Gameplay 结果，也不得宣称事件已被业务消费

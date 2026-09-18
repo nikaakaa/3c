@@ -50,4 +50,4 @@
 ## 8. 编辑器 MVC 与当前消费边界
 
 - [x] 8.1 Timeline 顶栏拆成 `TimelineEditorBindingState` 只读模型、`TimelineEditorToolbarView` 视图和 `TimelineEditorWindow` controller；按钮按文档导航、Workspace 模式、运行状态分组
-- [x] 8.2 登记 Corin `AttackProperty` 消费边界：主控转成 Timeline Marker / Ability 打击帧，Timeline runtime 与编辑器只消费正式内容，不新增私有解析器或第二运行链
+- [x] 8.2 登记 Corin `AttackProperty` 消费边界：主控转成 Timeline Marker / Ability 打击帧，Timeline runtime 与编辑器只消费正式内容，不新增私有解析器或第二运行链- [x] 8.3 收口 Corin Attack ActionCue 合同：ActionCue 只在 Logic commit 后发布 `CueType`/`CueId` 领域事件，Timeline 不解析 `AttackProperty`，不代行 Camera/VFX/Audio 消费

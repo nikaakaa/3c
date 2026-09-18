@@ -6,11 +6,18 @@ namespace BTSMTL.Timeline
 {
     public readonly struct TimelineActionCueSample
     {
-        public TimelineActionCueSample(string sourceId, string sourceName, string trackName, string cueId, string cueType)
+        public TimelineActionCueSample(
+            string sourceId,
+            string sourceName,
+            string trackName,
+            string clipAuthoringId,
+            string cueId,
+            string cueType)
         {
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
             TrackName = trackName ?? string.Empty;
+            ClipAuthoringId = clipAuthoringId ?? string.Empty;
             CueId = cueId ?? string.Empty;
             CueType = cueType ?? string.Empty;
         }
@@ -18,6 +25,7 @@ namespace BTSMTL.Timeline
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
+        public string ClipAuthoringId { get; }
         public string CueId { get; }
         public string CueType { get; }
     }
@@ -55,6 +63,7 @@ namespace BTSMTL.Timeline
                         sourceId,
                         sourceName,
                         Name,
+                        actionCueClip.AuthoringId,
                         actionCueClip.CueId,
                         actionCueClip.CueType));
                 }

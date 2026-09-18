@@ -44,12 +44,12 @@ MonoBehaviour:
   m_OverflowPolicy: 0
   m_SetByCallerParameters: []
   m_Components:
-  - rid: 207050555325415594
-  - rid: 207050555325415595
+  - rid: 207050555325415914
+  - rid: 207050555325415915
   references:
     version: 2
     RefIds:
-    - rid: 207050555325415594
+    - rid: 207050555325415914
       type: {class: GameplayAttackCollisionComponentDefinition, ns: ThirdPersonGameplay.Effects,
         asm: ThirdPersonGameplay}
       data:
@@ -69,7 +69,7 @@ MonoBehaviour:
         m_AliveMaxHitCount: 99
         m_UnitMaxHitCount: 5
         m_FollowAttacker: 1
-    - rid: 207050555325415595
+    - rid: 207050555325415915
       type: {class: GameplayAttackPropertyComponentDefinition, ns: ThirdPersonGameplay.Effects,
         asm: ThirdPersonGameplay}
       data:

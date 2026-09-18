@@ -436,9 +436,9 @@ namespace ThirdPersonSimulation.Fixed
             int damageTextWaitMilliseconds,
             int frameHalt,
             int attackerFrameHalt,
-            int groundHitEffectId,
-            int skyHitEffectId,
-            int downHitEffectId,
+            uint groundHitEffectId,
+            uint skyHitEffectId,
+            uint downHitEffectId,
             string standardConfigKey,
             string abilityTargetKey,
             bool isCauseStun,
@@ -513,9 +513,9 @@ namespace ThirdPersonSimulation.Fixed
         public int DamageTextWaitMilliseconds { get; }
         public int FrameHalt { get; }
         public int AttackerFrameHalt { get; }
-        public int GroundHitEffectId { get; }
-        public int SkyHitEffectId { get; }
-        public int DownHitEffectId { get; }
+        public uint GroundHitEffectId { get; }
+        public uint SkyHitEffectId { get; }
+        public uint DownHitEffectId { get; }
         public string StandardConfigKey { get; }
         public string AbilityTargetKey { get; }
         public bool IsCauseStun { get; }
@@ -862,9 +862,9 @@ namespace ThirdPersonSimulation.Fixed
                         reader.ReadInt32(),
                         reader.ReadInt32(),
                         reader.ReadInt32(),
-                        reader.ReadInt32(),
-                        reader.ReadInt32(),
-                        reader.ReadInt32(),
+                        reader.ReadUInt32(),
+                        reader.ReadUInt32(),
+                        reader.ReadUInt32(),
                         reader.ReadString(),
                         reader.ReadString(),
                         reader.ReadBoolean(),

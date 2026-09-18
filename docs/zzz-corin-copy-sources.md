@@ -1,4 +1,4 @@
-# ZZZ Corin 数据抄录源清单
+﻿# ZZZ Corin 数据抄录源清单
 
 Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源、目标领域与优先级；不把未证实行为直接当成 3C 规则。
 
@@ -96,3 +96,5 @@ Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源�
 2026-09-19：五段普通攻击的 20 个唯一 AttackProperty key 已导入为正式 `GameplayEffectDefinition` 资产，目录为 `Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties`。每个 Effect 携带正式攻击碰撞和攻击属性组件；伤害、破盾、元素积蓄、毁灭值、顿帧、目标阵营、命中效果编号、目标键和碰撞形状进入 Fixed/Float32 GameplayEffect catalog codec。相机、VFX、音频仍留给各自领域消费，不塞进 GameplayEffect。20 个 Effect 已登记到 Corin Character Gameplay Effect Profile 和 CorinAttackGameplayAbilityDefinition，并通过正式 authoring code 引用。
 
 2026-09-19：AttackProperty 正式 Effect 进入 Ability 依赖目录后，同 Trace Replay 逐帧对账仍为 1121 帧全部匹配、0 帧分歧。Aggregate hash 因正式内容版本变化而变化，属于预期；该证据已记入 Replay closure 文档。
+
+2026-09-19：AttackProperty 导入范围扩展到 ZZZ Corin 全量 `108` 个 key；目录保持 `Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties`。`GroundHitEffectId`、`SkyHitEffectId`、`DownHitEffectId` 按原始无符号效果编号进入 `GameplayEffectDefinition`、Fixed/Float32 Portable catalog 和 Runtime binding。Effect Profile 现登记 `109` 个定义：`108` 个 AttackProperty 加既有 `CorinDamageEffect`。Ability 依赖由 `Attack.FixedData.asset`、`Attack.Float32Data.asset` 和正式 Ability asset 承载。

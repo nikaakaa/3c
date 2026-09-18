@@ -151,9 +151,9 @@ namespace ThirdPersonCharacter.Pipeline
                     writer.WriteInt32(attack.DamageTextWaitMilliseconds);
                     writer.WriteInt32(attack.FrameHalt);
                     writer.WriteInt32(attack.AttackerFrameHalt);
-                    writer.WriteInt32(attack.GroundHitEffectId);
-                    writer.WriteInt32(attack.SkyHitEffectId);
-                    writer.WriteInt32(attack.DownHitEffectId);
+                    writer.WriteUInt32(attack.GroundHitEffectId);
+                    writer.WriteUInt32(attack.SkyHitEffectId);
+                    writer.WriteUInt32(attack.DownHitEffectId);
                     writer.WriteString(attack.StandardConfigKey);
                     writer.WriteString(attack.AbilityTargetKey);
                     writer.WriteBoolean(attack.IsCauseStun);

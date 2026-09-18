@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using ThirdPersonGameplay.Attributes;
 using ThirdPersonGameplay.Contracts;
@@ -410,9 +410,9 @@ namespace ThirdPersonGameplay.Effects
         [SerializeField] int m_DamageTextWaitMilliseconds;
         [SerializeField] int m_FrameHalt;
         [SerializeField] int m_AttackerFrameHalt;
-        [SerializeField] int m_GroundHitEffectId;
-        [SerializeField] int m_SkyHitEffectId;
-        [SerializeField] int m_DownHitEffectId;
+        [SerializeField] uint m_GroundHitEffectId;
+        [SerializeField] uint m_SkyHitEffectId;
+        [SerializeField] uint m_DownHitEffectId;
         [SerializeField] string m_StandardConfigKey;
         [SerializeField] string m_AbilityTargetKey;
         [SerializeField] bool m_IsCauseStun;
@@ -449,9 +449,9 @@ namespace ThirdPersonGameplay.Effects
             int damageTextWaitMilliseconds,
             int frameHalt,
             int attackerFrameHalt,
-            int groundHitEffectId,
-            int skyHitEffectId,
-            int downHitEffectId,
+            uint groundHitEffectId,
+            uint skyHitEffectId,
+            uint downHitEffectId,
             string standardConfigKey,
             string abilityTargetKey,
             bool isCauseStun,
@@ -526,9 +526,9 @@ namespace ThirdPersonGameplay.Effects
         public int DamageTextWaitMilliseconds => m_DamageTextWaitMilliseconds;
         public int FrameHalt => m_FrameHalt;
         public int AttackerFrameHalt => m_AttackerFrameHalt;
-        public int GroundHitEffectId => m_GroundHitEffectId;
-        public int SkyHitEffectId => m_SkyHitEffectId;
-        public int DownHitEffectId => m_DownHitEffectId;
+        public uint GroundHitEffectId => m_GroundHitEffectId;
+        public uint SkyHitEffectId => m_SkyHitEffectId;
+        public uint DownHitEffectId => m_DownHitEffectId;
         public string StandardConfigKey => m_StandardConfigKey ?? string.Empty;
         public string AbilityTargetKey => m_AbilityTargetKey ?? string.Empty;
         public bool IsCauseStun => m_IsCauseStun;

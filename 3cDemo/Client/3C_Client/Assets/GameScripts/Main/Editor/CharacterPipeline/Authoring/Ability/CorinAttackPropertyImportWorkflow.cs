@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json.Linq;
-using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.GameplayEffect;
 using ThirdPersonGameplay.Effects;
 using UnityEditor;
@@ -18,10 +17,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
         const string SourceJsonPath = @"D:\ZZZ_Dump\output\corin_replication\replication-guide\data\attack-properties.json";
         const string OutputFolder = "Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties";
         const string EffectProfilePath = "Assets/Configs/Character/Corin/Pipeline/GameplayEffect/CorinCharacterGameplayEffectProfile.asset";
-        const string AbilityPath = "Assets/Configs/Character/Corin/Pipeline/Abilities/CorinAttackGameplayAbilityDefinition.asset";
-        const string KeyPrefix = "Corin_Attack_Normal_0";
+        const string KeyPrefix = "Corin_Attack_";
 
-        [MenuItem("3C/Character/Gameplay/Import Corin Normal Attack Properties")]
+        [MenuItem("3C/Character/Gameplay/Import Corin Attack Properties")]
         public static void Import()
         {
             if (!File.Exists(SourceJsonPath))
@@ -33,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToList();
             if (keys.Count == 0)
-                throw new InvalidOperationException("Corin AttackProperty source has no normal attack entries.");
+                throw new InvalidOperationException("Corin AttackProperty source has no attack entries.");
             if (!AssetDatabase.IsValidFolder(OutputFolder))
             {
                 string parent = Path.GetDirectoryName(OutputFolder)?.Replace('\\', '/');
@@ -47,21 +45,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
             foreach (string key in keys)
                 effects.Add(ImportEffect(source[key] as JObject ?? throw new InvalidOperationException($"AttackProperty '{key}' is not an object."), key));
 
-            GameplayEffectDefinition profileEffect = AssetDatabase.LoadAssetAtPath<GameplayEffectDefinition>(EffectProfilePath);
             CharacterGameplayEffectProfile profile = AssetDatabase.LoadAssetAtPath<CharacterGameplayEffectProfile>(EffectProfilePath);
-            if (!profileEffect && !profile)
+            if (!profile)
                 throw new InvalidOperationException("Corin Gameplay Effect profile is missing.");
-            if (profile)
-                RegisterProfileEffects(profile, effects);
-
-            GameplayAbilityDefinition ability = AssetDatabase.LoadAssetAtPath<GameplayAbilityDefinition>(AbilityPath);
-            if (!ability)
-                throw new InvalidOperationException("Corin Attack Gameplay Ability is missing.");
-            ability.ConfigureEffects(effects);
-            EditorUtility.SetDirty(ability);
+            RegisterProfileEffects(profile, effects);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"Imported {effects.Count} Corin normal attack AttackProperty effects.");
+            Debug.Log($"Imported {effects.Count} Corin attack AttackProperty effects.");
         }
 
         static GameplayEffectDefinition ImportEffect(JObject source, string key)
@@ -224,11 +214,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring
             return value.Value<int?>("fixedValue") ?? 0;
         }
 
-        static int HitEffectId(JToken token)
+        static uint HitEffectId(JToken token)
         {
             if (token is not JObject value)
                 return 0;
-            return value.Value<int?>("TargetHitEffect") ?? 0;
+            return value.Value<long?>("TargetHitEffect") is long hitEffect ? checked((uint)hitEffect) : 0u;
         }
     }
 }

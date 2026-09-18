@@ -1,4 +1,4 @@
-# 固定输入 Replay 闭环证据（2026-09-19）
+﻿# 固定输入 Replay 闭环证据（2026-09-19）
 
 ## 结论
 
@@ -39,3 +39,10 @@ Replay 已 matched，可以进入 ZZZ Corin 正式数据抄录阶段；抄录必
 - 帧对账：`compared:1121`，`divergent_frame_count:0`，`first_frame_mismatches:[]`。
 - Aggregate 对账为 `mismatch`，差异字段只有 `runtime_content_hash`、`source_revision`、`semantic_hash`；这是新增 20 个 AttackProperty Effect 和正式 provider 合同后的预期内容变化。
 - 结论：运行数据没有回归；旧 proof 不能再作为同一内容版本的 aggregate 基线，应作为“内容变更前最后 matched proof”保留。
+
+## 全量 AttackProperty 后复验
+
+- 新 Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/369327502f7a4add8a21a19a7713d24d/20260919-063251-925-81d9b46f5ec34fa2b2118e060a87ebf9.json`。
+- 帧对账：`compared:1121`，`divergent_frame_count:0`，`first_frame_mismatches:[]`。
+- Aggregate 对账为 `mismatch`，差异字段只有 `runtime_content_hash`、`source_revision`、`semantic_hash`；这是 AttackProperty 扩展到全量 `108` 个 key、命中效果编号改为 `uint` 并重建 Fixed/Float32 Ability 数据后的预期内容变化。
+- 结论：运行数据没有回归；本轮 proof 成为全量 AttackProperty 内容版本的第一份逐帧 matched 证据。

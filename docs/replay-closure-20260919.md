@@ -52,3 +52,9 @@ Replay 已 matched，可以进入 ZZZ Corin 正式数据抄录阶段；抄录必
 - 新 Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/369327502f7a4add8a21a19a7713d24d/20260919-071255-632-9d555f9c1fb0410782f9d8317d5279a3.json`。
 - 帧对账：`compared:1121`，`divergent_frame_count:0`，`first_frame_mismatches:[]`。
 - Aggregate 对账为 `matched`，`aggregate_mismatches:[]`；删除 Attack5 frame=64 多余 `_01_02` cue 并重建 Ability 资产后，运行数据没有回归。
+
+## Attack3 Explode 状态本地 cue 后复验
+
+- 新 Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/369327502f7a4add8a21a19a7713d24d/20260919-074258-722-ed3e575b8a2c4fe594441c80291f8987.json`。
+- 帧对账：`compared:1121`，`divergent_frame_count:0`，`first_frame_mismatches:[]`。
+- Aggregate 对账为 `matched`，`aggregate_mismatches:[]`；Attack3 Explode 独立状态本地 cue 收口后，运行数据没有回归。

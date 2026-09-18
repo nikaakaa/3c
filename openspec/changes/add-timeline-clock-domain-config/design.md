@@ -141,3 +141,5 @@ Corin dump 中的 `AttackProperty` 不是 Timeline 的直接数据格式。主�
 `ActionCueTrack` 的唯一 runtime 语义是发布 committed Logic domain event：事件名是作者配置的 `CueType`（Corin 攻击使用 `AttackProperty`），业务键是 `CueId`。`CharacterTimelineHost.ActionCueCommitted` 负责在 SimulationTick commit 后发布 `TimelineActionCueEvent`；payload 包含稳定 `EventId`、playback handle、generation、`LogicTick`、frame/cycle、execution identity、content revision、source/track/clip authoring id、`EventName` 和 `CueId`。Timeline 不解析 `AttackProperty`，不决定 Camera/VFX/Audio 命令，也不在 Track 内写领域状态。
 
 消费边界：`AttackProperty` 由 Ability/Attack 领域订阅并解释；Camera 请求继续由 Camera/TreeClip 节点合同拥有；VFX/Audio 必须由各自正式 domain 订阅或显式失败，Timeline 不代发伪命令。没有领域订阅时，事件只能保持为已提交事实和 trace，不能宣称已消费。触发时钟只有 Logic SimulationTick；不得改由 PresentationFrame 重发。
+
+2026-09-19 主控复验：`9fe8ea317` 已把 Corin AttackProperty 扩展到全量 `108` 个正式 GameplayEffect key，命中效果编号按 `uint` 收口；同 Trace 1121 帧逐帧 0 分歧。Timeline 侧确认：ActionCue 只发布稳定领域事件，`CueId` 保持原始 `Corin_Attack_*_AttackProperty_*` key；命中效果编号、碰撞形状和属性 payload 不进入 Timeline runtime。旧 TreeDesigner Timeline UI 保持删除，FlowCanvas 只承担 TreeClip / Marker 图可视化。

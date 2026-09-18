@@ -38,8 +38,10 @@
 
 ### Timeline ActionCue Boundary
 
-- Timeline `ActionCueTrack` 只发布 Logic commit 后的领域事件；`CueType` 是事件名，`CueId` 是业务键。
-- Corin 的 `AttackProperty` 由主控/Ability 领域消费；Camera、VFX 和 Audio 各自由正式领域拥有。Timeline 不解析领域语义，也不代发表现命令。
+- Timeline `ActionCueTrack` 只发布 Logic commit 后的领域事件；`CueType` 是事件名，`CueId` 是业务键并保留原始 `Corin_Attack_*_AttackProperty_*` key。
+- Corin 的攻击碰撞和攻击属性 payload 由主控录入 GameplayEffect Profile / Ability 执行域；Timeline 只携带播放身份与 `CueId`，不解析命中效果、碰撞形状或属性数值。
+- Camera、VFX 和 Audio 各自由正式领域拥有。Timeline 不解析领域语义，也不代发表现命令。
+- Timeline 的旧 TreeDesigner 自制 UI 已删除；唯一 Timeline 编辑面是嵌入 Slate，FlowCanvas 只负责 TreeClip / Marker 触发图等正式图的可视化与作者入口。
 
 ### Presentation
 

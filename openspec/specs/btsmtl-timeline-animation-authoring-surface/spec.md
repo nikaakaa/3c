@@ -88,3 +88,19 @@ Timeline 顶栏 MUST 将控件分为文档导航组、Workspace 模式组和运�
 - **WHEN** 作者打开 bound 或 unbound Timeline 窗口
 - **THEN** 顶栏 MUST 仍显示三组职责控件
 - **AND** 未注册 Workspace controller 时 MUST 保持文档导航和状态可用，不得创建备用运行按钮
+
+### Requirement: 旧TreeDesigner Timeline UI必须保持删除且FlowCanvas只做图可视化
+
+Timeline 作者面 MUST 只使用唯一嵌入式 Slate surface。旧 TreeDesigner Timeline 自制窗口、列表、Inspector 或第二编辑面 MUST NOT恢复。FlowCanvas / TreeClip graph 窗口只负责 TimelineBody、Marker 触发图和其它正式 graph 的节点可视化与作者入口；MUST NOT重新拥有 Track 布局、Clip 时间几何、selection、Undo transaction 或 Timeline runtime observation。
+
+#### Scenario: 从 TreeClip 打开图
+
+- **WHEN** 作者在 Timeline 中打开 TreeClip 或 Marker 触发图
+- **THEN** 编辑器 MUST 打开正式 FlowCanvas graph authoring surface
+- **AND** MUST NOT创建第二个 Timeline 窗口或把 graph canvas 当作 Timeline track editor
+
+#### Scenario: 编辑 Timeline 内容
+
+- **WHEN** 作者编辑 Track、Clip、Marker、Section 或 Timeline-local curve
+- **THEN** 输入 MUST 进入嵌入式 Slate projection 和正式 Timeline session mutation
+- **AND** MUST NOT绕过 Slate 在 TreeDesigner UI 中维护平行内容

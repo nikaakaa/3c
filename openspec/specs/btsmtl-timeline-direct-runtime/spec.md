@@ -119,7 +119,14 @@ Timeline Runtime MUST为每个TreeClip候选携带`TreeGraphId`和`TreeGraphRevi
 
 - **WHEN** Logic Timeline 跨过 `CueType=AttackProperty` 的 ActionCue
 - **THEN** runtime MUST 只发布事件名为 `AttackProperty` 的 committed ActionCue
-- **AND** Ability/Attack 领域 MUST 按稳定 `CueId` 和完整 playback identity 解释该事件
+- **AND** `CueId` MUST 保留原始 `Corin_Attack_*_AttackProperty_*` key，MUST NOT被 Timeline 重命名、截断或重编码
+- **AND** Ability/Attack 领域 MUST 按该 `CueId` 解析正式 GameplayEffect Profile / Ability 执行域内容
+
+#### Scenario: 攻击属性payload到达领域
+
+- **WHEN** `AttackProperty` ActionCue 被提交
+- **THEN** Timeline payload MUST只包含播放、内容、身份和 `CueId` 字段
+- **AND** 命中效果编号、碰撞形状、属性数值和目标语义 MUST由 GameplayEffect Profile / Ability 执行域消费，MUST NOT由 Timeline runtime 解释
 
 #### Scenario: 领域消费方未装配
 

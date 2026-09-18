@@ -579,7 +579,7 @@ Timeline MUST保留编辑游标、整数帧输入和逐帧操作；编辑游标�
 
 ### Requirement: Corin AttackProperty必须经正式转换后消费
 
-外部或 ZZZ dump 的 `AttackProperty` MUST NOT 成为 Timeline runtime 的直接输入格式。主控 MUST 把作者确认的攻击属性转换成 Timeline Marker 或 Ability 打击帧；Timeline runtime MUST 只消费这些正式 Marker / TreeClip / Ability 事件，并通过既有 Advance / Present 与 Commit / Discard 边界交付。Timeline UI 只观察正式 playback / trace 事实，MUST NOT 新建 AttackProperty 解析器、私有时钟或第二运行链。
+外部或 ZZZ dump 的 `AttackProperty` MUST NOT 成为 Timeline runtime 的直接输入格式。主控 MUST 把作者确认的事件时间转成正式 Logic ActionCue / Ability 打击帧，并把碰撞和属性 payload 录入 GameplayEffect Profile / Ability 执行域。Timeline runtime MUST 只发布携带原始 `CueId` 的 committed ActionCue 并通过既有 Advance / Commit 边界交付。Timeline UI 只观察正式 playback / trace 事实，MUST NOT 新建 AttackProperty 解析器、私有时钟或第二运行链。
 
 #### Scenario: 使用攻击属性配置打击帧
 

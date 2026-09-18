@@ -98,3 +98,5 @@ Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源�
 2026-09-19：AttackProperty 正式 Effect 进入 Ability 依赖目录后，同 Trace Replay 逐帧对账仍为 1121 帧全部匹配、0 帧分歧。Aggregate hash 因正式内容版本变化而变化，属于预期；该证据已记入 Replay closure 文档。
 
 2026-09-19：AttackProperty 导入范围扩展到 ZZZ Corin 全量 `108` 个 key；目录保持 `Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties`。`GroundHitEffectId`、`SkyHitEffectId`、`DownHitEffectId` 按原始无符号效果编号进入 `GameplayEffectDefinition`、Fixed/Float32 Portable catalog 和 Runtime binding。Effect Profile 现登记 `109` 个定义：`108` 个 AttackProperty 加既有 `CorinDamageEffect`。Ability 依赖由 `Attack.FixedData.asset`、`Attack.Float32Data.asset` 和正式 Ability asset 承载。
+
+Timeline 侧边界同步收口：ActionCue 只在 Logic commit 后发布 `CueType=AttackProperty` 的稳定领域事件；`CueId` 继续保留原始 `Corin_Attack_*_AttackProperty_*` key。Timeline runtime 不解析命中效果编号、碰撞形状或属性数值；这些 payload 由 GameplayEffect Profile 与 Ability 执行域消费。

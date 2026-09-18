@@ -66,3 +66,13 @@
 - 重建（本次）：ResourceSet新增internal ReplaceSourcePlans变更合同（空表/空条目/索引重复精确失败，RequireValid逐条校验）；新增编辑器CharacterPoseNativeDomainResourceSetCompiler，链路=Profile源目录（CharacterPresentationPoseSourceCompiler.Compile）→逐clip ResolveIdentity+ValidateFootMotionGroupRequired+FootPlacementWeight曲线→AnimationFootAnalysisArtifactBuilder.Build正式分析产物→CompileFootStepObservation→低层plan构造器，NativeClip后端scalarPage=null合法；菜单3C/Character/Animation/Compile Pose Domain Resource Set，操作选中的Presentation Profile。BlendSpace等其他绑定类型显式报不支持，不做容忍。
 - 编译证据：ThirdPersonClient.Editor.csproj 0错误（92条警告均为并行窗口ACL文件预存CS0649）；强制参数+build-server shutdown已执行。
 - 待办（运行该菜单的前置）：CorinFootPlacementAnalysisSource需为新ZZZ clip补Motion Reference绑定（authoring决策：每个target clip对应哪条motion reference，归Corin资产owner），随后artifact首次Build会自动生成到Library/CharacterFootAnalysis；Timeline编译错误清零后一起验证。
+
+
+## PoseGraph runtime生命周期归属与repeat replay语义收口（2026-09-19）
+
+- 生命周期归属（审计后固定）：CharacterPoseNativeDomainInstance（包装器）唯一持有DomainSession；CharacterPresentationDomainRuntime唯一持有包装器并在Dispose销毁；DomainRuntimeFactory的catch为幂等二次销毁；FrameCoordinator→RoleRuntime→GraphRuntime单向持有；子图child由SubgraphHandler持有并随evaluator级联销毁；每个runtime通过NodeCanvas Graph.Clone持有独立graph实例，跨host无共享销毁面。
+- Replace链删除：DomainRuntimeFactory/RoleEntry/RoleRuntime/GraphRuntime四级Replace无任何调用方，且语义破损（销毁旧session但新session无法回绑进仍存活的包装器，一旦被调用必然产生"包装器存活+底层图已销毁"的ObjectDisposedException错配）。按激进清理整体删除，repeat replay不引入Replace语义。
+- Repeat replay正式语义：同一Pose实例跨轮次复用，轮次间经presentation.Reset→ResetPose→ResetInstance按递增resetGeneration重置状态；重置失败（Disposed/Stale/内部异常）由吞结果改为精确抛InvalidOperationException，失败后不再推进带脏状态的帧。
+- 实例身份：presentation装配原对每个host硬编码instanceId=1（子图id=parent*4099+seq也随之跨host相同），fixed-player与fixed-target存在实例身份冲突；改为StableHash.Compute(actorId.Value)派生，跨host唯一、跨轮次稳定、非零校验。
+- 双FixedCharacterHost隔离：各自Registration独立持有表现运行时，SessionHost按ActorId去重注册，注册销毁链各自独立，无互相接管路径。
+- 编译验证：Runtime全量编译被Timeline窗口在途TimelineData.cs（52个语法错误，非本域文件）阻塞；本域6个改动文件无任何错误输出。同一trace两轮ReplayProof验证待Timeline清零后由Play侧执行。

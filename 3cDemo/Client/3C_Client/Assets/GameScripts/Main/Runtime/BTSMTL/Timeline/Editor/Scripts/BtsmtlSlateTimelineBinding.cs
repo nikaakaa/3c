@@ -116,25 +116,29 @@ namespace BTSMTL.Timeline.Editor
             bool changed = !ReferenceEquals(m_Selected, element);
             m_Selected = element;
             Selection.activeObject = m_Request.SerializedOwner;
-            object source = element is BtsmtlTimelineClipBinding clipSource
-                ? clipSource.Source
-                : element is BtsmtlTimelineTrackBinding trackSource
+            object source = element is BtsmtlTimelineMarkerBinding markerSource
+                ? markerSource.Source
+                : element is BtsmtlTimelineClipBinding clipSource
+                    ? clipSource.Source
+                    : element is BtsmtlTimelineTrackBinding trackSource
                     ? trackSource.Source
                     : element is BtsmtlTimelineSectionBinding sectionSource
-                        ? sectionSource.Source
-                        : null;
+                            ? sectionSource.Source
+                            : null;
             if (source != null && Timeline.TryGetSerializedPropertyPath(source, out string propertyPath))
                 TimelineInspectorSelection.Set(m_Request.SerializedOwner, propertyPath, source);
             else
                 TimelineInspectorSelection.Clear(m_Request.SerializedOwner);
             m_Session.SetSelection(
-                element is BtsmtlTimelineClipBinding selectedClip
-                    ? selectedClip.Source
-                    : element is BtsmtlTimelineTrackBinding selectedTrack
-                        ? selectedTrack.Source
-                        : element is BtsmtlTimelineSectionBinding selectedSection
-                            ? selectedSection.Source
-                        : null);
+                element is BtsmtlTimelineMarkerBinding selectedMarker
+                    ? selectedMarker.Source
+                    : element is BtsmtlTimelineClipBinding selectedClip
+                        ? selectedClip.Source
+                        : element is BtsmtlTimelineTrackBinding selectedTrack
+                            ? selectedTrack.Source
+                            : element is BtsmtlTimelineSectionBinding selectedSection
+                                ? selectedSection.Source
+                                : null);
             if (changed)
                 RequestRepaint();
         }
@@ -291,6 +295,45 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
             ApplyImmediate(() => Timeline.RemoveTrack(formalTrack.Source), "Delete Timeline Track");
+        }
+
+        public void AddMarker(IEmbeddedTimelineTrackBinding track, int frame)
+        {
+            if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
+                return;
+            if (formalTrack.IsLocked)
+            {
+                ReportIssue("当前 Track 已锁定，不能添加 Marker。");
+                return;
+            }
+            ApplyImmediate(() => formalTrack.Source.AddMarker(Mathf.Max(0, frame)), "Add Timeline Marker");
+        }
+
+        public void DeleteMarker(IEmbeddedTimelineMarkerBinding marker)
+        {
+            if (IsReadOnly || !(marker is BtsmtlTimelineMarkerBinding formalMarker))
+                return;
+            if (formalMarker.IsLocked)
+            {
+                ReportIssue("当前 Marker 或所属 Track 已锁定，不能删除。");
+                return;
+            }
+            ApplyImmediate(() => formalMarker.FormalTrack.Source.RemoveMarker(formalMarker.Source), "Delete Timeline Marker");
+        }
+
+        public void MoveMarker(IEmbeddedTimelineMarkerBinding marker, int frame)
+        {
+            if (IsReadOnly || !(marker is BtsmtlTimelineMarkerBinding formalMarker))
+                return;
+            int nextFrame = Mathf.Max(0, frame);
+            if (formalMarker.Source.Frame == nextFrame)
+                return;
+            if (formalMarker.IsLocked)
+            {
+                ReportIssue("当前 Marker 或所属 Track 已锁定，不能移动。");
+                return;
+            }
+            ApplyImmediate(() => formalMarker.Source.Configure(nextFrame, formalMarker.Source.Graph), "Move Timeline Marker");
         }
 
         public void DeleteClip(IEmbeddedTimelineClipBinding clip)
@@ -667,6 +710,13 @@ namespace BTSMTL.Timeline.Editor
                     track.CustomHeight = customHeight;
                 group.AddTrack(track);
                 m_Tracks[source.AuthoringId] = track;
+                for (int markerIndex = 0; markerIndex < source.Markers.Count; markerIndex++)
+                {
+                    TimelineMarker sourceMarker = source.Markers[markerIndex];
+                    if (sourceMarker == null)
+                        continue;
+                    track.AddMarker(new BtsmtlTimelineMarkerBinding(this, track, sourceMarker));
+                }
                 for (int clipIndex = 0; clipIndex < source.Clips.Count; clipIndex++)
                 {
                     Clip sourceClip = source.Clips[clipIndex];
@@ -760,9 +810,10 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
             TimelineExecutionDomain executionDomain = track.Source.ExecutionDomain;
-            bool isLogicTreeClip = kind == TimelineContractKinds.TreeClip &&
+            bool isTreeClip = kind == TimelineContractKinds.TreeClip;
+            bool terminalLogicTreeClip = isTreeClip &&
                 executionDomain == TimelineExecutionDomain.Logic;
-            int defaultEndFrame = isLogicTreeClip
+            int defaultEndFrame = terminalLogicTreeClip
                 ? Mathf.Max(frame + 1, Timeline.MaxFrame)
                 : frame + Mathf.Max(1, FrameRate / 20);
             var motionClipIds = Timeline.Tracks.SelectMany(track => track.Clips).OfType<MotionCurveClip>().Select(clip => clip.AuthoringId).ToArray();
@@ -776,7 +827,7 @@ namespace BTSMTL.Timeline.Editor
                 EndFrame = defaultEndFrame,
                 DefaultEndFrame = defaultEndFrame,
             };
-            if (isLogicTreeClip)
+            if (isTreeClip)
                 request.NewTreeGraphName = "Timeline Tree";
             PopupWindow.Show(new Rect(m_PopupPosition, Vector2.zero), new TimelineClipCreationPopup(
                 request,
@@ -812,15 +863,9 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("Add Clip 的目标 Track 已锁定。");
                 return "Add Clip 的目标 Track 已锁定。";
             }
-            bool isLogicTreeClip = request.Kind == TimelineContractKinds.TreeClip &&
+            bool isTreeClip = request.Kind == TimelineContractKinds.TreeClip;
+            bool terminalLogicTreeClip = isTreeClip &&
                 track.Source.ExecutionDomain == TimelineExecutionDomain.Logic;
-            bool isMarkersTreeClip = request.Kind == TimelineContractKinds.TreeClip &&
-                track.Source.ExecutionDomain == TimelineExecutionDomain.Presentation;
-            if (request.Kind == TimelineContractKinds.TreeClip && !isLogicTreeClip && !isMarkersTreeClip)
-                return "TreeClip只支持Logic或Presentation执行域。";
-            if (isMarkersTreeClip &&
-                    (request.TreeGraph != null || !string.IsNullOrWhiteSpace(request.NewTreeGraphName)))
-                return "Presentation TreeClip不能绑定Timeline节点图资产。";
             int terminalFrame = Mathf.Max(request.StartFrame + 1, Timeline.MaxFrame);
             try
             {
@@ -828,7 +873,7 @@ namespace BTSMTL.Timeline.Editor
                 if (!ApplyImmediate(() =>
                 {
                     UnityEngine.Object treeGraph = null;
-                    if (request.Kind == TimelineContractKinds.TreeClip && isLogicTreeClip)
+                    if (isTreeClip)
                     {
                         treeGraph = request.TreeGraph;
                         if (treeGraph == null)
@@ -843,11 +888,12 @@ namespace BTSMTL.Timeline.Editor
                         : request.Resource != null
                             ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, request.StartFrame)
                             : Timeline.AddClip(ContractCatalog, track.Source, request.StartFrame);
-                    added.EndFrame = isLogicTreeClip
+                    added.EndFrame = terminalLogicTreeClip
                         ? terminalFrame
                         : Mathf.Max(request.StartFrame + 1, request.EndFrame);
-                    if (isMarkersTreeClip && added is TreeClip markersClip)
-                        markersClip.SetExitSource(TimelineClipExitSource.FrameBoundary);
+                    if (isTreeClip && track.Source.ExecutionDomain == TimelineExecutionDomain.Presentation &&
+                        added is TreeClip presentationClip)
+                        presentationClip.SetExitSource(TimelineClipExitSource.FrameBoundary);
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip"))
@@ -1027,9 +1073,10 @@ namespace BTSMTL.Timeline.Editor
             public void AddTrack(BtsmtlTimelineTrackBinding track) => m_Tracks.Add(track);
         }
 
-        sealed class BtsmtlTimelineTrackBinding : IEmbeddedTimelineTrackBinding
+        sealed class BtsmtlTimelineTrackBinding : IEmbeddedTimelineTrackBinding, IEmbeddedTimelineMarkerTrackBinding
         {
             readonly List<IEmbeddedTimelineClipBinding> m_Clips = new List<IEmbeddedTimelineClipBinding>();
+            readonly List<IEmbeddedTimelineMarkerBinding> m_Markers = new List<IEmbeddedTimelineMarkerBinding>();
             float m_CustomHeight;
             public BtsmtlTimelineTrackBinding(BtsmtlSlateTimelineBinding owner, BtsmtlTimelineGroupBinding group, Track source)
             {
@@ -1095,6 +1142,27 @@ namespace BTSMTL.Timeline.Editor
                     ? selected
                     : null;
             public void AddClip(BtsmtlTimelineClipBinding clip) => m_Clips.Add(clip);
+            public IReadOnlyList<IEmbeddedTimelineMarkerBinding> Markers => m_Markers;
+            public void AddMarker(BtsmtlTimelineMarkerBinding marker) => m_Markers.Add(marker);
+        }
+
+        sealed class BtsmtlTimelineMarkerBinding : IEmbeddedTimelineMarkerBinding
+        {
+            readonly BtsmtlTimelineTrackBinding m_Track;
+
+            public BtsmtlTimelineMarkerBinding(BtsmtlSlateTimelineBinding owner, BtsmtlTimelineTrackBinding track, TimelineMarker source)
+            {
+                m_Track = track;
+                Source = source;
+            }
+
+            public TimelineMarker Source { get; }
+            public BtsmtlTimelineTrackBinding FormalTrack => m_Track;
+            IEmbeddedTimelineTrackBinding IEmbeddedTimelineMarkerBinding.Track => m_Track;
+            public string AuthoringId => Source.AuthoringId;
+            public string DisplayName => $"Marker {Source.Frame}";
+            public int Frame => Source.Frame;
+            public bool IsLocked { get => m_Track.IsLocked; set => m_Track.IsLocked = value; }
         }
 
         sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding, IEmbeddedTimelineSourceRangeBinding

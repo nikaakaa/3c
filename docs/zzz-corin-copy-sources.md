@@ -1,4 +1,4 @@
-﻿# ZZZ Corin 数据抄录源清单
+# ZZZ Corin 数据抄录源清单
 
 Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源、目标领域与优先级；不把未证实行为直接当成 3C 规则。
 
@@ -89,11 +89,11 @@ Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源�
 
 ## 抄录进度
 
-2026-09-19：Corin 五段普通攻击的 ZZZ Controller 战斗事件时间已进入正式 BTSMTL Timeline。`CorinAttackGameplayAbilityDefinition` 中新增 5 条 Logic `AttackProperty` ActionCue 轨道，共 66 个 Cue；CueId 使用原始 `Corin_Attack_Normal_xx_AttackProperty_*` key，帧位保留 ZZZ 战斗事件帧。该批数据先解决命中/表现触发时序，AttackProperty 完整伤害、碰撞、命中反馈 payload 还没有迁移。
+2026-09-19：Corin 五段普通攻击的 ZZZ Controller 战斗事件时间已进入正式 BTSMTL Timeline。`CorinAttackGameplayAbilityDefinition` 中新增 5 条 Logic `AttackProperty` ActionCue 轨道，共 66 个 Cue；CueId 使用原始 `Corin_Attack_Normal_xx_AttackProperty_*` key，帧位保留 ZZZ 战斗事件帧。该批先解决命中/表现触发时序；AttackProperty payload 由后续批次继续补齐。
 
 同 Trace `369327502f7a4add8a21a19a7713d24d` 在数据写入后复跑 1121 帧，Replay 结果仍为 `matched:1121`，无分歧帧。
 
-2026-09-19：五段普通攻击的 20 个唯一 AttackProperty key 已导入为正式 `GameplayEffectDefinition` 资产，目录为 `Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties`。每个 Effect 携带正式攻击碰撞和攻击属性组件；伤害、破盾、元素积蓄、毁灭值、顿帧、目标阵营、命中效果编号、目标键和碰撞形状进入 Fixed/Float32 GameplayEffect catalog codec。相机、VFX、音频仍留给各自领域消费，不塞进 GameplayEffect。20 个 Effect 已登记到 Corin Character Gameplay Effect Profile 和 CorinAttackGameplayAbilityDefinition，并通过正式 authoring code 引用。
+2026-09-19：首批五段普通攻击的 20 个唯一 AttackProperty key 导入为正式 `GameplayEffectDefinition` 资产，目录为 `Assets/Configs/Character/Corin/Pipeline/GameplayEffect/AttackProperties`。每个 Effect 携带正式攻击碰撞和攻击属性组件；伤害、破盾、元素积蓄、毁灭值、顿帧、目标阵营、命中效果编号、目标键和碰撞形状进入 Fixed/Float32 GameplayEffect catalog codec。相机、VFX、音频仍留给各自领域消费，不塞进 GameplayEffect。首批 20 个 Effect 先登记到 Corin Character Gameplay Effect Profile 和 CorinAttackGameplayAbilityDefinition，并通过正式 authoring code 引用。
 
 2026-09-19：AttackProperty 正式 Effect 进入 Ability 依赖目录后，同 Trace Replay 逐帧对账仍为 1121 帧全部匹配、0 帧分歧。Aggregate hash 因正式内容版本变化而变化，属于预期；该证据已记入 Replay closure 文档。
 

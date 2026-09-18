@@ -248,6 +248,11 @@ namespace BTSMTL.Timeline.Editor
                 contract.AllowedClipKinds.Count == 1 &&
                 string.Equals(contract.AllowedClipKinds[0], TimelineContractKinds.TreeClip, StringComparison.Ordinal))
             {
+                if (formalTrack.Source.ExecutionDomain == TimelineExecutionDomain.Presentation)
+                {
+                    ReportIssue("Presentation TreeClip 必须包含 Marker，当前没有单独的 Marker 创建入口。");
+                    return;
+                }
                 ShowClipCreationPopup(formalTrack.Source.AuthoringId, TimelineContractKinds.TreeClip, frame);
                 return;
             }
@@ -749,17 +754,29 @@ namespace BTSMTL.Timeline.Editor
 
         void ShowClipCreationPopup(string trackAuthoringId, string kind, int frame)
         {
+            if (!m_Tracks.TryGetValue(trackAuthoringId ?? string.Empty, out BtsmtlTimelineTrackBinding track))
+            {
+                ReportIssue("Add Clip 的目标 Track 已失效。");
+                return;
+            }
+            TimelineExecutionDomain executionDomain = track.Source.ExecutionDomain;
+            bool isLogicTreeClip = kind == TimelineContractKinds.TreeClip &&
+                executionDomain == TimelineExecutionDomain.Logic;
+            int defaultEndFrame = isLogicTreeClip
+                ? Mathf.Max(frame + 1, Timeline.MaxFrame)
+                : frame + Mathf.Max(1, FrameRate / 20);
             var motionClipIds = Timeline.Tracks.SelectMany(track => track.Clips).OfType<MotionCurveClip>().Select(clip => clip.AuthoringId).ToArray();
             var request = new TimelineClipCreationRequest
             {
                 TrackAuthoringId = trackAuthoringId,
                 Kind = kind,
+                ExecutionDomain = executionDomain,
                 FrameRate = FrameRate,
                 StartFrame = frame,
-                EndFrame = frame + Mathf.Max(1, FrameRate / 20),
-                DefaultEndFrame = frame + Mathf.Max(1, FrameRate / 20),
+                EndFrame = defaultEndFrame,
+                DefaultEndFrame = defaultEndFrame,
             };
-            if (kind == TimelineContractKinds.TreeClip)
+            if (isLogicTreeClip)
                 request.NewTreeGraphName = "Timeline Tree";
             PopupWindow.Show(new Rect(m_PopupPosition, Vector2.zero), new TimelineClipCreationPopup(
                 request,
@@ -795,6 +812,11 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("Add Clip 的目标 Track 已锁定。");
                 return "Add Clip 的目标 Track 已锁定。";
             }
+            bool isLogicTreeClip = request.Kind == TimelineContractKinds.TreeClip &&
+                track.Source.ExecutionDomain == TimelineExecutionDomain.Logic;
+            if (request.Kind == TimelineContractKinds.TreeClip && !isLogicTreeClip)
+                return "Presentation TreeClip 必须通过 Marker 创建，当前入口不可用。";
+            int terminalFrame = Mathf.Max(request.StartFrame + 1, Timeline.MaxFrame);
             try
             {
                 Clip added = null;
@@ -816,7 +838,9 @@ namespace BTSMTL.Timeline.Editor
                         : request.Resource != null
                             ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, request.StartFrame)
                             : Timeline.AddClip(ContractCatalog, track.Source, request.StartFrame);
-                    added.EndFrame = Mathf.Max(request.StartFrame + 1, request.EndFrame);
+                    added.EndFrame = isLogicTreeClip
+                        ? terminalFrame
+                        : Mathf.Max(request.StartFrame + 1, request.EndFrame);
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip"))

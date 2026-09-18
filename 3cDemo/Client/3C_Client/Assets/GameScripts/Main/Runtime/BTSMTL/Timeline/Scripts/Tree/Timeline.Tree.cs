@@ -19,16 +19,33 @@ namespace BTSMTL.Timeline
     }
 
     [TrackGroup("Base"), ScriptGuid("31085f11443fe1347b871c5d69db3774"), IconGuid("e28acf5dc5b2e3d4a97920bf4e831c87"), Ordered(3), Color(201, 060, 032)]
+#if UNITY_EDITOR
+    [TimelineAuthoringTrackField("executionDomain", "timeline_tree_execution_domain_missing", "Tree Track必须选择Logic或Presentation执行域。")]
+#endif
     public class TreeTrack : Track
+#if UNITY_EDITOR
+        , ITimelineAuthoringTrackFieldSink
+#endif
     {
         public override string ContractKind => TimelineContractKinds.TreeTrack;
 
 #if UNITY_EDITOR
+        public void ApplyAuthoringField(string fieldId, string value)
+        {
+            if (fieldId != "executionDomain" ||
+                !Enum.TryParse(value, true, out TimelineExecutionDomain executionDomain) ||
+                executionDomain != TimelineExecutionDomain.Logic && executionDomain != TimelineExecutionDomain.Presentation)
+            {
+                throw new ArgumentException("Tree Track执行域必须是Logic或Presentation。", nameof(value));
+            }
+            ConfigureExecutionDomain(executionDomain);
+        }
+
         public override Type ClipType => typeof(TreeClip);
 
         public override Clip AddClip(int frame)
         {
-            if (ExecutionDomain != TimelineExecutionDomain.Presentation)
+            if (ExecutionDomain == TimelineExecutionDomain.Logic)
                 throw new InvalidOperationException("Logic TreeClip必须绑定正式的Timeline节点图资产。");
             return base.AddClip(frame);
         }
@@ -56,7 +73,7 @@ namespace BTSMTL.Timeline
 
     [Serializable]
     [ScriptGuid("31085f11443fe1347b871c5d69db3774"), Color(201, 060, 032)]
-    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource, ITimelinePresentationMarkerSource
+    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource, ITimelineTerminalFrameAlignedClip, ITimelinePresentationMarkerSource
     {
         public override string ContractKind => TimelineContractKinds.TreeClip;
 
@@ -64,7 +81,7 @@ namespace BTSMTL.Timeline
         TimelineTreeExecutionPhase m_ExecutionPhase = TimelineTreeExecutionPhase.Commit;
 
         [SerializeField, ShowInInspector, OnValueChanged("OnClipChanged", "RepaintInspector")]
-        TimelineClipExitSource m_ExitSource = TimelineClipExitSource.FrameBoundary;
+        TimelineClipExitSource m_ExitSource = TimelineClipExitSource.TreeDecision;
 
         [SerializeField]
         ScriptableObject m_AssetTree;
@@ -82,6 +99,10 @@ namespace BTSMTL.Timeline
         {
             if (!Enum.IsDefined(typeof(TimelineClipExitSource), source))
                 throw new ArgumentOutOfRangeException(nameof(source), source, "TimelineTree exit source is invalid.");
+            if (ExecutionDomain == TimelineExecutionDomain.Logic && source != TimelineClipExitSource.TreeDecision)
+                throw new InvalidOperationException("Logic TreeClip必须由节点图决定退出。");
+            if (ExecutionDomain == TimelineExecutionDomain.Presentation && source != TimelineClipExitSource.FrameBoundary)
+                throw new InvalidOperationException("Presentation TreeClip只能由帧边界结束。");
             m_ExitSource = source;
 #if UNITY_EDITOR
             OnClipChanged();
@@ -145,6 +166,20 @@ namespace BTSMTL.Timeline
 #endif
         }
 
+        public bool AlignTerminalFrame(int terminalFrame)
+        {
+            if (ExecutionDomain != TimelineExecutionDomain.Logic ||
+                m_ExitSource != TimelineClipExitSource.TreeDecision)
+            {
+                return false;
+            }
+            int endFrame = Mathf.Max(StartFrame + 1, terminalFrame);
+            if (EndFrame == endFrame)
+                return false;
+            EndFrame = endFrame;
+            return true;
+        }
+
         public override void Init(Track track)
         {
             base.Init(track);
@@ -152,7 +187,10 @@ namespace BTSMTL.Timeline
 
 #if UNITY_EDITOR
         public override string Name => $"{ExecutionDomain} / {m_ExecutionPhase} / {(m_AssetTree ? m_AssetTree.name : "Markers")}";
-        public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.TickQuantized;
+        public override ClipCapabilities Capabilities =>
+            TimelineClipExecutionPolicy.FromDomain(ExecutionDomain).IsLogic
+                ? ClipCapabilities.TickQuantized
+                : ClipCapabilities.Resizable | ClipCapabilities.TickQuantized;
 
         public TreeClip(Track track, int frame) : base(track, frame)
         {
@@ -193,8 +231,8 @@ namespace BTSMTL.Timeline
                     TimelineContractKinds.TreeTrack,
                     TimelineTrackOverlapPolicy.Parallel,
                     TimelineCapability.Tree,
-                    TimelineExecutionDomain.DualProjection,
-                    TimelineOutputKind.DualProjection,
+                    TimelineExecutionDomain.Logic,
+                    TimelineOutputKind.GameplayFact,
                     TimelineExecutionDomainMask.Logic |
                     TimelineExecutionDomainMask.Presentation |
                     TimelineExecutionDomainMask.DualProjection,
@@ -209,8 +247,8 @@ namespace BTSMTL.Timeline
                     TimelineCapability.Tree,
                     true,
                     true,
-                    TimelineExecutionDomain.DualProjection,
-                    TimelineOutputKind.DualProjection,
+                    TimelineExecutionDomain.Logic,
+                    TimelineOutputKind.GameplayFact,
                     TimelineExecutionDomainMask.Logic |
                     TimelineExecutionDomainMask.Presentation |
                     TimelineExecutionDomainMask.DualProjection,
@@ -233,6 +271,8 @@ namespace BTSMTL.Timeline
                         errors?.Add($"Timeline Logic TreeClip '{treeClip.AuthoringId}' requires a TimelineBody graph.");
                     if (hasMarkers)
                         errors?.Add($"Timeline Logic TreeClip '{treeClip.AuthoringId}' cannot contain Presentation Markers.");
+                    if (treeClip.ClipExitSource != TimelineClipExitSource.TreeDecision)
+                        errors?.Add($"Timeline Logic TreeClip '{treeClip.AuthoringId}' must use TreeDecision exit.");
                     break;
                 case TimelineExecutionDomain.Presentation:
                     if (treeClip.AssetTree != null)

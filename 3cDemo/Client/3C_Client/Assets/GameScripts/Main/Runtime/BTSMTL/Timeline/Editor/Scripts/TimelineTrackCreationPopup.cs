@@ -8,6 +8,8 @@ namespace BTSMTL.Timeline.Editor
 {
     sealed class TimelineTrackCreationPopup : PopupWindowContent
     {
+        static readonly string[] s_ExecutionDomains = { "Logic", "Presentation" };
+
         readonly string m_Kind;
         readonly IReadOnlyList<TimelineAuthoringTrackFieldAttribute> m_Fields;
         readonly Func<string, IReadOnlyDictionary<string, string>, string> m_Create;
@@ -38,7 +40,16 @@ namespace BTSMTL.Timeline.Editor
             {
                 TimelineAuthoringTrackFieldAttribute field = m_Fields[index];
                 string value = m_Values.TryGetValue(field.FieldId, out string current) ? current : string.Empty;
-                m_Values[field.FieldId] = EditorGUILayout.TextField(DisplayName(field.FieldId), value);
+                if (string.Equals(field.FieldId, "executionDomain", StringComparison.Ordinal))
+                {
+                    int selected = Array.IndexOf(s_ExecutionDomains, value);
+                    m_Values[field.FieldId] = s_ExecutionDomains[EditorGUILayout.Popup(
+                        DisplayName(field.FieldId),
+                        selected < 0 ? 0 : selected,
+                        s_ExecutionDomains)];
+                }
+                else
+                    m_Values[field.FieldId] = EditorGUILayout.TextField(DisplayName(field.FieldId), value);
             }
             IReadOnlyList<TimelineAuthoringTrackIssue> issues = TimelineAuthoringTrackBinding.Validate(m_Kind, m_Values);
             m_Error = issues.Count == 0 ? string.Empty : issues[0].ErrorMessage;

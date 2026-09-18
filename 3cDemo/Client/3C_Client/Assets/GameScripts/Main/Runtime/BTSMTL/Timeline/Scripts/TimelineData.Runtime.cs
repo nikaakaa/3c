@@ -491,6 +491,9 @@ namespace BTSMTL.Timeline
             {
                 UpdateSerializedTimeline();
                 action?.Invoke();
+                Init();
+                if (AlignTerminalFrameClips())
+                    Init();
                 UnityEditor.EditorUtility.SetDirty(SerializedOwner);
                 UnityEditor.Undo.CollapseUndoOperations(undoGroup);
             }
@@ -502,6 +505,42 @@ namespace BTSMTL.Timeline
                 throw;
             }
         }
+
+        bool AlignTerminalFrameClips()
+        {
+            var terminalClips = new List<ITimelineTerminalFrameAlignedClip>();
+            int terminalFrame = 0;
+            for (int trackIndex = 0; trackIndex < m_Tracks.Count; trackIndex++)
+            {
+                Track track = m_Tracks[trackIndex];
+                if (track == null)
+                    continue;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    Clip clip = track.Clips[clipIndex];
+                    if (clip == null)
+                        continue;
+                    if (clip is ITimelineTerminalFrameAlignedClip terminalClip)
+                    {
+                        terminalClips.Add(terminalClip);
+                        terminalFrame = Mathf.Max(terminalFrame, clip.StartFrame + 1);
+                    }
+                    else
+                        terminalFrame = Mathf.Max(terminalFrame, clip.EndFrame);
+                }
+            }
+            for (int sectionIndex = 0; sectionIndex < m_Sections.Count; sectionIndex++)
+            {
+                TimelineSection section = m_Sections[sectionIndex];
+                if (section != null)
+                    terminalFrame = Mathf.Max(terminalFrame, section.Frame);
+            }
+            bool changed = false;
+            for (int clipIndex = 0; clipIndex < terminalClips.Count; clipIndex++)
+                changed |= terminalClips[clipIndex].AlignTerminalFrame(terminalFrame);
+            return changed;
+        }
+
         public void UpdateSerializedTimeline()
         {
             if (!SerializedOwner || string.IsNullOrEmpty(SerializedPropertyPath))

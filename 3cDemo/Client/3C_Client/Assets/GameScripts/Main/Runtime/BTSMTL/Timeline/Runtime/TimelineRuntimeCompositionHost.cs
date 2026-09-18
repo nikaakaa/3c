@@ -307,4 +307,4 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ObjectDisposedException(nameof(TimelineRuntimeCompositionHost));
         }
     }
-    }
+}

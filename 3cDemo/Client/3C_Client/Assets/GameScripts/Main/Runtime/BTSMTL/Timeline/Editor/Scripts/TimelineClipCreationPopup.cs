@@ -15,6 +15,7 @@ namespace BTSMTL.Timeline.Editor
     {
         public string TrackAuthoringId;
         public string Kind;
+        public TimelineExecutionDomain ExecutionDomain;
         public int FrameRate;
         public int StartFrame;
         public int EndFrame;
@@ -80,7 +81,10 @@ namespace BTSMTL.Timeline.Editor
         {
             EditorGUILayout.LabelField("Add Clip", EditorStyles.boldLabel);
             m_Request.StartFrame = EditorGUILayout.IntField("Start Frame", m_Request.StartFrame);
-            m_Request.EndFrame = EditorGUILayout.IntField("End Frame", m_Request.EndFrame);
+            if (IsLogicTreeClip)
+                EditorGUILayout.LabelField("End Frame", $"Timeline End ({m_Request.EndFrame})");
+            else
+                m_Request.EndFrame = EditorGUILayout.IntField("End Frame", m_Request.EndFrame);
 
             if (m_Request.Kind == TimelineContractKinds.AnimationClip)
             {
@@ -98,13 +102,18 @@ namespace BTSMTL.Timeline.Editor
             }
             else if (m_Request.Kind == TimelineContractKinds.TreeClip)
             {
-                m_Request.TreeGraph = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField(
-                    "Skill Graph",
-                    m_Request.TreeGraph,
-                    typeof(BtsmtlSkillFlowGraph),
-                    false);
-                m_Request.NewTreeGraphName = EditorGUILayout.TextField("New Graph Name", m_Request.NewTreeGraphName);
-                EditorGUILayout.HelpBox("Skill Graph 为空时按名称在 Timeline 资产内创建子资产图。", MessageType.Info);
+                if (IsLogicTreeClip)
+                {
+                    m_Request.TreeGraph = (BtsmtlSkillFlowGraph)EditorGUILayout.ObjectField(
+                        "Skill Graph",
+                        m_Request.TreeGraph,
+                        typeof(BtsmtlSkillFlowGraph),
+                        false);
+                    m_Request.NewTreeGraphName = EditorGUILayout.TextField("New Graph Name", m_Request.NewTreeGraphName);
+                    EditorGUILayout.HelpBox("Skill Graph 为空时按名称在 Timeline 资产内创建子资产图。", MessageType.Info);
+                }
+                else
+                    EditorGUILayout.HelpBox("Presentation TreeClip 必须包含 Marker，当前没有单独的 Marker 创建入口。", MessageType.Warning);
             }
 
             if (m_Request.Kind == TimelineContractKinds.MotionCurveClip)
@@ -238,10 +247,16 @@ namespace BTSMTL.Timeline.Editor
             if (m_Request.Kind == TimelineContractKinds.ScenePresentationParameterCurveClip &&
                 (string.IsNullOrEmpty(m_Request.TargetBindingId) || string.IsNullOrEmpty(m_Request.ParameterBindingId)))
                 return "Scene 参数 Clip 必须选择 Target 和 Parameter binding。";
-            if (m_Request.Kind == TimelineContractKinds.TreeClip && m_Request.TreeGraph == null && string.IsNullOrWhiteSpace(m_Request.NewTreeGraphName))
+            if (IsLogicTreeClip && m_Request.TreeGraph == null && string.IsNullOrWhiteSpace(m_Request.NewTreeGraphName))
                 return "TreeClip必须绑定或创建 FlowCanvas SkillGraph。";
+            if (m_Request.Kind == TimelineContractKinds.TreeClip && !IsLogicTreeClip)
+                return "Presentation TreeClip 必须通过 Marker 创建，当前入口不可用。";
             return string.Empty;
         }
+
+        bool IsLogicTreeClip =>
+            m_Request.Kind == TimelineContractKinds.TreeClip &&
+            m_Request.ExecutionDomain == TimelineExecutionDomain.Logic;
 
         void BuildBindingPopup(string label, bool target, ref string value)
         {

@@ -88,9 +88,15 @@ namespace BTSMTL.Timeline.Editor
             int selfEaseInFrame = clip.SelfEaseInFrame;
             int selfEaseOutFrame = clip.SelfEaseOutFrame;
             int clipInFrame = clip.ClipInFrame;
+            bool isTerminalLogicTreeClip = clip is TreeClip treeClip &&
+                treeClip.ExecutionDomain == TimelineExecutionDomain.Logic &&
+                treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
             EditorGUI.BeginChangeCheck();
             startFrame = Mathf.Max(0, EditorGUILayout.IntField("Start Frame", startFrame));
-            endFrame = Mathf.Max(startFrame + 1, EditorGUILayout.IntField("End Frame", endFrame));
+            if (isTerminalLogicTreeClip)
+                EditorGUILayout.LabelField("End Frame", $"Timeline End ({endFrame})");
+            else
+                endFrame = Mathf.Max(startFrame + 1, EditorGUILayout.IntField("End Frame", endFrame));
             selfEaseInFrame = Mathf.Clamp(EditorGUILayout.IntField("Self Ease In", selfEaseInFrame), 0, endFrame - startFrame - 1);
             selfEaseOutFrame = Mathf.Clamp(EditorGUILayout.IntField("Self Ease Out", selfEaseOutFrame), 0, endFrame - startFrame - selfEaseInFrame - 1);
             clipInFrame = Mathf.Max(0, EditorGUILayout.IntField("Clip In", clipInFrame));

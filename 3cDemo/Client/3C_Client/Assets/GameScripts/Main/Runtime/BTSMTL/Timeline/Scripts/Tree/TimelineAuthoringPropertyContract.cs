@@ -66,6 +66,7 @@ namespace BTSMTL.Timeline
             if (clip is TreeClip tree)
             {
                 Add(result, clip, "executionPhase", TimelineAuthoringPropertyKind.Enum, tree.ExecutionPhase);
+                Add(result, clip, "exitSource", TimelineAuthoringPropertyKind.Enum, tree.ClipExitSource);
                 if (tree.AssetTree)
                     Add(result, clip, "assetTree", TimelineAuthoringPropertyKind.Object, tree.AssetTree);
             }
@@ -113,6 +114,12 @@ namespace BTSMTL.Timeline
             Clip clip,
             UnityEngine.Object referenceObject)
         {
+            if (clip is TreeClip tree &&
+                tree.ExecutionDomain == TimelineExecutionDomain.Logic &&
+                tree.ClipExitSource == TimelineClipExitSource.TreeDecision)
+            {
+                return false;
+            }
             return clip.EndFrame != DefaultEndFrame(clip, clip.StartFrame, referenceObject) ||
                    clip.SelfEaseInFrame != 0 ||
                    clip.SelfEaseOutFrame != 0 ||
@@ -131,6 +138,7 @@ namespace BTSMTL.Timeline
             TimelineAuthoringClipConfiguration configuration = DefaultConfiguration();
             string sourceMotionClipId = string.Empty;
             TimelineTreeExecutionPhase executionPhase = TimelineTreeExecutionPhase.Commit;
+            TimelineClipExitSource exitSource = TimelineClipExitSource.FrameBoundary;
             UnityEngine.Object treeAsset = null;
             foreach (TimelineAuthoringPropertyValue value in values ?? Array.Empty<TimelineAuthoringPropertyValue>())
             {
@@ -138,6 +146,8 @@ namespace BTSMTL.Timeline
                     sourceMotionClipId = (string)value.Value;
                 else if (value.PropertyId == "executionPhase")
                     executionPhase = (TimelineTreeExecutionPhase)value.Value;
+                else if (value.PropertyId == "exitSource")
+                    exitSource = (TimelineClipExitSource)value.Value;
                 else if (value.PropertyId == "assetTree")
                     treeAsset = (UnityEngine.Object)value.Value;
                 else
@@ -149,6 +159,9 @@ namespace BTSMTL.Timeline
                 if (treeAsset)
                     tree.SetAssetTree(treeAsset as ScriptableObject);
                 tree.SetExecutionPhase(executionPhase);
+                tree.SetExitSource(tree.ExecutionDomain == TimelineExecutionDomain.Logic
+                    ? TimelineClipExitSource.TreeDecision
+                    : exitSource);
             }
             if (clip is MotionWarpClip warp)
             {
@@ -368,6 +381,7 @@ namespace BTSMTL.Timeline
                 "targetBindingId" => "target",
                 "parameterBindingId" => "openAmount",
                 "executionPhase" => TimelineTreeExecutionPhase.Commit,
+                "exitSource" => TimelineClipExitSource.TreeDecision,
                 _ => null
             };
             return expected != null && ValuesEqual(value, expected);

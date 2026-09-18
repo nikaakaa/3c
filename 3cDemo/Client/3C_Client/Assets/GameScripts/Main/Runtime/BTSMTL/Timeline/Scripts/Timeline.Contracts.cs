@@ -154,6 +154,11 @@ namespace BTSMTL.Timeline
         TimelineClipExitSource ClipExitSource { get; }
     }
 
+    public interface ITimelineTerminalFrameAlignedClip
+    {
+        bool AlignTerminalFrame(int terminalFrame);
+    }
+
     public enum TimelinePresentationMarkerLifetime : byte
     {
         Pulse = 1,

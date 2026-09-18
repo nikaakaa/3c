@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Corin_Pipeline_WalkLoop_Inplace Source Binding
   m_EditorClassIdentifier: 
-  m_Slot: {fileID: -1223974716485499172, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
-  m_ContentRevision: 822872aba1034e0f9454893b56cacbfc
-  m_Clip: {fileID: 7400000, guid: a42a3b1b15a10b44f9892c728d72b74f, type: 2}
+  m_Slot: {fileID: 8629324124613113230, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_ContentRevision: cb6f89ebe7944b9f876aed718b300b2f
+  m_Clip: {fileID: 7400000, guid: 39a391c88c52e4542b1e4b7ed7deed41, type: 2}
 --- !u!114 &-1918799456739606241
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -27,9 +27,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Corin_Pipeline_RunStart_Inplace Source Binding
   m_EditorClassIdentifier: 
-  m_Slot: {fileID: -2979050784670951599, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
-  m_ContentRevision: 4868900ddc1142888e794600e69c025d
-  m_Clip: {fileID: 7400000, guid: c3f6deae23e56064fb4b8938601e35e5, type: 2}
+  m_Slot: {fileID: 6242652349391753679, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_ContentRevision: 2f68ad4c44a04c8c877c188edd4304b7
+  m_Clip: {fileID: 7400000, guid: a98afa8eaf438dd49b30e4382a8ea765, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -75,19 +75,19 @@ MonoBehaviour:
   - {fileID: -3088765152812931864}
   - {fileID: 8667777657623053410}
   m_PoseResourceBindings:
-  - m_Slot: {fileID: 4177065355598373836, guid: 00531e79abbeb524ebc08428efbd0a88,
+  - m_Slot: {fileID: -5708191824285114883, guid: 00531e79abbeb524ebc08428efbd0a88,
       type: 2}
     m_Resource: {fileID: 11400000, guid: 0c091f82b87df624b9df65e821e52c38, type: 2}
-  - m_Slot: {fileID: -1844466054010593893, guid: 00531e79abbeb524ebc08428efbd0a88,
+  - m_Slot: {fileID: -2819830200314167010, guid: 00531e79abbeb524ebc08428efbd0a88,
       type: 2}
     m_Resource: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0, type: 2}
-  - m_Slot: {fileID: -2335344785742086560, guid: 00531e79abbeb524ebc08428efbd0a88,
+  - m_Slot: {fileID: 4412922592043435038, guid: 00531e79abbeb524ebc08428efbd0a88,
       type: 2}
     m_Resource: {fileID: 11400000, guid: 471a3432ddd640c187b4ebfdf8c94e69, type: 2}
-  - m_Slot: {fileID: 5400234489284315176, guid: 00531e79abbeb524ebc08428efbd0a88,
+  - m_Slot: {fileID: -5849264378725478179, guid: 00531e79abbeb524ebc08428efbd0a88,
       type: 2}
     m_Resource: {fileID: 11400000, guid: 6b94b222eff64c24a2ecf708238ef9a1, type: 2}
-  - m_Slot: {fileID: -7307166977988170493, guid: 00531e79abbeb524ebc08428efbd0a88,
+  - m_Slot: {fileID: 2906013293782627653, guid: 00531e79abbeb524ebc08428efbd0a88,
       type: 2}
     m_Resource: {fileID: 11400000, guid: e66d749fe12369343a053c527dbf5aaa, type: 2}
   m_SourceResourceBindings:
@@ -481,7 +481,8 @@ MonoBehaviour:
     - {fileID: 7400000, guid: 3747a185f0711e842b4df7c03fa2cfac, type: 2}
     - {fileID: 7400000, guid: a42a3b1b15a10b44f9892c728d72b74f, type: 2}
   m_FootPlacementAnalysisMode: 1
-  m_PoseNativeDomainResources: {fileID: 11400000, guid: ed97b3257b8448d89d6c3e38087ac407, type: 2}
+  m_PoseNativeDomainResources: {fileID: 11400000, guid: ed97b3257b8448d89d6c3e38087ac407,
+    type: 2}
   m_FootPlacementAnalysisSourceAssetGuid: 2487156154864bb5b49cb283c2583808
 --- !u!114 &51165433380949522
 MonoBehaviour:
@@ -495,9 +496,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Corin_Pipeline_WalkStart_Inplace Source Binding
   m_EditorClassIdentifier: 
-  m_Slot: {fileID: -8822627664849689120, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
-  m_ContentRevision: 8545fb4e2c1847999a4e6d0bb59aa705
-  m_Clip: {fileID: 7400000, guid: 90d528fc935ce2e43b4b301c8c2b98db, type: 2}
+  m_Slot: {fileID: 3344833663789169170, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_ContentRevision: 31106d3eae7543c095281b9418b12bf8
+  m_Clip: {fileID: 7400000, guid: 9590e08484b8f87479d0b4d5547aca85, type: 2}
 --- !u!114 &2900449559105972607
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -510,9 +511,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Corin_Pipeline_RunEnd_Inplace Source Binding
   m_EditorClassIdentifier: 
-  m_Slot: {fileID: -1125276244088184030, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
-  m_ContentRevision: d4c9faacc2824c3aa910c918991b98ec
-  m_Clip: {fileID: 7400000, guid: 9654782e7ebbcd14bab93c76dc248019, type: 2}
+  m_Slot: {fileID: -2565681344851523176, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_ContentRevision: 17d741d410ee49d9b9819a39ca0253e7
+  m_Clip: {fileID: 7400000, guid: 1ecaba0d5f8176f409e956db3d393ad4, type: 2}
 --- !u!114 &7183590138057213296
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -525,9 +526,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Corin_Pipeline_Idle_Inplace Source Binding
   m_EditorClassIdentifier: 
-  m_Slot: {fileID: -3921232948358065235, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
-  m_ContentRevision: e8461c2196de40d5b6d2abcf17f8cbef
-  m_Clip: {fileID: 7400000, guid: 7dbd59f643bcfbe4495990d45ad359ef, type: 2}
+  m_Slot: {fileID: -2645411269419663801, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_ContentRevision: eef99475700149a6aa143f748f3cd3fc
+  m_Clip: {fileID: 7400000, guid: 903f51d722fcd5044ad085dafd8847d7, type: 2}
 --- !u!114 &8442467174669319862
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -540,9 +541,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Corin_Pipeline_RunLoop_Inplace Source Binding
   m_EditorClassIdentifier: 
-  m_Slot: {fileID: 1131448872057909736, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
-  m_ContentRevision: 5d8335636b6942428592abe844c15852
-  m_Clip: {fileID: 7400000, guid: 3747a185f0711e842b4df7c03fa2cfac, type: 2}
+  m_Slot: {fileID: 8050897460272955977, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_ContentRevision: ba6f7b48503f47daa45e3bf028cb345a
+  m_Clip: {fileID: 7400000, guid: b577b425a812f1143b19df01c7ea5002, type: 2}
 --- !u!114 &8667777657623053410
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -555,6 +556,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6940fdb0e534f158f8169962958d169, type: 3}
   m_Name: Corin_Pipeline_MovingTurn_Inplace Source Binding
   m_EditorClassIdentifier: 
-  m_Slot: {fileID: 2468437558700976723, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
-  m_ContentRevision: 345198cc0d674151a0d15cb108f3a75a
-  m_Clip: {fileID: 7400000, guid: e569e81bd2858154b9bf4f2e660cf981, type: 2}
+  m_Slot: {fileID: 6826403210904887930, guid: 00531e79abbeb524ebc08428efbd0a88, type: 2}
+  m_ContentRevision: 1617fe1b4cf3479eac12ca49388bb97e
+  m_Clip: {fileID: 7400000, guid: 74e2307a050733d4c904cce5abf2ef14, type: 2}

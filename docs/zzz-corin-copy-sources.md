@@ -86,3 +86,9 @@ Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源�
 - 不新增第二套 Timeline、Pose、Camera domain。
 - ZZZ 私有结构必须先转成 3C 正式资产/代码入口。
 - UI、NPC、MainCity 控制器只作来源区分，不直接进战斗链路。
+
+## 抄录进度
+
+2026-09-19：Corin 五段普通攻击的 ZZZ Controller 战斗事件时间已进入正式 BTSMTL Timeline。`CorinAttackGameplayAbilityDefinition` 中新增 5 条 Logic `AttackProperty` ActionCue 轨道，共 66 个 Cue；CueId 使用原始 `Corin_Attack_Normal_xx_AttackProperty_*` key，帧位保留 ZZZ 战斗事件帧。该批数据先解决命中/表现触发时序，AttackProperty 完整伤害、碰撞、命中反馈 payload 还没有迁移。
+
+同 Trace `369327502f7a4add8a21a19a7713d24d` 在数据写入后复跑 1121 帧，Replay 结果仍为 `matched:1121`，无分歧帧。

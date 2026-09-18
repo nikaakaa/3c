@@ -57,6 +57,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<RootMotionCurveAsset> RootOrientationCurves =>
             m_RootOrientationCurves ?? Array.Empty<RootMotionCurveAsset>();
 
+        internal void ReplaceSourcePlans(
+            IReadOnlyList<CharacterPresentationPoseSourcePlan> sourcePlans)
+        {
+            if (sourcePlans == null || sourcePlans.Count == 0)
+                throw new InvalidOperationException(
+                    "Pose Native Resource Set requires at least one compiled source plan.");
+            var plans = new CharacterPresentationPoseSourcePlan[sourcePlans.Count];
+            var seenIndices = new HashSet<PresentationPoseSourceIndex>();
+            for (int i = 0; i < sourcePlans.Count; i++)
+            {
+                CharacterPresentationPoseSourcePlan plan = sourcePlans[i] ??
+                    throw new InvalidOperationException(
+                        $"Pose Native Resource Set source plan #{i} is missing.");
+                plan.RequireValid();
+                if (!plan.SourceIndex.IsValid || !seenIndices.Add(plan.SourceIndex))
+                    throw new InvalidOperationException(
+                        "Pose Native Resource Set source plan index is missing or duplicated.");
+                plans[i] = plan;
+            }
+            m_SourcePlans = plans;
+        }
         internal CharacterPoseNativeSourceResourceCatalog CreateSourceCatalog(
             CharacterAnimationRigPayload rig,
             CharacterAnimationResourceScope resourceScope)

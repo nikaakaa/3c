@@ -3906,7 +3906,11 @@ MonoBehaviour:
     - rid: 207050438612877335
     - rid: 207050438612877338
     - rid: 207050555325415507
-    m_Sections: []
+    m_Sections:
+    - m_AuthoringId: d31a7f2e-1c84-4a76-9f0a-3f0d59e2a7b1
+      m_Name: Attack_Normal_03_Explode
+      m_Frame: 75
+      m_NextSectionId: 
     m_ExternalBindings: []
     m_Loop: 0
   references:
@@ -4537,6 +4541,7 @@ MonoBehaviour:
         - rid: 207050555325415525
         - rid: 207050555325415526
         - rid: 207050555325415527
+        - rid: 207050555325416014
         m_Markers: []
     - rid: 207050555325415508
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
@@ -4817,6 +4822,20 @@ MonoBehaviour:
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325416014
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: e5849c0a-2b7f-4d76-8f3a-90c1d64f2a55
+        m_ExecutionDomain: 1
+        StartFrame: 75
+        EndFrame: 76
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_02
         CueType: AttackProperty
 --- !u!114 &8022151124549127005
 MonoBehaviour:

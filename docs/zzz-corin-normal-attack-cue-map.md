@@ -20,7 +20,7 @@
 | 状态 / Pattern | 源事件数 | 当前 AttackProperty cue 数 | 差异 |
 |---|---:|---:|---|
 | `Corin_Attack_Normal_03` | 20 | 20 | 主段 20 个 cue 帧和 key 完全一致；Explode 状态另缺 1 个 cue |
-| `Corin_Attack_Normal_03_Explode` | 1 | 0 | 当前缺本状态本地 cue |
+| `Corin_Attack_Normal_03_Explode` | 1 | 1 | 已在 `Attack_Normal_03_Explode` 段收口 |
 | `Corin_Attack_Normal_05` | 15 | 15 | frame=64 多出的 `_01_02` cue 已删除，当前帧和 key 与源一致 |
 | `Corin_Attack_Normal_05_End` | 0 | 0 | 无 AttackProperty cue |
 | `Corin_Attack_Normal_05_End_2` | 15 | 0 | 当前五段 Timeline 缺全部 15 个 End_2 本地 cue |
@@ -56,7 +56,7 @@
 
 | 来源帧 | AnimEventID | 当前帧 | 结论 |
 |---:|---|---:|---|
-| 1 | `Corin_Attack_Normal_03_AttackProperty_02` | - | 缺失 |
+| 1 | `Corin_Attack_Normal_03_AttackProperty_02` | 75（段内本地 1） | 已收口 |
 
 ### `Corin_Attack_Normal_05`
 

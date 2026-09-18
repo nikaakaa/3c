@@ -18,13 +18,13 @@ Timeline Runtime MUST直接消费正式轨道、Marker、Clip类型/区间/参�
 
 ### Requirement: 状态本地ActionCue必须绑定状态分段和分支
 
-`Attack_Normal_03_Explode` 与 `Attack_Normal_05_End / End_2` 的 ActionCue MUST 绑定各自状态分段或独立 Timeline；MUST NOT 把状态本地 cue 压平成无状态全局帧。分支边界 MUST 在进入 End / End_2 时明确选择其中一个分支，两侧 cue MUST NOT同时发布。状态本地 cue 事件 MUST 保留原始 `CueId`，并可携带状态 id、本地帧和分支身份用于稳定调和；攻击碰撞与属性 payload MUST 留在 GameplayEffect / Ability 执行域。
+`Attack_Normal_03_Explode` 与 `Attack_Normal_05_End / End_2` 的 ActionCue MUST 绑定各自状态分段或独立 Timeline；MUST NOT 把状态本地 cue 压平成无状态全局帧。分支边界 MUST 在进入 End / End_2 时明确选择其中一个分支，两侧 cue MUST NOT同时发布。状态本地 cue 事件 MUST 保留原始 `CueId`，MUST 携带状态 id 与状态本地帧；Attack5 分支还 MUST 携带分支身份用于稳定调和。攻击碰撞与属性 payload MUST 留在 GameplayEffect / Ability 执行域。
 
 #### Scenario: Attack3 Explode cue
 
 - **WHEN** `Attack_Normal_03_Explode` 的 frame=1 cue 被收口
-- **THEN** 事件 MUST归属 `Attack_Normal_03_Explode` 状态本地时间
-- **AND** MUST NOT通过主段全局轴替代
+- **THEN** 事件 MUST携带 `StateId=Attack_Normal_03_Explode`、`LocalFrame=1`
+- **AND** MUST NOT通过主段无状态全局帧替代
 
 #### Scenario: Attack5 End与End2分支
 

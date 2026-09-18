@@ -332,6 +332,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             EventId eventId,
             string eventName,
             string cueId,
+            string stateId,
+            int localFrame,
             TimelineRuntimePlaybackHandle handle,
             ulong generation,
             ulong logicTick,
@@ -345,6 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (!eventId.IsValid || string.IsNullOrWhiteSpace(eventName) || string.IsNullOrWhiteSpace(cueId) ||
                 !handle.IsValid || generation == 0 || logicTick == 0 || frame < 0 || cycle < 0 ||
+                localFrame < 0 ||
                 !executionIdentity.IsValid || string.IsNullOrWhiteSpace(contentRevision) ||
                 string.IsNullOrWhiteSpace(sourceId) || string.IsNullOrWhiteSpace(trackAuthoringId) ||
                 string.IsNullOrWhiteSpace(clipAuthoringId))
@@ -355,6 +358,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             EventId = eventId;
             EventName = eventName.Trim();
             CueId = cueId.Trim();
+            StateId = stateId?.Trim() ?? string.Empty;
+            LocalFrame = localFrame;
             Handle = handle;
             Generation = generation;
             LogicTick = logicTick;
@@ -370,6 +375,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public EventId EventId { get; }
         public string EventName { get; }
         public string CueId { get; }
+        public string StateId { get; }
+        public int LocalFrame { get; }
         public TimelineRuntimePlaybackHandle Handle { get; }
         public ulong Generation { get; }
         public ulong LogicTick { get; }
@@ -1477,9 +1484,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         index.ToString(System.Globalization.CultureInfo.InvariantCulture),
                         cue.ClipAuthoringId,
                         cue.CueId,
-                        cue.CueType)),
+                        cue.CueType,
+                        cue.StateId,
+                        cue.LocalFrame.ToString(System.Globalization.CultureInfo.InvariantCulture))),
                     cue.CueType,
                     cue.CueId,
+                    cue.StateId,
+                    cue.LocalFrame,
                     evaluation.Handle,
                     evaluation.Generation,
                     evaluation.LogicTick,

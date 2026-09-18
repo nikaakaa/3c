@@ -12,7 +12,9 @@ namespace BTSMTL.Timeline
             string trackName,
             string clipAuthoringId,
             string cueId,
-            string cueType)
+            string cueType,
+            string stateId,
+            int localFrame)
         {
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
@@ -20,6 +22,8 @@ namespace BTSMTL.Timeline
             ClipAuthoringId = clipAuthoringId ?? string.Empty;
             CueId = cueId ?? string.Empty;
             CueType = cueType ?? string.Empty;
+            StateId = stateId?.Trim() ?? string.Empty;
+            LocalFrame = localFrame;
         }
 
         public string SourceId { get; }
@@ -28,6 +32,8 @@ namespace BTSMTL.Timeline
         public string ClipAuthoringId { get; }
         public string CueId { get; }
         public string CueType { get; }
+        public string StateId { get; }
+        public int LocalFrame { get; }
     }
 
     [TrackGroup("Base"), ScriptGuid("43f20139703b4e96a6c8f201f0a703c7"), Ordered(3), Color(255, 210, 92)]
@@ -59,13 +65,27 @@ namespace BTSMTL.Timeline
                 if ((includeStartBoundary && Mathf.Abs(actionCueClip.StartTime) <= 0.000001f) ||
                     previousTime < actionCueClip.StartTime && actionCueClip.StartTime <= timelineTime)
                 {
+                    string stateId = string.Empty;
+                    int localFrame = 0;
+                    IReadOnlyList<TimelineSection> sections = actionCueClip.Timeline.Sections;
+                    for (int sectionIndex = 0; sectionIndex < sections.Count; sectionIndex++)
+                    {
+                        TimelineSection section = sections[sectionIndex];
+                        if (section.Frame > actionCueClip.StartFrame)
+                            break;
+                        stateId = section.Name;
+                        localFrame = actionCueClip.StartFrame - section.Frame + 1;
+                    }
+
                     cues.Add(new TimelineActionCueSample(
                         sourceId,
                         sourceName,
                         Name,
                         actionCueClip.AuthoringId,
                         actionCueClip.CueId,
-                        actionCueClip.CueType));
+                        actionCueClip.CueType,
+                        stateId,
+                        localFrame));
                 }
             }
         }

@@ -447,7 +447,7 @@ MonoBehaviour:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 286, y: 301}
+    _translation: {x: 323, y: 318}
     _zoomFactor: 0.97778326
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
@@ -478,7 +478,7 @@ MonoBehaviour:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 128.95602, y: 177.70795}
+    _translation: {x: 172, y: 194}
     _zoomFactor: 0.7068292
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
@@ -937,9 +937,11 @@ MonoBehaviour:
     m_Tracks:
     - rid: 665191780990845502
     - rid: 665191803296677992
-    - rid: 665191780990845504
     - rid: 665191780990845503
+    - rid: 665191780990845504
     - rid: 665191780990845505
+    - rid: 207050555325415425
+    - rid: 207050555325415497
     m_Sections:
     - m_AuthoringId: c196a52f-4b06-4310-8a8a-8699ef6a5620
       m_Name: Attack
@@ -954,6 +956,7 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: a50fcf55-d4cd-4ce2-b3af-86b9d2209813
+        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         OtherEaseInFrame: 0
@@ -963,15 +966,95 @@ MonoBehaviour:
         ClipInFrame: 0
         CueId: Attack1CameraCue
         CueType: Camera
+    - rid: 207050555325415425
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 746b8d82-5d44-4f5d-a816-a92dfbc7773a
+        Name: tree
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips: []
+        m_Markers: []
+    - rid: 207050555325415497
+      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 340ac1e7-e5c7-4df9-a4fd-67373bc13e69
+        Name: AttackProperty
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325415498
+        - rid: 207050555325415499
+        - rid: 207050555325415500
+        - rid: 207050555325415501
+        m_Markers: []
+    - rid: 207050555325415498
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: f9062fea-a84f-4833-842d-940979929f97
+        m_ExecutionDomain: 1
+        StartFrame: 21
+        EndFrame: 22
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_01_AttackProperty_01_01
+        CueType: AttackProperty
+    - rid: 207050555325415499
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 63f311cc-2404-41f1-b8c1-43b7351ce986
+        m_ExecutionDomain: 1
+        StartFrame: 22
+        EndFrame: 23
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_01_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415500
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 3715ad72-598f-4e62-a18f-824dff2af0e5
+        m_ExecutionDomain: 1
+        StartFrame: 23
+        EndFrame: 24
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_01_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415501
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: c68c43c2-59c6-452d-bafd-d44aa54b14b3
+        m_ExecutionDomain: 1
+        StartFrame: 24
+        EndFrame: 25
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_01_AttackProperty_01_02
+        CueType: AttackProperty
     - rid: 665191780990845502
       type: {class: AnimationTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 0811fba7-c4c7-4cc3-9714-f93b9da4d4ab
         Name: Animation
+        m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
         - rid: 665191780990845506
         - rid: 665191780990845507
+        m_Markers: []
         m_AnimationChannelId: FullBodyAction
         m_AnimationSlotId: corin.full-body-action
     - rid: 665191780990845503
@@ -979,34 +1062,41 @@ MonoBehaviour:
       data:
         m_AuthoringId: e0242e32-6b30-43e8-a125-06cd47f45318
         Name: Action Cue
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 665191780990845508
         - rid: 207050521905463330
+        m_Markers: []
     - rid: 665191780990845504
       type: {class: MotionCurveTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 9673f395-2c0b-46b8-bcc3-f10062581bab
         Name: Motion Curve
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 665191780990845510
         - rid: 665191780990845511
+        m_Markers: []
     - rid: 665191780990845505
       type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: ec923db2-74bc-40a3-8826-039fc541c948
         Name: Tree
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 665191780990845512
         - rid: 665191780990845513
         - rid: 665191780990845514
         - rid: 665191780990845515
+        m_Markers: []
     - rid: 665191780990845506
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e34b7999-c4fa-4f8b-8425-5d7ed8de8159
+        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 49
         OtherEaseInFrame: 0
@@ -1093,6 +1183,7 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 74f288a4-3126-453a-9858-109479d652e6
+        m_ExecutionDomain: 2
         StartFrame: 43
         EndFrame: 162
         OtherEaseInFrame: 6
@@ -1179,6 +1270,7 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d662b1f3-3254-4436-9fd2-17a016248d6f
+        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         OtherEaseInFrame: 0
@@ -1192,6 +1284,7 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 142218e6-6644-479b-b721-19d91be03a15
+        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 49
         OtherEaseInFrame: 0
@@ -1285,6 +1378,7 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 7df37ded-43d4-4c6c-83a4-0227e64ccb8a
+        m_ExecutionDomain: 1
         StartFrame: 49
         EndFrame: 168
         OtherEaseInFrame: 0
@@ -1378,70 +1472,77 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: d7c8216a-4bdf-4676-809f-f4828d6e986a
+        m_ExecutionDomain: 1
         StartFrame: 18
-        EndFrame: 45
+        EndFrame: 168
         OtherEaseInFrame: 0
-        OtherEaseOutFrame: 2
+        OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 114000002}
     - rid: 665191780990845513
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: ffc20627-9e1a-4ab0-be42-8c4af9e6f1b0
+        m_ExecutionDomain: 1
         StartFrame: 50
-        EndFrame: 93
+        EndFrame: 168
         OtherEaseInFrame: 0
-        OtherEaseOutFrame: 20
+        OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 114000003}
     - rid: 665191780990845514
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: de283c70-27e9-453b-b188-24736779ffa3
+        m_ExecutionDomain: 1
         StartFrame: 73
-        EndFrame: 162
-        OtherEaseInFrame: 89
+        EndFrame: 168
+        OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 114000004}
     - rid: 665191780990845515
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 3509c34c-84ff-4a89-8100-cc549a0f8c85
+        m_ExecutionDomain: 1
         StartFrame: 43
-        EndFrame: 162
-        OtherEaseInFrame: 2
+        EndFrame: 168
+        OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 114000005}
     - rid: 665191803296677992
       type: {class: MotionWarpTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 244e81ee-5fc6-498f-b813-a103023881c5
         Name: Motion Warp
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 665191803296677993
+        m_Markers: []
     - rid: 665191803296677993
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: eb07c8dd-3527-4470-8bc4-c44f6665d937
+        m_ExecutionDomain: 1
         StartFrame: 7
         EndFrame: 32
         OtherEaseInFrame: 0
@@ -1506,7 +1607,7 @@ MonoBehaviour:
             inWeight: 0
             outWeight: 0
           - serializedVersion: 3
-            time: 0.66666675
+            time: 0.6666667
             value: 0.842683
             inSlope: 0
             outSlope: 0
@@ -1515,7 +1616,7 @@ MonoBehaviour:
             inWeight: 0
             outWeight: 0
           - serializedVersion: 3
-            time: 0.9999997
+            time: 0.99999964
             value: 1
             inSlope: 0
             outSlope: 0
@@ -1785,6 +1886,7 @@ MonoBehaviour:
     - rid: 207050438612877318
     - rid: 207050438612877321
     - rid: 207050438612877323
+    - rid: 207050555325415502
     m_Sections: []
     m_ExternalBindings: []
     m_Loop: 0
@@ -1796,14 +1898,17 @@ MonoBehaviour:
       data:
         m_AuthoringId: 115a275c-e3c1-4f49-a797-730d8740ad60
         Name: Motion Curve
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877313
         - rid: 207050438612877314
+        m_Markers: []
     - rid: 207050438612877313
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 7a5caece-fc2f-4860-837c-755f36421dda
+        m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 173
         OtherEaseInFrame: 0
@@ -1897,6 +2002,7 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: a56930a0-7209-427e-977e-81bb4488c2ad
+        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 48
         OtherEaseInFrame: 0
@@ -1991,16 +2097,19 @@ MonoBehaviour:
       data:
         m_AuthoringId: 5847542b-70e3-49bf-98b9-26bb30d68c01
         Name: Animation
+        m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877316
         - rid: 207050438612877317
+        m_Markers: []
         m_AnimationChannelId: FullBodyAction
         m_AnimationSlotId: corin.full-body-action
     - rid: 207050438612877316
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2296291d-3c89-4ace-811f-93c19e3cccf8
+        m_ExecutionDomain: 2
         StartFrame: 48
         EndFrame: 173
         OtherEaseInFrame: 0
@@ -2087,6 +2196,7 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 6a375bc8-4cc1-4786-a496-ce0fa05d6e36
+        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 48
         OtherEaseInFrame: 0
@@ -2174,14 +2284,17 @@ MonoBehaviour:
       data:
         m_AuthoringId: c757d385-68cd-4fda-9ada-9712ef6b3cda
         Name: Action Cue
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877319
         - rid: 207050438612877320
+        m_Markers: []
     - rid: 207050438612877319
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 0f0ebfa0-4556-4883-a52d-307a8d715bfd
+        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         OtherEaseInFrame: 0
@@ -2195,6 +2308,7 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: f4f35ee7-ee1f-4992-b562-379aebbdc5b1
+        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         OtherEaseInFrame: 0
@@ -2209,13 +2323,16 @@ MonoBehaviour:
       data:
         m_AuthoringId: db51f858-48f4-430b-9011-c54a40c3cdcb
         Name: Motion Warp
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877322
+        m_Markers: []
     - rid: 207050438612877322
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 28fc08a4-055f-4a38-9371-77efd7c6914a
+        m_ExecutionDomain: 1
         StartFrame: 5
         EndFrame: 29
         OtherEaseInFrame: 0
@@ -2305,68 +2422,143 @@ MonoBehaviour:
       data:
         m_AuthoringId: e2c48df9-bb8e-4aa3-92bf-ab3562310254
         Name: Tree
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877324
         - rid: 207050438612877325
         - rid: 207050438612877326
         - rid: 207050438612877371
+        m_Markers: []
     - rid: 207050438612877324
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 206e350b-009c-44b5-83b8-9f7f3b17b1b5
+        m_ExecutionDomain: 1
         StartFrame: 42
-        EndFrame: 167
-        OtherEaseInFrame: 3
+        EndFrame: 173
+        OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
-        SelfEaseInFrame: 3
+        SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 3348614451701167143}
     - rid: 207050438612877325
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 652e6726-9013-46cf-a691-d075a739da68
+        m_ExecutionDomain: 1
         StartFrame: 18
-        EndFrame: 45
+        EndFrame: 173
         OtherEaseInFrame: 0
-        OtherEaseOutFrame: 3
+        OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
-        SelfEaseOutFrame: 3
+        SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 6942571526568422829}
     - rid: 207050438612877326
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: d88a8003-2e4d-456f-a9ba-741c5ef42426
+        m_ExecutionDomain: 1
         StartFrame: 49
-        EndFrame: 92
+        EndFrame: 173
         OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 4195809031538708240}
     - rid: 207050438612877371
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: e73aea15-2e02-4e95-aa19-bec673b83215
+        m_ExecutionDomain: 1
         StartFrame: 72
-        EndFrame: 167
-        OtherEaseInFrame: 20
+        EndFrame: 173
+        OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
-        SelfEaseInFrame: 20
+        SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 1029093293035819120}
+    - rid: 207050555325415502
+      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: c951ea32-0fd1-4029-96f3-683e4779386f
+        Name: AttackProperty
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325415503
+        - rid: 207050555325415504
+        - rid: 207050555325415505
+        - rid: 207050555325415506
+        m_Markers: []
+    - rid: 207050555325415503
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: c7ba8c1c-0251-47ad-90cf-27bf43178945
+        m_ExecutionDomain: 1
+        StartFrame: 15
+        EndFrame: 16
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_02_AttackProperty_01_01
+        CueType: AttackProperty
+    - rid: 207050555325415504
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 176e80fa-2c1c-4ef3-b1fd-1621731e8639
+        m_ExecutionDomain: 1
+        StartFrame: 16
+        EndFrame: 17
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_02_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415505
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 2542c229-eef2-44ff-9db7-a42fd9d0b252
+        m_ExecutionDomain: 1
+        StartFrame: 17
+        EndFrame: 18
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_02_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415506
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 458c1f4b-399e-4928-b8a6-2994809806a1
+        m_ExecutionDomain: 1
+        StartFrame: 18
+        EndFrame: 19
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_02_AttackProperty_01_02
+        CueType: AttackProperty
 --- !u!114 &2881805319160728456
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2728,6 +2920,7 @@ MonoBehaviour:
     - rid: 207050438612877362
     - rid: 207050438612877366
     - rid: 207050438612877369
+    - rid: 207050555325415551
     m_Sections: []
     m_ExternalBindings: []
     m_Loop: 0
@@ -2739,13 +2932,16 @@ MonoBehaviour:
       data:
         m_AuthoringId: 120a9675-9ebe-4cef-bcd1-a268e85eb38e
         Name: Motion Warp
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877358
+        m_Markers: []
     - rid: 207050438612877358
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 86240efe-6475-4499-bc61-9a80a91c84b8
+        m_ExecutionDomain: 1
         StartFrame: 10
         EndFrame: 40
         OtherEaseInFrame: 0
@@ -2835,14 +3031,17 @@ MonoBehaviour:
       data:
         m_AuthoringId: 206e763b-8a5e-46cd-ab6d-a233689dd878
         Name: Motion Curve
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877360
         - rid: 207050438612877361
+        m_Markers: []
     - rid: 207050438612877360
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 20077501-0b2e-42d9-9a55-82bac742453d
+        m_ExecutionDomain: 1
         StartFrame: 125
         EndFrame: 212
         OtherEaseInFrame: 0
@@ -2936,6 +3135,7 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 765bebe5-8d5d-4ce3-92a5-dc8a51dc1664
+        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 125
         OtherEaseInFrame: 0
@@ -3030,66 +3230,74 @@ MonoBehaviour:
       data:
         m_AuthoringId: 708f3104-14ef-463f-b4f7-131423ccb582
         Name: Tree
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877363
         - rid: 207050438612877364
         - rid: 207050438612877365
+        m_Markers: []
     - rid: 207050438612877363
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 2e4177f6-76fe-4d0a-bbd7-56e308dfbd8f
+        m_ExecutionDomain: 1
         StartFrame: 18
-        EndFrame: 45
+        EndFrame: 212
         OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: -2484288986480383195}
     - rid: 207050438612877364
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 5e9a19b0-82aa-43f4-9775-36ae151985ce
+        m_ExecutionDomain: 1
         StartFrame: 119
-        EndFrame: 206
+        EndFrame: 212
         OtherEaseInFrame: 0
-        OtherEaseOutFrame: 57
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
-        ClipInFrame: 0
-        m_ExecutionPhase: 0
-        m_ExitSource: 0
-        m_AssetTree: {fileID: 6693837534795556610}
-    - rid: 207050438612877365
-      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: c6eed989-9343-468e-aff2-4174451b29c4
-        StartFrame: 149
-        EndFrame: 206
-        OtherEaseInFrame: 57
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
+        m_AssetTree: {fileID: 6693837534795556610}
+    - rid: 207050438612877365
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: c6eed989-9343-468e-aff2-4174451b29c4
+        m_ExecutionDomain: 1
+        StartFrame: 149
+        EndFrame: 212
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_ExecutionPhase: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: -8167014581780197970}
     - rid: 207050438612877366
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: c3022685-aa54-48b3-85b6-1211ab1f6779
         Name: Action Cue
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877368
         - rid: 207050521905463331
+        m_Markers: []
     - rid: 207050438612877368
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d9f6c7d9-4b72-4197-ba9e-9b43da28ca6b
+        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         OtherEaseInFrame: 0
@@ -3104,16 +3312,19 @@ MonoBehaviour:
       data:
         m_AuthoringId: dc4fde81-bab5-405d-ad63-6bf864fd536d
         Name: Animation
+        m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877370
         - rid: 207050438612877374
+        m_Markers: []
         m_AnimationChannelId: FullBodyAction
         m_AnimationSlotId: corin.full-body-action
     - rid: 207050438612877370
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 990ad51a-09bb-4b0e-9f66-c156cb4dcf20
+        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 125
         OtherEaseInFrame: 0
@@ -3200,6 +3411,7 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: ae42d57e-8a2c-4cfc-958b-c2d14718a142
+        m_ExecutionDomain: 2
         StartFrame: 119
         EndFrame: 206
         OtherEaseInFrame: 6
@@ -3286,6 +3498,7 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 3b26dcef-1d55-478e-a59a-5312a72f9bb4
+        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         OtherEaseInFrame: 0
@@ -3295,6 +3508,255 @@ MonoBehaviour:
         ClipInFrame: 0
         CueId: Attack5CameraCue
         CueType: Camera
+    - rid: 207050555325415551
+      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 44b49808-6025-4a03-9874-03c877611c07
+        Name: AttackProperty
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325415552
+        - rid: 207050555325415553
+        - rid: 207050555325415554
+        - rid: 207050555325415555
+        - rid: 207050555325415556
+        - rid: 207050555325415557
+        - rid: 207050555325415558
+        - rid: 207050555325415559
+        - rid: 207050555325415560
+        - rid: 207050555325415561
+        - rid: 207050555325415562
+        - rid: 207050555325415563
+        - rid: 207050555325415564
+        - rid: 207050555325415565
+        - rid: 207050555325415566
+        - rid: 207050555325415567
+        m_Markers: []
+    - rid: 207050555325415552
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: bb77b766-4359-427f-b983-ececa666c7ed
+        m_ExecutionDomain: 1
+        StartFrame: 36
+        EndFrame: 37
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_01
+        CueType: AttackProperty
+    - rid: 207050555325415553
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 00f346ec-a8b3-4012-9320-003b33272e2d
+        m_ExecutionDomain: 1
+        StartFrame: 38
+        EndFrame: 39
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415554
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: ee53bb31-e402-4cd3-8e86-a280d8c835e5
+        m_ExecutionDomain: 1
+        StartFrame: 40
+        EndFrame: 41
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415555
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: e24e18cf-0eff-41c1-9632-eb8359c3f459
+        m_ExecutionDomain: 1
+        StartFrame: 42
+        EndFrame: 43
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415556
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 3ce91e78-183e-4d19-9133-85fd548ef1fc
+        m_ExecutionDomain: 1
+        StartFrame: 44
+        EndFrame: 45
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415557
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 61a1acfc-1c29-4ae8-ad98-de6a6a1afdb8
+        m_ExecutionDomain: 1
+        StartFrame: 46
+        EndFrame: 47
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415558
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 7a8cedf5-ef01-4ab0-933a-02734f06f2a7
+        m_ExecutionDomain: 1
+        StartFrame: 48
+        EndFrame: 49
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415559
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 3684ba3d-b9b2-419e-b4db-b4ce2b7e072a
+        m_ExecutionDomain: 1
+        StartFrame: 50
+        EndFrame: 51
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415560
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 494c9635-bd89-440b-952d-13280f99a6cb
+        m_ExecutionDomain: 1
+        StartFrame: 52
+        EndFrame: 53
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415561
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 2d6db77c-27c7-4c6b-830f-d5e5d0007d05
+        m_ExecutionDomain: 1
+        StartFrame: 54
+        EndFrame: 55
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415562
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 93363782-2d05-4bd9-8fcb-27b912a620b6
+        m_ExecutionDomain: 1
+        StartFrame: 56
+        EndFrame: 57
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415563
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: a33ce961-52c6-4c29-973f-8e69a9ca8a23
+        m_ExecutionDomain: 1
+        StartFrame: 58
+        EndFrame: 59
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415564
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 576ad46f-e19a-46c7-a113-af166422d90c
+        m_ExecutionDomain: 1
+        StartFrame: 60
+        EndFrame: 61
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415565
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: a4eef375-89f8-47a1-8648-b0ef041bc4d1
+        m_ExecutionDomain: 1
+        StartFrame: 62
+        EndFrame: 63
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415566
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: d9c74c68-2398-4af2-bc7d-d4e79fed496a
+        m_ExecutionDomain: 1
+        StartFrame: 64
+        EndFrame: 65
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415567
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: b4a895cc-c0a5-4b35-855e-995515571f39
+        m_ExecutionDomain: 1
+        StartFrame: 64
+        EndFrame: 65
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_05_AttackProperty_02
+        CueType: AttackProperty
 --- !u!114 &6693837534795556610
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3453,6 +3915,7 @@ MonoBehaviour:
     - rid: 207050438612877332
     - rid: 207050438612877335
     - rid: 207050438612877338
+    - rid: 207050555325415507
     m_Sections: []
     m_ExternalBindings: []
     m_Loop: 0
@@ -3464,13 +3927,16 @@ MonoBehaviour:
       data:
         m_AuthoringId: afefc7cb-1b63-459d-8028-5797d89ef71b
         Name: Motion Warp
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877328
+        m_Markers: []
     - rid: 207050438612877328
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b7cc37e0-f20d-40a9-afd5-c6d2e659d99d
+        m_ExecutionDomain: 1
         StartFrame: 6
         EndFrame: 39
         OtherEaseInFrame: 0
@@ -3560,16 +4026,19 @@ MonoBehaviour:
       data:
         m_AuthoringId: c1c596d2-39fd-4c8b-825e-149b852e700c
         Name: Animation
+        m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877330
         - rid: 207050438612877331
+        m_Markers: []
         m_AnimationChannelId: FullBodyAction
         m_AnimationSlotId: corin.full-body-action
     - rid: 207050438612877330
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 012703eb-3a08-40ed-ad50-8a9b43a395c3
+        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 81
         OtherEaseInFrame: 0
@@ -3656,6 +4125,7 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 722274ab-789c-4400-b6d4-eb1ab715d68f
+        m_ExecutionDomain: 2
         StartFrame: 75
         EndFrame: 200
         OtherEaseInFrame: 6
@@ -3743,14 +4213,17 @@ MonoBehaviour:
       data:
         m_AuthoringId: c3098ce4-4b36-4dc9-8151-947f0406590c
         Name: Motion Curve
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877333
         - rid: 207050438612877334
+        m_Markers: []
     - rid: 207050438612877333
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2c0107ca-fde7-4043-8dd4-1939f2663551
+        m_ExecutionDomain: 1
         StartFrame: 81
         EndFrame: 206
         OtherEaseInFrame: 0
@@ -3844,6 +4317,7 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 373e6fc6-7fc7-490d-88ef-b4a48b87fcfd
+        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 81
         OtherEaseInFrame: 0
@@ -3938,14 +4412,17 @@ MonoBehaviour:
       data:
         m_AuthoringId: e638bdfb-9178-4723-99e2-688a04b0194e
         Name: Action Cue
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877336
         - rid: 207050438612877337
+        m_Markers: []
     - rid: 207050438612877336
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 4dcfd64b-50d3-4b42-befd-85ccbc5b3829
+        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         OtherEaseInFrame: 0
@@ -3959,6 +4436,7 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 69479831-dd75-420d-85bf-2ccffe7fc331
+        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         OtherEaseInFrame: 0
@@ -3973,68 +4451,383 @@ MonoBehaviour:
       data:
         m_AuthoringId: e82bc011-e089-491e-8138-47499074b343
         Name: Tree
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877339
         - rid: 207050438612877340
         - rid: 207050438612877341
         - rid: 207050438612877372
+        m_Markers: []
     - rid: 207050438612877339
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 173a1e60-144d-4d42-8e97-d942787f4993
+        m_ExecutionDomain: 1
         StartFrame: 75
-        EndFrame: 200
+        EndFrame: 206
         OtherEaseInFrame: 0
-        OtherEaseOutFrame: 95
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
-        ClipInFrame: 0
-        m_ExecutionPhase: 0
-        m_ExitSource: 0
-        m_AssetTree: {fileID: 8823563092797898876}
-    - rid: 207050438612877340
-      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: 5d3d23e0-5e31-4100-bb8e-b62b8b36d626
-        StartFrame: 105
-        EndFrame: 200
-        OtherEaseInFrame: 20
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
+        m_AssetTree: {fileID: 8823563092797898876}
+    - rid: 207050438612877340
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 5d3d23e0-5e31-4100-bb8e-b62b8b36d626
+        m_ExecutionDomain: 1
+        StartFrame: 105
+        EndFrame: 206
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_ExecutionPhase: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 4543710769292310889}
     - rid: 207050438612877341
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 7ec2401d-c627-41b5-85d9-d0abec3f7344
+        m_ExecutionDomain: 1
         StartFrame: 18
+        EndFrame: 206
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_ExecutionPhase: 0
+        m_ExitSource: 1
+        m_AssetTree: {fileID: -4812538147775276677}
+    - rid: 207050438612877372
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: c390cfd6-7d02-423f-98ec-c5c60f81a8ed
+        m_ExecutionDomain: 1
+        StartFrame: 82
+        EndFrame: 206
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_ExecutionPhase: 0
+        m_ExitSource: 1
+        m_AssetTree: {fileID: 6264845888259740218}
+    - rid: 207050555325415507
+      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 86358461-7824-4566-9a81-82b131ae5eb8
+        Name: AttackProperty
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325415508
+        - rid: 207050555325415509
+        - rid: 207050555325415510
+        - rid: 207050555325415511
+        - rid: 207050555325415512
+        - rid: 207050555325415513
+        - rid: 207050555325415514
+        - rid: 207050555325415515
+        - rid: 207050555325415516
+        - rid: 207050555325415517
+        - rid: 207050555325415518
+        - rid: 207050555325415519
+        - rid: 207050555325415520
+        - rid: 207050555325415521
+        - rid: 207050555325415522
+        - rid: 207050555325415523
+        - rid: 207050555325415524
+        - rid: 207050555325415525
+        - rid: 207050555325415526
+        - rid: 207050555325415527
+        m_Markers: []
+    - rid: 207050555325415508
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 9466f0e6-5ee7-4cb0-98e2-959a82ef7970
+        m_ExecutionDomain: 1
+        StartFrame: 40
+        EndFrame: 41
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_01
+        CueType: AttackProperty
+    - rid: 207050555325415509
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: cf31ed48-9331-446f-93dd-d53b7063a9f9
+        m_ExecutionDomain: 1
+        StartFrame: 42
+        EndFrame: 43
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415510
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 68667d89-bab5-4f39-8dc7-25073eaf0028
+        m_ExecutionDomain: 1
+        StartFrame: 44
         EndFrame: 45
         OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        m_ExecutionPhase: 0
-        m_ExitSource: 0
-        m_AssetTree: {fileID: -4812538147775276677}
-    - rid: 207050438612877372
-      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415511
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
-        m_AuthoringId: c390cfd6-7d02-423f-98ec-c5c60f81a8ed
-        StartFrame: 82
-        EndFrame: 125
+        m_AuthoringId: 90435401-3a92-4b31-a19f-c24c09972d3e
+        m_ExecutionDomain: 1
+        StartFrame: 46
+        EndFrame: 47
         OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
-        m_ExecutionPhase: 0
-        m_ExitSource: 0
-        m_AssetTree: {fileID: 6264845888259740218}
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415512
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: cf1f8c8f-5d21-471f-b363-429096455dc5
+        m_ExecutionDomain: 1
+        StartFrame: 48
+        EndFrame: 49
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415513
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 5fa0cfba-e53c-4b40-9761-b23de9754d7e
+        m_ExecutionDomain: 1
+        StartFrame: 50
+        EndFrame: 51
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415514
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 35180dd2-d031-453f-b08b-3623d992e0de
+        m_ExecutionDomain: 1
+        StartFrame: 52
+        EndFrame: 53
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415515
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: e45bb1a2-63a6-4600-85c6-7d1f4abc9a7c
+        m_ExecutionDomain: 1
+        StartFrame: 54
+        EndFrame: 55
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415516
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 2b26ff23-e92d-444a-bcfa-ea2f719c4a23
+        m_ExecutionDomain: 1
+        StartFrame: 56
+        EndFrame: 57
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415517
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: e670ae70-487e-4ba4-806c-29f8c85a5de4
+        m_ExecutionDomain: 1
+        StartFrame: 58
+        EndFrame: 59
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415518
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 0acd9176-ce33-4860-80f6-eaa94ac82fb8
+        m_ExecutionDomain: 1
+        StartFrame: 60
+        EndFrame: 61
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415519
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 3676070d-7fc2-4d0c-88cd-87f144f63308
+        m_ExecutionDomain: 1
+        StartFrame: 62
+        EndFrame: 63
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415520
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 98efd08b-5538-4b75-91cb-7b5044c8c1fa
+        m_ExecutionDomain: 1
+        StartFrame: 64
+        EndFrame: 65
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415521
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 423f8017-e244-4749-806a-199efcec6d8d
+        m_ExecutionDomain: 1
+        StartFrame: 66
+        EndFrame: 67
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415522
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 16750978-4745-4eee-8314-f2b32d305f56
+        m_ExecutionDomain: 1
+        StartFrame: 68
+        EndFrame: 69
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415523
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 1a0d4f3e-a283-4311-862b-bfcd03bbd1c6
+        m_ExecutionDomain: 1
+        StartFrame: 70
+        EndFrame: 71
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415524
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 5205ae0e-9a88-4824-8e60-64e34939e158
+        m_ExecutionDomain: 1
+        StartFrame: 72
+        EndFrame: 73
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415525
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: b8f7200b-5af8-48b4-a2d7-4cacde18bfc5
+        m_ExecutionDomain: 1
+        StartFrame: 74
+        EndFrame: 75
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415526
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: ed12781b-c2e4-4782-bc51-432b5e9843bb
+        m_ExecutionDomain: 1
+        StartFrame: 76
+        EndFrame: 77
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415527
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 45287a78-2bb9-4fbe-b1fd-77db491cbafe
+        m_ExecutionDomain: 1
+        StartFrame: 78
+        EndFrame: 79
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_03_AttackProperty_01_02
+        CueType: AttackProperty
 --- !u!114 &8022151124549127005
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4133,6 +4926,7 @@ MonoBehaviour:
     - rid: 207050438612877347
     - rid: 207050438612877352
     - rid: 207050438612877355
+    - rid: 207050555325415528
     m_Sections: []
     m_ExternalBindings: []
     m_Loop: 0
@@ -4144,14 +4938,17 @@ MonoBehaviour:
       data:
         m_AuthoringId: 34c03a9a-c089-425d-8a1d-b3a1eb588fa7
         Name: Motion Curve
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877343
         - rid: 207050438612877344
+        m_Markers: []
     - rid: 207050438612877343
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2173d615-dd8c-4d5b-a550-58a798c0d69e
+        m_ExecutionDomain: 1
         StartFrame: 89
         EndFrame: 282
         OtherEaseInFrame: 0
@@ -4245,6 +5042,7 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: bd920a87-f138-4df5-aad9-c3763973bedb
+        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 89
         OtherEaseInFrame: 0
@@ -4339,13 +5137,16 @@ MonoBehaviour:
       data:
         m_AuthoringId: bfc839f6-52a8-4628-84a7-b6c6657ed6c4
         Name: Motion Warp
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877346
+        m_Markers: []
     - rid: 207050438612877346
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e28c94f9-544b-4d3c-8280-ac6cfb9f0a42
+        m_ExecutionDomain: 1
         StartFrame: 9
         EndFrame: 42
         OtherEaseInFrame: 0
@@ -4435,81 +5236,90 @@ MonoBehaviour:
       data:
         m_AuthoringId: c450e49e-25c8-4a16-ad3f-acabb28a4a48
         Name: Tree
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877348
         - rid: 207050438612877349
         - rid: 207050438612877350
         - rid: 207050438612877351
+        m_Markers: []
     - rid: 207050438612877348
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 096aa081-0595-4592-b34d-a8521aca903b
+        m_ExecutionDomain: 1
         StartFrame: 18
-        EndFrame: 45
+        EndFrame: 282
         OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: -3755222623046793182}
     - rid: 207050438612877349
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 61799f08-5e23-4524-93ed-769aec46757a
+        m_ExecutionDomain: 1
         StartFrame: 113
-        EndFrame: 276
-        OtherEaseInFrame: 20
+        EndFrame: 282
+        OtherEaseInFrame: 0
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 9036229574908285600}
     - rid: 207050438612877350
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 629ecaef-ed68-4ef8-bf6e-793719b5efd8
+        m_ExecutionDomain: 1
         StartFrame: 83
-        EndFrame: 276
+        EndFrame: 282
         OtherEaseInFrame: 0
-        OtherEaseOutFrame: 163
+        OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: -6672077517517524189}
     - rid: 207050438612877351
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 8fefb458-0d9c-4568-8bc9-51e578f50a62
+        m_ExecutionDomain: 1
         StartFrame: 90
-        EndFrame: 133
+        EndFrame: 282
         OtherEaseInFrame: 0
-        OtherEaseOutFrame: 20
+        OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
         ClipInFrame: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: -4803222074373020198}
     - rid: 207050438612877352
       type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d719f2f0-2c59-4289-bbf0-916f00a88cfb
         Name: Action Cue
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877353
         - rid: 207050438612877354
+        m_Markers: []
     - rid: 207050438612877353
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 0327a31c-e074-45a0-acb8-8a1d32fb5524
+        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         OtherEaseInFrame: 0
@@ -4523,6 +5333,7 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 6d7b49fa-c06f-4f82-bc71-6066f64be835
+        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         OtherEaseInFrame: 0
@@ -4537,16 +5348,19 @@ MonoBehaviour:
       data:
         m_AuthoringId: eff79947-1ee6-452b-91b0-6582c93e648e
         Name: Animation
+        m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877356
         - rid: 207050438612877373
+        m_Markers: []
         m_AnimationChannelId: FullBodyAction
         m_AnimationSlotId: corin.full-body-action
     - rid: 207050438612877356
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2a6f8273-f664-4948-8aa3-9fdedd24b8d2
+        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 89
         OtherEaseInFrame: 0
@@ -4633,6 +5447,7 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 8a0b2cd5-0900-4584-bdaf-2789f7288743
+        m_ExecutionDomain: 2
         StartFrame: 83
         EndFrame: 276
         OtherEaseInFrame: 6
@@ -4715,3 +5530,342 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
         BlendProfileId: corin.animation-rig.action-blend-profile
+    - rid: 207050555325415528
+      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: a15f20d1-0eda-491e-b533-ff1d1e87efa5
+        Name: AttackProperty
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325415529
+        - rid: 207050555325415530
+        - rid: 207050555325415531
+        - rid: 207050555325415532
+        - rid: 207050555325415533
+        - rid: 207050555325415534
+        - rid: 207050555325415535
+        - rid: 207050555325415536
+        - rid: 207050555325415537
+        - rid: 207050555325415538
+        - rid: 207050555325415539
+        - rid: 207050555325415540
+        - rid: 207050555325415541
+        - rid: 207050555325415542
+        - rid: 207050555325415543
+        - rid: 207050555325415544
+        - rid: 207050555325415545
+        - rid: 207050555325415546
+        - rid: 207050555325415547
+        - rid: 207050555325415548
+        - rid: 207050555325415549
+        - rid: 207050555325415550
+        m_Markers: []
+    - rid: 207050555325415529
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: fdd0a063-2e1b-4153-9d3a-6fa21a72e0a4
+        m_ExecutionDomain: 1
+        StartFrame: 20
+        EndFrame: 21
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_01_01
+        CueType: AttackProperty
+    - rid: 207050555325415530
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 36566d47-4414-444b-a452-e544147fe05b
+        m_ExecutionDomain: 1
+        StartFrame: 21
+        EndFrame: 22
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415531
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 5e540dbb-815b-4476-b14b-f6ec4fb2f281
+        m_ExecutionDomain: 1
+        StartFrame: 22
+        EndFrame: 23
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415532
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 0947a33a-7cef-40a1-823a-c7d86921931c
+        m_ExecutionDomain: 1
+        StartFrame: 23
+        EndFrame: 24
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_01_02
+        CueType: AttackProperty
+    - rid: 207050555325415533
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: df7f9631-0a9f-4fe4-ae45-e3b2e1465cdb
+        m_ExecutionDomain: 1
+        StartFrame: 38
+        EndFrame: 39
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_02_01
+        CueType: AttackProperty
+    - rid: 207050555325415534
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 846a5453-839f-485e-9219-a855f569cf23
+        m_ExecutionDomain: 1
+        StartFrame: 40
+        EndFrame: 41
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_02_02
+        CueType: AttackProperty
+    - rid: 207050555325415535
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 27beefaa-7109-4c27-98e8-d734fb9d6509
+        m_ExecutionDomain: 1
+        StartFrame: 42
+        EndFrame: 43
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_02_02
+        CueType: AttackProperty
+    - rid: 207050555325415536
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: ed213252-19f6-427c-9476-78fedb102bfd
+        m_ExecutionDomain: 1
+        StartFrame: 44
+        EndFrame: 45
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_02_02
+        CueType: AttackProperty
+    - rid: 207050555325415537
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: c908e505-5a76-4156-aca0-5f2f357dcb0c
+        m_ExecutionDomain: 1
+        StartFrame: 46
+        EndFrame: 47
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_01
+        CueType: AttackProperty
+    - rid: 207050555325415538
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 335bccd6-a2f6-4f4a-b444-13d2ebd84ab4
+        m_ExecutionDomain: 1
+        StartFrame: 48
+        EndFrame: 49
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415539
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: d80ebb22-4836-495b-b3e7-0f80eead3396
+        m_ExecutionDomain: 1
+        StartFrame: 50
+        EndFrame: 51
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415540
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 8427ceeb-e80f-4df1-80d4-027bbf8e9856
+        m_ExecutionDomain: 1
+        StartFrame: 52
+        EndFrame: 53
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415541
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 928f58c9-1e1d-4e1a-83ba-1ef7d15228dc
+        m_ExecutionDomain: 1
+        StartFrame: 54
+        EndFrame: 55
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415542
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: bf230f6a-3a90-4b48-94ab-aa49180042c4
+        m_ExecutionDomain: 1
+        StartFrame: 56
+        EndFrame: 57
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415543
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: c85d0eda-2d38-4e2a-a5b6-a86ac17e0dff
+        m_ExecutionDomain: 1
+        StartFrame: 58
+        EndFrame: 59
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415544
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: bb971ff8-7305-4a45-b9b2-195e9e03d702
+        m_ExecutionDomain: 1
+        StartFrame: 60
+        EndFrame: 61
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415545
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 91694db8-1a34-4dd8-8dcb-5991c601843d
+        m_ExecutionDomain: 1
+        StartFrame: 62
+        EndFrame: 63
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415546
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: bb2a2277-3f54-4873-8675-ac542e78ddb2
+        m_ExecutionDomain: 1
+        StartFrame: 64
+        EndFrame: 65
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415547
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: d6d51c55-6b0e-4900-99dc-93187107532f
+        m_ExecutionDomain: 1
+        StartFrame: 66
+        EndFrame: 67
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415548
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: c9cac761-4554-4071-a68d-38266b4bbf8a
+        m_ExecutionDomain: 1
+        StartFrame: 68
+        EndFrame: 69
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415549
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: ef43bc0b-af7b-4565-8b86-95eef10da390
+        m_ExecutionDomain: 1
+        StartFrame: 70
+        EndFrame: 71
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty
+    - rid: 207050555325415550
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 42bf67ad-ac72-4287-a4d8-ae3e8309a663
+        m_ExecutionDomain: 1
+        StartFrame: 72
+        EndFrame: 73
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Normal_04_AttackProperty_03_02
+        CueType: AttackProperty

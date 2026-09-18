@@ -1147,6 +1147,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (m_Disposed)
                 return;
+            UnityEngine.Debug.LogWarning(
+                $"[Pose][Diagnostic] GraphRuntime disposed. Instance={InstanceId} Graph={m_PreparedBinding.GraphId} Started={m_Started}{Environment.StackTrace}");
             StopInstance();
             if (m_Graph != null && m_Graph.isRunning)
                 m_Graph.Stop(false);

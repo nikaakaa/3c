@@ -354,7 +354,7 @@ namespace ThirdPersonSimulation.Fixed
                 s_Replay == null || !s_HasStartBody)
             {
                 throw new InvalidOperationException(
-                    "Fixed character input replay start state is not prepared.");
+                    $"Fixed character input replay start state is not prepared. Mode={s_Mode}, HasStartBody={s_HasStartBody}, Replay={(s_Replay == null ? "null" : s_Replay.TraceId)}.");
             }
             s_Mode = FixedCharacterInputTraceMode.Replaying;
             s_Message = "Waiting for the first canonical Fixed replay input frame.";

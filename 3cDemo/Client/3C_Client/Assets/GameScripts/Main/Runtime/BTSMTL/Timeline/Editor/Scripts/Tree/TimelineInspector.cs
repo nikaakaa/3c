@@ -133,7 +133,6 @@ namespace BTSMTL.Timeline.Editor
                 if (ValuesDiffer(before, after))
                 {
                     property.SetValue(configuration, after, null);
-+
                     DrawClipMarkerSection(asset, clip);
                     break;
                 }

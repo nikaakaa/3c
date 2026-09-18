@@ -16,6 +16,7 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
 using SimulationInput = ThirdPersonSimulation.Fixed.SimulationInput;
@@ -147,23 +148,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorApplication.update += Tick;
             s_LastTracePath = FindLatestTracePath();
             s_LastTraceId = TraceIdFromPath(s_LastTracePath);
-            if (IsPending)
-            {
-                try
-                {
-                    EnsurePendingTracePreparation();
-                    if (EditorApplication.isPlaying &&
-                        ReadPendingLaunchPhase() == PendingLaunchPhase.AwaitingPlayMode)
-                    {
-                        WritePendingLaunchPhase(PendingLaunchPhase.Running);
-                        ResetPendingDeadline();
-                    }
-                }
-                catch (Exception exception)
-                {
-                    AbortPendingInitialization(exception);
-                }
-            }
         }
 
         public static bool IsRecording =>
@@ -403,13 +387,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             s_HasRecordedCameraYaw = false;
             s_RecordedCameraYaw = 0f;
+            ICharacterPresentationDomainRuntime runtime = host?.PresentationRuntime;
+            if (runtime == null || !runtime.TryGetCameraBasis(out CameraBasisSnapshot basis))
+                return;
+            s_HasRecordedCameraYaw = true;
+            s_RecordedCameraYaw = basis.Yaw;
         }
 
         static void ApplyRecordedCameraHeading(TraceDocument document, FixedCharacterHost host)
         {
             if (document == null || !document.has_camera_basis_yaw)
                 return;
-            throw new InvalidOperationException("Camera Presentation runtime is not composed.");
+            ICharacterPresentationDomainRuntime runtime = host?.PresentationRuntime;
+            if (runtime == null)
+                throw new InvalidOperationException(
+                    "Camera trace replay requires the formal Camera Presentation runtime.");
+            runtime.SetCameraInitialState(new CameraInitialState(
+                document.camera_basis_yaw_degrees,
+                0f));
         }
 
         static void BeginReplay(TraceDocument document)
@@ -505,6 +500,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             try
             {
+                SynchronizePending();
                 if (IsPending)
                     TickPending();
                 TickActiveReplay();
@@ -516,6 +512,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void SynchronizePending()
+        {
+            if (!IsPending)
+                return;
+            try
+            {
+                EnsurePendingTracePreparation();
+                if (EditorApplication.isPlaying &&
+                    ReadPendingLaunchPhase() == PendingLaunchPhase.AwaitingPlayMode)
+                {
+                    WritePendingLaunchPhase(PendingLaunchPhase.Running);
+                    ResetPendingDeadline();
+                }
+            }
+            catch (Exception exception)
+            {
+                AbortPendingInitialization(exception);
+            }
+        }
         static void TickPending()
         {
             if (DateTime.UtcNow.Ticks > ReadPendingDeadline())
@@ -1261,6 +1276,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ReadPendingLaunchPhase() != PendingLaunchPhase.ReadyToPlay ||
                 EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
+            EditorSceneManager.SaveOpenScenes();
             EnsurePendingTracePreparation();
             ResetPendingDeadline();
             WritePendingLaunchPhase(PendingLaunchPhase.AwaitingPlayMode);
@@ -1718,15 +1734,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (!IsPending ||
                 FixedCharacterInputTraceModule.Status.Mode !=
-                FixedCharacterInputTraceMode.Idle)
+                    FixedCharacterInputTraceMode.Idle &&
+                FixedCharacterInputTraceModule.Status.Mode !=
+                    FixedCharacterInputTraceMode.PreparingReplay &&
+                FixedCharacterInputTraceModule.Status.Mode !=
+                    FixedCharacterInputTraceMode.PreparingRecording)
             {
                 return;
             }
             string operation = PendingOperation;
             if (string.Equals(operation, "record", StringComparison.Ordinal))
             {
-                FixedCharacterInputTraceModule.PrepareRecording(
-                    new ActorId(PlayerActorId));
+                if (FixedCharacterInputTraceModule.Status.Mode == FixedCharacterInputTraceMode.Idle)
+                    FixedCharacterInputTraceModule.PrepareRecording(new ActorId(PlayerActorId));
+                else if (TryResolvePlayerStartState(
+                        out FixedCharacterHost recordingHost,
+                        out FixedWorldBodyState recordingBody,
+                        out _) &&
+                    recordingHost.SessionHost.LifecycleState == SimulationSessionLifecycleState.Active)
+                {
+                    FixedCharacterInputTraceModule.ResolveInitialBody(recordingBody);
+                }
                 return;
             }
             if (operation != StandardReplayOperation &&
@@ -1738,9 +1766,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Canonical Fixed input pending operation '{operation}' is invalid.");
             }
             s_PendingReplayDocument ??= ReadPendingReplayDocument();
-            FixedCharacterInputTraceModule.PrepareReplay(
-                ToRuntimeTrace(s_PendingReplayDocument),
-                0);
+            FixedCharacterInputTrace trace = ToRuntimeTrace(s_PendingReplayDocument);
+            bool hasActiveHost = TryResolvePlayerStartState(
+                out FixedCharacterHost host,
+                out FixedWorldBodyState initialBody,
+                out _) &&
+                host.SessionHost.LifecycleState == SimulationSessionLifecycleState.Active;
+            if (FixedCharacterInputTraceModule.Status.Mode ==
+                FixedCharacterInputTraceMode.Idle)
+            {
+                if (hasActiveHost)
+                    FixedCharacterInputTraceModule.PrepareReplayFromCheckpoint(trace, 0, initialBody);
+                else
+                    FixedCharacterInputTraceModule.PrepareReplay(trace, 0);
+            }
+            else if (hasActiveHost)
+            {
+                FixedCharacterInputTraceModule.ResolveInitialBody(initialBody);
+            }
         }
 
         static TraceDocument ReadPendingReplayDocument()

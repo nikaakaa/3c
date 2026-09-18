@@ -24,7 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramRevision sourceRevision,
             BtsmtlSkillGraphOccurrence entryGraph,
             IDictionary<string, GameplayAbilityAuthoringBlackboardDeclaration> declarations,
-            int tickRate)
+            int tickRate,
+            string gameplayEffectProfileOwner)
         {
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             DefinitionPath = string.IsNullOrEmpty(definitionPath)
@@ -44,6 +45,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentOutOfRangeException(nameof(tickRate));
             TickRate = tickRate;
             AbilityId = new CharacterSkillId(definition.AbilityId);
+            GameplayEffectProfileOwner = CharacterSkillProviderOwners.IsAssetOwner(gameplayEffectProfileOwner)
+                ? gameplayEffectProfileOwner
+                : throw new ArgumentException("Gameplay Effect profile owner is required.", nameof(gameplayEffectProfileOwner));
         }
 
         public GameplayAbilityDefinition Definition { get; }
@@ -52,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public ProgramId ProgramId { get; }
         public ProgramRevision SourceRevision { get; }
         public CharacterSkillId AbilityId { get; }
+        public string GameplayEffectProfileOwner { get; }
         public int TickRate { get; }
         public string EntryIdentity => $"ability:{AbilityId.Value}";
         public BtsmtlSkillGraphOccurrence EntryGraph { get; }
@@ -60,11 +65,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public static class GameplayAbilityAuthoringDiscovery
     {
-
         public static GameplayAbilityAuthoringCompilationModel Discover(
             GameplayAbilityDefinition definition,
             SimulationCompileReport report,
-            int tickRate)
+            int tickRate,
+            string gameplayEffectProfileOwner)
         {
             if (report == null)
                 throw new ArgumentNullException(nameof(report));
@@ -134,7 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     sourceRevision,
                     entry,
                     declarations,
-                    tickRate);
+                    tickRate,
+                    gameplayEffectProfileOwner);
             }
             catch (Exception exception)
             {

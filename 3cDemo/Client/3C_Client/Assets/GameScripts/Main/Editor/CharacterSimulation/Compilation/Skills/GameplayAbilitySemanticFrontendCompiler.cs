@@ -34,10 +34,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public const string CompilerVersion = "gameplay-ability-semantic-compiler/1";
         public static readonly OperationSetVersion OperationSetVersion = GameplayAbilityOperationSet.Version;
 
-        public static GameplayAbilitySemanticFrontendResult Compile(GameplayAbilityDefinition definition, int tickRate)
+        public static GameplayAbilitySemanticFrontendResult Compile(
+            GameplayAbilityDefinition definition,
+            int tickRate,
+            string gameplayEffectProfileOwner)
         {
             var report = new SimulationCompileReport();
-            GameplayAbilityAuthoringCompilationModel model = GameplayAbilityAuthoringDiscovery.Discover(definition, report, tickRate);
+            GameplayAbilityAuthoringCompilationModel model = GameplayAbilityAuthoringDiscovery.Discover(definition, report, tickRate, gameplayEffectProfileOwner);
             if (model == null || !report.IsValid)
                 return GameplayAbilitySemanticFrontendResult.Failed(report);
             try

@@ -48,7 +48,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 GameplayAbilityDefinition ability = abilities[i];
                 GameplayAbilitySemanticFrontendResult semantic =
-                    GameplayAbilitySemanticFrontendCompiler.Compile(ability, definition.SimulationTickRate);
+                    GameplayAbilitySemanticFrontendCompiler.Compile(
+                        ability,
+                        definition.SimulationTickRate,
+                        CharacterSkillProviderOwners.Asset(
+                            AssetDatabase.AssetPathToGUID(
+                                AssetDatabase.GetAssetPath(definition.GameplayEffectProfile))));
                 if (!semantic.IsValid)
                     throw new InvalidOperationException(FormatReport(semantic.Report));
                 var abilityTimelinesForAbility = new List<TimelineAsset>();

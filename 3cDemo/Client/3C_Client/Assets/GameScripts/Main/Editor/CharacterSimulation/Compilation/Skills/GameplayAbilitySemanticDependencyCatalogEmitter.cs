@@ -171,7 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             SimulationSourceLocation rootSource = Source(model, model.EntryGraph, "ability");
             DeclareAction(model.Definition.AdmissionProfile, rootSource);
             foreach (GameplayEffectDefinition effect in model.Definition.Effects)
-                DeclareEffect(effect, owners.GameplayProviderOwnerId, rootSource);
+                DeclareEffect(effect, model.GameplayEffectProfileOwner, rootSource);
             foreach (BtsmtlSkillGraphOccurrence occurrence in model.EntryGraph.EnumerateOccurrences())
                 foreach (FlowNode node in occurrence.Nodes)
                     DeclareNodeDependencies(model, occurrence, node, owners);
@@ -273,13 +273,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (node is BtsmtlSkillApplyGameplayEffectFlowNode apply)
             {
-                DeclareEffectReference(model, apply.Effect, owners.GameplayProviderOwnerId, source);
+                DeclareEffectReference(model, apply.Effect, model.GameplayEffectProfileOwner, source);
                 return;
             }
             if (node is BtsmtlSkillRemoveGameplayEffectFlowNode remove)
             {
                 if (remove.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectId)
-                    DeclareEffectReference(model, remove.Effect, owners.GameplayProviderOwnerId, source);
+                    DeclareEffectReference(model, remove.Effect, model.GameplayEffectProfileOwner, source);
                 else
                     DeclareQuery(remove.EffectTagQuery, remove.ProviderOwnerId, source);
             }

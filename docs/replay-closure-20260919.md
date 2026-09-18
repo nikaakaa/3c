@@ -32,3 +32,10 @@
 ## 下一阶段
 
 Replay 已 matched，可以进入 ZZZ Corin 正式数据抄录阶段；抄录必须走现有正式 authoring / runtime 链路，不新增临时迁移路径。
+
+## AttackProperty Payload 后复验
+
+- 新 Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/369327502f7a4add8a21a19a7713d24d/20260919-061501-350-55800fa08aea4ec1b44c2dafb580fc07.json`。
+- 帧对账：`compared:1121`，`divergent_frame_count:0`，`first_frame_mismatches:[]`。
+- Aggregate 对账为 `mismatch`，差异字段只有 `runtime_content_hash`、`source_revision`、`semantic_hash`；这是新增 20 个 AttackProperty Effect 和正式 provider 合同后的预期内容变化。
+- 结论：运行数据没有回归；旧 proof 不能再作为同一内容版本的 aggregate 基线，应作为“内容变更前最后 matched proof”保留。

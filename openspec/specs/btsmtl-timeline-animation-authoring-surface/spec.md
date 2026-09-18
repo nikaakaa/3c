@@ -68,3 +68,23 @@ Timeline Editor MUST提供显式Editor-only tool provider合同和不使用反�
 - **WHEN** shared Timeline没有领域工具输入
 - **THEN** Track、Segment与Timeline-local Curve MUST保持完整可编辑
 - **AND** Editor MUST不显示空Analysis或Marker区域
+
+### Requirement: Timeline窗口顶栏必须使用模型视图控制器边界
+
+Timeline 顶栏 MUST 由只读 binding model、独立 toolbar view 和窗口 controller 组成。Model 只投影当前 TimelineData、serialized owner/path、ownership、source graph 与 node identity；View 只构造布局、按钮组和控件回调；controller MUST 拥有 binding、mutation、Undo、Slate projection 和观察事件。View MUST NOT 持有 TimelineData 可写状态、runtime fact 或业务 mutation。
+
+#### Scenario: 顶栏操作
+
+- **WHEN** 作者点击返回导航、切换文档或观察 Workspace 模式
+- **THEN** View MUST 只把请求交给 controller，由 controller 走正式 binding / mutation / runtime observation 入口
+- **AND** View MUST NOT 直接改 TimelineData 或创建第二个 Timeline runtime
+
+### Requirement: Timeline顶栏必须按职责分组
+
+Timeline 顶栏 MUST 将控件分为文档导航组、Workspace 模式组和运行状态组。文档导航组承载返回、文档选择与来源摘要；Workspace 模式组承载显式注册的模式 controls；运行状态组只承载指向正式 Graph Shell / Scene Play ownership 的状态说明。禁止把不同职责控件混入同一无语义堆栈后用绝对位置补救。
+
+#### Scenario: 打开 Timeline 窗口
+
+- **WHEN** 作者打开 bound 或 unbound Timeline 窗口
+- **THEN** 顶栏 MUST 仍显示三组职责控件
+- **AND** 未注册 Workspace controller 时 MUST 保持文档导航和状态可用，不得创建备用运行按钮

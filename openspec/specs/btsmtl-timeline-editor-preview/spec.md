@@ -576,3 +576,13 @@ Timeline MUST保留编辑游标、整数帧输入和逐帧操作；编辑游标�
 - **WHEN** 作者保存后关闭并重新打开 Timeline
 - **THEN** 正式 Track/Clip identity、资源和帧范围 MUST保持，旧临时对象 MUST释放
 - **AND** MUST无新增 GUI、序列化或生命周期异常，异常处理 MUST基于完整堆栈而不是隐藏 Console
+
+### Requirement: Corin AttackProperty必须经正式转换后消费
+
+外部或 ZZZ dump 的 `AttackProperty` MUST NOT 成为 Timeline runtime 的直接输入格式。主控 MUST 把作者确认的攻击属性转换成 Timeline Marker 或 Ability 打击帧；Timeline runtime MUST 只消费这些正式 Marker / TreeClip / Ability 事件，并通过既有 Advance / Present 与 Commit / Discard 边界交付。Timeline UI 只观察正式 playback / trace 事实，MUST NOT 新建 AttackProperty 解析器、私有时钟或第二运行链。
+
+#### Scenario: 使用攻击属性配置打击帧
+
+- **WHEN** 主控把 `AttackProperty` 时间点转换成 Marker 或 Ability 打击帧
+- **THEN** Timeline MUST 按其声明的 Logic / Presentation 执行域消费该正式内容
+- **AND** UI 观察结果 MUST 来自正式 playback 或 trace，不得从 AttackProperty 原始数据重算

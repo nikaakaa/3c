@@ -26,4 +26,4 @@
 - [x] 4.1 新增作者可见的“结束片段”Timeline Body节点，编译为正式 `TimelineClipExitRequest` operation
 - [x] 4.2 Fixed/Float32 Ability执行域在Logic TreeClip invocation上下文内触发退出请求，并接入Timeline接收端
 - [x] 4.3 pending树退出进入播放状态；当前Advance discard时丢弃，commit后由下一个Advance注入真实Exit边界，回滚重放可重建
-- [ ] 4.4 接入执行域合同：`TreeDecision` 与“结束片段”只允许 Logic 投影使用；Presentation TreeClip 拒绝该配置，DualProjection 只把请求路由到 Logic 投影
+- [x] 4.4 接入执行域合同：`TreeDecision` 与“结束片段”只允许 Logic 投影使用；Presentation TreeClip 拒绝该配置，DualProjection 只把请求路由到 Logic 投影

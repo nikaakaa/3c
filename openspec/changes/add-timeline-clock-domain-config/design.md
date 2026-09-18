@@ -129,3 +129,9 @@ TreeClip 必须把图执行和表现触发拆成两个明确来源：
 当前落地状态：Track 已直接持有 Marker 列表；闭包/指纹包含 Marker 与触发图；旧 Pulse / Stateful / Clip 子列表实现已删除；Presentation 事件已使用 `handle:generation:markerId:traversalIndex`；Slate 轨道已支持 Marker 创建、绘制、拖拽、选中与触发图编辑。Marker 触发图已进入 Ability Timeline 编译闭包：Marker 图单独建立 MarkerTrees，禁止 Disable / Destroy / 结束片段节点，SourceMap 只声明 OnEnable。Logic 域 Marker 在 Advance Evaluation 中形成独立请求，经 ExecutionConsumer 消费并参与 Commit / Discard；Presentation 域 Marker 继续由视觉游标产生稳定事件，CharacterTimelineHost 在广播 PresentationFrame 前执行 OnEnable。Presentation 输出的下游边界已经固定：Marker 的 `handle:generation:markerId:traversalIndex` 补齐为正式 `EventId`；表现动画继续经既有 `ActionPlaybackCommandInbox`；Timeline Camera 的 State / Cue / Response / Resource 采样在 `CharacterPresentationDomainRuntime` 装配的 Camera bridge 中生成激活与退役命令，交给既有 Camera domain 调和。激活身份来自 Ability Timeline invocation 的正式 SkillOperation source、invocation generation、Action instance 与当前 Logic tick，不用 playback handle 伪造 ActivationId。
 
 特效和音效当前没有正式下游 domain，因此不得通过 `Vfx`、`Ui` 或 payload 字符串伪造命令，也不得新建第二套事件系统；这些领域以后必须以同样的 PresentationFrame 事件和稳定 EventId 接入正式 domain。现有逻辑 TreeClip runtime 不得被宣称为已经支持表现时钟 TreeClip；仅输出 Presentation Marker 事件也不等价于已完成触发图消费。
+
+## Timeline 编辑器 MVC 与攻击帧消费边界（2026-09-19）
+
+Timeline 顶栏已拆成正式 MVC 边界：`TimelineEditorBindingState` 只保存当前 Timeline binding 的只读投影；`TimelineEditorToolbarView` 只构造文档导航、Workspace 模式和运行状态三个按钮组；`TimelineEditorWindow` 继续作为 controller 拥有绑定、undo、Slate projection 和观察事件。不得把按钮回调、资产绑定或 runtime fact 混进 View。
+
+Corin dump 中的 `AttackProperty` 不是 Timeline 的直接数据格式。主控负责把它转换成 Timeline Marker 或 Ability 打击帧；Timeline runtime 只消费这些正式 Marker / TreeClip / Ability 事件，Timeline editor 只提供这些内容的作者、跳转和只读观察。禁止在 Timeline 内新建 AttackProperty 解析器、私有时钟或第二运行链。

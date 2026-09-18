@@ -28,3 +28,9 @@
 
 - 前置：时钟域 change（`add-timeline-clock-domain-config`）策略合同与装配开关收尾；主体已落码（`8a508f68e`、`6104e6387`）。
 - 实施归属：runtime 回传合同归 timeline runtime 域；树侧上报归树 hook 节点域；显示归 ScenePlay 预览观察链。本 change 文档统一登记合同，实施按域分工，不新建并行实现。
+
+## 2026-09-19 复核与剩余边界
+
+- `TreeDecision` 由 `TreeClip.SetExitSource` 和 TreeClip contract 校验限制在 Logic；Presentation 固定为 FrameBoundary。`TimelineBody` 图合同只允许“结束片段”节点出现在 TimelineBody，Marker 图显式拒绝它；Logic Evaluation 只对 `TimelineClipExecutionPolicy.IsLogic` 的 TreeClip 产出请求，DualProjection 的表现投影不会路由退出。
+- Timeline 编辑器顶栏拆为 `TimelineEditorBindingState` 只读模型、`TimelineEditorToolbarView` 视图和 `TimelineEditorWindow` 控制器；顶栏按钮按文档导航、Workspace 模式、运行状态三组承载，仍只消费正式 binding 并保持 Slate 唯一编辑面。
+- Corin dump 中的 `AttackProperty` 不由 Timeline 直接解释或复制为主时间轴数据；主控负责转换成 Timeline Marker / Ability 打击帧。Timeline 只消费正式 Marker / TreeClip / Ability runtime 事件，编辑器只负责这些正式内容的作者与观察链路。

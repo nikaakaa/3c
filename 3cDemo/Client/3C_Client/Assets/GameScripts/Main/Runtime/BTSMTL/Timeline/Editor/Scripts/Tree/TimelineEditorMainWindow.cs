@@ -113,10 +113,7 @@ namespace BTSMTL.Timeline.Editor
         BtsmtlSlateTimelineProjection m_SlateProjection;
         IMGUIContainer m_SlateSurface;
         TimelineData m_Timeline;
-        ToolbarButton m_BackButton;
-        ObjectField m_SharedTimelineField;
-        Label m_SourceSummary;
-        Label m_Status;
+        TimelineEditorToolbarControls m_Toolbar;
         VisualElement m_WorkspaceModeControls;
         bool m_RuntimeObservationReadOnly;
         RuntimeInstanceKey m_RuntimeObservationScope;
@@ -639,6 +636,8 @@ namespace BTSMTL.Timeline.Editor
             m_SlateProjection?.Dispose();
             m_SlateProjection = null;
             m_SlateSurface = null;
+            m_Toolbar = null;
+            m_WorkspaceModeControls = null;
             m_Timeline = null;
         }
 
@@ -660,34 +659,27 @@ namespace BTSMTL.Timeline.Editor
                 EndWindows);
         }
 
+        TimelineEditorBindingState BindingState => new TimelineEditorBindingState(
+            m_Timeline,
+            m_SerializedOwner,
+            m_SerializedPropertyPath,
+            m_OwnershipLabel,
+            m_SourceGraphWindow,
+            m_SourceGraphOwner,
+            m_SourceNode,
+            m_SourceNodeGuid,
+            m_SourceGraphAuthoringId);
+
         VisualElement CreateAuthoringToolbar()
         {
-            var toolbar = new Toolbar();
-            m_BackButton = new ToolbarButton(ReturnToTimeline) { text = "‹ Timeline" };
-            m_BackButton.style.display = HasTimelineNavigation ? DisplayStyle.Flex : DisplayStyle.None;
-            m_SharedTimelineField = new ObjectField("Document")
-            {
-                objectType = typeof(UnityEngine.Object),
-                allowSceneObjects = false
-            };
-            m_SharedTimelineField.style.width = 280f;
-            m_SharedTimelineField.SetValueWithoutNotify(m_SerializedOwner as TimelineAsset);
-            m_SharedTimelineField.RegisterValueChangedCallback(OnSharedTimelineChanged);
-            m_SourceSummary = new Label(CurrentSourceSummary());
-            m_SourceSummary.style.minWidth = 180f;
-            m_SourceSummary.style.marginLeft = 6f;
-            m_Status = new Label("运行控制：Skill Graph / Graph Shell");
-            m_Status.style.marginLeft = 6f;
-            m_Status.style.flexGrow = 1f;
-            m_Status.tooltip = "Timeline 只负责作者编辑；Scene Play、Build、Skill 和运行观察由 Graph Shell 管理。";
-            toolbar.Add(m_BackButton);
-            toolbar.Add(m_SharedTimelineField);
-            toolbar.Add(m_SourceSummary);
             m_WorkspaceModeControls = TimelineWorkspaceModeBridge.CreateControls(this);
-            if (m_WorkspaceModeControls != null)
-                toolbar.Add(m_WorkspaceModeControls);
-            toolbar.Add(m_Status);
-            return toolbar;
+            m_Toolbar = TimelineEditorToolbarView.Create(
+                BindingState,
+                HasTimelineNavigation,
+                ReturnToTimeline,
+                OnSharedTimelineChanged,
+                m_WorkspaceModeControls);
+            return m_Toolbar.Toolbar;
         }
 
         bool HasTimelineNavigation => m_NavigationOwner && !string.IsNullOrWhiteSpace(m_NavigationPropertyPath);
@@ -739,8 +731,7 @@ namespace BTSMTL.Timeline.Editor
             m_NavigationSourceGraphWindow = null;
             m_NavigationSourceGraphOwner = null;
             m_NavigationViewport = Vector2.zero;
-            if (m_BackButton != null)
-                m_BackButton.style.display = DisplayStyle.None;
+            m_Toolbar?.SetBackVisible(false);
         }
 
         void OnSharedTimelineChanged(ChangeEvent<UnityEngine.Object> evt)
@@ -756,29 +747,14 @@ namespace BTSMTL.Timeline.Editor
             if (m_SerializedOwner is TimelineAsset)
                 ClearBinding();
             else
-                m_SharedTimelineField.SetValueWithoutNotify(null);
+                m_Toolbar?.SetDocumentWithoutNotify(null);
         }
 
-        string CurrentSourceSummary()
-        {
-            if (m_Timeline == null)
-                return "Source: None";
-            string ownership = string.IsNullOrWhiteSpace(m_OwnershipLabel) ? "Timeline" : m_OwnershipLabel;
-            return $"Source: {ownership} / {m_Timeline.Name}";
-        }
-
-        void SetStatus(string value)
-        {
-            if (m_Status == null)
-                return;
-            m_Status.text = value ?? string.Empty;
-            m_Status.tooltip = value ?? string.Empty;
-        }
+        void SetStatus(string value) => m_Toolbar?.SetStatus(value);
 
         void OnTimelineValueChanged()
         {
-            if (m_SourceSummary != null)
-                m_SourceSummary.text = CurrentSourceSummary();
+            m_Toolbar?.SetSourceSummary(BindingState.CreateSourceSummary());
             AuthoringRevisionChanged?.Invoke(this);
         }
     }

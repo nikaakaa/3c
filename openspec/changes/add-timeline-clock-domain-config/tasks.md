@@ -47,9 +47,7 @@
 - [x] 7.9 Marker 作者 UI：Slate 时间轴轨上 Marker 点的创建、绘制、拖拽与选中，触发图引用编辑
 - [x] 7.6 Presentation Marker 事件 identity 定义为 playback handle、generation、marker 与 traversal index：同一次经过只交付一次、循环重触发换新 index、停止或 generation 变化后旧 generation 不再触发
 
+## 8. 编辑器 MVC 与当前消费边界
 
-
-
-
-
-
+- [x] 8.1 Timeline 顶栏拆成 `TimelineEditorBindingState` 只读模型、`TimelineEditorToolbarView` 视图和 `TimelineEditorWindow` controller；按钮按文档导航、Workspace 模式、运行状态分组
+- [x] 8.2 登记 Corin `AttackProperty` 消费边界：主控转成 Timeline Marker / Ability 打击帧，Timeline runtime 与编辑器只消费正式内容，不新增私有解析器或第二运行链

@@ -46,3 +46,13 @@
 - generate_assets成功替换LocomotionFullBodyPoseGraph.asset；重新export_code验证资产内容含goal-assembler节点、FullBodyIkGoalAssemblerPayload与assembler-to-ik连线（goals→full-body-ik.goals），validator成对规则静态满足。
 - 过程中发现并绕过导出器缺陷：BtsmtlAuthoringCodeGenerationService的外部资产分类把Definition/Presentation Profile发为BuildRoot局部var，而FinalizeAuthoring经rootParts.asset/asset1消费，导致generate报"requires a Definition and Presentation Profile"。当前以生成源码内补parts.asset赋值绕过（再导出会被冲掉，需重打补丁）；分类漏FinalStatements使用的根因修复归authoring工具owner。
 - 静态校验：Editor编译0错误；validator成对规则以资产内容+源码规则核对通过。Play端到端验证归用户。
+
+
+## GraphInvalid第二根因修复与诊断透传（2026-09-18）
+
+- 现象复核：9981cee4c（GoalAssembler资产修复）后受控Play仍报"Pose Native Domain creation failed: GraphInvalid"且Message为空。
+- 根因（源码证据）：CharacterPoseNativeDomainRuntimeFactory.Validate成功路径误用Failed工厂构造"通过"标记（Failed(None,"","")），而Failed工厂带None→GraphInvalid归一化，IsAdopted判定为Session!=null在预检阶段恒false；Create/Replace两处gate因此永远把"通过"当失败返回（GraphInvalid+空消息）。自bd2562486接入正式装配入口起，域创建从未通过预检，真实图校验器从未运行——此前各次Play的GraphInvalid均为此gate产物，GoalAssembler资产修复本身正确但被该gate掩盖。
+- 修复：CharacterPoseNativeDomainCreateResult新增Valid()工厂与IsFailure判定；Validate成功返回Valid()；Create/Replace gate改判IsFailure。提交c6f2e6180。
+- 诊断透传补全（审计发现的真实缺口）：AdoptedResult原无Source属性，validator的Origin在RoleEntry边界丢失；validator外层catch与工厂catch重包装异常只拷Message丢类型名。修复：AdoptedResult新增Source（preparation重载内部取preparation.Source，请求重载显式传Pose/Create与Pose/Replace）；DomainCreateResult.Failed(adopted)改用adoption.Source；重包装消息统一为"类型名: 消息"；创建失败日志追加Source字段。提交960d117f7（内容与工作区改动一致，由并行窗口代为入库）。
+- 编译证据：ThirdPersonClient.Runtime.csproj与ThirdPersonClient.Editor.csproj均0错误0警告（--disable-build-servers /nr:false /p:UseSharedCompilation=false），结束后已执行dotnet build-server shutdown。
+- 后续：gate修复后validator首次真实运行，Play端到端验证归用户；若仍有结构失败，日志将携带来源与异常类型名可直接定位。3.11的clip集与源id映射合同仍待Timeline owner确认。

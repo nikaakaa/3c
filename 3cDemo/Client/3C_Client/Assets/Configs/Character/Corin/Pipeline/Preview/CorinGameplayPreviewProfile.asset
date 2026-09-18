@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d33954432c14c1c8700431075b9438d, type: 3}
   m_Name: CorinGameplayPreviewProfile
   m_EditorClassIdentifier: 
-  m_Scene: {fileID: 102900000, guid: eba4320fd1ff4e55a88ef0d9b8a1e42e, type: 2}
+  m_Scene: {fileID: 102900000, guid: 7c268906406444dcbe943f04986321ba, type: 2}
   m_ContextId: btsmtl-preview
   m_DefaultActorId: fixed-player

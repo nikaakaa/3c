@@ -67,7 +67,7 @@ Pose Bottom Dock 不再创建独立 Preview Scene、隐藏相机、局部 Animat
 
 ## 当前缺失与实现边界
 
-- 已创建 `Assets/Scenes/Authoring/BtsmtlPreview.unity`，接入共享环境、CorinStandalonePlayer、Local Float32 Session Composition、Unity CharacterController World Solver、正式 Cinemachine 相机和唯一 `btsmtl-preview` Character Context。该场景只闭合角色运行目标；具体非 Skill Timeline owner、目标绑定、播放 identity、调用点和 generation 仍等待 Timeline owner 发布后消费。
+- 默认 `CorinGameplayPreviewProfile` 现在指向 `Assets/Scenes/GameplayLab/GameplayLabFixed.unity`；该场景通过 `GameplayLabLocalFixed` prefab 提供 `fixed-player` Actor、正式 Composition、Unity CharacterController World Solver 和相机装配。`Assets/Scenes/Authoring/BtsmtlPreview.unity` 保留为历史构建产物，不再作为默认 Preview 入口。具体非 Skill Timeline owner、目标绑定、播放 identity、调用点和 generation 仍等待 Timeline owner 发布后消费。
 - 主重构已发布 `a47532948` 的 Skill/Action identity、ActionInstance 和 generation runtime，以及 `ceb50eb9e` 的 Corin Rules、技能 authoring/编译输入；`0cdb043dd` 补齐三处 Unity 装配引用。本 worktree 已消费这三个正式提交，但预览尚未把它们接入作者选择、ActionInstance 观察和完整 v7 Capability，因此任务 2.3、4.7、5.3–5.4、6.8、7.6、10.1–10.4 仍未完成，不能复制其编译器或状态格式。
 - 在早期 `229d2a9d0` 实施基线中，`CharacterPipelineDefinition` 仍保存 `RootTreeAsset`，Agent authoring 仍是 v4；该段只记录当时的主重构 owner 边界。随后 `d423510f0` 合入已删除旧 RootTree 运行入口，本 change 不恢复 v4 兼容路径。
 - 现有 `SimulationSessionHost` 已提供正式 `Quiesce`、`ReleaseSessionRuntime` 和 `Stop`，场景重建协调器应调用这些公开生命周期，不直接清理 Program、Presentation、Foot、IK 或 Camera 内部状态。
@@ -1046,7 +1046,7 @@ RuntimeDebug 现在有显式 Follow current runtime source；它按当前 Runtim
 - `TimelineEditorWindow` 通过 `ITimelineWorkspaceModeController` 接收角色 Editor 的 ScenePlay 实现，程序集方向仍为角色 Editor 依赖 Timeline Editor，不让 Timeline Editor 反向依赖角色 runtime。
 - 原 Timeline 顶部新增唯一紧凑工具条：`BtsmtlScenePlayProfile` 资产、`Authoring/Preview/RuntimeDebug` 模式菜单、Session 菜单和一行状态。没有 Scene、Context、Actor、Composition、World、Camera 的展开表单。
 - `Prepare/Publish/Adopt` 只在 Preview 中按当前状态出现；Authoring 和 RuntimeDebug 不显示这三个命令。
-- 新增 `CorinGameplayPreviewProfile.asset`，引用正式 `BtsmtlPreview.unity`、Context `btsmtl-preview` 和默认 Actor `fixed-player`。Profile 不保存任何运行态。
+- `CorinGameplayPreviewProfile.asset` 引用正式 `GameplayLabFixed.unity`、Context `btsmtl-preview` 和默认 Actor `fixed-player`。Profile 不保存任何运行态。
 - `BtsmtlSkillRuntimeObservationAutoBinder` 只有在 Timeline 工作形态为 RuntimeDebug 时才自动绑定 FlowCanvas 运行观察，Preview 不再污染作者图。
 
 验证：`ThirdPersonClient.Editor.csproj` 按统一 build 参数编译成功，0 error；构建服务器已关闭。

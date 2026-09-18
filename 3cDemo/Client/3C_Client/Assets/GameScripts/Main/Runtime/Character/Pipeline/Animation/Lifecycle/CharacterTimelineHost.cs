@@ -309,6 +309,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal TimelineRuntimeStopRequest Request { get; }
         public AbilityTimelineRuntimeStatus Status { get; }
     }
+    internal readonly struct TimelinePresentationExecutionContext
+    {
+        public TimelinePresentationExecutionContext(
+            ulong actionInstanceId,
+            SimulationTick tick,
+            ActivationId activation)
+        {
+            ActionInstanceId = actionInstanceId;
+            Tick = tick;
+            Activation = activation;
+        }
+
+        public ulong ActionInstanceId { get; }
+        public SimulationTick Tick { get; }
+        public ActivationId Activation { get; }
+    }
+
     public sealed class CharacterTimelineHost : ITimelinePlaybackService, IDisposable
     {
         struct ActivePlayback
@@ -1007,6 +1024,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 }
             }
             actionContext = default;
+            return false;
+        }
+
+        internal bool TryGetPresentationExecutionContext(
+            TimelineRuntimePlaybackHandle handle,
+            out TimelinePresentationExecutionContext context)
+        {
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                ActivePlayback active = m_ActivePlaybacks[index];
+                if (active.Handle.Value != handle.Value ||
+                    active.SourceKind != CharacterTimelinePlaybackSourceKind.AbilityRuntime ||
+                    !active.Provenance.HasProgramInvocation)
+                {
+                    continue;
+                }
+
+                ulong tick = active.ActionContext.StartLocalLogicTick;
+                if (tick == 0)
+                {
+                    context = default;
+                    return false;
+                }
+
+                var source = SimulationExecutionSource.FromSkillOperation(
+                    new OperationHandle(active.Provenance.SourceOperationIndex),
+                    active.Provenance.SourceInvocationPath);
+                context = new TimelinePresentationExecutionContext(
+                    active.ActionContext.ActionInstanceId,
+                    new SimulationTick(tick),
+                    new ActivationId(source, active.Provenance.SkillExecutionGeneration));
+                return true;
+            }
+
+            context = default;
             return false;
         }
 

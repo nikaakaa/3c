@@ -96,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost m_TimelineHost;
         ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge m_TimelineBridge;
+        ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelinePresentationEventBridge m_TimelinePresentationBridge;
 
         internal void InitializeTimelineHost(
             ThirdPersonCharacter.Pipeline.Animation.Lifecycle.CharacterTimelineHost timelineHost,
@@ -110,6 +111,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             timelineHost.Initialize(numericTarget, tickRate);
             BindTimelineBridge(new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge(
                 timelineHost, m_PoseActionPublisher.Inbox));
+            m_TimelinePresentationBridge = new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelinePresentationEventBridge(
+                timelineHost,
+                this,
+                m_ActorId);
         }
 
         internal void BindTimelineBridge(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge bridge)
@@ -304,6 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void Reset()
         {
+            m_TimelinePresentationBridge?.Reset();
             m_Camera?.Reset();
             m_Equipment?.Reset();
             m_Body.Reset();
@@ -496,6 +502,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             m_Disposed = true;
             m_TimelineBridge?.Dispose();
+            m_TimelinePresentationBridge?.Dispose();
             m_TimelineHost = null;
             m_PoseDomain?.Dispose();
             m_PoseResourceScope?.Dispose();

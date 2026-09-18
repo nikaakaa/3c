@@ -44,6 +44,7 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             string trackName,
+            string sequenceId,
             TimelineCameraMode mode,
             int priority,
             float weight,
@@ -55,6 +56,7 @@ namespace BTSMTL.Timeline
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
             TrackName = trackName ?? string.Empty;
+            SequenceId = sequenceId ?? string.Empty;
             Mode = mode;
             Priority = priority;
             Weight = Mathf.Clamp01(weight);
@@ -67,6 +69,7 @@ namespace BTSMTL.Timeline
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
+        public string SequenceId { get; }
         public TimelineCameraMode Mode { get; }
         public int Priority { get; }
         public float Weight { get; }
@@ -180,6 +183,7 @@ namespace BTSMTL.Timeline
                     sourceId,
                     sourceName,
                     Name,
+                    cameraClip.SequenceId,
                     cameraClip.Mode,
                     cameraClip.Priority,
                     weight,

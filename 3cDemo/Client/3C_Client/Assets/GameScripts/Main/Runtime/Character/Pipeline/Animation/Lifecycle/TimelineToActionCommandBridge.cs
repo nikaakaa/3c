@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Runtime;
+using ThirdPersonCamera;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
+using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
@@ -312,4 +315,357 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_TimelineHost.PresentationPlaybackEnded -= OnPresentationPlaybackEnded;
         }
     }
+
+internal sealed class TimelinePresentationEventBridge : IDisposable
+{
+    sealed class CameraEventState
+    {
+        internal CameraEventState(
+            string key,
+            CharacterPresentationCommand activation,
+            CharacterPresentationCommand retirement)
+        {
+            Key = key;
+            Activation = activation;
+            Retirement = retirement;
+        }
+
+        internal string Key { get; }
+        internal CharacterPresentationCommand Activation { get; }
+        internal CharacterPresentationCommand Retirement { get; }
+    }
+
+    readonly CharacterTimelineHost m_TimelineHost;
+    readonly ICharacterPresentationDomainRuntime m_Runtime;
+    readonly ActorId m_ActorId;
+    readonly Dictionary<string, CameraEventState> m_Active = new(StringComparer.Ordinal);
+    bool m_Disposed;
+
+    internal TimelinePresentationEventBridge(
+        CharacterTimelineHost timelineHost,
+        ICharacterPresentationDomainRuntime runtime,
+        ActorId actorId)
+    {
+        m_TimelineHost = timelineHost ?? throw new ArgumentNullException(nameof(timelineHost));
+        m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        m_ActorId = actorId;
+        m_TimelineHost.PresentationFrameProduced += OnPresentationFrame;
+        m_TimelineHost.PresentationPlaybackEnded += OnPresentationPlaybackEnded;
+    }
+
+    void OnPresentationFrame(TimelineRuntimePresentationFrame frame)
+    {
+        if (!m_TimelineHost.TryGetPresentationExecutionContext(
+                frame.Handle,
+                out TimelinePresentationExecutionContext context))
+        {
+            throw new InvalidOperationException(
+                $"Timeline playback '{frame.Handle.Value}' has no Presentation execution identity.");
+        }
+
+        var alive = new HashSet<string>(StringComparer.Ordinal);
+        CollectCameraEvents(frame, context, alive);
+        RetireInactive(alive, frame.Handle.Value);
+    }
+
+    void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle)
+    {
+        RetireInactive(new HashSet<string>(StringComparer.Ordinal), handle.Value);
+    }
+
+    void CollectCameraEvents(
+        TimelineRuntimePresentationFrame frame,
+        in TimelinePresentationExecutionContext context,
+        HashSet<string> alive)
+    {
+        for (int index = 0; index < frame.Operations.CameraStates.Count; index++)
+        {
+            TimelineCameraStateSample sample = frame.Operations.CameraStates[index];
+            string key = CreateKey(
+                frame,
+                "state",
+                sample.SourceId,
+                sample.TrackName,
+                sample.SequenceId,
+                sample.Mode.ToString(),
+                sample.TargetKey,
+                sample.InterruptPolicy.ToString());
+            if (!m_Active.ContainsKey(key))
+            {
+                PresentationCameraRequest activation = PresentationCameraRequest.Sequence(
+                    PresentationCameraRequestLifecycle.Activate,
+                    RequireSequenceId(sample.SequenceId),
+                    (int)sample.Mode,
+                    (int)sample.InterruptPolicy,
+                    sample.Priority,
+                    sample.Weight,
+                    sample.BlendInSeconds,
+                    sample.BlendOutSeconds,
+                    sample.TargetKey,
+                    context.Activation.Source.Identity);
+                PresentationCameraRequest retirement = PresentationCameraRequest.Sequence(
+                    PresentationCameraRequestLifecycle.Retire,
+                    RequireSequenceId(sample.SequenceId),
+                    (int)sample.Mode,
+                    (int)sample.InterruptPolicy,
+                    sample.Priority,
+                    sample.Weight,
+                    sample.BlendInSeconds,
+                    sample.BlendOutSeconds,
+                    sample.TargetKey,
+                    context.Activation.Source.Identity);
+                AddCamera(key, frame, context, activation, retirement);
+            }
+
+            alive.Add(key);
+        }
+
+        for (int index = 0; index < frame.Operations.CameraCues.Count; index++)
+        {
+            TimelineCameraCueSample sample = frame.Operations.CameraCues[index];
+            string effectKind = RequireCueEffectKind(sample.CueKind).ToString();
+            string key = CreateKey(
+                frame,
+                "cue",
+                sample.SourceId,
+                sample.TrackName,
+                sample.CueId,
+                effectKind,
+                sample.ResourceId,
+                sample.CueType);
+            if (!m_Active.ContainsKey(key))
+            {
+                string requestId = $"{sample.TrackName}/{sample.CueId}";
+                PresentationCameraRequest activation = PresentationCameraRequest.Effect(
+                    PresentationCameraRequestLifecycle.Activate,
+                    requestId,
+                    (int)RequireCueEffectKind(sample.CueKind),
+                    sample.ResourceId,
+                    sample.Priority,
+                    Mathf.Clamp01(sample.Intensity),
+                    context.Activation.Source.Identity);
+                PresentationCameraRequest retirement = PresentationCameraRequest.Effect(
+                    PresentationCameraRequestLifecycle.Retire,
+                    requestId,
+                    (int)RequireCueEffectKind(sample.CueKind),
+                    sample.ResourceId,
+                    sample.Priority,
+                    Mathf.Clamp01(sample.Intensity),
+                    context.Activation.Source.Identity);
+                AddCamera(key, frame, context, activation, retirement);
+            }
+
+            alive.Add(key);
+        }
+
+        for (int index = 0; index < frame.Operations.CameraResponses.Count; index++)
+        {
+            TimelineCameraResponseSample sample = frame.Operations.CameraResponses[index];
+            string key = CreateKey(
+                frame,
+                "response",
+                sample.SourceId,
+                sample.TrackName,
+                sample.LookResponse.ToString(),
+                sample.ManualOrbitWeight.ToString("R", CultureInfo.InvariantCulture),
+                sample.PitchResponseWeight.ToString("R", CultureInfo.InvariantCulture),
+                sample.YawResponseWeight.ToString("R", CultureInfo.InvariantCulture));
+            if (!m_Active.ContainsKey(key))
+            {
+                PresentationCameraRequest activation = PresentationCameraRequest.Response(
+                    PresentationCameraRequestLifecycle.Activate,
+                    (int)sample.LookResponse,
+                    sample.ManualOrbitWeight,
+                    sample.PitchResponseWeight,
+                    sample.YawResponseWeight,
+                    sample.Priority,
+                    sample.Weight,
+                    context.Activation.Source.Identity);
+                PresentationCameraRequest retirement = PresentationCameraRequest.Response(
+                    PresentationCameraRequestLifecycle.Retire,
+                    (int)sample.LookResponse,
+                    sample.ManualOrbitWeight,
+                    sample.PitchResponseWeight,
+                    sample.YawResponseWeight,
+                    sample.Priority,
+                    sample.Weight,
+                    context.Activation.Source.Identity);
+                AddCamera(key, frame, context, activation, retirement);
+            }
+
+            alive.Add(key);
+        }
+
+        for (int index = 0; index < frame.Operations.CameraResources.Count; index++)
+        {
+            TimelineCameraResourceSample sample = frame.Operations.CameraResources[index];
+            string key = CreateKey(
+                frame,
+                "resource",
+                sample.SourceId,
+                sample.TrackAuthoringId,
+                sample.ClipAuthoringId,
+                sample.Kind.ToString(),
+                sample.ResourceId);
+            if (!m_Active.ContainsKey(key))
+            {
+                string requestId = $"{sample.TrackAuthoringId}/{sample.ClipAuthoringId}";
+                PresentationCameraRequest activation = PresentationCameraRequest.Effect(
+                    PresentationCameraRequestLifecycle.Activate,
+                    requestId,
+                    (int)RequireResourceEffectKind(sample.Kind),
+                    sample.ResourceId,
+                    sample.Priority,
+                    sample.Weight,
+                    context.Activation.Source.Identity);
+                PresentationCameraRequest retirement = PresentationCameraRequest.Effect(
+                    PresentationCameraRequestLifecycle.Retire,
+                    requestId,
+                    (int)RequireResourceEffectKind(sample.Kind),
+                    sample.ResourceId,
+                    sample.Priority,
+                    sample.Weight,
+                    context.Activation.Source.Identity);
+                AddCamera(key, frame, context, activation, retirement);
+            }
+
+            alive.Add(key);
+        }
+    }
+
+    void AddCamera(
+        string key,
+        TimelineRuntimePresentationFrame frame,
+        in TimelinePresentationExecutionContext context,
+        PresentationCameraRequest activationRequest,
+        PresentationCameraRequest retirementRequest)
+    {
+        EventId eventId = new(StableHash.Compute(
+            "timeline-presentation-camera",
+            key,
+            frame.Handle.Value.ToString(CultureInfo.InvariantCulture),
+            frame.Generation.ToString(CultureInfo.InvariantCulture)));
+        var activationHeader = new CharacterPresentationEventHeader(
+            eventId,
+            m_ActorId,
+            context.Tick,
+            context.Activation,
+            frame.PresentationFrame,
+            "timeline.camera");
+        var retirementHeader = new CharacterPresentationEventHeader(
+            eventId,
+            m_ActorId,
+            context.Tick,
+            context.Activation,
+            frame.PresentationFrame + 1,
+            "timeline.camera");
+        string producerId = $"timeline-camera:{key}";
+        var activation = new CharacterPresentationCommand(
+            activationHeader,
+            CharacterPresentationCommandKind.Camera,
+            producerId,
+            frame.InterpolationAlpha,
+            activationRequest.Weight,
+            context.Activation.Generation,
+            0,
+            context.ActionInstanceId,
+            1f,
+            null,
+            activationRequest);
+        var retirement = new CharacterPresentationCommand(
+            retirementHeader,
+            CharacterPresentationCommandKind.Camera,
+            producerId,
+            frame.InterpolationAlpha,
+            retirementRequest.Weight,
+            context.Activation.Generation,
+            0,
+            context.ActionInstanceId,
+            1f,
+            null,
+            retirementRequest);
+        var state = new CameraEventState(key, activation, retirement);
+        m_Active.Add(key, state);
+        m_Runtime.Publish(activation);
+    }
+
+    void RetireInactive(HashSet<string> alive, ulong handle)
+    {
+        List<string> retired = new();
+        foreach (KeyValuePair<string, CameraEventState> pair in m_Active)
+        {
+            if (!alive.Contains(pair.Key))
+                retired.Add(pair.Key);
+        }
+
+        for (int index = 0; index < retired.Count; index++)
+        {
+            CameraEventState state = m_Active[retired[index]];
+            m_Runtime.Retire(state.Retirement);
+            m_Active.Remove(retired[index]);
+        }
+    }
+
+    internal void Reset()
+    {
+        if (m_Disposed || m_Active.Count == 0)
+            return;
+        RetireInactive(new HashSet<string>(StringComparer.Ordinal), 0);
+    }
+
+    static string CreateKey(
+        TimelineRuntimePresentationFrame frame,
+        string kind,
+        params string[] values)
+    {
+        var parts = new List<string>(values.Length + 4)
+        {
+            kind,
+            frame.ExecutionIdentity.OwnerIdentity,
+            frame.Handle.Value.ToString(CultureInfo.InvariantCulture),
+            frame.Generation.ToString(CultureInfo.InvariantCulture)
+        };
+        parts.AddRange(values);
+        return string.Join("|", parts);
+    }
+
+    static string RequireSequenceId(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new InvalidOperationException("Timeline camera state has no SequenceId.");
+        return value.Trim();
+    }
+
+    static CameraEffectKind RequireCueEffectKind(TimelineCameraCueKind kind)
+    {
+        return kind switch
+        {
+            TimelineCameraCueKind.Shake => CameraEffectKind.Shake,
+            TimelineCameraCueKind.FovKick => CameraEffectKind.Zoom,
+            TimelineCameraCueKind.Recoil => CameraEffectKind.Shake,
+            TimelineCameraCueKind.Override => CameraEffectKind.Override,
+            TimelineCameraCueKind.Shot => CameraEffectKind.Shot,
+            _ => throw new InvalidOperationException(
+                $"Timeline camera cue '{kind}' has no formal Camera domain effect mapping.")
+        };
+    }
+
+    static CameraEffectKind RequireResourceEffectKind(TimelineCameraResourceKind kind)
+    {
+        return Enum.IsDefined(typeof(CameraEffectKind), (byte)kind)
+            ? (CameraEffectKind)kind
+            : throw new InvalidOperationException(
+                $"Timeline camera resource '{kind}' is not a formal Camera domain effect.");
+    }
+
+    public void Dispose()
+    {
+        if (m_Disposed)
+            return;
+        m_Disposed = true;
+        m_TimelineHost.PresentationFrameProduced -= OnPresentationFrame;
+        m_TimelineHost.PresentationPlaybackEnded -= OnPresentationPlaybackEnded;
+        Reset();
+    }
+}
 }

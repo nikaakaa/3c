@@ -1290,6 +1290,7 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         public string Identity { get; }
+        public EventId EventId => new(StableHash.Compute("btsmtl-timeline-presentation-marker", Identity));
         public TimelineRuntimePlaybackHandle PlaybackHandle { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public ulong Generation { get; }

@@ -145,6 +145,22 @@ Presentation Marker 事件的 `EventId` MUST由 `PlaybackHandle`、`Generation`�
 - **WHEN** playback 停止或 generation 变化
 - **THEN** 旧 generation 的 Marker MUST不再触发
 - **AND** MUST NOT通过 Logic Commit / Discard 重放、补写或撤销 Gameplay 事实
+### Requirement: Presentation 输出必须交给正式下游域调和消费
+
+PresentationFrame 中的表现输出 MUST交给已经装配的正式下游域消费：表现动画 MUST继续经 Action playback command 调和，Camera State / Cue / Response / Resource MUST交给 Camera domain，并使用稳定 EventId 做 keep / replace / cancel 调和。没有正式下游域的表现能力 MUST NOT通过伪命令、payload 字符串或第二套事件系统假装已消费，MUST NOT写 Gameplay fact。
+
+#### Scenario: Camera 采样进入 Camera domain
+
+- **WHEN** PresentationFrame 采样到 Camera State / Cue / Response / Resource
+- **THEN** 下游 MUST使用稳定 EventId 向 Camera domain 发出激活请求
+- **AND** 采样离开生效区间或 playback 结束时 MUST发出可调和的退役请求
+
+#### Scenario: 下游 domain 尚未装配
+
+- **WHEN** Timeline 输出声明了某个尚未装配正式下游 domain 的表现能力
+- **THEN** 系统 MUST NOT伪造 CharacterPresentationCommand 或新建第二套事件系统
+- **AND** 该输出 MUST NOT被宣称为已交给下游消费
+
 ### Requirement: 编辑器吸附粒度必须等于 tick 步长
 
 Timeline 编辑器 clip/cue 边界吸附粒度 MUST 等于会话 tick 步长（`1/tickRate`），MUST NOT 提供运行时无法表示的亚 tick 位置。编辑器预览刻度 MAY 与运行时 tick 率独立配置。

@@ -126,9 +126,19 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     rootHierarchy,
                     CharacterPresentationBodyState.FromFloat32(initialBody),
                     CharacterPresentationRole.SimulatedActor,
-                    CharacterLocomotionPresentationComposition.PrepareServerAuthorityRemote(
-                        string.Concat("server-authority-remote/", BindingId, "/", actorId.Value),
-                        m_BodyPresentationProfile),
+                    CharacterLocomotionPresentationPreparation.RequireBinding(
+                        new CharacterLocomotionPresentationPreparationRequest(
+                            new CharacterLocomotionPresentationPlan(
+                                string.Concat(
+                                    "server-authority-remote/",
+                                    BindingId,
+                                    "/",
+                                    actorId.Value,
+                                    "/locomotion"),
+                                CharacterLocomotionClockMode.FreeRun,
+                                CharacterLocomotionBodySource.SelectedStream),
+                            m_BodyPresentationProfile,
+                            CharacterLocomotionPresentationSourceCapability.SelectedBodyStream)),
                     worldAwarePresentation,
                     physicsScene,
                     null,

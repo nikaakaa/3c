@@ -246,13 +246,23 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                         throw new InvalidOperationException($"Remote Rollback Character Host '{name}' cannot receive LocalOwner Camera configuration.");
                     }
                 }
-                PreparedCharacterLocomotionPresentationBinding locomotionBinding = local
-                    ? CharacterLocomotionPresentationComposition.PrepareRollbackLocal(
-                        sessionHost.Composition,
-                        bodyPresentationProfile)
-                    : CharacterLocomotionPresentationComposition.PrepareRollbackRemote(
-                        sessionHost.Composition,
-                        bodyPresentationProfile);
+                CharacterLocomotionBodySource locomotionBodySource = local
+                    ? CharacterLocomotionBodySource.CommittedStream
+                    : CharacterLocomotionBodySource.SelectedStream;
+                CharacterLocomotionPresentationSourceCapability locomotionSourceCapabilities = local
+                    ? CharacterLocomotionPresentationSourceCapability.CommittedBodyStream
+                    : CharacterLocomotionPresentationSourceCapability.SelectedBodyStream;
+                PreparedCharacterLocomotionPresentationBinding locomotionBinding =
+                    CharacterLocomotionPresentationPreparation.RequireBinding(
+                        new CharacterLocomotionPresentationPreparationRequest(
+                            new CharacterLocomotionPresentationPlan(
+                                string.Concat(
+                                    sessionHost.Composition.SessionId,
+                                    local ? "/locomotion/rollback/local" : "/locomotion/rollback/remote"),
+                                CharacterLocomotionClockMode.FreeRun,
+                                locomotionBodySource),
+                            bodyPresentationProfile,
+                            locomotionSourceCapabilities));
                 presentation = CharacterPresentationDomainRuntimeFactory.Create(
                     tickRate,
                     animationPresentationProfile,

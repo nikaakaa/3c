@@ -310,6 +310,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 string.Empty);
         }
 
+        public static PreparedCharacterLocomotionPresentationBinding RequireBinding(
+            in CharacterLocomotionPresentationPreparationRequest request)
+        {
+            CharacterLocomotionPresentationPreparationResult result = Prepare(in request);
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Locomotion presentation preparation failed: {result.FailureCode} {result.Message}");
+            }
+            return result.Binding;
+        }
+
         static bool SupportsBodySource(
             CharacterLocomotionPresentationSourceCapability capabilities,
             CharacterLocomotionBodySource bodySource) =>

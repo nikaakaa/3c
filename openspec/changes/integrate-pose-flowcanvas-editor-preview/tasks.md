@@ -3,7 +3,7 @@
 ## 1. 保留现有基础
 
 - [x] 1.1 保留已接入的FlowCanvas原生图编辑、typed端口及统一作者交互基础。
-- [x] 1.2 保留现有Program Image、Native／Job、Source／Constraint／Final Publication和唯一帧事务。
+- [x] 1.2 保留现有原生图执行、Native／Job、Source／Constraint／Final Publication和唯一帧事务。
 - [x] 1.3 保留已有真实Actor观察、稳定来源identity和窗口解绑基础，作为新组织的接入点。
 
 ## 2. 作者模型与动画层

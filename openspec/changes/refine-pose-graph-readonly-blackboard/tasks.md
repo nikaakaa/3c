@@ -46,7 +46,7 @@ DOMAIN-BOUNDARIES-20260914-03执行补充见design第12节：3.8—3.14沿真实
 - [x] 3.8 实现同一原生图的源需求准备和姿态求值阶段，准备结果只表达活跃分支与source demand，求值仅在唯一Animancer Barrier完成后读取同次源结果。
 - [x] 3.9 将Player、PoseState、Slot、BlendStack和Inertialization的既有逻辑接入原生节点，保留准入、时间、权重、relevance、capture/release及Pending/Committed历史。保留已有Player和混合算法；补齐ICharacterPoseNativeStateMachineSource等具体服务实现、构造注入和实际输出消费者，不能以handler或接口声明数量判定完成。
 - [ ] 3.10 接入Phase同步、state-local source与Linked Pose正式绑定，保留实际资源身份、continuation、readiness和调用共享规则，不用插件通用FSM替换动画状态语义。
-- [ ] 3.11 将原生节点采样需求与结果交接接回唯一Source模块，保留ACL/Playable和现有资源准备/释放能力，不新增direct Play、资源副本或旧Image回退。已有Player Source binding必须由正式实例装配注入，并让同次Barrier后的采样进入实际姿态链，不能只完成binding类声明。
+- [ ] 3.11 将原生节点采样需求与结果交接接回唯一Source模块，保留ACL/Playable和现有资源准备/释放能力，不新增direct Play、资源副本或旧Image回退。已有Player Source binding必须由正式实例装配注入，并让同次Barrier后的采样进入实际姿态链，不能只完成binding类声明。当前状态：模块帧生命周期已由RoleRuntime单点接回（开帧/收帧/丢弃与根图帧对称，子图共享租约），绑定Prepare已具备前提；剩余收口为评估阶段native Job完成时机（同步评估屏障在新管线无调用方，CompletedAt检查疑似逐帧错位），待运行日志指认后修复。
 - [x] 3.12 让Foot、Goal聚合和FBBIK原生节点调用IK任务当前正式Constraint接口，保持输入与求解次序、单数Goal/输出，不复制Foot/IK状态或修改算法。
 - [x] 3.13 实现按实例复用的节点输出缓冲、只读分支输入和明确租约释放，移除全图Value Lifetime/Workspace计划依赖；节点内部已有Native/Job算法由原owner管理。
 - [x] 3.14 将原生Output接入唯一Final Publication，复用已新增CharacterFinalPoseNativePublication及物理／属性Writer入口，完成正式实例注入和最终消费者切换；保留整Rig预检查、完整骨骼写入、提交／丢弃及Barrier前后故障边界，不从节点另写Transform。共享Host由核心4.7接线，Final服务存在不等同角色已调用。
@@ -54,3 +54,4 @@ DOMAIN-BOUNDARIES-20260914-03执行补充见design第12节：3.8—3.14沿真实
 - [x] 3.16 将已完成Get/条件/BlendSpace的唯一EventGraph变量帧消费适配到原生端口与调用实例，保留只读范围、精确类型、曲线来源和Source Pending不回退事件状态的行为。
 - [x] 3.17 从原生图、Node、Port、调用实例和已完成阶段结果发布节点观察与Pose Watch，保持订阅/租约释放，不为旧SourceMap生成隐藏Image或重新求值。
 - [x] 3.18 按主方案D17先删除Pose IR、ProgramImage、Execution View、全图操作表/Worker编排和专属Compiler/产物入口，再处理保留消费者接线；混合文件只提取有效算法／作者规则，不等待Host全链完成才删。a31c27b79已完成编译Pass主链删除，剩余类型与消费者仍需收口；共享壳及总Projection引用交核心，不恢复加载期编译、兼容reader或双运行模式。
+- [ ] 3.19 清理Source Module执行壳残留死面：BindDemand、RequireDemand、PrepareFrameResult、RequirePendingReady、SealReadiness、HasPreparedSource、RequirePreparedResources、EnterEvaluateBarrier、usage与release诊断包装及FramePage的demand/result半边在新管线零调用方，统一删除；同pass按运行日志收口评估阶段Job完成时机的底层失败。

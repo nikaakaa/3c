@@ -33,11 +33,22 @@ Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；A
 - **THEN** 动画Pose MAY连续变化
 - **AND** Gameplay state与facts MUST保持不变
 
-### Requirement: CharacterSimulationPresentationRuntime必须执行唯一原生Pose链
+### Requirement: Timeline Track / Clip 执行域必须分离
 
-SimulationCommitter与唯一`CharacterSimulationPresentationRuntime` MUST共同构成Unity animation application seam。其内部唯一`CharacterAnimationPresentationRuntime` MUST消费Committed Body/Intent、Presentation parameter与有限Action command并构造Presentation Fact，唯一拥有根`CharacterPoseFrameTransaction`，但 MUST只负责actor-local Tuning协调、Frame Lease、固定Module顺序、Animancer Evaluate Barrier、统一Seal/Discard/Fault和外部输入输出装配。根Transaction MUST只保存lineage、阶段、Module lease/result与Outcome，不得保存Module内部Workspace。
+Timeline Track / Clip MUST显式声明 `Logic`、`Presentation` 或 `DualProjection` 执行域。Logic 内容 MUST由 SimulationTick 推进并遵守 Commit / Discard；Presentation 内容 MUST由 PresentationFrame 推进并只产生表现结果；`DualProjection` 只把同一作者 Clip 的 Logic 图与 Presentation Marker 投影到各自路径，不是第三个时钟或第二份 Timeline runtime。普通表现动画、特效、音效和相机 MUST不因为归属于同一 Timeline 而被迫等待逻辑 Tick。Presentation TreeClip MUST只按 Marker 输出可调和事件，不得在 PresentationFrame 执行 TimelineBody 图；Presentation Event MUST不写 Gameplay fact。
 
-正式运行 MUST 由唯一原生 FlowCanvas Pose Graph 实例执行 PoseStateMachine、Player、ActionPlaybackInput lifecycle、AnimationSlot、Local/Component Pose、Constraint 与 Output；唯一 `CharacterPoseSourceModule` 负责 source sample、Animancer/Playable 与物理 source 生命周期；唯一 `CharacterPoseConstraintRuntime` 负责 Foot Placement、PoseBone Goal、Goal Contribution、Assembler、唯一 Goal Set、FBBIK 与 BendHistory；唯一 `CharacterFinalPosePublication` 负责唯一 Committed/Pending Final Pose 物理页与 Physical Writer。图实例 MUST 按固定阶段调用各 Constraint 入口一次，Constraint Module MUST 不扫描 Graph 或维护第二份 Schedule。Module 间 MUST 只交换同 Frame、Completion、Graph、Rig 与 Tuning Generation lineage 的 typed Result。外层 Runtime、ScenePlay 与 Diagnostics MUST 不创建第二 Graph 实例、第二 Action lifecycle、第二 Constraint 事务、第二 Goal Set、第二 FBBIK、第二 Final Pose 页或第二 Writer。
+#### Scenario: TreeClip 触发表现事件
+
+- **WHEN** TreeClip 的 Presentation Marker 被视觉游标跨过
+- **THEN** PresentationFrame MUST直接产生 Presentation Event
+- **AND** 该事件 MUST不等待 SimulationTick
+- **AND** Gameplay TreeClip 的逻辑输出仍 MUST按 Logic Tick 与 Commit / Discard 执行
+
+### Requirement: 表现运行时必须执行唯一原生Pose链
+
+SimulationCommitter与唯一`CharacterPresentationDomainRuntime` MUST共同构成Unity animation application seam。表现运行时 MUST 唯一持有该 Actor 的 Pose 域实例并按固定阶段门推进唯一帧事务：以 frameInput 开启 DomainSession 帧后，preparation MUST 为 Prepared 才进入 PrepareEvaluation；evaluation MUST 为 Evaluated 才进入 ValidatePending 与 Commit。任何非 Prepared 或非 Evaluated 结果 MUST 按其 FailureCode Discard Pose 会话并丢弃表现帧，MUST NOT 携带该结果冲击后续阶段合同。帧事务的阶段状态、lease 与阶段结果由 FrameCoordinator 与根 Pose 图运行时持有，表现运行时 MUST 只按阶段门消费阶段结果，不解析图内部 Workspace。当前完整运行链为：PresentationDomainRuntime → Pose DomainInstance/Session → FrameCoordinator → RoleRuntime（唯一驱动 Source Module 帧生命周期）→ 根 GraphRuntime（FlowCanvas 原生图，状态机子图经 Subgraph 边界派生并共享同一帧谱与模块租约）→ 节点 Handler。
+
+正式运行 MUST 由唯一原生 FlowCanvas Pose Graph 实例执行 PoseStateMachine、Player、ActionPlaybackInput lifecycle、AnimationSlot、Local/Component Pose、Constraint 与 Output；唯一 `CharacterPoseSourceModule` 负责 source sample、Animancer/Playable 与物理 source 生命周期，其帧打开、收帧与丢弃 MUST 由 RoleRuntime 单点驱动，模块开帧失败 MUST 丢弃已开图帧并上抛；唯一 `CharacterPoseConstraintRuntime` 负责 Foot Placement、PoseBone Goal、Goal Contribution、Assembler、唯一 Goal Set、FBBIK 与 BendHistory；唯一 `CharacterFinalPosePublication` 负责唯一 Committed/Pending Final Pose 物理页与 Physical Writer。图实例 MUST 按固定阶段调用各 Constraint 入口一次，Constraint Module MUST 不扫描 Graph 或维护第二份 Schedule。Module 间 MUST 只交换同 Frame、Completion、Graph、Rig 与 Tuning Generation lineage 的 typed Result。外层 Runtime、ScenePlay 与 Diagnostics MUST 不创建第二 Graph 实例、第二 Action lifecycle、第二 Constraint 事务、第二 Goal Set、第二 FBBIK、第二 Final Pose 页或第二 Writer。
 
 Constraint外部Owner变化 MUST整体保留指定提交ad3527e103cc3235a63e8a1c1dbd26df5155e0ba的动画时钟／混合、Foot、Pelvis、Goal与FBBIK实现、公式、配置和数值顺序；成功Reset MUST保留第一阶段通过后的正式结果，第一阶段批准的Reset差异单独引用证据；本次Goal MUST先完成并验证IK维护重构，再以其通过提交串行接入；第一阶段结构变化与独立Reset修正的证据 MUST保留，总基线不变。其它Foot待办或未归档不构成前置。本change不得恢复旧中央Foot状态机、已撤除业务Reach硬夹紧／末端夹脚、已撤销SmoothKnee或恢复第一阶段已删除的结构，不得接管其它未实施IK行为任务。
 

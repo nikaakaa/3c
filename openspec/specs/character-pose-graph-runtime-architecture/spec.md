@@ -118,7 +118,7 @@ Pose 域会话 MUST 由唯一包装器（CharacterPoseNativeDomainInstance）持
 
 ### Requirement: Pose 实例身份必须按 Actor 稳定派生且跨 Host 唯一
 
-Pose 实例 instanceId MUST 从 ActorId 稳定哈希派生、MUST 非零，并在同一 Actor 的多轮回放间保持稳定；子图实例身份 MUST 从父实例身份派生。不同 Host（如 fixed-player 与 fixed-target）的 Pose 实例与子图实例身份 MUST 不相同，任何以实例身份为键的状态 MUST 不跨 Host 命中。
+Pose 实例 instanceId MUST 从 ActorId 稳定哈希派生、MUST 非零，并在同一 Actor 的多轮回放间保持稳定；子图实例身份 MUST 由 StableHash(父实例身份, 子身份, 序列) 派生 64 位身份，天然防溢出：StateMachine 状态子图以状态 Id 为子身份，Subgraph 节点以节点 Id 为子身份；派生结果为零或与父身份碰撞 MUST 显式失败。不同 Host（如 fixed-player 与 fixed-target）的 Pose 实例与子图实例身份 MUST 不相同，任何以实例身份为键的状态 MUST 不跨 Host 命中。
 
 #### Scenario: 两个 Fixed Character Host 同时装配
 
@@ -136,3 +136,33 @@ Pose 运行实例的图是未持久化的瞬态克隆。编辑器 restore/残留
 - **THEN** 运行中已挂接 Native Runtime 的瞬态 Pose 图 MUST 全部保留
 - **AND** Pose 域帧推进 MUST NOT 因该清理出现任何 ObjectDisposed 异常
 - **AND** 无 Native Runtime 挂接的编辑态瞬态残留 MUST 仍被清理
+
+### Requirement: 帧谱必须区分开帧与完成帧两种有效语义
+
+`CharacterPoseNativeFrameLineage` MUST 提供两种互斥有效语义：开帧有效（全部身份字段有效且 completion identity 为零）服务 Frame Lease 与 Source/Constraint 模块开帧；完成帧有效（全部身份字段有效且 completion identity 非零）服务 Demand、Evaluation、Validation、Publication 与最终结果合同。两语义 MUST 共享同一字段有效性检查，MUST NOT 用其中一个语义的实现推导另一个；frame identity 与 completion identity 的分配与递增由根图唯一管理。
+
+#### Scenario: Demand 携带完成帧谱
+
+- **WHEN** 根图 Prepare 成功构造 Source Demand
+- **THEN** Demand MUST 携带完成帧谱并通过完成帧语义校验
+- **AND** 同帧开帧租约 MUST 仍保持 completion 为零的开帧语义
+
+### Requirement: Source Module 帧生命周期必须由 RoleRuntime 单点驱动
+
+`CharacterPoseSourceModule` 的帧打开、收帧与丢弃 MUST 由该 Actor 的 `CharacterPoseNativeRoleRuntime` 单点驱动：根图 BeginFrame 成功后 MUST 以开帧帧谱打开模块帧，模块开帧失败 MUST 丢弃已开的图帧并上抛；根图 Commit 成功后 MUST 收模块帧（提交物理源与采样后端并清理 pending 页）；Discard 与 Stop MUST 同步丢弃模块帧。状态机子图与其它子图 MUST 复用根帧的同一模块租约，MUST NOT 出现第二开帧入口或帧外采样。
+
+#### Scenario: 模块帧未开时源绑定 Prepare
+
+- **WHEN** Clip、BlendSpace 或 Slot 绑定在模块帧未打开时执行 Prepare
+- **THEN** 绑定 MUST 以明确异常失败
+- **AND** 运行链 MUST NOT 以默认源或旧帧租约继续推进
+
+### Requirement: 表现帧推进必须按阶段结果门控
+
+表现运行时帧推进 MUST 在每个阶段边界检查阶段结果状态：preparation MUST 为 Prepared 才进入评估准备，evaluation MUST 为 Evaluated 才进入 ValidatePending 与 Commit。任何非 Prepared 或非 Evaluated 结果 MUST 按其 FailureCode Discard 会话与表现帧，MUST NOT 携带该结果冲击后续阶段合同；阶段失败原因 MUST 以带来源与消息的日志暴露，MUST NOT 以跨阶段合同异常终止帧循环。
+
+#### Scenario: 根图评估内部失败
+
+- **WHEN** 根图 Evaluate 内部异常被转为 Faulted 结果
+- **THEN** 表现运行时 MUST 丢弃当前帧并记录来源与消息
+- **AND** MUST NOT 将 Faulted 结果传入 ValidatePending 或 Commit

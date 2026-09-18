@@ -106,3 +106,10 @@
 - 修复（3e99c84c1）：RunPoseFrame评估后状态门——非Evaluated时Warning日志携带evaluation.Source与Message（把被吞的底层真因暴露到下一轮Play日志），按失败码Discard会话并丢弃表现帧，录制不再被合同异常打断。
 - 待办：下一轮Play按Warning日志指认的底层Evaluate失败收口（静态候选：native playable Job完成时机与EnterEvaluateBarrier零调用——同步评估屏障属旧执行壳流程，新管线未接；ClipPlayerHandler.CompleteFrame的CompletedAt检查可能每帧错帧）。
 - 编译证据：Runtime 0错误（强制参数+shutdown）。Play验证归用户。
+
+## Replay收口当前卡点与诊断增强（2026-09-19）
+
+- 运行日志真因（评估门Warning暴露）：state corin.locomotion.idle did not produce the current Local Pose——状态机子图Evaluate的Local Pose校验失败，每帧Faulted经阶段门降级Discard，Play不再崩、Trace可保存，但姿态内容为空，Replay尚无法matched。
+- 生成→编译→装配→帧推进链路已通：域创建、图启动、源模块开帧、绑定Prepare、根图与子图Evaluate均进入；唯一断点在子图Local Pose产出校验，五条件（结果无效/status非Evaluated/输出非LocalPose/Native无效/completion不等）静态无法区分。
+- 诊断增强（38c2a27c3）：StateMachineSource.Evaluate失败异常携带详情——有效结果输出status/输出端口类型/输出completion与期望completion对照，无效结果输出子图Source与Message；下一轮Play按详情直接定位（首要嫌疑：native Job完成时机逐帧错位，同步评估屏障在新管线无调用方）。
+- 输入/输出/Timeline交接合同已入运行时架构spec（8090f9076）：帧输入显式字段、事件图typed变量帧只读消费、输出带CompletionIdentity的typed端口值与四类阶段结果、Timeline唯一交接点为已提交Action command集与Fact帧事实。

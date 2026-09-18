@@ -814,8 +814,13 @@ namespace BTSMTL.Timeline.Editor
             }
             bool isLogicTreeClip = request.Kind == TimelineContractKinds.TreeClip &&
                 track.Source.ExecutionDomain == TimelineExecutionDomain.Logic;
-            if (request.Kind == TimelineContractKinds.TreeClip && !isLogicTreeClip)
-                return "Presentation TreeClip 必须通过 Marker 创建，当前入口不可用。";
+            bool isMarkersTreeClip = request.Kind == TimelineContractKinds.TreeClip &&
+                track.Source.ExecutionDomain == TimelineExecutionDomain.Presentation;
+            if (request.Kind == TimelineContractKinds.TreeClip && !isLogicTreeClip && !isMarkersTreeClip)
+                return "TreeClip只支持Logic或Presentation执行域。";
+            if (isMarkersTreeClip &&
+                    (request.TreeGraph != null || !string.IsNullOrWhiteSpace(request.NewTreeGraphName)))
+                return "Presentation TreeClip不能绑定Timeline节点图资产。";
             int terminalFrame = Mathf.Max(request.StartFrame + 1, Timeline.MaxFrame);
             try
             {
@@ -823,7 +828,7 @@ namespace BTSMTL.Timeline.Editor
                 if (!ApplyImmediate(() =>
                 {
                     UnityEngine.Object treeGraph = null;
-                    if (request.Kind == TimelineContractKinds.TreeClip)
+                    if (request.Kind == TimelineContractKinds.TreeClip && isLogicTreeClip)
                     {
                         treeGraph = request.TreeGraph;
                         if (treeGraph == null)
@@ -841,6 +846,8 @@ namespace BTSMTL.Timeline.Editor
                     added.EndFrame = isLogicTreeClip
                         ? terminalFrame
                         : Mathf.Max(request.StartFrame + 1, request.EndFrame);
+                    if (isMarkersTreeClip && added is TreeClip markersClip)
+                        markersClip.SetExitSource(TimelineClipExitSource.FrameBoundary);
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip"))

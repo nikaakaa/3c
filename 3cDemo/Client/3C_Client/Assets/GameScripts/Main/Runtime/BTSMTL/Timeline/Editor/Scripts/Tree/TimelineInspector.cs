@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BTSMTL.Timeline;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -82,6 +83,7 @@ namespace BTSMTL.Timeline.Editor
                 EditorGUILayout.HelpBox(m_ConfigurationError, MessageType.Error);
             EditorGUILayout.LabelField("Name", clip.Name);
             EditorGUILayout.LabelField("Kind", clip.ContractKind);
+            DrawClipMarkerSection(asset, clip);
 
             int startFrame = clip.StartFrame;
             int endFrame = clip.EndFrame;
@@ -131,9 +133,96 @@ namespace BTSMTL.Timeline.Editor
                 if (ValuesDiffer(before, after))
                 {
                     property.SetValue(configuration, after, null);
-                    ApplyConfiguration(asset, clip, configuration);
++
+                    DrawClipMarkerSection(asset, clip);
                     break;
                 }
+            }
+        }
+
+        void DrawPresentationMarkers(TimelineAsset asset, TreeClip tree)
+        {
+            var bindings = asset.Data.ExternalBindings
+                .Where(value => value != null &&
+                    value.Access == TimelineBindingAccess.Input &&
+                    value.Lifetime == TimelineBindingLifetime.Call)
+                .ToArray();
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Presentation Markers", EditorStyles.boldLabel);
+            TimelinePresentationMarker[] markers = tree.PresentationMarkers.ToArray();
+            for (int index = markers.Length - 1; index >= 0; index-- )
+            {
+                TimelinePresentationMarker marker = markers[index];
+                EditorGUILayout.BeginHorizontal();
+                int frame = Mathf.Max(0, EditorGUILayout.IntField("Frame", marker.Frame));
+                var lifetime = (TimelinePresentationMarkerLifetime)EditorGUILayout.EnumPopup(marker.Lifetime);
+                bool stateful = lifetime == TimelinePresentationMarkerLifetime.Stateful;
+                int endFrame = stateful ? Mathf.Max(frame + 1, marker.EndFrame) : frame;
+                using (new EditorGUI.DisabledScope(!stateful))
+                    endFrame = EditorGUILayout.IntField("End", endFrame);
+                string[] options = bindings
+                    .Select(value => string.IsNullOrEmpty(value.DisplayName) ? value.BindingId : value.DisplayName)
+                    .ToArray();
+                int selected = Array.FindIndex(bindings, value => string.Equals(value.BindingId, marker.PayloadBinding.BindingId, StringComparison.Ordinal));
+                int next = EditorGUILayout.Popup(Mathf.Max(0, selected), options);
+                bool remove = GUILayout.Button("-", GUILayout.Width(22));
+                EditorGUILayout.EndHorizontal();
+                if (remove)
+                {
+                    MutatePresentationMarkers(asset, () => tree.RemovePresentationMarker(marker));
+                    return;
+                }
+                TimelineExternalBindingUse bindingUse = next != selected && next >= 0
+                    ? new TimelineExternalBindingUse(
+                        bindings[next].BindingId,
+                        bindings[next].ValueKind,
+                        TimelineBindingAccess.Input,
+                        TimelineBindingLifetime.Call)
+                    : null;
+                if (frame != marker.Frame ||
+                    lifetime != marker.Lifetime ||
+                    endFrame != marker.EndFrame ||
+                    bindingUse != null)
+                {
+                    TimelinePresentationMarker target = marker;
+                    TimelineExternalBindingUse payload = bindingUse ?? marker.PayloadBinding;
+                    MutatePresentationMarkers(asset, () => target.Configure(frame, lifetime, endFrame, payload));
+                    return;
+                }
+            }
+            if (bindings.Length == 0)
+            {
+                EditorGUILayout.HelpBox("先在 Timeline Data 外部绑定表创建 Input/Call 绑定，Marker 才能引用 payload。", MessageType.Info);
+                return;
+            }
+            if (GUILayout.Button("Add Marker"))
+            {
+                TimelineExternalBindingDeclaration first = bindings[0];
+                MutatePresentationMarkers(asset, () => tree.AddPresentationMarker(
+                    tree.StartFrame,
+                    TimelinePresentationMarkerLifetime.Pulse,
+                    tree.StartFrame,
+                    new TimelineExternalBindingUse(
+                        first.BindingId,
+                        first.ValueKind,
+                        TimelineBindingAccess.Input,
+                        TimelineBindingLifetime.Call)));
+            }
+        }
+
+        void MutatePresentationMarkers(TimelineAsset asset, Action mutation)
+        {
+            if (!TryBeginMutation(asset))
+                return;
+            try
+            {
+                asset.Data.ApplyModify(mutation, "Edit Timeline Presentation Markers");
+                m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
+                m_ConfigurationError = null;
+            }
+            catch (Exception exception)
+            {
+                m_ConfigurationError = exception.Message;
             }
         }
 
@@ -185,6 +274,13 @@ namespace BTSMTL.Timeline.Editor
             {
                 m_ConfigurationError = exception.Message;
             }
+        }
+
+        void DrawClipMarkerSection(TimelineAsset asset, Clip clip)
+        {
+            if (clip is TreeClip presentationTree &&
+                presentationTree.ExecutionDomain == TimelineExecutionDomain.Presentation)
+                DrawPresentationMarkers(asset, presentationTree);
         }
 
         void ApplyFrames(TimelineAsset asset, Clip clip, int startFrame, int endFrame, int selfEaseInFrame, int selfEaseOutFrame, int clipInFrame)

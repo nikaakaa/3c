@@ -143,3 +143,9 @@ Corin dump 中的 `AttackProperty` 不是 Timeline 的直接数据格式。主�
 消费边界：`AttackProperty` 由 Ability/Attack 领域订阅并解释；Camera 请求继续由 Camera/TreeClip 节点合同拥有；VFX/Audio 必须由各自正式 domain 订阅或显式失败，Timeline 不代发伪命令。没有领域订阅时，事件只能保持为已提交事实和 trace，不能宣称已消费。触发时钟只有 Logic SimulationTick；不得改由 PresentationFrame 重发。
 
 2026-09-19 主控复验：`9fe8ea317` 已把 Corin AttackProperty 扩展到全量 `108` 个正式 GameplayEffect key，命中效果编号按 `uint` 收口；同 Trace 1121 帧逐帧 0 分歧。Timeline 侧确认：ActionCue 只发布稳定领域事件，`CueId` 保持原始 `Corin_Attack_*_AttackProperty_*` key；命中效果编号、碰撞形状和属性 payload 不进入 Timeline runtime。旧 TreeDesigner Timeline UI 保持删除，FlowCanvas 只承担 TreeClip / Marker 图可视化。
+
+## Normal Attack End / Explode 复核（2026-09-19）
+
+依据 `docs/zzz-corin-controller-map.md` 复核后，现有五段简化 Timeline 不升级为完整 Normal 状态机：Attack 1 / 2 / 4 可继续用线性 main + End 覆盖主起止和主段 cue；Attack 3 Explode 与 Attack 5 End / End_2 不可用当前 Timeline 表达。具名缺口是 `GAP-Normal3-ExplodeStateSegment`、`GAP-Normal3-ExplodeCueRemap`、`GAP-Normal5-EndBranchSelection`、`GAP-Normal5-End2TimelineBinding` 和 `GAP-NormalEndStateBoundary`。Branch / Rush 不混入现有 Attack Timeline。
+
+`Attack_Normal_05_End_2` 不是缺 Clip：状态实际绑定 `Attack_Normal_05_B`，缺的是正式 Timeline 段、状态边界和分支选择。AttackProperty payload 继续全量留在 GameplayEffect Profile / Ability 执行域；Timeline 只发布原始 `CueId` 和播放身份。

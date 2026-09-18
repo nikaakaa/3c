@@ -50,4 +50,4 @@
 ## 8. 编辑器 MVC 与当前消费边界
 
 - [x] 8.1 Timeline 顶栏拆成 `TimelineEditorBindingState` 只读模型、`TimelineEditorToolbarView` 视图和 `TimelineEditorWindow` controller；按钮按文档导航、Workspace 模式、运行状态分组
-- [x] 8.2 登记 Corin `AttackProperty` 消费边界：主控转成 Timeline Marker / Ability 打击帧，Timeline runtime 与编辑器只消费正式内容，不新增私有解析器或第二运行链- [x] 8.3 收口 Corin Attack ActionCue 合同：ActionCue 只在 Logic commit 后发布 `CueType`/`CueId` 领域事件，Timeline 不解析 `AttackProperty`，不代行 Camera/VFX/Audio 消费- [x] 8.4 同步主控全量 AttackProperty / uint 效果编号结果：Timeline 只保留原始 CueId 与播放身份，payload 消费归 GameplayEffect / Ability，TreeDesigner 旧 UI 删除与 FlowCanvas 可视化边界入 spec
+- [x] 8.2 登记 Corin `AttackProperty` 消费边界：主控转成 Timeline Marker / Ability 打击帧，Timeline runtime 与编辑器只消费正式内容，不新增私有解析器或第二运行链- [x] 8.3 收口 Corin Attack ActionCue 合同：ActionCue 只在 Logic commit 后发布 `CueType`/`CueId` 领域事件，Timeline 不解析 `AttackProperty`，不代行 Camera/VFX/Audio 消费- [x] 8.4 同步主控全量 AttackProperty / uint 效果编号结果：Timeline 只保留原始 CueId 与播放身份，payload 消费归 GameplayEffect / Ability，TreeDesigner 旧 UI 删除与 FlowCanvas 可视化边界入 spec- [x] 8.5 复核 Normal Attack End / Explode：登记 Attack3 Explode、Attack5 End/End_2 分支、End2 Timeline 绑定和状态本地 cue 重映射缺口；Branch/Rush 不混入现有五段 Timeline

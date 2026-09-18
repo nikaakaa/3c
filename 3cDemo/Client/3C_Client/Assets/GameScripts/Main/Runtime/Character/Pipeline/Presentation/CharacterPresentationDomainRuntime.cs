@@ -422,9 +422,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_HasTrajectory
                     ? m_Trajectory.MovementModeId
                     : CharacterPresentationTrajectoryIntent.StationaryMovementModeId,
-                default,
-                default,
-                0d,
+                m_HasTrajectory ? m_Trajectory.MovementPlaybackClock : default,
+                m_HasTrajectory ? m_Trajectory.LocomotionMotionTimeline : default,
+                m_HasTrajectory && m_Trajectory.MovementPlaybackClock.IsValid
+                    ? m_Trajectory.MovementPlaybackClock.ElapsedSeconds
+                    : 0d,
                 m_Body.ResetSequence);
         }
 

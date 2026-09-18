@@ -201,10 +201,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             RequireFrame();
             m_Player.SetRelevant(true);
+            CharacterPresentationFactFrame factFrame = input.FactFrame;
             m_ClockPolicy.DriveClock(
                 m_Player,
                 node.AnimationChannelId,
                 input.PresentationSampleTick,
+                in factFrame,
                 input.DeltaSeconds);
             m_Capture = m_Player.PrepareCapture(
                 input.DeltaSeconds,

@@ -11,6 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationClipPlayerRuntime player,
             AnimationChannelId channelId,
             double presentationSampleTick,
+            in CharacterPresentationFactFrame factFrame,
             float presentationDeltaSeconds);
     }
 
@@ -32,9 +33,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationClipPlayerRuntime player,
             AnimationChannelId channelId,
             double presentationSampleTick,
+            in CharacterPresentationFactFrame factFrame,
             float presentationDeltaSeconds)
         {
             player.Advance(presentationDeltaSeconds, player.PlayRate);
+        }
+    }
+
+    internal sealed class CommittedMovementPresentationClockPolicy : IActionPresentationClockPolicy
+    {
+        public void DriveClock(
+            AnimationClipPlayerRuntime player,
+            AnimationChannelId channelId,
+            double presentationSampleTick,
+            in CharacterPresentationFactFrame factFrame,
+            float presentationDeltaSeconds)
+        {
+            player.SynchronizeMovementClock(
+                factFrame.MovementPlaybackTime,
+                factFrame.MovementPlaybackClock,
+                presentationDeltaSeconds,
+                player.PlayRate);
         }
     }
 
@@ -53,11 +72,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationClipPlayerRuntime player,
             AnimationChannelId channelId,
             double presentationSampleTick,
+            in CharacterPresentationFactFrame factFrame,
             float presentationDeltaSeconds) =>
             m_Coordinator.DriveClock(
                 player,
                 channelId,
                 presentationSampleTick,
+                in factFrame,
                 presentationDeltaSeconds);
     }
 
@@ -198,6 +219,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationClipPlayerRuntime player,
             AnimationChannelId channelId,
             double presentationSampleTick,
+            in CharacterPresentationFactFrame factFrame,
             float presentationDeltaSeconds)
         {
             RequireAlive();
@@ -217,6 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     player,
                     channelId,
                     presentationSampleTick,
+                    in factFrame,
                     presentationDeltaSeconds);
                 return;
             }

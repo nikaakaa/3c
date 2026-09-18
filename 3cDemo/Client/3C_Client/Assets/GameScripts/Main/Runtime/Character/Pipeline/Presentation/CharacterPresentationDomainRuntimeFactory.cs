@@ -167,9 +167,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         worldAwarePresentation,
                         sessionHost,
                         physicsScene,
-                        node => presentationClockCoordinator != null
-                            ? presentationClockCoordinator.CreatePolicy()
-                            : FreeRunPresentationClockPolicy.Shared);
+                        node => node.ClipClockSource == CharacterClipPlayerClockSource.CommittedMovement
+                            ? new CommittedMovementPresentationClockPolicy()
+                            : presentationClockCoordinator != null && node.AnimationChannelId.IsValid
+                                ? presentationClockCoordinator.CreatePolicy()
+                                : FreeRunPresentationClockPolicy.Shared);
                     var createResult = CharacterPoseNativeDomainRuntimeFactory.Create(
                         NextRequestId(),
                         actorId,

@@ -3870,7 +3870,7 @@ namespace Slate
             if (formalDraggedMarker != null && ReferenceEquals(formalDraggedMarker.Track, track) &&
                 e.type == EventType.MouseDrag && e.button == 0)
             {
-                int frame = Mathf.Max(0, Mathf.RoundToInt(SnapTime(PosToTime(e.mousePosition.x)) * embeddedTimeline.FrameRate));
+                int frame = Mathf.Max(0, Mathf.RoundToInt(SnapTime(PosToTime(mousePosition.x)) * embeddedTimeline.FrameRate));
                 embeddedTimeline.MoveMarker(formalDraggedMarker, frame);
                 e.Use();
             }

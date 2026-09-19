@@ -587,7 +587,7 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (operation.Code == SimulationOperationCode.Timeline)
             {
-                var stop = m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                var stop = StopTimeline(ReadTimelineRuntimeHandle(operation));
                 if (stop.Pending != null)
                     m_TimelinePendingStops.Add(stop.Pending);
                 return OperationStopStatus.Completed;
@@ -603,13 +603,28 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (operation.Code == SimulationOperationCode.Timeline)
             {
-                var stop = m_TimelineRuntime.Stop(ReadTimelineRuntimeHandle(operation));
+                var stop = StopTimeline(ReadTimelineRuntimeHandle(operation));
                 if (stop.Pending != null)
                     m_TimelinePendingStops.Add(stop.Pending);
                 return;
             }
             throw new InvalidOperationException(
                 $"Ability operation '{m_Access.SourcePath(m_Access.Operation(operation.Handle))}' has no direct Timeline stop owner.");
+        }
+
+        AbilityTimelineStopResult StopTimeline(int runtimeHandle)
+        {
+            IAbilityTreeClipInvokerHost host = m_TimelineRuntime as IAbilityTreeClipInvokerHost;
+            if (host != null && m_TreeClipLink?.Invoker != null)
+                host.PushTreeClipInvoker(m_TreeClipLink.Invoker);
+            try
+            {
+                return m_TimelineRuntime.Stop(runtimeHandle);
+            }
+            finally
+            {
+                host?.PopTreeClipInvoker();
+            }
         }
 
         public void EmitTrace(

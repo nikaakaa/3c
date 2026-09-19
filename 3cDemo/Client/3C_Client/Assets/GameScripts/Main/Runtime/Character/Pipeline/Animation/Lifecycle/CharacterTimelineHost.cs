@@ -122,7 +122,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             public string ClipAuthoringId;
             public string TreeGraphId;
             public int Cycle;
-            public IAbilityTreeClipInvoker Invoker;
         }
 
         readonly CharacterTimelineHost m_Host;
@@ -142,10 +141,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public bool Consume(TimelineRuntimeTreeClipRequest request, TimelineRuntimeStepContext context)
         {
+            if (!m_Host.IsAbilityRuntimePlayback(context.Playback.Handle))
+                return true;
+            IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker
+                ?? throw new InvalidOperationException($"Timeline TreeClip '{request.ClipAuthoringId}' requires an active Ability invoker.");
             if (request.EventKind == TimelineRuntimeTreeClipEventKind.Update)
             {
-                if (!m_Host.IsAbilityRuntimePlayback(context.Playback.Handle))
-                    return true;
                 if (!m_ActiveClips.TryGetValue(context.Playback.Handle.Value, out List<ActiveTreeClip> activeClips) ||
                     activeClips.Count == 0)
                     return true;
@@ -161,14 +162,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         clip.Cycle,
                         actionInstanceId,
                         checked((int)context.Playback.Handle.Value));
-                    return clip.Invoker.InvokeTreeClip(updateInvocation);
+                    return invoker.InvokeTreeClip(updateInvocation);
                 }
                 return true;
             }
-            if (!m_Host.IsAbilityRuntimePlayback(context.Playback.Handle))
-                return true;
-            IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker
-                ?? throw new InvalidOperationException($"Timeline TreeClip '{request.ClipAuthoringId}' requires an active Ability invoker.");
             if (request.EventKind == TimelineRuntimeTreeClipEventKind.Enter)
             {
                 if (!m_ActiveClips.TryGetValue(context.Playback.Handle.Value, out List<ActiveTreeClip> clips))
@@ -181,8 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     ClipAuthoringId = request.ClipAuthoringId,
                     TreeGraphId = request.TreeGraphId,
-                    Cycle = request.Cycle,
-                    Invoker = invoker
+                    Cycle = request.Cycle
                 });
             }
             else if (request.EventKind == TimelineRuntimeTreeClipEventKind.Exit)
@@ -209,13 +205,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public void Commit(TimelineRuntimeStepContext context) { }
         public void DiscardStep(TimelineRuntimeStepContext context) { }
-        public bool ConsumeStop(TimelineRuntimeStopRequest request) => true;
-
-        public void CommitStop(TimelineRuntimeStopRequest request)
+        public bool ConsumeStop(TimelineRuntimeStopRequest request)
         {
             if (!m_ActiveClips.TryGetValue(request.Handle.Value, out List<ActiveTreeClip> clips))
-                return;
-            m_ActiveClips.Remove(request.Handle.Value);
+                return true;
+            IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker
+                ?? throw new InvalidOperationException("Timeline stop requires the current Ability invoker.");
             foreach (ActiveTreeClip clip in clips)
             {
                 var invocation = new AbilityTreeClipInvocation(
@@ -225,13 +220,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     clip.Cycle,
                     m_Host.RequireAbilityPlaybackActionInstanceId(request.Handle),
                     checked((int)request.Handle.Value));
-                if (!clip.Invoker.InvokeTreeClip(invocation))
-                    continue;
+                invoker.InvokeTreeClip(invocation);
             }
+            return true;
         }
 
-        public void DiscardStop(TimelineRuntimeStopRequest request) =>
+        public void CommitStop(TimelineRuntimeStopRequest request) =>
             m_ActiveClips.Remove(request.Handle.Value);
+
+        public void DiscardStop(TimelineRuntimeStopRequest request) { }
 
         void RemoveClip(ulong handle, string clipAuthoringId, int cycle)
         {

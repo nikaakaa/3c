@@ -143,7 +143,7 @@ namespace BTSMTL.Timeline.Runtime
         internal TimelineRuntimeAdvanceResult(
             TimelineRuntimePlayback owner,
             ulong generation,
-            ulong logicTick,
+            TimelineRuntimeAdvanceRequest request,
             int previousFrame,
             int frame,
             int previousCycle,
@@ -156,7 +156,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             Owner = owner;
             Generation = generation;
-            LogicTick = logicTick;
+            Request = request;
             PreviousFrame = previousFrame;
             Frame = frame;
             PreviousCycle = previousCycle;
@@ -170,8 +170,9 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         internal TimelineRuntimePlayback Owner { get; }
+        internal TimelineRuntimeAdvanceRequest Request { get; }
         public ulong Generation { get; }
-        public ulong LogicTick { get; }
+        public ulong LogicTick => Request.LogicTick;
         public int PreviousFrame { get; }
         public int Frame { get; }
         public int PreviousCycle { get; }
@@ -423,7 +424,7 @@ namespace BTSMTL.Timeline.Runtime
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
                 Generation,
-                request.LogicTick,
+                request,
                 m_CursorFrame,
                 nextFrame,
                 m_Cycle,

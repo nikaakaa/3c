@@ -819,8 +819,21 @@ namespace BTSMTL.Timeline.Runtime
         {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
-            TimelineRuntimeAdvanceResult result = playback.Advance(
-                new TimelineRuntimeAdvanceRequest(logicTick, tickCount));
+            var request = new TimelineRuntimeAdvanceRequest(logicTick, tickCount);
+            TimelineRuntimeAdvanceResult result = playback.Advance(request);
+            var context = new TimelineRuntimeStepContext(playback, request, result);
+            try
+            {
+                if (m_StepConsumer.Consume(context) != TimelineRuntimeStepDecision.Commit)
+                    throw new InvalidOperationException("Timeline advance was rejected by its execution consumer.");
+            }
+            catch
+            {
+                playback.Discard(result);
+                if (m_StepConsumer is ITimelineRuntimeStepCommitConsumer commitConsumer)
+                    commitConsumer.Discard(context);
+                throw;
+            }
             Publish(playback);
             return result;
         }
@@ -833,6 +846,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlayback playback = Require(handle);
             if (!playback.Commit(advance))
                 return false;
+            if (m_StepConsumer is ITimelineRuntimeStepCommitConsumer commitConsumer)
+                commitConsumer.Commit(new TimelineRuntimeStepContext(playback, advance.Request, advance));
             Publish(playback);
             return true;
         }
@@ -845,6 +860,8 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlayback playback = Require(handle);
             if (!playback.Discard(advance))
                 return false;
+            if (m_StepConsumer is ITimelineRuntimeStepCommitConsumer commitConsumer)
+                commitConsumer.Discard(new TimelineRuntimeStepContext(playback, advance.Request, advance));
             Publish(playback);
             return true;
         }
@@ -1010,5 +1027,4 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 }
-
 

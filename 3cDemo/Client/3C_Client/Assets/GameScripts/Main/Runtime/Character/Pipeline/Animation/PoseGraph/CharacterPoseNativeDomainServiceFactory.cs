@@ -114,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Rig.RigId,
                 m_Rig.RigRevision);
             var worldContext = new CharacterPoseWorldContextAdapter(
-                m_Profile.PoseGraph.Graph.GraphId.Value,
+                footResource.PosePlanHash,
                 source,
                 CollectPlayerNodeIds(),
                 ResolveFootMotion,

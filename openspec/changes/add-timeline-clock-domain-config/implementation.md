@@ -84,3 +84,11 @@
 - 已查明尚待迁移的具体顺序：`CharacterPresentationDomainRuntime.Present` 先调用 TimelineHost.Present；`TimelineToActionCommandBridge` 从 PresentationFrameProduced 生成动画命令；`RunPoseFrame` 之后才打开协调器事务。这还不是 committed 动作位置驱动 Timeline 的目标顺序，必须调整输入与帧边界后才可声称共享采样完成。
 - 当前投影仍按 channel 查询 playback，并使用源时长；尚未变成 Timeline playback／generation 的单次动作区间投影。5.1、5.2、5.4、5.5 均保持未完成，不能仅凭方法拆分勾选。
 - 本批先退出 Play，再修改并请求脚本编译；主线实例重载完成时间 `1789836193744`，观测 `1789836215836` 为 idle、非 Play／编译／导入，错误控制台 0 条。未新增测试，未宣称实际动作播放已通过验收。
+
+## 主线同帧投影复用
+
+- `ActionPresentationSampleProjector` 现在在既有 pending cursor 的值类型存储中保留本帧请求与投影结果；同一 playback 在同一 mutation lease 内只计算一次，后续相同请求直接复用。原实现的 Retained／RetirementPermitted 尾段会因重复调用再次累加 delta，此路径已删除。
+- 重复请求的样本窗口、sample tick、delta、源时长、末端和生命周期必须一致；不一致明确失败，防止不同消费者按调用顺序覆盖共享时间。比较使用值类型字段与 EventId 的类型化比较，不产生装箱或逐帧容器分配。
+- Commit 仅保留已接受游标并清空本帧投影；Discard 不写 committed cursor；已登记移除候选的实例拒绝同帧再次投影。没有新增 Registry 或另一份时钟。
+- 本项仍是动画播放实例内的复用，不是尚未接入的 Timeline playback／generation 共享动作区间；5.2、7.1、7.3 保持未完成。
+- 主线实例在 `1789836682344` 完成重载，`1789836724344` 为 idle、非 Play／编译／导入。本次 Editor.log 同时记录 Attack1／Attack2 私有 TimelineBody 图的三处连线端口缺失或类型不一致，控制台另有缺失脚本错误；不把编译重载描述为内容或运行验收通过。

@@ -23,6 +23,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal AnimationPlaybackId PlaybackId;
             internal double ContinuousTime;
             internal bool Initialized;
+            internal Projection Projection;
+        }
+
+        readonly struct Projection
+        {
+            readonly ActionCommittedSampleWindow m_Window;
+            readonly double m_SampleTick;
+            readonly float m_DeltaSeconds;
+            readonly float m_SourceDurationSeconds;
+            readonly float m_LastSampleTimeSeconds;
+            readonly ActionAnimationPlaybackLifecyclePhase m_Phase;
+
+            internal Projection(in ActionCommittedSampleWindow window, double sampleTick,
+                float deltaSeconds, float sourceDurationSeconds, float lastSampleTimeSeconds,
+                ActionAnimationPlaybackLifecyclePhase phase, ProjectedActionPresentationSample sample)
+            {
+                m_Window = window;
+                m_SampleTick = sampleTick;
+                m_DeltaSeconds = deltaSeconds;
+                m_SourceDurationSeconds = sourceDurationSeconds;
+                m_LastSampleTimeSeconds = lastSampleTimeSeconds;
+                m_Phase = phase;
+                Sample = sample;
+            }
+
+            internal ProjectedActionPresentationSample Sample { get; }
+
+            internal bool Matches(in ActionCommittedSampleWindow window, double sampleTick,
+                float deltaSeconds, float sourceDurationSeconds, float lastSampleTimeSeconds,
+                ActionAnimationPlaybackLifecyclePhase phase) =>
+                m_SampleTick == sampleTick && m_DeltaSeconds == deltaSeconds &&
+                m_SourceDurationSeconds == sourceDurationSeconds && m_LastSampleTimeSeconds == lastSampleTimeSeconds &&
+                m_Phase == phase && m_Window.HasNext == window.HasNext &&
+                SameSample(m_Window.Previous, window.Previous) &&
+                (!window.HasNext || SameSample(m_Window.Next, window.Next));
+
+            static bool SameSample(in ActionCommittedRawSample left, in ActionCommittedRawSample right) =>
+                left.EventId.Equals(right.EventId) && left.LocalLogicTick == right.LocalLogicTick &&
+                left.CommittedSequence == right.CommittedSequence && left.VisualTime == right.VisualTime &&
+                left.ContinuousVisualTime == right.ContinuousVisualTime && left.Cycle == right.Cycle &&
+                left.Loop == right.Loop && left.VisualTimeScale == right.VisualTimeScale &&
+                left.ProducerWeight == right.ProducerWeight;
         }
 
         readonly Cursor[] m_CommittedCursors;
@@ -95,6 +137,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
 
             ref Cursor cursor = ref GetWritable(playbackId);
+            if (cursor.Remove)
+                throw new InvalidOperationException("Released Action playback cannot be projected in the same frame.");
+            if (cursor.Projection.Sample.IsValid)
+            {
+                if (!cursor.Projection.Matches(in window, presentationSampleTick, presentationDeltaSeconds,
+                        sourceDurationSeconds, lastSampleTimeSeconds, phase))
+                    throw new InvalidOperationException("Action playback received conflicting projection inputs in one frame.");
+                return cursor.Projection.Sample;
+            }
             double target = Interpolate(in window, presentationSampleTick);
             bool retention =
                 phase == ActionAnimationPlaybackLifecyclePhase.Retained ||
@@ -131,7 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             cursor.ContinuousTime = continuousTime;
             cursor.Initialized = true;
             cursor.Remove = false;
-            return new ProjectedActionPresentationSample(
+            var sample = new ProjectedActionPresentationSample(
                 playbackId,
                 window.HasNext
                     ? window.Next.EventId
@@ -143,6 +194,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     window.Previous.Loop,
                     window.Previous.VisualTimeScale),
                 retention && !window.HasNext);
+            cursor.Projection = new Projection(in window, presentationSampleTick, presentationDeltaSeconds,
+                sourceDurationSeconds, lastSampleTimeSeconds, phase, sample);
+            return sample;
         }
 
         public void RemovePlayback(
@@ -227,6 +281,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (pending.Remove)
                     continue;
                 pending.Remove = false;
+                pending.Projection = default;
                 m_CommittedCursors[committedIndex] = pending;
             }
             Close();

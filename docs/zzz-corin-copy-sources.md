@@ -109,3 +109,4 @@ Timeline 侧边界同步收口：ActionCue 只在 Logic commit 后发布 `CueTyp
 2026-09-19：Normal Attack 细分状态继续收口。Attack3 `Explode` 使用正式状态分段承载 frame=1 本地 cue；Attack5 在 frame=47 通过 `Attack5EndBoundary` 选择 `End` / `End_2`，`Attack5End2` 绑定 `Attack_Normal_05_B` 并挂 15 个状态本地 AttackProperty cue。同 Trace 1121 帧逐帧 matched、aggregate matched。下一批优先评估 Branch/Rush 的正式 Control + Timeline + Pose 链路；不把 Branch/Rush 伪装成普通五段连段。
 
 2026-09-19：Branch/Rush PoseGraph 绑定评估完成：26 个状态去重后需要 19 个独立 Clip，全部按 ZZZ 原名导入 3C，导入零缺口；Corin Pose 源目录当前 0 条 Attack 条目，真正缺口在 Timeline/Ability/Control 未建链。按防分裂原则，Branch/Rush 走与 NormalAttack 相同的 Timeline Action playback 链，不扩 locomotion Pose 状态机。下一批先做 RushAttack 8 状态，BranchAttack 后置。
+2026-09-19：RushAttack 正式链路方案已登记到 `openspec/changes/add-corin-rush-attack-formal-chain`：8 个状态独立 Ability/Timeline，7 个 Motion 按实际引用复用，93 个状态本地 AttackProperty cue 和 source-frame 边界已对账；Pose 继续走 Timeline Action playback，不扩 locomotion 状态机。

@@ -143,7 +143,7 @@ namespace BTSMTL.Timeline.Editor
             if (!string.IsNullOrEmpty(m_ConfigurationError))
                 EditorGUILayout.HelpBox(m_ConfigurationError, MessageType.Error);
             EditorGUILayout.LabelField("Name", marker.AuthoringId);
-            EditorGUILayout.LabelField("Domain", marker.ExecutionDomain.ToString());
+            EditorGUILayout.LabelField("Domain (Inherited from Track)", marker.ExecutionDomain.ToString());
             if (GUILayout.Button("Open Trigger Graph"))
                 TimelineGraphAuthoring.Open(marker.Graph);
             int frame = Mathf.Max(0, EditorGUILayout.IntField("Frame", marker.Frame));
@@ -171,10 +171,16 @@ namespace BTSMTL.Timeline.Editor
 
         void DrawTrackInspector(TimelineAsset asset, Track track)
         {
+            if (!string.IsNullOrEmpty(m_ConfigurationError))
+                EditorGUILayout.HelpBox(m_ConfigurationError, MessageType.Error);
             EditorGUILayout.LabelField("Contract", track.ContractKind);
             string name = EditorGUILayout.TextField("Name", track.Name ?? string.Empty);
             bool muted = EditorGUILayout.Toggle("Muted", track.PersistentMuted);
-            if (name == track.Name && muted == track.PersistentMuted)
+            EditorGUI.BeginChangeCheck();
+            TimelineExecutionDomain executionDomain = (TimelineExecutionDomain)EditorGUILayout.EnumPopup(
+                "Execution Domain", track.ExecutionDomain);
+            bool domainChanged = EditorGUI.EndChangeCheck();
+            if (name == track.Name && muted == track.PersistentMuted && !domainChanged)
                 return;
             if (!TryBeginMutation(asset))
                 return;
@@ -184,6 +190,13 @@ namespace BTSMTL.Timeline.Editor
                 {
                     track.Name = name;
                     track.PersistentMuted = muted;
+                    if (domainChanged)
+                    {
+                        track.ConfigureExecutionDomain(executionDomain);
+                        var errors = new List<string>();
+                        if (!asset.ValidateContent(TimelineTreeContractComposition.Create(), errors))
+                            throw new InvalidOperationException(string.Join("\n", errors));
+                    }
                     asset.Data.Init();
                 }, "Edit Timeline Track");
                 m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);

@@ -117,3 +117,11 @@
 - 修复后再次运行正式 `btsmtl.generate_assets`，返回 saved=true、diagnostics=[]；CorinAttackGameplayAbilityDefinition.asset 与本次重建前逐字节一致，52 张图与 7 个 Timeline 共 59 项正式指纹完全一致。再次调用正式导出服务，10 个文件按统一换行比较与当前源码全部相同。
 - 独立 Timeline 根复用相同完整图生成阶段，通过 EnsureTimelineGraph 创建正式 TimelineBody／TimelineTrigger；嵌套私有图继续使用同一 owner 工厂。8.5 按 C# owner 闭包与重建范围完成，不以此代表 Marker 表现执行或秒制字段迁移完成。
 - 主线完成生成代码及作者 API 编译重载；没有新增测试代码，没有改写源资产内容。当前任务完成 30/56，余项继续保持未勾选。
+
+## Track 执行域作者入口
+
+- 原 TimelineInspector 的 Track 面板增加 Execution Domain，Marker 明确显示其域继承自 Track；没有新增窗口或第二份配置。
+- 域变更在原 ApplyModify / Undo 事务内调用 ConfigureExecutionDomain，再走正式 ValidateContent。Track 与 Clip 的声明能力不匹配时，错误包含内容身份，整次修改回滚，不自动改写显式 Clip 域，也不退回 Logic。
+- 本次只补作者入口及已有合同校验。Marker 图节点的表现能力检查仍由 6.1 / 8.2 完成，不把 Inspector 接入视为该能力已经实现。
+- 秒制迁移仍未完成：当前 TimelineData 的正式存储仍是整数作者帧；FixedScalar 位于 ThirdPersonSimulation.Fixed，Timeline 仅直接引用 Core。后续必须同时处理公共时间合同与依赖方向，不能用秒属性包裹旧帧字段冒充迁移完成。
+- 本次未新增测试；Unity 编译重载期间 MCP 连接不可用，尚未取得本次编译完成证据，任务勾选保持不变。

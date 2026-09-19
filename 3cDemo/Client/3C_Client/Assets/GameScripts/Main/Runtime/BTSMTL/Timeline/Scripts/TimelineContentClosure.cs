@@ -239,18 +239,20 @@ namespace BTSMTL.Timeline
 
     public readonly struct TimelineContentSection
     {
-        public TimelineContentSection(string authoringId, int frame, string nextSectionId)
+        public TimelineContentSection(string authoringId, int frame, string nextSectionId, string branchId)
         {
             AuthoringId = Require(authoringId, nameof(authoringId));
             if (frame < 0)
                 throw new ArgumentOutOfRangeException(nameof(frame));
             Frame = frame;
             NextSectionId = nextSectionId?.Trim() ?? string.Empty;
+            BranchId = branchId?.Trim() ?? string.Empty;
         }
 
         public string AuthoringId { get; }
         public int Frame { get; }
         public string NextSectionId { get; }
+        public string BranchId { get; }
 
         static string Require(string value, string name)
         {
@@ -449,7 +451,8 @@ namespace BTSMTL.Timeline
                     sections.Add(new TimelineContentSection(
                         section.AuthoringId,
                         section.Frame,
-                        section.NextSectionId));
+                        section.NextSectionId,
+                        section.BranchId));
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {

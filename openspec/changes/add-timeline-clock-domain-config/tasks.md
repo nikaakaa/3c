@@ -52,7 +52,7 @@
 - [x] 8.1 Timeline 顶栏拆成 `TimelineEditorBindingState` 只读模型、`TimelineEditorToolbarView` 视图和 `TimelineEditorWindow` controller；按钮按文档导航、Workspace 模式、运行状态分组
 - [x] 8.2 登记 Corin `AttackProperty` 消费边界：主控转成 Timeline Marker / Ability 打击帧，Timeline runtime 与编辑器只消费正式内容，不新增私有解析器或第二运行链- [x] 8.3 收口 Corin Attack ActionCue 合同：ActionCue 只在 Logic commit 后发布 `CueType`/`CueId` 领域事件，Timeline 不解析 `AttackProperty`，不代行 Camera/VFX/Audio 消费- [x] 8.4 同步主控全量 AttackProperty / uint 效果编号结果：Timeline 只保留原始 CueId 与播放身份，payload 消费归 GameplayEffect / Ability，TreeDesigner 旧 UI 删除与 FlowCanvas 可视化边界入 spec- [x] 8.5 复核 Normal Attack End / Explode：登记 Attack3 Explode、Attack5 End/End_2 分支、End2 Timeline 绑定和状态本地 cue 重映射缺口；Branch/Rush 不混入现有五段 Timeline
 - [x] 8.6 Attack3 `Attack_Normal_03_Explode` 独立状态分段：在 `CorinAttack3Timeline` 的 frame=75 建 `Attack_Normal_03_Explode` 段，frame=1 本地 cue 映射到全局 frame=75；ActionCue 事件携带 `StateId/LocalFrame`，不压回主段全局轴
-- [ ] 8.7 Attack5 `End / End_2` 分支边界：frame=47 后不再共用无状态选择的连续 Timeline
-- [ ] 8.8 `Attack_Normal_05_End_2` 正式 Timeline 绑定：承载 15 个状态本地 cue，不借用普通 End 段
+- [x] 8.7 Attack5 `End / End_2` 分支边界：frame=47 建 `Attack5EndBoundary` TreeClip，新增 Attack5 到 `End` / `End_2` 的正式状态转移和两个结束状态
+- [x] 8.8 `Attack_Normal_05_End_2` 正式 Timeline 绑定：建立 `CorinAttack5EndTimeline` / `CorinAttack5End2Timeline`，End_2 段携带 `BranchId=End_2` 和 15 个状态本地 cue
 - [x] 8.9 删除 Attack5 frame=64 多余 `_01_02` cue：重建 `CorinAttackGameplayAbilityDefinition`，固定输入 Replay 1121 帧逐帧 matched 且 aggregate matched
-- [ ] 8.10 状态本地 cue 重映射合同：payload 保留原始 `CueId` 与播放身份，状态 id / 本地帧 / 分支身份可调和
+- [x] 8.10 状态本地 cue 重映射合同：payload 保留原始 `CueId` 与播放身份，`StateId / LocalFrame / BranchId` 进入 sample、committed event 和稳定 EventId

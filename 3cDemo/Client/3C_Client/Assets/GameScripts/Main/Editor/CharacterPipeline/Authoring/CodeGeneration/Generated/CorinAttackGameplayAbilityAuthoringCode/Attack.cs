@@ -34,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var asset38 = context.ResolveExternalAsset<RootMotionCurveAsset>("Assets/Configs/Character/Corin/Pipeline/Motion/RootMotion/CorinAttackGameplayAbilityDefinition/CorinAttack5Timeline/Attack5Main.asset", 11400000L);
             var asset39 = context.ResolveExternalAsset<UnityAnimationClip>("Assets/AssetArt/Animation/MyDemoNeed/Corin/PipelineInplace/Corin_Pipeline_Attack5_Inplace.anim", 7400000L);
             var asset40 = context.ResolveExternalAsset<UnityAnimationClip>("Assets/AssetArt/Animation/MyDemoNeed/Corin/PipelineInplace/Corin_Pipeline_Attack5_End_Inplace.anim", 7400000L);
+            var asset41 = context.ResolveExternalAsset<UnityAnimationClip>("Assets/AssetArt/Animation/MyDemoNeed/Corin/Humanoid/Inplace/Corin_Attack_Normal_05_B_Inplace.anim", 7400000L);
             parts.graph2 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "894a4cd14e8db8f49003b0660b7660ed", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.StateBody, "Attack1 State Body");
             parts.graph11 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "ef6ea798d23cbb42daa656723c5263b2", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.StateBody, "Attack2 State Body");
             parts.graph20 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "ab4f75a3dbba67da55dbf4a46872eadd", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.StateBody, "Attack3 State Body");
@@ -402,6 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             internal TimelineContractCatalog timelineCatalog2;
             internal TimelineContractCatalog timelineCatalog3;
             internal TimelineContractCatalog timelineCatalog4;
+            internal Clip clip118;
         }
     }
 }

@@ -18,7 +18,7 @@ Timeline Runtime MUST直接消费正式轨道、Marker、Clip类型/区间/参�
 
 ### Requirement: 状态本地ActionCue必须绑定状态分段和分支
 
-`Attack_Normal_03_Explode` 与 `Attack_Normal_05_End / End_2` 的 ActionCue MUST 绑定各自状态分段或独立 Timeline；MUST NOT 把状态本地 cue 压平成无状态全局帧。分支边界 MUST 在进入 End / End_2 时明确选择其中一个分支，两侧 cue MUST NOT同时发布。状态本地 cue 事件 MUST 保留原始 `CueId`，MUST 携带状态 id 与状态本地帧；Attack5 分支还 MUST 携带分支身份用于稳定调和。攻击碰撞与属性 payload MUST 留在 GameplayEffect / Ability 执行域。
+`Attack_Normal_03_Explode` 与 `Attack_Normal_05_End / End_2` 的 ActionCue MUST 绑定各自状态分段或独立 Timeline；MUST NOT 把状态本地 cue 压平成无状态全局帧。分支边界 MUST 在进入 End / End_2 时明确选择其中一个分支，两侧 cue MUST NOT同时发布。状态本地 cue 事件 MUST 保留原始 `CueId`，MUST 携带状态 id 与状态本地帧；Attack5 分支还 MUST 携带分支身份用于稳定调和。稳定 `EventId` MUST 包含状态 id、本地帧和分支身份，避免同一 CueId 在不同状态或分支间互相覆盖。攻击碰撞与属性 payload MUST 留在 GameplayEffect / Ability 执行域。
 
 #### Scenario: Attack3 Explode cue
 
@@ -31,3 +31,4 @@ Timeline Runtime MUST直接消费正式轨道、Marker、Clip类型/区间/参�
 - **WHEN** `Attack_Normal_05` 到达 frame=47 分支点
 - **THEN** playback MUST只进入 End 或 End_2 其中一个正式 Timeline / 状态分段
 - **AND** End_2 的 15 个状态本地 cue MUST只在 End_2 分支发布
+- **AND** End_2 事件 MUST携带 `StateId=Attack_Normal_05_End_2`、`BranchId=End_2` 和状态本地帧

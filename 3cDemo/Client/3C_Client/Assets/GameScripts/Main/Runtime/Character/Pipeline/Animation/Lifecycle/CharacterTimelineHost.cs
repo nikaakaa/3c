@@ -334,6 +334,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             string cueId,
             string stateId,
             int localFrame,
+            string branchId,
             TimelineRuntimePlaybackHandle handle,
             ulong generation,
             ulong logicTick,
@@ -360,6 +361,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             CueId = cueId.Trim();
             StateId = stateId?.Trim() ?? string.Empty;
             LocalFrame = localFrame;
+            BranchId = branchId?.Trim() ?? string.Empty;
             Handle = handle;
             Generation = generation;
             LogicTick = logicTick;
@@ -377,6 +379,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public string CueId { get; }
         public string StateId { get; }
         public int LocalFrame { get; }
+        public string BranchId { get; }
         public TimelineRuntimePlaybackHandle Handle { get; }
         public ulong Generation { get; }
         public ulong LogicTick { get; }
@@ -1486,11 +1489,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         cue.CueId,
                         cue.CueType,
                         cue.StateId,
-                        cue.LocalFrame.ToString(System.Globalization.CultureInfo.InvariantCulture))),
+                        cue.LocalFrame.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        cue.BranchId)),
                     cue.CueType,
                     cue.CueId,
                     cue.StateId,
                     cue.LocalFrame,
+                    cue.BranchId,
                     evaluation.Handle,
                     evaluation.Generation,
                     evaluation.LogicTick,

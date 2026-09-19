@@ -23,7 +23,7 @@
 | `Corin_Attack_Normal_03_Explode` | 1 | 1 | 已在 `Attack_Normal_03_Explode` 段收口 |
 | `Corin_Attack_Normal_05` | 15 | 15 | frame=64 多出的 `_01_02` cue 已删除，当前帧和 key 与源一致 |
 | `Corin_Attack_Normal_05_End` | 0 | 0 | 无 AttackProperty cue |
-| `Corin_Attack_Normal_05_End_2` | 15 | 0 | 当前五段 Timeline 缺全部 15 个 End_2 本地 cue |
+| `Corin_Attack_Normal_05_End_2` | 15 | 15 | 已挂在 `CorinAttack5End2Timeline` 的 `Attack_Normal_05_End_2` 段，`BranchId=End_2` |
 
 ## 缺失 / 多余 cue 明细
 
@@ -87,26 +87,25 @@
 
 | 来源帧 | AnimEventID | 当前帧 | 结论 |
 |---:|---|---:|---|
-| 1 | `Corin_Attack_Normal_05_AttackProperty_03` | - | 缺失 |
-| 10 | `Corin_Attack_Normal_05_AttackProperty_04_01` | - | 缺失 |
-| 12 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 14 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 16 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 18 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 20 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 22 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 24 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 26 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 28 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 30 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 32 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 34 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-| 36 | `Corin_Attack_Normal_05_AttackProperty_04_02` | - | 缺失 |
-
+| 1 | `Corin_Attack_Normal_05_AttackProperty_03` | 段内本地 1 | 已收口 |
+| 10 | `Corin_Attack_Normal_05_AttackProperty_04_01` | 段内本地 10 | 已收口 |
+| 12 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 12 | 已收口 |
+| 14 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 14 | 已收口 |
+| 16 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 16 | 已收口 |
+| 18 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 18 | 已收口 |
+| 20 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 20 | 已收口 |
+| 22 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 22 | 已收口 |
+| 24 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 24 | 已收口 |
+| 26 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 26 | 已收口 |
+| 28 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 28 | 已收口 |
+| 30 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 30 | 已收口 |
+| 32 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 32 | 已收口 |
+| 34 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 34 | 已收口 |
+| 36 | `Corin_Attack_Normal_05_AttackProperty_04_02` | 段内本地 36 | 已收口 |
 ## 收口要求
 
 1. Attack3 Explode 必须拥有独立状态本地时间；其 frame=1 的 `Corin_Attack_Normal_03_AttackProperty_02` 不能塞进主段全局轴。
-2. Attack5 的 frame=47 是 End / End_2 分支选择点；两个分支不能继续共用一条无状态选择的连续 Timeline。
-3. `Corin_Attack_Normal_05_End_2` 的 15 个本地 AttackProperty cue 必须挂在 End_2 分支；不得用普通 End 段或主段全局帧替代。
+2. Attack5 的 frame=47 是 End / End_2 分支选择点；现在由 `Attack5EndBoundary` TreeClip 和正式状态转移选择唯一分支。
+3. `Corin_Attack_Normal_05_End_2` 的 15 个本地 AttackProperty cue 已挂在 `CorinAttack5End2Timeline` 的 `End_2` 分支。
 4. Attack5 frame=64 多出的 `_01_02` cue 已删除；对应 Ability 资产已重建，1121 帧固定输入 Replay 逐帧 matched。
-5. 修复后必须重建对应 Ability/Timeline 资产，并复跑固定输入 Replay。
+5. 已重建对应 Ability/Timeline 资产，并复跑固定输入 Replay：1121 帧逐帧 matched、aggregate matched。

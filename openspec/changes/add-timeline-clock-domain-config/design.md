@@ -146,18 +146,18 @@ Corin dump 中的 `AttackProperty` 不是 Timeline 的直接数据格式。主�
 
 ## Normal Attack End / Explode 复核（2026-09-19）
 
-依据 `docs/zzz-corin-controller-map.md` 复核后，现有五段简化 Timeline 不升级为完整 Normal 状态机：Attack 1 / 2 / 4 可继续用线性 main + End 覆盖主起止和主段 cue；Attack 3 Explode 与 Attack 5 End / End_2 不可用当前 Timeline 表达。具名缺口是 `GAP-Normal3-ExplodeStateSegment`、`GAP-Normal3-ExplodeCueRemap`、`GAP-Normal5-EndBranchSelection`、`GAP-Normal5-End2TimelineBinding` 和 `GAP-NormalEndStateBoundary`。Branch / Rush 不混入现有 Attack Timeline。
+依据 `docs/zzz-corin-controller-map.md` 复核后，现有五段简化 Timeline 不升级为完整 Normal 状态机：Attack 1 / 2 / 4 可继续用线性 main + End 覆盖主起止和主段 cue；Attack 3 Explode 与 Attack 5 End / End_2 需要显式状态边界。Branch / Rush 不混入现有 Attack Timeline。
 
 `Attack_Normal_05_End_2` 不是缺 Clip：状态实际绑定 `Attack_Normal_05_B`，缺的是正式 Timeline 段、状态边界和分支选择。AttackProperty payload 继续全量留在 GameplayEffect Profile / Ability 执行域；Timeline 只发布原始 `CueId` 和播放身份。
 
 ## Attack3 Explode 状态分段收口（2026-09-19）
 
-`Attack_Normal_03_Explode` 使用 `CorinAttack3Timeline` 内的 `TimelineSection` 承载，不改成主段普通全局 cue。Section 从 frame=75 开始，`Corin_Attack_Normal_03_AttackProperty_02` 的源本地 frame=1 映射到全局 frame=75。`TimelineActionCueSample` 和 committed `TimelineActionCueEvent` 现在携带 `StateId` 与 `LocalFrame`；ActionCue 采样按 cue 所属 Section 计算本地帧。这样消费端可以用状态身份调和，不能把 frame=75 解释成主段自己的第 75 帧。
+`Attack_Normal_03_Explode` 使用 `CorinAttack3Timeline` 内的 `TimelineSection` 承载，不改成主段普通全局 cue。Section 从 frame=75 开始，`Corin_Attack_Normal_03_AttackProperty_02` 的源本地 frame=1 映射到全局 frame=75。`TimelineActionCueSample` 和 committed `TimelineActionCueEvent` 携带 `StateId` 与 `LocalFrame`；ActionCue 采样按 cue 所属 Section 计算本地帧。
 
-本段只收口 Attack3 Explode cue。Attack5 frame=47 的 End / End_2 分支选择、End_2 正式 Timeline 绑定和 15 个本地 cue 仍保留在后续任务。
+## Attack5 End / End_2 分支收口（2026-09-19）
 
-## Normal Attack 状态本地 cue 收口（进行中）
+Attack5 主 Timeline 在 frame=47 增加 Decision TreeClip，触发图写入帧作用域 `Attack5EndBoundary`。FSM 新增 `Attack5End` 与 `Attack5End2` 两个状态；Attack5 到两个状态的条件分别读取这个边界值，End 与 End_2 完成后回到 Exit。这样 frame=47 后不再是一条无状态连续 Timeline，也不会同时进入两个结束状态。
 
-`docs/zzz-corin-normal-attack-cue-map.md` 已给出精确差量：Attack3 主段 20 个 cue 一致；Explode 缺 frame=1 的 `Corin_Attack_Normal_03_AttackProperty_02`。Attack5 主段源 15 个 cue，当前 16 个；多余 frame=64 的 `_01_02` 必须删除。`Attack_Normal_05_End` 没有 cue；`Attack_Normal_05_End_2` 缺 15 个状态本地 cue，帧号为 1、10、12、14、16、18、20、22、24、26、28、30、32、34、36。
+`Attack5End` 持有正式 `CorinAttack5EndTimeline`，播放 `Corin_Pipeline_Attack5_End`。`Attack5End2` 持有正式 `CorinAttack5End2Timeline`；后者建立 `Attack_Normal_05_End_2` Section，`BranchId=End_2`，播放 `Corin_Attack_Normal_05_B`，并在 Logic ActionCue 轨上挂源帧 1、10、12、14、16、18、20、22、24、26、28、30、32、34、36 对应的 15 个本地 cue。Timeline 起始帧改用 0，因此源 frame=1 对应 Timeline frame=0，后续源帧依次减 1。
 
-正式收口不得把状态本地 cue 继续压平到当前五段全局轴：Attack3 Explode 需要 `Attack_Normal_03_Explode` 独立 Timeline / 状态分段；Attack5 需要在 frame=47 分离 End 与 End_2 分支，End_2 使用正式 Timeline 绑定并承载 15 个本地 cue。payload 仍只带 `CueId` 与播放身份，属性和碰撞语义留在 GameplayEffect / Ability 执行域。
+`TimelineSection.BranchId` 进入内容闭包和指纹；ActionCue 采样用所属 Section 补齐 `StateId`、`LocalFrame` 和 `BranchId`。committed `TimelineActionCueEvent` 保留这三个身份，稳定 EventId 也纳入它们，避免同一 CueId 在不同状态或分支间被错误调和。`AttackProperty` 的属性、碰撞和效果语义仍留在 GameplayEffect / Ability 执行域。

@@ -329,10 +329,14 @@ namespace BTSMTL.Timeline
         [SerializeField]
         string m_NextSectionId;
 
+        [SerializeField]
+        string m_BranchId;
+
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public string Name => m_Name ?? string.Empty;
         public int Frame => m_Frame;
         public string NextSectionId => m_NextSectionId ?? string.Empty;
+        public string BranchId => m_BranchId?.Trim() ?? string.Empty;
 
 #if UNITY_EDITOR
         public void ConfigureAuthoringIdentity(string authoringId)
@@ -371,6 +375,11 @@ namespace BTSMTL.Timeline
         public void SetNextSection(string authoringId)
         {
             m_NextSectionId = authoringId?.Trim() ?? string.Empty;
+        }
+
+        public void ConfigureBranch(string branchId)
+        {
+            m_BranchId = branchId?.Trim() ?? string.Empty;
         }
 
         public bool EnsureAuthoringIdentity()

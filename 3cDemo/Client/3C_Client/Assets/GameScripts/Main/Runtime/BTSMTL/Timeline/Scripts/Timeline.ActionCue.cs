@@ -14,7 +14,8 @@ namespace BTSMTL.Timeline
             string cueId,
             string cueType,
             string stateId,
-            int localFrame)
+            int localFrame,
+            string branchId)
         {
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
@@ -24,6 +25,7 @@ namespace BTSMTL.Timeline
             CueType = cueType ?? string.Empty;
             StateId = stateId?.Trim() ?? string.Empty;
             LocalFrame = localFrame;
+            BranchId = branchId?.Trim() ?? string.Empty;
         }
 
         public string SourceId { get; }
@@ -34,6 +36,7 @@ namespace BTSMTL.Timeline
         public string CueType { get; }
         public string StateId { get; }
         public int LocalFrame { get; }
+        public string BranchId { get; }
     }
 
     [TrackGroup("Base"), ScriptGuid("43f20139703b4e96a6c8f201f0a703c7"), Ordered(3), Color(255, 210, 92)]
@@ -66,6 +69,7 @@ namespace BTSMTL.Timeline
                     previousTime < actionCueClip.StartTime && actionCueClip.StartTime <= timelineTime)
                 {
                     string stateId = string.Empty;
+                    string branchId = string.Empty;
                     int localFrame = 0;
                     IReadOnlyList<TimelineSection> sections = actionCueClip.Timeline.Sections;
                     for (int sectionIndex = 0; sectionIndex < sections.Count; sectionIndex++)
@@ -74,6 +78,7 @@ namespace BTSMTL.Timeline
                         if (section.Frame > actionCueClip.StartFrame)
                             break;
                         stateId = section.Name;
+                        branchId = section.BranchId;
                         localFrame = actionCueClip.StartFrame - section.Frame + 1;
                     }
 
@@ -85,7 +90,8 @@ namespace BTSMTL.Timeline
                         actionCueClip.CueId,
                         actionCueClip.CueType,
                         stateId,
-                        localFrame));
+                        localFrame,
+                        branchId));
                 }
             }
         }

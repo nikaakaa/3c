@@ -43,6 +43,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
     internal sealed class CharacterTimelineDependencyResolver : ITimelineRuntimeDependencyResolver
     {
+        readonly Dictionary<string, string> m_GraphRevisions = new(StringComparer.Ordinal);
+        readonly Dictionary<string, string> m_CurveRevisions = new(StringComparer.Ordinal);
+        readonly Dictionary<string, TimelineRuntimeDependencyHandle> m_Handles = new(StringComparer.Ordinal);
+        TimelineRuntimeNumericTarget m_NumericTarget;
+
+        internal void InstallGraphSources(IReadOnlyList<ProgramSourceMapEntry> sources)
+        {
+            for (int i = 0; i < sources.Count; i++)
+            {
+                ProgramSourceMapEntry source = sources[i];
+                if (string.IsNullOrEmpty(source.GraphId) || string.IsNullOrEmpty(source.ContentHash))
+                    continue;
+                string identity = $"tree:{source.GraphId}";
+                if (m_GraphRevisions.TryGetValue(identity, out string revision) && revision != source.ContentHash)
+                    throw new InvalidOperationException($"Compiled Timeline graph '{identity}' has conflicting revisions.");
+                m_GraphRevisions[identity] = source.ContentHash;
+            }
+        }
+
+        internal void InstallContent(IEnumerable<TimelineData> timelines, TimelineRuntimeNumericTarget numericTarget)
+        {
+            m_NumericTarget = numericTarget;
+            m_CurveRevisions.Clear();
+            m_Handles.Clear();
+            foreach (TimelineData timeline in timelines)
+            {
+                for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+                {
+                    Track track = timeline.Tracks[trackIndex];
+                    for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                    {
+                        if (track.Clips[clipIndex] is not MotionCurveClip motion)
+                            continue;
+                        if (!motion.SourceCurve || !motion.SourceCurve.TryValidate(out string error))
+                            throw new InvalidOperationException($"Timeline motion source '{motion.AuthoringId}' is invalid.");
+                        string revision = SourceContentHasher.Hash(JsonUtility.ToJson(motion.SourceCurve));
+                        m_CurveRevisions[$"motion-curve:{revision}"] = revision;
+                    }
+                }
+            }
+            foreach (string identity in m_GraphRevisions.Keys)
+                m_Handles.Add(identity, new TimelineRuntimeDependencyHandle(m_Handles.Count + 1));
+            foreach (string identity in m_CurveRevisions.Keys)
+                m_Handles.Add(identity, new TimelineRuntimeDependencyHandle(m_Handles.Count + 1));
+        }
 
         public bool TryResolve(
             TimelineContentDependency dependency,
@@ -51,7 +96,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             out string error)
         {
             handle = TimelineRuntimeDependencyHandle.Invalid;
-            error = $"Timeline runtime dependency '{dependency.Identity}' requires a composed dependency service."; return false;
+            Dictionary<string, string> revisions = dependency.Kind switch
+            {
+                "timeline.tree" => m_GraphRevisions,
+                "timeline.motion-curve" => m_CurveRevisions,
+                _ => null
+            };
+            if (numericTarget != m_NumericTarget || revisions == null ||
+                !revisions.TryGetValue(dependency.Identity, out string revision) ||
+                !string.Equals(revision, dependency.ContentHash, StringComparison.Ordinal) ||
+                !m_Handles.TryGetValue(dependency.Identity, out handle))
+            {
+                error = $"Timeline dependency '{dependency.Identity}' has no installed {numericTarget} resource matching revision '{dependency.ContentHash}'.";
+                return false;
+            }
+            error = string.Empty;
+            return true;
         }
     }
 
@@ -419,6 +479,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly Dictionary<ulong, CharacterTimelinePendingStop> m_PendingStops =
             new Dictionary<ulong, CharacterTimelinePendingStop>();
         readonly string m_SourceName;
+        readonly CharacterTimelineDependencyResolver m_DependencyResolver = new();
         ulong m_TickCounter;
         TimelineRuntimeNumericTarget m_NumericTarget;
         TimelineAsset[] m_AuthoringTimelineContent = Array.Empty<TimelineAsset>();
@@ -445,6 +506,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         public void PopTreeClipInvoker() => m_ActiveTreeClipInvoker = null;
+
+        public void InstallAbilitySources(IReadOnlyList<ProgramSourceMapEntry> sources) =>
+            m_DependencyResolver.InstallGraphSources(sources);
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
         public bool IsInitialized => m_Initialized && m_Host != null;
@@ -478,7 +542,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_SourceName, "character-timeline", default);
             var domainResolver = new CharacterTimelineDomainBindingResolver(
                 new[] { "self", "camera", "main" });
-            var dependencyResolver = new CharacterTimelineDependencyResolver();
             var treeClipService = new CharacterTimelineTreeClipService(this);
             var markerService = new CharacterTimelineMarkerService(this);
 
@@ -487,7 +550,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_NumericTarget,
                 callBindingSource,
                 domainResolver,
-                dependencyResolver,
+                m_DependencyResolver,
                 Array.Empty<ITimelineRuntimeEvaluationSink>(),
                 treeClipService,
                 markerService,
@@ -595,6 +658,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     throw new InvalidOperationException($"Timeline content identity '{timeline.AuthoringId}' is duplicated.");
             }
             AuthoringContentRevision = authoringRevision ?? string.Empty;
+            m_DependencyResolver.InstallContent(m_TimelineContent.Values, m_NumericTarget);
             ContentRevision = contentRevision ?? string.Empty;
             m_ContentGeneration = checked(m_ContentGeneration + 1);
         }
@@ -977,6 +1041,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 invocationSource.OperationIndex,
                 CreateAbilityPlaybackProvenance(invocationSource, actionContext, timeline.Name),
                 out handle);
+            if (!requested)
+                throw new InvalidOperationException($"Ability Timeline '{timelineId}' could not start: {m_Host.Service.LastFailure}");
             if (requested)
             {
                 for (int i = 0; i < m_ActivePlaybacks.Count; i++)

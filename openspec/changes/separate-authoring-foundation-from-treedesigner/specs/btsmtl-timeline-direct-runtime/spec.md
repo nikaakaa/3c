@@ -1,23 +1,17 @@
 ## ADDED Requirements
 
-### Requirement: Timeline播放调用必须使用独立的调用身份
+### Requirement: Timeline在作者代码归位中只更新直接依赖
 
-Timeline 服务 MUST 沿已有阶段接收必要身份：Prepare 读取正式内容 identity/revision 与依赖；Playback 接收真实调用方和所需 owner context，并由既有播放 owner 建立播放 identity/generation；TreeClip 执行时携带对应 Clip/cycle 与精确图 identity/revision。接口 MUST 不把整张旧 BaseGraph 当作通用上下文，也 MUST 不通过图对象推断 Action、Character 或 Timeline owner。Skill、非 Skill 和独立 Timeline 调用 MUST 继续使用各自真实的 typed 调用来源，不新增全字段通用上下文。
+Timeline 的内容、Prepare/Playback/TreeClip 调用身份、调度、Marker、快照及提交语义 MUST 保持。此次整理 MUST 只更新迁出类型的直接引用，不强制删除仍有真实消费者的 BaseGraph 参数或创建替代上下文。无消费者且无资产引用的旧 UI 附属入口才可删除。
 
-#### Scenario: 技能调用Timeline
+#### Scenario: 调用参数仍有正式消费者
 
-- **WHEN** 技能请求一个带 TreeClip 的 Timeline
-- **THEN** 播放请求 MUST 使用正式 Ability 调用来源及其所需 Action 上下文；进入 TreeClip 时 MUST 使用该 Clip 与精确图 revision identity
-- **AND** Timeline MUST 不接收或解析旧 BaseGraph
+- **WHEN** Timeline 接口仍通过图参数表达真实调用上下文
+- **THEN** MUST 保留现有行为并列明消费者
+- **AND** 如果解除该依赖需要改变运行合同，MUST 报告具体缺口交用户决定
 
-#### Scenario: 独立调用Timeline
+#### Scenario: 作者类型位置改变
 
-- **WHEN** 真实的非 Skill owner 请求 Timeline
-- **THEN** 调用 MUST 使用该 owner 的 typed invocation source 和独立 playback identity
-- **AND** MUST 不包装成空技能、假角色或默认图上下文
-
-#### Scenario: 缺少调用身份
-
-- **WHEN** 某阶段缺少其正式合同要求的调用 owner、播放 generation 或 TreeClip 图版本
-- **THEN** 对应阶段 MUST 返回明确失败；Prepare MUST 不要求尚未创建的播放或 Clip 身份
-- **AND** MUST 不从当前资产、最后调用或默认值补齐
+- **WHEN** Timeline 作者集成引用的类型原样移入独立文件
+- **THEN** MUST 同步直接引用并保持内容与调用身份
+- **AND** MUST 不新增播放服务、独立求值路径或通用上下文

@@ -1,40 +1,37 @@
 ## Why
 
-当前技能、FSM 和 Pose 已经使用 FlowCanvas／NodeCanvas 原生图，分域数据访问、局部变量作用域、节点字段与端口规则仍由项目自研；这些有效能力却与旧 BaseGraph、旧节点执行器和旧画布混放在 TreeDesigner 中。作者难以判断删除旧 UI 会损失什么，现行部分规范还要求恢复旧图底座，因此需要明确唯一数据来源、独立业务合同和编辑集成，并完整退出旧链路。
+当前自研黑板声明、节点与端口定义、编辑辅助和旧 UI 混放在 TreeDesigner 中。用户要把仍在使用的代码按职责分出来，并删除已不用的旧 UI。本次整理不以完整退出旧图运行类型为目标，也不把旧类型仍存在认定为有两条正式运行路径。
 
 ## What Changes
 
-本次只抽离作者合同、迁移受影响消费者与合法内容，并删除对应旧链路。现有技能变量寻址、Provider、生命周期、Pose 原生执行和 Timeline 调度机制保持原领域所有权。现行黑板 fact projection 与 provenance 的完整业务约束保留，不因目录清理删除。
-
-- 保留现有 FlowCanvas／NodeCanvas 图资产格式、原生 Port／Connection，以及 TimelineData 和 Slate 编辑入口；不创建第三套可写图、双向同步器或替代序列化格式。
-- 抽出项目自有黑板声明、作用域／生命周期、输入绑定、事实投射，以及节点字段、逻辑端口、类型和连接约束。分域 Provider 的数据所有权与局部变量生命周期分别保留，不退回通用可写字典。
-- 将业务规则、框架适配、UI 描述、运行状态明确分开。业务规则由原领域唯一声明，FlowCanvas Port 对象由适配生成，编译器与 C# authoring 读取同一语义；Skill 继续编译执行，Pose 继续使用已有原生运行实例。
-- 保留仍在使用的分域黑板面板、专用参数编辑、资源选择、Details、Navigator、多资产 Undo、C# 输出／生成和只读运行观察；迁出旧目录中的有效编辑辅助，删除被替代的窗口和画布。
-- **BREAKING**：退役 TreeDesigner 的旧窗口、GraphView、节点视图，以及无正式消费者的 BaseGraph／BaseTree／BaseNode／PropertyPort／BaseExposedProperty 执行链、旧编译重载和旧 Timeline 图调用入口。有合法内容的旧资产先通过对应正式作者操作迁入原生图，不能以删资产代替迁移。
-- **BREAKING**：对本次抽离的自有类型清理 TreeDesigner 命名空间、旧程序集和序列化类型引用。保留业务 ID、参数、连线、变量默认值与所有权；不保留旧程序集空壳、兼容类型、运行时迁移器或 fallback。
-- 用增量规范替换要求旧 BaseGraph／旧画布的条款，保留已有领域算法与作者能力；当前主目录中其他任务的正确修改不回退。
+- 将仍在使用的自研声明、端口定义和编辑辅助归位；混合文件按职责拆开，同步必要引用，不重写业务规则。
+- 保留 FlowCanvas／NodeCanvas 原生资产和 Slate Timeline，保留 Details、Navigator、资源选择、Selection、Undo、C# authoring 与只读观察等有效功能。
+- **BREAKING**：删除被替代的旧窗口、画布、独有视图、菜单和回调；删除前先迁出其中仍被当前编辑入口使用的代码。
+- 仅删除已有代码、注册和资产引用证据证明无消费者的旧代码。BaseGraph、BaseNode、PropertyPort、BaseExposedProperty 不是预定删除名单；有有效职责的类型保留或原样归位。
+- 仅更新此次移动直接影响的命名空间、程序集与序列化引用。已正确工作的编译、求值、黑板和 Timeline 调用不借机重构，不增加通用中间模型或新适配层。
+- 严格遵循 0 GC：此次涉及的运行热路径不得产生托管分配；发现既有分配阻碍这项要求时，报告具体调用和取舍，不以“已有问题”宣告通过，也不擅自扩展为性能重构。
 
 ## Capabilities
 
 ### New Capabilities
 
-无。使用现有领域规范表达本次拆分，不另建一套图系统规范。
+无。只整理现有能力的文件与职责归属。
 
 ### Modified Capabilities
 
-- `btsmtl-graph-core`：以当前原生图资产作为结构来源，保留稳定身份与私有／共享所有权，退出旧 BaseGraph 结构和运行实例要求。
-- `graph-authoring-domain-framework`：独立共享作者合同与端口规则，分离业务定义和 UI 描述，保持人工、C# 与编译消费一致。
-- `graph-authoring-editor-shell`：以原生 GraphEditor 为画布入口，保留必要的自研编辑集成，退出旧 GraphView Shell。
-- `btsmtl-tree-inspector-information-architecture`：保留数据分类、专用 Details、导航和观察能力，移除对 TreeWindow／TreeView 实现的绑定。
-- `character-pipeline-blackboard`：明确分域 Provider、原生局部变量、自有作用域声明和运行槽位各自职责，取消 BaseExposedProperty 唯一作者表面的要求。
-- `btsmtl-skill-authoring-model`：明确自研节点与逻辑端口定义、原生框架适配及实际运行执行之间的关系，移除失去消费者的旧节点适配。
-- `btsmtl-timeline-direct-runtime`：播放调用只接收必要的内容和调用身份，不再要求整棵旧 BaseGraph；保留现有调度、TreeClip、Marker 和提交语义。
-- `unity-simulation-assembly-ownership`：明确独立作者合同和编辑集成的单向依赖，以及本次类型迁名的精确资产迁移约束。
+- `btsmtl-graph-core`：明确代码归位和删除证据边界，不授权整体删除旧图运行类型。
+- `graph-authoring-domain-framework`：保留已有定义及消费者，只分离文件中的业务和显示职责。
+- `graph-authoring-editor-shell`：原生画布与自研业务面板保留，旧 UI 退出。
+- `btsmtl-tree-inspector-information-architecture`：保留数据、详情、导航与观察功能，解除旧窗口实现绑定。
+- `character-pipeline-blackboard`：迁移现有作者声明引用，保持变量所有权、寻址、生命周期和事实投射。
+- `btsmtl-skill-authoring-model`：保留端口和求值语义，不能以原生端口存在推断完整等价。
+- `btsmtl-timeline-direct-runtime`：仅调整此次移动直接影响的引用，不强制重写 BaseGraph 参数接口。
+- `unity-simulation-assembly-ownership`：必要的类型归位、精确序列化引用迁移及运行热路径 0 GC。
 
 ## Impact
 
-主要涉及 TreeDesigner/Scripts 中混合的黑板与 Authoring 合同、TreeDesigner/Editor 中仍被原生编辑器使用的辅助模块，以及 Skill／Pose／Timeline／C# authoring 的消费者和程序集引用。实际目录与文件迁移清单、删除前提、序列化处理及现行规范冲突见 design.md。
+主要修改文件组织、混合类型的位置、必要引用和旧 UI。用户操作仍是原生图编辑、项目业务面板和 Slate Timeline。旧合法资产不因清理而迁成另一种图格式，不批量重建角色资产。
 
-用户继续使用现有原生图和项目专用编辑功能；本次不改变技能参数、战斗规则、运动仲裁、回放输入、Pose／Foot IK 算法、网络模型或资源打包。Motion 重复累计与正在进行的 Pose、Timeline 运行修复保持各自任务所有权。本变更在主目录规划，不新建 worktree；不新增测试或验证任务。
+值端口绑定与递归求值已存在；通用脏标记缓存未在已检查基础链中发现，编译 OR 与旧非调试 OR 存在短路行为差异。这些是已知问题，不是本次完成事项，也不能据此把优化自动加入本次任务。具体证据和范围见 design.md。
 
-当前已存在的原生 FSM、Pose 编辑与只读输入变更提供迁移事实，但其未归档条款不是本次完成证据。本次只新增本目录 proposal、design、spec delta 与实施清单；不修改代码，不替其它任务归档，不覆盖已有主 spec 改动。
+本轮只修订本 change 文档，不实施代码、不修改主规格或归档其它任务。现行规格中仍有过时图底座约束，冲突单独列出；格式校验通过不代表语义完整或性能达标。

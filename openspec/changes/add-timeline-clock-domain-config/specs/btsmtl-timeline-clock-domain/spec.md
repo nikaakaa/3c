@@ -1,27 +1,43 @@
 ## Purpose
 
-规定 Timeline 作者时间、逻辑更新与表现采样各自的职责，保证固定作者帧在不同逻辑 tick 率下确定性推进，并使同一动作的动画、表现 Marker 与相机共享正式采样结果，作者编辑、图执行、事件调和与停止遵守一致合同。
+规定 Timeline 秒制作者时间、逻辑更新与表现采样各自的职责。同一内容适配不同逻辑 tick 率，同一配置内保证确定性推进；同一动作的动画、表现 Marker 与相机共享正式采样结果，作者编辑、图执行、事件调和与停止遵守一致合同。
 
 ## ADDED Requirements
 
 ### Requirement: Timeline 作者时间与逻辑调度必须区分
 
-Timeline MUST以固定 60 作者帧作为当前内容位置基准，秒与归一化时间 MUST由正式映射派生。SimulationTickRate MUST来自正式 pipeline 配置，MUST NOT使用可变全局帧率。Logic 内容 MUST在 SimulationTick 内依据换算后的作者帧边界求值，不得把一个作者帧自动解释为一个逻辑 tick。表现采样位置 MAY连续变化，MUST NOT写回作者内容或逻辑游标。
+Timeline MUST以秒作为唯一作者时间单位，起点、时长、Marker、Section、ClipIn、循环边界和 Timeline 自有时间坐标 MUST使用同一正式时间表示。归一化参数与源坐标 MUST通过正式映射派生或解释，不得保留可写的作者帧副本或生成独立 tick 版资产。SimulationTickRate MUST来自正式 pipeline 配置，MUST NOT使用可变全局帧率。Logic MUST在 SimulationTick 内推进精确动作时间并遍历秒制内容边界；tick 编号 MUST保留为模拟身份。表现位置 MUST NOT写回作者内容或逻辑游标。
 
-#### Scenario: tick率不同于作者帧率
+#### Scenario: 同一秒制内容适配不同tick率
 
-- **WHEN** 同一段 60 作者帧内容在 30Hz 或 120Hz SimulationTick 下以正常速率播放
-- **THEN** 累计内容进度 MUST分别在 30 或 120 个逻辑 tick 后到达 60 作者帧
-- **AND** 事件 MUST在逻辑推进实际跨过其作者位置的 tick 求值；不能承诺任意作者位置都恰好落在逻辑 tick 边界
+- **WHEN** 同一段 1 秒内容从 0 开始、无暂停且以正常速率在 30Hz 或 120Hz SimulationTick 下播放
+- **THEN** 累计进度 MUST分别在 30 或 120 个 tick 后到达 1 秒，作者内容 MUST不改变
+- **AND** 0.25 秒事件 MUST分别在第 8 或第 30 tick 被经过；MUST NOT据此承诺不同 tick 率下碰撞和输入响应完全相同
 
-### Requirement: tick与作者帧换算必须保留确定性余数
+### Requirement: 秒制逻辑推进必须保留确定性状态
 
-逻辑推进 MUST使用整数比例换算，非整除余数 MUST作为已提交的 Timeline 私有状态进入 Capture / Restore。一次推进跨过多个内容边界时 MUST按正式稳定顺序处理，不得仅采样最终落点而遗漏中间事件。
+正式秒制表示 MUST明确精度、范围、舍入、速率换算和边界比较规则，不得默认用表现浮点 delta 累加决定逻辑事件。精确动作时间及必要换算余数 MUST作为 Timeline 私有状态进入 Capture / Restore。正常前进 MUST按 `(previous, current]` 遍历点事件，起点由开始经过处理，循环按正式循环分段与稳定排序处理。一次推进跨过多个内容边界时 MUST处理各边界，不得仅采样最终落点。短窗口边界交付 MUST NOT被宣称为已完成窗口内碰撞采样；业务区间消费仍由原领域负责。
 
-#### Scenario: 高tick率与回滚
+#### Scenario: 非整除步长与回滚
 
-- **WHEN** 120Hz 逻辑推进 60Hz 作者内容，并从含余数的快照恢复后重放
-- **THEN** 每两 tick 累计推进一作者帧，恢复后的游标与余数序列 MUST与原逻辑输入一致
+- **WHEN** 固定 tick 步长或播放速率不能整除所选时间精度，并从快照恢复后重放相同配置与输入
+- **THEN** 精确动作进度、余数和事件顺序 MUST与原执行一致，不得丢弃余数造成累计漂移
+
+#### Scenario: 暂停与变速不修改内容
+
+- **WHEN** 正式播放控制暂停或改变动作速率
+- **THEN** Logic MUST按控制改变动作时间推进，事件作者秒数 MUST保持不变
+- **AND** MUST NOT维护一份需要随暂停或变速重写的作者事件 tick 表
+
+### Requirement: 秒制迁移必须删除旧时间存储路径
+
+迁移 MUST统一更新正式作者字段、资产、生成代码、闭包、指纹、派生格式、编辑器 mutation、导出重建和运行消费者。旧作者帧 MUST按已知旧时间基准转换，源素材帧 MUST按其来源映射处理。迁移后 MUST删除旧帧存储、兼容读取和双写，MUST NOT保留按不同资产版本选择两套时间推进的路径。
+
+#### Scenario: 带来源帧身份的旧资产迁移
+
+- **WHEN** 一个事件同时含旧作者帧位置和素材 LocalFrame 身份
+- **THEN** 作者位置 MUST转换为唯一正式秒数，内容身份与引用 MUST保持
+- **AND** LocalFrame MAY保留为来源标识，但 MUST NOT成为另一份可写调度时间
 
 ### Requirement: 表现进度策略必须由正式业务装配选择
 
@@ -53,9 +69,9 @@ Timeline MUST以固定 60 作者帧作为当前内容位置基准，秒与归一
 
 #### Scenario: 动画和Marker消费同一动作
 
-- **WHEN** 动作本帧从作者位置 19.5 采样到 20.5
+- **WHEN** 动作本帧从 0.24 秒正常采样到 0.26 秒
 - **THEN** 动画与该动作 Camera MUST从该结果映射到各自源采样
-- **AND** 第 20 帧 Marker MUST按同一经过和事件资格判定，不得用另一份 delta 累加结果
+- **AND** 0.25 秒 Marker MUST按同一经过和事件资格判定，不得用另一份 delta 累加结果
 
 #### Scenario: 动作内Clip起点不同
 
@@ -83,7 +99,7 @@ Runtime MUST继续直接读取同一正式只读 Timeline 内容；每次 evalua
 
 ### Requirement: Marker必须与Clip同级且只提供点触发
 
-Marker MUST由 Track 直接持有稳定 MarkerId、整数触发帧和正式触发图引用，图 MUST只有 OnEnable 触发入口。Marker MUST NOT携带持续区间、Update / Exit 生命周期或成为 Clip 子列表。Logic Marker MUST经正式逻辑事务触发；Presentation Marker MUST使用该 playback 的表现采样结果触发，两域的执行职责分开但 MAY共享正式采样来源。
+Marker MUST由 Track 直接持有稳定 MarkerId、秒制触发位置和正式触发图引用，图 MUST只有 OnEnable 触发入口。Marker MUST NOT携带持续区间、Update / Exit 生命周期或成为 Clip 子列表。Logic Marker MUST经正式逻辑事务触发；Presentation Marker MUST使用该 playback 的表现采样结果触发，两域的执行职责分开但 MAY共享正式采样来源。
 
 #### Scenario: 表现帧跨过Marker
 
@@ -98,7 +114,7 @@ Marker MUST由 Track 直接持有稳定 MarkerId、整数触发帧和正式触�
 
 #### Scenario: 起点与静音轨道
 
-- **WHEN** 新 playback 正式开始于含第 0 帧 Marker 的轨道
+- **WHEN** 新 playback 正式开始于含 0 秒 Marker 的轨道
 - **THEN** 启用轨道的起点 Marker MUST按开始经过触发一次
 - **AND** 静音轨道 MUST不产生该事件，起点重复采样 MUST不再次触发
 
@@ -184,19 +200,19 @@ Presentation Marker EventId MUST由 PlaybackHandle、Generation、MarkerId 与 T
 
 ### Requirement: 作者吸附必须与可保存精度一致
 
-拖动、帧输入、秒换算、Marker 位置和 Clip 边界 MUST使用正式 Session 的作者帧映射与整数保存精度。UI MUST区分作者帧与 SimulationTick，MUST NOT把表现连续采样称为亚帧存储支持，MUST NOT把吸附强制绑定为 1/SimulationTickRate。逻辑生效时点观察 MUST来自正式换算规则，未编辑内容不得整体重新量化。
+拖动、秒输入、帧显示、Marker 位置和 Clip 边界 MUST使用统一秒制时间表示与正式保存精度。帧吸附 MUST只控制本次编辑位置，不得限制底层为固定 60Hz 网格或绑定为 1/SimulationTickRate。逻辑生效时点观察 MUST来自正式推进规则并说明当前速率、暂停与起点前提。显示帧率与运行 tick 率变化 MUST NOT重新量化作者内容。
 
 #### Scenario: Presentation轨道拖动
 
-- **WHEN** 作者拖动一个 Presentation Marker 到两个作者帧之间
-- **THEN** 交互落点与最终保存 MUST使用同一作者帧量化
-- **AND** MUST NOT出现拖动时显示自由小数位置、提交后无说明地回跳到整数帧
+- **WHEN** 作者关闭帧吸附，将 Presentation Marker 拖到两个显示帧之间
+- **THEN** 交互落点与最终保存 MUST使用同一正式秒制精度
+- **AND** MUST NOT在提交时重新量化回整数显示帧
 
 #### Scenario: 调整运行tick率
 
 - **WHEN** pipeline SimulationTickRate 改变而 Timeline 内容不变
-- **THEN** 作者帧位置 MUST保持不变
-- **AND** 运行观察 MUST能区分作者位置与换算后的实际逻辑生效 tick
+- **THEN** 作者秒数 MUST保持不变
+- **AND** 运行观察 MUST能区分作者秒数与当前播放控制下的实际逻辑生效 tick
 
 ### Requirement: Marker私有图必须随正式作者闭包重建
 

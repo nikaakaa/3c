@@ -1,5 +1,21 @@
 ## MODIFIED Requirements
 
+### Requirement: Timeline 资产不承载节点生命周期
+
+系统 MUST 将 Timeline authoring data 与 Unity asset 身份分离。普通 C# 可序列化 `TimelineData` MUST 作为 tracks、clips、markers、sections 和秒制时间的唯一数据模型，不保留旧 Scale 或可写作者帧副本；`TimelineAsset` MUST 只作为显式 shared 复用和 Project 直接打开的 ScriptableObject 外壳持有一份 TimelineData。TimelineData 与 TimelineAsset MUST NOT 继承 `RunnableNode`，也 MUST NOT 直接承担 Graph 节点生命周期。
+
+#### Scenario: Graph 播放 inline Timeline
+
+- **WHEN** Graph 中的 TimelineNode 使用默认 Inline ownership
+- **THEN** TimelineNode MUST 解析自己持有的 TimelineData 并提交正式播放请求
+- **AND** 系统 MUST NOT 要求作者先创建 TimelineAsset，Graph MUST NOT 直接 tick authoring TimelineData
+
+#### Scenario: Graph 播放 shared Timeline
+
+- **WHEN** TimelineNode 显式选择 Shared Asset ownership
+- **THEN** resolved TimelineData MUST 来自 TimelineAsset 持有的数据
+- **AND** TimelineNode MUST NOT 同时保留一份生效的 inline TimelineData，Graph MUST NOT 直接 tick TimelineAsset
+
 ### Requirement: TreeClip编译为TimelineBody图operation invocation
 
 Logic TreeClip 与 DualProjection TreeClip 的 Logic 投影 MUST将其 AssetTree（TimelineBody 图）编译为正式 operations：TimelineClip caller MUST按 clip 声明 OnEnable、OnDisable、OnDestroy 三个边界 hook entry 与 Root（技能入口）entry，SourceMap MUST按 clipId 登记 Root handle 供运行时查询。Presentation 内容 MUST使用与 Clip 同级的表现 Marker；Presentation Marker 图只能通过表现安全执行上下文运行，MUST NOT绑定、编译或执行 TimelineBody 图。系统 MUST不恢复 Timeline.Bind/Evaluate/Unbind 自主播放路径。
@@ -14,7 +30,7 @@ Logic TreeClip 与 DualProjection TreeClip 的 Logic 投影 MUST将其 AssetTree
 
 ### Requirement: Marker图只能暴露表现安全的OnEnable入口
 
-Timeline Marker MUST是与 Clip 同级的一等内容实体：单帧点、稳定 MarkerId、触发帧与触发图引用。Marker 的触发图 MUST只暴露 OnEnable 一个回调，MUST NOT拥有 Update、Exit、Disable 或结束片段生命周期。Logic Marker 可经正式 SimulationTick Advance / Commit 执行；Presentation Marker MUST经表现采样结果跨点触发，并绑定正式表现执行上下文。Presentation 图 MUST不访问 SimulationState、Gameplay fact、canonical input 或 Kernel Evaluate / Finalize；能力不满足时 MUST在编译或准备边界失败。Marker MUST不作为 Clip 的子列表存在。
+Timeline Marker MUST是与 Clip 同级的一等内容实体：零时长触发点、稳定 MarkerId、秒制触发位置与触发图引用。Marker 的触发图 MUST只暴露 OnEnable 一个回调，MUST NOT拥有 Update、Exit、Disable 或结束片段生命周期。Logic Marker 可经正式 SimulationTick Advance / Commit 执行；Presentation Marker MUST经表现采样结果跨点触发，并绑定正式表现执行上下文。Presentation 图 MUST不访问 SimulationState、Gameplay fact、canonical input 或 Kernel Evaluate / Finalize；能力不满足时 MUST在编译或准备边界失败。Marker MUST不作为 Clip 的子列表存在。
 
 #### Scenario: 表现域Marker触发
 

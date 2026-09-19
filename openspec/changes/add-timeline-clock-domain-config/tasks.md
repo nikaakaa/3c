@@ -1,8 +1,19 @@
 # Tasks
 
-2026-09-19 状态修正：保留已完成的代码成果，撤销“1–8 勾完即 Timeline 已闭环”的结论。勾选只表示所述范围的实现；共享表现采样、表现图执行、停止与作者入口仍有待办。本清单不含测试或手动验证任务，本轮只改文档。
+2026-09-19 更新：用户已确定秒制作者时间。第 1–4 节仅记录已有实现，不代表旧 60 作者帧继续作为目标存储；第 0 节新增完整秒制迁移，第 5–8 节保留运行与作者闭环待办。停止与修正随共享采样一起接入。本清单不含测试或手动验证任务，本轮只改文档。
 
-## 1. 作者帧基准与逻辑换算
+## 0. 秒制作者时间与全链路迁移
+
+- [ ] 0.1 根据现有数值类型、素材帧率和业务时间范围，明确唯一秒制表示、精度、舍入、边界比较与速率换算规则，补齐设计中的数值决策
+- [ ] 0.2 将 Timeline 起点、时长、Marker、Section、ClipIn、循环边界和 Timeline 自有时间坐标迁移为秒，更新正式字段名与作者 API，删除整数作者帧双写和兼容读取
+- [ ] 0.3 将旧资产和生成 authoring 代码按正式旧时间 / 素材映射一次性迁移，保留内容身份和引用；同步闭包、指纹及正式派生产品格式，不生成 tick 版作者内容
+- [ ] 0.4 迁移 Logic 推进、秒制区间遍历、稳定排序与 Capture / Restore，保留 tick 身份、精确动作进度和必要换算余数，覆盖起点、循环、暂停与变速的正式语义
+- [ ] 0.5 将正式事件位置和运行消费者迁移为秒，ActionCue 保留 LogicTick、cycle 和素材来源身份；原 LocalFrame 不再参与第二套时间推进
+- [ ] 0.6 迁移 Slate、Inspector、Session、mutation / Undo 和 C# 导出重建的时间读写，帧只作显示与可选吸附，删除 StartFrame 等旧正式存储入口
+
+以上是目标实现，尚未执行。调整运行 tick 率不改作者秒数，不承诺不同 tick 率下碰撞与输入结果完全相同；短窗口的业务区间消费仍属于原战斗领域。
+
+## 1. 已有作者帧基准与逻辑换算（由第 0 节迁移）
 
 - [x] 1.1 将 TimelineUtility.FrameRate 固定为 60 作者帧基准，删除可变全局帧率依赖
 - [x] 1.2 编辑器会话、TimelineContentClosure 与内容派生换算使用明确的 FrameRate，不再共享可变全局配置
@@ -46,8 +57,8 @@
 
 ## 5. 同一动作的共享表现采样
 
-- [ ] 5.1 沿既有 Action 表现时钟策略拆出进度计算结果，输入正式 playback identity、committed controls / samples 和表现 delta，输出前后位置、循环经过、变化原因与事件资格
-- [ ] 5.2 在既有播放 owner 中按动作实例 / generation 每表现帧计算一次采样，移除 Timeline driver 与动作 Player 对同一动作的独立累加，不增加第二 Registry 或同义时钟接口
+- [ ] 5.1 沿既有 Action 表现时钟策略拆出进度计算结果，输入正式 playback identity、committed controls / samples 和表现 delta，输出前后动作秒数、循环经过、变化原因与事件资格；同时接入第 7 节的停止和修正控制
+- [ ] 5.2 沿现有调用链明确共享采样的具体持有对象和帧内调用顺序，按动作实例 / generation 每表现帧计算一次采样，移除 Timeline driver 与动作 Player 对同一动作的独立累加，不增加第二 Registry 或同义时钟接口
 - [ ] 5.3 将动作动画、同 playback 的 Timeline Marker 与 Camera 采样接入该结果，Clip 源采样继续经过起点 / ClipIn / 速率映射，locomotion 与混合过渡保持原 owner
 - [ ] 5.4 在正式 composition / prepared binding 中接入策略与控制输入，保留有限 Action 的 committed sample 合同，不按游戏类型或 Network Model 在消费者内分支，不提供缺配置后的自由播 fallback
 - [ ] 5.5 让当前合法策略统一接收暂停、速率与终态控制，缺少所需 samples / binding 时报告对应正式失败或合同规定的保持状态，不擅自外推
@@ -72,6 +83,6 @@
 
 - [ ] 8.1 在现有 Track Inspector 增加 Domain 编辑、Marker 继承域显示及不兼容内容定位，复用原 Timeline mutation / Undo，一次失败不留下部分域变更
 - [ ] 8.2 域修改同步处理 Track、显式 Clip 域与 Marker 图能力，闭包和编译使用一致声明；缺少 DualProjection 合法投影时明确失败，不把同一 Logic 图执行两次
-- [ ] 8.3 统一 Slate 拖动反馈、数值输入、Snap 与 CommitSource 的整数作者帧量化，标明作者帧 / 秒换算，移除“Presentation 可保存亚帧”及“作者帧等于 tick”的误导
-- [ ] 8.4 在现有时间观察入口显示所用 SimulationTickRate 与作者位置对应的实际逻辑生效 tick，不为观察新增预览时钟或第二求值器
+- [ ] 8.3 在第 0 节迁移后的秒制模型上统一拖动反馈、秒输入、帧显示、Snap 与 CommitSource 的精度规则；改变显示帧率不重写资产，关闭帧吸附不强制回到 1/60 秒
+- [ ] 8.4 在现有时间观察入口显示作者秒数、SimulationTickRate 与当前播放控制下的实际逻辑生效 tick，标明静态换算的速率 / 暂停前提，不新增预览时钟或第二求值器
 - [ ] 8.5 补齐 Marker 私有图在正式 C# export_code / generate_assets 中的 owner 闭包，复制 / 重建保留图角色、节点内容与引用，不以旧资产路径 / localFileId 或空图代替完整重建

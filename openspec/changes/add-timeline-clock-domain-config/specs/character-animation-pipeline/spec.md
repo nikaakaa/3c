@@ -30,9 +30,9 @@ Timeline Track / Clip MUST显式声明 `Logic`、`Presentation` 或 `DualProject
 
 #### Scenario: 动画和Camera共用动作位置
 
-- **WHEN** 动作表现位置从 19.5 变化到 20.5
+- **WHEN** 动作表现位置从 0.24 秒正常前进到 0.26 秒
 - **THEN** 动画与 Camera MUST根据同一结果各自映射源内容
-- **AND** 第 20 帧 Marker MUST按同一次经过决定是否交付
+- **AND** 0.25 秒 Marker MUST按同一次经过决定是否交付
 
 ### Requirement: Presentation Marker执行必须遵守表现帧事务
 
@@ -42,7 +42,7 @@ Presentation Marker 触发图 MUST使用正式表现安全上下文，只读允�
 
 - **WHEN** Presentation Marker 图已形成候选但表现帧未通过正式接受阶段
 - **THEN** 候选与未交付事件记账 MUST一起丢弃
-- **AND** 下游 MUST不收到该事件，下一帧也不得因旧记账缺失重复交付
+- **AND** 下游 MUST不收到该事件，后续合法采样仍可交付尚未接受的同一事件，不得提前记为已消费
 
 #### Scenario: 停止后继续渲染
 

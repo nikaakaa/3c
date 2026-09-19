@@ -18,7 +18,7 @@ Timeline Runtime MUST直接消费正式轨道、Clip类型/区间/参数/顺序�
 
 ### Requirement: Timeline必须保留时间边界和TreeClip生命周期
 
-Timeline唯一时间owner MUST负责作者帧、派生秒、Tick、ClipIn、速率、源映射、Section/loop与前后采样边界，复用原稳定遍历顺序。每个 playback identity 的表现采样结果 MUST由其正式表现 owner 计算一次，动作动画、该动作的 Presentation Marker 和 Camera 采样 MUST消费这次结果；这不改变 Logic 私有时间状态，也不要求 locomotion 或独立效果并入该动作游标。TreeClip MUST引用主实现提供的已独立编译技能入口和执行服务；Logic TreeClip 管理阶段/调用身份/取消，MUST NOT复制技能编译器或技能状态真相。Presentation Marker 只能经表现安全上下文执行，不得借用临时 Logic invoker。Motion/Warp/Camera算法与资源映射 MUST复用原领域owner。
+Timeline唯一时间owner MUST负责秒制内容位置、Tick 身份到动作时间的推进、ClipIn、速率、源映射、Section/loop与前后采样边界，复用原稳定遍历顺序。作者秒数 MUST不被永久转换为独立 tick 版内容，暂停和变速 MUST只改变运行推进。每个 playback identity 的表现采样结果 MUST由其正式表现 owner 计算一次，动作动画、该动作的 Presentation Marker 和 Camera 采样 MUST消费这次结果；这不改变 Logic 私有时间状态，也不要求 locomotion 或独立效果并入该动作游标。TreeClip MUST引用主实现提供的已独立编译技能入口和执行服务；Logic TreeClip 管理阶段/调用身份/取消，MUST NOT复制技能编译器或技能状态真相。Presentation Marker 只能经表现安全上下文执行，不得借用临时 Logic invoker。Motion/Warp/Camera算法与资源映射 MUST复用原领域owner。
 
 #### Scenario: 一步跨越循环与多个Clip边界
 
@@ -28,9 +28,9 @@ Timeline唯一时间owner MUST负责作者帧、派生秒、Tick、ClipIn、速�
 
 #### Scenario: 推进落点不在被跨过的短Clip中
 
-- **WHEN** 播放从第10帧推进到第30帧，中间存在第20帧进入、第21帧退出的Clip
+- **WHEN** 播放从 0.10 秒推进到 0.30 秒，中间存在 0.20 秒进入、0.21 秒退出的 Clip
 - **THEN** Runtime MUST按同一次Step的稳定边界顺序处理该Clip的进入、适用阶段及退出，并形成对应候选结果
-- **AND** MUST NOT仅按第30帧的活动Clip集合决定本次业务，遗漏短窗口或一次性事件
+- **AND** MUST NOT仅按 0.30 秒的活动 Clip 集合决定本次业务；窗口内碰撞采样仍由原战斗领域负责，不能以边界已发出冒充已完成命中处理
 
 #### Scenario: 停止指定播放
 
@@ -44,24 +44,46 @@ Timeline唯一时间owner MUST负责作者帧、派生秒、Tick、ClipIn、速�
 - **THEN** Timeline MUST保留此前已提交的播放状态与活动调用，丢弃本次停止候选及输出
 - **AND** MUST NOT在RequestStop或CompleteStop内绕过正式接受边界提前清空committed活动Clip或安装终态
 
+### Requirement: ActionCue必须只发布committed领域事件
+
+`ActionCueTrack` MUST 只把 Logic 执行域的跨点转成 committed 领域事件；`EventName` MUST 使用作者配置的 `CueType`，业务键 MUST 使用 `CueId`。事件 MUST 在 SimulationTick Advance 被接受后通过 `CharacterTimelineHost.ActionCueCommitted` 发布，payload MUST 包含稳定 `EventId`、playback handle、generation、`LogicTick`、秒制内容位置、cycle、execution identity、content revision、source/track/clip authoring id、`EventName` 和 `CueId`。MUST删除原调度 frame 字段，保留的素材帧身份 MUST不承担时间推进。Timeline runtime MUST NOT 在 ActionCue 内解析领域 payload、直接驱动 Camera/VFX/Audio、写 Gameplay fact 或改由 PresentationFrame 重发。
+
+#### Scenario: Corin攻击属性cue被提交
+
+- **WHEN** Logic Timeline 跨过 `CueType=AttackProperty` 的 ActionCue
+- **THEN** runtime MUST 发布事件名为 `AttackProperty` 的 committed ActionCue，携带秒制位置及实际 LogicTick
+- **AND** CueId MUST保留原始 key，Ability/Attack 领域 MUST按该 key 解析正式 GameplayEffect Profile / Ability 执行域内容
+
+#### Scenario: 攻击属性payload到达领域
+
+- **WHEN** `AttackProperty` ActionCue 被提交
+- **THEN** Timeline payload MUST只包含播放、内容、身份和 CueId 字段
+- **AND** 命中效果编号、碰撞形状、属性数值和目标语义 MUST由 GameplayEffect Profile / Ability 执行域消费
+
+#### Scenario: 领域消费方未装配
+
+- **WHEN** 某个 CueType 没有领域订阅者
+- **THEN** Timeline MUST保持事件为已提交事实和 trace
+- **AND** MUST NOT伪造 Camera、VFX、Audio 或 Gameplay 结果，也不得宣称事件已被业务消费
+
+## ADDED Requirements
+
 ### Requirement: 状态本地ActionCue必须绑定状态分段和分支
 
-`Attack_Normal_03_Explode` 与 `Attack_Normal_05_End / End_2` 的 ActionCue MUST 绑定各自状态分段或独立 Timeline；MUST NOT 把状态本地 cue 压平成无状态全局帧。分支边界 MUST 在进入 End / End_2 时明确选择其中一个分支，两侧 cue MUST NOT同时发布。状态本地 cue 事件 MUST 保留原始 `CueId`，MUST 携带状态 id 与状态本地帧；Attack5 分支还 MUST 携带分支身份用于稳定调和。稳定 `EventId` MUST 包含状态 id、本地帧和分支身份，避免同一 CueId 在不同状态或分支间互相覆盖。攻击碰撞与属性 payload MUST 留在 GameplayEffect / Ability 执行域。
+`Attack_Normal_03_Explode` 与 `Attack_Normal_05_End / End_2` 的 ActionCue MUST 绑定各自状态分段或独立 Timeline；MUST NOT 把状态本地 cue 压平成无状态全局位置。分支边界 MUST 在进入 End / End_2 时明确选择其中一个分支，两侧 cue MUST NOT同时发布。事件 MUST保留原始 CueId、状态 id 与原始素材 LocalFrame 来源身份；Attack5 分支还 MUST携带分支身份。稳定 EventId MUST包含状态 id、来源 LocalFrame 和分支身份，避免同一 CueId 互相覆盖。唯一运行位置 MUST为正式映射后的秒数，LocalFrame MUST NOT成为第二份可写调度时间。攻击碰撞与属性 payload MUST留在 GameplayEffect / Ability 执行域。
 
 #### Scenario: Attack3 Explode cue
 
 - **WHEN** `Attack_Normal_03_Explode` 的 frame=1 cue 被收口
 - **THEN** 事件 MUST携带 `StateId=Attack_Normal_03_Explode`、`LocalFrame=1`
-- **AND** MUST NOT通过主段无状态全局帧替代
+- **AND** 唯一秒制位置 MUST由正式状态源映射得到，MUST NOT把一基 LocalFrame=1 直接解释为 1/60 秒偏移
 
 #### Scenario: Attack5 End与End2分支
 
-- **WHEN** `Attack_Normal_05` 到达 frame=47 分支点
+- **WHEN** `Attack_Normal_05` 到达由旧作者 frame=47 换算得到的秒制分支点
 - **THEN** playback MUST只进入 End 或 End_2 其中一个正式 Timeline / 状态分段
 - **AND** End_2 的 15 个状态本地 cue MUST只在 End_2 分支发布
 - **AND** End_2 事件 MUST携带 `StateId=Attack_Normal_05_End_2`、`BranchId=End_2` 和状态本地帧
-
-## ADDED Requirements
 
 ### Requirement: 表现修正不得把采样重算当成新的事件经过
 

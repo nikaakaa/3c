@@ -88,5 +88,5 @@
 - [ ] 8.2 域修改同步处理 Track、显式 Clip 域与 Marker 图能力，闭包和编译使用一致声明；缺少 DualProjection 合法投影时明确失败，不把同一 Logic 图执行两次
 - [ ] 8.3 在秒制模型上统一拖动反馈、秒输入、逻辑 tick／素材帧／关闭吸附与 CommitSource；逻辑网格自动读取绑定 pipeline 的 SimulationTickRate，展示来源，缺绑定时不可用；配置变化不移动已有内容
 - [ ] 8.4 在现有时间观察入口显示作者秒数、SimulationTickRate 与当前播放控制下的实际逻辑生效 tick，标明静态换算的速率 / 暂停前提，不新增预览时钟或第二求值器
-- [ ] 8.5 补齐 Marker 私有图在正式 C# export_code / generate_assets 中的 owner 闭包，复制 / 重建保留图角色、节点内容与引用，不以旧资产路径 / localFileId 或空图代替完整重建
+- [x] 8.5 补齐 Marker 私有图在正式 C# export_code / generate_assets 中的 owner 闭包，复制 / 重建保留图角色、节点内容与引用，不以旧资产路径 / localFileId 或空图代替完整重建
 - [ ] 8.6 将“按当前网格重新对齐”作为显式作者操作接入原 mutation，仅处理选中范围并支持一次完整 Undo，统一网格到正式秒制精度的舍入规则

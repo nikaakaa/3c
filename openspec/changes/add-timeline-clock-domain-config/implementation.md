@@ -107,3 +107,13 @@
 - 后续读取期间主 Editor 多次进入 Play／程序集重载，调用连接断开。本轮没有落盘导出的 C# 文件，也没有执行 generate_assets；不重复执行状态未知的资产写入。
 - `Attack1.cs`／`Root.cs` 新增的未提交删除移除了 `Enter_To_State_Rule` 条件。只读核对实际资产中转移 `2c359c8b-c840-4888-b8db-fe22fe16df63` 的 `m_Payload` 为空，确认转移已无条件；图 `5ee51b65f135f7809601ec732f478ef1` 仍作为孤立子资产存在。因此源码删除与实际转移一致，保留该改动，不按孤立图仍存在误判为冲突或恢复旧条件。
 - 8.5 仍未完成；需要取得完整正式导出结果、保留上述新口径，再继续重建。
+
+## Marker 私有图导出与重建收口
+
+- 已取回 Corin Attack 完整正式导出结果，通过系统文件工具写入 10 个根专属 C# 文件；原有入口条件删除保持，新增两个文件按现有 End／End2 状态维护边界分组。
+- 当前 Marker `6409c746-28e1-421f-86fc-1104df163dca` 的私有图 `3d20d1d4c26a496393bb52f724252f24` 通过 EnsureOwnedGraph 创建 TimelineTrigger，再创建其原有 OnEnable 节点并绑定 Marker。导出外部依赖不包含本 Ability 资产，未借旧私有图路径／localFileId 重建。原图只有 OnEnable，输出忠实保留原内容；节点、端口、连线、Blackboard 仍走统一完整图生成流程。
+- `035608a36` 在原 export_code／generate_assets 的 schema 和参数白名单中接受传输层已有的 timeout_seconds，没有新增导出服务、后台运行器或项目 fallback 配置。
+- 首次真实重建发现默认显示名被写成显式名称覆盖，导致 12 项依赖指纹变化；资产差异只有 8 个节点的 `_name`。`bd99d195a` 由原生节点公开只读覆盖值、正式 Flow／FSM 作者 API 保留 null 默认语义，导出器消费该合同，不反射读取字段或修改指纹算法来掩盖差异。
+- 修复后再次运行正式 `btsmtl.generate_assets`，返回 saved=true、diagnostics=[]；CorinAttackGameplayAbilityDefinition.asset 与本次重建前逐字节一致，52 张图与 7 个 Timeline 共 59 项正式指纹完全一致。再次调用正式导出服务，10 个文件按统一换行比较与当前源码全部相同。
+- 独立 Timeline 根复用相同完整图生成阶段，通过 EnsureTimelineGraph 创建正式 TimelineBody／TimelineTrigger；嵌套私有图继续使用同一 owner 工厂。8.5 按 C# owner 闭包与重建范围完成，不以此代表 Marker 表现执行或秒制字段迁移完成。
+- 主线完成生成代码及作者 API 编译重载；没有新增测试代码，没有改写源资产内容。当前任务完成 30/56，余项继续保持未勾选。

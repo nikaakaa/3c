@@ -236,6 +236,10 @@ namespace ThirdPersonCharacter.Control.Authoring
                 {
                     throw Error(path + "/node:" + value.UID, exception.Message);
                 }
+            }
+            foreach (Node value in graph.allNodes)
+            {
+                FlowNode node = (FlowNode)value;
                 if (!nodes.Add(node.UID))
                     throw Error(path, "节点身份重复。");
                 bool anchor = node is IBtsmtlSkillSystemNode || node is MacroInputNode || node is MacroOutputNode;

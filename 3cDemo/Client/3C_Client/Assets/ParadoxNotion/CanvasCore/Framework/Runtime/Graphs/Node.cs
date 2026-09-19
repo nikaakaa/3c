@@ -98,6 +98,8 @@ namespace NodeCanvas.Framework
             set { _name = value; }
         }
 
+        public string GetNameOverride() => _name;
+
         ///<summary>The node tag. Useful for finding nodes through code.</summary>
         public string tag {
             get { return _tag; }

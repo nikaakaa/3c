@@ -431,7 +431,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public static void ConfigureNativeState(
             BtsmtlSkillNativeState state,
             BtsmtlSkillFlowGraph body) =>
-            BtsmtlSkillNativeStateMachineAuthoring.ConfigureState(state, state.name, state.position, body);
+            BtsmtlSkillNativeStateMachineAuthoring.ConfigureState(state, BtsmtlSkillFlowGraphAuthoring.ReadNodeName(state), state.position, body);
 
         public static void ConfigureNativeConnection(
             BtsmtlSkillNativeConnection connection,

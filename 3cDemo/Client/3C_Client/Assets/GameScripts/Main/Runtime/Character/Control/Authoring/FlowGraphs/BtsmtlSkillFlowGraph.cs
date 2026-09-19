@@ -90,6 +90,8 @@ namespace ThirdPersonCharacter.Control.Authoring
 
     public static class BtsmtlSkillFlowGraphAuthoring
     {
+        public static string ReadNodeName(Node node) => node.GetNameOverride();
+
         public static FlowNode ResolveNode(FlowGraph graph, string identity)
         {
             if (graph == null || string.IsNullOrWhiteSpace(identity))
@@ -131,7 +133,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 else if (node.GetType() != nodeType)
                     throw new InvalidOperationException($"技能Graph节点identity '{identity}'的类型不一致。");
                 node.ConfigureAuthoringIdentity(identity);
-                node.name = string.IsNullOrWhiteSpace(name) ? node.name : name;
+                node.name = name;
                 node.position = position;
                 node.GatherPorts();
                 return node;

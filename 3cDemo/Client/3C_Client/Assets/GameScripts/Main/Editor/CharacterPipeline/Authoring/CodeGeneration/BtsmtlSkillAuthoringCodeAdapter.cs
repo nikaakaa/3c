@@ -571,7 +571,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     string nodeVariable = Variable(context, node, $"node:{((IBtsmtlSkillAuthoringGraph)graph).AuthoringId}:{node.UID}");
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Create,
-                        $"var {nodeVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureFlowNode({graphVariable}, typeof({TypeName(node.GetType())}), {String(node.UID)}, {String(node.name)}, {BtsmtlAuthoringCodeValues.Vector2(node.position)});");
+                        $"var {nodeVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureFlowNode({graphVariable}, typeof({TypeName(node.GetType())}), {String(node.UID)}, {String(BtsmtlSkillFlowGraphAuthoring.ReadNodeName(node))}, {BtsmtlAuthoringCodeValues.Vector2(node.position)});");
                 }
         }
 
@@ -586,7 +586,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     string stateVariable = Variable(context, state, $"state:{machine.AuthoringId}:{state.UID}");
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Create,
-                        $"var {stateVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureNativeState({machineVariable}, typeof({TypeName(state.GetType())}), {String(state.UID)}, {String(state.name)}, {BtsmtlAuthoringCodeValues.Vector2(state.position)});");
+                        $"var {stateVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureNativeState({machineVariable}, typeof({TypeName(state.GetType())}), {String(state.UID)}, {String(BtsmtlSkillFlowGraphAuthoring.ReadNodeName(state))}, {BtsmtlAuthoringCodeValues.Vector2(state.position)});");
                 }
         }
 

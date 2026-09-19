@@ -417,7 +417,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 else if (state.GetType() != stateType)
                     throw new InvalidOperationException($"技能FSM状态identity '{identity}'的类型不一致。");
                 state.ConfigureAuthoringIdentity(identity);
-                state.name = string.IsNullOrWhiteSpace(name) ? state.name : name;
+                state.name = name;
                 state.position = position;
                 if (state is BtsmtlSkillNativeEntryState)
                     machine.primeNode = state;
@@ -438,7 +438,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             return BtsmtlSkillFlowEditorMutation.Execute(machine, "创建技能FSM状态", () =>
             {
                 BtsmtlSkillNativeState state = (BtsmtlSkillNativeState)machine.AddNode(stateType, position);
-                state.name = string.IsNullOrWhiteSpace(name) ? state.name : name;
+                state.name = name;
                 state.position = position;
                 if (state is BtsmtlSkillNativeEntryState)
                     machine.primeNode = state;
@@ -464,7 +464,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                     if (body != null)
                         throw new InvalidOperationException("技能FSM系统锚点不能拥有StateBody。");
                 }
-                state.name = string.IsNullOrWhiteSpace(name) ? state.name : name;
+                state.name = name;
                 state.position = position;
                 BtsmtlSkillFlowGraph previous = state.Body;
                 state.SetBody(body);

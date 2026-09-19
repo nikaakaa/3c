@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using NodeCanvas.Editor;
 using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
@@ -10,6 +11,12 @@ namespace BTSMTL.Timeline.Editor
     {
         public static BtsmtlSkillFlowGraph CreateSubAsset(UnityEngine.Object container, string graphName, BtsmtlSkillFlowGraphRole role)
         {
+            return EnsureSubAsset(container, Guid.NewGuid().ToString("N"), graphName, role);
+        }
+
+        public static BtsmtlSkillFlowGraph EnsureSubAsset(UnityEngine.Object container, string identity,
+            string graphName, BtsmtlSkillFlowGraphRole role)
+        {
             if (role != BtsmtlSkillFlowGraphRole.TimelineBody && role != BtsmtlSkillFlowGraphRole.TimelineTrigger)
                 throw new ArgumentOutOfRangeException(nameof(role));
             if (container == null)
@@ -17,9 +24,19 @@ namespace BTSMTL.Timeline.Editor
             string path = AssetDatabase.GetAssetPath(container);
             if (string.IsNullOrEmpty(path))
                 throw new InvalidOperationException("Timeline 容器不是持久资产，无法创建图子资产。");
+            BtsmtlSkillFlowGraph existing = AssetDatabase.LoadAllAssetsAtPath(path)
+                .OfType<BtsmtlSkillFlowGraph>()
+                .SingleOrDefault(value => string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
+            if (existing != null)
+            {
+                if (existing.Role != role)
+                    throw new InvalidOperationException($"Timeline图身份 '{identity}' 的角色不匹配。");
+                BtsmtlSkillGraphAssetFactory.EnsureRequiredAnchors(existing);
+                return existing;
+            }
             var graph = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
             graph.name = string.IsNullOrWhiteSpace(graphName) ? "Timeline Tree" : graphName.Trim();
-            graph.ConfigureIdentity(Guid.NewGuid().ToString("N"), role);
+            graph.ConfigureIdentity(identity, role);
             BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph);
             AssetDatabase.AddObjectToAsset(graph, path);
             Undo.RegisterCreatedObjectUndo(graph, "创建Timeline节点图");

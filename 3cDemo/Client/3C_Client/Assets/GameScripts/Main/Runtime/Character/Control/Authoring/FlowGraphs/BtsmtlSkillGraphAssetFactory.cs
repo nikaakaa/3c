@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (owner is not IBtsmtlSkillFlowGraph || string.IsNullOrEmpty(path))
                 throw new InvalidOperationException("私有状态机必须属于已保存的技能根或共享Macro资产。");
             UnityEngine.Object mainAsset = AssetDatabase.LoadMainAssetAtPath(path);
-            if (mainAsset is not IBtsmtlSkillFlowGraph &&
+            if (mainAsset is not IBtsmtlSkillFlowGraph && mainAsset is not TimelineAsset &&
                 (mainAsset is not GameplayAbilityDefinition ability || !IsAbilityOwnedGraph(ability, owner, path)))
                 throw new InvalidOperationException("私有状态机必须属于已保存的技能根或共享Macro资产。");
             return BtsmtlSkillFlowEditorMutation.Execute(owner, "创建技能原生状态机", () =>

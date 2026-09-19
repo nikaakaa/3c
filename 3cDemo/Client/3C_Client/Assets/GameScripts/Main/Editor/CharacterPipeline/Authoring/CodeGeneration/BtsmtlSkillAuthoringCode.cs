@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
+using BTSMTL.Timeline.Editor;
 using FlowCanvas;
 using FlowCanvas.Macros;
 using NodeCanvas.Framework;
@@ -384,31 +385,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         public static BtsmtlSkillFlowGraph EnsureTimelineGraph(
             TimelineAsset owner,
             string identity,
-            string name)
+            string name,
+            BtsmtlSkillFlowGraphRole role = BtsmtlSkillFlowGraphRole.TimelineBody)
         {
-            if (owner == null)
-                throw new ArgumentNullException(nameof(owner));
-            string path = AssetDatabase.GetAssetPath(owner);
-            if (string.IsNullOrEmpty(path))
-                throw new InvalidOperationException("Timeline decision graph must belong to a saved Timeline asset.");
-            BtsmtlSkillFlowGraph existing = AssetDatabase.LoadAllAssetsAtPath(path)
-                .OfType<BtsmtlSkillFlowGraph>()
-                .SingleOrDefault(value => string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
-            if (existing)
-            {
-                if (existing.Role != BtsmtlSkillFlowGraphRole.TimelineBody)
-                    throw new InvalidOperationException($"Timeline graph identity '{identity}' has a different role.");
-                return existing;
-            }
-            var graph = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
-            graph.name = name;
-            graph.ConfigureIdentity(identity, BtsmtlSkillFlowGraphRole.TimelineBody);
-            AssetDatabase.AddObjectToAsset(graph, path);
-            Undo.RegisterCreatedObjectUndo(graph, "创建Timeline状态边界图");
-            BtsmtlSkillFlowEditorMutation.Apply(graph, "初始化Timeline状态边界图", () => BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph), false);
-            EditorUtility.SetDirty(graph);
-            EditorUtility.SetDirty(owner);
-            return graph;
+            return TimelineGraphAuthoring.EnsureSubAsset(owner, identity, name, role);
         }
         public static FlowNode EnsureFlowNode(
             FlowGraph graph,

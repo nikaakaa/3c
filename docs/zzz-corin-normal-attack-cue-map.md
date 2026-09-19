@@ -107,5 +107,5 @@
 1. Attack3 Explode 必须拥有独立状态本地时间；其 frame=1 的 `Corin_Attack_Normal_03_AttackProperty_02` 不能塞进主段全局轴。
 2. Attack5 的 frame=47 是 End / End_2 分支选择点；现在由 `Attack5EndBoundary` TreeClip 和正式状态转移选择唯一分支。
 3. `Corin_Attack_Normal_05_End_2` 的 15 个本地 AttackProperty cue 已挂在 `CorinAttack5End2Timeline` 的 `End_2` 分支。
-4. Attack5 frame=64 多出的 `_01_02` cue 已删除；对应 Ability 资产已重建，1121 帧固定输入 Replay 逐帧 matched。
-5. 已重建对应 Ability/Timeline 资产，并复跑固定输入 Replay：1121 帧逐帧 matched、aggregate matched。
+4. Attack5 frame=64 多出的 `_01_02` cue 已删除；对应 Ability 资产已重建，实际动作回放尚未完成。
+5. 已重建对应 Ability/Timeline 资产；无输入 Replay 已删除，不能作为普通攻击运行证据。

@@ -33,4 +33,4 @@ Rush Ability 已登记 8 个唯一 Rush AttackProperty GameplayEffect：普通�
 
 ## 复验
 
-同 Trace `369327502f7a4add8a21a19a7713d24d` 在新增 Rush Admission Profile 与 Ability 后复跑：`matched:1121`，基线 proof 为 `20260919-085836-293-d0cfb77806a54ee5a8263e90763d42e3.json`，本次 proof 为 `20260919-100603-789-32d845b6af3d44edbd227f361fc7395c.json`。该结果证明新资产不破坏现有 NormalAttack Replay；Rush 主动激活链仍在等待 Dodge/Control owner。
+无输入 Replay 及对应 Proof 已删除。当前尚无包含 Rush 请求的回放证据，不能据此认定 Rush 或 NormalAttack 的运行闭环。

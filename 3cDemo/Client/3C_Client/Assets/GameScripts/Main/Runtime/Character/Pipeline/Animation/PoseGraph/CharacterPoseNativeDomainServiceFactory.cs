@@ -317,21 +317,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         IReadOnlyList<PoseNodeId> CollectPlayerNodeIds()
         {
-            var result = new List<PoseNodeId>();
-            foreach (CharacterPoseCanvasGraph graph in m_Profile.PoseGraph.EnumerateGraphs())
-            {
-                foreach (CharacterPoseCanvasNode node in graph.Nodes)
-                {
-                    if (node != null &&
-                        (node.PresentationPoseSourceSlot ||
-                         node.Kind == CharacterPoseNodeKind.PoseStateMachine ||
-                         node.Kind == CharacterPoseNodeKind.AnimationSlot) &&
-                        !result.Contains(node.NodeId))
-                    {
-                        result.Add(node.NodeId);
-                    }
-                }
-            }
+            var result = new PoseNodeId[m_IndexByNode.Count];
+            foreach (KeyValuePair<PoseNodeId, int> node in m_IndexByNode)
+                result[node.Value] = node.Key;
             return result;
         }
 

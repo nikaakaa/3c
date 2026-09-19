@@ -51,7 +51,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     primitive.SourceOwnerIndex)
                 {
                     throw new InvalidOperationException(
-                        "Final Animation Pose Live contribution metadata is stale.");
+                        $"Final Animation Pose Live contribution metadata is stale: player={primitive.PhysicalPlayerIndex}, " +
+                        $"expectedNode={playerNodeId}, actualNode={sourceModule.RequirePoseNodeId(physicalIdentity)}, " +
+                        $"expectedOwner={primitive.SourceOwnerIndex}, actualOwner={sourceModule.RequireSourceOwnerIndex(physicalIdentity)}.");
                 }
             }
             else if (primitive.PhysicalSourceIndex != -1 ||

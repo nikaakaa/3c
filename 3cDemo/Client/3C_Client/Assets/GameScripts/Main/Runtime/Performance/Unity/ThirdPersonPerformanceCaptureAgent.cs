@@ -341,6 +341,7 @@ namespace ThirdPersonPerformance.Runtime
             }
             FixedCharacterInputTraceModule.PrepareReplay(
                 new FixedCharacterInputTrace(document.trace_id, actorId, document.tick_rate, frames),
+                actorId,
                 m_Scenario.warmup_logic_ticks);
         }
 

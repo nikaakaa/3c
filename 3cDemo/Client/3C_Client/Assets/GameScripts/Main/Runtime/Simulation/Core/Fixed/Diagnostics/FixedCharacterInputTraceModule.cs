@@ -329,16 +329,18 @@ namespace ThirdPersonSimulation.Fixed
             return trace;
         }
 
-        public static void PrepareReplay(FixedCharacterInputTrace trace, int pauseAfterFrameCount)
+        public static void PrepareReplay(FixedCharacterInputTrace trace, ActorId targetActorId, int pauseAfterFrameCount)
         {
             if (trace == null)
                 throw new ArgumentNullException(nameof(trace));
+            if (!targetActorId.IsValid)
+                throw new ArgumentException("Fixed input replay requires a target Actor.", nameof(targetActorId));
             if (pauseAfterFrameCount < 0 || pauseAfterFrameCount >= trace.Frames.Count)
                 throw new ArgumentOutOfRangeException(nameof(pauseAfterFrameCount));
             RequireIdle();
             ResetState();
             s_Replay = trace;
-            s_ActorId = trace.ActorId;
+            s_ActorId = targetActorId;
             s_TraceId = trace.TraceId;
             s_ReplayPauseAfterFrameCount = pauseAfterFrameCount;
             s_ReplayEvidence = new ReplayFrameBuilder[trace.Frames.Count];
@@ -366,7 +368,7 @@ namespace ThirdPersonSimulation.Fixed
             WorldBodyState startBody,
             bool continueAfterReplay = false)
         {
-            PrepareReplay(trace, pauseAfterFrameCount);
+            PrepareReplay(trace, startBody.ActorId, pauseAfterFrameCount);
             s_StartBody = startBody;
             s_HasStartBody = true;
             s_ContinueAfterReplay = continueAfterReplay;

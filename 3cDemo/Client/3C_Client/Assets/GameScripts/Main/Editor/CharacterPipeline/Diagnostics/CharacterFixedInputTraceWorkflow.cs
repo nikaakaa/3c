@@ -348,7 +348,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TraceDocument document = ReadDocument(path, true);
             FixedCharacterInputTrace trace = ToRuntimeTrace(document);
             s_ActiveReplayDocument = document;
-            FixedCharacterInputTraceModule.PrepareReplay(trace, 0);
+            FixedCharacterInputTraceModule.PrepareReplay(trace, new ActorId(PlayerActorId), 0);
             s_PendingReplayDocument = document;
             s_LastFailure = string.Empty;
             s_LastTracePath = path;
@@ -1778,7 +1778,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (hasActiveHost)
                     FixedCharacterInputTraceModule.PrepareReplayFromCheckpoint(trace, 0, initialBody);
                 else
-                    FixedCharacterInputTraceModule.PrepareReplay(trace, 0);
+                    FixedCharacterInputTraceModule.PrepareReplay(trace, new ActorId(PlayerActorId), 0);
             }
             else if (hasActiveHost)
             {

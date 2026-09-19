@@ -527,7 +527,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     runtime.CurrentLineage.CompletionIdentity);
             if (!result.IsValid)
                 throw new InvalidOperationException(
-                    $"Full Body IK Goal Assembler '{NodeId}' returned an invalid Constraint result.");
+                    $"Full Body IK Goal Assembler '{NodeId}' returned an invalid Constraint result: " +
+                    $"failure={result.Assembly.Failure}, contribution={result.Assembly.FailedGoalSetIndex}, " +
+                    $"slot={result.Assembly.FailedSlot}, frame={frame.PresentationFrame}, " +
+                    $"completion={runtime.CurrentLineage.CompletionIdentity}.");
             CharacterFullBodyIkGoalSetHeader resultGoalSet = result.GoalSet;
             CharacterFullBodyIkGoalSet goalSet =
                 m_Service.RequireGoalSet(in resultGoalSet);
@@ -627,6 +630,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new InvalidOperationException(
                     $"Full Body IK '{NodeId}' received an unavailable Component Pose.");
+            }
+            foreach (CharacterPoseDynamicPort contribution in node.DynamicPorts)
+            {
+                if (contribution.Direction != CharacterPosePortDirection.Input ||
+                    contribution.Kind != CharacterPosePortKind.FullBodyIkGoalContribution)
+                    continue;
+                if (contribution.Required || node.GetInputPort(contribution.PortId.Value).isConnected)
+                    runtime.ReadInput<CharacterPoseNativeGoalContributionValue>(
+                        node, contribution.PortId.Value);
             }
             ValueInput<CharacterPoseNativeFullBodyIkGoalsValue> goalsInput =
                 node.GetInputPort("goals") as

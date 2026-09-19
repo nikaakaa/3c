@@ -381,6 +381,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return asset;
         }
 
+        public static BtsmtlSkillFlowGraph EnsureTimelineGraph(
+            TimelineAsset owner,
+            string identity,
+            string name)
+        {
+            if (owner == null)
+                throw new ArgumentNullException(nameof(owner));
+            string path = AssetDatabase.GetAssetPath(owner);
+            if (string.IsNullOrEmpty(path))
+                throw new InvalidOperationException("Timeline decision graph must belong to a saved Timeline asset.");
+            BtsmtlSkillFlowGraph existing = AssetDatabase.LoadAllAssetsAtPath(path)
+                .OfType<BtsmtlSkillFlowGraph>()
+                .SingleOrDefault(value => string.Equals(value.AuthoringId, identity, StringComparison.Ordinal));
+            if (existing)
+            {
+                if (existing.Role != BtsmtlSkillFlowGraphRole.TimelineBody)
+                    throw new InvalidOperationException($"Timeline graph identity '{identity}' has a different role.");
+                return existing;
+            }
+            var graph = ScriptableObject.CreateInstance<BtsmtlSkillFlowGraph>();
+            graph.name = name;
+            graph.ConfigureIdentity(identity, BtsmtlSkillFlowGraphRole.TimelineBody);
+            AssetDatabase.AddObjectToAsset(graph, path);
+            Undo.RegisterCreatedObjectUndo(graph, "创建Timeline状态边界图");
+            BtsmtlSkillFlowEditorMutation.Apply(graph, "初始化Timeline状态边界图", () => BtsmtlSkillGraphAssetFactory.PopulateAnchors(graph), false);
+            EditorUtility.SetDirty(graph);
+            EditorUtility.SetDirty(owner);
+            return graph;
+        }
         public static FlowNode EnsureFlowNode(
             FlowGraph graph,
             Type nodeType,
@@ -520,8 +549,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             TimelineContractCatalog catalog,
             Type trackType,
             string identity,
-            string name)
+            string name,
+            TimelineExecutionDomain executionDomain = TimelineExecutionDomain.Logic)
         {
+            if (timeline == null)
+                throw new ArgumentNullException(nameof(timeline));
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
+            Track expected = Activator.CreateInstance(trackType) as Track;
+            TimelineTrackContract contract = catalog.RequireTrack(expected?.ContractKind);
+            if (!contract.SupportsExecutionDomain(executionDomain))
+                throw new InvalidOperationException($"Timeline track '{contract.Kind}' does not support execution domain '{executionDomain}'.");
             Track existing = timeline.Tracks.SingleOrDefault(value => value != null && value.AuthoringId == identity);
             if (existing != null)
             {
@@ -529,6 +567,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     throw new InvalidOperationException($"Timeline track identity '{identity}' has a different type.");
                 existing.Name = name ?? existing.Name;
                 existing.PersistentMuted = false;
+                existing.ConfigureExecutionDomain(executionDomain);
                 return existing;
             }
             Track created = null;
@@ -540,6 +579,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 created = timeline.Tracks[count];
                 created.ConfigureAuthoringIdentity(identity);
                 created.Name = name ?? created.Name;
+                created.ConfigureExecutionDomain(executionDomain);
                 timeline.Init();
             }, "生成Timeline轨道");
             return created;
@@ -557,6 +597,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             if (existing != null)
             {
                 ConfigureClipSegment(existing, startFrame, DefaultEndFrame(existing, startFrame, referenceObject), 0, 0, 0);
+                ConfigureClipExecution(track, existing);
                 return existing;
             }
             Clip created = null;
@@ -567,9 +608,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     ? timeline.AddClip(catalog, referenceObject, track, startFrame)
                     : timeline.AddClip(catalog, track, startFrame);
                 created.ConfigureAuthoringIdentity(identity);
+                ConfigureClipExecution(track, created);
                 timeline.Init();
             }, "生成Timeline片段");
             return created;
+        }
+
+        static void ConfigureClipExecution(Track track, Clip clip)
+        {
+            clip.ConfigureExecutionDomain(track.ExecutionDomain);
+            if (clip is TreeClip tree)
+                tree.SetExitSource(track.ExecutionDomain == TimelineExecutionDomain.Logic
+                    ? TimelineClipExitSource.TreeDecision
+                    : TimelineClipExitSource.FrameBoundary);
         }
 
         public static Clip EnsureClip(

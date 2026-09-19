@@ -4,7 +4,7 @@
 
 Corin `RushAttack` MUST 是独立正式 Ability / FSM 链，MUST 拥有 ZZZ 的 8 个业务状态：`Attack_Rush`、`Attack_Rush_Explode`、`Attack_Rush_End`、`Attack_Rush_Enhance`、`Attack_Rush_Enhance_Loop`、`Attack_Rush_Enhance_End`、`Attack_Rush_Enhance_Explode` 和 `Attack_Rush_Enhance_Explode_End`。每个状态 MUST 拥有状态本地 Timeline producer；7 个实际 Motion 可复用，但播放身份和 `StateId` MUST 不合并。Rush MUST NOT 追加到 NormalAttack 五段 Timeline，也 MUST NOT 改为 Locomotion PoseStateMachine 状态。
 
-Rush 状态 Timeline MUST 使用 ZZZ 源总帧 70、70、80、44、86、70、70、118 作为状态时长基准，MUST 用正式 Logic TreeClip / FSM 条件表达 frame=13/23/70、frame=35、frame=43/81/86、frame=40/55/70 和 frame=55/118 边界。原 `special_*` 目标 MUST 交给 Hit、Evade、Aid、Switch 等正式宿主 owner；缺失 owner 时 MUST 显式失败或保持不可用，MUST NOT 伪造路由。
+Rush 状态 Timeline MUST 使用 ZZZ 源总帧 70、70、80、44、86、70、70、118 作为状态时长基准，MUST 用正式 Logic TreeClip / FSM 条件表达 frame=13/23/70、14/70、80、frame=35、frame=43/81/86、frame=40/55 和 frame=55/118 边界。原 `special_*` 目标 MUST 交给 Hit、Evade、Aid、Switch 等正式宿主 owner；缺失 owner 时 MUST 显式失败或保持不可用，MUST NOT 伪造路由。
 
 #### Scenario: Rush独立于NormalAttack
 

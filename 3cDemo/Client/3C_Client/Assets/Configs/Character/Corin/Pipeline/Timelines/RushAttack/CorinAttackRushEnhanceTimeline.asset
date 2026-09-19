@@ -1,0 +1,430 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-200240719098948488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a948d6627a8f3c4da400e687ba05224, type: 3}
+  m_Name: Boundary Attack_Rush_Enhance Attack_Rush_Enhance_Loop Terminal @35
+  m_EditorClassIdentifier: 
+  _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"3304835a-63b0-417b-9937-432cbf712dbe","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineEnableFlowNode"},{"_UID":"37579810-6a89-4e8d-895c-79bb433fdb2b","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode"},{"_UID":"24f8ec17-5e1e-40d2-9723-5880c9db2393","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDisableFlowNode"},{"_UID":"40dbf7b3-6516-49ab-840e-259af1aed514","_position":{"x":120.0,"y":660.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineDestroyFlowNode"}],"connections":[],"canvasGroups":[],"localBlackboard":{"_variables":{}},"derivedData":{"Identity":"d089a439-0237-33f1-aa72-ac917567c225","Role":5,"Declarations":[],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
+  _objectReferences: []
+  _graphSource:
+    _version: 3.42
+    _category: 
+    _comments: 
+    _translation: {x: 0, y: 0}
+    _zoomFactor: 1
+  _haltSerialization: 0
+  _externalSerializationFile: {fileID: 0}
+  m_AuthoringId: d089a439-0237-33f1-aa72-ac917567c225
+  m_Role: 5
+  m_BlackboardDeclarations: []
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa5ae3c048510ba4bb65d1cfb507eb53, type: 3}
+  m_Name: CorinAttackRushEnhanceTimeline
+  m_EditorClassIdentifier: 
+  m_Data:
+    m_AuthoringId: fa50d379-5509-1650-85ca-6bc5c062faa3
+    m_Name: CorinAttackRushEnhanceTimeline
+    m_Tracks:
+    - rid: 207050555325416088
+    - rid: 207050555325416090
+    - rid: 207050555325416107
+    m_Sections:
+    - m_AuthoringId: 017fe590-4234-5099-420e-794651345f58
+      m_Name: Attack_Rush_Enhance
+      m_Frame: 0
+      m_NextSectionId: 
+      m_BranchId: Rush_Enhance
+    m_ExternalBindings: []
+    m_Loop: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 207050555325416088
+      type: {class: AnimationTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 918912fa-40c9-d1d3-b6d1-02cb8f08356e
+        Name: Animation
+        m_ExecutionDomain: 2
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416089
+        m_Markers: []
+        m_AnimationChannelId: FullBodyAction
+        m_AnimationSlotId: corin.full-body-action
+    - rid: 207050555325416089
+      type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 35ec9f0d-14d9-cb8a-5e1a-276a4f4438bc
+        m_ExecutionDomain: 2
+        StartFrame: 0
+        EndFrame: 44
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        Clip: {fileID: 7400000, guid: fa38deedaed81e14984c451596a6e1c6, type: 2}
+        ExtraPolationMode: 0
+        WeightCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 0
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseInCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        EaseOutCurve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        BlendProfileId: corin.animation-rig.action-blend-profile
+    - rid: 207050555325416090
+      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 09bf14f8-dce3-18af-bc79-cb61d8271d5b
+        Name: AttackProperty
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416091
+        - rid: 207050555325416092
+        - rid: 207050555325416093
+        - rid: 207050555325416094
+        - rid: 207050555325416095
+        - rid: 207050555325416096
+        - rid: 207050555325416097
+        - rid: 207050555325416098
+        - rid: 207050555325416099
+        - rid: 207050555325416100
+        - rid: 207050555325416101
+        - rid: 207050555325416102
+        - rid: 207050555325416103
+        - rid: 207050555325416104
+        - rid: 207050555325416105
+        - rid: 207050555325416106
+        m_Markers: []
+    - rid: 207050555325416091
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 7959cac4-08dd-f0ab-4589-d107a6c6fc07
+        m_ExecutionDomain: 1
+        StartFrame: 7
+        EndFrame: 8
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_03
+        CueType: AttackProperty
+    - rid: 207050555325416092
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: b2cf8730-d8b1-ed17-bed9-e031725bc0d9
+        m_ExecutionDomain: 1
+        StartFrame: 9
+        EndFrame: 10
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416093
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: c376d236-4a4e-4e27-0a57-403c92a37d18
+        m_ExecutionDomain: 1
+        StartFrame: 11
+        EndFrame: 12
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416094
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 28ff9384-b5f6-b336-2222-8405d2889968
+        m_ExecutionDomain: 1
+        StartFrame: 13
+        EndFrame: 14
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416095
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: b97b7c3f-fca4-28f5-be37-47f14eb51a17
+        m_ExecutionDomain: 1
+        StartFrame: 15
+        EndFrame: 16
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416096
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 2adc2f6d-d17d-3d41-a468-ca3da881bda2
+        m_ExecutionDomain: 1
+        StartFrame: 17
+        EndFrame: 18
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416097
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: f31ad02c-bc51-67e2-3137-ab20ab0adefa
+        m_ExecutionDomain: 1
+        StartFrame: 19
+        EndFrame: 20
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416098
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: e2bbc71b-934c-a52e-ba08-e5a76852431e
+        m_ExecutionDomain: 1
+        StartFrame: 21
+        EndFrame: 22
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416099
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: e76fb00b-44c7-8f21-9297-aa6db9d128f0
+        m_ExecutionDomain: 1
+        StartFrame: 23
+        EndFrame: 24
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416100
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 7274f71a-8534-a4a8-805b-03056acebcdb
+        m_ExecutionDomain: 1
+        StartFrame: 25
+        EndFrame: 26
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416101
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 0bef2c7e-ea06-3a25-c210-756d5b9b0a3b
+        m_ExecutionDomain: 1
+        StartFrame: 27
+        EndFrame: 28
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416102
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 10e6757e-340b-6b41-c57a-5fbaf9ca02dc
+        m_ExecutionDomain: 1
+        StartFrame: 29
+        EndFrame: 30
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416103
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: bfb3a5d2-43b1-802d-d4d3-2302163b0580
+        m_ExecutionDomain: 1
+        StartFrame: 31
+        EndFrame: 32
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416104
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 95c8b316-22b6-1dab-f368-70f8b8f0cdad
+        m_ExecutionDomain: 1
+        StartFrame: 33
+        EndFrame: 34
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416105
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: d2cc98a1-2209-f466-37b3-bfb4e7d00414
+        m_ExecutionDomain: 1
+        StartFrame: 35
+        EndFrame: 36
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416106
+      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
+      data:
+        m_AuthoringId: 439a8e72-cb81-2310-7c86-a17e6cc45069
+        m_ExecutionDomain: 1
+        StartFrame: 37
+        EndFrame: 38
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
+        CueType: AttackProperty
+    - rid: 207050555325416107
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 577b2bdd-771e-abce-2e79-1f4d7c0391bb
+        Name: StateBoundary
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416108
+        m_Markers: []
+    - rid: 207050555325416108
+      type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: eade943d-c3d8-8593-d902-d510a051f0db
+        m_ExecutionDomain: 1
+        StartFrame: 34
+        EndFrame: 44
+        OtherEaseInFrame: 0
+        OtherEaseOutFrame: 0
+        SelfEaseInFrame: 0
+        SelfEaseOutFrame: 0
+        ClipInFrame: 0
+        m_ExecutionPhase: 0
+        m_ExitSource: 1
+        m_AssetTree: {fileID: -200240719098948488}

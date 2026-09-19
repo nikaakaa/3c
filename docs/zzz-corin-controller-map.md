@@ -287,15 +287,20 @@
 - BranchAttack 18 状态 → 12 Clip：Branch_01（+_End/_Explode）、Branch_02（+_End/_Explode）、Branch_Loop、Branch_Walk、Branch_03_Loop、Branch_03_Walk_Loop、Branch_03_Shake、Branch_03_Walk_Shake。Branch_03 主体/End/Explode 复用 Branch_02 系列，NotExplode 复用 Branch_01_Explode。
 - RushAttack 8 状态 → 7 Clip：Rush、Rush_End、Rush_Explode、Rush_Enhance_Start、Rush_Enhance_Loop、Rush_Enhance_Explode、Rush_Enhance_End（复用 Rush_Explode）。
 
+### RushAttack Timeline 收口（2026-09-19）
+
+Rush 的 8 个状态 Timeline 已落盘到 Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/，继续复用 7 个实际 Motion；每个状态保留独立 TimelineId、StateId、SectionId 与 Rush / Rush_Enhance BranchId。全量 93 个 AttackProperty Logic ActionCue、18 个状态边界 Decision TreeClip 已挂到对应状态本地帧。资产身份、命中帧、边界条件和 runtime SourceFrame = TimelineFrame + 1 合同见 [zzz-corin-rush-timeline-map.md](zzz-corin-rush-timeline-map.md)。
+
 ### 缺口结论
 
 - Clip 资产：19/19 全部已按 ZZZ 原名导入 3C（`Avatar_Female_Size01_Corin_Ani_*`，含 Inplace/Rootmotion/Weapon 变体），**导入零缺口、零改名需求**——正式绑定直接引用导入资产名，改名反而切断与导出清单的对应。`Attack_Rush_Enhance`（无 _Start 后缀）也已导入但不被这 8 个状态引用，留作证据不冒充绑定。
-- Pose 源目录：Corin Presentation Profile 源目录当前只有 locomotion 7 源，0 条 Attack 条目；PoseGraph 状态机仅 locomotion 状态。Branch/Rush 的 Clip 均未进入 Pose 绑定。
-- 真正缺口在上游：Branch/Rush 的 Timeline、Ability 执行状态与转移条件（Control）均未建。Pose 侧不具备独自成链的条件。
+- Rush Timeline：8/8 已收口，本批不再有 Timeline / cue / 状态边界缺口。Branch 仍无正式 Timeline。
+- Rush 剩余缺口在上游接线：Rush Ability / FSM / Control admission 未建，8 个 Timeline producer 也未接进既有 Action playback / Slot 链。
 
 ### 可实施顺序
 
 1. **决策点（已定，2026-09-19 总控）**：RushAttack 采用与 NormalAttack 相同的 Timeline Action playback 链，不扩 locomotion Pose 状态机、不建第二套 Attack Pose 路径。Pose 侧已确认承接：`corin.full-body-action.slot` 节点在图内（FullBodyAction channel、AllowEmpty），committed samples 按 SourceId 解析、clip 无关。BranchAttack 是否同链待 Branch 建链时按同口径确认。
-2. **Control/Ability/Timeline 建链**：转移条件、Timeline 起止与 committed sample（引用上表 19 Clip 的导入资产名）。
-3. **Pose 侧接线**（材料已备，无导入工作）：Timeline action playback 经既有 ActionPlaybackInput/Slot 节点与 actionSampleProvider 混入 Pose；若走状态机路线则为每状态建 Clip Player 绑定（19 条 source 条目进 Profile 源目录 + ResourceSet 重编译，菜单链路已具备）。
-4. **验证**：Play 侧 Replay 观察 Branch/Rush 姿态混入与 NormalAttack 回归。
+2. **Rush Control/Ability 建链**：Rush 8 个 Timeline 起止和 committed sample 已备，剩余是 Dodge 入口、内部转移、Normal04 handoff 和宿主路由；Branch 仍需 Timeline / Ability / Control 建链。
+3. **Rush Pose 侧接线**：把 8 个 Rush Timeline producer 接进既有 ActionPlaybackInput / FullBodyAction Slot 链，不新增 Pose 状态机或第二条 Pose 路径。
+4. **Branch Pose 侧接线**：材料已备但未建链；若 Branch 后续沿用同一决策，走 Timeline action playback，不把 19 个 Clip 写进 locomotion 源目录。若改走状态机，才需要为对应状态建 Clip Player 绑定和源目录条目。
+5. **验证**：Rush Control / Ability / Pose 接线完成后再做 Play 侧 Replay，观察姿态混入、命中时序与 NormalAttack 回归。

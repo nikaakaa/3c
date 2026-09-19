@@ -9,11 +9,11 @@
 
 ## 2. Rush Timeline / cue
 
-- [ ] 2.1 建立 8 个状态 Timeline，按 7 个实际 Motion 绑定 AnimationTrack 和 FullBodyAction channel
-- [ ] 2.2 为每个 Timeline 建 ZZZ 同名 Section 和 `Rush` / `Rush_Enhance` BranchId
-- [ ] 2.3 挂 93 个 AttackProperty Logic ActionCue，保留原始 `CueId` 与状态/分支/本地帧身份
-- [ ] 2.4 用 Decision TreeClip 表达 frame=13/23/70、35、43/81/86、40/55/70、55/118 等状态边界
-- [ ] 2.5 纳入正式内容闭包与资源引用，重建 Rush Ability 资产
+- [x] 2.1 建立 8 个状态 Timeline，按 7 个实际 Motion 绑定 AnimationTrack 和 FullBodyAction channel
+- [x] 2.2 为每个 Timeline 建 ZZZ 同名 Section 和 `Rush` / `Rush_Enhance` BranchId
+- [x] 2.3 挂 93 个 AttackProperty Logic ActionCue，保留原始 `CueId` 与状态/分支/本地帧身份
+- [x] 2.4 用 Decision TreeClip 表达 frame=13/23/70、14/70、80、35、43/81/86、40/55、55/118 等状态边界
+- [x] 2.5 纳入 8 个 Rush Timeline 资产的正式内容闭包、子图与轨道引用
 
 ## 3. Pose / 消费接线
 

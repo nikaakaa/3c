@@ -111,3 +111,5 @@ Timeline 侧边界同步收口：ActionCue 只在 Logic commit 后发布 `CueTyp
 
 2026-09-19：Branch/Rush PoseGraph 绑定评估完成：26 个状态去重后需要 19 个独立 Clip，全部按 ZZZ 原名导入 3C，导入零缺口；Corin Pose 源目录当前 0 条 Attack 条目，真正缺口在 Timeline/Ability/Control 未建链。按防分裂原则，Branch/Rush 走与 NormalAttack 相同的 Timeline Action playback 链，不扩 locomotion Pose 状态机。下一批先做 RushAttack 8 状态，BranchAttack 后置。
 2026-09-19：RushAttack 正式链路方案已登记到 `openspec/changes/add-corin-rush-attack-formal-chain`：8 个状态独立 Ability/Timeline，7 个 Motion 按实际引用复用，93 个状态本地 AttackProperty cue 和 source-frame 边界已对账；Pose 继续走 Timeline Action playback，不扩 locomotion 状态机。
+
+2026-09-19：RushAttack Timeline 8 个状态已正式收口到 Assets/Configs/Character/Corin/Pipeline/Timelines/RushAttack/。7 个实际 Motion 继续按控制器实际引用复用，8 个播放身份和 Rush / Rush_Enhance BranchId 保持独立；93 个 AttackProperty Logic ActionCue 和 18 个状态边界 Decision TreeClip 已挂到状态本地帧。全量资产身份、TimelineId、SectionId、命中帧和边界见 [zzz-corin-rush-timeline-map.md](zzz-corin-rush-timeline-map.md)。Rush 现在只剩 Ability / FSM / Control admission 和 Timeline producer 到 Pose Action playback 的接线；命中 payload 仍归 GameplayEffect / Ability，不进 Timeline。

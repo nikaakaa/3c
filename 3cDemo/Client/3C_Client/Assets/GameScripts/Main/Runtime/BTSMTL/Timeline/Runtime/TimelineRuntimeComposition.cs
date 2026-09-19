@@ -291,6 +291,12 @@ namespace BTSMTL.Timeline.Runtime
             }
 
             bool hasState = m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state);
+            if (hasState && state.StopCommitted)
+            {
+                m_Playbacks.Remove(handle.Value);
+                frame = default;
+                return false;
+            }
             if (!hasState)
             {
                 if (playback.State == TimelineRuntimePlaybackState.Stopping ||
@@ -304,7 +310,6 @@ namespace BTSMTL.Timeline.Runtime
                 m_Playbacks.Add(handle.Value, state);
             }
 
-            var events = new List<TimelineRuntimePresentationEvent>();
             if (state.HasCachedFrame)
             {
                 if (presentationFrame == state.LastPresentationFrame)
@@ -323,6 +328,7 @@ namespace BTSMTL.Timeline.Runtime
                 return false;
             }
 
+            var events = new List<TimelineRuntimePresentationEvent>();
             int maxFrame = Math.Max(0, playback.Content.MaxFrame);
             bool loop = playback.PlaybackMode == TimelinePlaybackMode.Loop;
             float previousFrame = state.CursorFrame;

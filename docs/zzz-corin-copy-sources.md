@@ -14,6 +14,7 @@ Replay 闭环已 `matched:1121`。本清单只登记已存在的 ZZZ 证据源�
 - 目标领域：Control 状态、Ability 转移条件、Timeline 起止、Pose 状态选择。
 - 抄录优先级：最高；先对齐战斗主控制器，不抄 UI/NPC 表现。
 - 当前状态对照：[zzz-corin-controller-map.md](zzz-corin-controller-map.md)
+- Rush 正式链（2026-09-19 定）：走与 NormalAttack 相同的 Timeline Action playback 链，不扩 Pose 状态机；Pose 侧 `corin.full-body-action.slot`（FullBodyAction channel、AllowEmpty）已具备、零新增，等待 Rush Timeline producer（7 Motion，状态→Motion 对照见 controller-map）。
 
 ### 2. Animation Clip
 

@@ -8,7 +8,7 @@
 |---|---:|---|---|
 | NormalAttack | 12 | Control + Attack Ability + Timeline | 已收口：12状态进入正式 Attack FSM/Timeline；End/Explode/End_2 状态边界、Attack5EndBoundary 分支和状态本地 cue 已重建，`Attack_Normal_05_End_2` 绑 `Attack_Normal_05_B`。 |
 | BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | 已精确对账：18状态全部有真实Clip绑定，Branch_01/03大量共享Branch_02与Branch_Loop/Walk共享Motion；缺的是Timeline/Pose binding与Ability状态，不是Clip。 |
-| RushAttack | 8 | Control + Attack Ability + Timeline + Pose | 已精确对账：8状态全部有真实Clip绑定（`Attack_Rush_Enhance`实际绑`Enhance_Start`，Enhance_End复用`Attack_Rush_Explode`）；缺Timeline/Pose binding与Ability状态。 |
+| RushAttack | 8 | Control + Attack Ability + Timeline + Pose | 已精确对账并定链（2026-09-19）：采用与NormalAttack相同的Timeline Action playback链，不扩locomotion状态机；Pose侧Slot链已具备零新增，等待Timeline producer建链。 |
 | AidCounterAttack | 20 | Control + Combat/Aid Ability + Timeline | 仅有效果/镜头证据，没有正式 3C Aid/Counter 执行链；AssaultAid 只有 raw Motion。 |
 | EvadeHit | 8 | Control + Pose + Hit feedback | Dodge 已有正式 Ability；Hit/HitFly 状态复用 Front/Back Motion，还没有完整 3C 链。 |
 | Switch | 11 | Control + Switch Ability | SwitchIn/SwitchOut 还没有正式 Control 请求与 Switch Ability。 |
@@ -295,7 +295,7 @@
 
 ### 可实施顺序
 
-1. **决策点（Control/Ability/Timeline owner）**：Branch/Rush 走与 NormalAttack 相同的 Timeline Action playback 链（Slot/ActionPlaybackInput 混入 Pose，与现行攻击架构不分裂），或作为 Pose 状态机状态扩进 locomotion 图。按"不产生分裂路径"原则，前者是唯一不与 NormalAttack 分裂的路线；后者需要 Ability/Timeline owner 先确认放弃 Timeline 路线。
+1. **决策点（已定，2026-09-19 总控）**：RushAttack 采用与 NormalAttack 相同的 Timeline Action playback 链，不扩 locomotion Pose 状态机、不建第二套 Attack Pose 路径。Pose 侧已确认承接：`corin.full-body-action.slot` 节点在图内（FullBodyAction channel、AllowEmpty），committed samples 按 SourceId 解析、clip 无关。BranchAttack 是否同链待 Branch 建链时按同口径确认。
 2. **Control/Ability/Timeline 建链**：转移条件、Timeline 起止与 committed sample（引用上表 19 Clip 的导入资产名）。
 3. **Pose 侧接线**（材料已备，无导入工作）：Timeline action playback 经既有 ActionPlaybackInput/Slot 节点与 actionSampleProvider 混入 Pose；若走状态机路线则为每状态建 Clip Player 绑定（19 条 source 条目进 Profile 源目录 + ResourceSet 重编译，菜单链路已具备）。
 4. **验证**：Play 侧 Replay 观察 Branch/Rush 姿态混入与 NormalAttack 回归。

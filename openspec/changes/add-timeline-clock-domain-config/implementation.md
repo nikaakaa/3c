@@ -125,3 +125,10 @@
 - 本次只补作者入口及已有合同校验。Marker 图节点的表现能力检查仍由 6.1 / 8.2 完成，不把 Inspector 接入视为该能力已经实现。
 - 秒制迁移仍未完成：当前 TimelineData 的正式存储仍是整数作者帧；FixedScalar 位于 ThirdPersonSimulation.Fixed，Timeline 仅直接引用 Core。后续必须同时处理公共时间合同与依赖方向，不能用秒属性包裹旧帧字段冒充迁移完成。
 - 本次未新增测试；Unity 编译重载期间 MCP 连接不可用，尚未取得本次编译完成证据，任务勾选保持不变。
+## 秒制公共数值依赖
+
+- 将现有 FixedScalar 从 Fixed/Numerics/SimulationNumerics.cs 移入公共 Core/Numerics/FixedScalar.cs；保留同一类型全名与全部运算实现，旧定义删除，没有复制第二份算法或新增兼容转发。
+- Q32.32 的 FractionalBits 由数值类型自身声明，FixedSimulationNumericProfile 引用该常量。Core 不再需要为了使用秒制定点值而反向依赖 Fixed 执行器；Timeline 已引用 Core，后续公共时间合同可以直接复用此类型。
+- 提取前后逐字比较 FixedScalar 主体，除常量来源改为等值 32 外完全一致。正式 Portable Fixed 与 Float32 项目均编译通过，各为 0 警告、0 错误；构建使用禁用 build servers / node reuse / shared compilation 参数，结束后执行 build-server shutdown。没有新增测试。
+- 本次改变程序集归属，不改变数值格式。已搜索源码与资产，没有发现绑定旧程序集的 FixedScalar 类型字符串或反射查找；Unity 完整程序集重载仍待确认。
+- 这是 0.2 的依赖准备，不代表秒制作者字段、被动求值、资产迁移或 tick 吸附完成，任务勾选保持不变。

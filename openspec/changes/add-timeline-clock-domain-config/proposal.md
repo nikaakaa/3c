@@ -6,7 +6,7 @@ Timeline 当前仍以固定 60 作者帧记录内容，只能换算不同 Simula
 
 ## What Changes
 
-- **BREAKING**：Timeline 的起点、时长、Marker、Section、ClipIn 和 Timeline 自有时间坐标统一用秒表达和保存。帧只作为编辑显示、素材来源或吸附单位，不保留帧与秒双写，不生成独立 tick 版作者资产。具体数值表示、存储精度与舍入规则仍需在实现前明确，不能默认使用 float 累加。
+- **BREAKING**：Timeline 的起点、时长、Marker、Section、ClipIn 和 Timeline 自有时间坐标统一用秒表达和保存，采用现有 Fixed 合同一致的 Q32.32 与 nearest-even 舍入。帧只作为编辑显示、素材来源或吸附单位，不保留帧与秒双写，不生成独立 tick 版作者资产；逻辑保留换算余数，不使用 float 反复累加。
 - **BREAKING**：明确 Timeline 被动求值。原逻辑／表现播放管理者决定前后动作秒数、经过与推进原因，Timeline 接收结果遍历内容边界并产生候选，不自行读取时间源或累计另一份游标。逻辑调用仍在 SimulationTick 提交，表现调用仍在表现帧发生，tick 编号保留为模拟身份；播放状态和求值状态在同一正式事务与快照链中保持一致。
 - 子弹时间、暂停与动作倍率由正式播放控制改变游标推进；不修改 Unity Time.timeScale、fixedDeltaTime 或为此改变逻辑 tick 率。动作倍率与 Clip 源采样倍率分开，共享动作采样只应用一次有效动作倍率，不把时间控制复制到消费者。
 - 对同一动作播放实例统一计算表现采样结果，动作动画、Timeline 表现 Marker、随该动作采样的 Camera 内容消费同一结果。Clip 通过自己的起点、ClipIn 与源映射得到源动画时间；locomotion、独立特效和混合过渡继续由原 owner 管理。
@@ -50,4 +50,4 @@ Timeline 当前仍以固定 60 作者帧记录内容，只能换算不同 Simula
 | btsmtl-runnable-timeline-node：数据模型仍列出 scale | 通过本 change 的 MODIFIED requirement 删除已废弃字段描述 |
 | btsmtl-timeline-direct-runtime：Timeline 唯一时间 owner 管理帧/秒/Tick，ActionCue payload 包含 frame/cycle | 旧 owner 表述与被动边界冲突；delta 明确播放管理者决定进度，Timeline 管内容映射和求值状态，同事务提交；统一秒制事件位置，保留 tick、cycle 和来源身份 |
 
-旧文档中的“本轮保留固定 60 作者帧、不迁移秒存储”“独立表现时钟已否决”“普通表现一律自由播放”“不同域不得共享采样来源”不再作为决策。秒制单位已经确定；数值表示与精度、共享采样具体 owner 和表现图接入仍有实施前待明确项，见 [design.md](design.md)。实现清单见 [tasks.md](tasks.md)。主 specs 仍描述现行系统，本次 delta 尚未归档，不代表代码已采用目标合同。
+旧文档中的“本轮保留固定 60 作者帧、不迁移秒存储”“独立表现时钟已否决”“普通表现一律自由播放”“不同域不得共享采样来源”不再作为决策。秒制及 Q32.32 数值合同已经确定；共享采样具体 owner 和表现图接入仍需沿代码落实，见 [design.md](design.md)。实现清单见 [tasks.md](tasks.md)。主 specs 仍描述现行系统，本次 delta 尚未归档，不代表代码已采用目标合同。

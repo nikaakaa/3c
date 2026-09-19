@@ -86,6 +86,7 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.RunnableStopBarrier,
                 ProgramStateSemantic.RunnableActivationGeneration,
                 ProgramStateSemantic.LocomotionMotionElapsedTicks,
+                ProgramStateSemantic.TimelinePlayback,
                 ProgramStateSemantic.StateMachineActive,
                 ProgramStateSemantic.StateMachinePending,
                 ProgramStateSemantic.StateMachineExiting,

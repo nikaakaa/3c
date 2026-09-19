@@ -171,14 +171,24 @@ namespace ThirdPersonSimulation
 
         void Resolve(Float32ActionInstanceState action, GameplayAbilityExecutionBinding skill, bool success)
         {
+            SimulationExecutionSource source = SimulationExecutionSource.FromSkillOperation(
+                skill.EntryOperation,
+                m_Services.SourcePath(skill.EntryOperation));
+            if (!success)
+            {
+                m_Actions.ResolveFromControl(
+                    action,
+                    source,
+                    AbilityLifecycleTransition.Abort,
+                    "SkillExecutionFailed");
+                return;
+            }
             m_Actions.ResolveFromControl(
                 action,
-                SimulationExecutionSource.FromSkillOperation(
-                    skill.EntryOperation,
-                    m_Services.SourcePath(skill.EntryOperation)),
+                source,
                 GameplayAbilityEndTriggerNames.ExecutionCompleted,
-                success ? AbilityLifecycleTransition.Complete : AbilityLifecycleTransition.Abort,
-                success ? "SkillCompleted" : "SkillExecutionFailed");
+                AbilityLifecycleTransition.Complete,
+                "SkillCompleted");
         }
     }
 }

@@ -91,6 +91,12 @@ namespace ThirdPersonCharacter.Control.Authoring
                                 AddGraphOwner(graphOwners, child, graph);
                                 AddPlacementOwner(graphPlacementOwners, child, graph);
                             }
+                        foreach (TimelineMarker marker in timelineNode.Timeline.Tracks.SelectMany(track => track.Markers))
+                            if (marker.Graph is BtsmtlSkillFlowGraph trigger)
+                            {
+                                AddGraphOwner(graphOwners, trigger, graph);
+                                AddPlacementOwner(graphPlacementOwners, trigger, graph);
+                            }
                     }
                     if (node is BtsmtlSkillCompositeFlowNode composite)
                         foreach (BtsmtlSkillStepPort step in composite.Steps)

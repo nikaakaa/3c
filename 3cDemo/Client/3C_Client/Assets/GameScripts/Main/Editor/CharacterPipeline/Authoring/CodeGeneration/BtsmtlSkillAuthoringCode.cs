@@ -614,6 +614,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return created;
         }
 
+        public static void EnsureMarker(TimelineData timeline, Track track, string identity, int frame, ScriptableObject graph)
+        {
+            PrepareTimelineMutation(timeline);
+            timeline.ApplyModify(() =>
+            {
+                TimelineMarker marker = track.Markers.SingleOrDefault(value => value.AuthoringId == identity);
+                if (marker == null)
+                {
+                    marker = track.AddMarker(frame, graph);
+                    marker.ConfigureAuthoringIdentity(identity);
+                }
+                else
+                    marker.Configure(frame, graph);
+            }, "生成Timeline触发点");
+        }
+
+        public static void PruneTimelineMarkers(TimelineData timeline, IEnumerable<string> markerIdentities)
+        {
+            var identities = new HashSet<string>(markerIdentities, StringComparer.Ordinal);
+            PrepareTimelineMutation(timeline);
+            timeline.ApplyModify(() =>
+            {
+                var previous = BtsmtlSkillOwnedAssets.Collect(timeline.SerializedOwner);
+                foreach (Track track in timeline.Tracks)
+                    foreach (TimelineMarker marker in track.Markers.ToArray())
+                        if (!identities.Contains(marker.AuthoringId))
+                            track.RemoveMarker(marker);
+                BtsmtlSkillOwnedAssets.ReleaseUnreferenced(timeline.SerializedOwner, previous);
+            }, "清理Timeline触发点");
+        }
+
         static void ConfigureClipExecution(Track track, Clip clip)
         {
             clip.ConfigureExecutionDomain(track.ExecutionDomain);

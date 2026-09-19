@@ -732,6 +732,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 foreach (Track track in data.Tracks)
                 {
                     string trackVariable = Variable(context, track, $"track:{data.AuthoringId}:{track.AuthoringId}");
+                    foreach (TimelineMarker marker in track.Markers)
+                    {
+                        if (marker.Graph is not ITimelineTreeGraphAsset trigger || !trigger.IsTimelineTrigger)
+                        {
+                            context.ReportError("timeline_marker_graph_invalid", marker.AuthoringId, "Marker缺少正式TimelineTrigger图。");
+                            continue;
+                        }
+                        string graphReference = context.TryGetVariable(marker.Graph, out string graphVariable)
+                            ? graphVariable
+                            : ExternalAsset(context, marker.Graph, marker.Graph.GetType());
+                        context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
+                            $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureMarker({dataVariable}, {trackVariable}, {String(marker.AuthoringId)}, {marker.Frame}, {graphReference});");
+                    }
                     if (track.PersistentMuted)
                         context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                             $"{trackVariable}.PersistentMuted = true;");
@@ -957,6 +970,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 context.AddStatement(
                     BtsmtlAuthoringCodeEmissionPhase.RootBinding,
                     $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.PruneTimeline({dataVariable}, {tracks}, {clips}, {sections}, {bindings});");
+                string markers = StringArray(timeline.Data.Tracks.SelectMany(value => value.Markers).Select(value => value.AuthoringId));
+                context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.RootBinding,
+                    $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.PruneTimelineMarkers({dataVariable}, {markers});");
             }
         }
 

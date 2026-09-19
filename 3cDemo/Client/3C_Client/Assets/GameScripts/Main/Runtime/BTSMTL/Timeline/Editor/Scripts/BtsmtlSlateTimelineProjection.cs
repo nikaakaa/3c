@@ -19,6 +19,7 @@ namespace BTSMTL.Timeline.Editor
         [SerializeField] string m_TrackAuthoringId;
         [SerializeField] string m_ClipAuthoringId;
         [SerializeField] string m_SectionAuthoringId;
+        [SerializeField] string m_MarkerAuthoringId;
         [SerializeField] string[] m_CurveTrackAuthoringIds;
         [SerializeField] BtsmtlSlateTimelineTrackHeight[] m_TrackHeights;
         [SerializeField] BtsmtlSlateTimelineInspection[] m_InspectedParameters;
@@ -35,7 +36,8 @@ namespace BTSMTL.Timeline.Editor
             IEnumerable<string> curveTrackAuthoringIds = null,
             IEnumerable<BtsmtlSlateTimelineTrackHeight> trackHeights = null,
             string sectionAuthoringId = null,
-            IEnumerable<BtsmtlSlateTimelineInspection> inspectedParameters = null)
+            IEnumerable<BtsmtlSlateTimelineInspection> inspectedParameters = null,
+            string markerAuthoringId = null)
         {
             m_ViewTimeMin = viewTimeMin;
             m_ViewTimeMax = viewTimeMax;
@@ -44,6 +46,7 @@ namespace BTSMTL.Timeline.Editor
             m_TrackAuthoringId = trackAuthoringId ?? string.Empty;
             m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
             m_SectionAuthoringId = sectionAuthoringId ?? string.Empty;
+            m_MarkerAuthoringId = markerAuthoringId ?? string.Empty;
             m_CurveTrackAuthoringIds = curveTrackAuthoringIds == null
                 ? Array.Empty<string>()
                 : curveTrackAuthoringIds.Where(value => !string.IsNullOrEmpty(value)).Distinct(StringComparer.Ordinal).ToArray();
@@ -63,12 +66,14 @@ namespace BTSMTL.Timeline.Editor
         public string TrackAuthoringId => m_TrackAuthoringId ?? string.Empty;
         public string ClipAuthoringId => m_ClipAuthoringId ?? string.Empty;
         public string SectionAuthoringId => m_SectionAuthoringId ?? string.Empty;
+        public string MarkerAuthoringId => m_MarkerAuthoringId ?? string.Empty;
         public IReadOnlyList<string> CurveTrackAuthoringIds => m_CurveTrackAuthoringIds ?? Array.Empty<string>();
         public IReadOnlyList<BtsmtlSlateTimelineTrackHeight> TrackHeights => m_TrackHeights ?? Array.Empty<BtsmtlSlateTimelineTrackHeight>();
         public IReadOnlyList<BtsmtlSlateTimelineInspection> InspectedParameters => m_InspectedParameters ?? Array.Empty<BtsmtlSlateTimelineInspection>();
         public bool GroupCollapsed => m_GroupCollapsed;
         public bool HasSelection => !string.IsNullOrEmpty(TrackAuthoringId) ||
                                     !string.IsNullOrEmpty(ClipAuthoringId) ||
+                                    !string.IsNullOrEmpty(MarkerAuthoringId) ||
                                     !string.IsNullOrEmpty(SectionAuthoringId);
     }
 
@@ -169,6 +174,7 @@ namespace BTSMTL.Timeline.Editor
             string trackId = string.Empty;
             string clipId = string.Empty;
             string sectionId = string.Empty;
+            string markerId = string.Empty;
             if (m_Binding.Selected is IEmbeddedTimelineClipBinding clip)
             {
                 clipId = clip.AuthoringId;
@@ -181,6 +187,11 @@ namespace BTSMTL.Timeline.Editor
             else if (m_Binding.Selected is IEmbeddedTimelineSectionBinding section)
             {
                 sectionId = section.AuthoringId;
+            }
+            else if (m_Binding.Selected is IEmbeddedTimelineMarkerBinding marker)
+            {
+                markerId = marker.AuthoringId;
+                trackId = marker.Track.AuthoringId;
             }
             string[] curveTrackIds = m_Binding.Groups
                 .SelectMany(group => group.Tracks)
@@ -208,7 +219,8 @@ namespace BTSMTL.Timeline.Editor
                 curveTrackIds,
                 trackHeights,
                 sectionId,
-                inspectedParameters);
+                inspectedParameters,
+                markerId);
         }
 
         public void RestoreViewState(BtsmtlSlateTimelineViewState state)
@@ -237,7 +249,7 @@ namespace BTSMTL.Timeline.Editor
             m_EmbeddedEditor.RestoreEmbeddedInspectedParameters(inspectedParameters);
             m_EmbeddedEditor.EmbeddedScrollPosition = state.ScrollPosition;
             if (state.HasSelection)
-                FocusSource(state.TrackAuthoringId, state.ClipAuthoringId, state.SectionAuthoringId);
+                FocusSource(state.TrackAuthoringId, state.ClipAuthoringId, state.SectionAuthoringId, state.MarkerAuthoringId);
         }
 
         public void DrawEmbeddedGUI(float width, float height)
@@ -252,8 +264,15 @@ namespace BTSMTL.Timeline.Editor
                 m_EmbeddedEditor.DrawEmbeddedGUI(width, height, beginWindows, endWindows);
         }
 
-        public bool FocusSource(string trackAuthoringId, string clipAuthoringId, string sectionAuthoringId = null)
+        public bool FocusSource(string trackAuthoringId, string clipAuthoringId, string sectionAuthoringId = null, string markerAuthoringId = null)
         {
+            if (!string.IsNullOrEmpty(markerAuthoringId) &&
+                m_Binding.TryGetMarkerBinding(markerAuthoringId, out IEmbeddedTimelineMarkerBinding marker))
+            {
+                m_Binding.Select(marker);
+                m_EmbeddedEditor.RequestEmbeddedRepaint();
+                return true;
+            }
             if (!string.IsNullOrEmpty(clipAuthoringId) &&
                 m_Binding.TryGetClipBinding(clipAuthoringId, out IEmbeddedTimelineClipBinding clip))
             {

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using Slate;
+using ThirdPersonCharacter.Control.Authoring;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,6 +19,7 @@ namespace BTSMTL.Timeline.Editor
         readonly List<IEmbeddedTimelineSectionBinding> m_Sections = new List<IEmbeddedTimelineSectionBinding>();
         readonly Dictionary<string, BtsmtlTimelineTrackBinding> m_Tracks = new Dictionary<string, BtsmtlTimelineTrackBinding>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlTimelineClipBinding> m_Clips = new Dictionary<string, BtsmtlTimelineClipBinding>(StringComparer.Ordinal);
+        readonly Dictionary<string, BtsmtlTimelineMarkerBinding> m_Markers = new Dictionary<string, BtsmtlTimelineMarkerBinding>(StringComparer.Ordinal);
         readonly Dictionary<string, BtsmtlTimelineSectionBinding> m_SectionsById = new Dictionary<string, BtsmtlTimelineSectionBinding>(StringComparer.Ordinal);
         TimelineData m_Timeline;
         string m_SourceRevision;
@@ -168,6 +170,7 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
             if (!m_Clips.Values.Any(clip => clip.HasChanges()) &&
+                !m_Markers.Values.Any(marker => marker.HasChanges()) &&
                 !m_SectionsById.Values.Any(section => section.HasChanges()))
             {
                 m_EditSourceRevision = string.Empty;
@@ -182,6 +185,8 @@ namespace BTSMTL.Timeline.Editor
                     bool changed = false;
                     foreach (BtsmtlTimelineClipBinding clip in m_Clips.Values)
                         changed |= clip.CommitSource();
+                    foreach (BtsmtlTimelineMarkerBinding marker in m_Markers.Values)
+                        changed |= marker.CommitSource();
                     foreach (BtsmtlTimelineSectionBinding section in m_SectionsById.Values)
                         changed |= section.CommitSource();
                     if (!changed)
@@ -254,7 +259,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 if (formalTrack.Source.ExecutionDomain == TimelineExecutionDomain.Presentation)
                 {
-                    ReportIssue("Presentation TreeClip 必须包含 Marker，当前没有单独的 Marker 创建入口。");
+                    ReportIssue("表现域点事件请使用 Add Marker 创建触发图。");
                     return;
                 }
                 ShowClipCreationPopup(formalTrack.Source.AuthoringId, TimelineContractKinds.TreeClip, frame);
@@ -294,7 +299,8 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("当前 Track 已锁定，不能删除。");
                 return;
             }
-            ApplyImmediate(() => Timeline.RemoveTrack(formalTrack.Source), "Delete Timeline Track");
+            ApplyImmediate(() => TimelineGraphAuthoring.MutateOwnedContent(
+                Timeline, () => Timeline.RemoveTrack(formalTrack.Source)), "Delete Timeline Track");
         }
 
         public void AddMarker(IEmbeddedTimelineTrackBinding track, int frame)
@@ -306,7 +312,14 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("当前 Track 已锁定，不能添加 Marker。");
                 return;
             }
-            ApplyImmediate(() => formalTrack.Source.AddMarker(Mathf.Max(0, frame)), "Add Timeline Marker");
+            TimelineMarker added = null;
+            if (ApplyImmediate(() =>
+            {
+                BtsmtlSkillFlowGraph graph = TimelineGraphAuthoring.CreateSubAsset(
+                    m_Request.SerializedOwner, $"{formalTrack.Source.Name} Marker {frame}", BtsmtlSkillFlowGraphRole.TimelineTrigger);
+                added = formalTrack.Source.AddMarker(Mathf.Max(0, frame), graph);
+            }, "Add Timeline Marker") && m_Markers.TryGetValue(added.AuthoringId, out BtsmtlTimelineMarkerBinding binding))
+                Select(binding);
         }
 
         public void DeleteMarker(IEmbeddedTimelineMarkerBinding marker)
@@ -318,7 +331,8 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("当前 Marker 或所属 Track 已锁定，不能删除。");
                 return;
             }
-            ApplyImmediate(() => formalMarker.FormalTrack.Source.RemoveMarker(formalMarker.Source), "Delete Timeline Marker");
+            ApplyImmediate(() => TimelineGraphAuthoring.MutateOwnedContent(
+                Timeline, () => formalMarker.FormalTrack.Source.RemoveMarker(formalMarker.Source)), "Delete Timeline Marker");
         }
 
         public void MoveMarker(IEmbeddedTimelineMarkerBinding marker, int frame)
@@ -326,14 +340,30 @@ namespace BTSMTL.Timeline.Editor
             if (IsReadOnly || !(marker is BtsmtlTimelineMarkerBinding formalMarker))
                 return;
             int nextFrame = Mathf.Max(0, frame);
-            if (formalMarker.Source.Frame == nextFrame)
+            if (formalMarker.Frame == nextFrame)
                 return;
             if (formalMarker.IsLocked)
             {
                 ReportIssue("当前 Marker 或所属 Track 已锁定，不能移动。");
                 return;
             }
-            ApplyImmediate(() => formalMarker.Source.Configure(nextFrame, formalMarker.Source.Graph), "Move Timeline Marker");
+            if (m_EditActive)
+                formalMarker.Frame = nextFrame;
+            else
+                ApplyImmediate(() => formalMarker.Source.Configure(nextFrame, formalMarker.Source.Graph), "Move Timeline Marker");
+        }
+
+        public void OpenMarker(IEmbeddedTimelineMarkerBinding marker)
+        {
+            if (marker is BtsmtlTimelineMarkerBinding binding)
+                TimelineGraphAuthoring.Open(binding.Source.Graph);
+        }
+
+        public bool TryGetMarkerBinding(string authoringId, out IEmbeddedTimelineMarkerBinding binding)
+        {
+            bool found = m_Markers.TryGetValue(authoringId ?? string.Empty, out BtsmtlTimelineMarkerBinding value);
+            binding = value;
+            return found;
         }
 
         public void DeleteClip(IEmbeddedTimelineClipBinding clip)
@@ -609,6 +639,8 @@ namespace BTSMTL.Timeline.Editor
             BuildBindings();
             if (m_Clips.TryGetValue(selectedId, out BtsmtlTimelineClipBinding clip))
                 Select(clip);
+            else if (m_Markers.TryGetValue(selectedId, out BtsmtlTimelineMarkerBinding marker))
+                Select(marker);
             else if (m_Tracks.TryGetValue(selectedId, out BtsmtlTimelineTrackBinding track))
                 Select(track);
             else if (m_SectionsById.TryGetValue(selectedId, out BtsmtlTimelineSectionBinding section))
@@ -695,6 +727,7 @@ namespace BTSMTL.Timeline.Editor
             m_Sections.Clear();
             m_Tracks.Clear();
             m_Clips.Clear();
+            m_Markers.Clear();
             m_SectionsById.Clear();
             var group = new BtsmtlTimelineGroupBinding(this, Timeline.Name);
             m_Groups.Add(group);
@@ -715,7 +748,9 @@ namespace BTSMTL.Timeline.Editor
                     TimelineMarker sourceMarker = source.Markers[markerIndex];
                     if (sourceMarker == null)
                         continue;
-                    track.AddMarker(new BtsmtlTimelineMarkerBinding(this, track, sourceMarker));
+                    var marker = new BtsmtlTimelineMarkerBinding(track, sourceMarker);
+                    track.AddMarker(marker);
+                    m_Markers.Add(marker.AuthoringId, marker);
                 }
                 for (int clipIndex = 0; clipIndex < source.Clips.Count; clipIndex++)
                 {
@@ -877,7 +912,7 @@ namespace BTSMTL.Timeline.Editor
                     {
                         treeGraph = request.TreeGraph;
                         if (treeGraph == null)
-                            treeGraph = TreeClipGraphCreation.CreateSubAsset(m_Request.SerializedOwner, request.NewTreeGraphName);
+                            treeGraph = TimelineGraphAuthoring.CreateSubAsset(m_Request.SerializedOwner, request.NewTreeGraphName, BtsmtlSkillFlowGraphRole.TimelineBody);
                     }
                     added = request.Kind == TimelineContractKinds.AnimationClip
                         ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, request.StartFrame)
@@ -1150,10 +1185,11 @@ namespace BTSMTL.Timeline.Editor
         {
             readonly BtsmtlTimelineTrackBinding m_Track;
 
-            public BtsmtlTimelineMarkerBinding(BtsmtlSlateTimelineBinding owner, BtsmtlTimelineTrackBinding track, TimelineMarker source)
+            public BtsmtlTimelineMarkerBinding(BtsmtlTimelineTrackBinding track, TimelineMarker source)
             {
                 m_Track = track;
                 Source = source;
+                Frame = source.Frame;
             }
 
             public TimelineMarker Source { get; }
@@ -1161,8 +1197,18 @@ namespace BTSMTL.Timeline.Editor
             IEmbeddedTimelineTrackBinding IEmbeddedTimelineMarkerBinding.Track => m_Track;
             public string AuthoringId => Source.AuthoringId;
             public string DisplayName => $"Marker {Source.Frame}";
-            public int Frame => Source.Frame;
+            public int Frame { get; set; }
             public bool IsLocked { get => m_Track.IsLocked; set => m_Track.IsLocked = value; }
+
+            public bool HasChanges() => Frame != Source.Frame;
+
+            public bool CommitSource()
+            {
+                if (!HasChanges())
+                    return false;
+                Source.Configure(Frame, Source.Graph);
+                return true;
+            }
         }
 
         sealed class BtsmtlTimelineClipBinding : IEmbeddedTimelineClipBinding, IEmbeddedTimelineSourceRangeBinding
@@ -1714,5 +1760,3 @@ namespace BTSMTL.Timeline.Editor
     }
 }
 #endif
-
-

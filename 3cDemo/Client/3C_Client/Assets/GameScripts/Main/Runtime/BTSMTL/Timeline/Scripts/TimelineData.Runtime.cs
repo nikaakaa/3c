@@ -100,7 +100,10 @@ namespace BTSMTL.Timeline
                     MaxFrame = clip.EndFrame;
             }
             foreach (var marker in m_Markers)
-                marker?.Init(this);
+            {
+                marker.Init(this);
+                MaxFrame = Mathf.Max(MaxFrame, Mathf.Max(1, marker.Frame));
+            }
 
         }
 
@@ -125,13 +128,14 @@ namespace BTSMTL.Timeline
             m_AuthoringId = AuthoringIdentity.Create();
         }
 
-        public TimelineMarker AddMarker(int frame)
+        public TimelineMarker AddMarker(int frame, ScriptableObject graph)
         {
             if (frame < 0)
                 throw new ArgumentOutOfRangeException(nameof(frame));
             var marker = new TimelineMarker();
             marker.EnsureAuthoringIdentity();
-            marker.Configure(frame, null);
+            marker.Configure(frame, graph);
+            marker.Init(this);
             m_Markers.Add(marker);
             return marker;
         }
@@ -538,6 +542,8 @@ namespace BTSMTL.Timeline
                 Track track = m_Tracks[trackIndex];
                 if (track == null)
                     continue;
+                foreach (TimelineMarker marker in track.Markers)
+                    terminalFrame = Mathf.Max(terminalFrame, Mathf.Max(1, marker.Frame));
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
                     Clip clip = track.Clips[clipIndex];
@@ -744,4 +750,3 @@ namespace BTSMTL.Timeline
     } 
 #endif
 }
-

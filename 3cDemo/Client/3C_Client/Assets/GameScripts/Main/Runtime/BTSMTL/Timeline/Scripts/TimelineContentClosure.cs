@@ -129,17 +129,20 @@ namespace BTSMTL.Timeline
             TimelineClipExecutionPolicy executionPolicy,
             int frame,
             string graphId,
-            string graphRevision)
+            string graphRevision,
+            bool trackMuted)
         {
             MarkerId = Require(markerId, nameof(markerId));
             TrackAuthoringId = Require(trackAuthoringId, nameof(trackAuthoringId));
             ExecutionPolicy = executionPolicy;
+            TrackMuted = trackMuted;
             GraphId = Require(graphId, nameof(graphId));
             GraphRevision = Require(graphRevision, nameof(graphRevision));
             Frame = frame < 0 ? throw new ArgumentOutOfRangeException(nameof(frame)) : frame;
         }
 
         public string MarkerId { get; }
+        public bool TrackMuted { get; }
         public string TrackAuthoringId { get; }
         public TimelineClipExecutionPolicy ExecutionPolicy { get; }
         public int Frame { get; }
@@ -408,9 +411,8 @@ namespace BTSMTL.Timeline
                     TimelineMarker marker = track.Markers[markerIndex];
                     if (marker == null)
                         continue;
-                    if (marker.Frame > maxFrame)
-                        maxFrame = marker.Frame;
-                    if (marker.Graph is not ITimelineTreeGraphAsset markerGraph || !markerGraph.IsTimelineTree)
+                    maxFrame = Math.Max(maxFrame, Math.Max(1, marker.Frame));
+                    if (marker.Graph is not ITimelineTreeGraphAsset markerGraph || !markerGraph.IsTimelineTrigger)
                     {
                         errors.Add($"Timeline Marker '{marker.AuthoringId}' requires a Timeline trigger graph.");
                         continue;
@@ -432,7 +434,8 @@ namespace BTSMTL.Timeline
                         TimelineClipExecutionPolicy.FromDomain(marker.ExecutionDomain),
                         marker.Frame,
                         graphIdentity,
-                        graphRevision));
+                        graphRevision,
+                        track.PersistentMuted));
                 }
                 tracks.Add(new TimelineContentTrack(
                     track.AuthoringId,

@@ -56,6 +56,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 {
                     foreach (TreeClip clip in timeline.Data.Tracks.SelectMany(track => track.Clips).OfType<TreeClip>())
                         Visit(clip.AssetTree);
+                    foreach (TimelineMarker marker in timeline.Data.Tracks.SelectMany(track => track.Markers))
+                        Visit(marker.Graph);
                 }
                 else
                     throw new InvalidOperationException("私有技能内容必须由正式技能图或Timeline资产拥有。");

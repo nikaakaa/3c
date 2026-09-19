@@ -449,7 +449,7 @@ namespace BTSMTL.Timeline.Runtime
             for (int markerIndex = 0; markerIndex < playback.Content.Markers.Count; markerIndex++)
             {
                 TimelineContentMarker marker = playback.Content.Markers[markerIndex];
-                if (!marker.ExecutionPolicy.IsPresentation)
+                if (!marker.ExecutionPolicy.IsPresentation || marker.TrackMuted)
                     continue;
                 for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
                 {
@@ -782,4 +782,3 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 }
-

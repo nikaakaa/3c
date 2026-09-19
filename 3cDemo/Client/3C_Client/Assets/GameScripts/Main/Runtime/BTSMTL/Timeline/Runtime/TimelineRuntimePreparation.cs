@@ -2099,7 +2099,7 @@ namespace BTSMTL.Timeline.Runtime
             for (int index = 0; index < content.Markers.Count; index++)
             {
                 TimelineContentMarker contentMarker = content.Markers[index];
-                if (!contentMarker.ExecutionPolicy.IsLogic)
+                if (!contentMarker.ExecutionPolicy.IsLogic || contentMarker.TrackMuted)
                     continue;
                 for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
                 {
@@ -2124,6 +2124,14 @@ namespace BTSMTL.Timeline.Runtime
                         CreateMarkerCallId(executionIdentity, generation, cycle, contentMarker.MarkerId)));
                 }
             }
+            markers.Sort((left, right) =>
+            {
+                int cycleOrder = left.Cycle.CompareTo(right.Cycle);
+                if (cycleOrder != 0)
+                    return cycleOrder;
+                int frameOrder = left.Frame.CompareTo(right.Frame);
+                return frameOrder != 0 ? frameOrder : string.CompareOrdinal(left.MarkerAuthoringId, right.MarkerAuthoringId);
+            });
         }
 
         static Track FindTrack(TimelineContentUnit content, string authoringId)

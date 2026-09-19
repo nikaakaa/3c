@@ -140,8 +140,12 @@ namespace BTSMTL.Timeline.Editor
 
         void DrawMarkerInspector(TimelineAsset asset, TimelineMarker marker)
         {
+            if (!string.IsNullOrEmpty(m_ConfigurationError))
+                EditorGUILayout.HelpBox(m_ConfigurationError, MessageType.Error);
             EditorGUILayout.LabelField("Name", marker.AuthoringId);
             EditorGUILayout.LabelField("Domain", marker.ExecutionDomain.ToString());
+            if (GUILayout.Button("Open Trigger Graph"))
+                TimelineGraphAuthoring.Open(marker.Graph);
             int frame = Mathf.Max(0, EditorGUILayout.IntField("Frame", marker.Frame));
             ScriptableObject graph = (ScriptableObject)EditorGUILayout.ObjectField(
                 "Trigger Graph",
@@ -154,7 +158,8 @@ namespace BTSMTL.Timeline.Editor
                 return;
             try
             {
-                asset.Data.ApplyModify(() => marker.Configure(frame, graph), "Edit Timeline Marker");
+                asset.Data.ApplyModify(() => TimelineGraphAuthoring.MutateOwnedContent(
+                    asset.Data, () => marker.Configure(frame, graph)), "Edit Timeline Marker");
                 m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
                 m_ConfigurationError = null;
             }
@@ -262,6 +267,11 @@ namespace BTSMTL.Timeline.Editor
 
         bool TryBeginMutation(TimelineAsset asset)
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                m_ConfigurationError = "Play观察期间不能修改Timeline。";
+                return false;
+            }
             string currentRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
             if (string.IsNullOrEmpty(m_SourceRevision) ||
                 string.Equals(m_SourceRevision, currentRevision, StringComparison.Ordinal))

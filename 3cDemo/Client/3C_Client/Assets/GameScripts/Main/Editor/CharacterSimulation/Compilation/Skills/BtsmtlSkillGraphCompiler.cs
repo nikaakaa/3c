@@ -214,6 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             FlowNode entry = graph.Role switch
             {
                 BtsmtlSkillFlowGraphRole.Skill or BtsmtlSkillFlowGraphRole.StateBody or BtsmtlSkillFlowGraphRole.TimelineBody => graph.Nodes.OfType<BtsmtlSkillRootFlowNode>().Single(),
+                BtsmtlSkillFlowGraphRole.TimelineTrigger => graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single(),
                 BtsmtlSkillFlowGraphRole.StateMachine => graph.Nodes.OfType<BtsmtlSkillStateEnterFlowNode>().Single(),
                 BtsmtlSkillFlowGraphRole.ConditionRule => graph.Nodes.OfType<BtsmtlSkillConditionResultFlowNode>().Single(),
                 _ => throw new InvalidOperationException($"{graph.Route}: 未登记图入口规则。")

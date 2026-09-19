@@ -66,7 +66,8 @@ namespace BTSMTL.Timeline.Editor
         Clip = 2,
         TreeClip = 3,
         Curve = 4,
-        Section = 5
+        Section = 5,
+        Marker = 6
     }
 
     public interface ITimelineEditorRuntimeDebugBinding
@@ -118,6 +119,13 @@ namespace BTSMTL.Timeline.Editor
             Section = section;
         }
 
+        internal TimelineEditorSelection(TimelineMarker marker, ulong revision)
+            : this(TimelineEditorSelectionKind.Marker, marker.Track, null, marker.AuthoringId,
+                string.Empty, Array.Empty<int>(), revision)
+        {
+            Marker = marker;
+        }
+
         TimelineEditorSelection(
             TimelineEditorSelectionKind kind,
             Track track,
@@ -131,6 +139,7 @@ namespace BTSMTL.Timeline.Editor
             Track = track;
             Clip = clip;
             Section = null;
+            Marker = null;
             ElementAuthoringId =
                 elementAuthoringId ?? string.Empty;
             SubElementId = subElementId ?? string.Empty;
@@ -142,6 +151,7 @@ namespace BTSMTL.Timeline.Editor
         public Track Track { get; }
         public Clip Clip { get; }
         public TimelineSection Section { get; }
+        public TimelineMarker Marker { get; }
         public string ElementAuthoringId { get; }
         public string SubElementId { get; }
         public IReadOnlyList<int> KeyIndices { get; }
@@ -223,6 +233,7 @@ namespace BTSMTL.Timeline.Editor
                 Clip clip => new TimelineEditorSelection(clip.Track, clip, revision),
                 Track track => new TimelineEditorSelection(track, null, revision),
                 TimelineSection section => new TimelineEditorSelection(section, revision),
+                TimelineMarker marker => new TimelineEditorSelection(marker, revision),
                 _ => default
             };
             if (selection.Kind == m_Selection.Kind &&
@@ -235,6 +246,7 @@ namespace BTSMTL.Timeline.Editor
                 ReferenceEquals(
                     selection.Section,
                     m_Selection.Section) &&
+                ReferenceEquals(selection.Marker, m_Selection.Marker) &&
                 string.Equals(
                     selection.ElementAuthoringId,
                     m_Selection.ElementAuthoringId,

@@ -61,9 +61,14 @@ namespace ThirdPersonCharacter.Control.Authoring
                         throw new InvalidOperationException($"Skill Timeline identity重复：{timelineId}");
                     Timelines[timelineId] = timeline.TimelineAsset;
                     foreach (Track track in timeline.Timeline.Tracks)
+                    {
                         foreach (Clip clip in track.Clips)
                             if (clip is BTSMTL.Timeline.TreeClip tree && tree.AssetTree is BtsmtlSkillFlowGraph child)
                                 Visit(child);
+                        foreach (TimelineMarker marker in track.Markers)
+                            if (marker.Graph is BtsmtlSkillFlowGraph trigger)
+                                Visit(trigger);
+                    }
                 }
             }
         }

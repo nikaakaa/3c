@@ -294,6 +294,13 @@ namespace BTSMTL.Timeline
                             $"m_Tracks.Array.data[{trackIndex}].m_Clips.Array.data[{clipIndex}]");
                         return true;
                     }
+                for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
+                    if (ReferenceEquals(track.Markers[markerIndex], element))
+                    {
+                        propertyPath = GetSerializedPropertyPath(
+                            $"m_Tracks.Array.data[{trackIndex}].m_Markers.Array.data[{markerIndex}]");
+                        return true;
+                    }
             }
             for (int sectionIndex = 0; sectionIndex < m_Sections.Count; sectionIndex++)
                 if (ReferenceEquals(m_Sections[sectionIndex], element))

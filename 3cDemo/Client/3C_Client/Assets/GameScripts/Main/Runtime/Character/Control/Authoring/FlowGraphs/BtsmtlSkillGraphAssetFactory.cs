@@ -257,6 +257,9 @@ namespace ThirdPersonCharacter.Control.Authoring
                     graph.AddNode<BtsmtlSkillTimelineDisableFlowNode>(new Vector2(120, 460));
                     graph.AddNode<BtsmtlSkillTimelineDestroyFlowNode>(new Vector2(120, 660));
                     break;
+                case BtsmtlSkillFlowGraphRole.TimelineTrigger:
+                    graph.AddNode<BtsmtlSkillTimelineEnableFlowNode>(new Vector2(120, 60));
+                    break;
                 default:
                     throw new InvalidOperationException("未知技能图页面类型。");
             }

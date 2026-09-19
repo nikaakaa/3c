@@ -142,6 +142,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     snapshot.Timeline = timeline.Data.Clone();
                     foreach (TreeClip clip in timeline.Data.Tracks.SelectMany(track => track.Clips).OfType<TreeClip>())
                         Collect(clip.AssetTree);
+                    foreach (TimelineMarker marker in timeline.Data.Tracks.SelectMany(track => track.Markers))
+                        Collect(marker.Graph);
                 }
                 else
                     throw new InvalidOperationException("复制遇到没有技能所有权合同的私有内容。");
@@ -165,6 +167,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     foreach (TreeClip clip in data.Tracks.SelectMany(track => track.Clips).OfType<TreeClip>())
                         if (!ReferenceEquals(clip.AssetTree, null))
                             clip.SetAssetTree(Resolve(clip.AssetTree));
+                    foreach (TimelineMarker marker in data.Tracks.SelectMany(track => track.Markers))
+                        marker.Configure(marker.Frame, Resolve(marker.Graph));
                     ((TimelineAsset)m_Copies[source.Source]).SetData(data);
                     EditorUtility.SetDirty(m_Copies[source.Source]);
                 }

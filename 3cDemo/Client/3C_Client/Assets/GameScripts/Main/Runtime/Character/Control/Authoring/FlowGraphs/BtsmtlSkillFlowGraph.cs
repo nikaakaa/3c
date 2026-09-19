@@ -20,7 +20,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         StateMachine,
         ConditionRule,
         StateBody,
-        TimelineBody
+        TimelineBody,
+        TimelineTrigger
     }
 
     public interface IBtsmtlSkillAuthoringGraph
@@ -58,7 +59,8 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (nodeType == typeof(BtsmtlSkillTimelineExitRequestFlowNode))
                 return role == BtsmtlSkillFlowGraphRole.TimelineBody;
             if (typeof(BtsmtlSkillTimelineHookFlowNode).IsAssignableFrom(nodeType))
-                return role == BtsmtlSkillFlowGraphRole.TimelineBody;
+                return role == BtsmtlSkillFlowGraphRole.TimelineBody ||
+                       role == BtsmtlSkillFlowGraphRole.TimelineTrigger && nodeType == typeof(BtsmtlSkillTimelineEnableFlowNode);
             if (typeof(BtsmtlSkillStateLifecycleFlowNode).IsAssignableFrom(nodeType))
                 return (nodeType == typeof(BtsmtlSkillStateOnEnterFlowNode) ||
                         nodeType == typeof(BtsmtlSkillStateOnExitFlowNode)) &&
@@ -223,6 +225,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public BtsmtlSkillFlowGraphRole Role => m_Role;
         public IReadOnlyList<BtsmtlSkillBlackboardDeclaration> BlackboardDeclarations => m_BlackboardDeclarations;
         public bool IsTimelineTree => m_Role == BtsmtlSkillFlowGraphRole.TimelineBody;
+        public bool IsTimelineTrigger => m_Role == BtsmtlSkillFlowGraphRole.TimelineTrigger;
         public override bool canAcceptVariableDrops => true;
         public override bool allowsPortIdentityAliases => false;
         public override bool allowBlackboardOverrides => false;

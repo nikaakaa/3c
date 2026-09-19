@@ -36,13 +36,20 @@ namespace BTSMTL.Timeline
         {
             if (frame < 0)
                 throw new ArgumentOutOfRangeException(nameof(frame));
-            if (graph != null && graph is not ITimelineTreeGraphAsset markerGraph)
+            if (graph is not ITimelineTreeGraphAsset markerGraph || !markerGraph.IsTimelineTrigger)
                 throw new ArgumentException("Timeline Marker需要正式的Timeline触发图资产。", nameof(graph));
             m_Frame = frame;
             m_Graph = graph;
         }
 
 #if UNITY_EDITOR
+        public void ConfigureAuthoringIdentity(string authoringId)
+        {
+            if (!AuthoringIdentity.IsValid(authoringId))
+                throw new ArgumentException("Timeline Marker authoring identity is invalid.", nameof(authoringId));
+            m_AuthoringId = authoringId;
+        }
+
         public bool EnsureAuthoringIdentity()
         {
             if (AuthoringIdentity.IsValid(m_AuthoringId))

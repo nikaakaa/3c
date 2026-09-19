@@ -393,10 +393,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static void ValidateMarkerGraph(BtsmtlSkillFlowGraph graph, string route)
         {
-            if (graph == null || graph.Role != BtsmtlSkillFlowGraphRole.TimelineBody)
-                throw new InvalidOperationException($"{route}/graph: Marker触发图必须是TimelineBody。");
-            if (graph.allNodes.Cast<FlowNode>().OfType<BtsmtlSkillRootFlowNode>().Count() != 1)
-                throw new InvalidOperationException($"{route}/graph: Marker触发图必须有且只有一个Root。");
+            if (graph == null || graph.Role != BtsmtlSkillFlowGraphRole.TimelineTrigger)
+                throw new InvalidOperationException($"{route}/graph: Marker触发图必须是TimelineTrigger。");
             if (graph.allNodes.Cast<FlowNode>().OfType<BtsmtlSkillTimelineEnableFlowNode>().Count() != 1)
                 throw new InvalidOperationException($"{route}/graph: Marker触发图必须有且只有一个OnEnable入口。");
             if (graph.allNodes.Cast<FlowNode>().OfType<BtsmtlSkillTimelineDisableFlowNode>().Any() ||

@@ -51,6 +51,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 BtsmtlSkillFlowGraphRole.ConditionRule => new[] { "@result" },
                 BtsmtlSkillFlowGraphRole.StateBody => new[] { "@onEnter", "@root", "@onExit" },
                 BtsmtlSkillFlowGraphRole.TimelineBody => new[] { "@timelineEnable", "@root", "@timelineDisable", "@timelineDestroy" },
+                BtsmtlSkillFlowGraphRole.TimelineTrigger => new[] { "@timelineEnable" },
                 _ => Array.Empty<string>()
             };
         }

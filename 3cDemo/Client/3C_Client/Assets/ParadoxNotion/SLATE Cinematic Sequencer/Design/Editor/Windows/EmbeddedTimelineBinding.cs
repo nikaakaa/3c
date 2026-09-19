@@ -22,6 +22,10 @@ namespace Slate
         void Select(IEmbeddedTimelineElementBinding element);
         void AddTrack();
         void AddClip(IEmbeddedTimelineTrackBinding track, int frame);
+        void AddMarker(IEmbeddedTimelineTrackBinding track, int frame);
+        void DeleteMarker(IEmbeddedTimelineMarkerBinding marker);
+        void MoveMarker(IEmbeddedTimelineMarkerBinding marker, int frame);
+        void OpenMarker(IEmbeddedTimelineMarkerBinding marker);
         void SetTrackActive(IEmbeddedTimelineTrackBinding track, bool active);
         void DeleteTrack(IEmbeddedTimelineTrackBinding track);
         void DeleteClip(IEmbeddedTimelineClipBinding clip);
@@ -79,13 +83,6 @@ namespace Slate
     public interface IEmbeddedTimelineMarkerTrackBinding : IEmbeddedTimelineTrackBinding
     {
         IReadOnlyList<IEmbeddedTimelineMarkerBinding> Markers { get; }
-    }
-
-    public interface IEmbeddedTimelineMarkerEditing
-    {
-        void AddMarker(IEmbeddedTimelineTrackBinding track, int frame);
-        void DeleteMarker(IEmbeddedTimelineMarkerBinding marker);
-        void MoveMarker(IEmbeddedTimelineMarkerBinding marker, int frame);
     }
 
     public interface IEmbeddedTimelineClipBinding : IEmbeddedTimelineElementBinding

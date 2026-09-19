@@ -105,6 +105,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                         if (timeline.Ownership == BtsmtlSkillTimelineOwnership.Shared && !AssetDatabase.IsMainAsset(timeline.TimelineAsset))
                             throw Error(nodePath, "共享Timeline必须是明确的独立资产。");
                         foreach (Track track in timeline.Timeline.Tracks)
+                        {
                             foreach (Clip clip in track.Clips)
                                 if (clip is TreeClip tree)
                                 {
@@ -114,6 +115,16 @@ namespace ThirdPersonCharacter.Control.Authoring
                                     VisitChild(child, BtsmtlSkillFlowGraphRole.TimelineBody, $"{nodePath}/clip:{clip.AuthoringId}",
                                         complete, active, identities, result);
                                 }
+                            foreach (TimelineMarker marker in track.Markers)
+                            {
+                                string markerPath = $"{nodePath}/marker:{marker.AuthoringId}";
+                                if (marker.Graph is not BtsmtlSkillFlowGraph trigger)
+                                    throw Error(markerPath, "Marker必须引用正式TimelineTrigger图。");
+                                RequirePrivateOwnership(timeline.TimelineAsset, trigger, markerPath);
+                                VisitChild(trigger, BtsmtlSkillFlowGraphRole.TimelineTrigger, markerPath,
+                                    complete, active, identities, result);
+                            }
+                        }
                     }
                 }
                 if (node is BtsmtlSkillCompositeFlowNode composite)

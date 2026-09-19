@@ -65,6 +65,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         public static void ReleaseUnreferenced(UnityEngine.Object owner, HashSet<UnityEngine.Object> previous)
         {
             previous.ExceptWith(Collect(owner));
+            previous.RemoveWhere(asset => !asset);
             foreach (UnityEngine.Object asset in previous)
                 Undo.DestroyObjectImmediate(asset);
         }

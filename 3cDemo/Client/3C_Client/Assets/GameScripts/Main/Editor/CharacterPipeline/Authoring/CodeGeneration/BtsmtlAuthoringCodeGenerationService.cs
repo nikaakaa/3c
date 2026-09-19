@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                             BtsmtlAuthoringCodeDiagnosticSeverity.Error,
                             "domain_support_check_failed",
                             adapter.DomainId,
-                            error.Message));
+                            error.ToString()));
                 }
                 if (handlesRoot)
                     matchingAdapters.Add(adapter);
@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         BtsmtlAuthoringCodeDiagnosticSeverity.Error,
                         "generation_entry_failed",
                         request.EntryTypeName,
-                        error.Message));
+                        error.ToString()));
             }
         }
 

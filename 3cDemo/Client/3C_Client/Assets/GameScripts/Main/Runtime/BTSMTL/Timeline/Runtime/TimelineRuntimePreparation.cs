@@ -148,6 +148,7 @@ namespace BTSMTL.Timeline.Runtime
             int frame,
             int previousCycle,
             int cycle,
+            int frameCarry,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
             IReadOnlyList<TimelineRuntimeClipBoundary> boundaries,
@@ -161,6 +162,7 @@ namespace BTSMTL.Timeline.Runtime
             Frame = frame;
             PreviousCycle = previousCycle;
             Cycle = cycle;
+            FrameCarry = frameCarry;
             SectionId = sectionId ?? string.Empty;
             m_ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
             m_Boundaries = new ReadOnlyCollection<TimelineRuntimeClipBoundary>(
@@ -171,6 +173,7 @@ namespace BTSMTL.Timeline.Runtime
 
         internal TimelineRuntimePlayback Owner { get; }
         internal TimelineRuntimeAdvanceRequest Request { get; }
+        internal int FrameCarry { get; }
         public ulong Generation { get; }
         public ulong LogicTick => Request.LogicTick;
         public int PreviousFrame { get; }
@@ -329,9 +332,9 @@ namespace BTSMTL.Timeline.Runtime
                 throw new InvalidOperationException("Timeline playback has an uncommitted Advance result.");
             int maxFrame = Math.Max(0, Content.MaxFrame);
             bool loop = PlaybackMode == TimelinePlaybackMode.Loop;
-            m_FrameCarry += request.TickCount * Math.Max(1, Content.FrameRate);
-            int deltaFrames = m_FrameCarry / m_TickRate;
-            m_FrameCarry %= m_TickRate;
+            long accumulatedFrames = m_FrameCarry + (long)request.TickCount * Content.FrameRate;
+            long deltaFrames = accumulatedFrames / m_TickRate;
+            int nextFrameCarry = (int)(accumulatedFrames % m_TickRate);
             long requestedFrame = (long)m_CursorFrame + deltaFrames;
             int nextFrame;
             int nextCycle = m_Cycle;
@@ -429,6 +432,7 @@ namespace BTSMTL.Timeline.Runtime
                 nextFrame,
                 m_Cycle,
                 nextCycle,
+                nextFrameCarry,
                 sectionId,
                 activeClipIds,
                 boundaries,
@@ -442,6 +446,7 @@ namespace BTSMTL.Timeline.Runtime
             RequirePendingAdvance(advance);
             m_CursorFrame = advance.Frame;
             m_Cycle = advance.Cycle;
+            m_FrameCarry = advance.FrameCarry;
             m_LastCommittedLogicTick = advance.LogicTick;
             m_SectionId = advance.SectionId;
             m_InitialBoundaryPending = false;

@@ -132,3 +132,10 @@
 - 提取前后逐字比较 FixedScalar 主体，除常量来源改为等值 32 外完全一致。正式 Portable Fixed 与 Float32 项目均编译通过，各为 0 警告、0 错误；构建使用禁用 build servers / node reuse / shared compilation 参数，结束后执行 build-server shutdown。没有新增测试。
 - 本次改变程序集归属，不改变数值格式。已搜索源码与资产，没有发现绑定旧程序集的 FixedScalar 类型字符串或反射查找；Unity 完整程序集重载仍待确认。
 - 这是 0.2 的依赖准备，不代表秒制作者字段、被动求值、资产迁移或 tick 吸附完成，任务勾选保持不变。
+## 推进余数与游标原子提交
+
+- 发现 Advance 在接受结果前直接修改 m_FrameCarry，而 Discard 不恢复余数；失败后重试因此可能跨过不同的内容边界，Capture 也可能读到尚未接受的时间状态。
+- 将本次余数存入既有 TimelineRuntimeAdvanceResult，Advance 只计算候选，Commit 才与 CursorFrame / Cycle 一起写入。Discard 或求值抛错不消耗 committed 余数；原 Capture / Restore 继续读写 committed 字段，没有新增快照链路或运行对象。
+- tickCount 与作者帧率的乘法提升到 long，避免 int 乘法在大推进区间溢出。本次只增加既有结果中的整数值字段，没有新增每帧分配。
+- 已核对唯一结果构造点及 Capture / Restore 读写链，git diff --check 通过。主 Editor 的 get_editor_state 仍超时，未取得本次 Unity 编译或运行证据，没有新增测试。
+- 这是 0.4 所需原子提交语义的修复。时间单位仍为旧作者帧，外部秒制播放管理者尚未接入，0.4 保持未完成。

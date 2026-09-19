@@ -49,3 +49,11 @@
 - Center 名称：角色运动只求解一次与真实输入回放。
 - Change ID：`e239544738624229a0e45fc2c5b59703`。
 - 首次修改前运行：`addb8f65e5104379bbb78fb9d87531fd`，工作区首次 Unity 启动因 Package Manager 解析错误退出，未开始回放。失败运行保留，不作为玩法结果。
+
+## Rush 装配后复验
+
+- Trace：`92695eab609c4de4abf0fdd9006bdd85`，3870 帧。
+- Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/92695eab609c4de4abf0fdd9006bdd85/20260919-123210-843-e4131e670f994817b12ceaed89d1fc3d.json`。
+- 帧对账：`DivergentFrameCount=0`，`FirstDivergentRelativeFrame=-1`。
+- Aggregate：`mismatch`，差异字段只有 `runtime_content_hash`、`source_revision`、`semantic_hash`；这是 Rush Ability/执行数据加入正式闭包后的预期内容版本变化。
+- 前置 Proof：同 Trace `20260919-113223-597-98808fc7f0194fa18a2fc06691721f1c.json` 为 Rush 装配前 `matched:3870` 基线。

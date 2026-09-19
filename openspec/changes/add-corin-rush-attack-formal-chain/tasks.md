@@ -17,7 +17,8 @@
 
 ## 3. Pose / 消费接线
 
-- [ ] 3.1 将 8 个 Timeline producer 接入既有 committed FullBodyAction playback / ActionPlaybackInput / Slot 链。Pose领域确认（2026-09-19）：接线合同已具备、零新增——Corin姿态图已含`corin.full-body-action.slot`节点（AnimationChannelId=FullBodyAction、SelectionAvailability=AllowEmpty，接线为状态机→惯性化→Slot→ControlRig→Output），committed samples经actionSampleProvider按SourceId解析，链路clip无关；Rush 8状态（7 Motion，状态→实际Motion对照见controller-map）只需Timeline producer按2.1绑同channel提交即被Slot混入，唯一运行前提仍是子图Local Pose断点收口。
+- [x] 3.1 将 8 个 Timeline producer 接入既有 committed FullBodyAction playback / ActionPlaybackInput / Slot 链。Pose领域确认（2026-09-19）：接线合同已具备、零新增——Corin姿态图已含`corin.full-body-action.slot`节点（AnimationChannelId=FullBodyAction、SelectionAvailability=AllowEmpty，接线为状态机→惯性化→Slot→ControlRig→Output），committed samples经actionSampleProvider按SourceId解析，链路clip无关；Rush 8状态（7 Motion，状态→实际Motion对照见controller-map）只需Timeline producer按2.1绑同channel提交即被Slot混入，唯一运行前提仍是子图Local Pose断点收口。
 - [x] 3.2 确认 GameplayEffect / Ability 消费 Rush 的 8 类原始 AttackProperty key；Timeline 不携带伤害、碰撞或相机 payload
 - [ ] 3.3 同步 `docs/zzz-corin-controller-map.md` 与 Rush cue 对照，记录状态边界、命中帧和 Motion 复用证据
+
 

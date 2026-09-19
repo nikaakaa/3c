@@ -35,3 +35,9 @@ MonoBehaviour:
     m_BufferSeconds: 0.2
     m_Priority: 100
     m_TimingClass: 1
+  - m_RequestId: Rush
+    m_SourceAction: {fileID: 11400000, guid: b05734b8439b44cb8fba86324a242f65, type: 2}
+    m_BufferSeconds: 0.2
+    m_Priority: 100
+    m_TimingClass: 1
+

@@ -68,7 +68,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             AddDeclaration(parts, "RushSawExplode", "RushSawExplode");
             AddDeclaration(parts, "RushNormalHandoff", "RushNormalHandoff");
 
-            AddEdge(parts, "Entry", "Attack_Rush", BooleanCondition(parts, "entry-rush", "Entry To Attack_Rush", "RushSelected"));
+            AddEdge(parts, "Entry", "Attack_Rush", RequestCondition(parts, "entry-rush-request", "Entry To Attack_Rush"));
             AddEdge(parts, "Entry", "Attack_Rush_Enhance", BooleanCondition(parts, "entry-enhance", "Entry To Attack_Rush_Enhance", "RushEnhanceSelected"));
             AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", BooleanCondition(parts, "rush-release", "Attack_Rush Release", "RushHoldReleased"));
             AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", BooleanCondition(parts, "rush-saw", "Attack_Rush SawExplode", "RushSawExplode"));
@@ -159,6 +159,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.BindAbilityRoot(context, parts.graph);
         }
 
+        static BtsmtlSkillFlowGraph RequestCondition(RootParts parts, string seed, string name)
+        {
+            var graph = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph, RushId($"graph:{seed}"), typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, name);
+            var request = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillActionRequestFlowNode), RushId($"node:{seed}:request"), "Has Rush Request", new Vector2(-520f, 0f));
+            var result = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillConditionResultFlowNode), RushId($"node:{seed}:result"), "条件结果", new Vector2(600f, 180f));
+            BtsmtlSkillAuthoringContract.Apply(request, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "Rush"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
+            BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, request, "m_Output", result, "m_Result", RushId($"edge:{seed}"));
+            BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { RushId($"node:{seed}:request"), RushId($"node:{seed}:result") }, new[] { RushId($"edge:{seed}") });
+            return graph;
+        }
+
         static GameplayAbilityEndRule CreateEndRule(GameplayAbilityEndTrigger trigger, ActionLifecycleTransitionType transition, string window, string source)
         {
             var rule = new GameplayAbilityEndRule();
@@ -190,6 +201,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         }
     }
 }
+
 
 
 

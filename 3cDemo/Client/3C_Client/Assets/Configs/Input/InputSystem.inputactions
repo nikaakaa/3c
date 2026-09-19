@@ -41,6 +41,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Rush",
+                    "type": "Button",
+                    "id": "3d8cf2e5-7914-4b2f-a5a8-7231cfa85b6d",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -283,6 +292,28 @@
                     "processors": "",
                     "groups": ";Gamepad",
                     "action": "Dodge",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "29f57f24-6d61-4a1d-bba2-f9530c62531d",
+                    "path": "<Keyboard>/leftCtrl",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "Rush",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4d8ba3d1-4a2d-4a9c-8e5d-bc316fd48f25",
+                    "path": "<Gamepad>/buttonNorth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "Rush",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
@@ -868,3 +899,4 @@
         }
     ]
 }
+

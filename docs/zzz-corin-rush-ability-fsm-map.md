@@ -34,3 +34,9 @@ Rush Ability 已登记 8 个唯一 Rush AttackProperty GameplayEffect：普通�
 ## 复验
 
 无输入 Replay 及对应 Proof 已删除。当前尚无包含 Rush 请求的回放证据，不能据此认定 Rush 或 NormalAttack 的运行闭环。
+
+## 运行装配补口
+
+`CorinCharacterPipelineDefinition` 已接入 Rush 正式输入请求和 4 项运行资源：Rush Float32/Fixed 执行数据、Rush Admission Profile、Rush Ability Grant、8 条 Rush Timeline producer。`InputSystem.inputactions` 的 `Rush` 请求绑定 `LeftCtrl` 与 Gamepad `North`；Ability 入口条件消费 `Rush` 请求，进入 `Attack_Rush`。`RushEnhanceSelected` 仍是显式 false，强化入口继续等 Dodge/Badge owner。
+
+正式 Republish 已生成 `RushAttack.Float32Data.asset` / `RushAttack.FixedData.asset`，并把 Pipeline 的 AbilityData 与 ControlMotionTimelines 重建为统一闭包。补口后同 Trace `92695eab609c4de4abf0fdd9006bdd85` 3870 帧 `DivergentFrameCount=0`；aggregate 只因 Rush 正式内容加入而变更 `runtime_content_hash / source_revision / semantic_hash`，没有运行帧回归。

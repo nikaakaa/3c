@@ -77,7 +77,6 @@
 | 60 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 60 | 一致 |
 | 62 | `Corin_Attack_Normal_05_AttackProperty_01_02` | 62 | 一致 |
 | 64 | `Corin_Attack_Normal_05_AttackProperty_02` | 64 | 一致 |
-| - | `Corin_Attack_Normal_05_AttackProperty_01_02` | 64 | 多余 |
 
 ### `Corin_Attack_Normal_05_End`
 

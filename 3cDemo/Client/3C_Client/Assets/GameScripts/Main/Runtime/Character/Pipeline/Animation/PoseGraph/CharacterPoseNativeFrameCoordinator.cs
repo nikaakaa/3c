@@ -39,11 +39,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!m_Preparation.IsValid ||
                 m_Preparation.Status != CharacterPoseNativeFrameStatus.Prepared)
             {
+                CharacterPoseNativePreparationResult failure = m_Preparation;
                 DiscardOpenedFrame(
                     m_Preparation.FailureCode == CharacterPoseNativeFailureCode.None
                         ? CharacterPoseNativeFailureCode.FrameInvalid
                         : m_Preparation.FailureCode);
-                return m_Preparation;
+                return failure;
             }
             m_Open = true;
             return m_Preparation;

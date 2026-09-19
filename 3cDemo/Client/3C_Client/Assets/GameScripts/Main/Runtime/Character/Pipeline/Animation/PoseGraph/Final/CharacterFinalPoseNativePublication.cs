@@ -262,15 +262,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 output.DenseLocalPoses.Length != m_BoneCount ||
                 output.PoseParameters.Length != m_ParameterCount ||
                 output.PoseParameterAvailability.Length != m_ParameterCount ||
-                output.Contributions.Length > m_ContributionCapacity ||
                 output.DenseContributionWeights.Length !=
                     output.Contributions.Length * m_BoneCount)
             {
                 throw new InvalidOperationException(
-                    "Native Final Pose publication output layout is invalid.");
+                    $"Native Final Pose publication output layout is invalid: completion={output.CompletionIdentity}/{lease.Lineage.CompletionIdentity}, " +
+                    $"space={output.Space}, availability={output.Availability[0]}, invalid={output.InvalidReason[0]}, " +
+                    $"completed={output.CompletedAt[0]}, continuity={output.ContinuityIdentity[0]}, weight={output.OutputWeight[0]}, " +
+                    $"bones={output.DenseLocalPoses.Length}/{m_BoneCount}, parameters={output.PoseParameters.Length}/{m_ParameterCount}, " +
+                    $"parameterAvailability={output.PoseParameterAvailability.Length}, contributions={output.Contributions.Length}/{m_ContributionCapacity}, " +
+                    $"contributionWeights={output.DenseContributionWeights.Length}.");
             }
             int contributionCount = output.ContributionCount[0];
-            if (contributionCount <= 0 || contributionCount > output.Contributions.Length)
+            if (contributionCount <= 0 || contributionCount > output.Contributions.Length ||
+                contributionCount > m_ContributionCapacity)
                 throw new InvalidOperationException(
                     "Native Final Pose publication contribution count is invalid.");
             for (int bone = 0; bone < m_BoneCount; bone++)

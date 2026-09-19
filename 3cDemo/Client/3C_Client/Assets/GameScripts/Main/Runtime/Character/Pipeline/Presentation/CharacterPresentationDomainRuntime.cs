@@ -480,6 +480,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         {
                             m_PoseDomain.DiscardFrame();
                             m_PresentationClockCoordinator?.DiscardFrame();
+                            throw new InvalidOperationException(
+                                $"Pose frame publication failed ({commit.Source}): {commit.Message}");
                         }
                     }
                     else
@@ -490,12 +492,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                 : CharacterPoseNativeFailureCode.FrameInvalid);
                         m_PoseDomain.DiscardFrame();
                         m_PresentationClockCoordinator?.DiscardFrame();
+                        throw new InvalidOperationException(
+                            $"Pose frame validation failed ({validation.Source}): {validation.Message}");
                     }
                 }
                 else
                 {
                     m_PoseDomain.DiscardFrame();
                     m_PresentationClockCoordinator?.DiscardFrame();
+                    throw new InvalidOperationException(
+                        $"Pose frame preparation failed ({preparation.Source}): {preparation.Message}");
                 }
             }
             catch
@@ -593,4 +599,3 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 }
-

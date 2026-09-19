@@ -67,3 +67,9 @@ MonoBehaviour:
     m_ParentTag:
       m_Value: 
     m_DebugCategory: Action
+  - m_TagId:
+      m_Value: Rush
+    m_DisplayName: Rush
+    m_ParentTag:
+      m_Value:
+    m_DebugCategory: Action

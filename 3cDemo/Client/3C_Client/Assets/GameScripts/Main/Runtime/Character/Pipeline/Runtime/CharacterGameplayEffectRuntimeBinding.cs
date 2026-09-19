@@ -295,8 +295,17 @@ namespace ThirdPersonCharacter.Pipeline
             if (bound == null || !bound.Enabled)
                 return;
             writer.WriteInt32((int)bound.Source);
-            writer.WriteDouble(bound.Constant);
-            writer.WriteString(bound.AttributeId.Value);
+            switch (bound.Source)
+            {
+                case GameplayAttributeBoundSource.Constant:
+                    writer.WriteDouble(bound.Constant);
+                    break;
+                case GameplayAttributeBoundSource.Attribute:
+                    writer.WriteString(bound.AttributeId.Value);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Gameplay Attribute bound source '{bound.Source}' is invalid.");
+            }
         }
 
         static void WriteTags(CanonicalWriter writer, IReadOnlyList<GameplayTagId> tags)

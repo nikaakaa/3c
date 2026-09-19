@@ -118,7 +118,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             GameplayAbilityAuthoringCompilationModel model,
             GameplayAbilitySemanticBuilder builder)
         {
-            bool requiresGameplayEffect = false;
+            bool requiresGameplayEffect = model.Definition.Effects.Count > 0 ||
+                RequiresGameplayEffect(model.Definition.AdmissionProfile);
             bool requiresEquipment = false;
             foreach (BtsmtlSkillGraphOccurrence occurrence in model.EntryGraph.EnumerateOccurrences())
             {
@@ -129,7 +130,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 foreach (object node in occurrence.Nodes)
                 {
                     if (node is BtsmtlSkillApplyGameplayEffectFlowNode ||
-                        node is BtsmtlSkillRemoveGameplayEffectFlowNode)
+                        node is BtsmtlSkillRemoveGameplayEffectFlowNode ||
+                        node is BtsmtlSkillGameplayTagFlowNode ||
+                        node is BtsmtlSkillGameplayTagQueryFlowNode ||
+                        node is BtsmtlSkillCanActivateActionFlowNode admission &&
+                        RequiresGameplayEffect(admission.AdmissionProfile))
                         requiresGameplayEffect = true;
                     if (node is ReadEquipmentIdentityNode ||
                         node is ReadEquipmentParameterNode ||
@@ -142,6 +147,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (requiresEquipment)
                 builder.RequireGameplayCapability("Equipment");
         }
+
+        static bool RequiresGameplayEffect(GameplayAbilityAdmissionProfile profile) =>
+            profile.Tags.Count > 0 ||
+            !profile.RequiredTags.IsEmpty ||
+            !profile.BlockTags.IsEmpty ||
+            !profile.CancelTags.IsEmpty;
 
         static void DeclareAbilityCatalog(
             GameplayAbilityAuthoringCompilationModel model,

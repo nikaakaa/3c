@@ -2,7 +2,9 @@
 
 ## 结论
 
-固定输入 Replay 闭环已跑通。第二轮同 Trace Replay 与第一轮 baseline 完成对账，结果为 `matched:1121`，无分歧帧。
+2026-09-19 重新检查录制内容后，更正本页证据范围：Trace `369327502f7a4add8a21a19a7713d24d` 的 1121 帧中，`MoveAxis` 非零帧数为 0，`LookAxis` 非零帧数为 0，动作请求总数为 0。逐帧解码使用 `RollbackInputCodec` v3 的正式字段顺序，并检查每帧完整消费。
+
+历史 `matched:1121` 只证明这段全零控制输入的回放一致，不能证明普通 Play 可操作，也不能证明 NormalAttack、Dodge、Rush、命中或状态分支已经运行。下文保留历史记录，其中动作功能收口的表述不以这份 Replay 为验证依据。
 
 ## 正式输入 Trace
 
@@ -77,3 +79,16 @@ Replay 已 matched，可以进入 ZZZ Corin 正式数据抄录阶段；抄录必
 - 帧对账：`matched:1121`。
 - 本次新增 Corin Rush Admission Profile、`CorinRushAttackGameplayAbilityDefinition`、8 状态 Timeline producer 绑定和 8 个 Rush AttackProperty Ability 依赖；Rush 主动激活链未接入，所以现有固定输入路径不变。
 - 结论：新 Rush 资产没有引入 NormalAttack Replay 回归；Unity Console `0 error`，`ThirdPersonClient.Editor.csproj` `0 error`。
+
+## 普通 Play 启动失败复查
+
+2026-09-19 实际操作当前主 Editor，沿失败链确认并修复：
+
+- Corin 已有 4 个 Ability grant，但 Fixed / Float32 Ability Data 各只有 3 份。`FixedCharacterHost.OnEnable` 在加载运行数据时失败，回放随后等待会话启动超时。通过正式 `Republish Corin Ability Data` 入口补齐运行资产。
+- Rush Admission Profile 使用未注册的 `Rush` 标签，Definition 还含一个空 Behavior Profile 引用。正式标签目录补齐 Rush，删除空引用。
+- Ability 语义编译只根据 Apply / Remove Effect 节点声明 GameplayEffect 能力，漏掉动作标签、准入标签查询、图中标签查询和显式 Effect 依赖。修正共同编译入口，让 Fixed / Float32 按正式能力声明安装服务。
+- 属性上下限的写入端同时写入 Constant 和 AttributeId，Fixed / Float32 读取端却按 Source 只读取其一，使后续 Effect 数量错位为 `16777216`。写入端改为按 Source 写对应数据，保留现有严格读取合同。
+
+修复后，同一 Trace 实际推进到 1121 帧并生成新 Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/369327502f7a4add8a21a19a7713d24d/20260919-104121-731-5ed7963d8b344e3492e1e40f03d2c35e.json`。逐帧分歧为 0，aggregate 与旧 Proof 的差异为 `runtime_content_hash`、`source_revision`、`semantic_hash`，因此整体状态仍为 mismatch，不能称为 matched。
+
+随后普通 Play 进入 Recording，实测录制推进到 926 帧，未拥有 Replay Tick Drive，Console 0 error。该次录制被共用 Editor 的 Timeline 任务执行 Stop 中断，未保存为操作输入证据。移动、攻击和闪避的真实操作录制及回放尚未完成。

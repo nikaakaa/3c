@@ -73,13 +73,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationChannelId channelId,
             double presentationSampleTick,
             in CharacterPresentationFactFrame factFrame,
-            float presentationDeltaSeconds) =>
-            m_Coordinator.DriveClock(
-                player,
+            float presentationDeltaSeconds)
+        {
+            ProjectedActionPresentationSample sample = m_Coordinator.ProjectSample(
                 channelId,
                 presentationSampleTick,
-                in factFrame,
-                presentationDeltaSeconds);
+                presentationDeltaSeconds,
+                player.Duration);
+            player.SetRawClock(sample.ProjectedRawSample.ContinuousTime);
+        }
     }
 
     internal sealed class CommittedFollowPresentationClockCoordinator : IActionPresentationClockCoordinator
@@ -215,44 +217,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return new CommittedFollowPresentationClockPolicy(this);
         }
 
-        internal void DriveClock(
-            AnimationClipPlayerRuntime player,
+        internal ProjectedActionPresentationSample ProjectSample(
             AnimationChannelId channelId,
             double presentationSampleTick,
-            in CharacterPresentationFactFrame factFrame,
-            float presentationDeltaSeconds)
+            float presentationDeltaSeconds,
+            float sourceDurationSeconds)
         {
             RequireAlive();
-            if (!channelId.IsValid ||
-                !m_RegistryActive ||
-                !m_Registry.TryGetLatestPlayback(
+            RequireActiveFrame();
+            if (!channelId.IsValid)
+                throw new ArgumentException("Committed follow sampling requires a valid animation channel.", nameof(channelId));
+            if (!m_Registry.TryGetLatestPlayback(
                     channelId,
                     out AnimationPlaybackId playbackId,
-                    out ActionAnimationPlaybackLifecyclePhase phase) ||
-                !m_History.TryGetProjectionWindow(
+                    out ActionAnimationPlaybackLifecyclePhase phase))
+                throw new InvalidOperationException($"Committed follow channel '{channelId.Value}' has no committed playback sample.");
+            if (!m_History.TryGetProjectionWindow(
                     m_HistoryLease,
                     playbackId,
                     presentationSampleTick,
                     out ActionCommittedSampleWindow window))
-            {
-                FreeRunPresentationClockPolicy.Shared.DriveClock(
-                    player,
-                    channelId,
-                    presentationSampleTick,
-                    in factFrame,
-                    presentationDeltaSeconds);
-                return;
-            }
-            ProjectedActionPresentationSample projected = m_Projector.Project(
+                throw new InvalidOperationException("Committed follow playback has no committed projection window.");
+            return m_Projector.Project(
                 m_ProjectorLease,
                 playbackId,
                 in window,
                 presentationSampleTick,
                 presentationDeltaSeconds,
-                player.Duration,
-                player.Duration,
+                sourceDurationSeconds,
+                sourceDurationSeconds,
                 phase);
-            player.SetRawClock(projected.ProjectedRawSample.ContinuousTime);
         }
 
         public void Dispose()

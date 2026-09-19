@@ -75,3 +75,12 @@
 - TreeClip 当前只有 Logic TimelineBody 执行能力；删除其 Presentation 和 DualProjection 许可及“表现 TimelineBody”旧校验分支。Presentation 明确要求 Marker／TimelineTrigger，DualProjection 明确报告缺少表现投影，不把 Logic 图再执行一次。TreeTrack 保留 Marker 所需的域声明能力。
 - 主线资源处理期间未发刷新／编译请求；资源处理结束后 Unity 自动完成源码编译。两个修改文件时间为 00:35:18，对应正式程序集更新时间为 00:35:24／00:35:25。观测 `1789835870089` 显示编译和重载已结束，错误控制台 0 条；Editor 正进入 Play，未刷新或 build。
 - 6.1、8.1、8.2 仍未全部完成：Marker 节点及资源的表现能力约束、原子 Domain 编辑和完整 preparation 接线仍需实施。此处没有把 Track Inspector 入口写成已完成。
+
+## 主线动作投影与播放器写入分离
+
+- 既有 `CommittedFollowPresentationClockCoordinator` 已拥有 Registry、History、Projector 及其 Begin／Commit／Discard 租约；继续使用这个 owner，不新增时钟或注册表。
+- 协调器的 `ProjectSample` 现在返回现有 `ProjectedActionPresentationSample`，不接收或写入 AnimationClipPlayer；CommittedFollow policy 再将结果写入播放器。FreeRun 与 CommittedMovement 的合法独立策略保持原链路。
+- 删除 CommittedFollow 缺少通道、活动事务、播放身份或 committed 样本时调用 FreeRun 的回退。缺失合同输入明确失败，经原 Pose 帧 catch／Discard 撤回候选，不制造未提交进度。该变化不增加成功热路径分配。
+- 已查明尚待迁移的具体顺序：`CharacterPresentationDomainRuntime.Present` 先调用 TimelineHost.Present；`TimelineToActionCommandBridge` 从 PresentationFrameProduced 生成动画命令；`RunPoseFrame` 之后才打开协调器事务。这还不是 committed 动作位置驱动 Timeline 的目标顺序，必须调整输入与帧边界后才可声称共享采样完成。
+- 当前投影仍按 channel 查询 playback，并使用源时长；尚未变成 Timeline playback／generation 的单次动作区间投影。5.1、5.2、5.4、5.5 均保持未完成，不能仅凭方法拆分勾选。
+- 本批先退出 Play，再修改并请求脚本编译；主线实例重载完成时间 `1789836193744`，观测 `1789836215836` 为 idle、非 Play／编译／导入，错误控制台 0 条。未新增测试，未宣称实际动作播放已通过验收。

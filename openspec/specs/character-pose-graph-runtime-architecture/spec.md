@@ -204,3 +204,13 @@ Pose 域消费 Timeline 的唯一运行输入是按帧打开的已提交 Action 
 - **AND** 属性写入 MUST 保持唯一 Property Writer 路径
 
 阶段门触发的 Warning 日志是收口期诊断：其职责是把被阶段门丢弃结果的来源与真实消息暴露到运行日志，供下一轮定位；对应根因收口后 MUST 随修复一并移除，MUST NOT 作为常驻运行日志保留。
+
+### Requirement: 评估准备与图评估之间必须同步求值动画图
+
+姿态帧内消费动画 Job 结果的节点（Clip/BlendSpace/SelectedPose Player 等）其 Job 只在 PlayableGraph 求值时执行。帧协调器 MUST 在评估准备（Job 数据写入）完成之后、图评估阶段（CompletedAt/采样结果检查）之前以当前帧 delta 同步求值该 Actor 的动画图一次；求值 MUST NOT 移到帧外依赖下一次动画更新，否则 Job 结果永远滞后或缺失。求值失败 MUST 按帧失败处理，MUST NOT 被吞掉后继续检查 Job 结果。
+
+#### Scenario: 评估屏障缺失
+
+- **WHEN** 评估准备完成后未同步求值动画图直接进入图评估
+- **THEN** 依赖 Job 结果的检查 MUST 得到明确失败（如 CompletedAt 为零或旧值）
+- **AND** 运行链 MUST NOT 以默认姿态或上一帧 Job 结果通过检查

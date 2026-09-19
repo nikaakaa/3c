@@ -128,3 +128,10 @@
 - 合同构造（CharacterAnimationInputContract:252/403/412）：Control必须事件图发布且类型一致；AnimatedProperty仅由blendshape绑定与FootPlacementWeight声明产生。
 - 结论：Control→事件图变量帧、AnimatedProperty→Final Publication Property Writer两条链各自单路，无交叉查询点、无伪装填充路径；合同文本见character-pose-graph-runtime-architecture spec（57a76e426）。
 - 剩余问题不变：①子图Local Pose真因待下一轮Play日志（诊断分支已修正，7f73670d8）；②3.19源模块死面清理；③评估阶段Job完成时机按日志收口。
+
+## 评估屏障同步求值接回（2026-09-19，主控3870帧Replay现场）
+
+- 精确症状：idle每帧Faulted "Animation source pose pending entry did not complete successfully. SourceIndex=0, ExpectedCompletion=N, ActualCompletion=0, Failure=None"——workspace.CompletedAt由playable graph上的动画Job写入，Actual=0即Job从未执行。
+- 根因：旧编排BeginEvaluateBarrier含m_Animancer.Evaluate(delta)同步求值，Job以当前completion执行后才检查；旧壳删除后新管线在LateUpdate设Job数据、立即CompleteFrame检查，Job要等下一次动画更新才执行——恒错帧/永不执行（70c31f30b修复）。
+- 修复：RoleRuntime新增EvaluateAnimationGraph（按帧DeltaSeconds调AnimancerComponent.Evaluate），FrameCoordinator在PrepareEvaluation（Job数据写入）完成后、EvaluateFrame（CompletedAt检查）前触发，恢复旧管线时序语义；合同入运行时架构spec（评估准备与图评估之间必须同步求值动画图）。
+- 编译证据：Runtime 0错误（强制参数+shutdown）。Play复验与Trace 92695eab609c4de4abf0fdd9006bdd85重放归用户侧。

@@ -667,32 +667,17 @@ namespace BTSMTL.Timeline.Runtime
                 playback.State == TimelineRuntimePlaybackState.Stopped ||
                 playback.State == TimelineRuntimePlaybackState.Disposed)
                 return;
-            if (!playback.RequestStop(stopContext))
+            if (!RequestStopTimelinePlayback(handle, stopContext, out TimelineRuntimeStopRequest request))
                 throw new InvalidOperationException($"Timeline playback '{handle.Value}' rejected Stop.");
-            TimelineRuntimeStopRequest request = new TimelineRuntimeStopRequest(playback, stopContext);
-            bool stopCommitted = false;
             try
             {
-                if (!m_StopConsumer.ConsumeStop(request))
-                {
-                    playback.DiscardStop();
-                    throw new InvalidOperationException($"Timeline playback '{handle.Value}' Stop was rejected by the runtime owner.");
-                }
-                if (!playback.CommitStop())
+                if (!CommitStopTimelinePlayback(handle, request))
                     throw new InvalidOperationException($"Timeline playback '{handle.Value}' Stop could not be committed.");
-                stopCommitted = true;
-                if (m_StopConsumer is ITimelineRuntimeStopCommitConsumer committedStopConsumer)
-                    committedStopConsumer.CommitStop(request);
-                if (!playback.CompleteStop())
-                    throw new InvalidOperationException($"Timeline playback '{handle.Value}' Stop could not complete.");
-                Publish(playback);
             }
             catch
             {
                 if (playback.HasPendingStop)
-                    playback.DiscardStop();
-                if (!stopCommitted && m_StopConsumer is ITimelineRuntimeStopCommitConsumer failedStopConsumer)
-                    failedStopConsumer.DiscardStop(request);
+                    DiscardStopTimelinePlayback(handle, request);
                 throw;
             }
         }
@@ -708,12 +693,22 @@ namespace BTSMTL.Timeline.Runtime
             if (!playback.RequestStop(stopContext))
                 return false;
             request = new TimelineRuntimeStopRequest(playback, stopContext);
-            if (!m_StopConsumer.ConsumeStop(request))
+            bool accepted = false;
+            try
             {
-                playback.DiscardStop();
-                return false;
+                accepted = m_StopConsumer.ConsumeStop(request);
+                return accepted;
             }
-            return true;
+            finally
+            {
+                if (!accepted)
+                {
+                    playback.DiscardStop();
+                    if (m_StopConsumer is ITimelineRuntimeStopCommitConsumer discardConsumer)
+                        discardConsumer.DiscardStop(request);
+                    request = default;
+                }
+            }
         }
 
         public bool CommitStopTimelinePlayback(TimelinePlaybackHandle handle, TimelineRuntimeStopRequest request)
@@ -1015,6 +1010,5 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 }
-
 
 

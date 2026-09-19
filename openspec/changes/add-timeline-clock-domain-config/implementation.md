@@ -51,9 +51,19 @@
 
 ## 原 worktree 编译环境与依赖定位（历史）
 
+以下仅为迁回主线以前的失败记录，后续主线工作见上方及文末。
+
 - Run `17776ed34b634547ae425be647693db6` 再次在相同 UPM 阶段失败。
 - 已定位环境原因：工具进程缺少 `ALLUSERSPROFILE`；安装的 UPM 在 `getGlobalConfigRoot` 中直接用它拼接路径。按 Windows `CommonApplicationData` 补齐正式子进程环境后，再使用同一 RunHost；未改包源、复制缓存或新增编译入口。
 - Run `b7382578158f46c09b90e501cdcca17a` 已完成包解析并进入 C# 编译，最终 Faulted。四处独立错误均为现行基线缺少 `CharacterClipPlayerClockSource`，位于 `AnimationClipPlayer.cs:365` 和 `AnimationPhaseProjectionPlan.cs:286/295/321`；后续编译阶段尚无通过证据。
 - 当时定位到 `add-network-model-locomotion-presentation-policy` 的消费者迁移位于主目录未提交改动；该记录仅解释旧 worktree 失败原因。当前已按上方“工作位置纠正”归回主线，不再等待独立依赖交接。
 - 冷导入删除了 7537 个缺少配对资产的已跟踪 `.meta`，已仅恢复本 worktree 这些自动删除的原文件，未动主目录。UPM 自动从 lock 移除两项本 worktree 不存在的 embedded FSR 包；该 lock 差异未计入 Timeline 提交。
 - 该 Run 已结束，进程 53988 已退出；旧 worktree 不再承担实施或验证，后续状态以主目录为准。
+
+## 主线停止请求事务
+
+- `RequestStopTimelinePlayback` 原先在下游拒绝时只撤回 playback 的 pending 标记，没有对已经收到请求的 Marker／TreeClip／领域 sink 执行 Discard；下游抛异常时还会留下 pending 标记。
+- 现在同一入口在拒绝或异常时同时撤回 playback 与下游候选，失败不返回可提交的请求。正式 Commit 后的终态安装路径保持不变。
+- `CancelTimelinePlayback` 复用既有 Request／Commit／Discard 方法，删除重复停止实现；未增加播放 owner、备用入口或运行分配。
+- 此修复只补齐停止请求的拒绝／异常边界；任务 7.1 仍需共享表现采样与终态交付整体接线，0 GC 仍需处理既有停止请求快照等分配，均不据此勾选完成。
+- 主线 Unity 完成该次编译和重载：观测 `1789835251464` 为 idle、非 Play／编译／导入，重载完成时间 `1789835225426`，错误控制台 0 条；未新增或执行测试。

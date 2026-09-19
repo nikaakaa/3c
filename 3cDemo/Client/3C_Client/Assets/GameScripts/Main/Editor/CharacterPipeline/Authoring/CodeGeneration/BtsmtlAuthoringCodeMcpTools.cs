@@ -54,6 +54,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             [ToolParameter("当 asset_path 指向含多个子资产的文件时，填写精确 local file id。", Required = false)]
             public long asset_local_file_id { get; set; }
+
+            [ToolParameter("请求等待秒数，使用现有Unity MCP传输期限；长导出可显式指定90。", Required = false)]
+            public int timeout_seconds { get; set; }
         }
 
         public static object HandleCommand(JObject @params) =>
@@ -89,6 +92,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
             [ToolParameter("精确生成输出资产路径或根输出路径。", Required = true)]
             public string output_asset_path { get; set; }
+
+            [ToolParameter("请求等待秒数，使用现有Unity MCP传输期限；长重建可显式指定90。", Required = false)]
+            public int timeout_seconds { get; set; }
         }
 
         public static object HandleCommand(JObject @params) =>
@@ -120,7 +126,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     "output_code_path",
                     "recipe_type",
                     "entry_type_name",
-                    "namespace_name"
+                    "namespace_name",
+                    "timeout_seconds"
                 });
                 string assetPath = RequireAssetPath(parameters, "asset_path");
                 string definitionPath = RequireDefinitionPath(parameters);
@@ -209,7 +216,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     "recipe_type",
                     "entry_type_name",
                     "definition_asset_path",
-                    "output_asset_path"
+                    "output_asset_path",
+                    "timeout_seconds"
                 });
                 string sourceRelativePath = RequireEditorCodePath(parameters, "source_code_path", false);
                 string sourceAbsolutePath = ProjectAbsolutePath(sourceRelativePath);

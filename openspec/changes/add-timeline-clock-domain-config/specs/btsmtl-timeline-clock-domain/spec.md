@@ -1,184 +1,219 @@
+## Purpose
+
+规定 Timeline 作者时间、逻辑更新与表现采样各自的职责，保证固定作者帧在不同逻辑 tick 率下确定性推进，并使同一动作的动画、表现 Marker 与相机共享正式采样结果，作者编辑、图执行、事件调和与停止遵守一致合同。
+
 ## ADDED Requirements
 
-### Requirement: Timeline 时钟域必须以 tick 为唯一权威
+### Requirement: Timeline 作者时间与逻辑调度必须区分
 
-Timeline 逻辑判定 MUST 以整数 tick 为唯一权威时钟：clip enter/exit、cue、TreeClip、Tick lifetime 绑定的判定 MUST 使用整数 tick 比较。秒与归一化时间 MUST 只是派生读数，供采样、显示与表现插值使用。Timeline 帧基准（timeline 帧率）是资产存储语义的固定常量，MUST NOT 依赖 static 可变全局字段；tick 率 MUST 来自 pipeline 正式配置，两者仅在推进换算处相乘。
+Timeline MUST以固定 60 作者帧作为当前内容位置基准，秒与归一化时间 MUST由正式映射派生。SimulationTickRate MUST来自正式 pipeline 配置，MUST NOT使用可变全局帧率。Logic 内容 MUST在 SimulationTick 内依据换算后的作者帧边界求值，不得把一个作者帧自动解释为一个逻辑 tick。表现采样位置 MAY连续变化，MUST NOT写回作者内容或逻辑游标。
 
-#### Scenario: 默认配置下行为不变
+#### Scenario: tick率不同于作者帧率
 
-- **WHEN** pipeline tick 率为 60 且 timeline 帧率取同值
-- **THEN** 每个 tick 推进一帧，播放速度、cue 与 TreeClip 判定时刻 MUST 与现状一致
+- **WHEN** 同一段 60 作者帧内容在 30Hz 或 120Hz SimulationTick 下以正常速率播放
+- **THEN** 累计内容进度 MUST分别在 30 或 120 个逻辑 tick 后到达 60 作者帧
+- **AND** 事件 MUST在逻辑推进实际跨过其作者位置的 tick 求值；不能承诺任意作者位置都恰好落在逻辑 tick 边界
 
-#### Scenario: tick 率偏离 60
+### Requirement: tick与作者帧换算必须保留确定性余数
 
-- **WHEN** pipeline tick 率配置为非 60 值
-- **THEN** timeline 播放速度与判定时刻 MUST 按配置换算保持真实秒时长不变
-- **AND** 系统 MUST NOT 读取 static FrameRate 全局
+逻辑推进 MUST使用整数比例换算，非整除余数 MUST作为已提交的 Timeline 私有状态进入 Capture / Restore。一次推进跨过多个内容边界时 MUST按正式稳定顺序处理，不得仅采样最终落点而遗漏中间事件。
 
-### Requirement: tick 率与 timeline 帧率比率必须确定性推进
+#### Scenario: 高tick率与回滚
 
-每 tick 推进的 timeline 帧数 MUST 按 tick 率与 timeline 帧率的比率经整数累加换算；比率非整除时累加器余数 MUST 作为确定性整数状态进入 Timeline 播放快照，回滚 Capture/Restore MUST 对称保留。
+- **WHEN** 120Hz 逻辑推进 60Hz 作者内容，并从含余数的快照恢复后重放
+- **THEN** 每两 tick 累计推进一作者帧，恢复后的游标与余数序列 MUST与原逻辑输入一致
 
-#### Scenario: 高 tick 率推进
+### Requirement: 表现进度策略必须由正式业务装配选择
 
-- **WHEN** tick 率为 timeline 帧率的两倍
-- **THEN** 累加器 MUST 使每两 tick 推进一帧，任何回滚重放 MUST 产生相同帧游标序列
+表现进度来源与修正方式 MUST由正式业务装配明确给出；执行域、游戏类型、网络模型名称和单个 Clip MUST NOT成为消费者中的隐式策略开关。策略 MUST遵守该业务现行的 sample、horizon、终态与连续性合同，不得提供缺失配置后的自由播放 fallback。逻辑 Motion、Warp、Window 等 MUST只消费逻辑域数据，不得读取表现私有进度。
 
-#### Scenario: 回滚后重放
+当前有限 Action MUST继续基于 committed raw sample 投影；locomotion MUST继续使用自身正式 prepared binding 的 FreeRun 或 CommittedMovement。CommittedMovement MUST视为逻辑派生事实，不构成新增调度域。对正式合同允许的独立表现播放，装配 MAY选择表现 delta 自由推进；未来追赶策略也 MUST遵守相同输入输出和生命周期边界。
 
-- **WHEN** 播放被回滚到含累加器余数的快照并重放
-- **THEN** 后续推进 MUST 与首次播放逐 tick 一致
+#### Scenario: 有限Action与locomotion同时存在
 
-### Requirement: 表现时间驱动模式必须是业务策略而非固定实现
+- **WHEN** 有限 Action 和 locomotion 在同一角色表现帧内更新
+- **THEN** Action MUST消费其 committed sample 投影，locomotion MUST消费自己的 prepared binding
+- **AND** 两者 MUST NOT因为共用角色或 Timeline 名称而被强制合并为一个时钟
 
-Timeline 表现层的时间驱动 MUST 是显式业务策略，以策略对象（`IActionPresentationClockPolicy`）注入播放器：策略实现 MUST 完整封装该模式下播放器时钟的每帧行为，播放器消费点 MUST NOT 因模式产生分支。业务 MAY 选择自由播策略（按渲染 delta 自走，非确定、不回滚），MAY 选择 committed movement 进度跟随策略（消费正式 `CharacterPresentationFactFrame.MovementPlaybackClock`），MAY 选择 committed Action sample 插值跟随策略（动画时间为 committed 逻辑采样的连续函数，支持修正重演）。`CommittedMovementPlaybackClock` MUST 被视为逻辑时钟派生事实，不得作为第三个时间域。无论哪种模式，逻辑消费动画时间的场景（motion curve、foot window、motion warp）MUST 使用 tick 域数据，MUST NOT 读取表现私有动画时钟。各跟随模式的能力组件 MUST 保持可用，采用与否 MUST 由 Network Model、角色表现域或业务域装配决定，MUST NOT 由单个 Clip 强制全局策略。
+#### Scenario: 普通业务中断动作
 
-#### Scenario: 表现自由播业务
+- **WHEN** 没有网络修正的本地业务接受一个动作中断
+- **THEN** 动作 MUST按正式终态停止生产新事件
+- **AND** 可见姿态如何过渡 MUST由原表现业务决定，不得以“单机无需同步”为理由继续触发旧动作事件
 
-- **WHEN** 业务装配自由播策略
-- **THEN** 播放器时钟 MUST 按渲染 delta 平滑推进，收到播放事件后 MUST NOT 被 tick 采样阶梯约束
+#### Scenario: 缺少策略所需样本
 
-#### Scenario: 策略注入即插件开关
+- **WHEN** 已装配的跟随策略缺少合同必需的样本或身份不匹配
+- **THEN** 系统 MUST给出该合同规定的保持或失败结果
+- **AND** MUST NOT自动切成另一策略或自行读取网络私有历史
 
-- **WHEN** 新业务需要不同的表现时钟行为
-- **THEN** MUST 通过新增策略实现并在装配时注入接入
-- **AND** 播放器消费点与既有策略实现 MUST NOT 被修改
+### Requirement: 同一动作的表现消费者必须共享一次采样结果
 
-#### Scenario: locomotion 表现域选择 CommittedMovement
+同一动作 playback identity / generation 在一个 PresentationFrame 内 MUST只确定一次表现采样结果。动作动画、该动作 Timeline 的表现 Marker 和 Camera 内容 MUST消费相同的前后动作位置、循环经过、变化原因及事件资格。各 Clip 的起点、ClipIn 和源速率映射 MUST保留；source phase、混合过渡、locomotion 和独立生成效果仍 MUST由原 owner 管理。共享结果 MUST NOT成为第二份作者内容、逻辑权威或全角色统一游标。
 
-- **WHEN** locomotion 表现域装配模式为 `CommittedMovement`，且节点被标记为 locomotion 参与节点
-- **THEN** 播放器 MUST 从正式 `CharacterPresentationFactFrame.MovementPlaybackClock` 驱动连续时间
-- **AND** 同一 Committed movement clock identity 下的渲染帧 MUST 不因渲染帧率变化而改变 Clip 的逻辑经过时长
+#### Scenario: 动画和Marker消费同一动作
 
-#### Scenario: locomotion 默认自由播放
+- **WHEN** 动作本帧从作者位置 19.5 采样到 20.5
+- **THEN** 动画与该动作 Camera MUST从该结果映射到各自源采样
+- **AND** 第 20 帧 Marker MUST按同一经过和事件资格判定，不得用另一份 delta 累加结果
 
-- **WHEN** Network Model 未显式选择严格逻辑跟随模式
-- **THEN** locomotion MUST 使用 `FreeRunPresentationClockPolicy`
-- **AND** 表现层 MUST NOT 因未选择严格模式而读取或创建额外时间域
+#### Scenario: 动作内Clip起点不同
 
-#### Scenario: 跟随逻辑时间轴业务
+- **WHEN** 两个 Clip 属于同一动作但起点或 ClipIn 不同
+- **THEN** 两个源采样时间 MUST通过各自正式映射计算
+- **AND** MUST NOT因为共享动作位置而强制使用相同源动画时间
 
-- **WHEN** 业务选择 committed 插值跟随模式
-- **THEN** 表现动画时间 MUST 由 committed 采样点之间连续插值得出
-- **AND** 回滚重放替换 committed 分支时 MUST 从当前可见状态平滑接管，不倒退、不硬重置
+### Requirement: 执行域必须限定内容的更新者与输出能力
 
-### Requirement: Timeline Track 与 Clip 必须声明执行域
+Track MUST声明 Logic、Presentation 或 DualProjection，有效 Clip 域 MUST在 Track 与内容能力允许的范围内。Marker MUST继承 Track 域。Logic 输出 MUST由 SimulationTick 经 Advance / Commit 产生；Presentation 输出 MUST由表现帧产生且不得写 Gameplay fact、canonical input 或 SimulationState。DualProjection MUST表示同一作者内容的合法双侧投影，不得解释为第三个时钟、额外 playback 或把同一 Gameplay 图执行两次。缺少对应域能力的内容 MUST被明确拒绝。
 
-Timeline Track MUST声明默认执行域 `Logic`、`Presentation` 或 `DualProjection`。`DualProjection` 只表示同一作者内容同时拥有 Logic 与 Presentation 输出，不得被解释为第三个时钟、第二个 playback 或把同一逻辑图在两个时钟各执行一次。历史资产缺少执行域字段时 MUST固定解释为 `Logic`，保持既有行为。Clip MAY在 Track 允许范围内声明有效域，但 MUST不保存具体 Network Model、Endpoint、Transport、Rollback 或具体时钟实现。
+Runtime MUST继续直接读取同一正式只读 Timeline 内容；每次 evaluation 只是当前调用的结果，不得生成第二 Timeline 操作表或常驻执行语言。
 
-Timeline Runtime MUST继续直接遍历正式只读 Timeline 内容。`Advance` 与 `Present` MAY分别形成当前调用的 Logic Evaluation 与 Presentation Evaluation 结果分区，但 MUST NOT把 Track / Clip 编译为 Semantic operation、持久化操作表或第二份 Timeline 内容。帧存储、编辑器布局和时间单位可以复用同一 TimelineData；Logic 输出 MUST只由 SimulationTick 推进，Presentation 输出 MUST只由 PresentationFrame 推进。
+#### Scenario: 表现内容需要跟随已提交动作
 
-#### Scenario: 历史 Timeline 保持逻辑语义
+- **WHEN** Presentation Track 使用跟随 committed sample 的动作采样
+- **THEN** Track MUST仍在 PresentationFrame 运行
+- **AND** 使用逻辑提交的进度来源 MUST NOT使它变成 Logic Track，也不得要求再调用一次逻辑 evaluator
 
-- **WHEN** 反序列化的历史 Track 或 Clip 没有执行域字段
-- **THEN** 有效执行域 MUST为 `Logic`
-- **AND** 系统 MUST NOT自动把既有 TreeClip、Cue、Window 或 Action lifecycle 迁移到 Presentation
+#### Scenario: 缺少双侧投影
 
-#### Scenario: 普通表现 Track
+- **WHEN** 内容被声明为 DualProjection，但只有 Logic 图而没有合法表现能力
+- **THEN** 作者提交或 preparation MUST指出该内容的域能力错误
+- **AND** MUST NOT在 PresentationFrame 复制执行 Logic 图
 
-- **WHEN** Track 的执行域为 `Presentation`
-- **THEN** 动画、特效、音效和相机 Clip MUST按 PresentationFrame 推进
-- **AND** 多个 PresentationFrame 之间 MAY连续更新
-- **AND** MUST不产生 Gameplay fact、canonical input 或 SimulationTick
+### Requirement: Marker必须与Clip同级且只提供点触发
 
-#### Scenario: DualProjection 内容
+Marker MUST由 Track 直接持有稳定 MarkerId、整数触发帧和正式触发图引用，图 MUST只有 OnEnable 触发入口。Marker MUST NOT携带持续区间、Update / Exit 生命周期或成为 Clip 子列表。Logic Marker MUST经正式逻辑事务触发；Presentation Marker MUST使用该 playback 的表现采样结果触发，两域的执行职责分开但 MAY共享正式采样来源。
 
-- **WHEN** 同一作者 Clip 声明 `DualProjection`
-- **THEN** 当前播放 MUST在各自推进调用中形成独立的 Logic 与 Presentation evaluation 输出
-- **AND** Runtime MUST继续直读该 Clip 的正式内容，不得生成可跨播放复用的操作表
+#### Scenario: 表现帧跨过Marker
 
-#### Scenario: Gameplay Track
+- **WHEN** 一个已接受的正常表现经过跨过启用的 Presentation Marker 且当前实例具有事件资格
+- **THEN** Marker MUST交付一次 OnEnable 事件
+- **AND** MUST NOT为了触发而额外推进 SimulationTick
 
-- **WHEN** Track 的执行域为 `Logic`
-- **THEN** Cue、Window、Gameplay TreeClip 和 Action lifecycle MUST按 SimulationTick 推进
-- **AND** Enter / Update / Exit MUST进入既有 Commit / Discard 事务
+#### Scenario: Logic候选被丢弃
 
-### Requirement: TreeClip 图执行必须只由其执行域推进
+- **WHEN** Logic Marker 已形成候选但所属 Step 被 Discard
+- **THEN** 其输出与私有候选 MUST一起丢弃，不留下已提交事件或业务状态
 
-Logic TreeClip 的既有 `AssetTree` / TimelineBody 图 MUST只在 SimulationTick 执行；其 Enter / Update / Exit、`TreeDecision` 退出与 Commit / Discard MUST只属于 Logic 投影。Presentation 轨的 TreeClip MUST由 PresentationFrame 游标推进，内容 MUST限于表现安全范围，MUST NOT产生 Gameplay fact、canonical input 或 SimulationState，MUST NOT进入 Gameplay Commit / Discard 事实链。DualProjection TreeClip 的 AssetTree MUST只在 SimulationTick 执行一次，MUST NOT在 PresentationFrame 执行。
+#### Scenario: 起点与静音轨道
 
-#### Scenario: TreeDecision 只作用于逻辑投影
+- **WHEN** 新 playback 正式开始于含第 0 帧 Marker 的轨道
+- **THEN** 启用轨道的起点 Marker MUST按开始经过触发一次
+- **AND** 静音轨道 MUST不产生该事件，起点重复采样 MUST不再次触发
 
-- **WHEN** DualProjection TreeClip 的 Logic `AssetTree` 请求 `TreeDecision` 退出
-- **THEN** 该请求 MUST只按既有 Logic Advance / Commit 协议改变 Logic TreeClip 生命周期
-- **AND** 表现侧 MUST继续由表现游标处理，不得执行 AssetTree 或产生 Gameplay fact
+### Requirement: Presentation触发图必须使用表现安全执行上下文
 
-### Requirement: Marker 必须是与 Clip 同级的点触发实体
+表现 Marker 的图 MUST经正式图编译与服务边界绑定精确 identity / revision、只读表现输入与已装配的 typed 表现输出能力。图 MUST NOT通过临时 Logic 调用栈执行，MUST NOT访问可写 SimulationState、产生 Gameplay fact 或调用 Kernel Evaluate / Finalize。图角色、域能力或下游资源不合法时 MUST报告明确错误，不得以空 invoker、空图或私有 Simulation context 代替。
 
-Timeline Marker MUST是与 Clip 同级的一等内容实体：单帧点触发，持有稳定 MarkerId、触发帧、执行域归属与一张仅暴露 OnEnable 回调的触发图引用。Marker MUST NOT携带持续区间或 Stateful 生命周期，MUST NOT作为任何 Clip 的子内容存在。Marker 的推进者由其域归属决定：Logic 域 Marker MUST由 SimulationTick 经 Advance / Commit 推进并触发其触发图 OnEnable；Presentation 域 Marker MUST由 PresentationFrame 的视觉游标跨点触发。不同域的 Marker MUST独立推进，MUST NOT共用游标或互相等待。
+图候选输出与事件记账 MUST遵守既有表现帧的接受 / 丢弃边界，未接受输出不得提前发布到下游。
 
-#### Scenario: 表现域 Marker 被视觉游标跨过
+#### Scenario: 表现图包含Gameplay节点
 
-- **WHEN** Presentation Marker 的触发点被表现游标跨过
-- **THEN** PresentationFrame MUST产生携带稳定 EventId 的表现事件并触发其触发图 OnEnable
-- **AND** 该触发 MUST不等待 SimulationTick，MUST不进入 Gameplay Commit / Discard 事实链
+- **WHEN** Presentation Marker 图包含修改 Gameplay 状态或结束 Logic 片段的节点
+- **THEN** 作者提交或 preparation MUST拒绝并定位该图与节点
+- **AND** MUST NOT将它延迟交给 Logic invoker 执行
 
-#### Scenario: 逻辑域 Marker 被 tick 跨过
+#### Scenario: 表现帧候选失败
 
-- **WHEN** Logic Marker 的触发点被 SimulationTick 跨过
-- **THEN** runtime MUST经既有 Advance / Commit 协议触发其触发图 OnEnable 一次
-- **AND** 同一经过在 Discard 后 MUST不产生执行残留，Commit 后 MUST不得重复触发
+- **WHEN** 图已产生候选，但本次表现帧被 Discard
+- **THEN** 对应候选和未交付事件记账 MUST一起丢弃
+- **AND** MUST不泄漏下游命令，也不得把未交付事件标成已消费
 
-#### Scenario: 与 Clip 同级共存
+### Requirement: Marker事件身份必须区分正常经过与修正采样
 
-- **WHEN** 同一 Timeline 同时包含 Clip 与 Marker
-- **THEN** 两者 MUST各自按自己的域推进，互不从属
-- **AND** Marker 的创建、存储与指纹 MUST与 Clip 平级处理
-### Requirement: Presentation Marker 事件必须具有稳定身份且只交付一次
+Presentation Marker EventId MUST由 PlaybackHandle、Generation、MarkerId 与 TraversalIndex 组成。正常循环再次经过 MUST使用新的 TraversalIndex；同一经过多次重采样 MUST只交付一次。Seek、分支修正或位置回退 MUST不自动补发跨过的区间事件，不得仅为躲避去重而生成新的经过身份。需要替换或取消的已发事件 MUST沿原正式身份调和。
 
-Presentation Marker 事件的 `EventId` MUST由 `PlaybackHandle`、`Generation`、`MarkerId` 与 `TraversalIndex` 组成。`TraversalIndex` MUST标识同一 playback generation 对该 Marker 的循环/经过次序：同一次经过被多个 PresentationFrame 重采样时 MUST只交付一次，下一次循环经过 MUST产生新的 identity。playback 停止或 generation 变化后，旧 generation 的 Marker MUST不再触发。触发 MUST只改变表现状态，MUST NOT写 Gameplay fact、canonical input、SimulationState 或 rollback 决策。
+#### Scenario: 修正后再次采样相同位置
 
-#### Scenario: 同一 Marker 被多次表现帧采样
+- **WHEN** 同 generation 的表现位置因修正回退，再次经过已交付的同一循环 Marker
+- **THEN** 系统 MUST识别原经过，不重复交付该事件
+- **AND** 修正本身 MUST不冒充自然循环
 
-- **WHEN** 同一次经过的触发点被多个 PresentationFrame 重复重采样
-- **THEN** 该 `EventId` MUST只交付一次
-- **AND** 后续采样 MUST NOT重复触发
+#### Scenario: 正常循环再次触发
 
-#### Scenario: 循环再次经过
+- **WHEN** 同一 generation 按正常播放完成一个循环并再次跨过 Marker
+- **THEN** 新事件 MUST拥有新的 TraversalIndex，正式消费端 MUST允许该次触发
 
-- **WHEN** 同一 playback generation 完成一次循环并再次跨过相同 Marker
-- **THEN** 新事件 MUST使用新的 `TraversalIndex`
-- **AND** 消费端 MUST能够再次触发该 Marker
+### Requirement: 已接受终态必须关闭旧播放的新事件资格
 
-#### Scenario: 停止或分支替换
+正式 Stop / Cancel / generation 替换生效后，旧播放 MUST不再推进并产生新 Marker，已有采样缓存不得恢复其事件资格。终态时点 MUST服从既有 commit / confirmed horizon 合同；预测分支撤销 MUST使用最终分支更新，不得伪造 confirmed Complete / Release。已生成动画、相机和效果的退役或尾部 MUST由原领域结束策略处理，不得通过保持旧 Timeline 活跃来收尾。
 
-- **WHEN** playback 停止或 generation 变化
-- **THEN** 旧 generation 的 Marker MUST不再触发
-- **AND** MUST NOT通过 Logic Commit / Discard 重放、补写或撤销 Gameplay 事实
-### Requirement: Presentation 输出必须交给正式下游域调和消费
+#### Scenario: 循环Timeline停止
 
-PresentationFrame 中的表现输出 MUST交给已经装配的正式下游域消费：表现动画 MUST继续经 Action playback command 调和，Camera State / Cue / Response / Resource MUST交给 Camera domain，并使用稳定 EventId 做 keep / replace / cancel 调和。没有正式下游域的表现能力 MUST NOT通过伪命令、payload 字符串或第二套事件系统假装已消费，MUST NOT写 Gameplay fact。
+- **WHEN** 循环播放的 Stop 已由正式 owner 接受
+- **THEN** 后续 PresentationFrame MUST不再产生该 playback / generation 的 Marker
+- **AND** MUST NOT等到下一次循环末尾才生效
 
-#### Scenario: Camera 采样进入 Camera domain
+#### Scenario: 已生成表现需要尾部
 
-- **WHEN** PresentationFrame 采样到 Camera State / Cue / Response / Resource
-- **THEN** 下游 MUST使用稳定 EventId 向 Camera domain 发出激活请求
-- **AND** 采样离开生效区间或 playback 结束时 MUST发出可调和的退役请求
+- **WHEN** playback 已停止且已生成表现声明合法尾部
+- **THEN** 尾部 MUST由该表现领域自身完成
+- **AND** MUST不延长旧 Timeline 的事件生产资格或 Gameplay 窗口
 
-#### Scenario: 下游 domain 尚未装配
+### Requirement: 表现输出必须交给正式下游域
 
-- **WHEN** Timeline 输出声明了某个尚未装配正式下游 domain 的表现能力
-- **THEN** 系统 MUST NOT伪造 CharacterPresentationCommand 或新建第二套事件系统
-- **AND** 该输出 MUST NOT被宣称为已交给下游消费
+动画输出 MUST继续通过原 Action / Pose 生命周期；Camera 输出 MUST通过原 Camera domain 使用稳定身份调和。没有正式下游 domain 的能力 MUST在准备或调用边界明确报告不可用，不得用 payload 字符串、空实现或第二套事件系统宣称已经消费。
 
-### Requirement: 编辑器吸附粒度必须等于 tick 步长
+#### Scenario: Camera离开生效范围
 
-Timeline 编辑器 clip/cue 边界吸附粒度 MUST 等于会话 tick 步长（`1/tickRate`），MUST NOT 提供运行时无法表示的亚 tick 位置。编辑器预览刻度 MAY 与运行时 tick 率独立配置。
+- **WHEN** Camera 内容离开生效范围或所属播放正式结束
+- **THEN** 原 Camera domain MUST收到对应稳定身份的退役结果
 
-#### Scenario: 拖拽 clip 边界
+#### Scenario: 特效领域未装配
 
-- **WHEN** 作者在时间轴拖动 clip 边界
-- **THEN** 落点 MUST 量化到 tick 步长网格
-- **AND** 编辑器显示位置 MUST 与运行时判定位置一致
+- **WHEN** 表现图请求尚未装配正式 domain 的特效能力
+- **THEN** 准备或调用 MUST明确失败
+- **AND** trace 或事件输出本身 MUST NOT被宣称为特效已经播放
 
-### Requirement: TimelineData 不得包含全局时间缩放字段
+### Requirement: Domain编辑必须保持整个作者内容一致
 
-`TimelineData` MUST NOT 持有全局时间缩放（Scale）字段；时间速率调整 MUST 由播放请求或 clip 级字段显式表达，MUST NOT 保留无运行时语义的残留字段。
+现有 Track 的 Domain MUST能够通过正式 Timeline 作者入口修改。Marker MUST显示继承域，域修改 MUST校验同 owner 内受影响的 Clip 显式域与图能力，并作为一次正式 mutation / Undo 提交。失败 MUST保留原内容并定位不兼容项，MUST NOT只改 Track enum 或静默删除节点。Domain MUST只表达执行与输出权限，不改变业务时钟策略。
 
-#### Scenario: 加载历史资产
+#### Scenario: 将含Gameplay图的轨道改为Presentation
 
-- **WHEN** 反序列化含旧 Scale 字段的历史 Timeline 资产
-- **THEN** 系统 MUST 忽略该数据且不保留字段定义
+- **WHEN** 作者修改该 Track 的 Domain
+- **THEN** 系统 MUST拒绝不合法转换并显示具体内容原因
+- **AND** Track、Clip 与图 MUST保持修改前的一致状态
 
+#### Scenario: 修改合法轨道域
 
+- **WHEN** 受影响内容均具备目标域能力
+- **THEN** 域声明、闭包与保存结果 MUST在同一正式 mutation 内一致更新
+- **AND** Undo MUST恢复同一 owner 的完整改动
 
+### Requirement: 作者吸附必须与可保存精度一致
+
+拖动、帧输入、秒换算、Marker 位置和 Clip 边界 MUST使用正式 Session 的作者帧映射与整数保存精度。UI MUST区分作者帧与 SimulationTick，MUST NOT把表现连续采样称为亚帧存储支持，MUST NOT把吸附强制绑定为 1/SimulationTickRate。逻辑生效时点观察 MUST来自正式换算规则，未编辑内容不得整体重新量化。
+
+#### Scenario: Presentation轨道拖动
+
+- **WHEN** 作者拖动一个 Presentation Marker 到两个作者帧之间
+- **THEN** 交互落点与最终保存 MUST使用同一作者帧量化
+- **AND** MUST NOT出现拖动时显示自由小数位置、提交后无说明地回跳到整数帧
+
+#### Scenario: 调整运行tick率
+
+- **WHEN** pipeline SimulationTickRate 改变而 Timeline 内容不变
+- **THEN** 作者帧位置 MUST保持不变
+- **AND** 运行观察 MUST能区分作者位置与换算后的实际逻辑生效 tick
+
+### Requirement: Marker私有图必须随正式作者闭包重建
+
+Marker 私有触发图 MUST随所属 Timeline / Graph 的正式 owner 闭包参与复制、删除、导出与生成。C# authoring 重建 MUST保留图角色、节点内容、稳定身份与引用关系，不得仅引用原私有子资产的路径 / localFileId 或用空图替代原内容。
+
+#### Scenario: 重建包含私有Marker图的Timeline
+
+- **WHEN** 作者通过既有 export_code / generate_assets 重建该 owner 内容
+- **THEN** 生成结果 MUST包含该 Marker 及其完整私有触发图
+- **AND** MUST不依赖旧 owner 下的私有图子资产仍然存在
+
+### Requirement: TimelineData不得保留无语义的全局Scale
+
+TimelineData MUST NOT持有无运行时语义的全局 Scale 字段；时间速率 MUST由正式播放控制或 Clip 源映射显式表达，MUST NOT保留旧字段、兼容读取或 fallback 配置。
+
+#### Scenario: 请求变速播放
+
+- **WHEN** 业务通过正式播放控制改变速率
+- **THEN** Logic 换算与动作表现策略 MUST消费各自合同允许的同一控制来源
+- **AND** MUST不读取 TimelineData.Scale 或编辑器私有缩放来改变运行进度

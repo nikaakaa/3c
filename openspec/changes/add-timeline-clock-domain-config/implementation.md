@@ -99,3 +99,11 @@
 - `BtsmtlSkillGraphClosure.ValidateTopology` 原先在遍历一个节点时立即验证其出边，可能先于目标节点的 GatherPorts。现分为全图端口收集与拓扑校验两阶段，保留原端点类型、容量、身份及环检查。
 - 主线完成编译重载后，直接调用正式闭包校验，三张原失败图均通过；再调用 Ability 正式作者闭包及 TimelineContentDiscovery，得到 54 张图、7 个私有 Timeline，Attack1–5、Attack5End、Attack5End2 均 valid。查询仅加载并校验当前资产，没有写资产或生成测试文件。
 - 这证明当前作者闭包与内容发现通过，不代表私有图导出重建、Marker 表现执行或完整动作运行已完成；缺失脚本错误不在此修复范围。
+
+## 正式导出结果读取进展
+
+- 直接调用正式 `BtsmtlAuthoringCodeExportService.Export`，不调用 FileWriter；代码文件仍由系统文件工具写入。一次调用由 execute_code 历史确认完成，耗时 45454.4ms，返回结果预览含 `Success:true`；30 秒连接等待结束导致完整文件集未取回，不能据此声称生成代码已经保存或重建通过。
+- 已确认现有 Unity MCP 传输支持请求参数 `timeout_seconds`；仅增加 CLI timeout 不能改变服务端 30 秒命令期限。无需修改工具服务器或增加另一套导出服务。
+- 后续读取期间主 Editor 多次进入 Play／程序集重载，调用连接断开。本轮没有落盘导出的 C# 文件，也没有执行 generate_assets；不重复执行状态未知的资产写入。
+- `Attack1.cs`／`Root.cs` 新增的未提交删除移除了 `Enter_To_State_Rule` 条件。只读核对实际资产中转移 `2c359c8b-c840-4888-b8db-fe22fe16df63` 的 `m_Payload` 为空，确认转移已无条件；图 `5ee51b65f135f7809601ec732f478ef1` 仍作为孤立子资产存在。因此源码删除与实际转移一致，保留该改动，不按孤立图仍存在误判为冲突或恢复旧条件。
+- 8.5 仍未完成；需要取得完整正式导出结果、保留上述新口径，再继续重建。

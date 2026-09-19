@@ -57,6 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Lease,
                 in demand,
                 barrierIdentity);
+            m_Role.EvaluateAnimationGraph();
         }
 
         internal CharacterPoseNativeEvaluationResult Evaluate(

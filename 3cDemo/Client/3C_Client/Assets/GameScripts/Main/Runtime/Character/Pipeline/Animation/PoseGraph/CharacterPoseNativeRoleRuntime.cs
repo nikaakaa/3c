@@ -280,6 +280,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeFrameLease lease) =>
             m_Graph.PrepareFrame(lease);
 
+        internal void EvaluateAnimationGraph() =>
+            m_Graph.InstanceContext.Animancer.Evaluate(
+                m_Graph.CurrentInput.DeltaSeconds);
+
         internal void BindGraphInput(
             PosePortId portId,
             CharacterPoseNativePortValue value) =>

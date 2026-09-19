@@ -39,11 +39,9 @@ namespace ThirdPersonCharacter.Control.Rules
         static readonly string s_MovingTurnSourceMotion = "timeline:8a6491b4-93fe-4002-a814-2ac6eb75e567/track:9b2e235b-266b-47ef-8ecd-c2fa8a4207fc/clip:e04f4e26-be58-4698-8905-36dcef1d5405";
         static readonly CharacterControlModuleContract s_Contract = BuildContract();
 
-        // UnityHFSM 是控制层状态机的执行引擎:Contract 构造时已按 Priority/Order/Id 排序,
-        // 机器按该序登记转移,OnLogic 内"体先行、按登记序首个真条件即转移"实现优先级抢占语义。
-        // 状态真值仍在仿真槽位,模块由目录工厂按 evaluator(即按 actor)新建,机器可变状态不跨 actor 共享。
         readonly StateMachine<string, string> m_Machine;
         bool m_Initialized;
+        bool m_RestoringState;
 
         CharacterControlTickContext m_Context;
         ICharacterControlReadPort m_Read;
@@ -55,7 +53,6 @@ namespace ThirdPersonCharacter.Control.Rules
         public CorinCharacterControlModule()
         {
             m_Machine = new StateMachine<string, string>();
-            m_Machine.SetStartState(Idle.Value);
             for (int i = 0; i < s_Contract.States.Count; i++)
             {
                 CharacterControlStateId stateId = s_Contract.States[i].Id;
@@ -87,14 +84,20 @@ namespace ThirdPersonCharacter.Control.Rules
             m_Output = output;
             if (!m_Initialized)
             {
+                CharacterControlStateId activeState = m_State.ReadState(s_ActiveState);
+                m_RestoringState = activeState.IsValid;
+                m_Machine.SetStartState(m_RestoringState ? activeState.Value : s_Contract.InitialState.Value);
                 m_Initialized = true;
                 m_Machine.Init();
+                m_RestoringState = false;
             }
             m_Machine.OnLogic();
         }
 
         void OnStateEnter(CharacterControlStateId stateId)
         {
+            if (m_RestoringState)
+                return;
             m_State.WriteState(s_ActiveState, stateId);
             m_State.WriteUInt64(s_EnteredTick, m_Context.Tick.Value);
             m_State.WriteInt32(s_MotionElapsed, 0);

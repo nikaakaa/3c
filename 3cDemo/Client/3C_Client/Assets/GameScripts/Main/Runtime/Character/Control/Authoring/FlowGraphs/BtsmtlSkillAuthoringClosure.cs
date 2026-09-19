@@ -51,13 +51,24 @@ namespace ThirdPersonCharacter.Control.Authoring
             BtsmtlSkillFlowGraph root,
             bool requireComplete)
         {
-            IReadOnlyList<FlowGraph> graphs = BtsmtlSkillGraphClosure.Validate(root, requireComplete);
+            return Create(BtsmtlSkillGraphClosure.Validate(root, requireComplete));
+        }
+
+        public static BtsmtlSkillAuthoringClosure Create(TimelineAsset root, bool requireComplete)
+        {
+            return Create(BtsmtlSkillGraphClosure.Validate(root, requireComplete), root);
+        }
+
+        static BtsmtlSkillAuthoringClosure Create(IReadOnlyList<FlowGraph> graphs, TimelineAsset timelineRoot = null)
+        {
             var graphOwners = new Dictionary<FlowGraph, FlowGraph>();
             var graphPlacementOwners = new Dictionary<FlowGraph, FlowGraph>();
             var machines = new List<BtsmtlSkillNativeStateMachine>();
             var machineOwners = new Dictionary<BtsmtlSkillNativeStateMachine, FlowGraph>();
             var timelines = new List<TimelineAsset>();
             var timelineOwners = new Dictionary<TimelineAsset, FlowGraph>();
+            if (timelineRoot != null)
+                timelines.Add(timelineRoot);
 
             foreach (FlowGraph graph in graphs)
                 foreach (FlowNode node in graph.allNodes.OfType<FlowNode>())

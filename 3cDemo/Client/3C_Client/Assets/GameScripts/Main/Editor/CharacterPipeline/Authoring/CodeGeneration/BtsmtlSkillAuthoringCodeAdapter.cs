@@ -237,22 +237,45 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         void EmitTimelineRoot(BtsmtlAuthoringCodeExportContext context, TimelineAsset root)
         {
-            if (root.Data == null)
+            BtsmtlSkillAuthoringClosure closure;
+            try
             {
-                context.ReportError("timeline_data_missing", root.name, "TimelineAsset缺少TimelineData。");
+                closure = BtsmtlSkillAuthoringClosure.Create(root, true);
+            }
+            catch (Exception error)
+            {
+                context.ReportError("timeline_graph_closure_invalid", root.name, error.Message);
                 return;
             }
+            IReadOnlyList<FlowGraph> graphs = closure.Graphs;
+            TimelineAsset[] nestedTimelines = closure.Timelines.Where(value => value != root).ToArray();
+            TimelineAsset[] ownedTimelines = closure.Timelines.Where(value =>
+                value == root || BtsmtlSkillAuthoringClosure.IsPrivateSubAsset(value, root)).ToArray();
             RegisterTimeline(context, root, true);
-            EmitTimelineCreation(context, new[] { root }, new Dictionary<TimelineAsset, FlowGraph>(), root);
-            EmitTimelineContentCreation(context, new[] { root });
-            EmitTimelineConfiguration(context, new[] { root });
-            EmitPrune(context, Array.Empty<FlowGraph>(), Array.Empty<BtsmtlSkillNativeStateMachine>(), new[] { root });
+            RegisterGraphs(context, graphs, root, closure.GraphOwners, closure.GraphPlacementOwners);
+            RegisterMachines(context, closure.Machines, closure.MachineOwners, root,
+                closure.GraphOwners, closure.GraphPlacementOwners);
+            RegisterTimelines(context, nestedTimelines, closure.TimelineOwners, root,
+                closure.GraphOwners, closure.GraphPlacementOwners);
+            EmitTimelineCreation(context, new[] { root }, closure.TimelineOwners, root);
+            EmitGraphCreation(context, graphs, root, closure.GraphOwners, false, string.Empty);
+            EmitGraphNodeCreation(context, graphs);
+            EmitMachineCreation(context, closure.Machines, closure.MachineOwners);
+            EmitTimelineCreation(context, nestedTimelines, closure.TimelineOwners, root);
+            EmitMachineNodeCreation(context, closure.Machines);
+            EmitTimelineContentCreation(context, ownedTimelines);
+            EmitGraphConfiguration(context, graphs);
+            EmitMachineConfiguration(context, closure.Machines);
+            EmitTimelineConfiguration(context, ownedTimelines);
+            EmitGraphConnections(context, graphs);
+            EmitMachineConnections(context, closure.Machines);
+            EmitPrune(context, graphs, closure.Machines, ownedTimelines);
         }
 
         void RegisterGraphs(
             BtsmtlAuthoringCodeExportContext context,
             IEnumerable<FlowGraph> graphs,
-            FlowGraph root,
+            UnityEngine.Object root,
             IReadOnlyDictionary<FlowGraph, FlowGraph> owners,
             IReadOnlyDictionary<FlowGraph, FlowGraph> placementOwners)
         {
@@ -281,7 +304,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlAuthoringCodeExportContext context,
             IEnumerable<BtsmtlSkillNativeStateMachine> machines,
             IReadOnlyDictionary<BtsmtlSkillNativeStateMachine, FlowGraph> owners,
-            FlowGraph root,
+            UnityEngine.Object root,
             IReadOnlyDictionary<FlowGraph, FlowGraph> graphOwners,
             IReadOnlyDictionary<FlowGraph, FlowGraph> placementOwners)
         {
@@ -326,7 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlAuthoringCodeExportContext context,
             IEnumerable<TimelineAsset> timelines,
             IReadOnlyDictionary<TimelineAsset, FlowGraph> owners,
-            FlowGraph root,
+            UnityEngine.Object root,
             IReadOnlyDictionary<FlowGraph, FlowGraph> graphOwners,
             IReadOnlyDictionary<FlowGraph, FlowGraph> placementOwners)
         {
@@ -441,7 +464,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         void EmitGraphCreation(
             BtsmtlAuthoringCodeExportContext context,
             IReadOnlyList<FlowGraph> graphs,
-            BtsmtlSkillFlowGraph root,
+            UnityEngine.Object root,
             IReadOnlyDictionary<FlowGraph, FlowGraph> owners,
             bool abilityRoot,
             string abilityId)
@@ -465,6 +488,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 {
                     string ownerVariable = Variable(context, owner, $"graph:{((IBtsmtlSkillAuthoringGraph)owner).AuthoringId}");
                     expression = $"{TypeName(typeof(BtsmtlSkillAuthoringGraphCreationContract))}.EnsureOwnedGraph<{TypeName(graph.GetType())}>({ownerVariable}, {String(authoring.AuthoringId)}, typeof({TypeName(graph.GetType())}), {EnumValue(typeof(BtsmtlSkillFlowGraphRole), authoring.Role)}, {String(graph.name)})";
+                    canRunWithSectionDependencies = true;
+                }
+                else if (root is TimelineAsset timelineRoot && BtsmtlSkillAuthoringClosure.IsPrivateSubAsset(graph, root))
+                {
+                    string ownerVariable = Variable(context, timelineRoot, $"timeline:{timelineRoot.Data.AuthoringId}");
+                    expression = $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureTimelineGraph({ownerVariable}, {String(authoring.AuthoringId)}, {String(graph.name)}, {EnumValue(typeof(BtsmtlSkillFlowGraphRole), authoring.Role)})";
                     canRunWithSectionDependencies = true;
                 }
                 else
@@ -739,9 +768,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                             context.ReportError("timeline_marker_graph_invalid", marker.AuthoringId, "Marker缺少正式TimelineTrigger图。");
                             continue;
                         }
-                        string graphReference = context.TryGetVariable(marker.Graph, out string graphVariable)
-                            ? graphVariable
-                            : ExternalAsset(context, marker.Graph, marker.Graph.GetType());
+                        if (!context.TryGetVariable(marker.Graph, out string graphReference))
+                        {
+                            context.ReportError("timeline_marker_graph_not_in_closure", marker.AuthoringId,
+                                "Marker私有图不在正式重建闭包中，不能引用旧子资产替代重建。");
+                            continue;
+                        }
                         context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                             $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureMarker({dataVariable}, {trackVariable}, {String(marker.AuthoringId)}, {marker.Frame}, {graphReference});");
                     }
@@ -1073,7 +1105,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         static string SectionForGraph(
             FlowGraph graph,
-            FlowGraph root,
+            UnityEngine.Object root,
             IReadOnlyDictionary<FlowGraph, FlowGraph> owners,
             IReadOnlyDictionary<FlowGraph, FlowGraph> placementOwners)
         {

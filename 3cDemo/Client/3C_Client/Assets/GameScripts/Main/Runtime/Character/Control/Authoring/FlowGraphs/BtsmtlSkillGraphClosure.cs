@@ -23,6 +23,44 @@ namespace ThirdPersonCharacter.Control.Authoring
             return result.AsReadOnly();
         }
 
+        public static IReadOnlyList<FlowGraph> Validate(TimelineAsset root, bool requireComplete)
+        {
+            if (root == null || root.Data == null)
+                throw Error("timeline", "Timeline缺少正式作者内容。");
+            var result = new List<FlowGraph>();
+            VisitTimeline(root, "timeline", requireComplete, new HashSet<FlowGraph>(),
+                new Dictionary<string, FlowGraph>(StringComparer.Ordinal), result);
+            return result.AsReadOnly();
+        }
+
+        static void VisitTimeline(TimelineAsset timeline, string path, bool complete,
+            HashSet<FlowGraph> active, Dictionary<string, FlowGraph> identities, List<FlowGraph> result)
+        {
+            foreach (Track track in timeline.Data.Tracks)
+            {
+                foreach (Clip clip in track.Clips)
+                {
+                    if (clip is not TreeClip tree)
+                        continue;
+                    string clipPath = $"{path}/clip:{clip.AuthoringId}";
+                    if (tree.AssetTree is not BtsmtlSkillFlowGraph child)
+                        throw Error(clipPath, "技能TreeClip必须引用正式原生节点图。");
+                    RequirePrivateOwnership(timeline, child, clipPath);
+                    VisitChild(child, BtsmtlSkillFlowGraphRole.TimelineBody, clipPath,
+                        complete, active, identities, result);
+                }
+                foreach (TimelineMarker marker in track.Markers)
+                {
+                    string markerPath = $"{path}/marker:{marker.AuthoringId}";
+                    if (marker.Graph is not BtsmtlSkillFlowGraph trigger)
+                        throw Error(markerPath, "Marker必须引用正式TimelineTrigger图。");
+                    RequirePrivateOwnership(timeline, trigger, markerPath);
+                    VisitChild(trigger, BtsmtlSkillFlowGraphRole.TimelineTrigger, markerPath,
+                        complete, active, identities, result);
+                }
+            }
+        }
+
         static void RequireAbilityRootOwnership(FlowGraph root)
         {
             if (root is not BtsmtlSkillFlowGraph graph || !AssetDatabase.IsSubAsset(graph))
@@ -104,27 +142,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                             throw Error(nodePath, "私有Timeline必须是当前技能根中的子资产。");
                         if (timeline.Ownership == BtsmtlSkillTimelineOwnership.Shared && !AssetDatabase.IsMainAsset(timeline.TimelineAsset))
                             throw Error(nodePath, "共享Timeline必须是明确的独立资产。");
-                        foreach (Track track in timeline.Timeline.Tracks)
-                        {
-                            foreach (Clip clip in track.Clips)
-                                if (clip is TreeClip tree)
-                                {
-                                    if (tree.AssetTree is not BtsmtlSkillFlowGraph child)
-                                        throw Error($"{nodePath}/clip:{clip.AuthoringId}", "技能TreeClip必须引用正式原生节点图。");
-                                    RequirePrivateOwnership(timeline.TimelineAsset, child, nodePath);
-                                    VisitChild(child, BtsmtlSkillFlowGraphRole.TimelineBody, $"{nodePath}/clip:{clip.AuthoringId}",
-                                        complete, active, identities, result);
-                                }
-                            foreach (TimelineMarker marker in track.Markers)
-                            {
-                                string markerPath = $"{nodePath}/marker:{marker.AuthoringId}";
-                                if (marker.Graph is not BtsmtlSkillFlowGraph trigger)
-                                    throw Error(markerPath, "Marker必须引用正式TimelineTrigger图。");
-                                RequirePrivateOwnership(timeline.TimelineAsset, trigger, markerPath);
-                                VisitChild(trigger, BtsmtlSkillFlowGraphRole.TimelineTrigger, markerPath,
-                                    complete, active, identities, result);
-                            }
-                        }
+                        VisitTimeline(timeline.TimelineAsset, nodePath, complete, active, identities, result);
                     }
                 }
                 if (node is BtsmtlSkillCompositeFlowNode composite)

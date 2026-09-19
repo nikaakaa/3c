@@ -406,7 +406,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     LastEventIdentity = discontinuity.EventIdentity
                 };
             }
-            else if (discontinuity.EventIdentity < m_PendingState.LastEventIdentity)
+            else if (discontinuity.IsPresent &&
+                     discontinuity.EventIdentity < m_PendingState.LastEventIdentity)
             {
                 throw new InvalidOperationException(
                     $"Inertialization '{NodeId}' received an older Discontinuity event.");

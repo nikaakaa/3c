@@ -276,7 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     EnsureState(runtime, state);
                     SynchronizeReset(runtime, state);
-                    state.Lease = state.Graph.BeginFrame(in input);
+                    state.Lease = state.Graph.BeginFrame(in input, lineage.CompletionIdentity);
                     state.Preparation = state.Graph.PrepareFrame(state.Lease);
                     if (!state.Preparation.IsValid ||
                         state.Preparation.Status != CharacterPoseNativeFrameStatus.Prepared)

@@ -2,7 +2,7 @@
 
 ## Context
 
-本次于 2026-09-19 根据用户决定更新已有变更：作者时间改为秒，不再保留固定 60 作者帧作为存储基准。秒制作者内容、逻辑 tick 调度和表现采样分别承担内容位置、模拟更新和画面显示职责。本文只更新设计，代码仍为下表所述现状。
+本次根据用户决定更新已有变更：内容用秒记录；既有播放管理者决定游标进度与速率；Timeline 接收推进结果被动求值，不自己维护两个独立计时器。逻辑 tick 与表现帧是两种调用场合，执行权限不同；编辑器可按正式配置的逻辑 tick 率自适应吸附。本文只更新设计，代码仍为下表所述现状。
 
 ### 当前代码事实
 
@@ -28,13 +28,14 @@ Marker 创建、选中、拖动、独占 OnEnable 图角色等已有改动属于
 | 更新域 | 谁在什么时候运行，允许改变什么 | Logic 在 SimulationTick 提交；Presentation 在表现帧采样 |
 | 表现进度策略 | 这次应该采样动作的哪个位置 | 正式业务装配选择，并服从该业务的现行 sample / lifecycle 合同 |
 
-现在确实保存了 Logic 与 Presentation 两个进度，但这不等于两份作者内容。问题在于表现进度来源和生命周期没有统一：改成秒存储不会自动解决。正文的“双域”只指 Timeline 的逻辑与表现职责，不声称整个项目不存在 LocalLogicTick、ServerTick、source phase 等其它时间身份。
+现有代码保存了 Logic 与 Presentation 两个进度；目标不是给 Timeline 再装两种自主时钟，而是明确进度计算和内容求值的边界。秒制内容只有一份，逻辑位置与表现位置由各自正式播放管理者提供；Timeline 只处理调用所声明的区间和域。正文的“双域”不替代 LocalLogicTick、ServerTick、source phase 等已有时间身份。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
 - 同一动作播放实例只有一份本帧表现采样结果；进度来源可替换，消费者不再各自累加。
+- 播放管理者负责进度、倍率和暂停；Timeline 负责区间遍历、内容采样及生命周期候选，不自行读取时间源推进。
 - 作者只保存一份秒制内容，适配运行 tick 率而不重写内容；编辑器帧显示不限制保存精度。
 - 业务通过正式装配选择进度来源、暂停和修正行为，Timeline / Clip 不认识网络模型或游戏类型。
 - Marker 从作者数据、图闭包、域能力、正式运行、事件调和到停止有完整归属。
@@ -62,17 +63,47 @@ Marker 创建、选中、拖动、独占 OnEnable 图角色等已有改动属于
 
 当前仅确定秒制单位；具体表示、精度、范围和舍入规则尚未定稿。实施前需结合现有数值类型、素材帧率和窗口精度完成决定，不默认引入 float 累加或另一套通用时间框架。最终源动画采样可在正式边界转换为播放器接受的浮点秒。
 
-逻辑 tick 率仍来自正式 pipeline 配置。每次 SimulationTick 以固定步长和正式速率控制推进精确动作时间，必要的换算余数随快照保存。运行保存 tick 身份和动作时间状态，不把所有作者事件提前永久写成某个 tick：暂停与变速会改变事件实际到达的 tick，但不改变事件的动作秒数。
+逻辑 tick 率仍来自正式 pipeline 配置。每次 SimulationTick 由既有逻辑播放管理者以固定步长和正式速率控制计算动作推进，再把前后秒数、经过信息和原因交给 Timeline。精确进度、倍率、暂停与必要换算余数属于播放管理者的确定性状态；Timeline 保留活动 Clip、已接受边界、循环遍历及去重等求值状态。两者沿同一正式 Step 提交、丢弃和快照恢复，不各保一份可独立推进的权威游标。暂停与变速改变实际到达 tick，不修改事件作者秒数。
 
 例如 Marker 在 0.25 秒、正常速率且从 0 开始播放：120Hz 在第 30 tick 到达；30Hz 在第 8 tick 跨过。两种配置读取相同内容，实际处理时点受逻辑步长约束。确定性承诺限于相同配置、输入和初始状态下重复执行，不保证不同 tick 率下碰撞、输入响应和物理结果完全相同。
 
 正常前进按 `(previous, current]` 遍历点事件，0 秒起点由正式开始经过处理一次；循环按尾段、完整循环、头段遍历，循环身份区别重复经过。同时间事件复用正式稳定排序，Clip 的 Enter / Exit / Decision 生命周期保持原规则。Seek 和修正不走正常跨点补发规则。短窗口的进入与退出均需交给原战斗领域；发出两个边界不等于窗口内已完成碰撞采样，不靠表现事件补做逻辑命中。
 
-帧显示与逐帧吸附是作者工具：一帧对应 `1 / 显示帧率` 秒。关闭帧吸附后仍按正式秒制精度提交，不强制回到 1/60 秒网格。修改显示帧率或 SimulationTickRate 不得重写内容。旧资产按已知旧 60 作者帧基准换算，源素材帧号按其正式源映射处理，不能对一基帧号盲目除以 60。
+编辑器提供逻辑 tick 吸附、素材帧吸附与关闭吸附：逻辑网格从当前明确绑定的 pipeline 读取 SimulationTickRate，位置为 `n / R` 秒；素材网格读取正式素材帧率和源映射。二者都转换为同一正式秒制位置，不限制底层精度。共享 Timeline 必须显示当前参考的 pipeline；没有绑定时逻辑吸附不可用，不能默认猜一个 60Hz 配置。
+
+改变配置只更新网格和参考读数，不移动已保存事件。重新对齐必须是作者显式操作，仅修改选中范围并支持一次完整 Undo。逻辑吸附表示正常速率、动作起点对齐逻辑边界时的参考，不保证变速或暂停后仍在原 tick 生效。旧资产按已知旧 60 作者帧基准迁移，源素材帧号按正式源映射处理，不能对一基帧号盲目除以 60。
+
+### 1.1 播放控制与 Timeline 被动求值
+
+| 职责 | 输入 | 处理与输出 |
+|---|---|---|
+| 既有逻辑播放管理者 | 固定逻辑步、已接受播放控制、当前播放状态 | 决定本步前后动作秒数、播放身份与推进原因，产生待提交进度 |
+| 既有表现播放管理者 | committed samples、正式表现策略与控制 | 每表现帧计算一次前后动作秒数、经过信息与事件资格 |
+| Timeline 求值 | 同一秒制内容、播放身份、域、前后位置、循环/分段经过、推进原因与事件资格 | 遍历边界、映射 Clip 源采样、产生领域结果和生命周期候选 |
+| 正式领域消费者 | 已接受的 Timeline 结果与共享动作采样 | 执行动画、相机、战斗等各自业务，不再次推进同一动作时间 |
+
+`previous → current` 必须包含正常前进、暂停、Seek、修正或终态的原因；循环或 Section 跳转还必须带完整经过信息，不能只给两个取模位置丢失中间循环。Timeline 可以依据内容处理循环边界和返回 Decision / 阻塞 / 完成候选，但最终采用的位置与控制由原播放管理者在同一事务接受。被内容边界截停时不能仍提交候选区间的远端位置，Discard 也不能留下进度已走、事件未交付的状态。
+
+Timeline 不读取 Unity delta、自行累计 wall time 或注册独立 Update；也不解释“子弹时间”并再次计算倍率。被动不等于无状态，已有边界生命周期、活动调用与去重状态仍归原运行实例。技能与真实非 Skill 调用方均复用这条接口，不新建播放器、影子图或第二 Registry。推进结果与求值结果复用既有预分配存储，逐 tick、逐表现帧和事件热路径不得产生托管 GC 分配。
+
+### 1.2 子弹时间与动画倍率
+
+业务子弹时间通过正式播放控制改变指定角色／动作的有效推进速率，不修改 Unity `Time.timeScale`、`Time.fixedDeltaTime` 或为此改变 SimulationTickRate。假设本步正常动作增量为 0.02 秒，0.1 倍速时播放管理者传给 Timeline 的区间是 `0.20 → 0.202` 秒；暂停时为 `0.20 → 0.20`。Timeline 按区间求值，不需要知道造成该区间的业务名称。
+
+| 作者或业务意图 | 修改位置 | 业务取舍 |
+|---|---|---|
+| 整个动作加速、减速或 hitstop | 正式动作进度控制 | 窗口、动作动画、动作 Marker 与随动作采样的相机共同快慢；影响实际战斗节奏 |
+| 仅调整某个 Clip 的素材播放速度 | Clip 源时间映射 | 可调整视觉与素材覆盖，不自动改变攻击窗口或动作总进度；作者需要保证视觉与命中仍一致 |
+
+有效动作倍率在播放管理者计算推进时应用一次；跟随 committed sample 的表现消费者直接使用已变速的动作位置，不再乘同一倍率。若多个业务倍率叠加，其组合、作用范围、生效 Step 和恢复规则必须由正式播放控制明确，Timeline 不临时组合。逻辑倍率、暂停和恢复控制进入原确定性输入／状态及快照链；暂停到期不能依赖已冻结的动作游标自行抵达结束点，释放条件由业务控制的正式时间来源决定。
+
+UI、独立效果与非随动作相机保留自身正式时间策略，不强制跟随动作。角色位移、投射物或其它世界行为如需变慢，由对应正式领域接收控制，不能把 Timeline 减速声称为整个世界子弹时间已完成。本 change 不建立全局慢动作服务。
+
+现有 GameplayTickSettings 默认 Scaled，外部修改 Unity 全局时间仍可能影响调度，这是当前状态，不是本方案的子弹时间入口。这里不擅自把全项目设置改成 Unscaled；若要隔离所有外部全局时间影响，需要另行明确正式调度配置范围。Slate 的全局 timeScale 运行片段不得作为本方案实现路径。
 
 ### 2. 保留两个更新域，统一每个动作的表现采样
 
-统一范围是同一 playback identity / generation 的动作实例。由既有 Action / Timeline 播放 owner 保管策略状态，每个 PresentationFrame 计算一次结果，再交给动作动画、该动作的表现 Marker 和 Camera 采样。
+统一范围是同一 playback identity / generation 的动作实例。由既有动作表现播放管理者保管策略状态，每个 PresentationFrame 计算一次结果，再交给 Timeline 被动表现求值和动作动画、Camera 采样；Timeline 内部不拥有独立表现速率积分器。
 
 输入为正式播放身份、已提交的开始 / 暂停 / 速率 / 终止控制、可用 committed samples、当前表现 delta 及准备好的业务策略。输出至少表达前后动作秒数、循环经过、变化原因、是否允许产生新的跨点事件。这里描述业务含义，不另定一套与现有类型同义的公开接口。跟随策略从 committed samples 推导位置，不要求另外维护一个自由累加器；自主推进只用于已明确允许该策略的内容。
 
@@ -80,7 +111,7 @@ Marker 创建、选中、拖动、独占 OnEnable 图角色等已有改动属于
 
 取舍：统一结果避免画面在 0.20 秒而相机 / Marker 已按另一个游标走到 0.25 秒；代价是必须把现有直接改播放器的策略拆开。保留消费者独立累加能更自由，但每个暂停、速率变化和修正都要多方协调，不适合共享动作时间线的内容。
 
-### 3. 业务选择进度来源，基础层只执行策略
+### 3. 业务选择进度来源，播放管理者执行策略
 
 “中断后紧跟规则还是平滑接管”是业务要求。单机也会有打断和 hitstop；是否需要网络修正与这些本地控制分别决定。MMO / ACT 只是使用场景，不能成为基础层 if 分支。
 
@@ -98,7 +129,7 @@ Marker 创建、选中、拖动、独占 OnEnable 图角色等已有改动属于
 
 ### 4. 从已有策略抽出采样结果，删除重复推进
 
-已有 IActionPresentationClockPolicy 把进度计算和 AnimationClipPlayerRuntime 写入绑在 DriveClock 内。沿此正式策略链拆出中立时间结果，继续复用 ActionCommittedSampleHistory、Projector、Registry 与既有播放身份。Player 只消费已算出的结果；Timeline Presentation driver 不再为同一动作另做 delta 累加。
+已有 IActionPresentationClockPolicy 把进度计算和 AnimationClipPlayerRuntime 写入绑在 DriveClock 内。沿此正式策略链拆出中立时间结果，继续复用 ActionCommittedSampleHistory、Projector、Registry 与既有播放身份。Player 只消费已算出的结果；Timeline Presentation driver 改为接收外部结果的求值入口。逻辑入口同样接收正式逻辑播放管理者的推进区间，不因是 Logic 域就保留一套自主时间源。
 
 不能在旁边新增 ITimelineClockPolicy 并保留旧播放器时钟，否则只是把两份进度换了名字。拆分应只影响动作共享采样边界，保留已正确的 locomotion 策略、Phase、混合、source sampling 和 Pose 帧事务。
 
@@ -130,7 +161,7 @@ DualProjection 表示内容有两个域的合法投影，不授权把同一 Game
 
 已有 Track 的 Inspector 提供 Domain 编辑，Marker 显示继承的 Track 域；Domain 控制执行与输出权限，不切换全角色时钟策略。操作通过原 Timeline authoring mutation 校验受影响 Clip 和 Marker 图，更新同一 owner 下的域声明、闭包与 dirty / Undo 状态。存在不兼容节点或 Clip 时拒绝整次修改并定位内容，不只改 Track enum 留下旧 Clip 域。
 
-目标 UI 统一按正式秒制时间保存：拖动反馈、秒输入、帧显示与 CommitSource 使用同一转换和舍入规则。显示帧率由正式 Session 提供，帧吸附仅是编辑操作，不改底层精度；不再把整数 StartFrame 作为正式保存目标。展示所用 tick 率和实际逻辑生效位置时，必须计入当前播放速率、暂停及起点，静态时间除以 tick 步长只能作为明确前提下的说明。
+目标 UI 统一按正式秒制时间保存：拖动反馈、秒输入、tick / 素材帧吸附与 CommitSource 使用同一转换和舍入规则。作者能看到当前吸附模式、参考 pipeline / 素材和频率；逻辑 tick 网格自动跟随正式配置，不另填一份易失配的编辑器逻辑频率。配置变化不改内容，显式重新对齐走原 mutation / Undo；不再把整数 StartFrame 作为正式保存目标。预计逻辑生效 tick 必须注明速率、暂停及起点假设，实际运行 tick 来自正式诊断。
 
 Marker 的私有图归正式 owner 闭包；复制、删除、导出与 generate_assets 重建必须保留图角色、内容、身份与引用。不能只导出旧资产路径 / localFileId 后称为可独立重建，也不能自动生成一张空图代替原内容。
 
@@ -148,19 +179,19 @@ Marker 的私有图归正式 owner 闭包；复制、删除、导出与 generate
 ## Migration Plan
 
 1. 明确秒制数值表示、精度和舍入，梳理正式字段及消费者；保留 Marker 同级模型、Logic 事务、Slate 坐标修复等已正确成果。
-2. 同步迁移作者模型、资产、闭包 / 指纹、C# 导出重建、运行时间与快照、编辑器 mutation；旧时间位置按正式映射转为秒后删除旧帧字段和双写路径，保留 tick 身份和必要来源身份。
+2. 同步迁移作者模型、资产、闭包 / 指纹、C# 导出重建、播放管理者的时间状态与 Timeline 求值状态、编辑器 mutation；旧时间位置按正式映射转为秒后删除旧帧字段和双写路径，保留 tick 身份和必要来源身份。
 3. 在既有表现策略与播放 owner 中产出一次共享采样；同时接入暂停、Stop / Cancel、分支更新、采样原因与事件资格，再让动作 Player、Timeline Marker / Camera 消费，删除重复推进。
 4. 在正式图编译与服务边界接入表现安全能力、帧事务、精确身份，删除临时 Logic invoker 的表现依赖；事件输出与去重记账一起接受或丢弃。
-5. 完成 Track Domain 正式 mutation 和 Marker 私有图的正式导出 / 重建闭包。无效转换显式报错，不保留旧兼容路径。
+5. 完成配置驱动的逻辑 tick 吸附、素材帧吸附、显式重对齐 Undo、Track Domain 正式 mutation 和 Marker 私有图重建。无效转换显式报错，不保留旧兼容路径。
 
 每步是可独立提交的模块改动，但不能将一个已接通接口当成整条运行链已经完成。代码层尚未实施的内容见 tasks.md；本轮只更新规划。
 
 ## 与现行 spec 的差异处理
 
-- gameplay-tick-system 的更新职责不变；过去用 P Marker 调逻辑 invoker 的路径不符合该合同，必须修正实现。
+- gameplay-tick-system 的固定步长、可配置 Scaled / Unscaled 时间来源和更新职责不变。本方案业务变速不写 Unity 全局时间，也不暗改默认 TimeSource；过去用 P Marker 调逻辑 invoker 的路径必须修正。
 - btsmtl-timeline-editor-preview 仍要求整数作者帧、StartFrame 和 frame/value mutation，与新秒制目标直接冲突。本 change 增加对应 MODIFIED requirements，保留 Slate 单一入口与正式 mutation，改成秒保存、帧显示；主 spec 归档前仍是现状。
 - character-presentation-interpolation 对有限 Action、locomotion 与 Body correction 已有不同合同；本设计服从它们。将自由推进普遍用于有限 Action 或因 Body 修正重置 Player 都超出当前方案。
-- btsmtl-timeline-direct-runtime 的“唯一时间 owner”按播放实例理解：统一作者映射与共享表现结果，保留确定性 Logic 私有状态；不新建第二 Runtime。
+- btsmtl-timeline-direct-runtime 的“Timeline 唯一时间 owner”旧表述与被动求值边界不一致。本 change 明确外部既有播放管理者拥有进度／速率，Timeline 拥有内容映射及求值状态；在同一 Step 和快照链提交恢复，不新建第二 Runtime。
 - character-animation-pipeline 的 Clip 子 Marker 表述通过 delta 改成同级 Marker，保留原 requirement 名字以便准确归档。
 - btsmtl-runnable-timeline-node 的 scale 描述通过 delta 删除。direct-runtime 的 ActionCue frame/cycle 改为秒制时间与 cycle；StateId / LocalFrame / BranchId 中的原始 LocalFrame 仅保留来源身份，不再构成独立调度位置。状态本地 ActionCue 在当前主 spec 中无同名 requirement，列为 ADDED。
 - 本轮不改 openspec/project.md 与主 specs；待实现合同仍属于当前 change，不以文档更新宣称已经归档或完成。
@@ -168,7 +199,8 @@ Marker 的私有图归正式 owner 闭包；复制、删除、导出与 generate
 ## 实施前仍需明确
 
 - 秒的数值表示、精度、范围、输入舍入与速率换算规则：秒制已确定，具体编码不能从本轮讨论中假定。
-- 共享采样由现有哪个具体对象持有、在帧事务哪一步计算和失效：沿现有 Action 历史 / Projector / Registry 核对调用链，不新建并列 owner。
+- 既有哪个具体播放对象持有逻辑进度和表现策略、在帧事务哪一步计算和失效：职责已确定为 Timeline 求值之外的原播放管理者；沿现有 Action 历史 / Projector / Registry 核对具体类与调用点，不新建并列 owner。
+- 正式控制中倍率叠加、生效 Step、暂停解除时间来源的具体业务规则；不得将 Timeline 内部自主计时或修改 Unity 全局时间作为补缺方式。
 - 表现图通过现有图服务接入的实际能力：明确具体上下文、合法节点和输出入口；如果原服务必须修改，明确同一正式服务的修改范围，不另搭影子运行器。
 
 停止与修正必须作为共享采样的输入同时设计，不能在消费者接通后才补事件资格。本设计记录已确定方向和约束，不把上述未决项写成已经完成的实施细节。

@@ -2,7 +2,7 @@
 
 ### Requirement: Timeline逻辑采样与表现采样必须分离
 
-Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；Action visual sampling、Presentation Marker 与state-local Pose sampling MUST只按PresentationFrame发生。两个Simulation Tick之间的多个PresentationFrame MUST不重复产生TreeClip逻辑、Motion、ActionWindow、Cue fact或Effect mutation。对同一 playback identity / generation，动作表现结果 MUST在该表现帧由正式 owner 计算一次，动作动画、该动作的 Presentation Marker 与 Camera 内容 MUST消费该结果。Presentation sample MUST不推进CharacterSimulationState的Timeline clock。Presentation Marker 事件必须使用稳定 EventId 调和，只改变表现事件生命周期，不得写 Gameplay state 或 facts。
+Gameplay Timeline sampling MUST只在 SimulationTick/canonical fraction 调用范围发生；Action visual sampling、Presentation Marker 与 state-local Pose sampling MUST只在 PresentationFrame 发生。动作进度 MUST由既有播放管理者计算，Timeline MUST被动消费相应域的时间经过，不得自持两套独立计时器。两个 SimulationTick 之间的多次表现调用 MUST不重复产生 TreeClip 逻辑、Motion、ActionWindow、Cue fact 或 Effect mutation。对同一 playback identity / generation，动作表现结果 MUST每帧计算一次，动画、Marker 与 Camera MUST共享该结果，不重复应用动作倍率。Presentation MUST不推进逻辑动作时间或写 Gameplay state / facts，事件 MUST按稳定 EventId 调和。
 
 #### Scenario: 两个逻辑Tick之间多次渲染
 
@@ -13,7 +13,7 @@ Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；A
 
 ### Requirement: Timeline Track / Clip 执行域必须分离
 
-Timeline Track / Clip MUST显式声明 `Logic`、`Presentation` 或 `DualProjection` 执行域。Marker MUST是与 Clip 同级的点触发实体，并跟随所在 Track 的执行域由 SimulationTick 或 PresentationFrame 推进。Logic 内容 MUST由SimulationTick推进并遵守Commit / Discard；Presentation 内容 MUST由PresentationFrame推进并只产生表现结果；DualProjection MUST只把同一作者 Clip 的 Logic 图和 Presentation Marker 投影到各自路径，不是第三个时钟或第二份 Timeline runtime。普通表现动画、特效、音效和相机 MUST不因为归属于同一 Timeline 而被迫等待逻辑 Tick。Presentation TreeClip 图 MUST不在 PresentationFrame 执行 Logic TimelineBody 图；Presentation Event MUST不写 Gameplay fact。域声明 MUST不自动选择表现时钟策略，策略由正式业务装配决定。
+Timeline Track / Clip MUST声明 `Logic`、`Presentation` 或 `DualProjection`，Marker MUST与 Clip 同级并继承 Track 域。Logic MUST在 SimulationTick 调用中消费外部逻辑进度并遵守 Commit / Discard；Presentation MUST在表现帧调用中消费外部采样并只产生表现结果。DualProjection MUST是同一内容的合法双侧投影，不是第三个时钟或第二运行时。表现可在逻辑更新之间采样，但 MUST遵守已有 sample / horizon 合同，不得自行外推未来事件。Presentation MUST不执行 Logic TimelineBody 图或写 Gameplay fact。域声明只规定调用与输出权限，MUST不成为自主时钟或隐式进度策略开关。
 
 #### Scenario: TreeClip 触发表现事件
 

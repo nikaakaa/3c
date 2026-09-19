@@ -6,7 +6,7 @@
 
 ### Requirement: Timeline 作者时间与逻辑调度必须区分
 
-Timeline MUST以秒作为唯一作者时间单位，起点、时长、Marker、Section、ClipIn、循环边界和 Timeline 自有时间坐标 MUST使用同一正式时间表示。归一化参数与源坐标 MUST通过正式映射派生或解释，不得保留可写的作者帧副本或生成独立 tick 版资产。SimulationTickRate MUST来自正式 pipeline 配置，MUST NOT使用可变全局帧率。Logic MUST在 SimulationTick 内推进精确动作时间并遍历秒制内容边界；tick 编号 MUST保留为模拟身份。表现位置 MUST NOT写回作者内容或逻辑游标。
+Timeline MUST以秒作为唯一作者时间单位，起点、时长、Marker、Section、ClipIn、循环边界和 Timeline 自有时间坐标 MUST使用同一正式时间表示。归一化参数与源坐标 MUST通过正式映射派生或解释，不得保留可写作者帧副本或生成独立 tick 版资产。SimulationTickRate MUST来自正式 pipeline 配置。既有逻辑播放管理者 MUST在 SimulationTick 内计算动作推进，Timeline MUST被动遍历提供的秒制区间；tick 编号 MUST保留为模拟身份。表现位置 MUST NOT写回作者内容或逻辑游标。
 
 #### Scenario: 同一秒制内容适配不同tick率
 
@@ -16,7 +16,7 @@ Timeline MUST以秒作为唯一作者时间单位，起点、时长、Marker、S
 
 ### Requirement: 秒制逻辑推进必须保留确定性状态
 
-正式秒制表示 MUST明确精度、范围、舍入、速率换算和边界比较规则，不得默认用表现浮点 delta 累加决定逻辑事件。精确动作时间及必要换算余数 MUST作为 Timeline 私有状态进入 Capture / Restore。正常前进 MUST按 `(previous, current]` 遍历点事件，起点由开始经过处理，循环按正式循环分段与稳定排序处理。一次推进跨过多个内容边界时 MUST处理各边界，不得仅采样最终落点。短窗口边界交付 MUST NOT被宣称为已完成窗口内碰撞采样；业务区间消费仍由原领域负责。
+正式秒制表示 MUST明确精度、范围、舍入、速率换算和边界比较规则，不得默认用表现浮点 delta 累加决定逻辑事件。精确动作时间、倍率、暂停及换算余数 MUST归既有逻辑播放管理者；Timeline MUST保留必要求值状态，两者 MUST沿同一 Step 和 Capture / Restore 链一致提交恢复，不得有两个独立推进的逻辑游标。正常前进 MUST按 `(previous, current]` 遍历点事件，起点由开始经过处理，循环按正式分段与稳定排序处理。一次调用 MUST处理所有经过边界；短窗口边界交付 MUST NOT被宣称为已完成窗口内碰撞采样。
 
 #### Scenario: 非整除步长与回滚
 
@@ -38,6 +38,37 @@ Timeline MUST以秒作为唯一作者时间单位，起点、时长、Marker、S
 - **WHEN** 一个事件同时含旧作者帧位置和素材 LocalFrame 身份
 - **THEN** 作者位置 MUST转换为唯一正式秒数，内容身份与引用 MUST保持
 - **AND** LocalFrame MAY保留为来源标识，但 MUST NOT成为另一份可写调度时间
+
+### Requirement: Timeline必须被动消费正式播放进度
+
+既有播放管理者 MUST提供播放身份、执行域、前后动作秒数、完整循环／分段经过、推进原因和事件资格。Timeline MUST据此遍历边界、映射源采样并产生生命周期及领域候选，MUST NOT自行读取 Unity 时间、注册独立更新、累计另一份动作进度或再次应用动作倍率。被动求值 MAY保留活动 Clip、边界和去重状态；MUST NOT新增并列播放器、Registry 或影子运行链。推进和求值热路径 MUST复用既有预分配存储并保持 0 GC。
+
+#### Scenario: 相同区间具有不同推进原因
+
+- **WHEN** 两次调用的前后秒数相同，但一次是正常前进、另一次是 Seek 或修正
+- **THEN** Timeline MUST根据原因处理事件资格，MUST NOT仅凭位置差补发修正区间的 Marker
+
+#### Scenario: Decision截停或调用被丢弃
+
+- **WHEN** 请求区间被内容 Decision／阻塞边界截停，或所属 Step 被 Discard
+- **THEN** 播放管理者 MUST与 Timeline 求值状态在同一事务接受实际位置或共同丢弃候选
+- **AND** MUST NOT把请求终点直接提交而遗漏中途截停，也不得先推进时间再单独丢弃事件
+
+### Requirement: 业务慢动作必须通过正式播放控制改变进度
+
+子弹时间、hitstop 与动作变速 MUST由正式播放管理者解释为进度变化，不得写 Unity Time.timeScale、Time.fixedDeltaTime 或为此改变 SimulationTickRate。有效倍率 MUST在动作推进处应用一次；跟随 committed sample 的表现 MUST不重复缩放。逻辑控制的生效 Step、组合和恢复 MUST进入原确定性控制／快照链。暂停解除 MUST由业务控制的正式来源决定，不得等待已冻结动作游标自行抵达解除点。Clip 源倍率 MUST只影响源映射，不得隐式修改动作进度和战斗窗口。
+
+#### Scenario: 子弹时间减速
+
+- **WHEN** 正常动作增量为 0.02 秒且正式有效倍率变为 0.1
+- **THEN** 播放管理者 MUST提供 0.002 秒推进，Timeline MUST按该区间求值
+- **AND** 动画、随动作 Marker 与 Camera MUST消费同一动作位置，不再重复乘 0.1，作者秒数和编辑网格 MUST保持不变
+
+#### Scenario: 只调整动画素材速度
+
+- **WHEN** 作者只修改某个 Clip 的源采样倍率
+- **THEN** MUST只改变动作秒数到素材时间的映射
+- **AND** 逻辑窗口和动作进度 MUST不被隐式加速
 
 ### Requirement: 表现进度策略必须由正式业务装配选择
 
@@ -200,7 +231,7 @@ Presentation Marker EventId MUST由 PlaybackHandle、Generation、MarkerId 与 T
 
 ### Requirement: 作者吸附必须与可保存精度一致
 
-拖动、秒输入、帧显示、Marker 位置和 Clip 边界 MUST使用统一秒制时间表示与正式保存精度。帧吸附 MUST只控制本次编辑位置，不得限制底层为固定 60Hz 网格或绑定为 1/SimulationTickRate。逻辑生效时点观察 MUST来自正式推进规则并说明当前速率、暂停与起点前提。显示帧率与运行 tick 率变化 MUST NOT重新量化作者内容。
+拖动、秒输入、Marker 位置和 Clip 边界 MUST使用统一秒制时间表示与保存精度。作者 MUST能选择逻辑 tick、素材帧或关闭吸附。逻辑网格 MUST读取当前绑定 pipeline 的 SimulationTickRate，以 n/R 秒定位；素材帧网格 MUST使用正式素材帧率和映射。缺少绑定时逻辑吸附 MUST不可用，不得猜测默认频率。网格 MUST不限制底层保存精度，配置变化 MUST NOT重新量化作者内容。逻辑生效观察 MUST说明速率、暂停及起点前提。
 
 #### Scenario: Presentation轨道拖动
 
@@ -212,7 +243,13 @@ Presentation Marker EventId MUST由 PlaybackHandle、Generation、MarkerId 与 T
 
 - **WHEN** pipeline SimulationTickRate 改变而 Timeline 内容不变
 - **THEN** 作者秒数 MUST保持不变
-- **AND** 运行观察 MUST能区分作者秒数与当前播放控制下的实际逻辑生效 tick
+- **AND** 逻辑吸附网格 MUST跟随新配置更新，运行观察 MUST区分作者秒数与实际逻辑生效 tick
+
+#### Scenario: 作者显式重新对齐
+
+- **WHEN** 作者选择内容并执行按当前逻辑网格重新对齐
+- **THEN** 系统 MUST通过正式 mutation 修改选中范围的秒数并提供一次完整 Undo
+- **AND** 未选内容 MUST不被量化，共享 Timeline MUST明确显示当前参考 pipeline
 
 ### Requirement: Marker私有图必须随正式作者闭包重建
 

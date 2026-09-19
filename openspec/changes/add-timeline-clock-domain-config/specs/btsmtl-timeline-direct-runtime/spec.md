@@ -18,7 +18,7 @@ Timeline Runtime MUST直接消费正式轨道、Clip类型/区间/参数/顺序�
 
 ### Requirement: Timeline必须保留时间边界和TreeClip生命周期
 
-Timeline唯一时间owner MUST负责秒制内容位置、Tick 身份到动作时间的推进、ClipIn、速率、源映射、Section/loop与前后采样边界，复用原稳定遍历顺序。作者秒数 MUST不被永久转换为独立 tick 版内容，暂停和变速 MUST只改变运行推进。每个 playback identity 的表现采样结果 MUST由其正式表现 owner 计算一次，动作动画、该动作的 Presentation Marker 和 Camera 采样 MUST消费这次结果；这不改变 Logic 私有时间状态，也不要求 locomotion 或独立效果并入该动作游标。TreeClip MUST引用主实现提供的已独立编译技能入口和执行服务；Logic TreeClip 管理阶段/调用身份/取消，MUST NOT复制技能编译器或技能状态真相。Presentation Marker 只能经表现安全上下文执行，不得借用临时 Logic invoker。Motion/Warp/Camera算法与资源映射 MUST复用原领域owner。
+既有逻辑／表现播放管理者 MUST决定动作进度与速率，Timeline MUST接收前后秒数、播放身份、域、完整经过和推进原因被动求值，不得自主读取时间或再次应用动作倍率。Timeline MUST负责 ClipIn、源倍率映射、Section/loop 边界遍历和生命周期候选，复用原稳定遍历顺序；作者秒数 MUST不被永久转换为独立 tick 版内容。每个 playback identity 的表现采样 MUST由原表现播放管理者每帧计算一次，动作动画、同动作 Marker 和 Camera MUST消费该结果，不改变逻辑进度或强制并入 locomotion／独立效果。TreeClip MUST引用正式已编译入口与服务，管理阶段／调用身份／取消，不复制技能状态；Presentation Marker MUST使用正式表现安全上下文。Motion/Warp/Camera 算法与资源映射 MUST复用原领域 owner。
 
 #### Scenario: 一步跨越循环与多个Clip边界
 
@@ -43,6 +43,32 @@ Timeline唯一时间owner MUST负责秒制内容位置、Tick 身份到动作时
 - **WHEN** 指定播放产生停止、关闭窗口及结束TreeClip的候选后，同一步调用方失败或丢弃
 - **THEN** Timeline MUST保留此前已提交的播放状态与活动调用，丢弃本次停止候选及输出
 - **AND** MUST NOT在RequestStop或CompleteStop内绕过正式接受边界提前清空committed活动Clip或安装终态
+
+### Requirement: Timeline推进必须服从调用方Step提交
+
+Advance MUST被动消费调用方播放管理者提供的时间经过，只产生求值私有状态、实际到达边界、领域贡献、窗口／TreeClip 和表现／trace 候选，MUST NOT提前发布副作用。调用方统一 Step MUST一起接受或丢弃播放进度与 Timeline 求值状态；遇到 Decision、阻塞或完成边界时 MUST接受正式处理后的实际位置，不得越过边界直接安装请求终点。Timeline Commit MUST只安装对应求值候选，角色／World／表现发布仍归原 owner。
+
+#### Scenario: 同一步World处理失败
+
+- **WHEN** Timeline 已求值但调用方未接受本 Step
+- **THEN** Discard MUST丢弃播放进度、Timeline 及 TreeClip 服务候选，保持上次 committed 状态
+- **AND** MUST NOT泄漏窗口、Motion、Cue、结果或成功 trace，也不得新增自动提交路径
+
+#### Scenario: 接受推进结果
+
+- **WHEN** 调用方接受指定 Step 候选
+- **THEN** MUST原子接受匹配实例／generation／Step 的播放进度与求值状态，不重新执行技能逻辑
+- **AND** 正式结果 MUST通过原领域发布链交付，而非直接操作场景对象
+
+### Requirement: Timeline快照必须仅拥有分型播放私有状态
+
+Timeline MUST提供 Float32/Fixed 分型 Capture/Restore，保存已接受求值位置、loop/Section、活动 Clip、窗口、TreeClip 调用关联、终态、内容版本和 generation 等求值私有状态；已接受位置 MUST不构成第二个自主推进源。精确动作进度、倍率、暂停和换算余数 MUST由既有逻辑播放管理者保存，原角色快照组合 MUST原子恢复两者与技能／World 状态。Pending、表现采样缓存、Unity 对象和 GUI 状态 MUST NOT进入逻辑快照；MUST NOT新增角色 codec 或复制技能服务状态。
+
+#### Scenario: 恢复内容不兼容
+
+- **WHEN** snapshot 的 revision、NumericTarget、schema 或服务关联不匹配
+- **THEN** Restore MUST在安装前拒绝，不得猜测旧内容或读取兼容包
+- **AND** 失败 MUST保持已提交状态，成功恢复 MUST不重发已提交副作用或推进 Pose 图
 
 ### Requirement: ActionCue必须只发布committed领域事件
 

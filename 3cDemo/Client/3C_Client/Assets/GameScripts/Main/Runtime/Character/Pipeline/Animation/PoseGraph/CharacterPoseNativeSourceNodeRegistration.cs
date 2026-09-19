@@ -46,6 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         buffer,
                         new CharacterPoseNativeClipSourceModuleBinding(
                             source,
+                            player,
                             sourceLeaseProvider,
                             bindingIndexFactory(node, context)),
                         clockPolicyFactory(node));

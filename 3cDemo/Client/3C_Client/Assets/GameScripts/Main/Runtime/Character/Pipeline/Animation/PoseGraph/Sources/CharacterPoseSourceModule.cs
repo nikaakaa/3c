@@ -306,6 +306,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly CharacterPoseSourceBindingPage m_BindingPage;
         readonly CharacterPoseSourceUsagePage m_UsagePage;
         readonly SourceReleasePage m_ReleasePage;
+        readonly List<ICharacterPoseSourceRetirementOwner> m_RetirementOwners =
+            new List<ICharacterPoseSourceRetirementOwner>();
         readonly HashSet<AnimationPhysicalSourceIdentity>
             m_ReleaseValidationIdentities;
         readonly Playable m_PreviousOutputSource;
@@ -1066,6 +1068,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal void EnterEvaluateBarrier(
             CharacterPoseSourceFrameLease lease)
+            BeginReleaseDiagnostics(false);
+            for (int i = 0; i < m_RetirementOwners.Count; i++)
+                m_RetirementOwners[i].PrepareRetirements();
         {
             m_FramePage.RequireReady(lease);
             m_Backends.EnterEvaluateBarrier(lease);
@@ -1078,6 +1083,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Backends.CommitFrame(lease);
             m_FramePage.Discard(lease);
             m_PhysicalSources.CommitFrame();
+            for (int i = 0; i < m_RetirementOwners.Count; i++)
+                m_RetirementOwners[i].CommitRetirements();
+            CompleteDeferredReleases();
             m_BindingPage.Clear();
             m_PreparedSourceCount = 0;
             m_CurrentLease = default;
@@ -1087,6 +1095,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireOpen(lease);
+            for (int i = 0; i < m_RetirementOwners.Count; i++)
+                m_RetirementOwners[i].DiscardRetirements();
             Exception failure = null;
             int pendingRegistrationCount = 0;
             DiscardStep(
@@ -1142,6 +1152,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal int RequireSourceOwnerIndex(
             AnimationPhysicalSourceIdentity physical) =>
             m_PhysicalSources.RequireSourceOwnerIndex(physical);
+
+        internal void RegisterRetirementOwner(ICharacterPoseSourceRetirementOwner owner) =>
+            m_RetirementOwners.Add(owner);
+
+        internal void UnregisterRetirementOwner(ICharacterPoseSourceRetirementOwner owner) =>
+            m_RetirementOwners.Remove(owner);
 
         AnimationPhysicalSourceIdentity ValidateRetirement(
             in CharacterPoseSourceRetirementPermission permission)

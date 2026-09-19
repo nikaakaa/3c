@@ -3,6 +3,13 @@ using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    internal interface ICharacterPoseSourceRetirementOwner
+    {
+        void PrepareRetirements();
+        void CommitRetirements();
+        void DiscardRetirements();
+    }
+
     internal readonly struct CharacterPoseSourceRetirementPermission
     {
         internal CharacterPoseSourceRetirementPermission(

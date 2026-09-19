@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
+using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal interface ICharacterPoseNativeClipSourceBinding
+    internal interface ICharacterPoseNativeClipSourceBinding : IDisposable
     {
         void Prepare(
             CharacterPoseNativeGraphRuntime runtime,
@@ -21,16 +22,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     internal sealed class CharacterPoseNativeClipSourceModuleBinding :
-        ICharacterPoseNativeClipSourceBinding
+        ICharacterPoseNativeClipSourceBinding, ICharacterPoseSourceRetirementOwner
     {
         readonly CharacterPoseSourceModule m_Source;
         readonly Func<CharacterPoseSourceFrameLease> m_SourceLeaseProvider;
         readonly int m_BindingIndex;
         CharacterPoseSourceBinding m_Binding;
         bool m_Prepared;
+        readonly AnimationClipPlayerRuntime m_Player;
+        readonly AnimationPlayerReleaseToken[] m_PlayerReleases =
+            new AnimationPlayerReleaseToken[AnimationBlendSourcePoseWorkspace.SinglePlayerHandoffCapacity];
+        readonly CharacterPoseSourceRetirementHandle[] m_Retirements =
+            new CharacterPoseSourceRetirementHandle[AnimationBlendSourcePoseWorkspace.SinglePlayerHandoffCapacity];
+        int m_RetirementCount;
 
         internal CharacterPoseNativeClipSourceModuleBinding(
             CharacterPoseSourceModule source,
+            AnimationClipPlayerRuntime player,
             Func<CharacterPoseSourceFrameLease> sourceLeaseProvider,
             int bindingIndex)
         {
@@ -41,7 +49,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Native Clip source module binding is invalid.");
             m_BindingIndex = bindingIndex;
+            m_Player = player;
+            m_Source.RegisterRetirementOwner(this);
         }
+
+        public void PrepareRetirements()
+        {
+            int count = m_Player.PendingReleaseCount;
+            for (int i = 0; i < count; i++)
+            {
+                AnimationPlayerReleaseToken token = m_Player.PrepareRelease(i);
+                m_PlayerReleases[i] = token;
+                var permission = new CharacterPoseSourceRetirementPermission(
+                    token.SourceId, m_Player.NodeId, default);
+                m_Retirements[i] = m_Source.PrepareRetirement(in permission);
+                m_RetirementCount++;
+            }
+        }
+
+        public void CommitRetirements()
+        {
+            for (int i = 0; i < m_RetirementCount; i++)
+            {
+                m_Source.ApplyRetirement(in m_Retirements[i]);
+                m_Player.ApplyPreparedRelease(in m_PlayerReleases[i]);
+                m_PlayerReleases[i] = default;
+                m_Retirements[i] = default;
+            }
+            m_RetirementCount = 0;
+        }
+
+        public void DiscardRetirements()
+        {
+            m_Player.DiscardPreparedReleases();
+            Array.Clear(m_PlayerReleases, 0, m_RetirementCount);
+            Array.Clear(m_Retirements, 0, m_RetirementCount);
+            m_RetirementCount = 0;
+        }
+
+        public void Dispose() => m_Source.UnregisterRetirementOwner(this);
 
         public void Prepare(
             CharacterPoseNativeGraphRuntime runtime,
@@ -369,6 +415,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Playable.IsValid())
                 AnimancerUtilities.RemovePlayable(m_Playable);
             m_Player.Dispose();
+            m_SourceBinding.Dispose();
             m_OutputBuffer.Dispose();
             m_SecondaryOutputBuffer.Dispose();
             ClearFrame();

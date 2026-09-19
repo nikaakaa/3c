@@ -817,6 +817,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Releases.ApplyPreparedRelease(token.ReleaseOrdinal);
         }
 
+        internal void DiscardPreparedReleases()
+        {
+            m_SourceWorkspace.DiscardPreparedReleases();
+            m_Releases.DiscardPreparedReleases();
+        }
+
         public void Dispose()
         {
             if (m_Disposed)

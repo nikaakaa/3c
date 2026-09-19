@@ -490,6 +490,8 @@ namespace BTSMTL.Timeline
         }
 
         public bool SupportsExecutionDomain(TimelineExecutionDomain domain) =>
+            (domain == TimelineExecutionDomain.Logic || domain == TimelineExecutionDomain.Presentation ||
+             domain == TimelineExecutionDomain.DualProjection) &&
             (AllowedExecutionDomains & TimelineExecutionDomains.ToMask(domain)) != 0;
 
         static string Require(string value, string name)
@@ -632,6 +634,8 @@ namespace BTSMTL.Timeline
             (SupportedExecutionPhases & phase) == phase;
 
         public bool SupportsExecutionDomain(TimelineExecutionDomain domain) =>
+            (domain == TimelineExecutionDomain.Logic || domain == TimelineExecutionDomain.Presentation ||
+             domain == TimelineExecutionDomain.DualProjection) &&
             (AllowedExecutionDomains & TimelineExecutionDomains.ToMask(domain)) != 0;
 
         static string Require(string value, string name)
@@ -799,6 +803,11 @@ namespace BTSMTL.Timeline
                 throw new InvalidOperationException(
                     $"Timeline Clip '{clip.ContractKind}' cannot be added to Track '{track.ContractKind}'.");
             }
+            TimelineExecutionDomain domain = clip.ResolveExecutionDomain(track.ExecutionDomain);
+            if (!track.HasExplicitExecutionDomain || !trackContract.SupportsExecutionDomain(domain) ||
+                !clipContract.SupportsExecutionDomain(domain))
+                throw new InvalidOperationException(
+                    $"Timeline Clip '{clip.AuthoringId}' cannot use execution domain '{domain}' on Track '{track.AuthoringId}'.");
         }
 
         public void Validate(TimelineData timeline, List<string> errors)
@@ -833,7 +842,7 @@ namespace BTSMTL.Timeline
                     errors?.Add($"Timeline '{timeline.Name}' track #{trackIndex} has unknown contract kind '{track.ContractKind}'.");
                     continue;
                 }
-                if (track.HasExplicitExecutionDomain && !trackContract.SupportsExecutionDomain(track.ExecutionDomain))
+                if (!track.HasExplicitExecutionDomain || !trackContract.SupportsExecutionDomain(track.ExecutionDomain))
                 {
                     errors?.Add($"Timeline '{timeline.Name}' track '{track.AuthoringId}' uses unsupported execution domain '{track.ExecutionDomain}'.");
                 }
@@ -853,9 +862,8 @@ namespace BTSMTL.Timeline
                     if (!trackContract.AllowsClip(clipContract.Kind) || !string.Equals(clipContract.TrackKind, trackContract.Kind, StringComparison.Ordinal))
                         errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' is not allowed on track '{track.AuthoringId}'.");
                     TimelineExecutionDomain executionDomain = clip.ResolveExecutionDomain(track.ExecutionDomain);
-                    if (clip.HasExplicitExecutionDomain &&
-                        (!trackContract.SupportsExecutionDomain(executionDomain) ||
-                         !clipContract.SupportsExecutionDomain(executionDomain)))
+                    if (!trackContract.SupportsExecutionDomain(executionDomain) ||
+                        !clipContract.SupportsExecutionDomain(executionDomain))
                     {
                         errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' uses unsupported execution domain '{executionDomain}'.");
                     }

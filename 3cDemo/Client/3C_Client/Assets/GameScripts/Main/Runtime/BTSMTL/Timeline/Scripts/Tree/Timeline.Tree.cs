@@ -206,9 +206,7 @@ namespace BTSMTL.Timeline
                     true,
                     TimelineExecutionDomain.Logic,
                     TimelineOutputKind.GameplayFact,
-                    TimelineExecutionDomainMask.Logic |
-                    TimelineExecutionDomainMask.Presentation |
-                    TimelineExecutionDomainMask.DualProjection,
+                    TimelineExecutionDomainMask.Logic,
                     ValidateClip)
             });
 
@@ -229,14 +227,10 @@ namespace BTSMTL.Timeline
                         errors?.Add($"Timeline Logic TreeClip '{treeClip.AuthoringId}' must use TreeDecision exit.");
                     break;
                 case TimelineExecutionDomain.Presentation:
-                    if (!hasGraph)
-                        errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' requires a presentation TimelineBody graph.");
-                    if (treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision)
-                        errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' cannot use TreeDecision exit.");
+                    errors?.Add($"Timeline TreeClip '{treeClip.AuthoringId}' cannot execute a TimelineBody graph in Presentation; use a Timeline Marker with a TimelineTrigger graph.");
                     break;
                 case TimelineExecutionDomain.DualProjection:
-                    if (!hasGraph)
-                        errors?.Add($"Timeline DualProjection TreeClip '{treeClip.AuthoringId}' requires a TimelineBody graph.");
+                    errors?.Add($"Timeline TreeClip '{treeClip.AuthoringId}' has no presentation projection for its TimelineBody graph.");
                     break;
                 default:
                     errors?.Add($"Timeline TreeClip '{treeClip.AuthoringId}' has an invalid execution domain.");
@@ -245,4 +239,3 @@ namespace BTSMTL.Timeline
         }
     }
 }
-

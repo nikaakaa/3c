@@ -10,7 +10,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         static Attack1Parts BuildAttack1(AttackParts attack, RootParts rootParts, BtsmtlAuthoringGenerationContext context)
         {
             var parts = new Attack1Parts();
-            parts.graph1 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "5ee51b65f135f7809601ec732f478ef1", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "Enter_To_State_Rule");
             parts.graph3 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(attack.graph2, "1eac26e4ad67ccfd6cfe9342d2ea92d7", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.TimelineBody, "Decision Attack1Hit");
             parts.graph4 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(attack.graph2, "361211b72ded30e65d37533b1fb982da", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.TimelineBody, "Decision ComboAccept");
             parts.graph5 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(attack.graph2, "375b9282861f7b1674da6d39b8077a5a", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.TimelineBody, "Decision RecoveryLate");
@@ -18,7 +17,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             parts.graph7 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "66a99a1ba00258473739f5c053c3d9c3", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "Attack1 To Exit Condition");
             parts.graph9 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "280eceb11630ff24f9986186bc0698e6", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "Attack1 To Exit Condition");
             parts.graph10 = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(rootParts.graph, "cebaa6f70788d586cbd02645609fd567", typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, "Attack1 To Exit Condition");
-            var node2 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph1, typeof(BtsmtlSkillConditionResultFlowNode), "4376cf41-0cac-494a-8891-ceab7dd9054a", "条件结果", new Vector2(600f, 180f));
             var node14 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(RequestCameraEffectNode), "0decd134-e335-4240-9d37-a40365be4f21", "Corin_Attack_Normal_01_Shake_Node", new Vector2(360f, 460f));
             var node9 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillParallelFlowNode), "0e21a562-15a3-4d02-960f-1f5fa94ef22f", "相机与命中分支", new Vector2(240f, 260f));
             var node11 = BtsmtlSkillAuthoringCode.EnsureFlowNode(parts.graph3, typeof(BtsmtlSkillBlackboardSetFlowNode), "10981503-e757-4c4d-a227-a5ed0b5dec44", "Set Attack1Hit", new Vector2(0f, 0f));
@@ -95,7 +93,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         sealed class Attack1Parts
         {
-            internal BtsmtlSkillFlowGraph graph1;
             internal BtsmtlSkillFlowGraph graph3;
             internal BtsmtlSkillFlowGraph graph4;
             internal BtsmtlSkillFlowGraph graph5;

@@ -216,6 +216,11 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
+        public void InheritExecutionDomain()
+        {
+            m_ExecutionDomain = 0;
+        }
+
         public void ConfigureExecutionDomain(TimelineExecutionDomain executionDomain)
         {
             if (!Enum.IsDefined(typeof(TimelineExecutionDomain), executionDomain))

@@ -39,6 +39,16 @@
 - `EnsureTimelineGraph` 复用编辑器的 `TimelineGraphAuthoring.EnsureSubAsset`，保留 TimelineBody / TimelineTrigger 角色，不另建生成器专用图创建规则。
 - 任务 8.5 仍未勾选：候选尚未通过完整编译与真实导出／重建。
 
+## 主线作者闭包与执行域收口
+
+- 用户已明确由本任务统一 Timeline 的执行域口径；移除主目录待提交的 `ResolveExportExecutionDomain` 自动降为 Logic／默认域的规则。
+- `BtsmtlSkillAuthoringClosure` 在验证引用图后，只将当前根及其同资产私有内容纳入重建集合。共享 Timeline／Macro／图仍是正式外部引用，不再对外部图生成节点配置、连接及清理语句；私有 Marker 图缺失闭包继续明确报错。
+- Track 导出通过 `TimelineAuthoringTrackBinding.Export` 读取并校验正式域，catalog 由装配层传入；不由作者工具推断业务域。缺声明或不支持的域保留具体轨道身份并失败，不隐式修复资产。
+- Clip 的显式域进入既有 `TimelineAuthoringPropertyContract`，读写都校验轨道与 Clip 能力；新增正式 `InheritExecutionDomain` 作者操作。重建先建立继承关系，再按作者属性恢复显式覆盖，不把继承强制改成显式域，也不把合法覆盖写成轨道域。
+- 本批变化只影响作者链，未增加运行时热路径分配。没有生成测试，也未用这些修改宣称运行链已达到 0 GC。
+- 主线 Unity 实例 `e852139597e42532` 完成本批脚本编译与重载；最终观测 `1789834940597` 为非 Play、非编译、非导入，重载完成时间 `1789834912685`，随后错误控制台返回 0 条。首次编译发现基础 Timeline 程序集不能反向依赖 Tree composition，已改成传入正式 catalog 并重新编译。
+- 8.2、8.5 保持未勾选：前者仍缺编辑器原子域修改和完整图能力约束，后者仍缺真实导出／重建及复制闭包证据。此处编译通过不代表资产迁移或端到端通过。
+
 ## 原 worktree 编译环境与依赖定位（历史）
 
 - Run `17776ed34b634547ae425be647693db6` 再次在相同 UPM 阶段失败。

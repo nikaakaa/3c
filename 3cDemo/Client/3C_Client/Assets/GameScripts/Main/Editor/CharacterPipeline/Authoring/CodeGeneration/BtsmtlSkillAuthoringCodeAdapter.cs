@@ -613,9 +613,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 foreach (Track track in timeline.Data.Tracks)
                 {
                     string trackVariable = Variable(context, track, $"track:{timelineIdentity}:{track.AuthoringId}");
+                    TimelineExecutionDomain executionDomain = TimelineAuthoringTrackBinding.Export(track, TimelineTreeContractComposition.Create()).ExecutionDomain;
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Create,
-                        $"var {trackVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureTrack({dataVariable}, {catalogVariable}, typeof({TypeName(track.GetType())}), {String(track.AuthoringId)}, {String(track.Name)});");
+                        $"var {trackVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureTrack({dataVariable}, {catalogVariable}, typeof({TypeName(track.GetType())}), {String(track.AuthoringId)}, {String(track.Name)}, {EnumValue(typeof(TimelineExecutionDomain), executionDomain)});");
                     foreach (Clip clip in track.Clips)
                     {
                         string clipVariable = Variable(context, clip, $"clip:{timelineIdentity}:{clip.AuthoringId}");
@@ -770,9 +771,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                         }
                         if (!context.TryGetVariable(marker.Graph, out string graphReference))
                         {
-                            context.ReportError("timeline_marker_graph_not_in_closure", marker.AuthoringId,
-                                "Marker私有图不在正式重建闭包中，不能引用旧子资产替代重建。");
-                            continue;
+                            if (BtsmtlSkillAuthoringClosure.IsPrivateSubAsset(marker.Graph, timeline))
+                            {
+                                context.ReportError("timeline_marker_graph_not_in_closure", marker.AuthoringId,
+                                    "Marker私有图不在正式重建闭包中，不能引用旧子资产替代重建。");
+                                continue;
+                            }
+                            graphReference = ExternalAsset(context, marker.Graph, marker.Graph.GetType());
                         }
                         context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                             $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureMarker({dataVariable}, {trackVariable}, {String(marker.AuthoringId)}, {marker.Frame}, {graphReference});");
@@ -780,7 +785,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     if (track.PersistentMuted)
                         context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
                             $"{trackVariable}.PersistentMuted = true;");
-                    TimelineAuthoringTrackExport trackAuthoring = TimelineAuthoringTrackBinding.Export(track);
+                    TimelineAuthoringTrackExport trackAuthoring = TimelineAuthoringTrackBinding.Export(track, TimelineTreeContractComposition.Create());
                     if (!string.IsNullOrEmpty(trackAuthoring.AnimationChannelId))
                     {
                         context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,

@@ -53,6 +53,13 @@ namespace BTSMTL.Timeline
                 throw new ArgumentNullException(nameof(clip));
             TimelineAuthoringClipConfiguration configuration = TimelineAuthoringClipBinding.Read(clip);
             var result = new List<TimelineAuthoringPropertyValue>();
+            TimelineContractCatalog catalog = TimelineTreeContractComposition.Create();
+            if (clip.Track == null ||
+                !catalog.RequireTrack(clip.Track.ContractKind).SupportsExecutionDomain(clip.ExecutionDomain) ||
+                !catalog.RequireClip(clip.ContractKind).SupportsExecutionDomain(clip.ExecutionDomain))
+                throw new InvalidOperationException($"Timeline clip '{clip.AuthoringId}' has an unsupported execution domain '{clip.ExecutionDomain}'.");
+            if (clip.HasExplicitExecutionDomain)
+                result.Add(new TimelineAuthoringPropertyValue("executionDomain", TimelineAuthoringPropertyKind.Enum, clip.ExecutionDomain));
             foreach (TimelineAuthoringPropertyAttribute property in clip.GetType()
                          .GetCustomAttributes(typeof(TimelineAuthoringPropertyAttribute), true)
                          .OfType<TimelineAuthoringPropertyAttribute>()
@@ -139,10 +146,13 @@ namespace BTSMTL.Timeline
             string sourceMotionClipId = string.Empty;
             TimelineTreeExecutionPhase executionPhase = TimelineTreeExecutionPhase.Commit;
             TimelineClipExitSource exitSource = TimelineClipExitSource.FrameBoundary;
+            TimelineExecutionDomain? executionDomainOverride = null;
             UnityEngine.Object treeAsset = null;
             foreach (TimelineAuthoringPropertyValue value in values ?? Array.Empty<TimelineAuthoringPropertyValue>())
             {
-                if (value.PropertyId == "sourceMotionClipId")
+                if (value.PropertyId == "executionDomain")
+                    executionDomainOverride = (TimelineExecutionDomain)value.Value;
+                else if (value.PropertyId == "sourceMotionClipId")
                     sourceMotionClipId = (string)value.Value;
                 else if (value.PropertyId == "executionPhase")
                     executionPhase = (TimelineTreeExecutionPhase)value.Value;
@@ -153,6 +163,15 @@ namespace BTSMTL.Timeline
                 else
                     SetValue(configuration, value.PropertyId, value.Value);
             }
+            TimelineContractCatalog catalog = TimelineTreeContractComposition.Create();
+            TimelineExecutionDomain executionDomain = executionDomainOverride ?? clip.Track.ExecutionDomain;
+            if (!catalog.RequireTrack(clip.Track.ContractKind).SupportsExecutionDomain(executionDomain) ||
+                !catalog.RequireClip(clip.ContractKind).SupportsExecutionDomain(executionDomain))
+                throw new InvalidOperationException($"Timeline clip '{clip.AuthoringId}' does not support execution domain '{executionDomain}'.");
+            if (executionDomainOverride.HasValue)
+                clip.ConfigureExecutionDomain(executionDomainOverride.Value);
+            else
+                clip.InheritExecutionDomain();
             TimelineAuthoringClipBinding.Configure(timeline, clip, configuration, null);
             if (clip is TreeClip tree)
             {

@@ -32,12 +32,14 @@ namespace BTSMTL.Timeline
 
     public readonly struct TimelineAuthoringTrackExport
     {
-        public TimelineAuthoringTrackExport(string animationChannelId, string animationSlotId)
+        public TimelineAuthoringTrackExport(TimelineExecutionDomain executionDomain, string animationChannelId, string animationSlotId)
         {
+            ExecutionDomain = executionDomain;
             AnimationChannelId = animationChannelId ?? string.Empty;
             AnimationSlotId = animationSlotId ?? string.Empty;
         }
 
+        public TimelineExecutionDomain ExecutionDomain { get; }
         public string AnimationChannelId { get; }
         public string AnimationSlotId { get; }
     }
@@ -106,12 +108,20 @@ namespace BTSMTL.Timeline
                     values.TryGetValue(field.FieldId, out string value) ? value : string.Empty);
         }
 
-        public static TimelineAuthoringTrackExport Export(Track track) =>
-            track is AnimationTrack animation
+        public static TimelineAuthoringTrackExport Export(Track track, TimelineContractCatalog catalog)
+        {
+            if (track == null)
+                throw new ArgumentNullException(nameof(track));
+            TimelineTrackContract contract = catalog.RequireTrack(track.ContractKind);
+            if (!track.HasExplicitExecutionDomain || !contract.SupportsExecutionDomain(track.ExecutionDomain))
+                throw new InvalidOperationException($"Timeline track '{track.AuthoringId}' has a missing or unsupported execution domain '{track.ExecutionDomain}'.");
+            return track is AnimationTrack animation
                 ? new TimelineAuthoringTrackExport(
+                    track.ExecutionDomain,
                     animation.AnimationChannelId.Value,
                     animation.AnimationSlotId)
-                : new TimelineAuthoringTrackExport(string.Empty, string.Empty);
+                : new TimelineAuthoringTrackExport(track.ExecutionDomain, string.Empty, string.Empty);
+        }
 
         static bool IsIdentity(string value)
         {

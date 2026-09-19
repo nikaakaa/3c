@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             BtsmtlSkillFlowGraph root,
             bool requireComplete)
         {
-            return Create(BtsmtlSkillGraphClosure.Validate(root, requireComplete));
+            return Create(BtsmtlSkillGraphClosure.Validate(root, requireComplete), root);
         }
 
         public static BtsmtlSkillAuthoringClosure Create(TimelineAsset root, bool requireComplete)
@@ -59,15 +59,16 @@ namespace ThirdPersonCharacter.Control.Authoring
             return Create(BtsmtlSkillGraphClosure.Validate(root, requireComplete), root);
         }
 
-        static BtsmtlSkillAuthoringClosure Create(IReadOnlyList<FlowGraph> graphs, TimelineAsset timelineRoot = null)
+        static BtsmtlSkillAuthoringClosure Create(IReadOnlyList<FlowGraph> validatedGraphs, UnityEngine.Object root)
         {
+            FlowGraph[] graphs = validatedGraphs.Where(graph => graph == root || IsPrivateSubAsset(graph, root)).ToArray();
             var graphOwners = new Dictionary<FlowGraph, FlowGraph>();
             var graphPlacementOwners = new Dictionary<FlowGraph, FlowGraph>();
             var machines = new List<BtsmtlSkillNativeStateMachine>();
             var machineOwners = new Dictionary<BtsmtlSkillNativeStateMachine, FlowGraph>();
             var timelines = new List<TimelineAsset>();
             var timelineOwners = new Dictionary<TimelineAsset, FlowGraph>();
-            if (timelineRoot != null)
+            if (root is TimelineAsset timelineRoot)
                 timelines.Add(timelineRoot);
 
             foreach (FlowGraph graph in graphs)
@@ -78,7 +79,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                         AddGraphOwner(graphOwners, macroGraph, graph);
                         AddPlacementOwner(graphPlacementOwners, macroGraph, graph);
                     }
-                    if (node is BtsmtlSkillStateMachineFlowNode stateMachine && stateMachine.StateMachine != null)
+                    if (node is BtsmtlSkillStateMachineFlowNode stateMachine &&
+                        stateMachine.StateMachine != null && IsPrivateSubAsset(stateMachine.StateMachine, root))
                     {
                         AddUnique(machines, stateMachine.StateMachine);
                         AddMachineOwner(machineOwners, stateMachine.StateMachine, graph);
@@ -90,7 +92,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                         AddGraphOwner(graphOwners, state.Body, graph);
                         AddPlacementOwner(graphPlacementOwners, state.Body, graph);
                     }
-                    if (node is BtsmtlSkillTimelineFlowNode timelineNode && timelineNode.TimelineAsset != null)
+                    if (node is BtsmtlSkillTimelineFlowNode timelineNode &&
+                        timelineNode.TimelineAsset != null && IsPrivateSubAsset(timelineNode.TimelineAsset, root))
                     {
                         AddUnique(timelines, timelineNode.TimelineAsset);
                         AddTimelineOwner(timelineOwners, timelineNode.TimelineAsset, graph);
@@ -168,7 +171,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             FlowGraph child,
             FlowGraph owner)
         {
-            if (child == null || owner == null)
+            if (child == null || owner == null || !IsPrivateSubAsset(child, owner))
                 return;
             if (owners.TryGetValue(child, out FlowGraph existing) && !ReferenceEquals(existing, owner))
                 throw new InvalidOperationException($"Skill graph '{child.name}' has multiple formal owners.");
@@ -180,7 +183,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             FlowGraph child,
             FlowGraph owner)
         {
-            if (child == null || owner == null)
+            if (child == null || owner == null || !IsPrivateSubAsset(child, owner))
                 return;
             if (owners.TryGetValue(child, out FlowGraph existing) && !ReferenceEquals(existing, owner))
                 throw new InvalidOperationException($"Skill graph '{child.name}' has multiple formal placement owners.");

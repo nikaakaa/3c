@@ -105,3 +105,5 @@ Timeline 侧边界同步收口：ActionCue 只在 Logic commit 后发布 `CueTyp
 2026-09-19：主战斗控制器状态对照已建立，`101` 个状态中 `97` 个已有 `.anim` Motion、`2` 个只有 raw `.dat`、`2` 个无 Motion。Normal/Branch/Rush 已按 BlendTree 实际 Clip 引用对账，非同名与共享 Motion 逐行标注；详见 [zzz-corin-controller-map.md](zzz-corin-controller-map.md)。
 
 2026-09-19：Timeline 复核确认现有五段 Normal Timeline 只能粗表达 Attack 1/2/4 线性 End；Attack3 Explode、Attack5 End/End_2 分支、End2 Timeline 绑定和状态本地 cue 重映射是具名缺口。Branch/Rush 不混入现有五段 Timeline；详见 [zzz-corin-normal-attack-timeline-review.md](zzz-corin-normal-attack-timeline-review.md)。
+
+2026-09-19：Normal Attack 细分状态继续收口。Attack3 `Explode` 使用正式状态分段承载 frame=1 本地 cue；Attack5 在 frame=47 通过 `Attack5EndBoundary` 选择 `End` / `End_2`，`Attack5End2` 绑定 `Attack_Normal_05_B` 并挂 15 个状态本地 AttackProperty cue。同 Trace 1121 帧逐帧 matched、aggregate matched。下一批优先评估 Branch/Rush 的正式 Control + Timeline + Pose 链路；不把 Branch/Rush 伪装成普通五段连段。

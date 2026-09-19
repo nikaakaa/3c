@@ -6,7 +6,7 @@
 
 | 组 | 状态数 | 3C 归属 | 当前结论 |
 |---|---:|---|---|
-| NormalAttack | 12 | Control + Attack Ability + Timeline | 已精确对账：12状态全部有真实Clip绑定（End/Explode全同名精确；`Attack_Normal_05_End_2`实际绑`Attack_Normal_05_B`）。 |
+| NormalAttack | 12 | Control + Attack Ability + Timeline | 已收口：12状态进入正式 Attack FSM/Timeline；End/Explode/End_2 状态边界、Attack5EndBoundary 分支和状态本地 cue 已重建，`Attack_Normal_05_End_2` 绑 `Attack_Normal_05_B`。 |
 | BranchAttack | 18 | Control + Attack Ability + Timeline + Pose | 已精确对账：18状态全部有真实Clip绑定，Branch_01/03大量共享Branch_02与Branch_Loop/Walk共享Motion；缺的是Timeline/Pose binding与Ability状态，不是Clip。 |
 | RushAttack | 8 | Control + Attack Ability + Timeline + Pose | 已精确对账：8状态全部有真实Clip绑定（`Attack_Rush_Enhance`实际绑`Enhance_Start`，Enhance_End复用`Attack_Rush_Explode`）；缺Timeline/Pose binding与Ability状态。 |
 | AidCounterAttack | 20 | Control + Combat/Aid Ability + Timeline | 仅有效果/镜头证据，没有正式 3C Aid/Counter 执行链；AssaultAid 只有 raw Motion。 |

@@ -61,17 +61,4 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class Float32MotionExecutionScratch : IExecutionWorkspaceScratch
-    {
-        public List<SimulationMotionContribution> Contributions { get; } =
-            new List<SimulationMotionContribution>();
-        public List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> WarpSamples { get; } =
-            new List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>>();
-
-        public void Reset()
-        {
-            Contributions.Clear();
-            WarpSamples.Clear();
-        }
-    }
 }

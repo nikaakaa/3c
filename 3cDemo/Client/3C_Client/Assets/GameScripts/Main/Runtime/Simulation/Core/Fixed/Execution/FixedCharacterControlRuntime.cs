@@ -50,89 +50,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_Contributions.Add);
         }
 
-        public ResolvedGameplayMotion Resolve()
-        {
-            FixedVector3 additiveDisplacement = FixedVector3.Zero;
-            FixedScalar additiveYaw = FixedScalar.Zero;
-            FixedVector3 weightedDisplacement = FixedVector3.Zero;
-            FixedScalar weightedYaw = FixedScalar.Zero;
-            FixedScalar totalWeight = FixedScalar.Zero;
-            SimulationMotionContribution overrideWinner = default;
-            FixedVector3 overrideDisplacement = FixedVector3.Zero;
-            FixedScalar overrideYaw = FixedScalar.Zero;
-            bool hasWeighted = false;
-            bool hasOverride = false;
-            for (int i = 0; i < m_Contributions.Count; i++)
-            {
-                SimulationMotionContribution contribution = m_Contributions[i];
-                FixedVector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
-                    ? FixedAngle.RotatePlanar(contribution.Displacement, m_Body.Yaw)
-                    : contribution.Displacement;
-                switch (contribution.BlendMode)
-                {
-                    case SimulationMotionBlendMode.Additive:
-                        additiveDisplacement += resolved * contribution.Weight;
-                        additiveYaw += contribution.YawDegrees * contribution.Weight;
-                        break;
-                    case SimulationMotionBlendMode.WeightedBlend:
-                        weightedDisplacement += resolved * contribution.Weight;
-                        weightedYaw += contribution.YawDegrees * contribution.Weight;
-                        totalWeight += contribution.Weight;
-                        hasWeighted = true;
-                        break;
-                    case SimulationMotionBlendMode.Override:
-                        if (!hasOverride || contribution.Priority > overrideWinner.Priority)
-                        {
-                            overrideWinner = contribution;
-                            overrideDisplacement = resolved * contribution.Weight;
-                            overrideYaw = contribution.YawDegrees * contribution.Weight;
-                            hasOverride = true;
-                        }
-                        break;
-                    default:
-                        throw new InvalidOperationException(
-                            $"Motion contribution '{contribution.SourceIdentity}' has invalid blend mode '{contribution.BlendMode}'.");
-                }
-            }
-            if (!hasWeighted && !hasOverride && additiveDisplacement == FixedVector3.Zero && additiveYaw == FixedScalar.Zero)
-                return new ResolvedGameplayMotion(
-                    FixedVector3.Zero,
-                    FixedScalar.Zero,
-                    FixedVector2.Zero,
-                    false,
-                    default,
-                    default,
-                    string.Empty,
-                    string.Empty);
-
-            FixedVector3 displacement = additiveDisplacement;
-            FixedScalar yaw = additiveYaw;
-            if (hasOverride)
-            {
-                displacement += overrideDisplacement;
-                yaw += overrideYaw;
-            }
-            else if (hasWeighted && totalWeight > FixedScalar.Zero)
-            {
-                displacement += new FixedVector3(
-                    weightedDisplacement.X / totalWeight,
-                    weightedDisplacement.Y / totalWeight,
-                    weightedDisplacement.Z / totalWeight);
-                yaw += weightedYaw / totalWeight;
-            }
-            if (!hasOverride || !overrideWinner.MovementPlaybackClock.IsValid)
-                throw new InvalidOperationException("Resolved Character Control motion has no committed Movement playback clock owner.");
-            return new ResolvedGameplayMotion(
-                displacement,
-                yaw,
-                overrideWinner.PlanarBasis,
-                displacement != FixedVector3.Zero || yaw != FixedScalar.Zero,
-                overrideWinner.MovementPlaybackClock,
-                overrideWinner.LocomotionTimeline,
-                string.Empty,
-                string.Empty);
-        }
-
         internal static void SubmitControl(
             FixedVector2 move,
             FixedAbilityBodyFacts body,
@@ -209,6 +126,7 @@ namespace ThirdPersonSimulation.Fixed
                 0f);
             submit(new SimulationMotionContribution(
                 request.Source,
+                default,
                 displacement,
                 yaw,
                 descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
@@ -241,7 +159,7 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedCharacterControlTraceSink
+    internal sealed class FixedCharacterTraceSink
     {
         readonly List<SimulationTraceRecord> m_Records;
         readonly SimulationNumericProfile m_NumericProfile;
@@ -251,7 +169,7 @@ namespace ThirdPersonSimulation.Fixed
         ulong m_Sequence;
         readonly bool m_Enabled;
 
-        public FixedCharacterControlTraceSink(
+        public FixedCharacterTraceSink(
             List<SimulationTraceRecord> records,
             SimulationNumericProfile numericProfile,
             StableHash contentHash,
@@ -270,6 +188,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public void Add(
+            string category,
             SimulationExecutionSource source,
             string code,
             SimulationTraceSeverity severity,
@@ -293,7 +212,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Records.Add(new SimulationTraceRecord(
                 header,
                 severity,
-                "Character.Control",
+                category,
                 code,
                 detail));
         }
@@ -506,13 +425,13 @@ namespace ThirdPersonSimulation.Fixed
         readonly CharacterControlModuleContract m_ControlModule;
         readonly FixedCharacterControlMotionRuntime m_Motion;
         readonly IReadOnlyDictionary<CharacterSkillId, IFixedAbilityActionControlPort> m_Actions;
-        readonly FixedCharacterControlTraceSink m_Trace;
+        readonly FixedCharacterTraceSink m_Trace;
 
         public FixedCharacterControlOutputPort(
             CharacterControlModuleContract controlModule,
             FixedCharacterControlMotionRuntime motion,
             IReadOnlyDictionary<CharacterSkillId, IFixedAbilityActionControlPort> actions,
-            FixedCharacterControlTraceSink trace)
+            FixedCharacterTraceSink trace)
         {
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
             m_Motion = motion ?? throw new ArgumentNullException(nameof(motion));
@@ -533,7 +452,7 @@ namespace ThirdPersonSimulation.Fixed
             RequireAction(request.AbilityId).StopFromControl(request);
 
         public void Trace(SimulationExecutionSource source, string code, string detail, ulong generation) =>
-            m_Trace.Add(source, code, SimulationTraceSeverity.Information, detail, generation);
+            m_Trace.Add("Character.Control", source, code, SimulationTraceSeverity.Information, detail, generation);
 
         IFixedAbilityActionControlPort RequireAction(CharacterSkillId abilityId)
         {
@@ -578,7 +497,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedAbilityExecutionInput input,
             FixedAbilityBodyFacts body,
             FixedCharacterControlMotionRuntime motion,
-            FixedCharacterControlTraceSink trace,
+            FixedCharacterTraceSink trace,
             IReadOnlyDictionary<CharacterSkillId, IFixedAbilityActionControlPort> actions,
             Func<CharacterSkillId, string, bool> isActionWindowActive,
             Func<EquipmentActionRouteId, (bool Found, EquipmentActionContext Context)> tryReadEquipmentActionContext)

@@ -59,6 +59,7 @@ namespace ThirdPersonSimulation
     {
         public SimulationMotionContribution(
             SimulationExecutionSource source,
+            CharacterSkillId abilityId,
             Float32Vector3 displacement,
             Float32Scalar yawDegrees,
             Float32Vector2 planarBasis,
@@ -74,6 +75,7 @@ namespace ThirdPersonSimulation
             if (!source.IsValid)
                 throw new ArgumentException("Motion contribution source is invalid.", nameof(source));
             Source = source;
+            AbilityId = abilityId;
             Displacement = displacement;
             YawDegrees = yawDegrees;
             PlanarBasis = planarBasis;
@@ -99,6 +101,7 @@ namespace ThirdPersonSimulation
         }
 
         public SimulationExecutionSource Source { get; }
+        public CharacterSkillId AbilityId { get; }
         public string SourceIdentity => Source.Identity;
         public Float32Vector3 Displacement { get; }
         public Float32Scalar YawDegrees { get; }
@@ -129,11 +132,13 @@ namespace ThirdPersonSimulation
             bool hasContribution,
             bool claimsLowerChannels,
             SimulationExecutionSource resolvedOwnerSource,
+            CharacterSkillId resolvedOwnerAbilityId,
             CommittedMovementPlaybackClock movementPlaybackClock,
             CommittedLocomotionPlanarMotionTimeline locomotionTimeline,
             Float32Vector3 resolvedOwnerDisplacement,
             Float32Scalar resolvedOwnerYawDegrees,
             SimulationExecutionSource traceSource,
+            CharacterSkillId traceAbilityId,
             int participatingSourceCount,
             ulong participatingSourceFingerprint)
         {
@@ -144,11 +149,13 @@ namespace ThirdPersonSimulation
             HasContribution = hasContribution;
             ClaimsLowerChannels = claimsLowerChannels;
             ResolvedOwnerSource = resolvedOwnerSource;
+            ResolvedOwnerAbilityId = resolvedOwnerAbilityId;
             MovementPlaybackClock = movementPlaybackClock;
             LocomotionTimeline = locomotionTimeline;
             ResolvedOwnerDisplacement = resolvedOwnerDisplacement;
             ResolvedOwnerYawDegrees = resolvedOwnerYawDegrees;
             TraceSource = traceSource;
+            TraceAbilityId = traceAbilityId;
             ParticipatingSourceCount = participatingSourceCount;
             ParticipatingSourceFingerprint = participatingSourceFingerprint;
         }
@@ -160,12 +167,14 @@ namespace ThirdPersonSimulation
         public bool HasContribution { get; }
         public bool ClaimsLowerChannels { get; }
         public SimulationExecutionSource ResolvedOwnerSource { get; }
+        public CharacterSkillId ResolvedOwnerAbilityId { get; }
         public string ResolvedOwnerIdentity => ResolvedOwnerSource.IsValid ? ResolvedOwnerSource.Identity : string.Empty;
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
         public CommittedLocomotionPlanarMotionTimeline LocomotionTimeline { get; }
         public Float32Vector3 ResolvedOwnerDisplacement { get; }
         public Float32Scalar ResolvedOwnerYawDegrees { get; }
         public SimulationExecutionSource TraceSource { get; }
+        public CharacterSkillId TraceAbilityId { get; }
         public int ParticipatingSourceCount { get; }
         public ulong ParticipatingSourceFingerprint { get; }
         public bool HasDelta => Displacement != Float32Vector3.Zero || YawDegrees != Float32Scalar.Zero;
@@ -256,6 +265,173 @@ namespace ThirdPersonSimulation
                 SourceOperation);
     }
 
+    internal static class Float32CharacterMotionResolver
+    {
+        public static string FormatMovementClock(CommittedMovementPlaybackClock clock) =>
+            clock.IsValid
+                ? $"{clock.OwnerIdentity}@{clock.Generation}:{clock.ContinuousTicks}/{clock.TickRate}#tick{clock.AuthorityTick.Value}"
+                : "none";
+
+        public static ResolvedMotionChannel ResolveChannel(
+            IReadOnlyList<SimulationMotionContribution> contributions,
+            Float32Yaw bodyYaw,
+            SimulationMotionChannel channel)
+        {
+            Float32Vector3 additiveDisplacement = Float32Vector3.Zero;
+            Float32Scalar additiveYaw = Float32Scalar.Zero;
+            Float32Vector3 weightedDisplacement = Float32Vector3.Zero;
+            Float32Scalar weightedYaw = Float32Scalar.Zero;
+            Float32Scalar totalWeight = Float32Scalar.Zero;
+            SimulationMotionContribution overrideWinner = default;
+            Float32Vector3 overrideDisplacement = Float32Vector3.Zero;
+            Float32Scalar overrideYaw = Float32Scalar.Zero;
+            SimulationExecutionSource traceSource = default;
+            CharacterSkillId traceAbilityId = default;
+            int sourceCount = 0;
+            ulong sourceFingerprint = 1469598103934665603UL;
+            bool hasAdditive = false;
+            bool hasWeighted = false;
+            bool hasOverride = false;
+            for (int i = 0; i < contributions.Count; i++)
+            {
+                SimulationMotionContribution contribution = contributions[i];
+                if (contribution.Channel != channel || !contribution.CanResolve)
+                    continue;
+                if (!traceSource.IsValid)
+                {
+                    traceSource = contribution.Source;
+                    traceAbilityId = contribution.AbilityId;
+                }
+                sourceCount++;
+                sourceFingerprint = MixSource(sourceFingerprint, contribution.Source.Identity);
+                Float32Vector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
+                    ? Float32Angle.RotatePlanar(contribution.Displacement, bodyYaw)
+                    : contribution.Displacement;
+                switch (contribution.BlendMode)
+                {
+                    case SimulationMotionBlendMode.Additive:
+                        additiveDisplacement += resolved * contribution.Weight;
+                        additiveYaw += contribution.YawDegrees * contribution.Weight;
+                        hasAdditive = true;
+                        break;
+                    case SimulationMotionBlendMode.WeightedBlend:
+                        weightedDisplacement += resolved * contribution.Weight;
+                        weightedYaw += contribution.YawDegrees * contribution.Weight;
+                        totalWeight += contribution.Weight;
+                        hasWeighted = true;
+                        break;
+                    case SimulationMotionBlendMode.Override:
+                        if (!hasOverride || contribution.Priority > overrideWinner.Priority)
+                        {
+                            overrideWinner = contribution;
+                            overrideDisplacement = resolved * contribution.Weight;
+                            overrideYaw = contribution.YawDegrees * contribution.Weight;
+                            hasOverride = true;
+                        }
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Motion contribution '{contribution.SourceIdentity}' has invalid blend mode '{contribution.BlendMode}'.");
+                }
+            }
+            if (!hasAdditive && !hasWeighted && !hasOverride)
+                return new ResolvedMotionChannel(channel, Float32Vector3.Zero, Float32Scalar.Zero, Float32Vector2.Zero, false, false, default, default, default, default, Float32Vector3.Zero, Float32Scalar.Zero, default, default, 0, 0);
+
+            Float32Vector3 channelDisplacement = additiveDisplacement;
+            Float32Scalar channelYaw = additiveYaw;
+            if (hasOverride)
+            {
+                channelDisplacement += overrideDisplacement;
+                channelYaw += overrideYaw;
+            }
+            else if (hasWeighted && totalWeight > Float32Scalar.Zero)
+            {
+                channelDisplacement += new Float32Vector3(
+                    weightedDisplacement.X / totalWeight,
+                    weightedDisplacement.Y / totalWeight,
+                    weightedDisplacement.Z / totalWeight);
+                channelYaw += weightedYaw / totalWeight;
+            }
+            CommittedMovementPlaybackClock movementPlaybackClock =
+                channel == SimulationMotionChannel.Locomotion && hasOverride
+                    ? overrideWinner.MovementPlaybackClock
+                    : default;
+            if (channel == SimulationMotionChannel.Locomotion && !movementPlaybackClock.IsValid)
+                throw new InvalidOperationException("Resolved Locomotion motion has no single committed Movement playback clock owner.");
+            var result = new ResolvedMotionChannel(
+                channel,
+                channelDisplacement,
+                channelYaw,
+                hasOverride ? overrideWinner.PlanarBasis : Float32Vector2.Zero,
+                true,
+                hasOverride && overrideWinner.ConsumeLowerChannels,
+                hasOverride ? overrideWinner.Source : default,
+                hasOverride ? overrideWinner.AbilityId : default,
+                movementPlaybackClock,
+                channel == SimulationMotionChannel.Locomotion && hasOverride
+                    ? overrideWinner.LocomotionTimeline
+                    : default,
+                hasOverride ? overrideDisplacement : Float32Vector3.Zero,
+                hasOverride ? overrideYaw : Float32Scalar.Zero,
+                hasOverride ? overrideWinner.Source : traceSource,
+                hasOverride ? overrideWinner.AbilityId : traceAbilityId,
+                sourceCount,
+                sourceFingerprint);
+            return result;
+        }
+
+        public static ResolvedGameplayMotion Compose(
+            ResolvedMotionChannel locomotion,
+            ResolvedMotionChannel action,
+            ResolvedMotionChannel gameplayResult)
+        {
+            Float32Vector3 displacement = Float32Vector3.Zero;
+            Float32Scalar yaw = Float32Scalar.Zero;
+            ComposeChannel(locomotion, ref displacement, ref yaw);
+            ComposeChannel(action, ref displacement, ref yaw);
+            ComposeChannel(gameplayResult, ref displacement, ref yaw);
+            return new ResolvedGameplayMotion(
+                displacement,
+                yaw,
+                locomotion.PlanarBasis,
+                displacement != Float32Vector3.Zero || yaw != Float32Scalar.Zero,
+                locomotion.MovementPlaybackClock,
+                locomotion.LocomotionTimeline,
+                action.ResolvedOwnerIdentity,
+                gameplayResult.ResolvedOwnerIdentity);
+        }
+
+        static void ComposeChannel(
+            ResolvedMotionChannel channel,
+            ref Float32Vector3 displacement,
+            ref Float32Scalar yaw)
+        {
+            if (!channel.HasContribution)
+                return;
+            if (channel.ClaimsLowerChannels)
+            {
+                displacement = channel.Displacement;
+                yaw = channel.YawDegrees;
+                return;
+            }
+            displacement += channel.Displacement;
+            yaw += channel.YawDegrees;
+        }
+
+        static ulong MixSource(ulong hash, string identity)
+        {
+            unchecked
+            {
+                for (int i = 0; i < identity.Length; i++)
+                {
+                    hash ^= identity[i];
+                    hash *= 1099511628211UL;
+                }
+                return hash;
+            }
+        }
+    }
+
     internal sealed class Float32MotionAccumulator : Float32OperationModule,
         IFloat32MotionContributionSink,
         IFloat32MotionModifierSampleSink
@@ -290,145 +466,26 @@ namespace ThirdPersonSimulation
                     contribution.Source,
                     "motion_contribution",
                     SimulationTraceSeverity.Detail,
-                    $"channel={contribution.Channel};blend={contribution.BlendMode};priority={contribution.Priority};weight={contribution.Weight};delta={contribution.Displacement};yaw={contribution.YawDegrees};claim={contribution.ClaimsLowerChannels};movementClock={FormatMovementClock(contribution.MovementPlaybackClock)}",
+                    $"channel={contribution.Channel};blend={contribution.BlendMode};priority={contribution.Priority};weight={contribution.Weight};delta={contribution.Displacement};yaw={contribution.YawDegrees};claim={contribution.ClaimsLowerChannels};movementClock={Float32CharacterMotionResolver.FormatMovementClock(contribution.MovementPlaybackClock)}",
                     SourceGeneration(contribution.Source));
             }
         }
 
         public void Submit(MotionWarpSample<Float32Scalar, Float32ActionInstanceState> sample) => m_WarpSamples.Add(sample);
 
-        public ResolvedGameplayMotion Resolve()
+        public void ApplyModifiers(ref ResolvedMotionChannel action)
         {
-            ResolvedMotionChannel locomotion = ResolveChannel(SimulationMotionChannel.Locomotion);
-            ResolvedMotionChannel action = ResolveChannel(SimulationMotionChannel.Action);
-            ResolvedMotionChannel gameplayResult = ResolveChannel(SimulationMotionChannel.GameplayResult);
-
+            OperationHandle resolvedOwner = action.ResolvedOwnerAbilityId == m_Ability.AbilityId &&
+                action.ResolvedOwnerSource.IsSkillOperation
+                ? action.ResolvedOwnerSource.Operation
+                : OperationHandle.Invalid;
             ProgramMotionModifierRuntime.ApplyActionWarp<Float32Scalar, Float32ActionInstanceState, ResolvedMotionChannel, Float32MotionWarpTarget>(
                 m_Layout.MotionModifiers(ProgramMotionModifierChannel.Action),
                 m_WarpSamples,
-                action.ResolvedOwnerSource.IsSkillOperation ? action.ResolvedOwnerSource.Operation : OperationHandle.Invalid,
+                resolvedOwner,
                 ref action,
                 m_MotionWarp);
             RequireNoUnsupportedModifiers(ProgramMotionModifierChannel.GameplayResult);
-
-            Float32Vector3 displacement = Float32Vector3.Zero;
-            Float32Scalar yaw = Float32Scalar.Zero;
-            Compose(locomotion, ref displacement, ref yaw);
-            Compose(action, ref displacement, ref yaw);
-            Compose(gameplayResult, ref displacement, ref yaw);
-
-            bool hasMotion = displacement != Float32Vector3.Zero || yaw != Float32Scalar.Zero;
-            var motion = new ResolvedGameplayMotion(
-                displacement,
-                yaw,
-                locomotion.PlanarBasis,
-                hasMotion,
-                locomotion.MovementPlaybackClock,
-                locomotion.LocomotionTimeline,
-                action.ResolvedOwnerIdentity,
-                gameplayResult.ResolvedOwnerIdentity);
-            TraceResolvedGameplayMotion(motion, action);
-            return motion;
-        }
-
-        ResolvedMotionChannel ResolveChannel(SimulationMotionChannel channel)
-        {
-            Float32Vector3 additiveDisplacement = Float32Vector3.Zero;
-            Float32Scalar additiveYaw = Float32Scalar.Zero;
-            Float32Vector3 weightedDisplacement = Float32Vector3.Zero;
-            Float32Scalar weightedYaw = Float32Scalar.Zero;
-            Float32Scalar totalWeight = Float32Scalar.Zero;
-            SimulationMotionContribution overrideWinner = default;
-            Float32Vector3 overrideDisplacement = Float32Vector3.Zero;
-            Float32Scalar overrideYaw = Float32Scalar.Zero;
-            SimulationExecutionSource traceSource = default;
-            int sourceCount = 0;
-            ulong sourceFingerprint = 1469598103934665603UL;
-            bool hasAdditive = false;
-            bool hasWeighted = false;
-            bool hasOverride = false;
-            for (int i = 0; i < m_Contributions.Count; i++)
-            {
-                SimulationMotionContribution contribution = m_Contributions[i];
-                if (contribution.Channel != channel || !contribution.CanResolve)
-                    continue;
-                if (!traceSource.IsValid)
-                    traceSource = contribution.Source;
-                sourceCount++;
-                sourceFingerprint = MixSource(sourceFingerprint, contribution.Source.Identity);
-                Float32Vector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
-                    ? Float32Angle.RotatePlanar(contribution.Displacement, m_Frame.BodyFacts.Yaw)
-                    : contribution.Displacement;
-                switch (contribution.BlendMode)
-                {
-                    case SimulationMotionBlendMode.Additive:
-                        additiveDisplacement += resolved * contribution.Weight;
-                        additiveYaw += contribution.YawDegrees * contribution.Weight;
-                        hasAdditive = true;
-                        break;
-                    case SimulationMotionBlendMode.WeightedBlend:
-                        weightedDisplacement += resolved * contribution.Weight;
-                        weightedYaw += contribution.YawDegrees * contribution.Weight;
-                        totalWeight += contribution.Weight;
-                        hasWeighted = true;
-                        break;
-                    case SimulationMotionBlendMode.Override:
-                        if (!hasOverride || contribution.Priority > overrideWinner.Priority)
-                        {
-                            overrideWinner = contribution;
-                            overrideDisplacement = resolved * contribution.Weight;
-                            overrideYaw = contribution.YawDegrees * contribution.Weight;
-                            hasOverride = true;
-                        }
-                        break;
-                    default:
-                        throw new InvalidOperationException(
-                            $"Motion contribution '{contribution.SourceIdentity}' has invalid blend mode '{contribution.BlendMode}'.");
-                }
-            }
-            if (!hasAdditive && !hasWeighted && !hasOverride)
-                return new ResolvedMotionChannel(channel, Float32Vector3.Zero, Float32Scalar.Zero, Float32Vector2.Zero, false, false, default, default, default, Float32Vector3.Zero, Float32Scalar.Zero, default, 0, 0);
-
-            Float32Vector3 channelDisplacement = additiveDisplacement;
-            Float32Scalar channelYaw = additiveYaw;
-            if (hasOverride)
-            {
-                channelDisplacement += overrideDisplacement;
-                channelYaw += overrideYaw;
-            }
-            else if (hasWeighted && totalWeight > Float32Scalar.Zero)
-            {
-                channelDisplacement += new Float32Vector3(
-                    weightedDisplacement.X / totalWeight,
-                    weightedDisplacement.Y / totalWeight,
-                    weightedDisplacement.Z / totalWeight);
-                channelYaw += weightedYaw / totalWeight;
-            }
-            CommittedMovementPlaybackClock movementPlaybackClock =
-                channel == SimulationMotionChannel.Locomotion && hasOverride
-                    ? overrideWinner.MovementPlaybackClock
-                    : default;
-            if (channel == SimulationMotionChannel.Locomotion && !movementPlaybackClock.IsValid)
-                throw new InvalidOperationException("Resolved Locomotion motion has no single committed Movement playback clock owner.");
-            var result = new ResolvedMotionChannel(
-                channel,
-                channelDisplacement,
-                channelYaw,
-                hasOverride ? overrideWinner.PlanarBasis : Float32Vector2.Zero,
-                true,
-                hasOverride && overrideWinner.ConsumeLowerChannels,
-                hasOverride ? overrideWinner.Source : default,
-                movementPlaybackClock,
-                channel == SimulationMotionChannel.Locomotion && hasOverride
-                    ? overrideWinner.LocomotionTimeline
-                    : default,
-                hasOverride ? overrideDisplacement : Float32Vector3.Zero,
-                hasOverride ? overrideYaw : Float32Scalar.Zero,
-                hasOverride ? overrideWinner.Source : traceSource,
-                sourceCount,
-                sourceFingerprint);
-            TraceChannel(result);
-            return result;
         }
 
         void RequireNoUnsupportedModifiers(ProgramMotionModifierChannel channel)
@@ -437,51 +494,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException($"Program contains unsupported '{channel}' Motion Modifiers.");
         }
 
-        static void Compose(
-            ResolvedMotionChannel channel,
-            ref Float32Vector3 displacement,
-            ref Float32Scalar yaw)
-        {
-            if (!channel.HasContribution)
-                return;
-            if (channel.ClaimsLowerChannels)
-            {
-                displacement = channel.Displacement;
-                yaw = channel.YawDegrees;
-                return;
-            }
-            displacement += channel.Displacement;
-            yaw += channel.YawDegrees;
-        }
-
-        void TraceChannel(ResolvedMotionChannel channel)
-        {
-            if (!m_Frame.Trace.Enabled || !channel.TraceSource.IsValid)
-                return;
-            m_Frame.Trace.Add(
-                channel.TraceSource,
-                "motion_channel_resolved",
-                SimulationTraceSeverity.Detail,
-                $"channel={channel.Channel};owner={channel.ResolvedOwnerIdentity};delta={channel.Displacement};yaw={channel.YawDegrees};planarBasis={channel.PlanarBasis};claim={channel.ClaimsLowerChannels};sources={channel.ParticipatingSourceCount};fingerprint={channel.ParticipatingSourceFingerprint:x16};movementClock={FormatMovementClock(channel.MovementPlaybackClock)}",
-                SourceGeneration(channel.TraceSource));
-        }
-
-        void TraceResolvedGameplayMotion(ResolvedGameplayMotion motion, ResolvedMotionChannel action)
-        {
-            if (!m_Frame.Trace.Enabled)
-                return;
-            SimulationExecutionSource source = action.TraceSource.IsValid
-                ? action.TraceSource
-                : SimulationExecutionSource.FromSkillOperation(m_Layout.RootOperation, "resolved_gameplay_motion");
-            m_Frame.Trace.Add(
-                source,
-                "resolved_gameplay_motion",
-                SimulationTraceSeverity.Information,
-                $"delta={motion.Displacement};yaw={motion.YawDegrees};hasMotion={motion.HasMotion};movementClock={FormatMovementClock(motion.MovementPlaybackClock)}",
-                SourceGeneration(source));
-        }
-
-        ulong SourceGeneration(SimulationExecutionSource source)
+        public ulong SourceGeneration(SimulationExecutionSource source)
         {
             if (!source.IsSkillOperation)
                 return 1;
@@ -492,23 +505,6 @@ namespace ThirdPersonSimulation
             return generation == 0 ? 1UL : generation;
         }
 
-        static string FormatMovementClock(CommittedMovementPlaybackClock clock) =>
-            clock.IsValid
-                ? $"{clock.OwnerIdentity}@{clock.Generation}:{clock.ContinuousTicks}/{clock.TickRate}#tick{clock.AuthorityTick.Value}"
-                : "none";
-
-        static ulong MixSource(ulong hash, string identity)
-        {
-            unchecked
-            {
-                for (int i = 0; i < identity.Length; i++)
-                {
-                    hash ^= identity[i];
-                    hash *= 1099511628211UL;
-                }
-                return hash;
-            }
-        }
 
     }
 
@@ -1243,6 +1239,7 @@ namespace ThirdPersonSimulation
                 generation);
             m_Motion.Submit(new SimulationMotionContribution(
                 SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
+                m_Ability.AbilityId,
                 displacement,
                 yaw,
                 move,

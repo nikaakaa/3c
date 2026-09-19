@@ -41,12 +41,13 @@ namespace ThirdPersonSimulation.Fixed
             var invocations = new List<FixedAbilityInvocationRuntime>(actor.AbilityInstallations.Installations.Count);
             var actionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>();
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
-            var results = new List<FixedAbilityInvocationResult>(invocations.Capacity);
+            var motionContributions = new List<SimulationMotionContribution>();
+            var timelineAdvances = new List<IAbilityTimelinePending>();
+            var timelineStops = new List<IAbilityTimelineStopPending>();
             var facts = new List<GameplayFact>();
             var presentation = new List<PresentationCommand>();
             var trace = new List<SimulationTraceRecord>();
-            var controlTrace = new List<SimulationTraceRecord>();
-            var workspace = new FixedAbilityExecutionWorkspace(sharedEffectScratch);
+            var characterTrace = new List<SimulationTraceRecord>();
             try
             {
                 var serviceFactory = new FixedAbilityExecutionServiceFactory(actor.TimelineRuntime);
@@ -59,14 +60,13 @@ namespace ThirdPersonSimulation.Fixed
                     tick,
                     characterRuntime.TickRate,
                     actor.ControlRuntimeBinding.MotionBindings);
-                var controlTraceSink = new FixedCharacterControlTraceSink(
-                    controlTrace,
+                var characterTraceSink = new FixedCharacterTraceSink(
+                    characterTrace,
                     characterRuntime.NumericProfile,
                     actor.GameplayContentHash,
                     actor.ActorId,
                     tick,
                     diagnosticsEnabled);
-                workspace.Reset();
                 for (int i = 0; i < actor.AbilityInstallations.Installations.Count; i++)
                 {
                     FixedGameplayAbilityExecutionInstallation installation = actor.AbilityInstallations.Installations[i];
@@ -87,7 +87,7 @@ namespace ThirdPersonSimulation.Fixed
                         tick,
                         abilityInput,
                         bodyFacts,
-                        workspace,
+                        new FixedAbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops),
                         serviceFactory);
                     invocations.Add(invocation);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
@@ -108,14 +108,12 @@ namespace ThirdPersonSimulation.Fixed
                     abilityInput,
                     bodyFacts,
                     controlMotion,
-                    controlTraceSink,
+                    characterTraceSink,
                     actionRuntimes,
                     (skill, window) => IsActionWindowActive(invocations, skill, window),
                     route => ReadEquipmentActionContext(invocations, route));
                 control.Tick();
-                trace.AddRange(controlTrace);
-                if (invocations.Count != 0)
-                    workspace.MotionContributions.AddRange(controlMotion.Contributions);
+                motionContributions.AddRange(controlMotion.Contributions);
 
                 bool effectAdvanced = false;
                 for (int i = 0; i < invocations.Count; i++)
@@ -131,20 +129,24 @@ namespace ThirdPersonSimulation.Fixed
                     }
                     invocation.ApplyInputBindings();
                     invocation.Tick();
-                    FixedAbilityInvocationResult result = invocation.Complete();
-                    results.Add(result);
-                    facts.AddRange(result.GameplayFacts);
-                    presentation.AddRange(result.PresentationCommands);
-                    trace.AddRange(result.TraceRecords);
-                    invocation.Accept(roleState.AcceptAbility);
+                    motionContributions.AddRange(invocation.MotionContributions);
                 }
 
                 if (!effectAdvanced)
                     RequireNoGameplayEffectIngress(ingress);
 
-                ResolvedGameplayMotion gameplayMotion = invocations.Count == 0
-                    ? controlMotion.Resolve()
-                    : ResolveMotion(results);
+                ResolvedGameplayMotion gameplayMotion = ResolveMotion(
+                    motionContributions, beforeBody.Yaw, invocations, characterTraceSink);
+                for (int i = 0; i < invocations.Count; i++)
+                {
+                    FixedAbilityInvocationRuntime invocation = invocations[i];
+                    FixedAbilityInvocationResult result = invocation.Complete();
+                    facts.AddRange(result.GameplayFacts);
+                    presentation.AddRange(result.PresentationCommands);
+                    trace.AddRange(result.TraceRecords);
+                    invocation.Accept(roleState.AcceptAbility);
+                }
+                trace.AddRange(characterTrace);
                 FixedScalar tickDelta = FixedScalar.One / FixedScalar.FromInt64(characterRuntime.TickRate);
                 BodyMotionPrepareResult bodyMotion = CharacterBodyMotionRuntime.Prepare(
                     actor.ActorId,
@@ -174,13 +176,13 @@ namespace ThirdPersonSimulation.Fixed
                     facts,
                     presentation,
                     trace,
-                    workspace.TimelineAdvances,
-                    workspace.TimelineStops);
+                    timelineAdvances,
+                    timelineStops);
             }
             catch
             {
-                DiscardTimelineAdvances(actor.TimelineRuntime, workspace);
-                DiscardTimelineStops(actor.TimelineRuntime, workspace);
+                DiscardTimelineAdvances(actor.TimelineRuntime, timelineAdvances);
+                DiscardTimelineStops(actor.TimelineRuntime, timelineStops);
                 for (int i = 0; i < invocations.Count; i++)
                     invocations[i].Dispose();
                 roleState.Dispose();
@@ -190,11 +192,10 @@ namespace ThirdPersonSimulation.Fixed
 
         static void DiscardTimelineStops(
             IAbilityTimelineRuntime timelineRuntime,
-            FixedAbilityExecutionWorkspace workspace)
+            IReadOnlyList<IAbilityTimelineStopPending> stops)
         {
             if (timelineRuntime == null)
                 return;
-            IReadOnlyList<IAbilityTimelineStopPending> stops = workspace.TimelineStops;
             for (int i = 0; i < stops.Count; i++)
             {
                 if (stops[i] == null)
@@ -205,11 +206,10 @@ namespace ThirdPersonSimulation.Fixed
 
         static void DiscardTimelineAdvances(
             IAbilityTimelineRuntime timelineRuntime,
-            FixedAbilityExecutionWorkspace workspace)
+            IReadOnlyList<IAbilityTimelinePending> advances)
         {
             if (timelineRuntime == null)
                 return;
-            IReadOnlyList<IAbilityTimelinePending> advances = workspace.TimelineAdvances;
             for (int i = 0; i < advances.Count; i++)
             {
                 if (advances[i] == null)
@@ -296,54 +296,51 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static ResolvedGameplayMotion ResolveMotion(
-            IReadOnlyList<FixedAbilityInvocationResult> results)
+            IReadOnlyList<SimulationMotionContribution> contributions,
+            FixedYaw bodyYaw,
+            IReadOnlyList<FixedAbilityInvocationRuntime> invocations,
+            FixedCharacterTraceSink trace)
         {
-            FixedVector3 displacement = FixedVector3.Zero;
-            FixedScalar yaw = FixedScalar.Zero;
-            FixedVector2 planarBasis = FixedVector2.Zero;
-            bool hasMotion = false;
-            CommittedMovementPlaybackClock movementClock = default;
-            CommittedLocomotionPlanarMotionTimeline locomotionTimeline = default;
-            bool hasMovementClock = false;
-            string actionOwner = string.Empty;
-            string gameplayResultOwner = string.Empty;
-            for (int i = 0; i < results.Count; i++)
-            {
-                ResolvedGameplayMotion motion = results[i].Motion;
-                displacement += motion.Displacement;
-                yaw += motion.YawDegrees;
-                hasMotion |= motion.HasMotion;
-                if (planarBasis == FixedVector2.Zero && motion.LocomotionPlanarBasis != FixedVector2.Zero)
-                    planarBasis = motion.LocomotionPlanarBasis;
-                if (!string.IsNullOrEmpty(motion.ActionOwnerIdentity) && string.IsNullOrEmpty(actionOwner))
-                    actionOwner = motion.ActionOwnerIdentity;
-                if (!string.IsNullOrEmpty(motion.GameplayResultOwnerIdentity) && string.IsNullOrEmpty(gameplayResultOwner))
-                    gameplayResultOwner = motion.GameplayResultOwnerIdentity;
-                if (!motion.MovementPlaybackClock.IsValid)
-                    continue;
-                if (hasMovementClock)
-                {
-                    if (!movementClock.Equals(motion.MovementPlaybackClock) ||
-                        !locomotionTimeline.Equals(motion.LocomotionTimeline))
-                        throw new InvalidOperationException(
-                            "Fixed Character evaluation produced multiple incompatible locomotion playback clocks.");
-                }
-                else
-                {
-                    movementClock = motion.MovementPlaybackClock;
-                    locomotionTimeline = motion.LocomotionTimeline;
-                    hasMovementClock = true;
-                }
-            }
-            return new ResolvedGameplayMotion(
-                displacement,
-                yaw,
-                planarBasis,
-                hasMotion,
-                movementClock,
-                locomotionTimeline,
-                actionOwner,
-                gameplayResultOwner);
+            ResolvedMotionChannel locomotion = FixedCharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.Locomotion);
+            ResolvedMotionChannel action = FixedCharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.Action);
+            ResolvedMotionChannel gameplayResult = FixedCharacterMotionResolver.ResolveChannel(contributions, bodyYaw, SimulationMotionChannel.GameplayResult);
+            for (int i = 0; i < invocations.Count; i++)
+                invocations[i].ApplyMotionModifiers(ref action);
+            TraceMotionChannel(locomotion, invocations, trace);
+            TraceMotionChannel(action, invocations, trace);
+            TraceMotionChannel(gameplayResult, invocations, trace);
+            ResolvedGameplayMotion motion = FixedCharacterMotionResolver.Compose(locomotion, action, gameplayResult);
+            ResolvedMotionChannel source = gameplayResult.TraceSource.IsValid ? gameplayResult :
+                action.TraceSource.IsValid ? action : locomotion;
+            if (source.TraceSource.IsValid)
+                trace.Add("Character.Motion", source.TraceSource, "resolved_gameplay_motion", SimulationTraceSeverity.Information,
+                    $"delta={motion.Displacement};yaw={motion.YawDegrees};hasMotion={motion.HasMotion};movementClock={FixedCharacterMotionResolver.FormatMovementClock(motion.MovementPlaybackClock)}",
+                    MotionSourceGeneration(source, invocations));
+            return motion;
+        }
+
+        static void TraceMotionChannel(
+            ResolvedMotionChannel channel,
+            IReadOnlyList<FixedAbilityInvocationRuntime> invocations,
+            FixedCharacterTraceSink trace)
+        {
+            if (!channel.TraceSource.IsValid)
+                return;
+            trace.Add("Character.Motion", channel.TraceSource, "motion_channel_resolved", SimulationTraceSeverity.Detail,
+                $"channel={channel.Channel};owner={channel.ResolvedOwnerIdentity};delta={channel.Displacement};yaw={channel.YawDegrees};planarBasis={channel.PlanarBasis};claim={channel.ClaimsLowerChannels};sources={channel.ParticipatingSourceCount};fingerprint={channel.ParticipatingSourceFingerprint:x16};movementClock={FixedCharacterMotionResolver.FormatMovementClock(channel.MovementPlaybackClock)}",
+                MotionSourceGeneration(channel, invocations));
+        }
+
+        static ulong MotionSourceGeneration(
+            ResolvedMotionChannel channel,
+            IReadOnlyList<FixedAbilityInvocationRuntime> invocations)
+        {
+            if (!channel.TraceAbilityId.IsValid)
+                return 1;
+            for (int i = 0; i < invocations.Count; i++)
+                if (invocations[i].AbilityId == channel.TraceAbilityId)
+                    return invocations[i].MotionSourceGeneration(channel.TraceSource);
+            throw new InvalidOperationException("Motion trace source has no owning Ability invocation.");
         }
 
 }

@@ -62,17 +62,4 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedMotionExecutionScratch : IExecutionWorkspaceScratch
-    {
-        public List<SimulationMotionContribution> Contributions { get; } =
-            new List<SimulationMotionContribution>();
-        public List<MotionWarpSample<FixedScalar, FixedActionInstanceState>> WarpSamples { get; } =
-            new List<MotionWarpSample<FixedScalar, FixedActionInstanceState>>();
-
-        public void Reset()
-        {
-            Contributions.Clear();
-            WarpSamples.Clear();
-        }
-    }
 }

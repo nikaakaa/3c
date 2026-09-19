@@ -13,18 +13,15 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedAbilityInvocationResult
     {
         public FixedAbilityInvocationResult(
-            ResolvedGameplayMotion motion,
             IReadOnlyList<GameplayFact> gameplayFacts,
             IReadOnlyList<PresentationCommand> presentationCommands,
             IReadOnlyList<SimulationTraceRecord> traceRecords)
         {
-            Motion = motion;
             GameplayFacts = gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts));
             PresentationCommands = presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands));
             TraceRecords = traceRecords ?? throw new ArgumentNullException(nameof(traceRecords));
         }
 
-        public ResolvedGameplayMotion Motion { get; }
         public IReadOnlyList<GameplayFact> GameplayFacts { get; }
         public IReadOnlyList<PresentationCommand> PresentationCommands { get; }
         public IReadOnlyList<SimulationTraceRecord> TraceRecords { get; }
@@ -133,7 +130,6 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentNullException(nameof(input));
             m_SkillState = skillState;
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
-            m_Workspace.Reset();
             m_Frame = new FixedAbilityExecutionFrame(
                 execution.Data,
                 execution.Layout,
@@ -171,6 +167,16 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public CharacterSkillId AbilityId { get; }
+        public IReadOnlyList<SimulationMotionContribution> MotionContributions => m_Workspace.MotionContributions;
+
+        public void ApplyMotionModifiers(ref ResolvedMotionChannel action)
+        {
+            RequireEvaluation();
+            m_Motion.ApplyModifiers(ref action);
+        }
+
+        public ulong MotionSourceGeneration(SimulationExecutionSource source) => m_Motion.SourceGeneration(source);
+
         public IFixedAbilityActionControlPort Actions => m_Actions;
         public bool HasGameplayEffects => m_GameplayEffects != null;
         public IEquipmentActionContextReader Equipment => m_Equipment;
@@ -233,10 +239,8 @@ namespace ThirdPersonSimulation.Fixed
             RequireEvaluation();
             if (m_Completed)
                 throw new InvalidOperationException("Fixed Ability invocation has already completed.");
-            ResolvedGameplayMotion motion = m_Motion.Resolve();
             m_Control.EndEvaluation();
             var result = new FixedAbilityInvocationResult(
-                motion,
                 new List<GameplayFact>(m_Workspace.Facts),
                 new List<PresentationCommand>(m_Workspace.Presentation),
                 new List<SimulationTraceRecord>(m_Workspace.Trace));

@@ -92,6 +92,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 ulong actionInstanceId = m_Host.RequireAbilityPlaybackActionInstanceId(context.Playback.Handle);
                 foreach (ActiveTreeClip clip in activeClips)
                 {
+                    if (clip.ClipAuthoringId != request.ClipAuthoringId || clip.Cycle != request.Cycle)
+                        continue;
                     var updateInvocation = new AbilityTreeClipInvocation(
                         clip.ClipAuthoringId,
                         clip.TreeGraphId,
@@ -99,8 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         clip.Cycle,
                         actionInstanceId,
                         checked((int)context.Playback.Handle.Value));
-                    if (!clip.Invoker.InvokeTreeClip(updateInvocation))
-                        return false;
+                    return clip.Invoker.InvokeTreeClip(updateInvocation);
                 }
                 return true;
             }

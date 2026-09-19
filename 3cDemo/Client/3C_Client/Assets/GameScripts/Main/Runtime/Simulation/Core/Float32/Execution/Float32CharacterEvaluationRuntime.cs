@@ -89,11 +89,29 @@ namespace ThirdPersonSimulation
                         new Float32AbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops),
                         serviceFactory);
                     invocations.Add(invocation);
+                    invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
 
                 new Float32CharacterInputRuntime(roleState.InputRequests, characterRuntime.InputRequestIds)
                     .ApplyRequests(input.Requests);
+
+                bool effectAdvanced = false;
+                for (int i = 0; i < invocations.Count; i++)
+                {
+                    Float32AbilityInvocationRuntime invocation = invocations[i];
+                    ApplyIngress(invocation, ingress, sourceState);
+                    if (!effectAdvanced && invocation.HasGameplayEffects)
+                    {
+                        ApplyGameplayEffectIngress(invocation, ingress);
+                        invocation.AdvanceGameplayEffects();
+                        effectAdvanced = true;
+                    }
+                    invocation.ApplyInputBindings();
+                }
+
+                if (!effectAdvanced)
+                    RequireNoGameplayEffectIngress(ingress);
 
                 var control = new Float32CharacterControlRuntime(
                     characterRuntime.ControlModules,
@@ -114,25 +132,12 @@ namespace ThirdPersonSimulation
                 control.Tick();
                 motionContributions.AddRange(controlMotion.Contributions);
 
-                bool effectAdvanced = false;
                 for (int i = 0; i < invocations.Count; i++)
                 {
                     Float32AbilityInvocationRuntime invocation = invocations[i];
-                    invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
-                    ApplyIngress(invocation, ingress, sourceState);
-                    if (!effectAdvanced && invocation.HasGameplayEffects)
-                    {
-                        ApplyGameplayEffectIngress(invocation, ingress);
-                        invocation.AdvanceGameplayEffects();
-                        effectAdvanced = true;
-                    }
-                    invocation.ApplyInputBindings();
                     invocation.Tick();
                     motionContributions.AddRange(invocation.MotionContributions);
                 }
-
-                if (!effectAdvanced)
-                    RequireNoGameplayEffectIngress(ingress);
 
                 ResolvedGameplayMotion gameplayMotion = ResolveMotion(
                     motionContributions, beforeBody.Yaw, invocations, characterTraceSink);

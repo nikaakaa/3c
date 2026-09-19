@@ -70,3 +70,10 @@ Replay 已 matched，可以进入 ZZZ Corin 正式数据抄录阶段；抄录必
 - 新 Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/369327502f7a4add8a21a19a7713d24d/20260919-085836-293-d0cfb77806a54ee5a8263e90763d42e3.json`。
 - 帧对账：`compared:1121`，`divergent_frame_count:0`，`first_frame_mismatches:[]`。
 - Aggregate 对账为 `matched`，`aggregate_mismatches:[]`；`Attack5EndBoundary`、`Attack5End` / `Attack5End2` 状态分支、`CorinAttack5End2Timeline` 与 15 个状态本地 cue 重建后，运行数据没有回归。
+
+## Rush Ability 资产后复验
+
+- 新 Proof：`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/369327502f7a4add8a21a19a7713d24d/20260919-100603-789-32d845b6af3d44edbd227f361fc7395c.json`。
+- 帧对账：`matched:1121`。
+- 本次新增 Corin Rush Admission Profile、`CorinRushAttackGameplayAbilityDefinition`、8 状态 Timeline producer 绑定和 8 个 Rush AttackProperty Ability 依赖；Rush 主动激活链未接入，所以现有固定输入路径不变。
+- 结论：新 Rush 资产没有引入 NormalAttack Replay 回归；Unity Console `0 error`，`ThirdPersonClient.Editor.csproj` `0 error`。

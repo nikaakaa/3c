@@ -279,3 +279,23 @@
 3. `special_*` 不作为图内状态抄录；它对应外部切换、队伍 Aid、受伤收口等宿主路由，必须先落到 3C Control/Aid 请求边界。
 4. 所有状态身份保留 ZZZ 原名作为业务对照；3C 资产命名使用正式 `Corin_` 前缀，不使用 `Clone`、`Copy` 或临时序号。
 5. 本表更新时必须同步 `docs/zzz-corin-copy-sources.md` 的进度；没有对应正式资产落盘不得把状态写成已迁移。
+
+## Branch/Rush 正式 PoseGraph 绑定链路评估（2026-09-19）
+
+依据上文 BlendTree 实际 Motion 引用（不按状态名猜），两个分组共 26 状态去重后需要 19 个独立 Clip：
+
+- BranchAttack 18 状态 → 12 Clip：Branch_01（+_End/_Explode）、Branch_02（+_End/_Explode）、Branch_Loop、Branch_Walk、Branch_03_Loop、Branch_03_Walk_Loop、Branch_03_Shake、Branch_03_Walk_Shake。Branch_03 主体/End/Explode 复用 Branch_02 系列，NotExplode 复用 Branch_01_Explode。
+- RushAttack 8 状态 → 7 Clip：Rush、Rush_End、Rush_Explode、Rush_Enhance_Start、Rush_Enhance_Loop、Rush_Enhance_Explode、Rush_Enhance_End（复用 Rush_Explode）。
+
+### 缺口结论
+
+- Clip 资产：19/19 全部已按 ZZZ 原名导入 3C（`Avatar_Female_Size01_Corin_Ani_*`，含 Inplace/Rootmotion/Weapon 变体），**导入零缺口、零改名需求**——正式绑定直接引用导入资产名，改名反而切断与导出清单的对应。`Attack_Rush_Enhance`（无 _Start 后缀）也已导入但不被这 8 个状态引用，留作证据不冒充绑定。
+- Pose 源目录：Corin Presentation Profile 源目录当前只有 locomotion 7 源，0 条 Attack 条目；PoseGraph 状态机仅 locomotion 状态。Branch/Rush 的 Clip 均未进入 Pose 绑定。
+- 真正缺口在上游：Branch/Rush 的 Timeline、Ability 执行状态与转移条件（Control）均未建。Pose 侧不具备独自成链的条件。
+
+### 可实施顺序
+
+1. **决策点（Control/Ability/Timeline owner）**：Branch/Rush 走与 NormalAttack 相同的 Timeline Action playback 链（Slot/ActionPlaybackInput 混入 Pose，与现行攻击架构不分裂），或作为 Pose 状态机状态扩进 locomotion 图。按"不产生分裂路径"原则，前者是唯一不与 NormalAttack 分裂的路线；后者需要 Ability/Timeline owner 先确认放弃 Timeline 路线。
+2. **Control/Ability/Timeline 建链**：转移条件、Timeline 起止与 committed sample（引用上表 19 Clip 的导入资产名）。
+3. **Pose 侧接线**（材料已备，无导入工作）：Timeline action playback 经既有 ActionPlaybackInput/Slot 节点与 actionSampleProvider 混入 Pose；若走状态机路线则为每状态建 Clip Player 绑定（19 条 source 条目进 Profile 源目录 + ResourceSet 重编译，菜单链路已具备）。
+4. **验证**：Play 侧 Replay 观察 Branch/Rush 姿态混入与 NormalAttack 回归。

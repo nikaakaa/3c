@@ -1078,6 +1078,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Backends.CommitFrame(lease);
             m_FramePage.Discard(lease);
             m_PhysicalSources.CommitFrame();
+            m_BindingPage.Clear();
             m_PreparedSourceCount = 0;
             m_CurrentLease = default;
         }

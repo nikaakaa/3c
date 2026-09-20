@@ -27,14 +27,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseNativeBlendStackSourceModuleBinding :
         ICharacterPoseNativeBlendStackSourceBinding
     {
-        sealed class PendingSource
+        readonly struct PendingSource
         {
-            internal AnimationPoseSourceId SourceId;
-            internal int SourceOwnerIndex;
-            internal AnimationResolvedPoseSourceSample ActionSample;
-            internal PresentationPoseSourceSample ProviderSample;
-            internal AnimationPoseSourceCaptureBinding Capture;
-            internal bool IsProvider;
+            internal PendingSource(
+                AnimationPoseSourceId sourceId,
+                int sourceOwnerIndex,
+                AnimationResolvedPoseSourceSample actionSample,
+                PresentationPoseSourceSample providerSample,
+                in AnimationPoseSourceCaptureBinding capture,
+                bool isProvider)
+            {
+                SourceId = sourceId;
+                SourceOwnerIndex = sourceOwnerIndex;
+                ActionSample = actionSample;
+                ProviderSample = providerSample;
+                Capture = capture;
+                IsProvider = isProvider;
+            }
+
+            internal AnimationPoseSourceId SourceId { get; }
+            internal int SourceOwnerIndex { get; }
+            internal AnimationResolvedPoseSourceSample ActionSample { get; }
+            internal PresentationPoseSourceSample ProviderSample { get; }
+            internal AnimationPoseSourceCaptureBinding Capture { get; }
+            internal bool IsProvider { get; }
         }
 
         readonly CharacterPoseSourceModule m_Source;
@@ -45,6 +61,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationPoseSourceSample> m_ProviderSampleProvider;
         readonly List<PendingSource> m_Pending =
             new List<PendingSource>();
+        readonly List<CharacterPoseNativeSourceRequest> m_Requests =
+            new List<CharacterPoseNativeSourceRequest>();
+        readonly HashSet<AnimationPoseSourceId> m_SourceIds =
+            new HashSet<AnimationPoseSourceId>();
 
         internal CharacterPoseNativeBlendStackSourceModuleBinding(
             CharacterPoseSourceModule source,
@@ -71,14 +91,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage)
         {
             m_Pending.Clear();
-            var requests = new List<CharacterPoseNativeSourceRequest>();
+            m_Requests.Clear();
+            m_SourceIds.Clear();
             if (!stack.HasCurrentSelectionSample)
-                return requests;
-            var sourceIds = new HashSet<AnimationPoseSourceId>();
+                return m_Requests;
             for (int i = 0; i < stack.EntryCount; i++)
             {
                 AnimationBlendEntryState entry = stack.GetEntryState(i);
-                if (entry.IsSourcePose || !sourceIds.Add(entry.SourceId))
+                if (entry.IsSourcePose || !m_SourceIds.Add(entry.SourceId))
                     continue;
                 if (entry.SourceId.SourceKind == AnimationPoseSourceKind.Timeline)
                 {
@@ -87,16 +107,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (sample == null || !sample.IsValid)
                         throw new InvalidOperationException(
                             $"Blend Stack '{stack.PoseNodeId}' has no Action source sample for '{entry.SourceId}'.");
-                    m_Pending.Add(new PendingSource
-                    {
-                        SourceId = entry.SourceId,
-                        SourceOwnerIndex = entry.SourceOwnerIndex,
-                        ActionSample = sample,
-                        Capture = stack.PrepareCapture(
-                            sample,
-                            input.DeltaSeconds),
-                        IsProvider = false
-                    });
+                    AnimationPoseSourceCaptureBinding capture =
+                        stack.PrepareCapture(sample, input.DeltaSeconds);
+                    m_Pending.Add(new PendingSource(
+                        entry.SourceId,
+                        entry.SourceOwnerIndex,
+                        sample,
+                        null,
+                        in capture,
+                        false));
                 }
                 else if (entry.SourceId.SourceKind == AnimationPoseSourceKind.MotionMatching)
                 {
@@ -115,30 +134,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (resolved.Request.SourceId != entry.SourceId)
                         throw new InvalidOperationException(
                             $"Blend Stack '{stack.PoseNodeId}' Provider source identity is stale.");
-                    m_Pending.Add(new PendingSource
-                    {
-                        SourceId = entry.SourceId,
-                        SourceOwnerIndex = entry.SourceOwnerIndex,
-                        ProviderSample = sample,
-                        Capture = stack.PrepareCapture(
-                            resolved,
-                            input.DeltaSeconds),
-                        IsProvider = true
-                    });
+                    AnimationPoseSourceCaptureBinding capture =
+                        stack.PrepareCapture(resolved, input.DeltaSeconds);
+                    m_Pending.Add(new PendingSource(
+                        entry.SourceId,
+                        entry.SourceOwnerIndex,
+                        null,
+                        sample,
+                        in capture,
+                        true));
                 }
                 else
                 {
                     throw new InvalidOperationException(
                         $"Blend Stack '{stack.PoseNodeId}' source kind '{entry.SourceId.SourceKind}' is unsupported.");
                 }
-                requests.Add(new CharacterPoseNativeSourceRequest(
+                m_Requests.Add(new CharacterPoseNativeSourceRequest(
                     stack.PoseNodeId,
                     node.PresentationPoseSourceSlot,
                     entry.SourceId,
                     true,
                     runtime.InstanceId));
             }
-            return requests;
+            return m_Requests;
         }
 
         public void PrepareEvaluation(
@@ -170,13 +188,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (m_Source.TryDeferSource(in target))
                     throw new InvalidOperationException(
                         $"Blend Stack '{stack.PoseNodeId}' source '{source.SourceId}' is pending.");
+                AnimationPoseSourceCaptureBinding capture = source.Capture;
                 if (source.IsProvider)
                 {
                     m_Source.PrepareNativeProviderSource(
                         sourceLease,
                         source.ProviderSample,
                         source.SourceOwnerIndex,
-                        in source.Capture,
+                        in capture,
                         stack.PoseNodeId);
                 }
                 else
@@ -186,13 +205,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_Source.PrepareNativeActionSource(
                         sourceLease,
                         in actionRequest,
-                        in source.Capture,
+                        in capture,
                         stack.PoseNodeId);
                 }
             }
         }
 
-        public void ResetFrame() => m_Pending.Clear();
+        public void ResetFrame()
+        {
+            m_Pending.Clear();
+            m_Requests.Clear();
+            m_SourceIds.Clear();
+        }
     }
 
     internal sealed class CharacterPoseNativeBlendStackHandler :

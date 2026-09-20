@@ -1180,3 +1180,12 @@
 - CharacterPoseNativeSourceDemand 原为每帧新建重复键 HashSet，并在每条合法请求上提前拼装仅异常才使用的描述字符串。合法性检查现只在实际异常分支构造文本，重复身份按已验证的前序请求顺序比较，不改变 ScopeInstanceId、NodeId、SourceId 三元身份规则。
 - 顺序重复检测以活动 Pose 源通常较少为取舍，删除每图每帧 HashSet 的固定成本；当单图活动源数量显著增加时比较次数呈平方增长，后续需要以真实图规模和采样结果判断是否值得引入实例级集合工作区。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-21 Blend Stack 源准备工作区复用
+
+对应 tasks.md 的 4.2.9。
+
+- CharacterPoseNativeBlendStackSourceModuleBinding.PrepareFrame 原每帧新建 SourceRequest List 和 SourceId HashSet，并为每个 Timeline／MotionMatching 活动源 new 一个 PendingSource 对象；pending 列表虽已长期持有，但对象本身仍逐源分配。
+- binding 现在长期持有 pending、request、source identity 三个工作区，每帧统一 Clear；PendingSource 改为只读值记录，保存相同 SourceId、owner、sample、capture 和 provider 标记，PrepareEvaluation 仍按原列表顺序准备来源。
+- 无当前 selection 时返回同一个空 request 工作区；正常帧返回的 request 列表只在 CharacterPoseNativeGraphEvaluator 同步复制期间借用，pending 列表继续持有到同帧 PrepareEvaluation。首次达到更高活动源数量时容器仍可能扩容。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Blend Stack 运行采样或 Player 分配采样。

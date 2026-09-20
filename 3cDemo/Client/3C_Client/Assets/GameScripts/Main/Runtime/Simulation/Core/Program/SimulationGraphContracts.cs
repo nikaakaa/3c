@@ -1063,7 +1063,7 @@ namespace ThirdPersonSimulation
     {
         public BlackboardOwnerToken(ProgramScopeKind scopeKind, int compiledOwnerIndex, ulong generation)
         {
-            if (!Enum.IsDefined(typeof(ProgramScopeKind), scopeKind) || compiledOwnerIndex < 0 || generation == 0)
+            if (!IsDefined(scopeKind) || compiledOwnerIndex < 0 || generation == 0)
                 throw new ArgumentException("Blackboard owner token is incomplete.");
             ScopeKind = scopeKind;
             CompiledOwnerIndex = compiledOwnerIndex;
@@ -1073,7 +1073,7 @@ namespace ThirdPersonSimulation
         public ProgramScopeKind ScopeKind { get; }
         public int CompiledOwnerIndex { get; }
         public ulong Generation { get; }
-        public bool IsValid => CompiledOwnerIndex >= 0 && Generation != 0 && Enum.IsDefined(typeof(ProgramScopeKind), ScopeKind);
+        public bool IsValid => CompiledOwnerIndex >= 0 && Generation != 0 && IsDefined(ScopeKind);
         public bool Equals(BlackboardOwnerToken other) =>
             ScopeKind == other.ScopeKind &&
             CompiledOwnerIndex == other.CompiledOwnerIndex &&
@@ -1082,6 +1082,9 @@ namespace ThirdPersonSimulation
         public override int GetHashCode() => HashCode.Combine((int)ScopeKind, CompiledOwnerIndex, Generation);
         public static bool operator ==(BlackboardOwnerToken left, BlackboardOwnerToken right) => left.Equals(right);
         public static bool operator !=(BlackboardOwnerToken left, BlackboardOwnerToken right) => !left.Equals(right);
+
+        static bool IsDefined(ProgramScopeKind kind) =>
+            kind >= ProgramScopeKind.Character && kind <= ProgramScopeKind.Frame;
     }
 
     public readonly struct BlackboardWriteStamp : IEquatable<BlackboardWriteStamp>

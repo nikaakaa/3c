@@ -1099,3 +1099,12 @@
 - PortableModifierOperation 正式成员连续为 Additive=0 至 Clamp=3，PortableClampBound 连续为 Minimum=0 至 Maximum=1。两数值域同步按闭区间判断，未知 byte 继续抛出原 InvalidDataException。
 - 只删除状态恢复解码中的装箱和枚举元数据查询，不改变 modifier handle、来源效果、幅值、优先级、实时属性、插入顺序或聚合结构；该路径不计普通逐帧收益。
 - Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 GameplayEffect 状态恢复运行对比或 Player 分配采样。
+
+## 2026-09-20 黑板 OwnerToken 作用域校验
+
+对应 tasks.md 的 2.45。
+
+- Fixed／Float32 BlackboardRuntime 在运行中根据 Character、Graph、State、ActionInstance、Frame 作用域解析 owner generation，并构造 BlackboardOwnerToken 写入或对比状态。token 构造器和 IsValid 原分别执行 Enum.IsDefined。
+- ProgramScopeKind 正式成员连续为 Character=1 至 Frame=5，BlackboardOwnerToken 内部统一按闭区间判断；未知零值及其它 byte、负 compiled owner index、零 generation 继续由原异常或 IsValid=false 拒绝。
+- 删除两数值域运行黑板 owner 解析、物化和后续有效性读取中的装箱与枚举元数据查询；不改变作用域 generation、所有权比较、状态槽或黑板生命周期。
+- Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做黑板运行回放或 Player 分配采样。

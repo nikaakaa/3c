@@ -79,6 +79,8 @@
 
 - [x] 2.44 两数值域 GameplayEffect 状态恢复按每个 modifier 的 Operation／ClampBound 正式连续值域校验，删除随 modifier 数量重复的四处 Enum.IsDefined 装箱
 
+- [x] 2.45 运行黑板 OwnerToken 构造及 IsValid 按 Character 至 Frame 五种正式作用域值域校验，删除两数值域作用域解析与状态读取中的 Enum.IsDefined 装箱
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

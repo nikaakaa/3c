@@ -72,6 +72,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
                 {
                     Track track = timeline.Tracks[trackIndex];
+                    if (track.ExecutionDomain == TimelineExecutionDomain.Presentation && track.Markers.Count != 0)
+                        throw new InvalidOperationException($"Timeline '{timeline.AuthoringId}' track '{track.AuthoringId}' requires a presentation graph executor; Simulation graph resources cannot execute its Markers.");
                     for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                     {
                         if (track.Clips[clipIndex] is not MotionCurveClip motion)
@@ -1093,30 +1095,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
 
-        void InvokePresentationMarkers(TimelineRuntimePresentationFrame frame)
-        {
-            if (frame.Events.Count == 0)
-                return;
-            if (!IsAbilityRuntimePlayback(frame.Handle))
-                throw new InvalidOperationException($"Timeline Presentation Marker playback '{frame.Handle.Value}' requires an Ability runtime.");
-            IAbilityTreeClipInvoker invoker = m_ActiveTreeClipInvoker
-                ?? throw new InvalidOperationException($"Timeline Presentation Marker playback '{frame.Handle.Value}' requires an active Ability invoker.");
-            ulong actionInstanceId = RequireAbilityPlaybackActionInstanceId(frame.Handle);
-            for (int index = 0; index < frame.Events.Count; index++)
-            {
-                TimelineRuntimePresentationEvent marker = frame.Events[index];
-                var invocation = new AbilityTreeClipInvocation(
-                    marker.MarkerAuthoringId,
-                    marker.GraphId,
-                    AbilityTreeClipHook.OnEnable,
-                    marker.Cycle,
-                    actionInstanceId,
-                    checked((int)frame.Handle.Value));
-                if (!invoker.InvokeTreeClip(invocation))
-                    throw new InvalidOperationException($"Timeline Presentation Marker '{marker.MarkerAuthoringId}' invocation failed.");
-            }
-        }
-
         internal bool IsAbilityRuntimePlayback(TimelineRuntimePlaybackHandle handle)
         {
             for (int i = 0; i < m_ActivePlaybacks.Count; i++)
@@ -1893,7 +1871,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         out TimelineRuntimePresentationFrame frame);
                 if (presented)
                 {
-                    InvokePresentationMarkers(frame);
+                    if (frame.Events.Count != 0)
+                        throw new InvalidOperationException($"Timeline playback '{frame.Handle.Value}' has Presentation Markers without an installed presentation graph executor.");
                     PresentationFrameProduced?.Invoke(frame);
                     PublishTimelineVisualTime(active, frame);
                 }

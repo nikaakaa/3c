@@ -369,6 +369,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         {
                             if (marker == null)
                                 continue;
+                            if (track.ExecutionDomain != TimelineExecutionDomain.Logic)
+                                throw new InvalidOperationException($"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{marker.AuthoringId}: Presentation Marker缺少正式表现图执行合同，不能编译为Simulation operations。");
                             if (marker.Graph is not BtsmtlSkillFlowGraph child)
                                 throw new InvalidOperationException($"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{marker.AuthoringId}: Marker引用不是正式Skill图。");
                             ValidateMarkerGraph(child, $"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{marker.AuthoringId}");

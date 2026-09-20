@@ -247,3 +247,10 @@
 - Presentation Marker候选仍在原driver中生成，其正式图执行与接受／丢弃边界尚未接通；本批仅减少遍历准备开销，不能当作表现Marker业务已完成。
 - SourceTracks只被旧FindTrack消费，删除该运行查找后一并移除内容对象中的重复Track引用集合及构造参数；保留原SourceTimeline作为正式源，不新增影子图或备用查找。
 - 编译重载完成1789882677095，错误控制台0条；正式内容发现覆盖18个Timeline，现有1个Marker的图身份／版本与timeline.tree依赖一致、排序检查errors=[]。当前实际内容只有1个Marker，该证据不覆盖多Marker跨循环端到端，未新增测试。
+
+## 表现Marker错误执行路径清理
+
+- 已确认Skill图只通过Simulation编译器生成operations，角色依赖安装也只读取Simulation SourceMap；原InvokePresentationMarkers借用仅在逻辑tick作用域有效的m_ActiveTreeClipInvoker，不能构成正式表现图执行。
+- Simulation图编译入口明确拒绝Presentation Marker，诊断包含调用路径、Timeline和Marker身份，禁止将表现触发图混入Simulation operations。角色内容安装遇到Presentation Marker明确报告缺少表现图executor，不接受逻辑图资源代替该能力。
+- 删除表现帧构造AbilityTreeClipInvocation并调用逻辑invoker的实现；若收到未安装executor的Marker事件，保留明确失败，不静默丢事件或调用Simulation逻辑。
+- 这完成错误归属的拒绝和旧路径删除，不代表6.1–6.4已全部完成。正式表现节点能力、只读上下文、typed输出与帧候选事务仍需实现；第6节保持未完成。

@@ -379,17 +379,14 @@ namespace BTSMTL.Timeline.Runtime
             CursorTime = playback.CursorTime;
             Cycle = playback.Cycle;
             SectionId = playback.SectionId;
-            ActiveClipIds = new ReadOnlyCollection<string>(
-                new List<string>(playback.ActiveClipIds));
+            ActiveClipIds = Copy(playback.ActiveClipIds);
             HasStopContext = playback.HasStopContext;
             StopContext = playback.StopContext;
             InitialBoundaryPending = playback.InitialBoundaryPending;
             TimeCarry = playback.TimeCarry;
             Control = playback.Control;
-            TreeDecisionExits = new ReadOnlyCollection<string>(
-                new List<string>(playback.ExitedTreeDecisionClips));
-            PendingTreeDecisionExits = new ReadOnlyCollection<string>(
-                new List<string>(playback.PendingTreeDecisionClips));
+            TreeDecisionExits = Copy(playback.ExitedTreeDecisionClips);
+            PendingTreeDecisionExits = Copy(playback.PendingTreeDecisionClips);
         }
 
         public TimelineRuntimePlaybackSnapshot(
@@ -427,14 +424,14 @@ namespace BTSMTL.Timeline.Runtime
             CursorTime = cursorTime;
             Cycle = cycle;
             SectionId = sectionId ?? string.Empty;
-            ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
+            ActiveClipIds = Copy(activeClipIds);
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             InitialBoundaryPending = initialBoundaryPending;
             TimeCarry = timeCarry;
             Control = control;
-            TreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(treeDecisionExits ?? Array.Empty<string>()));
-            PendingTreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(pendingTreeDecisionExits ?? Array.Empty<string>()));
+            TreeDecisionExits = Copy(treeDecisionExits);
+            PendingTreeDecisionExits = Copy(pendingTreeDecisionExits);
         }
 
         public string Schema { get; }
@@ -458,6 +455,16 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<string> TreeDecisionExits { get; }
         public IReadOnlyList<string> PendingTreeDecisionExits { get; }
         public int TickRate { get; }
+
+        static IReadOnlyList<string> Copy(IReadOnlyList<string> values)
+        {
+            if (values == null || values.Count == 0)
+                return Array.Empty<string>();
+            var result = new string[values.Count];
+            for (int index = 0; index < result.Length; index++)
+                result[index] = values[index];
+            return Array.AsReadOnly(result);
+        }
     }
 
     public sealed class TimelineRuntimeRestoreCandidate

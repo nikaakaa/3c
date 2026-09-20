@@ -788,8 +788,8 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(pendingTreeDecisionExits));
             TimeCarry = timeCarry;
             Control = control;
-            TreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(treeDecisionExits ?? Array.Empty<string>()));
-            PendingTreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(pendingTreeDecisionExits ?? Array.Empty<string>()));
+            TreeDecisionExits = Copy(treeDecisionExits, false);
+            PendingTreeDecisionExits = Copy(pendingTreeDecisionExits, false);
             SectionId = sectionId ?? string.Empty;
             ActiveClipIds = Copy(activeClipIds);
             if (activeTreeClips == null)
@@ -865,12 +865,14 @@ namespace ThirdPersonSimulation
         public ulong InputSequence { get; }
         public SimulationTick StartTick { get; }
 
-        static IReadOnlyList<string> Copy(IReadOnlyList<string> values)
+        static IReadOnlyList<string> Copy(IReadOnlyList<string> values, bool normalizeNull = true)
         {
-            var result = values == null ? new List<string>() : new List<string>(values);
-            for (int i = 0; i < result.Count; i++)
-                result[i] = result[i] ?? string.Empty;
-            return result.AsReadOnly();
+            if (values == null || values.Count == 0)
+                return Array.Empty<string>();
+            var result = new string[values.Count];
+            for (int index = 0; index < result.Length; index++)
+                result[index] = normalizeNull ? values[index] ?? string.Empty : values[index];
+            return Array.AsReadOnly(result);
         }
     }
     public enum AbilityTreeClipHook : byte

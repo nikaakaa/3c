@@ -1727,3 +1727,12 @@
 - EventGraphValue.As<T> 在确认 T 与存储 Kind 对应后，原实现仍把 bool、int、float、Vector2、Vector3、Quaternion 值转成 object 再强制转回 T；角色动画变量适配器的 float／int／bool typed 读取会经过该入口。
 - 六种固定值类型现通过项目已有 System.Runtime.CompilerServices.Unsafe 引用直接重解释为已验证的 T，不生成 object。类型和 Kind 条件、错误分支以及值布局不变；ToObject 明确要求 object 的 API 和通用 Enum.ToObject 路径仍保留原装箱语义。
 - BTSMTL.EventGraphs 全依赖构建通过，仅保留 Unity Test Framework 两条既有未赋值字段警告，零错误；构建服务关闭成功。首次构建前检测到共享 Unity Bee 编译并等待其退出。未新增测试、未操作共享 Unity、未做 EventGraph 运行采样。
+
+## 2026-09-21 角色状态剩余枚举恢复去反射
+
+对应 tasks.md 的 2.86。
+
+- Fixed／Float32 Character runtime state codec 的泛型 ReadEnum 只剩四类调用：AbilityTimelineSnapshotMode、AbilityTimelineSnapshotState、AbilityTimelineSnapshotStopCause 与 ProgramScopeKind。每次恢复仍经 Enum.ToObject、Enum.IsDefined 和 object 强转完成。
+- 四类枚举均有稳定连续正式值域：Once 至 Loop、Prepared 至 Disposed、None 至 Shutdown、Character 至 Frame。两域改为各自具体读取函数，直接校验 byte 上下界并强类型转换；非法值仍抛带数值和枚举名的 InvalidDataException。
+- 删除两域角色状态恢复文件最后一条泛型枚举反射和装箱拆箱路径，不改变快照字段宽度、读取顺序、默认黑板 OwnerToken 表示或 Timeline 恢复语义。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做状态恢复运行对比或 Player 分配采样。

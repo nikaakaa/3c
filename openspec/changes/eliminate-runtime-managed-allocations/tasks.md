@@ -144,6 +144,8 @@
 
 - [x] 2.85 EventGraphValue typed 读取按已验证具体值类型直接重解释返回，删除 bool／int／float／Vector2／Vector3／Quaternion 的 object 装箱拆箱桥接；显式 ToObject 与枚举 object 边界保持
 
+- [x] 2.86 两数值域角色状态恢复按 Timeline 模式、状态、停止原因和黑板作用域的正式连续值域直接解码，删除最后一条泛型 Enum.ToObject／IsDefined 反射与装箱路径
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

@@ -247,9 +247,9 @@ namespace ThirdPersonSimulation
             string ownerIdentity = reader.ReadString();
             string callIdentity = reader.ReadString();
             ulong executionInstanceId = reader.ReadUInt64();
-            AbilityTimelineSnapshotMode playbackMode = ReadEnum<AbilityTimelineSnapshotMode>(reader.ReadByte());
+            AbilityTimelineSnapshotMode playbackMode = ReadTimelineSnapshotMode(reader.ReadByte());
             string contentRevision = reader.ReadString();
-            AbilityTimelineSnapshotState state = ReadEnum<AbilityTimelineSnapshotState>(reader.ReadByte());
+            AbilityTimelineSnapshotState state = ReadTimelineSnapshotState(reader.ReadByte());
             FixedScalar cursorTime = FixedScalar.FromRaw(reader.ReadInt64());
             int cycle = reader.ReadInt32();
             int timeCarry = reader.ReadInt32();
@@ -272,7 +272,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < treeClipCount; i++)
                 treeClips[i] = new AbilityTimelineTreeClipState(reader.ReadString(), reader.ReadString(), reader.ReadInt32());
             bool hasStopContext = reader.ReadBoolean();
-            AbilityTimelineSnapshotStopCause stopCause = ReadEnum<AbilityTimelineSnapshotStopCause>(reader.ReadByte());
+            AbilityTimelineSnapshotStopCause stopCause = ReadTimelineSnapshotStopCause(reader.ReadByte());
             ulong stopLocalLogicTick = reader.ReadUInt64();
             bool initialBoundaryPending = reader.ReadBoolean();
             string timelineId = reader.ReadString();
@@ -744,7 +744,7 @@ namespace ThirdPersonSimulation
             if (scope == 0 && owner == -1 && generation == 0)
                 return default;
             return new BlackboardOwnerToken(
-                ReadEnum<ProgramScopeKind>(scope),
+                ReadProgramScopeKind(scope),
                 owner,
                 generation);
         }
@@ -961,12 +961,32 @@ namespace ThirdPersonSimulation
             return result;
         }
 
-        static T ReadEnum<T>(byte value) where T : struct
+        static AbilityTimelineSnapshotMode ReadTimelineSnapshotMode(byte value)
         {
-            object candidate = Enum.ToObject(typeof(T), value);
-            if (!Enum.IsDefined(typeof(T), candidate))
-                throw new InvalidDataException($"Float32 Character runtime state enum '{typeof(T).Name}' value '{value}' is invalid.");
-            return (T)candidate;
+            if (value > (byte)AbilityTimelineSnapshotMode.Loop)
+                throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(AbilityTimelineSnapshotMode)}' value '{value}' is invalid.");
+            return (AbilityTimelineSnapshotMode)value;
+        }
+
+        static AbilityTimelineSnapshotState ReadTimelineSnapshotState(byte value)
+        {
+            if (value > (byte)AbilityTimelineSnapshotState.Disposed)
+                throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(AbilityTimelineSnapshotState)}' value '{value}' is invalid.");
+            return (AbilityTimelineSnapshotState)value;
+        }
+
+        static AbilityTimelineSnapshotStopCause ReadTimelineSnapshotStopCause(byte value)
+        {
+            if (value > (byte)AbilityTimelineSnapshotStopCause.Shutdown)
+                throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(AbilityTimelineSnapshotStopCause)}' value '{value}' is invalid.");
+            return (AbilityTimelineSnapshotStopCause)value;
+        }
+
+        static ProgramScopeKind ReadProgramScopeKind(byte value)
+        {
+            if (value < (byte)ProgramScopeKind.Character || value > (byte)ProgramScopeKind.Frame)
+                throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(ProgramScopeKind)}' value '{value}' is invalid.");
+            return (ProgramScopeKind)value;
         }
 
     }

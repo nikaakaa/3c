@@ -458,6 +458,15 @@
 - 工作列表仍在 finally 清空，未将列表借给长期状态，也未调整 scratch 创建、事务保存或跨步寿命。没有 scratch 的原调用仍创建临时 List，IEnumerable 遍历和 NormalizeTag 等成本也保留；本步只消除内容相同的结果数组。
 - 两个状态文件编辑前均无其它未提交修改；相邻 AbilityExecutionFrame／OperationControlRuntime 有并行修改，未触碰。编辑前未发现 csc／bee 编译进程。Fixed 与 Float32 portable 各自编译零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过；未新增测试、未刷新或控制共享 Unity、未做 Player 分配采样。
 
+## 2026-09-20 动作标签来源键数字中转清理
+
+对应 tasks.md 的 2.11，与代码同步提交。
+
+- 两数值域 GameplayEffectTarget 的 SetActionTags／RemoveActionTags 都调用公共 GameplayTagSourceIdentity.ActionInstance。原先 ulong.ToString(InvariantCulture) 创建数字字符串，再拼接 action: 创建最终键；现把前缀和十进制数字写入栈缓冲，最后只创建结果字符串。
+- 容量由 action: 的 7 字符与 ulong 十进制最大 20 位确定，覆盖全部非零 ulong；仍使用 InvariantCulture、默认十进制格式和原零值异常。没有添加键缓存、改变来源标识、标签存储、动作生命周期或事务边界；最终键字符串仍分配。
+- 标签 Normalize 对已规范化输入直接返回原字符串，本轮未修改该正确路径。动手前检测到 Unity 编译进程，等待具体 bee／csc 进程结束并重新确认无编译进程后才编辑。
+- portable Core 编译零警告零错误，按规定构建后 shutdown 成功；当前 Unity 引用下完整 Core 独立编译也通过，确认 ulong.TryFormat 与 Span 字符串构造可用。diff 空白检查通过，未新增测试、未刷新或控制共享 Unity、未做运行身份对比或 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

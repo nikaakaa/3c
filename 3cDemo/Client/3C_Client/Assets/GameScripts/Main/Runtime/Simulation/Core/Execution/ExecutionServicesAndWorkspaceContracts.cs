@@ -308,7 +308,11 @@ namespace ThirdPersonSimulation
         {
             if (actionInstanceId == 0)
                 throw new ArgumentOutOfRangeException(nameof(actionInstanceId));
-            return $"action:{actionInstanceId.ToString(CultureInfo.InvariantCulture)}";
+            const string prefix = "action:";
+            Span<char> characters = stackalloc char[prefix.Length + 20];
+            prefix.AsSpan().CopyTo(characters);
+            actionInstanceId.TryFormat(characters.Slice(prefix.Length), out int written, provider: CultureInfo.InvariantCulture);
+            return new string(characters.Slice(0, prefix.Length + written));
         }
     }
 

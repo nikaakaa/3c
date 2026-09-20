@@ -116,7 +116,9 @@ namespace ThirdPersonSimulation
             Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             Plan = plan ?? throw new ArgumentNullException(nameof(plan));
             Passes = passes ?? throw new ArgumentNullException(nameof(passes));
-            StateParticipants = stateParticipants ?? throw new ArgumentNullException(nameof(stateParticipants));
+            StateParticipants = SimulationPipelineStateSnapshotCoordinator.CreateParticipantSet(
+                Plan,
+                stateParticipants ?? throw new ArgumentNullException(nameof(stateParticipants)));
             ReconstructiblePasses = reconstructiblePasses ?? throw new ArgumentNullException(nameof(reconstructiblePasses));
         }
 

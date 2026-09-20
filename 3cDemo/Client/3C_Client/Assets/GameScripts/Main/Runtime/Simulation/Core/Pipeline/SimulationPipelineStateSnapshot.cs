@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -159,6 +160,25 @@ namespace ThirdPersonSimulation
         ISimulationPipelinePassStateCheckpoint CaptureCheckpoint();
         SimulationPipelinePassStateSnapshot CaptureState();
         ISimulationPipelinePassRestoreTransaction PrepareRestore(SimulationPipelinePassStateSnapshot snapshot);
+    }
+
+    internal sealed class SimulationPipelineStateParticipantSet : IReadOnlyList<ISimulationPipelineStateParticipant>
+    {
+        public SimulationPipelineStateParticipantSet(
+            CompiledSimulationPipelinePlan plan,
+            ISimulationPipelineStateParticipant[] values)
+        {
+            Plan = plan ?? throw new ArgumentNullException(nameof(plan));
+            Values = values ?? throw new ArgumentNullException(nameof(values));
+        }
+
+        public CompiledSimulationPipelinePlan Plan { get; }
+        internal ISimulationPipelineStateParticipant[] Values { get; }
+        public int Count => Values.Length;
+        public ISimulationPipelineStateParticipant this[int index] => Values[index];
+        public IEnumerator<ISimulationPipelineStateParticipant> GetEnumerator() =>
+            ((IEnumerable<ISimulationPipelineStateParticipant>)Values).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => Values.GetEnumerator();
     }
 
     public enum SimulationPipelineStepProjectionMode : byte
@@ -463,6 +483,17 @@ namespace ThirdPersonSimulation
 
     public static class SimulationPipelineStateSnapshotCoordinator
     {
+        internal static IReadOnlyList<ISimulationPipelineStateParticipant> CreateParticipantSet(
+            CompiledSimulationPipelinePlan plan,
+            IReadOnlyList<ISimulationPipelineStateParticipant> participants)
+        {
+            if (plan == null)
+                throw new ArgumentNullException(nameof(plan));
+            return new SimulationPipelineStateParticipantSet(
+                plan,
+                ValidateParticipantSet(plan, participants));
+        }
+
         public static SimulationPipelineStateCheckpointSet CaptureCheckpoints(
             CompiledSimulationPipelinePlan plan,
             IReadOnlyList<ISimulationPipelineStateParticipant> participants)
@@ -592,6 +623,12 @@ namespace ThirdPersonSimulation
             CompiledSimulationPipelinePlan plan,
             IReadOnlyList<ISimulationPipelineStateParticipant> participants)
         {
+            if (participants is SimulationPipelineStateParticipantSet participantSet)
+            {
+                if (!ReferenceEquals(participantSet.Plan, plan))
+                    throw Failure("pipeline_state_participant_plan_mismatch", default, "Runtime Pipeline state participant set belongs to another compiled plan.");
+                return participantSet.Values;
+            }
             int expectedCount = 0;
             for (int i = 0; i < plan.Passes.Count; i++)
             {

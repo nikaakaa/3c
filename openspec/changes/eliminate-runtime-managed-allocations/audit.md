@@ -1603,3 +1603,12 @@
 - 捕获现按已验证 participant 数创建精确接口数组并按索引写入，成功时直接交给 CheckpointSet；异常时以已接纳数量为界逆序 Dispose，保持原失败清理顺序和边界。空 participant 集合复用 Array.Empty。
 - 删除每个外层事务 checkpoint 捕获的 List 与 ReadOnlyCollection 两个对象，以一份精确数组替代原 List 底层存储。每个 pass checkpoint 和 CheckpointSet 对象仍按事务生命周期存在。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 checkpoint 恢复运行对比或 Player 分配采样。
+
+## 2026-09-21 Pipeline 已验证 participant set
+
+对应 tasks.md 的 2.83，收口 2.81 中每次仍创建两份校验数组的状态。
+
+- Fixed／Float32 backend 按 compiled pass 顺序组装的 stateParticipants 在 PipelineTransactionRuntimeServices 生命周期内不会增删；plan、runtime 实例及各 participant 的 StateIdentity 均在激活后锁定。此前每个事务 checkpoint 和每个状态捕获仍重新复制、排序并比对 plan。
+- Services 构造时通过原 ValidateParticipantSet 创建一次不可变 SimulationPipelineStateParticipantSet，内部保存 plan 引用和已按 PassId 排序、完整校验的数组。后续 Coordinator 遇到该正式 set 时要求同一 compiled plan 并直接返回内部数组；跨 plan 误用新增明确完整性错误。
+- 事务期 checkpoint、完整 snapshot、step 投影和 restore 不再创建运行 participant 与期望 participant 两份数组，也不重复扫描 plan schema。Backend 初始 restore／capture 仍传原始列表并走完整校验，Services 组装本身也执行一次完整校验。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做事务运行对比或 Player 分配采样。

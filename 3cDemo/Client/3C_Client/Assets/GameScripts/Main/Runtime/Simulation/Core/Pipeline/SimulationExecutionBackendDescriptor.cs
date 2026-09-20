@@ -142,7 +142,7 @@ namespace ThirdPersonSimulation
             values[0] = "simulation-execution-backend/1";
             values[1] = BackendId;
             values[2] = SemanticVersion;
-            values[3] = Convert.ToUInt64(Capabilities, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture);
+            values[3] = checked((ulong)Capabilities).ToString(CultureInfo.InvariantCulture);
             for (int i = 0; i < m_Targets.Count; i++)
             {
                 SimulationExecutionBackendTargetSupport target = m_Targets[i];

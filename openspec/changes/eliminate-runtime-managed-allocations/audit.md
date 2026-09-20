@@ -659,3 +659,11 @@
 - 三处删除枚举参数装箱及反射校验，保留短路次序、房间和产品身份条件、异常文本、公开合同、序列化和哈希内容。不存在新增存储、缓存或容量配置，进程角色等其它枚举校验未纳入此次完成范围。
 - 编辑前两个目标文件无其它未提交修改，未发现 csc／bee 编译进程。Core portable 编译零警告零错误，build-server shutdown 成功，本切片 diff 空白检查通过。未新增测试、未控制或刷新共享 Unity、未做 Player 采样。
 - 同轮复查上一切片 Float32 编译，仍在并行 Float32GraphValueRuntime.cs 第 270 行起失败（37 个语法错误），构建服务已清理，未修改该现场。2.21 的 Float32 编译证据仍待补齐，不阻止本次独立 Core 源码改动。
+## 2026-09-20 描述及身份哈希枚举格式化清理
+
+对应 tasks.md 的 5.43。
+
+- 全部公共 Core 源码的十处 Convert.ToUInt64(enum, CultureInfo.InvariantCulture) 均用于哈希输入字符串，分别位于会话组合描述、Pipeline 描述、执行后端描述、权威产品描述以及 Pipeline／世界兼容身份。改为 checked((ulong)value).ToString(CultureInfo.InvariantCulture)，删除 Convert 的 object 参数装箱，沿用现有最终字符串及 StableHash 链。
+- WorldCapability 底层为 ulong，后端 Capability 为 ushort，WorldFeature 底层为 int。保留 checked 转换，使 WorldFeature 非法负值仍以 OverflowException 拒绝，而不是转换成大的正数改变哈希；不承诺框架生成的异常文本逐字相同。合法值及组合标记的十进制输入不变，没有替换为枚举名称。
+- 权威 Pipeline 身份由 SessionConfigurationDefinition 构造，世界身份由端点构造／解析入口产生；其余为描述准备入口。本轮清理的是这些构造的重复装箱，未证明逐帧频率，不计为稳态逐帧收益。最终数字字符串、哈希拼接及描述对象仍分配，未改变身份协议或增加缓存。
+- 五个目标文件修改前均无其它未提交修改，修改前未发现 csc／bee 编译进程。Core portable 编译零警告零错误，build-server shutdown 成功，修改范围 diff 空白检查通过；未新增测试、未操作共享 Unity、未做哈希运行对比或 Player 分配采样。

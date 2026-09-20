@@ -38,8 +38,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ManifestSchemaVersion.ToString(CultureInfo.InvariantCulture),
                 AuthoritySolverId.Value,
                 AuthoritySolverVersion,
-                Convert.ToUInt64(AuthoritySolverCapabilities, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
-                Convert.ToUInt64(AuthoritySolverFeatures, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture));
+                checked((ulong)AuthoritySolverCapabilities).ToString(CultureInfo.InvariantCulture),
+                checked((ulong)AuthoritySolverFeatures).ToString(CultureInfo.InvariantCulture));
         }
 
         public HostProductId ProductId { get; }

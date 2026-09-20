@@ -288,7 +288,7 @@ namespace ThirdPersonSimulation
                 TargetAbiVersion.ToString(),
                 BackendId,
                 BackendSemanticVersion,
-                Convert.ToUInt64(RequiredSolverCapabilities, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
+                checked((ulong)RequiredSolverCapabilities).ToString(CultureInfo.InvariantCulture),
                 ((int)ExecutionSupport).ToString(CultureInfo.InvariantCulture),
                 ((int)StateClass).ToString(CultureInfo.InvariantCulture),
                 StateOwner

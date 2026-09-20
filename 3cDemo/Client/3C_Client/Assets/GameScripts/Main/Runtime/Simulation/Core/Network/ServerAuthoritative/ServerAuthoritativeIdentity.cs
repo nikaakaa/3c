@@ -241,8 +241,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 predictionPipeline.ToString(),
                 authorityPipeline.ToString(),
                 backend.ToString(),
-                Convert.ToUInt64(predictionSolverRequiredCapabilities, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
-                Convert.ToUInt64(authoritySolverRequiredCapabilities, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture));
+                checked((ulong)predictionSolverRequiredCapabilities).ToString(CultureInfo.InvariantCulture),
+                checked((ulong)authoritySolverRequiredCapabilities).ToString(CultureInfo.InvariantCulture));
         }
 
         public GameplayContentHash GameplayContentHash { get; }
@@ -291,8 +291,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 "server-authoritative-world-identity/1",
                 solverId.Value,
                 SolverVersion,
-                Convert.ToUInt64(solverCapabilities, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
-                Convert.ToUInt64(solverFeatures, CultureInfo.InvariantCulture).ToString(CultureInfo.InvariantCulture),
+                checked((ulong)solverCapabilities).ToString(CultureInfo.InvariantCulture),
+                checked((ulong)solverFeatures).ToString(CultureInfo.InvariantCulture),
                 worldId.Value,
                 MapId,
                 worldRevision.Value,

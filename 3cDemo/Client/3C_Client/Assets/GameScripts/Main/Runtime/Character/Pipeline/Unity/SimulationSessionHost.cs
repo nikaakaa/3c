@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline
             new SortedDictionary<ulong, SimulationSessionCheckpoint>();
         const int MaxCheckpointCount = 32;
         const ulong CheckpointInterval = 30;
+        readonly List<ulong> m_CheckpointRemovalBuffer = new List<ulong>(MaxCheckpointCount);
         ISimulationSessionCompositionPreparation m_Preparation;
         SimulationSessionLaunchPlan m_LaunchPlan;
         ISimulationSessionRuntimeHandle m_Runtime;
@@ -699,8 +700,13 @@ namespace ThirdPersonCharacter.Pipeline
 
         void CommitRestoreBranch(SimulationSessionCheckpoint checkpoint)
         {
-            foreach (ulong futureTick in m_Checkpoints.Keys.Where(value => value > checkpoint.Tick.Value).ToArray())
-                m_Checkpoints.Remove(futureTick);
+            m_CheckpointRemovalBuffer.Clear();
+            foreach (ulong futureTick in m_Checkpoints.Keys)
+                if (futureTick > checkpoint.Tick.Value)
+                    m_CheckpointRemovalBuffer.Add(futureTick);
+            for (int i = 0; i < m_CheckpointRemovalBuffer.Count; i++)
+                m_Checkpoints.Remove(m_CheckpointRemovalBuffer[i]);
+            m_CheckpointRemovalBuffer.Clear();
             m_ParentExecutionBranchId = m_ExecutionBranchId;
             m_ExecutionBranchId = Guid.NewGuid();
             m_ExecutionBranchBaseTick = checkpoint.Tick.Value;

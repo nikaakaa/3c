@@ -1752,3 +1752,11 @@
 - ActionPresentationTimeSnapshot 构造结束会读取 IsValid；该属性原先分别对 LifecyclePhase 与由构造器派生的 ProjectionKind 调用 Enum.IsDefined。时间诊断采集生成快照时因此执行两次枚举装箱查询。
 - 可发布生命周期正式集合正好是连续的 Selected、Retained、RetirementPermitted；PendingFirstSample 与 Retired 原本也会被后续条件排除。投影类型则连续为 LatestCommitted 至 BoundedExtrapolation。IsValid 改为两组直接上下界判断，合法集合完全不变。
 - ThirdPersonClient.Runtime 全依赖构建通过，保留 Unity 包、第三方包、启动视图和既有 Runtime 字段共三十四条警告，零错误；构建服务关闭成功。未新增测试、未操作共享 Unity、未做时间诊断运行采样。
+
+## 2026-09-21 Session checkpoint 回滚清理缓冲
+
+对应 tasks.md 的 5.64。
+
+- SimulationSessionHost 提交 restore 分支时需要从 SortedDictionary 删除 checkpoint.Tick 之后的条目；原实现通过 Keys.Where 后 ToArray 物化待删 tick，产生 LINQ 迭代器和结果数组，才能避开枚举期间修改字典。
+- Host 现按正式 MaxCheckpointCount=32 在生命周期内持有 ulong 清理列表。提交 restore 分支先枚举并收集未来 tick，再按下标删除并清空缓冲；排序字典、删除集合、分支身份和 Actor 重绑定顺序不变。
+- 回滚提交后的重复清理不再创建迭代器和数组；Host 构造时的一次列表及其定长容量保留。ThirdPersonClient.Runtime 无依赖重编通过，仅保留 CharacterInputValueNodes 一条既有未使用字段警告，零错误；构建服务关闭成功。未新增测试、未操作共享 Unity、未做回滚运行对比或 Player 分配采样。

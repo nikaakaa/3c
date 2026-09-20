@@ -284,6 +284,8 @@
 
 - [x] 5.63 两数值域 SimulationWorldSnapshotFactory 按可计数 Actor 状态输入直接复制到排序工作数组，删除每次快照捕获的 List 对象；工作数组继续隔离可复用 step workspace 并维持任意输入顺序兼容
 
+- [x] 5.64 Session Host 回滚分支提交复用按正式 32 条 checkpoint 上限准备的 tick 清理缓冲，删除未来 checkpoint 清理的 Where 迭代器与 ToArray；删除期间不直接修改枚举中的字典
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

@@ -286,6 +286,7 @@ namespace BTSMTL.Timeline.Runtime
             m_TreeClipService.Commit(context);
             m_EvaluationSink.Commit(context);
             m_ConsumedTreeClipCounts.Remove(context.Playback.Handle.Value);
+            m_ConsumedMarkerCounts.Remove(context.Playback.Handle.Value);
         }
 
         public void Discard(TimelineRuntimeStepContext context)

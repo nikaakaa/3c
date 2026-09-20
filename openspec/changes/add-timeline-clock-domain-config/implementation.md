@@ -525,3 +525,10 @@
 - 时序沿正式操作顺序：Timeline读取倍率／暂停输入前已施加的控制可用于本次推进；在该Timeline求值内部回调才施加的控制影响后续推进，不倒改已经求值的区间。效果到期仍由逻辑tick驱动，暂停动作位置不冻结到期。
 - 尚需继续闭合作者调用与多来源业务配置、TreeClip退出记账丢弃边界，以及完整0 GC；本批接口接通不等于整个5.6完成。
 - 脚本编译和最终域重载完成（1789924550476）；正式菜单Tools/3C/Internal/Republish Corin Ability Data执行后控制台错误为零。已核对当前8份Fixed／Float32能力产物没有GameplayEffectAppliedHandle状态槽，说明现有Corin内容没有覆盖新增Apply节点端口；本次仅证明代码和现有内容重建通过，不宣称新句柄用法已端到端验收。派生资产及编辑器随保存产生的其他变化留在工作区，不混入本批提交；未新增测试。
+
+## TreeClip候选退出不再修改已提交活动登记
+- 对应7.3／7.4：原服务在Consume阶段直接删除Exit片段，而Discard只撤销Enter，导致被丢弃的退出仍永久丢失OnDestroy清理对象。现将Enter／Exit活动登记统一推迟到Commit；Consume只执行正式图回调，Discard不再改已提交登记。图中逻辑写入仍由原Simulation候选／快照链处理。
+- 同帧Update先检查本次请求序列里同Clip／cycle的最后一个Enter／Exit，再读取已提交活动登记，保持新进入可Update、同帧已退出不可Update的规则，不新增候选活动表或状态备份。停止只遍历已提交活动片段。
+- ActiveTreeClip改为值类型，删除逐次实例对象及RemoveAll捕获闭包；运行中的空列表保留复用，正常完成或正式停止后释放注册。空活动列表停止无需invoker。Step Commit同时移除Marker消费计数，避免已结束播放残留记账。
+- 本批关闭候选丢弃边界；完整逻辑Restore后的活动登记同步仍需继续核对，首次注册分配及循环TreeDecision长期活动实例容量也未据此宣称0 GC。未新增测试。
+- Unity编译与最终域重载完成（1789925037599），Editor idle，控制台错误为零；git diff --check通过，未新增测试，未进行候选失败注入或运行分配采样。

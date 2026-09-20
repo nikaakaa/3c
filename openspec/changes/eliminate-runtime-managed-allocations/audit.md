@@ -1234,3 +1234,12 @@
 - 克隆图通过正式 Validator 后、Evaluator 初始化前，Runtime 现一次建立 NodeId、PortId、Direction 到 CharacterPosePortDefinition 的映射；BindGraphInput 与 ReadInputValue 继续执行原方向、类型及 typed read 校验，但 FindPort 只做值键字典查询。
 - 缓存覆盖克隆图当时的静态和动态端口，并在 Runtime Dispose 时清空；图 revision 生命周期内不支持原地改端口，变更仍通过正式实例重建生效。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Subgraph／SpaceConversion 运行采样或 Player 分配采样。
+
+## 2026-09-21 Blend Stack push 目标端校验
+
+对应 tasks.md 的 4.2.15。
+
+- AnimationBlendPushRequest 在 Blend Stack 接受 Timeline／Provider 新来源时构造；目标端业务只允许 SourceOwner 或 SourcePose，原校验先排除 NoPose，再调用 Enum.IsDefined。
+- 构造器现直接匹配两个允许值，零值、NoPose 及其它 byte 继续进入原 ArgumentException；source id、owner index、transition target、request sequence 和 hard cut 约束不变。
+- 该入口按来源切换触发，不计普通无切换帧收益，只删除实际运行 push 时的一次枚举装箱和元数据查询。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Blend Stack 来源切换回放或 Player 分配采样。

@@ -210,8 +210,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             bool executeAsHardCut)
         {
             if (!poseNodeId.IsValid || presentationRequestSequence == 0 ||
-                targetEndpointKind == AnimationBlendTransitionEndpointKind.NoPose ||
-                !Enum.IsDefined(typeof(AnimationBlendTransitionEndpointKind), targetEndpointKind) ||
+                targetEndpointKind != AnimationBlendTransitionEndpointKind.SourceOwner &&
+                targetEndpointKind != AnimationBlendTransitionEndpointKind.SourcePose ||
                 (targetEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner) != sourceId.IsValid ||
                 (targetEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner) != (sourceOwnerIndex >= 0) ||
                 transition == null || transition.TargetEndpointKind != targetEndpointKind ||

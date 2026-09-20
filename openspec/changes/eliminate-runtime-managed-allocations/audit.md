@@ -1923,3 +1923,12 @@
 - InputSource 现跨 tick 持有一只 arrival 工作列表，Read 开始时清空、两次 drain 共用，返回时只生成 ingress batch 必须独立持有的最终数组，并在 finally 清除所有帧引用。列表容量随实际观测峰值增长并保留，不按 HistoryLengthTicks 与 MaximumQueuedBundles 的理论总容量预分配大块常驻存储。
 - 删除每次 Read 的 List 对象及稳定容量后的工作缓冲数组分配；首次增长和更高突发峰值仍可能扩容，最终 arrival 数组仍按 batch 寿命存在。canonical arrival 已直接填最终数组，不受本步影响。
 - 首次验证前检测到共享 Unity Bee 正在编译并等待其退出；随后 ThirdPersonSimulation.DeterministicRollback.Endpoint portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Endpoint 到达突发或 Player 分配采样。
+
+## 2026-09-21 Rollback solver payload 直接哈希
+
+对应 tasks.md 的 5.81。
+
+- RollbackHashEgressPass 每个 hash tick 解码 WorldSimulationState 后，只需计算 solver payload 的 SHA-256；原调用先对状态内部 ReadOnlyMemory<byte> 执行 ToArray，再把新数组交给 SimulationCanonicalPayloadHash。
+- SimulationCanonicalPayloadHash 新增 ReadOnlySpan<byte> 正式入口，原 byte[] 入口继续做 null 校验后委托给 span 实现。hash egress 直接传 SolverStatePayload.Span，摘要算法、十六进制格式和 KccHash 字段不变。
+- 删除每个 rollback hash tick 一份与 solver payload 等长的 byte[] 复制。SHA256 实例、最终哈希字符串和 world state 解码自身成本仍保留，本步不宣称整条 hash egress 无分配。
+- ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 hash cadence 或 Player 分配采样。

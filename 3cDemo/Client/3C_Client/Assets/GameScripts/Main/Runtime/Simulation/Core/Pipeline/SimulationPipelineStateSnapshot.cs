@@ -13,14 +13,14 @@ namespace ThirdPersonSimulation
         {
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
-            return Compute(new ArraySegment<byte>(payload));
+            return Compute(payload.AsSpan());
         }
 
-        internal static StableHash Compute(ArraySegment<byte> payload)
+        public static StableHash Compute(ReadOnlySpan<byte> payload)
         {
             using SHA256 sha = SHA256.Create();
             Span<byte> hash = stackalloc byte[32];
-            if (!sha.TryComputeHash(payload.AsSpan(), hash, out int written) || written != hash.Length)
+            if (!sha.TryComputeHash(payload, hash, out int written) || written != hash.Length)
                 throw new CryptographicException("SHA-256 did not produce a complete digest.");
             Span<char> characters = stackalloc char[64];
             const string hex = "0123456789abcdef";

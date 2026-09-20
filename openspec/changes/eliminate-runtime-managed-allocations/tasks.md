@@ -324,6 +324,8 @@
 
 - [x] 5.80 Rollback Endpoint 跨 tick 复用 relayed explicit arrival 工作列表并在 finally 清空引用，只为 ingress batch 生成最终独立数组，删除每次 Read 的 List 本体并保留观测峰值容量；不按整个历史窗口预分配大存储
 
+- [x] 5.81 canonical payload hash 增加 ReadOnlySpan 入口，Rollback hash egress 直接读取 world solver payload span，删除每个 hash tick 为 KCC hash 创建的完整 payload 数组副本
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

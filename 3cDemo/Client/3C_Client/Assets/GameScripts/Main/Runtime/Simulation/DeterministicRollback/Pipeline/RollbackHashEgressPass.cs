@@ -104,7 +104,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             SimulationWorldSnapshot world = snapshot.World;
             WorldSimulationState worldState = world.DecodeWorldState();
             StableHash kccHash = SimulationCanonicalPayloadHash.Compute(
-                worldState.SolverStatePayload.ToArray());
+                worldState.SolverStatePayload.Span);
             var actors = new RollbackActorHash[world.Actors.Count];
             for (int i = 0; i < actors.Length; i++)
             {

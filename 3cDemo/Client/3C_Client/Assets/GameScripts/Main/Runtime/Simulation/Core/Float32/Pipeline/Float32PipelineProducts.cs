@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation
 
     public sealed class Float32CanonicalInputBatch
     {
-        readonly ReadOnlyCollection<SimulationPipelineActorInput<Float32StepInput>> m_Inputs;
+        readonly IReadOnlyList<SimulationPipelineActorInput<Float32StepInput>> m_Inputs;
 
         public Float32CanonicalInputBatch(
             SimulationTickSourceIdentity source,
@@ -40,7 +40,7 @@ namespace ThirdPersonSimulation
                 }
             }
             Source = source;
-            m_Inputs = values.AsReadOnly();
+            m_Inputs = values;
         }
 
         public SimulationTickSourceIdentity Source { get; }

@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedCanonicalInputBatch
     {
-        readonly ReadOnlyCollection<SimulationPipelineActorInput<FixedStepInput>> m_Inputs;
+        readonly IReadOnlyList<SimulationPipelineActorInput<FixedStepInput>> m_Inputs;
 
         public FixedCanonicalInputBatch(
             SimulationTickSourceIdentity source,
@@ -41,7 +41,7 @@ namespace ThirdPersonSimulation.Fixed
                 }
             }
             Source = source;
-            m_Inputs = values.AsReadOnly();
+            m_Inputs = values;
         }
 
         public SimulationTickSourceIdentity Source { get; }

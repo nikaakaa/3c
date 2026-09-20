@@ -1405,3 +1405,12 @@
 - 构造器现直接使用 OutputDispositions.Dispositions.Count 作为容量。正常提交路径中该数量就是最终事件数；异常不一致路径仍允许 List 扩容后进入原覆盖数量或身份错误，不改变错误判定。
 - 只删除正常已提交 tick 汇总事件所有权时的 List 扩容和旧数组迁移，事件列表、排序及逐项覆盖检查仍保留。
 - ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做多事件提交运行对比或 Player 分配采样。
+
+## 2026-09-21 CanonicalInputBatch 列表只读暴露
+
+对应 tasks.md 的 2.61。
+
+- FixedCanonicalInputBatch／Float32CanonicalInputBatch 已从 ingress 输入复制出私有 actor input List，排序并校验非空、Actor 唯一及 TickSource 一致；原完成后仍调用 AsReadOnly。
+- 两域字段现以 IReadOnlyList 保存并直接引用各自私有 List。Inputs 公开类型和只读消费方式不变，调用者没有内部 List 的可变引用；canonical input batch 仍独立持有输入顺序。
+- 删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象；输入 List、排序、来源时钟和重复 actor 校验不变。
+- ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 ingress 输入运行对比或 Player 分配采样。

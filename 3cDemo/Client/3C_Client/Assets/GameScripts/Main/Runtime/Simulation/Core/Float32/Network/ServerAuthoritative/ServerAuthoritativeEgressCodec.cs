@@ -251,7 +251,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static GameplayFact ReadGameplayFact(CanonicalReader reader)
         {
             SimulationEventHeader header = ReadHeader(reader);
-            var kind = ReadEnum<GameplayFactKind>(reader.ReadByte(), "gameplay fact kind");
+            var kind = (GameplayFactKind)reader.ReadByte();
             return kind switch
             {
                 GameplayFactKind.Action => new GameplayFact(header, ReadAction(reader)),
@@ -265,7 +265,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     reader.ReadString(),
                     reader.ReadString(),
                     reader.ReadScalar()),
-                _ => throw new InvalidDataException($"Unsupported GameplayFact kind '{kind}'.")
+                _ => throw new InvalidDataException($"ServerAuthoritative gameplay fact kind '{(byte)kind}' is invalid.")
             };
         }
 
@@ -287,7 +287,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static PresentationCommand ReadPresentationCommand(CanonicalReader reader)
         {
             SimulationEventHeader header = ReadHeader(reader);
-            PresentationCommandKind kind = ReadEnum<PresentationCommandKind>(reader.ReadByte(), "presentation command kind");
+            PresentationCommandKind kind = ReadPresentationCommandKind(reader.ReadByte());
             string producerId = reader.ReadString();
             var sampleTime = reader.ReadScalar();
             var weight = reader.ReadScalar();
@@ -299,6 +299,27 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ? AbilityTimelineProgressCodec.Read(reader) : default;
             return new PresentationCommand(header, kind, producerId, sampleTime, weight,
                 generation, cycle, actionInstanceId, visualTimeScale, timelineProgress: progress);
+        }
+
+        static PresentationCommandKind ReadPresentationCommandKind(byte value)
+        {
+            var kind = (PresentationCommandKind)value;
+            return kind switch
+            {
+                PresentationCommandKind.SelectProducer or
+                PresentationCommandKind.SampleProducer or
+                PresentationCommandKind.CompleteProducer or
+                PresentationCommandKind.ReleaseProducer or
+                PresentationCommandKind.Camera or
+                PresentationCommandKind.Cue or
+                PresentationCommandKind.Vfx or
+                PresentationCommandKind.Ui or
+                PresentationCommandKind.ForceProducer or
+                PresentationCommandKind.DomainEvent or
+                PresentationCommandKind.ForceReleaseProducer or
+                PresentationCommandKind.TimelineProgress => kind,
+                _ => throw new InvalidDataException($"ServerAuthoritative presentation command kind '{value}' is invalid.")
+            };
         }
 
         static void WriteHeader(CanonicalWriter writer, SimulationEventHeader header)

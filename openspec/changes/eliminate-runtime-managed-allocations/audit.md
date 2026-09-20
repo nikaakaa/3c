@@ -432,3 +432,12 @@
 - 基线内部角色状态仍 ReadBytes 并由结果复制持有；远端表现结果从解析出的独立字符串、数值和结果集合构造，不保存原包或 reader。删除的是每个外层子消息的字节副本，不改长期基线、事件、播放、事务或恢复生命周期。
 - 私有 RequireCanonical 的源参数改为 ReadOnlySpan；null 已由全部公开读取入口在解析前拒绝，不再保留不可达的源 null 判断。错误文本及结果数据校验不变。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前及续做前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行对比或 Player 分配采样。
+
+## 2026-09-20 Egress 高层消息类型装箱清理
+
+对应 tasks.md 的 5.32，与代码同步提交。
+
+- ReadGameplayFact 原反射读取 GameplayFactKind 后再 switch，已核对当前全部七种正式成员均有解码分支。现直接转换后进入原 switch，未知字节在读具体字段前抛出原泛型校验的 InvalidDataException 数值文本。
+- ReadPresentationCommand 的类型改用显式列出当前十二种成员的 switch 校验，在读取 producerId 前拒绝其它值，保留原异常文本。TimelineProgress 成员继续沿原 AbilityTimelineProgressCodec，不改其字段、播放或事件消费边界。
+- 两处不再调用 Enum.ToObject／Enum.IsDefined，不建立额外运行缓存。Action transition／phase／state 和效果操作／应用模式仍使用原泛型入口，此次不宣称 Egress 枚举分配全部完成。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。

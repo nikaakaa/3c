@@ -1324,3 +1324,12 @@
 - 基类保留原受保护 IEnumerable 构造入口；同程序集新增 List 所有权入口，TargetSimulationPipelineStep 将自身刚创建、无外部引用的 actor 列表直接交给基类。基类仍原地排序、拒绝空列表、非法或重复 ActorId，并只通过 IReadOnlyList 暴露。
 - 删除每个 step 的第二份 actor List、其内部数组复制及 ReadOnlyCollection 包装；inputs／ingress 的独立所有权、排序和只读包装本小步不变。
 - ThirdPersonSimulation.Core portable 连续两次编译均零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Fixed／Float32 调度运行对比或 Player 分配采样。
+
+## 2026-09-21 SimulationStep 输入列表只读暴露
+
+对应 tasks.md 的 2.53。
+
+- TargetSimulationPipelineStep 已分别从调用输入复制出私有 inputValues 和 ingressValues，并在构造器内完成排序、actor 绑定及重复检查；原完成后仍对两份列表调用 AsReadOnly，各创建一个只读包装对象。
+- 两个字段现以 IReadOnlyList 保存并直接引用各自私有 List。调用者仍只能通过 Inputs／Ingress 的 IReadOnlyList 接口读取，不获得底层 List 引用；步骤构造完成后的内容和顺序保持不变。
+- 删除每个 Fixed／Float32 SimulationStep 的两个 ReadOnlyCollection 包装对象；输入和 ingress 列表本体、独立复制及元素存储仍保留。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做步骤输入运行对比或 Player 分配采样。

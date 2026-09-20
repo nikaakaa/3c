@@ -219,8 +219,8 @@ namespace ThirdPersonSimulation
 
     public class TargetSimulationPipelineStep<TInput, TIngress> : SimulationPipelineStep
     {
-        readonly ReadOnlyCollection<SimulationPipelineActorInput<TInput>> m_Inputs;
-        readonly ReadOnlyCollection<SimulationPipelineTypedIngress<TIngress>> m_Ingress;
+        readonly IReadOnlyList<SimulationPipelineActorInput<TInput>> m_Inputs;
+        readonly IReadOnlyList<SimulationPipelineTypedIngress<TIngress>> m_Ingress;
 
         public TargetSimulationPipelineStep(
             SimulationTick tick,
@@ -270,8 +270,8 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Pipeline Step contains duplicate typed ingress.", nameof(ingress));
                 }
             }
-            m_Inputs = inputValues.AsReadOnly();
-            m_Ingress = ingressValues.AsReadOnly();
+            m_Inputs = inputValues;
+            m_Ingress = ingressValues;
         }
 
         public IReadOnlyList<SimulationPipelineActorInput<TInput>> Inputs => m_Inputs;

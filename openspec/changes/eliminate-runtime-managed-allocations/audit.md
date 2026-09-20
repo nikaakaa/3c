@@ -1827,3 +1827,11 @@
 - ServerAuthoritativePredictionHistory.GetReplayAfter 在 baseline reconcile 与 replay 计数中生成独立结果 List，原返回前再创建 ReadOnlyCollection 包装。PreparePruneConfirmedThrough 则先复制完整 SortedDictionary，再收集待删 tick 到新 List，最后逐项从副本删除。
 - replay 结果仍是方法内独立 List，仅按 IReadOnlyList 暴露，删除额外包装对象。确认裁剪直接遍历当前历史，把 InputSequence 大于确认序列的记录加入新 SortedDictionary；最终记录集合、排序和 checkpoint 独立所有权不变。
 - 删除每次 replay 查询的包装对象，以及每次确认裁剪的 remove List 和树删除操作；checkpoint、远端身体时间线捕获及最终独立字典仍保留。ThirdPersonSimulation.ServerAuthoritative portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 reconciliation 运行采样。
+
+## 2026-09-21 权威预测 disposition confirmation 中转清理
+
+对应 tasks.md 的 5.70。
+
+- PrepareConfirmation 已持有当前 journal 的独立 entries 副本，却仍先把每条待确认／拒绝记录收集进 updates List，再第二次循环写入 entries。checkpoint 构造又把输入复制成 List 后创建 ReadOnlyCollection 包装。
+- confirmation 现遍历只读的 m_Entries 时直接调用 Record 写 entries 副本，原 Tick／Sequence 顺序、rejectedCount、cursor 递增、容量与 prune 校验不变。checkpoint 仍复制输入为独立 List，只按 IReadOnlyList 暴露，删除包装对象。
+- 每次 authority confirmation 删除 updates List 及第二次循环，每次 journal checkpoint 删除 ReadOnlyCollection；最终 entries 副本和 checkpoint List 仍按事务独立存在。ThirdPersonSimulation.ServerAuthoritative portable 编译零警告零错误，首次构建前检测到 Unity Bee 编译并等待其退出，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 confirmation 运行采样。

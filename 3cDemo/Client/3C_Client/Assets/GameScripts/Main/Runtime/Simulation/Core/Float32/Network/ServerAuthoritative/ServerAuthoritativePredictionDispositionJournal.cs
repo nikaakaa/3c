@@ -38,7 +38,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var entries = CopyEntries(m_Entries);
             ulong cursor = Cursor;
             int rejectedCount = 0;
-            var updates = new List<ServerAuthoritativeJournalEntry>();
             foreach (ServerAuthoritativeJournalEntry entry in m_Entries.Values)
             {
                 if (entry.Tick.Value > authorityTick.Value ||
@@ -52,20 +51,16 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                      entry.Sequence == horizon.Sequence && entry.EventId.Equals(horizon.EventId));
                 if (!confirmed)
                     rejectedCount++;
-                updates.Add(new ServerAuthoritativeJournalEntry(
-                    entry.EventId,
-                    entry.Tick,
-                    entry.Sequence,
-                    confirmed
-                        ? ServerAuthoritativeEventDisposition.AuthorityConfirmed
-                        : ServerAuthoritativeEventDisposition.PredictedRejected));
-            }
-            for (int i = 0; i < updates.Count; i++)
-            {
                 Record(
                     entries,
                     ref cursor,
-                    updates[i],
+                    new ServerAuthoritativeJournalEntry(
+                        entry.EventId,
+                        entry.Tick,
+                        entry.Sequence,
+                        confirmed
+                            ? ServerAuthoritativeEventDisposition.AuthorityConfirmed
+                            : ServerAuthoritativeEventDisposition.PredictedRejected),
                     firstRetainedHistoryTick,
                     m_Capacity);
             }
@@ -187,7 +182,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ulong cursor,
             int lastRejectedCount)
         {
-            Entries = new List<KeyValuePair<EventId, ServerAuthoritativeJournalEntry>>(entries).AsReadOnly();
+            Entries = new List<KeyValuePair<EventId, ServerAuthoritativeJournalEntry>>(entries);
             Cursor = cursor;
             LastRejectedCount = lastRejectedCount;
         }

@@ -302,6 +302,8 @@
 
 - [x] 5.69 权威预测历史 replay 结果直接返回独立 List，确认裁剪一次遍历构造保留字典，删除 ReadOnlyCollection 包装、remove List 与已复制字典的逐项删除
 
+- [x] 5.70 权威预测 disposition confirmation 在遍历当前 journal 时直接写入独立目标字典，checkpoint 直接保存独立 List，删除 updates List 与 ReadOnlyCollection 包装；确认／拒绝顺序和 cursor 保持
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

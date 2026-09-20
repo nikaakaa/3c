@@ -840,3 +840,11 @@
 - 每次嵌入控制状态删除一套子 writer／流／最终数组及到外层复制。保留原 state null 拒绝，为新 writer 参数提供直接 null 拒绝；异常沿角色外层 using 释放，不发布部分结果。没有增加兼容入口或第二编码协议。
 - 读取侧整体 ReadBytes 和两遍 schema 解析、控制状态对象与快照存储仍分配；未改事务生命周期或 Timeline 部分。三文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。
 - 未新增测试、未操作共享 Unity、未做字节对比或状态恢复运行及 Player 分配采样。
+## 2026-09-20 运行期反射边界与 MotionWarp 持续执行校验
+
+对应 tasks.md 的 2.31。
+
+- 用户明确初始化反射可接受、运行中反射不可接受。后续按真实调用阶段区分：准备期反射不再单独作为清理目标；更新、事件、回放和状态恢复中的枚举元数据查询及反射调用继续治理，不以不发生于每帧为保留理由。
+- Fixed／Float32 MotionRuntime.ApplyMotionWarp 经 ApplyMotionWarpCore 读取已有 MotionWarp 状态，ResolveLifecycle 后分 Initialize 与已有状态分支。已有状态分支原每次 Enum.IsDefined 校验 storedState.LimitResult，再排除 PreservedByLimitPolicy；因此该位置会随持续执行进入，不只是内容准备或一次恢复。
+- 正式枚举只有 Applied=0、AppliedClamped=1、PreservedByLimitPolicy=2，现直接匹配前两项，拒绝其它值。保留原 Fail 调用和错误文本、零值合法性、进度读取与后续 EvaluateWarpPose／状态写入；不修改 Timeline 播放身份、生命周期判定或状态存储归属。
+- 两文件编辑前无其它未提交修改，进程扫描无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次 build-server shutdown 成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未做 MotionWarp 运行或 Player 分配采样，实际执行频率和数值收益尚无采样证据。

@@ -706,7 +706,7 @@ namespace ThirdPersonSimulation
                 resolvedTargetPosition = storedState.ResolvedTargetPosition;
                 resolvedTargetYaw = storedState.ResolvedTargetYaw;
                 limitResult = storedState.LimitResult;
-                if (!Enum.IsDefined(typeof(ProgramMotionWarpLimitResult), limitResult) || limitResult == ProgramMotionWarpLimitResult.PreservedByLimitPolicy)
+                if (limitResult is not (ProgramMotionWarpLimitResult.Applied or ProgramMotionWarpLimitResult.AppliedClamped))
                     Fail(MotionModifierDiagnosticCode.InvalidState, descriptor, $"Restored MotionWarp limit result '{limitResult}' is invalid for active state.");
                 previousWarpedPosition = storedState.PreviousWarpedPosition;
                 previousWarpedYaw = storedState.PreviousWarpedYaw;

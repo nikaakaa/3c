@@ -12,12 +12,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly RollbackRuntimeState m_State;
         readonly IFixedSimulationSessionSnapshotCodec m_SnapshotCodec;
         readonly DeterministicRollbackModelPolicy m_Policy;
-        readonly Dictionary<ulong, RollbackStateHashReport> m_LocalReports =
-            new Dictionary<ulong, RollbackStateHashReport>();
-        readonly Dictionary<ulong, Dictionary<string, RollbackStateHashReport>> m_RemoteReports =
-            new Dictionary<ulong, Dictionary<string, RollbackStateHashReport>>();
-        readonly Dictionary<ulong, StableHash> m_RequestedSnapshots =
-            new Dictionary<ulong, StableHash>();
+        readonly SortedDictionary<ulong, RollbackStateHashReport> m_LocalReports =
+            new SortedDictionary<ulong, RollbackStateHashReport>();
+        readonly SortedDictionary<ulong, Dictionary<string, RollbackStateHashReport>> m_RemoteReports =
+            new SortedDictionary<ulong, Dictionary<string, RollbackStateHashReport>>();
+        readonly SortedDictionary<ulong, StableHash> m_RequestedSnapshots =
+            new SortedDictionary<ulong, StableHash>();
 
         public RollbackEndpointRuntimeBridge(
             RollbackPeerEndpoint peer,
@@ -300,16 +300,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RemoveBefore(m_RequestedSnapshots, floor);
         }
 
-        static void RemoveBefore<T>(Dictionary<ulong, T> values, ulong floor)
+        static void RemoveBefore<T>(SortedDictionary<ulong, T> values, ulong floor)
         {
-            var remove = new List<ulong>();
-            foreach (ulong tick in values.Keys)
+            while (values.Count != 0)
             {
-                if (tick < floor)
-                    remove.Add(tick);
+                ulong tick = 0;
+                foreach (ulong candidate in values.Keys)
+                {
+                    tick = candidate;
+                    break;
+                }
+                if (tick >= floor)
+                    break;
+                values.Remove(tick);
             }
-            for (int i = 0; i < remove.Count; i++)
-                values.Remove(remove[i]);
         }
 
         static bool ReportsEqual(

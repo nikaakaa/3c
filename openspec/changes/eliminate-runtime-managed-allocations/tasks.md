@@ -308,6 +308,8 @@
 
 - [x] 5.72 Rollback Endpoint 按 Actor 的显式输入历史在确认释放时按排序 tick 逐个弹出最小记录并保留最后确认帧，删除每次释放、每 Actor 的 remove List
 
+- [x] 5.73 Rollback RuntimeBridge 三张 tick 索引 report／request 表统一为 SortedDictionary，历史窗口释放按最小 tick 弹出，删除每次 Pump 的 remove List 并固定诊断／恢复遍历顺序
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

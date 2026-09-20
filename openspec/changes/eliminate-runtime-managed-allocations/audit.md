@@ -1851,3 +1851,12 @@
 - RollbackEndpointInputSourcePort 为每个 Actor 持有按 tick 排序的显式输入字典。确认推进时原实现为每个 Actor 新建 remove List，先收集 confirmed 边界内 tick 并记住最后帧，再第二次循环删除并更新全局数量。
 - 释放现反复读取该 Actor 字典的最小键；最小 tick 超过 confirmed 立即结束，否则记录为 latest、删除并递减 m_ExplicitCount。循环结束后仍把最后删除帧转换为 ConfirmedExplicit 写入 m_LastConfirmed。
 - 删除每次确认释放按 Actor 创建的 key List，不改变最后确认输入选择、Actor 遍历、历史容量或预测缺帧逻辑。ThirdPersonSimulation.DeterministicRollback.Endpoint portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Endpoint 输入运行采样。
+
+## 2026-09-21 Rollback RuntimeBridge tick 索引顺序
+
+对应 tasks.md 的 5.73。
+
+- RuntimeBridge 的 local reports、按 tick 聚合的 remote reports 和 requested snapshots 都以 tick 为唯一键，并受 HistoryLengthTicks／MaximumQueuedSnapshots 限制；原先使用普通 Dictionary，窗口释放只能新建 remove List 扫描全部键后第二次删除。
+- 三张外层表统一为 SortedDictionary，peerId 内层表继续使用 Ordinal Dictionary。RemoveBefore 反复读取最小 tick，小于 floor 就删除，达到 floor 立即结束；诊断 latest、恢复候选和容量计数语义保持，遍历顺序从未指定改为稳定 tick 顺序。
+- 取舍是单条 report／request 查找从哈希平均 O(1) 变为有界历史上的 O(log n)，换取每次 Pump 窗口释放不再创建 key List，并使 tick 顺序成为容器正式语义；网络在项目中是压力场景，历史规模由策略明确限制。
+- ThirdPersonSimulation.DeterministicRollback.Endpoint portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Endpoint 网络运行采样。

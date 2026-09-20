@@ -1261,3 +1261,12 @@
 - 正式锁定模式连续为 Unlocked=0、Sliding=1、Locked=2，现按 byte 上界直接判断；未知值继续进入原 ArgumentOutOfRangeException，其它数值归一化、事件有效性和预测落脚语义不变。
 - 仅删除正式脚步运行样本构造中的枚举装箱和元数据查询，不改变锁定权重、支撑权重或事件帧内容。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做脚步曲线运行回放或 Player 分配采样。
+
+## 2026-09-21 Pipeline Coordinator 控制结果枚举校验
+
+对应 tasks.md 的 2.47。
+
+- 2.33 已处理 Fixed／Float32 对外 TransactionResult；共享 PipelineTransactionCoordinator 内部仍会在 Pending 和 Committed 两条外层 tick 返回路径构造 PipelineTransactionControlResult，并在其构造器执行 Enum.IsDefined。
+- 内部 outcome 正式成员只有 Pending=1、Committed=2，现直接匹配两值；零值和其它 byte 继续进入原 ArgumentException，事务身份及只有 Committed 才允许 commit batch 的双向约束不变。
+- 结果 class 自身仍分配，本小步只删除每个外层 tick 控制结果构造中的枚举装箱和元数据查询，不重复计入 2.33 的对外结果修改。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Pipeline 事务运行对比或 Player 分配采样。

@@ -118,7 +118,9 @@ namespace ThirdPersonSimulation
             ulong lastCompletedTick,
             TCommitBatch commitBatch)
         {
-            if (!Enum.IsDefined(typeof(PipelineTransactionOutcome), outcome) || !transactionIdentity.IsValid)
+            if (outcome != PipelineTransactionOutcome.Pending &&
+                outcome != PipelineTransactionOutcome.Committed ||
+                !transactionIdentity.IsValid)
                 throw new ArgumentException("Pipeline transaction result identity is incomplete.");
             if ((outcome == PipelineTransactionOutcome.Committed) != (commitBatch != null))
                 throw new ArgumentException("Only a committed Pipeline transaction has a Commit batch.", nameof(commitBatch));

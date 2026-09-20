@@ -1625,9 +1625,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelineRuntimeCommittedEvaluation evaluation,
             float time)
         {
-            IReadOnlyList<TimelineActionCueSample> cues = evaluation.Evaluation?.ActionCues;
-            if (cues == null)
-                return;
+            TimelineRuntimeSampleView<TimelineActionCueSample> cues = evaluation.Evaluation.ActionCues;
             for (int index = 0; index < cues.Count; index++)
             {
                 TimelineActionCueSample cue = cues[index];
@@ -1731,9 +1729,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelineRuntimeCommittedEvaluation evaluation,
             float time)
         {
-            IReadOnlyList<TimelineRuntimeTreeClipRequest> requests = evaluation.Evaluation?.TreeClips;
-            if (requests == null)
-                return;
+            TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> requests = evaluation.Evaluation.TreeClips;
             for (int index = 0; index < requests.Count; index++)
             {
                 TimelineRuntimeTreeClipRequest request = requests[index];
@@ -1928,7 +1924,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             weight = 0f;
             clipAuthoringId = string.Empty;
             if (!m_Host.TryGetCommittedEvaluationResult(handle, out TimelineRuntimeEvaluationResult result) ||
-                result == null || result.AnimationContributions.Count == 0)
+                result.AnimationContributions.Count == 0)
                 return;
             for (int i = 0; i < result.AnimationContributions.Count; i++)
             {

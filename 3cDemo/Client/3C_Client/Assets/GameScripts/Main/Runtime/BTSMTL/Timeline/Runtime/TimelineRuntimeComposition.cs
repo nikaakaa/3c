@@ -238,12 +238,12 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlaybackHandle handle,
             out TimelineRuntimeEvaluationResult result)
         {
-            if (m_Committed.TryGetValue(handle.Value, out TimelineRuntimeCommittedEvaluation committed))
+            if (TryGetCommittedEvaluation(handle, out TimelineRuntimeCommittedEvaluation committed))
             {
                 result = committed.Evaluation;
                 return true;
             }
-            result = null;
+            result = default;
             return false;
         }
 
@@ -251,7 +251,10 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlaybackHandle handle,
             out TimelineRuntimeCommittedEvaluation evaluation)
         {
-            return m_Committed.TryGetValue(handle.Value, out evaluation);
+            if (m_Committed.TryGetValue(handle.Value, out evaluation) && evaluation.Evaluation.IsCurrent)
+                return true;
+            evaluation = default;
+            return false;
         }
 
         public void Clear()

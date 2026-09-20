@@ -480,3 +480,10 @@
 - 原 Camera domain 的 Publish 对相同来源请求、EventId、generation、资源及效果类型直接替换请求参数，保留候选的 AcceptedIndex，不发送退休，不重置效果计时；身份或资源变化仍走原退休／激活链。丢弃帧继续丢弃请求候选和桥内记账，不恢复相机历史。
 - 发现并修正资源枚举值错配：Timeline 的 Shot=4，Camera 的 Shake=4、Shot=5，原强转会把 Shot 解释为 Shake。改为四种资源的显式对应，同时删除 Enum.IsDefined 的装箱。
 - Unity脚本构建成功，git diff --check通过；共享工作区其他脚本仍在导入，MCP暂未重新连接，本批提交时未取得重载后的最终控制台检查。未新增测试，权重曲线与Shot资源的实际画面仍待用户端到端验收。
+
+## 逻辑求值结果改用候选与已提交缓冲
+- 对应0.7：原 playback 持有两份按内容预分配的 EvaluationStorage。Evaluate 直接写入13种输出缓冲，EvaluationResult 改为带版本的值类型视图；删除逐 tick 的13个List、结果ReadOnlyCollection／List副本、结果堆对象，以及没有消费者的 LogicOperations 重复包装。
+- Commit 交换候选与已提交缓冲并使旧提交视图失效；Discard 不覆盖旧提交，候选仍供既有 Discard 回调读取，到下次 Advance 开始才清空失效。暂停提交使用本 playback 的空缓冲，CompleteStop／Dispose 清空两份结果。TryGetCommitted 检查结果版本，释放／换代后不会返回旧播放的失效视图；直接持有过期视图的调用会明确失败。结果不是可无限持有的历史快照。
+- 容量按各类正式 Clip／Marker 数、既有4096圈上限及每片段的Enter／Exit／Update上限计算；超限明确失败。循环内容会占用较大的初始化内存，此处不引入运行时扩容。场景参数求值补齐轨道静音和Logic域过滤，与其他逻辑轨道保持一致。
+- ActionCue和TreeClip诊断消费者改为直接索引值类型视图，不通过IReadOnlyList装箱。AdvanceResult及边界副本、调用身份哈希等仍有分配，完整0 GC仍未完成；本批未新增测试。
+- Unity脚本编译通过，最终域重载完成（1789922044951），Editor idle，控制台错误为零；git diff --check通过。同时补齐上一批连续Camera请求更新／Shot映射的重载后检查；未做运行内存采样，不宣称已实测全链路0 GC。

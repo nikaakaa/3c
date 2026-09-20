@@ -262,7 +262,7 @@ namespace BTSMTL.Timeline.Runtime
             EnsureAvailable();
             if (!handle.IsValid)
             {
-                result = null;
+                result = default;
                 return false;
             }
             return EvaluationBuffer.TryGetCommitted(new TimelineRuntimePlaybackHandle(handle.Value), out result);

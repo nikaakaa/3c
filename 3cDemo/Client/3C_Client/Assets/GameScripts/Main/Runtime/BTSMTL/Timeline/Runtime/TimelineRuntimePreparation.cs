@@ -174,7 +174,7 @@ namespace BTSMTL.Timeline.Runtime
             m_ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
             m_Boundaries = new ReadOnlyCollection<TimelineRuntimeClipBoundary>(
                 new List<TimelineRuntimeClipBoundary>(boundaries ?? Array.Empty<TimelineRuntimeClipBoundary>()));
-            Evaluation = evaluation ?? throw new ArgumentNullException(nameof(evaluation));
+            Evaluation = evaluation;
             Completes = completes;
         }
 
@@ -211,6 +211,8 @@ namespace BTSMTL.Timeline.Runtime
         readonly List<TimelineRuntimeClipBoundary> m_AdvanceBoundaries;
         readonly Comparison<TimelineRuntimeClipBoundary> m_CompareBoundaries;
         readonly ReadOnlyCollection<string> m_ActiveClipIdsView;
+        TimelineRuntimeEvaluationStorage m_CandidateEvaluation;
+        TimelineRuntimeEvaluationStorage m_CommittedEvaluation;
         TimelineRuntimeAdvanceResult m_PendingAdvance;
         TimelinePlaybackStopContext m_PendingStopContext;
         bool m_StopPending;
@@ -261,6 +263,8 @@ namespace BTSMTL.Timeline.Runtime
             m_AdvanceBoundaries = new List<TimelineRuntimeClipBoundary>(boundaryCapacity);
             m_CompareBoundaries = CompareBoundaries;
             m_ActiveClipIdsView = new ReadOnlyCollection<string>(m_ActiveClipIds);
+            m_CandidateEvaluation = new TimelineRuntimeEvaluationStorage(this);
+            m_CommittedEvaluation = new TimelineRuntimeEvaluationStorage(this);
             State = TimelineRuntimePlaybackState.Prepared;
         }
 
@@ -367,13 +371,14 @@ namespace BTSMTL.Timeline.Runtime
                 throw new InvalidOperationException("Timeline playback has an uncommitted Advance result.");
             if (request.PreviousTime != m_CursorTime)
                 throw new InvalidOperationException("Timeline interval does not begin at the committed cursor.");
+            m_CandidateEvaluation.Clear();
             if (request.Control.IsPaused)
             {
                 if (request.TargetTime != m_CursorTime || request.TimeCarry != m_TimeCarry)
                     throw new InvalidOperationException("A paused Timeline interval must preserve the committed cursor and time carry.");
                 m_PendingAdvance = new TimelineRuntimeAdvanceResult(this, Generation, request,
                     m_CursorTime, m_CursorTime, m_Cycle, m_Cycle, m_TimeCarry, m_SectionId,
-                    m_ActiveClipIds, Array.Empty<TimelineRuntimeClipBoundary>(), TimelineRuntimeEvaluationResult.Empty, false);
+                    m_ActiveClipIds, Array.Empty<TimelineRuntimeClipBoundary>(), new TimelineRuntimeEvaluationResult(m_CandidateEvaluation), false);
                 return m_PendingAdvance;
             }
             FixedScalar duration = Content.Duration;
@@ -438,6 +443,7 @@ namespace BTSMTL.Timeline.Runtime
                     evaluationExitedTreeDecisionClips.Add(m_PendingTreeClipExits[index]);
             }
             TimelineRuntimeEvaluationResult evaluation = TimelineRuntimeEvaluator.Evaluate(
+                m_CandidateEvaluation,
                 SourceTimeline,
                 Content,
                 m_CursorTime,
@@ -487,6 +493,10 @@ namespace BTSMTL.Timeline.Runtime
         public bool Commit(TimelineRuntimeAdvanceResult advance)
         {
             RequirePendingAdvance(advance);
+            TimelineRuntimeEvaluationStorage previous = m_CommittedEvaluation;
+            m_CommittedEvaluation = m_CandidateEvaluation;
+            m_CandidateEvaluation = previous;
+            m_CandidateEvaluation.Clear();
             m_CursorTime = advance.Time;
             m_Cycle = advance.Cycle;
             m_TimeCarry = advance.TimeCarry;
@@ -562,12 +572,16 @@ namespace BTSMTL.Timeline.Runtime
             if (State != TimelineRuntimePlaybackState.Stopping)
                 return false;
             m_ActiveClipIds.Clear();
+            m_CandidateEvaluation.Clear();
+            m_CommittedEvaluation.Clear();
             State = TimelineRuntimePlaybackState.Stopped;
             return true;
         }
 
         public void Dispose()
         {
+            m_CandidateEvaluation.Clear();
+            m_CommittedEvaluation.Clear();
             m_PendingAdvance = null;
             m_StopPending = false;
             m_ActiveClipIds.Clear();
@@ -1434,97 +1448,125 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle { get; }
     }
 
-    public sealed class TimelineRuntimeEvaluationResult
+    public readonly struct TimelineRuntimeEvaluationResult
     {
-        public static readonly TimelineRuntimeEvaluationResult Empty = new TimelineRuntimeEvaluationResult(
-            null, null, null, null, null, null, null, null, null, null, null, null, null);
-        internal TimelineRuntimeEvaluationResult(
-            IReadOnlyList<TimelineAnimationContribution> animations,
-            IReadOnlyList<TimelineMotionCurveContribution> motions,
-            IReadOnlyList<TimelineCameraStateSample> cameraStates,
-            IReadOnlyList<TimelineCameraCueSample> cameraCues,
-            IReadOnlyList<TimelineCameraResponseSample> cameraResponses,
-            IReadOnlyList<TimelineCameraResourceSample> cameraResources,
-            IReadOnlyList<TimelineActionCueSample> actionCues,
-            IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
-            IReadOnlyList<TimelineRuntimeMarkerRequest> markers,
-            IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation,
-            IReadOnlyList<TimelineRuntimeMotionWarpRequest> motionWarps,
-            IReadOnlyList<TimelineRuntimeClipSample> clipSamples,
-            IReadOnlyList<TimelineRuntimeTraceOutput> traces)
+        internal bool IsCurrent => AnimationContributions.IsCurrent;
+
+        internal TimelineRuntimeEvaluationResult(TimelineRuntimeEvaluationStorage storage)
         {
-            AnimationContributions = Copy(animations);
-            MotionContributions = Copy(motions);
-            CameraStates = Copy(cameraStates);
-            CameraCues = Copy(cameraCues);
-            CameraResponses = Copy(cameraResponses);
-            CameraResources = Copy(cameraResources);
-            ActionCues = Copy(actionCues);
-            TreeClips = Copy(treeClips);
-            Markers = Copy(markers);
-            ScenePresentation = Copy(scenePresentation);
-            MotionWarps = Copy(motionWarps);
-            ClipSamples = Copy(clipSamples);
-            Traces = Copy(traces);
-            LogicOperations = new TimelineRuntimeLogicOperations(
-                MotionContributions,
-                MotionWarps,
-                ActionCues,
-                TreeClips,
-                Markers,
-                ClipSamples,
-                Traces);
+            AnimationContributions = storage.AnimationContributions.View;
+            MotionContributions = storage.MotionContributions.View;
+            CameraStates = storage.CameraStates.View;
+            CameraCues = storage.CameraCues.View;
+            CameraResponses = storage.CameraResponses.View;
+            CameraResources = storage.CameraResources.View;
+            ActionCues = storage.ActionCues.View;
+            TreeClips = storage.TreeClips.View;
+            Markers = storage.Markers.View;
+            ScenePresentation = storage.ScenePresentation.View;
+            MotionWarps = storage.MotionWarps.View;
+            ClipSamples = storage.ClipSamples.View;
+            Traces = storage.Traces.View;
         }
 
-        public IReadOnlyList<TimelineAnimationContribution> AnimationContributions { get; }
-        public IReadOnlyList<TimelineMotionCurveContribution> MotionContributions { get; }
-        public IReadOnlyList<TimelineCameraStateSample> CameraStates { get; }
-        public IReadOnlyList<TimelineCameraCueSample> CameraCues { get; }
-        public IReadOnlyList<TimelineCameraResponseSample> CameraResponses { get; }
-        public IReadOnlyList<TimelineCameraResourceSample> CameraResources { get; }
-        public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
-        public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
-        public IReadOnlyList<TimelineRuntimeMarkerRequest> Markers { get; }
-        public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
-        public IReadOnlyList<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
-        public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
-        public IReadOnlyList<TimelineRuntimeTraceOutput> Traces { get; }
-        public TimelineRuntimeLogicOperations LogicOperations { get; }
-
-        static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
-        {
-            return new ReadOnlyCollection<T>(
-                new List<T>(values ?? Array.Empty<T>()));
-        }
+        public TimelineRuntimeSampleView<TimelineAnimationContribution> AnimationContributions { get; }
+        public TimelineRuntimeSampleView<TimelineMotionCurveContribution> MotionContributions { get; }
+        public TimelineRuntimeSampleView<TimelineCameraStateSample> CameraStates { get; }
+        public TimelineRuntimeSampleView<TimelineCameraCueSample> CameraCues { get; }
+        public TimelineRuntimeSampleView<TimelineCameraResponseSample> CameraResponses { get; }
+        public TimelineRuntimeSampleView<TimelineCameraResourceSample> CameraResources { get; }
+        public TimelineRuntimeSampleView<TimelineActionCueSample> ActionCues { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeTreeClipRequest> TreeClips { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeMarkerRequest> Markers { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeClipSample> ClipSamples { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeTraceOutput> Traces { get; }
     }
 
-    public sealed class TimelineRuntimeLogicOperations
+    sealed class TimelineRuntimeEvaluationStorage
     {
-        internal TimelineRuntimeLogicOperations(
-            IReadOnlyList<TimelineMotionCurveContribution> motionContributions,
-            IReadOnlyList<TimelineRuntimeMotionWarpRequest> motionWarps,
-            IReadOnlyList<TimelineActionCueSample> actionCues,
-            IReadOnlyList<TimelineRuntimeTreeClipRequest> treeClips,
-            IReadOnlyList<TimelineRuntimeMarkerRequest> markers,
-            IReadOnlyList<TimelineRuntimeClipSample> clipSamples,
-            IReadOnlyList<TimelineRuntimeTraceOutput> traces)
+        public TimelineRuntimeEvaluationStorage(TimelineRuntimePlayback playback)
         {
-            MotionContributions = motionContributions;
-            MotionWarps = motionWarps;
-            ActionCues = actionCues;
-            TreeClips = treeClips;
-            Markers = markers;
-            ClipSamples = clipSamples;
-            Traces = traces;
+            int animations = 0, motions = 0, cameraStates = 0, cameraCues = 0;
+            int cameraResponses = 0, cameraResources = 0, actionCues = 0, treeClips = 0;
+            int markers = 0, scenePresentation = 0, motionWarps = 0, clips = 0;
+            TimelineData timeline = playback.SourceTimeline;
+            for (int index = 0; index < timeline.Tracks.Count; index++)
+            {
+                Track track = timeline.Tracks[index];
+                if (track == null || track.PersistentMuted || track.ExecutionDomain != TimelineExecutionDomain.Logic)
+                    continue;
+                int count = track.Clips.Count;
+                clips = checked(clips + count);
+                switch (track)
+                {
+                    case AnimationTrack: animations = checked(animations + count); break;
+                    case MotionCurveTrack: motions = checked(motions + count); break;
+                    case CameraStateTrack: cameraStates = checked(cameraStates + count); break;
+                    case CameraCueTrack: cameraCues = checked(cameraCues + count); break;
+                    case CameraResponseTrack: cameraResponses = checked(cameraResponses + count); break;
+                    case CameraEffectTrack: cameraResources = checked(cameraResources + count); break;
+                    case ActionCueTrack: actionCues = checked(actionCues + count); break;
+                    case TreeTrack: treeClips = checked(treeClips + count); break;
+                    case ScenePresentationParameterTrack: scenePresentation = checked(scenePresentation + count); break;
+                    case MotionWarpTrack: motionWarps = checked(motionWarps + count); break;
+                }
+            }
+            for (int index = 0; index < playback.Content.Markers.Count; index++)
+            {
+                TimelineContentMarker marker = playback.Content.Markers[index];
+                if (!marker.TrackMuted && marker.ExecutionPolicy.IsLogic)
+                    markers++;
+            }
+            int traversals = playback.PlaybackMode == TimelinePlaybackMode.Loop
+                ? TimelineRuntimeEvaluationSegments.MaximumCycleAdvance + 1 : 1;
+            int lifecycleSamples = checked(2 * traversals + 1);
+            AnimationContributions = new(checked(animations * traversals));
+            MotionContributions = new(checked(motions * traversals));
+            CameraStates = new(checked(cameraStates));
+            CameraCues = new(checked(cameraCues * traversals));
+            CameraResponses = new(checked(cameraResponses));
+            CameraResources = new(checked(cameraResources));
+            ActionCues = new(checked(actionCues * traversals));
+            TreeClips = new(checked(treeClips * lifecycleSamples));
+            Markers = new(checked(markers * traversals));
+            ScenePresentation = new(checked(scenePresentation));
+            MotionWarps = new(checked(motionWarps * traversals));
+            ClipSamples = new(checked(clips * lifecycleSamples));
+            Traces = new(checked(2 * clips * traversals + treeClips));
         }
 
-        public IReadOnlyList<TimelineMotionCurveContribution> MotionContributions { get; }
-        public IReadOnlyList<TimelineRuntimeMotionWarpRequest> MotionWarps { get; }
-        public IReadOnlyList<TimelineActionCueSample> ActionCues { get; }
-        public IReadOnlyList<TimelineRuntimeTreeClipRequest> TreeClips { get; }
-        public IReadOnlyList<TimelineRuntimeMarkerRequest> Markers { get; }
-        public IReadOnlyList<TimelineRuntimeClipSample> ClipSamples { get; }
-        public IReadOnlyList<TimelineRuntimeTraceOutput> Traces { get; }
+        public readonly TimelineRuntimeSampleBuffer<TimelineAnimationContribution> AnimationContributions;
+        public readonly TimelineRuntimeSampleBuffer<TimelineMotionCurveContribution> MotionContributions;
+        public readonly TimelineRuntimeSampleBuffer<TimelineCameraStateSample> CameraStates;
+        public readonly TimelineRuntimeSampleBuffer<TimelineCameraCueSample> CameraCues;
+        public readonly TimelineRuntimeSampleBuffer<TimelineCameraResponseSample> CameraResponses;
+        public readonly TimelineRuntimeSampleBuffer<TimelineCameraResourceSample> CameraResources;
+        public readonly TimelineRuntimeSampleBuffer<TimelineActionCueSample> ActionCues;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeTreeClipRequest> TreeClips;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeMarkerRequest> Markers;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeScenePresentationSample> ScenePresentation;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeMotionWarpRequest> MotionWarps;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeClipSample> ClipSamples;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeTraceOutput> Traces;
+
+        public void Clear()
+        {
+            AnimationContributions.Clear();
+            MotionContributions.Clear();
+            CameraStates.Clear();
+            CameraCues.Clear();
+            CameraResponses.Clear();
+            CameraResources.Clear();
+            ActionCues.Clear();
+            TreeClips.Clear();
+            Markers.Clear();
+            ScenePresentation.Clear();
+            MotionWarps.Clear();
+            ClipSamples.Clear();
+            Traces.Clear();
+        }
     }
 
     public readonly struct TimelineRuntimeSampleView<T>
@@ -1538,10 +1580,14 @@ namespace BTSMTL.Timeline.Runtime
             m_Version = buffer.Version;
         }
 
+        internal bool IsCurrent => m_Buffer != null && m_Buffer.Version == m_Version;
+
         public int Count
         {
             get
             {
+                if (m_Buffer == null)
+                    return 0;
                 RequireCurrent();
                 return m_Buffer.Count;
             }
@@ -1802,6 +1848,7 @@ namespace BTSMTL.Timeline.Runtime
     internal static class TimelineRuntimeEvaluator
     {
         public static TimelineRuntimeEvaluationResult Evaluate(
+            TimelineRuntimeEvaluationStorage storage,
             TimelineData timeline,
             TimelineContentUnit content,
             FixedScalar previousPosition,
@@ -1821,19 +1868,19 @@ namespace BTSMTL.Timeline.Runtime
             if (content == null)
                 throw new ArgumentNullException(nameof(content));
             int frameRate = Math.Max(1, content.FrameRate);
-            var animations = new List<TimelineAnimationContribution>();
-            var motions = new List<TimelineMotionCurveContribution>();
-            var cameraStates = new List<TimelineCameraStateSample>();
-            var cameraCues = new List<TimelineCameraCueSample>();
-            var cameraResponses = new List<TimelineCameraResponseSample>();
-            var cameraResources = new List<TimelineCameraResourceSample>();
-            var actionCues = new List<TimelineActionCueSample>();
-            var treeClips = new List<TimelineRuntimeTreeClipRequest>();
-            var markers = new List<TimelineRuntimeMarkerRequest>();
-            var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
-            var motionWarps = new List<TimelineRuntimeMotionWarpRequest>();
-            var clipSamples = new List<TimelineRuntimeClipSample>();
-            var traces = new List<TimelineRuntimeTraceOutput>();
+            TimelineRuntimeSampleBuffer<TimelineAnimationContribution> animations = storage.AnimationContributions;
+            TimelineRuntimeSampleBuffer<TimelineMotionCurveContribution> motions = storage.MotionContributions;
+            TimelineRuntimeSampleBuffer<TimelineCameraStateSample> cameraStates = storage.CameraStates;
+            TimelineRuntimeSampleBuffer<TimelineCameraCueSample> cameraCues = storage.CameraCues;
+            TimelineRuntimeSampleBuffer<TimelineCameraResponseSample> cameraResponses = storage.CameraResponses;
+            TimelineRuntimeSampleBuffer<TimelineCameraResourceSample> cameraResources = storage.CameraResources;
+            TimelineRuntimeSampleBuffer<TimelineActionCueSample> actionCues = storage.ActionCues;
+            TimelineRuntimeSampleBuffer<TimelineRuntimeTreeClipRequest> treeClips = storage.TreeClips;
+            TimelineRuntimeSampleBuffer<TimelineRuntimeMarkerRequest> markers = storage.Markers;
+            TimelineRuntimeSampleBuffer<TimelineRuntimeScenePresentationSample> scenePresentation = storage.ScenePresentation;
+            TimelineRuntimeSampleBuffer<TimelineRuntimeMotionWarpRequest> motionWarps = storage.MotionWarps;
+            TimelineRuntimeSampleBuffer<TimelineRuntimeClipSample> clipSamples = storage.ClipSamples;
+            TimelineRuntimeSampleBuffer<TimelineRuntimeTraceOutput> traces = storage.Traces;
             var segments = new TimelineRuntimeEvaluationSegments(
                 previousPosition,
                 previousCycle,
@@ -2005,7 +2052,8 @@ namespace BTSMTL.Timeline.Runtime
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
-                if (timeline.Tracks[trackIndex] is not ScenePresentationParameterTrack track)
+                if (timeline.Tracks[trackIndex] is not ScenePresentationParameterTrack track ||
+                    track.PersistentMuted || track.ExecutionDomain != TimelineExecutionDomain.Logic)
                     continue;
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
@@ -2131,20 +2179,7 @@ namespace BTSMTL.Timeline.Runtime
                         (currentTime - clip.StartTime).ToSingle() / duration));
                 }
             }
-            return new TimelineRuntimeEvaluationResult(
-                animations,
-                motions,
-                cameraStates,
-                cameraCues,
-                cameraResponses,
-                cameraResources,
-                actionCues,
-                treeClips,
-                markers,
-                scenePresentation,
-                motionWarps,
-                clipSamples,
-                traces);
+            return new TimelineRuntimeEvaluationResult(storage);
         }
 
         static void AppendMarkerRequests(
@@ -2157,7 +2192,7 @@ namespace BTSMTL.Timeline.Runtime
             int currentCycle,
             bool loop,
             bool includeStartBoundary,
-            List<TimelineRuntimeMarkerRequest> markers)
+            TimelineRuntimeSampleBuffer<TimelineRuntimeMarkerRequest> markers)
         {
             FixedScalar duration = content.Duration;
             if (duration <= FixedScalar.Zero)

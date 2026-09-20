@@ -329,7 +329,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 CanonicalInputSample sample = value.Samples[i];
                 writer.WriteUInt64(sample.TargetAuthorityTick);
                 writer.WriteUInt64(sample.InputSequence);
-                writer.WriteBytes(ServerAuthoritativeCanonicalCodec.WriteInput(sample.Input));
+                ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, sample.Input);
             }
             return writer.ToArray();
         }

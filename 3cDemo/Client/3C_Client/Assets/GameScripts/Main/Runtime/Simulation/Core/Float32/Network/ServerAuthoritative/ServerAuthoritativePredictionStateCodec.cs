@@ -95,7 +95,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 writer.WriteString(record.Input.ActorId.Value);
                 writer.WriteUInt64(record.Input.SourceTick);
                 writer.WriteUInt64(record.Input.InputSequence);
-                writer.WriteBytes(ServerAuthoritativeCanonicalCodec.WriteInput(record.Input.Input));
+                ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, record.Input.Input);
                 writer.WriteString(record.CompositionIdentity.ToString());
                 writer.WriteBytes(SimulationWorldSnapshotCodec.Write(record.World));
                 writer.WriteBytes(WritePipelineProjection(record.PipelineProjection));

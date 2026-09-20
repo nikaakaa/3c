@@ -377,3 +377,12 @@
 - 已核对 Float32 SimulationInputValueKind 的全部六个成员与解码分支一致。未知字节进入 switch 默认分支时仍抛原泛型校验的 InvalidDataException 和数值文本，不再保留原本不可达的 Unsupported 分支。未知来源仍在读取 clockId 前拒绝，未知输入值仍在读取值数据前拒绝。
 - 不改变来源身份、输入排序、值解码、canonical 重编码或协议 schema；减少每条来源和每个输入值的反射转换／装箱入口，未宣称整个输入对象创建无分配。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
+
+## 2026-09-20 权威输入嵌套直接编码
+
+对应 tasks.md 的 5.26，与代码同步提交。
+
+- 全部四处 writer.WriteBytes(ServerAuthoritativeCanonicalCodec.WriteInput(...)) 分别位于输入数据报、Egress 输入、AuthorityPasses 状态写入和 PredictionStateCodec 状态写入。原先每个子输入创建 writer／MemoryStream，再 ToArray 并复制到外层。
+- 新 WriteLengthPrefixedInput 调用已有 CanonicalWriter.BeginLengthPrefixedBlock／EndLengthPrefixedBlock，在外层预留并回填四字节长度；内部沿同一个私有 WriteInput，不复制字段编码。该入口因 Transport 是独立程序集而公开，四个调用点统一迁移，公开返回独立输入数组的真实入口保留。
+- 输入 Magic／schema、字段顺序、小端长度及外层遍历次序不变。状态写入两个文件仅替换这一行，不改变保存、恢复、确认、事务或并行 Timeline 生命周期。写入失败不返回外层部分包，子项不创建独立结果；外层 writer、流和最终数组仍分配。
+- ServerAuthoritative.Transport portable 连带 Core／Float32／ServerAuthoritative 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改，未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议字节实测或 Player 分配采样。

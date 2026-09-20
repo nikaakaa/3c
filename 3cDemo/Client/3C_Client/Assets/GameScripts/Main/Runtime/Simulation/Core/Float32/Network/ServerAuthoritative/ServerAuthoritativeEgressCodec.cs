@@ -38,7 +38,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString(input.ActorId.Value);
             writer.WriteUInt64(input.SourceTick);
             writer.WriteUInt64(input.InputSequence);
-            writer.WriteBytes(ServerAuthoritativeCanonicalCodec.WriteInput(input.Input));
+            ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, input.Input);
             return writer.ToArray();
         }
 

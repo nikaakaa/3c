@@ -331,7 +331,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 writer.WriteUInt64(pair.Value.InputSequence);
                 writer.WriteUInt64(pair.Value.AcceptedTick.Value);
                 writer.WriteUInt64(pair.Value.LastConsumedTick);
-                writer.WriteBytes(ServerAuthoritativeCanonicalCodec.WriteInput(pair.Value.Input));
+                ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, pair.Value.Input);
             }
             return writer.ToArray();
         }

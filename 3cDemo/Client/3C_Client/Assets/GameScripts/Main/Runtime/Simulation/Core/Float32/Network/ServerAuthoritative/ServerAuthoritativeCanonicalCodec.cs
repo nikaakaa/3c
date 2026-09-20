@@ -22,6 +22,17 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return writer.ToArray();
         }
 
+        public static void WriteLengthPrefixedInput(CanonicalWriter writer, SimulationInput input)
+        {
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
+            WriteInput(writer, input);
+            writer.EndLengthPrefixedBlock(prefixPosition);
+        }
+
         static void WriteInput(CanonicalWriter writer, SimulationInput input)
         {
             writer.WriteUInt32(InputMagic);

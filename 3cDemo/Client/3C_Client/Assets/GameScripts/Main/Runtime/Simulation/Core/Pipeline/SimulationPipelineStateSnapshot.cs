@@ -502,9 +502,13 @@ namespace ThirdPersonSimulation
             var snapshots = new List<SimulationPipelinePassStateSnapshot>(values.Count);
             for (int i = 0; i < values.Count; i++)
             {
-                if (!Enum.IsDefined(typeof(SimulationPipelineStepProjectionMode), values[i].StepProjectionMode))
+                SimulationPipelineStepProjectionMode projectionMode = values[i].StepProjectionMode;
+                if ((byte)projectionMode < (byte)SimulationPipelineStepProjectionMode.Include ||
+                    (byte)projectionMode > (byte)SimulationPipelineStepProjectionMode.ReconstructForRestore)
+                {
                     throw Failure("pipeline_step_projection_mode_invalid", values[i].StateIdentity.PassId, "State participant Step projection mode is invalid.");
-                if (values[i].StepProjectionMode == SimulationPipelineStepProjectionMode.ReconstructForRestore)
+                }
+                if (projectionMode == SimulationPipelineStepProjectionMode.ReconstructForRestore)
                     continue;
                 SimulationPipelinePassStateSnapshot snapshot = values[i].CaptureState() ??
                     throw Failure("pipeline_state_capture_missing", values[i].StateIdentity.PassId, "State participant returned no snapshot.");

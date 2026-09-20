@@ -1477,3 +1477,12 @@
 - 两处统一改为 capabilities 与单一能力位按位与后比较零。第一处仍比较“声明能力”和“实现接口”的布尔结果，第二处仍只在声明已提交观测时要求 roster runtime；未知能力位检查不变。
 - 清除运行代码最后两处 HasFlag 装箱语义。两处都在端口初始化／会话组装，不是每 tick 热路径，不将它们记录为稳态帧收益。
 - ThirdPersonSimulation.Float32 portable 编译零警告零错误，构建服务关闭成功。客户端 Runtime 构建仍被并行 CharacterTimelineHost 缺失 AbilityTimelineAdvancePending／AbilityTimelineStopPending 的六处错误阻断，错误不在本项文件。未新增测试、未操作共享 Unity、未做运行或 Player 分配采样。
+
+## 2026-09-21 Pipeline step 投影模式校验
+
+对应 tasks.md 的 2.69。
+
+- SimulationPipelineStateCapture.CaptureStepProjection 每次捕获都会遍历正式 state participant，原对 StepProjectionMode 调用 Enum.IsDefined 后再次读取属性决定跳过还是 CaptureState。
+- SimulationPipelineStepProjectionMode 只有连续的 Include=1 与 ReconstructForRestore=2；现单次读取局部值并按 byte 范围校验，非法零值及大于二的值继续抛同一完整性错误，重建型 participant 继续跳过捕获。
+- 删除每次 step 投影按 participant 的枚举反射查询／装箱，并减少一次属性读取。participant 列表、snapshot 列表和每个被包含状态的 CaptureState 分配仍存在。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 step 投影运行对比或 Player 分配采样。

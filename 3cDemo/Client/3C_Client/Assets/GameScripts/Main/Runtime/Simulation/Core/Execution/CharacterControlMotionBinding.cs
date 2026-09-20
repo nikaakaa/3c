@@ -414,7 +414,13 @@ namespace ThirdPersonSimulation
             var sourceIdentity = reader.ReadString();
             var sourceCurveIdentity = reader.ReadString();
             var sourceRevision = new StableHash(reader.ReadString());
-            CharacterControlMotionEvaluationMode evaluationMode = ReadEnum<CharacterControlMotionEvaluationMode>(reader.ReadByte(), "motion evaluation mode");
+            byte evaluationModeValue = reader.ReadByte();
+            if (evaluationModeValue < (byte)CharacterControlMotionEvaluationMode.FullLocalDelta ||
+                evaluationModeValue > (byte)CharacterControlMotionEvaluationMode.ForwardDistanceYaw)
+            {
+                throw new InvalidDataException($"Character control motion motion evaluation mode '{evaluationModeValue}' is invalid.");
+            }
+            var evaluationMode = (CharacterControlMotionEvaluationMode)evaluationModeValue;
             CharacterControlMotionTimeMapping mapping = ReadMapping(reader);
             CharacterControlMotionCurve positionX = ReadCurve(reader);
             CharacterControlMotionCurve positionY = ReadCurve(reader);
@@ -489,11 +495,5 @@ namespace ThirdPersonSimulation
             return new CharacterControlMotionCurve(preWrapMode, postWrapMode, keys);
         }
 
-        static T ReadEnum<T>(byte value, string label) where T : struct
-        {
-            if (!Enum.IsDefined(typeof(T), value))
-                throw new InvalidDataException($"Character control motion {label} '{value}' is invalid.");
-            return (T)Enum.ToObject(typeof(T), value);
-        }
     }
 }

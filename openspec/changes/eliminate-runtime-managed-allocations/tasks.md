@@ -146,6 +146,8 @@
 
 - [x] 2.86 两数值域角色状态恢复按 Timeline 模式、状态、停止原因和黑板作用域的正式连续值域直接解码，删除最后一条泛型 Enum.ToObject／IsDefined 反射与装箱路径
 
+- [x] 2.87 角色控制 Motion binding catalog 按双值 EvaluationMode 直接解码，删除单一调用泛型 Enum.IsDefined／ToObject 入口；catalog 格式和 canonical 校验保持
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

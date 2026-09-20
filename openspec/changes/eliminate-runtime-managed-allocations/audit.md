@@ -1736,3 +1736,11 @@
 - 四类枚举均有稳定连续正式值域：Once 至 Loop、Prepared 至 Disposed、None 至 Shutdown、Character 至 Frame。两域改为各自具体读取函数，直接校验 byte 上下界并强类型转换；非法值仍抛带数值和枚举名的 InvalidDataException。
 - 删除两域角色状态恢复文件最后一条泛型枚举反射和装箱拆箱路径，不改变快照字段宽度、读取顺序、默认黑板 OwnerToken 表示或 Timeline 恢复语义。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做状态恢复运行对比或 Player 分配采样。
+
+## 2026-09-21 Character Control Motion binding 枚举解码
+
+对应 tasks.md 的 2.87。
+
+- CharacterControlMotionBindingCodec 的泛型 ReadEnum 只有 EvaluationMode 一个调用，读取 catalog 时仍执行 Enum.IsDefined 与 Enum.ToObject，并产生反射查询及装箱拆箱。
+- EvaluationMode 正式值域只有连续的 FullLocalDelta=1 与 ForwardDistanceYaw=2。读取改为 byte 上下界校验后直接强类型转换，非法值异常、字段宽度、catalog 构造和后续 canonical 比较保持。
+- 删除无剩余消费者的泛型 ReadEnum。ThirdPersonSimulation.Core.Portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 catalog 运行加载或 Player 分配采样。

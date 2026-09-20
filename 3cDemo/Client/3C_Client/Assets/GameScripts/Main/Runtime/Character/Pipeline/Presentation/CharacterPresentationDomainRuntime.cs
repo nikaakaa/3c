@@ -440,6 +440,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return;
                 }
                 PublishLocomotionDiagnostics();
+                m_Camera?.ValidateFrame();
                 if (!RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context))
                     return;
                 m_TimelineHost?.CommitPresentationFrame(context.RenderFrame, m_PresentationClockCoordinator);

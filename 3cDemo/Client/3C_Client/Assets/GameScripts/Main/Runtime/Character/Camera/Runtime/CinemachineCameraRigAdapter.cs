@@ -65,6 +65,16 @@ namespace ThirdPersonCamera
                 brain = GetComponent<CinemachineBrain>();
         }
 
+        public void ValidateBinding(string shotId)
+        {
+            if (virtualCamera == null)
+                throw new InvalidOperationException("Camera rig requires an explicit CinemachineVirtualCamera.");
+            if (!HasValidBrain())
+                throw new InvalidOperationException("Camera rig requires a CinemachineBrain using Manual Update.");
+            if (ResolveShotCamera(shotId) == null)
+                throw new InvalidOperationException($"Camera Shot '{shotId}' has no live rig camera.");
+        }
+
         public void Apply(in CameraFramePlan plan)
         {
             if (!plan.Valid)
@@ -74,16 +84,8 @@ namespace ThirdPersonCamera
                 return;
             }
 
-            if (!CanApply())
-                return;
-
+            ValidateBinding(plan.ShotId);
             CinemachineVirtualCamera targetCamera = ResolveShotCamera(plan.ShotId);
-            if (targetCamera == null)
-            {
-                basisSnapshot = CameraBasisSnapshot.Invalid;
-                result = default;
-                return;
-            }
             ActivateCamera(targetCamera);
             ApplyLens(targetCamera, plan.FieldOfView, plan.NearClipPlane, plan.FarClipPlane);
             targetCamera.ForceCameraPosition(plan.Location, plan.Rotation);
@@ -105,20 +107,6 @@ namespace ThirdPersonCamera
                     shotRigs[i].VirtualCamera.PreviousStateIsValid = false;
             if (virtualCamera != null)
                 ActivateCamera(virtualCamera);
-        }
-
-        bool CanApply()
-        {
-            ReportMissingVirtualCamera();
-            ReportInvalidBrain();
-            if (virtualCamera == null || !HasValidBrain())
-            {
-                basisSnapshot = CameraBasisSnapshot.Invalid;
-                result = default;
-                return false;
-            }
-
-            return true;
         }
 
         void ApplyLens(

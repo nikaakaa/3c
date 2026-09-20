@@ -446,3 +446,10 @@
 - Cue Sample 传递原 evaluation segment.Cycle，Camera 键、事件身份与输出命令携带该循环编号；相同显示名不再合并不同片段，同帧跨多圈的同一 Cue 不再被一个 key 吞掉。Camera 请求仍进入原候选容量检查，超限在帧接受前失败。
 - Cue／Resource 的正式请求ID直接使用 ClipAuthoringId，不再临时拼显示名。首次激活时 EventId 哈希、producer ID 与动画事件身份仍存在分配，连续 Camera 权重更新及最终 Apply 事务仍需继续对账，不将本批记成完整0 GC或完整Camera功能。
 - Unity编译和最终域重载完成（1789918771001），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试。
+
+## Camera 已知绑定错误前移至 Pose 提交之前
+- 对应6.4／7.3：原 ICameraRigAdapter 增加明确的 ValidateBinding 合同，由 Cinemachine adapter 检查正式主相机、Manual Update Brain 和实际 Shot rig 引用；不通过 UI、不创建替代 rig。Apply 复用该合同，删除缺依赖时仅记录错误并静默返回的 CanApply 路径。
+- 原 Camera domain 在候选请求已收集后调用 ValidateFrame，逐项复用 ValidateRequest 检查资源、目标 key 与 Shot 绑定。原表现域在 RunPoseFrame 前执行该检查；错误沿既有 finally 丢弃 Timeline／Camera／桥接候选，Pose 尚未提交。Marker 准备时的 ValidateRequest 也使用同一 Shot 检查。
+- Camera SequenceInterruptPolicy／EffectKind 从 int 到 byte 枚举改为明确的合法值映射，删除 Enum.IsDefined 装箱与底层类型不匹配风险；Effect 预检不再通过 byte 强转把越界值截断成合法类型。
+- 本批只关闭已知配置／资源错误晚于 Pose 提交的边界。Camera 求值器的可变状态、最终物理 Apply 与 Pose 的跨领域回滚仍未完成，不能据此宣称完整帧事务。下一步沿原求值 owner 的候选／丢弃边界继续实现。
+- Unity编译和最终域重载完成（1789919348469），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试。

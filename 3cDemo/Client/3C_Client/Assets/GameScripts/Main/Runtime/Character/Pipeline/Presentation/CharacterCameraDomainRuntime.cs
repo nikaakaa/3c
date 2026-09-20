@@ -165,6 +165,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_FrameOpen = true;
         }
 
+        internal void ValidateFrame()
+        {
+            if (!m_FrameOpen)
+                throw new InvalidOperationException("Camera validation requires an open frame candidate.");
+            m_Rig.ValidateBinding(string.Empty);
+            for (int index = 0; index < m_CandidateRequests.Count; index++)
+                ValidateRequest(m_CandidateRequests[index].Command.CameraRequest);
+        }
+
         internal void CommitFrame()
         {
             if (!m_FrameOpen)
@@ -203,7 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PresentationCameraRequestKind.Sequence => m_Projection.TryGetSequence(request.SequenceId, out _),
                 PresentationCameraRequestKind.Response => request.Mode >= 0 && request.Mode <= 2,
                 PresentationCameraRequestKind.Target => true,
-                PresentationCameraRequestKind.Effect => (CameraEffectKind)request.EffectKind switch
+                PresentationCameraRequestKind.Effect => RequireEffectKind(request.EffectKind) switch
                 {
                     CameraEffectKind.Override => m_Projection.TryGetOverride(request.ResourceId, out _),
                     CameraEffectKind.Zoom => m_Projection.TryGetZoom(request.ResourceId, out _),
@@ -218,6 +227,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException($"Camera request '{request.RequestId}' has unsupported mode or missing resource '{request.ResourceId}/{request.SequenceId}'.");
             if (request.Kind == PresentationCameraRequestKind.Sequence)
                 RequireSequenceInterruptPolicy(request.InterruptPolicy);
+            if (request.Kind == PresentationCameraRequestKind.Effect && request.EffectKind == (int)CameraEffectKind.Shot)
+                m_Rig.ValidateBinding(request.ResourceId);
             ValidateTargetKey(request.TargetKey);
             ValidateTargetKey(request.AnchorKey);
             ValidateTargetKey(request.AimPointKey);
@@ -231,7 +242,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             for (int index = 0; index < m_Projection.TargetSlots.Count; index++)
                 if (m_Projection.TargetSlots[index].SlotId == key)
                     return;
-            m_TargetResolver.RequireKey(key, "Presentation Marker");
+            m_TargetResolver.RequireKey(key, "Timeline Camera");
         }
 
         internal void Publish(CharacterPresentationCommand command)
@@ -593,19 +604,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    string.Equals(left.CameraRequest.SequenceId, right.CameraRequest.SequenceId, StringComparison.Ordinal);
         }
 
-        static CameraSequenceInterruptPolicy RequireSequenceInterruptPolicy(int value)
+        static CameraSequenceInterruptPolicy RequireSequenceInterruptPolicy(int value) => value switch
         {
-            if (!Enum.IsDefined(typeof(CameraSequenceInterruptPolicy), value))
-                throw new InvalidOperationException($"Camera sequence interrupt policy '{value}' is unsupported.");
-            return (CameraSequenceInterruptPolicy)value;
-        }
+            (int)CameraSequenceInterruptPolicy.BlendOut => CameraSequenceInterruptPolicy.BlendOut,
+            (int)CameraSequenceInterruptPolicy.Cut => CameraSequenceInterruptPolicy.Cut,
+            (int)CameraSequenceInterruptPolicy.HoldUntilSourceEnds => CameraSequenceInterruptPolicy.HoldUntilSourceEnds,
+            _ => throw new InvalidOperationException($"Camera sequence interrupt policy '{value}' is unsupported.")
+        };
 
-        static CameraEffectKind RequireEffectKind(int value)
+        static CameraEffectKind RequireEffectKind(int value) => value switch
         {
-            if (!Enum.IsDefined(typeof(CameraEffectKind), value))
-                throw new InvalidOperationException($"Camera effect kind '{value}' is unsupported.");
-            return (CameraEffectKind)value;
-        }
+            (int)CameraEffectKind.Override => CameraEffectKind.Override,
+            (int)CameraEffectKind.Zoom => CameraEffectKind.Zoom,
+            (int)CameraEffectKind.Stretch => CameraEffectKind.Stretch,
+            (int)CameraEffectKind.Shake => CameraEffectKind.Shake,
+            (int)CameraEffectKind.Shot => CameraEffectKind.Shot,
+            _ => throw new InvalidOperationException($"Camera effect kind '{value}' is unsupported.")
+        };
 
         static CameraResponseMode RequireResponseMode(int value)
         {

@@ -1977,3 +1977,12 @@
 - 十四处校验改为对首尾正式成员的 byte 区间比较。原空值、数值有限性、范围、资源引用、stage 类型与目标槽规则保持；非法 0、超出末项和所有原合法成员的结果不变。
 - 删除这些 Camera payload 每次 RequireValid 的枚举装箱与反射查询。实际调用频率可能包含资源准备和运行投影重校验，本步未把静态入口删除等同于每帧收益。
 - ThirdPersonClient.Runtime 无依赖构建被并行 Timeline API 迁移的六处缺失成员错误阻断，错误均位于 CharacterTimelineHost，另有一条既有未使用字段警告；未触碰并行文件。ThirdPersonCamera.Contracts 无依赖编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 Camera Player 分配采样。
+
+## 2026-09-21 Rollback output Actor 工作区
+
+对应 tasks.md 的 5.84。
+
+- RollbackOutputCommitter.ResolveActorTick 对每个 completed Actor/tick 创建 existing slot List、current record List 与 seen slot HashSet；FlushConfirmed 每次确认推进再创建 release List。四类集合只服务当前同步解析，不进入 output operation、registry 或事务结果。
+- committer 现持有四只私有工作集合。Actor 解析开始清空并复用，current records 直接填入工作列表后排序；确认释放收集到共用 release slots 后排序删除。两条路径均用 finally 清空，正常、提前异常都不会长期保留 RollbackOutputRecord 引用。
+- 删除每个 Actor/tick 三只集合对象及稳定容量后的底层存储分配，也删除每次确认释放的 List 对象；首次填充或更高输出峰值仍可能扩容。事务 records 副本、disposition 索引与 operation List 保持原独立失败边界，本步未混入。
+- ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 output commit 运行对比或 Player 分配采样。

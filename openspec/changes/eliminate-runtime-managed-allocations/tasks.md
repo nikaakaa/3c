@@ -334,6 +334,8 @@
 
 - [x] 5.83 Float32 预测权威 schedule 按 replay 数与 0～2 个 current step 准确分配最终 steps／source mappings 数组并转交 ExecutionPlan，删除每 outer tick 的两只动态 List、增长存储及计划二次复制；remote-body 输出寿命保持独立
 
+- [x] 5.84 RollbackOutputCommitter 跨 Actor/tick 复用 existing slots、current records、seen slots 与 confirmed release 四只工作集合，并在 finally 清空引用，删除每 Actor 三只集合及每次确认释放一只 List 的重复创建
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

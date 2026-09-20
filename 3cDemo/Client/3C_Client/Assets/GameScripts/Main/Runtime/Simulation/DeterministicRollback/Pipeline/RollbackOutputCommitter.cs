@@ -37,6 +37,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly IFixedSimulationResultOutputPort m_Output;
         readonly IFixedSourceEgressOutputPort m_SourceEgress;
         readonly ISimulationDiagnosticsSink m_Diagnostics;
+        readonly List<RollbackOutputSlot> m_ExistingSlots = new List<RollbackOutputSlot>();
+        readonly List<RollbackOutputRecord> m_CurrentRecords = new List<RollbackOutputRecord>();
+        readonly HashSet<RollbackOutputSlot> m_SeenSlots = new HashSet<RollbackOutputSlot>();
+        readonly List<RollbackOutputSlot> m_ReleaseSlots = new List<RollbackOutputSlot>();
         Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_Records =
             new Dictionary<RollbackOutputSlot, RollbackOutputRecord>();
         ulong m_KeepCount;
@@ -172,7 +176,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return values;
         }
 
-        static void ResolveActorTick(
+        void ResolveActorTick(
             Dictionary<RollbackOutputSlot, RollbackOutputRecord> records,
             ICollection<RollbackOutputOperation> operations,
             SimulationActorTickResult actor,
@@ -182,97 +186,106 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ref ulong replacements,
             ref ulong cancellations)
         {
-            var existing = new List<RollbackOutputSlot>();
-            foreach (RollbackOutputSlot slot in records.Keys)
+            m_ExistingSlots.Clear();
+            m_CurrentRecords.Clear();
+            m_SeenSlots.Clear();
+            try
             {
-                if (slot.ActorId == actor.ActorId && slot.Tick == actor.Tick)
-                    existing.Add(slot);
-            }
-            existing.Sort();
-
-            List<RollbackOutputRecord> current = BuildCurrent(actor, executionKind, dispositions);
-            var seen = new HashSet<RollbackOutputSlot>();
-            for (int i = 0; i < current.Count; i++)
-            {
-                RollbackOutputRecord value = current[i];
-                if (!seen.Add(value.Slot))
-                    throw new InvalidOperationException($"Rollback output Tick '{actor.Tick}' contains duplicate semantic slot '{value.Slot}'.");
-                if (!records.TryGetValue(value.Slot, out RollbackOutputRecord previous))
+                foreach (RollbackOutputSlot slot in records.Keys)
                 {
-                    if (!value.ConfirmedOnly)
-                        operations.Add(RollbackOutputOperation.Publish(value, executionKind));
-                    records.Add(value.Slot, value);
-                    continue;
+                    if (slot.ActorId == actor.ActorId && slot.Tick == actor.Tick)
+                        m_ExistingSlots.Add(slot);
                 }
+                m_ExistingSlots.Sort();
 
-                if (previous.EventId.Equals(value.EventId))
+                BuildCurrent(actor, executionKind, dispositions, m_CurrentRecords);
+                for (int i = 0; i < m_CurrentRecords.Count; i++)
                 {
-                    if (previous.ConfirmedOnly != value.ConfirmedOnly)
-                        throw new InvalidOperationException($"Rollback output EventId '{value.EventId}' changed disposition class.");
-                    if (!previous.IsGameplay &&
-                        !value.IsGameplay &&
-                        !SamePresentationCommand(previous.Presentation, value.Presentation))
+                    RollbackOutputRecord value = m_CurrentRecords[i];
+                    if (!m_SeenSlots.Add(value.Slot))
+                        throw new InvalidOperationException($"Rollback output Tick '{actor.Tick}' contains duplicate semantic slot '{value.Slot}'.");
+                    if (!records.TryGetValue(value.Slot, out RollbackOutputRecord previous))
                     {
-                        if (!previous.ConfirmedOnly && !value.ConfirmedOnly)
-                        {
-                            operations.Add(RollbackOutputOperation.Replace(previous.EventId, value, executionKind));
-                            replacements++;
-                        }
-                        else if (!previous.ConfirmedOnly)
-                        {
-                            operations.Add(RollbackOutputOperation.Retire(previous, executionKind));
-                            cancellations++;
-                        }
-                        else if (!value.ConfirmedOnly)
-                        {
+                        if (!value.ConfirmedOnly)
                             operations.Add(RollbackOutputOperation.Publish(value, executionKind));
-                        }
+                        records.Add(value.Slot, value);
+                        continue;
                     }
-                    else
-                        keeps++;
+
+                    if (previous.EventId.Equals(value.EventId))
+                    {
+                        if (previous.ConfirmedOnly != value.ConfirmedOnly)
+                            throw new InvalidOperationException($"Rollback output EventId '{value.EventId}' changed disposition class.");
+                        if (!previous.IsGameplay &&
+                            !value.IsGameplay &&
+                            !SamePresentationCommand(previous.Presentation, value.Presentation))
+                        {
+                            if (!previous.ConfirmedOnly && !value.ConfirmedOnly)
+                            {
+                                operations.Add(RollbackOutputOperation.Replace(previous.EventId, value, executionKind));
+                                replacements++;
+                            }
+                            else if (!previous.ConfirmedOnly)
+                            {
+                                operations.Add(RollbackOutputOperation.Retire(previous, executionKind));
+                                cancellations++;
+                            }
+                            else if (!value.ConfirmedOnly)
+                            {
+                                operations.Add(RollbackOutputOperation.Publish(value, executionKind));
+                            }
+                        }
+                        else
+                            keeps++;
+                        records[value.Slot] = value;
+                        continue;
+                    }
+
+                    if (!previous.ConfirmedOnly && !value.ConfirmedOnly)
+                    {
+                        operations.Add(RollbackOutputOperation.Replace(previous.EventId, value, executionKind));
+                        replacements++;
+                    }
+                    else if (!previous.ConfirmedOnly)
+                    {
+                        operations.Add(RollbackOutputOperation.Retire(previous, executionKind));
+                        cancellations++;
+                    }
+                    else if (!value.ConfirmedOnly)
+                    {
+                        operations.Add(RollbackOutputOperation.Publish(value, executionKind));
+                    }
                     records[value.Slot] = value;
-                    continue;
                 }
 
-                if (!previous.ConfirmedOnly && !value.ConfirmedOnly)
+                for (int i = 0; i < m_ExistingSlots.Count; i++)
                 {
-                    operations.Add(RollbackOutputOperation.Replace(previous.EventId, value, executionKind));
-                    replacements++;
+                    RollbackOutputSlot slot = m_ExistingSlots[i];
+                    if (m_SeenSlots.Contains(slot))
+                        continue;
+                    RollbackOutputRecord previous = records[slot];
+                    if (!previous.ConfirmedOnly)
+                    {
+                        operations.Add(RollbackOutputOperation.Retire(previous, executionKind));
+                        cancellations++;
+                    }
+                    records.Remove(slot);
                 }
-                else if (!previous.ConfirmedOnly)
-                {
-                    operations.Add(RollbackOutputOperation.Retire(previous, executionKind));
-                    cancellations++;
-                }
-                else if (!value.ConfirmedOnly)
-                {
-                    operations.Add(RollbackOutputOperation.Publish(value, executionKind));
-                }
-                records[value.Slot] = value;
             }
-
-            for (int i = 0; i < existing.Count; i++)
+            finally
             {
-                RollbackOutputSlot slot = existing[i];
-                if (seen.Contains(slot))
-                    continue;
-                RollbackOutputRecord previous = records[slot];
-                if (!previous.ConfirmedOnly)
-                {
-                    operations.Add(RollbackOutputOperation.Retire(previous, executionKind));
-                    cancellations++;
-                }
-                records.Remove(slot);
+                m_ExistingSlots.Clear();
+                m_CurrentRecords.Clear();
+                m_SeenSlots.Clear();
             }
         }
 
-        static List<RollbackOutputRecord> BuildCurrent(
+        static void BuildCurrent(
             SimulationActorTickResult actor,
             SimulationPipelineStepExecutionKind executionKind,
-            IReadOnlyDictionary<EventId, SimulationOutputDisposition> dispositions)
+            IReadOnlyDictionary<EventId, SimulationOutputDisposition> dispositions,
+            List<RollbackOutputRecord> values)
         {
-            var values = new List<RollbackOutputRecord>(
-                actor.GameplayFacts.Count + actor.PresentationCommands.Count);
             for (int i = 0; i < actor.GameplayFacts.Count; i++)
             {
                 GameplayFact fact = actor.GameplayFacts[i];
@@ -292,7 +305,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     disposition.Kind == SimulationOutputDispositionKind.Defer));
             }
             values.Sort((left, right) => left.Slot.CompareTo(right.Slot));
-            return values;
         }
 
         static bool SamePresentationCommand(
@@ -334,21 +346,28 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (m_State.ConfirmedTick == 0)
                 return;
-            var release = new List<RollbackOutputSlot>();
-            foreach (KeyValuePair<RollbackOutputSlot, RollbackOutputRecord> pair in records)
+            m_ReleaseSlots.Clear();
+            try
             {
-                if (pair.Key.Tick.Value > m_State.ConfirmedTick)
-                    continue;
-                if (pair.Value.ConfirmedOnly)
+                foreach (KeyValuePair<RollbackOutputSlot, RollbackOutputRecord> pair in records)
                 {
-                    operations.Add(RollbackOutputOperation.Publish(pair.Value, pair.Value.ExecutionKind));
-                    confirmations++;
+                    if (pair.Key.Tick.Value > m_State.ConfirmedTick)
+                        continue;
+                    if (pair.Value.ConfirmedOnly)
+                    {
+                        operations.Add(RollbackOutputOperation.Publish(pair.Value, pair.Value.ExecutionKind));
+                        confirmations++;
+                    }
+                    m_ReleaseSlots.Add(pair.Key);
                 }
-                release.Add(pair.Key);
+                m_ReleaseSlots.Sort();
+                for (int i = 0; i < m_ReleaseSlots.Count; i++)
+                    records.Remove(m_ReleaseSlots[i]);
             }
-            release.Sort();
-            for (int i = 0; i < release.Count; i++)
-                records.Remove(release[i]);
+            finally
+            {
+                m_ReleaseSlots.Clear();
+            }
         }
 
         void Apply(RollbackOutputOperation operation)

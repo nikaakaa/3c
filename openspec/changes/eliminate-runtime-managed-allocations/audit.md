@@ -1198,3 +1198,12 @@
 - 现用固定两槽 StateRuntime 工作区显式收集活动态，四阶段按数量直接循环；活动顺序仍是当前态在前、目标态在后，Inertialization 直接切态和普通双态混合语义不变。
 - PrepareFrame 复用按 contribution capacity 预备的子请求列表；Evaluate 用两个局部引用替代输出 List；PrepareEvaluation 用普通循环查找父 demand 中的子请求，删除捕获 expected 的 LINQ Any 委托／闭包。身份仍按 ScopeInstanceId、NodeId、SourceId 三项匹配。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 StateMachine 运行采样或 Player 分配采样。
+
+## 2026-09-21 Pose Graph 输出边界预绑定
+
+对应 tasks.md 的 4.2.11。
+
+- CharacterPoseNativeGraphEvaluator.EvaluateGraphOutput 原每帧用 FindNodes 分别查找 OutputPose／GraphOutput，FindNodes 会创建 List 再 ToArray；GraphOutput 路径还会重新创建运行端口形状并查找连接目标定义，随后 ReadInputValue 再创建一次形状。
+- Evaluator 初始化时现一次确认唯一 OutputPose，或唯一 GraphOutput、唯一输入连接和目标端口定义；逐帧 OutputPose 直接读取固定 pose 输入，GraphOutput 通过新增的已绑定端口重载按缓存 definition.Kind 路由 typed input。
+- 该绑定服从现有 PreparedBinding 的图 revision：运行实例启动后拓扑和动态端口不得原地变化；需要变化时仍应走正式重建实例链路，不增加运行期失效探测或兼容路径。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做图输出运行采样或 Player 分配采样。

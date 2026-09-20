@@ -105,6 +105,7 @@
 - [x] 4.2.8 Pose Graph Evaluator 复用按 handler 数预备的 SourceRequest 汇总列表，Demand 合法路径改为无 HashSet、无错误文本构造的顺序校验，删除每个图每帧的容器与字符串分配
 - [x] 4.2.9 Blend Stack 源 binding 复用 pending、request 和 source identity 工作区，并将每个活动源的 PendingSource 改为值记录，删除每帧容器及逐源对象分配
 - [x] 4.2.10 Pose StateMachine 以当前态／目标态两槽工作区替代四阶段 yield 枚举，复用子请求汇总并直接持有最多两个输出值，删除每帧 List、迭代器和捕获式 Any 分配
+- [x] 4.2.11 Pose Graph Evaluator 初始化时绑定唯一 OutputPose 或 GraphOutput 输入定义，逐帧直接读取已绑定边界，删除输出节点 List／数组及动态端口形状重建
 - [ ] 4.3 沿Foot查询、Goal Assembly、FBBIK和最终写入链治理实际managed临时对象、装箱和vendor接口分配，保留查询容量和算法顺序
 - [ ] 4.4 沿Camera目标/效果、Input采样和Behavior Designer正式任务治理已确认分配，保持输入来源和目标身份
 

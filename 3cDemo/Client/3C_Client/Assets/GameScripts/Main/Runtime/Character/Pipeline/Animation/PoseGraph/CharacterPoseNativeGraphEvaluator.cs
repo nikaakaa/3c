@@ -64,6 +64,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly HashSet<PoseNodeId> m_ReachableNodeIds =
             new HashSet<PoseNodeId>();
         readonly List<CharacterPoseNativeSourceRequest> m_SourceRequests;
+        CharacterPoseCanvasNode m_OutputPose;
+        CharacterPoseCanvasNode m_GraphOutput;
+        CharacterPosePortDefinition m_GraphOutputPort;
         bool m_Disposed;
 
         internal CharacterPoseNativeGraphEvaluator(
@@ -133,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Pose native node handler '{handler.NodeId}' has kind '{handler.Kind}', expected '{node.Kind}'.");
             }
             BuildReachableNodeIds(runtime);
+            BindGraphOutput(runtime);
         }
 
         public void Start(CharacterPoseNativeGraphRuntime runtime)
@@ -214,55 +218,70 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeExecutionStage stage)
         {
             RequireAlive();
-            CharacterPoseCanvasNode[] outputPoses = FindNodes(
-                runtime,
-                CharacterPoseNodeKind.OutputPose);
-            if (outputPoses.Length == 1)
+            if (m_OutputPose != null)
                 return runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(
-                    outputPoses[0],
+                    m_OutputPose,
                     "pose");
-            if (outputPoses.Length > 1)
-                throw new InvalidOperationException(
-                    $"Pose graph '{runtime.PreparedBinding.GraphId}' has multiple Output Pose nodes.");
+            return runtime.ReadInputValue(m_GraphOutput, m_GraphOutputPort);
+        }
 
-            CharacterPoseCanvasNode[] graphOutputs = FindNodes(
-                runtime,
-                CharacterPoseNodeKind.GraphOutput);
-            if (graphOutputs.Length != 1)
+        void BindGraphOutput(CharacterPoseNativeGraphRuntime runtime)
+        {
+            m_OutputPose = null;
+            m_GraphOutput = null;
+            m_GraphOutputPort = null;
+            foreach (CharacterPoseCanvasNode node in runtime.Graph.Nodes)
+            {
+                if (node.Kind != CharacterPoseNodeKind.OutputPose)
+                    continue;
+                if (m_OutputPose != null)
+                    throw new InvalidOperationException(
+                        $"Pose graph '{runtime.PreparedBinding.GraphId}' has multiple Output Pose nodes.");
+                m_OutputPose = node;
+            }
+            if (m_OutputPose != null)
+                return;
+            foreach (CharacterPoseCanvasNode node in runtime.Graph.Nodes)
+            {
+                if (node.Kind != CharacterPoseNodeKind.GraphOutput)
+                    continue;
+                if (m_GraphOutput != null)
+                    throw new InvalidOperationException(
+                        $"Pose graph '{runtime.PreparedBinding.GraphId}' has no unique graph output boundary.");
+                m_GraphOutput = node;
+            }
+            if (m_GraphOutput == null)
                 throw new InvalidOperationException(
                     $"Pose graph '{runtime.PreparedBinding.GraphId}' has no unique graph output boundary.");
-            CharacterPoseCanvasNode graphOutput = graphOutputs[0];
             CharacterPoseCanvasConnection connection = null;
             for (int i = 0; i < runtime.Graph.Connections.Count; i++)
             {
                 CharacterPoseCanvasConnection candidate = runtime.Graph.Connections[i];
-                if (candidate.TargetNodeId != graphOutput.NodeId)
+                if (candidate.TargetNodeId != m_GraphOutput.NodeId)
                     continue;
                 if (connection != null)
                     throw new InvalidOperationException(
-                        $"Pose graph output '{graphOutput.NodeId}' has multiple inputs.");
+                        $"Pose graph output '{m_GraphOutput.NodeId}' has multiple inputs.");
                 connection = candidate;
             }
             if (connection == null)
                 throw new InvalidOperationException(
-                    $"Pose graph output '{graphOutput.NodeId}' has no input.");
-            CharacterPosePortDefinition targetPort = null;
+                    $"Pose graph output '{m_GraphOutput.NodeId}' has no input.");
             IReadOnlyList<CharacterPosePortDefinition> shape =
-                CharacterPoseCanvasNativePorts.GetRuntimeShape(graphOutput);
+                CharacterPoseCanvasNativePorts.GetRuntimeShape(m_GraphOutput);
             for (int i = 0; i < shape.Count; i++)
             {
                 CharacterPosePortDefinition candidate = shape[i];
                 if (candidate.Direction == CharacterPosePortDirection.Input &&
                     candidate.PortId == connection.TargetPortId)
                 {
-                    targetPort = candidate;
+                    m_GraphOutputPort = candidate;
                     break;
                 }
             }
-            if (targetPort == null)
+            if (m_GraphOutputPort == null)
                 throw new InvalidOperationException(
-                    $"Pose graph output '{graphOutput.NodeId}' input '{connection.TargetPortId}' is not declared.");
-            return runtime.ReadInputValue(graphOutput, targetPort.PortId);
+                    $"Pose graph output '{m_GraphOutput.NodeId}' input '{connection.TargetPortId}' is not declared.");
         }
 
         public void EvaluateFrame(
@@ -353,17 +372,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             for (int i = 0; i < m_HandlerOrder.Count; i++)
                 m_HandlerOrder[i].Stop(runtime);
-        }
-
-        static CharacterPoseCanvasNode[] FindNodes(
-            CharacterPoseNativeGraphRuntime runtime,
-            CharacterPoseNodeKind kind)
-        {
-            var result = new List<CharacterPoseCanvasNode>();
-            foreach (CharacterPoseCanvasNode node in runtime.Graph.Nodes)
-                if (node.Kind == kind)
-                    result.Add(node);
-            return result.ToArray();
         }
 
         void BuildReachableNodeIds(CharacterPoseNativeGraphRuntime runtime)

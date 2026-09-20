@@ -549,6 +549,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (definition == null)
                 throw new InvalidOperationException(
                     $"Pose node '{node.NodeId}' input '{portId}' is not declared.");
+            return ReadInputValue(node, definition);
+        }
+
+        internal CharacterPoseNativePortValue ReadInputValue(
+            CharacterPoseCanvasNode node,
+            CharacterPosePortDefinition definition)
+        {
+            RequireEvaluationStage();
+            if (node == null || definition == null ||
+                definition.Direction != CharacterPosePortDirection.Input)
+            {
+                throw new ArgumentException(
+                    "Pose native input binding is invalid.");
+            }
+            PosePortId portId = definition.PortId;
             return definition.Kind switch
             {
                 CharacterPosePortKind.LocalPose =>

@@ -1063,3 +1063,12 @@
 - sampling 后端正式成员只有 NativeClip 与 Acl，现由 token 内同一值判断直接匹配；未知零值及其它 byte、负 permission index、零 generation 继续拒绝。SourceId、PlayerNodeId、permission 和 generation 生命周期未改。
 - 删除释放令牌生成与消费中的装箱和枚举元数据查询，不改变 ACL／NativeClip 路由、frame journal 提交顺序或物理 Pose 源释放时机。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Pose 源释放运行回放或 Player 分配采样。
+
+## 2026-09-20 Pose 源 readiness 页面枚举校验
+
+对应 tasks.md 的 4.2.3。
+
+- CharacterPoseSourceReadinessJournal 每帧建立 key 并向固定容量 page 记录当前／延后目标；key 构造和 IsValid 原查询 PreparationKind，entry 构造及 page Record／Remove 原查询 Category。同一记录会在这些边界重复校验。
+- 新增 CharacterPoseSourceReadinessEnumValues，PreparationKind 按 Action=1 至 BlendSpacePlayer=5、Category 按 Current=1 至 DeferredTarget=2 的正式连续值域判断。未知零值和其它 byte 继续与原身份／binding／readiness 条件共同拒绝。
+- 删除 key、entry、page 运行链五处装箱和枚举元数据查询，不改变 completion identity、page generation、覆盖非法结果、容量、Seal 或聚合顺序。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 readiness 页面运行回放或 Player 分配采样。

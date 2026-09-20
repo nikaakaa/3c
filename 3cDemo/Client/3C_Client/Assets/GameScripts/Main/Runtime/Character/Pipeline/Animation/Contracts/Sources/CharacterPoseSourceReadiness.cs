@@ -8,6 +8,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         DeferredTarget = 2
     }
 
+    internal static class CharacterPoseSourceReadinessEnumValues
+    {
+        internal static bool IsValid(CharacterPoseSourceReadinessCategory value) =>
+            value >= CharacterPoseSourceReadinessCategory.Current &&
+            value <= CharacterPoseSourceReadinessCategory.DeferredTarget;
+
+        internal static bool IsValid(CharacterPoseSourcePreparationKind value) =>
+            value >= CharacterPoseSourcePreparationKind.Action &&
+            value <= CharacterPoseSourcePreparationKind.BlendSpacePlayer;
+    }
+
     internal readonly struct CharacterPoseSourceReadinessView
     {
         internal CharacterPoseSourceReadinessView(
@@ -133,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseNodeId poseNodeId,
             int bindingIndex)
         {
-            if (!Enum.IsDefined(typeof(CharacterPoseSourcePreparationKind), kind) ||
+            if (!CharacterPoseSourceReadinessEnumValues.IsValid(kind) ||
                 !poseNodeId.IsValid || bindingIndex < -1 ||
                 (!sourceId.IsValid && bindingIndex < 0))
             {
@@ -150,7 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal PoseNodeId PoseNodeId { get; }
         internal int BindingIndex { get; }
         internal bool IsValid =>
-            Enum.IsDefined(typeof(CharacterPoseSourcePreparationKind), Kind) &&
+            CharacterPoseSourceReadinessEnumValues.IsValid(Kind) &&
             PoseNodeId.IsValid &&
             BindingIndex >= -1 &&
             (SourceId.IsValid || BindingIndex >= 0);
@@ -175,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseSourceReadinessKey key,
             in CharacterPoseSourceReadinessView readiness)
         {
-            if (!Enum.IsDefined(typeof(CharacterPoseSourceReadinessCategory), category) ||
+            if (!CharacterPoseSourceReadinessEnumValues.IsValid(category) ||
                 !key.IsValid || !readiness.IsValid)
             {
                 throw new ArgumentException("Character Pose source readiness entry is invalid.");

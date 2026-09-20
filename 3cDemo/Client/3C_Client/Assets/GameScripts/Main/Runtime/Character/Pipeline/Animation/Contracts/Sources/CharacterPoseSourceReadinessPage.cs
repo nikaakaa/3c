@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseSourceReadinessView readiness)
         {
             if (!IsOpen ||
-                !Enum.IsDefined(typeof(CharacterPoseSourceReadinessCategory), category) ||
+                !CharacterPoseSourceReadinessEnumValues.IsValid(category) ||
                 !key.IsValid ||
                 !readiness.IsValid ||
                 readiness.CompletionIdentity != m_CompletionIdentity)
@@ -78,7 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseSourceReadinessCategory category,
             in CharacterPoseSourceReadinessKey key)
         {
-            if (!IsOpen || !Enum.IsDefined(typeof(CharacterPoseSourceReadinessCategory), category) ||
+            if (!IsOpen || !CharacterPoseSourceReadinessEnumValues.IsValid(category) ||
                 !key.IsValid)
             {
                 throw new InvalidOperationException(

@@ -1297,3 +1297,12 @@
 - AbilityTreeClipHook 正式成员连续为 OnEnable=0、OnDisable=1、OnDestroy=2、Root=3，现按 byte 上界判断；未知值继续进入原 ArgumentOutOfRangeException，clip authoring id、tree graph id、cycle、action instance 和 timeline runtime handle 约束不变。
 - Root 更新路径仍会构造 invocation，本小步只删除其中的枚举装箱和元数据查询，不声称 Timeline Host 已无分配。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Ability Tree Clip 生命周期回放或 Player 分配采样。
+
+## 2026-09-21 Timeline Runtime Snapshot 枚举值域
+
+对应 tasks.md 的 2.50。
+
+- AbilityTimelineRuntimeSnapshot 由 CharacterTimelineHost 捕获，并由 Fixed／Float32 CharacterRuntimeStateCodec 恢复构造；原构造器分别查询 PlaybackMode 和 State。
+- PlaybackMode 正式成员为 Once=0 至 Loop=1，State 连续为 Prepared=0 至 Disposed=6，现按各自 byte 上界校验；未知值继续抛出原 ArgumentOutOfRangeException，运行身份、cursor、cycle、stop context 和 action context 约束不变。
+- Snapshot 仍为独立对象，TreeDecisionExits、PendingTreeDecisionExits 和 ActiveClipIds 的深拷贝继续保留；本小步只删除两次枚举装箱和元数据查询，不把快照路径计作逐帧零分配。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Timeline 快照捕获／恢复对比或 Player 分配采样。

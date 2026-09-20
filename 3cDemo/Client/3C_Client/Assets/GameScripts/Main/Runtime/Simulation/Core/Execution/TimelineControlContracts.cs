@@ -739,10 +739,10 @@ namespace ThirdPersonSimulation
             CallIdentity = SimulationIdentity.Require(callIdentity, nameof(callIdentity));
             if (executionInstanceId == 0)
                 throw new ArgumentOutOfRangeException(nameof(executionInstanceId));
-            if (!Enum.IsDefined(typeof(AbilityTimelineSnapshotMode), playbackMode))
+            if ((byte)playbackMode > (byte)AbilityTimelineSnapshotMode.Loop)
                 throw new ArgumentOutOfRangeException(nameof(playbackMode));
             ContentRevision = SimulationIdentity.Require(contentRevision, nameof(contentRevision));
-            if (!Enum.IsDefined(typeof(AbilityTimelineSnapshotState), state))
+            if ((byte)state > (byte)AbilityTimelineSnapshotState.Disposed)
                 throw new ArgumentOutOfRangeException(nameof(state));
             if (cursorTime < FixedScalar.Zero || cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cursorTime));

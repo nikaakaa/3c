@@ -720,3 +720,12 @@
 - 节点只存在于私有 m_Recency 和 m_RecencyNodes，ReadSince 返回独立 RuntimeLiveStateChange 值记录与列表，不暴露节点，故复用不改变已返回结果。旧 Value 被覆盖，不额外保留旧状态引用；顺序、m_LastEvictionVersion、m_EvictedStates、m_Version、changes 队列及全量同步判定均沿原逻辑。
 - 节点数量上限沿既有 m_MaxChanges，未增加配置、池或旁路存储。未满时仍创建节点；Clear 保留原清除行为，之后重新填充仍分配。字典／队列增长、变化读取列表、事件 payload 和捕获段仍未完成治理，不宣称诊断稳态整链 0 GC。
 - 目标文件编辑前无其它未提交修改，编辑前未发现 csc／bee 编译进程。使用当前 Unity BTSMTL.Diagnostics.rsp 的引用与源码独立调用 csc，输出及临时 rsp 位于系统 TEMP，退出码 0，无诊断输出；未改 Assets 编译产物、未刷新或控制 Editor。diff 空白检查通过，未新增测试或执行 Player 分配采样。
+## 2026-09-20 捕获读取结果按实际数量准备
+
+对应 tasks.md 的 7.10。
+
+- RuntimeCaptureStore.ReadSince 原从头过滤到无初始容量的 List，增量较多时反复扩容复制。m_Changes 只按递增 revision 追加，TrimToCapacity 只删前缀，Dispose 清空；被丢弃的事件不加入列表，可能产生 revision 缺口但不改变顺序。现二分定位首个 Revision 大于 cursor 的位置，再 GetRange 一次取得独立后缀列表。
+- 保留 cursor 大于等于版本的空结果返回、最早可读版本及淘汰版本触发的全量同步分支。没有按 revision 差值推算数量，因而不依赖编号连续；GetRange 仍返回独立 List，不借用后续可被截断的 m_Changes。
+- CollectAllChanges 保留逐 segment 的原顺序，只以 m_Changes.Count 初始化容量。成功收录事件同时加入 segment.Events 与 m_Changes，超限丢弃两者都不加入，段淘汰同时删对应前缀，因此该数量覆盖现有段事件总数；不引入最大容量级别的过量预分配。
+- 减少读取过程中结果列表增长的中间数组与复制，最终 List／数组、Freeze 快照和采集段自身仍分配。没有改变捕获发布、Timeline 播放、事务或存储所有权，不宣称捕获链 0 GC。
+- 编辑前目标文件无其它未提交修改，未发现 csc／bee 编译进程。沿当前 Unity BTSMTL.Diagnostics.rsp 独立 csc 编译到系统 TEMP，退出码 0、无诊断输出；diff 空白检查通过。未新增测试、未操作共享 Unity、未执行捕获读取运行对比或 Player 采样。

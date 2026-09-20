@@ -470,13 +470,17 @@ namespace BTSMTL.Diagnostics
             if (cursor < earliestAvailable - 1 || cursor < m_LastEvictionVersion)
                 return new RuntimeCaptureRead(m_Version, true, CollectAllChanges());
 
-            var changes = new List<RuntimeCaptureChange>();
-            for (int i = 0; i < m_Changes.Count; i++)
+            int first = 0;
+            int end = m_Changes.Count;
+            while (first < end)
             {
-                RuntimeCaptureChange change = m_Changes[i];
-                if (change.Revision > cursor)
-                    changes.Add(change);
+                int middle = first + (end - first) / 2;
+                if (m_Changes[middle].Revision <= cursor)
+                    first = middle + 1;
+                else
+                    end = middle;
             }
+            List<RuntimeCaptureChange> changes = m_Changes.GetRange(first, m_Changes.Count - first);
             return new RuntimeCaptureRead(m_Version, false, changes);
         }
 
@@ -515,7 +519,7 @@ namespace BTSMTL.Diagnostics
 
         List<RuntimeCaptureChange> CollectAllChanges()
         {
-            var changes = new List<RuntimeCaptureChange>();
+            var changes = new List<RuntimeCaptureChange>(m_Changes.Count);
             for (int i = 0; i < m_Segments.Count; i++)
                 changes.AddRange(m_Segments[i].Events);
             return changes;

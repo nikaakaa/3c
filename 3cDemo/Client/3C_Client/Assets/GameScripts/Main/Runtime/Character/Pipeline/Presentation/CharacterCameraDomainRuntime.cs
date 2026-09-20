@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             for (int i = m_ActiveRequests.Count - 1; i >= 0; i--)
             {
                 CharacterPresentationCommand active = m_ActiveRequests[i].Command;
-                if (!SameRequest(active, command))
+                if (active.ProducerGeneration != command.ProducerGeneration || !SameRequest(active, command))
                     continue;
                 RetireRuntimeRequest(active, reason);
                 m_ActiveRequests.RemoveAt(i);

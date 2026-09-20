@@ -1135,3 +1135,12 @@
 - 新增 CharacterPresentationEnumValues，五类枚举分别按现有正式连续首末成员判断：ClockMode、BodySource、BodyCorrectionMode、DomainFactKind、DomainFactState。未知零值及其它 byte 继续使 IsValid=false 或抛出原异常。
 - 删除三类 locomotion 表现有效性读取与 domain fact 构造中的六处装箱和枚举元数据查询；Plan 身份、movement lineage、body profile、runtime fact 内容及校验顺序不变。
 - 首次编译前检测到 Unity/C# 编译进程并主动跳过；确认进程结束后，ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做表现运行采样。
+
+## 2026-09-20 Fixed Unity 输入适配器枚举校验
+
+对应 tasks.md 的 4.4.10。
+
+- FixedLocalInputIngressPass 的提交、丢弃、恢复及 Rollback endpoint 丢弃都会调用 UnityFixedCharacterInputAdapter.NotifyStateDisposition；适配器原在每次通知执行 Enum.IsDefined。适配器状态恢复还逐条校验 pending request 的 TimingClass。
+- disposition 正式成员连续为 Prepared=1 至 Restored=4，TimingClass 连续为 Immediate=1 至 Offensive=2；现直接按闭区间判断，未知零值及其它 byte 继续进入原异常。
+- 删除输入运行通知及恢复时按 pending request 数重复的装箱和枚举元数据查询，不改变请求序号、捕获帧、buffer 秒数、优先级、capture/eligible tick 或输入提交顺序。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做输入运行回放或 Player 分配采样。

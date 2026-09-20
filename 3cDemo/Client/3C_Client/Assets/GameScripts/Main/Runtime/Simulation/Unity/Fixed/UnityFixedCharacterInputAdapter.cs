@@ -294,7 +294,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 var timingClass = (CharacterActionRequestTimingClass)reader.ReadByte();
                 ulong captureTick = reader.ReadUInt64();
                 ulong eligibleTick = reader.ReadUInt64();
-                if (!Enum.IsDefined(typeof(CharacterActionRequestTimingClass), timingClass) ||
+                if (timingClass < CharacterActionRequestTimingClass.Immediate ||
+                    timingClass > CharacterActionRequestTimingClass.Offensive ||
                     captureTick == 0 != (eligibleTick == 0) || eligibleTick < captureTick)
                 {
                     throw new InvalidDataException("Unity Fixed Input Adapter pending request state is invalid.");
@@ -318,7 +319,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition)
         {
-            if (!Enum.IsDefined(typeof(FixedCharacterControlSourceStateDisposition), disposition))
+            if (disposition < FixedCharacterControlSourceStateDisposition.Prepared ||
+                disposition > FixedCharacterControlSourceStateDisposition.Restored)
                 throw new ArgumentOutOfRangeException(nameof(disposition));
         }
 

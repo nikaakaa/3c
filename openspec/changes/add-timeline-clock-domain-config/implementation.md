@@ -407,3 +407,9 @@
 - 结束事件、动画／Camera bridge 清理、表现 driver 释放均显式携带 generation，旧代结束不能释放同 handle 的新代。Float32 编译产物需要与作者图一致；本批没有创建或修改 Presentation Marker 业务资产，尚未做端到端图执行验证。
 - 仍未整体完成第6／7节：只读表现事实节点未开放，最终 Camera Apply 异常后的跨领域回滚、同代分支重新出现、完整0 GC仍待完成。
 - Unity最终编译与域重载完成（1789916115983），原菜单 Tools/3C/Internal/Republish Corin Ability Data 执行后控制台错误为零；git diff --check通过。派生资产保留工作区中其他任务的修改，不混入本批代码提交。
+
+## Presentation Marker 读取同帧角色表现事实
+- 原 Character State 的向量／数值／朝向／布尔节点声明允许 Presentation；继续使用既有五个字段标识与编译端口，不添加作者字段表。表现执行器只接受 position、velocity、vertical-velocity、body-yaw、grounded，Gameplay 黑板及其余未绑定读取能力仍拒绝。
+- 原表现域先构造本帧 CharacterPresentationFactFrame，再将同帧 TargetPosition、事实速度／朝向／接地适配成只读 Float32PresentationGraphFacts 传给 Timeline Host。Marker 条件读取的是当前表现事实，不创建 Simulation frame，不回写逻辑状态，也不生成第二套事实采样。
+- Host 按 renderFrame 核对求值上下文；图执行器每次 Evaluate 接收显式快照并在 finally 清理，原帧 Discard 同时清空 Host 的快照。只读事实为值类型，转换与读取路径无新增集合／装箱。Logic Character State 节点继续由原逻辑执行器读取。
+- 仍待完成：全 Timeline 求值与原事件身份分配清理、播放控制多来源叠加、最终分支重接入、下游最终 Apply 异常回滚及完整对账；本批没有新增测试。

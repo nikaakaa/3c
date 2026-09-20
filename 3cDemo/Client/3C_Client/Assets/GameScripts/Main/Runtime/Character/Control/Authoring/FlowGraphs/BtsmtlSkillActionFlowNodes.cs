@@ -144,28 +144,28 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("读取Character State向量"), Category("BTSMTL/Character State")]
-    [BtsmtlSkillNodeKind("character-state-vector3")]
+    [BtsmtlSkillNodeKind("character-state-vector3", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CharacterStateFieldType, "fieldId", "vector3")]
     public sealed class BtsmtlSkillCharacterStateVector3FlowNode : BtsmtlSkillCharacterStateFlowNode<Vector3>
     {
     }
 
     [Name("读取Character State数值"), Category("BTSMTL/Character State")]
-    [BtsmtlSkillNodeKind("character-state-scalar")]
+    [BtsmtlSkillNodeKind("character-state-scalar", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CharacterStateFieldType, "fieldId", "scalar")]
     public sealed class BtsmtlSkillCharacterStateScalarFlowNode : BtsmtlSkillCharacterStateFlowNode<float>
     {
     }
 
     [Name("读取Character State朝向"), Category("BTSMTL/Character State")]
-    [BtsmtlSkillNodeKind("character-state-yaw")]
+    [BtsmtlSkillNodeKind("character-state-yaw", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CharacterStateFieldType, "fieldId", "yaw")]
     public sealed class BtsmtlSkillCharacterStateYawFlowNode : BtsmtlSkillCharacterStateFlowNode<float>
     {
     }
 
     [Name("读取Character State布尔"), Category("BTSMTL/Character State")]
-    [BtsmtlSkillNodeKind("character-state-bool")]
+    [BtsmtlSkillNodeKind("character-state-bool", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CharacterStateFieldType, "fieldId", "bool")]
     public sealed class BtsmtlSkillCharacterStateBooleanFlowNode : BtsmtlSkillCharacterStateFlowNode<bool>
     {

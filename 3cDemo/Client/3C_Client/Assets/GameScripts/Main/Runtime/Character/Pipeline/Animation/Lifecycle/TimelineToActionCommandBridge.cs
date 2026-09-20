@@ -523,7 +523,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             for (int index = 0; index < frame.Events.Count; index++)
             {
                 TimelineRuntimePresentationEvent marker = frame.Events[index];
-                ReadOnlySpan<PresentationGraphCameraOutput> outputs = m_TimelineHost.EvaluatePresentationMarker(in marker);
+                ReadOnlySpan<PresentationGraphCameraOutput> outputs = m_TimelineHost.EvaluatePresentationMarker(in marker, frame.PresentationFrame);
                 EventId eventId = marker.EventId;
                 for (int outputIndex = 0; outputIndex < outputs.Length; outputIndex++)
                     AddMarkerCamera(frame, context, marker, eventId, outputs[outputIndex]);

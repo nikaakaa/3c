@@ -512,6 +512,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             new Dictionary<ulong, CharacterTimelinePendingStop>();
         readonly string m_SourceName;
         readonly List<Float32PresentationGraphRuntime> m_PresentationGraphs = new();
+        Float32PresentationGraphFacts m_PresentationFacts;
         readonly CharacterTimelineDependencyResolver m_DependencyResolver = new();
         ulong m_TickCounter;
         TimelineRuntimeNumericTarget m_NumericTarget;
@@ -571,8 +572,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_PresentationGraphs[index].ValidateCameraResources(validate);
         }
 
-        internal ReadOnlySpan<PresentationGraphCameraOutput> EvaluatePresentationMarker(in TimelineRuntimePresentationEvent marker)
+        internal ReadOnlySpan<PresentationGraphCameraOutput> EvaluatePresentationMarker(in TimelineRuntimePresentationEvent marker, ulong renderFrame)
         {
+            if (renderFrame == 0 || m_PresentationFacts.RenderFrame != renderFrame)
+                throw new InvalidOperationException("Presentation Marker facts do not belong to its candidate frame.");
             if (!TryGetActivePlayback(marker.PlaybackHandle, out ActivePlayback active) || active.Generation != marker.Generation)
                 throw new InvalidOperationException("Presentation Marker targets an inactive playback generation.");
             Float32PresentationGraphRuntime selected = null;
@@ -590,7 +593,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             if (selected == null)
                 throw new InvalidOperationException($"Presentation Marker '{marker.MarkerAuthoringId}' has no exact graph invocation or revision binding.");
-            return selected.Evaluate(binding);
+            return selected.Evaluate(binding, in m_PresentationFacts);
         }
 
         internal TimelineRuntimeCompositionHost Host => m_Host;
@@ -1966,8 +1969,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        internal void Present(in GameplayPresentationFrameContext context, IActionPresentationClockCoordinator clock)
+        internal void Present(in GameplayPresentationFrameContext context, IActionPresentationClockCoordinator clock,
+            in Float32PresentationGraphFacts facts)
         {
+            if (facts.RenderFrame != context.RenderFrame)
+                throw new InvalidOperationException("Timeline presentation requires facts from the same render frame.");
+            m_PresentationFacts = facts;
             if (!m_Initialized || m_Host == null || m_ActivePlaybacks.Count == 0)
                 return;
             for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
@@ -2040,6 +2047,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         internal void DiscardPresentationFrame(ulong frame)
         {
+            m_PresentationFacts = default;
             m_Host?.DiscardPresentationFrame(frame);
             m_PresentationCandidates.Clear();
             m_PresentationEndCandidates.Clear();

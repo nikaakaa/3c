@@ -3,6 +3,37 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
+    public readonly struct Float32PresentationGraphFacts
+    {
+        public Float32PresentationGraphFacts(ulong renderFrame, Float32Vector3 position,
+            Float32Vector3 velocity, Float32Yaw yaw, bool grounded)
+        {
+            if (renderFrame == 0)
+                throw new ArgumentOutOfRangeException(nameof(renderFrame));
+            RenderFrame = renderFrame;
+            Position = position;
+            Velocity = velocity;
+            Yaw = yaw;
+            Grounded = grounded;
+        }
+
+        public ulong RenderFrame { get; }
+        public Float32Vector3 Position { get; }
+        public Float32Vector3 Velocity { get; }
+        public Float32Yaw Yaw { get; }
+        public bool Grounded { get; }
+
+        internal AbilityStateValue ReadCharacterState(string field) => field switch
+        {
+            CharacterStateProviderFields.Position => AbilityStateValue.FromVector3(Position),
+            CharacterStateProviderFields.Velocity => AbilityStateValue.FromVector3(Velocity),
+            CharacterStateProviderFields.VerticalVelocity => AbilityStateValue.FromScalar(Velocity.Y),
+            CharacterStateProviderFields.BodyYaw => AbilityStateValue.FromYaw(Yaw),
+            CharacterStateProviderFields.Grounded => AbilityStateValue.FromBoolean(Grounded),
+            _ => throw new InvalidOperationException($"Presentation Character State field '{field}' is unsupported.")
+        };
+    }
+
     public readonly struct PresentationGraphCameraOutput
     {
         public PresentationGraphCameraOutput(OperationHandle operation, string producer, PresentationCameraRequest request, PresentationCameraRequest retirement)
@@ -32,6 +63,7 @@ namespace ThirdPersonSimulation
         readonly PresentationGraphCameraOutput[] m_Outputs;
         readonly Values m_Values;
         readonly OperationControlRuntime<Target> m_Control;
+        Float32PresentationGraphFacts m_Facts;
         int m_OutputCount;
         bool m_Executing;
 
@@ -104,11 +136,14 @@ namespace ThirdPersonSimulation
             return match >= 0;
         }
 
-        public ReadOnlySpan<PresentationGraphCameraOutput> Evaluate(int binding)
+        public ReadOnlySpan<PresentationGraphCameraOutput> Evaluate(int binding, in Float32PresentationGraphFacts facts)
         {
             if (m_Executing)
                 throw new InvalidOperationException("Presentation graph evaluation is already active.");
+            if (facts.RenderFrame == 0)
+                throw new InvalidOperationException("Presentation Marker requires its current read-only fact frame.");
             ProgramSourceMapEntry entry = m_Entries[binding];
+            m_Facts = facts;
             m_Executing = true;
             m_OutputCount = 0;
             Array.Copy(m_Defaults, m_State, m_State.Length);
@@ -128,6 +163,7 @@ namespace ThirdPersonSimulation
             }
             finally
             {
+                m_Facts = default;
                 m_Executing = false;
             }
         }
@@ -169,6 +205,10 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.TimelineEnter:
                     if (operation.Integer0 != (int)AbilityTreeClipHook.OnEnable)
                         throw new InvalidOperationException("Presentation Marker only supports the OnEnable hook.");
+                    break;
+                case SimulationOperationCode.CharacterStateRead:
+                    if (!CharacterStateProviderFields.IsValid(operation.Text0))
+                        throw new InvalidOperationException($"Presentation Character State field '{operation.Text0}' is unsupported.");
                     break;
                 case SimulationOperationCode.BlackboardGet:
                 case SimulationOperationCode.BlackboardSet:
@@ -246,9 +286,12 @@ namespace ThirdPersonSimulation
             protected override AbilityStateValue EvaluateDomainValue<TTarget>(OperationControlCursor<TTarget> cursor,
                 SimulationOperation operation, string outputPort, Float32ValueInputLease inputs)
             {
-                if (operation.Code != SimulationOperationCode.BlackboardGet)
-                    throw new InvalidOperationException($"Presentation value operation '{operation.Code}' has no bound read capability.");
-                return m_Owner.m_State[m_Owner.ParameterSlot(operation)];
+                return operation.Code switch
+                {
+                    SimulationOperationCode.BlackboardGet => m_Owner.m_State[m_Owner.ParameterSlot(operation)],
+                    SimulationOperationCode.CharacterStateRead => m_Owner.m_Facts.ReadCharacterState(operation.Text0),
+                    _ => throw new InvalidOperationException($"Presentation value operation '{operation.Code}' has no bound read capability.")
+                };
             }
 
             internal void WriteParameter<TTarget>(OperationControlCursor<TTarget> cursor, SimulationOperation operation)

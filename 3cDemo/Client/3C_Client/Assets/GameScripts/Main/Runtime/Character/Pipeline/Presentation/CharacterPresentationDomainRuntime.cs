@@ -409,8 +409,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Camera?.BeginFrame();
                 m_TimelinePresentationBridge?.BeginFrame();
                 m_TimelineBridge?.BeginFrame();
-                m_TimelineHost?.Present(context, m_PresentationClockCoordinator);
                 CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
+                if (m_TimelineHost != null)
+                {
+                    Vector3 position = bodyFrame.TargetPosition;
+                    Vector3 velocity = factFrame.Velocity;
+                    var graphFacts = new Float32PresentationGraphFacts(context.RenderFrame,
+                        new Float32Vector3(Float32Scalar.FromSingle(position.x), Float32Scalar.FromSingle(position.y), Float32Scalar.FromSingle(position.z)),
+                        new Float32Vector3(Float32Scalar.FromSingle(velocity.x), Float32Scalar.FromSingle(velocity.y), Float32Scalar.FromSingle(velocity.z)),
+                        new Float32Yaw(Float32Scalar.FromSingle(factFrame.Rotation.eulerAngles.y)), factFrame.Grounded);
+                    m_TimelineHost.Present(context, m_PresentationClockCoordinator, in graphFacts);
+                }
                 CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
                     in factFrame,
                     Mathf.Max(0f, context.PresentationDeltaSeconds),

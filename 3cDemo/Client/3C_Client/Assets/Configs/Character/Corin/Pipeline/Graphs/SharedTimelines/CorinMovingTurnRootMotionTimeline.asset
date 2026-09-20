@@ -79,9 +79,11 @@ MonoBehaviour:
       data:
         m_AuthoringId: 9b2e235b-266b-47ef-8ecd-c2fa8a4207fc
         Name: Motion Curve
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050398850875393
+        m_Markers: []
     - rid: 207050398850875393
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -180,9 +182,11 @@ MonoBehaviour:
       data:
         m_AuthoringId: cd3bfa4b-0b9d-4c85-a6e8-e1d386bbb770
         Name: tree
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050521905463329
+        m_Markers: []
     - rid: 207050521905463329
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -195,7 +199,7 @@ MonoBehaviour:
         m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 1
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: 133216587555870579}
 --- !u!114 &133216587555870579
 MonoBehaviour:

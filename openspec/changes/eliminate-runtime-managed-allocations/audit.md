@@ -1396,3 +1396,12 @@
 - 两域四个字段现以 IReadOnlyList 保存并直接引用各自私有 List。Steps／SourceEgress 的公开类型和只读消费方式不变，调用者无法取得构造器内部列表的可变引用；Committer 仍可在提交调用期间或之后持有完整独立批次。
 - 删除每个已提交外层 tick 的四个 ReadOnlyCollection 包装对象；CommitBatch class、steps／egress 列表本体、OutputDispositions 及事件覆盖校验仍保留。
 - ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Committer 运行对比或 Player 分配采样。
+
+## 2026-09-21 CommitBatch 事件覆盖容量
+
+对应 tasks.md 的 2.60。
+
+- Fixed／Float32 CommitBatch 会汇总全部 completed step 中的 GameplayFacts 与 PresentationCommands，再排序并要求数量、EventId、ActorId 与 OutputDispositions 一一对应；原 outputEvents List 从零容量开始增长。
+- 构造器现直接使用 OutputDispositions.Dispositions.Count 作为容量。正常提交路径中该数量就是最终事件数；异常不一致路径仍允许 List 扩容后进入原覆盖数量或身份错误，不改变错误判定。
+- 只删除正常已提交 tick 汇总事件所有权时的 List 扩容和旧数组迁移，事件列表、排序及逐项覆盖检查仍保留。
+- ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做多事件提交运行对比或 Player 分配采样。

@@ -319,7 +319,8 @@ namespace ThirdPersonSimulation
                 if (stepValues[i] == null || i > 0 && stepValues[i - 1].Step.Tick.CompareTo(stepValues[i].Step.Tick) >= 0)
                     throw new ArgumentException("Commit batch Step order is invalid.", nameof(steps));
             }
-            var outputEvents = new List<OutputEventOwner>();
+            var outputEvents = new List<OutputEventOwner>(
+                outputDispositions.Dispositions.Count);
             for (int i = 0; i < stepValues.Count; i++)
             {
                 SimulationTickResult result = stepValues[i].Result;

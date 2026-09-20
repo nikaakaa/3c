@@ -1486,3 +1486,12 @@
 - SimulationPipelineStepProjectionMode 只有连续的 Include=1 与 ReconstructForRestore=2；现单次读取局部值并按 byte 范围校验，非法零值及大于二的值继续抛同一完整性错误，重建型 participant 继续跳过捕获。
 - 删除每次 step 投影按 participant 的枚举反射查询／装箱，并减少一次属性读取。participant 列表、snapshot 列表和每个被包含状态的 CaptureState 分配仍存在。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 step 投影运行对比或 Player 分配采样。
+
+## 2026-09-21 Fixed Neutral 控制源事务通知校验
+
+对应 tasks.md 的 2.70。
+
+- FixedNeutralCharacterControlSource.NotifyStateDisposition 会在 Fixed 本地输入事务提交、丢弃或恢复时收到状态通知；原每次通过 Enum.IsDefined 校验 disposition。
+- FixedCharacterControlSourceStateDisposition 只有连续的 Prepared=1、Committed=2、Discarded=3、Restored=4。现按 Prepared 至 Restored 范围判断，零值及大于四的非法值继续抛 ArgumentOutOfRangeException，并与 UnityFixedCharacterInputAdapter 的正式校验写法一致。
+- 删除 Neutral 实现每次事务状态通知的枚举反射查询／装箱；方法仍不保存状态。其它控制源、通知分发顺序和事务行为不变。
+- 专用 ThirdPersonSimulation.Fixed.Unity 首次无 restore 构建因缺少 project.assets.json 停止；允许生成临时 assets 后编译又因 no-dependencies 下缺少 Unity 生成的 DeterministicKcc／Fixed DLL 停止。客户端 Runtime 仍受并行 Timeline 类型迁移错误阻断，因此本项只有定向源码校验和 diff 校验，没有可用程序集编译证据。未新增测试、未启动 Unity、未做运行或 Player 分配采样。

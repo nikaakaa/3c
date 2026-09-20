@@ -191,7 +191,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition)
         {
-            if (!Enum.IsDefined(typeof(FixedCharacterControlSourceStateDisposition), disposition))
+            if (disposition < FixedCharacterControlSourceStateDisposition.Prepared ||
+                disposition > FixedCharacterControlSourceStateDisposition.Restored)
                 throw new ArgumentOutOfRangeException(nameof(disposition));
         }
 

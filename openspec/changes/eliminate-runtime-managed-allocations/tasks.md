@@ -112,6 +112,8 @@
 
 - [x] 2.69 Pipeline step 投影捕获按 Include／ReconstructForRestore 连续值域校验 participant 模式，删除每次投影遍历的 Enum.IsDefined 装箱及重复属性读取
 
+- [x] 2.70 Fixed Neutral 控制源按 Prepared 至 Restored 连续值域校验事务 disposition，删除每次状态通知的 Enum.IsDefined 装箱，并与正式 UnityFixedCharacterInputAdapter 现有校验统一
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

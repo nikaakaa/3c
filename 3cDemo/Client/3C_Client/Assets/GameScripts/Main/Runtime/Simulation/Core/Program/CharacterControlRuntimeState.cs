@@ -390,8 +390,8 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < values.Length; i++)
             {
                 var field = new CharacterControlStateFieldId(reader.ReadString());
-                CharacterControlStateValueKind kind = ReadEnum<CharacterControlStateValueKind>(reader.ReadByte(), "control state value kind");
-                CharacterControlStateSemantic semantic = ReadEnum<CharacterControlStateSemantic>(reader.ReadUInt16(), "control state semantic");
+                CharacterControlStateValueKind kind = ReadValueKind(reader.ReadByte());
+                CharacterControlStateSemantic semantic = ReadSemantic(reader.ReadUInt16());
                 if (field != schema.Fields[i].Id || kind != schema.Fields[i].ValueKind || semantic != schema.Fields[i].Semantic)
                     throw new InvalidDataException($"Character control runtime state field '{field}' does not match schema index '{i}'.");
                 values[i] = ReadValue(reader, kind);
@@ -429,8 +429,8 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < fields.Length; i++)
             {
                 var fieldId = new CharacterControlStateFieldId(reader.ReadString());
-                CharacterControlStateValueKind kind = ReadEnum<CharacterControlStateValueKind>(reader.ReadByte(), "control state value kind");
-                CharacterControlStateSemantic semantic = ReadEnum<CharacterControlStateSemantic>(reader.ReadUInt16(), "control state semantic");
+                CharacterControlStateValueKind kind = ReadValueKind(reader.ReadByte());
+                CharacterControlStateSemantic semantic = ReadSemantic(reader.ReadUInt16());
                 ReadValue(reader, kind);
                 fields[i] = new CharacterControlStateFieldDescriptor(fieldId, kind, semantic);
             }
@@ -487,18 +487,22 @@ namespace ThirdPersonSimulation
             };
         }
 
-        static T ReadEnum<T>(byte value, string label) where T : struct
+        static CharacterControlStateValueKind ReadValueKind(byte value)
         {
-            if (!Enum.IsDefined(typeof(T), value))
-                throw new InvalidDataException($"Character control runtime state {label} '{value}' is invalid.");
-            return (T)Enum.ToObject(typeof(T), value);
+            var result = (CharacterControlStateValueKind)value;
+            if (result is not (CharacterControlStateValueKind.Boolean or CharacterControlStateValueKind.Int32 or
+                CharacterControlStateValueKind.UInt64 or CharacterControlStateValueKind.Identity))
+                throw new InvalidDataException($"Character control runtime state control state value kind '{value}' is invalid.");
+            return result;
         }
 
-        static T ReadEnum<T>(ushort value, string label) where T : struct
+        static CharacterControlStateSemantic ReadSemantic(ushort value)
         {
-            if (!Enum.IsDefined(typeof(T), value))
-                throw new InvalidDataException($"Character control runtime state {label} '{value}' is invalid.");
-            return (T)Enum.ToObject(typeof(T), value);
+            var result = (CharacterControlStateSemantic)value;
+            if (result is not (CharacterControlStateSemantic.ActiveState or CharacterControlStateSemantic.EnteredTick or
+                CharacterControlStateSemantic.Transition or CharacterControlStateSemantic.StateValue))
+                throw new InvalidDataException($"Character control runtime state control state semantic '{value}' is invalid.");
+            return result;
         }
     }
 }

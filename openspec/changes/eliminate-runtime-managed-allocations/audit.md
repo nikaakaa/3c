@@ -807,3 +807,11 @@
 - 删除 codec 的 ReadEnum 泛型反射入口，两个消费者分别进入强类型读取函数；原 Enum.ToObject／Enum.IsDefined 装箱不再发生于这些入口。默认零值仍拒绝，构造保留 ArgumentException，解码保留 InvalidDataException 及原类型名／字节错误文本，读取和短路顺序不变。
 - 不删除构造层校验，因为直接构造与反序列化均为实际路径；只统一成员判断，不改装备事务、准备／提交／撤销行为和局部状态存储。其它装备枚举和准备编译器仍有校验分配，不宣称装备全链完成。
 - 两目标文件修改前无其它未提交修改，编辑前无 csc／bee；最终 Core portable 编译零警告零错误并成功关闭构建服务，diff 空白检查通过。未新增测试、未操作共享 Unity，未做装备运行或 Player 分配采样。
+## 2026-09-20 角色控制状态枚举解码清理
+
+对应 tasks.md 的 2.27。
+
+- CharacterControlRuntimeStateCodec 四处调用原 byte／ushort 泛型 ReadEnum，先 Enum.IsDefined 再 Enum.ToObject。现分别调用 ReadValueKind(byte) 与 ReadSemantic(ushort)，值类型接受 Boolean／Int32／UInt64／Identity，语义接受 ActiveState／EnteredTick／Transition／StateValue，其它值包括零继续拒绝。
+- 删除两个无消费者的泛型入口，不引入另一解码路径。保留字段读取宽度、读取次序、InvalidDataException 和原错误文本（包括原标签重复措辞）；字段／schema 匹配、值解码、状态哈希及返回结果所有权不变。
+- 这里消除的是枚举元数据查询与转换装箱，不是动态调用业务方法的反射。CharacterControlStateFieldDescriptor 等其他构造层仍有枚举检查，不能将 codec 清理推广为所有角色控制状态均无装箱。
+- 目标文件编辑前无其它未提交修改，进程扫描无 csc／bee。SimulationGraphContracts.cs 存在并行修改，其中 scope／相机有效性检查未触碰。Core portable 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做运行或 Player 分配采样。

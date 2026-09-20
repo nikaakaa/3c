@@ -36,8 +36,8 @@ namespace BTSMTL.Timeline
             for (int i = 0; i < m_Sections.Count; i++)
             {
                 TimelineSection section = m_Sections[i];
-                if (section != null && section.Frame > MaxFrame)
-                    MaxFrame = section.Frame;
+                if (section != null)
+                    MaxFrame = Math.Max(MaxFrame, TimelineTimeGrid.CeilingIndex(section.Time, TimelineUtility.FrameRate));
             }
             Duration = (float)MaxFrame / TimelineUtility.FrameRate;
             OnValueChanged?.Invoke();
@@ -411,9 +411,9 @@ namespace BTSMTL.Timeline
 
             Init();
         }
-        public TimelineSection AddSection(string name, int frame)
+        public TimelineSection AddSection(string name, FixedScalar time)
         {
-            TimelineSection section = TimelineSection.Create(name, frame);
+            TimelineSection section = TimelineSection.Create(name, time);
             if (m_Sections.Exists(value => value != null && string.Equals(value.Name, section.Name, StringComparison.Ordinal)))
                 throw new InvalidOperationException($"Timeline Section '{section.Name}' already exists.");
             m_Sections.Add(section);
@@ -451,20 +451,20 @@ namespace BTSMTL.Timeline
             OnValueChanged?.Invoke();
         }
 #if UNITY_EDITOR
-        public TimelineSection EnsureSection(string authoringId, string name, int frame)
+        public TimelineSection EnsureSection(string authoringId, string name, FixedScalar time)
         {
             TimelineSection section = m_Sections.SingleOrDefault(value =>
                 value != null && string.Equals(value.AuthoringId, authoringId, StringComparison.Ordinal));
             if (section == null)
             {
-                section = TimelineSection.Create(authoringId, name, frame);
+                section = TimelineSection.Create(authoringId, name, time);
                 m_Sections.Add(section);
             }
-            ConfigureSection(section, name, frame);
+            ConfigureSection(section, name, time);
             return section;
         }
 #endif
-        public void ConfigureSection(TimelineSection section, string name, int frame)
+        public void ConfigureSection(TimelineSection section, string name, FixedScalar time)
         {
             if (section == null || !m_Sections.Contains(section))
                 throw new ArgumentException("Timeline Section is not owned by this Timeline.", nameof(section));
@@ -472,7 +472,7 @@ namespace BTSMTL.Timeline
             if (m_Sections.Exists(candidate => candidate != null && !ReferenceEquals(candidate, section) &&
                 string.Equals(candidate.Name, value, StringComparison.Ordinal)))
                 throw new InvalidOperationException($"Timeline Section '{value}' already exists.");
-            section.Configure(value, frame);
+            section.Configure(value, time);
             SortSections();
             Init();
         }
@@ -498,7 +498,7 @@ namespace BTSMTL.Timeline
         {
             m_Sections.Sort((left, right) =>
             {
-                int frame = (left?.Frame ?? int.MaxValue).CompareTo(right?.Frame ?? int.MaxValue);
+                int frame = (left?.Time ?? FixedScalar.MaxValue).CompareTo(right?.Time ?? FixedScalar.MaxValue);
                 return frame != 0 ? frame : string.CompareOrdinal(left?.AuthoringId, right?.AuthoringId);
             });
         }
@@ -568,7 +568,7 @@ namespace BTSMTL.Timeline
             {
                 TimelineSection section = m_Sections[sectionIndex];
                 if (section != null)
-                    terminalFrame = Mathf.Max(terminalFrame, section.Frame);
+                    terminalFrame = Mathf.Max(terminalFrame, TimelineTimeGrid.CeilingIndex(section.Time, TimelineUtility.FrameRate));
             }
             bool changed = false;
             for (int clipIndex = 0; clipIndex < terminalClips.Count; clipIndex++)

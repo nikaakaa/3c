@@ -1164,7 +1164,7 @@ MonoBehaviour:
     m_Sections:
     - m_AuthoringId: c196a52f-4b06-4310-8a8a-8699ef6a5620
       m_Name: Attack
-      m_Frame: 0
+      m_TimeRaw: 0
       m_NextSectionId: 
       m_BranchId: 
     m_ExternalBindings: []
@@ -4093,7 +4093,7 @@ MonoBehaviour:
     m_Sections:
     - m_AuthoringId: 24d05f02-b27e-554e-b3a6-8f79c1a44820
       m_Name: Attack_Normal_05_End_2
-      m_Frame: 0
+      m_TimeRaw: 0
       m_NextSectionId: 
       m_BranchId: End_2
     m_ExternalBindings: []
@@ -4570,7 +4570,7 @@ MonoBehaviour:
     m_Sections:
     - m_AuthoringId: d31a7f2e-1c84-4a76-9f0a-3f0d59e2a7b1
       m_Name: Attack_Normal_03_Explode
-      m_Frame: 75
+      m_TimeRaw: 5368709120
       m_NextSectionId: 
       m_BranchId: 
     m_ExternalBindings: []

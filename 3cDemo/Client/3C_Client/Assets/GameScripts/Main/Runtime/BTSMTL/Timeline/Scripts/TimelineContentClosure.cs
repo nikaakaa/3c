@@ -243,18 +243,18 @@ namespace BTSMTL.Timeline
 
     public readonly struct TimelineContentSection
     {
-        public TimelineContentSection(string authoringId, int frame, string nextSectionId, string branchId)
+        public TimelineContentSection(string authoringId, FixedScalar time, string nextSectionId, string branchId)
         {
             AuthoringId = Require(authoringId, nameof(authoringId));
-            if (frame < 0)
-                throw new ArgumentOutOfRangeException(nameof(frame));
-            Frame = frame;
+            if (time < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(time));
+            Time = time;
             NextSectionId = nextSectionId?.Trim() ?? string.Empty;
             BranchId = branchId?.Trim() ?? string.Empty;
         }
 
         public string AuthoringId { get; }
-        public int Frame { get; }
+        public FixedScalar Time { get; }
         public string NextSectionId { get; }
         public string BranchId { get; }
 
@@ -449,12 +449,12 @@ namespace BTSMTL.Timeline
             for (int sectionIndex = 0; sectionIndex < timeline.Sections.Count; sectionIndex++)
             {
                 TimelineSection section = timeline.Sections[sectionIndex];
-                if (section != null && section.Frame > maxFrame)
-                    maxFrame = section.Frame;
+                if (section != null)
+                    maxFrame = Math.Max(maxFrame, TimelineTimeGrid.CeilingIndex(section.Time, TimelineUtility.FrameRate));
                 if (section != null)
                     sections.Add(new TimelineContentSection(
                         section.AuthoringId,
-                        section.Frame,
+                        section.Time,
                         section.NextSectionId,
                         section.BranchId));
             }
@@ -567,7 +567,7 @@ namespace BTSMTL.Timeline
             });
             sections.Sort((left, right) =>
             {
-                int frame = left.Frame.CompareTo(right.Frame);
+                int frame = left.Time.CompareTo(right.Time);
                 return frame != 0 ? frame : string.CompareOrdinal(left.AuthoringId, right.AuthoringId);
             });
             bindings.Sort((left, right) => string.CompareOrdinal(left.BindingId, right.BindingId));

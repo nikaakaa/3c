@@ -758,7 +758,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 foreach (TimelineSection section in data.Sections)
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Configure,
-                        $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureSection({dataVariable}, {String(section.AuthoringId)}, {String(section.Name)}, {section.Frame}, {String(section.NextSectionId)});");
+                        $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureSection({dataVariable}, {String(section.AuthoringId)}, {String(section.Name)}, {(section.Time.Raw / (decimal)ThirdPersonSimulation.Fixed.FixedScalar.OneRaw).ToString(System.Globalization.CultureInfo.InvariantCulture)}m, {String(section.NextSectionId)});");
                 foreach (Track track in data.Tracks)
                 {
                     string trackVariable = Variable(context, track, $"track:{data.AuthoringId}:{track.AuthoringId}");

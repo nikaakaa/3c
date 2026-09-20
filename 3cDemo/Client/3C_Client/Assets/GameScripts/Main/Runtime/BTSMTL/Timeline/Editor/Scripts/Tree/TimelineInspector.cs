@@ -149,19 +149,20 @@ namespace BTSMTL.Timeline.Editor
                 TimelineGraphAuthoring.Open(marker.Graph);
             EditorGUI.BeginChangeCheck();
             double seconds = Math.Max(0d, EditorGUILayout.DoubleField("Time (Seconds)", marker.Time.ToDouble()));
+            bool timeChanged = EditorGUI.EndChangeCheck();
             ScriptableObject graph = (ScriptableObject)EditorGUILayout.ObjectField(
                 "Trigger Graph",
                 marker.Graph,
                 typeof(ScriptableObject),
                 false);
-            if (!EditorGUI.EndChangeCheck())
+            if (!timeChanged && graph == marker.Graph)
                 return;
             if (!TryBeginMutation(asset))
                 return;
             try
             {
                 asset.Data.ApplyModify(() => TimelineGraphAuthoring.MutateOwnedContent(
-                    asset.Data, () => marker.Configure(FixedScalar.FromDouble(seconds), graph)), "Edit Timeline Marker");
+                    asset.Data, () => marker.Configure(timeChanged ? FixedScalar.FromDouble(seconds) : marker.Time, graph)), "Edit Timeline Marker");
                 m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
                 m_ConfigurationError = null;
             }
@@ -213,8 +214,10 @@ namespace BTSMTL.Timeline.Editor
         void DrawSectionInspector(TimelineAsset asset, TimelineSection section)
         {
             string name = EditorGUILayout.TextField("Name", section.Name);
-            int frame = Mathf.Max(0, EditorGUILayout.IntField("Frame", section.Frame));
-            if (name == section.Name && frame == section.Frame)
+            EditorGUI.BeginChangeCheck();
+            double seconds = Math.Max(0d, EditorGUILayout.DoubleField("Time (Seconds)", section.Time.ToDouble()));
+            bool timeChanged = EditorGUI.EndChangeCheck();
+            if (name == section.Name && !timeChanged)
                 return;
             if (!TryBeginMutation(asset))
                 return;
@@ -222,7 +225,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 asset.Data.ApplyModify(() =>
                 {
-                    asset.Data.ConfigureSection(section, name, frame);
+                    asset.Data.ConfigureSection(section, name, timeChanged ? FixedScalar.FromDouble(seconds) : section.Time);
                     asset.Data.Init();
                 }, "Edit Timeline Section");
                 m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);

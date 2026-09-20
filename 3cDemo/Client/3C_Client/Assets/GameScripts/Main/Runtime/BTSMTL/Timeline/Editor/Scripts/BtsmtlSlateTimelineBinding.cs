@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
@@ -493,7 +494,7 @@ namespace BTSMTL.Timeline.Editor
         {
             if (IsReadOnly)
                 return;
-            ApplyImmediate(() => Timeline.AddSection("Section", Mathf.Max(0, frame)), "Add Timeline Section");
+            ApplyImmediate(() => Timeline.AddSection("Section", TimelineTimeGrid.Position(Mathf.Max(0, frame), FrameRate)), "Add Timeline Section");
         }
 
         public bool CanPasteClip => m_CopiedClip != null;
@@ -1731,12 +1732,14 @@ namespace BTSMTL.Timeline.Editor
         sealed class BtsmtlTimelineSectionBinding : IEmbeddedTimelineSectionBinding
         {
             readonly BtsmtlSlateTimelineBinding m_Owner;
+            float m_InitialTime;
             public BtsmtlTimelineSectionBinding(BtsmtlSlateTimelineBinding owner, TimelineSection source)
             {
                 m_Owner = owner;
                 Source = source;
                 Name = source.Name;
-                Time = source.Frame / (float)owner.FrameRate;
+                Time = source.Time.ToSingle();
+                m_InitialTime = Time;
             }
             public TimelineSection Source { get; }
             public string AuthoringId => Source.AuthoringId;
@@ -1747,17 +1750,17 @@ namespace BTSMTL.Timeline.Editor
             public Color Color => Color.white;
             public bool CommitSource()
             {
-                int frame = Mathf.Max(0, Mathf.RoundToInt(Time * m_Owner.FrameRate));
-                if (string.Equals(Source.Name, Name, StringComparison.Ordinal) && Source.Frame == frame)
+                if (!HasChanges())
                     return false;
-                Source.Configure(Name, frame);
+                m_Owner.Timeline.ConfigureSection(Source, Name, Time == m_InitialTime ? Source.Time :
+                    TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(Time * m_Owner.FrameRate)), m_Owner.FrameRate));
+                m_InitialTime = Time;
                 return true;
             }
 
             public bool HasChanges()
             {
-                int frame = Mathf.Max(0, Mathf.RoundToInt(Time * m_Owner.FrameRate));
-                return !string.Equals(Source.Name, Name, StringComparison.Ordinal) || Source.Frame != frame;
+                return !string.Equals(Source.Name, Name, StringComparison.Ordinal) || Time != m_InitialTime;
             }
         }
     }

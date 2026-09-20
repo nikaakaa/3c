@@ -373,7 +373,7 @@ namespace BTSMTL.Timeline.Runtime
             for (int index = 0; index < Content.Sections.Count; index++)
             {
                 TimelineContentSection section = Content.Sections[index];
-                if (section.Frame > nextFrame)
+                if (section.Time > FixedScalar.FromRatio(nextFrame, Content.FrameRate))
                     break;
                 sectionId = section.AuthoringId;
             }
@@ -631,7 +631,7 @@ namespace BTSMTL.Timeline.Runtime
             {
                 TimelineContentSection section = Content.Sections[index];
                 if (string.Equals(section.AuthoringId, sectionId, StringComparison.Ordinal))
-                    return section.Frame <= cursorFrame;
+                    return section.Time <= FixedScalar.FromRatio(cursorFrame, Content.FrameRate);
             }
             return false;
         }
@@ -736,7 +736,7 @@ namespace BTSMTL.Timeline.Runtime
             for (int index = 0; index < Content.Sections.Count; index++)
             {
                 TimelineContentSection section = Content.Sections[index];
-                if (section.Frame > m_CursorFrame)
+                if (section.Time > FixedScalar.FromRatio(m_CursorFrame, Content.FrameRate))
                     break;
                 m_SectionId = section.AuthoringId;
             }

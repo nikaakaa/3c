@@ -148,3 +148,12 @@
 - CorinAttackGameplayAbilityDefinition.asset 本来就包含尚未提交的 Marker、FSM 和其它作者改动，本次在当前内容上迁移并保存，未覆盖它们，也不把整份既有未提交资产夹带进代码提交。
 - 当前迁移仍分阶段：Clip、Section、播放游标与 Slate 通用接口尚为帧。Marker 消费入口将当前区间端点换算成秒再比较，不再将 Marker 秒数量化回运行帧。这不是最终外部秒制被动求值；0.2–0.7、共享采样和自适应网格仍保持未完成。
 - 没有新增测试。Marker 源码已成功编译加载并完成正式作者 API 迁移；正式导出成功且 diagnostics=[]。控制台另有原生 FSM 调用绑定与 CorinPanelExpandTimeline 缺失类型错误，不据此声称全项目运行通过。- 最终 decimal 入口编译重载后，再从持久资产读回 raw=3364391049；正式 Timeline 导出成功、diagnostics=[]，字面量为 0.7833333334419876337051391602m，FromDecimal 重建 raw 完全一致；最近显示网格与覆盖终点都为第 47 帧。此次仅调用导出服务读取结果，没有创建 MarkerSecondsSnapshot 文件或其它临时作者入口。
+## Section 秒制迁移
+
+- TimelineSection 删除 m_Frame / Frame，唯一存储为 m_TimeRaw；Create、Configure、AddSection、EnsureSection 和正式 C# API 均改为秒。闭包中的 TimelineContentSection、排序、运行 Section 选择及 Restore 一致性判断也比较定点秒。
+- Inspector 使用秒输入，单独改名称保留原始秒值；Slate 仍使用现有显示网格，但未拖动不回写浮点显示值，拖动经统一网格映射再提交，并走原 ConfigureSection 排序。Marker 仅改图引用时同样保留原始秒值。
+- 删除未被项目或工具源码使用的旧 TimelineSectionDescriptor / TimelineSectionCatalog 整数帧声明，不留第二份 Section 时间合同。ActionCue 的 LocalFrame 暂仍为既有来源元数据，由秒差映射，不用于推进；第 0.5 节仍未完成。
+- 迁移前通过正式资产读取记录 11 个 Timeline 的 11 个 Section，包含原第 75 帧 Attack_Normal_03_Explode。编译后通过 EnsureSection / ApplyModify 迁移并保存，全部内容校验通过；第 75 帧变为精确 1.25 秒，其余为 0 秒。
+- 最终编译重载后逐项读回，11 项时间、身份、名称、NextSectionId 和 BranchId 全部与迁移记录一致。正式导出第 75 帧所在 Timeline 成功、diagnostics=[]，生成 EnsureSection(..., 1.25m, ...)。没有生成临时作者源码或新增测试。
+- 已跟踪 CorinAttack 资产只暂存本次 3 个 Section 的字段迁移，其既有 FSM、Marker 等未提交变更保留；8 个原本未跟踪的 Rush Timeline 也已迁移保存，继续保留原工作区状态。
+- Clip、播放游标、外部控制、共享采样、完整派生产物和可配置网格仍未完成，任务 0.2–0.7 等不提前勾选。

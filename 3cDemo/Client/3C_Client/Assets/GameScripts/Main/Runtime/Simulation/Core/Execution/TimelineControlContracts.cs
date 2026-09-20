@@ -157,38 +157,6 @@ namespace ThirdPersonSimulation
         public bool StartsCycle { get; }
     }
 
-    public readonly struct TimelineSectionDescriptor
-    {
-        public TimelineSectionDescriptor(string authoringId, int frame, string nextSectionId)
-        {
-            AuthoringId = SimulationIdentity.Require(authoringId, nameof(authoringId));
-            if (frame < 0)
-                throw new ArgumentOutOfRangeException(nameof(frame));
-            Frame = frame;
-            NextSectionId = nextSectionId?.Trim() ?? string.Empty;
-        }
-
-        public string AuthoringId { get; }
-        public int Frame { get; }
-        public string NextSectionId { get; }
-    }
-
-    public static class TimelineSectionCatalog
-    {
-        public const string CountField = "SectionCount";
-
-        public static string IdentityField(int index) => Field(index, "Id");
-        public static string FrameField(int index) => Field(index, "Frame");
-        public static string NextField(int index) => Field(index, "Next");
-
-        static string Field(int index, string suffix)
-        {
-            if (index < 0)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return $"Section:{index}:{suffix}";
-        }
-    }
-
     internal readonly struct MotionWarpSample<TTime, TAction>
         where TTime : struct
         where TAction : struct

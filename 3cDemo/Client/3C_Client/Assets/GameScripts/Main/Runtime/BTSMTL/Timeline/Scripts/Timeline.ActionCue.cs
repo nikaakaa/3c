@@ -72,14 +72,15 @@ namespace BTSMTL.Timeline
                     string branchId = string.Empty;
                     int localFrame = 0;
                     IReadOnlyList<TimelineSection> sections = actionCueClip.Timeline.Sections;
+                    var cueTime = TimelineTimeGrid.Position(actionCueClip.StartFrame, TimelineUtility.FrameRate);
                     for (int sectionIndex = 0; sectionIndex < sections.Count; sectionIndex++)
                     {
                         TimelineSection section = sections[sectionIndex];
-                        if (section.Frame > actionCueClip.StartFrame)
+                        if (section.Time > cueTime)
                             break;
                         stateId = section.Name;
                         branchId = section.BranchId;
-                        localFrame = actionCueClip.StartFrame - section.Frame + 1;
+                        localFrame = TimelineTimeGrid.NearestIndex(cueTime - section.Time, TimelineUtility.FrameRate) + 1;
                     }
 
                     cues.Add(new TimelineActionCueSample(

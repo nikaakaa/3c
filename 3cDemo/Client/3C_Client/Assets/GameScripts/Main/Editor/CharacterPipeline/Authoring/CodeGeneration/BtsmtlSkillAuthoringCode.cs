@@ -707,14 +707,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             TimelineData timeline,
             string identity,
             string name,
-            int frame,
+            decimal seconds,
             string nextSectionId)
         {
             TimelineSection result = null;
             PrepareTimelineMutation(timeline);
             timeline.ApplyModify(() =>
             {
-                result = timeline.EnsureSection(identity, name, frame);
+                result = timeline.EnsureSection(identity, name, FixedScalar.FromDecimal(seconds));
                 timeline.ConfigureSectionNext(result, nextSectionId);
             }, "生成Timeline段");
             return result;

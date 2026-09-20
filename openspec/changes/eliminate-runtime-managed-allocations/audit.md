@@ -702,3 +702,13 @@
 - 两数值域 SimulationInput.Copy 已对零长度 ICollection 返回 Array.Empty；此次消除的是到达该正确入口前的空数组。保留读入计数及上限校验、读取顺序、请求 Tick 重映射、排序／重复检查、canonical 比较和结果隔离。空数组无可修改元素，无需租用或归还，不改非空请求存储。
 - 先前观察到 bee_backend PID 125504 和 csc 所在 dotnet PID 81640，等待两句柄结束并再次扫描无编译进程后编辑。四目标文件修改前无其它改动。DeterministicRollback 与 ServerAuthoritative portable 连带两数值域编译零警告零错误，构建服务关闭成功；本切片 diff 空白检查通过。
 - 本轮公共 Core 类型引用阻断已解除，未由本任务修复；7.8 两数值域回放身份改动现已包含在通过的编译内。未新增测试、未控制共享 Unity、未做回放／协议运行对比或 Player 分配采样，输入对象及非空集合复制仍未完成治理。
+## 2026-09-20 预测请求中转与恢复所有权复核
+
+本节为任务 5.2／5.4 的调用链证据，未将父任务勾选完成，本轮不修改预测事务代码。
+
+- PredictionIngressAndSchedulePasses 在调度入口先 CaptureCorrectionCheckpoint，并注册恢复该 checkpoint 的回调，然后才取输入、计算当前步数并调用 ScheduleRequests。零步时请求保留在 ConfirmationState，消费时按序生成独立数组并 Clear 内部 pending 字典。
+- 同步下游 WithRequests 将该数组传入 SimulationInput，构造再次复制并排序，随后创建 OwnerCanonicalInputBatch；因此非空调度路径确有中转数组。但把返回值改成共享列表或字典视图会影响 Clear 后的可见内容，必须同时迁移生产者、输入构造及所有使用者，不能只删 ToArray／new。
+- 确认状态还被 PrepareAck、PrepareBaseline、Capture 使用；checkpoint 当前复制 pending 请求至只读列表。Restore 先完整建立新 SortedDictionary，再替换字段，避免重建失败时破坏原 pending。快照不仅用于编码，也由事务恢复回调持有，不能用当前可变字典代替。
+- pending 正式容量来自 requestCapacity，RetainRequest 在加入新序号前检查上限并拒绝同序号内容变化。容量为未来有界存储提供依据；目前 SortedDictionary 的逐节点分配、消费结果及 checkpoint 复制仍在，不能仅凭有容量上限视为 0 GC。
+- 业务取舍：保留独立快照会继续产生复制，但失败时可恢复消费前的请求和确认游标；改为准备好的事务工作存储可以减少复制，但必须一起落实提交／失败恢复的存储归还边界。该范围触及当前目标明确要求保留的共享事务／回滚边界，因此保留现场，后续独立治理不以旁路缓存绕过。
+- 实际检查文件为 PredictionConfirmationState、PredictionIngressAndSchedulePasses、PredictionState 和 PredictionStateCodec；codec 的独立解析字典还负责拒绝重复序号并排序，删除它不能省略这两项行为。本轮仅记录源码证据，无新增编译、运行或 Player 采样结论。

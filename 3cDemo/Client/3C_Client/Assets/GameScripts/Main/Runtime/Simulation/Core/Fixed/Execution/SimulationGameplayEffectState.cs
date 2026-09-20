@@ -386,11 +386,12 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        static string[] CollectOwnedTags(IReadOnlyDictionary<string, string[]> sources)
+        static string[] CollectOwnedTags(SortedDictionary<string, string[]> sources)
         {
             var tags = new HashSet<string>(StringComparer.Ordinal);
-            foreach (string[] source in sources.Values)
+            foreach (KeyValuePair<string, string[]> sourcePair in sources)
             {
+                string[] source = sourcePair.Value;
                 for (int i = 0; i < source.Length; i++)
                     tags.Add(source[i]);
             }
@@ -489,8 +490,9 @@ namespace ThirdPersonSimulation.Fixed
             List<string> values = m_Scratch?.OwnedTags ?? new List<string>();
             tags.Clear();
             values.Clear();
-            foreach (string[] source in m_TagSources.Values)
+            foreach (KeyValuePair<string, string[]> sourcePair in m_TagSources)
             {
+                string[] source = sourcePair.Value;
                 for (int i = 0; i < source.Length; i++)
                     tags.Add(source[i]);
             }
@@ -567,8 +569,9 @@ namespace ThirdPersonSimulation.Fixed
             if (modifier == null || modifier.Handle == 0 || modifier.SourceEffectHandle == 0)
                 throw new ArgumentException("Gameplay Attribute modifier identity is incomplete.", nameof(modifier));
             PortableAttributeState attribute = RequireAttribute(attributeId);
-            foreach (PortableAttributeState existingAttribute in m_Attributes.Values)
+            foreach (KeyValuePair<string, PortableAttributeState> attributePair in m_Attributes)
             {
+                PortableAttributeState existingAttribute = attributePair.Value;
                 for (int i = 0; i < existingAttribute.Modifiers.Count; i++)
                 {
                     if (existingAttribute.Modifiers[i].Handle == modifier.Handle)
@@ -590,8 +593,9 @@ namespace ThirdPersonSimulation.Fixed
             List<PortableAttributeChange> changes = m_Scratch?.AttributeChanges ?? new List<PortableAttributeChange>();
             changes.Clear();
             bool removed = false;
-            foreach (PortableAttributeState attribute in m_Attributes.Values)
+            foreach (KeyValuePair<string, PortableAttributeState> attributePair in m_Attributes)
             {
+                PortableAttributeState attribute = attributePair.Value;
                 for (int i = attribute.Modifiers.Count - 1; i >= 0; i--)
                 {
                     if (attribute.Modifiers[i].SourceEffectHandle != sourceEffectHandle)
@@ -986,8 +990,9 @@ namespace ThirdPersonSimulation.Fixed
                 if (active == null || active.Spec.PeriodTicks == 0)
                     throw new InvalidDataException($"Gameplay Effect period references unknown or non-periodic instance '{period.Key}'.");
             }
-            foreach (PortableAttributeState attribute in m_Attributes.Values)
+            foreach (KeyValuePair<string, PortableAttributeState> attributePair in m_Attributes)
             {
+                PortableAttributeState attribute = attributePair.Value;
                 for (int i = 0; i < attribute.Modifiers.Count; i++)
                 {
                     if (FindActiveByHandle(attribute.Modifiers[i].SourceEffectHandle) == null)

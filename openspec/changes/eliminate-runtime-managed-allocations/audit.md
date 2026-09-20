@@ -640,3 +640,13 @@
 - 未知 byte 在原调用位置抛相同 InvalidDataException 文本；合法零值和各成员保留，读取次序不变。此次只改序列化校验，不修改动作推进、效果执行或任何生命周期边界。
 - 五个消费者迁移后删除泛型 ReadEnum；源码检索确认本 codec 无 Enum.ToObject／Enum.IsDefined。此结论只覆盖 codec 自身，不能推广到构造函数、嵌套 codec 或整条事件链。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
+
+## 2026-09-20 效果状态剩余值视图遍历清理
+
+对应 tasks.md 的 2.21，勾选仅表示该源码切片完成，Float32 编译尚未通过。
+
+- 两数值域 CollectOwnedTags／CopyOwnedTags、AddModifier、RemoveModifiersByEffect 和 ValidateRuntimeClosure 改为遍历具体 SortedDictionary 的 KeyValuePair，再读取 Value。私有 CollectOwnedTags 唯一调用者是聚合状态构造函数，输入本就是自有 SortedDictionary，因此收紧私有参数类型以删除接口枚举器装箱；公开合同不变。
+- 保留字典顺序、标签去重及 Ordinal 排序、modifier 重复检查、逐项移除和每次重算顺序、活动效果引用检查；没有共享可变快照或改变工作状态、事务及 scratch 寿命。
+- 删除上述入口对 Values 视图的创建需求，不将缓存视图误报为每次必分配。SortedDictionary 枚举内部存储、标签集合与最终数组仍可能分配，未新增池或容量配置，不宣称全链 0 GC。
+- 编辑前两目标文件和本治理文档没有其它未提交修改，未发现 csc／bee 进程。Fixed portable 编译零警告零错误；Float32 portable 因另一个任务未跟踪的 Float32GraphValueRuntime.cs 第 270 行起语法错误失败，共 37 个错误，读取现场确认存在方法外语句及截断字符串，未修改该文件。两次构建均执行 build-server shutdown 成功。
+- 本切片 diff 空白检查通过；未新增测试、未控制或刷新共享 Unity、未做 Player 采样。Float32 的编译证据待共享 GraphValueRuntime 修复后补齐，整体目标继续未完成。

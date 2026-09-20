@@ -4,36 +4,6 @@ using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
 {
-    public enum Float32PipelineTransactionOutcome : byte
-    {
-        Pending = 1,
-        Committed = 2
-    }
-
-    public sealed class Float32PipelineTransactionResult
-    {
-        public Float32PipelineTransactionResult(
-            Float32PipelineTransactionOutcome outcome,
-            StableHash transactionIdentity,
-            ulong lastCompletedTick,
-            Float32SimulationCommitBatch commitBatch)
-        {
-            if (outcome is not (Float32PipelineTransactionOutcome.Pending or Float32PipelineTransactionOutcome.Committed) || !transactionIdentity.IsValid)
-                throw new ArgumentException("Pipeline transaction result identity is incomplete.");
-            if ((outcome == Float32PipelineTransactionOutcome.Committed) != (commitBatch != null))
-                throw new ArgumentException("Only a committed Pipeline transaction has a Commit batch.", nameof(commitBatch));
-            Outcome = outcome;
-            TransactionIdentity = transactionIdentity;
-            LastCompletedTick = lastCompletedTick;
-            CommitBatch = commitBatch;
-        }
-
-        public Float32PipelineTransactionOutcome Outcome { get; }
-        public StableHash TransactionIdentity { get; }
-        public ulong LastCompletedTick { get; }
-        public Float32SimulationCommitBatch CommitBatch { get; }
-    }
-
     public sealed class Float32PipelineTransaction
     {
         readonly Float32PipelineTransactionPort m_Target;
@@ -92,16 +62,9 @@ namespace ThirdPersonSimulation
         }
 
         [PerformanceProbe("simulation.pipeline.transaction")]
-        public Float32PipelineTransactionResult Execute(SimulationSessionLogicTickContext outer)
+        public void Execute(SimulationSessionLogicTickContext outer)
         {
-            PipelineTransactionControlResult<Float32SimulationCommitBatch> result = m_Coordinator.Execute(outer);
-            return new Float32PipelineTransactionResult(
-                result.Outcome == PipelineTransactionOutcome.Pending
-                    ? Float32PipelineTransactionOutcome.Pending
-                    : Float32PipelineTransactionOutcome.Committed,
-                result.TransactionIdentity,
-                result.LastCompletedTick,
-                result.CommitBatch);
+            m_Coordinator.Execute(outer);
         }
 
         public SimulationSessionCheckpoint CaptureCheckpoint() => m_Target.CaptureCheckpoint();

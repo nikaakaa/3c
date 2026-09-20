@@ -6,36 +6,6 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    public enum FixedPipelineTransactionOutcome : byte
-    {
-        Pending = 1,
-        Committed = 2
-    }
-
-    public sealed class FixedPipelineTransactionResult
-    {
-        public FixedPipelineTransactionResult(
-            FixedPipelineTransactionOutcome outcome,
-            StableHash transactionIdentity,
-            ulong lastCompletedTick,
-            FixedSimulationCommitBatch commitBatch)
-        {
-            if (outcome is not (FixedPipelineTransactionOutcome.Pending or FixedPipelineTransactionOutcome.Committed) || !transactionIdentity.IsValid)
-                throw new ArgumentException("Pipeline transaction result identity is incomplete.");
-            if ((outcome == FixedPipelineTransactionOutcome.Committed) != (commitBatch != null))
-                throw new ArgumentException("Only a committed Pipeline transaction has a Commit batch.", nameof(commitBatch));
-            Outcome = outcome;
-            TransactionIdentity = transactionIdentity;
-            LastCompletedTick = lastCompletedTick;
-            CommitBatch = commitBatch;
-        }
-
-        public FixedPipelineTransactionOutcome Outcome { get; }
-        public StableHash TransactionIdentity { get; }
-        public ulong LastCompletedTick { get; }
-        public FixedSimulationCommitBatch CommitBatch { get; }
-    }
-
     public sealed class FixedPipelineTransaction
     {
         readonly FixedPipelineTransactionPort m_Target;
@@ -94,16 +64,9 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         [PerformanceProbe("simulation.pipeline.transaction")]
-        public FixedPipelineTransactionResult Execute(SimulationSessionLogicTickContext outer)
+        public void Execute(SimulationSessionLogicTickContext outer)
         {
-            PipelineTransactionControlResult<FixedSimulationCommitBatch> result = m_Coordinator.Execute(outer);
-            return new FixedPipelineTransactionResult(
-                result.Outcome == PipelineTransactionOutcome.Pending
-                    ? FixedPipelineTransactionOutcome.Pending
-                    : FixedPipelineTransactionOutcome.Committed,
-                result.TransactionIdentity,
-                result.LastCompletedTick,
-                result.CommitBatch);
+            m_Coordinator.Execute(outer);
         }
 
         public SimulationSessionCheckpoint CaptureCheckpoint() => m_Target.CaptureCheckpoint();

@@ -17,12 +17,6 @@ namespace ThirdPersonSimulation
         void Execute(SimulationPipelineEgressContext context);
     }
 
-    internal enum PipelineTransactionOutcome : byte
-    {
-        Pending = 1,
-        Committed = 2
-    }
-
     internal enum PipelineTransactionStage : byte
     {
         Ingress = 1,
@@ -108,32 +102,6 @@ namespace ThirdPersonSimulation
         public string ProductOutputs { get; }
         public string SnapshotParticipant { get; }
         public StableHash SnapshotHash { get; }
-    }
-
-    internal readonly struct PipelineTransactionControlResult<TCommitBatch>
-    {
-        public PipelineTransactionControlResult(
-            PipelineTransactionOutcome outcome,
-            StableHash transactionIdentity,
-            ulong lastCompletedTick,
-            TCommitBatch commitBatch)
-        {
-            if (outcome != PipelineTransactionOutcome.Pending &&
-                outcome != PipelineTransactionOutcome.Committed ||
-                !transactionIdentity.IsValid)
-                throw new ArgumentException("Pipeline transaction result identity is incomplete.");
-            if ((outcome == PipelineTransactionOutcome.Committed) != (commitBatch != null))
-                throw new ArgumentException("Only a committed Pipeline transaction has a Commit batch.", nameof(commitBatch));
-            Outcome = outcome;
-            TransactionIdentity = transactionIdentity;
-            LastCompletedTick = lastCompletedTick;
-            CommitBatch = commitBatch;
-        }
-
-        public PipelineTransactionOutcome Outcome { get; }
-        public StableHash TransactionIdentity { get; }
-        public ulong LastCompletedTick { get; }
-        public TCommitBatch CommitBatch { get; }
     }
 
     internal sealed class PipelineTransactionRuntimeServices

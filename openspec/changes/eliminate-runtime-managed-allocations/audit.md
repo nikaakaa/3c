@@ -1378,3 +1378,12 @@
 - 内部结果没有 null 分支、引用身份比较或跨调用持有，现改为 readonly struct；构造校验、四个只读属性以及只有 Committed 才能携带 commit batch 的约束不变。
 - 删除每个外层 tick 的一个内部控制结果对象；Fixed／Float32 对外 TransactionResult class 和 CommitBatch 自身仍按原生命周期分配。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做事务返回运行对比或 Player 分配采样。
+
+## 2026-09-21 Pipeline 事务死返回链删除
+
+对应 tasks.md 的 2.58，取代 2.33、2.47、2.57 中保留结果类型的中间状态。
+
+- 全项目源码核对确认 FixedPassPipelineRuntimeHandle 与 Float32PassPipelineRuntimeHandle 调用 Transaction.Execute 后直接丢弃返回值；内部 ControlResult 只被两域 wrapper 读取，两域公开 TransactionResult 没有其它消费者。
+- Coordinator.Execute／ExecuteTransaction、FixedPipelineTransaction.Execute、Float32PipelineTransaction.Execute 统一改为 void。Pending 分支恢复 pipeline checkpoint 后直接返回，Committed 分支仍冻结 commit batch、发布状态并完成 External Commit 后返回；事务行为和异常传播不变。
+- 删除 PipelineTransactionControlResult、FixedPipelineTransactionResult、Float32PipelineTransactionResult 以及对应三套 Outcome 枚举，不保留兼容返回路径。TransactionIdentity 仍沿 step／egress context、output disposition 和 commit batch 正式链路传递。
+- 每个外层 tick 不再创建两域公开 TransactionResult 对象，也不再复制无人读取的内部结果字段。ThirdPersonSimulation.Core、Fixed、Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做事务运行对比或 Player 分配采样。

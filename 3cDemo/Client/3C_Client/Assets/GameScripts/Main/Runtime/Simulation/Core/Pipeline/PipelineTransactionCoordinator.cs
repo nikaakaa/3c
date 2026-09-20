@@ -57,12 +57,12 @@ namespace ThirdPersonSimulation
             }
         }
 
-        public PipelineTransactionControlResult<TCommitBatch> Execute(SimulationSessionLogicTickContext outer)
+        public void Execute(SimulationSessionLogicTickContext outer)
         {
-            return ExecuteTransaction(outer);
+            ExecuteTransaction(outer);
         }
 
-        PipelineTransactionControlResult<TCommitBatch> ExecuteTransaction(SimulationSessionLogicTickContext outer)
+        void ExecuteTransaction(SimulationSessionLogicTickContext outer)
         {
             ulong beforeCompletedTick = m_Target.BaselineCompletedTick;
             TWorkingState working = m_Target.CreateWorkingState();
@@ -111,11 +111,7 @@ namespace ThirdPersonSimulation
                 if (executionPlan.Status == SimulationSessionExecutionPlanStatus.Pending)
                 {
                     RestorePipelineBefore(beforePipeline);
-                    return new PipelineTransactionControlResult<TCommitBatch>(
-                        PipelineTransactionOutcome.Pending,
-                        transactionIdentity,
-                        beforeCompletedTick,
-                        null);
+                    return;
                 }
                 if (executionPlan.Restore != null)
                 {
@@ -229,11 +225,7 @@ namespace ThirdPersonSimulation
                         "External Committer failed after atomic Gameplay state publish.",
                         exception);
                 }
-                return new PipelineTransactionControlResult<TCommitBatch>(
-                    PipelineTransactionOutcome.Committed,
-                    transactionIdentity,
-                    completedTick,
-                    commitBatch);
+                return;
             }
             catch (Exception exception)
             {

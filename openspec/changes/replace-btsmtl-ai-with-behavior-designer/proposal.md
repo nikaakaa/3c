@@ -12,29 +12,23 @@
 - **BREAKING**：网络名单分离连接身份、Actor 身份与输入所有权，允许一个真实 Peer 控制玩家 Actor 和多个 Bot。Relay 保持纯 .NET 路由与最终输入确认职责，不运行 AI、角色或世界；不为 Bot 创建假连接、假 Player 或新的 Unity Relay。
 - 保持已发布 Bot 输入不可改写。AI 可以依据生产端当时已提交的预测世界作出决定；迟到输入纠正世界后，历史 Bot 操作仍然有效，后续新决策再读取新的已提交观察。本变更不提供 AI 历史重决策、存活 BT 无损迁移、生产端断线接管或任意存档恢复后继续决策。
 - Unity Authority 的玩家输入与本地 Bot 输入进入同一权威 batch，敌人通过既有结果与远端表现通道同步。普通 .NET DotRecast Authority 保留现有正式用途，但本变更不为它安装插件 AI；不支持的装配在启动前明确拒绝。
-- **BREAKING**：从 BTSMTL Agent Document、MCP、Capability、Mutation、Validator、窗口和技能说明中删除游戏 AI domain；保留主重构的技能/控制配置合同及其它正式非 AI domain，不新建插件 AI Document 或通用节点自动化平台。
+- 自研AI的Document、MCP、Capability、Mutation、Validator与窗口路径已经退出现行能力目录；本change只清理实现残留并维护`character-csharp-authoring`、Graph authoring与Behavior Designer的正式边界，不再为已删除能力建立REMOVED／MODIFIED delta。
 - 迁移稳定 Corin 的本地 AI 样例，并在两个真人端点的正式网络产品中装配玩家角色 Bot 与中立 Actor 的最小移动/动作请求用例。复用同一角色资产，不补齐未完成的命中、伤害、队伍战斗规则或 TrainingEnemy 表现，不把该接入描述为完整 2v2vE 战斗交付。
 
 ## Capabilities
 
 ### New Capabilities
 
-- `behavior-designer-ai-integration`：插件作者与版本绑定、批量运行、游戏任务边界、原生调试和正式内容发布。
+- 无。`behavior-designer-ai-integration` 已是现行能力，本change实施并补齐该合同，不再以ADDED delta重复创建。
 
 ### Modified Capabilities
 
-- `btsmtl-ai-controller-authoring`：移除自研 AI Definition、图、窗口、黑板与 Intent 作者要求。
-- `agent-ai-controller-synthesis`：移除 BTSMTL AIController domain、专用合成、校验与技能流程。
-- `gameplay-ai-control-source`：改为插件输入生产者、冻结观察、不可改写输入事实与正式失败语义。
 - `character-input-pipeline`：玩家与插件共用输入、请求时序、结果关联及输入生产/消费状态边界。
 - `gameplay-simulation-session-composition`：锁定行为内容、输入所有权、观察能力和批量准备合同。
 - `gameplay-simulation-pipeline`：正式区分外部输入生产事实与可恢复消费状态，替换旧 Local AI 候选状态回滚要求。
 - `btsmtl-graph-core`：删除 AIControllerTree 的领域注册，保留技能及其它正式树能力。
 - `graph-authoring-editor-shell`：删除自研 AI 窗口装配，保留共享编辑行为。
 - `graph-authoring-domain-framework`：插件 AI 使用插件自身作者框架，不进入 BTSMTL Capability/Mutation。
-- `btsmtl-agent-authoring-document-sync`：删除 AI 根与分片，保留唯一整包事务和其它领域能力。
-- `btsmtl-agent-authoring-mcp-bridge`：移除 AIController 路由，保留既有五个生命周期工具。
-- `agent-character-controller-synthesis`：移除 Character Document 合同中的 AI 正文要求。
 - `deterministic-rollback-network-model`：一端多 Actor 输入归属、Bot 输入只生产一次及角色重演边界。
 - `deterministic-rollback-two-client-demo`：两个真实 Peer 承载玩家与 Bot，保留同一 Fixed 角色模拟。
 - `deterministic-rollback-relay-product`：发布并校验真实 Peer 与 Actor 所有权名单，保持 Relay-only 拓扑。
@@ -45,8 +39,8 @@
 
 ## Impact
 
-- 主要实现范围：`Main/Runtime/Character/AI`、`Main/Editor/AI`、AI 专用 Semantic/Program/State、Unity 输入与 Session Source 接入、两个网络模型的名单/端点/输入装配，以及 Agent 作者链和正式样例资产。
+- 主要实现范围：`Main/Runtime/Character/AI`、`Main/Editor/AI`、AI 专用 Semantic/Program/State残留、Unity输入与Session Source接入、两个网络模型的名单／端点／输入装配和正式样例资产。旧Agent作者链只做残留清理，不再是本change的规范owner。
 - 依赖已导入的 `com.opsive.behaviordesigner`、`com.opsive.graphdesigner`、`com.opsive.shared` 和 Entities；新增代码沿现有发布与程序集边界进入 Unity 产品，不建立第二套资源或网络发布流程。
-- 与 `refactor-btsmtl-authoring-architecture` 的“保留 AIIntentProgram/AIController domain”直接冲突，需按本提案删除目标对账；与 `decouple-timeline-from-skill`、场景预览 change 只合并非 AI 作者接口，不改动其 Timeline/TreeClip/预览所有权。详细差异、合并规则和删除范围见 `design.md`。
+- 历史主重构中“保留AIIntentProgram／AIController domain”的目标已经失效，只作为删除来源追溯；与Timeline、场景预览change只共享现行角色输入和观察合同，不改动其Timeline／TreeClip／预览所有权。详细差异和删除范围见`design.md`。
 - 当前 AI 状态回滚、一 Peer 一 Actor、网络默认拒绝 AI 等规范需由本 change 的 delta 正式替换。当前技能、Action、KCC、Motion、Pose、IK、Camera 和既有无 Bot 网络行为不借此重写。
 - 本次只创建提案、设计、delta specs 与实施任务，不修改 current specs、其它 active change、实现代码或 Unity 资产，不启动实施。后续复用正式编译、Validator 和既有回放/网络运行证据，不新增测试代码，不把手动验收写入任务。

@@ -1,7 +1,7 @@
 ## 1. 共同接口与迁移范围
 
 - [ ] 1.1 核对当前工作区的 AI 调用者、资产引用和共享输入/Tree/Timeline 依赖，交付按“删除、职责迁移、保护”分类的精确清单，确认不覆盖其它任务改动。
-- [ ] 1.2 按 design 的逐条交接表对齐主重构、Timeline 和本变更的输入/Action 结果/Document v7 合同，交付唯一 schema owner 的实际 installed 标题、改名及 MCP 整包改名各执行一次的映射和正文/场景合并记录，不整段覆盖有效增量、不新增旧 AI 功能。
+- [ ] 1.2 按design的逐条交接表对齐现行Behavior Designer、角色输入、Action结果、Session与Graph authoring合同，清除针对已退出AI Document／MCP／synthesis能力的delta和引用，不整段覆盖有效增量、不新增旧AI功能。
 
 ## 2. 正式观察与输入生产合同
 

@@ -174,13 +174,12 @@ Authority Replication 对完整 Actor roster 产生既有状态/动作/结果。
 
 | 当前约束/位置 | 与本提案的差异 | 本提案的处理 |
 |---|---|---|
-| btsmtl-ai-controller-authoring：独立 Definition/RootTree、BTSMTL AI 窗口、AI Blackboard | 用户已选择停止维护这套作者框架 | 全部要求移除，旧 spec 能力在安装时退役 |
-| gameplay-ai-control-source：AI 必须编译为 portable Program；失败恢复 AI 候选状态 | 与插件直接执行及一次性输入事实冲突 | 替换为外部输入生产/消费分责；插件故障终止，角色回滚复用输入 |
+| 已退役的自研AI作者、Program与Control Source合同 | 已不在现行能力目录，不再是待安装delta | 只清实现残留；输入生产、故障与回滚边界归behavior-designer-ai-integration、character-input-pipeline和Session owner |
 | gameplay-simulation-pipeline：有状态 Pass 恢复、Standard Local 的 AI 候选状态和外层原子性 | 单改 AI Source 规范会留下相反的 Pipeline 要求 | 同步限定 ExternalSource 输入生产边界；保留全部消费/调度/玩法结果事务，删除旧 AI 候选状态恢复 |
 | character-input-pipeline：AI 来源固定 AIIntentProgram；pending 请求恢复 | 来源改为插件；已发布输入不得再由恢复改变 | 保留请求捕获顺序和 timing class，明确 pending 与已冻结事实的边界 |
 | gameplay-simulation-session-composition：AI Program/ControllerId/ABI binding | 已删除 Program/Definition | 改锁定行为内容、游戏任务/input catalog、观察、所有权与 Source 能力 |
 | btsmtl-graph-core、editor shell、domain framework 的 AI 示例/领域装配 | 插件 AI 不再复用 BTSMTL 图框架 | 删除 AI 注册与承诺，保留其它领域的共享行为 |
-| Agent Document/MCP/Character synthesis 的 CharacterController 与 AIController 两域及 AI 事务内 Build | AI 正文和 AIProgram 发布不再存在 | 从唯一协议中移除 AI domain；其它领域继续整包事务、精确 root、显式 Build |
+| character-csharp-authoring 与 Graph authoring | 当前只保留两个显式C#作者入口和正式领域API，不存在游戏AI Document域 | 保持现行边界，不新增插件AI文档包、同步协议或节点级写入工具 |
 | Rollback one Peer/Player/Actor 与完整输入确认 | 一个真实端点将控制多个 Actor | 分离名单和所有权；确认仍按完整 Actor 集合，不改变 Relay-only |
 | Rollback world snapshot/history 包含所有未来模拟状态 | 插件是已明确外部输入生产者 | 保留全部 Fixed 模拟状态；外部决策、生产 frontier 不进入世界 hash/restore |
 | two-client demo 的双 Actor SolidBodyBlock 描述 | 样例扩展到两玩家、两 Bot 和一中立 Actor | 复用现有多 Actor batch/碰撞能力，更新样例覆盖；不改 KCC 算法 |
@@ -190,8 +189,8 @@ Authority Replication 对完整 Actor roster 产生既有状态/动作/结果。
 
 并行变更的合并规则：
 
-- `refactor-btsmtl-authoring-architecture`：其 design 中保留 AI RootTree/AIIntentProgram、Document 两域以及 task 5.6 由本提案的删除目标替代；技能/C# 控制/Action/状态布局仍归原变更。本次不要求整份主重构完成才开展独立工作，但接线必须使用实际已形成的正式输入与动作合同，不能镜像另一套接口。
-- Document 继续对齐主重构正在形成的唯一 v5 目标；本变更移除该目标中的 AIController domain，不另起插件 schema。当前 installed v4 与目标 v5 的迁移仍只有一条正式发布链，旧 AI package 不被转换为插件图。其它非 AI domain 的新增只来自其正式变更，不能借删除 AI 顺带撤销。
+- 历史主重构中的AI RootTree、AIIntentProgram和双Document域目标已经失效，不再作为并行change依赖；技能、C#控制、Action和状态布局继续归各自现行spec。本change接线只使用已形成的正式输入与动作合同，不能镜像另一套接口。
+- 旧AI package不转换为插件图。非AI领域的作者能力继续由`character-csharp-authoring`、Graph Capability和typed Mutation拥有，删除AI不能顺带撤销或复制这些能力。
 - `decouple-timeline-from-skill`：保留其独立 Timeline 目标和共享 TreeClip/编译/执行提取。插件 AI 不直接调用技能/非技能 Timeline，不决定独立 Timeline 的生命周期；涉及 Document 的共同文件合并为“已有非 AI domains + 该变更正式 Timeline domain”。
 - `design-btsmtl-authoring-runtime-workbench`：Authoring Runtime Workbench 继续拥有正式 Session 控制；只替换旧 AI 作者/诊断引用，不恢复窗口播放器或插件图直接改角色的预览路径。
 - Pose、Foot、Camera、Performance、Development Center 等变更只复用其已声明合同。本次不覆盖其未提交修改、不修复无关 baseline、不发送自动实施指令。
@@ -200,29 +199,12 @@ Authority Replication 对完整 Actor roster 产生既有状态/动作/结果。
 
 | 主重构文件/条款 | 本提案负责替换的部分 | 原 owner 保留的部分 |
 |---|---|---|
-| `design.md:69`、`tasks.md:42` 的 5.6 | 保留 AI RootTree/AIIntentProgram 的目标改为插件 AI 输入接入；不再新增旧 AI 功能 | CharacterSimulationInput、角色目录和对现存调用者必要的可编译适配 |
-| `design.md:190`、`:192` | AIController domain、AI body 的持续维护目标删除 | 技能/控制配置 v5 基础、Presentation 所有权、唯一 schema 发布 |
-| `specs/btsmtl-ai-controller-authoring/spec.md` 的 AI 窗口、AI Intent 绑定 | 旧窗口/节点要求移除，游戏任务接入归本提案 | 稳定 InputId/RequestId、value kind、TimingClass 与角色输入目录 |
-| `specs/agent-ai-controller-synthesis/spec.md` | v5 AI Definition/Graph/Blackboard/Perception/Intent 合同移除 | 其它领域的共享对账/事务/校验基础 |
-| `specs/btsmtl-agent-authoring-document-sync/spec.md` 的目录包根、v5 原子替代条款 | 删除 AI 根和“两旧 Controller 域都必须保留”的承诺 | 单一 v5 迁移，保留技能与独立 Timeline 正式目标 |
-| `specs/btsmtl-agent-authoring-mcp-bridge/spec.md` 的 AI 事务 | 删除 AI 正文/路由，不新增插件 domain | 五个生命周期工具及精确 root/hash/整包事务 |
-| `specs/agent-character-controller-synthesis/spec.md` 的声明式控制器结构 | 删除 AI editable 正文和旧 AI handler 依赖 | C# 控制配置、技能局部结构、Timeline/Presentation 的正式作者合同 |
+| 历史AI RootTree／AIIntentProgram／AIController domain目标 | 不再新增或维护自研AI功能 | CharacterSimulationInput、角色目录和现存调用者需要的正式适配 |
+| 已删除AI Document／MCP／synthesis路径 | 不建立删除delta或插件替代协议 | `character-csharp-authoring`的两个入口、技能／Timeline／Presentation领域API |
 
 Input/Action 的共同输出仍是 ActorId、RequestId、capture sequence 到排队/过期/拒绝、实际 ActionInstance 与完成/中断的只读关联；本提案负责尚缺的观察接入，不要求主重构先为旧 AI 实现一套。插件不读取 Action 私有地址。共享的角色输入目录和 Tree/Timeline 编译基础不得随旧 AI 一并删除。
 
-Document 的规范安装必须与唯一 schema owner 合并 v7 基础及 Timeline 增量，不能单独安装本提案的局部条款而留下 current spec 中的旧版本要求，也不能重复应用已完成的 requirement rename。合并依据实际已安装条款，最终删除 AI、保留其余正式领域；这项文档发布顺序不要求其它无关主重构任务全部完成。
-
-已从实际 delta 核对的三组安装冲突：
-
-| 条款迁移 | 当前重复/交叉位置 | 安装规则 |
-|---|---|---|
-| `Document v4必须原子替代v3` → `Document v7必须原子替代旧版本` | 主重构和 Timeline 的 `btsmtl-agent-authoring-document-sync` 都曾声明 RENAMED | 由 v7/schema owner 执行一次；后安装的 delta 必须对齐已安装标题，不能重复旧 FROM |
-| `Document v4失败恢复必须同时覆盖Unity owner与正式package` → `Document v7失败恢复必须同时覆盖Unity owner与正式package` | 主重构和 Timeline 的同一能力都曾声明 RENAMED | 同样只执行一次；保留完整 Unity owner/package 失败恢复正文 |
-| `MCP bridge必须透传同一Document Character与AI事务` → `MCP bridge必须透传同一Document整包事务` | 主重构仍 MODIFIED 旧标题，本提案 RENAMED 后提供完整正文 | 整包标题只改一次；之后所有相关 MODIFIED 都对齐实际新标题 |
-
-规范安装时先读取当时的 installed 标题和完整正文，再合并主重构的 Skill/控制配置、Timeline 的独立根增量和本提案的 AI 退役语义。同标题 MODIFIED 不能按文件先后整段覆盖，否则会丢失另一变更的有效字段/场景或恢复旧 AI。已完成改名必须从后安装的待应用 delta 中消除重复操作；这是作者阶段对齐实际规范，不是运行时保留两种名称或 reader。
-
-组合安装的检查记录必须包含安装前标题、每组只执行一次的改名、逐条合并后的正文/场景，以及安装后仍保留 Skill 和 Timeline、已移除游戏 AI domain 的结果。三个 change 分别通过严格校验只能证明各自 delta 的校验结果，不能替代上述组合检查。截至本次规划，本提案独立严格校验已通过，三份变更的组合安装尚未执行或验证。该责任属于规范安装/对账，不要求三份实现一起完成，也不扩大本提案仅规划的授权。
+本change不再安装或改名任何已退出能力的Document、MCP或synthesis requirement。规范对账只检查现行Behavior Designer、角色输入、Session、网络产品和Graph authoring delta，确认它们没有恢复AIController domain、旧Program或第二作者协议。
 
 2026-09-10 已按当前主规划执行顺序完成旧AI代码和资产退役；插件任务与网络接线仍由本change剩余任务负责。本段交接记录只用于说明规范合并边界，不授权恢复旧AI路径，也不把未完成插件运行证据当作已交付。
 

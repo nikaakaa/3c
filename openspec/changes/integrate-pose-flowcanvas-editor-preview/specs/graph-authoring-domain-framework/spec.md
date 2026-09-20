@@ -118,6 +118,18 @@ Pose作者节点 MUST表达动画或控制意图，Pose Compiler可以为一个�
 - **THEN** Authoring capability、Details与C#作者API MUST不自动暴露该字段
 - **AND** Compiler MUST负责从Pose IR生成该内部值
 
+#### Scenario: 原生事件图调用变量节点
+
+- **WHEN** 已明确采用原生执行的事件图使用宿主准入的Get／Set
+- **THEN** 系统 MUST执行原生节点并遵守唯一变量合同
+- **AND** MUST不建立同义项目指令或备用执行器
+
+#### Scenario: Pose作者图被尝试直接启动
+
+- **WHEN** Editor、事件图或其它调用方绕过角色表现宿主直接启动Pose作者图
+- **THEN** 系统 MUST拒绝该入口，Pose MUST由正式Character Presentation绑定创建并驱动原生实例
+- **AND** MUST不创建窗口私有实例、第二时钟或隐藏运行路径
+
 ### Requirement: Graph Canvas必须复用统一节点与端口投影
 
 作者画布 MUST从唯一正式作者对象、Capability和Port Shape生成节点、端口、菜单与可编辑连接；领域适配可提供图角色、标题、颜色、状态标记和特殊命令，不重建选择、框选、Undo或另一画布。固定、条件与动态端口必须保持稳定identity及空间／目标类型，不能从显示名、现有连线或operation位置猜测。

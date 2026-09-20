@@ -1,6 +1,6 @@
 ## Purpose
 
-为Corin建立从外部Dump来源、正式Unity作者配置、Character产物、Session运行到固定输入Replay的可追溯闭环，确保每一步都使用同一组稳定身份、版本和依赖证据。
+为Corin建立从外部Dump来源、正式Unity作者配置、Graph／领域／表现产物、Session运行到固定输入Replay的可追溯闭环，确保每一步都使用同一组稳定身份、版本和依赖证据。
 
 ## ADDED Requirements
 
@@ -20,13 +20,13 @@
 
 #### Scenario: 完整闭包核对
 
-- **WHEN** 系统准备Corin Document或Build
+- **WHEN** 系统准备Corin作者闭包或运行产物
 - **THEN** 所有正式owner、稳定identity、引用和来源manifest MUST 能从Definition闭包解析
 - **AND** 任一跨角色、跨Target或未声明引用 MUST 被拒绝
 
 ### Requirement: Dump来源、作者资产和生成产物必须分层
 
-系统 MUST 将Dump归一化为正式作者资产后再参与Definition闭包。Document和作者资产可以引用来源identity，但Runtime MUST 不读取Dump文件；Program、Projection、Native Pose Program和Replay结果 MUST 不能反向成为作者配置来源。
+系统 MUST 将Dump归一化为正式作者资产后再参与Definition闭包。作者资产可以引用来源identity，但Runtime MUST不读取Dump文件；Graph artifact、领域／表现binding和Replay结果 MUST不能反向成为作者配置来源。
 
 #### Scenario: 禁止生成产物反向驱动作者配置
 
@@ -35,16 +35,16 @@
 
 ### Requirement: Corin Numeric Target和Session必须成组固定
 
-每个Corin运行目标 MUST 同时固定Numeric Target、Program、Layout、Projection、Session Composition、Prefab/Scene、Source和Solver identity。Float32、Fixed、Rollback和Server Authority的产物 MUST 不能交叉混用。
+每个Corin运行目标 MUST同时固定Numeric Target、Graph artifact、Domain Binding Set、Presentation Binding、Session Composition、Prefab／Scene、Source和Solver identity。Float32、Fixed、Rollback和Server Authority的产物 MUST不能交叉混用。
 
 #### Scenario: Target身份不一致
 
-- **WHEN** Replay或运行配置使用不同Target的Program、Projection或Session
+- **WHEN** Replay或运行配置使用不同Target的Graph artifact、binding或Session
 - **THEN** 系统 MUST 在启动前拒绝并报告完整身份差异
 
 ### Requirement: Replay必须固定输入与运行版本
 
-每次Corin Replay MUST 绑定固定Input Trace、初始Actor/World配置、Program/Layout/Projection hash、Session身份、时钟模式和运行构建身份。Replay MUST 不创建临时执行器或旁路配置。
+每次Corin Replay MUST绑定固定Input Trace、初始Actor／World配置、GraphArtifact／DomainBindingSet／PresentationBinding hash、Session身份、时钟模式和运行构建身份。Replay MUST不创建临时执行器或旁路配置。
 
 #### Scenario: 同条件Replay
 
@@ -54,11 +54,11 @@
 
 ### Requirement: Corin闭环必须按Gate串行推进
 
-正式流程 MUST 按Dump来源核对、作者配置闭包、Document checkout/dry-run/apply、Character Build、Session/Play、Runtime Dump/Replay和最终比较的顺序执行。前一Gate未成功时 MUST 不进入后一Gate。
+正式流程 MUST按Dump来源核对、作者配置闭包、Graph／领域／表现产物准备、Session／Play、Runtime Dump／Replay和最终比较的顺序执行。前一Gate未成功时 MUST不进入后一Gate。
 
 #### Scenario: 前置Gate失败
 
-- **WHEN** 来源、Document、Build或Session校验失败
+- **WHEN** 来源、Authoring Closure、产物准备或Session校验失败
 - **THEN** 系统 MUST 停在当前Gate并保留机器诊断
 - **AND** MUST 不使用旧产物或其他worktree结果继续Replay
 

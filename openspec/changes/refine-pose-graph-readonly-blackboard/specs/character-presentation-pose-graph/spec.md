@@ -169,6 +169,18 @@ source-local曲线参数 MUST随指定Pose Value传播；既有显式`Base | Ove
 - **THEN** 正式曲线采样、混合、资源/实例绑定与最终BlendShape写入 MUST继续由原唯一链路完成
 - **AND** 系统 MUST不丢弃仍被消费的曲线或用默认值掩盖缺失依赖
 
+#### Scenario: 为动画片段声明面部形变参数
+
+- **WHEN** AnimationClip声明动画属性曲线且Profile映射到明确Renderer／Mesh／BlendShape
+- **THEN** 资源绑定 MUST把曲线、目标与容量纳入同一正式集合
+- **AND** Pose Graph MUST不把该属性复制成可写Blackboard变量或按作者显示名读取
+
+#### Scenario: 骨骼分层后需要保留另一分支曲线
+
+- **WHEN** 作者在实际组合节点为两份Pose选择明确Curve混合策略
+- **THEN** 组合节点 MUST保留骨骼混合职责并按原曲线算法解析参数
+- **AND** MUST不要求额外通用汇总节点或创建第二条动画播放链
+
 ### Requirement: PoseStateMachine必须是纯表现状态机
 
 PoseStateMachine MUST拥有稳定Entry、State、Transition、State Alias和MaxTransitionsPerFrame。Transition Rule MUST只读取同帧CharacterPresentationFactFrame、同次成功发布且作用范围允许的typed动画变量Frame、TimeInState与StatePoseRemainingTime；MUST不读取Gameplay Blackboard mutable address、ActionInstance、Timeline operation、Unity Transform或World query。State Alias MUST只复用合法source State集合，不得拥有Pose或成为active runtime State。PoseStateMachine MUST由原生Pose实例中的业务状态节点执行，不进入Gameplay Semantic IR、Numeric Program或角色网络快照，也不以通用插件FSM替代已有动画状态语义。

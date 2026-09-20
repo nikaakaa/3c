@@ -6,9 +6,9 @@
 
 | 资产 | 当前字段/值 |
 | --- | --- |
-| `Pipeline/Definition/CorinCharacterPipelineDefinition.asset` | `ControlModuleId=character.corin.control`；`SimulationTickRate=60`；`EquipmentCapabilityEnabled=0`；装配InputProfile、GameplayEffectProfile、BodyMotionProfile、AnimationPresentationProfile、CameraProfile、SkillDefinitions、SkillGraphs、ActionProfiles、BehaviorProfiles、Float32/Generated Program和Projection |
+| `Pipeline/Definition/CorinCharacterPipelineDefinition.asset` | `ControlModuleId=character.corin.control`；`SimulationTickRate=60`；`EquipmentCapabilityEnabled=0`；装配InputProfile、GameplayEffectProfile、BodyMotionProfile、AnimationPresentationProfile、CameraProfile、SkillDefinitions、SkillGraphs、ActionProfiles和BehaviorProfiles；Graph artifact与领域／表现binding属于派生产物，不是Definition作者字段 |
 | `Pipeline/Motion/Profiles/CorinBodyMotionProfile.asset` | `GravityAcceleration=-25`；`MaximumFallSpeed=40` |
-| `Pipeline/Simulation/Compositions/CorinLocalSimulationSessionComposition.asset` | `SessionId=Corin.Local`；`WorldId=Local.World`；`MapId=Local.Map`；`WorldRevision=Local.World.v1`；`SourceClockId=Local.Logic`；`TickRate=60`；显式ProgramRuntime、ExecutionBackend、Pipeline、SessionSource、WorldSolver |
+| `Pipeline/Simulation/Compositions/CorinLocalSimulationSessionComposition.asset` | `SessionId=Corin.Local`；`WorldId=Local.World`；`MapId=Local.Map`；`WorldRevision=Local.World.v1`；`SourceClockId=Local.Logic`；`TickRate=60`；显式DomainRuntime、ExecutionBackend、Pipeline、SessionSource、WorldSolver |
 
 Definition下的Skill、Graph、Timeline、Presentation、Motion和Session引用必须继续从实际GUID/owner解析，不能用本表中的显示名替代。
 
@@ -35,7 +35,7 @@ Skill Timeline字段必须逐项记录Animation Track/Clip、Animation Channel/S
 | `Presentation/Blend/Locomotion/CorinLocomotionBlendProfile.asset` | `Schema=character-animation-blend-profile/v2`；`ProfileId=corin.animation-rig.locomotion-blend-profile`；RigId/Revision；`GlobalDurationMultiplier=1`；BoneOverrides |
 | `Presentation/Blend/Locomotion/CorinPoseInertializationPolicy.asset` | `Schema=character-pose-inertialization-policy/v4`；PolicyId/Revision；ParameterFilters及其Mode；DirectPlayerRule；references |
 
-Animation/Pose Transition必须逐条记录：源/目标owner、EndpointKind、BlendLogic、DurationSeconds、BlendMode、CustomBlendCurve、BlendProfile、Slot/Layer/Mask、Inertialization Policy、SourceSlot和AnimationChannel。不能只记录“有BlendPolicy”。
+Animation／Pose Transition必须逐条记录：源／目标owner、EndpointKind、BlendLogic、DurationSeconds、BlendMode、CustomBlendCurve、BlendProfile、Slot／Layer／Mask、Inertialization Policy和AnimationChannel。不能只记录“有BlendPolicy”。
 
 ## 4. Foot、IK与Pose数值
 
@@ -54,8 +54,8 @@ Animation/Pose Transition必须逐条记录：源/目标owner、EndpointKind、B
 | `Presentation/Camera/CorinCameraDefaultSequence.asset` | `Schema=character-camera-sequence/v1`；SequenceId `corin.camera.default.normal`；Default Stage；PlayLength `-1`；三组Orbit `(2.225,2.5)`、`(0.225,3.75)`、`(-0.775,2.2)`；ScreenOffsets `(0,0.35)`、`(0,0.5)`、`(0,0.5)`；Aspect `1.7777778`；FOV `50`；ElevationRatio `0.5`；PolarAngle `0`；TimeDomain `1` |
 | Camera Curve | Default Curve 01/02/04：`Schema=character-camera-curve/v1`；TimeDomain `1`；Range `0..1`；Unit `normalized`；Pre/PostWrap `2`；实际曲线keys和引用必须由Dump/Camera资产索引逐项记录 |
 
-## 6. Replay与生成产物
+## 6. Replay与正式产物
 
-- ReplayRequest必须绑定SourceManifestHash、AuthoringClosureHash、DocumentHash、Program/Layout/ProjectionHash、SessionCompositionHash、Prefab/Scene、FixedInputTraceHash、CameraInputTraceHash、初始Actor/World状态和运行版本。
-- Generated Program、Projection、Fixed wrapper、Timeline Program、Runtime Dump和Compare只记录依赖与hash，不作为作者配置字段复制回Definition。
+- ReplayRequest必须绑定SourceManifestHash、AuthoringClosureHash、GraphArtifactHash、DomainBindingSetHash、PresentationBindingHash、SessionCompositionHash、Prefab／Scene、FixedInputTraceHash、CameraInputTraceHash、初始Actor／World状态和运行版本。
+- Graph artifact、领域／表现binding、Fixed wrapper、Runtime Dump和Compare只记录依赖与hash，不作为作者配置字段复制回Definition。
 - 当前任何一项数值、曲线、Transition、Camera参数变更，都必须从其正式owner重新Build并重新Replay；不能复用旧Dump或其他worktree产物。

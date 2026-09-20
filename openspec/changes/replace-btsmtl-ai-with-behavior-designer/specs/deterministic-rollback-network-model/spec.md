@@ -2,20 +2,25 @@
 
 ### Requirement: Rollback Model 必须严格校验 Deterministic Capability
 
-Model MUST在创建前校验 SemanticHash、Fixed ProgramHash、Fixed ABI、Program deterministic capability、TickRate、CollisionWorldHash、KccId/capabilities、protocol version 和 actor roster 规则。任一项不满足 MUST拒绝创建，MUST不跳过 operation、加载 Float32 Program 或回退其他 Solver/Model。
+Model MUST在创建前校验SemanticHash、Fixed GameplayContentHash、Fixed ABI、角色玩法deterministic capability、TickRate、CollisionWorldHash、KccId／capabilities、protocol version和actor roster规则。任一项不满足 MUST拒绝创建，MUST不跳过operation、加载Float32领域运行或回退其他Solver／Model。
 
-确定性要求 MUST覆盖进入 Fixed 角色/世界执行的全部状态和操作。已明确位于模型输入生产边界之外的插件决策 MUST不被当作 Fixed operation，也不能借该身份直接修改模拟；它只能交付已经转换成正式 Fixed 数值的输入。会话兼容身份 MUST同时锁定 Actor 输入所有权和输入格式。
+确定性要求 MUST覆盖进入Fixed角色／世界执行的全部状态和操作。已明确位于模型输入生产边界之外的插件决策 MUST不被当作Fixed operation，也不能借该身份直接修改模拟；它只能交付已经转换成正式Fixed数值的输入。会话兼容身份 MUST同时锁定Actor输入所有权和输入格式。
 
 #### Scenario: Program 包含 Nondeterministic Operation
 
-- **WHEN** Fixed Program capability manifest 不满足 deterministic-compatible
+- **WHEN** Fixed领域运行capability manifest不满足deterministic-compatible
+- **THEN** Rollback model option MUST不可创建
+
+#### Scenario: Graph包含Nondeterministic Operation
+
+- **WHEN** Fixed Graph／domain capability manifest不满足deterministic-compatible
 - **THEN** Rollback model option MUST不可创建
 
 #### Scenario: 插件在指定端产生Fixed输入
 
 - **WHEN** 已声明的 Bot 生产端将本次决策转换为正式 Fixed 输入
 - **THEN** 其它端 MUST消费相同编码的输入并执行确定性角色模拟
-- **AND** MUST不要求其它端运行插件或在 Fixed Program 中装载插件任务
+- **AND** MUST不要求其它端运行插件或在Fixed领域运行中装载插件任务
 
 ### Requirement: Gameplay 输入必须沿单一 Raw-to-Canonical 生命周期传播
 

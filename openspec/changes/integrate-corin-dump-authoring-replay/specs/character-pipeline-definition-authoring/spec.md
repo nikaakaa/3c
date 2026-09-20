@@ -2,7 +2,7 @@
 
 ### Requirement: CharacterPipelineDefinition必须是Corin配置闭包根
 
-Corin的CharacterPipelineDefinition MUST 唯一装配Control、Input、Skill、Gameplay、Motion、Presentation、Session和来源绑定。生成Program、Projection和Replay数据 MUST 作为Definition的派生产物或验证输入记录，不能反向成为Definition引用源。
+Corin的CharacterPipelineDefinition MUST唯一装配Control、Input、Skill、Gameplay、Motion、Presentation、Session和来源绑定。Graph artifact、领域／表现binding和Replay数据 MUST作为Definition的派生产物或验证输入记录，不能反向成为Definition引用源。
 
 #### Scenario: Definition闭包可重建
 

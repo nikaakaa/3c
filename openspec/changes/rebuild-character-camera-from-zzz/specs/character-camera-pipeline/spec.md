@@ -29,6 +29,12 @@
 - **THEN** Compiler preflight MUST报告 node source identity并拒绝生成 Program
 - **AND** runtime MUST不把该 node 当成 Success 或选择默认 CameraTarget
 
+#### Scenario: ActionCue 不是相机入口
+
+- **WHEN** Logic Timeline提交`CueType=AttackProperty`或其它非相机ActionCue
+- **THEN** Camera MUST不订阅、解释该事件或伪造镜头请求
+- **AND** 相机触发仍 MUST来自TreeClip相机特殊Node或唯一效果轨道窗口
+
 #### Scenario: Fixed Target 编译 Camera operation
 
 - **WHEN** Fixed Graph artifact 与 domain binding 包含当前 operation-set version 的 Camera operation

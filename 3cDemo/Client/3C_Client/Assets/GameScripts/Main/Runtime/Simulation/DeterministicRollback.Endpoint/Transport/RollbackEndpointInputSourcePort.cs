@@ -453,14 +453,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 return;
             foreach (KeyValuePair<ActorId, SortedDictionary<ulong, RollbackActorInputFrame>> actor in m_Explicit)
             {
-                var remove = new List<ulong>();
                 RollbackActorInputFrame latest = null;
-                foreach (KeyValuePair<ulong, RollbackActorInputFrame> pair in actor.Value)
+                while (actor.Value.Count != 0)
                 {
+                    KeyValuePair<ulong, RollbackActorInputFrame> pair = default;
+                    foreach (KeyValuePair<ulong, RollbackActorInputFrame> candidate in actor.Value)
+                    {
+                        pair = candidate;
+                        break;
+                    }
                     if (pair.Key > confirmed)
                         break;
                     latest = pair.Value;
-                    remove.Add(pair.Key);
+                    actor.Value.Remove(pair.Key);
+                    m_ExplicitCount--;
                 }
                 if (latest != null)
                 {
@@ -470,11 +476,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         latest.InputSequence,
                         latest.Input,
                         RollbackInputProvenance.ConfirmedExplicit);
-                }
-                for (int i = 0; i < remove.Count; i++)
-                {
-                    actor.Value.Remove(remove[i]);
-                    m_ExplicitCount--;
                 }
             }
         }

@@ -1843,3 +1843,11 @@
 - RollbackInputHistory、RollbackSnapshotHistory 与每个 peer 的 RollbackStateHashHistory 共用 RemoveThrough。字典 key 均为升序 tick，原实现仍先把边界内 key 收集进新 List，再第二次循环删除。输入历史 CaptureEntries 还对已独立的结果 List 创建 ReadOnlyCollection。
 - RemoveThrough 现只要字典非空就读取最小 key，超过边界立即结束，否则删除后继续；不会在枚举期间修改活动枚举器，也不扫描确认边界之后的条目。删除顺序和三个历史的 count／floor 语义保持。
 - 输入历史捕获仍返回独立 List，仅按 IReadOnlyList 暴露。删除每次 confirmed horizon 释放的 key List，以及每次输入历史捕获的只读包装。ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 rollback 历史运行采样。
+
+## 2026-09-21 Rollback Endpoint 显式输入确认释放
+
+对应 tasks.md 的 5.72。
+
+- RollbackEndpointInputSourcePort 为每个 Actor 持有按 tick 排序的显式输入字典。确认推进时原实现为每个 Actor 新建 remove List，先收集 confirmed 边界内 tick 并记住最后帧，再第二次循环删除并更新全局数量。
+- 释放现反复读取该 Actor 字典的最小键；最小 tick 超过 confirmed 立即结束，否则记录为 latest、删除并递减 m_ExplicitCount。循环结束后仍把最后删除帧转换为 ConfirmedExplicit 写入 m_LastConfirmed。
+- 删除每次确认释放按 Actor 创建的 key List，不改变最后确认输入选择、Actor 遍历、历史容量或预测缺帧逻辑。ThirdPersonSimulation.DeterministicRollback.Endpoint portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Endpoint 输入运行采样。

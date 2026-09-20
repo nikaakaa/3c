@@ -22,12 +22,17 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public static RollbackActorInputFrame ReadInput(byte[] bytes)
         {
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            return ReadInput(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))));
+        }
+
+        internal static RollbackActorInputFrame ReadInput(ArraySegment<byte> bytes)
+        {
+            var reader = new CanonicalReader(bytes);
             RollbackActorInputFrame frame = ReadInput(reader);
             reader.RequireComplete();
             using var writer = new CanonicalWriter();
             WriteInput(writer, frame);
-            if (!writer.ContentEquals(bytes))
+            if (!writer.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Rollback Actor input is not canonical.");
             return frame;
         }
@@ -72,7 +77,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public static RollbackCanonicalInputBundle ReadBundle(byte[] bytes)
         {
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            return ReadBundle(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))));
+        }
+
+        internal static RollbackCanonicalInputBundle ReadBundle(ArraySegment<byte> bytes)
+        {
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != BundleMagic || reader.ReadInt32() != Version)
                 throw new InvalidDataException("Rollback canonical bundle header is invalid.");
             var tick = new SimulationTick(reader.ReadUInt64());
@@ -85,7 +95,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var bundle = new RollbackCanonicalInputBundle(tick, sequence, actors);
             using var writer = new CanonicalWriter();
             WriteBundle(writer, bundle);
-            if (!writer.ContentEquals(bytes))
+            if (!writer.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Rollback canonical bundle is not canonical.");
             return bundle;
         }

@@ -180,3 +180,14 @@
 - RollbackInputCodec 的两个内部长度前缀写入入口调用同一私有 WriteInput／WriteBundle；四类外层调用统一使用该入口。Magic、Version、字段顺序和小端长度编码均沿原实现，公开返回独立数组的方法保留其真实消费者。
 - 删除嵌套子项临时 writer、流、primitive buffer 和最终 ToArray 数组，不改变外层独立结果、消息历史或异步发送寿命；失败时不返回部分包。读取侧 ReadBytes 中间数组、快照响应副本、外层 writer 容量和发送存储仍未完成。
 - 回滚 portable 及 Core／Fixed 依赖编译零警告零错误，按规定构建参数及结束 shutdown，diff 空白检查通过。已查当前 portable Tests 工程不引用回滚工程且未找到对应 codec 用例，未新增测试、未宣称协议运行或 Player 性能已验证。
+
+## 2026-09-20 回滚嵌套输入同步借用解码
+
+对应 tasks.md 的 5.10，与代码同步提交。
+
+- CanonicalReader 支持 ArraySegment 构造和 ReadBytesSegment。byte[] 构造沿同一初始化链；片段 reader 保存绝对 Offset 和 End，Remaining 改为 End 减 Offset，现有所有基础读取、字符串和字节读取仍先 Require，因此不能越过子消息边界。
+- ReadBytesSegment 沿原负长度和剩余长度检查取得原包片段，并推进父 reader；不创建字节数组。ReadBytes／ReadRawBytes 仍为真实需要独立持有字节的消费者提供复制语义，不是兼容路径。
+- RollbackInputCodec 的公开 byte[] 入口统一进入内部片段解码；内部仍执行原 ReadInput／ReadBundle、RequireComplete 和完整重新编码，只把 ContentEquals 的输入限定为 bytes.AsSpan() 的实际片段。
+- RollbackProtocolCodec 的 canonical bundle、输入批次、转发输入和确认批次四类调用切换为片段入口。已核对解码结果只保存独立字符串、数值和输入集合，不保存 reader 或原包引用；借用范围限于同步调用。快照响应字节的读取与持有没有改动。
+- 每个嵌套子项少一次完整 byte[] 创建与复制；reader 对象、解码输入集合、重新编码 writer、哈希及长期结果存储仍有分配。
+- 回滚 portable 连带 Core／Fixed 编译零警告零错误；Unity 当前引用下独立编译 Core，再用新 Core 编译回滚程序集也通过。diff 空白检查通过，按规定构建后 shutdown；未新增测试、未主动刷新 Unity、未做 Player 采样或宣称运行验证完成。

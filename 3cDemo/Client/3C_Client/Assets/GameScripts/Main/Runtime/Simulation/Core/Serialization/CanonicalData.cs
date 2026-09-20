@@ -195,14 +195,22 @@ namespace ThirdPersonSimulation
     public sealed class CanonicalReader
     {
         readonly byte[] m_Bytes;
+        readonly int m_End;
         int m_Offset;
 
         public CanonicalReader(byte[] bytes)
+            : this(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))))
         {
-            m_Bytes = bytes ?? throw new ArgumentNullException(nameof(bytes));
         }
 
-        public int Remaining => m_Bytes.Length - m_Offset;
+        public CanonicalReader(ArraySegment<byte> bytes)
+        {
+            m_Bytes = bytes.Array ?? throw new ArgumentNullException(nameof(bytes));
+            m_Offset = bytes.Offset;
+            m_End = bytes.Offset + bytes.Count;
+        }
+
+        public int Remaining => m_End - m_Offset;
         public byte ReadByte()
         {
             Require(1);
@@ -239,6 +247,14 @@ namespace ThirdPersonSimulation
         {
             int length = ReadLength();
             return ReadRawBytes(length);
+        }
+        public ArraySegment<byte> ReadBytesSegment()
+        {
+            int length = ReadLength();
+            Require(length);
+            var value = new ArraySegment<byte>(m_Bytes, m_Offset, length);
+            m_Offset += length;
+            return value;
         }
         public byte[] ReadRawBytes(int length)
         {

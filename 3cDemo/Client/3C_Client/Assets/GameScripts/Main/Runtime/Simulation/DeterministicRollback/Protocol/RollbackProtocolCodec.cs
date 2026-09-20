@@ -135,7 +135,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 RollbackProtocolMessageKind.Roster => ReadRoster(reader),
                 RollbackProtocolMessageKind.ActorInputBatch => ReadInputBatch(reader),
                 RollbackProtocolMessageKind.RelayedExplicitInputBatch => ReadRelayedInputBatch(reader),
-                RollbackProtocolMessageKind.CanonicalBundle => RollbackInputCodec.ReadBundle(reader.ReadBytes()),
+                RollbackProtocolMessageKind.CanonicalBundle => RollbackInputCodec.ReadBundle(reader.ReadBytesSegment()),
                 RollbackProtocolMessageKind.CanonicalConfirmation => ReadCanonicalConfirmation(reader),
                 RollbackProtocolMessageKind.StateHash => ReadStateHash(reader),
                 RollbackProtocolMessageKind.SnapshotRequest => new RollbackSnapshotRequest(
@@ -166,7 +166,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int count = ReadCount(reader);
             var frames = new RollbackActorInputFrame[count];
             for (int i = 0; i < count; i++)
-                frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytes());
+                frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytesSegment());
             return new RollbackActorInputBatch(frames);
         }
 
@@ -182,7 +182,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int count = ReadCount(reader);
             var frames = new RollbackActorInputFrame[count];
             for (int i = 0; i < count; i++)
-                frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytes());
+                frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytesSegment());
             return new RollbackRelayedExplicitInputBatch(frames);
         }
 
@@ -202,7 +202,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int count = ReadCount(reader);
             var bundles = new RollbackCanonicalInputBundle[count];
             for (int i = 0; i < count; i++)
-                bundles[i] = RollbackInputCodec.ReadBundle(reader.ReadBytes());
+                bundles[i] = RollbackInputCodec.ReadBundle(reader.ReadBytesSegment());
             return new RollbackCanonicalConfirmation(previousConfirmedTick, confirmedTick, bundles);
         }
 

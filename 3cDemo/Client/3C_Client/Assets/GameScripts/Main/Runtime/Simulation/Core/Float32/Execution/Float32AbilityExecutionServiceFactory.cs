@@ -142,6 +142,7 @@ namespace ThirdPersonSimulation
                 equipment,
                 blackboard,
                 frame,
+                controlState,
                 workspace);
             Float32MotionAccumulator motion = new Float32MotionAccumulator(
                 access,

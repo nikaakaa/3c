@@ -854,8 +854,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                     return apply.ProviderOwnerId;
                 case "selector" when node is IGameplayEffectRemovalAuthoring remove:
                     return remove.Selector;
-                case "handle" when node is IGameplayEffectRemovalAuthoring remove:
-                    return remove.Handle;
                 case "effect" when node is IGameplayEffectRemovalAuthoring remove:
                     return remove.Effect;
                 case "query" when node is IGameplayEffectRemovalAuthoring remove:

@@ -547,6 +547,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Int32, ProgramStateOwnerKind.Runnable, ProgramStateSemantic.RunnableStopBarrier));
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.Runnable, ProgramStateSemantic.RunnableActivationGeneration));
             }
+            if (code == SimulationOperationCode.GameplayEffectApply)
+                slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.Runnable, ProgramStateSemantic.GameplayEffectAppliedHandle));
             if (code == SimulationOperationCode.LocomotionInputMotion)
                 slots.Add(DeclareStateSlot(source, handle, ProgramStateValueKind.Int32, ProgramStateOwnerKind.Runnable, ProgramStateSemantic.LocomotionMotionElapsedTicks));
             if (code == SimulationOperationCode.StateMachine)

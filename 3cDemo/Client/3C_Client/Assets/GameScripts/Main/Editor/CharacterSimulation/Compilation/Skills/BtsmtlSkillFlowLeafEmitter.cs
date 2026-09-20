@@ -358,7 +358,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 Field<BtsmtlSkillRemoveGameplayEffectFlowNode, GameplayEffectDefinition>(node, "effect");
             var fields = new List<KeyValuePair<string, object>>
             {
-                new KeyValuePair<string, object>("Handle", Field<BtsmtlSkillRemoveGameplayEffectFlowNode, ulong>(node, "handle")),
                 new KeyValuePair<string, object>("Effect", EffectIdentity(EffectId(effect))),
                 new KeyValuePair<string, object>("ProviderOwner", Field<BtsmtlSkillRemoveGameplayEffectFlowNode, string>(node, "providerOwnerId"))
             };

@@ -199,7 +199,6 @@ namespace ThirdPersonSimulation
         Predicted = 7,
         Effect = 8,
         DefinitionRevision = 9,
-        Handle = 10,
         MoveSpeed = 11,
         TurnSpeedDegrees = 12,
         Weight = 13,

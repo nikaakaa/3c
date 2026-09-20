@@ -12,6 +12,7 @@ namespace ThirdPersonSimulation
         readonly Float32EquipmentRuntime m_Equipment;
         readonly IFloat32BlackboardPort m_Blackboard;
         readonly Float32AbilityExecutionFrame m_Frame;
+        readonly Float32StatePort m_ControlState;
         readonly Float32GameplayAbilityExecutionAccess Access;
 
         public Float32ValueRuntime(
@@ -23,6 +24,7 @@ namespace ThirdPersonSimulation
             Float32EquipmentRuntime equipment,
             IFloat32BlackboardPort blackboard,
             Float32AbilityExecutionFrame frame,
+            Float32StatePort controlState,
             Float32AbilityExecutionWorkspace workspace)
             : base(access.Data, access.Layout, workspace.Values)
         {
@@ -33,6 +35,7 @@ namespace ThirdPersonSimulation
             m_Equipment = equipment;
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+            m_ControlState = controlState ?? throw new ArgumentNullException(nameof(controlState));
             Access = access;
         }
 
@@ -72,7 +75,18 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.CanActivateAction:
 						result = AbilityStateValue.FromBoolean(m_ActionAdmission.PreviewActivation(cursor, operation).Allowed);
 						break;
-                case SimulationOperationCode.GameplayEffectHasTag:
+                case SimulationOperationCode.GameplayEffectApply:
+                        result = outputPort switch
+                        {
+                            "m_Handle" => m_ControlState.Get(Access.RequireOperationSlot(operation.Handle, ProgramStateSemantic.GameplayEffectAppliedHandle)),
+                            "m_Applied" => AbilityStateValue.FromBoolean(cursor.ReadStatus(operation.Handle) == OperationRunnableStatus.Success),
+                            _ => throw new InvalidOperationException($"Gameplay Effect apply output '{outputPort}' is unsupported.")
+                        };
+                        break;
+                    case SimulationOperationCode.GameplayEffectRemove:
+                        result = AbilityStateValue.FromBoolean(cursor.ReadStatus(operation.Handle) == OperationRunnableStatus.Success);
+                        break;
+                    case SimulationOperationCode.GameplayEffectHasTag:
                         result = AbilityStateValue.FromBoolean(RequireGameplayTags().HasTag(operation.Text0));
                         break;
                 case SimulationOperationCode.GameplayEffectMatchTags:

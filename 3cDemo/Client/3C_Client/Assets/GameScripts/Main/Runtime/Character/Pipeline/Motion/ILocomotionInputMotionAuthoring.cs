@@ -78,7 +78,6 @@ namespace ThirdPersonCharacter.Pipeline.Motion
     public interface IGameplayEffectRemovalAuthoring
     {
         GameplayEffectRemoveSelector Selector { get; }
-        ulong Handle { get; }
         GameplayEffectDefinition Effect { get; }
         GameplayTagQuery EffectTagQuery { get; }
     }

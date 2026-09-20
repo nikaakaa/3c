@@ -151,7 +151,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                 AppendConfigured(graph, menu, "BTSMTL/Provider/Gameplay Effect/Remove / " + label,
                     RequireType("gameplay-effect-remove"), position, context,
                     node => ((BtsmtlSkillRemoveGameplayEffectFlowNode)node).Configure(
-                        GameplayEffectRemoveSelector.EffectId, 0, selected, null, owner));
+                        GameplayEffectRemoveSelector.EffectId, selected, null, owner));
             }
         }
 

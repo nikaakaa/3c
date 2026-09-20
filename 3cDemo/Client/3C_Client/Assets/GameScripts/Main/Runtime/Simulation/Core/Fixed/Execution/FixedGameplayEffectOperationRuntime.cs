@@ -144,8 +144,9 @@ namespace ThirdPersonSimulation.Fixed
             ProjectChanges(RootOperation(), "gameplay-effect:advance");
         }
 
-        public bool Apply(SimulationOperation operation)
+        public bool Apply(SimulationOperation operation, out ulong appliedHandle)
         {
+            appliedHandle = 0;
             ProgramCatalogEntry definition = RequireGameplayEffectCatalog(operation);
             ulong configuredRevision = GetUInt64Constant(operation, OperationNamedConstant.DefinitionRevision, 0);
             if (configuredRevision != (ulong)definition.Revision)
@@ -181,10 +182,11 @@ namespace ThirdPersonSimulation.Fixed
                 values);
             GameplayEffectApplyResult result = m_GameplayEffects.Apply(application);
             ProjectChanges(operation, "operation:apply-effect");
+            appliedHandle = result.Succeeded ? result.Handle : 0;
             return result.Succeeded;
         }
 
-        public bool Remove(SimulationOperation operation)
+        public bool Remove(SimulationOperation operation, ulong handle)
         {
             if (operation.Integer0 < byte.MinValue || operation.Integer0 > byte.MaxValue)
                 throw new InvalidOperationException($"Gameplay Effect remove selector '{operation.Integer0}' is invalid.");
@@ -194,7 +196,6 @@ namespace ThirdPersonSimulation.Fixed
                 selector != GameplayEffectRemoveSelector.SourceActor &&
                 selector != GameplayEffectRemoveSelector.EffectTagQuery)
                 throw new InvalidOperationException($"Gameplay Effect remove selector '{operation.Integer0}' is invalid.");
-            ulong handle = GetUInt64Constant(operation, OperationNamedConstant.Handle, 0);
             string effectId = GetStringConstant(operation, OperationNamedConstant.Effect, string.Empty);
             PortableTagQuery query = selector == GameplayEffectRemoveSelector.EffectTagQuery
                 ? m_Frame.Services.RequireTagQuery(operation.Handle)

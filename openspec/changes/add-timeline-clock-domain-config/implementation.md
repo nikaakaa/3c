@@ -517,3 +517,11 @@
 - 尚缺作者图可用的运行时效果句柄链：Apply操作拿到GameplayEffectApplyResult后只返回Succeeded，作者节点只暴露Applied；Remove的Handle来自静态编译常量。相同效果的多个独立实例无法由各自Clip保存并动态移除。后续需沿正式UInt64值端口与原状态槽补齐Apply句柄输出、Remove句柄输入和回调清理，不能用EffectId／SourceActor批量移除冒充独立来源解除。
 - 0.7另清除一处TreeClip／Marker图查询分配：直接按既有dependency identity的前缀及作者身份作序号字符串比较，返回闭包中的原身份，删除每次求值重新拼接tree:身份。图revision校验继续沿原闭包，不增加缓存。
 - Unity编译及最终域重载完成（1789923865117），Editor idle，控制台错误为零；git diff --check通过，未新增测试。多来源效果句柄接入尚未实现，不据现有聚合能力勾选5.6。
+
+## GameplayEffect运行时句柄进入正式值端口
+- 对应5.6／7.4：施加节点新增UInt64效果句柄输出；正式编译为该Apply操作声明GameplayEffectAppliedHandle状态槽，沿原Control状态端口写入并随原快照链保存恢复。Fixed／Float32都在成功时保存实际句柄，失败保存0；Applied输出读取原操作成功状态，不重新执行施加。
+- 移除节点的Handle改为UInt64值输入，删除原静态Handle作者字段、Inspector输入、authoring配置参数及具名编译常量。两套控制运行时从正式值输入读取句柄，移除操作仍调用原GameplayEffect.Remove；Removed输出读取操作状态。没有新增时间控制服务、效果表或动态／静态双路径。
+- 作者在OnEnable施加效果并将句柄保存到合适生命周期的正式黑板变量，在OnDisable与OnDestroy共用移除逻辑。独立来源需要配置独立效果实例；原合并堆叠策略仍共享实例句柄，不能承诺独立移除一个共享实例里的来源。当前Configs资产未发现使用旧Remove节点的内容。
+- 时序沿正式操作顺序：Timeline读取倍率／暂停输入前已施加的控制可用于本次推进；在该Timeline求值内部回调才施加的控制影响后续推进，不倒改已经求值的区间。效果到期仍由逻辑tick驱动，暂停动作位置不冻结到期。
+- 尚需继续闭合作者调用与多来源业务配置、TreeClip退出记账丢弃边界，以及完整0 GC；本批接口接通不等于整个5.6完成。
+- 脚本编译和最终域重载完成（1789924550476）；正式菜单Tools/3C/Internal/Republish Corin Ability Data执行后控制台错误为零。已核对当前8份Fixed／Float32能力产物没有GameplayEffectAppliedHandle状态槽，说明现有Corin内容没有覆盖新增Apply节点端口；本次仅证明代码和现有内容重建通过，不宣称新句柄用法已端到端验收。派生资产及编辑器随保存产生的其他变化留在工作区，不混入本批提交；未新增测试。

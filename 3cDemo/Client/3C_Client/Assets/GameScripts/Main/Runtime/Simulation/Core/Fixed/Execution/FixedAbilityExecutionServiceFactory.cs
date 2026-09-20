@@ -145,6 +145,7 @@ namespace ThirdPersonSimulation.Fixed
                 equipment,
                 blackboard,
                 frame,
+                controlState,
                 workspace);
             FixedMotionAccumulator motion = new FixedMotionAccumulator(
                 access,

@@ -351,8 +351,8 @@ namespace ThirdPersonSimulation
 				Fixed("m_Valid", 0, SemanticValueKind.Boolean),
 				Fixed("m_BaseValue", 1, SemanticValueKind.Number),
 				Fixed("m_CurrentValue", 2, SemanticValueKind.Number)));
-			Set(values, Output(SimulationOperationCode.GameplayEffectApply, Fixed("m_Applied", 0, SemanticValueKind.Boolean)));
-			Set(values, Output(SimulationOperationCode.GameplayEffectRemove, Fixed("m_Removed", 0, SemanticValueKind.Boolean)));
+			Set(values, Output(SimulationOperationCode.GameplayEffectApply, Fixed("m_Applied", 0, SemanticValueKind.Boolean), Fixed("m_Handle", 1, SemanticValueKind.UInt64)));
+			Set(values, Both(SimulationOperationCode.GameplayEffectRemove, new[] { Fixed("m_Handle", 0, SemanticValueKind.UInt64) }, new[] { Fixed("m_Removed", 0, SemanticValueKind.Boolean) }));
 			Set(values, Output(SimulationOperationCode.CameraBasisRead,
 				Fixed(CameraProgramOperationSchema.BasisValidPortId, 0, SemanticValueKind.Boolean),
 				Fixed(CameraProgramOperationSchema.BasisPlanarForwardPortId, 1, SemanticValueKind.Vector3),

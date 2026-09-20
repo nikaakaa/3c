@@ -235,7 +235,6 @@ namespace ThirdPersonCharacter.Control.Authoring
                     values.TryGetValue("selector", out object selector)
                         ? (GameplayEffectRemoveSelector)selector
                         : removeEffect.Selector,
-                    values.TryGetValue("handle", out object handle) ? (ulong)handle : removeEffect.Handle,
                     values.TryGetValue("effect", out object effect) ? (GameplayEffectDefinition)effect : removeEffect.Effect,
                     values.TryGetValue("query", out object query) ? (GameplayTagQuery)query : removeEffect.EffectTagQuery,
                     values.TryGetValue("providerOwnerId", out object owner) ? (string)owner : removeEffect.ProviderOwnerId);

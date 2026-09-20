@@ -217,13 +217,16 @@ namespace ThirdPersonSimulation.Fixed
                         ? OperationExecutionResult.Success
                         : OperationExecutionResult.Failure;
                 case SimulationOperationCode.GameplayEffectApply:
-                    return RequireGameplayEffects().Apply(operation)
-                        ? OperationExecutionResult.Success
-                        : OperationExecutionResult.Failure;
+                {
+                    bool applied = RequireGameplayEffects().Apply(operation, out ulong appliedHandle);
+                    int slot = m_Access.RequireOperationSlot(operation.Handle, ProgramStateSemantic.GameplayEffectAppliedHandle);
+                    m_ControlState.Set(slot, AbilityStateValue.FromUInt64(appliedHandle));
+                    return applied ? OperationExecutionResult.Success : OperationExecutionResult.Failure;
+                }
                 case SimulationOperationCode.GameplayEffectRemove:
-                    return RequireGameplayEffects().Remove(operation)
-                        ? OperationExecutionResult.Success
-                        : OperationExecutionResult.Failure;
+                    using (FixedValueInputLease inputs = m_Values.ReadInputs(cursor, operation))
+                        return RequireGameplayEffects().Remove(operation, inputs[0].UInt64)
+                            ? OperationExecutionResult.Success : OperationExecutionResult.Failure;
                 case SimulationOperationCode.RequestEquipmentChange:
                 case SimulationOperationCode.BeginEquipmentChange:
                 case SimulationOperationCode.CommitEquipmentChange:

@@ -133,17 +133,14 @@ namespace ThirdPersonCharacter.Control.Authoring
         static void DrawRemoveGameplayEffect(FlowGraph graph, BtsmtlSkillRemoveGameplayEffectFlowNode node)
         {
             GameplayEffectRemoveSelector currentSelector = Read<GameplayEffectRemoveSelector>(node, "selector");
-            ulong currentHandle = Read<ulong>(node, "handle");
             GameplayEffectDefinition currentEffect = Read<GameplayEffectDefinition>(node, "effect");
             string currentOwner = Read<string>(node, "providerOwnerId");
             GameplayEffectRemoveSelector selector = (GameplayEffectRemoveSelector)EditorGUILayout.EnumPopup("Selector", currentSelector);
-            long handleValue = EditorGUILayout.LongField("Handle", (long)currentHandle);
-            ulong handle = handleValue < 0 ? 0UL : (ulong)handleValue;
             GameplayEffectDefinition effect = ObjectField("Gameplay Effect", currentEffect, typeof(GameplayEffectDefinition));
             string owner = EditorGUILayout.DelayedTextField("Provider Owner", currentOwner);
-            if (selector != currentSelector || handle != currentHandle || effect != currentEffect ||
+            if (selector != currentSelector || effect != currentEffect ||
                 !string.Equals(owner, currentOwner, StringComparison.Ordinal))
-                Change(graph, "修改Gameplay Effect移除", () => node.Configure(selector, handle, effect, Read<GameplayTagQuery>(node, "query"), owner));
+                Change(graph, "修改Gameplay Effect移除", () => node.Configure(selector, effect, Read<GameplayTagQuery>(node, "query"), owner));
         }
 
         static string JoinTags(IReadOnlyList<GameplayTagId> tags) =>
@@ -553,6 +550,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             AddFlowInput("执行", RejectAuthoringExecution, "Input");
             AddValueOutput<bool>("Applied", RejectAuthoringValue<bool>, "m_Applied");
+            AddValueOutput<ulong>("效果句柄", RejectAuthoringValue<ulong>, "m_Handle");
         }
     }
 
@@ -567,13 +565,6 @@ namespace ThirdPersonCharacter.Control.Authoring
         typeof(GameplayEffectDefinition),
         Optional = true)]
     [BtsmtlSkillAuthoringField("selector", typeof(GameplayEffectRemoveSelector))]
-    [BtsmtlSkillAuthoringField(
-        "handle",
-        TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Integer,
-        HasMinimum = true,
-        Minimum = 0d,
-        Finite = true,
-        Optional = true)]
     [BtsmtlSkillAuthoringField("effect", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference,
         Optional = true)]
     [BtsmtlSkillAuthoringField("query", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Object,
@@ -582,20 +573,17 @@ namespace ThirdPersonCharacter.Control.Authoring
     public sealed class BtsmtlSkillRemoveGameplayEffectFlowNode : BtsmtlSkillFlowNode, IGameplayEffectRemovalAuthoring
     {
         [SerializeField] GameplayEffectRemoveSelector m_Selector = GameplayEffectRemoveSelector.EffectId;
-        [SerializeField] ulong m_Handle;
         [SerializeField] GameplayEffectDefinition m_Effect;
         [SerializeField] GameplayTagQuery m_EffectTagQuery = new GameplayTagQuery();
         [SerializeField] string m_ProviderOwnerId;
 
         public GameplayEffectRemoveSelector Selector => m_Selector;
-        public ulong Handle => m_Handle;
         public GameplayEffectDefinition Effect => m_Effect;
         public GameplayTagQuery EffectTagQuery => m_EffectTagQuery;
         public string ProviderOwnerId => m_ProviderOwnerId ?? string.Empty;
 
         public void Configure(
             GameplayEffectRemoveSelector selector,
-            ulong handle,
             GameplayEffectDefinition effect,
             GameplayTagQuery effectTagQuery,
             string providerOwnerId)
@@ -604,7 +592,6 @@ namespace ThirdPersonCharacter.Control.Authoring
             if (string.IsNullOrWhiteSpace(providerOwnerId))
                 throw new ArgumentException("Gameplay Effect removal provider reference is incomplete.");
             m_Selector = selector;
-            m_Handle = handle;
             m_Effect = effect;
             m_EffectTagQuery = effectTagQuery ?? new GameplayTagQuery();
             m_ProviderOwnerId = providerOwnerId.Trim();
@@ -613,6 +600,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         protected override void RegisterPorts()
         {
             AddFlowInput("执行", RejectAuthoringExecution, "Input");
+            AddValueInput<ulong>("效果句柄", "m_Handle").SetDefaultAndSerializedValue(0UL);
             AddValueOutput<bool>("Removed", RejectAuthoringValue<bool>, "m_Removed");
         }
     }

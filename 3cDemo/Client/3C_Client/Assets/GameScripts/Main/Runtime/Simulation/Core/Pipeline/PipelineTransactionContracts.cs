@@ -197,6 +197,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<TCompletedStep> completedSteps,
             SessionExecutionWorkspace<TCompletedStep, TActorResult, TActorState, TEgressRecord> workspace);
         void PublishWorkingState(TWorkingState workingState);
+        void CompleteStatePublish(TWorkingState workingState);
         void RestoreSolverBaseline();
         void Commit(TCommitBatch commitBatch);
         void PublishTrace(PipelineTransactionTrace trace);

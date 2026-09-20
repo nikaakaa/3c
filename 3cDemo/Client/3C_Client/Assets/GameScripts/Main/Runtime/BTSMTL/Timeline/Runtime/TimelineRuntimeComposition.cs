@@ -257,6 +257,12 @@ namespace BTSMTL.Timeline.Runtime
             return false;
         }
 
+        public void ReleasePlayback(TimelineRuntimePlaybackHandle handle)
+        {
+            m_Pending.Remove(handle.Value);
+            m_Committed.Remove(handle.Value);
+        }
+
         public void Clear()
         {
             m_Pending.Clear();

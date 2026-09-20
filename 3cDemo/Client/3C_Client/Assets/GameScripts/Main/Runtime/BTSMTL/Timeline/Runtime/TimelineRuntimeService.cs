@@ -928,6 +928,19 @@ namespace BTSMTL.Timeline.Runtime
             return true;
         }
 
+        public void ReleasePlayback(TimelineRuntimePlaybackHandle handle)
+        {
+            EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
+            if (playback.HasPendingAdvance || playback.HasPendingStop ||
+                playback.State != TimelineRuntimePlaybackState.Completed &&
+                playback.State != TimelineRuntimePlaybackState.Stopped &&
+                playback.State != TimelineRuntimePlaybackState.Failed)
+                throw new InvalidOperationException("Timeline playback release requires a committed terminal state.");
+            playback.Dispose();
+            m_Playbacks.Remove(handle.Value);
+        }
+
         public TimelineRuntimePlaybackSnapshot Capture(TimelineRuntimePlaybackHandle handle)
         {
             EnsureAvailable();

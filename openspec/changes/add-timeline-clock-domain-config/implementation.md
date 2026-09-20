@@ -612,3 +612,12 @@
 - 清理返回新的角色状态，不修改此前历史状态及其不可变快照；回滚到更早的活跃动作状态仍可沿原ApplyRestore恢复同handle／generation。没有可清理项时返回原状态，不新建集合。实际移除仍走原CloneWithTimelineSnapshots，因此外层状态重建分配尚未解决。
 - Native Service播放对象与Unity适配层请求登记尚未回收，本批只清理最新逻辑状态里的无活跃持有者终态快照；它们的最终回收仍需与表现终态确认一起闭合，不据此宣称已解决播放对象累计。
 - Unity编译及最终域重载完成（1789929661923），Editor idle、控制台零错误，git diff --check通过；未新增测试，未运行连续动作或回滚恢复验收。
+
+## 按逻辑与表现确认边界回收已结束播放
+- 对应0.7／7.1／7.4：原Pipeline事务在状态原子发布及Restore参与者完成之后，新增同一目标端口的CompleteStatePublish阶段。Fixed／Float32将已发布角色状态的TimelineSnapshots和完成tick交给原IAbilityTimelineRuntime同步持有关系；候选丢弃前不会释放资源，状态发布后的同步异常仍按已发布状态失败处理，不伪装成可撤回的发布。
+- Unity适配层沿原m_Requests移除当前快照不再引用的请求，先通知原Host逻辑解除tick，再移除记录；循环直接扫描原表，不新建释放队列。ApplyRestore仍从正式快照重新登记StartRequest，并撤销Host的LogicOwnerReleased标记。
+- 原ActivePlayback增加逻辑解除tick与PresentationReleased标记。表现已正式结束的CoreDriven记录停止采样，但在原表中保留到逻辑解除tick也进入既有Action表现时钟ConfirmedTimelineTick。三个条件同时满足才释放：逻辑无持有、该解除tick已确认、表现已正式释放。预测撤销仍沿RetainForCorrection保留原游标；已经确认结束的表现不因逻辑状态恢复而重放。
+- 释放通过原CompositionHost顺序交给Service与EvaluationBuffer：Native只允许无待提交Advance／Stop的终态对象释放，Dispose清空并使旧结果视图失效，删除原播放表项和已提交／待提交求值记录。不会等整个Service.Dispose才回收已确认的CoreDriven终态播放；未增加第二注册表或将镜头历史纳入回滚。
+- 本批覆盖已进入正式逻辑／表现生命周期的CoreDriven终态播放。未接受Start造成的孤立实例、非CoreDriven调用方的释放合同及诊断历史保留仍需另行核对；首次内容准备、快照数组与事件哈希分配尚未关闭，不据此宣称完整0 GC。
+- 首次编译遇到并行任务RollbackCanonicalInput.cs未限定Copy调用的错误；保留该任务修改，核对其已修正为RollbackInputArray.Copy后重新编译，未修改该文件。
+- 最终Unity编译及域重载完成（1789930370165），Editor idle、控制台零错误，git diff --check通过；未新增测试，未进行跨确认边界回滚、连续动作或失败Start运行验收。

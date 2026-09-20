@@ -514,6 +514,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal RuntimeTimelinePlaybackProvenance Provenance;
             internal bool TerminalPublished;
             internal bool PresentationWithdrawn;
+            internal bool LogicOwnerReleased;
+            internal ulong LogicReleaseTick;
+            internal bool PresentationReleased;
             internal TimelineRuntimePresentationSample LocalPresentationSample;
         }
 
@@ -1347,6 +1350,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 clipAuthoringId);
         }
 
+        public void ReleaseAbilityTimelineOwner(int runtimeHandle, ulong committedTick)
+        {
+            var handle = new TimelineRuntimePlaybackHandle(checked((ulong)runtimeHandle));
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                ActivePlayback active = m_ActivePlaybacks[index];
+                if (active.Handle.Value != handle.Value)
+                    continue;
+                active.LogicOwnerReleased = true;
+                active.LogicReleaseTick = committedTick;
+                m_ActivePlaybacks[index] = active;
+                return;
+            }
+            throw new InvalidOperationException("Timeline logical owner release has no registered playback.");
+        }
+
+        void ReleaseConfirmedPlaybacks(ulong confirmedTick)
+        {
+            for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
+            {
+                ActivePlayback active = m_ActivePlaybacks[index];
+                if (!active.CoreDriven || !active.LogicOwnerReleased || !active.PresentationReleased ||
+                    active.LogicReleaseTick > confirmedTick)
+                    continue;
+                m_Host.ReleasePlayback(new TimelineRuntimePlaybackHandle(active.Handle.Value));
+                m_ActivePlaybacks.RemoveAt(index);
+            }
+        }
+
         public AbilityTimelineRuntimeSnapshot CaptureAbilityTimelinePlayback(
             TimelinePlaybackHandle handle,
             AbilityTimelineStartRequest request)
@@ -1436,8 +1468,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);
             m_TreeClipService.Restore(restored.Value, snapshot.ActiveTreeClips);
             var handle = new TimelinePlaybackHandle(restored.Value);
-            if (TryGetActivePlayback(restored, out _))
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                ActivePlayback current = m_ActivePlaybacks[index];
+                if (current.Handle.Value != restored.Value)
+                    continue;
+                current.LogicOwnerReleased = false;
+                m_ActivePlaybacks[index] = current;
                 return checked((int)restored.Value);
+            }
             var active = new ActivePlayback
             {
                 Handle = handle,
@@ -2004,6 +2043,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
             {
                 ActivePlayback active = m_ActivePlaybacks[index];
+                if (active.PresentationReleased)
+                    continue;
                 TimelineRuntimePresentationSample sample = active.LocalPresentationSample;
                 bool hasSample = sample.IsValid;
                 if (active.CoreDriven)
@@ -2082,7 +2123,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (retainForCorrection)
                     m_Host.SuspendPresentationPlayback(handle, active.Generation);
                 else
+                {
                     m_Host.ReleasePresentationPlayback(handle, active.Generation);
+                    active.PresentationReleased = true;
+                }
                 for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
                 {
                     if (m_ActivePlaybacks[index].Handle.Value != handle.Value || m_ActivePlaybacks[index].Generation != active.Generation)
@@ -2092,12 +2136,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         active.PresentationWithdrawn = true;
                         m_ActivePlaybacks[index] = active;
                     }
+                    else if (active.CoreDriven)
+                        m_ActivePlaybacks[index] = active;
                     else
                         m_ActivePlaybacks.RemoveAt(index);
                 }
             }
             m_PresentationCandidates.Clear();
             m_PresentationEndCandidates.Clear();
+            if (clock != null)
+                ReleaseConfirmedPlaybacks(clock.ConfirmedTimelineTick);
         }
 
         internal void DiscardPresentationFrame(ulong frame)

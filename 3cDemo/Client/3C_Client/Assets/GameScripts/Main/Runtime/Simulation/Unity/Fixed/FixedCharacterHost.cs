@@ -552,6 +552,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public bool RequestTreeClipExit(int runtimeHandle, string clipAuthoringId) =>
             m_Host.RequestAbilityTreeClipExit(runtimeHandle, clipAuthoringId);
 
+        public void ReleaseUnreferencedPlaybacks(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots, ulong committedTick)
+        {
+            while (true)
+            {
+                int releaseHandle = 0;
+                foreach (KeyValuePair<int, AbilityTimelineStartRequest> entry in m_Requests)
+                {
+                    bool retained = false;
+                    for (int index = 0; index < snapshots.Count; index++)
+                        if (snapshots[index].RuntimeHandle == entry.Key)
+                        {
+                            retained = true;
+                            break;
+                        }
+                    if (!retained)
+                    {
+                        releaseHandle = entry.Key;
+                        break;
+                    }
+                }
+                if (releaseHandle == 0)
+                    return;
+                m_Host.ReleaseAbilityTimelineOwner(releaseHandle, committedTick);
+                m_Requests.Remove(releaseHandle);
+            }
+        }
+
         public AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle)
         {
             if (!m_Requests.TryGetValue(runtimeHandle, out AbilityTimelineStartRequest request))

@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
     internal interface IActionPresentationClockCoordinator : IDisposable
     {
+        ulong ConfirmedTimelineTick { get; }
         void ConfirmTimelineHistory(ulong confirmedTick);
         void AcceptTimelineProgress(in CharacterPresentationCommand command);
         void RetireTimelineProgress(in CharacterPresentationCommand command);
@@ -112,6 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly TimelineProgressEntry[] m_TimelineFrameBaseline = new TimelineProgressEntry[64];
         bool m_SamplingFrameActive;
         ulong m_ConfirmedTimelineTick;
+        public ulong ConfirmedTimelineTick => m_ConfirmedTimelineTick;
 
         public void BeginSamplingFrame()
         {

@@ -441,6 +441,12 @@ namespace ThirdPersonSimulation.Fixed
             m_Committer.Commit(commitBatch);
         }
 
+        public void CompleteStatePublish(FixedPipelineWorkingState workingState)
+        {
+            for (int index = 0; index < m_Roster.Count; index++)
+                m_Roster[index].TimelineRuntime?.ReleaseUnreferencedPlaybacks(workingState.Actors[index].State.TimelineSnapshots, workingState.LastCompletedTick);
+        }
+
         public void PublishWorkingState(FixedPipelineWorkingState workingState)
         {
             m_StateStore.ReplaceValidated(workingState.Current);

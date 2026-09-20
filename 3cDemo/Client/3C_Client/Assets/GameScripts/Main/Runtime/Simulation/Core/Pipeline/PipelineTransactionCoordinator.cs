@@ -206,6 +206,7 @@ namespace ThirdPersonSimulation
                     "Character and World working state published atomically.",
                     stepCount: completed.Count);
                 restoreTransaction?.CompleteAfterAtomicSessionPublish();
+                m_Target.CompleteStatePublish(working);
                 try
                 {
                     CommitExternal(commitBatch);

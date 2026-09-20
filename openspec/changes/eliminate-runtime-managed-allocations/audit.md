@@ -1108,3 +1108,12 @@
 - ProgramScopeKind 正式成员连续为 Character=1 至 Frame=5，BlackboardOwnerToken 内部统一按闭区间判断；未知零值及其它 byte、负 compiled owner index、零 generation 继续由原异常或 IsValid=false 拒绝。
 - 删除两数值域运行黑板 owner 解析、物化和后续有效性读取中的装箱与枚举元数据查询；不改变作用域 generation、所有权比较、状态槽或黑板生命周期。
 - Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做黑板运行回放或 Player 分配采样。
+
+## 2026-09-20 相机表现请求 Kind 与生命周期校验
+
+对应 tasks.md 的 4.4.9。
+
+- CameraProgramRequestFactory 和 TimelineToActionCommandBridge 在运行中为 Sequence、Effect、Response、Target 的激活／退役生成 PresentationCameraRequest。请求构造器原分别查询 Kind 与 Lifecycle，消费者读取 IsValid 时再查询两次。
+- PresentationCameraRequestKind 正式成员连续为 Sequence=1 至 Target=4，Lifecycle 连续为 Activate=1 至 Retire=2；请求类型内部统一按闭区间判断，未知零值及其它 byte 继续由原异常或 IsValid=false 拒绝。
+- 每个运行请求构造和有效性读取合计最多删除四次装箱及枚举元数据查询；身份规范化、权重、Blend 时长、模式、优先级和相机请求路由保持不变。
+- Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做相机请求运行回放或 Player 分配采样。

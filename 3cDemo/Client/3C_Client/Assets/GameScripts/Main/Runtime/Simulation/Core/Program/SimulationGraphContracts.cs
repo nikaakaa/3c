@@ -1594,9 +1594,9 @@ namespace ThirdPersonSimulation
             float pitchWeight,
             float yawWeight)
         {
-            if (!Enum.IsDefined(typeof(PresentationCameraRequestKind), kind))
+            if (!IsDefined(kind))
                 throw new ArgumentOutOfRangeException(nameof(kind));
-            if (!Enum.IsDefined(typeof(PresentationCameraRequestLifecycle), lifecycle))
+            if (!IsDefined(lifecycle))
                 throw new ArgumentOutOfRangeException(nameof(lifecycle));
             Kind = kind;
             Lifecycle = lifecycle;
@@ -1640,8 +1640,7 @@ namespace ThirdPersonSimulation
         public float ManualOrbitWeight { get; }
         public float PitchWeight { get; }
         public float YawWeight { get; }
-        public bool IsValid => Enum.IsDefined(typeof(PresentationCameraRequestKind), Kind) &&
-                               Enum.IsDefined(typeof(PresentationCameraRequestLifecycle), Lifecycle);
+        public bool IsValid => IsDefined(Kind) && IsDefined(Lifecycle);
 
         public static PresentationCameraRequest Sequence(
             PresentationCameraRequestLifecycle lifecycle,
@@ -1776,6 +1775,14 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Camera request identity must be trimmed.");
             return value;
         }
+
+        static bool IsDefined(PresentationCameraRequestKind kind) =>
+            kind >= PresentationCameraRequestKind.Sequence &&
+            kind <= PresentationCameraRequestKind.Target;
+
+        static bool IsDefined(PresentationCameraRequestLifecycle lifecycle) =>
+            lifecycle >= PresentationCameraRequestLifecycle.Activate &&
+            lifecycle <= PresentationCameraRequestLifecycle.Retire;
 
         static float RequireFiniteNonNegative(float value, string name)
         {

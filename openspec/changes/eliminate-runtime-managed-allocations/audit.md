@@ -1351,3 +1351,12 @@
 - actor 列表现直接按 inputs.Count 准备容量；添加顺序、后续排序、空列表拒绝和重复 ActorId 校验不变，容量来源就是本 step 已独立持有的输入数量。
 - 只删除多 Actor step 的内部扩容及旧数组迁移，actor List 和每个 step 的最终存储仍保留。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做多 Actor 调度运行对比或 Player 分配采样。
+
+## 2026-09-21 Pose committed output 死状态清理
+
+对应 tasks.md 的 4.2.17。
+
+- CharacterPoseNativeGraphRuntime 原在 CommitGraphOutput 把 evaluation.Output 保存到 m_LastCommittedOutput，并由 CharacterPoseNativeRoleRuntime 转发；全项目源码检索确认没有读取消费者，reset 两分支只负责清空该引用。
+- 删除字段、提交赋值、reset 清空及 Role 转发属性；正式跨帧结果仍由 CharacterFinalPoseNativePublication 提供，节点 observation 仍复制到 m_CommittedObservations，行为和诊断边界不变。
+- 该清理本身不减少端口值构造次数，但移除了无消费者的跨帧引用，明确端口值只借给当前 evaluation／validate／commit 链，为后续按 handler 复用值对象消除错误寿命信号。
+- 定向引用检索及 diff 空白校验通过。ThirdPersonClient.Runtime 构建被并行提交 730d5216d 的 TimelineRuntimeAdvanceResult／SampleView 六个消费者接口错误阻断，目标文件没有编译诊断；未新增测试、未主动刷新 Unity、未做 Pose 运行回放或 Player 分配采样。

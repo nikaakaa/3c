@@ -144,7 +144,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseNativeSourceDemand m_SourceDemand;
         CharacterPoseNativeEvaluationResult m_Evaluation;
         CharacterPoseNativeValidationResult m_Validation;
-        CharacterPoseNativePortValue m_LastCommittedOutput;
         CharacterPoseNativeFrameLineage m_LastCommittedLineage;
         ulong m_ResetGeneration;
         CharacterPoseNativeExecutionStage m_Stage;
@@ -176,7 +175,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool HasOpenFrame => m_FrameLease.IsValid;
         internal CharacterPoseNativeFrameLineage CurrentLineage => m_CompletedLineage;
         internal CharacterPoseNativeFrameInput CurrentInput => m_FrameInput;
-        internal CharacterPoseNativePortValue LastCommittedOutput => m_LastCommittedOutput;
 
         internal CharacterPoseNativeGraphPrepareResult PrepareChild(
             ulong requestId,
@@ -932,7 +930,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 this,
                 in m_CompletedLineage,
                 evaluation.Output);
-            m_LastCommittedOutput = evaluation.Output;
             m_CommittedObservations.Clear();
             foreach (KeyValuePair<CharacterPoseNativePortKey, CharacterPoseNativeNodeObservation> observation in m_Observations)
                 m_CommittedObservations.Add(observation.Key, observation.Value);
@@ -988,7 +985,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Observations.Clear();
                 m_CommittedObservations.Clear();
                 m_Evaluating.Clear();
-                m_LastCommittedOutput = null;
                 m_LastCommittedLineage = default;
                 m_ResetGeneration = resetGeneration;
                 return CharacterPoseNativeResetResult.Succeeded(
@@ -1004,7 +1000,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Observations.Clear();
                 m_CommittedObservations.Clear();
                 m_Evaluating.Clear();
-                m_LastCommittedOutput = null;
                 m_LastCommittedLineage = default;
                 return CharacterPoseNativeResetResult.Failed(
                     m_CreateRequest.Context.ActorId,

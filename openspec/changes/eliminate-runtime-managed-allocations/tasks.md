@@ -152,6 +152,8 @@
 
 - [x] 2.89 两数值域运行 OperationModule 的字符串 catalog field 查询统一为 IReadOnlyList 下标扫描，删除 Constant／Identity／TryIdentity 六处捕获 FirstOrDefault 和 LINQ 依赖
 
+- [x] 2.90 两数值域 SimulationActorState 改为只读值状态，CompleteStep、初始组装和恢复直接写入 Actor 数组，删除每 Actor 的状态外壳对象；restore 缺失查询同步改为 TryFindActor
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

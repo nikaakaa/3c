@@ -1810,3 +1810,12 @@
 - KCC、DotRecast 与 Unity solver 各自实现 CloneState，用 state.Bodies 调公开构造并先对 SolverStatePayload.ToArray；公开构造随后再次克隆 payload，因此 create 返回、reconstruct 保存、公开 current state 和每 step result 均产生两份 payload 数组。
 - 两域 WorldSimulationState 新增 Clone，在类型内部各复制一次 body 最终数组和 payload，并直接进入私有接管构造。三套 solver 的 create／reconstruct／step 调用统一改为 state.Clone，删除重复 CloneState 实现。
 - 每次世界状态克隆仍产生一份独立 body 数组和一份独立 payload，保持 solver 内部 m_Current 与外部结果隔离；只删除 payload 的第二次克隆及重复实现。ThirdPersonSimulation.Fixed、Float32、DeterministicKcc portable 编译零警告零错误；DotRecastAuthority 编译通过并保留依赖两条既有 nullable-context 警告；Unity 生成的 Float32 与 Unity solver 项目无依赖重编均零警告零错误。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 solver 状态运行对比或 Player 分配采样。
+
+## 2026-09-21 SimulationActorState 值状态
+
+对应 tasks.md 的 2.90。
+
+- Fixed／Float32 CompleteStep 每 Actor 只需把 ActorId 与已生成 CharacterRuntimeState 引用成对写入 workspace，随后 SimulationWorldStateSet 复制进最终数组；原 SimulationActorState 是只包含这两个字段的 sealed class，因此每 Actor 每 completed step 额外创建一个外壳对象。初始状态与恢复也使用同一类型。
+- 两域 SimulationActorState 改为 readonly struct，构造时继续拒绝无效 ActorId 和 null State。Factory 与 StateSet 对 default 元素的校验改为检查 State 引用；排序、重复 Actor、数值域和 roster 校验保持。
+- restore transaction 原 FindActor 以 null 表示缺失，统一改为 TryFindActor(out actor)，避免值类型 default 被误读。正式源码检索确认没有其它引用身份、继承或 null 语义消费者。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 编译零警告零错误；DotRecastAuthority 编译通过并保留依赖两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 无依赖重编零警告零错误。首次 Portable 构建前检测到 Unity Bee 正在编 ThirdPersonClient.Runtime 并等待其退出。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 completed step 或 restore 运行采样。

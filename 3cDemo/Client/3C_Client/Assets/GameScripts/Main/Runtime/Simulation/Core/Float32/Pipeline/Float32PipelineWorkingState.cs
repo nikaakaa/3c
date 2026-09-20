@@ -101,14 +101,14 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < m_Restored.Actors.Count; i++)
             {
                 SimulationActorState restoredActor = m_Restored.Actors[i];
-                SimulationActorState previousActor = FindActor(m_Previous, restoredActor.ActorId);
+                bool hadPreviousActor = TryFindActor(m_Previous, restoredActor.ActorId, out SimulationActorState previousActor);
                 IAbilityTimelineRuntime timeline = m_Roster[i].TimelineRuntime;
                 for (int s = 0; s < restoredActor.State.TimelineSnapshots.Count; s++)
                 {
                     AbilityTimelineRuntimeSnapshot snapshot = restoredActor.State.TimelineSnapshots[s];
                     timeline.ApplyRestore(snapshot);
                 }
-                if (previousActor == null)
+                if (!hadPreviousActor)
                     continue;
                 for (int s = 0; s < previousActor.State.TimelineSnapshots.Count; s++)
                 {
@@ -130,12 +130,18 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static SimulationActorState FindActor(SimulationWorldStateSet state, ActorId actorId)
+        static bool TryFindActor(SimulationWorldStateSet state, ActorId actorId, out SimulationActorState actor)
         {
             for (int i = 0; i < state.Actors.Count; i++)
+            {
                 if (state.Actors[i].ActorId.Equals(actorId))
-                    return state.Actors[i];
-            return null;
+                {
+                    actor = state.Actors[i];
+                    return true;
+                }
+            }
+            actor = default;
+            return false;
         }
 
         public void Rollback()

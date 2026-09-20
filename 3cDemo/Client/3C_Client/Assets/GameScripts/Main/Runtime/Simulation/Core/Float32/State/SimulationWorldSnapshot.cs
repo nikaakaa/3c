@@ -4,7 +4,7 @@ using System.IO;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class SimulationActorState
+    public readonly struct SimulationActorState
     {
         public SimulationActorState(ActorId actorId, Float32CharacterRuntimeState state)
         {
@@ -192,7 +192,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < actors.Length; i++)
             {
                 actors[i] = actorStates[i];
-                if (actors[i] == null)
+                if (actors[i].State == null)
                     throw new InvalidOperationException("Character runtime state roster contains a null entry.");
             }
             Array.Sort(actors, (left, right) => left.ActorId.CompareTo(right.ActorId));
@@ -260,7 +260,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < copied.Length; i++)
             {
                 copied[i] = actors[i];
-                if (copied[i] == null)
+                if (copied[i].State == null)
                     throw new ArgumentException("Simulation state Actor roster contains a null entry.", nameof(actors));
             }
             Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));

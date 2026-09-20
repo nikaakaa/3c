@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyList<GameplayFact> m_GameplayFacts;
         readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
         readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
-        readonly IReadOnlyList<IAbilityTimelinePending> m_TimelineAdvances;
+        readonly IReadOnlyList<AbilityTimelineAdvancePending> m_TimelineAdvances;
         readonly IReadOnlyList<IAbilityTimelineStopPending> m_TimelineStops;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         FixedCharacterRuntimeState m_CandidateState;
@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<GameplayFact> gameplayFacts,
             IEnumerable<PresentationCommand> presentationCommands,
             IEnumerable<SimulationTraceRecord> traceRecords,
-            IReadOnlyList<IAbilityTimelinePending> timelineAdvances,
+            IReadOnlyList<AbilityTimelineAdvancePending> timelineAdvances,
             IReadOnlyList<IAbilityTimelineStopPending> timelineStops)
         {
             if (!actorId.IsValid || !tick.IsValid)
@@ -47,7 +47,7 @@ namespace ThirdPersonSimulation.Fixed
         internal IReadOnlyList<GameplayFact> GameplayFacts => m_GameplayFacts;
         internal IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;
         internal IReadOnlyList<SimulationTraceRecord> TraceRecords => m_TraceRecords;
-        internal IReadOnlyList<IAbilityTimelinePending> TimelineAdvances => m_TimelineAdvances;
+        internal IReadOnlyList<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
 
         internal void Consume()
         {
@@ -79,7 +79,7 @@ namespace ThirdPersonSimulation.Fixed
                 return;
             for (int i = 0; i < m_TimelineAdvances.Count; i++)
             {
-                if (m_TimelineAdvances[i] == null)
+                if (!m_TimelineAdvances[i].IsValid)
                     throw new InvalidOperationException("Fixed Character evaluation has an empty Timeline advance.");
                 if (commit)
                     m_TimelineRuntime.Commit(m_TimelineAdvances[i]);

@@ -42,7 +42,7 @@ namespace ThirdPersonSimulation
             var actionRuntimes = new Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort>();
             var sharedEffectScratch = new Float32GameplayEffectExecutionScratch();
             var motionContributions = new List<SimulationMotionContribution>();
-            var timelineAdvances = new List<IAbilityTimelinePending>();
+            var timelineAdvances = new List<AbilityTimelineAdvancePending>();
             var timelineStops = new List<IAbilityTimelineStopPending>();
             var facts = new List<GameplayFact>();
             var presentation = new List<PresentationCommand>();
@@ -210,13 +210,13 @@ namespace ThirdPersonSimulation
 
         static void DiscardTimelineAdvances(
             IAbilityTimelineRuntime timelineRuntime,
-            IReadOnlyList<IAbilityTimelinePending> advances)
+            IReadOnlyList<AbilityTimelineAdvancePending> advances)
         {
             if (timelineRuntime == null)
                 return;
             for (int i = 0; i < advances.Count; i++)
             {
-                if (advances[i] == null)
+                if (!advances[i].IsValid)
                     throw new InvalidOperationException("Float32 Character evaluation has an empty Timeline advance.");
                 timelineRuntime.Discard(advances[i]);
             }

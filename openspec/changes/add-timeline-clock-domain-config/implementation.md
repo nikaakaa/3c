@@ -498,3 +498,9 @@
 ## 删除没有消费者的TreeClip与Logic Marker调用字符串
 - 对应0.7：全Assets C#引用核对显示，两种请求的CallId只在构造时赋值，没有读取方。正式invoker使用原playback handle、Clip／Marker身份、cycle和Action实例身份。删除冗余CallId字段、参数及两处拼接函数，持续TreeClip Update不再为无人使用的字段逐tick生成字符串；没有引入身份缓存或另一套调用身份。
 - Unity脚本构建已成功，域重载后检查待本轮后续补齐；git diff --check通过。其他实际使用的EventId哈希和pending包装分配仍需处理，未新增测试。
+
+## 推进pending跨域传递改用值类型凭据
+- 对应0.7／7.3：删除IAbilityTimelinePending／IAbilityTimelineAdvancePending接口；Simulation正式合同改为AbilityTimelineAdvancePending值类型，包含runtime handle、候选序号和进度。Fixed／Float32执行工作区、提交／丢弃、Unity adapter全链消费同一具体类型，不把struct装箱回接口。
+- CharacterTimelinePendingAdvance改为值类型，实际AdvanceResult留在原Host pending注册表；跨域只传正式凭据，不向Simulation泄露BTSMTL结果。原每tick pending包装对象与接口引用分配已删除，终态返回无候选的默认凭据。
+- 候选序号使用进程内原子递增值，跨Host、Reset和逻辑Restore不复用；它仅是本机事务身份，不参与确定性快照或网络进度。Commit／Discard必须命中原注册表的handle与序号才移除候选，旧凭据不能消耗新记录。停止pending仍按原合同，后续继续清理，未新增测试。
+- Unity编译与最终域重载完成（1789922983366），Editor idle，控制台错误为零；git diff --check通过。上一批冗余调用字符串删除同时通过重载后检查；未新增测试，未进行运行分配采样。

@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation
     {
         Float32AbilityExecutionTarget Target { get; }
         void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
-        IReadOnlyList<IAbilityTimelinePending> TimelineAdvances { get; }
+        IReadOnlyList<AbilityTimelineAdvancePending> TimelineAdvances { get; }
         IReadOnlyList<IAbilityTimelineStopPending> TimelineStops { get; }
         void EndEvaluation();
     }
@@ -133,7 +133,7 @@ namespace ThirdPersonSimulation
         readonly Float32ActionStateStore m_ActionState;
         readonly SimulationTick m_Tick;
         readonly Float32TreeClipInvokerLink m_TreeClipLink;
-        readonly List<IAbilityTimelinePending> m_TimelinePendingAdvances;
+        readonly List<AbilityTimelineAdvancePending> m_TimelinePendingAdvances;
         readonly List<IAbilityTimelineStopPending> m_TimelinePendingStops;
 
         public Float32AbilityExecutionTarget(
@@ -151,7 +151,7 @@ namespace ThirdPersonSimulation
             Float32TraceSink trace,
             IAbilityTimelineRuntime timelineRuntime,
             Float32ActionStateStore actionState,
-            List<IAbilityTimelinePending> timelineAdvances,
+            List<AbilityTimelineAdvancePending> timelineAdvances,
             List<IAbilityTimelineStopPending> timelineStops,
             SimulationTick tick,
             Float32TreeClipInvokerLink treeClipLink)
@@ -403,7 +403,7 @@ namespace ThirdPersonSimulation
             {
                 treeClipInvokerHost?.PopTreeClipInvoker();
             }
-            if (tick.Pending != null)
+            if (tick.Pending.IsValid)
                 m_TimelinePendingAdvances.Add(tick.Pending);
             if (tick.Progress.IsValid)
             {

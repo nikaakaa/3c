@@ -529,21 +529,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             CharacterTimelinePendingAdvance pending = m_Host.AdvanceTimelinePlayback(
                 new TimelinePlaybackHandle((ulong)runtimeHandle), logicTick, tickCount, control);
-            if (pending == null)
-                throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' returned no pending advance.");
-            return new AbilityTimelineTickResult(pending.Status, pending);
+            return new AbilityTimelineTickResult(pending.Status, pending.Pending);
         }
 
 
 
-        public void Commit(IAbilityTimelinePending pending)
+        public void Commit(AbilityTimelineAdvancePending pending)
         {
-            m_Host.CommitTimelinePlayback((CharacterTimelinePendingAdvance)pending);
+            m_Host.CommitTimelinePlayback(pending);
         }
 
-        public void Discard(IAbilityTimelinePending pending)
+        public void Discard(AbilityTimelineAdvancePending pending)
         {
-            m_Host.DiscardTimelinePlayback((CharacterTimelinePendingAdvance)pending);
+            m_Host.DiscardTimelinePlayback(pending);
         }
         public void PushTreeClipInvoker(IAbilityTreeClipInvoker invoker) =>
             m_Host.PushTreeClipInvoker(invoker);

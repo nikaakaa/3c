@@ -532,11 +532,6 @@ namespace ThirdPersonSimulation
         public ulong InputSequence { get; }
     }
 
-    public interface IAbilityTimelinePending
-    {
-        int RuntimeHandle { get; }
-    }
-
     public readonly struct AbilityTimelinePlaybackControl : IEquatable<AbilityTimelinePlaybackControl>
     {
         public AbilityTimelinePlaybackControl(FixedScalar rate, bool paused)
@@ -630,28 +625,41 @@ namespace ThirdPersonSimulation
         public override int GetHashCode() => HashCode.Combine(TimelineId, ContentRevision, Generation, LogicTick, Time.Raw, Cycle);
     }
 
-    public interface IAbilityTimelineAdvancePending : IAbilityTimelinePending
+    public readonly struct AbilityTimelineAdvancePending
     {
-        AbilityTimelineProgress Progress { get; }
+        public AbilityTimelineAdvancePending(int runtimeHandle, ulong sequence, AbilityTimelineProgress progress)
+        {
+            if (runtimeHandle <= 0 || sequence == 0 || !progress.IsValid)
+                throw new ArgumentException("Timeline pending advance requires its runtime handle, sequence and progress.");
+            RuntimeHandle = runtimeHandle;
+            Sequence = sequence;
+            Progress = progress;
+        }
+
+        public int RuntimeHandle { get; }
+        public ulong Sequence { get; }
+        public AbilityTimelineProgress Progress { get; }
+        public bool IsValid => RuntimeHandle > 0 && Sequence != 0;
     }
 
     public readonly struct AbilityTimelineTickResult
     {
-        public AbilityTimelineTickResult(AbilityTimelineRuntimeStatus status, IAbilityTimelineAdvancePending pending)
+        public AbilityTimelineTickResult(AbilityTimelineRuntimeStatus status, AbilityTimelineAdvancePending pending)
         {
             Status = status;
             Pending = pending;
-            if (status == AbilityTimelineRuntimeStatus.Running && (pending == null || !pending.Progress.IsValid))
+            if (status == AbilityTimelineRuntimeStatus.Running && (!pending.IsValid || !pending.Progress.IsValid))
                 throw new ArgumentException("A running Ability Timeline advance requires a pending commit candidate.");
         }
 
         public AbilityTimelineRuntimeStatus Status { get; }
-        public IAbilityTimelineAdvancePending Pending { get; }
-        public AbilityTimelineProgress Progress => Pending == null ? default : Pending.Progress;
+        public AbilityTimelineAdvancePending Pending { get; }
+        public AbilityTimelineProgress Progress => Pending.Progress;
     }
 
-    public interface IAbilityTimelineStopPending : IAbilityTimelinePending
+    public interface IAbilityTimelineStopPending
     {
+        int RuntimeHandle { get; }
         AbilityTimelineProgress Progress { get; }
     }
 
@@ -876,8 +884,8 @@ namespace ThirdPersonSimulation
     {
         int Start(in AbilityTimelineStartRequest request);
         AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int tickCount, AbilityTimelinePlaybackControl control);
-        void Commit(IAbilityTimelinePending pending);
-        void Discard(IAbilityTimelinePending pending);
+        void Commit(AbilityTimelineAdvancePending pending);
+        void Discard(AbilityTimelineAdvancePending pending);
         AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle);
         int ApplyRestore(AbilityTimelineRuntimeSnapshot snapshot);
         AbilityTimelineStopResult Stop(int runtimeHandle, ulong logicTick);

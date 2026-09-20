@@ -341,19 +341,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
     }
 
-    public sealed class CharacterTimelinePendingAdvance : IAbilityTimelineAdvancePending
+    public readonly struct CharacterTimelinePendingAdvance
     {
         internal CharacterTimelinePendingAdvance(
             TimelinePlaybackHandle handle,
             int runtimeHandle,
             TimelineRuntimeAdvanceResult result,
-            AbilityTimelineRuntimeStatus status)
+            AbilityTimelineRuntimeStatus status,
+            ulong sequence)
         {
             Handle = handle;
-            RuntimeHandle = runtimeHandle;
             Result = result;
             Status = status;
-            Progress = !result.IsValid ? default : new AbilityTimelineProgress(
+            AbilityTimelineProgress progress = !result.IsValid ? default : new AbilityTimelineProgress(
                 result.ContentIdentity,
                 result.ContentRevision,
                 result.Generation,
@@ -365,12 +365,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 result.Cycle,
                 result.PlaybackMode == TimelinePlaybackMode.Loop,
                 result.Completes ? AbilityTimelineProgressState.Completed : AbilityTimelineProgressState.Active, result.Control);
+            Pending = result.IsValid ? new AbilityTimelineAdvancePending(runtimeHandle, sequence, progress) : default;
         }
 
         public TimelinePlaybackHandle Handle { get; }
-        public int RuntimeHandle { get; }
         public AbilityTimelineRuntimeStatus Status { get; }
-        public AbilityTimelineProgress Progress { get; }
+        public AbilityTimelineAdvancePending Pending { get; }
         internal TimelineRuntimeAdvanceResult Result { get; }
     }
     public sealed class CharacterTimelinePendingStop : IAbilityTimelineStopPending
@@ -507,6 +507,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly List<(ActivePlayback Playback, TimelinePresentationSampleReason Reason, bool RetainForCorrection)> m_PresentationEndCandidates = new(64);
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
         readonly Guid m_ContentSessionIdentity = Guid.NewGuid();
+        static long s_NextPendingAdvanceSequence;
         readonly Dictionary<ulong, CharacterTimelinePendingAdvance> m_PendingAdvances =
             new Dictionary<ulong, CharacterTimelinePendingAdvance>();
         readonly Dictionary<ulong, CharacterTimelinePendingStop> m_PendingStops =
@@ -1161,35 +1162,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException("Timeline advancement requires an initialized CharacterTimelineHost.");
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(handle);
             if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
-                return new CharacterTimelinePendingAdvance(handle, 0, default, MapTerminalStatus(status));
+                return new CharacterTimelinePendingAdvance(handle, 0, default, MapTerminalStatus(status), 0);
             TimelineRuntimeAdvanceResult advance = m_Host.Advance(new TimelineRuntimePlaybackHandle(handle.Value), logicTick, tickCount, control);
-            var pending = new CharacterTimelinePendingAdvance(handle, (int)handle.Value, advance, AbilityTimelineRuntimeStatus.Running);
+            var pending = new CharacterTimelinePendingAdvance(handle, (int)handle.Value, advance, AbilityTimelineRuntimeStatus.Running, checked((ulong)System.Threading.Interlocked.Increment(ref s_NextPendingAdvanceSequence)));
             m_PendingAdvances[handle.Value] = pending;
             return pending;
         }
 
-        public void CommitTimelinePlayback(CharacterTimelinePendingAdvance pending)
+        public void CommitTimelinePlayback(AbilityTimelineAdvancePending pending)
         {
             if (!IsInitialized)
                 throw new InvalidOperationException("Timeline commit requires an initialized CharacterTimelineHost.");
-            if (pending == null || !m_PendingAdvances.TryGetValue(pending.Handle.Value, out CharacterTimelinePendingAdvance current) ||
-                !ReferenceEquals(current, pending))
+            if (!pending.IsValid || !m_PendingAdvances.TryGetValue((ulong)pending.RuntimeHandle, out CharacterTimelinePendingAdvance current) ||
+                current.Pending.Sequence != pending.Sequence)
                 return;
-            m_PendingAdvances.Remove(pending.Handle.Value);
-            if (pending.Result.IsValid && !m_Host.CommitAdvance(new TimelineRuntimePlaybackHandle(pending.Handle.Value), pending.Result))
-                throw new InvalidOperationException($"Timeline advance '{pending.Handle.Value}' could not be committed.");
+            m_PendingAdvances.Remove((ulong)pending.RuntimeHandle);
+            if (!m_Host.CommitAdvance(new TimelineRuntimePlaybackHandle(current.Handle.Value), current.Result))
+                throw new InvalidOperationException($"Timeline advance '{current.Handle.Value}' could not be committed.");
         }
 
-        public void DiscardTimelinePlayback(CharacterTimelinePendingAdvance pending)
+        public void DiscardTimelinePlayback(AbilityTimelineAdvancePending pending)
         {
             if (!IsInitialized)
                 throw new InvalidOperationException("Timeline discard requires an initialized CharacterTimelineHost.");
-            if (pending == null || !m_PendingAdvances.TryGetValue(pending.Handle.Value, out CharacterTimelinePendingAdvance current) ||
-                !ReferenceEquals(current, pending))
+            if (!pending.IsValid || !m_PendingAdvances.TryGetValue((ulong)pending.RuntimeHandle, out CharacterTimelinePendingAdvance current) ||
+                current.Pending.Sequence != pending.Sequence)
                 return;
-            m_PendingAdvances.Remove(pending.Handle.Value);
-            if (pending.Result.IsValid && !m_Host.DiscardAdvance(new TimelineRuntimePlaybackHandle(pending.Handle.Value), pending.Result))
-                throw new InvalidOperationException($"Timeline advance '{pending.Handle.Value}' could not be discarded.");
+            m_PendingAdvances.Remove((ulong)pending.RuntimeHandle);
+            if (!m_Host.DiscardAdvance(new TimelineRuntimePlaybackHandle(current.Handle.Value), current.Result))
+                throw new InvalidOperationException($"Timeline advance '{current.Handle.Value}' could not be discarded.");
         }
 
 
@@ -1505,7 +1506,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (m_PendingStops.TryGetValue(handle.Value, out CharacterTimelinePendingStop pendingStop))
                 CommitStopTimelinePlayback(pendingStop);
             if (m_PendingAdvances.TryGetValue(handle.Value, out CharacterTimelinePendingAdvance pending))
-                DiscardTimelinePlayback(pending);
+                DiscardTimelinePlayback(pending.Pending);
             m_Host.Service.CancelTimelinePlayback(handle, stopContext);
         }
 

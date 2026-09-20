@@ -42,7 +42,7 @@ namespace ThirdPersonSimulation.Fixed
             var actionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>();
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
             var motionContributions = new List<SimulationMotionContribution>();
-            var timelineAdvances = new List<IAbilityTimelinePending>();
+            var timelineAdvances = new List<AbilityTimelineAdvancePending>();
             var timelineStops = new List<IAbilityTimelineStopPending>();
             var facts = new List<GameplayFact>();
             var presentation = new List<PresentationCommand>();
@@ -211,13 +211,13 @@ namespace ThirdPersonSimulation.Fixed
 
         static void DiscardTimelineAdvances(
             IAbilityTimelineRuntime timelineRuntime,
-            IReadOnlyList<IAbilityTimelinePending> advances)
+            IReadOnlyList<AbilityTimelineAdvancePending> advances)
         {
             if (timelineRuntime == null)
                 return;
             for (int i = 0; i < advances.Count; i++)
             {
-                if (advances[i] == null)
+                if (!advances[i].IsValid)
                     throw new InvalidOperationException("Fixed Character evaluation has an empty Timeline advance.");
                 timelineRuntime.Discard(advances[i]);
             }

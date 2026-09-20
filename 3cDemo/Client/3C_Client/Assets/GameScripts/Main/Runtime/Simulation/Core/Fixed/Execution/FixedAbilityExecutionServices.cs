@@ -12,7 +12,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedEquipmentRuntime m_Equipment;
         readonly FixedValueRuntime m_Values;
         readonly FixedBlackboardRuntime m_Blackboard;
-        readonly IReadOnlyList<IAbilityTimelinePending> m_TimelineAdvances;
+        readonly IReadOnlyList<AbilityTimelineAdvancePending> m_TimelineAdvances;
         readonly IReadOnlyList<IAbilityTimelineStopPending> m_TimelineStops;
 
         public FixedAbilityExecutionServiceSet(
@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedEquipmentRuntime equipment,
             FixedValueRuntime values,
             FixedBlackboardRuntime blackboard,
-            IReadOnlyList<IAbilityTimelinePending> timelineAdvances,
+            IReadOnlyList<AbilityTimelineAdvancePending> timelineAdvances,
             IReadOnlyList<IAbilityTimelineStopPending> timelineStops)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
@@ -38,7 +38,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public FixedAbilityExecutionTarget Target { get; }
-        public IReadOnlyList<IAbilityTimelinePending> TimelineAdvances => m_TimelineAdvances;
+        public IReadOnlyList<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
         public IReadOnlyList<IAbilityTimelineStopPending> TimelineStops => m_TimelineStops;
 
         public void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)

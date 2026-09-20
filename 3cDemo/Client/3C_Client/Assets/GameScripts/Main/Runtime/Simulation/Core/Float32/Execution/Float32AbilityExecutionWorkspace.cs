@@ -8,7 +8,7 @@ namespace ThirdPersonSimulation
     {
         public Float32AbilityExecutionWorkspace(
             Float32GameplayEffectExecutionScratch gameplayEffects,
-            List<IAbilityTimelinePending> timelineAdvances,
+            List<AbilityTimelineAdvancePending> timelineAdvances,
             List<IAbilityTimelineStopPending> timelineStops,
             Float32GraphValueWorkspace values)
         {
@@ -31,7 +31,7 @@ namespace ThirdPersonSimulation
         public List<SimulationActionWindowProjectionCandidate> ActionWindowProjections { get; } =
             new List<SimulationActionWindowProjectionCandidate>();
         public HashSet<string> ActionWindowProjectionKeys { get; } = new HashSet<string>(StringComparer.Ordinal);
-        public List<IAbilityTimelinePending> TimelineAdvances { get; }
+        public List<AbilityTimelineAdvancePending> TimelineAdvances { get; }
         public List<IAbilityTimelineStopPending> TimelineStops { get; }
         public Stack<SimulationTimelineBlackboardContext> TimelineBlackboardContexts { get; } =
             new Stack<SimulationTimelineBlackboardContext>();

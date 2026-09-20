@@ -130,7 +130,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedActionStateStore m_ActionState;
         readonly SimulationTick m_Tick;
         readonly FixedTreeClipInvokerLink m_TreeClipLink;
-        readonly List<IAbilityTimelinePending> m_TimelinePendingAdvances;
+        readonly List<AbilityTimelineAdvancePending> m_TimelinePendingAdvances;
         readonly List<IAbilityTimelineStopPending> m_TimelinePendingStops;
 
         public FixedAbilityExecutionTarget(
@@ -148,7 +148,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedTraceSink trace,
             IAbilityTimelineRuntime timelineRuntime,
             FixedActionStateStore actionState,
-            List<IAbilityTimelinePending> timelineAdvances,
+            List<AbilityTimelineAdvancePending> timelineAdvances,
             List<IAbilityTimelineStopPending> timelineStops,
             SimulationTick tick,
             FixedTreeClipInvokerLink treeClipLink)
@@ -400,7 +400,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 treeClipInvokerHost?.PopTreeClipInvoker();
             }
-            if (tick.Pending != null)
+            if (tick.Pending.IsValid)
                 m_TimelinePendingAdvances.Add(tick.Pending);
             if (tick.Progress.IsValid)
             {

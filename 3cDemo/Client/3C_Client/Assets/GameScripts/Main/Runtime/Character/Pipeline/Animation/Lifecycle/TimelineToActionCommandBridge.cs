@@ -211,7 +211,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Playbacks.Remove(handle.Value);
         }
 
-        void CollectSamples(IReadOnlyList<TimelineAnimationContribution> contributions)
+        void CollectSamples(TimelineRuntimeSampleView<TimelineAnimationContribution> contributions)
         {
             m_Samples.Clear();
             m_SampleOrder.Clear();

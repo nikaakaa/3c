@@ -419,3 +419,10 @@
 - 对应 5.3：Timeline 表现求值的动画贡献只采样共享进度的最终秒数和最终 cycle，删除沿所有经过循环收集动画贡献的路径，避免旧循环末尾片段混入当前姿态选择。Camera Cue 继续按经过区间采集，保持跨循环触发语义。
 - 本批仅改动 TimelineRuntimePresentationEvaluator，未修改作者资产、既有播放控制及用户工作区其他文件。Unity 脚本构建成功；MCP 在域重载期间暂未重新连接，尚未取得重载后控制台结果。未新增测试。
 - 下一步仍需完成表现结果缓冲的明确寿命与复用；多来源播放控制、同代分支恢复和完整运行热路径 0 GC 保持未完成。
+
+## 表现求值复用候选与已接受缓冲
+- 对应 0.7／5.3／7.3：原 PresentationPlaybackState 持有两份固定容量结果缓冲。Evaluate 将动画、Camera 与场景参数写入候选；Commit 交换两份缓冲，Discard 仅清空候选，Marker 遍历基线仍在 Commit 才更新。重复帧直接返回原 pending／cached frame。
+- 删除每帧七份 List、表现 Operations 堆对象及结果 ReadOnlyCollection／List 副本。Operations 与 SampleView 为值类型；视图按缓冲版本检查，候选丢弃、旧已接受帧被下一次提交替换、playback 释放／换代后访问明确失败，不静默读取下一帧数据。当前桥接消费者按索引同步读取，不保留过期视图。
+- 容量由正式轨道 Clip 数、表现 Marker 数及既有单次最多跨4096圈的限制推导；循环 Cue／Marker 保留4097段容量，非循环仅一段，超限明确失败。此实现用预分配内存换取运行时不扩容；循环事件较多时内存占用随内容数量及最大遍历段数增长。
+- 首次表现状态创建仍会分配，Marker Identity／EventId、Camera key 及逻辑求值链仍有分配，不能据此声称完整0 GC。多来源控制、同代撤销后重接入和下游 Apply 事务保持未完成。
+- Unity脚本构建通过，最终域重载完成（1789917653415），Editor idle，控制台错误为零；本批文件 git diff --check 通过，未新增测试。导入时曾出现 SourceAssetDB 文件时间戳错误，随后原文件成功重导入，最终控制台无错误。

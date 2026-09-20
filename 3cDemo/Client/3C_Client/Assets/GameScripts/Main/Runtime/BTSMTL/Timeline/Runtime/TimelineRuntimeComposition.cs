@@ -328,6 +328,7 @@ namespace BTSMTL.Timeline.Runtime
             bool hasState = m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state);
             if (hasState && state.Generation != playback.Generation)
             {
+                state.Clear();
                 m_Playbacks.Remove(handle.Value);
                 hasState = false;
             }
@@ -338,7 +339,7 @@ namespace BTSMTL.Timeline.Runtime
             }
             if (!hasState)
             {
-                state = new PresentationPlaybackState(playback.Generation, playback.Content.Markers.Count);
+                state = new PresentationPlaybackState(playback);
                 m_Playbacks.Add(handle.Value, state);
             }
 
@@ -367,7 +368,8 @@ namespace BTSMTL.Timeline.Runtime
             }
 
             Array.Copy(state.MarkerLastTraversal, state.PendingMarkerLastTraversal, state.MarkerLastTraversal.Length);
-            var events = new List<TimelineRuntimePresentationEvent>();
+            state.Candidate.Clear();
+            var events = state.Candidate.Events;
             bool loop = playback.PlaybackMode == TimelinePlaybackMode.Loop;
             FixedScalar previousTime = state.CursorTime;
             int previousCycle = state.Cycle;
@@ -387,7 +389,8 @@ namespace BTSMTL.Timeline.Runtime
                 currentTime,
                 currentCycle,
                 loop,
-                allowTraversal && !state.InitialBoundaryConsumed);
+                allowTraversal && !state.InitialBoundaryConsumed,
+                state.Candidate);
             if (allowTraversal)
                 AppendMarkerEvents(
                 playback,
@@ -411,7 +414,7 @@ namespace BTSMTL.Timeline.Runtime
                 presentationDeltaSeconds,
                 interpolationAlpha,
                 operations,
-                events,
+                events.View,
                 !allowTraversal && sample.Reason == TimelinePresentationSampleReason.Advance
                     ? TimelinePresentationSampleReason.Correction : sample.Reason,
                 currentTime,
@@ -444,6 +447,7 @@ namespace BTSMTL.Timeline.Runtime
             {
                 if (!state.HasPendingFrame || state.PendingFrame.PresentationFrame != presentationFrame)
                     continue;
+                state.Candidate.Clear();
                 state.PendingFrame = default;
                 state.HasPendingFrame = false;
             }
@@ -452,7 +456,10 @@ namespace BTSMTL.Timeline.Runtime
         public void ReleasePresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation)
         {
             if (m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state) && state.Generation == generation)
+            {
+                state.Clear();
                 m_Playbacks.Remove(handle.Value);
+            }
         }
 
         public bool Consume(TimelineRuntimeStepContext context) => true;
@@ -477,6 +484,8 @@ namespace BTSMTL.Timeline.Runtime
 
         public void Clear()
         {
+            foreach (PresentationPlaybackState state in m_Playbacks.Values)
+                state.Clear();
             m_Playbacks.Clear();
         }
 
@@ -489,7 +498,7 @@ namespace BTSMTL.Timeline.Runtime
             int currentCycle,
             bool loop,
             bool includeStartBoundary,
-            List<TimelineRuntimePresentationEvent> events)
+            TimelineRuntimeSampleBuffer<TimelineRuntimePresentationEvent> events)
         {
             FixedScalar duration = playback.Content.Duration;
             if (duration <= FixedScalar.Zero)
@@ -531,13 +540,18 @@ namespace BTSMTL.Timeline.Runtime
 
         sealed class PresentationPlaybackState
         {
-            public PresentationPlaybackState(ulong generation, int markerCount)
+            public PresentationPlaybackState(TimelineRuntimePlayback playback)
             {
-                Generation = generation;
+                Generation = playback.Generation;
+                int markerCount = playback.Content.Markers.Count;
+                Candidate = new TimelineRuntimePresentationBuffer(playback);
+                Accepted = new TimelineRuntimePresentationBuffer(playback);
                 MarkerLastTraversal = new ulong[markerCount];
                 PendingMarkerLastTraversal = new ulong[markerCount];
             }
 
+            public TimelineRuntimePresentationBuffer Candidate;
+            public TimelineRuntimePresentationBuffer Accepted;
             public readonly ulong[] MarkerLastTraversal;
             public readonly ulong[] PendingMarkerLastTraversal;
             public FixedScalar PendingTime;
@@ -557,9 +571,19 @@ namespace BTSMTL.Timeline.Runtime
 
             public void Cache(TimelineRuntimePresentationFrame frame)
             {
+                TimelineRuntimePresentationBuffer recycled = Accepted;
+                Accepted = Candidate;
+                Candidate = recycled;
+                Candidate.Clear();
                 CachedFrame = frame;
                 LastPresentationFrame = frame.PresentationFrame;
                 HasCachedFrame = true;
+            }
+
+            public void Clear()
+            {
+                Candidate.Clear();
+                Accepted.Clear();
             }
 
         }

@@ -712,7 +712,7 @@ namespace BTSMTL.Timeline.Runtime
             FixedScalar nextAbsolute = duration * FixedScalar.FromInt64(nextCycle) + nextTime;
             if (nextAbsolute <= previousAbsolute)
                 return result;
-            if (loop && nextCycle - previousCycle > 4096)
+            if (loop && nextCycle - previousCycle > TimelineRuntimeEvaluationSegments.MaximumCycleAdvance)
                 throw new InvalidOperationException("Timeline playback crossed more than 4096 cycles in one Advance.");
 
             int firstCycle = loop ? previousCycle : 0;
@@ -1499,34 +1499,156 @@ namespace BTSMTL.Timeline.Runtime
         public IReadOnlyList<TimelineRuntimeTraceOutput> Traces { get; }
     }
 
-    public sealed class TimelineRuntimePresentationOperations
+    public readonly struct TimelineRuntimeSampleView<T>
     {
-        internal TimelineRuntimePresentationOperations(
-            IReadOnlyList<TimelineAnimationContribution> animationContributions,
-            IReadOnlyList<TimelineCameraStateSample> cameraStates,
-            IReadOnlyList<TimelineCameraCueSample> cameraCues,
-            IReadOnlyList<TimelineCameraResponseSample> cameraResponses,
-            IReadOnlyList<TimelineCameraResourceSample> cameraResources,
-            IReadOnlyList<TimelineRuntimeScenePresentationSample> scenePresentation)
+        readonly TimelineRuntimeSampleBuffer<T> m_Buffer;
+        readonly ulong m_Version;
+
+        internal TimelineRuntimeSampleView(TimelineRuntimeSampleBuffer<T> buffer)
         {
-            AnimationContributions = Copy(animationContributions);
-            CameraStates = Copy(cameraStates);
-            CameraCues = Copy(cameraCues);
-            CameraResponses = Copy(cameraResponses);
-            CameraResources = Copy(cameraResources);
-            ScenePresentation = Copy(scenePresentation);
+            m_Buffer = buffer;
+            m_Version = buffer.Version;
         }
 
-        public IReadOnlyList<TimelineAnimationContribution> AnimationContributions { get; }
-        public IReadOnlyList<TimelineCameraStateSample> CameraStates { get; }
-        public IReadOnlyList<TimelineCameraCueSample> CameraCues { get; }
-        public IReadOnlyList<TimelineCameraResponseSample> CameraResponses { get; }
-        public IReadOnlyList<TimelineCameraResourceSample> CameraResources { get; }
-        public IReadOnlyList<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
-        static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values)
+        public int Count
         {
-            return new ReadOnlyCollection<T>(new List<T>(values ?? Array.Empty<T>()));
+            get
+            {
+                RequireCurrent();
+                return m_Buffer.Count;
+            }
         }
+
+        public T this[int index]
+        {
+            get
+            {
+                RequireCurrent();
+                return m_Buffer[index];
+            }
+        }
+
+        void RequireCurrent()
+        {
+            if (m_Buffer == null || m_Buffer.Version != m_Version)
+                throw new InvalidOperationException("Timeline sample view no longer belongs to a live frame.");
+        }
+    }
+
+    sealed class TimelineRuntimeSampleBuffer<T> : ICollection<T>
+    {
+        readonly T[] m_Values;
+
+        public TimelineRuntimeSampleBuffer(int capacity)
+        {
+            m_Values = capacity == 0 ? Array.Empty<T>() : new T[capacity];
+        }
+
+        public int Count { get; private set; }
+        public ulong Version { get; private set; }
+        public bool IsReadOnly => false;
+        public T this[int index] => (uint)index < (uint)Count
+            ? m_Values[index] : throw new ArgumentOutOfRangeException(nameof(index));
+        public TimelineRuntimeSampleView<T> View => new(this);
+
+        public void Add(T value)
+        {
+            if (Count == m_Values.Length)
+                throw new InvalidOperationException("Timeline sample count exceeds the prepared content capacity.");
+            m_Values[Count++] = value;
+        }
+
+        public void Clear()
+        {
+            Array.Clear(m_Values, 0, Count);
+            Count = 0;
+            Version = checked(Version + 1);
+        }
+
+        public bool Contains(T value) => Array.IndexOf(m_Values, value, 0, Count) >= 0;
+        public void CopyTo(T[] array, int arrayIndex) => Array.Copy(m_Values, 0, array, arrayIndex, Count);
+        public bool Remove(T value) => throw new NotSupportedException();
+        public IEnumerator<T> GetEnumerator() => throw new NotSupportedException("Use the indexed Timeline sample view.");
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    sealed class TimelineRuntimePresentationBuffer
+    {
+        public TimelineRuntimePresentationBuffer(TimelineRuntimePlayback playback)
+        {
+            int animations = 0, states = 0, cues = 0, responses = 0, resources = 0, scene = 0, markers = 0;
+            TimelineData timeline = playback.SourceTimeline;
+            for (int index = 0; index < timeline.Tracks.Count; index++)
+            {
+                Track track = timeline.Tracks[index];
+                if (track == null || track.PersistentMuted || track.ExecutionDomain != TimelineExecutionDomain.Presentation)
+                    continue;
+                int count = track.Clips.Count;
+                switch (track)
+                {
+                    case AnimationTrack: animations = checked(animations + count); break;
+                    case CameraStateTrack: states = checked(states + count); break;
+                    case CameraCueTrack: cues = checked(cues + count); break;
+                    case CameraResponseTrack: responses = checked(responses + count); break;
+                    case CameraEffectTrack: resources = checked(resources + count); break;
+                    case ScenePresentationParameterTrack: scene = checked(scene + count); break;
+                }
+            }
+            for (int index = 0; index < playback.Content.Markers.Count; index++)
+            {
+                TimelineContentMarker marker = playback.Content.Markers[index];
+                if (marker.ExecutionPolicy.IsPresentation && !marker.TrackMuted)
+                    markers++;
+            }
+            int traversals = playback.PlaybackMode == TimelinePlaybackMode.Loop
+                ? TimelineRuntimeEvaluationSegments.MaximumCycleAdvance + 1 : 1;
+            Animations = new(animations);
+            CameraStates = new(states);
+            CameraCues = new(checked(cues * traversals));
+            CameraResponses = new(responses);
+            CameraResources = new(resources);
+            ScenePresentation = new(scene);
+            Events = new(checked(markers * traversals));
+        }
+
+        public readonly TimelineRuntimeSampleBuffer<TimelineAnimationContribution> Animations;
+        public readonly TimelineRuntimeSampleBuffer<TimelineCameraStateSample> CameraStates;
+        public readonly TimelineRuntimeSampleBuffer<TimelineCameraCueSample> CameraCues;
+        public readonly TimelineRuntimeSampleBuffer<TimelineCameraResponseSample> CameraResponses;
+        public readonly TimelineRuntimeSampleBuffer<TimelineCameraResourceSample> CameraResources;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeScenePresentationSample> ScenePresentation;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimePresentationEvent> Events;
+
+        public void Clear()
+        {
+            Animations.Clear();
+            CameraStates.Clear();
+            CameraCues.Clear();
+            CameraResponses.Clear();
+            CameraResources.Clear();
+            ScenePresentation.Clear();
+            Events.Clear();
+        }
+    }
+
+    public readonly struct TimelineRuntimePresentationOperations
+    {
+        internal TimelineRuntimePresentationOperations(TimelineRuntimePresentationBuffer buffer)
+        {
+            AnimationContributions = buffer.Animations.View;
+            CameraStates = buffer.CameraStates.View;
+            CameraCues = buffer.CameraCues.View;
+            CameraResponses = buffer.CameraResponses.View;
+            CameraResources = buffer.CameraResources.View;
+            ScenePresentation = buffer.ScenePresentation.View;
+        }
+
+        public TimelineRuntimeSampleView<TimelineAnimationContribution> AnimationContributions { get; }
+        public TimelineRuntimeSampleView<TimelineCameraStateSample> CameraStates { get; }
+        public TimelineRuntimeSampleView<TimelineCameraCueSample> CameraCues { get; }
+        public TimelineRuntimeSampleView<TimelineCameraResponseSample> CameraResponses { get; }
+        public TimelineRuntimeSampleView<TimelineCameraResourceSample> CameraResources { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeScenePresentationSample> ScenePresentation { get; }
     }
 
     public readonly struct TimelineRuntimePresentationFrame
@@ -1538,15 +1660,14 @@ namespace BTSMTL.Timeline.Runtime
             float presentationDeltaSeconds,
             float interpolationAlpha,
             TimelineRuntimePresentationOperations operations,
-            IReadOnlyList<TimelineRuntimePresentationEvent> events,
+            TimelineRuntimeSampleView<TimelineRuntimePresentationEvent> events,
             TimelinePresentationSampleReason reason,
             FixedScalar time,
             int cycle)
         {
             if (playback == null || !playback.Handle.IsValid || playback.Generation == 0 || presentationFrame == 0 ||
                 !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
-                !float.IsFinite(interpolationAlpha) || interpolationAlpha < 0f || interpolationAlpha > 1f ||
-                operations == null)
+                !float.IsFinite(interpolationAlpha) || interpolationAlpha < 0f || interpolationAlpha > 1f)
                 throw new ArgumentException("Timeline presentation frame is invalid.");
             Handle = playback.Handle;
             Generation = playback.Generation;
@@ -1559,8 +1680,7 @@ namespace BTSMTL.Timeline.Runtime
             Reason = reason;
             Time = time;
             Cycle = cycle;
-            Events = new ReadOnlyCollection<TimelineRuntimePresentationEvent>(
-                new List<TimelineRuntimePresentationEvent>(events ?? Array.Empty<TimelineRuntimePresentationEvent>()));
+            Events = events;
         }
 
         public TimelineRuntimePlaybackHandle Handle { get; }
@@ -1574,7 +1694,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelinePresentationSampleReason Reason { get; }
         public FixedScalar Time { get; }
         public int Cycle { get; }
-        public IReadOnlyList<TimelineRuntimePresentationEvent> Events { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimePresentationEvent> Events { get; }
     }
 
     public enum TimelineRuntimeStepDecision : byte
@@ -2196,19 +2316,20 @@ namespace BTSMTL.Timeline.Runtime
             FixedScalar currentPosition,
             int currentCycle,
             bool loop,
-            bool includeStartBoundary)
+            bool includeStartBoundary,
+            TimelineRuntimePresentationBuffer buffer)
         {
             if (playback == null)
                 throw new ArgumentNullException(nameof(playback));
             TimelineData timeline = playback.SourceTimeline;
             int frameRate = Math.Max(1, playback.Content.FrameRate);
             FixedScalar contentDuration = playback.Content.Duration;
-            var animations = new List<TimelineAnimationContribution>();
-            var cameraStates = new List<TimelineCameraStateSample>();
-            var cameraCues = new List<TimelineCameraCueSample>();
-            var cameraResponses = new List<TimelineCameraResponseSample>();
-            var cameraResources = new List<TimelineCameraResourceSample>();
-            var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
+            var animations = buffer.Animations;
+            var cameraStates = buffer.CameraStates;
+            var cameraCues = buffer.CameraCues;
+            var cameraResponses = buffer.CameraResponses;
+            var cameraResources = buffer.CameraResources;
+            var scenePresentation = buffer.ScenePresentation;
             var segments = new TimelineRuntimeEvaluationSegments(
                 previousPosition,
                 previousCycle,
@@ -2297,13 +2418,7 @@ namespace BTSMTL.Timeline.Runtime
                     }
                 }
             }
-            return new TimelineRuntimePresentationOperations(
-                animations,
-                cameraStates,
-                cameraCues,
-                cameraResponses,
-                cameraResources,
-                scenePresentation);
+            return new TimelineRuntimePresentationOperations(buffer);
         }
 
 
@@ -2311,6 +2426,7 @@ namespace BTSMTL.Timeline.Runtime
 
     readonly struct TimelineRuntimeEvaluationSegments
     {
+        public const int MaximumCycleAdvance = 4096;
         readonly FixedScalar m_Previous;
         readonly FixedScalar m_Current;
         readonly FixedScalar m_Duration;
@@ -2320,7 +2436,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeEvaluationSegments(FixedScalar previous, int previousCycle,
             FixedScalar current, int currentCycle, FixedScalar duration, bool loop)
         {
-            if (currentCycle < previousCycle || currentCycle - previousCycle > 4096 ||
+            if (currentCycle < previousCycle || currentCycle - previousCycle > MaximumCycleAdvance ||
                 currentCycle == previousCycle && current < previous)
                 throw new InvalidOperationException("Timeline interval has an invalid traversal range.");
             m_Previous = previous;

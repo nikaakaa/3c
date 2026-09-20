@@ -254,3 +254,9 @@
 - Simulation图编译入口明确拒绝Presentation Marker，诊断包含调用路径、Timeline和Marker身份，禁止将表现触发图混入Simulation operations。角色内容安装遇到Presentation Marker明确报告缺少表现图executor，不接受逻辑图资源代替该能力。
 - 删除表现帧构造AbilityTreeClipInvocation并调用逻辑invoker的实现；若收到未安装executor的Marker事件，保留明确失败，不静默丢事件或调用Simulation逻辑。
 - 这完成错误归属的拒绝和旧路径删除，不代表6.1–6.4已全部完成。正式表现节点能力、只读上下文、typed输出与帧候选事务仍需实现；第6节保持未完成。
+
+## 非Simulation入口删除60帧时间量化
+- CharacterTimelineHost.Update直接将调用者deltaTime转换为Q32.32秒，删除乘60、整数四舍五入和至少前进一帧。零delta保持零时间区间，负数和非有限输入明确拒绝。
+- TimelineRuntimeService的秒输入Step在既有播放游标上生成前后时间请求，沿原TimelineRuntimeStepCoordinator完成求值、消费和提交；循环、Decision截停与停止继续使用同一执行链。Simulation入口仍通过正式tick率和余数换算秒，不受本次修改影响。
+- 这只移除非Simulation入口的旧作者帧量化，不代表共享动作表现采样已经完成。当前Timeline先生成动画命令，Pose后打开CommittedFollow采样事务；下一步需在原命令/采样事务内拆开内容选择与时间求值，不能另设时钟服务。
+- Unity脚本编译与域重载完成（1789883519377），错误日志为零；未新增测试。首次编译发现FixedScalar命名空间缺失，已补齐后重新编译。

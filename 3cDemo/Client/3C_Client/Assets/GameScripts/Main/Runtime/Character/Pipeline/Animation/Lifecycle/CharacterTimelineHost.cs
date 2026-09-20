@@ -5,6 +5,7 @@ using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Runtime;
 using ThirdPersonSimulation;
+using ThirdPersonSimulation.Fixed;
 using ThirdPersonGameplay.Tick;
 using TreeDesigner;
 using TimelinePlaybackStatus = BTSMTL.Timeline.TimelinePlaybackStatus;
@@ -1838,10 +1839,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         public void Update(float deltaTime)
         {
+            if (!float.IsFinite(deltaTime) || deltaTime < 0f)
+                throw new ArgumentOutOfRangeException(nameof(deltaTime));
             if (!m_Initialized || m_Host == null || m_ActivePlaybacks.Count == 0)
                 return;
             m_TickCounter++;
-            int deltaFrames = Math.Max(1, (int)MathF.Round(deltaTime * 60f));
+            FixedScalar elapsedSeconds = FixedScalar.FromDouble(deltaTime);
             m_PlaybackScan.Clear();
             m_PlaybackScan.AddRange(m_ActivePlaybacks);
             for (int i = 0; i < m_PlaybackScan.Count; i++)
@@ -1852,7 +1855,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     continue;
                 if (active.CoreDriven)
                     continue;
-                m_Host.Service.Step(active.Handle, m_TickCounter, deltaFrames);
+                m_Host.Service.Step(active.Handle, m_TickCounter, elapsedSeconds);
             }
         }
 

@@ -808,6 +808,28 @@ namespace BTSMTL.Timeline.Runtime
             return result;
         }
 
+        public TimelineRuntimeAdvanceResult Step(
+            TimelinePlaybackHandle handle,
+            ulong logicTick,
+            FixedScalar elapsedSeconds)
+        {
+            EnsureAvailable();
+            if (elapsedSeconds < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
+            TimelineRuntimePlayback playback = Require(handle);
+            var request = new TimelineRuntimeAdvanceRequest(
+                logicTick,
+                playback.CursorTime,
+                FixedScalar.FromRaw(checked(playback.CursorTime.Raw + elapsedSeconds.Raw)),
+                0);
+            TimelineRuntimeAdvanceResult result = TimelineRuntimeStepCoordinator.Step(
+                playback,
+                request,
+                m_StepConsumer);
+            Publish(playback);
+            return result;
+        }
+
         static TimelineRuntimeAdvanceRequest CreateAdvanceRequest(TimelineRuntimePlayback playback, ulong logicTick, int tickCount)
         {
             if (tickCount <= 0)

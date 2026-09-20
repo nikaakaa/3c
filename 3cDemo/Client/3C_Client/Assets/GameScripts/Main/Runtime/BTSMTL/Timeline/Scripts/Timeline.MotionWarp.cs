@@ -563,13 +563,12 @@ namespace BTSMTL.Timeline
         }
 
         static float SourceWindowYaw(MotionCurveClip source, MotionWarpClip warp) =>
-            source.EvaluateYawAtTimelineTime(warp.EndTime.ToSingle()) -
-            source.EvaluateYawAtTimelineTime(warp.StartTime.ToSingle());
+            source.EvaluateYawAtTimelineTime(warp.EndTime) -
+            source.EvaluateYawAtTimelineTime(warp.StartTime);
 
         static Vector2 SourcePosition(MotionCurveClip source, FixedScalar time)
         {
-            Vector3 position = source.EvaluatePositionAtTimelineTime(
-                time.ToSingle());
+            Vector3 position = source.EvaluatePositionAtTimelineTime(time);
             return new Vector2(position.x, position.z);
         }
 

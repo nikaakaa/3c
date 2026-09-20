@@ -159,7 +159,7 @@ namespace BTSMTL.Timeline
         public override string ContractKind => TimelineContractKinds.CameraStateTrack;
 
         public void Sample(
-            float timelineTime,
+            FixedScalar timelineTime,
             string sourceId,
             string sourceName,
             ICollection<TimelineCameraStateSample> states)
@@ -190,15 +190,15 @@ namespace BTSMTL.Timeline
             }
         }
 
-        static bool TrySampleClip(CameraStateClip clip, float timelineTime, out float weight)
+        static bool TrySampleClip(CameraStateClip clip, FixedScalar timelineTime, out float weight)
         {
             weight = 0f;
-            if (timelineTime < clip.StartTime.ToSingle() || timelineTime > clip.EndTime.ToSingle())
+            if (timelineTime < clip.StartTime || timelineTime > clip.EndTime)
                 return false;
 
             float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
-            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
-            float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
+            float selfTime = FixedScalar.Clamp(timelineTime - clip.StartTime, FixedScalar.Zero, clip.DurationTime).ToSingle();
+            float remainTime = FixedScalar.Max(FixedScalar.Zero, clip.EndTime - timelineTime).ToSingle();
             float normalizedTime = Mathf.Clamp01(selfTime / duration);
             weight = CameraTimelineSampling.SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, normalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             return weight > 0f;
@@ -341,7 +341,7 @@ namespace BTSMTL.Timeline
         public override string ContractKind => TimelineContractKinds.CameraResponseTrack;
 
         public void Sample(
-            float timelineTime,
+            FixedScalar timelineTime,
             string sourceId,
             string sourceName,
             ICollection<TimelineCameraResponseSample> responses)
@@ -370,15 +370,15 @@ namespace BTSMTL.Timeline
             }
         }
 
-        static bool TrySampleClip(CameraResponseClip clip, float timelineTime, out float weight)
+        static bool TrySampleClip(CameraResponseClip clip, FixedScalar timelineTime, out float weight)
         {
             weight = 0f;
-            if (timelineTime < clip.StartTime.ToSingle() || timelineTime > clip.EndTime.ToSingle())
+            if (timelineTime < clip.StartTime || timelineTime > clip.EndTime)
                 return false;
 
             float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
-            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
-            float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
+            float selfTime = FixedScalar.Clamp(timelineTime - clip.StartTime, FixedScalar.Zero, clip.DurationTime).ToSingle();
+            float remainTime = FixedScalar.Max(FixedScalar.Zero, clip.EndTime - timelineTime).ToSingle();
             float normalizedTime = Mathf.Clamp01(selfTime / duration);
             weight = CameraTimelineSampling.SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, normalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             return weight > 0f;

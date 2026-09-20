@@ -83,8 +83,8 @@ namespace BTSMTL.Timeline
         public override string ContractKind => TimelineContractKinds.MotionCurveTrack;
 
         public void Sample(
-            float previousTimelineTime,
-            float timelineTime,
+            FixedScalar previousTimelineTime,
+            FixedScalar timelineTime,
             string sourceId,
             string sourceName,
             ICollection<TimelineMotionCurveContribution> contributions)
@@ -122,22 +122,23 @@ namespace BTSMTL.Timeline
 
         static bool TrySampleClip(
             MotionCurveClip clip,
-            float previousTimelineTime,
-            float timelineTime,
+            FixedScalar previousTimelineTime,
+            FixedScalar timelineTime,
             out TimelineMotionCurveContribution contribution)
         {
             contribution = default;
-            if (timelineTime <= clip.StartTime.ToSingle() || previousTimelineTime >= clip.EndTime.ToSingle())
+            if (timelineTime <= clip.StartTime || previousTimelineTime >= clip.EndTime)
                 return false;
 
             float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
-            float previousSelfTime = Mathf.Clamp(previousTimelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
-            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
-            if (Mathf.Approximately(previousSelfTime, selfTime))
+            FixedScalar previousLocalTime = FixedScalar.Clamp(previousTimelineTime - clip.StartTime, FixedScalar.Zero, clip.DurationTime);
+            FixedScalar localTime = FixedScalar.Clamp(timelineTime - clip.StartTime, FixedScalar.Zero, clip.DurationTime);
+            if (previousLocalTime == localTime)
                 return false;
 
+            float selfTime = localTime.ToSingle();
             float weightNormalizedTime = Mathf.Clamp01(selfTime / duration);
-            float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
+            float remainTime = FixedScalar.Max(FixedScalar.Zero, clip.EndTime - timelineTime).ToSingle();
             float weight = SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, weightNormalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             if (weight <= 0f)
                 return false;
@@ -311,19 +312,19 @@ namespace BTSMTL.Timeline
                 RebindTimeline();
         }
 
-        public Vector3 EvaluatePositionAtTimelineTime(float timelineTime)
+        public Vector3 EvaluatePositionAtTimelineTime(FixedScalar timelineTime)
         {
             float sourceTime = Mathf.Clamp(
-                m_SourceStartTime + Mathf.Max(0f, timelineTime - StartTime.ToSingle()),
+                m_SourceStartTime + FixedScalar.Max(FixedScalar.Zero, timelineTime - StartTime).ToSingle(),
                 m_SourceStartTime,
                 m_SourceEndTime);
             return RequireSource().EvaluatePosition(sourceTime);
         }
 
-        public float EvaluateYawAtTimelineTime(float timelineTime)
+        public float EvaluateYawAtTimelineTime(FixedScalar timelineTime)
         {
             float sourceTime = Mathf.Clamp(
-                m_SourceStartTime + Mathf.Max(0f, timelineTime - StartTime.ToSingle()),
+                m_SourceStartTime + FixedScalar.Max(FixedScalar.Zero, timelineTime - StartTime).ToSingle(),
                 m_SourceStartTime,
                 m_SourceEndTime);
             return RequireSource().EvaluateYaw(sourceTime);

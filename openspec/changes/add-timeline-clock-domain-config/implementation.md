@@ -260,3 +260,10 @@
 - TimelineRuntimeService的秒输入Step在既有播放游标上生成前后时间请求，沿原TimelineRuntimeStepCoordinator完成求值、消费和提交；循环、Decision截停与停止继续使用同一执行链。Simulation入口仍通过正式tick率和余数换算秒，不受本次修改影响。
 - 这只移除非Simulation入口的旧作者帧量化，不代表共享动作表现采样已经完成。当前Timeline先生成动画命令，Pose后打开CommittedFollow采样事务；下一步需在原命令/采样事务内拆开内容选择与时间求值，不能另设时钟服务。
 - Unity脚本编译与域重载完成（1789883519377），错误日志为零；未新增测试。首次编译发现FixedScalar命名空间缺失，已补齐后重新编译。
+
+## 区间采样保留正式秒精度
+- Animation、Camera State/Response/Effect、MotionCurve的正式Sample输入改为FixedScalar秒；删除float时间重载，逻辑/表现求值器直接传入同一个精确区间。
+- Clip起止、Hold边界、TreeClip Update和ScenePresentation激活判断直接比较Q32.32时间。先以秒制求差和截断，再转换为Unity素材/AnimationCurve需要的float，不先转换绝对时间后相减。
+- MotionCurve删除Mathf.Approximately的时间相等判定，改为比较截断后的精确本地时间；MotionWarp源窗口采样沿用同一正式秒输入。
+- Unity脚本编译和域重载完成（1789883931101），错误日志为零。只读调用现有共享Timeline资产的AnimationTrack.Sample：12个Clip在StartTime.Raw-1处均无对应贡献，其中2个边界若转float会与起点重合。该证据只覆盖共享资产动画起点，不代表所有素材输出或共享动作采样完成；未新增测试。
+- 共享采样仍有明确未完成项：TimelineToActionCommandBridge目前从表现帧生成ActionCommittedRawSample，CommittedSequence借用render frame，动作projector之后才打开事务。必须改为正式逻辑提交事实驱动并调整原事务顺序，不能将这些伪committed样本当作共享时钟的完成依据。

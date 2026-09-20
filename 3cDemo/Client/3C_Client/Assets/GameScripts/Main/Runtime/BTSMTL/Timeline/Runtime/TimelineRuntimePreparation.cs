@@ -1800,8 +1800,8 @@ namespace BTSMTL.Timeline.Runtime
                     if (track is AnimationTrack animationTrack)
                     {
                         animationTrack.Sample(
-                            segment.PreviousTime.ToSingle(),
-                            segment.CurrentTime.ToSingle(),
+                            segment.PreviousTime,
+                            segment.CurrentTime,
                             trackIndex,
                             timeline.AuthoringId,
                             timeline.Name,
@@ -1812,8 +1812,8 @@ namespace BTSMTL.Timeline.Runtime
                     else if (track is MotionCurveTrack motionTrack)
                     {
                         motionTrack.Sample(
-                            segment.PreviousTime.ToSingle(),
-                            segment.CurrentTime.ToSingle(),
+                            segment.PreviousTime,
+                            segment.CurrentTime,
                             timeline.AuthoringId,
                             timeline.Name,
                             motions);
@@ -1873,7 +1873,7 @@ namespace BTSMTL.Timeline.Runtime
                     }
                 }
             }
-            float currentTime = currentPosition.ToSingle();
+            FixedScalar currentTime = currentPosition;
             for (int boundaryIndex = 0; boundaryIndex < (boundaries?.Count ?? 0); boundaryIndex++)
             {
                 TimelineRuntimeClipBoundary boundary = boundaries[boundaryIndex];
@@ -1946,10 +1946,10 @@ namespace BTSMTL.Timeline.Runtime
                 {
                     if (track.Clips[clipIndex] is not ScenePresentationParameterCurveClip clip ||
                         clip.ExecutionDomain != TimelineExecutionDomain.Logic ||
-                        currentTime < clip.StartTime.ToSingle() || currentTime > clip.EndTime.ToSingle())
+                        currentTime < clip.StartTime || currentTime > clip.EndTime)
                         continue;
                     float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
-                    float local = Mathf.Clamp01((currentTime - clip.StartTime.ToSingle()) / duration);
+                    float local = Mathf.Clamp01((currentTime - clip.StartTime).ToSingle() / duration);
                     scenePresentation.Add(new TimelineRuntimeScenePresentationSample(
                         clip.AuthoringId,
                         clip.TargetBindingId,
@@ -2001,9 +2001,9 @@ namespace BTSMTL.Timeline.Runtime
                         treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
                     if (System.Linq.Enumerable.Contains(exitedTreeDecisionClips, treeClip.AuthoringId))
                         continue;
-                    if (currentTime <= treeClip.StartTime.ToSingle())
+                    if (currentTime <= treeClip.StartTime)
                         continue;
-                    if (!treeDecisionExit && currentTime >= treeClip.EndTime.ToSingle())
+                    if (!treeDecisionExit && currentTime >= treeClip.EndTime)
                         continue;
                     if (!TryGetTreeContract(
                             content,
@@ -2012,7 +2012,7 @@ namespace BTSMTL.Timeline.Runtime
                             out string treeGraphRevision))
                         continue;
                     float duration = Mathf.Max(0.0001f, treeClip.DurationTime.ToSingle());
-                    float local = Mathf.Clamp01((currentTime - treeClip.StartTime.ToSingle()) / duration);
+                    float local = Mathf.Clamp01((currentTime - treeClip.StartTime).ToSingle() / duration);
                     treeClips.Add(new TimelineRuntimeTreeClipRequest(
                         treeClip.AuthoringId,
                         treeTrack.AuthoringId,
@@ -2053,7 +2053,7 @@ namespace BTSMTL.Timeline.Runtime
                     Clip clip = track.Clips[clipIndex];
                     if (clip == null ||
                         clip.ExecutionDomain != TimelineExecutionDomain.Logic ||
-                        currentTime <= clip.StartTime.ToSingle() || currentTime >= clip.EndTime.ToSingle())
+                        currentTime <= clip.StartTime || currentTime >= clip.EndTime)
                         continue;
                     float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
                     clipSamples.Add(new TimelineRuntimeClipSample(
@@ -2063,7 +2063,7 @@ namespace BTSMTL.Timeline.Runtime
                         TimelineRuntimeTreeClipEventKind.Update,
                         currentPosition,
                         currentCycle,
-                        (currentTime - clip.StartTime.ToSingle()) / duration));
+                        (currentTime - clip.StartTime).ToSingle() / duration));
                 }
             }
             return new TimelineRuntimeEvaluationResult(
@@ -2312,8 +2312,8 @@ namespace BTSMTL.Timeline.Runtime
                     if (track is AnimationTrack animationTrack)
                     {
                         animationTrack.Sample(
-                            segment.PreviousTime.ToSingle(),
-                            segment.CurrentTime.ToSingle(),
+                            segment.PreviousTime,
+                            segment.CurrentTime,
                             trackIndex,
                             timeline.AuthoringId,
                             timeline.Name,
@@ -2333,7 +2333,7 @@ namespace BTSMTL.Timeline.Runtime
                     }
                 }
             }
-            float currentTime = currentPosition.ToSingle();
+            FixedScalar currentTime = currentPosition;
             int sampledFrame = TimelineTimeGrid.NearestIndex(currentPosition, frameRate);
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -2364,12 +2364,12 @@ namespace BTSMTL.Timeline.Runtime
                     {
                         if (sceneTrack.Clips[clipIndex] is not ScenePresentationParameterCurveClip clip ||
                             clip.ExecutionDomain != TimelineExecutionDomain.Presentation ||
-                            currentTime < clip.StartTime.ToSingle() || currentTime > clip.EndTime.ToSingle())
+                            currentTime < clip.StartTime || currentTime > clip.EndTime)
                         {
                             continue;
                         }
                         float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
-                        float local = Mathf.Clamp01((currentTime - clip.StartTime.ToSingle()) / duration);
+                        float local = Mathf.Clamp01((currentTime - clip.StartTime).ToSingle() / duration);
                         scenePresentation.Add(new TimelineRuntimeScenePresentationSample(
                             clip.AuthoringId,
                             clip.TargetBindingId,

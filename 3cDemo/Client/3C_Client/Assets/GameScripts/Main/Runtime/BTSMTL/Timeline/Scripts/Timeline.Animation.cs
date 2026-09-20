@@ -125,14 +125,14 @@ namespace BTSMTL.Timeline
 
 #endif
 
-        public void Sample(float timelineTime, int trackIndex, string sourceId, string sourceName, ICollection<TimelineAnimationContribution> contributions)
+        public void Sample(FixedScalar timelineTime, int trackIndex, string sourceId, string sourceName, ICollection<TimelineAnimationContribution> contributions)
         {
             Sample(timelineTime, timelineTime, trackIndex, sourceId, sourceName, contributions);
         }
 
         public void Sample(
-            float previousTimelineTime,
-            float timelineTime,
+            FixedScalar previousTimelineTime,
+            FixedScalar timelineTime,
             int trackIndex,
             string sourceId,
             string sourceName,
@@ -142,8 +142,8 @@ namespace BTSMTL.Timeline
         }
 
         public void Sample(
-            float previousTimelineTime,
-            float timelineTime,
+            FixedScalar previousTimelineTime,
+            FixedScalar timelineTime,
             int trackIndex,
             string sourceId,
             string sourceName,
@@ -186,22 +186,22 @@ namespace BTSMTL.Timeline
             }
         }
 
-        static bool TrySampleClip(AnimationClip clip, float timelineTime, out float clipTime, out float normalizedTime, out float weight)
+        static bool TrySampleClip(AnimationClip clip, FixedScalar timelineTime, out float clipTime, out float normalizedTime, out float weight)
         {
             clipTime = 0f;
             normalizedTime = 0f;
             weight = 0f;
 
-            if (timelineTime < clip.StartTime.ToSingle())
+            if (timelineTime < clip.StartTime)
                 return false;
 
-            bool hold = timelineTime > clip.EndTime.ToSingle() && clip.ExtraPolationMode == ExtraPolationMode.Hold;
-            if (timelineTime > clip.EndTime.ToSingle() && !hold)
+            bool hold = timelineTime > clip.EndTime && clip.ExtraPolationMode == ExtraPolationMode.Hold;
+            if (timelineTime > clip.EndTime && !hold)
                 return false;
 
             float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
-            float selfTime = hold ? clip.DurationTime.ToSingle() : Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
-            float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
+            float selfTime = hold ? clip.DurationTime.ToSingle() : FixedScalar.Clamp(timelineTime - clip.StartTime, FixedScalar.Zero, clip.DurationTime).ToSingle();
+            float remainTime = FixedScalar.Max(FixedScalar.Zero, clip.EndTime - timelineTime).ToSingle();
             normalizedTime = Mathf.Clamp01(selfTime / duration);
             clipTime = selfTime + clip.ClipInTime.ToSingle();
 

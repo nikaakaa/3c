@@ -56,7 +56,7 @@ namespace BTSMTL.Timeline
         public override string ContractKind => TimelineContractKinds.CameraEffectTrack;
 
         public void Sample(
-            float timelineTime,
+            FixedScalar timelineTime,
             string sourceId,
             string sourceName,
             ICollection<TimelineCameraResourceSample> samples)
@@ -67,8 +67,8 @@ namespace BTSMTL.Timeline
             for (int clipIndex = 0; clipIndex < Clips.Count; clipIndex++)
             {
                 if (Clips[clipIndex] is not CameraEffectClip clip ||
-                    timelineTime < clip.StartTime.ToSingle() ||
-                    timelineTime > clip.EndTime.ToSingle())
+                    timelineTime < clip.StartTime ||
+                    timelineTime > clip.EndTime)
                     continue;
 
                 CameraEffectAsset effect = clip.Effect;
@@ -76,8 +76,8 @@ namespace BTSMTL.Timeline
                     continue;
 
                 float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
-                float selfTime = Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
-                float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
+                float selfTime = FixedScalar.Clamp(timelineTime - clip.StartTime, FixedScalar.Zero, clip.DurationTime).ToSingle();
+                float remainTime = FixedScalar.Max(FixedScalar.Zero, clip.EndTime - timelineTime).ToSingle();
                 float normalizedTime = Mathf.Clamp01(selfTime / duration);
                 float weight = CameraTimelineSampling.SampleWeight(
                     clip.WeightCurve,

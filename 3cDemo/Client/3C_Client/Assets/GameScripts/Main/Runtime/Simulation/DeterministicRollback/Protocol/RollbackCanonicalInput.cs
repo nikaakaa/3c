@@ -61,7 +61,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RollbackInputProvenance provenance)
         {
             if (!actorId.IsValid || !tick.IsValid || inputSequence == 0 || input == null ||
-                !Enum.IsDefined(typeof(RollbackInputProvenance), provenance) ||
+                !IsValidProvenance(provenance) ||
                 input.NumericProfile != FixedSimulationNumericProfile.Value || input.Sequence != inputSequence ||
                 input.TickSource.SourceTick != tick.Value)
             {
@@ -81,6 +81,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public SimulationTick Tick { get; }
         public ulong InputSequence { get; }
         public SimulationInput Input { get; }
+        internal static bool IsValidProvenance(RollbackInputProvenance provenance) =>
+            provenance == RollbackInputProvenance.LocalExplicit ||
+            provenance == RollbackInputProvenance.RelayedExplicit ||
+            provenance == RollbackInputProvenance.PredictedContinuous ||
+            provenance == RollbackInputProvenance.PredictedNeutral ||
+            provenance == RollbackInputProvenance.CanonicalExplicit ||
+            provenance == RollbackInputProvenance.ConfirmedExplicit;
+
         public RollbackInputProvenance Provenance { get; }
         public StableHash InputHash { get; }
         public StableHash GameplayHash { get; }

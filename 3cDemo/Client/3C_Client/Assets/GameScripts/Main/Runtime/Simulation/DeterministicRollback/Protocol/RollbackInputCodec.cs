@@ -278,12 +278,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static RollbackInputProvenance ReadProvenance(byte value)
         {
-            if (value != (byte)RollbackInputProvenance.LocalExplicit &&
-                value != (byte)RollbackInputProvenance.RelayedExplicit &&
-                value != (byte)RollbackInputProvenance.PredictedContinuous &&
-                value != (byte)RollbackInputProvenance.PredictedNeutral &&
-                value != (byte)RollbackInputProvenance.CanonicalExplicit &&
-                value != (byte)RollbackInputProvenance.ConfirmedExplicit)
+            if (!RollbackActorInputFrame.IsValidProvenance((RollbackInputProvenance)value))
                 throw new InvalidDataException($"Rollback input provenance '{value}' is invalid.");
             return (RollbackInputProvenance)value;
         }

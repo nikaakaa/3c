@@ -431,6 +431,15 @@
 - 同时检查 SimulationNumericProfile 的 Equals／GetHashCode，当前使用强类型比较和整数枚举参数，没有基于此检查做无证据改动。
 - DeterministicRollback portable 连带 Core／Fixed 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
 
+## 2026-09-20 回滚输入帧来源构造校验统一
+
+对应 tasks.md 的 5.38，与代码同步提交。
+
+- RollbackInputCodec 的来源读取装箱虽已删除，随后 RollbackActorInputFrame 构造仍 Enum.IsDefined 校验，且本地生成输入也经过该构造。现在由帧类型提供内部 IsValidProvenance，按原六个正式成员比较，构造与 codec 共用该规则，删除构造装箱及两处分别维护的来源清单。
+- codec 仍在原字节读取位置以 InvalidDataException 拒绝非法来源；直接构造仍沿原合并检查抛 ArgumentException。没有省略身份、数值配置、序号和 Tick 校验，也没有改 InputHash／GameplayHash、预测、确认或回滚流程。
+- 相机效果存储检查发现停止／撤销／完成依赖尚与 Timeline 相交，本轮未改其复用；ACL 租用表已有按容量准备的槽位，也未重复改造。
+- DeterministicRollback portable 连带 Core／Fixed 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做运行或 Player 分配采样。
+
 ## 2026-09-20 权威复制子消息直接编码
 
 对应 tasks.md 的 5.30，与代码同步提交。

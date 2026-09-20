@@ -454,48 +454,9 @@ namespace ThirdPersonSimulation
             PresentationCameraRequestLifecycle lifecycle = invocation.Hook == AbilityTreeClipHook.OnEnable
                 ? PresentationCameraRequestLifecycle.Activate
                 : PresentationCameraRequestLifecycle.Retire;
-            PresentationCameraRequest request = operation.Code switch
-            {
-                SimulationOperationCode.CameraStateRequest => PresentationCameraRequest.Sequence(
-                    lifecycle,
-                    RequireString(operation, "SequenceId"),
-                    operation.Integer1,
-                    checked((int)operation.Flags),
-                    RequireInt32(operation, "Priority"),
-                    RequireScalar(operation, "Weight"),
-                    RequireScalar(operation, "BlendInSeconds"),
-                    RequireScalar(operation, "BlendOutSeconds"),
-                    RequireOptionalString(operation, "TargetKey"),
-                    m_Access.GetStringConstant(operation, "ActionContext", string.Empty)),
-                SimulationOperationCode.CameraEffectRequest => PresentationCameraRequest.Effect(
-                    lifecycle,
-                    RequireString(operation, "RequestId"),
-                    operation.Integer1,
-                    RequireString(operation, "ResourceId"),
-                    RequireInt32(operation, "Priority"),
-                    RequireScalar(operation, "Weight"),
-                    m_Access.GetStringConstant(operation, "ActionContext", string.Empty)),
-                SimulationOperationCode.CameraResponse => PresentationCameraRequest.Response(
-                    lifecycle,
-                    operation.Integer1,
-                    RequireScalar(operation, "ManualOrbitWeight"),
-                    RequireScalar(operation, "PitchResponseWeight"),
-                    RequireScalar(operation, "YawResponseWeight"),
-                    RequireInt32(operation, "Priority"),
-                    RequireScalar(operation, "Weight"),
-                    m_Access.GetStringConstant(operation, "ActionContext", string.Empty)),
-                SimulationOperationCode.CameraTarget => PresentationCameraRequest.Target(
-                    lifecycle,
-                    RequireOptionalString(operation, "TargetKey"),
-                    RequireOptionalString(operation, "AnchorKey"),
-                    RequireOptionalString(operation, "AimPointKey"),
-                    RequireOptionalString(operation, "PreferredBoneKey"),
-                    RequireInt32(operation, "Priority"),
-                    RequireScalar(operation, "Weight"),
-                    m_Access.GetStringConstant(operation, "ActionContext", string.Empty)),
-                _ => throw new InvalidOperationException(
-                    $"Operation '{m_Access.SourcePath(operation)}' is not a Camera request.")
-            };
+            PresentationCameraRequest request = CameraProgramRequestFactory.Build(
+                operation.Code, operation.Integer1, operation.Flags, lifecycle,
+                new Float32CameraProgramConstantReader(m_Access.Layout, operation.Handle));
             SimulationEventHeader header = m_Presentation.Next(operation);
             m_Presentation.Add(new PresentationCommand(
                 header,
@@ -517,42 +478,6 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException(
                     $"Camera operation '{m_Access.SourcePath(operation)}' has no unique Camera producer identity.");
             return references[0].ExternalIdentity;
-        }
-
-        int RequireInt32(SimulationOperation operation, string field)
-        {
-            ProgramConstant constant = RequireConstant(operation, field, ProgramConstantKind.Int32);
-            return constant.Int32;
-        }
-
-        float RequireScalar(SimulationOperation operation, string field)
-        {
-            ProgramConstant constant = RequireConstant(operation, field, ProgramConstantKind.Scalar);
-            return constant.Scalar.ToSingle();
-        }
-
-        string RequireString(SimulationOperation operation, string field)
-        {
-            ProgramConstant constant = RequireConstant(operation, field, ProgramConstantKind.String);
-            if (string.IsNullOrWhiteSpace(constant.Text))
-                throw new InvalidOperationException(
-                    $"Camera operation '{m_Access.SourcePath(operation)}' constant '{field}' is empty.");
-            return constant.Text;
-        }
-
-        string RequireOptionalString(SimulationOperation operation, string field) =>
-            m_Access.GetStringConstant(operation, field, string.Empty);
-
-        ProgramConstant RequireConstant(
-            SimulationOperation operation,
-            string field,
-            ProgramConstantKind kind)
-        {
-            ProgramConstant constant = m_Access.FindConstant(operation, field);
-            if (constant == null || constant.Kind != kind)
-                throw new InvalidOperationException(
-                    $"Camera operation '{m_Access.SourcePath(operation)}' constant '{field}' is missing or has kind '{constant?.Kind}'.");
-            return constant;
         }
 
         int ReadTimelineRuntimeHandle(OperationExecutionDescriptor operation)
@@ -704,6 +629,39 @@ namespace ThirdPersonSimulation
                     sourceActionInstanceId: action.InstanceId,
                     domainPayload: $"prev:{exitingState.Value};next:{targetState.Value}"));
             }
+        }
+    }
+    internal readonly struct Float32CameraProgramConstantReader : ICameraProgramConstantReader
+    {
+        readonly GameplayAbilityExecutionLayout m_Layout;
+        readonly OperationHandle m_Operation;
+
+        public Float32CameraProgramConstantReader(GameplayAbilityExecutionLayout layout, OperationHandle operation)
+        {
+            m_Layout = layout;
+            m_Operation = operation;
+        }
+
+        public int ReadInt32(OperationNamedConstant field) => Require(field, ProgramConstantKind.Int32).Int32;
+        public float ReadScalar(OperationNamedConstant field) => Require(field, ProgramConstantKind.Scalar).Scalar.ToSingle();
+
+        public string ReadString(OperationNamedConstant field, bool required)
+        {
+            ProgramConstant constant = m_Layout.FindNamedConstant(m_Operation, field);
+            if (constant == null && !required)
+                return string.Empty;
+            if (constant == null || constant.Kind != ProgramConstantKind.String ||
+                required && string.IsNullOrWhiteSpace(constant.Text))
+                throw new InvalidOperationException($"Camera operation '{m_Layout.SourcePath(m_Operation)}' string constant '{field}' is invalid.");
+            return constant.Text;
+        }
+
+        ProgramConstant Require(OperationNamedConstant field, ProgramConstantKind kind)
+        {
+            ProgramConstant constant = m_Layout.FindNamedConstant(m_Operation, field);
+            if (constant == null || constant.Kind != kind)
+                throw new InvalidOperationException($"Camera operation '{m_Layout.SourcePath(m_Operation)}' constant '{field}' is missing or has kind '{constant?.Kind}'.");
+            return constant;
         }
     }
 }

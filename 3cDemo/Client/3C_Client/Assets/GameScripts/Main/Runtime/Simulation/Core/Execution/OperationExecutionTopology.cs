@@ -207,14 +207,26 @@ namespace ThirdPersonSimulation
         DurationSeconds = 15,
         ActionMotionPositionX = 16,
         ActionMotionPositionZ = 17,
-        ActionMotionDuration = 18
+        ActionMotionDuration = 18,
+        SequenceId = 19,
+        Priority = 20,
+        BlendInSeconds = 21,
+        BlendOutSeconds = 22,
+        RequestId = 23,
+        ResourceId = 24,
+        ManualOrbitWeight = 25,
+        PitchResponseWeight = 26,
+        YawResponseWeight = 27,
+        AnchorKey = 28,
+        AimPointKey = 29,
+        PreferredBoneKey = 30
     }
 
     public static class OperationNamedConstantSchema
     {
         const string Marker = "/constant/";
 
-        public static int Count => 19;
+        public static int Count => 31;
 
         public static bool TryParseIdentity(string identity, out OperationNamedConstant field)
         {

@@ -14,7 +14,7 @@
 - 工作区整理提交：`4c82681fb` 渲染持久 ID 映射；`8204397e0` Fixed 正式输入目录；`343bcd81a` Fixed Pass 端口声明；`73f1cd263` Pose 时钟与相机接口；`5a7c15b3b` 脚部素材、校准、Pose 资源映射和生命周期配套；`6a910a155` Rush Section 秒制序列化。这些整理提交没有新增端到端运行证据。
 - 正式 RunHost 编译曾返回 WorkspaceEditorInUse，无 RunId。局部相机探针是在现有 Editor 重载后执行，不应描述成正式批处理编译或整段 Replay 通过。Center 记录为 `2d848daee8a343e49f9b7fceaae265e9`。
 - 动作窗口候选 BeginFrame/EndFrame 均清空；控制层窗口查询接口未找到业务调用。ClearActionInstanceScopes 当前为空，资源释放必须结合技能执行帧移除核对，不能凭方法名声称完整释放。
-- 未提交的 GameplayAbilityGraphInvocationLayout 查询仍调用 Hook.ToString 和 string.Concat，存在热路径分配；不能把这组改动称为满足 0 GC。
+- `491ba4935` 收口 GameplayAbilityGraphInvocationLayout 与编译来源、Fixed/Float32 代次读取配套；查询键改为三个字符串字段组成的值类型，Hook 使用固定名称，去掉原 Hook.ToString 和 string.Concat。此处仅静态核对消除显式查询字符串分配，尚无修改后编译、Profiler 或动作回放证据，不能宣称整条链路 0 GC。
 - 仍未完成：Timeline 定点位移进入 MotionAccumulator 和世界求解；攻击完成、取消、打断后的运行复核；开场相机输入定位；动画时钟与速度检查；1492 帧整段回放。
 
 以下章节保留原时间点的诊断过程，其中旧状态不覆盖上述最新核对。

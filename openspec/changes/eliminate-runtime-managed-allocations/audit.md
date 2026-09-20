@@ -1189,3 +1189,12 @@
 - binding 现在长期持有 pending、request、source identity 三个工作区，每帧统一 Clear；PendingSource 改为只读值记录，保存相同 SourceId、owner、sample、capture 和 provider 标记，PrepareEvaluation 仍按原列表顺序准备来源。
 - 无当前 selection 时返回同一个空 request 工作区；正常帧返回的 request 列表只在 CharacterPoseNativeGraphEvaluator 同步复制期间借用，pending 列表继续持有到同帧 PrepareEvaluation。首次达到更高活动源数量时容器仍可能扩容。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Blend Stack 运行采样或 Player 分配采样。
+
+## 2026-09-21 Pose StateMachine 两态工作区
+
+对应 tasks.md 的 4.2.10。
+
+- CharacterPoseNativeStateMachineSource 的活动集合业务上只有当前态，以及普通混合期间不同于当前态的目标态。原实现用 yield 返回这一个或两个 StateRuntime，并在 PrepareFrame、PrepareEvaluation、Evaluate、CommitFrame 四个阶段分别创建迭代器。
+- 现用固定两槽 StateRuntime 工作区显式收集活动态，四阶段按数量直接循环；活动顺序仍是当前态在前、目标态在后，Inertialization 直接切态和普通双态混合语义不变。
+- PrepareFrame 复用按 contribution capacity 预备的子请求列表；Evaluate 用两个局部引用替代输出 List；PrepareEvaluation 用普通循环查找父 demand 中的子请求，删除捕获 expected 的 LINQ Any 委托／闭包。身份仍按 ScopeInstanceId、NodeId、SourceId 三项匹配。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 StateMachine 运行采样或 Player 分配采样。

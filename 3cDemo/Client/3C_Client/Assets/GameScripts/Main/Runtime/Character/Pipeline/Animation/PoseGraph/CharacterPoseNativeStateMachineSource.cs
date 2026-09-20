@@ -140,6 +140,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly Dictionary<PoseStateId, float> m_StateDurations;
+        readonly StateRuntime[] m_ActiveStates = new StateRuntime[2];
+        readonly List<CharacterPoseNativeSourceRequest> m_SourceRequests;
         CharacterPoseNativeGraphRuntime m_ParentRuntime;
         CharacterPoseNativeLocalPoseValue m_Output;
         CharacterPoseNativeFrameLineage m_Lineage;
@@ -186,6 +188,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Factory = factory;
             m_States = new Dictionary<PoseStateId, StateRuntime>();
             m_StateDurations = new Dictionary<PoseStateId, float>();
+            m_SourceRequests =
+                new List<CharacterPoseNativeSourceRequest>(contributionCapacity);
             RequireDefinition();
             m_OutputBuffer = new CharacterPoseNativeNodePoseBuffer(
                 0,
@@ -271,9 +275,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             try
             {
-                var requests = new List<CharacterPoseNativeSourceRequest>();
-                foreach (StateRuntime state in EnumerateActiveStates())
+                m_SourceRequests.Clear();
+                int activeStateCount = CollectActiveStates();
+                for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
                 {
+                    StateRuntime state = m_ActiveStates[activeIndex];
                     EnsureState(runtime, state);
                     SynchronizeReset(runtime, state);
                     state.Lease = state.Graph.BeginFrame(in input, lineage.CompletionIdentity);
@@ -286,9 +292,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                     state.FrameOpen = true;
                     for (int i = 0; i < state.Preparation.Demand.Requests.Count; i++)
-                        requests.Add(state.Preparation.Demand.Requests[i]);
+                        m_SourceRequests.Add(state.Preparation.Demand.Requests[i]);
                 }
-                return requests;
+                return m_SourceRequests;
             }
             catch
             {
@@ -309,19 +315,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!demand.IsValid || demand.Lineage != lineage || barrierIdentity == 0)
                 throw new ArgumentException(
                     "Pose native StateMachine source evaluation preparation is invalid.");
-            foreach (StateRuntime state in EnumerateActiveStates())
+            int activeStateCount = CollectActiveStates();
+            for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
             {
+                StateRuntime state = m_ActiveStates[activeIndex];
                 for (int requestIndex = 0;
                      requestIndex < state.Preparation.Demand.Requests.Count;
                      requestIndex++)
                 {
                     CharacterPoseNativeSourceRequest expected =
                         state.Preparation.Demand.Requests[requestIndex];
-                    bool found = demand.Requests.Any(candidate =>
-                        candidate.ScopeInstanceId == expected.ScopeInstanceId &&
-                        candidate.NodeId == expected.NodeId &&
-                        candidate.SourceId == expected.SourceId);
-                    if (!found)
+                    if (!ContainsRequest(demand.Requests, in expected))
                         throw new InvalidOperationException(
                             $"Pose StateMachine '{m_NodeId}' child source request '{expected.NodeId}/{expected.SourceId}' was lost before the evaluation barrier.");
                 }
@@ -344,9 +348,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!m_EvaluationPrepared || barrierIdentity == 0)
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' has no prepared native evaluation.");
-            var values = new List<CharacterPoseNativeLocalPoseValue>();
-            foreach (StateRuntime state in EnumerateActiveStates())
+            CharacterPoseNativeLocalPoseValue firstValue = null;
+            CharacterPoseNativeLocalPoseValue secondValue = null;
+            int valueCount = 0;
+            int activeStateCount = CollectActiveStates();
+            for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
             {
+                StateRuntime state = m_ActiveStates[activeIndex];
                 CharacterPoseNativeSourceDemand demand = state.Preparation.Demand;
                 state.Evaluation = state.Graph.Evaluate(
                     state.Lease,
@@ -364,18 +372,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose StateMachine '{m_NodeId}' state '{state.Definition.StateId}' did not produce the current Local Pose ({detail}).");
                 }
-                values.Add(value);
+                if (valueCount == 0)
+                    firstValue = value;
+                else
+                    secondValue = value;
+                valueCount++;
             }
-            if (values.Count == 1)
+            if (valueCount == 1)
             {
-                CharacterPoseNativeLocalPoseValue value = values[0];
-                CopySingle(in value);
+                CopySingle(in firstValue);
             }
-            else if (values.Count == 2)
+            else if (valueCount == 2)
             {
-                CharacterPoseNativeLocalPoseValue source = values[0];
-                CharacterPoseNativeLocalPoseValue target = values[1];
-                BlendTransition(in source, in target);
+                BlendTransition(in firstValue, in secondValue);
             }
             else
                 throw new InvalidOperationException(
@@ -396,8 +405,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             RequireFrame(runtime, in lineage);
-            foreach (StateRuntime state in EnumerateActiveStates())
+            int activeStateCount = CollectActiveStates();
+            for (int activeIndex = 0; activeIndex < activeStateCount; activeIndex++)
             {
+                StateRuntime state = m_ActiveStates[activeIndex];
                 state.Graph.ValidatePending(state.Lease, in state.Evaluation);
                 state.Graph.Commit(state.Lease, in state.Evaluation);
             }
@@ -487,16 +498,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw failure;
         }
 
-        IEnumerable<StateRuntime> EnumerateActiveStates()
+        int CollectActiveStates()
         {
             StateRuntime current = RequireState(m_PendingState);
-            yield return current;
+            m_ActiveStates[0] = current;
+            m_ActiveStates[1] = null;
             if (m_PendingTransition != null)
             {
                 StateRuntime target = RequireState(m_PendingTransition.TargetStateId);
                 if (!ReferenceEquals(current, target))
-                    yield return target;
+                {
+                    m_ActiveStates[1] = target;
+                    return 2;
+                }
             }
+            return 1;
+        }
+
+        static bool ContainsRequest(
+            IReadOnlyList<CharacterPoseNativeSourceRequest> requests,
+            in CharacterPoseNativeSourceRequest expected)
+        {
+            for (int i = 0; i < requests.Count; i++)
+            {
+                CharacterPoseNativeSourceRequest candidate = requests[i];
+                if (candidate.ScopeInstanceId == expected.ScopeInstanceId &&
+                    candidate.NodeId == expected.NodeId &&
+                    candidate.SourceId == expected.SourceId)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         StateRuntime RequireState(PoseStateId stateId)

@@ -712,3 +712,11 @@
 - pending 正式容量来自 requestCapacity，RetainRequest 在加入新序号前检查上限并拒绝同序号内容变化。容量为未来有界存储提供依据；目前 SortedDictionary 的逐节点分配、消费结果及 checkpoint 复制仍在，不能仅凭有容量上限视为 0 GC。
 - 业务取舍：保留独立快照会继续产生复制，但失败时可恢复消费前的请求和确认游标；改为准备好的事务工作存储可以减少复制，但必须一起落实提交／失败恢复的存储归还边界。该范围触及当前目标明确要求保留的共享事务／回滚边界，因此保留现场，后续独立治理不以旁路缓存绕过。
 - 实际检查文件为 PredictionConfirmationState、PredictionIngressAndSchedulePasses、PredictionState 和 PredictionStateCodec；codec 的独立解析字典还负责拒绝重复序号并排序，删除它不能省略这两项行为。本轮仅记录源码证据，无新增编译、运行或 Player 采样结论。
+## 2026-09-20 诊断实时状态淘汰节点复用
+
+对应 tasks.md 的 7.9。
+
+- RuntimeLiveStateStore.Upsert 对已有 key 原已复用 LinkedListNode 并移到尾部，该正确路径保持不变。新 key 到达 m_MaxChanges 时，旧实现 RemoveFirst 后 AddLast(key) 创建新节点；现取出最旧节点，删除旧 key 的两个字典项，替换节点 Value 后 AddLast(node)，新 key 索引保存同一节点。
+- 节点只存在于私有 m_Recency 和 m_RecencyNodes，ReadSince 返回独立 RuntimeLiveStateChange 值记录与列表，不暴露节点，故复用不改变已返回结果。旧 Value 被覆盖，不额外保留旧状态引用；顺序、m_LastEvictionVersion、m_EvictedStates、m_Version、changes 队列及全量同步判定均沿原逻辑。
+- 节点数量上限沿既有 m_MaxChanges，未增加配置、池或旁路存储。未满时仍创建节点；Clear 保留原清除行为，之后重新填充仍分配。字典／队列增长、变化读取列表、事件 payload 和捕获段仍未完成治理，不宣称诊断稳态整链 0 GC。
+- 目标文件编辑前无其它未提交修改，编辑前未发现 csc／bee 编译进程。使用当前 Unity BTSMTL.Diagnostics.rsp 的引用与源码独立调用 csc，输出及临时 rsp 位于系统 TEMP，退出码 0，无诊断输出；未改 Assets 编译产物、未刷新或控制 Editor。diff 空白检查通过，未新增测试或执行 Player 分配采样。

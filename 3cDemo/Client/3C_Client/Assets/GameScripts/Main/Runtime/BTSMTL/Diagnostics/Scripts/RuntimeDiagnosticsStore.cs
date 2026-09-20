@@ -215,16 +215,24 @@ namespace BTSMTL.Diagnostics
             }
             else
             {
+                LinkedListNode<RuntimeLiveStateKey> recent;
                 if (m_Current.Count == m_MaxChanges)
                 {
-                    RuntimeLiveStateKey oldest = m_Recency.First.Value;
+                    recent = m_Recency.First;
+                    RuntimeLiveStateKey oldest = recent.Value;
                     m_Recency.RemoveFirst();
                     m_RecencyNodes.Remove(oldest);
                     m_Current.Remove(oldest);
                     m_LastEvictionVersion = m_Version + 1;
                     m_EvictedStates++;
+                    recent.Value = key;
+                    m_Recency.AddLast(recent);
                 }
-                m_RecencyNodes.Add(key, m_Recency.AddLast(key));
+                else
+                {
+                    recent = m_Recency.AddLast(key);
+                }
+                m_RecencyNodes.Add(key, recent);
             }
 
             m_Version++;

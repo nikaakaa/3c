@@ -88,8 +88,8 @@ namespace BTSMTL.Timeline.Editor
             EditorGUILayout.LabelField("Kind", clip.ContractKind);
             int startFrame = clip.StartFrame;
             int endFrame = clip.EndFrame;
-            int selfEaseInFrame = clip.SelfEaseInFrame;
-            int selfEaseOutFrame = clip.SelfEaseOutFrame;
+            FixedScalar easeIn = clip.SelfEaseInTime;
+            FixedScalar easeOut = clip.SelfEaseOutTime;
             bool isTerminalLogicTreeClip = clip is TreeClip treeClip &&
                 treeClip.ExecutionDomain == TimelineExecutionDomain.Logic &&
                 treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
@@ -99,15 +99,21 @@ namespace BTSMTL.Timeline.Editor
                 EditorGUILayout.LabelField("End Frame", $"Timeline End ({endFrame})");
             else
                 endFrame = Mathf.Max(startFrame + 1, EditorGUILayout.IntField("End Frame", endFrame));
-            selfEaseInFrame = Mathf.Clamp(EditorGUILayout.IntField("Self Ease In", selfEaseInFrame), 0, endFrame - startFrame - 1);
-            selfEaseOutFrame = Mathf.Clamp(EditorGUILayout.IntField("Self Ease Out", selfEaseOutFrame), 0, endFrame - startFrame - selfEaseInFrame - 1);
+            EditorGUI.BeginChangeCheck();
+            double easeInSeconds = Math.Max(0d, EditorGUILayout.DoubleField("Self Ease In (Seconds)", easeIn.ToDouble()));
+            if (EditorGUI.EndChangeCheck())
+                easeIn = FixedScalar.FromDouble(easeInSeconds);
+            EditorGUI.BeginChangeCheck();
+            double easeOutSeconds = Math.Max(0d, EditorGUILayout.DoubleField("Self Ease Out (Seconds)", easeOut.ToDouble()));
+            if (EditorGUI.EndChangeCheck())
+                easeOut = FixedScalar.FromDouble(easeOutSeconds);
             EditorGUI.BeginChangeCheck();
             double clipInSeconds = Math.Max(0d, EditorGUILayout.DoubleField("Clip In (Seconds)", clip.ClipInTime.ToDouble()));
             bool clipInChanged = EditorGUI.EndChangeCheck();
-            EditorGUILayout.LabelField("Other Ease In", clip.OtherEaseInFrame.ToString());
-            EditorGUILayout.LabelField("Other Ease Out", clip.OtherEaseOutFrame.ToString());
+            EditorGUILayout.LabelField("Other Ease In", clip.OtherEaseInTime.ToString());
+            EditorGUILayout.LabelField("Other Ease Out", clip.OtherEaseOutTime.ToString());
             if (EditorGUI.EndChangeCheck())
-                ApplyFrames(asset, clip, startFrame, endFrame, selfEaseInFrame, selfEaseOutFrame, clipInSeconds, clipInChanged);
+                ApplyFrames(asset, clip, startFrame, endFrame, easeIn, easeOut, clipInSeconds, clipInChanged);
 
             TimelineAuthoringClipConfiguration configuration;
             try
@@ -238,7 +244,7 @@ namespace BTSMTL.Timeline.Editor
             }
         }
 
-        void ApplyFrames(TimelineAsset asset, Clip clip, int startFrame, int endFrame, int selfEaseInFrame, int selfEaseOutFrame, double clipInSeconds, bool clipInChanged)
+        void ApplyFrames(TimelineAsset asset, Clip clip, int startFrame, int endFrame, FixedScalar easeIn, FixedScalar easeOut, double clipInSeconds, bool clipInChanged)
         {
             if (!TryBeginMutation(asset))
                 return;
@@ -248,8 +254,7 @@ namespace BTSMTL.Timeline.Editor
                 {
                     clip.StartFrame = startFrame;
                     clip.EndFrame = endFrame;
-                    clip.SelfEaseInFrame = selfEaseInFrame;
-                    clip.SelfEaseOutFrame = selfEaseOutFrame;
+                    clip.ConfigureEase(easeIn, easeOut);
                     if (clipInChanged)
                         clip.ConfigureClipIn(FixedScalar.FromDouble(clipInSeconds));
                     clip.Track.UpdateMix();

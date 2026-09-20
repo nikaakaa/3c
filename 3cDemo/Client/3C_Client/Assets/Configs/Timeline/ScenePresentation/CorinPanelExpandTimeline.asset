@@ -90,10 +90,10 @@ MonoBehaviour:
         m_AuthoringId: ce3ac914-13d3-485a-bd11-32fb36b491de
         StartFrame: 0
         EndFrame: 60
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_TargetBindingId: leftPanel
         m_ParameterBindingId: leftOpenAmount
@@ -127,10 +127,10 @@ MonoBehaviour:
         m_AuthoringId: 9b476da4-0a2f-46b6-bb6d-0ec38abf4ec3
         StartFrame: 0
         EndFrame: 60
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_TargetBindingId: rightPanel
         m_ParameterBindingId: rightOpenAmount
@@ -172,10 +172,10 @@ MonoBehaviour:
         m_AuthoringId: d832eff3-e3ff-4a40-9ca6-9fbf0f05f344
         StartFrame: 0
         EndFrame: 3
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_InlineTree:
@@ -262,10 +262,10 @@ MonoBehaviour:
         m_AuthoringId: 47b02c2b-01e2-4042-a72c-e17a13dfae0d
         StartFrame: 0
         EndFrame: 60
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_TargetBindingId: leftPanel
         m_ParameterBindingId: leftVisible
@@ -299,10 +299,10 @@ MonoBehaviour:
         m_AuthoringId: f22bc2bb-c2fc-4894-bb6c-ed04da31432e
         StartFrame: 0
         EndFrame: 60
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_TargetBindingId: rightPanel
         m_ParameterBindingId: rightVisible

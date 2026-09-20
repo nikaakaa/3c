@@ -689,10 +689,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 87
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 4cfdcca827720544e9b01db0507ad2bf, type: 2}
         ExtraPolationMode: 0
@@ -1201,10 +1201,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 21
         EndFrame: 22
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_01_AttackProperty_01_01
         CueType: AttackProperty
@@ -1215,10 +1215,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 22
         EndFrame: 23
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_01_AttackProperty_01_02
         CueType: AttackProperty
@@ -1229,10 +1229,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 23
         EndFrame: 24
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_01_AttackProperty_01_02
         CueType: AttackProperty
@@ -1243,10 +1243,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_01_AttackProperty_01_02
         CueType: AttackProperty
@@ -1304,10 +1304,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 49
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 6
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 429496730
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 1085463043eec484c9173b05b7037f92, type: 2}
         ExtraPolationMode: 0
@@ -1391,10 +1391,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 43
         EndFrame: 162
-        OtherEaseInFrame: 6
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 429496730
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 4bd2aa40793a8a5449b6ef7f4de23426, type: 2}
         ExtraPolationMode: 0
@@ -1478,10 +1478,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Attack1GameplayCue
         CueType: Gameplay
@@ -1492,10 +1492,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 49
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack1Main
         Space: 0
@@ -1586,10 +1586,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 49
         EndFrame: 168
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack1End
         Space: 0
@@ -1680,10 +1680,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 168
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -1695,10 +1695,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 50
         EndFrame: 168
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -1710,10 +1710,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 73
         EndFrame: 168
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -1725,10 +1725,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 43
         EndFrame: 168
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -1750,10 +1750,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 7
         EndFrame: 32
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_SourceMotionClipId: 142218e6-6644-479b-b721-19d91be03a15
         TranslationMode: 0
@@ -2116,10 +2116,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 173
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack2End
         Space: 0
@@ -2210,10 +2210,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 48
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack2Main
         Space: 0
@@ -2317,10 +2317,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 48
         EndFrame: 173
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 6
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 429496730
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 69b4dda2a99b8c441833d55ec2229928, type: 2}
         ExtraPolationMode: 0
@@ -2404,10 +2404,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 48
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 6
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 429496730
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 4ef82b85767cffe4883132371252902e, type: 2}
         ExtraPolationMode: 0
@@ -2502,10 +2502,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Attack2GameplayCue
         CueType: Gameplay
@@ -2516,10 +2516,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Attack2CameraCue
         CueType: Camera
@@ -2540,10 +2540,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 5
         EndFrame: 29
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_SourceMotionClipId: a56930a0-7209-427e-977e-81bb4488c2ad
         TranslationMode: 0
@@ -2642,10 +2642,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 42
         EndFrame: 173
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -2657,10 +2657,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 173
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -2672,10 +2672,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 49
         EndFrame: 173
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -2687,10 +2687,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 72
         EndFrame: 173
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -2715,10 +2715,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 15
         EndFrame: 16
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_02_AttackProperty_01_01
         CueType: AttackProperty
@@ -2729,10 +2729,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 16
         EndFrame: 17
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_02_AttackProperty_01_02
         CueType: AttackProperty
@@ -2743,10 +2743,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 17
         EndFrame: 18
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_02_AttackProperty_01_02
         CueType: AttackProperty
@@ -2757,10 +2757,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_02_AttackProperty_01_02
         CueType: AttackProperty
@@ -3177,10 +3177,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 10
         EndFrame: 40
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_SourceMotionClipId: 765bebe5-8d5d-4ce3-92a5-dc8a51dc1664
         TranslationMode: 0
@@ -3277,10 +3277,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 125
         EndFrame: 212
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack5End
         Space: 0
@@ -3371,10 +3371,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 125
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack5Main
         Space: 0
@@ -3478,10 +3478,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 212
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -3493,10 +3493,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 119
         EndFrame: 212
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -3508,10 +3508,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 149
         EndFrame: 212
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -3533,10 +3533,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Attack5GameplayCue
         CueType: Gameplay
@@ -3560,10 +3560,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 125
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 6
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 429496730
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: cacfffd6d16755a40bd024ab1cfd8438, type: 2}
         ExtraPolationMode: 0
@@ -3647,10 +3647,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 119
         EndFrame: 206
-        OtherEaseInFrame: 6
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 429496730
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 4cfdcca827720544e9b01db0507ad2bf, type: 2}
         ExtraPolationMode: 0
@@ -3759,10 +3759,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 36
         EndFrame: 37
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_01
         CueType: AttackProperty
@@ -3773,10 +3773,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 38
         EndFrame: 39
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3787,10 +3787,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 40
         EndFrame: 41
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3801,10 +3801,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 42
         EndFrame: 43
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3815,10 +3815,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 44
         EndFrame: 45
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3829,10 +3829,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 46
         EndFrame: 47
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3843,10 +3843,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 49
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3857,10 +3857,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 50
         EndFrame: 51
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3871,10 +3871,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 52
         EndFrame: 53
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3885,10 +3885,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 54
         EndFrame: 55
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3899,10 +3899,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 56
         EndFrame: 57
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3913,10 +3913,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 58
         EndFrame: 59
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3927,10 +3927,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 60
         EndFrame: 61
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3941,10 +3941,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 62
         EndFrame: 63
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3955,10 +3955,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 64
         EndFrame: 65
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_01_02
         CueType: AttackProperty
@@ -3969,10 +3969,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 64
         EndFrame: 65
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_02
         CueType: AttackProperty
@@ -3983,10 +3983,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 47
         EndFrame: 212
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -4120,10 +4120,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 185
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 6437129dbd005054ba50336a44c4d4e3, type: 2}
         ExtraPolationMode: 0
@@ -4231,10 +4231,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 1
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_03
         CueType: AttackProperty
@@ -4245,10 +4245,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 9
         EndFrame: 10
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_01
         CueType: AttackProperty
@@ -4259,10 +4259,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 11
         EndFrame: 12
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4273,10 +4273,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 13
         EndFrame: 14
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4287,10 +4287,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 15
         EndFrame: 16
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4301,10 +4301,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 17
         EndFrame: 18
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4315,10 +4315,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 19
         EndFrame: 20
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4329,10 +4329,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 21
         EndFrame: 22
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4343,10 +4343,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 23
         EndFrame: 24
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4357,10 +4357,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 25
         EndFrame: 26
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4371,10 +4371,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 27
         EndFrame: 28
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4385,10 +4385,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 29
         EndFrame: 30
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4399,10 +4399,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 31
         EndFrame: 32
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4413,10 +4413,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 33
         EndFrame: 34
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4427,10 +4427,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 35
         EndFrame: 36
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_05_AttackProperty_04_02
         CueType: AttackProperty
@@ -4595,10 +4595,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 6
         EndFrame: 39
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_SourceMotionClipId: 373e6fc6-7fc7-490d-88ef-b4a48b87fcfd
         TranslationMode: 0
@@ -4697,10 +4697,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 81
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 6
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 429496730
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 928dc4fc54458fe488f6ee2bd52054a7, type: 2}
         ExtraPolationMode: 0
@@ -4784,10 +4784,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 75
         EndFrame: 200
-        OtherEaseInFrame: 6
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 429496730
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: fe89c3755a34cf64ca6ec99408ab55d6, type: 2}
         ExtraPolationMode: 0
@@ -4882,10 +4882,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 81
         EndFrame: 206
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack3End
         Space: 0
@@ -4976,10 +4976,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 81
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack3Main
         Space: 0
@@ -5081,10 +5081,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Attack3CameraCue
         CueType: Camera
@@ -5095,10 +5095,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Attack3GameplayCue
         CueType: Gameplay
@@ -5122,10 +5122,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 75
         EndFrame: 206
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -5137,10 +5137,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 105
         EndFrame: 206
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -5152,10 +5152,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 206
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -5167,10 +5167,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 82
         EndFrame: 206
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -5212,10 +5212,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 40
         EndFrame: 41
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_01
         CueType: AttackProperty
@@ -5226,10 +5226,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 42
         EndFrame: 43
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5240,10 +5240,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 44
         EndFrame: 45
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5254,10 +5254,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 46
         EndFrame: 47
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5268,10 +5268,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 49
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5282,10 +5282,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 50
         EndFrame: 51
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5296,10 +5296,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 52
         EndFrame: 53
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5310,10 +5310,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 54
         EndFrame: 55
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5324,10 +5324,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 56
         EndFrame: 57
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5338,10 +5338,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 58
         EndFrame: 59
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5352,10 +5352,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 60
         EndFrame: 61
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5366,10 +5366,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 62
         EndFrame: 63
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5380,10 +5380,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 64
         EndFrame: 65
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5394,10 +5394,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 66
         EndFrame: 67
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5408,10 +5408,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 68
         EndFrame: 69
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5422,10 +5422,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 70
         EndFrame: 71
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5436,10 +5436,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 72
         EndFrame: 73
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5450,10 +5450,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 74
         EndFrame: 75
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5464,10 +5464,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 76
         EndFrame: 77
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5478,10 +5478,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 78
         EndFrame: 79
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_01_02
         CueType: AttackProperty
@@ -5492,10 +5492,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 75
         EndFrame: 76
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_03_AttackProperty_02
         CueType: AttackProperty
@@ -5676,10 +5676,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 89
         EndFrame: 282
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack4End
         Space: 0
@@ -5770,10 +5770,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 89
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: Attack4Main
         Space: 0
@@ -5874,10 +5874,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 9
         EndFrame: 42
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_SourceMotionClipId: bd920a87-f138-4df5-aad9-c3763973bedb
         TranslationMode: 0
@@ -5976,10 +5976,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 282
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -5991,10 +5991,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 113
         EndFrame: 282
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -6006,10 +6006,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 83
         EndFrame: 282
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -6021,10 +6021,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 90
         EndFrame: 282
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -6047,10 +6047,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Attack4CameraCue
         CueType: Camera
@@ -6061,10 +6061,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Attack4GameplayCue
         CueType: Gameplay
@@ -6088,10 +6088,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 89
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 6
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 429496730
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: c0186e9f72ed34e4dae58f9f7de9ffa0, type: 2}
         ExtraPolationMode: 0
@@ -6175,10 +6175,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 83
         EndFrame: 276
-        OtherEaseInFrame: 6
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 429496730
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 67587c79547407b4a9fb97cadcf2b6e6, type: 2}
         ExtraPolationMode: 0
@@ -6293,10 +6293,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 20
         EndFrame: 21
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_01_01
         CueType: AttackProperty
@@ -6307,10 +6307,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 21
         EndFrame: 22
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_01_02
         CueType: AttackProperty
@@ -6321,10 +6321,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 22
         EndFrame: 23
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_01_02
         CueType: AttackProperty
@@ -6335,10 +6335,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 23
         EndFrame: 24
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_01_02
         CueType: AttackProperty
@@ -6349,10 +6349,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 38
         EndFrame: 39
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_02_01
         CueType: AttackProperty
@@ -6363,10 +6363,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 40
         EndFrame: 41
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_02_02
         CueType: AttackProperty
@@ -6377,10 +6377,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 42
         EndFrame: 43
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_02_02
         CueType: AttackProperty
@@ -6391,10 +6391,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 44
         EndFrame: 45
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_02_02
         CueType: AttackProperty
@@ -6405,10 +6405,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 46
         EndFrame: 47
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_01
         CueType: AttackProperty
@@ -6419,10 +6419,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 49
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6433,10 +6433,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 50
         EndFrame: 51
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6447,10 +6447,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 52
         EndFrame: 53
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6461,10 +6461,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 54
         EndFrame: 55
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6475,10 +6475,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 56
         EndFrame: 57
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6489,10 +6489,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 58
         EndFrame: 59
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6503,10 +6503,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 60
         EndFrame: 61
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6517,10 +6517,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 62
         EndFrame: 63
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6531,10 +6531,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 64
         EndFrame: 65
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6545,10 +6545,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 66
         EndFrame: 67
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6559,10 +6559,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 68
         EndFrame: 69
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6573,10 +6573,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 70
         EndFrame: 71
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty
@@ -6587,10 +6587,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 72
         EndFrame: 73
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Normal_04_AttackProperty_03_02
         CueType: AttackProperty

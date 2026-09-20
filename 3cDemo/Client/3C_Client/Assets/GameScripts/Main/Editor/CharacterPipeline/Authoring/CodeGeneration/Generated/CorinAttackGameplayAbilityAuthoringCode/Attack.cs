@@ -102,8 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var clip14 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData1, parts.timelineCatalog1, track7, "7a5caece-fc2f-4860-837c-755f36421dda", 48, asset25, 173, 0, 0, 0);
             var clip15 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData1, parts.timelineCatalog1, track7, "a56930a0-7209-427e-977e-81bb4488c2ad", 0, asset26, 48, 0, 0, 0);
             var track8 = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData1, parts.timelineCatalog1, typeof(AnimationTrack), "5847542b-70e3-49bf-98b9-26bb30d68c01", "Animation", TimelineExecutionDomain.Presentation);
-            var clip16 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData1, parts.timelineCatalog1, track8, "2296291d-3c89-4ace-811f-93c19e3cccf8", 48, asset27, 173, 6, 0, 0);
-            var clip17 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData1, parts.timelineCatalog1, track8, "6a375bc8-4cc1-4786-a496-ce0fa05d6e36", 0, asset28, 48, 0, 6, 0);
+            var clip16 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData1, parts.timelineCatalog1, track8, "2296291d-3c89-4ace-811f-93c19e3cccf8", 48, asset27, 173, 0.10000000009313225746154785156m, 0m, 0);
+            var clip17 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData1, parts.timelineCatalog1, track8, "6a375bc8-4cc1-4786-a496-ce0fa05d6e36", 0, asset28, 48, 0m, 0.10000000009313225746154785156m, 0);
             var track9 = BtsmtlSkillAuthoringCode.EnsureTrack(parts.timelineData1, parts.timelineCatalog1, typeof(ActionCueTrack), "c757d385-68cd-4fda-9ada-9712ef6b3cda", "Action Cue", TimelineExecutionDomain.Logic);
             var clip18 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData1, parts.timelineCatalog1, track9, "0f0ebfa0-4556-4883-a52d-307a8d715bfd", 18, null);
             var clip19 = BtsmtlSkillAuthoringCode.EnsureClip(parts.timelineData1, parts.timelineCatalog1, track9, "f4f35ee7-ee1f-4992-b562-379aebbdc5b1", 24, null);

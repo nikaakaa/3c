@@ -49,10 +49,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 80
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 16f38330684ce314189be68cc86fadc1, type: 2}
         ExtraPolationMode: 0
@@ -155,10 +155,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 79
         EndFrame: 80
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1

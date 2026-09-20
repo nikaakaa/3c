@@ -87,8 +87,8 @@ namespace BTSMTL.Timeline
                     normalizedTime,
                     selfTime,
                     remainTime,
-                    clip.EaseInTime,
-                    clip.EaseOutTime);
+                    clip.EaseInTime.ToSingle(),
+                    clip.EaseOutTime.ToSingle());
                 if (weight <= 0f)
                     continue;
 

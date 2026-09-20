@@ -436,8 +436,8 @@ namespace BTSMTL.Timeline.Editor
                     motionCopy.ConfigureSource(motionCopy.SourceCurve, splitSourceTime, originalSourceEnd);
                 }
                 formalClip.Source.EndFrame = frame;
-                formalClip.Source.SelfEaseOutFrame = 0;
-                copy.SelfEaseInFrame = 0;
+                formalClip.Source.ConfigureEase(formalClip.Source.SelfEaseInTime, FixedScalar.Zero);
+                copy.ConfigureEase(FixedScalar.Zero, copy.SelfEaseOutTime);
                 copy.Track = formalClip.Source.Track;
                 formalClip.Source.Track.Clips.Add(copy);
                 SplitClipCurves(
@@ -1224,7 +1224,9 @@ namespace BTSMTL.Timeline.Editor
             float m_StartTime;
             float m_EndTime;
             float m_BlendIn;
+            float m_InitialBlendIn;
             float m_BlendOut;
+            float m_InitialBlendOut;
             FixedScalar m_ClipInTime;
             float m_SourceStartTime;
             float m_SourceEndTime;
@@ -1238,8 +1240,10 @@ namespace BTSMTL.Timeline.Editor
                 Source = source;
                 m_StartTime = source.StartFrame / (float)owner.FrameRate;
                 m_EndTime = source.EndFrame / (float)owner.FrameRate;
-                m_BlendIn = source.SelfEaseInFrame / (float)owner.FrameRate;
-                m_BlendOut = source.SelfEaseOutFrame / (float)owner.FrameRate;
+                m_BlendIn = source.SelfEaseInTime.ToSingle();
+                m_InitialBlendIn = m_BlendIn;
+                m_BlendOut = source.SelfEaseOutTime.ToSingle();
+                m_InitialBlendOut = m_BlendOut;
                 m_ClipInTime = source.ClipInTime;
                 if (source is MotionCurveClip motion)
                 {
@@ -1407,12 +1411,12 @@ namespace BTSMTL.Timeline.Editor
             {
                 int startFrame = Mathf.Max(0, Mathf.RoundToInt(StartTime * m_Owner.FrameRate));
                 int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(EndTime * m_Owner.FrameRate));
-                int selfEaseInFrame = Mathf.Clamp(Mathf.RoundToInt(BlendIn * m_Owner.FrameRate), 0, endFrame - startFrame - 1);
-                int selfEaseOutFrame = Mathf.Clamp(Mathf.RoundToInt(BlendOut * m_Owner.FrameRate), 0, endFrame - startFrame - selfEaseInFrame - 1);
+                FixedScalar easeIn = m_BlendIn == m_InitialBlendIn ? Source.SelfEaseInTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendIn * m_Owner.FrameRate)), m_Owner.FrameRate);
+                FixedScalar easeOut = m_BlendOut == m_InitialBlendOut ? Source.SelfEaseOutTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendOut * m_Owner.FrameRate)), m_Owner.FrameRate);
                 bool changed = Source.StartFrame != startFrame ||
                                Source.EndFrame != endFrame ||
-                               Source.SelfEaseInFrame != selfEaseInFrame ||
-                               Source.SelfEaseOutFrame != selfEaseOutFrame ||
+                               Source.SelfEaseInTime != easeIn ||
+                               Source.SelfEaseOutTime != easeOut ||
                                (CanClipIn && Source.ClipInTime != m_ClipInTime);
                 if (Source is MotionCurveClip motion &&
                     (!Mathf.Approximately(motion.SourceStartTime, m_SourceStartTime) ||
@@ -1424,8 +1428,9 @@ namespace BTSMTL.Timeline.Editor
                     return false;
                 Source.StartFrame = startFrame;
                 Source.EndFrame = endFrame;
-                Source.SelfEaseInFrame = selfEaseInFrame;
-                Source.SelfEaseOutFrame = selfEaseOutFrame;
+                Source.ConfigureEase(easeIn, easeOut);
+                m_InitialBlendIn = m_BlendIn;
+                m_InitialBlendOut = m_BlendOut;
                 if (CanClipIn)
                     Source.ConfigureClipIn(m_ClipInTime);
                 if (Source is MotionCurveClip sourceMotion &&
@@ -1440,10 +1445,10 @@ namespace BTSMTL.Timeline.Editor
             {
                 int startFrame = Mathf.Max(0, Mathf.RoundToInt(StartTime * m_Owner.FrameRate));
                 int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(EndTime * m_Owner.FrameRate));
-                int selfEaseInFrame = Mathf.Clamp(Mathf.RoundToInt(BlendIn * m_Owner.FrameRate), 0, endFrame - startFrame - 1);
-                int selfEaseOutFrame = Mathf.Clamp(Mathf.RoundToInt(BlendOut * m_Owner.FrameRate), 0, endFrame - startFrame - selfEaseInFrame - 1);
+                FixedScalar easeIn = m_BlendIn == m_InitialBlendIn ? Source.SelfEaseInTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendIn * m_Owner.FrameRate)), m_Owner.FrameRate);
+                FixedScalar easeOut = m_BlendOut == m_InitialBlendOut ? Source.SelfEaseOutTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendOut * m_Owner.FrameRate)), m_Owner.FrameRate);
                 if (Source.StartFrame != startFrame || Source.EndFrame != endFrame ||
-                    Source.SelfEaseInFrame != selfEaseInFrame || Source.SelfEaseOutFrame != selfEaseOutFrame ||
+                    Source.SelfEaseInTime != easeIn || Source.SelfEaseOutTime != easeOut ||
                     (CanClipIn && Source.ClipInTime != m_ClipInTime))
                     return true;
                 if (Source is MotionCurveClip motion &&

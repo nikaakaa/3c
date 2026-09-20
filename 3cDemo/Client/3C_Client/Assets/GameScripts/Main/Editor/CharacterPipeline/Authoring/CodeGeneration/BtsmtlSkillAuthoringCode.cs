@@ -644,12 +644,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             int startFrame,
             UnityEngine.Object referenceObject,
             int endFrame,
-            int selfEaseInFrame,
-            int selfEaseOutFrame,
+            decimal selfEaseInSeconds,
+            decimal selfEaseOutSeconds,
             decimal clipInSeconds)
         {
             Clip clip = EnsureClip(timeline, catalog, track, identity, startFrame, referenceObject);
-            ConfigureClipSegment(clip, startFrame, endFrame, selfEaseInFrame, selfEaseOutFrame, clipInSeconds);
+            ConfigureClipSegment(clip, startFrame, endFrame, selfEaseInSeconds, selfEaseOutSeconds, clipInSeconds);
             return clip;
         }
 
@@ -657,14 +657,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             Clip clip,
             int startFrame,
             int endFrame,
-            int selfEaseInFrame,
-            int selfEaseOutFrame,
+            decimal selfEaseInSeconds,
+            decimal selfEaseOutSeconds,
             decimal clipInSeconds)
         {
             clip.StartFrame = startFrame;
             clip.EndFrame = endFrame;
-            clip.SelfEaseInFrame = selfEaseInFrame;
-            clip.SelfEaseOutFrame = selfEaseOutFrame;
+            clip.ConfigureEase(FixedScalar.FromDecimal(selfEaseInSeconds), FixedScalar.FromDecimal(selfEaseOutSeconds));
             clip.ConfigureClipIn(FixedScalar.FromDecimal(clipInSeconds));
             clip.FrameToTime();
             clip.Track?.UpdateMix();

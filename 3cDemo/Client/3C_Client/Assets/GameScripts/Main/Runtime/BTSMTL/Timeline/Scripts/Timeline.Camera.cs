@@ -204,7 +204,7 @@ namespace BTSMTL.Timeline
             float selfTime = Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
             float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
             float normalizedTime = Mathf.Clamp01(selfTime / duration);
-            weight = CameraTimelineSampling.SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, normalizedTime, selfTime, remainTime, clip.EaseInTime, clip.EaseOutTime);
+            weight = CameraTimelineSampling.SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, normalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             return weight > 0f;
         }
 
@@ -394,7 +394,7 @@ namespace BTSMTL.Timeline
             float selfTime = Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
             float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
             float normalizedTime = Mathf.Clamp01(selfTime / duration);
-            weight = CameraTimelineSampling.SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, normalizedTime, selfTime, remainTime, clip.EaseInTime, clip.EaseOutTime);
+            weight = CameraTimelineSampling.SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, normalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             return weight > 0f;
         }
 

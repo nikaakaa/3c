@@ -142,7 +142,7 @@ namespace BTSMTL.Timeline
 
             float weightNormalizedTime = Mathf.Clamp01(selfTime / duration);
             float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
-            float weight = SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, weightNormalizedTime, selfTime, remainTime, clip.EaseInTime, clip.EaseOutTime);
+            float weight = SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, weightNormalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             if (weight <= 0f)
                 return false;
 

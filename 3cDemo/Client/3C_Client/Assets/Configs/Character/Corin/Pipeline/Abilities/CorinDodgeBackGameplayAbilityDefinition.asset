@@ -122,10 +122,10 @@ MonoBehaviour:
         m_AuthoringId: b0ee4319-922b-410e-8c0c-b4fe70eb7504
         StartFrame: 0
         EndFrame: 141
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: edd7c59a8dbf622489dcbd2692cd2ecd, type: 2}
         ExtraPolationMode: 0
@@ -216,10 +216,10 @@ MonoBehaviour:
         m_AuthoringId: ca9b83e7-d1c4-4224-b62d-a51b4a4b9e0d
         StartFrame: 0
         EndFrame: 141
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: DodgeBack
         Space: 0
@@ -318,10 +318,10 @@ MonoBehaviour:
         m_AuthoringId: 180ec5ff-8aca-43b2-93aa-32d2354b4851
         StartFrame: 6
         EndFrame: 45
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_InlineTree:
@@ -334,10 +334,10 @@ MonoBehaviour:
         m_AuthoringId: b88aeaf5-d4a4-4a9d-a706-d6da6cb8072a
         StartFrame: 45
         EndFrame: 141
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_InlineTree:

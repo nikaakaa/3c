@@ -92,10 +92,10 @@ MonoBehaviour:
         m_AuthoringId: 9080e5fb-1e6c-414a-bd9f-94cab1cf7c5c
         StartFrame: 6
         EndFrame: 45
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 0
@@ -106,10 +106,10 @@ MonoBehaviour:
         m_AuthoringId: 913539bd-df57-4f13-b965-feafda823f36
         StartFrame: 46
         EndFrame: 142
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 0
@@ -130,10 +130,10 @@ MonoBehaviour:
         m_AuthoringId: e9d429f1-595e-475a-b647-444a6e069c92
         StartFrame: 7
         EndFrame: 148
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 6f9dc7e23ba63244e95d8f8d7142c5a2, type: 2}
         ExtraPolationMode: 1
@@ -224,10 +224,10 @@ MonoBehaviour:
         m_AuthoringId: ea9a052b-5407-4a22-b1c2-f5bbce6e31bc
         StartFrame: 0
         EndFrame: 141
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CurveId: DodgeForward
         Space: 0

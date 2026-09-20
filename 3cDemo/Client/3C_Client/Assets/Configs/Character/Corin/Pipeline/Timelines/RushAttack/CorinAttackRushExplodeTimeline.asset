@@ -124,10 +124,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 70
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 56dc445e7347ede4b84c0bba50500ed1, type: 2}
         ExtraPolationMode: 0
@@ -221,10 +221,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 1
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_AttackProperty_02
         CueType: AttackProperty
@@ -247,10 +247,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 13
         EndFrame: 70
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -262,10 +262,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 13
         EndFrame: 70
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
@@ -277,10 +277,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 69
         EndFrame: 70
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1

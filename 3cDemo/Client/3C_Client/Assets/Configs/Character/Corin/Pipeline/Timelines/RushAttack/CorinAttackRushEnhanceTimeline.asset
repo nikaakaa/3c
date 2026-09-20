@@ -74,10 +74,10 @@ MonoBehaviour:
         m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 44
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: fa38deedaed81e14984c451596a6e1c6, type: 2}
         ExtraPolationMode: 0
@@ -186,10 +186,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 7
         EndFrame: 8
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_03
         CueType: AttackProperty
@@ -200,10 +200,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 9
         EndFrame: 10
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -214,10 +214,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 11
         EndFrame: 12
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -228,10 +228,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 13
         EndFrame: 14
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -242,10 +242,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 15
         EndFrame: 16
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -256,10 +256,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 17
         EndFrame: 18
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -270,10 +270,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 19
         EndFrame: 20
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -284,10 +284,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 21
         EndFrame: 22
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -298,10 +298,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 23
         EndFrame: 24
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -312,10 +312,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 25
         EndFrame: 26
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -326,10 +326,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 27
         EndFrame: 28
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -340,10 +340,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 29
         EndFrame: 30
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -354,10 +354,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 31
         EndFrame: 32
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -368,10 +368,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 33
         EndFrame: 34
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -382,10 +382,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 35
         EndFrame: 36
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -396,10 +396,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 37
         EndFrame: 38
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
@@ -420,10 +420,10 @@ MonoBehaviour:
         m_ExecutionDomain: 1
         StartFrame: 34
         EndFrame: 44
-        OtherEaseInFrame: 0
-        OtherEaseOutFrame: 0
-        SelfEaseInFrame: 0
-        SelfEaseOutFrame: 0
+        m_OtherEaseInTimeRaw: 0
+        m_OtherEaseOutTimeRaw: 0
+        m_SelfEaseInTimeRaw: 0
+        m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1

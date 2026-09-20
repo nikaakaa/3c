@@ -210,12 +210,12 @@ namespace BTSMTL.Timeline
             clipTime = selfTime + clip.ClipInTime.ToSingle();
 
             float fadeInWeight = 1f;
-            if (!hold && clip.EaseInTime > 0f && selfTime < clip.EaseInTime)
-                fadeInWeight = EvaluateCurve(clip.EaseInCurve, Mathf.Clamp01(selfTime / clip.EaseInTime), 1f);
+            if (!hold && clip.EaseInTime.ToSingle() > 0f && selfTime < clip.EaseInTime.ToSingle())
+                fadeInWeight = EvaluateCurve(clip.EaseInCurve, Mathf.Clamp01(selfTime / clip.EaseInTime.ToSingle()), 1f);
 
             float fadeOutWeight = 1f;
-            if (!hold && clip.EaseOutTime > 0f && remainTime < clip.EaseOutTime)
-                fadeOutWeight = 1f - EvaluateCurve(clip.EaseOutCurve, Mathf.Clamp01(1f - remainTime / clip.EaseOutTime), 0f);
+            if (!hold && clip.EaseOutTime.ToSingle() > 0f && remainTime < clip.EaseOutTime.ToSingle())
+                fadeOutWeight = 1f - EvaluateCurve(clip.EaseOutCurve, Mathf.Clamp01(1f - remainTime / clip.EaseOutTime.ToSingle()), 0f);
 
             float curveWeight = EvaluateCurve(clip.WeightCurve, normalizedTime, 1f);
             weight = Mathf.Clamp01(curveWeight * fadeInWeight * fadeOutWeight);

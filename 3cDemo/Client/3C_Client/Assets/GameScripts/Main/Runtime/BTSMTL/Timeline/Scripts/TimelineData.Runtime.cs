@@ -168,15 +168,17 @@ namespace BTSMTL.Timeline
         #region Frame
         public int StartFrame;
         public int EndFrame;
-        public int OtherEaseInFrame;
-        public int OtherEaseOutFrame;
-        public int SelfEaseInFrame;
-        public int SelfEaseOutFrame;
+        [SerializeField]
+        long m_OtherEaseInTimeRaw;
+        [SerializeField]
+        long m_OtherEaseOutTimeRaw;
+        [SerializeField]
+        long m_SelfEaseInTimeRaw;
+        [SerializeField]
+        long m_SelfEaseOutTimeRaw;
         [SerializeField]
         long m_ClipInTimeRaw;
 
-        public int EaseInFrame => OtherEaseInFrame == 0 ? SelfEaseInFrame : OtherEaseInFrame;
-        public int EaseOutFrame => OtherEaseOutFrame == 0 ? SelfEaseOutFrame : OtherEaseOutFrame;
         public int Duration => EndFrame - StartFrame;
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public virtual string ContractKind => string.Empty;
@@ -188,10 +190,12 @@ namespace BTSMTL.Timeline
         #region Time
         public float StartTime { get; private set; }
         public float EndTime { get; private set; }
-        public float OtherEaseInTime { get; private set; }
-        public float OtherEaseOutTime { get; private set; }
-        public float EaseInTime { get; private set; }
-        public float EaseOutTime { get; private set; }
+        public FixedScalar SelfEaseInTime => FixedScalar.FromRaw(m_SelfEaseInTimeRaw);
+        public FixedScalar SelfEaseOutTime => FixedScalar.FromRaw(m_SelfEaseOutTimeRaw);
+        public FixedScalar OtherEaseInTime => FixedScalar.FromRaw(m_OtherEaseInTimeRaw);
+        public FixedScalar OtherEaseOutTime => FixedScalar.FromRaw(m_OtherEaseOutTimeRaw);
+        public FixedScalar EaseInTime => OtherEaseInTime.Raw == 0 ? SelfEaseInTime : OtherEaseInTime;
+        public FixedScalar EaseOutTime => OtherEaseOutTime.Raw == 0 ? SelfEaseOutTime : OtherEaseOutTime;
         public FixedScalar ClipInTime => FixedScalar.FromRaw(m_ClipInTimeRaw);
         public float DurationTime { get; private set; }
 
@@ -218,6 +222,14 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
+        public void ConfigureEase(FixedScalar easeIn, FixedScalar easeOut)
+        {
+            if (easeIn < FixedScalar.Zero || easeOut < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(easeIn));
+            m_SelfEaseInTimeRaw = easeIn.Raw;
+            m_SelfEaseOutTimeRaw = easeOut.Raw;
+        }
+
         public void ConfigureClipIn(FixedScalar time)
         {
             if (time < FixedScalar.Zero)
@@ -261,10 +273,6 @@ namespace BTSMTL.Timeline
         {
             StartTime = StartFrame / (float)TimelineUtility.FrameRate;
             EndTime = EndFrame / (float)TimelineUtility.FrameRate;
-            OtherEaseInTime = OtherEaseInFrame / (float)TimelineUtility.FrameRate;
-            OtherEaseOutTime = OtherEaseOutFrame / (float)TimelineUtility.FrameRate;
-            EaseInTime = EaseInFrame / (float)TimelineUtility.FrameRate;
-            EaseOutTime = EaseOutFrame / (float)TimelineUtility.FrameRate;
             DurationTime = Duration / (float)TimelineUtility.FrameRate;
         }
     }
@@ -660,10 +668,10 @@ namespace BTSMTL.Timeline
 
         public void UpdateMix()
         {
-            OtherEaseInFrame = 0;
-            OtherEaseOutFrame = 0;
+            m_OtherEaseInTimeRaw = 0;
+            m_OtherEaseOutTimeRaw = 0;
 
-            if (Invalid)
+            if (Invalid || !IsMixable())
                 return;
 
             foreach (var clip in Track.Clips)
@@ -681,25 +689,25 @@ namespace BTSMTL.Timeline
 
                     if (clip.StartFrame < StartFrame && clip.EndFrame > StartFrame)
                     {
-                        OtherEaseInFrame = clip.EndFrame - StartFrame;
+                        m_OtherEaseInTimeRaw = FixedScalar.FromRatio(clip.EndFrame - StartFrame, TimelineUtility.FrameRate).Raw;
                     }
                     if (clip.StartFrame > StartFrame && clip.StartFrame < EndFrame)
                     {
-                        OtherEaseOutFrame = EndFrame - clip.StartFrame;
+                        m_OtherEaseOutTimeRaw = FixedScalar.FromRatio(EndFrame - clip.StartFrame, TimelineUtility.FrameRate).Raw;
                     }
                     if (clip.StartFrame == StartFrame)
                     {
                         if (clip.EndFrame < EndFrame)
                         {
-                            OtherEaseInFrame = clip.EndFrame - StartFrame;
+                            m_OtherEaseInTimeRaw = FixedScalar.FromRatio(clip.EndFrame - StartFrame, TimelineUtility.FrameRate).Raw;
                         }
                         else if (clip.EndFrame > EndFrame)
                         {
-                            OtherEaseOutFrame = EndFrame - StartFrame;
+                            m_OtherEaseOutTimeRaw = FixedScalar.FromRatio(EndFrame - StartFrame, TimelineUtility.FrameRate).Raw;
                         }
                     }
-                    SelfEaseInFrame = Mathf.Min(SelfEaseInFrame, Duration - OtherEaseOutFrame);
-                    SelfEaseOutFrame = Mathf.Min(SelfEaseOutFrame, Duration - OtherEaseInFrame);
+                    m_SelfEaseInTimeRaw = FixedScalar.Min(SelfEaseInTime, FixedScalar.FromRatio(Duration, TimelineUtility.FrameRate) - OtherEaseOutTime).Raw;
+                    m_SelfEaseOutTimeRaw = FixedScalar.Min(SelfEaseOutTime, FixedScalar.FromRatio(Duration, TimelineUtility.FrameRate) - OtherEaseInTime).Raw;
                 }
             }
         }

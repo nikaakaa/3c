@@ -574,7 +574,7 @@ namespace BTSMTL.Timeline
 
         static bool HasUnitGameplayWeight(MotionCurveClip source)
         {
-            if (source.EaseInFrame != 0 || source.EaseOutFrame != 0 || source.WeightCurve == null || source.WeightCurve.length == 0)
+            if (source.EaseInTime.Raw != 0 || source.EaseOutTime.Raw != 0 || source.WeightCurve == null || source.WeightCurve.length == 0)
                 return false;
             Keyframe[] keys = source.WeightCurve.keys;
             for (int i = 0; i < keys.Length; i++)

@@ -128,8 +128,8 @@ namespace BTSMTL.Timeline
                 return false;
             }
             return clip.EndFrame != DefaultEndFrame(clip, clip.StartFrame, referenceObject) ||
-                   clip.SelfEaseInFrame != 0 ||
-                   clip.SelfEaseOutFrame != 0 ||
+                   clip.SelfEaseInTime.Raw != 0 ||
+                   clip.SelfEaseOutTime.Raw != 0 ||
                    clip.ClipInTime.Raw != 0;
         }
 

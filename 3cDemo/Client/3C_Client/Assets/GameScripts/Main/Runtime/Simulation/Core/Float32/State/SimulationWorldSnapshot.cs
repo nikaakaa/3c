@@ -176,7 +176,7 @@ namespace ThirdPersonSimulation
         public static SimulationWorldSnapshot Capture(
             Float32CharacterRuntime characterRuntime,
             SimulationTick tick,
-            IEnumerable<SimulationActorState> actorStates,
+            IReadOnlyList<SimulationActorState> actorStates,
             WorldSimulationState worldState,
             WorldCapability solverCapabilities)
         {
@@ -186,16 +186,21 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(worldState));
             if (characterRuntime.NumericProfile != worldState.NumericProfile)
                 throw new InvalidOperationException("Character Runtime and World state Numeric Profiles do not match.");
-            var actors = actorStates == null ? new List<SimulationActorState>() : new List<SimulationActorState>(actorStates);
-            for (int i = 0; i < actors.Count; i++)
+            var actors = actorStates == null || actorStates.Count == 0
+                ? Array.Empty<SimulationActorState>()
+                : new SimulationActorState[actorStates.Count];
+            for (int i = 0; i < actors.Length; i++)
+            {
+                actors[i] = actorStates[i];
                 if (actors[i] == null)
                     throw new InvalidOperationException("Character runtime state roster contains a null entry.");
-            actors.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (actors.Count != worldState.Bodies.Count || actors.Count != characterRuntime.Roster.Count)
+            }
+            Array.Sort(actors, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (actors.Length != worldState.Bodies.Count || actors.Length != characterRuntime.Roster.Count)
                 throw new InvalidOperationException("Character runtime state, Character Runtime and World body rosters do not match.");
-            var snapshots = new SimulationActorSnapshot[actors.Count];
+            var snapshots = new SimulationActorSnapshot[actors.Length];
             bool abilitiesDeterministic = true;
-            for (int i = 0; i < actors.Count; i++)
+            for (int i = 0; i < actors.Length; i++)
             {
                 SimulationActorState actor = actors[i];
                 SimulationActorBinding binding = characterRuntime.Roster[i];

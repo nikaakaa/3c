@@ -276,6 +276,8 @@
 
 - [x] 5.62 两数值域 SimulationWorldSnapshot 以最终 Actor 数组保存，并由程序集内部构造接管 Factory／Codec／权威合并的新建数组与 world-state bytes，删除快照结果 List、ReadOnlyCollection、Actor 数组二次复制和字节克隆；公开构造仍独立复制
 
+- [x] 5.63 两数值域 SimulationWorldSnapshotFactory 按可计数 Actor 状态输入直接复制到排序工作数组，删除每次快照捕获的 List 对象；工作数组继续隔离可复用 step workspace 并维持任意输入顺序兼容
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

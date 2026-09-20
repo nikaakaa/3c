@@ -365,18 +365,18 @@ namespace ThirdPersonSimulation
             writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
-        public static CharacterControlRuntimeState Read(byte[] bytes)
+        public static CharacterControlRuntimeState Read(ArraySegment<byte> bytes)
         {
             return Read(bytes, ReadSchema(bytes));
         }
 
         public static CharacterControlRuntimeState Read(
-            byte[] bytes,
+            ArraySegment<byte> bytes,
             CharacterControlStateSchema schema)
         {
             if (schema == null)
                 throw new ArgumentNullException(nameof(schema));
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version ||
                 !string.Equals(reader.ReadString(), CodecIdentity, StringComparison.Ordinal))
                 throw new InvalidDataException("Character control runtime state header is invalid.");
@@ -405,14 +405,14 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Character control runtime state hash is invalid.");
             using var writer = new CanonicalWriter();
             WriteCanonical(writer, result);
-            if (!writer.ContentEquals(bytes))
+            if (!writer.ContentEquals(bytes.AsSpan()))
                 throw new InvalidDataException("Character control runtime state is not canonical.");
             return result;
         }
 
-        static CharacterControlStateSchema ReadSchema(byte[] bytes)
+        static CharacterControlStateSchema ReadSchema(ArraySegment<byte> bytes)
         {
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version ||
                 !string.Equals(reader.ReadString(), CodecIdentity, StringComparison.Ordinal))
                 throw new InvalidDataException("Character control runtime state header is invalid.");

@@ -951,3 +951,11 @@
 - 两数值域构造新增按 m_Passes.Count 定长的 m_PassPhaseNames，每项初始化时执行原 Phase.ToString，BuildDiagnostics 直接读对应文本。初始化仍允许枚举格式化，运行诊断读取不再逐 Pass 查询枚举名称／装箱；输出文本沿原格式。
 - 存储为每个句柄一个与正式 Pass 数一致的数组，没有按 tick 增长的缓存或新配置。生命周期状态、错误、最新 tick 和诊断条目仍每次读取生成，不缓存动态快照。身份插值、生产与结果数组等仍分配，未声称整个 Diagnostics 无分配。
 - 两文件此前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未运行诊断刷新或 Player 分配采样。
+## 2026-09-20 角色控制状态同步片段读取
+
+对应 tasks.md 的 2.41。
+
+- Assets／Tools C# 检索显示 CharacterControlRuntimeStateCodec.Read 的实际外部消费者为 Fixed／Float32 角色 codec 的控制状态分支。两处 ReadBytes 改为 ReadBytesSegment；控制状态的公开 Read、带 schema 的 Read 及私有 ReadSchema 统一接收 ArraySegment，移除旧 byte[] 签名而不保留兼容路径。
+- 两次解析都经 CanonicalReader 片段构造使用 Offset／End，仍各自 RequireComplete；重新编码比较使用 bytes.AsSpan()，不会读入相邻装备／效果数据。底层数组不存在时由 CanonicalReader 拒绝，带 schema 的入口仍先检查 schema null。
+- 返回 schema、值对象、字符串及 CharacterControlRuntimeState 均不持有输入片段。只删除嵌套控制状态的整体字节副本，保持解析顺序、hash 校验、状态深拷贝和事务所有权；两遍 schema／值解析仍未合并，结果对象仍分配。
+- 三文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未执行片段边界／恢复运行对比或 Player 分配采样。

@@ -84,7 +84,7 @@ namespace ThirdPersonSimulation
             ulong actionEventSequence = reader.ReadUInt64();
             ulong handleAllocator = reader.ReadUInt64();
             CharacterControlRuntimeState controlState = reader.ReadBoolean()
-                ? CharacterControlRuntimeStateCodec.Read(reader.ReadBytes())
+                ? CharacterControlRuntimeStateCodec.Read(reader.ReadBytesSegment())
                 : null;
             GameplayEffectStateAggregate gameplayEffectState = null;
             if (reader.ReadBoolean())

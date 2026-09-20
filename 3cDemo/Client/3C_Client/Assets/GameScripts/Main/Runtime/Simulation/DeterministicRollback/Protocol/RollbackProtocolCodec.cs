@@ -97,7 +97,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     WriteRelayedInputBatch(writer, relayed);
                     break;
                 case RollbackCanonicalInputBundle bundle:
-                    writer.WriteBytes(RollbackInputCodec.WriteBundle(bundle));
+                    RollbackInputCodec.WriteLengthPrefixedBundle(writer, bundle);
                     break;
                 case RollbackCanonicalConfirmation confirmation:
                     WriteCanonicalConfirmation(writer, confirmation);
@@ -158,7 +158,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             writer.WriteInt32(value.Frames.Count);
             for (int i = 0; i < value.Frames.Count; i++)
-                writer.WriteBytes(RollbackInputCodec.WriteInput(value.Frames[i]));
+                RollbackInputCodec.WriteLengthPrefixedInput(writer, value.Frames[i]);
         }
 
         static RollbackActorInputBatch ReadInputBatch(CanonicalReader reader)
@@ -174,7 +174,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             writer.WriteInt32(value.Frames.Count);
             for (int i = 0; i < value.Frames.Count; i++)
-                writer.WriteBytes(RollbackInputCodec.WriteInput(value.Frames[i]));
+                RollbackInputCodec.WriteLengthPrefixedInput(writer, value.Frames[i]);
         }
 
         static RollbackRelayedExplicitInputBatch ReadRelayedInputBatch(CanonicalReader reader)
@@ -192,7 +192,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             writer.WriteUInt64(value.ConfirmedTick.Value);
             writer.WriteInt32(value.FinalBundles.Count);
             for (int i = 0; i < value.FinalBundles.Count; i++)
-                writer.WriteBytes(RollbackInputCodec.WriteBundle(value.FinalBundles[i]));
+                RollbackInputCodec.WriteLengthPrefixedBundle(writer, value.FinalBundles[i]);
         }
 
         static RollbackCanonicalConfirmation ReadCanonicalConfirmation(CanonicalReader reader)

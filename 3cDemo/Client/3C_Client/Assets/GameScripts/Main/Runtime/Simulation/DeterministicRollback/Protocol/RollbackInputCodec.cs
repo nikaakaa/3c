@@ -52,6 +52,24 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 WriteInput(writer, bundle.Actors[i]);
         }
 
+        internal static void WriteLengthPrefixedInput(CanonicalWriter writer, RollbackActorInputFrame frame)
+        {
+            if (frame == null)
+                throw new ArgumentNullException(nameof(frame));
+            long prefix = writer.BeginLengthPrefixedBlock();
+            WriteInput(writer, frame);
+            writer.EndLengthPrefixedBlock(prefix);
+        }
+
+        internal static void WriteLengthPrefixedBundle(CanonicalWriter writer, RollbackCanonicalInputBundle bundle)
+        {
+            if (bundle == null)
+                throw new ArgumentNullException(nameof(bundle));
+            long prefix = writer.BeginLengthPrefixedBlock();
+            WriteBundle(writer, bundle);
+            writer.EndLengthPrefixedBlock(prefix);
+        }
+
         public static RollbackCanonicalInputBundle ReadBundle(byte[] bytes)
         {
             var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));

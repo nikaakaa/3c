@@ -99,6 +99,30 @@ namespace ThirdPersonSimulation
             m_Stream.Write(value);
         }
 
+        public long BeginLengthPrefixedBlock()
+        {
+            long position = m_Stream.Position;
+            WriteInt32(0);
+            return position;
+        }
+
+        public void EndLengthPrefixedBlock(long prefixPosition)
+        {
+            long end = m_Stream.Position;
+            if (prefixPosition < 0 || prefixPosition > end - sizeof(int))
+                throw new ArgumentOutOfRangeException(nameof(prefixPosition));
+            int length = checked((int)(end - prefixPosition - sizeof(int)));
+            m_Stream.Position = prefixPosition;
+            try
+            {
+                WriteInt32(length);
+            }
+            finally
+            {
+                m_Stream.Position = end;
+            }
+        }
+
         public void WriteRawBytes(byte[] value, int offset, int count)
         {
             if (value == null)

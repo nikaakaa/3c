@@ -170,3 +170,13 @@
 - 公共写入 API、重新编码校验、RequireComplete、协议版本、字段顺序、空参数及非 canonical 报错均保留；不改变正式结果的独立寿命或可靠事件存储。
 - 此处减少三类入口各自生成的一份完整临时数组，不代表 writer、哈希对象或嵌套 WriteInput／WriteBundle 的中间数组已消除；嵌套数组、解码对象和发送容量仍待治理。
 - 回滚 portable 工程及其 Core／Fixed 依赖编译零警告零错误，按规定禁用构建服务器与共享编译并结束 shutdown，diff 空白检查通过。未新增测试、未主动刷新 Unity、未做 Player 分配或性能采样。
+
+## 2026-09-20 回滚嵌套输入直接编码
+
+对应 tasks.md 的 5.9，与代码同步提交。
+
+- 原 RollbackProtocolCodec 在输入批次、转发输入、canonical bundle 和确认批次四类入口调用 `writer.WriteBytes(RollbackInputCodec.WriteInput/WriteBundle(...))`。每个子项先建立独立 writer／MemoryStream 并 ToArray，再复制到外层。
+- CanonicalWriter 增加 BeginLengthPrefixedBlock／EndLengthPrefixedBlock：记录当前 Position 并预留四字节，写完后以实际位置差计算 int 长度，沿 WriteInt32 回填，再恢复结束位置。不用流总 Length 代替 Position，因此保留原可传入 MemoryStream 的相对位置语义；不分配作用域对象或委托。
+- RollbackInputCodec 的两个内部长度前缀写入入口调用同一私有 WriteInput／WriteBundle；四类外层调用统一使用该入口。Magic、Version、字段顺序和小端长度编码均沿原实现，公开返回独立数组的方法保留其真实消费者。
+- 删除嵌套子项临时 writer、流、primitive buffer 和最终 ToArray 数组，不改变外层独立结果、消息历史或异步发送寿命；失败时不返回部分包。读取侧 ReadBytes 中间数组、快照响应副本、外层 writer 容量和发送存储仍未完成。
+- 回滚 portable 及 Core／Fixed 依赖编译零警告零错误，按规定构建参数及结束 shutdown，diff 空白检查通过。已查当前 portable Tests 工程不引用回滚工程且未找到对应 codec 用例，未新增测试、未宣称协议运行或 Player 性能已验证。

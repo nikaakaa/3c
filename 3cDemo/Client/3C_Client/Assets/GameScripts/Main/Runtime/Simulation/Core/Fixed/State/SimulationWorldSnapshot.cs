@@ -204,20 +204,25 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class SimulationWorldStateSet
     {
-        readonly ReadOnlyCollection<SimulationActorState> m_Actors;
+        readonly IReadOnlyList<SimulationActorState> m_Actors;
 
-        public SimulationWorldStateSet(ulong lastCompletedTick, IEnumerable<SimulationActorState> actors, WorldSimulationState worldState)
+        public SimulationWorldStateSet(ulong lastCompletedTick, IReadOnlyList<SimulationActorState> actors, WorldSimulationState worldState)
         {
             LastCompletedTick = lastCompletedTick;
             WorldState = worldState ?? throw new ArgumentNullException(nameof(worldState));
-            var copied = actors == null ? new List<SimulationActorState>() : new List<SimulationActorState>(actors);
-            for (int i = 0; i < copied.Count; i++)
+            var copied = actors == null || actors.Count == 0
+                ? Array.Empty<SimulationActorState>()
+                : new SimulationActorState[actors.Count];
+            for (int i = 0; i < copied.Length; i++)
+            {
+                copied[i] = actors[i];
                 if (copied[i] == null)
                     throw new ArgumentException("Simulation state Actor roster contains a null entry.", nameof(actors));
-            copied.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (copied.Count == 0 || copied.Count != worldState.Bodies.Count)
+            }
+            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (copied.Length == 0 || copied.Length != worldState.Bodies.Count)
                 throw new ArgumentException("Simulation state Actor and World body rosters must be non-empty and equal.", nameof(actors));
-            for (int i = 0; i < copied.Count; i++)
+            for (int i = 0; i < copied.Length; i++)
             {
                 if (copied[i].State.NumericProfile != worldState.NumericProfile ||
                     copied[i].ActorId != worldState.Bodies[i].ActorId ||
@@ -226,7 +231,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException("Simulation state Actor and World body rosters must share one stable ActorId order.", nameof(actors));
                 }
             }
-            m_Actors = copied.AsReadOnly();
+            m_Actors = copied;
         }
 
         public ulong LastCompletedTick { get; }

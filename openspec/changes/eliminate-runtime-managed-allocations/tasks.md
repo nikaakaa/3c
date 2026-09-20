@@ -272,6 +272,8 @@
 
 - [x] 5.60 两数值域 AbilityEvaluatePass 按锁定 roster 持有可重置 WorldSolveBatchRequest workspace，复用 Batch 对象与内部请求数组，删除每 simulation step 的请求 Batch 和数组分配；RequestHash 仍逐 step 重算
 
+- [x] 5.61 两数值域 SimulationWorldStateSet 按 actor workspace Count 复制到独立最终数组并原地排序校验，删除每 completed step 的 Actor List 与 ReadOnlyCollection 包装；状态集继续独立持有 Actor 状态引用
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

@@ -1684,3 +1684,12 @@
 - 两域 Product slot factory、Finalize writer、Transaction、LocalImmediateOutput，以及 Rollback History／OutputDisposition、ServerAuthoritative Authority／Prediction readers 统一改为直接承载 SimulationActorTickResult。Transaction 与输出消费直接读取 entry.Value。
 - 删除两套包装类型和每 Actor 每 simulation step 的一个 managed 包装对象；SimulationActorTickResult 本身仍是跨 Finalize、CompletedStep 和 Committer 的正式业务结果，其寿命与排序不变。不保留兼容 Product 路径。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功；全运行源码检索确认旧类型及 Value.Result 链均已清空。未新增测试、未操作共享 Unity、未做输出运行对比或 Player 分配采样。
+
+## 2026-09-21 SimulationWorldStateSet 最终 Actor 数组
+
+对应 tasks.md 的 5.61。
+
+- Fixed／Float32 CompleteStep 使用可复用 ExecutionWorkspaceBuffer<SimulationActorState> 收集下一状态，随后构造 SimulationWorldStateSet；原构造器复制到 List、排序校验并创建 ReadOnlyCollection。恢复与初始组装也提供数组或可计数列表。
+- 两域构造入口收窄为 IReadOnlyList，按 Count 复制到独立最终数组，在数组上执行原 null、ActorId 排序、非空、world body 数量、numeric profile 与稳定 roster 校验；公开 Actors 仍为 IReadOnlyList。
+- 删除每 completed simulation step 的 Actor List 与 ReadOnlyCollection 两个对象，以最终数组替代原 List 底层存储。状态集继续独立持有 SimulationActorState 引用，不借用下一 tick 会复用的 workspace。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback 编译零警告零错误；DotRecastAuthority 编译通过并仅带 DotRecast 依赖包两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 全依赖构建通过并保留 Unity 包及既有 Editor 代码十七条警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做状态发布运行对比或 Player 分配采样。

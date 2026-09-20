@@ -273,6 +273,7 @@ namespace ThirdPersonSimulation.Fixed
                 CurrentValue = source.CurrentValue,
                 Revision = source.Revision
             };
+            result.Modifiers.Capacity = source.Modifiers.Count;
             for (int i = 0; i < source.Modifiers.Count; i++)
                 result.Modifiers.Add(CloneModifier(source.Modifiers[i]));
             return result;

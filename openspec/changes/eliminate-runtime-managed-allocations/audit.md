@@ -1549,3 +1549,12 @@
 - 两域 CommitBatch 构造入口收窄为 IReadOnlyList，按 Count 分别创建 completed step 与 source egress 最终数组，在复制时执行原 step 非空／tick 严格递增和 egress 非空记录校验；空集合复用 Array.Empty，公开属性仍为 IReadOnlyList。
 - 删除每个已提交外层 tick 的 steps 与 source egress 两个结果 List 对象，以最终数组替代各自原 List 底层数组。CommitBatch 对象、非空数组、事件覆盖列表和 disposition 仍存在。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做提交运行对比或 Player 分配采样。
+
+## 2026-09-21 CommitBatch 事件覆盖数组
+
+对应 tasks.md 的 2.77，取代 2.60 中仍保留事件覆盖 List 的状态。
+
+- CommitBatch 事件覆盖校验最终必须与 OutputDispositions.Dispositions.Count 完全相等；原实现以该数量预备 List 容量，再 Add 全部 GameplayFacts 与 PresentationCommands，排序并逐项核对 EventId／ActorId。
+- 两域现以 disposition 数量创建精确 OutputEventOwner 数组并顺序填充。事件超过数组时立即抛原“dispositions do not cover every Step EventId”参数错误，填充完成后数量不足仍抛同一错误；数量相等才原地排序并执行原身份与重复 EventId 校验。
+- 正常提交路径删除一个覆盖校验 List 对象，以相同元素数组完成同步验证；数组只活到 CommitBatch 构造结束。CommitBatch 持久结果和 OutputDispositionSet 不引用该数组。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做多事件提交运行对比或 Player 分配采样。

@@ -318,8 +318,10 @@ namespace ThirdPersonSimulation.Fixed
                 if (stepValues[i] == null || i > 0 && stepValues[i - 1].Step.Tick.CompareTo(stepValues[i].Step.Tick) >= 0)
                     throw new ArgumentException("Commit batch Step order is invalid.", nameof(steps));
             }
-            var outputEvents = new List<OutputEventOwner>(
-                outputDispositions.Dispositions.Count);
+            var outputEvents = outputDispositions.Dispositions.Count == 0
+                ? Array.Empty<OutputEventOwner>()
+                : new OutputEventOwner[outputDispositions.Dispositions.Count];
+            int outputEventCount = 0;
             for (int i = 0; i < stepValues.Length; i++)
             {
                 SimulationTickResult result = stepValues[i].Result;
@@ -328,22 +330,26 @@ namespace ThirdPersonSimulation.Fixed
                     SimulationActorTickResult actor = result.Actors[actorIndex];
                     for (int eventIndex = 0; eventIndex < actor.GameplayFacts.Count; eventIndex++)
                     {
-                        outputEvents.Add(new OutputEventOwner(
+                        if (outputEventCount >= outputEvents.Length)
+                            throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
+                        outputEvents[outputEventCount++] = new OutputEventOwner(
                             actor.GameplayFacts[eventIndex].Header.EventId,
-                            actor.ActorId));
+                            actor.ActorId);
                     }
                     for (int eventIndex = 0; eventIndex < actor.PresentationCommands.Count; eventIndex++)
                     {
-                        outputEvents.Add(new OutputEventOwner(
+                        if (outputEventCount >= outputEvents.Length)
+                            throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
+                        outputEvents[outputEventCount++] = new OutputEventOwner(
                             actor.PresentationCommands[eventIndex].Header.EventId,
-                            actor.ActorId));
+                            actor.ActorId);
                     }
                 }
             }
-            outputEvents.Sort((left, right) => left.EventId.CompareTo(right.EventId));
-            if (outputEvents.Count != outputDispositions.Dispositions.Count)
+            if (outputEventCount != outputEvents.Length)
                 throw new ArgumentException("Commit batch dispositions do not cover every Step EventId.", nameof(outputDispositions));
-            for (int i = 0; i < outputEvents.Count; i++)
+            Array.Sort(outputEvents, (left, right) => left.EventId.CompareTo(right.EventId));
+            for (int i = 0; i < outputEvents.Length; i++)
             {
                 if (!outputEvents[i].EventId.Equals(outputDispositions.Dispositions[i].SourceEventId) ||
                     !outputEvents[i].ActorId.Equals(outputDispositions.Dispositions[i].ActorId) ||

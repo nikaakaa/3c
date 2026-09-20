@@ -39,7 +39,7 @@ ScenePlay 是 Preview 的唯一正式运行底座，不是第四种产品形态�
 - `graph-authoring-editor-shell`：Graph Shell 承载三种工作形态和共享 Session 状态，不为每个领域复制场景控制器。
 - `btsmtl-runtime-diagnostics`：RuntimeDebug 通过统一 Session 提供当前调用栈、SourceMap、Capture/History 和只读视图。
 - `gameplay-simulation-session-composition`：Preview 只能连接正式 Session composition，不能创建 Preview 专用 Kernel、Actor 或 Pipeline。
-- 现有角色、Pose、Animation、Timeline、Document 和程序集所有权 delta：继续保留各领域边界，但统一消费 Workbench 的 Authoring/Preview/RuntimeDebug 语义。
+- 角色 Animation、Timeline、领域作者合同和程序集所有权 delta：继续保留各领域边界，但统一消费 Workbench 的 Authoring/Preview/RuntimeDebug 语义。Pose 的 ScenePlay 与原生图合同已经进入现行 spec，不重复覆盖；已退役的 Document 同步协议不属于本 change。
 
 ## Impact
 
@@ -72,3 +72,11 @@ BtsmtlScenePlayProfile
 - RuntimeDebug 当前真实执行到了哪个 Graph、Timeline、Track 或 Clip？
 
 任何不能直接服务这三个问题的独立面板、播放器、状态副本或专用时间轴都不属于本 change。
+
+## 2026-09-20 现行规范对账
+
+- `character-presentation-pose-graph`、`character-pose-graph-runtime-architecture`、`character-animation-selection-runtime` 已明确原生图与 ScenePlay。删除本 change 中以旧 Pose Image、Projection 和已移除 requirement 为目标的重复 delta，保留现行合同。
+- `btsmtl-agent-authoring-document-sync` 已退出当前能力目录；删除其 Document v5 delta。字段资格只引用现行 C# authoring、Capability 和 typed Mutation，不恢复同步包。
+- 当前 `btsmtl-timeline-editor-preview` 前部已规定原 Timeline Session 菜单，后部仍有“默认不包含未确认的 Timeline 内 Scene Play 快捷控制”。本 change 只明确已确认的 Profile、三态和正式 Session 菜单；普通编辑游标仍不执行角色。delta 改为当前 requirement 名称，避免归档时覆盖不存在的旧条款。
+- 动画层和 MM 的现行 spec 仍含独立 Fact/Query Fixture 预览措辞，与当前 `openspec/project.md` 及原生 Pose spec 的唯一 ScenePlay 合同冲突。本 change 的对应 delta 统一为正式 Actor 的只读观察，不恢复 Fixture 或旧 Projection。
+- 三种形态始终从原 Timeline 窗口进入；FlowCanvas 仅复用已有图面板进行来源导航，不替换 Timeline 内的 Slate，也不新增 Workbench。

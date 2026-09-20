@@ -2,7 +2,7 @@
 
 ### Requirement: 运行期间字段编辑资格必须由领域正式合同提供
 
-领域 MUST消费主重构的唯一 Document v5 基础及对应正式 domain 增量的共享 Capability、作者 owner 和参数合同，向所有作者入口一致提供运行可调参数、需要 Build 的作者字段、纯编辑布局与只读运行观察的区别。技能/控制配置、Pose 与独立 Timeline MUST保持各自资格和采用规则；窗口 MUST不按字段名、数值类型或 C# 反射猜测可热更新能力。运行可调参数 MUST复用真实作者 Mutation、Validator、Undo 和正式运行端口；其输入范围和生效时机 MUST与领域原有合同一致。
+领域 MUST消费现行正式 C# authoring API、共享 Capability、typed Mutation、作者 owner 和参数合同，向所有作者入口一致提供运行可调参数、需要 Build 的作者字段、纯编辑布局与只读运行观察的区别。技能/控制配置、Pose 与独立 Timeline MUST保持各自资格和采用规则；窗口 MUST不按字段名、数值类型或 C# 反射猜测可热更新能力。运行可调参数 MUST复用真实作者 Mutation、Validator、Undo 和正式运行端口；其输入范围和生效时机 MUST与领域原有合同一致。
 
 #### Scenario: 同一字段从两个页面修改
 

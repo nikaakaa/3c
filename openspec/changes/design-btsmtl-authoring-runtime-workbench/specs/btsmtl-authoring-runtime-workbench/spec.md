@@ -73,11 +73,20 @@ RuntimeDebug MUST 以正式调用栈为导航主线。RootTree 或子图执行�
 - **AND** 当前表面 MUST 在 FlowCanvas 与 Slate 之间切换
 - **AND** 未执行的 Graph、Track 或 Clip MUST 不被当作本次运行内容提前显示
 
+#### Scenario: 复用原 Timeline 面板进行导航
+
+- **WHEN** RuntimeDebug 在 Graph、Timeline 和父调用方之间跟随
+- **THEN** 三种形态的入口 MUST 始终位于原 Timeline 窗口，Timeline MUST 始终使用原 Slate 面板
+- **AND** Graph MUST 使用已有 FlowCanvas 面板，导航 MUST NOT 按调用创建新窗口或将 FlowCanvas 嵌入 Slate
+- **AND** 并行调用 MUST 要求显式 Pin，不得按事件列表顺序选择赢家
+
 #### Scenario: 观察历史运行
 
 - **WHEN** 用户查看 Capture 或 History
 - **THEN** RuntimeDebug MUST 显示记录时的 SourceMap、调用 identity、时间和提交事实
 - **AND** MUST 不使用当前作者数据重新求值历史结果
+
+- **AND** 切换历史位置 MUST 按该位置重新建立已执行内容集合，较晚历史出现的 Track 或 Clip 不得残留到较早位置
 
 ### Requirement: Slate 和 FlowCanvas 必须只是工具表面
 

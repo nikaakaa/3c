@@ -9,7 +9,7 @@
 
 ### Requirement: MM场景预览必须观察真实角色查询与结果
 
-MM 完整角色预览 MUST使用独立场景中真实 Actor 的正式 Definition、MM Pose source、Projection 和 Database。查询输入 MUST由正式角色运行产生，作者页面 MUST只观察实际 Admission、Search、Selection、历史与 Pose 结果，不创建自己的 MM 实例、查询 fixture 或完整角色播放器。需要世界上下文的阶段 MUST使用该真实 Actor 的正式上下文。
+MM 完整角色预览 MUST使用独立场景中真实 Actor 的正式 Definition、MM Pose source、正式资源 binding 和 Database。查询输入 MUST由正式角色运行产生，作者页面 MUST只观察实际 Admission、Search、Selection、历史与 Pose 结果，不创建自己的 MM 实例、查询 fixture 或完整角色播放器。需要世界上下文的阶段 MUST使用该真实 Actor 的正式上下文。
 
 #### Scenario: 预览移动中的MM选择
 
@@ -19,6 +19,6 @@ MM 完整角色预览 MUST使用独立场景中真实 Actor 的正式 Definition
 
 #### Scenario: Database身份已过期
 
-- **WHEN** 所选 Actor 的 Projection、Database 或分析产物与正式 Definition 不匹配
+- **WHEN** 所选 Actor 的资源 binding、Database 或分析产物与正式 Definition 不匹配
 - **THEN** 正式准备 MUST拒绝运行并显示精确不匹配项
 - **AND** MUST不自动重建、迁移旧 query 或选择其它 Definition

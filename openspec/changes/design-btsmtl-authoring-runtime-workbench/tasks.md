@@ -2,7 +2,7 @@
 
 本清单只定义 Authoring Runtime Workbench 的三种产品形态和接入边界，不把手动验收写成任务。Preview 只是其中一种形态。历史实现记录保留在 `implementation-audit.md`，其中的旧任务勾选不代表本次三种产品形态已经实现。
 
-2026-09-20 继续实施：按源码重新核对以下未闭合项，撤销超出实际实现的完成标记。三种形态的入口仍在原 Timeline 窗口，Timeline 始终复用原 Slate 面板。
+2026-09-20 继续实施：重新核对并补齐六项曾过度勾选的实现缺口，见 [本轮实施记录](implementation-current.md)。三种形态的入口仍在原 Timeline 窗口，Timeline 始终复用原 Slate 面板。完成勾选表达代码实现，不代表用户端到端验收或已经归档。
 
 ## 1. 产品形态与术语
 
@@ -15,7 +15,7 @@
 
 - [x] 2.1 在原 `TimelineEditorWindow` 中提供 Authoring、Preview、RuntimeDebug 三种工作形态，删除独立 Workbench 窗口
 - [x] 2.2 三种形态共用 Session、Actor、Ability、Revision 和当前调用目标显示，不新增 Dashboard 或平行控制器
-- [ ] 2.3 页面切换只改变本地视图和 interest，不能创建或销毁第二个 Scene、Actor、Session、时钟或执行器
+- [x] 2.3 页面切换只改变本地视图和 interest，不能创建或销毁第二个 Scene、Actor、Session、时钟或执行器
 - [x] 2.4 将 Start、Pause、Resume、Stop、Export、Prepare、Publish、Adopt、Capture、History 和 Resume Live 归入正式 ScenePlay / Runtime owner，工具表面只提交请求并显示结果
 - [x] 2.5 新增唯一 `BtsmtlScenePlayProfile` SO，只保存 Scene、ContextId、DefaultActorId；Timeline 顶部只选择 Profile，不展开详细设置
 
@@ -28,10 +28,10 @@
 
 ## 4. Preview 形态
 
-- [ ] 4.1 进入 Preview 时创建或连接唯一正式 ScenePlay Session，并显示真实准备阶段
+- [x] 4.1 进入 Preview 时创建或连接唯一正式 ScenePlay Session，并显示真实准备阶段
 - [x] 4.2 Preview 使用正式 Scene、Actor、Ability、RootTree、Timeline、Pose、Motion、Camera、World 和输入链产生结果
 - [x] 4.3 作者修改通过 Export、Prepare、Publish 和 Adopt 进入当前 Session，不退出 Scene、Session 或 Actor
-- [ ] 4.4 兼容参数和内容修改按正式安全边界采用，分别显示作者已修改、已导出、已准备、待采用、已采用和应用失败
+- [x] 4.4 兼容参数和内容修改按正式安全边界采用，分别显示作者已修改、已导出、已准备、待采用、已采用和应用失败
 - [x] 4.5 不兼容 Timeline 拓扑、状态布局、Composition、Scene、Actor roster、C# 代码和运行模块变化明确拒绝混用并要求重建或新 Session
 - [x] 4.6 不使用 Timeline 私有播放器、CMC MontagePlayer、Pose fixture 或 Edit Mode 假 Runtime 作为 Preview 执行路径
 
@@ -39,9 +39,9 @@
 
 - [x] 5.1 RuntimeDebug 只消费 RuntimeDebugSession、SourceMap、Trace、Playback、Snapshot、Capture/History 和正式提交事实
 - [x] 5.2 RootTree / 子图执行时显示 source-mapped FlowCanvas 只读状态，Timeline / TreeClip 执行时显示对应 Slate 只读状态
-- [ ] 5.3 调用栈变化时在 FlowCanvas 与 Slate 之间自动切换，返回父调用方时恢复父路径
+- [x] 5.3 调用栈变化时在 FlowCanvas 与 Slate 之间自动切换，返回父调用方时恢复父路径
 - [x] 5.4 未执行的 Graph、Timeline、Track 和 Clip 不提前显示；并发 playback 使用 identity、调用点和 generation 隔离
-- [ ] 5.5 历史观察使用记录时的 SourceMap 和事实，不用当前作者资产重新求值；RuntimeDebug 不写作者数据
+- [x] 5.5 历史观察使用记录时的 SourceMap 和事实，不用当前作者资产重新求值；RuntimeDebug 不写作者数据
 
 ## 6. Slate / FlowCanvas 工具接入
 
@@ -60,6 +60,6 @@
 ## 8. 文档与清理
 
 - [x] 8.1 统一 change 名、能力名和相关文档引用为 `design-btsmtl-authoring-runtime-workbench` / `btsmtl-authoring-runtime-workbench`
-- [ ] 8.2 对照现行 `btsmtl-timeline-editor-preview`、`btsmtl-runtime-diagnostics`、Graph Shell 和 Session Composition spec，指出冲突并以现行合同为准
+- [x] 8.2 对照现行 `btsmtl-timeline-editor-preview`、`btsmtl-runtime-diagnostics`、Graph Shell 和 Session Composition spec，指出冲突并以现行合同为准
 - [x] 8.3 删除或改写把旧窗口播放器、独立时钟、Runtime overlay 当成 Preview 主体的旧规划描述
 - [x] 8.4 保留 `implementation-audit.md` 作为历史实施证据，并标明它不等于本 Workbench 产品形态已完成

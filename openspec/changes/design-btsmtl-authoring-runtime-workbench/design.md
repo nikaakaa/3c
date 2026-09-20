@@ -75,6 +75,8 @@ Ability
 
 当前焦点在 Graph 时使用 FlowCanvas 作者画布显示 source-mapped 只读状态；当前焦点在 Timeline 时使用 Slate Timeline 表面显示真实 playback、Track、Clip、游标和生命周期；调用栈变化时自动切换表面，不为每个子图或 Timeline 新建窗口。
 
+这里的切换是导航到已有 FlowCanvas 面板或原 Timeline 面板，不替换 Timeline 内的 Slate，也不创建新的工作台。Authoring、Preview、RuntimeDebug 三种形态的入口始终位于原 Timeline 窗口。只有唯一明确的活动调用时自动跟随；并行调用要求显式 Pin，不能按列表顺序挑选。历史位置变化只更新记录时的观察投影，不能把较晚位置已经显示的 Clip 带入较早位置。
+
 ## 3. Session 与工作台关系
 
 一个 Workbench 对应一个当前 Preview Session。多个作者页面、Timeline 页面、FlowCanvas 页面和 RuntimeDebug 页面只持有自己的视图绑定，不能拥有运行状态。

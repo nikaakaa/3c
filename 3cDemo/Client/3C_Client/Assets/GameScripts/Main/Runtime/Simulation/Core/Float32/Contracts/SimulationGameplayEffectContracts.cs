@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ThirdPersonSimulation
 {
@@ -162,40 +163,40 @@ namespace ThirdPersonSimulation
 
         static SimulationSetByCallerValue[] CopySetByCaller(IEnumerable<SimulationSetByCallerValue> source)
         {
-            var values = source == null ? new List<SimulationSetByCallerValue>() : new List<SimulationSetByCallerValue>(source);
-            values.Sort((left, right) => string.CompareOrdinal(left.ParameterId, right.ParameterId));
-            for (int i = 1; i < values.Count; i++)
+            var values = source == null ? Array.Empty<SimulationSetByCallerValue>() : source.ToArray();
+            Array.Sort(values, (left, right) => string.CompareOrdinal(left.ParameterId, right.ParameterId));
+            for (int i = 1; i < values.Length; i++)
             {
                 if (string.Equals(values[i - 1].ParameterId, values[i].ParameterId, StringComparison.Ordinal))
                     throw new ArgumentException($"Duplicate SetByCaller parameter '{values[i].ParameterId}'.", nameof(source));
             }
-            return values.ToArray();
+            return values;
         }
 
         static SimulationAttributeCapture[] CopyAttributes(IEnumerable<SimulationAttributeCapture> source)
         {
-            var values = source == null ? new List<SimulationAttributeCapture>() : new List<SimulationAttributeCapture>(source);
-            values.Sort((left, right) => string.CompareOrdinal(left.AttributeId, right.AttributeId));
-            for (int i = 1; i < values.Count; i++)
+            var values = source == null ? Array.Empty<SimulationAttributeCapture>() : source.ToArray();
+            Array.Sort(values, (left, right) => string.CompareOrdinal(left.AttributeId, right.AttributeId));
+            for (int i = 1; i < values.Length; i++)
             {
                 if (string.Equals(values[i - 1].AttributeId, values[i].AttributeId, StringComparison.Ordinal))
                     throw new ArgumentException($"Duplicate source Attribute snapshot '{values[i].AttributeId}'.", nameof(source));
             }
-            return values.ToArray();
+            return values;
         }
 
         static string[] CopyIdentities(IEnumerable<string> source, string parameterName)
         {
-            var values = source == null ? new List<string>() : new List<string>(source);
-            for (int i = 0; i < values.Count; i++)
+            var values = source == null ? Array.Empty<string>() : source.ToArray();
+            for (int i = 0; i < values.Length; i++)
                 values[i] = SimulationIdentity.Require(values[i], parameterName);
-            values.Sort(StringComparer.Ordinal);
-            for (int i = 1; i < values.Count; i++)
+            Array.Sort(values, StringComparer.Ordinal);
+            for (int i = 1; i < values.Length; i++)
             {
                 if (string.Equals(values[i - 1], values[i], StringComparison.Ordinal))
                     throw new ArgumentException($"Duplicate identity '{values[i]}'.", parameterName);
             }
-            return values.ToArray();
+            return values;
         }
     }
 
@@ -237,7 +238,7 @@ namespace ThirdPersonSimulation
             DefinitionRevision = definitionRevision;
             m_SetByCallerValues = setByCallerValues == null
                 ? Array.Empty<SimulationSetByCallerValue>()
-                : new List<SimulationSetByCallerValue>(setByCallerValues).ToArray();
+                : setByCallerValues.ToArray();
             if (!IsValid)
                 throw new ArgumentException("Gameplay Effect lifecycle ingress is incomplete.");
         }

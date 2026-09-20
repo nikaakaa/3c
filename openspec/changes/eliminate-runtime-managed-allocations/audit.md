@@ -530,6 +530,16 @@
 - 同时核对附加效果应用，现有工作列表通过 Acquire／finally Release 使用，公共 Admission 已在来源标签数量为零时避免新建数组，本轮不重复修改这些正确路径。
 - Fixed／Float32 portable 各自零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；目标文件此前无其它未提交修改，编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity、未做运行对比或 Player 分配采样。
 
+## 2026-09-20 效果请求构造中间列表清理
+
+对应 tasks.md 的 2.19，与代码同步提交。
+
+- SimulationGameplayEffectApplication 的 CopySetByCaller／CopyAttributes／CopyIdentities 原先复制到 List，排序校验后 ToArray。两数值域改为 Enumerable.ToArray 取得独立最终数组，再沿原 Ordinal 比较排序、身份规范化和重复项校验；null 使用原空结果语义。
+- SimulationGameplayEffectLifecycleIngress 的参数只需保留输入顺序，改为直接 ToArray，不再创建 List。FromCompiled 的既有准备数组入口不变，也不新增旁路缓存。
+- 对正式数组和 List 输入，直接 ToArray 利用集合数量复制，取消中间 List 对象和其存储到最终数组的再次复制。一般 IEnumerable 的框架内部仍可能使用增长缓冲及枚举器，结果数组自身仍分配；该改动不等于请求无分配。
+- 调用方数据不会被排序或规范化原地修改，结果仍独立持有。重复参数／属性／标签错误文本和校验顺序保留，生命周期接收规则未改。
+- 编辑前检测到 Unity bee 进程，等待该进程结束并确认无 csc／bee 后修改；两个目标文件无其它未提交修改。Fixed／Float32 portable 分别编译零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过。未新增测试、未刷新或控制共享 Unity、未做请求运行对比或 Player 分配采样。
+
 ## 2026-09-20 渲染查询调用阶段复核
 
 本节补充任务 6.3 的代码证据，不将 6.3 标为完成。本轮不修改渲染代码，也未做编译、运行或 Player 采样。

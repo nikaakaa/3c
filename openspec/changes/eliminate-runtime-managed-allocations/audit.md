@@ -442,6 +442,15 @@
 - 两处不再调用 Enum.ToObject／Enum.IsDefined，不建立额外运行缓存。Action transition／phase／state 和效果操作／应用模式仍使用原泛型入口，此次不宣称 Egress 枚举分配全部完成。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
 
+## 2026-09-20 基线编码与检查点重复构造清理
+
+对应 tasks.md 的 5.34，与代码同步提交。
+
+- AuthoritativeActorBaseline 已有正式 ReadOnlyMemory CharacterStateBytes。CanonicalCodec.WriteBaseline 现在通过其 Span 同步写入，删除 CopyCharacterStateBytes 的编码中转；不新增访问接口，基线构造的独立克隆及预测恢复消费者继续保留。
+- NetworkCheckpointCodec.Capture 原先创建一份 checkpoint 交 layout.Require，再重新复制相同 baseline 字节并构造第二份结果。现构造一次，完整校验后返回该对象。已核对 Require 仅验证身份并读取 checkpoint.StateBytes 的副本进行解码／哈希检查，不修改或保留 checkpoint，因此无需再生成第二个同内容对象。
+- 减少每次基线编码的一份状态字节副本，以及 Capture 第二次基线复制、checkpoint 自身复制、对象及哈希过程。仍保留首次构造的独立数据、校验解码与错误；未改历史存储、回滚恢复或事务归还边界。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做检查点运行对比或 Player 分配采样。
+
 ## 2026-09-20 Egress 剩余枚举解码装箱清理
 
 对应 tasks.md 的 5.33，与代码同步提交。

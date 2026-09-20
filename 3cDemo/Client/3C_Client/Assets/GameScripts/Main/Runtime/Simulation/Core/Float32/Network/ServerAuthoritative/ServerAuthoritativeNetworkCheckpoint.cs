@@ -178,8 +178,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentNullException(nameof(layout));
             if (baseline == null)
                 throw new ArgumentNullException(nameof(baseline));
-            layout.Require(new NetworkCheckpoint(baseline, baseline.CopyCharacterStateBytes()));
-            return new NetworkCheckpoint(baseline, baseline.CopyCharacterStateBytes());
+            var checkpoint = new NetworkCheckpoint(baseline, baseline.CopyCharacterStateBytes());
+            layout.Require(checkpoint);
+            return checkpoint;
         }
 
         public static byte[] WriteFull(NetworkCheckpointLayout layout, NetworkCheckpoint checkpoint)

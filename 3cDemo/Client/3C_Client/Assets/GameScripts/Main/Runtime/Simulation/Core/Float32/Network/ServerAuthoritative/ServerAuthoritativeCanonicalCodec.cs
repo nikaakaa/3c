@@ -111,7 +111,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString(baseline.StateCodecIdentity);
             writer.WriteString(baseline.GameplayContentHash.ToString());
             writer.WriteString(baseline.OperationSetVersion.Value);
-            writer.WriteBytes(baseline.CopyCharacterStateBytes());
+            writer.WriteBytes(baseline.CharacterStateBytes.Span);
             writer.WriteString(baseline.StateHash.ToString());
             writer.WriteString(baseline.WorldRevision.Value);
             writer.WriteString(baseline.SolverId.Value);

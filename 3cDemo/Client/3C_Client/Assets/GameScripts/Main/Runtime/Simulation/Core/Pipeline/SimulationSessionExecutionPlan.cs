@@ -340,9 +340,9 @@ namespace ThirdPersonSimulation
             GameplayContentHash gameplayContentHash,
             SimulationPipelineHash pipelineHash,
             SimulationActorRosterDescriptor roster,
-            IEnumerable<SimulationPipelineStepSourceMapping> sourceMappings,
+            IReadOnlyList<SimulationPipelineStepSourceMapping> sourceMappings,
             SimulationRestoreDirective restore,
-            IEnumerable<TStep> steps,
+            IReadOnlyList<TStep> steps,
             SimulationSessionPlanRequirement requirements)
         {
             if ((byte)status < (byte)SimulationSessionExecutionPlanStatus.Pending ||
@@ -352,11 +352,11 @@ namespace ThirdPersonSimulation
             {
                 throw new ArgumentException("Session ExecutionPlan identity is incomplete.");
             }
-            IReadOnlyList<TStep> values = MaterializeSteps(steps);
+            TStep[] values = MaterializeSteps(steps);
             m_SourceMappings = FreezeMappings(sourceMappings, outerSource.ClockId);
             if (status == SimulationSessionExecutionPlanStatus.Pending)
             {
-                if (restore != null || values.Count != 0 || requirements != SimulationSessionPlanRequirement.None)
+                if (restore != null || values.Length != 0 || requirements != SimulationSessionPlanRequirement.None)
                     throw new ArgumentException("Pending ExecutionPlan cannot contain restore, steps or execution requirements.");
             }
             else if (status == SimulationSessionExecutionPlanStatus.NoStep)
@@ -364,7 +364,7 @@ namespace ThirdPersonSimulation
                 const SimulationSessionPlanRequirement required =
                     SimulationSessionPlanRequirement.WorkingState |
                     SimulationSessionPlanRequirement.OutputDisposition;
-                if (values.Count != 0 || (requirements & required) != required)
+                if (values.Length != 0 || (requirements & required) != required)
                     throw new ArgumentException("NoStep ExecutionPlan requires working state and output disposition without ordered Steps.");
             }
             else
@@ -372,9 +372,9 @@ namespace ThirdPersonSimulation
                 const SimulationSessionPlanRequirement required =
                     SimulationSessionPlanRequirement.WorkingState |
                     SimulationSessionPlanRequirement.OutputDisposition;
-                if (values.Count == 0 || (requirements & required) != required)
+                if (values.Length == 0 || (requirements & required) != required)
                     throw new ArgumentException("Executable ExecutionPlan requires ordered Steps, working state and output disposition.");
-                for (int i = 0; i < values.Count; i++)
+                for (int i = 0; i < values.Length; i++)
                 {
                     if (values[i] == null || i > 0 && values[i - 1].Tick.CompareTo(values[i].Tick) >= 0)
                         throw new ArgumentException("ExecutionPlan Steps must have strictly increasing SimulationTick values.", nameof(steps));
@@ -384,7 +384,7 @@ namespace ThirdPersonSimulation
                         throw new ArgumentException("ExecutionPlan Step provenance sequence must be strictly increasing.", nameof(steps));
                 }
             }
-            if (values.Count > 0 && restore != null && restore.Tick.CompareTo(values[0].Tick) >= 0)
+            if (values.Length > 0 && restore != null && restore.Tick.CompareTo(values[0].Tick) >= 0)
                 throw new ArgumentException("Restore Tick must precede the first ExecutionPlan Step.", nameof(restore));
             Status = status;
             OuterSource = outerSource;
@@ -406,38 +406,27 @@ namespace ThirdPersonSimulation
         public SimulationSessionPlanRequirement Requirements { get; }
         public IReadOnlyList<TStep> Steps => m_Steps;
 
-        static IReadOnlyList<TStep> MaterializeSteps(IEnumerable<TStep> steps)
+        static TStep[] MaterializeSteps(IReadOnlyList<TStep> steps)
         {
-            if (steps == null || steps is IReadOnlyCollection<TStep> collection && collection.Count == 0)
+            if (steps == null || steps.Count == 0)
                 return Array.Empty<TStep>();
-            if (steps is TStep[] source)
-                return (TStep[])source.Clone();
-            return new List<TStep>(steps);
+            var values = new TStep[steps.Count];
+            for (int i = 0; i < values.Length; i++)
+                values[i] = steps[i];
+            return values;
         }
 
-        static IReadOnlyList<SimulationPipelineStepSourceMapping> FreezeMappings(
-            IEnumerable<SimulationPipelineStepSourceMapping> source,
+        static SimulationPipelineStepSourceMapping[] FreezeMappings(
+            IReadOnlyList<SimulationPipelineStepSourceMapping> source,
             string outerClockId)
         {
-            if (source == null ||
-                source is IReadOnlyCollection<SimulationPipelineStepSourceMapping> collection && collection.Count == 0)
-            {
+            if (source == null || source.Count == 0)
                 return Array.Empty<SimulationPipelineStepSourceMapping>();
-            }
-            IReadOnlyList<SimulationPipelineStepSourceMapping> values;
-            if (source is SimulationPipelineStepSourceMapping[] sourceArray)
-            {
-                var array = (SimulationPipelineStepSourceMapping[])sourceArray.Clone();
-                Array.Sort(array, CompareSourceMappings);
-                values = array;
-            }
-            else
-            {
-                var list = new List<SimulationPipelineStepSourceMapping>(source);
-                list.Sort(CompareSourceMappings);
-                values = list;
-            }
-            for (int i = 0; i < values.Count; i++)
+            var values = new SimulationPipelineStepSourceMapping[source.Count];
+            for (int i = 0; i < values.Length; i++)
+                values[i] = source[i];
+            Array.Sort(values, CompareSourceMappings);
+            for (int i = 0; i < values.Length; i++)
             {
                 if (!string.Equals(values[i].OuterClockId, outerClockId, StringComparison.Ordinal) ||
                     i > 0 && string.Equals(values[i - 1].StepClockId, values[i].StepClockId, StringComparison.Ordinal) &&

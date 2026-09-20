@@ -154,6 +154,8 @@
 
 - [x] 2.90 两数值域 SimulationActorState 改为只读值状态，CompleteStep、初始组装和恢复直接写入 Actor 数组，删除每 Actor 的状态外壳对象；restore 缺失查询同步改为 TryFindActor
 
+- [x] 2.91 共用 SimulationSessionExecutionPlan 将 steps 与 source mappings 按 IReadOnlyList 准确复制到最终数组并原地排序校验，删除 rollback／server-authoritative 计划构造的第二只结果 List 与容量冗余；计划仍独立持有输入
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

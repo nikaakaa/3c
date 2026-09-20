@@ -1932,3 +1932,12 @@
 - SimulationCanonicalPayloadHash 新增 ReadOnlySpan<byte> 正式入口，原 byte[] 入口继续做 null 校验后委托给 span 实现。hash egress 直接传 SolverStatePayload.Span，摘要算法、十六进制格式和 KccHash 字段不变。
 - 删除每个 rollback hash tick 一份与 solver payload 等长的 byte[] 复制。SHA256 实例、最终哈希字符串和 world state 解码自身成本仍保留，本步不宣称整条 hash egress 无分配。
 - ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 hash cadence 或 Player 分配采样。
+
+## 2026-09-21 ExecutionPlan 最终数组
+
+对应 tasks.md 的 2.91。
+
+- SimulationSessionExecutionPlan 是 Fixed、Float32、rollback 与 server-authoritative 共用的每 outer tick 计划对象。原 steps 若不是数组会再创建 List，source mappings 同样创建并排序第二只 List；rollback 和预测权威生产者本身已经用 List 组装，因而计划构造会再产生一只集合对象和一份带容量的底层存储。
+- 构造输入收窄为 IReadOnlyList。steps 按准确 Count 复制到最终 TStep[]；mappings 按准确 Count 复制到最终数组后原地排序并执行原 outer clock／重复映射校验。空输入继续复用 Array.Empty，计划仍不借用调用方集合。
+- 删除非数组生产者每个计划的第二只 List 及其容量冗余，最终独立数组仍按 plan 寿命存在。数组生产者当前仍由公开构造复制，显式所有权转移需要在各调度器证明数组不再修改后另行处理。
+- 首次 Fixed portable 构建发现局部 values 已收窄为数组但五处校验仍使用 Count，改为 Length 后，Fixed、Float32、DeterministicRollback 与 ServerAuthoritative portable 均编译零警告零错误；构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 schedule 运行对比或 Player 分配采样。

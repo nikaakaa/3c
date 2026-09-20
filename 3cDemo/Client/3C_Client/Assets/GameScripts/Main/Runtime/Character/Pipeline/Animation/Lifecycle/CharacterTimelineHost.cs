@@ -1631,36 +1631,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             for (int index = 0; index < cues.Count; index++)
             {
                 TimelineActionCueSample cue = cues[index];
-                var committed = new TimelineActionCueEvent(
-                    new EventId(StableHash.Compute(
-                        "timeline.action-cue.committed",
-                        evaluation.Handle.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                        evaluation.Generation.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                        evaluation.LogicTick.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                        evaluation.Cycle.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                        index.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                        cue.ClipAuthoringId,
-                        cue.CueId,
+                if (ActionCueCommitted != null)
+                {
+                    var committed = new TimelineActionCueEvent(
+                        new EventId(StableHash.Compute(
+                            "timeline.action-cue.committed",
+                            evaluation.Handle.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            evaluation.Generation.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            evaluation.LogicTick.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            evaluation.Cycle.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            index.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            cue.ClipAuthoringId,
+                            cue.CueId,
+                            cue.CueType,
+                            cue.StateId,
+                            cue.LocalFrame.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            cue.BranchId)),
                         cue.CueType,
+                        cue.CueId,
                         cue.StateId,
-                        cue.LocalFrame.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                        cue.BranchId)),
-                    cue.CueType,
-                    cue.CueId,
-                    cue.StateId,
-                    cue.LocalFrame,
-                    cue.BranchId,
-                    evaluation.Handle,
-                    evaluation.Generation,
-                    evaluation.LogicTick,
-                    TimelineTimeGrid.NearestIndex(evaluation.Time, TimelineUtility.FrameRate),
-                    evaluation.Cycle,
-                    evaluation.ExecutionIdentity,
-                    evaluation.ContentRevision,
-                    cue.SourceId,
-                    cue.TrackName,
-                    cue.ClipAuthoringId);
-                ActionCueCommitted?.Invoke(committed);
+                        cue.LocalFrame,
+                        cue.BranchId,
+                        evaluation.Handle,
+                        evaluation.Generation,
+                        evaluation.LogicTick,
+                        TimelineTimeGrid.NearestIndex(evaluation.Time, TimelineUtility.FrameRate),
+                        evaluation.Cycle,
+                        evaluation.ExecutionIdentity,
+                        evaluation.ContentRevision,
+                        cue.SourceId,
+                        cue.TrackName,
+                        cue.ClipAuthoringId);
+                    ActionCueCommitted.Invoke(committed);
+                }
                 PublishTimelineEvent(
                     active,
                     RuntimeTraceDomain.Logic,
@@ -1680,43 +1683,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelineRuntimeCommittedEvaluation evaluation,
             float time)
         {
-            if (active.Timeline == null)
+            if (active.Timeline == null || m_Diagnostics == null)
                 return;
-            var activeTracks = new HashSet<string>(StringComparer.Ordinal);
-            IReadOnlyList<string> activeClipIds = evaluation.Evaluation?.ClipSamples != null
-                ? evaluation.Evaluation.ClipSamples.Select(value => value.ClipAuthoringId).ToArray()
-                : Array.Empty<string>();
-            if (m_Host.TryGetPlaybackDescriptor(active.Handle, out TimelineRuntimePlaybackDescriptor descriptor))
-                activeClipIds = descriptor.ActiveClipIds;
-            for (int index = 0; index < activeClipIds.Count; index++)
+            bool publishTracks = m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, RuntimeTraceEventKind.TrackActive);
+            bool publishClips = m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, RuntimeTraceEventKind.ClipActive);
+            if (!publishTracks && !publishClips)
+                return;
+            IReadOnlyList<string> activeClipIds = evaluation.ActiveClipIds;
+            for (int trackIndex = 0; trackIndex < active.Timeline.Tracks.Count; trackIndex++)
             {
-                if (!TryFindClip(active.Timeline, activeClipIds[index], out Track track, out Clip clip))
+                Track track = active.Timeline.Tracks[trackIndex];
+                if (track == null)
                     continue;
-                if (activeTracks.Add(track.AuthoringId))
+                bool trackPublished = false;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
-                    PublishTimelineEvent(
-                        active,
-                        RuntimeTraceDomain.Logic,
-                        RuntimeTraceEventKind.TrackActive,
-                        RuntimeSourceElementKey.Track(active.Timeline.AuthoringId, track.AuthoringId),
-                        "Active",
-                        string.Empty,
-                        time,
-                        evaluation.Cycle);
+                    Clip clip = track.Clips[clipIndex];
+                    if (clip == null)
+                        continue;
+                    bool isActive = false;
+                    for (int activeIndex = 0; activeIndex < activeClipIds.Count; activeIndex++)
+                    {
+                        if (!string.Equals(activeClipIds[activeIndex], clip.AuthoringId, StringComparison.Ordinal))
+                            continue;
+                        isActive = true;
+                        break;
+                    }
+                    if (!isActive)
+                        continue;
+                    if (publishTracks && !trackPublished)
+                    {
+                        PublishTimelineEvent(active, RuntimeTraceDomain.Logic, RuntimeTraceEventKind.TrackActive,
+                            RuntimeSourceElementKey.Track(active.Timeline.AuthoringId, track.AuthoringId),
+                            "Active", string.Empty, time, evaluation.Cycle);
+                        trackPublished = true;
+                    }
+                    if (publishClips)
+                        PublishTimelineEvent(active, RuntimeTraceDomain.Logic, RuntimeTraceEventKind.ClipActive,
+                            RuntimeSourceElementKey.Clip(active.Timeline.AuthoringId, track.AuthoringId,
+                                clip.AuthoringId, clip is TreeClip), "Active", string.Empty, time, evaluation.Cycle);
                 }
-                PublishTimelineEvent(
-                    active,
-                    RuntimeTraceDomain.Logic,
-                    RuntimeTraceEventKind.ClipActive,
-                    RuntimeSourceElementKey.Clip(
-                        active.Timeline.AuthoringId,
-                        track.AuthoringId,
-                        clip.AuthoringId,
-                        clip is TreeClip),
-                    "Active",
-                    string.Empty,
-                    time,
-                    evaluation.Cycle);
             }
         }
 
@@ -1738,6 +1744,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     TimelineRuntimeTreeClipEventKind.Exit => RuntimeTraceEventKind.TreeClipExited,
                     _ => throw new ArgumentOutOfRangeException()
                 };
+                if (m_Diagnostics == null || !m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, kind))
+                    continue;
                 RuntimeInstanceKey treeClip = RuntimeInstanceKey.TreeClip(
                     active.RuntimeInstance.CharacterRuntimeId,
                     active.Provenance.SourceGraphRuntimeId,
@@ -1754,7 +1762,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         request.TrackAuthoringId,
                         request.ClipAuthoringId,
                         true),
-                    request.EventKind.ToString(),
+                    request.EventKind switch
+                    {
+                        TimelineRuntimeTreeClipEventKind.Enter => "Enter",
+                        TimelineRuntimeTreeClipEventKind.Update => "Update",
+                        TimelineRuntimeTreeClipEventKind.Exit => "Exit",
+                        _ => throw new ArgumentOutOfRangeException()
+                    },
                     string.Empty,
                     time,
                     request.Cycle,
@@ -1765,8 +1779,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         void PublishTimelineVisualTime(ActivePlayback active, TimelineRuntimePresentationFrame frame)
         {
-            if (!m_Host.TryGetPlaybackDescriptor(active.Handle, out TimelineRuntimePlaybackDescriptor descriptor))
-                return;
             PublishTimelineEvent(
                 active,
                 RuntimeTraceDomain.Presentation,
@@ -1774,8 +1786,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 RuntimeSourceElementKey.Timeline(active.Timeline.AuthoringId),
                 "Presented",
                 string.Empty,
-                descriptor.CursorTime.ToSingle(),
-                descriptor.Cycle,
+                frame.Time.ToSingle(),
+                frame.Cycle,
                 default,
                 string.Empty);
         }
@@ -1829,7 +1841,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RuntimeInstanceKey runtimeInstance = default,
             string relatedElementId = "")
         {
-            if (m_Diagnostics == null || !active.RuntimeInstance.IsValid)
+            if (m_Diagnostics == null || !active.RuntimeInstance.IsValid ||
+                !m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, kind))
                 return;
             m_Diagnostics.Publish(
                 RuntimeTraceChannel.Timeline,
@@ -1860,25 +1873,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     return true;
             }
             active = default;
-            return false;
-        }
-
-        static bool TryFindClip(TimelineData timeline, string clipAuthoringId, out Track track, out Clip clip)
-        {
-            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
-            {
-                track = timeline.Tracks[trackIndex];
-                if (track == null)
-                    continue;
-                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
-                {
-                    clip = track.Clips[clipIndex];
-                    if (clip != null && string.Equals(clip.AuthoringId, clipAuthoringId, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-            track = null;
-            clip = null;
             return false;
         }
 

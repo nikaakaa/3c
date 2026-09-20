@@ -433,3 +433,10 @@
 - 同 action／调用／Timeline／generation 的正式进度重新发布时，原时钟将其识别为 Correction，Host 原绑定仍在，因此动画和连续 Camera 可按正式位置重新采样；帧提交后清除撤销标记。已接受 Marker 不因重现而补发或伪造新 TraversalIndex，遵循 design.md 的修正规则。确认后无重现则释放原时钟槽、driver 与 Host 绑定。
 - 本批恢复标记在 driver 接受后更新；原跨 Pose／Camera 最终 Apply 异常的整体回滚仍未闭合，Marker 真实输出修订的下游调和与完整0 GC仍需继续对账，不据此勾选整个第7节。多来源倍率组合的相乘／最小值业务规则已向用户提问，尚未写入实现。
 - Unity脚本构建及最终域重载完成（1789918181297），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试，未执行端到端验收。
+
+## 诊断读取本次接受结果并删除逐步中间副本
+- 对应0.7／5.3／8.4：TimelineRuntimeCommittedEvaluation 直接携带原 Advance.ActiveClipIds，不另存第二份活动集合。活动 Track／Clip 诊断按正式轨道顺序读取该集合，每轨道最多发布一次 TrackActive；删除逐步 HashSet、ClipSamples.Select.ToArray 及额外 playback descriptor 快照和旧 TryFindClip 扫描入口。
+- TimelineVisualTime 直接读取原表现帧 Time／Cycle，修正先前显示逻辑游标、与实际表现采样不一致的问题；不再为了两个字段分配含活动集合的播放描述。
+- 诊断构造前复用原 ShouldPublish（同时覆盖 live／capture）过滤；TreeClip 事件名使用原枚举对应常量，删除枚举 ToString 分配。ActionCue 无订阅者时不构造无人消费的 committed EventId，但正式订阅者存在时仍按原业务链交付，未删除事件能力。
+- 仍未解决：有消费者时的 EventId 哈希分配、Camera 字符串键、逻辑求值集合及最终跨领域事务；本批不代表整个0 GC完成。多来源倍率规则仍等待用户答复。
+- Unity脚本构建和最终域重载完成（1789918476732），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试。

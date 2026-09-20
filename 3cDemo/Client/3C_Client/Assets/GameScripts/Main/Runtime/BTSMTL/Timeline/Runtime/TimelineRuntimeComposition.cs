@@ -164,6 +164,7 @@ namespace BTSMTL.Timeline.Runtime
             ContentRevision = context.Playback.Content.ContentHash;
             ExecutionIdentity = context.Playback.ExecutionIdentity;
             Evaluation = context.Advance.Evaluation;
+            ActiveClipIds = context.Advance.ActiveClipIds;
             Completes = context.Advance.Completes;
             Control = context.Advance.Control;
         }
@@ -179,6 +180,7 @@ namespace BTSMTL.Timeline.Runtime
         public string ContentRevision { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelineRuntimeEvaluationResult Evaluation { get; }
+        public IReadOnlyList<string> ActiveClipIds { get; }
         public bool Completes { get; }
         public AbilityTimelinePlaybackControl Control { get; }
     }

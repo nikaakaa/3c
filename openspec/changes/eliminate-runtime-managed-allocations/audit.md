@@ -1360,3 +1360,12 @@
 - 删除字段、提交赋值、reset 清空及 Role 转发属性；正式跨帧结果仍由 CharacterFinalPoseNativePublication 提供，节点 observation 仍复制到 m_CommittedObservations，行为和诊断边界不变。
 - 该清理本身不减少端口值构造次数，但移除了无消费者的跨帧引用，明确端口值只借给当前 evaluation／validate／commit 链，为后续按 handler 复用值对象消除错误寿命信号。
 - 定向引用检索及 diff 空白校验通过。ThirdPersonClient.Runtime 构建被并行提交 730d5216d 的 TimelineRuntimeAdvanceResult／SampleView 六个消费者接口错误阻断，目标文件没有编译诊断；未新增测试、未主动刷新 Unity、未做 Pose 运行回放或 Player 分配采样。
+
+## 2026-09-21 Pipeline 事务身份 UTF-8 直写
+
+对应 tasks.md 的 2.56。
+
+- PipelineTransactionCoordinator 每个外层 tick 原调用 StableHash.Compute，依次传入 domain、composition hash、plan hash、source kind、clock id、source tick、completed tick。入口会产生三个数字字符串和 params 数组，SimulationIdentity.Hash 再产生 join 字符串及完整 UTF-8 数组。
+- 专用事务身份入口现从已有 StableHash.Value 直接取得 composition／plan 文本，三个非负数字使用与原 ToString 相同的 CurrentCulture 写入栈 char 缓冲；七段内容仍按原顺序，以 U+001F 的同一 UTF-8 单字节 0x1F 分隔，最终片段同步交给原 SHA-256 canonical hash。
+- UTF-8 容量按七段实际 byte count 加六个分隔符精确计算并从 ArrayPool 租用，hash 完成后立即归还；不跨 tick 保存 payload。最终 StableHash 的 64 字符串及 SHA 提供者仍分配，池首次扩容也可能分配，本项不宣称事务身份已达到 0 GC。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做不同 Culture 的事务身份运行对比或 Player 分配采样。

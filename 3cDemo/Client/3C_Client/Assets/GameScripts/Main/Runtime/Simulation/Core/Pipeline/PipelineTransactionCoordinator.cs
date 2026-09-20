@@ -1,6 +1,9 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.Text;
 using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
@@ -63,14 +66,14 @@ namespace ThirdPersonSimulation
         {
             ulong beforeCompletedTick = m_Target.BaselineCompletedTick;
             TWorkingState working = m_Target.CreateWorkingState();
-            StableHash transactionIdentity = StableHash.Compute(
+            StableHash transactionIdentity = ComputeTransactionIdentity(
                 m_Target.TransactionIdentityDomain,
-                m_Services.Descriptor.Identity.ToString(),
-                m_Services.Plan.PlanHash.ToString(),
-                ((int)outer.Source.Kind).ToString(),
+                m_Services.Descriptor.Identity.Value.Value,
+                m_Services.Plan.PlanHash.Value,
+                outer.Source.Kind,
                 outer.Source.ClockId,
-                outer.Source.SourceTick.ToString(),
-                beforeCompletedTick.ToString());
+                outer.Source.SourceTick,
+                beforeCompletedTick);
             PublishPipeline(
                 outer.Source,
                 beforeCompletedTick,
@@ -796,6 +799,103 @@ namespace ThirdPersonSimulation
                 string.Join(",", inputValues),
                 string.Join(",", outputValues));
         }
+
+        static StableHash ComputeTransactionIdentity(
+            string domain,
+            string descriptorIdentity,
+            string planHash,
+            SimulationTickSourceKind sourceKind,
+            string clockId,
+            ulong sourceTick,
+            ulong beforeCompletedTick)
+        {
+            Span<char> sourceKindText = stackalloc char[3];
+            Span<char> sourceTickText = stackalloc char[20];
+            Span<char> completedTickText = stackalloc char[20];
+            if (!((int)sourceKind).TryFormat(
+                    sourceKindText,
+                    out int sourceKindLength,
+                    default,
+                    CultureInfo.CurrentCulture) ||
+                !sourceTick.TryFormat(
+                    sourceTickText,
+                    out int sourceTickLength,
+                    default,
+                    CultureInfo.CurrentCulture) ||
+                !beforeCompletedTick.TryFormat(
+                    completedTickText,
+                    out int completedTickLength,
+                    default,
+                    CultureInfo.CurrentCulture))
+            {
+                throw new InvalidOperationException(
+                    "Pipeline transaction identity numeric formatting failed.");
+            }
+            ReadOnlySpan<char> sourceKindValue =
+                sourceKindText.Slice(0, sourceKindLength);
+            ReadOnlySpan<char> sourceTickValue =
+                sourceTickText.Slice(0, sourceTickLength);
+            ReadOnlySpan<char> completedTickValue =
+                completedTickText.Slice(0, completedTickLength);
+            Encoding utf8 = Encoding.UTF8;
+            int byteCount = checked(
+                6 +
+                utf8.GetByteCount(domain) +
+                utf8.GetByteCount(descriptorIdentity) +
+                utf8.GetByteCount(planHash) +
+                utf8.GetByteCount(sourceKindValue) +
+                utf8.GetByteCount(clockId) +
+                utf8.GetByteCount(sourceTickValue) +
+                utf8.GetByteCount(completedTickValue));
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(byteCount);
+            try
+            {
+                int offset = 0;
+                offset = AppendUtf8(utf8, buffer, offset, domain);
+                buffer[offset++] = 0x1f;
+                offset = AppendUtf8(utf8, buffer, offset, descriptorIdentity);
+                buffer[offset++] = 0x1f;
+                offset = AppendUtf8(utf8, buffer, offset, planHash);
+                buffer[offset++] = 0x1f;
+                offset = AppendUtf8(utf8, buffer, offset, sourceKindValue);
+                buffer[offset++] = 0x1f;
+                offset = AppendUtf8(utf8, buffer, offset, clockId);
+                buffer[offset++] = 0x1f;
+                offset = AppendUtf8(utf8, buffer, offset, sourceTickValue);
+                buffer[offset++] = 0x1f;
+                offset = AppendUtf8(utf8, buffer, offset, completedTickValue);
+                if (offset != byteCount)
+                    throw new InvalidOperationException(
+                        "Pipeline transaction identity UTF-8 length is inconsistent.");
+                return SimulationCanonicalPayloadHash.Compute(
+                    new ArraySegment<byte>(buffer, 0, offset));
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        static int AppendUtf8(
+            Encoding encoding,
+            byte[] buffer,
+            int offset,
+            string value) =>
+            offset + encoding.GetBytes(
+                value,
+                0,
+                value.Length,
+                buffer,
+                offset);
+
+        static int AppendUtf8(
+            Encoding encoding,
+            byte[] buffer,
+            int offset,
+            ReadOnlySpan<char> value) =>
+            offset + encoding.GetBytes(
+                value,
+                buffer.AsSpan(offset));
 
         readonly struct PassProductTrace
         {

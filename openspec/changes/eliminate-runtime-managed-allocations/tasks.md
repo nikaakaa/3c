@@ -91,6 +91,7 @@
 - [x] 2.53 两数值域 SimulationStep 的独立 inputs／ingress 列表直接作为 IReadOnlyList 暴露，删除每个 step 两个 ReadOnlyCollection 包装对象
 - [x] 2.54 两数值域 ExecutionPlan 的独立 steps／source mappings 列表直接作为 IReadOnlyList 暴露，删除每个外层 tick 计划的两个 ReadOnlyCollection 包装对象
 - [x] 2.55 两数值域 SimulationStep 的 actor 收集列表按 inputs.Count 准确预备容量，删除多 Actor step 填充中的列表扩容
+- [x] 2.56 共享 Pipeline 每 tick 事务身份按原七段文本和 U+001F 分隔直接写入池化 UTF-8 缓冲，删除三个数字字符串、params 数组、join 字符串和最终 UTF-8 数组
 
 ## 3. Timeline和事件图
 

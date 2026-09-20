@@ -20,7 +20,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong lastCompletedTick,
             FixedSimulationCommitBatch commitBatch)
         {
-            if (!Enum.IsDefined(typeof(FixedPipelineTransactionOutcome), outcome) || !transactionIdentity.IsValid)
+            if (outcome is not (FixedPipelineTransactionOutcome.Pending or FixedPipelineTransactionOutcome.Committed) || !transactionIdentity.IsValid)
                 throw new ArgumentException("Pipeline transaction result identity is incomplete.");
             if ((outcome == FixedPipelineTransactionOutcome.Committed) != (commitBatch != null))
                 throw new ArgumentException("Only a committed Pipeline transaction has a Commit batch.", nameof(commitBatch));

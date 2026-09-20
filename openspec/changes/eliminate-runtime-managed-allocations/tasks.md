@@ -55,6 +55,8 @@
 
 - [x] 2.32 Fixed 输入源状态通知直接匹配全部四种正式 disposition，删除提交／丢弃／恢复调用中的 Enum.IsDefined 装箱，保留通知顺序和原非法值异常
 
+- [x] 2.33 两数值域 Pipeline Execute 返回结果直接校验 Pending／Committed，删除结果构造中的 Enum.IsDefined 装箱，保留事务身份和提交批次关联约束
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

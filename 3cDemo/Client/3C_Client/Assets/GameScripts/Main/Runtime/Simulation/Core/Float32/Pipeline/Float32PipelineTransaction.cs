@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation
             ulong lastCompletedTick,
             Float32SimulationCommitBatch commitBatch)
         {
-            if (!Enum.IsDefined(typeof(Float32PipelineTransactionOutcome), outcome) || !transactionIdentity.IsValid)
+            if (outcome is not (Float32PipelineTransactionOutcome.Pending or Float32PipelineTransactionOutcome.Committed) || !transactionIdentity.IsValid)
                 throw new ArgumentException("Pipeline transaction result identity is incomplete.");
             if ((outcome == Float32PipelineTransactionOutcome.Committed) != (commitBatch != null))
                 throw new ArgumentException("Only a committed Pipeline transaction has a Commit batch.", nameof(commitBatch));

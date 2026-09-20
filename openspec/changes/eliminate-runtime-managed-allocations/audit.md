@@ -855,3 +855,11 @@
 - FixedLocalInputSourcePort.NotifyStateDisposition 原 Enum.IsDefined 校验参数，再依绑定顺序通知各控制源。改为直接接受 Prepared／Committed／Discarded／Restored 全部四成员，其它值仍抛相同 ArgumentOutOfRangeException；没有根据当前调用点缩窄合法集合。
 - 运行链证据：FixedLocalControlInputCheckpoint.Restore 在恢复输入后通知 Discarded，Dispose 在未恢复时通知 Committed；FixedLocalControlInputRestoreTransaction.Apply 恢复替换状态后通知 Restored。这些属于运行中的提交和恢复流程，不是初始化专用路径。
 - 修改仅一处校验，不改检查点、恢复事务、通知消费者或状态数据生命周期。目标文件无其它未提交修改，编辑前无 csc／bee。最终 Fixed portable 编译零警告零错误并关闭构建服务，diff 空白检查通过；未新增测试、未控制共享 Unity、未做提交／恢复运行或 Player 采样。
+## 2026-09-20 运行事务结果构造枚举校验
+
+对应 tasks.md 的 2.33。
+
+- Fixed／Float32 PipelineTransaction.Execute 在 coordinator 执行后每次构造各自 TransactionResult，原结果构造用 Enum.IsDefined 检查 Outcome。这是运行事务返回路径，不是初始化构造。
+- 改为显式 Pending／Committed 两成员判断，拒绝零及其它非法值；保留 transactionIdentity 校验以及只有 Committed 才能有 commitBatch 的双向关联检查，异常文本和检查先后不变。
+- 只修改两个结果类的成员判断，不改 coordinator、事务执行、快照、提交批次或恢复行为。结果 class 本身仍分配，本次删除枚举元数据查询和装箱，不声称事务无分配。
+- 两文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未运行事务对比或 Player 分配采样。

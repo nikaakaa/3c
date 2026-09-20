@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         "ownerId",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
     [BtsmtlSkillAuthoringField("valueType", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
-        "bool", "int", "float", "string", "vector2", "vector3")]
+        "bool", "int", "ulong", "float", "string", "vector2", "vector3")]
     public abstract class BtsmtlSkillBlackboardReadFlowNode<T> : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IBtsmtlSkillBlackboardReadNode
     {
         [SerializeField] BtsmtlSkillBlackboardReference m_Variable;
@@ -85,7 +85,8 @@ namespace ThirdPersonCharacter.Control.Authoring
         Number,
         Identity,
         Vector2,
-        Vector3
+        Vector3,
+        UInt64
     }
 
     [BtsmtlSkillAuthoringField(
@@ -95,7 +96,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         "ownerId",
         TreeDesigner.Authoring.GraphAuthoringFieldValueKind.IdentityReference)]
     [BtsmtlSkillAuthoringField("valueType", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
-        "bool", "int", "float", "string", "vector2", "vector3")]
+        "bool", "int", "ulong", "float", "string", "vector2", "vector3")]
     [BtsmtlSkillAuthoringField("accessMode", TreeDesigner.Authoring.GraphAuthoringFieldValueKind.Enum,
         "get", "set")]
     [BtsmtlSkillAuthoringField(
@@ -139,6 +140,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             BtsmtlSkillBlackboardValueType.Boolean => typeof(bool),
             BtsmtlSkillBlackboardValueType.Integer => typeof(int),
+            BtsmtlSkillBlackboardValueType.UInt64 => typeof(ulong),
             BtsmtlSkillBlackboardValueType.Number => typeof(float),
             BtsmtlSkillBlackboardValueType.Identity => typeof(string),
             BtsmtlSkillBlackboardValueType.Vector2 => typeof(Vector2),

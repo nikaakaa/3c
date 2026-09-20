@@ -7,12 +7,6 @@ using UnityEngine;
 namespace ThirdPersonCharacter.Pipeline.Graph
 {
     [Serializable]
-    [PropertyColor(148, 129, 230)]
-    public sealed class EquipmentUInt64PropertyPort : PropertyPort<ulong>
-    {
-    }
-
-    [Serializable]
     [PropertyColor(230, 138, 106)]
     public sealed class EquipmentChangeFailurePropertyPort : PropertyPort<EquipmentChangeFailure>
     {
@@ -34,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         StringPropertyPort m_Feature = new StringPropertyPort();
 
         [SerializeField, PropertyPort(PortDirection.Output, "Revision"), ReadOnly]
-        EquipmentUInt64PropertyPort m_Revision = new EquipmentUInt64PropertyPort();
+        UInt64PropertyPort m_Revision = new UInt64PropertyPort();
 
         [SerializeField, PropertyPort(PortDirection.Output, "Equipped"), ReadOnly]
         BoolPropertyPort m_Equipped = new BoolPropertyPort();
@@ -71,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         EquipmentParameterValueKind m_ValueKind = EquipmentParameterValueKind.Scalar;
 
         [SerializeField, PropertyPort(PortDirection.Input, "Expected Revision")]
-        EquipmentUInt64PropertyPort m_ExpectedRevision = new EquipmentUInt64PropertyPort();
+        UInt64PropertyPort m_ExpectedRevision = new UInt64PropertyPort();
 
         [SerializeReference, VariablePropertyPort(PortDirection.Output, "Value", "GetAcceptableValueTypes"), ReadOnly]
         PropertyPort m_Output = new FloatPropertyPort();
@@ -110,7 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         ActionContextSlot m_ActionContext;
 
         [SerializeField, PropertyPort(PortDirection.Input, "Expected Revision")]
-        EquipmentUInt64PropertyPort m_ExpectedRevision = new EquipmentUInt64PropertyPort();
+        UInt64PropertyPort m_ExpectedRevision = new UInt64PropertyPort();
 
         public string SlotId => ReadEquipmentIdentityNode.Normalize(m_SlotId);
         public string EquipmentId => ReadEquipmentIdentityNode.Normalize(m_EquipmentId);
@@ -150,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         BoolPropertyPort m_Begun = new BoolPropertyPort();
 
         [SerializeField, PropertyPort(PortDirection.Output, "Change Id"), ReadOnly]
-        EquipmentUInt64PropertyPort m_ChangeId = new EquipmentUInt64PropertyPort();
+        UInt64PropertyPort m_ChangeId = new UInt64PropertyPort();
 
         [SerializeField, PropertyPort(PortDirection.Output, "Failure"), ReadOnly]
         EquipmentChangeFailurePropertyPort m_Failure = new EquipmentChangeFailurePropertyPort();
@@ -160,7 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     public abstract class EquipmentPendingChangeOperationNode : SimulationOperationNode
     {
         [SerializeField, PropertyPort(PortDirection.Input, "Change Id")]
-        EquipmentUInt64PropertyPort m_ChangeId = new EquipmentUInt64PropertyPort();
+        UInt64PropertyPort m_ChangeId = new UInt64PropertyPort();
     }
 
     [Serializable]

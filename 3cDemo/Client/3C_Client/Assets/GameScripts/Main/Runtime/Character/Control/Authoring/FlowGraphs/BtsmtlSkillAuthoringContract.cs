@@ -334,6 +334,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             {
                 "bool" => BtsmtlSkillBlackboardValueType.Boolean,
                 "int" => BtsmtlSkillBlackboardValueType.Integer,
+                "ulong" => BtsmtlSkillBlackboardValueType.UInt64,
                 "float" => BtsmtlSkillBlackboardValueType.Number,
                 "string" => BtsmtlSkillBlackboardValueType.Identity,
                 "vector2" => BtsmtlSkillBlackboardValueType.Vector2,

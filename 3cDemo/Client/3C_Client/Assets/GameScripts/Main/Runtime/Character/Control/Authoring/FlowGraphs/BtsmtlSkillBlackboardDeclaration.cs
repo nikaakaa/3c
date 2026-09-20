@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             PipelineBlackboardInputBinding inputBinding,
             PipelineBlackboardFactProjection factProjection)
         {
-            if (type != typeof(bool) && type != typeof(int) && type != typeof(float) && type != typeof(string) &&
+            if (type != typeof(bool) && type != typeof(int) && type != typeof(ulong) && type != typeof(float) && type != typeof(string) &&
                 type != typeof(Vector2) && type != typeof(Vector3) && type != typeof(ActionTargetSnapshot))
                 throw new InvalidOperationException($"技能黑板不支持'{type?.FullName}'类型。");
             if (!PipelineBlackboardVariablePolicy.IsValid(scope, lifetime))

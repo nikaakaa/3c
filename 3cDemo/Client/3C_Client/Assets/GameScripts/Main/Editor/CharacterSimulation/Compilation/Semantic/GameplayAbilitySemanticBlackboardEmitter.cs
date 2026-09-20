@@ -299,6 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (type == typeof(bool)) kind = ProgramStateValueKind.Boolean;
             else if (type == typeof(int)) kind = ProgramStateValueKind.Int32;
+            else if (type == typeof(ulong)) kind = ProgramStateValueKind.UInt64;
             else if (type == typeof(float)) kind = ProgramStateValueKind.Scalar;
             else if (type == typeof(string)) kind = ProgramStateValueKind.Identity;
             else if (type == typeof(Vector2)) kind = ProgramStateValueKind.Vector2;

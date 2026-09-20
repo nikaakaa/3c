@@ -552,3 +552,10 @@
 - 生命周期Registry保留最近真实事件身份，不让无事件身份的连续采样覆盖它；ProjectSample沿同一Registry读取该来源身份与已投影时间。采样仍不写committed history，不推进逻辑，不改变Camera历史边界。删除PublishSample已无用途的handle参数。
 - 对照现行spec，稳定EventId要求仍适用于正式事件及Simulation输出；此次删除的是PresentationFrame内的连续求值记录所重复构造的事件，不改变Marker或分支事件调和合同。未新增测试；实际Marker／生命周期事件哈希、Snapshot副本及首次播放建立分配仍在剩余范围，未宣称整条热路径0 GC。
 - Unity编译与最终域重载完成（1789926783028），Editor idle，控制台错误为零；未新增测试，未进行运行内存采样或帧失败注入。
+
+## 效果句柄的Tree节点与黑板作者链补齐
+- 对应5.6：进一步核对发现，先前Apply／Remove动态句柄只接入Skill Flow节点，Tree图的ApplyGameplayEffectNode没有Handle输出，RemoveGameplayEffectNode仍保留静态ulong字段。现统一为同名m_Handle UInt64输出／输入端口，删除Remove的静态字段、属性及ConfigureAuthoring参数，继续使用已存在的操作值端口和GameplayEffectAppliedHandle状态槽。
+- 原EquipmentUInt64PropertyPort移为独立共享UInt64PropertyPort，装备节点与效果节点使用同一端口类型；当前Assets内未发现旧类型的序列化引用或Apply／Remove节点实例，不保留旧类兼容入口。
+- 另发现正式黑板作者声明、读写节点类型及编译映射未接受ulong，先前“保存到黑板再退出解除”的描述因此不完整。现补齐声明校验、编辑器新增类型菜单、拖拽生成读写节点的类型映射、节点valueType作者合同和语义编译的UInt64映射。枚举在末尾追加UInt64，已有值不变；状态槽、字面量、运行读写和快照继续使用原UInt64合同，不转为浮点数。
+- 作者可在进入回调将Apply返回句柄写入适当生命周期的UInt64黑板声明，退出／停止回调读取同一声明移除自己的独立实例。效果合并堆叠仍共用句柄，不能用此用法区分合并后的来源。hitstop触发动作、持续时间及倍率作用内容已询问用户；未擅自修改Corin战斗配置。
+- 最终Unity编译及域重载完成（1789927240467），Editor idle、控制台零错误；新增端口文件首次脚本刷新未导入导致的CS0246已通过正式全资源刷新解决。未新增测试，也未配置新效果图做端到端运行，不能将本批编译成功等同于多来源手感验收。

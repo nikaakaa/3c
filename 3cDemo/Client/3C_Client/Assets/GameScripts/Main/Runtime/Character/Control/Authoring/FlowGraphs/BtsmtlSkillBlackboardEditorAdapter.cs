@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         {
             (typeof(bool), "Boolean", "newBoolean"),
             (typeof(int), "Integer", "newInteger"),
+            (typeof(ulong), "UInt64（句柄）", "newHandle"),
             (typeof(float), "Number", "newNumber"),
             (typeof(string), "Identity", "newIdentity"),
             (typeof(Vector2), "Vector2", "newVector2"),

@@ -570,6 +570,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                 valueType = BtsmtlSkillBlackboardValueType.Boolean;
             else if (type == typeof(int))
                 valueType = BtsmtlSkillBlackboardValueType.Integer;
+            else if (type == typeof(ulong))
+                valueType = BtsmtlSkillBlackboardValueType.UInt64;
             else if (type == typeof(float))
                 valueType = BtsmtlSkillBlackboardValueType.Number;
             else if (type == typeof(string))

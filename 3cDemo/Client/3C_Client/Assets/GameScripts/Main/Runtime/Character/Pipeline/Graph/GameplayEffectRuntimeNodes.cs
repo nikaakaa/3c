@@ -123,6 +123,9 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, PropertyPort(PortDirection.Output, "Applied"), ReadOnly]
         BoolPropertyPort m_Applied = new BoolPropertyPort();
 
+        [SerializeField, PropertyPort(PortDirection.Output, "Handle"), ReadOnly]
+        UInt64PropertyPort m_Handle = new UInt64PropertyPort();
+
         public GameplayEffectDefinition Effect => m_Effect;
         public ActionContextSlot ActionContext => m_ActionContext;
         public bool Predicted => m_Predicted;
@@ -158,8 +161,8 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         [SerializeField, ShowInPanel("Selector")]
         GameplayEffectRemoveSelector m_Selector = GameplayEffectRemoveSelector.EffectId;
 
-        [SerializeField, ShowInPanel("Handle")]
-        ulong m_Handle;
+        [SerializeField, PropertyPort(PortDirection.Input, "Handle")]
+        UInt64PropertyPort m_Handle = new UInt64PropertyPort();
 
         [SerializeField, ShowInPanel("Effect")]
         GameplayEffectDefinition m_Effect;
@@ -171,7 +174,6 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         BoolPropertyPort m_Removed = new BoolPropertyPort();
 
         public GameplayEffectRemoveSelector Selector => m_Selector;
-        public ulong Handle => m_Handle;
         public GameplayEffectDefinition Effect => m_Effect;
         public GameplayTagQuery EffectTagQuery => m_EffectTagQuery;
 
@@ -180,13 +182,11 @@ namespace ThirdPersonCharacter.Pipeline.Graph
 #if UNITY_EDITOR
         public void ConfigureAuthoring(
             GameplayEffectRemoveSelector selector,
-            ulong handle,
             GameplayEffectDefinition effect,
             GameplayTagQuery effectTagQuery)
         {
             GameplayAuthoringRules.ValidateEffectRemoval(selector, effect, effectTagQuery);
             m_Selector = selector;
-            m_Handle = handle;
             m_Effect = effect;
             m_EffectTagQuery = effectTagQuery ?? new GameplayTagQuery();
             OnNodeChangedCallback();

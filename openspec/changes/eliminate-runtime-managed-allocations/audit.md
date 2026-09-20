@@ -350,3 +350,12 @@
 - packet 的内部 Span 构造执行唯一一次 ToArray 取得所有权。公开 byte[] 构造仍供两个正式发送生产者使用，保留 null 抛 ArgumentNullException 后进入同一个构造实现；没有复制两套校验或编码。空 payload 和 header 长度匹配规则不变。
 - 解码身份字符串和 packet payload 均独立持有，下一次接收不会覆盖排队消息；未修改应用层消息、检查点或 Timeline 生命周期。reader、packet、身份字符串、payload 本身、端点和队列仍有分配。
 - ServerAuthoritative.Transport portable 及 Core／Float32／ServerAuthoritative 依赖编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity，未做网络联调或 Player 采样。
+
+## 2026-09-20 快照数据报 delta 中转副本清理
+
+对应 tasks.md 的 5.23，与代码同步提交。
+
+- SnapshotDatagram 编码原 CopyDeltaPayload 后立即写流，现通过 DeltaPayload 只读 Span 直接写入；解码原 ReadBytes 后交构造 Clone，现 ReadBytesSegment 交内部片段构造 ToArray 一次持有，删除编码和解码各一份中转数组。
+- 正式发送仍使用 byte[] 构造，该入口转换片段后统一执行既有身份检查和存储复制；null 转默认片段，在原身份校验之后抛 ArgumentNullException，空但非 null 数组仍合法。没有新增第二套构造校验或借用结果对象。
+- ServerAuthoritativeCheckpointReconstructionModule 是 CopyDeltaPayload 的实际消费者，继续获得独立副本；本步不改 checkpoint 重建、恢复、delta 应用或历史生命周期。消息元数据顺序、schema、尾部检查和最终存储所有权不变。
+- ServerAuthoritative.Transport portable 及全部依赖编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制 Unity、未做网络联调或 Player 分配采样。快照对象、自身 delta 数组和最终编码数组仍会分配。

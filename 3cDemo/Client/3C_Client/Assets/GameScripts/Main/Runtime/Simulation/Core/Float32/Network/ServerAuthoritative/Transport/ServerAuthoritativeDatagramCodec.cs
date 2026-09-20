@@ -246,6 +246,18 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ulong acknowledgedInputSequence,
             ulong reliableEventHorizon,
             byte[] deltaPayload)
+            : this(snapshotSequence, baseSnapshotSequence, authorityTick, acknowledgedInputSequence,
+                reliableEventHorizon, deltaPayload == null ? default : new ArraySegment<byte>(deltaPayload))
+        {
+        }
+
+        internal SnapshotDatagram(
+            ulong snapshotSequence,
+            ulong baseSnapshotSequence,
+            ulong authorityTick,
+            ulong acknowledgedInputSequence,
+            ulong reliableEventHorizon,
+            ArraySegment<byte> deltaPayload)
         {
             if (snapshotSequence == 0 || authorityTick == 0)
                 throw new ArgumentException("Snapshot datagram identity is invalid.");
@@ -254,7 +266,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             AuthorityTick = authorityTick;
             AcknowledgedInputSequence = acknowledgedInputSequence;
             ReliableEventHorizon = reliableEventHorizon;
-            m_DeltaPayload = deltaPayload == null ? throw new ArgumentNullException(nameof(deltaPayload)) : (byte[])deltaPayload.Clone();
+            m_DeltaPayload = deltaPayload.Array == null ? throw new ArgumentNullException(nameof(deltaPayload)) : deltaPayload.AsSpan().ToArray();
         }
 
         public ulong SnapshotSequence { get; }
@@ -262,6 +274,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         public ulong AuthorityTick { get; }
         public ulong AcknowledgedInputSequence { get; }
         public ulong ReliableEventHorizon { get; }
+        public ReadOnlySpan<byte> DeltaPayload => m_DeltaPayload;
         public byte[] CopyDeltaPayload() => (byte[])m_DeltaPayload.Clone();
     }
 
@@ -351,7 +364,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             writer.WriteUInt64(value.AuthorityTick);
             writer.WriteUInt64(value.AcknowledgedInputSequence);
             writer.WriteUInt64(value.ReliableEventHorizon);
-            writer.WriteBytes(value.CopyDeltaPayload());
+            writer.WriteBytes(value.DeltaPayload);
             return writer.ToArray();
         }
 
@@ -364,7 +377,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 reader.ReadUInt64(),
                 reader.ReadUInt64(),
                 reader.ReadUInt64(),
-                reader.ReadBytes());
+                reader.ReadBytesSegment());
             reader.RequireComplete();
             return value;
         }

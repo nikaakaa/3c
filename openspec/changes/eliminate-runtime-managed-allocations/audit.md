@@ -1270,3 +1270,12 @@
 - 内部 outcome 正式成员只有 Pending=1、Committed=2，现直接匹配两值；零值和其它 byte 继续进入原 ArgumentException，事务身份及只有 Committed 才允许 commit batch 的双向约束不变。
 - 结果 class 自身仍分配，本小步只删除每个外层 tick 控制结果构造中的枚举装箱和元数据查询，不重复计入 2.33 的对外结果修改。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Pipeline 事务运行对比或 Player 分配采样。
+
+## 2026-09-21 ExecutionPlan 运行枚举值域
+
+对应 tasks.md 的 2.48。
+
+- Local、Rollback 与 ServerAuthoritative 调度在运行中构造 SimulationSessionExecutionPlan、SimulationPipelineStepProvenance、具体 Step 和 SourceMapping；原四个构造层分别查询 PlanStatus、ExecutionKind 或 TickSourceKind。
+- PlanStatus 正式成员连续为 Pending=1 至 NoStep=3，ExecutionKind 连续为 Forward=1 至 Authoritative=4，TickSourceKind 连续为 LocalLogic=1 至 Replay=3；现统一按对应 byte 闭区间判断，未知零值及其它值继续进入原异常。
+- 不改变 Pending／NoStep／Executable 的步骤和 requirement 组合，Step provenance 身份、actor 排序、来源映射和 replay／authoritative 路由保持原逻辑；计划及步骤对象自身分配仍存在。
+- 首次编译前检测到 Unity Bee／C# 编译进程并主动跳过；进程结束后 ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做调度运行回放或 Player 分配采样。

@@ -89,7 +89,8 @@ namespace ThirdPersonSimulation
             ulong planSequence,
             string baselineIdentity = "")
         {
-            if (!Enum.IsDefined(typeof(SimulationPipelineStepExecutionKind), executionKind) ||
+            if ((byte)executionKind < (byte)SimulationPipelineStepExecutionKind.Forward ||
+                (byte)executionKind > (byte)SimulationPipelineStepExecutionKind.Authoritative ||
                 string.IsNullOrEmpty(source.ClockId) || source.SourceTick == 0 || planSequence == 0)
             {
                 throw new ArgumentException("Pipeline Step provenance is incomplete.");
@@ -113,7 +114,8 @@ namespace ThirdPersonSimulation
             string outerClockId,
             SimulationTickSourceKind sourceKind)
         {
-            if (!Enum.IsDefined(typeof(SimulationTickSourceKind), sourceKind))
+            if ((byte)sourceKind < (byte)SimulationTickSourceKind.LocalLogic ||
+                (byte)sourceKind > (byte)SimulationTickSourceKind.Replay)
                 throw new ArgumentOutOfRangeException(nameof(sourceKind));
             StepClockId = SimulationIdentity.Require(stepClockId, nameof(stepClockId));
             OuterClockId = SimulationIdentity.Require(outerClockId, nameof(outerClockId));
@@ -135,7 +137,8 @@ namespace ThirdPersonSimulation
             IEnumerable<ActorId> actors)
         {
             if (!tick.IsValid || string.IsNullOrEmpty(provenance.Source.ClockId) || provenance.Source.SourceTick == 0 ||
-                !Enum.IsDefined(typeof(SimulationPipelineStepExecutionKind), provenance.ExecutionKind))
+                (byte)provenance.ExecutionKind < (byte)SimulationPipelineStepExecutionKind.Forward ||
+                (byte)provenance.ExecutionKind > (byte)SimulationPipelineStepExecutionKind.Authoritative)
             {
                 throw new ArgumentException("Pipeline Step identity is incomplete.");
             }
@@ -294,7 +297,8 @@ namespace ThirdPersonSimulation
             IEnumerable<TStep> steps,
             SimulationSessionPlanRequirement requirements)
         {
-            if (!Enum.IsDefined(typeof(SimulationSessionExecutionPlanStatus), status) ||
+            if ((byte)status < (byte)SimulationSessionExecutionPlanStatus.Pending ||
+                (byte)status > (byte)SimulationSessionExecutionPlanStatus.NoStep ||
                 string.IsNullOrEmpty(outerSource.ClockId) || outerSource.SourceTick == 0 ||
                 !gameplayContentHash.IsValid || !pipelineHash.IsValid || roster == null)
             {

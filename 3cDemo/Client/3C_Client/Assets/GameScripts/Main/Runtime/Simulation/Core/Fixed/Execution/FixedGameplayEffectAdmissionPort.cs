@@ -50,12 +50,10 @@ namespace ThirdPersonSimulation.Fixed
         string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SuppliedSourceAttributeId(SimulationGameplayEffectApplication application, int index) => application.SourceAttributeSnapshots[index].AttributeId;
         FixedScalar IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.SuppliedSourceAttributeValue(SimulationGameplayEffectApplication application, int index) => application.SourceAttributeSnapshots[index].Value;
         string IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.NormalizeAttributeId(string attributeId) => FixedGameplayEffectRuntimeCatalog.NormalizeAttribute(attributeId);
-        IEnumerable<string> IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.RequiredSnapshotAttributes(PortableEffectSpecState spec, GameplayEffectAttributeSnapshotKind kind) =>
-            CollectSnapshotAttributes(
-                spec.Definition,
-                kind == GameplayEffectAttributeSnapshotKind.Source
-                    ? PortableMagnitudeSource.SourceAttributeSnapshot
-                    : PortableMagnitudeSource.TargetAttributeSnapshot);
+        IReadOnlyList<string> IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.RequiredSnapshotAttributes(PortableEffectSpecState spec, GameplayEffectAttributeSnapshotKind kind) =>
+            kind == GameplayEffectAttributeSnapshotKind.Source
+                ? spec.Definition.SourceSnapshotAttributes
+                : spec.Definition.TargetSnapshotAttributes;
 
         bool IGameplayEffectApplicationAdmissionPort<SimulationGameplayEffectApplication, PortableEffectSpecState, FixedScalar>.TryReadTargetAttribute(string attributeId, out FixedScalar value)
         {

@@ -561,7 +561,7 @@ namespace ThirdPersonSimulation
         string SuppliedSourceAttributeId(TApplication application, int index);
         TScalar SuppliedSourceAttributeValue(TApplication application, int index);
         string NormalizeAttributeId(string attributeId);
-        IEnumerable<string> RequiredSnapshotAttributes(TSpec spec, GameplayEffectAttributeSnapshotKind kind);
+        IReadOnlyList<string> RequiredSnapshotAttributes(TSpec spec, GameplayEffectAttributeSnapshotKind kind);
         bool TryReadTargetAttribute(string attributeId, out TScalar value);
         void AddSourceAttribute(TSpec spec, string attributeId, TScalar value);
         void AddTargetAttribute(TSpec spec, string attributeId, TScalar value);
@@ -654,8 +654,10 @@ namespace ThirdPersonSimulation
                     m_SuppliedSourceAttributes.Add(attributeId, m_Port.SuppliedSourceAttributeValue(application, i));
                 }
                 bool selfSource = m_Port.SourceActorId(application) == m_Port.TargetActorId(application);
-                foreach (string attributeId in m_Port.RequiredSnapshotAttributes(spec, GameplayEffectAttributeSnapshotKind.Source))
+                IReadOnlyList<string> sourceAttributes = m_Port.RequiredSnapshotAttributes(spec, GameplayEffectAttributeSnapshotKind.Source);
+                for (int i = 0; i < sourceAttributes.Count; i++)
                 {
+                    string attributeId = sourceAttributes[i];
                     if (m_SuppliedSourceAttributes.TryGetValue(attributeId, out TScalar supplied))
                         m_Port.AddSourceAttribute(spec, attributeId, supplied);
                     else if (selfSource && m_Port.TryReadTargetAttribute(attributeId, out TScalar current))
@@ -669,8 +671,10 @@ namespace ThirdPersonSimulation
                             out failure);
                     }
                 }
-                foreach (string attributeId in m_Port.RequiredSnapshotAttributes(spec, GameplayEffectAttributeSnapshotKind.Target))
+                IReadOnlyList<string> targetAttributes = m_Port.RequiredSnapshotAttributes(spec, GameplayEffectAttributeSnapshotKind.Target);
+                for (int i = 0; i < targetAttributes.Count; i++)
                 {
+                    string attributeId = targetAttributes[i];
                     if (!m_Port.TryReadTargetAttribute(attributeId, out TScalar current))
                     {
                         return Fail(

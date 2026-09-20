@@ -367,39 +367,6 @@ namespace ThirdPersonSimulation.Fixed
             return true;
         }
 
-        IEnumerable<string> CollectSnapshotAttributes(PortableEffectDefinition definition, PortableMagnitudeSource source)
-        {
-            var result = new SortedSet<string>(StringComparer.Ordinal);
-            Collect(definition.DurationMagnitude);
-            if (definition.HasPeriod)
-                Collect(definition.PeriodMagnitude);
-            for (int i = 0; i < definition.Components.Length; i++)
-            {
-                switch (definition.Components[i])
-                {
-                    case PortableModifierComponent modifier:
-                        Collect(modifier.Magnitude);
-                        break;
-                    case PortableAttributeRequirementsComponent requirement:
-                        if (requirement.Source == PortableAttributeSource.SourceSnapshot && source == PortableMagnitudeSource.SourceAttributeSnapshot)
-                            result.Add(requirement.AttributeId);
-                        Collect(requirement.Threshold);
-                        break;
-                    case PortableExecutionComponent execution:
-                        for (int mutationIndex = 0; mutationIndex < execution.Mutations.Length; mutationIndex++)
-                            Collect(execution.Mutations[mutationIndex].Magnitude);
-                        break;
-                }
-            }
-            return result;
-
-            void Collect(PortableMagnitude magnitude)
-            {
-                if (magnitude.Source == source)
-                    result.Add(magnitude.AttributeId);
-            }
-        }
-
         SimulationGameplayEffectApplication BuildAdditionalApplication(
             PortableEffectSpecState parent,
             PortableAdditionalEffectsComponent component,

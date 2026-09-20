@@ -95,3 +95,16 @@
 - CameraEffectRuntimeStateStore.Add 仍创建效果状态对象；效果请求、可见状态、输出贡献和完成事件去重集合仍需明确准备容量与存活上限。
 - 效果停止、撤销和完成事件保留与并行 Timeline 的事件生命周期相交；不能随意清空、复用或引入无界缓存。
 - Input、Behavior Designer、第三方相机及其它模块仍按原任务清单处理，4.4 保持未完成。
+
+## 2026-09-20 GameplayEffect 属性捕获清单准备
+
+对应 tasks.md 的 2.6。本节与代码同步提交，具体版本可由本文件及以下源码的 Git 历史追溯。
+
+- 原调用：公共 `GameplayEffectApplicationAdmissionRuntime.TryPrepare` 分别请求来源、目标属性清单；Fixed／Float32 的 `GameplayEffectTarget.CollectSnapshotAttributes` 每次扫描效果定义并创建 SortedSet，随后经 IEnumerable 遍历。集合节点及枚举器属于重复分配。
+- 新调用：两数值域的 `PortableEffectDefinition` 构造时生成 `SourceSnapshotAttributes` 和 `TargetSnapshotAttributes`，由既有 RuntimeCatalog 持有；AdmissionPort 返回 IReadOnlyList，公共 TryPrepare 按下标读取。删除两套 Target 中的原运行期收集函数。
+- 输入仍是效果定义的时长、周期、Modifier、属性要求和 Execution mutation。沿用原 Ordinal 排序、去重及来源／目标筛选规则，没有合并数值计算或改变属性读取顺序。
+- 输出只保存“需要捕获哪些属性”的名称，不保存属性值。每次效果应用仍读取本次上下文和当前状态，缺少属性的失败结果、独立 Spec 和事务边界不变。
+- 清单容量由已加载定义精确产生，不引入运行期扩容或任意上限。两个字符串引用数组随目录存活，换取取消每次应用的集合重建；该准备阶段允许分配，未将战斗内申请伪装成准备阶段。
+- 代码入口：`Simulation/Core/Execution/GameplayEffectControlContracts.cs`，以及两数值域 Execution 下的 `GameplayEffectRuntimeCatalog`、`GameplayEffectAdmissionPort`、`GameplayEffectTarget` 文件。
+- Fixed 与 Float32 portable 工程分别以 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过，均为零警告、零错误；每次构建后执行 `dotnet build-server shutdown`。未新增测试、未主动刷新 Unity，未做 Player 分配采样。
+- 效果 Spec 创建、属性快照字典、标签复制和事务克隆仍有分配，不由本小步宣称完成。

@@ -564,6 +564,8 @@ namespace ThirdPersonSimulation.Fixed
             OverflowPolicy = overflowPolicy;
             SetByCallerParameters = setByCallerParameters ?? Array.Empty<string>();
             Components = components ?? Array.Empty<PortableEffectComponent>();
+            SourceSnapshotAttributes = CollectSnapshotAttributes(PortableMagnitudeSource.SourceAttributeSnapshot);
+            TargetSnapshotAttributes = CollectSnapshotAttributes(PortableMagnitudeSource.TargetAttributeSnapshot);
         }
 
         public string Id { get; }
@@ -581,6 +583,41 @@ namespace ThirdPersonSimulation.Fixed
         public PortableEffectOverflowPolicy OverflowPolicy { get; }
         public string[] SetByCallerParameters { get; }
         public PortableEffectComponent[] Components { get; }
+        public IReadOnlyList<string> SourceSnapshotAttributes { get; }
+        public IReadOnlyList<string> TargetSnapshotAttributes { get; }
+
+        string[] CollectSnapshotAttributes(PortableMagnitudeSource source)
+        {
+            var result = new SortedSet<string>(StringComparer.Ordinal);
+            Collect(DurationMagnitude);
+            if (HasPeriod)
+                Collect(PeriodMagnitude);
+            for (int i = 0; i < Components.Length; i++)
+            {
+                switch (Components[i])
+                {
+                    case PortableModifierComponent modifier:
+                        Collect(modifier.Magnitude);
+                        break;
+                    case PortableAttributeRequirementsComponent requirement:
+                        if (requirement.Source == PortableAttributeSource.SourceSnapshot && source == PortableMagnitudeSource.SourceAttributeSnapshot)
+                            result.Add(requirement.AttributeId);
+                        Collect(requirement.Threshold);
+                        break;
+                    case PortableExecutionComponent execution:
+                        for (int mutationIndex = 0; mutationIndex < execution.Mutations.Length; mutationIndex++)
+                            Collect(execution.Mutations[mutationIndex].Magnitude);
+                        break;
+                }
+            }
+            return result.ToArray();
+
+            void Collect(PortableMagnitude magnitude)
+            {
+                if (magnitude.Source == source)
+                    result.Add(magnitude.AttributeId);
+            }
+        }
     }
 
     internal sealed class FixedGameplayEffectRuntimeCatalog

@@ -1558,3 +1558,12 @@
 - 两域现以 disposition 数量创建精确 OutputEventOwner 数组并顺序填充。事件超过数组时立即抛原“dispositions do not cover every Step EventId”参数错误，填充完成后数量不足仍抛同一错误；数量相等才原地排序并执行原身份与重复 EventId 校验。
 - 正常提交路径删除一个覆盖校验 List 对象，以相同元素数组完成同步验证；数组只活到 CommitBatch 构造结束。CommitBatch 持久结果和 OutputDispositionSet 不引用该数组。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做多事件提交运行对比或 Player 分配采样。
+
+## 2026-09-21 PipelineStateSnapshot 最终数组
+
+对应 tasks.md 的 2.78。
+
+- Capture／CaptureStepProjection 及状态解码先收集 participant snapshots，再构造 SimulationPipelineStateSnapshot；原构造器再次复制到 List、排序校验并创建 ReadOnlyCollection，形成结果侧额外 List 对象与包装。
+- 构造入口收窄为 IReadOnlyList，按 Count 复制到最终数组，在数组上按 PassId 排序并执行原缺失 participant 与重复 PassId 校验；空集合复用 Array.Empty。Participants 公开类型仍为 IReadOnlyList，SnapshotHash 继续按同一排序读取。
+- 每个完整或 step 投影快照删除结果侧 List 与 ReadOnlyCollection 两个对象，以最终 participant 数组替代原 List 底层数组。上游 capture 收集 List、每个 pass snapshot、hash 字符串与 Snapshot 对象仍分配。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做快照运行对比或 Player 分配采样。

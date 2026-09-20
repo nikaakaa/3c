@@ -70,26 +70,27 @@ namespace ThirdPersonSimulation
 
     public sealed class SimulationPipelineStateSnapshot
     {
-        readonly ReadOnlyCollection<SimulationPipelinePassStateSnapshot> m_Participants;
+        readonly IReadOnlyList<SimulationPipelinePassStateSnapshot> m_Participants;
 
         public SimulationPipelineStateSnapshot(
             SimulationPipelineIdentity pipeline,
             SimulationComponentIdentity backend,
             ulong lastCompletedTick,
-            IEnumerable<SimulationPipelinePassStateSnapshot> participants)
+            IReadOnlyList<SimulationPipelinePassStateSnapshot> participants)
         {
             if (!pipeline.IsValid || !backend.IsValid || backend.Role != SimulationComponentRole.ExecutionBackend)
                 throw new ArgumentException("Pipeline state snapshot identity is incomplete.");
-            var values = participants == null
-                ? new List<SimulationPipelinePassStateSnapshot>()
-                : new List<SimulationPipelinePassStateSnapshot>(participants);
-            for (int i = 0; i < values.Count; i++)
+            var values = participants == null || participants.Count == 0
+                ? Array.Empty<SimulationPipelinePassStateSnapshot>()
+                : new SimulationPipelinePassStateSnapshot[participants.Count];
+            for (int i = 0; i < values.Length; i++)
             {
+                values[i] = participants[i];
                 if (values[i] == null)
                     throw new ArgumentException("Pipeline state snapshot contains a missing participant.", nameof(participants));
             }
-            values.Sort((left, right) => left.PassId.CompareTo(right.PassId));
-            for (int i = 0; i < values.Count; i++)
+            Array.Sort(values, (left, right) => left.PassId.CompareTo(right.PassId));
+            for (int i = 0; i < values.Length; i++)
             {
                 if (i > 0 && values[i - 1].PassId.Equals(values[i].PassId))
                     throw new ArgumentException("Pipeline state snapshot contains a missing or duplicate participant.", nameof(participants));
@@ -97,7 +98,7 @@ namespace ThirdPersonSimulation
             Pipeline = pipeline;
             Backend = backend;
             LastCompletedTick = lastCompletedTick;
-            m_Participants = values.AsReadOnly();
+            m_Participants = values;
             SnapshotHash = ComputeHash();
         }
 

@@ -128,6 +128,8 @@
 
 - [x] 2.77 两数值域 CommitBatch 按 OutputDispositions.Count 直接填充事件所有者数组并原地排序校验，删除每个已提交 tick 的覆盖校验 List 外壳，事件数量不匹配继续抛原参数错误
 
+- [x] 2.78 PipelineStateSnapshot 按 IReadOnlyList.Count 复制 participant 到最终数组并原地排序校验，空集合复用 Array.Empty，删除每次完整／step 投影快照的结果 List 与 ReadOnlyCollection 包装
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

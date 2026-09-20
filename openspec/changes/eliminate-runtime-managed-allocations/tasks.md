@@ -300,6 +300,8 @@
 
 - [x] 5.68 两数值域 WorldSimulationState 统一提供一次复制的 Clone，迁移 KCC／DotRecast／Unity create、reconstruct 与 step 结果边界，删除三套重复 CloneState 和 solver payload 的二次克隆
 
+- [x] 5.69 权威预测历史 replay 结果直接返回独立 List，确认裁剪一次遍历构造保留字典，删除 ReadOnlyCollection 包装、remove List 与已复制字典的逐项删除
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

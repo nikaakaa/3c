@@ -71,7 +71,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 if (record.Input.InputSequence > confirmedInputSequence)
                     values.Add(record);
             }
-            return values.AsReadOnly();
+            return values;
         }
 
         public void Add(
@@ -110,15 +110,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public ServerAuthoritativePredictionHistoryCheckpoint PreparePruneConfirmedThrough(ulong inputSequence)
         {
-            var records = CopyRecords();
-            var remove = new List<ulong>();
-            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in records)
+            var records = new SortedDictionary<ulong, ServerAuthoritativePredictionHistoryRecord>();
+            foreach (KeyValuePair<ulong, ServerAuthoritativePredictionHistoryRecord> pair in m_Records)
             {
-                if (pair.Value.Input.InputSequence <= inputSequence)
-                    remove.Add(pair.Key);
+                if (pair.Value.Input.InputSequence > inputSequence)
+                    records.Add(pair.Key, pair.Value);
             }
-            for (int i = 0; i < remove.Count; i++)
-                records.Remove(remove[i]);
             return new ServerAuthoritativePredictionHistoryCheckpoint(records, m_RemoteBodies.Capture());
         }
 

@@ -1819,3 +1819,11 @@
 - 两域 SimulationActorState 改为 readonly struct，构造时继续拒绝无效 ActorId 和 null State。Factory 与 StateSet 对 default 元素的校验改为检查 State 引用；排序、重复 Actor、数值域和 roster 校验保持。
 - restore transaction 原 FindActor 以 null 表示缺失，统一改为 TryFindActor(out actor)，避免值类型 default 被误读。正式源码检索确认没有其它引用身份、继承或 null 语义消费者。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 编译零警告零错误；DotRecastAuthority 编译通过并保留依赖两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 无依赖重编零警告零错误。首次 Portable 构建前检测到 Unity Bee 正在编 ThirdPersonClient.Runtime 并等待其退出。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 completed step 或 restore 运行采样。
+
+## 2026-09-21 权威预测历史 replay 与确认裁剪
+
+对应 tasks.md 的 5.69。
+
+- ServerAuthoritativePredictionHistory.GetReplayAfter 在 baseline reconcile 与 replay 计数中生成独立结果 List，原返回前再创建 ReadOnlyCollection 包装。PreparePruneConfirmedThrough 则先复制完整 SortedDictionary，再收集待删 tick 到新 List，最后逐项从副本删除。
+- replay 结果仍是方法内独立 List，仅按 IReadOnlyList 暴露，删除额外包装对象。确认裁剪直接遍历当前历史，把 InputSequence 大于确认序列的记录加入新 SortedDictionary；最终记录集合、排序和 checkpoint 独立所有权不变。
+- 删除每次 replay 查询的包装对象，以及每次确认裁剪的 remove List 和树删除操作；checkpoint、远端身体时间线捕获及最终独立字典仍保留。ThirdPersonSimulation.ServerAuthoritative portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 reconciliation 运行采样。

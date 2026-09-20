@@ -605,3 +605,10 @@
 - TimelineRuntimeRestoreCandidate改为readonly struct，删除每次恢复的候选对象分配；默认候选由原服务归属校验拒绝，无额外可变候选表。内容准备结果随原播放存活。进一步核对发现原Service仅在整体Dispose清空播放表，终态实例确认后的回收仍需沿快照与确认边界继续处理，不能宣称停止即释放。
 - 首轮编译报告跨程序集internal入口不可见，已调整为正式公开读取合同后重新编译；未使用反射或修改程序集友元权限。新播放准备、首次快照数组、Marker事件哈希及外层状态分配仍在剩余范围，未据此宣称全链0 GC。
 - 最终Unity编译及域重载完成（1789929328234），Editor idle、控制台零错误，git diff --check通过；未新增测试，未运行恢复压力或分配采样。
+
+## 清理失去活跃动作持有者的终态快照
+- 对应0.7／7.1：原角色状态仅在显式Timeline Stop候选提交时移除快照，自然完成的Timeline会持续留在后续状态中。Fixed／Float32现于原CharacterEvaluationResult.Consume完成Timeline提交、捕获与停止移除后，清理所属动作已不活跃的Completed／Stopped快照，避免重复动作不断扩大最新状态的终态记录。
+- 持有判断使用ActionContext.InstanceId和SkillExecutionGeneration匹配原ActionInstances，动作仍活跃时即使Timeline已完成也保留，确保后续图执行读取成功状态及恢复仍有依据。非终态快照不在此直接删除，不能用集合清理代替TreeClip退出、原停止事务或表现退役。
+- 清理返回新的角色状态，不修改此前历史状态及其不可变快照；回滚到更早的活跃动作状态仍可沿原ApplyRestore恢复同handle／generation。没有可清理项时返回原状态，不新建集合。实际移除仍走原CloneWithTimelineSnapshots，因此外层状态重建分配尚未解决。
+- Native Service播放对象与Unity适配层请求登记尚未回收，本批只清理最新逻辑状态里的无活跃持有者终态快照；它们的最终回收仍需与表现终态确认一起闭合，不据此宣称已解决播放对象累计。
+- Unity编译及最终域重载完成（1789929661923），Editor idle、控制台零错误，git diff --check通过；未新增测试，未运行连续动作或回滚恢复验收。

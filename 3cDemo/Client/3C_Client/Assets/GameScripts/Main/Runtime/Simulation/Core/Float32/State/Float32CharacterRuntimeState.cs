@@ -169,6 +169,38 @@ namespace ThirdPersonSimulation
             return CloneWithTimelineSnapshots(snapshots);
         }
 
+        internal Float32CharacterRuntimeState WithoutUnownedTerminalTimelines()
+        {
+            int firstRemoved = -1;
+            for (int index = 0; index < m_TimelineSnapshots.Count; index++)
+                if (!RetainTimelineSnapshot(m_TimelineSnapshots[index]))
+                {
+                    firstRemoved = index;
+                    break;
+                }
+            if (firstRemoved < 0)
+                return this;
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots.Count - 1);
+            for (int index = 0; index < m_TimelineSnapshots.Count; index++)
+                if (index < firstRemoved || index > firstRemoved && RetainTimelineSnapshot(m_TimelineSnapshots[index]))
+                    snapshots.Add(m_TimelineSnapshots[index]);
+            return CloneWithTimelineSnapshots(snapshots);
+        }
+
+        bool RetainTimelineSnapshot(in AbilityTimelineRuntimeSnapshot snapshot)
+        {
+            if (snapshot.State != AbilityTimelineSnapshotState.Completed && snapshot.State != AbilityTimelineSnapshotState.Stopped)
+                return true;
+            for (int index = 0; index < ActionInstances.Count; index++)
+            {
+                Float32ActionInstanceState action = ActionInstances[index];
+                if (action.IsActive && action.InstanceId == snapshot.ActionContext.InstanceId &&
+                    action.SkillExecutionGeneration == snapshot.ActionContext.SkillExecutionGeneration)
+                    return true;
+            }
+            return false;
+        }
+
         Float32CharacterRuntimeState CloneWithTimelineSnapshots(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots) =>
             new Float32CharacterRuntimeState(
                 NumericProfile,

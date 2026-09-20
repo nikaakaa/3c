@@ -62,6 +62,7 @@ namespace ThirdPersonSimulation.Fixed
             }
             for (int i = 0; i < m_TimelineStops.Count; i++)
                 m_CandidateState = m_CandidateState.WithoutTimelineSnapshot(m_TimelineStops[i].RuntimeHandle);
+            m_CandidateState = m_CandidateState.WithoutUnownedTerminalTimelines();
             m_Consumed = true;
         }
 

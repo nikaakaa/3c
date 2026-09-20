@@ -1432,3 +1432,12 @@
 - 两域字段现以 IReadOnlyList 保存并直接引用各自私有 List。Dispositions 公开类型、事务身份和只读消费方式不变，CommitBatch 的事件覆盖校验继续读取同一独立列表。
 - 删除每个 egress tick 的两个 ReadOnlyCollection 包装对象，并清理两文件不再使用的 Collections.ObjectModel 引用；disposition List 本体仍保留。
 - ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 egress disposition 运行对比或 Player 分配采样。
+
+## 2026-09-21 本地输入值帧
+
+对应 tasks.md 的 2.64。
+
+- FixedLocalInputFrame／Float32LocalInputFrame 只在 SourcePort.Read 返回后由 LocalInputIngressPass.Execute 同步读取两个 batch 属性并写入 Product，源码检索未发现缓存、引用身份比较、继承或可空消费。
+- 两域 frame 改为 readonly struct，构造器仍拒绝缺失的 CanonicalInputs／TypedIngress；接口返回类型、属性类型、调用顺序及两个 batch 的独立所有权不变。
+- 删除每个本地输入 ingress tick 只为打包两个 batch 引用创建的一个 frame 对象。CanonicalInputBatch、TypedIngressBatch 及其内部列表仍分配，未扩大本项结论。
+- ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做本地输入运行对比或 Player 分配采样。

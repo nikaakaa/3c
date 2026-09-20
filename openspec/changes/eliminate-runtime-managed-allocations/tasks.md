@@ -100,6 +100,8 @@
 - [x] 2.62 两数值域 TypedIngressBatch 的独立事实列表直接作为 IReadOnlyList 暴露，删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象
 - [x] 2.63 两数值域 OutputDispositionSet 的独立 disposition 列表直接作为 IReadOnlyList 暴露，删除每个 egress tick 的两个 ReadOnlyCollection 包装对象及无消费者命名空间引用
 
+- [x] 2.64 两数值域 LocalInputFrame 改为只读值帧，删除每个本地输入 ingress tick 只为同步传递两个 batch 引用而创建的外壳对象；两个 batch 的数据所有权与 Product 写入边界不变
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

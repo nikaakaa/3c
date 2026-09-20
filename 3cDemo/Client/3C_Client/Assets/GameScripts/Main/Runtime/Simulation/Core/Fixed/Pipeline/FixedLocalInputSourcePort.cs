@@ -130,7 +130,7 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationPortDirection.Input);
     }
 
-    public sealed class FixedLocalInputFrame
+    public readonly struct FixedLocalInputFrame
     {
         public FixedLocalInputFrame(FixedCanonicalInputBatch canonicalInputs, FixedTypedIngressBatch typedIngress)
         {

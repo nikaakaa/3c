@@ -116,7 +116,7 @@ namespace ThirdPersonSimulation
                 SimulationPortDirection.Input);
     }
 
-    public sealed class Float32LocalInputFrame
+    public readonly struct Float32LocalInputFrame
     {
         public Float32LocalInputFrame(
             Float32CanonicalInputBatch canonicalInputs,

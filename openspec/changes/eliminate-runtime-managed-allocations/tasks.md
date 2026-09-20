@@ -158,6 +158,8 @@
 
 - [x] 2.92 SimulationSessionExecutionPlan 增加显式数组所有权入口，Fixed／Float32 本地单步与 Float32 权威单步直接转移本方法新建 mappings／steps 数组，删除这些每 tick 计划的两次数组克隆；公开构造继续独立复制
 
+- [x] 2.93 两数值域 SimulationActorTickResult 将 gameplay facts／presentation commands／trace records 按可计数输入直接复制到最终数组，删除每 Actor 每 completed tick 的三只 List 与三只 ReadOnlyCollection；结果继续独立持有输入
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

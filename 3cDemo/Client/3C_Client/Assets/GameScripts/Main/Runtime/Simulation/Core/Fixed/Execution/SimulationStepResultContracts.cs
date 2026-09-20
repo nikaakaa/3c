@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
@@ -35,9 +34,9 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class SimulationActorTickResult
     {
-        readonly ReadOnlyCollection<GameplayFact> m_GameplayFacts;
-        readonly ReadOnlyCollection<PresentationCommand> m_PresentationCommands;
-        readonly ReadOnlyCollection<SimulationTraceRecord> m_TraceRecords;
+        readonly IReadOnlyList<GameplayFact> m_GameplayFacts;
+        readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
+        readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
         CharacterStateHash m_StateHash;
 
         public SimulationActorTickResult(
@@ -47,9 +46,9 @@ namespace ThirdPersonSimulation.Fixed
             CharacterStateHash stateHash,
             CharacterBodySample bodySample,
             CharacterMotionRequest motion,
-            IEnumerable<GameplayFact> gameplayFacts,
-            IEnumerable<PresentationCommand> presentationCommands,
-            IEnumerable<SimulationTraceRecord> traceRecords)
+            IReadOnlyList<GameplayFact> gameplayFacts,
+            IReadOnlyList<PresentationCommand> presentationCommands,
+            IReadOnlyList<SimulationTraceRecord> traceRecords)
         {
             if (!actorId.IsValid || !tick.IsValid || bodySample.ActorId != actorId || bodySample.Tick != tick)
                 throw new ArgumentException("Actor Tick result identity is incomplete.");
@@ -63,9 +62,9 @@ namespace ThirdPersonSimulation.Fixed
             Tick = tick;
             BodySample = bodySample;
             Motion = motion;
-            m_GameplayFacts = Copy(gameplayFacts).AsReadOnly();
-            m_PresentationCommands = Copy(presentationCommands).AsReadOnly();
-            m_TraceRecords = Copy(traceRecords).AsReadOnly();
+            m_GameplayFacts = Copy(gameplayFacts);
+            m_PresentationCommands = Copy(presentationCommands);
+            m_TraceRecords = Copy(traceRecords);
             ValidateHeaders(m_GameplayFacts, value => value.Header, state.NumericProfile, actorId, tick, "Gameplay fact");
             ValidateHeaders(m_PresentationCommands, value => value.Header, state.NumericProfile, actorId, tick, "Presentation command");
             ValidateHeaders(m_TraceRecords, value => value.Header, state.NumericProfile, actorId, tick, "Trace record");
@@ -81,8 +80,15 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;
         public IReadOnlyList<SimulationTraceRecord> TraceRecords => m_TraceRecords;
 
-        static List<T> Copy<T>(IEnumerable<T> values) =>
-            values == null ? new List<T>() : new List<T>(values);
+        static T[] Copy<T>(IReadOnlyList<T> values)
+        {
+            if (values == null || values.Count == 0)
+                return Array.Empty<T>();
+            var result = new T[values.Count];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = values[i];
+            return result;
+        }
 
         static void ValidateHeaders<T>(
             IReadOnlyList<T> values,

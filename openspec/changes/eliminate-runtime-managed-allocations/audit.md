@@ -2022,3 +2022,12 @@
 - 捕获现以字典数量减去实际存在的本地 Actor 得到准确长度，直接填充 RollbackRemoteActorInputDiagnosticsSnapshot 数组并原地按 ActorId 排序。未锁定 roster 时仍得到 Array.Empty 等价的零长度数组，远端字段与排序保持。
 - 每次 diagnostics 捕获删除 List 对象、List 底层数组和 ToArray 的第二次复制；最终独立数组仍按诊断快照寿命存在。该入口是否按帧读取未采样，不把静态删除宣称为稳态 Player 收益。
 - ThirdPersonSimulation.DeterministicRollback.Endpoint portable 连同依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 diagnostics 刷新频率或 Player 分配采样。
+
+## 2026-09-21 SimulationActorTickResult 最终数组
+
+对应 tasks.md 的 2.93。
+
+- Fixed／Float32 AbilityFinalize 为每个 Actor 每个 completed tick 创建 SimulationActorTickResult。原结果对象分别从 evaluation 的 gameplay facts、presentation commands 与 trace records 创建 List，再为三只 List 各建一只 ReadOnlyCollection；这些集合是 result 的最终长期存储。
+- 两域构造输入收窄为 IReadOnlyList，按准确 Count 将三类输出复制到最终数组，空输入复用 Array.Empty。原 header 数值域、ActorId 与 tick 校验继续遍历最终数组，公开结果仍不借用 evaluation 集合。
+- 每个 Actor completed tick 删除三只 List 和三只 ReadOnlyCollection，并消除 List 容量冗余；三只必要的最终数组仍按 result 寿命存在。evaluation 到 finalize 仍有一层独立复制，待明确消费后所有权转移另行收口。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback 与 ServerAuthoritative portable 均编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 completed tick Player 分配采样。

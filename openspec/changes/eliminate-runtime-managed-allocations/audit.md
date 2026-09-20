@@ -1666,3 +1666,12 @@
 - 两域类型统一改为 readonly struct。WorldSolveBatchRequest 不再检查元素 null，而由原 numeric profile、ActorId、RequestId、Tick、before body 与 roster 对齐校验拒绝 default 元素；EvaluatePass finally 改为写 default，继续释放 Motion／BodyMotionPlan 等引用字段。
 - KCC ActorSolveCandidate 原 null 防御同步删除，候选仍携带完整值请求。每 Actor 每 simulation step 删除一个 managed 请求对象；代价是固定字段结构体在候选和局部之间按值复制，不产生 managed 分配或装箱。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority、ThirdPersonSimulation.Unity 编译零警告零错误；DotRecast portable 编译通过并保留依赖包两条既有 nullable-context 警告。首次 KCC 编译暴露旧 null 合并，改为值赋值后通过。未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。
+
+## 2026-09-21 WorldSolveBatchRequest workspace
+
+对应 tasks.md 的 5.60。
+
+- WorldSolveBatchRequest 的正式 Product lifetime 为 SimulationStep：AbilityEvaluatePass 生产，WorldResolve 与 Finalize 同步消费，CompleteStep 只将 WorldSolveBatchSummary、next state 与 actor results 写入持久 CompletedStep；下一 step 不保留 Batch。KCC candidate 已保存值请求副本，不引用 Batch 数组。
+- Fixed／Float32 AbilityEvaluatePass 在按锁定 roster 构造时各创建一个定长 WorldSolveBatchRequest workspace。每 step Reset 将复用的 m_Requests 值数组复制进 Batch 自有定长数组，原地排序并执行原 roster／world／observed constraint 校验，再更新 Tick、BeforeWorldState、能力和 RequestHash。
+- 删除每 simulation step 的 WorldSolveBatchRequest 对象和内部请求数组分配；Batch 与数组随 Pass runtime 生命周期复用。Evaluate 的输入 workspace 仍独立并在 finally 写 default，Batch 不借用其可变存储。RequestHash 及 CanonicalWriter 内部分配仍逐 step 存在。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority 编译零警告零错误；DotRecast portable 编译通过并保留依赖包两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 全依赖构建通过并保留 Unity 包及既有 Editor 代码十七条警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做多 step 事务或 Player 分配采样。

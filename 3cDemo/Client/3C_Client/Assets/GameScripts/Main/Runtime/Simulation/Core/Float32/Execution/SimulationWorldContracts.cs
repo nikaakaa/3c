@@ -256,9 +256,28 @@ namespace ThirdPersonSimulation
 
     public sealed class WorldSolveBatchRequest
     {
-        readonly IReadOnlyList<CharacterWorldSolveRequest> m_Requests;
+        readonly CharacterWorldSolveRequest[] m_Requests;
 
         public WorldSolveBatchRequest(
+            SimulationTick tick,
+            WorldSimulationState beforeWorldState,
+            IReadOnlyList<CharacterWorldSolveRequest> requests,
+            ObservedWorldConstraintFrame observedWorldConstraints)
+            : this(requests?.Count ?? 0)
+        {
+            Reset(tick, beforeWorldState, requests, observedWorldConstraints);
+        }
+
+        internal WorldSolveBatchRequest(int actorCount)
+        {
+            if (actorCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(actorCount));
+            m_Requests = actorCount == 0
+                ? Array.Empty<CharacterWorldSolveRequest>()
+                : new CharacterWorldSolveRequest[actorCount];
+        }
+
+        internal WorldSolveBatchRequest Reset(
             SimulationTick tick,
             WorldSimulationState beforeWorldState,
             IReadOnlyList<CharacterWorldSolveRequest> requests,
@@ -266,51 +285,51 @@ namespace ThirdPersonSimulation
         {
             if (!tick.IsValid)
                 throw new ArgumentException("World batch Tick is invalid.", nameof(tick));
-            Tick = tick;
-            BeforeWorldState = beforeWorldState ?? throw new ArgumentNullException(nameof(beforeWorldState));
-            ObservedWorldConstraints = observedWorldConstraints ?? throw new ArgumentNullException(nameof(observedWorldConstraints));
-            if (ObservedWorldConstraints.Tick != tick)
+            WorldSimulationState worldState = beforeWorldState ?? throw new ArgumentNullException(nameof(beforeWorldState));
+            ObservedWorldConstraintFrame observedConstraints = observedWorldConstraints ?? throw new ArgumentNullException(nameof(observedWorldConstraints));
+            if (observedConstraints.Tick != tick)
                 throw new ArgumentException("Observed world constraint frame Tick does not match the batch.", nameof(observedWorldConstraints));
-            NumericProfile = beforeWorldState.NumericProfile;
-            var copied = requests == null || requests.Count == 0
-                ? Array.Empty<CharacterWorldSolveRequest>()
-                : new CharacterWorldSolveRequest[requests.Count];
-            for (int i = 0; i < copied.Length; i++)
-                copied[i] = requests[i];
-            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (copied.Length == 0 || copied.Length != beforeWorldState.Bodies.Count)
+            if (requests == null || requests.Count != m_Requests.Length || m_Requests.Length != worldState.Bodies.Count)
                 throw new ArgumentException("World batch must contain exactly one request per world body.", nameof(requests));
+            for (int i = 0; i < m_Requests.Length; i++)
+                m_Requests[i] = requests[i];
+            Array.Sort(m_Requests, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            SimulationNumericProfile numericProfile = worldState.NumericProfile;
             WorldCapability required = WorldCapability.None;
-            for (int i = 0; i < copied.Length; i++)
+            for (int i = 0; i < m_Requests.Length; i++)
             {
-                CharacterWorldSolveRequest request = copied[i];
-                if (request.NumericProfile != NumericProfile || request.Tick != tick || request.ActorId != beforeWorldState.Bodies[i].ActorId || !BodyEquals(request.BeforeBody, beforeWorldState.Bodies[i]))
+                CharacterWorldSolveRequest request = m_Requests[i];
+                if (request.NumericProfile != numericProfile || request.Tick != tick || request.ActorId != worldState.Bodies[i].ActorId || !BodyEquals(request.BeforeBody, worldState.Bodies[i]))
                     throw new ArgumentException("World batch request order or before-body state does not match WorldSimulationState.", nameof(requests));
-                if (i > 0 && copied[i - 1].ActorId == request.ActorId)
+                if (i > 0 && m_Requests[i - 1].ActorId == request.ActorId)
                     throw new ArgumentException($"World batch contains duplicate ActorId '{request.ActorId}'.", nameof(requests));
                 required |= request.RequiredCapabilities;
             }
-            for (int i = 0; i < ObservedWorldConstraints.Constraints.Count; i++)
+            for (int i = 0; i < observedConstraints.Constraints.Count; i++)
             {
-                ObservedWorldConstraint observed = ObservedWorldConstraints.Constraints[i];
-                for (int activeIndex = 0; activeIndex < copied.Length; activeIndex++)
+                ObservedWorldConstraint observed = observedConstraints.Constraints[i];
+                for (int activeIndex = 0; activeIndex < m_Requests.Length; activeIndex++)
                 {
-                    if (copied[activeIndex].ActorId == observed.ActorId)
+                    if (m_Requests[activeIndex].ActorId == observed.ActorId)
                         throw new ArgumentException($"Observed ActorId '{observed.ActorId}' is already active in the World batch.", nameof(observedWorldConstraints));
                 }
             }
+            Tick = tick;
+            BeforeWorldState = worldState;
+            ObservedWorldConstraints = observedConstraints;
+            NumericProfile = numericProfile;
             RequiredCapabilities = required;
-            m_Requests = copied;
             RequestHash = WorldSolveBatchCodec.ComputeRequestHash(this);
+            return this;
         }
 
-        public SimulationNumericProfile NumericProfile { get; }
-        public SimulationTick Tick { get; }
-        public WorldSimulationState BeforeWorldState { get; }
-        public ObservedWorldConstraintFrame ObservedWorldConstraints { get; }
+        public SimulationNumericProfile NumericProfile { get; private set; }
+        public SimulationTick Tick { get; private set; }
+        public WorldSimulationState BeforeWorldState { get; private set; }
+        public ObservedWorldConstraintFrame ObservedWorldConstraints { get; private set; }
         public IReadOnlyList<CharacterWorldSolveRequest> Requests => m_Requests;
-        public WorldCapability RequiredCapabilities { get; }
-        public StableHash RequestHash { get; }
+        public WorldCapability RequiredCapabilities { get; private set; }
+        public StableHash RequestHash { get; private set; }
 
         internal static bool BodyEquals(WorldBodyState left, WorldBodyState right)
         {

@@ -38,6 +38,7 @@ namespace ThirdPersonSimulation
         readonly CharacterWorldSolveRequest[] m_Requests;
         readonly List<SimulationIngress>[] m_Ingress;
         readonly Float32CharacterEvaluationResultBatch m_EvaluationBatch;
+        readonly WorldSolveBatchRequest m_WorldBatch;
 
         public Float32AbilityEvaluatePassRuntime(
             SimulationPipelinePassDescriptor descriptor,
@@ -60,6 +61,7 @@ namespace ThirdPersonSimulation
             m_Requests = new CharacterWorldSolveRequest[actorCount];
             m_Ingress = new List<SimulationIngress>[actorCount];
             m_EvaluationBatch = new Float32CharacterEvaluationResultBatch(actorCount);
+            m_WorldBatch = new WorldSolveBatchRequest(actorCount);
             for (int i = 0; i < actorCount; i++)
                 m_Ingress[i] = new List<SimulationIngress>();
         }
@@ -108,7 +110,7 @@ namespace ThirdPersonSimulation
                     m_Requests[i] = worldRequest;
                 }
                 writePorts.CharacterEvaluationResults.Write(m_EvaluationBatch.Reset(step.Tick, m_Evaluations));
-                writePorts.WorldBatch.Write(new WorldSolveBatchRequest(
+                writePorts.WorldBatch.Write(m_WorldBatch.Reset(
                     step.Tick,
                     state.WorldState,
                     m_Requests,

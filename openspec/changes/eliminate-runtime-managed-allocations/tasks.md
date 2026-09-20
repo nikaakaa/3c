@@ -268,6 +268,8 @@
 
 - [x] 5.59 两数值域 CharacterWorldSolveRequest 改为只读值请求，Evaluate workspace 以 default 清空引用字段，删除每 Actor 每 step 的请求对象分配；Batch 身份校验和三套 solver 消费契约保持
 
+- [x] 5.60 两数值域 AbilityEvaluatePass 按锁定 roster 持有可重置 WorldSolveBatchRequest workspace，复用 Batch 对象与内部请求数组，删除每 simulation step 的请求 Batch 和数组分配；RequestHash 仍逐 step 重算
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

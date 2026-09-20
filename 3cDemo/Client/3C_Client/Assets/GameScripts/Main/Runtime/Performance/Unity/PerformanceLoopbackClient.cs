@@ -10,6 +10,7 @@ namespace ThirdPersonPerformance.Runtime
 {
     internal sealed class PerformanceLoopbackClient : IDisposable
     {
+        const int MaximumMessageCharacters = 256;
         readonly object m_Gate = new object();
         readonly Queue<string> m_Incoming = new Queue<string>();
         readonly Queue<string> m_Outgoing = new Queue<string>();
@@ -17,6 +18,7 @@ namespace ThirdPersonPerformance.Runtime
         readonly int m_Port;
         readonly string m_Hello;
         readonly int m_ConnectTimeoutMilliseconds;
+        readonly byte[] m_SendBuffer;
 
         TcpClient m_Client;
         NetworkStream m_Stream;
@@ -38,6 +40,7 @@ namespace ThirdPersonPerformance.Runtime
             m_Port = port;
             m_Hello = hello;
             m_ConnectTimeoutMilliseconds = connectTimeoutMilliseconds;
+            m_SendBuffer = new byte[checked(Encoding.UTF8.GetMaxByteCount(Math.Max(MaximumMessageCharacters, hello.Length)) + 1)];
         }
 
         public bool IsConnected
@@ -89,7 +92,7 @@ namespace ThirdPersonPerformance.Runtime
 
         public void Send(string message)
         {
-            if (string.IsNullOrWhiteSpace(message) || message.Length > 256)
+            if (string.IsNullOrWhiteSpace(message) || message.Length > MaximumMessageCharacters)
                 throw new InvalidDataException("Performance loopback message is invalid.");
             lock (m_Gate)
             {
@@ -133,10 +136,10 @@ namespace ThirdPersonPerformance.Runtime
                 m_OutgoingReady.Set();
                 while (true)
                 {
-                    string line = reader.ReadLineAsync().GetAwaiter().GetResult();
+                    string line = reader.ReadLine();
                     if (line == null)
                         throw new EndOfStreamException("Performance Controller loopback connection closed.");
-                    if (line.Length > 256)
+                    if (line.Length > MaximumMessageCharacters)
                         throw new InvalidDataException("Performance Controller command exceeds the protocol limit.");
                     lock (m_Gate)
                         m_Incoming.Enqueue(line);
@@ -157,8 +160,9 @@ namespace ThirdPersonPerformance.Runtime
                     m_OutgoingReady.WaitOne();
                     while (TryTakeOutgoing(out NetworkStream stream, out string message))
                     {
-                        byte[] bytes = Encoding.UTF8.GetBytes(message + "\n");
-                        stream.WriteAsync(bytes, 0, bytes.Length).GetAwaiter().GetResult();
+                        int byteCount = Encoding.UTF8.GetBytes(message, 0, message.Length, m_SendBuffer, 0);
+                        m_SendBuffer[byteCount++] = (byte)'\n';
+                        stream.Write(m_SendBuffer, 0, byteCount);
                         CompleteWrite();
                     }
                     lock (m_Gate)

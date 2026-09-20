@@ -274,3 +274,13 @@
 - 四个构造入口通过原有正数检查后，按 checked(N＋1) 创建各自队列。发布逻辑原先先 Enqueue 再在超出 N 时 Dequeue，因此瞬时峰值是 N＋1；保持该顺序及 Changed 通知时机，不修改公开历史接口、最终保留数量、记录对象和旧快照寿命。
 - 取舍：提前占用配置容量的引用数组，消除窗口填充过程和满窗口写入的队列扩容。极端容量导致的整数溢出或内存不足在准备入口直接失败，不新增任意上限或备用存储。History.ToArray 与各类记录对象分配仍存在；故障事件属于显式诊断行为，未称为每帧热点。
 - 以当前 Unity GameLogic.rsp 引用独立编译完整 GameLogic，退出码 0、无诊断，产物仅写系统临时目录；diff 空白检查通过。编辑前本机未发现 csc／bee 编译进程，未控制或刷新共享 Unity，未新增测试，未做 Player 分配采样。
+
+## 2026-09-20 正式性能控制连接收发分配清理
+
+对应 tasks.md 的 7.5，与代码同步提交。
+
+- ThirdPersonPerformanceCaptureAgent 使用 PerformanceLoopbackClient 与既有控制器通信。其 ReadLoop／WriteLoop 已分别运行在专用后台线程，原调用 ReadLineAsync／WriteAsync 后立即 GetAwaiter().GetResult；现在线程内直接 ReadLine／Write，删除每次消息的异步操作任务入口，不把阻塞 IO 移到 Unity 主线程。
+- 发送原先 Encoding.UTF8.GetBytes(message + 换行) 每次拼接字符串并创建字节数组。现构造时保存单一发送缓冲，按 UTF-8.GetMaxByteCount(max(256, hello.Length)) 加一准备。256 来自既有普通命令长度限制；HELLO 直接入队，故必须按实际握手字符串长度覆盖，不能假定同样受 256 限制。
+- 唯一写线程编码消息到缓冲后追加单字节 LF，并在同步 Write 完成后复用；保留编码器默认替换行为、无 BOM、消息先后、CompleteWrite 时机以及原错误发布路径。读取结果仍是独立字符串，控制器协议和收发队列消费者均不变，没有新增控制面。
+- 取舍：连接常驻一个准备缓冲，避免每条发送消息的拼接和数组；线程原本就在等待异步操作完成，现直接承担同步 IO。连接建立阶段的 ConnectAsync、入站字符串、出站消息构造、队列扩容和故障文本仍会分配。控制消息不是每帧采样数据，不能把此改动描述为每帧消除固定分配量。
+- 当前 Unity 引用下独立编译完整 ThirdPersonPerformance.Runtime，退出码 0、无诊断，产物位于系统临时目录；diff 空白检查通过。编辑前本机未发现 csc／bee 编译进程，未新增测试、未刷新或控制 Editor，未进行控制器联调或 Player 采样。

@@ -304,3 +304,12 @@
 - 全仓调用核对后，RollbackDatagramPacket.CopyPayload 的唯一消费者是该重组器，迁移后删除旧入口；其它快照、服务器消息等同名 CopyPayload 不属于本类型，保持原有真实消费者。
 - 取舍：不再创建逐片字节副本，但直到重组结束会保留 packet 本体及其身份字符串，常驻内存变化取决于分片尺寸和重组等待时间，未经采样不宣称总内存下降。packet 自身 payload、重组引用数组、最终消息数组及解码对象仍会分配，未引入复用池或提前回收。
 - 编辑前检测到 Unity bee 和 csc 进程，等待具体进程结束并重新确认无编译进程后才修改。Endpoint portable 连带 Core／Fixed／Rollback 编译零警告零错误，按规定构建后 shutdown 成功；diff 空白检查通过。未新增测试、未刷新或控制共享 Editor、未做网络联调或 Player 采样。
+
+## 2026-09-20 Canonical 基础数值写入栈缓冲
+
+对应 tasks.md 的 5.18，与代码同步提交。
+
+- CanonicalWriter 原字段 m_PrimitiveBuffer 为每个 writer 创建 byte[8]，供五个整数写入方法同步使用。现删除字段，WriteInt32／UInt32／UInt16／Int64／UInt64 各自 stackalloc sizeof(对应数值类型) 的缓冲。
+- 仍调用相同 BinaryPrimitives 小端写入函数，再同步调用现有 MemoryStream.Write(Span)。每个函数单次使用 2／4／8 字节，退出函数后不保留引用；没有循环内累计栈申请，也没有托管池或共享可变缓冲。
+- WriteDouble 继续通过 WriteInt64 写位模式，长度前缀及回填继续通过 WriteInt32；协议字段、负零规范化、异常和流所有权不变。消除的是每个 writer 的一个托管数组，不是每个整数一个数组；writer 对象、流容量、字符串编码租借和 ToArray 仍存在。
+- portable Core 构建零警告零错误，按规定禁用构建服务器和共享编译并在结束 shutdown；当前 Unity 引用下独立编译完整 Core 也通过，产物仅在系统临时目录。diff 空白检查通过，编辑前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity、未做 Player 或协议实测。

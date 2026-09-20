@@ -11,7 +11,6 @@ namespace ThirdPersonSimulation
     {
         readonly MemoryStream m_Stream;
         readonly bool m_OwnsStream;
-        readonly byte[] m_PrimitiveBuffer = new byte[8];
 
         public CanonicalWriter()
         {
@@ -30,32 +29,37 @@ namespace ThirdPersonSimulation
 
         public void WriteInt32(int value)
         {
-            BinaryPrimitives.WriteInt32LittleEndian(m_PrimitiveBuffer.AsSpan(0, 4), value);
-            m_Stream.Write(m_PrimitiveBuffer, 0, 4);
+            Span<byte> buffer = stackalloc byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32LittleEndian(buffer, value);
+            m_Stream.Write(buffer);
         }
 
         public void WriteUInt32(uint value)
         {
-            BinaryPrimitives.WriteUInt32LittleEndian(m_PrimitiveBuffer.AsSpan(0, 4), value);
-            m_Stream.Write(m_PrimitiveBuffer, 0, 4);
+            Span<byte> buffer = stackalloc byte[sizeof(uint)];
+            BinaryPrimitives.WriteUInt32LittleEndian(buffer, value);
+            m_Stream.Write(buffer);
         }
 
         public void WriteUInt16(ushort value)
         {
-            BinaryPrimitives.WriteUInt16LittleEndian(m_PrimitiveBuffer.AsSpan(0, 2), value);
-            m_Stream.Write(m_PrimitiveBuffer, 0, 2);
+            Span<byte> buffer = stackalloc byte[sizeof(ushort)];
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer, value);
+            m_Stream.Write(buffer);
         }
 
         public void WriteInt64(long value)
         {
-            BinaryPrimitives.WriteInt64LittleEndian(m_PrimitiveBuffer, value);
-            m_Stream.Write(m_PrimitiveBuffer, 0, 8);
+            Span<byte> buffer = stackalloc byte[sizeof(long)];
+            BinaryPrimitives.WriteInt64LittleEndian(buffer, value);
+            m_Stream.Write(buffer);
         }
 
         public void WriteUInt64(ulong value)
         {
-            BinaryPrimitives.WriteUInt64LittleEndian(m_PrimitiveBuffer, value);
-            m_Stream.Write(m_PrimitiveBuffer, 0, 8);
+            Span<byte> buffer = stackalloc byte[sizeof(ulong)];
+            BinaryPrimitives.WriteUInt64LittleEndian(buffer, value);
+            m_Stream.Write(buffer);
         }
 
         public void WriteDouble(double value)

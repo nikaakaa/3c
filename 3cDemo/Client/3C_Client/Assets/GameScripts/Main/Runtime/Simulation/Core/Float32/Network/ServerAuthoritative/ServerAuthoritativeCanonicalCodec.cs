@@ -126,9 +126,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 : string.Empty);
         }
 
-        public static AuthoritativeActorBaseline ReadBaseline(byte[] bytes)
+        public static AuthoritativeActorBaseline ReadBaseline(ArraySegment<byte> bytes)
         {
-            var reader = Reader(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))), BaselineMagic, BaselineSchemaVersion, "ServerAuthoritative baseline");
+            var reader = Reader(bytes, BaselineMagic, BaselineSchemaVersion, "ServerAuthoritative baseline");
             var actorId = new ActorId(reader.ReadString());
             var tick = new SimulationTick(reader.ReadUInt64());
             SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
@@ -173,7 +173,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 new ServerAuthoritativeEventHorizon(eventSequence, eventId));
             using var writer = new CanonicalWriter();
             WriteBaseline(writer, result);
-            RequireCanonical(bytes, writer, "ServerAuthoritative baseline");
+            RequireCanonical(bytes.AsSpan(), writer, "ServerAuthoritative baseline");
             return result;
         }
 

@@ -98,11 +98,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             int baselineCount = ReadCount(reader, "baseline");
             var baselines = new AuthoritativeActorBaseline[baselineCount];
             for (int i = 0; i < baselineCount; i++)
-                baselines[i] = ServerAuthoritativeCanonicalCodec.ReadBaseline(reader.ReadBytes());
+                baselines[i] = ServerAuthoritativeCanonicalCodec.ReadBaseline(reader.ReadBytesSegment());
             int remoteCount = ReadCount(reader, "remote presentation");
             var remote = new RemotePresentationBatch[remoteCount];
             for (int i = 0; i < remoteCount; i++)
-                remote[i] = ReadRemotePresentation(reader.ReadBytes());
+                remote[i] = ReadRemotePresentation(reader.ReadBytesSegment());
             reader.RequireComplete();
             var result = new AuthorityReplicationBatch(tick, acks, baselines, remote);
             using var writer = new CanonicalWriter();
@@ -174,6 +174,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public static RemotePresentationBatch ReadRemotePresentation(byte[] bytes)
         {
+            return ReadRemotePresentation(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))));
+        }
+
+        static RemotePresentationBatch ReadRemotePresentation(ArraySegment<byte> bytes)
+        {
             CanonicalReader reader = Reader(bytes, RemoteMagic, RemoteVersion, "remote presentation");
             var actorId = new ActorId(reader.ReadString());
             bool resetBodyStream = reader.ReadBoolean();
@@ -193,7 +198,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             var result = new RemotePresentationBatch(actorId, bodies, samples, events, resetBodyStream);
             using var writer = new CanonicalWriter();
             WriteRemotePresentation(writer, result);
-            RequireCanonical(bytes, writer, "remote presentation");
+            RequireCanonical(bytes.AsSpan(), writer, "remote presentation");
             return result;
         }
 
@@ -503,7 +508,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         static CanonicalReader Reader(byte[] bytes, uint magic, int version, string label)
         {
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            return Reader(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))), magic, version, label);
+        }
+
+        static CanonicalReader Reader(ArraySegment<byte> bytes, uint magic, int version, string label)
+        {
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != magic || reader.ReadInt32() != version)
                 throw new InvalidDataException($"ServerAuthoritative {label} schema is invalid.");
             return reader;
@@ -517,9 +527,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return count;
         }
 
-        static void RequireCanonical(byte[] source, CanonicalWriter canonical, string label)
+        static void RequireCanonical(ReadOnlySpan<byte> source, CanonicalWriter canonical, string label)
         {
-            if (source == null || canonical == null || !canonical.ContentEquals(source))
+            if (canonical == null || !canonical.ContentEquals(source))
                 throw new InvalidDataException($"ServerAuthoritative {label} payload is not canonical.");
         }
 

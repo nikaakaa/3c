@@ -422,3 +422,13 @@
 - 两个辅助入口只处理长度边界，仍调用各自唯一字段写入函数，保留 null 参数异常、Magic／版本／字段与集合次序。公开 WriteBaseline／WriteRemotePresentation 的实际独立结果消费者保留，不另建编码协议。
 - 每个子项不再创建 writer、流和完整输出数组。读取侧 ReadBytes、基线自身角色状态字节复制、外层 writer 与最终数组仍分配；不改变远端表现消费、事件或状态恢复生命周期。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议字节对比或 Player 分配采样。
+
+## 2026-09-20 权威复制子消息片段解码
+
+对应 tasks.md 的 5.31，与代码同步提交。
+
+- ReadAuthorityReplication 的基线及远端表现循环改用 ReadBytesSegment。ReadBaseline 全仓唯一调用迁移后，正式入口统一接收 ArraySegment；远端表现仍有独立 byte[] 消费者，公开入口保留原 null 检查后进入同一私有片段解码，不复制另一套解析实现。
+- 两类子消息的 CanonicalReader 与 ContentEquals 都限定为实际片段，继续执行 schema、集合上限、RequireComplete 和完整重新编码比较。原包中相邻子消息不参与本片段校验，公开 byte[] 消费者的输入范围不变。
+- 基线内部角色状态仍 ReadBytes 并由结果复制持有；远端表现结果从解析出的独立字符串、数值和结果集合构造，不保存原包或 reader。删除的是每个外层子消息的字节副本，不改长期基线、事件、播放、事务或恢复生命周期。
+- 私有 RequireCanonical 的源参数改为 ReadOnlySpan；null 已由全部公开读取入口在解析前拒绝，不再保留不可达的源 null 判断。错误文本及结果数据校验不变。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前及续做前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行对比或 Player 分配采样。

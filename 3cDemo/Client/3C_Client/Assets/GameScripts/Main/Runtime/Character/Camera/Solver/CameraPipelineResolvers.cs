@@ -36,14 +36,15 @@ namespace ThirdPersonCamera
 
         public CameraResolvedTargetPlan Resolve(
             CameraSequenceRequest sequence,
-            IEnumerable<CameraTargetSelectionRequest> requests,
+            IReadOnlyList<CameraTargetSelectionRequest> requests,
             IReadOnlyList<CameraTargetSnapshot> snapshots = null)
         {
             CameraTargetSelectionRequest selected = default;
             if (requests != null)
             {
-                foreach (CameraTargetSelectionRequest candidate in requests)
+                for (int i = 0; i < requests.Count; i++)
                 {
+                    CameraTargetSelectionRequest candidate = requests[i];
                     if (candidate.Active && ShouldReplace(selected, candidate))
                         selected = candidate;
                 }

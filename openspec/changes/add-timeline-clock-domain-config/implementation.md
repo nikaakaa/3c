@@ -494,3 +494,7 @@
 - 本批编译先发现跨程序集可见性和三个原引用类型判断，已迁移为明确的IsValid合同。CharacterTimelinePendingAdvance包装和运行事件身份仍有分配，完整0 GC仍未完成。
 - Host 的 Commit／Discard 原先先按handle删除pending再调用底层；现先核对字典中的pending对象就是传入对象，避免同handle旧请求移除新候选。此处仍使用原pending注册表，不增加并行状态表。
 - Unity编译与最终域重载完成（1789922436006），Editor idle，控制台错误为零；git diff --check通过，未新增测试，未进行运行分配采样。
+
+## 删除没有消费者的TreeClip与Logic Marker调用字符串
+- 对应0.7：全Assets C#引用核对显示，两种请求的CallId只在构造时赋值，没有读取方。正式invoker使用原playback handle、Clip／Marker身份、cycle和Action实例身份。删除冗余CallId字段、参数及两处拼接函数，持续TreeClip Update不再为无人使用的字段逐tick生成字符串；没有引入身份缓存或另一套调用身份。
+- Unity脚本构建已成功，域重载后检查待本轮后续补齐；git diff --check通过。其他实际使用的EventId哈希和pending包装分配仍需处理，未新增测试。

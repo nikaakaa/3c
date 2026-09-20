@@ -1113,8 +1113,7 @@ namespace BTSMTL.Timeline.Runtime
             FixedScalar time,
             int cycle,
             float normalizedTime,
-            ulong generation,
-            string callId)
+            ulong generation)
         {
             ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
                 ? throw new ArgumentException("TreeClip identity is required.", nameof(clipAuthoringId))
@@ -1136,9 +1135,6 @@ namespace BTSMTL.Timeline.Runtime
             Generation = generation == 0
                 ? throw new ArgumentOutOfRangeException(nameof(generation))
                 : generation;
-            CallId = string.IsNullOrWhiteSpace(callId)
-                ? throw new ArgumentException("TreeClip call identity is required.", nameof(callId))
-                : callId.Trim();
         }
 
         public string ClipAuthoringId { get; }
@@ -1151,7 +1147,6 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle { get; }
         public float NormalizedTime { get; }
         public ulong Generation { get; }
-        public string CallId { get; }
     }
 
     public readonly struct TimelineRuntimeMarkerRequest
@@ -1163,8 +1158,7 @@ namespace BTSMTL.Timeline.Runtime
             string graphRevision,
             FixedScalar time,
             int cycle,
-            ulong generation,
-            string callId)
+            ulong generation)
         {
             MarkerAuthoringId = string.IsNullOrWhiteSpace(markerAuthoringId)
                 ? throw new ArgumentException("Timeline Marker identity is required.", nameof(markerAuthoringId))
@@ -1183,9 +1177,6 @@ namespace BTSMTL.Timeline.Runtime
             Generation = generation == 0
                 ? throw new ArgumentOutOfRangeException(nameof(generation))
                 : generation;
-            CallId = string.IsNullOrWhiteSpace(callId)
-                ? throw new ArgumentException("Timeline Marker call identity is required.", nameof(callId))
-                : callId.Trim();
             Time = time;
             Cycle = cycle;
         }
@@ -1197,7 +1188,6 @@ namespace BTSMTL.Timeline.Runtime
         public FixedScalar Time { get; }
         public int Cycle { get; }
         public ulong Generation { get; }
-        public string CallId { get; }
     }
 
     public enum TimelineRuntimeTreeClipEventKind : byte
@@ -1889,7 +1879,6 @@ namespace BTSMTL.Timeline.Runtime
                 loop);
             AppendMarkerRequests(
                 content,
-                executionIdentity,
                 generation,
                 previousPosition,
                 previousCycle,
@@ -2042,12 +2031,7 @@ namespace BTSMTL.Timeline.Runtime
                     boundary.Time,
                     boundary.Cycle,
                     boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter ? 0f : 1f,
-                    generation,
-                    CreateTreeClipCallId(
-                        executionIdentity,
-                        generation,
-                        boundary.Cycle,
-                        treeClip.AuthoringId)));
+                    generation));
             }
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
@@ -2135,12 +2119,7 @@ namespace BTSMTL.Timeline.Runtime
                         currentPosition,
                         currentCycle,
                         local,
-                        generation,
-                        CreateTreeClipCallId(
-                            executionIdentity,
-                            generation,
-                            currentCycle,
-                            treeClip.AuthoringId)));
+                        generation));
                     traces.Add(new TimelineRuntimeTraceOutput(
                         timeline.AuthoringId,
                         treeTrack.AuthoringId,
@@ -2183,7 +2162,6 @@ namespace BTSMTL.Timeline.Runtime
 
         static void AppendMarkerRequests(
             TimelineContentUnit content,
-            TimelineExecutionIdentity executionIdentity,
             ulong generation,
             FixedScalar previousPosition,
             int previousCycle,
@@ -2221,28 +2199,9 @@ namespace BTSMTL.Timeline.Runtime
                         marker.GraphRevision,
                         marker.Time,
                         cycle,
-                        generation,
-                        CreateMarkerCallId(executionIdentity, generation, cycle, marker.MarkerId)));
+                        generation));
                 }
             }
-        }
-
-        internal static string CreateMarkerCallId(
-            TimelineExecutionIdentity executionIdentity,
-            ulong generation,
-            int cycle,
-            string markerAuthoringId)
-        {
-            return $"{executionIdentity.OwnerIdentity}:{executionIdentity.CallIdentity}:{executionIdentity.InstanceId}:{generation}:{cycle}:{markerAuthoringId}";
-        }
-
-        internal static string CreateTreeClipCallId(
-            TimelineExecutionIdentity executionIdentity,
-            ulong generation,
-            int cycle,
-            string clipAuthoringId)
-        {
-            return $"{executionIdentity.OwnerIdentity}:{executionIdentity.CallIdentity}:{executionIdentity.InstanceId}:{generation}:{cycle}:{clipAuthoringId}";
         }
 
         internal static void ValidateTreeContracts(

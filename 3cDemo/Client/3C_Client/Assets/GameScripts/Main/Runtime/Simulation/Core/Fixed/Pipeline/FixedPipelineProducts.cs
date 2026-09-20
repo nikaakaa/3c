@@ -1,7 +1,6 @@
 ﻿using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation.Fixed
 {
@@ -182,7 +181,7 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class SimulationPipelineOutputDispositionSet
     {
-        readonly ReadOnlyCollection<SimulationOutputDisposition> m_Dispositions;
+        readonly IReadOnlyList<SimulationOutputDisposition> m_Dispositions;
 
         public SimulationPipelineOutputDispositionSet(
             StableHash transactionIdentity,
@@ -200,7 +199,7 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException("Output disposition set contains duplicate EventId ownership.", nameof(dispositions));
             }
             TransactionIdentity = transactionIdentity;
-            m_Dispositions = values.AsReadOnly();
+            m_Dispositions = values;
         }
 
         public StableHash TransactionIdentity { get; }

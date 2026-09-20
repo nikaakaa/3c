@@ -1423,3 +1423,12 @@
 - 两域字段现以 IReadOnlyList 保存并直接引用各自私有 List。Ingress 公开类型和只读消费方式不变，调用者无法修改内部列表；事实排序和身份组合保持原规则。
 - 删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象；ingress List 本体和独立元素存储仍保留。
 - ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 typed ingress 运行对比或 Player 分配采样。
+
+## 2026-09-21 OutputDispositionSet 列表只读暴露
+
+对应 tasks.md 的 2.63。
+
+- Fixed／Float32 各自的 SimulationPipelineOutputDispositionSet 已从 egress 结果复制出私有 disposition List，按 SourceEventId 排序并拒绝重复事件所有权；原完成后仍调用 AsReadOnly。
+- 两域字段现以 IReadOnlyList 保存并直接引用各自私有 List。Dispositions 公开类型、事务身份和只读消费方式不变，CommitBatch 的事件覆盖校验继续读取同一独立列表。
+- 删除每个 egress tick 的两个 ReadOnlyCollection 包装对象，并清理两文件不再使用的 Collections.ObjectModel 引用；disposition List 本体仍保留。
+- ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 egress disposition 运行对比或 Player 分配采样。

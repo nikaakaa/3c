@@ -98,6 +98,7 @@
 - [x] 2.60 两数值域 CommitBatch 的事件覆盖列表按 OutputDispositions.Count 正式数量预备容量，删除正常提交路径的 List 扩容
 - [x] 2.61 两数值域 CanonicalInputBatch 的独立输入列表直接作为 IReadOnlyList 暴露，删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象
 - [x] 2.62 两数值域 TypedIngressBatch 的独立事实列表直接作为 IReadOnlyList 暴露，删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象
+- [x] 2.63 两数值域 OutputDispositionSet 的独立 disposition 列表直接作为 IReadOnlyList 暴露，删除每个 egress tick 的两个 ReadOnlyCollection 包装对象及无消费者命名空间引用
 
 ## 3. Timeline和事件图
 

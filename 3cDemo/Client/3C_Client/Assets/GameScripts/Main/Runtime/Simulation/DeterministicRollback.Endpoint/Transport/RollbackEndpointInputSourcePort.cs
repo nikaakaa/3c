@@ -210,26 +210,30 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public RollbackInputSourceDiagnosticsSnapshot CaptureDiagnostics()
         {
-            var remote = new List<RollbackRemoteActorInputDiagnosticsSnapshot>();
+            int remoteCount = m_RemoteDiagnostics.Count;
+            if (m_LocalActorId.IsValid && m_RemoteDiagnostics.ContainsKey(m_LocalActorId))
+                remoteCount--;
+            var remote = new RollbackRemoteActorInputDiagnosticsSnapshot[remoteCount];
+            int remoteIndex = 0;
             foreach (KeyValuePair<ActorId, RemoteInputDiagnostics> pair in m_RemoteDiagnostics)
             {
                 if (pair.Key.Equals(m_LocalActorId))
                     continue;
-                remote.Add(new RollbackRemoteActorInputDiagnosticsSnapshot(
+                remote[remoteIndex++] = new RollbackRemoteActorInputDiagnosticsSnapshot(
                     pair.Key,
                     pair.Value.ExactInputHitCount,
                     pair.Value.PredictedFallbackCount,
                     pair.Value.LastArrivalDeltaTicks,
-                    ExplicitFrontier(pair.Key)));
+                    ExplicitFrontier(pair.Key));
             }
-            remote.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+            Array.Sort(remote, (left, right) => left.ActorId.CompareTo(right.ActorId));
             FixedCharacterControlSourceDiagnosticsSnapshot local = m_InputAdapter.CaptureDiagnostics();
             return new RollbackInputSourceDiagnosticsSnapshot(
                 new RollbackLocalInputDiagnosticsSnapshot(
                     local.PendingOffensiveRequestCount,
                     local.OldestCaptureTick,
                     local.OldestEligibleTick),
-                remote.ToArray(),
+                remote,
                 m_RelayedArrivalCount,
                 m_RelayedArrivalLeadCount,
                 m_RelayedArrivalLateCount,

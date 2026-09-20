@@ -2013,3 +2013,12 @@
 - pass 现持有一只 disposition 工作列表，Execute 开始清空、填充后交给 set 的公开复制构造，并在 finally 清除。正常写入和任意中途异常都不保留本 tick 内容；实现与 Fixed／Float32 local immediate output pass 的既有工作区模式统一。
 - 删除每个 rollback outer tick 的 List 对象及达到观测峰值后的底层数组重复分配；首次填充和更高事件峰值仍可能扩容，最终 disposition 数组保持必要的独立寿命。
 - ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 disposition 事件峰值或 Player 分配采样。
+
+## 2026-09-21 Rollback Endpoint diagnostics 最终数组
+
+对应 tasks.md 的 7.19。
+
+- Endpoint InputSource 的 remote diagnostics 字典在 roster 锁定后包含全部 Actor，其中本地 Actor 由 m_LocalActorId 明确标识。原 CaptureDiagnostics 先把其余 Actor 加入 List、排序，再 ToArray 生成快照最终存储。
+- 捕获现以字典数量减去实际存在的本地 Actor 得到准确长度，直接填充 RollbackRemoteActorInputDiagnosticsSnapshot 数组并原地按 ActorId 排序。未锁定 roster 时仍得到 Array.Empty 等价的零长度数组，远端字段与排序保持。
+- 每次 diagnostics 捕获删除 List 对象、List 底层数组和 ToArray 的第二次复制；最终独立数组仍按诊断快照寿命存在。该入口是否按帧读取未采样，不把静态删除宣称为稳态 Player 收益。
+- ThirdPersonSimulation.DeterministicRollback.Endpoint portable 连同依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 diagnostics 刷新频率或 Player 分配采样。

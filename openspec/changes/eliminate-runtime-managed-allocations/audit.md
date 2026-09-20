@@ -895,3 +895,11 @@
 - 保留 Startup、Requested、None 等合法零值；其他 byte 仍在原字段位置抛原类型名／数值的 InvalidDataException，未使用粗略非零或范围判断。实例字段顺序、构造、身份与上下文关联保持原样，不改变动作状态推进、Timeline 播放或回滚所有权。
 - 运行入口为已有角色状态恢复的 ReadActionInstances，不将此项报告为每帧必经。Timeline 与 scope 的通用枚举读取仍有真实消费者，原泛型工具继续保留，完整 codec 尚未无反射。
 - 修改前两目标文件无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未执行动作恢复运行对比或 Player 分配采样。
+## 2026-09-20 远端身体采样选择上游校验
+
+对应 tasks.md 的 2.38，补充 2.34 的上游调用链。
+
+- ServerAuthoritativePredictionHistory 中远端身体采样流程先生成 ServerAuthoritativeRemoteBodySelection，再通过 ToObservedConstraint 转成观测约束。2.34 已清理下游构造，但上游 selection 构造仍 Enum.IsDefined，现同样直接接受 Exact／Interpolation／ConstantVelocityExtrapolation 三成员。
+- 已检索到生成 selection frame 的循环及实际 selection 构造入口，不是初始化目录。保留 Actor／Tick／Body 关联和来源时序检查、原 ArgumentException，未改采样算法、精确／插值／外推选择规则或历史持有关系。
+- 再次核对 SimulationGraphContracts.cs 仍有并行未提交修改，scope 校验未介入。实际目标文件此前无其它修改，编辑前进程查询完成且无 csc／bee。ServerAuthoritative portable 连带 Core／Float32 零警告零错误，构建服务关闭成功，diff 空白检查通过。
+- 未新增测试、未操作共享 Unity、未运行网络采样对比或 Player 分配采样；selection frame 数组及历史存储仍分配，不能将上下游两处校验清理等同整条预测链无分配。

@@ -598,3 +598,10 @@
 - Fixed／Float32解码仍在原编码链构造固定集合，写入字段与顺序不变。公开构造合同不再接收可为null的列表，合法空集合使用默认集合值；删除先前活动Clip的null元素替换，正式内容身份按原输入保留，异常身份仍由恢复内容校验拒绝，不做兼容归一化。
 - 首次从非空运行列表捕获仍分配数组，解码临时数组、外层角色状态重建和Restore候选对象仍有分配；本批关闭的是包装与两层适配重复复制，未将其描述为完整快照0 GC。
 - Unity编译及最终域重载完成（1789928943159），Editor idle、控制台零错误，git diff --check通过；未新增测试，未进行快照Restore运行或内存采样。
+
+## 已有播放恢复复用原内容准备结果
+- 对应0.7／7.2：原Host在每次ApplyAbilityTimelineSnapshot时，即使原播放仍存在也重新执行Prepare，重复建立内容依赖与绑定。现TimelineRuntimePlayback保留创建时已就绪的Preparation，Service通过正式TryGetPreparation读取；Host恢复已存在handle时复用原结果，缺失播放仍沿原Prepare及CreatePlayback链完整建立。没有新增按内容身份猜测的缓存或另一条runtime。
+- Preparation.SourceTimeline作为跨程序集正式读取入口公开，使Host重新建立表现登记时使用原准备对应的Timeline来源，而不是再克隆一份同名内容。原RestoreCandidate.Validate及ApplyTo仍逐项核对服务、handle、generation、执行身份、模式、tick率、revision和提交边界，不因复用而放松校验。
+- TimelineRuntimeRestoreCandidate改为readonly struct，删除每次恢复的候选对象分配；默认候选由原服务归属校验拒绝，无额外可变候选表。内容准备结果随原播放存活。进一步核对发现原Service仅在整体Dispose清空播放表，终态实例确认后的回收仍需沿快照与确认边界继续处理，不能宣称停止即释放。
+- 首轮编译报告跨程序集internal入口不可见，已调整为正式公开读取合同后重新编译；未使用反射或修改程序集友元权限。新播放准备、首次快照数组、Marker事件哈希及外层状态分配仍在剩余范围，未据此宣称全链0 GC。
+- 最终Unity编译及域重载完成（1789929328234），Editor idle、控制台零错误，git diff --check通过；未新增测试，未运行恢复压力或分配采样。

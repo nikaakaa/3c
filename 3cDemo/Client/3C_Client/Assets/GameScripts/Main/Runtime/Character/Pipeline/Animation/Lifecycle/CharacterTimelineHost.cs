@@ -1397,16 +1397,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 snapshot.OwnerIdentity,
                 snapshot.CallIdentity,
                 snapshot.ExecutionInstanceId);
-            TimelineData playbackTimeline = TryGetActivePlayback(new TimelineRuntimePlaybackHandle((ulong)snapshot.RuntimeHandle), out ActivePlayback existing)
-                ? existing.Timeline : timeline.Clone();
-            TimelineRuntimePreparationResult preparation = m_Host.Prepare(
-                snapshot.RequestId,
-                playbackTimeline,
-                executionIdentity,
-                MapPlaybackMode(snapshot.PlaybackMode),
-                Array.Empty<TimelineCallBinding>());
-            if (!preparation.IsReady)
-                throw new InvalidOperationException($"Ability Timeline restore '{snapshot.RuntimeHandle}' failed preparation: {string.Join(" | ", preparation.Errors)}");
+            if (!m_Host.Service.TryGetPreparation(new TimelineRuntimePlaybackHandle((ulong)snapshot.RuntimeHandle),
+                    out TimelineRuntimePreparationResult preparation))
+            {
+                preparation = m_Host.Prepare(
+                    snapshot.RequestId,
+                    timeline.Clone(),
+                    executionIdentity,
+                    MapPlaybackMode(snapshot.PlaybackMode),
+                    Array.Empty<TimelineCallBinding>());
+                if (!preparation.IsReady)
+                    throw new InvalidOperationException($"Ability Timeline restore '{snapshot.RuntimeHandle}' failed preparation: {string.Join(" | ", preparation.Errors)}");
+            }
+            TimelineData playbackTimeline = preparation.SourceTimeline;
             var stopCause = MapPlaybackStopCause(snapshot.StopCause);
             var native = new TimelineRuntimePlaybackSnapshot(
                 new TimelineRuntimePlaybackHandle((ulong)snapshot.RuntimeHandle),

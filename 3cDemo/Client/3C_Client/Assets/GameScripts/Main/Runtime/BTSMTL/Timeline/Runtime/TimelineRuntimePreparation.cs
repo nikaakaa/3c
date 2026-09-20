@@ -232,6 +232,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             Handle = handle;
             Generation = generation;
+            Preparation = preparation;
             RequestId = preparation.RequestId;
             ExecutionIdentity = preparation.ExecutionIdentity;
             PlaybackMode = preparation.PlaybackMode;
@@ -265,6 +266,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public TimelineContentUnit Content { get; }
         internal TimelineData SourceTimeline { get; }
+        internal TimelineRuntimePreparationResult Preparation { get; }
         public string ContentRevision => Content.ContentHash;
         public TimelineRuntimePreparedDependencies PreparedDependencies { get; }
         public TimelinePreparedBindings PreparedBindings { get; }
@@ -929,7 +931,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelinePlaybackMode PlaybackMode { get; }
         public TimelineRuntimeNumericTarget NumericTarget { get; }
-        internal TimelineData SourceTimeline { get; }
+        public TimelineData SourceTimeline { get; }
         public TimelineContentUnit Content { get; }
         public string ContentRevision => Content?.ContentHash ?? string.Empty;
         public TimelineBindingPlan BindingPlan { get; }

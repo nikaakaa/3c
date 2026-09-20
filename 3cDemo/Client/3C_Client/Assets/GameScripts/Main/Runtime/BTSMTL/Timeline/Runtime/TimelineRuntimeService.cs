@@ -460,7 +460,7 @@ namespace BTSMTL.Timeline.Runtime
 
     }
 
-    public sealed class TimelineRuntimeRestoreCandidate
+    public readonly struct TimelineRuntimeRestoreCandidate
     {
         readonly TimelineRuntimePlaybackSnapshot m_Snapshot;
         readonly TimelineRuntimePreparationResult m_Preparation;
@@ -937,6 +937,18 @@ namespace BTSMTL.Timeline.Runtime
             return new TimelineRuntimePlaybackSnapshot(playback);
         }
 
+        public bool TryGetPreparation(TimelineRuntimePlaybackHandle handle, out TimelineRuntimePreparationResult preparation)
+        {
+            EnsureAvailable();
+            if (TryGet(handle, out TimelineRuntimePlayback playback))
+            {
+                preparation = playback.Preparation;
+                return true;
+            }
+            preparation = null;
+            return false;
+        }
+
         public TimelineRuntimeRestoreCandidate PrepareRestore(
             TimelineRuntimePlaybackSnapshot snapshot,
             TimelineRuntimePreparationResult preparation)
@@ -949,8 +961,6 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimeRestoreCandidate candidate)
         {
             EnsureAvailable();
-            if (candidate == null)
-                throw new ArgumentNullException(nameof(candidate));
             candidate.ValidateOwnedBy(this);
             if (m_Playbacks.TryGetValue(candidate.Handle.Value, out TimelineRuntimePlayback playback))
                 candidate.ApplyTo(playback);

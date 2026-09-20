@@ -11,12 +11,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Unavailable = 3
     }
 
-    public enum ActionLogicTerminalKind : byte
+    public enum ActionPlaybackEndReason : byte
     {
         None = 0,
         Complete = 1,
         Release = 2,
-        SegmentReplaced = 3
+        SegmentReplaced = 3,
+        BranchWithdrawn = 4
     }
 
     public enum ActionSlotSourceUsageKind : byte
@@ -275,7 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             EventId latestEventId,
             ulong latestCommandSequence,
             ActionFirstSampleReadiness firstSampleReadiness,
-            ActionLogicTerminalKind logicTerminal,
+            ActionPlaybackEndReason endReason,
             ActionAnimationPlaybackLifecyclePhase phase,
             ActionCommittedRawSample latestCommittedRawSample,
             bool hasCommittedRawSample,
@@ -295,7 +296,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             LatestEventId = latestEventId;
             LatestCommandSequence = latestCommandSequence;
             FirstSampleReadiness = firstSampleReadiness;
-            LogicTerminal = logicTerminal;
+            EndReason = endReason;
             Phase = phase;
             LatestCommittedRawSample = latestCommittedRawSample;
             HasCommittedRawSample = hasCommittedRawSample;
@@ -315,7 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public EventId LatestEventId { get; }
         public ulong LatestCommandSequence { get; }
         public ActionFirstSampleReadiness FirstSampleReadiness { get; }
-        public ActionLogicTerminalKind LogicTerminal { get; }
+        public ActionPlaybackEndReason EndReason { get; }
         public ActionAnimationPlaybackLifecyclePhase Phase { get; }
         public ActionCommittedRawSample LatestCommittedRawSample { get; }
         public bool HasCommittedRawSample { get; }

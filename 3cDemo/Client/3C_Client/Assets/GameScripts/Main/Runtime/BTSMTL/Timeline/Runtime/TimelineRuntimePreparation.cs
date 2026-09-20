@@ -258,7 +258,6 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle => m_Cycle;
         public string SectionId => m_SectionId;
         public IReadOnlyList<string> ActiveClipIds => m_ActiveClipIdsView;
-        public IReadOnlyList<TimelineRuntimeTreeClipAssociation> ActiveTreeClipAssociations => CreateActiveTreeClipAssociations(m_CursorTime, m_Cycle);
         public bool HasStopContext { get; private set; }
         public TimelinePlaybackStopContext StopContext { get; private set; }
 
@@ -547,7 +546,6 @@ namespace BTSMTL.Timeline.Runtime
             int timeCarry,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
-            IReadOnlyList<TimelineRuntimeTreeClipAssociation> activeTreeClipAssociations,
             IReadOnlyList<string> exitedTreeDecisionClips,
             IReadOnlyList<string> pendingTreeDecisionClips,
             bool hasStopContext,
@@ -578,13 +576,6 @@ namespace BTSMTL.Timeline.Runtime
                     exitedTreeDecisionClips,
                     pendingTreeDecisionClips))
                 return false;
-            if (!ValidateRestoredTreeClipAssociations(
-                    cursorTime,
-                    cycle,
-                    activeTreeClipAssociations,
-                    exitedTreeDecisionClips,
-                    pendingTreeDecisionClips))
-                return false;
             m_CursorTime = cursorTime;
             m_Cycle = cycle;
             m_SectionId = sectionId ?? string.Empty;
@@ -602,36 +593,6 @@ namespace BTSMTL.Timeline.Runtime
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             State = state;
-            return true;
-        }
-
-        bool ValidateRestoredTreeClipAssociations(
-            FixedScalar cursorTime,
-            int cycle,
-            IReadOnlyList<TimelineRuntimeTreeClipAssociation> associations,
-            IReadOnlyList<string> exitedTreeDecisionClips,
-            IReadOnlyList<string> pendingTreeDecisionClips)
-        {
-            List<TimelineRuntimeTreeClipAssociation> expected = CreateActiveTreeClipAssociations(
-                cursorTime,
-                cycle,
-                exitedTreeDecisionClips,
-                pendingTreeDecisionClips);
-            if ((associations?.Count ?? 0) != expected.Count)
-                return false;
-            for (int index = 0; index < expected.Count; index++)
-            {
-                TimelineRuntimeTreeClipAssociation actual = associations[index];
-                TimelineRuntimeTreeClipAssociation required = expected[index];
-                if (!string.Equals(actual.CallId, required.CallId, StringComparison.Ordinal) ||
-                    !string.Equals(actual.ClipAuthoringId, required.ClipAuthoringId, StringComparison.Ordinal) ||
-                    !string.Equals(actual.TrackAuthoringId, required.TrackAuthoringId, StringComparison.Ordinal) ||
-                    !string.Equals(actual.TreeGraphId, required.TreeGraphId, StringComparison.Ordinal) ||
-                    !string.Equals(actual.TreeGraphRevision, required.TreeGraphRevision, StringComparison.Ordinal) ||
-                    actual.Phase != required.Phase ||
-                    actual.Cycle != required.Cycle)
-                    return false;
-            }
             return true;
         }
 
@@ -693,42 +654,6 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (advance == null || !ReferenceEquals(advance.Owner, this) || !ReferenceEquals(m_PendingAdvance, advance))
                 throw new InvalidOperationException("Timeline Advance result does not belong to the active playback.");
-        }
-
-        List<TimelineRuntimeTreeClipAssociation> CreateActiveTreeClipAssociations(
-            FixedScalar cursorTime,
-            int cycle,
-            IReadOnlyList<string> exitedTreeDecisionClips = null,
-            IReadOnlyList<string> pendingTreeDecisionClips = null)
-        {
-            exitedTreeDecisionClips ??= m_ExitedTreeDecisionClips;
-            pendingTreeDecisionClips ??= m_PendingTreeClipExits;
-            var associations = new List<TimelineRuntimeTreeClipAssociation>();
-            for (int index = 0; index < Content.Clips.Count; index++)
-            {
-                TimelineContentClip clip = Content.Clips[index];
-                bool treeDecision = clip.ExitSource == TimelineClipExitSource.TreeDecision;
-                bool exited = treeDecision &&
-                              (exitedTreeDecisionClips.Contains(clip.AuthoringId) ||
-                               pendingTreeDecisionClips.Contains(clip.AuthoringId));
-                if (clip.TrackMuted || !clip.ExecutionPolicy.IsLogic ||
-                    clip.StartTime > cursorTime || exited ||
-                    !treeDecision && cursorTime >= clip.EndTime)
-                    continue;
-                if (!TimelineRuntimeEvaluator.TryResolveTreeClip(SourceTimeline, clip.AuthoringId, out TreeClip treeClip) ||
-                    !TimelineRuntimeEvaluator.TryGetTreeContract(Content, treeClip, out string treeGraphId, out string treeGraphRevision))
-                    continue;
-                associations.Add(new TimelineRuntimeTreeClipAssociation(
-                    TimelineRuntimeEvaluator.CreateTreeClipCallId(
-                        ExecutionIdentity, Generation, cycle, clip.AuthoringId),
-                    clip.AuthoringId,
-                    clip.TrackAuthoringId,
-                    treeGraphId,
-                    treeGraphRevision,
-                    treeClip.ExecutionPhase,
-                    cycle));
-            }
-            return associations;
         }
 
         void RefreshActiveState()
@@ -1229,45 +1154,6 @@ namespace BTSMTL.Timeline.Runtime
         public string CallId { get; }
     }
 
-    public readonly struct TimelineRuntimeTreeClipAssociation
-    {
-        public TimelineRuntimeTreeClipAssociation(
-            string callId,
-            string clipAuthoringId,
-            string trackAuthoringId,
-            string treeGraphId,
-            string treeGraphRevision,
-            TimelineTreeExecutionPhase phase,
-            int cycle)
-        {
-            CallId = string.IsNullOrWhiteSpace(callId)
-                ? throw new ArgumentException("TreeClip call identity is required.", nameof(callId))
-                : callId.Trim();
-            ClipAuthoringId = string.IsNullOrWhiteSpace(clipAuthoringId)
-                ? throw new ArgumentException("TreeClip identity is required.", nameof(clipAuthoringId))
-                : clipAuthoringId.Trim();
-            TrackAuthoringId = string.IsNullOrWhiteSpace(trackAuthoringId)
-                ? throw new ArgumentException("Tree Track identity is required.", nameof(trackAuthoringId))
-                : trackAuthoringId.Trim();
-            TreeGraphId = string.IsNullOrWhiteSpace(treeGraphId)
-                ? throw new ArgumentException("Tree graph identity is required.", nameof(treeGraphId))
-                : treeGraphId.Trim();
-            TreeGraphRevision = string.IsNullOrWhiteSpace(treeGraphRevision)
-                ? throw new ArgumentException("Tree graph revision is required.", nameof(treeGraphRevision))
-                : treeGraphRevision.Trim();
-            Phase = phase;
-            Cycle = cycle;
-        }
-
-        public string CallId { get; }
-        public string ClipAuthoringId { get; }
-        public string TrackAuthoringId { get; }
-        public string TreeGraphId { get; }
-        public string TreeGraphRevision { get; }
-        public TimelineTreeExecutionPhase Phase { get; }
-        public int Cycle { get; }
-    }
-
     public enum TimelineRuntimeTreeClipEventKind : byte
     {
         Enter = 1,
@@ -1637,7 +1523,8 @@ namespace BTSMTL.Timeline.Runtime
             float presentationDeltaSeconds,
             float interpolationAlpha,
             TimelineRuntimePresentationOperations operations,
-            IReadOnlyList<TimelineRuntimePresentationEvent> events)
+            IReadOnlyList<TimelineRuntimePresentationEvent> events,
+            TimelinePresentationSampleReason reason)
         {
             if (playback == null || !playback.Handle.IsValid || playback.Generation == 0 || presentationFrame == 0 ||
                 !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
@@ -1652,6 +1539,7 @@ namespace BTSMTL.Timeline.Runtime
             InterpolationAlpha = interpolationAlpha;
             ExecutionIdentity = playback.ExecutionIdentity;
             Operations = operations;
+            Reason = reason;
             Events = new ReadOnlyCollection<TimelineRuntimePresentationEvent>(
                 new List<TimelineRuntimePresentationEvent>(events ?? Array.Empty<TimelineRuntimePresentationEvent>()));
         }
@@ -1664,6 +1552,7 @@ namespace BTSMTL.Timeline.Runtime
         public float InterpolationAlpha { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelineRuntimePresentationOperations Operations { get; }
+        public TimelinePresentationSampleReason Reason { get; }
         public IReadOnlyList<TimelineRuntimePresentationEvent> Events { get; }
     }
 

@@ -294,6 +294,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 if (m_PresentationClockCoordinator == null || current.Kind != replacement.Kind)
                     throw new InvalidOperationException("Timeline progress replacement has no matching Action clock contract.");
+                if (current.SourceActionInstanceId != replacement.SourceActionInstanceId ||
+                    !current.Header.Activation.Source.Equals(replacement.Header.Activation.Source) ||
+                    current.TimelineProgress.Generation != replacement.TimelineProgress.Generation ||
+                    !string.Equals(current.TimelineProgress.TimelineId, replacement.TimelineProgress.TimelineId, StringComparison.Ordinal))
+                    m_PresentationClockCoordinator.RetireTimelineProgress(in current);
                 m_PresentationClockCoordinator.AcceptTimelineProgress(in replacement);
                 return;
             }

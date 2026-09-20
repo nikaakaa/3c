@@ -180,7 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 RemoveAt(pendingIndex);
                 return;
             }
-            Publish(ActionAnimationPlaybackCommand.Release(
+            Publish(ActionAnimationPlaybackCommand.Withdraw(
                 command.EventId,
                 command.LocalLogicTick,
                 command.PlaybackId,
@@ -385,6 +385,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ActionAnimationPlaybackCommandKind previous,
             ActionAnimationPlaybackCommandKind next)
         {
+            if (previous == ActionAnimationPlaybackCommandKind.Withdraw)
+                return next == ActionAnimationPlaybackCommandKind.Withdraw || next == ActionAnimationPlaybackCommandKind.Select;
+            if (next == ActionAnimationPlaybackCommandKind.Withdraw)
+                return previous != ActionAnimationPlaybackCommandKind.Release;
             if (previous == ActionAnimationPlaybackCommandKind.Release)
                 return next == ActionAnimationPlaybackCommandKind.Release;
             if (previous == ActionAnimationPlaybackCommandKind.Complete)

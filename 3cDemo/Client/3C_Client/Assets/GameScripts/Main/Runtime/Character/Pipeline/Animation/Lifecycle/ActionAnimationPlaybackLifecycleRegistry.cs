@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             EventId latestEventId,
             ulong latestCommandSequence,
             ActionFirstSampleReadiness firstSampleReadiness,
-            ActionLogicTerminalKind logicTerminal,
+            ActionPlaybackEndReason logicTerminal,
             ActionAnimationPlaybackLifecyclePhase phase,
             ActionCommittedRawSample latestCommittedRawSample,
             bool hasCommittedRawSample,
@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             LatestEventId = latestEventId;
             LatestCommandSequence = latestCommandSequence;
             FirstSampleReadiness = firstSampleReadiness;
-            LogicTerminal = logicTerminal;
+            EndReason = logicTerminal;
             Phase = phase;
             LatestCommittedRawSample = latestCommittedRawSample;
             HasCommittedRawSample = hasCommittedRawSample;
@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal EventId LatestEventId { get; }
         internal ulong LatestCommandSequence { get; }
         internal ActionFirstSampleReadiness FirstSampleReadiness { get; }
-        internal ActionLogicTerminalKind LogicTerminal { get; }
+        internal ActionPlaybackEndReason EndReason { get; }
         internal ActionAnimationPlaybackLifecyclePhase Phase { get; }
         internal ActionCommittedRawSample LatestCommittedRawSample { get; }
         internal bool HasCommittedRawSample { get; }
@@ -84,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal EventId LatestEventId;
             internal ulong LatestCommandSequence;
             internal ActionFirstSampleReadiness FirstSampleReadiness;
-            internal ActionLogicTerminalKind LogicTerminal;
+            internal ActionPlaybackEndReason EndReason;
             internal ActionAnimationPlaybackLifecyclePhase Phase;
             internal ActionCommittedRawSample LatestCommittedRawSample;
             internal bool HasCommittedRawSample;
@@ -116,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 LatestEventId = source.LatestEventId;
                 LatestCommandSequence = source.LatestCommandSequence;
                 FirstSampleReadiness = source.FirstSampleReadiness;
-                LogicTerminal = source.LogicTerminal;
+                EndReason = source.EndReason;
                 Phase = source.Phase;
                 LatestCommittedRawSample = source.LatestCommittedRawSample;
                 HasCommittedRawSample = source.HasCommittedRawSample;
@@ -160,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 LatestEventId = default;
                 LatestCommandSequence = 0;
                 FirstSampleReadiness = default;
-                LogicTerminal = default;
+                EndReason = default;
                 Phase = default;
                 LatestCommittedRawSample = default;
                 HasCommittedRawSample = false;
@@ -417,7 +417,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     }
                 }
                 entry.Phase =
-                    entry.LogicTerminal != ActionLogicTerminalKind.None ||
+                    entry.EndReason != ActionPlaybackEndReason.None ||
                     !selected && entry.SlotUsageCount > 0
                         ? ActionAnimationPlaybackLifecyclePhase.Retained
                         : ActionAnimationPlaybackLifecyclePhase.Selected;
@@ -464,7 +464,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (!permission.IsValid ||
                     entry == null ||
                     entry.Phase != ActionAnimationPlaybackLifecyclePhase.Retained ||
-                    entry.LogicTerminal == ActionLogicTerminalKind.None ||
+                    entry.EndReason == ActionPlaybackEndReason.None ||
                     entry.SlotUsageCount != 0 ||
                     !entry.HasSlotOwner ||
                     !entry.SlotOwner.Equals(permission.SlotId))
@@ -751,7 +751,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         entry.LatestEventId,
                         entry.LatestCommandSequence,
                         entry.FirstSampleReadiness,
-                        entry.LogicTerminal,
+                        entry.EndReason,
                         entry.Phase,
                         entry.LatestCommittedRawSample,
                         entry.HasCommittedRawSample,
@@ -787,7 +787,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     if (existing.Phase ==
                             ActionAnimationPlaybackLifecyclePhase.Retired ||
-                        existing.LogicTerminal != ActionLogicTerminalKind.None)
+                        existing.EndReason != ActionPlaybackEndReason.None)
                     {
                         BeginSegment(playbackId: command.PlaybackId,
                             actionInstanceId: command.ActionInstanceId,
@@ -830,7 +830,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (command.Kind == ActionAnimationPlaybackCommandKind.Sample ||
                 command.Kind == ActionAnimationPlaybackCommandKind.ProjectedSample)
             {
-                if (entry.LogicTerminal != ActionLogicTerminalKind.None)
+                if (entry.EndReason != ActionPlaybackEndReason.None)
                 {
                     throw new InvalidOperationException(
                         "Action playback Sample follows a terminal command.");
@@ -850,17 +850,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 }
                 return;
             }
-            ActionLogicTerminalKind terminal =
-                command.Kind == ActionAnimationPlaybackCommandKind.Complete
-                    ? ActionLogicTerminalKind.Complete
-                    : ActionLogicTerminalKind.Release;
-            if (entry.LogicTerminal == ActionLogicTerminalKind.Release &&
-                terminal != ActionLogicTerminalKind.Release)
+            ActionPlaybackEndReason terminal = command.Kind switch
+            {
+                ActionAnimationPlaybackCommandKind.Complete => ActionPlaybackEndReason.Complete,
+                ActionAnimationPlaybackCommandKind.Release => ActionPlaybackEndReason.Release,
+                ActionAnimationPlaybackCommandKind.Withdraw => ActionPlaybackEndReason.BranchWithdrawn,
+                _ => throw new InvalidOperationException("Action playback end command is invalid.")
+            };
+            if (entry.EndReason == ActionPlaybackEndReason.Release &&
+                terminal != ActionPlaybackEndReason.Release)
             {
                 throw new InvalidOperationException(
                     "Action playback terminal order is invalid.");
             }
-            entry.LogicTerminal = terminal;
+            entry.EndReason = terminal;
             if (entry.Phase ==
                 ActionAnimationPlaybackLifecyclePhase.PendingFirstSample)
             {
@@ -951,6 +954,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         AnimationPresentationMutationOperationKind.Complete,
                     ActionAnimationPlaybackCommandKind.Release =>
                         AnimationPresentationMutationOperationKind.Release,
+                    ActionAnimationPlaybackCommandKind.Withdraw =>
+                        AnimationPresentationMutationOperationKind.Withdraw,
                     _ => throw new InvalidOperationException(
                         "Action lifecycle command mutation kind is invalid.")
                 };
@@ -1044,7 +1049,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     entry.LatestEventId,
                     entry.LatestCommandSequence,
                     entry.FirstSampleReadiness,
-                    entry.LogicTerminal,
+                    entry.EndReason,
                     entry.Phase,
                     entry.LatestCommittedRawSample,
                     entry.HasCommittedRawSample,
@@ -1133,13 +1138,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (entry == null ||
                     entry.ActionInstanceId != actionInstanceId ||
                     entry.Phase == ActionAnimationPlaybackLifecyclePhase.Retired ||
-                    entry.LogicTerminal != ActionLogicTerminalKind.None)
+                    entry.EndReason != ActionPlaybackEndReason.None)
                 {
                     continue;
                 }
                 Entry writable = GetWritable(entry.PlaybackId, false);
                 writable.LatestEventId = causeEventId;
-                writable.LogicTerminal = ActionLogicTerminalKind.SegmentReplaced;
+                writable.EndReason = ActionPlaybackEndReason.SegmentReplaced;
                 if (writable.Phase ==
                     ActionAnimationPlaybackLifecyclePhase.PendingFirstSample)
                 {
@@ -1174,7 +1179,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             created.LatestEventId = eventId;
             created.LatestCommandSequence = sequence;
             created.FirstSampleReadiness = ActionFirstSampleReadiness.Pending;
-            created.LogicTerminal = ActionLogicTerminalKind.None;
+            created.EndReason = ActionPlaybackEndReason.None;
             created.Phase =
                 ActionAnimationPlaybackLifecyclePhase.PendingFirstSample;
         }

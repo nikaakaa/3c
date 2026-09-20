@@ -22,8 +22,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     {
         void AcceptTimelineProgress(in CharacterPresentationCommand command);
         void RetireTimelineProgress(in CharacterPresentationCommand command);
-        void ReleaseTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId);
-        bool TrySampleTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId,
+        void ReleaseTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId, ulong generation);
+        bool TrySampleTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId, ulong generation,
             ulong presentationFrame, ulong localLogicTick, float interpolationAlpha, out TimelineRuntimePresentationSample sample);
         void BeginSamplingFrame();
         void CommitSamplingFrame();
@@ -102,6 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal CharacterPresentationCommand Command;
             internal bool Occupied;
             internal bool Corrected;
+            internal bool Withdrawn;
             internal ulong PresentationFrame;
             internal TimelineRuntimePresentationSample Sample;
         }
@@ -156,10 +157,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     !entry.Command.Header.Activation.Source.Equals(command.Header.Activation.Source) ||
                     !string.Equals(entry.Command.TimelineProgress.TimelineId, command.TimelineProgress.TimelineId, StringComparison.Ordinal))
                     continue;
-                if (entry.Command.Header.EventId.Equals(command.Header.EventId) && entry.Command.TimelineProgress.Equals(command.TimelineProgress))
+                if (entry.Command.TimelineProgress.Generation != command.TimelineProgress.Generation)
+                {
+                    entry.Withdrawn = true;
+                    entry.PresentationFrame = 0;
+                    continue;
+                }
+                if (!entry.Withdrawn && entry.Command.Header.EventId.Equals(command.Header.EventId) && entry.Command.TimelineProgress.Equals(command.TimelineProgress))
                     return;
-                entry.Corrected = command.TimelineProgress.Generation != entry.Command.TimelineProgress.Generation ||
+                entry.Corrected = entry.Withdrawn ||
                     command.Header.Tick.Value <= entry.Command.Header.Tick.Value;
+                entry.Withdrawn = false;
                 entry.Command = command;
                 entry.PresentationFrame = 0;
                 return;
@@ -176,15 +184,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException("Timeline progress cannot retire inside an open presentation frame.");
             for (int i = 0; i < m_TimelineProgress.Length; i++)
                 if (m_TimelineProgress[i].Occupied && m_TimelineProgress[i].Command.Header.EventId.Equals(command.Header.EventId))
-                    m_TimelineProgress[i] = default;
+                {
+                    m_TimelineProgress[i].Withdrawn = true;
+                    m_TimelineProgress[i].PresentationFrame = 0;
+                }
         }
 
-        public void ReleaseTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId)
+        public void ReleaseTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId, ulong generation)
         {
             for (int i = 0; i < m_TimelineProgress.Length; i++)
             {
                 ref TimelineProgressEntry entry = ref m_TimelineProgress[i];
                 if (entry.Occupied && entry.Command.SourceActionInstanceId == actionInstanceId &&
+                    entry.Command.TimelineProgress.Generation == generation &&
                     entry.Command.Header.Activation.Source.Operation.Value == operationIndex &&
                     string.Equals(entry.Command.Header.Activation.Source.ExecutionPath, invocationPath, StringComparison.Ordinal) &&
                     string.Equals(entry.Command.TimelineProgress.TimelineId, timelineId, StringComparison.Ordinal))
@@ -192,7 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        public bool TrySampleTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId,
+        public bool TrySampleTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId, ulong generation,
             ulong presentationFrame, ulong localLogicTick, float interpolationAlpha, out TimelineRuntimePresentationSample sample)
         {
             RequireAlive();
@@ -202,6 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 ref TimelineProgressEntry entry = ref m_TimelineProgress[i];
                 if (!entry.Occupied || entry.Command.SourceActionInstanceId != actionInstanceId ||
+                    entry.Command.TimelineProgress.Generation != generation ||
                     entry.Command.Header.Activation.Source.Operation.Value != operationIndex ||
                     !string.Equals(entry.Command.Header.Activation.Source.ExecutionPath, invocationPath, StringComparison.Ordinal) ||
                     !string.Equals(entry.Command.TimelineProgress.TimelineId, timelineId, StringComparison.Ordinal))
@@ -226,11 +239,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 TimelinePresentationSampleReason reason = entry.Corrected
                     ? TimelinePresentationSampleReason.Correction : TimelinePresentationSampleReason.Advance;
-                if (progress.State == AbilityTimelineProgressState.Stopped)
+                if (entry.Withdrawn || progress.State == AbilityTimelineProgressState.Stopped)
                 {
                     position = progress.Time.Raw;
                     cycle = progress.Cycle;
-                    reason = TimelinePresentationSampleReason.Stopped;
+                    reason = entry.Withdrawn ? TimelinePresentationSampleReason.Withdrawn : TimelinePresentationSampleReason.Stopped;
                 }
                 else if (!entry.Corrected && progress.State == AbilityTimelineProgressState.Completed && alpha == 1m)
                     reason = TimelinePresentationSampleReason.Completed;
@@ -299,7 +312,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 for (int i = 0; i < m_Entries.Count; i++)
                 {
                     ActionAnimationPlaybackCommand command = m_Entries[i].Command;
-                    if (command.Kind == ActionAnimationPlaybackCommandKind.Release)
+                    if (command.Kind == ActionAnimationPlaybackCommandKind.Release || command.Kind == ActionAnimationPlaybackCommandKind.Withdraw)
                         m_Projector.RemovePlayback(m_ProjectorLease, command.PlaybackId);
                 }
                 m_Registry.ValidateFrame(m_RegistryLease);

@@ -262,7 +262,8 @@ namespace BTSMTL.Timeline.Runtime
         Advance = 0,
         Correction = 1,
         Completed = 2,
-        Stopped = 3
+        Stopped = 3,
+        Withdrawn = 4
     }
 
     public readonly struct TimelineRuntimePresentationSample
@@ -286,7 +287,7 @@ namespace BTSMTL.Timeline.Runtime
         public string ContentRevision { get; }
         public TimelinePresentationSampleReason Reason { get; }
         public bool AllowTraversal => Reason == TimelinePresentationSampleReason.Advance || Reason == TimelinePresentationSampleReason.Completed;
-        public bool IsTerminal => Reason == TimelinePresentationSampleReason.Completed || Reason == TimelinePresentationSampleReason.Stopped;
+        public bool EndsPlayback => Reason == TimelinePresentationSampleReason.Completed || Reason == TimelinePresentationSampleReason.Stopped || Reason == TimelinePresentationSampleReason.Withdrawn;
         public bool IsValid => Generation != 0;
     }
 
@@ -327,7 +328,7 @@ namespace BTSMTL.Timeline.Runtime
                 m_Playbacks.Remove(handle.Value);
                 hasState = false;
             }
-            if (sample.Reason == TimelinePresentationSampleReason.Stopped)
+            if (sample.Reason == TimelinePresentationSampleReason.Stopped || sample.Reason == TimelinePresentationSampleReason.Withdrawn)
             {
                 frame = default;
                 return false;
@@ -405,7 +406,9 @@ namespace BTSMTL.Timeline.Runtime
                 presentationDeltaSeconds,
                 interpolationAlpha,
                 operations,
-                events);
+                events,
+                !allowTraversal && sample.Reason == TimelinePresentationSampleReason.Advance
+                    ? TimelinePresentationSampleReason.Correction : sample.Reason);
             state.PendingFrame = frame;
             state.HasPendingFrame = true;
             return true;

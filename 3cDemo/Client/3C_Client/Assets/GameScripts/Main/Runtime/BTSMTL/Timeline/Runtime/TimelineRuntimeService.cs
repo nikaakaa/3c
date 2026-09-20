@@ -359,7 +359,7 @@ namespace BTSMTL.Timeline.Runtime
 
     public sealed class TimelineRuntimePlaybackSnapshot
     {
-        public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v5";
+        public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v6";
 
         internal TimelineRuntimePlaybackSnapshot(TimelineRuntimePlayback playback)
         {
@@ -378,7 +378,6 @@ namespace BTSMTL.Timeline.Runtime
             SectionId = playback.SectionId;
             ActiveClipIds = new ReadOnlyCollection<string>(
                 new List<string>(playback.ActiveClipIds));
-            ActiveTreeClipAssociations = playback.ActiveTreeClipAssociations;
             HasStopContext = playback.HasStopContext;
             StopContext = playback.StopContext;
             InitialBoundaryPending = playback.InitialBoundaryPending;
@@ -402,7 +401,6 @@ namespace BTSMTL.Timeline.Runtime
             int cycle,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
-            IReadOnlyList<TimelineRuntimeTreeClipAssociation> activeTreeClipAssociations,
             bool hasStopContext,
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending,
@@ -425,7 +423,6 @@ namespace BTSMTL.Timeline.Runtime
             Cycle = cycle;
             SectionId = sectionId ?? string.Empty;
             ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
-            ActiveTreeClipAssociations = activeTreeClipAssociations ?? Array.Empty<TimelineRuntimeTreeClipAssociation>();
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             InitialBoundaryPending = initialBoundaryPending;
@@ -447,7 +444,6 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle { get; }
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds { get; }
-        public IReadOnlyList<TimelineRuntimeTreeClipAssociation> ActiveTreeClipAssociations { get; }
         public bool HasStopContext { get; }
         public TimelinePlaybackStopContext StopContext { get; }
         public bool InitialBoundaryPending { get; }
@@ -498,6 +494,18 @@ namespace BTSMTL.Timeline.Runtime
                 m_Snapshot.Handle,
                 m_Snapshot.Generation,
                 m_Service.TickRate);
+            ApplyTo(playback);
+            return playback;
+        }
+
+        internal void ApplyTo(TimelineRuntimePlayback playback)
+        {
+            if (playback.Handle != m_Snapshot.Handle || playback.Generation != m_Snapshot.Generation ||
+                playback.ExecutionIdentity != m_Snapshot.ExecutionIdentity || playback.PlaybackMode != m_Snapshot.PlaybackMode ||
+                playback.NumericTarget != m_Snapshot.NumericTarget || playback.TickRate != m_Snapshot.TickRate ||
+                !string.Equals(playback.RequestId, m_Snapshot.RequestId, StringComparison.Ordinal) ||
+                !string.Equals(playback.ContentRevision, m_Snapshot.ContentRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Timeline restore targets a different playback identity or content.");
             if (!playback.RestoreCommittedState(
                     m_Snapshot.State,
                     m_Snapshot.CursorTime,
@@ -505,14 +513,12 @@ namespace BTSMTL.Timeline.Runtime
                     m_Snapshot.TimeCarry,
                     m_Snapshot.SectionId,
                     m_Snapshot.ActiveClipIds,
-                    m_Snapshot.ActiveTreeClipAssociations,
                     m_Snapshot.TreeDecisionExits,
                     m_Snapshot.PendingTreeDecisionExits,
                     m_Snapshot.HasStopContext,
                     m_Snapshot.StopContext,
                     m_Snapshot.InitialBoundaryPending))
                 throw new InvalidOperationException("Timeline restore candidate is not a committed state.");
-            return playback;
         }
 
         void Validate()
@@ -933,10 +939,17 @@ namespace BTSMTL.Timeline.Runtime
             if (candidate == null)
                 throw new ArgumentNullException(nameof(candidate));
             candidate.ValidateOwnedBy(this);
-            if (m_Playbacks.ContainsKey(candidate.Handle.Value))
-                throw new InvalidOperationException($"Timeline playback handle '{candidate.Handle.Value}' is already active.");
-            TimelineRuntimePlayback playback = candidate.CreatePlayback();
-            m_Playbacks.Add(playback.Handle.Value, playback);
+            if (m_Playbacks.TryGetValue(candidate.Handle.Value, out TimelineRuntimePlayback playback))
+                candidate.ApplyTo(playback);
+            else
+            {
+                playback = candidate.CreatePlayback();
+                m_Playbacks.Add(playback.Handle.Value, playback);
+            }
+            if (m_NextPlaybackHandle <= playback.Handle.Value)
+                m_NextPlaybackHandle = checked(playback.Handle.Value + 1);
+            if (m_NextGeneration <= playback.Generation)
+                m_NextGeneration = checked(playback.Generation + 1);
             Publish(playback);
             return playback.Handle;
         }

@@ -35,7 +35,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Complete = 3,
         Release = 4,
         Upsert = 5,
-        Remove = 6
+        Remove = 6,
+        Withdraw = 7
     }
 
     internal readonly struct AnimationPresentationMutationJournalHeader
@@ -75,7 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             OperationKind >=
                 AnimationPresentationMutationOperationKind.Select &&
             OperationKind <=
-                AnimationPresentationMutationOperationKind.Remove &&
+                AnimationPresentationMutationOperationKind.Withdraw &&
             PayloadIndex >= 0 &&
             SequenceIndex >= 0;
     }

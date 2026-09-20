@@ -478,6 +478,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         struct ActivePlayback
         {
             internal TimelinePlaybackHandle Handle;
+            internal ulong Generation;
             internal TimelineData Timeline;
             internal string SourceName;
             internal CharacterTimelinePlaybackSourceKind SourceKind;
@@ -494,7 +495,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
         readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
         readonly List<TimelineRuntimePresentationFrame> m_PresentationCandidates = new List<TimelineRuntimePresentationFrame>(64);
-        readonly List<ActivePlayback> m_PresentationEndCandidates = new List<ActivePlayback>(64);
+        readonly List<(ActivePlayback Playback, TimelinePresentationSampleReason Reason)> m_PresentationEndCandidates = new(64);
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
         readonly Guid m_ContentSessionIdentity = Guid.NewGuid();
         readonly Dictionary<ulong, CharacterTimelinePendingAdvance> m_PendingAdvances =
@@ -540,7 +541,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public ulong ContentGeneration => m_ContentGeneration;
         internal event Action<TimelineRuntimePresentationFrame> PresentationFramePrepared;
         public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
-        public event Action<TimelineRuntimePlaybackHandle> PresentationPlaybackEnded;
+        internal event Action<TimelineRuntimePlaybackHandle, TimelinePresentationSampleReason> PresentationPlaybackEndPrepared;
+        public event Action<TimelineRuntimePlaybackHandle, TimelinePresentationSampleReason> PresentationPlaybackEnded;
         public event Action<TimelineActionCueEvent> ActionCueCommitted;
 
         public void AttachRuntimeDiagnostics(RuntimeDiagnosticsContext diagnostics)
@@ -631,9 +633,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 playbackTimeline, sourceId, sourceName, actionContext, playbackMode,
                 sourceActivation, sourceRuntimeGraph, out handle))
                 return false;
+            if (!m_Host.Service.TryGetDescriptor(handle, out TimelineRuntimePlaybackDescriptor descriptor))
+                throw new InvalidOperationException("Started Timeline playback has no descriptor.");
             var active = new ActivePlayback
             {
                 Handle = handle,
+                Generation = descriptor.Generation,
                 Timeline = playbackTimeline,
                 SourceName = sourceName ?? string.Empty,
                 SourceKind = sourceKind,
@@ -1298,7 +1303,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 snapshot.OwnerIdentity,
                 snapshot.CallIdentity,
                 snapshot.ExecutionInstanceId);
-            TimelineData playbackTimeline = timeline.Clone();
+            TimelineData playbackTimeline = TryGetActivePlayback(new TimelineRuntimePlaybackHandle((ulong)snapshot.RuntimeHandle), out ActivePlayback existing)
+                ? existing.Timeline : timeline.Clone();
             TimelineRuntimePreparationResult preparation = m_Host.Prepare(
                 snapshot.RequestId,
                 playbackTimeline,
@@ -1321,7 +1327,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 snapshot.Cycle,
                 snapshot.SectionId,
                 snapshot.ActiveClipIds,
-                Array.Empty<TimelineRuntimeTreeClipAssociation>(),
                 snapshot.HasStopContext,
                 new TimelinePlaybackStopContext(stopCause, snapshot.StopLocalLogicTick),
                 snapshot.InitialBoundaryPending,
@@ -1332,9 +1337,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             TimelineRuntimeRestoreCandidate candidate = m_Host.PrepareRestore(native, preparation);
             TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);
             var handle = new TimelinePlaybackHandle(restored.Value);
+            if (TryGetActivePlayback(restored, out _))
+                return checked((int)restored.Value);
             var active = new ActivePlayback
             {
                 Handle = handle,
+                Generation = snapshot.Generation,
                 Timeline = playbackTimeline,
                 SourceName = playbackTimeline.Name,
                 SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime,
@@ -1909,7 +1917,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     if (clock == null)
                         throw new InvalidOperationException("Ability Timeline presentation requires its Action clock coordinator.");
                     hasSample = clock.TrySampleTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
-                        active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId,
+                        active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId, active.Generation,
                         context.RenderFrame, context.LocalLogicTick, context.InterpolationAlpha, out sample);
                 }
                 TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
@@ -1931,11 +1939,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     PresentationFramePrepared?.Invoke(frame);
                 }
                 bool ended = active.CoreDriven
-                    ? hasSample && sample.IsTerminal
+                    ? hasSample && sample.EndsPlayback
                     : status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running;
                 if (ended && !presented)
                 {
-                    m_PresentationEndCandidates.Add(active);
+                    TimelinePresentationSampleReason reason = active.CoreDriven ? sample.Reason : TimelinePresentationSampleReason.Stopped;
+                    m_PresentationEndCandidates.Add((active, reason));
+                    PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), reason);
                 }
             }
         }
@@ -1952,12 +1962,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Host?.CommitPresentationFrame(frame);
             for (int i = 0; i < m_PresentationEndCandidates.Count; i++)
             {
-                ActivePlayback active = m_PresentationEndCandidates[i];
+                ActivePlayback active = m_PresentationEndCandidates[i].Playback;
                 if (active.CoreDriven)
                     clock.ReleaseTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
-                        active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId);
+                        active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId, active.Generation);
                 var handle = new TimelineRuntimePlaybackHandle(active.Handle.Value);
-                PresentationPlaybackEnded?.Invoke(handle);
+                PresentationPlaybackEnded?.Invoke(handle, m_PresentationEndCandidates[i].Reason);
                 m_Host.ReleasePresentationPlayback(handle);
                 for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
                     if (m_ActivePlaybacks[index].Handle.Value == handle.Value)

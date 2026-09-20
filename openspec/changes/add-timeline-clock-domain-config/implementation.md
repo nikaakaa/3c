@@ -313,3 +313,12 @@
 - 仍未完整解决：最终分支撤销后的表现退役与 generation 绑定、Marker 图 executor、后续播放倍率 / 暂停和所有运行热路径分配。因此第5、7节不提前整体勾选。
 - Marker traversal identity 固定为本 playback generation 内的 cycle + 1，原预分配数组保存该 Marker 已交付的最大 traversal；回退修正后再次跨过同一循环的 Marker 不重复交付，下一正常循环仍可触发。数组候选随 Pose 帧 Commit / Discard 接受或恢复，不新增集合或第二事件系统。
 - Unity 最终编译及域重载完成（1789889008875），实例 e852139597e42532 已恢复 idle、非 Play、非编译状态，错误日志为零。git diff --check 通过；未新增测试，未声称 Marker 图执行或整个第7节已经完成。
+
+## 第7节：分支撤销按原生命周期收尾，Restore 保留表现状态
+- 原 ActionAnimationPlaybackCommand 增加 Withdraw，原生命周期结束原因改名 ActionPlaybackEndReason，明确 BranchWithdrawn，与已确认 Complete / Release 分开。Inbox 对已消费命令的撤销、Timeline generation 替换和修正后失效 Clip 都使用该原因；沿原 Slot 保留与退役许可链释放资源，不新建播放器。
+- 原共享采样表保留已撤销行直至表现帧接受，采样和释放均精确匹配 generation；撤销不再直接删行而让 Host 永远等不到结束输入。最终 replacement 在动作身份、来源、内容或 generation 改变时先撤销原行，新旧分支各自处理。
+- 动画结束／撤销候选在 Pose 求值前进入原 Inbox，本帧 Pose Discard 时由原桥快照回退；相机请求退役、driver 与采样缓存清理仍在帧接受阶段。修正原因透传到 TimelineRuntimePresentationFrame，修正移走的 Clip 不伪装自然结束。
+- TimelineRuntimeService.ApplyRestore 对同 handle、generation、执行身份及内容版本原位恢复已提交逻辑状态；Host 不再追加重复 ActivePlayback，不重置表现 driver。新实例恢复后推进 handle / generation 分配边界，避免后续创建碰撞。
+- 删除快照中的 ActiveTreeClipAssociations 双份派生数据及其构造／比较链：图关联完全由固定内容、时间、cycle 和 TreeDecision 集合导出；旧 Ability 恢复曾传空关联而与动态构造结果冲突。直接 runtime schema 升 v6，不提供兼容读取。
+- 尚未证明完整完成：撤销后同一 generation 再次成为最终分支时的重接入、prepared 图执行、所有热路径 0 GC 与倍率／暂停仍需继续处理；第7节暂不整体勾选。
+- Unity 编译与域重载完成（1789890365305），实例 e852139597e42532 idle、非 Play，错误日志为零；git diff --check 通过。未新增测试。

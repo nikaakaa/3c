@@ -9,7 +9,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Sample = 2,
         Complete = 3,
         Release = 4,
-        ProjectedSample = 5
+        ProjectedSample = 5,
+        Withdraw = 6
     }
 
     public enum ActionAnimationPlaybackLifecyclePhase : byte
@@ -137,7 +138,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public bool IsValid =>
             (byte)Kind >= (byte)ActionAnimationPlaybackCommandKind.Select &&
-            (byte)Kind <= (byte)ActionAnimationPlaybackCommandKind.ProjectedSample &&
+            (byte)Kind <= (byte)ActionAnimationPlaybackCommandKind.Withdraw &&
             EventId.IsValid &&
             LocalLogicTick != 0 &&
             PlaybackId.IsValid &&
@@ -238,6 +239,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 animationChannelId,
                 programProducerId);
         }
+
+        public static ActionAnimationPlaybackCommand Withdraw(
+            EventId eventId,
+            ulong localLogicTick,
+            AnimationPlaybackId playbackId,
+            ulong actionInstanceId,
+            AnimationChannelId animationChannelId,
+            string programProducerId) => Terminal(
+                ActionAnimationPlaybackCommandKind.Withdraw, eventId, localLogicTick, playbackId,
+                actionInstanceId, animationChannelId, programProducerId);
 
         static ActionAnimationPlaybackCommand Terminal(
             ActionAnimationPlaybackCommandKind kind,

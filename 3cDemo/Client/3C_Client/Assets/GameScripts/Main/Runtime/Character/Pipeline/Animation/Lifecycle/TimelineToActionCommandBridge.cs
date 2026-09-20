@@ -146,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_FramePlaybacks = new FramePlaybackSnapshot[inbox.Capacity];
             m_FrameProducers = new KeyValuePair<AnimationProducerId, ProducerState>[inbox.Capacity];
             m_TimelineHost.PresentationFramePrepared += OnPresentationFrame;
-            m_TimelineHost.PresentationPlaybackEnded += OnPresentationPlaybackEnded;
+            m_TimelineHost.PresentationPlaybackEndPrepared += OnPresentationPlaybackEnded;
         }
 
         void OnPresentationFrame(TimelineRuntimePresentationFrame frame)
@@ -166,7 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             else if (playback.Generation != frame.Generation)
             {
-                ReleaseAll(playback, frame.Handle.Value, logicTick, frame.PresentationFrame, "generation-replaced");
+                ReleaseAll(playback, frame.Handle.Value, logicTick, frame.PresentationFrame, "generation-replaced", true);
                 playback = new PlaybackState(frame.Generation, logicTick, frame.PresentationFrame);
                 m_Playbacks[frame.Handle.Value] = playback;
             }
@@ -177,7 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
 
             CollectSamples(frame.Operations.AnimationContributions);
-            ReleaseInactive(playback, frame.Handle.Value, logicTick, frame.PresentationFrame);
+            ReleaseInactive(playback, frame.Handle.Value, logicTick, frame.PresentationFrame, frame.Reason == TimelinePresentationSampleReason.Correction);
             for (int index = 0; index < m_SampleOrder.Count; index++)
             {
                 AnimationProducerId producerId = m_SampleOrder[index];
@@ -198,7 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle)
+        void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, TimelinePresentationSampleReason reason)
         {
             if (!m_Playbacks.TryGetValue(handle.Value, out PlaybackState playback))
                 return;
@@ -207,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 handle.Value,
                 playback.LogicTick,
                 playback.PresentationFrame,
-                "playback-ended");
+                "playback-ended", reason == TimelinePresentationSampleReason.Withdrawn);
             m_Playbacks.Remove(handle.Value);
         }
 
@@ -242,7 +242,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             PlaybackState playback,
             ulong handle,
             ulong logicTick,
-            ulong presentationFrame)
+            ulong presentationFrame,
+            bool withdrawn)
         {
             m_Releases.Clear();
             foreach (KeyValuePair<AnimationProducerId, ProducerState> pair in playback.Producers)
@@ -258,7 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     handle,
                     logicTick,
                     presentationFrame,
-                    "clip-ended");
+                    "clip-ended", withdrawn);
                 playback.Producers.Remove(producerId);
             }
         }
@@ -268,7 +269,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ulong handle,
             ulong logicTick,
             ulong presentationFrame,
-            string reason)
+            string reason,
+            bool withdrawn = false)
         {
             m_Releases.Clear();
             foreach (AnimationProducerId producerId in playback.Producers.Keys)
@@ -281,7 +283,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     handle,
                     logicTick,
                     presentationFrame,
-                    reason);
+                    reason,
+                    withdrawn);
             }
             playback.Producers.Clear();
         }
@@ -348,15 +351,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ulong handle,
             ulong logicTick,
             ulong presentationFrame,
-            string reason)
+            string reason,
+            bool withdrawn = false)
         {
-            m_Inbox.Publish(ActionAnimationPlaybackCommand.Release(
-                CreateEventId("release", producer, handle, presentationFrame, reason),
-                logicTick,
-                producer.PlaybackId,
-                producer.ActionInstanceId,
-                producer.AnimationChannelId,
-                producer.ProgramProducerId));
+            EventId eventId = CreateEventId(withdrawn ? "withdraw" : "release", producer, handle, presentationFrame, reason);
+            m_Inbox.Publish(withdrawn
+                ? ActionAnimationPlaybackCommand.Withdraw(eventId, logicTick, producer.PlaybackId,
+                    producer.ActionInstanceId, producer.AnimationChannelId, producer.ProgramProducerId)
+                : ActionAnimationPlaybackCommand.Release(eventId, logicTick, producer.PlaybackId,
+                    producer.ActionInstanceId, producer.AnimationChannelId, producer.ProgramProducerId));
         }
 
         static EventId CreateEventId(
@@ -393,7 +396,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
             m_Playbacks.Clear();
             m_TimelineHost.PresentationFramePrepared -= OnPresentationFrame;
-            m_TimelineHost.PresentationPlaybackEnded -= OnPresentationPlaybackEnded;
+            m_TimelineHost.PresentationPlaybackEndPrepared -= OnPresentationPlaybackEnded;
         }
     }
 
@@ -449,7 +452,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         RetireInactive(alive, frame.Handle.Value);
     }
 
-    void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle)
+    void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, TimelinePresentationSampleReason reason)
     {
         RetireInactive(new HashSet<string>(StringComparer.Ordinal), handle.Value);
     }

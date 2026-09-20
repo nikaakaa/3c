@@ -228,15 +228,6 @@ namespace ThirdPersonSimulation.DeterministicKcc
             result.Ground.LedgeState,
             result.Ground.LastMovementIterationFoundAnyGround);
 
-        static WorldSimulationState CloneState(WorldSimulationState state) => new WorldSimulationState(
-            state.NumericProfile,
-            state.SolverId,
-            state.SolverVersion,
-            state.WorldRevision,
-            state.PersistenceMode,
-            state.Bodies,
-            state.SolverStatePayload.ToArray());
-
         static bool StateEquals(WorldSimulationState left, WorldSimulationState right)
         {
             if (left == null || right == null || left.NumericProfile != right.NumericProfile ||

@@ -96,7 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     Quaternion.Euler(0f, body.Yaw.Degrees.ToSingle(), 0f));
                 controller.enabled = enabled;
             }
-            m_Current = CloneState(state);
+            m_Current = state.Clone();
         }
 
         public WorldSimulationState Capture(WorldRevision worldRevision)
@@ -106,7 +106,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             if (!worldRevision.Equals(m_Current.WorldRevision))
                 throw new InvalidOperationException("Unity World Solver cannot capture another WorldRevision.");
             RequireSceneMatches(m_Current);
-            return CloneState(m_Current);
+            return m_Current.Clone();
         }
 
         public void Restore(WorldSimulationState state)
@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     request,
                     Descriptor.ImplementationId,
                     Descriptor.Version,
-                    CloneState(m_Current),
+                    m_Current.Clone(),
                     results);
             }
             catch
@@ -248,18 +248,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     Quaternion.Angle(root.rotation, Quaternion.Euler(0f, body.Yaw.Degrees.ToSingle(), 0f)) > RotationTolerance)
                     throw new InvalidOperationException($"Unity body '{m_Bindings[i].BindingId}' diverged from explicit World state.");
             }
-        }
-
-        static WorldSimulationState CloneState(WorldSimulationState state)
-        {
-            return new WorldSimulationState(
-                state.NumericProfile,
-                state.SolverId,
-                state.SolverVersion,
-                state.WorldRevision,
-                state.PersistenceMode,
-                state.Bodies,
-                state.SolverStatePayload.ToArray());
         }
 
         static bool StateEquals(WorldSimulationState left, WorldSimulationState right)

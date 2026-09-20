@@ -150,7 +150,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 m_KccStates[i] = CreateKccState(source.ActorId, initial);
             }
             m_Current = CreateState(worldRevision, bodies, m_KccStates);
-            return CloneState(m_Current);
+            return m_Current.Clone();
         }
 
         public void Reconstruct(WorldSimulationState state)
@@ -162,7 +162,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 m_CollisionWorld.ContentHash,
                 m_Configuration.ConfigurationHash);
             RequireKccRoster(m_KccStates);
-            m_Current = CloneState(state);
+            m_Current = state.Clone();
         }
 
         public WorldSimulationState Capture(WorldRevision worldRevision)
@@ -171,7 +171,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             RequireCurrent();
             if (!m_Current.WorldRevision.Equals(worldRevision))
                 throw new InvalidOperationException("Deterministic KCC cannot capture another WorldRevision.");
-            return CloneState(m_Current);
+            return m_Current.Clone();
         }
 
         public void Restore(WorldSimulationState state) => Reconstruct(state);
@@ -391,7 +391,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 request,
                 Descriptor.ImplementationId,
                 Descriptor.Version,
-                CloneState(m_Current),
+                m_Current.Clone(),
                 results);
         }
 

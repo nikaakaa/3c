@@ -1802,3 +1802,11 @@
 - 两域新增显式 FromOwnedState，接管调用方声明转移的 body 与 payload 数组，在接管的 body 上执行原排序和重复 Actor 校验。普通公开构造继续复制 IReadOnlyList 并克隆 payload，初始外部 roster、诊断 clone 和其它非独占输入不会被借用。
 - codec 直接转移解码 body 数组，payload 从输入片段只复制一次；KCC、DotRecast、Unity 正式 step 及权威合并统一迁移，删除各入口的第二份 body 数组，KCC 同时删除第二份 payload。空 payload 统一复用 Array.Empty。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback、DeterministicKcc portable 编译零警告零错误；DotRecastAuthority 编译通过并保留 DotRecast 依赖两条既有 nullable-context 警告。ThirdPersonSimulation.Unity 首次无依赖构建因 Temp 中旧 Float32 DLL 看不到新 API 失败，全依赖刷新后构建通过并保留十七条既有 Unity 包／Editor 警告；所有构建服务已关闭。未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。
+
+## 2026-09-21 WorldSimulationState 统一 Clone
+
+对应 tasks.md 的 5.68。
+
+- KCC、DotRecast 与 Unity solver 各自实现 CloneState，用 state.Bodies 调公开构造并先对 SolverStatePayload.ToArray；公开构造随后再次克隆 payload，因此 create 返回、reconstruct 保存、公开 current state 和每 step result 均产生两份 payload 数组。
+- 两域 WorldSimulationState 新增 Clone，在类型内部各复制一次 body 最终数组和 payload，并直接进入私有接管构造。三套 solver 的 create／reconstruct／step 调用统一改为 state.Clone，删除重复 CloneState 实现。
+- 每次世界状态克隆仍产生一份独立 body 数组和一份独立 payload，保持 solver 内部 m_Current 与外部结果隔离；只删除 payload 的第二次克隆及重复实现。ThirdPersonSimulation.Fixed、Float32、DeterministicKcc portable 编译零警告零错误；DotRecastAuthority 编译通过并保留依赖两条既有 nullable-context 警告；Unity 生成的 Float32 与 Unity solver 项目无依赖重编均零警告零错误。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 solver 状态运行对比或 Player 分配采样。

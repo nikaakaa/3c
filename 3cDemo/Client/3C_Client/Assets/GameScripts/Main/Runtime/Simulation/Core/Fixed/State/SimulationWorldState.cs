@@ -126,6 +126,16 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<WorldBodyState> Bodies => m_Bodies;
         public ReadOnlyMemory<byte> SolverStatePayload => m_SolverStatePayload;
 
+        public WorldSimulationState Clone() =>
+            new WorldSimulationState(
+                NumericProfile,
+                SolverId,
+                SolverVersion,
+                WorldRevision,
+                PersistenceMode,
+                CopyBodies(m_Bodies),
+                CopySolverStatePayload(m_SolverStatePayload));
+
         static WorldBodyState[] CopyBodies(IReadOnlyList<WorldBodyState> bodies)
         {
             if (bodies == null || bodies.Count == 0)

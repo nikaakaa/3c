@@ -296,6 +296,8 @@
 
 - [x] 5.67 WorldSimulationState 提供显式 FromOwnedState 所有权入口，codec、KCC step／create、DotRecast step、Unity step 与权威基线合并直接转移方法内新建 body／payload 数组，删除对应第二份数组复制；普通构造仍独立复制
 
+- [x] 5.68 两数值域 WorldSimulationState 统一提供一次复制的 Clone，迁移 KCC／DotRecast／Unity create、reconstruct 与 step 结果边界，删除三套重复 CloneState 和 solver payload 的二次克隆
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

@@ -197,7 +197,7 @@ namespace ThirdPersonSimulation.DotRecast
                 RequireLocalized(orderedInitialBodies[i], "initial");
             }
             m_Current = CreateState(worldRevision, orderedInitialBodies);
-            return CloneState(m_Current);
+            return m_Current.Clone();
         }
 
         public void Reconstruct(WorldSimulationState state)
@@ -206,7 +206,7 @@ namespace ThirdPersonSimulation.DotRecast
             ValidateState(state);
             for (int i = 0; i < state.Bodies.Count; i++)
                 RequireLocalized(state.Bodies[i], "reconstruct");
-            m_Current = CloneState(state);
+            m_Current = state.Clone();
         }
 
         public WorldSimulationState Capture(WorldRevision worldRevision)
@@ -215,7 +215,7 @@ namespace ThirdPersonSimulation.DotRecast
             RequireCurrent();
             if (!worldRevision.Equals(m_Current.WorldRevision))
                 throw new InvalidOperationException("DotRecast World Solver cannot capture another WorldRevision.");
-            return CloneState(m_Current);
+            return m_Current.Clone();
         }
 
         public void Restore(WorldSimulationState state)
@@ -349,7 +349,7 @@ namespace ThirdPersonSimulation.DotRecast
                 request,
                 Descriptor.ImplementationId,
                 Descriptor.Version,
-                CloneState(m_Current),
+                m_Current.Clone(),
                 results);
         }
 
@@ -735,18 +735,6 @@ namespace ThirdPersonSimulation.DotRecast
             if (float.IsNaN(result) || float.IsInfinity(result))
                 throw new InvalidDataException($"DotRecast value '{identity}' is outside Float32 range.");
             return result;
-        }
-
-        static WorldSimulationState CloneState(WorldSimulationState state)
-        {
-            return new WorldSimulationState(
-                state.NumericProfile,
-                state.SolverId,
-                state.SolverVersion,
-                state.WorldRevision,
-                state.PersistenceMode,
-                state.Bodies,
-                state.SolverStatePayload.ToArray());
         }
 
         static bool StateEquals(WorldSimulationState left, WorldSimulationState right)

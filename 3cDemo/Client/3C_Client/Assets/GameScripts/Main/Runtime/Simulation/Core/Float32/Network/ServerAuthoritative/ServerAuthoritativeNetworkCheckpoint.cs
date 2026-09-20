@@ -573,23 +573,25 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static void WriteHash(CanonicalWriter writer, StableHash hash)
         {
             string value = hash.IsValid ? hash.Value : throw new InvalidDataException("Stable hash is invalid.");
-            var bytes = new byte[32];
+            Span<byte> bytes = stackalloc byte[32];
             for (int i = 0; i < bytes.Length; i++)
                 bytes[i] = (byte)((Hex(value[i * 2]) << 4) | Hex(value[i * 2 + 1]));
-            writer.WriteRawBytes(bytes, 0, bytes.Length);
+            writer.WriteRawBytes(bytes);
         }
 
         static StableHash ReadHash(CanonicalReader reader)
         {
-            byte[] bytes = reader.ReadRawBytes(32);
-            var chars = new char[64];
-            const string hex = "0123456789abcdef";
-            for (int i = 0; i < bytes.Length; i++)
+            ArraySegment<byte> bytes = reader.ReadRawBytesSegment(32);
+            return new StableHash(string.Create(64, bytes, static (chars, source) =>
             {
-                chars[i * 2] = hex[bytes[i] >> 4];
-                chars[i * 2 + 1] = hex[bytes[i] & 15];
-            }
-            return new StableHash(new string(chars));
+                const string hex = "0123456789abcdef";
+                for (int i = 0; i < source.Count; i++)
+                {
+                    byte value = source.Array[source.Offset + i];
+                    chars[i * 2] = hex[value >> 4];
+                    chars[i * 2 + 1] = hex[value & 15];
+                }
+            }));
         }
 
         static int Hex(char value) => value >= '0' && value <= '9' ? value - '0' : value - 'a' + 10;

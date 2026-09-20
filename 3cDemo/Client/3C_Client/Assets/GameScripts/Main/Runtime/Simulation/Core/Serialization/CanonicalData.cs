@@ -135,6 +135,8 @@ namespace ThirdPersonSimulation
             m_Stream.Write(value, offset, count);
         }
 
+        public void WriteRawBytes(ReadOnlySpan<byte> value) => m_Stream.Write(value);
+
         public byte[] ToArray() => m_Stream.ToArray();
 
         public bool ContentEquals(ReadOnlySpan<byte> value)
@@ -241,7 +243,12 @@ namespace ThirdPersonSimulation
         }
         public ArraySegment<byte> ReadBytesSegment()
         {
-            int length = ReadLength();
+            return ReadRawBytesSegment(ReadLength());
+        }
+        public ArraySegment<byte> ReadRawBytesSegment(int length)
+        {
+            if (length < 0)
+                throw new ArgumentOutOfRangeException(nameof(length));
             Require(length);
             var value = new ArraySegment<byte>(m_Bytes, m_Offset, length);
             m_Offset += length;

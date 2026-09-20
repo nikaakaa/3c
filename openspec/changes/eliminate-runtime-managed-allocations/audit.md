@@ -451,6 +451,16 @@
 - 减少每次基线编码的一份状态字节副本，以及 Capture 第二次基线复制、checkpoint 自身复制、对象及哈希过程。仍保留首次构造的独立数据、校验解码与错误；未改历史存储、回滚恢复或事务归还边界。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做检查点运行对比或 Player 分配采样。
 
+## 2026-09-20 紧凑检查点固定哈希字段缓冲清理
+
+对应 tasks.md 的 5.35，与代码同步提交。
+
+- NetworkCheckpointCodec.WriteHash 原为每个哈希创建 byte[32]，现使用固定 32 字节栈缓冲，仍按原高低半字节规则解码 64 位十六进制字符，再同步原样写流，不加长度前缀。
+- CanonicalWriter 增加实际供该调用使用的 ReadOnlySpan 原始写入入口；原 byte[]／offset／count 入口保留现有消费者和参数检查。CanonicalReader 增加 ReadRawBytesSegment，按负长度及剩余字节检查后推进游标，已有 ReadBytesSegment 共用它；需要独立数组的 ReadRawBytes 消费者保持不变。
+- ReadHash 原先复制 byte[32]，填 char[64]，再生成字符串。现借用 32 字节片段，通过无捕获 string.Create 回调直接填最终 64 字符字符串，严格使用片段 Offset，保留小写格式及 StableHash 校验。回调同步结束后不保留源包，最终字符串仍独立持有。
+- 每个固定哈希写入少一个字节数组，读取少一个字节数组和字符数组；最终字符串及其它消息存储仍分配。协议字段、前缀和 checkpoint 恢复生命周期不变。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行对比或 Player 分配采样。
+
 ## 2026-09-20 Egress 剩余枚举解码装箱清理
 
 对应 tasks.md 的 5.33，与代码同步提交。

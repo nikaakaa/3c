@@ -99,7 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             operations.Node(enable.UID),
                             invocationSource,
                             context.CallerKind,
-                            enable.Hook.ToString(),
+                            context.CallerKind == ProgramInvocationCallerKind.PresentationMarker
+                                ? context.CallerId : enable.Hook.ToString(),
                             context.ClipId);
                     }
                     else

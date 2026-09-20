@@ -383,3 +383,10 @@
 - Camera 字段进入现有 OperationNamedConstant 索引，两个读取器按编译布局读取并在明确类型不匹配时报错；删除这条输出热路径上拼接 /constant/ 字符串并扫描常量引用的操作。原合同允许为空的可选字符串继续表示未指定目标，必填字符串与数值缺失仍失败。
 - 四类请求构造参数顺序／值与改前静态对照一致。尚未接入表现 Marker 的执行 target 和帧事务输出，不据此勾选第6节。
 - Unity编译与域重载完成（1789897343874），Editor idle，控制台错误为零。未新增测试。
+
+## 表现 Marker 图执行适配器
+- 新增 Float32PresentationGraphRuntime，复用 OperationControlRuntime 与 Float32GraphValueRuntime 执行编译后的 OnEnable，不创建 Simulation actor、Ability execution frame，也不调用 Simulation Evaluate／Finalize。准备阶段遍历可达控制／值操作，拒绝 Gameplay 黑板、Loop、Timeline 驱动、状态机及未绑定的读取能力；Macro 仅可读写正式参数槽。
+- 绑定同时核对父调用路径、Timeline 节点身份、Marker 身份、图 identity 和 revision。编译器对 PresentationMarker 的 callerId 保留实际 Timeline 节点身份，避免同一图多处调用只能靠图名字匹配；Logic Marker 的旧 hook 调用合同保持原语义。
+- Camera 请求在准备时由上一批公共工厂构造，按可达流程预计算候选容量。Evaluate 重置自己的临时值／控制状态，并返回原 typed 请求的只读候选区间；失败清空候选计数。成功调用的新增路径不构造 List／字符串／命令对象，状态槽复位采用索引循环。
+- 这批只落地正式图控制器的表现执行适配与候选输出接口；CharacterTimelineHost 尚未装配该适配器，Camera 帧候选接收／提交、只读表现事实节点及资源准备仍待完成。现有 Host 的缺执行器错误保持，第6节不能勾选完成。
+- Unity编译与最终域重载完成（1789898726011），Editor idle，控制台错误为零；没有运行图端到端验证，没有新增测试。

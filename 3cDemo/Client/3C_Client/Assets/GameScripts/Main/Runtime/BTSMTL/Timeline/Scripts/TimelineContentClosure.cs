@@ -313,7 +313,6 @@ namespace BTSMTL.Timeline
             IReadOnlyList<TimelineContentTrack> tracks,
             IReadOnlyList<TimelineContentClip> clips,
             IReadOnlyList<TimelineContentMarker> markers,
-            IReadOnlyList<Track> sourceTracks,
             IReadOnlyList<TimelineContentSection> sections,
             IReadOnlyList<TimelineBindingDeclaration> bindings,
             IReadOnlyList<TimelineContentDependency> dependencies)
@@ -326,7 +325,6 @@ namespace BTSMTL.Timeline
             Duration = duration;
             Loop = loop;
             Tracks = new ReadOnlyCollection<TimelineContentTrack>(new List<TimelineContentTrack>(tracks ?? Array.Empty<TimelineContentTrack>()));
-            SourceTracks = new ReadOnlyCollection<Track>(new List<Track>(sourceTracks ?? Array.Empty<Track>()));
             Clips = new ReadOnlyCollection<TimelineContentClip>(new List<TimelineContentClip>(clips ?? Array.Empty<TimelineContentClip>()));
             Markers = new ReadOnlyCollection<TimelineContentMarker>(new List<TimelineContentMarker>(markers ?? Array.Empty<TimelineContentMarker>()));
             Sections = new ReadOnlyCollection<TimelineContentSection>(new List<TimelineContentSection>(sections ?? Array.Empty<TimelineContentSection>()));
@@ -342,7 +340,6 @@ namespace BTSMTL.Timeline
         public FixedScalar Duration { get; }
         public bool Loop { get; }
         public IReadOnlyList<TimelineContentTrack> Tracks { get; }
-        public IReadOnlyList<Track> SourceTracks { get; }
         public IReadOnlyList<TimelineContentClip> Clips { get; }
         public IReadOnlyList<TimelineContentMarker> Markers { get; }
         public IReadOnlyList<TimelineContentSection> Sections { get; }
@@ -620,7 +617,6 @@ namespace BTSMTL.Timeline
                     tracks,
                     clips,
                     markers,
-                    timeline.Tracks,
                     sections,
                     bindings,
                     dependencies),

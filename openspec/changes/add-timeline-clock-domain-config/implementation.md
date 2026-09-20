@@ -239,3 +239,11 @@
 - 求值器在轨道循环直接筛选Track.ExecutionDomain与PersistentMuted；剩余跨轨道Clip边界读所在轨道域。删除每个Clip都线性遍历Content.Clips的HasProjection辅助函数，不再维护另一份可覆盖执行域。
 - 正式内容在preparation校验后只读消费，轨道采样只负责本轨道的数据映射。此改动消除两侧求值的域过滤闭包分配与重复扫描；结果容器、Marker事件和生命周期仍有其它分配，不声称整体0GC完成。
 - 编译重载完成1789882282243，观测1789882291050为idle，错误控制台0条。全Main源码已无clipFilter／logicClipFilter／presentationClipFilter引用，未新增测试；共享动作采样仍待接线。
+
+## Marker准备结果复用
+
+- TimelineContentMarker在内容发现阶段已记录GraphId／GraphRevision并按Time、MarkerId排序。逻辑Marker直接消费这份已验证的正式数据，删除运行时FindTrack、FirstOrDefault捕获谓词与图依赖重复扫描。
+- 两域按cycle外层、已排序Marker内层遍历，天然保持原cycle→time→identity顺序；删除逻辑二次排序，以及表现MarkerTransition值、临时List和排序。跨圈仍保留上一圈末端与下一圈起点各自的循环身份。
+- Presentation Marker候选仍在原driver中生成，其正式图执行与接受／丢弃边界尚未接通；本批仅减少遍历准备开销，不能当作表现Marker业务已完成。
+- SourceTracks只被旧FindTrack消费，删除该运行查找后一并移除内容对象中的重复Track引用集合及构造参数；保留原SourceTimeline作为正式源，不新增影子图或备用查找。
+- 编译重载完成1789882677095，错误控制台0条；正式内容发现覆盖18个Timeline，现有1个Marker的图身份／版本与timeline.tree依赖一致、排序检查errors=[]。当前实际内容只有1个Marker，该证据不覆盖多Marker跨循环端到端，未新增测试。

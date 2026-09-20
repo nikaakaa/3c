@@ -2103,53 +2103,29 @@ namespace BTSMTL.Timeline.Runtime
                 throw new InvalidOperationException("Timeline logic cursor moved backward without a generation reset.");
             int firstCycle = loop ? previousCycle : 0;
             int lastCycle = loop ? currentCycle : 0;
-            for (int index = 0; index < content.Markers.Count; index++)
+            for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
             {
-                TimelineContentMarker contentMarker = content.Markers[index];
-                if (!contentMarker.ExecutionPolicy.IsLogic || contentMarker.TrackMuted)
-                    continue;
-                for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
+                for (int index = 0; index < content.Markers.Count; index++)
                 {
-                    bool initial = includeStartBoundary && cycle == previousCycle && contentMarker.Time == previousTime;
-                    bool afterPrevious = cycle > previousCycle || cycle == previousCycle && contentMarker.Time > previousTime;
-                    bool beforeCurrent = cycle < currentCycle || cycle == currentCycle && contentMarker.Time <= currentTime;
+                    TimelineContentMarker marker = content.Markers[index];
+                    if (!marker.ExecutionPolicy.IsLogic || marker.TrackMuted)
+                        continue;
+                    bool initial = includeStartBoundary && cycle == previousCycle && marker.Time == previousTime;
+                    bool afterPrevious = cycle > previousCycle || cycle == previousCycle && marker.Time > previousTime;
+                    bool beforeCurrent = cycle < currentCycle || cycle == currentCycle && marker.Time <= currentTime;
                     if ((!initial && !afterPrevious) || !beforeCurrent)
                         continue;
-                    Track track = FindTrack(content, contentMarker.TrackAuthoringId);
-                    TimelineMarker marker = track?.Markers.FirstOrDefault(candidate =>
-                        candidate != null && candidate.AuthoringId == contentMarker.MarkerId);
-                    if (marker?.Graph is not ITimelineTreeGraphAsset graph ||
-                        !TryGetTreeGraphContract(content, graph, out string graphId, out string graphRevision))
-                        throw new InvalidOperationException($"Timeline Marker '{contentMarker.MarkerId}' graph contract is missing.");
                     markers.Add(new TimelineRuntimeMarkerRequest(
-                        contentMarker.MarkerId,
-                        contentMarker.TrackAuthoringId,
-                        graphId,
-                        graphRevision,
-                        contentMarker.Time,
+                        marker.MarkerId,
+                        marker.TrackAuthoringId,
+                        marker.GraphId,
+                        marker.GraphRevision,
+                        marker.Time,
                         cycle,
                         generation,
-                        CreateMarkerCallId(executionIdentity, generation, cycle, contentMarker.MarkerId)));
+                        CreateMarkerCallId(executionIdentity, generation, cycle, marker.MarkerId)));
                 }
             }
-            markers.Sort((left, right) =>
-            {
-                int cycleOrder = left.Cycle.CompareTo(right.Cycle);
-                if (cycleOrder != 0)
-                    return cycleOrder;
-                int frameOrder = left.Time.CompareTo(right.Time);
-                return frameOrder != 0 ? frameOrder : string.CompareOrdinal(left.MarkerAuthoringId, right.MarkerAuthoringId);
-            });
-        }
-
-        static Track FindTrack(TimelineContentUnit content, string authoringId)
-        {
-            for (int index = 0; index < content.Tracks.Count; index++)
-            {
-                if (string.Equals(content.Tracks[index].AuthoringId, authoringId, StringComparison.Ordinal))
-                    return content.SourceTracks[index];
-            }
-            return null;
         }
 
         internal static string CreateMarkerCallId(

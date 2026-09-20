@@ -448,44 +448,37 @@ namespace BTSMTL.Timeline.Runtime
                 throw new InvalidOperationException("Timeline presentation cursor moved backward without a generation reset.");
             int firstCycle = loop ? previousCycle : 0;
             int lastCycle = loop ? currentCycle : 0;
-            var transitions = new List<MarkerTransition>();
-            for (int markerIndex = 0; markerIndex < playback.Content.Markers.Count; markerIndex++)
+            for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
             {
-                TimelineContentMarker marker = playback.Content.Markers[markerIndex];
-                if (!marker.ExecutionPolicy.IsPresentation || marker.TrackMuted)
-                    continue;
-                for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
+                for (int markerIndex = 0; markerIndex < playback.Content.Markers.Count; markerIndex++)
                 {
+                    TimelineContentMarker marker = playback.Content.Markers[markerIndex];
+                    if (!marker.ExecutionPolicy.IsPresentation || marker.TrackMuted)
+                        continue;
                     bool initial = includeStartBoundary && cycle == previousCycle && marker.Time == previousTime;
                     bool afterPrevious = cycle > previousCycle || cycle == previousCycle && marker.Time > previousTime;
                     bool beforeCurrent = cycle < currentCycle || cycle == currentCycle && marker.Time <= currentTime;
-                    if ((initial || afterPrevious) && beforeCurrent)
-                        transitions.Add(new MarkerTransition(marker, cycle));
+                    if ((!initial && !afterPrevious) || !beforeCurrent)
+                        continue;
+                    string markerId = marker.MarkerId;
+                    if (!state.MarkerTraversal.TryGetValue(markerId, out ulong traversalIndex))
+                        traversalIndex = 1;
+                    if (traversalIndex == 0)
+                        throw new InvalidOperationException($"Timeline presentation marker '{markerId}' traversal identity is exhausted.");
+                    state.MarkerTraversal[markerId] = traversalIndex + 1;
+                    events.Add(new TimelineRuntimePresentationEvent(
+                        playback.Handle,
+                        playback.ExecutionIdentity,
+                        playback.Generation,
+                        markerId,
+                        traversalIndex,
+                        marker.GraphId,
+                        marker.GraphRevision,
+                        marker.Time,
+                        cycle));
                 }
             }
-            transitions.Sort(MarkerTransition.Compare);
-            for (int index = 0; index < transitions.Count; index++)
-            {
-                MarkerTransition transition = transitions[index];
-                string markerId = transition.Marker.MarkerId;
-                if (!state.MarkerTraversal.TryGetValue(markerId, out ulong traversalIndex))
-                    traversalIndex = 1;
-                if (traversalIndex == 0)
-                    throw new InvalidOperationException($"Timeline presentation marker '{markerId}' traversal identity is exhausted.");
-                state.MarkerTraversal[markerId] = traversalIndex + 1;
-                events.Add(new TimelineRuntimePresentationEvent(
-                    playback.Handle,
-                    playback.ExecutionIdentity,
-                    playback.Generation,
-                    markerId,
-                    traversalIndex,
-                    transition.Marker.GraphId,
-                    transition.Marker.GraphRevision,
-                    transition.Time,
-                    transition.Cycle));
-            }
         }
-
 
         sealed class PresentationPlaybackState
         {
@@ -521,31 +514,7 @@ namespace BTSMTL.Timeline.Runtime
             }
         }
 
-        readonly struct MarkerTransition
-        {
-            public MarkerTransition(
-                TimelineContentMarker marker,
-                int cycle)
-            {
-                Marker = marker;
-                Cycle = cycle;
-            }
 
-            public TimelineContentMarker Marker { get; }
-            public int Cycle { get; }
-            public FixedScalar Time => Marker.Time;
-
-            public static int Compare(MarkerTransition left, MarkerTransition right)
-            {
-                int cycle = left.Cycle.CompareTo(right.Cycle);
-                if (cycle != 0)
-                    return cycle;
-                int absolute = left.Time.CompareTo(right.Time);
-                if (absolute != 0)
-                    return absolute;
-                return string.CompareOrdinal(left.Marker.MarkerId, right.Marker.MarkerId);
-            }
-        }
     }
 
     public sealed class TimelineRuntimeEvaluationFanout : ITimelineRuntimeEvaluationSink

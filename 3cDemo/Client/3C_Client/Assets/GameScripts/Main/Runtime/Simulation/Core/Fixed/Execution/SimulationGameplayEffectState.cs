@@ -780,10 +780,10 @@ namespace ThirdPersonSimulation.Fixed
             HashSet<string> stack = m_Scratch?.AttributeStack ?? new HashSet<string>(StringComparer.Ordinal);
             cache.Clear();
             stack.Clear();
-            foreach (string id in m_Attributes.Keys)
-                CalculateCurrent(id, null, cache, stack);
-            foreach (PortableAttributeState attribute in m_Attributes.Values)
-                attribute.Revision = 1;
+            foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
+                CalculateCurrent(pair.Key, null, cache, stack);
+            foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
+                pair.Value.Revision = 1;
             m_ChangeCursor = 0;
             ClearDirty();
         }
@@ -826,8 +826,8 @@ namespace ThirdPersonSimulation.Fixed
             HashSet<string> stack = m_Scratch?.AttributeStack ?? new HashSet<string>(StringComparer.Ordinal);
             cache.Clear();
             stack.Clear();
-            foreach (string id in m_Attributes.Keys)
-                CalculateCurrent(id, excludedAttribute, cache, stack);
+            foreach (KeyValuePair<string, PortableAttributeState> pair in m_Attributes)
+                CalculateCurrent(pair.Key, excludedAttribute, cache, stack);
             List<PortableAttributeChange> changes = m_Scratch?.RecalculatedAttributeChanges ??
                 new List<PortableAttributeChange>();
             changes.Clear();

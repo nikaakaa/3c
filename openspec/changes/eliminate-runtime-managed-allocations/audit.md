@@ -540,6 +540,15 @@
 - 调用方数据不会被排序或规范化原地修改，结果仍独立持有。重复参数／属性／标签错误文本和校验顺序保留，生命周期接收规则未改。
 - 编辑前检测到 Unity bee 进程，等待该进程结束并确认无 csc／bee 后修改；两个目标文件无其它未提交修改。Fixed／Float32 portable 分别编译零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过。未新增测试、未刷新或控制共享 Unity、未做请求运行对比或 Player 分配采样。
 
+## 2026-09-20 属性初始化及重算字典视图清理
+
+对应 tasks.md 的 2.20，与代码同步提交。
+
+- 两数值域属性初始化先遍历 m_Attributes.Keys 求值，再遍历 Values 设置 revision；RecalculateAll 也先读取 Keys。现直接遍历具体 SortedDictionary 的 KeyValuePair，读取对应 Key／Value，取消这些入口的集合视图访问。
+- 按原字典顺序执行，初始化仍先完成全部计算再设置全部 revision=1，没有合并两轮或提前修改 revision；重算的排除属性、cache、递归 stack 和变化列表行为不变。SortedDictionary 树遍历存储仍可能分配；只删除上述 Keys／Values 视图创建需求，不把它算成每次必定新建视图或整个重算无分配。
+- 本轮重新读取并行 Timeline 任务，状态仍为 inProgress；工作树中 Fixed／Float32 AbilityExecutionFrame 有其它未提交修改。两个 CharacterEvaluationRuntime 仍每步创建效果 scratch，因此 2.1／2.2 的跨步 owner 迁移保持未完成，不在本轮介入共享执行帧。
+- 同时核对 SimulationInput 构造，ICollection 路径已经按 Count 一次复制，保留该正确实现。两个实际修改文件此前无其它改动，编辑前无 csc／bee 编译进程。Fixed／Float32 portable 各自零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；未新增测试、未刷新或控制共享 Unity、未做 Player 分配采样。
+
 ## 2026-09-20 渲染查询调用阶段复核
 
 本节补充任务 6.3 的代码证据，不将 6.3 标为完成。本轮不修改渲染代码，也未做编译、运行或 Player 采样。

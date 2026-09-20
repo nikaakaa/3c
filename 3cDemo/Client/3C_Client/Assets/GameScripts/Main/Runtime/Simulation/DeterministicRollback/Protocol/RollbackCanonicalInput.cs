@@ -104,7 +104,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly IReadOnlyList<RollbackActorInputFrame> m_Frames;
 
         public RollbackActorInputBatch(IReadOnlyList<RollbackActorInputFrame> frames)
-            : this(RollbackInputArray.Copy(frames), true)
+            : this(RollbackProtocolArray.Copy(frames), true)
         {
         }
 
@@ -141,7 +141,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly IReadOnlyList<RollbackActorInputFrame> m_Frames;
 
         public RollbackRelayedExplicitInputBatch(IReadOnlyList<RollbackActorInputFrame> frames)
-            : this(RollbackInputArray.Copy(frames), true)
+            : this(RollbackProtocolArray.Copy(frames), true)
         {
         }
 
@@ -228,7 +228,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             IReadOnlyList<RollbackActorInputFrame> actors)
         {
             RequireIdentity(tick, bundleSequence);
-            return RollbackInputArray.Copy(actors);
+            return RollbackProtocolArray.Copy(actors);
         }
 
         static void RequireIdentity(SimulationTick tick, ulong bundleSequence)
@@ -325,7 +325,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             IReadOnlyList<RollbackCanonicalInputBundle> finalBundles)
         {
             RequireRange(previousConfirmedTick, confirmedTick);
-            return RollbackInputArray.Copy(finalBundles);
+            return RollbackProtocolArray.Copy(finalBundles);
         }
 
         static void RequireRange(ulong previousConfirmedTick, SimulationTick confirmedTick)
@@ -340,7 +340,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public IReadOnlyList<RollbackCanonicalInputBundle> FinalBundles => m_FinalBundles;
     }
 
-    static class RollbackInputArray
+    static class RollbackProtocolArray
     {
         public static T[] Copy<T>(IReadOnlyList<T> source)
         {

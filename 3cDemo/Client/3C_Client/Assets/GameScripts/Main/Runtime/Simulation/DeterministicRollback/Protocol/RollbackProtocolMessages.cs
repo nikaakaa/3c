@@ -153,7 +153,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackStateHashReport : IRollbackProtocolPayload
     {
-        readonly ReadOnlyCollection<RollbackActorHash> m_Actors;
+        readonly IReadOnlyList<RollbackActorHash> m_Actors;
 
         public RollbackStateHashReport(
             string peerId,
@@ -161,24 +161,51 @@ namespace ThirdPersonSimulation.DeterministicRollback
             StableHash worldHash,
             StableHash rosterHash,
             StableHash kccHash,
-            IEnumerable<RollbackActorHash> actors)
+            IReadOnlyList<RollbackActorHash> actors)
+            : this(peerId, tick, worldHash, rosterHash, kccHash, RollbackProtocolArray.Copy(actors), true)
+        {
+        }
+
+        RollbackStateHashReport(
+            string peerId,
+            SimulationTick tick,
+            StableHash worldHash,
+            StableHash rosterHash,
+            StableHash kccHash,
+            RollbackActorHash[] actors,
+            bool _)
         {
             PeerId = SimulationIdentity.Require(peerId, nameof(peerId));
             if (!tick.IsValid || !worldHash.IsValid || !rosterHash.IsValid || !kccHash.IsValid)
                 throw new ArgumentException("Rollback state hash report is incomplete.");
-            var values = new List<RollbackActorHash>(actors ?? throw new ArgumentNullException(nameof(actors)));
-            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            for (int i = 0; i < values.Count; i++)
+            Array.Sort(actors, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            for (int i = 0; i < actors.Length; i++)
             {
-                if (values[i] == null || i > 0 && values[i - 1].ActorId.Equals(values[i].ActorId))
+                if (actors[i] == null || i > 0 && actors[i - 1].ActorId.Equals(actors[i].ActorId))
                     throw new ArgumentException("Rollback state hash Actor order is invalid.", nameof(actors));
             }
             Tick = tick;
             WorldHash = worldHash;
             RosterHash = rosterHash;
             KccHash = kccHash;
-            m_Actors = values.AsReadOnly();
+            m_Actors = actors;
         }
+
+        public static RollbackStateHashReport FromOwnedActors(
+            string peerId,
+            SimulationTick tick,
+            StableHash worldHash,
+            StableHash rosterHash,
+            StableHash kccHash,
+            RollbackActorHash[] actors) =>
+            new RollbackStateHashReport(
+                peerId,
+                tick,
+                worldHash,
+                rosterHash,
+                kccHash,
+                actors ?? throw new ArgumentNullException(nameof(actors)),
+                true);
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.StateHash;
         public string PeerId { get; }

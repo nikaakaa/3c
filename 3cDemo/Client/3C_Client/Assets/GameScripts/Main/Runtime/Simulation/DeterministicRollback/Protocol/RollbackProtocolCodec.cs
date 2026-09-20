@@ -298,7 +298,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 var characterStateHash = new CharacterStateHash(new StableHash(reader.ReadString()));
                 actors[i] = new RollbackActorHash(actorId, gameplayContentHash, characterStateHash);
             }
-            return new RollbackStateHashReport(peerId, tick, worldHash, rosterHash, kccHash, actors);
+            return RollbackStateHashReport.FromOwnedActors(peerId, tick, worldHash, rosterHash, kccHash, actors);
         }
 
         static void WriteComponentIdentity(CanonicalWriter writer, SimulationComponentIdentity value)

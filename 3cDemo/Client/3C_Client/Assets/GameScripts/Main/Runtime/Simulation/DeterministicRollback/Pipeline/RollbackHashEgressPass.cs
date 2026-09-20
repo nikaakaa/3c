@@ -114,7 +114,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     actor.GameplayContentHash,
                     actor.StateHash);
             }
-            return new RollbackStateHashReport(
+            return RollbackStateHashReport.FromOwnedActors(
                 localPeerId,
                 world.Tick,
                 world.WorldHash.Value,

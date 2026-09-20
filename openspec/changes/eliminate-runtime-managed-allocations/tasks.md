@@ -316,6 +316,8 @@
 
 - [x] 5.76 Rollback 输入协议增加显式数组所有权入口，解码、canonical 组装、预测重建、relay 转发与 confirmation 捕获直接转移本方法新建数组，删除这些路径的协议结果二次复制；可复用发送列表继续走公开复制构造
 
+- [x] 5.77 RollbackStateHashReport 按可计数输入直接保存最终 Actor hash 数组，并接管 hash 生产与协议解码新建数组，删除每个报告的结果 List、ReadOnlyCollection 和数组二次复制；公开构造继续独立持有输入
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

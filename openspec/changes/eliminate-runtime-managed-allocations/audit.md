@@ -1887,3 +1887,12 @@
 - 四类协议对象新增显式 FromOwnedFrames／FromOwnedActors／FromOwnedBundles 入口，在接管数组上执行原排序和校验。上述调用统一转移数组；CaptureCanonicalRange 的返回类型收窄为数组，使连续确认捕获直接成为 confirmation 的最终存储。
 - 每个迁移调用删除一份完整数组复制，保留协议对象自身所需的最终数组。RollbackPeerEndpoint 的输入冗余发送列表会在缩减包体时继续改写，因此仍调用公开复制构造，不转移工作区；外部一般集合也继续由公开构造独立复制。
 - ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做网络协议吞吐或 Player 分配采样。
+
+## 2026-09-21 Rollback state hash 最终数组
+
+对应 tasks.md 的 5.77。
+
+- RollbackHashEgressPass 在每个 hash tick 已按 world Actor 数新建完整 RollbackActorHash 数组，协议解码也按报文 Actor 数新建完整数组；原 RollbackStateHashReport 随后又从输入创建 List、排序，并创建 ReadOnlyCollection 包装。
+- report 公开构造收窄为 IReadOnlyList，按准确 Count 复制到最终数组后原地排序校验；新增 FromOwnedActors 供 hash 生产与协议解码转移本方法新建数组。通用复制帮助类改名为 RollbackProtocolArray，供输入与 hash 协议共用。
+- 每个本地或解码 state hash report 删除结果 List、ReadOnlyCollection 与一份完整 Actor hash 数组复制；最终数组及每 Actor hash 对象仍按报告寿命存在。外部一般集合继续通过公开构造独立复制，初始化期 RollbackRoster 暂未混入本步。
+- ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 hash 发送频率或 Player 分配采样。

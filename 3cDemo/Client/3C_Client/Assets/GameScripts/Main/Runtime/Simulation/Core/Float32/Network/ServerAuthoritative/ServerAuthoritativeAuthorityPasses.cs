@@ -351,7 +351,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ulong sequence = reader.ReadUInt64();
                 var acceptedTick = new SimulationTick(reader.ReadUInt64());
                 ulong consumedTick = reader.ReadUInt64();
-                SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
+                SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytesSegment());
                 m_Held.Add(actorId, new HeldAuthorityInput(actorId, sequence, input, acceptedTick, consumedTick));
             }
             reader.RequireComplete();

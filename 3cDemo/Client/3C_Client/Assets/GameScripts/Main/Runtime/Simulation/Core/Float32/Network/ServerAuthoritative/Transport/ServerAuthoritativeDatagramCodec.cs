@@ -347,7 +347,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             {
                 ulong targetTick = reader.ReadUInt64();
                 ulong inputSequence = reader.ReadUInt64();
-                SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytes());
+                SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytesSegment());
                 samples[i] = new CanonicalInputSample(targetTick, inputSequence, input);
             }
             reader.RequireComplete();

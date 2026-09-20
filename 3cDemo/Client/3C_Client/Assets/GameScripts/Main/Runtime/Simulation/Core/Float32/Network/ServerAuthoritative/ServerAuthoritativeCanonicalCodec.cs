@@ -51,7 +51,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 WriteInputRequest(writer, input.Requests[i]);
         }
 
-        public static SimulationInput ReadInput(byte[] bytes)
+        public static SimulationInput ReadInput(ArraySegment<byte> bytes)
         {
             var reader = Reader(bytes, InputMagic, InputSchemaVersion, "ServerAuthoritative canonical input");
             SimulationNumericProfile profile = SimulationNumericProfileCodec.Read(reader);
@@ -78,7 +78,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 requests);
             using var writer = new CanonicalWriter();
             WriteInput(writer, result);
-            RequireCanonical(bytes, writer, "ServerAuthoritative canonical input");
+            RequireCanonical(bytes.AsSpan(), writer, "ServerAuthoritative canonical input");
             return result;
         }
 
@@ -119,7 +119,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public static AuthoritativeActorBaseline ReadBaseline(byte[] bytes)
         {
-            var reader = Reader(bytes, BaselineMagic, BaselineSchemaVersion, "ServerAuthoritative baseline");
+            var reader = Reader(new ArraySegment<byte>(bytes ?? throw new ArgumentNullException(nameof(bytes))), BaselineMagic, BaselineSchemaVersion, "ServerAuthoritative baseline");
             var actorId = new ActorId(reader.ReadString());
             var tick = new SimulationTick(reader.ReadUInt64());
             SimulationNumericProfile numericProfile = SimulationNumericProfileCodec.Read(reader);
@@ -267,9 +267,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 (WorldCollisionSummary)reader.ReadUInt32());
         }
 
-        static CanonicalReader Reader(byte[] bytes, uint magic, int expectedVersion, string label)
+        static CanonicalReader Reader(ArraySegment<byte> bytes, uint magic, int expectedVersion, string label)
         {
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            if (bytes.Array == null)
+                throw new ArgumentNullException(nameof(bytes));
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != magic)
                 throw new InvalidDataException($"{label} magic is invalid.");
             int version = reader.ReadInt32();
@@ -296,7 +298,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return typed;
         }
 
-        static void RequireCanonical(byte[] source, CanonicalWriter canonical, string label)
+        static void RequireCanonical(ReadOnlySpan<byte> source, CanonicalWriter canonical, string label)
         {
             if (!canonical.ContentEquals(source))
                 throw new InvalidDataException($"{label} is not canonical.");

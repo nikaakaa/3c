@@ -386,3 +386,12 @@
 - 新 WriteLengthPrefixedInput 调用已有 CanonicalWriter.BeginLengthPrefixedBlock／EndLengthPrefixedBlock，在外层预留并回填四字节长度；内部沿同一个私有 WriteInput，不复制字段编码。该入口因 Transport 是独立程序集而公开，四个调用点统一迁移，公开返回独立输入数组的真实入口保留。
 - 输入 Magic／schema、字段顺序、小端长度及外层遍历次序不变。状态写入两个文件仅替换这一行，不改变保存、恢复、确认、事务或并行 Timeline 生命周期。写入失败不返回外层部分包，子项不创建独立结果；外层 writer、流和最终数组仍分配。
 - ServerAuthoritative.Transport portable 连带 Core／Float32／ServerAuthoritative 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改，未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议字节实测或 Player 分配采样。
+
+## 2026-09-20 权威嵌套输入片段解码
+
+对应 tasks.md 的 5.27，与代码同步提交。
+
+- 全仓 ReadInput 调用只有输入数据报、Egress 输入、AuthorityPasses 和 PredictionStateCodec 四处，原先均 ReadBytes 建立独立子数组。现在统一 ReadBytesSegment 并将正式 ReadInput 参数迁移为 ArraySegment，没有保留无消费者的 byte[] 重载。
+- 共用 Reader 以片段构造 CanonicalReader，所有基础读取与 RequireComplete 使用片段边界；重新编码仍完整执行，ContentEquals 只比较 bytes.AsSpan() 的实际范围。父消息其它字段或尾部缓冲不能混入输入解析与 canonical 比较。
+- ReadInput 的结果由独立字符串、数值、值数组和请求数组构成，不保存 reader、片段或源字节引用，因此借用结束于同步调用。状态保存恢复两个文件只替换子输入读取调用，不改变事务或存储寿命。ReadBaseline 仍从整个 byte[] 进入统一 Reader，原 null 异常和长期 stateBytes 复制保持不变。
+- 删除每个嵌套输入的一份字节数组；reader、解码对象集合和重新编码 writer 仍分配。ServerAuthoritative.Transport portable 及 Core／Float32／ServerAuthoritative 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改、无 csc／bee 编译进程；未新增测试、未刷新或控制共享 Unity，未做协议运行或 Player 分配采样。

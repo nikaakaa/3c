@@ -191,7 +191,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 Float32CharacterRuntimeStateCodec.CodecIdentity,
                 baseline.CopyCharacterStateBytes());
             WorldSimulationState localWorld = local.DecodeWorldState();
-            var world = new WorldSimulationState(
+            var world = WorldSimulationState.FromOwnedState(
                 localWorld.NumericProfile,
                 localWorld.SolverId,
                 localWorld.SolverVersion,

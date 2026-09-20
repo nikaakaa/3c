@@ -337,7 +337,14 @@ namespace ThirdPersonSimulation.DotRecast
                     out bodies[i],
                     out results[i]);
             }
-            m_Current = CreateState(request.BeforeWorldState.WorldRevision, bodies);
+            m_Current = WorldSimulationState.FromOwnedState(
+                Descriptor.NumericProfile,
+                Descriptor.ImplementationId,
+                Descriptor.Version,
+                request.BeforeWorldState.WorldRevision,
+                WorldStatePersistenceMode.Reconstruct,
+                bodies,
+                Array.Empty<byte>());
             return WorldSolveBatchResult.FromOwnedResults(
                 request,
                 Descriptor.ImplementationId,

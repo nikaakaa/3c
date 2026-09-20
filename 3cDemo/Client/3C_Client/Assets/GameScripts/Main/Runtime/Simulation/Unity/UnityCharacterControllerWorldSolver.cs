@@ -180,7 +180,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                         applied,
                         appliedYaw);
                 }
-                m_Current = new WorldSimulationState(
+                m_Current = WorldSimulationState.FromOwnedState(
                     Descriptor.NumericProfile,
                     Descriptor.ImplementationId,
                     Descriptor.Version,

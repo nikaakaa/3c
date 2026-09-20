@@ -88,14 +88,14 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
         WorldSimulationState CreateState(
             WorldRevision revision,
-            IReadOnlyList<WorldBodyState> bodies,
+            WorldBodyState[] bodies,
             IReadOnlyList<DeterministicKccBodyState> states)
         {
             byte[] payload = DeterministicKccStateCodec.Write(
                 m_CollisionWorld.ContentHash,
                 m_Configuration.ConfigurationHash,
                 states);
-            return new WorldSimulationState(
+            return WorldSimulationState.FromOwnedState(
                 Descriptor.NumericProfile,
                 Descriptor.ImplementationId,
                 Descriptor.Version,

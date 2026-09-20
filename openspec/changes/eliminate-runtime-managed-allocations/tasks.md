@@ -294,6 +294,8 @@
 
 - [x] 5.66 两数值域 WorldSimulationState 按可计数 body 输入直接复制到最终数组并原地排序，直接以 IReadOnlyList 保存，删除 LINQ ToArray 与 ReadOnlyCollection 包装；公开状态继续独立持有 body 和 solver payload
 
+- [x] 5.67 WorldSimulationState 提供显式 FromOwnedState 所有权入口，codec、KCC step／create、DotRecast step、Unity step 与权威基线合并直接转移方法内新建 body／payload 数组，删除对应第二份数组复制；普通构造仍独立复制
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

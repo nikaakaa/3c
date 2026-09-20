@@ -1793,3 +1793,12 @@
 - Fixed／Float32 WorldSimulationState 由 KCC、DotRecast、Unity solver、codec、预测权威合并及诊断 clone 构造；原构造通过 IEnumerable.ToArray 复制 body 后排序，再创建 ReadOnlyCollection 包装。solver payload 同时复制以保持状态独立。
 - 两域 body 输入收窄为 IReadOnlyList，按准确 Count 复制到最终 WorldBodyState 数组，在同一数组执行原 ActorId 排序与重复检查，并直接作为 IReadOnlyList 保存。空 body 复用 Array.Empty；公开构造仍复制 body，payload 仍复制，不借用外部可变存储。
 - 删除每个世界状态的 LINQ ToArray 枚举入口和 ReadOnlyCollection 对象；body 最终数组及 payload 独立副本仍按状态寿命存在。ThirdPersonSimulation.Fixed、Float32、DeterministicRollback、DeterministicKcc portable 编译零警告零错误；DotRecastAuthority 编译通过并保留 DotRecast 依赖两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 无依赖重编零警告零错误。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做世界状态运行采样。
+
+## 2026-09-21 WorldSimulationState 数组所有权转移
+
+对应 tasks.md 的 5.67，收口 5.66 中保留的新建数组二次复制。
+
+- World state codec 已新建完整 body 数组，KCC create／step、DotRecast step 与 Unity step 均在方法内新建最终 body 数组；KCC codec 同时新建 solver payload。Float32 权威基线合并也新建单 Actor body 数组和独立 payload 数组。这些调用在状态构造后均不再修改或保留数组。
+- 两域新增显式 FromOwnedState，接管调用方声明转移的 body 与 payload 数组，在接管的 body 上执行原排序和重复 Actor 校验。普通公开构造继续复制 IReadOnlyList 并克隆 payload，初始外部 roster、诊断 clone 和其它非独占输入不会被借用。
+- codec 直接转移解码 body 数组，payload 从输入片段只复制一次；KCC、DotRecast、Unity 正式 step 及权威合并统一迁移，删除各入口的第二份 body 数组，KCC 同时删除第二份 payload。空 payload 统一复用 Array.Empty。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback、DeterministicKcc portable 编译零警告零错误；DotRecastAuthority 编译通过并保留 DotRecast 依赖两条既有 nullable-context 警告。ThirdPersonSimulation.Unity 首次无依赖构建因 Temp 中旧 Float32 DLL 看不到新 API 失败，全依赖刷新后构建通过并保留十七条既有 Unity 包／Editor 警告；所有构建服务已关闭。未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。

@@ -62,19 +62,25 @@ namespace ThirdPersonSimulation
             WorldStatePersistenceMode persistenceMode,
             IReadOnlyList<WorldBodyState> bodies,
             byte[] solverStatePayload)
-            : this(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies,
-                solverStatePayload.AsSpan())
+            : this(
+                numericProfile,
+                solverId,
+                solverVersion,
+                worldRevision,
+                persistenceMode,
+                CopyBodies(bodies),
+                CopySolverStatePayload(solverStatePayload))
         {
         }
 
-        internal WorldSimulationState(
+        WorldSimulationState(
             SimulationNumericProfile numericProfile,
             SolverImplementationId solverId,
             string solverVersion,
             WorldRevision worldRevision,
             WorldStatePersistenceMode persistenceMode,
-            IReadOnlyList<WorldBodyState> bodies,
-            ReadOnlySpan<byte> solverStatePayload)
+            WorldBodyState[] bodies,
+            byte[] solverStatePayload)
         {
             if (!numericProfile.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value))
                 throw new ArgumentException("World state identity is incomplete.");
@@ -83,18 +89,33 @@ namespace ThirdPersonSimulation
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
             PersistenceMode = persistenceMode;
-            WorldBodyState[] copied = CopyBodies(bodies);
-            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
-            for (int i = 1; i < copied.Length; i++)
+            WorldBodyState[] ownedBodies = bodies ?? Array.Empty<WorldBodyState>();
+            Array.Sort(ownedBodies, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            for (int i = 1; i < ownedBodies.Length; i++)
             {
-                if (copied[i - 1].ActorId == copied[i].ActorId)
-                    throw new ArgumentException($"World state contains duplicate ActorId '{copied[i].ActorId}'.", nameof(bodies));
+                if (ownedBodies[i - 1].ActorId == ownedBodies[i].ActorId)
+                    throw new ArgumentException($"World state contains duplicate ActorId '{ownedBodies[i].ActorId}'.", nameof(bodies));
             }
-            m_Bodies = copied;
-            m_SolverStatePayload = solverStatePayload.Length == 0
-                ? Array.Empty<byte>()
-                : solverStatePayload.ToArray();
+            m_Bodies = ownedBodies;
+            m_SolverStatePayload = solverStatePayload ?? Array.Empty<byte>();
         }
+
+        public static WorldSimulationState FromOwnedState(
+            SimulationNumericProfile numericProfile,
+            SolverImplementationId solverId,
+            string solverVersion,
+            WorldRevision worldRevision,
+            WorldStatePersistenceMode persistenceMode,
+            WorldBodyState[] bodies,
+            byte[] solverStatePayload) =>
+            new WorldSimulationState(
+                numericProfile,
+                solverId,
+                solverVersion,
+                worldRevision,
+                persistenceMode,
+                bodies,
+                solverStatePayload);
 
         public SimulationNumericProfile NumericProfile { get; }
         public SolverImplementationId SolverId { get; }
@@ -113,6 +134,11 @@ namespace ThirdPersonSimulation
                 copied[i] = bodies[i];
             return copied;
         }
+
+        static byte[] CopySolverStatePayload(byte[] solverStatePayload) =>
+            solverStatePayload == null || solverStatePayload.Length == 0
+                ? Array.Empty<byte>()
+                : (byte[])solverStatePayload.Clone();
     }
 
     public static class WorldSimulationStateCodec
@@ -196,7 +222,14 @@ namespace ThirdPersonSimulation
             reader.RequireComplete();
             if (numericProfile != expectedNumericProfile || !solverId.Equals(expectedSolverId) || !string.Equals(solverVersion, expectedSolverVersion, StringComparison.Ordinal) || !worldRevision.Equals(expectedWorldRevision))
                 throw new InvalidDataException("World state Numeric Profile, Solver, or revision binding is stale or mismatched.");
-            var result = new WorldSimulationState(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies, payload.AsSpan());
+            var result = WorldSimulationState.FromOwnedState(
+                numericProfile,
+                solverId,
+                solverVersion,
+                worldRevision,
+                persistenceMode,
+                bodies,
+                payload.Count == 0 ? Array.Empty<byte>() : payload.AsSpan().ToArray());
             using var writer = new CanonicalWriter();
             WriteCanonical(writer, result);
             if (!writer.ContentEquals(bytes))

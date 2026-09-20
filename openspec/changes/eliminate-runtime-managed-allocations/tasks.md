@@ -62,6 +62,7 @@
 - [x] 5.16 Datagram 接收线程同步借用本次 socket 缓冲片段解码，codec 统一接收 ArraySegment 并按片段限制读取，删除整包中转复制；返回 packet 仍独立持有 payload 和身份字符串，接收队列寿命不变
 - [x] 5.17 分片重组保留不可变 packet 引用，完成时从只读 payload 拼接最终结果，删除逐片克隆及无消费者的 DatagramPacket.CopyPayload；保留重复片判定、长度校验和最终消息独立数组
 - [x] 5.18 CanonicalWriter 整数写入改用按数值宽度确定的栈缓冲，删除每个 writer 的八字节托管数组，保留小端编码和同步写流；writer、流和最终数组分配仍未完成
+- [x] 5.19 CanonicalWriter 哈希统一复用 SimulationCanonicalPayloadHash 的片段入口，使用 string.Create 直接填充最终小写十六进制字符串，删除重复格式化与中间字符数组；SHA 对象和摘要字节数组仍未完成
 
 ## 6. UI、资源、渲染和生命周期
 

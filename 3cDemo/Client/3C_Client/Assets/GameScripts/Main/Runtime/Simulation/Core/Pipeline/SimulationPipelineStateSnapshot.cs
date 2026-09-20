@@ -12,16 +12,22 @@ namespace ThirdPersonSimulation
         {
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
+            return Compute(new ArraySegment<byte>(payload));
+        }
+
+        internal static StableHash Compute(ArraySegment<byte> payload)
+        {
             using SHA256 sha = SHA256.Create();
-            byte[] hash = sha.ComputeHash(payload);
-            var characters = new char[hash.Length * 2];
-            const string hex = "0123456789abcdef";
-            for (int i = 0; i < hash.Length; i++)
+            byte[] hash = sha.ComputeHash(payload.Array, payload.Offset, payload.Count);
+            return new StableHash(string.Create(hash.Length * 2, hash, static (characters, bytes) =>
             {
-                characters[i * 2] = hex[hash[i] >> 4];
-                characters[i * 2 + 1] = hex[hash[i] & 15];
-            }
-            return new StableHash(new string(characters));
+                const string hex = "0123456789abcdef";
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    characters[i * 2] = hex[bytes[i] >> 4];
+                    characters[i * 2 + 1] = hex[bytes[i] & 15];
+                }
+            }));
         }
     }
 

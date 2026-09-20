@@ -313,3 +313,12 @@
 - 仍调用相同 BinaryPrimitives 小端写入函数，再同步调用现有 MemoryStream.Write(Span)。每个函数单次使用 2／4／8 字节，退出函数后不保留引用；没有循环内累计栈申请，也没有托管池或共享可变缓冲。
 - WriteDouble 继续通过 WriteInt64 写位模式，长度前缀及回填继续通过 WriteInt32；协议字段、负零规范化、异常和流所有权不变。消除的是每个 writer 的一个托管数组，不是每个整数一个数组；writer 对象、流容量、字符串编码租借和 ToArray 仍存在。
 - portable Core 构建零警告零错误，按规定禁用构建服务器和共享编译并在结束 shutdown；当前 Unity 引用下独立编译完整 Core 也通过，产物仅在系统临时目录。diff 空白检查通过，编辑前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity、未做 Player 或协议实测。
+
+## 2026-09-20 Canonical 哈希格式化统一
+
+对应 tasks.md 的 5.19，与代码同步提交。
+
+- CanonicalWriter.ComputeHash 和 SimulationCanonicalPayloadHash.Compute 原先各自计算 SHA-256，再创建 char[64] 并复制成字符串。现为既有 SimulationCanonicalPayloadHash 增加内部 ArraySegment 入口，公开 byte[] 入口保留原 null 检查后进入同一实现；writer 也直接使用该实现，删除私有 ToHex 和重复 SHA 装配。
+- 哈希输入仍是原始完整字节，无新前缀。writer 的可见缓冲沿原 Offset 和流 Length 传入片段，非公开缓冲流仍沿原 ToArray 路径取得实际内容，未读取 Capacity 或改变 Position。此处没有改变任何快照保存、恢复、归还流程。
+- 十六进制转换使用 string.Create 和无捕获 static 回调，直接填充最终字符串的全部字符；保留原高低半字节次序、小写字母及 StableHash 的 64 字符校验。每次少一个中间字符数组，首次回调委托初始化、SHA 对象、摘要 byte[] 和最终字符串仍存在。
+- portable Core 零警告零错误，按规定构建后 shutdown 成功；Unity 当前引用下独立编译完整 Core 也通过，确认 string.Create 与静态回调在项目编译环境可用。diff 空白检查通过，编辑前未发现 csc／bee 编译进程；未新增测试、未控制或刷新共享 Unity，未做运行哈希对比或 Player 分配采样。

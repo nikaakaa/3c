@@ -2,7 +2,6 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace ThirdPersonSimulation
@@ -166,15 +165,14 @@ namespace ThirdPersonSimulation
 
         public StableHash ComputeHash()
         {
-            using SHA256 sha = SHA256.Create();
             if (m_Stream.TryGetBuffer(out ArraySegment<byte> buffer))
             {
-                return new StableHash(ToHex(sha.ComputeHash(
+                return SimulationCanonicalPayloadHash.Compute(new ArraySegment<byte>(
                     buffer.Array,
                     buffer.Offset,
-                    checked((int)m_Stream.Length))));
+                    checked((int)m_Stream.Length)));
             }
-            return new StableHash(ToHex(sha.ComputeHash(ToArray())));
+            return SimulationCanonicalPayloadHash.Compute(ToArray());
         }
 
         public void Dispose()
@@ -183,17 +181,6 @@ namespace ThirdPersonSimulation
                 m_Stream.Dispose();
         }
 
-        static string ToHex(byte[] bytes)
-        {
-            var chars = new char[bytes.Length * 2];
-            const string hex = "0123456789abcdef";
-            for (int i = 0; i < bytes.Length; i++)
-            {
-                chars[i * 2] = hex[bytes[i] >> 4];
-                chars[i * 2 + 1] = hex[bytes[i] & 15];
-            }
-            return new string(chars);
-        }
     }
 
     public sealed class CanonicalReader

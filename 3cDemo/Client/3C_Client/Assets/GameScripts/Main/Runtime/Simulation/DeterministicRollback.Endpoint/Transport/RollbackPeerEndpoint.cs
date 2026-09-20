@@ -17,8 +17,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly Queue<IRollbackProtocolPayload> m_ControlMessages = new Queue<IRollbackProtocolPayload>();
         readonly Queue<RollbackRelayedExplicitInputBatch> m_RelayedExplicitInputs =
             new Queue<RollbackRelayedExplicitInputBatch>();
-        readonly SortedDictionary<ulong, RollbackActorInputFrame> m_InputRedundancy =
-            new SortedDictionary<ulong, RollbackActorInputFrame>();
+        readonly SortedList<ulong, RollbackActorInputFrame> m_InputRedundancy;
+        readonly IList<RollbackActorInputFrame> m_InputRedundancyValues;
+        readonly List<RollbackActorInputFrame> m_InputBatchFrames;
         readonly int m_InputRedundancyCount;
         bool m_Started;
         bool m_RemoteHandshakeAccepted;
@@ -39,16 +40,27 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (inputRedundancyCount <= 0 || inputRedundancyCount > definition.MaximumQueuedMessages)
                 throw new ArgumentOutOfRangeException(nameof(inputRedundancyCount));
             m_InputRedundancyCount = inputRedundancyCount;
+            m_InputRedundancy = new SortedList<ulong, RollbackActorInputFrame>(checked(inputRedundancyCount + 1));
+            m_InputRedundancyValues = m_InputRedundancy.Values;
+            m_InputBatchFrames = new List<RollbackActorInputFrame>(inputRedundancyCount);
             m_Endpoint = new RollbackDatagramEndpoint(
                 localEndPoint,
                 definition.MaximumQueuedMessages,
                 definition.MaximumDatagramBytes);
-            m_Channel = new RollbackDatagramChannel(
-                m_Endpoint,
-                definition,
-                localHandshake.PeerId,
-                relayServerPeerId,
-                relayServerEndPoint);
+            try
+            {
+                m_Channel = new RollbackDatagramChannel(
+                    m_Endpoint,
+                    definition,
+                    localHandshake.PeerId,
+                    relayServerPeerId,
+                    relayServerEndPoint);
+            }
+            catch
+            {
+                m_Endpoint.Dispose();
+                throw;
+            }
         }
 
         public IPEndPoint LocalEndPoint => m_Endpoint.LocalEndPoint;
@@ -99,36 +111,38 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_InputRedundancy.Add(input.Tick.Value, input);
             }
             while (m_InputRedundancy.Count > m_InputRedundancyCount)
-                m_InputRedundancy.Remove(FirstInputTick());
+                m_InputRedundancy.RemoveAt(0);
             SendInputBatchWithinDatagram();
         }
 
         void SendInputBatchWithinDatagram()
         {
-            var frames = new List<RollbackActorInputFrame>(m_InputRedundancy.Values);
-            while (frames.Count > 0)
+            m_InputBatchFrames.Clear();
+            try
             {
-                var batch = new RollbackActorInputBatch(frames);
-                if (m_Channel.FitsSingleDatagram(batch, out int encodedBytes, out int maximumBytes))
+                for (int i = 0; i < m_InputRedundancyValues.Count; i++)
+                    m_InputBatchFrames.Add(m_InputRedundancyValues[i]);
+                while (m_InputBatchFrames.Count > 0)
                 {
-                    m_Channel.Send(batch, false);
-                    return;
+                    var batch = new RollbackActorInputBatch(m_InputBatchFrames);
+                    if (m_Channel.FitsSingleDatagram(batch, out int encodedBytes, out int maximumBytes))
+                    {
+                        m_Channel.Send(batch, false);
+                        return;
+                    }
+                    if (m_InputBatchFrames.Count == 1)
+                    {
+                        throw new InvalidOperationException(
+                            $"Rollback current input frame requires {encodedBytes} bytes but the unreliable payload budget is {maximumBytes} bytes.");
+                    }
+                    m_InputBatchFrames.RemoveAt(0);
                 }
-                if (frames.Count == 1)
-                {
-                    throw new InvalidOperationException(
-                        $"Rollback current input frame requires {encodedBytes} bytes but the unreliable payload budget is {maximumBytes} bytes.");
-                }
-                frames.RemoveAt(0);
+                throw new InvalidOperationException("Rollback input redundancy history is empty.");
             }
-            throw new InvalidOperationException("Rollback input redundancy history is empty.");
-        }
-
-        ulong FirstInputTick()
-        {
-            foreach (ulong tick in m_InputRedundancy.Keys)
-                return tick;
-            throw new InvalidOperationException("Rollback input redundancy history is empty.");
+            finally
+            {
+                m_InputBatchFrames.Clear();
+            }
         }
 
         public void SendStateHash(RollbackStateHashReport report)
@@ -331,6 +345,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_ControlMessages.Clear();
             m_RelayedExplicitInputs.Clear();
             m_InputRedundancy.Clear();
+            m_InputBatchFrames.Clear();
         }
     }
 }

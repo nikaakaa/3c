@@ -232,3 +232,14 @@
 - RollbackProtocolCodec.GetEncodedLength 沿同一 WriteEnvelope 执行完整编码后读取 writer.Length，不执行 ToArray；Channel 使用相同 SessionId、PeerId、当前消息序号和 payload 调用它。没有额外尺寸公式、payload 缓存或序号预占，所有消息种类仍由原 WritePayload 分派。
 - 每次候选批次长度判断少一份完整数组，但 envelope、writer、流容量和编码 CPU 仍存在；不是无分配测长器。实际 Send 的独立结果与后续分片寿命不变，候选裁剪和过大单帧报错不变。
 - Endpoint portable 与 Core／Fixed／Rollback 依赖编译零警告零错误，diff 空白检查通过，按规定构建并结束 shutdown；未新增测试、未主动刷新 Unity、未做 Player 或网络实测。
+
+## 2026-09-20 peer 冗余发包历史与候选存储准备
+
+对应 tasks.md 的 5.15，与代码同步提交。
+
+- RollbackPeerEndpoint 的本地输入冗余历史已有 inputRedundancyCount=N，且不大于 MaximumQueuedMessages。原 SortedDictionary 每个新 tick 分配树节点，获取最旧 tick 还通过 Keys 枚举；现用 SortedList 并在构造时准备 N＋1 容量，保留加入后淘汰的临时峰值，按 RemoveAt(0) 删除同一个最旧 tick，删除 FirstInputTick 辅助函数。
+- 构造阶段取得一次 Values 只读来源视图，准备 N 容量的 m_InputBatchFrames。每次发送按下标填入，仍用 RollbackActorInputBatch 构造、精确测长和逐个裁掉最旧帧；finally 清空工作引用，Dispose 同步清理。
+- 已核对 RollbackActorInputBatch 构造会建立自己的 List 和只读包装，所以复用候选工作列表不会覆盖已经构造的批次。重复 tick 的身份校验、连续 tick 校验、超 MTU 单帧失败和发送顺序保持原样。
+- 取舍：有序数组在插入／移除时可能搬移引用，换取不再创建树节点和临时键枚举器；没有实测 CPU 收益。容量完全来自正式 N，未新增任意默认上限，不修改 canonical bundle／confirmation 容器或模拟回滚历史。
+- 通道构造现在承担正式容量准备，可能在首次发送前失败；peer 在创建 Endpoint 后构造 Channel 的步骤增加异常清理，调用既有 Endpoint.Dispose 释放 socket／线程后重新抛出，不增加重试或替代路径。
+- Endpoint portable 全依赖编译零警告零错误，diff 空白检查通过，按规定构建并结束 shutdown；未新增测试、未主动刷新 Unity、未做网络或 Player 实测。批次及其独立列表、编码和消息对象仍有分配。

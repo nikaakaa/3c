@@ -540,6 +540,14 @@
 - LocalHeatDistortionRenderPass.Execute 使用已有 ProfilingSampler、共享 MaterialPropertyBlock、CommandBufferPool.Get／Release；new Vector4 是值类型，不能按关键字计为托管对象。RTHandle 的 ReAllocateIfNeeded 与底层 Unity 调用需要尺寸变化及首次／稳态采样，当前仅有源码证据。
 - 后续 6.3 应追踪实际工作区重建、动态源启停、渲染目标尺寸变化和 Unity/native 内部分配，保留原正式性能采集链；不以替换这些已有复用代码冒充治理进展。
 
+### ShapeProjection 帧入口与工作区创建边界
+
+- 继续沿 CharacterShapeProjectionMaskPass.Execute 核对：每帧先 pool.Sweep，再按来源下标调用 GetOrCreate、UpdateCamera、ProcessCompletedContours、TryPrepareSubmission、RecordMask 和 RecordReadback。GetOrCreate 的 key 包含 CameraId、SourceInstanceId、SourceGeneration；已存在 key 直接返回工作区，不重复构造。
+- pool 的 Dictionary 和 staleKeys List 均按 maxWorkspaces 准备；创建前检查容量，Sweep 直接枚举具体 Dictionary，待淘汰 key 不超过工作区数量。现有源码已有明确容量与复用，不为此新增另一套池。原 maxWorkspaces 的配置校正行为本轮未改。
+- 首个相机／来源／代次组合仍会在 Execute 内创建工作区，构造包括烘焙 Mesh、渲染器数组、按 VertexCount 准备的顶点 List、固定 NativeArray／GraphicsBuffer 和读回槽。来源失效、禁用或代次变化在 Sweep 释放；随后重新进入可创建新工作区。首次创建与重建不是稳态无分配证据，应分别采样并追踪容量来源。
+- PublishDiagnostics 的 ShapeProjectionDiagnosticsSnapshot 是 struct；Job、Vector4、Hash128 也为值类型，不能因 new 关键字列为托管对象。Recorder 在静态初始化建立，仍需要区分第一次访问与后续读取，底层 native／Unity 调用开销未验证。
+- 更早准备工作区需要正式相机与来源可用时机，复用旧代次存储需要保证未完成 GPU readback／Job 和发布结果的所有权；本轮不为绕开这些边界建立共享全局工作区。任务 6.3 继续未完成，下一步证据应覆盖首次、重建、稳态和在途释放；本轮仅更新审计，没有修改渲染代码或运行 Editor。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

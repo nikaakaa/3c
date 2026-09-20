@@ -1896,3 +1896,12 @@
 - report 公开构造收窄为 IReadOnlyList，按准确 Count 复制到最终数组后原地排序校验；新增 FromOwnedActors 供 hash 生产与协议解码转移本方法新建数组。通用复制帮助类改名为 RollbackProtocolArray，供输入与 hash 协议共用。
 - 每个本地或解码 state hash report 删除结果 List、ReadOnlyCollection 与一份完整 Actor hash 数组复制；最终数组及每 Actor hash 对象仍按报告寿命存在。外部一般集合继续通过公开构造独立复制，初始化期 RollbackRoster 暂未混入本步。
 - ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 hash 发送频率或 Player 分配采样。
+
+## 2026-09-21 Rollback policy 枚举具体校验
+
+对应 tasks.md 的 5.78。
+
+- RollbackMissingInputPolicy 的正式集合只有 ContinuousValuesWithEmptyRequests 与 NeutralValuesWithEmptyRequests，RollbackSnapshotAuthority 只有 LowestPeerId；源码没有保留值或位组合语义。原 policy 构造分别调用 Enum.IsDefined(Type, value)，Server manifest 的泛型 RequireEnum 解析后也调用同一路径。
+- policy 构造改为直接比较正式成员。manifest 拆成 RequireMissingInputPolicy 与 RequireSnapshotAuthority 两个具体入口，继续使用区分大小写的 Enum.TryParse，并对解析结果按相同正式集合校验；有效名称、有效数字字符串和异常结果不变。
+- 删除 rollback 模型构造及服务端 manifest 配置解析的 Enum.IsDefined 装箱。该配置链主要发生在初始化而非每帧，本步只记录静态分配入口删除，不宣称稳态收益。
+- ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做配置加载分配采样。

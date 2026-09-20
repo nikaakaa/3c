@@ -102,8 +102,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
             maximumQueuedBundles,
             maximumQueuedSnapshots,
             maximumOutputRecords,
-            RequireEnum<RollbackMissingInputPolicy>(missingInputPolicy),
-            RequireEnum<RollbackSnapshotAuthority>(snapshotAuthority));
+            RequireMissingInputPolicy(missingInputPolicy),
+            RequireSnapshotAuthority(snapshotAuthority));
 
         public RollbackRoster BuildRoster()
         {
@@ -138,10 +138,24 @@ namespace ThirdPersonSimulation.DeterministicRollback
             new StableHash(kccIdentityHash),
             new SimulationProtocolIdentity(protocolId, protocolVersion, new StableHash(protocolSchemaHash)));
 
-        static T RequireEnum<T>(string value) where T : struct
+        static RollbackMissingInputPolicy RequireMissingInputPolicy(string value)
         {
-            if (!Enum.TryParse(value, false, out T result) || !Enum.IsDefined(typeof(T), result))
-                throw new InvalidOperationException($"Deterministic Rollback Server Candidate enum '{typeof(T).Name}' is invalid.");
+            if (!Enum.TryParse(value, false, out RollbackMissingInputPolicy result) ||
+                result != RollbackMissingInputPolicy.ContinuousValuesWithEmptyRequests &&
+                result != RollbackMissingInputPolicy.NeutralValuesWithEmptyRequests)
+            {
+                throw new InvalidOperationException("Deterministic Rollback Server Candidate enum 'RollbackMissingInputPolicy' is invalid.");
+            }
+            return result;
+        }
+
+        static RollbackSnapshotAuthority RequireSnapshotAuthority(string value)
+        {
+            if (!Enum.TryParse(value, false, out RollbackSnapshotAuthority result) ||
+                result != RollbackSnapshotAuthority.LowestPeerId)
+            {
+                throw new InvalidOperationException("Deterministic Rollback Server Candidate enum 'RollbackSnapshotAuthority' is invalid.");
+            }
             return result;
         }
     }

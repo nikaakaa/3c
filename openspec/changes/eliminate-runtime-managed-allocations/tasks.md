@@ -318,6 +318,8 @@
 
 - [x] 5.77 RollbackStateHashReport 按可计数输入直接保存最终 Actor hash 数组，并接管 hash 生产与协议解码新建数组，删除每个报告的结果 List、ReadOnlyCollection 和数组二次复制；公开构造继续独立持有输入
 
+- [x] 5.78 Rollback policy 与 Server manifest 按两个正式 missing-input 值及唯一 snapshot-authority 值直接校验，泛型 enum parser 拆为具体解析，删除模型构造和配置解析中的 Enum.IsDefined 装箱
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

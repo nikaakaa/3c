@@ -35,8 +35,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 confirmationDelayTicks < 0 || confirmationDelayTicks >= historyLengthTicks ||
                 maximumQueuedBundles <= 0 || maximumQueuedSnapshots <= 0 || maximumOutputRecords <= 0 ||
                 maximumQueuedSnapshots <= maximumRollbackDepthTicks ||
-                !Enum.IsDefined(typeof(RollbackMissingInputPolicy), missingInputPolicy) ||
-                !Enum.IsDefined(typeof(RollbackSnapshotAuthority), snapshotAuthority))
+                (missingInputPolicy != RollbackMissingInputPolicy.ContinuousValuesWithEmptyRequests &&
+                 missingInputPolicy != RollbackMissingInputPolicy.NeutralValuesWithEmptyRequests) ||
+                snapshotAuthority != RollbackSnapshotAuthority.LowestPeerId)
             {
                 throw new ArgumentException("Deterministic Rollback policy is invalid.");
             }

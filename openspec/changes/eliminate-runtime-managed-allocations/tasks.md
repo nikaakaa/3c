@@ -274,6 +274,8 @@
 
 - [x] 5.61 两数值域 SimulationWorldStateSet 按 actor workspace Count 复制到独立最终数组并原地排序校验，删除每 completed step 的 Actor List 与 ReadOnlyCollection 包装；状态集继续独立持有 Actor 状态引用
 
+- [x] 5.62 两数值域 SimulationWorldSnapshot 以最终 Actor 数组保存，并由程序集内部构造接管 Factory／Codec／权威合并的新建数组与 world-state bytes，删除快照结果 List、ReadOnlyCollection、Actor 数组二次复制和字节克隆；公开构造仍独立复制
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

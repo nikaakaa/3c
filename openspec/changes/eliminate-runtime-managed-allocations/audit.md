@@ -1693,3 +1693,12 @@
 - 两域构造入口收窄为 IReadOnlyList，按 Count 复制到独立最终数组，在数组上执行原 null、ActorId 排序、非空、world body 数量、numeric profile 与稳定 roster 校验；公开 Actors 仍为 IReadOnlyList。
 - 删除每 completed simulation step 的 Actor List 与 ReadOnlyCollection 两个对象，以最终数组替代原 List 底层存储。状态集继续独立持有 SimulationActorState 引用，不借用下一 tick 会复用的 workspace。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback 编译零警告零错误；DotRecastAuthority 编译通过并仅带 DotRecast 依赖包两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 全依赖构建通过并保留 Unity 包及既有 Editor 代码十七条警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做状态发布运行对比或 Player 分配采样。
+
+## 2026-09-21 SimulationWorldSnapshot 数据所有权转移
+
+对应 tasks.md 的 5.62。
+
+- 两域 Snapshot Factory、Codec 读取及 Float32 权威状态合并均按 Actor 数新建快照数组并生成新的 world-state bytes，构造完成后调用方不再修改或保留这些存储；原构造器仍将 Actor 集合复制进 List、排序后创建 ReadOnlyCollection，并克隆 world-state bytes。
+- SimulationWorldSnapshot 现以最终数组保存 Actor。公开 IReadOnlyList 构造继续复制 Actor 并克隆 bytes，保持外部输入隔离；程序集内部数组构造显式接管新建数组和 bytes，在同一存储上执行原排序、非空、null 与重复 Actor 校验后计算 WorldHash。
+- Factory、Codec 与权威合并的正式调用自动命中内部数组入口，删除每个快照的 List、ReadOnlyCollection、第二份 Actor 存储及 world-state bytes 克隆；Snapshot 对象、每 Actor 快照和序列化生成的初始 bytes 仍按快照寿命独立存在。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误；DotRecastAuthority 编译通过并仅带 DotRecast 依赖包两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 全依赖构建通过并保留 Unity 包及既有 Editor 代码十七条警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做快照运行对比或 Player 分配采样。

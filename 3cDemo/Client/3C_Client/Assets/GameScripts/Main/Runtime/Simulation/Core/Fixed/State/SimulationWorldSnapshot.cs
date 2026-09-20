@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using ThirdPersonSimulation;
 namespace ThirdPersonSimulation.Fixed
@@ -75,7 +74,7 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class SimulationWorldSnapshot
     {
-        readonly ReadOnlyCollection<SimulationActorSnapshot> m_Actors;
+        readonly IReadOnlyList<SimulationActorSnapshot> m_Actors;
         readonly byte[] m_WorldStateBytes;
 
         public SimulationWorldSnapshot(
@@ -86,7 +85,32 @@ namespace ThirdPersonSimulation.Fixed
             string solverVersion,
             WorldRevision worldRevision,
             SimulationTick tick,
-            IEnumerable<SimulationActorSnapshot> actors,
+            IReadOnlyList<SimulationActorSnapshot> actors,
+            byte[] worldStateBytes,
+            bool deterministicValidity)
+            : this(
+                numericProfile,
+                gameplayContentHash,
+                stateSchemaHash,
+                solverId,
+                solverVersion,
+                worldRevision,
+                tick,
+                CopyActors(actors),
+                CopyWorldStateBytes(worldStateBytes),
+                deterministicValidity)
+        {
+        }
+
+        internal SimulationWorldSnapshot(
+            SimulationNumericProfile numericProfile,
+            GameplayContentHash gameplayContentHash,
+            StableHash stateSchemaHash,
+            SolverImplementationId solverId,
+            string solverVersion,
+            WorldRevision worldRevision,
+            SimulationTick tick,
+            SimulationActorSnapshot[] actors,
             byte[] worldStateBytes,
             bool deterministicValidity)
         {
@@ -99,18 +123,18 @@ namespace ThirdPersonSimulation.Fixed
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
             Tick = tick;
-            var copied = actors == null ? new List<SimulationActorSnapshot>() : new List<SimulationActorSnapshot>(actors);
-            for (int i = 0; i < copied.Count; i++)
+            SimulationActorSnapshot[] copied = actors ?? Array.Empty<SimulationActorSnapshot>();
+            for (int i = 0; i < copied.Length; i++)
                 if (copied[i] == null)
                     throw new ArgumentException("Simulation World Snapshot actor roster contains a null entry.", nameof(actors));
-            copied.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (copied.Count == 0)
+            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (copied.Length == 0)
                 throw new ArgumentException("Simulation World Snapshot actor roster cannot be empty.", nameof(actors));
-            for (int i = 1; i < copied.Count; i++)
+            for (int i = 1; i < copied.Length; i++)
                 if (copied[i - 1].ActorId == copied[i].ActorId)
                     throw new ArgumentException("Simulation World Snapshot actor roster contains duplicate entries.", nameof(actors));
-            m_Actors = copied.AsReadOnly();
-            m_WorldStateBytes = worldStateBytes == null ? throw new ArgumentNullException(nameof(worldStateBytes)) : (byte[])worldStateBytes.Clone();
+            m_Actors = copied;
+            m_WorldStateBytes = worldStateBytes ?? throw new ArgumentNullException(nameof(worldStateBytes));
             DeterministicValidity = deterministicValidity;
             WorldHash = SimulationWorldSnapshotCodec.ComputeHash(this);
         }
@@ -127,6 +151,21 @@ namespace ThirdPersonSimulation.Fixed
         internal byte[] WorldStateBytesBuffer => m_WorldStateBytes;
         public bool DeterministicValidity { get; }
         public SimulationWorldHash WorldHash { get; }
+
+        static SimulationActorSnapshot[] CopyActors(IReadOnlyList<SimulationActorSnapshot> actors)
+        {
+            if (actors == null || actors.Count == 0)
+                return Array.Empty<SimulationActorSnapshot>();
+            var copied = new SimulationActorSnapshot[actors.Count];
+            for (int i = 0; i < copied.Length; i++)
+                copied[i] = actors[i];
+            return copied;
+        }
+
+        static byte[] CopyWorldStateBytes(byte[] worldStateBytes) =>
+            worldStateBytes == null
+                ? throw new ArgumentNullException(nameof(worldStateBytes))
+                : (byte[])worldStateBytes.Clone();
 
         public WorldSimulationState DecodeWorldState() =>
             WorldSimulationStateCodec.Read(m_WorldStateBytes, NumericProfile, SolverId, SolverVersion, WorldRevision);

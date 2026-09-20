@@ -27,17 +27,27 @@ namespace ThirdPersonSimulation
                 new NumericProfileId(reader.ReadString()),
                 new TargetAbiVersion(reader.ReadInt32()),
                 reader.ReadInt32(),
-                ReadEnum<SimulationNumericRoundingMode>(reader.ReadByte()),
-                ReadEnum<SimulationNumericOverflowMode>(reader.ReadByte()),
+                ReadRounding(reader.ReadByte()),
+                ReadOverflow(reader.ReadByte()),
                 reader.ReadBoolean());
         }
 
-        static T ReadEnum<T>(byte value) where T : struct
+        static SimulationNumericRoundingMode ReadRounding(byte value)
         {
-            object candidate = Enum.ToObject(typeof(T), value);
-            if (!Enum.IsDefined(typeof(T), candidate))
-                throw new InvalidDataException($"Simulation numeric profile enum '{typeof(T).Name}' value '{value}' is invalid.");
-            return (T)candidate;
+            var candidate = (SimulationNumericRoundingMode)value;
+            if (candidate != SimulationNumericRoundingMode.Ieee754NearestEven &&
+                candidate != SimulationNumericRoundingMode.FixedNearestEven)
+                throw new InvalidDataException($"Simulation numeric profile enum '{nameof(SimulationNumericRoundingMode)}' value '{value}' is invalid.");
+            return candidate;
+        }
+
+        static SimulationNumericOverflowMode ReadOverflow(byte value)
+        {
+            var candidate = (SimulationNumericOverflowMode)value;
+            if (candidate != SimulationNumericOverflowMode.RejectNonFinite &&
+                candidate != SimulationNumericOverflowMode.RejectOverflow)
+                throw new InvalidDataException($"Simulation numeric profile enum '{nameof(SimulationNumericOverflowMode)}' value '{value}' is invalid.");
+            return candidate;
         }
     }
 }

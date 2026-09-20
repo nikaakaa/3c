@@ -414,6 +414,14 @@
 - 嵌套基线及远端表现子消息仍会创建独立 writer 和数组，此步不宣称它们已完成；外层 writer、流、解码集合、公开编码结果也仍分配。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行对比或 Player 分配采样。
 
+## 2026-09-20 公共数值配置解码装箱清理
+
+对应 tasks.md 的 5.36，与代码同步提交。
+
+- SimulationNumericProfileCodec.Read 原通过泛型 ReadEnum 为舍入和溢出字段分别 Enum.ToObject，再 Enum.IsDefined。现直接转换并比较 Ieee754NearestEven／FixedNearestEven、RejectNonFinite／RejectOverflow，全部消费者迁移后删除反射泛型入口。
+- 合法成员和非法零值处理与当前枚举声明一致，两个字段读取先后、后续 deterministicReplay 读取和 SimulationNumericProfile 构造规则不变；错误文本中的类型名由 nameof 提供，与原 typeof(T).Name 相同。没有修改浮点或定点舍入、溢出算法，也没有新增运行缓存。
+- portable Core 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；目标文件此前无其它未提交修改，编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样；此步仅覆盖两个枚举对象入口。
+
 ## 2026-09-20 权威复制子消息直接编码
 
 对应 tasks.md 的 5.30，与代码同步提交。

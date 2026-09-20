@@ -80,6 +80,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly HashSet<ulong> m_CompletedSequences = new HashSet<ulong>();
         readonly Queue<ulong> m_CompletedOrder = new Queue<ulong>();
         readonly long m_ResendInterval;
+        readonly int m_MaximumFragmentPayloadBytes;
         ulong m_NextDatagramSequence = 1;
         ulong m_NextMessageSequence = 1;
 
@@ -98,6 +99,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 ? throw new ArgumentNullException(nameof(remoteEndPoint))
                 : new IPEndPoint(remoteEndPoint.Address, remoteEndPoint.Port);
             m_ResendInterval = Math.Max(1L, Stopwatch.Frequency * definition.ReliableResendMilliseconds / 1000L);
+            m_MaximumFragmentPayloadBytes = RollbackDatagramCodec.GetMaximumFragmentPayloadBytes(
+                m_Definition.SessionId,
+                m_LocalPeerId,
+                m_Definition.MaximumDatagramBytes);
         }
 
         public string RemotePeerId => m_RemotePeerId;
@@ -114,7 +119,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
             encodedPayloadBytes = Encode(payload, m_NextMessageSequence).Length;
-            maximumPayloadBytes = GetMaximumFragmentPayloadBytes();
+            maximumPayloadBytes = m_MaximumFragmentPayloadBytes;
             return encodedPayloadBytes <= maximumPayloadBytes;
         }
 
@@ -126,7 +131,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new InvalidOperationException("Rollback reliable message capacity is exhausted.");
             ulong messageSequence = NextMessageSequence();
             byte[] bytes = Encode(payload, messageSequence);
-            int fragmentBytes = GetMaximumFragmentPayloadBytes();
+            int fragmentBytes = m_MaximumFragmentPayloadBytes;
             int fragmentCount = checked((bytes.Length + fragmentBytes - 1) / fragmentBytes);
             if (!reliable && fragmentCount != 1)
                 throw new InvalidOperationException("Rollback unreliable payload exceeds one datagram.");
@@ -137,8 +142,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 int offset = i * fragmentBytes;
                 int length = Math.Min(fragmentBytes, bytes.Length - offset);
-                var fragment = new byte[length];
-                Buffer.BlockCopy(bytes, offset, fragment, 0, length);
                 packets[i] = new RollbackDatagramPacket(
                     RollbackDatagramKind.Payload,
                     m_Definition.SessionId,
@@ -149,7 +152,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     i,
                     fragmentCount,
                     bytes.Length,
-                    fragment);
+                    bytes.AsSpan(offset, length));
             }
             Enqueue(packets);
             if (reliable)
@@ -164,12 +167,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
         byte[] Encode(IRollbackProtocolPayload payload, ulong messageSequence) =>
             RollbackProtocolCodec.Write(
                 new RollbackProtocolEnvelope(m_Definition.SessionId, m_LocalPeerId, messageSequence, payload));
-
-        int GetMaximumFragmentPayloadBytes() =>
-            RollbackDatagramCodec.GetMaximumFragmentPayloadBytes(
-                m_Definition.SessionId,
-                m_LocalPeerId,
-                m_Definition.MaximumDatagramBytes);
 
         public void Process(RollbackReceivedDatagram received)
         {

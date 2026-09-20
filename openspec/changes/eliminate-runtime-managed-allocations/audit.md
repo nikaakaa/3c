@@ -201,3 +201,14 @@
 - 解码端从 ReadBytesSegment 直接把片段 Span 传入响应构造，不再先 ReadBytes 复制一份再 Clone。响应构造仍取得一份独立数组，不把网络接收缓冲当作长期快照存储。
 - 已核对另一个 CopySnapshotBytes 消费者位于 RollbackEndpointRuntimeBridge.ReceiveSnapshotResponse。它仍向 SnapshotCodec.Read 传独立副本；本小步保留该真实入口，不修改恢复快照、哈希校验或状态生命周期。
 - Endpoint portable 工程连带 Core／Fixed／Rollback 编译零警告零错误；Unity 当前引用下依次编译 Core、Rollback、Endpoint 也通过。diff 空白检查通过，按规定构建结束 shutdown。未新增测试、未主动刷新 Unity、未做 Player 采样；最终消息数组与快照自身数组仍有分配。
+
+## 2026-09-20 Datagram 分片与准备容量清理
+
+对应 tasks.md 的 5.12，与代码同步提交。
+
+- RollbackDatagramPacket 构造改接收 ReadOnlySpan，保留原数据报身份、确认包和分片合法性校验，随后复制一次拥有 payload；构造和 ReadKind 对 Payload／Acknowledgement 直接比较，取消两处枚举装箱。
+- Channel.Send 直接把编码消息的片段 Span 传给 packet，删除临时 fragment 数组及 BlockCopy；codec.Read 直接传 reader 的字节片段，删除 ReadBytes 再 Clone 的中间副本。codec.Write 读取 packet.Payload 只读 Span，删除只为编码生成的 CopyPayload 副本。
+- packet 不持有原发送或接收缓冲；重组 FragmentAssembly 仍通过 CopyPayload 保存独立数据，重传队列仍持有 packet。没有改变完成、超时、重复片段、发送线程和队列所有权。
+- Channel 的定义、SessionId、LocalPeerId 和 MaximumDatagramBytes 为只读，故构造时沿现有 codec.GetMaximumFragmentPayloadBytes 计算一次并保存。FitsSingleDatagram／Send 直接读取该准备结果，删除运行期重复包头 writer。codec 计算容量时改读 writer.Length，不为取长度 ToArray；包头字段与 UTF-8 编码仍只有一套。
+- 业务变化：身份字段占满 MTU 的非法配置现在创建通道即失败，而不是等首次发送；没有新增默认容量或改变合法配置的分片大小。保留现有 MaximumFragmentsPerMessage、队列和 MTU 限制。
+- Endpoint portable 及 Core／Fixed／Rollback 依赖编译零警告零错误，按规定参数构建并结束 shutdown，diff 空白检查通过。未新增测试、未主动刷新 Unity、未做 Player 或网络实测。最终数据报数组、packet、重组和发送存储仍有分配。

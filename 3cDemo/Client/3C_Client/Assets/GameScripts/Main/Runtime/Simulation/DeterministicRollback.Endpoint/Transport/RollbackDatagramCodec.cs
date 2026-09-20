@@ -23,24 +23,24 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int fragmentIndex,
             int fragmentCount,
             int totalPayloadBytes,
-            byte[] payload)
+            ReadOnlySpan<byte> payload)
         {
-            if (!Enum.IsDefined(typeof(RollbackDatagramKind), kind) || datagramSequence == 0 || messageSequence == 0)
+            if ((kind != RollbackDatagramKind.Payload && kind != RollbackDatagramKind.Acknowledgement) || datagramSequence == 0 || messageSequence == 0)
                 throw new ArgumentException("Rollback datagram identity is invalid.");
             SessionId = RollbackEndpointIdentity.Require(sessionId, nameof(sessionId));
             SenderPeerId = RollbackEndpointIdentity.Require(senderPeerId, nameof(senderPeerId));
-            m_Payload = payload == null ? Array.Empty<byte>() : (byte[])payload.Clone();
             if (kind == RollbackDatagramKind.Acknowledgement)
             {
-                if (!reliable || fragmentIndex != 0 || fragmentCount != 0 || totalPayloadBytes != 0 || m_Payload.Length != 0)
+                if (!reliable || fragmentIndex != 0 || fragmentCount != 0 || totalPayloadBytes != 0 || payload.Length != 0)
                     throw new ArgumentException("Rollback acknowledgement datagram is invalid.");
             }
             else if (fragmentCount <= 0 || fragmentIndex < 0 || fragmentIndex >= fragmentCount ||
-                     totalPayloadBytes <= 0 || m_Payload.Length <= 0 || m_Payload.Length > totalPayloadBytes ||
+                     totalPayloadBytes <= 0 || payload.Length <= 0 || payload.Length > totalPayloadBytes ||
                      !reliable && fragmentCount != 1)
             {
                 throw new ArgumentException("Rollback payload datagram is invalid.");
             }
+            m_Payload = payload.ToArray();
             Kind = kind;
             DatagramSequence = datagramSequence;
             MessageSequence = messageSequence;
@@ -59,6 +59,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public int FragmentIndex { get; }
         public int FragmentCount { get; }
         public int TotalPayloadBytes { get; }
+        public ReadOnlySpan<byte> Payload => m_Payload;
         public byte[] CopyPayload() => (byte[])m_Payload.Clone();
     }
 
@@ -89,7 +90,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 1,
                 1);
             writer.WriteBytes(Array.Empty<byte>());
-            int capacity = maximumDatagramBytes - writer.ToArray().Length;
+            int capacity = maximumDatagramBytes - checked((int)writer.Length);
             if (capacity <= 0)
                 throw new InvalidOperationException("Rollback datagram identity leaves no payload capacity.");
             return capacity;
@@ -111,7 +112,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 packet.FragmentIndex,
                 packet.FragmentCount,
                 packet.TotalPayloadBytes);
-            writer.WriteBytes(packet.CopyPayload());
+            writer.WriteBytes(packet.Payload);
             byte[] result = writer.ToArray();
             if (result.Length > maximumDatagramBytes)
                 throw new InvalidDataException($"Rollback datagram '{result.Length}' exceeds MTU budget '{maximumDatagramBytes}'.");
@@ -134,7 +135,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             int fragmentIndex = reader.ReadInt32();
             int fragmentCount = reader.ReadInt32();
             int totalPayloadBytes = reader.ReadInt32();
-            byte[] payload = reader.ReadBytes();
+            ArraySegment<byte> payload = reader.ReadBytesSegment();
             reader.RequireComplete();
             return new RollbackDatagramPacket(
                 kind,
@@ -146,7 +147,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 fragmentIndex,
                 fragmentCount,
                 totalPayloadBytes,
-                payload);
+                payload.AsSpan());
         }
 
         static void WriteHeader(
@@ -176,7 +177,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static RollbackDatagramKind ReadKind(byte value)
         {
-            if (!Enum.IsDefined(typeof(RollbackDatagramKind), value))
+            if (value != (byte)RollbackDatagramKind.Payload && value != (byte)RollbackDatagramKind.Acknowledgement)
                 throw new InvalidDataException($"Rollback datagram kind '{value}' is unsupported.");
             return (RollbackDatagramKind)value;
         }

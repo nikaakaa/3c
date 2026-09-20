@@ -142,6 +142,8 @@
 
 - [x] 2.84 FinalizedStepResult append Product 直接承载 SimulationActorTickResult，迁移 Fixed／Float32 本地、Rollback 与 ServerAuthoritative 全部读写端，删除两套 FinalizedActorResult 类型及每 Actor 每 step 的包装对象
 
+- [x] 2.85 EventGraphValue typed 读取按已验证具体值类型直接重解释返回，删除 bool／int／float／Vector2／Vector3／Quaternion 的 object 装箱拆箱桥接；显式 ToObject 与枚举 object 边界保持
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

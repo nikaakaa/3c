@@ -1719,3 +1719,11 @@
 - GameplayTickSystem 在实时 Presentation Schedule 捕获期间每 render frame 构造 GameplayPresentationScheduleFrame；脚本化输入也构造 GameplayScriptedPresentationFrame。两类帧构造原先都通过 Enum.IsDefined(Type, object) 校验 ClockMode，引入枚举装箱。
 - GameplayPresentationDebugClockMode 的正式值域只有连续的 LivePresentation=0 与 LogicLockedPresentation=1。两处构造改为无符号上界比较，负值和大于 1 的非法底层值仍进入原 ArgumentException，其他时间、tick 和插值校验不变。
 - ThirdPersonGameplay 全依赖构建通过，保留 Unity 包、UniTask、TEngine 的二十五条既有警告，零错误；构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Presentation Schedule 运行采样。
+
+## 2026-09-21 EventGraphValue typed 读取去装箱
+
+对应 tasks.md 的 2.85。
+
+- EventGraphValue.As<T> 在确认 T 与存储 Kind 对应后，原实现仍把 bool、int、float、Vector2、Vector3、Quaternion 值转成 object 再强制转回 T；角色动画变量适配器的 float／int／bool typed 读取会经过该入口。
+- 六种固定值类型现通过项目已有 System.Runtime.CompilerServices.Unsafe 引用直接重解释为已验证的 T，不生成 object。类型和 Kind 条件、错误分支以及值布局不变；ToObject 明确要求 object 的 API 和通用 Enum.ToObject 路径仍保留原装箱语义。
+- BTSMTL.EventGraphs 全依赖构建通过，仅保留 Unity Test Framework 两条既有未赋值字段警告，零错误；构建服务关闭成功。首次构建前检测到共享 Unity Bee 编译并等待其退出。未新增测试、未操作共享 Unity、未做 EventGraph 运行采样。

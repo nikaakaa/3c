@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace BTSMTL.EventGraphs
 {
@@ -281,22 +282,25 @@ namespace BTSMTL.EventGraphs
         public T As<T>()
         {
             if (typeof(T) == typeof(bool) && Kind == EventGraphValueKind.Bool)
-                return (T)(object)m_BoolValue;
+                return Reinterpret<bool, T>(m_BoolValue);
             if (typeof(T) == typeof(int) && Kind == EventGraphValueKind.Int32)
-                return (T)(object)m_IntValue;
+                return Reinterpret<int, T>(m_IntValue);
             if (typeof(T) == typeof(float) && Kind == EventGraphValueKind.Float32)
-                return (T)(object)m_FloatValue;
+                return Reinterpret<float, T>(m_FloatValue);
             if (typeof(T) == typeof(UnityEngine.Vector2) && Kind == EventGraphValueKind.Vector2)
-                return (T)(object)m_Vector2Value;
+                return Reinterpret<UnityEngine.Vector2, T>(m_Vector2Value);
             if (typeof(T) == typeof(UnityEngine.Vector3) && Kind == EventGraphValueKind.Vector3)
-                return (T)(object)m_Vector3Value;
+                return Reinterpret<UnityEngine.Vector3, T>(m_Vector3Value);
             if (typeof(T) == typeof(UnityEngine.Quaternion) && Kind == EventGraphValueKind.Quaternion)
-                return (T)(object)m_QuaternionValue;
+                return Reinterpret<UnityEngine.Quaternion, T>(m_QuaternionValue);
             if (typeof(T).IsEnum && Kind == EventGraphValueKind.Enum && m_EnumType == typeof(T))
                 return (T)Enum.ToObject(typeof(T), m_EnumValue);
             throw new InvalidOperationException(
                 $"Event graph value kind '{Kind}' cannot be read as '{typeof(T).FullName}'.");
         }
+
+        static TResult Reinterpret<TValue, TResult>(TValue value) =>
+            Unsafe.As<TValue, TResult>(ref value);
 
         void RequireKind(EventGraphValueKind expected)
         {

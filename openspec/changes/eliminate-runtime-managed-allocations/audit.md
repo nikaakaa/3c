@@ -422,6 +422,15 @@
 - 合法成员和非法零值处理与当前枚举声明一致，两个字段读取先后、后续 deterministicReplay 读取和 SimulationNumericProfile 构造规则不变；错误文本中的类型名由 nameof 提供，与原 typeof(T).Name 相同。没有修改浮点或定点舍入、溢出算法，也没有新增运行缓存。
 - portable Core 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；目标文件此前无其它未提交修改，编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样；此步仅覆盖两个枚举对象入口。
 
+## 2026-09-20 回滚输入枚举校验装箱清理
+
+对应 tasks.md 的 5.37，与代码同步提交。
+
+- 核对 RollbackInputProvenance 六种、Fixed SimulationInputValueKind 六种、SimulationTickSourceKind 三种正式成员后，RollbackInputCodec 的三个读取校验函数改为显式 byte 成员比较，删除 Enum.IsDefined(Type, object) 的值类型装箱。
+- 接受集合、非法零值及其它字节的 InvalidDataException 文本、读取先后和返回枚举值保持不变。不改变预测来源、输入提交、确认、历史或回滚流程，仅替换协议类型校验方式。
+- 同时检查 SimulationNumericProfile 的 Equals／GetHashCode，当前使用强类型比较和整数枚举参数，没有基于此检查做无证据改动。
+- DeterministicRollback portable 连带 Core／Fixed 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
+
 ## 2026-09-20 权威复制子消息直接编码
 
 对应 tasks.md 的 5.30，与代码同步提交。

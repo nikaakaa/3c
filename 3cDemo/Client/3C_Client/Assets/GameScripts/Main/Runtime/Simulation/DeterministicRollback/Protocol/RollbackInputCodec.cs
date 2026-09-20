@@ -278,14 +278,24 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static RollbackInputProvenance ReadProvenance(byte value)
         {
-            if (!Enum.IsDefined(typeof(RollbackInputProvenance), value))
+            if (value != (byte)RollbackInputProvenance.LocalExplicit &&
+                value != (byte)RollbackInputProvenance.RelayedExplicit &&
+                value != (byte)RollbackInputProvenance.PredictedContinuous &&
+                value != (byte)RollbackInputProvenance.PredictedNeutral &&
+                value != (byte)RollbackInputProvenance.CanonicalExplicit &&
+                value != (byte)RollbackInputProvenance.ConfirmedExplicit)
                 throw new InvalidDataException($"Rollback input provenance '{value}' is invalid.");
             return (RollbackInputProvenance)value;
         }
 
         static SimulationInputValueKind ReadValueKind(byte value)
         {
-            if (!Enum.IsDefined(typeof(SimulationInputValueKind), value))
+            if (value != (byte)SimulationInputValueKind.Boolean &&
+                value != (byte)SimulationInputValueKind.Scalar &&
+                value != (byte)SimulationInputValueKind.Vector2 &&
+                value != (byte)SimulationInputValueKind.Vector3 &&
+                value != (byte)SimulationInputValueKind.Yaw &&
+                value != (byte)SimulationInputValueKind.ActionTargetSnapshot)
                 throw new InvalidDataException($"Rollback input value kind '{value}' is invalid.");
             return (SimulationInputValueKind)value;
         }
@@ -304,7 +314,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static SimulationTickSourceKind ReadTickSourceKind(byte value)
         {
-            if (!Enum.IsDefined(typeof(SimulationTickSourceKind), value))
+            if (value != (byte)SimulationTickSourceKind.LocalLogic &&
+                value != (byte)SimulationTickSourceKind.Authoritative &&
+                value != (byte)SimulationTickSourceKind.Replay)
                 throw new InvalidDataException($"Rollback Tick source kind '{value}' is invalid.");
             return (SimulationTickSourceKind)value;
         }

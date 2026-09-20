@@ -163,7 +163,9 @@ namespace ThirdPersonSimulation
             SimulationInputBuildContext context)
         {
             ulong replayTick = context.SimulationTick.Value;
-            var requests = new SimulationInputRequest[frame.Input.Requests.Count];
+            var requests = frame.Input.Requests.Count == 0
+                ? Array.Empty<SimulationInputRequest>()
+                : new SimulationInputRequest[frame.Input.Requests.Count];
             for (int i = 0; i < requests.Length; i++)
             {
                 SimulationInputRequest request = frame.Input.Requests[i];

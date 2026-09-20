@@ -61,11 +61,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             string inputSource = reader.ReadString();
             ulong sequence = reader.ReadUInt64();
             int valueCount = ReadCount(reader, "input value");
-            var values = new SimulationInputValue[valueCount];
+            var values = valueCount == 0
+                ? Array.Empty<SimulationInputValue>()
+                : new SimulationInputValue[valueCount];
             for (int i = 0; i < valueCount; i++)
                 values[i] = ReadInputValue(reader);
             int requestCount = ReadCount(reader, "input request");
-            var requests = new SimulationInputRequest[requestCount];
+            var requests = requestCount == 0
+                ? Array.Empty<SimulationInputRequest>()
+                : new SimulationInputRequest[requestCount];
             for (int i = 0; i < requestCount; i++)
                 requests[i] = ReadInputRequest(reader);
             reader.RequireComplete();

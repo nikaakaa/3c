@@ -694,3 +694,11 @@
 - 存储上限是每个既有回放模块一个活动字符串，内容长度来自原 trace 身份，不建立字典缓存或新增配置。只移除重复身份插值；每帧 SimulationInput、请求重映射数组、状态消息和哈希分配仍存在。
 - 编辑前两个目标文件无其它未提交修改，曾观察到 bee_backend PID 35648；等待后该句柄消失，再次进程扫描无 csc／bee 才编辑。Fixed／Float32 portable 均在公共 Core 编译失败，CameraProgramRequestFactory.cs 的 ProgramConstantKind／ProgramConstant／GameplayAbilityExecutionLayout 等类型引用报 8 个错误；未修改该文件或增加编译旁路，两次 build-server shutdown 均成功。
 - 本切片 diff 空白检查通过；未新增测试、未主动刷新或控制共享 Unity，未运行回放或采样。后续需在公共依赖恢复后补齐两数值域编译证据，历史已通过的检查不冒充本次通过。
+## 2026-09-20 空输入集合数组复用
+
+对应 tasks.md 的 5.44，并补齐 7.8 编译证据。
+
+- RollbackInputCodec 和 ServerAuthoritativeCanonicalCodec 的输入解码，原在计数为零时仍各 new 值数组和请求数组；Fixed／Float32 回放 Remap 也为无请求帧创建零长度数组。六处改为计数为零使用 Array.Empty，非零仍分配独立数组并执行原填写循环。
+- 两数值域 SimulationInput.Copy 已对零长度 ICollection 返回 Array.Empty；此次消除的是到达该正确入口前的空数组。保留读入计数及上限校验、读取顺序、请求 Tick 重映射、排序／重复检查、canonical 比较和结果隔离。空数组无可修改元素，无需租用或归还，不改非空请求存储。
+- 先前观察到 bee_backend PID 125504 和 csc 所在 dotnet PID 81640，等待两句柄结束并再次扫描无编译进程后编辑。四目标文件修改前无其它改动。DeterministicRollback 与 ServerAuthoritative portable 连带两数值域编译零警告零错误，构建服务关闭成功；本切片 diff 空白检查通过。
+- 本轮公共 Core 类型引用阻断已解除，未由本任务修复；7.8 两数值域回放身份改动现已包含在通过的编译内。未新增测试、未控制共享 Unity、未做回放／协议运行对比或 Player 分配采样，输入对象及非空集合复制仍未完成治理。

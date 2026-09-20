@@ -627,7 +627,9 @@ namespace ThirdPersonSimulation.Fixed
             FixedCharacterInputTraceFrame frame,
             FixedCharacterInputBuildContext context)
         {
-            var requests = new SimulationInputRequest[frame.Input.Requests.Count];
+            var requests = frame.Input.Requests.Count == 0
+                ? Array.Empty<SimulationInputRequest>()
+                : new SimulationInputRequest[frame.Input.Requests.Count];
             for (int i = 0; i < requests.Length; i++)
             {
                 SimulationInputRequest request = frame.Input.Requests[i];

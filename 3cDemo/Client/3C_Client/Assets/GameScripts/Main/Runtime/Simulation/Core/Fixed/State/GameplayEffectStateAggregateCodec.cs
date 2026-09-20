@@ -31,11 +31,11 @@ namespace ThirdPersonSimulation.Fixed
             var lifecycleRevisions = new SortedDictionary<ulong, ulong>();
             aggregate.CopyTo(tagSources, attributes, activeEffects, periods, journal, lifecycleRevisions);
 
-            writer.WriteBytes(WriteTags(tagSources));
-            writer.WriteBytes(WriteAttributes(attributes));
-            writer.WriteBytes(WriteActiveEffects(activeEffects));
-            writer.WriteBytes(WritePeriods(periods));
-            writer.WriteBytes(WriteJournal(journal, lifecycleRevisions));
+            WriteTags(writer, tagSources);
+            WriteAttributes(writer, attributes);
+            WriteActiveEffects(writer, activeEffects);
+            WritePeriods(writer, periods);
+            WriteJournal(writer, journal, lifecycleRevisions);
             writer.WriteUInt64(aggregate.ChangeCursor);
         }
 
@@ -72,9 +72,9 @@ namespace ThirdPersonSimulation.Fixed
             return new SimulationGameplayEffectState(catalog, aggregate).Freeze();
         }
 
-        static byte[] WriteTags(IReadOnlyDictionary<string, string[]> tagSources)
+        static void WriteTags(CanonicalWriter writer, IReadOnlyDictionary<string, string[]> tagSources)
         {
-            using var writer = new CanonicalWriter();
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(TagsMagic);
             writer.WriteInt32(StateVersion);
             writer.WriteInt32(tagSources.Count);
@@ -83,7 +83,7 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteString(pair.Key);
                 WriteStrings(writer, pair.Value);
             }
-            return writer.ToArray();
+            writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
         static void ReadTags(ArraySegment<byte> bytes, IDictionary<string, string[]> tagSources)
@@ -102,9 +102,9 @@ namespace ThirdPersonSimulation.Fixed
             reader.RequireComplete();
         }
 
-        static byte[] WriteAttributes(IReadOnlyDictionary<string, PortableAttributeState> attributes)
+        static void WriteAttributes(CanonicalWriter writer, IReadOnlyDictionary<string, PortableAttributeState> attributes)
         {
-            using var writer = new CanonicalWriter();
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(AttributesMagic);
             writer.WriteInt32(StateVersion);
             writer.WriteInt32(attributes.Count);
@@ -119,7 +119,7 @@ namespace ThirdPersonSimulation.Fixed
                 for (int i = 0; i < attribute.Modifiers.Count; i++)
                     WriteModifier(writer, attribute.Modifiers[i]);
             }
-            return writer.ToArray();
+            writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
         static void ReadAttributes(
@@ -154,15 +154,15 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidDataException("Gameplay Attribute state does not match the runtime catalog.");
         }
 
-        static byte[] WriteActiveEffects(IReadOnlyList<PortableActiveEffectState> activeEffects)
+        static void WriteActiveEffects(CanonicalWriter writer, IReadOnlyList<PortableActiveEffectState> activeEffects)
         {
-            using var writer = new CanonicalWriter();
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(ActiveMagic);
             writer.WriteInt32(StateVersion);
             writer.WriteInt32(activeEffects.Count);
             for (int i = 0; i < activeEffects.Count; i++)
                 WriteActive(writer, activeEffects[i]);
-            return writer.ToArray();
+            writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
         static void ReadActiveEffects(
@@ -178,9 +178,9 @@ namespace ThirdPersonSimulation.Fixed
             activeEffects.Sort(CompareActive);
         }
 
-        static byte[] WritePeriods(IReadOnlyDictionary<ulong, ulong> periods)
+        static void WritePeriods(CanonicalWriter writer, IReadOnlyDictionary<ulong, ulong> periods)
         {
-            using var writer = new CanonicalWriter();
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(PeriodsMagic);
             writer.WriteInt32(StateVersion);
             writer.WriteInt32(periods.Count);
@@ -189,7 +189,7 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteUInt64(pair.Key);
                 writer.WriteUInt64(pair.Value);
             }
-            return writer.ToArray();
+            writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
         static void ReadPeriods(ArraySegment<byte> bytes, IDictionary<ulong, ulong> periods)
@@ -209,11 +209,12 @@ namespace ThirdPersonSimulation.Fixed
             reader.RequireComplete();
         }
 
-        static byte[] WriteJournal(
+        static void WriteJournal(
+            CanonicalWriter writer,
             IReadOnlyDictionary<ulong, List<PortablePredictionRecord>> journal,
             IReadOnlyDictionary<ulong, ulong> lifecycleRevisions)
         {
-            using var writer = new CanonicalWriter();
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
             writer.WriteUInt32(JournalMagic);
             writer.WriteInt32(StateVersion);
             writer.WriteInt32(journal.Count);
@@ -230,7 +231,7 @@ namespace ThirdPersonSimulation.Fixed
                 writer.WriteUInt64(pair.Key);
                 writer.WriteUInt64(pair.Value);
             }
-            return writer.ToArray();
+            writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
         static void ReadJournal(

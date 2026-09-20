@@ -773,3 +773,12 @@
 - 解析只产生独立字符串、值对象及集合，没有存储 reader 或 ArraySegment；后续 aggregate 构造、SimulationGameplayEffectState 校验和 Freeze 深拷贝保持原样。不将借用字节扩展至快照结果，不改变提交／恢复或并行执行帧的存储归还边界。
 - 写入侧五个子 writer／数组及读取侧结果集合、深拷贝仍存在，本次仅清理同步解析字节中转，不宣称效果快照无分配。外层读取游标仍先消费完整子块，再由私有 reader 解析，不更改失败时外层推进次序。
 - 编辑前两个文件无其它未提交修改，未发现 csc／bee 编译进程。Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做状态恢复运行对比或 Player 分配采样。
+## 2026-09-20 效果状态子块直接编码
+
+对应 tasks.md 的 2.23。
+
+- 两数值域 WriteTags／WriteAttributes／WriteActiveEffects／WritePeriods／WriteJournal 原分别构造 CanonicalWriter 和 MemoryStream，ToArray 后再由外层 WriteBytes 复制。五个私有函数全部改为接收外层 writer，BeginLengthPrefixedBlock 保留四字节长度位置，沿原字段写入后 EndLengthPrefixedBlock 回填，不保留旧返回数组入口。
+- 每次完整效果状态写入删除五套子 writer／流／输出数组及数组到外层的复制。Magic、StateVersion、每个字段与集合顺序以及末尾 ChangeCursor 均保留；沿公共长度回填实现恢复流末尾位置，不使用闭包或另外的序列化协议。
+- 实际上层调用是两数值域 CharacterRuntimeStateCodec 内部 effectWriter，失败则异常离开 using 作用域，没有发布部分结果。新方式失败时 effectWriter 可能已有未完成子块，未承诺失败后的流内容相同；现有调用者不捕获后继续使用它。最终角色封装仍有 effectWriter.ToArray，本次未迁移外层。
+- aggregate.CopyTo 的工作集合和深拷贝、外层结果及流扩容仍存在；不改状态提交、恢复、归还或 Timeline 执行帧边界。读取继续沿上一小步的片段接口，尚未做编码字节对比或状态往返运行。
+- 编辑前两目标文件无其它未提交修改，未发现 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。未新增测试、未刷新或控制共享 Unity、未采样 Player 分配。

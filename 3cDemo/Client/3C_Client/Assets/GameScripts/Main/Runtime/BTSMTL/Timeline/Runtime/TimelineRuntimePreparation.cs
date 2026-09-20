@@ -1794,8 +1794,8 @@ namespace BTSMTL.Timeline.Runtime
                     if (track is AnimationTrack animationTrack)
                     {
                         animationTrack.Sample(
-                            segment.PreviousTime,
-                            segment.CurrentTime,
+                            segment.PreviousTime.ToSingle(),
+                            segment.CurrentTime.ToSingle(),
                             trackIndex,
                             timeline.AuthoringId,
                             timeline.Name,
@@ -1807,8 +1807,8 @@ namespace BTSMTL.Timeline.Runtime
                     else if (track is MotionCurveTrack motionTrack)
                     {
                         motionTrack.Sample(
-                            segment.PreviousTime,
-                            segment.CurrentTime,
+                            segment.PreviousTime.ToSingle(),
+                            segment.CurrentTime.ToSingle(),
                             timeline.AuthoringId,
                             timeline.Name,
                             motions,
@@ -1822,7 +1822,7 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.AuthoringId,
                             timeline.Name,
                             cameraCues,
-                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f,
+                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime.Raw == 0,
                             logicClipFilter);
                     }
                     else if (track is ActionCueTrack actionCueTrack)
@@ -1833,7 +1833,7 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.AuthoringId,
                             timeline.Name,
                             actionCues,
-                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f,
+                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime.Raw == 0,
                             logicClipFilter);
                     }
                     else if (track is MotionWarpTrack motionWarpTrack && !track.PersistentMuted)
@@ -1842,18 +1842,18 @@ namespace BTSMTL.Timeline.Runtime
                         {
                             if (motionWarpTrack.Clips[clipIndex] is not MotionWarpClip motionWarpClip ||
                                 !logicClipFilter(motionWarpClip) ||
-                                segment.CurrentTime <= motionWarpClip.StartTime.ToSingle() ||
-                                segment.PreviousTime >= motionWarpClip.EndTime.ToSingle())
+                                segment.CurrentTime <= motionWarpClip.StartTime ||
+                                segment.PreviousTime >= motionWarpClip.EndTime)
                                 continue;
                             float duration = Mathf.Max(0.0001f, motionWarpClip.DurationTime.ToSingle());
                             float previousNormalized = Mathf.Clamp01(
-                                (segment.PreviousTime - motionWarpClip.StartTime.ToSingle()) / duration);
+                                (segment.PreviousTime - motionWarpClip.StartTime).ToSingle() / duration);
                             float normalized = Mathf.Clamp01(
-                                (segment.CurrentTime - motionWarpClip.StartTime.ToSingle()) / duration);
+                                (segment.CurrentTime - motionWarpClip.StartTime).ToSingle() / duration);
                             motionWarps.Add(new TimelineRuntimeMotionWarpRequest(
                                 motionWarpClip.AuthoringId,
                                 motionWarpClip.SourceMotionClipId,
-                                Mathf.RoundToInt(segment.CurrentTime * frameRate),
+                                TimelineTimeGrid.NearestIndex(segment.CurrentTime, frameRate),
                                 segment.Cycle,
                                 previousNormalized,
                                 normalized,
@@ -2332,25 +2332,25 @@ namespace BTSMTL.Timeline.Runtime
             if (!loop || currentCycle == previousCycle || maxFrame <= 0)
             {
                 result.Add(new TimelineRuntimeEvaluationSegment(
-                    previousFrame / (float)frameRate,
-                    currentFrame / (float)frameRate,
+                    FixedScalar.FromRatio(previousFrame, frameRate),
+                    FixedScalar.FromRatio(currentFrame, frameRate),
                     currentCycle));
                 return result;
             }
             if (currentCycle - previousCycle > 4096)
                 throw new InvalidOperationException("Timeline evaluation crossed more than 4096 cycles in one Advance.");
             result.Add(new TimelineRuntimeEvaluationSegment(
-                previousFrame / (float)frameRate,
-                maxFrame / (float)frameRate,
+                FixedScalar.FromRatio(previousFrame, frameRate),
+                FixedScalar.FromRatio(maxFrame, frameRate),
                 previousCycle));
             for (int cycle = previousCycle + 1; cycle < currentCycle; cycle++)
                 result.Add(new TimelineRuntimeEvaluationSegment(
-                    0f,
-                    maxFrame / (float)frameRate,
+                    FixedScalar.Zero,
+                    FixedScalar.FromRatio(maxFrame, frameRate),
                     cycle));
             result.Add(new TimelineRuntimeEvaluationSegment(
-                0f,
-                currentFrame / (float)frameRate,
+                FixedScalar.Zero,
+                FixedScalar.FromRatio(currentFrame, frameRate),
                 currentCycle));
             return result;
         }
@@ -2378,7 +2378,7 @@ namespace BTSMTL.Timeline.Runtime
             var cameraResponses = new List<TimelineCameraResponseSample>();
             var cameraResources = new List<TimelineCameraResourceSample>();
             var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
-            List<TimelineRuntimePresentationSegment> segments = BuildSegments(
+            List<TimelineRuntimeEvaluationSegment> segments = BuildSegments(
                 previousFrame,
                 previousCycle,
                 currentFrame,
@@ -2393,7 +2393,7 @@ namespace BTSMTL.Timeline.Runtime
                     TimelineExecutionDomain.Presentation);
             for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
             {
-                TimelineRuntimePresentationSegment segment = segments[segmentIndex];
+                TimelineRuntimeEvaluationSegment segment = segments[segmentIndex];
                 for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
                 {
                     Track track = timeline.Tracks[trackIndex];
@@ -2402,8 +2402,8 @@ namespace BTSMTL.Timeline.Runtime
                     if (track is AnimationTrack animationTrack)
                     {
                         animationTrack.Sample(
-                            segment.PreviousTime,
-                            segment.CurrentTime,
+                            segment.PreviousTime.ToSingle(),
+                            segment.CurrentTime.ToSingle(),
                             trackIndex,
                             timeline.AuthoringId,
                             timeline.Name,
@@ -2420,7 +2420,7 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.AuthoringId,
                             timeline.Name,
                             cameraCues,
-                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime == 0f,
+                            segmentIndex > 0 || includeStartBoundary && segment.PreviousTime.Raw == 0,
                             presentationClipFilter);
                     }
                 }
@@ -2488,7 +2488,7 @@ namespace BTSMTL.Timeline.Runtime
                 scenePresentation);
         }
 
-        static List<TimelineRuntimePresentationSegment> BuildSegments(
+        static List<TimelineRuntimeEvaluationSegment> BuildSegments(
             float previousFrame,
             int previousCycle,
             float currentFrame,
@@ -2497,54 +2497,40 @@ namespace BTSMTL.Timeline.Runtime
             bool loop,
             int frameRate)
         {
-            var result = new List<TimelineRuntimePresentationSegment>();
+            var result = new List<TimelineRuntimeEvaluationSegment>();
             if (!loop || currentCycle == previousCycle || maxFrame <= 0)
             {
-                result.Add(new TimelineRuntimePresentationSegment(
-                    previousFrame / frameRate,
-                    currentFrame / frameRate,
+                result.Add(new TimelineRuntimeEvaluationSegment(
+                    FixedScalar.FromDouble(previousFrame / (double)frameRate),
+                    FixedScalar.FromDouble(currentFrame / (double)frameRate),
                     currentCycle));
                 return result;
             }
             if (currentCycle < previousCycle || currentCycle - previousCycle > 4096)
                 throw new InvalidOperationException("Timeline presentation evaluation crossed an invalid cycle range.");
-            float maxTime = maxFrame / (float)frameRate;
-            result.Add(new TimelineRuntimePresentationSegment(
-                previousFrame / frameRate,
+            FixedScalar maxTime = FixedScalar.FromRatio(maxFrame, frameRate);
+            result.Add(new TimelineRuntimeEvaluationSegment(
+                FixedScalar.FromDouble(previousFrame / (double)frameRate),
                 maxTime,
                 previousCycle));
             for (int cycle = previousCycle + 1; cycle < currentCycle; cycle++)
-                result.Add(new TimelineRuntimePresentationSegment(0f, maxTime, cycle));
-            result.Add(new TimelineRuntimePresentationSegment(0f, currentFrame / frameRate, currentCycle));
+                result.Add(new TimelineRuntimeEvaluationSegment(FixedScalar.Zero, maxTime, cycle));
+            result.Add(new TimelineRuntimeEvaluationSegment(FixedScalar.Zero, FixedScalar.FromDouble(currentFrame / (double)frameRate), currentCycle));
             return result;
         }
     }
 
-    readonly struct TimelineRuntimePresentationSegment
-    {
-        public TimelineRuntimePresentationSegment(float previousTime, float currentTime, int cycle)
-        {
-            PreviousTime = previousTime;
-            CurrentTime = currentTime;
-            Cycle = cycle;
-        }
-
-        public float PreviousTime { get; }
-        public float CurrentTime { get; }
-        public int Cycle { get; }
-    }
-
     readonly struct TimelineRuntimeEvaluationSegment
     {
-        public TimelineRuntimeEvaluationSegment(float previousTime, float currentTime, int cycle)
+        public TimelineRuntimeEvaluationSegment(FixedScalar previousTime, FixedScalar currentTime, int cycle)
         {
             PreviousTime = previousTime;
             CurrentTime = currentTime;
             Cycle = cycle;
         }
 
-        public float PreviousTime { get; }
-        public float CurrentTime { get; }
+        public FixedScalar PreviousTime { get; }
+        public FixedScalar CurrentTime { get; }
         public int Cycle { get; }
     }
 }

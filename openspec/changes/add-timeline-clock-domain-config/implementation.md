@@ -199,3 +199,10 @@
 - 索引只纳入266个Clip的起止字段替换及8项混合字段重算，保留其它资产改动。原生成代码147个创建调用换为decimal秒；已按迁移结果同步完整调用的精确末端。素材采样在原float接口边界转换。
 - 角色运动绑定沿上一任务未提交的定点秒映射继续完成：原映射二进制与指纹变更一并收口，绑定构建器直接读取Clip秒值。播放游标、旧Motion catalog字段、共享表现采样、Marker表现执行及0GC仍有未完成项，不据此勾选完整任务。
 - 最终编译重载于1789880567369完成，观测1789880609780为idle、非Play／编译／导入；重载后18个Timeline、266个Clip再次校验errors=[]，错误控制台0条。未新增测试，未声称完整运行或生成重建已验收。
+
+## 点事件区间精度
+
+- ActionCueTrack 与 CameraCueTrack 的 Sample 入参改为 FixedScalar 秒，跨点判断直接比较作者端点，不再将事件位置转成 float；0 秒起点仍只由 includeStartBoundary 明确启用。
+- 逻辑与表现求值共用 TimelineRuntimeEvaluationSegment，删除重复的 PresentationSegment。区间保存定点秒，动画／运动曲线采样在原浮点接口边界转换；MotionWarp 区间相交比较保留定点精度。
+- 当前 BuildSegments 仍从待迁移的逻辑整数帧／表现浮点帧游标换算秒，该剩余入口不作为最终方案；没有新增一份权威游标。原 List、闭包和结果对象分配仍待后续清理。
+- Unity重载完成1789880893502，随后错误控制台0条。只读调用现有ActionCueTrack.Sample检查180个非零实际Cue：从触发点前1 raw跨至触发点均恰好返回该Cue一次，原地重复区间不返回该Cue，errors=[]。未创建测试文件、未修改资产；该证据仅覆盖点事件边界，不代表整条播放链验收。

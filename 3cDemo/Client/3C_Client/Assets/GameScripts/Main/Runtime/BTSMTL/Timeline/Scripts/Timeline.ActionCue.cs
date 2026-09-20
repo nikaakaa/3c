@@ -46,8 +46,8 @@ namespace BTSMTL.Timeline
         public override string ContractKind => TimelineContractKinds.ActionCueTrack;
 
         public void Sample(
-            float previousTime,
-            float timelineTime,
+            FixedScalar previousTime,
+            FixedScalar timelineTime,
             string sourceId,
             string sourceName,
             ICollection<TimelineActionCueSample> cues,
@@ -67,7 +67,7 @@ namespace BTSMTL.Timeline
                 }
 
                 if ((includeStartBoundary && actionCueClip.StartTime.Raw == 0) ||
-                    previousTime < actionCueClip.StartTime.ToSingle() && actionCueClip.StartTime.ToSingle() <= timelineTime)
+                    previousTime < actionCueClip.StartTime && actionCueClip.StartTime <= timelineTime)
                 {
                     string stateId = string.Empty;
                     string branchId = string.Empty;

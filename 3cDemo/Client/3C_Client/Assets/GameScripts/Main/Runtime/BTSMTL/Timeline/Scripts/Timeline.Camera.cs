@@ -262,8 +262,8 @@ namespace BTSMTL.Timeline
         public override string ContractKind => TimelineContractKinds.CameraCueTrack;
 
         public void Sample(
-            float previousTime,
-            float timelineTime,
+            FixedScalar previousTime,
+            FixedScalar timelineTime,
             string sourceId,
             string sourceName,
             ICollection<TimelineCameraCueSample> cues,
@@ -283,7 +283,7 @@ namespace BTSMTL.Timeline
                 }
 
                 if ((includeStartBoundary && cueClip.StartTime.Raw == 0) ||
-                    previousTime < cueClip.StartTime.ToSingle() && cueClip.StartTime.ToSingle() <= timelineTime)
+                    previousTime < cueClip.StartTime && cueClip.StartTime <= timelineTime)
                 {
                     cues.Add(new TimelineCameraCueSample(
                         sourceId,

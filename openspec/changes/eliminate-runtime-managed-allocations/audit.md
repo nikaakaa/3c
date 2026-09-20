@@ -1760,3 +1760,11 @@
 - SimulationSessionHost 提交 restore 分支时需要从 SortedDictionary 删除 checkpoint.Tick 之后的条目；原实现通过 Keys.Where 后 ToArray 物化待删 tick，产生 LINQ 迭代器和结果数组，才能避开枚举期间修改字典。
 - Host 现按正式 MaxCheckpointCount=32 在生命周期内持有 ulong 清理列表。提交 restore 分支先枚举并收集未来 tick，再按下标删除并清空缓冲；排序字典、删除集合、分支身份和 Actor 重绑定顺序不变。
 - 回滚提交后的重复清理不再创建迭代器和数组；Host 构造时的一次列表及其定长容量保留。ThirdPersonClient.Runtime 无依赖重编通过，仅保留 CharacterInputValueNodes 一条既有未使用字段警告，零错误；构建服务关闭成功。未新增测试、未操作共享 Unity、未做回滚运行对比或 Player 分配采样。
+
+## 2026-09-21 Session Host 剩余 checkpoint LINQ
+
+对应 tasks.md 的 5.65。
+
+- Session Host 每次判断表现 checkpoint 能力时原先经 Enumerable.All 遍历注册列表；读取最旧 tick 和 checkpoint 超限淘汰则经 Enumerable.First 读取 SortedDictionary.Keys。三处都把已有具体集合提升为 IEnumerable LINQ。
+- 能力检查改为 List 下标短路遍历，继续要求非空 roster 且每个注册同时支持捕获和恢复。最旧 tick 通过 SortedDictionary KeyCollection 的具体 foreach 读取；空集合返回 0，超限淘汰只在非空时调用，原语义保持。
+- 文件不再需要 System.Linq。ThirdPersonClient.Runtime 无依赖重编通过，仅保留 CharacterInputValueNodes 一条既有未使用字段警告，零错误；构建服务关闭成功。未新增测试、未操作共享 Unity、未做 checkpoint 运行采样。

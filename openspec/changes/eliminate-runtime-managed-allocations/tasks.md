@@ -286,6 +286,8 @@
 
 - [x] 5.64 Session Host 回滚分支提交复用按正式 32 条 checkpoint 上限准备的 tick 清理缓冲，删除未来 checkpoint 清理的 Where 迭代器与 ToArray；删除期间不直接修改枚举中的字典
 
+- [x] 5.65 Session Host 的表现 checkpoint 能力检查改为注册列表下标遍历，最旧 checkpoint 查询改为排序字典具体枚举器，删除剩余 All／First LINQ 与命名空间依赖
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

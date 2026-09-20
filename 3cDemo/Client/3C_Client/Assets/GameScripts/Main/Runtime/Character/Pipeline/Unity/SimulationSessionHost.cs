@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonPerformance.Instrumentation;
@@ -63,16 +62,28 @@ namespace ThirdPersonCharacter.Pipeline
         public int RegistrationCount => m_Registrations.Count;
         public bool IsQuiesced => m_Quiesced;
         public bool SupportsInputReplay => m_Runtime is ISimulationSessionInputReplayRuntime;
-        public bool SupportsPresentationCheckpointRestore =>
-            m_Registrations.Count != 0 &&
-            m_Registrations.All(registration =>
-                registration is ISimulationPresentationCheckpointRuntime checkpoint &&
-                checkpoint.SupportsPresentationCheckpointCapture &&
-                checkpoint.SupportsPresentationCheckpointRestore);
+        public bool SupportsPresentationCheckpointRestore
+        {
+            get
+            {
+                if (m_Registrations.Count == 0)
+                    return false;
+                for (int i = 0; i < m_Registrations.Count; i++)
+                {
+                    if (m_Registrations[i] is not ISimulationPresentationCheckpointRuntime checkpoint ||
+                        !checkpoint.SupportsPresentationCheckpointCapture ||
+                        !checkpoint.SupportsPresentationCheckpointRestore)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
         public bool IsInputRecording =>
             m_Runtime is ISimulationSessionInputReplayRuntime replay && replay.IsInputRecording;
         public ulong LatestCheckpointTick => m_Checkpoints.Count == 0 ? 0 : GetLastCheckpointTick();
-        public ulong OldestCheckpointTick => m_Checkpoints.Count == 0 ? 0 : m_Checkpoints.Keys.First();
+        public ulong OldestCheckpointTick => GetFirstCheckpointTick();
         public int CheckpointCount => m_Checkpoints.Count;
         public string LastCheckpointFailure => m_LastCheckpointFailure;
         public Guid ExecutionBranchId => m_ExecutionBranchId;
@@ -505,7 +516,7 @@ namespace ThirdPersonCharacter.Pipeline
                         checkpoint.SnapshotHash);
                 m_Checkpoints[checkpoint.Tick.Value] = checkpoint;
                 while (m_Checkpoints.Count > MaxCheckpointCount)
-                    m_Checkpoints.Remove(m_Checkpoints.Keys.First());
+                    m_Checkpoints.Remove(GetFirstCheckpointTick());
                 m_LastCheckpointFailure = string.Empty;
                 return true;
             }
@@ -523,6 +534,13 @@ namespace ThirdPersonCharacter.Pipeline
             foreach (ulong tick in m_Checkpoints.Keys)
                 value = tick;
             return value;
+        }
+
+        ulong GetFirstCheckpointTick()
+        {
+            foreach (ulong tick in m_Checkpoints.Keys)
+                return tick;
+            return 0;
         }
 
         SimulationSessionCheckpoint FindCheckpointAtOrBefore(ulong targetTick)

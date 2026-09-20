@@ -927,3 +927,11 @@
 - 保留合法状态、非法零值拒绝、条目 ArgumentOutOfRangeException 与快照 ArgumentException、sessionId 校验及原检查次序。组件身份规范化、排序、重复检查和只读结果寿命不变，不缓存可变会话快照。
 - 这里只确认按需 Diagnostics 读取会经过构造，尚未确认用户运行场景中的刷新频率，不报告为每帧必经或固定 GC 节省值。BuildDiagnostics 的插值、列表、快照对象以及 Phase.ToString 仍有开销，未纳入本次完成范围。
 - 目标文件此前无其它未提交修改，编辑前无 csc／bee。Core portable 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做诊断刷新运行或 Player 采样。
+## 2026-09-20 会话诊断组件快照直接数组复制
+
+对应 tasks.md 的 7.13。
+
+- SimulationSessionDiagnosticsSnapshot 原复制 components 至 List，排序校验后保存其只读包装。现 ToArray 取得独立最终数组，Array.Sort 使用原比较规则，按 Length 执行原重复身份检查，最后 Array.AsReadOnly；null 使用 Array.Empty。调用方集合不会原地排序或暴露可变结果。
+- 实际会话句柄 BuildDiagnostics 提供 List 输入，ToArray 可按集合数量直接复制，删除快照内部的 List 对象；原 List 的底层数组由最终数组替代，不将其算成额外减少一整份数组。只读包装继续存在，不改变 Components 对外行为。
+- 一般 IEnumerable 输入仍可能在框架内部使用增长缓冲，最终数组／包装／快照和上游 BuildDiagnostics 的列表及插值仍分配。该路径为按需诊断读取，未声称 Player 每帧收益。
+- 文件此前无其它未提交修改，编辑前无 csc／bee。Core portable 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做诊断运行或分配采样。

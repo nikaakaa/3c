@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace ThirdPersonSimulation
 {
@@ -100,15 +101,15 @@ namespace ThirdPersonSimulation
             PreparationStatus = preparationStatus;
             LatestOuterTick = latestOuterTick;
             Failure = failure;
-            var values = components == null
-                ? new List<SimulationSessionComponentDiagnostic>()
-                : new List<SimulationSessionComponentDiagnostic>(components);
-            values.Sort((left, right) =>
+            SimulationSessionComponentDiagnostic[] values = components == null
+                ? Array.Empty<SimulationSessionComponentDiagnostic>()
+                : components.ToArray();
+            Array.Sort(values, (left, right) =>
             {
                 int component = string.CompareOrdinal(left.Component, right.Component);
                 return component != 0 ? component : string.CompareOrdinal(left.Identity, right.Identity);
             });
-            for (int i = 1; i < values.Count; i++)
+            for (int i = 1; i < values.Length; i++)
             {
                 if (string.Equals(values[i - 1].Component, values[i].Component, StringComparison.Ordinal) &&
                     string.Equals(values[i - 1].Identity, values[i].Identity, StringComparison.Ordinal))
@@ -116,7 +117,7 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Diagnostics snapshot contains a duplicate component identity.", nameof(components));
                 }
             }
-            m_Components = values.AsReadOnly();
+            m_Components = Array.AsReadOnly(values);
         }
 
         public SimulationSessionCompositionDescriptor Descriptor { get; }

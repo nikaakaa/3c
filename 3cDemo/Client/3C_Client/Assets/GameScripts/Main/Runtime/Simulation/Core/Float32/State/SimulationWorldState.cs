@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 
 namespace ThirdPersonSimulation
 {
@@ -53,7 +51,7 @@ namespace ThirdPersonSimulation
 
     public sealed class WorldSimulationState
     {
-        readonly ReadOnlyCollection<WorldBodyState> m_Bodies;
+        readonly IReadOnlyList<WorldBodyState> m_Bodies;
         readonly byte[] m_SolverStatePayload;
 
         public WorldSimulationState(
@@ -62,7 +60,7 @@ namespace ThirdPersonSimulation
             string solverVersion,
             WorldRevision worldRevision,
             WorldStatePersistenceMode persistenceMode,
-            IEnumerable<WorldBodyState> bodies,
+            IReadOnlyList<WorldBodyState> bodies,
             byte[] solverStatePayload)
             : this(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies,
                 solverStatePayload.AsSpan())
@@ -75,7 +73,7 @@ namespace ThirdPersonSimulation
             string solverVersion,
             WorldRevision worldRevision,
             WorldStatePersistenceMode persistenceMode,
-            IEnumerable<WorldBodyState> bodies,
+            IReadOnlyList<WorldBodyState> bodies,
             ReadOnlySpan<byte> solverStatePayload)
         {
             if (!numericProfile.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value))
@@ -85,14 +83,14 @@ namespace ThirdPersonSimulation
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
             PersistenceMode = persistenceMode;
-            WorldBodyState[] copied = bodies == null ? Array.Empty<WorldBodyState>() : bodies.ToArray();
+            WorldBodyState[] copied = CopyBodies(bodies);
             Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
             for (int i = 1; i < copied.Length; i++)
             {
                 if (copied[i - 1].ActorId == copied[i].ActorId)
                     throw new ArgumentException($"World state contains duplicate ActorId '{copied[i].ActorId}'.", nameof(bodies));
             }
-            m_Bodies = Array.AsReadOnly(copied);
+            m_Bodies = copied;
             m_SolverStatePayload = solverStatePayload.Length == 0
                 ? Array.Empty<byte>()
                 : solverStatePayload.ToArray();
@@ -105,6 +103,16 @@ namespace ThirdPersonSimulation
         public WorldStatePersistenceMode PersistenceMode { get; }
         public IReadOnlyList<WorldBodyState> Bodies => m_Bodies;
         public ReadOnlyMemory<byte> SolverStatePayload => m_SolverStatePayload;
+
+        static WorldBodyState[] CopyBodies(IReadOnlyList<WorldBodyState> bodies)
+        {
+            if (bodies == null || bodies.Count == 0)
+                return Array.Empty<WorldBodyState>();
+            var copied = new WorldBodyState[bodies.Count];
+            for (int i = 0; i < copied.Length; i++)
+                copied[i] = bodies[i];
+            return copied;
+        }
     }
 
     public static class WorldSimulationStateCodec

@@ -1785,3 +1785,11 @@
 - Fixed／Float32 OperationModule 为兼容字符串 fieldName 的操作执行入口分别提供 CatalogConstant、CatalogIdentity 与 TryCatalogIdentity；三处均通过捕获 fieldName 的 FirstOrDefault 扫描 entry.Fields，合计六个运行查询点。
 - 两域各自统一到 FindCatalogField，下标遍历 IReadOnlyList 并保持第一个 Ordinal 同名字段语义。Constant／Identity 类型检查、必需字段错误与可选 identity 的 false 返回保持不变。
 - 删除两个运行模块的 System.Linq 依赖和六处捕获委托／LINQ 枚举入口。ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，构建服务逐次关闭；首次构建前检测到共享 Unity Bee 编译并等待其退出。未新增测试、未操作共享 Unity、未做操作执行采样。
+
+## 2026-09-21 WorldSimulationState 最终 body 数组
+
+对应 tasks.md 的 5.66。
+
+- Fixed／Float32 WorldSimulationState 由 KCC、DotRecast、Unity solver、codec、预测权威合并及诊断 clone 构造；原构造通过 IEnumerable.ToArray 复制 body 后排序，再创建 ReadOnlyCollection 包装。solver payload 同时复制以保持状态独立。
+- 两域 body 输入收窄为 IReadOnlyList，按准确 Count 复制到最终 WorldBodyState 数组，在同一数组执行原 ActorId 排序与重复检查，并直接作为 IReadOnlyList 保存。空 body 复用 Array.Empty；公开构造仍复制 body，payload 仍复制，不借用外部可变存储。
+- 删除每个世界状态的 LINQ ToArray 枚举入口和 ReadOnlyCollection 对象；body 最终数组及 payload 独立副本仍按状态寿命存在。ThirdPersonSimulation.Fixed、Float32、DeterministicRollback、DeterministicKcc portable 编译零警告零错误；DotRecastAuthority 编译通过并保留 DotRecast 依赖两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 无依赖重编零警告零错误。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做世界状态运行采样。

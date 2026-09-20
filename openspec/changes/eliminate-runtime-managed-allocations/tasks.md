@@ -292,6 +292,8 @@
 
 - [x] 5.65 Session Host 的表现 checkpoint 能力检查改为注册列表下标遍历，最旧 checkpoint 查询改为排序字典具体枚举器，删除剩余 All／First LINQ 与命名空间依赖
 
+- [x] 5.66 两数值域 WorldSimulationState 按可计数 body 输入直接复制到最终数组并原地排序，直接以 IReadOnlyList 保存，删除 LINQ ToArray 与 ReadOnlyCollection 包装；公开状态继续独立持有 body 和 solver payload
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

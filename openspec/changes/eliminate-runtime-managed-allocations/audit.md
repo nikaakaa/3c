@@ -1450,3 +1450,12 @@
 - 两域 batch 新增只读 Empty 单例，内部直接持有对应元素类型的 Array.Empty；三个输入源统一引用该实例。batch 没有可变成员或写接口，Product slot 只在 tick 内保存引用，共享不会串写状态。
 - 公开 IEnumerable 构造器及原排序、重复身份校验完整保留，未来正式非空 ingress 仍取得独立列表。当前空路径每 tick 不再创建 batch 对象和空 List。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback.Endpoint portable 分别编译零警告零错误，逐次构建服务关闭成功。客户端 Runtime 构建被并行 CharacterTimelineHost 缺失 AbilityTimelineAdvancePending／AbilityTimelineStopPending 的六处错误阻断，错误不在本项文件。未新增测试、未操作共享 Unity、未做运行对比或 Player 分配采样。
+
+## 2026-09-21 CanonicalInputBatch 接管输入数组
+
+对应 tasks.md 的 2.66。
+
+- 全仓源码检索确认 FixedCanonicalInputBatch／Float32CanonicalInputBatch 各只有对应 LocalInputSourcePort 一个构造点；SourcePort 为当前 tick 新建输入数组，填充后立即交给 batch，不再持有或修改。
+- 两域构造器收窄为程序集内部数组入口，直接原地排序并执行原非空、Actor 唯一、输入存在及 TickSource 一致校验，随后以 IReadOnlyList 暴露同一数组；没有新增可变数组出口。
+- 删除每个本地输入 ingress tick 的一个 List 对象、数组到 List 底层存储的逐项复制及第二份元素存储。SourcePort 的输入数组和 CanonicalInputBatch 对象仍分配。
+- ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做本地输入运行对比或 Player 分配采样。

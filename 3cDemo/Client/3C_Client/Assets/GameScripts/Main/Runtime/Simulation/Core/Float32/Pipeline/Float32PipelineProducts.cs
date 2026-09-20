@@ -17,29 +17,26 @@ namespace ThirdPersonSimulation
     {
         readonly IReadOnlyList<SimulationPipelineActorInput<Float32StepInput>> m_Inputs;
 
-        public Float32CanonicalInputBatch(
+        internal Float32CanonicalInputBatch(
             SimulationTickSourceIdentity source,
-            IEnumerable<SimulationPipelineActorInput<Float32StepInput>> inputs)
+            SimulationPipelineActorInput<Float32StepInput>[] inputs)
         {
             if (string.IsNullOrEmpty(source.ClockId) || source.SourceTick == 0)
                 throw new ArgumentException("Canonical input batch source is incomplete.", nameof(source));
-            var values = inputs == null
-                ? new List<SimulationPipelineActorInput<Float32StepInput>>()
-                : new List<SimulationPipelineActorInput<Float32StepInput>>(inputs);
-            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (values.Count == 0)
+            if (inputs == null || inputs.Length == 0)
                 throw new ArgumentException("Canonical input batch cannot be empty.", nameof(inputs));
-            for (int i = 0; i < values.Count; i++)
+            Array.Sort(inputs, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            for (int i = 0; i < inputs.Length; i++)
             {
-                if (i > 0 && values[i - 1].ActorId.Equals(values[i].ActorId) ||
-                    values[i].Value.Input == null ||
-                    !values[i].Value.Input.TickSource.Equals(source))
+                if (i > 0 && inputs[i - 1].ActorId.Equals(inputs[i].ActorId) ||
+                    inputs[i].Value.Input == null ||
+                    !inputs[i].Value.Input.TickSource.Equals(source))
                 {
                     throw new ArgumentException("Canonical input batch contains duplicate Actors or another source clock.", nameof(inputs));
                 }
             }
             Source = source;
-            m_Inputs = values;
+            m_Inputs = inputs;
         }
 
         public SimulationTickSourceIdentity Source { get; }

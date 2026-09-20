@@ -104,6 +104,8 @@
 
 - [x] 2.65 两数值域 TypedIngressBatch 提供不可变 Empty 实例，本地输入与 Fixed 回滚输入源统一复用，删除当前正式空 ingress 路径每 tick 的 batch 及空 List；非空构造和排序校验保留
 
+- [x] 2.66 两数值域 CanonicalInputBatch 内部接管 SourcePort 独占输入数组并原地排序校验，删除每个本地输入 ingress tick 的中间 List 与数组复制；数组不向可变接口暴露
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

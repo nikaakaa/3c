@@ -139,3 +139,13 @@
 - Fixed／Float32 GameplayEffectOperationRuntime.Remove 原先对转换后的选择器调用 Enum.IsDefined。现直接比较 Handle、EffectId、SourceActor、EffectTagQuery，保留转换前的 byte 范围检查及原 InvalidOperationException，不改变请求、删除对象或输出事件。
 - 规范化函数对已规范化身份直接返回原字符串，本次没有为此引入缓存或调整身份格式；执行来源的 codec 和输出协议不变。
 - Fixed／Float32 portable 构建均零警告、零错误，diff 空白检查通过；每次构建按规定禁用服务器和共享编译并结束 shutdown。未新增测试、未主动刷新 Unity、未做 Player 分配采样；此结论只覆盖三个装箱入口。
+
+## 2026-09-20 Canonical Span 写入中转数组清理
+
+对应 tasks.md 的 5.6，与代码同步提交。
+
+- `Simulation/Core/Serialization/CanonicalData.cs` 的 WriteBytes(ReadOnlySpan<byte>) 原先写入长度前缀，再租 ArrayPool 字节数组、复制 Span、写流并归还。Fixed／Float32 的世界状态编码通过此入口写 SolverStatePayload.Span。
+- 改为写入相同长度前缀后直接调用现有 MemoryStream.Write(ReadOnlySpan<byte>)，空输入仍只写前缀。不修改 byte[] 重载、字符串编码、ToArray、哈希、writer 所有权或消息与快照结果寿命，不创建新序列化入口。
+- 原数组池命中时不一定产生托管分配，因此不能按每次调用计为已消除一个数组；本次确实删除中转租借、复制和池未命中时的临时数组申请需求。MemoryStream 扩容及最终输出数组仍存在，未宣称序列化整链 0 GC。
+- portable Core 编译零警告零错误，按规定禁用构建服务器与共享编译并结束 shutdown；沿当前 Unity Core 响应文件的引用单独编译完整 Core 也通过，产物位于系统临时目录。diff 空白检查通过，未新增测试或做 Player 采样。
+- 此时默认 Editor.log 来自其它 Unity 项目；3C 实例 e852139597e42532 的只读状态检查经历超时和断开，观察到的 csc／bee 编译进程结束后才修改源码。本次未主动刷新、重启或控制编辑器，独立编译不代表共享 Editor 当前验证通过。

@@ -96,16 +96,7 @@ namespace ThirdPersonSimulation
             WriteInt32(value.Length);
             if (value.Length == 0)
                 return;
-            byte[] rented = ArrayPool<byte>.Shared.Rent(value.Length);
-            try
-            {
-                value.CopyTo(rented);
-                m_Stream.Write(rented, 0, value.Length);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(rented);
-            }
+            m_Stream.Write(value);
         }
 
         public void WriteRawBytes(byte[] value, int offset, int count)

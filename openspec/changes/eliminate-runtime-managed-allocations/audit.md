@@ -738,3 +738,12 @@
 - 已确认 RuntimeDebugTargetProvider.ReadLiveStateSince 的结果使用 Count 和下标，没有依赖 List 的转换。源码已存在 Array.Empty 返回，所以数组并非新的公开结果类型约束。全量空状态仍可创建空数组，本轮未宣称读取零分配。
 - 同轮核对 RuntimeCaptureSnapshot.GetEvents 的三个调用点均在 Editor（RuntimeExecutionTimeline 两处、RuntimeDebugTargetProvider 一处）；本轮未改 GetEvents，后续应将这些读取和运行采集开销分开计量。
 - 编辑前目标文件无其它未提交修改，未发现 csc／bee。使用 Unity 现有 BTSMTL.Diagnostics.rsp 独立编译到系统 TEMP，退出码 0、无编译诊断；diff 空白检查通过。未新增测试、未操作共享 Editor、未采样 Player 或面板刷新分配。
+## 2026-09-20 诊断发布入口与实例来源映射容量复核
+
+本节补充任务 7.1 的运行发布证据，不将整项勾选完成。本轮仅审计，没有修改代码或新增编译结论。
+
+- RuntimeDiagnosticsStore.Publish 在 m_Gate 锁内读取已有 m_LiveChannels／m_CaptureChannels 和捕获等级后分派；ShouldPublish／IsInterested 同样读取已有位标记。RecalculateLiveChannels 只由 AcquireInterest／ReleaseInterest 调用，不能将兴趣字典 Values 的查询成本报告成每条事件都发生；本轮保留正确的发布分派。
+- RuntimeDiagnosticsContext 的 SourceKey Publish 重载在兴趣检查后解析 handle，并以有效 runtimeInstance 更新 m_InstanceSources；SourceHandle 重载在 source 无效而实例有效时读取该表。当前表没有正式容量，只有 AdoptRuntime 清空；PopRuntimeInstance 只弹栈，SetExecutionBranch 只清时钟信息和实时状态，并不清该映射。
+- RuntimeInstanceKey 是 struct，实现强类型 Equals/GetHashCode；Character 等工厂直接构造值类型，不能因 new 关键字列为托管分配。其身份同时包含 ActivationGeneration、TimelinePlaybackId、ActionInstanceId 和 InvocationGeneration 等，新代次可产生新字典键，因此长时间事件流可能导致映射增长；本轮没有运行数据证明具体增长速率或泄漏量。
+- 该映射用于补齐后续无 source 的事件来源。按大小随意淘汰、在 Pop 时删除或分支切换时清空，可能让迟到／结束事件丢失来源；正确迁移需要明确各实例最后事件与释放边界，覆盖动作、技能、Timeline／TreeClip 和上下文切换。该范围与并行播放生命周期相交，保留现场，不能用任意固定上限或第二来源缓存绕过。
+- 现有 live 状态 m_MaxChanges 和 capture 的 maxSegments／maxEvents 只约束各自存储，不能当作 m_InstanceSources 的容量依据。后续 7.1 应把上下文实例映射和实例栈的准备容量、代次结束归还纳入同一生命周期改造；本轮没有新增配置、手动验证任务、Editor 操作或 Player 采样。

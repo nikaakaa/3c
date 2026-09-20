@@ -1744,3 +1744,11 @@
 - CharacterControlMotionBindingCodec 的泛型 ReadEnum 只有 EvaluationMode 一个调用，读取 catalog 时仍执行 Enum.IsDefined 与 Enum.ToObject，并产生反射查询及装箱拆箱。
 - EvaluationMode 正式值域只有连续的 FullLocalDelta=1 与 ForwardDistanceYaw=2。读取改为 byte 上下界校验后直接强类型转换，非法值异常、字段宽度、catalog 构造和后续 canonical 比较保持。
 - 删除无剩余消费者的泛型 ReadEnum。ThirdPersonSimulation.Core.Portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 catalog 运行加载或 Player 分配采样。
+
+## 2026-09-21 Action Presentation 时间快照枚举校验
+
+对应 tasks.md 的 7.17。
+
+- ActionPresentationTimeSnapshot 构造结束会读取 IsValid；该属性原先分别对 LifecyclePhase 与由构造器派生的 ProjectionKind 调用 Enum.IsDefined。时间诊断采集生成快照时因此执行两次枚举装箱查询。
+- 可发布生命周期正式集合正好是连续的 Selected、Retained、RetirementPermitted；PendingFirstSample 与 Retired 原本也会被后续条件排除。投影类型则连续为 LatestCommitted 至 BoundedExtrapolation。IsValid 改为两组直接上下界判断，合法集合完全不变。
+- ThirdPersonClient.Runtime 全依赖构建通过，保留 Unity 包、第三方包、启动视图和既有 Runtime 字段共三十四条警告，零错误；构建服务关闭成功。未新增测试、未操作共享 Unity、未做时间诊断运行采样。

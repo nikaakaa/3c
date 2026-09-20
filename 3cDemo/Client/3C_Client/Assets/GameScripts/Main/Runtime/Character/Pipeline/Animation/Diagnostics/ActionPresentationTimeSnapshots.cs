@@ -48,11 +48,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PlaybackId.IsValid &&
             ActionInstanceId != 0 &&
             PresentationFrame != 0 &&
-            Enum.IsDefined(typeof(ActionAnimationPlaybackLifecyclePhase), LifecyclePhase) &&
-            LifecyclePhase != ActionAnimationPlaybackLifecyclePhase.PendingFirstSample &&
-            LifecyclePhase != ActionAnimationPlaybackLifecyclePhase.Retired &&
+            LifecyclePhase >= ActionAnimationPlaybackLifecyclePhase.Selected &&
+            LifecyclePhase <= ActionAnimationPlaybackLifecyclePhase.RetirementPermitted &&
             CommittedWindow.IsValid &&
             ProjectedRawSample.IsValid &&
-            Enum.IsDefined(typeof(ActionPresentationProjectionKind), ProjectionKind);
+            ProjectionKind >= ActionPresentationProjectionKind.LatestCommitted &&
+            ProjectionKind <= ActionPresentationProjectionKind.BoundedExtrapolation;
     }
 }

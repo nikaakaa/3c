@@ -313,3 +313,5 @@
 - [x] 7.15 两数值域 Pass 阶段名称在句柄组装时按 Pass 数准备，诊断读取复用文本，移除运行读取中的枚举 ToString；初始化格式化保留，生命周期状态仍实时获取
 
 - [x] 7.16 脚本化与实时捕获的 Presentation Schedule 帧按连续双值 ClockMode 直接校验，删除逐帧 Enum.IsDefined 装箱；帧时序、范围和投递契约保持
+
+- [x] 7.17 Action Presentation 时间快照按可发布生命周期与投影类型的正式连续区间校验，删除每次快照构造 IsValid 中的两次 Enum.IsDefined 装箱

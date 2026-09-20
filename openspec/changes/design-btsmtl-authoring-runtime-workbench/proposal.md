@@ -75,7 +75,7 @@ BtsmtlScenePlayProfile
 
 ## 2026-09-20 现行规范对账
 
-- `character-presentation-pose-graph`、`character-pose-graph-runtime-architecture`、`character-animation-selection-runtime` 已明确原生图与 ScenePlay。删除本 change 中以旧 Pose Image、Projection 和已移除 requirement 为目标的重复 delta，保留现行合同。
+- `character-presentation-pose-graph`、`character-pose-graph-runtime-architecture`、`character-animation-layer-runtime` 已明确原生图、Source／Slot生命周期与ScenePlay。删除本 change 中以旧 Pose Image、Projection 和已移除 requirement 为目标的重复 delta，保留现行合同。
 - `btsmtl-agent-authoring-document-sync` 已退出当前能力目录；删除其 Document v5 delta。字段资格只引用现行 C# authoring、Capability 和 typed Mutation，不恢复同步包。
 - 当前 `btsmtl-timeline-editor-preview` 前部已规定原 Timeline Session 菜单，后部仍有“默认不包含未确认的 Timeline 内 Scene Play 快捷控制”。本 change 只明确已确认的 Profile、三态和正式 Session 菜单；普通编辑游标仍不执行角色。delta 改为当前 requirement 名称，避免归档时覆盖不存在的旧条款。
 - 动画层和 MM 的现行 spec 仍含独立 Fact/Query Fixture 预览措辞，与当前 `openspec/project.md` 及原生 Pose spec 的唯一 ScenePlay 合同冲突。本 change 的对应 delta 统一为正式 Actor 的只读观察，不恢复 Fixture 或旧 Projection。

@@ -66,7 +66,7 @@ Action producer MUST显式提交Select、Sample、Complete与Release command。�
 
 ### Requirement: PoseState source必须按provider demand和state relevance管理
 
-PoseStateMachine MUST只向相关State的显式source plan提交固定容量demand，并以实例绑定的source handle、PlayerNodeId、SourceGeneration、continuity identity和frame lease接收sample。Pending target MUST不启动transition，Ready target MAY进入Routing，Invalid MUST阻止正式publication。State离开active后只要transition仍需要其Pose，state relevance MUST保持source；release完成后 MUST精确清理。Pose source MUST不创建作者Source字符串、Gameplay PlaybackId或Action retention。
+PoseStateMachine MUST只向相关State的显式source plan提交固定容量demand，并以实例绑定的source handle、PlayerNodeId、SourceGeneration、continuity identity和frame lease接收sample。每个source MUST显式报告Pending、Ready、Invalid、Released或Faulted；Pending target MUST不启动transition，Ready target MAY进入Routing，Invalid或Faulted MUST阻止正式publication。State离开active后只要transition仍需要其Pose，state relevance MUST保持source；release完成后 MUST精确清理。Pose source MUST不创建作者Source字符串、Gameplay PlaybackId或Action retention。
 
 #### Scenario: Start State切向Locomotion
 
@@ -124,13 +124,25 @@ Runtime MUST支持Cyclic与Finite source之间的显式同组映射。Cyclic sou
 
 ### Requirement: Source backend必须只负责采样和物理资源释放
 
-Animancer source backend MUST只按完整Action playback或Presentation Pose source identity创建、复用和释放source playable，采样producer内部clip membership或state-local source，并把capture job安装到同一PlayableGraph。它 MUST不拥有Gameplay/PoseState仲裁、跨source transition weight、AnimationSlot、Inertialization、Pose composition、IK或Final writer。每个表现帧 MUST只执行一次正式原生Pose图和一次PlayableGraph Evaluate。
+唯一Source Module MUST只按完整Action playback或Presentation Pose source identity创建、复用和释放物理source，并把capture job安装到同一PlayableGraph。每个动画资源 MUST在构建时唯一选择NativeClip或ACL backend；Action、Direct Clip、Blend Space与Motion Matching必须解析同一份资源合同，ACL资源不得依赖同素材AnimationClip强引用或备用播放器。Source Module MUST不拥有Gameplay/PoseState仲裁、跨source transition weight、AnimationSlot、Inertialization、Pose composition、IK或Final writer，也不得重复累计时钟或再次应用play rate。每个表现帧 MUST只执行一次正式原生Pose图和一次PlayableGraph Evaluate。候选资源Pending时，当前合法source继续按既有图语义采样；入口资源Pending时不得发布Final Pose，任何source都不得以历史sample、bind pose或默认Idle伪造Ready。
 
 #### Scenario: Transition同时采样两侧source
 
 - **WHEN** State或Slot transition要求两个source共同可见
 - **THEN** backend MUST分别提供两个source capture
 - **AND** transition weight MUST只由对应owner计算
+
+#### Scenario: 同一ACL资源被多个使用点引用
+
+- **WHEN** 同一ACL动画同时用于Direct Clip、Action或Blend Space
+- **THEN** 所有使用点 MUST解析同一资源版本并保留各自时间与generation
+- **AND** 运行包 MUST不携带同素材AnimationClip备用播放路径
+
+#### Scenario: 候选资源仍在准备
+
+- **WHEN** target资源尚未Ready而当前source仍合法
+- **THEN** Source Module MUST返回Pending并继续当前source的正式采样
+- **AND** MUST不把target标记为Ready或发布入口半成品Pose
 
 ### Requirement: Float32与Fixed必须共享同一Presentation binding
 
@@ -144,7 +156,7 @@ Animancer source backend MUST只按完整Action playback或Presentation Pose sou
 
 ### Requirement: Runtime、Preview和Live Debug必须使用同一事实源
 
-正式Runtime、Action Timeline Preview、Pose Graph Fact Preview、MM Query Fixture和Live Debug MUST复用匹配revision的动画运行绑定、source backend、Routing Plan、原生Pose图与completion语义。Preview入口 MUST分别只提交Action command、Presentation Fact或state-local query fixture。Diagnostics MUST按Action playback identity或Provider/Player/Source/generation显示各自生命周期、effective sample、transition、release和Pose contribution；不得从Animancer weight或Animator骨骼反推第二份事实。
+正式Runtime、Action Timeline、Pose Graph、Motion Matching页面和Live Debug MUST绑定ScenePlay正式Actor，并复用匹配revision的动画运行绑定、source backend、Routing Plan、原生Pose图与completion语义。页面不得创建Fact／Query Fixture、独立Action lifecycle、简化Player、临时PlayableGraph或Animancer direct Play。Diagnostics MUST按Action playback identity或Provider/Player/Source/generation显示各自生命周期、effective sample、transition、release和Pose contribution；不得从Animancer weight、Animator骨骼或作者游标反推第二份事实。
 
 #### Scenario: Projection变为Stale
 
@@ -161,6 +173,8 @@ Animancer source backend MUST只按完整Action playback或Presentation Pose sou
 ### Requirement: Locomotion Phase映射必须编入source-local计划
 
 Locomotion Phase MUST继续使用来源明确的 forward／inverse 资源数据与可达 relation。每个 relation MUST保留 TransitionId、固定 leader、秒域 coverage 和有效性身份；实例绑定建立 source-local 关联，运行按 relation／transition／generation 和 continuation 计算有效采样时间。系统 MUST不因取消图编译退回 normalized time、旧 Marker 或逐帧搜索／重建关系；资源数据预处理独立于 Pose 图执行。
+
+Locomotion Phase的正式来源只能是AnimationClip注册曲线与Profile／Source binding；Runtime不得读取Editor曲线、Foot Analysis artifact、窗口游标或显示名现场推导Phase。
 
 #### Scenario: RunLoop接任MovingTurn
 

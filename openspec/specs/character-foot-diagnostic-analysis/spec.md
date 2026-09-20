@@ -95,6 +95,38 @@ Foot诊断结果 MUST按Contact、Landing、Motion、Pelvis、Coverage和Score�
 - **THEN** 报告 MUST包含对应脚、Frame范围、Sole／Contact Plane证据和超出量
 - **AND** Score摘要 MUST能追溯到该Finding而不是只输出一个数字
 
+### Requirement: Foot质量评分必须去重并保留证据边界
+
+Foot质量 MUST只按下陷穿透20%、接触未贴合20%、普通Swing平顺度15%、Path变化连续性15%、接触状态交接15%、腿部姿态可达性10%和锁脚水平稳定性5%七个业务维度加权。同Side同一连续过程中的阶段、原因、反事实和子域统计只能作为Evidence，不得重复扣分。每个维度必须发布Health、Evidence、次数、分母、规则版本和代表事实；任一必需事实缺失或eligible少于10时，该维度和完整总分 MUST为Unavailable，并保留可计算权重、已知贡献、可能区间与缺失原因。总分只是辅助比较，不得命名为Pass／Fail或替代视觉验收。
+
+#### Scenario: 同一接触过程经过多个阶段
+
+- **WHEN** 同一脚的连续过程依次经过Landing、FullAnchor、Sliding和Releasing
+- **THEN** 唯一质量Target MUST按过程去重，子域只发布各自Evidence
+- **AND** MUST不以阶段数量重复扣分或用退出帧稀释接触分母
+
+#### Scenario: 评分证据不足
+
+- **WHEN** 任一维度缺少正式事实或eligible少于10
+- **THEN** 该维度与完整总分 MUST发布Unavailable
+- **AND** MUST不以0、100、默认接触面或旧派生列补全结果
+
+### Requirement: Foot报告必须共享一次解析并原子发布
+
+离线分析 MUST由唯一Reader校验并读取一次Completed Artifact，规则、评分、报告和紧凑明细共享同次typed事实。摘要只保存问题、覆盖率、分布、Health／Evidence和至多五条代表预览；全部事件只在唯一明细中保存一次，并由稳定记录身份与原始帧范围引用。报告索引 MUST绑定输入manifest、子表hash、Schema、分析版本、coverage与明细索引，并与报告和明细原子发布。系统不得恢复facts.json中转、旧CSV Reader、Diagnosis Store、自动Stop后分析或旧JSON fallback。
+
+#### Scenario: 同一事件被多个规则引用
+
+- **WHEN** 多个诊断Target引用同一已分析事件
+- **THEN** 明细 MUST只保存一次且所有结果引用同一记录身份
+- **AND** 预览截断 MUST不改变eligible、matched、评分或完整事件枚举
+
+#### Scenario: 报告存储损坏
+
+- **WHEN** 报告索引、明细、hash或Schema不完整
+- **THEN** Reader MUST typed拒绝且保留原始Capture
+- **AND** MUST不重跑Runtime、查询世界或兼容读取旧facts.json
+
 ### Requirement: Foot离线诊断不得改变发布构建闭包
 
 Foot Analyzer、Plan、Operator和Report程序集 MUST只存在于Editor／Host。Capture Player MAY包含被选中的Foot Core或Full生成采样程序，但 MUST不包含离线诊断规则；Disabled Player MUST继续同时排除Foot采样与离线诊断闭包。

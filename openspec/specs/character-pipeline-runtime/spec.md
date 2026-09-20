@@ -38,7 +38,7 @@ GameplayTickSystem MUST 只注册 SimulationSessionHost/runtime handle 作为同
 
 ### Requirement: Gameplay domain、Graph 与 World 必须沿唯一阶段运行
 
-Session MUST 按固定顺序推进 Ingress、Schedule、Graph Runtime/Control、Ability、Timeline、Effect、Equipment、Motion Resolve、WorldSolver、Finalize、Committer 和 Presentation。Graph Runtime 只执行 Graph artifact 中的图语义；Control、Ability、Timeline、Effect、Equipment 和 Motion 各自拥有正式 domain state。节点和 Timeline MUST 只产生 state mutation、typed fact、MotionContribution 或 WorldRequest；只有 WorldSolver MAY 改变 WorldSimulationState，只有 Presentation adapter MAY 写 visual root。
+Session MUST 按固定顺序推进 Ingress、Schedule、Graph Runtime/Control、Ability、Timeline、Effect、Equipment、Motion Resolve、WorldSolver、Finalize、Egress、Committer 和 Presentation，并在同一主线内推进ActionInstance。Graph Runtime只执行Graph artifact中的图语义；Control、Ability、Timeline、Effect、Equipment和Motion各自拥有正式domain state。节点和Timeline MUST只产生state mutation、typed GameplayFact、MotionContribution、WorldRequest或稳定EventId；多个运动贡献必须先经唯一Motion accumulator和Body Motion Integrator，再由WorldSolver生成唯一body result。只有WorldSolver MAY改变WorldSimulationState，只有Presentation adapter MAY写visual root，系统不得建立demo专用或第二套deterministic业务路径。
 
 #### Scenario: Dodge Timeline产生位移
 
@@ -46,6 +46,12 @@ Session MUST 按固定顺序推进 Ingress、Schedule、Graph Runtime/Control、
 - **THEN** contribution MUST 进入统一 Motion accumulator 和 WorldRequest batch
 - **AND** WorldSolver MUST 返回唯一 body result
 - **AND** Timeline、Graph 和 Unity Transform MUST 不直接移动角色
+
+#### Scenario: 本地Action进入下一段
+
+- **WHEN** 输入满足Action准入并触发后续状态
+- **THEN** Control、Ability、Graph与Timeline MUST推进同一ActionInstance事实链
+- **AND** Committer MUST只提交经过World Resolve、Finalize与Egress的结果
 
 ### Requirement: Timeline Gameplay 时钟与表现时钟必须分责
 
@@ -59,7 +65,7 @@ Gameplay Timeline time MUST 由正式 Timeline Runtime 按 SimulationTick 推进
 
 ### Requirement: Pipeline 输出必须按 Gameplay、Body、Presentation 与 Trace 分离
 
-`SimulationTickResult` MUST 按 Actor 保存 `SimulationActorTickResult`，并分离 GameplayFacts、CharacterBodySample、PresentationCommands 与 TraceRecords。Egress Pass 与 Committer MAY 按正式产品/端口消费，MUST 不让 Presentation output 反向改变 Gameplay state，也 MUST 不把 packet 或 Pipeline 私有状态写入结果。
+`SimulationTickResult` MUST 按 Actor 保存 `SimulationActorTickResult`，并分离 GameplayFacts、CharacterBodySample、PresentationCommands 与 TraceRecords。Egress Pass、Committer与Network Model只能消费正式Finalized输出和EventId disposition；MUST不让Presentation output反向改变Gameplay state，不把packet或Pipeline私有状态写入结果，也不得让Fantasy Handler、Room或Model Source直接修改表现对象或动画转换。
 
 #### Scenario: Attack Tick输出
 
@@ -69,7 +75,7 @@ Gameplay Timeline time MUST 由正式 Timeline Runtime 按 SimulationTick 推进
 
 ### Requirement: CharacterPipelineDefinition 只提供正式 authoring context
 
-CharacterPipelineDefinition MUST 持有 InputProfile、Ability grants、domain profile 与 Presentation binding 的正式引用。Editor MAY 从 Definition 打开 Graph/Ability authoring，并将 Definition、Ability grant 和 InputProfile 作为 editor-only context 传入对应窗口；该 context MUST 不创建 Character RootTree、不拥有运行时状态，也 MUST 不改变 Graph Runtime 语义。Runtime Host MUST 不从 Definition 临时生成 Graph clone 或 domain state。
+CharacterPipelineDefinition MUST 持有 InputProfile、Ability grants、domain profile 与 Presentation binding 的正式引用。Runtime Host MUST分别加载并校验匹配revision的Control、Ability、Timeline、Presentation、World与Input binding，不得从Definition、RootTree、Timeline或Effect资产临时克隆运行状态。Editor MAY 从 Definition 打开 Graph/Ability authoring，并将 Definition、Ability grant 和 InputProfile 作为 editor-only context 传入对应窗口；该 context MUST 不创建 Character RootTree、不拥有运行时状态，也 MUST 不改变 Graph Runtime 语义。
 
 #### Scenario: 从Definition打开Ability Graph
 
@@ -89,7 +95,7 @@ Graph-owned Blackboard declaration、ExposedProperty、Graph Data Catalog 和 sc
 
 ### Requirement: PresentationFrame 必须只消费已提交事实
 
-SimulationCommitter MUST 保存未消费的有限 Action producer selection、sample、complete、release 与 EventId lifecycle。PresentationFrame MUST 消费 committed Body/Intent、Presentation Fact、Action playback、AnimationSlot、Native Pose Graph、Source、Constraint 和 Final Publication。持续 Locomotion PoseState、source relevance 与 transition MUST 只存在于 Presentation workspace，不得写入 Gameplay command queue；Presentation 失败 MUST 不回写 Gameplay state。
+SimulationCommitter MUST 保存未消费的有限 Action producer selection、sample、complete、release 与 EventId lifecycle。PresentationFrame MUST 消费 committed Body/Intent、Presentation Fact、Action playback、AnimationSlot、Native Pose Graph、Source、Constraint 和 Final Publication。持续 Locomotion PoseState、source relevance 与 transition MUST 只存在于 Presentation workspace，不得写入 Gameplay command queue；Presentation 失败 MUST 不回写 Gameplay state。Remote Body sample、Action producer command与reliable EventId只能在正式Commit边界进入表现输出，并复用同一Interpolation、AnimationSlot和Native Pose Graph，不得创建远端专用播放器。
 
 #### Scenario: Action等待首个合法Sample
 
@@ -119,7 +125,7 @@ Binding、Graph artifact、domain preparation、Pipeline、WorldSolver、Finaliz
 
 ### Requirement: Diagnostics 必须是统一只读目标
 
-每个 Active Simulation Session 与 Actor roster MUST 注册明确 diagnostics target、Graph Source Map、Backend/Pipeline identity、SourceId、Solver identity、默认关闭的 Live/Capture store 和 structured Trace。Editor MUST 只读取当前 target 或 Capture snapshot，不得持有 runtime Graph、mutable Character/World/Pipeline state、Pass runtime 或 Solver object。
+每个 Active Simulation Session 与 Actor roster MUST 注册明确 diagnostics target、Graph Source Map、Backend/Pipeline identity、SourceId、Solver identity、默认关闭的 Live/Capture store 和 structured Trace。Trace MUST能按ActorId、ActionInstanceId、SimulationTick、Graph source、World request/result、domain owner与EventId关联输入、决策、Timeline窗口、Motion、Effect和committed Presentation。Editor MUST 只读取当前 target 或 Capture snapshot，不得持有 runtime Graph、mutable Character/World/Pipeline state、Pass runtime 或 Solver object。
 
 #### Scenario: Local Session结束
 

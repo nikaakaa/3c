@@ -7,13 +7,19 @@
 ## Requirements
 ### Requirement: Network Test Product必须使用唯一Editor Build Workflow
 
-Unity Authority、DotRecast Authority与Deterministic Rollback MUST继续通过唯一Editor-only `NetworkTestProductBuildWorkflow`构建。Build request MUST包含显式CandidateLabel；公共workflow MUST统一Git源码身份、schema v3 manifest、Player构建、runtime artifact、Tool Bundle、Session Plan、staging、exact closure与不可变Candidate发布。每个Product adapter MUST只提供产品身份、Player输入、runtime artifacts、Tool Bundle扩展和Session Plan，不得调用另一adapter helper。公共workflow MUST不引用具体Network Model runtime类型、不按ProductId分支、不反射或fallback发现adapter。
+Network Model只定义输入、确认、恢复与状态权威语义；Network Test Product定义可独立Build／Run的测试环境。Unity Authority与DotRecast Authority是同一ServerAuthoritativeHybrid Model的不同Authority backend产品，Deterministic Rollback是独立Model产品；公共系统不得把产品数量等同于Model数量或按Model类型推断进程。三个产品 MUST继续通过唯一Editor-only `NetworkTestProductBuildWorkflow`构建。Build request MUST包含显式CandidateLabel；公共workflow MUST统一Git源码身份、schema v3 manifest、Player构建、runtime artifact、Tool Bundle、Session Plan、staging、exact closure与不可变Candidate发布。每个Product adapter MUST只提供产品身份、Player输入、runtime artifacts、Tool Bundle扩展和Session Plan，不得调用另一adapter helper。公共workflow MUST不引用具体Network Model runtime类型、不按ProductId分支、不反射或fallback发现adapter。
 
 #### Scenario: 构建Rollback Candidate
 
 - **WHEN** 作者以合法CandidateLabel执行DeterministicRollback Build
 - **THEN** Rollback adapter MUST提供Player、Relay、GM和对应Session Plan/Tool Bundle描述
 - **AND** 公共workflow MUST按同一Candidate合同完成构建和发布
+
+#### Scenario: 列出三个测试产品
+
+- **WHEN** Editor注册Unity Authority、DotRecast Authority与Deterministic Rollback三个入口
+- **THEN** Product catalog MUST包含三个隔离的ProductId
+- **AND** 前两个产品 MUST共享ServerAuthoritativeHybrid Model identity，第三个使用DeterministicRollback identity
 
 #### Scenario: 构建Authority Candidate
 
@@ -74,7 +80,7 @@ Network Test Build Workflow 调用dotnet或msbuild时 MUST包含`--disable-build
 
 ### Requirement: Product Manifest必须证明精确产物闭包
 
-每个Network Test Candidate manifest MUST使用schema v3记录CandidateId、CandidateLabel、SourceCommit、SourceTreeHash、Product/Model/Topology、Program/Pipeline/Projection/World身份、runtime artifacts、Tool Bundles、Session Plan、Player配置和exact file closure。Build完成后workflow MUST从最终Candidate目录重新读取并严格核对全部身份。schema v2、时间BuildId、未声明文件、缺失文件、混合Product或工具hash不匹配 MUST失败，系统 MUST不提供兼容reader。
+每个Network Test Candidate manifest MUST使用schema v3记录CandidateId、CandidateLabel、SourceCommit、SourceTreeHash、Product/Model/Topology、Program/Pipeline/Projection/World身份、runtime artifacts、Tool Bundles、Session Plan、Player配置和exact file closure。每个runtime artifact MUST声明唯一RoleId、Kind、ProductId、受约束相对root、entry point、configuration identity及可选manifest path/hash；每个Tool Bundle MUST引用明确artifact、版本、合同和BundleHash。公共系统不得用固定Player／Server字段、目录存在性、文件名或仓库脚本猜测闭包。Build完成后workflow MUST从最终Candidate目录重新读取并严格核对全部身份。schema v2、路径逃逸、时间BuildId、未声明文件、缺失文件、混合Product或工具hash不匹配 MUST失败，系统 MUST不提供兼容reader。
 
 #### Scenario: Candidate混入另一版GM
 
@@ -87,3 +93,9 @@ Network Test Build Workflow 调用dotnet或msbuild时 MUST包含`--disable-build
 - **WHEN** DotRecast Candidate包含未声明的Unity Authority Worker文件、artifact或工具身份
 - **THEN** exact closure validation MUST拒绝发布
 - **AND** MUST不通过忽略额外文件或修改manifest掩盖混合产物
+
+#### Scenario: Runtime artifact路径逃逸
+
+- **WHEN** artifact或Tool Bundle路径规范化后离开Candidate Root
+- **THEN** Build与Run MUST在启动前拒绝
+- **AND** MUST不搜索仓库目录、修复路径或复制外部文件

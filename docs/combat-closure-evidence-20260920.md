@@ -23,6 +23,12 @@
 
 Unity MCP 已恢复连接，目标实例为 e852139597e42532，GameplayLabFixed 在 Edit 模式且无编译，Console 返回零条错误。通过正式 FixedGameplayAbilityDataAsset.Load，传入 Corin Definition.BuildGameplayAbilityProviderBinding，四份现有 Fixed 技能数据均读取成功：Attack SourceMap=2063，DodgeBack=195，DodgeForward=195，RushAttack=1057。这覆盖既有二进制完整性和 Provider 合同检查，不覆盖 SourceRevision 与当前作者资产一致性、运行调用布局查询、动作推进或位移。没有重新发布资产、刷新、启动 Play 或长回放。
 
+### TreeClip 调用布局与局部分配复核
+
+现有 Editor 已执行 `491ba4935` 的布局代码。用四份实际 FixedData 的 SourceMap、Operations 和 Topology 构造正式 GameplayAbilityGraphInvocationLayout，逐一检查 TimelineClip 入口下的 Operation：GenerationSlot 必须等于对应入口在编译拓扑中的 RunnableActivationGeneration 槽，ParentGenerationSlot 必须可解析。Attack 421 组、DodgeBack 40 组、DodgeForward 40 组、RushAttack 288 组，合计 789 组均通过。
+
+每组先预热 10 次，再各重复 GenerationSlot/ParentGenerationSlot 100 次，以 GC.GetAllocatedBytesForCurrentThread 统计查询循环，四份数据各为 0 字节。数据加载、布局构造、调用对象构造和反射探针本身均在计量区间之外；结论仅是这两个查询在上述数据下无托管分配，不覆盖 Timeline 推进、技能执行、Float32 或整帧。没有新增测试文件或启动 Play。此结果更新上文该提交仅有静态检查的历史状态。
+
 ## 已完成的修复与资源生成
 
 - `72cb32c0a`：Fixed 回放准备接口明确区分录制角色与接收角色。编辑器入口绑定 `fixed-player`；检查点入口使用 Body 的角色；性能采集明确使用录制角色。没有修改原始录制或另造回放链路。

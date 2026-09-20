@@ -352,3 +352,11 @@
 - 删除曲线时长最少一显示帧与0.0001秒的隐式拉长，删除将附近关键点当同一时刻的阈值；正式短区间按实际时长映射归一化素材曲线。素材浮点无法表达的内部切分明确失败，不将位置夹到别处。
 - 以上仍属原 Slate 编辑器、原曲线描述与原 mutation 链；不增加第二预览或求值器。完整运行控制、Marker 表现图、最终分支重接入及全运行链0 GC继续保持未完成。
 - Unity编译与域重载完成（1789893614019），Editor idle、错误日志为零，git diff --check通过；未新增测试。
+
+## 动作 Timeline 正式倍率／暂停控制
+- 原播放技能Timeline节点增加动作进度倍率与暂停值输入，默认正式值为1／false，可连接既有值图和黑板；OperationValuePortContracts同步声明两个输入，Fixed／Float32按同一端口合同逐逻辑步读取。没有修改Unity全局时间或SimulationTickRate，也不把动作倍率写进Clip素材倍率。
+- AbilityTimelinePlaybackControl作为值类型沿原Tick／Advance请求传递。原播放管理者以rate.Raw代替固定OneRaw生成tick区间，保留对正式tick率的有符号余数与nearest-even舍入；暂停保持进度与余数，不积攒暂停时间。控制只随原Advance Commit生效，Discard不泄露，原Capture／Restore同时保存Rate和Paused。
+- 暂停候选不遍历Clip生命周期、Logic Marker、ActionCue或Motion输出；未消费的初始边界和待退出请求保留至恢复。表现采样显式给出Paused，动画／Camera消费同一停住的位置，不重复乘倍率；表现起点事件单独随帧接受记账，起步暂停不会提前消耗首次经过资格。
+- 进度命令同时携带控制，差异比较包含控制字段。Fixed／Float32状态格式升9、直接runtime快照升v7、权威进度传输相关schema升10；删除旧签名，不兼容读取旧格式。
+- 已通过正式菜单 Tools/3C/Internal/Republish Corin Ability Data 调用既有Publisher，从当前正式作者资产重建Attack、DodgeBack、DodgeForward、RushAttack共8份Fixed／Float32派生资产；静态核对8份产物都含m_PlaybackRate、m_Paused及Timeline producer。作者资产原有其他改动保留，派生产物不混入代码提交。
+- Unity编译及域重载完成（1789894226854），正式重建后错误日志为零，git diff --check通过；未新增测试。尚未完成：多来源hitstop的叠加与解除来源合同、非Skill调用方控制接入、最终分支重接入、正式Presentation Marker图执行和全运行链0 GC，不据此勾选整个第5节。

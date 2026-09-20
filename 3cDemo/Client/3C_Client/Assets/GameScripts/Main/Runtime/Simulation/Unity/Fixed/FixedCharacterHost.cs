@@ -524,10 +524,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return checked((int)handle.Value);
         }
 
-        public AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int tickCount)
+        public AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int tickCount, AbilityTimelinePlaybackControl control)
         {
             CharacterTimelinePendingAdvance pending = m_Host.AdvanceTimelinePlayback(
-                new TimelinePlaybackHandle((ulong)runtimeHandle), logicTick, tickCount);
+                new TimelinePlaybackHandle((ulong)runtimeHandle), logicTick, tickCount, control);
             if (pending == null)
                 throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' returned no pending advance.");
             return new AbilityTimelineTickResult(pending.Status, pending);

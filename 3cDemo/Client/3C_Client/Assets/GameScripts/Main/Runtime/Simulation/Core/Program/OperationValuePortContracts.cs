@@ -311,6 +311,9 @@ namespace ThirdPersonSimulation
 			Set(values, Empty(SimulationOperationCode.SubGraph));
 			Set(values, Output(SimulationOperationCode.StateExitCause, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
 			Set(values, Empty(SimulationOperationCode.TimelineClipExitRequest));
+            Set(values, Input(SimulationOperationCode.Timeline,
+                Fixed("m_PlaybackRate", 0, SemanticValueKind.Number),
+                Fixed("m_Paused", 1, SemanticValueKind.Boolean)));
 			Set(values, Output(SimulationOperationCode.BlackboardGet, Dynamic("m_Output", 0)));
 			Set(values, Input(SimulationOperationCode.BlackboardSet, Dynamic("m_Value", 0)));
 			Set(values, Output(SimulationOperationCode.InputBoolean, Fixed("m_Output", 0, SemanticValueKind.Boolean)));

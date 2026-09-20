@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation
     public static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 8;
+        const int Version = 9;
         const string HashIdentity = "float32-character-runtime-state-hash/7";
         public const string CodecIdentity = "float32-character-runtime-state/7";
 
@@ -194,6 +194,8 @@ namespace ThirdPersonSimulation
             writer.WriteInt64(snapshot.CursorTime.Raw);
             writer.WriteInt32(snapshot.Cycle);
             writer.WriteInt32(snapshot.TimeCarry);
+            writer.WriteInt64(snapshot.Control.Rate.Raw);
+            writer.WriteBoolean(snapshot.Control.Paused);
             writer.WriteInt32(snapshot.TreeDecisionExits.Count);
             for (int i = 0; i < snapshot.TreeDecisionExits.Count; i++)
                 writer.WriteString(snapshot.TreeDecisionExits[i]);
@@ -240,6 +242,7 @@ namespace ThirdPersonSimulation
             FixedScalar cursorTime = FixedScalar.FromRaw(reader.ReadInt64());
             int cycle = reader.ReadInt32();
             int timeCarry = reader.ReadInt32();
+            var control = new AbilityTimelinePlaybackControl(ThirdPersonSimulation.Fixed.FixedScalar.FromRaw(reader.ReadInt64()), reader.ReadBoolean());
             int treeDecisionExitCount = ReadCount(reader, 1024, "timeline tree decision exits");
             var treeDecisionExits = new string[treeDecisionExitCount];
             for (int i = 0; i < treeDecisionExitCount; i++)
@@ -304,6 +307,7 @@ namespace ThirdPersonSimulation
                 cursorTime,
                 cycle,
                 timeCarry,
+                control,
                 treeDecisionExits,
                 pendingTreeDecisionExits,
                 sectionId,

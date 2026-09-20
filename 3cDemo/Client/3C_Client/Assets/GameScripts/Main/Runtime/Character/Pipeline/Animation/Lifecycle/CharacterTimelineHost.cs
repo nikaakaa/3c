@@ -356,7 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 result.PreviousCycle,
                 result.Cycle,
                 result.PlaybackMode == TimelinePlaybackMode.Loop,
-                result.Completes ? AbilityTimelineProgressState.Completed : AbilityTimelineProgressState.Active);
+                result.Completes ? AbilityTimelineProgressState.Completed : AbilityTimelineProgressState.Active, result.Control);
         }
 
         public TimelinePlaybackHandle Handle { get; }
@@ -381,7 +381,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Progress = playback == null || request.Reason.LocalLogicTick == 0 ? default : new AbilityTimelineProgress(
                 playback.Content.Identity, playback.ContentRevision, playback.Generation, request.Reason.LocalLogicTick,
                 playback.Content.Duration, playback.CursorTime, playback.CursorTime, playback.Cycle, playback.Cycle,
-                playback.PlaybackMode == TimelinePlaybackMode.Loop, AbilityTimelineProgressState.Stopped);
+                playback.PlaybackMode == TimelinePlaybackMode.Loop, AbilityTimelineProgressState.Stopped, playback.Control);
         }
 
         public TimelinePlaybackHandle Handle { get; }
@@ -1091,14 +1091,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public CharacterTimelinePendingAdvance AdvanceTimelinePlayback(
             TimelinePlaybackHandle handle,
             ulong logicTick,
-            int tickCount)
+            int tickCount,
+            AbilityTimelinePlaybackControl control)
         {
             if (!IsInitialized)
                 throw new InvalidOperationException("Timeline advancement requires an initialized CharacterTimelineHost.");
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(handle);
             if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
                 return new CharacterTimelinePendingAdvance(handle, 0, null, MapTerminalStatus(status));
-            TimelineRuntimeAdvanceResult advance = m_Host.Advance(new TimelineRuntimePlaybackHandle(handle.Value), logicTick, tickCount);
+            TimelineRuntimeAdvanceResult advance = m_Host.Advance(new TimelineRuntimePlaybackHandle(handle.Value), logicTick, tickCount, control);
             var pending = new CharacterTimelinePendingAdvance(handle, (int)handle.Value, advance, AbilityTimelineRuntimeStatus.Running);
             m_PendingAdvances[handle.Value] = pending;
             return pending;
@@ -1275,6 +1276,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 native.CursorTime,
                 native.Cycle,
                 native.TimeCarry,
+                native.Control,
                 native.TreeDecisionExits,
                 native.PendingTreeDecisionExits,
                 native.SectionId,
@@ -1331,6 +1333,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 new TimelinePlaybackStopContext(stopCause, snapshot.StopLocalLogicTick),
                 snapshot.InitialBoundaryPending,
                 snapshot.TimeCarry,
+                snapshot.Control,
                 snapshot.TreeDecisionExits,
                 snapshot.PendingTreeDecisionExits,
                 m_TickRate);
@@ -1515,7 +1518,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             {
                 active.LocalPresentationSample = new TimelineRuntimePresentationSample(evaluation.Generation,
                     evaluation.LogicTick, evaluation.ContentRevision, evaluation.Time, evaluation.Cycle,
-                    evaluation.Completes ? TimelinePresentationSampleReason.Completed : TimelinePresentationSampleReason.Advance);
+                    evaluation.Completes ? TimelinePresentationSampleReason.Completed :
+                    evaluation.Control.IsPaused ? TimelinePresentationSampleReason.Paused : TimelinePresentationSampleReason.Advance);
                 for (int i = 0; i < m_ActivePlaybacks.Count; i++)
                     if (m_ActivePlaybacks[i].Handle.Value == active.Handle.Value)
                     {

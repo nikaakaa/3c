@@ -14,8 +14,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public const string AuthorityReplicationSchema = "server-authoritative-authority-replication/8";
         public const string RemotePresentationSchema = "server-authoritative-remote-presentation/8";
         public const int SchemaVersion = 1;
-        public const int AuthorityReplicationSchemaVersion = 9;
-        public const int RemotePresentationSchemaVersion = 9;
+        public const int AuthorityReplicationSchemaVersion = 10;
+        public const int RemotePresentationSchemaVersion = 10;
     }
 
     public static class ServerAuthoritativeEgressCodec
@@ -24,8 +24,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         const uint ReplicationMagic = 0x52454153;
         const uint RemoteMagic = 0x50454153;
         const int InputVersion = 1;
-        const int ReplicationVersion = 9;
-        const int RemoteVersion = 9;
+        const int ReplicationVersion = 10;
+        const int RemoteVersion = 10;
         const int MaximumCount = 4096;
 
         public static byte[] WriteOwnerInput(OwnerCanonicalInputBatch input)

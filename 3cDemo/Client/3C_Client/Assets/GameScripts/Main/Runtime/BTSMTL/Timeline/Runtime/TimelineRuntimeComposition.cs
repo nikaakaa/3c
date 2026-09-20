@@ -165,6 +165,7 @@ namespace BTSMTL.Timeline.Runtime
             ExecutionIdentity = context.Playback.ExecutionIdentity;
             Evaluation = context.Advance.Evaluation;
             Completes = context.Advance.Completes;
+            Control = context.Advance.Control;
         }
 
         public TimelineRuntimePlaybackHandle Handle { get; }
@@ -179,6 +180,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelineRuntimeEvaluationResult Evaluation { get; }
         public bool Completes { get; }
+        public AbilityTimelinePlaybackControl Control { get; }
     }
 
     public sealed class TimelineRuntimeEvaluationBuffer : ITimelineRuntimeEvaluationSink
@@ -263,7 +265,8 @@ namespace BTSMTL.Timeline.Runtime
         Correction = 1,
         Completed = 2,
         Stopped = 3,
-        Withdrawn = 4
+        Withdrawn = 4,
+        Paused = 5
     }
 
     public readonly struct TimelineRuntimePresentationSample
@@ -384,7 +387,7 @@ namespace BTSMTL.Timeline.Runtime
                 currentTime,
                 currentCycle,
                 loop,
-                allowTraversal && !state.HasPresented);
+                allowTraversal && !state.InitialBoundaryConsumed);
             if (allowTraversal)
                 AppendMarkerEvents(
                 playback,
@@ -394,11 +397,13 @@ namespace BTSMTL.Timeline.Runtime
                 currentTime,
                 currentCycle,
                 loop,
-                !state.HasPresented,
+                !state.InitialBoundaryConsumed,
                 events);
             state.PendingTime = currentTime;
             state.PendingCycle = currentCycle;
             state.PendingFinished = sample.Reason == TimelinePresentationSampleReason.Completed;
+            state.PendingInitialBoundaryConsumed = state.InitialBoundaryConsumed || allowTraversal ||
+                sample.Reason == TimelinePresentationSampleReason.Correction;
             frame = new TimelineRuntimePresentationFrame(
                 playback,
                 sample.LogicTick,
@@ -424,7 +429,7 @@ namespace BTSMTL.Timeline.Runtime
                 state.CursorTime = state.PendingTime;
                 state.Cycle = state.PendingCycle;
                 state.Finished = state.PendingFinished;
-                state.HasPresented = true;
+                state.InitialBoundaryConsumed = state.PendingInitialBoundaryConsumed;
                 state.Cache(state.PendingFrame);
                 state.PendingFrame = default;
                 state.HasPendingFrame = false;
@@ -532,12 +537,13 @@ namespace BTSMTL.Timeline.Runtime
             public FixedScalar PendingTime;
             public int PendingCycle;
             public bool PendingFinished;
+            public bool PendingInitialBoundaryConsumed;
             public TimelineRuntimePresentationFrame PendingFrame;
             public bool HasPendingFrame;
             public ulong Generation { get; }
             public FixedScalar CursorTime;
             public int Cycle;
-            public bool HasPresented;
+            public bool InitialBoundaryConsumed;
             public bool Finished;
             public TimelineRuntimePresentationFrame CachedFrame;
             public ulong LastPresentationFrame;
@@ -697,9 +703,10 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeAdvanceResult Advance(
             TimelineRuntimePlaybackHandle handle,
             ulong logicTick,
-            int tickCount)
+            int tickCount,
+            AbilityTimelinePlaybackControl control)
         {
-            return m_Service.Advance(handle, logicTick, tickCount);
+            return m_Service.Advance(handle, logicTick, tickCount, control);
 
         }
 

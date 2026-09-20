@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
@@ -150,10 +151,11 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeAdvanceResult Advance(
             TimelineRuntimePlaybackHandle handle,
             ulong logicTick,
-            int tickCount)
+            int tickCount,
+            AbilityTimelinePlaybackControl control)
         {
             EnsureAvailable();
-            return m_Composition.Advance(handle, logicTick, tickCount);
+            return m_Composition.Advance(handle, logicTick, tickCount, control);
         }
 
         public bool CommitAdvance(

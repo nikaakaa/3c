@@ -266,7 +266,7 @@ namespace ThirdPersonSimulation
                         ? OperationExecutionResult.Success
                         : OperationExecutionResult.Failure;
                 case SimulationOperationCode.Timeline:
-                    return TickTimeline(operation);
+                    return TickTimeline(cursor, operation);
                 case SimulationOperationCode.TimelineClipExitRequest:
                     return RequestTreeClipExit(operation);
                 case SimulationOperationCode.CameraStateRequest:
@@ -354,7 +354,7 @@ namespace ThirdPersonSimulation
             return OperationExecutionResult.Success;
         }
 
-        OperationExecutionResult TickTimeline(SimulationOperation operation)
+        OperationExecutionResult TickTimeline(OperationControlCursor<Float32AbilityExecutionTarget> cursor, SimulationOperation operation)
         {
             if (m_TimelineRuntime == null)
                 throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' has no Timeline runtime binding.");
@@ -392,7 +392,12 @@ namespace ThirdPersonSimulation
             AbilityTimelineTickResult tick;
             try
             {
-                tick = m_TimelineRuntime.Tick(runtimeHandle, m_Tick.Value, 1);
+                using (Float32ValueInputLease inputs = m_Values.ReadInputs(cursor, operation))
+                {
+                    var control = new AbilityTimelinePlaybackControl(
+                        ThirdPersonSimulation.Fixed.FixedScalar.FromDouble(inputs[0].Scalar.ToDouble()), inputs[1].Boolean);
+                    tick = m_TimelineRuntime.Tick(runtimeHandle, m_Tick.Value, 1, control);
+                }
             }
             finally
             {

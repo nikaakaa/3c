@@ -537,6 +537,25 @@ namespace ThirdPersonSimulation
         int RuntimeHandle { get; }
     }
 
+    public readonly struct AbilityTimelinePlaybackControl : IEquatable<AbilityTimelinePlaybackControl>
+    {
+        public AbilityTimelinePlaybackControl(FixedScalar rate, bool paused)
+        {
+            if (rate < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(rate));
+            Rate = rate;
+            Paused = paused;
+        }
+
+        public FixedScalar Rate { get; }
+        public bool Paused { get; }
+        public bool IsPaused => Paused || Rate == FixedScalar.Zero;
+        public static AbilityTimelinePlaybackControl Normal => new AbilityTimelinePlaybackControl(FixedScalar.One, false);
+        public bool Equals(AbilityTimelinePlaybackControl other) => Rate == other.Rate && Paused == other.Paused;
+        public override bool Equals(object obj) => obj is AbilityTimelinePlaybackControl other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(Rate.Raw, Paused);
+    }
+
     public enum AbilityTimelineProgressState : byte
     {
         Active = 0,
@@ -557,7 +576,8 @@ namespace ThirdPersonSimulation
             int previousCycle,
             int cycle,
             bool loop,
-            AbilityTimelineProgressState state)
+            AbilityTimelineProgressState state,
+            AbilityTimelinePlaybackControl control)
         {
             TimelineId = SimulationIdentity.Require(timelineId, nameof(timelineId));
             ContentRevision = SimulationIdentity.Require(contentRevision, nameof(contentRevision));
@@ -580,6 +600,7 @@ namespace ThirdPersonSimulation
             if (state > AbilityTimelineProgressState.Stopped)
                 throw new ArgumentOutOfRangeException(nameof(state));
             State = state;
+            Control = control;
         }
 
         public string TimelineId { get; }
@@ -593,6 +614,7 @@ namespace ThirdPersonSimulation
         public int Cycle { get; }
         public bool Loop { get; }
         public AbilityTimelineProgressState State { get; }
+        public AbilityTimelinePlaybackControl Control { get; }
         public bool IsTerminal => State != AbilityTimelineProgressState.Active;
         public bool IsValid => Generation != 0;
 
@@ -602,7 +624,7 @@ namespace ThirdPersonSimulation
             Generation == other.Generation && LogicTick == other.LogicTick &&
             Duration == other.Duration && PreviousTime == other.PreviousTime && Time == other.Time &&
             PreviousCycle == other.PreviousCycle && Cycle == other.Cycle &&
-            Loop == other.Loop && State == other.State;
+            Loop == other.Loop && State == other.State && Control.Equals(other.Control);
 
         public override bool Equals(object obj) => obj is AbilityTimelineProgress other && Equals(other);
         public override int GetHashCode() => HashCode.Combine(TimelineId, ContentRevision, Generation, LogicTick, Time.Raw, Cycle);
@@ -692,6 +714,7 @@ namespace ThirdPersonSimulation
             FixedScalar cursorTime,
             int cycle,
             int timeCarry,
+            AbilityTimelinePlaybackControl control,
             IReadOnlyList<string> treeDecisionExits,
             IReadOnlyList<string> pendingTreeDecisionExits,
             string sectionId,
@@ -728,6 +751,7 @@ namespace ThirdPersonSimulation
             if (pendingTreeDecisionExits == null)
                 throw new ArgumentNullException(nameof(pendingTreeDecisionExits));
             TimeCarry = timeCarry;
+            Control = control;
             TreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(treeDecisionExits ?? Array.Empty<string>()));
             PendingTreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(pendingTreeDecisionExits ?? Array.Empty<string>()));
             SectionId = sectionId ?? string.Empty;
@@ -771,6 +795,7 @@ namespace ThirdPersonSimulation
         public FixedScalar CursorTime { get; }
         public int Cycle { get; }
         public int TimeCarry { get; }
+        public AbilityTimelinePlaybackControl Control { get; }
         public IReadOnlyList<string> TreeDecisionExits { get; }
         public IReadOnlyList<string> PendingTreeDecisionExits { get; }
         public string SectionId { get; }
@@ -850,7 +875,7 @@ namespace ThirdPersonSimulation
     public interface IAbilityTimelineRuntime
     {
         int Start(in AbilityTimelineStartRequest request);
-        AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int tickCount);
+        AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int tickCount, AbilityTimelinePlaybackControl control);
         void Commit(IAbilityTimelinePending pending);
         void Discard(IAbilityTimelinePending pending);
         AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle);

@@ -62,7 +62,12 @@ namespace ThirdPersonCharacter.Control.Authoring
             m_PlaybackMode = playbackMode;
         }
 
-        protected override void RegisterPorts() => AddFlowInput("执行", RejectAuthoringExecution, "Input");
+        protected override void RegisterPorts()
+        {
+            AddFlowInput("执行", RejectAuthoringExecution, "Input");
+            AddValueInput<float>("动作进度倍率", "m_PlaybackRate").SetDefaultAndSerializedValue(1f);
+            AddValueInput<bool>("暂停动作进度", "m_Paused").SetDefaultAndSerializedValue(false);
+        }
 
         protected override void OnNodeInspectorGUI()
         {

@@ -247,6 +247,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 else if (!entry.Corrected && progress.State == AbilityTimelineProgressState.Completed && alpha == 1m)
                     reason = TimelinePresentationSampleReason.Completed;
+                else if (!entry.Corrected && progress.Control.IsPaused)
+                    reason = TimelinePresentationSampleReason.Paused;
                 sample = new TimelineRuntimePresentationSample(progress.Generation, progress.LogicTick, progress.ContentRevision,
                     FixedScalar.FromRaw(checked((long)position)), cycle, reason);
                 entry.Sample = sample;

@@ -1288,3 +1288,12 @@
 - ExecutionKind 正式成员连续为 Forward=1 至 Authoritative=4，事务上下文现按 byte 闭区间判断；session、pipeline、tick、step index/count 和 transaction identity 校验顺序及异常保持不变。
 - 只删除每执行一个 step 时的一次枚举装箱和元数据查询，不改变 pass 调用、步骤数量或事务阶段。
 - 首次编译前检测到 Unity Bee 编译进程并主动跳过；进程结束后 ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做逐步事务运行回放或 Player 分配采样。
+
+## 2026-09-21 Ability Tree Clip hook 校验
+
+对应 tasks.md 的 4.2.16。
+
+- CharacterTimelineHost 在 Root 更新以及 Clip enable、disable、destroy 路径构造 AbilityTreeClipInvocation；构造器原对每次 hook 执行 Enum.IsDefined。
+- AbilityTreeClipHook 正式成员连续为 OnEnable=0、OnDisable=1、OnDestroy=2、Root=3，现按 byte 上界判断；未知值继续进入原 ArgumentOutOfRangeException，clip authoring id、tree graph id、cycle、action instance 和 timeline runtime handle 约束不变。
+- Root 更新路径仍会构造 invocation，本小步只删除其中的枚举装箱和元数据查询，不声称 Timeline Host 已无分配。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Ability Tree Clip 生命周期回放或 Player 分配采样。

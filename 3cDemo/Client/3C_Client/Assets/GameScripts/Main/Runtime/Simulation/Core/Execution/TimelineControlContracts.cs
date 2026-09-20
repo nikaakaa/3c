@@ -839,7 +839,7 @@ namespace ThirdPersonSimulation
         {
             ClipAuthoringId = SimulationIdentity.Require(clipAuthoringId, nameof(clipAuthoringId));
             TreeGraphId = SimulationIdentity.Require(treeGraphId, nameof(treeGraphId));
-            if (!Enum.IsDefined(typeof(AbilityTreeClipHook), hook))
+            if ((byte)hook > (byte)AbilityTreeClipHook.Root)
                 throw new ArgumentOutOfRangeException(nameof(hook));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));

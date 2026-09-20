@@ -81,10 +81,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 WriteAck(writer, batch.Acks[i]);
             writer.WriteInt32(batch.Baselines.Count);
             for (int i = 0; i < batch.Baselines.Count; i++)
-                writer.WriteBytes(ServerAuthoritativeCanonicalCodec.WriteBaseline(batch.Baselines[i]));
+                ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedBaseline(writer, batch.Baselines[i]);
             writer.WriteInt32(batch.RemotePresentation.Count);
             for (int i = 0; i < batch.RemotePresentation.Count; i++)
-                writer.WriteBytes(WriteRemotePresentation(batch.RemotePresentation[i]));
+                WriteLengthPrefixedRemotePresentation(writer, batch.RemotePresentation[i]);
         }
 
         public static AuthorityReplicationBatch ReadAuthorityReplication(byte[] bytes)
@@ -144,6 +144,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             using var writer = new CanonicalWriter();
             WriteRemotePresentation(writer, batch);
             return writer.ToArray();
+        }
+
+        static void WriteLengthPrefixedRemotePresentation(CanonicalWriter writer, RemotePresentationBatch batch)
+        {
+            if (batch == null)
+                throw new ArgumentNullException(nameof(batch));
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
+            WriteRemotePresentation(writer, batch);
+            writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
         static void WriteRemotePresentation(CanonicalWriter writer, RemotePresentationBatch batch)

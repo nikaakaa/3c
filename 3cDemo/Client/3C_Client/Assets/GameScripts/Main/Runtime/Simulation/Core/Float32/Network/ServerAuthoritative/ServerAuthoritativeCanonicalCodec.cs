@@ -91,6 +91,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return writer.ToArray();
         }
 
+        internal static void WriteLengthPrefixedBaseline(CanonicalWriter writer, AuthoritativeActorBaseline baseline)
+        {
+            if (baseline == null)
+                throw new ArgumentNullException(nameof(baseline));
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
+            WriteBaseline(writer, baseline);
+            writer.EndLengthPrefixedBlock(prefixPosition);
+        }
+
         static void WriteBaseline(CanonicalWriter writer, AuthoritativeActorBaseline baseline)
         {
             writer.WriteUInt32(BaselineMagic);

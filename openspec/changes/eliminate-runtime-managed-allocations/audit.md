@@ -413,3 +413,12 @@
 - 保留原 schema、字段次序、嵌套消息编码和完整重新编码检查；尾部与集合数量检查、错误文本和返回消息独立数据不变。只修改编解码内部存储，不改表现事件消费、Timeline 播放、事务或回滚生命周期。
 - 嵌套基线及远端表现子消息仍会创建独立 writer 和数组，此步不宣称它们已完成；外层 writer、流、解码集合、公开编码结果也仍分配。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行对比或 Player 分配采样。
+
+## 2026-09-20 权威复制子消息直接编码
+
+对应 tasks.md 的 5.30，与代码同步提交。
+
+- 全仓嵌套基线和远端表现写入各一处，均在 Egress.WriteAuthorityReplication。原每个子消息独立 Write 返回数组，再 WriteBytes 复制到外层。现通过内部 WriteLengthPrefixedBaseline 和私有 WriteLengthPrefixedRemotePresentation 写外层，再沿已有 Begin／EndLengthPrefixedBlock 回填四字节长度。
+- 两个辅助入口只处理长度边界，仍调用各自唯一字段写入函数，保留 null 参数异常、Magic／版本／字段与集合次序。公开 WriteBaseline／WriteRemotePresentation 的实际独立结果消费者保留，不另建编码协议。
+- 每个子项不再创建 writer、流和完整输出数组。读取侧 ReadBytes、基线自身角色状态字节复制、外层 writer 与最终数组仍分配；不改变远端表现消费、事件或状态恢复生命周期。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议字节对比或 Player 分配采样。

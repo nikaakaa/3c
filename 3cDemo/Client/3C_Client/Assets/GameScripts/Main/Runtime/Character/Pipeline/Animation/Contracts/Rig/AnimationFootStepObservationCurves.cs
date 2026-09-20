@@ -31,7 +31,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !float.IsFinite(toeSpeed) || toeSpeed < 0f ||
                 !float.IsFinite(positionError) || positionError < 0f ||
                 !float.IsFinite(rotationError) || rotationError < 0f ||
-                !Normalized(contact) || !Enum.IsDefined(typeof(AnimationFootStepObservationLockMode), lockMode) ||
+                !Normalized(contact) ||
+                (byte)lockMode > (byte)AnimationFootStepObservationLockMode.Locked ||
                 !Normalized(lockWeight) || !Normalized(support) ||
                 !events.IsValid)
             {

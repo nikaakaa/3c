@@ -1252,3 +1252,12 @@
 - 正式相位连续为 Unavailable=0、PreSwing=1、Swing=2、ApproachContact=3、Contact=4，现按 byte 上界直接判断；未知值继续进入原 ArgumentException，Contact、下一落脚、摆动进度及 approach 组合约束不变。
 - 仅删除正式事件帧构造中的枚举装箱和元数据查询，不改变事件身份、落脚周期、连续性或脚侧绑定。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做脚步事件运行回放或 Player 分配采样。
+
+## 2026-09-21 脚步 Motion Runtime 锁定模式校验
+
+对应 tasks.md 的 4.3.2。
+
+- AnimationFootMotionRuntimeSample 由左右脚运行曲线读取和绑定结果逐帧构造；原在高度、速度、误差、接触值校验中对 LockMode 执行 Enum.IsDefined。
+- 正式锁定模式连续为 Unlocked=0、Sliding=1、Locked=2，现按 byte 上界直接判断；未知值继续进入原 ArgumentOutOfRangeException，其它数值归一化、事件有效性和预测落脚语义不变。
+- 仅删除正式脚步运行样本构造中的枚举装箱和元数据查询，不改变锁定权重、支撑权重或事件帧内容。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做脚步曲线运行回放或 Player 分配采样。

@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
         readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
         readonly IReadOnlyList<AbilityTimelineAdvancePending> m_TimelineAdvances;
-        readonly IReadOnlyList<IAbilityTimelineStopPending> m_TimelineStops;
+        readonly IReadOnlyList<AbilityTimelineStopPending> m_TimelineStops;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         FixedCharacterRuntimeState m_CandidateState;
         bool m_Consumed;
@@ -24,7 +24,7 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<PresentationCommand> presentationCommands,
             IEnumerable<SimulationTraceRecord> traceRecords,
             IReadOnlyList<AbilityTimelineAdvancePending> timelineAdvances,
-            IReadOnlyList<IAbilityTimelineStopPending> timelineStops)
+            IReadOnlyList<AbilityTimelineStopPending> timelineStops)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Character evaluation result identity is incomplete.");
@@ -88,7 +88,7 @@ namespace ThirdPersonSimulation.Fixed
             }
             for (int i = 0; i < m_TimelineStops.Count; i++)
             {
-                if (m_TimelineStops[i] == null)
+                if (!m_TimelineStops[i].IsValid)
                     throw new InvalidOperationException("Fixed Character evaluation has an empty Timeline stop.");
                 if (commit)
                     m_TimelineRuntime.CommitStop(m_TimelineStops[i]);
@@ -97,12 +97,9 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static IReadOnlyList<T> Copy<T>(IEnumerable<T> values)
+        static IReadOnlyList<T> Copy<T>(IEnumerable<T> values) where T : struct
         {
             var result = values == null ? new List<T>(0) : new List<T>(values);
-            for (int i = 0; i < result.Count; i++)
-                if (result[i] == null)
-                    throw new ArgumentException("Fixed Character evaluation result contains a missing output.", nameof(values));
             return result.AsReadOnly();
         }
     }

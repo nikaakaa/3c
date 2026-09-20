@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation
             var sharedEffectScratch = new Float32GameplayEffectExecutionScratch();
             var motionContributions = new List<SimulationMotionContribution>();
             var timelineAdvances = new List<AbilityTimelineAdvancePending>();
-            var timelineStops = new List<IAbilityTimelineStopPending>();
+            var timelineStops = new List<AbilityTimelineStopPending>();
             var facts = new List<GameplayFact>();
             var presentation = new List<PresentationCommand>();
             var trace = new List<SimulationTraceRecord>();
@@ -196,13 +196,13 @@ namespace ThirdPersonSimulation
 
         static void DiscardTimelineStops(
             IAbilityTimelineRuntime timelineRuntime,
-            IReadOnlyList<IAbilityTimelineStopPending> stops)
+            IReadOnlyList<AbilityTimelineStopPending> stops)
         {
             if (timelineRuntime == null)
                 return;
             for (int i = 0; i < stops.Count; i++)
             {
-                if (stops[i] == null)
+                if (!stops[i].IsValid)
                     throw new InvalidOperationException("Float32 Character evaluation has an empty Timeline stop.");
                 timelineRuntime.DiscardStop(stops[i]);
             }

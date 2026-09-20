@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation
         readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
         readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
         readonly IReadOnlyList<AbilityTimelineAdvancePending> m_TimelineAdvances;
-        readonly IReadOnlyList<IAbilityTimelineStopPending> m_TimelineStops;
+        readonly IReadOnlyList<AbilityTimelineStopPending> m_TimelineStops;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         Float32CharacterRuntimeState m_CandidateState;
         bool m_Consumed;
@@ -22,7 +22,7 @@ namespace ThirdPersonSimulation
             IEnumerable<PresentationCommand> presentationCommands,
             IEnumerable<SimulationTraceRecord> traceRecords,
             IAbilityTimelineRuntime timelineRuntime,            IEnumerable<AbilityTimelineAdvancePending> timelineAdvances,
-            IEnumerable<IAbilityTimelineStopPending> timelineStops)
+            IEnumerable<AbilityTimelineStopPending> timelineStops)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Character evaluation result identity is incomplete.");
@@ -87,7 +87,7 @@ namespace ThirdPersonSimulation
             }
             for (int i = 0; i < m_TimelineStops.Count; i++)
             {
-                if (m_TimelineStops[i] == null)
+                if (!m_TimelineStops[i].IsValid)
                     throw new InvalidOperationException("Float32 Character evaluation has an empty Timeline stop.");
                 if (commit)
                     m_TimelineRuntime.CommitStop(m_TimelineStops[i]);
@@ -96,12 +96,9 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static IReadOnlyList<T> Copy<T>(IEnumerable<T> values)
+        static IReadOnlyList<T> Copy<T>(IEnumerable<T> values) where T : struct
         {
             var result = values == null ? new List<T>() : new List<T>(values);
-            for (int i = 0; i < result.Count; i++)
-                if (result[i] == null)
-                    throw new ArgumentException("Float32 Character evaluation result contains a missing output.", nameof(values));
             return result.AsReadOnly();
         }
     }

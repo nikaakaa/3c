@@ -131,7 +131,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly SimulationTick m_Tick;
         readonly FixedTreeClipInvokerLink m_TreeClipLink;
         readonly List<AbilityTimelineAdvancePending> m_TimelinePendingAdvances;
-        readonly List<IAbilityTimelineStopPending> m_TimelinePendingStops;
+        readonly List<AbilityTimelineStopPending> m_TimelinePendingStops;
 
         public FixedAbilityExecutionTarget(
             FixedGameplayAbilityExecutionAccess access,
@@ -149,7 +149,7 @@ namespace ThirdPersonSimulation.Fixed
             IAbilityTimelineRuntime timelineRuntime,
             FixedActionStateStore actionState,
             List<AbilityTimelineAdvancePending> timelineAdvances,
-            List<IAbilityTimelineStopPending> timelineStops,
+            List<AbilityTimelineStopPending> timelineStops,
             SimulationTick tick,
             FixedTreeClipInvokerLink treeClipLink)
         {
@@ -529,7 +529,7 @@ namespace ThirdPersonSimulation.Fixed
             if (operation.Code == SimulationOperationCode.Timeline)
             {
                 var stop = StopTimeline(operation, ReadTimelineRuntimeHandle(operation));
-                if (stop.Pending != null)
+                if (stop.Pending.IsValid)
                     m_TimelinePendingStops.Add(stop.Pending);
                 return OperationStopStatus.Completed;
             }
@@ -545,7 +545,7 @@ namespace ThirdPersonSimulation.Fixed
             if (operation.Code == SimulationOperationCode.Timeline)
             {
                 var stop = StopTimeline(operation, ReadTimelineRuntimeHandle(operation));
-                if (stop.Pending != null)
+                if (stop.Pending.IsValid)
                     m_TimelinePendingStops.Add(stop.Pending);
                 return;
             }

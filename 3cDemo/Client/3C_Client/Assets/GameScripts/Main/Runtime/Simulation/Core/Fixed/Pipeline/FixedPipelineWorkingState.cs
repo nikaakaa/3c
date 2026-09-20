@@ -126,7 +126,7 @@ namespace ThirdPersonSimulation.Fixed
                     if (restored)
                         continue;
                     AbilityTimelineStopResult stop = timeline.Stop(runtimeHandle, 0);
-                    if (stop.Pending != null)
+                    if (stop.Pending.IsValid)
                         timeline.CommitStop(stop.Pending);
                 }
             }

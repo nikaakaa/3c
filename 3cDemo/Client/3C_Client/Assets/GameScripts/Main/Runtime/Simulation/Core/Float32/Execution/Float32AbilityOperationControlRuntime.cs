@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation
         Float32AbilityExecutionTarget Target { get; }
         void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow);
         IReadOnlyList<AbilityTimelineAdvancePending> TimelineAdvances { get; }
-        IReadOnlyList<IAbilityTimelineStopPending> TimelineStops { get; }
+        IReadOnlyList<AbilityTimelineStopPending> TimelineStops { get; }
         void EndEvaluation();
     }
 
@@ -134,7 +134,7 @@ namespace ThirdPersonSimulation
         readonly SimulationTick m_Tick;
         readonly Float32TreeClipInvokerLink m_TreeClipLink;
         readonly List<AbilityTimelineAdvancePending> m_TimelinePendingAdvances;
-        readonly List<IAbilityTimelineStopPending> m_TimelinePendingStops;
+        readonly List<AbilityTimelineStopPending> m_TimelinePendingStops;
 
         public Float32AbilityExecutionTarget(
             Float32GameplayAbilityExecutionAccess access,
@@ -152,7 +152,7 @@ namespace ThirdPersonSimulation
             IAbilityTimelineRuntime timelineRuntime,
             Float32ActionStateStore actionState,
             List<AbilityTimelineAdvancePending> timelineAdvances,
-            List<IAbilityTimelineStopPending> timelineStops,
+            List<AbilityTimelineStopPending> timelineStops,
             SimulationTick tick,
             Float32TreeClipInvokerLink treeClipLink)
         {
@@ -532,7 +532,7 @@ namespace ThirdPersonSimulation
             if (operation.Code == SimulationOperationCode.Timeline)
             {
                 var stop = StopTimeline(operation, ReadTimelineRuntimeHandle(operation));
-                if (stop.Pending != null)
+                if (stop.Pending.IsValid)
                     m_TimelinePendingStops.Add(stop.Pending);
                 return OperationStopStatus.Completed;
             }
@@ -548,7 +548,7 @@ namespace ThirdPersonSimulation
             if (operation.Code == SimulationOperationCode.Timeline)
             {
                 var stop = StopTimeline(operation, ReadTimelineRuntimeHandle(operation));
-                if (stop.Pending != null)
+                if (stop.Pending.IsValid)
                     m_TimelinePendingStops.Add(stop.Pending);
                 return;
             }

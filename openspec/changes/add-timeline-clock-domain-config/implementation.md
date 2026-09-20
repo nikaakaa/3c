@@ -504,3 +504,10 @@
 - CharacterTimelinePendingAdvance改为值类型，实际AdvanceResult留在原Host pending注册表；跨域只传正式凭据，不向Simulation泄露BTSMTL结果。原每tick pending包装对象与接口引用分配已删除，终态返回无候选的默认凭据。
 - 候选序号使用进程内原子递增值，跨Host、Reset和逻辑Restore不复用；它仅是本机事务身份，不参与确定性快照或网络进度。Commit／Discard必须命中原注册表的handle与序号才移除候选，旧凭据不能消耗新记录。停止pending仍按原合同，后续继续清理，未新增测试。
 - Unity编译与最终域重载完成（1789922983366），Editor idle，控制台错误为零；git diff --check通过。上一批冗余调用字符串删除同时通过重载后检查；未新增测试，未进行运行分配采样。
+
+## 停止pending值类型化并拒绝旧停止凭据
+- 对应0.7／7.1／7.3：删除IAbilityTimelineStopPending，原停止合同使用具体AbilityTimelineStopPending值类型；Fixed／Float32工作区、状态切换、停止提交／丢弃及Unity adapter统一迁移。CharacterTimelinePendingStop成为保存在原注册表中的值类型，不再为每次停止创建接口包装对象。
+- 推进和停止共用Host的进程内原子候选序号来源；停止接口仍保持独立的类型与入口。Host先核对handle与序号，旧停止请求不能删掉新停止候选，取消播放时提交原候选的正式凭据。停止进度允许沿原合同为空，不额外合成未确认终态。
+- 两套CharacterEvaluation结果的Copy仅接收值类型，删除对struct逐项判null的无效循环；集合副本及运行快照的分配尚未在此批清理。未新增测试；多来源控制的跨动作作用范围仍待用户明确，未据角色级GameplayEffect存储擅自决定业务行为。
+- 用户补充可由Timeline Clip退出回调解除控制。现有正式链正常退出走OnDisable、Timeline停止走OnDestroy；后续沿这两个出口做同一来源清理，不把角色级存储误当成必须跨动作生效。定时hitstop到期仍应使用逻辑tick，不能依赖被冻结的片段位置。
+- Unity编译与最终域重载完成（1789923462392），Editor idle，控制台错误为零；git diff --check通过，未新增测试。

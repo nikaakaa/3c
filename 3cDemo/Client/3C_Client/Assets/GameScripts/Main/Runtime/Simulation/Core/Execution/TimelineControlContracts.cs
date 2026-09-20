@@ -657,27 +657,38 @@ namespace ThirdPersonSimulation
         public AbilityTimelineProgress Progress => Pending.Progress;
     }
 
-    public interface IAbilityTimelineStopPending
+    public readonly struct AbilityTimelineStopPending
     {
-        int RuntimeHandle { get; }
-        AbilityTimelineProgress Progress { get; }
+        public AbilityTimelineStopPending(int runtimeHandle, ulong sequence, AbilityTimelineProgress progress)
+        {
+            if (runtimeHandle <= 0 || sequence == 0)
+                throw new ArgumentException("Timeline stop candidate requires its runtime handle and sequence.");
+            RuntimeHandle = runtimeHandle;
+            Sequence = sequence;
+            Progress = progress;
+        }
+
+        public int RuntimeHandle { get; }
+        public ulong Sequence { get; }
+        public AbilityTimelineProgress Progress { get; }
+        public bool IsValid => RuntimeHandle > 0 && Sequence != 0;
     }
 
     public readonly struct AbilityTimelineStopResult
     {
-        public AbilityTimelineStopResult(AbilityTimelineRuntimeStatus status, IAbilityTimelineStopPending pending, ulong sourceActionInstanceId)
+        public AbilityTimelineStopResult(AbilityTimelineRuntimeStatus status, AbilityTimelineStopPending pending, ulong sourceActionInstanceId)
         {
             Status = status;
             Pending = pending;
             SourceActionInstanceId = sourceActionInstanceId;
-            if (status == AbilityTimelineRuntimeStatus.Running && pending == null)
+            if (status == AbilityTimelineRuntimeStatus.Running && !pending.IsValid)
                 throw new ArgumentException("A running Ability Timeline stop requires a pending commit candidate.");
         }
 
         public AbilityTimelineRuntimeStatus Status { get; }
-        public IAbilityTimelineStopPending Pending { get; }
+        public AbilityTimelineStopPending Pending { get; }
         public ulong SourceActionInstanceId { get; }
-        public AbilityTimelineProgress Progress => Pending == null ? default : Pending.Progress;
+        public AbilityTimelineProgress Progress => Pending.Progress;
     }
     public enum AbilityTimelineSnapshotMode : byte
     {
@@ -889,8 +900,8 @@ namespace ThirdPersonSimulation
         AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle);
         int ApplyRestore(AbilityTimelineRuntimeSnapshot snapshot);
         AbilityTimelineStopResult Stop(int runtimeHandle, ulong logicTick);
-        void CommitStop(IAbilityTimelineStopPending pending);
-        void DiscardStop(IAbilityTimelineStopPending pending);
+        void CommitStop(AbilityTimelineStopPending pending);
+        void DiscardStop(AbilityTimelineStopPending pending);
         bool RequestTreeClipExit(int runtimeHandle, string clipAuthoringId);
     }
 

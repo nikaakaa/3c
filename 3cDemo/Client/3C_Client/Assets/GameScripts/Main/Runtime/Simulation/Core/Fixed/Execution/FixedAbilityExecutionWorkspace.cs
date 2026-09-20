@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation.Fixed
         public FixedAbilityExecutionWorkspace(
             FixedGameplayEffectExecutionScratch gameplayEffects,
             List<AbilityTimelineAdvancePending> timelineAdvances,
-            List<IAbilityTimelineStopPending> timelineStops)
+            List<AbilityTimelineStopPending> timelineStops)
         {
             GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
             TimelineAdvances = timelineAdvances ?? throw new ArgumentNullException(nameof(timelineAdvances));
@@ -31,7 +31,7 @@ namespace ThirdPersonSimulation.Fixed
             new List<SimulationActionWindowProjectionCandidate>();
         public HashSet<string> ActionWindowProjectionKeys { get; } = new HashSet<string>(StringComparer.Ordinal);
         public List<AbilityTimelineAdvancePending> TimelineAdvances { get; }
-        public List<IAbilityTimelineStopPending> TimelineStops { get; }
+        public List<AbilityTimelineStopPending> TimelineStops { get; }
         public Stack<SimulationTimelineBlackboardContext> TimelineBlackboardContexts { get; } =
             new Stack<SimulationTimelineBlackboardContext>();
     }

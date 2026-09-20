@@ -43,7 +43,7 @@ namespace ThirdPersonSimulation.Fixed
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
             var motionContributions = new List<SimulationMotionContribution>();
             var timelineAdvances = new List<AbilityTimelineAdvancePending>();
-            var timelineStops = new List<IAbilityTimelineStopPending>();
+            var timelineStops = new List<AbilityTimelineStopPending>();
             var facts = new List<GameplayFact>();
             var presentation = new List<PresentationCommand>();
             var trace = new List<SimulationTraceRecord>();
@@ -197,13 +197,13 @@ namespace ThirdPersonSimulation.Fixed
 
         static void DiscardTimelineStops(
             IAbilityTimelineRuntime timelineRuntime,
-            IReadOnlyList<IAbilityTimelineStopPending> stops)
+            IReadOnlyList<AbilityTimelineStopPending> stops)
         {
             if (timelineRuntime == null)
                 return;
             for (int i = 0; i < stops.Count; i++)
             {
-                if (stops[i] == null)
+                if (!stops[i].IsValid)
                     throw new InvalidOperationException("Fixed Character evaluation has an empty Timeline stop.");
                 timelineRuntime.DiscardStop(stops[i]);
             }

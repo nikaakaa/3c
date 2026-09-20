@@ -12,7 +12,7 @@ namespace ThirdPersonSimulation
         readonly Float32ValueRuntime m_Values;
         readonly Float32BlackboardRuntime m_Blackboard;
         readonly IReadOnlyList<AbilityTimelineAdvancePending> m_TimelineAdvances;
-        readonly IReadOnlyList<IAbilityTimelineStopPending> m_TimelineStops;
+        readonly IReadOnlyList<AbilityTimelineStopPending> m_TimelineStops;
 
         public Float32AbilityExecutionServiceSet(
             Float32AbilityExecutionFrame frame,
@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation
             Float32ValueRuntime values,
             Float32BlackboardRuntime blackboard,
             IReadOnlyList<AbilityTimelineAdvancePending> timelineAdvances,
-            IReadOnlyList<IAbilityTimelineStopPending> timelineStops)
+            IReadOnlyList<AbilityTimelineStopPending> timelineStops)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             Target = target;
@@ -38,7 +38,7 @@ namespace ThirdPersonSimulation
 
         public Float32AbilityExecutionTarget Target { get; }
         public IReadOnlyList<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
-        public IReadOnlyList<IAbilityTimelineStopPending> TimelineStops => m_TimelineStops;
+        public IReadOnlyList<AbilityTimelineStopPending> TimelineStops => m_TimelineStops;
 
         public void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
         {

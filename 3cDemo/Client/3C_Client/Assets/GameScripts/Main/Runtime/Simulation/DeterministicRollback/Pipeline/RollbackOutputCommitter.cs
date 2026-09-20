@@ -311,6 +311,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                    left.Cycle == right.Cycle &&
                    left.SourceActionInstanceId == right.SourceActionInstanceId &&
                    left.VisualTimeScale.Equals(right.VisualTimeScale) &&
+                   left.TimelineProgress.Equals(right.TimelineProgress) &&
                    left.Header.Activation.Equals(right.Header.Activation);
         }
 

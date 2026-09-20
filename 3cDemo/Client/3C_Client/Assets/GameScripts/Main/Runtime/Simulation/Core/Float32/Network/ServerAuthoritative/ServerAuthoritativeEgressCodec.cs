@@ -11,11 +11,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public const string AuthorityReplication = "server-authoritative.authority-replication";
         public const string RemotePresentation = "server-authoritative.remote-presentation";
         public const string ClientInputSchema = "server-authoritative-client-input/1";
-        public const string AuthorityReplicationSchema = "server-authoritative-authority-replication/7";
-        public const string RemotePresentationSchema = "server-authoritative-remote-presentation/7";
+        public const string AuthorityReplicationSchema = "server-authoritative-authority-replication/8";
+        public const string RemotePresentationSchema = "server-authoritative-remote-presentation/8";
         public const int SchemaVersion = 1;
-        public const int AuthorityReplicationSchemaVersion = 7;
-        public const int RemotePresentationSchemaVersion = 7;
+        public const int AuthorityReplicationSchemaVersion = 8;
+        public const int RemotePresentationSchemaVersion = 8;
     }
 
     public static class ServerAuthoritativeEgressCodec
@@ -24,8 +24,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         const uint ReplicationMagic = 0x52454153;
         const uint RemoteMagic = 0x50454153;
         const int InputVersion = 1;
-        const int ReplicationVersion = 7;
-        const int RemoteVersion = 7;
+        const int ReplicationVersion = 8;
+        const int RemoteVersion = 8;
         const int MaximumCount = 4096;
 
         public static byte[] WriteOwnerInput(OwnerCanonicalInputBatch input)
@@ -245,18 +245,26 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteInt32(command.Cycle);
             writer.WriteUInt64(command.SourceActionInstanceId);
             writer.WriteScalar(command.VisualTimeScale);
+            if (command.Kind == PresentationCommandKind.TimelineProgress)
+                AbilityTimelineProgressCodec.Write(writer, command.TimelineProgress);
         }
 
-        static PresentationCommand ReadPresentationCommand(CanonicalReader reader) => new PresentationCommand(
-            ReadHeader(reader),
-            ReadEnum<PresentationCommandKind>(reader.ReadByte(), "presentation command kind"),
-            reader.ReadString(),
-            reader.ReadScalar(),
-            reader.ReadScalar(),
-            reader.ReadUInt64(),
-            reader.ReadInt32(),
-            reader.ReadUInt64(),
-            reader.ReadScalar());
+        static PresentationCommand ReadPresentationCommand(CanonicalReader reader)
+        {
+            SimulationEventHeader header = ReadHeader(reader);
+            PresentationCommandKind kind = ReadEnum<PresentationCommandKind>(reader.ReadByte(), "presentation command kind");
+            string producerId = reader.ReadString();
+            var sampleTime = reader.ReadScalar();
+            var weight = reader.ReadScalar();
+            ulong generation = reader.ReadUInt64();
+            int cycle = reader.ReadInt32();
+            ulong actionInstanceId = reader.ReadUInt64();
+            var visualTimeScale = reader.ReadScalar();
+            AbilityTimelineProgress progress = kind == PresentationCommandKind.TimelineProgress
+                ? AbilityTimelineProgressCodec.Read(reader) : default;
+            return new PresentationCommand(header, kind, producerId, sampleTime, weight,
+                generation, cycle, actionInstanceId, visualTimeScale, timelineProgress: progress);
+        }
 
         static void WriteHeader(CanonicalWriter writer, SimulationEventHeader header)
         {

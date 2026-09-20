@@ -583,7 +583,8 @@ namespace ThirdPersonSimulation
         Ui = 8,
         ForceProducer = 9,
         DomainEvent = 10,
-        ForceReleaseProducer = 11
+        ForceReleaseProducer = 11,
+        TimelineProgress = 12
     }
 
     public readonly struct PresentationCommand
@@ -599,7 +600,8 @@ namespace ThirdPersonSimulation
             ulong sourceActionInstanceId = 0,
             Float32Scalar visualTimeScale = default,
             string domainPayload = null,
-            PresentationCameraRequest cameraRequest = default)
+            PresentationCameraRequest cameraRequest = default,
+            AbilityTimelineProgress timelineProgress = default)
         {
             Header = header;
             Kind = kind;
@@ -612,6 +614,10 @@ namespace ThirdPersonSimulation
             VisualTimeScale = visualTimeScale;
             DomainPayload = domainPayload ?? string.Empty;
             CameraRequest = cameraRequest;
+            TimelineProgress = timelineProgress;
+            if ((kind == PresentationCommandKind.TimelineProgress) != timelineProgress.IsValid ||
+                timelineProgress.IsValid && (sourceActionInstanceId == 0 || timelineProgress.LogicTick != header.Tick.Value))
+                throw new ArgumentException("Timeline progress requires its exact logic tick and Action identity.", nameof(timelineProgress));
             if (RequiresProducerGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             if (RequiresProducerGeneration(kind) && producerGeneration != header.Activation.Generation)
@@ -643,6 +649,7 @@ namespace ThirdPersonSimulation
         public string DomainPayload { get; }
         public Float32Scalar VisualTimeScale { get; }
         public PresentationCameraRequest CameraRequest { get; }
+        public AbilityTimelineProgress TimelineProgress { get; }
 
         static bool IsPlaybackCommand(PresentationCommandKind kind)
         {

@@ -274,3 +274,10 @@
 - 该合同本身不新建计时器、Registry或图runtime，也没有把Presentation轨道改成Logic求值。
 - 尚未完成：经原PresentationCommand输出提交/替换/撤销通道发布这些候选中的最终事实，让既有Action采样事务统一消费；目前TimelineToActionCommandBridge的旧渲染帧样本仍在，未声称已删除或共享时钟完成。不能直接订阅Host.CommittedEvaluation发布，因为rollback中间推进也会经过该回调。
 - Unity编译与域重载完成（1789884594787），错误日志为零；保留已有其他文件改动，未新增测试。
+
+## 精确进度进入既有表现命令传输合同
+- Fixed/Float32 PresentationCommand及Unity CharacterPresentationCommand增加TimelineProgress正式种类和AbilityTimelineProgress typed字段，要求Action身份及header逻辑tick与进度一致。Unity转换直接保留该值，不将原始秒转float或写字符串payload。
+- 回放输出差异比较逐字段比较进度，包含内容revision、generation、循环和完成状态，避免时间变化被误判为相同输出。
+- 统一AbilityTimelineProgressCodec按int64保存Q32.32原始时间；ServerAuthoritative egress对该命令读写typed进度，相关schema由7升级8，不兼容读取旧schema。
+- Unity全资源刷新、编译及域重载完成（1789885021027），错误日志为零。新增脚本需全资源刷新才会导入，已处理；未新增测试。
+- 这批只打通命令表示/转换/比较/编码，不宣称生产端和消费端已接通。原TimelineToActionCommandBridge、复制策略和共享采样owner尚需后续一起迁移，当前不新增提前发布进度的Host回调。

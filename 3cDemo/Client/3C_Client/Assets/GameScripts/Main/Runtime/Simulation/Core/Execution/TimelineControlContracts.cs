@@ -537,7 +537,7 @@ namespace ThirdPersonSimulation
         int RuntimeHandle { get; }
     }
 
-    public readonly struct AbilityTimelineProgress
+    public readonly struct AbilityTimelineProgress : IEquatable<AbilityTimelineProgress>
     {
         public AbilityTimelineProgress(
             string timelineId,
@@ -585,6 +585,17 @@ namespace ThirdPersonSimulation
         public bool Loop { get; }
         public bool Completes { get; }
         public bool IsValid => Generation != 0;
+
+        public bool Equals(AbilityTimelineProgress other) =>
+            string.Equals(TimelineId, other.TimelineId, StringComparison.Ordinal) &&
+            string.Equals(ContentRevision, other.ContentRevision, StringComparison.Ordinal) &&
+            Generation == other.Generation && LogicTick == other.LogicTick &&
+            Duration == other.Duration && PreviousTime == other.PreviousTime && Time == other.Time &&
+            PreviousCycle == other.PreviousCycle && Cycle == other.Cycle &&
+            Loop == other.Loop && Completes == other.Completes;
+
+        public override bool Equals(object obj) => obj is AbilityTimelineProgress other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(TimelineId, ContentRevision, Generation, LogicTick, Time.Raw, Cycle);
     }
 
     public interface IAbilityTimelineAdvancePending : IAbilityTimelinePending

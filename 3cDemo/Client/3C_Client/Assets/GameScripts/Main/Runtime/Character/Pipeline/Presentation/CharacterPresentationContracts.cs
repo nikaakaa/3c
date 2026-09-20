@@ -452,7 +452,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Ui = 8,
         ForceProducer = 9,
         DomainEvent = 10,
-        ForceReleaseProducer = 11
+        ForceReleaseProducer = 11,
+        TimelineProgress = 12
     }
 
     public readonly struct CharacterPresentationCommand
@@ -468,7 +469,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong sourceActionInstanceId = 0,
             float visualTimeScale = 0f,
             string domainPayload = null,
-            PresentationCameraRequest cameraRequest = default)
+            PresentationCameraRequest cameraRequest = default,
+            AbilityTimelineProgress timelineProgress = default)
         {
             if (float.IsNaN(sampleTime) || float.IsInfinity(sampleTime) ||
                 float.IsNaN(weight) || float.IsInfinity(weight))
@@ -496,6 +498,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             VisualTimeScale = visualTimeScale;
             DomainPayload = domainPayload ?? string.Empty;
             CameraRequest = cameraRequest;
+            TimelineProgress = timelineProgress;
+            if ((kind == CharacterPresentationCommandKind.TimelineProgress) != timelineProgress.IsValid ||
+                timelineProgress.IsValid && (sourceActionInstanceId == 0 || timelineProgress.LogicTick != header.Tick.Value))
+                throw new ArgumentException("Timeline progress requires its exact logic tick and Action identity.", nameof(timelineProgress));
             if (kind == CharacterPresentationCommandKind.DomainEvent &&
                 (sourceActionInstanceId == 0 || string.IsNullOrWhiteSpace(DomainPayload)))
                 throw new ArgumentException("Domain event command requires an Action instance and payload.", nameof(domainPayload));
@@ -518,6 +524,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float VisualTimeScale { get; }
         public string DomainPayload { get; }
         public PresentationCameraRequest CameraRequest { get; }
+        public AbilityTimelineProgress TimelineProgress { get; }
 
         public static CharacterPresentationCommand FromFloat32(PresentationCommand command)
         {
@@ -538,7 +545,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.SourceActionInstanceId,
                 command.VisualTimeScale.ToSingle(),
                 command.DomainPayload,
-                command.CameraRequest);
+                command.CameraRequest,
+                command.TimelineProgress);
         }
 
         static bool IsPlaybackCommand(CharacterPresentationCommandKind kind)

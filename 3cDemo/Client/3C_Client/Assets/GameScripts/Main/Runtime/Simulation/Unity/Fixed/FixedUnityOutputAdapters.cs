@@ -519,7 +519,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 command.SourceActionInstanceId,
                 command.VisualTimeScale.ToSingle(),
                 command.DomainPayload,
-                command.CameraRequest);
+                command.CameraRequest,
+                command.TimelineProgress);
         }
 
         readonly struct ActivePresentationRecord

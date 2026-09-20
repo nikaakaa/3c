@@ -129,12 +129,25 @@ namespace ThirdPersonSimulation
 
     public abstract class SimulationPipelineStep
     {
-        readonly ReadOnlyCollection<ActorId> m_Actors;
+        readonly IReadOnlyList<ActorId> m_Actors;
 
         protected SimulationPipelineStep(
             SimulationTick tick,
             SimulationPipelineStepProvenance provenance,
             IEnumerable<ActorId> actors)
+            : this(
+                tick,
+                provenance,
+                actors == null
+                    ? new List<ActorId>()
+                    : new List<ActorId>(actors))
+        {
+        }
+
+        internal SimulationPipelineStep(
+            SimulationTick tick,
+            SimulationPipelineStepProvenance provenance,
+            List<ActorId> actors)
         {
             if (!tick.IsValid || string.IsNullOrEmpty(provenance.Source.ClockId) || provenance.Source.SourceTick == 0 ||
                 (byte)provenance.ExecutionKind < (byte)SimulationPipelineStepExecutionKind.Forward ||
@@ -142,7 +155,7 @@ namespace ThirdPersonSimulation
             {
                 throw new ArgumentException("Pipeline Step identity is incomplete.");
             }
-            var values = actors == null ? new List<ActorId>() : new List<ActorId>(actors);
+            List<ActorId> values = actors ?? new List<ActorId>();
             values.Sort();
             if (values.Count == 0)
                 throw new ArgumentException("Pipeline Step must contain at least one Actor.", nameof(actors));
@@ -153,7 +166,7 @@ namespace ThirdPersonSimulation
             }
             Tick = tick;
             Provenance = provenance;
-            m_Actors = values.AsReadOnly();
+            m_Actors = values;
         }
 
         public SimulationTick Tick { get; }

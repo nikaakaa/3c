@@ -87,6 +87,7 @@
 - [x] 2.49 共享 Pipeline 每步事务上下文按 Forward 至 Authoritative 正式执行类型值域校验，删除 Coordinator 每执行 step 时的 Enum.IsDefined 装箱
 - [x] 2.50 Timeline Runtime Snapshot 的 Once／Loop 模式及 Prepared 至 Disposed 状态按正式连续值域校验，删除 Host 捕获与两数值域恢复共用构造中的两次 Enum.IsDefined 装箱
 - [x] 2.51 角色控制 Ability 停止请求直接匹配 Graceful／Force 两种正式模式，删除两数值域动作停止入口共用的 Enum.IsDefined 装箱
+- [x] 2.52 两数值域 SimulationStep 的私有 actor 收集列表由基类直接接管，删除每个 step 的第二份 List 复制和 ReadOnlyCollection 包装，保留排序、去重及 IReadOnlyList 输出
 
 ## 3. Timeline和事件图
 

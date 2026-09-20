@@ -19,6 +19,10 @@
 
 以下章节保留原时间点的诊断过程，其中旧状态不覆盖上述最新核对。
 
+### 22:22 左右的现有资产读取
+
+Unity MCP 已恢复连接，目标实例为 e852139597e42532，GameplayLabFixed 在 Edit 模式且无编译，Console 返回零条错误。通过正式 FixedGameplayAbilityDataAsset.Load，传入 Corin Definition.BuildGameplayAbilityProviderBinding，四份现有 Fixed 技能数据均读取成功：Attack SourceMap=2063，DodgeBack=195，DodgeForward=195，RushAttack=1057。这覆盖既有二进制完整性和 Provider 合同检查，不覆盖 SourceRevision 与当前作者资产一致性、运行调用布局查询、动作推进或位移。没有重新发布资产、刷新、启动 Play 或长回放。
+
 ## 已完成的修复与资源生成
 
 - `72cb32c0a`：Fixed 回放准备接口明确区分录制角色与接收角色。编辑器入口绑定 `fixed-player`；检查点入口使用 Body 的角色；性能采集明确使用录制角色。没有修改原始录制或另造回放链路。

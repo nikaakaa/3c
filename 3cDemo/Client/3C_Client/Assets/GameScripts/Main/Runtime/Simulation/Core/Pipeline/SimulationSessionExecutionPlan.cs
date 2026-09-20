@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 
 namespace ThirdPersonSimulation
 {
@@ -296,8 +295,8 @@ namespace ThirdPersonSimulation
 
     public sealed class SimulationSessionExecutionPlan<TStep> where TStep : SimulationPipelineStep
     {
-        readonly ReadOnlyCollection<TStep> m_Steps;
-        readonly ReadOnlyCollection<SimulationPipelineStepSourceMapping> m_SourceMappings;
+        readonly IReadOnlyList<TStep> m_Steps;
+        readonly IReadOnlyList<SimulationPipelineStepSourceMapping> m_SourceMappings;
 
         public SimulationSessionExecutionPlan(
             SimulationSessionExecutionPlanStatus status,
@@ -358,7 +357,7 @@ namespace ThirdPersonSimulation
             RosterHash = roster.RosterHash;
             Restore = restore;
             Requirements = requirements;
-            m_Steps = values.AsReadOnly();
+            m_Steps = values;
         }
 
         public SimulationSessionExecutionPlanStatus Status { get; }
@@ -371,7 +370,7 @@ namespace ThirdPersonSimulation
         public SimulationSessionPlanRequirement Requirements { get; }
         public IReadOnlyList<TStep> Steps => m_Steps;
 
-        static ReadOnlyCollection<SimulationPipelineStepSourceMapping> FreezeMappings(
+        static IReadOnlyList<SimulationPipelineStepSourceMapping> FreezeMappings(
             IEnumerable<SimulationPipelineStepSourceMapping> source,
             string outerClockId)
         {
@@ -392,7 +391,7 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("ExecutionPlan contains an invalid or duplicate source clock mapping.", nameof(source));
                 }
             }
-            return values.AsReadOnly();
+            return values;
         }
 
         static void RequireSourceMapping(TStep step, IReadOnlyList<SimulationPipelineStepSourceMapping> mappings)

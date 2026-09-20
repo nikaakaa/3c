@@ -1333,3 +1333,12 @@
 - 两个字段现以 IReadOnlyList 保存并直接引用各自私有 List。调用者仍只能通过 Inputs／Ingress 的 IReadOnlyList 接口读取，不获得底层 List 引用；步骤构造完成后的内容和顺序保持不变。
 - 删除每个 Fixed／Float32 SimulationStep 的两个 ReadOnlyCollection 包装对象；输入和 ingress 列表本体、独立复制及元素存储仍保留。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做步骤输入运行对比或 Player 分配采样。
+
+## 2026-09-21 ExecutionPlan 列表只读暴露
+
+对应 tasks.md 的 2.54。
+
+- SimulationSessionExecutionPlan 构造时已从调用输入复制出私有 steps List，并由 FreezeMappings 复制、排序和校验私有 source mappings List；原完成后分别通过 AsReadOnly 创建包装对象。
+- 两个字段现以 IReadOnlyList 保存并直接引用各自私有 List。Steps／SourceMappings 的公开类型和只读调用方式不变，调用者不持有构造器内部新列表的可变引用。
+- 删除每个 Fixed／Float32 外层 tick 计划的两个 ReadOnlyCollection 包装对象；steps 和 mappings 列表本体、独立复制、映射排序及 roster／source 校验仍保留。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 ExecutionPlan 调度运行对比或 Player 分配采样。

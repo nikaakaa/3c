@@ -1468,3 +1468,12 @@
 - 通用 step 在输入排序与重复 Actor 校验后，对 null 或 Count 为零的 IReadOnlyCollection 直接保存 Array.Empty 并结束 ingress 分支。非空枚举仍复制到独立 List，按 Actor／SourceTick／Sequence／FactIdentity 排序并执行目标 Actor 和重复身份校验。
 - 删除当前本地单步调度每个 step 的一个空 List；输入 List、Actor List、step、execution plan 等对象仍分配，网络或未来非空 ingress 路径不共享可变事实。
 - ThirdPersonSimulation.Core、Fixed、Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做调度运行对比或 Player 分配采样。
+
+## 2026-09-21 控制源能力位掩码判断
+
+对应 tasks.md 的 2.68。
+
+- 全运行源码检索只剩两处 Enum.HasFlag：Float32LocalInputSourcePort 构造时核对 TransactionalState 声明与状态接口，以及 LocalSimulationSessionSourceDefinition 组装时判断 CommittedObservation 能力。
+- 两处统一改为 capabilities 与单一能力位按位与后比较零。第一处仍比较“声明能力”和“实现接口”的布尔结果，第二处仍只在声明已提交观测时要求 roster runtime；未知能力位检查不变。
+- 清除运行代码最后两处 HasFlag 装箱语义。两处都在端口初始化／会话组装，不是每 tick 热路径，不将它们记录为稳态帧收益。
+- ThirdPersonSimulation.Float32 portable 编译零警告零错误，构建服务关闭成功。客户端 Runtime 构建仍被并行 CharacterTimelineHost 缺失 AbilityTimelineAdvancePending／AbilityTimelineStopPending 的六处错误阻断，错误不在本项文件。未新增测试、未操作共享 Unity、未做运行或 Player 分配采样。

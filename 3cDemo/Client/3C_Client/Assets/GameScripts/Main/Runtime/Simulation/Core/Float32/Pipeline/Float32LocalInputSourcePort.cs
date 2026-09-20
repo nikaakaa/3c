@@ -171,8 +171,8 @@ namespace ThirdPersonSimulation
                 if (i > 0 && values[i - 1].ActorId.Equals(binding.ActorId))
                     throw new ArgumentException("Local input Source contains duplicate ActorId.", nameof(bindings));
                 ICharacterControlSourceRuntime source = binding.ControlSource;
-                if (source.Capabilities.HasFlag(CharacterControlSourceCapability.TransactionalState) !=
-                    source is ICharacterControlSourceStateRuntime)
+                if (((source.Capabilities & CharacterControlSourceCapability.TransactionalState) != 0) !=
+                    (source is ICharacterControlSourceStateRuntime))
                 {
                     throw new ArgumentException($"Control Source '{source.SourceIdentity}' state capability and runtime contract disagree.", nameof(bindings));
                 }

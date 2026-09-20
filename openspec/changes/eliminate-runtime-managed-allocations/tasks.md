@@ -108,6 +108,8 @@
 
 - [x] 2.67 通用 TargetSimulationPipelineStep 对 null 或已知空 typed ingress 直接复用 Array.Empty，删除本地 Fixed／Float32 单步调度每 step 的空 List；非空复制、排序和 Actor 归属校验保留
 
+- [x] 2.68 Float32 控制源事务能力一致性与本地会话已提交观测能力改用位掩码判断，清除运行代码最后两处 Enum.HasFlag 装箱；两处均为初始化／组装路径，不计为每帧收益
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

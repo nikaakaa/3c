@@ -119,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     CharacterControlSourceCapability.TransactionalState;
                 if ((controlSource.Capabilities & ~knownCapabilities) != 0)
                     throw new InvalidOperationException($"Local Actor '{registration.ActorId}' Control Source declares unknown capabilities '{controlSource.Capabilities & ~knownCapabilities}'.");
-                if (controlSource.Capabilities.HasFlag(CharacterControlSourceCapability.CommittedObservation))
+                if ((controlSource.Capabilities & CharacterControlSourceCapability.CommittedObservation) != 0)
                 {
                     if (controlSource is not ICharacterControlSourceRosterRuntime rosterRuntime)
                         throw new InvalidOperationException($"Local Actor '{registration.ActorId}' Control Source requires committed observation without a roster contract.");

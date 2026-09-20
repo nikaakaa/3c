@@ -144,12 +144,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     int received = m_Socket.ReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref remote);
                     if (received <= 0 || received > m_MaximumDatagramBytes)
                         continue;
-                    var bytes = new byte[received];
-                    Buffer.BlockCopy(buffer, 0, bytes, 0, received);
                     RollbackDatagramPacket packet;
                     try
                     {
-                        packet = RollbackDatagramCodec.Read(bytes, m_MaximumDatagramBytes);
+                        packet = RollbackDatagramCodec.Read(new ArraySegment<byte>(buffer, 0, received), m_MaximumDatagramBytes);
                     }
                     catch (Exception exception) when (exception is InvalidDataException || exception is ArgumentException)
                     {

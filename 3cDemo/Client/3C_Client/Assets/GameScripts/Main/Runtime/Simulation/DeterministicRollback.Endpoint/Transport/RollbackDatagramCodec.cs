@@ -119,9 +119,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return result;
         }
 
-        public static RollbackDatagramPacket Read(byte[] bytes, int maximumDatagramBytes)
+        public static RollbackDatagramPacket Read(ArraySegment<byte> bytes, int maximumDatagramBytes)
         {
-            if (bytes == null || bytes.Length == 0 || bytes.Length > maximumDatagramBytes)
+            if (bytes.Count == 0 || bytes.Count > maximumDatagramBytes)
                 throw new InvalidDataException("Rollback datagram size is invalid.");
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)

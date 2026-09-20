@@ -284,3 +284,13 @@
 - 唯一写线程编码消息到缓冲后追加单字节 LF，并在同步 Write 完成后复用；保留编码器默认替换行为、无 BOM、消息先后、CompleteWrite 时机以及原错误发布路径。读取结果仍是独立字符串，控制器协议和收发队列消费者均不变，没有新增控制面。
 - 取舍：连接常驻一个准备缓冲，避免每条发送消息的拼接和数组；线程原本就在等待异步操作完成，现直接承担同步 IO。连接建立阶段的 ConnectAsync、入站字符串、出站消息构造、队列扩容和故障文本仍会分配。控制消息不是每帧采样数据，不能把此改动描述为每帧消除固定分配量。
 - 当前 Unity 引用下独立编译完整 ThirdPersonPerformance.Runtime，退出码 0、无诊断，产物位于系统临时目录；diff 空白检查通过。编辑前本机未发现 csc／bee 编译进程，未新增测试、未刷新或控制 Editor，未进行控制器联调或 Player 采样。
+
+## 2026-09-20 Datagram 接收缓冲同步借用解码
+
+对应 tasks.md 的 5.16，与代码同步提交。
+
+- RollbackDatagramEndpoint.ReceiveLoop 已有单线程复用的 MTU＋1 接收缓冲，但每次有效长度接收后仍创建 received 大小的数组并 BlockCopy，随后解码。现直接将 buffer 的 [0, received) ArraySegment 传给 RollbackDatagramCodec.Read，删除整包中转数组和复制。
+- 全仓调用搜索仅有该正式接收入口；codec 的 Read 参数统一为 ArraySegment，不新增兼容重载。使用既有 CanonicalReader 片段构造，尺寸检查改查 Count，空片段仍报原尺寸错误。Require 与 RequireComplete 按片段结束位置检查，不能读到上一次较长数据报遗留的缓冲尾部。
+- ReadString 产生独立字符串；packet 构造通过 payload.ToArray 保存自身存储。同步 Read 返回后才进入接收队列和下一次 ReceiveFrom，消息不保存 reader 或原接收缓冲引用，重组与重传仍使用原所有权。
+- MTU 拒绝、截断包异常处理、接收队列超限丢弃及统计时机不变。每次解码少一份整包数组，但 reader、packet、payload、身份字符串、端点和队列段分配仍未完成，不能宣称网络收包 0 GC。
+- Endpoint portable 连带 Core／Fixed／Rollback 编译零警告零错误，按规定禁用构建服务器与共享编译，结束后 shutdown 成功；diff 空白检查通过。编辑前本机未发现 csc／bee 编译进程，未新增测试、未控制或刷新共享 Unity，未做网络联调或 Player 采样。

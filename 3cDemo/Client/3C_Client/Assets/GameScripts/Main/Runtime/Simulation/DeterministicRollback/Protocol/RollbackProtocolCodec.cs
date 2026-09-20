@@ -15,6 +15,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (envelope == null)
                 throw new ArgumentNullException(nameof(envelope));
             using var writer = new CanonicalWriter();
+            WriteEnvelope(writer, envelope);
+            return writer.ToArray();
+        }
+
+        static void WriteEnvelope(CanonicalWriter writer, RollbackProtocolEnvelope envelope)
+        {
             writer.WriteUInt32(Magic);
             writer.WriteInt32(Version);
             writer.WriteString(envelope.SessionId);
@@ -22,7 +28,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             writer.WriteUInt64(envelope.Sequence);
             writer.WriteByte((byte)envelope.Payload.Kind);
             WritePayload(writer, envelope.Payload);
-            return writer.ToArray();
         }
 
         public static RollbackProtocolEnvelope Read(byte[] bytes)
@@ -37,7 +42,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             IRollbackProtocolPayload payload = ReadPayload(reader, kind);
             reader.RequireComplete();
             var envelope = new RollbackProtocolEnvelope(sessionId, senderPeerId, sequence, payload);
-            if (!BytesEqual(bytes, Write(envelope)))
+            using var writer = new CanonicalWriter();
+            WriteEnvelope(writer, envelope);
+            if (!writer.ContentEquals(bytes))
                 throw new InvalidDataException("Rollback protocol envelope is not canonical.");
             return envelope;
         }
@@ -47,11 +54,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
             using var writer = new CanonicalWriter();
+            WriteCanonicalPayload(writer, payload);
+            return writer.ToArray();
+        }
+
+        static void WriteCanonicalPayload(CanonicalWriter writer, IRollbackProtocolPayload payload)
+        {
             writer.WriteUInt32(PayloadMagic);
             writer.WriteInt32(Version);
             writer.WriteByte((byte)payload.Kind);
             WritePayload(writer, payload);
-            return writer.ToArray();
         }
 
         public static IRollbackProtocolPayload ReadCanonicalPayload(byte[] bytes)
@@ -61,7 +73,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new InvalidDataException("Rollback canonical payload header is invalid.");
             IRollbackProtocolPayload payload = ReadPayload(reader, ReadKind(reader.ReadByte()));
             reader.RequireComplete();
-            if (!BytesEqual(bytes, WriteCanonicalPayload(payload)))
+            using var writer = new CanonicalWriter();
+            WriteCanonicalPayload(writer, payload);
+            if (!writer.ContentEquals(bytes))
                 throw new InvalidDataException("Rollback protocol payload is not canonical.");
             return payload;
         }
@@ -311,18 +325,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (value < 0 || value > 1000000)
                 throw new InvalidDataException($"Rollback protocol count '{value}' is invalid.");
             return value;
-        }
-
-        static bool BytesEqual(byte[] left, byte[] right)
-        {
-            if (left.Length != right.Length)
-                return false;
-            for (int i = 0; i < left.Length; i++)
-            {
-                if (left[i] != right[i])
-                    return false;
-            }
-            return true;
         }
     }
 }

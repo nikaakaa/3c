@@ -160,3 +160,13 @@
 - 每次成功到达比较阶段不再生成该份完整字节数组；writer、流容量、解码对象、哈希和公开写入的独立结果数组仍存在。此次未修改回滚历史和异步发送的存储归属。
 - 回滚 portable 工程连带 Core／Fixed 编译零警告零错误，构建结束 shutdown；沿当前 Unity 引用独立编译 Core 后，再用该 Core 编译 DeterministicRollback 也通过。diff 空白检查通过，未新增测试或做 Player 采样。
 - 编辑前显式读取 3C 实例 e852139597e42532 的状态，确认为 idle、非 Play、非编译、无待重载；未主动刷新或控制 Editor。
+
+## 2026-09-20 回滚封套校验与输入束哈希副本清理
+
+对应 tasks.md 的 5.8，与代码同步提交。
+
+- RollbackProtocolCodec.Read 和 ReadCanonicalPayload 原在完整重新编码后 ToArray，再调用本类 BytesEqual。现公开写入与校验共用 WriteEnvelope／WriteCanonicalPayload(writer, payload)，校验调用既有 ContentEquals，不再生成仅用于比较的完整副本，并删除旧 BytesEqual。
+- RollbackInputCodec.ComputeBundleHash 原把 WriteBundle 返回的新数组交给 SimulationCanonicalPayloadHash.Compute；现同一 WriteBundle(writer, bundle) 写完后调用 writer.ComputeHash。已核对两哈希实现均是原始完整 payload 的 SHA-256 和小写十六进制 StableHash，无额外前缀、字段或版本差异。
+- 公共写入 API、重新编码校验、RequireComplete、协议版本、字段顺序、空参数及非 canonical 报错均保留；不改变正式结果的独立寿命或可靠事件存储。
+- 此处减少三类入口各自生成的一份完整临时数组，不代表 writer、哈希对象或嵌套 WriteInput／WriteBundle 的中间数组已消除；嵌套数组、解码对象和发送容量仍待治理。
+- 回滚 portable 工程及其 Core／Fixed 依赖编译零警告零错误，按规定禁用构建服务器与共享编译并结束 shutdown，diff 空白检查通过。未新增测试、未主动刷新 Unity、未做 Player 分配或性能采样。

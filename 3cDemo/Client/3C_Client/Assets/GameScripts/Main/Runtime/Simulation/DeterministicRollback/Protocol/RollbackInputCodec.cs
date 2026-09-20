@@ -81,7 +81,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public static StableHash ComputeBundleHash(RollbackCanonicalInputBundle bundle)
         {
-            return SimulationCanonicalPayloadHash.Compute(WriteBundle(bundle));
+            if (bundle == null)
+                throw new ArgumentNullException(nameof(bundle));
+            using var writer = new CanonicalWriter();
+            WriteBundle(writer, bundle);
+            return writer.ComputeHash();
         }
 
         public static StableHash ComputeGameplayInputHash(

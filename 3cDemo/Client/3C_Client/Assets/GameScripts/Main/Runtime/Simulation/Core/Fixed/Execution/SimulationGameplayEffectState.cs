@@ -413,6 +413,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class SimulationGameplayEffectState
     {
+        static readonly Comparison<string> s_CompareOwnedTags = string.CompareOrdinal;
         const uint TagsMagic = 0x53474154;
         const uint AttributesMagic = 0x52545441;
         const uint ActiveMagic = 0x56544341;
@@ -481,8 +482,8 @@ namespace ThirdPersonSimulation.Fixed
 
         public IReadOnlyList<string> CopyOwnedTags()
         {
-            SortedSet<string> tags = m_Scratch?.OwnedTagSet ??
-                new SortedSet<string>(StringComparer.Ordinal);
+            HashSet<string> tags = m_Scratch?.OwnedTagSet ??
+                new HashSet<string>(StringComparer.Ordinal);
             List<string> values = m_Scratch?.OwnedTags ?? new List<string>();
             tags.Clear();
             values.Clear();
@@ -493,15 +494,17 @@ namespace ThirdPersonSimulation.Fixed
             }
             foreach (string tag in tags)
                 values.Add(tag);
+            values.Sort(s_CompareOwnedTags);
             return values;
         }
 
         public bool HasTag(string tagId)
         {
             string query = FixedGameplayEffectRuntimeCatalog.NormalizeTag(tagId);
-            foreach (string owned in CopyOwnedTags())
+            IReadOnlyList<string> owned = CopyOwnedTags();
+            for (int i = 0; i < owned.Count; i++)
             {
-                if (m_Catalog.IsTagOrParent(owned, query))
+                if (m_Catalog.IsTagOrParent(owned[i], query))
                     return true;
             }
             return false;

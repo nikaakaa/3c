@@ -119,3 +119,14 @@
 - 业务取舍：查询直接读取调用期间不变的列表，省去每次独立副本；目录合法性在准备入口统一保证，未加入运行期修补或兼容分支。该改动不改变实际 OwnedTags 的收集和状态快照寿命。
 - Fixed／Float32 portable 构建均零警告、零错误，沿用禁用构建服务器及共享编译参数并在每次结束后 shutdown；diff 空白检查通过。无新增测试、无 Unity 主动刷新、无 Player 分配采样。
 - 剩余：SimulationGameplayEffectState.CopyOwnedTags 仍会整理标签集合；效果 Spec、快照、标签复制与事务分配仍未完成，不能把查询内部入口清理视为整个效果运行无分配。
+
+## 2026-09-20 GameplayEffect 标签整理树节点清理
+
+对应 tasks.md 的 2.8，与代码同步提交。
+
+- Fixed／Float32 的 GameplayEffectExecutionScratch.OwnedTagSet 原为 SortedSet。每次 CopyOwnedTags 先 Clear 再逐个 Add，即使集合实例复用，树节点仍需重新创建。
+- 改为使用 Ordinal HashSet 去重，再填入既有 OwnedTags 列表并按 Ordinal 排序；排序 Comparison 在类型初始化时保存，不在每次调用转换委托。返回内容、唯一性和顺序保持不变，没有改变借用列表或效果快照的寿命。
+- 两数值域的 SimulationGameplayEffectState.HasTag 及 GameplayEffectTarget 对已提交状态的 HasTag 改为 IReadOnlyList 下标读取，取消接口 foreach；保留查到即返回的顺序。
+- 取舍：散列表保留桶／条目数组，输出列表需一次排序；相较清空再构造排序树，取消每次插入的节点对象。具体 CPU 和常驻容量变化未经采样，不宣称更快或整链 0 GC。
+- 已知未完成：scratch 当前仍由 CharacterEvaluationRuntime 每步创建；HashSet／List 容量增长、m_TagSources 的 SortedDictionary 遍历，以及无 scratch 的既有调用仍存在分配来源。本步没有为避开这些问题新增另一存储入口。
+- Fixed 与 Float32 portable 编译均零警告、零错误，diff 空白检查通过；构建参数与结束 shutdown 同前。未新增测试、未主动刷新 Unity、未做 Player 采样。

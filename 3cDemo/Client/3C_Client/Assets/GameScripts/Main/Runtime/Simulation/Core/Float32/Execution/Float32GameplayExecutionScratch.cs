@@ -33,7 +33,7 @@ namespace ThirdPersonSimulation
         public HashSet<ulong> ActiveInstances { get; } = new HashSet<ulong>();
         public List<GameplayEffectActiveIdentity> ActiveIdentities { get; } =
             new List<GameplayEffectActiveIdentity>();
-        public SortedSet<string> OwnedTagSet { get; } = new SortedSet<string>(StringComparer.Ordinal);
+        public HashSet<string> OwnedTagSet { get; } = new HashSet<string>(StringComparer.Ordinal);
         public List<string> OwnedTags { get; } = new List<string>();
         public List<string> CanonicalTags { get; } = new List<string>();
 

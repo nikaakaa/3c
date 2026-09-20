@@ -92,9 +92,10 @@ namespace ThirdPersonSimulation
             if (m_State != null)
                 return m_State.HasTag(tagId);
             string query = Float32GameplayEffectRuntimeCatalog.NormalizeTag(tagId);
-            foreach (string owned in m_CommittedState.CopyOwnedTags())
+            IReadOnlyList<string> owned = m_CommittedState.CopyOwnedTags();
+            for (int i = 0; i < owned.Count; i++)
             {
-                if (m_Catalog.IsTagOrParent(owned, query))
+                if (m_Catalog.IsTagOrParent(owned[i], query))
                     return true;
             }
             return false;

@@ -271,9 +271,10 @@ namespace BTSMTL.Timeline.Runtime
 
     public readonly struct TimelineRuntimePresentationSample
     {
-        public TimelineRuntimePresentationSample(ulong generation, ulong logicTick, string contentRevision, FixedScalar time, int cycle, TimelinePresentationSampleReason reason)
+        public TimelineRuntimePresentationSample(ulong generation, ulong logicTick, string contentRevision, FixedScalar time, int cycle, TimelinePresentationSampleReason reason, bool retainForCorrection)
         {
-            if (generation == 0 || logicTick == 0 || time < FixedScalar.Zero || cycle < 0)
+            if (generation == 0 || logicTick == 0 || time < FixedScalar.Zero || cycle < 0 ||
+                retainForCorrection && reason != TimelinePresentationSampleReason.Withdrawn)
                 throw new ArgumentException("Timeline presentation sample is invalid.");
             Generation = generation;
             LogicTick = logicTick;
@@ -281,6 +282,7 @@ namespace BTSMTL.Timeline.Runtime
             Time = time;
             Cycle = cycle;
             Reason = reason;
+            RetainForCorrection = retainForCorrection;
         }
 
         public ulong Generation { get; }
@@ -289,6 +291,7 @@ namespace BTSMTL.Timeline.Runtime
         public int Cycle { get; }
         public string ContentRevision { get; }
         public TimelinePresentationSampleReason Reason { get; }
+        public bool RetainForCorrection { get; }
         public bool AllowTraversal => Reason == TimelinePresentationSampleReason.Advance || Reason == TimelinePresentationSampleReason.Completed;
         public bool EndsPlayback => Reason == TimelinePresentationSampleReason.Completed || Reason == TimelinePresentationSampleReason.Stopped || Reason == TimelinePresentationSampleReason.Withdrawn;
         public bool IsValid => Generation != 0;
@@ -451,6 +454,18 @@ namespace BTSMTL.Timeline.Runtime
                 state.PendingFrame = default;
                 state.HasPendingFrame = false;
             }
+        }
+
+        public void SuspendPresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation)
+        {
+            if (!m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state) || state.Generation != generation)
+                return;
+            state.Clear();
+            state.PendingFrame = default;
+            state.CachedFrame = default;
+            state.HasPendingFrame = false;
+            state.HasCachedFrame = false;
+            state.Finished = false;
         }
 
         public void ReleasePresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation)

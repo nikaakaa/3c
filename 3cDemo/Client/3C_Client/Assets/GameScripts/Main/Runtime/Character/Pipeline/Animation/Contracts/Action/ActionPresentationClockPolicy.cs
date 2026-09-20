@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
     internal interface IActionPresentationClockCoordinator : IDisposable
     {
+        void ConfirmTimelineHistory(ulong confirmedTick);
         void AcceptTimelineProgress(in CharacterPresentationCommand command);
         void RetireTimelineProgress(in CharacterPresentationCommand command);
         void ReleaseTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId, ulong generation);
@@ -110,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly TimelineProgressEntry[] m_TimelineProgress = new TimelineProgressEntry[64];
         readonly TimelineProgressEntry[] m_TimelineFrameBaseline = new TimelineProgressEntry[64];
         bool m_SamplingFrameActive;
+        ulong m_ConfirmedTimelineTick;
 
         public void BeginSamplingFrame()
         {
@@ -135,6 +137,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             Array.Copy(m_TimelineFrameBaseline, m_TimelineProgress, m_TimelineProgress.Length);
             Array.Clear(m_TimelineFrameBaseline, 0, m_TimelineFrameBaseline.Length);
             m_SamplingFrameActive = false;
+        }
+
+        public void ConfirmTimelineHistory(ulong confirmedTick)
+        {
+            RequireAlive();
+            if (m_SamplingFrameActive || m_ProjectorActive || confirmedTick < m_ConfirmedTimelineTick)
+                throw new InvalidOperationException("Timeline confirmation must advance outside a presentation frame.");
+            if (confirmedTick == m_ConfirmedTimelineTick)
+                return;
+            m_ConfirmedTimelineTick = confirmedTick;
+            for (int index = 0; index < m_TimelineProgress.Length; index++)
+                if (m_TimelineProgress[index].Occupied && m_TimelineProgress[index].Withdrawn)
+                    m_TimelineProgress[index].PresentationFrame = 0;
         }
 
         public void AcceptTimelineProgress(in CharacterPresentationCommand command)
@@ -250,7 +265,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 else if (!entry.Corrected && progress.Control.IsPaused)
                     reason = TimelinePresentationSampleReason.Paused;
                 sample = new TimelineRuntimePresentationSample(progress.Generation, progress.LogicTick, progress.ContentRevision,
-                    FixedScalar.FromRaw(checked((long)position)), cycle, reason);
+                    FixedScalar.FromRaw(checked((long)position)), cycle, reason,
+                    entry.Withdrawn && entry.Command.Header.Tick.Value > m_ConfirmedTimelineTick);
                 entry.Sample = sample;
                 entry.PresentationFrame = presentationFrame;
                 entry.Corrected = false;
@@ -380,6 +396,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Committed follow clock cannot reset during an open frame.");
             Array.Clear(m_TimelineProgress, 0, m_TimelineProgress.Length);
+            m_ConfirmedTimelineTick = 0;
             m_Registry.Reset();
             m_History.Reset();
             m_Projector.Reset();

@@ -275,6 +275,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Equipment.Capture(selections);
         }
 
+        public void ConfirmTimelineHistory(ulong confirmedTick)
+        {
+            m_PresentationClockCoordinator?.ConfirmTimelineHistory(confirmedTick);
+        }
+
         public void Publish(CharacterPresentationCommand command)
         {
             RequireActor(command.Header.ActorId);

@@ -117,6 +117,7 @@ namespace BTSMTL.Timeline.Runtime
 
         public void CommitPresentationFrame(ulong frame) => m_PresentationDriver.CommitPresentationFrame(frame);
         public void DiscardPresentationFrame(ulong frame) => m_PresentationDriver.DiscardPresentationFrame(frame);
+        public void SuspendPresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation) => m_PresentationDriver.SuspendPresentationPlayback(handle, generation);
         public void ReleasePresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation) => m_PresentationDriver.ReleasePresentationPlayback(handle, generation);
 
         public TimelineRuntimePreparationResult Prepare(

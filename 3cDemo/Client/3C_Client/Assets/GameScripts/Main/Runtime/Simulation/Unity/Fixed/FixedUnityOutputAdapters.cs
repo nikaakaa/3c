@@ -104,6 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 FlushDeferredAnimationRetirements(confirmedTick);
                 for (int i = 0; i < m_ConfirmedPublishes.Count; i++)
                     m_Runtime.Publish(m_ConfirmedPublishes[i]);
+                m_Runtime.ConfirmTimelineHistory(confirmedTick);
                 PruneConfirmed(confirmedTick);
             }
             finally

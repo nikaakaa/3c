@@ -818,6 +818,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void Publish(CharacterPresentationCommand command);
         void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement);
         void Retire(CharacterPresentationCommand command);
+        void ConfirmTimelineHistory(ulong confirmedTick);
         void Reset();
         CharacterPresentationDomainDiagnosticsSnapshot CaptureDiagnostics();
         CharacterPresentationDomainObservation CaptureObservation();

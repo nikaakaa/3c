@@ -426,3 +426,10 @@
 - 容量由正式轨道 Clip 数、表现 Marker 数及既有单次最多跨4096圈的限制推导；循环 Cue／Marker 保留4097段容量，非循环仅一段，超限明确失败。此实现用预分配内存换取运行时不扩容；循环事件较多时内存占用随内容数量及最大遍历段数增长。
 - 首次表现状态创建仍会分配，Marker Identity／EventId、Camera key 及逻辑求值链仍有分配，不能据此声称完整0 GC。多来源控制、同代撤销后重接入和下游 Apply 事务保持未完成。
 - Unity脚本构建通过，最终域重载完成（1789917653415），Editor idle，控制台错误为零；本批文件 git diff --check 通过，未新增测试。导入时曾出现 SourceAssetDB 文件时间戳错误，随后原文件成功重导入，最终控制台无错误。
+
+## 撤销记录保留至正式确认边界并允许同代重接入
+- 对应 7.2／7.3／7.4：FixedUnityPresentationOutputAdapter.CompleteCommit 将原 confirmedTick 传给原表现域／共享时钟。撤销进度尚在未确认区间时，采样显式携带 RetainForCorrection；确认越过来源进度 tick 后才允许最终释放，不新增墙钟超时或第二注册表。
+- Host 在撤销帧接受后仅将既有播放绑定标为 PresentationWithdrawn。动画与 Camera 沿原 Withdrawn 事件退役；driver 清空结果视图，保留游标、初始边界资格和 MarkerLastTraversal。同一撤销重复帧不重复通知下游。丢弃撤销帧不改变 Host 标记或去重基线。
+- 同 action／调用／Timeline／generation 的正式进度重新发布时，原时钟将其识别为 Correction，Host 原绑定仍在，因此动画和连续 Camera 可按正式位置重新采样；帧提交后清除撤销标记。已接受 Marker 不因重现而补发或伪造新 TraversalIndex，遵循 design.md 的修正规则。确认后无重现则释放原时钟槽、driver 与 Host 绑定。
+- 本批恢复标记在 driver 接受后更新；原跨 Pose／Camera 最终 Apply 异常的整体回滚仍未闭合，Marker 真实输出修订的下游调和与完整0 GC仍需继续对账，不据此勾选整个第7节。多来源倍率组合的相乘／最小值业务规则已向用户提问，尚未写入实现。
+- Unity脚本构建及最终域重载完成（1789918181297），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试，未执行端到端验收。

@@ -496,6 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal RuntimeInstanceKey RuntimeInstance;
             internal RuntimeTimelinePlaybackProvenance Provenance;
             internal bool TerminalPublished;
+            internal bool PresentationWithdrawn;
             internal TimelineRuntimePresentationSample LocalPresentationSample;
         }
 
@@ -503,7 +504,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
         readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
         readonly List<TimelineRuntimePresentationFrame> m_PresentationCandidates = new List<TimelineRuntimePresentationFrame>(64);
-        readonly List<(ActivePlayback Playback, TimelinePresentationSampleReason Reason)> m_PresentationEndCandidates = new(64);
+        readonly List<(ActivePlayback Playback, TimelinePresentationSampleReason Reason, bool RetainForCorrection)> m_PresentationEndCandidates = new(64);
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
         readonly Guid m_ContentSessionIdentity = Guid.NewGuid();
         readonly Dictionary<ulong, CharacterTimelinePendingAdvance> m_PendingAdvances =
@@ -1581,7 +1582,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 active.LocalPresentationSample = new TimelineRuntimePresentationSample(evaluation.Generation,
                     evaluation.LogicTick, evaluation.ContentRevision, evaluation.Time, evaluation.Cycle,
                     evaluation.Completes ? TimelinePresentationSampleReason.Completed :
-                    evaluation.Control.IsPaused ? TimelinePresentationSampleReason.Paused : TimelinePresentationSampleReason.Advance);
+                    evaluation.Control.IsPaused ? TimelinePresentationSampleReason.Paused : TimelinePresentationSampleReason.Advance, false);
                 for (int i = 0; i < m_ActivePlaybacks.Count; i++)
                     if (m_ActivePlaybacks[i].Handle.Value == active.Handle.Value)
                     {
@@ -1990,6 +1991,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId, active.Generation,
                         context.RenderFrame, context.LocalLogicTick, context.InterpolationAlpha, out sample);
                 }
+                if (active.PresentationWithdrawn && hasSample && sample.Reason == TimelinePresentationSampleReason.Withdrawn && sample.RetainForCorrection)
+                    continue;
                 TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
                 bool locallyStopped = !active.CoreDriven && status != TimelinePlaybackStatus.Requested &&
                     status != TimelinePlaybackStatus.Running && status != TimelinePlaybackStatus.Succeeded;
@@ -2012,8 +2015,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (ended && !presented)
                 {
                     TimelinePresentationSampleReason reason = active.CoreDriven ? sample.Reason : TimelinePresentationSampleReason.Stopped;
-                    m_PresentationEndCandidates.Add((active, reason));
-                    PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), active.Generation, reason);
+                    m_PresentationEndCandidates.Add((active, reason, active.CoreDriven && sample.RetainForCorrection));
+                    if (!active.PresentationWithdrawn)
+                        PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), active.Generation, reason);
                 }
             }
         }
@@ -2028,18 +2032,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     PublishTimelineVisualTime(active, candidate);
             }
             m_Host?.CommitPresentationFrame(frame);
+            for (int i = 0; i < m_PresentationCandidates.Count; i++)
+            {
+                TimelineRuntimePresentationFrame candidate = m_PresentationCandidates[i];
+                for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+                {
+                    ActivePlayback active = m_ActivePlaybacks[index];
+                    if (active.Handle.Value != candidate.Handle.Value || active.Generation != candidate.Generation)
+                        continue;
+                    active.PresentationWithdrawn = false;
+                    m_ActivePlaybacks[index] = active;
+                    break;
+                }
+            }
             for (int i = 0; i < m_PresentationEndCandidates.Count; i++)
             {
                 ActivePlayback active = m_PresentationEndCandidates[i].Playback;
-                if (active.CoreDriven)
+                bool retainForCorrection = m_PresentationEndCandidates[i].RetainForCorrection;
+                if (active.CoreDriven && !retainForCorrection)
                     clock.ReleaseTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
                         active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId, active.Generation);
                 var handle = new TimelineRuntimePlaybackHandle(active.Handle.Value);
-                PresentationPlaybackEnded?.Invoke(handle, active.Generation, m_PresentationEndCandidates[i].Reason);
-                m_Host.ReleasePresentationPlayback(handle, active.Generation);
+                if (!active.PresentationWithdrawn)
+                    PresentationPlaybackEnded?.Invoke(handle, active.Generation, m_PresentationEndCandidates[i].Reason);
+                if (retainForCorrection)
+                    m_Host.SuspendPresentationPlayback(handle, active.Generation);
+                else
+                    m_Host.ReleasePresentationPlayback(handle, active.Generation);
                 for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
-                    if (m_ActivePlaybacks[index].Handle.Value == handle.Value && m_ActivePlaybacks[index].Generation == active.Generation)
+                {
+                    if (m_ActivePlaybacks[index].Handle.Value != handle.Value || m_ActivePlaybacks[index].Generation != active.Generation)
+                        continue;
+                    if (retainForCorrection)
+                    {
+                        active.PresentationWithdrawn = true;
+                        m_ActivePlaybacks[index] = active;
+                    }
+                    else
                         m_ActivePlaybacks.RemoveAt(index);
+                }
             }
             m_PresentationCandidates.Clear();
             m_PresentationEndCandidates.Clear();

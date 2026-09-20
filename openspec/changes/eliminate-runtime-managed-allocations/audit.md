@@ -863,3 +863,11 @@
 - 改为显式 Pending／Committed 两成员判断，拒绝零及其它非法值；保留 transactionIdentity 校验以及只有 Committed 才能有 commitBatch 的双向关联检查，异常文本和检查先后不变。
 - 只修改两个结果类的成员判断，不改 coordinator、事务执行、快照、提交批次或恢复行为。结果 class 本身仍分配，本次删除枚举元数据查询和装箱，不声称事务无分配。
 - 两文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未运行事务对比或 Player 分配采样。
+## 2026-09-20 预测观测约束采样类型校验
+
+对应 tasks.md 的 2.34。
+
+- Float32 ObservedWorldConstraint 构造原使用 Enum.IsDefined 校验 samplingKind；实际生产者包括 PredictionHistory 的 ToObservedConstraint（构造观测约束帧）和 PredictionStateCodec.ReadObservedFrame（恢复历史）。属于运行中的预测／恢复数据，不是初始化专用描述。
+- 改为直接匹配 Exact／Interpolation／ConstantVelocityExtrapolation，仍拒绝零及其他成员。保留 Actor 身份、目标和来源 Tick、前后 Body 一致性、来源时序与 contactShapeConfigurationHash 校验以及原异常；没有修改采样算法、预测历史寿命或回滚逻辑。
+- 同轮搜索 CharacterControlAbilityStopRequest：存在类型声明、提交接口和处理者，但当前 Assets／Tools C# 检索没有实际构造调用证据。该入口暂未修改，不将文件名含 Runtime 或存在消费者直接推断为每帧构造。
+- 目标文件修改前无其它未提交修改，编辑前无 csc／bee。ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做预测运行或 Player 分配采样。

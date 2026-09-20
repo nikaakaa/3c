@@ -125,7 +125,8 @@ namespace ThirdPersonSimulation
             if (!actorId.IsValid || !targetTick.IsValid || !sourcePreviousTick.IsValid || !sourceCurrentTick.IsValid ||
                 beforeBody.ActorId != actorId || finalBody.ActorId != actorId ||
                 sourceCurrentTick.CompareTo(sourcePreviousTick) < 0 ||
-                !Enum.IsDefined(typeof(ObservedWorldConstraintSamplingKind), samplingKind) ||
+                samplingKind is not (ObservedWorldConstraintSamplingKind.Exact or
+                    ObservedWorldConstraintSamplingKind.Interpolation or ObservedWorldConstraintSamplingKind.ConstantVelocityExtrapolation) ||
                 !contactShapeConfigurationHash.IsValid)
             {
                 throw new ArgumentException("Observed world constraint identity is incomplete or inconsistent.");

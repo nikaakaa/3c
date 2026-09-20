@@ -24,7 +24,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
             var reads = new RollbackHistoryReadPorts(
-                context.Products.BindAppendReader<FixedFinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult));
+                context.Products.BindAppendReader<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult));
             return new FixedStepPassRuntimeAdapter<RollbackHistoryReadPorts, RollbackHistoryWritePorts>(
                 new RollbackHistoryPassRuntime(context.Pass.Descriptor, m_State),
                 reads,
@@ -99,12 +99,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
     public sealed class RollbackHistoryReadPorts : ISimulationPipelineReadPortSet
     {
         public RollbackHistoryReadPorts(
-            IReadOnlySimulationPipelineAppendPort<FixedFinalizedActorResult> results)
+            IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> results)
         {
             Results = results ?? throw new ArgumentNullException(nameof(results));
         }
 
-        public IReadOnlySimulationPipelineAppendPort<FixedFinalizedActorResult> Results { get; }
+        public IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> Results { get; }
     }
 
     public sealed class RollbackHistoryWritePorts : ISimulationPipelineWritePortSet

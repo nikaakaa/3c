@@ -140,6 +140,8 @@
 
 - [x] 2.83 PipelineTransactionRuntimeServices 在组装时创建不可变已验证 participant set，事务期 checkpoint／snapshot／restore 直接复用排序数组，删除每次调用的运行与期望 participant 数组分配；原始列表和 plan 不匹配仍完整失败
 
+- [x] 2.84 FinalizedStepResult append Product 直接承载 SimulationActorTickResult，迁移 Fixed／Float32 本地、Rollback 与 ServerAuthoritative 全部读写端，删除两套 FinalizedActorResult 类型及每 Actor 每 step 的包装对象
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

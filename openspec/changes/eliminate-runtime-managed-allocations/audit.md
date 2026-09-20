@@ -1675,3 +1675,12 @@
 - Fixed／Float32 AbilityEvaluatePass 在按锁定 roster 构造时各创建一个定长 WorldSolveBatchRequest workspace。每 step Reset 将复用的 m_Requests 值数组复制进 Batch 自有定长数组，原地排序并执行原 roster／world／observed constraint 校验，再更新 Tick、BeforeWorldState、能力和 RequestHash。
 - 删除每 simulation step 的 WorldSolveBatchRequest 对象和内部请求数组分配；Batch 与数组随 Pass runtime 生命周期复用。Evaluate 的输入 workspace 仍独立并在 finally 写 default，Batch 不借用其可变存储。RequestHash 及 CanonicalWriter 内部分配仍逐 step 存在。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority 编译零警告零错误；DotRecast portable 编译通过并保留依赖包两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 全依赖构建通过并保留 Unity 包及既有 Editor 代码十七条警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做多 step 事务或 Player 分配采样。
+
+## 2026-09-21 FinalizedStepResult 直接业务结果
+
+对应 tasks.md 的 2.84。
+
+- FixedFinalizedActorResult／Float32FinalizedActorResult 各自只保存一个非空 SimulationActorTickResult。Finalize 每 Actor new 包装后写 append Product，Transaction 和本地 Output Pass 随后只读取 Value.Result；Rollback 与 ServerAuthoritative 只依赖同一 Product 类型，没有包装特有语义。
+- 两域 Product slot factory、Finalize writer、Transaction、LocalImmediateOutput，以及 Rollback History／OutputDisposition、ServerAuthoritative Authority／Prediction readers 统一改为直接承载 SimulationActorTickResult。Transaction 与输出消费直接读取 entry.Value。
+- 删除两套包装类型和每 Actor 每 simulation step 的一个 managed 包装对象；SimulationActorTickResult 本身仍是跨 Finalize、CompletedStep 和 Committer 的正式业务结果，其寿命与排序不变。不保留兼容 Product 路径。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功；全运行源码检索确认旧类型及 Value.Result 链均已清空。未新增测试、未操作共享 Unity、未做输出运行对比或 Player 分配采样。

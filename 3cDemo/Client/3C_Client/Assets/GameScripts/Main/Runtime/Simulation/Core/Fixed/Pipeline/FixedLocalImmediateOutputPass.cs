@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation.Fixed
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
             var reads = new FixedLocalImmediateOutputReadPorts(
-                context.Products.BindAppendReader<FixedFinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult));
+                context.Products.BindAppendReader<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult));
             var writes = new FixedLocalImmediateOutputWritePorts(
                 context.Products.BindExclusiveWriter<SimulationPipelineOutputDispositionSet>(SimulationPipelineProducts.OutputDispositionSet));
             return new FixedEgressPassRuntimeAdapter<FixedLocalImmediateOutputReadPorts, FixedLocalImmediateOutputWritePorts>(
@@ -49,7 +49,7 @@ namespace ThirdPersonSimulation.Fixed
             {
                 for (int i = 0; i < readPorts.Results.Count; i++)
                 {
-                    SimulationActorTickResult result = readPorts.Results.Get(i).Value.Result;
+                    SimulationActorTickResult result = readPorts.Results.Get(i).Value;
                     for (int eventIndex = 0; eventIndex < result.GameplayFacts.Count; eventIndex++)
                     {
                         m_Dispositions.Add(new SimulationOutputDisposition(
@@ -79,12 +79,12 @@ namespace ThirdPersonSimulation.Fixed
     public sealed class FixedLocalImmediateOutputReadPorts : ISimulationPipelineReadPortSet
     {
         public FixedLocalImmediateOutputReadPorts(
-            IReadOnlySimulationPipelineAppendPort<FixedFinalizedActorResult> results)
+            IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> results)
         {
             Results = results ?? throw new ArgumentNullException(nameof(results));
         }
 
-        public IReadOnlySimulationPipelineAppendPort<FixedFinalizedActorResult> Results { get; }
+        public IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> Results { get; }
     }
 
     public sealed class FixedLocalImmediateOutputWritePorts : ISimulationPipelineWritePortSet

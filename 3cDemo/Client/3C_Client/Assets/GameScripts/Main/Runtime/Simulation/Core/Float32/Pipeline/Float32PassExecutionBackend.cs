@@ -60,7 +60,7 @@ namespace ThirdPersonSimulation
                 new Float32ExclusiveProductSlotFactory<Float32CharacterEvaluationResultBatch>(SimulationPipelineProducts.CharacterEvaluationResults, Float32PipelineProductLifetime.SimulationStep),
                 new Float32ExclusiveProductSlotFactory<WorldSolveBatchRequest>(SimulationPipelineProducts.WorldSolveBatchRequest, Float32PipelineProductLifetime.SimulationStep),
                 new Float32ExclusiveProductSlotFactory<WorldSolveBatchResult>(SimulationPipelineProducts.WorldSolveBatchResult, Float32PipelineProductLifetime.SimulationStep),
-                new Float32AppendProductSlotFactory<Float32FinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult, Float32PipelineProductLifetime.OuterTransaction),
+                new Float32AppendProductSlotFactory<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult, Float32PipelineProductLifetime.OuterTransaction),
                 new Float32AppendProductSlotFactory<SimulationPipelinePassStateSnapshot>(SimulationPipelineProducts.PipelineSnapshotContribution, Float32PipelineProductLifetime.OuterTransaction),
                 new Float32ExclusiveProductSlotFactory<SimulationPipelineOutputDispositionSet>(SimulationPipelineProducts.OutputDispositionSet, Float32PipelineProductLifetime.OuterTransaction),
                 new Float32AppendProductSlotFactory<Float32SourceEgressRecord>(SimulationPipelineProducts.SourceEgress, Float32PipelineProductLifetime.OuterTransaction)

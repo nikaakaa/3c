@@ -147,16 +147,6 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    public sealed class FixedFinalizedActorResult
-    {
-        public FixedFinalizedActorResult(SimulationActorTickResult result)
-        {
-            Result = result ?? throw new ArgumentNullException(nameof(result));
-        }
-
-        public SimulationActorTickResult Result { get; }
-    }
-
     public sealed class FixedCompletedSimulationStep
     {
         public FixedCompletedSimulationStep(

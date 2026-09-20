@@ -20,7 +20,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
             var reads = new RollbackOutputDispositionReadPorts(
-                context.Products.BindAppendReader<FixedFinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult),
+                context.Products.BindAppendReader<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult),
                 context.BindTargetPort<IFixedCompletedStepReadPort>(FixedPipelineRuntimePortIds.CompletedSteps));
             var writes = new RollbackOutputDispositionWritePorts(
                 context.Products.BindExclusiveWriter<SimulationPipelineOutputDispositionSet>(SimulationPipelineProducts.OutputDispositionSet));
@@ -86,14 +86,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
     public sealed class RollbackOutputDispositionReadPorts : ISimulationPipelineReadPortSet
     {
         public RollbackOutputDispositionReadPorts(
-            IReadOnlySimulationPipelineAppendPort<FixedFinalizedActorResult> results,
+            IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> results,
             IFixedCompletedStepReadPort completedSteps)
         {
             Results = results ?? throw new ArgumentNullException(nameof(results));
             CompletedSteps = completedSteps ?? throw new ArgumentNullException(nameof(completedSteps));
         }
 
-        public IReadOnlySimulationPipelineAppendPort<FixedFinalizedActorResult> Results { get; }
+        public IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> Results { get; }
         public IFixedCompletedStepReadPort CompletedSteps { get; }
     }
 

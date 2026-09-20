@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation.Fixed
                 context.BindTargetPort<IFixedWorkingStateReadPort>(FixedPipelineRuntimePortIds.WorkingState),
                 context.BindDiagnosticsPort<IFixedDiagnosticsRuntimePort>(FixedPipelineRuntimePortIds.Diagnostics));
             var writes = new FixedAbilityFinalizeWritePorts(
-                context.Products.BindAppendWriter<FixedFinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult));
+                context.Products.BindAppendWriter<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult));
             return new FixedStepPassRuntimeAdapter<FixedAbilityFinalizeReadPorts, FixedAbilityFinalizeWritePorts>(
                 new FixedAbilityFinalizePassRuntime(context.Pass.Descriptor),
                 reads,
@@ -101,7 +101,7 @@ namespace ThirdPersonSimulation.Fixed
                         context.Tick,
                         1,
                         step.Source),
-                    new FixedFinalizedActorResult(result));
+                    result);
 
             }
         }
@@ -133,12 +133,12 @@ namespace ThirdPersonSimulation.Fixed
     public sealed class FixedAbilityFinalizeWritePorts : ISimulationPipelineWritePortSet
     {
         public FixedAbilityFinalizeWritePorts(
-            IAppendOnlySimulationPipelineProductWriter<FixedFinalizedActorResult> results)
+            IAppendOnlySimulationPipelineProductWriter<SimulationActorTickResult> results)
         {
             Results = results ?? throw new ArgumentNullException(nameof(results));
         }
 
-        public IAppendOnlySimulationPipelineProductWriter<FixedFinalizedActorResult> Results { get; }
+        public IAppendOnlySimulationPipelineProductWriter<SimulationActorTickResult> Results { get; }
     }
 
     static class FixedPipelineDiagnostics

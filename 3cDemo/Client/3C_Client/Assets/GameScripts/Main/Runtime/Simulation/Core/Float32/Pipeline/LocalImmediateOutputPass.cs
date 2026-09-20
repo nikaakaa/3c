@@ -16,7 +16,7 @@ namespace ThirdPersonSimulation
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
             var reads = new LocalImmediateOutputReadPorts(
-                context.Products.BindAppendReader<Float32FinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult));
+                context.Products.BindAppendReader<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult));
             var writes = new LocalImmediateOutputWritePorts(
                 context.Products.BindExclusiveWriter<SimulationPipelineOutputDispositionSet>(SimulationPipelineProducts.OutputDispositionSet));
             return new Float32EgressPassRuntimeAdapter<LocalImmediateOutputReadPorts, LocalImmediateOutputWritePorts>(
@@ -54,7 +54,7 @@ namespace ThirdPersonSimulation
     {
         public static SimulationPipelineOutputDispositionSet Build(
             StableHash transactionIdentity,
-            IReadOnlySimulationPipelineAppendPort<Float32FinalizedActorResult> results,
+            IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> results,
             List<SimulationOutputDisposition> dispositions)
         {
             if (results == null)
@@ -66,7 +66,7 @@ namespace ThirdPersonSimulation
             {
                 for (int i = 0; i < results.Count; i++)
                 {
-                    SimulationActorTickResult result = results.Get(i).Value.Result;
+                    SimulationActorTickResult result = results.Get(i).Value;
                     for (int eventIndex = 0; eventIndex < result.GameplayFacts.Count; eventIndex++)
                     {
                         dispositions.Add(new SimulationOutputDisposition(
@@ -94,12 +94,12 @@ namespace ThirdPersonSimulation
     public sealed class LocalImmediateOutputReadPorts : ISimulationPipelineReadPortSet
     {
         public LocalImmediateOutputReadPorts(
-            IReadOnlySimulationPipelineAppendPort<Float32FinalizedActorResult> results)
+            IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> results)
         {
             Results = results ?? throw new ArgumentNullException(nameof(results));
         }
 
-        public IReadOnlySimulationPipelineAppendPort<Float32FinalizedActorResult> Results { get; }
+        public IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> Results { get; }
     }
 
     public sealed class LocalImmediateOutputWritePorts : ISimulationPipelineWritePortSet

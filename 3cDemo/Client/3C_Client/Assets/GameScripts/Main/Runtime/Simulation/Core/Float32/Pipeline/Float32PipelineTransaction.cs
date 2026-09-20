@@ -339,7 +339,7 @@ namespace ThirdPersonSimulation
                 Float32SourceEgressRecord> workspace)
         {
             _ = workingState;
-            Float32AppendProductSlot<Float32FinalizedActorResult> finalized = GetFinalizedSlot();
+            Float32AppendProductSlot<SimulationActorTickResult> finalized = GetFinalizedSlot();
             int finalizedCount = finalized.UnsealedCount - finalizedStart;
             if (finalizedCount != m_Roster.Count)
                 throw Failure("finalized_actor_count_mismatch", "Ability Finalize Pass did not produce exactly one result per Actor.", SimulationSessionFailureStage.Step);
@@ -348,7 +348,7 @@ namespace ThirdPersonSimulation
             workspace.ActorResults.EnsureCapacity(finalizedCount);
             for (int i = finalizedStart; i < finalized.UnsealedCount; i++)
             {
-                SimulationActorTickResult result = finalized.GetUnsealed(i).Value.Result;
+                SimulationActorTickResult result = finalized.GetUnsealed(i).Value;
                 if (result.Tick != step.Tick)
                     throw Failure("finalized_actor_tick_mismatch", "Ability Finalize Pass produced a result for another Tick.", SimulationSessionFailureStage.Step);
                 actorResults.Add(result);
@@ -506,9 +506,9 @@ namespace ThirdPersonSimulation
             }
         }
 
-        Float32AppendProductSlot<Float32FinalizedActorResult> GetFinalizedSlot()
+        Float32AppendProductSlot<SimulationActorTickResult> GetFinalizedSlot()
         {
-            return m_Products.GetRequired<Float32AppendProductSlot<Float32FinalizedActorResult>>(
+            return m_Products.GetRequired<Float32AppendProductSlot<SimulationActorTickResult>>(
                 SimulationPipelineProducts.FinalizedStepResult);
         }
 

@@ -178,7 +178,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentNullException(nameof(context));
             var reads = new PredictionOutputDispositionReads(
                 context.Products.BindExclusiveReader<PredictionCorrectionDecision>(ServerAuthoritativeProducts.PredictionCorrectionDecision),
-                context.Products.BindAppendReader<Float32FinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult),
+                context.Products.BindAppendReader<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult),
                 context.BindSourcePort<IServerAuthoritativePredictionStatePort>(ServerAuthoritativeSourcePortContracts.PredictionStatePortId),
                 context.BindTargetPort<IFloat32CompletedStepReadPort>(Float32PipelineRuntimePortIds.CompletedSteps),
                 context.BindDiagnosticsPort<IFloat32DiagnosticsRuntimePort>(Float32PipelineRuntimePortIds.Diagnostics));
@@ -338,7 +338,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         public PredictionOutputDispositionReads(
             IReadOnlySimulationPipelineProductPort<PredictionCorrectionDecision> decision,
-            IReadOnlySimulationPipelineAppendPort<Float32FinalizedActorResult> results,
+            IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> results,
             IServerAuthoritativePredictionStatePort predictionState,
             IFloat32CompletedStepReadPort completed,
             IFloat32DiagnosticsRuntimePort diagnostics)
@@ -351,7 +351,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         }
 
         public IReadOnlySimulationPipelineProductPort<PredictionCorrectionDecision> Decision { get; }
-        public IReadOnlySimulationPipelineAppendPort<Float32FinalizedActorResult> Results { get; }
+        public IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> Results { get; }
         public IServerAuthoritativePredictionStatePort PredictionState { get; }
         public IFloat32CompletedStepReadPort Completed { get; }
         public IFloat32DiagnosticsRuntimePort Diagnostics { get; }

@@ -61,7 +61,7 @@ namespace ThirdPersonSimulation.Fixed
                 new FixedExclusiveProductSlotFactory<FixedCharacterEvaluationResultBatch>(SimulationPipelineProducts.CharacterEvaluationResults, FixedPipelineProductLifetime.SimulationStep),
                 new FixedExclusiveProductSlotFactory<WorldSolveBatchRequest>(SimulationPipelineProducts.WorldSolveBatchRequest, FixedPipelineProductLifetime.SimulationStep),
                 new FixedExclusiveProductSlotFactory<WorldSolveBatchResult>(SimulationPipelineProducts.WorldSolveBatchResult, FixedPipelineProductLifetime.SimulationStep),
-                new FixedAppendProductSlotFactory<FixedFinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult, FixedPipelineProductLifetime.OuterTransaction),
+                new FixedAppendProductSlotFactory<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult, FixedPipelineProductLifetime.OuterTransaction),
                 new FixedAppendProductSlotFactory<SimulationPipelinePassStateSnapshot>(SimulationPipelineProducts.PipelineSnapshotContribution, FixedPipelineProductLifetime.OuterTransaction),
                 new FixedExclusiveProductSlotFactory<SimulationPipelineOutputDispositionSet>(SimulationPipelineProducts.OutputDispositionSet, FixedPipelineProductLifetime.OuterTransaction),
                 new FixedAppendProductSlotFactory<FixedSourceEgressRecord>(SimulationPipelineProducts.SourceEgress, FixedPipelineProductLifetime.OuterTransaction)

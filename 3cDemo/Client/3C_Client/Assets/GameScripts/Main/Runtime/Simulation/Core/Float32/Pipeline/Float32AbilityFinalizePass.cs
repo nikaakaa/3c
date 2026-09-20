@@ -21,7 +21,7 @@ namespace ThirdPersonSimulation
                 context.BindTargetPort<IFloat32WorkingStateReadPort>(Float32PipelineRuntimePortIds.WorkingState),
                 context.BindDiagnosticsPort<IFloat32DiagnosticsRuntimePort>(Float32PipelineRuntimePortIds.Diagnostics));
             var writes = new Float32AbilityFinalizeWritePorts(
-                context.Products.BindAppendWriter<Float32FinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult));
+                context.Products.BindAppendWriter<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult));
             return new Float32StepPassRuntimeAdapter<Float32AbilityFinalizeReadPorts, Float32AbilityFinalizeWritePorts>(
                 new Float32AbilityFinalizePassRuntime(context.Pass.Descriptor),
                 reads,
@@ -99,7 +99,7 @@ namespace ThirdPersonSimulation
                         context.Tick,
                         1,
                         step.Source),
-                    new Float32FinalizedActorResult(result));
+                    result);
 
             }
         }
@@ -131,12 +131,12 @@ namespace ThirdPersonSimulation
     public sealed class Float32AbilityFinalizeWritePorts : ISimulationPipelineWritePortSet
     {
         public Float32AbilityFinalizeWritePorts(
-            IAppendOnlySimulationPipelineProductWriter<Float32FinalizedActorResult> results)
+            IAppendOnlySimulationPipelineProductWriter<SimulationActorTickResult> results)
         {
             Results = results ?? throw new ArgumentNullException(nameof(results));
         }
 
-        public IAppendOnlySimulationPipelineProductWriter<Float32FinalizedActorResult> Results { get; }
+        public IAppendOnlySimulationPipelineProductWriter<SimulationActorTickResult> Results { get; }
     }
 
     static class Float32PipelineDiagnostics

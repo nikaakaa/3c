@@ -153,16 +153,6 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class Float32FinalizedActorResult
-    {
-        public Float32FinalizedActorResult(SimulationActorTickResult result)
-        {
-            Result = result ?? throw new ArgumentNullException(nameof(result));
-        }
-
-        public SimulationActorTickResult Result { get; }
-    }
-
     public sealed class Float32CompletedSimulationStep
     {
         public Float32CompletedSimulationStep(

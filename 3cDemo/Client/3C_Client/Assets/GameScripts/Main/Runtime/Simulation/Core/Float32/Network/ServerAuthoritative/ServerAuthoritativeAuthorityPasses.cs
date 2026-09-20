@@ -438,7 +438,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new ArgumentNullException(nameof(context));
             var reads = new AuthorityReplicationEgressReads(
                 context.Products.BindExclusiveReader<AcceptedAuthorityInputBatch>(ServerAuthoritativeProducts.AcceptedAuthorityInputBatch),
-                context.Products.BindAppendReader<Float32FinalizedActorResult>(SimulationPipelineProducts.FinalizedStepResult),
+                context.Products.BindAppendReader<SimulationActorTickResult>(SimulationPipelineProducts.FinalizedStepResult),
                 context.BindSourcePort<IServerAuthoritativeNetworkSendPort>(ServerAuthoritativeSourcePortContracts.AuthoritySendPortId),
                 context.BindSourcePort<IServerAuthoritativeFullBaselineRequestSourcePort>(ServerAuthoritativeSourcePortContracts.FullBaselineRequestPortId),
                 context.BindTargetPort<IFloat32CompletedStepReadPort>(Float32PipelineRuntimePortIds.CompletedSteps),
@@ -732,7 +732,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
     {
         public AuthorityReplicationEgressReads(
             IReadOnlySimulationPipelineProductPort<AcceptedAuthorityInputBatch> accepted,
-            IReadOnlySimulationPipelineAppendPort<Float32FinalizedActorResult> results,
+            IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> results,
             IServerAuthoritativeNetworkSendPort send,
             IServerAuthoritativeFullBaselineRequestSourcePort fullBaselineRequest,
             IFloat32CompletedStepReadPort completed,
@@ -751,7 +751,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         }
 
         public IReadOnlySimulationPipelineProductPort<AcceptedAuthorityInputBatch> Accepted { get; }
-        public IReadOnlySimulationPipelineAppendPort<Float32FinalizedActorResult> Results { get; }
+        public IReadOnlySimulationPipelineAppendPort<SimulationActorTickResult> Results { get; }
         public IServerAuthoritativeNetworkSendPort Send { get; }
         public IServerAuthoritativeFullBaselineRequestSourcePort FullBaselineRequest { get; }
         public IFloat32CompletedStepReadPort Completed { get; }

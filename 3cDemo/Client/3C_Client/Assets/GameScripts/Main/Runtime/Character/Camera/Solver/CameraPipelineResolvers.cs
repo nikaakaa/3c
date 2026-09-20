@@ -197,14 +197,15 @@ namespace ThirdPersonCamera
                 : string.CompareOrdinal(candidate.EventId, selected.EventId) < 0;
         }
 
-        static string FirstKey(params string[] keys)
+        static string FirstKey(string first, string second, string third, string fourth = null)
         {
-            for (int i = 0; i < keys.Length; i++)
-            {
-                if (!string.IsNullOrEmpty(keys[i]))
-                    return keys[i];
-            }
-            return string.Empty;
+            if (!string.IsNullOrEmpty(first))
+                return first;
+            if (!string.IsNullOrEmpty(second))
+                return second;
+            if (!string.IsNullOrEmpty(third))
+                return third;
+            return string.IsNullOrEmpty(fourth) ? string.Empty : fourth;
         }
 
         static string ValidateKey(string key, string source)

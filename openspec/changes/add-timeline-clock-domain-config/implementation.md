@@ -157,3 +157,12 @@
 - 最终编译重载后逐项读回，11 项时间、身份、名称、NextSectionId 和 BranchId 全部与迁移记录一致。正式导出第 75 帧所在 Timeline 成功、diagnostics=[]，生成 EnsureSection(..., 1.25m, ...)。没有生成临时作者源码或新增测试。
 - 已跟踪 CorinAttack 资产只暂存本次 3 个 Section 的字段迁移，其既有 FSM、Marker 等未提交变更保留；8 个原本未跟踪的 Rush Timeline 也已迁移保存，继续保留原工作区状态。
 - Clip、播放游标、外部控制、共享采样、完整派生产物和可配置网格仍未完成，任务 0.2–0.7 等不提前勾选。
+## ClipIn 素材起点秒制迁移
+
+- Clip 删除 ClipInFrame 正式存储与 FrameToTime 中的派生副本，唯一存储改为 m_ClipInTimeRaw；ClipInTime 返回公共 FixedScalar，ConfigureClipIn 校验非负。动画采样在现有浮点素材接口边界 ToSingle，不再先量化到作者帧。
+- 正式 EnsureClip / ConfigureClipSegment 的素材起点参数改为 decimal 秒；导出通过 raw / 2^32 生成 decimal 字面量。现有生成代码的 20 个完整调用该参数均为零，数值含义不变且均可编译，无需重写其它任务的生成文件。
+- Inspector 支持 Clip In 秒输入，仅实际修改该字段才换算；Slate 草稿持有定点秒，ClipInFrame 仅留在既有表面接口作显示与拖动网格，读取／编辑其它字段不把未修改的素材起点回写为帧。动画拆分按秒增加素材起点。
+- 迁移前读取 19 个 Timeline 的 271 个 Clip，ClipIn 原值均为零。通过原 ApplyModify / ConfigureClipIn 保存，再逐项核对 271 个身份与秒值。配置资产内旧 ClipInFrame 字段计数为零；暂存资产只包含 271 处本次字段替换，其余未提交改动保持原样。
+- Unity 已完成编译重载，正式 API 迁移调用成功；共享 MovingTurn Timeline 正式导出成功、diagnostics=[]，完整 EnsureClip 调用使用 0m。未创建临时作者代码或新增测试。
+- 期间本机 MCP 服务退出，8080 无监听；恢复原安装服务后同一 Unity 实例自动重连，未重启 Editor。控制台仍存在 FSM 调用绑定、Panel Timeline 缺失类型和 Timeline.meta GUID 诊断，不声明全项目运行通过。
+- Clip 起止、混合区间、播放游标、共享采样和自适应网格仍待迁移，相关任务保持未完成。

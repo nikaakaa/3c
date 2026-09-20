@@ -172,7 +172,8 @@ namespace BTSMTL.Timeline
         public int OtherEaseOutFrame;
         public int SelfEaseInFrame;
         public int SelfEaseOutFrame;
-        public int ClipInFrame;
+        [SerializeField]
+        long m_ClipInTimeRaw;
 
         public int EaseInFrame => OtherEaseInFrame == 0 ? SelfEaseInFrame : OtherEaseInFrame;
         public int EaseOutFrame => OtherEaseOutFrame == 0 ? SelfEaseOutFrame : OtherEaseOutFrame;
@@ -191,7 +192,7 @@ namespace BTSMTL.Timeline
         public float OtherEaseOutTime { get; private set; }
         public float EaseInTime { get; private set; }
         public float EaseOutTime { get; private set; }
-        public float ClipInTime { get; private set; }
+        public FixedScalar ClipInTime => FixedScalar.FromRaw(m_ClipInTimeRaw);
         public float DurationTime { get; private set; }
 
         #endregion
@@ -217,6 +218,13 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
+        public void ConfigureClipIn(FixedScalar time)
+        {
+            if (time < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(time));
+            m_ClipInTimeRaw = time.Raw;
+        }
+
         public void InheritExecutionDomain()
         {
             m_ExecutionDomain = 0;
@@ -257,7 +265,6 @@ namespace BTSMTL.Timeline
             OtherEaseOutTime = OtherEaseOutFrame / (float)TimelineUtility.FrameRate;
             EaseInTime = EaseInFrame / (float)TimelineUtility.FrameRate;
             EaseOutTime = EaseOutFrame / (float)TimelineUtility.FrameRate;
-            ClipInTime = ClipInFrame / (float)TimelineUtility.FrameRate;
             DurationTime = Duration / (float)TimelineUtility.FrameRate;
         }
     }

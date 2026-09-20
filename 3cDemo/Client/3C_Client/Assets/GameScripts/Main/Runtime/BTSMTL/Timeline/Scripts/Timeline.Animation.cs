@@ -184,7 +184,7 @@ namespace BTSMTL.Timeline
                     normalizedTime,
                     weight,
                     isLooping,
-                    animationClip.ClipInTime,
+                    animationClip.ClipInTime.ToSingle(),
                     animationClip.DurationTime,
                     cycleIndex));
             }
@@ -207,7 +207,7 @@ namespace BTSMTL.Timeline
             float selfTime = hold ? clip.DurationTime : Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
             float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
             normalizedTime = Mathf.Clamp01(selfTime / duration);
-            clipTime = selfTime + clip.ClipInTime;
+            clipTime = selfTime + clip.ClipInTime.ToSingle();
 
             float fadeInWeight = 1f;
             if (!hold && clip.EaseInTime > 0f && selfTime < clip.EaseInTime)

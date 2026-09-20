@@ -53,7 +53,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 718562575c0e4974c92e46652bf4e63c, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
@@ -159,7 +159,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: 2567188243746922312}

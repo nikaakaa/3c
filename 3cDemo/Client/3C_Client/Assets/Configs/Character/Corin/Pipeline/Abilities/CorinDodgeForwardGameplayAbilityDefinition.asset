@@ -96,7 +96,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 0
         m_AssetTree: {fileID: -7652454408741459237}
@@ -110,7 +110,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 0
         m_AssetTree: {fileID: -7135324045220957111}
@@ -134,7 +134,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: 6f9dc7e23ba63244e95d8f8d7142c5a2, type: 2}
         ExtraPolationMode: 1
         WeightCurve:
@@ -228,7 +228,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CurveId: DodgeForward
         Space: 0
         Channel: 1

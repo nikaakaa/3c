@@ -92,7 +92,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CurveId: MovingTurn180
         Space: 0
         Channel: 1
@@ -193,7 +193,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_ExecutionPhase: 1
         m_ExitSource: 0
         m_AssetTree: {fileID: 133216587555870579}

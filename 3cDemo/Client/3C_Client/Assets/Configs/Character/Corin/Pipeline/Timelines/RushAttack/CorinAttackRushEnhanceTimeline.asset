@@ -78,7 +78,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         Clip: {fileID: 7400000, guid: fa38deedaed81e14984c451596a6e1c6, type: 2}
         ExtraPolationMode: 0
         WeightCurve:
@@ -190,7 +190,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_03
         CueType: AttackProperty
     - rid: 207050555325416092
@@ -204,7 +204,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416093
@@ -218,7 +218,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416094
@@ -232,7 +232,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416095
@@ -246,7 +246,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416096
@@ -260,7 +260,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416097
@@ -274,7 +274,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416098
@@ -288,7 +288,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416099
@@ -302,7 +302,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416100
@@ -316,7 +316,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416101
@@ -330,7 +330,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416102
@@ -344,7 +344,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416103
@@ -358,7 +358,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416104
@@ -372,7 +372,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416105
@@ -386,7 +386,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416106
@@ -400,7 +400,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         CueId: Corin_Attack_Rush_Enhance_AttackProperty_01_04
         CueType: AttackProperty
     - rid: 207050555325416107
@@ -424,7 +424,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: -200240719098948488}

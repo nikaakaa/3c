@@ -130,7 +130,7 @@ namespace BTSMTL.Timeline
             return clip.EndFrame != DefaultEndFrame(clip, clip.StartFrame, referenceObject) ||
                    clip.SelfEaseInFrame != 0 ||
                    clip.SelfEaseOutFrame != 0 ||
-                   clip.ClipInFrame != 0;
+                   clip.ClipInTime.Raw != 0;
         }
 
         public static void Apply(

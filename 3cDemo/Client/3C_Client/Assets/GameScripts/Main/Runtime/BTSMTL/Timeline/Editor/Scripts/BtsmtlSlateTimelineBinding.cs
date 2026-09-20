@@ -426,7 +426,7 @@ namespace BTSMTL.Timeline.Editor
                 copy.StartFrame = frame;
                 copy.EndFrame = originalEndFrame;
                 if (formalClip.Source is AnimationClip animation && copy is AnimationClip animationCopy)
-                    animationCopy.ClipInFrame = animation.ClipInFrame + frame - originalStartFrame;
+                    animationCopy.ConfigureClipIn(animation.ClipInTime + TimelineTimeGrid.Position(frame - originalStartFrame, FrameRate));
                 if (formalClip.Source is MotionCurveClip motion && copy is MotionCurveClip motionCopy)
                 {
                     float splitSourceTime = motion.SourceStartTime +
@@ -1225,7 +1225,7 @@ namespace BTSMTL.Timeline.Editor
             float m_EndTime;
             float m_BlendIn;
             float m_BlendOut;
-            int m_ClipInFrame;
+            FixedScalar m_ClipInTime;
             float m_SourceStartTime;
             float m_SourceEndTime;
             bool m_IsCollapsed;
@@ -1240,7 +1240,7 @@ namespace BTSMTL.Timeline.Editor
                 m_EndTime = source.EndFrame / (float)owner.FrameRate;
                 m_BlendIn = source.SelfEaseInFrame / (float)owner.FrameRate;
                 m_BlendOut = source.SelfEaseOutFrame / (float)owner.FrameRate;
-                m_ClipInFrame = source.ClipInFrame;
+                m_ClipInTime = source.ClipInTime;
                 if (source is MotionCurveClip motion)
                 {
                     m_SourceStartTime = motion.SourceStartTime;
@@ -1315,8 +1315,13 @@ namespace BTSMTL.Timeline.Editor
             public bool CanClipIn => Source.IsClipInable();
             public int ClipInFrame
             {
-                get => m_ClipInFrame;
-                set => m_ClipInFrame = Mathf.Max(0, value);
+                get => TimelineTimeGrid.NearestIndex(m_ClipInTime, m_Owner.FrameRate);
+                set
+                {
+                    int index = Mathf.Max(0, value);
+                    if (index != ClipInFrame)
+                        m_ClipInTime = TimelineTimeGrid.Position(index, m_Owner.FrameRate);
+                }
             }
             public bool CanBlendIn => Source.IsMixable();
             public bool CanBlendOut => Source.IsMixable();
@@ -1408,7 +1413,7 @@ namespace BTSMTL.Timeline.Editor
                                Source.EndFrame != endFrame ||
                                Source.SelfEaseInFrame != selfEaseInFrame ||
                                Source.SelfEaseOutFrame != selfEaseOutFrame ||
-                               (CanClipIn && Source.ClipInFrame != m_ClipInFrame);
+                               (CanClipIn && Source.ClipInTime != m_ClipInTime);
                 if (Source is MotionCurveClip motion &&
                     (!Mathf.Approximately(motion.SourceStartTime, m_SourceStartTime) ||
                      !Mathf.Approximately(motion.SourceEndTime, m_SourceEndTime)))
@@ -1422,7 +1427,7 @@ namespace BTSMTL.Timeline.Editor
                 Source.SelfEaseInFrame = selfEaseInFrame;
                 Source.SelfEaseOutFrame = selfEaseOutFrame;
                 if (CanClipIn)
-                    Source.ClipInFrame = m_ClipInFrame;
+                    Source.ConfigureClipIn(m_ClipInTime);
                 if (Source is MotionCurveClip sourceMotion &&
                     (!Mathf.Approximately(sourceMotion.SourceStartTime, m_SourceStartTime) ||
                      !Mathf.Approximately(sourceMotion.SourceEndTime, m_SourceEndTime)))
@@ -1439,7 +1444,7 @@ namespace BTSMTL.Timeline.Editor
                 int selfEaseOutFrame = Mathf.Clamp(Mathf.RoundToInt(BlendOut * m_Owner.FrameRate), 0, endFrame - startFrame - selfEaseInFrame - 1);
                 if (Source.StartFrame != startFrame || Source.EndFrame != endFrame ||
                     Source.SelfEaseInFrame != selfEaseInFrame || Source.SelfEaseOutFrame != selfEaseOutFrame ||
-                    (CanClipIn && Source.ClipInFrame != m_ClipInFrame))
+                    (CanClipIn && Source.ClipInTime != m_ClipInTime))
                     return true;
                 if (Source is MotionCurveClip motion &&
                     (!Mathf.Approximately(motion.SourceStartTime, m_SourceStartTime) ||

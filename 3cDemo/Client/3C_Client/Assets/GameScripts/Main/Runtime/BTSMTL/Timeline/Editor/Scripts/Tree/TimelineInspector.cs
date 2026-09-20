@@ -90,7 +90,6 @@ namespace BTSMTL.Timeline.Editor
             int endFrame = clip.EndFrame;
             int selfEaseInFrame = clip.SelfEaseInFrame;
             int selfEaseOutFrame = clip.SelfEaseOutFrame;
-            int clipInFrame = clip.ClipInFrame;
             bool isTerminalLogicTreeClip = clip is TreeClip treeClip &&
                 treeClip.ExecutionDomain == TimelineExecutionDomain.Logic &&
                 treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
@@ -102,11 +101,13 @@ namespace BTSMTL.Timeline.Editor
                 endFrame = Mathf.Max(startFrame + 1, EditorGUILayout.IntField("End Frame", endFrame));
             selfEaseInFrame = Mathf.Clamp(EditorGUILayout.IntField("Self Ease In", selfEaseInFrame), 0, endFrame - startFrame - 1);
             selfEaseOutFrame = Mathf.Clamp(EditorGUILayout.IntField("Self Ease Out", selfEaseOutFrame), 0, endFrame - startFrame - selfEaseInFrame - 1);
-            clipInFrame = Mathf.Max(0, EditorGUILayout.IntField("Clip In", clipInFrame));
+            EditorGUI.BeginChangeCheck();
+            double clipInSeconds = Math.Max(0d, EditorGUILayout.DoubleField("Clip In (Seconds)", clip.ClipInTime.ToDouble()));
+            bool clipInChanged = EditorGUI.EndChangeCheck();
             EditorGUILayout.LabelField("Other Ease In", clip.OtherEaseInFrame.ToString());
             EditorGUILayout.LabelField("Other Ease Out", clip.OtherEaseOutFrame.ToString());
             if (EditorGUI.EndChangeCheck())
-                ApplyFrames(asset, clip, startFrame, endFrame, selfEaseInFrame, selfEaseOutFrame, clipInFrame);
+                ApplyFrames(asset, clip, startFrame, endFrame, selfEaseInFrame, selfEaseOutFrame, clipInSeconds, clipInChanged);
 
             TimelineAuthoringClipConfiguration configuration;
             try
@@ -237,7 +238,7 @@ namespace BTSMTL.Timeline.Editor
             }
         }
 
-        void ApplyFrames(TimelineAsset asset, Clip clip, int startFrame, int endFrame, int selfEaseInFrame, int selfEaseOutFrame, int clipInFrame)
+        void ApplyFrames(TimelineAsset asset, Clip clip, int startFrame, int endFrame, int selfEaseInFrame, int selfEaseOutFrame, double clipInSeconds, bool clipInChanged)
         {
             if (!TryBeginMutation(asset))
                 return;
@@ -249,7 +250,8 @@ namespace BTSMTL.Timeline.Editor
                     clip.EndFrame = endFrame;
                     clip.SelfEaseInFrame = selfEaseInFrame;
                     clip.SelfEaseOutFrame = selfEaseOutFrame;
-                    clip.ClipInFrame = clipInFrame;
+                    if (clipInChanged)
+                        clip.ConfigureClipIn(FixedScalar.FromDouble(clipInSeconds));
                     clip.Track.UpdateMix();
                     asset.Data.Init();
                 }, "Edit Timeline Clip Frames");

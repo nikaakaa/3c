@@ -94,7 +94,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_TargetBindingId: leftPanel
         m_ParameterBindingId: leftOpenAmount
         m_ValueCurve:
@@ -131,7 +131,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_TargetBindingId: rightPanel
         m_ParameterBindingId: rightOpenAmount
         m_ValueCurve:
@@ -176,7 +176,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
         m_InlineTree:
           rid: 207050278562168834
@@ -266,7 +266,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_TargetBindingId: leftPanel
         m_ParameterBindingId: leftVisible
         m_ValueCurve:
@@ -303,7 +303,7 @@ MonoBehaviour:
         OtherEaseOutFrame: 0
         SelfEaseInFrame: 0
         SelfEaseOutFrame: 0
-        ClipInFrame: 0
+        m_ClipInTimeRaw: 0
         m_TargetBindingId: rightPanel
         m_ParameterBindingId: rightVisible
         m_ValueCurve:

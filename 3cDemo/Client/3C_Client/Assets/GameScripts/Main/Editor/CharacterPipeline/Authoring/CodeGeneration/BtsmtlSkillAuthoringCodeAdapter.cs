@@ -623,7 +623,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     context.AddStatement(
                         BtsmtlAuthoringCodeEmissionPhase.Create,
                         NeedsClipSegmentOverride(clip, TimelineAuthoringPropertyContract.ReferenceAsset(clip))
-                            ? $"var {clipVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureClip({dataVariable}, {catalogVariable}, {trackVariable}, {String(clip.AuthoringId)}, {clip.StartFrame}, {TimelineReference(context, clip)}, {clip.EndFrame}, {clip.SelfEaseInFrame}, {clip.SelfEaseOutFrame}, {clip.ClipInFrame});"
+                            ? $"var {clipVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureClip({dataVariable}, {catalogVariable}, {trackVariable}, {String(clip.AuthoringId)}, {clip.StartFrame}, {TimelineReference(context, clip)}, {clip.EndFrame}, {clip.SelfEaseInFrame}, {clip.SelfEaseOutFrame}, {(clip.ClipInTime.Raw / (decimal)ThirdPersonSimulation.Fixed.FixedScalar.OneRaw).ToString(System.Globalization.CultureInfo.InvariantCulture)}m);"
                             : $"var {clipVariable} = {TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureClip({dataVariable}, {catalogVariable}, {trackVariable}, {String(clip.AuthoringId)}, {clip.StartFrame}, {TimelineReference(context, clip)});");
                     }
                 }

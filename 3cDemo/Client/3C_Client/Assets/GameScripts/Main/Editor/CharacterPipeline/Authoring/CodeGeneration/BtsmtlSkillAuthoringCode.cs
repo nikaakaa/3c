@@ -646,10 +646,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             int endFrame,
             int selfEaseInFrame,
             int selfEaseOutFrame,
-            int clipInFrame)
+            decimal clipInSeconds)
         {
             Clip clip = EnsureClip(timeline, catalog, track, identity, startFrame, referenceObject);
-            ConfigureClipSegment(clip, startFrame, endFrame, selfEaseInFrame, selfEaseOutFrame, clipInFrame);
+            ConfigureClipSegment(clip, startFrame, endFrame, selfEaseInFrame, selfEaseOutFrame, clipInSeconds);
             return clip;
         }
 
@@ -659,13 +659,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             int endFrame,
             int selfEaseInFrame,
             int selfEaseOutFrame,
-            int clipInFrame)
+            decimal clipInSeconds)
         {
             clip.StartFrame = startFrame;
             clip.EndFrame = endFrame;
             clip.SelfEaseInFrame = selfEaseInFrame;
             clip.SelfEaseOutFrame = selfEaseOutFrame;
-            clip.ClipInFrame = clipInFrame;
+            clip.ConfigureClipIn(FixedScalar.FromDecimal(clipInSeconds));
             clip.FrameToTime();
             clip.Track?.UpdateMix();
         }

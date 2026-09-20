@@ -473,8 +473,10 @@ namespace ThirdPersonSimulation
                 InsertionSequence = reader.ReadUInt64()
             };
             if (modifier.Handle == 0 || modifier.SourceEffectHandle == 0 || modifier.InsertionSequence == 0 ||
-                !Enum.IsDefined(typeof(PortableModifierOperation), modifier.Operation) ||
-                !Enum.IsDefined(typeof(PortableClampBound), modifier.ClampBound))
+                modifier.Operation < PortableModifierOperation.Additive ||
+                modifier.Operation > PortableModifierOperation.Clamp ||
+                modifier.ClampBound < PortableClampBound.Minimum ||
+                modifier.ClampBound > PortableClampBound.Maximum)
                 throw new InvalidDataException("Gameplay Attribute modifier identity is invalid.");
             if (!string.IsNullOrEmpty(modifier.LiveAttributeId))
                 modifier.LiveAttributeId = Float32GameplayEffectRuntimeCatalog.NormalizeAttribute(modifier.LiveAttributeId);

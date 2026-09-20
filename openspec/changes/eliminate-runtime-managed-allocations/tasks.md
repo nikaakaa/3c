@@ -77,6 +77,8 @@
 
 - [x] 2.43 动作生命周期运行提交、Ingress 与结束规则解析按正式连续成员边界校验 Transition，删除 Enum.IsDefined 装箱和元数据查询；保留非法值及终止状态约束
 
+- [x] 2.44 两数值域 GameplayEffect 状态恢复按每个 modifier 的 Operation／ClampBound 正式连续值域校验，删除随 modifier 数量重复的四处 Enum.IsDefined 装箱
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

@@ -1090,3 +1090,12 @@
 - LedgeState 正式成员连续为 None=0 至 EmptySide=2，身体状态直接检查该闭区间。恢复解码的 FeatureKind 同步按 PlaneFace=1 至 BoxFace=5、Ledge byte 按 0 至 2 检查，未知值继续抛出原 InvalidDataException。
 - 删除每步身体状态和低频恢复解码中的三处枚举元数据查询；ActorId、地面身份、法线、稳定性、吸附、状态顺序和 canonical 字段均未改变。
 - ThirdPersonSimulation.DeterministicKcc portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 KCC 状态运行回放或 Player 分配采样。
+
+## 2026-09-20 GameplayEffect modifier 恢复枚举校验
+
+对应 tasks.md 的 2.44。
+
+- Fixed／Float32 GameplayEffectStateAggregateCodec 在角色状态恢复时逐个读取 PortableAttributeModifierState；每个 modifier 原分别对 Operation 和 ClampBound 执行 Enum.IsDefined，因此分配随恢复的 modifier 数量增长。
+- PortableModifierOperation 正式成员连续为 Additive=0 至 Clamp=3，PortableClampBound 连续为 Minimum=0 至 Maximum=1。两数值域同步按闭区间判断，未知 byte 继续抛出原 InvalidDataException。
+- 只删除状态恢复解码中的装箱和枚举元数据查询，不改变 modifier handle、来源效果、幅值、优先级、实时属性、插入顺序或聚合结构；该路径不计普通逐帧收益。
+- Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 GameplayEffect 状态恢复运行对比或 Player 分配采样。

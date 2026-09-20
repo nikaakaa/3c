@@ -318,7 +318,8 @@ namespace ThirdPersonSimulation
 
         public void NotifyStateDisposition(CharacterControlSourceStateDisposition disposition)
         {
-            if (!Enum.IsDefined(typeof(CharacterControlSourceStateDisposition), disposition))
+            if (disposition < CharacterControlSourceStateDisposition.Prepared ||
+                disposition > CharacterControlSourceStateDisposition.Restored)
                 throw new ArgumentOutOfRangeException(nameof(disposition));
             for (int i = 0; i < m_Bindings.Count; i++)
             {

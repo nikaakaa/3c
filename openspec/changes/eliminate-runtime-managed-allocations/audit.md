@@ -1144,3 +1144,12 @@
 - disposition 正式成员连续为 Prepared=1 至 Restored=4，TimingClass 连续为 Immediate=1 至 Offensive=2；现直接按闭区间判断，未知零值及其它 byte 继续进入原异常。
 - 删除输入运行通知及恢复时按 pending request 数重复的装箱和枚举元数据查询，不改变请求序号、捕获帧、buffer 秒数、优先级、capture/eligible tick 或输入提交顺序。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做输入运行回放或 Player 分配采样。
+
+## 2026-09-20 Float32 输入事务通知枚举校验
+
+对应 tasks.md 的 2.46。
+
+- Float32LocalInputSourcePort 在输入事务提交、丢弃及状态恢复后调用 NotifyStateDisposition，并向全部 ICharacterControlSourceTransactionObserver 广播。该入口原在每次广播前执行 Enum.IsDefined。
+- CharacterControlSourceStateDisposition 正式成员连续为 Prepared=1 至 Restored=4，现直接按闭区间判断；未知零值及其它 byte 继续抛出原 ArgumentOutOfRangeException。Fixed 对应端口已经使用同一正式成员判断，本项补齐 Float32。
+- 不改变 observer 筛选、通知顺序、输入状态捕获／恢复或事务提交语义，只删除运行通知入口的装箱和枚举元数据查询。
+- Float32 portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做输入事务运行回放或 Player 分配采样。

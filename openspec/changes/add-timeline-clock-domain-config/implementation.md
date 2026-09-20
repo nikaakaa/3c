@@ -511,3 +511,9 @@
 - 两套CharacterEvaluation结果的Copy仅接收值类型，删除对struct逐项判null的无效循环；集合副本及运行快照的分配尚未在此批清理。未新增测试；多来源控制的跨动作作用范围仍待用户明确，未据角色级GameplayEffect存储擅自决定业务行为。
 - 用户补充可由Timeline Clip退出回调解除控制。现有正式链正常退出走OnDisable、Timeline停止走OnDestroy；后续沿这两个出口做同一来源清理，不把角色级存储误当成必须跨动作生效。定时hitstop到期仍应使用逻辑tick，不能依赖被冻结的片段位置。
 - Unity编译与最终域重载完成（1789923462392），Editor idle，控制台错误为零；git diff --check通过，未新增测试。
+
+## 多来源控制的现有能力与缺口核对
+- 现有GameplayEffect按逻辑tick推进持续时间；属性Multiplicative修饰符按乘积聚合，标签由活跃效果持有。Timeline播放节点已经读取倍率和暂停值输入，因此不应在Timeline另建倍率／暂停计时服务。Clip正常退出OnDisable和停止OnDestroy可调用同一来源清理。
+- 尚缺作者图可用的运行时效果句柄链：Apply操作拿到GameplayEffectApplyResult后只返回Succeeded，作者节点只暴露Applied；Remove的Handle来自静态编译常量。相同效果的多个独立实例无法由各自Clip保存并动态移除。后续需沿正式UInt64值端口与原状态槽补齐Apply句柄输出、Remove句柄输入和回调清理，不能用EffectId／SourceActor批量移除冒充独立来源解除。
+- 0.7另清除一处TreeClip／Marker图查询分配：直接按既有dependency identity的前缀及作者身份作序号字符串比较，返回闭包中的原身份，删除每次求值重新拼接tree:身份。图revision校验继续沿原闭包，不增加缓存。
+- Unity编译及最终域重载完成（1789923865117），Editor idle，控制台错误为零；git diff --check通过，未新增测试。多来源效果句柄接入尚未实现，不据现有聚合能力勾选5.6。

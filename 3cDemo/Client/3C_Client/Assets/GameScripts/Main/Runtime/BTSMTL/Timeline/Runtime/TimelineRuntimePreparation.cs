@@ -2250,15 +2250,17 @@ namespace BTSMTL.Timeline.Runtime
             treeGraphRevision = string.Empty;
             if (content == null || graph == null)
                 return false;
-            var treeGraph = graph;
-            string identity = $"tree:{treeGraph.AuthoringId}";
+            string authoringId = graph.AuthoringId;
+            const string prefix = "tree:";
             for (int index = 0; index < content.Dependencies.Count; index++)
             {
                 TimelineContentDependency dependency = content.Dependencies[index];
                 if (dependency.Kind != "timeline.tree" ||
-                    !string.Equals(dependency.Identity, identity, StringComparison.Ordinal))
+                    dependency.Identity.Length != prefix.Length + authoringId.Length ||
+                    !dependency.Identity.StartsWith(prefix, StringComparison.Ordinal) ||
+                    string.CompareOrdinal(dependency.Identity, prefix.Length, authoringId, 0, authoringId.Length) != 0)
                     continue;
-                treeGraphId = identity;
+                treeGraphId = dependency.Identity;
                 treeGraphRevision = dependency.ContentHash;
                 return true;
             }

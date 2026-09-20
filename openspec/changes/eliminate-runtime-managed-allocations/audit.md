@@ -1711,3 +1711,11 @@
 - 两域 Capture 输入收窄为 IReadOnlyList，按准确 Count 新建 Actor 状态工作数组、逐项复制并在数组上执行原 null、排序、roster 数量和身份校验。快照仍不借用下一 step 会清空复用的 workspace，也继续接受未排序的列表输入。
 - 删除每次世界快照捕获的 List 对象；Actor 工作数组仍是必要的隔离和排序存储，SimulationActorSnapshot 数组及每 Actor 序列化数据仍按快照生成。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，构建服务逐次关闭。Fixed 构建后曾检测到共享 Unity 的 Bee 编译，后续构建等待其退出再执行，未与 Editor 抢编译。未新增测试、未操作共享 Unity、未做快照运行对比或 Player 分配采样。
+
+## 2026-09-21 Presentation Schedule ClockMode 值域校验
+
+对应 tasks.md 的 7.16。
+
+- GameplayTickSystem 在实时 Presentation Schedule 捕获期间每 render frame 构造 GameplayPresentationScheduleFrame；脚本化输入也构造 GameplayScriptedPresentationFrame。两类帧构造原先都通过 Enum.IsDefined(Type, object) 校验 ClockMode，引入枚举装箱。
+- GameplayPresentationDebugClockMode 的正式值域只有连续的 LivePresentation=0 与 LogicLockedPresentation=1。两处构造改为无符号上界比较，负值和大于 1 的非法底层值仍进入原 ArgumentException，其他时间、tick 和插值校验不变。
+- ThirdPersonGameplay 全依赖构建通过，保留 Unity 包、UniTask、TEngine 的二十五条既有警告，零错误；构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Presentation Schedule 运行采样。

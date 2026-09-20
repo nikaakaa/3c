@@ -114,7 +114,7 @@ namespace ThirdPersonGameplay.Tick
                 !FiniteNonNegative(presentationDeltaSeconds) ||
                 !float.IsFinite(interpolationAlpha) ||
                 interpolationAlpha < 0f || interpolationAlpha > 1f ||
-                !Enum.IsDefined(typeof(GameplayPresentationDebugClockMode), presentationClockMode))
+                (uint)presentationClockMode > (uint)GameplayPresentationDebugClockMode.LogicLockedPresentation)
             {
                 throw new ArgumentException("Scripted Presentation Frame is invalid.");
             }
@@ -173,7 +173,7 @@ namespace ThirdPersonGameplay.Tick
                 !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
                 !float.IsFinite(interpolationAlpha) || interpolationAlpha < 0f ||
                 interpolationAlpha > 1f ||
-                !Enum.IsDefined(typeof(GameplayPresentationDebugClockMode), presentationClockMode))
+                (uint)presentationClockMode > (uint)GameplayPresentationDebugClockMode.LogicLockedPresentation)
             {
                 throw new ArgumentException(
                     "Presentation Schedule Frame is invalid.");

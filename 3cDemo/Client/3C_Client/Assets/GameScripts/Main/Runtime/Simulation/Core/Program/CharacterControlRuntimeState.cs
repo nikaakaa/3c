@@ -354,13 +354,15 @@ namespace ThirdPersonSimulation
         const int Version = 2;
         public const string CodecIdentity = "character-control-runtime-state/v2";
 
-        public static byte[] Write(CharacterControlRuntimeState state)
+        public static void WriteLengthPrefixed(CanonicalWriter writer, CharacterControlRuntimeState state)
         {
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
             if (state == null)
                 throw new ArgumentNullException(nameof(state));
-            using var writer = new CanonicalWriter();
+            long prefixPosition = writer.BeginLengthPrefixedBlock();
             WriteCanonical(writer, state);
-            return writer.ToArray();
+            writer.EndLengthPrefixedBlock(prefixPosition);
         }
 
         public static CharacterControlRuntimeState Read(byte[] bytes)

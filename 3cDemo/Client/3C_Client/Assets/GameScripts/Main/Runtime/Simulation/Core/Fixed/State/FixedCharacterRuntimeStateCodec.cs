@@ -158,7 +158,7 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteUInt64(state.HandleAllocator);
             writer.WriteBoolean(state.ControlState != null);
             if (state.ControlState != null)
-                writer.WriteBytes(CharacterControlRuntimeStateCodec.Write(state.ControlState));
+                CharacterControlRuntimeStateCodec.WriteLengthPrefixed(writer, state.ControlState);
             writer.WriteBoolean(state.GameplayEffectState != null);
             if (state.GameplayEffectState != null)
             {

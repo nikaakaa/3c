@@ -831,3 +831,12 @@
 - 不取消重新编码：公开 Write 与此校验仍共用唯一字段写入实现；ContentEquals 先比较总长度，再通过固定栈块比较所有字节，并恢复流位置。原非规范编码 InvalidDataException 文本保持不变，解析顺序、状态 hash 和返回对象不变。
 - Read(bytes) 自建 schema 后进入同一 Read(bytes, schema)，两条公开读取路径均覆盖；角色 Fixed／Float32 codec 是实际消费者。公开 Write 的独立数组仍保留，schema 的重复解析、writer／MemoryStream、结果对象及非空数据存储仍分配。
 - 目标文件修改前无其它未提交修改，编辑前无 csc／bee。Core portable 编译零警告零错误、build-server shutdown 成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未执行状态往返或非规范输入对比及 Player 分配采样。
+## 2026-09-20 角色控制状态直接嵌套写入
+
+对应 tasks.md 的 2.30。
+
+- 搜索 Assets 与 Tools 的 C# 调用，CharacterControlRuntimeStateCodec.Write 的两个消费者均为 Fixed／Float32 CharacterRuntimeStateCodec 内 WriteBytes 嵌套写入；上一轮 canonical 比较已不依赖返回数组。现以明确的 WriteLengthPrefixed(writer, state) 替换旧公开入口，迁移全部实际调用，删除旧 byte[] 返回实现。
+- 新入口沿公共 Begin／EndLengthPrefixedBlock，使用原 WriteCanonical 写字段；解码后重新编码比较仍直接调用同一 WriteCanonical，不将长度前缀混入内部 canonical 比较。原角色控制存在标记、外层四字节长度、内部版本／身份／字段／hash 次序保留。
+- 每次嵌入控制状态删除一套子 writer／流／最终数组及到外层复制。保留原 state null 拒绝，为新 writer 参数提供直接 null 拒绝；异常沿角色外层 using 释放，不发布部分结果。没有增加兼容入口或第二编码协议。
+- 读取侧整体 ReadBytes 和两遍 schema 解析、控制状态对象与快照存储仍分配；未改事务生命周期或 Timeline 部分。三文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。
+- 未新增测试、未操作共享 Unity、未做字节对比或状态恢复运行及 Player 分配采样。

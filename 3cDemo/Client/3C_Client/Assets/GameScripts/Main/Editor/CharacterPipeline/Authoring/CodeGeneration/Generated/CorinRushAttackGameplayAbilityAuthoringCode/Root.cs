@@ -66,23 +66,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             AddDeclaration(parts, "RushEnhanceSelected", "RushEnhanceSelected");
             AddDeclaration(parts, "RushHoldReleased", "RushHoldReleased");
             AddDeclaration(parts, "RushSawExplode", "RushSawExplode");
-            AddDeclaration(parts, "RushNormalHandoff", "RushNormalHandoff");
 
-            AddEdge(parts, "Entry", "Attack_Rush", RequestCondition(parts, "entry-rush-request", "Entry To Attack_Rush"));
+
+            AddEdge(parts, "Entry", "Attack_Rush", RequestCondition(parts, "entry-rush-request", "Entry To Attack_Rush", "Rush"));
             AddEdge(parts, "Entry", "Attack_Rush_Enhance", BooleanCondition(parts, "entry-enhance", "Entry To Attack_Rush_Enhance", "RushEnhanceSelected"));
             AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", BooleanCondition(parts, "rush-release", "Attack_Rush Release", "RushHoldReleased"));
             AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", BooleanCondition(parts, "rush-saw", "Attack_Rush SawExplode", "RushSawExplode"));
             AddEdge(parts, "Attack_Rush", "Attack_Rush_Explode", CompletedCondition(parts, "rush-terminal", "Attack_Rush Terminal"));
-            AddEdge(parts, "Attack_Rush_Explode", "Exit", BooleanCondition(parts, "explode-normal", "Attack_Rush_Explode NormalHandoff", "RushNormalHandoff"));
+            AddEdge(parts, "Attack_Rush_Explode", "Exit", RequestCondition(parts, "explode-normal", "Attack_Rush_Explode NormalHandoff", "Attack"));
             AddEdge(parts, "Attack_Rush_Explode", "Attack_Rush_End", CompletedCondition(parts, "explode-terminal", "Attack_Rush_Explode Terminal"));
             AddEdge(parts, "Attack_Rush_End", "Exit", CompletedCondition(parts, "end-terminal", "Attack_Rush_End Terminal"));
             AddEdge(parts, "Attack_Rush_Enhance", "Attack_Rush_Enhance_Loop", CompletedCondition(parts, "enhance-terminal", "Attack_Rush_Enhance Terminal"));
             AddEdge(parts, "Attack_Rush_Enhance_Loop", "Attack_Rush_Enhance_Explode", BooleanCondition(parts, "loop-saw", "Enhance_Loop SawExplode", "RushSawExplode"));
             AddEdge(parts, "Attack_Rush_Enhance_Loop", "Attack_Rush_Enhance_Loop", CompletedCondition(parts, "loop-reenter", "Enhance_Loop Reenter"));
             AddEdge(parts, "Attack_Rush_Enhance_Loop", "Attack_Rush_Enhance_End", BooleanCondition(parts, "loop-release", "Enhance_Loop Release", "RushHoldReleased"));
-            AddEdge(parts, "Attack_Rush_Enhance_End", "Exit", BooleanCondition(parts, "enhance-end-normal", "Enhance_End NormalHandoff", "RushNormalHandoff"));
+            AddEdge(parts, "Attack_Rush_Enhance_End", "Exit", RequestCondition(parts, "enhance-end-normal", "Enhance_End NormalHandoff", "Attack"));
             AddEdge(parts, "Attack_Rush_Enhance_End", "Attack_Rush_End", CompletedCondition(parts, "enhance-end-terminal", "Enhance_End Terminal"));
-            AddEdge(parts, "Attack_Rush_Enhance_Explode", "Exit", BooleanCondition(parts, "enhance-explode-normal", "Enhance_Explode NormalHandoff", "RushNormalHandoff"));
+            AddEdge(parts, "Attack_Rush_Enhance_Explode", "Exit", RequestCondition(parts, "enhance-explode-normal", "Enhance_Explode NormalHandoff", "Attack"));
             AddEdge(parts, "Attack_Rush_Enhance_Explode", "Attack_Rush_Enhance_Explode_End", CompletedCondition(parts, "enhance-explode-terminal", "Enhance_Explode Terminal"));
             AddEdge(parts, "Attack_Rush_Enhance_Explode_End", "Exit", CompletedCondition(parts, "enhance-explode-end-terminal", "Enhance_Explode_End Terminal"));
 
@@ -159,12 +159,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             BtsmtlSkillAuthoringCode.BindAbilityRoot(context, parts.graph);
         }
 
-        static BtsmtlSkillFlowGraph RequestCondition(RootParts parts, string seed, string name)
+        static BtsmtlSkillFlowGraph RequestCondition(RootParts parts, string seed, string name, string requestId)
         {
             var graph = BtsmtlSkillAuthoringGraphCreationContract.EnsureOwnedGraph<BtsmtlSkillFlowGraph>(parts.graph, RushId($"graph:{seed}"), typeof(BtsmtlSkillFlowGraph), BtsmtlSkillFlowGraphRole.ConditionRule, name);
-            var request = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillActionRequestFlowNode), RushId($"node:{seed}:request"), "Has Rush Request", new Vector2(-520f, 0f));
+            var request = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillActionRequestFlowNode), RushId($"node:{seed}:request"), $"Has {requestId} Request", new Vector2(-520f, 0f));
             var result = BtsmtlSkillAuthoringCode.EnsureFlowNode(graph, typeof(BtsmtlSkillConditionResultFlowNode), RushId($"node:{seed}:result"), "条件结果", new Vector2(600f, 180f));
-            BtsmtlSkillAuthoringContract.Apply(request, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", "Rush"), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
+            BtsmtlSkillAuthoringContract.Apply(request, new[] { new BtsmtlSkillAuthoringFieldValue("inputId", requestId), new BtsmtlSkillAuthoringFieldValue("providerOwnerId", "asset:be650df85b1e49ab9d1cefc91c6cc809") });
             BtsmtlSkillAuthoringCode.EnsureFlowConnection(graph, request, "m_Output", result, "m_Result", RushId($"edge:{seed}"));
             BtsmtlSkillAuthoringCode.PruneFlowGraph(graph, new[] { RushId($"node:{seed}:request"), RushId($"node:{seed}:result") }, new[] { RushId($"edge:{seed}") });
             return graph;
@@ -201,6 +201,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
         }
     }
 }
+
+
 
 
 

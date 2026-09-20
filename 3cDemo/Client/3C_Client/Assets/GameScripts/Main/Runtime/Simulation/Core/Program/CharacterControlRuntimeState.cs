@@ -401,14 +401,10 @@ namespace ThirdPersonSimulation
             var result = new CharacterControlRuntimeState(schema, lastCompletedTick, values);
             if (!result.StateHash.Equals(expectedHash))
                 throw new InvalidDataException("Character control runtime state hash is invalid.");
-            byte[] canonical = Write(result);
-            if (canonical.Length != bytes.Length)
+            using var writer = new CanonicalWriter();
+            WriteCanonical(writer, result);
+            if (!writer.ContentEquals(bytes))
                 throw new InvalidDataException("Character control runtime state is not canonical.");
-            for (int i = 0; i < bytes.Length; i++)
-            {
-                if (bytes[i] != canonical[i])
-                    throw new InvalidDataException("Character control runtime state is not canonical.");
-            }
             return result;
         }
 

@@ -823,3 +823,11 @@
 - 删除两次枚举装箱，保留 id.IsValid、现有组合判断及同一 ArgumentException。没有增加另一份枚举成员清单或弱化类型／语义关系，未知类型和零值仍被原组合判断拒绝。
 - CharacterControlRuntimeStateCodec 的无外部 schema 读取分支会逐字段构造该描述，因此上一轮解码去装箱后这里仍是真实后续检查；同时覆盖直接构造和内容准备，不将所有构造次数都计为逐帧。
 - 文件修改前无其它未提交修改，进程查询完成后确认无 csc／bee。Core portable 编译零警告零错误并成功关闭构建服务，diff 空白检查通过；未新增测试、未操作共享 Unity、未做运行或分配采样。字段对象、schema 与结果存储仍分配。
+## 2026-09-20 角色控制状态规范编码比较清理
+
+对应 tasks.md 的 2.29。
+
+- CharacterControlRuntimeStateCodec.Read 在 schema／字段／状态 hash 校验后，原 Write(result) 生成完整 byte[]，再比较长度和每个字节。现直接新建局部 CanonicalWriter，调用已有 WriteCanonical，再使用正式 ContentEquals 比较原输入，删除仅供比较的 ToArray 副本。
+- 不取消重新编码：公开 Write 与此校验仍共用唯一字段写入实现；ContentEquals 先比较总长度，再通过固定栈块比较所有字节，并恢复流位置。原非规范编码 InvalidDataException 文本保持不变，解析顺序、状态 hash 和返回对象不变。
+- Read(bytes) 自建 schema 后进入同一 Read(bytes, schema)，两条公开读取路径均覆盖；角色 Fixed／Float32 codec 是实际消费者。公开 Write 的独立数组仍保留，schema 的重复解析、writer／MemoryStream、结果对象及非空数据存储仍分配。
+- 目标文件修改前无其它未提交修改，编辑前无 csc／bee。Core portable 编译零警告零错误、build-server shutdown 成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未执行状态往返或非规范输入对比及 Player 分配采样。

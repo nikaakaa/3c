@@ -105,7 +105,7 @@ namespace ThirdPersonCamera
                         offset = ResolveScreenOffset(byScreen.ScreenOffset, byScreen.AspectRatio);
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
-                        CameraTrackOrbitPayload orbit = SampleTrack(byTrack.CameraOrbits, byTrack.ElevationRatio);
+                        var orbit = SampleTrack(byTrack.CameraOrbits, byTrack.ElevationRatio);
                         offset = ResolveScreenOffset(
                             SampleTrack(byTrack.ScreenOffsets, byTrack.ElevationRatio),
                             byTrack.AspectRatio);
@@ -414,20 +414,20 @@ namespace ThirdPersonCamera
             return new Vector2(offset.x * ReferenceAspectRatio / aspectRatio, offset.y);
         }
 
-        static CameraTrackOrbitPayload SampleTrack(
+        static (float Height, float Radius) SampleTrack(
             IReadOnlyList<CameraTrackOrbitPayload> orbits,
             float elevationRatio)
         {
             if (orbits.Count == 0)
-                return new CameraTrackOrbitPayload(0f, 0f);
+                return (0f, 0f);
             if (orbits.Count == 1)
-                return orbits[0];
+                return (orbits[0].Height, orbits[0].Radius);
             float t = Mathf.Clamp01(elevationRatio) * (orbits.Count - 1);
             int index = Mathf.Min(Mathf.FloorToInt(t), orbits.Count - 2);
             float alpha = t - index;
             CameraTrackOrbitPayload left = orbits[index];
             CameraTrackOrbitPayload right = orbits[index + 1];
-            return new CameraTrackOrbitPayload(
+            return (
                 Mathf.Lerp(left.Height, right.Height, alpha),
                 Mathf.Lerp(left.Radius, right.Radius, alpha));
         }

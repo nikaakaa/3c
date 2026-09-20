@@ -1054,3 +1054,12 @@
 - IsValidEndpoint 现显式匹配 SourceOwner、SourcePose、NoPose：SourceOwner 要求索引非负，另外两种要求索引为 -1，未知值直接失败。身份字段、相等比较、hash、transition 精确引用检查和错误路径均未改变。
 - 一次 Push 比较两个新构造身份时，最多删除四次枚举装箱和元数据查询；其它调用 IsValidEndpoint 的身份有效性读取同步受益。未修改 Blend 时长、曲线、Profile、栈容量或 Pose 生命周期。
 - 首次 Runtime 增量编译受并行 Timeline 合同中间状态的五个错误阻断，目标文件无错误；并行提交闭合后重新执行 ThirdPersonClient.Runtime 全依赖编译，零错误、三十四个既有警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-20 Pose 源释放后端校验
+
+对应 tasks.md 的 4.2.2。
+
+- AnimationPoseSourceReleaseToken 由 ACL frame journal 的 StageRelease 生成，并在 journal 提交和具体 sampling backend Release 前反复检查 IsValid。构造器与 IsValid 原都对 CharacterAnimationSamplingBackendKind 执行 Enum.IsDefined。
+- sampling 后端正式成员只有 NativeClip 与 Acl，现由 token 内同一值判断直接匹配；未知零值及其它 byte、负 permission index、零 generation 继续拒绝。SourceId、PlayerNodeId、permission 和 generation 生命周期未改。
+- 删除释放令牌生成与消费中的装箱和枚举元数据查询，不改变 ACL／NativeClip 路由、frame journal 提交顺序或物理 Pose 源释放时机。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Pose 源释放运行回放或 Player 分配采样。

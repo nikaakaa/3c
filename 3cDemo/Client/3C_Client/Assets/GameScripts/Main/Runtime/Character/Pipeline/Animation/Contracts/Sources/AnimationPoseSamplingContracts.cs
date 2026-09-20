@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             PoseNodeId playerNodeId = default)
         {
             if (permissionIndex < 0 || generation == 0 ||
-                !Enum.IsDefined(typeof(CharacterAnimationSamplingBackendKind), backend))
+                !IsDefined(backend))
                 throw new ArgumentException("Animation pose source release token is invalid.");
             PermissionIndex = permissionIndex;
             Generation = generation;
@@ -76,7 +76,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         internal AnimationPoseSourceId SourceId { get; }
         internal PoseNodeId PlayerNodeId { get; }
         internal bool IsValid => PermissionIndex >= 0 && Generation != 0 &&
-                                 Enum.IsDefined(typeof(CharacterAnimationSamplingBackendKind), Backend);
+                                 IsDefined(Backend);
+
+        static bool IsDefined(CharacterAnimationSamplingBackendKind backend) =>
+            backend == CharacterAnimationSamplingBackendKind.NativeClip ||
+            backend == CharacterAnimationSamplingBackendKind.Acl;
     }
 
     internal readonly struct AnimationPoseSourcePrepareResult

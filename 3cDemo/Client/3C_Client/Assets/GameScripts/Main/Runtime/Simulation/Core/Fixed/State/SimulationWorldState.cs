@@ -65,6 +65,19 @@ namespace ThirdPersonSimulation.Fixed
             WorldStatePersistenceMode persistenceMode,
             IEnumerable<WorldBodyState> bodies,
             byte[] solverStatePayload)
+            : this(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies,
+                solverStatePayload.AsSpan())
+        {
+        }
+
+        internal WorldSimulationState(
+            SimulationNumericProfile numericProfile,
+            SolverImplementationId solverId,
+            string solverVersion,
+            WorldRevision worldRevision,
+            WorldStatePersistenceMode persistenceMode,
+            IEnumerable<WorldBodyState> bodies,
+            ReadOnlySpan<byte> solverStatePayload)
         {
             if (!numericProfile.IsValid || string.IsNullOrEmpty(solverId.Value) || string.IsNullOrEmpty(worldRevision.Value))
                 throw new ArgumentException("World state identity is incomplete.");
@@ -81,9 +94,9 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException($"World state contains duplicate ActorId '{copied[i].ActorId}'.", nameof(bodies));
             }
             m_Bodies = Array.AsReadOnly(copied);
-            m_SolverStatePayload = solverStatePayload == null || solverStatePayload.Length == 0
+            m_SolverStatePayload = solverStatePayload.Length == 0
                 ? Array.Empty<byte>()
-                : (byte[])solverStatePayload.Clone();
+                : solverStatePayload.ToArray();
         }
 
         public SimulationNumericProfile NumericProfile { get; }
@@ -172,11 +185,11 @@ namespace ThirdPersonSimulation.Fixed
                     reader.ReadBoolean(),
                     (WorldCollisionSummary)reader.ReadUInt32());
             }
-            byte[] payload = reader.ReadBytes();
+            ArraySegment<byte> payload = reader.ReadBytesSegment();
             reader.RequireComplete();
             if (numericProfile != expectedNumericProfile || !solverId.Equals(expectedSolverId) || !string.Equals(solverVersion, expectedSolverVersion, StringComparison.Ordinal) || !worldRevision.Equals(expectedWorldRevision))
                 throw new InvalidDataException("World state Numeric Profile, Solver, or revision binding is stale or mismatched.");
-            var result = new WorldSimulationState(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies, payload);
+            var result = new WorldSimulationState(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies, payload.AsSpan());
             using var writer = new CanonicalWriter();
             WriteCanonical(writer, result);
             if (!writer.ContentEquals(bytes))

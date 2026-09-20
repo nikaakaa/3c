@@ -991,3 +991,12 @@
 - solverStatePayload 为 null 或长度零时统一 Array.Empty，非空继续 Clone，保留求解器载荷独立所有权。空数组没有可修改元素，不新增租用池、缓存或恢复旁路。
 - 运行中的世界状态构造及解码重建都会经过该入口；未修改求解器、事务发布或回滚存储边界。修改前两文件无其它未提交修改，编辑前进程扫描无 csc／bee。Fixed／Float32 portable 均零警告零错误，逐次构建服务关闭成功，diff 空白检查通过。
 - 未新增测试、未操作共享 Unity、未做世界状态运行对比或 Player 分配采样。对象、最终数组／包装及非空 payload 克隆仍分配。
+
+## 2026-09-20 世界状态解码载荷单次复制
+
+对应 tasks.md 的 5.50。
+
+- Fixed／Float32 WorldSimulationStateCodec.Read 原经 CanonicalReader.ReadBytes 复制求解器 payload，再传入 WorldSimulationState 构造器 Clone，形成两份连续数组复制。现解码同步读取 ArraySegment，并交给内部 ReadOnlySpan 构造入口；最终状态仅 ToArray 一次，继续独立持有 payload。
+- 公共 byte[] 构造入口保留，并统一转交同一只读片段实现；null／空载荷仍得到 Array.Empty，非空调用方输入仍不会被状态暴露或后续修改影响。reader 片段只在同步构造期间借用，不跨方法保存。
+- 字段顺序、长度检查、RequireComplete、身份绑定校验及完整 canonical 重新编码比较均未修改。只删除恢复解码的中间 payload 数组，不改变求解器恢复、世界状态发布或事务生命周期；最终状态数组仍是必要分配。
+- 两目标文件继承前一提交后无其它未提交修改。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查待提交前执行；未新增测试、未操作共享 Unity、未做世界状态恢复运行对比或 Player 分配采样。

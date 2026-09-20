@@ -441,3 +441,12 @@
 - ReadPresentationCommand 的类型改用显式列出当前十二种成员的 switch 校验，在读取 producerId 前拒绝其它值，保留原异常文本。TimelineProgress 成员继续沿原 AbilityTimelineProgressCodec，不改其字段、播放或事件消费边界。
 - 两处不再调用 Enum.ToObject／Enum.IsDefined，不建立额外运行缓存。Action transition／phase／state 和效果操作／应用模式仍使用原泛型入口，此次不宣称 Egress 枚举分配全部完成。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
+
+## 2026-09-20 Egress 剩余枚举解码装箱清理
+
+对应 tasks.md 的 5.33，与代码同步提交。
+
+- 按当前 Float32 正式声明逐项核对动作转换 8 个、动作阶段 5 个、动作状态 9 个、效果操作 11 个、应用模式 2 个成员。分别用强类型 switch 匹配替换原 ReadEnum 调用，不以连续数字范围代替成员声明，也不生成运行缓存。
+- 未知 byte 在原调用位置抛相同 InvalidDataException 文本；合法零值和各成员保留，读取次序不变。此次只改序列化校验，不修改动作推进、效果执行或任何生命周期边界。
+- 五个消费者迁移后删除泛型 ReadEnum；源码检索确认本 codec 无 Enum.ToObject／Enum.IsDefined。此结论只覆盖 codec 自身，不能推广到构造函数、嵌套 codec 或整条事件链。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。

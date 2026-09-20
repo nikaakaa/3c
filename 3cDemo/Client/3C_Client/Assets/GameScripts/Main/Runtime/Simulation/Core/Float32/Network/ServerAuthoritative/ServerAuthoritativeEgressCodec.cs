@@ -400,9 +400,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             reader.ReadUInt64(),
             reader.ReadString(),
             ReadOptionalSkillId(reader.ReadString()),
-            ReadEnum<SimulationActionLifecycleTransitionType>(reader.ReadByte(), "action transition"),
-            ReadEnum<SimulationActionPhase>(reader.ReadByte(), "action phase"),
-            ReadEnum<SimulationActionState>(reader.ReadByte(), "action state"),
+            ReadActionTransition(reader.ReadByte()),
+            ReadActionPhase(reader.ReadByte()),
+            ReadActionState(reader.ReadByte()),
             reader.ReadString(),
             default);
 
@@ -446,7 +446,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static GameplayEffectFact ReadEffect(CanonicalReader reader) => new GameplayEffectFact(
             reader.ReadString(),
             reader.ReadUInt64(),
-            ReadEnum<SimulationGameplayEffectLifecycleOperation>(reader.ReadByte(), "effect operation"),
+            ReadEffectOperation(reader.ReadByte()),
             ReadEffectContext(reader),
             reader.ReadUInt64(),
             reader.ReadUInt64(),
@@ -525,7 +525,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             reader.ReadUInt64(),
             reader.ReadUInt64(),
             reader.ReadUInt64(),
-            ReadEnum<SimulationGameplayEffectApplicationMode>(reader.ReadByte(), "effect application mode"));
+            ReadEffectApplicationMode(reader.ReadByte()));
 
         static CanonicalReader Reader(byte[] bytes, uint magic, int version, string label)
         {
@@ -554,12 +554,69 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new InvalidDataException($"ServerAuthoritative {label} payload is not canonical.");
         }
 
-        static T ReadEnum<T>(byte value, string label) where T : struct, Enum
-        {
-            var result = (T)Enum.ToObject(typeof(T), value);
-            if (!Enum.IsDefined(typeof(T), result))
-                throw new InvalidDataException($"ServerAuthoritative {label} '{value}' is invalid.");
-            return result;
-        }
+        static SimulationActionLifecycleTransitionType ReadActionTransition(byte value) =>
+            (SimulationActionLifecycleTransitionType)value switch
+            {
+                SimulationActionLifecycleTransitionType.None or
+                SimulationActionLifecycleTransitionType.Confirm or
+                SimulationActionLifecycleTransitionType.Complete or
+                SimulationActionLifecycleTransitionType.Cancel or
+                SimulationActionLifecycleTransitionType.Interrupt or
+                SimulationActionLifecycleTransitionType.Reject or
+                SimulationActionLifecycleTransitionType.Correct or
+                SimulationActionLifecycleTransitionType.Abort => (SimulationActionLifecycleTransitionType)value,
+                _ => throw new InvalidDataException($"ServerAuthoritative action transition '{value}' is invalid.")
+            };
+
+        static SimulationActionPhase ReadActionPhase(byte value) =>
+            (SimulationActionPhase)value switch
+            {
+                SimulationActionPhase.Startup or
+                SimulationActionPhase.Active or
+                SimulationActionPhase.Recovery or
+                SimulationActionPhase.Cancel or
+                SimulationActionPhase.Ended => (SimulationActionPhase)value,
+                _ => throw new InvalidDataException($"ServerAuthoritative action phase '{value}' is invalid.")
+            };
+
+        static SimulationActionState ReadActionState(byte value) =>
+            (SimulationActionState)value switch
+            {
+                SimulationActionState.Requested or
+                SimulationActionState.Predicted or
+                SimulationActionState.Confirmed or
+                SimulationActionState.Rejected or
+                SimulationActionState.Cancelled or
+                SimulationActionState.Interrupted or
+                SimulationActionState.Aborted or
+                SimulationActionState.Ended or
+                SimulationActionState.Corrected => (SimulationActionState)value,
+                _ => throw new InvalidDataException($"ServerAuthoritative action state '{value}' is invalid.")
+            };
+
+        static SimulationGameplayEffectLifecycleOperation ReadEffectOperation(byte value) =>
+            (SimulationGameplayEffectLifecycleOperation)value switch
+            {
+                SimulationGameplayEffectLifecycleOperation.Applied or
+                SimulationGameplayEffectLifecycleOperation.Confirmed or
+                SimulationGameplayEffectLifecycleOperation.Rejected or
+                SimulationGameplayEffectLifecycleOperation.StackChanged or
+                SimulationGameplayEffectLifecycleOperation.Inhibited or
+                SimulationGameplayEffectLifecycleOperation.Resumed or
+                SimulationGameplayEffectLifecycleOperation.PeriodExecuted or
+                SimulationGameplayEffectLifecycleOperation.Removed or
+                SimulationGameplayEffectLifecycleOperation.Expired or
+                SimulationGameplayEffectLifecycleOperation.Corrected or
+                SimulationGameplayEffectLifecycleOperation.Overflow => (SimulationGameplayEffectLifecycleOperation)value,
+                _ => throw new InvalidDataException($"ServerAuthoritative effect operation '{value}' is invalid.")
+            };
+
+        static SimulationGameplayEffectApplicationMode ReadEffectApplicationMode(byte value) =>
+            (SimulationGameplayEffectApplicationMode)value switch
+            {
+                SimulationGameplayEffectApplicationMode.Confirmed or
+                SimulationGameplayEffectApplicationMode.Predicted => (SimulationGameplayEffectApplicationMode)value,
+                _ => throw new InvalidDataException($"ServerAuthoritative effect application mode '{value}' is invalid.")
+            };
     }
 }

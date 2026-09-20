@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
@@ -127,7 +128,7 @@ namespace BTSMTL.Timeline
             string markerId,
             string trackAuthoringId,
             TimelineClipExecutionPolicy executionPolicy,
-            int frame,
+            FixedScalar time,
             string graphId,
             string graphRevision,
             bool trackMuted)
@@ -138,14 +139,14 @@ namespace BTSMTL.Timeline
             TrackMuted = trackMuted;
             GraphId = Require(graphId, nameof(graphId));
             GraphRevision = Require(graphRevision, nameof(graphRevision));
-            Frame = frame < 0 ? throw new ArgumentOutOfRangeException(nameof(frame)) : frame;
+            Time = time < FixedScalar.Zero ? throw new ArgumentOutOfRangeException(nameof(time)) : time;
         }
 
         public string MarkerId { get; }
         public bool TrackMuted { get; }
         public string TrackAuthoringId { get; }
         public TimelineClipExecutionPolicy ExecutionPolicy { get; }
-        public int Frame { get; }
+        public FixedScalar Time { get; }
         public string GraphId { get; }
         public string GraphRevision { get; }
 
@@ -411,7 +412,7 @@ namespace BTSMTL.Timeline
                     TimelineMarker marker = track.Markers[markerIndex];
                     if (marker == null)
                         continue;
-                    maxFrame = Math.Max(maxFrame, Math.Max(1, marker.Frame));
+                    maxFrame = Math.Max(maxFrame, Math.Max(1, TimelineTimeGrid.CeilingIndex(marker.Time, TimelineUtility.FrameRate)));
                     if (marker.Graph is not ITimelineTreeGraphAsset markerGraph || !markerGraph.IsTimelineTrigger)
                     {
                         errors.Add($"Timeline Marker '{marker.AuthoringId}' requires a Timeline trigger graph.");
@@ -432,7 +433,7 @@ namespace BTSMTL.Timeline
                         marker.AuthoringId,
                         track.AuthoringId,
                         TimelineClipExecutionPolicy.FromDomain(marker.ExecutionDomain),
-                        marker.Frame,
+                        marker.Time,
                         graphIdentity,
                         graphRevision,
                         track.PersistentMuted));
@@ -561,7 +562,7 @@ namespace BTSMTL.Timeline
             clips.Sort((left, right) => string.CompareOrdinal(left.AuthoringId, right.AuthoringId));
             markers.Sort((left, right) =>
             {
-                int frame = left.Frame.CompareTo(right.Frame);
+                int frame = left.Time.CompareTo(right.Time);
                 return frame != 0 ? frame : string.CompareOrdinal(left.MarkerId, right.MarkerId);
             });
             sections.Sort((left, right) =>
@@ -605,7 +606,7 @@ namespace BTSMTL.Timeline
                 hashParts.Add(markers[i].MarkerId);
                 hashParts.Add(markers[i].ExecutionPolicy.Domain.ToString("G"));
                 hashParts.Add(markers[i].ExecutionPolicy.OutputKind.ToString("G"));
-                hashParts.Add(markers[i].Frame.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                hashParts.Add(markers[i].Time.Raw.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
             return new TimelineContentDiscoveryResult(
                 new TimelineContentUnit(

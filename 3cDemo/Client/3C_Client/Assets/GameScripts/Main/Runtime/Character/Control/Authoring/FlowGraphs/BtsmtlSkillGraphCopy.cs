@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Control.Authoring
                         if (!ReferenceEquals(clip.AssetTree, null))
                             clip.SetAssetTree(Resolve(clip.AssetTree));
                     foreach (TimelineMarker marker in data.Tracks.SelectMany(track => track.Markers))
-                        marker.Configure(marker.Frame, Resolve(marker.Graph));
+                        marker.Configure(marker.Time, Resolve(marker.Graph));
                     ((TimelineAsset)m_Copies[source.Source]).SetData(data);
                     EditorUtility.SetDirty(m_Copies[source.Source]);
                 }

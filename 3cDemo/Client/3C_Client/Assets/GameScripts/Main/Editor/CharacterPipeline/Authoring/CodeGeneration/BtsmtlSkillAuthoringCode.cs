@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
@@ -594,19 +595,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             return created;
         }
 
-        public static void EnsureMarker(TimelineData timeline, Track track, string identity, int frame, ScriptableObject graph)
+        public static void EnsureMarker(TimelineData timeline, Track track, string identity, decimal seconds, ScriptableObject graph)
         {
+            FixedScalar time = FixedScalar.FromDecimal(seconds);
             PrepareTimelineMutation(timeline);
             timeline.ApplyModify(() =>
             {
                 TimelineMarker marker = track.Markers.SingleOrDefault(value => value.AuthoringId == identity);
                 if (marker == null)
                 {
-                    marker = track.AddMarker(frame, graph);
+                    marker = track.AddMarker(time, graph);
                     marker.ConfigureAuthoringIdentity(identity);
                 }
                 else
-                    marker.Configure(frame, graph);
+                    marker.Configure(time, graph);
             }, "生成Timeline触发点");
         }
 

@@ -37,10 +37,15 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (double.IsNaN(value) || double.IsInfinity(value))
                 throw new ArgumentOutOfRangeException(nameof(value));
-            decimal scaled = checked((decimal)value * OneRaw);
+            return FromDecimal(checked((decimal)value));
+        }
+
+        public static FixedScalar FromDecimal(decimal value)
+        {
+            decimal scaled = checked(value * OneRaw);
             decimal rounded = decimal.Round(scaled, 0, MidpointRounding.ToEven);
             if (rounded < long.MinValue || rounded > long.MaxValue)
-                throw new OverflowException($"Simulation Fixed value '{value.ToString("R", CultureInfo.InvariantCulture)}' exceeds Q32.32.");
+                throw new OverflowException($"Simulation Fixed value '{value.ToString(CultureInfo.InvariantCulture)}' exceeds Q32.32.");
             return new FixedScalar((long)rounded);
         }
 

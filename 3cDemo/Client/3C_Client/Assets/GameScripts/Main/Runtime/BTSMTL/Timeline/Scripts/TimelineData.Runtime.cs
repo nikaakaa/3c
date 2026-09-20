@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
@@ -102,7 +103,7 @@ namespace BTSMTL.Timeline
             foreach (var marker in m_Markers)
             {
                 marker.Init(this);
-                MaxFrame = Mathf.Max(MaxFrame, Mathf.Max(1, marker.Frame));
+                MaxFrame = Mathf.Max(MaxFrame, Mathf.Max(1, TimelineTimeGrid.CeilingIndex(marker.Time, TimelineUtility.FrameRate)));
             }
 
         }
@@ -128,13 +129,13 @@ namespace BTSMTL.Timeline
             m_AuthoringId = AuthoringIdentity.Create();
         }
 
-        public TimelineMarker AddMarker(int frame, ScriptableObject graph)
+        public TimelineMarker AddMarker(FixedScalar time, ScriptableObject graph)
         {
-            if (frame < 0)
-                throw new ArgumentOutOfRangeException(nameof(frame));
+            if (time < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(time));
             var marker = new TimelineMarker();
             marker.EnsureAuthoringIdentity();
-            marker.Configure(frame, graph);
+            marker.Configure(time, graph);
             marker.Init(this);
             m_Markers.Add(marker);
             return marker;
@@ -548,7 +549,7 @@ namespace BTSMTL.Timeline
                 if (track == null)
                     continue;
                 foreach (TimelineMarker marker in track.Markers)
-                    terminalFrame = Mathf.Max(terminalFrame, Mathf.Max(1, marker.Frame));
+                    terminalFrame = Mathf.Max(terminalFrame, Mathf.Max(1, TimelineTimeGrid.CeilingIndex(marker.Time, TimelineUtility.FrameRate)));
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
                     Clip clip = track.Clips[clipIndex];

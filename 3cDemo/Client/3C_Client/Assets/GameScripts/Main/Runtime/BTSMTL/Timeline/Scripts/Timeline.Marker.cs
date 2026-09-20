@@ -1,5 +1,6 @@
 using System;
 using BTSMTL.Diagnostics;
+using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -11,7 +12,7 @@ namespace BTSMTL.Timeline
         string m_AuthoringId;
 
         [SerializeField]
-        int m_Frame;
+        long m_TimeRaw;
 
         [SerializeField]
         ScriptableObject m_Graph;
@@ -19,7 +20,7 @@ namespace BTSMTL.Timeline
         Track m_Track;
 
         public string AuthoringId => m_AuthoringId ?? string.Empty;
-        public int Frame => m_Frame;
+        public FixedScalar Time => FixedScalar.FromRaw(m_TimeRaw);
         public ScriptableObject Graph => m_Graph;
         public Track Track => m_Track;
         public TimelineExecutionDomain ExecutionDomain =>
@@ -28,17 +29,17 @@ namespace BTSMTL.Timeline
         public void Init(Track track)
         {
             m_Track = track;
-            if (m_Frame < 0)
-                throw new InvalidOperationException($"Timeline Marker '{AuthoringId}' frame is invalid.");
+            if (m_TimeRaw < 0)
+                throw new InvalidOperationException($"Timeline Marker '{AuthoringId}' time is invalid.");
         }
 
-        public void Configure(int frame, ScriptableObject graph)
+        public void Configure(FixedScalar time, ScriptableObject graph)
         {
-            if (frame < 0)
-                throw new ArgumentOutOfRangeException(nameof(frame));
+            if (time < FixedScalar.Zero)
+                throw new ArgumentOutOfRangeException(nameof(time));
             if (graph is not ITimelineTreeGraphAsset markerGraph || !markerGraph.IsTimelineTrigger)
                 throw new ArgumentException("Timeline Marker需要正式的Timeline触发图资产。", nameof(graph));
-            m_Frame = frame;
+            m_TimeRaw = time.Raw;
             m_Graph = graph;
         }
 

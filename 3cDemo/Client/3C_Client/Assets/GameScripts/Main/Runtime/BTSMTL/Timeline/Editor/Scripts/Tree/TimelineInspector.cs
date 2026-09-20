@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -146,20 +147,21 @@ namespace BTSMTL.Timeline.Editor
             EditorGUILayout.LabelField("Domain (Inherited from Track)", marker.ExecutionDomain.ToString());
             if (GUILayout.Button("Open Trigger Graph"))
                 TimelineGraphAuthoring.Open(marker.Graph);
-            int frame = Mathf.Max(0, EditorGUILayout.IntField("Frame", marker.Frame));
+            EditorGUI.BeginChangeCheck();
+            double seconds = Math.Max(0d, EditorGUILayout.DoubleField("Time (Seconds)", marker.Time.ToDouble()));
             ScriptableObject graph = (ScriptableObject)EditorGUILayout.ObjectField(
                 "Trigger Graph",
                 marker.Graph,
                 typeof(ScriptableObject),
                 false);
-            if (frame == marker.Frame && graph == marker.Graph)
+            if (!EditorGUI.EndChangeCheck())
                 return;
             if (!TryBeginMutation(asset))
                 return;
             try
             {
                 asset.Data.ApplyModify(() => TimelineGraphAuthoring.MutateOwnedContent(
-                    asset.Data, () => marker.Configure(frame, graph)), "Edit Timeline Marker");
+                    asset.Data, () => marker.Configure(FixedScalar.FromDouble(seconds), graph)), "Edit Timeline Marker");
                 m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
                 m_ConfigurationError = null;
             }

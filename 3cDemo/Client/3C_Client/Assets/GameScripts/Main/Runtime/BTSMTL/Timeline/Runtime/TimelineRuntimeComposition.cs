@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
@@ -451,6 +452,8 @@ namespace BTSMTL.Timeline.Runtime
                 throw new InvalidOperationException("Timeline presentation cursor moved backward without a generation reset.");
             int firstCycle = loop ? previousCycle : 0;
             int lastCycle = loop ? currentCycle : 0;
+            FixedScalar previousTime = FixedScalar.FromDouble(previousFrame / (double)playback.Content.FrameRate);
+            FixedScalar currentTime = FixedScalar.FromDouble(currentFrame / (double)playback.Content.FrameRate);
             var transitions = new List<MarkerTransition>();
             for (int markerIndex = 0; markerIndex < playback.Content.Markers.Count; markerIndex++)
             {
@@ -459,9 +462,11 @@ namespace BTSMTL.Timeline.Runtime
                     continue;
                 for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
                 {
-                    double absolute = cycle * (double)maxFrame + marker.Frame;
-                    if (Crosses(absolute, previousAbsolute, currentAbsolute, includeStartBoundary))
-                        transitions.Add(new MarkerTransition(marker, cycle, marker.Frame, absolute));
+                    bool initial = includeStartBoundary && cycle == previousCycle && marker.Time == previousTime;
+                    bool afterPrevious = cycle > previousCycle || cycle == previousCycle && marker.Time > previousTime;
+                    bool beforeCurrent = cycle < currentCycle || cycle == currentCycle && marker.Time <= currentTime;
+                    if ((initial || afterPrevious) && beforeCurrent)
+                        transitions.Add(new MarkerTransition(marker, cycle));
                 }
             }
             transitions.Sort(MarkerTransition.Compare);
@@ -482,20 +487,11 @@ namespace BTSMTL.Timeline.Runtime
                     traversalIndex,
                     transition.Marker.GraphId,
                     transition.Marker.GraphRevision,
-                    transition.Frame,
+                    transition.Time,
                     transition.Cycle));
             }
         }
 
-        static bool Crosses(
-            double position,
-            double previousPosition,
-            double currentPosition,
-            bool includeStartBoundary)
-        {
-            return includeStartBoundary && position == previousPosition ||
-                   position > previousPosition && position <= currentPosition;
-        }
 
         sealed class PresentationPlaybackState
         {
@@ -535,24 +531,22 @@ namespace BTSMTL.Timeline.Runtime
         {
             public MarkerTransition(
                 TimelineContentMarker marker,
-                int cycle,
-                int frame,
-                double absolute)
+                int cycle)
             {
                 Marker = marker;
                 Cycle = cycle;
-                Frame = frame;
-                Absolute = absolute;
             }
 
             public TimelineContentMarker Marker { get; }
             public int Cycle { get; }
-            public int Frame { get; }
-            public double Absolute { get; }
+            public FixedScalar Time => Marker.Time;
 
             public static int Compare(MarkerTransition left, MarkerTransition right)
             {
-                int absolute = left.Absolute.CompareTo(right.Absolute);
+                int cycle = left.Cycle.CompareTo(right.Cycle);
+                if (cycle != 0)
+                    return cycle;
+                int absolute = left.Time.CompareTo(right.Time);
                 if (absolute != 0)
                     return absolute;
                 return string.CompareOrdinal(left.Marker.MarkerId, right.Marker.MarkerId);

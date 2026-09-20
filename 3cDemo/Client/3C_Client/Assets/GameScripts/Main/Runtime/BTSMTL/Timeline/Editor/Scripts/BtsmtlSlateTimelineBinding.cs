@@ -317,7 +317,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 BtsmtlSkillFlowGraph graph = TimelineGraphAuthoring.CreateSubAsset(
                     m_Request.SerializedOwner, $"{formalTrack.Source.Name} Marker {frame}", BtsmtlSkillFlowGraphRole.TimelineTrigger);
-                added = formalTrack.Source.AddMarker(Mathf.Max(0, frame), graph);
+                added = formalTrack.Source.AddMarker(TimelineTimeGrid.Position(Mathf.Max(0, frame), FrameRate), graph);
             }, "Add Timeline Marker") && m_Markers.TryGetValue(added.AuthoringId, out BtsmtlTimelineMarkerBinding binding))
                 Select(binding);
         }
@@ -350,7 +350,7 @@ namespace BTSMTL.Timeline.Editor
             if (m_EditActive)
                 formalMarker.Frame = nextFrame;
             else
-                ApplyImmediate(() => formalMarker.Source.Configure(nextFrame, formalMarker.Source.Graph), "Move Timeline Marker");
+                ApplyImmediate(() => formalMarker.Source.Configure(TimelineTimeGrid.Position(nextFrame, FrameRate), formalMarker.Source.Graph), "Move Timeline Marker");
         }
 
         public void OpenMarker(IEmbeddedTimelineMarkerBinding marker)
@@ -1184,29 +1184,32 @@ namespace BTSMTL.Timeline.Editor
         sealed class BtsmtlTimelineMarkerBinding : IEmbeddedTimelineMarkerBinding
         {
             readonly BtsmtlTimelineTrackBinding m_Track;
+            int m_InitialFrame;
 
             public BtsmtlTimelineMarkerBinding(BtsmtlTimelineTrackBinding track, TimelineMarker source)
             {
                 m_Track = track;
                 Source = source;
-                Frame = source.Frame;
+                Frame = TimelineTimeGrid.NearestIndex(source.Time, TimelineUtility.FrameRate);
+                m_InitialFrame = Frame;
             }
 
             public TimelineMarker Source { get; }
             public BtsmtlTimelineTrackBinding FormalTrack => m_Track;
             IEmbeddedTimelineTrackBinding IEmbeddedTimelineMarkerBinding.Track => m_Track;
             public string AuthoringId => Source.AuthoringId;
-            public string DisplayName => $"Marker {Source.Frame}";
+            public string DisplayName => $"Marker {Source.Time.ToDouble():0.#########}s";
             public int Frame { get; set; }
             public bool IsLocked { get => m_Track.IsLocked; set => m_Track.IsLocked = value; }
 
-            public bool HasChanges() => Frame != Source.Frame;
+            public bool HasChanges() => Frame != m_InitialFrame;
 
             public bool CommitSource()
             {
                 if (!HasChanges())
                     return false;
-                Source.Configure(Frame, Source.Graph);
+                Source.Configure(TimelineTimeGrid.Position(Frame, TimelineUtility.FrameRate), Source.Graph);
+                m_InitialFrame = Frame;
                 return true;
             }
         }

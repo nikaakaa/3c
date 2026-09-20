@@ -780,7 +780,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                             graphReference = ExternalAsset(context, marker.Graph, marker.Graph.GetType());
                         }
                         context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,
-                            $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureMarker({dataVariable}, {trackVariable}, {String(marker.AuthoringId)}, {marker.Frame}, {graphReference});");
+                            $"{TypeName(typeof(BtsmtlSkillAuthoringCode))}.EnsureMarker({dataVariable}, {trackVariable}, {String(marker.AuthoringId)}, {(marker.Time.Raw / (decimal)ThirdPersonSimulation.Fixed.FixedScalar.OneRaw).ToString(System.Globalization.CultureInfo.InvariantCulture)}m, {graphReference});");
                     }
                     if (track.PersistentMuted)
                         context.AddStatement(BtsmtlAuthoringCodeEmissionPhase.Configure,

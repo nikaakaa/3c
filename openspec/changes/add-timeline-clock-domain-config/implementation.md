@@ -139,3 +139,12 @@
 - tickCount 与作者帧率的乘法提升到 long，避免 int 乘法在大推进区间溢出。本次只增加既有结果中的整数值字段，没有新增每帧分配。
 - 已核对唯一结果构造点及 Capture / Restore 读写链，git diff --check 通过。主 Editor 的 get_editor_state 仍超时，未取得本次 Unity 编译或运行证据，没有新增测试。
 - 这是 0.4 所需原子提交语义的修复。时间单位仍为旧作者帧，外部秒制播放管理者尚未接入，0.4 保持未完成。
+## Marker 首批秒制迁移
+
+- TimelineMarker 删除 m_Frame / Frame，唯一作者存储改为 m_TimeRaw（Q32.32 秒），通过 FixedScalar Time 读取。Configure / AddMarker、图复制、闭包、排序、指纹、Logic Marker 请求和 Presentation Marker 事件均改为秒；没有保留旧帧字段或兼容读取。
+- Inspector 输入秒，仅在实际编辑后走原 mutation；Slate 暂保留现有显示帧网格，通过 TimelineTimeGrid 统一映射，未拖动 Marker 时不量化回网格。NearestIndex 使用最近偶数，CeilingIndex 识别已量化网格位置，避免 47/60 的 Q32.32 舍入误差把终点抬到显示第 48 帧。
+- 正式 C# EnsureMarker 接收 decimal 秒，导出由 raw / 2^32 生成 decimal 字面量，再经公共 FixedScalar.FromDecimal 使用原最近偶数规则重建。FromDouble 复用同一转换实现，避免大时间值经 double 导出丢失 Q32.32 低位。
+- 迁移前通过 Unity AssetDatabase 读取全部 TimelineAsset，找到唯一 Marker：Timeline 10f4cb90-8b9a-4944-b77c-14efc9a3124d、Track 746b8d82-5d44-4f5d-a816-a92dfbc7773a、Marker 6409c746-28e1-421f-86fc-1104df163dca，旧位置 47。通过正式 EnsureMarker / ApplyModify 将其迁为 47/60 秒，保存 raw=3364391049；内容校验通过，身份及图引用保留。
+- CorinAttackGameplayAbilityDefinition.asset 本来就包含尚未提交的 Marker、FSM 和其它作者改动，本次在当前内容上迁移并保存，未覆盖它们，也不把整份既有未提交资产夹带进代码提交。
+- 当前迁移仍分阶段：Clip、Section、播放游标与 Slate 通用接口尚为帧。Marker 消费入口将当前区间端点换算成秒再比较，不再将 Marker 秒数量化回运行帧。这不是最终外部秒制被动求值；0.2–0.7、共享采样和自适应网格仍保持未完成。
+- 没有新增测试。Marker 源码已成功编译加载并完成正式作者 API 迁移；正式导出成功且 diagnostics=[]。控制台另有原生 FSM 调用绑定与 CorinPanelExpandTimeline 缺失类型错误，不据此声称全项目运行通过。- 最终 decimal 入口编译重载后，再从持久资产读回 raw=3364391049；正式 Timeline 导出成功、diagnostics=[]，字面量为 0.7833333334419876337051391602m，FromDecimal 重建 raw 完全一致；最近显示网格与覆盖终点都为第 47 帧。此次仅调用导出服务读取结果，没有创建 MarkerSecondsSnapshot 文件或其它临时作者入口。

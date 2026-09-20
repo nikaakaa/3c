@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -1175,7 +1176,7 @@ namespace BTSMTL.Timeline.Runtime
             string trackAuthoringId,
             string graphId,
             string graphRevision,
-            int frame,
+            FixedScalar time,
             int cycle,
             ulong generation,
             string callId)
@@ -1192,15 +1193,15 @@ namespace BTSMTL.Timeline.Runtime
             GraphRevision = string.IsNullOrWhiteSpace(graphRevision)
                 ? throw new ArgumentException("Timeline Marker graph revision is required.", nameof(graphRevision))
                 : graphRevision.Trim();
-            if (frame < 0 || cycle < 0)
-                throw new ArgumentOutOfRangeException(nameof(frame));
+            if (time < FixedScalar.Zero || cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(time));
             Generation = generation == 0
                 ? throw new ArgumentOutOfRangeException(nameof(generation))
                 : generation;
             CallId = string.IsNullOrWhiteSpace(callId)
                 ? throw new ArgumentException("Timeline Marker call identity is required.", nameof(callId))
                 : callId.Trim();
-            Frame = frame;
+            Time = time;
             Cycle = cycle;
         }
 
@@ -1208,7 +1209,7 @@ namespace BTSMTL.Timeline.Runtime
         public string TrackAuthoringId { get; }
         public string GraphId { get; }
         public string GraphRevision { get; }
-        public int Frame { get; }
+        public FixedScalar Time { get; }
         public int Cycle { get; }
         public ulong Generation { get; }
         public string CallId { get; }
@@ -1270,7 +1271,7 @@ namespace BTSMTL.Timeline.Runtime
             ulong traversalIndex,
             string graphId,
             string graphRevision,
-            int frame,
+            FixedScalar time,
             int cycle)
         {
             if (!playbackHandle.IsValid || !executionIdentity.IsValid || generation == 0 || traversalIndex == 0)
@@ -1287,10 +1288,10 @@ namespace BTSMTL.Timeline.Runtime
             GraphRevision = string.IsNullOrWhiteSpace(graphRevision)
                 ? throw new ArgumentException("Timeline presentation marker graph revision is required.", nameof(graphRevision))
                 : graphRevision.Trim();
-            if (frame < 0 || cycle < 0)
-                throw new ArgumentOutOfRangeException(nameof(frame));
+            if (time < FixedScalar.Zero || cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(time));
             TraversalIndex = traversalIndex;
-            Frame = frame;
+            Time = time;
             Cycle = cycle;
             Identity = $"{PlaybackHandle.Value}:{Generation}:{MarkerAuthoringId}:{TraversalIndex}";
         }
@@ -1304,7 +1305,7 @@ namespace BTSMTL.Timeline.Runtime
         public ulong TraversalIndex { get; }
         public string GraphId { get; }
         public string GraphRevision { get; }
-        public int Frame { get; }
+        public FixedScalar Time { get; }
         public int Cycle { get; }
     }
 
@@ -2096,9 +2097,9 @@ namespace BTSMTL.Timeline.Runtime
             int maxFrame = Math.Max(0, content.MaxFrame);
             if (maxFrame <= 0)
                 return;
-            long previousAbsolute = (long)previousCycle * maxFrame + previousFrame;
-            long currentAbsolute = (long)currentCycle * maxFrame + currentFrame;
-            if (currentAbsolute < previousAbsolute)
+            FixedScalar previousTime = FixedScalar.FromRatio(previousFrame, content.FrameRate);
+            FixedScalar currentTime = FixedScalar.FromRatio(currentFrame, content.FrameRate);
+            if (currentCycle < previousCycle || currentCycle == previousCycle && currentTime < previousTime)
                 throw new InvalidOperationException("Timeline logic cursor moved backward without a generation reset.");
             int firstCycle = loop ? previousCycle : 0;
             int lastCycle = loop ? currentCycle : 0;
@@ -2109,9 +2110,10 @@ namespace BTSMTL.Timeline.Runtime
                     continue;
                 for (int cycle = firstCycle; cycle <= lastCycle; cycle++)
                 {
-                    long absolute = (long)cycle * maxFrame + contentMarker.Frame;
-                    bool initial = includeStartBoundary && absolute == previousAbsolute;
-                    if ((!initial && absolute <= previousAbsolute) || absolute > currentAbsolute)
+                    bool initial = includeStartBoundary && cycle == previousCycle && contentMarker.Time == previousTime;
+                    bool afterPrevious = cycle > previousCycle || cycle == previousCycle && contentMarker.Time > previousTime;
+                    bool beforeCurrent = cycle < currentCycle || cycle == currentCycle && contentMarker.Time <= currentTime;
+                    if ((!initial && !afterPrevious) || !beforeCurrent)
                         continue;
                     Track track = FindTrack(content, contentMarker.TrackAuthoringId);
                     TimelineMarker marker = track?.Markers.FirstOrDefault(candidate =>
@@ -2124,7 +2126,7 @@ namespace BTSMTL.Timeline.Runtime
                         contentMarker.TrackAuthoringId,
                         graphId,
                         graphRevision,
-                        contentMarker.Frame,
+                        contentMarker.Time,
                         cycle,
                         generation,
                         CreateMarkerCallId(executionIdentity, generation, cycle, contentMarker.MarkerId)));
@@ -2135,7 +2137,7 @@ namespace BTSMTL.Timeline.Runtime
                 int cycleOrder = left.Cycle.CompareTo(right.Cycle);
                 if (cycleOrder != 0)
                     return cycleOrder;
-                int frameOrder = left.Frame.CompareTo(right.Frame);
+                int frameOrder = left.Time.CompareTo(right.Time);
                 return frameOrder != 0 ? frameOrder : string.CompareOrdinal(left.MarkerAuthoringId, right.MarkerAuthoringId);
             });
         }

@@ -18,11 +18,12 @@ namespace ThirdPersonSimulation
             ActorId actorId,
             SimulationTick tick,
             Float32CharacterRuntimeState candidateState,
-            IEnumerable<GameplayFact> gameplayFacts,
-            IEnumerable<PresentationCommand> presentationCommands,
-            IEnumerable<SimulationTraceRecord> traceRecords,
-            IAbilityTimelineRuntime timelineRuntime,            IEnumerable<AbilityTimelineAdvancePending> timelineAdvances,
-            IEnumerable<AbilityTimelineStopPending> timelineStops)
+            GameplayFact[] gameplayFacts,
+            PresentationCommand[] presentationCommands,
+            SimulationTraceRecord[] traceRecords,
+            IAbilityTimelineRuntime timelineRuntime,
+            AbilityTimelineAdvancePending[] timelineAdvances,
+            AbilityTimelineStopPending[] timelineStops)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Float32 Character evaluation result identity is incomplete.");
@@ -33,12 +34,12 @@ namespace ThirdPersonSimulation
             }
             ActorId = actorId;
             Tick = tick;
-            m_GameplayFacts = Copy(gameplayFacts);
-            m_PresentationCommands = Copy(presentationCommands);
-            m_TraceRecords = Copy(traceRecords);
+            m_GameplayFacts = gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts));
+            m_PresentationCommands = presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands));
+            m_TraceRecords = traceRecords ?? throw new ArgumentNullException(nameof(traceRecords));
             m_TimelineRuntime = timelineRuntime;
-            m_TimelineAdvances = Copy(timelineAdvances);
-            m_TimelineStops = Copy(timelineStops);
+            m_TimelineAdvances = timelineAdvances ?? throw new ArgumentNullException(nameof(timelineAdvances));
+            m_TimelineStops = timelineStops ?? throw new ArgumentNullException(nameof(timelineStops));
         }
 
         public ActorId ActorId { get; }
@@ -95,12 +96,6 @@ namespace ThirdPersonSimulation
                 else
                     m_TimelineRuntime.DiscardStop(m_TimelineStops[i]);
             }
-        }
-
-        static IReadOnlyList<T> Copy<T>(IEnumerable<T> values) where T : struct
-        {
-            var result = values == null ? new List<T>() : new List<T>(values);
-            return result.AsReadOnly();
         }
     }
 }

@@ -20,11 +20,11 @@ namespace ThirdPersonSimulation.Fixed
             SimulationTick tick,
             FixedCharacterRuntimeState candidateState,
             IAbilityTimelineRuntime timelineRuntime,
-            IEnumerable<GameplayFact> gameplayFacts,
-            IEnumerable<PresentationCommand> presentationCommands,
-            IEnumerable<SimulationTraceRecord> traceRecords,
-            IReadOnlyList<AbilityTimelineAdvancePending> timelineAdvances,
-            IReadOnlyList<AbilityTimelineStopPending> timelineStops)
+            GameplayFact[] gameplayFacts,
+            PresentationCommand[] presentationCommands,
+            SimulationTraceRecord[] traceRecords,
+            AbilityTimelineAdvancePending[] timelineAdvances,
+            AbilityTimelineStopPending[] timelineStops)
         {
             if (!actorId.IsValid || !tick.IsValid)
                 throw new ArgumentException("Fixed Character evaluation result identity is incomplete.");
@@ -34,11 +34,11 @@ namespace ThirdPersonSimulation.Fixed
             ActorId = actorId;
             Tick = tick;
             m_TimelineRuntime = timelineRuntime;
-            m_GameplayFacts = Copy(gameplayFacts);
-            m_PresentationCommands = Copy(presentationCommands);
-            m_TraceRecords = Copy(traceRecords);
-            m_TimelineAdvances = Copy(timelineAdvances);
-            m_TimelineStops = Copy(timelineStops);
+            m_GameplayFacts = gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts));
+            m_PresentationCommands = presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands));
+            m_TraceRecords = traceRecords ?? throw new ArgumentNullException(nameof(traceRecords));
+            m_TimelineAdvances = timelineAdvances ?? throw new ArgumentNullException(nameof(timelineAdvances));
+            m_TimelineStops = timelineStops ?? throw new ArgumentNullException(nameof(timelineStops));
         }
 
         public ActorId ActorId { get; }
@@ -96,12 +96,6 @@ namespace ThirdPersonSimulation.Fixed
                 else
                     m_TimelineRuntime.DiscardStop(m_TimelineStops[i]);
             }
-        }
-
-        static IReadOnlyList<T> Copy<T>(IEnumerable<T> values) where T : struct
-        {
-            var result = values == null ? new List<T>(0) : new List<T>(values);
-            return result.AsReadOnly();
         }
     }
 }

@@ -177,11 +177,12 @@ namespace ThirdPersonSimulation
                     actor.ActorId,
                     tick,
                     candidateState,
-                    facts,
-                    presentation,
-                    trace,
-                    actor.TimelineRuntime,                timelineAdvances,
-                    timelineStops);
+                    facts.ToArray(),
+                    presentation.ToArray(),
+                    trace.ToArray(),
+                    actor.TimelineRuntime,
+                    timelineAdvances.ToArray(),
+                    timelineStops.ToArray());
             }
             catch
             {

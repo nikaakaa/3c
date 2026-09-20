@@ -178,11 +178,11 @@ namespace ThirdPersonSimulation.Fixed
                     tick,
                     candidateState,
                     actor.TimelineRuntime,
-                    facts,
-                    presentation,
-                    trace,
-                    timelineAdvances,
-                    timelineStops);
+                    facts.ToArray(),
+                    presentation.ToArray(),
+                    trace.ToArray(),
+                    timelineAdvances.ToArray(),
+                    timelineStops.ToArray());
             }
             catch
             {

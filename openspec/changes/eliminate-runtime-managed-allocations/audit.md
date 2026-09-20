@@ -2031,3 +2031,12 @@
 - 两域构造输入收窄为 IReadOnlyList，按准确 Count 将三类输出复制到最终数组，空输入复用 Array.Empty。原 header 数值域、ActorId 与 tick 校验继续遍历最终数组，公开结果仍不借用 evaluation 集合。
 - 每个 Actor completed tick 删除三只 List 和三只 ReadOnlyCollection，并消除 List 容量冗余；三只必要的最终数组仍按 result 寿命存在。evaluation 到 finalize 仍有一层独立复制，待明确消费后所有权转移另行收口。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback 与 ServerAuthoritative portable 均编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 completed tick Player 分配采样。
+
+## 2026-09-21 CharacterEvaluationResult 数组所有权
+
+对应 tasks.md 的 2.94。
+
+- Fixed／Float32 CharacterEvaluationRuntime 在每 Actor 每 step 内用 List 聚合多次 ability invocation 的 gameplay facts、presentation commands、trace records，以及 timeline advance／stop；返回 evaluation 后这五只本地 List 不再使用。原 evaluation 构造又为五类结果各创建 List 并创建 ReadOnlyCollection。
+- 两域 runtime 在成功返回边界把五只聚合 List 各物化一次为准确数组，CharacterEvaluationResult 内部构造直接接管并按 IReadOnlyList 暴露。候选状态、Timeline runtime、Consume／Discard 及 timeline commit 顺序不变；异常发生在返回前时仍走原 discard 清理。
+- 每个 Actor evaluation 删除五只结果 List、五只 ReadOnlyCollection 及从聚合 List 到结果 List 的二次元素复制；五只最终数组仍按 evaluation 寿命存在。Finalize 到 SimulationActorTickResult 的安全复制暂时保留。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback 与 ServerAuthoritative portable 均编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 ability evaluation Player 分配采样。

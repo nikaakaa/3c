@@ -182,7 +182,7 @@ namespace ThirdPersonSimulation
 
         static WorldStatePersistenceMode ReadPersistenceMode(byte value)
         {
-            if (!Enum.IsDefined(typeof(WorldStatePersistenceMode), value))
+            if ((WorldStatePersistenceMode)value is not (WorldStatePersistenceMode.Reconstruct or WorldStatePersistenceMode.Snapshot))
                 throw new InvalidDataException($"World persistence mode '{value}' is invalid.");
             return (WorldStatePersistenceMode)value;
         }

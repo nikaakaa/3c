@@ -975,3 +975,10 @@
 - 完整重新编码、长度与所有字节一致性检查保留，原 World state is not canonical 异常不变。Write、ComputeHash、读取后校验仍共用唯一字段编码；没有省略 numeric profile、solver、revision、计数或尾部检查。
 - 世界 Bodies、求解器 payload 的读取及构造复制未改，长期存储保持独立，不改变求解、快照恢复或事务生命周期。只减少比较用副本，reader／writer／流和实际状态仍分配；ReadPersistenceMode 的枚举查询仍待另行处理。
 - 两目标文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未执行世界状态往返／非规范输入运行对比或 Player 分配采样。
+## 2026-09-20 世界状态恢复持久化模式校验
+
+对应 tasks.md 的 5.48。
+
+- 两数值域 WorldSimulationStateCodec.ReadPersistenceMode 原 Enum.IsDefined(Type, object) 校验读取的 byte，产生装箱及枚举元数据查询；现直接匹配正式 Reconstruct=1／Snapshot=2，零与其它值继续拒绝。
+- 保留读取字段位置和宽度、原 InvalidDataException 文本以及后续 WorldSimulationState 构造；不改持久化模式含义、求解器重建／快照恢复行为或 payload 所有权。构造器原未做相同枚举检查，本轮不附加新约束。
+- 修改前两目标文件无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未执行世界恢复运行或 Player 分配采样。

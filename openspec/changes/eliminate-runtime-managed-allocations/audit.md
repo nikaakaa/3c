@@ -1459,3 +1459,12 @@
 - 两域构造器收窄为程序集内部数组入口，直接原地排序并执行原非空、Actor 唯一、输入存在及 TickSource 一致校验，随后以 IReadOnlyList 暴露同一数组；没有新增可变数组出口。
 - 删除每个本地输入 ingress tick 的一个 List 对象、数组到 List 底层存储的逐项复制及第二份元素存储。SourcePort 的输入数组和 CanonicalInputBatch 对象仍分配。
 - ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做本地输入运行对比或 Player 分配采样。
+
+## 2026-09-21 空 Step ingress 复用
+
+对应 tasks.md 的 2.67。
+
+- 本地 Fixed／Float32 Schedule 将 TypedIngressBatch.Ingress 传入 TargetSimulationPipelineStep；当前正式空批次已由数组实现，但原 step 构造仍无条件 new List 复制该空集合。
+- 通用 step 在输入排序与重复 Actor 校验后，对 null 或 Count 为零的 IReadOnlyCollection 直接保存 Array.Empty 并结束 ingress 分支。非空枚举仍复制到独立 List，按 Actor／SourceTick／Sequence／FactIdentity 排序并执行目标 Actor 和重复身份校验。
+- 删除当前本地单步调度每个 step 的一个空 List；输入 List、Actor List、step、execution plan 等对象仍分配，网络或未来非空 ingress 路径不共享可变事实。
+- ThirdPersonSimulation.Core、Fixed、Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做调度运行对比或 Player 分配采样。

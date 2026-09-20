@@ -243,9 +243,14 @@ namespace ThirdPersonSimulation
                 if (inputValues[i - 1].ActorId.Equals(inputValues[i].ActorId))
                     throw new ArgumentException("Pipeline Step contains duplicate Actor input.", nameof(inputValues));
             }
-            var ingressValues = ingress == null
-                ? new List<SimulationPipelineTypedIngress<TIngress>>()
-                : new List<SimulationPipelineTypedIngress<TIngress>>(ingress);
+            m_Inputs = inputValues;
+            if (ingress == null ||
+                ingress is IReadOnlyCollection<SimulationPipelineTypedIngress<TIngress>> collection && collection.Count == 0)
+            {
+                m_Ingress = Array.Empty<SimulationPipelineTypedIngress<TIngress>>();
+                return;
+            }
+            var ingressValues = new List<SimulationPipelineTypedIngress<TIngress>>(ingress);
             ingressValues.Sort((left, right) =>
             {
                 int actor = left.ActorId.CompareTo(right.ActorId);
@@ -269,7 +274,6 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Pipeline Step contains duplicate typed ingress.", nameof(ingress));
                 }
             }
-            m_Inputs = inputValues;
             m_Ingress = ingressValues;
         }
 

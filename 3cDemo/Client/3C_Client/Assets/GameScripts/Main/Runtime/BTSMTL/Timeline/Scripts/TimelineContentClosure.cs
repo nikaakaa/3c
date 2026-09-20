@@ -194,8 +194,8 @@ namespace BTSMTL.Timeline
             string contractKind,
             string trackAuthoringId,
             TimelineClipExecutionPolicy executionPolicy,
-            int startFrame,
-            int endFrame,
+            FixedScalar startTime,
+            FixedScalar endTime,
             TimelineClipExecutionPhase executionPhase,
             TimelineClipExitSource exitSource,
             TimelineCapability capabilities,
@@ -208,8 +208,8 @@ namespace BTSMTL.Timeline
             ContractKind = Require(contractKind, nameof(contractKind));
             TrackAuthoringId = Require(trackAuthoringId, nameof(trackAuthoringId));
             ExecutionPolicy = executionPolicy;
-            StartFrame = startFrame;
-            EndFrame = endFrame;
+            StartTime = startTime;
+            EndTime = endTime;
             ExecutionPhase = executionPhase;
             ExitSource = exitSource;
             Capabilities = capabilities;
@@ -223,8 +223,8 @@ namespace BTSMTL.Timeline
         public string ContractKind { get; }
         public string TrackAuthoringId { get; }
         public TimelineClipExecutionPolicy ExecutionPolicy { get; }
-        public int StartFrame { get; }
-        public int EndFrame { get; }
+        public FixedScalar StartTime { get; }
+        public FixedScalar EndTime { get; }
         public TimelineClipExecutionPhase ExecutionPhase { get; }
         public TimelineClipExitSource ExitSource { get; }
         public TimelineCapability Capabilities { get; }
@@ -531,8 +531,8 @@ namespace BTSMTL.Timeline
                         track.AuthoringId,
                         TimelineClipExecutionPolicy.FromDomain(
                             clip.ResolveExecutionDomain(track.ExecutionDomain)),
-                        clip.StartFrame,
-                        clip.EndFrame,
+                        TimelineTimeGrid.Position(clip.StartFrame, TimelineUtility.FrameRate),
+                        TimelineTimeGrid.Position(clip.EndFrame, TimelineUtility.FrameRate),
                         executionPhase,
                         exitSource,
                         clipContract.Capabilities,

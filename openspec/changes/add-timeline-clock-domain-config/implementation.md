@@ -173,3 +173,10 @@
 - 首次重算发现非 Mixable TreeClip 被通用重叠算法生成混合区间；事务回滚。UpdateMix 现遵守原 IsMixable 能力声明，修正后全部字段一致，不为逻辑图片段产生混合。
 - Unity 已编译重载并执行正式迁移。正式导出非零 Self Ease 的两个 Clip 成功、diagnostics=[]，输出 0.1000000000931322574615478516m。此前按更长小数字符串筛选未匹配是文本末位差异，不能当作内容丢失；本轮按 Clip 身份读取实际导出行确认。
 - 资产暂存只包含 1084 处 Ease 字段替换，保留其余未提交内容；未新增测试，未创建临时作者源码。起止时间、播放控制、共享采样及配置网格仍未完成，任务不提前勾选。
+## 接续实施：运行 Clip 时间合同
+
+- 已按用户授权删除 CorinPanelExpandTimeline 及 meta（1464879ec），没有恢复旧内联图。删除前配置目录内 19 个 Timeline 正式内容校验中仅此资产失败；Assets 范围名称与 GUID 查询未发现消费者。后续由工厂重建。
+- Inspector 属性变化重新进入原 ApplyConfiguration / ApplyModify / Undo 链（3661249df），不再只修改临时配置对象。
+- TimelineContentClip 起止、TimelineRuntimeClipBoundary、TreeClipRequest、ClipSample 和 TraceOutput 的正式位置统一使用 FixedScalar 秒，删除这些合同的整数帧位置。边界比较与排序直接使用秒，循环和同位置 Exit 优先顺序保留。
+- 本批仍从尚未迁移的作者 StartFrame / EndFrame 建立秒制内容；播放游标仍为整数帧。没有把这些剩余入口当作最终方案，任务 0.2–0.7 继续保持未完成。未新增测试，原有运行容器分配尚待清理，不声明 0 GC 已完成。
+- 本批 Unity 编译和域重载完成，观测 1789875977302 为 idle、非 Play／编译／导入，错误控制台 0 条。通过正式内容发现只读加载剩余 18 个 Timeline、266 个 Clip，内容校验和秒制区间检查 errors=[]；这不是完整播放验收。

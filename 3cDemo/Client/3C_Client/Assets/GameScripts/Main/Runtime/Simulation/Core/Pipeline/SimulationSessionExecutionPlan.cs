@@ -320,7 +320,7 @@ namespace ThirdPersonSimulation
             {
                 throw new ArgumentException("Session ExecutionPlan identity is incomplete.");
             }
-            var values = steps == null ? new List<TStep>() : new List<TStep>(steps);
+            IReadOnlyList<TStep> values = MaterializeSteps(steps);
             m_SourceMappings = FreezeMappings(sourceMappings, outerSource.ClockId);
             if (status == SimulationSessionExecutionPlanStatus.Pending)
             {
@@ -374,13 +374,23 @@ namespace ThirdPersonSimulation
         public SimulationSessionPlanRequirement Requirements { get; }
         public IReadOnlyList<TStep> Steps => m_Steps;
 
+        static IReadOnlyList<TStep> MaterializeSteps(IEnumerable<TStep> steps)
+        {
+            if (steps == null || steps is IReadOnlyCollection<TStep> collection && collection.Count == 0)
+                return Array.Empty<TStep>();
+            return new List<TStep>(steps);
+        }
+
         static IReadOnlyList<SimulationPipelineStepSourceMapping> FreezeMappings(
             IEnumerable<SimulationPipelineStepSourceMapping> source,
             string outerClockId)
         {
-            var values = source == null
-                ? new List<SimulationPipelineStepSourceMapping>()
-                : new List<SimulationPipelineStepSourceMapping>(source);
+            if (source == null ||
+                source is IReadOnlyCollection<SimulationPipelineStepSourceMapping> collection && collection.Count == 0)
+            {
+                return Array.Empty<SimulationPipelineStepSourceMapping>();
+            }
+            var values = new List<SimulationPipelineStepSourceMapping>(source);
             values.Sort((left, right) =>
             {
                 int clock = string.CompareOrdinal(left.StepClockId, right.StepClockId);

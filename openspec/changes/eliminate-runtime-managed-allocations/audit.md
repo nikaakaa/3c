@@ -1495,3 +1495,12 @@
 - FixedCharacterControlSourceStateDisposition 只有连续的 Prepared=1、Committed=2、Discarded=3、Restored=4。现按 Prepared 至 Restored 范围判断，零值及大于四的非法值继续抛 ArgumentOutOfRangeException，并与 UnityFixedCharacterInputAdapter 的正式校验写法一致。
 - 删除 Neutral 实现每次事务状态通知的枚举反射查询／装箱；方法仍不保存状态。其它控制源、通知分发顺序和事务行为不变。
 - 专用 ThirdPersonSimulation.Fixed.Unity 首次无 restore 构建因缺少 project.assets.json 停止；允许生成临时 assets 后编译又因 no-dependencies 下缺少 Unity 生成的 DeterministicKcc／Fixed DLL 停止。客户端 Runtime 仍受并行 Timeline 类型迁移错误阻断，因此本项只有定向源码校验和 diff 校验，没有可用程序集编译证据。未新增测试、未启动 Unity、未做运行或 Player 分配采样。
+
+## 2026-09-21 ExecutionPlan 空集合复用
+
+对应 tasks.md 的 2.71。
+
+- 正式 Rollback NoStep、ServerAuthoritative Pending 等构造点向 SimulationSessionExecutionPlan 传入 Array.Empty 的 steps 与 source mappings；原构造器仍分别 new 空 List 并保存。
+- plan 现对 null 或 Count 为零的 IReadOnlyCollection 直接保存相应 Array.Empty。非空 steps 仍复制到独立 List并执行状态、tick、source mapping、roster 和 plan sequence 校验；非空 mappings 仍复制、排序并检查 outer clock 与重复映射。
+- 删除每个 Pending／NoStep plan 的两个空 List 对象。plan 对象、非空 executable 列表、restore 和其它正式结果仍按原生命周期分配。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 plan 运行对比或 Player 分配采样。

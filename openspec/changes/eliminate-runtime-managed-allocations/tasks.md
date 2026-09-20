@@ -114,6 +114,8 @@
 
 - [x] 2.70 Fixed Neutral 控制源按 Prepared 至 Restored 连续值域校验事务 disposition，删除每次状态通知的 Enum.IsDefined 装箱，并与正式 UnityFixedCharacterInputAdapter 现有校验统一
 
+- [x] 2.71 通用 ExecutionPlan 对 null 或已知空 steps／source mappings 直接复用 Array.Empty，删除 Pending／NoStep 外层 tick 的两个空 List；非空计划继续独立复制、排序和完整性校验
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

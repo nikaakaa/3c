@@ -959,3 +959,11 @@
 - 两次解析都经 CanonicalReader 片段构造使用 Offset／End，仍各自 RequireComplete；重新编码比较使用 bytes.AsSpan()，不会读入相邻装备／效果数据。底层数组不存在时由 CanonicalReader 拒绝，带 schema 的入口仍先检查 schema null。
 - 返回 schema、值对象、字符串及 CharacterControlRuntimeState 均不持有输入片段。只删除嵌套控制状态的整体字节副本，保持解析顺序、hash 校验、状态深拷贝和事务所有权；两遍 schema／值解析仍未合并，结果对象仍分配。
 - 三文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未执行片段边界／恢复运行对比或 Player 分配采样。
+## 2026-09-20 完整角色状态规范比较清理
+
+对应 tasks.md 的 2.42。
+
+- Fixed／Float32 CharacterRuntimeStateCodec.Read 末尾原 RequireCanonical(bytes, Write(state), label)，Write 为比较生成完整角色状态数组。现局部 writer 调用唯一 WriteCanonical，再 ContentEquals 原输入；各文件只有一个 RequireCanonical 调用，迁移后删除旧数组比较函数。
+- 保留完整重新编码与长度／逐字节比较，不以 hash 相同替代协议规范校验；两个数值域的原 InvalidDataException 文本保留。公开 Write 的真实独立结果消费者保持原实现，hash 路径也仍共用 WriteCanonical。
+- 减少每次角色恢复校验的一份完整输出副本，不改变输入读取、返回状态、Timeline 字段、事务恢复或任何结果所有权。writer／流、聚合集合、最终状态对象和其它枚举读取仍有分配／查询，本项不是完整角色状态 0 GC。
+- 两目标文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做规范字节／恢复运行对比或 Player 分配采样。

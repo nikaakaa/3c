@@ -128,7 +128,10 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayEffectState,
                 equipmentState,
                 timelineSnapshots);
-            RequireCanonical(bytes, Write(state), "Fixed Character runtime state");
+            using var writer = new CanonicalWriter();
+            WriteCanonical(writer, state);
+            if (!writer.ContentEquals(bytes))
+                throw new InvalidDataException("Fixed Character runtime state is not canonical.");
             return state;
         }
 
@@ -953,13 +956,5 @@ namespace ThirdPersonSimulation.Fixed
             return (T)candidate;
         }
 
-        static void RequireCanonical(byte[] source, byte[] canonical, string label)
-        {
-            if (source.Length != canonical.Length)
-                throw new InvalidDataException($"{label} is not canonical.");
-            for (int i = 0; i < source.Length; i++)
-                if (source[i] != canonical[i])
-                    throw new InvalidDataException($"{label} is not canonical.");
-        }
     }
 }

@@ -318,25 +318,23 @@ namespace ThirdPersonSimulation.Fixed
 
         SimulationSessionDiagnosticsSnapshot BuildDiagnostics()
         {
-            var components = new List<SimulationSessionComponentDiagnostic>
-            {
-                Component("ExecutionBackend", Descriptor.ExecutionBackend),
-                Component("SessionSource", Descriptor.SessionSource),
-                Component("WorldSolver", Descriptor.WorldSolver),
-                Component("SnapshotCodec", Descriptor.SnapshotCodec),
-                Component("Committer", Descriptor.Committer),
-                new SimulationSessionComponentDiagnostic(
+            var components = new SimulationSessionComponentDiagnostic[6 + m_Passes.Count];
+            components[0] = Component("ExecutionBackend", Descriptor.ExecutionBackend);
+            components[1] = Component("SessionSource", Descriptor.SessionSource);
+            components[2] = Component("WorldSolver", Descriptor.WorldSolver);
+            components[3] = Component("SnapshotCodec", Descriptor.SnapshotCodec);
+            components[4] = Component("Committer", Descriptor.Committer);
+            components[5] = new SimulationSessionComponentDiagnostic(
                     "Pipeline",
                     $"{m_Pipeline.Identity}/{m_Pipeline.PlanHash}",
-                    DiagnosticState())
-            };
+                    DiagnosticState());
             for (int i = 0; i < m_Passes.Count; i++)
             {
-                components.Add(new SimulationSessionComponentDiagnostic(
+                components[6 + i] = new SimulationSessionComponentDiagnostic(
                     "Pass",
                     $"{i}:{m_Passes[i].Descriptor.VersionedIdentity}",
                     DiagnosticState(),
-                    m_Passes[i].Phase.ToString()));
+                    m_Passes[i].Phase.ToString());
             }
             return new SimulationSessionDiagnosticsSnapshot(
                 Descriptor,

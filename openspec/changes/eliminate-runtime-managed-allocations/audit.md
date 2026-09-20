@@ -935,3 +935,11 @@
 - 实际会话句柄 BuildDiagnostics 提供 List 输入，ToArray 可按集合数量直接复制，删除快照内部的 List 对象；原 List 的底层数组由最终数组替代，不将其算成额外减少一整份数组。只读包装继续存在，不改变 Components 对外行为。
 - 一般 IEnumerable 输入仍可能在框架内部使用增长缓冲，最终数组／包装／快照和上游 BuildDiagnostics 的列表及插值仍分配。该路径为按需诊断读取，未声称 Player 每帧收益。
 - 文件此前无其它未提交修改，编辑前无 csc／bee。Core portable 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做诊断运行或分配采样。
+## 2026-09-20 会话诊断生产数组按实际数量准备
+
+对应 tasks.md 的 7.14。
+
+- Fixed／Float32 PassPipelineRuntimeHandle.BuildDiagnostics 固定生产五个系统组件和一个 Pipeline 条目，再为每个 Pass 追加条目。原无容量 List 在固定六项初始化中已会增长；现直接建立长度 6＋m_Passes.Count 的数组，固定项写 0 至 5、Pass 写 6＋i。
+- 顺序、每次 DiagnosticState 读取、各身份和 Phase 文本构造保持原样；没有跨查询缓存可变状态。下游 SimulationSessionDiagnosticsSnapshot 仍复制并排序，返回结果独立，生产数组在同步调用后不保留。
+- 删除上游 List 对象及扩容中的额外数组／复制，不宣称去掉下游最终快照数组。正式数量直接来自既有 Pass 列表，无新容量配置或临时旁路；按需读取实际频率仍未采样。
+- 编辑前两文件无其它未提交修改，进程扫描无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未做诊断运行或 Player 分配采样。

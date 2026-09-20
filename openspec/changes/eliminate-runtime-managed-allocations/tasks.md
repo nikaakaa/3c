@@ -264,6 +264,8 @@
 
 - [x] 5.57 WorldSolveBatchResult 提供显式 FromOwnedResults 所有权入口，DeterministicKcc／DotRecast／UnityCharacterController solver 直接转移方法内新建结果数组，删除每批求解的第二份结果数组复制；普通集合构造仍独立复制
 
+- [x] 5.58 两数值域 CharacterWorldSolveResult 改为只读值结果，删除 KCC／DotRecast／UnityCharacterController 每 Actor 每 step 的结果对象分配；数组、Batch 校验和公开读取契约保持
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

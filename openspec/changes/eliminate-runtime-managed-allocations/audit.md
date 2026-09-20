@@ -1648,3 +1648,12 @@
 - 两域 Result 保留公开 IReadOnlyList 构造，其输入继续复制到独立数组；新增显式 FromOwnedResults 入口接管调用方声明转移的数组并进入同一排序、数量、身份、final body 与 summary hash 校验。三套 solver 统一改用该正式入口。
 - 每批世界求解删除第二份 CharacterWorldSolveResult 数组分配与逐项复制，Batch 成为原 solver 数组的唯一持有者。WorldSolveBatchResult 对象、结果元素对象和 hash 分配仍存在。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority portable 编译零警告零错误；DotRecast portable 编译通过并保留依赖包两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 全依赖构建通过并保留 Unity 包及既有 Editor 代码共十七条警告。构建服务均关闭。未新增测试、未刷新共享 Unity、未做求解运行对比或 Player 分配采样。
+
+## 2026-09-21 CharacterWorldSolveResult 值结果
+
+对应 tasks.md 的 5.58。
+
+- 全运行源码检索确认 CharacterWorldSolveResult 只由三套 solver 构造后写入定长数组，经 WorldSolveBatchResult 校验并由 Finalize／codec 按值读取；没有继承、引用身份比较、null 业务分支或跨数组单独持有。
+- Fixed／Float32 类型统一改为 readonly struct，构造校验和全部只读字段保持。WorldSolveBatchResult 不再检查元素 null，而由原 numeric profile、ActorId、RequestId、Tick、SolverId 和 final body 对齐校验拒绝未填充的 default 元素。
+- 删除 KCC／DotRecast／UnityCharacterController 每 Actor 每 simulation step 的一个 managed 结果对象；结果仍以内联结构体数组随 Batch 持有，WorldBodyState 等引用字段寿命不变。结构体复制成本增加，但字段规模固定且消费均为局部按值读取。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority、ThirdPersonSimulation.Unity 编译零警告零错误；DotRecast portable 编译通过并保留依赖包两条既有 nullable-context 警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。

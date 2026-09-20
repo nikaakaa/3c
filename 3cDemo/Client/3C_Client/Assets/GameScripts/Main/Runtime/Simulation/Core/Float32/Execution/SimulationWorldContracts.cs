@@ -324,7 +324,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    public sealed class CharacterWorldSolveResult
+    public readonly struct CharacterWorldSolveResult
     {
         public CharacterWorldSolveResult(
             SimulationNumericProfile numericProfile,
@@ -413,7 +413,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("World result must contain exactly one result per request.", nameof(results));
             for (int i = 0; i < copied.Length; i++)
             {
-                CharacterWorldSolveResult result = copied[i] ?? throw new ArgumentException("World batch contains a null result.", nameof(results));
+                CharacterWorldSolveResult result = copied[i];
                 CharacterWorldSolveRequest expected = request.Requests[i];
                 if (result.NumericProfile != request.NumericProfile || result.ActorId != expected.ActorId || !result.RequestId.Equals(expected.RequestId) || result.Tick != request.Tick ||
                     !result.SolverId.Equals(solverId) || result.FinalBody.ActorId != expected.ActorId ||

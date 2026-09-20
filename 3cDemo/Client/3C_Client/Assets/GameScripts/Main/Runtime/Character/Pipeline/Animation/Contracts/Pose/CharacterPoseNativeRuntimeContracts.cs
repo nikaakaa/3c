@@ -57,6 +57,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Validated = 8
     }
 
+    internal static class CharacterPoseNativeEnumValues
+    {
+        internal static bool IsValid(CharacterPoseNativePreparationStatus value) =>
+            value >= CharacterPoseNativePreparationStatus.Pending &&
+            value <= CharacterPoseNativePreparationStatus.Failed;
+
+        internal static bool IsValid(CharacterPoseNativeGraphBoundary value) =>
+            value >= CharacterPoseNativeGraphBoundary.Root &&
+            value <= CharacterPoseNativeGraphBoundary.Subgraph;
+
+        internal static bool IsValid(CharacterPoseNativeFailureCode value) =>
+            value >= CharacterPoseNativeFailureCode.None &&
+            value <= CharacterPoseNativeFailureCode.FrameInvalid;
+
+        internal static bool IsValid(CharacterPoseNativeFrameStatus value) =>
+            value >= CharacterPoseNativeFrameStatus.Prepared &&
+            value <= CharacterPoseNativeFrameStatus.Validated;
+    }
+
     internal readonly struct CharacterPoseNativeGraphPrepareRequest
     {
         internal CharacterPoseNativeGraphPrepareRequest(
@@ -75,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!graphAsset || graph == null || profile == null || rig == null || inputContract == null)
                 throw new ArgumentException("Pose native graph request binding is incomplete.");
             if (!graph.GraphId.IsValid || string.IsNullOrWhiteSpace(graph.ContentRevision) ||
-                !Enum.IsDefined(typeof(CharacterPoseNativeGraphBoundary), boundary))
+                !CharacterPoseNativeEnumValues.IsValid(boundary))
                 throw new ArgumentException("Pose native graph request graph identity is invalid.");
             if (profile.PoseGraph != graphAsset ||
                 !graphAsset.TryGetGraph(graph.GraphId, out CharacterPoseCanvasGraph resolved) ||
@@ -114,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Rig != null && InputContract != null && Graph.GraphId.IsValid &&
             !string.IsNullOrWhiteSpace(Graph.ContentRevision) &&
             !string.IsNullOrWhiteSpace(ResourceRevision) &&
-            Enum.IsDefined(typeof(CharacterPoseNativeGraphBoundary), Boundary) &&
+            CharacterPoseNativeEnumValues.IsValid(Boundary) &&
             !string.IsNullOrWhiteSpace(InputContract.ContractHash);
     }
 
@@ -160,7 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Rig != null && InputContract != null && GraphId.IsValid &&
             !string.IsNullOrWhiteSpace(GraphRevision) && !string.IsNullOrWhiteSpace(RigId) &&
             !string.IsNullOrWhiteSpace(RigRevision) && !string.IsNullOrWhiteSpace(ResourceRevision) &&
-            Enum.IsDefined(typeof(CharacterPoseNativeGraphBoundary), Boundary) &&
+            CharacterPoseNativeEnumValues.IsValid(Boundary) &&
             !string.IsNullOrWhiteSpace(InputContractHash);
     }
 
@@ -174,8 +193,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string message,
             in CharacterPoseNativePreparedBinding preparedBinding)
         {
-            if (!request.IsValid || !Enum.IsDefined(typeof(CharacterPoseNativePreparationStatus), status) ||
-                !Enum.IsDefined(typeof(CharacterPoseNativeFailureCode), failureCode) ||
+            if (!request.IsValid || !CharacterPoseNativeEnumValues.IsValid(status) ||
+                !CharacterPoseNativeEnumValues.IsValid(failureCode) ||
                 string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(message) ||
                 status == CharacterPoseNativePreparationStatus.Ready && !preparedBinding.IsValid ||
                 status != CharacterPoseNativePreparationStatus.Ready && preparedBinding.IsValid ||
@@ -237,8 +256,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal string Message { get; }
         internal CharacterPoseNativePreparedBinding PreparedBinding { get; }
         internal bool IsValid => Request.IsValid &&
-            Enum.IsDefined(typeof(CharacterPoseNativePreparationStatus), Status) &&
-            Enum.IsDefined(typeof(CharacterPoseNativeFailureCode), FailureCode) &&
+            CharacterPoseNativeEnumValues.IsValid(Status) &&
+            CharacterPoseNativeEnumValues.IsValid(FailureCode) &&
             !string.IsNullOrWhiteSpace(Source) && !string.IsNullOrWhiteSpace(Message) &&
             (Status == CharacterPoseNativePreparationStatus.Ready
                 ? FailureCode == CharacterPoseNativeFailureCode.None && PreparedBinding.IsValid
@@ -721,8 +740,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string message,
             in CharacterPoseNativeSourceDemand demand)
         {
-            if (!lineage.IsValid || !Enum.IsDefined(typeof(CharacterPoseNativeFrameStatus), status) ||
-                !Enum.IsDefined(typeof(CharacterPoseNativeFailureCode), failureCode) ||
+            if (!lineage.IsValid || !CharacterPoseNativeEnumValues.IsValid(status) ||
+                !CharacterPoseNativeEnumValues.IsValid(failureCode) ||
                 string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(message) ||
                 status == CharacterPoseNativeFrameStatus.Prepared && !demand.IsValid ||
                 status != CharacterPoseNativeFrameStatus.Prepared && demand.IsValid)
@@ -744,8 +763,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal string Message { get; }
         internal CharacterPoseNativeSourceDemand Demand { get; }
         internal bool IsValid => Lineage.IsValid &&
-            Enum.IsDefined(typeof(CharacterPoseNativeFrameStatus), Status) &&
-            Enum.IsDefined(typeof(CharacterPoseNativeFailureCode), FailureCode) &&
+            CharacterPoseNativeEnumValues.IsValid(Status) &&
+            CharacterPoseNativeEnumValues.IsValid(FailureCode) &&
             !string.IsNullOrWhiteSpace(Source) && !string.IsNullOrWhiteSpace(Message) &&
             (Status == CharacterPoseNativeFrameStatus.Prepared
                 ? Demand.IsValid

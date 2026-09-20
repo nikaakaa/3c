@@ -1009,3 +1009,12 @@
 - AbilityLifecycleTransition 的正式非空成员连续为 Confirm=1 至 Abort=7。现直接检查该闭区间；None、负数、超过 byte 以及 8 至 255 的未知值继续抛出原 InvalidOperationException。RequireTerminalTransition 仍单独限制 Complete／Cancel／Interrupt／Abort。
 - 只删除运行事件到达时的通用枚举查询，不改变动作匹配、状态转换、结果种类、原因文本、来源 Tick 或任何生命周期分支。该入口不是普通每帧必经，未将其记录为逐帧收益。
 - 目标文件修改前无其它未提交修改。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查待提交前执行；未新增测试、未操作共享 Unity、未执行动作生命周期运行回放或 Player 分配采样。
+
+## 2026-09-20 Pose Native 枚举值域校验
+
+对应 tasks.md 的 4.2.1。
+
+- CharacterPoseNativePreparationResult 由 Pose Native BeginFrame／PrepareFrame 每帧产生，构造和后续 IsValid 原分别查询 FrameStatus 与 FailureCode 枚举；图准备请求、绑定和准备结果还存在同类查询。四类枚举的正式成员均为连续 byte 值域。
+- 新增 CharacterPoseNativeEnumValues，集中定义 PreparationStatus、GraphBoundary、FailureCode 与 FrameStatus 的正式首末成员；十一处 Enum.IsDefined 全部迁移为该值域判断。未知零值、越界值以及原状态／失败码／Demand／Binding 组合仍由原条件拒绝。
+- 每帧链删除四次装箱与元数据查询，其余七次属于图准备和准备结果校验，不计作逐帧收益。未修改 Pose Graph 求值、资源准备、节点处理、发布结果或原生数据边界。
+- Unity 生成的 Runtime 工程首次 --no-restore 因 Temp 资产文件缺失未启动编译；随后由同一正式工程完成还原和编译，ThirdPersonClient.Runtime 及依赖零错误，存在三十四个既有包／项目警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。

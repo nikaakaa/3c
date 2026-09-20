@@ -87,6 +87,7 @@
 
 - [ ] 4.1 将BlendStack PrepareFrame请求和去重集合改为原节点/实例持有的准备存储，移除每帧分配
 - [ ] 4.2 迁移Pose源请求、观察结果和资源目录getter的热点副本，按Frame/Barrier/Seal落实租用寿命，不改原生求值
+- [x] 4.2.1 Pose Native 四类连续枚举集中按正式值域校验，删除图准备合同及每帧 PreparationResult 构造／IsValid 中十一处 Enum.IsDefined 装箱，保留原状态组合约束
 - [ ] 4.3 沿Foot查询、Goal Assembly、FBBIK和最终写入链治理实际managed临时对象、装箱和vendor接口分配，保留查询容量和算法顺序
 - [ ] 4.4 沿Camera目标/效果、Input采样和Behavior Designer正式任务治理已确认分配，保持输入来源和目标身份
 

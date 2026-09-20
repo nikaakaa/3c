@@ -390,3 +390,11 @@
 - Camera 请求在准备时由上一批公共工厂构造，按可达流程预计算候选容量。Evaluate 重置自己的临时值／控制状态，并返回原 typed 请求的只读候选区间；失败清空候选计数。成功调用的新增路径不构造 List／字符串／命令对象，状态槽复位采用索引循环。
 - 这批只落地正式图控制器的表现执行适配与候选输出接口；CharacterTimelineHost 尚未装配该适配器，Camera 帧候选接收／提交、只读表现事实节点及资源准备仍待完成。现有 Host 的缺执行器错误保持，第6节不能勾选完成。
 - Unity编译与最终域重载完成（1789898726011），Editor idle，控制台错误为零；没有运行图端到端验证，没有新增测试。
+
+## Camera 输出与 Timeline 事件记账进入表现帧候选
+- 原 CharacterCameraDomainRuntime 增加 BeginFrame／CommitFrame／DiscardFrame。帧内 Publish／Retire 只修改原请求集合的候选副本并登记已接受请求的退休原因；接受时交给既有 Sequence／Effect 生命周期，丢弃时不触碰已接受状态。原帧流程统一调用这些边界，没有第二 Camera registry。
+- TimelinePresentationEventBridge 改为消费原 Prepared 事件，Camera 请求容量失败等调用错误发生在 Pose 接受之前；桥内事件字典也保留预分配帧基线，Discard 恢复原事件记账。复用 alive／retired 容器，删除每帧新建 HashSet／退休列表。没有 Camera 输出的帧不再强求 Camera 调用上下文。
+- 修复 RetireInactive 忽略 playback handle、导致不同 Timeline 相互退休 Camera 请求的问题；修正／分支撤销使用原 activation 交给 Camera 的 EventRevoked，正常结束保留自然收尾。Dispose 先清理事件，再标记已释放，修复原来 Reset 被直接跳过的问题。
+- Camera Profile 新增正式 RequestCapacity，参与 Revision 和合法性检查；Corin 资产显式配置128。原请求集合、帧候选、事件基线和投影请求缓冲按配置预分配，容量不足明确失败；未配置 Camera domain 的能力容量为0，任何实际 Camera 输出仍明确报缺 domain。
+- 正式 Marker 图的 Host 装配仍未接通；原 Camera key／EventId 字符串构造与部分运行分配、Camera最终Apply异常后的跨领域回滚仍未消除，不能据此宣称完整0 GC或整体第7节完成。
+- Unity编译及最终域重载完成（1789899749435），Editor idle，控制台错误为零；未新增测试。

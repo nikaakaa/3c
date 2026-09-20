@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Schema: character-camera-profile/v2
   m_ProfileId: corin.camera.profile
+  m_RequestCapacity: 128
   m_DefaultSequence: {fileID: 11400000, guid: b3351f824e49467c893d83d326b392b3, type: 2}
   m_Sequences: []
   m_OverrideTracks: []

@@ -114,7 +114,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_TimelinePresentationBridge = new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelinePresentationEventBridge(
                 timelineHost,
                 this,
-                m_ActorId);
+                m_ActorId,
+                m_Camera != null ? m_Camera.RequestCapacity : 0);
         }
 
         internal void BindTimelineBridge(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge bridge)
@@ -397,6 +398,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PresentationClockCoordinator?.BeginSamplingFrame();
             try
             {
+                m_Camera?.BeginFrame();
+                m_TimelinePresentationBridge?.BeginFrame();
                 m_TimelineBridge?.BeginFrame();
                 m_TimelineHost?.Present(context, m_PresentationClockCoordinator);
                 CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
@@ -420,12 +423,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_TimelineHost?.CommitPresentationFrame(context.RenderFrame, m_PresentationClockCoordinator);
                 m_TimelineBridge?.CommitFrame();
                 m_PresentationClockCoordinator?.CommitSamplingFrame();
+                m_Camera?.CommitFrame();
+                m_TimelinePresentationBridge?.CommitFrame();
                 m_Camera?.Present(bodyFrame, context);
             }
             finally
             {
                 m_TimelineHost?.DiscardPresentationFrame(context.RenderFrame);
                 m_TimelineBridge?.DiscardFrame();
+                m_Camera?.DiscardFrame();
+                m_TimelinePresentationBridge?.DiscardFrame();
                 m_PresentationClockCoordinator?.DiscardSamplingFrame();
             }
         }

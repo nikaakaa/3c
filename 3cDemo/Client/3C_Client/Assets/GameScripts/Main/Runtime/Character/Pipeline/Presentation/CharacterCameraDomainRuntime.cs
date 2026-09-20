@@ -30,7 +30,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly List<CameraResponseRequest> m_ResponseRequests = new List<CameraResponseRequest>();
         readonly List<CameraTargetSelectionRequest> m_TargetRequests = new List<CameraTargetSelectionRequest>();
         readonly List<CameraEffectRequest> m_EffectRequests = new List<CameraEffectRequest>();
-        readonly List<ActiveCameraRequest> m_ActiveRequests = new List<ActiveCameraRequest>();
+        readonly List<ActiveCameraRequest> m_ActiveRequests;
+        readonly List<ActiveCameraRequest> m_CandidateRequests;
+        readonly CameraPresentationStopReason[] m_CandidateRetirements;
+        readonly int m_RequestCapacity;
+        bool m_FrameOpen;
         CameraSequenceRequest m_DefaultSequenceRequest;
         readonly CameraResponseRequest m_DefaultResponseRequest;
         ulong m_LastBodyResetSequence;
@@ -88,6 +92,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!m_Adopted.Adopted)
                 throw new InvalidOperationException($"Camera runtime binding was not adopted: {m_Adopted.FailureMessage}.");
             m_Projection = m_Binding.Projection;
+            m_RequestCapacity = profile.RequestCapacity;
+            m_ActiveRequests = new List<ActiveCameraRequest>(m_RequestCapacity);
+            m_CandidateRequests = new List<ActiveCameraRequest>(m_RequestCapacity);
+            m_CandidateRetirements = new CameraPresentationStopReason[m_RequestCapacity];
+            m_SequenceRequests.Capacity = checked(m_RequestCapacity + 1);
+            m_ResponseRequests.Capacity = m_RequestCapacity;
+            m_TargetRequests.Capacity = m_RequestCapacity;
+            m_EffectRequests.Capacity = m_RequestCapacity;
+            m_Targets.Capacity = checked(m_Projection.TargetSlots.Count + 2);
             m_TargetResolver = new CameraTargetBindingResolver(m_Binding.TargetBindings);
             m_ResponseResolver = new CameraResponseRequestResolver(m_Projection.Input);
             m_SequenceEvaluator = new CharacterCameraSequenceEvaluator(m_Projection);
@@ -138,6 +151,50 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal CameraBasisSnapshot BasisSnapshot => m_Rig.BasisSnapshot;
+        internal int RequestCapacity => m_RequestCapacity;
+
+        internal void BeginFrame()
+        {
+            RequireAlive();
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Camera frame candidate is already open.");
+            m_CandidateRequests.Clear();
+            for (int index = 0; index < m_ActiveRequests.Count; index++)
+                m_CandidateRequests.Add(new ActiveCameraRequest(m_ActiveRequests[index].Command, index));
+            Array.Clear(m_CandidateRetirements, 0, m_CandidateRetirements.Length);
+            m_FrameOpen = true;
+        }
+
+        internal void CommitFrame()
+        {
+            if (!m_FrameOpen)
+                throw new InvalidOperationException("Camera frame candidate is not open.");
+            for (int index = 0; index < m_ActiveRequests.Count; index++)
+                if (m_CandidateRetirements[index] != 0)
+                    RetireRuntimeRequest(m_ActiveRequests[index].Command, m_CandidateRetirements[index]);
+            m_ActiveRequests.Clear();
+            m_ActiveRequests.AddRange(m_CandidateRequests);
+            m_CandidateRequests.Clear();
+            m_FrameOpen = false;
+        }
+
+        internal void DiscardFrame()
+        {
+            if (!m_FrameOpen)
+                return;
+            m_CandidateRequests.Clear();
+            m_FrameOpen = false;
+        }
+
+        List<ActiveCameraRequest> Requests => m_FrameOpen ? m_CandidateRequests : m_ActiveRequests;
+
+        void RetireRequest(ActiveCameraRequest request, CameraPresentationStopReason reason)
+        {
+            if (!m_FrameOpen)
+                RetireRuntimeRequest(request.Command, reason);
+            else if (request.AcceptedIndex >= 0)
+                m_CandidateRetirements[request.AcceptedIndex] = reason;
+        }
 
         internal void Publish(CharacterPresentationCommand command)
         {
@@ -148,15 +205,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 Retire(command);
                 return;
             }
-            for (int i = m_ActiveRequests.Count - 1; i >= 0; i--)
+            List<ActiveCameraRequest> requests = Requests;
+            for (int i = requests.Count - 1; i >= 0; i--)
             {
-                CharacterPresentationCommand active = m_ActiveRequests[i].Command;
-                if (!SameRequest(active, command))
+                if (!SameRequest(requests[i].Command, command))
                     continue;
-                RetireRuntimeRequest(active, CameraPresentationStopReason.EventRevoked);
-                m_ActiveRequests.RemoveAt(i);
+                RetireRequest(requests[i], CameraPresentationStopReason.EventRevoked);
+                requests.RemoveAt(i);
             }
-            m_ActiveRequests.Add(new ActiveCameraRequest(command));
+            if (requests.Count == m_RequestCapacity)
+                throw new InvalidOperationException($"Camera request capacity {m_RequestCapacity} is exhausted.");
+            requests.Add(new ActiveCameraRequest(command));
         }
 
         internal void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement)
@@ -175,13 +234,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PresentationCameraRequestLifecycle.Retire
                     ? CameraPresentationStopReason.NaturalComplete
                     : CameraPresentationStopReason.EventRevoked;
-            for (int i = m_ActiveRequests.Count - 1; i >= 0; i--)
+            List<ActiveCameraRequest> requests = Requests;
+            for (int i = requests.Count - 1; i >= 0; i--)
             {
-                CharacterPresentationCommand active = m_ActiveRequests[i].Command;
+                CharacterPresentationCommand active = requests[i].Command;
                 if (active.ProducerGeneration != command.ProducerGeneration || !SameRequest(active, command))
                     continue;
-                RetireRuntimeRequest(active, reason);
-                m_ActiveRequests.RemoveAt(i);
+                RetireRequest(requests[i], reason);
+                requests.RemoveAt(i);
             }
         }
 
@@ -258,6 +318,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_TargetRequests.Clear();
             m_EffectRequests.Clear();
             m_ActiveRequests.Clear();
+            m_CandidateRequests.Clear();
+            m_FrameOpen = false;
             m_LastBodyResetSequence = 0;
             m_PendingResetReason = CameraResetReason.Initialization;
         }
@@ -529,12 +591,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         readonly struct ActiveCameraRequest
         {
-            public ActiveCameraRequest(CharacterPresentationCommand command)
+            public ActiveCameraRequest(CharacterPresentationCommand command, int acceptedIndex = -1)
             {
                 Command = command;
+                AcceptedIndex = acceptedIndex;
             }
 
             public CharacterPresentationCommand Command { get; }
+            public int AcceptedIndex { get; }
         }
 
         static CameraResetReason ResolveResetReason(CharacterBodyPresentationResetReason reason)

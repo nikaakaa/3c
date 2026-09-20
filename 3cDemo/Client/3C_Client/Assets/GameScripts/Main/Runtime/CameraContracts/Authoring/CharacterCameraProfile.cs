@@ -13,6 +13,7 @@ namespace ThirdPersonCamera
         public const string SchemaVersion = "character-camera-profile/v2";
 
         [SerializeField] string m_Schema = SchemaVersion;
+        [SerializeField, Min(1)] int m_RequestCapacity = 128;
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CameraSequenceAsset m_DefaultSequence;
         [SerializeField] CameraSequenceAsset[] m_Sequences = Array.Empty<CameraSequenceAsset>();
@@ -32,6 +33,7 @@ namespace ThirdPersonCamera
         [SerializeField] CameraTargetSlot[] m_TargetSlots = Array.Empty<CameraTargetSlot>();
 
         public string Schema => m_Schema ?? string.Empty;
+        public int RequestCapacity => m_RequestCapacity;
         public string ProfileId => m_ProfileId ?? string.Empty;
         public CameraSequenceAsset DefaultSequence => m_DefaultSequence;
         public IReadOnlyList<CameraSequenceAsset> Sequences => m_Sequences ?? Array.Empty<CameraSequenceAsset>();
@@ -68,6 +70,7 @@ namespace ThirdPersonCamera
             get
             {
                 var value = new StringBuilder(SchemaVersion).Append('|').Append(ProfileId);
+                value.Append('|').Append(RequestCapacity.ToString(CultureInfo.InvariantCulture));
                 value.Append('|').Append(DefaultSequence ? DefaultSequence.SequenceId : string.Empty);
                 value.Append('|').Append(CameraAssetRevision.Compute(DefaultSequence));
                 CameraFrameOnePointByTrackStage defaultTrack = RequireDefaultTrack();
@@ -121,7 +124,7 @@ namespace ThirdPersonCamera
         public void RequireValid()
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ProfileId) ||
-                !DefaultSequence || Input == null || Collision == null ||
+                RequestCapacity <= 0 || !DefaultSequence || Input == null || Collision == null ||
                 !float.IsFinite(NearClipPlane) || NearClipPlane < 0f || !float.IsFinite(FarClipPlane) ||
                 FarClipPlane <= NearClipPlane || !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
                 !float.IsFinite(DefaultSmoothTime) || DefaultSmoothTime < 0f ||

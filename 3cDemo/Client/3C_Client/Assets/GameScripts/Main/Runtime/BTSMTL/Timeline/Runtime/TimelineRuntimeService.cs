@@ -650,12 +650,28 @@ namespace BTSMTL.Timeline.Runtime
                 runtimeHandle,
                 generation,
                 m_TickRate);
-            if (!playback.Start())
-                return false;
-            m_Playbacks.Add(runtimeHandle.Value, playback);
-            handle = new TimelinePlaybackHandle(runtimeHandle.Value);
-            Publish(playback);
-            return true;
+            bool registered = false;
+            bool accepted = false;
+            try
+            {
+                if (!playback.Start())
+                    return false;
+                m_Playbacks.Add(runtimeHandle.Value, playback);
+                registered = true;
+                Publish(playback);
+                handle = new TimelinePlaybackHandle(runtimeHandle.Value);
+                accepted = true;
+                return true;
+            }
+            finally
+            {
+                if (!accepted)
+                {
+                    if (registered)
+                        m_Playbacks.Remove(runtimeHandle.Value);
+                    playback.Dispose();
+                }
+            }
         }
 
         public TimelinePlaybackStatus GetTimelinePlaybackStatus(TimelinePlaybackHandle handle)
@@ -771,9 +787,25 @@ namespace BTSMTL.Timeline.Runtime
                 handle,
                 generation,
                 m_TickRate);
-            m_Playbacks.Add(handle.Value, playback);
-            Publish(playback);
-            return handle;
+            bool registered = false;
+            bool accepted = false;
+            try
+            {
+                m_Playbacks.Add(handle.Value, playback);
+                registered = true;
+                Publish(playback);
+                accepted = true;
+                return handle;
+            }
+            finally
+            {
+                if (!accepted)
+                {
+                    if (registered)
+                        m_Playbacks.Remove(handle.Value);
+                    playback.Dispose();
+                }
+            }
         }
 
         public bool Start(TimelineRuntimePlaybackHandle handle)

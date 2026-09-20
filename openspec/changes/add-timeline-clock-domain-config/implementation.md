@@ -638,3 +638,11 @@
 - 覆盖Start已经返回并登记后、求值／外层事务失败的清理，以及恢复事务中新建实例的回退。内容准备或Start内部在登记前抛错的资源边界仍需继续核对；未据此宣称所有Start异常或全链0 GC已经完成。
 - 回退还区分“本次新建”与“重新持有旧的已释放逻辑记录”：ActivePlayback记录RestoredReleasedOwner。恢复失败且原基线不持有该旧实例时，仅恢复其逻辑释放等待状态，保留原释放tick和表现游标，不删除已经发布过的表现来源；成功状态发布后清除该临时标记。重新解除逻辑持有时同步清除未来逻辑求值和TreeClip登记，防止失败重模拟留下逻辑数据。
 - 最终Unity编译及域重载完成（1789931630539），Editor idle、控制台零错误，git diff --check通过；未新增测试，未运行恢复后重模拟、候选失败或旧释放记录重新持有的端到端验收。
+
+## Start返回与登记前异常的资源清理
+- 对应Start／Step事务边界：Service.RequestTimelinePlayback在Start、入表和通知之间增加明确接受标记，只有全部完成才返回有效handle；失败或异常时只移除本次已入表对象并Dispose，不对已有同key对象做删除。直接CreatePlayback入口同样保护入表后的通知异常。
+- Host在Native启动成功后，对描述读取、ActivePlayback登记、诊断快照及生命周期通知建立同一失败清理边界。未完成时使out handle无效，移除本次ActivePlayback和其新建诊断缓存，再释放Native／EvaluationBuffer；不调用普通Stop或伪造终态事件。
+- Unity适配层Start改为显式Add请求登记，handle转换或登记异常时丢弃本次播放后原样抛错。未发布丢弃入口改为正式TimelinePlaybackHandle，删除旧int入口，避免handle转换失败后反而无法回收Native。此前“Start已登记后事务失败”的清理继续共用该入口。
+- 诊断快照Registry对已有RuntimeInstanceKey复用原快照，Publish返回是否本次创建；ActivePlayback记录CreatedDiagnosticSnapshot，失败清理只删除本次创建的缓存。历史恢复遇到已有诊断快照不会覆盖后再误删，同时减少同身份恢复时重复克隆；正常发布过的诊断历史保留合同没有改变。
+- 本批关闭已创建对象跨Start／Host／适配层登记交接的清理缺口；内容准备与新播放克隆仍会分配，诊断历史的整体寿命及完整0 GC仍需继续处理，未据异常清理完成宣称整个goal完成。
+- 最终Unity编译及域重载完成（1789932085215），Editor idle、控制台零错误，git diff --check通过；未新增测试，未执行Start通知异常注入。后续继续核对回退后重新Start的handle／generation分配是否受未恢复计数影响，不能仅因已有快照可恢复就认定重模拟身份稳定。

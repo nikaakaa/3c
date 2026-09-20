@@ -9,14 +9,19 @@ namespace BTSMTL.Timeline.Runtime
         static readonly Dictionary<RuntimeInstanceKey, TimelineData> s_Snapshots =
             new Dictionary<RuntimeInstanceKey, TimelineData>();
 
-        public static void Publish(RuntimeInstanceKey playback, TimelineData timeline)
+        public static bool Publish(RuntimeInstanceKey playback, TimelineData timeline)
         {
             if (playback.Kind != RuntimeInstanceKind.TimelinePlayback)
                 throw new ArgumentException("Timeline playback identity is required.", nameof(playback));
             if (timeline == null)
                 throw new ArgumentNullException(nameof(timeline));
-            s_Snapshots[playback] = timeline.Clone();
+            if (s_Snapshots.ContainsKey(playback))
+                return false;
+            s_Snapshots.Add(playback, timeline.Clone());
+            return true;
         }
+
+        public static void Remove(RuntimeInstanceKey playback) => s_Snapshots.Remove(playback);
 
         public static bool TryGet(RuntimeInstanceKey playback, out TimelineData timeline)
         {

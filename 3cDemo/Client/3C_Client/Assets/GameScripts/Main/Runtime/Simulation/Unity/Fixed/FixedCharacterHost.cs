@@ -521,8 +521,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 out TimelinePlaybackHandle handle);
             if (!started)
                 throw new InvalidOperationException($"Ability Timeline '{request.TimelineId}' failed to start for Action '{request.ActionContext.ActionId}'.");
-            m_Requests[checked((int)handle.Value)] = request;
-            return checked((int)handle.Value);
+            try
+            {
+                int runtimeHandle = checked((int)handle.Value);
+                m_Requests.Add(runtimeHandle, request);
+                return runtimeHandle;
+            }
+            catch
+            {
+                m_Host.DiscardUnpublishedTimelinePlayback(handle);
+                throw;
+            }
         }
 
         public AbilityTimelineTickResult Tick(int runtimeHandle, ulong logicTick, int tickCount, AbilityTimelinePlaybackControl control)
@@ -569,7 +578,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             int handle;
             while ((handle = FindUnreferencedPlayback(snapshots)) != 0)
             {
-                m_Host.DiscardUnpublishedAbilityTimeline(handle);
+                m_Host.DiscardUnpublishedTimelinePlayback(new TimelinePlaybackHandle((ulong)handle));
                 m_Requests.Remove(handle);
             }
         }

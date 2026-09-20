@@ -518,6 +518,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal bool RestoredReleasedOwner;
             internal ulong LogicReleaseTick;
             internal bool PresentationReleased;
+            internal bool CreatedDiagnosticSnapshot;
             internal TimelineRuntimePresentationSample LocalPresentationSample;
         }
 
@@ -719,26 +720,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 playbackTimeline, sourceId, sourceName, actionContext, playbackMode,
                 sourceActivation, sourceRuntimeGraph, out handle))
                 return false;
-            if (!m_Host.Service.TryGetDescriptor(handle, out TimelineRuntimePlaybackDescriptor descriptor))
-                throw new InvalidOperationException("Started Timeline playback has no descriptor.");
-            var active = new ActivePlayback
+            var runtimeHandle = new TimelineRuntimePlaybackHandle(handle.Value);
+            bool accepted = false;
+            try
             {
-                Handle = handle,
-                Generation = descriptor.Generation,
-                Timeline = playbackTimeline,
-                SourceName = sourceName ?? string.Empty,
-                SourceKind = sourceKind,
-                CoreDriven = false,
-                ActionContext = actionContext,
-                ActionInstanceId = actionContext.ActionInstanceId,
-                RuntimeInstance = CreateRuntimeInstance(handle, actionContext.ActionInstanceId, sourceOperationIndex),
-                Provenance = provenance
-            };
-            m_ActivePlaybacks.Add(active);
-            PublishPlaybackSnapshot(active);
-            PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineRequested, "Requested", string.Empty);
-            PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineStarted, "Running", string.Empty);
-            return true;
+                if (!m_Host.Service.TryGetDescriptor(handle, out TimelineRuntimePlaybackDescriptor descriptor))
+                    throw new InvalidOperationException("Started Timeline playback has no descriptor.");
+                var active = new ActivePlayback
+                {
+                    Handle = handle,
+                    Generation = descriptor.Generation,
+                    Timeline = playbackTimeline,
+                    SourceName = sourceName ?? string.Empty,
+                    SourceKind = sourceKind,
+                    CoreDriven = false,
+                    ActionContext = actionContext,
+                    ActionInstanceId = actionContext.ActionInstanceId,
+                    RuntimeInstance = CreateRuntimeInstance(handle, actionContext.ActionInstanceId, sourceOperationIndex),
+                    Provenance = provenance
+                };
+                m_ActivePlaybacks.Add(active);
+                PublishPlaybackSnapshot(active);
+                PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineRequested, "Requested", string.Empty);
+                PublishTimelineLifecycle(active, RuntimeTraceEventKind.TimelineStarted, "Running", string.Empty);
+                accepted = true;
+                return true;
+            }
+            finally
+            {
+                if (!accepted)
+                {
+                    handle = TimelinePlaybackHandle.Invalid;
+                    for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
+                    {
+                        if (m_ActivePlaybacks[index].Handle.Value != runtimeHandle.Value)
+                            continue;
+                        if (m_ActivePlaybacks[index].CreatedDiagnosticSnapshot)
+                            TimelineRuntimePlaybackSnapshotRegistry.Remove(m_ActivePlaybacks[index].RuntimeInstance);
+                        m_ActivePlaybacks.RemoveAt(index);
+                    }
+                    m_Host.ReleasePlayback(runtimeHandle);
+                }
+            }
         }
 
         public void SetTimelineContent(IReadOnlyList<TimelineAsset> timelines)
@@ -1351,9 +1374,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 clipAuthoringId);
         }
 
-        public void DiscardUnpublishedAbilityTimeline(int runtimeHandle)
+        public void DiscardUnpublishedTimelinePlayback(TimelinePlaybackHandle playbackHandle)
         {
-            var handle = new TimelineRuntimePlaybackHandle(checked((ulong)runtimeHandle));
+            var handle = new TimelineRuntimePlaybackHandle(playbackHandle.Value);
             for (int index = 0; index < m_ActivePlaybacks.Count; index++)
             {
                 ActivePlayback active = m_ActivePlaybacks[index];
@@ -1371,6 +1394,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_Host.ReleasePlayback(handle);
                 m_Host.ReleasePresentationPlayback(handle, active.Generation);
                 m_TreeClipService.Restore(handle.Value, default);
+                if (active.CreatedDiagnosticSnapshot)
+                    TimelineRuntimePlaybackSnapshotRegistry.Remove(active.RuntimeInstance);
                 m_ActivePlaybacks.RemoveAt(index);
                 return;
             }
@@ -1686,7 +1711,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (!active.RuntimeInstance.IsValid || active.Timeline == null)
                 return;
-            TimelineRuntimePlaybackSnapshotRegistry.Publish(active.RuntimeInstance, active.Timeline);
+            if (!TimelineRuntimePlaybackSnapshotRegistry.Publish(active.RuntimeInstance, active.Timeline))
+                return;
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                ActivePlayback registered = m_ActivePlaybacks[index];
+                if (registered.Handle.Value != active.Handle.Value)
+                    continue;
+                registered.CreatedDiagnosticSnapshot = true;
+                m_ActivePlaybacks[index] = registered;
+                break;
+            }
         }
 
         void OnCommittedTimelineEvaluation(TimelineRuntimeCommittedEvaluation evaluation)

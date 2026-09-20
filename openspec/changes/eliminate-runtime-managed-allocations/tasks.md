@@ -148,6 +148,8 @@
 
 - [x] 2.87 角色控制 Motion binding catalog 按双值 EvaluationMode 直接解码，删除单一调用泛型 Enum.IsDefined／ToObject 入口；catalog 格式和 canonical 校验保持
 
+- [x] 2.88 两数值域 Timeline snapshot 加入／移除按下标扫描并按准确结果容量复制，删除 stop 的捕获 All、两条 RemoveAll 捕获委托及 LINQ 依赖；角色状态克隆边界保持
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

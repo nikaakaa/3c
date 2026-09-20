@@ -1768,3 +1768,12 @@
 - Session Host 每次判断表现 checkpoint 能力时原先经 Enumerable.All 遍历注册列表；读取最旧 tick 和 checkpoint 超限淘汰则经 Enumerable.First 读取 SortedDictionary.Keys。三处都把已有具体集合提升为 IEnumerable LINQ。
 - 能力检查改为 List 下标短路遍历，继续要求非空 roster 且每个注册同时支持捕获和恢复。最旧 tick 通过 SortedDictionary KeyCollection 的具体 foreach 读取；空集合返回 0，超限淘汰只在非空时调用，原语义保持。
 - 文件不再需要 System.Linq。ThirdPersonClient.Runtime 无依赖重编通过，仅保留 CharacterInputValueNodes 一条既有未使用字段警告，零错误；构建服务关闭成功。未新增测试、未操作共享 Unity、未做 checkpoint 运行采样。
+
+## 2026-09-21 角色 Timeline snapshot 更新去 LINQ
+
+对应 tasks.md 的 2.88。
+
+- Fixed／Float32 角色状态在 Timeline advance 时复制快照 List 后用捕获 snapshot 的 RemoveAll 去重；Timeline stop 则先用捕获 runtimeHandle 的 Enumerable.All 查询，再复制 List 并用第二个捕获 RemoveAll 删除。两条链路由能力执行结果提交直接调用。
+- 两域加入路径按现有 Count+1 准备列表并下标复制不同 handle，随后追加新 snapshot；移除路径先下标定位，未命中直接返回原状态，命中后按 Count-1 准备并复制其余项。新状态构造仍负责排序、重复校验和独立持有。
+- 删除两个文件的 System.Linq、stop 的 All 迭代入口和加入／移除的捕获 RemoveAll 委托；角色状态及内部集合克隆仍按原边界发生，未宣称 Timeline 状态更新已无分配。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 Timeline 运行对比或 Player 分配采样。

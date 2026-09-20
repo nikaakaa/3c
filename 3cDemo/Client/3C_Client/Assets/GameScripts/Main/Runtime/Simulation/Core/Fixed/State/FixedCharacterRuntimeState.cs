@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot>;
 
 namespace ThirdPersonSimulation.Fixed
@@ -140,8 +139,10 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (snapshot == null || snapshot.RuntimeHandle == 0)
                 throw new ArgumentException("Fixed Character Timeline snapshot is invalid.", nameof(snapshot));
-            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots);
-            snapshots.RemoveAll(value => value.RuntimeHandle == snapshot.RuntimeHandle);
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots.Count + 1);
+            for (int i = 0; i < m_TimelineSnapshots.Count; i++)
+                if (m_TimelineSnapshots[i].RuntimeHandle != snapshot.RuntimeHandle)
+                    snapshots.Add(m_TimelineSnapshots[i]);
             snapshots.Add(snapshot);
             return CloneWithTimelineSnapshots(snapshots);
         }
@@ -150,10 +151,21 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (runtimeHandle == 0)
                 throw new ArgumentOutOfRangeException(nameof(runtimeHandle));
-            if (m_TimelineSnapshots.All(value => value.RuntimeHandle != runtimeHandle))
+            int removedIndex = -1;
+            for (int i = 0; i < m_TimelineSnapshots.Count; i++)
+            {
+                if (m_TimelineSnapshots[i].RuntimeHandle == runtimeHandle)
+                {
+                    removedIndex = i;
+                    break;
+                }
+            }
+            if (removedIndex < 0)
                 return this;
-            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots);
-            snapshots.RemoveAll(value => value.RuntimeHandle == runtimeHandle);
+            var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots.Count - 1);
+            for (int i = 0; i < m_TimelineSnapshots.Count; i++)
+                if (i != removedIndex)
+                    snapshots.Add(m_TimelineSnapshots[i]);
             return CloneWithTimelineSnapshots(snapshots);
         }
 

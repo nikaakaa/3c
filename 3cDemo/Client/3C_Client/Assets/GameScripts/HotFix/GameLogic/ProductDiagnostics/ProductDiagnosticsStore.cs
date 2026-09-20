@@ -31,11 +31,12 @@ namespace GameLogic.ProductDiagnostics
     public sealed class ProductDiagnosticsStore : IProductCheckpointSnapshotSource
     {
         private readonly int _capacity;
-        private readonly Queue<ProductCheckpointSnapshot> _history = new Queue<ProductCheckpointSnapshot>();
+        private readonly Queue<ProductCheckpointSnapshot> _history;
 
         public ProductDiagnosticsStore(int capacity)
         {
             _capacity = capacity > 0 ? capacity : throw new ArgumentOutOfRangeException(nameof(capacity));
+            _history = new Queue<ProductCheckpointSnapshot>(checked(_capacity + 1));
         }
 
         public ProductCheckpointSnapshot Current { get; private set; }

@@ -265,3 +265,12 @@
 - 取舍：运行时多保留一个工作列表的容量，取消每次查询新建完整数组。初始池数不是后续池数的正式上限，动态新增池仍可能触发扩容；CanReleaseCount 内部工作集合增长也未在此步治理，不能宣称资源统计全程无分配。
 - 资源作用域释放存在逐项通知，未把原复制清单直接改成共享可变视图；UnityFixedCharacterInputAdapter 已有并行未提交修改，保持原现场。本步不修改这些生命周期或输入链。
 - 当前 Unity 引用下独立编译完整 GameLogic 退出码 0、无诊断，产物位于系统临时目录，diff 空白检查通过。编辑前未发现 csc／bee 编译进程；MCP 仍返回 503，未控制或刷新 Editor。未新增测试，未做 Player 分配采样。
+
+## 2026-09-20 产品诊断历史队列容量准备
+
+对应 tasks.md 的 6.7，与代码同步提交。
+
+- ProductStartupCoordinator 从正式 RuntimeDefinition.DiagnosticsHistoryCapacity 取得 N，传给 ProductResourceRuntime、ProductRuntimeSnapshotStore、ProductDiagnosticsStore 和 ProductFaultLab。四者原先创建零容量 Queue，在记录增加时扩容。
+- 四个构造入口通过原有正数检查后，按 checked(N＋1) 创建各自队列。发布逻辑原先先 Enqueue 再在超出 N 时 Dequeue，因此瞬时峰值是 N＋1；保持该顺序及 Changed 通知时机，不修改公开历史接口、最终保留数量、记录对象和旧快照寿命。
+- 取舍：提前占用配置容量的引用数组，消除窗口填充过程和满窗口写入的队列扩容。极端容量导致的整数溢出或内存不足在准备入口直接失败，不新增任意上限或备用存储。History.ToArray 与各类记录对象分配仍存在；故障事件属于显式诊断行为，未称为每帧热点。
+- 以当前 Unity GameLogic.rsp 引用独立编译完整 GameLogic，退出码 0、无诊断，产物仅写系统临时目录；diff 空白检查通过。编辑前本机未发现 csc／bee 编译进程，未控制或刷新共享 Unity，未新增测试，未做 Player 分配采样。

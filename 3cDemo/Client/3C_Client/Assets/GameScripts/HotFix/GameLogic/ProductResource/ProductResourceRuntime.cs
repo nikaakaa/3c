@@ -43,7 +43,7 @@ namespace GameLogic.ProductResource
         private readonly Dictionary<ResourceIdentity, int> _ownedReferenceCounts = new Dictionary<ResourceIdentity, int>();
         private readonly Dictionary<ResourceIdentity, int> _pendingAcquireCounts = new Dictionary<ResourceIdentity, int>();
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
-        private readonly Queue<ResourceRuntimeSnapshot> _history = new Queue<ResourceRuntimeSnapshot>();
+        private readonly Queue<ResourceRuntimeSnapshot> _history;
         private readonly CancellationTokenSource _runtimeCancellation = new CancellationTokenSource();
 
         private long _nextScopeId;
@@ -66,6 +66,7 @@ namespace GameLogic.ProductResource
             _poolMetricsBuffer = new List<ObjectPoolBase>(_objectPoolModule.Count);
             _packageName = string.IsNullOrWhiteSpace(packageName) ? throw new ArgumentException("Package name is required.", nameof(packageName)) : packageName.Trim();
             _historyCapacity = snapshotHistoryCapacity > 0 ? snapshotHistoryCapacity : throw new ArgumentOutOfRangeException(nameof(snapshotHistoryCapacity));
+            _history = new Queue<ResourceRuntimeSnapshot>(checked(_historyCapacity + 1));
             GlobalScope = CreateScopeInternal(ResourceScopeKind.Global, "Global");
             Application.lowMemory += OnLowMemory;
             PublishSnapshot();

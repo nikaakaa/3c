@@ -110,7 +110,7 @@ namespace GameLogic.ProductDiagnostics
         private readonly IProductDownloadCancellationBoundary _downloadCancellation;
         private readonly IProductCacheFaultBoundary _cacheFaultBoundary;
         private readonly int _historyCapacity;
-        private readonly Queue<ProductFaultEvent> _history = new Queue<ProductFaultEvent>();
+        private readonly Queue<ProductFaultEvent> _history;
         private long _sequence;
 
         public ProductFaultLab(ProductResourceRuntime resources, IProductDownloadCancellationBoundary downloadCancellation, IProductCacheFaultBoundary cacheFaultBoundary, int historyCapacity)
@@ -119,6 +119,7 @@ namespace GameLogic.ProductDiagnostics
             _downloadCancellation = downloadCancellation ?? throw new ArgumentNullException(nameof(downloadCancellation));
             _cacheFaultBoundary = cacheFaultBoundary;
             _historyCapacity = historyCapacity > 0 ? historyCapacity : throw new ArgumentOutOfRangeException(nameof(historyCapacity));
+            _history = new Queue<ProductFaultEvent>(checked(_historyCapacity + 1));
         }
 
         public IReadOnlyList<ProductFaultEvent> History => _history.ToArray();

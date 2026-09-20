@@ -166,12 +166,13 @@ namespace GameLogic.ProductStartup
     internal sealed class ProductRuntimeSnapshotStore : IProductRuntimeSnapshotSource
     {
         private readonly int _capacity;
-        private readonly Queue<ProductRuntimeSnapshot> _history = new Queue<ProductRuntimeSnapshot>();
+        private readonly Queue<ProductRuntimeSnapshot> _history;
         private long _sequence;
 
         public ProductRuntimeSnapshotStore(int capacity)
         {
             _capacity = capacity > 0 ? capacity : throw new ArgumentOutOfRangeException(nameof(capacity));
+            _history = new Queue<ProductRuntimeSnapshot>(checked(_capacity + 1));
         }
 
         public ProductRuntimeSnapshot Current { get; private set; }

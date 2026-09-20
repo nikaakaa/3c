@@ -82,10 +82,12 @@ MonoBehaviour:
       data:
         m_AuthoringId: 1fabe64a-9df6-4bb3-a395-ebfa32d9874b
         Name: Decision
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877383
         - rid: 207050438612877384
+        m_Markers: []
     - rid: 207050438612877383
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -98,7 +100,7 @@ MonoBehaviour:
         m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: -7652454408741459237}
     - rid: 207050438612877384
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -112,16 +114,18 @@ MonoBehaviour:
         m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
-        m_ExitSource: 0
+        m_ExitSource: 1
         m_AssetTree: {fileID: -7135324045220957111}
     - rid: 207050438612877385
       type: {class: AnimationTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 8e4b0f0d-829b-4818-9a8b-39d9246447ea
         Name: Animation
+        m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877386
+        m_Markers: []
         m_AnimationChannelId: FullBodyAction
         m_AnimationSlotId: corin.full-body-action
     - rid: 207050438612877386
@@ -215,9 +219,11 @@ MonoBehaviour:
       data:
         m_AuthoringId: a0c961a6-0179-4f4d-8b75-76fa3a8bcd0a
         Name: Motion Curve
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877388
+        m_Markers: []
     - rid: 207050438612877388
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -358,7 +364,7 @@ MonoBehaviour:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: -13, y: 182}
+    _translation: {x: 22, y: 187}
     _zoomFactor: 1
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
@@ -406,7 +412,7 @@ MonoBehaviour:
   m_Name: DodgeForward State Body
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"555d035e-3251-417d-83ac-c0b9c5d72314","_name":"\u8fdb\u5165\u72b6\u6001","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnEnterFlowNode"},{"_UID":"a757928f-ae8b-489d-9f8e-bf586374e90a","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Timeline":1,"_UID":"c78616f5-3e17-4b1d-b6ec-7a200ebec941","_name":"Play
-    DodgeForward Timeline","_position":{"x":300.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"4a1648fa-c157-43c8-a5a0-272ee43a87aa","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"1823df30-39a2-4088-9b6d-6e4f2a55cf53","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"RecoveryOpen":{"_name":"RecoveryOpen","_id":"4a7a79cd9fc14a8f807d3d9580548cc1","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
+    DodgeForward Timeline","_position":{"x":300.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"4a1648fa-c157-43c8-a5a0-272ee43a87aa","_name":"\u9000\u51fa\u72b6\u6001","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"1823df30-39a2-4088-9b6d-6e4f2a55cf53","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"RecoveryOpen":{"_name":"RecoveryOpen","_id":"4a7a79cd9fc14a8f807d3d9580548cc1","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
     mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},"DodgeForwardIFrame":{"_name":"DodgeForwardIFrame","_id":"d9ecf57b06514746a1eed7a5a7217a6b","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
     mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}}},"derivedData":{"Identity":"01974466-06fd-4295-a76e-74a85e118390","Role":4,"Declarations":[{"m_VariableId":"4a7a79cd9fc14a8f807d3d9580548cc1","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Dodge/RecoveryOpen","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"RecoveryOpen","m_ActionWindowId":"DodgeForwardRecoveryOpen","m_ActionWindowDigest":7003}},{"m_VariableId":"d9ecf57b06514746a1eed7a5a7217a6b","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Windows","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"IFrame","m_ActionWindowId":"DodgeForwardIFrame","m_ActionWindowDigest":2}}],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences:

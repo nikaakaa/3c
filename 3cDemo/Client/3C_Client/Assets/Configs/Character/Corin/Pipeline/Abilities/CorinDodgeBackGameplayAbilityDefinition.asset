@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: DodgeBack State Body
   m_EditorClassIdentifier: 
   _serializedGraph: '{"type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph","nodes":[{"_UID":"e3379cf4-a2a0-4288-b190-d9952dcd30ed","_name":"\u8fdb\u5165\u72b6\u6001","_position":{"x":120.0,"y":60.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnEnterFlowNode"},{"_UID":"f02da1e1-1177-4116-b3ed-766e3251db81","_name":"\u6280\u80fd\u5165\u53e3","_position":{"x":120.0,"y":260.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillRootFlowNode","$id":"1"},{"m_Timeline":1,"_UID":"61586c6f-c735-4125-8875-41f1ff5f93c7","_name":"Play
-    DodgeBack Timeline","_position":{"x":324.0,"y":225.3333},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"e6673554-94b0-4f98-a52e-01158c43b92c","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"1d4bfe96-f332-4168-a910-fecb32dd4a43","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"RecoveryOpen":{"_name":"RecoveryOpen","_id":"066d593b6cd64cdb9de608744b830ca3","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
+    DodgeBack Timeline","_position":{"x":324.0,"y":225.3333},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillTimelineFlowNode","$id":"2"},{"_UID":"e6673554-94b0-4f98-a52e-01158c43b92c","_name":"\u9000\u51fa\u72b6\u6001","_position":{"x":120.0,"y":460.0},"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillStateOnExitFlowNode"}],"connections":[{"_sourcePortName":"Output","_targetPortName":"Input","_sourceNode":{"$ref":"1"},"_targetNode":{"$ref":"2"},"_UID":"1d4bfe96-f332-4168-a910-fecb32dd4a43","$type":"FlowCanvas.BinderConnection"}],"canvasGroups":[],"localBlackboard":{"_variables":{"RecoveryOpen":{"_name":"RecoveryOpen","_id":"066d593b6cd64cdb9de608744b830ca3","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
     mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"},"DodgeBackIFrame":{"_name":"DodgeBackIFrame","_id":"131816a77d7344d7b03d11917cb9c75d","$type":"NodeCanvas.Framework.Variable`1[[System.Boolean,
     mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}}},"derivedData":{"Identity":"93e14509-b248-44cc-a263-78c434016564","Role":4,"Declarations":[{"m_VariableId":"066d593b6cd64cdb9de608744b830ca3","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Dodge/RecoveryOpen","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"RecoveryOpen","m_ActionWindowId":"DodgeRecoveryCancel","m_ActionWindowDigest":7002}},{"m_VariableId":"131816a77d7344d7b03d11917cb9c75d","m_Scope":4,"m_Lifetime":4,"m_Category":"Action/Windows","m_InputBinding":{},"m_FactProjection":{"m_ActionWindowType":"IFrame","m_ActionWindowId":"DodgeBackIFrame","m_ActionWindowDigest":1}}],"$type":"ThirdPersonCharacter.Control.Authoring.BtsmtlSkillFlowGraph+AuthoringData"}}'
   _objectReferences:
@@ -99,21 +99,20 @@ MonoBehaviour:
     - rid: 207050438612877379
     m_Sections: []
     m_ExternalBindings: []
-    m_Scale: 1
     m_Loop: 0
   references:
     version: 2
     RefIds:
-    - rid: -2
-      type: {class: , ns: , asm: }
     - rid: 207050438612877375
       type: {class: AnimationTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 82f04395-f39f-487a-8112-e45882a37deb
         Name: Animation
+        m_ExecutionDomain: 2
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877376
+        m_Markers: []
         m_AnimationChannelId: FullBodyAction
         m_AnimationSlotId: corin.full-body-action
     - rid: 207050438612877376
@@ -207,9 +206,11 @@ MonoBehaviour:
       data:
         m_AuthoringId: 8f2a9050-893a-41e1-be05-57312ab21153
         Name: Motion Curve
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877378
+        m_Markers: []
     - rid: 207050438612877378
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
@@ -308,10 +309,12 @@ MonoBehaviour:
       data:
         m_AuthoringId: a636f440-208c-47db-88c1-afe9792423df
         Name: Decision
+        m_ExecutionDomain: 1
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877380
         - rid: 207050438612877381
+        m_Markers: []
     - rid: 207050438612877380
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -324,9 +327,7 @@ MonoBehaviour:
         m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
-        m_InlineTree:
-          rid: -2
-        m_SharedTreeAsset: {fileID: 0}
+        m_ExitSource: 1
         m_AssetTree: {fileID: 4417630261157840952}
     - rid: 207050438612877381
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -340,9 +341,7 @@ MonoBehaviour:
         m_SelfEaseOutTimeRaw: 0
         m_ClipInTimeRaw: 0
         m_ExecutionPhase: 0
-        m_InlineTree:
-          rid: -2
-        m_SharedTreeAsset: {fileID: 0}
+        m_ExitSource: 1
         m_AssetTree: {fileID: 7431018140762963}
 --- !u!114 &-5821543509179673098
 MonoBehaviour:

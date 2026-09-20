@@ -330,6 +330,8 @@
 
 - [x] 5.81 canonical payload hash 增加 ReadOnlySpan 入口，Rollback hash egress 直接读取 world solver payload span，删除每个 hash tick 为 KCC hash 创建的完整 payload 数组副本
 
+- [x] 5.82 Rollback schedule 按确定的 replay 区间与 current-step 条件准确分配最终 steps／source mappings 数组并转交 ExecutionPlan，删除每 outer tick 的两只动态 List、增长存储及计划二次复制
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

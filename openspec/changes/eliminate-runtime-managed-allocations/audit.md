@@ -1950,3 +1950,12 @@
 - SimulationSessionExecutionPlan 新增 FromOwnedArrays，接管 mappings 后原地执行既有排序与重复映射校验，并直接保存 steps。三条单步生产路径迁移到所有权入口；公开构造仍按 IReadOnlyList 复制，动态列表生产者尚未借用工作区。
 - 每个本地或 authority 单步计划删除一份 mapping 数组克隆和一份 step 数组克隆；原始单元素数组直接成为 plan 最终存储。空计划继续复用 Array.Empty。
 - 首次构建发现 FreezeMappings 异常参数名仍引用重命名前的 source，改为 sourceMappings 后 Fixed 编译通过；Unity 随后启动 Bee 编译，等待退出后 Float32、ServerAuthoritative 与 DeterministicRollback portable 均编译零警告零错误。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 schedule Player 分配采样。
+
+## 2026-09-21 Rollback schedule 最终数组
+
+对应 tasks.md 的 5.82。
+
+- Rollback schedule 的 replay steps 数量由 replayStart 到 CurrentCompletedTick 的闭区间确定；是否附加 current step 由 prediction lead 与 replay 是否为空确定。source mapping 对每种实际 step clock 各一条，因此数量同样可在构建前准确得到，最大为 replay 与 current 两条。
+- BuildPlan 先确定 restore／replay 边界，再计算 replayStepCount 与 includeCurrentStep，按准确数量创建最终 steps 和 mappings 数组。replay 通过整数索引填入原连续 tick 序列，planSequence 仍从 1 严格递增；current step 的 Forward／Current 分类、typed ingress 和 paced NoStep 条件保持。
+- 两只最终数组直接交给 SimulationSessionExecutionPlan.FromOwnedArrays。删除每个 rollback outer tick 的 steps List、mappings List、各自增长存储及 plan 内二次复制；每个实际 step、Actor input 数组和最终 plan 数组仍按执行计划寿命存在。
+- ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 rollback replay 运行对比或 Player 分配采样。

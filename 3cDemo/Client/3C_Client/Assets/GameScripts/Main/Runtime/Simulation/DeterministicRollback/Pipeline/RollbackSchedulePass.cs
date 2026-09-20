@@ -89,10 +89,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     SimulationSessionPlanRequirement.WorkingState |
                     SimulationSessionPlanRequirement.OutputDisposition);
             }
-            var steps = new List<FixedSimulationStep>();
-            var mappings = new List<SimulationPipelineStepSourceMapping>();
             SimulationRestoreDirective restore = null;
-            ulong planSequence = 1;
             SimulationTick replayStart = default;
             bool deepRecoveryReplay = false;
             if (m_State.TryGetPendingRecovery(out SimulationTick recoveryTick))
@@ -130,48 +127,66 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 restore = BuildRestoreDirective(restoreTick, snapshot, characterRuntime, context);
                 replayStart = mismatch;
             }
-            if (replayStart.IsValid)
+            int replayStepCount = replayStart.IsValid
+                ? checked((int)(context.CurrentCompletedTick - replayStart.Value + 1))
+                : 0;
+            string replayClock = null;
+            if (replayStepCount > 0)
             {
-                string replayClock = $"{context.Source.ClockId}/rollback-replay";
-                mappings.Add(new SimulationPipelineStepSourceMapping(
-                    replayClock,
-                    context.Source.ClockId,
-                    SimulationTickSourceKind.Replay));
+                replayClock = $"{context.Source.ClockId}/rollback-replay";
                 if (deepRecoveryReplay)
                     m_State.BeginDeepRecoveryReplay(replayStart, context.CurrentCompletedTick);
                 else
                     m_State.BeginRollback(replayStart, context.CurrentCompletedTick);
-                for (ulong tick = replayStart.Value; tick <= context.CurrentCompletedTick; tick++)
-                {
-                    RollbackCanonicalInputBundle bundle = SelectBundle(new SimulationTick(tick));
-                    var source = new SimulationTickSourceIdentity(SimulationTickSourceKind.Replay, replayClock, tick);
-                    steps.Add(BuildStep(bundle, source, SimulationPipelineStepExecutionKind.Replay, planSequence++, Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>()));
-                    if (tick == ulong.MaxValue)
-                        break;
-                }
             }
             bool canAdvancePrediction = nextTick <= checked(
                 m_State.LastCanonicalContiguousTick + (ulong)m_Policy.MaximumPredictionLeadTicks);
-            if (!canAdvancePrediction && steps.Count == 0 && restore == null)
+            if (!canAdvancePrediction && replayStepCount == 0 && restore == null)
             {
                 m_State.RecordPacedNoStep();
                 return BuildNoStep(context, characterRuntime.Runtime.GameplayContentHash, roster);
             }
-            if (canAdvancePrediction || steps.Count == 0)
+            bool includeCurrentStep = canAdvancePrediction || replayStepCount == 0;
+            var steps = new FixedSimulationStep[replayStepCount + (includeCurrentStep ? 1 : 0)];
+            var mappings = new SimulationPipelineStepSourceMapping[
+                (replayStepCount > 0 ? 1 : 0) + (includeCurrentStep ? 1 : 0)];
+            int stepIndex = 0;
+            int mappingIndex = 0;
+            ulong planSequence = 1;
+            if (replayStepCount > 0)
+            {
+                mappings[mappingIndex++] = new SimulationPipelineStepSourceMapping(
+                    replayClock,
+                    context.Source.ClockId,
+                    SimulationTickSourceKind.Replay);
+                for (int i = 0; i < replayStepCount; i++)
+                {
+                    ulong tick = checked(replayStart.Value + (ulong)i);
+                    RollbackCanonicalInputBundle bundle = SelectBundle(new SimulationTick(tick));
+                    var source = new SimulationTickSourceIdentity(SimulationTickSourceKind.Replay, replayClock, tick);
+                    steps[stepIndex++] = BuildStep(
+                        bundle,
+                        source,
+                        SimulationPipelineStepExecutionKind.Replay,
+                        planSequence++,
+                        Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>());
+                }
+            }
+            if (includeCurrentStep)
             {
                 RollbackCanonicalInputBundle current = SelectBundle(new SimulationTick(nextTick));
-                mappings.Add(new SimulationPipelineStepSourceMapping(
+                mappings[mappingIndex] = new SimulationPipelineStepSourceMapping(
                     context.Source.ClockId,
                     context.Source.ClockId,
-                    context.Source.Kind));
-                steps.Add(BuildStep(
+                    context.Source.Kind);
+                steps[stepIndex] = BuildStep(
                     current,
                     new SimulationTickSourceIdentity(context.Source.Kind, context.Source.ClockId, nextTick),
                     restore == null ? SimulationPipelineStepExecutionKind.Forward : SimulationPipelineStepExecutionKind.Current,
                     planSequence,
-                    ingress.TypedIngress.Ingress));
+                    ingress.TypedIngress.Ingress);
             }
-            return new SimulationSessionExecutionPlan<FixedSimulationStep>(
+            return SimulationSessionExecutionPlan<FixedSimulationStep>.FromOwnedArrays(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
                 characterRuntime.Runtime.GameplayContentHash,

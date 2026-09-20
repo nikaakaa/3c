@@ -467,6 +467,15 @@
 - 标签 Normalize 对已规范化输入直接返回原字符串，本轮未修改该正确路径。动手前检测到 Unity 编译进程，等待具体 bee／csc 进程结束并重新确认无编译进程后才编辑。
 - portable Core 编译零警告零错误，按规定构建后 shutdown 成功；当前 Unity 引用下完整 Core 独立编译也通过，确认 ulong.TryFormat 与 Span 字符串构造可用。diff 空白检查通过，未新增测试、未刷新或控制共享 Unity、未做运行身份对比或 Player 分配采样。
 
+## 2026-09-20 效果快照标签汇总与列表复制清理
+
+对应 tasks.md 的 2.12，与代码同步提交。
+
+- Fixed／Float32 效果快照 CollectOwnedTags 原用 SortedSet，每次汇总为唯一标签建立树节点；现在 HashSet 按 Ordinal 去重，CopyTo 最终独立数组，再按 Ordinal 排序。内容唯一性、顺序、字符串引用和返回数组归属保持不变。
+- 取舍：散列表使用桶／条目数组并增加一次最终排序，取消逐标签节点对象；新集合及容量增长仍分配，实际常驻内存和 CPU 收益未经采样。未把快照数组改为共享工作列表或建立跨步缓存。
+- 同一快照类的 Copy<T> 唯一调用源是 CloneActiveEffects 返回的 List，改为 IReadOnlyList 按下标读取，删除 IEnumerable 枚举器装箱；元素仍来自原深拷贝，字典复制、活动效果克隆及恢复过程未改。
+- 两个目标文件此前无其它未提交修改，编辑前未发现 csc／bee 编译进程。Fixed／Float32 portable 各自零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过。未新增测试、未主动刷新或控制共享 Unity、未做快照运行对比或 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

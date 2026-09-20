@@ -387,7 +387,7 @@ namespace ThirdPersonSimulation.Fixed
 
         static string[] CollectOwnedTags(IReadOnlyDictionary<string, string[]> sources)
         {
-            var tags = new SortedSet<string>(StringComparer.Ordinal);
+            var tags = new HashSet<string>(StringComparer.Ordinal);
             foreach (string[] source in sources.Values)
             {
                 for (int i = 0; i < source.Length; i++)
@@ -395,6 +395,7 @@ namespace ThirdPersonSimulation.Fixed
             }
             var result = new string[tags.Count];
             tags.CopyTo(result);
+            Array.Sort(result, StringComparer.Ordinal);
             return result;
         }
 
@@ -404,10 +405,10 @@ namespace ThirdPersonSimulation.Fixed
                 destination.Add(pair.Key, pair.Value);
         }
 
-        static void Copy<T>(IEnumerable<T> source, IList<T> destination)
+        static void Copy<T>(IReadOnlyList<T> source, IList<T> destination)
         {
-            foreach (T value in source)
-                destination.Add(value);
+            for (int i = 0; i < source.Count; i++)
+                destination.Add(source[i]);
         }
     }
 

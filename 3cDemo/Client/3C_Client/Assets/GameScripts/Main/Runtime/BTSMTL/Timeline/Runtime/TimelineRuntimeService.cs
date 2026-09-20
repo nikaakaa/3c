@@ -199,7 +199,7 @@ namespace BTSMTL.Timeline.Runtime
 
     public readonly struct TimelineRuntimeStopRequest
     {
-        readonly ReadOnlyCollection<string> m_ActiveClipIds;
+        readonly ulong m_Sequence;
 
         internal TimelineRuntimeStopRequest(
             TimelineRuntimePlayback playback,
@@ -207,8 +207,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             Playback = playback ?? throw new ArgumentNullException(nameof(playback));
             Reason = reason;
-            m_ActiveClipIds = new ReadOnlyCollection<string>(
-                new List<string>(playback.ActiveClipIds));
+            m_Sequence = playback.PendingStopSequence;
         }
 
         public TimelineRuntimePlayback Playback { get; }
@@ -216,7 +215,9 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePlaybackHandle Handle => Playback.Handle;
         public TimelineExecutionIdentity ExecutionIdentity => Playback.ExecutionIdentity;
         public ulong Generation => Playback.Generation;
-        public IReadOnlyList<string> ActiveClipIds => m_ActiveClipIds;
+        internal bool IsPendingFor(TimelineRuntimePlayback playback) =>
+            ReferenceEquals(Playback, playback) && m_Sequence != 0 &&
+            m_Sequence == playback.PendingStopSequence;
     }
 
     public sealed class TimelineRuntimeExecutionConsumer :
@@ -729,7 +730,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
-            if (!playback.CommitStop())
+            if (!request.IsPendingFor(playback) || !playback.CommitStop())
                 return false;
             if (m_StopConsumer is ITimelineRuntimeStopCommitConsumer commitConsumer)
                 commitConsumer.CommitStop(request);
@@ -743,7 +744,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
-            if (!playback.DiscardStop())
+            if (!request.IsPendingFor(playback) || !playback.DiscardStop())
                 return false;
             if (m_StopConsumer is ITimelineRuntimeStopCommitConsumer discardConsumer)
                 discardConsumer.DiscardStop(request);

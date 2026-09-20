@@ -213,6 +213,7 @@ namespace BTSMTL.Timeline.Runtime
         TimelineRuntimeEvaluationStorage m_CommittedEvaluation;
         TimelineRuntimeAdvanceResult m_PendingAdvance;
         ulong m_AdvanceSequence;
+        ulong m_StopSequence;
         TimelinePlaybackStopContext m_PendingStopContext;
         bool m_StopPending;
         FixedScalar m_CursorTime;
@@ -533,6 +534,7 @@ namespace BTSMTL.Timeline.Runtime
                 return false;
             if (m_StopPending || m_PendingAdvance.IsValid)
                 return false;
+            m_StopSequence = checked(m_StopSequence + 1);
             m_PendingStopContext = context;
             m_StopPending = true;
             return true;
@@ -581,6 +583,7 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         internal bool HasPendingStop => m_StopPending;
+        internal ulong PendingStopSequence => m_StopPending ? m_StopSequence : 0;
         internal bool HasPendingAdvance => m_PendingAdvance.IsValid;
         internal bool InitialBoundaryPending => m_InitialBoundaryPending;
         internal IReadOnlyList<string> PendingTreeDecisionClips => m_PendingTreeClipExits;

@@ -97,6 +97,7 @@
 - [x] 2.59 两数值域 CommitBatch 的独立 steps／source egress 列表直接作为 IReadOnlyList 暴露，删除每个已提交外层 tick 的四个 ReadOnlyCollection 包装对象
 - [x] 2.60 两数值域 CommitBatch 的事件覆盖列表按 OutputDispositions.Count 正式数量预备容量，删除正常提交路径的 List 扩容
 - [x] 2.61 两数值域 CanonicalInputBatch 的独立输入列表直接作为 IReadOnlyList 暴露，删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象
+- [x] 2.62 两数值域 TypedIngressBatch 的独立事实列表直接作为 IReadOnlyList 暴露，删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象
 
 ## 3. Timeline和事件图
 

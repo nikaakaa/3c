@@ -50,7 +50,7 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedTypedIngressBatch
     {
-        readonly ReadOnlyCollection<SimulationPipelineTypedIngress<SimulationIngress>> m_Ingress;
+        readonly IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> m_Ingress;
 
         public FixedTypedIngressBatch(IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
         {
@@ -73,7 +73,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (i > 0 && SameIdentity(values[i - 1], values[i]))
                     throw new ArgumentException("Typed ingress batch contains a missing or duplicate fact.", nameof(ingress));
             }
-            m_Ingress = values.AsReadOnly();
+            m_Ingress = values;
         }
 
         public IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> Ingress => m_Ingress;

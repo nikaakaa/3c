@@ -1414,3 +1414,12 @@
 - 两域字段现以 IReadOnlyList 保存并直接引用各自私有 List。Inputs 公开类型和只读消费方式不变，调用者没有内部 List 的可变引用；canonical input batch 仍独立持有输入顺序。
 - 删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象；输入 List、排序、来源时钟和重复 actor 校验不变。
 - ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 ingress 输入运行对比或 Player 分配采样。
+
+## 2026-09-21 TypedIngressBatch 列表只读暴露
+
+对应 tasks.md 的 2.62。
+
+- FixedTypedIngressBatch／Float32TypedIngressBatch 已从调用输入复制出私有 ingress List，按 Actor、SourceTick、Sequence、FactIdentity 排序并拒绝重复事实；原完成后仍调用 AsReadOnly。
+- 两域字段现以 IReadOnlyList 保存并直接引用各自私有 List。Ingress 公开类型和只读消费方式不变，调用者无法修改内部列表；事实排序和身份组合保持原规则。
+- 删除每个 ingress tick 的两个 ReadOnlyCollection 包装对象；ingress List 本体和独立元素存储仍保留。
+- ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 typed ingress 运行对比或 Player 分配采样。

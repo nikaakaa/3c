@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using BTSMTL.Timeline;
 using System.Collections.Generic;
 using FlowCanvas;
 using NodeCanvas.Framework;
@@ -62,21 +63,21 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("技能入口"), Category("BTSMTL/技能流程"), DoNotList]
-    [BtsmtlSkillNodeKind("@root")]
+    [BtsmtlSkillNodeKind("@root", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     public sealed class BtsmtlSkillRootFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillSystemNode
     {
         protected override void RegisterPorts() => AddFlowOutput("执行", "Output");
     }
 
     [Name("成功完成"), Category("BTSMTL/技能流程")]
-    [BtsmtlSkillNodeKind("succeed")]
+    [BtsmtlSkillNodeKind("succeed", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     public sealed class BtsmtlSkillSucceedFlowNode : BtsmtlSkillFlowNode
     {
         protected override void RegisterPorts() => AddFlowInput("执行", RejectAuthoringExecution, "Input");
     }
 
     [Name("条件结果"), Category("BTSMTL/技能条件"), DoNotList]
-    [BtsmtlSkillNodeKind("@result")]
+    [BtsmtlSkillNodeKind("@result", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     public sealed class BtsmtlSkillConditionResultFlowNode : BtsmtlSkillFlowNode, IBtsmtlSkillPureValueNode, IBtsmtlSkillSystemNode
     {
         protected override void RegisterPorts() => AddValueInput<bool>("结果", "m_Result");

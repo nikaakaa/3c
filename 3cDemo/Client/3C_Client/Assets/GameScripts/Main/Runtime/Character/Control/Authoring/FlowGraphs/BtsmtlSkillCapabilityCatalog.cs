@@ -28,6 +28,7 @@ namespace ThirdPersonCharacter.Control.Authoring
         }
 
         public string Kind { get; }
+        public TimelineExecutionDomainMask TimelineDomains { get; set; } = TimelineExecutionDomainMask.Logic;
     }
 
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
@@ -234,6 +235,19 @@ namespace ThirdPersonCharacter.Control.Authoring
                 s_ByVariant.TryGetValue(VariantKey(kind, fieldId, value), out type))
                 return true;
             return TryResolveType(kind, out type);
+        }
+
+        public static TimelineExecutionDomainMask TimelineDomains(Type type)
+        {
+            if (!TryGetKind(type, out _))
+                return TimelineExecutionDomainMask.None;
+            if (BtsmtlSkillNativeNodeCatalog.TryGet(type, out _) ||
+                type == typeof(MacroNodeWrapper) ||
+                typeof(MacroInputNode).IsAssignableFrom(type) ||
+                typeof(MacroOutputNode).IsAssignableFrom(type))
+                return TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation;
+            return ((BtsmtlSkillNodeKindAttribute)Attribute.GetCustomAttribute(
+                type, typeof(BtsmtlSkillNodeKindAttribute), true)).TimelineDomains;
         }
 
         public static bool IsAnchor(string kind) =>

@@ -11,7 +11,7 @@ using UnityEngine;
 namespace ThirdPersonCharacter.Control.Authoring
 {
     [Name("请求相机状态"), Category("BTSMTL/相机")]
-    [BtsmtlSkillNodeKind("camera-state-request")]
+    [BtsmtlSkillNodeKind("camera-state-request", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringReference(
         "actionContext",
         BtsmtlSkillNodeAuthoringReferenceKind.Asset,
@@ -117,7 +117,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("请求相机效果"), Category("BTSMTL/相机")]
-    [BtsmtlSkillNodeKind("camera-effect-request")]
+    [BtsmtlSkillNodeKind("camera-effect-request", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringReference(
         "actionContext",
         BtsmtlSkillNodeAuthoringReferenceKind.Asset,
@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("设置相机响应"), Category("BTSMTL/相机")]
-    [BtsmtlSkillNodeKind("camera-response")]
+    [BtsmtlSkillNodeKind("camera-response", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringReference(
         "actionContext",
         BtsmtlSkillNodeAuthoringReferenceKind.Asset,
@@ -287,7 +287,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("设置相机目标"), Category("BTSMTL/相机")]
-    [BtsmtlSkillNodeKind("camera-target")]
+    [BtsmtlSkillNodeKind("camera-target", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringReference(
         "actionContext",
         BtsmtlSkillNodeAuthoringReferenceKind.Asset,

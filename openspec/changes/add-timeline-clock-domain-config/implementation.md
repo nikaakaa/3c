@@ -360,3 +360,8 @@
 - 进度命令同时携带控制，差异比较包含控制字段。Fixed／Float32状态格式升9、直接runtime快照升v7、权威进度传输相关schema升10；删除旧签名，不兼容读取旧格式。
 - 已通过正式菜单 Tools/3C/Internal/Republish Corin Ability Data 调用既有Publisher，从当前正式作者资产重建Attack、DodgeBack、DodgeForward、RushAttack共8份Fixed／Float32派生资产；静态核对8份产物都含m_PlaybackRate、m_Paused及Timeline producer。作者资产原有其他改动保留，派生产物不混入代码提交。
 - Unity编译及域重载完成（1789894226854），正式重建后错误日志为零，git diff --check通过；未新增测试。尚未完成：多来源hitstop的叠加与解除来源合同、非Skill调用方控制接入、最终分支重接入、正式Presentation Marker图执行和全运行链0 GC，不据此勾选整个第5节。
+
+## Slate 轨道域修改的图能力检查
+- 原节点能力声明增加 TimelineDomains；Gameplay 写入、Timeline 驱动、结束片段、循环、状态机及尚未绑定表现事实的读取节点不允许用于 Presentation。顺序／选择／并行结构、纯比较、Macro 端口、OnEnable 和现有四类 Camera 输出声明可用于表现域；这仅声明图内容资格，不代替运行上下文和资源准备。
+- ITimelineTreeGraphAsset 闭包入口显式接收所属轨道域，Marker 内容发现把轨道／Marker 身份传入。闭包检查全部子图节点并返回精确图／节点位置，原 Slate Track Inspector 的候选预检直接消费该结果，失败不提交轨道字段；未新增窗口或第二套 Inspector。
+- 当前仍保留缺少正式表现图执行器的准备／编译失败，未借用 Simulation invoker，也未把第6节或8.2整体勾选完成。

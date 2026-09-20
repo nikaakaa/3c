@@ -246,7 +246,7 @@ namespace ThirdPersonCharacter.Control.Authoring
             m_BlackboardDeclarations = next;
         }
 
-        public void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath)
+        public void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath, TimelineExecutionDomain domain)
         {
             try
             {
@@ -254,6 +254,13 @@ namespace ThirdPersonCharacter.Control.Authoring
                 foreach (FlowGraph graph in BtsmtlSkillGraphClosure.Validate(this, true))
                 {
                     string identity = ((IBtsmtlSkillFlowGraph)graph).AuthoringId;
+                    foreach (FlowNode node in graph.allNodes.Cast<FlowNode>())
+                    {
+                        if ((BtsmtlSkillCapabilityCatalog.TimelineDomains(node.GetType()) & TimelineExecutionDomains.ToMask(domain)) == 0)
+                            builder.AddError("timeline_graph_domain_unsupported",
+                                $"{sourcePath}/graph:{identity}/node:{node.UID}",
+                                $"节点 '{node.GetType().Name}' 不支持轨道执行域 {domain}。");
+                    }
                     builder.AddDependency($"tree:{identity}", "timeline.tree", $"{sourcePath}/graph:{identity}", fingerprint.Compute(graph));
                 }
             }

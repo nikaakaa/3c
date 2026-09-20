@@ -101,7 +101,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("片段启用"), Category("BTSMTL/Timeline"), DoNotList]
-    [BtsmtlSkillNodeKind("@timelineEnable")]
+    [BtsmtlSkillNodeKind("@timelineEnable", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     public sealed class BtsmtlSkillTimelineEnableFlowNode : BtsmtlSkillTimelineHookFlowNode
     {
         public override BtsmtlSkillTimelineHook Hook => BtsmtlSkillTimelineHook.OnEnable;

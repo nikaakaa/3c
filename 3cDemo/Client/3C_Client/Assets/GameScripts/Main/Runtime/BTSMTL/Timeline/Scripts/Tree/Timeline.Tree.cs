@@ -123,7 +123,7 @@ namespace BTSMTL.Timeline
                 builder.AddError("timeline_tree_missing", AuthoringId, "TreeClip没有绑定正式的Timeline节点图资产。");
                 return;
             }
-            graph.CollectTimelineContentClosure(builder, $"clip:{AuthoringId}/tree:{graph.AuthoringId}");
+            graph.CollectTimelineContentClosure(builder, $"clip:{AuthoringId}/tree:{graph.AuthoringId}", ExecutionDomain);
         }
 
         public bool AlignTerminalTime(FixedScalar terminalTime)

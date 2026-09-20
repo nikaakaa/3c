@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using BTSMTL.Timeline;
 using System.Collections.Generic;
 using System.Linq;
 using FlowCanvas;
@@ -104,7 +105,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("顺序执行"), Category("BTSMTL/技能流程")]
-    [BtsmtlSkillNodeKind("sequence")]
+    [BtsmtlSkillNodeKind("sequence", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
     [BtsmtlSkillAuthoringField(
         "steps",
@@ -114,7 +115,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("选择执行"), Category("BTSMTL/技能流程")]
-    [BtsmtlSkillNodeKind("selector")]
+    [BtsmtlSkillNodeKind("selector", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
     [BtsmtlSkillAuthoringField(
         "steps",
@@ -159,7 +160,7 @@ namespace ThirdPersonCharacter.Control.Authoring
     }
 
     [Name("并行执行"), Category("BTSMTL/技能流程")]
-    [BtsmtlSkillNodeKind("parallel")]
+    [BtsmtlSkillNodeKind("parallel", TimelineDomains = TimelineExecutionDomainMask.Logic | TimelineExecutionDomainMask.Presentation)]
     [BtsmtlSkillNodeAuthoringRule(BtsmtlSkillNodeAuthoringRule.CompositeSteps, "steps")]
     [BtsmtlSkillAuthoringField("mode", typeof(BtsmtlSkillParallelMode), Optional = true)]
     [BtsmtlSkillAuthoringField(

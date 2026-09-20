@@ -415,7 +415,7 @@ namespace BTSMTL.Timeline
                         errors.Add($"Timeline Marker '{marker.AuthoringId}' requires a Timeline trigger graph.");
                         continue;
                     }
-                    markerGraph.CollectTimelineContentClosure(closure, $"marker:{marker.AuthoringId}");
+                    markerGraph.CollectTimelineContentClosure(closure, $"track:{track.AuthoringId}/marker:{marker.AuthoringId}", track.ExecutionDomain);
                     string graphIdentity = $"tree:{markerGraph.AuthoringId}";
                     string graphRevision = string.Empty;
                     for (int dependencyIndex = 0; dependencyIndex < closure.Dependencies.Count; dependencyIndex++)

@@ -30,7 +30,7 @@ namespace BTSMTL.Timeline
         string AuthoringId { get; }
         bool IsTimelineTree { get; }
         bool IsTimelineTrigger { get; }
-        void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath);
+        void CollectTimelineContentClosure(TimelineContentClosureBuilder builder, string sourcePath, TimelineExecutionDomain domain);
     }
 
     public enum TimelineTrackOverlapPolicy : byte

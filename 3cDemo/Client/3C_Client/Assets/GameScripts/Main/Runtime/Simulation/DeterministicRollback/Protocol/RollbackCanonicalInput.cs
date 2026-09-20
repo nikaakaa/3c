@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicRollback
@@ -102,16 +101,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackActorInputBatch : IRollbackProtocolPayload
     {
-        readonly ReadOnlyCollection<RollbackActorInputFrame> m_Frames;
+        readonly IReadOnlyList<RollbackActorInputFrame> m_Frames;
 
-        public RollbackActorInputBatch(IEnumerable<RollbackActorInputFrame> frames)
+        public RollbackActorInputBatch(IReadOnlyList<RollbackActorInputFrame> frames)
         {
-            var values = new List<RollbackActorInputFrame>(frames ?? throw new ArgumentNullException(nameof(frames)));
-            values.Sort((left, right) => left.Tick.CompareTo(right.Tick));
-            if (values.Count == 0 || values[0] == null)
+            RollbackActorInputFrame[] values = RollbackInputArray.Copy(frames);
+            Array.Sort(values, (left, right) => left.Tick.CompareTo(right.Tick));
+            if (values.Length == 0 || values[0] == null)
                 throw new ArgumentException("Rollback input batch requires at least one frame.", nameof(frames));
             ActorId = values[0].ActorId;
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i] == null || values[i].ActorId != ActorId ||
                     values[i].Provenance != RollbackInputProvenance.LocalExplicit ||
@@ -122,7 +121,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         nameof(frames));
                 }
             }
-            m_Frames = values.AsReadOnly();
+            m_Frames = values;
         }
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.ActorInputBatch;
@@ -132,16 +131,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackRelayedExplicitInputBatch : IRollbackProtocolPayload
     {
-        readonly ReadOnlyCollection<RollbackActorInputFrame> m_Frames;
+        readonly IReadOnlyList<RollbackActorInputFrame> m_Frames;
 
-        public RollbackRelayedExplicitInputBatch(IEnumerable<RollbackActorInputFrame> frames)
+        public RollbackRelayedExplicitInputBatch(IReadOnlyList<RollbackActorInputFrame> frames)
         {
-            var values = new List<RollbackActorInputFrame>(frames ?? throw new ArgumentNullException(nameof(frames)));
-            values.Sort((left, right) => left.Tick.CompareTo(right.Tick));
-            if (values.Count == 0 || values[0] == null)
+            RollbackActorInputFrame[] values = RollbackInputArray.Copy(frames);
+            Array.Sort(values, (left, right) => left.Tick.CompareTo(right.Tick));
+            if (values.Length == 0 || values[0] == null)
                 throw new ArgumentException("Rollback relayed input batch requires at least one frame.", nameof(frames));
             ActorId = values[0].ActorId;
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i] == null || values[i].ActorId != ActorId ||
                     values[i].Provenance != RollbackInputProvenance.RelayedExplicit ||
@@ -152,7 +151,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                         nameof(frames));
                 }
             }
-            m_Frames = values.AsReadOnly();
+            m_Frames = values;
         }
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.RelayedExplicitInputBatch;
@@ -162,20 +161,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackCanonicalInputBundle : IRollbackProtocolPayload
     {
-        readonly ReadOnlyCollection<RollbackActorInputFrame> m_Actors;
+        readonly IReadOnlyList<RollbackActorInputFrame> m_Actors;
 
         public RollbackCanonicalInputBundle(
             SimulationTick tick,
             ulong bundleSequence,
-            IEnumerable<RollbackActorInputFrame> actors)
+            IReadOnlyList<RollbackActorInputFrame> actors)
         {
             if (!tick.IsValid || bundleSequence == 0)
                 throw new ArgumentException("Rollback canonical bundle identity is incomplete.");
-            var values = new List<RollbackActorInputFrame>(actors ?? throw new ArgumentNullException(nameof(actors)));
-            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (values.Count == 0)
+            RollbackActorInputFrame[] values = RollbackInputArray.Copy(actors);
+            Array.Sort(values, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (values.Length == 0)
                 throw new ArgumentException("Rollback canonical bundle requires an Actor roster.", nameof(actors));
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i] == null || values[i].Tick != tick ||
                     i > 0 && values[i - 1].ActorId.Equals(values[i].ActorId))
@@ -185,7 +184,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             Tick = tick;
             BundleSequence = bundleSequence;
-            m_Actors = values.AsReadOnly();
+            m_Actors = values;
             BundleHash = RollbackInputCodec.ComputeBundleHash(this);
             GameplayHash = RollbackInputCodec.ComputeGameplayBundleHash(this);
         }
@@ -218,22 +217,21 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
     public sealed class RollbackCanonicalConfirmation : IRollbackProtocolPayload
     {
-        readonly ReadOnlyCollection<RollbackCanonicalInputBundle> m_FinalBundles;
+        readonly IReadOnlyList<RollbackCanonicalInputBundle> m_FinalBundles;
 
         public RollbackCanonicalConfirmation(
             ulong previousConfirmedTick,
             SimulationTick confirmedTick,
-            IEnumerable<RollbackCanonicalInputBundle> finalBundles)
+            IReadOnlyList<RollbackCanonicalInputBundle> finalBundles)
         {
             if (!confirmedTick.IsValid || confirmedTick.Value <= previousConfirmedTick)
                 throw new ArgumentException("Rollback canonical confirmation range is invalid.");
-            var values = new List<RollbackCanonicalInputBundle>(
-                finalBundles ?? throw new ArgumentNullException(nameof(finalBundles)));
-            values.Sort((left, right) => left.Tick.CompareTo(right.Tick));
+            RollbackCanonicalInputBundle[] values = RollbackInputArray.Copy(finalBundles);
+            Array.Sort(values, (left, right) => left.Tick.CompareTo(right.Tick));
             ulong expectedCount = confirmedTick.Value - previousConfirmedTick;
-            if ((ulong)values.Count != expectedCount)
+            if ((ulong)values.Length != expectedCount)
                 throw new ArgumentException("Rollback canonical confirmation does not cover its complete Tick range.");
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 ulong expectedTick = checked(previousConfirmedTick + (ulong)i + 1);
                 if (values[i] == null || values[i].Tick.Value != expectedTick)
@@ -247,12 +245,27 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             PreviousConfirmedTick = previousConfirmedTick;
             ConfirmedTick = confirmedTick;
-            m_FinalBundles = values.AsReadOnly();
+            m_FinalBundles = values;
         }
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.CanonicalConfirmation;
         public ulong PreviousConfirmedTick { get; }
         public SimulationTick ConfirmedTick { get; }
         public IReadOnlyList<RollbackCanonicalInputBundle> FinalBundles => m_FinalBundles;
+    }
+
+    static class RollbackInputArray
+    {
+        public static T[] Copy<T>(IReadOnlyList<T> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            if (source.Count == 0)
+                return Array.Empty<T>();
+            var values = new T[source.Count];
+            for (int i = 0; i < values.Length; i++)
+                values[i] = source[i];
+            return values;
+        }
     }
 }

@@ -1869,3 +1869,12 @@
 - Batch 构造收窄为本 tick 独占的两类数组，在接管数组上执行原 tick／Actor、provenance、null 与重复项校验并直接按 IReadOnlyList 保存。Endpoint 将 explicit List 一次物化为最终数组，canonical 数组直接转移；空集合复用 Array.Empty。
 - 删除每个 rollback ingress tick 的两只结果 List、两只 ReadOnlyCollection，以及 canonical arrival 的第二份存储；explicit 收集 List 和必要的最终数组仍存在，后续可在有正式容量边界时再治理收集 workspace。
 - ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 ingress 运行对比或 Player 分配采样。
+
+## 2026-09-21 Rollback 输入协议最终数组
+
+对应 tasks.md 的 5.75。
+
+- RollbackActorInputBatch、RollbackRelayedExplicitInputBatch、RollbackCanonicalInputBundle 与 RollbackCanonicalConfirmation 都处于每包或每 tick 协议链路。原构造从 IEnumerable 创建 List，在 List 上排序校验，再创建 ReadOnlyCollection 包装；协议对象仍依靠 List 的底层数组保存独立结果。
+- 四类公开构造收窄为 IReadOnlyList，按准确 Count 复制到最终数组，在同一数组上执行原排序和完整性校验，并直接以 IReadOnlyList 暴露。外部输入仍不会被借用，空输入沿用原拒绝语义。
+- 每个协议对象删除一只结果 List 和一只 ReadOnlyCollection；最终独立数组仍按协议对象寿命存在。解码器和组装器已经新建数组时仍会经过公开构造复制，后续需要以显式所有权入口单独收口，避免混淆公开安全构造与内部转移。
+- ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做协议吞吐或 Player 分配采样。

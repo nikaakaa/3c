@@ -145,7 +145,7 @@ Presentation 上下文只接收该表现帧可用的只读事实与正式表现�
 
 表现图执行的中间结果进入原表现帧的 Prepare / Validate / Commit / Discard 边界；事件只有在该帧被正式接受后交付下游。复用图模型与正式编译服务，不复制一个表现专用影子图系统。
 
-DualProjection 表示内容有两个域的合法投影，不授权把同一 Gameplay 图运行两遍。缺少某域合法投影应失败；本变更不补造持续表现 TreeClip，已有 Logic TreeClip 的 Root / Enable / Disable / Destroy 生命周期保持原义。
+Track 是执行域的唯一声明者，只允许 Logic 或 Presentation；Clip 与 Marker 全部继承所在 Track，不保留 Clip 覆盖字段或 DualProjection。内容类型只校验能否放入该域的轨道。两类轨道消费播放管理者提供的动作进度；逻辑结果通过原已提交结果链传给表现，不再次执行逻辑内容。本变更不补造持续表现 TreeClip，已有 Logic TreeClip 的 Root / Enable / Disable / Destroy 生命周期保持原义。
 
 ### 6. 区分正常经过、修正采样与已接受终态
 

@@ -530,7 +530,7 @@ namespace BTSMTL.Timeline
                         clipContract.Kind,
                         track.AuthoringId,
                         TimelineClipExecutionPolicy.FromDomain(
-                            clip.ResolveExecutionDomain(track.ExecutionDomain)),
+                            track.ExecutionDomain),
                         TimelineTimeGrid.Position(clip.StartFrame, TimelineUtility.FrameRate),
                         TimelineTimeGrid.Position(clip.EndFrame, TimelineUtility.FrameRate),
                         executionPhase,

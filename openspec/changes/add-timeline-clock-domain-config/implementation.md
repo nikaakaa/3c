@@ -180,3 +180,12 @@
 - TimelineContentClip 起止、TimelineRuntimeClipBoundary、TreeClipRequest、ClipSample 和 TraceOutput 的正式位置统一使用 FixedScalar 秒，删除这些合同的整数帧位置。边界比较与排序直接使用秒，循环和同位置 Exit 优先顺序保留。
 - 本批仍从尚未迁移的作者 StartFrame / EndFrame 建立秒制内容；播放游标仍为整数帧。没有把这些剩余入口当作最终方案，任务 0.2–0.7 继续保持未完成。未新增测试，原有运行容器分配尚待清理，不声明 0 GC 已完成。
 - 本批 Unity 编译和域重载完成，观测 1789875977302 为 idle、非 Play／编译／导入，错误控制台 0 条。通过正式内容发现只读加载剩余 18 个 Timeline、266 个 Clip，内容校验和秒制区间检查 errors=[]；这不是完整播放验收。
+
+## 执行域收敛为 Track 唯一声明
+
+- 根据用户在“查看 Timeline 当前状态”任务中的最新决定，只保留 Logic／Presentation，删除 DualProjection；Clip 与 Marker 继承所在 Track，内容类型只校验是否允许放入该域轨道。同一动作共享进度，逻辑结果沿已有提交链交给表现。
+- 修改前通过正式对象读取 66 条轨道、266 个 Clip，130 个 Clip 有显式域，全部与轨道域一致，无需要保留的跨域覆盖。删除 Clip 序列化域及覆盖／继承操作、作者属性和生成代码中的覆盖表达；删除第三域枚举、能力与消费分支。
+- Track 未声明合法域继续由正式校验拒绝；删除非法枚举或未绑定 Clip／Marker 默认为 Logic 的回退。域有效性使用直接枚举比较，避免此处 Enum.IsDefined 的装箱。
+- Unity 编译重载后，18 个 Timeline 内容校验通过，再通过 AssetDatabase 正式重序列化清理旧 Clip 字段。配置资产 Clip 域字段剩余 0；索引仅删除 HEAD 中 256 个旧 Clip 域字段，其它原有资产改动继续保留在工作区。
+- 当前设计和变更规格已同步两域规则；现行 character-animation-pipeline 规格原先仍要求第三域及 Clip 覆盖，已按用户决定修正。上方较早实施记录中的覆盖／双侧投影只作历史，不再是当前目标。
+- 最终重载观测 1789876549152 为 idle，错误控制台 0 条；正式读取 18 个 Timeline、266 个 Clip 的作者属性，executionDomain 属性数为 0，运行枚举仅 Logic／Presentation，内容校验 errors=[]。完整共享采样和 Marker 表现执行尚未完成。

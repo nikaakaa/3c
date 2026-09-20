@@ -49,8 +49,7 @@ namespace BTSMTL.Timeline
     public enum TimelineExecutionDomain : byte
     {
         Logic = 1,
-        Presentation = 2,
-        DualProjection = 3
+        Presentation = 2
     }
 
     [Flags]
@@ -58,44 +57,39 @@ namespace BTSMTL.Timeline
     {
         None = 0,
         Logic = 1 << 0,
-        Presentation = 1 << 1,
-        DualProjection = 1 << 2
+        Presentation = 1 << 1
     }
 
     public enum TimelineOutputKind : byte
     {
         GameplayFact = 1,
-        PresentationEvent = 2,
-        DualProjection = 3
+        PresentationEvent = 2
     }
 
     public static class TimelineExecutionDomains
     {
-        public static TimelineExecutionDomain Normalize(TimelineExecutionDomain domain)
-        {
-            return Enum.IsDefined(typeof(TimelineExecutionDomain), domain)
-                ? domain
-                : TimelineExecutionDomain.Logic;
-        }
+        public static bool IsValid(TimelineExecutionDomain domain) =>
+            domain == TimelineExecutionDomain.Logic || domain == TimelineExecutionDomain.Presentation;
+
+        public static TimelineExecutionDomain Require(TimelineExecutionDomain domain) =>
+            IsValid(domain) ? domain : throw new ArgumentOutOfRangeException(nameof(domain));
 
         public static TimelineExecutionDomainMask ToMask(TimelineExecutionDomain domain)
         {
-            return Normalize(domain) switch
+            return Require(domain) switch
             {
                 TimelineExecutionDomain.Logic => TimelineExecutionDomainMask.Logic,
                 TimelineExecutionDomain.Presentation => TimelineExecutionDomainMask.Presentation,
-                TimelineExecutionDomain.DualProjection => TimelineExecutionDomainMask.DualProjection,
                 _ => throw new ArgumentOutOfRangeException(nameof(domain))
             };
         }
 
         public static TimelineOutputKind ToOutputKind(TimelineExecutionDomain domain)
         {
-            return Normalize(domain) switch
+            return Require(domain) switch
             {
                 TimelineExecutionDomain.Logic => TimelineOutputKind.GameplayFact,
                 TimelineExecutionDomain.Presentation => TimelineOutputKind.PresentationEvent,
-                TimelineExecutionDomain.DualProjection => TimelineOutputKind.DualProjection,
                 _ => throw new ArgumentOutOfRangeException(nameof(domain))
             };
         }
@@ -109,9 +103,7 @@ namespace BTSMTL.Timeline
             {
                 throw new ArgumentOutOfRangeException(nameof(projectionDomain));
             }
-            return projectionDomain == TimelineExecutionDomain.Logic
-                ? Normalize(contentDomain) != TimelineExecutionDomain.Presentation
-                : Normalize(contentDomain) != TimelineExecutionDomain.Logic;
+            return Require(contentDomain) == projectionDomain;
         }
     }
 
@@ -121,8 +113,8 @@ namespace BTSMTL.Timeline
             TimelineExecutionDomain domain,
             TimelineOutputKind outputKind)
         {
-            if (!Enum.IsDefined(typeof(TimelineExecutionDomain), domain) ||
-                !Enum.IsDefined(typeof(TimelineOutputKind), outputKind))
+            if (!TimelineExecutionDomains.IsValid(domain) ||
+                (outputKind != TimelineOutputKind.GameplayFact && outputKind != TimelineOutputKind.PresentationEvent))
             {
                 throw new ArgumentOutOfRangeException(nameof(domain));
             }
@@ -132,18 +124,16 @@ namespace BTSMTL.Timeline
 
         public static TimelineClipExecutionPolicy FromDomain(TimelineExecutionDomain domain)
         {
-            TimelineExecutionDomain normalized = TimelineExecutionDomains.Normalize(domain);
+            TimelineExecutionDomain declared = TimelineExecutionDomains.Require(domain);
             return new TimelineClipExecutionPolicy(
-                normalized,
-                TimelineExecutionDomains.ToOutputKind(normalized));
+                declared,
+                TimelineExecutionDomains.ToOutputKind(declared));
         }
 
         public TimelineExecutionDomain Domain { get; }
         public TimelineOutputKind OutputKind { get; }
-        public bool IsLogic => Domain == TimelineExecutionDomain.Logic ||
-                               Domain == TimelineExecutionDomain.DualProjection;
-        public bool IsPresentation => Domain == TimelineExecutionDomain.Presentation ||
-                                      Domain == TimelineExecutionDomain.DualProjection;
+        public bool IsLogic => Domain == TimelineExecutionDomain.Logic;
+        public bool IsPresentation => Domain == TimelineExecutionDomain.Presentation;
     }
 
     public interface ITimelineClipExecutionPhaseSource
@@ -490,8 +480,7 @@ namespace BTSMTL.Timeline
         }
 
         public bool SupportsExecutionDomain(TimelineExecutionDomain domain) =>
-            (domain == TimelineExecutionDomain.Logic || domain == TimelineExecutionDomain.Presentation ||
-             domain == TimelineExecutionDomain.DualProjection) &&
+            TimelineExecutionDomains.IsValid(domain) &&
             (AllowedExecutionDomains & TimelineExecutionDomains.ToMask(domain)) != 0;
 
         static string Require(string value, string name)
@@ -634,8 +623,7 @@ namespace BTSMTL.Timeline
             (SupportedExecutionPhases & phase) == phase;
 
         public bool SupportsExecutionDomain(TimelineExecutionDomain domain) =>
-            (domain == TimelineExecutionDomain.Logic || domain == TimelineExecutionDomain.Presentation ||
-             domain == TimelineExecutionDomain.DualProjection) &&
+            TimelineExecutionDomains.IsValid(domain) &&
             (AllowedExecutionDomains & TimelineExecutionDomains.ToMask(domain)) != 0;
 
         static string Require(string value, string name)
@@ -803,7 +791,7 @@ namespace BTSMTL.Timeline
                 throw new InvalidOperationException(
                     $"Timeline Clip '{clip.ContractKind}' cannot be added to Track '{track.ContractKind}'.");
             }
-            TimelineExecutionDomain domain = clip.ResolveExecutionDomain(track.ExecutionDomain);
+            TimelineExecutionDomain domain = track.ExecutionDomain;
             if (!track.HasExplicitExecutionDomain || !trackContract.SupportsExecutionDomain(domain) ||
                 !clipContract.SupportsExecutionDomain(domain))
                 throw new InvalidOperationException(
@@ -861,7 +849,7 @@ namespace BTSMTL.Timeline
                     }
                     if (!trackContract.AllowsClip(clipContract.Kind) || !string.Equals(clipContract.TrackKind, trackContract.Kind, StringComparison.Ordinal))
                         errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' is not allowed on track '{track.AuthoringId}'.");
-                    TimelineExecutionDomain executionDomain = clip.ResolveExecutionDomain(track.ExecutionDomain);
+                    TimelineExecutionDomain executionDomain = track.ExecutionDomain;
                     if (!trackContract.SupportsExecutionDomain(executionDomain) ||
                         !clipContract.SupportsExecutionDomain(executionDomain))
                     {

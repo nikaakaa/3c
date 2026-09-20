@@ -35,7 +35,7 @@ Gameplay Timeline sampling MUST只按SimulationTick/canonical fraction发生；A
 
 ### Requirement: Timeline Track / Clip 执行域必须分离
 
-Timeline Track / Clip MUST显式声明 `Logic`、`Presentation` 或 `DualProjection` 执行域。Logic 内容 MUST由 SimulationTick 推进并遵守 Commit / Discard；Presentation 内容 MUST由 PresentationFrame 推进并只产生表现结果；`DualProjection` 只把同一作者 Clip 的 Logic 图与 Presentation Marker 投影到各自路径，不是第三个时钟或第二份 Timeline runtime。普通表现动画、特效、音效和相机 MUST不因为归属于同一 Timeline 而被迫等待逻辑 Tick。Presentation TreeClip MUST只按 Marker 输出可调和事件，不得在 PresentationFrame 执行 TimelineBody 图；Presentation Event MUST不写 Gameplay fact。
+Timeline Track MUST唯一声明 `Logic` 或 `Presentation`；Clip 与同级 Marker MUST继承所在 Track，MUST NOT提供 Clip 域覆盖或 DualProjection。Logic MUST在 SimulationTick 消费外部逻辑进度并遵守 Commit / Discard；Presentation MUST在表现帧消费外部采样并只产生表现结果。两类轨道 MUST共用正式播放管理者提供的动作进度，表现采样 MUST遵守已有 sample / horizon 合同，不得自行外推未来事件。逻辑结果传给表现 MUST走原提交链。Presentation MUST不执行 Logic TimelineBody 图或写 Gameplay fact；域声明 MUST不成为自主时钟或隐式进度策略开关。
 
 #### Scenario: TreeClip 触发表现事件
 

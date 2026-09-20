@@ -191,8 +191,7 @@ namespace BTSMTL.Timeline
                     TimelineExecutionDomain.Logic,
                     TimelineOutputKind.GameplayFact,
                     TimelineExecutionDomainMask.Logic |
-                    TimelineExecutionDomainMask.Presentation |
-                    TimelineExecutionDomainMask.DualProjection,
+                    TimelineExecutionDomainMask.Presentation,
                     TimelineContractKinds.TreeClip)
             },
             new[]
@@ -228,9 +227,6 @@ namespace BTSMTL.Timeline
                     break;
                 case TimelineExecutionDomain.Presentation:
                     errors?.Add($"Timeline TreeClip '{treeClip.AuthoringId}' cannot execute a TimelineBody graph in Presentation; use a Timeline Marker with a TimelineTrigger graph.");
-                    break;
-                case TimelineExecutionDomain.DualProjection:
-                    errors?.Add($"Timeline TreeClip '{treeClip.AuthoringId}' has no presentation projection for its TimelineBody graph.");
                     break;
                 default:
                     errors?.Add($"Timeline TreeClip '{treeClip.AuthoringId}' has an invalid execution domain.");

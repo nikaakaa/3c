@@ -686,7 +686,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 1d561824-cad4-54eb-86e8-19de5dffbd81
-        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 87
         m_OtherEaseInTimeRaw: 0
@@ -1198,7 +1197,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: f9062fea-a84f-4833-842d-940979929f97
-        m_ExecutionDomain: 1
         StartFrame: 21
         EndFrame: 22
         m_OtherEaseInTimeRaw: 0
@@ -1212,7 +1210,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 63f311cc-2404-41f1-b8c1-43b7351ce986
-        m_ExecutionDomain: 1
         StartFrame: 22
         EndFrame: 23
         m_OtherEaseInTimeRaw: 0
@@ -1226,7 +1223,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 3715ad72-598f-4e62-a18f-824dff2af0e5
-        m_ExecutionDomain: 1
         StartFrame: 23
         EndFrame: 24
         m_OtherEaseInTimeRaw: 0
@@ -1240,7 +1236,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: c68c43c2-59c6-452d-bafd-d44aa54b14b3
-        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         m_OtherEaseInTimeRaw: 0
@@ -1301,7 +1296,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e34b7999-c4fa-4f8b-8425-5d7ed8de8159
-        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 49
         m_OtherEaseInTimeRaw: 0
@@ -1388,7 +1382,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 74f288a4-3126-453a-9858-109479d652e6
-        m_ExecutionDomain: 2
         StartFrame: 43
         EndFrame: 162
         m_OtherEaseInTimeRaw: 429496730
@@ -1475,7 +1468,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d662b1f3-3254-4436-9fd2-17a016248d6f
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         m_OtherEaseInTimeRaw: 0
@@ -1489,7 +1481,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 142218e6-6644-479b-b721-19d91be03a15
-        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 49
         m_OtherEaseInTimeRaw: 0
@@ -1583,7 +1574,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 7df37ded-43d4-4c6c-83a4-0227e64ccb8a
-        m_ExecutionDomain: 1
         StartFrame: 49
         EndFrame: 168
         m_OtherEaseInTimeRaw: 0
@@ -1677,7 +1667,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: d7c8216a-4bdf-4676-809f-f4828d6e986a
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 168
         m_OtherEaseInTimeRaw: 0
@@ -1692,7 +1681,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: ffc20627-9e1a-4ab0-be42-8c4af9e6f1b0
-        m_ExecutionDomain: 1
         StartFrame: 50
         EndFrame: 168
         m_OtherEaseInTimeRaw: 0
@@ -1707,7 +1695,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: de283c70-27e9-453b-b188-24736779ffa3
-        m_ExecutionDomain: 1
         StartFrame: 73
         EndFrame: 168
         m_OtherEaseInTimeRaw: 0
@@ -1722,7 +1709,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 3509c34c-84ff-4a89-8100-cc549a0f8c85
-        m_ExecutionDomain: 1
         StartFrame: 43
         EndFrame: 168
         m_OtherEaseInTimeRaw: 0
@@ -1747,7 +1733,6 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: eb07c8dd-3527-4470-8bc4-c44f6665d937
-        m_ExecutionDomain: 1
         StartFrame: 7
         EndFrame: 32
         m_OtherEaseInTimeRaw: 0
@@ -2113,7 +2098,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 7a5caece-fc2f-4860-837c-755f36421dda
-        m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 173
         m_OtherEaseInTimeRaw: 0
@@ -2207,7 +2191,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: a56930a0-7209-427e-977e-81bb4488c2ad
-        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 48
         m_OtherEaseInTimeRaw: 0
@@ -2314,7 +2297,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2296291d-3c89-4ace-811f-93c19e3cccf8
-        m_ExecutionDomain: 2
         StartFrame: 48
         EndFrame: 173
         m_OtherEaseInTimeRaw: 0
@@ -2401,7 +2383,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 6a375bc8-4cc1-4786-a496-ce0fa05d6e36
-        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 48
         m_OtherEaseInTimeRaw: 0
@@ -2499,7 +2480,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 0f0ebfa0-4556-4883-a52d-307a8d715bfd
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         m_OtherEaseInTimeRaw: 0
@@ -2513,7 +2493,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: f4f35ee7-ee1f-4992-b562-379aebbdc5b1
-        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         m_OtherEaseInTimeRaw: 0
@@ -2537,7 +2516,6 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 28fc08a4-055f-4a38-9371-77efd7c6914a
-        m_ExecutionDomain: 1
         StartFrame: 5
         EndFrame: 29
         m_OtherEaseInTimeRaw: 0
@@ -2639,7 +2617,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 206e350b-009c-44b5-83b8-9f7f3b17b1b5
-        m_ExecutionDomain: 1
         StartFrame: 42
         EndFrame: 173
         m_OtherEaseInTimeRaw: 0
@@ -2654,7 +2631,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 652e6726-9013-46cf-a691-d075a739da68
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 173
         m_OtherEaseInTimeRaw: 0
@@ -2669,7 +2645,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: d88a8003-2e4d-456f-a9ba-741c5ef42426
-        m_ExecutionDomain: 1
         StartFrame: 49
         EndFrame: 173
         m_OtherEaseInTimeRaw: 0
@@ -2684,7 +2659,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: e73aea15-2e02-4e95-aa19-bec673b83215
-        m_ExecutionDomain: 1
         StartFrame: 72
         EndFrame: 173
         m_OtherEaseInTimeRaw: 0
@@ -2712,7 +2686,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: c7ba8c1c-0251-47ad-90cf-27bf43178945
-        m_ExecutionDomain: 1
         StartFrame: 15
         EndFrame: 16
         m_OtherEaseInTimeRaw: 0
@@ -2726,7 +2699,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 176e80fa-2c1c-4ef3-b1fd-1621731e8639
-        m_ExecutionDomain: 1
         StartFrame: 16
         EndFrame: 17
         m_OtherEaseInTimeRaw: 0
@@ -2740,7 +2712,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2542c229-eef2-44ff-9db7-a42fd9d0b252
-        m_ExecutionDomain: 1
         StartFrame: 17
         EndFrame: 18
         m_OtherEaseInTimeRaw: 0
@@ -2754,7 +2725,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 458c1f4b-399e-4928-b8a6-2994809806a1
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         m_OtherEaseInTimeRaw: 0
@@ -3174,7 +3144,6 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 86240efe-6475-4499-bc61-9a80a91c84b8
-        m_ExecutionDomain: 1
         StartFrame: 10
         EndFrame: 40
         m_OtherEaseInTimeRaw: 0
@@ -3274,7 +3243,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 20077501-0b2e-42d9-9a55-82bac742453d
-        m_ExecutionDomain: 1
         StartFrame: 125
         EndFrame: 212
         m_OtherEaseInTimeRaw: 0
@@ -3368,7 +3336,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 765bebe5-8d5d-4ce3-92a5-dc8a51dc1664
-        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 125
         m_OtherEaseInTimeRaw: 0
@@ -3475,7 +3442,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 2e4177f6-76fe-4d0a-bbd7-56e308dfbd8f
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 212
         m_OtherEaseInTimeRaw: 0
@@ -3490,7 +3456,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 5e9a19b0-82aa-43f4-9775-36ae151985ce
-        m_ExecutionDomain: 1
         StartFrame: 119
         EndFrame: 212
         m_OtherEaseInTimeRaw: 0
@@ -3505,7 +3470,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: c6eed989-9343-468e-aff2-4174451b29c4
-        m_ExecutionDomain: 1
         StartFrame: 149
         EndFrame: 212
         m_OtherEaseInTimeRaw: 0
@@ -3530,7 +3494,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d9f6c7d9-4b72-4197-ba9e-9b43da28ca6b
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         m_OtherEaseInTimeRaw: 0
@@ -3557,7 +3520,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 990ad51a-09bb-4b0e-9f66-c156cb4dcf20
-        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 125
         m_OtherEaseInTimeRaw: 0
@@ -3644,7 +3606,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: ae42d57e-8a2c-4cfc-958b-c2d14718a142
-        m_ExecutionDomain: 2
         StartFrame: 119
         EndFrame: 206
         m_OtherEaseInTimeRaw: 429496730
@@ -3756,7 +3717,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: bb77b766-4359-427f-b983-ececa666c7ed
-        m_ExecutionDomain: 1
         StartFrame: 36
         EndFrame: 37
         m_OtherEaseInTimeRaw: 0
@@ -3770,7 +3730,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 00f346ec-a8b3-4012-9320-003b33272e2d
-        m_ExecutionDomain: 1
         StartFrame: 38
         EndFrame: 39
         m_OtherEaseInTimeRaw: 0
@@ -3784,7 +3743,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: ee53bb31-e402-4cd3-8e86-a280d8c835e5
-        m_ExecutionDomain: 1
         StartFrame: 40
         EndFrame: 41
         m_OtherEaseInTimeRaw: 0
@@ -3798,7 +3756,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e24e18cf-0eff-41c1-9632-eb8359c3f459
-        m_ExecutionDomain: 1
         StartFrame: 42
         EndFrame: 43
         m_OtherEaseInTimeRaw: 0
@@ -3812,7 +3769,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 3ce91e78-183e-4d19-9133-85fd548ef1fc
-        m_ExecutionDomain: 1
         StartFrame: 44
         EndFrame: 45
         m_OtherEaseInTimeRaw: 0
@@ -3826,7 +3782,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 61a1acfc-1c29-4ae8-ad98-de6a6a1afdb8
-        m_ExecutionDomain: 1
         StartFrame: 46
         EndFrame: 47
         m_OtherEaseInTimeRaw: 0
@@ -3840,7 +3795,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 7a8cedf5-ef01-4ab0-933a-02734f06f2a7
-        m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 49
         m_OtherEaseInTimeRaw: 0
@@ -3854,7 +3808,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 3684ba3d-b9b2-419e-b4db-b4ce2b7e072a
-        m_ExecutionDomain: 1
         StartFrame: 50
         EndFrame: 51
         m_OtherEaseInTimeRaw: 0
@@ -3868,7 +3821,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 494c9635-bd89-440b-952d-13280f99a6cb
-        m_ExecutionDomain: 1
         StartFrame: 52
         EndFrame: 53
         m_OtherEaseInTimeRaw: 0
@@ -3882,7 +3834,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2d6db77c-27c7-4c6b-830f-d5e5d0007d05
-        m_ExecutionDomain: 1
         StartFrame: 54
         EndFrame: 55
         m_OtherEaseInTimeRaw: 0
@@ -3896,7 +3847,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 93363782-2d05-4bd9-8fcb-27b912a620b6
-        m_ExecutionDomain: 1
         StartFrame: 56
         EndFrame: 57
         m_OtherEaseInTimeRaw: 0
@@ -3910,7 +3860,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: a33ce961-52c6-4c29-973f-8e69a9ca8a23
-        m_ExecutionDomain: 1
         StartFrame: 58
         EndFrame: 59
         m_OtherEaseInTimeRaw: 0
@@ -3924,7 +3873,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 576ad46f-e19a-46c7-a113-af166422d90c
-        m_ExecutionDomain: 1
         StartFrame: 60
         EndFrame: 61
         m_OtherEaseInTimeRaw: 0
@@ -3938,7 +3886,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: a4eef375-89f8-47a1-8648-b0ef041bc4d1
-        m_ExecutionDomain: 1
         StartFrame: 62
         EndFrame: 63
         m_OtherEaseInTimeRaw: 0
@@ -3952,7 +3899,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d9c74c68-2398-4af2-bc7d-d4e79fed496a
-        m_ExecutionDomain: 1
         StartFrame: 64
         EndFrame: 65
         m_OtherEaseInTimeRaw: 0
@@ -3966,7 +3912,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b4a895cc-c0a5-4b35-855e-995515571f39
-        m_ExecutionDomain: 1
         StartFrame: 64
         EndFrame: 65
         m_OtherEaseInTimeRaw: 0
@@ -3980,7 +3925,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: b9ee74a6-6149-54ae-9962-e9e9fa3dd785
-        m_ExecutionDomain: 1
         StartFrame: 47
         EndFrame: 212
         m_OtherEaseInTimeRaw: 0
@@ -4117,7 +4061,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 7005c2bd-f2e7-5625-b8eb-6f5d55fa92cd
-        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 185
         m_OtherEaseInTimeRaw: 0
@@ -4228,7 +4171,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 6f940cce-a656-5b38-90ed-a152315f147e
-        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 1
         m_OtherEaseInTimeRaw: 0
@@ -4242,7 +4184,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b69d2a91-13b6-587e-b083-287564d5af91
-        m_ExecutionDomain: 1
         StartFrame: 9
         EndFrame: 10
         m_OtherEaseInTimeRaw: 0
@@ -4256,7 +4197,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d428caed-724a-57e6-a384-cc6920d0228d
-        m_ExecutionDomain: 1
         StartFrame: 11
         EndFrame: 12
         m_OtherEaseInTimeRaw: 0
@@ -4270,7 +4210,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 40e70121-4948-5a50-b95a-de94258ecf82
-        m_ExecutionDomain: 1
         StartFrame: 13
         EndFrame: 14
         m_OtherEaseInTimeRaw: 0
@@ -4284,7 +4223,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 487e2ee7-d02d-5224-91cf-90da04636387
-        m_ExecutionDomain: 1
         StartFrame: 15
         EndFrame: 16
         m_OtherEaseInTimeRaw: 0
@@ -4298,7 +4236,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 8ffbcd35-62c7-57a9-93bc-11e81624f428
-        m_ExecutionDomain: 1
         StartFrame: 17
         EndFrame: 18
         m_OtherEaseInTimeRaw: 0
@@ -4312,7 +4249,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d9d8db84-c700-5630-a303-752986184c7e
-        m_ExecutionDomain: 1
         StartFrame: 19
         EndFrame: 20
         m_OtherEaseInTimeRaw: 0
@@ -4326,7 +4262,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 55977631-2546-5c33-8bdb-b8af901f5bc4
-        m_ExecutionDomain: 1
         StartFrame: 21
         EndFrame: 22
         m_OtherEaseInTimeRaw: 0
@@ -4340,7 +4275,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: ac94b225-fa8f-5a5f-bf1e-5c004165d848
-        m_ExecutionDomain: 1
         StartFrame: 23
         EndFrame: 24
         m_OtherEaseInTimeRaw: 0
@@ -4354,7 +4288,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b3f731d9-6bd8-59c3-aa99-edc2680aca7d
-        m_ExecutionDomain: 1
         StartFrame: 25
         EndFrame: 26
         m_OtherEaseInTimeRaw: 0
@@ -4368,7 +4301,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: a7813aa6-bed9-5a34-b381-03fb4f8a1fbc
-        m_ExecutionDomain: 1
         StartFrame: 27
         EndFrame: 28
         m_OtherEaseInTimeRaw: 0
@@ -4382,7 +4314,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: bdaf8973-b381-535b-ad8b-b3a8cbfff816
-        m_ExecutionDomain: 1
         StartFrame: 29
         EndFrame: 30
         m_OtherEaseInTimeRaw: 0
@@ -4396,7 +4327,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 9e443eb0-cebb-59b8-b7d8-c6bd4ecfc7ab
-        m_ExecutionDomain: 1
         StartFrame: 31
         EndFrame: 32
         m_OtherEaseInTimeRaw: 0
@@ -4410,7 +4340,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 34fd3e17-6e1b-536b-80b2-a07cc3e38cbf
-        m_ExecutionDomain: 1
         StartFrame: 33
         EndFrame: 34
         m_OtherEaseInTimeRaw: 0
@@ -4424,7 +4353,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 1bbd6234-8bf4-512a-b952-058817856b43
-        m_ExecutionDomain: 1
         StartFrame: 35
         EndFrame: 36
         m_OtherEaseInTimeRaw: 0
@@ -4592,7 +4520,6 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b7cc37e0-f20d-40a9-afd5-c6d2e659d99d
-        m_ExecutionDomain: 1
         StartFrame: 6
         EndFrame: 39
         m_OtherEaseInTimeRaw: 0
@@ -4694,7 +4621,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 012703eb-3a08-40ed-ad50-8a9b43a395c3
-        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 81
         m_OtherEaseInTimeRaw: 0
@@ -4781,7 +4707,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 722274ab-789c-4400-b6d4-eb1ab715d68f
-        m_ExecutionDomain: 2
         StartFrame: 75
         EndFrame: 200
         m_OtherEaseInTimeRaw: 429496730
@@ -4879,7 +4804,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2c0107ca-fde7-4043-8dd4-1939f2663551
-        m_ExecutionDomain: 1
         StartFrame: 81
         EndFrame: 206
         m_OtherEaseInTimeRaw: 0
@@ -4973,7 +4897,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 373e6fc6-7fc7-490d-88ef-b4a48b87fcfd
-        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 81
         m_OtherEaseInTimeRaw: 0
@@ -5078,7 +5001,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 4dcfd64b-50d3-4b42-befd-85ccbc5b3829
-        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         m_OtherEaseInTimeRaw: 0
@@ -5092,7 +5014,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 69479831-dd75-420d-85bf-2ccffe7fc331
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         m_OtherEaseInTimeRaw: 0
@@ -5119,7 +5040,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 173a1e60-144d-4d42-8e97-d942787f4993
-        m_ExecutionDomain: 1
         StartFrame: 75
         EndFrame: 206
         m_OtherEaseInTimeRaw: 0
@@ -5134,7 +5054,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 5d3d23e0-5e31-4100-bb8e-b62b8b36d626
-        m_ExecutionDomain: 1
         StartFrame: 105
         EndFrame: 206
         m_OtherEaseInTimeRaw: 0
@@ -5149,7 +5068,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 7ec2401d-c627-41b5-85d9-d0abec3f7344
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 206
         m_OtherEaseInTimeRaw: 0
@@ -5164,7 +5082,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: c390cfd6-7d02-423f-98ec-c5c60f81a8ed
-        m_ExecutionDomain: 1
         StartFrame: 82
         EndFrame: 206
         m_OtherEaseInTimeRaw: 0
@@ -5209,7 +5126,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 9466f0e6-5ee7-4cb0-98e2-959a82ef7970
-        m_ExecutionDomain: 1
         StartFrame: 40
         EndFrame: 41
         m_OtherEaseInTimeRaw: 0
@@ -5223,7 +5139,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: cf31ed48-9331-446f-93dd-d53b7063a9f9
-        m_ExecutionDomain: 1
         StartFrame: 42
         EndFrame: 43
         m_OtherEaseInTimeRaw: 0
@@ -5237,7 +5152,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 68667d89-bab5-4f39-8dc7-25073eaf0028
-        m_ExecutionDomain: 1
         StartFrame: 44
         EndFrame: 45
         m_OtherEaseInTimeRaw: 0
@@ -5251,7 +5165,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 90435401-3a92-4b31-a19f-c24c09972d3e
-        m_ExecutionDomain: 1
         StartFrame: 46
         EndFrame: 47
         m_OtherEaseInTimeRaw: 0
@@ -5265,7 +5178,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: cf1f8c8f-5d21-471f-b363-429096455dc5
-        m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 49
         m_OtherEaseInTimeRaw: 0
@@ -5279,7 +5191,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 5fa0cfba-e53c-4b40-9761-b23de9754d7e
-        m_ExecutionDomain: 1
         StartFrame: 50
         EndFrame: 51
         m_OtherEaseInTimeRaw: 0
@@ -5293,7 +5204,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 35180dd2-d031-453f-b08b-3623d992e0de
-        m_ExecutionDomain: 1
         StartFrame: 52
         EndFrame: 53
         m_OtherEaseInTimeRaw: 0
@@ -5307,7 +5217,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e45bb1a2-63a6-4600-85c6-7d1f4abc9a7c
-        m_ExecutionDomain: 1
         StartFrame: 54
         EndFrame: 55
         m_OtherEaseInTimeRaw: 0
@@ -5321,7 +5230,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2b26ff23-e92d-444a-bcfa-ea2f719c4a23
-        m_ExecutionDomain: 1
         StartFrame: 56
         EndFrame: 57
         m_OtherEaseInTimeRaw: 0
@@ -5335,7 +5243,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e670ae70-487e-4ba4-806c-29f8c85a5de4
-        m_ExecutionDomain: 1
         StartFrame: 58
         EndFrame: 59
         m_OtherEaseInTimeRaw: 0
@@ -5349,7 +5256,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 0acd9176-ce33-4860-80f6-eaa94ac82fb8
-        m_ExecutionDomain: 1
         StartFrame: 60
         EndFrame: 61
         m_OtherEaseInTimeRaw: 0
@@ -5363,7 +5269,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 3676070d-7fc2-4d0c-88cd-87f144f63308
-        m_ExecutionDomain: 1
         StartFrame: 62
         EndFrame: 63
         m_OtherEaseInTimeRaw: 0
@@ -5377,7 +5282,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 98efd08b-5538-4b75-91cb-7b5044c8c1fa
-        m_ExecutionDomain: 1
         StartFrame: 64
         EndFrame: 65
         m_OtherEaseInTimeRaw: 0
@@ -5391,7 +5295,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 423f8017-e244-4749-806a-199efcec6d8d
-        m_ExecutionDomain: 1
         StartFrame: 66
         EndFrame: 67
         m_OtherEaseInTimeRaw: 0
@@ -5405,7 +5308,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 16750978-4745-4eee-8314-f2b32d305f56
-        m_ExecutionDomain: 1
         StartFrame: 68
         EndFrame: 69
         m_OtherEaseInTimeRaw: 0
@@ -5419,7 +5321,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 1a0d4f3e-a283-4311-862b-bfcd03bbd1c6
-        m_ExecutionDomain: 1
         StartFrame: 70
         EndFrame: 71
         m_OtherEaseInTimeRaw: 0
@@ -5433,7 +5334,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 5205ae0e-9a88-4824-8e60-64e34939e158
-        m_ExecutionDomain: 1
         StartFrame: 72
         EndFrame: 73
         m_OtherEaseInTimeRaw: 0
@@ -5447,7 +5347,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b8f7200b-5af8-48b4-a2d7-4cacde18bfc5
-        m_ExecutionDomain: 1
         StartFrame: 74
         EndFrame: 75
         m_OtherEaseInTimeRaw: 0
@@ -5461,7 +5360,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: ed12781b-c2e4-4782-bc51-432b5e9843bb
-        m_ExecutionDomain: 1
         StartFrame: 76
         EndFrame: 77
         m_OtherEaseInTimeRaw: 0
@@ -5475,7 +5373,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 45287a78-2bb9-4fbe-b1fd-77db491cbafe
-        m_ExecutionDomain: 1
         StartFrame: 78
         EndFrame: 79
         m_OtherEaseInTimeRaw: 0
@@ -5489,7 +5386,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e5849c0a-2b7f-4d76-8f3a-90c1d64f2a55
-        m_ExecutionDomain: 1
         StartFrame: 75
         EndFrame: 76
         m_OtherEaseInTimeRaw: 0
@@ -5673,7 +5569,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2173d615-dd8c-4d5b-a550-58a798c0d69e
-        m_ExecutionDomain: 1
         StartFrame: 89
         EndFrame: 282
         m_OtherEaseInTimeRaw: 0
@@ -5767,7 +5662,6 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: bd920a87-f138-4df5-aad9-c3763973bedb
-        m_ExecutionDomain: 1
         StartFrame: 0
         EndFrame: 89
         m_OtherEaseInTimeRaw: 0
@@ -5871,7 +5765,6 @@ MonoBehaviour:
       type: {class: MotionWarpClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e28c94f9-544b-4d3c-8280-ac6cfb9f0a42
-        m_ExecutionDomain: 1
         StartFrame: 9
         EndFrame: 42
         m_OtherEaseInTimeRaw: 0
@@ -5973,7 +5866,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 096aa081-0595-4592-b34d-a8521aca903b
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 282
         m_OtherEaseInTimeRaw: 0
@@ -5988,7 +5880,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 61799f08-5e23-4524-93ed-769aec46757a
-        m_ExecutionDomain: 1
         StartFrame: 113
         EndFrame: 282
         m_OtherEaseInTimeRaw: 0
@@ -6003,7 +5894,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 629ecaef-ed68-4ef8-bf6e-793719b5efd8
-        m_ExecutionDomain: 1
         StartFrame: 83
         EndFrame: 282
         m_OtherEaseInTimeRaw: 0
@@ -6018,7 +5908,6 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 8fefb458-0d9c-4568-8bc9-51e578f50a62
-        m_ExecutionDomain: 1
         StartFrame: 90
         EndFrame: 282
         m_OtherEaseInTimeRaw: 0
@@ -6044,7 +5933,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 0327a31c-e074-45a0-acb8-8a1d32fb5524
-        m_ExecutionDomain: 1
         StartFrame: 24
         EndFrame: 25
         m_OtherEaseInTimeRaw: 0
@@ -6058,7 +5946,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 6d7b49fa-c06f-4f82-bc71-6066f64be835
-        m_ExecutionDomain: 1
         StartFrame: 18
         EndFrame: 19
         m_OtherEaseInTimeRaw: 0
@@ -6085,7 +5972,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2a6f8273-f664-4948-8aa3-9fdedd24b8d2
-        m_ExecutionDomain: 2
         StartFrame: 0
         EndFrame: 89
         m_OtherEaseInTimeRaw: 0
@@ -6172,7 +6058,6 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 8a0b2cd5-0900-4584-bdaf-2789f7288743
-        m_ExecutionDomain: 2
         StartFrame: 83
         EndFrame: 276
         m_OtherEaseInTimeRaw: 429496730
@@ -6290,7 +6175,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: fdd0a063-2e1b-4153-9d3a-6fa21a72e0a4
-        m_ExecutionDomain: 1
         StartFrame: 20
         EndFrame: 21
         m_OtherEaseInTimeRaw: 0
@@ -6304,7 +6188,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 36566d47-4414-444b-a452-e544147fe05b
-        m_ExecutionDomain: 1
         StartFrame: 21
         EndFrame: 22
         m_OtherEaseInTimeRaw: 0
@@ -6318,7 +6201,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 5e540dbb-815b-4476-b14b-f6ec4fb2f281
-        m_ExecutionDomain: 1
         StartFrame: 22
         EndFrame: 23
         m_OtherEaseInTimeRaw: 0
@@ -6332,7 +6214,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 0947a33a-7cef-40a1-823a-c7d86921931c
-        m_ExecutionDomain: 1
         StartFrame: 23
         EndFrame: 24
         m_OtherEaseInTimeRaw: 0
@@ -6346,7 +6227,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: df7f9631-0a9f-4fe4-ae45-e3b2e1465cdb
-        m_ExecutionDomain: 1
         StartFrame: 38
         EndFrame: 39
         m_OtherEaseInTimeRaw: 0
@@ -6360,7 +6240,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 846a5453-839f-485e-9219-a855f569cf23
-        m_ExecutionDomain: 1
         StartFrame: 40
         EndFrame: 41
         m_OtherEaseInTimeRaw: 0
@@ -6374,7 +6253,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 27beefaa-7109-4c27-98e8-d734fb9d6509
-        m_ExecutionDomain: 1
         StartFrame: 42
         EndFrame: 43
         m_OtherEaseInTimeRaw: 0
@@ -6388,7 +6266,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: ed213252-19f6-427c-9476-78fedb102bfd
-        m_ExecutionDomain: 1
         StartFrame: 44
         EndFrame: 45
         m_OtherEaseInTimeRaw: 0
@@ -6402,7 +6279,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: c908e505-5a76-4156-aca0-5f2f357dcb0c
-        m_ExecutionDomain: 1
         StartFrame: 46
         EndFrame: 47
         m_OtherEaseInTimeRaw: 0
@@ -6416,7 +6292,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 335bccd6-a2f6-4f4a-b444-13d2ebd84ab4
-        m_ExecutionDomain: 1
         StartFrame: 48
         EndFrame: 49
         m_OtherEaseInTimeRaw: 0
@@ -6430,7 +6305,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d80ebb22-4836-495b-b3e7-0f80eead3396
-        m_ExecutionDomain: 1
         StartFrame: 50
         EndFrame: 51
         m_OtherEaseInTimeRaw: 0
@@ -6444,7 +6318,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 8427ceeb-e80f-4df1-80d4-027bbf8e9856
-        m_ExecutionDomain: 1
         StartFrame: 52
         EndFrame: 53
         m_OtherEaseInTimeRaw: 0
@@ -6458,7 +6331,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 928f58c9-1e1d-4e1a-83ba-1ef7d15228dc
-        m_ExecutionDomain: 1
         StartFrame: 54
         EndFrame: 55
         m_OtherEaseInTimeRaw: 0
@@ -6472,7 +6344,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: bf230f6a-3a90-4b48-94ab-aa49180042c4
-        m_ExecutionDomain: 1
         StartFrame: 56
         EndFrame: 57
         m_OtherEaseInTimeRaw: 0
@@ -6486,7 +6357,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: c85d0eda-2d38-4e2a-a5b6-a86ac17e0dff
-        m_ExecutionDomain: 1
         StartFrame: 58
         EndFrame: 59
         m_OtherEaseInTimeRaw: 0
@@ -6500,7 +6370,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: bb971ff8-7305-4a45-b9b2-195e9e03d702
-        m_ExecutionDomain: 1
         StartFrame: 60
         EndFrame: 61
         m_OtherEaseInTimeRaw: 0
@@ -6514,7 +6383,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 91694db8-1a34-4dd8-8dcb-5991c601843d
-        m_ExecutionDomain: 1
         StartFrame: 62
         EndFrame: 63
         m_OtherEaseInTimeRaw: 0
@@ -6528,7 +6396,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: bb2a2277-3f54-4873-8675-ac542e78ddb2
-        m_ExecutionDomain: 1
         StartFrame: 64
         EndFrame: 65
         m_OtherEaseInTimeRaw: 0
@@ -6542,7 +6409,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d6d51c55-6b0e-4900-99dc-93187107532f
-        m_ExecutionDomain: 1
         StartFrame: 66
         EndFrame: 67
         m_OtherEaseInTimeRaw: 0
@@ -6556,7 +6422,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: c9cac761-4554-4071-a68d-38266b4bbf8a
-        m_ExecutionDomain: 1
         StartFrame: 68
         EndFrame: 69
         m_OtherEaseInTimeRaw: 0
@@ -6570,7 +6435,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: ef43bc0b-af7b-4565-8b86-95eef10da390
-        m_ExecutionDomain: 1
         StartFrame: 70
         EndFrame: 71
         m_OtherEaseInTimeRaw: 0
@@ -6584,7 +6448,6 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 42bf67ad-ac72-4287-a4d8-ae3e8309a663
-        m_ExecutionDomain: 1
         StartFrame: 72
         EndFrame: 73
         m_OtherEaseInTimeRaw: 0

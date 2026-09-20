@@ -13,7 +13,7 @@ Gameplay Timeline sampling MUST只在 SimulationTick/canonical fraction 调用�
 
 ### Requirement: Timeline Track / Clip 执行域必须分离
 
-Timeline Track / Clip MUST声明 `Logic`、`Presentation` 或 `DualProjection`，Marker MUST与 Clip 同级并继承 Track 域。Logic MUST在 SimulationTick 调用中消费外部逻辑进度并遵守 Commit / Discard；Presentation MUST在表现帧调用中消费外部采样并只产生表现结果。DualProjection MUST是同一内容的合法双侧投影，不是第三个时钟或第二运行时。表现可在逻辑更新之间采样，但 MUST遵守已有 sample / horizon 合同，不得自行外推未来事件。Presentation MUST不执行 Logic TimelineBody 图或写 Gameplay fact。域声明只规定调用与输出权限，MUST不成为自主时钟或隐式进度策略开关。
+Timeline Track MUST唯一声明 `Logic` 或 `Presentation`；Clip 与同级 Marker MUST继承所在 Track，MUST NOT提供 Clip 域覆盖或 DualProjection。Logic MUST在 SimulationTick 消费外部逻辑进度并遵守 Commit / Discard；Presentation MUST在表现帧消费外部采样并只产生表现结果。两类轨道 MUST共用正式播放管理者提供的动作进度，表现采样 MUST遵守已有 sample / horizon 合同，不得自行外推未来事件。逻辑结果传给表现 MUST走原提交链。Presentation MUST不执行 Logic TimelineBody 图或写 Gameplay fact；域声明 MUST不成为自主时钟或隐式进度策略开关。
 
 #### Scenario: TreeClip 触发表现事件
 

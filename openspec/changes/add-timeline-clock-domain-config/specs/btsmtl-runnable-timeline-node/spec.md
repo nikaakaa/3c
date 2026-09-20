@@ -18,7 +18,7 @@
 
 ### Requirement: TreeClip编译为TimelineBody图operation invocation
 
-Logic TreeClip 与 DualProjection TreeClip 的 Logic 投影 MUST将其 AssetTree（TimelineBody 图）编译为正式 operations：TimelineClip caller MUST按 clip 声明 OnEnable、OnDisable、OnDestroy 三个边界 hook entry 与 Root（技能入口）entry，SourceMap MUST按 clipId 登记 Root handle 供运行时查询。Presentation 内容 MUST使用与 Clip 同级的表现 Marker；Presentation Marker 图只能通过表现安全执行上下文运行，MUST NOT绑定、编译或执行 TimelineBody 图。系统 MUST不恢复 Timeline.Bind/Evaluate/Unbind 自主播放路径。
+Logic Track 中的 TreeClip MUST将其 AssetTree（TimelineBody 图）编译为正式 operations：TimelineClip caller MUST按 clip 声明 OnEnable、OnDisable、OnDestroy 三个边界 hook entry 与 Root（技能入口）entry，SourceMap MUST按 clipId 登记 Root handle 供运行时查询。Presentation 内容 MUST使用与 Clip 同级的表现 Marker；Presentation Marker 图只能通过表现安全执行上下文运行，MUST NOT绑定、编译或执行 TimelineBody 图。系统 MUST不恢复 Timeline.Bind/Evaluate/Unbind 自主播放路径。
 
 #### Scenario: Decision TreeClip 穿过 Loop 边界
 

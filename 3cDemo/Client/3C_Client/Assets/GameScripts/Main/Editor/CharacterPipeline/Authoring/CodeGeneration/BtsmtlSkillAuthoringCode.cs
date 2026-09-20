@@ -629,7 +629,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
 
         static void ConfigureClipExecution(Track track, Clip clip)
         {
-            clip.InheritExecutionDomain();
             if (clip is TreeClip tree)
                 tree.SetExitSource(track.ExecutionDomain == TimelineExecutionDomain.Logic
                     ? TimelineClipExitSource.TreeDecision

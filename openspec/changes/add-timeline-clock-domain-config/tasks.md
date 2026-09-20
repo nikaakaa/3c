@@ -33,7 +33,7 @@
 
 ## 3. 已有执行域与 Marker 作者模型
 
-- [x] 3.1 Track / Clip 增加 Logic、Presentation、DualProjection，Runtime 按当前 Advance / Present 直接遍历同一正式内容
+- [x] 3.1 Track 唯一声明 Logic／Presentation，Clip／Marker 继承轨道；删除 DualProjection 与 Clip 域覆盖，Runtime 直接遍历同一正式内容
 - [x] 3.2 建立 PresentationFrame evaluation 和表现游标入口；其独立累加实现由第 5 节迁移，不视为最终时钟合同
 - [x] 3.3 Marker 成为 Track 持有的同级点实体，进入闭包与指纹，删除 Clip 子列表与 Pulse / Stateful 区间模型
 - [x] 3.4 TimelineBody AssetTree 保留 Logic 执行路径，PresentationFrame 不重复执行该 Logic 图
@@ -85,7 +85,7 @@
 ## 8. Domain 与作者数据一致性
 
 - [ ] 8.1 在现有 Track Inspector 增加 Domain 编辑、Marker 继承域显示及不兼容内容定位，复用原 Timeline mutation / Undo，一次失败不留下部分域变更
-- [ ] 8.2 域修改同步处理 Track、显式 Clip 域与 Marker 图能力，闭包和编译使用一致声明；缺少 DualProjection 合法投影时明确失败，不把同一 Logic 图执行两次
+- [ ] 8.2 域修改同步校验 Track 所有 Clip 与 Marker 图能力，闭包和编译只读取轨道声明；不支持该域的内容明确失败，不把同一 Logic 图执行两次
 - [ ] 8.3 在秒制模型上统一拖动反馈、秒输入、逻辑 tick／素材帧／关闭吸附与 CommitSource；逻辑网格自动读取绑定 pipeline 的 SimulationTickRate，展示来源，缺绑定时不可用；配置变化不移动已有内容
 - [ ] 8.4 在现有时间观察入口显示作者秒数、SimulationTickRate 与当前播放控制下的实际逻辑生效 tick，标明静态换算的速率 / 暂停前提，不新增预览时钟或第二求值器
 - [x] 8.5 补齐 Marker 私有图在正式 C# export_code / generate_assets 中的 owner 闭包，复制 / 重建保留图角色、节点内容与引用，不以旧资产路径 / localFileId 或空图代替完整重建

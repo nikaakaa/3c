@@ -24,7 +24,7 @@ namespace BTSMTL.Timeline
         public ScriptableObject Graph => m_Graph;
         public Track Track => m_Track;
         public TimelineExecutionDomain ExecutionDomain =>
-            m_Track != null ? m_Track.ExecutionDomain : TimelineExecutionDomains.Normalize(default);
+            m_Track != null ? m_Track.ExecutionDomain : throw new InvalidOperationException("Timeline Marker has no owning Track.");
 
         public void Init(Track track)
         {

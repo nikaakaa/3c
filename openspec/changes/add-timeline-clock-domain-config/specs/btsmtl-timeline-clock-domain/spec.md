@@ -112,7 +112,7 @@ Timeline MUST以秒作为唯一作者时间单位，起点、时长、Marker、S
 
 ### Requirement: 执行域必须限定内容的更新者与输出能力
 
-Track MUST声明 Logic、Presentation 或 DualProjection，有效 Clip 域 MUST在 Track 与内容能力允许的范围内。Marker MUST继承 Track 域。Logic 输出 MUST由 SimulationTick 经 Advance / Commit 产生；Presentation 输出 MUST由表现帧产生且不得写 Gameplay fact、canonical input 或 SimulationState。DualProjection MUST表示同一作者内容的合法双侧投影，不得解释为第三个时钟、额外 playback 或把同一 Gameplay 图执行两次。缺少对应域能力的内容 MUST被明确拒绝。
+Track MUST是执行域的唯一声明者且只能声明 Logic 或 Presentation。Clip 与 Marker MUST继承所在 Track，MUST NOT保留单独域覆盖或 DualProjection。内容类型 MUST校验轨道域是否受支持。Logic 输出 MUST由 SimulationTick 经 Advance / Commit 产生；Presentation 输出 MUST由表现帧产生且不得写 Gameplay fact、canonical input 或 SimulationState。两类轨道 MUST消费正式播放管理者提供的动作进度；逻辑结果传给表现 MUST走已有提交链，不得重复执行逻辑图。
 
 Runtime MUST继续直接读取同一正式只读 Timeline 内容；每次 evaluation 只是当前调用的结果，不得生成第二 Timeline 操作表或常驻执行语言。
 
@@ -122,10 +122,10 @@ Runtime MUST继续直接读取同一正式只读 Timeline 内容；每次 evalua
 - **THEN** Track MUST仍在 PresentationFrame 运行
 - **AND** 使用逻辑提交的进度来源 MUST NOT使它变成 Logic Track，也不得要求再调用一次逻辑 evaluator
 
-#### Scenario: 缺少双侧投影
+#### Scenario: 轨道域不支持已有内容
 
-- **WHEN** 内容被声明为 DualProjection，但只有 Logic 图而没有合法表现能力
-- **THEN** 作者提交或 preparation MUST指出该内容的域能力错误
+- **WHEN** 作者将包含 Logic TimelineBody Clip 的轨道改为 Presentation
+- **THEN** 作者提交 MUST原子拒绝修改，preparation MUST指出该内容的域能力错误
 - **AND** MUST NOT在 PresentationFrame 复制执行 Logic 图
 
 ### Requirement: Marker必须与Clip同级且只提供点触发

@@ -86,6 +86,7 @@ namespace BTSMTL.Timeline.Editor
                 EditorGUILayout.HelpBox(m_ConfigurationError, MessageType.Error);
             EditorGUILayout.LabelField("Name", clip.Name);
             EditorGUILayout.LabelField("Kind", clip.ContractKind);
+            EditorGUILayout.LabelField("Domain (Inherited from Track)", clip.ExecutionDomain.ToString());
             int startFrame = clip.StartFrame;
             int endFrame = clip.EndFrame;
             FixedScalar easeIn = clip.SelfEaseInTime;

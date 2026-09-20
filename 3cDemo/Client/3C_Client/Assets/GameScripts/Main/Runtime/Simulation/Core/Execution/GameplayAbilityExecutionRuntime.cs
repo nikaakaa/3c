@@ -1070,7 +1070,7 @@ namespace ThirdPersonSimulation
             if (value < byte.MinValue || value > byte.MaxValue)
                 throw new InvalidOperationException($"Action lifecycle transition '{value}' is invalid.");
             var transition = (AbilityLifecycleTransition)(byte)value;
-            if (!Enum.IsDefined(typeof(AbilityLifecycleTransition), transition) || transition == AbilityLifecycleTransition.None)
+            if (transition < AbilityLifecycleTransition.Confirm || transition > AbilityLifecycleTransition.Abort)
                 throw new InvalidOperationException($"Action lifecycle transition '{value}' is invalid.");
             return transition;
         }

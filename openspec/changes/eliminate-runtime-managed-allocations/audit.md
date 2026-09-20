@@ -1000,3 +1000,12 @@
 - 公共 byte[] 构造入口保留，并统一转交同一只读片段实现；null／空载荷仍得到 Array.Empty，非空调用方输入仍不会被状态暴露或后续修改影响。reader 片段只在同步构造期间借用，不跨方法保存。
 - 字段顺序、长度检查、RequireComplete、身份绑定校验及完整 canonical 重新编码比较均未修改。只删除恢复解码的中间 payload 数组，不改变求解器恢复、世界状态发布或事务生命周期；最终状态数组仍是必要分配。
 - 两目标文件继承前一提交后无其它未提交修改。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查待提交前执行；未新增测试、未操作共享 Unity、未做世界状态恢复运行对比或 Player 分配采样。
+
+## 2026-09-20 动作生命周期转换运行校验
+
+对应 tasks.md 的 2.43。
+
+- AbilityExecution.RequireTransition 被运行中的外部生命周期提交、AbilityLifecycleIngress 应用和 GameplayAbility 结束规则解析调用。原将 int 缩到 byte 枚举后执行 Enum.IsDefined(Type, object)，每次发生装箱和枚举元数据查询。
+- AbilityLifecycleTransition 的正式非空成员连续为 Confirm=1 至 Abort=7。现直接检查该闭区间；None、负数、超过 byte 以及 8 至 255 的未知值继续抛出原 InvalidOperationException。RequireTerminalTransition 仍单独限制 Complete／Cancel／Interrupt／Abort。
+- 只删除运行事件到达时的通用枚举查询，不改变动作匹配、状态转换、结果种类、原因文本、来源 Tick 或任何生命周期分支。该入口不是普通每帧必经，未将其记录为逐帧收益。
+- 目标文件修改前无其它未提交修改。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查待提交前执行；未新增测试、未操作共享 Unity、未执行动作生命周期运行回放或 Player 分配采样。

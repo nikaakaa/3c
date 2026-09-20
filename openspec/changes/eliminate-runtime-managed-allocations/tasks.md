@@ -84,6 +84,7 @@
 - [x] 2.46 Float32 本地输入端口的 Prepared／Committed／Discarded／Restored 通知按正式连续值域校验，删除每次事务结果广播前的 Enum.IsDefined 装箱并与 Fixed 口径统一
 - [x] 2.47 共享 PipelineTransactionCoordinator 的 Pending／Committed 控制结果直接匹配两种正式 outcome，删除每个外层 tick 返回控制结果时的 Enum.IsDefined 装箱
 - [x] 2.48 共享 ExecutionPlan 的 status、step execution kind 与 tick source kind 按正式连续值域校验，删除每次计划／步骤／来源映射构造中的四处 Enum.IsDefined 装箱
+- [x] 2.49 共享 Pipeline 每步事务上下文按 Forward 至 Authoritative 正式执行类型值域校验，删除 Coordinator 每执行 step 时的 Enum.IsDefined 装箱
 
 ## 3. Timeline和事件图
 

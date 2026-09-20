@@ -106,7 +106,8 @@ namespace ThirdPersonSimulation
             StableHash transactionIdentity)
         {
             if (!session.IsValid || !pipeline.IsValid || !tick.IsValid ||
-                !Enum.IsDefined(typeof(SimulationPipelineStepExecutionKind), executionKind) ||
+                (byte)executionKind < (byte)SimulationPipelineStepExecutionKind.Forward ||
+                (byte)executionKind > (byte)SimulationPipelineStepExecutionKind.Authoritative ||
                 stepIndex < 0 || stepCount <= 0 || stepIndex >= stepCount || !transactionIdentity.IsValid)
             {
                 throw new ArgumentException("Step transaction context is incomplete.");

@@ -106,21 +106,25 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class WorldSolveBatchRequest
     {
-        readonly ReadOnlyCollection<CharacterWorldSolveRequest> m_Requests;
+        readonly IReadOnlyList<CharacterWorldSolveRequest> m_Requests;
 
-        public WorldSolveBatchRequest(SimulationTick tick, WorldSimulationState beforeWorldState, IEnumerable<CharacterWorldSolveRequest> requests)
+        public WorldSolveBatchRequest(SimulationTick tick, WorldSimulationState beforeWorldState, IReadOnlyList<CharacterWorldSolveRequest> requests)
         {
             if (!tick.IsValid)
                 throw new ArgumentException("World batch Tick is invalid.", nameof(tick));
             Tick = tick;
             BeforeWorldState = beforeWorldState ?? throw new ArgumentNullException(nameof(beforeWorldState));
             NumericProfile = beforeWorldState.NumericProfile;
-            var copied = requests == null ? new List<CharacterWorldSolveRequest>() : new List<CharacterWorldSolveRequest>(requests);
-            copied.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (copied.Count == 0 || copied.Count != beforeWorldState.Bodies.Count)
+            var copied = requests == null || requests.Count == 0
+                ? Array.Empty<CharacterWorldSolveRequest>()
+                : new CharacterWorldSolveRequest[requests.Count];
+            for (int i = 0; i < copied.Length; i++)
+                copied[i] = requests[i];
+            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (copied.Length == 0 || copied.Length != beforeWorldState.Bodies.Count)
                 throw new ArgumentException("World batch must contain exactly one request per world body.", nameof(requests));
             WorldCapability required = WorldCapability.None;
-            for (int i = 0; i < copied.Count; i++)
+            for (int i = 0; i < copied.Length; i++)
             {
                 CharacterWorldSolveRequest request = copied[i] ?? throw new ArgumentException("World batch contains a null request.", nameof(requests));
                 if (request.NumericProfile != NumericProfile || request.Tick != tick || request.ActorId != beforeWorldState.Bodies[i].ActorId || !BodyEquals(request.BeforeBody, beforeWorldState.Bodies[i]))
@@ -130,7 +134,7 @@ namespace ThirdPersonSimulation.Fixed
                 required |= request.RequiredCapabilities;
             }
             RequiredCapabilities = required;
-            m_Requests = copied.AsReadOnly();
+            m_Requests = copied;
             RequestHash = WorldSolveBatchCodec.ComputeRequestHash(this);
         }
 

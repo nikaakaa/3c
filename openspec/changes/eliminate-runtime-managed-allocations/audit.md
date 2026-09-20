@@ -1621,3 +1621,12 @@
 - Frame 现以 IReadOnlyList 字段保存最终数组。公开 IReadOnlyList 构造先复制到独立数组；程序集内部数组入口直接接管解码／历史转换刚创建且不再使用的数组。两条入口统一在数组上按 ActorId 排序并执行原 Tick 与重复 Actor 校验。
 - 空 Frame 直接持有 Array.Empty，删除每 step 的空 List 和只读包装；内部数组调用同时删除第二份元素复制。Frame 对象与包含 Tick 的 FrameHash 仍必须每 step 独立生成，hash 内部分配未处理。
 - ThirdPersonSimulation.Float32 portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做观测约束运行对比或 Player 分配采样。
+
+## 2026-09-21 WorldSolveBatchRequest 最终数组
+
+对应 tasks.md 的 5.55。
+
+- Fixed／Float32 AbilityEvaluatePass 持有按 roster 定长的 m_Requests workspace 数组，每 step 填充后构造 WorldSolveBatchRequest，并在 finally 中清空引用。原 Batch 将该数组再复制到 List、排序并创建 ReadOnlyCollection。
+- 两域 Batch 构造入口收窄为 IReadOnlyList，按 Count 复制到独立最终数组，在数组上执行原 ActorId 排序、数量、numeric profile、tick、before body 与重复 Actor 校验；公开 Requests 仍为 IReadOnlyList。
+- 删除每个 simulation step 的 WorldSolveBatchRequest 结果 List 与 ReadOnlyCollection 两个对象，以最终数组替代原 List 底层存储。Batch 仍独立持有请求，因此 EvaluatePass 清空 workspace 不会影响求解和 request hash。
+- ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。Float32 首次构建暴露一处旧 Count 访问，改为数组 Length 后通过；未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。

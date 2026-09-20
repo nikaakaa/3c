@@ -256,12 +256,12 @@ namespace ThirdPersonSimulation
 
     public sealed class WorldSolveBatchRequest
     {
-        readonly ReadOnlyCollection<CharacterWorldSolveRequest> m_Requests;
+        readonly IReadOnlyList<CharacterWorldSolveRequest> m_Requests;
 
         public WorldSolveBatchRequest(
             SimulationTick tick,
             WorldSimulationState beforeWorldState,
-            IEnumerable<CharacterWorldSolveRequest> requests,
+            IReadOnlyList<CharacterWorldSolveRequest> requests,
             ObservedWorldConstraintFrame observedWorldConstraints)
         {
             if (!tick.IsValid)
@@ -272,12 +272,16 @@ namespace ThirdPersonSimulation
             if (ObservedWorldConstraints.Tick != tick)
                 throw new ArgumentException("Observed world constraint frame Tick does not match the batch.", nameof(observedWorldConstraints));
             NumericProfile = beforeWorldState.NumericProfile;
-            var copied = requests == null ? new List<CharacterWorldSolveRequest>() : new List<CharacterWorldSolveRequest>(requests);
-            copied.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (copied.Count == 0 || copied.Count != beforeWorldState.Bodies.Count)
+            var copied = requests == null || requests.Count == 0
+                ? Array.Empty<CharacterWorldSolveRequest>()
+                : new CharacterWorldSolveRequest[requests.Count];
+            for (int i = 0; i < copied.Length; i++)
+                copied[i] = requests[i];
+            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (copied.Length == 0 || copied.Length != beforeWorldState.Bodies.Count)
                 throw new ArgumentException("World batch must contain exactly one request per world body.", nameof(requests));
             WorldCapability required = WorldCapability.None;
-            for (int i = 0; i < copied.Count; i++)
+            for (int i = 0; i < copied.Length; i++)
             {
                 CharacterWorldSolveRequest request = copied[i] ?? throw new ArgumentException("World batch contains a null request.", nameof(requests));
                 if (request.NumericProfile != NumericProfile || request.Tick != tick || request.ActorId != beforeWorldState.Bodies[i].ActorId || !BodyEquals(request.BeforeBody, beforeWorldState.Bodies[i]))
@@ -289,14 +293,14 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < ObservedWorldConstraints.Constraints.Count; i++)
             {
                 ObservedWorldConstraint observed = ObservedWorldConstraints.Constraints[i];
-                for (int activeIndex = 0; activeIndex < copied.Count; activeIndex++)
+                for (int activeIndex = 0; activeIndex < copied.Length; activeIndex++)
                 {
                     if (copied[activeIndex].ActorId == observed.ActorId)
                         throw new ArgumentException($"Observed ActorId '{observed.ActorId}' is already active in the World batch.", nameof(observedWorldConstraints));
                 }
             }
             RequiredCapabilities = required;
-            m_Requests = copied.AsReadOnly();
+            m_Requests = copied;
             RequestHash = WorldSolveBatchCodec.ComputeRequestHash(this);
         }
 

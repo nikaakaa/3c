@@ -1018,3 +1018,12 @@
 - 新增 CharacterPoseNativeEnumValues，集中定义 PreparationStatus、GraphBoundary、FailureCode 与 FrameStatus 的正式首末成员；十一处 Enum.IsDefined 全部迁移为该值域判断。未知零值、越界值以及原状态／失败码／Demand／Binding 组合仍由原条件拒绝。
 - 每帧链删除四次装箱与元数据查询，其余七次属于图准备和准备结果校验，不计作逐帧收益。未修改 Pose Graph 求值、资源准备、节点处理、发布结果或原生数据边界。
 - Unity 生成的 Runtime 工程首次 --no-restore 因 Temp 资产文件缺失未启动编译；随后由同一正式工程完成还原和编译，ThirdPersonClient.Runtime 及依赖零错误，存在三十四个既有包／项目警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-20 Blend Stack 运行目标枚举校验
+
+对应 tasks.md 的 4.1.1。
+
+- AnimationBlendStackRuntime.RequireTarget 由 SourcePose 快捷入口和统一 Push 请求校验调用。目标运行入口只接受 SourceOwner／SourcePose，原 Enum.IsDefined 后再拒绝 NoPose；现直接匹配两个正式成员，未知值与 NoPose 继续进入同一 ArgumentException。
+- SourcePose 快捷入口会在包装统一请求前校验一次，随后 Push 的 RequireRequest 再校验一次，因此一次目标切换可删除两次枚举装箱和元数据查询；普通 Push 删除一次。来源身份、OwnerIndex、请求序号和动作通道约束保持不变。
+- 同文件构造期 AnimationSelectionAvailabilityPolicy 仅有 RequireSelection／AllowEmpty 两个正式成员，改为直接匹配；该处只计准备阶段清理，不计逐帧收益。
+- ThirdPersonClient.Runtime 正式工程及依赖编译零错误，存在三十四个既有包／项目警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Blend Stack 运行回放或 Player 分配采样。

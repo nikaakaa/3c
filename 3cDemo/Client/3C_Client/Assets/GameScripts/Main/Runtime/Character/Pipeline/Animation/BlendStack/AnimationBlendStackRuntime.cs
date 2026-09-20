@@ -427,7 +427,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             bool providerOwned = presentationPoseSourceProviderId.IsValid &&
                                  presentationPoseSourceIndex.IsValid;
             if (!slot.NodeId.IsValid || actionOwned == providerOwned ||
-                !Enum.IsDefined(typeof(AnimationSelectionAvailabilityPolicy), availabilityPolicy) ||
+                availabilityPolicy != AnimationSelectionAvailabilityPolicy.RequireSelection &&
+                availabilityPolicy != AnimationSelectionAvailabilityPolicy.AllowEmpty ||
                 slot.StackPolicy == null || curveCatalog.Entries.Count == 0 ||
                 profileCatalog.Entries.Count == 0)
             {
@@ -1564,10 +1565,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             bool sourceOwner =
                 targetEndpointKind == AnimationBlendTransitionEndpointKind.SourceOwner;
             if (presentationRequestSequence == 0 ||
-                !Enum.IsDefined(
-                    typeof(AnimationBlendTransitionEndpointKind),
-                    targetEndpointKind) ||
-                targetEndpointKind == AnimationBlendTransitionEndpointKind.NoPose ||
+                targetEndpointKind != AnimationBlendTransitionEndpointKind.SourceOwner &&
+                targetEndpointKind != AnimationBlendTransitionEndpointKind.SourcePose ||
                 sourceOwner != sourceId.IsValid ||
                 sourceOwner != (sourceOwnerIndex >= 0) ||
                 targetEndpointKind == AnimationBlendTransitionEndpointKind.SourcePose &&

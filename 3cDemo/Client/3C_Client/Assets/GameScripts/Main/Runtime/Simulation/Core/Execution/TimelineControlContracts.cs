@@ -751,11 +751,11 @@ namespace ThirdPersonSimulation
             int cycle,
             int timeCarry,
             AbilityTimelinePlaybackControl control,
-            IReadOnlyList<string> treeDecisionExits,
-            IReadOnlyList<string> pendingTreeDecisionExits,
+            TimelineSnapshotItems<string> treeDecisionExits,
+            TimelineSnapshotItems<string> pendingTreeDecisionExits,
             string sectionId,
-            IReadOnlyList<string> activeClipIds,
-            IReadOnlyList<AbilityTimelineTreeClipState> activeTreeClips,
+            TimelineSnapshotItems<string> activeClipIds,
+            TimelineSnapshotItems<AbilityTimelineTreeClipState> activeTreeClips,
             bool hasStopContext,
             AbilityTimelineSnapshotStopCause stopCause,
             ulong stopLocalLogicTick,
@@ -783,33 +783,20 @@ namespace ThirdPersonSimulation
                 throw new ArgumentOutOfRangeException(nameof(state));
             if (cursorTime < FixedScalar.Zero || cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cursorTime));
-            if (treeDecisionExits == null)
-                throw new ArgumentNullException(nameof(treeDecisionExits));
-            if (pendingTreeDecisionExits == null)
-                throw new ArgumentNullException(nameof(pendingTreeDecisionExits));
             TimeCarry = timeCarry;
             Control = control;
-            TreeDecisionExits = Copy(treeDecisionExits, false);
-            PendingTreeDecisionExits = Copy(pendingTreeDecisionExits, false);
+            TreeDecisionExits = treeDecisionExits;
+            PendingTreeDecisionExits = pendingTreeDecisionExits;
             SectionId = sectionId ?? string.Empty;
-            ActiveClipIds = Copy(activeClipIds);
-            if (activeTreeClips == null)
-                throw new ArgumentNullException(nameof(activeTreeClips));
-            if (activeTreeClips.Count == 0)
-                ActiveTreeClips = Array.Empty<AbilityTimelineTreeClipState>();
-            else
+            ActiveClipIds = activeClipIds;
+            for (int index = 0; index < activeTreeClips.Count; index++)
             {
-                var treeClips = new AbilityTimelineTreeClipState[activeTreeClips.Count];
-                for (int index = 0; index < treeClips.Length; index++)
-                {
-                    AbilityTimelineTreeClipState clip = activeTreeClips[index];
-                    if (string.IsNullOrWhiteSpace(clip.ClipAuthoringId) || string.IsNullOrWhiteSpace(clip.TreeGraphId) ||
-                        clip.Cycle < 0 || clip.Cycle > cycle)
-                        throw new ArgumentException("Timeline active TreeClip identity or cycle is invalid.", nameof(activeTreeClips));
-                    treeClips[index] = clip;
-                }
-                ActiveTreeClips = Array.AsReadOnly(treeClips);
+                AbilityTimelineTreeClipState clip = activeTreeClips[index];
+                if (string.IsNullOrWhiteSpace(clip.ClipAuthoringId) || string.IsNullOrWhiteSpace(clip.TreeGraphId) ||
+                    clip.Cycle < 0 || clip.Cycle > cycle)
+                    throw new ArgumentException("Timeline active TreeClip identity or cycle is invalid.", nameof(activeTreeClips));
             }
+            ActiveTreeClips = activeTreeClips;
             StopCause = stopCause;
             StopLocalLogicTick = stopLocalLogicTick;
             if (hasStopContext && StopCause == AbilityTimelineSnapshotStopCause.None)
@@ -850,11 +837,11 @@ namespace ThirdPersonSimulation
         public int Cycle { get; }
         public int TimeCarry { get; }
         public AbilityTimelinePlaybackControl Control { get; }
-        public IReadOnlyList<string> TreeDecisionExits { get; }
-        public IReadOnlyList<string> PendingTreeDecisionExits { get; }
+        public TimelineSnapshotItems<string> TreeDecisionExits { get; }
+        public TimelineSnapshotItems<string> PendingTreeDecisionExits { get; }
         public string SectionId { get; }
-        public IReadOnlyList<string> ActiveClipIds { get; }
-        public IReadOnlyList<AbilityTimelineTreeClipState> ActiveTreeClips { get; }
+        public TimelineSnapshotItems<string> ActiveClipIds { get; }
+        public TimelineSnapshotItems<AbilityTimelineTreeClipState> ActiveTreeClips { get; }
         public bool HasStopContext { get; }
         public AbilityTimelineSnapshotStopCause StopCause { get; }
         public ulong StopLocalLogicTick { get; }
@@ -866,15 +853,7 @@ namespace ThirdPersonSimulation
         public ulong InputSequence { get; }
         public SimulationTick StartTick { get; }
 
-        static IReadOnlyList<string> Copy(IReadOnlyList<string> values, bool normalizeNull = true)
-        {
-            if (values == null || values.Count == 0)
-                return Array.Empty<string>();
-            var result = new string[values.Count];
-            for (int index = 0; index < result.Length; index++)
-                result[index] = normalizeNull ? values[index] ?? string.Empty : values[index];
-            return Array.AsReadOnly(result);
-        }
+
     }
     public enum AbilityTreeClipHook : byte
     {

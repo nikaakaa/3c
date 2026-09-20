@@ -141,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_ActiveClips.TryGetValue(handle, out List<AbilityTimelineTreeClipState> clips)
                 ? clips : Array.Empty<AbilityTimelineTreeClipState>();
 
-        internal void Restore(ulong handle, IReadOnlyList<AbilityTimelineTreeClipState> restored)
+        internal void Restore(ulong handle, TimelineSnapshotItems<AbilityTimelineTreeClipState> restored)
         {
             if (restored.Count == 0)
             {
@@ -1372,7 +1372,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 native.PendingTreeDecisionExits,
                 native.SectionId,
                 native.ActiveClipIds,
-                m_TreeClipService.Capture(handle.Value),
+                TimelineSnapshotItems<AbilityTimelineTreeClipState>.CopyFrom(m_TreeClipService.Capture(handle.Value)),
                 native.HasStopContext,
                 MapSnapshotStopCause(native.StopContext.Cause),
                 native.StopContext.LocalLogicTick,

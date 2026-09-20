@@ -595,9 +595,9 @@ namespace BTSMTL.Timeline.Runtime
             int timeCarry,
             AbilityTimelinePlaybackControl control,
             string sectionId,
-            IReadOnlyList<string> activeClipIds,
-            IReadOnlyList<string> exitedTreeDecisionClips,
-            IReadOnlyList<string> pendingTreeDecisionClips,
+            ReadOnlySpan<string> activeClipIds,
+            ReadOnlySpan<string> exitedTreeDecisionClips,
+            ReadOnlySpan<string> pendingTreeDecisionClips,
             bool hasStopContext,
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending)
@@ -632,13 +632,13 @@ namespace BTSMTL.Timeline.Runtime
             m_TimeCarry = timeCarry;
             Control = control;
             m_ActiveClipIds.Clear();
-            for (int index = 0; index < (activeClipIds?.Count ?? 0); index++)
+            for (int index = 0; index < activeClipIds.Length; index++)
                 m_ActiveClipIds.Add(activeClipIds[index]);
             m_ExitedTreeDecisionClips.Clear();
-            for (int index = 0; index < (exitedTreeDecisionClips?.Count ?? 0); index++)
+            for (int index = 0; index < exitedTreeDecisionClips.Length; index++)
                 m_ExitedTreeDecisionClips.Add(exitedTreeDecisionClips[index]);
             m_PendingTreeClipExits.Clear();
-            for (int index = 0; index < (pendingTreeDecisionClips?.Count ?? 0); index++)
+            for (int index = 0; index < pendingTreeDecisionClips.Length; index++)
                 m_PendingTreeClipExits.Add(pendingTreeDecisionClips[index]);
             HasStopContext = hasStopContext;
             StopContext = stopContext;
@@ -660,12 +660,12 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         bool ValidateRestoredActiveClips(
-            IReadOnlyList<string> activeClipIds,
+            ReadOnlySpan<string> activeClipIds,
             TimelineRuntimePlaybackState state,
             FixedScalar cursorTime,
-            IReadOnlyList<string> exitedTreeDecisionClips)
+            ReadOnlySpan<string> exitedTreeDecisionClips)
         {
-            int suppliedCount = activeClipIds?.Count ?? 0;
+            int suppliedCount = activeClipIds.Length;
             if (state != TimelineRuntimePlaybackState.Running)
                 return suppliedCount == 0;
             int expectedCount = 0;
@@ -687,6 +687,14 @@ namespace BTSMTL.Timeline.Runtime
                     return false;
             }
             return expectedCount == suppliedCount;
+        }
+
+        static bool ContainsClip(ReadOnlySpan<string> clips, string clipId)
+        {
+            for (int index = 0; index < clips.Length; index++)
+                if (string.Equals(clips[index], clipId, StringComparison.Ordinal))
+                    return true;
+            return false;
         }
 
         internal static bool ContainsClip(IReadOnlyList<string> clips, string clipId)

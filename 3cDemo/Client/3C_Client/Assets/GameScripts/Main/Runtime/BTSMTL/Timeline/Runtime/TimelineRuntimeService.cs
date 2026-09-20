@@ -380,14 +380,14 @@ namespace BTSMTL.Timeline.Runtime
             CursorTime = playback.CursorTime;
             Cycle = playback.Cycle;
             SectionId = playback.SectionId;
-            ActiveClipIds = Copy(playback.ActiveClipIds);
+            ActiveClipIds = TimelineSnapshotItems<string>.CopyFrom(playback.ActiveClipIds);
             HasStopContext = playback.HasStopContext;
             StopContext = playback.StopContext;
             InitialBoundaryPending = playback.InitialBoundaryPending;
             TimeCarry = playback.TimeCarry;
             Control = playback.Control;
-            TreeDecisionExits = Copy(playback.ExitedTreeDecisionClips);
-            PendingTreeDecisionExits = Copy(playback.PendingTreeDecisionClips);
+            TreeDecisionExits = TimelineSnapshotItems<string>.CopyFrom(playback.ExitedTreeDecisionClips);
+            PendingTreeDecisionExits = TimelineSnapshotItems<string>.CopyFrom(playback.PendingTreeDecisionClips);
         }
 
         public TimelineRuntimePlaybackSnapshot(
@@ -402,14 +402,14 @@ namespace BTSMTL.Timeline.Runtime
             FixedScalar cursorTime,
             int cycle,
             string sectionId,
-            IReadOnlyList<string> activeClipIds,
+            TimelineSnapshotItems<string> activeClipIds,
             bool hasStopContext,
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending,
             int timeCarry,
             AbilityTimelinePlaybackControl control,
-            IReadOnlyList<string> treeDecisionExits,
-            IReadOnlyList<string> pendingTreeDecisionExits,
+            TimelineSnapshotItems<string> treeDecisionExits,
+            TimelineSnapshotItems<string> pendingTreeDecisionExits,
             int tickRate)
         {
             TickRate = tickRate;
@@ -425,14 +425,14 @@ namespace BTSMTL.Timeline.Runtime
             CursorTime = cursorTime;
             Cycle = cycle;
             SectionId = sectionId ?? string.Empty;
-            ActiveClipIds = Copy(activeClipIds);
+            ActiveClipIds = activeClipIds;
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             InitialBoundaryPending = initialBoundaryPending;
             TimeCarry = timeCarry;
             Control = control;
-            TreeDecisionExits = Copy(treeDecisionExits);
-            PendingTreeDecisionExits = Copy(pendingTreeDecisionExits);
+            TreeDecisionExits = treeDecisionExits;
+            PendingTreeDecisionExits = pendingTreeDecisionExits;
         }
 
         public string Schema { get; }
@@ -447,25 +447,17 @@ namespace BTSMTL.Timeline.Runtime
         public FixedScalar CursorTime { get; }
         public int Cycle { get; }
         public string SectionId { get; }
-        public IReadOnlyList<string> ActiveClipIds { get; }
+        public TimelineSnapshotItems<string> ActiveClipIds { get; }
         public bool HasStopContext { get; }
         public TimelinePlaybackStopContext StopContext { get; }
         public bool InitialBoundaryPending { get; }
         public int TimeCarry { get; }
         public AbilityTimelinePlaybackControl Control { get; }
-        public IReadOnlyList<string> TreeDecisionExits { get; }
-        public IReadOnlyList<string> PendingTreeDecisionExits { get; }
+        public TimelineSnapshotItems<string> TreeDecisionExits { get; }
+        public TimelineSnapshotItems<string> PendingTreeDecisionExits { get; }
         public int TickRate { get; }
 
-        static IReadOnlyList<string> Copy(IReadOnlyList<string> values)
-        {
-            if (values == null || values.Count == 0)
-                return Array.Empty<string>();
-            var result = new string[values.Count];
-            for (int index = 0; index < result.Length; index++)
-                result[index] = values[index];
-            return Array.AsReadOnly(result);
-        }
+
     }
 
     public sealed class TimelineRuntimeRestoreCandidate
@@ -530,9 +522,9 @@ namespace BTSMTL.Timeline.Runtime
                     m_Snapshot.TimeCarry,
                     m_Snapshot.Control,
                     m_Snapshot.SectionId,
-                    m_Snapshot.ActiveClipIds,
-                    m_Snapshot.TreeDecisionExits,
-                    m_Snapshot.PendingTreeDecisionExits,
+                    m_Snapshot.ActiveClipIds.Span,
+                    m_Snapshot.TreeDecisionExits.Span,
+                    m_Snapshot.PendingTreeDecisionExits.Span,
                     m_Snapshot.HasStopContext,
                     m_Snapshot.StopContext,
                     m_Snapshot.InitialBoundaryPending))

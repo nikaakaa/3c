@@ -591,3 +591,10 @@
 - 非空集合仍由快照独立持有，只读值复制不会把播放列表借给历史状态；本批没有增加缓存／池／第二快照入口。字段和手写编码顺序未改变，不改变快照wire schema。集合复制、外层角色状态重建和Restore candidate对象仍有分配，需要继续按真实持有寿命处理，不能只复用一份可变数组。
 - 同步核对时另一个任务已提交f47dfb6bd清理快照更新LINQ，本批保留其索引循环，不重复改写或计入本批工作；仅更新两种角色状态的快照有效性校验。自动替换因该并行提交中止后，已补齐Float32校验并重新编译，未覆盖其改动。
 - 最终Unity编译及域重载完成（1789928587753），Editor idle、控制台零错误，git diff --check通过。未新增测试，未执行快照恢复或运行分配采样，完整热路径0 GC仍未完成。
+
+## 两层Timeline快照共享不可变集合值
+- 对应0.7：新增正式TimelineSnapshotItems<T>值合同，内部数组只在CopyFrom运行列表时建立，外部仅能按索引或ReadOnlySpan读取，空集合为默认值。TimelineRuntimePlaybackSnapshot与AbilityTimelineRuntimeSnapshot的活动Clip、退出记录和活动TreeClip统一使用该类型，删除各自Copy辅助方法、ReadOnlyCollection包装与适配时的重复数组复制。
+- Native快照捕获从播放列表复制一次；Host转为Ability快照直接传递已固定集合，活动TreeClip从原服务复制一次。Ability转回Native也直接传递固定集合；Restore入口与校验改用ReadOnlySpan，TreeClip服务按具体集合值读取，不通过IReadOnlyList装箱。没有借用可变运行数组，也没有添加池或第二快照表。
+- Fixed／Float32解码仍在原编码链构造固定集合，写入字段与顺序不变。公开构造合同不再接收可为null的列表，合法空集合使用默认集合值；删除先前活动Clip的null元素替换，正式内容身份按原输入保留，异常身份仍由恢复内容校验拒绝，不做兼容归一化。
+- 首次从非空运行列表捕获仍分配数组，解码临时数组、外层角色状态重建和Restore候选对象仍有分配；本批关闭的是包装与两层适配重复复制，未将其描述为完整快照0 GC。
+- Unity编译及最终域重载完成（1789928943159），Editor idle、控制台零错误，git diff --check通过；未新增测试，未进行快照Restore运行或内存采样。

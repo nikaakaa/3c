@@ -283,13 +283,13 @@ namespace ThirdPersonSimulation.Fixed
 
         void ActivateGrantedTags(PortableActiveEffectState active)
         {
-            m_State.SetTagSource($"effect:{active.Handle}", active.Spec.Definition.GrantedTags);
+            m_State.SetTagSource(GameplayTagSourceIdentity.EffectHandle(active.Handle), active.Spec.Definition.GrantedTags);
         }
 
         void DeactivatePersistent(PortableActiveEffectState active)
         {
             AddAttributeChanges(m_State.RemoveModifiersByEffect(active.Handle));
-            m_State.RemoveTagSource($"effect:{active.Handle}");
+            m_State.RemoveTagSource(GameplayTagSourceIdentity.EffectHandle(active.Handle));
         }
 
         void ExecuteNumericComponent(

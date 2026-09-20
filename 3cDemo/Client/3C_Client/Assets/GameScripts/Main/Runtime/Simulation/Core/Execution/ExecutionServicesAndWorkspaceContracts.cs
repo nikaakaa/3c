@@ -308,10 +308,17 @@ namespace ThirdPersonSimulation
         {
             if (actionInstanceId == 0)
                 throw new ArgumentOutOfRangeException(nameof(actionInstanceId));
-            const string prefix = "action:";
+            return Format("action:", actionInstanceId, CultureInfo.InvariantCulture);
+        }
+
+        public static string EffectHandle(ulong effectHandle) =>
+            Format("effect:", effectHandle, CultureInfo.CurrentCulture);
+
+        static string Format(string prefix, ulong value, IFormatProvider provider)
+        {
             Span<char> characters = stackalloc char[prefix.Length + 20];
             prefix.AsSpan().CopyTo(characters);
-            actionInstanceId.TryFormat(characters.Slice(prefix.Length), out int written, provider: CultureInfo.InvariantCulture);
+            value.TryFormat(characters.Slice(prefix.Length), out int written, provider: provider);
             return new string(characters.Slice(0, prefix.Length + written));
         }
     }

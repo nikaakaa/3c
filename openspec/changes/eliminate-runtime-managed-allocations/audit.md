@@ -512,6 +512,15 @@
 - 取舍：每个定义增加一个长期字符串引用清单，换取取消每次激活的组件扫描、排序树和树节点创建；容量由实际内容精确决定，没有任意上限或旁路配置。目录准备仍可分配，SetTagSource、来源字符串和其它效果记录仍有分配。
 - 四个目标文件修改前均无其它未提交修改，编辑前未发现 csc／bee 编译进程。Fixed／Float32 portable 各自编译零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过；未新增测试、未刷新或控制共享 Unity、未做效果运行对比或 Player 分配采样。
 
+## 2026-09-20 效果标签来源键统一栈格式化
+
+对应 tasks.md 的 2.17，与代码同步提交。
+
+- 两数值域 ActivateGrantedTags／DeactivatePersistent 原分别插值 effect: 与 ulong handle，在当前 C# 9 编译路径经过数值格式化装箱。四处迁移至已有 GameplayTagSourceIdentity 的 EffectHandle，和 ActionInstance 共用私有栈格式化实现，最终只建立键字符串。
+- 容量仍由固定前缀长度与 ulong 最大十进制 20 位确定。ActionInstance 保留零值拒绝和 InvariantCulture；EffectHandle 沿旧插值保留 CurrentCulture 及原零值可格式化行为，不新增业务约束或把不同键类型混用。
+- 其它 effect:effectId 是效果定义目录身份，非活动效果 handle，本次未迁移。激活与移除读取相同格式化规则，标签清单和来源存储不变；最终键仍有分配，没有引入跨步字符串缓存或改变事务 owner。
+- Fixed／Float32 portable 分别编译零警告零错误，按规定构建后 shutdown 均成功，diff 空白检查通过；编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity、未做运行身份对比或 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

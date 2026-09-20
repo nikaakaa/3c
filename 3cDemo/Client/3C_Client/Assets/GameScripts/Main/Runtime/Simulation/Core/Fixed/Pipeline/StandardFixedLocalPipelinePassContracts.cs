@@ -27,6 +27,7 @@ namespace ThirdPersonSimulation.Fixed
             new[]
             {
                 FixedLocalInputSourcePortContract.Requirement,
+                Target(FixedPipelineRuntimePortIds.CharacterRuntime, FixedPipelineRuntimePortIds.CharacterRuntimeSchema),
                 Target(FixedPipelineRuntimePortIds.CommittedObservation, FixedPipelineRuntimePortIds.CommittedObservationSchema)
             });
 
@@ -41,7 +42,10 @@ namespace ThirdPersonSimulation.Fixed
                 Consume(SimulationPipelineProducts.TypedIngress),
                 Produce(SimulationPipelineProducts.ExecutionPlan)
             },
-            Array.Empty<SimulationPipelinePortRequirement>());
+            new[]
+            {
+                Target(FixedPipelineRuntimePortIds.CharacterRuntime, FixedPipelineRuntimePortIds.CharacterRuntimeSchema)
+            });
 
         static readonly SimulationPipelinePassDescriptor s_LocalImmediateOutput = Create(
             LocalImmediateOutputPassId,

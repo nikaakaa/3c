@@ -368,3 +368,12 @@
 - 两类消息仍完整重新编码，保留原字段顺序、schema、尾部 RequireComplete、基线 ActorId 与 BodyHash 检查及不匹配 InvalidDataException 文本。公开 WriteInput／WriteBaseline 仍为发送和保存消费者产生独立数组；没有使用哈希替代字节比较或放宽验证。
 - 只删除输入和基线每次 canonical 比较的一份完整数组。重新编码 writer／流、基线 CopyCharacterStateBytes、解码对象及公开结果仍分配；未修改基线或回滚存储寿命。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity、未做协议运行对比或 Player 分配采样。
+
+## 2026-09-20 权威输入解码枚举装箱清理
+
+对应 tasks.md 的 5.25，与代码同步提交。
+
+- ServerAuthoritativeCanonicalCodec 的泛型 ReadEnum 仅用于输入来源和输入值类型，先 Enum.ToObject 产生枚举对象，再 Enum.IsDefined(Type, object) 检查。删除该入口后，来源按 LocalLogic／Authoritative／Replay 显式比较；输入值直接转换并进入既有解码 switch。
+- 已核对 Float32 SimulationInputValueKind 的全部六个成员与解码分支一致。未知字节进入 switch 默认分支时仍抛原泛型校验的 InvalidDataException 和数值文本，不再保留原本不可达的 Unsupported 分支。未知来源仍在读取 clockId 前拒绝，未知输入值仍在读取值数据前拒绝。
+- 不改变来源身份、输入排序、值解码、canonical 重编码或协议 schema；减少每条来源和每个输入值的反射转换／装箱入口，未宣称整个输入对象创建无分配。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。

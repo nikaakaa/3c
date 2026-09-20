@@ -44,7 +44,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             var reader = Reader(bytes, InputMagic, InputSchemaVersion, "ServerAuthoritative canonical input");
             SimulationNumericProfile profile = SimulationNumericProfileCodec.Read(reader);
-            var sourceKind = ReadEnum<SimulationTickSourceKind>(reader.ReadByte(), "input source kind");
+            var sourceKind = ReadSourceKind(reader.ReadByte());
             string clockId = reader.ReadString();
             ulong sourceTick = reader.ReadUInt64();
             string inputSource = reader.ReadString();
@@ -199,7 +199,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         static SimulationInputValue ReadInputValue(CanonicalReader reader)
         {
             string inputId = reader.ReadString();
-            var kind = ReadEnum<SimulationInputValueKind>(reader.ReadByte(), "input value kind");
+            var kind = (SimulationInputValueKind)reader.ReadByte();
             return kind switch
             {
                 SimulationInputValueKind.Boolean => SimulationInputValue.FromBoolean(inputId, reader.ReadBoolean()),
@@ -210,7 +210,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 SimulationInputValueKind.ActionTargetSnapshot => SimulationInputValue.FromActionTargetSnapshot(
                     inputId,
                     new SimulationActionTargetSnapshot(reader.ReadString(), reader.ReadVector3(), reader.ReadYaw())),
-                _ => throw new InvalidDataException($"Unsupported input value kind '{kind}'.")
+                _ => throw new InvalidDataException($"Canonical input value kind '{(byte)kind}' is invalid.")
             };
         }
 
@@ -275,11 +275,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return count;
         }
 
-        static T ReadEnum<T>(byte value, string label) where T : struct, Enum
+        static SimulationTickSourceKind ReadSourceKind(byte value)
         {
-            var typed = (T)Enum.ToObject(typeof(T), value);
-            if (!Enum.IsDefined(typeof(T), typed))
-                throw new InvalidDataException($"Canonical {label} '{value}' is invalid.");
+            var typed = (SimulationTickSourceKind)value;
+            if (typed != SimulationTickSourceKind.LocalLogic &&
+                typed != SimulationTickSourceKind.Authoritative &&
+                typed != SimulationTickSourceKind.Replay)
+                throw new InvalidDataException($"Canonical input source kind '{value}' is invalid.");
             return typed;
         }
 

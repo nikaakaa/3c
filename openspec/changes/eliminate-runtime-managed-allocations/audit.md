@@ -799,3 +799,11 @@
 - 检查公共 EquipmentStateAggregateCodec.Read：目录 hash、槽位数量／身份、装备贡献、局部状态类型及待定变更均沿原验证；读取产生字符串、数值、数组和 EquipmentStateAggregate，不保存字节片段。没有改变装备对象、安装／撤销流程或事务所有权。
 - 存在标记、长度前缀、字段顺序、角色 Write／ComputeHash 共用 WriteCanonical 均不变。失败沿外层 writer 的原 using 离开，不发布部分结果；不承诺异常后的临时流内容相同。控制状态、Timeline 快照和装备内部 LINQ／集合复制未在本轮修改。
 - 编辑前两目标文件无其它未提交修改，未发现 csc／bee；Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。未新增测试、未操作共享 Unity，未做字节对比、装备恢复运行或 Player 分配采样。
+## 2026-09-20 装备状态枚举构造与解码规则统一
+
+对应 tasks.md 的 2.26。
+
+- EquipmentRuntimeStateValue 提供内部 IsValidKind，明确接受八个正式成员；值构造、EquipmentProgramLocalState 定义构造和 EquipmentStateAggregateCodec 值类型读取共用规则。PendingEquipmentChange 提供内部 IsValidState，构造和 codec 的变更状态读取共用 Pending／Committed／Cancelled 三成员规则。
+- 删除 codec 的 ReadEnum 泛型反射入口，两个消费者分别进入强类型读取函数；原 Enum.ToObject／Enum.IsDefined 装箱不再发生于这些入口。默认零值仍拒绝，构造保留 ArgumentException，解码保留 InvalidDataException 及原类型名／字节错误文本，读取和短路顺序不变。
+- 不删除构造层校验，因为直接构造与反序列化均为实际路径；只统一成员判断，不改装备事务、准备／提交／撤销行为和局部状态存储。其它装备枚举和准备编译器仍有校验分配，不宣称装备全链完成。
+- 两目标文件修改前无其它未提交修改，编辑前无 csc／bee；最终 Core portable 编译零警告零错误并成功关闭构建服务，diff 空白检查通过。未新增测试、未操作共享 Unity，未做装备运行或 Player 分配采样。

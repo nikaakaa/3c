@@ -202,7 +202,7 @@ namespace ThirdPersonSimulation
             EquipmentRuntimeStateValueKind valueKind,
             EquipmentRuntimeStateValue defaultValue)
         {
-            if (!featureId.IsValid || !stateId.IsValid || !Enum.IsDefined(typeof(EquipmentRuntimeStateValueKind), valueKind) ||
+            if (!featureId.IsValid || !stateId.IsValid || !EquipmentRuntimeStateValue.IsValidKind(valueKind) ||
                 defaultValue == null || defaultValue.Kind != valueKind)
                 throw new ArgumentException("Equipment Program local state is invalid.");
             FeatureId = featureId;
@@ -579,7 +579,7 @@ namespace ThirdPersonSimulation
             ulong resolvedTick,
             PendingEquipmentChangeState state)
         {
-            if (!changeId.IsValid || !slotId.IsValid || beginTick == 0 || !Enum.IsDefined(typeof(PendingEquipmentChangeState), state))
+            if (!changeId.IsValid || !slotId.IsValid || beginTick == 0 || !IsValidState(state))
                 throw new ArgumentException("Pending Equipment Change is invalid.");
             if (state == PendingEquipmentChangeState.Pending && resolvedTick != 0 ||
                 state != PendingEquipmentChangeState.Pending && resolvedTick < beginTick)
@@ -604,6 +604,8 @@ namespace ThirdPersonSimulation
         public ulong BeginTick { get; }
         public ulong ResolvedTick { get; }
         public PendingEquipmentChangeState State { get; }
+        internal static bool IsValidState(PendingEquipmentChangeState state) =>
+            state is PendingEquipmentChangeState.Pending or PendingEquipmentChangeState.Committed or PendingEquipmentChangeState.Cancelled;
         public bool IsValid => ChangeId.IsValid;
         public bool IsPending => IsValid && State == PendingEquipmentChangeState.Pending;
 
@@ -926,7 +928,7 @@ namespace ThirdPersonSimulation
             {
                 EquipmentFeatureId featureId = new EquipmentFeatureId(reader.ReadString());
                 EquipmentLocalStateId stateId = new EquipmentLocalStateId(reader.ReadString());
-                EquipmentRuntimeStateValueKind valueKind = ReadEnum<EquipmentRuntimeStateValueKind>(reader.ReadByte());
+                EquipmentRuntimeStateValueKind valueKind = ReadStateValueKind(reader.ReadByte());
                 EquipmentProgramLocalState definition = layout.RequireLocalState(featureId, stateId);
                 if (definition.ValueKind != valueKind)
                     throw new InvalidDataException($"Equipment local state '{featureId}/{stateId}' value kind does not match the runtime layout.");
@@ -971,7 +973,7 @@ namespace ThirdPersonSimulation
                 reader.ReadUInt64(),
                 reader.ReadUInt64(),
                 reader.ReadUInt64(),
-                ReadEnum<PendingEquipmentChangeState>(reader.ReadByte()));
+                ReadChangeState(reader.ReadByte()));
             layout.RequireSlot(change.SlotId);
             if (change.FromEquipmentId.IsValid) layout.RequireItem(change.FromEquipmentId);
             if (change.ToEquipmentId.IsValid) layout.RequireItem(change.ToEquipmentId);
@@ -981,10 +983,19 @@ namespace ThirdPersonSimulation
         static EquipmentId ReadOptionalEquipment(string value) => string.IsNullOrEmpty(value) ? default : new EquipmentId(value);
         static EquipmentFeatureId ReadOptionalFeature(string value) => string.IsNullOrEmpty(value) ? default : new EquipmentFeatureId(value);
         static EquipmentVisualBindingId ReadOptionalVisual(string value) => string.IsNullOrEmpty(value) ? default : new EquipmentVisualBindingId(value);
-        static T ReadEnum<T>(byte value) where T : struct, Enum
+        static EquipmentRuntimeStateValueKind ReadStateValueKind(byte value)
         {
-            T result = (T)Enum.ToObject(typeof(T), value);
-            return Enum.IsDefined(typeof(T), result) ? result : throw new InvalidDataException($"Equipment state enum '{typeof(T).Name}' value '{value}' is invalid.");
+            var result = (EquipmentRuntimeStateValueKind)value;
+            return EquipmentRuntimeStateValue.IsValidKind(result) ? result :
+                throw new InvalidDataException($"Equipment state enum '{nameof(EquipmentRuntimeStateValueKind)}' value '{value}' is invalid.");
+        }
+
+        static PendingEquipmentChangeState ReadChangeState(byte value)
+        {
+            var result = (PendingEquipmentChangeState)value;
+            return PendingEquipmentChange.IsValidState(result)
+                ? result
+                : throw new InvalidDataException($"Equipment state enum '{nameof(PendingEquipmentChangeState)}' value '{value}' is invalid.");
         }
     }
 

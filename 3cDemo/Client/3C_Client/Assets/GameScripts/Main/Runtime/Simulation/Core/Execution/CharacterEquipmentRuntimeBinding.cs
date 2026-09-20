@@ -65,7 +65,7 @@ namespace ThirdPersonSimulation
             double z,
             string identity)
         {
-            if (!Enum.IsDefined(typeof(EquipmentRuntimeStateValueKind), kind) ||
+            if (!IsValidKind(kind) ||
                 double.IsNaN(x) || double.IsInfinity(x) ||
                 double.IsNaN(y) || double.IsInfinity(y) ||
                 double.IsNaN(z) || double.IsInfinity(z))
@@ -83,6 +83,11 @@ namespace ThirdPersonSimulation
         }
 
         public EquipmentRuntimeStateValueKind Kind { get; }
+        internal static bool IsValidKind(EquipmentRuntimeStateValueKind kind) =>
+            kind is EquipmentRuntimeStateValueKind.Boolean or EquipmentRuntimeStateValueKind.Int32 or
+                EquipmentRuntimeStateValueKind.UInt64 or EquipmentRuntimeStateValueKind.Scalar or
+                EquipmentRuntimeStateValueKind.Vector2 or EquipmentRuntimeStateValueKind.Vector3 or
+                EquipmentRuntimeStateValueKind.Yaw or EquipmentRuntimeStateValueKind.Identity;
         public bool Boolean { get; }
         public int Int32 { get; }
         public ulong UInt64 { get; }

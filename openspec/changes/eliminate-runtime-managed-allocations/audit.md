@@ -667,3 +667,12 @@
 - WorldCapability 底层为 ulong，后端 Capability 为 ushort，WorldFeature 底层为 int。保留 checked 转换，使 WorldFeature 非法负值仍以 OverflowException 拒绝，而不是转换成大的正数改变哈希；不承诺框架生成的异常文本逐字相同。合法值及组合标记的十进制输入不变，没有替换为枚举名称。
 - 权威 Pipeline 身份由 SessionConfigurationDefinition 构造，世界身份由端点构造／解析入口产生；其余为描述准备入口。本轮清理的是这些构造的重复装箱，未证明逐帧频率，不计为稳态逐帧收益。最终数字字符串、哈希拼接及描述对象仍分配，未改变身份协议或增加缓存。
 - 五个目标文件修改前均无其它未提交修改，修改前未发现 csc／bee 编译进程。Core portable 编译零警告零错误，build-server shutdown 成功，修改范围 diff 空白检查通过；未新增测试、未操作共享 Unity、未做哈希运行对比或 Player 分配采样。
+## 2026-09-20 运行时诊断记录枚举校验清理
+
+对应 tasks.md 的 7.6，并补齐 2.21 的 Float32 编译证据。
+
+- Fixed／Float32 SimulationSessionContracts 中四类诊断记录及 Pipeline Pass 阶段校验原调用 Enum.IsDefined(Type, object)，每次到达该校验都会装箱枚举。改为 C# 9 常量模式直接匹配声明成员：边界 14 种、Pipeline 14 种、模型 6 种、世界 4 种、阶段 4 种。默认零值和其它非法值继续拒绝，不使用可能接纳编号缺口的数值范围。
+- 保留各检查的原位置、短路次序、异常文本，Pass 阶段仍仅在 PassCompleted／PassFailed 时校验。构造字段、数值域、发布接口、订阅者及诊断开关均未改变，没有新增日志链、分配缓存或跨步所有权。
+- 已检索到正式生产者：FixedPipelineTransaction、DotRecastWorldSolver、DeterministicKccWorldSolver.Diagnostics、RollbackOutputCommitter 和权威／预测 Pass。记录本身是 struct，本轮不把 struct 的 new 视为对象分配；调用方字符串、发布存储及采样器内部开销仍未治理和实测。
+- 两文件修改前无其它未提交修改，未发现 csc／bee 编译进程。Fixed／Float32 portable 分别零警告零错误，每次 build-server shutdown 成功，本切片 diff 空白检查通过。并行 GraphValueRuntime 已恢复到可编译状态，未由本任务修改，因此 2.21 的 Float32 编译阻断已解除；历史失败证据保留。
+- 未新增测试、未主动刷新或控制共享 Unity、未做运行诊断对比或 Player 分配采样；7.1 等整体验收范围继续未完成。

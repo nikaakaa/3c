@@ -148,7 +148,20 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!numericProfile.IsValid || !tick.IsValid ||
                 string.IsNullOrEmpty(source.ClockId) || source.SourceTick == 0 ||
-                !Enum.IsDefined(typeof(SimulationBoundaryTraceKind), kind))
+                kind is not (SimulationBoundaryTraceKind.TickStarted or
+                    SimulationBoundaryTraceKind.RestoreRequested or
+                    SimulationBoundaryTraceKind.RestoreApplied or
+                    SimulationBoundaryTraceKind.EvaluateStarted or
+                    SimulationBoundaryTraceKind.EvaluateCompleted or
+                    SimulationBoundaryTraceKind.WorldBatchStarted or
+                    SimulationBoundaryTraceKind.WorldBatchCompleted or
+                    SimulationBoundaryTraceKind.FinalizeStarted or
+                    SimulationBoundaryTraceKind.FinalizeCompleted or
+                    SimulationBoundaryTraceKind.OutputPlanValidated or
+                    SimulationBoundaryTraceKind.StatePublished or
+                    SimulationBoundaryTraceKind.CommitStarted or
+                    SimulationBoundaryTraceKind.CommitCompleted or
+                    SimulationBoundaryTraceKind.TickFailed))
                 throw new ArgumentException("Simulation boundary trace identity is incomplete.");
             NumericProfile = numericProfile;
             Tick = tick;
@@ -223,12 +236,28 @@ namespace ThirdPersonSimulation.Fixed
             StableHash snapshotHash = default)
         {
             if (!session.IsValid || !pipeline.IsValid || string.IsNullOrEmpty(source.ClockId) || source.SourceTick == 0 ||
-                !Enum.IsDefined(typeof(SimulationPipelineTraceKind), kind) || stepCount < 0 || elapsedStopwatchTicks < 0)
+                kind is not (SimulationPipelineTraceKind.OuterTickStarted or
+                    SimulationPipelineTraceKind.IngressCompleted or
+                    SimulationPipelineTraceKind.ScheduleResolved or
+                    SimulationPipelineTraceKind.RestorePrepared or
+                    SimulationPipelineTraceKind.RestoreApplied or
+                    SimulationPipelineTraceKind.StepCompleted or
+                    SimulationPipelineTraceKind.EgressCompleted or
+                    SimulationPipelineTraceKind.StatePublished or
+                    SimulationPipelineTraceKind.CommitCompleted or
+                    SimulationPipelineTraceKind.PassCompleted or
+                    SimulationPipelineTraceKind.PassFailed or
+                    SimulationPipelineTraceKind.SnapshotCaptured or
+                    SimulationPipelineTraceKind.SnapshotRestored or
+                    SimulationPipelineTraceKind.OuterTickFailed) || stepCount < 0 || elapsedStopwatchTicks < 0)
             {
                 throw new ArgumentException("Pipeline trace identity is incomplete.");
             }
             bool passTrace = kind == SimulationPipelineTraceKind.PassCompleted || kind == SimulationPipelineTraceKind.PassFailed;
-            if (passTrace && (!Enum.IsDefined(typeof(SimulationPipelinePhase), phase) || !passId.IsValid || !passVersion.IsValid))
+            if (passTrace && (phase is not (SimulationPipelinePhase.Ingress or
+                    SimulationPipelinePhase.Schedule or
+                    SimulationPipelinePhase.Step or
+                    SimulationPipelinePhase.Egress) || !passId.IsValid || !passVersion.IsValid))
                 throw new ArgumentException("Pipeline Pass trace identity is incomplete.");
             bool snapshotTrace = kind == SimulationPipelineTraceKind.SnapshotCaptured || kind == SimulationPipelineTraceKind.SnapshotRestored;
             if (snapshotTrace && (string.IsNullOrWhiteSpace(snapshotParticipant) || !snapshotHash.IsValid))
@@ -301,7 +330,12 @@ namespace ThirdPersonSimulation.Fixed
             bool success = true,
             ulong snapshotSequence = 0)
         {
-            if (!Enum.IsDefined(typeof(SimulationModelTraceKind), kind) || string.IsNullOrWhiteSpace(code) ||
+            if (kind is not (SimulationModelTraceKind.Identity or
+                    SimulationModelTraceKind.Transport or
+                    SimulationModelTraceKind.Queue or
+                    SimulationModelTraceKind.Correction or
+                    SimulationModelTraceKind.OutputDisposition or
+                    SimulationModelTraceKind.Failure) || string.IsNullOrWhiteSpace(code) ||
                 queueDepth < 0 || replayCount < 0)
             {
                 throw new ArgumentException("Simulation model trace is invalid.");
@@ -371,7 +405,10 @@ namespace ThirdPersonSimulation.Fixed
             string disposition = "",
             bool success = true)
         {
-            if (!Enum.IsDefined(typeof(SimulationWorldTraceKind), kind) || string.IsNullOrWhiteSpace(code) ||
+            if (kind is not (SimulationWorldTraceKind.Query or
+                    SimulationWorldTraceKind.Projection or
+                    SimulationWorldTraceKind.Collision or
+                    SimulationWorldTraceKind.Failure) || string.IsNullOrWhiteSpace(code) ||
                 !tick.IsValid || !actorId.IsValid || string.IsNullOrWhiteSpace(solverId.Value) ||
                 string.IsNullOrWhiteSpace(solverVersion) || traversalCount < 0 || elapsedStopwatchTicks < 0)
             {

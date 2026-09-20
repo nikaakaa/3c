@@ -15,7 +15,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             WorldCapability authoritySolverCapabilities,
             WorldFeature authoritySolverFeatures)
         {
-            if (!productId.IsValid || !Enum.IsDefined(typeof(ServerAuthoritativeAuthorityHostRouteKind), routeKind) ||
+            if (!productId.IsValid || !ServerAuthoritativeAuthorityHostIdentity.IsValidRouteKind(routeKind) ||
                 string.IsNullOrWhiteSpace(launchKind) || manifestSchemaVersion <= 0 ||
                 string.IsNullOrEmpty(authoritySolverId.Value) || string.IsNullOrWhiteSpace(authoritySolverVersion) ||
                 authoritySolverCapabilities == WorldCapability.None)

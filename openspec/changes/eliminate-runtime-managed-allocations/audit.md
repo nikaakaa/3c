@@ -650,3 +650,12 @@
 - 删除上述入口对 Values 视图的创建需求，不将缓存视图误报为每次必分配。SortedDictionary 枚举内部存储、标签集合与最终数组仍可能分配，未新增池或容量配置，不宣称全链 0 GC。
 - 编辑前两目标文件和本治理文档没有其它未提交修改，未发现 csc／bee 进程。Fixed portable 编译零警告零错误；Float32 portable 因另一个任务未跟踪的 Float32GraphValueRuntime.cs 第 270 行起语法错误失败，共 37 个错误，读取现场确认存在方法外语句及截断字符串，未修改该文件。两次构建均执行 build-server shutdown 成功。
 - 本切片 diff 空白检查通过；未新增测试、未控制或刷新共享 Unity、未做 Player 采样。Float32 的编译证据待共享 GraphValueRuntime 修复后补齐，整体目标继续未完成。
+## 2026-09-20 权威主机路由身份校验清理
+
+对应 tasks.md 的 5.42。
+
+- ServerAuthoritativeAuthorityHostIdentity 构造及 IsValid 原通过 Enum.IsDefined(Type, object) 检查路由，产品描述构造重复同一规则。统一调用身份类型的内部 IsValidRouteKind，明确接受 ExternalAuthorityWorker／InProcessAuthorityScene，其它值（包括默认零值）继续拒绝。
+- 读取正式消费者确认 IsValid 由端点合同构造、控制会话主机验证以及 FantasyEndpointRuntime 的就绪判断和主机身份比对调用；本次仅修改公共身份和产品描述文件，不修改网络框架、会话推进或路由行为。没有声称这些调用每帧都执行，频率未采样。
+- 三处删除枚举参数装箱及反射校验，保留短路次序、房间和产品身份条件、异常文本、公开合同、序列化和哈希内容。不存在新增存储、缓存或容量配置，进程角色等其它枚举校验未纳入此次完成范围。
+- 编辑前两个目标文件无其它未提交修改，未发现 csc／bee 编译进程。Core portable 编译零警告零错误，build-server shutdown 成功，本切片 diff 空白检查通过。未新增测试、未控制或刷新共享 Unity、未做 Player 采样。
+- 同轮复查上一切片 Float32 编译，仍在并行 Float32GraphValueRuntime.cs 第 270 行起失败（37 个语法错误），构建服务已清理，未修改该现场。2.21 的 Float32 编译证据仍待补齐，不阻止本次独立 Core 源码改动。

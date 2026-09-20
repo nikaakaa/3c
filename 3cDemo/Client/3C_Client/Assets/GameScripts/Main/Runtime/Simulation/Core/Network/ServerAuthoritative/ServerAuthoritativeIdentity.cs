@@ -109,7 +109,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ServerAuthoritativeAuthorityHostRouteKind routeKind,
             ServerAuthoritativeRoomId roomId)
         {
-            if (!Enum.IsDefined(typeof(ServerAuthoritativeAuthorityHostRouteKind), routeKind) || !roomId.IsValid)
+            if (!IsValidRouteKind(routeKind) || !roomId.IsValid)
                 throw new ArgumentException("ServerAuthoritative Authority Host identity is incomplete.");
             HostProductId = hostProductId.IsValid
                 ? hostProductId
@@ -124,7 +124,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public ServerAuthoritativeAuthorityHostRouteKind RouteKind { get; }
         public ServerAuthoritativeRoomId RoomId { get; }
         public bool IsValid => HostProductId.IsValid && !string.IsNullOrEmpty(HostId) &&
-                               Enum.IsDefined(typeof(ServerAuthoritativeAuthorityHostRouteKind), RouteKind) && RoomId.IsValid;
+                               IsValidRouteKind(RouteKind) && RoomId.IsValid;
+
+        internal static bool IsValidRouteKind(ServerAuthoritativeAuthorityHostRouteKind routeKind) =>
+            routeKind == ServerAuthoritativeAuthorityHostRouteKind.ExternalAuthorityWorker ||
+            routeKind == ServerAuthoritativeAuthorityHostRouteKind.InProcessAuthorityScene;
         public bool Equals(ServerAuthoritativeAuthorityHostIdentity other) =>
             HostProductId.Equals(other.HostProductId) &&
             string.Equals(HostId, other.HostId, StringComparison.Ordinal) &&

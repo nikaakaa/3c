@@ -331,3 +331,12 @@
 - 保留全部写入字段、顺序、版本字符串和哈希格式；不改检查点 m_StateBytes 的独立持有、StateBytes 复制读取、ValidateState 或恢复流程。布局计算属于准备阶段，内容哈希随检查点创建执行，两者没有混报为每帧热点。
 - 此步仍有 writer、流、SHA 对象、摘要数组和最终哈希字符串分配。没有把检查点改为借用可变存储，也没有进入并行 Timeline 或回滚事务生命周期。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定禁用构建服务器与共享编译并结束 shutdown；diff 空白检查通过。编辑前未发现 csc／bee 编译进程，未新增测试、未主动刷新或控制 Unity，未做运行哈希对比或 Player 采样。
+
+## 2026-09-20 权威同步数据报编码副本与类型装箱清理
+
+对应 tasks.md 的 5.21，与代码同步提交。
+
+- ServerAuthoritativeDatagramPacket 原在构造时复制持有 payload，ServerAuthoritativeGameplayDatagramCodec.Write 又调用 CopyPayload 克隆后立即写流。现在 packet 提供 ReadOnlySpan Payload，编码同步写入该只读视图，删除每次编码的中转数组。packet 的构造复制及最终数据报数组仍保留。
+- 客户端通道和 AuthoritySourceRuntime 仍有 CopyPayload 的独立数据消费者，保持此真实入口，未把解码或跨步数据擅自改成借用存储。既有版本、身份字段、长度前缀、MTU 检查和发送队列数据寿命不变。
+- ServerAuthoritativeDatagramHeader 构造与 codec.Read 共用 IsSupportedKind，显式接受 Hello、HelloAck、Command、Snapshot 四种既有枚举值，删除两处 Enum.IsDefined(Type, object) 装箱；各自仍抛原 ArgumentException／InvalidDataException，不更改非法值行为。
+- ServerAuthoritative.Transport portable 连带 Core／Float32／ServerAuthoritative 编译零警告零错误，按规定构建后 shutdown 成功；diff 空白检查通过。编辑前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做网络联调或 Player 采样。解码中间数组、writer、最终包和队列分配仍未完成。

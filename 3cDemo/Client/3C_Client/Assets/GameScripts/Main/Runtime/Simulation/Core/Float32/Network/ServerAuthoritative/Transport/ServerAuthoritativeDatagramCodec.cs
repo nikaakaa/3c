@@ -50,7 +50,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             ulong packetSequence,
             int payloadLength)
         {
-            if (!Enum.IsDefined(typeof(ServerAuthoritativeDatagramKind), kind) || packetSequence == 0 || payloadLength < 0)
+            if (!ServerAuthoritativeGameplayDatagramCodec.IsSupportedKind(kind) || packetSequence == 0 || payloadLength < 0)
                 throw new ArgumentException("Gameplay datagram header is invalid.");
             Identity = identity;
             Kind = kind;
@@ -78,6 +78,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         }
 
         public ServerAuthoritativeDatagramHeader Header { get; }
+        public ReadOnlySpan<byte> Payload => m_Payload;
         public byte[] CopyPayload() => (byte[])m_Payload.Clone();
     }
 
@@ -85,6 +86,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
     {
         const uint Magic = 0x44504153;
         public const int ProtocolVersion = 1;
+
+        internal static bool IsSupportedKind(ServerAuthoritativeDatagramKind kind) =>
+            kind == ServerAuthoritativeDatagramKind.DataPlaneHello ||
+            kind == ServerAuthoritativeDatagramKind.DataPlaneHelloAck ||
+            kind == ServerAuthoritativeDatagramKind.Command ||
+            kind == ServerAuthoritativeDatagramKind.Snapshot;
 
         public static byte[] Write(ServerAuthoritativeDatagramPacket packet, int maximumBytes)
         {
@@ -101,7 +108,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             writer.WriteString(packet.Header.Identity.PlayerId.Value);
             writer.WriteString(packet.Header.Identity.ActorId.Value);
             writer.WriteUInt64(packet.Header.PacketSequence);
-            writer.WriteBytes(packet.CopyPayload());
+            writer.WriteBytes(packet.Payload);
             byte[] bytes = writer.ToArray();
             if (bytes.Length > maximumBytes)
                 throw new InvalidDataException($"Gameplay datagram size '{bytes.Length}' exceeds budget '{maximumBytes}'.");
@@ -119,7 +126,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             if (version != ProtocolVersion)
                 throw new InvalidDataException($"Gameplay datagram protocol version '{version}' is unsupported.");
             var kind = (ServerAuthoritativeDatagramKind)reader.ReadByte();
-            if (!Enum.IsDefined(typeof(ServerAuthoritativeDatagramKind), kind))
+            if (!IsSupportedKind(kind))
                 throw new InvalidDataException($"Gameplay datagram kind '{kind}' is unsupported.");
             var identity = new ServerAuthoritativeDatagramIdentity(
                 new ServerAuthoritativeRoomId(reader.ReadString()),

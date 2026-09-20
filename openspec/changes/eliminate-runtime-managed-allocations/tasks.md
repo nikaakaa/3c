@@ -63,6 +63,7 @@
 - [x] 5.17 分片重组保留不可变 packet 引用，完成时从只读 payload 拼接最终结果，删除逐片克隆及无消费者的 DatagramPacket.CopyPayload；保留重复片判定、长度校验和最终消息独立数组
 - [x] 5.18 CanonicalWriter 整数写入改用按数值宽度确定的栈缓冲，删除每个 writer 的八字节托管数组，保留小端编码和同步写流；writer、流和最终数组分配仍未完成
 - [x] 5.19 CanonicalWriter 哈希统一复用 SimulationCanonicalPayloadHash 的片段入口，使用 string.Create 直接填充最终小写十六进制字符串，删除重复格式化与中间字符数组；SHA 对象和摘要字节数组仍未完成
+- [x] 5.20 网络检查点布局与内容哈希直接使用 writer.ComputeHash，删除两处仅为哈希生成的完整 ToArray 副本；检查点持有、编码字段和恢复生命周期不变
 
 ## 6. UI、资源、渲染和生命周期
 

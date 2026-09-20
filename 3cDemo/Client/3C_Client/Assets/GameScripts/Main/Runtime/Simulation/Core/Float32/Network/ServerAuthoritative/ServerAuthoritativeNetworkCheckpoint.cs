@@ -34,7 +34,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     writer.WriteString(ability.StateSchemaHash.ToString());
                 }
             }
-            LayoutIdentity = SimulationCanonicalPayloadHash.Compute(writer.ToArray());
+            LayoutIdentity = writer.ComputeHash();
         }
 
         public Float32CharacterRuntime CharacterRuntime => m_CharacterRuntime;
@@ -160,7 +160,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteUInt64(baseline.ConfirmedInputSequence);
             writer.WriteUInt64(baseline.ConfirmedEventHorizon.Sequence);
             writer.WriteBytes(stateBytes);
-            return SimulationCanonicalPayloadHash.Compute(writer.ToArray());
+            return writer.ComputeHash();
         }
     }
 

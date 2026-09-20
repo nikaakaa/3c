@@ -322,3 +322,12 @@
 - 哈希输入仍是原始完整字节，无新前缀。writer 的可见缓冲沿原 Offset 和流 Length 传入片段，非公开缓冲流仍沿原 ToArray 路径取得实际内容，未读取 Capacity 或改变 Position。此处没有改变任何快照保存、恢复、归还流程。
 - 十六进制转换使用 string.Create 和无捕获 static 回调，直接填充最终字符串的全部字符；保留原高低半字节次序、小写字母及 StableHash 的 64 字符校验。每次少一个中间字符数组，首次回调委托初始化、SHA 对象、摘要 byte[] 和最终字符串仍存在。
 - portable Core 零警告零错误，按规定构建后 shutdown 成功；Unity 当前引用下独立编译完整 Core 也通过，确认 string.Create 与静态回调在项目编译环境可用。diff 空白检查通过，编辑前未发现 csc／bee 编译进程；未新增测试、未控制或刷新共享 Unity，未做运行哈希对比或 Player 分配采样。
+
+## 2026-09-20 网络检查点哈希副本清理
+
+对应 tasks.md 的 5.20，与代码同步提交。
+
+- NetworkCheckpointLayout 构造及 NetworkCheckpoint.ComputeHash 原写入 CanonicalWriter 后 ToArray，仅把该副本传给 SimulationCanonicalPayloadHash.Compute。现两处直接使用 writer.ComputeHash，后者已进入同一 SHA-256 实现，默认 writer 的流缓冲可直接读取，删除完整输出副本。
+- 保留全部写入字段、顺序、版本字符串和哈希格式；不改检查点 m_StateBytes 的独立持有、StateBytes 复制读取、ValidateState 或恢复流程。布局计算属于准备阶段，内容哈希随检查点创建执行，两者没有混报为每帧热点。
+- 此步仍有 writer、流、SHA 对象、摘要数组和最终哈希字符串分配。没有把检查点改为借用可变存储，也没有进入并行 Timeline 或回滚事务生命周期。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定禁用构建服务器与共享编译并结束 shutdown；diff 空白检查通过。编辑前未发现 csc／bee 编译进程，未新增测试、未主动刷新或控制 Unity，未做运行哈希对比或 Player 采样。

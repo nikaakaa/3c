@@ -1959,3 +1959,12 @@
 - BuildPlan 先确定 restore／replay 边界，再计算 replayStepCount 与 includeCurrentStep，按准确数量创建最终 steps 和 mappings 数组。replay 通过整数索引填入原连续 tick 序列，planSequence 仍从 1 严格递增；current step 的 Forward／Current 分类、typed ingress 和 paced NoStep 条件保持。
 - 两只最终数组直接交给 SimulationSessionExecutionPlan.FromOwnedArrays。删除每个 rollback outer tick 的 steps List、mappings List、各自增长存储及 plan 内二次复制；每个实际 step、Actor input 数组和最终 plan 数组仍按执行计划寿命存在。
 - ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 rollback replay 运行对比或 Player 分配采样。
+
+## 2026-09-21 预测权威 schedule 最终数组
+
+对应 tasks.md 的 5.83。
+
+- ServerAuthoritative prediction schedule 的 plan step 数严格等于 replay.Count 加 currentStepCount，后者已被正式限制在 0～2；source mapping 只在 current 或 replay 实际存在时各创建一条。原实现分别用 List 逐项加入，ExecutionPlan 再复制到最终数组。
+- BuildPlan 按准确数量创建 steps 与 mappings 数组并以索引填充，replay/current 顺序、tick 递增、input sequence floor、planSequence、ObservedWorldConstraintFrame 和 requirement 判定保持。数组直接转交 SimulationSessionExecutionPlan.FromOwnedArrays。
+- 删除每个预测 outer tick 的 steps List、mappings List、各自增长存储及 plan 二次复制。selectedRemoteBodies 是随后提交给独立产品的业务输出，本步继续使用原 selectedBodies List 与只读包装，不混淆其寿命。
+- ThirdPersonSimulation.Float32 与 ServerAuthoritative portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 prediction replay 运行对比或 Player 分配采样。

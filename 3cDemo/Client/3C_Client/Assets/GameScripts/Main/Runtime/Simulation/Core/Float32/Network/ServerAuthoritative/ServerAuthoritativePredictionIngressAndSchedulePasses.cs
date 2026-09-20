@@ -537,12 +537,16 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new InvalidOperationException("Prediction Schedule owner does not match the Character roster.");
             if (currentStepCount < 0 || currentStepCount > 2)
                 throw new ArgumentOutOfRangeException(nameof(currentStepCount));
-            var steps = new List<Float32SimulationStep>();
+            var steps = new Float32SimulationStep[replay.Count + currentStepCount];
+            var mappings = new SimulationPipelineStepSourceMapping[
+                (currentStepCount > 0 ? 1 : 0) + (replay.Count > 0 ? 1 : 0)];
             var selectedBodies = new List<CharacterBodySample>();
             string replayClock = $"{context.Source.ClockId}.replay";
             ulong planSequence = 1;
             ulong nextTick = restore?.Tick.Value ?? context.CurrentCompletedTick;
             ulong inputSequenceFloor = Math.Max(lastPredictedInputSequence, m_State.ConfirmedInputSequence);
+            int stepIndex = 0;
+            int mappingIndex = 0;
             for (int i = 0; i < replay.Count; i++)
             {
                 ServerAuthoritativePredictionHistoryRecord record = replay[i];
@@ -551,17 +555,21 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     SimulationTickSourceKind.Replay,
                     replayClock,
                     record.Input.SourceTick);
-                steps.Add(CreateStep(
+                steps[stepIndex++] = CreateStep(
                     new SimulationTick(checked(++nextTick)),
                     SimulationPipelineStepExecutionKind.Replay,
                     replaySource,
                     planSequence++,
                     record.Input,
-                    record.ObservedWorldConstraints));
+                    record.ObservedWorldConstraints);
             }
-            var mappings = new List<SimulationPipelineStepSourceMapping>();
             if (currentStepCount > 0)
-                mappings.Add(new SimulationPipelineStepSourceMapping(current.Input.TickSource.ClockId, context.Source.ClockId, current.Input.TickSource.Kind));
+            {
+                mappings[mappingIndex++] = new SimulationPipelineStepSourceMapping(
+                    current.Input.TickSource.ClockId,
+                    context.Source.ClockId,
+                    current.Input.TickSource.Kind);
+            }
             ulong nextInputSequence = Math.Max(current.InputSequence, checked(inputSequenceFloor + 1));
             for (int i = 0; i < currentStepCount; i++)
             {
@@ -577,18 +585,23 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ObservedWorldConstraintFrame observed = observedContactEnabled
                     ? selection.ToObservedWorldConstraints(contactShapeConfigurationHash)
                     : ObservedWorldConstraintFrame.Empty(tick);
-                steps.Add(CreateStep(
+                steps[stepIndex++] = CreateStep(
                     tick,
                     SimulationPipelineStepExecutionKind.Current,
                     rebound.Input.TickSource,
                     planSequence++,
                     rebound,
-                    observed));
+                    observed);
                 selectedBodies.AddRange(selection.ToBodySamples());
             }
             if (replay.Count > 0)
-                mappings.Add(new SimulationPipelineStepSourceMapping(replayClock, context.Source.ClockId, SimulationTickSourceKind.Replay));
-            SimulationSessionPlanRequirement requirements = steps.Count == 0
+            {
+                mappings[mappingIndex] = new SimulationPipelineStepSourceMapping(
+                    replayClock,
+                    context.Source.ClockId,
+                    SimulationTickSourceKind.Replay);
+            }
+            SimulationSessionPlanRequirement requirements = steps.Length == 0
                 ? SimulationSessionPlanRequirement.WorkingState |
                   SimulationSessionPlanRequirement.OutputDisposition
                 : SimulationSessionPlanRequirement.WorkingState |
@@ -596,8 +609,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                   SimulationSessionPlanRequirement.StateHash |
                   SimulationSessionPlanRequirement.Snapshot;
             selectedRemoteBodies = selectedBodies.AsReadOnly();
-            return new SimulationSessionExecutionPlan<Float32SimulationStep>(
-                steps.Count == 0
+            return SimulationSessionExecutionPlan<Float32SimulationStep>.FromOwnedArrays(
+                steps.Length == 0
                     ? SimulationSessionExecutionPlanStatus.NoStep
                     : SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,

@@ -20,7 +20,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedAbilityOperationControlRuntime : IFixedAbilityOperationControlRuntime, IAbilityTreeClipInvoker
     {
         readonly IFixedAbilityExecutionServices m_Services;
-        readonly Dictionary<string, OperationHandle> m_TreeClipEntries;
+        readonly Dictionary<(string ClipAuthoringId, int Hook), OperationHandle> m_TreeClipEntries;
         readonly string m_AbilityId;
         readonly FixedTreeClipInvokerLink m_TreeClipLink = new FixedTreeClipInvokerLink();
         OperationControlRuntime<FixedAbilityExecutionTarget> m_Runtime;
@@ -53,7 +53,7 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool InvokeTreeClip(in AbilityTreeClipInvocation invocation)
         {
-            if (!m_TreeClipEntries.TryGetValue(TreeClipKey(invocation.ClipAuthoringId, invocation.Hook), out OperationHandle entry))
+            if (!m_TreeClipEntries.TryGetValue((invocation.ClipAuthoringId, (int)invocation.Hook), out OperationHandle entry))
             {
                 if (invocation.Hook != AbilityTreeClipHook.OnEnable)
                     return false;
@@ -78,12 +78,9 @@ namespace ThirdPersonSimulation.Fixed
             return true;
         }
 
-        static string TreeClipKey(string clipAuthoringId, AbilityTreeClipHook hook) =>
-            string.Concat(clipAuthoringId, "|", hook.ToString("G"));
-
-        static Dictionary<string, OperationHandle> BuildTreeClipEntries(FixedGameplayAbilityExecutionData data)
+        static Dictionary<(string ClipAuthoringId, int Hook), OperationHandle> BuildTreeClipEntries(FixedGameplayAbilityExecutionData data)
         {
-            var entries = new Dictionary<string, OperationHandle>(StringComparer.Ordinal);
+            var entries = new Dictionary<(string ClipAuthoringId, int Hook), OperationHandle>();
             foreach (ProgramSourceMapEntry entry in data.SourceMap)
             {
                 if (entry.TargetKind != ProgramSourceTargetKind.GraphInvocation ||
@@ -93,7 +90,7 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     continue;
                 }
-                if (!entries.TryAdd(TreeClipKey(entry.InvocationCallerClipId, hook), new OperationHandle(entry.TargetIndex)))
+                if (!entries.TryAdd((entry.InvocationCallerClipId, (int)hook), new OperationHandle(entry.TargetIndex)))
                     throw new InvalidDataException(
                         $"Ability '{data.AbilityId.Value}' has duplicate TreeClip invocation '{entry.InvocationCallerClipId}/{entry.InvocationCallerId}'.");
             }

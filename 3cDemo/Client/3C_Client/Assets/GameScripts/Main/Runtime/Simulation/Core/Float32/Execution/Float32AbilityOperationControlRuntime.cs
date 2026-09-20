@@ -22,7 +22,7 @@ namespace ThirdPersonSimulation
     internal sealed class Float32AbilityOperationControlRuntime : IFloat32AbilityOperationControlRuntime, IAbilityTreeClipInvoker
     {
         readonly IFloat32AbilityExecutionServices m_Services;
-        readonly Dictionary<string, OperationHandle> m_TreeClipEntries;
+        readonly Dictionary<(string ClipAuthoringId, int Hook), OperationHandle> m_TreeClipEntries;
         readonly string m_AbilityId;
         readonly Float32TreeClipInvokerLink m_TreeClipLink;
         OperationControlRuntime<Float32AbilityExecutionTarget> m_Runtime;
@@ -54,7 +54,7 @@ namespace ThirdPersonSimulation
         internal void EndEvaluation() => m_Services.EndEvaluation();
         public bool InvokeTreeClip(in AbilityTreeClipInvocation invocation)
         {
-            if (!m_TreeClipEntries.TryGetValue(TreeClipKey(invocation.ClipAuthoringId, invocation.Hook), out OperationHandle entry))
+            if (!m_TreeClipEntries.TryGetValue((invocation.ClipAuthoringId, (int)invocation.Hook), out OperationHandle entry))
             {
                 if (invocation.Hook != AbilityTreeClipHook.OnEnable)
                     return false;
@@ -79,12 +79,9 @@ namespace ThirdPersonSimulation
             return true;
         }
 
-        static string TreeClipKey(string clipAuthoringId, AbilityTreeClipHook hook) =>
-            string.Concat(clipAuthoringId, "|", hook.ToString("G"));
-
-        static Dictionary<string, OperationHandle> BuildTreeClipEntries(Float32GameplayAbilityExecutionData data)
+        static Dictionary<(string ClipAuthoringId, int Hook), OperationHandle> BuildTreeClipEntries(Float32GameplayAbilityExecutionData data)
         {
-            var entries = new Dictionary<string, OperationHandle>(StringComparer.Ordinal);
+            var entries = new Dictionary<(string ClipAuthoringId, int Hook), OperationHandle>();
             foreach (ProgramSourceMapEntry entry in data.SourceMap)
             {
                 if (entry.TargetKind != ProgramSourceTargetKind.GraphInvocation ||
@@ -94,7 +91,7 @@ namespace ThirdPersonSimulation
                 {
                     continue;
                 }
-                if (!entries.TryAdd(TreeClipKey(entry.InvocationCallerClipId, hook), new OperationHandle(entry.TargetIndex)))
+                if (!entries.TryAdd((entry.InvocationCallerClipId, (int)hook), new OperationHandle(entry.TargetIndex)))
                     throw new InvalidDataException(
                         $"Ability '{data.AbilityId.Value}' has duplicate TreeClip invocation '{entry.InvocationCallerClipId}/{entry.InvocationCallerId}'.");
             }

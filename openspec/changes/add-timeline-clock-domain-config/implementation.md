@@ -566,3 +566,9 @@
 - 序号是本地候选身份，不加入确定性内容或恢复快照；与既有Advance候选序号同样在运行对象存活期间单调递增。Host现有外层pending令牌保留各自调用边界，未增加注册表。
 - 检查OnDestroy调用返回值：未配置可选回调时Invoker返回false，实际图执行Failure抛异常；因此未把可选回调缺失改成停止失败。异常仍进入原DiscardStop及Simulation候选丢弃链，不承诺任意外部副作用回滚。
 - Unity编译与最终域重载完成（1789927482420），Editor idle、控制台零错误，git diff --check通过。未新增测试，未进行陈旧停止请求注入或运行内存采样，完整热路径0 GC仍未闭合。
+
+## TreeClip回调查找不再构造组合字符串
+- 对应0.7：Fixed／Float32的InvokeTreeClip此前每次查找都调用hook.ToString("G")并拼接ClipAuthoringId与分隔符。两条链改用同一字段组成的ValueTuple<string,int>作为原字典键，初始化和运行查询一致；编号直接来自AbilityTreeClipHook，字符串仍按Ordinal相等，不生成临时字符串或装箱枚举。
+- 删除TreeClipKey格式化函数，不新增缓存或第二查找表。正式SourceMap继续保留原调用身份，初始化时解析Hook；缺OnEnable报错、缺可选钩子返回false及实际执行Failure抛异常的语义保持原样。首次创建字典仍有分配，本批仅关闭回调查找的逐次分配，不代表完整0 GC。
+- 下一项待核对：分支撤销／修正使Marker相机输出退役后，同generation重现是否能够从原事件记账恢复请求，且不重复执行已交付Marker图；不能因为动画播放已恢复就推定Marker输出也恢复。
+- Unity编译与最终域重载完成（1789927645501），Editor idle、控制台零错误，git diff --check通过；未新增测试，未进行运行分配采样。

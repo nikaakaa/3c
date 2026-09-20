@@ -1522,3 +1522,12 @@
 - inputs 动态类型为数组时，现 Clone 取得独立副本，在副本上按 ActorId 排序并直接作为 IReadOnlyList 保存。调用方数组仍不暴露、不共享，重复 Actor 校验及后续 Actor 派生不变。其它 IEnumerable 继续复制到独立 List 后排序。
 - 数组输入的每个 step 删除一个 List 对象，以克隆数组作为原来 List 底层数组的等价元素存储；数组复制本身仍保留，step 不借用上游可变数据。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 step 运行对比或 Player 分配采样。
+
+## 2026-09-21 ExecutionPlan 数组存储
+
+对应 tasks.md 的 2.74。
+
+- 本地 Fixed／Float32 单步与 ServerAuthoritative 权威单步使用新建数组传入一个 step 和一个 source mapping；原 plan 将两数组分别复制到 List，mapping 再排序。
+- plan 现对非空数组输入分别 Clone，steps 直接只读保存，mapping 在克隆数组上按 StepClockId／SourceKind 排序后保存；调用方数组仍不共享。非数组 IEnumerable 继续复制到独立 List，所有 plan 状态、tick、mapping、roster 和 sequence 校验不变。
+- 数组输入的 executable plan 删除 steps 与 source mappings 两个 List 对象，以克隆数组作为各自原 List 底层存储的等价结果。传入数组和克隆数组仍各自存在，本项没有改变公开构造器所有权语义。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 plan 运行对比或 Player 分配采样。

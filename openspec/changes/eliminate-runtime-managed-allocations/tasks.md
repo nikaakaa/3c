@@ -120,6 +120,8 @@
 
 - [x] 2.73 TargetSimulationPipelineStep 对数组 inputs 克隆后原地排序并直接只读保存，删除本地及其它数组输入 step 的 List 外壳；非数组枚举继续复制到独立 List
 
+- [x] 2.74 ExecutionPlan 对非空数组 steps／source mappings 克隆后直接只读保存，mapping 在副本上排序，删除本地与权威单步计划的两个 List 外壳；非数组枚举路径不变
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

@@ -410,6 +410,8 @@ namespace ThirdPersonSimulation
         {
             if (steps == null || steps is IReadOnlyCollection<TStep> collection && collection.Count == 0)
                 return Array.Empty<TStep>();
+            if (steps is TStep[] source)
+                return (TStep[])source.Clone();
             return new List<TStep>(steps);
         }
 
@@ -422,12 +424,19 @@ namespace ThirdPersonSimulation
             {
                 return Array.Empty<SimulationPipelineStepSourceMapping>();
             }
-            var values = new List<SimulationPipelineStepSourceMapping>(source);
-            values.Sort((left, right) =>
+            IReadOnlyList<SimulationPipelineStepSourceMapping> values;
+            if (source is SimulationPipelineStepSourceMapping[] sourceArray)
             {
-                int clock = string.CompareOrdinal(left.StepClockId, right.StepClockId);
-                return clock != 0 ? clock : left.SourceKind.CompareTo(right.SourceKind);
-            });
+                var array = (SimulationPipelineStepSourceMapping[])sourceArray.Clone();
+                Array.Sort(array, CompareSourceMappings);
+                values = array;
+            }
+            else
+            {
+                var list = new List<SimulationPipelineStepSourceMapping>(source);
+                list.Sort(CompareSourceMappings);
+                values = list;
+            }
             for (int i = 0; i < values.Count; i++)
             {
                 if (!string.Equals(values[i].OuterClockId, outerClockId, StringComparison.Ordinal) ||
@@ -438,6 +447,14 @@ namespace ThirdPersonSimulation
                 }
             }
             return values;
+        }
+
+        static int CompareSourceMappings(
+            SimulationPipelineStepSourceMapping left,
+            SimulationPipelineStepSourceMapping right)
+        {
+            int clock = string.CompareOrdinal(left.StepClockId, right.StepClockId);
+            return clock != 0 ? clock : left.SourceKind.CompareTo(right.SourceKind);
         }
 
         static void RequireSourceMapping(TStep step, IReadOnlyList<SimulationPipelineStepSourceMapping> mappings)

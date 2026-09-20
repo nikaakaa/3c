@@ -573,8 +573,7 @@ namespace BTSMTL.Timeline.Runtime
                     activeClipIds,
                     state,
                     cursorTime,
-                    exitedTreeDecisionClips,
-                    pendingTreeDecisionClips))
+                    exitedTreeDecisionClips))
                 return false;
             m_CursorTime = cursorTime;
             m_Cycle = cycle;
@@ -613,41 +612,38 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<string> activeClipIds,
             TimelineRuntimePlaybackState state,
             FixedScalar cursorTime,
-            IReadOnlyList<string> exitedTreeDecisionClips,
-            IReadOnlyList<string> pendingTreeDecisionClips)
+            IReadOnlyList<string> exitedTreeDecisionClips)
         {
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (int index = 0; index < (activeClipIds?.Count ?? 0); index++)
+            int suppliedCount = activeClipIds?.Count ?? 0;
+            if (state != TimelineRuntimePlaybackState.Running)
+                return suppliedCount == 0;
+            int expectedCount = 0;
+            for (int clipIndex = 0; clipIndex < Content.Clips.Count; clipIndex++)
             {
-                string clipId = activeClipIds[index] ?? string.Empty;
-                if (!seen.Add(clipId))
-                    return false;
-                bool found = false;
-                for (int clipIndex = 0; clipIndex < Content.Clips.Count; clipIndex++)
-                {
-                    TimelineContentClip clip = Content.Clips[clipIndex];
-                    if (!string.Equals(clip.AuthoringId, clipId, StringComparison.Ordinal))
-                        continue;
-                    found = true;
-                    bool treeDecision = clip.ExitSource == TimelineClipExitSource.TreeDecision;
-                    bool exited = treeDecision &&
-                                  (exitedTreeDecisionClips.Contains(clip.AuthoringId) ||
-                                   pendingTreeDecisionClips.Contains(clip.AuthoringId));
-                    if (clip.TrackMuted || !clip.ExecutionPolicy.IsLogic ||
-                        clip.StartTime > cursorTime || exited ||
-                        !treeDecision && cursorTime >= clip.EndTime)
-                        return false;
-                    break;
-                }
-                if (!found)
+                TimelineContentClip clip = Content.Clips[clipIndex];
+                bool active = !clip.TrackMuted && clip.ExecutionPolicy.IsLogic && clip.StartTime <= cursorTime &&
+                    (clip.ExitSource == TimelineClipExitSource.TreeDecision
+                        ? !ContainsClip(exitedTreeDecisionClips, clip.AuthoringId)
+                        : cursorTime < clip.EndTime);
+                if (!active)
+                    continue;
+                expectedCount++;
+                int occurrences = 0;
+                for (int index = 0; index < suppliedCount; index++)
+                    if (string.Equals(activeClipIds[index], clip.AuthoringId, StringComparison.Ordinal))
+                        occurrences++;
+                if (occurrences != 1)
                     return false;
             }
-            if (state == TimelineRuntimePlaybackState.Prepared ||
-                state == TimelineRuntimePlaybackState.Stopping ||
-                state == TimelineRuntimePlaybackState.Completed ||
-                state == TimelineRuntimePlaybackState.Stopped)
-                return (activeClipIds?.Count ?? 0) == 0;
-            return true;
+            return expectedCount == suppliedCount;
+        }
+
+        static bool ContainsClip(IReadOnlyList<string> clips, string clipId)
+        {
+            for (int index = 0; index < clips.Count; index++)
+                if (string.Equals(clips[index], clipId, StringComparison.Ordinal))
+                    return true;
+            return false;
         }
 
         void RequirePendingAdvance(TimelineRuntimeAdvanceResult advance)

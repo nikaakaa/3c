@@ -105,19 +105,25 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationActorState restoredActor = m_Restored.Actors[i];
                 SimulationActorState previousActor = FindActor(m_Previous, restoredActor.ActorId);
                 IAbilityTimelineRuntime timeline = m_Roster[i].TimelineRuntime;
-                var restoredHandles = new HashSet<int>();
                 for (int s = 0; s < restoredActor.State.TimelineSnapshots.Count; s++)
                 {
                     AbilityTimelineRuntimeSnapshot snapshot = restoredActor.State.TimelineSnapshots[s];
                     timeline.ApplyRestore(snapshot);
-                    restoredHandles.Add(snapshot.RuntimeHandle);
                 }
                 if (previousActor == null)
                     continue;
                 for (int s = 0; s < previousActor.State.TimelineSnapshots.Count; s++)
                 {
                     int runtimeHandle = previousActor.State.TimelineSnapshots[s].RuntimeHandle;
-                    if (restoredHandles.Contains(runtimeHandle))
+                    bool restored = false;
+                    for (int restoredIndex = 0; restoredIndex < restoredActor.State.TimelineSnapshots.Count; restoredIndex++)
+                    {
+                        if (restoredActor.State.TimelineSnapshots[restoredIndex].RuntimeHandle != runtimeHandle)
+                            continue;
+                        restored = true;
+                        break;
+                    }
+                    if (restored)
                         continue;
                     AbilityTimelineStopResult stop = timeline.Stop(runtimeHandle, 0);
                     if (stop.Pending != null)

@@ -322,3 +322,9 @@
 - 删除快照中的 ActiveTreeClipAssociations 双份派生数据及其构造／比较链：图关联完全由固定内容、时间、cycle 和 TreeDecision 集合导出；旧 Ability 恢复曾传空关联而与动态构造结果冲突。直接 runtime schema 升 v6，不提供兼容读取。
 - 尚未证明完整完成：撤销后同一 generation 再次成为最终分支时的重接入、prepared 图执行、所有热路径 0 GC 与倍率／暂停仍需继续处理；第7节暂不整体勾选。
 - Unity 编译与域重载完成（1789890365305），实例 e852139597e42532 idle、非 Play，错误日志为零；git diff --check 通过。未新增测试。
+
+## Restore 活动集合校验收尾
+- 活动 Clip 校验改为与正式内容计算出的完整集合比较，拒绝遗漏、重复及多余项，删除每次恢复创建的 HashSet 与接口集合的 LINQ Contains 枚举。TreeDecision 待退出仍属于本步已提交活动集合，只有已退出列表决定排除，吻合下一步消费退出请求的顺序。
+- Fixed / Float32 恢复遍历直接扫描已有快照判断 handle 是否保留，删除每个 actor 临时 HashSet；未增加第二份持久状态。
+- 这是已有 Restore 修改的收尾，不能代表整个 Timeline 0 GC 完成。后续优先完成倍率／暂停、表现 Marker 执行和作者域／网格功能，不继续扩展无关恢复框架。
+- 本批脚本构建日志显示成功；域重载期间 MCP 暂时返回 503，尚未取得重载后的控制台结果。未新增测试。

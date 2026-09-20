@@ -487,3 +487,10 @@
 - 容量按各类正式 Clip／Marker 数、既有4096圈上限及每片段的Enter／Exit／Update上限计算；超限明确失败。循环内容会占用较大的初始化内存，此处不引入运行时扩容。场景参数求值补齐轨道静音和Logic域过滤，与其他逻辑轨道保持一致。
 - ActionCue和TreeClip诊断消费者改为直接索引值类型视图，不通过IReadOnlyList装箱。AdvanceResult及边界副本、调用身份哈希等仍有分配，完整0 GC仍未完成；本批未新增测试。
 - Unity脚本编译通过，最终域重载完成（1789922044951），Editor idle，控制台错误为零；git diff --check通过。同时补齐上一批连续Camera请求更新／Shot映射的重载后检查；未做运行内存采样，不宣称已实测全链路0 GC。
+
+## 推进结果值类型与边界缓冲统一
+- 对应0.7：AdvanceResult 改为值类型，活动片段和边界直接引用原候选／已提交结果缓冲，删除推进结果堆对象、两组ReadOnlyCollection／List副本以及上一批单独的活动／边界工作列表。边界原地排序使用初始化时创建的比较器；消费者按具体值类型视图索引，未增加接口装箱。
+- Commit／Discard 用 playback 引用与递增推进序号校验候选，丢弃后在同一逻辑tick重算也获得新序号，旧结果不能接受或丢弃新候选。推进序号只用于本机事务身份，不作为逻辑时间或存档状态。暂停复制当前活动身份到空候选结果，仍不遍历内容。
+- 本批编译先发现跨程序集可见性和三个原引用类型判断，已迁移为明确的IsValid合同。CharacterTimelinePendingAdvance包装和运行事件身份仍有分配，完整0 GC仍未完成。
+- Host 的 Commit／Discard 原先先按handle删除pending再调用底层；现先核对字典中的pending对象就是传入对象，避免同handle旧请求移除新候选。此处仍使用原pending注册表，不增加并行状态表。
+- Unity编译与最终域重载完成（1789922436006），Editor idle，控制台错误为零；git diff --check通过，未新增测试，未进行运行分配采样。

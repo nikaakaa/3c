@@ -353,7 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RuntimeHandle = runtimeHandle;
             Result = result;
             Status = status;
-            Progress = result == null ? default : new AbilityTimelineProgress(
+            Progress = !result.IsValid ? default : new AbilityTimelineProgress(
                 result.ContentIdentity,
                 result.ContentRevision,
                 result.Generation,
@@ -1161,7 +1161,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 throw new InvalidOperationException("Timeline advancement requires an initialized CharacterTimelineHost.");
             TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(handle);
             if (status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running)
-                return new CharacterTimelinePendingAdvance(handle, 0, null, MapTerminalStatus(status));
+                return new CharacterTimelinePendingAdvance(handle, 0, default, MapTerminalStatus(status));
             TimelineRuntimeAdvanceResult advance = m_Host.Advance(new TimelineRuntimePlaybackHandle(handle.Value), logicTick, tickCount, control);
             var pending = new CharacterTimelinePendingAdvance(handle, (int)handle.Value, advance, AbilityTimelineRuntimeStatus.Running);
             m_PendingAdvances[handle.Value] = pending;
@@ -1172,9 +1172,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (!IsInitialized)
                 throw new InvalidOperationException("Timeline commit requires an initialized CharacterTimelineHost.");
-            if (pending == null || !m_PendingAdvances.Remove(pending.Handle.Value))
+            if (pending == null || !m_PendingAdvances.TryGetValue(pending.Handle.Value, out CharacterTimelinePendingAdvance current) ||
+                !ReferenceEquals(current, pending))
                 return;
-            if (pending.Result != null && !m_Host.CommitAdvance(new TimelineRuntimePlaybackHandle(pending.Handle.Value), pending.Result))
+            m_PendingAdvances.Remove(pending.Handle.Value);
+            if (pending.Result.IsValid && !m_Host.CommitAdvance(new TimelineRuntimePlaybackHandle(pending.Handle.Value), pending.Result))
                 throw new InvalidOperationException($"Timeline advance '{pending.Handle.Value}' could not be committed.");
         }
 
@@ -1182,9 +1184,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (!IsInitialized)
                 throw new InvalidOperationException("Timeline discard requires an initialized CharacterTimelineHost.");
-            if (pending == null || !m_PendingAdvances.Remove(pending.Handle.Value))
+            if (pending == null || !m_PendingAdvances.TryGetValue(pending.Handle.Value, out CharacterTimelinePendingAdvance current) ||
+                !ReferenceEquals(current, pending))
                 return;
-            if (pending.Result != null && !m_Host.DiscardAdvance(new TimelineRuntimePlaybackHandle(pending.Handle.Value), pending.Result))
+            m_PendingAdvances.Remove(pending.Handle.Value);
+            if (pending.Result.IsValid && !m_Host.DiscardAdvance(new TimelineRuntimePlaybackHandle(pending.Handle.Value), pending.Result))
                 throw new InvalidOperationException($"Timeline advance '{pending.Handle.Value}' could not be discarded.");
         }
 
@@ -1687,7 +1691,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             bool publishClips = m_Diagnostics.ShouldPublish(RuntimeTraceChannel.Timeline, RuntimeTraceEventKind.ClipActive);
             if (!publishTracks && !publishClips)
                 return;
-            IReadOnlyList<string> activeClipIds = evaluation.ActiveClipIds;
+            TimelineRuntimeSampleView<string> activeClipIds = evaluation.ActiveClipIds;
             for (int trackIndex = 0; trackIndex < active.Timeline.Tracks.Count; trackIndex++)
             {
                 Track track = active.Timeline.Tracks[trackIndex];

@@ -180,7 +180,7 @@ namespace BTSMTL.Timeline.Runtime
         public string ContentRevision { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelineRuntimeEvaluationResult Evaluation { get; }
-        public IReadOnlyList<string> ActiveClipIds { get; }
+        public TimelineRuntimeSampleView<string> ActiveClipIds { get; }
         public bool Completes { get; }
         public AbilityTimelinePlaybackControl Control { get; }
     }

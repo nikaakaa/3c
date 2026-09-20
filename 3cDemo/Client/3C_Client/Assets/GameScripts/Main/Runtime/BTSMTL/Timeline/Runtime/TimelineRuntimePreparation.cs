@@ -142,13 +142,11 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeClipBoundaryKind Kind { get; }
     }
 
-    public sealed class TimelineRuntimeAdvanceResult
+    public readonly struct TimelineRuntimeAdvanceResult
     {
-        readonly ReadOnlyCollection<string> m_ActiveClipIds;
-        readonly ReadOnlyCollection<TimelineRuntimeClipBoundary> m_Boundaries;
-
         internal TimelineRuntimeAdvanceResult(
             TimelineRuntimePlayback owner,
+            ulong advanceSequence,
             ulong generation,
             TimelineRuntimeAdvanceRequest request,
             FixedScalar previousTime,
@@ -157,12 +155,13 @@ namespace BTSMTL.Timeline.Runtime
             int cycle,
             int timeCarry,
             string sectionId,
-            IReadOnlyList<string> activeClipIds,
-            IReadOnlyList<TimelineRuntimeClipBoundary> boundaries,
+            TimelineRuntimeSampleView<string> activeClipIds,
+            TimelineRuntimeSampleView<TimelineRuntimeClipBoundary> boundaries,
             TimelineRuntimeEvaluationResult evaluation,
             bool completes)
         {
             Owner = owner;
+            AdvanceSequence = advanceSequence;
             Generation = generation;
             Request = request;
             PreviousTime = previousTime;
@@ -171,13 +170,14 @@ namespace BTSMTL.Timeline.Runtime
             Cycle = cycle;
             TimeCarry = timeCarry;
             SectionId = sectionId ?? string.Empty;
-            m_ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
-            m_Boundaries = new ReadOnlyCollection<TimelineRuntimeClipBoundary>(
-                new List<TimelineRuntimeClipBoundary>(boundaries ?? Array.Empty<TimelineRuntimeClipBoundary>()));
+            ActiveClipIds = activeClipIds;
+            Boundaries = boundaries;
             Evaluation = evaluation;
             Completes = completes;
         }
 
+        public bool IsValid => Owner != null;
+        internal ulong AdvanceSequence { get; }
         internal TimelineRuntimePlayback Owner { get; }
         internal TimelineRuntimeAdvanceRequest Request { get; }
         internal int TimeCarry { get; }
@@ -193,8 +193,8 @@ namespace BTSMTL.Timeline.Runtime
         public int PreviousCycle { get; }
         public int Cycle { get; }
         public string SectionId { get; }
-        public IReadOnlyList<string> ActiveClipIds => m_ActiveClipIds;
-        public IReadOnlyList<TimelineRuntimeClipBoundary> Boundaries => m_Boundaries;
+        public TimelineRuntimeSampleView<string> ActiveClipIds { get; }
+        public TimelineRuntimeSampleView<TimelineRuntimeClipBoundary> Boundaries { get; }
         public TimelineRuntimeEvaluationResult Evaluation { get; }
         public bool Completes { get; }
     }
@@ -206,14 +206,13 @@ namespace BTSMTL.Timeline.Runtime
         readonly List<string> m_ExitedTreeDecisionClips;
         readonly List<string> m_AdvanceInjectedTreeClipExits;
         readonly List<string> m_AdvanceProducedTreeClipExits;
-        readonly List<string> m_AdvanceActiveClipIds;
         readonly List<string> m_AdvanceExitedTreeDecisionClips;
-        readonly List<TimelineRuntimeClipBoundary> m_AdvanceBoundaries;
-        readonly Comparison<TimelineRuntimeClipBoundary> m_CompareBoundaries;
+        readonly IComparer<TimelineRuntimeClipBoundary> m_CompareBoundaries;
         readonly ReadOnlyCollection<string> m_ActiveClipIdsView;
         TimelineRuntimeEvaluationStorage m_CandidateEvaluation;
         TimelineRuntimeEvaluationStorage m_CommittedEvaluation;
         TimelineRuntimeAdvanceResult m_PendingAdvance;
+        ulong m_AdvanceSequence;
         TimelinePlaybackStopContext m_PendingStopContext;
         bool m_StopPending;
         FixedScalar m_CursorTime;
@@ -249,19 +248,8 @@ namespace BTSMTL.Timeline.Runtime
             m_ExitedTreeDecisionClips = new List<string>(clipCapacity);
             m_AdvanceInjectedTreeClipExits = new List<string>(clipCapacity);
             m_AdvanceProducedTreeClipExits = new List<string>(clipCapacity);
-            m_AdvanceActiveClipIds = new List<string>(clipCapacity);
             m_AdvanceExitedTreeDecisionClips = new List<string>(clipCapacity);
-            int boundaryCapacity = 0;
-            int traversals = PlaybackMode == TimelinePlaybackMode.Loop
-                ? TimelineRuntimeEvaluationSegments.MaximumCycleAdvance + 1 : 1;
-            for (int index = 0; index < Content.Clips.Count; index++)
-            {
-                TimelineContentClip clip = Content.Clips[index];
-                if (!clip.TrackMuted && clip.ExecutionPolicy.IsLogic)
-                    boundaryCapacity = checked(boundaryCapacity + 2 * traversals);
-            }
-            m_AdvanceBoundaries = new List<TimelineRuntimeClipBoundary>(boundaryCapacity);
-            m_CompareBoundaries = CompareBoundaries;
+            m_CompareBoundaries = Comparer<TimelineRuntimeClipBoundary>.Create(CompareBoundaries);
             m_ActiveClipIdsView = new ReadOnlyCollection<string>(m_ActiveClipIds);
             m_CandidateEvaluation = new TimelineRuntimeEvaluationStorage(this);
             m_CommittedEvaluation = new TimelineRuntimeEvaluationStorage(this);
@@ -356,7 +344,7 @@ namespace BTSMTL.Timeline.Runtime
             }
             if (!found)
                 return false;
-            if (m_PendingAdvance != null)
+            if (m_PendingAdvance.IsValid)
                 m_AdvanceProducedTreeClipExits.Add(trimmed);
             else
                 m_PendingTreeClipExits.Add(trimmed);
@@ -367,18 +355,21 @@ namespace BTSMTL.Timeline.Runtime
         {
             if (State != TimelineRuntimePlaybackState.Running)
                 throw new InvalidOperationException("Timeline playback must be running before Advance.");
-            if (m_PendingAdvance != null || m_StopPending)
+            if (m_PendingAdvance.IsValid || m_StopPending)
                 throw new InvalidOperationException("Timeline playback has an uncommitted Advance result.");
             if (request.PreviousTime != m_CursorTime)
                 throw new InvalidOperationException("Timeline interval does not begin at the committed cursor.");
             m_CandidateEvaluation.Clear();
+            ulong advanceSequence = checked(++m_AdvanceSequence);
             if (request.Control.IsPaused)
             {
                 if (request.TargetTime != m_CursorTime || request.TimeCarry != m_TimeCarry)
                     throw new InvalidOperationException("A paused Timeline interval must preserve the committed cursor and time carry.");
-                m_PendingAdvance = new TimelineRuntimeAdvanceResult(this, Generation, request,
+                for (int index = 0; index < m_ActiveClipIds.Count; index++)
+                    m_CandidateEvaluation.ActiveClipIds.Add(m_ActiveClipIds[index]);
+                m_PendingAdvance = new TimelineRuntimeAdvanceResult(this, advanceSequence, Generation, request,
                     m_CursorTime, m_CursorTime, m_Cycle, m_Cycle, m_TimeCarry, m_SectionId,
-                    m_ActiveClipIds, Array.Empty<TimelineRuntimeClipBoundary>(), new TimelineRuntimeEvaluationResult(m_CandidateEvaluation), false);
+                    m_CandidateEvaluation.ActiveClipIds.View, m_CandidateEvaluation.Boundaries.View, new TimelineRuntimeEvaluationResult(m_CandidateEvaluation), false);
                 return m_PendingAdvance;
             }
             FixedScalar duration = Content.Duration;
@@ -396,8 +387,7 @@ namespace BTSMTL.Timeline.Runtime
             else
                 nextTime = FixedScalar.Min(requestedTime, duration);
 
-            List<string> activeClipIds = m_AdvanceActiveClipIds;
-            activeClipIds.Clear();
+            TimelineRuntimeSampleBuffer<string> activeClipIds = m_CandidateEvaluation.ActiveClipIds;
             for (int index = 0; index < Content.Clips.Count; index++)
             {
                 TimelineContentClip clip = Content.Clips[index];
@@ -422,7 +412,7 @@ namespace BTSMTL.Timeline.Runtime
                     break;
                 sectionId = section.AuthoringId;
             }
-            List<TimelineRuntimeClipBoundary> boundaries = CollectBoundaries(
+            TimelineRuntimeSampleBuffer<TimelineRuntimeClipBoundary> boundaries = CollectBoundaries(
                 m_CursorTime,
                 m_Cycle,
                 nextTime,
@@ -475,6 +465,7 @@ namespace BTSMTL.Timeline.Runtime
             bool completes = !loop && nextTime >= duration && !hasUnexitedTreeDecisionClip;
             m_PendingAdvance = new TimelineRuntimeAdvanceResult(
                 this,
+                advanceSequence,
                 Generation,
                 request,
                 m_CursorTime,
@@ -483,8 +474,8 @@ namespace BTSMTL.Timeline.Runtime
                 nextCycle,
                 nextTimeCarry,
                 sectionId,
-                activeClipIds,
-                boundaries,
+                activeClipIds.View,
+                boundaries.View,
                 evaluation,
                 completes);
             return m_PendingAdvance;
@@ -515,7 +506,7 @@ namespace BTSMTL.Timeline.Runtime
                 if (!m_ExitedTreeDecisionClips.Contains(exitedClipId))
                     m_ExitedTreeDecisionClips.Add(exitedClipId);
             }
-            m_PendingAdvance = null;
+            m_PendingAdvance = default;
             for (int index = 0; index < m_AdvanceProducedTreeClipExits.Count; index++)
                 m_PendingTreeClipExits.Add(m_AdvanceProducedTreeClipExits[index]);
             m_AdvanceProducedTreeClipExits.Clear();
@@ -529,7 +520,7 @@ namespace BTSMTL.Timeline.Runtime
             RequirePendingAdvance(advance);
             m_AdvanceInjectedTreeClipExits.Clear();
             m_AdvanceProducedTreeClipExits.Clear();
-            m_PendingAdvance = null;
+            m_PendingAdvance = default;
             return true;
         }
 
@@ -540,7 +531,7 @@ namespace BTSMTL.Timeline.Runtime
                 State == TimelineRuntimePlaybackState.Stopped ||
                 State == TimelineRuntimePlaybackState.Failed)
                 return false;
-            if (m_StopPending || m_PendingAdvance != null)
+            if (m_StopPending || m_PendingAdvance.IsValid)
                 return false;
             m_PendingStopContext = context;
             m_StopPending = true;
@@ -549,7 +540,7 @@ namespace BTSMTL.Timeline.Runtime
 
         public bool CommitStop()
         {
-            if (!m_StopPending || m_PendingAdvance != null)
+            if (!m_StopPending || m_PendingAdvance.IsValid)
                 return false;
             StopContext = m_PendingStopContext;
             HasStopContext = true;
@@ -561,7 +552,7 @@ namespace BTSMTL.Timeline.Runtime
 
         public bool DiscardStop()
         {
-            if (!m_StopPending || m_PendingAdvance != null)
+            if (!m_StopPending || m_PendingAdvance.IsValid)
                 return false;
             m_StopPending = false;
             return true;
@@ -582,7 +573,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             m_CandidateEvaluation.Clear();
             m_CommittedEvaluation.Clear();
-            m_PendingAdvance = null;
+            m_PendingAdvance = default;
             m_StopPending = false;
             m_ActiveClipIds.Clear();
             if (State != TimelineRuntimePlaybackState.Disposed)
@@ -590,7 +581,7 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         internal bool HasPendingStop => m_StopPending;
-        internal bool HasPendingAdvance => m_PendingAdvance != null;
+        internal bool HasPendingAdvance => m_PendingAdvance.IsValid;
         internal bool InitialBoundaryPending => m_InitialBoundaryPending;
         internal IReadOnlyList<string> PendingTreeDecisionClips => m_PendingTreeClipExits;
 
@@ -608,7 +599,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending)
         {
-            if (m_PendingAdvance != null || m_StopPending)
+            if (m_PendingAdvance.IsValid || m_StopPending)
                 return false;
             if (cursorTime < FixedScalar.Zero || cycle < 0 || cursorTime > Content.Duration)
                 return false;
@@ -705,7 +696,8 @@ namespace BTSMTL.Timeline.Runtime
 
         void RequirePendingAdvance(TimelineRuntimeAdvanceResult advance)
         {
-            if (advance == null || !ReferenceEquals(advance.Owner, this) || !ReferenceEquals(m_PendingAdvance, advance))
+            if (!m_PendingAdvance.IsValid || !ReferenceEquals(advance.Owner, this) ||
+                advance.AdvanceSequence != m_PendingAdvance.AdvanceSequence)
                 throw new InvalidOperationException("Timeline Advance result does not belong to the active playback.");
         }
 
@@ -734,7 +726,7 @@ namespace BTSMTL.Timeline.Runtime
             }
         }
 
-        List<TimelineRuntimeClipBoundary> CollectBoundaries(
+        TimelineRuntimeSampleBuffer<TimelineRuntimeClipBoundary> CollectBoundaries(
             FixedScalar previousTime,
             int previousCycle,
             FixedScalar nextTime,
@@ -745,8 +737,7 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<string> exitedTreeDecisionClips,
             IReadOnlyList<string> pendingTreeClipExits)
         {
-            List<TimelineRuntimeClipBoundary> result = m_AdvanceBoundaries;
-            result.Clear();
+            TimelineRuntimeSampleBuffer<TimelineRuntimeClipBoundary> result = m_CandidateEvaluation.Boundaries;
             if (duration <= FixedScalar.Zero)
                 return result;
             FixedScalar previousAbsolute = duration * FixedScalar.FromInt64(previousCycle) + previousTime;
@@ -818,7 +809,7 @@ namespace BTSMTL.Timeline.Runtime
         }
 
         static void AddBoundary(
-            List<TimelineRuntimeClipBoundary> result,
+            TimelineRuntimeSampleBuffer<TimelineRuntimeClipBoundary> result,
             TimelineContentClip clip,
             FixedScalar time,
             int cycle,
@@ -1522,6 +1513,8 @@ namespace BTSMTL.Timeline.Runtime
             int traversals = playback.PlaybackMode == TimelinePlaybackMode.Loop
                 ? TimelineRuntimeEvaluationSegments.MaximumCycleAdvance + 1 : 1;
             int lifecycleSamples = checked(2 * traversals + 1);
+            ActiveClipIds = new(playback.Content.Clips.Count);
+            Boundaries = new(checked(2 * clips * traversals));
             AnimationContributions = new(checked(animations * traversals));
             MotionContributions = new(checked(motions * traversals));
             CameraStates = new(checked(cameraStates));
@@ -1537,6 +1530,8 @@ namespace BTSMTL.Timeline.Runtime
             Traces = new(checked(2 * clips * traversals + treeClips));
         }
 
+        public readonly TimelineRuntimeSampleBuffer<string> ActiveClipIds;
+        public readonly TimelineRuntimeSampleBuffer<TimelineRuntimeClipBoundary> Boundaries;
         public readonly TimelineRuntimeSampleBuffer<TimelineAnimationContribution> AnimationContributions;
         public readonly TimelineRuntimeSampleBuffer<TimelineMotionCurveContribution> MotionContributions;
         public readonly TimelineRuntimeSampleBuffer<TimelineCameraStateSample> CameraStates;
@@ -1553,6 +1548,8 @@ namespace BTSMTL.Timeline.Runtime
 
         public void Clear()
         {
+            ActiveClipIds.Clear();
+            Boundaries.Clear();
             AnimationContributions.Clear();
             MotionContributions.Clear();
             CameraStates.Clear();
@@ -1609,7 +1606,7 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
-    sealed class TimelineRuntimeSampleBuffer<T> : ICollection<T>
+    sealed class TimelineRuntimeSampleBuffer<T> : ICollection<T>, IReadOnlyList<T>
     {
         readonly T[] m_Values;
 
@@ -1638,6 +1635,8 @@ namespace BTSMTL.Timeline.Runtime
             Count = 0;
             Version = checked(Version + 1);
         }
+
+        public void Sort(IComparer<T> comparer) => Array.Sort(m_Values, 0, Count, comparer);
 
         public bool Contains(T value) => Array.IndexOf(m_Values, value, 0, Count) >= 0;
         public void CopyTo(T[] array, int arrayIndex) => Array.Copy(m_Values, 0, array, arrayIndex, Count);

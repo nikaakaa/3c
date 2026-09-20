@@ -1369,3 +1369,12 @@
 - 专用事务身份入口现从已有 StableHash.Value 直接取得 composition／plan 文本，三个非负数字使用与原 ToString 相同的 CurrentCulture 写入栈 char 缓冲；七段内容仍按原顺序，以 U+001F 的同一 UTF-8 单字节 0x1F 分隔，最终片段同步交给原 SHA-256 canonical hash。
 - UTF-8 容量按七段实际 byte count 加六个分隔符精确计算并从 ArrayPool 租用，hash 完成后立即归还；不跨 tick 保存 payload。最终 StableHash 的 64 字符串及 SHA 提供者仍分配，池首次扩容也可能分配，本项不宣称事务身份已达到 0 GC。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做不同 Culture 的事务身份运行对比或 Player 分配采样。
+
+## 2026-09-21 Pipeline Coordinator 值结果
+
+对应 tasks.md 的 2.57。
+
+- PipelineTransactionCoordinator 每个外层 tick 在 Pending 或 Committed 分支 new PipelineTransactionControlResult；FixedPipelineTransaction／Float32PipelineTransaction 收到后只立即读取 Outcome、TransactionIdentity、LastCompletedTick 和 CommitBatch，再构造各自公开结果。
+- 内部结果没有 null 分支、引用身份比较或跨调用持有，现改为 readonly struct；构造校验、四个只读属性以及只有 Committed 才能携带 commit batch 的约束不变。
+- 删除每个外层 tick 的一个内部控制结果对象；Fixed／Float32 对外 TransactionResult class 和 CommitBatch 自身仍按原生命周期分配。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做事务返回运行对比或 Player 分配采样。

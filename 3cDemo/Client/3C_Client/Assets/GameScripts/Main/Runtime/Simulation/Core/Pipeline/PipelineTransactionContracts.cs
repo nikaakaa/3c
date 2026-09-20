@@ -110,7 +110,7 @@ namespace ThirdPersonSimulation
         public StableHash SnapshotHash { get; }
     }
 
-    internal sealed class PipelineTransactionControlResult<TCommitBatch>
+    internal readonly struct PipelineTransactionControlResult<TCommitBatch>
     {
         public PipelineTransactionControlResult(
             PipelineTransactionOutcome outcome,

@@ -1027,3 +1027,12 @@
 - SourcePose 快捷入口会在包装统一请求前校验一次，随后 Push 的 RequireRequest 再校验一次，因此一次目标切换可删除两次枚举装箱和元数据查询；普通 Push 删除一次。来源身份、OwnerIndex、请求序号和动作通道约束保持不变。
 - 同文件构造期 AnimationSelectionAvailabilityPolicy 仅有 RequireSelection／AllowEmpty 两个正式成员，改为直接匹配；该处只计准备阶段清理，不计逐帧收益。
 - ThirdPersonClient.Runtime 正式工程及依赖编译零错误，存在三十四个既有包／项目警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Blend Stack 运行回放或 Player 分配采样。
+
+## 2026-09-20 DotRecast 接触候选运动性校验
+
+对应 tasks.md 的 5.51。
+
+- DotRecastWorldSolver 每批 Solve 在表面求解后，为全部本地请求及观测约束构造 ActorContactCandidate，再排序并进入 ActorContactSolver。构造器原对每个候选的 ActorContactMobility 执行 Enum.IsDefined。
+- ActorContactMobility 正式成员只有 ActiveSimulated 与 ObservedKinematic。现直接匹配两者，未知零值及其它 byte 继续与非法 ActorId 进入原 ArgumentException；位置、形状、候选顺序和接触求解输入均未改变。
+- 删除的是每批按本地角色数加观测角色数重复的装箱与枚举元数据查询，不宣称 ActorContactSolver 的数组、列表、结果或诊断已经无分配。
+- ThirdPersonSimulation.DotRecast portable 编译零错误，存在 DotRecast 包内两个既有 nullable 警告，构建服务关闭成功。未新增测试、未操作共享 Unity、未做接触求解运行对比或 Player 分配采样。

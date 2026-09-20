@@ -19,7 +19,9 @@ namespace ThirdPersonSimulation.DotRecast
             ActorContactShape shape,
             ActorContactMobility mobility)
         {
-            if (!actorId.IsValid || !Enum.IsDefined(typeof(ActorContactMobility), mobility))
+            if (!actorId.IsValid ||
+                mobility != ActorContactMobility.ActiveSimulated &&
+                mobility != ActorContactMobility.ObservedKinematic)
                 throw new ArgumentException("Actor contact candidate ActorId is invalid.", nameof(actorId));
             ActorId = actorId;
             BeforePosition = beforePosition;

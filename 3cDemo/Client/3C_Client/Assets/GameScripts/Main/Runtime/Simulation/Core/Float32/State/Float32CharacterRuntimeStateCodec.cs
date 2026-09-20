@@ -575,9 +575,9 @@ namespace ThirdPersonSimulation
                     reader.ReadString(),
                     ReadTarget(reader),
                     SimulationExecutionSourceCodec.Read(reader),
-                    ReadEnum<SimulationActionPhase>(reader.ReadByte()),
-                    ReadEnum<SimulationActionState>(reader.ReadByte()),
-                    ReadEnum<SimulationActionLifecycleTransitionType>(reader.ReadByte()),
+                    ReadActionPhase(reader.ReadByte()),
+                    ReadActionState(reader.ReadByte()),
+                    ReadActionTransition(reader.ReadByte()),
                     reader.ReadUInt64(),
                     reader.ReadUInt64(),
                     reader.ReadString(),
@@ -891,6 +891,49 @@ namespace ThirdPersonSimulation
             if (count < 0 || count > maximum)
                 throw new InvalidDataException($"{label} count '{count}' is invalid.");
             return count;
+        }
+
+        static SimulationActionPhase ReadActionPhase(byte value)
+        {
+            var result = (SimulationActionPhase)value;
+            if (result is not (SimulationActionPhase.Startup or
+                SimulationActionPhase.Active or
+                SimulationActionPhase.Recovery or
+                SimulationActionPhase.Cancel or
+                SimulationActionPhase.Ended))
+                throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(SimulationActionPhase)}' value '{value}' is invalid.");
+            return result;
+        }
+
+        static SimulationActionState ReadActionState(byte value)
+        {
+            var result = (SimulationActionState)value;
+            if (result is not (SimulationActionState.Requested or
+                SimulationActionState.Predicted or
+                SimulationActionState.Confirmed or
+                SimulationActionState.Rejected or
+                SimulationActionState.Cancelled or
+                SimulationActionState.Interrupted or
+                SimulationActionState.Aborted or
+                SimulationActionState.Ended or
+                SimulationActionState.Corrected))
+                throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(SimulationActionState)}' value '{value}' is invalid.");
+            return result;
+        }
+
+        static SimulationActionLifecycleTransitionType ReadActionTransition(byte value)
+        {
+            var result = (SimulationActionLifecycleTransitionType)value;
+            if (result is not (SimulationActionLifecycleTransitionType.None or
+                SimulationActionLifecycleTransitionType.Confirm or
+                SimulationActionLifecycleTransitionType.Complete or
+                SimulationActionLifecycleTransitionType.Cancel or
+                SimulationActionLifecycleTransitionType.Interrupt or
+                SimulationActionLifecycleTransitionType.Reject or
+                SimulationActionLifecycleTransitionType.Correct or
+                SimulationActionLifecycleTransitionType.Abort))
+                throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(SimulationActionLifecycleTransitionType)}' value '{value}' is invalid.");
+            return result;
         }
 
         static ProgramMotionWarpLimitResult ReadMotionWarpLimitResult(byte value)

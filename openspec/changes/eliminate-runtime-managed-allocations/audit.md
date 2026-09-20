@@ -887,3 +887,11 @@
 - 默认分支改为原 ReadEnum 实际抛出的类型名／字节 InvalidDataException 文本；保留合法成员包括 ActionTargetSnapshot=24，11 至 23 等缺口仍不接受。十一种具体值的读取、Blackboard token／stamp 和目标快照构造保持原样，不改变恢复状态或 Timeline 数据结构。
 - 运行路径为角色状态恢复中的变量值读取，删除每个读取值的 Enum.ToObject 和 Enum.IsDefined；其它类型仍调用真实存在的通用 ReadEnum，因此该工具尚不能删除，也不宣称完整 codec 无枚举反射。
 - 两文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未执行非法字节或状态恢复运行对比及 Player 分配采样。
+## 2026-09-20 动作实例恢复枚举解码
+
+对应 tasks.md 的 2.37。
+
+- Fixed／Float32 CharacterRuntimeStateCodec 的动作实例读取改用 ReadActionPhase／ReadActionState／ReadActionTransition，分别列出正式 5／9／8 个成员，替换原三个 ReadEnum 调用。两数值域共六个恢复字段不再 Enum.ToObject／Enum.IsDefined。
+- 保留 Startup、Requested、None 等合法零值；其他 byte 仍在原字段位置抛原类型名／数值的 InvalidDataException，未使用粗略非零或范围判断。实例字段顺序、构造、身份与上下文关联保持原样，不改变动作状态推进、Timeline 播放或回滚所有权。
+- 运行入口为已有角色状态恢复的 ReadActionInstances，不将此项报告为每帧必经。Timeline 与 scope 的通用枚举读取仍有真实消费者，原泛型工具继续保留，完整 codec 尚未无反射。
+- 修改前两目标文件无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未执行动作恢复运行对比或 Player 分配采样。

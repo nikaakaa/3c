@@ -440,6 +440,15 @@
 - 没有改变输入字段、分隔符、编码、摘要算法或身份格式，也不改变事件生成次数和排序。移除逐字节小字符串、builder 及其存储；params 输入数组、joined 字符串、UTF-8 数组、SHA／摘要和最终字符串仍会分配。
 - portable Core 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；编辑前文件无其它未提交修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity，未做运行哈希对比或 Player 分配采样。
 
+## 2026-09-20 统一 SHA-256 摘要栈存储
+
+对应 tasks.md 的 5.41，与代码同步提交，继续处理 5.19／5.40 保留的摘要结果数组。
+
+- SimulationCanonicalPayloadHash 改用 SHA256.TryComputeHash，将实际 ArraySegment 的 Span 写入固定 32 字节栈缓冲；若提供者未产生完整摘要则抛 CryptographicException，不对不完整数据生成身份。
+- 十六进制结果由固定 64 字符栈缓冲填充，再创建最终字符串，替代原返回 byte[] 后 string.Create 的流程。保留相同 SHA-256 算法、输入片段 Offset／Count、小写高低半字节顺序和 StableHash 校验；没有改变哈希输入或使用替代摘要算法。
+- 栈缓冲大小由 SHA-256 固定格式确定，单次调用共 32 字节加 64 个 char，不跨调用保留。源码不再请求返回摘要数组；SHA 实例与最终字符串仍分配，提供者内部是否还有临时存储未采样，不宣称哈希全程 0 GC。
+- portable Core 编译零警告零错误，按规定构建后 shutdown 成功；当前 Unity 引用下独立编译完整 Core 也通过，确认 TryComputeHash 和 Span 字符串构造在项目目标可用，产物只写系统临时目录。diff 空白检查通过，编辑前无其它目标修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制 Unity、未做运行哈希对比或 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

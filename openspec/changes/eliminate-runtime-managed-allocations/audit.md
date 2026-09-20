@@ -706,7 +706,7 @@
 
 本节为任务 5.2／5.4 的调用链证据，未将父任务勾选完成，本轮不修改预测事务代码。
 
-- PredictionIngressAndSchedulePasses 在调度入口先 CaptureCorrectionCheckpoint，并注册恢复该 checkpoint 的回调，然后才取输入、计算当前步数并调用 ScheduleRequests。零步时请求保留在 ConfirmationState，消费时按序生成独立数组并 Clear 内部 pending 字典。
+- PredictionIngressAndSchedulePasses 的 CaptureCheckpoint 调用 CaptureCorrectionCheckpoint，并返回持有该 checkpoint 的恢复回调；Execute 则取输入、计算当前步数并调用 ScheduleRequests。本轮确认了两个入口的共享状态依赖，未进一步核对外层事务调用两者的完整时序。零步时请求保留在 ConfirmationState，消费时按序生成独立数组并 Clear 内部 pending 字典。
 - 同步下游 WithRequests 将该数组传入 SimulationInput，构造再次复制并排序，随后创建 OwnerCanonicalInputBatch；因此非空调度路径确有中转数组。但把返回值改成共享列表或字典视图会影响 Clear 后的可见内容，必须同时迁移生产者、输入构造及所有使用者，不能只删 ToArray／new。
 - 确认状态还被 PrepareAck、PrepareBaseline、Capture 使用；checkpoint 当前复制 pending 请求至只读列表。Restore 先完整建立新 SortedDictionary，再替换字段，避免重建失败时破坏原 pending。快照不仅用于编码，也由事务恢复回调持有，不能用当前可变字典代替。
 - pending 正式容量来自 requestCapacity，RetainRequest 在加入新序号前检查上限并拒绝同序号内容变化。容量为未来有界存储提供依据；目前 SortedDictionary 的逐节点分配、消费结果及 checkpoint 复制仍在，不能仅凭有容量上限视为 0 GC。

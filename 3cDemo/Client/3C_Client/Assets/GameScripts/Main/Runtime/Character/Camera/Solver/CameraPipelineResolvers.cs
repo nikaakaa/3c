@@ -125,32 +125,20 @@ namespace ThirdPersonCamera
             }
         }
 
-        bool TryResolvePoint(string key, out Vector3 point, out string error)
-        {
-            point = default;
-            error = string.Empty;
-            if (!m_Bindings.TryGetValue(key, out Transform target))
-            {
-                error = $"Camera target binding '{key}' is absent.";
-                return false;
-            }
-            if (!target)
-            {
-                error = $"Camera target binding '{key}' no longer references a live Transform.";
-                return false;
-            }
-            point = target.position;
-            return true;
-        }
-
         bool TryResolvePoint(
             string key,
             IReadOnlyList<CameraTargetSnapshot> snapshots,
             out Vector3 point,
             out string error)
         {
-            if (TryResolvePoint(key, out point, out error))
+            point = default;
+            error = string.Empty;
+            bool hasBinding = m_Bindings.TryGetValue(key, out Transform target);
+            if (hasBinding && target)
+            {
+                point = target.position;
                 return true;
+            }
             if (snapshots != null)
             {
                 for (int i = 0; i < snapshots.Count; i++)
@@ -159,11 +147,13 @@ namespace ThirdPersonCamera
                     if (snapshot.Valid && string.Equals(snapshot.Key, key, StringComparison.Ordinal))
                     {
                         point = snapshot.AimPoint;
-                        error = string.Empty;
                         return true;
                     }
                 }
             }
+            error = hasBinding
+                ? $"Camera target binding '{key}' no longer references a live Transform."
+                : $"Camera target binding '{key}' is absent.";
             return false;
         }
 

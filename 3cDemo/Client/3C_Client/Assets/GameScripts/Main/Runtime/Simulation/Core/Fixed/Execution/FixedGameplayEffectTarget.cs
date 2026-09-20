@@ -283,15 +283,7 @@ namespace ThirdPersonSimulation.Fixed
 
         void ActivateGrantedTags(PortableActiveEffectState active)
         {
-            var grantedTags = new SortedSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < active.Spec.Definition.Components.Length; i++)
-            {
-                if (active.Spec.Definition.Components[i] is not PortableGrantedTagsComponent granted)
-                    continue;
-                for (int tagIndex = 0; tagIndex < granted.Tags.Length; tagIndex++)
-                    grantedTags.Add(granted.Tags[tagIndex]);
-            }
-            m_State.SetTagSource($"effect:{active.Handle}", grantedTags);
+            m_State.SetTagSource($"effect:{active.Handle}", active.Spec.Definition.GrantedTags);
         }
 
         void DeactivatePersistent(PortableActiveEffectState active)

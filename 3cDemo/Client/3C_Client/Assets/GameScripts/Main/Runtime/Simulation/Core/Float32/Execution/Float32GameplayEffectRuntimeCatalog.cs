@@ -563,6 +563,7 @@ namespace ThirdPersonSimulation
             OverflowPolicy = overflowPolicy;
             SetByCallerParameters = setByCallerParameters ?? Array.Empty<string>();
             Components = components ?? Array.Empty<PortableEffectComponent>();
+            GrantedTags = CollectGrantedTags();
             SourceSnapshotAttributes = CollectSnapshotAttributes(PortableMagnitudeSource.SourceAttributeSnapshot);
             TargetSnapshotAttributes = CollectSnapshotAttributes(PortableMagnitudeSource.TargetAttributeSnapshot);
         }
@@ -582,8 +583,22 @@ namespace ThirdPersonSimulation
         public PortableEffectOverflowPolicy OverflowPolicy { get; }
         public string[] SetByCallerParameters { get; }
         public PortableEffectComponent[] Components { get; }
+        public IReadOnlyList<string> GrantedTags { get; }
         public IReadOnlyList<string> SourceSnapshotAttributes { get; }
         public IReadOnlyList<string> TargetSnapshotAttributes { get; }
+
+        string[] CollectGrantedTags()
+        {
+            var tags = new SortedSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < Components.Length; i++)
+            {
+                if (Components[i] is not PortableGrantedTagsComponent granted)
+                    continue;
+                for (int tagIndex = 0; tagIndex < granted.Tags.Length; tagIndex++)
+                    tags.Add(granted.Tags[tagIndex]);
+            }
+            return tags.ToArray();
+        }
 
         string[] CollectSnapshotAttributes(PortableMagnitudeSource source)
         {

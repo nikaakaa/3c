@@ -503,6 +503,15 @@
 - 四种记录对象及变更列表存储仍存在，不改事件内容、游标协议、变更消费、TrimChanges 或保存恢复边界。此步删除的是工厂封装带来的分配，不宣称事件记录全程无分配。
 - 两个目标文件无其它未提交修改；本机编译进程查询未返回 csc／bee。Fixed／Float32 portable 均编译零警告零错误，构建后 shutdown 均成功，diff 空白检查通过。未新增测试、未主动刷新或控制共享 Unity、未做运行事件对比或 Player 分配采样。
 
+## 2026-09-20 GameplayEffect 授予标签准备清单
+
+对应 tasks.md 的 2.16，与代码同步提交。
+
+- Fixed／Float32 ActivateGrantedTags 原在每次效果激活时扫描定义组件，用 SortedSet 合并 GrantedTagsComponent 的标签。该数据来自已加载定义，与当前属性值、堆叠和 Tick 无关；现移到 PortableEffectDefinition 构造，在 Components 赋值后生成 GrantedTags 清单，由原目录持有。
+- 清单继续采用原 Ordinal 去重和排序，合并全部授予标签组件；无授予标签时为空。激活沿原 effect:handle 来源调用 SetTagSource，仍生成／比较活动来源自己的规范化结果，未将定义数组作为可变状态或改变 DeactivatePersistent 的移除行为。
+- 取舍：每个定义增加一个长期字符串引用清单，换取取消每次激活的组件扫描、排序树和树节点创建；容量由实际内容精确决定，没有任意上限或旁路配置。目录准备仍可分配，SetTagSource、来源字符串和其它效果记录仍有分配。
+- 四个目标文件修改前均无其它未提交修改，编辑前未发现 csc／bee 编译进程。Fixed／Float32 portable 各自编译零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过；未新增测试、未刷新或控制共享 Unity、未做效果运行对比或 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

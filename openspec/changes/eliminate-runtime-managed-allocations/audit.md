@@ -911,3 +911,11 @@
 - 运行调用包括预测日志确认时生成更新条目、PredictionState 发布条目及历史日志恢复；不是初始化专用校验。解码保留身份／Tick／sequence 和重复 eventId 检查，并继续抛原 InvalidDataException；直接构造保留原 ArgumentException，检查次序不变。
 - 没有删除构造校验或改变日志确认／拒绝／去重行为，不改 checkpoint、历史保留或恢复的所有权。条目是 struct，本轮仅消除枚举查询装箱，字典与更新集合仍可能分配。
 - 两目标文件此前无其它未提交修改，编辑前无 csc／bee。ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做事件运行或 Player 分配采样。
+## 2026-09-20 运行期预测修正决策校验
+
+对应 tasks.md 的 2.40。
+
+- PredictionCorrectionDecision 由 PredictionReconciler 的基线比较分支及 PredictionIngressAndSchedulePasses 的无基线分支创建，属于运行调度／修正结果，非初始化策略定义。构造中的两个 Enum.IsDefined 改为直接匹配三种决策和七种原因。
+- 完整保留 NoCorrection／RestoreReplay／HardRecovery 及所有正式 reason，零和未知值继续拒绝。baselineTick 有效性、决策与 restoreTick 的关联、回放范围成对有效及先后顺序检查和异常文本不变；不改变修正算法或状态恢复生命周期。
+- ServerAuthoritativePolicy 中初始化策略的枚举检查未因本项修改，遵守初始化允许反射的边界。目标文件此前无其它未提交修改，编辑前无 csc／bee。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，确认构建及 build-server shutdown 全部结束，diff 空白检查通过；未新增测试、未操作共享 Unity、未做运行决策对比或 Player 采样。决策对象自身仍分配。

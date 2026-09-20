@@ -252,8 +252,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             Float32Scalar positionError,
             Float32Scalar yawError)
         {
-            if (!Enum.IsDefined(typeof(PredictionCorrectionDecisionKind), kind) ||
-                !Enum.IsDefined(typeof(PredictionCorrectionReason), reason) || !baselineTick.IsValid)
+            if (kind is not (PredictionCorrectionDecisionKind.NoCorrection or
+                    PredictionCorrectionDecisionKind.RestoreReplay or PredictionCorrectionDecisionKind.HardRecovery) ||
+                reason is not (PredictionCorrectionReason.StateAndBodyMatch or PredictionCorrectionReason.CharacterStateMismatch or
+                    PredictionCorrectionReason.BodyPositionMismatch or PredictionCorrectionReason.BodyYawMismatch or
+                    PredictionCorrectionReason.HistoryUnavailable or PredictionCorrectionReason.ReplayLimitExceeded or
+                    PredictionCorrectionReason.NoAuthoritativeBaseline) || !baselineTick.IsValid)
             {
                 throw new ArgumentException("Prediction correction decision is incomplete.");
             }

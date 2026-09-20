@@ -10,6 +10,8 @@
 
 ## 已核对的代表性路径
 
+本节 G01–G21 保留初始审计结论；后续已实施的小步见文末进展，不把初始候选数量当作当前未修复数量。
+
 | 编号 | 领域 | 代码位置 | 触发边界 | 判断 |
 | --- | --- | --- | --- | --- |
 | G01 | 模拟装配 | [FixedCharacterEvaluationRuntime.cs:41](../../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Simulation/Core/Fixed/Execution/FixedCharacterEvaluationRuntime.cs#L41) | 已核对每角色每次 Evaluate | 新建集合和工厂；对每个已安装技能创建 invocation/workspace。Float32 同类入口存在。 |
@@ -65,3 +67,31 @@
 ## 当前结论边界
 
 已能证明常态模拟链有重复托管分配，并且表现、回滚、网络等领域各自存在分配入口。尚不能排列各项实测收益、报总字节数、保证全部正式第三方节点零分配，或宣称全项目每条调用链均已人工审计。proposal覆盖这些范围，实施逐域沿正式入口完成证据闭合。
+
+## 2026-09-20 相机独立小步实施
+
+对应 tasks.md 的 4.4，下面仅记录已提交的分配入口清理，不代表整个 4.4 或相机整链完成。此次未改 Timeline、共享动作播放、事务和回滚生命周期。
+
+源码位置以 `3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/` 为基准。
+
+| 提交 | 源码入口 | 修改前 | 修改后与业务边界 |
+| --- | --- | --- | --- |
+| `0a1ed8e82` | Character/Camera/Solver/CameraPipelineResolvers.cs：FirstKey | 每次传入三／四个键都会创建 params 数组 | 直接比较参数；仍按原顺序取首个非空键，全部为空返回空字符串。每个目标槽原有两次调用，选中有效请求后另有两次调用 |
+| `fe0162499` | 同文件：CameraTargetBindingResolver.Resolve | 将复用的 List 经 IEnumerable 遍历，产生枚举器装箱 | 输入改为 IReadOnlyList，按下标读取；唯一运行调用者仍传原 List，不转换、不复制，保持请求顺序与优先级规则 |
+| `f3854c086` | CameraContracts/Projection/CameraFrameInput.cs；CameraContracts/CameraEnvironmentContracts.cs；Character/Camera/Solver/CharacterCameraSequenceTransition.cs | 五处运行期 Enum.IsDefined(Type, object) 校验装箱 | 直接比较现有合法成员；保留原异常类型、抛出位置及合法集合，不改变时间增量或碰撞计算 |
+| `b96234f54` | Character/Camera/Solver/CharacterCameraFramePlanner.cs：SampleTrack | 空轨道／多轨道采样创建 CameraTrackOrbitPayload 引用对象 | 以具名值元组返回高度、半径；保留空／单／多轨道分支和插值顺序，作者 Payload 类型与资产格式不变 |
+| `affbf9883` | Character/Camera/Solver/CameraPipelineResolvers.cs：TryResolvePoint | 实时绑定缺失或失效时先生成错误字符串，即使随后命中快照 | 先按原顺序查实时绑定和快照，仅全部失败才生成原错误文本；成功路径不再制造丢弃的错误字符串 |
+| `53f2e3a47` | CameraContracts/CameraEnvironmentContracts.cs；Character/Camera/Runtime/UnityCameraEnvironmentQuery.cs；Character/Camera/Solver/CameraEnvironmentConstraintSolver.cs | 命中 Collider 后将实例编号转成字符串，沿查询和碰撞结果传递 | 全链统一为 int ColliderInstanceId，无命中为 0；删除旧字符串属性及转换。已查项目源码消费者，无相机编号的文本解析、持久化和网络协议消费者；物理求解不变 |
+
+### 已做检查与证据限制
+
+- 初始两笔完成修改文件的独立编译；后四笔沿 Unity 现有编译响应文件引用，独立编译完整 ThirdPersonCamera.Contracts，并使用新合同编译 Character/Camera 运行目录。产物位于系统临时目录，不写入 Unity Library 或 Assets。
+- 编译通过；相机目录仍有既有 `CameraShotRigBinding.m_VirtualCamera` 序列化字段 CS0649 警告。各笔提交前的 `git diff --check` 通过。
+- 上述检查不是完整项目编译或 Player 运行证明。未新增测试、未主动刷新 Editor、未启动性能采样；没有实测 bytes/frame、峰值占用和 GC 停顿数据。
+- 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
+
+### 仍未完成
+
+- CameraEffectRuntimeStateStore.Add 仍创建效果状态对象；效果请求、可见状态、输出贡献和完成事件去重集合仍需明确准备容量与存活上限。
+- 效果停止、撤销和完成事件保留与并行 Timeline 的事件生命周期相交；不能随意清空、复用或引入无界缓存。
+- Input、Behavior Designer、第三方相机及其它模块仍按原任务清单处理，4.4 保持未完成。

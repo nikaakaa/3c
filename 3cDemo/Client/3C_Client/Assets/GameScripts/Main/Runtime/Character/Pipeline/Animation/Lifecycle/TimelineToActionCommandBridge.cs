@@ -244,22 +244,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 handle,
                 presentationFrame,
                 contribution.ClipAuthoringId);
-            var sample = new ActionCommittedRawSample(
+            var sample = new ActionProjectedSample(
                 eventId,
                 logicTick,
                 presentationFrame,
-                contribution.ClipTime,
-                contribution.ContinuousClipTime,
-                contribution.Cycle,
-                contribution.IsLooping,
-                1f,
+                new PresentationPoseSampleTime(contribution.ClipTime, contribution.ContinuousClipTime,
+                    contribution.Cycle, contribution.IsLooping, 1f),
                 contribution.Weight);
-            m_Inbox.Publish(ActionAnimationPlaybackCommand.Sample(
+            m_Inbox.Publish(ActionAnimationPlaybackCommand.PresentSample(
                 producer.PlaybackId,
                 producer.ActionInstanceId,
                 producer.AnimationChannelId,
                 producer.ProgramProducerId,
-                sample));
+                in sample));
         }
 
         void PublishRelease(

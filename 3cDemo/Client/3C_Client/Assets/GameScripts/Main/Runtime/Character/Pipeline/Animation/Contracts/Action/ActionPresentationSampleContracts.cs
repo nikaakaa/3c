@@ -33,12 +33,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         public ProjectedActionPresentationSample(
             AnimationPlaybackId playbackId,
-            EventId latestCommittedEventId,
+            EventId sourceEventId,
             PresentationPoseSampleTime projectedRawSample,
             bool retentionProjection)
         {
             PlaybackId = playbackId;
-            LatestCommittedEventId = latestCommittedEventId;
+            SourceEventId = sourceEventId;
             ProjectedRawSample = projectedRawSample;
             RetentionProjection = retentionProjection;
             if (!IsValid)
@@ -46,12 +46,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public AnimationPlaybackId PlaybackId { get; }
-        public EventId LatestCommittedEventId { get; }
+        public EventId SourceEventId { get; }
         public PresentationPoseSampleTime ProjectedRawSample { get; }
         public bool RetentionProjection { get; }
         public bool IsValid =>
             PlaybackId.IsValid &&
-            LatestCommittedEventId.IsValid &&
+            SourceEventId.IsValid &&
             ProjectedRawSample.IsValid;
     }
 }

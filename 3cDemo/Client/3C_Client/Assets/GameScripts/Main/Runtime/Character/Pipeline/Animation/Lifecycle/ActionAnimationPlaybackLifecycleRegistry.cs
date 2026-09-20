@@ -30,7 +30,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ActionAnimationPlaybackLifecyclePhase phase,
             ActionCommittedRawSample latestCommittedRawSample,
             bool hasCommittedRawSample,
-            ulong backendReleaseRequestIdentity)
+            ulong backendReleaseRequestIdentity,
+            ActionProjectedSample projectedSample)
         {
             PlaybackId = playbackId;
             ActionInstanceId = actionInstanceId;
@@ -45,6 +46,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             LatestCommittedRawSample = latestCommittedRawSample;
             HasCommittedRawSample = hasCommittedRawSample;
             BackendReleaseRequestIdentity = backendReleaseRequestIdentity;
+            ProjectedSample = projectedSample;
         }
 
         internal AnimationPlaybackId PlaybackId { get; }
@@ -59,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal ActionAnimationPlaybackLifecyclePhase Phase { get; }
         internal ActionCommittedRawSample LatestCommittedRawSample { get; }
         internal bool HasCommittedRawSample { get; }
+        internal ActionProjectedSample ProjectedSample { get; }
         internal ulong BackendReleaseRequestIdentity { get; }
     }
 
@@ -85,6 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal ActionAnimationPlaybackLifecyclePhase Phase;
             internal ActionCommittedRawSample LatestCommittedRawSample;
             internal bool HasCommittedRawSample;
+            internal ActionProjectedSample ProjectedSample;
             internal AnimationSlotId SlotOwner;
             internal bool HasSlotOwner;
             internal int SlotUsageCount;
@@ -116,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Phase = source.Phase;
                 LatestCommittedRawSample = source.LatestCommittedRawSample;
                 HasCommittedRawSample = source.HasCommittedRawSample;
+                ProjectedSample = source.ProjectedSample;
                 SlotOwner = source.SlotOwner;
                 HasSlotOwner = source.HasSlotOwner;
                 SlotUsageCount = source.SlotUsageCount;
@@ -159,6 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 Phase = default;
                 LatestCommittedRawSample = default;
                 HasCommittedRawSample = false;
+                ProjectedSample = default;
                 SlotOwner = default;
                 HasSlotOwner = false;
                 SlotUsageCount = 0;
@@ -263,6 +269,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return found;
         }
 
+        internal bool TryGetProjectedSample(AnimationPlaybackId playbackId, out ActionProjectedSample sample)
+        {
+            Entry entry = FindReadable(playbackId);
+            sample = entry != null ? entry.ProjectedSample : default;
+            return sample.IsValid;
+        }
+
         static void ConsiderEntry(
             Entry entry,
             AnimationChannelId animationChannelId,
@@ -273,7 +286,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (!entry.Occupied ||
                 animationChannelId.IsValid &&
                 !entry.AnimationChannelId.Equals(animationChannelId) ||
-                !entry.HasCommittedRawSample ||
+                !entry.HasCommittedRawSample && !entry.ProjectedSample.IsValid ||
                 entry.Phase == ActionAnimationPlaybackLifecyclePhase.Retired)
             {
                 return;
@@ -746,7 +759,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         m_DiagnosticUsages,
                         m_DiagnosticPermissions,
                         entry.BackendReleaseRequestIdentity,
-                        m_DiagnosticBackendSources));
+                        m_DiagnosticBackendSources,
+                        entry.ProjectedSample));
             }
         }
 
@@ -813,15 +827,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             Entry entry = GetWritable(command.PlaybackId, false);
             entry.LatestEventId = command.EventId;
             entry.LatestCommandSequence = inboxEntry.Sequence;
-            if (command.Kind == ActionAnimationPlaybackCommandKind.Sample)
+            if (command.Kind == ActionAnimationPlaybackCommandKind.Sample ||
+                command.Kind == ActionAnimationPlaybackCommandKind.ProjectedSample)
             {
                 if (entry.LogicTerminal != ActionLogicTerminalKind.None)
                 {
                     throw new InvalidOperationException(
                         "Action playback Sample follows a terminal command.");
                 }
+                bool committed = command.Kind == ActionAnimationPlaybackCommandKind.Sample;
+                if (committed && entry.ProjectedSample.IsValid || !committed && entry.HasCommittedRawSample)
+                    throw new InvalidOperationException("Action playback cannot change sample ownership within one generation.");
                 entry.LatestCommittedRawSample = command.CommittedRawSample;
-                entry.HasCommittedRawSample = true;
+                entry.HasCommittedRawSample = committed;
+                entry.ProjectedSample = command.ProjectedSample;
                 entry.FirstSampleReadiness = ActionFirstSampleReadiness.Ready;
                 if (entry.Phase ==
                     ActionAnimationPlaybackLifecyclePhase.PendingFirstSample)
@@ -926,7 +945,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     ActionAnimationPlaybackCommandKind.Select =>
                         AnimationPresentationMutationOperationKind.Select,
-                    ActionAnimationPlaybackCommandKind.Sample =>
+                    ActionAnimationPlaybackCommandKind.Sample or ActionAnimationPlaybackCommandKind.ProjectedSample =>
                         AnimationPresentationMutationOperationKind.Sample,
                     ActionAnimationPlaybackCommandKind.Complete =>
                         AnimationPresentationMutationOperationKind.Complete,
@@ -1029,7 +1048,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     entry.Phase,
                     entry.LatestCommittedRawSample,
                     entry.HasCommittedRawSample,
-                    entry.BackendReleaseRequestIdentity));
+                    entry.BackendReleaseRequestIdentity,
+                    entry.ProjectedSample));
         }
 
         void FillDiagnosticCollections(Entry entry)

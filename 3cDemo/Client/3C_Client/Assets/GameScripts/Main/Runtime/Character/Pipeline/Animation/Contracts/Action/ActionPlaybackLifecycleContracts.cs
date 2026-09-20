@@ -284,7 +284,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IReadOnlyList<ActionRetirementPermission>
                 retirementPermissions,
             ulong backendReleaseRequestIdentity,
-            IReadOnlyList<ActionBackendSourceIdentity> pendingBackendSources)
+            IReadOnlyList<ActionBackendSourceIdentity> pendingBackendSources,
+            ActionProjectedSample projectedSample)
         {
             PlaybackId = playbackId;
             ActionInstanceId = actionInstanceId;
@@ -298,6 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Phase = phase;
             LatestCommittedRawSample = latestCommittedRawSample;
             HasCommittedRawSample = hasCommittedRawSample;
+            ProjectedSample = projectedSample;
             m_SlotOwners = Copy(slotOwners);
             m_SlotUsages = Copy(slotUsages);
             m_RetirementPermissions = Copy(retirementPermissions);
@@ -317,6 +319,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public ActionAnimationPlaybackLifecyclePhase Phase { get; }
         public ActionCommittedRawSample LatestCommittedRawSample { get; }
         public bool HasCommittedRawSample { get; }
+        public ActionProjectedSample ProjectedSample { get; }
         public IReadOnlyList<AnimationSlotId> SlotOwners => m_SlotOwners;
         public IReadOnlyList<ActionSlotSourceUsage> SlotUsages => m_SlotUsages;
         public IReadOnlyList<ActionRetirementPermission>

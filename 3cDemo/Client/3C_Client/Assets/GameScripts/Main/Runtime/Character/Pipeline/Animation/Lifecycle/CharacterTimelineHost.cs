@@ -129,26 +129,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
     internal sealed class CharacterTimelineTreeClipService : ITimelineRuntimeTreeClipService
     {
-        readonly struct ActiveTreeClip
-        {
-            public ActiveTreeClip(TimelineRuntimeTreeClipRequest request)
-            {
-                ClipAuthoringId = request.ClipAuthoringId;
-                TreeGraphId = request.TreeGraphId;
-                Cycle = request.Cycle;
-            }
-
-            public readonly string ClipAuthoringId;
-            public readonly string TreeGraphId;
-            public readonly int Cycle;
-        }
-
         readonly CharacterTimelineHost m_Host;
-        readonly Dictionary<ulong, List<ActiveTreeClip>> m_ActiveClips = new();
+        readonly Dictionary<ulong, List<AbilityTimelineTreeClipState>> m_ActiveClips = new();
 
         internal CharacterTimelineTreeClipService(CharacterTimelineHost host)
         {
             m_Host = host ?? throw new ArgumentNullException(nameof(host));
+        }
+
+        internal IReadOnlyList<AbilityTimelineTreeClipState> Capture(ulong handle) =>
+            m_ActiveClips.TryGetValue(handle, out List<AbilityTimelineTreeClipState> clips)
+                ? clips : Array.Empty<AbilityTimelineTreeClipState>();
+
+        internal void Restore(ulong handle, IReadOnlyList<AbilityTimelineTreeClipState> restored)
+        {
+            if (restored.Count == 0)
+            {
+                m_ActiveClips.Remove(handle);
+                return;
+            }
+            if (!m_ActiveClips.TryGetValue(handle, out List<AbilityTimelineTreeClipState> clips))
+            {
+                clips = new List<AbilityTimelineTreeClipState>(restored.Count);
+                m_ActiveClips.Add(handle, clips);
+            }
+            clips.Clear();
+            for (int index = 0; index < restored.Count; index++)
+                clips.Add(restored[index]);
         }
 
         public bool RequestTreeClipExit(TimelinePlaybackHandle handle, string clipAuthoringId)
@@ -192,7 +199,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     candidate.ClipAuthoringId == request.ClipAuthoringId && candidate.Cycle == request.Cycle)
                     return candidate.EventKind == TimelineRuntimeTreeClipEventKind.Enter;
             }
-            if (m_ActiveClips.TryGetValue(context.Playback.Handle.Value, out List<ActiveTreeClip> active))
+            if (m_ActiveClips.TryGetValue(context.Playback.Handle.Value, out List<AbilityTimelineTreeClipState> active))
                 for (int index = 0; index < active.Count; index++)
                     if (active[index].ClipAuthoringId == request.ClipAuthoringId && active[index].Cycle == request.Cycle)
                         return true;
@@ -215,12 +222,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 RemoveClip(handle, request.ClipAuthoringId, request.Cycle);
                 if (request.EventKind != TimelineRuntimeTreeClipEventKind.Enter)
                     continue;
-                if (!m_ActiveClips.TryGetValue(handle, out List<ActiveTreeClip> clips))
+                if (!m_ActiveClips.TryGetValue(handle, out List<AbilityTimelineTreeClipState> clips))
                 {
-                    clips = new List<ActiveTreeClip>(context.Playback.Content.Clips.Count);
+                    clips = new List<AbilityTimelineTreeClipState>(context.Playback.Content.Clips.Count);
                     m_ActiveClips.Add(handle, clips);
                 }
-                clips.Add(new ActiveTreeClip(request));
+                clips.Add(new AbilityTimelineTreeClipState(request.ClipAuthoringId, request.TreeGraphId, request.Cycle));
             }
             if (context.Advance.Completes)
                 m_ActiveClips.Remove(handle);
@@ -229,11 +236,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public void DiscardStep(TimelineRuntimeStepContext context) { }
         public bool ConsumeStop(TimelineRuntimeStopRequest request)
         {
-            if (!m_ActiveClips.TryGetValue(request.Handle.Value, out List<ActiveTreeClip> clips) || clips.Count == 0)
+            if (!m_ActiveClips.TryGetValue(request.Handle.Value, out List<AbilityTimelineTreeClipState> clips) || clips.Count == 0)
                 return true;
             IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker
                 ?? throw new InvalidOperationException("Timeline stop requires the current Ability invoker.");
-            foreach (ActiveTreeClip clip in clips)
+            foreach (AbilityTimelineTreeClipState clip in clips)
             {
                 var invocation = new AbilityTreeClipInvocation(
                     clip.ClipAuthoringId,
@@ -254,7 +261,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
         void RemoveClip(ulong handle, string clipAuthoringId, int cycle)
         {
-            if (!m_ActiveClips.TryGetValue(handle, out List<ActiveTreeClip> clips))
+            if (!m_ActiveClips.TryGetValue(handle, out List<AbilityTimelineTreeClipState> clips))
                 return;
             for (int index = clips.Count - 1; index >= 0; index--)
                 if (clips[index].ClipAuthoringId == clipAuthoringId && clips[index].Cycle == cycle)
@@ -511,6 +518,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
 
         TimelineRuntimeCompositionHost m_Host;
+        CharacterTimelineTreeClipService m_TreeClipService;
         readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
         readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
         readonly List<TimelineRuntimePresentationFrame> m_PresentationCandidates = new List<TimelineRuntimePresentationFrame>(64);
@@ -642,7 +650,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_SourceName, "character-timeline", default);
             var domainResolver = new CharacterTimelineDomainBindingResolver(
                 new[] { "self", "camera", "main" });
-            var treeClipService = new CharacterTimelineTreeClipService(this);
+            m_TreeClipService = new CharacterTimelineTreeClipService(this);
             var markerService = new CharacterTimelineMarkerService(this);
 
             m_Host = new TimelineRuntimeCompositionHost(
@@ -652,7 +660,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 domainResolver,
                 m_DependencyResolver,
                 Array.Empty<ITimelineRuntimeEvaluationSink>(),
-                treeClipService,
+                m_TreeClipService,
                 markerService,
                 tickRate);
             m_Host.CommittedEvaluation += OnCommittedTimelineEvaluation;
@@ -1364,6 +1372,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 native.PendingTreeDecisionExits,
                 native.SectionId,
                 native.ActiveClipIds,
+                m_TreeClipService.Capture(handle.Value),
                 native.HasStopContext,
                 MapSnapshotStopCause(native.StopContext.Cause),
                 native.StopContext.LocalLogicTick,
@@ -1422,6 +1431,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_TickRate);
             TimelineRuntimeRestoreCandidate candidate = m_Host.PrepareRestore(native, preparation);
             TimelineRuntimePlaybackHandle restored = m_Host.ApplyRestore(candidate);
+            m_TreeClipService.Restore(restored.Value, snapshot.ActiveTreeClips);
             var handle = new TimelinePlaybackHandle(restored.Value);
             if (TryGetActivePlayback(restored, out _))
                 return checked((int)restored.Value);
@@ -2102,6 +2112,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Host.StopCommitted -= OnTimelineStopCommitted;
             m_Host.Dispose();
             m_Host = null;
+            m_TreeClipService = null;
             m_Initialized = false;
             m_ActivePlaybacks.Clear();
             m_PendingAdvances.Clear();

@@ -532,3 +532,10 @@
 - ActiveTreeClip改为值类型，删除逐次实例对象及RemoveAll捕获闭包；运行中的空列表保留复用，正常完成或正式停止后释放注册。空活动列表停止无需invoker。Step Commit同时移除Marker消费计数，避免已结束播放残留记账。
 - 本批关闭候选丢弃边界；完整逻辑Restore后的活动登记同步仍需继续核对，首次注册分配及循环TreeDecision长期活动实例容量也未据此宣称0 GC。未新增测试。
 - Unity编译与最终域重载完成（1789925037599），Editor idle，控制台错误为零；git diff --check通过，未新增测试，未进行候选失败注入或运行分配采样。
+
+## 活动TreeClip调用登记进入原Timeline快照链
+- 对应7.2／7.4：AbilityTimelineRuntimeSnapshot新增已进入尚未退出的TreeClip调用记录，保存Clip身份、图身份和cycle。原Host捕获时从同一TreeClip服务读取登记，正式Snapshot持有只读副本；Restore先恢复原Timeline，再替换同handle的登记，包含恢复为空，且在复用已有ActivePlayback的提前返回之前完成。不会为恢复重放OnEnable，也不沿用未来分支的活动列表。
+- 删除Host内重复的ActiveTreeClip数据类型，服务与Snapshot使用同一AbilityTimelineTreeClipState。停止继续按恢复后的记录调用OnDestroy；上一批Commit／Discard行为保持不变。Host释放时同时释放该服务引用，不保留影子注册表。
+- Fixed／Float32快照编码版本同步从9升为10，codec及hash身份从/7升为/8；记录参与原状态序列化与哈希，不保留旧格式读取。解码数量按剩余载荷的最小记录尺寸约束，不引入任意活动调用上限。空记录共用空数组。
+- 这是逻辑调用登记恢复，不是表现／相机历史回滚。现有Snapshot自身及非空集合复制仍有分配，完整快照与运行热路径0 GC仍需继续清理；本批未新增测试。
+- Unity编译与最终域重载完成（1789925574542），Editor idle，控制台错误为零；git diff --check通过。未新增测试，未运行旧快照兼容或异常注入测试，旧格式按新版本明确拒绝。

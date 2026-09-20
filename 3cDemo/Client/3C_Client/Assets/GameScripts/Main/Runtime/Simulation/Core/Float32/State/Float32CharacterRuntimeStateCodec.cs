@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 9;
-        const string HashIdentity = "float32-character-runtime-state-hash/7";
-        public const string CodecIdentity = "float32-character-runtime-state/7";
+        const int Version = 10;
+        const string HashIdentity = "float32-character-runtime-state-hash/8";
+        public const string CodecIdentity = "float32-character-runtime-state/8";
 
         public static byte[] Write(Float32CharacterRuntimeState state)
         {
@@ -209,6 +209,14 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(snapshot.ActiveClipIds.Count);
             for (int i = 0; i < snapshot.ActiveClipIds.Count; i++)
                 writer.WriteString(snapshot.ActiveClipIds[i]);
+            writer.WriteInt32(snapshot.ActiveTreeClips.Count);
+            for (int i = 0; i < snapshot.ActiveTreeClips.Count; i++)
+            {
+                AbilityTimelineTreeClipState clip = snapshot.ActiveTreeClips[i];
+                writer.WriteString(clip.ClipAuthoringId);
+                writer.WriteString(clip.TreeGraphId);
+                writer.WriteInt32(clip.Cycle);
+            }
             writer.WriteBoolean(snapshot.HasStopContext);
             writer.WriteByte((byte)snapshot.StopCause);
             writer.WriteUInt64(snapshot.StopLocalLogicTick);
@@ -259,6 +267,10 @@ namespace ThirdPersonSimulation
             var clips = new string[clipCount];
             for (int i = 0; i < clipCount; i++)
                 clips[i] = reader.ReadString();
+            int treeClipCount = ReadCount(reader, reader.Remaining / (3 * sizeof(int)), "Timeline active TreeClip invocations");
+            var treeClips = treeClipCount == 0 ? Array.Empty<AbilityTimelineTreeClipState>() : new AbilityTimelineTreeClipState[treeClipCount];
+            for (int i = 0; i < treeClipCount; i++)
+                treeClips[i] = new AbilityTimelineTreeClipState(reader.ReadString(), reader.ReadString(), reader.ReadInt32());
             bool hasStopContext = reader.ReadBoolean();
             AbilityTimelineSnapshotStopCause stopCause = ReadEnum<AbilityTimelineSnapshotStopCause>(reader.ReadByte());
             ulong stopLocalLogicTick = reader.ReadUInt64();
@@ -315,6 +327,7 @@ namespace ThirdPersonSimulation
                 pendingTreeDecisionExits,
                 sectionId,
                 clips,
+                treeClips,
                 hasStopContext,
                 stopCause,
                 stopLocalLogicTick,

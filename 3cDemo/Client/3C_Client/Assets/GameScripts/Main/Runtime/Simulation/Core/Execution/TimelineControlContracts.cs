@@ -718,6 +718,22 @@ namespace ThirdPersonSimulation
         Shutdown = 6
     }
 
+    public readonly struct AbilityTimelineTreeClipState
+    {
+        public AbilityTimelineTreeClipState(string clipAuthoringId, string treeGraphId, int cycle)
+        {
+            ClipAuthoringId = SimulationIdentity.Require(clipAuthoringId, nameof(clipAuthoringId));
+            TreeGraphId = SimulationIdentity.Require(treeGraphId, nameof(treeGraphId));
+            if (cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(cycle));
+            Cycle = cycle;
+        }
+
+        public string ClipAuthoringId { get; }
+        public string TreeGraphId { get; }
+        public int Cycle { get; }
+    }
+
     public sealed class AbilityTimelineRuntimeSnapshot
     {
         public AbilityTimelineRuntimeSnapshot(
@@ -738,6 +754,7 @@ namespace ThirdPersonSimulation
             IReadOnlyList<string> pendingTreeDecisionExits,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
+            IReadOnlyList<AbilityTimelineTreeClipState> activeTreeClips,
             bool hasStopContext,
             AbilityTimelineSnapshotStopCause stopCause,
             ulong stopLocalLogicTick,
@@ -775,6 +792,23 @@ namespace ThirdPersonSimulation
             PendingTreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(pendingTreeDecisionExits ?? Array.Empty<string>()));
             SectionId = sectionId ?? string.Empty;
             ActiveClipIds = Copy(activeClipIds);
+            if (activeTreeClips == null)
+                throw new ArgumentNullException(nameof(activeTreeClips));
+            if (activeTreeClips.Count == 0)
+                ActiveTreeClips = Array.Empty<AbilityTimelineTreeClipState>();
+            else
+            {
+                var treeClips = new AbilityTimelineTreeClipState[activeTreeClips.Count];
+                for (int index = 0; index < treeClips.Length; index++)
+                {
+                    AbilityTimelineTreeClipState clip = activeTreeClips[index];
+                    if (string.IsNullOrWhiteSpace(clip.ClipAuthoringId) || string.IsNullOrWhiteSpace(clip.TreeGraphId) ||
+                        clip.Cycle < 0 || clip.Cycle > cycle)
+                        throw new ArgumentException("Timeline active TreeClip identity or cycle is invalid.", nameof(activeTreeClips));
+                    treeClips[index] = clip;
+                }
+                ActiveTreeClips = Array.AsReadOnly(treeClips);
+            }
             StopCause = stopCause;
             StopLocalLogicTick = stopLocalLogicTick;
             if (hasStopContext && StopCause == AbilityTimelineSnapshotStopCause.None)
@@ -819,6 +853,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<string> PendingTreeDecisionExits { get; }
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds { get; }
+        public IReadOnlyList<AbilityTimelineTreeClipState> ActiveTreeClips { get; }
         public bool HasStopContext { get; }
         public AbilityTimelineSnapshotStopCause StopCause { get; }
         public ulong StopLocalLogicTick { get; }

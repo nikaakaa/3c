@@ -37,7 +37,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
                                     innerGroundNormal.SqrMagnitude != FixedScalar.Zero ||
                                     outerGroundNormal.SqrMagnitude != FixedScalar.Zero ||
                                     snappingPrevented || ledgeState != DeterministicKccLedgeState.None) ||
-                !Enum.IsDefined(typeof(DeterministicKccLedgeState), ledgeState))
+                ledgeState < DeterministicKccLedgeState.None ||
+                ledgeState > DeterministicKccLedgeState.EmptySide)
             {
                 throw new ArgumentException("Deterministic KCC body state is invalid.");
             }
@@ -151,14 +152,15 @@ namespace ThirdPersonSimulation.DeterministicKcc
         {
             if (index == 0 && kind == 0)
                 return DeterministicCollisionFeatureId.Invalid;
-            if (!Enum.IsDefined(typeof(DeterministicCollisionFeatureKind), kind) || index < 0)
+            if (kind < (byte)DeterministicCollisionFeatureKind.PlaneFace ||
+                kind > (byte)DeterministicCollisionFeatureKind.BoxFace || index < 0)
                 throw new InvalidDataException($"Deterministic KCC ground feature '{kind}:{index}' is invalid.");
             return new DeterministicCollisionFeatureId((DeterministicCollisionFeatureKind)kind, index);
         }
 
         static DeterministicKccLedgeState ReadLedgeState(byte value)
         {
-            if (!Enum.IsDefined(typeof(DeterministicKccLedgeState), value))
+            if (value > (byte)DeterministicKccLedgeState.EmptySide)
                 throw new InvalidDataException($"Deterministic KCC ledge state '{value}' is invalid.");
             return (DeterministicKccLedgeState)value;
         }

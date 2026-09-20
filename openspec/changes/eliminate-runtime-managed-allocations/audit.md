@@ -1081,3 +1081,12 @@
 - 构造器复用 CharacterPoseSourceReadinessEnumValues 的 Kind 规则，TargetInput 按 ClipSamples=1 至 BlendSpaceSamples=3 判断；IsValid 既有三分支继续完整拒绝未知 Input，Resource 分支直接匹配 NativeClip／Acl。
 - 删除 target 构造与有效性读取四处装箱和枚举元数据查询，不改变 clips、resource index、group clip、blend space samples 或 readiness 资源解析结果。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做资源 readiness 运行回放或 Player 分配采样。
+
+## 2026-09-20 KCC 身体状态 Ledge 枚举校验
+
+对应 tasks.md 的 5.53。
+
+- DeterministicKccWorldSolver 每步求解完成后为每个 Actor 构造 DeterministicKccBodyState；构造器原在地面身份、法线和吸附约束之后对 LedgeState 执行 Enum.IsDefined，因此随求解 Actor 数重复装箱。
+- LedgeState 正式成员连续为 None=0 至 EmptySide=2，身体状态直接检查该闭区间。恢复解码的 FeatureKind 同步按 PlaneFace=1 至 BoxFace=5、Ledge byte 按 0 至 2 检查，未知值继续抛出原 InvalidDataException。
+- 删除每步身体状态和低频恢复解码中的三处枚举元数据查询；ActorId、地面身份、法线、稳定性、吸附、状态顺序和 canonical 字段均未改变。
+- ThirdPersonSimulation.DeterministicKcc portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 KCC 状态运行回放或 Player 分配采样。

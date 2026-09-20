@@ -149,8 +149,7 @@ namespace BTSMTL.Timeline
             string sourceName,
             ICollection<TimelineAnimationContribution> animationContributions,
             bool isLooping,
-            int cycleIndex,
-            Func<Clip, bool> clipFilter = null)
+            int cycleIndex)
         {
             if (m_PersistentMuted)
                 return;
@@ -160,10 +159,6 @@ namespace BTSMTL.Timeline
                 Clip clip = Clips[clipIndex];
                 if (clip is not AnimationClip animationClip || !animationClip.Clip)
                     continue;
-                if (clipFilter != null && !clipFilter(animationClip))
-                {
-                    continue;
-                }
 
                 if (!TrySampleClip(animationClip, timelineTime, out float clipTime, out float normalizedTime, out float weight))
                     continue;

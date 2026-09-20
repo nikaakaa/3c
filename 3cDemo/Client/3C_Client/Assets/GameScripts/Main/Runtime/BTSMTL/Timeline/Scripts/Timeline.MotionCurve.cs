@@ -87,8 +87,7 @@ namespace BTSMTL.Timeline
             float timelineTime,
             string sourceId,
             string sourceName,
-            ICollection<TimelineMotionCurveContribution> contributions,
-            Func<Clip, bool> clipFilter = null)
+            ICollection<TimelineMotionCurveContribution> contributions)
         {
             if (m_PersistentMuted || contributions == null)
                 return;
@@ -97,10 +96,6 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not MotionCurveClip motionCurveClip)
                     continue;
-                if (clipFilter != null && !clipFilter(motionCurveClip))
-                {
-                    continue;
-                }
 
                 if (!TrySampleClip(motionCurveClip, previousTimelineTime, timelineTime, out TimelineMotionCurveContribution contribution))
                     continue;

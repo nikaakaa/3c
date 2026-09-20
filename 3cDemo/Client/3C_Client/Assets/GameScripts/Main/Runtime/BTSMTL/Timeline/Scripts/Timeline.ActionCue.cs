@@ -51,8 +51,7 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             ICollection<TimelineActionCueSample> cues,
-            bool includeStartBoundary = false,
-            Func<Clip, bool> clipFilter = null)
+            bool includeStartBoundary = false)
         {
             if (m_PersistentMuted || cues == null)
                 return;
@@ -61,10 +60,6 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not ActionCueClip actionCueClip)
                     continue;
-                if (clipFilter != null && !clipFilter(actionCueClip))
-                {
-                    continue;
-                }
 
                 if ((includeStartBoundary && actionCueClip.StartTime.Raw == 0) ||
                     previousTime < actionCueClip.StartTime && actionCueClip.StartTime <= timelineTime)

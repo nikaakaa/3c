@@ -59,8 +59,7 @@ namespace BTSMTL.Timeline
             float timelineTime,
             string sourceId,
             string sourceName,
-            ICollection<TimelineCameraResourceSample> samples,
-            Func<Clip, bool> clipFilter = null)
+            ICollection<TimelineCameraResourceSample> samples)
         {
             if (m_PersistentMuted || samples == null)
                 return;
@@ -68,7 +67,6 @@ namespace BTSMTL.Timeline
             for (int clipIndex = 0; clipIndex < Clips.Count; clipIndex++)
             {
                 if (Clips[clipIndex] is not CameraEffectClip clip ||
-                    clipFilter != null && !clipFilter(clip) ||
                     timelineTime < clip.StartTime.ToSingle() ||
                     timelineTime > clip.EndTime.ToSingle())
                     continue;

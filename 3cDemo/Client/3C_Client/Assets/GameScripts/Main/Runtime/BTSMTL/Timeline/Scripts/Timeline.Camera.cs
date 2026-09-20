@@ -162,8 +162,7 @@ namespace BTSMTL.Timeline
             float timelineTime,
             string sourceId,
             string sourceName,
-            ICollection<TimelineCameraStateSample> states,
-            Func<Clip, bool> clipFilter = null)
+            ICollection<TimelineCameraStateSample> states)
         {
             if (m_PersistentMuted || states == null)
                 return;
@@ -172,10 +171,6 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not CameraStateClip cameraClip)
                     continue;
-                if (clipFilter != null && !clipFilter(cameraClip))
-                {
-                    continue;
-                }
 
                 if (!TrySampleClip(cameraClip, timelineTime, out float weight))
                     continue;
@@ -267,8 +262,7 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             ICollection<TimelineCameraCueSample> cues,
-            bool includeStartBoundary = false,
-            Func<Clip, bool> clipFilter = null)
+            bool includeStartBoundary = false)
         {
             if (m_PersistentMuted || cues == null)
                 return;
@@ -277,10 +271,6 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not CameraCueClip cueClip)
                     continue;
-                if (clipFilter != null && !clipFilter(cueClip))
-                {
-                    continue;
-                }
 
                 if ((includeStartBoundary && cueClip.StartTime.Raw == 0) ||
                     previousTime < cueClip.StartTime && cueClip.StartTime <= timelineTime)
@@ -354,8 +344,7 @@ namespace BTSMTL.Timeline
             float timelineTime,
             string sourceId,
             string sourceName,
-            ICollection<TimelineCameraResponseSample> responses,
-            Func<Clip, bool> clipFilter = null)
+            ICollection<TimelineCameraResponseSample> responses)
         {
             if (m_PersistentMuted || responses == null)
                 return;
@@ -364,10 +353,6 @@ namespace BTSMTL.Timeline
             {
                 if (clip is not CameraResponseClip responseClip)
                     continue;
-                if (clipFilter != null && !clipFilter(responseClip))
-                {
-                    continue;
-                }
 
                 if (!TrySampleClip(responseClip, timelineTime, out float weight))
                     continue;

@@ -232,3 +232,10 @@
 - driver仍在原AdvanceCursor中累加delta，该自主进度尚未移交共享动作采样，不能视为5.2完成。MarkerTraversal、结果列表、事件身份字符串等分配及表现提交／丢弃链仍待处理。
 - 当前调用顺序仍是Timeline产生动作命令后Pose打开投影事务；后续必须同时处理动作命令来源与事务范围，不能仅把Present挪位置制造另一条计时链。
 - 本批编译重载完成1789882074513，观测1789882098124为idle、非Play／编译／导入，错误控制台0条。源码已无表现CursorFrame与分段List；没有以此声称整体0GC或共享采样完成。
+
+## 轨道域筛选与采样委托清理
+
+- 删除ActionCue、Animation、MotionCurve和相机各采样接口的可选Func<Clip,bool>，以及Evaluate每次创建的logicClipFilter／presentationClipFilter捕获委托。
+- 求值器在轨道循环直接筛选Track.ExecutionDomain与PersistentMuted；剩余跨轨道Clip边界读所在轨道域。删除每个Clip都线性遍历Content.Clips的HasProjection辅助函数，不再维护另一份可覆盖执行域。
+- 正式内容在preparation校验后只读消费，轨道采样只负责本轨道的数据映射。此改动消除两侧求值的域过滤闭包分配与重复扫描；结果容器、Marker事件和生命周期仍有其它分配，不声称整体0GC完成。
+- 编译重载完成1789882282243，观测1789882291050为idle，错误控制台0条。全Main源码已无clipFilter／logicClipFilter／presentationClipFilter引用，未新增测试；共享动作采样仍待接线。

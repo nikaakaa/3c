@@ -224,3 +224,11 @@
 - 暂停／倍率控制、表现driver自主积分删除、共享采样、持续分配清理仍未完成；0.4／0.7和第5节不提前勾选。
 - 推进计算对整数分子先求商余数，再按最近偶数舍入，循环长度raw的奇偶进入tie判定；带符号余数范围为±tickRate/2。没有用每tick先量化再累加，也不经float算逻辑秒。CharacterTimelineHost.Update的非CoreDriven delta×60旧入口与Presentation driver仍待后续移除。
 - 本批编译重载完成1789881757642，观测1789881770374为idle，错误控制台0条；18个Timeline正式内容发现的Duration与作者精确DurationTime逐项一致。尚无完整Step／恢复运行证据，不把编译和内容发现视为完整回滚验收。
+
+## 表现秒区间与无分配循环分段
+
+- 表现driver的游标、循环末端、Marker比较和Evaluate入参统一FixedScalar秒，删除CursorFrame和作者帧率参与表现推进的换算；内容精确Duration不再经CeilingIndex改变循环长度。
+- 逻辑与表现两套BuildSegments／List删除，统一TimelineRuntimeEvaluationSegments值类型按索引计算首段、完整循环及末段；每次求值不再为分段分配List和数组。保留区间顺序和4096循环范围约束。
+- driver仍在原AdvanceCursor中累加delta，该自主进度尚未移交共享动作采样，不能视为5.2完成。MarkerTraversal、结果列表、事件身份字符串等分配及表现提交／丢弃链仍待处理。
+- 当前调用顺序仍是Timeline产生动作命令后Pose打开投影事务；后续必须同时处理动作命令来源与事务范围，不能仅把Present挪位置制造另一条计时链。
+- 本批编译重载完成1789882074513，观测1789882098124为idle、非Play／编译／导入，错误控制台0条。源码已无表现CursorFrame与分段List；没有以此声称整体0GC或共享采样完成。

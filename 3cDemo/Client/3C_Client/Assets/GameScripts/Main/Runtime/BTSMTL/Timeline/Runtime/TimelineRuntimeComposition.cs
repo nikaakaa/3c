@@ -330,40 +330,39 @@ namespace BTSMTL.Timeline.Runtime
             }
 
             var events = new List<TimelineRuntimePresentationEvent>();
-            int maxFrame = TimelineTimeGrid.CeilingIndex(playback.Content.Duration, playback.Content.FrameRate);
+            FixedScalar duration = playback.Content.Duration;
             bool loop = playback.PlaybackMode == TimelinePlaybackMode.Loop;
-            float previousFrame = state.CursorFrame;
+            FixedScalar previousTime = state.CursorTime;
             int previousCycle = state.Cycle;
             AdvanceCursor(
                 state,
-                maxFrame,
+                duration,
                 loop,
-                playback.Content.FrameRate,
                 presentationDeltaSeconds,
-                out float currentFrame,
+                out FixedScalar currentTime,
                 out int currentCycle);
             TimelineRuntimePresentationOperations operations = TimelineRuntimePresentationEvaluator.Evaluate(
                 playback,
-                previousFrame,
+                previousTime,
                 previousCycle,
-                currentFrame,
+                currentTime,
                 currentCycle,
                 loop,
                 !state.HasPresented);
             AppendMarkerEvents(
                 playback,
                 state,
-                previousFrame,
+                previousTime,
                 previousCycle,
-                currentFrame,
+                currentTime,
                 currentCycle,
                 loop,
                 !state.HasPresented,
                 events);
-            state.CursorFrame = currentFrame;
+            state.CursorTime = currentTime;
             state.Cycle = currentCycle;
             state.HasPresented = true;
-            if (!loop && currentFrame >= maxFrame)
+            if (!loop && currentTime >= duration)
                 state.Finished = true;
             frame = new TimelineRuntimePresentationFrame(
                 playback,
@@ -408,52 +407,47 @@ namespace BTSMTL.Timeline.Runtime
 
         static void AdvanceCursor(
             PresentationPlaybackState state,
-            int maxFrame,
+            FixedScalar duration,
             bool loop,
-            int frameRate,
             float deltaSeconds,
-            out float currentFrame,
+            out FixedScalar currentTime,
             out int currentCycle)
         {
-            currentFrame = state.CursorFrame;
+            currentTime = state.CursorTime;
             currentCycle = state.Cycle;
-            if (maxFrame <= 0)
+            if (duration <= FixedScalar.Zero)
                 return;
-            double requested = state.CursorFrame + deltaSeconds * Math.Max(1, frameRate);
+            FixedScalar requested = state.CursorTime + FixedScalar.FromDouble(deltaSeconds);
             if (loop)
             {
-                long cycleDelta = (long)Math.Floor(requested / maxFrame);
+                long cycleDelta = requested.Raw / duration.Raw;
                 if (cycleDelta > 4096 || cycleDelta > int.MaxValue - state.Cycle)
                     throw new InvalidOperationException("Timeline presentation cursor crossed an unsupported cycle range.");
                 currentCycle = state.Cycle + (int)cycleDelta;
-                currentFrame = (float)(requested - cycleDelta * maxFrame);
+                currentTime = FixedScalar.FromRaw(requested.Raw % duration.Raw);
                 return;
             }
-            currentFrame = (float)Math.Min(requested, maxFrame);
+            currentTime = FixedScalar.Min(requested, duration);
         }
 
         static void AppendMarkerEvents(
             TimelineRuntimePlayback playback,
             PresentationPlaybackState state,
-            float previousFrame,
+            FixedScalar previousTime,
             int previousCycle,
-            float currentFrame,
+            FixedScalar currentTime,
             int currentCycle,
             bool loop,
             bool includeStartBoundary,
             List<TimelineRuntimePresentationEvent> events)
         {
-            int maxFrame = TimelineTimeGrid.CeilingIndex(playback.Content.Duration, playback.Content.FrameRate);
-            if (maxFrame <= 0)
+            FixedScalar duration = playback.Content.Duration;
+            if (duration <= FixedScalar.Zero)
                 return;
-            double previousAbsolute = previousCycle * (double)maxFrame + previousFrame;
-            double currentAbsolute = currentCycle * (double)maxFrame + currentFrame;
-            if (currentAbsolute < previousAbsolute)
+            if (currentCycle < previousCycle || currentCycle == previousCycle && currentTime < previousTime)
                 throw new InvalidOperationException("Timeline presentation cursor moved backward without a generation reset.");
             int firstCycle = loop ? previousCycle : 0;
             int lastCycle = loop ? currentCycle : 0;
-            FixedScalar previousTime = FixedScalar.FromDouble(previousFrame / (double)playback.Content.FrameRate);
-            FixedScalar currentTime = FixedScalar.FromDouble(currentFrame / (double)playback.Content.FrameRate);
             var transitions = new List<MarkerTransition>();
             for (int markerIndex = 0; markerIndex < playback.Content.Markers.Count; markerIndex++)
             {
@@ -503,7 +497,7 @@ namespace BTSMTL.Timeline.Runtime
             public readonly Dictionary<string, ulong> MarkerTraversal =
                 new Dictionary<string, ulong>(StringComparer.Ordinal);
             public ulong Generation { get; }
-            public float CursorFrame;
+            public FixedScalar CursorTime;
             public int Cycle;
             public bool HasPresented;
             public bool StopCommitted;

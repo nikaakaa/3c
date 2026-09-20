@@ -1771,14 +1771,13 @@ namespace BTSMTL.Timeline.Runtime
             var motionWarps = new List<TimelineRuntimeMotionWarpRequest>();
             var clipSamples = new List<TimelineRuntimeClipSample>();
             var traces = new List<TimelineRuntimeTraceOutput>();
-            List<TimelineRuntimeEvaluationSegment> segments = BuildSegments(
+            var segments = new TimelineRuntimeEvaluationSegments(
                 previousPosition,
                 previousCycle,
                 currentPosition,
                 currentCycle,
                 content.Duration,
-                loop,
-                frameRate);
+                loop);
             Func<Clip, bool> logicClipFilter = clip =>
                 HasProjection(content, clip, TimelineExecutionDomain.Logic);
             AppendMarkerRequests(
@@ -2328,50 +2327,16 @@ namespace BTSMTL.Timeline.Runtime
             return string.Empty;
         }
 
-        static List<TimelineRuntimeEvaluationSegment> BuildSegments(
-            FixedScalar previousPosition,
-            int previousCycle,
-            FixedScalar currentPosition,
-            int currentCycle,
-            FixedScalar duration,
-            bool loop,
-            int frameRate)
-        {
-            var result = new List<TimelineRuntimeEvaluationSegment>();
-            if (!loop || currentCycle == previousCycle || duration <= FixedScalar.Zero)
-            {
-                result.Add(new TimelineRuntimeEvaluationSegment(
-                    previousPosition,
-                    currentPosition,
-                    currentCycle));
-                return result;
-            }
-            if (currentCycle - previousCycle > 4096)
-                throw new InvalidOperationException("Timeline evaluation crossed more than 4096 cycles in one Advance.");
-            result.Add(new TimelineRuntimeEvaluationSegment(
-                previousPosition,
-                duration,
-                previousCycle));
-            for (int cycle = previousCycle + 1; cycle < currentCycle; cycle++)
-                result.Add(new TimelineRuntimeEvaluationSegment(
-                    FixedScalar.Zero,
-                    duration,
-                    cycle));
-            result.Add(new TimelineRuntimeEvaluationSegment(
-                FixedScalar.Zero,
-                currentPosition,
-                currentCycle));
-            return result;
-        }
+
     }
 
     internal static class TimelineRuntimePresentationEvaluator
     {
         public static TimelineRuntimePresentationOperations Evaluate(
             TimelineRuntimePlayback playback,
-            float previousFrame,
+            FixedScalar previousPosition,
             int previousCycle,
-            float currentFrame,
+            FixedScalar currentPosition,
             int currentCycle,
             bool loop,
             bool includeStartBoundary)
@@ -2380,21 +2345,20 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ArgumentNullException(nameof(playback));
             TimelineData timeline = playback.SourceTimeline;
             int frameRate = Math.Max(1, playback.Content.FrameRate);
-            int maxFrame = TimelineTimeGrid.CeilingIndex(playback.Content.Duration, playback.Content.FrameRate);
+            FixedScalar contentDuration = playback.Content.Duration;
             var animations = new List<TimelineAnimationContribution>();
             var cameraStates = new List<TimelineCameraStateSample>();
             var cameraCues = new List<TimelineCameraCueSample>();
             var cameraResponses = new List<TimelineCameraResponseSample>();
             var cameraResources = new List<TimelineCameraResourceSample>();
             var scenePresentation = new List<TimelineRuntimeScenePresentationSample>();
-            List<TimelineRuntimeEvaluationSegment> segments = BuildSegments(
-                previousFrame,
+            var segments = new TimelineRuntimeEvaluationSegments(
+                previousPosition,
                 previousCycle,
-                currentFrame,
+                currentPosition,
                 currentCycle,
-                maxFrame,
-                loop,
-                frameRate);
+                contentDuration,
+                loop);
             Func<Clip, bool> presentationClipFilter = clip =>
                 TimelineRuntimeEvaluator.HasProjection(
                     playback.Content,
@@ -2434,8 +2398,8 @@ namespace BTSMTL.Timeline.Runtime
                     }
                 }
             }
-            float currentTime = currentFrame / frameRate;
-            int sampledFrame = Mathf.Clamp(Mathf.FloorToInt(currentFrame), 0, maxFrame);
+            float currentTime = currentPosition.ToSingle();
+            int sampledFrame = TimelineTimeGrid.NearestIndex(currentPosition, frameRate);
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
                 Track track = timeline.Tracks[trackIndex];
@@ -2497,35 +2461,43 @@ namespace BTSMTL.Timeline.Runtime
                 scenePresentation);
         }
 
-        static List<TimelineRuntimeEvaluationSegment> BuildSegments(
-            float previousFrame,
-            int previousCycle,
-            float currentFrame,
-            int currentCycle,
-            int maxFrame,
-            bool loop,
-            int frameRate)
+
+    }
+
+    readonly struct TimelineRuntimeEvaluationSegments
+    {
+        readonly FixedScalar m_Previous;
+        readonly FixedScalar m_Current;
+        readonly FixedScalar m_Duration;
+        readonly int m_PreviousCycle;
+        readonly int m_CurrentCycle;
+
+        public TimelineRuntimeEvaluationSegments(FixedScalar previous, int previousCycle,
+            FixedScalar current, int currentCycle, FixedScalar duration, bool loop)
         {
-            var result = new List<TimelineRuntimeEvaluationSegment>();
-            if (!loop || currentCycle == previousCycle || maxFrame <= 0)
+            if (currentCycle < previousCycle || currentCycle - previousCycle > 4096 ||
+                currentCycle == previousCycle && current < previous)
+                throw new InvalidOperationException("Timeline interval has an invalid traversal range.");
+            m_Previous = previous;
+            m_Current = current;
+            m_Duration = duration;
+            m_PreviousCycle = previousCycle;
+            m_CurrentCycle = currentCycle;
+            Count = loop && duration > FixedScalar.Zero ? currentCycle - previousCycle + 1 : 1;
+        }
+
+        public int Count { get; }
+        public TimelineRuntimeEvaluationSegment this[int index]
+        {
+            get
             {
-                result.Add(new TimelineRuntimeEvaluationSegment(
-                    FixedScalar.FromDouble(previousFrame / (double)frameRate),
-                    FixedScalar.FromDouble(currentFrame / (double)frameRate),
-                    currentCycle));
-                return result;
+                if ((uint)index >= (uint)Count)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                return new TimelineRuntimeEvaluationSegment(
+                    index == 0 ? m_Previous : FixedScalar.Zero,
+                    index == Count - 1 ? m_Current : m_Duration,
+                    Count == 1 ? m_CurrentCycle : m_PreviousCycle + index);
             }
-            if (currentCycle < previousCycle || currentCycle - previousCycle > 4096)
-                throw new InvalidOperationException("Timeline presentation evaluation crossed an invalid cycle range.");
-            FixedScalar maxTime = FixedScalar.FromRatio(maxFrame, frameRate);
-            result.Add(new TimelineRuntimeEvaluationSegment(
-                FixedScalar.FromDouble(previousFrame / (double)frameRate),
-                maxTime,
-                previousCycle));
-            for (int cycle = previousCycle + 1; cycle < currentCycle; cycle++)
-                result.Add(new TimelineRuntimeEvaluationSegment(FixedScalar.Zero, maxTime, cycle));
-            result.Add(new TimelineRuntimeEvaluationSegment(FixedScalar.Zero, FixedScalar.FromDouble(currentFrame / (double)frameRate), currentCycle));
-            return result;
         }
     }
 

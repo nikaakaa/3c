@@ -326,7 +326,6 @@ namespace BTSMTL.Timeline.Runtime
             }
             if (hasState && state.StopCommitted)
             {
-                m_Playbacks.Remove(handle.Value);
                 frame = default;
                 return false;
             }
@@ -339,10 +338,17 @@ namespace BTSMTL.Timeline.Runtime
                     frame = default;
                     return false;
                 }
-                state = new PresentationPlaybackState(playback.Generation);
+                state = new PresentationPlaybackState(playback.Generation, playback.Content.Markers.Count);
                 m_Playbacks.Add(handle.Value, state);
             }
 
+            if (state.HasPendingFrame)
+            {
+                if (state.PendingFrame.PresentationFrame != presentationFrame)
+                    throw new InvalidOperationException("Timeline presentation candidate has not been accepted or discarded.");
+                frame = state.PendingFrame;
+                return false;
+            }
             if (state.HasCachedFrame)
             {
                 if (presentationFrame == state.LastPresentationFrame)
@@ -356,11 +362,11 @@ namespace BTSMTL.Timeline.Runtime
 
             if (state.Finished && sample.Time == state.CursorTime && sample.Cycle == state.Cycle)
             {
-                m_Playbacks.Remove(handle.Value);
                 frame = default;
                 return false;
             }
 
+            Array.Copy(state.MarkerTraversal, state.PendingMarkerTraversal, state.MarkerTraversal.Length);
             var events = new List<TimelineRuntimePresentationEvent>();
             FixedScalar duration = playback.Content.Duration;
             bool loop = playback.PlaybackMode == TimelinePlaybackMode.Loop;
@@ -394,10 +400,9 @@ namespace BTSMTL.Timeline.Runtime
                 loop,
                 !state.HasPresented,
                 events);
-            state.CursorTime = currentTime;
-            state.Cycle = currentCycle;
-            state.HasPresented = true;
-            state.Finished = !loop && currentTime >= duration;
+            state.PendingTime = currentTime;
+            state.PendingCycle = currentCycle;
+            state.PendingFinished = !loop && currentTime >= duration;
             frame = new TimelineRuntimePresentationFrame(
                 playback,
                 sample.LogicTick,
@@ -406,9 +411,40 @@ namespace BTSMTL.Timeline.Runtime
                 interpolationAlpha,
                 operations,
                 events);
-            state.Cache(frame);
+            state.PendingFrame = frame;
+            state.HasPendingFrame = true;
             return true;
         }
+
+        public void CommitPresentationFrame(ulong presentationFrame)
+        {
+            foreach (PresentationPlaybackState state in m_Playbacks.Values)
+            {
+                if (!state.HasPendingFrame || state.PendingFrame.PresentationFrame != presentationFrame)
+                    continue;
+                Array.Copy(state.PendingMarkerTraversal, state.MarkerTraversal, state.MarkerTraversal.Length);
+                state.CursorTime = state.PendingTime;
+                state.Cycle = state.PendingCycle;
+                state.Finished = state.PendingFinished;
+                state.HasPresented = true;
+                state.Cache(state.PendingFrame);
+                state.PendingFrame = default;
+                state.HasPendingFrame = false;
+            }
+        }
+
+        public void DiscardPresentationFrame(ulong presentationFrame)
+        {
+            foreach (PresentationPlaybackState state in m_Playbacks.Values)
+            {
+                if (!state.HasPendingFrame || state.PendingFrame.PresentationFrame != presentationFrame)
+                    continue;
+                state.PendingFrame = default;
+                state.HasPendingFrame = false;
+            }
+        }
+
+        public void ReleasePresentationPlayback(TimelineRuntimePlaybackHandle handle) => m_Playbacks.Remove(handle.Value);
 
         public bool Consume(TimelineRuntimeStepContext context) => true;
 
@@ -471,11 +507,10 @@ namespace BTSMTL.Timeline.Runtime
                     if ((!initial && !afterPrevious) || !beforeCurrent)
                         continue;
                     string markerId = marker.MarkerId;
-                    if (!state.MarkerTraversal.TryGetValue(markerId, out ulong traversalIndex))
-                        traversalIndex = 1;
+                    ulong traversalIndex = state.PendingMarkerTraversal[markerIndex];
                     if (traversalIndex == 0)
-                        throw new InvalidOperationException($"Timeline presentation marker '{markerId}' traversal identity is exhausted.");
-                    state.MarkerTraversal[markerId] = traversalIndex + 1;
+                        traversalIndex = 1;
+                    state.PendingMarkerTraversal[markerIndex] = checked(traversalIndex + 1);
                     events.Add(new TimelineRuntimePresentationEvent(
                         playback.Handle,
                         playback.ExecutionIdentity,
@@ -492,13 +527,20 @@ namespace BTSMTL.Timeline.Runtime
 
         sealed class PresentationPlaybackState
         {
-            public PresentationPlaybackState(ulong generation)
+            public PresentationPlaybackState(ulong generation, int markerCount)
             {
                 Generation = generation;
+                MarkerTraversal = new ulong[markerCount];
+                PendingMarkerTraversal = new ulong[markerCount];
             }
 
-            public readonly Dictionary<string, ulong> MarkerTraversal =
-                new Dictionary<string, ulong>(StringComparer.Ordinal);
+            public readonly ulong[] MarkerTraversal;
+            public readonly ulong[] PendingMarkerTraversal;
+            public FixedScalar PendingTime;
+            public int PendingCycle;
+            public bool PendingFinished;
+            public TimelineRuntimePresentationFrame PendingFrame;
+            public bool HasPendingFrame;
             public ulong Generation { get; }
             public FixedScalar CursorTime;
             public int Cycle;

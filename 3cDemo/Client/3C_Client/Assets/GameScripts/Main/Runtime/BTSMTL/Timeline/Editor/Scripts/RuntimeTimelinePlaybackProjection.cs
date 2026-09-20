@@ -13,6 +13,7 @@ namespace BTSMTL.Timeline.Editor
         TimelineData m_SourceSnapshot;
         TimelineData m_Runtime;
         RuntimeInstanceKey m_Playback;
+        RuntimeDebugViewModel m_Observation;
 
         public bool Matches(TimelineData source, RuntimeInstanceKey playback) =>
             ReferenceEquals(m_Source, source) && m_Playback.Equals(playback);
@@ -20,12 +21,16 @@ namespace BTSMTL.Timeline.Editor
         public TimelineData Update(
             TimelineData source,
             RuntimeInstanceKey playback,
-            IReadOnlyList<RuntimeDebugEventView> events)
+            IReadOnlyList<RuntimeDebugEventView> events,
+            RuntimeDebugViewModel observation)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
-            if (!Matches(source, playback))
+            if (!Matches(source, playback) || !ReferenceEquals(m_Observation, observation))
+            {
                 Reset(source, playback);
+                m_Observation = observation;
+            }
 
             bool changed = false;
             for (int index = 0; index < events.Count; index++)

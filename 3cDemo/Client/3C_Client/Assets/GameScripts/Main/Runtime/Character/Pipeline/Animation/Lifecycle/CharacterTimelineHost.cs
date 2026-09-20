@@ -487,6 +487,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         TimelineRuntimeCompositionHost m_Host;
         readonly List<ActivePlayback> m_ActivePlaybacks = new List<ActivePlayback>();
         readonly List<ActivePlayback> m_PlaybackScan = new List<ActivePlayback>();
+        readonly List<TimelineRuntimePresentationFrame> m_PresentationCandidates = new List<TimelineRuntimePresentationFrame>(64);
+        readonly List<ActivePlayback> m_PresentationEndCandidates = new List<ActivePlayback>(64);
         readonly Dictionary<string, TimelineData> m_TimelineContent = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
         readonly Guid m_ContentSessionIdentity = Guid.NewGuid();
         readonly Dictionary<ulong, CharacterTimelinePendingAdvance> m_PendingAdvances =
@@ -530,6 +532,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public string AuthoringContentRevision { get; private set; } = string.Empty;
         public string ContentRevision { get; private set; } = string.Empty;
         public ulong ContentGeneration => m_ContentGeneration;
+        internal event Action<TimelineRuntimePresentationFrame> PresentationFramePrepared;
         public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
         public event Action<TimelineRuntimePlaybackHandle> PresentationPlaybackEnded;
         public event Action<TimelineActionCueEvent> ActionCueCommitted;
@@ -1914,21 +1917,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     if (frame.Events.Count != 0)
                         throw new InvalidOperationException($"Timeline playback '{frame.Handle.Value}' has Presentation Markers without an installed presentation graph executor.");
-                    PresentationFrameProduced?.Invoke(frame);
-                    PublishTimelineVisualTime(active, frame);
+                    m_PresentationCandidates.Add(frame);
+                    PresentationFramePrepared?.Invoke(frame);
                 }
                 TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
                 if (status != TimelinePlaybackStatus.Requested &&
                     status != TimelinePlaybackStatus.Running &&
                     !presented)
                 {
-                    if (active.CoreDriven)
-                        clock.ReleaseTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
-                            active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId);
-                    PresentationPlaybackEnded?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value));
-                    m_ActivePlaybacks.RemoveAt(index);
+                    m_PresentationEndCandidates.Add(active);
                 }
             }
+        }
+
+        internal void CommitPresentationFrame(ulong frame, IActionPresentationClockCoordinator clock)
+        {
+            for (int i = 0; i < m_PresentationCandidates.Count; i++)
+            {
+                TimelineRuntimePresentationFrame candidate = m_PresentationCandidates[i];
+                PresentationFrameProduced?.Invoke(candidate);
+                if (TryGetActivePlayback(candidate.Handle, out ActivePlayback active))
+                    PublishTimelineVisualTime(active, candidate);
+            }
+            m_Host?.CommitPresentationFrame(frame);
+            for (int i = 0; i < m_PresentationEndCandidates.Count; i++)
+            {
+                ActivePlayback active = m_PresentationEndCandidates[i];
+                if (active.CoreDriven)
+                    clock.ReleaseTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
+                        active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId);
+                var handle = new TimelineRuntimePlaybackHandle(active.Handle.Value);
+                PresentationPlaybackEnded?.Invoke(handle);
+                m_Host.ReleasePresentationPlayback(handle);
+                for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
+                    if (m_ActivePlaybacks[index].Handle.Value == handle.Value)
+                        m_ActivePlaybacks.RemoveAt(index);
+            }
+            m_PresentationCandidates.Clear();
+            m_PresentationEndCandidates.Clear();
+        }
+
+        internal void DiscardPresentationFrame(ulong frame)
+        {
+            m_Host?.DiscardPresentationFrame(frame);
+            m_PresentationCandidates.Clear();
+            m_PresentationEndCandidates.Clear();
         }
 
         public void Dispose()

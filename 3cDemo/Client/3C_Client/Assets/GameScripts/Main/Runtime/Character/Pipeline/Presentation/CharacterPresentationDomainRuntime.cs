@@ -389,25 +389,40 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
             if (!bodyFrame.IsValid)
                 return;
-            m_TimelineHost?.Present(context, m_PresentationClockCoordinator);
-            m_Camera?.Present(bodyFrame, context);
-            CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
-            CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
-                in factFrame,
-                Mathf.Max(0f, context.PresentationDeltaSeconds),
-                context.RenderFrame);
-            if (!update.Succeeded)
-                throw new InvalidOperationException(
-                    $"Animation EventGraph update failed: {update.Failure.Message}");
-            m_EventFrame = update.Frame;
-            if (m_LocomotionBinding.RequiresMovementFact && !m_HasTrajectory)
+            m_PresentationClockCoordinator?.BeginSamplingFrame();
+            try
             {
-                m_LocomotionFailureCode = LocomotionPresentationFailureCode.MissingMovementFact;
+                m_TimelineBridge?.BeginFrame();
+                m_TimelineHost?.Present(context, m_PresentationClockCoordinator);
+                CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
+                CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(
+                    in factFrame,
+                    Mathf.Max(0f, context.PresentationDeltaSeconds),
+                    context.RenderFrame);
+                if (!update.Succeeded)
+                    throw new InvalidOperationException(
+                        $"Animation EventGraph update failed: {update.Failure.Message}");
+                m_EventFrame = update.Frame;
+                if (m_LocomotionBinding.RequiresMovementFact && !m_HasTrajectory)
+                {
+                    m_LocomotionFailureCode = LocomotionPresentationFailureCode.MissingMovementFact;
+                    PublishLocomotionDiagnostics();
+                    return;
+                }
                 PublishLocomotionDiagnostics();
-                return;
+                if (!RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context))
+                    return;
+                m_TimelineHost?.CommitPresentationFrame(context.RenderFrame, m_PresentationClockCoordinator);
+                m_TimelineBridge?.CommitFrame();
+                m_PresentationClockCoordinator?.CommitSamplingFrame();
+                m_Camera?.Present(bodyFrame, context);
             }
-            PublishLocomotionDiagnostics();
-            RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context);
+            finally
+            {
+                m_TimelineHost?.DiscardPresentationFrame(context.RenderFrame);
+                m_TimelineBridge?.DiscardFrame();
+                m_PresentationClockCoordinator?.DiscardSamplingFrame();
+            }
         }
 
         void PublishLocomotionDiagnostics()
@@ -439,20 +454,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 });
         }
 
-        void RunPoseFrame(
+        bool RunPoseFrame(
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
             CharacterAnimationVariableFrame eventFrame,
             GameplayPresentationFrameContext context)
         {
             if (m_PoseDomain == null || !m_PoseDomain.IsAdopted)
-                return;
+                return m_TimelineHost == null;
             float deltaSeconds = Mathf.Max(0f, context.PresentationDeltaSeconds);
             m_PoseResourceScope.AdvancePreparation();
-            m_PoseDomain.BeginFrame(context.RenderFrame);
             CharacterPoseNativePreparationResult preparation;
             try
             {
+                m_PoseDomain.BeginFrame(context.RenderFrame);
                 if (!m_PoseDomain.TryGetCommands(m_ActorId, context.RenderFrame, out var actionCommands))
                     throw new InvalidOperationException("Pose Action command source did not produce the opened frame commands.");
                 m_PresentationClockCoordinator?.BeginFrame(actionCommands);
@@ -485,7 +500,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                 : CharacterPoseNativeFailureCode.FrameInvalid);
                         m_PoseDomain.DiscardFrame();
                         m_PresentationClockCoordinator?.DiscardFrame();
-                        return;
+                        return false;
                     }
                     CharacterPoseNativeValidationResult validation = m_PoseDomain.Session.ValidatePending();
                     if (validation.IsValidated)
@@ -531,6 +546,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_PresentationClockCoordinator?.DiscardFrame();
                 throw;
             }
+            return true;
         }
 
 

@@ -25,6 +25,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         void ReleaseTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId);
         bool TrySampleTimeline(ulong actionInstanceId, int operationIndex, string invocationPath, string timelineId,
             ulong presentationFrame, ulong localLogicTick, float interpolationAlpha, out TimelineRuntimePresentationSample sample);
+        void BeginSamplingFrame();
+        void CommitSamplingFrame();
+        void DiscardSamplingFrame();
         void BeginFrame(IReadOnlyList<ActionAnimationPlaybackCommand> commands);
         void CommitFrame();
         void DiscardFrame();
@@ -104,13 +107,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         readonly TimelineProgressEntry[] m_TimelineProgress = new TimelineProgressEntry[64];
+        readonly TimelineProgressEntry[] m_TimelineFrameBaseline = new TimelineProgressEntry[64];
+        bool m_SamplingFrameActive;
+
+        public void BeginSamplingFrame()
+        {
+            RequireAlive();
+            if (m_SamplingFrameActive)
+                throw new InvalidOperationException("Action sampling frame is already open.");
+            Array.Copy(m_TimelineProgress, m_TimelineFrameBaseline, m_TimelineProgress.Length);
+            m_SamplingFrameActive = true;
+        }
+
+        public void CommitSamplingFrame()
+        {
+            if (!m_SamplingFrameActive)
+                throw new InvalidOperationException("Action sampling frame is not open.");
+            m_SamplingFrameActive = false;
+            Array.Clear(m_TimelineFrameBaseline, 0, m_TimelineFrameBaseline.Length);
+        }
+
+        public void DiscardSamplingFrame()
+        {
+            if (!m_SamplingFrameActive)
+                return;
+            Array.Copy(m_TimelineFrameBaseline, m_TimelineProgress, m_TimelineProgress.Length);
+            Array.Clear(m_TimelineFrameBaseline, 0, m_TimelineFrameBaseline.Length);
+            m_SamplingFrameActive = false;
+        }
 
         public void AcceptTimelineProgress(in CharacterPresentationCommand command)
         {
             RequireAlive();
             if (command.Kind != CharacterPresentationCommandKind.TimelineProgress || !command.TimelineProgress.IsValid)
                 throw new ArgumentException("Action clock requires a typed Timeline progress command.", nameof(command));
-            if (m_ProjectorActive)
+            if (m_ProjectorActive || m_SamplingFrameActive)
                 throw new InvalidOperationException("Timeline progress cannot change inside an open presentation frame.");
             int slot = -1;
             for (int i = 0; i < m_TimelineProgress.Length; i++)
@@ -141,7 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         public void RetireTimelineProgress(in CharacterPresentationCommand command)
         {
             RequireAlive();
-            if (m_ProjectorActive)
+            if (m_ProjectorActive || m_SamplingFrameActive)
                 throw new InvalidOperationException("Timeline progress cannot retire inside an open presentation frame.");
             for (int i = 0; i < m_TimelineProgress.Length; i++)
                 if (m_TimelineProgress[i].Occupied && m_TimelineProgress[i].Command.Header.EventId.Equals(command.Header.EventId))
@@ -375,6 +406,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_Disposed)
                 return;
             DiscardFrame();
+            DiscardSamplingFrame();
             m_Disposed = true;
         }
 

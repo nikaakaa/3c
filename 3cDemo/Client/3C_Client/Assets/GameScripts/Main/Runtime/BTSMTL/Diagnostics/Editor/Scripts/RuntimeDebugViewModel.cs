@@ -384,6 +384,14 @@ namespace BTSMTL.Diagnostics.Editor
             return result;
         }
 
+        public void CopyCurrentEvents(RuntimeTraceChannel channels, List<RuntimeDebugEventView> destination)
+        {
+            destination.Clear();
+            foreach (RuntimeDebugEventView eventView in m_CurrentEvents.Values)
+                if ((eventView.Event.Channel & channels) != 0)
+                    destination.Add(eventView);
+        }
+
         public IReadOnlyList<RuntimeElementDebugState> GetGraphStates(string graphAuthoringId, RuntimeInstanceKey instance, bool changedOnly)
         {
             var result = new List<RuntimeElementDebugState>();

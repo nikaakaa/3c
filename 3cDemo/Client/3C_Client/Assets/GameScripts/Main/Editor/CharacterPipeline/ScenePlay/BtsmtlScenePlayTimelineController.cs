@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline;
@@ -9,6 +8,7 @@ using ThirdPersonCharacter.Editor.ProductStartup;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -25,8 +25,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
         {
             TimelineWorkspaceModeBridge.Register(s_Controller);
             EditorApplication.playModeStateChanged += s_Controller.OnPlayModeChanged;
-            EditorApplication.projectChanged += s_Controller.Refresh;
+            EditorApplication.projectChanged += s_Controller.OnContentChanged;
+            Undo.undoRedoPerformed += s_Controller.OnContentChanged;
             RuntimeDebugSession.Shared.Changed += s_Controller.Refresh;
+            RuntimeDiagnosticsTargetRegistry.TargetRegistered += s_Controller.OnTargetChanged;
+            RuntimeDiagnosticsTargetRegistry.TargetUnregistered += s_Controller.OnTargetChanged;
+            EditorApplication.update += s_Controller.UpdateSessionState;
             TimelineEditorWindow.AuthoringRevisionChanged += s_Controller.OnAuthoringRevisionChanged;
         }
 
@@ -54,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             readonly object m_InterestOwner = new object();
             readonly List<Controls> m_Controls = new List<Controls>();
+            readonly BtsmtlRuntimeFocusResolver m_RuntimeFocus = new();
             TimelineWorkspaceMode m_Mode = TimelineWorkspaceMode.Authoring;
             BtsmtlScenePlayProfile m_Profile;
             CharacterTimelineContentExport m_ExportedContent;
@@ -62,6 +67,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             CharacterTimelineContentAdoptionState m_ContentState;
             string m_Status = "Authoring";
             bool m_RuntimeInterest;
+            bool m_ConnectionRefreshQueued;
+            SimulationSessionHost m_ObservedSession;
+            SimulationSessionLifecycleState m_ObservedLifecycle;
+            ulong m_ObservedGeneration;
+            bool m_FollowRuntime = true;
+            bool m_NavigationQueued;
+            RuntimeInstanceKey m_LastFocusInstance;
+            string m_LastFocusGraph;
 
             public Controller()
             {
@@ -123,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 m_Controls.Add(controls);
                 RefreshControls();
                 ApplyToWindow(window);
+                QueueConnectionRefresh();
                 return container;
             }
 
@@ -139,19 +153,52 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 for (int i = m_Controls.Count - 1; i >= 0; i--)
                     if (m_Controls[i].Window == window)
                         m_Controls.RemoveAt(i);
+                if (m_Controls.Count == 0)
+                    ReleaseRuntimeInterest();
+            }
+
+            internal void OnTargetChanged(RuntimeDiagnosticsTarget target) => QueueConnectionRefresh();
+
+            void QueueConnectionRefresh()
+            {
+                if (m_ConnectionRefreshQueued)
+                    return;
+                m_ConnectionRefreshQueued = true;
+                EditorApplication.delayCall += RefreshConnection;
+            }
+
+            void RefreshConnection()
+            {
+                m_ConnectionRefreshQueued = false;
+                if (m_Controls.Count == 0 || !EditorApplication.isPlaying)
+                    return;
+                if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
+                    AttachRuntimeDebug();
+                else if (m_Mode == TimelineWorkspaceMode.Preview)
+                    SetStatus(FormatPreviewContentStatus(string.Empty));
+            }
+
+            internal void UpdateSessionState()
+            {
+                if (m_Mode == TimelineWorkspaceMode.Authoring || m_Controls.Count == 0 || !m_ObservedSession)
+                    return;
+                if (m_ObservedLifecycle == m_ObservedSession.LifecycleState &&
+                    m_ObservedGeneration == m_ObservedSession.SessionGeneration)
+                    return;
+                m_ObservedLifecycle = m_ObservedSession.LifecycleState;
+                m_ObservedGeneration = m_ObservedSession.SessionGeneration;
+                QueueConnectionRefresh();
             }
 
             internal void OnPlayModeChanged(PlayModeStateChange state)
             {
                 if (state == PlayModeStateChange.EnteredPlayMode)
                 {
-                    if (m_Mode == TimelineWorkspaceMode.RuntimeDebug)
-                        EditorApplication.delayCall += AttachRuntimeDebug;
-                    else if (m_Mode == TimelineWorkspaceMode.Preview)
-                        SetStatus(FormatPreviewContentStatus("ScenePlay 已连接。"));
+                    QueueConnectionRefresh();
                 }
                 if (state == PlayModeStateChange.ExitingPlayMode)
                 {
+                    m_ObservedSession = null;
                     ReleaseRuntimeInterest();
                     ClearContentWorkflow();
                     m_Mode = TimelineWorkspaceMode.Authoring;
@@ -164,8 +211,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             internal void OnAuthoringRevisionChanged(TimelineEditorWindow window)
             {
-                if (!IsPreviewContentWindow(window))
+                OnContentChanged();
+            }
+
+            internal void OnContentChanged()
+            {
+                if (m_Mode != TimelineWorkspaceMode.Preview || ResolveActorHost()?.TimelineHost == null)
+                {
+                    Refresh();
                     return;
+                }
                 if (m_ExportedContent != null &&
                     !string.Equals(
                         ResolveCurrentAuthoringRevision(),
@@ -177,11 +232,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 }
                 if (m_Mode == TimelineWorkspaceMode.Preview)
                     SetStatus(FormatPreviewContentStatus(
-                        "作者内容已修改，尚未导出。"));
+                        string.Empty));
             }
 
             internal void Refresh()
             {
+                if (m_Mode == TimelineWorkspaceMode.RuntimeDebug && m_Controls.Count != 0)
+                {
+                    m_RuntimeFocus.Refresh(RuntimeDebugSession.Shared.ViewModel);
+                    QueueRuntimeNavigation();
+                }
                 RefreshControls();
                 for (int i = 0; i < m_Controls.Count; i++)
                     ApplyToWindow(m_Controls[i].Window);
@@ -229,7 +289,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 menu.menu.AppendAction(
                     "Stop",
                     _ => StopSession(),
-                    _ => HasSessionHost() || EditorApplication.isPlaying
+                    _ => HasSessionHost() && EditorApplication.isPlaying
                         ? DropdownMenuAction.Status.Normal
                         : DropdownMenuAction.Status.Disabled);
                 if (m_Mode == TimelineWorkspaceMode.Preview)
@@ -291,7 +351,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                         _ =>
                         {
                             if (window.SelectRuntimeObservationPlayback(playback))
+                            {
+                                m_FollowRuntime = false;
                                 Refresh();
+                            }
                         },
                         _ => window.RuntimeObservationPlayback.Equals(playback)
                             ? DropdownMenuAction.Status.Checked
@@ -303,6 +366,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             {
                 RuntimeDebugSession debug = RuntimeDebugSession.Shared;
                 menu.menu.AppendSeparator("RuntimeDebug/");
+                menu.menu.AppendAction(
+                    "RuntimeDebug/Follow",
+                    _ =>
+                    {
+                        m_FollowRuntime = true;
+                        m_LastFocusInstance = default;
+                        Refresh();
+                    },
+                    _ => m_FollowRuntime ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
+                for (int i = 0; i < m_RuntimeFocus.Candidates.Count; i++)
+                {
+                    RuntimeDebugEventView candidate = m_RuntimeFocus.Candidates[i];
+                    RuntimeInstanceKey instance = candidate.Event.RuntimeInstance;
+                    string path = instance.Kind == RuntimeInstanceKind.TimelinePlayback
+                        ? candidate.Event.Payload.TimelinePlayback.SourceInvocationPath
+                        : instance.CallSiteId;
+                    menu.menu.AppendAction(
+                        $"RuntimeDebug/Pin/{candidate.SourceName} · 动作 {instance.ActionInstanceId} · {path} · 调用 {instance.InvocationGeneration} · 播放 {instance.TimelinePlaybackId}",
+                        _ =>
+                        {
+                            m_FollowRuntime = false;
+                            NavigateRuntime(candidate);
+                        });
+                }
                 if (debug.IsCaptureRecording)
                 {
                     menu.menu.AppendAction(
@@ -344,6 +431,59 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 }
             }
 
+            void QueueRuntimeNavigation()
+            {
+                if (!m_FollowRuntime || m_NavigationQueued)
+                    return;
+                m_NavigationQueued = true;
+                EditorApplication.delayCall += FollowRuntime;
+            }
+
+            void FollowRuntime()
+            {
+                m_NavigationQueued = false;
+                if (!m_FollowRuntime || m_Mode != TimelineWorkspaceMode.RuntimeDebug || m_Controls.Count == 0)
+                    return;
+                RuntimeDebugViewModel view = RuntimeDebugSession.Shared.ViewModel;
+                m_RuntimeFocus.Refresh(view);
+                if (view.HasCoverageGap)
+                {
+                    PublishNavigationStatus("运行记录不完整，已停止自动跟随。");
+                    return;
+                }
+                if (m_RuntimeFocus.Candidates.Count != 1)
+                {
+                    PublishNavigationStatus(m_RuntimeFocus.Candidates.Count == 0
+                        ? "当前没有活动调用。"
+                        : "存在并行调用，请在 Session / RuntimeDebug / Pin 中选择具体实例。");
+                    return;
+                }
+                RuntimeDebugEventView candidate = m_RuntimeFocus.Candidates[0];
+                if (m_LastFocusInstance.Equals(candidate.Event.RuntimeInstance) &&
+                    string.Equals(m_LastFocusGraph, candidate.Source.GraphAuthoringId, StringComparison.Ordinal))
+                    return;
+                NavigateRuntime(candidate);
+            }
+
+            void NavigateRuntime(RuntimeDebugEventView candidate)
+            {
+                if (!RuntimeDebugSourceNavigator.Open(candidate, followGraph: true))
+                {
+                    PublishNavigationStatus("当前调用缺少匹配版本的作者来源，无法导航。");
+                    return;
+                }
+                m_LastFocusInstance = candidate.Event.RuntimeInstance;
+                m_LastFocusGraph = candidate.Source.GraphAuthoringId;
+                PublishNavigationStatus($"{(m_FollowRuntime ? "跟随" : "固定")} {candidate.SourceName} · 动作 {m_LastFocusInstance.ActionInstanceId}");
+            }
+
+            void PublishNavigationStatus(string message)
+            {
+                m_Status = FormatRuntimeDebugStatus(message);
+                for (int i = 0; i < m_Controls.Count; i++)
+                    ApplyToWindow(m_Controls[i].Window);
+            }
+
             void SetMode(TimelineWorkspaceMode mode)
             {
                 if (mode == TimelineWorkspaceMode.Authoring)
@@ -369,7 +509,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     if (!EditorApplication.isPlaying)
                         StartPreview();
                     else
-                        SetStatus(FormatPreviewContentStatus("ScenePlay 已连接。"));
+                        SetStatus(FormatPreviewContentStatus(string.Empty));
                     return;
                 }
                 m_Mode = mode;
@@ -397,11 +537,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
             void StopSession()
             {
                 bool resolved = TryResolveSessionHost(out SimulationSessionHost sessionHost, out string error);
-                if (resolved)
-                    sessionHost.Stop();
-                if (EditorApplication.isPlaying)
+                if (!resolved)
+                {
+                    SetStatus(error);
+                    return;
+                }
+                sessionHost.Stop();
+                if (EditorPlayModeSceneLauncher.TryGetPendingRequest(out EditorPlayModeSceneLaunchRequest request) &&
+                    string.Equals(request.OwnerId, typeof(BtsmtlScenePlayTimelineController).FullName, StringComparison.Ordinal) &&
+                    string.Equals(request.ScenePath, m_Profile.ScenePath, StringComparison.Ordinal) &&
+                    string.Equals(request.ContextId, m_Profile.ContextId, StringComparison.Ordinal))
                     EditorApplication.ExitPlaymode();
-                SetStatus(resolved ? "ScenePlay 已提交停止。" : error);
+                SetStatus("ScenePlay 已提交停止。");
             }
 
             void SubmitSessionCommand(bool pause)
@@ -457,6 +604,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             void ReleaseRuntimeInterest()
             {
+                BtsmtlSkillObservationSession.Close();
+                m_LastFocusInstance = default;
+                m_LastFocusGraph = null;
                 if (!m_RuntimeInterest)
                     return;
                 RuntimeDebugSession.Shared.ReleaseLiveInterest(m_InterestOwner);
@@ -476,7 +626,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                 for (int i = 0; i < hosts.Length; i++)
                 {
                     SimulationSessionCompositionDefinition composition = hosts[i].Composition;
-                    if (!composition || !string.Equals(composition.SessionId, m_Profile.ContextId, StringComparison.Ordinal))
+                    if (!composition ||
+                        !string.Equals(hosts[i].gameObject.scene.path, m_Profile.ScenePath, StringComparison.Ordinal) ||
+                        !string.Equals(composition.SessionId, m_Profile.ContextId, StringComparison.Ordinal))
                         continue;
                     if (sessionHost != null)
                     {
@@ -486,7 +638,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     sessionHost = hosts[i];
                 }
                 if (sessionHost != null)
+                {
+                    m_ObservedSession = sessionHost;
                     return true;
+                }
                 error = $"未找到 Context '{m_Profile.ContextId}' 对应的正式 ScenePlay Session。";
                 return false;
             }
@@ -631,13 +786,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     report.Message);
             }
 
-            bool IsPreviewContentWindow(TimelineEditorWindow window)
-            {
-                TimelineAsset source = window?.SourceAsset;
-                CharacterPipelineDefinition definition = ResolveActorHost()?.CharacterDefinition;
-                return source != null && definition != null && definition.ControlMotionTimelines.Any(asset => asset == source);
-            }
-
             void SetContentStatus(
                 CharacterTimelineContentAdoptionState state,
                 string message)
@@ -648,9 +796,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
 
             string FormatPreviewContentStatus(string message)
             {
-                CharacterTimelineHost timelineHost = ResolveActorHost()?.TimelineHost;
-                string authoring = ResolveCurrentAuthoringRevision();
-                string adopted = timelineHost?.AuthoringContentRevision;
+                if (!EditorApplication.isPlaying)
+                    return $"Preview | 未运行 | {message}";
+                if (!TryResolveSessionHost(out SimulationSessionHost sessionHost, out string sessionError))
+                    return $"Preview | 未连接 | {sessionError} | {message}";
+                string target = $"Session {m_Profile.ContextId} #{sessionHost.SessionGeneration} | Actor {m_Profile.DefaultActorId}";
+                if (sessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
+                    return $"Preview | {target} | {sessionHost.LifecycleState} | {sessionHost.Failure?.ToString() ?? message}";
+                if (!TryResolveActorHost(out FixedCharacterHost actorHost, out string actorError))
+                    return $"Preview | {target} | 未连接 | {actorError}";
+                CharacterTimelineHost timelineHost = actorHost.TimelineHost;
+                if (timelineHost == null || !timelineHost.IsInitialized)
+                    return $"Preview | {target} | Timeline 尚未准备 | {message}";
+                if (!timelineHost.TryGetCurrentAuthoringContentRevision(out string authoring, out string revisionError))
+                    return $"Preview | {target} | 作者内容不可用 | {revisionError}";
+                string adopted = timelineHost.AuthoringContentRevision;
+                if (string.IsNullOrEmpty(adopted))
+                    return $"Preview | {target} | 尚未收到实际采用版本 | {message}";
                 string staged = m_PublishedContent?.AuthoringRevision ??
                                 m_PendingPlan?.AuthoringRevision ??
                                 m_ExportedContent?.AuthoringRevision;
@@ -672,10 +834,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.ScenePlay
                     CharacterTimelineContentAdoptionState.Failed => "失败",
                     _ => string.Equals(authoring, adopted, StringComparison.Ordinal) ? "已采用" : "作者已修改"
                 };
-                string sessionGeneration = TryResolveSessionHost(out SimulationSessionHost sessionHost, out _)
-                    ? sessionHost.SessionGeneration.ToString()
-                    : "-";
-                return $"Preview | {state} | 作者 {ShortRevision(authoring)} | 已采用 {ShortRevision(adopted)} | {stagedLabel} {ShortRevision(staged)} | Session {sessionGeneration} | RuntimeDebug {RuntimeDebugSession.Shared.TargetRevision} | {message}";
+                return $"Preview | {target} | {state} | 作者 {ShortRevision(authoring)} | 已采用 {ShortRevision(adopted)} | {stagedLabel} {ShortRevision(staged)} | RuntimeDebug {RuntimeDebugSession.Shared.TargetRevision} | {message}";
             }
 
             string ResolveCurrentAuthoringRevision()

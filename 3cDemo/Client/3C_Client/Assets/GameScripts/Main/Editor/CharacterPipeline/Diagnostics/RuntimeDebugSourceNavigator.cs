@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     static class RuntimeDebugSourceNavigator
     {
-        public static bool Open(RuntimeDebugEventView eventView)
+        public static bool Open(RuntimeDebugEventView eventView, bool followGraph = false)
         {
             RuntimeTraceEvent trace = eventView.Event;
             RuntimeInstanceKey instance = trace.RuntimeInstance;
@@ -55,7 +55,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return OpenTimelineSource(definition, instance, trace.Payload.TimelinePlayback);
             }
-            return Open(definition, eventView.Source, instance);
+            return Open(definition, followGraph
+                ? RuntimeSourceElementKey.Graph(eventView.Source.GraphAuthoringId)
+                : eventView.Source, instance);
         }
 
         public static bool Open(CharacterPipelineDefinition definition, RuntimeSourceElementKey source, RuntimeInstanceKey instance = default)
@@ -121,6 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (source.Kind != RuntimeSourceElementKind.Graph && element == null)
                 return false;
 
+            BtsmtlSkillObservationSession.Close();
             if (graph.editorObservation is BtsmtlSkillFlowObservation existing)
                 existing.Dispose();
             if (GraphEditor.currentGraph?.editorObservation is BtsmtlSkillFlowObservation previous)

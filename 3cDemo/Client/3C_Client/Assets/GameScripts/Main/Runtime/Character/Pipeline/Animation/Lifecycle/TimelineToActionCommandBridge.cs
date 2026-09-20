@@ -47,6 +47,88 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal readonly Dictionary<AnimationProducerId, ProducerState> Producers = new();
         }
 
+        struct FramePlaybackSnapshot
+        {
+            internal ulong Handle;
+            internal PlaybackState State;
+            internal ulong LogicTick;
+            internal ulong PresentationFrame;
+            internal int ProducerOffset;
+            internal int ProducerCount;
+        }
+
+        readonly FramePlaybackSnapshot[] m_FramePlaybacks;
+        readonly KeyValuePair<AnimationProducerId, ProducerState>[] m_FrameProducers;
+        int m_FramePlaybackCount;
+        int m_FrameProducerCount;
+        ulong m_FramePublicationSequence;
+        bool m_FrameActive;
+
+        internal void BeginFrame()
+        {
+            if (m_FrameActive)
+                throw new InvalidOperationException("Timeline animation command frame is already open.");
+            int producerCount = 0;
+            foreach (PlaybackState state in m_Playbacks.Values)
+                producerCount += state.Producers.Count;
+            if (m_Playbacks.Count > m_FramePlaybacks.Length || producerCount > m_FrameProducers.Length)
+                throw new InvalidOperationException("Timeline animation frame exceeds its prepared command capacity.");
+            m_FramePlaybackCount = 0;
+            m_FrameProducerCount = 0;
+            foreach (var pair in m_Playbacks)
+            {
+                PlaybackState state = pair.Value;
+                m_FramePlaybacks[m_FramePlaybackCount++] = new FramePlaybackSnapshot
+                {
+                    Handle = pair.Key, State = state, LogicTick = state.LogicTick,
+                    PresentationFrame = state.PresentationFrame,
+                    ProducerOffset = m_FrameProducerCount, ProducerCount = state.Producers.Count
+                };
+                foreach (var producer in state.Producers)
+                    m_FrameProducers[m_FrameProducerCount++] = producer;
+            }
+            m_FramePublicationSequence = m_Inbox.PublicationSequence;
+            m_FrameActive = true;
+        }
+
+        internal void CommitFrame()
+        {
+            m_FrameActive = false;
+            ClearFrameSnapshot();
+        }
+
+        internal void DiscardFrame()
+        {
+            if (!m_FrameActive)
+                return;
+            m_Inbox.DiscardPublicationsAfter(m_FramePublicationSequence);
+            m_Playbacks.Clear();
+            for (int i = 0; i < m_FramePlaybackCount; i++)
+            {
+                FramePlaybackSnapshot snapshot = m_FramePlaybacks[i];
+                PlaybackState state = snapshot.State;
+                state.LogicTick = snapshot.LogicTick;
+                state.PresentationFrame = snapshot.PresentationFrame;
+                state.Producers.Clear();
+                for (int j = 0; j < snapshot.ProducerCount; j++)
+                {
+                    var producer = m_FrameProducers[snapshot.ProducerOffset + j];
+                    state.Producers.Add(producer.Key, producer.Value);
+                }
+                m_Playbacks.Add(snapshot.Handle, state);
+            }
+            m_FrameActive = false;
+            ClearFrameSnapshot();
+        }
+
+        void ClearFrameSnapshot()
+        {
+            Array.Clear(m_FramePlaybacks, 0, m_FramePlaybackCount);
+            Array.Clear(m_FrameProducers, 0, m_FrameProducerCount);
+            m_FramePlaybackCount = 0;
+            m_FrameProducerCount = 0;
+        }
+
         readonly CharacterTimelineHost m_TimelineHost;
         readonly ActionPlaybackCommandInbox m_Inbox;
         readonly Dictionary<ulong, PlaybackState> m_Playbacks = new();
@@ -61,7 +143,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             m_TimelineHost = timelineHost ?? throw new ArgumentNullException(nameof(timelineHost));
             m_Inbox = inbox ?? throw new ArgumentNullException(nameof(inbox));
-            m_TimelineHost.PresentationFrameProduced += OnPresentationFrame;
+            m_FramePlaybacks = new FramePlaybackSnapshot[inbox.Capacity];
+            m_FrameProducers = new KeyValuePair<AnimationProducerId, ProducerState>[inbox.Capacity];
+            m_TimelineHost.PresentationFramePrepared += OnPresentationFrame;
             m_TimelineHost.PresentationPlaybackEnded += OnPresentationPlaybackEnded;
         }
 
@@ -308,7 +392,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     "bridge-disposed");
             }
             m_Playbacks.Clear();
-            m_TimelineHost.PresentationFrameProduced -= OnPresentationFrame;
+            m_TimelineHost.PresentationFramePrepared -= OnPresentationFrame;
             m_TimelineHost.PresentationPlaybackEnded -= OnPresentationPlaybackEnded;
         }
     }

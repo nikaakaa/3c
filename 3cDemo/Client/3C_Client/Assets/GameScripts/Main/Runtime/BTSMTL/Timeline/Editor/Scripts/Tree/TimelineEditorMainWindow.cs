@@ -843,9 +843,9 @@ namespace BTSMTL.Timeline.Editor
                     activeClips[source.ClipAuthoringId] = status;
             }
             RuntimeTimelinePlaybackProjection projection = GetProjection(window, summary.Playback);
-            TimelineData runtimeTimeline = projection.Update(sourceTimeline, summary.Playback, events);
+            TimelineData runtimeTimeline = projection.Update(sourceTimeline, summary.Playback, events, RuntimeDebugSession.Shared.ViewModel);
             MarkOpenTreeClips(runtimeTimeline, activeClips);
-            if (RuntimeDebugSession.Shared.AttachmentState == RuntimeDebugAttachmentState.CaptureHistory)
+            if (RuntimeDebugSession.Shared.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
                 window.ApplyHistoryTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);
             else
                 window.ApplyRuntimeTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);

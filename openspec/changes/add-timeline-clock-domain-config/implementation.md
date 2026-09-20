@@ -296,3 +296,11 @@
 - 既有CommittedFollow策略消费已投影结果时直接交给Player，不再送入history插值或保留态delta外推；逻辑raw样本仍走原History/Projector。ProjectedActionPresentationSample的事件字段改为SourceEventId，不把表现来源标为已提交逻辑事件。
 - 本批不改locomotion、Body、素材phase或混合权重owner。5.1–5.3仍保持未完成：推进原因/正式控制、共享帧候选的接受与丢弃、7节停止修正事件事务尚未完全闭合，不能凭这次样本消费迁移勾选整体任务。
 - Unity脚本编译及域重载完成（1789887235950），错误日志为零；静态核对Timeline桥已无ActionCommittedRawSample构造，逻辑命令publisher仍保留原正式raw入口。未新增测试。
+
+## 第7节：Pose拒绝时统一丢弃Timeline表现候选
+- Timeline driver将本帧游标、完成状态、Marker traversal记账保留为pending，只有CommitPresentationFrame才写入已接受状态。Marker记账改为随内容预分配的双数组；Discard后重试不消耗事件身份。
+- 原Host拆分PresentationFramePrepared与PresentationFrameProduced：动画桥先提供Pose候选命令，相机桥只在Pose接受后收到Timeline输出；停止播放的退役与缓存释放也延迟至接受阶段。Camera.Present移到该阶段之后，Pose事实输入仍只读取原Body/Trajectory事实。
+- 原动作时钟协调器用预分配baseline回退修正标记和帧内采样缓存。原动画桥按Inbox正式容量预分配快照，失败时恢复生产者集合与元数据；Inbox按本帧起始发布序号移除候选命令，保留之前已接受逻辑输入。
+- CharacterPresentationDomainRuntime通过finally覆盖EventGraph失败、缺少必要运动事实、Pose资源未就绪、Pose准备/求值/验证失败等提前退出路径。没有新建事件系统、Registry或并列时钟；未改现有Inbox空读lease的其他未提交修复。
+- Unity编译及域重载完成（1789887842882），错误日志为零。静态核对driver已接受游标与Marker计数只在Commit写入，动画/相机分别订阅准备/接受阶段。未新增测试。
+- 第7节仍未整体完成：正式Stop/Cancel的确认交付与最终分支revision需要继续接入；Pose已接受之后下游发布异常的原子失败边界、正式Presentation Marker图executor及其typed输出还需完成。当前不能据此勾选7.1–7.4或宣称整个运行链0 GC；旧求值结果集合仍有分配。

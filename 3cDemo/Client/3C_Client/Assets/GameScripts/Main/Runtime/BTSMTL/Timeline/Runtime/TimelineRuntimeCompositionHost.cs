@@ -114,6 +114,10 @@ namespace BTSMTL.Timeline.Runtime
                 out frame);
         }
 
+        public void CommitPresentationFrame(ulong frame) => m_PresentationDriver.CommitPresentationFrame(frame);
+        public void DiscardPresentationFrame(ulong frame) => m_PresentationDriver.DiscardPresentationFrame(frame);
+        public void ReleasePresentationPlayback(TimelineRuntimePlaybackHandle handle) => m_PresentationDriver.ReleasePresentationPlayback(handle);
+
         public TimelineRuntimePreparationResult Prepare(
             string requestId,
             TimelineData timeline,

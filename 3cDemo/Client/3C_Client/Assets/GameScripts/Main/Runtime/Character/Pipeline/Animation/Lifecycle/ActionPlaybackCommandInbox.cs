@@ -63,6 +63,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 : throw new ArgumentOutOfRangeException(nameof(index));
         public bool HasActiveReadLease => m_ActiveLease.IsValid;
 
+        internal int Capacity => m_Entries.Length;
+        internal ulong PublicationSequence => m_NextInboxSequence;
+
+        internal void DiscardPublicationsAfter(ulong sequence)
+        {
+            RequireWritable();
+            int write = 0;
+            for (int i = 0; i < m_Count; i++)
+                if (m_Entries[i].Sequence <= sequence)
+                    m_Entries[write++] = m_Entries[i];
+            Array.Clear(m_Entries, write, m_Count - write);
+            m_Count = write;
+        }
+
         public void Publish(ActionAnimationPlaybackCommand command)
         {
             RequireWritable();

@@ -370,3 +370,10 @@
 - Marker occurrence 从其所属 Track 记录执行域；图编译沿用原 Skill compiler 和正式 SourceMap，Presentation Marker 的 OnEnable 入口声明 PresentationMarker 调用归属，图 identity／revision／调用路径仍来自原闭包。Logic Marker 保持既有 TimelineClip 调用表，Fixed／Float32 的逻辑 invoker 不会收集 PresentationMarker 入口。
 - 将上一批图能力检查收敛到 BtsmtlSkillGraphClosure.ValidateTimelineGraph，Slate 内容发现与编译 occurrence 共用同一入口，不复制一份编译器节点白名单。通过能力检查的 Presentation 图可生成正式编译内容；运行准备仍明确拒绝尚未安装表现执行器的内容，没有临时 Simulation actor 或借用逻辑 Tick。第6节仍未完成。
 - 暂停 Advance 与正常 Advance 共用已提交区间起点检查；暂停请求携带不同目标时间或余数时明确拒绝，防止在暂停分支静默丢掉错误区间。
+
+## 表现图复用原值求值算法
+- 从原 Float32ValueRuntime 抽出 Float32GraphValueRuntime：常量、比较、布尔运算、条件结果、Macro 参数准备／输出读取和递归输入租约统一保留一份实现。原 Simulation 值运行时继承共享部分，仅保留输入、角色事实、Gameplay、黑板和诊断访问；没有新建影子值图解释器，也没有创建私有 Simulation actor／frame 供表现侧使用。
+- 共享层只接收不可变编译数据、既有布局和专用值缓冲，域读取与 Macro 参数存储通过明确实现接口提供。30类值操作的 case 主体静态对照一致；这不代替用户端到端验证。
+- 值递归 HashSet 与输入缓冲按正式操作数／最大输入端口数预分配，由原 Float32 Ability Evaluate Pass 在准备时按 actor／ability 持有并传给原求值链。删除运行中扩充输入缓冲的路径，不把可变暂存放进共享编译产物，不每逻辑步重新分配整套缓冲。其余原 Simulation 输出／上下文及 Timeline 求值分配仍未全部消除。
+- 本批是正式表现图执行所需共享部件迁移；表现图 target、Camera 输出候选及帧提交尚未接通，第6节继续保持未完成。
+- Unity脚本编译成功、域重载完成（1789896636348）。编译期间两份源文件曾报告 SourceAssetDB 时间戳不一致，日志随后显示两份文件均重新导入并产生正式 artifact；未清除用户控制台。首次代码拆分的语法错误已修复，最终编译没有C#错误。

@@ -9,8 +9,10 @@ namespace ThirdPersonSimulation
         public Float32AbilityExecutionWorkspace(
             Float32GameplayEffectExecutionScratch gameplayEffects,
             List<IAbilityTimelinePending> timelineAdvances,
-            List<IAbilityTimelineStopPending> timelineStops)
+            List<IAbilityTimelineStopPending> timelineStops,
+            Float32GraphValueWorkspace values)
         {
+            Values = values ?? throw new ArgumentNullException(nameof(values));
             GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
             TimelineAdvances = timelineAdvances ?? throw new ArgumentNullException(nameof(timelineAdvances));
             TimelineStops = timelineStops ?? throw new ArgumentNullException(nameof(timelineStops));
@@ -22,8 +24,7 @@ namespace ThirdPersonSimulation
         public NestedExecutionWorkspaceBuffer<TimelineSegment<Float32Scalar>> TimelineSegments { get; } =
             new NestedExecutionWorkspaceBuffer<TimelineSegment<Float32Scalar>>();
         public Float32GameplayEffectExecutionScratch GameplayEffects { get; }
-        public HashSet<Float32ValueEvaluationKey> ValueStack { get; } = new HashSet<Float32ValueEvaluationKey>();
-        public List<Float32ValueInputBuffer> ValueBuffers { get; } = new List<Float32ValueInputBuffer>();
+        public Float32GraphValueWorkspace Values { get; }
         public List<SimulationMotionContribution> MotionContributions { get; } = new List<SimulationMotionContribution>();
         public List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> MotionWarpSamples { get; } =
             new List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>>();

@@ -8,6 +8,7 @@ namespace ThirdPersonSimulation
         public static Float32CharacterEvaluationResult Evaluate(
             Float32CharacterRuntime characterRuntime,
             SimulationActorBinding actor,
+            IReadOnlyList<Float32GraphValueWorkspace> valueWorkspaces,
             Float32CharacterRuntimeState sourceState,
             SimulationTick tick,
             SimulationInput input,
@@ -86,7 +87,7 @@ namespace ThirdPersonSimulation
                         tick,
                         abilityInput,
                         bodyFacts,
-                        new Float32AbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops),
+                        new Float32AbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops, valueWorkspaces[i]),
                         serviceFactory);
                     invocations.Add(invocation);
                     invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);

@@ -607,6 +607,16 @@ namespace ThirdPersonSimulation
             SimulationPipelineStateCheckpointSet beforePipeline,
             bool solverTouched)
         {
+            Exception timelineFailure = null;
+            try
+            {
+                m_Target.DiscardUnconsumedEvaluations();
+                m_Target.RestoreTimelineBaseline();
+            }
+            catch (Exception exception)
+            {
+                timelineFailure = exception;
+            }
             Exception solverFailure = null;
             if (solverTouched)
             {
@@ -620,6 +630,12 @@ namespace ThirdPersonSimulation
                 }
             }
             RestorePipelineBefore(beforePipeline);
+            if (timelineFailure != null)
+                throw Failure(
+                    SimulationSessionFailureStage.Runtime,
+                    "timeline_rollback_failed",
+                    "Timeline runtime failed to restore the outer Tick baseline.",
+                    timelineFailure);
             if (solverFailure != null)
             {
                 throw Failure(

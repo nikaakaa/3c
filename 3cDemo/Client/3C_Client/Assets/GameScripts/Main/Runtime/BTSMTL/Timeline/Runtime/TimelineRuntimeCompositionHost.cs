@@ -200,7 +200,9 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimeRestoreCandidate candidate)
         {
             EnsureAvailable();
-            return m_Composition.ApplyRestore(candidate);
+            TimelineRuntimePlaybackHandle handle = m_Composition.ApplyRestore(candidate);
+            EvaluationBuffer.ReleasePlayback(handle);
+            return handle;
         }
         public void Stop(
             TimelineRuntimePlaybackHandle handle,

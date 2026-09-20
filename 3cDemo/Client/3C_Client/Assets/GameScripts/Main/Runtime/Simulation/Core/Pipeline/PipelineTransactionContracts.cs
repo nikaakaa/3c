@@ -199,6 +199,7 @@ namespace ThirdPersonSimulation
         void PublishWorkingState(TWorkingState workingState);
         void CompleteStatePublish(TWorkingState workingState);
         void RestoreSolverBaseline();
+        void RestoreTimelineBaseline();
         void Commit(TCommitBatch commitBatch);
         void PublishTrace(PipelineTransactionTrace trace);
     }

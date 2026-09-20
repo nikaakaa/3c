@@ -220,7 +220,6 @@ namespace BTSMTL.Timeline.Runtime
         int m_Cycle;
         string m_SectionId = string.Empty;
         bool m_InitialBoundaryPending;
-        ulong m_LastCommittedLogicTick;
         readonly int m_TickRate;
         int m_TimeCarry;
 
@@ -273,7 +272,6 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePlaybackState State { get; private set; }
         public FixedScalar CursorTime => m_CursorTime;
         public int TickRate => m_TickRate;
-        public ulong LastCommittedLogicTick => m_LastCommittedLogicTick;
         internal IReadOnlyList<string> ExitedTreeDecisionClips => m_ExitedTreeDecisionClips;
         internal int TimeCarry => m_TimeCarry;
         public AbilityTimelinePlaybackControl Control { get; private set; } = AbilityTimelinePlaybackControl.Normal;
@@ -495,7 +493,6 @@ namespace BTSMTL.Timeline.Runtime
             m_Cycle = advance.Cycle;
             m_TimeCarry = advance.TimeCarry;
             Control = advance.Request.Control;
-            m_LastCommittedLogicTick = advance.LogicTick;
             m_SectionId = advance.SectionId;
             if (!advance.Request.Control.IsPaused)
                 m_InitialBoundaryPending = false;
@@ -627,6 +624,8 @@ namespace BTSMTL.Timeline.Runtime
                     cursorTime,
                     exitedTreeDecisionClips))
                 return false;
+            m_CandidateEvaluation.Clear();
+            m_CommittedEvaluation.Clear();
             m_CursorTime = cursorTime;
             m_Cycle = cycle;
             m_SectionId = sectionId ?? string.Empty;

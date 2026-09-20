@@ -452,6 +452,16 @@ namespace ThirdPersonSimulation.Fixed
             m_StateStore.ReplaceValidated(workingState.Current);
         }
 
+        public void RestoreTimelineBaseline()
+        {
+            for (int actorIndex = 0; actorIndex < m_Roster.Count; actorIndex++)
+            {
+                IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots = m_StateStore.Current.Actors[actorIndex].State.TimelineSnapshots;
+                for (int index = 0; index < snapshots.Count; index++)
+                    m_Roster[actorIndex].TimelineRuntime.ApplyRestore(snapshots[index]);
+            }
+        }
+
         public void RestoreSolverBaseline()
         {
             m_Solver.Restore(m_StateStore.Current.WorldState);

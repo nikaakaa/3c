@@ -283,7 +283,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] int m_SourcePhasePlanIndex = -1;
         [SerializeField] int m_TargetPhasePlanIndex = -1;
         [SerializeField] bool m_SourceIsLeader;
-        [SerializeField] CharacterClipPlayerClockSource m_LeaderClockAuthority;
         [SerializeField] string m_ValidationIdentity = string.Empty;
 
         public AnimationPhaseRelationPlan(
@@ -292,12 +291,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int sourcePhasePlanIndex,
             int targetPhasePlanIndex,
             bool sourceIsLeader,
-            CharacterClipPlayerClockSource leaderClockAuthority,
             string validationIdentity)
         {
             if (string.IsNullOrWhiteSpace(relationIdentity) || !transitionId.IsValid ||
                 sourcePhasePlanIndex < 0 || targetPhasePlanIndex < 0 ||
-                !Enum.IsDefined(typeof(CharacterClipPlayerClockSource), leaderClockAuthority) ||
                 string.IsNullOrWhiteSpace(validationIdentity))
             {
                 throw new ArgumentException("Animation Phase relation plan is invalid.");
@@ -307,7 +304,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourcePhasePlanIndex = sourcePhasePlanIndex;
             m_TargetPhasePlanIndex = targetPhasePlanIndex;
             m_SourceIsLeader = sourceIsLeader;
-            m_LeaderClockAuthority = leaderClockAuthority;
             m_ValidationIdentity = validationIdentity.Trim();
         }
 
@@ -318,7 +314,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int SourcePhasePlanIndex => m_SourcePhasePlanIndex;
         public int TargetPhasePlanIndex => m_TargetPhasePlanIndex;
         public bool SourceIsLeader => m_SourceIsLeader;
-        public CharacterClipPlayerClockSource LeaderClockAuthority => m_LeaderClockAuthority;
         public string ValidationIdentity => m_ValidationIdentity ?? string.Empty;
     }
 }

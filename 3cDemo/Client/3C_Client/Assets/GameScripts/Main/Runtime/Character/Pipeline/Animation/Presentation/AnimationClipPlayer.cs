@@ -362,7 +362,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal int Cycle => m_Cycle;
         internal float RemainingTime => Math.Max(0f, m_Source.SourceDurationSeconds - m_SampleTime);
         internal float Duration => m_Source.SourceDurationSeconds;
-        internal CharacterClipPlayerClockSource ClockSource => m_Descriptor.ClockSource;
         internal float PlayRate => m_Descriptor.PlayRate;
         internal void CreateFootMotionSamples(
             float sourceWeight,
@@ -558,10 +557,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!m_Relevant)
                 return;
             if (!clock.IsValid)
-            {
-                ContinueMovementClock(presentationDeltaSeconds, playRate);
-                return;
-            }
+                throw new InvalidOperationException($"Clip Player '{NodeId}' requires a committed movement fact.");
             string ownerIdentity = clock.OwnerIdentity;
             ulong generation = clock.Generation;
             bool hadClockOrigin = m_HasMovementClockOrigin;
@@ -571,12 +567,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                     m_MovementClockOwnerIdentity,
                                     ownerIdentity,
                                     StringComparison.Ordinal);
-            if (changedClock && hadClockOrigin &&
-                m_DemandKind == PoseSourceProviderDemandKind.TransitionSource)
-            {
-                ContinueMovementClock(presentationDeltaSeconds, playRate);
-                return;
-            }
             if (changedClock)
             {
                 double preservedContinuousTime = m_RawContinuousTime;
@@ -595,15 +585,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                (elapsedSeconds - m_MovementClockOriginSeconds) * playRate +
                                m_MovementClockOffsetSeconds;
             SetRawClock(stateTime);
-        }
-
-        void ContinueMovementClock(
-            float presentationDeltaSeconds,
-            float playRate)
-        {
-            if (presentationDeltaSeconds == 0f)
-                return;
-            SetRawClock(m_RawContinuousTime + presentationDeltaSeconds * playRate);
         }
 
         internal void Advance(

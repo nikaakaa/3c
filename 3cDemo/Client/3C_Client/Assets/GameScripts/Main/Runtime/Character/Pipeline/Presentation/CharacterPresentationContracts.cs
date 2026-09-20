@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCamera;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -805,6 +806,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         bool AcceptsTrajectoryIntent { get; }
         ulong BodyResetSequence { get; }
         CharacterLocomotionBodySource LocomotionBodySource { get; }
+        bool TryGetCameraBasis(out CameraBasisSnapshot basis);
+        void SetCameraInitialState(in CameraInitialState state);
         bool TryGetLatestBody(out CharacterPresentationBodyState body);
         void CaptureBodyStream(IReadOnlyList<CharacterPresentationBodyInterval> intervals);
         CharacterLocomotionPresentationFactLineage CreateLocomotionFactLineage(

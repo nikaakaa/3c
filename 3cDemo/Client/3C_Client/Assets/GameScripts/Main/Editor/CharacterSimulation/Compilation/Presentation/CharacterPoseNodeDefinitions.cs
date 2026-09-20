@@ -389,7 +389,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNodeKind.ClipPlayer;
         public override GraphAuthoringCapabilityDescriptor Declare() =>
             Node<CharacterClipPlayerPosePayload>(CharacterPoseNodeKind.ClipPlayer, RootAndStateWithLinkedEntry, "Clip Player", "Sources", SourceColor,
-                Fields(SourceField(typeof(CharacterClipPoseSourceSlot)), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), BoolField("loop-animation", "Loop Animation", true), EnumField("clock-source", "Clock Source", typeof(CharacterClipPlayerClockSource))),
+                Fields(SourceField(typeof(CharacterClipPoseSourceSlot)), FloatField("play-rate", "Play Rate", 1f), FloatField("initial-time", "Initial Time", 0f), BoolField("loop-animation", "Loop Animation", true), BoolField("locomotion-participant", "Locomotion Participant", false)),
                 Ports(Out("pose", "Local Pose", "pose.local"), Out("discontinuity", "Discontinuity", "pose.discontinuity")),
                 commands: SourceCommands(),
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture);
@@ -413,9 +413,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 input.Require<float>("play-rate"),
                 input.Require<float>("initial-time"),
                 input.Require<bool>("loop-animation"),
-                Enum.Parse<CharacterClipPlayerClockSource>(
-                    input.Require<string>("clock-source"),
-                    false));
+                input.Require<bool>("locomotion-participant"));
 
         protected override object ReadField(
             CharacterClipPlayerPosePayload payload,
@@ -426,7 +424,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 "play-rate" => payload.PlayRate,
                 "initial-time" => payload.InitialTime,
                 "loop-animation" => payload.LoopAnimation,
-                "clock-source" => payload.ClockSource.ToString(),
+                "locomotion-participant" => payload.IsLocomotionParticipant,
                 _ => base.ReadField(payload, field)
             };
 
@@ -448,10 +446,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payload.InitialTime >= 0f,
                 sourcePath,
                 "Clip initial time must be finite and non-negative.");
-            CharacterPoseNodeDefinitionValidation.Require(
-                Enum.IsDefined(typeof(CharacterClipPlayerClockSource), payload.ClockSource),
-                sourcePath,
-                "Clip clock source is invalid.");
         }
     }
 

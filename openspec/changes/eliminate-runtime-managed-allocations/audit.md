@@ -967,3 +967,11 @@
 - 保留完整重新编码与长度／逐字节比较，不以 hash 相同替代协议规范校验；两个数值域的原 InvalidDataException 文本保留。公开 Write 的真实独立结果消费者保持原实现，hash 路径也仍共用 WriteCanonical。
 - 减少每次角色恢复校验的一份完整输出副本，不改变输入读取、返回状态、Timeline 字段、事务恢复或任何结果所有权。writer／流、聚合集合、最终状态对象和其它枚举读取仍有分配／查询，本项不是完整角色状态 0 GC。
 - 两目标文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做规范字节／恢复运行对比或 Player 分配采样。
+## 2026-09-20 世界状态规范比较清理
+
+对应 tasks.md 的 5.47。
+
+- Fixed／Float32 WorldSimulationStateCodec.Read 原在绑定校验及结果构造后调用 RequireCanonical(bytes, Write(result), label)。现使用局部 writer 调用原 WriteCanonical，再 ContentEquals 输入，删除两份只供比较的完整输出数组路径和各自无消费者的数组比较工具。
+- 完整重新编码、长度与所有字节一致性检查保留，原 World state is not canonical 异常不变。Write、ComputeHash、读取后校验仍共用唯一字段编码；没有省略 numeric profile、solver、revision、计数或尾部检查。
+- 世界 Bodies、求解器 payload 的读取及构造复制未改，长期存储保持独立，不改变求解、快照恢复或事务生命周期。只减少比较用副本，reader／writer／流和实际状态仍分配；ReadPersistenceMode 的枚举查询仍待另行处理。
+- 两目标文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未执行世界状态往返／非规范输入运行对比或 Player 分配采样。

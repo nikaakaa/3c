@@ -173,7 +173,10 @@ namespace ThirdPersonSimulation
             if (numericProfile != expectedNumericProfile || !solverId.Equals(expectedSolverId) || !string.Equals(solverVersion, expectedSolverVersion, StringComparison.Ordinal) || !worldRevision.Equals(expectedWorldRevision))
                 throw new InvalidDataException("World state Numeric Profile, Solver, or revision binding is stale or mismatched.");
             var result = new WorldSimulationState(numericProfile, solverId, solverVersion, worldRevision, persistenceMode, bodies, payload);
-            RequireCanonical(bytes, Write(result), "World state");
+            using var writer = new CanonicalWriter();
+            WriteCanonical(writer, result);
+            if (!writer.ContentEquals(bytes))
+                throw new InvalidDataException("World state is not canonical.");
             return result;
         }
 
@@ -184,16 +187,5 @@ namespace ThirdPersonSimulation
             return (WorldStatePersistenceMode)value;
         }
 
-        static void RequireCanonical(byte[] source, byte[] canonical, string label)
-        {
-            if (source.Length != canonical.Length)
-                throw new InvalidDataException($"{label} is not canonical.");
-            for (int i = 0; i < source.Length; i++)
-            {
-                if (source[i] != canonical[i])
-                    throw new InvalidDataException($"{label} is not canonical.");
-            }
-        }
     }
 }
-

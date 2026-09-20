@@ -332,7 +332,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         }
     }
 
-    public sealed class CharacterTimelinePendingAdvance : IAbilityTimelinePending
+    public sealed class CharacterTimelinePendingAdvance : IAbilityTimelineAdvancePending
     {
         internal CharacterTimelinePendingAdvance(
             TimelinePlaybackHandle handle,
@@ -344,11 +344,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RuntimeHandle = runtimeHandle;
             Result = result;
             Status = status;
+            Progress = result == null ? default : new AbilityTimelineProgress(
+                result.ContentIdentity,
+                result.ContentRevision,
+                result.Generation,
+                result.LogicTick,
+                result.Duration,
+                result.PreviousTime,
+                result.Time,
+                result.PreviousCycle,
+                result.Cycle,
+                result.PlaybackMode == TimelinePlaybackMode.Loop,
+                result.Completes);
         }
 
         public TimelinePlaybackHandle Handle { get; }
         public int RuntimeHandle { get; }
         public AbilityTimelineRuntimeStatus Status { get; }
+        public AbilityTimelineProgress Progress { get; }
         internal TimelineRuntimeAdvanceResult Result { get; }
     }
     public sealed class CharacterTimelinePendingStop : IAbilityTimelineStopPending

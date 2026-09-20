@@ -537,18 +537,74 @@ namespace ThirdPersonSimulation
         int RuntimeHandle { get; }
     }
 
+    public readonly struct AbilityTimelineProgress
+    {
+        public AbilityTimelineProgress(
+            string timelineId,
+            string contentRevision,
+            ulong generation,
+            ulong logicTick,
+            FixedScalar duration,
+            FixedScalar previousTime,
+            FixedScalar time,
+            int previousCycle,
+            int cycle,
+            bool loop,
+            bool completes)
+        {
+            TimelineId = SimulationIdentity.Require(timelineId, nameof(timelineId));
+            ContentRevision = SimulationIdentity.Require(contentRevision, nameof(contentRevision));
+            if (generation == 0 || logicTick == 0)
+                throw new ArgumentOutOfRangeException(nameof(generation));
+            if (duration < FixedScalar.Zero || previousTime < FixedScalar.Zero ||
+                previousTime > duration || time < FixedScalar.Zero || time > duration ||
+                previousCycle < 0 || cycle < previousCycle ||
+                cycle == previousCycle && time < previousTime ||
+                !loop && (previousCycle != 0 || cycle != 0))
+                throw new ArgumentException("Timeline progress must describe a forward interval within its content.");
+            Generation = generation;
+            LogicTick = logicTick;
+            Duration = duration;
+            PreviousTime = previousTime;
+            Time = time;
+            PreviousCycle = previousCycle;
+            Cycle = cycle;
+            Loop = loop;
+            Completes = completes;
+        }
+
+        public string TimelineId { get; }
+        public string ContentRevision { get; }
+        public ulong Generation { get; }
+        public ulong LogicTick { get; }
+        public FixedScalar Duration { get; }
+        public FixedScalar PreviousTime { get; }
+        public FixedScalar Time { get; }
+        public int PreviousCycle { get; }
+        public int Cycle { get; }
+        public bool Loop { get; }
+        public bool Completes { get; }
+        public bool IsValid => Generation != 0;
+    }
+
+    public interface IAbilityTimelineAdvancePending : IAbilityTimelinePending
+    {
+        AbilityTimelineProgress Progress { get; }
+    }
+
     public readonly struct AbilityTimelineTickResult
     {
-        public AbilityTimelineTickResult(AbilityTimelineRuntimeStatus status, IAbilityTimelinePending pending)
+        public AbilityTimelineTickResult(AbilityTimelineRuntimeStatus status, IAbilityTimelineAdvancePending pending)
         {
             Status = status;
             Pending = pending;
-            if (status == AbilityTimelineRuntimeStatus.Running && pending == null)
+            if (status == AbilityTimelineRuntimeStatus.Running && (pending == null || !pending.Progress.IsValid))
                 throw new ArgumentException("A running Ability Timeline advance requires a pending commit candidate.");
         }
 
         public AbilityTimelineRuntimeStatus Status { get; }
-        public IAbilityTimelinePending Pending { get; }
+        public IAbilityTimelineAdvancePending Pending { get; }
+        public AbilityTimelineProgress Progress => Pending == null ? default : Pending.Progress;
     }
 
     public interface IAbilityTimelineStopPending : IAbilityTimelinePending

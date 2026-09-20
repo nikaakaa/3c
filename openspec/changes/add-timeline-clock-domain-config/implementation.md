@@ -267,3 +267,10 @@
 - MotionCurve删除Mathf.Approximately的时间相等判定，改为比较截断后的精确本地时间；MotionWarp源窗口采样沿用同一正式秒输入。
 - Unity脚本编译和域重载完成（1789883931101），错误日志为零。只读调用现有共享Timeline资产的AnimationTrack.Sample：12个Clip在StartTime.Raw-1处均无对应贡献，其中2个边界若转float会与起点重合。该证据只覆盖共享资产动画起点，不代表所有素材输出或共享动作采样完成；未新增测试。
 - 共享采样仍有明确未完成项：TimelineToActionCommandBridge目前从表现帧生成ActionCommittedRawSample，CommittedSequence借用render frame，动作projector之后才打开事务。必须改为正式逻辑提交事实驱动并调整原事务顺序，不能将这些伪committed样本当作共享时钟的完成依据。
+
+## Ability推进候选暴露精确进度
+- AbilityTimelineTickResult现在通过IAbilityTimelineAdvancePending返回AbilityTimelineProgress值类型。内容身份/版本、generation、logic tick、精确前后时间、循环、内容时长及完成状态来自实际Advance结果，不从渲染帧倒推。
+- CharacterTimelinePendingAdvance在创建时冻结该值，继续由原Commit/Discard拥有接受权。Running候选必须具备有效进度；终态无推进时允许默认空进度。零时长内容沿用TimelineContentUnit既有合法合同。
+- 该合同本身不新建计时器、Registry或图runtime，也没有把Presentation轨道改成Logic求值。
+- 尚未完成：经原PresentationCommand输出提交/替换/撤销通道发布这些候选中的最终事实，让既有Action采样事务统一消费；目前TimelineToActionCommandBridge的旧渲染帧样本仍在，未声称已删除或共享时钟完成。不能直接订阅Host.CommittedEvaluation发布，因为rollback中间推进也会经过该回调。
+- Unity编译与域重载完成（1789884594787），错误日志为零；保留已有其他文件改动，未新增测试。

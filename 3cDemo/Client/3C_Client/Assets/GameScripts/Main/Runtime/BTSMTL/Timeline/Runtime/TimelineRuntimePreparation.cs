@@ -180,6 +180,10 @@ namespace BTSMTL.Timeline.Runtime
         internal TimelineRuntimeAdvanceRequest Request { get; }
         internal int TimeCarry { get; }
         public ulong Generation { get; }
+        public string ContentIdentity => Owner.Content.Identity;
+        public string ContentRevision => Owner.Content.ContentHash;
+        public FixedScalar Duration => Owner.Content.Duration;
+        public TimelinePlaybackMode PlaybackMode => Owner.PlaybackMode;
         public ulong LogicTick => Request.LogicTick;
         public FixedScalar PreviousTime { get; }
         public FixedScalar Time { get; }

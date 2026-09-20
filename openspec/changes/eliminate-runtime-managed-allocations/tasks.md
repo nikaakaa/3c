@@ -94,6 +94,7 @@
 - [x] 2.56 共享 Pipeline 每 tick 事务身份按原七段文本和 U+001F 分隔直接写入池化 UTF-8 缓冲，删除三个数字字符串、params 数组、join 字符串和最终 UTF-8 数组
 - [x] 2.57 共享 PipelineTransactionControlResult 改为只读值结果，删除 Coordinator 每个 Pending／Committed 外层 tick 返回的内部结果对象分配
 - [x] 2.58 Fixed／Float32 Pipeline Execute 统一为 void，删除无人消费的内部／公开 TransactionResult 及三套 Outcome 枚举，移除每个外层 tick 的公开结果对象和完整死返回链
+- [x] 2.59 两数值域 CommitBatch 的独立 steps／source egress 列表直接作为 IReadOnlyList 暴露，删除每个已提交外层 tick 的四个 ReadOnlyCollection 包装对象
 
 ## 3. Timeline和事件图
 

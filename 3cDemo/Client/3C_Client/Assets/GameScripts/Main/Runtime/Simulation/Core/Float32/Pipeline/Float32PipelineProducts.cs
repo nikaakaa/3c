@@ -297,8 +297,8 @@ namespace ThirdPersonSimulation
 
     public sealed class Float32SimulationCommitBatch
     {
-        readonly ReadOnlyCollection<Float32CompletedSimulationStep> m_Steps;
-        readonly ReadOnlyCollection<Float32SourceEgressRecord> m_SourceEgress;
+        readonly IReadOnlyList<Float32CompletedSimulationStep> m_Steps;
+        readonly IReadOnlyList<Float32SourceEgressRecord> m_SourceEgress;
 
         public Float32SimulationCommitBatch(
             StableHash transactionIdentity,
@@ -361,8 +361,8 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException("Commit batch contains a missing Source egress record.", nameof(sourceEgress));
             }
             TransactionIdentity = transactionIdentity;
-            m_Steps = stepValues.AsReadOnly();
-            m_SourceEgress = egressValues.AsReadOnly();
+            m_Steps = stepValues;
+            m_SourceEgress = egressValues;
         }
 
         public StableHash TransactionIdentity { get; }

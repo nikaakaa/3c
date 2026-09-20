@@ -1387,3 +1387,12 @@
 - Coordinator.Execute／ExecuteTransaction、FixedPipelineTransaction.Execute、Float32PipelineTransaction.Execute 统一改为 void。Pending 分支恢复 pipeline checkpoint 后直接返回，Committed 分支仍冻结 commit batch、发布状态并完成 External Commit 后返回；事务行为和异常传播不变。
 - 删除 PipelineTransactionControlResult、FixedPipelineTransactionResult、Float32PipelineTransactionResult 以及对应三套 Outcome 枚举，不保留兼容返回路径。TransactionIdentity 仍沿 step／egress context、output disposition 和 commit batch 正式链路传递。
 - 每个外层 tick 不再创建两域公开 TransactionResult 对象，也不再复制无人读取的内部结果字段。ThirdPersonSimulation.Core、Fixed、Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做事务运行对比或 Player 分配采样。
+
+## 2026-09-21 CommitBatch 列表只读暴露
+
+对应 tasks.md 的 2.59。
+
+- FixedSimulationCommitBatch／Float32SimulationCommitBatch 构造时已从 completed steps 与 source egress 调用输入复制出私有 List，并完成 step tick 顺序、event disposition 覆盖及空 egress 检查；原完成后仍分别调用 AsReadOnly。
+- 两域四个字段现以 IReadOnlyList 保存并直接引用各自私有 List。Steps／SourceEgress 的公开类型和只读消费方式不变，调用者无法取得构造器内部列表的可变引用；Committer 仍可在提交调用期间或之后持有完整独立批次。
+- 删除每个已提交外层 tick 的四个 ReadOnlyCollection 包装对象；CommitBatch class、steps／egress 列表本体、OutputDispositions 及事件覆盖校验仍保留。
+- ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Committer 运行对比或 Player 分配采样。

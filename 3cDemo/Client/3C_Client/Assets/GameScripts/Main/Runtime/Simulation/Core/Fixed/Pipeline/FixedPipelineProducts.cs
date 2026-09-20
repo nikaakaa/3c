@@ -291,8 +291,8 @@ namespace ThirdPersonSimulation.Fixed
 
     public sealed class FixedSimulationCommitBatch
     {
-        readonly ReadOnlyCollection<FixedCompletedSimulationStep> m_Steps;
-        readonly ReadOnlyCollection<FixedSourceEgressRecord> m_SourceEgress;
+        readonly IReadOnlyList<FixedCompletedSimulationStep> m_Steps;
+        readonly IReadOnlyList<FixedSourceEgressRecord> m_SourceEgress;
 
         public FixedSimulationCommitBatch(
             StableHash transactionIdentity,
@@ -355,8 +355,8 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException("Commit batch contains a missing Source egress record.", nameof(sourceEgress));
             }
             TransactionIdentity = transactionIdentity;
-            m_Steps = stepValues.AsReadOnly();
-            m_SourceEgress = egressValues.AsReadOnly();
+            m_Steps = stepValues;
+            m_SourceEgress = egressValues;
         }
 
         public StableHash TransactionIdentity { get; }

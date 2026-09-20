@@ -87,7 +87,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     pair.Value.Predicted,
                     pair.Value.Canonical));
             }
-            return result.AsReadOnly();
+            return result;
         }
 
         public void RestoreEntries(IEnumerable<RollbackInputHistoryEntry> entries)
@@ -175,15 +175,18 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         internal static void RemoveThrough<T>(SortedDictionary<ulong, T> values, ulong tick)
         {
-            var remove = new List<ulong>();
-            foreach (ulong candidate in values.Keys)
+            while (values.Count != 0)
             {
+                ulong candidate = 0;
+                foreach (ulong value in values.Keys)
+                {
+                    candidate = value;
+                    break;
+                }
                 if (candidate > tick)
                     break;
-                remove.Add(candidate);
+                values.Remove(candidate);
             }
-            for (int i = 0; i < remove.Count; i++)
-                values.Remove(remove[i]);
         }
     }
 

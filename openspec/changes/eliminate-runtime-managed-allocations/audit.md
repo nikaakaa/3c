@@ -1835,3 +1835,11 @@
 - PrepareConfirmation 已持有当前 journal 的独立 entries 副本，却仍先把每条待确认／拒绝记录收集进 updates List，再第二次循环写入 entries。checkpoint 构造又把输入复制成 List 后创建 ReadOnlyCollection 包装。
 - confirmation 现遍历只读的 m_Entries 时直接调用 Record 写 entries 副本，原 Tick／Sequence 顺序、rejectedCount、cursor 递增、容量与 prune 校验不变。checkpoint 仍复制输入为独立 List，只按 IReadOnlyList 暴露，删除包装对象。
 - 每次 authority confirmation 删除 updates List 及第二次循环，每次 journal checkpoint 删除 ReadOnlyCollection；最终 entries 副本和 checkpoint List 仍按事务独立存在。ThirdPersonSimulation.ServerAuthoritative portable 编译零警告零错误，首次构建前检测到 Unity Bee 编译并等待其退出，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 confirmation 运行采样。
+
+## 2026-09-21 Rollback 排序历史边界移除
+
+对应 tasks.md 的 5.71。
+
+- RollbackInputHistory、RollbackSnapshotHistory 与每个 peer 的 RollbackStateHashHistory 共用 RemoveThrough。字典 key 均为升序 tick，原实现仍先把边界内 key 收集进新 List，再第二次循环删除。输入历史 CaptureEntries 还对已独立的结果 List 创建 ReadOnlyCollection。
+- RemoveThrough 现只要字典非空就读取最小 key，超过边界立即结束，否则删除后继续；不会在枚举期间修改活动枚举器，也不扫描确认边界之后的条目。删除顺序和三个历史的 count／floor 语义保持。
+- 输入历史捕获仍返回独立 List，仅按 IReadOnlyList 暴露。删除每次 confirmed horizon 释放的 key List，以及每次输入历史捕获的只读包装。ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 rollback 历史运行采样。

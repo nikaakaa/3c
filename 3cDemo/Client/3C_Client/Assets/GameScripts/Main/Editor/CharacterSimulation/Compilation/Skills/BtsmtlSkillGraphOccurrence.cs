@@ -209,21 +209,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public BtsmtlSkillGraphOccurrence Condition { get; }
     }
 
+    public readonly struct BtsmtlSkillTimelineMarkerOccurrence
+    {
+        public BtsmtlSkillTimelineMarkerOccurrence(BtsmtlSkillGraphOccurrence graph, TimelineExecutionDomain domain)
+        {
+            Graph = graph;
+            Domain = domain;
+        }
+
+        public BtsmtlSkillGraphOccurrence Graph { get; }
+        public TimelineExecutionDomain Domain { get; }
+    }
+
     public sealed class BtsmtlSkillTimelineOccurrence
     {
         internal BtsmtlSkillTimelineOccurrence(
             BtsmtlSkillTimelineFlowNode node,
             Dictionary<string, BtsmtlSkillGraphOccurrence> trees,
-            Dictionary<string, BtsmtlSkillGraphOccurrence> markerTrees)
+            Dictionary<string, BtsmtlSkillTimelineMarkerOccurrence> markerTrees)
         {
             Node = node;
             Trees = new System.Collections.ObjectModel.ReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence>(trees);
-            MarkerTrees = new System.Collections.ObjectModel.ReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence>(markerTrees);
+            MarkerTrees = new System.Collections.ObjectModel.ReadOnlyDictionary<string, BtsmtlSkillTimelineMarkerOccurrence>(markerTrees);
         }
 
         public BtsmtlSkillTimelineFlowNode Node { get; }
         public IReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence> Trees { get; }
-        public IReadOnlyDictionary<string, BtsmtlSkillGraphOccurrence> MarkerTrees { get; }
+        public IReadOnlyDictionary<string, BtsmtlSkillTimelineMarkerOccurrence> MarkerTrees { get; }
     }
 
     public sealed class BtsmtlSkillGraphOccurrence
@@ -345,7 +357,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     if (timeline.Timeline == null)
                         throw new InvalidOperationException($"{route}/node:{node.UID}/timeline: 技能Timeline引用缺失。");
                     var trees = new Dictionary<string, BtsmtlSkillGraphOccurrence>(StringComparer.Ordinal);
-                    var markerTrees = new Dictionary<string, BtsmtlSkillGraphOccurrence>(StringComparer.Ordinal);
+                    var markerTrees = new Dictionary<string, BtsmtlSkillTimelineMarkerOccurrence>(StringComparer.Ordinal);
                     foreach (Track track in timeline.Timeline.Tracks)
                     {
                         if (track == null)
@@ -369,14 +381,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         {
                             if (marker == null)
                                 continue;
-                            if (track.ExecutionDomain != TimelineExecutionDomain.Logic)
-                                throw new InvalidOperationException($"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{marker.AuthoringId}: Presentation Marker缺少正式表现图执行合同，不能编译为Simulation operations。");
                             if (marker.Graph is not BtsmtlSkillFlowGraph child)
                                 throw new InvalidOperationException($"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{marker.AuthoringId}: Marker引用不是正式Skill图。");
                             ValidateMarkerGraph(child, $"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{marker.AuthoringId}");
-                            markerTrees.Add(marker.AuthoringId, ReadOccurrence(child,
+                            BtsmtlSkillGraphClosure.ValidateTimelineGraph(child, track.ExecutionDomain);
+                            markerTrees.Add(marker.AuthoringId, new BtsmtlSkillTimelineMarkerOccurrence(ReadOccurrence(child,
                                 $"{route}/node:{node.UID}/timeline:{timeline.Timeline.AuthoringId}/marker:{child.AuthoringId}",
-                                contentHash, report));
+                                contentHash, report), track.ExecutionDomain));
                         }
                     }
                     timelines.Add(new BtsmtlSkillTimelineOccurrence(timeline, trees, markerTrees));
@@ -434,8 +445,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 foreach (BtsmtlSkillGraphOccurrence tree in timeline.Trees.Values)
                     foreach (BtsmtlSkillGraphOccurrence child in tree.EnumerateOccurrences())
                         yield return child;
-                foreach (BtsmtlSkillGraphOccurrence tree in timeline.MarkerTrees.Values)
-                    foreach (BtsmtlSkillGraphOccurrence child in tree.EnumerateOccurrences())
+                foreach (BtsmtlSkillTimelineMarkerOccurrence marker in timeline.MarkerTrees.Values)
+                    foreach (BtsmtlSkillGraphOccurrence child in marker.Graph.EnumerateOccurrences())
                         yield return child;
             }
         }

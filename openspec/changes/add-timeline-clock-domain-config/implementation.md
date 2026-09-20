@@ -365,3 +365,8 @@
 - 原节点能力声明增加 TimelineDomains；Gameplay 写入、Timeline 驱动、结束片段、循环、状态机及尚未绑定表现事实的读取节点不允许用于 Presentation。顺序／选择／并行结构、纯比较、Macro 端口、OnEnable 和现有四类 Camera 输出声明可用于表现域；这仅声明图内容资格，不代替运行上下文和资源准备。
 - ITimelineTreeGraphAsset 闭包入口显式接收所属轨道域，Marker 内容发现把轨道／Marker 身份传入。闭包检查全部子图节点并返回精确图／节点位置，原 Slate Track Inspector 的候选预检直接消费该结果，失败不提交轨道字段；未新增窗口或第二套 Inspector。
 - 当前仍保留缺少正式表现图执行器的准备／编译失败，未借用 Simulation invoker，也未把第6节或8.2整体勾选完成。
+
+## Marker 编译调用身份区分执行域
+- Marker occurrence 从其所属 Track 记录执行域；图编译沿用原 Skill compiler 和正式 SourceMap，Presentation Marker 的 OnEnable 入口声明 PresentationMarker 调用归属，图 identity／revision／调用路径仍来自原闭包。Logic Marker 保持既有 TimelineClip 调用表，Fixed／Float32 的逻辑 invoker 不会收集 PresentationMarker 入口。
+- 将上一批图能力检查收敛到 BtsmtlSkillGraphClosure.ValidateTimelineGraph，Slate 内容发现与编译 occurrence 共用同一入口，不复制一份编译器节点白名单。通过能力检查的 Presentation 图可生成正式编译内容；运行准备仍明确拒绝尚未安装表现执行器的内容，没有临时 Simulation actor 或借用逻辑 Tick。第6节仍未完成。
+- 暂停 Advance 与正常 Advance 共用已提交区间起点检查；暂停请求携带不同目标时间或余数时明确拒绝，防止在暂停分支静默丢掉错误区间。

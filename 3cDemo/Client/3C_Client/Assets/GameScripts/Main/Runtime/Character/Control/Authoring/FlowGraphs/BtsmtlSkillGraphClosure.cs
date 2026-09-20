@@ -23,6 +23,18 @@ namespace ThirdPersonCharacter.Control.Authoring
             return result.AsReadOnly();
         }
 
+        public static IReadOnlyList<FlowGraph> ValidateTimelineGraph(FlowGraph root, TimelineExecutionDomain domain)
+        {
+            TimelineExecutionDomainMask mask = TimelineExecutionDomains.ToMask(domain);
+            IReadOnlyList<FlowGraph> graphs = Validate(root, true);
+            foreach (FlowGraph graph in graphs)
+                foreach (FlowNode node in graph.allNodes.Cast<FlowNode>())
+                    if ((BtsmtlSkillCapabilityCatalog.TimelineDomains(node.GetType()) & mask) == 0)
+                        throw Error($"graph:{((IBtsmtlSkillFlowGraph)graph).AuthoringId}/node:{node.UID}",
+                            $"节点 '{node.GetType().Name}' 不支持轨道执行域 {domain}。");
+            return graphs;
+        }
+
         public static IReadOnlyList<FlowGraph> Validate(TimelineAsset root, bool requireComplete)
         {
             if (root == null || root.Data == null)

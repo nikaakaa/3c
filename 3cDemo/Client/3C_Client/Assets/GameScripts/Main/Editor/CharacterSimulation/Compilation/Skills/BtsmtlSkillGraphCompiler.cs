@@ -88,7 +88,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 OperationHandle invocationOwner = context.Owner.IsValid ? context.Owner : context.UseTimelineEnable
                     ? operations.Node(graph.Nodes.OfType<BtsmtlSkillTimelineEnableFlowNode>().Single().UID)
                     : entry;
-                if (context.CallerKind == ProgramInvocationCallerKind.TimelineClip && !string.IsNullOrEmpty(context.ClipId))
+                if ((context.CallerKind == ProgramInvocationCallerKind.TimelineClip ||
+                     context.CallerKind == ProgramInvocationCallerKind.PresentationMarker) && !string.IsNullOrEmpty(context.ClipId))
                 {
                     if (context.UseTimelineEnable)
                     {
@@ -131,9 +132,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     foreach (KeyValuePair<string, BtsmtlSkillGraphOccurrence> tree in timelineOccurrence.Trees)
                         Compile(tree.Value, stateOwner,
                             BtsmtlSkillInvocationContext.TreeClip(timelineOccurrence.Node.UID, tree.Key, false));
-                    foreach (KeyValuePair<string, BtsmtlSkillGraphOccurrence> marker in timelineOccurrence.MarkerTrees)
-                        Compile(marker.Value, stateOwner,
-                            BtsmtlSkillInvocationContext.TreeClip(timelineOccurrence.Node.UID, marker.Key, true));
+                    foreach (KeyValuePair<string, BtsmtlSkillTimelineMarkerOccurrence> marker in timelineOccurrence.MarkerTrees)
+                        Compile(marker.Value.Graph, stateOwner,
+                            BtsmtlSkillInvocationContext.Marker(timelineOccurrence.Node.UID, marker.Key, marker.Value.Domain));
                 }
                 foreach (BtsmtlSkillGraphReferenceOccurrence reference in graph.References)
                 {

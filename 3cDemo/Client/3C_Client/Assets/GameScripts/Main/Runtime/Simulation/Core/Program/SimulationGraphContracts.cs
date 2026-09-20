@@ -1228,7 +1228,8 @@ namespace ThirdPersonSimulation
         None,
         Node,
         Edge,
-        TimelineClip
+        TimelineClip,
+        PresentationMarker
     }
 
 	public sealed class ProgramSourceMapEntry
@@ -1346,7 +1347,8 @@ namespace ThirdPersonSimulation
                             !Enum.IsDefined(typeof(ProgramInvocationCallerKind), entry.InvocationCallerKind) ||
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.ParentInvocationPath) ||
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.InvocationCallerId) ||
-                            (entry.InvocationCallerKind == ProgramInvocationCallerKind.TimelineClip) != !string.IsNullOrEmpty(entry.InvocationCallerClipId))
+                            (entry.InvocationCallerKind == ProgramInvocationCallerKind.TimelineClip ||
+                             entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker) != !string.IsNullOrEmpty(entry.InvocationCallerClipId))
                             throw new InvalidDataException("Program graph invocation source is incomplete.");
                         break;
                     case ProgramSourceTargetKind.OptimizedAway:

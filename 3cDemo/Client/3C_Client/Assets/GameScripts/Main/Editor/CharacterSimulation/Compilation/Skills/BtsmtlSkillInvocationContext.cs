@@ -1,4 +1,5 @@
 using ThirdPersonSimulation;
+using BTSMTL.Timeline;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -23,6 +24,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             new(owner, ProgramInvocationCallerKind.Node, nodeId, string.Empty, false);
         public static BtsmtlSkillInvocationContext Condition(string edgeId, OperationHandle owner) =>
             new(owner, ProgramInvocationCallerKind.Edge, edgeId, string.Empty, false);
+        public static BtsmtlSkillInvocationContext Marker(string nodeId, string markerId, TimelineExecutionDomain domain) =>
+            new(default, domain == TimelineExecutionDomain.Presentation
+                ? ProgramInvocationCallerKind.PresentationMarker : ProgramInvocationCallerKind.TimelineClip,
+                nodeId, markerId, true);
         public static BtsmtlSkillInvocationContext TreeClip(string nodeId, string clipId, bool useEnable) =>
             new(default, ProgramInvocationCallerKind.TimelineClip, nodeId, clipId, useEnable);
     }

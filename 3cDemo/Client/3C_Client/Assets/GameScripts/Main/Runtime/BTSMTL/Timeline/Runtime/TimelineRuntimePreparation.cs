@@ -342,8 +342,12 @@ namespace BTSMTL.Timeline.Runtime
                 throw new InvalidOperationException("Timeline playback must be running before Advance.");
             if (m_PendingAdvance != null || m_StopPending)
                 throw new InvalidOperationException("Timeline playback has an uncommitted Advance result.");
+            if (request.PreviousTime != m_CursorTime)
+                throw new InvalidOperationException("Timeline interval does not begin at the committed cursor.");
             if (request.Control.IsPaused)
             {
+                if (request.TargetTime != m_CursorTime || request.TimeCarry != m_TimeCarry)
+                    throw new InvalidOperationException("A paused Timeline interval must preserve the committed cursor and time carry.");
                 m_PendingAdvance = new TimelineRuntimeAdvanceResult(this, Generation, request,
                     m_CursorTime, m_CursorTime, m_Cycle, m_Cycle, m_TimeCarry, m_SectionId,
                     m_ActiveClipIds, Array.Empty<TimelineRuntimeClipBoundary>(), TimelineRuntimeEvaluationResult.Empty, false);
@@ -351,8 +355,6 @@ namespace BTSMTL.Timeline.Runtime
             }
             FixedScalar duration = Content.Duration;
             bool loop = PlaybackMode == TimelinePlaybackMode.Loop;
-            if (request.PreviousTime != m_CursorTime)
-                throw new InvalidOperationException("Timeline interval does not begin at the committed cursor.");
             int nextTimeCarry = request.TimeCarry;
             FixedScalar requestedTime = request.TargetTime;
             FixedScalar nextTime;

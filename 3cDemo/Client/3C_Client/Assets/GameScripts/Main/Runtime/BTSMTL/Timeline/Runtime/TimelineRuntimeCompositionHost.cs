@@ -120,6 +120,12 @@ namespace BTSMTL.Timeline.Runtime
         public void SuspendPresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation) => m_PresentationDriver.SuspendPresentationPlayback(handle, generation);
         public void ReleasePresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation) => m_PresentationDriver.ReleasePresentationPlayback(handle, generation);
 
+        public void DiscardEvaluation(TimelineRuntimePlaybackHandle handle)
+        {
+            Service.DiscardEvaluation(handle);
+            EvaluationBuffer.ReleasePlayback(handle);
+        }
+
         public void ReleasePlayback(TimelineRuntimePlaybackHandle handle)
         {
             Service.ReleasePlayback(handle);

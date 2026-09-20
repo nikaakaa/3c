@@ -916,6 +916,7 @@ namespace ThirdPersonSimulation
         void Discard(AbilityTimelineAdvancePending pending);
         AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle);
         int ApplyRestore(AbilityTimelineRuntimeSnapshot snapshot);
+        void DiscardUnpublishedPlaybacks(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots);
         void ReleaseUnreferencedPlaybacks(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots, ulong committedTick);
         AbilityTimelineStopResult Stop(int runtimeHandle, ulong logicTick);
         void CommitStop(AbilityTimelineStopPending pending);

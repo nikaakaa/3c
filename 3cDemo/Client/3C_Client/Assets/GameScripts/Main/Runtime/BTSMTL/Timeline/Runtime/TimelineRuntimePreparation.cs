@@ -581,6 +581,12 @@ namespace BTSMTL.Timeline.Runtime
                 State = TimelineRuntimePlaybackState.Disposed;
         }
 
+        internal void DiscardEvaluation()
+        {
+            m_CandidateEvaluation.Clear();
+            m_CommittedEvaluation.Clear();
+        }
+
         internal bool HasPendingStop => m_StopPending;
         internal ulong PendingStopSequence => m_StopPending ? m_StopSequence : 0;
         internal bool HasPendingAdvance => m_PendingAdvance.IsValid;

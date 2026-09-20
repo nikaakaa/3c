@@ -515,6 +515,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal bool TerminalPublished;
             internal bool PresentationWithdrawn;
             internal bool LogicOwnerReleased;
+            internal bool RestoredReleasedOwner;
             internal ulong LogicReleaseTick;
             internal bool PresentationReleased;
             internal TimelineRuntimePresentationSample LocalPresentationSample;
@@ -1350,6 +1351,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 clipAuthoringId);
         }
 
+        public void DiscardUnpublishedAbilityTimeline(int runtimeHandle)
+        {
+            var handle = new TimelineRuntimePlaybackHandle(checked((ulong)runtimeHandle));
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                ActivePlayback active = m_ActivePlaybacks[index];
+                if (active.Handle.Value != handle.Value)
+                    continue;
+                if (active.RestoredReleasedOwner)
+                {
+                    m_Host.DiscardEvaluation(handle);
+                    m_TreeClipService.Restore(handle.Value, default);
+                    active.LogicOwnerReleased = true;
+                    active.RestoredReleasedOwner = false;
+                    m_ActivePlaybacks[index] = active;
+                    return;
+                }
+                m_Host.ReleasePlayback(handle);
+                m_Host.ReleasePresentationPlayback(handle, active.Generation);
+                m_TreeClipService.Restore(handle.Value, default);
+                m_ActivePlaybacks.RemoveAt(index);
+                return;
+            }
+            throw new InvalidOperationException("Unpublished Timeline discard has no registered playback.");
+        }
+
+        public void PublishAbilityTimelineOwner(int runtimeHandle)
+        {
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                ActivePlayback active = m_ActivePlaybacks[index];
+                if (active.Handle.Value != (ulong)runtimeHandle)
+                    continue;
+                active.RestoredReleasedOwner = false;
+                m_ActivePlaybacks[index] = active;
+                return;
+            }
+            throw new InvalidOperationException("Published Timeline owner has no registered playback.");
+        }
+
         public void ReleaseAbilityTimelineOwner(int runtimeHandle, ulong committedTick)
         {
             var handle = new TimelineRuntimePlaybackHandle(checked((ulong)runtimeHandle));
@@ -1358,6 +1399,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 ActivePlayback active = m_ActivePlaybacks[index];
                 if (active.Handle.Value != handle.Value)
                     continue;
+                m_Host.DiscardEvaluation(handle);
+                m_TreeClipService.Restore(handle.Value, default);
                 active.LogicOwnerReleased = true;
                 active.LogicReleaseTick = committedTick;
                 m_ActivePlaybacks[index] = active;
@@ -1473,6 +1516,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 ActivePlayback current = m_ActivePlaybacks[index];
                 if (current.Handle.Value != restored.Value)
                     continue;
+                current.RestoredReleasedOwner |= current.LogicOwnerReleased;
                 current.LogicOwnerReleased = false;
                 m_ActivePlaybacks[index] = current;
                 return checked((int)restored.Value);

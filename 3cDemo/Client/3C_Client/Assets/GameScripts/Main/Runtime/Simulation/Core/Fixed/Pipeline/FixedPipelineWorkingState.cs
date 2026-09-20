@@ -79,6 +79,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Working.Replace(m_Restored);
             m_Applied = true;
             m_Validated = false;
+            RestoreTimelineSnapshots(m_Restored);
         }
 
         public void ValidateApplied()
@@ -94,56 +95,17 @@ namespace ThirdPersonSimulation.Fixed
             RequireOpen();
             if (!m_Applied || !m_Validated)
                 throw new InvalidOperationException("Character restore transaction was not applied and validated before Session publish.");
-            RestoreTimelineSnapshots();
             m_Completed = true;
         }
 
-        void RestoreTimelineSnapshots()
+        void RestoreTimelineSnapshots(SimulationWorldStateSet state)
         {
-            for (int i = 0; i < m_Restored.Actors.Count; i++)
+            for (int actorIndex = 0; actorIndex < state.Actors.Count; actorIndex++)
             {
-                SimulationActorState restoredActor = m_Restored.Actors[i];
-                bool hadPreviousActor = TryFindActor(m_Previous, restoredActor.ActorId, out SimulationActorState previousActor);
-                IAbilityTimelineRuntime timeline = m_Roster[i].TimelineRuntime;
-                for (int s = 0; s < restoredActor.State.TimelineSnapshots.Count; s++)
-                {
-                    AbilityTimelineRuntimeSnapshot snapshot = restoredActor.State.TimelineSnapshots[s];
-                    timeline.ApplyRestore(snapshot);
-                }
-                if (!hadPreviousActor)
-                    continue;
-                for (int s = 0; s < previousActor.State.TimelineSnapshots.Count; s++)
-                {
-                    int runtimeHandle = previousActor.State.TimelineSnapshots[s].RuntimeHandle;
-                    bool restored = false;
-                    for (int restoredIndex = 0; restoredIndex < restoredActor.State.TimelineSnapshots.Count; restoredIndex++)
-                    {
-                        if (restoredActor.State.TimelineSnapshots[restoredIndex].RuntimeHandle != runtimeHandle)
-                            continue;
-                        restored = true;
-                        break;
-                    }
-                    if (restored)
-                        continue;
-                    AbilityTimelineStopResult stop = timeline.Stop(runtimeHandle, 0);
-                    if (stop.Pending.IsValid)
-                        timeline.CommitStop(stop.Pending);
-                }
+                IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots = state.Actors[actorIndex].State.TimelineSnapshots;
+                for (int index = 0; index < snapshots.Count; index++)
+                    m_Roster[actorIndex].TimelineRuntime.ApplyRestore(snapshots[index]);
             }
-        }
-
-        static bool TryFindActor(SimulationWorldStateSet state, ActorId actorId, out SimulationActorState actor)
-        {
-            for (int i = 0; i < state.Actors.Count; i++)
-            {
-                if (state.Actors[i].ActorId.Equals(actorId))
-                {
-                    actor = state.Actors[i];
-                    return true;
-                }
-            }
-            actor = default;
-            return false;
         }
 
         public void Rollback()
@@ -151,6 +113,9 @@ namespace ThirdPersonSimulation.Fixed
             if (m_Completed || !m_Applied)
                 return;
             m_Working.Replace(m_Previous);
+            RestoreTimelineSnapshots(m_Previous);
+            for (int index = 0; index < m_Roster.Count; index++)
+                m_Roster[index].TimelineRuntime?.DiscardUnpublishedPlaybacks(m_Previous.Actors[index].State.TimelineSnapshots);
             m_Applied = false;
             m_Validated = false;
         }

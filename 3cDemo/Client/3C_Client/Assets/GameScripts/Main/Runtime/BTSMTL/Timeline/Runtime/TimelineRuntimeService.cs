@@ -928,15 +928,21 @@ namespace BTSMTL.Timeline.Runtime
             return true;
         }
 
-        public void ReleasePlayback(TimelineRuntimePlaybackHandle handle)
+        internal void DiscardEvaluation(TimelineRuntimePlaybackHandle handle)
         {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
-            if (playback.HasPendingAdvance || playback.HasPendingStop ||
-                playback.State != TimelineRuntimePlaybackState.Completed &&
-                playback.State != TimelineRuntimePlaybackState.Stopped &&
-                playback.State != TimelineRuntimePlaybackState.Failed)
-                throw new InvalidOperationException("Timeline playback release requires a committed terminal state.");
+            if (playback.HasPendingAdvance || playback.HasPendingStop)
+                throw new InvalidOperationException("Timeline evaluation discard requires no pending candidates.");
+            playback.DiscardEvaluation();
+        }
+
+        internal void ReleasePlayback(TimelineRuntimePlaybackHandle handle)
+        {
+            EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
+            if (playback.HasPendingAdvance || playback.HasPendingStop)
+                throw new InvalidOperationException("Timeline playback release requires no pending candidates.");
             playback.Dispose();
             m_Playbacks.Remove(handle.Value);
         }

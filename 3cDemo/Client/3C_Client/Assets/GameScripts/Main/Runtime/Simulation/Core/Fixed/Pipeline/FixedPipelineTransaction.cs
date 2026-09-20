@@ -459,6 +459,7 @@ namespace ThirdPersonSimulation.Fixed
                 IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots = m_StateStore.Current.Actors[actorIndex].State.TimelineSnapshots;
                 for (int index = 0; index < snapshots.Count; index++)
                     m_Roster[actorIndex].TimelineRuntime.ApplyRestore(snapshots[index]);
+                m_Roster[actorIndex].TimelineRuntime?.DiscardUnpublishedPlaybacks(snapshots);
             }
         }
 

@@ -240,7 +240,14 @@ namespace ThirdPersonSimulation
                 {
                     try
                     {
-                        restoreTransaction?.Dispose();
+                        try
+                        {
+                            m_Target.DiscardUnconsumedEvaluations();
+                        }
+                        finally
+                        {
+                            restoreTransaction?.Dispose();
+                        }
                     }
                     finally
                     {

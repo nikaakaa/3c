@@ -554,29 +554,41 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public void ReleaseUnreferencedPlaybacks(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots, ulong committedTick)
         {
-            while (true)
+            int handle;
+            while ((handle = FindUnreferencedPlayback(snapshots)) != 0)
             {
-                int releaseHandle = 0;
-                foreach (KeyValuePair<int, AbilityTimelineStartRequest> entry in m_Requests)
-                {
-                    bool retained = false;
-                    for (int index = 0; index < snapshots.Count; index++)
-                        if (snapshots[index].RuntimeHandle == entry.Key)
-                        {
-                            retained = true;
-                            break;
-                        }
-                    if (!retained)
+                m_Host.ReleaseAbilityTimelineOwner(handle, committedTick);
+                m_Requests.Remove(handle);
+            }
+            for (int index = 0; index < snapshots.Count; index++)
+                m_Host.PublishAbilityTimelineOwner(snapshots[index].RuntimeHandle);
+        }
+
+        public void DiscardUnpublishedPlaybacks(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots)
+        {
+            int handle;
+            while ((handle = FindUnreferencedPlayback(snapshots)) != 0)
+            {
+                m_Host.DiscardUnpublishedAbilityTimeline(handle);
+                m_Requests.Remove(handle);
+            }
+        }
+
+        int FindUnreferencedPlayback(IReadOnlyList<AbilityTimelineRuntimeSnapshot> snapshots)
+        {
+            foreach (KeyValuePair<int, AbilityTimelineStartRequest> entry in m_Requests)
+            {
+                bool retained = false;
+                for (int index = 0; index < snapshots.Count; index++)
+                    if (snapshots[index].RuntimeHandle == entry.Key)
                     {
-                        releaseHandle = entry.Key;
+                        retained = true;
                         break;
                     }
-                }
-                if (releaseHandle == 0)
-                    return;
-                m_Host.ReleaseAbilityTimelineOwner(releaseHandle, committedTick);
-                m_Requests.Remove(releaseHandle);
+                if (!retained)
+                    return entry.Key;
             }
+            return 0;
         }
 
         public AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle)

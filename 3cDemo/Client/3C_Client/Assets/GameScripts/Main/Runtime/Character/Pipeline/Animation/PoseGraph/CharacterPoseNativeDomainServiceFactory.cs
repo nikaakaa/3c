@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Rig,
                 rigBinding,
                 m_Profile.PoseGraph.Graph.ContentRevision);
-            CharacterFinalIkFullBodySolver solver = CreateSolver();
+            CharacterFinalIkFullBodySolver solver = CreateSolver(owned);
             var constraints = new CharacterPoseConstraintRuntime(
                 footPlacement,
                 constraintCatalog.PoseBoneContributions,
@@ -223,7 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 plan.FootStepObservation);
         }
 
-        CharacterFinalIkFullBodySolver CreateSolver()
+        CharacterFinalIkFullBodySolver CreateSolver(List<IDisposable> owned)
         {
             var parents = new NativeArray<int>(m_Rig.PoseBoneCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             var virtualBones = new NativeArray<CharacterVirtualBoneDescriptor>(m_Rig.VirtualBoneCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
@@ -240,14 +240,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         bone.TargetPhysicalBoneIndex,
                         bone.PoseBoneIndex);
                 }
-                return new CharacterFinalIkFullBodySolver(m_Rig, m_Profile.FullBodyIkProfile, parents, virtualBones);
+                var solver = new CharacterFinalIkFullBodySolver(m_Rig, m_Profile.FullBodyIkProfile, parents, virtualBones);
+                owned.Add(parents);
+                owned.Add(virtualBones);
+                return solver;
             }
-            finally
+            catch
             {
                 if (parents.IsCreated)
                     parents.Dispose();
                 if (virtualBones.IsCreated)
                     virtualBones.Dispose();
+                throw;
             }
         }
 
@@ -349,11 +353,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Dictionary<CharacterPresentationPoseSourceSlot, int> BuildSourceIndexes()
         {
             var result = new Dictionary<CharacterPresentationPoseSourceSlot, int>();
-            for (int i = 0; i < m_Profile.PoseSourceBindings.Count; i++)
+            for (int i = 0; i < m_Resources.SourceSlots.Count; i++)
             {
-                CharacterPresentationPoseSourceBinding binding = m_Profile.PoseSourceBindings[i];
-                if (binding && binding.Slot && !result.TryAdd(binding.Slot, i))
-                    throw new InvalidOperationException($"Pose Source binding #{i} duplicates a Slot.");
+                CharacterPresentationPoseSourceSlot slot = m_Resources.SourceSlots[i];
+                if (!slot || !result.TryAdd(slot, m_Resources.SourcePlans[i].SourceIndex.Value))
+                    throw new InvalidOperationException($"Compiled Pose Source #{i} has a missing or duplicated Slot.");
             }
             return result;
         }

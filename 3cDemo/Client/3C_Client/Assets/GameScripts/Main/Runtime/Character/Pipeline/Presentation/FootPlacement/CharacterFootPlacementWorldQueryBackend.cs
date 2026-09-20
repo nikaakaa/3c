@@ -87,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!physicsScene.IsValid())
                 throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
-            if (landingHitCapacity < 4 || landingHitCapacity > 32)
+            if (landingHitCapacity < 4 || landingHitCapacity > 64)
                 throw new ArgumentOutOfRangeException(nameof(landingHitCapacity));
             if (groundPathSegmentHitCapacity < 4 || groundPathSegmentHitCapacity > 32)
                 throw new ArgumentOutOfRangeException(nameof(groundPathSegmentHitCapacity));

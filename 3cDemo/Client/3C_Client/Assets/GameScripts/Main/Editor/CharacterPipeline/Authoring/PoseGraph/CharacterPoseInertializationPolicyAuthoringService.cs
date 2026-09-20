@@ -30,24 +30,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     "Corin Definition requires one Animation Presentation Profile, Pose Graph and Rig Definition.");
             }
-            if (AssetDatabase.LoadAssetAtPath<CharacterPoseInertializationPolicy>(
-                    CorinPolicyPath))
+            CharacterPoseInertializationPolicy policy =
+                AssetDatabase.LoadAssetAtPath<CharacterPoseInertializationPolicy>(CorinPolicyPath);
+            if (policy == null)
             {
-                throw new InvalidOperationException(
-                    $"Inertialization Policy already exists at '{CorinPolicyPath}'.");
+                policy = Create(
+                    CorinPolicyPath,
+                    CorinPolicyId,
+                    StableHash.Compute(CorinPolicyId + ":" + CharacterPoseInertializationPolicy.SchemaVersion).ToString(),
+                    definition.AnimationPresentationProfile.RigDefinition,
+                    definition.AnimationPresentationProfile.PoseGraph.Graph.Parameters
+                        .Select(value => value.ParameterId)
+                        .ToArray());
             }
-
-            Create(
-                CorinPolicyPath,
-                CorinPolicyId,
-                StableHash.Compute(CorinPolicyId + ":" + CharacterPoseInertializationPolicy.SchemaVersion).ToString(),
-                definition.AnimationPresentationProfile.RigDefinition,
-                definition.AnimationPresentationProfile.PoseGraph.Graph.Parameters
-                    .Select(value => value.ParameterId)
-                    .ToArray());
+            RepairDirectPlayerRule(policy, definition.AnimationPresentationProfile.RigDefinition);
             Selection.activeObject =
-                AssetDatabase.LoadAssetAtPath<CharacterPoseInertializationPolicy>(
-                    CorinPolicyPath);
+                policy;
+        }
+
+        static void RepairDirectPlayerRule(
+            CharacterPoseInertializationPolicy policy,
+            CharacterAnimationRigDefinition rig)
+        {
+            CharacterAnimationBlendProfile blendProfile =
+                AssetDatabase.LoadAssetAtPath<CharacterAnimationBlendProfile>(
+                    "Assets/Configs/Character/Corin/Pipeline/Presentation/Blend/Locomotion/CorinLocomotionBlendProfile.asset");
+            if (!policy || !rig || !blendProfile)
+                throw new InvalidOperationException(
+                    "Corin Locomotion Inertialization Policy repair requires the policy, Rig and Locomotion Blend Profile assets.");
+
+            CharacterPoseDirectInertializationRule directRule =
+                policy.DirectPlayerRule ?? new CharacterPoseDirectInertializationRule();
+            directRule.Configure(
+                PoseInertializationMode.Inertialize,
+                0.2f,
+                CharacterAnimationBlendMode.EaseInOut,
+                null,
+                blendProfile);
+            policy.Configure(
+                policy.PolicyId,
+                policy.Revision,
+                policy.Response,
+                directRule,
+                rig);
+            EditorUtility.SetDirty(policy);
+            AssetDatabase.SaveAssetIfDirty(policy);
+            Debug.Log(
+                $"Repaired Corin Locomotion Inertialization Policy '{policy.name}' " +
+                $"with direct rule profile '{blendProfile.name}'.");
         }
 
         internal static CharacterPoseInertializationPolicy Create(

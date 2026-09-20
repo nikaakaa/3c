@@ -1055,24 +1055,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 in scalarReadView);
         }
 
-        internal void ValidatePhysicalFrame() =>
-            m_PhysicalSources.ValidateFrame();
-
-        internal void ValidateFrame(
-            CharacterPoseSourceFrameLease lease)
-        {
-            m_FramePage.RequireReady(lease);
-            m_ReleaseValidationIdentities.Clear();
-            m_Backends.ValidateFrame(lease);
-        }
-
         internal void EnterEvaluateBarrier(
             CharacterPoseSourceFrameLease lease)
+        {
+            m_FramePage.RequireOpen(lease);
             BeginReleaseDiagnostics(false);
             for (int i = 0; i < m_RetirementOwners.Count; i++)
                 m_RetirementOwners[i].PrepareRetirements();
-        {
-            m_FramePage.RequireReady(lease);
+            m_PhysicalSources.ValidateFrame();
+            m_Backends.ValidateFrame(lease);
             m_Backends.EnterEvaluateBarrier(lease);
         }
 
@@ -1500,5 +1491,3 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
     }
 }
-
-

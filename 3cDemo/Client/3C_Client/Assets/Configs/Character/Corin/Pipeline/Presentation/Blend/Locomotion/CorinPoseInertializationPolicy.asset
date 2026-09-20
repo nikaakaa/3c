@@ -18,9 +18,17 @@ MonoBehaviour:
   m_Response:
     m_ParameterFilters: []
   m_DirectPlayerRule:
-    rid: -2
+    rid: 207050521905463332
   references:
     version: 2
     RefIds:
-    - rid: -2
-      type: {class: , ns: , asm: }
+    - rid: 207050521905463332
+      type: {class: CharacterPoseDirectInertializationRule, ns: ThirdPersonCharacter.Pipeline.Animation,
+        asm: ThirdPersonClient.Runtime}
+      data:
+        m_Mode: 2
+        m_DurationSeconds: 0.2
+        m_BlendMode: 4
+        m_CustomBlendCurve: {fileID: 0}
+        m_BlendProfile: {fileID: 11400000, guid: 6b06fb0e71bd44daaa0b2d663f8c62d0,
+          type: 2}

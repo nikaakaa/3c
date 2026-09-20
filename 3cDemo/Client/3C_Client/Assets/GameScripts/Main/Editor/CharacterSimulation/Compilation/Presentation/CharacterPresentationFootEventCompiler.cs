@@ -456,6 +456,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     return next;
                 }
             }
+            if (foot.Samples[liftOffSample].Filter.Contact > contactEpsilon)
+                return liftOffSample;
             return -1;
         }
 

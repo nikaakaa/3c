@@ -70,6 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseConstraintRuntime m_Constraints;
         readonly CharacterPoseSourceModule m_Source;
         CharacterPoseSourceFrameLease m_SourceLease;
+        CharacterPoseConstraintFrameLease m_ConstraintsLease;
         bool m_Disposed;
 
         CharacterPoseNativeRoleRuntime(
@@ -266,11 +267,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeFrameLineage openLineage = lease.Lineage;
             try
             {
-                m_SourceLease = m_Source.BeginFrame(in openLineage);
+                if (m_Constraints != null)
+                    m_ConstraintsLease = m_Constraints.BeginFrame(in openLineage);
+                if (m_Source != null)
+                    m_SourceLease = m_Source.BeginFrame(in openLineage);
                 return lease;
             }
             catch
             {
+                if (m_Constraints != null && m_ConstraintsLease.IsValid)
+                {
+                    m_Constraints.DiscardFrame(m_ConstraintsLease);
+                    m_ConstraintsLease = default;
+                }
                 m_Graph.Discard(lease, CharacterPoseNativeFailureCode.FrameInvalid);
                 throw;
             }
@@ -292,11 +301,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void PrepareEvaluation(
             CharacterPoseNativeFrameLease lease,
             in CharacterPoseNativeSourceDemand demand,
-            ulong barrierIdentity) =>
+            ulong barrierIdentity)
+        {
             m_Graph.PrepareEvaluation(
                 lease,
                 in demand,
                 barrierIdentity);
+            m_Source?.EnterEvaluateBarrier(m_SourceLease);
+        }
 
         internal CharacterPoseNativeEvaluationResult Evaluate(
             CharacterPoseNativeFrameLease lease,
@@ -322,6 +334,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in evaluation,
                 m_Publication,
                 captureFootIkDiagnostics);
+            if (m_Constraints != null)
+            {
+                CharacterPoseNativeFrameLineage committedLineage =
+                    m_Graph.CurrentLineage;
+                m_Constraints.CompleteFrame(
+                    m_ConstraintsLease,
+                    in committedLineage,
+                    AnimationPoseAvailability.Pose,
+                    AnimationPoseNativeInvalidReason.None,
+                    AnimationPoseNativeInvalidReason.None);
+                m_Constraints.SealFrame(m_ConstraintsLease);
+                m_ConstraintsLease = default;
+            }
             if (m_Source != null)
             {
                 m_Source.CommitFrame(m_SourceLease);
@@ -335,6 +360,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseNativeFailureCode reason)
         {
             m_Graph.Discard(lease, reason);
+            if (m_Constraints != null && m_ConstraintsLease.IsValid)
+            {
+                m_Constraints.DiscardFrame(m_ConstraintsLease);
+                m_ConstraintsLease = default;
+            }
             if (m_Source != null && m_SourceLease.IsValid)
             {
                 m_Source.DiscardFrame(m_SourceLease);
@@ -352,6 +382,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void Stop()
         {
+            if (m_Constraints != null && m_ConstraintsLease.IsValid)
+            {
+                m_Constraints.DiscardFrame(m_ConstraintsLease);
+                m_ConstraintsLease = default;
+            }
             if (m_Source != null && m_SourceLease.IsValid)
             {
                 m_Source.DiscardFrame(m_SourceLease);

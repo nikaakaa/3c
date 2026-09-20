@@ -631,8 +631,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Full Body IK '{NodeId}' received an unavailable Component Pose.");
             }
-            foreach (CharacterPoseDynamicPort contribution in node.DynamicPorts)
+            for (int i = 0; i < node.DynamicPorts.Count; i++)
             {
+                CharacterPoseDynamicPort contribution = node.DynamicPorts[i];
                 if (contribution.Direction != CharacterPosePortDirection.Input ||
                     contribution.Kind != CharacterPosePortKind.FullBodyIkGoalContribution)
                     continue;
@@ -675,7 +676,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     runtime.CurrentLineage.CompletionIdentity))
             {
                 throw new InvalidOperationException(
-                    $"Full Body IK '{NodeId}' returned an invalid Constraint result.");
+                    $"Full Body IK '{NodeId}' returned an invalid Constraint result: failure={result.Solve.Failure}, " +
+                    $"slot={result.Solve.FailedSlot}, solverResidual={result.Solve.FailedSolverResidual}, " +
+                    $"positionResidual={result.Solve.FailedPositionResidual}, detail={result.Solve.FailureDetail}.");
             }
             NativeSlice<AnimationPoseAvailability> availability =
                 m_WriteBinding.Availability;

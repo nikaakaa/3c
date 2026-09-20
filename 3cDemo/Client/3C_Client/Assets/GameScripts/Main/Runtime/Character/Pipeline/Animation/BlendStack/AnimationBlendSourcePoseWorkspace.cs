@@ -144,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     m_CaptureFailures[pendingSlot] != AnimationSourcePoseCaptureFailure.None)
                 {
                     throw new InvalidOperationException(
-                        "Animation source pose pending entry did not complete successfully.");
+                        $"Animation source pose pending entry did not complete successfully. SourceIndex={sourceIndex}, ExpectedCompletion={completionIdentity}, ActualCompletion={m_CompletedAt[pendingSlot]}, Failure={m_CaptureFailures[pendingSlot]}.");
                 }
             }
 

@@ -20,6 +20,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField, Min(1)] long m_ResourceResidentBudgetBytes = 1;
         [SerializeField] CharacterPresentationPoseSourcePlan[] m_SourcePlans =
             Array.Empty<CharacterPresentationPoseSourcePlan>();
+        [SerializeField] CharacterPresentationPoseSourceSlot[] m_SourceSlots =
+            Array.Empty<CharacterPresentationPoseSourceSlot>();
         [SerializeField] CharacterAnimationCompiledResourceDescriptor[] m_ResourceDescriptors =
             Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
         [SerializeField] CharacterPoseBoneIkGoalBinding[] m_PoseBoneIkGoalBindings =
@@ -41,6 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public long ResourceResidentBudgetBytes => m_ResourceResidentBudgetBytes;
         public IReadOnlyList<CharacterPresentationPoseSourcePlan> SourcePlans =>
             m_SourcePlans ?? Array.Empty<CharacterPresentationPoseSourcePlan>();
+        public IReadOnlyList<CharacterPresentationPoseSourceSlot> SourceSlots => m_SourceSlots;
         public IReadOnlyList<CharacterAnimationCompiledResourceDescriptor> ResourceDescriptors =>
             m_ResourceDescriptors ?? Array.Empty<CharacterAnimationCompiledResourceDescriptor>();
         public IReadOnlyList<CharacterPoseBoneIkGoalBinding> PoseBoneIkGoalBindings =>
@@ -58,7 +61,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RootOrientationCurves ?? Array.Empty<RootMotionCurveAsset>();
 
         internal void ReplaceSourcePlans(
-            IReadOnlyList<CharacterPresentationPoseSourcePlan> sourcePlans)
+            IReadOnlyList<CharacterPresentationPoseSourcePlan> sourcePlans,
+            IReadOnlyList<CharacterPresentationPoseSourceSlot> sourceSlots)
         {
             if (sourcePlans == null || sourcePlans.Count == 0)
                 throw new InvalidOperationException(
@@ -76,7 +80,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         "Pose Native Resource Set source plan index is missing or duplicated.");
                 plans[i] = plan;
             }
+            if (sourceSlots == null || sourceSlots.Count != plans.Length)
+                throw new ArgumentException("Pose source slots must match the compiled source plans.");
+            var slots = new CharacterPresentationPoseSourceSlot[plans.Length];
+            var seenSlots = new HashSet<CharacterPresentationPoseSourceSlot>();
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (!sourceSlots[i] || !seenSlots.Add(sourceSlots[i]))
+                    throw new ArgumentException("Pose source slot is missing or duplicated.");
+                slots[i] = sourceSlots[i];
+            }
             m_SourcePlans = plans;
+            m_SourceSlots = slots;
         }
         internal CharacterPoseNativeSourceResourceCatalog CreateSourceCatalog(
             CharacterAnimationRigPayload rig,
@@ -177,17 +192,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         reachableSlots.Add(node.PresentationPoseSourceSlot);
                 }
             }
-            int bindingCount = 0;
+            if (SourceSlots == null || SourceSlots.Count != SourcePlans.Count)
+                throw new InvalidOperationException("Pose source slot map is missing. Recompile the Pose Domain Resource Set.");
             foreach (CharacterPresentationPoseSourceBinding binding in profile.PoseSourceBindings)
             {
                 if (!binding || !binding.Slot)
                     continue;
-                bindingCount++;
                 if (reachableSlots.Contains(binding.Slot) &&
-                    !SourcePlans.Any(plan => plan != null && plan.SourceIndex.Value == bindingCount - 1))
+                    !SourceSlots.Contains(binding.Slot))
                 {
                     throw new InvalidOperationException(
-                        $"Pose Native Source plan #{bindingCount - 1} is missing for '{binding.Slot.name}'.");
+                        $"Pose Native Source plan is missing for '{binding.Slot.name}'.");
                 }
             }
         }

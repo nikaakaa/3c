@@ -40,19 +40,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 CharacterFullBodyIkGoalContributionHeader header =
                     contributionHeaders[headerIndex];
+                bool unavailable =
+                    header.Availability ==
+                    CharacterFullBodyIkGoalContributionAvailability
+                        .WorldContextUnavailable &&
+                    header.GoalCount == 0;
                 if (!header.IsValid ||
                     header.FrameSequence != frameSequence ||
                     header.CompletionIdentity != completionIdentity ||
-                    header.Availability !=
-                    CharacterFullBodyIkGoalContributionAvailability.Ready ||
                     !header.RigId.Equals(expectedRigId) ||
                     !header.RigRevision.Equals(expectedRigRevision) ||
-                    header.GoalOffset > contributionGoals.Length - header.GoalCount)
+                    header.GoalOffset > contributionGoals.Length - header.GoalCount ||
+                    (!header.Availability.Equals(
+                         CharacterFullBodyIkGoalContributionAvailability.Ready) &&
+                     !unavailable))
                 {
                     return CharacterFullBodyIkResult.Fail(
                         CharacterFullBodyIkFailure.GoalLineageMismatch,
                         contributionIndex);
                 }
+                if (unavailable)
+                    continue;
                 if (count > goalOutput.Length - header.GoalCount)
                 {
                     return CharacterFullBodyIkResult.Fail(

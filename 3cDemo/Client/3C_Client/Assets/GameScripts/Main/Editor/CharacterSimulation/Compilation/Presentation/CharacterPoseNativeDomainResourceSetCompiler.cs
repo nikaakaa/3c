@@ -9,6 +9,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     internal static class CharacterPoseNativeDomainResourceSetCompiler
     {
+        const string CorinProfilePath =
+            "Assets/Configs/Character/Corin/Pipeline/Presentation/Profiles/CorinAnimationPresentationProfile.asset";
+
         [MenuItem("3C/Character/Animation/Compile Pose Domain Resource Set")]
         public static void CompileSelectedProfileResourceSet()
         {
@@ -17,6 +20,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!profile)
                 throw new InvalidOperationException(
                     "Select a Character Animation Presentation Profile to compile its Pose Domain Resource Set.");
+            Compile(profile);
+        }
+
+        [MenuItem("3C/Character/Animation/Corin/Compile Pose Domain Resource Set")]
+        public static void CompileCorinResourceSet()
+        {
+            CharacterAnimationPresentationProfile profile =
+                AssetDatabase.LoadAssetAtPath<CharacterAnimationPresentationProfile>(CorinProfilePath);
+            if (!profile)
+                throw new InvalidOperationException(
+                    $"Corin Character Animation Presentation Profile is missing at '{CorinProfilePath}'.");
             Compile(profile);
         }
 
@@ -39,6 +53,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             RequireNoDiagnostics(profile, compilation.Diagnostics);
             var plans = new List<CharacterPresentationPoseSourcePlan>(
                 compilation.Catalog.Entries.Count);
+            var slots = new List<CharacterPresentationPoseSourceSlot>(
+                compilation.Catalog.Entries.Count);
             var seenIndices = new HashSet<PresentationPoseSourceIndex>();
             foreach (CharacterPresentationPoseSourceCompilationEntry entry in
                      compilation.Catalog.Entries)
@@ -51,8 +67,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         $"Pose source binding kind " +
                         $"{entry.Binding?.GetType().Name ?? "missing"} is not supported by the Pose Domain Resource Set compiler.");
                 plans.Add(CompileClipPlan(entry.SourceIndex, clipBinding, rig, analysisSource));
+                slots.Add(clipBinding.Slot);
             }
-            resourceSet.ReplaceSourcePlans(plans);
+            resourceSet.ReplaceSourcePlans(plans, slots);
             EditorUtility.SetDirty(resourceSet);
             AssetDatabase.SaveAssetIfDirty(resourceSet);
             Debug.Log(

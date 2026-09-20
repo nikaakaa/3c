@@ -218,6 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_TimelineHost = new CharacterTimelineHost($"character-timeline/{name}");
             for (int i = 0; i < abilityData.Data.Count; i++)
                 m_TimelineHost.InstallAbilitySources(abilityData.Data[i].SourceMap);
+            m_TimelineHost.InstallPresentationPrograms(characterDefinition.LoadFloat32AbilitySet().Data);
             var timelineRuntime = new CharacterTimelineAbilityRuntime(m_TimelineHost, characterDefinition.ControlMotionTimelines);
             FixedSimulationActorBinding actorBinding = new FixedSimulationActorBinding(
                 actorId,

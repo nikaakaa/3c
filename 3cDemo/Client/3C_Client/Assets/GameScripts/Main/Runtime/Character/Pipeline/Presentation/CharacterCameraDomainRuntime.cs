@@ -196,6 +196,44 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CandidateRetirements[request.AcceptedIndex] = reason;
         }
 
+        internal void ValidateRequest(PresentationCameraRequest request)
+        {
+            bool valid = request.Kind switch
+            {
+                PresentationCameraRequestKind.Sequence => m_Projection.TryGetSequence(request.SequenceId, out _),
+                PresentationCameraRequestKind.Response => request.Mode >= 0 && request.Mode <= 2,
+                PresentationCameraRequestKind.Target => true,
+                PresentationCameraRequestKind.Effect => (CameraEffectKind)request.EffectKind switch
+                {
+                    CameraEffectKind.Override => m_Projection.TryGetOverride(request.ResourceId, out _),
+                    CameraEffectKind.Zoom => m_Projection.TryGetZoom(request.ResourceId, out _),
+                    CameraEffectKind.Stretch => m_Projection.TryGetStretch(request.ResourceId, out _),
+                    CameraEffectKind.Shake => m_Projection.TryGetShake(request.ResourceId, out _),
+                    CameraEffectKind.Shot => m_Projection.TryGetShot(request.ResourceId, out _),
+                    _ => false
+                },
+                _ => false
+            };
+            if (!valid)
+                throw new InvalidOperationException($"Camera request '{request.RequestId}' has unsupported mode or missing resource '{request.ResourceId}/{request.SequenceId}'.");
+            if (request.Kind == PresentationCameraRequestKind.Sequence)
+                RequireSequenceInterruptPolicy(request.InterruptPolicy);
+            ValidateTargetKey(request.TargetKey);
+            ValidateTargetKey(request.AnchorKey);
+            ValidateTargetKey(request.AimPointKey);
+            ValidateTargetKey(request.PreferredBoneKey);
+        }
+
+        void ValidateTargetKey(string key)
+        {
+            if (string.IsNullOrEmpty(key) || key == CameraTargetBindingKeys.Body)
+                return;
+            for (int index = 0; index < m_Projection.TargetSlots.Count; index++)
+                if (m_Projection.TargetSlots[index].SlotId == key)
+                    return;
+            m_TargetResolver.RequireKey(key, "Presentation Marker");
+        }
+
         internal void Publish(CharacterPresentationCommand command)
         {
             RequireAlive();

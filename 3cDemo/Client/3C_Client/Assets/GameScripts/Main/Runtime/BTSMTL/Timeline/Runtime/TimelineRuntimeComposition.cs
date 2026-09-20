@@ -413,7 +413,9 @@ namespace BTSMTL.Timeline.Runtime
                 operations,
                 events,
                 !allowTraversal && sample.Reason == TimelinePresentationSampleReason.Advance
-                    ? TimelinePresentationSampleReason.Correction : sample.Reason);
+                    ? TimelinePresentationSampleReason.Correction : sample.Reason,
+                currentTime,
+                currentCycle);
             state.PendingFrame = frame;
             state.HasPendingFrame = true;
             return true;
@@ -447,7 +449,11 @@ namespace BTSMTL.Timeline.Runtime
             }
         }
 
-        public void ReleasePresentationPlayback(TimelineRuntimePlaybackHandle handle) => m_Playbacks.Remove(handle.Value);
+        public void ReleasePresentationPlayback(TimelineRuntimePlaybackHandle handle, ulong generation)
+        {
+            if (m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state) && state.Generation == generation)
+                m_Playbacks.Remove(handle.Value);
+        }
 
         public bool Consume(TimelineRuntimeStepContext context) => true;
 

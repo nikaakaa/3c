@@ -46,6 +46,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
     internal sealed class CharacterTimelineDependencyResolver : ITimelineRuntimeDependencyResolver
     {
         readonly Dictionary<string, string> m_GraphRevisions = new(StringComparer.Ordinal);
+        readonly HashSet<string> m_PresentationGraphs = new(StringComparer.Ordinal);
+
+        internal void InstallPresentationGraph(string graphId) => m_PresentationGraphs.Add("tree:" + graphId);
         readonly Dictionary<string, string> m_CurveRevisions = new(StringComparer.Ordinal);
         readonly Dictionary<string, TimelineRuntimeDependencyHandle> m_Handles = new(StringComparer.Ordinal);
         TimelineRuntimeNumericTarget m_NumericTarget;
@@ -74,8 +77,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
                 {
                     Track track = timeline.Tracks[trackIndex];
-                    if (track.ExecutionDomain == TimelineExecutionDomain.Presentation && track.Markers.Count != 0)
-                        throw new InvalidOperationException($"Timeline '{timeline.AuthoringId}' track '{track.AuthoringId}' requires a presentation graph executor; Simulation graph resources cannot execute its Markers.");
+                    if (track.ExecutionDomain == TimelineExecutionDomain.Presentation)
+                        for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
+                        {
+                            if (track.Markers[markerIndex].Graph is not ITimelineTreeGraphAsset graph ||
+                                !m_PresentationGraphs.Contains("tree:" + graph.AuthoringId))
+                                throw new InvalidOperationException($"Timeline '{timeline.AuthoringId}' marker '{track.Markers[markerIndex].AuthoringId}' has no installed Presentation graph.");
+                        }
                     for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                     {
                         if (track.Clips[clipIndex] is not MotionCurveClip motion)
@@ -503,6 +511,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         readonly Dictionary<ulong, CharacterTimelinePendingStop> m_PendingStops =
             new Dictionary<ulong, CharacterTimelinePendingStop>();
         readonly string m_SourceName;
+        readonly List<Float32PresentationGraphRuntime> m_PresentationGraphs = new();
         readonly CharacterTimelineDependencyResolver m_DependencyResolver = new();
         ulong m_TickCounter;
         TimelineRuntimeNumericTarget m_NumericTarget;
@@ -534,6 +543,56 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public void InstallAbilitySources(IReadOnlyList<ProgramSourceMapEntry> sources) =>
             m_DependencyResolver.InstallGraphSources(sources);
 
+        public void InstallPresentationPrograms(IReadOnlyList<Float32GameplayAbilityExecutionData> programs)
+        {
+            if (m_Initialized)
+                throw new InvalidOperationException("Presentation graphs must be installed before Timeline preparation.");
+            for (int programIndex = 0; programIndex < programs.Count; programIndex++)
+            {
+                Float32GameplayAbilityExecutionData data = programs[programIndex];
+                bool hasMarkers = false;
+                for (int index = 0; index < data.SourceMap.Count; index++)
+                    hasMarkers |= data.SourceMap[index].TargetKind == ProgramSourceTargetKind.GraphInvocation &&
+                        data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker;
+                if (!hasMarkers)
+                    continue;
+                var runtime = new Float32PresentationGraphRuntime(data);
+                m_DependencyResolver.InstallGraphSources(data.SourceMap);
+                m_PresentationGraphs.Add(runtime);
+                for (int index = 0; index < data.SourceMap.Count; index++)
+                    if (data.SourceMap[index].InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker)
+                        m_DependencyResolver.InstallPresentationGraph(data.SourceMap[index].GraphId);
+            }
+        }
+
+        internal void ValidatePresentationGraphResources(Action<PresentationCameraRequest> validate)
+        {
+            for (int index = 0; index < m_PresentationGraphs.Count; index++)
+                m_PresentationGraphs[index].ValidateCameraResources(validate);
+        }
+
+        internal ReadOnlySpan<PresentationGraphCameraOutput> EvaluatePresentationMarker(in TimelineRuntimePresentationEvent marker)
+        {
+            if (!TryGetActivePlayback(marker.PlaybackHandle, out ActivePlayback active) || active.Generation != marker.Generation)
+                throw new InvalidOperationException("Presentation Marker targets an inactive playback generation.");
+            Float32PresentationGraphRuntime selected = null;
+            int binding = -1;
+            for (int index = 0; index < m_PresentationGraphs.Count; index++)
+            {
+                Float32PresentationGraphRuntime runtime = m_PresentationGraphs[index];
+                if (!runtime.TryBind(active.Provenance.SourceInvocationPath, active.Provenance.SourceNodeAuthoringId,
+                        marker.MarkerAuthoringId, marker.GraphId, marker.GraphRevision, out int candidate))
+                    continue;
+                if (selected != null)
+                    throw new InvalidOperationException("Presentation Marker matches multiple installed programs.");
+                selected = runtime;
+                binding = candidate;
+            }
+            if (selected == null)
+                throw new InvalidOperationException($"Presentation Marker '{marker.MarkerAuthoringId}' has no exact graph invocation or revision binding.");
+            return selected.Evaluate(binding);
+        }
+
         internal TimelineRuntimeCompositionHost Host => m_Host;
         public bool IsInitialized => m_Initialized && m_Host != null;
         public string AuthoringContentRevision { get; private set; } = string.Empty;
@@ -541,8 +600,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public ulong ContentGeneration => m_ContentGeneration;
         internal event Action<TimelineRuntimePresentationFrame> PresentationFramePrepared;
         public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
-        internal event Action<TimelineRuntimePlaybackHandle, TimelinePresentationSampleReason> PresentationPlaybackEndPrepared;
-        public event Action<TimelineRuntimePlaybackHandle, TimelinePresentationSampleReason> PresentationPlaybackEnded;
+        internal event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason> PresentationPlaybackEndPrepared;
+        public event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason> PresentationPlaybackEnded;
         public event Action<TimelineActionCueEvent> ActionCueCommitted;
 
         public void AttachRuntimeDiagnostics(RuntimeDiagnosticsContext diagnostics)
@@ -1937,8 +1996,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         out frame);
                 if (presented)
                 {
-                    if (frame.Events.Count != 0)
-                        throw new InvalidOperationException($"Timeline playback '{frame.Handle.Value}' has Presentation Markers without an installed presentation graph executor.");
                     m_PresentationCandidates.Add(frame);
                     PresentationFramePrepared?.Invoke(frame);
                 }
@@ -1949,7 +2006,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 {
                     TimelinePresentationSampleReason reason = active.CoreDriven ? sample.Reason : TimelinePresentationSampleReason.Stopped;
                     m_PresentationEndCandidates.Add((active, reason));
-                    PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), reason);
+                    PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), active.Generation, reason);
                 }
             }
         }
@@ -1971,10 +2028,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     clock.ReleaseTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
                         active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId, active.Generation);
                 var handle = new TimelineRuntimePlaybackHandle(active.Handle.Value);
-                PresentationPlaybackEnded?.Invoke(handle, m_PresentationEndCandidates[i].Reason);
-                m_Host.ReleasePresentationPlayback(handle);
+                PresentationPlaybackEnded?.Invoke(handle, active.Generation, m_PresentationEndCandidates[i].Reason);
+                m_Host.ReleasePresentationPlayback(handle, active.Generation);
                 for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
-                    if (m_ActivePlaybacks[index].Handle.Value == handle.Value)
+                    if (m_ActivePlaybacks[index].Handle.Value == handle.Value && m_ActivePlaybacks[index].Generation == active.Generation)
                         m_ActivePlaybacks.RemoveAt(index);
             }
             m_PresentationCandidates.Clear();

@@ -1539,7 +1539,9 @@ namespace BTSMTL.Timeline.Runtime
             float interpolationAlpha,
             TimelineRuntimePresentationOperations operations,
             IReadOnlyList<TimelineRuntimePresentationEvent> events,
-            TimelinePresentationSampleReason reason)
+            TimelinePresentationSampleReason reason,
+            FixedScalar time,
+            int cycle)
         {
             if (playback == null || !playback.Handle.IsValid || playback.Generation == 0 || presentationFrame == 0 ||
                 !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
@@ -1555,6 +1557,8 @@ namespace BTSMTL.Timeline.Runtime
             ExecutionIdentity = playback.ExecutionIdentity;
             Operations = operations;
             Reason = reason;
+            Time = time;
+            Cycle = cycle;
             Events = new ReadOnlyCollection<TimelineRuntimePresentationEvent>(
                 new List<TimelineRuntimePresentationEvent>(events ?? Array.Empty<TimelineRuntimePresentationEvent>()));
         }
@@ -1568,6 +1572,8 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelineRuntimePresentationOperations Operations { get; }
         public TimelinePresentationSampleReason Reason { get; }
+        public FixedScalar Time { get; }
+        public int Cycle { get; }
         public IReadOnlyList<TimelineRuntimePresentationEvent> Events { get; }
     }
 

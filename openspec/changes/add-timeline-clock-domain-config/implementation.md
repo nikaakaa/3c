@@ -398,3 +398,12 @@
 - Camera Profile 新增正式 RequestCapacity，参与 Revision 和合法性检查；Corin 资产显式配置128。原请求集合、帧候选、事件基线和投影请求缓冲按配置预分配，容量不足明确失败；未配置 Camera domain 的能力容量为0，任何实际 Camera 输出仍明确报缺 domain。
 - 正式 Marker 图的 Host 装配仍未接通；原 Camera key／EventId 字符串构造与部分运行分配、Camera最终Apply异常后的跨领域回滚仍未消除，不能据此宣称完整0 GC或整体第7节完成。
 - Unity编译及最终域重载完成（1789899749435），Editor idle，控制台错误为零；未新增测试。
+
+## Host 装配正式表现图并提交 Marker Camera 候选
+- Fixed Character Host 在原 Definition 能力集加载阶段安装正式 Float32 编译产物中的 PresentationMarker 图；纯表现图不创建 Fixed／Float32 Simulation actor。依赖解析器只接受已安装的表现图，保留源图 revision 一致性检查，删除一律拒绝 Presentation Marker 的阻断。
+- CharacterTimelineHost 在原 Prepared 事件中按父图调用路径、Timeline 节点、Marker、graphId／revision 选择唯一已准备执行器，代次不匹配、缺少或重复绑定明确失败。TimelinePresentationEventBridge 调用原图适配器，将 typed Camera 输出写入上一批的原 Camera 帧候选；事件去重仍随原 Timeline 帧接受，Discard 同时恢复 Camera 与桥内记账，不调用逻辑 invoker。
+- Camera 的 Sequence／Effect 资源、模式、目标绑定在表现域初始化检查；缺 Camera domain 直接失败。图节点已有 producer 区分输出，Marker 原有 EventId／TraversalIndex 保持一次正常经过的身份。循环重触发替换同一 Marker／producer 的旧请求，修正回到 Marker 之前撤销请求，正常结束沿原 Camera 退休策略收尾。
+- 原 Camera 事件字典改用值类型键和事件记录；Marker 键由 handle／generation／Marker／producer 组成，不拼接新的复合字符串，也不新增第二字典。旧 Clip Camera key 字符串及原 Marker EventId 哈希分配仍待清理。表现帧携带共享采样的秒数／cycle，校正清理不读取逻辑中间游标。
+- 结束事件、动画／Camera bridge 清理、表现 driver 释放均显式携带 generation，旧代结束不能释放同 handle 的新代。Float32 编译产物需要与作者图一致；本批没有创建或修改 Presentation Marker 业务资产，尚未做端到端图执行验证。
+- 仍未整体完成第6／7节：只读表现事实节点未开放，最终 Camera Apply 异常后的跨领域回滚、同代分支重新出现、完整0 GC仍待完成。
+- Unity最终编译与域重载完成（1789916115983），原菜单 Tools/3C/Internal/Republish Corin Ability Data 执行后控制台错误为零；git diff --check通过。派生资产保留工作区中其他任务的修改，不混入本批代码提交。

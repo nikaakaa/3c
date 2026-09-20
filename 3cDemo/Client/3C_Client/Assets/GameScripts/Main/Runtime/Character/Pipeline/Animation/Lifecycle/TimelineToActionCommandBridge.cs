@@ -198,9 +198,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, TimelinePresentationSampleReason reason)
+        void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason)
         {
-            if (!m_Playbacks.TryGetValue(handle.Value, out PlaybackState playback))
+            if (!m_Playbacks.TryGetValue(handle.Value, out PlaybackState playback) || playback.Generation != generation)
                 return;
             ReleaseAll(
                 playback,
@@ -402,22 +402,53 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 
 internal sealed class TimelinePresentationEventBridge : IDisposable
 {
-    sealed class CameraEventState
+    readonly struct CameraEventKey : IEquatable<CameraEventKey>
+    {
+        internal CameraEventKey(ulong handle, ulong generation, string marker, string producer)
+        {
+            Handle = handle;
+            Generation = generation;
+            Marker = marker;
+            Producer = producer;
+        }
+
+        internal readonly ulong Handle;
+        internal readonly ulong Generation;
+        internal readonly string Marker;
+        readonly string Producer;
+        public bool Equals(CameraEventKey other) => Handle == other.Handle && Generation == other.Generation &&
+            string.Equals(Marker, other.Marker, StringComparison.Ordinal) && string.Equals(Producer, other.Producer, StringComparison.Ordinal);
+        public override bool Equals(object obj) => obj is CameraEventKey other && Equals(other);
+        public override int GetHashCode() => unchecked((Handle.GetHashCode() * 397 ^ Generation.GetHashCode()) * 397 ^
+            (Marker == null ? 0 : StringComparer.Ordinal.GetHashCode(Marker)) ^ StringComparer.Ordinal.GetHashCode(Producer));
+        public static implicit operator CameraEventKey(string legacy) => new(0, 0, null, legacy);
+    }
+
+    readonly struct CameraEventState
     {
         internal CameraEventState(
-            string key,
+            CameraEventKey key,
             ulong playbackHandle,
             CharacterPresentationCommand activation,
-            CharacterPresentationCommand retirement)
+            CharacterPresentationCommand retirement,
+            ulong generation,
+            long markerTime = 0,
+            int markerCycle = 0)
         {
             Key = key;
             PlaybackHandle = playbackHandle;
+            Generation = generation;
             Activation = activation;
             Retirement = retirement;
+            MarkerTime = markerTime;
+            MarkerCycle = markerCycle;
         }
 
-        internal string Key { get; }
+        internal CameraEventKey Key { get; }
+        internal long MarkerTime { get; }
+        internal int MarkerCycle { get; }
         internal ulong PlaybackHandle { get; }
+        internal ulong Generation { get; }
         internal CharacterPresentationCommand Activation { get; }
         internal CharacterPresentationCommand Retirement { get; }
     }
@@ -425,10 +456,10 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     readonly CharacterTimelineHost m_TimelineHost;
     readonly ICharacterPresentationDomainRuntime m_Runtime;
     readonly ActorId m_ActorId;
-    readonly Dictionary<string, CameraEventState> m_Active;
-    readonly Dictionary<string, CameraEventState> m_FrameBaseline;
-    readonly HashSet<string> m_Alive;
-    readonly List<string> m_Retired;
+    readonly Dictionary<CameraEventKey, CameraEventState> m_Active;
+    readonly Dictionary<CameraEventKey, CameraEventState> m_FrameBaseline;
+    readonly HashSet<CameraEventKey> m_Alive;
+    readonly List<CameraEventKey> m_Retired;
     readonly int m_RequestCapacity;
     bool m_FrameOpen;
     bool m_Disposed;
@@ -445,10 +476,10 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         if (requestCapacity < 0)
             throw new ArgumentOutOfRangeException(nameof(requestCapacity));
         m_RequestCapacity = requestCapacity;
-        m_Active = new Dictionary<string, CameraEventState>(requestCapacity, StringComparer.Ordinal);
-        m_FrameBaseline = new Dictionary<string, CameraEventState>(requestCapacity, StringComparer.Ordinal);
-        m_Alive = new HashSet<string>(requestCapacity, StringComparer.Ordinal);
-        m_Retired = new List<string>(requestCapacity);
+        m_Active = new Dictionary<CameraEventKey, CameraEventState>(requestCapacity);
+        m_FrameBaseline = new Dictionary<CameraEventKey, CameraEventState>(requestCapacity);
+        m_Alive = new HashSet<CameraEventKey>(requestCapacity);
+        m_Retired = new List<CameraEventKey>(requestCapacity);
         m_TimelineHost.PresentationFramePrepared += OnPresentationFrame;
         m_TimelineHost.PresentationPlaybackEndPrepared += OnPresentationPlaybackEnded;
     }
@@ -458,7 +489,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         if (m_FrameOpen)
             throw new InvalidOperationException("Timeline Camera event candidate is already open.");
         m_FrameBaseline.Clear();
-        foreach (KeyValuePair<string, CameraEventState> entry in m_Active)
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Active)
             m_FrameBaseline.Add(entry.Key, entry.Value);
         m_FrameOpen = true;
     }
@@ -474,7 +505,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         if (!m_FrameOpen)
             return;
         m_Active.Clear();
-        foreach (KeyValuePair<string, CameraEventState> entry in m_FrameBaseline)
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_FrameBaseline)
             m_Active.Add(entry.Key, entry.Value);
         m_FrameBaseline.Clear();
         m_FrameOpen = false;
@@ -484,25 +515,60 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     {
         m_Alive.Clear();
         if (frame.Operations.CameraStates.Count != 0 || frame.Operations.CameraCues.Count != 0 ||
-            frame.Operations.CameraResponses.Count != 0 || frame.Operations.CameraResources.Count != 0)
+            frame.Operations.CameraResponses.Count != 0 || frame.Operations.CameraResources.Count != 0 || frame.Events.Count != 0)
         {
             if (!m_TimelineHost.TryGetPresentationExecutionContext(frame.Handle, out TimelinePresentationExecutionContext context))
                 throw new InvalidOperationException($"Timeline playback '{frame.Handle.Value}' has no Presentation execution identity.");
             CollectCameraEvents(frame, context, m_Alive);
+            for (int index = 0; index < frame.Events.Count; index++)
+            {
+                TimelineRuntimePresentationEvent marker = frame.Events[index];
+                ReadOnlySpan<PresentationGraphCameraOutput> outputs = m_TimelineHost.EvaluatePresentationMarker(in marker);
+                EventId eventId = marker.EventId;
+                for (int outputIndex = 0; outputIndex < outputs.Length; outputIndex++)
+                    AddMarkerCamera(frame, context, marker, eventId, outputs[outputIndex]);
+            }
         }
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Active)
+            if (entry.Key.Marker != null && entry.Key.Handle == frame.Handle.Value && entry.Key.Generation == frame.Generation &&
+                (entry.Value.MarkerCycle < frame.Cycle || entry.Value.MarkerCycle == frame.Cycle && entry.Value.MarkerTime <= frame.Time.Raw))
+                m_Alive.Add(entry.Key);
         RetireInactive(m_Alive, frame.Handle.Value, frame.Reason == TimelinePresentationSampleReason.Correction);
     }
 
-    void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, TimelinePresentationSampleReason reason)
+    void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason)
     {
         m_Alive.Clear();
-        RetireInactive(m_Alive, handle.Value, reason == TimelinePresentationSampleReason.Withdrawn);
+        RetireInactive(m_Alive, handle.Value, reason == TimelinePresentationSampleReason.Withdrawn, generation);
+    }
+
+    void AddMarkerCamera(TimelineRuntimePresentationFrame frame, in TimelinePresentationExecutionContext context,
+        in TimelineRuntimePresentationEvent marker, EventId eventId, in PresentationGraphCameraOutput output)
+    {
+        var key = new CameraEventKey(frame.Handle.Value, frame.Generation, marker.MarkerAuthoringId, output.Producer);
+        if (m_Active.TryGetValue(key, out CameraEventState previous))
+        {
+            m_Runtime.Retire(previous.Activation);
+            m_Active.Remove(key);
+        }
+        if (m_RequestCapacity == 0 || m_Active.Count == m_RequestCapacity)
+            throw new InvalidOperationException("Presentation Marker Camera output exceeds the composed domain capacity.");
+        var header = new CharacterPresentationEventHeader(eventId, m_ActorId, new SimulationTick(frame.LogicTick),
+            context.Activation, marker.TraversalIndex, "timeline.marker.camera");
+        var activation = new CharacterPresentationCommand(header, CharacterPresentationCommandKind.Camera,
+            output.Producer, marker.Time.ToSingle(), output.Request.Weight, context.Activation.Generation,
+            marker.Cycle, context.ActionInstanceId, 1f, cameraRequest: output.Request);
+        var retirement = new CharacterPresentationCommand(header, CharacterPresentationCommandKind.Camera,
+            output.Producer, marker.Time.ToSingle(), output.Retirement.Weight, context.Activation.Generation,
+            marker.Cycle, context.ActionInstanceId, 1f, cameraRequest: output.Retirement);
+        m_Runtime.Publish(activation);
+        m_Active.Add(key, new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation, marker.Time.Raw, marker.Cycle));
     }
 
     void CollectCameraEvents(
         TimelineRuntimePresentationFrame frame,
         in TimelinePresentationExecutionContext context,
-        HashSet<string> alive)
+        HashSet<CameraEventKey> alive)
     {
         for (int index = 0; index < frame.Operations.CameraStates.Count; index++)
         {
@@ -714,17 +780,18 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             1f,
             null,
             retirementRequest);
-        var state = new CameraEventState(key, frame.Handle.Value, activation, retirement);
+        var state = new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation);
         m_Active.Add(key, state);
         m_Runtime.Publish(activation);
     }
 
-    void RetireInactive(HashSet<string> alive, ulong handle, bool withdrawn)
+    void RetireInactive(HashSet<CameraEventKey> alive, ulong handle, bool withdrawn, ulong generation = 0)
     {
         m_Retired.Clear();
-        foreach (KeyValuePair<string, CameraEventState> pair in m_Active)
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> pair in m_Active)
         {
-            if ((handle == 0 || pair.Value.PlaybackHandle == handle) && !alive.Contains(pair.Key))
+            if ((handle == 0 || pair.Value.PlaybackHandle == handle) &&
+                (generation == 0 || pair.Value.Generation == generation) && !alive.Contains(pair.Key))
                 m_Retired.Add(pair.Key);
         }
 

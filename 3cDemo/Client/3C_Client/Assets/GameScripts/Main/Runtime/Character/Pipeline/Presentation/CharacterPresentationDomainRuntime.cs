@@ -108,6 +108,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_PoseActionPublisher == null)
                 throw new InvalidOperationException("Timeline playback requires a composed Pose Action command publisher.");
             m_TimelineHost = timelineHost;
+            timelineHost.ValidatePresentationGraphResources(ValidateTimelineCameraResource);
             timelineHost.Initialize(numericTarget, tickRate);
             BindTimelineBridge(new ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge(
                 timelineHost, m_PoseActionPublisher.Inbox));
@@ -116,6 +117,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 this,
                 m_ActorId,
                 m_Camera != null ? m_Camera.RequestCapacity : 0);
+        }
+
+        void ValidateTimelineCameraResource(PresentationCameraRequest request)
+        {
+            if (m_Camera == null)
+                throw new InvalidOperationException("Presentation Marker requires a composed Camera domain.");
+            m_Camera.ValidateRequest(request);
         }
 
         internal void BindTimelineBridge(ThirdPersonCharacter.Pipeline.Animation.Lifecycle.TimelineToActionCommandBridge bridge)

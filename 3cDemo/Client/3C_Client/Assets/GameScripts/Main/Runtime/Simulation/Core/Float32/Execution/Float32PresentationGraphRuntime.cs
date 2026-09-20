@@ -5,16 +5,18 @@ namespace ThirdPersonSimulation
 {
     public readonly struct PresentationGraphCameraOutput
     {
-        public PresentationGraphCameraOutput(OperationHandle operation, string producer, PresentationCameraRequest request)
+        public PresentationGraphCameraOutput(OperationHandle operation, string producer, PresentationCameraRequest request, PresentationCameraRequest retirement)
         {
             Operation = operation;
             Producer = producer;
             Request = request;
+            Retirement = retirement;
         }
 
         public OperationHandle Operation { get; }
         public string Producer { get; }
         public PresentationCameraRequest Request { get; }
+        public PresentationCameraRequest Retirement { get; }
     }
 
     public sealed class Float32PresentationGraphRuntime
@@ -78,7 +80,14 @@ namespace ThirdPersonSimulation
         public CharacterSkillId AbilityId => m_Data.AbilityId;
         public int CameraOutputCapacity => m_Outputs.Length;
 
-        public int Bind(string parentInvocationPath, string timelineNodeId, string markerId, string graphId, string revision)
+        public void ValidateCameraResources(Action<PresentationCameraRequest> validate)
+        {
+            for (int index = 0; index < m_CameraOperations.Length; index++)
+                if (m_CameraOperations[index].Producer != null)
+                    validate(m_CameraOperations[index].Request);
+        }
+
+        public bool TryBind(string parentInvocationPath, string timelineNodeId, string markerId, string graphId, string revision, out int binding)
         {
             int match = -1;
             for (int index = 0; index < m_Entries.Length; index++)
@@ -91,9 +100,8 @@ namespace ThirdPersonSimulation
                     throw new InvalidOperationException("Presentation Marker graph binding is ambiguous.");
                 match = index;
             }
-            if (match < 0)
-                throw new InvalidOperationException($"Presentation Marker '{markerId}' has no exact compiled graph binding for '{graphId}/{revision}'.");
-            return match;
+            binding = match;
+            return match >= 0;
         }
 
         public ReadOnlySpan<PresentationGraphCameraOutput> Evaluate(int binding)
@@ -175,7 +183,9 @@ namespace ThirdPersonSimulation
                         throw new InvalidOperationException($"Presentation Camera operation '{m_Layout.SourcePath(handle)}' requires one producer.");
                     m_CameraOperations[handle.Value] = new PresentationGraphCameraOutput(handle, producers[0].ExternalIdentity,
                         CameraProgramRequestFactory.Build(operation.Code, operation.Integer1, operation.Flags,
-                            PresentationCameraRequestLifecycle.Activate, new Float32CameraProgramConstantReader(m_Layout, handle)));
+                            PresentationCameraRequestLifecycle.Activate, new Float32CameraProgramConstantReader(m_Layout, handle)),
+                        CameraProgramRequestFactory.Build(operation.Code, operation.Integer1, operation.Flags,
+                            PresentationCameraRequestLifecycle.Retire, new Float32CameraProgramConstantReader(m_Layout, handle)));
                     capacity = 1;
                     break;
                 default:

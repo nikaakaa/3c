@@ -378,14 +378,14 @@ namespace ThirdPersonSimulation
 
     public sealed class WorldSolveBatchResult
     {
-        readonly ReadOnlyCollection<CharacterWorldSolveResult> m_Results;
+        readonly IReadOnlyList<CharacterWorldSolveResult> m_Results;
 
         public WorldSolveBatchResult(
             WorldSolveBatchRequest request,
             SolverImplementationId solverId,
             string solverVersion,
             WorldSimulationState nextWorldState,
-            IEnumerable<CharacterWorldSolveResult> results)
+            IReadOnlyList<CharacterWorldSolveResult> results)
         {
             Request = request ?? throw new ArgumentNullException(nameof(request));
             if (string.IsNullOrEmpty(solverId.Value))
@@ -397,11 +397,15 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("World result state Numeric Profile does not match request.", nameof(nextWorldState));
             if (!nextWorldState.SolverId.Equals(solverId) || !string.Equals(nextWorldState.SolverVersion, SolverVersion, StringComparison.Ordinal))
                 throw new ArgumentException("Next World state does not match Solver identity.", nameof(nextWorldState));
-            var copied = results == null ? new List<CharacterWorldSolveResult>() : new List<CharacterWorldSolveResult>(results);
-            copied.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (copied.Count != request.Requests.Count || copied.Count != nextWorldState.Bodies.Count)
+            var copied = results == null || results.Count == 0
+                ? Array.Empty<CharacterWorldSolveResult>()
+                : new CharacterWorldSolveResult[results.Count];
+            for (int i = 0; i < copied.Length; i++)
+                copied[i] = results[i];
+            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (copied.Length != request.Requests.Count || copied.Length != nextWorldState.Bodies.Count)
                 throw new ArgumentException("World result must contain exactly one result per request.", nameof(results));
-            for (int i = 0; i < copied.Count; i++)
+            for (int i = 0; i < copied.Length; i++)
             {
                 CharacterWorldSolveResult result = copied[i] ?? throw new ArgumentException("World batch contains a null result.", nameof(results));
                 CharacterWorldSolveRequest expected = request.Requests[i];
@@ -410,9 +414,9 @@ namespace ThirdPersonSimulation
                     !WorldSolveBatchRequest.BodyEquals(result.FinalBody, nextWorldState.Bodies[i]))
                     throw new ArgumentException("World result is missing, duplicated, unknown, or mismatched.", nameof(results));
             }
-            m_Results = copied.AsReadOnly();
+            m_Results = copied;
             StableHash resultHash = WorldSolveBatchCodec.ComputeResultHash(this);
-            Summary = new WorldSolveBatchSummary(copied.Count, request.RequestHash, resultHash);
+            Summary = new WorldSolveBatchSummary(copied.Length, request.RequestHash, resultHash);
         }
 
         public WorldSolveBatchRequest Request { get; }

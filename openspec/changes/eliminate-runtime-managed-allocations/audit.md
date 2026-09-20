@@ -1630,3 +1630,12 @@
 - 两域 Batch 构造入口收窄为 IReadOnlyList，按 Count 复制到独立最终数组，在数组上执行原 ActorId 排序、数量、numeric profile、tick、before body 与重复 Actor 校验；公开 Requests 仍为 IReadOnlyList。
 - 删除每个 simulation step 的 WorldSolveBatchRequest 结果 List 与 ReadOnlyCollection 两个对象，以最终数组替代原 List 底层存储。Batch 仍独立持有请求，因此 EvaluatePass 清空 workspace 不会影响求解和 request hash。
 - ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。Float32 首次构建暴露一处旧 Count 访问，改为数组 Length 后通过；未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。
+
+## 2026-09-21 WorldSolveBatchResult 最终数组
+
+对应 tasks.md 的 5.56。
+
+- DeterministicKcc、DotRecast 与 UnityCharacterController solver 均按 request 数创建 CharacterWorldSolveResult 数组并填充，再构造对应数值域 WorldSolveBatchResult；原 Batch 将结果再次复制到 List、排序并创建 ReadOnlyCollection。
+- 两域 Result 构造入口收窄为 IReadOnlyList，按 Count 复制到独立最终数组，在数组上执行原 ActorId 排序、数量、numeric profile、request identity、tick、solver identity、final body 与 next world state 校验；Summary 继续使用最终数量和同一 hash。
+- 删除每批世界求解结果的 List 与 ReadOnlyCollection 两个对象，以最终数组替代原 List 底层存储。solver 输入数组与 Batch 结果数组仍隔离，未引入所有权转移或 solver 后续修改风险。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority portable 编译零警告零错误；DotRecast portable 编译通过并保留依赖包 RcVec2i／RcVec3i 的两条既有 nullable-context 警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。

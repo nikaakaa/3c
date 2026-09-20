@@ -260,6 +260,8 @@
 
 - [x] 5.55 两数值域 WorldSolveBatchRequest 按复用 workspace 请求数组的 Count 复制到独立最终数组并原地排序校验，删除每 step 的结果 List 与 ReadOnlyCollection 包装；Evaluate 完成后清空 workspace 不影响 Batch
 
+- [x] 5.56 两数值域 WorldSolveBatchResult 按 solver 结果集合 Count 复制到独立最终数组并原地排序校验，删除每批求解结果的 List 与 ReadOnlyCollection 包装；保留 solver 输入数组与 Batch 之间的隔离
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

@@ -18,6 +18,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool IsValid => !string.IsNullOrEmpty(TimelineAuthoringId) &&
                                !string.IsNullOrEmpty(TrackAuthoringId);
 
+        public bool MatchesProgramProducerIdentity(string value)
+        {
+            if (!IsValid || value == null)
+                return false;
+            const string prefix = "producer:";
+            int trackOffset = prefix.Length + TimelineAuthoringId.Length + 1;
+            return value.Length == trackOffset + TrackAuthoringId.Length &&
+                   value.StartsWith(prefix, StringComparison.Ordinal) && value[trackOffset - 1] == ':' &&
+                   string.CompareOrdinal(value, prefix.Length, TimelineAuthoringId, 0, TimelineAuthoringId.Length) == 0 &&
+                   string.CompareOrdinal(value, trackOffset, TrackAuthoringId, 0, TrackAuthoringId.Length) == 0;
+        }
+
         public bool Equals(AnimationProducerId other)
         {
             return string.Equals(TimelineAuthoringId, other.TimelineAuthoringId, StringComparison.Ordinal) &&

@@ -144,10 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PlaybackId.IsValid &&
             ActionInstanceId != 0 &&
             AnimationChannelId.IsValid &&
-            string.Equals(
-                ProgramProducerId,
-                PlaybackId.ProducerId.ProgramProducerIdentity,
-                StringComparison.Ordinal) &&
+            PlaybackId.ProducerId.MatchesProgramProducerIdentity(ProgramProducerId) &&
             (Kind == ActionAnimationPlaybackCommandKind.Sample
                 ? HasCommittedRawSample && !ProjectedSample.IsValid &&
                   CommittedRawSample.IsValid &&
@@ -344,10 +341,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ActionInstanceId == 0 ||
                     SourcePoseContinuityIdentity == 0 ||
                     !AnimationChannelId.IsValid ||
-                    !string.Equals(
-                        ProgramProducerId,
-                        PlaybackId.ProducerId.ProgramProducerIdentity,
-                        StringComparison.Ordinal) ||
+                    !PlaybackId.ProducerId.MatchesProgramProducerIdentity(ProgramProducerId) ||
                     LatestCommandSequence == 0 ||
                     (byte)LifecyclePhase < (byte)ActionAnimationPlaybackLifecyclePhase.PendingFirstSample ||
                     (byte)LifecyclePhase > (byte)ActionAnimationPlaybackLifecyclePhase.Retired ||

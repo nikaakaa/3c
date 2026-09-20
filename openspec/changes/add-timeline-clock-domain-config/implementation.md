@@ -539,3 +539,9 @@
 - Fixed／Float32快照编码版本同步从9升为10，codec及hash身份从/7升为/8；记录参与原状态序列化与哈希，不保留旧格式读取。解码数量按剩余载荷的最小记录尺寸约束，不引入任意活动调用上限。空记录共用空数组。
 - 这是逻辑调用登记恢复，不是表现／相机历史回滚。现有Snapshot自身及非空集合复制仍有分配，完整快照与运行热路径0 GC仍需继续清理；本批未新增测试。
 - Unity编译与最终域重载完成（1789925574542），Editor idle，控制台错误为零；git diff --check通过。未新增测试，未运行旧快照兼容或异常注入测试，旧格式按新版本明确拒绝。
+
+## 动画生产者身份校验不再逐帧拼接字符串
+- 对应0.7：ActionAnimationPlaybackCommand与播放快照的IsValid此前读取AnimationProducerId.ProgramProducerIdentity，每次校验都会构造producer:Timeline:Track字符串。现由AnimationProducerId直接按长度、固定前缀、分隔符和两段Ordinal字符串比较校验既有ProgramProducerId，保持原身份格式与相等语义，不增加缓存或第二身份表。生产者首次建立时仍使用原格式化入口。
+- 本轮核对确认，轨道Sample的foreach遍历具体List，不是接口枚举器分配；PlaybackChanged无订阅者时也不会构造描述对象，未为这些误判改动已有链路。
+- 剩余明确分配包括Timeline表现动画每帧EventId构造（数字ToString、params数组、StableHash字符串哈希链）、实际Marker身份，以及Snapshot对象／集合复制和播放建立路径。当前EventId基于字符串StableHash，不能仅靠此次校验清理宣称完整0 GC；未新增测试。
+- Unity编译及最终域重载完成（1789926058403），Editor idle，控制台错误为零；git diff --check通过，未新增测试，未进行运行内存采样。

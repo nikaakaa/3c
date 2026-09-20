@@ -1306,3 +1306,12 @@
 - PlaybackMode 正式成员为 Once=0 至 Loop=1，State 连续为 Prepared=0 至 Disposed=6，现按各自 byte 上界校验；未知值继续抛出原 ArgumentOutOfRangeException，运行身份、cursor、cycle、stop context 和 action context 约束不变。
 - Snapshot 仍为独立对象，TreeDecisionExits、PendingTreeDecisionExits 和 ActiveClipIds 的深拷贝继续保留；本小步只删除两次枚举装箱和元数据查询，不把快照路径计作逐帧零分配。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Timeline 快照捕获／恢复对比或 Player 分配采样。
+
+## 2026-09-21 角色控制 Ability 停止模式校验
+
+对应 tasks.md 的 2.51。
+
+- CharacterControlAbilityStopRequest 是角色控制向 Fixed／Float32 Action Runtime 提交技能停止意图的共享值请求；构造器原对 StopMode 执行 Enum.IsDefined。
+- 正式模式只有 Graceful=1 和 Force=2，现直接匹配两值；未知零值及其它 byte 继续进入原 ArgumentException，CharacterControl 来源、AbilityId、reason、action instance 和 window type 内容不变。
+- 两数值域运行时仍按 Graceful 映射 Cancel、Force 映射 Abort；本小步只删除请求构造中的枚举装箱和元数据查询。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做技能停止运行回放或 Player 分配采样。

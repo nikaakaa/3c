@@ -119,7 +119,9 @@ namespace ThirdPersonSimulation
             ulong actionInstanceId = 0,
             string actionWindowType = "")
         {
-            if (!source.IsCharacterControl || !abilityId.IsValid || !Enum.IsDefined(typeof(CharacterControlAbilityStopMode), mode))
+            if (!source.IsCharacterControl || !abilityId.IsValid ||
+                mode != CharacterControlAbilityStopMode.Graceful &&
+                mode != CharacterControlAbilityStopMode.Force)
                 throw new ArgumentException("Character control Ability stop request is incomplete.");
             Source = source;
             AbilityId = abilityId;

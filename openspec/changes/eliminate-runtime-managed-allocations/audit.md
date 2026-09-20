@@ -982,3 +982,12 @@
 - 两数值域 WorldSimulationStateCodec.ReadPersistenceMode 原 Enum.IsDefined(Type, object) 校验读取的 byte，产生装箱及枚举元数据查询；现直接匹配正式 Reconstruct=1／Snapshot=2，零与其它值继续拒绝。
 - 保留读取字段位置和宽度、原 InvalidDataException 文本以及后续 WorldSimulationState 构造；不改持久化模式含义、求解器重建／快照恢复行为或 payload 所有权。构造器原未做相同枚举检查，本轮不附加新约束。
 - 修改前两目标文件无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未执行世界恢复运行或 Player 分配采样。
+## 2026-09-20 世界状态构造中间集合与空载荷清理
+
+对应 tasks.md 的 5.49。
+
+- Fixed／Float32 WorldSimulationState 构造原将 bodies 复制到 List、排序后保存 AsReadOnly。现 ToArray 取得独立数组，Array.Sort 沿原 ActorId 比较，重复身份校验按 Length 执行，Array.AsReadOnly 保留对外只读包装。输入集合不会原地修改，状态数据寿命不变。
+- 对数组／List 等 ICollection 输入，减少一个 List 对象；最终数组替代原 List 底层数组，并非同时少一整份结果存储。一般 IEnumerable 的框架复制仍可能增长，未宣称构造无分配。
+- solverStatePayload 为 null 或长度零时统一 Array.Empty，非空继续 Clone，保留求解器载荷独立所有权。空数组没有可修改元素，不新增租用池、缓存或恢复旁路。
+- 运行中的世界状态构造及解码重建都会经过该入口；未修改求解器、事务发布或回滚存储边界。修改前两文件无其它未提交修改，编辑前进程扫描无 csc／bee。Fixed／Float32 portable 均零警告零错误，逐次构建服务关闭成功，diff 空白检查通过。
+- 未新增测试、未操作共享 Unity、未做世界状态运行对比或 Player 分配采样。对象、最终数组／包装及非空 payload 克隆仍分配。

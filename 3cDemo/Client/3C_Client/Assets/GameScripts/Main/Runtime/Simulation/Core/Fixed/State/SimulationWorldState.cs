@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 
 namespace ThirdPersonSimulation.Fixed
 {
@@ -72,15 +73,17 @@ namespace ThirdPersonSimulation.Fixed
             SolverVersion = SimulationIdentity.Require(solverVersion, nameof(solverVersion));
             WorldRevision = worldRevision;
             PersistenceMode = persistenceMode;
-            var copied = bodies == null ? new List<WorldBodyState>() : new List<WorldBodyState>(bodies);
-            copied.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            for (int i = 1; i < copied.Count; i++)
+            WorldBodyState[] copied = bodies == null ? Array.Empty<WorldBodyState>() : bodies.ToArray();
+            Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            for (int i = 1; i < copied.Length; i++)
             {
                 if (copied[i - 1].ActorId == copied[i].ActorId)
                     throw new ArgumentException($"World state contains duplicate ActorId '{copied[i].ActorId}'.", nameof(bodies));
             }
-            m_Bodies = copied.AsReadOnly();
-            m_SolverStatePayload = solverStatePayload == null ? Array.Empty<byte>() : (byte[])solverStatePayload.Clone();
+            m_Bodies = Array.AsReadOnly(copied);
+            m_SolverStatePayload = solverStatePayload == null || solverStatePayload.Length == 0
+                ? Array.Empty<byte>()
+                : (byte[])solverStatePayload.Clone();
         }
 
         public SimulationNumericProfile NumericProfile { get; }

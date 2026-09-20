@@ -250,7 +250,7 @@ namespace ThirdPersonSimulation.Fixed
             if (source == null)
                 return result;
             foreach (KeyValuePair<string, string[]> pair in source)
-                result.Add(pair.Key, pair.Value == null ? Array.Empty<string>() : (string[])pair.Value.Clone());
+                result.Add(pair.Key, pair.Value == null || pair.Value.Length == 0 ? Array.Empty<string>() : (string[])pair.Value.Clone());
             return result;
         }
 
@@ -330,8 +330,8 @@ namespace ThirdPersonSimulation.Fixed
             {
                 Definition = source.Definition,
                 Context = source.Context,
-                SourceTags = source.SourceTags == null ? Array.Empty<string>() : (string[])source.SourceTags.Clone(),
-                TargetTags = source.TargetTags == null ? Array.Empty<string>() : (string[])source.TargetTags.Clone(),
+                SourceTags = source.SourceTags == null || source.SourceTags.Length == 0 ? Array.Empty<string>() : (string[])source.SourceTags.Clone(),
+                TargetTags = source.TargetTags == null || source.TargetTags.Length == 0 ? Array.Empty<string>() : (string[])source.TargetTags.Clone(),
                 DurationTicks = source.DurationTicks,
                 PeriodTicks = source.PeriodTicks
             };

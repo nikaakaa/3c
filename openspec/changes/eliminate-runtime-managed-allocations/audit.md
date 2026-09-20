@@ -521,6 +521,15 @@
 - 其它 effect:effectId 是效果定义目录身份，非活动效果 handle，本次未迁移。激活与移除读取相同格式化规则，标签清单和来源存储不变；最终键仍有分配，没有引入跨步字符串缓存或改变事务 owner。
 - Fixed／Float32 portable 分别编译零警告零错误，按规定构建后 shutdown 均成功，diff 空白检查通过；编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity、未做运行身份对比或 Player 分配采样。
 
+## 2026-09-20 效果快照空标签数组共享
+
+对应 tasks.md 的 2.18，与代码同步提交。
+
+- 两数值域 CloneSpec 的 SourceTags／TargetTags 以及 CloneTagSources 原只对 null 使用 Array.Empty，零长度数组仍 Clone 成新的空数组。现在 null 与零长度统一复用 Array.Empty，非空分支保持原数组克隆。
+- 空数组没有可修改元素，既有状态也已使用 Array.Empty 表示无标签；集合长度、遍历结果和序列化数据不变。非空数组的隔离关系、Spec 对象和来源字典仍独立，不修改事务或快照归还边界。
+- 同时核对附加效果应用，现有工作列表通过 Acquire／finally Release 使用，公共 Admission 已在来源标签数量为零时避免新建数组，本轮不重复修改这些正确路径。
+- Fixed／Float32 portable 各自零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；目标文件此前无其它未提交修改，编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity、未做运行对比或 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

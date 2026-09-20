@@ -404,3 +404,12 @@
 - codec 的 Write 与新 RequireFits 共用唯一私有写入函数，完成原字段编码后按 writer.Length 检查 maximumBytes。RequireFits 不 ToArray；正式 Write 通过预算检查后才输出独立数组，因此超限写入也不再生成最终数组。原参数异常、MTU 文本和 InvalidDataException 处理保留。
 - 不计算另一套尺寸公式、不缓存可变 payload，也不改变序号、路由、队列、StoreSent 或原超限业务分支。仍执行完整编码，writer／流和编码 CPU 未消除；不宣称此检查无分配。
 - ServerAuthoritative.Transport portable 及全部依赖编译零警告零错误，按规定构建后 shutdown 成功；diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity，未做网络联调或 Player 采样。
+
+## 2026-09-20 Egress 三类消息 canonical 副本清理
+
+对应 tasks.md 的 5.29，与代码同步提交。
+
+- ServerAuthoritativeEgressCodec 的 ReadOwnerInput／ReadAuthorityReplication／ReadRemotePresentation 原完整重新编码并 ToArray，只为 RequireCanonical 逐字节比较。现公开写入与读取校验共用各自唯一私有 writer 写入函数，RequireCanonical 调用既有 ContentEquals，不产生最终比较数组。
+- 保留原 schema、字段次序、嵌套消息编码和完整重新编码检查；尾部与集合数量检查、错误文本和返回消息独立数据不变。只修改编解码内部存储，不改表现事件消费、Timeline 播放、事务或回滚生命周期。
+- 嵌套基线及远端表现子消息仍会创建独立 writer 和数组，此步不宣称它们已完成；外层 writer、流、解码集合、公开编码结果也仍分配。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行对比或 Player 分配采样。

@@ -33,13 +33,18 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
             using var writer = new CanonicalWriter();
+            WriteOwnerInput(writer, input);
+            return writer.ToArray();
+        }
+
+        static void WriteOwnerInput(CanonicalWriter writer, OwnerCanonicalInputBatch input)
+        {
             writer.WriteUInt32(InputMagic);
             writer.WriteInt32(InputVersion);
             writer.WriteString(input.ActorId.Value);
             writer.WriteUInt64(input.SourceTick);
             writer.WriteUInt64(input.InputSequence);
             ServerAuthoritativeCanonicalCodec.WriteLengthPrefixedInput(writer, input.Input);
-            return writer.ToArray();
         }
 
         public static OwnerCanonicalInputBatch ReadOwnerInput(byte[] bytes)
@@ -51,7 +56,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             SimulationInput input = ServerAuthoritativeCanonicalCodec.ReadInput(reader.ReadBytesSegment());
             reader.RequireComplete();
             var result = new OwnerCanonicalInputBatch(actorId, sourceTick, inputSequence, input);
-            RequireCanonical(bytes, WriteOwnerInput(result), "owner input");
+            using var writer = new CanonicalWriter();
+            WriteOwnerInput(writer, result);
+            RequireCanonical(bytes, writer, "owner input");
             return result;
         }
 
@@ -60,6 +67,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (batch == null)
                 throw new ArgumentNullException(nameof(batch));
             using var writer = new CanonicalWriter();
+            WriteAuthorityReplication(writer, batch);
+            return writer.ToArray();
+        }
+
+        static void WriteAuthorityReplication(CanonicalWriter writer, AuthorityReplicationBatch batch)
+        {
             writer.WriteUInt32(ReplicationMagic);
             writer.WriteInt32(ReplicationVersion);
             writer.WriteUInt64(batch.AuthorityTick.Value);
@@ -72,7 +85,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteInt32(batch.RemotePresentation.Count);
             for (int i = 0; i < batch.RemotePresentation.Count; i++)
                 writer.WriteBytes(WriteRemotePresentation(batch.RemotePresentation[i]));
-            return writer.ToArray();
         }
 
         public static AuthorityReplicationBatch ReadAuthorityReplication(byte[] bytes)
@@ -93,7 +105,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 remote[i] = ReadRemotePresentation(reader.ReadBytes());
             reader.RequireComplete();
             var result = new AuthorityReplicationBatch(tick, acks, baselines, remote);
-            RequireCanonical(bytes, WriteAuthorityReplication(result), "authority replication");
+            using var writer = new CanonicalWriter();
+            WriteAuthorityReplication(writer, result);
+            RequireCanonical(bytes, writer, "authority replication");
             return result;
         }
 
@@ -128,6 +142,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (batch == null)
                 throw new ArgumentNullException(nameof(batch));
             using var writer = new CanonicalWriter();
+            WriteRemotePresentation(writer, batch);
+            return writer.ToArray();
+        }
+
+        static void WriteRemotePresentation(CanonicalWriter writer, RemotePresentationBatch batch)
+        {
             writer.WriteUInt32(RemoteMagic);
             writer.WriteInt32(RemoteVersion);
             writer.WriteString(batch.ActorId.Value);
@@ -141,7 +161,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteInt32(batch.ReliableEvents.Count);
             for (int i = 0; i < batch.ReliableEvents.Count; i++)
                 WriteReliableEvent(writer, batch.ReliableEvents[i]);
-            return writer.ToArray();
         }
 
         public static RemotePresentationBatch ReadRemotePresentation(byte[] bytes)
@@ -163,7 +182,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 events[i] = ReadReliableEvent(reader);
             reader.RequireComplete();
             var result = new RemotePresentationBatch(actorId, bodies, samples, events, resetBodyStream);
-            RequireCanonical(bytes, WriteRemotePresentation(result), "remote presentation");
+            using var writer = new CanonicalWriter();
+            WriteRemotePresentation(writer, result);
+            RequireCanonical(bytes, writer, "remote presentation");
             return result;
         }
 
@@ -487,13 +508,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return count;
         }
 
-        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        static void RequireCanonical(byte[] source, CanonicalWriter canonical, string label)
         {
-            if (source == null || canonical == null || source.Length != canonical.Length)
+            if (source == null || canonical == null || !canonical.ContentEquals(source))
                 throw new InvalidDataException($"ServerAuthoritative {label} payload is not canonical.");
-            for (int i = 0; i < source.Length; i++)
-                if (source[i] != canonical[i])
-                    throw new InvalidDataException($"ServerAuthoritative {label} payload is not canonical.");
         }
 
         static T ReadEnum<T>(byte value, string label) where T : struct, Enum

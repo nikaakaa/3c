@@ -198,7 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason)
+        void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason, bool retainForCorrection)
         {
             if (!m_Playbacks.TryGetValue(handle.Value, out PlaybackState playback) || playback.Generation != generation)
                 return;
@@ -434,7 +434,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             CharacterPresentationCommand retirement,
             ulong generation,
             long markerTime = 0,
-            int markerCycle = 0)
+            int markerCycle = 0,
+            bool suspended = false)
         {
             Key = key;
             PlaybackHandle = playbackHandle;
@@ -443,8 +444,12 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             Retirement = retirement;
             MarkerTime = markerTime;
             MarkerCycle = markerCycle;
+            Suspended = suspended;
         }
 
+        internal bool Suspended { get; }
+        internal CameraEventState WithSuspended(bool suspended) =>
+            new CameraEventState(Key, PlaybackHandle, Activation, Retirement, Generation, MarkerTime, MarkerCycle, suspended);
         internal CameraEventKey Key { get; }
         internal long MarkerTime { get; }
         internal int MarkerCycle { get; }
@@ -457,7 +462,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     readonly CharacterTimelineHost m_TimelineHost;
     readonly ICharacterPresentationDomainRuntime m_Runtime;
     readonly ActorId m_ActorId;
-    readonly Dictionary<CameraEventKey, CameraEventState> m_Active;
+    readonly Dictionary<CameraEventKey, CameraEventState> m_Events;
     readonly Dictionary<CameraEventKey, CameraEventState> m_FrameBaseline;
     readonly HashSet<CameraEventKey> m_Alive;
     readonly List<CameraEventKey> m_Retired;
@@ -477,7 +482,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         if (requestCapacity < 0)
             throw new ArgumentOutOfRangeException(nameof(requestCapacity));
         m_RequestCapacity = requestCapacity;
-        m_Active = new Dictionary<CameraEventKey, CameraEventState>(requestCapacity);
+        m_Events = new Dictionary<CameraEventKey, CameraEventState>(requestCapacity);
         m_FrameBaseline = new Dictionary<CameraEventKey, CameraEventState>(requestCapacity);
         m_Alive = new HashSet<CameraEventKey>(requestCapacity);
         m_Retired = new List<CameraEventKey>(requestCapacity);
@@ -490,7 +495,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         if (m_FrameOpen)
             throw new InvalidOperationException("Timeline Camera event candidate is already open.");
         m_FrameBaseline.Clear();
-        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Active)
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Events)
             m_FrameBaseline.Add(entry.Key, entry.Value);
         m_FrameOpen = true;
     }
@@ -505,9 +510,9 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     {
         if (!m_FrameOpen)
             return;
-        m_Active.Clear();
+        m_Events.Clear();
         foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_FrameBaseline)
-            m_Active.Add(entry.Key, entry.Value);
+            m_Events.Add(entry.Key, entry.Value);
         m_FrameBaseline.Clear();
         m_FrameOpen = false;
     }
@@ -530,29 +535,39 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
                     AddMarkerCamera(frame, context, marker, eventId, outputs[outputIndex]);
             }
         }
-        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Active)
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> entry in m_Events)
             if (entry.Key.Marker != null && entry.Key.Handle == frame.Handle.Value && entry.Key.Generation == frame.Generation &&
                 (entry.Value.MarkerCycle < frame.Cycle || entry.Value.MarkerCycle == frame.Cycle && entry.Value.MarkerTime <= frame.Time.Raw))
                 m_Alive.Add(entry.Key);
-        RetireInactive(m_Alive, frame.Handle.Value, frame.Reason == TimelinePresentationSampleReason.Correction);
+        foreach (CameraEventKey key in m_Alive)
+        {
+            CameraEventState state = m_Events[key];
+            if (!state.Suspended)
+                continue;
+            m_Runtime.Publish(state.Activation);
+            m_Events[key] = state.WithSuspended(false);
+        }
+        RetireInactive(m_Alive, frame.Handle.Value, frame.Reason == TimelinePresentationSampleReason.Correction,
+            retainForCorrection: true);
     }
 
-    void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason)
+    void OnPresentationPlaybackEnded(TimelineRuntimePlaybackHandle handle, ulong generation, TimelinePresentationSampleReason reason, bool retainForCorrection)
     {
         m_Alive.Clear();
-        RetireInactive(m_Alive, handle.Value, reason == TimelinePresentationSampleReason.Withdrawn, generation);
+        RetireInactive(m_Alive, handle.Value, reason == TimelinePresentationSampleReason.Withdrawn, generation, retainForCorrection);
     }
 
     void AddMarkerCamera(TimelineRuntimePresentationFrame frame, in TimelinePresentationExecutionContext context,
         in TimelineRuntimePresentationEvent marker, EventId eventId, in PresentationGraphCameraOutput output)
     {
         var key = CameraEventKey.ForMarker(frame.Handle.Value, frame.Generation, marker.MarkerAuthoringId, output.Producer);
-        if (m_Active.TryGetValue(key, out CameraEventState previous))
+        if (m_Events.TryGetValue(key, out CameraEventState previous))
         {
-            m_Runtime.Retire(previous.Activation);
-            m_Active.Remove(key);
+            if (!previous.Suspended)
+                m_Runtime.Retire(previous.Activation);
+            m_Events.Remove(key);
         }
-        if (m_RequestCapacity == 0 || m_Active.Count == m_RequestCapacity)
+        if (m_RequestCapacity == 0 || m_Events.Count == m_RequestCapacity)
             throw new InvalidOperationException("Presentation Marker Camera output exceeds the composed domain capacity.");
         var header = new CharacterPresentationEventHeader(eventId, m_ActorId, new SimulationTick(frame.LogicTick),
             context.Activation, marker.TraversalIndex, "timeline.marker.camera");
@@ -563,7 +578,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             output.Producer, marker.Time.ToSingle(), output.Retirement.Weight, context.Activation.Generation,
             marker.Cycle, context.ActionInstanceId, 1f, cameraRequest: output.Retirement);
         m_Runtime.Publish(activation);
-        m_Active.Add(key, new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation, marker.Time.Raw, marker.Cycle));
+        m_Events.Add(key, new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation, marker.Time.Raw, marker.Cycle));
     }
 
     void CollectCameraEvents(
@@ -608,7 +623,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             TimelineCameraCueSample sample = frame.Operations.CameraCues[index];
             CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
                 sample.TrackAuthoringId, sample.ClipAuthoringId, sample.Cycle);
-            if (!m_Active.ContainsKey(key))
+            if (!m_Events.ContainsKey(key))
             {
                 string requestId = sample.ClipAuthoringId;
                 PresentationCameraRequest activation = PresentationCameraRequest.Effect(
@@ -698,8 +713,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     {
         if (m_RequestCapacity == 0)
             throw new InvalidOperationException("Timeline Camera outputs require a composed Camera domain.");
-        bool existing = m_Active.TryGetValue(key, out CameraEventState previous);
-        if (!existing && m_Active.Count == m_RequestCapacity)
+        bool existing = m_Events.TryGetValue(key, out CameraEventState previous);
+        if (!existing && m_Events.Count == m_RequestCapacity)
             throw new InvalidOperationException($"Timeline Camera event capacity {m_RequestCapacity} is exhausted.");
         EventId eventId = existing ? previous.Activation.Header.EventId : new(StableHash.Compute(
             "timeline-presentation-camera",
@@ -750,14 +765,15 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             null,
             retirementRequest);
         var state = new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation);
-        m_Active[key] = state;
+        m_Events[key] = state;
         m_Runtime.Publish(activation);
     }
 
-    void RetireInactive(HashSet<CameraEventKey> alive, ulong handle, bool withdrawn, ulong generation = 0)
+    void RetireInactive(HashSet<CameraEventKey> alive, ulong handle, bool withdrawn, ulong generation = 0,
+        bool retainForCorrection = false)
     {
         m_Retired.Clear();
-        foreach (KeyValuePair<CameraEventKey, CameraEventState> pair in m_Active)
+        foreach (KeyValuePair<CameraEventKey, CameraEventState> pair in m_Events)
         {
             if ((handle == 0 || pair.Value.PlaybackHandle == handle) &&
                 (generation == 0 || pair.Value.Generation == generation) && !alive.Contains(pair.Key))
@@ -766,9 +782,14 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
 
         for (int index = 0; index < m_Retired.Count; index++)
         {
-            CameraEventState state = m_Active[m_Retired[index]];
-            m_Runtime.Retire(withdrawn ? state.Activation : state.Retirement);
-            m_Active.Remove(m_Retired[index]);
+            CameraEventState state = m_Events[m_Retired[index]];
+            if (!state.Suspended)
+                m_Runtime.Retire(withdrawn ? state.Activation : state.Retirement);
+            if (retainForCorrection && state.Key.Marker != null &&
+                state.Activation.CameraRequest.Kind != PresentationCameraRequestKind.Effect)
+                m_Events[state.Key] = state.WithSuspended(true);
+            else
+                m_Events.Remove(state.Key);
         }
     }
 

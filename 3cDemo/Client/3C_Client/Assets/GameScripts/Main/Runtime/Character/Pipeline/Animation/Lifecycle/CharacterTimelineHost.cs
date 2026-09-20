@@ -623,7 +623,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public ulong ContentGeneration => m_ContentGeneration;
         internal event Action<TimelineRuntimePresentationFrame> PresentationFramePrepared;
         public event Action<TimelineRuntimePresentationFrame> PresentationFrameProduced;
-        internal event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason> PresentationPlaybackEndPrepared;
+        internal event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason, bool> PresentationPlaybackEndPrepared;
         public event Action<TimelineRuntimePlaybackHandle, ulong, TimelinePresentationSampleReason> PresentationPlaybackEnded;
         public event Action<TimelineActionCueEvent> ActionCueCommitted;
 
@@ -2035,9 +2035,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 if (ended && !presented)
                 {
                     TimelinePresentationSampleReason reason = active.CoreDriven ? sample.Reason : TimelinePresentationSampleReason.Stopped;
-                    m_PresentationEndCandidates.Add((active, reason, active.CoreDriven && sample.RetainForCorrection));
-                    if (!active.PresentationWithdrawn)
-                        PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), active.Generation, reason);
+                    bool retainForCorrection = active.CoreDriven && sample.RetainForCorrection;
+                    m_PresentationEndCandidates.Add((active, reason, retainForCorrection));
+                    if (!active.PresentationWithdrawn || !retainForCorrection)
+                        PresentationPlaybackEndPrepared?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value), active.Generation, reason, retainForCorrection);
                 }
             }
         }

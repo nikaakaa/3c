@@ -572,3 +572,10 @@
 - 删除TreeClipKey格式化函数，不新增缓存或第二查找表。正式SourceMap继续保留原调用身份，初始化时解析Hook；缺OnEnable报错、缺可选钩子返回false及实际执行Failure抛异常的语义保持原样。首次创建字典仍有分配，本批仅关闭回调查找的逐次分配，不代表完整0 GC。
 - 下一项待核对：分支撤销／修正使Marker相机输出退役后，同generation重现是否能够从原事件记账恢复请求，且不重复执行已交付Marker图；不能因为动画播放已恢复就推定Marker输出也恢复。
 - Unity编译与最终域重载完成（1789927645501），Editor idle、控制台零错误，git diff --check通过；未新增测试，未进行运行分配采样。
+
+## 同generation恢复时重接Marker持续相机请求
+- 对应7.2／7.4：原桥在撤销时直接删除Marker输出，而原Marker游标保留去重，恢复后既没有旧请求也不会重执行图。现沿原桥接表增加Suspended状态，表改名m_Events以准确表示已发与暂时撤销的记录；不增加第二事件表。原帧baseline包含该状态，失败帧沿原Discard恢复。
+- Sequence／Response／Target请求在尚可修正的撤销或修正回退时，先按原相机owner退役，再保留原typed输出及EventId。后续同handle／generation的采样位置到达该记录，重发同一Activate请求并解除Suspended，不调用Marker图、不分配新TraversalIndex。Camera Effect输出撤销后删除，不重播震屏等效果，不保存或恢复相机平滑、碰撞、混合与效果计时。
+- Host内部PresentationPlaybackEndPrepared携带原RetainForCorrection，并在已经暂时撤销的播放最终确定释放时仍通知原消费者清理。动画桥因播放已移除而不重复发终态；相机桥释放Suspended记录且不重复退役已撤销请求。Reset与正常完成不保留记录。
+- 保留记录仍受原requestCapacity硬上限约束，容量不足明确失败，不增长新历史缓存。此批只恢复原桥已保留的最近输出：同一Marker较新循环会覆盖较旧循环记录，跨循环且输出分支变化的修正仍需继续核对，不据此勾选完整7.2／7.4。
+- Unity编译与最终域重载完成（1789927908641），Editor idle、控制台零错误；未新增测试，未进行撤销恢复、跨循环或帧失败注入的端到端运行。代码及当前编译证据不等于这些业务边界均已验收。

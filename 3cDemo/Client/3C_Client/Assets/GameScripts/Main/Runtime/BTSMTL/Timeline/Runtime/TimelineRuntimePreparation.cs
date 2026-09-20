@@ -201,11 +201,15 @@ namespace BTSMTL.Timeline.Runtime
 
     public sealed class TimelineRuntimePlayback : IDisposable
     {
-        readonly List<string> m_ActiveClipIds = new List<string>();
-        readonly List<string> m_PendingTreeClipExits = new List<string>();
-        readonly List<string> m_ExitedTreeDecisionClips = new List<string>();
-        readonly List<string> m_AdvanceInjectedTreeClipExits = new List<string>();
-        readonly List<string> m_AdvanceProducedTreeClipExits = new List<string>();
+        readonly List<string> m_ActiveClipIds;
+        readonly List<string> m_PendingTreeClipExits;
+        readonly List<string> m_ExitedTreeDecisionClips;
+        readonly List<string> m_AdvanceInjectedTreeClipExits;
+        readonly List<string> m_AdvanceProducedTreeClipExits;
+        readonly List<string> m_AdvanceActiveClipIds;
+        readonly List<string> m_AdvanceExitedTreeDecisionClips;
+        readonly List<TimelineRuntimeClipBoundary> m_AdvanceBoundaries;
+        readonly Comparison<TimelineRuntimeClipBoundary> m_CompareBoundaries;
         readonly ReadOnlyCollection<string> m_ActiveClipIdsView;
         TimelineRuntimeAdvanceResult m_PendingAdvance;
         TimelinePlaybackStopContext m_PendingStopContext;
@@ -237,6 +241,25 @@ namespace BTSMTL.Timeline.Runtime
             SourceTimeline = preparation.SourceTimeline;
             PreparedDependencies = preparation.PreparedDependencies;
             PreparedBindings = preparation.PreparedBindings;
+            int clipCapacity = Content.Clips.Count;
+            m_ActiveClipIds = new List<string>(clipCapacity);
+            m_PendingTreeClipExits = new List<string>(clipCapacity);
+            m_ExitedTreeDecisionClips = new List<string>(clipCapacity);
+            m_AdvanceInjectedTreeClipExits = new List<string>(clipCapacity);
+            m_AdvanceProducedTreeClipExits = new List<string>(clipCapacity);
+            m_AdvanceActiveClipIds = new List<string>(clipCapacity);
+            m_AdvanceExitedTreeDecisionClips = new List<string>(clipCapacity);
+            int boundaryCapacity = 0;
+            int traversals = PlaybackMode == TimelinePlaybackMode.Loop
+                ? TimelineRuntimeEvaluationSegments.MaximumCycleAdvance + 1 : 1;
+            for (int index = 0; index < Content.Clips.Count; index++)
+            {
+                TimelineContentClip clip = Content.Clips[index];
+                if (!clip.TrackMuted && clip.ExecutionPolicy.IsLogic)
+                    boundaryCapacity = checked(boundaryCapacity + 2 * traversals);
+            }
+            m_AdvanceBoundaries = new List<TimelineRuntimeClipBoundary>(boundaryCapacity);
+            m_CompareBoundaries = CompareBoundaries;
             m_ActiveClipIdsView = new ReadOnlyCollection<string>(m_ActiveClipIds);
             State = TimelineRuntimePlaybackState.Prepared;
         }
@@ -368,7 +391,8 @@ namespace BTSMTL.Timeline.Runtime
             else
                 nextTime = FixedScalar.Min(requestedTime, duration);
 
-            var activeClipIds = new List<string>();
+            List<string> activeClipIds = m_AdvanceActiveClipIds;
+            activeClipIds.Clear();
             for (int index = 0; index < Content.Clips.Count; index++)
             {
                 TimelineContentClip clip = Content.Clips[index];
@@ -405,7 +429,9 @@ namespace BTSMTL.Timeline.Runtime
                 m_PendingTreeClipExits);
             m_AdvanceInjectedTreeClipExits.Clear();
             m_AdvanceInjectedTreeClipExits.AddRange(m_PendingTreeClipExits);
-            var evaluationExitedTreeDecisionClips = new List<string>(m_ExitedTreeDecisionClips);
+            List<string> evaluationExitedTreeDecisionClips = m_AdvanceExitedTreeDecisionClips;
+            evaluationExitedTreeDecisionClips.Clear();
+            evaluationExitedTreeDecisionClips.AddRange(m_ExitedTreeDecisionClips);
             for (int index = 0; index < m_PendingTreeClipExits.Count; index++)
             {
                 if (!evaluationExitedTreeDecisionClips.Contains(m_PendingTreeClipExits[index]))
@@ -655,7 +681,7 @@ namespace BTSMTL.Timeline.Runtime
             return expectedCount == suppliedCount;
         }
 
-        static bool ContainsClip(IReadOnlyList<string> clips, string clipId)
+        internal static bool ContainsClip(IReadOnlyList<string> clips, string clipId)
         {
             for (int index = 0; index < clips.Count; index++)
                 if (string.Equals(clips[index], clipId, StringComparison.Ordinal))
@@ -705,7 +731,8 @@ namespace BTSMTL.Timeline.Runtime
             IReadOnlyList<string> exitedTreeDecisionClips,
             IReadOnlyList<string> pendingTreeClipExits)
         {
-            var result = new List<TimelineRuntimeClipBoundary>();
+            List<TimelineRuntimeClipBoundary> result = m_AdvanceBoundaries;
+            result.Clear();
             if (duration <= FixedScalar.Zero)
                 return result;
             FixedScalar previousAbsolute = duration * FixedScalar.FromInt64(previousCycle) + previousTime;
@@ -723,9 +750,9 @@ namespace BTSMTL.Timeline.Runtime
                 if (clip.TrackMuted || !clip.ExecutionPolicy.IsLogic)
                     continue;
                 bool treeDecision = clip.ExitSource == TimelineClipExitSource.TreeDecision;
-                if (treeDecision && System.Linq.Enumerable.Contains(exitedTreeDecisionClips, clip.AuthoringId))
+                if (treeDecision && ContainsClip(exitedTreeDecisionClips, clip.AuthoringId))
                     continue;
-                if (treeDecision && pendingTreeClipExits.Contains(clip.AuthoringId))
+                if (treeDecision && ContainsClip(pendingTreeClipExits, clip.AuthoringId))
                 {
                     result.Add(new TimelineRuntimeClipBoundary(
                         clip.AuthoringId,
@@ -761,18 +788,19 @@ namespace BTSMTL.Timeline.Runtime
                         false);
                 }
             }
-            result.Sort((left, right) =>
-            {
-                int position = (duration * FixedScalar.FromInt64(left.Cycle) + left.Time).CompareTo(
-                    duration * FixedScalar.FromInt64(right.Cycle) + right.Time);
-                if (position != 0)
-                    return position;
-                int kind = left.Kind.CompareTo(right.Kind);
-                return kind != 0
-                    ? kind
-                    : string.CompareOrdinal(left.AuthoringId, right.AuthoringId);
-            });
+            result.Sort(m_CompareBoundaries);
             return result;
+        }
+
+        int CompareBoundaries(TimelineRuntimeClipBoundary left, TimelineRuntimeClipBoundary right)
+        {
+            FixedScalar duration = Content.Duration;
+            int position = (duration * FixedScalar.FromInt64(left.Cycle) + left.Time).CompareTo(
+                duration * FixedScalar.FromInt64(right.Cycle) + right.Time);
+            if (position != 0)
+                return position;
+            int kind = left.Kind.CompareTo(right.Kind);
+            return kind != 0 ? kind : string.CompareOrdinal(left.AuthoringId, right.AuthoringId);
         }
 
         static void AddBoundary(
@@ -1936,7 +1964,8 @@ namespace BTSMTL.Timeline.Runtime
                         ? "timeline.clip.enter"
                         : "timeline.clip.exit",
                     TimelineTraceSeverity.Detail,
-                    $"Clip boundary {boundary.Kind}.",
+                    boundary.Kind == TimelineRuntimeClipBoundaryKind.Enter
+                        ? "Clip boundary Enter." : "Clip boundary Exit.",
                     executionIdentity,
                     generation,
                     logicTick,
@@ -2035,7 +2064,7 @@ namespace BTSMTL.Timeline.Runtime
                         continue;
                     bool treeDecisionExit =
                         treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
-                    if (System.Linq.Enumerable.Contains(exitedTreeDecisionClips, treeClip.AuthoringId))
+                    if (TimelineRuntimePlayback.ContainsClip(exitedTreeDecisionClips, treeClip.AuthoringId))
                         continue;
                     if (currentTime <= treeClip.StartTime)
                         continue;

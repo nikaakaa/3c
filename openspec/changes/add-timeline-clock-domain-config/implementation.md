@@ -469,3 +469,8 @@
 - 保留原候选请求 BeginFrame／CommitFrame／DiscardFrame 和 Pose 前资源／Rig 校验；未接受 Marker 不消耗交付资格，已接受事件撤销按原镜头退休规则收尾。没有增加 Pose 物理恢复代码。
 - 保留效果状态对象池、容量约束与已结束事件清理，避免每次激活分配状态对象；不把这些内存改进解释为相机回滚能力。design.md、tasks.md 和 character-animation-pipeline delta 已同步明确该边界。
 - 删除仅为候选回滚拆出的 PrepareRequests／EvaluatePrepared 接口，效果请求处理与求值统一回 Resolve。Unity 日志已报告脚本构建成功；共享工作区后续修改再次触发域重载，提交时尚未取得最终 idle／控制台结果。git diff --check 通过，未新增测试。
+
+## 逻辑推进复用工作列表与排序委托
+- 对应0.7：原 playback 按正式 Clip 数预分配活动片段、待退出、已退出及求值工作列表；Advance 复用活动列表、退出列表和边界列表，不再逐 tick 创建这些临时集合。结果仍保留原独立副本寿命，下游尚未迁移的结果消费者不会观察到下一次工作区写入。
+- 边界容量由有效 Logic Clip 数、每片段最多两个边界及既有单次最多4096圈推导；循环内容用较大的准备期内存换取推进时不扩容。排序继续比较绝对位置、Enter／Exit 和作者身份，委托只在 playback 初始化创建一次。退出查询改为索引遍历，边界诊断改用固定文字。
+- AdvanceResult、EvaluationResult 及其输出集合副本仍有分配，本批不表示完整0 GC。Unity编译与域重载完成（1789921437488），Editor idle，控制台错误为零；同时补齐上一批相机边界修正的重载后检查。git diff --check通过，未新增测试。

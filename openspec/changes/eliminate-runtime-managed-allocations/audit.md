@@ -449,6 +449,15 @@
 - 栈缓冲大小由 SHA-256 固定格式确定，单次调用共 32 字节加 64 个 char，不跨调用保留。源码不再请求返回摘要数组；SHA 实例与最终字符串仍分配，提供者内部是否还有临时存储未采样，不宣称哈希全程 0 GC。
 - portable Core 编译零警告零错误，按规定构建后 shutdown 成功；当前 Unity 引用下独立编译完整 Core 也通过，确认 TryComputeHash 和 Span 字符串构造在项目目标可用，产物只写系统临时目录。diff 空白检查通过，编辑前无其它目标修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制 Unity、未做运行哈希对比或 Player 分配采样。
 
+## 2026-09-20 GameplayEffect 相同来源标签数组复用
+
+对应 tasks.md 的 2.10，与代码同步提交。
+
+- Fixed／Float32 SimulationGameplayEffectState.SetTagSource 原先每次规范化、排序、去重并 ToArray，再与现有来源数组比较；即使内容相同也丢弃刚分配的数组。现在将现有数组传给唯一 CanonicalTags，在工作列表上按下标 Ordinal 比较，相同时返回已有数组，变化才 ToArray。
+- SetTagSource 通过引用相同识别未变化结果。规范化和错误校验仍完整执行，不根据输入引用跳过处理；排序、重复标签去除、空结果移除来源、m_TagsDirty 的设置及变更后的独立数组保持不变。初始标签仍沿同一函数且没有现有数组可复用。
+- 工作列表仍在 finally 清空，未将列表借给长期状态，也未调整 scratch 创建、事务保存或跨步寿命。没有 scratch 的原调用仍创建临时 List，IEnumerable 遍历和 NormalizeTag 等成本也保留；本步只消除内容相同的结果数组。
+- 两个状态文件编辑前均无其它未提交修改；相邻 AbilityExecutionFrame／OperationControlRuntime 有并行修改，未触碰。编辑前未发现 csc／bee 编译进程。Fixed 与 Float32 portable 各自编译零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过；未新增测试、未刷新或控制共享 Unity、未做 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

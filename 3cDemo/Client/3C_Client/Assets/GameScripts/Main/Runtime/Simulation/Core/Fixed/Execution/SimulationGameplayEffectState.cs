@@ -518,14 +518,15 @@ namespace ThirdPersonSimulation.Fixed
         public void SetTagSource(string sourceId, IEnumerable<string> tags)
         {
             string source = SimulationIdentity.Require(sourceId, nameof(sourceId));
-            string[] values = CanonicalTags(tags);
+            m_TagSources.TryGetValue(source, out string[] current);
+            string[] values = CanonicalTags(tags, current);
             if (values.Length == 0)
             {
                 if (m_TagSources.Remove(source))
                     m_TagsDirty = true;
                 return;
             }
-            if (m_TagSources.TryGetValue(source, out string[] current) && EqualStrings(current, values))
+            if (ReferenceEquals(current, values))
                 return;
             m_TagSources[source] = values;
             m_TagsDirty = true;
@@ -993,7 +994,7 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        string[] CanonicalTags(IEnumerable<string> tags)
+        string[] CanonicalTags(IEnumerable<string> tags, string[] current = null)
         {
             List<string> values = m_Scratch?.CanonicalTags ?? new List<string>();
             values.Clear();
@@ -1010,7 +1011,7 @@ namespace ThirdPersonSimulation.Fixed
                     if (string.Equals(values[i - 1], values[i], StringComparison.Ordinal))
                         values.RemoveAt(i);
                 }
-                return values.ToArray();
+                return EqualStrings(current, values) ? current : values.ToArray();
             }
             finally
             {
@@ -1018,13 +1019,13 @@ namespace ThirdPersonSimulation.Fixed
             }
         }
 
-        static bool EqualStrings(string[] left, string[] right)
+        static bool EqualStrings(IReadOnlyList<string> left, IReadOnlyList<string> right)
         {
             if (ReferenceEquals(left, right))
                 return true;
-            if (left == null || right == null || left.Length != right.Length)
+            if (left == null || right == null || left.Count != right.Count)
                 return false;
-            for (int i = 0; i < left.Length; i++)
+            for (int i = 0; i < left.Count; i++)
             {
                 if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
                     return false;

@@ -1513,3 +1513,12 @@
 - CollectActors 现按 inputs.Count 创建精确 ActorId 数组并直接填充；SimulationPipelineStep 的程序集内部数组入口接管该新数组，沿原规则排序，拒绝空集合、非法 ActorId 和重复 Actor。外部受保护 IEnumerable 构造入口及其独立 List 路径不变。
 - 删除每个 Fixed／Float32 step 的 Actor List 对象，元素存储仍为一份精确数组。step 对象、inputs 存储、ingress 及后续 plan 仍按原生命周期存在。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 step 运行对比或 Player 分配采样。
+
+## 2026-09-21 SimulationStep 数组输入存储
+
+对应 tasks.md 的 2.73。
+
+- TargetSimulationPipelineStep 原将所有 inputs 枚举复制到 List，再在构造器排序并只读保存；本地 CanonicalInputBatch 的公开 IReadOnlyList 底层为数组，正式服务器权威路径也存在数组输入。
+- inputs 动态类型为数组时，现 Clone 取得独立副本，在副本上按 ActorId 排序并直接作为 IReadOnlyList 保存。调用方数组仍不暴露、不共享，重复 Actor 校验及后续 Actor 派生不变。其它 IEnumerable 继续复制到独立 List 后排序。
+- 数组输入的每个 step 删除一个 List 对象，以克隆数组作为原来 List 底层数组的等价元素存储；数组复制本身仍保留，step 不借用上游可变数据。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 step 运行对比或 Player 分配采样。

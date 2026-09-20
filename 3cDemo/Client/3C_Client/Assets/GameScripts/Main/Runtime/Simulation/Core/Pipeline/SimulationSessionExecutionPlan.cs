@@ -258,11 +258,10 @@ namespace ThirdPersonSimulation
         TargetSimulationPipelineStep(
             SimulationTick tick,
             SimulationPipelineStepProvenance provenance,
-            List<SimulationPipelineActorInput<TInput>> inputValues,
+            IReadOnlyList<SimulationPipelineActorInput<TInput>> inputValues,
             IEnumerable<SimulationPipelineTypedIngress<TIngress>> ingress)
             : base(tick, provenance, CollectActors(inputValues))
         {
-            inputValues.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             for (int i = 1; i < inputValues.Count; i++)
             {
                 if (inputValues[i - 1].ActorId.Equals(inputValues[i].ActorId))
@@ -305,12 +304,20 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SimulationPipelineActorInput<TInput>> Inputs => m_Inputs;
         public IReadOnlyList<SimulationPipelineTypedIngress<TIngress>> Ingress => m_Ingress;
 
-        static List<SimulationPipelineActorInput<TInput>> MaterializeInputs(
+        static IReadOnlyList<SimulationPipelineActorInput<TInput>> MaterializeInputs(
             IEnumerable<SimulationPipelineActorInput<TInput>> inputs)
         {
             if (inputs == null)
                 throw new ArgumentNullException(nameof(inputs));
-            return new List<SimulationPipelineActorInput<TInput>>(inputs);
+            if (inputs is SimulationPipelineActorInput<TInput>[] source)
+            {
+                var values = (SimulationPipelineActorInput<TInput>[])source.Clone();
+                Array.Sort(values, (left, right) => left.ActorId.CompareTo(right.ActorId));
+                return values;
+            }
+            var list = new List<SimulationPipelineActorInput<TInput>>(inputs);
+            list.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
+            return list;
         }
 
         static ActorId[] CollectActors(IReadOnlyList<SimulationPipelineActorInput<TInput>> inputs)

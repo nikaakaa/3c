@@ -118,6 +118,8 @@
 
 - [x] 2.72 TargetSimulationPipelineStep 按已物化 input 数直接生成 ActorId 数组并由 base 接管，删除每 step 的 Actor List 外壳；排序、非空、身份合法与重复 Actor 校验保持
 
+- [x] 2.73 TargetSimulationPipelineStep 对数组 inputs 克隆后原地排序并直接只读保存，删除本地及其它数组输入 step 的 List 外壳；非数组枚举继续复制到独立 List
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

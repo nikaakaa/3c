@@ -206,19 +206,8 @@ namespace BTSMTL.Timeline.Editor
                 return;
             try
             {
-                asset.Data.ApplyModify(() =>
-                {
-                    track.Name = name;
-                    track.PersistentMuted = muted;
-                    if (domainChanged)
-                    {
-                        track.ConfigureExecutionDomain(executionDomain);
-                        var errors = new List<string>();
-                        if (!asset.ValidateContent(TimelineTreeContractComposition.Create(), errors))
-                            throw new InvalidOperationException(string.Join("\n", errors));
-                    }
-                    asset.Data.Init();
-                }, "Edit Timeline Track");
+                asset.Data.ConfigureTrackAuthoring(track, name, muted, executionDomain,
+                    TimelineTreeContractComposition.Create());
                 m_SourceRevision = TimelineAuthoringFingerprint.Compute(asset.Data);
                 m_ConfigurationError = null;
             }

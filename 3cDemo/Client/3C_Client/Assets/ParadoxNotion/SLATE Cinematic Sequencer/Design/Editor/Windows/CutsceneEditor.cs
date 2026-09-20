@@ -534,6 +534,9 @@ namespace Slate
         float SnapTime(float time) {
             //holding control for precision (ignore snap intervals)
             if ( Event.current.control ) { return time; }
+            if ( embeddedTimeline != null ) {
+                return embeddedTimeline.SnapTime(time);
+            }
             if ( embeddedSurface ) {
                 var frameRate = Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate);
                 return Mathf.Round(time * frameRate) / frameRate;
@@ -1742,6 +1745,8 @@ namespace Slate
                 viewTimeMin = 0f;
                 viewTimeMax = Mathf.Max(length, 1f / Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
             }
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal(EditorStyles.toolbar);
             int authoringFrame = embeddedCurrentFrame != null
                 ? embeddedCurrentFrame()
                 : Mathf.RoundToInt(cutscene.currentTime * Mathf.Max(1, embeddedFrameRate != null ? embeddedFrameRate() : Prefs.frameRate));
@@ -1755,6 +1760,8 @@ namespace Slate
             }
             else
                 GUILayout.Label($"Edit  {authoringFrame}F", EditorStyles.miniLabel);
+            if (embeddedTimeline != null && GUILayout.Button(embeddedTimeline.SnapLabel, EditorStyles.toolbarDropDown, GUILayout.Width(90)))
+                embeddedTimeline.ShowSnapSettings(GUILayoutUtility.GetLastRect());
             GUILayout.EndHorizontal();
             GUI.EndGroup();
         }

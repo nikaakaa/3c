@@ -503,6 +503,29 @@ namespace BTSMTL.Timeline
             OnValueChanged?.Invoke();
         }
 
+        public void ConfigureTrackAuthoring(Track track, string name, bool muted,
+            TimelineExecutionDomain domain, TimelineContractCatalog catalog)
+        {
+            int trackIndex = m_Tracks.IndexOf(track);
+            if (trackIndex < 0)
+                throw new ArgumentException("轨道不属于当前 Timeline。", nameof(track));
+            TimelineData candidate = Clone();
+            Track candidateTrack = candidate.Tracks[trackIndex];
+            candidateTrack.Name = name;
+            candidateTrack.PersistentMuted = muted;
+            candidateTrack.ConfigureExecutionDomain(domain);
+            candidate.Init();
+            TimelineContentDiscoveryResult discovery = TimelineContentDiscovery.Discover(candidate, catalog);
+            if (!discovery.IsValid)
+                throw new InvalidOperationException($"轨道 '{track.Name}' ({track.AuthoringId}) 无法提交为 {domain}：\n{string.Join("\n", discovery.Errors)}");
+            ApplyModify(() =>
+            {
+                track.Name = name;
+                track.PersistentMuted = muted;
+                track.ConfigureExecutionDomain(domain);
+            }, "修改轨道配置");
+        }
+
         public void ApplyModify(Action action, string name)
         {
             if (!SerializedOwner || string.IsNullOrEmpty(SerializedPropertyPath))

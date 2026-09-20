@@ -54,7 +54,63 @@ namespace BTSMTL.Timeline.Editor
         public TimelineContractCatalog ContractCatalog => m_Request.ContractCatalog;
         public TimelineEditorSessionContext Session => m_Session;
         public int FrameRate => Mathf.Max(1, m_Session.FrameRate);
-        public int TickRate => Mathf.Max(1, m_Session.TickRate);
+        public int TickRate => m_Session.TickRate;
+        public float SnapTime(float time) => m_Session.SnapTime(
+            FixedScalar.FromDouble(Math.Max(0d, time)), m_Session.Selection.Clip).ToSingle();
+        public string SnapLabel => m_Session.SnapMode switch
+        {
+            TimelineAuthoringSnapMode.LogicTick => $"吸附 {TickRate}Hz",
+            TimelineAuthoringSnapMode.SourceFrame => "吸附 素材帧",
+            _ => "吸附 关闭"
+        };
+        public void ShowSnapSettings(Rect rect) => PopupWindow.Show(rect, new GridSettingsPopup(this));
+
+        sealed class GridSettingsPopup : PopupWindowContent
+        {
+            readonly BtsmtlSlateTimelineBinding m_Owner;
+            string m_Error;
+
+            internal GridSettingsPopup(BtsmtlSlateTimelineBinding owner) => m_Owner = owner;
+            public override Vector2 GetWindowSize() => new Vector2(340f, 205f);
+            public override void OnGUI(Rect rect)
+            {
+                TimelineEditorSessionContext session = m_Owner.Session;
+                EditorGUILayout.LabelField("Timeline 时间网格", EditorStyles.boldLabel);
+                var pipeline = (ThirdPersonCharacter.Pipeline.CharacterPipelineDefinition)EditorGUILayout.ObjectField(
+                    "参考 Pipeline", session.GridPipeline, typeof(ThirdPersonCharacter.Pipeline.CharacterPipelineDefinition), false);
+                if (pipeline != session.GridPipeline)
+                    session.ConfigureGrid(pipeline, !pipeline && session.SnapMode == TimelineAuthoringSnapMode.LogicTick
+                        ? TimelineAuthoringSnapMode.None : session.SnapMode);
+                if (GUILayout.Toggle(session.SnapMode == TimelineAuthoringSnapMode.None, "关闭吸附", EditorStyles.radioButton))
+                    session.ConfigureGrid(pipeline, TimelineAuthoringSnapMode.None);
+                using (new EditorGUI.DisabledScope(!pipeline))
+                    if (GUILayout.Toggle(session.SnapMode == TimelineAuthoringSnapMode.LogicTick,
+                        pipeline ? $"逻辑 tick：{pipeline.SimulationTickRate} Hz" : "逻辑 tick：请先选择 Pipeline", EditorStyles.radioButton))
+                        session.ConfigureGrid(pipeline, TimelineAuthoringSnapMode.LogicTick);
+                bool hasSource = session.Selection.Clip is AnimationClip animation && animation.Clip;
+                using (new EditorGUI.DisabledScope(!hasSource))
+                    if (GUILayout.Toggle(session.SnapMode == TimelineAuthoringSnapMode.SourceFrame,
+                        hasSource ? "动画素材帧（含 ClipIn 映射）" : "素材帧：请选中动画 Clip", EditorStyles.radioButton))
+                        session.ConfigureGrid(pipeline, TimelineAuthoringSnapMode.SourceFrame);
+                using (new EditorGUI.DisabledScope(m_Owner.IsReadOnly || session.SnapMode == TimelineAuthoringSnapMode.None))
+                    if (GUILayout.Button("将选中内容重新对齐到当前网格"))
+                    {
+                        try
+                        {
+                            m_Owner.Apply(session.RealignSelection, "按当前网格重新对齐");
+                            m_Error = null;
+                        }
+                        catch (Exception exception)
+                        {
+                            m_Error = exception.Message;
+                        }
+                    }
+                EditorGUILayout.LabelField("网格换算前提：正常速率、未暂停。", EditorStyles.miniLabel);
+                if (!string.IsNullOrEmpty(m_Error))
+                    EditorGUILayout.HelpBox(m_Error, MessageType.Error);
+            }
+        }
+
         public string DisplayName => Timeline.Name;
         public float Length => Timeline.Duration;
         public float Duration => Timeline.Duration;
@@ -1270,7 +1326,7 @@ namespace BTSMTL.Timeline.Editor
             internal BtsmtlSlateTimelineBinding Owner => m_Owner;
             public BtsmtlTimelineTrackBinding Track => m_Track;
             IEmbeddedTimelineTrackBinding IEmbeddedTimelineClipBinding.Track => m_Track;
-            public bool IsTimeQuantized => Source.IsTickQuantized();
+            public bool IsTimeQuantized => false;
             public string AuthoringId => Source.AuthoringId;
             public string DisplayName => Source.Name;
             public string Info => Source is MotionCurveClip motion && motion.SourceCurve != null
@@ -1288,7 +1344,7 @@ namespace BTSMTL.Timeline.Editor
                     float nextStart = SnapTime(value);
                     float delta = nextStart - m_StartTime;
                     m_StartTime = nextStart;
-                    m_EndTime = Mathf.Max(m_StartTime + 1f / m_Owner.FrameRate, m_EndTime + delta);
+                    m_EndTime = Mathf.Max(m_StartTime, m_EndTime + delta);
                     RefreshReferenceCurves();
                 }
             }
@@ -1297,7 +1353,7 @@ namespace BTSMTL.Timeline.Editor
                 get => m_EndTime;
                 set
                 {
-                    m_EndTime = Mathf.Max(StartTime + 1f / m_Owner.FrameRate, SnapTime(value));
+                    m_EndTime = Mathf.Max(StartTime, SnapTime(value));
                     RefreshReferenceCurves();
                 }
             }
@@ -1305,12 +1361,12 @@ namespace BTSMTL.Timeline.Editor
             public float BlendIn
             {
                 get => Mathf.Clamp(m_BlendIn, 0f, Length);
-                set => m_BlendIn = Mathf.Clamp(SnapTime(value), 0f, Length);
+                set => m_BlendIn = Mathf.Clamp(m_Owner.Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, value)), Source, true).ToSingle(), 0f, Length);
             }
             public float BlendOut
             {
                 get => Mathf.Clamp(m_BlendOut, 0f, Length);
-                set => m_BlendOut = Mathf.Clamp(SnapTime(value), 0f, Length);
+                set => m_BlendOut = Mathf.Clamp(m_Owner.Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, value)), Source, true).ToSingle(), 0f, Length);
             }
             public bool CanScale => Source.IsResizable();
             public bool CanClipIn => Source.IsClipInable();
@@ -1406,10 +1462,10 @@ namespace BTSMTL.Timeline.Editor
 
             public bool CommitSource()
             {
-                FixedScalar startTime = StartTime == Source.StartTime.ToSingle() ? Source.StartTime : FixedScalar.FromDouble(StartTime);
-                FixedScalar endTime = EndTime == Source.EndTime.ToSingle() ? Source.EndTime : FixedScalar.FromDouble(EndTime);
-                FixedScalar easeIn = m_BlendIn == m_InitialBlendIn ? Source.SelfEaseInTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendIn * m_Owner.FrameRate)), m_Owner.FrameRate);
-                FixedScalar easeOut = m_BlendOut == m_InitialBlendOut ? Source.SelfEaseOutTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendOut * m_Owner.FrameRate)), m_Owner.FrameRate);
+                FixedScalar startTime = StartTime == Source.StartTime.ToSingle() ? Source.StartTime : m_Owner.Session.SnapTime(FixedScalar.FromDouble(StartTime), Source);
+                FixedScalar endTime = EndTime == Source.EndTime.ToSingle() ? Source.EndTime : m_Owner.Session.SnapTime(FixedScalar.FromDouble(EndTime), Source);
+                FixedScalar easeIn = m_BlendIn == m_InitialBlendIn ? Source.SelfEaseInTime : m_Owner.Session.SnapTime(FixedScalar.FromDouble(BlendIn), Source, true);
+                FixedScalar easeOut = m_BlendOut == m_InitialBlendOut ? Source.SelfEaseOutTime : m_Owner.Session.SnapTime(FixedScalar.FromDouble(BlendOut), Source, true);
                 bool changed = Source.StartTime != startTime ||
                                Source.EndTime != endTime ||
                                Source.SelfEaseInTime != easeIn ||
@@ -1439,10 +1495,10 @@ namespace BTSMTL.Timeline.Editor
 
             public bool HasChanges()
             {
-                FixedScalar startTime = StartTime == Source.StartTime.ToSingle() ? Source.StartTime : FixedScalar.FromDouble(StartTime);
-                FixedScalar endTime = EndTime == Source.EndTime.ToSingle() ? Source.EndTime : FixedScalar.FromDouble(EndTime);
-                FixedScalar easeIn = m_BlendIn == m_InitialBlendIn ? Source.SelfEaseInTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendIn * m_Owner.FrameRate)), m_Owner.FrameRate);
-                FixedScalar easeOut = m_BlendOut == m_InitialBlendOut ? Source.SelfEaseOutTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendOut * m_Owner.FrameRate)), m_Owner.FrameRate);
+                FixedScalar startTime = StartTime == Source.StartTime.ToSingle() ? Source.StartTime : m_Owner.Session.SnapTime(FixedScalar.FromDouble(StartTime), Source);
+                FixedScalar endTime = EndTime == Source.EndTime.ToSingle() ? Source.EndTime : m_Owner.Session.SnapTime(FixedScalar.FromDouble(EndTime), Source);
+                FixedScalar easeIn = m_BlendIn == m_InitialBlendIn ? Source.SelfEaseInTime : m_Owner.Session.SnapTime(FixedScalar.FromDouble(BlendIn), Source, true);
+                FixedScalar easeOut = m_BlendOut == m_InitialBlendOut ? Source.SelfEaseOutTime : m_Owner.Session.SnapTime(FixedScalar.FromDouble(BlendOut), Source, true);
                 if (Source.StartTime != startTime || Source.EndTime != endTime ||
                     Source.SelfEaseInTime != easeIn || Source.SelfEaseOutTime != easeOut ||
                     (CanClipIn && Source.ClipInTime != m_ClipInTime))
@@ -1459,14 +1515,7 @@ namespace BTSMTL.Timeline.Editor
 
             float SnapTime(float value)
             {
-                if (Source.IsTickQuantized())
-                {
-                    int tickStep = Mathf.Max(1, Mathf.RoundToInt((float)m_Owner.FrameRate / Mathf.Max(1, m_Owner.TickRate)));
-                    int frame = Mathf.Max(0, Mathf.RoundToInt(value * m_Owner.FrameRate));
-                    frame = frame - frame % tickStep;
-                    return frame / (float)m_Owner.FrameRate;
-                }
-                return Mathf.Max(0f, value);
+                return m_Owner.Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, value)), Source).ToSingle();
             }
         }
 

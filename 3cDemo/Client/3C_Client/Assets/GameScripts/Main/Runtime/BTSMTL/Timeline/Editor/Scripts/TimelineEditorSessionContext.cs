@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using ThirdPersonSimulation;
+using ThirdPersonSimulation.Fixed;
+using ThirdPersonCharacter.Pipeline;
 using UnityEngine;
 
 namespace BTSMTL.Timeline.Editor
@@ -174,8 +176,7 @@ namespace BTSMTL.Timeline.Editor
             string ownershipLabel,
             ITimelineEditorRuntimeDebugBinding runtimeDebugBinding,
             TimelineContractCatalog contractCatalog,
-            int previewFrameRate = TimelineUtility.FrameRate,
-            int tickRate = TimelineUtility.FrameRate)
+            int previewFrameRate = TimelineUtility.FrameRate)
         {
             Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
             SerializedOwner = serializedOwner ? serializedOwner : throw new ArgumentNullException(nameof(serializedOwner));
@@ -188,9 +189,6 @@ namespace BTSMTL.Timeline.Editor
             if (previewFrameRate <= 0)
                 throw new ArgumentOutOfRangeException(nameof(previewFrameRate));
             PreviewFrameRate = previewFrameRate;
-            if (tickRate <= 0)
-                throw new ArgumentOutOfRangeException(nameof(tickRate));
-            TickRate = tickRate;
         }
 
         public TimelineData Timeline { get; }
@@ -200,7 +198,13 @@ namespace BTSMTL.Timeline.Editor
         public ITimelineEditorRuntimeDebugBinding RuntimeDebugBinding { get; }
         public TimelineContractCatalog ContractCatalog { get; }
         public int PreviewFrameRate { get; }
-        public int TickRate { get; }
+    }
+
+    public enum TimelineAuthoringSnapMode : byte
+    {
+        None,
+        LogicTick,
+        SourceFrame
     }
 
     public sealed class TimelineEditorSessionContext
@@ -222,7 +226,69 @@ namespace BTSMTL.Timeline.Editor
         public TimelineEditorSelection Selection => m_Selection;
         public bool IsReadOnly => m_IsReadOnly != null && m_IsReadOnly();
         public int FrameRate => m_Request.PreviewFrameRate;
-        public int TickRate => m_Request.TickRate;
+        public CharacterPipelineDefinition GridPipeline { get; private set; }
+        public TimelineAuthoringSnapMode SnapMode { get; private set; }
+        public int TickRate => GridPipeline ? GridPipeline.SimulationTickRate : 0;
+
+        public void ConfigureGrid(CharacterPipelineDefinition pipeline, TimelineAuthoringSnapMode mode)
+        {
+            if (mode == TimelineAuthoringSnapMode.LogicTick && !pipeline)
+                throw new InvalidOperationException("逻辑 tick 吸附需要明确选择参考 Pipeline。");
+            GridPipeline = pipeline;
+            SnapMode = mode;
+        }
+
+        public FixedScalar SnapTime(FixedScalar time, Clip clip = null, bool duration = false)
+        {
+            if (SnapMode == TimelineAuthoringSnapMode.None)
+                return time;
+            if (SnapMode == TimelineAuthoringSnapMode.LogicTick)
+            {
+                if (!GridPipeline)
+                    throw new InvalidOperationException("参考 Pipeline 已失效，无法进行逻辑 tick 吸附。");
+                return TimelineTimeGrid.Position(TimelineTimeGrid.NearestIndex(time, TickRate), TickRate);
+            }
+            if (clip is not AnimationClip animation || !animation.Clip || animation.Clip.frameRate <= 0f)
+                throw new InvalidOperationException("素材帧吸附需要带有效动画素材的 Clip。");
+            decimal rate = (decimal)animation.Clip.frameRate;
+            decimal offset = duration ? 0m : (decimal)clip.StartTime.Raw - clip.ClipInTime.Raw;
+            decimal sourceRaw = time.Raw - offset;
+            decimal frame = decimal.Round(sourceRaw * rate / FixedScalar.OneRaw, 0, MidpointRounding.ToEven);
+            long raw = checked((long)decimal.Round(frame * FixedScalar.OneRaw / rate + offset,
+                0, MidpointRounding.ToEven));
+            return FixedScalar.Max(FixedScalar.Zero, FixedScalar.FromRaw(raw));
+        }
+        internal void RealignSelection()
+        {
+            if (SnapMode == TimelineAuthoringSnapMode.None)
+                throw new InvalidOperationException("请先选择吸附网格。");
+            if (Selection.Clip != null)
+                AlignClip(Selection.Clip);
+            else if (Selection.Marker != null)
+                Selection.Marker.Configure(SnapTime(Selection.Marker.Time), Selection.Marker.Graph);
+            else if (Selection.Section != null)
+                Timeline.ConfigureSection(Selection.Section, Selection.Section.Name, SnapTime(Selection.Section.Time));
+            else if (Selection.Track != null)
+            {
+                foreach (Clip clip in Selection.Track.Clips)
+                    AlignClip(clip);
+                foreach (TimelineMarker marker in Selection.Track.Markers)
+                    marker.Configure(SnapTime(marker.Time), marker.Graph);
+            }
+            else
+                throw new InvalidOperationException("请选中要对齐的 Clip、Marker、Section 或轨道。");
+        }
+
+        void AlignClip(Clip clip)
+        {
+            FixedScalar start = SnapTime(clip.StartTime, clip);
+            FixedScalar end = SnapTime(clip.EndTime, clip);
+            if (end <= start)
+                throw new InvalidOperationException($"Clip '{clip.AuthoringId}' 对齐后没有正时长，请选择更细网格。");
+            clip.ConfigureTimeRange(start, end);
+            clip.Track.UpdateMix();
+        }
+
         public event Action<TimelineEditorSelection> SelectionChanged;
 
         internal void SetSelection(object target)

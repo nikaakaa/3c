@@ -9,6 +9,9 @@ namespace Slate
     {
         string DisplayName { get; }
         int FrameRate { get; }
+        float SnapTime(float time);
+        string SnapLabel { get; }
+        void ShowSnapSettings(Rect rect);
         float Length { get; }
         int CurrentFrame { get; set; }
         float ViewTimeMin { get; set; }

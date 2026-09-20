@@ -125,7 +125,7 @@ namespace ThirdPersonSimulation
                 for (int i = 0; i < m_Evaluations.Length; i++)
                 {
                     m_Evaluations[i] = null;
-                    m_Requests[i] = null;
+                    m_Requests[i] = default;
                     m_Ingress[i].Clear();
                 }
             }

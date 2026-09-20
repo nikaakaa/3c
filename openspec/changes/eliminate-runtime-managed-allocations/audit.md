@@ -1657,3 +1657,12 @@
 - Fixed／Float32 类型统一改为 readonly struct，构造校验和全部只读字段保持。WorldSolveBatchResult 不再检查元素 null，而由原 numeric profile、ActorId、RequestId、Tick、SolverId 和 final body 对齐校验拒绝未填充的 default 元素。
 - 删除 KCC／DotRecast／UnityCharacterController 每 Actor 每 simulation step 的一个 managed 结果对象；结果仍以内联结构体数组随 Batch 持有，WorldBodyState 等引用字段寿命不变。结构体复制成本增加，但字段规模固定且消费均为局部按值读取。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority、ThirdPersonSimulation.Unity 编译零警告零错误；DotRecast portable 编译通过并保留依赖包两条既有 nullable-context 警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。
+
+## 2026-09-21 CharacterWorldSolveRequest 值请求
+
+对应 tasks.md 的 5.59。
+
+- 全运行源码检索确认 CharacterWorldSolveRequest 由 Fixed／Float32 Evaluate 每 Actor 构造并写入定长 workspace 数组，Batch 独立复制后由 KCC／DotRecast／Unity solver 及 Finalize 按值读取；没有继承、引用身份比较或业务 null 分支。
+- 两域类型统一改为 readonly struct。WorldSolveBatchRequest 不再检查元素 null，而由原 numeric profile、ActorId、RequestId、Tick、before body 与 roster 对齐校验拒绝 default 元素；EvaluatePass finally 改为写 default，继续释放 Motion／BodyMotionPlan 等引用字段。
+- KCC ActorSolveCandidate 原 null 防御同步删除，候选仍携带完整值请求。每 Actor 每 simulation step 删除一个 managed 请求对象；代价是固定字段结构体在候选和局部之间按值复制，不产生 managed 分配或装箱。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority、ThirdPersonSimulation.Unity 编译零警告零错误；DotRecast portable 编译通过并保留依赖包两条既有 nullable-context 警告。首次 KCC 编译暴露旧 null 合并，改为值赋值后通过。未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。

@@ -266,6 +266,8 @@
 
 - [x] 5.58 两数值域 CharacterWorldSolveResult 改为只读值结果，删除 KCC／DotRecast／UnityCharacterController 每 Actor 每 step 的结果对象分配；数组、Batch 校验和公开读取契约保持
 
+- [x] 5.59 两数值域 CharacterWorldSolveRequest 改为只读值请求，Evaluate workspace 以 default 清空引用字段，删除每 Actor 每 step 的请求对象分配；Batch 身份校验和三套 solver 消费契约保持
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

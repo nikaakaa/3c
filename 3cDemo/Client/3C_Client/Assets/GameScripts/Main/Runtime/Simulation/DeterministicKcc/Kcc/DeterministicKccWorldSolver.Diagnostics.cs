@@ -319,7 +319,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
                 DeterministicKccBodyState previousState,
                 long elapsedStopwatchTicks)
             {
-                Request = request ?? throw new ArgumentNullException(nameof(request));
+                Request = request;
                 Requested = requested;
                 Position = position;
                 Ground = ground;

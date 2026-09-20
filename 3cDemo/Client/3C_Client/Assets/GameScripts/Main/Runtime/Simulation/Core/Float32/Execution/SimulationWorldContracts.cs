@@ -57,7 +57,7 @@ namespace ThirdPersonSimulation
         public string GameplayResultOwnerIdentity { get; }
     }
 
-    public sealed class CharacterWorldSolveRequest
+    public readonly struct CharacterWorldSolveRequest
     {
         public CharacterWorldSolveRequest(
             SimulationNumericProfile numericProfile,
@@ -283,7 +283,7 @@ namespace ThirdPersonSimulation
             WorldCapability required = WorldCapability.None;
             for (int i = 0; i < copied.Length; i++)
             {
-                CharacterWorldSolveRequest request = copied[i] ?? throw new ArgumentException("World batch contains a null request.", nameof(requests));
+                CharacterWorldSolveRequest request = copied[i];
                 if (request.NumericProfile != NumericProfile || request.Tick != tick || request.ActorId != beforeWorldState.Bodies[i].ActorId || !BodyEquals(request.BeforeBody, beforeWorldState.Bodies[i]))
                     throw new ArgumentException("World batch request order or before-body state does not match WorldSimulationState.", nameof(requests));
                 if (i > 0 && copied[i - 1].ActorId == request.ActorId)

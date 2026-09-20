@@ -903,3 +903,11 @@
 - 已检索到生成 selection frame 的循环及实际 selection 构造入口，不是初始化目录。保留 Actor／Tick／Body 关联和来源时序检查、原 ArgumentException，未改采样算法、精确／插值／外推选择规则或历史持有关系。
 - 再次核对 SimulationGraphContracts.cs 仍有并行未提交修改，scope 校验未介入。实际目标文件此前无其它修改，编辑前进程查询完成且无 csc／bee。ServerAuthoritative portable 连带 Core／Float32 零警告零错误，构建服务关闭成功，diff 空白检查通过。
 - 未新增测试、未操作共享 Unity、未运行网络采样对比或 Player 分配采样；selection frame 数组及历史存储仍分配，不能将上下游两处校验清理等同整条预测链无分配。
+## 2026-09-20 预测事件日志结果校验统一
+
+对应 tasks.md 的 2.39。
+
+- ServerAuthoritativeJournalEntry 新增内部 IsValidDisposition，明确匹配 PredictedCommitted／AuthorityConfirmed／SuppressedDuplicate／PredictedRejected。构造与 PredictionStateCodec.ReadJournal 共用该规则，删除两处 Enum.IsDefined，未知值和零继续拒绝。
+- 运行调用包括预测日志确认时生成更新条目、PredictionState 发布条目及历史日志恢复；不是初始化专用校验。解码保留身份／Tick／sequence 和重复 eventId 检查，并继续抛原 InvalidDataException；直接构造保留原 ArgumentException，检查次序不变。
+- 没有删除构造校验或改变日志确认／拒绝／去重行为，不改 checkpoint、历史保留或恢复的所有权。条目是 struct，本轮仅消除枚举查询装箱，字典与更新集合仍可能分配。
+- 两目标文件此前无其它未提交修改，编辑前无 csc／bee。ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做事件运行或 Player 分配采样。

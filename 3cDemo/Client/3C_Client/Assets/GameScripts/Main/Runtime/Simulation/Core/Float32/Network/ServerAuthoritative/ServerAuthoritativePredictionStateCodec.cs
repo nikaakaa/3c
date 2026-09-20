@@ -199,7 +199,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 ulong sequence = reader.ReadUInt64();
                 var disposition = (ServerAuthoritativeEventDisposition)reader.ReadByte();
                 if (!eventId.IsValid || !tick.IsValid || sequence == 0 ||
-                    !Enum.IsDefined(typeof(ServerAuthoritativeEventDisposition), disposition) ||
+                    !ServerAuthoritativeJournalEntry.IsValidDisposition(disposition) ||
                     entries.ContainsKey(eventId))
                 {
                     throw new InvalidDataException("Prediction disposition journal payload is invalid.");

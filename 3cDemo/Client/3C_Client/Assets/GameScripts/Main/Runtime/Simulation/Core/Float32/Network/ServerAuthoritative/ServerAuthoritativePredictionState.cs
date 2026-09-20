@@ -21,7 +21,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             ServerAuthoritativeEventDisposition disposition)
         {
             if (!eventId.IsValid || !tick.IsValid || sequence == 0 ||
-                !Enum.IsDefined(typeof(ServerAuthoritativeEventDisposition), disposition))
+                !IsValidDisposition(disposition))
             {
                 throw new ArgumentException("Prediction disposition journal entry is invalid.");
             }
@@ -35,6 +35,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         public SimulationTick Tick { get; }
         public ulong Sequence { get; }
         public ServerAuthoritativeEventDisposition Disposition { get; }
+        internal static bool IsValidDisposition(ServerAuthoritativeEventDisposition disposition) =>
+            disposition is ServerAuthoritativeEventDisposition.PredictedCommitted or
+                ServerAuthoritativeEventDisposition.AuthorityConfirmed or
+                ServerAuthoritativeEventDisposition.SuppressedDuplicate or
+                ServerAuthoritativeEventDisposition.PredictedRejected;
     }
 
     public sealed class ServerAuthoritativePredictionHistoryRecord

@@ -5,27 +5,82 @@ namespace ThirdPersonCamera
 {
     internal sealed class CameraEffectRuntimeStateStore
     {
-        readonly List<CameraEffectRuntimeState> m_Active =
-            new List<CameraEffectRuntimeState>();
+        readonly List<CameraEffectRuntimeState> m_Active;
+        readonly CameraEffectRuntimeState[] m_Pool;
+        readonly CameraEffectRuntimeState.State[] m_FrameBaseline;
+        int m_BaselineCount;
+
+        public CameraEffectRuntimeStateStore(int capacity)
+        {
+            m_Active = new List<CameraEffectRuntimeState>(capacity);
+            m_Pool = new CameraEffectRuntimeState[capacity];
+            m_FrameBaseline = new CameraEffectRuntimeState.State[capacity];
+            for (int index = 0; index < capacity; index++)
+                m_Pool[index] = new CameraEffectRuntimeState(default, string.Empty);
+        }
 
         public IReadOnlyList<CameraEffectRuntimeState> Active => m_Active;
 
-        public void Reset() => m_Active.Clear();
+        public void BeginFrame()
+        {
+            m_BaselineCount = m_Active.Count;
+            for (int index = 0; index < m_BaselineCount; index++)
+                m_FrameBaseline[index] = m_Active[index].CaptureState();
+        }
+
+        public void CommitFrame()
+        {
+            Array.Clear(m_FrameBaseline, 0, m_BaselineCount);
+            m_BaselineCount = 0;
+        }
+
+        public void DiscardFrame()
+        {
+            Reset();
+            for (int index = 0; index < m_BaselineCount; index++)
+            {
+                m_Pool[index].RestoreState(in m_FrameBaseline[index]);
+                m_Active.Add(m_Pool[index]);
+            }
+            CommitFrame();
+        }
+
+        public void Reset()
+        {
+            var empty = default(CameraEffectRuntimeState.State);
+            for (int index = 0; index < m_Active.Count; index++)
+                m_Active[index].RestoreState(in empty);
+            m_Active.Clear();
+        }
 
         public CameraEffectRuntimeState Add(CameraEffectRequest request, string tag = null)
         {
-            var state = new CameraEffectRuntimeState(request, tag);
+            if (m_Active.Count == m_Pool.Length)
+                throw new InvalidOperationException("Camera active effects and retiring tails exceed RequestCapacity.");
+            CameraEffectRuntimeState state = m_Pool[m_Active.Count];
+            var initial = new CameraEffectRuntimeState.State { Request = request, Tag = tag ?? string.Empty };
+            state.RestoreState(in initial);
             m_Active.Add(state);
             return state;
         }
 
-        public void RemoveAt(int index) => m_Active.RemoveAt(index);
+        public void RemoveAt(int index)
+        {
+            CameraEffectRuntimeState released = m_Pool[index];
+            int last = m_Active.Count - 1;
+            for (int slot = index; slot < last; slot++)
+                m_Pool[slot] = m_Pool[slot + 1];
+            m_Pool[last] = released;
+            m_Active.RemoveAt(index);
+            var empty = default(CameraEffectRuntimeState.State);
+            released.RestoreState(in empty);
+        }
 
         public void ClearScope(CameraPresentationScopeKey scope)
         {
             for (int i = m_Active.Count - 1; i >= 0; i--)
                 if (m_Active[i].Request.Scope.Equals(scope))
-                    m_Active.RemoveAt(i);
+                    RemoveAt(i);
         }
 
         public void ClearOverrideTracks(bool clearTracks, IReadOnlyList<string> tags)
@@ -38,7 +93,7 @@ namespace ThirdPersonCamera
                 if (state.Request.Kind != CameraEffectKind.Override)
                     continue;
                 if (clearTracks || Contains(tags, state.Tag))
-                    m_Active.RemoveAt(i);
+                    RemoveAt(i);
             }
         }
 

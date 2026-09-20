@@ -11,6 +11,30 @@ namespace ThirdPersonCamera
         readonly CameraWorldBasicHistory m_WorldBasicHistory;
         bool m_Initialized;
 
+        internal struct State
+        {
+            internal CharacterCameraFramePlanner.State Planner;
+            internal CharacterCameraSequenceTransition.State Transition;
+            internal CameraWorldBasicHistory.State History;
+            internal bool Initialized;
+        }
+
+        internal State CaptureState() => new State
+        {
+            Planner = m_FramePlanner.CaptureState(),
+            Transition = m_Transition.CaptureState(),
+            History = m_WorldBasicHistory.CaptureState(),
+            Initialized = m_Initialized
+        };
+
+        internal void RestoreState(in State state)
+        {
+            m_FramePlanner.RestoreState(in state.Planner);
+            m_Transition.RestoreState(in state.Transition);
+            m_WorldBasicHistory.RestoreState(in state.History);
+            m_Initialized = state.Initialized;
+        }
+
         public CharacterCameraSequenceEvaluator(CharacterCameraProjectionPayload projection)
         {
             if (projection == null)
@@ -98,6 +122,33 @@ namespace ThirdPersonCamera
         float m_RadiusVelocity;
         Vector2 m_OffsetVelocity;
         bool m_Initialized;
+
+        internal struct State
+        {
+            internal CameraWorldBasicData Current;
+            internal Vector3 PivotVelocity;
+            internal float RadiusVelocity;
+            internal Vector2 OffsetVelocity;
+            internal bool Initialized;
+        }
+
+        internal State CaptureState() => new State
+        {
+            Current = m_Current,
+            PivotVelocity = m_PivotVelocity,
+            RadiusVelocity = m_RadiusVelocity,
+            OffsetVelocity = m_OffsetVelocity,
+            Initialized = m_Initialized
+        };
+
+        internal void RestoreState(in State state)
+        {
+            m_Current = state.Current;
+            m_PivotVelocity = state.PivotVelocity;
+            m_RadiusVelocity = state.RadiusVelocity;
+            m_OffsetVelocity = state.OffsetVelocity;
+            m_Initialized = state.Initialized;
+        }
 
         public CameraWorldBasicHistory(float smoothTime)
         {

@@ -7,23 +7,36 @@ namespace ThirdPersonCamera
     public sealed class CameraEffectEvaluator
     {
         readonly CharacterCameraProjectionPayload m_Projection;
-        readonly CameraEffectRuntimeStateStore m_States =
-            new CameraEffectRuntimeStateStore();
+        readonly CameraEffectRuntimeStateStore m_States;
         readonly ICameraEffectOwner[] m_Owners;
-        readonly List<CameraEffectContribution> m_Contributions =
-            new List<CameraEffectContribution>();
-        readonly List<PendingRetirement> m_PendingRetirements =
-            new List<PendingRetirement>();
-        readonly List<CameraEffectRuntimeState> m_VisibleStates =
-            new List<CameraEffectRuntimeState>();
-        readonly HashSet<CameraEffectEventKey> m_CompletedEvents =
-            new HashSet<CameraEffectEventKey>();
+        readonly List<CameraEffectContribution> m_Contributions;
+        readonly List<PendingRetirement> m_PendingRetirements;
+        readonly List<CameraEffectRuntimeState> m_VisibleStates;
+        readonly HashSet<CameraEffectEventKey> m_CompletedEvents;
+        readonly List<CameraEffectContribution> m_ContributionBaseline;
+        readonly List<PendingRetirement> m_RetirementBaseline;
+        readonly HashSet<CameraEffectEventKey> m_CompletedBaseline;
+        readonly List<CameraEffectEventKey> m_CompletedToRemove;
+        readonly int m_Capacity;
+        bool m_FrameOpen;
 
-        public CameraEffectEvaluator(CharacterCameraProjectionPayload projection)
+        public CameraEffectEvaluator(CharacterCameraProjectionPayload projection, int capacity)
         {
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
+            if (capacity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
             m_Projection = projection;
+            m_Capacity = capacity;
+            m_States = new CameraEffectRuntimeStateStore(capacity);
+            m_Contributions = new List<CameraEffectContribution>(capacity);
+            m_PendingRetirements = new List<PendingRetirement>(capacity);
+            m_VisibleStates = new List<CameraEffectRuntimeState>(capacity);
+            m_CompletedEvents = new HashSet<CameraEffectEventKey>(capacity);
+            m_ContributionBaseline = new List<CameraEffectContribution>(capacity);
+            m_RetirementBaseline = new List<PendingRetirement>(capacity);
+            m_CompletedBaseline = new HashSet<CameraEffectEventKey>(capacity);
+            m_CompletedToRemove = new List<CameraEffectEventKey>(capacity);
             m_Owners = new ICameraEffectOwner[]
             {
                 new CameraOverrideEffectEvaluator(projection),
@@ -36,8 +49,54 @@ namespace ThirdPersonCamera
 
         public IReadOnlyList<CameraEffectContribution> Contributions => m_Contributions;
 
+        public void BeginFrame()
+        {
+            if (m_FrameOpen)
+                throw new InvalidOperationException("Camera effect frame is already open.");
+            m_States.BeginFrame();
+            m_ContributionBaseline.AddRange(m_Contributions);
+            m_RetirementBaseline.AddRange(m_PendingRetirements);
+            foreach (CameraEffectEventKey key in m_CompletedEvents)
+                m_CompletedBaseline.Add(key);
+            m_FrameOpen = true;
+        }
+
+        public void CommitFrame()
+        {
+            if (!m_FrameOpen)
+                throw new InvalidOperationException("Camera effect frame is not open.");
+            m_States.CommitFrame();
+            ClearBaseline();
+        }
+
+        public void DiscardFrame()
+        {
+            if (!m_FrameOpen)
+                return;
+            m_States.DiscardFrame();
+            m_Contributions.Clear();
+            m_Contributions.AddRange(m_ContributionBaseline);
+            m_PendingRetirements.Clear();
+            m_PendingRetirements.AddRange(m_RetirementBaseline);
+            m_CompletedEvents.Clear();
+            foreach (CameraEffectEventKey key in m_CompletedBaseline)
+                m_CompletedEvents.Add(key);
+            m_VisibleStates.Clear();
+            m_CompletedToRemove.Clear();
+            ClearBaseline();
+        }
+
+        void ClearBaseline()
+        {
+            m_ContributionBaseline.Clear();
+            m_RetirementBaseline.Clear();
+            m_CompletedBaseline.Clear();
+            m_FrameOpen = false;
+        }
+
         public void Reset()
         {
+            DiscardFrame();
             m_States.Reset();
             m_Contributions.Clear();
             m_PendingRetirements.Clear();
@@ -72,6 +131,8 @@ namespace ThirdPersonCamera
             int cycle,
             CameraPresentationStopReason reason)
         {
+            if (m_PendingRetirements.Count == m_Capacity)
+                throw new InvalidOperationException("Camera retirement count exceeds RequestCapacity.");
             m_States.Retire(
                 eventId,
                 generation,
@@ -94,13 +155,26 @@ namespace ThirdPersonCamera
                 reason));
         }
 
-        public CameraFramePlan Resolve(
+        public void PrepareRequests(IReadOnlyList<CameraEffectRequest> newRequests)
+        {
+            if (newRequests != null && newRequests.Count > m_Capacity)
+                throw new InvalidOperationException("Camera effect requests exceed RequestCapacity.");
+            m_CompletedToRemove.Clear();
+            foreach (CameraEffectEventKey key in m_CompletedEvents)
+                if (!ContainsEvent(newRequests, key))
+                    m_CompletedToRemove.Add(key);
+            for (int index = 0; index < m_CompletedToRemove.Count; index++)
+                m_CompletedEvents.Remove(m_CompletedToRemove[index]);
+            m_CompletedToRemove.Clear();
+            AddRequests(newRequests);
+            ApplyPendingRetirements();
+        }
+
+        public CameraFramePlan EvaluatePrepared(
             CameraFramePlan basePlan,
             IReadOnlyList<CameraEffectRequest> newRequests,
             in CameraFrameInput input)
         {
-            AddRequests(newRequests);
-            ApplyPendingRetirements();
             m_VisibleStates.Clear();
             for (int i = 0; i < m_States.Active.Count; i++)
                 m_VisibleStates.Add(m_States.Active[i]);
@@ -130,7 +204,7 @@ namespace ThirdPersonCamera
                     active.Request.EventId,
                     active.RetireReason));
             }
-            Advance(in input);
+            Advance(in input, newRequests);
             return plan;
         }
 
@@ -197,7 +271,17 @@ namespace ThirdPersonCamera
                 : string.Empty;
         }
 
-        void Advance(in CameraFrameInput input)
+        static bool ContainsEvent(IReadOnlyList<CameraEffectRequest> requests, CameraEffectEventKey key)
+        {
+            if (requests == null)
+                return false;
+            for (int index = 0; index < requests.Count; index++)
+                if (CameraEffectEventKey.From(requests[index]).Equals(key))
+                    return true;
+            return false;
+        }
+
+        void Advance(in CameraFrameInput input, IReadOnlyList<CameraEffectRequest> requests)
         {
             for (int i = m_States.Active.Count - 1; i >= 0; i--)
             {
@@ -213,7 +297,9 @@ namespace ThirdPersonCamera
                 }
                 else if (owner.IsExpired(active))
                 {
-                    m_CompletedEvents.Add(CameraEffectEventKey.From(active.Request));
+                    CameraEffectEventKey key = CameraEffectEventKey.From(active.Request);
+                    if (ContainsEvent(requests, key))
+                        m_CompletedEvents.Add(key);
                     m_States.RemoveAt(i);
                 }
             }

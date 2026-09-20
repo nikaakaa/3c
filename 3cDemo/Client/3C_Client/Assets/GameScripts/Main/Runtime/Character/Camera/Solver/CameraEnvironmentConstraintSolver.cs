@@ -11,6 +11,27 @@ namespace ThirdPersonCamera
         Vector3 m_PositionVelocity;
         bool m_HasLocation;
 
+        internal struct State
+        {
+            internal Vector3 CurrentLocation;
+            internal Vector3 PositionVelocity;
+            internal bool HasLocation;
+        }
+
+        internal State CaptureState() => new State
+        {
+            CurrentLocation = m_CurrentLocation,
+            PositionVelocity = m_PositionVelocity,
+            HasLocation = m_HasLocation
+        };
+
+        internal void RestoreState(in State state)
+        {
+            m_CurrentLocation = state.CurrentLocation;
+            m_PositionVelocity = state.PositionVelocity;
+            m_HasLocation = state.HasLocation;
+        }
+
         public CameraEnvironmentConstraintSolver(
             CharacterCameraProjectionPayload projection,
             ICameraEnvironmentQuery query)

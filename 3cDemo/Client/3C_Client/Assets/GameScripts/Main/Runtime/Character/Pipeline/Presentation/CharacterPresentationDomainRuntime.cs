@@ -440,15 +440,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return;
                 }
                 PublishLocomotionDiagnostics();
-                m_Camera?.ValidateFrame();
+                m_Camera?.PrepareRequests();
                 if (!RunPoseFrame(in bodyFrame, in factFrame, update.Frame, context))
                     return;
+                m_Camera?.PrepareFrame(bodyFrame, in context);
+                m_Camera?.CommitFrame();
                 m_TimelineHost?.CommitPresentationFrame(context.RenderFrame, m_PresentationClockCoordinator);
                 m_TimelineBridge?.CommitFrame();
                 m_PresentationClockCoordinator?.CommitSamplingFrame();
-                m_Camera?.CommitFrame();
                 m_TimelinePresentationBridge?.CommitFrame();
-                m_Camera?.Present(bodyFrame, context);
             }
             finally
             {

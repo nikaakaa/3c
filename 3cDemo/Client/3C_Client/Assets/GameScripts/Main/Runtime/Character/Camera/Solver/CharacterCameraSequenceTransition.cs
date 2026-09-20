@@ -25,6 +25,66 @@ namespace ThirdPersonCamera
         CameraPresentationStopReason m_RetireReason;
         bool m_Retiring;
 
+        internal struct State
+        {
+            internal CameraFramePlan LastPlan;
+            internal CameraFramePlan BlendFrom;
+            internal string CurrentSequenceId;
+            internal string CurrentSourceId;
+            internal ulong CurrentGeneration;
+            internal ulong CurrentSourceActionInstanceId;
+            internal int CurrentCycle;
+            internal bool CurrentIsDefault;
+            internal float TransitionElapsed;
+            internal float TransitionDuration;
+            internal CameraFramePlan RetireFrom;
+            internal float RetireElapsed;
+            internal float RetireDuration;
+            internal CameraTimeDomain RetireTimeDomain;
+            internal CameraPresentationStopReason RetireReason;
+            internal bool Retiring;
+        }
+
+        internal State CaptureState() => new State
+        {
+            LastPlan = m_LastPlan,
+            BlendFrom = m_BlendFrom,
+            CurrentSequenceId = m_CurrentSequenceId,
+            CurrentSourceId = m_CurrentSourceId,
+            CurrentGeneration = m_CurrentGeneration,
+            CurrentSourceActionInstanceId = m_CurrentSourceActionInstanceId,
+            CurrentCycle = m_CurrentCycle,
+            CurrentIsDefault = m_CurrentIsDefault,
+            TransitionElapsed = m_TransitionElapsed,
+            TransitionDuration = m_TransitionDuration,
+            RetireFrom = m_RetireFrom,
+            RetireElapsed = m_RetireElapsed,
+            RetireDuration = m_RetireDuration,
+            RetireTimeDomain = m_RetireTimeDomain,
+            RetireReason = m_RetireReason,
+            Retiring = m_Retiring
+        };
+
+        internal void RestoreState(in State state)
+        {
+            m_LastPlan = state.LastPlan;
+            m_BlendFrom = state.BlendFrom;
+            m_CurrentSequenceId = state.CurrentSequenceId;
+            m_CurrentSourceId = state.CurrentSourceId;
+            m_CurrentGeneration = state.CurrentGeneration;
+            m_CurrentSourceActionInstanceId = state.CurrentSourceActionInstanceId;
+            m_CurrentCycle = state.CurrentCycle;
+            m_CurrentIsDefault = state.CurrentIsDefault;
+            m_TransitionElapsed = state.TransitionElapsed;
+            m_TransitionDuration = state.TransitionDuration;
+            m_RetireFrom = state.RetireFrom;
+            m_RetireElapsed = state.RetireElapsed;
+            m_RetireDuration = state.RetireDuration;
+            m_RetireTimeDomain = state.RetireTimeDomain;
+            m_RetireReason = state.RetireReason;
+            m_Retiring = state.Retiring;
+        }
+
         public CharacterCameraSequenceTransition(
             CharacterCameraProjectionPayload projection,
             CharacterCameraFramePlanner planner)

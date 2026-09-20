@@ -453,3 +453,12 @@
 - Camera SequenceInterruptPolicy／EffectKind 从 int 到 byte 枚举改为明确的合法值映射，删除 Enum.IsDefined 装箱与底层类型不匹配风险；Effect 预检不再通过 byte 强转把越界值截断成合法类型。
 - 本批只关闭已知配置／资源错误晚于 Pose 提交的边界。Camera 求值器的可变状态、最终物理 Apply 与 Pose 的跨领域回滚仍未完成，不能据此宣称完整帧事务。下一步沿原求值 owner 的候选／丢弃边界继续实现。
 - Unity编译和最终域重载完成（1789919348469），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试。
+
+## Camera 求值状态随候选帧接受与丢弃
+- 对应6.3／7.3：沿原 Camera owner 增加值类型状态备份，覆盖 FramePlanner 朝向、SequenceTransition 全部过渡／退休状态、WorldBasic 平滑历史和环境碰撞平滑历史。保留唯一求值算法，不实例化第二份相机运行时；Discard 恢复本帧开始状态。
+- CameraEffectEvaluator 原状态池改为按 RequestCapacity 预分配对象与值类型备份。BeginFrame 保存请求、计时、退休、完成记账及贡献；Commit 清除备份，Discard 恢复。活动效果与尚在收尾的效果共同计入容量，超限明确失败；删除 Add 时 new CameraEffectRuntimeState。完成记账只保留仍在正式请求集合中的事件，避免已退休来源永久占用。
+- 原表现链分开 PrepareRequests 与 PrepareFrame：Pose 前先校验资源、转换候选请求、处理退休并检查效果容量；Pose 写入后读取同帧骨骼目标并求 Camera 候选计划。相机请求准备失败或 Pose 拒绝时，原 finally 恢复所有 Camera 内部状态，不丢掉待处理的 reset reason。
+- Camera 内部计划 Apply 成功后才接受 Camera 状态，随后接受 Timeline 与桥接记账；删除原“先接受 Timeline、最后才求值 Camera”的顺序。Camera 目标依赖本帧骨骼，未把它错误前移为读取上一帧 Transform。
+- 仍未闭合跨领域物理事务：Pose 当前仍在 Camera 实际求值前提交；Camera Apply 部分写入失败，以及 Camera 接受后 Timeline 提交失败，需要接入原 Native Final Pose 发布边界共同处理。本批只完成 Camera 内部候选状态，不宣称完整外部回滚。首次身份分配、其他逻辑求值分配及多来源控制仍未完成。
+- 编译途中另一份正在修改的 CharacterPoseNativeBlendStackHandler.cs 出现 CS8156；该文件随后由原有改动修正为局部变量传 in，本任务未修改它，已发起当前代码的重新编译。
+- 当前代码重新编译成功，最终域重载完成（1789920360427），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试，未做异常注入或端到端验收。

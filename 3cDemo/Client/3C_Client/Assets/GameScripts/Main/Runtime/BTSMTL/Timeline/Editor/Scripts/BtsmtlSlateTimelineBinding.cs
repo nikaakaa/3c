@@ -1056,7 +1056,9 @@ namespace BTSMTL.Timeline.Editor
                 return;
             var descriptors = new List<TimelineCurveChannelDescriptor>();
             TimelineCurveChannelCatalog.CollectForTrack(first.Track, descriptors);
-            float normalizedSplit = Mathf.Clamp(split, 0.0001f, 0.9999f);
+            if (split <= 0f || split >= 1f)
+                throw new InvalidOperationException("切分位置超出素材归一化曲线可表达的内部范围。");
+            float normalizedSplit = split;
             for (int index = 0; index < descriptors.Count; index++)
             {
                 TimelineCurveChannelDescriptor descriptor = descriptors[index];
@@ -1072,7 +1074,9 @@ namespace BTSMTL.Timeline.Editor
         {
             if (source == null)
                 return new AnimationCurve();
-            float duration = Mathf.Max(0.0001f, end - start);
+            float duration = end - start;
+            if (duration <= 0f)
+                throw new InvalidOperationException("曲线切分区间必须具有正时长。");
             var keys = new List<Keyframe>();
             Keyframe[] sourceKeys = source.keys;
             bool hasStart = false;
@@ -1080,13 +1084,13 @@ namespace BTSMTL.Timeline.Editor
             for (int index = 0; index < sourceKeys.Length; index++)
             {
                 Keyframe key = sourceKeys[index];
-                if (key.time < start - 0.0001f || key.time > end + 0.0001f)
+                if (key.time < start || key.time > end)
                     continue;
                 key.time = Mathf.Clamp01((key.time - start) / duration);
                 key.inTangent *= duration;
                 key.outTangent *= duration;
-                hasStart |= Mathf.Abs(key.time) <= 0.0001f;
-                hasEnd |= Mathf.Abs(key.time - 1f) <= 0.0001f;
+                hasStart |= key.time == 0f;
+                hasEnd |= key.time == 1f;
                 keys.Add(key);
             }
             if (!hasStart)
@@ -1516,7 +1520,7 @@ namespace BTSMTL.Timeline.Editor
                 m_Descriptor = descriptor;
                 m_Curve = ConvertCurveTime(
                     descriptor.Read(clip.Source),
-                    CurveDuration(clip.Source, descriptor, clip.Owner.FrameRate),
+                    clip.Source.DurationTime.ToSingle(),
                     false);
             }
             public string ChannelId => m_Descriptor.ChannelId.Value;
@@ -1525,7 +1529,7 @@ namespace BTSMTL.Timeline.Editor
             public AnimationCurve Curve => m_Curve;
             public int StartFrame => Mathf.RoundToInt(m_Clip.StartTime * m_Clip.Owner.FrameRate);
             public int EndFrame => Mathf.RoundToInt(m_Clip.EndTime * m_Clip.Owner.FrameRate);
-            public float Duration => Mathf.Max(1f / m_Clip.Owner.FrameRate, m_Clip.Length);
+            public float Duration => m_Clip.Length;
             public void Replace(AnimationCurve curve) => m_Curve = SnapCurve(curve);
             public void Trim(float min, float max)
             {
@@ -1552,11 +1556,11 @@ namespace BTSMTL.Timeline.Editor
 
             public float SnapTime(float time)
             {
-                int frame = Mathf.Clamp(
-                    Mathf.RoundToInt(time * m_Clip.Owner.FrameRate),
-                    0,
-                    Mathf.RoundToInt(Duration * m_Clip.Owner.FrameRate));
-                return frame / (float)m_Clip.Owner.FrameRate;
+                FixedScalar origin = m_Clip.StartTime == m_Clip.Source.StartTime.ToSingle()
+                    ? m_Clip.Source.StartTime : FixedScalar.FromDouble(m_Clip.StartTime);
+                FixedScalar localTime = FixedScalar.FromDouble(Math.Clamp((double)time, 0d, Duration));
+                FixedScalar snapped = m_Clip.Owner.Session.SnapTime(origin + localTime, m_Clip.Source);
+                return Mathf.Clamp((snapped - origin).ToSingle(), 0f, Duration);
             }
 
             AnimationCurve SnapCurve(AnimationCurve source)
@@ -1566,20 +1570,27 @@ namespace BTSMTL.Timeline.Editor
                 for (int index = 0; index < keys.Length; index++)
                 {
                     Keyframe key = keys[index];
-                    key.time = SnapTime(key.time);
+                    bool existingTime = false;
+                    for (int sourceIndex = 0; sourceIndex < m_Curve.length; sourceIndex++)
+                        if (m_Curve[sourceIndex].time == key.time)
+                        {
+                            existingTime = true;
+                            break;
+                        }
+                    if (!existingTime)
+                        key.time = SnapTime(key.time);
                     keys[index] = key;
                 }
                 result.keys = keys;
                 return result;
             }
 
-            static float CurveDuration(Clip clip, TimelineCurveChannelDescriptor descriptor, int frameRate) =>
-                Mathf.Max(1f / frameRate, clip.DurationTime.ToSingle());
-
             static AnimationCurve ConvertCurveTime(AnimationCurve source, float duration, bool toNormalized)
             {
                 AnimationCurve result = TimelineCurveAuthoring.CopyCurve(source);
-                float safeDuration = Mathf.Max(0.0001f, duration);
+                if (duration <= 0f)
+                    throw new InvalidOperationException("曲线所属 Clip 必须具有正时长。");
+                float safeDuration = duration;
                 if (toNormalized)
                     result = ClipCurveToDuration(result, safeDuration);
                 Keyframe[] keys = result.keys;
@@ -1611,7 +1622,7 @@ namespace BTSMTL.Timeline.Editor
                 for (int index = 0; index < sourceKeys.Length; index++)
                 {
                     Keyframe key = sourceKeys[index];
-                    if (key.time < -0.0001f || key.time > duration + 0.0001f)
+                    if (key.time < 0f || key.time > duration)
                         continue;
                     key.time = Mathf.Clamp(key.time, 0f, duration);
                     keys.Add(key);
@@ -1629,7 +1640,7 @@ namespace BTSMTL.Timeline.Editor
             static void AddBoundaryKey(AnimationCurve source, List<Keyframe> keys, float time, float duration)
             {
                 for (int index = 0; index < keys.Count; index++)
-                    if (Mathf.Abs(keys[index].time - time) <= 0.0001f)
+                    if (keys[index].time == time)
                         return;
                 float tangent = BoundaryTangent(source, time);
                 keys.Add(new Keyframe(time, source.Evaluate(time), tangent, tangent));
@@ -1678,7 +1689,7 @@ namespace BTSMTL.Timeline.Editor
             {
                 float snappedTime = m_Curve.SnapTime(localTime);
                 for (int index = m_Curve.Curve.length - 1; index >= 0; index--)
-                    if (Mathf.Abs(m_Curve.Curve[index].time - snappedTime) <= 0.0001f)
+                    if (m_Curve.Curve[index].time == snappedTime)
                         m_Curve.Curve.RemoveKey(index);
             }
             public void SelectPreviousKey(float localTime)
@@ -1686,7 +1697,7 @@ namespace BTSMTL.Timeline.Editor
                 float? previous = null;
                 Keyframe[] keys = m_Curve.Curve.keys;
                 for (int index = 0; index < keys.Length; index++)
-                    if (keys[index].time < localTime - 0.0001f && (!previous.HasValue || keys[index].time > previous.Value))
+                    if (keys[index].time < localTime && (!previous.HasValue || keys[index].time > previous.Value))
                         previous = keys[index].time;
                 if (previous.HasValue)
                     m_Clip.Owner.CurrentFrame = Mathf.RoundToInt(
@@ -1698,7 +1709,7 @@ namespace BTSMTL.Timeline.Editor
                 float? next = null;
                 Keyframe[] keys = m_Curve.Curve.keys;
                 for (int index = 0; index < keys.Length; index++)
-                    if (keys[index].time > localTime + 0.0001f && (!next.HasValue || keys[index].time < next.Value))
+                    if (keys[index].time > localTime && (!next.HasValue || keys[index].time < next.Value))
                         next = keys[index].time;
                 if (next.HasValue)
                     m_Clip.Owner.CurrentFrame = Mathf.RoundToInt(
@@ -1764,7 +1775,7 @@ namespace BTSMTL.Timeline.Editor
             public AnimationCurve Curve => m_Curve;
             public int StartFrame => Mathf.RoundToInt(m_Clip.StartTime * m_Clip.Owner.FrameRate);
             public int EndFrame => Mathf.RoundToInt(m_Clip.EndTime * m_Clip.Owner.FrameRate);
-            public float Duration => Mathf.Max(1f / m_Clip.Owner.FrameRate, m_Clip.Length);
+            public float Duration => m_Clip.Length;
             public void Replace(AnimationCurve curve) { }
             public void Refresh() => m_Curve = m_CreateCurve();
         }

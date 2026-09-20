@@ -440,6 +440,15 @@
 - 相机效果存储检查发现停止／撤销／完成依赖尚与 Timeline 相交，本轮未改其复用；ACL 租用表已有按容量准备的槽位，也未重复改造。
 - DeterministicRollback portable 连带 Core／Fixed 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做运行或 Player 分配采样。
 
+## 2026-09-20 回滚协议封套枚举校验清理
+
+对应 tasks.md 的 5.39，与代码同步提交。
+
+- RollbackProtocolCodec.ReadKind 改为显式匹配十种正式消息；ReadComponentIdentity 匹配八种当前组件角色。删除 Enum.IsDefined(Type, object) 的 byte 装箱，保留原 InvalidDataException 文本与读取位置。
+- SimulationComponentRole 正式值从 ExecutionBackend=2 开始，0 和 1 仍拒绝；未使用粗略非零判断或包含废弃编号的范围。消息解码、组件身份字符串读取、canonical 检查和协议版本均不变。
+- 角色读取属于握手身份处理，消息类型读取覆盖协议消息，两者不混报为相同频率热点。后续身份对象和消息对象分配仍存在，不宣称整个封套无分配。
+- DeterministicRollback portable 连带 Core／Fixed 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
+
 ## 2026-09-20 权威复制子消息直接编码
 
 对应 tasks.md 的 5.30，与代码同步提交。

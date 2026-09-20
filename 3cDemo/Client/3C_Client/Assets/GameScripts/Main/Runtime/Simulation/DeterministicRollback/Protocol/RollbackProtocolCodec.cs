@@ -312,7 +312,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
         static SimulationComponentIdentity ReadComponentIdentity(CanonicalReader reader)
         {
             byte role = reader.ReadByte();
-            if (!Enum.IsDefined(typeof(SimulationComponentRole), role))
+            if (role != (byte)SimulationComponentRole.ExecutionBackend &&
+                role != (byte)SimulationComponentRole.SessionSource &&
+                role != (byte)SimulationComponentRole.WorldSolver &&
+                role != (byte)SimulationComponentRole.SnapshotCodec &&
+                role != (byte)SimulationComponentRole.Committer &&
+                role != (byte)SimulationComponentRole.Model &&
+                role != (byte)SimulationComponentRole.Endpoint &&
+                role != (byte)SimulationComponentRole.Diagnostics)
                 throw new InvalidDataException($"Rollback component role '{role}' is invalid.");
             return new SimulationComponentIdentity(
                 (SimulationComponentRole)role,
@@ -323,7 +330,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         static RollbackProtocolMessageKind ReadKind(byte value)
         {
-            if (!Enum.IsDefined(typeof(RollbackProtocolMessageKind), value))
+            if (value != (byte)RollbackProtocolMessageKind.Handshake &&
+                value != (byte)RollbackProtocolMessageKind.Roster &&
+                value != (byte)RollbackProtocolMessageKind.ActorInputBatch &&
+                value != (byte)RollbackProtocolMessageKind.CanonicalBundle &&
+                value != (byte)RollbackProtocolMessageKind.StateHash &&
+                value != (byte)RollbackProtocolMessageKind.SnapshotRequest &&
+                value != (byte)RollbackProtocolMessageKind.SnapshotResponse &&
+                value != (byte)RollbackProtocolMessageKind.Leave &&
+                value != (byte)RollbackProtocolMessageKind.CanonicalConfirmation &&
+                value != (byte)RollbackProtocolMessageKind.RelayedExplicitInputBatch)
                 throw new InvalidDataException($"Rollback protocol message kind '{value}' is invalid.");
             return (RollbackProtocolMessageKind)value;
         }

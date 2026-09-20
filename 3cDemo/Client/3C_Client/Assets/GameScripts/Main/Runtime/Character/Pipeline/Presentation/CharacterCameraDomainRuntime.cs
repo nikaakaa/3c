@@ -257,9 +257,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             List<ActiveCameraRequest> requests = Requests;
             for (int i = requests.Count - 1; i >= 0; i--)
             {
-                if (!SameRequest(requests[i].Command, command))
+                ActiveCameraRequest current = requests[i];
+                if (!SameRequest(current.Command, command))
                     continue;
-                RetireRequest(requests[i], CameraPresentationStopReason.EventRevoked);
+                if (current.Command.Header.EventId.Equals(command.Header.EventId) &&
+                    current.Command.ProducerGeneration == command.ProducerGeneration &&
+                    current.Command.CameraRequest.EffectKind == command.CameraRequest.EffectKind &&
+                    string.Equals(current.Command.CameraRequest.ResourceId, command.CameraRequest.ResourceId, StringComparison.Ordinal))
+                {
+                    requests[i] = new ActiveCameraRequest(command, current.AcceptedIndex);
+                    return;
+                }
+                RetireRequest(current, CameraPresentationStopReason.EventRevoked);
                 requests.RemoveAt(i);
             }
             if (requests.Count == m_RequestCapacity)

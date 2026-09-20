@@ -474,3 +474,9 @@
 - 对应0.7：原 playback 按正式 Clip 数预分配活动片段、待退出、已退出及求值工作列表；Advance 复用活动列表、退出列表和边界列表，不再逐 tick 创建这些临时集合。结果仍保留原独立副本寿命，下游尚未迁移的结果消费者不会观察到下一次工作区写入。
 - 边界容量由有效 Logic Clip 数、每片段最多两个边界及既有单次最多4096圈推导；循环内容用较大的准备期内存换取推进时不扩容。排序继续比较绝对位置、Enter／Exit 和作者身份，委托只在 playback 初始化创建一次。退出查询改为索引遍历，边界诊断改用固定文字。
 - AdvanceResult、EvaluationResult 及其输出集合副本仍有分配，本批不表示完整0 GC。Unity编译与域重载完成（1789921437488），Editor idle，控制台错误为零；同时补齐上一批相机边界修正的重载后检查。git diff --check通过，未新增测试。
+
+## 连续 Camera 片段更新当前请求而不重启效果
+- 对应5.3／7.3：Camera State、Response、Resource 每帧将正式共享位置得到的权重与参数发布到同一请求；删除只在首次出现时发布的门槛。既有 CameraEventKey 继续索引同一 EventId／producer，连续更新不重新计算哈希或拼接身份。Camera Cue 保留经过触发规则。
+- 原 Camera domain 的 Publish 对相同来源请求、EventId、generation、资源及效果类型直接替换请求参数，保留候选的 AcceptedIndex，不发送退休，不重置效果计时；身份或资源变化仍走原退休／激活链。丢弃帧继续丢弃请求候选和桥内记账，不恢复相机历史。
+- 发现并修正资源枚举值错配：Timeline 的 Shot=4，Camera 的 Shake=4、Shot=5，原强转会把 Shot 解释为 Shake。改为四种资源的显式对应，同时删除 Enum.IsDefined 的装箱。
+- Unity脚本构建成功，git diff --check通过；共享工作区其他脚本仍在导入，MCP暂未重新连接，本批提交时未取得重载后的最终控制台检查。未新增测试，权重曲线与Shot资源的实际画面仍待用户端到端验收。

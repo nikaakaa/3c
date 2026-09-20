@@ -584,32 +584,29 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             TimelineCameraStateSample sample = frame.Operations.CameraStates[index];
             CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
                 sample.TrackAuthoringId, sample.ClipAuthoringId, 0);
-            if (!m_Active.ContainsKey(key))
-            {
-                PresentationCameraRequest activation = PresentationCameraRequest.Sequence(
-                    PresentationCameraRequestLifecycle.Activate,
-                    RequireSequenceId(sample.SequenceId),
-                    (int)sample.Mode,
-                    (int)sample.InterruptPolicy,
-                    sample.Priority,
-                    sample.Weight,
-                    sample.BlendInSeconds,
-                    sample.BlendOutSeconds,
-                    sample.TargetKey,
-                    context.Activation.Source.Identity);
-                PresentationCameraRequest retirement = PresentationCameraRequest.Sequence(
-                    PresentationCameraRequestLifecycle.Retire,
-                    RequireSequenceId(sample.SequenceId),
-                    (int)sample.Mode,
-                    (int)sample.InterruptPolicy,
-                    sample.Priority,
-                    sample.Weight,
-                    sample.BlendInSeconds,
-                    sample.BlendOutSeconds,
-                    sample.TargetKey,
-                    context.Activation.Source.Identity);
-                AddCamera(key, frame, context, activation, retirement);
-            }
+            PresentationCameraRequest activation = PresentationCameraRequest.Sequence(
+                PresentationCameraRequestLifecycle.Activate,
+                RequireSequenceId(sample.SequenceId),
+                (int)sample.Mode,
+                (int)sample.InterruptPolicy,
+                sample.Priority,
+                sample.Weight,
+                sample.BlendInSeconds,
+                sample.BlendOutSeconds,
+                sample.TargetKey,
+                context.Activation.Source.Identity);
+            PresentationCameraRequest retirement = PresentationCameraRequest.Sequence(
+                PresentationCameraRequestLifecycle.Retire,
+                RequireSequenceId(sample.SequenceId),
+                (int)sample.Mode,
+                (int)sample.InterruptPolicy,
+                sample.Priority,
+                sample.Weight,
+                sample.BlendInSeconds,
+                sample.BlendOutSeconds,
+                sample.TargetKey,
+                context.Activation.Source.Identity);
+            PublishCamera(key, frame, context, activation, retirement);
 
             alive.Add(key);
         }
@@ -638,7 +635,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
                     sample.Priority,
                     Mathf.Clamp01(sample.Intensity),
                     context.Activation.Source.Identity);
-                AddCamera(key, frame, context, activation, retirement);
+                PublishCamera(key, frame, context, activation, retirement);
             }
 
             alive.Add(key);
@@ -649,28 +646,25 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             TimelineCameraResponseSample sample = frame.Operations.CameraResponses[index];
             CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
                 sample.TrackAuthoringId, sample.ClipAuthoringId, 0);
-            if (!m_Active.ContainsKey(key))
-            {
-                PresentationCameraRequest activation = PresentationCameraRequest.Response(
-                    PresentationCameraRequestLifecycle.Activate,
-                    (int)sample.LookResponse,
-                    sample.ManualOrbitWeight,
-                    sample.PitchResponseWeight,
-                    sample.YawResponseWeight,
-                    sample.Priority,
-                    sample.Weight,
-                    context.Activation.Source.Identity);
-                PresentationCameraRequest retirement = PresentationCameraRequest.Response(
-                    PresentationCameraRequestLifecycle.Retire,
-                    (int)sample.LookResponse,
-                    sample.ManualOrbitWeight,
-                    sample.PitchResponseWeight,
-                    sample.YawResponseWeight,
-                    sample.Priority,
-                    sample.Weight,
-                    context.Activation.Source.Identity);
-                AddCamera(key, frame, context, activation, retirement);
-            }
+            PresentationCameraRequest activation = PresentationCameraRequest.Response(
+                PresentationCameraRequestLifecycle.Activate,
+                (int)sample.LookResponse,
+                sample.ManualOrbitWeight,
+                sample.PitchResponseWeight,
+                sample.YawResponseWeight,
+                sample.Priority,
+                sample.Weight,
+                context.Activation.Source.Identity);
+            PresentationCameraRequest retirement = PresentationCameraRequest.Response(
+                PresentationCameraRequestLifecycle.Retire,
+                (int)sample.LookResponse,
+                sample.ManualOrbitWeight,
+                sample.PitchResponseWeight,
+                sample.YawResponseWeight,
+                sample.Priority,
+                sample.Weight,
+                context.Activation.Source.Identity);
+            PublishCamera(key, frame, context, activation, retirement);
 
             alive.Add(key);
         }
@@ -680,33 +674,30 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             TimelineCameraResourceSample sample = frame.Operations.CameraResources[index];
             CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
                 sample.TrackAuthoringId, sample.ClipAuthoringId, 0);
-            if (!m_Active.ContainsKey(key))
-            {
-                string requestId = sample.ClipAuthoringId;
-                PresentationCameraRequest activation = PresentationCameraRequest.Effect(
-                    PresentationCameraRequestLifecycle.Activate,
-                    requestId,
-                    (int)RequireResourceEffectKind(sample.Kind),
-                    sample.ResourceId,
-                    sample.Priority,
-                    sample.Weight,
-                    context.Activation.Source.Identity);
-                PresentationCameraRequest retirement = PresentationCameraRequest.Effect(
-                    PresentationCameraRequestLifecycle.Retire,
-                    requestId,
-                    (int)RequireResourceEffectKind(sample.Kind),
-                    sample.ResourceId,
-                    sample.Priority,
-                    sample.Weight,
-                    context.Activation.Source.Identity);
-                AddCamera(key, frame, context, activation, retirement);
-            }
+            string requestId = sample.ClipAuthoringId;
+            PresentationCameraRequest activation = PresentationCameraRequest.Effect(
+                PresentationCameraRequestLifecycle.Activate,
+                requestId,
+                (int)RequireResourceEffectKind(sample.Kind),
+                sample.ResourceId,
+                sample.Priority,
+                sample.Weight,
+                context.Activation.Source.Identity);
+            PresentationCameraRequest retirement = PresentationCameraRequest.Effect(
+                PresentationCameraRequestLifecycle.Retire,
+                requestId,
+                (int)RequireResourceEffectKind(sample.Kind),
+                sample.ResourceId,
+                sample.Priority,
+                sample.Weight,
+                context.Activation.Source.Identity);
+            PublishCamera(key, frame, context, activation, retirement);
 
             alive.Add(key);
         }
     }
 
-    void AddCamera(
+    void PublishCamera(
         CameraEventKey key,
         TimelineRuntimePresentationFrame frame,
         in TimelinePresentationExecutionContext context,
@@ -715,9 +706,10 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     {
         if (m_RequestCapacity == 0)
             throw new InvalidOperationException("Timeline Camera outputs require a composed Camera domain.");
-        if (m_Active.Count == m_RequestCapacity)
+        bool existing = m_Active.TryGetValue(key, out CameraEventState previous);
+        if (!existing && m_Active.Count == m_RequestCapacity)
             throw new InvalidOperationException($"Timeline Camera event capacity {m_RequestCapacity} is exhausted.");
-        EventId eventId = new(StableHash.Compute(
+        EventId eventId = existing ? previous.Activation.Header.EventId : new(StableHash.Compute(
             "timeline-presentation-camera",
             frame.ExecutionIdentity.OwnerIdentity,
             key.Track,
@@ -739,7 +731,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             context.Activation,
             frame.PresentationFrame + 1,
             "timeline.camera");
-        string producerId = $"timeline-camera:{key.Handle}:{key.Generation}:{key.Track}:{key.Producer}:{key.Cycle}";
+        string producerId = existing ? previous.Activation.ProducerId
+            : $"timeline-camera:{key.Handle}:{key.Generation}:{key.Track}:{key.Producer}:{key.Cycle}";
         var activation = new CharacterPresentationCommand(
             activationHeader,
             CharacterPresentationCommandKind.Camera,
@@ -765,7 +758,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             null,
             retirementRequest);
         var state = new CameraEventState(key, frame.Handle.Value, activation, retirement, frame.Generation);
-        m_Active.Add(key, state);
+        m_Active[key] = state;
         m_Runtime.Publish(activation);
     }
 
@@ -819,10 +812,15 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
 
     static CameraEffectKind RequireResourceEffectKind(TimelineCameraResourceKind kind)
     {
-        return Enum.IsDefined(typeof(CameraEffectKind), (byte)kind)
-            ? (CameraEffectKind)kind
-            : throw new InvalidOperationException(
-                $"Timeline camera resource '{kind}' is not a formal Camera domain effect.");
+        return kind switch
+        {
+            TimelineCameraResourceKind.Override => CameraEffectKind.Override,
+            TimelineCameraResourceKind.Zoom => CameraEffectKind.Zoom,
+            TimelineCameraResourceKind.Stretch => CameraEffectKind.Stretch,
+            TimelineCameraResourceKind.Shot => CameraEffectKind.Shot,
+            _ => throw new InvalidOperationException(
+                $"Timeline camera resource '{kind}' is not a formal Camera domain effect.")
+        };
     }
 
     public void Dispose()

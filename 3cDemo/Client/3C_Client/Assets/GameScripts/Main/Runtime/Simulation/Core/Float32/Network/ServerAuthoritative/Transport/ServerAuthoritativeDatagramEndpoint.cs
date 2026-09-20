@@ -237,12 +237,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                         Interlocked.Increment(ref m_OversizeDrops);
                         continue;
                     }
-                    var bytes = new byte[received];
-                    Buffer.BlockCopy(buffer, 0, bytes, 0, received);
                     ServerAuthoritativeDatagramPacket packet;
                     try
                     {
-                        packet = ServerAuthoritativeGameplayDatagramCodec.Read(bytes, m_MaximumDatagramBytes);
+                        packet = ServerAuthoritativeGameplayDatagramCodec.Read(new ArraySegment<byte>(buffer, 0, received), m_MaximumDatagramBytes);
                     }
                     catch (Exception exception) when (exception is InvalidDataException || exception is ArgumentException)
                     {

@@ -340,3 +340,13 @@
 - 客户端通道和 AuthoritySourceRuntime 仍有 CopyPayload 的独立数据消费者，保持此真实入口，未把解码或跨步数据擅自改成借用存储。既有版本、身份字段、长度前缀、MTU 检查和发送队列数据寿命不变。
 - ServerAuthoritativeDatagramHeader 构造与 codec.Read 共用 IsSupportedKind，显式接受 Hello、HelloAck、Command、Snapshot 四种既有枚举值，删除两处 Enum.IsDefined(Type, object) 装箱；各自仍抛原 ArgumentException／InvalidDataException，不更改非法值行为。
 - ServerAuthoritative.Transport portable 连带 Core／Float32／ServerAuthoritative 编译零警告零错误，按规定构建后 shutdown 成功；diff 空白检查通过。编辑前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做网络联调或 Player 采样。解码中间数组、writer、最终包和队列分配仍未完成。
+
+## 2026-09-20 权威数据报接收解码片段借用
+
+对应 tasks.md 的 5.22，与代码同步提交。
+
+- ServerAuthoritativeDatagramEndpoint 原在接收后复制完整 received 字节，codec.Read 又 ReadBytes 复制 payload，packet 构造再 Clone。现唯一正式 Read 调用直接提供 [0, received) ArraySegment，codec 同步借用片段并通过 ReadBytesSegment 将 payload 交给 packet 构造，删除前两层中转。
+- codec.Read 统一接收 ArraySegment，按 Count 检查尺寸，CanonicalReader 按片段结束边界读取并 RequireComplete，接收缓冲未使用区域不能混入解析。原 MTU、格式错误、路由、队列和丢包统计分支保持不变。
+- packet 的内部 Span 构造执行唯一一次 ToArray 取得所有权。公开 byte[] 构造仍供两个正式发送生产者使用，保留 null 抛 ArgumentNullException 后进入同一个构造实现；没有复制两套校验或编码。空 payload 和 header 长度匹配规则不变。
+- 解码身份字符串和 packet payload 均独立持有，下一次接收不会覆盖排队消息；未修改应用层消息、检查点或 Timeline 生命周期。reader、packet、身份字符串、payload 本身、端点和队列仍有分配。
+- ServerAuthoritative.Transport portable 及 Core／Float32／ServerAuthoritative 依赖编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity，未做网络联调或 Player 采样。

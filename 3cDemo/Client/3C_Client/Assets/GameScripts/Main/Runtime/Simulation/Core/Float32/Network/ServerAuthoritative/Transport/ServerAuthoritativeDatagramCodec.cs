@@ -70,8 +70,13 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly byte[] m_Payload;
 
         public ServerAuthoritativeDatagramPacket(ServerAuthoritativeDatagramHeader header, byte[] payload)
+            : this(header, payload == null ? throw new ArgumentNullException(nameof(payload)) : payload.AsSpan())
         {
-            m_Payload = payload == null ? throw new ArgumentNullException(nameof(payload)) : (byte[])payload.Clone();
+        }
+
+        internal ServerAuthoritativeDatagramPacket(ServerAuthoritativeDatagramHeader header, ReadOnlySpan<byte> payload)
+        {
+            m_Payload = payload.ToArray();
             if (header.PayloadLength != m_Payload.Length)
                 throw new ArgumentException("Gameplay datagram payload length does not match its header.", nameof(payload));
             Header = header;
@@ -115,9 +120,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             return bytes;
         }
 
-        public static ServerAuthoritativeDatagramPacket Read(byte[] bytes, int maximumBytes)
+        public static ServerAuthoritativeDatagramPacket Read(ArraySegment<byte> bytes, int maximumBytes)
         {
-            if (bytes == null || bytes.Length == 0 || bytes.Length > maximumBytes)
+            if (bytes.Count == 0 || bytes.Count > maximumBytes)
                 throw new InvalidDataException("Gameplay datagram length is invalid.");
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic)
@@ -134,11 +139,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 new ServerAuthoritativePlayerId(reader.ReadString()),
                 new ActorId(reader.ReadString()));
             ulong packetSequence = reader.ReadUInt64();
-            byte[] payload = reader.ReadBytes();
+            ArraySegment<byte> payload = reader.ReadBytesSegment();
             reader.RequireComplete();
             return new ServerAuthoritativeDatagramPacket(
-                new ServerAuthoritativeDatagramHeader(identity, kind, packetSequence, payload.Length),
-                payload);
+                new ServerAuthoritativeDatagramHeader(identity, kind, packetSequence, payload.Count),
+                payload.AsSpan());
         }
     }
 

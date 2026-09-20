@@ -65,6 +65,7 @@
 - [x] 5.19 CanonicalWriter 哈希统一复用 SimulationCanonicalPayloadHash 的片段入口，使用 string.Create 直接填充最终小写十六进制字符串，删除重复格式化与中间字符数组；SHA 对象和摘要字节数组仍未完成
 - [x] 5.20 网络检查点布局与内容哈希直接使用 writer.ComputeHash，删除两处仅为哈希生成的完整 ToArray 副本；检查点持有、编码字段和恢复生命周期不变
 - [x] 5.21 权威同步数据报编码直接读取 packet 的只读 payload，删除编码前克隆；包头和解码共用显式合法 kind 判断，删除两处枚举装箱，保持独立 payload 消费者与异常语义
+- [x] 5.22 权威数据报接收与解码同步借用实际缓冲片段，删除整包和 payload 两层中转数组；packet 构造复制一次拥有数据，保留发送端 byte[] 的 null 校验和统一构造实现
 
 ## 6. UI、资源、渲染和生命周期
 

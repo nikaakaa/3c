@@ -1968,3 +1968,12 @@
 - BuildPlan 按准确数量创建 steps 与 mappings 数组并以索引填充，replay/current 顺序、tick 递增、input sequence floor、planSequence、ObservedWorldConstraintFrame 和 requirement 判定保持。数组直接转交 SimulationSessionExecutionPlan.FromOwnedArrays。
 - 删除每个预测 outer tick 的 steps List、mappings List、各自增长存储及 plan 二次复制。selectedRemoteBodies 是随后提交给独立产品的业务输出，本步继续使用原 selectedBodies List 与只读包装，不混淆其寿命。
 - ThirdPersonSimulation.Float32 与 ServerAuthoritative portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 prediction replay 运行对比或 Player 分配采样。
+
+## 2026-09-21 Camera Projection 枚举直接校验
+
+对应 tasks.md 的 7.18。
+
+- Camera Projection payload 的 RequireValid 在 FrameTwoPoints、OverrideTrack、Sequence、Shake、Shot、Stretch、TargetSlot、Zoom 与 CharacterProjection 九类对象中调用十四次 Enum.IsDefined。涉及 CameraEffectStackingType、CameraFovVariationType、CameraSpace、CameraTimeDomain 与 CameraSequenceStageKind；五类均为 byte 枚举，正式成员从首项到末项连续且无 Flags 或保留空洞。
+- 十四处校验改为对首尾正式成员的 byte 区间比较。原空值、数值有限性、范围、资源引用、stage 类型与目标槽规则保持；非法 0、超出末项和所有原合法成员的结果不变。
+- 删除这些 Camera payload 每次 RequireValid 的枚举装箱与反射查询。实际调用频率可能包含资源准备和运行投影重校验，本步未把静态入口删除等同于每帧收益。
+- ThirdPersonClient.Runtime 无依赖构建被并行 Timeline API 迁移的六处缺失成员错误阻断，错误均位于 CharacterTimelineHost，另有一条既有未使用字段警告；未触碰并行文件。ThirdPersonCamera.Contracts 无依赖编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 Camera Player 分配采样。

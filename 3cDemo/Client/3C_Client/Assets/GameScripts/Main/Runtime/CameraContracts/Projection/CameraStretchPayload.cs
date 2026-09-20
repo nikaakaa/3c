@@ -142,9 +142,12 @@ namespace ThirdPersonCamera
                 !float.IsFinite(EndElevationAngleMax) || !float.IsFinite(RecoilTime) || RecoilTime < 0f ||
                 !float.IsFinite(HoldTime) || HoldTime < -1f || !float.IsFinite(DelayTime) || DelayTime < 0f ||
                 !Finite(CamOffset) || !float.IsFinite(RadiusRatio) || !float.IsFinite(StretchTime) || StretchTime < 0f ||
-                !Enum.IsDefined(typeof(CameraEffectStackingType), PlayStackingType) ||
-                !Enum.IsDefined(typeof(CameraSpace), CamOffsetSpace) ||
-                !Enum.IsDefined(typeof(CameraFovVariationType), FovVariationType))
+                (byte)PlayStackingType < (byte)CameraEffectStackingType.Replace ||
+                (byte)PlayStackingType > (byte)CameraEffectStackingType.HighestPriority ||
+                (byte)CamOffsetSpace < (byte)CameraSpace.World ||
+                (byte)CamOffsetSpace > (byte)CameraSpace.Camera ||
+                (byte)FovVariationType < (byte)CameraFovVariationType.Absolute ||
+                (byte)FovVariationType > (byte)CameraFovVariationType.Multiplicative)
                 throw new InvalidOperationException($"{source} contains an invalid Camera Stretch payload.");
             StartCurve.RequireValid(source + ".StartCurve");
             EndCurve.RequireValid(source + ".EndCurve");

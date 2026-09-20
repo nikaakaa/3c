@@ -34,7 +34,7 @@ namespace ThirdPersonCamera
         public void RequireValid(string source)
         {
             if (string.IsNullOrWhiteSpace(SlotId) || !string.Equals(SlotId, SlotId.Trim(), StringComparison.Ordinal) ||
-                !Enum.IsDefined(typeof(CameraSpace), Space) ||
+                (byte)Space < (byte)CameraSpace.World || (byte)Space > (byte)CameraSpace.Camera ||
                 string.IsNullOrWhiteSpace(AnchorKey) && string.IsNullOrWhiteSpace(AimPointKey) &&
                 string.IsNullOrWhiteSpace(PreferredBoneKey))
                 throw new InvalidOperationException($"{source} contains an invalid Camera target slot.");

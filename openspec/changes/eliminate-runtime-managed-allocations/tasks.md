@@ -365,3 +365,5 @@
 - [x] 7.16 脚本化与实时捕获的 Presentation Schedule 帧按连续双值 ClockMode 直接校验，删除逐帧 Enum.IsDefined 装箱；帧时序、范围和投递契约保持
 
 - [x] 7.17 Action Presentation 时间快照按可发布生命周期与投影类型的正式连续区间校验，删除每次快照构造 IsValid 中的两次 Enum.IsDefined 装箱
+
+- [x] 7.18 Camera Projection 九类 payload 按 CameraSpace／TimeDomain／Stacking／FovVariation／SequenceStage 五个正式连续 byte 区间直接校验，删除 RequireValid 中十四处 Enum.IsDefined 装箱

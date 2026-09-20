@@ -131,7 +131,9 @@ namespace ThirdPersonCamera
         {
             if (string.IsNullOrWhiteSpace(TrackId) || Settings == null || string.IsNullOrWhiteSpace(Tag) ||
                 !float.IsFinite(Duration) || Duration == 0f || Duration < -1f ||
-                !Enum.IsDefined(typeof(CameraTimeDomain), TimeDomain) || !float.IsFinite(BlendInSeconds) ||
+                (byte)TimeDomain < (byte)CameraTimeDomain.PresentationScaled ||
+                (byte)TimeDomain > (byte)CameraTimeDomain.LocalAvatarScaled ||
+                !float.IsFinite(BlendInSeconds) ||
                 BlendInSeconds < 0f || !float.IsFinite(BlendOutSeconds) || BlendOutSeconds < 0f ||
                 BlendInCurve == null || BlendOutCurve == null)
                 throw new InvalidOperationException($"{source} contains an invalid Camera Override Track payload.");

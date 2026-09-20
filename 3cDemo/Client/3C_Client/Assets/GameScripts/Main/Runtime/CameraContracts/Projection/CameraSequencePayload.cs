@@ -24,14 +24,17 @@ namespace ThirdPersonCamera
 
         public void RequireValid(string source)
         {
-            if (string.IsNullOrWhiteSpace(SequenceId) || !Enum.IsDefined(typeof(CameraTimeDomain), TimeDomain) ||
+            if (string.IsNullOrWhiteSpace(SequenceId) ||
+                (byte)TimeDomain < (byte)CameraTimeDomain.PresentationScaled ||
+                (byte)TimeDomain > (byte)CameraTimeDomain.LocalAvatarScaled ||
                 Stages.Count == 0)
                 throw new InvalidOperationException($"{source} contains an invalid Camera Sequence payload.");
             for (int i = 0; i < Stages.Count; i++)
             {
                 CameraSequenceStagePayload stage = Stages[i];
                 if (stage == null || string.IsNullOrWhiteSpace(stage.StageId) ||
-                    !Enum.IsDefined(typeof(CameraSequenceStageKind), stage.Kind))
+                    (byte)stage.Kind < (byte)CameraSequenceStageKind.FrameOnePointByHeight ||
+                    (byte)stage.Kind > (byte)CameraSequenceStageKind.RotationLast)
                     throw new InvalidOperationException($"{source}.Stages[{i}] is invalid.");
                 RequireStage(stage, $"{source}.Stages[{i}]");
             }

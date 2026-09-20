@@ -209,7 +209,8 @@ namespace ThirdPersonCamera
                 if (slot == null || string.IsNullOrWhiteSpace(slot.SlotId) ||
                     string.Equals(slot.SlotId, CameraTargetBindingKeys.Body, StringComparison.Ordinal) ||
                     !slots.Add(slot.SlotId) ||
-                    !Enum.IsDefined(typeof(CameraSpace), slot.Space))
+                    (byte)slot.Space < (byte)CameraSpace.World ||
+                    (byte)slot.Space > (byte)CameraSpace.Camera)
                     throw new InvalidOperationException($"Character Camera Projection TargetSlots[{i}] is invalid.");
                 slot.RequireValid($"Character Camera Projection TargetSlots[{i}]");
                 if (slot.Space != CameraSpace.World)

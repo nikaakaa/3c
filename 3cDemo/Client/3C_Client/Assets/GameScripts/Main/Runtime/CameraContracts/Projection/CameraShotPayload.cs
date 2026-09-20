@@ -95,7 +95,9 @@ namespace ThirdPersonCamera
                 string.IsNullOrWhiteSpace(FollowTargetSlotId) || string.IsNullOrWhiteSpace(LookAtTargetSlotId) ||
                 !float.IsFinite(NearClipPlane) || NearClipPlane < 0f || !float.IsFinite(FarClipPlane) ||
                 FarClipPlane <= NearClipPlane || !float.IsFinite(Duration) || Duration == 0f || Duration < -1f ||
-                !Enum.IsDefined(typeof(CameraTimeDomain), TimeDomain) || !Finite(FollowOffset) ||
+                (byte)TimeDomain < (byte)CameraTimeDomain.PresentationScaled ||
+                (byte)TimeDomain > (byte)CameraTimeDomain.LocalAvatarScaled ||
+                !Finite(FollowOffset) ||
                 !Finite(LookAtOffset) || !Finite(OffsetRotation) || !float.IsFinite(FieldOfView) ||
                 FieldOfView <= 0f || BlendIn == null || BlendOut == null || string.IsNullOrWhiteSpace(Tag))
                 throw new InvalidOperationException($"{source} contains an invalid Camera Shot payload.");

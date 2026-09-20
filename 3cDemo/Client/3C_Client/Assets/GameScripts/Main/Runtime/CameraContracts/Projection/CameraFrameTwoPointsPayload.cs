@@ -64,7 +64,9 @@ namespace ThirdPersonCamera
 
         public void RequireValid(string source)
         {
-            if (string.IsNullOrWhiteSpace(StageId) || !Enum.IsDefined(typeof(CameraSequenceStageKind), Kind) ||
+            if (string.IsNullOrWhiteSpace(StageId) ||
+                (byte)Kind < (byte)CameraSequenceStageKind.FrameOnePointByHeight ||
+                (byte)Kind > (byte)CameraSequenceStageKind.RotationLast ||
                 !float.IsFinite(AspectRatio) || AspectRatio <= 0f || !float.IsFinite(HeightRatio) || HeightRatio <= 0f ||
                 !float.IsFinite(MinPlayerHeightRatio) || !float.IsFinite(MaxPlayerHeightRatio) ||
                 MinPlayerHeightRatio > MaxPlayerHeightRatio || !float.IsFinite(FieldOfView) || FieldOfView <= 0f ||

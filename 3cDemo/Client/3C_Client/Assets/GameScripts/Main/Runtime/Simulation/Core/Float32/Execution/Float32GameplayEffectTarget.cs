@@ -430,7 +430,7 @@ namespace ThirdPersonSimulation
         {
             if (instanceId == 0 || revision == 0)
                 return;
-            AddChange(cursor => new PortableEffectLifecycleRuntimeChange(cursor, definition, instanceId, operation, context, startTick, endTick, stackCount, revision, instant));
+            m_Changes.Add(new PortableEffectLifecycleRuntimeChange(NextChangeCursor(), definition, instanceId, operation, context, startTick, endTick, stackCount, revision, instant));
         }
 
         void AddAttributeChanges(IReadOnlyList<PortableAttributeChange> changes)
@@ -439,8 +439,8 @@ namespace ThirdPersonSimulation
             {
                 PortableAttributeChange change = changes[i];
                 PortableEffectCause cause = m_Causes.TryGetValue(change.CauseHandle, out PortableEffectCause value) ? value : default;
-                AddChange(cursor => new PortableAttributeRuntimeChange(
-                    cursor,
+                m_Changes.Add(new PortableAttributeRuntimeChange(
+                    NextChangeCursor(),
                     change,
                     cause.Definition?.Id,
                     cause.InstanceId,
@@ -450,22 +450,22 @@ namespace ThirdPersonSimulation
 
         void AddCue(string cueId, PortableCueTrigger trigger, PortableEffectDefinition definition, ulong instanceId, SimulationGameplayEffectContext context, bool trackPrediction = true)
         {
-            AddChange(cursor => new PortableCueRuntimeChange(cursor, cueId, trigger, definition, instanceId, context));
+            m_Changes.Add(new PortableCueRuntimeChange(NextChangeCursor(), cueId, trigger, definition, instanceId, context));
             if (trackPrediction && m_CurrentPrediction != null && !m_CurrentPrediction.CueIds.Contains(cueId))
                 m_CurrentPrediction.CueIds.Add(cueId);
         }
 
         void AddFailure(string ownerEffectId, ulong ownerInstanceId, string requestedEffectId, SimulationGameplayEffectApplyResultCode code, string reason)
         {
-            AddChange(cursor => new PortableEffectFailureRuntimeChange(cursor, ownerEffectId, ownerInstanceId, requestedEffectId, code, reason));
+            m_Changes.Add(new PortableEffectFailureRuntimeChange(NextChangeCursor(), ownerEffectId, ownerInstanceId, requestedEffectId, code, reason));
         }
 
-        void AddChange(Func<ulong, PortableEffectRuntimeChange> create)
+        ulong NextChangeCursor()
         {
             m_State.ChangeCursor = checked(m_State.ChangeCursor + 1);
             if (m_State.ChangeCursor == 0)
                 throw new OverflowException("Gameplay Effect ChangeSet cursor overflowed.");
-            m_Changes.Add(create(m_State.ChangeCursor));
+            return m_State.ChangeCursor;
         }
 
         void TrimChanges(int count)

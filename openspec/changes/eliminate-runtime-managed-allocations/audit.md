@@ -494,6 +494,15 @@
 - 取舍：容量恰好覆盖本次快照内容，不保留 List 自动增长的额外余量；恢复后若继续新增 modifier 仍可能再次扩容，甚至比原有余量更早增长。此次只保证复制内不逐级扩容，不宣称后续更新或全链分配下降，后续正式容量仍需结合事务 owner 处理。
 - Fixed／Float32 portable 分别编译零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity、未做 Player 分配采样。
 
+## 2026-09-20 GameplayEffect 变更记录闭包清理
+
+对应 tasks.md 的 2.15，与代码同步提交。
+
+- Fixed／Float32 GameplayEffectTarget 的生命周期、属性、Cue 和失败记录原各创建捕获 lambda，交 AddChange(Func<ulong,...>) 立即调用。八处迁移为 m_Changes.Add(new 对应记录(NextChangeCursor(), ...))，删除闭包／委托构造及无消费者工厂入口。
+- NextChangeCursor 保留原 checked 递增和溢出异常，返回本次游标。执行仍是游标推进、记录构造、加入列表；生命周期无效 instance／revision 的提前返回、属性逐项顺序和 Cue 预测标记仍在原位置。记录构造失败时的游标状态与原逻辑一致。
+- 四种记录对象及变更列表存储仍存在，不改事件内容、游标协议、变更消费、TrimChanges 或保存恢复边界。此步删除的是工厂封装带来的分配，不宣称事件记录全程无分配。
+- 两个目标文件无其它未提交修改；本机编译进程查询未返回 csc／bee。Fixed／Float32 portable 均编译零警告零错误，构建后 shutdown 均成功，diff 空白检查通过。未新增测试、未主动刷新或控制共享 Unity、未做运行事件对比或 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

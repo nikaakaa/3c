@@ -74,7 +74,7 @@ MonoBehaviour:
     m_Sections:
     - m_AuthoringId: a4fd678b-681d-0c35-65f8-48af5017c8f9
       m_Name: Attack_Rush_Enhance_Loop
-      m_Frame: 0
+      m_TimeRaw: 0
       m_NextSectionId: 
       m_BranchId: Rush_Enhance
     m_ExternalBindings: []

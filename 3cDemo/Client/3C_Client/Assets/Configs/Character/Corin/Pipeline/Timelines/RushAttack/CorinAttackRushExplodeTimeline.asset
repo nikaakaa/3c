@@ -97,7 +97,7 @@ MonoBehaviour:
     m_Sections:
     - m_AuthoringId: 866672da-8a24-aa7c-d040-bc8f3df58e6a
       m_Name: Attack_Rush_Explode
-      m_Frame: 0
+      m_TimeRaw: 0
       m_NextSectionId: 
       m_BranchId: Rush
     m_ExternalBindings: []

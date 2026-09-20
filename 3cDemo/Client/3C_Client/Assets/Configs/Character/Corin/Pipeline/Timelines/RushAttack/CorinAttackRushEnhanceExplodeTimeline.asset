@@ -22,7 +22,7 @@ MonoBehaviour:
     m_Sections:
     - m_AuthoringId: d33002d9-8bfb-578a-8c7d-c2878aa366c6
       m_Name: Attack_Rush_Enhance_Explode
-      m_Frame: 0
+      m_TimeRaw: 0
       m_NextSectionId: 
       m_BranchId: Rush_Enhance
     m_ExternalBindings: []

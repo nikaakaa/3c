@@ -585,3 +585,9 @@
 - 对应0.7：TimelineRuntimePlaybackSnapshot的捕获和显式构造、AbilityTimelineRuntimeSnapshot的退出记录及活动Clip复制，改为按IReadOnlyList索引复制到精确长度数组，再封装为只读集合。删除中间List及接口枚举复制；空集合直接共用Array.Empty，不为无退出记录的每次快照创建空List和包装对象。
 - 快照仍独立持有非空数据，不借用会继续变动的播放列表；Ability活动Clip中的null仍归一化为空字符串，TreeDecision列表保留原元素语义及原非null参数校验。未新增缓冲池或寿命旁路。快照对象本身和非空数组／只读包装仍分配，不能据此宣称快照链0 GC；后续仍需按正式持有寿命处理。
 - Unity编译与最终域重载完成（1789928296872），Editor idle、控制台零错误，git diff --check通过。未新增测试，未进行快照寿命或运行内存采样。
+
+## Timeline快照对象改为只读值类型
+- 对应0.7：TimelineRuntimePlaybackSnapshot与AbilityTimelineRuntimeSnapshot改为readonly struct，沿原Capture／Restore、角色状态集合和Fixed／Float32编码链传递，删除每次捕获的两层快照对象分配。新增基于正式handle／generation的IsValid，原null入口校验改为拒绝无效默认值，不把default当成合法快照。
+- 非空集合仍由快照独立持有，只读值复制不会把播放列表借给历史状态；本批没有增加缓存／池／第二快照入口。字段和手写编码顺序未改变，不改变快照wire schema。集合复制、外层角色状态重建和Restore candidate对象仍有分配，需要继续按真实持有寿命处理，不能只复用一份可变数组。
+- 同步核对时另一个任务已提交f47dfb6bd清理快照更新LINQ，本批保留其索引循环，不重复改写或计入本批工作；仅更新两种角色状态的快照有效性校验。自动替换因该并行提交中止后，已补齐Float32校验并重新编译，未覆盖其改动。
+- 最终Unity编译及域重载完成（1789928587753），Editor idle、控制台零错误，git diff --check通过。未新增测试，未执行快照恢复或运行分配采样，完整热路径0 GC仍未完成。

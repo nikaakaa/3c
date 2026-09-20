@@ -1389,8 +1389,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (!IsInitialized)
                 throw new InvalidOperationException("Timeline restore requires an initialized CharacterTimelineHost.");
-            if (snapshot == null)
-                throw new ArgumentNullException(nameof(snapshot));
+            if (!snapshot.IsValid)
+                throw new ArgumentException("Ability Timeline snapshot is invalid.", nameof(snapshot));
             if (!m_TimelineContent.TryGetValue(snapshot.TimelineId, out TimelineData timeline))
                 throw new KeyNotFoundException($"Ability Timeline content '{snapshot.TimelineId}' is not installed.");
             var executionIdentity = new TimelineExecutionIdentity(

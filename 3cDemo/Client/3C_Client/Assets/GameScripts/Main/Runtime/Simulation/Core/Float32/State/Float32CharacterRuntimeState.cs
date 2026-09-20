@@ -107,7 +107,7 @@ namespace ThirdPersonSimulation
             snapshots.Sort((left, right) => left.RuntimeHandle.CompareTo(right.RuntimeHandle));
             for (int i = 0; i < snapshots.Count; i++)
             {
-                if (snapshots[i] == null || snapshots[i].RuntimeHandle == 0 || i > 0 && snapshots[i - 1].RuntimeHandle == snapshots[i].RuntimeHandle)
+                if (!snapshots[i].IsValid || i > 0 && snapshots[i - 1].RuntimeHandle == snapshots[i].RuntimeHandle)
                     throw new ArgumentException("Character runtime state Timeline snapshots are missing or duplicated.", nameof(timelineSnapshots));
             }
             m_TimelineSnapshots = snapshots.AsReadOnly();
@@ -137,7 +137,7 @@ namespace ThirdPersonSimulation
 
         internal Float32CharacterRuntimeState WithTimelineSnapshot(AbilityTimelineRuntimeSnapshot snapshot)
         {
-            if (snapshot == null || snapshot.RuntimeHandle == 0)
+            if (!snapshot.IsValid)
                 throw new ArgumentException("Float32 Character Timeline snapshot is invalid.", nameof(snapshot));
             var snapshots = new List<AbilityTimelineRuntimeSnapshot>(m_TimelineSnapshots.Count + 1);
             for (int i = 0; i < m_TimelineSnapshots.Count; i++)

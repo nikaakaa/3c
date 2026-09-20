@@ -360,9 +360,10 @@ namespace BTSMTL.Timeline.Runtime
         public bool IsValid => Handle.IsValid && Generation != 0 && ExecutionIdentity.IsValid;
     }
 
-    public sealed class TimelineRuntimePlaybackSnapshot
+    public readonly struct TimelineRuntimePlaybackSnapshot
     {
         public const string CurrentSchema = "btsmtl.timeline.direct-runtime.v7";
+        public bool IsValid => Handle.IsValid && Generation != 0;
 
         internal TimelineRuntimePlaybackSnapshot(TimelineRuntimePlayback playback)
         {
@@ -479,7 +480,9 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePreparationResult preparation)
         {
             m_Service = service ?? throw new ArgumentNullException(nameof(service));
-            m_Snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
+            if (!snapshot.IsValid)
+                throw new ArgumentException("Timeline restore snapshot is invalid.", nameof(snapshot));
+            m_Snapshot = snapshot;
             m_Preparation = preparation ?? throw new ArgumentNullException(nameof(preparation));
             Validate();
         }

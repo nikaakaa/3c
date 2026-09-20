@@ -563,8 +563,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public int ApplyRestore(AbilityTimelineRuntimeSnapshot snapshot)
         {
-            if (snapshot == null)
-                throw new ArgumentNullException(nameof(snapshot));
+            if (!snapshot.IsValid)
+                throw new ArgumentException("Ability Timeline snapshot is invalid.", nameof(snapshot));
             int restoredHandle = m_Host.ApplyAbilityTimelineSnapshot(snapshot);
             m_Requests[restoredHandle] = new AbilityTimelineStartRequest(
                 snapshot.TimelineId,

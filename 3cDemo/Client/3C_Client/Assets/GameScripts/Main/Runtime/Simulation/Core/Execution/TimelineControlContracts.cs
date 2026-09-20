@@ -734,8 +734,9 @@ namespace ThirdPersonSimulation
         public int Cycle { get; }
     }
 
-    public sealed class AbilityTimelineRuntimeSnapshot
+    public readonly struct AbilityTimelineRuntimeSnapshot
     {
+        public bool IsValid => RuntimeHandle != 0 && Generation != 0;
         public AbilityTimelineRuntimeSnapshot(
             int runtimeHandle,
             ulong generation,

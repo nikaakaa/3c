@@ -254,3 +254,14 @@
 - 作用域按当前数量直接创建最终数组并填充，沿原 Id.Value 排序；标签用 HashSet.CopyTo 填充最终数组，再按原 Ordinal 排序。删除两个临时 List、其存储和 ToArray 复制；ResourceRuntimeSnapshot 仍分别持有本次数组，旧快照不会被后续发布覆盖。
 - 业务边界：这是加载、租用、实例与维护事件触发的快照发布清理，未证明每帧发生。快照对象、作用域对象、最终数组、对象池首次查询数组和历史 getter 副本仍会分配，没有宣称资源链 0 GC。
 - 以现有 GameLogic.rsp 的 Unity 引用独立编译完整 GameLogic，退出码 0，未输出诊断；产物仅写系统临时目录。未新增测试、未采样 Player，也未主动刷新或控制共享 Editor。编辑前 Unity MCP 状态查询返回 503，随后本机进程检查未发现 csc 或 bee 编译进程；这不等同于共享 Editor 验证通过。
+
+## 2026-09-20 资源池统计工作列表复用
+
+对应 tasks.md 的 6.6，与代码同步提交，继续清理 6.5 保留的对象池查询数组。
+
+- ProductResourceRuntime 通过 IObjectPoolModule 已有 GetAllObjectPools(List<ObjectPoolBase>) 填充自身工作列表。GetAssetPoolMetrics 同步返回池数量、资源对象数和可释放数，快照发布与维护前后都调用此唯一入口，删除产品资源运行时中的返回数组查询调用。
+- 列表在构造时按 IObjectPoolModule.Count 准备，finally 清空池引用但保留数组容量；不跨 await、Changed 通知或快照寿命保存池引用。维护前后仍各自查询，未缓存统计值或改变采集时点。
+- 已核对 TEngine 实现：列表填充清空后遍历实际池集合；正式 Asset Pool 由 ResourceModule 为私有 AssetObject 创建，AssetObject 未重写 CustomCanReleaseFlag，沿 ObjectBase 的常量 true；本统计链不会调用资源业务通知。历史快照仍只持有数值结果。
+- 取舍：运行时多保留一个工作列表的容量，取消每次查询新建完整数组。初始池数不是后续池数的正式上限，动态新增池仍可能触发扩容；CanReleaseCount 内部工作集合增长也未在此步治理，不能宣称资源统计全程无分配。
+- 资源作用域释放存在逐项通知，未把原复制清单直接改成共享可变视图；UnityFixedCharacterInputAdapter 已有并行未提交修改，保持原现场。本步不修改这些生命周期或输入链。
+- 当前 Unity 引用下独立编译完整 GameLogic 退出码 0、无诊断，产物位于系统临时目录，diff 空白检查通过。编辑前未发现 csc／bee 编译进程；MCP 仍返回 503，未控制或刷新 Editor。未新增测试，未做 Player 分配采样。

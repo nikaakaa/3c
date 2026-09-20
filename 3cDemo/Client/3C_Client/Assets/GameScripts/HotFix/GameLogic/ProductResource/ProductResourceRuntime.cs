@@ -32,6 +32,7 @@ namespace GameLogic.ProductResource
 
         private readonly IResourceModule _resourceModule;
         private readonly IObjectPoolModule _objectPoolModule;
+        private readonly List<ObjectPoolBase> _poolMetricsBuffer;
         private readonly string _packageName;
         private readonly int _historyCapacity;
         private readonly Dictionary<ResourceScopeId, ResourceScope> _scopes = new Dictionary<ResourceScopeId, ResourceScope>();
@@ -62,6 +63,7 @@ namespace GameLogic.ProductResource
         {
             _resourceModule = resourceModule ?? throw new ArgumentNullException(nameof(resourceModule));
             _objectPoolModule = objectPoolModule ?? throw new ArgumentNullException(nameof(objectPoolModule));
+            _poolMetricsBuffer = new List<ObjectPoolBase>(_objectPoolModule.Count);
             _packageName = string.IsNullOrWhiteSpace(packageName) ? throw new ArgumentException("Package name is required.", nameof(packageName)) : packageName.Trim();
             _historyCapacity = snapshotHistoryCapacity > 0 ? snapshotHistoryCapacity : throw new ArgumentOutOfRangeException(nameof(snapshotHistoryCapacity));
             GlobalScope = CreateScopeInternal(ResourceScopeKind.Global, "Global");
@@ -230,13 +232,13 @@ namespace GameLogic.ProductResource
 
             _maintenanceRunning = true;
             DateTimeOffset startedAt = DateTimeOffset.UtcNow;
-            GetAssetPoolMetrics(_objectPoolModule.GetAllObjectPools(), out int before, out _);
+            GetAssetPoolMetrics(out _, out int before, out _);
             try
             {
                 _resourceModule.UnloadUnusedAssets();
                 await Resources.UnloadUnusedAssets().ToUniTask(cancellationToken: cancellationToken);
                 RemoveUnownedPhysicalKnowledge();
-                GetAssetPoolMetrics(_objectPoolModule.GetAllObjectPools(), out int after, out _);
+                GetAssetPoolMetrics(out _, out int after, out _);
                 _lastMaintenance = new ResourceMaintenanceSnapshot(reason, startedAt, DateTimeOffset.UtcNow, before, after);
                 PublishSnapshot();
                 return _lastMaintenance;
@@ -510,8 +512,7 @@ namespace GameLogic.ProductResource
 
         private void PublishSnapshot()
         {
-            ObjectPoolBase[] pools = _objectPoolModule.GetAllObjectPools();
-            GetAssetPoolMetrics(pools, out int assetPoolObjects, out int assetPoolReleasable);
+            GetAssetPoolMetrics(out int poolCount, out int assetPoolObjects, out int assetPoolReleasable);
 
             var scopeSnapshots = new ResourceScopeSnapshot[_scopes.Count];
             int scopeIndex = 0;
@@ -545,7 +546,7 @@ namespace GameLogic.ProductResource
                 _leases.Count,
                 _instances.Count,
                 _inFlight.Count,
-                pools.Length,
+                poolCount,
                 assetPoolObjects,
                 assetPoolReleasable,
                 _packageName,
@@ -563,17 +564,28 @@ namespace GameLogic.ProductResource
             Changed?.Invoke(Current);
         }
 
-        private static void GetAssetPoolMetrics(ObjectPoolBase[] pools, out int count, out int releasable)
+        private void GetAssetPoolMetrics(out int poolCount, out int count, out int releasable)
         {
+            poolCount = 0;
             count = 0;
             releasable = 0;
-            foreach (ObjectPoolBase pool in pools)
+            try
             {
-                if (string.Equals(pool.Name, "Asset Pool", StringComparison.Ordinal))
+                _objectPoolModule.GetAllObjectPools(_poolMetricsBuffer);
+                poolCount = _poolMetricsBuffer.Count;
+                for (int i = 0; i < _poolMetricsBuffer.Count; i++)
                 {
-                    count += pool.Count;
-                    releasable += pool.CanReleaseCount;
+                    ObjectPoolBase pool = _poolMetricsBuffer[i];
+                    if (string.Equals(pool.Name, "Asset Pool", StringComparison.Ordinal))
+                    {
+                        count += pool.Count;
+                        releasable += pool.CanReleaseCount;
+                    }
                 }
+            }
+            finally
+            {
+                _poolMetricsBuffer.Clear();
             }
         }
 

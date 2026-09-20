@@ -107,6 +107,7 @@
 - [x] 4.2.10 Pose StateMachine 以当前态／目标态两槽工作区替代四阶段 yield 枚举，复用子请求汇总并直接持有最多两个输出值，删除每帧 List、迭代器和捕获式 Any 分配
 - [x] 4.2.11 Pose Graph Evaluator 初始化时绑定唯一 OutputPose 或 GraphOutput 输入定义，逐帧直接读取已绑定边界，删除输出节点 List／数组及动态端口形状重建
 - [x] 4.2.12 Pose StateMachine 构造时按 state 解析 alias 并按 priority／transition id 预排候选迁移数组，删除逐帧 Where／OrderBy／ThenBy／ToArray
+- [x] 4.2.13 Pose StateMachine 按最大规则操作数预备 operations／values／visiting 工作区，每次候选规则求值前 Clear 复用，删除逐候选三份容器分配
 - [ ] 4.3 沿Foot查询、Goal Assembly、FBBIK和最终写入链治理实际managed临时对象、装箱和vendor接口分配，保留查询容量和算法顺序
 - [ ] 4.4 沿Camera目标/效果、Input采样和Behavior Designer正式任务治理已确认分配，保持输入来源和目标身份
 

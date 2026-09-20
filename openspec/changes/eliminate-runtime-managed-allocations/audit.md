@@ -1216,3 +1216,12 @@
 - 实例构造完成 state 定义校验后，现为每个 state 一次解析直接来源或 alias 来源，按 Priority 升序、TransitionId ordinal 升序保存候选数组；SelectTransition 只按原顺序执行规则并返回首个命中项。
 - 空候选复用 Array.Empty；状态机 definition 属于实例生命周期内的只读 authoring 输入，运行期不支持原地修改 transition 或 alias，变更仍须重建正式实例。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做迁移选择运行回放或 Player 分配采样。
+
+## 2026-09-21 Pose StateMachine 规则求值工作区
+
+对应 tasks.md 的 4.2.13。
+
+- CharacterPoseNativeStateMachineSource.EvaluateRule 原每尝试一个候选 transition 都新建 Operation 字典、RuleValue 字典和递归 visiting 集合，再按 rule.Operations 填充并执行输出操作。
+- 状态机实例构造时现取全部 transition rule 的最大操作数作为三份工作区容量；每次求值前 Clear，重新填充相同 operation identity 映射，并沿原递归、缓存、环检测和短路逻辑执行。
+- 分配从逐候选运行路径移到状态机实例构造；候选规则间不共享值或 visiting 状态，异常后的下一次求值也会先清空。规则图本身仍按候选重新填充 operations 工作区，后续是否预编译不在本小步内。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做规则命中运行回放或 Player 分配采样。

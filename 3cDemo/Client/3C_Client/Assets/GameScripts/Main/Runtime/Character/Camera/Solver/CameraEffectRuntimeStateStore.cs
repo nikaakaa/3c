@@ -7,49 +7,21 @@ namespace ThirdPersonCamera
     {
         readonly List<CameraEffectRuntimeState> m_Active;
         readonly CameraEffectRuntimeState[] m_Pool;
-        readonly CameraEffectRuntimeState.State[] m_FrameBaseline;
-        int m_BaselineCount;
 
         public CameraEffectRuntimeStateStore(int capacity)
         {
             m_Active = new List<CameraEffectRuntimeState>(capacity);
             m_Pool = new CameraEffectRuntimeState[capacity];
-            m_FrameBaseline = new CameraEffectRuntimeState.State[capacity];
             for (int index = 0; index < capacity; index++)
                 m_Pool[index] = new CameraEffectRuntimeState(default, string.Empty);
         }
 
         public IReadOnlyList<CameraEffectRuntimeState> Active => m_Active;
 
-        public void BeginFrame()
-        {
-            m_BaselineCount = m_Active.Count;
-            for (int index = 0; index < m_BaselineCount; index++)
-                m_FrameBaseline[index] = m_Active[index].CaptureState();
-        }
-
-        public void CommitFrame()
-        {
-            Array.Clear(m_FrameBaseline, 0, m_BaselineCount);
-            m_BaselineCount = 0;
-        }
-
-        public void DiscardFrame()
-        {
-            Reset();
-            for (int index = 0; index < m_BaselineCount; index++)
-            {
-                m_Pool[index].RestoreState(in m_FrameBaseline[index]);
-                m_Active.Add(m_Pool[index]);
-            }
-            CommitFrame();
-        }
-
         public void Reset()
         {
-            var empty = default(CameraEffectRuntimeState.State);
             for (int index = 0; index < m_Active.Count; index++)
-                m_Active[index].RestoreState(in empty);
+                m_Active[index].Reset(default, string.Empty);
             m_Active.Clear();
         }
 
@@ -58,8 +30,7 @@ namespace ThirdPersonCamera
             if (m_Active.Count == m_Pool.Length)
                 throw new InvalidOperationException("Camera active effects and retiring tails exceed RequestCapacity.");
             CameraEffectRuntimeState state = m_Pool[m_Active.Count];
-            var initial = new CameraEffectRuntimeState.State { Request = request, Tag = tag ?? string.Empty };
-            state.RestoreState(in initial);
+            state.Reset(request, tag);
             m_Active.Add(state);
             return state;
         }
@@ -72,8 +43,7 @@ namespace ThirdPersonCamera
                 m_Pool[slot] = m_Pool[slot + 1];
             m_Pool[last] = released;
             m_Active.RemoveAt(index);
-            var empty = default(CameraEffectRuntimeState.State);
-            released.RestoreState(in empty);
+            released.Reset(default, string.Empty);
         }
 
         public void ClearScope(CameraPresentationScopeKey scope)

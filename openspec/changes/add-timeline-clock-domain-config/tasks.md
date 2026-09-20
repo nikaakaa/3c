@@ -77,6 +77,8 @@
 - [ ] 6.3 将 OnEnable 产生的表现候选与事件记账接入原表现帧接受 / 丢弃边界，不调用 Simulation Evaluate / Finalize，不新建影子图 runtime 或私有 Simulation context
 - [ ] 6.4 缺少正式下游 domain 或图执行能力时在准备 / 调用边界明确失败，Camera / 动画继续走原领域输出，不以空实现或 payload 字符串宣称已消费
 
+相机范围：6.3／7.3 的丢弃仅覆盖未接受请求和事件记账；7.4 撤销已接受请求时走原镜头退出规则。相机平滑、碰撞、混合和效果计时不做历史恢复，跨 Pose／Cinemachine 物理回滚不属于本变更。
+
 ## 7. 停止、分支修正与事件生命周期
 
 - [ ] 7.1 接通正式 Stop / Cancel 接受结果与 Presentation 状态，停止后禁止旧 playback / generation 推进并产生新 Marker，清理失效采样缓存

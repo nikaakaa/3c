@@ -462,3 +462,10 @@
 - 仍未闭合跨领域物理事务：Pose 当前仍在 Camera 实际求值前提交；Camera Apply 部分写入失败，以及 Camera 接受后 Timeline 提交失败，需要接入原 Native Final Pose 发布边界共同处理。本批只完成 Camera 内部候选状态，不宣称完整外部回滚。首次身份分配、其他逻辑求值分配及多来源控制仍未完成。
 - 编译途中另一份正在修改的 CharacterPoseNativeBlendStackHandler.cs 出现 CS8156；该文件随后由原有改动修正为局部变量传 in，本任务未修改它，已发起当前代码的重新编译。
 - 当前代码重新编译成功，最终域重载完成（1789920360427），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试，未做异常注入或端到端验收。
+
+## 按用户明确边界收回相机历史回滚
+- 本节取代以上记录中把 Camera 求值状态恢复和跨 Pose／Camera 最终物理回滚列为后续必做项的判断；该扩展不符合业务范围，不再作为未完成事项。
+- 删除 FramePlanner、SequenceTransition、WorldBasic 和环境碰撞求值器的历史备份，以及 CameraEffectEvaluator 的帧备份／恢复。相机保留当前连续状态，在正式请求接受后读取本帧目标并正常求值。
+- 保留原候选请求 BeginFrame／CommitFrame／DiscardFrame 和 Pose 前资源／Rig 校验；未接受 Marker 不消耗交付资格，已接受事件撤销按原镜头退休规则收尾。没有增加 Pose 物理恢复代码。
+- 保留效果状态对象池、容量约束与已结束事件清理，避免每次激活分配状态对象；不把这些内存改进解释为相机回滚能力。design.md、tasks.md 和 character-animation-pipeline delta 已同步明确该边界。
+- 删除仅为候选回滚拆出的 PrepareRequests／EvaluatePrepared 接口，效果请求处理与求值统一回 Resolve。Unity 日志已报告脚本构建成功；共享工作区后续修改再次触发域重载，提交时尚未取得最终 idle／控制台结果。git diff --check 通过，未新增测试。

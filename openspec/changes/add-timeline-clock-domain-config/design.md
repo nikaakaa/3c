@@ -161,6 +161,8 @@ Track 是执行域的唯一声明者，只允许 Logic 或 Presentation；Clip �
 
 逻辑 Restore 只恢复逻辑私有状态。Presentation 消费正式最终分支 revision / reset 信息，不读取回滚中间状态，不把旧表现页作为确定性快照还原。停止时点遵守原确认 / horizon 合同，本变更不把未确认 rollback terminal 提前当成最终释放。
 
+相机不参加逻辑历史回滚，不保存或恢复过去的平滑、碰撞、镜头混合和效果计时状态。帧接受前只校验与丢弃候选请求及未交付事件记账；接受后，相机读取本帧角色目标，从当前可见画面继续求值。分支撤销通过稳定事件身份撤销请求，由原镜头 owner 按退出规则收尾。本变更不要求 Pose 与 Cinemachine 的物理写入形成可回滚事务，也不通过恢复内部相机状态掩盖最终 Apply 异常。
+
 ### 7. 作者操作必须对应可保存、可执行的内容
 
 已有 Track 的 Inspector 提供 Domain 编辑，Marker 显示继承的 Track 域；Domain 控制执行与输出权限，不切换全角色时钟策略。操作通过原 Timeline authoring mutation 校验受影响 Clip 和 Marker 图，更新同一 owner 下的域声明、闭包与 dirty / Undo 状态。存在不兼容节点或 Clip 时拒绝整次修改并定位内容，不只改 Track enum 留下旧 Clip 域。

@@ -35,14 +35,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CameraPresentationStopReason[] m_CandidateRetirements;
         readonly int m_RequestCapacity;
         bool m_FrameOpen;
-        bool m_FramePrepared;
-        bool m_RequestsPrepared;
-        CameraFramePlan m_CandidatePlan;
-        CharacterCameraSequenceEvaluator.State m_SequenceBaseline;
-        CameraEnvironmentConstraintSolver.State m_EnvironmentBaseline;
-        CameraSequenceRequest m_DefaultSequenceBaseline;
-        ulong m_BodyResetBaseline;
-        CameraResetReason m_ResetReasonBaseline;
         CameraSequenceRequest m_DefaultSequenceRequest;
         readonly CameraResponseRequest m_DefaultResponseRequest;
         ulong m_LastBodyResetSequence;
@@ -140,16 +132,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 0,
                 0);
             if (initializeExternalState)
-            {
-                CaptureRequests(m_SequenceRequests, m_ResponseRequests, m_TargetRequests, m_EffectRequests);
-                m_EffectEvaluator.PrepareRequests(m_EffectRequests);
-                CameraFramePlan initialPlan = EvaluatePlan(
+                Apply(
                     initialBody.Position,
                     initialBody.Rotation,
                     Vector2.zero,
                     0f,
                     0f,
                     0f,
+                    0,
+                    0,
                     0f,
                     0f,
                     false,
@@ -157,8 +148,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     false,
                     true,
                     CameraResetReason.Initialization);
-                m_Rig.Apply(in initialPlan);
-            }
         }
 
         internal CameraBasisSnapshot BasisSnapshot => m_Rig.BasisSnapshot;
@@ -173,66 +162,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             for (int index = 0; index < m_ActiveRequests.Count; index++)
                 m_CandidateRequests.Add(new ActiveCameraRequest(m_ActiveRequests[index].Command, index));
             Array.Clear(m_CandidateRetirements, 0, m_CandidateRetirements.Length);
-            m_SequenceBaseline = m_SequenceEvaluator.CaptureState();
-            m_EnvironmentBaseline = m_EnvironmentSolver.CaptureState();
-            m_DefaultSequenceBaseline = m_DefaultSequenceRequest;
-            m_BodyResetBaseline = m_LastBodyResetSequence;
-            m_ResetReasonBaseline = m_PendingResetReason;
-            m_EffectEvaluator.BeginFrame();
             m_FrameOpen = true;
         }
 
-        internal void PrepareRequests()
+        internal void ValidateFrame()
         {
-            if (!m_FrameOpen || m_RequestsPrepared)
-                throw new InvalidOperationException("Camera request preparation requires an open, unprepared candidate.");
+            if (!m_FrameOpen)
+                throw new InvalidOperationException("Camera validation requires an open frame candidate.");
             m_Rig.ValidateBinding(string.Empty);
             for (int index = 0; index < m_CandidateRequests.Count; index++)
                 ValidateRequest(m_CandidateRequests[index].Command.CameraRequest);
-            for (int index = 0; index < m_ActiveRequests.Count; index++)
-                if (m_CandidateRetirements[index] != 0)
-                    RetireRuntimeRequest(m_ActiveRequests[index].Command, m_CandidateRetirements[index]);
-            CaptureRequests(m_SequenceRequests, m_ResponseRequests, m_TargetRequests, m_EffectRequests);
-            m_EffectEvaluator.PrepareRequests(m_EffectRequests);
-            m_RequestsPrepared = true;
         }
 
         internal void CommitFrame()
         {
-            if (!m_FrameOpen || !m_FramePrepared)
-                throw new InvalidOperationException("Camera frame candidate has not been prepared.");
-            m_Rig.Apply(in m_CandidatePlan);
-            m_EffectEvaluator.CommitFrame();
+            if (!m_FrameOpen)
+                throw new InvalidOperationException("Camera frame candidate is not open.");
+            for (int index = 0; index < m_ActiveRequests.Count; index++)
+                if (m_CandidateRetirements[index] != 0)
+                    RetireRuntimeRequest(m_ActiveRequests[index].Command, m_CandidateRetirements[index]);
             m_ActiveRequests.Clear();
             m_ActiveRequests.AddRange(m_CandidateRequests);
             m_CandidateRequests.Clear();
-            ClearFrameBaseline();
+            m_FrameOpen = false;
         }
 
         internal void DiscardFrame()
         {
             if (!m_FrameOpen)
                 return;
-            m_SequenceEvaluator.RestoreState(in m_SequenceBaseline);
-            m_EnvironmentSolver.RestoreState(in m_EnvironmentBaseline);
-            m_EffectEvaluator.DiscardFrame();
-            m_DefaultSequenceRequest = m_DefaultSequenceBaseline;
-            m_LastBodyResetSequence = m_BodyResetBaseline;
-            m_PendingResetReason = m_ResetReasonBaseline;
             m_CandidateRequests.Clear();
-            ClearFrameBaseline();
-        }
-
-        void ClearFrameBaseline()
-        {
-            m_SequenceBaseline = default;
-            m_EnvironmentBaseline = default;
-            m_DefaultSequenceBaseline = default;
-            m_CandidatePlan = default;
-            m_BodyResetBaseline = 0;
-            m_ResetReasonBaseline = default;
-            m_FramePrepared = false;
-            m_RequestsPrepared = false;
             m_FrameOpen = false;
         }
 
@@ -356,13 +315,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingResetReason = CameraResetReason.Initialization;
         }
 
-        internal void PrepareFrame(
+        internal void Present(
             CharacterBodyPresentationFrame bodyFrame,
             in GameplayPresentationFrameContext context)
         {
             RequireAlive();
-            if (!m_FrameOpen || !m_RequestsPrepared || m_FramePrepared)
-                throw new InvalidOperationException("Camera evaluation requires prepared requests and an unevaluated frame candidate.");
             if (!bodyFrame.IsValid)
                 throw new InvalidOperationException("Camera domain requires a valid Body Presentation frame.");
             Vector2 look = m_Input.TryGetLatchedVector2(m_LookInputId, out Vector2 value)
@@ -379,13 +336,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CameraResetReason.None;
             m_PendingResetReason = CameraResetReason.None;
             m_LastBodyResetSequence = bodyFrame.ResetSequence;
-            m_CandidatePlan = EvaluatePlan(
+            Apply(
                 bodyFrame.VisiblePosition,
                 bodyFrame.VisibleRotation,
                 look,
                 context.ScaledDeltaSeconds,
                 context.UnscaledDeltaSeconds,
                 context.PresentationDeltaSeconds,
+                context.RenderFrame,
+                context.LocalLogicTick,
                 context.OwnerTimeScale,
                 context.LocalAvatarTimeScale,
                 context.HasOwnerTimeScale,
@@ -393,15 +352,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.Paused,
                 resetHistory,
                 resetReason);
-            m_Rig.ValidateBinding(m_CandidatePlan.ShotId);
-            m_FramePrepared = true;
         }
 
         public void Reset()
         {
             if (m_Disposed)
                 return;
-            DiscardFrame();
             m_SequenceEvaluator.Reset();
             m_EffectEvaluator.Reset();
             m_EnvironmentSolver.Reset();
@@ -425,13 +381,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Targets.Clear();
         }
 
-        CameraFramePlan EvaluatePlan(
+        void Apply(
             Vector3 position,
             Quaternion rotation,
             Vector2 look,
             float scaledDeltaSeconds,
             float unscaledDeltaSeconds,
             float presentationDeltaSeconds,
+            ulong presentationFrame,
+            ulong localLogicTick,
             float ownerTimeScale,
             float localAvatarTimeScale,
             bool ownerTimeScaleAvailable,
@@ -453,6 +411,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_TargetResolver.CaptureSlotSnapshots(
                 m_Projection.TargetSlots,
                 m_Targets);
+            CaptureRequests(
+                presentationFrame,
+                m_SequenceRequests,
+                m_ResponseRequests,
+                m_TargetRequests,
+                m_EffectRequests);
             m_SequenceRequests.Insert(0, m_DefaultSequenceRequest);
             CameraSequenceRequest sequence = m_SequenceResolver.Resolve(
                 m_SequenceRequests,
@@ -509,14 +473,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in frameInput,
                 in sequence,
                 in response);
-            plan = m_EffectEvaluator.EvaluatePrepared(plan, m_EffectRequests, in frameInput);
+            plan = m_EffectEvaluator.Resolve(plan, m_EffectRequests, in frameInput);
             plan = plan.WithPitchClamped(
                 m_Projection.Input.PitchLimit.x,
                 m_Projection.Input.PitchLimit.y);
-            return m_EnvironmentSolver.Apply(plan, in frameInput);
+            plan = m_EnvironmentSolver.Apply(plan, in frameInput);
+            m_Rig.Apply(in plan);
         }
 
         void CaptureRequests(
+            ulong presentationFrame,
             List<CameraSequenceRequest> sequences,
             List<CameraResponseRequest> responses,
             List<CameraTargetSelectionRequest> targets,
@@ -526,10 +492,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             responses.Clear();
             targets.Clear();
             effects.Clear();
-            List<ActiveCameraRequest> requests = Requests;
-            for (int i = 0; i < requests.Count; i++)
+            for (int i = 0; i < m_ActiveRequests.Count; i++)
             {
-                CharacterPresentationCommand command = requests[i].Command;
+                CharacterPresentationCommand command = m_ActiveRequests[i].Command;
                 PresentationCameraRequest payload = command.CameraRequest;
                 string eventId = command.Header.EventId.ToString();
                 switch (payload.Kind)

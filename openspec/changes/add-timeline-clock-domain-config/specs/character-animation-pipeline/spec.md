@@ -49,3 +49,10 @@ Presentation Marker 触发图 MUST使用正式表现安全上下文，只读允�
 - **WHEN** playback 的 Stop / Cancel 已被正式 owner 接受
 - **THEN** 后续 PresentationFrame MUST不再产生该 playback / generation 的新 Marker
 - **AND** 已生成动画、相机或效果尾部 MUST由其原领域 owner 处理，不得保持旧 Timeline 活跃
+
+#### Scenario: 逻辑分支修正后的相机继续表现
+
+- **WHEN** 已接受镜头事件的来源分支被撤销或角色目标位置被修正
+- **THEN** Camera MUST从当前可见状态继续跟随修正后的目标，按稳定事件身份撤销失效请求并由原 owner 处理退出
+- **AND** Camera MUST NOT恢复过去的平滑、碰撞、混合和效果计时状态
+- **AND** 未接受候选的丢弃 MUST仅约束请求和事件交付记账，不要求跨 Pose／Cinemachine 物理写入回滚

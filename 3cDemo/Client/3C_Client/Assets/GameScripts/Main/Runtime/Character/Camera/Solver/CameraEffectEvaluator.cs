@@ -13,12 +13,8 @@ namespace ThirdPersonCamera
         readonly List<PendingRetirement> m_PendingRetirements;
         readonly List<CameraEffectRuntimeState> m_VisibleStates;
         readonly HashSet<CameraEffectEventKey> m_CompletedEvents;
-        readonly List<CameraEffectContribution> m_ContributionBaseline;
-        readonly List<PendingRetirement> m_RetirementBaseline;
-        readonly HashSet<CameraEffectEventKey> m_CompletedBaseline;
         readonly List<CameraEffectEventKey> m_CompletedToRemove;
         readonly int m_Capacity;
-        bool m_FrameOpen;
 
         public CameraEffectEvaluator(CharacterCameraProjectionPayload projection, int capacity)
         {
@@ -33,9 +29,6 @@ namespace ThirdPersonCamera
             m_PendingRetirements = new List<PendingRetirement>(capacity);
             m_VisibleStates = new List<CameraEffectRuntimeState>(capacity);
             m_CompletedEvents = new HashSet<CameraEffectEventKey>(capacity);
-            m_ContributionBaseline = new List<CameraEffectContribution>(capacity);
-            m_RetirementBaseline = new List<PendingRetirement>(capacity);
-            m_CompletedBaseline = new HashSet<CameraEffectEventKey>(capacity);
             m_CompletedToRemove = new List<CameraEffectEventKey>(capacity);
             m_Owners = new ICameraEffectOwner[]
             {
@@ -49,54 +42,8 @@ namespace ThirdPersonCamera
 
         public IReadOnlyList<CameraEffectContribution> Contributions => m_Contributions;
 
-        public void BeginFrame()
-        {
-            if (m_FrameOpen)
-                throw new InvalidOperationException("Camera effect frame is already open.");
-            m_States.BeginFrame();
-            m_ContributionBaseline.AddRange(m_Contributions);
-            m_RetirementBaseline.AddRange(m_PendingRetirements);
-            foreach (CameraEffectEventKey key in m_CompletedEvents)
-                m_CompletedBaseline.Add(key);
-            m_FrameOpen = true;
-        }
-
-        public void CommitFrame()
-        {
-            if (!m_FrameOpen)
-                throw new InvalidOperationException("Camera effect frame is not open.");
-            m_States.CommitFrame();
-            ClearBaseline();
-        }
-
-        public void DiscardFrame()
-        {
-            if (!m_FrameOpen)
-                return;
-            m_States.DiscardFrame();
-            m_Contributions.Clear();
-            m_Contributions.AddRange(m_ContributionBaseline);
-            m_PendingRetirements.Clear();
-            m_PendingRetirements.AddRange(m_RetirementBaseline);
-            m_CompletedEvents.Clear();
-            foreach (CameraEffectEventKey key in m_CompletedBaseline)
-                m_CompletedEvents.Add(key);
-            m_VisibleStates.Clear();
-            m_CompletedToRemove.Clear();
-            ClearBaseline();
-        }
-
-        void ClearBaseline()
-        {
-            m_ContributionBaseline.Clear();
-            m_RetirementBaseline.Clear();
-            m_CompletedBaseline.Clear();
-            m_FrameOpen = false;
-        }
-
         public void Reset()
         {
-            DiscardFrame();
             m_States.Reset();
             m_Contributions.Clear();
             m_PendingRetirements.Clear();
@@ -155,7 +102,10 @@ namespace ThirdPersonCamera
                 reason));
         }
 
-        public void PrepareRequests(IReadOnlyList<CameraEffectRequest> newRequests)
+        public CameraFramePlan Resolve(
+            CameraFramePlan basePlan,
+            IReadOnlyList<CameraEffectRequest> newRequests,
+            in CameraFrameInput input)
         {
             if (newRequests != null && newRequests.Count > m_Capacity)
                 throw new InvalidOperationException("Camera effect requests exceed RequestCapacity.");
@@ -168,13 +118,6 @@ namespace ThirdPersonCamera
             m_CompletedToRemove.Clear();
             AddRequests(newRequests);
             ApplyPendingRetirements();
-        }
-
-        public CameraFramePlan EvaluatePrepared(
-            CameraFramePlan basePlan,
-            IReadOnlyList<CameraEffectRequest> newRequests,
-            in CameraFrameInput input)
-        {
             m_VisibleStates.Clear();
             for (int i = 0; i < m_States.Active.Count; i++)
                 m_VisibleStates.Add(m_States.Active[i]);

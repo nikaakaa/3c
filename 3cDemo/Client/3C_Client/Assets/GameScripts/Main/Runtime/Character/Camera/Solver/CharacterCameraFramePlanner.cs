@@ -16,30 +16,6 @@ namespace ThirdPersonCamera
         float m_YawOffset;
         float m_PitchOffset;
 
-        internal struct State
-        {
-            internal float InitialYawOffset;
-            internal float InitialPitchOffset;
-            internal float YawOffset;
-            internal float PitchOffset;
-        }
-
-        internal State CaptureState() => new State
-        {
-            InitialYawOffset = m_InitialYawOffset,
-            InitialPitchOffset = m_InitialPitchOffset,
-            YawOffset = m_YawOffset,
-            PitchOffset = m_PitchOffset
-        };
-
-        internal void RestoreState(in State state)
-        {
-            m_InitialYawOffset = state.InitialYawOffset;
-            m_InitialPitchOffset = state.InitialPitchOffset;
-            m_YawOffset = state.YawOffset;
-            m_PitchOffset = state.PitchOffset;
-        }
-
         public CharacterCameraFramePlanner(CharacterCameraProjectionPayload projection)
         {
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));

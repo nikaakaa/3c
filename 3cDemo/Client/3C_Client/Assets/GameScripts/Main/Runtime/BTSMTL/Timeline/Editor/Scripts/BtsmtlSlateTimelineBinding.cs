@@ -833,6 +833,8 @@ namespace BTSMTL.Timeline.Editor
             for (int index = 0; index < contract.AllowedClipKinds.Count; index++)
             {
                 string kind = contract.AllowedClipKinds[index];
+                if (!ContractCatalog.RequireClip(kind).SupportsExecutionDomain(track.Source.ExecutionDomain))
+                    continue;
                 menu.AddItem(new GUIContent(DisplayKind(kind)), false, () => ShowClipCreationPopup(trackAuthoringId, kind, frame));
             }
             menu.ShowAsContext();
@@ -849,19 +851,19 @@ namespace BTSMTL.Timeline.Editor
             bool isTreeClip = kind == TimelineContractKinds.TreeClip;
             bool terminalLogicTreeClip = isTreeClip &&
                 executionDomain == TimelineExecutionDomain.Logic;
-            int defaultEndFrame = terminalLogicTreeClip
-                ? Mathf.Max(frame + 1, Timeline.MaxFrame)
-                : frame + Mathf.Max(1, FrameRate / 20);
+            FixedScalar startTime = TimelineTimeGrid.Position(frame, FrameRate);
+            FixedScalar defaultEndTime = terminalLogicTreeClip
+                ? FixedScalar.Max(startTime + FixedScalar.FromRaw(1), Timeline.DurationTime)
+                : startTime + FixedScalar.FromDecimal(0.05m);
             var motionClipIds = Timeline.Tracks.SelectMany(track => track.Clips).OfType<MotionCurveClip>().Select(clip => clip.AuthoringId).ToArray();
             var request = new TimelineClipCreationRequest
             {
                 TrackAuthoringId = trackAuthoringId,
                 Kind = kind,
                 ExecutionDomain = executionDomain,
-                FrameRate = FrameRate,
-                StartFrame = frame,
-                EndFrame = defaultEndFrame,
-                DefaultEndFrame = defaultEndFrame,
+                StartTime = startTime,
+                EndTime = defaultEndTime,
+                DefaultEndTime = defaultEndTime,
             };
             if (isTreeClip)
                 request.NewTreeGraphName = "Timeline Tree";
@@ -902,7 +904,7 @@ namespace BTSMTL.Timeline.Editor
             bool isTreeClip = request.Kind == TimelineContractKinds.TreeClip;
             bool terminalLogicTreeClip = isTreeClip &&
                 track.Source.ExecutionDomain == TimelineExecutionDomain.Logic;
-            int terminalFrame = Mathf.Max(request.StartFrame + 1, Timeline.MaxFrame);
+            FixedScalar terminalTime = FixedScalar.Max(request.StartTime + FixedScalar.FromRaw(1), Timeline.DurationTime);
             try
             {
                 Clip added = null;
@@ -916,20 +918,15 @@ namespace BTSMTL.Timeline.Editor
                             treeGraph = TimelineGraphAuthoring.CreateSubAsset(m_Request.SerializedOwner, request.NewTreeGraphName, BtsmtlSkillFlowGraphRole.TimelineBody);
                     }
                     added = request.Kind == TimelineContractKinds.AnimationClip
-                        ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, TimelineTimeGrid.Position(request.StartFrame, FrameRate))
+                        ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, request.StartTime)
                         : request.Kind == TimelineContractKinds.MotionCurveClip
-                            ? Timeline.AddClip(ContractCatalog, request.SourceCurve, track.Source, TimelineTimeGrid.Position(request.StartFrame, FrameRate))
+                            ? Timeline.AddClip(ContractCatalog, request.SourceCurve, track.Source, request.StartTime)
                         : treeGraph != null
-                            ? Timeline.AddClip(ContractCatalog, treeGraph, track.Source, TimelineTimeGrid.Position(request.StartFrame, FrameRate))
+                            ? Timeline.AddClip(ContractCatalog, treeGraph, track.Source, request.StartTime)
                         : request.Resource != null
-                            ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, TimelineTimeGrid.Position(request.StartFrame, FrameRate))
-                            : Timeline.AddClip(ContractCatalog, track.Source, TimelineTimeGrid.Position(request.StartFrame, FrameRate));
-                    added.ConfigureTimeRange(added.StartTime, TimelineTimeGrid.Position(terminalLogicTreeClip
-                        ? terminalFrame
-                        : Mathf.Max(request.StartFrame + 1, request.EndFrame), FrameRate));
-                    if (isTreeClip && track.Source.ExecutionDomain == TimelineExecutionDomain.Presentation &&
-                        added is TreeClip presentationClip)
-                        presentationClip.SetExitSource(TimelineClipExitSource.FrameBoundary);
+                            ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, request.StartTime)
+                            : Timeline.AddClip(ContractCatalog, track.Source, request.StartTime);
+                    added.ConfigureTimeRange(added.StartTime, terminalLogicTreeClip ? terminalTime : request.EndTime);
                     TimelineAuthoringClipBinding.Configure(Timeline, added, ReadConfiguration(added, request), this);
                     added.Track.UpdateMix();
                 }, "Add Timeline Clip"))

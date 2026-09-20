@@ -206,3 +206,11 @@
 - 逻辑与表现求值共用 TimelineRuntimeEvaluationSegment，删除重复的 PresentationSegment。区间保存定点秒，动画／运动曲线采样在原浮点接口边界转换；MotionWarp 区间相交比较保留定点精度。
 - 当前 BuildSegments 仍从待迁移的逻辑整数帧／表现浮点帧游标换算秒，该剩余入口不作为最终方案；没有新增一份权威游标。原 List、闭包和结果对象分配仍待后续清理。
 - Unity重载完成1789880893502，随后错误控制台0条。只读调用现有ActionCueTrack.Sample检查180个非零实际Cue：从触发点前1 raw跨至触发点均恰好返回该Cue一次，原地重复区间不返回该Cue，errors=[]。未创建测试文件、未修改资产；该证据仅覆盖点事件边界，不代表整条播放链验收。
+
+## 新建 Clip 草稿秒制收口
+
+- TimelineClipCreationRequest 删除 FrameRate／StartFrame／EndFrame／DefaultEndFrame，草稿只保存定点秒。弹窗输入秒，仅字段变化时转换；选择Animation或RootMotion素材时直接使用源秒数，不再先按显示帧率取整。
+- 创建提交直接传递草稿秒值给正式 AddClip／ConfigureTimeRange；逻辑TreeClip按精确Timeline末端对齐。显示网格只在打开弹窗时将点击帧位置转换一次，不进入草稿存储。
+- Add Clip菜单通过既有Clip contract按轨道域过滤类型，删除已不允许的Presentation TreeClip创建后分支；不恢复跨域覆盖或空表现图执行。
+- 配置驱动的逻辑tick／素材帧／关闭吸附与显式重新对齐尚未完成，不能因创建弹窗改用秒就勾选8.3／8.6。
+- 编译与域重载于1789881136894完成，观测1789881157099为idle、非Play／编译／导入，错误控制台0条。创建草稿及弹窗源码不再含StartFrame／EndFrame／FrameRate字段；未进行鼠标操作验收，未新增测试。

@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Control.Authoring;
@@ -16,10 +17,9 @@ namespace BTSMTL.Timeline.Editor
         public string TrackAuthoringId;
         public string Kind;
         public TimelineExecutionDomain ExecutionDomain;
-        public int FrameRate;
-        public int StartFrame;
-        public int EndFrame;
-        public int DefaultEndFrame;
+        public FixedScalar StartTime;
+        public FixedScalar EndTime;
+        public FixedScalar DefaultEndTime;
         public UnityEngine.Object Resource;
         public RootMotionCurveAsset SourceCurve;
         public float SourceStartTime;
@@ -80,11 +80,11 @@ namespace BTSMTL.Timeline.Editor
         public override void OnGUI(Rect rect)
         {
             EditorGUILayout.LabelField("Add Clip", EditorStyles.boldLabel);
-            m_Request.StartFrame = EditorGUILayout.IntField("Start Frame", m_Request.StartFrame);
+            m_Request.StartTime = DrawTime("Start (Seconds)", m_Request.StartTime);
             if (IsTreeClip && m_Request.ExecutionDomain == TimelineExecutionDomain.Logic)
-                EditorGUILayout.LabelField("End Frame", $"Timeline End ({m_Request.EndFrame})");
+                EditorGUILayout.LabelField("End (Seconds)", $"Timeline End ({m_Request.EndTime})");
             else
-                m_Request.EndFrame = EditorGUILayout.IntField("End Frame", m_Request.EndFrame);
+                m_Request.EndTime = DrawTime("End (Seconds)", m_Request.EndTime);
 
             if (m_Request.Kind == TimelineContractKinds.AnimationClip)
             {
@@ -92,10 +92,10 @@ namespace BTSMTL.Timeline.Editor
                 m_Request.Resource = EditorGUILayout.ObjectField("Animation Clip", m_Request.Resource, typeof(UnityEngine.AnimationClip), false);
                 if (!ReferenceEquals(previousResource, m_Request.Resource) && m_Request.Resource is UnityEngine.AnimationClip animation)
                 {
-                    int resourceEndFrame = m_Request.StartFrame + Mathf.Max(1, Mathf.RoundToInt(animation.length * m_Request.FrameRate));
-                    if (m_Request.EndFrame == m_Request.DefaultEndFrame)
-                        m_Request.EndFrame = resourceEndFrame;
-                    m_Request.DefaultEndFrame = resourceEndFrame;
+                    FixedScalar resourceEndTime = m_Request.StartTime + FixedScalar.FromDouble(animation.length);
+                    if (m_Request.EndTime == m_Request.DefaultEndTime)
+                        m_Request.EndTime = resourceEndTime;
+                    m_Request.DefaultEndTime = resourceEndTime;
                 }
                 m_Request.Extrapolation = (ExtraPolationMode)EditorGUILayout.EnumPopup("Extrapolation", m_Request.Extrapolation);
                 m_Request.BlendProfileId = EditorGUILayout.TextField("Blend Profile", m_Request.BlendProfileId);
@@ -126,12 +126,10 @@ namespace BTSMTL.Timeline.Editor
                 {
                     m_Request.SourceStartTime = 0f;
                     m_Request.SourceEndTime = m_Request.SourceCurve.Duration;
-                    int sourceEndFrame = m_Request.StartFrame + Mathf.Max(
-                        1,
-                        Mathf.RoundToInt(m_Request.SourceCurve.Duration * m_Request.FrameRate));
-                    if (m_Request.EndFrame == m_Request.DefaultEndFrame)
-                        m_Request.EndFrame = sourceEndFrame;
-                    m_Request.DefaultEndFrame = sourceEndFrame;
+                    FixedScalar sourceEndTime = m_Request.StartTime + FixedScalar.FromDouble(m_Request.SourceCurve.Duration);
+                    if (m_Request.EndTime == m_Request.DefaultEndTime)
+                        m_Request.EndTime = sourceEndTime;
+                    m_Request.DefaultEndTime = sourceEndTime;
                 }
                 m_Request.CurveId = EditorGUILayout.TextField("Curve Id", m_Request.CurveId);
                 m_Request.SourceStartTime = EditorGUILayout.FloatField("Source Start (s)", m_Request.SourceStartTime);
@@ -215,7 +213,7 @@ namespace BTSMTL.Timeline.Editor
 
         string Validate()
         {
-            if (m_Request.StartFrame < 0 || m_Request.EndFrame <= m_Request.StartFrame)
+            if (m_Request.StartTime < FixedScalar.Zero || m_Request.EndTime <= m_Request.StartTime)
                 return "帧范围必须满足 Start < End。";
             if (m_Request.Kind == TimelineContractKinds.AnimationClip && m_Request.Resource is not UnityEngine.AnimationClip)
                 return "必须选择已有 AnimationClip。";
@@ -229,11 +227,9 @@ namespace BTSMTL.Timeline.Editor
                     m_Request.SourceEndTime <= m_Request.SourceStartTime ||
                     m_Request.SourceEndTime > m_Request.SourceCurve.Duration)
                     return "Source 时间范围必须位于 RootMotionCurveAsset 内。";
-                int sourceEndFrame = m_Request.StartFrame + Mathf.Max(
-                    1,
-                    Mathf.RoundToInt((m_Request.SourceEndTime - m_Request.SourceStartTime) * m_Request.FrameRate));
-                if (sourceEndFrame > m_Request.EndFrame)
-                    return "Clip End Frame 必须覆盖 Source 时间范围。";
+                FixedScalar sourceEndTime = m_Request.StartTime + FixedScalar.FromDouble(m_Request.SourceEndTime - m_Request.SourceStartTime);
+                if (sourceEndTime > m_Request.EndTime)
+                    return "Clip 结束秒数必须覆盖 Source 时间范围。";
             }
             if (m_Request.Kind == TimelineContractKinds.MotionWarpClip && string.IsNullOrEmpty(m_Request.SourceMotionClipId))
                 return "MotionWarp 必须选择已有 MotionCurve 来源。";
@@ -248,6 +244,13 @@ namespace BTSMTL.Timeline.Editor
             if (IsTreeClip && m_Request.TreeGraph == null && string.IsNullOrWhiteSpace(m_Request.NewTreeGraphName))
                 return "TreeClip必须绑定或创建 FlowCanvas SkillGraph。";
             return string.Empty;
+        }
+
+        static FixedScalar DrawTime(string label, FixedScalar time)
+        {
+            EditorGUI.BeginChangeCheck();
+            double seconds = EditorGUILayout.DoubleField(label, time.ToDouble());
+            return EditorGUI.EndChangeCheck() ? FixedScalar.FromDouble(seconds) : time;
         }
 
         bool IsTreeClip => m_Request.Kind == TimelineContractKinds.TreeClip;

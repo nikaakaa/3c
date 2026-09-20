@@ -48,6 +48,31 @@ namespace ThirdPersonSimulation
             IReadOnlyList<GameplayFact> gameplayFacts,
             IReadOnlyList<PresentationCommand> presentationCommands,
             IReadOnlyList<SimulationTraceRecord> traceRecords)
+            : this(
+                actorId,
+                tick,
+                state,
+                stateHash,
+                bodySample,
+                motion,
+                Copy(gameplayFacts),
+                Copy(presentationCommands),
+                Copy(traceRecords),
+                true)
+        {
+        }
+
+        SimulationActorTickResult(
+            ActorId actorId,
+            SimulationTick tick,
+            Float32CharacterRuntimeState state,
+            CharacterStateHash stateHash,
+            CharacterBodySample bodySample,
+            CharacterMotionRequest motion,
+            GameplayFact[] gameplayFacts,
+            PresentationCommand[] presentationCommands,
+            SimulationTraceRecord[] traceRecords,
+            bool _)
         {
             if (!actorId.IsValid || !tick.IsValid || bodySample.ActorId != actorId || bodySample.Tick != tick)
                 throw new ArgumentException("Actor Tick result identity is incomplete.");
@@ -61,13 +86,35 @@ namespace ThirdPersonSimulation
             Tick = tick;
             BodySample = bodySample;
             Motion = motion;
-            m_GameplayFacts = Copy(gameplayFacts);
-            m_PresentationCommands = Copy(presentationCommands);
-            m_TraceRecords = Copy(traceRecords);
+            m_GameplayFacts = gameplayFacts;
+            m_PresentationCommands = presentationCommands;
+            m_TraceRecords = traceRecords;
             ValidateHeaders(m_GameplayFacts, value => value.Header, state.NumericProfile, actorId, tick, "Gameplay fact");
             ValidateHeaders(m_PresentationCommands, value => value.Header, state.NumericProfile, actorId, tick, "Presentation command");
             ValidateHeaders(m_TraceRecords, value => value.Header, state.NumericProfile, actorId, tick, "Trace record");
         }
+
+        internal static SimulationActorTickResult FromOwnedOutputs(
+            ActorId actorId,
+            SimulationTick tick,
+            Float32CharacterRuntimeState state,
+            CharacterStateHash stateHash,
+            CharacterBodySample bodySample,
+            CharacterMotionRequest motion,
+            GameplayFact[] gameplayFacts,
+            PresentationCommand[] presentationCommands,
+            SimulationTraceRecord[] traceRecords) =>
+            new SimulationActorTickResult(
+                actorId,
+                tick,
+                state,
+                stateHash,
+                bodySample,
+                motion,
+                gameplayFacts ?? throw new ArgumentNullException(nameof(gameplayFacts)),
+                presentationCommands ?? throw new ArgumentNullException(nameof(presentationCommands)),
+                traceRecords ?? throw new ArgumentNullException(nameof(traceRecords)),
+                true);
 
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }

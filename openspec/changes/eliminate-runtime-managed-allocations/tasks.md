@@ -162,6 +162,8 @@
 
 - [x] 2.94 两数值域 CharacterEvaluationResult 直接接管角色评估末尾从五只聚合 List 物化的 facts／presentation／trace／timeline advance／timeline stop 数组，删除每 Actor 每 step 的五只结果 List、五只 ReadOnlyCollection 及二次元素复制
 
+- [x] 2.95 两数值域 CharacterEvaluationResult 在 Consume 成功后通过一次性 TakeOutputs 转移 facts／presentation／trace 数组，AbilityFinalize 以内部 owned 入口构造 SimulationActorTickResult，删除每 Actor 每 completed tick 的三次数组复制
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

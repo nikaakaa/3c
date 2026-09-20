@@ -79,16 +79,21 @@ namespace ThirdPersonSimulation
                     worldResult.AppliedYawDegrees);
                 evaluation.Consume();
                 Float32CharacterRuntimeState finalState = evaluation.CandidateState;
-                var result = new SimulationActorTickResult(
+                CharacterStateHash stateHash = Float32CharacterRuntimeStateCodec.ComputeHash(finalState);
+                evaluation.TakeOutputs(
+                    out GameplayFact[] gameplayFacts,
+                    out PresentationCommand[] presentationCommands,
+                    out SimulationTraceRecord[] traceRecords);
+                SimulationActorTickResult result = SimulationActorTickResult.FromOwnedOutputs(
                     evaluation.ActorId,
                     evaluation.Tick,
                     finalState,
-                    Float32CharacterRuntimeStateCodec.ComputeHash(finalState),
+                    stateHash,
                     bodySample,
                     expected.Motion,
-                    evaluation.GameplayFacts,
-                    evaluation.PresentationCommands,
-                    evaluation.TraceRecords);
+                    gameplayFacts,
+                    presentationCommands,
+                    traceRecords);
                 Float32PipelineDiagnostics.PublishOperations(
                     readPorts.Diagnostics.Sink,
                     result.TraceRecords,

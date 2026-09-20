@@ -6,14 +6,16 @@ namespace ThirdPersonSimulation.Fixed
 {
     public sealed class FixedCharacterEvaluationResult
     {
-        readonly IReadOnlyList<GameplayFact> m_GameplayFacts;
-        readonly IReadOnlyList<PresentationCommand> m_PresentationCommands;
-        readonly IReadOnlyList<SimulationTraceRecord> m_TraceRecords;
+        GameplayFact[] m_GameplayFacts;
+        PresentationCommand[] m_PresentationCommands;
+        SimulationTraceRecord[] m_TraceRecords;
         readonly IReadOnlyList<AbilityTimelineAdvancePending> m_TimelineAdvances;
         readonly IReadOnlyList<AbilityTimelineStopPending> m_TimelineStops;
         readonly IAbilityTimelineRuntime m_TimelineRuntime;
         FixedCharacterRuntimeState m_CandidateState;
         bool m_Consumed;
+        bool m_OutputsCommitted;
+        bool m_OutputsTaken;
 
         internal FixedCharacterEvaluationResult(
             ActorId actorId,
@@ -44,10 +46,6 @@ namespace ThirdPersonSimulation.Fixed
         public ActorId ActorId { get; }
         public SimulationTick Tick { get; }
         internal FixedCharacterRuntimeState CandidateState => m_CandidateState;
-        internal IReadOnlyList<GameplayFact> GameplayFacts => m_GameplayFacts;
-        internal IReadOnlyList<PresentationCommand> PresentationCommands => m_PresentationCommands;
-        internal IReadOnlyList<SimulationTraceRecord> TraceRecords => m_TraceRecords;
-        internal IReadOnlyList<AbilityTimelineAdvancePending> TimelineAdvances => m_TimelineAdvances;
 
         internal void Consume()
         {
@@ -63,7 +61,24 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < m_TimelineStops.Count; i++)
                 m_CandidateState = m_CandidateState.WithoutTimelineSnapshot(m_TimelineStops[i].RuntimeHandle);
             m_CandidateState = m_CandidateState.WithoutUnownedTerminalTimelines();
+            m_OutputsCommitted = true;
             m_Consumed = true;
+        }
+
+        internal void TakeOutputs(
+            out GameplayFact[] gameplayFacts,
+            out PresentationCommand[] presentationCommands,
+            out SimulationTraceRecord[] traceRecords)
+        {
+            if (!m_OutputsCommitted || m_OutputsTaken)
+                throw new InvalidOperationException("Fixed Character evaluation outputs are not available for transfer.");
+            gameplayFacts = m_GameplayFacts;
+            presentationCommands = m_PresentationCommands;
+            traceRecords = m_TraceRecords;
+            m_GameplayFacts = Array.Empty<GameplayFact>();
+            m_PresentationCommands = Array.Empty<PresentationCommand>();
+            m_TraceRecords = Array.Empty<SimulationTraceRecord>();
+            m_OutputsTaken = true;
         }
 
         internal void DiscardUnconsumed()

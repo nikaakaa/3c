@@ -2040,3 +2040,12 @@
 - 两域 runtime 在成功返回边界把五只聚合 List 各物化一次为准确数组，CharacterEvaluationResult 内部构造直接接管并按 IReadOnlyList 暴露。候选状态、Timeline runtime、Consume／Discard 及 timeline commit 顺序不变；异常发生在返回前时仍走原 discard 清理。
 - 每个 Actor evaluation 删除五只结果 List、五只 ReadOnlyCollection 及从聚合 List 到结果 List 的二次元素复制；五只最终数组仍按 evaluation 寿命存在。Finalize 到 SimulationActorTickResult 的安全复制暂时保留。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback 与 ServerAuthoritative portable 均编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 ability evaluation Player 分配采样。
+
+## 2026-09-21 Evaluation 到 ActorTickResult 输出转移
+
+对应 tasks.md 的 2.95，收口 2.93／2.94 之间保留的 evaluation 到 finalize 数组复制。
+
+- AbilityFinalize 先 Consume evaluation，提交 Timeline 输出并得到最终 CharacterRuntimeState，随后原构造会把 evaluation 已独立持有的 facts、presentation 与 trace 三只数组再复制到 SimulationActorTickResult。evaluation 在 finalize 后不再消费这些输出。
+- 两域 CharacterEvaluationResult 增加一次性 TakeOutputs：只允许 Consume 成功标记 committed 后调用，取走三只数组后把内部引用置为 Array.Empty，再次取走或 discard 路径调用会失败。未使用的直接集合 getter 删除，输出所有权只有这一条正式链路。
+- 两域 SimulationActorTickResult 增加 internal FromOwnedOutputs，在接管数组上执行原 header 数值域／Actor／tick 校验；公开构造继续复制一般 IReadOnlyList。Finalize 先计算状态哈希，再取走数组并进入 owned 构造。
+- 每个 Actor completed tick 删除三只与输出数量等长的数组复制，最终数组及所有事件对象仍按 ActorTickResult 寿命存在。ThirdPersonSimulation.Fixed、Float32、DeterministicRollback 与 ServerAuthoritative portable 均编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 finalize Player 分配采样。

@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Buffers.Binary;
 using System.IO;
 using System.Text;
@@ -75,15 +74,19 @@ namespace ThirdPersonSimulation
             WriteInt32(byteCount);
             if (byteCount == 0)
                 return;
-            byte[] rented = ArrayPool<byte>.Shared.Rent(byteCount);
-            try
+            const int characterCapacity = 256;
+            Span<byte> buffer = stackalloc byte[characterCapacity * 3];
+            int offset = 0;
+            while (offset < value.Length)
             {
-                int written = Encoding.UTF8.GetBytes(value, 0, value.Length, rented, 0);
-                m_Stream.Write(rented, 0, written);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(rented);
+                int count = Math.Min(characterCapacity, value.Length - offset);
+                if (offset + count < value.Length &&
+                    char.IsHighSurrogate(value[offset + count - 1]) &&
+                    char.IsLowSurrogate(value[offset + count]))
+                    count--;
+                int written = Encoding.UTF8.GetBytes(value.AsSpan(offset, count), buffer);
+                m_Stream.Write(buffer.Slice(0, written));
+                offset += count;
             }
         }
 

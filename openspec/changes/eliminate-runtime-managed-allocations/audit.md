@@ -747,3 +747,12 @@
 - RuntimeInstanceKey 是 struct，实现强类型 Equals/GetHashCode；Character 等工厂直接构造值类型，不能因 new 关键字列为托管分配。其身份同时包含 ActivationGeneration、TimelinePlaybackId、ActionInstanceId 和 InvocationGeneration 等，新代次可产生新字典键，因此长时间事件流可能导致映射增长；本轮没有运行数据证明具体增长速率或泄漏量。
 - 该映射用于补齐后续无 source 的事件来源。按大小随意淘汰、在 Pop 时删除或分支切换时清空，可能让迟到／结束事件丢失来源；正确迁移需要明确各实例最后事件与释放边界，覆盖动作、技能、Timeline／TreeClip 和上下文切换。该范围与并行播放生命周期相交，保留现场，不能用任意固定上限或第二来源缓存绕过。
 - 现有 live 状态 m_MaxChanges 和 capture 的 maxSegments／maxEvents 只约束各自存储，不能当作 m_InstanceSources 的容量依据。后续 7.1 应把上下文实例映射和实例栈的准备容量、代次结束归还纳入同一生命周期改造；本轮没有新增配置、手动验证任务、Editor 操作或 Player 采样。
+## 2026-09-20 Canonical 字符串编码固定栈缓冲
+
+对应 tasks.md 的 5.45。
+
+- CanonicalWriter.WriteString 原 GetByteCount 后按整字符串 UTF-8 长度租借数组，编码、写入再归还。现保留 GetByteCount 和原四字节长度前缀，使用一次 768 字节栈缓冲，循环处理最多 256 个 UTF-16 code unit；每块编码后同步写入已有 MemoryStream，不租借托管中转数组。
+- 容量推导：默认 UTF-8 对单个普通／替换字符最多三字节，合法代理对占两个 code unit、输出四字节，256×3 足够。若块尾是高代理且下一字符是低代理，本块缩短一位，下一块完整处理该代理对；不按字符任意拆字节，不分裂合法 Unicode 字符。null／空串仍写零长度后返回。
+- 源码核对了普通字符、代理对恰跨边界、孤立代理及尾块的控制流，未执行字节对比测试。沿 Encoding.UTF8 的既有无效字符替换语义；编码器处理非法输入的内部辅助分配没有采样，不宣称任意字符串全链零分配。
+- 取舍：固定栈占用与字符串总长度无关，删除池未命中和大字符串中转数组；长串会有多次同步流写入，CPU／吞吐影响未测。MemoryStream 扩容、writer 对象及最终输出仍分配，不改变外部流持有关系或另建编码入口。
+- 目标文件编辑前无其它未提交修改，未发现 csc／bee。Core portable 编译零警告零错误并关闭构建服务；另沿 Unity 当前 Core.rsp 独立编译至系统 TEMP，退出码 0、无诊断输出，确认 Span 编码 API 可用。diff 空白检查通过，未新增测试、未刷新或控制共享 Editor、未做协议运行或 Player 采样。

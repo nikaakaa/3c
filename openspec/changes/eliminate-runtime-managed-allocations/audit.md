@@ -1036,3 +1036,12 @@
 - ActorContactMobility 正式成员只有 ActiveSimulated 与 ObservedKinematic。现直接匹配两者，未知零值及其它 byte 继续与非法 ActorId 进入原 ArgumentException；位置、形状、候选顺序和接触求解输入均未改变。
 - 删除的是每批按本地角色数加观测角色数重复的装箱与枚举元数据查询，不宣称 ActorContactSolver 的数组、列表、结果或诊断已经无分配。
 - ThirdPersonSimulation.DotRecast portable 编译零错误，存在 DotRecast 包内两个既有 nullable 警告，构建服务关闭成功。未新增测试、未操作共享 Unity、未做接触求解运行对比或 Player 分配采样。
+
+## 2026-09-20 KCC 碰撞特征身份枚举校验
+
+对应 tasks.md 的 5.52。
+
+- DeterministicCapsuleQueries 的距离、射线、三角形几何等运行查询在产生命中特征时反复构造 DeterministicCollisionFeatureId；原构造器和 IsValid 都执行 Enum.IsDefined，后续比较、命中结果和 KCC 状态还会读取该身份。
+- DeterministicCollisionFeatureKind 正式成员连续为 PlaneFace=1 至 BoxFace=5，现由身份类型集中按该闭区间判断；未知零值及其它 byte 和负索引继续拒绝。碰撞资产图元的 Plane=1 至 Box=3 同步改为边界校验。
+- 删除的是每次碰撞特征生成及有效性读取的装箱和元数据查询；图元构造只属于世界准备，不计逐帧收益。未修改特征 Index、命中排序、距离算法、法线、表面或 KCC 状态语义。
+- ThirdPersonSimulation.DeterministicKcc portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 KCC 运行回放或 Player 分配采样。

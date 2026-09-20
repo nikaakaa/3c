@@ -25,7 +25,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
     {
         public DeterministicCollisionFeatureId(DeterministicCollisionFeatureKind kind, int index)
         {
-            if (!Enum.IsDefined(typeof(DeterministicCollisionFeatureKind), kind) || index < 0)
+            if (!IsDefined(kind) || index < 0)
                 throw new ArgumentException("Collision feature identity is invalid.");
             Kind = kind;
             Index = index;
@@ -33,8 +33,12 @@ namespace ThirdPersonSimulation.DeterministicKcc
 
         public DeterministicCollisionFeatureKind Kind { get; }
         public int Index { get; }
-        public bool IsValid => Index >= 0 && Enum.IsDefined(typeof(DeterministicCollisionFeatureKind), Kind);
+        public bool IsValid => Index >= 0 && IsDefined(Kind);
         public static DeterministicCollisionFeatureId Invalid => default;
+
+        static bool IsDefined(DeterministicCollisionFeatureKind kind) =>
+            kind >= DeterministicCollisionFeatureKind.PlaneFace &&
+            kind <= DeterministicCollisionFeatureKind.BoxFace;
 
         public int CompareTo(DeterministicCollisionFeatureId other)
         {
@@ -100,7 +104,9 @@ namespace ThirdPersonSimulation.DeterministicKcc
             int adjacentPrimitive1,
             int adjacentPrimitive2)
         {
-            if (id < 0 || surfaceId < 0 || !Enum.IsDefined(typeof(DeterministicCollisionPrimitiveKind), kind))
+            if (id < 0 || surfaceId < 0 ||
+                kind < DeterministicCollisionPrimitiveKind.Plane ||
+                kind > DeterministicCollisionPrimitiveKind.Box)
                 throw new ArgumentOutOfRangeException();
             Id = id;
             Kind = kind;

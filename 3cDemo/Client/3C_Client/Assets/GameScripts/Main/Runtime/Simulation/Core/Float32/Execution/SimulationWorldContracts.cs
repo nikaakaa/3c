@@ -153,25 +153,30 @@ namespace ThirdPersonSimulation
 
     public sealed class ObservedWorldConstraintFrame
     {
-        readonly ReadOnlyCollection<ObservedWorldConstraint> m_Constraints;
+        readonly IReadOnlyList<ObservedWorldConstraint> m_Constraints;
 
         public ObservedWorldConstraintFrame(
             SimulationTick tick,
-            IEnumerable<ObservedWorldConstraint> constraints)
+            IReadOnlyList<ObservedWorldConstraint> constraints)
+            : this(tick, CopyConstraints(tick, constraints))
+        {
+        }
+
+        internal ObservedWorldConstraintFrame(
+            SimulationTick tick,
+            ObservedWorldConstraint[] constraints)
         {
             if (!tick.IsValid)
                 throw new ArgumentException("Observed world constraint frame Tick is invalid.", nameof(tick));
-            var values = constraints == null
-                ? throw new ArgumentNullException(nameof(constraints))
-                : new List<ObservedWorldConstraint>(constraints);
-            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            for (int i = 0; i < values.Count; i++)
+            ObservedWorldConstraint[] values = constraints ?? throw new ArgumentNullException(nameof(constraints));
+            Array.Sort(values, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i].TargetTick != tick || i > 0 && values[i - 1].ActorId == values[i].ActorId)
                     throw new ArgumentException("Observed world constraint frame contains a duplicate Actor or mismatched Tick.", nameof(constraints));
             }
             Tick = tick;
-            m_Constraints = values.AsReadOnly();
+            m_Constraints = values;
             FrameHash = ObservedWorldConstraintCodec.ComputeHash(this);
         }
 
@@ -180,6 +185,22 @@ namespace ThirdPersonSimulation
         public StableHash FrameHash { get; }
         public static ObservedWorldConstraintFrame Empty(SimulationTick tick) =>
             new ObservedWorldConstraintFrame(tick, Array.Empty<ObservedWorldConstraint>());
+
+        static ObservedWorldConstraint[] CopyConstraints(
+            SimulationTick tick,
+            IReadOnlyList<ObservedWorldConstraint> constraints)
+        {
+            if (!tick.IsValid)
+                throw new ArgumentException("Observed world constraint frame Tick is invalid.", nameof(tick));
+            if (constraints == null)
+                throw new ArgumentNullException(nameof(constraints));
+            if (constraints.Count == 0)
+                return Array.Empty<ObservedWorldConstraint>();
+            var values = new ObservedWorldConstraint[constraints.Count];
+            for (int i = 0; i < values.Length; i++)
+                values[i] = constraints[i];
+            return values;
+        }
     }
 
     public interface IObservedWorldConstraintProfileProvider

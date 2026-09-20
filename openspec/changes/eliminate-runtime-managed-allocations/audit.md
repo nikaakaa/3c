@@ -1612,3 +1612,12 @@
 - Services 构造时通过原 ValidateParticipantSet 创建一次不可变 SimulationPipelineStateParticipantSet，内部保存 plan 引用和已按 PassId 排序、完整校验的数组。后续 Coordinator 遇到该正式 set 时要求同一 compiled plan 并直接返回内部数组；跨 plan 误用新增明确完整性错误。
 - 事务期 checkpoint、完整 snapshot、step 投影和 restore 不再创建运行 participant 与期望 participant 两份数组，也不重复扫描 plan schema。Backend 初始 restore／capture 仍传原始列表并走完整校验，Services 组装本身也执行一次完整校验。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做事务运行对比或 Player 分配采样。
+
+## 2026-09-21 ObservedWorldConstraintFrame 最终数组
+
+对应 tasks.md 的 5.54。
+
+- Float32 本地与权威调度在无观测接触时每 step 调用 ObservedWorldConstraintFrame.Empty(tick)；原构造即使空集合也创建 List 和 ReadOnlyCollection。状态解码与远端身体选择则先生成数组，构造器再复制到 List。
+- Frame 现以 IReadOnlyList 字段保存最终数组。公开 IReadOnlyList 构造先复制到独立数组；程序集内部数组入口直接接管解码／历史转换刚创建且不再使用的数组。两条入口统一在数组上按 ActorId 排序并执行原 Tick 与重复 Actor 校验。
+- 空 Frame 直接持有 Array.Empty，删除每 step 的空 List 和只读包装；内部数组调用同时删除第二份元素复制。Frame 对象与包含 Tick 的 FrameHash 仍必须每 step 独立生成，hash 内部分配未处理。
+- ThirdPersonSimulation.Float32 portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做观测约束运行对比或 Player 分配采样。

@@ -256,6 +256,8 @@
 
 - [x] 5.53 KCC 每步按 Actor 构造身体状态时按三种 Ledge 正式值域校验，删除重复 Enum.IsDefined 装箱；状态恢复的 Feature／Ledge 解码同步改为正式连续值域判断
 
+- [x] 5.54 Float32 ObservedWorldConstraintFrame 以最终数组保存约束，空帧复用 Array.Empty，程序集内解码／历史转换直接转移新建数组，删除每步空 List、ReadOnlyCollection 及内部数组二次复制
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

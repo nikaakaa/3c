@@ -1585,3 +1585,12 @@
 - Snapshot 新增程序集内部数组入口，直接接管该数组后执行原空项、PassId 排序和重复检查并计算 hash。公开 IReadOnlyList 构造器仍先复制到新数组再进入同一实现，外部调用方不能通过后续修改输入集合影响 Snapshot。
 - 完整与 step 投影捕获不再创建第二份 participant 数组或复制元素；最终 Snapshot 仍独立持有唯一数组。状态解码和其它程序集调用继续走公开复制边界。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做快照运行对比或 Player 分配采样。
+
+## 2026-09-21 Pipeline participant 校验数组
+
+对应 tasks.md 的 2.81。
+
+- PipelineTransactionServices.StateParticipants 的正式类型为 IReadOnlyList，Checkpoint、完整 Snapshot、step 投影和 Restore 四条 Coordinator 调用链都传该固定集合；原 ValidateParticipantSet 每次把运行 participant 复制到 List，并另建 List 从 compiled plan 筛选期望 participant。
+- 四个 Coordinator 入口统一接收 IReadOnlyList。校验先统计 plan 中 SnapshotParticipant 数量并填充精确 expected 数组，再按运行 Count 复制精确 values 数组；两数组分别按 PassId 排序后执行原数量、版本、owner、schema 与重复 participant 检查。
+- 每次 checkpoint／snapshot／restore participant 校验删除两个 List 对象，以等价的两份精确数组承载元素。完整性检查没有缓存或跳过；plan 与 runtime 集合每次仍重新对齐验证。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 checkpoint／restore 运行对比或 Player 分配采样。

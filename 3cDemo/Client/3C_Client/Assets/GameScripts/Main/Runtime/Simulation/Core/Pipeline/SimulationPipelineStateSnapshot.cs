@@ -465,15 +465,15 @@ namespace ThirdPersonSimulation
     {
         public static SimulationPipelineStateCheckpointSet CaptureCheckpoints(
             CompiledSimulationPipelinePlan plan,
-            IEnumerable<ISimulationPipelineStateParticipant> participants)
+            IReadOnlyList<ISimulationPipelineStateParticipant> participants)
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
-            List<ISimulationPipelineStateParticipant> values = ValidateParticipantSet(plan, participants);
-            var checkpoints = new List<ISimulationPipelinePassStateCheckpoint>(values.Count);
+            ISimulationPipelineStateParticipant[] values = ValidateParticipantSet(plan, participants);
+            var checkpoints = new List<ISimulationPipelinePassStateCheckpoint>(values.Length);
             try
             {
-                for (int i = 0; i < values.Count; i++)
+                for (int i = 0; i < values.Length; i++)
                 {
                     ISimulationPipelinePassStateCheckpoint checkpoint = values[i].CaptureCheckpoint() ??
                         throw Failure("pipeline_state_checkpoint_missing", values[i].StateIdentity.PassId, "State participant returned no transaction checkpoint.");
@@ -494,15 +494,15 @@ namespace ThirdPersonSimulation
         public static SimulationPipelineStateSnapshot Capture(
             CompiledSimulationPipelinePlan plan,
             ulong lastCompletedTick,
-            IEnumerable<ISimulationPipelineStateParticipant> participants)
+            IReadOnlyList<ISimulationPipelineStateParticipant> participants)
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
-            List<ISimulationPipelineStateParticipant> values = ValidateParticipantSet(plan, participants);
-            var snapshots = values.Count == 0
+            ISimulationPipelineStateParticipant[] values = ValidateParticipantSet(plan, participants);
+            var snapshots = values.Length == 0
                 ? Array.Empty<SimulationPipelinePassStateSnapshot>()
-                : new SimulationPipelinePassStateSnapshot[values.Count];
-            for (int i = 0; i < values.Count; i++)
+                : new SimulationPipelinePassStateSnapshot[values.Length];
+            for (int i = 0; i < values.Length; i++)
             {
                 SimulationPipelinePassStateSnapshot snapshot = values[i].CaptureState() ??
                     throw Failure("pipeline_state_capture_missing", values[i].StateIdentity.PassId, "State participant returned no snapshot.");
@@ -515,13 +515,13 @@ namespace ThirdPersonSimulation
         public static SimulationPipelineStateSnapshot CaptureStepProjection(
             CompiledSimulationPipelinePlan plan,
             ulong lastCompletedTick,
-            IEnumerable<ISimulationPipelineStateParticipant> participants)
+            IReadOnlyList<ISimulationPipelineStateParticipant> participants)
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
-            List<ISimulationPipelineStateParticipant> values = ValidateParticipantSet(plan, participants);
+            ISimulationPipelineStateParticipant[] values = ValidateParticipantSet(plan, participants);
             int snapshotCount = 0;
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 SimulationPipelineStepProjectionMode projectionMode = values[i].StepProjectionMode;
                 if ((byte)projectionMode < (byte)SimulationPipelineStepProjectionMode.Include ||
@@ -536,7 +536,7 @@ namespace ThirdPersonSimulation
                 ? Array.Empty<SimulationPipelinePassStateSnapshot>()
                 : new SimulationPipelinePassStateSnapshot[snapshotCount];
             int snapshotIndex = 0;
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i].StepProjectionMode == SimulationPipelineStepProjectionMode.ReconstructForRestore)
                     continue;
@@ -551,7 +551,7 @@ namespace ThirdPersonSimulation
         public static SimulationPipelineStateRestoreTransaction PrepareRestore(
             CompiledSimulationPipelinePlan plan,
             SimulationPipelineStateSnapshot snapshot,
-            IEnumerable<ISimulationPipelineStateParticipant> participants)
+            IReadOnlyList<ISimulationPipelineStateParticipant> participants)
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
@@ -559,13 +559,13 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(snapshot));
             if (!snapshot.Pipeline.Equals(plan.Identity) || !snapshot.Backend.Equals(plan.Backend))
                 throw Failure("pipeline_snapshot_identity_mismatch", default, "Pipeline snapshot identity does not match the compiled plan and Backend.");
-            List<ISimulationPipelineStateParticipant> values = ValidateParticipantSet(plan, participants);
-            if (values.Count != snapshot.Participants.Count)
+            ISimulationPipelineStateParticipant[] values = ValidateParticipantSet(plan, participants);
+            if (values.Length != snapshot.Participants.Count)
                 throw Failure("pipeline_snapshot_participant_count_mismatch", default, "Pipeline snapshot participant count does not match the compiled plan.");
-            var transactions = new List<ISimulationPipelinePassRestoreTransaction>(values.Count);
+            var transactions = new List<ISimulationPipelinePassRestoreTransaction>(values.Length);
             try
             {
-                for (int i = 0; i < values.Count; i++)
+                for (int i = 0; i < values.Length; i++)
                 {
                     SimulationPipelinePassStateSnapshot state = snapshot.Participants[i];
                     RequireSnapshotIdentity(values[i].StateIdentity, state);
@@ -585,29 +585,39 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static List<ISimulationPipelineStateParticipant> ValidateParticipantSet(
+        static ISimulationPipelineStateParticipant[] ValidateParticipantSet(
             CompiledSimulationPipelinePlan plan,
-            IEnumerable<ISimulationPipelineStateParticipant> participants)
+            IReadOnlyList<ISimulationPipelineStateParticipant> participants)
         {
-            var expected = new List<CompiledSimulationPipelinePass>();
+            int expectedCount = 0;
             for (int i = 0; i < plan.Passes.Count; i++)
             {
                 if (plan.Passes[i].Descriptor.StateClass == SimulationPipelinePassStateClass.SnapshotParticipant)
-                    expected.Add(plan.Passes[i]);
+                    expectedCount++;
             }
-            var values = participants == null
-                ? new List<ISimulationPipelineStateParticipant>()
-                : new List<ISimulationPipelineStateParticipant>(participants);
-            for (int i = 0; i < values.Count; i++)
+            var expected = expectedCount == 0
+                ? Array.Empty<CompiledSimulationPipelinePass>()
+                : new CompiledSimulationPipelinePass[expectedCount];
+            int expectedIndex = 0;
+            for (int i = 0; i < plan.Passes.Count; i++)
             {
+                if (plan.Passes[i].Descriptor.StateClass == SimulationPipelinePassStateClass.SnapshotParticipant)
+                    expected[expectedIndex++] = plan.Passes[i];
+            }
+            var values = participants == null || participants.Count == 0
+                ? Array.Empty<ISimulationPipelineStateParticipant>()
+                : new ISimulationPipelineStateParticipant[participants.Count];
+            for (int i = 0; i < values.Length; i++)
+            {
+                values[i] = participants[i];
                 if (values[i] == null)
                     throw Failure("pipeline_state_participant_missing", default, "Runtime Pipeline state participant is missing.");
             }
-            values.Sort((left, right) => left.StateIdentity.PassId.CompareTo(right.StateIdentity.PassId));
-            expected.Sort((left, right) => left.Descriptor.PassId.CompareTo(right.Descriptor.PassId));
-            if (values.Count != expected.Count)
+            Array.Sort(values, (left, right) => left.StateIdentity.PassId.CompareTo(right.StateIdentity.PassId));
+            Array.Sort(expected, (left, right) => left.Descriptor.PassId.CompareTo(right.Descriptor.PassId));
+            if (values.Length != expected.Length)
                 throw Failure("pipeline_state_participant_count_mismatch", default, "Runtime Pipeline state participant count does not match the compiled plan.");
-            for (int i = 0; i < values.Count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 SimulationPipelineStateParticipantIdentity actual = values[i].StateIdentity;
                 CompiledSimulationPipelinePass required = expected[i];

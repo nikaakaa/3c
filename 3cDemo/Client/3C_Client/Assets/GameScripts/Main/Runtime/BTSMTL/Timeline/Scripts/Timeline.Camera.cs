@@ -45,6 +45,8 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             string trackName,
+            string trackAuthoringId,
+            string clipAuthoringId,
             string sequenceId,
             TimelineCameraMode mode,
             int priority,
@@ -57,6 +59,8 @@ namespace BTSMTL.Timeline
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
             TrackName = trackName ?? string.Empty;
+            TrackAuthoringId = trackAuthoringId;
+            ClipAuthoringId = clipAuthoringId;
             SequenceId = sequenceId ?? string.Empty;
             Mode = mode;
             Priority = priority;
@@ -70,6 +74,8 @@ namespace BTSMTL.Timeline
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
+        public string TrackAuthoringId { get; }
+        public string ClipAuthoringId { get; }
         public string SequenceId { get; }
         public TimelineCameraMode Mode { get; }
         public int Priority { get; }
@@ -86,17 +92,22 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             string trackName,
+            string trackAuthoringId,
+            string clipAuthoringId,
             string cueId,
             TimelineCameraCueKind cueKind,
             string cueType,
             string resourceId,
             float intensity,
             float durationSeconds,
-            int priority)
+            int priority,
+            int cycle)
         {
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
             TrackName = trackName ?? string.Empty;
+            TrackAuthoringId = trackAuthoringId;
+            ClipAuthoringId = clipAuthoringId;
             CueId = cueId ?? string.Empty;
             CueKind = cueKind;
             CueType = cueType ?? string.Empty;
@@ -104,11 +115,14 @@ namespace BTSMTL.Timeline
             Intensity = Mathf.Max(0f, intensity);
             DurationSeconds = Mathf.Max(0f, durationSeconds);
             Priority = priority;
+            Cycle = cycle;
         }
 
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
+        public string TrackAuthoringId { get; }
+        public string ClipAuthoringId { get; }
         public string CueId { get; }
         public TimelineCameraCueKind CueKind { get; }
         public string CueType { get; }
@@ -116,6 +130,7 @@ namespace BTSMTL.Timeline
         public float Intensity { get; }
         public float DurationSeconds { get; }
         public int Priority { get; }
+        public int Cycle { get; }
     }
 
     public readonly struct TimelineCameraResponseSample
@@ -124,6 +139,8 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             string trackName,
+            string trackAuthoringId,
+            string clipAuthoringId,
             TimelineCameraLookResponseMode lookResponse,
             float manualOrbitWeight,
             float pitchResponseWeight,
@@ -134,6 +151,8 @@ namespace BTSMTL.Timeline
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
             TrackName = trackName ?? string.Empty;
+            TrackAuthoringId = trackAuthoringId;
+            ClipAuthoringId = clipAuthoringId;
             LookResponse = lookResponse;
             ManualOrbitWeight = Mathf.Clamp01(manualOrbitWeight);
             PitchResponseWeight = Mathf.Clamp01(pitchResponseWeight);
@@ -145,6 +164,8 @@ namespace BTSMTL.Timeline
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
+        public string TrackAuthoringId { get; }
+        public string ClipAuthoringId { get; }
         public TimelineCameraLookResponseMode LookResponse { get; }
         public float ManualOrbitWeight { get; }
         public float PitchResponseWeight { get; }
@@ -179,6 +200,8 @@ namespace BTSMTL.Timeline
                     sourceId,
                     sourceName,
                     Name,
+                    AuthoringId,
+                    cameraClip.AuthoringId,
                     cameraClip.SequenceId,
                     cameraClip.Mode,
                     cameraClip.Priority,
@@ -262,6 +285,7 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             ICollection<TimelineCameraCueSample> cues,
+            int cycle,
             bool includeStartBoundary = false)
         {
             if (m_PersistentMuted || cues == null)
@@ -279,13 +303,16 @@ namespace BTSMTL.Timeline
                         sourceId,
                         sourceName,
                         Name,
+                        AuthoringId,
+                        cueClip.AuthoringId,
                         cueClip.CueId,
                         cueClip.CueKind,
                         cueClip.CueType,
                         cueClip.ResourceId,
                         cueClip.Intensity,
                         cueClip.DurationSeconds,
-                        cueClip.Priority));
+                        cueClip.Priority,
+                        cycle));
                 }
             }
         }
@@ -361,6 +388,8 @@ namespace BTSMTL.Timeline
                     sourceId,
                     sourceName,
                     Name,
+                    AuthoringId,
+                    responseClip.AuthoringId,
                     responseClip.LookResponse,
                     responseClip.ManualOrbitWeight,
                     responseClip.PitchResponseWeight,

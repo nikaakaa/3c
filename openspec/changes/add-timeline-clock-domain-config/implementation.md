@@ -440,3 +440,9 @@
 - 诊断构造前复用原 ShouldPublish（同时覆盖 live／capture）过滤；TreeClip 事件名使用原枚举对应常量，删除枚举 ToString 分配。ActionCue 无订阅者时不构造无人消费的 committed EventId，但正式订阅者存在时仍按原业务链交付，未删除事件能力。
 - 仍未解决：有消费者时的 EventId 哈希分配、Camera 字符串键、逻辑求值集合及最终跨领域事务；本批不代表整个0 GC完成。多来源倍率规则仍等待用户答复。
 - Unity脚本构建和最终域重载完成（1789918476732），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试。
+
+## Camera 查询使用正式片段身份并保留 Cue 循环来源
+- 对应0.7／5.3／7.3：Camera State／Cue／Response 的运行采样补传原 TrackAuthoringId／ClipAuthoringId，未新增作者配置；与原 Resource 采样统一按 playback handle／generation／轨道／片段查询。删除 CreateKey、params数组、临时List、字符串拼接查询以及 legacy string 隐式转换。Marker 与 Clip 继续共用原 CameraEventKey 字典，保留明确身份字段。
+- Cue Sample 传递原 evaluation segment.Cycle，Camera 键、事件身份与输出命令携带该循环编号；相同显示名不再合并不同片段，同帧跨多圈的同一 Cue 不再被一个 key 吞掉。Camera 请求仍进入原候选容量检查，超限在帧接受前失败。
+- Cue／Resource 的正式请求ID直接使用 ClipAuthoringId，不再临时拼显示名。首次激活时 EventId 哈希、producer ID 与动画事件身份仍存在分配，连续 Camera 权重更新及最终 Apply 事务仍需继续对账，不将本批记成完整0 GC或完整Camera功能。
+- Unity编译和最终域重载完成（1789918771001），Editor idle，控制台错误为零；本批文件 git diff --check通过，未新增测试。

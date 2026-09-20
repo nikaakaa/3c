@@ -404,24 +404,33 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
 {
     readonly struct CameraEventKey : IEquatable<CameraEventKey>
     {
-        internal CameraEventKey(ulong handle, ulong generation, string marker, string producer)
+        CameraEventKey(ulong handle, ulong generation, string marker, string track, string producer, int cycle)
         {
             Handle = handle;
             Generation = generation;
             Marker = marker;
+            Track = track;
             Producer = producer;
+            Cycle = cycle;
         }
 
+        internal static CameraEventKey ForMarker(ulong handle, ulong generation, string marker, string producer) =>
+            new(handle, generation, marker, string.Empty, producer, 0);
+        internal static CameraEventKey ForClip(ulong handle, ulong generation, string track, string clip, int cycle) =>
+            new(handle, generation, null, track, clip, cycle);
         internal readonly ulong Handle;
         internal readonly ulong Generation;
         internal readonly string Marker;
-        readonly string Producer;
-        public bool Equals(CameraEventKey other) => Handle == other.Handle && Generation == other.Generation &&
-            string.Equals(Marker, other.Marker, StringComparison.Ordinal) && string.Equals(Producer, other.Producer, StringComparison.Ordinal);
+        internal readonly string Track;
+        internal readonly string Producer;
+        internal readonly int Cycle;
+        public bool Equals(CameraEventKey other) => Handle == other.Handle && Generation == other.Generation && Cycle == other.Cycle &&
+            string.Equals(Marker, other.Marker, StringComparison.Ordinal) && string.Equals(Track, other.Track, StringComparison.Ordinal) &&
+            string.Equals(Producer, other.Producer, StringComparison.Ordinal);
         public override bool Equals(object obj) => obj is CameraEventKey other && Equals(other);
-        public override int GetHashCode() => unchecked((Handle.GetHashCode() * 397 ^ Generation.GetHashCode()) * 397 ^
-            (Marker == null ? 0 : StringComparer.Ordinal.GetHashCode(Marker)) ^ StringComparer.Ordinal.GetHashCode(Producer));
-        public static implicit operator CameraEventKey(string legacy) => new(0, 0, null, legacy);
+        public override int GetHashCode() => unchecked((((Handle.GetHashCode() * 397 ^ Generation.GetHashCode()) * 397 ^ Cycle) * 397 ^
+            (Marker == null ? 0 : StringComparer.Ordinal.GetHashCode(Marker))) * 397 ^
+            StringComparer.Ordinal.GetHashCode(Track) ^ StringComparer.Ordinal.GetHashCode(Producer));
     }
 
     readonly struct CameraEventState
@@ -545,7 +554,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     void AddMarkerCamera(TimelineRuntimePresentationFrame frame, in TimelinePresentationExecutionContext context,
         in TimelineRuntimePresentationEvent marker, EventId eventId, in PresentationGraphCameraOutput output)
     {
-        var key = new CameraEventKey(frame.Handle.Value, frame.Generation, marker.MarkerAuthoringId, output.Producer);
+        var key = CameraEventKey.ForMarker(frame.Handle.Value, frame.Generation, marker.MarkerAuthoringId, output.Producer);
         if (m_Active.TryGetValue(key, out CameraEventState previous))
         {
             m_Runtime.Retire(previous.Activation);
@@ -573,15 +582,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         for (int index = 0; index < frame.Operations.CameraStates.Count; index++)
         {
             TimelineCameraStateSample sample = frame.Operations.CameraStates[index];
-            string key = CreateKey(
-                frame,
-                "state",
-                sample.SourceId,
-                sample.TrackName,
-                sample.SequenceId,
-                sample.Mode.ToString(),
-                sample.TargetKey,
-                sample.InterruptPolicy.ToString());
+            CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
+                sample.TrackAuthoringId, sample.ClipAuthoringId, 0);
             if (!m_Active.ContainsKey(key))
             {
                 PresentationCameraRequest activation = PresentationCameraRequest.Sequence(
@@ -615,19 +617,11 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         for (int index = 0; index < frame.Operations.CameraCues.Count; index++)
         {
             TimelineCameraCueSample sample = frame.Operations.CameraCues[index];
-            string effectKind = RequireCueEffectKind(sample.CueKind).ToString();
-            string key = CreateKey(
-                frame,
-                "cue",
-                sample.SourceId,
-                sample.TrackName,
-                sample.CueId,
-                effectKind,
-                sample.ResourceId,
-                sample.CueType);
+            CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
+                sample.TrackAuthoringId, sample.ClipAuthoringId, sample.Cycle);
             if (!m_Active.ContainsKey(key))
             {
-                string requestId = $"{sample.TrackName}/{sample.CueId}";
+                string requestId = sample.ClipAuthoringId;
                 PresentationCameraRequest activation = PresentationCameraRequest.Effect(
                     PresentationCameraRequestLifecycle.Activate,
                     requestId,
@@ -653,15 +647,8 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         for (int index = 0; index < frame.Operations.CameraResponses.Count; index++)
         {
             TimelineCameraResponseSample sample = frame.Operations.CameraResponses[index];
-            string key = CreateKey(
-                frame,
-                "response",
-                sample.SourceId,
-                sample.TrackName,
-                sample.LookResponse.ToString(),
-                sample.ManualOrbitWeight.ToString("R", CultureInfo.InvariantCulture),
-                sample.PitchResponseWeight.ToString("R", CultureInfo.InvariantCulture),
-                sample.YawResponseWeight.ToString("R", CultureInfo.InvariantCulture));
+            CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
+                sample.TrackAuthoringId, sample.ClipAuthoringId, 0);
             if (!m_Active.ContainsKey(key))
             {
                 PresentationCameraRequest activation = PresentationCameraRequest.Response(
@@ -691,17 +678,11 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         for (int index = 0; index < frame.Operations.CameraResources.Count; index++)
         {
             TimelineCameraResourceSample sample = frame.Operations.CameraResources[index];
-            string key = CreateKey(
-                frame,
-                "resource",
-                sample.SourceId,
-                sample.TrackAuthoringId,
-                sample.ClipAuthoringId,
-                sample.Kind.ToString(),
-                sample.ResourceId);
+            CameraEventKey key = CameraEventKey.ForClip(frame.Handle.Value, frame.Generation,
+                sample.TrackAuthoringId, sample.ClipAuthoringId, 0);
             if (!m_Active.ContainsKey(key))
             {
-                string requestId = $"{sample.TrackAuthoringId}/{sample.ClipAuthoringId}";
+                string requestId = sample.ClipAuthoringId;
                 PresentationCameraRequest activation = PresentationCameraRequest.Effect(
                     PresentationCameraRequestLifecycle.Activate,
                     requestId,
@@ -726,7 +707,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
     }
 
     void AddCamera(
-        string key,
+        CameraEventKey key,
         TimelineRuntimePresentationFrame frame,
         in TimelinePresentationExecutionContext context,
         PresentationCameraRequest activationRequest,
@@ -738,9 +719,12 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             throw new InvalidOperationException($"Timeline Camera event capacity {m_RequestCapacity} is exhausted.");
         EventId eventId = new(StableHash.Compute(
             "timeline-presentation-camera",
-            key,
-            frame.Handle.Value.ToString(CultureInfo.InvariantCulture),
-            frame.Generation.ToString(CultureInfo.InvariantCulture)));
+            frame.ExecutionIdentity.OwnerIdentity,
+            key.Track,
+            key.Producer,
+            key.Cycle.ToString(CultureInfo.InvariantCulture),
+            key.Handle.ToString(CultureInfo.InvariantCulture),
+            key.Generation.ToString(CultureInfo.InvariantCulture)));
         var activationHeader = new CharacterPresentationEventHeader(
             eventId,
             m_ActorId,
@@ -755,7 +739,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             context.Activation,
             frame.PresentationFrame + 1,
             "timeline.camera");
-        string producerId = $"timeline-camera:{key}";
+        string producerId = $"timeline-camera:{key.Handle}:{key.Generation}:{key.Track}:{key.Producer}:{key.Cycle}";
         var activation = new CharacterPresentationCommand(
             activationHeader,
             CharacterPresentationCommandKind.Camera,
@@ -763,7 +747,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             frame.InterpolationAlpha,
             activationRequest.Weight,
             context.Activation.Generation,
-            0,
+            key.Cycle,
             context.ActionInstanceId,
             1f,
             null,
@@ -775,7 +759,7 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
             frame.InterpolationAlpha,
             retirementRequest.Weight,
             context.Activation.Generation,
-            0,
+            key.Cycle,
             context.ActionInstanceId,
             1f,
             null,
@@ -810,22 +794,6 @@ internal sealed class TimelinePresentationEventBridge : IDisposable
         DiscardFrame();
         m_Alive.Clear();
         RetireInactive(m_Alive, 0, true);
-    }
-
-    static string CreateKey(
-        TimelineRuntimePresentationFrame frame,
-        string kind,
-        params string[] values)
-    {
-        var parts = new List<string>(values.Length + 4)
-        {
-            kind,
-            frame.ExecutionIdentity.OwnerIdentity,
-            frame.Handle.Value.ToString(CultureInfo.InvariantCulture),
-            frame.Generation.ToString(CultureInfo.InvariantCulture)
-        };
-        parts.AddRange(values);
-        return string.Join("|", parts);
     }
 
     static string RequireSequenceId(string value)

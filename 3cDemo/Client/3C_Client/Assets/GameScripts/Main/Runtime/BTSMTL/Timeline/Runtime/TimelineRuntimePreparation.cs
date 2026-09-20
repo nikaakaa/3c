@@ -1861,6 +1861,7 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.AuthoringId,
                             timeline.Name,
                             cameraCues,
+                            segment.Cycle,
                             segmentIndex > 0 || includeStartBoundary && segment.PreviousTime.Raw == 0);
                     }
                     else if (track is ActionCueTrack actionCueTrack)
@@ -2353,6 +2354,7 @@ namespace BTSMTL.Timeline.Runtime
                             timeline.AuthoringId,
                             timeline.Name,
                             cameraCues,
+                            segment.Cycle,
                             segmentIndex > 0 || includeStartBoundary && segment.PreviousTime.Raw == 0);
                     }
                 }

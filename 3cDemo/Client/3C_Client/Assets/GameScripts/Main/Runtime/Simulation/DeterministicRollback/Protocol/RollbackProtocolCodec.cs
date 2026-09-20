@@ -19,6 +19,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return writer.ToArray();
         }
 
+        public static int GetEncodedLength(RollbackProtocolEnvelope envelope)
+        {
+            if (envelope == null)
+                throw new ArgumentNullException(nameof(envelope));
+            using var writer = new CanonicalWriter();
+            WriteEnvelope(writer, envelope);
+            return checked((int)writer.Length);
+        }
+
         static void WriteEnvelope(CanonicalWriter writer, RollbackProtocolEnvelope envelope)
         {
             writer.WriteUInt32(Magic);

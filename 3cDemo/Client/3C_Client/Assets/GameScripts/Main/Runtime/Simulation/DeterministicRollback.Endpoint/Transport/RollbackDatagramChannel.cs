@@ -127,7 +127,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
-            encodedPayloadBytes = Encode(payload, m_NextMessageSequence).Length;
+            encodedPayloadBytes = RollbackProtocolCodec.GetEncodedLength(
+                new RollbackProtocolEnvelope(m_Definition.SessionId, m_LocalPeerId, m_NextMessageSequence, payload));
             maximumPayloadBytes = m_MaximumFragmentPayloadBytes;
             return encodedPayloadBytes <= maximumPayloadBytes;
         }

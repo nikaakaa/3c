@@ -18,7 +18,8 @@ namespace ThirdPersonSimulation
             CharacterControlStateId stateId,
             CharacterControlTransitionId transitionId)
         {
-            if (!Enum.IsDefined(typeof(SimulationExecutionSourceKind), kind))
+            if (kind != SimulationExecutionSourceKind.SkillOperation &&
+                kind != SimulationExecutionSourceKind.CharacterControl)
                 throw new ArgumentOutOfRangeException(nameof(kind));
             if (kind == SimulationExecutionSourceKind.SkillOperation &&
                 (!operation.IsValid || string.IsNullOrWhiteSpace(executionPath) || moduleId.IsValid || stateId.IsValid || transitionId.IsValid))

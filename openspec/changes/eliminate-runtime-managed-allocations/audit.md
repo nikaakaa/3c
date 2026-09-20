@@ -130,3 +130,12 @@
 - 取舍：散列表保留桶／条目数组，输出列表需一次排序；相较清空再构造排序树，取消每次插入的节点对象。具体 CPU 和常驻容量变化未经采样，不宣称更快或整链 0 GC。
 - 已知未完成：scratch 当前仍由 CharacterEvaluationRuntime 每步创建；HashSet／List 容量增长、m_TagSources 的 SortedDictionary 遍历，以及无 scratch 的既有调用仍存在分配来源。本步没有为避开这些问题新增另一存储入口。
 - Fixed 与 Float32 portable 编译均零警告、零错误，diff 空白检查通过；构建参数与结束 shutdown 同前。未新增测试、未主动刷新 Unity、未做 Player 采样。
+
+## 2026-09-20 执行来源和效果移除枚举校验
+
+对应 tasks.md 的 2.9，与代码同步提交。
+
+- SimulationExecutionSource 的构造入口由两数值域 Action、Motion、Blackboard、Domain 等运行代码调用；原 Enum.IsDefined(Type, object) 使值类型 kind 装箱。现直接接受 SkillOperation／CharacterControl 两个合法成员，仍对其它值抛出原 ArgumentOutOfRangeException，其余身份完整性校验不动。
+- Fixed／Float32 GameplayEffectOperationRuntime.Remove 原先对转换后的选择器调用 Enum.IsDefined。现直接比较 Handle、EffectId、SourceActor、EffectTagQuery，保留转换前的 byte 范围检查及原 InvalidOperationException，不改变请求、删除对象或输出事件。
+- 规范化函数对已规范化身份直接返回原字符串，本次没有为此引入缓存或调整身份格式；执行来源的 codec 和输出协议不变。
+- Fixed／Float32 portable 构建均零警告、零错误，diff 空白检查通过；每次构建按规定禁用服务器和共享编译并结束 shutdown。未新增测试、未主动刷新 Unity、未做 Player 分配采样；此结论只覆盖三个装箱入口。

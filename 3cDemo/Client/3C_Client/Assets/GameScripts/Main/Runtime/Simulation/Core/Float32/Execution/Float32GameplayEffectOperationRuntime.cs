@@ -188,7 +188,10 @@ namespace ThirdPersonSimulation
 			if (operation.Integer0 < byte.MinValue || operation.Integer0 > byte.MaxValue)
 				throw new InvalidOperationException($"Gameplay Effect remove selector '{operation.Integer0}' is invalid.");
 			var selector = (GameplayEffectRemoveSelector)(byte)operation.Integer0;
-			if (!Enum.IsDefined(typeof(GameplayEffectRemoveSelector), selector))
+			if (selector != GameplayEffectRemoveSelector.Handle &&
+			    selector != GameplayEffectRemoveSelector.EffectId &&
+			    selector != GameplayEffectRemoveSelector.SourceActor &&
+			    selector != GameplayEffectRemoveSelector.EffectTagQuery)
 				throw new InvalidOperationException($"Gameplay Effect remove selector '{operation.Integer0}' is invalid.");
 			ulong handle = GetUInt64Constant(operation, OperationNamedConstant.Handle, 0);
 			string effectId = GetStringConstant(operation, OperationNamedConstant.Effect, string.Empty);

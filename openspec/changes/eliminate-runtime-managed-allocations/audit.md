@@ -1117,3 +1117,12 @@
 - PresentationCameraRequestKind 正式成员连续为 Sequence=1 至 Target=4，Lifecycle 连续为 Activate=1 至 Retire=2；请求类型内部统一按闭区间判断，未知零值及其它 byte 继续由原异常或 IsValid=false 拒绝。
 - 每个运行请求构造和有效性读取合计最多删除四次装箱及枚举元数据查询；身份规范化、权重、Blend 时长、模式、优先级和相机请求路由保持不变。
 - Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做相机请求运行回放或 Player 分配采样。
+
+## 2026-09-20 物理 Pose 源后端与资源身份校验
+
+对应 tasks.md 的 4.2.5。
+
+- PhysicalPoseSourceMetadata.IsValid 被物理源 pending/committed 身份、注册结果、诊断视图和注册表消费共用。原先先执行 Enum.IsDefined，再按 NativeClip／Acl 分支约束 resource catalog index。
+- 正式组合现直接表达为 NativeClip 且 index=-1，或 Acl 且 index>=0；未知后端自然失败。source generation、pose source id、owner、提交和释放代次均未改变。
+- 删除物理 Pose 源注册与身份读取中的装箱和枚举元数据查询，不改变 backend 路由、资源索引含义、pending/committed page 或释放流程。
+- 并行 Timeline Camera 合同处于中间状态时首次增量编译被八个非目标错误阻断；对应并行提交闭合后，ThirdPersonClient.Runtime 全依赖编译零错误、三十四个既有警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。

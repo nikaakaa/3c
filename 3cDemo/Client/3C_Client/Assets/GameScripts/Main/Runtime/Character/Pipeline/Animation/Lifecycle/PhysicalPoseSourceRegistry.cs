@@ -85,10 +85,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal static bool IsValid(
             CharacterAnimationSamplingBackendKind backend,
             int resourceCatalogIndex) =>
-            Enum.IsDefined(typeof(CharacterAnimationSamplingBackendKind), backend) &&
-            (backend == CharacterAnimationSamplingBackendKind.NativeClip
+            backend == CharacterAnimationSamplingBackendKind.NativeClip
                 ? resourceCatalogIndex == -1
-                : resourceCatalogIndex >= 0);
+                : backend == CharacterAnimationSamplingBackendKind.Acl &&
+                  resourceCatalogIndex >= 0;
     }
 
     internal readonly struct CharacterPoseSourceCommittedIdentity

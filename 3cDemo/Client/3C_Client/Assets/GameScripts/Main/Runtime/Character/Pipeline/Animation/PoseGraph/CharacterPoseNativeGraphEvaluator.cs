@@ -63,6 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new List<ICharacterPoseNativeNodeHandler>();
         readonly HashSet<PoseNodeId> m_ReachableNodeIds =
             new HashSet<PoseNodeId>();
+        readonly List<CharacterPoseNativeSourceRequest> m_SourceRequests;
         bool m_Disposed;
 
         internal CharacterPoseNativeGraphEvaluator(
@@ -70,6 +71,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (handlers == null)
                 throw new ArgumentNullException(nameof(handlers));
+            m_SourceRequests =
+                new List<CharacterPoseNativeSourceRequest>(handlers.Count);
             for (int i = 0; i < handlers.Count; i++)
                 Register(handlers[i]);
         }
@@ -169,7 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeFrameLineage lineage)
         {
             RequireAlive();
-            var requests = new List<CharacterPoseNativeSourceRequest>();
+            m_SourceRequests.Clear();
             foreach (CharacterPoseCanvasNode node in runtime.Graph.Nodes)
             {
                 if (!m_ReachableNodeIds.Contains(node.NodeId))
@@ -187,9 +190,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (nodeRequests == null)
                     continue;
                 for (int i = 0; i < nodeRequests.Count; i++)
-                    requests.Add(nodeRequests[i]);
+                    m_SourceRequests.Add(nodeRequests[i]);
             }
-            return requests;
+            return m_SourceRequests;
         }
 
         public CharacterPoseNativePortValue EvaluateOutput(

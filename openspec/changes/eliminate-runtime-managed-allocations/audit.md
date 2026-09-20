@@ -1170,4 +1170,13 @@
 - CharacterPoseNativeClipPlayerHandler、BlendSpacePlayerHandler 和 SelectedPosePlayerHandler 的 PrepareFrame 每帧各自构造单元素 SourceRequest 数组；CharacterPoseNativeGraphEvaluator 会在同一次同步调用中逐项复制到本帧汇总列表，不持有 handler 返回容器。
 - 三类 handler 现在各自长期持有一个单元素请求槽，每帧只覆盖值并返回；NodeId、PoseSourceSlot、SourceId、Required 和 ScopeInstanceId 均保持原值，Evaluator 汇总后的 demand 生命周期不变。
 - 删除每帧三份单元素数组。Evaluator 的汇总 List 及 SourceDemand 构造校验仍有独立分配，留待后续按完整帧寿命继续收口。
-- 定向 diff 校验通过；ThirdPersonClient.Runtime 增量编译被并行相机改动的 CameraEffectEvaluator 新构造参数尚未同步阻断，目标文件本身未产生编译诊断。未新增测试、未主动刷新 Unity、未做 Player 分配采样。
+- 定向 diff 校验通过；首次 ThirdPersonClient.Runtime 增量编译被并行相机改动的 CameraEffectEvaluator 新构造参数尚未同步阻断，调用点补齐后与 4.2.8 同轮增量编译零错误、存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-21 Pose Demand 汇总与合法性校验复用
+
+对应 tasks.md 的 4.2.8。
+
+- CharacterPoseNativeGraphEvaluator.PrepareFrame 原为每个图实例每帧新建 SourceRequest List，再把各 handler 请求复制进去；Evaluator 现在长期持有一个汇总列表，初始容量取 handler 数，帧开始清空并复用，活动源超过该数时只发生首次扩容。
+- CharacterPoseNativeSourceDemand 原为每帧新建重复键 HashSet，并在每条合法请求上提前拼装仅异常才使用的描述字符串。合法性检查现只在实际异常分支构造文本，重复身份按已验证的前序请求顺序比较，不改变 ScopeInstanceId、NodeId、SourceId 三元身份规则。
+- 顺序重复检测以活动 Pose 源通常较少为取舍，删除每图每帧 HashSet 的固定成本；当单图活动源数量显著增加时比较次数呈平方增长，后续需要以真实图规模和采样结果判断是否值得引入实例级集合工作区。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。

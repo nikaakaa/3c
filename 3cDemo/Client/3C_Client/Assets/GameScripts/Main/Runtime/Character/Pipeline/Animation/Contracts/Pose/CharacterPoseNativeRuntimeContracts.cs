@@ -698,13 +698,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"resetGeneration={lineage.ResetGeneration}).");
             if (requests == null)
                 throw new ArgumentNullException(nameof(requests));
-            var requestKeys = new HashSet<(ulong, PoseNodeId, AnimationPoseSourceId)>();
             for (int i = 0; i < requests.Count; i++)
             {
                 CharacterPoseNativeSourceRequest request = requests[i];
-                string requestDescription =
-                    $"index={i}, nodeId={request.NodeId.Value}, sourceId={request.SourceId}, " +
-                    $"sourceSlot={request.SourceSlot}, scopeInstanceId={request.ScopeInstanceId}";
                 if (!request.NodeId.IsValid ||
                     !request.SourceId.IsValid ||
                     !request.SourceSlot &&
@@ -712,14 +708,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     request.ScopeInstanceId == 0)
                     throw new ArgumentException(
                         "Pose native source demand contains an invalid request " +
-                        $"({requestDescription}).");
-                if (!requestKeys.Add((
-                        request.ScopeInstanceId,
-                        request.NodeId,
-                        request.SourceId)))
+                        $"(index={i}, nodeId={request.NodeId.Value}, sourceId={request.SourceId}, " +
+                        $"sourceSlot={request.SourceSlot}, scopeInstanceId={request.ScopeInstanceId}).");
+                for (int previousIndex = 0; previousIndex < i; previousIndex++)
+                {
+                    CharacterPoseNativeSourceRequest previous = requests[previousIndex];
+                    if (previous.ScopeInstanceId != request.ScopeInstanceId ||
+                        previous.NodeId != request.NodeId ||
+                        previous.SourceId != request.SourceId)
+                    {
+                        continue;
+                    }
                     throw new ArgumentException(
                         "Pose native source demand contains a duplicate request " +
-                        $"({requestDescription}).");
+                        $"(index={i}, nodeId={request.NodeId.Value}, sourceId={request.SourceId}, " +
+                        $"sourceSlot={request.SourceSlot}, scopeInstanceId={request.ScopeInstanceId}).");
+                }
             }
             Lineage = lineage;
             Requests = requests;

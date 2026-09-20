@@ -102,6 +102,7 @@
 - [x] 4.2.5 物理 Pose 源 metadata 按 NativeClip 对应无资源索引、Acl 对应非负资源索引的正式组合直接校验，删除注册、pending／committed 身份与诊断读取共用的 Enum.IsDefined 装箱
 - [x] 4.2.6 ClipPlayer／BlendSpacePlayer 每帧 SetRelevant 按 Entry 至 TransitionSource 四种 DemandKind 值域校验，删除明确逐帧的 Enum.IsDefined 装箱
 - [x] 4.2.7 ClipPlayer／BlendSpacePlayer／SelectedPosePlayer 各自复用单元素 SourceRequest 槽，Evaluator 仍同步复制到本帧汇总，删除每帧三份短命数组
+- [x] 4.2.8 Pose Graph Evaluator 复用按 handler 数预备的 SourceRequest 汇总列表，Demand 合法路径改为无 HashSet、无错误文本构造的顺序校验，删除每个图每帧的容器与字符串分配
 - [ ] 4.3 沿Foot查询、Goal Assembly、FBBIK和最终写入链治理实际managed临时对象、装箱和vendor接口分配，保留查询容量和算法顺序
 - [ ] 4.4 沿Camera目标/效果、Input采样和Behavior Designer正式任务治理已确认分配，保持输入来源和目标身份
 

@@ -1808,7 +1808,7 @@ namespace Slate
                 //split at scrubber
                 if ( e.keyCode == KeyCode.S ) {
                     if (embeddedTimeline != null && embeddedTimeline.Selected is IEmbeddedTimelineClipBinding formalClip)
-                        embeddedTimeline.SplitClip(formalClip, Mathf.RoundToInt(EmbeddedCurrentTime() * embeddedTimeline.FrameRate));
+                        embeddedTimeline.SplitClip(formalClip, EmbeddedCurrentTime());
                     else if (CutsceneUtility.selectedObject is ActionClip clip) {
                         var wrapper = clipWrappersMap[clip];
                         SafeDoAction(() => wrapper?.Split(cutscene.currentTime));
@@ -2886,11 +2886,11 @@ namespace Slate
                         },
                         (track, _, _) =>
                         {
-                            int frame = embeddedTimeline.CurrentFrame;
+                            float time = EmbeddedCurrentTime();
                             GenericMenu menu = new GenericMenu();
-                            menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, frame));
+                            menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(track, time));
                             if (embeddedTimeline.CanPasteClip)
-                                menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, frame));
+                                menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(track, time));
                             menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(track));
                             menu.ShowAsContext();
                         },
@@ -3788,15 +3788,15 @@ namespace Slate
                                 if (e.type == EventType.ContextClick &&
                                     trackPosRect.Contains(e.mousePosition))
                                 {
-                                    int frame = Mathf.Max(0, Mathf.RoundToInt(SnapTime(PosToTime(mousePosition.x)) * embeddedTimeline.FrameRate));
+                                    float markerTime = Mathf.Max(0f, SnapTime(PosToTime(mousePosition.x)));
                                     GenericMenu menu = new GenericMenu();
                                     if (!embeddedTimeline.IsReadOnly && !value.IsLocked)
-                                        menu.AddItem(new GUIContent("Add Marker"), false, () => embeddedTimeline.AddMarker(value, frame));
+                                        menu.AddItem(new GUIContent("Add Marker"), false, () => embeddedTimeline.AddMarker(value, markerTime));
                                     else
                                         menu.AddDisabledItem(new GUIContent("Add Marker"));
-                                    menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(value, frame));
+                                    menu.AddItem(new GUIContent("Add Clip"), false, () => embeddedTimeline.AddClip(value, markerTime));
                                     if (embeddedTimeline.CanPasteClip)
-                                        menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(value, frame));
+                                        menu.AddItem(new GUIContent("Paste Clip"), false, () => embeddedTimeline.PasteClip(value, markerTime));
                                     menu.AddItem(new GUIContent("Delete Track"), false, () => embeddedTimeline.DeleteTrack(value));
                                     menu.ShowAsContext();
                                     e.Use();
@@ -3840,7 +3840,7 @@ namespace Slate
             for (int index = 0; index < markers.Count; index++)
             {
                 IEmbeddedTimelineMarkerBinding marker = markers[index];
-                float x = TimeToPos(marker.Frame / (float)embeddedTimeline.FrameRate);
+                float x = TimeToPos((float)marker.Time);
                 Rect markerRect = new Rect(x - 5f, trackRect.y + 5f, 10f, trackRect.height - 10f);
                 bool selected = ReferenceEquals(embeddedTimeline.Selected, marker);
                 postWindowsGUI += () =>
@@ -3877,8 +3877,7 @@ namespace Slate
             if (formalDraggedMarker != null && ReferenceEquals(formalDraggedMarker.Track, track) &&
                 e.type == EventType.MouseDrag && e.button == 0)
             {
-                int frame = Mathf.Max(0, Mathf.RoundToInt(SnapTime(PosToTime(mousePosition.x)) * embeddedTimeline.FrameRate));
-                embeddedTimeline.MoveMarker(formalDraggedMarker, frame);
+                embeddedTimeline.MoveMarker(formalDraggedMarker, Mathf.Max(0f, SnapTime(PosToTime(mousePosition.x))));
                 e.Use();
             }
         }
@@ -3891,9 +3890,9 @@ namespace Slate
                 .ToList();
             if (e.type == EventType.ContextClick && rect.Contains(e.mousePosition))
             {
-                int frame = Mathf.Max(0, Mathf.RoundToInt(PosToTime(mousePosition.x) * embeddedTimeline.FrameRate));
+                float sectionTime = Mathf.Max(0f, SnapTime(PosToTime(mousePosition.x)));
                 GenericMenu menu = new GenericMenu();
-                menu.AddItem(new GUIContent("Add Section Here"), false, () => embeddedTimeline.AddSection(frame));
+                menu.AddItem(new GUIContent("Add Section Here"), false, () => embeddedTimeline.AddSection(sectionTime));
                 menu.ShowAsContext();
                 e.Use();
             }
@@ -3925,7 +3924,7 @@ namespace Slate
                         menu.AddItem(new GUIContent("Move to Current Frame"), false, () =>
                         {
                             BeginEmbeddedEdit("Move Timeline Section");
-                            embeddedTimeline.ConfigureSection(section, section.Name, embeddedTimeline.CurrentFrame);
+                            embeddedTimeline.ConfigureSection(section, section.Name, EmbeddedCurrentTime());
                             CommitEmbeddedEdit();
                         });
                         menu.AddItem(new GUIContent("Delete Section"), false, () => embeddedTimeline.DeleteSection(section));
@@ -4345,7 +4344,7 @@ namespace Slate
             public Dictionary<int, Keyframe[]> preScaleKeys;
             public float preScaleStartTime;
             public float preScaleEndTime;
-            public int preScaleClipInFrame;
+            public double preScaleClipInTime;
             public float preScaleSubclipOffset;
             public float preScaleSubclipSpeed;
 
@@ -4656,7 +4655,7 @@ namespace Slate
             public void BeginClipAdjust() {
                 preScaleStartTime = editorBinding.StartTime;
                 preScaleEndTime = editorBinding.EndTime;
-                preScaleClipInFrame = editorBinding.FormalClip?.ClipInFrame ?? 0;
+                preScaleClipInTime = editorBinding.FormalClip?.ClipInTime ?? 0d;
 
                 preScaleKeys = new Dictionary<int, Keyframe[]>();
                 var curves = editorBinding.Curves;
@@ -4696,9 +4695,8 @@ namespace Slate
                     trim &&
                     isScalingStart)
                 {
-                    int deltaFrame = Mathf.RoundToInt(
-                        (preScaleStartTime - editorBinding.StartTime) * editor.embeddedTimeline.FrameRate);
-                    editorBinding.FormalClip.ClipInFrame = preScaleClipInFrame + deltaFrame;
+                    double deltaTime = editorBinding.StartTime - preScaleStartTime;
+                    editorBinding.FormalClip.ClipInTime = preScaleClipInTime + deltaTime;
                 }
 
                 if (editorBinding.FormalClip is IEmbeddedTimelineSourceRangeBinding sourceRange &&
@@ -4706,10 +4704,9 @@ namespace Slate
                     (isScalingStart || isScalingEnd))
                 {
                     sourceRange.AdjustSourceRange(
-                        Mathf.RoundToInt(preScaleStartTime * editor.embeddedTimeline.FrameRate),
-                        Mathf.RoundToInt(preScaleEndTime * editor.embeddedTimeline.FrameRate),
-                        Mathf.RoundToInt(editorBinding.StartTime * editor.embeddedTimeline.FrameRate),
-                        Mathf.RoundToInt(editorBinding.EndTime * editor.embeddedTimeline.FrameRate),
+                        preScaleStartTime,
+                        editorBinding.StartTime,
+                        editorBinding.EndTime,
                         isScalingStart);
                 }
 

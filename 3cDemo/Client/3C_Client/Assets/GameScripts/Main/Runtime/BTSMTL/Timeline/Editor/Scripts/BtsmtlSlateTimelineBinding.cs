@@ -295,7 +295,7 @@ namespace BTSMTL.Timeline.Editor
             menu.ShowAsContext();
         }
 
-        public void AddClip(IEmbeddedTimelineTrackBinding track, int frame)
+        public void AddClip(IEmbeddedTimelineTrackBinding track, double time)
         {
             if (IsReadOnly)
                 return;
@@ -319,10 +319,10 @@ namespace BTSMTL.Timeline.Editor
                     ReportIssue("表现域点事件请使用 Add Marker 创建触发图。");
                     return;
                 }
-                ShowClipCreationPopup(formalTrack.Source.AuthoringId, TimelineContractKinds.TreeClip, frame);
+                ShowClipCreationPopup(formalTrack.Source.AuthoringId, TimelineContractKinds.TreeClip, time);
                 return;
             }
-            ShowAddClipMenu(formalTrack.Source.AuthoringId, frame);
+            ShowAddClipMenu(formalTrack.Source.AuthoringId, time);
         }
 
         public void SetTrackActive(IEmbeddedTimelineTrackBinding track, bool active)
@@ -335,16 +335,6 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
             ApplyImmediate(() => formalTrack.Source.PersistentMuted = !active, "Track Active");
-        }
-
-        public void AddClipAt(string trackAuthoringId, int frame)
-        {
-            if (m_Tracks.TryGetValue(trackAuthoringId ?? string.Empty, out BtsmtlTimelineTrackBinding track))
-            {
-                AddClip(track, frame);
-                return;
-            }
-            ReportIssue("Add Clip 的目标 Track 已失效。");
         }
 
         public void DeleteTrack(IEmbeddedTimelineTrackBinding track)
@@ -360,7 +350,7 @@ namespace BTSMTL.Timeline.Editor
                 Timeline, () => Timeline.RemoveTrack(formalTrack.Source)), "Delete Timeline Track");
         }
 
-        public void AddMarker(IEmbeddedTimelineTrackBinding track, int frame)
+        public void AddMarker(IEmbeddedTimelineTrackBinding track, double time)
         {
             if (IsReadOnly || !(track is BtsmtlTimelineTrackBinding formalTrack))
                 return;
@@ -373,8 +363,8 @@ namespace BTSMTL.Timeline.Editor
             if (ApplyImmediate(() =>
             {
                 BtsmtlSkillFlowGraph graph = TimelineGraphAuthoring.CreateSubAsset(
-                    m_Request.SerializedOwner, $"{formalTrack.Source.Name} Marker {frame}", BtsmtlSkillFlowGraphRole.TimelineTrigger);
-                added = formalTrack.Source.AddMarker(TimelineTimeGrid.Position(Mathf.Max(0, frame), FrameRate), graph);
+                    m_Request.SerializedOwner, $"{formalTrack.Source.Name} Marker {time:0.#########}s", BtsmtlSkillFlowGraphRole.TimelineTrigger);
+                added = formalTrack.Source.AddMarker(m_Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, time))), graph);
             }, "Add Timeline Marker") && m_Markers.TryGetValue(added.AuthoringId, out BtsmtlTimelineMarkerBinding binding))
                 Select(binding);
         }
@@ -392,12 +382,12 @@ namespace BTSMTL.Timeline.Editor
                 Timeline, () => formalMarker.FormalTrack.Source.RemoveMarker(formalMarker.Source)), "Delete Timeline Marker");
         }
 
-        public void MoveMarker(IEmbeddedTimelineMarkerBinding marker, int frame)
+        public void MoveMarker(IEmbeddedTimelineMarkerBinding marker, double time)
         {
             if (IsReadOnly || !(marker is BtsmtlTimelineMarkerBinding formalMarker))
                 return;
-            int nextFrame = Mathf.Max(0, frame);
-            if (formalMarker.Frame == nextFrame)
+            FixedScalar nextTime = m_Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, time)));
+            if (formalMarker.Time == nextTime.ToDouble())
                 return;
             if (formalMarker.IsLocked)
             {
@@ -405,9 +395,9 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
             if (m_EditActive)
-                formalMarker.Frame = nextFrame;
+                formalMarker.SetTime(nextTime);
             else
-                ApplyImmediate(() => formalMarker.Source.Configure(TimelineTimeGrid.Position(nextFrame, FrameRate), formalMarker.Source.Graph), "Move Timeline Marker");
+                ApplyImmediate(() => formalMarker.Source.Configure(nextTime, formalMarker.Source.Graph), "Move Timeline Marker");
         }
 
         public void OpenMarker(IEmbeddedTimelineMarkerBinding marker)
@@ -455,7 +445,7 @@ namespace BTSMTL.Timeline.Editor
             }, "Delete Timeline Clips");
         }
 
-        public void SplitClip(IEmbeddedTimelineClipBinding clip, int frame)
+        public void SplitClip(IEmbeddedTimelineClipBinding clip, double time)
         {
             if (IsReadOnly || !(clip is BtsmtlTimelineClipBinding formalClip))
                 return;
@@ -464,7 +454,7 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("当前 Clip 或所属 Track 已锁定，不能切分。");
                 return;
             }
-            FixedScalar splitTime = TimelineTimeGrid.Position(frame, FrameRate);
+            FixedScalar splitTime = m_Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, time)), formalClip.Source);
             if (splitTime <= formalClip.Source.StartTime || splitTime >= formalClip.Source.EndTime)
                 return;
             if (formalClip.Source is not AnimationClip && formalClip.Source is not MotionCurveClip)
@@ -521,7 +511,7 @@ namespace BTSMTL.Timeline.Editor
             }, "Reorder Timeline Track");
         }
 
-        public void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, int frame)
+        public void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, double time)
         {
             if (IsReadOnly || !(section is BtsmtlTimelineSectionBinding formalSection))
                 return;
@@ -531,7 +521,7 @@ namespace BTSMTL.Timeline.Editor
                 return;
             }
             formalSection.Name = name ?? string.Empty;
-            formalSection.Time = Mathf.Max(0, frame) / (float)FrameRate;
+            formalSection.Time = m_Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, time))).ToSingle();
         }
 
         public void DeleteSection(IEmbeddedTimelineSectionBinding section)
@@ -546,11 +536,11 @@ namespace BTSMTL.Timeline.Editor
             ApplyImmediate(() => Timeline.RemoveSection(formalSection.Source), "Delete Timeline Section");
         }
 
-        public void AddSection(int frame)
+        public void AddSection(double time)
         {
             if (IsReadOnly)
                 return;
-            ApplyImmediate(() => Timeline.AddSection("Section", TimelineTimeGrid.Position(Mathf.Max(0, frame), FrameRate)), "Add Timeline Section");
+            ApplyImmediate(() => Timeline.AddSection("Section", m_Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, time)))), "Add Timeline Section");
         }
 
         public bool CanPasteClip => m_CopiedClip != null;
@@ -570,7 +560,7 @@ namespace BTSMTL.Timeline.Editor
                 : null;
         }
 
-        public void PasteClip(IEmbeddedTimelineTrackBinding track, int frame)
+        public void PasteClip(IEmbeddedTimelineTrackBinding track, double time)
         {
             if (IsReadOnly || m_CopiedClip == null || !(track is BtsmtlTimelineTrackBinding formalTrack))
                 return;
@@ -585,7 +575,7 @@ namespace BTSMTL.Timeline.Editor
                 clone.RegenerateAuthoringIdentity();
                 if (clone is ITimelineOwnedAuthoringIdentity owned)
                     owned.RegenerateOwnedAuthoringIdentity();
-                FixedScalar startTime = TimelineTimeGrid.Position(Mathf.Max(0, frame), FrameRate);
+                FixedScalar startTime = m_Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, time)), m_CopiedClip);
                 clone.ConfigureTimeRange(startTime, startTime + m_CopiedClip.DurationTime);
                 ContractCatalog.RequireClipPlacement(formalTrack.Source, clone);
                 formalTrack.Source.Clips.Add(clone);
@@ -877,7 +867,7 @@ namespace BTSMTL.Timeline.Editor
             }
         }
 
-        void ShowAddClipMenu(string trackAuthoringId, int frame)
+        void ShowAddClipMenu(string trackAuthoringId, double time)
         {
             if (!m_Tracks.TryGetValue(trackAuthoringId ?? string.Empty, out BtsmtlTimelineTrackBinding track) ||
                 !ContractCatalog.TryGetTrack(track.Source.ContractKind, out TimelineTrackContract contract))
@@ -891,12 +881,12 @@ namespace BTSMTL.Timeline.Editor
                 string kind = contract.AllowedClipKinds[index];
                 if (!ContractCatalog.RequireClip(kind).SupportsExecutionDomain(track.Source.ExecutionDomain))
                     continue;
-                menu.AddItem(new GUIContent(DisplayKind(kind)), false, () => ShowClipCreationPopup(trackAuthoringId, kind, frame));
+                menu.AddItem(new GUIContent(DisplayKind(kind)), false, () => ShowClipCreationPopup(trackAuthoringId, kind, time));
             }
             menu.ShowAsContext();
         }
 
-        void ShowClipCreationPopup(string trackAuthoringId, string kind, int frame)
+        void ShowClipCreationPopup(string trackAuthoringId, string kind, double time)
         {
             if (!m_Tracks.TryGetValue(trackAuthoringId ?? string.Empty, out BtsmtlTimelineTrackBinding track))
             {
@@ -907,7 +897,7 @@ namespace BTSMTL.Timeline.Editor
             bool isTreeClip = kind == TimelineContractKinds.TreeClip;
             bool terminalLogicTreeClip = isTreeClip &&
                 executionDomain == TimelineExecutionDomain.Logic;
-            FixedScalar startTime = TimelineTimeGrid.Position(frame, FrameRate);
+            FixedScalar startTime = m_Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, time)), m_Session.Selection.Clip);
             FixedScalar defaultEndTime = terminalLogicTreeClip
                 ? FixedScalar.Max(startTime + FixedScalar.FromRaw(1), Timeline.DurationTime)
                 : startTime + FixedScalar.FromDecimal(0.05m);
@@ -1238,14 +1228,15 @@ namespace BTSMTL.Timeline.Editor
         sealed class BtsmtlTimelineMarkerBinding : IEmbeddedTimelineMarkerBinding
         {
             readonly BtsmtlTimelineTrackBinding m_Track;
-            int m_InitialFrame;
+            FixedScalar m_InitialTime;
+            FixedScalar m_Time;
 
             public BtsmtlTimelineMarkerBinding(BtsmtlTimelineTrackBinding track, TimelineMarker source)
             {
                 m_Track = track;
                 Source = source;
-                Frame = TimelineTimeGrid.NearestIndex(source.Time, TimelineUtility.FrameRate);
-                m_InitialFrame = Frame;
+                m_Time = source.Time;
+                m_InitialTime = m_Time;
             }
 
             public TimelineMarker Source { get; }
@@ -1253,17 +1244,18 @@ namespace BTSMTL.Timeline.Editor
             IEmbeddedTimelineTrackBinding IEmbeddedTimelineMarkerBinding.Track => m_Track;
             public string AuthoringId => Source.AuthoringId;
             public string DisplayName => $"Marker {Source.Time.ToDouble():0.#########}s";
-            public int Frame { get; set; }
+            public double Time => m_Time.ToDouble();
+            internal void SetTime(FixedScalar time) => m_Time = time;
             public bool IsLocked { get => m_Track.IsLocked; set => m_Track.IsLocked = value; }
 
-            public bool HasChanges() => Frame != m_InitialFrame;
+            public bool HasChanges() => m_Time != m_InitialTime;
 
             public bool CommitSource()
             {
                 if (!HasChanges())
                     return false;
-                Source.Configure(TimelineTimeGrid.Position(Frame, TimelineUtility.FrameRate), Source.Graph);
-                m_InitialFrame = Frame;
+                Source.Configure(m_Time, Source.Graph);
+                m_InitialTime = m_Time;
                 return true;
             }
         }
@@ -1370,14 +1362,13 @@ namespace BTSMTL.Timeline.Editor
             }
             public bool CanScale => Source.IsResizable();
             public bool CanClipIn => Source.IsClipInable();
-            public int ClipInFrame
+            public double ClipInTime
             {
-                get => TimelineTimeGrid.NearestIndex(m_ClipInTime, m_Owner.FrameRate);
+                get => m_ClipInTime.ToDouble();
                 set
                 {
-                    int index = Mathf.Max(0, value);
-                    if (index != ClipInFrame)
-                        m_ClipInTime = TimelineTimeGrid.Position(index, m_Owner.FrameRate);
+                    if (value != m_ClipInTime.ToDouble())
+                        m_ClipInTime = m_Owner.Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, value)), Source, true);
                 }
             }
             public bool CanBlendIn => Source.IsMixable();
@@ -1386,24 +1377,18 @@ namespace BTSMTL.Timeline.Editor
             public IReadOnlyList<IEmbeddedTimelineCurveBinding> Curves => m_Curves;
 
             public void AdjustSourceRange(
-                int originalStartFrame,
-                int originalEndFrame,
-                int currentStartFrame,
-                int currentEndFrame,
+                double originalStartTime,
+                double currentStartTime,
+                double currentEndTime,
                 bool trimStart)
             {
                 if (Source is not MotionCurveClip motion || motion.SourceCurve == null)
                     return;
-                float duration = Mathf.Max(1f / m_Owner.FrameRate, (currentEndFrame - currentStartFrame) / (float)m_Owner.FrameRate);
+                double duration = Math.Max(0d, currentEndTime - currentStartTime);
                 if (trimStart)
-                    m_SourceStartTime = Mathf.Clamp(
-                        motion.SourceStartTime + (currentStartFrame - originalStartFrame) / (float)m_Owner.FrameRate,
-                        0f,
-                        motion.SourceEndTime - 1f / m_Owner.FrameRate);
-                m_SourceEndTime = Mathf.Clamp(
-                    m_SourceStartTime + duration,
-                    m_SourceStartTime + 1f / m_Owner.FrameRate,
-                    motion.SourceCurve.Duration);
+                    m_SourceStartTime = (float)Math.Max(0d,
+                        Math.Min(motion.SourceEndTime, motion.SourceStartTime + currentStartTime - originalStartTime));
+                m_SourceEndTime = (float)Math.Min(motion.SourceCurve.Duration, m_SourceStartTime + duration);
                 RefreshReferenceCurves();
             }
 
@@ -1440,7 +1425,7 @@ namespace BTSMTL.Timeline.Editor
                         reference.Refresh();
             }
 
-            public void Split(float time) => m_Owner.SplitClip(this, Mathf.RoundToInt(time * m_Owner.FrameRate));
+            public void Split(float time) => m_Owner.SplitClip(this, time);
 
             public void StretchFit()
             {
@@ -1808,7 +1793,7 @@ namespace BTSMTL.Timeline.Editor
                 if (!HasChanges())
                     return false;
                 m_Owner.Timeline.ConfigureSection(Source, Name, Time == m_InitialTime ? Source.Time :
-                    TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(Time * m_Owner.FrameRate)), m_Owner.FrameRate));
+                    m_Owner.Session.SnapTime(FixedScalar.FromDouble(Math.Max(0d, Time))));
                 m_InitialTime = Time;
                 return true;
             }

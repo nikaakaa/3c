@@ -24,23 +24,23 @@ namespace Slate
         bool TryGetClip(string authoringId, out IEmbeddedTimelineClipBinding clip);
         void Select(IEmbeddedTimelineElementBinding element);
         void AddTrack();
-        void AddClip(IEmbeddedTimelineTrackBinding track, int frame);
-        void AddMarker(IEmbeddedTimelineTrackBinding track, int frame);
+        void AddClip(IEmbeddedTimelineTrackBinding track, double time);
+        void AddMarker(IEmbeddedTimelineTrackBinding track, double time);
         void DeleteMarker(IEmbeddedTimelineMarkerBinding marker);
-        void MoveMarker(IEmbeddedTimelineMarkerBinding marker, int frame);
+        void MoveMarker(IEmbeddedTimelineMarkerBinding marker, double time);
         void OpenMarker(IEmbeddedTimelineMarkerBinding marker);
         void SetTrackActive(IEmbeddedTimelineTrackBinding track, bool active);
         void DeleteTrack(IEmbeddedTimelineTrackBinding track);
         void DeleteClip(IEmbeddedTimelineClipBinding clip);
         void DeleteClips(IReadOnlyList<IEmbeddedTimelineClipBinding> clips);
-        void SplitClip(IEmbeddedTimelineClipBinding clip, int frame);
+        void SplitClip(IEmbeddedTimelineClipBinding clip, double time);
         void MoveTrack(IEmbeddedTimelineTrackBinding track, int index);
-        void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, int frame);
+        void ConfigureSection(IEmbeddedTimelineSectionBinding section, string name, double time);
         void DeleteSection(IEmbeddedTimelineSectionBinding section);
-        void AddSection(int frame);
+        void AddSection(double time);
         bool CanPasteClip { get; }
         void CopyClip(IEmbeddedTimelineClipBinding clip);
-        void PasteClip(IEmbeddedTimelineTrackBinding track, int frame);
+        void PasteClip(IEmbeddedTimelineTrackBinding track, double time);
         void OpenSource(IEmbeddedTimelineClipBinding clip);
         void BeginEdit(string undoName);
         void CommitEdit();
@@ -80,7 +80,7 @@ namespace Slate
     public interface IEmbeddedTimelineMarkerBinding : IEmbeddedTimelineElementBinding
     {
         IEmbeddedTimelineTrackBinding Track { get; }
-        int Frame { get; }
+        double Time { get; }
     }
 
     public interface IEmbeddedTimelineMarkerTrackBinding : IEmbeddedTimelineTrackBinding
@@ -103,7 +103,7 @@ namespace Slate
         float BlendOut { get; set; }
         bool CanScale { get; }
         bool CanClipIn { get; }
-        int ClipInFrame { get; set; }
+        double ClipInTime { get; set; }
         bool CanBlendIn { get; }
         bool CanBlendOut { get; }
         IReadOnlyList<IEmbeddedTimelineParameterBinding> Parameters { get; }
@@ -137,7 +137,7 @@ namespace Slate
 
     public interface IEmbeddedTimelineSourceRangeBinding
     {
-        void AdjustSourceRange(int originalStartFrame, int originalEndFrame, int currentStartFrame, int currentEndFrame, bool trimStart);
+        void AdjustSourceRange(double originalStartTime, double currentStartTime, double currentEndTime, bool trimStart);
     }
 
     public interface IEmbeddedTimelineCurveBinding

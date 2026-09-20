@@ -764,3 +764,12 @@
 - ReadBytes 已通过同一 ReadRawBytes 实现，所有消费者自然覆盖，不新增替代解码入口。检索到效果／装备绑定、语义与执行数据、世界状态及快照等消费者；这些场景允许空字节时才减少分配，不将所有读取一概称为空或逐帧调用。
 - 空数组无可变元素，不影响独立非空载荷的所有权；后续业务对空载荷的拒绝仍由原消费者执行。ReadString 已直接对原数组片段 GetString，无中间字节数组，本轮保留该正确路径。
 - 目标文件修改前无其它未提交修改，未发现 csc／bee。Core portable 编译零警告零错误并成功关闭构建服务；diff 空白检查通过。未新增测试、未操作共享 Unity，未做边界运行对比或 Player 分配采样；非空字节复制、返回字符串、reader 对象等仍未完成治理。
+## 2026-09-20 效果状态子块同步片段解码
+
+对应 tasks.md 的 2.22。
+
+- Fixed／Float32 GameplayEffectStateAggregateCodec.Read 的标签、属性、活动效果、周期、预测日志五个子块，原各 ReadBytes 复制完整数组后创建内部 reader。现调用已有 ReadBytesSegment，五个私有解码函数及唯一 Reader 工厂统一接收 ArraySegment，删除每次完整效果状态读取的五个中转数组，两数值域共十处。
+- 子 reader 沿已有片段构造记录 Offset／End，头部 Magic、版本、数量上限、顺序／重复／目录检查以及各块 RequireComplete 均保留。私有工厂不再保留不可达的 byte[] null 检查；片段由已校验的外层 reader 产生，CanonicalReader 仍拒绝无底层数组的片段。
+- 解析只产生独立字符串、值对象及集合，没有存储 reader 或 ArraySegment；后续 aggregate 构造、SimulationGameplayEffectState 校验和 Freeze 深拷贝保持原样。不将借用字节扩展至快照结果，不改变提交／恢复或并行执行帧的存储归还边界。
+- 写入侧五个子 writer／数组及读取侧结果集合、深拷贝仍存在，本次仅清理同步解析字节中转，不宣称效果快照无分配。外层读取游标仍先消费完整子块，再由私有 reader 解析，不更改失败时外层推进次序。
+- 编辑前两个文件无其它未提交修改，未发现 csc／bee 编译进程。Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做状态恢复运行对比或 Player 分配采样。

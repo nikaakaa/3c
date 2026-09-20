@@ -1,4 +1,4 @@
-﻿using ThirdPersonSimulation;
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -55,11 +55,11 @@ namespace ThirdPersonSimulation.Fixed
             var journal = new SortedDictionary<ulong, List<PortablePredictionRecord>>();
             var lifecycleRevisions = new SortedDictionary<ulong, ulong>();
 
-            ReadTags(reader.ReadBytes(), tagSources);
-            ReadAttributes(reader.ReadBytes(), catalog, attributes);
-            ReadActiveEffects(reader.ReadBytes(), catalog, activeEffects);
-            ReadPeriods(reader.ReadBytes(), periods);
-            ReadJournal(reader.ReadBytes(), catalog, journal, lifecycleRevisions);
+            ReadTags(reader.ReadBytesSegment(), tagSources);
+            ReadAttributes(reader.ReadBytesSegment(), catalog, attributes);
+            ReadActiveEffects(reader.ReadBytesSegment(), catalog, activeEffects);
+            ReadPeriods(reader.ReadBytesSegment(), periods);
+            ReadJournal(reader.ReadBytesSegment(), catalog, journal, lifecycleRevisions);
 
             var aggregate = new GameplayEffectStateAggregate(
                 tagSources,
@@ -86,7 +86,7 @@ namespace ThirdPersonSimulation.Fixed
             return writer.ToArray();
         }
 
-        static void ReadTags(byte[] bytes, IDictionary<string, string[]> tagSources)
+        static void ReadTags(ArraySegment<byte> bytes, IDictionary<string, string[]> tagSources)
         {
             CanonicalReader reader = Reader(bytes, TagsMagic, "Gameplay Effect Tags");
             int count = ReadCount(reader, "Gameplay Tag source");
@@ -123,7 +123,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static void ReadAttributes(
-            byte[] bytes,
+            ArraySegment<byte> bytes,
             FixedGameplayEffectRuntimeCatalog catalog,
             IDictionary<string, PortableAttributeState> attributes)
         {
@@ -166,7 +166,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static void ReadActiveEffects(
-            byte[] bytes,
+            ArraySegment<byte> bytes,
             FixedGameplayEffectRuntimeCatalog catalog,
             List<PortableActiveEffectState> activeEffects)
         {
@@ -192,7 +192,7 @@ namespace ThirdPersonSimulation.Fixed
             return writer.ToArray();
         }
 
-        static void ReadPeriods(byte[] bytes, IDictionary<ulong, ulong> periods)
+        static void ReadPeriods(ArraySegment<byte> bytes, IDictionary<ulong, ulong> periods)
         {
             CanonicalReader reader = Reader(bytes, PeriodsMagic, "Gameplay Effect Periods");
             int count = ReadCount(reader, "Gameplay Effect period");
@@ -234,7 +234,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static void ReadJournal(
-            byte[] bytes,
+            ArraySegment<byte> bytes,
             FixedGameplayEffectRuntimeCatalog catalog,
             IDictionary<ulong, List<PortablePredictionRecord>> journal,
             IDictionary<ulong, ulong> lifecycleRevisions)
@@ -529,9 +529,9 @@ namespace ThirdPersonSimulation.Fixed
             return result;
         }
 
-        static CanonicalReader Reader(byte[] bytes, uint magic, string label)
+        static CanonicalReader Reader(ArraySegment<byte> bytes, uint magic, string label)
         {
-            var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
+            var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != magic || reader.ReadInt32() != StateVersion)
                 throw new InvalidDataException($"{label} state header is invalid.");
             return reader;

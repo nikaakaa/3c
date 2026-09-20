@@ -6,6 +6,22 @@
 
 ## Requirements
 
+### Requirement: FBBIK方向准备与运行历史必须分型
+
+FBBIK初始化方向 MUST由Rig参考姿态与Profile准备过程产生身份匹配的typed只读结果；无法得到合法几何方向时必须失败，不得使用默认世界轴、名称搜索或另一套初始化算法。准备结果不得冒充已提交运行历史。初始化、完全Reset或调参清历史后，Solver只能从当前Pose、Goal、Profile、正式准备结果与Committed BendHistory建立Vendor输入；Pending帧被丢弃时不得继承Vendor工作字段。普通历史帧继续使用已提交的有符号膝向运输、退化分支和权重数学，不扩大Foot或Solver Reset范围。
+
+#### Scenario: 完全Reset后的退化腿姿态
+
+- **WHEN** Runtime完成Reset且当前动画腿不足以提供可靠弯曲方向
+- **THEN** Solver MUST从正式准备结果和当前输入建立方向
+- **AND** MUST不读取Reset前Vendor方向或把准备结果标记为已提交历史
+
+#### Scenario: Pending求解未发布
+
+- **WHEN** Vendor处理了Pending方向但本帧没有成功Seal
+- **THEN** 下一次求解 MUST从上一Committed BendHistory或正式初始化状态重建输入
+- **AND** MUST不继承被丢弃帧的Vendor工作字段
+
 ### Requirement: Foot Placement必须是唯一Goal事务
 
 唯一`CharacterPoseConstraintRuntime` MUST继续为每个Actor和表现帧建立匹配Frame、Completion、Program、Projection、Rig与Tuning Generation lineage的Pending Constraint Bank，并唯一拥有Foot Context、Resolved Foot Pair、Primary Support/Pelvis、Goal Contribution、唯一Goal Assembler、唯一Goal Set、FBBIK BendHistory与Solver Result。它 MUST不再拥有Final Pose物理页、Physical Writer或Physical Result；这些真相只属于`CharacterFinalPosePublication`。Foot Placement与FBBIK在线调参 MUST只进入actor-local Constraint Tuning Snapshot，不得修改Program Image、actor-local Execution View或其它Actor。

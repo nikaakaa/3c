@@ -24,7 +24,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         readonly Stack<string> m_GraphInvocationPaths = new();
-        readonly HashSet<string> m_DeclaredGraphInvocationPaths = new(System.StringComparer.Ordinal);
         readonly List<string> m_OperationInvocationPaths = new();
 
         public IDisposable PushGraphInvocation(string path)
@@ -155,15 +154,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string parent = string.Empty;
             int depth = 0;
             foreach (string path in m_GraphInvocationPaths)
-            {
-                if (depth++ == 0)
-                    continue;
-                if (m_DeclaredGraphInvocationPaths.Contains(path))
+                if (depth++ == 1)
                 {
                     parent = path;
                     break;
                 }
-            }
             AddSourceMap(ProgramSourceTargetKind.GraphInvocation, owner.Value, source,
                 parentInvocation: parent, callerKind: callerKind, callerId: callerId, callerClipId: callerClipId);
         }
@@ -648,7 +643,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             try
             {
-                string graphInvocationPath = m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek();
+                string sourceInvocationPath = m_GraphInvocationPaths.Count == 0 ? string.Empty : m_GraphInvocationPaths.Peek();
+                string graphInvocationPath = sourceInvocationPath;
                 if (targetKind == ProgramSourceTargetKind.GraphInvocation && !string.IsNullOrEmpty(callerId))
                     graphInvocationPath = $"{graphInvocationPath}/{callerId}";
                 m_SourceMap.Add(new ProgramSourceMapEntry(
@@ -670,10 +666,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         : graphInvocationPath,
                     compiledPortId,
                     direction,
-                    graphInvocationPath,
+                    sourceInvocationPath,
                     parentInvocation, callerKind, callerId, callerClipId));
-                if (targetKind == ProgramSourceTargetKind.GraphInvocation)
-                    m_DeclaredGraphInvocationPaths.Add(graphInvocationPath);
             }
             catch (Exception exception)
             {

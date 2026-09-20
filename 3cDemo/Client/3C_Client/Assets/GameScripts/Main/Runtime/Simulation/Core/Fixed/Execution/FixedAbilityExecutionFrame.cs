@@ -810,7 +810,9 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!m_Frame.HasActionTraceContext)
                 return 0;
-            int slot = m_Invocations.GenerationSlot(operation);
+            int slot = m_Frame.Presentation.HasTreeClipInvocation
+                ? m_Invocations.GenerationSlot(operation, m_Frame.Presentation.TreeClipInvocation)
+                : m_Invocations.GenerationSlot(operation);
             return slot >= 0 ? m_Frame.ReadState(slot).UInt64 : 0;
         }
 
@@ -818,7 +820,9 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!m_Frame.HasActionTraceContext)
                 return 0;
-            int slot = m_Invocations.ParentGenerationSlot(operation);
+            int slot = m_Frame.Presentation.HasTreeClipInvocation
+                ? m_Invocations.ParentGenerationSlot(operation, m_Frame.Presentation.TreeClipInvocation)
+                : m_Invocations.ParentGenerationSlot(operation);
             return slot >= 0 ? m_Frame.ReadState(slot).UInt64 : 0;
         }
     }

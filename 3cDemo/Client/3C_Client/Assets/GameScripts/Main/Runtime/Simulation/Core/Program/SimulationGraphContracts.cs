@@ -1324,6 +1324,7 @@ namespace ThirdPersonSimulation
             var operations = new bool[operationCount];
             var stateSlots = new bool[stateSlotCount];
             var invocations = new Dictionary<string, ProgramSourceMapEntry>(StringComparer.Ordinal);
+            var invocationSources = new Dictionary<string, List<ProgramSourceMapEntry>>(StringComparer.Ordinal);
             for (int i = 0; i < entries.Count; i++)
             {
                 ProgramSourceMapEntry entry = entries[i] ??
@@ -1343,13 +1344,20 @@ namespace ThirdPersonSimulation
                         break;
                     case ProgramSourceTargetKind.GraphInvocation:
                         if (entry.TargetIndex >= operationCount || string.IsNullOrEmpty(entry.GraphId) ||
-                            string.IsNullOrEmpty(entry.GraphInvocationPath) || !invocations.TryAdd(entry.GraphInvocationPath, entry) ||
+                            string.IsNullOrEmpty(entry.GraphInvocationPath) || string.IsNullOrEmpty(entry.SourceInvocationPath) ||
+                            !invocations.TryAdd(entry.GraphInvocationPath, entry) ||
                             !Enum.IsDefined(typeof(ProgramInvocationCallerKind), entry.InvocationCallerKind) ||
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.ParentInvocationPath) ||
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.None) != string.IsNullOrEmpty(entry.InvocationCallerId) ||
                             (entry.InvocationCallerKind == ProgramInvocationCallerKind.TimelineClip ||
                              entry.InvocationCallerKind == ProgramInvocationCallerKind.PresentationMarker) != !string.IsNullOrEmpty(entry.InvocationCallerClipId))
                             throw new InvalidDataException("Program graph invocation source is incomplete.");
+                        if (!invocationSources.TryGetValue(entry.SourceInvocationPath, out List<ProgramSourceMapEntry> sourceInvocations))
+                        {
+                            sourceInvocations = new List<ProgramSourceMapEntry>();
+                            invocationSources.Add(entry.SourceInvocationPath, sourceInvocations);
+                        }
+                        sourceInvocations.Add(entry);
                         break;
                     case ProgramSourceTargetKind.OptimizedAway:
                         if (string.IsNullOrEmpty(entry.GraphId) ||
@@ -1363,15 +1371,18 @@ namespace ThirdPersonSimulation
                 }
             }
 
-            foreach (ProgramSourceMapEntry invocation in invocations.Values)
+            foreach (KeyValuePair<string, List<ProgramSourceMapEntry>> source in invocationSources)
             {
-                var visited = new HashSet<string>(StringComparer.Ordinal) { invocation.GraphInvocationPath };
-                string parent = invocation.ParentInvocationPath;
+                string parent = source.Value[0].ParentInvocationPath;
+                for (int i = 1; i < source.Value.Count; i++)
+                    if (!string.Equals(parent, source.Value[i].ParentInvocationPath, StringComparison.Ordinal))
+                        throw new InvalidDataException("Program graph invocation hierarchy is invalid.");
+                var visited = new HashSet<string>(StringComparer.Ordinal) { source.Key };
                 while (!string.IsNullOrEmpty(parent))
                 {
-                    if (!visited.Add(parent) || !invocations.TryGetValue(parent, out ProgramSourceMapEntry owner))
+                    if (!visited.Add(parent) || !invocationSources.TryGetValue(parent, out List<ProgramSourceMapEntry> owners))
                         throw new InvalidDataException("Program graph invocation hierarchy is invalid.");
-                    parent = owner.ParentInvocationPath;
+                    parent = owners[0].ParentInvocationPath;
                 }
             }
 

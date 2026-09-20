@@ -320,6 +320,8 @@
 
 - [x] 5.78 Rollback policy 与 Server manifest 按两个正式 missing-input 值及唯一 snapshot-authority 值直接校验，泛型 enum parser 拆为具体解析，删除模型构造和配置解析中的 Enum.IsDefined 装箱
 
+- [x] 5.79 Rollback relay 按 input redundancy 正式上限持有 accepted input 工作列表，assembler 直接填充调用方工作区，转发数组生成后在 finally 清空引用，删除每个输入包的 accepted List 与 ReadOnlyCollection
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

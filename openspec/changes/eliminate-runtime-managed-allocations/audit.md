@@ -1905,3 +1905,12 @@
 - policy 构造改为直接比较正式成员。manifest 拆成 RequireMissingInputPolicy 与 RequireSnapshotAuthority 两个具体入口，继续使用区分大小写的 Enum.TryParse，并对解析结果按相同正式集合校验；有效名称、有效数字字符串和异常结果不变。
 - 删除 rollback 模型构造及服务端 manifest 配置解析的 Enum.IsDefined 装箱。该配置链主要发生在初始化而非每帧，本步只记录静态分配入口删除，不宣称稳态收益。
 - ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做配置加载分配采样。
+
+## 2026-09-21 Rollback relay accepted input 工作区
+
+对应 tasks.md 的 5.79。
+
+- RollbackCanonicalInputAssembler.SubmitBatch 只有 relay 的 ReceiveInput 一个消费者。原实现按输入帧数创建 accepted List，逐帧提交后再创建 ReadOnlyCollection；消费者随即把 accepted 帧转换为新的 relayed frame 数组，结果不会跨调用保存。
+- relay 以 inputRedundancyCount 这一正式包内帧数上限预分配 accepted input 工作列表。SubmitBatch 改为清空并填充调用方列表；ReceiveInput 在同一同步调用内计算去重数并生成最终 relayed 数组，finally 清空列表，正常返回和异常路径都不保留帧引用。
+- 删除每个接收输入包的一只 accepted List、其底层数组和一只 ReadOnlyCollection。最终 relayed frame 数组与每帧协议对象仍按广播消息寿命存在；assembler 的显式输入历史所有权不变。
+- ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 relay 包速率或 Player 分配采样。

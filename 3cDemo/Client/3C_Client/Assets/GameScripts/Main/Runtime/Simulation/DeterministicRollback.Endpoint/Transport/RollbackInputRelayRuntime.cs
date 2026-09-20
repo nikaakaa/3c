@@ -67,6 +67,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly int m_InputRedundancyCount;
         readonly Dictionary<string, RollbackRosterEntry> m_ExpectedPeers = new Dictionary<string, RollbackRosterEntry>(StringComparer.Ordinal);
         readonly Dictionary<string, PeerState> m_Peers = new Dictionary<string, PeerState>(StringComparer.Ordinal);
+        readonly List<RollbackActorInputFrame> m_AcceptedInputFrames;
         RollbackCanonicalInputAssembler m_Assembler;
         ulong m_AssembledCount;
         ulong m_InputBatchCount;
@@ -94,6 +95,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (inputRedundancyCount <= 0 || inputRedundancyCount > definition.MaximumQueuedMessages)
                 throw new ArgumentOutOfRangeException(nameof(inputRedundancyCount));
             m_InputRedundancyCount = inputRedundancyCount;
+            m_AcceptedInputFrames = new List<RollbackActorInputFrame>(inputRedundancyCount);
             m_RelayHandshake = new RollbackHandshake(
                 relayServerPeerId,
                 handshakeTemplate.Model,
@@ -318,24 +320,31 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     throw new InvalidOperationException("Rollback peer input frame ownership or provenance is invalid.");
             }
             m_InputBatchCount = checked(m_InputBatchCount + 1);
-            IReadOnlyList<RollbackActorInputFrame> accepted = m_Assembler.SubmitBatch(input.Frames);
-            m_DeduplicatedInputCount = checked(
-                m_DeduplicatedInputCount + (ulong)(input.Frames.Count - accepted.Count));
-            if (accepted.Count == 0)
-                return;
-            var relayed = new RollbackActorInputFrame[accepted.Count];
-            for (int i = 0; i < accepted.Count; i++)
+            try
             {
-                RollbackActorInputFrame source = accepted[i];
-                relayed[i] = new RollbackActorInputFrame(
-                    source.ActorId,
-                    source.Tick,
-                    source.InputSequence,
-                    source.Input,
-                    RollbackInputProvenance.RelayedExplicit);
+                m_Assembler.SubmitBatch(input.Frames, m_AcceptedInputFrames);
+                m_DeduplicatedInputCount = checked(
+                    m_DeduplicatedInputCount + (ulong)(input.Frames.Count - m_AcceptedInputFrames.Count));
+                if (m_AcceptedInputFrames.Count == 0)
+                    return;
+                var relayed = new RollbackActorInputFrame[m_AcceptedInputFrames.Count];
+                for (int i = 0; i < m_AcceptedInputFrames.Count; i++)
+                {
+                    RollbackActorInputFrame source = m_AcceptedInputFrames[i];
+                    relayed[i] = new RollbackActorInputFrame(
+                        source.ActorId,
+                        source.Tick,
+                        source.InputSequence,
+                        source.Input,
+                        RollbackInputProvenance.RelayedExplicit);
+                }
+                Broadcast(RollbackRelayedExplicitInputBatch.FromOwnedFrames(relayed), true, peer.Roster.PeerId);
+                m_ExplicitRelayBroadcastCount = checked(m_ExplicitRelayBroadcastCount + (ulong)relayed.Length);
             }
-            Broadcast(RollbackRelayedExplicitInputBatch.FromOwnedFrames(relayed), true, peer.Roster.PeerId);
-            m_ExplicitRelayBroadcastCount = checked(m_ExplicitRelayBroadcastCount + (ulong)relayed.Length);
+            finally
+            {
+                m_AcceptedInputFrames.Clear();
+            }
         }
 
         void FlushCanonicalConfirmation()

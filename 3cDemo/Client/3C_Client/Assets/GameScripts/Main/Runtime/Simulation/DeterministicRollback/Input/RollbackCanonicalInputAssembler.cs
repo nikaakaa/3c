@@ -107,17 +107,20 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return true;
         }
 
-        public IReadOnlyList<RollbackActorInputFrame> SubmitBatch(IReadOnlyList<RollbackActorInputFrame> frames)
+        public void SubmitBatch(
+            IReadOnlyList<RollbackActorInputFrame> frames,
+            List<RollbackActorInputFrame> accepted)
         {
             if (frames == null || frames.Count == 0)
                 throw new ArgumentException("Rollback canonical input batch is empty.", nameof(frames));
-            var accepted = new List<RollbackActorInputFrame>(frames.Count);
+            if (accepted == null)
+                throw new ArgumentNullException(nameof(accepted));
+            accepted.Clear();
             for (int i = 0; i < frames.Count; i++)
             {
                 if (SubmitFrame(frames[i]))
                     accepted.Add(frames[i]);
             }
-            return accepted.AsReadOnly();
         }
 
         public bool SubmitFrame(RollbackActorInputFrame frame)

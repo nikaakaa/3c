@@ -149,7 +149,7 @@ namespace ThirdPersonSimulation
             CharacterControlStateValueKind valueKind,
             CharacterControlStateSemantic semantic)
         {
-            if (!id.IsValid || !Enum.IsDefined(typeof(CharacterControlStateValueKind), valueKind) || !Enum.IsDefined(typeof(CharacterControlStateSemantic), semantic) || !IsValid(valueKind, semantic))
+            if (!id.IsValid || !IsValid(valueKind, semantic))
                 throw new ArgumentException("Character control state field is incomplete.");
             Id = id;
             ValueKind = valueKind;

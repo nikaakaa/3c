@@ -815,3 +815,11 @@
 - 删除两个无消费者的泛型入口，不引入另一解码路径。保留字段读取宽度、读取次序、InvalidDataException 和原错误文本（包括原标签重复措辞）；字段／schema 匹配、值解码、状态哈希及返回结果所有权不变。
 - 这里消除的是枚举元数据查询与转换装箱，不是动态调用业务方法的反射。CharacterControlStateFieldDescriptor 等其他构造层仍有枚举检查，不能将 codec 清理推广为所有角色控制状态均无装箱。
 - 目标文件编辑前无其它未提交修改，进程扫描无 csc／bee。SimulationGraphContracts.cs 存在并行修改，其中 scope／相机有效性检查未触碰。Core portable 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做运行或 Player 分配采样。
+## 2026-09-20 角色控制字段重复枚举检查清理
+
+对应 tasks.md 的 2.28。
+
+- CharacterControlStateFieldDescriptor 构造原先分别 Enum.IsDefined 检查 valueKind 和 semantic，再调用已有 IsValid(valueKind, semantic)。该组合判断已明确限定 ActiveState／Transition 只能 Identity、EnteredTick 只能 UInt64、StateValue 只能四种正式值类型，未知 semantic 返回 false；因此前两项检查完全冗余。
+- 删除两次枚举装箱，保留 id.IsValid、现有组合判断及同一 ArgumentException。没有增加另一份枚举成员清单或弱化类型／语义关系，未知类型和零值仍被原组合判断拒绝。
+- CharacterControlRuntimeStateCodec 的无外部 schema 读取分支会逐字段构造该描述，因此上一轮解码去装箱后这里仍是真实后续检查；同时覆盖直接构造和内容准备，不将所有构造次数都计为逐帧。
+- 文件修改前无其它未提交修改，进程查询完成后确认无 csc／bee。Core portable 编译零警告零错误并成功关闭构建服务，diff 空白检查通过；未新增测试、未操作共享 Unity、未做运行或分配采样。字段对象、schema 与结果存储仍分配。

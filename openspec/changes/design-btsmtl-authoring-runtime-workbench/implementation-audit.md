@@ -338,7 +338,7 @@ Replay capability 现在公开真实 `IsInputRecording` 状态，Float32/Fixed T
 - Unity：手动 batch `btsmtl-preview-replay-compile-20260909.log` 曾只记录到 Package Manager 注册完成，随后进程无进一步输出并被停止；该次不作为编译证据。此前正式 Center Run `c4c620ae0c4d4712812d591f0c5d3d56` 完成 `compile`。新增 Target identity report 初次编译由 `47aebafc4c664564832734ea8b2654ad` 抓到类型错误，已由 `af27a0aba`、`37a091e99` 修复；正式 Run `3df678e58c9f466ab93a4600ca5d5aad` 完成，Unity 日志出现 `*** Tundra build success` 并正常退出，未检出 `error CS`。局部 History 边界修正后的正式 Run `95e50007eb5d4d2381d4e4c612b22137` 同样完成并出现 `*** Tundra build success`。PresentationFrame Action snapshot 关联的 Run `3911cace9846414695b4a91abc42999f` 出现 `*** Tundra build success`、无 `error CS`，但 Unity 在 assembly reload 后未自行退出，已停止我启动的 batch 进程；其后的 `dc8472e1a` 只调整既有 TimelinePlayback identity 到同一 PresentationFrame 的选择闭包，尚未获得独立正式编译结论。直接 batch 也再次卡在 Package Manager 注册后，无新 CS 结论。RunHost 没有生成额外结果文件，因此这里只认定已编译部分完成，不扩大为当前最终 HEAD 完整业务通过。
 - Center：继续使用 `79a0588a3f9047b4889ac40e9e698cc9`，已写入上述提交范围、验证缺口和未闭合项；没有新建第二条 Change 记录。
 
-静态 TreeClip 盘点已写入 [treeclip-migration-audit.md](treeclip-migration-audit.md)：旧来源实际是 RootTree 19 个加 shared Attack1 Timeline 4 个，新目标为 7 条 Native Timeline 的 23 个。数量一致，但稳定 clip identity 和逐项行为映射证据缺失，`11.6` 仍未完成。
+当时的静态 TreeClip 盘点文件未纳入仓库：旧来源记录为 RootTree 19 个加 shared Attack1 Timeline 4 个，新目标记录为 7 条 Native Timeline 的 23 个。该数量观察没有稳定 clip identity 或逐项行为映射证据，不能作为当前迁移依据，`11.6` 仍未完成。
 
 ## 2026-09-10 SourceMap 所属 Graph 映射修正
 
@@ -470,7 +470,7 @@ Timeline 窗口的完整 Capture 原先只订阅 Timeline、Animation 和 Motion
 - 旧片段先读取 ActionWindow 类型、ID、Digest、Blackboard 作用域/生命周期/分类、写入值、完整时间范围、缓动参数、ClipIn 和执行阶段；同一 Timeline 内出现重复业务键会直接失败。
 - 已存在的 Native TreeClip 必须按同一业务键逐项匹配，不能按旧/新数组下标对应；Native 图还必须通过正式 Skill Graph closure，只有一组 TimelineBody 生命周期锚点、一个 Boolean Blackboard setter，以及 Root 到 setter 的正式 Flow 连接。
 - 新创建的 TimelineBody 图不再使用随机 graph identity，而是由旧 Timeline/TreeClip 与 ActionWindow 身份计算稳定 hash；现有已生成资产不被这次代码改写，避免无授权地改变已发布来源 identity。
-- 当前 23 条静态对应关系保存在 [treeclip-migration-map.json](treeclip-migration-map.json)，包含旧/新 Timeline、Track、Clip、TreeGraph 身份和时间范围。该文件明确把行为 digest、运行时 Decision/Commit、SourceMap coverage 和输入回放标为未验证，因此 `11.6` 仍未勾选，也没有把迁移数量相等写成行为等价。
+- 当时的 23 条静态对应关系只记录在未纳入仓库的临时盘点中，涵盖旧/新 Timeline、Track、Clip、TreeGraph 身份和时间范围。行为 digest、运行时 Decision/Commit、SourceMap coverage 与输入回放都没有可复查的盘点产物，因此 `11.6` 仍未勾选，数量相等也不表示行为等价。
 
 本步 `ThirdPersonClient.Editor.csproj` 按项目要求构建成功，0 错误、90 个既有 ACL/旧代码字段警告；随后已执行 `dotnet build-server shutdown`。未启动 Unity，也未改变当前 Corin 资产。
 

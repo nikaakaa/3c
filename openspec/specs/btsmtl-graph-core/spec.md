@@ -169,7 +169,7 @@
 
 #### Scenario: Character 正式运行
 
-- **WHEN** CharacterPipelineDefinition已生成有效 Program artifact且 Session Pipeline进入 Active
+- **WHEN** CharacterPipelineDefinition已绑定有效 Graph artifact与领域内容且 Session Pipeline进入 Active
 - **THEN** 对应正式 Graph/Domain Evaluate/Finalize 入口 MUST 只执行其 owner 的图或领域规则
 - **AND** MUST不创建 BaseGraph运行工作副本或调用通用解释器
 

@@ -1,6 +1,6 @@
 ## Context
 
-见[proposal](proposal.md)。2026-09-13按公共[原生C#作者基线r2](../remove-agent-authoring-use-native-csharp/design.md)更新剩余计划。旧实现及任务映射保留在[归档交接](../archive/2026-09-12-refactor-btsmtl-flowcanvas-authoring/split-handoff.md)和本目录历史实施记录；已勾选工作不撤销，但不代表新导出/重建或协议删除完成。
+见[proposal](proposal.md)。2026-09-13按公共[原生C#作者基线r2](../archive/2026-09-13-remove-agent-authoring-use-native-csharp/design.md)更新剩余计划。旧实现及任务映射保留在[归档交接](../archive/2026-09-12-refactor-btsmtl-flowcanvas-authoring/split-handoff.md)和本目录历史实施记录；已勾选工作不撤销，但不代表新导出/重建或协议删除完成。
 
 此前只读源码已确认原生FSM类型、配置/创建及领域合同存在，插件runtime被拒绝。当前任务表已将r2各项勾选，本轮保留这些实现记录；它们只说明当时的图/FSM范围，不能扩大为r3的完整Ability外壳已输出。当前`BindSkillRoot`仍只登记`Definition.SkillGraphs`，角色外壳另存于`SkillDefinitions`。实施前重读实际差异，不从旧截图恢复steps、不覆盖其它窗口正确改动。
 
@@ -76,7 +76,7 @@ r4正式作者模型不再包含用于系统清理/终态推导的OnExit执行�
 
 删除后重建必须恢复指定Definition/Skill根挂接，不能只生成孤立FSM。清理只覆盖明确旧输出，不删除源码、原始素材、外部共享资源或未列入范围的消费者；范围外消费者若需重挂，须作为本次明确目标输入。首次迁移先完整导出并取得重建证据，再清理旧输出，不因资产可重建直接删除现有正确资产。
 
-Build独立显式执行，仍由现有Character编译器读取正式资产产生Program/Projection。声明范围的结构/配置往返不等于运行测试，文档更新不执行生成、删除、Build或Play。
+Build独立显式执行，仍由正式发布链读取领域资产并产生Graph artifact与领域 binding。声明范围的结构/配置往返不等于运行测试，文档更新不执行生成、删除、Build或Play。
 
 ### D4 编译只汇入现有Program
 

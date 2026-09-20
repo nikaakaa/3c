@@ -1,6 +1,6 @@
 # Change: PoseGraph只读输入与原生Runtime接入
 
-修订：r3，2026-09-14。按用户广播`parallel-20260914-domain-01-planning-update`接收[领域运行主方案D9—D13](../replace-character-program-with-domain-runtimes/design.md)与[协调审阅](../../../docs/coordination-progress.md)中的Pose原生Runtime范围。复用规划窗口01a09594-1751-7512-b8c0-08b04185055b和已有Pose实现窗口01a081f3-46f4-7c91-8930-73923ff7950b，不创建任务或派发实现。
+修订：r3，2026-09-14。按用户广播`parallel-20260914-domain-01-planning-update`接收[领域运行主方案D9—D13](../archive/2026-09-17-replace-character-program-with-domain-runtimes/design.md)与[协调审阅](../../../docs/coordination-progress.md)中的Pose原生Runtime范围。复用规划窗口01a09594-1751-7512-b8c0-08b04185055b和已有Pose实现窗口01a081f3-46f4-7c91-8930-73923ff7950b，不创建任务或派发实现。
 
 第1、2组20项已完成记录保持原文和勾选；第3组是新增Runtime接收范围的唯一实施清单。本轮只改规划与必要delta，不改代码、资产、其它owner文档或历史执行证据。
 
@@ -52,7 +52,7 @@
 
 ## Dependencies And Boundaries
 
-- EventGraph正式规划由独立窗口维护，现以[add-flowcanvas-event-graph](../add-flowcanvas-event-graph/design.md)及本次广播为共同基线：事件图原生执行，唯一拥有声明、更新、Contract/Layout/Frame；本任务消费它们，不另设运行模式。
+- EventGraph正式规划由独立窗口维护，现以[add-flowcanvas-event-graph](../archive/2026-09-17-add-flowcanvas-event-graph/design.md)及本次广播为共同基线：事件图原生执行，唯一拥有声明、更新、Contract/Layout/Frame；本任务消费它们，不另设运行模式。
 - 共享变量采用Float、Int32、Bool精确类型；Get、条件、BlendSpace使用相同图/变量身份和唯一布局，校验实例、表现采样、Simulation tick、Reset代际和版本。消费者结束前输出不得被重写。
 - Source Pending不回退已成功更新的事件图状态；Pose仍遵守原提交规则。运行和完整Preview消费签名已迁移，旧CharacterPresentationProgramParameterFrame及旧生产方法已删除；不补默认motor值。
 - C# authoring任务拥有两个显式工具、公共代码输出/生成入口和Agent Mapper/DTO退役；事件图任务拥有HostEventGraph原生操作API；本任务保留Pose作者/输入与内部执行接入；r3共享Host、表现装配壳及总Projection对应调用由主实现唯一修改，具体文件边界见design第11节。

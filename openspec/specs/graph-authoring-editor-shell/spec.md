@@ -38,13 +38,13 @@ Navigator、Details和Bottom Dock的宽度、展开、折叠、选中页签、�
 
 ### Requirement: Shell必须保持重操作的显式触发边界
 
-Shell Toolbar MAY暴露domain提供的Compile或Build命令，但selection、Inspector focus、Graph mutation、窗口创建、窗口恢复、Preview target切换、AssetDatabase import或refresh MUST不自动触发Program、Projection、Foot Analysis或Motion Matching Database构建。Shell MAY刷新轻量validator与Stale状态，但 MUST不自行修复Stale产物。Behavior Designer内容由插件自己的生命周期管理。
+Shell Toolbar MAY暴露domain提供的Compile或Build命令，但selection、Inspector focus、Graph mutation、窗口创建、窗口恢复、Preview target切换、AssetDatabase import或refresh MUST不自动触发Graph artifact、领域 binding、Foot Analysis或Motion Matching Database构建。Shell MAY刷新轻量validator与Stale状态，但 MUST不自行修复Stale产物。Behavior Designer内容由插件自己的生命周期管理。
 
 #### Scenario: 修改Pose Graph连线
 
 - **WHEN** 作者连接一个Pose edge
 - **THEN** mutation adapter MUST更新真实Pose Graph owner并允许轻量validation刷新
-- **AND** Projection Build MUST保持未触发并显示Stale
+- **AND** 受影响的Graph artifact或领域 binding MUST保持未触发并显示Stale
 
 #### Scenario: 显式点击Compile
 

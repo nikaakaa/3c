@@ -6,7 +6,7 @@
 
 持久归档README及retention-manifest记录：持续Gap12/60降至3/60、Landing未闭合11/60降至2/60、普通Swing最大额外步98.285降至36.401毫米。没有找到绑定193957的官方Replay Proof，不补造matched；历史可比性按已核对的原始Body／动画／Foot输入及表现时钟限定。骨盆硬夹紧、膝盖翻侧及部分端点平面负距仍存在，不把该参照叫全身合格。
 
-之后212054提前卸载候选被拒绝，3436cf6／27dbef4撤销，221050的1119个非身份CSV列对193957逐值相同，37项规则／计数／score恢复。脚目标有效性及骨盆三步属于后续独立change，索引见[骨盆实验历史](../../refine-character-pelvis-response/experiments/README.md)。本段只补齐最终处置，不重写193957原数据或把后续改进记到本实验。
+之后212054提前卸载候选被拒绝，3436cf6／27dbef4撤销，221050的1119个非身份CSV列对193957逐值相同，37项规则／计数／score恢复。脚目标有效性及骨盆三步属于后续独立change，索引见[骨盆实验历史](../../archive/2026-09-04-refine-character-pelvis-response/experiments/README.md)。本段只补齐最终处置，不重写193957原数据或把后续改进记到本实验。
 
 ## 用户范围与对照
 

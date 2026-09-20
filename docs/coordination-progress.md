@@ -5,7 +5,7 @@
 
 ## 2026-09-14：DOMAIN-BOUNDARIES-20260914-02 规范审阅
 
-状态：`REVIEWED_NO_REASSIGNMENT`。来源：规划提交 `6932d1ad6`、[design D21](../openspec/changes/replace-character-program-with-domain-runtimes/design.md)、同目录spec-audit与tasks，以及两个领域的现行清单。用户本轮重点为“怎么规范”；这里只记录约束和现有归属，不新建任务、不调整执行优先级、不向其它窗口派工。
+状态：`REVIEWED_NO_REASSIGNMENT`。来源：规划提交 `6932d1ad6`、[design D21](../openspec/changes/archive/2026-09-17-replace-character-program-with-domain-runtimes/design.md)、同目录spec-audit与tasks，以及两个领域的现行清单。用户本轮重点为“怎么规范”；这里只记录约束和现有归属，不新建任务、不调整执行优先级、不向其它窗口派工。
 
 当前授权事实：此前三个规划已登记分工，核心、Timeline、Pose已经获准实施。下方PARALLEL审阅的“待分派”是当时快照，不再代表当前状态，不需要重复授权。此前只发消息要求更新规划，不等于当时运行链已经完成；后续实施事实以各自现行清单和代码为准。
 
@@ -60,7 +60,7 @@ ActionRuntime不整类搬给Control。当前ActivateFromControl/StopFromControl/
 
 本节响应用户要求的先审阅后决定分派，只记录可行分工和实际冲突。没有派发任务、索取回执、启动实现、修改业务代码或执行 Unity/Build。下方2026-09-06章节保留历史，不作为本轮消息路由和任务配对依据。本轮沿用用户已允许的实现层临时阻塞协商，不因此向规划窗口发送日常消息。
 
-审阅来源为 [领域运行设计 D9—D13](../openspec/changes/replace-character-program-with-domain-runtimes/design.md)，提报编号 `PARALLEL-20260914-DOMAIN-01`。代码观察点为共享工作树 `fb5affe196d1cf0cb0fff0728f02e7a9e27fdee6` 附近，包含并行修改；这是读取时证据，不代表运行或最终产物通过。
+审阅来源为 [领域运行设计 D9—D13](../openspec/changes/archive/2026-09-17-replace-character-program-with-domain-runtimes/design.md)，提报编号 `PARALLEL-20260914-DOMAIN-01`。代码观察点为共享工作树 `fb5affe196d1cf0cb0fff0728f02e7a9e27fdee6` 附近，包含并行修改；这是读取时证据，不代表运行或最终产物通过。
 
 ### 结论
 

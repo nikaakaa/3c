@@ -2,7 +2,7 @@
 
 r5下一轮只补齐共享准入命名迁移与StateBody三个系统锚点合同。第1—7节已勾选工作保留为对应阶段记录，不据此宣称本轮增量完成。
 
-原生FSM、Program编译和C#图输出已在任务表记录完成，但完整技能外壳仍与图分散保存。本change继续采用[原生C#作者基线r2](../remove-agent-authoring-use-native-csharp/design.md)的两个显式工具，在已有成果上补齐完整Ability作者入口。
+原生FSM、Program编译和C#图输出已在任务表记录完成，但完整技能外壳仍与图分散保存。本change继续采用[原生C#作者基线r2](../archive/2026-09-13-remove-agent-authoring-use-native-csharp/design.md)的两个显式工具，在已有成果上补齐完整Ability作者入口。
 
 r3补充用户已确认的作者目标：`GameplayAbilityDefinition`是一个完整技能的入口，集中呈现技能配置和执行图，准入规则通过独立共享资产引用。现有SkillDefinition、ActionProfile、ActionContext与角色图列表分散表达同一技能，新C#生成也只登记图；本阶段收敛这些所有权和命名，不把只重建Graph称为完整Ability。
 

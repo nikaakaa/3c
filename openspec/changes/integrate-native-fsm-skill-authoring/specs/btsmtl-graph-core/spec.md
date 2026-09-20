@@ -178,12 +178,12 @@
 
 本要求及以下场景中的旧BaseGraph、PropertyEdge、普通C#内联图和Tree窗口实现限制仅适用于尚未迁移领域。BTSMTL技能执行图及其局部状态／规则图 MUST采用btsmtl-flowcanvas-authoring的正式图、Macro所有权和直接编译合同。其他领域继续保持以下原有行为，不由本次技能变更迁移。
 
-系统 MUST允许 `BaseGraph` 保存非序列化运行上下文，包括 `User`、`DeltaTime`和类型化上下文读取能力。`BaseGraph` MUST NOT拥有 `Running`、`State`、`UpdateTree`或 `ResetTree`。通用 BTSMTL解释器 MAY从 resolved authoring graph data创建隔离运行工作副本，但正式 Character runtime MUST将同一 authoring编译为 `CharacterSimulationProgram`，并由 Session Pipeline的标准 Program Step Pass执行，不得通过 `RunnableTree`、`StateMachineGraphRuntime`或运行时 Graph clone执行角色 Gameplay。两种用途 MUST不共享或回写运行状态。
+系统 MUST允许 `BaseGraph` 保存非序列化运行上下文，包括 `User`、`DeltaTime`和类型化上下文读取能力。`BaseGraph` MUST NOT拥有 `Running`、`State`、`UpdateTree`或 `ResetTree`。通用 BTSMTL解释器 MAY从 resolved authoring graph data创建隔离运行工作副本，但正式 Character runtime MUST从对应Graph artifact与领域 binding直接建立运行实例，并由 Session 的正式 Evaluate/Finalize路径驱动，不得通过 `RunnableTree`、`StateMachineGraphRuntime`或运行时 Graph clone执行角色 Gameplay。两种用途 MUST不共享或回写运行状态。
 
 #### Scenario: Character 正式运行
 
-- **WHEN** CharacterPipelineDefinition已生成有效 Program artifact且 Session Pipeline进入 Active
-- **THEN** Program Evaluate/Finalize Pass MUST只执行 Program operation
+- **WHEN** CharacterPipelineDefinition已绑定有效 Graph artifact与领域内容且 Session Pipeline进入 Active
+- **THEN** 对应Graph或领域 owner 的 Evaluate/Finalize入口 MUST只执行自身规则
 - **AND** MUST不创建 BaseGraph运行工作副本或调用通用解释器
 
 #### Scenario: 非角色通用 RunnableTree tick

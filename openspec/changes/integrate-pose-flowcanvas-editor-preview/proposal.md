@@ -1,4 +1,4 @@
-修订：公共输入/authoring协议r2（2026-09-13）。依据用户广播及[公共C# authoring r2](../remove-agent-authoring-use-native-csharp/design.md)更新。范围与历史任务去向见[对接记录](coordination-r2.md)，不重规划旧Pose其它业务。
+修订：公共输入/authoring协议r2（2026-09-13）。依据用户广播及[公共C# authoring r2](../archive/2026-09-13-remove-agent-authoring-use-native-csharp/design.md)更新。范围与历史任务去向见[对接记录](coordination-r2.md)，不重规划旧Pose其它业务。
 
 ## Why
 

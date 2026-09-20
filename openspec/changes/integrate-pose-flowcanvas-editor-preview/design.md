@@ -1,6 +1,6 @@
 ## 2026-09-13 公共协议r2
 
-依据[公共C# authoring r2](../remove-agent-authoring-use-native-csharp/design.md)和用户广播修订；范围与维护归属见[对接记录](coordination-r2.md)。本轮只更新本旧方案的公共输入与authoring协议，其它图组织、Slot/Action、资源、曲线和IK业务不变，历史implementation.md不改。
+依据[公共C# authoring r2](../archive/2026-09-13-remove-agent-authoring-use-native-csharp/design.md)和用户广播修订；范围与维护归属见[对接记录](coordination-r2.md)。本轮只更新本旧方案的公共输入与authoring协议，其它图组织、Slot/Action、资源、曲线和IK业务不变，历史implementation.md不改。
 
 ## Context
 

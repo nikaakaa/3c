@@ -6,8 +6,8 @@
 
 ## 唯一公共基线和实施归属
 
-- 两个显式MCP、完整C#输出/生成、明确范围替换、源码与未导出修改边界：[C# authoring r2](../remove-agent-authoring-use-native-csharp/design.md)。
-- 原生事件图、唯一变量声明/Contract/Layout/Frame和原生操作API：[事件图方案](../add-flowcanvas-event-graph/design.md)。
+- 两个显式MCP、完整C#输出/生成、明确范围替换、源码与未导出修改边界：[C# authoring r2](../archive/2026-09-13-remove-agent-authoring-use-native-csharp/design.md)。
+- 原生事件图、唯一变量声明/Contract/Layout/Frame和原生操作API：[事件图方案](../archive/2026-09-17-add-flowcanvas-event-graph/design.md)。
 - CharacterPoseGraphAuthoringAdapter、Pose Mutation、输入合同、Get/条件/BlendSpace及运行/Preview消费：[只读Blackboard r2](../refine-pose-graph-readonly-blackboard/design.md)。公共实施只在该目录任务1.x/2.x登记，本旧方案不重复列同一实现任务。
 
 ## 旧协议退出

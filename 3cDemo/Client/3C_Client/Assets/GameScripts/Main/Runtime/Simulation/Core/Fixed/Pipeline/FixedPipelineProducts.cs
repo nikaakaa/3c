@@ -300,26 +300,27 @@ namespace ThirdPersonSimulation.Fixed
 
         public FixedSimulationCommitBatch(
             StableHash transactionIdentity,
-            IEnumerable<FixedCompletedSimulationStep> steps,
+            IReadOnlyList<FixedCompletedSimulationStep> steps,
             SimulationPipelineOutputDispositionSet outputDispositions,
-            IEnumerable<FixedSourceEgressRecord> sourceEgress)
+            IReadOnlyList<FixedSourceEgressRecord> sourceEgress)
         {
             if (!transactionIdentity.IsValid)
                 throw new ArgumentException("Commit batch transaction identity is invalid.", nameof(transactionIdentity));
             OutputDispositions = outputDispositions ?? throw new ArgumentNullException(nameof(outputDispositions));
             if (!outputDispositions.TransactionIdentity.Equals(transactionIdentity))
                 throw new ArgumentException("Commit batch and disposition transaction identities do not match.", nameof(outputDispositions));
-            var stepValues = steps == null
-                ? new List<FixedCompletedSimulationStep>()
-                : new List<FixedCompletedSimulationStep>(steps);
-            for (int i = 0; i < stepValues.Count; i++)
+            var stepValues = steps == null || steps.Count == 0
+                ? Array.Empty<FixedCompletedSimulationStep>()
+                : new FixedCompletedSimulationStep[steps.Count];
+            for (int i = 0; i < stepValues.Length; i++)
             {
+                stepValues[i] = steps[i];
                 if (stepValues[i] == null || i > 0 && stepValues[i - 1].Step.Tick.CompareTo(stepValues[i].Step.Tick) >= 0)
                     throw new ArgumentException("Commit batch Step order is invalid.", nameof(steps));
             }
             var outputEvents = new List<OutputEventOwner>(
                 outputDispositions.Dispositions.Count);
-            for (int i = 0; i < stepValues.Count; i++)
+            for (int i = 0; i < stepValues.Length; i++)
             {
                 SimulationTickResult result = stepValues[i].Result;
                 for (int actorIndex = 0; actorIndex < result.Actors.Count; actorIndex++)
@@ -351,11 +352,12 @@ namespace ThirdPersonSimulation.Fixed
                     throw new ArgumentException("Commit batch contains duplicate or undisposed EventIds.", nameof(outputDispositions));
                 }
             }
-            var egressValues = sourceEgress == null
-                ? new List<FixedSourceEgressRecord>()
-                : new List<FixedSourceEgressRecord>(sourceEgress);
-            for (int i = 0; i < egressValues.Count; i++)
+            var egressValues = sourceEgress == null || sourceEgress.Count == 0
+                ? Array.Empty<FixedSourceEgressRecord>()
+                : new FixedSourceEgressRecord[sourceEgress.Count];
+            for (int i = 0; i < egressValues.Length; i++)
             {
+                egressValues[i] = sourceEgress[i];
                 if (egressValues[i] == null)
                     throw new ArgumentException("Commit batch contains a missing Source egress record.", nameof(sourceEgress));
             }

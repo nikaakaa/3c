@@ -1540,3 +1540,12 @@
 - 两域构造入口收窄为 IReadOnlyList，按 Count 创建最终数组并逐项复制，在数组上按 SourceEventId 排序和执行原重复所有权校验；null 或空集合统一保存 Array.Empty。公开 Dispositions 仍为 IReadOnlyList。
 - 删除每个 egress tick 的结果侧 List 对象，以最终数组替代原 List 底层数组，不删除上游可复用收集列表。OutputDispositionSet 对象和非空元素数组仍分配。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 egress 运行对比或 Player 分配采样。
+
+## 2026-09-21 CommitBatch 最终数组
+
+对应 tasks.md 的 2.76，取代 2.59 中仍保留 steps／source egress 结果 List 的状态。
+
+- PipelineTransaction.FreezeCommitBatch 传入 completedSteps 与从 workspace 读取的 sourceEgress，二者均为 IReadOnlyList，底层 workspace 会在后续事务清空和复用；CommitBatch 必须复制，不能借用。
+- 两域 CommitBatch 构造入口收窄为 IReadOnlyList，按 Count 分别创建 completed step 与 source egress 最终数组，在复制时执行原 step 非空／tick 严格递增和 egress 非空记录校验；空集合复用 Array.Empty，公开属性仍为 IReadOnlyList。
+- 删除每个已提交外层 tick 的 steps 与 source egress 两个结果 List 对象，以最终数组替代各自原 List 底层数组。CommitBatch 对象、非空数组、事件覆盖列表和 disposition 仍存在。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做提交运行对比或 Player 分配采样。

@@ -1531,3 +1531,12 @@
 - plan 现对非空数组输入分别 Clone，steps 直接只读保存，mapping 在克隆数组上按 StepClockId／SourceKind 排序后保存；调用方数组仍不共享。非数组 IEnumerable 继续复制到独立 List，所有 plan 状态、tick、mapping、roster 和 sequence 校验不变。
 - 数组输入的 executable plan 删除 steps 与 source mappings 两个 List 对象，以克隆数组作为各自原 List 底层存储的等价结果。传入数组和克隆数组仍各自存在，本项没有改变公开构造器所有权语义。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 plan 运行对比或 Player 分配采样。
+
+## 2026-09-21 OutputDispositionSet 最终数组
+
+对应 tasks.md 的 2.75，取代 2.63 中仍保留结果 List 的状态。
+
+- Fixed／Float32 本地立即输出、Rollback 输出及 ServerAuthoritative 输出均用 List 收集 dispositions，并在 SimulationPipelineOutputDispositionSet 同步构造后清空或复用上游列表；结果必须独立持有，不能直接借用该 List。
+- 两域构造入口收窄为 IReadOnlyList，按 Count 创建最终数组并逐项复制，在数组上按 SourceEventId 排序和执行原重复所有权校验；null 或空集合统一保存 Array.Empty。公开 Dispositions 仍为 IReadOnlyList。
+- 删除每个 egress tick 的结果侧 List 对象，以最终数组替代原 List 底层数组，不删除上游可复用收集列表。OutputDispositionSet 对象和非空元素数组仍分配。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 egress 运行对比或 Player 分配采样。

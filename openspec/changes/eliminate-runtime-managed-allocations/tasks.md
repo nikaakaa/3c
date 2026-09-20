@@ -122,6 +122,8 @@
 
 - [x] 2.74 ExecutionPlan 对非空数组 steps／source mappings 克隆后直接只读保存，mapping 在副本上排序，删除本地与权威单步计划的两个 List 外壳；非数组枚举路径不变
 
+- [x] 2.75 两数值域 OutputDispositionSet 按 IReadOnlyList.Count 复制到最终数组并原地排序校验，空集合复用 Array.Empty，删除每个 egress tick 的结果 List 外壳并保留独立所有权
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

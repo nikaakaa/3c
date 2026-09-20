@@ -188,15 +188,17 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationPipelineOutputDispositionSet(
             StableHash transactionIdentity,
-            IEnumerable<SimulationOutputDisposition> dispositions)
+            IReadOnlyList<SimulationOutputDisposition> dispositions)
         {
             if (!transactionIdentity.IsValid)
                 throw new ArgumentException("Output disposition transaction identity is invalid.", nameof(transactionIdentity));
-            var values = dispositions == null
-                ? new List<SimulationOutputDisposition>()
-                : new List<SimulationOutputDisposition>(dispositions);
-            values.Sort((left, right) => left.SourceEventId.CompareTo(right.SourceEventId));
-            for (int i = 1; i < values.Count; i++)
+            var values = dispositions == null || dispositions.Count == 0
+                ? Array.Empty<SimulationOutputDisposition>()
+                : new SimulationOutputDisposition[dispositions.Count];
+            for (int i = 0; i < values.Length; i++)
+                values[i] = dispositions[i];
+            Array.Sort(values, (left, right) => left.SourceEventId.CompareTo(right.SourceEventId));
+            for (int i = 1; i < values.Length; i++)
             {
                 if (values[i - 1].SourceEventId.Equals(values[i].SourceEventId))
                     throw new ArgumentException("Output disposition set contains duplicate EventId ownership.", nameof(dispositions));

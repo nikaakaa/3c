@@ -74,11 +74,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly string m_LocalPeerId;
         readonly string m_RemotePeerId;
         readonly IPEndPoint m_RemoteEndPoint;
-        readonly Dictionary<ulong, PendingReliableMessage> m_PendingReliable = new Dictionary<ulong, PendingReliableMessage>();
-        readonly Dictionary<ulong, FragmentAssembly> m_Reassembly = new Dictionary<ulong, FragmentAssembly>();
-        readonly Queue<RollbackProtocolEnvelope> m_Received = new Queue<RollbackProtocolEnvelope>();
-        readonly HashSet<ulong> m_CompletedSequences = new HashSet<ulong>();
-        readonly Queue<ulong> m_CompletedOrder = new Queue<ulong>();
+        readonly Dictionary<ulong, PendingReliableMessage> m_PendingReliable;
+        readonly Dictionary<ulong, FragmentAssembly> m_Reassembly;
+        readonly Queue<RollbackProtocolEnvelope> m_Received;
+        readonly HashSet<ulong> m_CompletedSequences;
+        readonly Queue<ulong> m_CompletedOrder;
+        readonly int m_CompletedHistoryCapacity;
         readonly long m_ResendInterval;
         readonly int m_MaximumFragmentPayloadBytes;
         ulong m_NextDatagramSequence = 1;
@@ -103,6 +104,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_Definition.SessionId,
                 m_LocalPeerId,
                 m_Definition.MaximumDatagramBytes);
+            int messageCapacity = m_Definition.MaximumQueuedMessages;
+            m_CompletedHistoryCapacity = checked(messageCapacity * 2);
+            int completedStorageCapacity = checked(m_CompletedHistoryCapacity + 1);
+            m_PendingReliable = new Dictionary<ulong, PendingReliableMessage>(messageCapacity);
+            m_Reassembly = new Dictionary<ulong, FragmentAssembly>(messageCapacity);
+            m_Received = new Queue<RollbackProtocolEnvelope>(messageCapacity);
+            m_CompletedSequences = new HashSet<ulong>(completedStorageCapacity);
+            m_CompletedOrder = new Queue<ulong>(completedStorageCapacity);
         }
 
         public string RemotePeerId => m_RemotePeerId;
@@ -231,8 +240,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public void Pump()
         {
             long now = Stopwatch.GetTimestamp();
-            foreach (PendingReliableMessage pending in m_PendingReliable.Values)
+            foreach (KeyValuePair<ulong, PendingReliableMessage> pair in m_PendingReliable)
             {
+                PendingReliableMessage pending = pair.Value;
                 if (now < pending.NextSendTimestamp)
                     continue;
                 Enqueue(pending.Packets);
@@ -267,8 +277,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             m_CompletedSequences.Add(sequence);
             m_CompletedOrder.Enqueue(sequence);
-            int capacity = checked(m_Definition.MaximumQueuedMessages * 2);
-            while (m_CompletedOrder.Count > capacity)
+            while (m_CompletedOrder.Count > m_CompletedHistoryCapacity)
                 m_CompletedSequences.Remove(m_CompletedOrder.Dequeue());
         }
 

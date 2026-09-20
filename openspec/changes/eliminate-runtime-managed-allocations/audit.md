@@ -212,3 +212,14 @@
 - Channel 的定义、SessionId、LocalPeerId 和 MaximumDatagramBytes 为只读，故构造时沿现有 codec.GetMaximumFragmentPayloadBytes 计算一次并保存。FitsSingleDatagram／Send 直接读取该准备结果，删除运行期重复包头 writer。codec 计算容量时改读 writer.Length，不为取长度 ToArray；包头字段与 UTF-8 编码仍只有一套。
 - 业务变化：身份字段占满 MTU 的非法配置现在创建通道即失败，而不是等首次发送；没有新增默认容量或改变合法配置的分片大小。保留现有 MaximumFragmentsPerMessage、队列和 MTU 限制。
 - Endpoint portable 及 Core／Fixed／Rollback 依赖编译零警告零错误，按规定参数构建并结束 shutdown，diff 空白检查通过。未新增测试、未主动刷新 Unity、未做 Player 或网络实测。最终数据报数组、packet、重组和发送存储仍有分配。
+
+## 2026-09-20 Datagram 通道容器按正式上限准备
+
+对应 tasks.md 的 5.13，与代码同步提交。
+
+- 既有 MaximumQueuedMessages 为 N，Send 对可靠待确认消息、Process 对重组和接收队列均在插入前检查 N。将这两个 Dictionary 和一个 Queue 的初始容量移到通道构造阶段按 N 分配，取消合法峰值内的运行期扩容。
+- 既有完成消息历史保留 2N 条，但 RememberCompleted 先 Add／Enqueue 再淘汰，临时峰值为 2N＋1。因此完成 HashSet 和 Queue 按 2N＋1 准备，正式保留上限仍为 2N，未改变去重窗口及淘汰顺序；乘法和加法均 checked，超出可表示范围在准备阶段失败。
+- Pump 直接遍历具体 Dictionary 的 KeyValuePair，再取 Value，避免首次访问 Values 创建集合视图；遍历顺序及 NextSendTimestamp 更新仍沿原字典和重传规则。
+- 业务取舍：每条 peer 通道提前持有声明容量，降低合法峰值第一次出现时的存储增长；未增加任意配置或业务上限。Dictionary／HashSet 实际桶容量可按其实现取整，需后续采样常驻内存，不用消息容量冒充字节占用。
+- 只覆盖这些容器的存储，PendingReliableMessage、FragmentAssembly、packet、payload、最终数组和 ConcurrentQueue 段等仍有分配，不能宣称传输端到端 0 GC。
+- Endpoint portable 全依赖零警告零错误，Unity 当前引用下 Endpoint 独立编译通过，diff 空白检查通过；按规定构建并结束 shutdown，未新增测试、未主动刷新 Editor、未做网络或 Player 实测。

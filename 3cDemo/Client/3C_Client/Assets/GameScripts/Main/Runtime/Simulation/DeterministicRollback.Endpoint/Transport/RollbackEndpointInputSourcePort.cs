@@ -45,6 +45,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             new Dictionary<ActorId, RollbackActorInputFrame>();
         readonly Dictionary<ActorId, RemoteInputDiagnostics> m_RemoteDiagnostics =
             new Dictionary<ActorId, RemoteInputDiagnostics>();
+        readonly List<RollbackActorInputFrame> m_ExplicitArrivals = new List<RollbackActorInputFrame>();
         ActorId m_LocalActorId;
         RollbackActorInputFrame m_PendingLocalFrame;
         RollbackCanonicalInputBundle m_PendingPredicted;
@@ -116,41 +117,50 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (m_RuntimeBridge == null)
                 throw new InvalidOperationException("Rollback input Source has no bound Runtime bridge.");
             RequireRoster(roster);
-            var explicitArrivals = new List<RollbackActorInputFrame>();
-            m_RuntimeBridge.Pump();
-            DrainRelayedExplicit(explicitArrivals, nextSimulationTick.Value);
-            DrainCanonical(roster);
-            ReleaseConfirmedHistory();
-            var source = new SimulationTickSourceIdentity(
-                SimulationTickSourceKind.LocalLogic,
-                m_ClockId,
-                nextSimulationTick.Value);
-            if (m_PendingSimulationTick != nextSimulationTick.Value)
+            m_ExplicitArrivals.Clear();
+            try
             {
-                if (m_PendingSimulationTick != 0 && nextSimulationTick.Value != checked(m_PendingSimulationTick + 1))
-                    throw new InvalidOperationException("Rollback input Source observed a non-contiguous Simulation Tick.");
-                BuildLocalFrame(nextSimulationTick, source);
+                m_RuntimeBridge.Pump();
+                DrainRelayedExplicit(m_ExplicitArrivals, nextSimulationTick.Value);
+                DrainCanonical(roster);
+                ReleaseConfirmedHistory();
+                var source = new SimulationTickSourceIdentity(
+                    SimulationTickSourceKind.LocalLogic,
+                    m_ClockId,
+                    nextSimulationTick.Value);
+                if (m_PendingSimulationTick != nextSimulationTick.Value)
+                {
+                    if (m_PendingSimulationTick != 0 && nextSimulationTick.Value != checked(m_PendingSimulationTick + 1))
+                        throw new InvalidOperationException("Rollback input Source observed a non-contiguous Simulation Tick.");
+                    BuildLocalFrame(nextSimulationTick, source);
+                }
+                m_Peer.SendInput(m_PendingLocalFrame);
+                m_RuntimeBridge.Pump();
+                DrainRelayedExplicit(m_ExplicitArrivals, nextSimulationTick.Value);
+                DrainCanonical(roster);
+                ReleaseConfirmedHistory();
+                m_PendingPredicted = BuildPredictedBundle(nextSimulationTick, source, roster);
+                var canonicalArrivals = new RollbackCanonicalInputBundle[m_CanonicalPending.Count];
+                int arrivalIndex = 0;
+                foreach (RollbackCanonicalInputBundle bundle in m_CanonicalPending.Values)
+                    canonicalArrivals[arrivalIndex++] = bundle;
+                m_CanonicalPending.Clear();
+                m_LastOuterSourceTick = outerSource.SourceTick;
+                return new RollbackIngressBatch(
+                    m_PendingPredicted,
+                    m_ExplicitArrivals.Count == 0
+                        ? Array.Empty<RollbackActorInputFrame>()
+                        : m_ExplicitArrivals.ToArray(),
+                    canonicalArrivals,
+                    m_Peer.ConfirmedCanonicalTick == 0
+                        ? default
+                        : new SimulationTick(m_Peer.ConfirmedCanonicalTick),
+                    FixedTypedIngressBatch.Empty);
             }
-            m_Peer.SendInput(m_PendingLocalFrame);
-            m_RuntimeBridge.Pump();
-            DrainRelayedExplicit(explicitArrivals, nextSimulationTick.Value);
-            DrainCanonical(roster);
-            ReleaseConfirmedHistory();
-            m_PendingPredicted = BuildPredictedBundle(nextSimulationTick, source, roster);
-            var canonicalArrivals = new RollbackCanonicalInputBundle[m_CanonicalPending.Count];
-            int arrivalIndex = 0;
-            foreach (RollbackCanonicalInputBundle bundle in m_CanonicalPending.Values)
-                canonicalArrivals[arrivalIndex++] = bundle;
-            m_CanonicalPending.Clear();
-            m_LastOuterSourceTick = outerSource.SourceTick;
-            return new RollbackIngressBatch(
-                m_PendingPredicted,
-                explicitArrivals.Count == 0 ? Array.Empty<RollbackActorInputFrame>() : explicitArrivals.ToArray(),
-                canonicalArrivals,
-                m_Peer.ConfirmedCanonicalTick == 0
-                    ? default
-                    : new SimulationTick(m_Peer.ConfirmedCanonicalTick),
-                FixedTypedIngressBatch.Empty);
+            finally
+            {
+                m_ExplicitArrivals.Clear();
+            }
         }
 
         public IRollbackInputSourceCheckpoint CaptureCheckpoint()

@@ -322,6 +322,8 @@
 
 - [x] 5.79 Rollback relay 按 input redundancy 正式上限持有 accepted input 工作列表，assembler 直接填充调用方工作区，转发数组生成后在 finally 清空引用，删除每个输入包的 accepted List 与 ReadOnlyCollection
 
+- [x] 5.80 Rollback Endpoint 跨 tick 复用 relayed explicit arrival 工作列表并在 finally 清空引用，只为 ingress batch 生成最终独立数组，删除每次 Read 的 List 本体并保留观测峰值容量；不按整个历史窗口预分配大存储
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

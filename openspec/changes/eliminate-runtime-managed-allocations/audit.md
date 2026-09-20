@@ -1914,3 +1914,12 @@
 - relay 以 inputRedundancyCount 这一正式包内帧数上限预分配 accepted input 工作列表。SubmitBatch 改为清空并填充调用方列表；ReceiveInput 在同一同步调用内计算去重数并生成最终 relayed 数组，finally 清空列表，正常返回和异常路径都不保留帧引用。
 - 删除每个接收输入包的一只 accepted List、其底层数组和一只 ReadOnlyCollection。最终 relayed frame 数组与每帧协议对象仍按广播消息寿命存在；assembler 的显式输入历史所有权不变。
 - ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 relay 包速率或 Player 分配采样。
+
+## 2026-09-21 Rollback Endpoint explicit arrival 工作区
+
+对应 tasks.md 的 5.80。
+
+- Endpoint InputSource 每次 Read 会在前后两次 Pump 后排空所有 relayed explicit 包，同 tick 到达量可能包含多个 Actor、多个冗余包和多个 tick，不能仅按 roster 数预分配。原实现每次 Read 新建 List，最终再 ToArray 交给 RollbackIngressBatch。
+- InputSource 现跨 tick 持有一只 arrival 工作列表，Read 开始时清空、两次 drain 共用，返回时只生成 ingress batch 必须独立持有的最终数组，并在 finally 清除所有帧引用。列表容量随实际观测峰值增长并保留，不按 HistoryLengthTicks 与 MaximumQueuedBundles 的理论总容量预分配大块常驻存储。
+- 删除每次 Read 的 List 对象及稳定容量后的工作缓冲数组分配；首次增长和更高突发峰值仍可能扩容，最终 arrival 数组仍按 batch 寿命存在。canonical arrival 已直接填最终数组，不受本步影响。
+- 首次验证前检测到共享 Unity Bee 正在编译并等待其退出；随后 ThirdPersonSimulation.DeterministicRollback.Endpoint portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Endpoint 到达突发或 Player 分配采样。

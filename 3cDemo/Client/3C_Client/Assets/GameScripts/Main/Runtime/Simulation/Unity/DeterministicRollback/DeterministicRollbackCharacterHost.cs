@@ -231,7 +231,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                     {
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' camera anchors must belong to VisualRoot.");
                     }
-                    input = new UnityFixedCharacterInputAdapter(inputProfile, controlModule, cameraRig);
+                    input = new UnityFixedCharacterInputAdapter(
+                        inputProfile,
+                        controlModule,
+                        cameraRig,
+                        characterDefinition,
+                        this,
+                        string.Empty,
+                        null);
                     followAnchor = m_CameraFollowAnchor;
                     aimAnchor = m_CameraAimAnchor;
                     cameraTargetBindings = m_CameraTargetBindings;

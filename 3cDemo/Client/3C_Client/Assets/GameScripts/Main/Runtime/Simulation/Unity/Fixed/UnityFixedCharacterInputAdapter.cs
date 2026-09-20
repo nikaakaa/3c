@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly CharacterInputProfile m_Profile;
         readonly CharacterControlModuleContract m_ControlModule;
         readonly ICameraBasisSnapshotProvider m_CameraBasis;
+        readonly FixedCharacterInputCatalog m_InputCatalog;
         readonly ISimulationSessionActorHost m_Owner;
         readonly string m_ActionTargetInputValueId;
         readonly ICharacterActionTargetInputProvider m_ActionTargetProvider;
@@ -48,15 +49,27 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
             CharacterControlModuleContract controlModule,
-            ICameraBasisSnapshotProvider cameraBasis)
-            : this(profile, controlModule, cameraBasis, null, string.Empty, null)
+            ICameraBasisSnapshotProvider cameraBasis,
+            CharacterPipelineDefinition characterDefinition,
+            ISimulationSessionActorHost owner,
+            string actionTargetInputValueId,
+            ICharacterActionTargetInputProvider actionTargetProvider)
+            : this(
+                profile,
+                controlModule,
+                cameraBasis,
+                FixedCharacterInputCatalog.Create(characterDefinition),
+                owner,
+                actionTargetInputValueId,
+                actionTargetProvider)
         {
         }
 
-        public UnityFixedCharacterInputAdapter(
+        internal UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
             CharacterControlModuleContract controlModule,
             ICameraBasisSnapshotProvider cameraBasis,
+            FixedCharacterInputCatalog inputCatalog,
             ISimulationSessionActorHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)
@@ -64,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
             m_CameraBasis = cameraBasis ?? throw new ArgumentNullException(nameof(cameraBasis));
+            m_InputCatalog = inputCatalog ?? throw new ArgumentNullException(nameof(inputCatalog));
             m_Owner = owner;
             m_ActionTargetInputValueId = string.IsNullOrWhiteSpace(actionTargetInputValueId)
                 ? string.Empty
@@ -79,6 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException(string.Join("\n", errors));
             Actions.bindingMask = InputBinding.MaskByGroup(profile.BindingGroup);
             BuildBindings();
+            ValidateContinuousInputBindings();
             BuildActionTargetInputs();
             ResolveDirectionSpaces();
             m_RequiresCameraBasis = RequiresCameraBasis(controlModule);
@@ -391,11 +406,43 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         void BuildActionTargetInputs()
         {
-            if (string.IsNullOrEmpty(m_ActionTargetInputValueId))
-                return;
-            if (m_ValueBindings.ContainsKey(m_ActionTargetInputValueId))
-                throw new InvalidOperationException($"Action target input '{m_ActionTargetInputValueId}' must not be bound to an InputAction.");
-            m_ActionTargetInputIds.Add(m_ActionTargetInputValueId);
+            m_ActionTargetInputIds.Clear();
+            for (int i = 0; i < m_InputCatalog.ActionTargetInputIds.Count; i++)
+            {
+                string inputId = m_InputCatalog.ActionTargetInputIds[i];
+                if (m_ValueBindings.ContainsKey(inputId))
+                    throw new InvalidOperationException($"Action target input '{inputId}' must not be bound to an InputAction.");
+                m_ActionTargetInputIds.Add(inputId);
+            }
+            if (!string.IsNullOrEmpty(m_ActionTargetInputValueId) &&
+                !m_InputCatalog.ContainsActionTargetInput(m_ActionTargetInputValueId))
+            {
+                throw new InvalidOperationException(
+                    $"Fixed Action target input '{m_ActionTargetInputValueId}' is not declared by the formal input catalog.");
+            }
+        }
+
+        void ValidateContinuousInputBindings()
+        {
+            for (int i = 0; i < m_InputCatalog.NeutralValues.Count; i++)
+            {
+                FixedSimulationInputValue value = m_InputCatalog.NeutralValues[i];
+                if (value.Kind == ThirdPersonSimulation.Fixed.SimulationInputValueKind.ActionTargetSnapshot)
+                    continue;
+                if (!m_ValueBindings.ContainsKey(value.InputId))
+                {
+                    throw new InvalidOperationException(
+                        $"Unity Fixed input profile does not bind formal input '{value.InputId}'.");
+                }
+            }
+            foreach (string inputId in m_ValueBindings.Keys)
+            {
+                if (!m_InputCatalog.ContainsInputValue(inputId))
+                {
+                    throw new InvalidOperationException(
+                        $"Unity Fixed input profile binds undeclared input '{inputId}'.");
+                }
+            }
         }
 
         ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot ResolveActionTarget(

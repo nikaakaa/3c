@@ -30,6 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 inputProfile,
                 context.ControlModule,
                 cameraRig,
+                context.InputCatalog,
                 context.Owner,
                 ActionTargetInputValueId,
                 m_ActionTargetProvider);

@@ -1567,3 +1567,12 @@
 - 构造入口收窄为 IReadOnlyList，按 Count 复制到最终数组，在数组上按 PassId 排序并执行原缺失 participant 与重复 PassId 校验；空集合复用 Array.Empty。Participants 公开类型仍为 IReadOnlyList，SnapshotHash 继续按同一排序读取。
 - 每个完整或 step 投影快照删除结果侧 List 与 ReadOnlyCollection 两个对象，以最终 participant 数组替代原 List 底层数组。上游 capture 收集 List、每个 pass snapshot、hash 字符串与 Snapshot 对象仍分配。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做快照运行对比或 Player 分配采样。
+
+## 2026-09-21 Pipeline 状态捕获收集数组
+
+对应 tasks.md 的 2.79。
+
+- SimulationPipelineStateSnapshotCoordinator.Capture 原按全部 participant 容量建 List 后 Add；CaptureStepProjection 同样建最大容量 List，再跳过 ReconstructForRestore participant。
+- 完整捕获现按验证后的 participant 数创建精确数组并按索引写入。step 投影先遍历并校验全部 StepProjectionMode，同时统计 Include 数量，再创建精确数组并在第二遍只捕获 Include participant；非法模式仍在任何 CaptureState 之前失败。
+- 删除每次完整或 step 投影捕获的上游 snapshots List 对象，以精确数组替代其底层存储。SimulationPipelineStateSnapshot 仍复制到自己的最终数组以保持独立结果寿命，因此两份数组复制边界仍存在。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做快照运行对比或 Player 分配采样。

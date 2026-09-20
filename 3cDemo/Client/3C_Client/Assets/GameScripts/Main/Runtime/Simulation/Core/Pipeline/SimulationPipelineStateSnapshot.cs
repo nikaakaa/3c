@@ -481,13 +481,15 @@ namespace ThirdPersonSimulation
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
             List<ISimulationPipelineStateParticipant> values = ValidateParticipantSet(plan, participants);
-            var snapshots = new List<SimulationPipelinePassStateSnapshot>(values.Count);
+            var snapshots = values.Count == 0
+                ? Array.Empty<SimulationPipelinePassStateSnapshot>()
+                : new SimulationPipelinePassStateSnapshot[values.Count];
             for (int i = 0; i < values.Count; i++)
             {
                 SimulationPipelinePassStateSnapshot snapshot = values[i].CaptureState() ??
                     throw Failure("pipeline_state_capture_missing", values[i].StateIdentity.PassId, "State participant returned no snapshot.");
                 RequireSnapshotIdentity(values[i].StateIdentity, snapshot);
-                snapshots.Add(snapshot);
+                snapshots[i] = snapshot;
             }
             return new SimulationPipelineStateSnapshot(plan.Identity, plan.Backend, lastCompletedTick, snapshots);
         }
@@ -500,7 +502,7 @@ namespace ThirdPersonSimulation
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
             List<ISimulationPipelineStateParticipant> values = ValidateParticipantSet(plan, participants);
-            var snapshots = new List<SimulationPipelinePassStateSnapshot>(values.Count);
+            int snapshotCount = 0;
             for (int i = 0; i < values.Count; i++)
             {
                 SimulationPipelineStepProjectionMode projectionMode = values[i].StepProjectionMode;
@@ -509,12 +511,21 @@ namespace ThirdPersonSimulation
                 {
                     throw Failure("pipeline_step_projection_mode_invalid", values[i].StateIdentity.PassId, "State participant Step projection mode is invalid.");
                 }
-                if (projectionMode == SimulationPipelineStepProjectionMode.ReconstructForRestore)
+                if (projectionMode == SimulationPipelineStepProjectionMode.Include)
+                    snapshotCount++;
+            }
+            var snapshots = snapshotCount == 0
+                ? Array.Empty<SimulationPipelinePassStateSnapshot>()
+                : new SimulationPipelinePassStateSnapshot[snapshotCount];
+            int snapshotIndex = 0;
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (values[i].StepProjectionMode == SimulationPipelineStepProjectionMode.ReconstructForRestore)
                     continue;
                 SimulationPipelinePassStateSnapshot snapshot = values[i].CaptureState() ??
                     throw Failure("pipeline_state_capture_missing", values[i].StateIdentity.PassId, "State participant returned no snapshot.");
                 RequireSnapshotIdentity(values[i].StateIdentity, snapshot);
-                snapshots.Add(snapshot);
+                snapshots[snapshotIndex++] = snapshot;
             }
             return new SimulationPipelineStateSnapshot(plan.Identity, plan.Backend, lastCompletedTick, snapshots);
         }

@@ -1,7 +1,6 @@
 ﻿using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ThirdPersonSimulation.Fixed
 {
@@ -181,8 +180,7 @@ namespace ThirdPersonSimulation.Fixed
 
         protected ProgramConstant CatalogConstant(ProgramCatalogEntry entry, string fieldName)
         {
-            ProgramCatalogField value = entry.Fields.FirstOrDefault(field =>
-                string.Equals(field.Name, fieldName, StringComparison.Ordinal));
+            ProgramCatalogField value = FindCatalogField(entry, fieldName);
             if (value == null || value.Kind != ProgramCatalogFieldKind.Constant)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{fieldName}' is not Constant.");
             return m_Ability.Constants[value.ConstantIndex];
@@ -260,8 +258,7 @@ namespace ThirdPersonSimulation.Fixed
 
         protected string CatalogIdentity(ProgramCatalogEntry entry, string fieldName)
         {
-            ProgramCatalogField value = entry.Fields.FirstOrDefault(field =>
-                string.Equals(field.Name, fieldName, StringComparison.Ordinal));
+            ProgramCatalogField value = FindCatalogField(entry, fieldName);
             if (value == null || value.Kind != ProgramCatalogFieldKind.Identity)
                 throw new InvalidOperationException($"Catalog field '{entry.Identity}/{fieldName}' is not Identity.");
             return value.Identity;
@@ -269,8 +266,7 @@ namespace ThirdPersonSimulation.Fixed
 
         protected bool TryCatalogIdentity(ProgramCatalogEntry entry, string fieldName, out string identity)
         {
-            ProgramCatalogField value = entry.Fields.FirstOrDefault(field =>
-                string.Equals(field.Name, fieldName, StringComparison.Ordinal));
+            ProgramCatalogField value = FindCatalogField(entry, fieldName);
             if (value != null && value.Kind == ProgramCatalogFieldKind.Identity)
             {
                 identity = value.Identity;
@@ -278,6 +274,17 @@ namespace ThirdPersonSimulation.Fixed
             }
             identity = string.Empty;
             return false;
+        }
+
+        static ProgramCatalogField FindCatalogField(ProgramCatalogEntry entry, string fieldName)
+        {
+            for (int i = 0; i < entry.Fields.Count; i++)
+            {
+                ProgramCatalogField field = entry.Fields[i];
+                if (string.Equals(field.Name, fieldName, StringComparison.Ordinal))
+                    return field;
+            }
+            return null;
         }
     }
 }

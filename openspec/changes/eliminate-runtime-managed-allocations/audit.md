@@ -1777,3 +1777,11 @@
 - 两域加入路径按现有 Count+1 准备列表并下标复制不同 handle，随后追加新 snapshot；移除路径先下标定位，未命中直接返回原状态，命中后按 Count-1 准备并复制其余项。新状态构造仍负责排序、重复校验和独立持有。
 - 删除两个文件的 System.Linq、stop 的 All 迭代入口和加入／移除的捕获 RemoveAll 委托；角色状态及内部集合克隆仍按原边界发生，未宣称 Timeline 状态更新已无分配。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 Timeline 运行对比或 Player 分配采样。
+
+## 2026-09-21 OperationModule catalog field 查询去 LINQ
+
+对应 tasks.md 的 2.89。
+
+- Fixed／Float32 OperationModule 为兼容字符串 fieldName 的操作执行入口分别提供 CatalogConstant、CatalogIdentity 与 TryCatalogIdentity；三处均通过捕获 fieldName 的 FirstOrDefault 扫描 entry.Fields，合计六个运行查询点。
+- 两域各自统一到 FindCatalogField，下标遍历 IReadOnlyList 并保持第一个 Ordinal 同名字段语义。Constant／Identity 类型检查、必需字段错误与可选 identity 的 false 返回保持不变。
+- 删除两个运行模块的 System.Linq 依赖和六处捕获委托／LINQ 枚举入口。ThirdPersonSimulation.Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，构建服务逐次关闭；首次构建前检测到共享 Unity Bee 编译并等待其退出。未新增测试、未操作共享 Unity、未做操作执行采样。

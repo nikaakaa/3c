@@ -251,17 +251,19 @@ namespace BTSMTL.Diagnostics
             long earliestAvailable = m_Changes.Count > 0 ? m_Changes.Peek().Revision : m_Version + 1;
             if (cursor < earliestAvailable - 1 || cursor < m_LastEvictionVersion)
             {
-                var current = new List<RuntimeLiveStateChange>(m_Current.Count);
+                var current = new RuntimeLiveStateChange[m_Current.Count];
+                int index = 0;
                 foreach (KeyValuePair<RuntimeLiveStateKey, RuntimeTraceEvent> pair in m_Current)
-                    current.Add(new RuntimeLiveStateChange(m_Version, pair.Key, pair.Value));
+                    current[index++] = new RuntimeLiveStateChange(m_Version, pair.Key, pair.Value);
                 return new RuntimeLiveStateRead(m_Version, true, current, m_EvictedStates);
             }
 
-            var changes = new List<RuntimeLiveStateChange>();
+            var changes = new RuntimeLiveStateChange[checked((int)(m_Version - cursor))];
+            int changeIndex = 0;
             foreach (RuntimeLiveStateChange change in m_Changes)
             {
                 if (change.Revision > cursor)
-                    changes.Add(change);
+                    changes[changeIndex++] = change;
             }
             return new RuntimeLiveStateRead(m_Version, false, changes, m_EvictedStates);
         }

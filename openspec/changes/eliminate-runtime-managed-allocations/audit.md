@@ -729,3 +729,12 @@
 - CollectAllChanges 保留逐 segment 的原顺序，只以 m_Changes.Count 初始化容量。成功收录事件同时加入 segment.Events 与 m_Changes，超限丢弃两者都不加入，段淘汰同时删对应前缀，因此该数量覆盖现有段事件总数；不引入最大容量级别的过量预分配。
 - 减少读取过程中结果列表增长的中间数组与复制，最终 List／数组、Freeze 快照和采集段自身仍分配。没有改变捕获发布、Timeline 播放、事务或存储所有权，不宣称捕获链 0 GC。
 - 编辑前目标文件无其它未提交修改，未发现 csc／bee 编译进程。沿当前 Unity BTSMTL.Diagnostics.rsp 独立 csc 编译到系统 TEMP，退出码 0、无诊断输出；diff 空白检查通过。未新增测试、未操作共享 Unity、未执行捕获读取运行对比或 Player 采样。
+## 2026-09-20 实时状态读取独立数组
+
+对应 tasks.md 的 7.11；本节为调试面板读取开销，不能当成 Player 每帧收益。
+
+- RuntimeLiveStateStore.ReadSince 的全量分支直接建立 m_Current.Count 长度数组，按原字典遍历顺序填写；增量分支使用 m_Version−cursor 作为长度，按原变化队列次序填充。删除两个 List 对象及增量列表扩容，返回合同仍为 IReadOnlyList，结果仍独立持有。
+- 数量推导仅用于实时状态：每次成功 Upsert 恰好增加一个 revision 并加入一条变化，等价状态不推进版本；Clear 虽推进版本但设置 m_LastEvictionVersion，旧 cursor 会进入原全量分支；队列淘汰也由 earliestAvailable 分支拦截。因此进入增量分支时差值等于保留变化数且不超过队列容量。保留 checked 转换，不对捕获存储应用该推导，捕获可能有丢弃事件造成编号缺口。
+- 已确认 RuntimeDebugTargetProvider.ReadLiveStateSince 的结果使用 Count 和下标，没有依赖 List 的转换。源码已存在 Array.Empty 返回，所以数组并非新的公开结果类型约束。全量空状态仍可创建空数组，本轮未宣称读取零分配。
+- 同轮核对 RuntimeCaptureSnapshot.GetEvents 的三个调用点均在 Editor（RuntimeExecutionTimeline 两处、RuntimeDebugTargetProvider 一处）；本轮未改 GetEvents，后续应将这些读取和运行采集开销分开计量。
+- 编辑前目标文件无其它未提交修改，未发现 csc／bee。使用 Unity 现有 BTSMTL.Diagnostics.rsp 独立编译到系统 TEMP，退出码 0、无编译诊断；diff 空白检查通过。未新增测试、未操作共享 Editor、未采样 Player 或面板刷新分配。

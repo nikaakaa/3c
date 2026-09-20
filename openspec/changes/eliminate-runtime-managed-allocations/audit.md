@@ -1072,3 +1072,12 @@
 - 新增 CharacterPoseSourceReadinessEnumValues，PreparationKind 按 Action=1 至 BlendSpacePlayer=5、Category 按 Current=1 至 DeferredTarget=2 的正式连续值域判断。未知零值和其它 byte 继续与原身份／binding／readiness 条件共同拒绝。
 - 删除 key、entry、page 运行链五处装箱和枚举元数据查询，不改变 completion identity、page generation、覆盖非法结果、容量、Seal 或聚合顺序。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 readiness 页面运行回放或 Player 分配采样。
+
+## 2026-09-20 Pose 源 readiness 资源目标枚举校验
+
+对应 tasks.md 的 4.2.4。
+
+- CharacterPoseSourceReadinessTarget 在每帧 preparation 转换及延后资源目标记录中构造；原构造器查询 PreparationKind 与 TargetInput，赋值后 IsValid 再查询 PreparationKind，并在 Resource 分支查询 sampling backend。
+- 构造器复用 CharacterPoseSourceReadinessEnumValues 的 Kind 规则，TargetInput 按 ClipSamples=1 至 BlendSpaceSamples=3 判断；IsValid 既有三分支继续完整拒绝未知 Input，Resource 分支直接匹配 NativeClip／Acl。
+- 删除 target 构造与有效性读取四处装箱和枚举元数据查询，不改变 clips、resource index、group clip、blend space samples 或 readiness 资源解析结果。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做资源 readiness 运行回放或 Player 分配采样。

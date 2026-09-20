@@ -24,10 +24,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             int groupClipIndex,
             IReadOnlyList<CharacterAnimationBlendSpaceSamplePlan> samples)
         {
-            if (!Enum.IsDefined(typeof(CharacterPoseSourcePreparationKind), kind) ||
+            if (!CharacterPoseSourceReadinessEnumValues.IsValid(kind) ||
                 !poseNodeId.IsValid || bindingIndex < -1 ||
                 (!sourceId.IsValid && bindingIndex < 0) ||
-                !Enum.IsDefined(typeof(CharacterPoseSourceReadinessTargetInput), input))
+                input < CharacterPoseSourceReadinessTargetInput.ClipSamples ||
+                input > CharacterPoseSourceReadinessTargetInput.BlendSpaceSamples)
             {
                 throw new ArgumentException(
                     "Character Pose source readiness target is invalid.");
@@ -58,16 +59,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal int GroupClipIndex { get; }
         internal IReadOnlyList<CharacterAnimationBlendSpaceSamplePlan> Samples { get; }
         internal bool IsValid =>
-            Enum.IsDefined(typeof(CharacterPoseSourcePreparationKind), Kind) &&
+            CharacterPoseSourceReadinessEnumValues.IsValid(Kind) &&
             PoseNodeId.IsValid &&
             BindingIndex >= -1 &&
             (SourceId.IsValid || BindingIndex >= 0) &&
             (Input == CharacterPoseSourceReadinessTargetInput.ClipSamples
                 ? Clips.Count > 0
                 : Input == CharacterPoseSourceReadinessTargetInput.Resource
-                    ? Enum.IsDefined(
-                      typeof(CharacterAnimationSamplingBackendKind),
-                        Backend) &&
+                    ? (Backend == CharacterAnimationSamplingBackendKind.NativeClip ||
+                       Backend == CharacterAnimationSamplingBackendKind.Acl) &&
                       (Backend == CharacterAnimationSamplingBackendKind.NativeClip
                           ? ResourceIndex == -1 && GroupClipIndex == -1
                           : ResourceIndex >= 0 && GroupClipIndex >= 0)

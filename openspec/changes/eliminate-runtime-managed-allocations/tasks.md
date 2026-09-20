@@ -92,6 +92,7 @@
 - [x] 4.2.1 Pose Native 四类连续枚举集中按正式值域校验，删除图准备合同及每帧 PreparationResult 构造／IsValid 中十一处 Enum.IsDefined 装箱，保留原状态组合约束
 - [x] 4.2.2 Pose 源释放令牌构造与 IsValid 直接匹配 NativeClip／Acl 后端，删除 ACL StageRelease、journal 和释放消费中的 Enum.IsDefined 装箱
 - [x] 4.2.3 Pose 源每帧 readiness key／entry／page 集中按 PreparationKind 与 Category 正式连续值域校验，删除构造、IsValid、Record、Remove 中五处 Enum.IsDefined 装箱
+- [x] 4.2.4 Pose 源 preparation 转 readiness target 复用 Kind 值域并直接匹配三种 Input、两种 sampling backend，删除构造与 IsValid 中四处 Enum.IsDefined 装箱
 - [ ] 4.3 沿Foot查询、Goal Assembly、FBBIK和最终写入链治理实际managed临时对象、装箱和vendor接口分配，保留查询容量和算法顺序
 - [ ] 4.4 沿Camera目标/效果、Input采样和Behavior Designer正式任务治理已确认分配，保持输入来源和目标身份
 

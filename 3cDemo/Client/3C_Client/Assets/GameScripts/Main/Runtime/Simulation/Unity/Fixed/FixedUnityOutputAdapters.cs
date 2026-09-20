@@ -165,6 +165,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         void ReconcileDirtyStates(ulong confirmedTick)
         {
+            foreach (PresentationStateKey key in m_ByState.Keys)
+            {
+                if (TryResolveLatest(key, out ActivePresentationRecord terminal) &&
+                    RequiresTerminalConfirmation(terminal.Command) && terminal.Command.Header.Tick.Value <= confirmedTick &&
+                    (!m_Applied.TryGetValue(key, out ActivePresentationRecord appliedTerminal) ||
+                     !appliedTerminal.Command.Header.EventId.Equals(terminal.Command.Header.EventId)))
+                    m_Dirty.Add(key);
+            }
             var keys = new List<PresentationStateKey>(m_Dirty);
             keys.Sort();
             for (int i = 0; i < keys.Count; i++)
@@ -183,7 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 bool hasCurrent = TryResolveLatest(key, out ActivePresentationRecord current);
                 bool hasApplied = m_Applied.TryGetValue(key, out ActivePresentationRecord applied);
                 if (hasCurrent &&
-                    IsTerminal(current.Command) &&
+                    RequiresTerminalConfirmation(current.Command) &&
                     current.Command.Header.Tick.Value > confirmedTick)
                 {
                     continue;
@@ -343,6 +351,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                    command.Kind == CharacterPresentationCommandKind.ReleaseProducer;
         }
 
+        static bool RequiresTerminalConfirmation(CharacterPresentationCommand command) =>
+            IsTerminal(command) || command.Kind == CharacterPresentationCommandKind.TimelineProgress && command.TimelineProgress.IsTerminal;
+
         static bool IsTerminal(CharacterPresentationCommand command)
         {
             return command.Kind == CharacterPresentationCommandKind.CompleteProducer ||
@@ -423,6 +434,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     var sampleKey = new PresentationStateKey("animation-sample", key.Producer, key.Generation);
                     RemoveHistory(sampleKey);
                     m_Applied.Remove(sampleKey);
+                }
+                else if (baseline.Command.Kind == CharacterPresentationCommandKind.TimelineProgress &&
+                         baseline.Command.TimelineProgress.IsTerminal &&
+                         m_Applied.TryGetValue(key, out ActivePresentationRecord applied) &&
+                         applied.Command.Header.EventId.Equals(baseline.Command.Header.EventId))
+                {
+                    RemoveHistory(key);
+                    m_Applied.Remove(key);
                 }
                 else if (string.Equals(key.Channel, "camera", StringComparison.Ordinal) &&
                          baseline.Command.CameraRequest.Lifecycle == PresentationCameraRequestLifecycle.Retire)

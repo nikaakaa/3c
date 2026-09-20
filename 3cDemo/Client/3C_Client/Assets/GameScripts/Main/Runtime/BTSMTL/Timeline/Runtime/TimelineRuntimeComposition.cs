@@ -164,6 +164,7 @@ namespace BTSMTL.Timeline.Runtime
             ContentRevision = context.Playback.Content.ContentHash;
             ExecutionIdentity = context.Playback.ExecutionIdentity;
             Evaluation = context.Advance.Evaluation;
+            Completes = context.Advance.Completes;
         }
 
         public TimelineRuntimePlaybackHandle Handle { get; }
@@ -177,6 +178,7 @@ namespace BTSMTL.Timeline.Runtime
         public string ContentRevision { get; }
         public TimelineExecutionIdentity ExecutionIdentity { get; }
         public TimelineRuntimeEvaluationResult Evaluation { get; }
+        public bool Completes { get; }
     }
 
     public sealed class TimelineRuntimeEvaluationBuffer : ITimelineRuntimeEvaluationSink
@@ -255,9 +257,17 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    public enum TimelinePresentationSampleReason : byte
+    {
+        Advance = 0,
+        Correction = 1,
+        Completed = 2,
+        Stopped = 3
+    }
+
     public readonly struct TimelineRuntimePresentationSample
     {
-        public TimelineRuntimePresentationSample(ulong generation, ulong logicTick, string contentRevision, FixedScalar time, int cycle, bool allowTraversal)
+        public TimelineRuntimePresentationSample(ulong generation, ulong logicTick, string contentRevision, FixedScalar time, int cycle, TimelinePresentationSampleReason reason)
         {
             if (generation == 0 || logicTick == 0 || time < FixedScalar.Zero || cycle < 0)
                 throw new ArgumentException("Timeline presentation sample is invalid.");
@@ -266,7 +276,7 @@ namespace BTSMTL.Timeline.Runtime
             ContentRevision = contentRevision;
             Time = time;
             Cycle = cycle;
-            AllowTraversal = allowTraversal;
+            Reason = reason;
         }
 
         public ulong Generation { get; }
@@ -274,21 +284,14 @@ namespace BTSMTL.Timeline.Runtime
         public FixedScalar Time { get; }
         public int Cycle { get; }
         public string ContentRevision { get; }
-        public bool AllowTraversal { get; }
+        public TimelinePresentationSampleReason Reason { get; }
+        public bool AllowTraversal => Reason == TimelinePresentationSampleReason.Advance || Reason == TimelinePresentationSampleReason.Completed;
+        public bool IsTerminal => Reason == TimelinePresentationSampleReason.Completed || Reason == TimelinePresentationSampleReason.Stopped;
         public bool IsValid => Generation != 0;
     }
 
     public sealed class TimelineRuntimePresentationDriver : ITimelineRuntimeEvaluationSink
     {
-        static readonly TimelineRuntimePresentationOperations s_EmptyOperations =
-            new TimelineRuntimePresentationOperations(
-                Array.Empty<TimelineAnimationContribution>(),
-                Array.Empty<TimelineCameraStateSample>(),
-                Array.Empty<TimelineCameraCueSample>(),
-                Array.Empty<TimelineCameraResponseSample>(),
-                Array.Empty<TimelineCameraResourceSample>(),
-                Array.Empty<TimelineRuntimeScenePresentationSample>());
-
         readonly Dictionary<ulong, PresentationPlaybackState> m_Playbacks =
             new Dictionary<ulong, PresentationPlaybackState>();
 
@@ -324,20 +327,13 @@ namespace BTSMTL.Timeline.Runtime
                 m_Playbacks.Remove(handle.Value);
                 hasState = false;
             }
-            if (hasState && state.StopCommitted)
+            if (sample.Reason == TimelinePresentationSampleReason.Stopped)
             {
                 frame = default;
                 return false;
             }
             if (!hasState)
             {
-                if (playback.State == TimelineRuntimePlaybackState.Stopping ||
-                    playback.State == TimelineRuntimePlaybackState.Stopped ||
-                    playback.State == TimelineRuntimePlaybackState.Disposed)
-                {
-                    frame = default;
-                    return false;
-                }
                 state = new PresentationPlaybackState(playback.Generation, playback.Content.Markers.Count);
                 m_Playbacks.Add(handle.Value, state);
             }
@@ -366,9 +362,8 @@ namespace BTSMTL.Timeline.Runtime
                 return false;
             }
 
-            Array.Copy(state.MarkerTraversal, state.PendingMarkerTraversal, state.MarkerTraversal.Length);
+            Array.Copy(state.MarkerLastTraversal, state.PendingMarkerLastTraversal, state.MarkerLastTraversal.Length);
             var events = new List<TimelineRuntimePresentationEvent>();
-            FixedScalar duration = playback.Content.Duration;
             bool loop = playback.PlaybackMode == TimelinePlaybackMode.Loop;
             FixedScalar previousTime = state.CursorTime;
             int previousCycle = state.Cycle;
@@ -402,7 +397,7 @@ namespace BTSMTL.Timeline.Runtime
                 events);
             state.PendingTime = currentTime;
             state.PendingCycle = currentCycle;
-            state.PendingFinished = !loop && currentTime >= duration;
+            state.PendingFinished = sample.Reason == TimelinePresentationSampleReason.Completed;
             frame = new TimelineRuntimePresentationFrame(
                 playback,
                 sample.LogicTick,
@@ -422,7 +417,7 @@ namespace BTSMTL.Timeline.Runtime
             {
                 if (!state.HasPendingFrame || state.PendingFrame.PresentationFrame != presentationFrame)
                     continue;
-                Array.Copy(state.PendingMarkerTraversal, state.MarkerTraversal, state.MarkerTraversal.Length);
+                Array.Copy(state.PendingMarkerLastTraversal, state.MarkerLastTraversal, state.MarkerLastTraversal.Length);
                 state.CursorTime = state.PendingTime;
                 state.Cycle = state.PendingCycle;
                 state.Finished = state.PendingFinished;
@@ -460,11 +455,6 @@ namespace BTSMTL.Timeline.Runtime
 
         public void CommitStop(TimelineRuntimeStopRequest request)
         {
-            if (m_Playbacks.TryGetValue(request.Handle.Value, out PresentationPlaybackState state))
-            {
-                state.StopCommitted = true;
-                state.ClearCachedFrame();
-            }
         }
 
         public void DiscardStop(TimelineRuntimeStopRequest request)
@@ -507,10 +497,10 @@ namespace BTSMTL.Timeline.Runtime
                     if ((!initial && !afterPrevious) || !beforeCurrent)
                         continue;
                     string markerId = marker.MarkerId;
-                    ulong traversalIndex = state.PendingMarkerTraversal[markerIndex];
-                    if (traversalIndex == 0)
-                        traversalIndex = 1;
-                    state.PendingMarkerTraversal[markerIndex] = checked(traversalIndex + 1);
+                    ulong traversalIndex = checked((ulong)cycle + 1);
+                    if (state.PendingMarkerLastTraversal[markerIndex] >= traversalIndex)
+                        continue;
+                    state.PendingMarkerLastTraversal[markerIndex] = traversalIndex;
                     events.Add(new TimelineRuntimePresentationEvent(
                         playback.Handle,
                         playback.ExecutionIdentity,
@@ -530,12 +520,12 @@ namespace BTSMTL.Timeline.Runtime
             public PresentationPlaybackState(ulong generation, int markerCount)
             {
                 Generation = generation;
-                MarkerTraversal = new ulong[markerCount];
-                PendingMarkerTraversal = new ulong[markerCount];
+                MarkerLastTraversal = new ulong[markerCount];
+                PendingMarkerLastTraversal = new ulong[markerCount];
             }
 
-            public readonly ulong[] MarkerTraversal;
-            public readonly ulong[] PendingMarkerTraversal;
+            public readonly ulong[] MarkerLastTraversal;
+            public readonly ulong[] PendingMarkerLastTraversal;
             public FixedScalar PendingTime;
             public int PendingCycle;
             public bool PendingFinished;
@@ -545,7 +535,6 @@ namespace BTSMTL.Timeline.Runtime
             public FixedScalar CursorTime;
             public int Cycle;
             public bool HasPresented;
-            public bool StopCommitted;
             public bool Finished;
             public TimelineRuntimePresentationFrame CachedFrame;
             public ulong LastPresentationFrame;
@@ -558,12 +547,6 @@ namespace BTSMTL.Timeline.Runtime
                 HasCachedFrame = true;
             }
 
-            public void ClearCachedFrame()
-            {
-                CachedFrame = default;
-                LastPresentationFrame = 0;
-                HasCachedFrame = false;
-            }
         }
 
 

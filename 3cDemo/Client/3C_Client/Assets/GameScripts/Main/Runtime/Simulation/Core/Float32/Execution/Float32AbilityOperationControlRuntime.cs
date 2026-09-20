@@ -601,7 +601,7 @@ namespace ThirdPersonSimulation
         {
             if (operation.Code == SimulationOperationCode.Timeline)
             {
-                var stop = StopTimeline(ReadTimelineRuntimeHandle(operation));
+                var stop = StopTimeline(operation, ReadTimelineRuntimeHandle(operation));
                 if (stop.Pending != null)
                     m_TimelinePendingStops.Add(stop.Pending);
                 return OperationStopStatus.Completed;
@@ -617,7 +617,7 @@ namespace ThirdPersonSimulation
         {
             if (operation.Code == SimulationOperationCode.Timeline)
             {
-                var stop = StopTimeline(ReadTimelineRuntimeHandle(operation));
+                var stop = StopTimeline(operation, ReadTimelineRuntimeHandle(operation));
                 if (stop.Pending != null)
                     m_TimelinePendingStops.Add(stop.Pending);
                 return;
@@ -626,14 +626,25 @@ namespace ThirdPersonSimulation
                 $"Ability operation '{m_Access.SourcePath(m_Access.Operation(operation.Handle))}' has no direct Timeline stop owner.");
         }
 
-        AbilityTimelineStopResult StopTimeline(int runtimeHandle)
+        AbilityTimelineStopResult StopTimeline(OperationExecutionDescriptor descriptor, int runtimeHandle)
         {
             IAbilityTreeClipInvokerHost host = m_TimelineRuntime as IAbilityTreeClipInvokerHost;
             if (host != null && m_TreeClipLink?.Invoker != null)
                 host.PushTreeClipInvoker(m_TreeClipLink.Invoker);
             try
             {
-                return m_TimelineRuntime.Stop(runtimeHandle);
+                AbilityTimelineStopResult stop = m_TimelineRuntime.Stop(runtimeHandle, m_Tick.Value);
+                if (stop.Progress.IsValid)
+                {
+                    SimulationOperation operation = m_Access.Operation(descriptor.Handle);
+                    SimulationEventHeader header = m_Presentation.Next(operation);
+                    m_Presentation.Add(new PresentationCommand(header, PresentationCommandKind.TimelineProgress,
+                        m_Access.SourcePath(operation),
+                        Float32Scalar.Zero, Float32Scalar.Zero,
+                        sourceActionInstanceId: stop.SourceActionInstanceId,
+                        timelineProgress: stop.Progress));
+                }
+                return stop;
             }
             finally
             {

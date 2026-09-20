@@ -621,14 +621,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             InstallContent();
         }
 
-        public AbilityTimelineStopResult Stop(int runtimeHandle)
+        public AbilityTimelineStopResult Stop(int runtimeHandle, ulong logicTick)
         {
             CharacterTimelinePendingStop pending = m_Host.RequestStopTimelinePlayback(
                 new TimelinePlaybackHandle((ulong)runtimeHandle),
-                new TimelinePlaybackStopContext(TimelinePlaybackStopCause.SelfAbort, 0));
+                new TimelinePlaybackStopContext(TimelinePlaybackStopCause.SelfAbort, logicTick));
             if (pending == null)
                 throw new InvalidOperationException($"Ability Timeline runtime '{runtimeHandle}' returned no stop candidate.");
-            return new AbilityTimelineStopResult(pending.Status, pending);
+            return new AbilityTimelineStopResult(pending.Status, pending, m_Requests[runtimeHandle].ActionContext.InstanceId);
         }
 
         public void CommitStop(IAbilityTimelineStopPending pending)

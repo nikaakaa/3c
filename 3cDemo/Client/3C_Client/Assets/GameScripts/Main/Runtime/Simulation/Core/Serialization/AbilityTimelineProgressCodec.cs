@@ -18,7 +18,7 @@ namespace ThirdPersonSimulation
             writer.WriteInt32(progress.PreviousCycle);
             writer.WriteInt32(progress.Cycle);
             writer.WriteBoolean(progress.Loop);
-            writer.WriteBoolean(progress.Completes);
+            writer.WriteByte((byte)progress.State);
         }
 
         public static AbilityTimelineProgress Read(CanonicalReader reader) => new AbilityTimelineProgress(
@@ -32,6 +32,6 @@ namespace ThirdPersonSimulation
             reader.ReadInt32(),
             reader.ReadInt32(),
             reader.ReadBoolean(),
-            reader.ReadBoolean());
+            (AbilityTimelineProgressState)reader.ReadByte());
     }
 }

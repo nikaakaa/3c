@@ -224,8 +224,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     cycle = checked((int)(position / progress.Duration.Raw));
                     position %= progress.Duration.Raw;
                 }
+                TimelinePresentationSampleReason reason = entry.Corrected
+                    ? TimelinePresentationSampleReason.Correction : TimelinePresentationSampleReason.Advance;
+                if (progress.State == AbilityTimelineProgressState.Stopped)
+                {
+                    position = progress.Time.Raw;
+                    cycle = progress.Cycle;
+                    reason = TimelinePresentationSampleReason.Stopped;
+                }
+                else if (!entry.Corrected && progress.State == AbilityTimelineProgressState.Completed && alpha == 1m)
+                    reason = TimelinePresentationSampleReason.Completed;
                 sample = new TimelineRuntimePresentationSample(progress.Generation, progress.LogicTick, progress.ContentRevision,
-                    FixedScalar.FromRaw(checked((long)position)), cycle, !entry.Corrected);
+                    FixedScalar.FromRaw(checked((long)position)), cycle, reason);
                 entry.Sample = sample;
                 entry.PresentationFrame = presentationFrame;
                 entry.Corrected = false;
@@ -351,7 +361,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         public void Reset()
         {
             RequireAlive();
-            if (m_RegistryActive || m_HistoryActive || m_ProjectorActive)
+            if (m_RegistryActive || m_HistoryActive || m_ProjectorActive || m_SamplingFrameActive)
                 throw new InvalidOperationException(
                     "Committed follow clock cannot reset during an open frame.");
             Array.Clear(m_TimelineProgress, 0, m_TimelineProgress.Length);

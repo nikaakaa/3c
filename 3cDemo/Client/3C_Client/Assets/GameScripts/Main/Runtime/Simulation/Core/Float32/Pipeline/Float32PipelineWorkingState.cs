@@ -117,7 +117,7 @@ namespace ThirdPersonSimulation
                     int runtimeHandle = previousActor.State.TimelineSnapshots[s].RuntimeHandle;
                     if (restoredHandles.Contains(runtimeHandle))
                         continue;
-                    AbilityTimelineStopResult stop = timeline.Stop(runtimeHandle);
+                    AbilityTimelineStopResult stop = timeline.Stop(runtimeHandle, 0);
                     if (stop.Pending != null)
                         timeline.CommitStop(stop.Pending);
                 }

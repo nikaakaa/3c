@@ -537,6 +537,13 @@ namespace ThirdPersonSimulation
         int RuntimeHandle { get; }
     }
 
+    public enum AbilityTimelineProgressState : byte
+    {
+        Active = 0,
+        Completed = 1,
+        Stopped = 2
+    }
+
     public readonly struct AbilityTimelineProgress : IEquatable<AbilityTimelineProgress>
     {
         public AbilityTimelineProgress(
@@ -550,7 +557,7 @@ namespace ThirdPersonSimulation
             int previousCycle,
             int cycle,
             bool loop,
-            bool completes)
+            AbilityTimelineProgressState state)
         {
             TimelineId = SimulationIdentity.Require(timelineId, nameof(timelineId));
             ContentRevision = SimulationIdentity.Require(contentRevision, nameof(contentRevision));
@@ -570,7 +577,9 @@ namespace ThirdPersonSimulation
             PreviousCycle = previousCycle;
             Cycle = cycle;
             Loop = loop;
-            Completes = completes;
+            if (state > AbilityTimelineProgressState.Stopped)
+                throw new ArgumentOutOfRangeException(nameof(state));
+            State = state;
         }
 
         public string TimelineId { get; }
@@ -583,7 +592,8 @@ namespace ThirdPersonSimulation
         public int PreviousCycle { get; }
         public int Cycle { get; }
         public bool Loop { get; }
-        public bool Completes { get; }
+        public AbilityTimelineProgressState State { get; }
+        public bool IsTerminal => State != AbilityTimelineProgressState.Active;
         public bool IsValid => Generation != 0;
 
         public bool Equals(AbilityTimelineProgress other) =>
@@ -592,7 +602,7 @@ namespace ThirdPersonSimulation
             Generation == other.Generation && LogicTick == other.LogicTick &&
             Duration == other.Duration && PreviousTime == other.PreviousTime && Time == other.Time &&
             PreviousCycle == other.PreviousCycle && Cycle == other.Cycle &&
-            Loop == other.Loop && Completes == other.Completes;
+            Loop == other.Loop && State == other.State;
 
         public override bool Equals(object obj) => obj is AbilityTimelineProgress other && Equals(other);
         public override int GetHashCode() => HashCode.Combine(TimelineId, ContentRevision, Generation, LogicTick, Time.Raw, Cycle);
@@ -620,20 +630,24 @@ namespace ThirdPersonSimulation
 
     public interface IAbilityTimelineStopPending : IAbilityTimelinePending
     {
+        AbilityTimelineProgress Progress { get; }
     }
 
     public readonly struct AbilityTimelineStopResult
     {
-        public AbilityTimelineStopResult(AbilityTimelineRuntimeStatus status, IAbilityTimelineStopPending pending)
+        public AbilityTimelineStopResult(AbilityTimelineRuntimeStatus status, IAbilityTimelineStopPending pending, ulong sourceActionInstanceId)
         {
             Status = status;
             Pending = pending;
+            SourceActionInstanceId = sourceActionInstanceId;
             if (status == AbilityTimelineRuntimeStatus.Running && pending == null)
                 throw new ArgumentException("A running Ability Timeline stop requires a pending commit candidate.");
         }
 
         public AbilityTimelineRuntimeStatus Status { get; }
         public IAbilityTimelineStopPending Pending { get; }
+        public ulong SourceActionInstanceId { get; }
+        public AbilityTimelineProgress Progress => Pending == null ? default : Pending.Progress;
     }
     public enum AbilityTimelineSnapshotMode : byte
     {
@@ -841,7 +855,7 @@ namespace ThirdPersonSimulation
         void Discard(IAbilityTimelinePending pending);
         AbilityTimelineRuntimeSnapshot Capture(int runtimeHandle);
         int ApplyRestore(AbilityTimelineRuntimeSnapshot snapshot);
-        AbilityTimelineStopResult Stop(int runtimeHandle);
+        AbilityTimelineStopResult Stop(int runtimeHandle, ulong logicTick);
         void CommitStop(IAbilityTimelineStopPending pending);
         void DiscardStop(IAbilityTimelineStopPending pending);
         bool RequestTreeClipExit(int runtimeHandle, string clipAuthoringId);

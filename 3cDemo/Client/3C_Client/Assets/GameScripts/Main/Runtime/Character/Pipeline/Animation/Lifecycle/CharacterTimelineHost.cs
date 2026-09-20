@@ -356,7 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 result.PreviousCycle,
                 result.Cycle,
                 result.PlaybackMode == TimelinePlaybackMode.Loop,
-                result.Completes);
+                result.Completes ? AbilityTimelineProgressState.Completed : AbilityTimelineProgressState.Active);
         }
 
         public TimelinePlaybackHandle Handle { get; }
@@ -377,11 +377,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RuntimeHandle = runtimeHandle;
             Request = request;
             Status = status;
+            TimelineRuntimePlayback playback = request.Playback;
+            Progress = playback == null || request.Reason.LocalLogicTick == 0 ? default : new AbilityTimelineProgress(
+                playback.Content.Identity, playback.ContentRevision, playback.Generation, request.Reason.LocalLogicTick,
+                playback.Content.Duration, playback.CursorTime, playback.CursorTime, playback.Cycle, playback.Cycle,
+                playback.PlaybackMode == TimelinePlaybackMode.Loop, AbilityTimelineProgressState.Stopped);
         }
 
         public TimelinePlaybackHandle Handle { get; }
         public int RuntimeHandle { get; }
         internal TimelineRuntimeStopRequest Request { get; }
+        public AbilityTimelineProgress Progress { get; }
         public AbilityTimelineRuntimeStatus Status { get; }
     }
     internal readonly struct TimelinePresentationExecutionContext
@@ -1500,7 +1506,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (!active.CoreDriven)
             {
                 active.LocalPresentationSample = new TimelineRuntimePresentationSample(evaluation.Generation,
-                    evaluation.LogicTick, evaluation.ContentRevision, evaluation.Time, evaluation.Cycle, true);
+                    evaluation.LogicTick, evaluation.ContentRevision, evaluation.Time, evaluation.Cycle,
+                    evaluation.Completes ? TimelinePresentationSampleReason.Completed : TimelinePresentationSampleReason.Advance);
                 for (int i = 0; i < m_ActivePlaybacks.Count; i++)
                     if (m_ActivePlaybacks[i].Handle.Value == active.Handle.Value)
                     {
@@ -1905,8 +1912,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId,
                         context.RenderFrame, context.LocalLogicTick, context.InterpolationAlpha, out sample);
                 }
+                TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
+                bool locallyStopped = !active.CoreDriven && status != TimelinePlaybackStatus.Requested &&
+                    status != TimelinePlaybackStatus.Running && status != TimelinePlaybackStatus.Succeeded;
                 TimelineRuntimePresentationFrame frame = default;
-                bool presented = hasSample && m_Host.TryPresent(
+                bool presented = hasSample && !locallyStopped && m_Host.TryPresent(
                         active.Handle,
                         in sample,
                         context.RenderFrame,
@@ -1920,10 +1930,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     m_PresentationCandidates.Add(frame);
                     PresentationFramePrepared?.Invoke(frame);
                 }
-                TimelinePlaybackStatus status = m_Host.Service.GetTimelinePlaybackStatus(active.Handle);
-                if (status != TimelinePlaybackStatus.Requested &&
-                    status != TimelinePlaybackStatus.Running &&
-                    !presented)
+                bool ended = active.CoreDriven
+                    ? hasSample && sample.IsTerminal
+                    : status != TimelinePlaybackStatus.Requested && status != TimelinePlaybackStatus.Running;
+                if (ended && !presented)
                 {
                     m_PresentationEndCandidates.Add(active);
                 }

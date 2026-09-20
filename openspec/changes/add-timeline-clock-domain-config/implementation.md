@@ -304,3 +304,12 @@
 - CharacterPresentationDomainRuntime通过finally覆盖EventGraph失败、缺少必要运动事实、Pose资源未就绪、Pose准备/求值/验证失败等提前退出路径。没有新建事件系统、Registry或并列时钟；未改现有Inbox空读lease的其他未提交修复。
 - Unity编译及域重载完成（1789887842882），错误日志为零。静态核对driver已接受游标与Marker计数只在Commit写入，动画/相机分别订阅准备/接受阶段。未新增测试。
 - 第7节仍未整体完成：正式Stop/Cancel的确认交付与最终分支revision需要继续接入；Pose已接受之后下游发布异常的原子失败边界、正式Presentation Marker图executor及其typed输出还需完成。当前不能据此勾选7.1–7.4或宣称整个运行链0 GC；旧求值结果集合仍有分配。
+
+## 第7节：正式停止进度与终态确认交付
+- AbilityTimelineProgress 的 bool 完成标记替换为 Active / Completed / Stopped 正式状态。停止候选冻结原内容版本、generation、动作实例、逻辑 tick 和精确位置；Fixed / Float32 沿原 PresentationCommand 产生停止输出，使用原 Timeline operation 的 producer 和事件 header。传输状态改为 byte，ServerAuthoritative 对应 schema 升到 9，不兼容旧格式。
+- 逻辑 Restore 清理旧 runtime 时仍走原停止事务，但不产生业务进度命令。删除表现 driver 在逻辑 CommitStop 回调里写永久停止状态，以及读取逻辑 Stopping / Stopped 拒绝表现的路径；核心表现只认原输出调和链交付的状态。
+- 原输出适配器沿已有 confirmedTick 门槛延迟 Completed / Stopped；未确认停止期间保留上次已交付采样。到达确认门槛后即使没有新命令，也重新调和待交付终态；交付后清理已确认且无预测后继的 Timeline 命令历史。动画终态账本仍只登记原动画命令。
+- 共享采样显式给出 Advance / Correction / Completed / Stopped；停止不进行区间跨点求值，完成样本到达末端后才结束。Host 在表现帧接受阶段释放采样、动画和相机生命周期；非核心本地播放保留其直接逻辑提交归属。
+- 仍未完整解决：最终分支撤销后的表现退役与 generation 绑定、Marker 图 executor、后续播放倍率 / 暂停和所有运行热路径分配。因此第5、7节不提前整体勾选。
+- Marker traversal identity 固定为本 playback generation 内的 cycle + 1，原预分配数组保存该 Marker 已交付的最大 traversal；回退修正后再次跨过同一循环的 Marker 不重复交付，下一正常循环仍可触发。数组候选随 Pose 帧 Commit / Discard 接受或恢复，不新增集合或第二事件系统。
+- Unity 最终编译及域重载完成（1789889008875），实例 e852139597e42532 已恢复 idle、非 Play、非编译状态，错误日志为零。git diff --check 通过；未新增测试，未声称 Marker 图执行或整个第7节已经完成。

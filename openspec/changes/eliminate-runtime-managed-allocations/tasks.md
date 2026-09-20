@@ -90,6 +90,7 @@
 - [x] 2.52 两数值域 SimulationStep 的私有 actor 收集列表由基类直接接管，删除每个 step 的第二份 List 复制和 ReadOnlyCollection 包装，保留排序、去重及 IReadOnlyList 输出
 - [x] 2.53 两数值域 SimulationStep 的独立 inputs／ingress 列表直接作为 IReadOnlyList 暴露，删除每个 step 两个 ReadOnlyCollection 包装对象
 - [x] 2.54 两数值域 ExecutionPlan 的独立 steps／source mappings 列表直接作为 IReadOnlyList 暴露，删除每个外层 tick 计划的两个 ReadOnlyCollection 包装对象
+- [x] 2.55 两数值域 SimulationStep 的 actor 收集列表按 inputs.Count 准确预备容量，删除多 Actor step 填充中的列表扩容
 
 ## 3. Timeline和事件图
 

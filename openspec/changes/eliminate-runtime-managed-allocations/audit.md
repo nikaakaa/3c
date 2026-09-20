@@ -1342,3 +1342,12 @@
 - 两个字段现以 IReadOnlyList 保存并直接引用各自私有 List。Steps／SourceMappings 的公开类型和只读调用方式不变，调用者不持有构造器内部新列表的可变引用。
 - 删除每个 Fixed／Float32 外层 tick 计划的两个 ReadOnlyCollection 包装对象；steps 和 mappings 列表本体、独立复制、映射排序及 roster／source 校验仍保留。
 - ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 ExecutionPlan 调度运行对比或 Player 分配采样。
+
+## 2026-09-21 SimulationStep actor 容量来源
+
+对应 tasks.md 的 2.55。
+
+- TargetSimulationPipelineStep.CollectActors 为每个 input 精确添加一个 ActorId，原 actor List 使用零容量构造，多 Actor step 填充时按 List 默认策略扩容。
+- actor 列表现直接按 inputs.Count 准备容量；添加顺序、后续排序、空列表拒绝和重复 ActorId 校验不变，容量来源就是本 step 已独立持有的输入数量。
+- 只删除多 Actor step 的内部扩容及旧数组迁移，actor List 和每个 step 的最终存储仍保留。
+- ThirdPersonSimulation.Core portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做多 Actor 调度运行对比或 Player 分配采样。

@@ -286,7 +286,7 @@ namespace ThirdPersonSimulation
 
         static IEnumerable<ActorId> CollectActors(IReadOnlyList<SimulationPipelineActorInput<TInput>> inputs)
         {
-            var actors = new List<ActorId>();
+            var actors = new List<ActorId>(inputs.Count);
             for (int i = 0; i < inputs.Count; i++)
                 actors.Add(inputs[i].ActorId);
             return actors;

@@ -837,13 +837,23 @@ namespace BTSMTL.Timeline.Editor
                     ? item.Event.Payload.Status
                     : item.Event.Kind.ToString();
                 if (source.Kind == RuntimeSourceElementKind.Track && !string.IsNullOrEmpty(source.TrackAuthoringId))
-                    activeTracks[source.TrackAuthoringId] = status;
+                {
+                    if (!summary.IsTerminal && item.Event.Position == summary.LatestLogicTick &&
+                        item.Event.Payload.Cycle == summary.Cycle)
+                        activeTracks.TryAdd(source.TrackAuthoringId, status);
+                }
                 else if ((source.Kind == RuntimeSourceElementKind.Clip || source.Kind == RuntimeSourceElementKind.TreeClip) &&
                          !string.IsNullOrEmpty(source.ClipAuthoringId))
-                    activeClips[source.ClipAuthoringId] = status;
+                {
+                    if ((summary.IsTerminal || item.Event.Position < summary.LatestLogicTick ||
+                         item.Event.Payload.Cycle != summary.Cycle) &&
+                        item.Event.Kind is RuntimeTraceEventKind.ClipActive or RuntimeTraceEventKind.TreeClipEntered or RuntimeTraceEventKind.TreeClipUpdated)
+                        status = "已执行";
+                    activeClips.TryAdd(source.ClipAuthoringId, status);
+                }
             }
             RuntimeTimelinePlaybackProjection projection = GetProjection(window, summary.Playback);
-            TimelineData runtimeTimeline = projection.Update(sourceTimeline, summary.Playback, events, RuntimeDebugSession.Shared.ViewModel);
+            TimelineData runtimeTimeline = projection.Update(sourceTimeline, summary.Playback, events, RuntimeDebugSession.Shared.ViewModel, summary);
             MarkOpenTreeClips(runtimeTimeline, activeClips);
             if (RuntimeDebugSession.Shared.AttachmentState is RuntimeDebugAttachmentState.CaptureHistory or RuntimeDebugAttachmentState.Ended)
                 window.ApplyHistoryTimelineObservation(runtimeTimeline, summary.VisualTime, activeTracks, activeClips);
@@ -880,7 +890,8 @@ namespace BTSMTL.Timeline.Editor
                 {
                     if (track.Clips[clipIndex] is TreeClip treeClip &&
                         treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision &&
-                        activeClips.ContainsKey(treeClip.AuthoringId))
+                        activeClips.TryGetValue(treeClip.AuthoringId, out string status) &&
+                        status is "Active" or "Enter" or "Update")
                         activeClips[treeClip.AuthoringId] = "open";
                 }
             }

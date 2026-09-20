@@ -176,6 +176,7 @@ namespace BTSMTL.Diagnostics.Editor
     {
         readonly RuntimeDebugSourceMapSnapshot m_SourceMap;
         readonly Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView> m_CurrentEvents = new Dictionary<RuntimeLiveStateKey, RuntimeDebugEventView>();
+        readonly Dictionary<RuntimeInstanceKey, RuntimeDebugSourceMapSnapshot> m_InstanceSourceMaps = new();
         readonly Dictionary<RuntimeInstanceKey, (ulong Parent, ulong Sequence)> m_InvocationParents = new();
         readonly Dictionary<ElementInstanceKey, RuntimeElementDebugState> m_ElementStates = new Dictionary<ElementInstanceKey, RuntimeElementDebugState>();
         readonly Dictionary<RuntimeSourceElementKey, Dictionary<RuntimeInstanceKey, ulong>> m_Instances = new Dictionary<RuntimeSourceElementKey, Dictionary<RuntimeInstanceKey, ulong>>();
@@ -241,8 +242,17 @@ namespace BTSMTL.Diagnostics.Editor
             m_HasCoverageGap |= missedChanges || evictedStates != 0;
         }
         public RuntimeDebugChangeSet Changes => m_Changes;
-        public IReadOnlyList<RuntimeGraphInvocation> GraphInvocations => m_SourceMap.GraphInvocations;
-        public bool TryGetInvocation(string path, out RuntimeGraphInvocation invocation) => m_SourceMap.TryGetInvocation(path, out invocation);
+        public IReadOnlyList<RuntimeGraphInvocation> GetGraphInvocations(RuntimeInstanceKey instance) =>
+            m_InstanceSourceMaps.TryGetValue(instance, out RuntimeDebugSourceMapSnapshot sourceMap)
+                ? sourceMap.GraphInvocations
+                : Array.Empty<RuntimeGraphInvocation>();
+
+        public bool TryGetInvocation(RuntimeInstanceKey instance, string path, out RuntimeGraphInvocation invocation)
+        {
+            invocation = default;
+            return m_InstanceSourceMaps.TryGetValue(instance, out RuntimeDebugSourceMapSnapshot sourceMap) &&
+                   sourceMap.TryGetInvocation(path, out invocation);
+        }
         public bool TryGetParentGeneration(RuntimeInstanceKey instance, out ulong generation)
         {
             bool found = m_InvocationParents.TryGetValue(instance, out var value);
@@ -447,6 +457,7 @@ namespace BTSMTL.Diagnostics.Editor
                 return;
 
             m_CurrentEvents.Clear();
+            m_InstanceSourceMaps.Clear();
             m_InvocationParents.Clear();
             m_ElementStates.Clear();
             m_Instances.Clear();
@@ -504,6 +515,8 @@ namespace BTSMTL.Diagnostics.Editor
 
             var eventView = new RuntimeDebugEventView(traceEvent, source, sourceName);
             m_CurrentEvents[key] = eventView;
+            if (traceEvent.RuntimeInstance.IsValid)
+                m_InstanceSourceMaps[traceEvent.RuntimeInstance] = sourceMap;
             if (traceEvent.RuntimeInstance.Kind == RuntimeInstanceKind.SkillExecution)
                 if (!m_InvocationParents.TryGetValue(traceEvent.RuntimeInstance, out var previous) || traceEvent.Sequence > previous.Sequence)
                     m_InvocationParents[traceEvent.RuntimeInstance] = (traceEvent.Payload.ParentInvocationGeneration, traceEvent.Sequence);

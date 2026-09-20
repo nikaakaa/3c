@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
+using ThirdPersonSimulation.Fixed;
 
 namespace BTSMTL.Timeline.Editor
 {
@@ -22,7 +23,8 @@ namespace BTSMTL.Timeline.Editor
             TimelineData source,
             RuntimeInstanceKey playback,
             IReadOnlyList<RuntimeDebugEventView> events,
-            RuntimeDebugViewModel observation)
+            RuntimeDebugViewModel observation,
+            RuntimeTimelinePlaybackDebugSummary summary)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -46,7 +48,35 @@ namespace BTSMTL.Timeline.Editor
             }
             if (changed)
                 m_Runtime.Init();
+            UpdateOpenClipEnds(events, summary);
             return m_Runtime;
+        }
+
+        void UpdateOpenClipEnds(IReadOnlyList<RuntimeDebugEventView> events, RuntimeTimelinePlaybackDebugSummary summary)
+        {
+            foreach (Track track in m_RuntimeTracks.Values)
+            {
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    if (track.Clips[clipIndex] is not TreeClip clip ||
+                        clip.ClipExitSource != TimelineClipExitSource.TreeDecision)
+                        continue;
+                    float end = summary.LogicTime;
+                    for (int eventIndex = 0; eventIndex < events.Count; eventIndex++)
+                    {
+                        RuntimeDebugEventView item = events[eventIndex];
+                        if (item.Event.Payload.Cycle == summary.Cycle &&
+                            item.Event.Kind is RuntimeTraceEventKind.TreeClipExited or RuntimeTraceEventKind.TreeClipDestroyed &&
+                            string.Equals(item.Source.ClipAuthoringId, clip.AuthoringId, StringComparison.Ordinal))
+                        {
+                            end = item.Event.Payload.Time;
+                            break;
+                        }
+                    }
+                    FixedScalar endTime = FixedScalar.FromDouble(Math.Max(0d, end));
+                    clip.ConfigureTimeRange(clip.StartTime, endTime < clip.StartTime ? clip.StartTime : endTime);
+                }
+            }
         }
 
         void Reset(TimelineData source, RuntimeInstanceKey playback)

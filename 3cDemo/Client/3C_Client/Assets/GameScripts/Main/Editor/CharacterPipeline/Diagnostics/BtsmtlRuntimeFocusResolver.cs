@@ -81,7 +81,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             child.ActionInstanceId == parent.ActionInstanceId &&
             child.ActivationGeneration == parent.ActivationGeneration &&
             view.TryGetParentGeneration(child, out ulong generation) && generation == parent.InvocationGeneration &&
-            view.TryGetInvocation(child.CallSiteId, out RuntimeGraphInvocation invocation) &&
+            view.TryGetInvocation(child, child.CallSiteId, out RuntimeGraphInvocation invocation) &&
             string.Equals(invocation.ParentPath, parent.CallSiteId, StringComparison.Ordinal);
 
         bool HasActiveTimeline(RuntimeDebugViewModel view, RuntimeInstanceKey graph)
@@ -105,7 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     graph.GraphRuntimeId != provenance.SourceGraphRuntimeId ||
                     graph.ActivationGeneration != provenance.SkillExecutionGeneration ||
                     !view.TryGetParentGeneration(graph, out ulong parent) || parent != provenance.SourceActivationGeneration ||
-                    !view.TryGetInvocation(graph.CallSiteId, out RuntimeGraphInvocation invocation))
+                    !view.TryGetInvocation(graph, graph.CallSiteId, out RuntimeGraphInvocation invocation))
                     continue;
                 if (!string.IsNullOrEmpty(invocation.CallerClipId) &&
                     string.Equals(invocation.ParentPath, provenance.SourceInvocationPath, StringComparison.Ordinal) &&

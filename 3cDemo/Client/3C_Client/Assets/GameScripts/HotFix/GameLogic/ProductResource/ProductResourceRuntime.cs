@@ -230,13 +230,13 @@ namespace GameLogic.ProductResource
 
             _maintenanceRunning = true;
             DateTimeOffset startedAt = DateTimeOffset.UtcNow;
-            GetAssetPoolMetrics(out int before, out _);
+            GetAssetPoolMetrics(_objectPoolModule.GetAllObjectPools(), out int before, out _);
             try
             {
                 _resourceModule.UnloadUnusedAssets();
                 await Resources.UnloadUnusedAssets().ToUniTask(cancellationToken: cancellationToken);
                 RemoveUnownedPhysicalKnowledge();
-                GetAssetPoolMetrics(out int after, out _);
+                GetAssetPoolMetrics(_objectPoolModule.GetAllObjectPools(), out int after, out _);
                 _lastMaintenance = new ResourceMaintenanceSnapshot(reason, startedAt, DateTimeOffset.UtcNow, before, after);
                 PublishSnapshot();
                 return _lastMaintenance;
@@ -511,17 +511,19 @@ namespace GameLogic.ProductResource
         private void PublishSnapshot()
         {
             ObjectPoolBase[] pools = _objectPoolModule.GetAllObjectPools();
-            GetAssetPoolMetrics(out int assetPoolObjects, out int assetPoolReleasable);
+            GetAssetPoolMetrics(pools, out int assetPoolObjects, out int assetPoolReleasable);
 
-            var scopeSnapshots = new List<ResourceScopeSnapshot>(_scopes.Count);
+            var scopeSnapshots = new ResourceScopeSnapshot[_scopes.Count];
+            int scopeIndex = 0;
             foreach (ResourceScope scope in _scopes.Values)
             {
-                scopeSnapshots.Add(new ResourceScopeSnapshot(scope.Id, scope.Kind, scope.Name, scope.State, scope.LeaseCount, scope.LiveInstanceCount));
+                scopeSnapshots[scopeIndex++] = new ResourceScopeSnapshot(scope.Id, scope.Kind, scope.Name, scope.State, scope.LeaseCount, scope.LiveInstanceCount);
             }
-            scopeSnapshots.Sort((left, right) => left.Id.Value.CompareTo(right.Id.Value));
+            Array.Sort(scopeSnapshots, (left, right) => left.Id.Value.CompareTo(right.Id.Value));
 
-            var tags = new List<string>(_preparedTags);
-            tags.Sort(StringComparer.Ordinal);
+            var tags = new string[_preparedTags.Count];
+            _preparedTags.CopyTo(tags);
+            Array.Sort(tags, StringComparer.Ordinal);
             string packageVersion;
             try
             {
@@ -548,8 +550,8 @@ namespace GameLogic.ProductResource
                 assetPoolReleasable,
                 _packageName,
                 packageVersion,
-                tags.ToArray(),
-                scopeSnapshots.ToArray(),
+                tags,
+                scopeSnapshots,
                 _lastMaintenance);
 
             _history.Enqueue(Current);
@@ -561,11 +563,11 @@ namespace GameLogic.ProductResource
             Changed?.Invoke(Current);
         }
 
-        private void GetAssetPoolMetrics(out int count, out int releasable)
+        private static void GetAssetPoolMetrics(ObjectPoolBase[] pools, out int count, out int releasable)
         {
             count = 0;
             releasable = 0;
-            foreach (ObjectPoolBase pool in _objectPoolModule.GetAllObjectPools())
+            foreach (ObjectPoolBase pool in pools)
             {
                 if (string.Equals(pool.Name, "Asset Pool", StringComparison.Ordinal))
                 {

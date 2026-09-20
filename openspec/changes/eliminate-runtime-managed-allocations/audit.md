@@ -243,3 +243,14 @@
 - 取舍：有序数组在插入／移除时可能搬移引用，换取不再创建树节点和临时键枚举器；没有实测 CPU 收益。容量完全来自正式 N，未新增任意默认上限，不修改 canonical bundle／confirmation 容器或模拟回滚历史。
 - 通道构造现在承担正式容量准备，可能在首次发送前失败；peer 在创建 Endpoint 后构造 Channel 的步骤增加异常清理，调用既有 Endpoint.Dispose 释放 socket／线程后重新抛出，不增加重试或替代路径。
 - Endpoint portable 全依赖编译零警告零错误，diff 空白检查通过，按规定构建并结束 shutdown；未新增测试、未主动刷新 Unity、未做网络或 Player 实测。批次及其独立列表、编码和消息对象仍有分配。
+
+## 2026-09-20 资源快照中间集合清理
+
+对应 tasks.md 的 6.5，与代码同步提交。
+
+- 核对产品快照接口与 ProductShellViewController 后，当前界面通过 Current 和 Changed 读取资源、启动和检查点状态；未找到产品 History 的正式读取调用。因此没有把 History.ToArray 认定为已发生的每帧热点，也没有改变其独立历史结果语义，6.1 仍未完成。
+- ProductResourceRuntime.PublishSnapshot 原先获取一次对象池数组用于计数，又在 GetAssetPoolMetrics 内重新查询一次。TEngine 的 GetAllObjectPools(false) 每次按当前池数创建数组；现在把同一份数组传入静态指标计算函数，池总数和 Asset Pool 指标来自同一次同步查询。
+- 资源维护的前后指标仍分别重新查询，在异步卸载两侧保留各自采集时点；未跨 await 缓存对象池数据。所有 GetAssetPoolMetrics 调用均迁移到显式输入数组，没有增加另一套查询实现。
+- 作用域按当前数量直接创建最终数组并填充，沿原 Id.Value 排序；标签用 HashSet.CopyTo 填充最终数组，再按原 Ordinal 排序。删除两个临时 List、其存储和 ToArray 复制；ResourceRuntimeSnapshot 仍分别持有本次数组，旧快照不会被后续发布覆盖。
+- 业务边界：这是加载、租用、实例与维护事件触发的快照发布清理，未证明每帧发生。快照对象、作用域对象、最终数组、对象池首次查询数组和历史 getter 副本仍会分配，没有宣称资源链 0 GC。
+- 以现有 GameLogic.rsp 的 Unity 引用独立编译完整 GameLogic，退出码 0，未输出诊断；产物仅写系统临时目录。未新增测试、未采样 Player，也未主动刷新或控制共享 Editor。编辑前 Unity MCP 状态查询返回 503，随后本机进程检查未发现 csc 或 bee 编译进程；这不等同于共享 Editor 验证通过。

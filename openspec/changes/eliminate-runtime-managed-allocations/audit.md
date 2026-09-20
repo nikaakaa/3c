@@ -530,6 +530,16 @@
 - 同时核对附加效果应用，现有工作列表通过 Acquire／finally Release 使用，公共 Admission 已在来源标签数量为零时避免新建数组，本轮不重复修改这些正确路径。
 - Fixed／Float32 portable 各自零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；目标文件此前无其它未提交修改，编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity、未做运行对比或 Player 分配采样。
 
+## 2026-09-20 渲染查询调用阶段复核
+
+本节补充任务 6.3 的代码证据，不将 6.3 标为完成。本轮不修改渲染代码，也未做编译、运行或 Player 采样。
+
+- LocalHeatDistortionAreaSource.GetComponentsInChildren<ParticleSystem>(true) 位于 OnValidate，且只在序列化粒子数组为空时执行；不能据此认定 TryResolveArea／TryBuildAreaSettings 每帧产生数组。ActiveSources 在 OnEnable／OnDisable 修改，稳态查询按下标遍历；动态激活造成的列表扩容仍未治理。
+- CharacterShapeProjectionSource.sharedMaterials 位于 ValidateSource。源码调用点为 PrepareAndRegister、CharacterShapeProjectionRuntimeWorkspace 构造和 Editor Inspector 显式校验，不属于直接的帧 Execute 路径。工作区重建时仍可能执行并分配，重建触发频率没有运行证据，不能将它报告为已实现 0 GC。
+- ShapeProjectionFrameSlot 构造保存 readbackCallback=OnReadbackCompleted，RecordReadback 复用该委托并写入已有 NativeArray，未发现每次提交新建 lambda。该正确复用不重写；GPU/native 存储及回调内部行为仍需分别归因。
+- LocalHeatDistortionRenderPass.Execute 使用已有 ProfilingSampler、共享 MaterialPropertyBlock、CommandBufferPool.Get／Release；new Vector4 是值类型，不能按关键字计为托管对象。RTHandle 的 ReAllocateIfNeeded 与底层 Unity 调用需要尺寸变化及首次／稳态采样，当前仅有源码证据。
+- 后续 6.3 应追踪实际工作区重建、动态源启停、渲染目标尺寸变化和 Unity/native 内部分配，保留原正式性能采集链；不以替换这些已有复用代码冒充治理进展。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

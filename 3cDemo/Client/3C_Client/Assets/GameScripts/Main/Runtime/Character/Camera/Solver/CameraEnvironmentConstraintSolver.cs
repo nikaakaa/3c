@@ -59,14 +59,14 @@ namespace ThirdPersonCamera
                         queryResult.SafeLocation,
                         queryResult.HitNormal,
                         Vector3.Distance(desired, queryResult.SafeLocation),
-                        queryResult.ColliderIdentity))
+                        queryResult.ColliderInstanceId))
                     .WithValidity(false);
             }
 
             Vector3 constrained = queryResult.SafeLocation;
             CameraCollisionStatus status = queryResult.Status;
             Vector3 normal = queryResult.HitNormal;
-            string colliderIdentity = queryResult.ColliderIdentity;
+            int colliderInstanceId = queryResult.ColliderInstanceId;
             if (queryResult.Status == CameraCollisionStatus.Clear &&
                 m_HasLocation && !input.ResetHistory && settings.SmoothTime > 0f && delta > 0f)
             {
@@ -97,13 +97,13 @@ namespace ThirdPersonCamera
                             recoveryResult.SafeLocation,
                             recoveryResult.HitNormal,
                             Vector3.Distance(desired, recoveryResult.SafeLocation),
-                            recoveryResult.ColliderIdentity))
+                            recoveryResult.ColliderInstanceId))
                         .WithValidity(false);
                 }
                 constrained = recoveryResult.SafeLocation;
                 status = recoveryResult.Status;
                 normal = recoveryResult.HitNormal;
-                colliderIdentity = recoveryResult.ColliderIdentity;
+                colliderInstanceId = recoveryResult.ColliderInstanceId;
             }
             else if (input.ResetHistory)
             {
@@ -121,7 +121,7 @@ namespace ThirdPersonCamera
                     constrained,
                     normal,
                     Vector3.Distance(desired, constrained),
-                    colliderIdentity));
+                    colliderInstanceId));
         }
     }
 }

@@ -72,7 +72,7 @@ namespace ThirdPersonCamera
             Vector3 safeLocation,
             Vector3 hitNormal,
             float hitDistance,
-            string colliderIdentity)
+            int colliderInstanceId)
         {
             if ((status != CameraCollisionStatus.NotEvaluated &&
                  status != CameraCollisionStatus.Clear &&
@@ -85,14 +85,14 @@ namespace ThirdPersonCamera
             SafeLocation = safeLocation;
             HitNormal = hitNormal;
             HitDistance = hitDistance;
-            ColliderIdentity = colliderIdentity ?? string.Empty;
+            ColliderInstanceId = colliderInstanceId;
         }
 
         public CameraCollisionStatus Status { get; }
         public Vector3 SafeLocation { get; }
         public Vector3 HitNormal { get; }
         public float HitDistance { get; }
-        public string ColliderIdentity { get; }
+        public int ColliderInstanceId { get; }
 
         public static CameraEnvironmentQueryResult Clear(Vector3 desiredLocation) =>
             new CameraEnvironmentQueryResult(
@@ -100,7 +100,7 @@ namespace ThirdPersonCamera
                 desiredLocation,
                 Vector3.zero,
                 0f,
-                string.Empty);
+                0);
 
         static bool Finite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
@@ -114,7 +114,7 @@ namespace ThirdPersonCamera
             Vector3 constrainedLocation,
             Vector3 hitNormal,
             float correctionDistance,
-            string colliderIdentity)
+            int colliderInstanceId)
         {
             if ((status != CameraCollisionStatus.NotEvaluated &&
                  status != CameraCollisionStatus.Clear &&
@@ -129,7 +129,7 @@ namespace ThirdPersonCamera
             ConstrainedLocation = constrainedLocation;
             HitNormal = hitNormal;
             CorrectionDistance = correctionDistance;
-            ColliderIdentity = colliderIdentity ?? string.Empty;
+            ColliderInstanceId = colliderInstanceId;
         }
 
         public CameraCollisionStatus Status { get; }
@@ -137,7 +137,7 @@ namespace ThirdPersonCamera
         public Vector3 ConstrainedLocation { get; }
         public Vector3 HitNormal { get; }
         public float CorrectionDistance { get; }
-        public string ColliderIdentity { get; }
+        public int ColliderInstanceId { get; }
         public bool IsApplied => Status != CameraCollisionStatus.NotEvaluated;
         public bool IsSafe => Status != CameraCollisionStatus.NoLegalSpace;
 
@@ -148,7 +148,7 @@ namespace ThirdPersonCamera
                 desiredLocation,
                 Vector3.zero,
                 0f,
-                string.Empty);
+                0);
 
         static bool Finite(Vector3 value) =>
             float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);

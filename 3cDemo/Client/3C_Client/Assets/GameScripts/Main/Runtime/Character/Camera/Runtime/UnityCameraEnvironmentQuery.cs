@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -46,7 +45,7 @@ namespace ThirdPersonCamera
                 out Vector3 pivotSafe,
                 out Vector3 pivotNormal,
                 out float pivotDistance,
-                out string pivotCollider);
+                out int pivotColliderInstanceId);
             if (!hasDesiredSegment)
             {
                 if (startOverlapped)
@@ -55,14 +54,14 @@ namespace ThirdPersonCamera
                         request.PreviousLocation,
                         Vector3.zero,
                         0f,
-                        string.Empty);
+                        0);
                 return CameraEnvironmentQueryResult.Clear(request.DesiredLocation);
             }
 
             Vector3 safeLocation = pivotSafe;
             Vector3 normal = pivotNormal;
             float distance = pivotDistance;
-            string colliderIdentity = pivotCollider;
+            int colliderInstanceId = pivotColliderInstanceId;
             if (TryResolveMovementSweep(
                     request.PreviousLocation,
                     request.DesiredLocation,
@@ -72,14 +71,14 @@ namespace ThirdPersonCamera
                     out Vector3 movementSafe,
                     out Vector3 movementNormal,
                     out float movementDistance,
-                    out string movementCollider) &&
+                    out int movementColliderInstanceId) &&
                 Vector3.SqrMagnitude(movementSafe - request.PivotLocation) <
                 Vector3.SqrMagnitude(safeLocation - request.PivotLocation))
             {
                 safeLocation = movementSafe;
                 normal = movementNormal;
                 distance = movementDistance;
-                colliderIdentity = movementCollider;
+                colliderInstanceId = movementColliderInstanceId;
             }
 
             CameraCollisionStatus status = startOverlapped
@@ -90,7 +89,7 @@ namespace ThirdPersonCamera
                 safeLocation,
                 normal,
                 distance,
-                colliderIdentity);
+                colliderInstanceId);
         }
 
         bool HasOverlap(
@@ -124,7 +123,7 @@ namespace ThirdPersonCamera
             out Vector3 safeLocation,
             out Vector3 hitNormal,
             out float hitDistance,
-            out string colliderIdentity)
+            out int colliderInstanceId)
         {
             Vector3 delta = destination - origin;
             float length = delta.magnitude;
@@ -133,7 +132,7 @@ namespace ThirdPersonCamera
                 safeLocation = destination;
                 hitNormal = Vector3.zero;
                 hitDistance = 0f;
-                colliderIdentity = string.Empty;
+                colliderInstanceId = 0;
                 return false;
             }
             Vector3 direction = delta / length;
@@ -142,7 +141,7 @@ namespace ThirdPersonCamera
                 safeLocation = destination;
                 hitNormal = Vector3.zero;
                 hitDistance = 0f;
-                colliderIdentity = string.Empty;
+                colliderInstanceId = 0;
                 return false;
             }
             float centerDistance = hit.distance - radius;
@@ -151,13 +150,13 @@ namespace ThirdPersonCamera
                 safeLocation = origin + direction * nearClipPlane;
                 hitNormal = hit.normal;
                 hitDistance = Mathf.Max(0f, hit.distance);
-                colliderIdentity = Identity(hit.collider);
+                colliderInstanceId = InstanceId(hit.collider);
                 return true;
             }
             safeLocation = origin + direction * centerDistance;
             hitNormal = hit.normal;
             hitDistance = Mathf.Max(0f, hit.distance);
-            colliderIdentity = Identity(hit.collider);
+            colliderInstanceId = InstanceId(hit.collider);
             return true;
         }
 
@@ -170,7 +169,7 @@ namespace ThirdPersonCamera
             out Vector3 safeLocation,
             out Vector3 hitNormal,
             out float hitDistance,
-            out string colliderIdentity)
+            out int colliderInstanceId)
         {
             Vector3 delta = destination - origin;
             float length = delta.magnitude;
@@ -179,7 +178,7 @@ namespace ThirdPersonCamera
                 safeLocation = destination;
                 hitNormal = Vector3.zero;
                 hitDistance = 0f;
-                colliderIdentity = string.Empty;
+                colliderInstanceId = 0;
                 return false;
             }
             Vector3 direction = delta / length;
@@ -188,14 +187,14 @@ namespace ThirdPersonCamera
                 safeLocation = destination;
                 hitNormal = Vector3.zero;
                 hitDistance = 0f;
-                colliderIdentity = string.Empty;
+                colliderInstanceId = 0;
                 return false;
             }
             float centerDistance = Mathf.Max(0f, hit.distance - radius);
             safeLocation = origin + direction * centerDistance;
             hitNormal = hit.normal;
             hitDistance = Mathf.Max(0f, hit.distance);
-            colliderIdentity = Identity(hit.collider);
+            colliderInstanceId = InstanceId(hit.collider);
             return true;
         }
 
@@ -245,9 +244,9 @@ namespace ThirdPersonCamera
             }
         }
 
-        static string Identity(Collider collider) =>
+        static int InstanceId(Collider collider) =>
             collider
-                ? collider.GetInstanceID().ToString(CultureInfo.InvariantCulture)
-                : string.Empty;
+                ? collider.GetInstanceID()
+                : 0;
     }
 }

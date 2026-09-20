@@ -25,7 +25,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var reader = new CanonicalReader(bytes ?? throw new ArgumentNullException(nameof(bytes)));
             RollbackActorInputFrame frame = ReadInput(reader);
             reader.RequireComplete();
-            if (!BytesEqual(bytes, WriteInput(frame)))
+            using var writer = new CanonicalWriter();
+            WriteInput(writer, frame);
+            if (!writer.ContentEquals(bytes))
                 throw new InvalidDataException("Rollback Actor input is not canonical.");
             return frame;
         }
@@ -35,6 +37,12 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (bundle == null)
                 throw new ArgumentNullException(nameof(bundle));
             using var writer = new CanonicalWriter();
+            WriteBundle(writer, bundle);
+            return writer.ToArray();
+        }
+
+        static void WriteBundle(CanonicalWriter writer, RollbackCanonicalInputBundle bundle)
+        {
             writer.WriteUInt32(BundleMagic);
             writer.WriteInt32(Version);
             writer.WriteUInt64(bundle.Tick.Value);
@@ -42,7 +50,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             writer.WriteInt32(bundle.Actors.Count);
             for (int i = 0; i < bundle.Actors.Count; i++)
                 WriteInput(writer, bundle.Actors[i]);
-            return writer.ToArray();
         }
 
         public static RollbackCanonicalInputBundle ReadBundle(byte[] bytes)
@@ -58,7 +65,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 actors[i] = ReadInput(reader);
             reader.RequireComplete();
             var bundle = new RollbackCanonicalInputBundle(tick, sequence, actors);
-            if (!BytesEqual(bytes, WriteBundle(bundle)))
+            using var writer = new CanonicalWriter();
+            WriteBundle(writer, bundle);
+            if (!writer.ContentEquals(bytes))
                 throw new InvalidDataException("Rollback canonical bundle is not canonical.");
             return bundle;
         }
@@ -268,16 +277,5 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return (SimulationTickSourceKind)value;
         }
 
-        static bool BytesEqual(byte[] left, byte[] right)
-        {
-            if (left.Length != right.Length)
-                return false;
-            for (int i = 0; i < left.Length; i++)
-            {
-                if (left[i] != right[i])
-                    return false;
-            }
-            return true;
-        }
     }
 }

@@ -109,6 +109,33 @@ namespace ThirdPersonSimulation
         }
 
         public byte[] ToArray() => m_Stream.ToArray();
+
+        public bool ContentEquals(ReadOnlySpan<byte> value)
+        {
+            if (m_Stream.Length != value.Length)
+                return false;
+            long position = m_Stream.Position;
+            try
+            {
+                m_Stream.Position = 0;
+                Span<byte> buffer = stackalloc byte[256];
+                int offset = 0;
+                while (offset < value.Length)
+                {
+                    int count = Math.Min(buffer.Length, value.Length - offset);
+                    int read = m_Stream.Read(buffer.Slice(0, count));
+                    if (read == 0 || !buffer.Slice(0, read).SequenceEqual(value.Slice(offset, read)))
+                        return false;
+                    offset += read;
+                }
+                return true;
+            }
+            finally
+            {
+                m_Stream.Position = position;
+            }
+        }
+
         public StableHash ComputeHash()
         {
             using SHA256 sha = SHA256.Create();

@@ -149,3 +149,14 @@
 - 原数组池命中时不一定产生托管分配，因此不能按每次调用计为已消除一个数组；本次确实删除中转租借、复制和池未命中时的临时数组申请需求。MemoryStream 扩容及最终输出数组仍存在，未宣称序列化整链 0 GC。
 - portable Core 编译零警告零错误，按规定禁用构建服务器与共享编译并结束 shutdown；沿当前 Unity Core 响应文件的引用单独编译完整 Core 也通过，产物位于系统临时目录。diff 空白检查通过，未新增测试或做 Player 采样。
 - 此时默认 Editor.log 来自其它 Unity 项目；3C 实例 e852139597e42532 的只读状态检查经历超时和断开，观察到的 csc／bee 编译进程结束后才修改源码。本次未主动刷新、重启或控制编辑器，独立编译不代表共享 Editor 当前验证通过。
+
+## 2026-09-20 回滚输入 canonical 比较副本清理
+
+对应 tasks.md 的 5.7，与代码同步提交。
+
+- RollbackInputCodec.ReadInput／ReadBundle 原在解码及 RequireComplete 后调用返回 byte[] 的公开写入方法，仅为 BytesEqual 比较生成一份完整 ToArray 临时副本。
+- CanonicalWriter.ContentEquals 先比较长度，再用固定 256 字节栈缓冲读取流并逐段比较，在 finally 恢复原 Position。此块大小只是比较的分段大小，不是协议容量或业务上限；支持原来可传入的 MemoryStream，不要求暴露内部数组，不租托管缓冲或复制完整 payload。
+- 两个读取入口继续完整重新编码并比较所有字节，仍拒绝非 canonical 输入和尾部数据；输入束编码抽为同一私有 WriteBundle(writer, bundle)，公开写入和校验共用它。删除原 BytesEqual 方法，没有第二套编码器、放宽校验或修改协议版本。
+- 每次成功到达比较阶段不再生成该份完整字节数组；writer、流容量、解码对象、哈希和公开写入的独立结果数组仍存在。此次未修改回滚历史和异步发送的存储归属。
+- 回滚 portable 工程连带 Core／Fixed 编译零警告零错误，构建结束 shutdown；沿当前 Unity 引用独立编译 Core 后，再用该 Core 编译 DeterministicRollback 也通过。diff 空白检查通过，未新增测试或做 Player 采样。
+- 编辑前显式读取 3C 实例 e852139597e42532 的状态，确认为 idle、非 Play、非编译、无待重载；未主动刷新或控制 Editor。

@@ -417,7 +417,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_ProvenancePromotionCount = checked(m_ProvenancePromotionCount + 1);
                 return;
             }
-            var replacement = new RollbackCanonicalInputBundle(
+            RollbackCanonicalInputBundle replacement = RollbackCanonicalInputBundle.FromOwnedActors(
                 frame.Tick,
                 checked(predicted.BundleSequence + 1),
                 actors);

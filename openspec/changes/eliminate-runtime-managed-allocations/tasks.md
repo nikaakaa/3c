@@ -314,6 +314,8 @@
 
 - [x] 5.75 Rollback Actor input／relayed input／canonical bundle／confirmation 四类协议对象按可计数输入直接复制到最终数组并原地排序，删除每包结果 List 与 ReadOnlyCollection 包装；公开构造继续独立持有输入
 
+- [x] 5.76 Rollback 输入协议增加显式数组所有权入口，解码、canonical 组装、预测重建、relay 转发与 confirmation 捕获直接转移本方法新建数组，删除这些路径的协议结果二次复制；可复用发送列表继续走公开复制构造
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

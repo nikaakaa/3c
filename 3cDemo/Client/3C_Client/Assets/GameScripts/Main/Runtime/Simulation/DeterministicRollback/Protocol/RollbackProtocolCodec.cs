@@ -176,7 +176,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var frames = new RollbackActorInputFrame[count];
             for (int i = 0; i < count; i++)
                 frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytesSegment());
-            return new RollbackActorInputBatch(frames);
+            return RollbackActorInputBatch.FromOwnedFrames(frames);
         }
 
         static void WriteRelayedInputBatch(CanonicalWriter writer, RollbackRelayedExplicitInputBatch value)
@@ -192,7 +192,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var frames = new RollbackActorInputFrame[count];
             for (int i = 0; i < count; i++)
                 frames[i] = RollbackInputCodec.ReadInput(reader.ReadBytesSegment());
-            return new RollbackRelayedExplicitInputBatch(frames);
+            return RollbackRelayedExplicitInputBatch.FromOwnedFrames(frames);
         }
 
         static void WriteCanonicalConfirmation(CanonicalWriter writer, RollbackCanonicalConfirmation value)
@@ -212,7 +212,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             var bundles = new RollbackCanonicalInputBundle[count];
             for (int i = 0; i < count; i++)
                 bundles[i] = RollbackInputCodec.ReadBundle(reader.ReadBytesSegment());
-            return new RollbackCanonicalConfirmation(previousConfirmedTick, confirmedTick, bundles);
+            return RollbackCanonicalConfirmation.FromOwnedBundles(previousConfirmedTick, confirmedTick, bundles);
         }
 
         static void WriteHandshake(CanonicalWriter writer, RollbackHandshake value)

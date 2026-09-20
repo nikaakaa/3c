@@ -288,7 +288,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             ulong sequence = m_NextPredictedBundleSequence;
             m_NextPredictedBundleSequence = checked(sequence + 1);
-            return new RollbackCanonicalInputBundle(tick, sequence, actors);
+            return RollbackCanonicalInputBundle.FromOwnedActors(tick, sequence, actors);
         }
 
         RollbackActorInputFrame BuildRemotePrediction(

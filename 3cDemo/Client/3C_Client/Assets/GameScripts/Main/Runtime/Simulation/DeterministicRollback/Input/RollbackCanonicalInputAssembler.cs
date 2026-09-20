@@ -181,14 +181,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             ulong sequence = m_NextBundleSequence;
             m_NextBundleSequence = checked(sequence + 1);
-            var result = new RollbackCanonicalInputBundle(tick, sequence, frames);
+            RollbackCanonicalInputBundle result = RollbackCanonicalInputBundle.FromOwnedActors(tick, sequence, frames);
             m_Canonical.Add(tick.Value, result);
             m_NextTick = checked(m_NextTick + 1);
             TrimHistory();
             return result;
         }
 
-        public IReadOnlyList<RollbackCanonicalInputBundle> CaptureCanonicalRange(
+        public RollbackCanonicalInputBundle[] CaptureCanonicalRange(
             ulong previousConfirmedTick,
             ulong confirmedTick)
         {

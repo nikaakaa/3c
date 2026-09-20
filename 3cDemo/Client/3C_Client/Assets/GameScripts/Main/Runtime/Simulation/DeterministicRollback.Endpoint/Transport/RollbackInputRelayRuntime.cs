@@ -334,7 +334,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     source.Input,
                     RollbackInputProvenance.RelayedExplicit);
             }
-            Broadcast(new RollbackRelayedExplicitInputBatch(relayed), true, peer.Roster.PeerId);
+            Broadcast(RollbackRelayedExplicitInputBatch.FromOwnedFrames(relayed), true, peer.Roster.PeerId);
             m_ExplicitRelayBroadcastCount = checked(m_ExplicitRelayBroadcastCount + (ulong)relayed.Length);
         }
 
@@ -343,11 +343,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (!IsRosterLocked || m_Assembler.ConfirmedTick <= m_LastConfirmedBroadcastTick)
                 return;
             ulong confirmedTick = m_Assembler.ConfirmedTick;
-            IReadOnlyList<RollbackCanonicalInputBundle> bundles = m_Assembler.CaptureCanonicalRange(
+            RollbackCanonicalInputBundle[] bundles = m_Assembler.CaptureCanonicalRange(
                 m_LastConfirmedBroadcastTick,
                 confirmedTick);
             Broadcast(
-                new RollbackCanonicalConfirmation(
+                RollbackCanonicalConfirmation.FromOwnedBundles(
                     m_LastConfirmedBroadcastTick,
                     new SimulationTick(confirmedTick),
                     bundles),

@@ -104,25 +104,32 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly IReadOnlyList<RollbackActorInputFrame> m_Frames;
 
         public RollbackActorInputBatch(IReadOnlyList<RollbackActorInputFrame> frames)
+            : this(RollbackInputArray.Copy(frames), true)
         {
-            RollbackActorInputFrame[] values = RollbackInputArray.Copy(frames);
-            Array.Sort(values, (left, right) => left.Tick.CompareTo(right.Tick));
-            if (values.Length == 0 || values[0] == null)
+        }
+
+        RollbackActorInputBatch(RollbackActorInputFrame[] frames, bool _)
+        {
+            Array.Sort(frames, (left, right) => left.Tick.CompareTo(right.Tick));
+            if (frames.Length == 0 || frames[0] == null)
                 throw new ArgumentException("Rollback input batch requires at least one frame.", nameof(frames));
-            ActorId = values[0].ActorId;
-            for (int i = 0; i < values.Length; i++)
+            ActorId = frames[0].ActorId;
+            for (int i = 0; i < frames.Length; i++)
             {
-                if (values[i] == null || values[i].ActorId != ActorId ||
-                    values[i].Provenance != RollbackInputProvenance.LocalExplicit ||
-                    i > 0 && values[i - 1].Tick.Value + 1 != values[i].Tick.Value)
+                if (frames[i] == null || frames[i].ActorId != ActorId ||
+                    frames[i].Provenance != RollbackInputProvenance.LocalExplicit ||
+                    i > 0 && frames[i - 1].Tick.Value + 1 != frames[i].Tick.Value)
                 {
                     throw new ArgumentException(
                         "Rollback input batch must contain one Actor's contiguous local explicit Tick range.",
                         nameof(frames));
                 }
             }
-            m_Frames = values;
+            m_Frames = frames;
         }
+
+        public static RollbackActorInputBatch FromOwnedFrames(RollbackActorInputFrame[] frames) =>
+            new RollbackActorInputBatch(frames ?? throw new ArgumentNullException(nameof(frames)), true);
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.ActorInputBatch;
         public ActorId ActorId { get; }
@@ -134,25 +141,32 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly IReadOnlyList<RollbackActorInputFrame> m_Frames;
 
         public RollbackRelayedExplicitInputBatch(IReadOnlyList<RollbackActorInputFrame> frames)
+            : this(RollbackInputArray.Copy(frames), true)
         {
-            RollbackActorInputFrame[] values = RollbackInputArray.Copy(frames);
-            Array.Sort(values, (left, right) => left.Tick.CompareTo(right.Tick));
-            if (values.Length == 0 || values[0] == null)
+        }
+
+        RollbackRelayedExplicitInputBatch(RollbackActorInputFrame[] frames, bool _)
+        {
+            Array.Sort(frames, (left, right) => left.Tick.CompareTo(right.Tick));
+            if (frames.Length == 0 || frames[0] == null)
                 throw new ArgumentException("Rollback relayed input batch requires at least one frame.", nameof(frames));
-            ActorId = values[0].ActorId;
-            for (int i = 0; i < values.Length; i++)
+            ActorId = frames[0].ActorId;
+            for (int i = 0; i < frames.Length; i++)
             {
-                if (values[i] == null || values[i].ActorId != ActorId ||
-                    values[i].Provenance != RollbackInputProvenance.RelayedExplicit ||
-                    i > 0 && values[i - 1].Tick.Value + 1 != values[i].Tick.Value)
+                if (frames[i] == null || frames[i].ActorId != ActorId ||
+                    frames[i].Provenance != RollbackInputProvenance.RelayedExplicit ||
+                    i > 0 && frames[i - 1].Tick.Value + 1 != frames[i].Tick.Value)
                 {
                     throw new ArgumentException(
                         "Rollback relayed input batch must contain one Actor's contiguous explicit Tick range.",
                         nameof(frames));
                 }
             }
-            m_Frames = values;
+            m_Frames = frames;
         }
+
+        public static RollbackRelayedExplicitInputBatch FromOwnedFrames(RollbackActorInputFrame[] frames) =>
+            new RollbackRelayedExplicitInputBatch(frames ?? throw new ArgumentNullException(nameof(frames)), true);
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.RelayedExplicitInputBatch;
         public ActorId ActorId { get; }
@@ -167,26 +181,60 @@ namespace ThirdPersonSimulation.DeterministicRollback
             SimulationTick tick,
             ulong bundleSequence,
             IReadOnlyList<RollbackActorInputFrame> actors)
+            : this(tick, bundleSequence, CopyActors(tick, bundleSequence, actors), true)
         {
-            if (!tick.IsValid || bundleSequence == 0)
-                throw new ArgumentException("Rollback canonical bundle identity is incomplete.");
-            RollbackActorInputFrame[] values = RollbackInputArray.Copy(actors);
-            Array.Sort(values, (left, right) => left.ActorId.CompareTo(right.ActorId));
-            if (values.Length == 0)
+        }
+
+        RollbackCanonicalInputBundle(
+            SimulationTick tick,
+            ulong bundleSequence,
+            RollbackActorInputFrame[] actors,
+            bool _)
+        {
+            Array.Sort(actors, (left, right) => left.ActorId.CompareTo(right.ActorId));
+            if (actors.Length == 0)
                 throw new ArgumentException("Rollback canonical bundle requires an Actor roster.", nameof(actors));
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < actors.Length; i++)
             {
-                if (values[i] == null || values[i].Tick != tick ||
-                    i > 0 && values[i - 1].ActorId.Equals(values[i].ActorId))
+                if (actors[i] == null || actors[i].Tick != tick ||
+                    i > 0 && actors[i - 1].ActorId.Equals(actors[i].ActorId))
                 {
                     throw new ArgumentException("Rollback canonical bundle Actor order or Tick is invalid.", nameof(actors));
                 }
             }
             Tick = tick;
             BundleSequence = bundleSequence;
-            m_Actors = values;
+            m_Actors = actors;
             BundleHash = RollbackInputCodec.ComputeBundleHash(this);
             GameplayHash = RollbackInputCodec.ComputeGameplayBundleHash(this);
+        }
+
+        public static RollbackCanonicalInputBundle FromOwnedActors(
+            SimulationTick tick,
+            ulong bundleSequence,
+            RollbackActorInputFrame[] actors)
+        {
+            RequireIdentity(tick, bundleSequence);
+            return new RollbackCanonicalInputBundle(
+                tick,
+                bundleSequence,
+                actors ?? throw new ArgumentNullException(nameof(actors)),
+                true);
+        }
+
+        static RollbackActorInputFrame[] CopyActors(
+            SimulationTick tick,
+            ulong bundleSequence,
+            IReadOnlyList<RollbackActorInputFrame> actors)
+        {
+            RequireIdentity(tick, bundleSequence);
+            return RollbackInputArray.Copy(actors);
+        }
+
+        static void RequireIdentity(SimulationTick tick, ulong bundleSequence)
+        {
+            if (!tick.IsValid || bundleSequence == 0)
+                throw new ArgumentException("Rollback canonical bundle identity is incomplete.");
         }
 
         public SimulationTick Tick { get; }
@@ -223,29 +271,67 @@ namespace ThirdPersonSimulation.DeterministicRollback
             ulong previousConfirmedTick,
             SimulationTick confirmedTick,
             IReadOnlyList<RollbackCanonicalInputBundle> finalBundles)
+            : this(
+                previousConfirmedTick,
+                confirmedTick,
+                CopyFinalBundles(previousConfirmedTick, confirmedTick, finalBundles),
+                true)
         {
-            if (!confirmedTick.IsValid || confirmedTick.Value <= previousConfirmedTick)
-                throw new ArgumentException("Rollback canonical confirmation range is invalid.");
-            RollbackCanonicalInputBundle[] values = RollbackInputArray.Copy(finalBundles);
-            Array.Sort(values, (left, right) => left.Tick.CompareTo(right.Tick));
+        }
+
+        RollbackCanonicalConfirmation(
+            ulong previousConfirmedTick,
+            SimulationTick confirmedTick,
+            RollbackCanonicalInputBundle[] finalBundles,
+            bool _)
+        {
+            Array.Sort(finalBundles, (left, right) => left.Tick.CompareTo(right.Tick));
             ulong expectedCount = confirmedTick.Value - previousConfirmedTick;
-            if ((ulong)values.Length != expectedCount)
+            if ((ulong)finalBundles.Length != expectedCount)
                 throw new ArgumentException("Rollback canonical confirmation does not cover its complete Tick range.");
-            for (int i = 0; i < values.Length; i++)
+            for (int i = 0; i < finalBundles.Length; i++)
             {
                 ulong expectedTick = checked(previousConfirmedTick + (ulong)i + 1);
-                if (values[i] == null || values[i].Tick.Value != expectedTick)
+                if (finalBundles[i] == null || finalBundles[i].Tick.Value != expectedTick)
                     throw new ArgumentException("Rollback canonical confirmation bundle order is invalid.");
-                for (int actorIndex = 0; actorIndex < values[i].Actors.Count; actorIndex++)
+                for (int actorIndex = 0; actorIndex < finalBundles[i].Actors.Count; actorIndex++)
                 {
-                    if (values[i].Actors[actorIndex].Provenance != RollbackInputProvenance.CanonicalExplicit &&
-                        values[i].Actors[actorIndex].Provenance != RollbackInputProvenance.ConfirmedExplicit)
+                    if (finalBundles[i].Actors[actorIndex].Provenance != RollbackInputProvenance.CanonicalExplicit &&
+                        finalBundles[i].Actors[actorIndex].Provenance != RollbackInputProvenance.ConfirmedExplicit)
                         throw new ArgumentException("Rollback canonical confirmation contains predicted input.");
                 }
             }
             PreviousConfirmedTick = previousConfirmedTick;
             ConfirmedTick = confirmedTick;
-            m_FinalBundles = values;
+            m_FinalBundles = finalBundles;
+        }
+
+        public static RollbackCanonicalConfirmation FromOwnedBundles(
+            ulong previousConfirmedTick,
+            SimulationTick confirmedTick,
+            RollbackCanonicalInputBundle[] finalBundles)
+        {
+            RequireRange(previousConfirmedTick, confirmedTick);
+            return new RollbackCanonicalConfirmation(
+                previousConfirmedTick,
+                confirmedTick,
+                finalBundles ?? throw new ArgumentNullException(nameof(finalBundles)),
+                true);
+        }
+
+        static RollbackCanonicalInputBundle[] CopyFinalBundles(
+            ulong previousConfirmedTick,
+            SimulationTick confirmedTick,
+            IReadOnlyList<RollbackCanonicalInputBundle> finalBundles)
+        {
+            RequireRange(previousConfirmedTick, confirmedTick);
+            return RollbackInputArray.Copy(finalBundles);
+        }
+
+        static void RequireRange(ulong previousConfirmedTick, SimulationTick confirmedTick)
+        {
+            if (!confirmedTick.IsValid || confirmedTick.Value <= previousConfirmedTick)
+                throw new ArgumentException("Rollback canonical confirmation range is invalid.");
         }
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.CanonicalConfirmation;

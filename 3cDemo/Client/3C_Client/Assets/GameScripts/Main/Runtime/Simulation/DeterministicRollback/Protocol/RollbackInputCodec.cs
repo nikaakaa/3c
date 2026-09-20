@@ -92,7 +92,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             for (int i = 0; i < count; i++)
                 actors[i] = ReadInput(reader);
             reader.RequireComplete();
-            var bundle = new RollbackCanonicalInputBundle(tick, sequence, actors);
+            RollbackCanonicalInputBundle bundle = RollbackCanonicalInputBundle.FromOwnedActors(tick, sequence, actors);
             using var writer = new CanonicalWriter();
             WriteBundle(writer, bundle);
             if (!writer.ContentEquals(bytes.AsSpan()))

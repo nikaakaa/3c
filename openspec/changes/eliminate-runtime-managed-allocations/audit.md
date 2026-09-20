@@ -1878,3 +1878,12 @@
 - 四类公开构造收窄为 IReadOnlyList，按准确 Count 复制到最终数组，在同一数组上执行原排序和完整性校验，并直接以 IReadOnlyList 暴露。外部输入仍不会被借用，空输入沿用原拒绝语义。
 - 每个协议对象删除一只结果 List 和一只 ReadOnlyCollection；最终独立数组仍按协议对象寿命存在。解码器和组装器已经新建数组时仍会经过公开构造复制，后续需要以显式所有权入口单独收口，避免混淆公开安全构造与内部转移。
 - ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做协议吞吐或 Player 分配采样。
+
+## 2026-09-21 Rollback 输入协议数组所有权转移
+
+对应 tasks.md 的 5.76，收口 5.75 中保留的新建数组二次复制。
+
+- 输入 batch、relayed batch、canonical bundle 与 confirmation 解码均已按协议数量新建完整数组；canonical assembler、Endpoint 预测、迟到输入替换和 relay 转发也在当前方法内新建最终 frame 数组。confirmation 捕获返回的连续 bundle 数组同样只交给随后创建的 confirmation。
+- 四类协议对象新增显式 FromOwnedFrames／FromOwnedActors／FromOwnedBundles 入口，在接管数组上执行原排序和校验。上述调用统一转移数组；CaptureCanonicalRange 的返回类型收窄为数组，使连续确认捕获直接成为 confirmation 的最终存储。
+- 每个迁移调用删除一份完整数组复制，保留协议对象自身所需的最终数组。RollbackPeerEndpoint 的输入冗余发送列表会在缩减包体时继续改写，因此仍调用公开复制构造，不转移工作区；外部一般集合也继续由公开构造独立复制。
+- ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做网络协议吞吐或 Player 分配采样。

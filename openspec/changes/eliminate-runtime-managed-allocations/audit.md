@@ -476,6 +476,15 @@
 - 同一快照类的 Copy<T> 唯一调用源是 CloneActiveEffects 返回的 List，改为 IReadOnlyList 按下标读取，删除 IEnumerable 枚举器装箱；元素仍来自原深拷贝，字典复制、活动效果克隆及恢复过程未改。
 - 两个目标文件此前无其它未提交修改，编辑前未发现 csc／bee 编译进程。Fixed／Float32 portable 各自零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过。未新增测试、未主动刷新或控制共享 Unity、未做快照运行对比或 Player 分配采样。
 
+## 2026-09-20 效果快照字典复制枚举装箱清理
+
+对应 tasks.md 的 2.13，与代码同步提交。
+
+- 核对两个快照实现中 Copy<TKey,TValue> 全部八个调用：标签、属性、period、journal、revision 克隆返回 SortedDictionary，Spec 的 SetByCaller／SourceAttributes／TargetAttributes 也声明为 SortedDictionary。原私有辅助函数经 IEnumerable 枚举这些具体容器，会装箱枚举器。
+- 源参数改为实际 SortedDictionary，foreach 直接使用其具体枚举器；目标仍为 IDictionary，保持调用方存储接口。未新增类型分支、转换副本或另一套复制实现，元素、遍历次序和深拷贝隔离关系不变。
+- 此步不移除 SortedDictionary 枚举内部树遍历所需存储，也不移除克隆字典和树节点；不宣称复制过程 0 GC。没有改变快照保存、恢复或事务寿命。
+- Fixed 与 Float32 portable 分别编译零警告零错误，每次按规定构建后 shutdown 成功，diff 空白检查通过；编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity、未做 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

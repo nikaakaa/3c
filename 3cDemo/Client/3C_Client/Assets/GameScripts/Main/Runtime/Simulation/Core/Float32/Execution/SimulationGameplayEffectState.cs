@@ -398,7 +398,7 @@ namespace ThirdPersonSimulation
             return result;
         }
 
-        static void Copy<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> source, IDictionary<TKey, TValue> destination)
+        static void Copy<TKey, TValue>(SortedDictionary<TKey, TValue> source, IDictionary<TKey, TValue> destination)
         {
             foreach (KeyValuePair<TKey, TValue> pair in source)
                 destination.Add(pair.Key, pair.Value);

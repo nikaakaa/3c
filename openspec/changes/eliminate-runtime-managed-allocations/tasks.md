@@ -136,6 +136,8 @@
 
 - [x] 2.81 Pipeline 状态 Coordinator 四个入口统一接收 IReadOnlyList，ValidateParticipantSet 按运行 participant 与 plan 期望 participant 数直接填充并排序数组，删除每次 checkpoint／snapshot／restore 校验的两只 List 外壳
 
+- [x] 2.82 Pipeline checkpoint 捕获按已验证 participant 数直接填充 checkpoint 数组并交给 CheckpointSet，删除每个外层事务的收集 List 与 ReadOnlyCollection 包装；失败仍逆序释放已接纳项
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

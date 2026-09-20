@@ -470,7 +470,10 @@ namespace ThirdPersonSimulation
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
             ISimulationPipelineStateParticipant[] values = ValidateParticipantSet(plan, participants);
-            var checkpoints = new List<ISimulationPipelinePassStateCheckpoint>(values.Length);
+            var checkpoints = values.Length == 0
+                ? Array.Empty<ISimulationPipelinePassStateCheckpoint>()
+                : new ISimulationPipelinePassStateCheckpoint[values.Length];
+            int checkpointCount = 0;
             try
             {
                 for (int i = 0; i < values.Length; i++)
@@ -479,13 +482,13 @@ namespace ThirdPersonSimulation
                         throw Failure("pipeline_state_checkpoint_missing", values[i].StateIdentity.PassId, "State participant returned no transaction checkpoint.");
                     if (!checkpoint.Participant.Equals(values[i].StateIdentity))
                         throw Failure("pipeline_state_checkpoint_identity_mismatch", values[i].StateIdentity.PassId, "State checkpoint identity does not match its participant.");
-                    checkpoints.Add(checkpoint);
+                    checkpoints[checkpointCount++] = checkpoint;
                 }
-                return new SimulationPipelineStateCheckpointSet(checkpoints.AsReadOnly());
+                return new SimulationPipelineStateCheckpointSet(checkpoints);
             }
             catch
             {
-                for (int i = checkpoints.Count - 1; i >= 0; i--)
+                for (int i = checkpointCount - 1; i >= 0; i--)
                     checkpoints[i].Dispose();
                 throw;
             }

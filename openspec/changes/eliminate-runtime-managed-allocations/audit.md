@@ -1594,3 +1594,12 @@
 - 四个 Coordinator 入口统一接收 IReadOnlyList。校验先统计 plan 中 SnapshotParticipant 数量并填充精确 expected 数组，再按运行 Count 复制精确 values 数组；两数组分别按 PassId 排序后执行原数量、版本、owner、schema 与重复 participant 检查。
 - 每次 checkpoint／snapshot／restore participant 校验删除两个 List 对象，以等价的两份精确数组承载元素。完整性检查没有缓存或跳过；plan 与 runtime 集合每次仍重新对齐验证。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 checkpoint／restore 运行对比或 Player 分配采样。
+
+## 2026-09-21 Pipeline checkpoint 收集数组
+
+对应 tasks.md 的 2.82。
+
+- 每个外层事务由 PipelineTransactionCoordinator 捕获全部已验证 state participant 的 checkpoint；原 Coordinator 按 participant 数建 List、逐项 Add，再创建 ReadOnlyCollection 交给 SimulationPipelineStateCheckpointSet。CheckpointSet 本身只保存 IReadOnlyList，不再次复制。
+- 捕获现按已验证 participant 数创建精确接口数组并按索引写入，成功时直接交给 CheckpointSet；异常时以已接纳数量为界逆序 Dispose，保持原失败清理顺序和边界。空 participant 集合复用 Array.Empty。
+- 删除每个外层事务 checkpoint 捕获的 List 与 ReadOnlyCollection 两个对象，以一份精确数组替代原 List 底层存储。每个 pass checkpoint 和 CheckpointSet 对象仍按事务生命周期存在。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 checkpoint 恢复运行对比或 Player 分配采样。

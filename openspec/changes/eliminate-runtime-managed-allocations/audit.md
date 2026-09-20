@@ -1045,3 +1045,12 @@
 - DeterministicCollisionFeatureKind 正式成员连续为 PlaneFace=1 至 BoxFace=5，现由身份类型集中按该闭区间判断；未知零值及其它 byte 和负索引继续拒绝。碰撞资产图元的 Plane=1 至 Box=3 同步改为边界校验。
 - 删除的是每次碰撞特征生成及有效性读取的装箱和元数据查询；图元构造只属于世界准备，不计逐帧收益。未修改特征 Index、命中排序、距离算法、法线、表面或 KCC 状态语义。
 - ThirdPersonSimulation.DeterministicKcc portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 KCC 运行回放或 Player 分配采样。
+
+## 2026-09-20 Blend transition 身份端点校验
+
+对应 tasks.md 的 4.1.2。
+
+- AnimationBlendStackRuntime.RequireRequest 在每次 Push 中分别读取编译 transition 与请求 transition 的 AnimationBlendTransitionIdentity；每个身份构造和 IsValid 都通过 IsValidEndpoint 检查源、目标端点。原检查对每个端点执行 Enum.IsDefined。
+- IsValidEndpoint 现显式匹配 SourceOwner、SourcePose、NoPose：SourceOwner 要求索引非负，另外两种要求索引为 -1，未知值直接失败。身份字段、相等比较、hash、transition 精确引用检查和错误路径均未改变。
+- 一次 Push 比较两个新构造身份时，最多删除四次枚举装箱和元数据查询；其它调用 IsValidEndpoint 的身份有效性读取同步受益。未修改 Blend 时长、曲线、Profile、栈容量或 Pose 生命周期。
+- 首次 Runtime 增量编译受并行 Timeline 合同中间状态的五个错误阻断，目标文件无错误；并行提交闭合后重新执行 ThirdPersonClient.Runtime 全依赖编译，零错误、三十四个既有警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。

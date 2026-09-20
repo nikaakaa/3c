@@ -371,13 +371,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static bool IsValidEndpoint(
             int sourceOwnerIndex,
-            AnimationBlendTransitionEndpointKind endpointKind) =>
-            Enum.IsDefined(
-                typeof(AnimationBlendTransitionEndpointKind),
-                endpointKind) &&
-            (endpointKind == AnimationBlendTransitionEndpointKind.SourceOwner
-                ? sourceOwnerIndex >= 0
-                : sourceOwnerIndex == -1);
+            AnimationBlendTransitionEndpointKind endpointKind) => endpointKind switch
+            {
+                AnimationBlendTransitionEndpointKind.SourceOwner => sourceOwnerIndex >= 0,
+                AnimationBlendTransitionEndpointKind.SourcePose or
+                    AnimationBlendTransitionEndpointKind.NoPose => sourceOwnerIndex == -1,
+                _ => false
+            };
 
         static string Describe(
             int sourceOwnerIndex,

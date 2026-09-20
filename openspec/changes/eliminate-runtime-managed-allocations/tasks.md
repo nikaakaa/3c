@@ -87,6 +87,7 @@
 
 - [ ] 4.1 将BlendStack PrepareFrame请求和去重集合改为原节点/实例持有的准备存储，移除每帧分配
 - [x] 4.1.1 Blend Stack 运行目标只直接匹配 SourceOwner／SourcePose，删除每次 Push 目标校验的 Enum.IsDefined 装箱；构造期选择可用性策略同步改为两种正式成员判断
+- [x] 4.1.2 Blend transition 身份按 SourceOwner／SourcePose／NoPose 显式校验端点和 OwnerIndex，删除每次 Push 比较两个 transition 身份时最多四次 Enum.IsDefined 装箱
 - [ ] 4.2 迁移Pose源请求、观察结果和资源目录getter的热点副本，按Frame/Barrier/Seal落实租用寿命，不改原生求值
 - [x] 4.2.1 Pose Native 四类连续枚举集中按正式值域校验，删除图准备合同及每帧 PreparationResult 构造／IsValid 中十一处 Enum.IsDefined 装箱，保留原状态组合约束
 - [ ] 4.3 沿Foot查询、Goal Assembly、FBBIK和最终写入链治理实际managed临时对象、装箱和vendor接口分配，保留查询容量和算法顺序

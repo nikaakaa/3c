@@ -552,7 +552,6 @@ namespace ThirdPersonSimulation
         int SuppliedParameterCount(TApplication application);
         string SuppliedParameterId(TApplication application, int index);
         TScalar SuppliedParameterValue(TApplication application, int index);
-        bool DeclaresParameter(TSpec spec, string parameterId);
         int RequiredParameterCount(TSpec spec);
         string RequiredParameterId(TSpec spec, int index);
         bool ContainsParameter(TSpec spec, string parameterId);
@@ -622,7 +621,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < m_Port.SuppliedParameterCount(application); i++)
             {
                 string parameterId = m_Port.SuppliedParameterId(application, i);
-                if (!m_Port.DeclaresParameter(spec, parameterId))
+                if (!DeclaresParameter(spec, parameterId))
                 {
                     return Fail(
                         application,
@@ -722,6 +721,14 @@ namespace ThirdPersonSimulation
             prepared = m_Port.DescribeSpec(spec);
             failure = default;
             return true;
+        }
+
+        bool DeclaresParameter(TSpec spec, string parameterId)
+        {
+            for (int i = 0; i < m_Port.RequiredParameterCount(spec); i++)
+                if (string.Equals(m_Port.RequiredParameterId(spec, i), parameterId, StringComparison.Ordinal))
+                    return true;
+            return false;
         }
 
         bool Fail(

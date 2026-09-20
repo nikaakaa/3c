@@ -651,11 +651,8 @@ namespace ThirdPersonSimulation
         {
             string current = NormalizeTag(ownedTag);
             string query = NormalizeTag(queryTag);
-            var visited = new HashSet<string>(StringComparer.Ordinal);
             while (!string.IsNullOrEmpty(current))
             {
-                if (!visited.Add(current))
-                    throw new InvalidDataException($"Gameplay Tag parent cycle reached '{current}'.");
                 if (string.Equals(current, query, StringComparison.Ordinal))
                     return true;
                 current = m_TagParents.TryGetValue(current, out string parent) ? parent : string.Empty;
@@ -663,22 +660,41 @@ namespace ThirdPersonSimulation
             return false;
         }
 
-        public bool Matches(PortableTagQuery query, IEnumerable<string> tags)
+        public bool Matches(PortableTagQuery query, IReadOnlyList<string> tags)
         {
-            var owned = tags == null ? Array.Empty<string>() : tags.ToArray();
+            IReadOnlyList<string> owned = tags ?? Array.Empty<string>();
             for (int i = 0; i < query.All.Length; i++)
             {
-                if (!owned.Any(value => IsTagOrParent(value, query.All[i])))
+                if (!ContainsTag(owned, query.All[i]))
                     return false;
             }
-            if (query.Any.Length > 0 && !query.Any.Any(required => owned.Any(value => IsTagOrParent(value, required))))
-                return false;
+            if (query.Any.Length > 0)
+            {
+                bool matched = false;
+                for (int i = 0; i < query.Any.Length; i++)
+                {
+                    if (!ContainsTag(owned, query.Any[i]))
+                        continue;
+                    matched = true;
+                    break;
+                }
+                if (!matched)
+                    return false;
+            }
             for (int i = 0; i < query.None.Length; i++)
             {
-                if (owned.Any(value => IsTagOrParent(value, query.None[i])))
+                if (ContainsTag(owned, query.None[i]))
                     return false;
             }
             return true;
+        }
+
+        bool ContainsTag(IReadOnlyList<string> owned, string required)
+        {
+            for (int i = 0; i < owned.Count; i++)
+                if (IsTagOrParent(owned[i], required))
+                    return true;
+            return false;
         }
 
         void ReadBinding(byte[] bytes)

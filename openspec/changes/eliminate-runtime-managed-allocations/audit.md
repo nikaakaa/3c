@@ -108,3 +108,14 @@
 - 代码入口：`Simulation/Core/Execution/GameplayEffectControlContracts.cs`，以及两数值域 Execution 下的 `GameplayEffectRuntimeCatalog`、`GameplayEffectAdmissionPort`、`GameplayEffectTarget` 文件。
 - Fixed 与 Float32 portable 工程分别以 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过，均为零警告、零错误；每次构建后执行 `dotnet build-server shutdown`。未新增测试、未主动刷新 Unity，未做 Player 分配采样。
 - 效果 Spec 创建、属性快照字典、标签复制和事务克隆仍有分配，不由本小步宣称完成。
+
+## 2026-09-20 GameplayEffect 参数和标签查询
+
+对应 tasks.md 的 2.7，与代码同笔提交。
+
+- 参数入口：两数值域 AdmissionPort 原通过带 Ordinal 比较器的 LINQ Contains 查声明数组；现在公共 GameplayEffectApplicationAdmissionRuntime 通过已有 RequiredParameterCount／RequiredParameterId 按下标逐项比较。移除接口和两后端的 DeclaresParameter 实现，不增加第二套参数集合，未声明参数仍走原失败结果。
+- 标签入口：Fixed／Float32 RuntimeCatalog.Matches 原先 ToArray 复制输入，随后通过捕获 query、下标和 required 的多层 LINQ Any 查询；现在要求 IReadOnlyList 并顺序遍历。已核对调用者均提供已有列表或数组，不新增转换；空输入、All／Any／None 的顺序及短路位置保持一致。
+- 父链入口：IsTagOrParent 原每次创建 HashSet 记录访问节点。RuntimeCatalog 构造先 ReadBinding 再 ValidateClosure，后者已经拒绝缺失父引用和循环；父映射没有正式运行期修改入口。因此保留准备期校验，删除重复运行期集合，仍按原链条逐级比较，不使用结果缓存。
+- 业务取舍：查询直接读取调用期间不变的列表，省去每次独立副本；目录合法性在准备入口统一保证，未加入运行期修补或兼容分支。该改动不改变实际 OwnedTags 的收集和状态快照寿命。
+- Fixed／Float32 portable 构建均零警告、零错误，沿用禁用构建服务器及共享编译参数并在每次结束后 shutdown；diff 空白检查通过。无新增测试、无 Unity 主动刷新、无 Player 分配采样。
+- 剩余：SimulationGameplayEffectState.CopyOwnedTags 仍会整理标签集合；效果 Spec、快照、标签复制与事务分配仍未完成，不能把查询内部入口清理视为整个效果运行无分配。

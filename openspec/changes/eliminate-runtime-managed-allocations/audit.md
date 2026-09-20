@@ -1243,3 +1243,12 @@
 - 构造器现直接匹配两个允许值，零值、NoPose 及其它 byte 继续进入原 ArgumentException；source id、owner index、transition target、request sequence 和 hard cut 约束不变。
 - 该入口按来源切换触发，不计普通无切换帧收益，只删除实际运行 push 时的一次枚举装箱和元数据查询。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Blend Stack 来源切换回放或 Player 分配采样。
+
+## 2026-09-21 脚步 Motion Event 相位校验
+
+对应 tasks.md 的 4.3.1。
+
+- AnimationFootMotionEventFrame 由脚步相位求解、Bind 和预测／接触分支构造，左右脚运行帧会重复进入；构造器原对 AnimationFootMotionEventPhase 执行 Enum.IsDefined。
+- 正式相位连续为 Unavailable=0、PreSwing=1、Swing=2、ApproachContact=3、Contact=4，现按 byte 上界直接判断；未知值继续进入原 ArgumentException，Contact、下一落脚、摆动进度及 approach 组合约束不变。
+- 仅删除正式事件帧构造中的枚举装箱和元数据查询，不改变事件身份、落脚周期、连续性或脚侧绑定。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做脚步事件运行回放或 Player 分配采样。

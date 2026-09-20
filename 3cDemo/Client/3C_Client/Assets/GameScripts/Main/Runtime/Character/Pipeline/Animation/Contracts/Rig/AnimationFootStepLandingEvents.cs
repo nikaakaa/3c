@@ -137,7 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float swingProgress,
             float approachContactToLandingProgress)
         {
-            if (!Enum.IsDefined(typeof(AnimationFootMotionEventPhase), phase) ||
+            if ((byte)phase > (byte)AnimationFootMotionEventPhase.Contact ||
                 !float.IsFinite(timeToLandingSeconds) ||
                 timeToLandingSeconds < 0f ||
                 !float.IsFinite(swingProgress) ||

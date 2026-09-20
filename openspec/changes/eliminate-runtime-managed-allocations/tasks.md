@@ -111,6 +111,7 @@
 - [x] 4.2.14 Pose Graph Runtime 在克隆图校验后缓存 node／port／direction 到端口定义的完整映射，BindGraphInput 和动态 ReadInputValue 删除逐次 RuntimeShape List 重建
 - [x] 4.2.15 Blend Stack 运行 push 请求的目标端直接匹配 SourceOwner／SourcePose 两种正式值，删除 source 切换入口的 Enum.IsDefined 装箱
 - [ ] 4.3 沿Foot查询、Goal Assembly、FBBIK和最终写入链治理实际managed临时对象、装箱和vendor接口分配，保留查询容量和算法顺序
+- [x] 4.3.1 左右脚正式 Motion Event Frame 按 Unavailable 至 Contact 连续相位值域校验，删除逐帧事件构造中的 Enum.IsDefined 装箱
 - [ ] 4.4 沿Camera目标/效果、Input采样和Behavior Designer正式任务治理已确认分配，保持输入来源和目标身份
 
 4.4 已完成小步与剩余范围（详见 [审计实施记录](audit.md#2026-09-20-相机独立小步实施)；以下勾选仅表示对应源码修改完成，不表示 Player 实测 0 GC）：

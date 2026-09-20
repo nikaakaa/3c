@@ -60,7 +60,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public int FragmentCount { get; }
         public int TotalPayloadBytes { get; }
         public ReadOnlySpan<byte> Payload => m_Payload;
-        public byte[] CopyPayload() => (byte[])m_Payload.Clone();
     }
 
     public static class RollbackDatagramCodec

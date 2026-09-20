@@ -294,3 +294,13 @@
 - ReadString 产生独立字符串；packet 构造通过 payload.ToArray 保存自身存储。同步 Read 返回后才进入接收队列和下一次 ReceiveFrom，消息不保存 reader 或原接收缓冲引用，重组与重传仍使用原所有权。
 - MTU 拒绝、截断包异常处理、接收队列超限丢弃及统计时机不变。每次解码少一份整包数组，但 reader、packet、payload、身份字符串、端点和队列段分配仍未完成，不能宣称网络收包 0 GC。
 - Endpoint portable 连带 Core／Fixed／Rollback 编译零警告零错误，按规定禁用构建服务器与共享编译，结束后 shutdown 成功；diff 空白检查通过。编辑前本机未发现 csc／bee 编译进程，未新增测试、未控制或刷新共享 Unity，未做网络联调或 Player 采样。
+
+## 2026-09-20 重组分片保留不可变 packet
+
+对应 tasks.md 的 5.17，与代码同步提交。
+
+- FragmentAssembly 原为每个首次收到的分片调用 packet.CopyPayload，建立 byte[][]。packet 构造已经复制拥有 payload，所有字段只读且 payload 只暴露 ReadOnlySpan，因此这次克隆没有承担隔离可变数据的职责。
+- 重组器改为 RollbackDatagramPacket[]，首次收到时保留该 packet；完成时按分片下标读取 Payload 并复制到最终消息数组。重复分片仍忽略，Reliable／FragmentCount／TotalPayloadBytes 检查、累计字节溢出与总长度检查均保留，最终解码消息的独立数组仍存在。
+- 全仓调用核对后，RollbackDatagramPacket.CopyPayload 的唯一消费者是该重组器，迁移后删除旧入口；其它快照、服务器消息等同名 CopyPayload 不属于本类型，保持原有真实消费者。
+- 取舍：不再创建逐片字节副本，但直到重组结束会保留 packet 本体及其身份字符串，常驻内存变化取决于分片尺寸和重组等待时间，未经采样不宣称总内存下降。packet 自身 payload、重组引用数组、最终消息数组及解码对象仍会分配，未引入复用池或提前回收。
+- 编辑前检测到 Unity bee 和 csc 进程，等待具体进程结束并重新确认无编译进程后才修改。Endpoint portable 连带 Core／Fixed／Rollback 编译零警告零错误，按规定构建后 shutdown 成功；diff 空白检查通过。未新增测试、未刷新或控制共享 Editor、未做网络联调或 Player 采样。

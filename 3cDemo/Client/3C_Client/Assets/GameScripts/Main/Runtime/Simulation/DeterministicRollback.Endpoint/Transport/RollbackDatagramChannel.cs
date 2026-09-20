@@ -22,7 +22,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         sealed class FragmentAssembly
         {
-            readonly byte[][] m_Fragments;
+            readonly RollbackDatagramPacket[] m_Fragments;
             int m_ReceivedCount;
             int m_ReceivedBytes;
 
@@ -30,7 +30,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 Reliable = packet.Reliable;
                 TotalPayloadBytes = packet.TotalPayloadBytes;
-                m_Fragments = new byte[packet.FragmentCount][];
+                m_Fragments = new RollbackDatagramPacket[packet.FragmentCount];
             }
 
             public bool Reliable { get; }
@@ -46,10 +46,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 }
                 if (m_Fragments[packet.FragmentIndex] != null)
                     return;
-                byte[] payload = packet.CopyPayload();
-                m_Fragments[packet.FragmentIndex] = payload;
+                m_Fragments[packet.FragmentIndex] = packet;
                 m_ReceivedCount++;
-                m_ReceivedBytes = checked(m_ReceivedBytes + payload.Length);
+                m_ReceivedBytes = checked(m_ReceivedBytes + packet.Payload.Length);
                 if (m_ReceivedBytes > TotalPayloadBytes)
                     throw new InvalidDataException("Rollback message fragments exceed the declared payload size.");
             }
@@ -62,8 +61,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 int offset = 0;
                 for (int i = 0; i < m_Fragments.Length; i++)
                 {
-                    Buffer.BlockCopy(m_Fragments[i], 0, result, offset, m_Fragments[i].Length);
-                    offset += m_Fragments[i].Length;
+                    ReadOnlySpan<byte> payload = m_Fragments[i].Payload;
+                    payload.CopyTo(result.AsSpan(offset));
+                    offset += payload.Length;
                 }
                 return result;
             }

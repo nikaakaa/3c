@@ -1,34 +1,31 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using ThirdPersonSimulation.Fixed;
 
 namespace ThirdPersonSimulation.DeterministicRollback
 {
     public sealed class RollbackIngressBatch
     {
-        readonly ReadOnlyCollection<RollbackActorInputFrame> m_RelayedExplicitArrivals;
-        readonly ReadOnlyCollection<RollbackCanonicalInputBundle> m_CanonicalArrivals;
+        readonly IReadOnlyList<RollbackActorInputFrame> m_RelayedExplicitArrivals;
+        readonly IReadOnlyList<RollbackCanonicalInputBundle> m_CanonicalArrivals;
 
         public RollbackIngressBatch(
             RollbackCanonicalInputBundle predicted,
-            IEnumerable<RollbackActorInputFrame> relayedExplicitArrivals,
-            IEnumerable<RollbackCanonicalInputBundle> canonicalArrivals,
+            RollbackActorInputFrame[] relayedExplicitArrivals,
+            RollbackCanonicalInputBundle[] canonicalArrivals,
             SimulationTick confirmedTick,
             FixedTypedIngressBatch typedIngress)
         {
             Predicted = predicted ?? throw new ArgumentNullException(nameof(predicted));
             ConfirmedTick = confirmedTick;
             TypedIngress = typedIngress ?? throw new ArgumentNullException(nameof(typedIngress));
-            var explicitValues = relayedExplicitArrivals == null
-                ? new List<RollbackActorInputFrame>()
-                : new List<RollbackActorInputFrame>(relayedExplicitArrivals);
-            explicitValues.Sort((left, right) =>
+            RollbackActorInputFrame[] explicitValues = relayedExplicitArrivals ?? Array.Empty<RollbackActorInputFrame>();
+            Array.Sort(explicitValues, (left, right) =>
             {
                 int tick = left.Tick.CompareTo(right.Tick);
                 return tick != 0 ? tick : left.ActorId.CompareTo(right.ActorId);
             });
-            for (int i = 0; i < explicitValues.Count; i++)
+            for (int i = 0; i < explicitValues.Length; i++)
             {
                 if (explicitValues[i] == null ||
                     explicitValues[i].Provenance != RollbackInputProvenance.RelayedExplicit ||
@@ -38,17 +35,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     throw new ArgumentException("Rollback relayed explicit arrival batch is invalid.", nameof(relayedExplicitArrivals));
                 }
             }
-            m_RelayedExplicitArrivals = explicitValues.AsReadOnly();
-            var values = canonicalArrivals == null
-                ? new List<RollbackCanonicalInputBundle>()
-                : new List<RollbackCanonicalInputBundle>(canonicalArrivals);
-            values.Sort((left, right) => left.Tick.CompareTo(right.Tick));
-            for (int i = 0; i < values.Count; i++)
+            m_RelayedExplicitArrivals = explicitValues;
+            RollbackCanonicalInputBundle[] values = canonicalArrivals ?? Array.Empty<RollbackCanonicalInputBundle>();
+            Array.Sort(values, (left, right) => left.Tick.CompareTo(right.Tick));
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i] == null || i > 0 && values[i - 1].Tick == values[i].Tick)
                     throw new ArgumentException("Rollback canonical arrival batch contains a missing or duplicate Tick.", nameof(canonicalArrivals));
             }
-            m_CanonicalArrivals = values.AsReadOnly();
+            m_CanonicalArrivals = values;
         }
 
         public RollbackCanonicalInputBundle Predicted { get; }

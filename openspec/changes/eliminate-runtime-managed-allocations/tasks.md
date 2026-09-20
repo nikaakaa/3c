@@ -310,6 +310,8 @@
 
 - [x] 5.73 Rollback RuntimeBridge 三张 tick 索引 report／request 表统一为 SortedDictionary，历史窗口释放按最小 tick 弹出，删除每次 Pump 的 remove List 并固定诊断／恢复遍历顺序
 
+- [x] 5.74 RollbackIngressBatch 直接接管 Endpoint 本 tick 新建的 relayed explicit／canonical arrival 数组并原地排序校验，删除两只结果 List、两只 ReadOnlyCollection 与 canonical 数组二次复制
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

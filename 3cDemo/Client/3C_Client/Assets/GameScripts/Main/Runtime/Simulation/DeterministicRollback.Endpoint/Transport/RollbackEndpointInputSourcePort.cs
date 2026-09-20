@@ -145,7 +145,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_LastOuterSourceTick = outerSource.SourceTick;
             return new RollbackIngressBatch(
                 m_PendingPredicted,
-                explicitArrivals,
+                explicitArrivals.Count == 0 ? Array.Empty<RollbackActorInputFrame>() : explicitArrivals.ToArray(),
                 canonicalArrivals,
                 m_Peer.ConfirmedCanonicalTick == 0
                     ? default

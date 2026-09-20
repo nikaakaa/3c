@@ -1860,3 +1860,12 @@
 - 三张外层表统一为 SortedDictionary，peerId 内层表继续使用 Ordinal Dictionary。RemoveBefore 反复读取最小 tick，小于 floor 就删除，达到 floor 立即结束；诊断 latest、恢复候选和容量计数语义保持，遍历顺序从未指定改为稳定 tick 顺序。
 - 取舍是单条 report／request 查找从哈希平均 O(1) 变为有界历史上的 O(log n)，换取每次 Pump 窗口释放不再创建 key List，并使 tick 顺序成为容器正式语义；网络在项目中是压力场景，历史规模由策略明确限制。
 - ThirdPersonSimulation.DeterministicRollback.Endpoint portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 Endpoint 网络运行采样。
+
+## 2026-09-21 RollbackIngressBatch arrival 数组所有权
+
+对应 tasks.md 的 5.74。
+
+- Endpoint Read 每 tick 先收集 relayed explicit 到本地 List，并按 m_CanonicalPending.Count 新建 canonical arrival 数组；原 RollbackIngressBatch 再把两者分别复制到 List、排序并创建 ReadOnlyCollection。canonical 数组因此被完整二次复制。
+- Batch 构造收窄为本 tick 独占的两类数组，在接管数组上执行原 tick／Actor、provenance、null 与重复项校验并直接按 IReadOnlyList 保存。Endpoint 将 explicit List 一次物化为最终数组，canonical 数组直接转移；空集合复用 Array.Empty。
+- 删除每个 rollback ingress tick 的两只结果 List、两只 ReadOnlyCollection，以及 canonical arrival 的第二份存储；explicit 收集 List 和必要的最终数组仍存在，后续可在有正式容量边界时再治理收集 workspace。
+- ThirdPersonSimulation.DeterministicRollback 与 Endpoint portable 分别编译零警告零错误，构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 ingress 运行对比或 Player 分配采样。

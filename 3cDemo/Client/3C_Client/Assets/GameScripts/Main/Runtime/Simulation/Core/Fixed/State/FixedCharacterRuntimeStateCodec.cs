@@ -94,7 +94,7 @@ namespace ThirdPersonSimulation.Fixed
                     : new FixedGameplayEffectRuntimeCatalog(gameplayEffectBinding);
                 if (effectCatalog == null)
                     throw new InvalidDataException("Fixed Character runtime state contains Gameplay Effect state without a Character Effect service.");
-                var effectReader = new CanonicalReader(reader.ReadBytes());
+                var effectReader = new CanonicalReader(reader.ReadBytesSegment());
                 gameplayEffectState = GameplayEffectStateAggregateCodec.Read(effectReader, effectCatalog);
                 effectReader.RequireComplete();
             }
@@ -162,11 +162,11 @@ namespace ThirdPersonSimulation.Fixed
             writer.WriteBoolean(state.GameplayEffectState != null);
             if (state.GameplayEffectState != null)
             {
-                using var effectWriter = new CanonicalWriter();
+                long effectPrefixPosition = writer.BeginLengthPrefixedBlock();
                 GameplayEffectStateAggregateCodec.Write(
-                    effectWriter,
+                    writer,
                     state.GameplayEffectState);
-                writer.WriteBytes(effectWriter.ToArray());
+                writer.EndLengthPrefixedBlock(effectPrefixPosition);
             }
             writer.WriteBoolean(state.EquipmentState != null);
             if (state.EquipmentState != null)

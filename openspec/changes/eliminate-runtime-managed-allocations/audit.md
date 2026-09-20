@@ -782,3 +782,12 @@
 - 实际上层调用是两数值域 CharacterRuntimeStateCodec 内部 effectWriter，失败则异常离开 using 作用域，没有发布部分结果。新方式失败时 effectWriter 可能已有未完成子块，未承诺失败后的流内容相同；现有调用者不捕获后继续使用它。最终角色封装仍有 effectWriter.ToArray，本次未迁移外层。
 - aggregate.CopyTo 的工作集合和深拷贝、外层结果及流扩容仍存在；不改状态提交、恢复、归还或 Timeline 执行帧边界。读取继续沿上一小步的片段接口，尚未做编码字节对比或状态往返运行。
 - 编辑前两目标文件无其它未提交修改，未发现 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。未新增测试、未刷新或控制共享 Unity、未采样 Player 分配。
+## 2026-09-20 角色状态效果封装直接读写
+
+对应 tasks.md 的 2.24。
+
+- Fixed／Float32 CharacterRuntimeStateCodec.WriteCanonical 的效果分支原建 effectWriter，完整编码后 ToArray 再 WriteBytes。现在角色 writer 预留长度，调用同一个 GameplayEffectStateAggregateCodec.Write 后回填长度；读取分支由 ReadBytes 改为 ReadBytesSegment，再构造有限片段 reader。
+- 保留效果存在标记、四字节外层长度、内部五个子块及 ChangeCursor 次序，effectReader.RequireComplete、效果目录安装检查和结果构造保留。嵌套长度回填均记录各自位置，结束后回到原末尾；Write 与 ComputeHash 继续共用唯一 WriteCanonical，未新增协议或快照路径。
+- 删除效果整体封装的一套 writer／流／最终中转数组，以及读取的一个整体字节副本。结果不保存输入片段，聚合状态仍独立；序列化异常沿原外层 using 离开，不发布部分字节。未改变恢复、事务或 Timeline 快照执行逻辑。
+- 角色最终数组／哈希、效果 CopyTo 深拷贝、装备与控制状态封装仍存在，不宣称角色状态全链无分配。目标文件修改前无其它未提交修改，未发现 csc／bee，修改仅限效果分支。
+- Fixed／Float32 portable 各自零警告零错误，逐次 build-server shutdown 成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做哈希字节对比或恢复运行及 Player 分配采样。

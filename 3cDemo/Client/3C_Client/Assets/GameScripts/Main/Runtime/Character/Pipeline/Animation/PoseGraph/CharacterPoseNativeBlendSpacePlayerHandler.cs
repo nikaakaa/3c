@@ -101,6 +101,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly ICharacterPoseNativeBlendSpaceSourceBinding m_SourceBinding;
+        readonly CharacterPoseNativeSourceRequest[] m_SourceRequests =
+            new CharacterPoseNativeSourceRequest[1];
         AnimationScriptPlayable m_Playable;
         AnimationPlayerPoseNativeWriteBinding m_WriteBinding;
         AnimationSelectedPosePlayerJob m_Job;
@@ -197,15 +199,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Player.Advance(input.DeltaSeconds);
             m_Capture = m_Player.PrepareCapture(input.DeltaSeconds);
             m_CapturePrepared = true;
-            return new[]
-            {
-                new CharacterPoseNativeSourceRequest(
-                    NodeId,
-                    node.PresentationPoseSourceSlot,
-                    m_Player.SourceId,
-                    true,
-                    runtime.InstanceId)
-            };
+            m_SourceRequests[0] = new CharacterPoseNativeSourceRequest(
+                NodeId,
+                node.PresentationPoseSourceSlot,
+                m_Player.SourceId,
+                true,
+                runtime.InstanceId);
+            return m_SourceRequests;
         }
 
         public CharacterPoseNativePortValue EvaluateOutput(

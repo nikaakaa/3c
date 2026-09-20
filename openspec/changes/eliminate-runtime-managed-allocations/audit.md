@@ -1162,3 +1162,12 @@
 - DemandKind 正式成员连续为 Entry=1 至 TransitionSource=4，现直接按闭区间判断；未知零值及其它 byte 继续抛出原 ArgumentOutOfRangeException。相关性切换、source generation、continuity、reset 和释放逻辑不变。
 - 删除 Clip Player 与 BlendSpace Player 每帧准备中的装箱和枚举元数据查询；PrepareFrame 返回的单元素请求数组仍分配，留作独立寿命迁移小步。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-20 Pose Player 单请求槽复用
+
+对应 tasks.md 的 4.2.7。
+
+- CharacterPoseNativeClipPlayerHandler、BlendSpacePlayerHandler 和 SelectedPosePlayerHandler 的 PrepareFrame 每帧各自构造单元素 SourceRequest 数组；CharacterPoseNativeGraphEvaluator 会在同一次同步调用中逐项复制到本帧汇总列表，不持有 handler 返回容器。
+- 三类 handler 现在各自长期持有一个单元素请求槽，每帧只覆盖值并返回；NodeId、PoseSourceSlot、SourceId、Required 和 ScopeInstanceId 均保持原值，Evaluator 汇总后的 demand 生命周期不变。
+- 删除每帧三份单元素数组。Evaluator 的汇总 List 及 SourceDemand 构造校验仍有独立分配，留待后续按完整帧寿命继续收口。
+- 定向 diff 校验通过；ThirdPersonClient.Runtime 增量编译被并行相机改动的 CameraEffectEvaluator 新构造参数尚未同步阻断，目标文件本身未产生编译诊断。未新增测试、未主动刷新 Unity、未做 Player 分配采样。

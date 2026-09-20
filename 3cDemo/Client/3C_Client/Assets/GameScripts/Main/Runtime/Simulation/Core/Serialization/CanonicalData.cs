@@ -262,6 +262,8 @@ namespace ThirdPersonSimulation
             if (length < 0)
                 throw new ArgumentOutOfRangeException(nameof(length));
             Require(length);
+            if (length == 0)
+                return Array.Empty<byte>();
             var value = new byte[length];
             Buffer.BlockCopy(m_Bytes, m_Offset, value, 0, length);
             m_Offset += length;

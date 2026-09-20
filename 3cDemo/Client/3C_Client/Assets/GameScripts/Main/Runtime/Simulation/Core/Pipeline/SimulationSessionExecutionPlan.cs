@@ -168,6 +168,31 @@ namespace ThirdPersonSimulation
             m_Actors = values;
         }
 
+        internal SimulationPipelineStep(
+            SimulationTick tick,
+            SimulationPipelineStepProvenance provenance,
+            ActorId[] actors)
+        {
+            if (!tick.IsValid || string.IsNullOrEmpty(provenance.Source.ClockId) || provenance.Source.SourceTick == 0 ||
+                (byte)provenance.ExecutionKind < (byte)SimulationPipelineStepExecutionKind.Forward ||
+                (byte)provenance.ExecutionKind > (byte)SimulationPipelineStepExecutionKind.Authoritative)
+            {
+                throw new ArgumentException("Pipeline Step identity is incomplete.");
+            }
+            ActorId[] values = actors ?? Array.Empty<ActorId>();
+            Array.Sort(values);
+            if (values.Length == 0)
+                throw new ArgumentException("Pipeline Step must contain at least one Actor.", nameof(actors));
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (!values[i].IsValid || i > 0 && values[i - 1].Equals(values[i]))
+                    throw new ArgumentException("Pipeline Step contains an invalid or duplicate ActorId.", nameof(actors));
+            }
+            Tick = tick;
+            Provenance = provenance;
+            m_Actors = values;
+        }
+
         public SimulationTick Tick { get; }
         public SimulationPipelineStepProvenance Provenance { get; }
         public SimulationTickSourceIdentity Source => Provenance.Source;
@@ -288,11 +313,11 @@ namespace ThirdPersonSimulation
             return new List<SimulationPipelineActorInput<TInput>>(inputs);
         }
 
-        static IEnumerable<ActorId> CollectActors(IReadOnlyList<SimulationPipelineActorInput<TInput>> inputs)
+        static ActorId[] CollectActors(IReadOnlyList<SimulationPipelineActorInput<TInput>> inputs)
         {
-            var actors = new List<ActorId>(inputs.Count);
+            var actors = new ActorId[inputs.Count];
             for (int i = 0; i < inputs.Count; i++)
-                actors.Add(inputs[i].ActorId);
+                actors[i] = inputs[i].ActorId;
             return actors;
         }
     }

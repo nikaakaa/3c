@@ -1504,3 +1504,12 @@
 - plan 现对 null 或 Count 为零的 IReadOnlyCollection 直接保存相应 Array.Empty。非空 steps 仍复制到独立 List并执行状态、tick、source mapping、roster 和 plan sequence 校验；非空 mappings 仍复制、排序并检查 outer clock 与重复映射。
 - 删除每个 Pending／NoStep plan 的两个空 List 对象。plan 对象、非空 executable 列表、restore 和其它正式结果仍按原生命周期分配。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 plan 运行对比或 Player 分配采样。
+
+## 2026-09-21 SimulationStep Actor 数组
+
+对应 tasks.md 的 2.72。
+
+- TargetSimulationPipelineStep 已持有完整 inputs，Actor 集合仅从每项 ActorId 派生。原 CollectActors 按 inputs.Count 创建 List 并 Add，base 排序校验后以 IReadOnlyList 保存该 List。
+- CollectActors 现按 inputs.Count 创建精确 ActorId 数组并直接填充；SimulationPipelineStep 的程序集内部数组入口接管该新数组，沿原规则排序，拒绝空集合、非法 ActorId 和重复 Actor。外部受保护 IEnumerable 构造入口及其独立 List 路径不变。
+- 删除每个 Fixed／Float32 step 的 Actor List 对象，元素存储仍为一份精确数组。step 对象、inputs 存储、ingress 及后续 plan 仍按原生命周期存在。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做 step 运行对比或 Player 分配采样。

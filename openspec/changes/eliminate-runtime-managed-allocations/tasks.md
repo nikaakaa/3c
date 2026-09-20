@@ -116,6 +116,8 @@
 
 - [x] 2.71 通用 ExecutionPlan 对 null 或已知空 steps／source mappings 直接复用 Array.Empty，删除 Pending／NoStep 外层 tick 的两个空 List；非空计划继续独立复制、排序和完整性校验
 
+- [x] 2.72 TargetSimulationPipelineStep 按已物化 input 数直接生成 ActorId 数组并由 base 接管，删除每 step 的 Actor List 外壳；排序、非空、身份合法与重复 Actor 校验保持
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

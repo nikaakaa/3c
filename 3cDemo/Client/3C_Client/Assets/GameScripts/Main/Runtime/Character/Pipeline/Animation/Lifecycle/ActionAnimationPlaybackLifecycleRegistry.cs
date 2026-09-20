@@ -269,10 +269,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return found;
         }
 
-        internal bool TryGetProjectedSample(AnimationPlaybackId playbackId, out ActionProjectedSample sample)
+        internal bool TryGetProjectedSample(AnimationPlaybackId playbackId, out ActionProjectedSample sample,
+            out EventId sourceEventId)
         {
             Entry entry = FindReadable(playbackId);
             sample = entry != null ? entry.ProjectedSample : default;
+            sourceEventId = entry != null ? entry.LatestEventId : default;
             return sample.IsValid;
         }
 
@@ -825,7 +827,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     "Action playback command targets a retired entry.");
             }
             Entry entry = GetWritable(command.PlaybackId, false);
-            entry.LatestEventId = command.EventId;
+            if (command.Kind != ActionAnimationPlaybackCommandKind.ProjectedSample)
+                entry.LatestEventId = command.EventId;
             entry.LatestCommandSequence = inboxEntry.Sequence;
             if (command.Kind == ActionAnimationPlaybackCommandKind.Sample ||
                 command.Kind == ActionAnimationPlaybackCommandKind.ProjectedSample)

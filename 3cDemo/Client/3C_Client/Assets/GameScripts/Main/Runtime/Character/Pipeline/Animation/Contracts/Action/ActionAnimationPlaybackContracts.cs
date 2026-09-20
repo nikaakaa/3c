@@ -75,10 +75,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public readonly struct ActionProjectedSample
     {
-        public ActionProjectedSample(EventId eventId, ulong localLogicTick, ulong presentationFrame,
+        public ActionProjectedSample(ulong localLogicTick, ulong presentationFrame,
             PresentationPoseSampleTime time, float producerWeight)
         {
-            EventId = eventId;
             LocalLogicTick = localLogicTick;
             PresentationFrame = presentationFrame;
             Time = time;
@@ -87,12 +86,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Action projected sample is invalid.");
         }
 
-        public EventId EventId { get; }
         public ulong LocalLogicTick { get; }
         public ulong PresentationFrame { get; }
         public PresentationPoseSampleTime Time { get; }
         public float ProducerWeight { get; }
-        public bool IsValid => EventId.IsValid && LocalLogicTick != 0 && PresentationFrame != 0 &&
+        public bool IsValid => LocalLogicTick != 0 && PresentationFrame != 0 &&
             Time.IsValid && float.IsFinite(ProducerWeight) && ProducerWeight >= 0f && ProducerWeight <= 1f;
     }
 
@@ -139,7 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public bool IsValid =>
             (byte)Kind >= (byte)ActionAnimationPlaybackCommandKind.Select &&
             (byte)Kind <= (byte)ActionAnimationPlaybackCommandKind.Withdraw &&
-            EventId.IsValid &&
+            (Kind == ActionAnimationPlaybackCommandKind.ProjectedSample ? !EventId.IsValid : EventId.IsValid) &&
             LocalLogicTick != 0 &&
             PlaybackId.IsValid &&
             ActionInstanceId != 0 &&
@@ -152,7 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                   CommittedRawSample.LocalLogicTick == LocalLogicTick
                 : Kind == ActionAnimationPlaybackCommandKind.ProjectedSample
                     ? !HasCommittedRawSample && ProjectedSample.IsValid &&
-                      ProjectedSample.EventId.Equals(EventId) && ProjectedSample.LocalLogicTick == LocalLogicTick
+                      ProjectedSample.LocalLogicTick == LocalLogicTick
                     : !HasCommittedRawSample && !ProjectedSample.IsValid);
 
         public static ActionAnimationPlaybackCommand Select(
@@ -198,7 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPlaybackId playbackId, ulong actionInstanceId, AnimationChannelId animationChannelId,
             string programProducerId, in ActionProjectedSample sample) =>
             new ActionAnimationPlaybackCommand(ActionAnimationPlaybackCommandKind.ProjectedSample,
-                sample.EventId, sample.LocalLogicTick, playbackId, actionInstanceId,
+                default, sample.LocalLogicTick, playbackId, actionInstanceId,
                 animationChannelId, programProducerId, default, false, sample);
 
         public static ActionAnimationPlaybackCommand Complete(

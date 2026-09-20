@@ -545,3 +545,10 @@
 - 本轮核对确认，轨道Sample的foreach遍历具体List，不是接口枚举器分配；PlaybackChanged无订阅者时也不会构造描述对象，未为这些误判改动已有链路。
 - 剩余明确分配包括Timeline表现动画每帧EventId构造（数字ToString、params数组、StableHash字符串哈希链）、实际Marker身份，以及Snapshot对象／集合复制和播放建立路径。当前EventId基于字符串StableHash，不能仅靠此次校验清理宣称完整0 GC；未新增测试。
 - Unity编译及最终域重载完成（1789926058403），Editor idle，控制台错误为零；git diff --check通过，未新增测试，未进行运行内存采样。
+
+## 连续表现动画采样使用播放身份与表现帧号
+- 对应0.7／5.3：删除ActionProjectedSample的EventId字段及TimelineToActionCommandBridge每帧sample哈希构造，采样携带原逻辑tick、表现帧号、已映射素材时间和权重。收件箱内ProjectedSample以AnimationPlaybackId（含generation）和PresentationFrame去重，仍走同一Publish、候选读取、Commit／Discard链，不新增队列或身份缓存。
+- Select／Complete／Release／Withdraw及committed Sample继续使用正式EventId。ProjectedSample命令明确不携带事件身份；按EventId的Replace／Retire只处理正式事件，拒绝连续表现采样。表现帧丢弃继续由既有发布序号截断处理；相同播放、相同帧的重复待交付采样明确报错。
+- 生命周期Registry保留最近真实事件身份，不让无事件身份的连续采样覆盖它；ProjectSample沿同一Registry读取该来源身份与已投影时间。采样仍不写committed history，不推进逻辑，不改变Camera历史边界。删除PublishSample已无用途的handle参数。
+- 对照现行spec，稳定EventId要求仍适用于正式事件及Simulation输出；此次删除的是PresentationFrame内的连续求值记录所重复构造的事件，不改变Marker或分支事件调和合同。未新增测试；实际Marker／生命周期事件哈希、Snapshot副本及首次播放建立分配仍在剩余范围，未宣称整条热路径0 GC。
+- Unity编译与最终域重载完成（1789926783028），Editor idle，控制台错误为零；未新增测试，未进行运行内存采样或帧失败注入。

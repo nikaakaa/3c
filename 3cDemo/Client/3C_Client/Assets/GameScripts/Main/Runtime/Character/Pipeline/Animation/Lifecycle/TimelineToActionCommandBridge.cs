@@ -194,7 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     throw new InvalidOperationException(
                         $"Timeline Animation producer '{producerId}' changed ownership within one playback generation.");
                 }
-                PublishSample(producer, contribution, frame.Handle.Value, logicTick, frame.PresentationFrame);
+                PublishSample(producer, contribution, logicTick, frame.PresentationFrame);
             }
         }
 
@@ -321,18 +321,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         void PublishSample(
             ProducerState producer,
             TimelineAnimationContribution contribution,
-            ulong handle,
             ulong logicTick,
             ulong presentationFrame)
         {
-            EventId eventId = CreateEventId(
-                "sample",
-                producer,
-                handle,
-                presentationFrame,
-                contribution.ClipAuthoringId);
             var sample = new ActionProjectedSample(
-                eventId,
                 logicTick,
                 presentationFrame,
                 new PresentationPoseSampleTime(contribution.ClipTime, contribution.ContinuousClipTime,

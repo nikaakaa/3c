@@ -424,8 +424,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     out AnimationPlaybackId playbackId,
                     out ActionAnimationPlaybackLifecyclePhase phase))
                 throw new InvalidOperationException($"Committed follow channel '{channelId.Value}' has no committed playback sample.");
-            if (m_Registry.TryGetProjectedSample(playbackId, out ActionProjectedSample projected))
-                return new ProjectedActionPresentationSample(playbackId, projected.EventId, projected.Time, false);
+            if (m_Registry.TryGetProjectedSample(playbackId, out ActionProjectedSample projected, out EventId sourceEventId))
+                return new ProjectedActionPresentationSample(playbackId, sourceEventId, projected.Time, false);
             if (!m_History.TryGetProjectionWindow(
                     m_HistoryLease,
                     playbackId,

@@ -87,10 +87,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     nameof(command));
             }
             ValidateAppendOrder(command);
-            if (FindEvent(command.EventId) >= 0)
+            if (FindCommand(command) >= 0)
             {
                 throw new InvalidOperationException(
-                    $"Action playback EventId '{command.EventId}' already exists.");
+                    "Action playback command identity already exists.");
             }
             if (m_Count == m_Entries.Length)
             {
@@ -116,7 +116,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ActionAnimationPlaybackCommand replacement)
         {
             RequireWritable();
-            if (!targetEventId.IsValid || !replacement.IsValid)
+            if (!targetEventId.IsValid || !replacement.IsValid ||
+                replacement.Kind == ActionAnimationPlaybackCommandKind.ProjectedSample)
                 throw new ArgumentException(
                     "Action playback replacement is invalid.");
             int index = FindEvent(targetEventId);
@@ -168,7 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public void Retire(ActionAnimationPlaybackCommand command)
         {
             RequireWritable();
-            if (!command.IsValid)
+            if (!command.IsValid || command.Kind == ActionAnimationPlaybackCommandKind.ProjectedSample)
             {
                 throw new ArgumentException(
                     "Action playback retirement command is invalid.",
@@ -251,11 +252,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        int FindCommand(ActionAnimationPlaybackCommand command)
+        {
+            if (command.Kind != ActionAnimationPlaybackCommandKind.ProjectedSample)
+                return FindEvent(command.EventId);
+            for (int i = 0; i < m_Count; i++)
+            {
+                ActionAnimationPlaybackCommand candidate = m_Entries[i].Command;
+                if (candidate.Kind == ActionAnimationPlaybackCommandKind.ProjectedSample &&
+                    candidate.PlaybackId.Equals(command.PlaybackId) &&
+                    candidate.ProjectedSample.PresentationFrame == command.ProjectedSample.PresentationFrame)
+                    return i;
+            }
+            return -1;
+        }
+
         int FindEvent(EventId eventId)
         {
             for (int i = 0; i < m_Count; i++)
             {
-                if (m_Entries[i].Command.EventId.Equals(eventId))
+                if (m_Entries[i].Command.Kind != ActionAnimationPlaybackCommandKind.ProjectedSample &&
+                    m_Entries[i].Command.EventId.Equals(eventId))
                     return i;
             }
             return -1;

@@ -77,15 +77,22 @@ namespace ThirdPersonSimulation
             SimulationComponentIdentity backend,
             ulong lastCompletedTick,
             IReadOnlyList<SimulationPipelinePassStateSnapshot> participants)
+            : this(pipeline, backend, lastCompletedTick, CopyParticipants(participants))
+        {
+        }
+
+        internal SimulationPipelineStateSnapshot(
+            SimulationPipelineIdentity pipeline,
+            SimulationComponentIdentity backend,
+            ulong lastCompletedTick,
+            SimulationPipelinePassStateSnapshot[] participants)
         {
             if (!pipeline.IsValid || !backend.IsValid || backend.Role != SimulationComponentRole.ExecutionBackend)
                 throw new ArgumentException("Pipeline state snapshot identity is incomplete.");
-            var values = participants == null || participants.Count == 0
-                ? Array.Empty<SimulationPipelinePassStateSnapshot>()
-                : new SimulationPipelinePassStateSnapshot[participants.Count];
+            SimulationPipelinePassStateSnapshot[] values = participants ??
+                Array.Empty<SimulationPipelinePassStateSnapshot>();
             for (int i = 0; i < values.Length; i++)
             {
-                values[i] = participants[i];
                 if (values[i] == null)
                     throw new ArgumentException("Pipeline state snapshot contains a missing participant.", nameof(participants));
             }
@@ -107,6 +114,17 @@ namespace ThirdPersonSimulation
         public ulong LastCompletedTick { get; }
         public IReadOnlyList<SimulationPipelinePassStateSnapshot> Participants => m_Participants;
         public StableHash SnapshotHash { get; }
+
+        static SimulationPipelinePassStateSnapshot[] CopyParticipants(
+            IReadOnlyList<SimulationPipelinePassStateSnapshot> participants)
+        {
+            if (participants == null || participants.Count == 0)
+                return Array.Empty<SimulationPipelinePassStateSnapshot>();
+            var values = new SimulationPipelinePassStateSnapshot[participants.Count];
+            for (int i = 0; i < values.Length; i++)
+                values[i] = participants[i];
+            return values;
+        }
 
         StableHash ComputeHash()
         {

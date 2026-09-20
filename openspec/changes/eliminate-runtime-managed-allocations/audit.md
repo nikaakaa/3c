@@ -1576,3 +1576,12 @@
 - 完整捕获现按验证后的 participant 数创建精确数组并按索引写入。step 投影先遍历并校验全部 StepProjectionMode，同时统计 Include 数量，再创建精确数组并在第二遍只捕获 Include participant；非法模式仍在任何 CaptureState 之前失败。
 - 删除每次完整或 step 投影捕获的上游 snapshots List 对象，以精确数组替代其底层存储。SimulationPipelineStateSnapshot 仍复制到自己的最终数组以保持独立结果寿命，因此两份数组复制边界仍存在。
 - ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做快照运行对比或 Player 分配采样。
+
+## 2026-09-21 PipelineStateSnapshot 接管捕获数组
+
+对应 tasks.md 的 2.80，收口 2.79 中保留的第二份数组复制。
+
+- Coordinator.Capture／CaptureStepProjection 创建的 participant snapshot 数组只用于紧接着构造 SimulationPipelineStateSnapshot，调用后没有保留者或后续修改；该数组已经按正式 participant 顺序填满。
+- Snapshot 新增程序集内部数组入口，直接接管该数组后执行原空项、PassId 排序和重复检查并计算 hash。公开 IReadOnlyList 构造器仍先复制到新数组再进入同一实现，外部调用方不能通过后续修改输入集合影响 Snapshot。
+- 完整与 step 投影捕获不再创建第二份 participant 数组或复制元素；最终 Snapshot 仍独立持有唯一数组。状态解码和其它程序集调用继续走公开复制边界。
+- ThirdPersonSimulation.Core、Fixed、Float32、DeterministicRollback portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做快照运行对比或 Player 分配采样。

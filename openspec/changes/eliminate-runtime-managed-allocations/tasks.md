@@ -132,6 +132,8 @@
 
 - [x] 2.79 Pipeline 完整状态捕获按 participant 数、step 投影按 Include 数直接填充 snapshot 数组，删除每次捕获的上游收集 List；投影模式仍先完整校验再捕获
 
+- [x] 2.80 PipelineStateSnapshot 增加程序集内部数组接管入口，Coordinator 完整／step 投影捕获直接转移新建 participant 数组，删除每次捕获的第二份数组复制；公开 IReadOnlyList 构造仍独立复制
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

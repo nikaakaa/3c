@@ -2224,19 +2224,7 @@ namespace BTSMTL.Timeline.Runtime
                     Track track = timeline.Tracks[trackIndex];
                     if (track == null || track.PersistentMuted || track.ExecutionDomain != TimelineExecutionDomain.Presentation)
                         continue;
-                    if (track is AnimationTrack animationTrack)
-                    {
-                        animationTrack.Sample(
-                            segment.PreviousTime,
-                            segment.CurrentTime,
-                            trackIndex,
-                            timeline.AuthoringId,
-                            timeline.Name,
-                            animations,
-                            loop,
-                            segment.Cycle);
-                    }
-                    else if (track is CameraCueTrack cameraCueTrack)
+                    if (track is CameraCueTrack cameraCueTrack)
                     {
                         cameraCueTrack.Sample(
                             segment.PreviousTime,
@@ -2255,7 +2243,17 @@ namespace BTSMTL.Timeline.Runtime
                 Track track = timeline.Tracks[trackIndex];
                 if (track == null || track.PersistentMuted || track.ExecutionDomain != TimelineExecutionDomain.Presentation)
                     continue;
-                if (track is CameraStateTrack cameraStateTrack)
+                if (track is AnimationTrack animationTrack)
+                    animationTrack.Sample(
+                        currentTime,
+                        currentTime,
+                        trackIndex,
+                        timeline.AuthoringId,
+                        timeline.Name,
+                        animations,
+                        loop,
+                        currentCycle);
+                else if (track is CameraStateTrack cameraStateTrack)
                     cameraStateTrack.Sample(
                         currentTime,
                         timeline.AuthoringId,

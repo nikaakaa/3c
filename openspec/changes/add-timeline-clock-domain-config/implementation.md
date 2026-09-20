@@ -413,3 +413,9 @@
 - 原表现域先构造本帧 CharacterPresentationFactFrame，再将同帧 TargetPosition、事实速度／朝向／接地适配成只读 Float32PresentationGraphFacts 传给 Timeline Host。Marker 条件读取的是当前表现事实，不创建 Simulation frame，不回写逻辑状态，也不生成第二套事实采样。
 - Host 按 renderFrame 核对求值上下文；图执行器每次 Evaluate 接收显式快照并在 finally 清理，原帧 Discard 同时清空 Host 的快照。只读事实为值类型，转换与读取路径无新增集合／装箱。Logic Character State 节点继续由原逻辑执行器读取。
 - 仍待完成：全 Timeline 求值与原事件身份分配清理、播放控制多来源叠加、最终分支重接入、下游最终 Apply 异常回滚及完整对账；本批没有新增测试。
+
+## 接续目标与跨循环动画采样
+- 本任务继续以同目录 tasks.md 为完成清单，design.md 与 specs/ 为实施合同；本记录只登记改动与证据，不替代清单，不提前勾选未闭合条目。
+- 对应 5.3：Timeline 表现求值的动画贡献只采样共享进度的最终秒数和最终 cycle，删除沿所有经过循环收集动画贡献的路径，避免旧循环末尾片段混入当前姿态选择。Camera Cue 继续按经过区间采集，保持跨循环触发语义。
+- 本批仅改动 TimelineRuntimePresentationEvaluator，未修改作者资产、既有播放控制及用户工作区其他文件。Unity 脚本构建成功；MCP 在域重载期间暂未重新连接，尚未取得重载后控制台结果。未新增测试。
+- 下一步仍需完成表现结果缓冲的明确寿命与复用；多来源播放控制、同代分支恢复和完整运行热路径 0 GC 保持未完成。

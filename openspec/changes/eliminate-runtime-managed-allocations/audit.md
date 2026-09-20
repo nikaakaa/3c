@@ -1207,3 +1207,12 @@
 - Evaluator 初始化时现一次确认唯一 OutputPose，或唯一 GraphOutput、唯一输入连接和目标端口定义；逐帧 OutputPose 直接读取固定 pose 输入，GraphOutput 通过新增的已绑定端口重载按缓存 definition.Kind 路由 typed input。
 - 该绑定服从现有 PreparedBinding 的图 revision：运行实例启动后拓扑和动态端口不得原地变化；需要变化时仍应走正式重建实例链路，不增加运行期失效探测或兼容路径。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做图输出运行采样或 Player 分配采样。
+
+## 2026-09-21 Pose StateMachine 候选迁移预排
+
+对应 tasks.md 的 4.2.12。
+
+- CharacterPoseNativeStateMachineSource.SelectTransition 原在每个未处于普通混合的帧上，从全部 transition 执行 Where、OrderBy、ThenBy、ToArray；alias 来源判断还用 SingleOrDefault 和捕获 stateId 的 Any。
+- 实例构造完成 state 定义校验后，现为每个 state 一次解析直接来源或 alias 来源，按 Priority 升序、TransitionId ordinal 升序保存候选数组；SelectTransition 只按原顺序执行规则并返回首个命中项。
+- 空候选复用 Array.Empty；状态机 definition 属于实例生命周期内的只读 authoring 输入，运行期不支持原地修改 transition 或 alias，变更仍须重建正式实例。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做迁移选择运行回放或 Player 分配采样。

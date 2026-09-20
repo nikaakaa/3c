@@ -140,6 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseNativeNodePoseBuffer m_OutputBuffer;
         readonly CharacterPoseNativeNodePoseBuffer m_SecondaryOutputBuffer;
         readonly Dictionary<PoseStateId, float> m_StateDurations;
+        readonly Dictionary<PoseStateId, CharacterPoseStateTransition[]> m_TransitionsByState;
         readonly StateRuntime[] m_ActiveStates = new StateRuntime[2];
         readonly List<CharacterPoseNativeSourceRequest> m_SourceRequests;
         CharacterPoseNativeGraphRuntime m_ParentRuntime;
@@ -191,6 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceRequests =
                 new List<CharacterPoseNativeSourceRequest>(contributionCapacity);
             RequireDefinition();
+            m_TransitionsByState = BuildTransitionsByState();
             m_OutputBuffer = new CharacterPoseNativeNodePoseBuffer(
                 0,
                 preparedBinding.Rig.PoseBoneCount,
@@ -855,11 +857,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterAnimationPoseInputFrame inputs,
             float timeInState)
         {
-            CharacterPoseStateTransition[] candidates = m_Definition.Transitions
-                .Where(value => value != null && AppliesToState(value.Source, stateId))
-                .OrderBy(value => value.Priority)
-                .ThenBy(value => value.TransitionId.Value, StringComparer.Ordinal)
-                .ToArray();
+            CharacterPoseStateTransition[] candidates = m_TransitionsByState[stateId];
             for (int i = 0; i < candidates.Length; i++)
             {
                 CharacterPoseStateTransition candidate = candidates[i];
@@ -874,6 +872,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return null;
         }
 
+        Dictionary<PoseStateId, CharacterPoseStateTransition[]> BuildTransitionsByState()
+        {
+            var result =
+                new Dictionary<PoseStateId, CharacterPoseStateTransition[]>(m_States.Count);
+            foreach (PoseStateId stateId in m_States.Keys)
+            {
+                var candidates = new List<CharacterPoseStateTransition>();
+                for (int i = 0; i < m_Definition.Transitions.Count; i++)
+                {
+                    CharacterPoseStateTransition transition =
+                        m_Definition.Transitions[i];
+                    if (transition != null && AppliesToState(transition.Source, stateId))
+                        candidates.Add(transition);
+                }
+                candidates.Sort(CompareTransitions);
+                result.Add(
+                    stateId,
+                    candidates.Count == 0
+                        ? Array.Empty<CharacterPoseStateTransition>()
+                        : candidates.ToArray());
+            }
+            return result;
+        }
+
+        static int CompareTransitions(
+            CharacterPoseStateTransition left,
+            CharacterPoseStateTransition right)
+        {
+            int priority = left.Priority.CompareTo(right.Priority);
+            return priority != 0
+                ? priority
+                : string.Compare(
+                    left.TransitionId.Value,
+                    right.TransitionId.Value,
+                    StringComparison.Ordinal);
+        }
+
         bool AppliesToState(
             CharacterPoseStateTransitionSource source,
             PoseStateId stateId)
@@ -882,15 +917,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return false;
             if (source.Kind == PoseStateTransitionSourceKind.State)
                 return source.StateId == stateId;
-            CharacterPoseStateAlias alias = m_Definition.Aliases
-                .SingleOrDefault(value => value != null && value.AliasId == source.AliasId);
+            CharacterPoseStateAlias alias = null;
+            for (int i = 0; i < m_Definition.Aliases.Count; i++)
+            {
+                CharacterPoseStateAlias candidate = m_Definition.Aliases[i];
+                if (candidate != null && candidate.AliasId == source.AliasId)
+                {
+                    alias = candidate;
+                    break;
+                }
+            }
             if (alias == null)
                 throw new InvalidOperationException(
                     $"Pose StateMachine '{m_NodeId}' transition references missing alias '{source.AliasId}'.");
-            return alias.Sources.Any(value =>
-                value != null &&
-                value.Kind == PoseStateTransitionSourceKind.State &&
-                value.StateId == stateId);
+            for (int i = 0; i < alias.Sources.Count; i++)
+            {
+                CharacterPoseStateTransitionSource candidate = alias.Sources[i];
+                if (candidate != null &&
+                    candidate.Kind == PoseStateTransitionSourceKind.State &&
+                    candidate.StateId == stateId)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         float ResolveRemainingTime(PoseStateId stateId, float timeInState)

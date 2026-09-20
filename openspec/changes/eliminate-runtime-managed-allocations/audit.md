@@ -1995,3 +1995,12 @@
 - committer 现持有 disposition index 与 operations 两只提交级工作区。公开 Commit 负责清空、调用 CommitPrepared，并在 finally 再次清空；索引冲突、容量失败、source egress 失败、output Abort 或成功完成均不会保留本批键值和 RollbackOutputRecord 引用。
 - 删除每次 Commit 的 Dictionary 与 List 对象，以及达到观测峰值后的桶／数组重复分配；首次填充和更高峰值仍可能扩容。m_Records 的 tentative 副本继续每次独立创建，成功前不覆盖正式 registry，原事务失败边界保持。
 - ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 output commit 失败注入或 Player 分配采样。
+
+## 2026-09-21 Rollback output registry 双缓冲
+
+对应 tasks.md 的 5.86。
+
+- output Commit 原先通过 Dictionary 拷贝构造为每次事务创建完整 next registry，所有 Resolve／Flush 只改 next，发布完成后才替换 m_Records。这个独立副本是失败隔离需要，但 Dictionary 对象和桶不必每次重新创建。
+- committer 现持有正式 m_Records 与 tentative m_RecordWorkspace 两张表。CommitPrepared 先把正式条目复制进空 workspace，全部规划、容量校验与发布仍只作用于 workspace；成功后交换两张表，外层 finally 清空交换后的旧正式表。任意成功前异常则清空 tentative 表，正式 registry 不变。
+- 删除每次 Commit 的 records Dictionary 对象及稳定容量后的桶／entry 数组分配；逐条复制和两张表的峰值常驻容量仍存在，这是保留事务隔离的明确成本。未改为原地修改、撤销日志或兼容路径。
+- ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 output commit 失败注入或 Player 分配采样。

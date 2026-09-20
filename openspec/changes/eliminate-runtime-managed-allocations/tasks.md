@@ -338,6 +338,8 @@
 
 - [x] 5.85 RollbackOutputCommitter 跨 Commit 复用 disposition 索引与 output operation 列表，外层 finally 清空键值和记录引用，删除每次提交的 Dictionary／List 对象及稳定容量后的底层存储分配；records 事务副本保持独立
 
+- [x] 5.86 RollbackOutputCommitter 以正式 registry／tentative workspace 两张 Dictionary 轮换，成功后交换、失败或完成后清空非正式表，删除每次 Commit 的 records Dictionary 克隆分配并保持发布前事务隔离
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

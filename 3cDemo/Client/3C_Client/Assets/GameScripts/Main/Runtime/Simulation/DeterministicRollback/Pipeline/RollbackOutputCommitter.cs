@@ -46,6 +46,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly List<RollbackOutputOperation> m_Operations = new List<RollbackOutputOperation>();
         Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_Records =
             new Dictionary<RollbackOutputSlot, RollbackOutputRecord>();
+        Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_RecordWorkspace =
+            new Dictionary<RollbackOutputSlot, RollbackOutputRecord>();
         ulong m_KeepCount;
         ulong m_ReplaceCount;
         ulong m_CancelCount;
@@ -104,13 +106,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
             {
                 m_DispositionIndex.Clear();
                 m_Operations.Clear();
+                m_RecordWorkspace.Clear();
             }
         }
 
         void CommitPrepared(FixedSimulationCommitBatch batch)
         {
             IndexDispositions(batch, m_DispositionIndex);
-            var next = new Dictionary<RollbackOutputSlot, RollbackOutputRecord>(m_Records);
+            foreach (KeyValuePair<RollbackOutputSlot, RollbackOutputRecord> pair in m_Records)
+                m_RecordWorkspace.Add(pair.Key, pair.Value);
+            Dictionary<RollbackOutputSlot, RollbackOutputRecord> next = m_RecordWorkspace;
             ulong keeps = 0;
             ulong replacements = 0;
             ulong cancellations = 0;
@@ -168,7 +173,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw;
             }
 
+            Dictionary<RollbackOutputSlot, RollbackOutputRecord> previous = m_Records;
             m_Records = next;
+            m_RecordWorkspace = previous;
             m_KeepCount = checked(m_KeepCount + keeps);
             m_ReplaceCount = checked(m_ReplaceCount + replacements);
             m_CancelCount = checked(m_CancelCount + cancellations);

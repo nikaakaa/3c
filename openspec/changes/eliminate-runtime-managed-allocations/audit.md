@@ -359,3 +359,12 @@
 - 正式发送仍使用 byte[] 构造，该入口转换片段后统一执行既有身份检查和存储复制；null 转默认片段，在原身份校验之后抛 ArgumentNullException，空但非 null 数组仍合法。没有新增第二套构造校验或借用结果对象。
 - ServerAuthoritativeCheckpointReconstructionModule 是 CopyDeltaPayload 的实际消费者，继续获得独立副本；本步不改 checkpoint 重建、恢复、delta 应用或历史生命周期。消息元数据顺序、schema、尾部检查和最终存储所有权不变。
 - ServerAuthoritative.Transport portable 及全部依赖编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制 Unity、未做网络联调或 Player 分配采样。快照对象、自身 delta 数组和最终编码数组仍会分配。
+
+## 2026-09-20 权威输入与基线 canonical 比较副本清理
+
+对应 tasks.md 的 5.24，与代码同步提交。
+
+- ServerAuthoritativeCanonicalCodec.ReadInput／ReadBaseline 原调用公开 WriteInput／WriteBaseline 得到完整 byte[] 后逐字节比较，该结果只用于判断是否 canonical。现各自的公开写入和解码校验共用私有 writer 写入函数，校验通过已有 CanonicalWriter.ContentEquals 直接读取流比较，不再 ToArray。
+- 两类消息仍完整重新编码，保留原字段顺序、schema、尾部 RequireComplete、基线 ActorId 与 BodyHash 检查及不匹配 InvalidDataException 文本。公开 WriteInput／WriteBaseline 仍为发送和保存消费者产生独立数组；没有使用哈希替代字节比较或放宽验证。
+- 只删除输入和基线每次 canonical 比较的一份完整数组。重新编码 writer／流、基线 CopyCharacterStateBytes、解码对象及公开结果仍分配；未修改基线或回滚存储寿命。
+- ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；编辑前未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity、未做协议运行对比或 Player 分配采样。

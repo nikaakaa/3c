@@ -18,6 +18,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
             using var writer = new CanonicalWriter();
+            WriteInput(writer, input);
+            return writer.ToArray();
+        }
+
+        static void WriteInput(CanonicalWriter writer, SimulationInput input)
+        {
             writer.WriteUInt32(InputMagic);
             writer.WriteInt32(InputSchemaVersion);
             SimulationNumericProfileCodec.Write(writer, input.NumericProfile);
@@ -32,7 +38,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteInt32(input.Requests.Count);
             for (int i = 0; i < input.Requests.Count; i++)
                 WriteInputRequest(writer, input.Requests[i]);
-            return writer.ToArray();
         }
 
         public static SimulationInput ReadInput(byte[] bytes)
@@ -60,7 +65,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 sequence,
                 values,
                 requests);
-            RequireCanonical(bytes, WriteInput(result), "ServerAuthoritative canonical input");
+            using var writer = new CanonicalWriter();
+            WriteInput(writer, result);
+            RequireCanonical(bytes, writer, "ServerAuthoritative canonical input");
             return result;
         }
 
@@ -69,6 +76,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             if (baseline == null)
                 throw new ArgumentNullException(nameof(baseline));
             using var writer = new CanonicalWriter();
+            WriteBaseline(writer, baseline);
+            return writer.ToArray();
+        }
+
+        static void WriteBaseline(CanonicalWriter writer, AuthoritativeActorBaseline baseline)
+        {
             writer.WriteUInt32(BaselineMagic);
             writer.WriteInt32(BaselineSchemaVersion);
             writer.WriteString(baseline.ActorId.Value);
@@ -91,7 +104,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString(baseline.ConfirmedEventHorizon.EventId.IsValid
                 ? baseline.ConfirmedEventHorizon.EventId.ToString()
                 : string.Empty);
-            return writer.ToArray();
         }
 
         public static AuthoritativeActorBaseline ReadBaseline(byte[] bytes)
@@ -139,7 +151,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 body,
                 confirmedInputSequence,
                 new ServerAuthoritativeEventHorizon(eventSequence, eventId));
-            RequireCanonical(bytes, WriteBaseline(result), "ServerAuthoritative baseline");
+            using var writer = new CanonicalWriter();
+            WriteBaseline(writer, result);
+            RequireCanonical(bytes, writer, "ServerAuthoritative baseline");
             return result;
         }
 
@@ -269,15 +283,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return typed;
         }
 
-        static void RequireCanonical(byte[] source, byte[] canonical, string label)
+        static void RequireCanonical(byte[] source, CanonicalWriter canonical, string label)
         {
-            if (source.Length != canonical.Length)
+            if (!canonical.ContentEquals(source))
                 throw new InvalidDataException($"{label} is not canonical.");
-            for (int i = 0; i < source.Length; i++)
-            {
-                if (source[i] != canonical[i])
-                    throw new InvalidDataException($"{label} is not canonical.");
-            }
         }
     }
 }

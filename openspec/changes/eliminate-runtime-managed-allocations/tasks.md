@@ -102,6 +102,8 @@
 
 - [x] 2.64 两数值域 LocalInputFrame 改为只读值帧，删除每个本地输入 ingress tick 只为同步传递两个 batch 引用而创建的外壳对象；两个 batch 的数据所有权与 Product 写入边界不变
 
+- [x] 2.65 两数值域 TypedIngressBatch 提供不可变 Empty 实例，本地输入与 Fixed 回滚输入源统一复用，删除当前正式空 ingress 路径每 tick 的 batch 及空 List；非空构造和排序校验保留
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

@@ -264,7 +264,7 @@ namespace ThirdPersonSimulation.Fixed
             m_LastReadSourceTick = source.SourceTick;
             return new FixedLocalInputFrame(
                 new FixedCanonicalInputBatch(source, inputs),
-                new FixedTypedIngressBatch(Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>()));
+                FixedTypedIngressBatch.Empty);
         }
 
         public byte[] CaptureState()

@@ -51,6 +51,11 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> m_Ingress;
 
+        FixedTypedIngressBatch()
+        {
+            m_Ingress = Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>();
+        }
+
         public FixedTypedIngressBatch(IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
         {
             var values = ingress == null
@@ -75,6 +80,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Ingress = values;
         }
 
+        public static FixedTypedIngressBatch Empty { get; } = new FixedTypedIngressBatch();
         public IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> Ingress => m_Ingress;
 
         static bool SameIdentity(

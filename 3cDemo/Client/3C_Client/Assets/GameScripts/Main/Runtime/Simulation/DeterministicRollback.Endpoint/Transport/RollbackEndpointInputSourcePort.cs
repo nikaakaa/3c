@@ -150,7 +150,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_Peer.ConfirmedCanonicalTick == 0
                     ? default
                     : new SimulationTick(m_Peer.ConfirmedCanonicalTick),
-                new FixedTypedIngressBatch(Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>()));
+                FixedTypedIngressBatch.Empty);
         }
 
         public IRollbackInputSourceCheckpoint CaptureCheckpoint()

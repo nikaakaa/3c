@@ -50,6 +50,11 @@ namespace ThirdPersonSimulation
     {
         readonly IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> m_Ingress;
 
+        Float32TypedIngressBatch()
+        {
+            m_Ingress = Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>();
+        }
+
         public Float32TypedIngressBatch(IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress)
         {
             var values = ingress == null
@@ -74,6 +79,7 @@ namespace ThirdPersonSimulation
             m_Ingress = values;
         }
 
+        public static Float32TypedIngressBatch Empty { get; } = new Float32TypedIngressBatch();
         public IReadOnlyList<SimulationPipelineTypedIngress<SimulationIngress>> Ingress => m_Ingress;
 
         static bool SameIdentity(

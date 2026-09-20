@@ -1441,3 +1441,12 @@
 - 两域 frame 改为 readonly struct，构造器仍拒绝缺失的 CanonicalInputs／TypedIngress；接口返回类型、属性类型、调用顺序及两个 batch 的独立所有权不变。
 - 删除每个本地输入 ingress tick 只为打包两个 batch 引用创建的一个 frame 对象。CanonicalInputBatch、TypedIngressBatch 及其内部列表仍分配，未扩大本项结论。
 - ThirdPersonSimulation.Fixed／Float32 portable 分别编译零警告零错误，逐次构建服务关闭成功。未新增测试、未操作共享 Unity、未做本地输入运行对比或 Player 分配采样。
+
+## 2026-09-21 空 TypedIngressBatch 共享
+
+对应 tasks.md 的 2.65。
+
+- 全项目源码检索确认 TypedIngressBatch 的三个正式构造点均传入 Array.Empty：Fixed／Float32 本地输入源各一处，Fixed 回滚 Endpoint 一处；没有非空实例构造点。
+- 两域 batch 新增只读 Empty 单例，内部直接持有对应元素类型的 Array.Empty；三个输入源统一引用该实例。batch 没有可变成员或写接口，Product slot 只在 tick 内保存引用，共享不会串写状态。
+- 公开 IEnumerable 构造器及原排序、重复身份校验完整保留，未来正式非空 ingress 仍取得独立列表。当前空路径每 tick 不再创建 batch 对象和空 List。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicRollback.Endpoint portable 分别编译零警告零错误，逐次构建服务关闭成功。客户端 Runtime 构建被并行 CharacterTimelineHost 缺失 AbilityTimelineAdvancePending／AbilityTimelineStopPending 的六处错误阻断，错误不在本项文件。未新增测试、未操作共享 Unity、未做运行对比或 Player 分配采样。

@@ -250,7 +250,7 @@ namespace ThirdPersonSimulation
             m_LastReadSourceTick = source.SourceTick;
             return new Float32LocalInputFrame(
                 new Float32CanonicalInputBatch(source, inputs),
-                new Float32TypedIngressBatch(Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>()));
+                Float32TypedIngressBatch.Empty);
         }
 
         public byte[] CaptureState()

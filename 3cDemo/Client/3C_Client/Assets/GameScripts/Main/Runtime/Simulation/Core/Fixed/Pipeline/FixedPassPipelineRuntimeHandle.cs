@@ -11,6 +11,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly SimulationWorldStateStore m_StateStore;
         readonly FixedPipelineTransaction m_Transaction;
         readonly IReadOnlyList<IFixedCompiledPipelinePassRuntime> m_Passes;
+        readonly string[] m_PassPhaseNames;
         readonly SimulationSessionResourceRegistry m_Resources;
         readonly ICharacterFutureBodyTranslationSource m_FutureBodyTranslationSource;
         ulong m_LatestOuterTick;
@@ -31,6 +32,9 @@ namespace ThirdPersonSimulation.Fixed
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             m_Passes = passes ?? throw new ArgumentNullException(nameof(passes));
             m_Resources = resources ?? throw new ArgumentNullException(nameof(resources));
+            m_PassPhaseNames = new string[m_Passes.Count];
+            for (int i = 0; i < m_PassPhaseNames.Length; i++)
+                m_PassPhaseNames[i] = m_Passes[i].Phase.ToString();
             m_FutureBodyTranslationSource = futureBodyTranslationSource;
             m_Lifecycle = new SimulationSessionLifecycleController(descriptor);
             m_Lifecycle.BeginPreparing();
@@ -334,7 +338,7 @@ namespace ThirdPersonSimulation.Fixed
                     "Pass",
                     $"{i}:{m_Passes[i].Descriptor.VersionedIdentity}",
                     DiagnosticState(),
-                    m_Passes[i].Phase.ToString());
+                    m_PassPhaseNames[i]);
             }
             return new SimulationSessionDiagnosticsSnapshot(
                 Descriptor,

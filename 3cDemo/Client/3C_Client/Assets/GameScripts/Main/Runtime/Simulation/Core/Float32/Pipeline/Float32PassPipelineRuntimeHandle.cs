@@ -10,6 +10,7 @@ namespace ThirdPersonSimulation
         readonly SimulationWorldStateStore m_StateStore;
         readonly Float32PipelineTransaction m_Transaction;
         readonly IReadOnlyList<IFloat32CompiledPipelinePassRuntime> m_Passes;
+        readonly string[] m_PassPhaseNames;
         readonly SimulationSessionResourceRegistry m_Resources;
         ulong m_LatestOuterTick;
         bool m_Disposed;
@@ -28,6 +29,9 @@ namespace ThirdPersonSimulation
             m_Transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
             m_Passes = passes ?? throw new ArgumentNullException(nameof(passes));
             m_Resources = resources ?? throw new ArgumentNullException(nameof(resources));
+            m_PassPhaseNames = new string[m_Passes.Count];
+            for (int i = 0; i < m_PassPhaseNames.Length; i++)
+                m_PassPhaseNames[i] = m_Passes[i].Phase.ToString();
             m_Lifecycle = new SimulationSessionLifecycleController(descriptor);
             m_Lifecycle.BeginPreparing();
             m_Lifecycle.Activate(descriptor);
@@ -279,7 +283,7 @@ namespace ThirdPersonSimulation
                     "Pass",
                     $"{i}:{m_Passes[i].Descriptor.VersionedIdentity}",
                     DiagnosticState(),
-                    m_Passes[i].Phase.ToString());
+                    m_PassPhaseNames[i]);
             }
             return new SimulationSessionDiagnosticsSnapshot(
                 Descriptor,

@@ -943,3 +943,11 @@
 - 顺序、每次 DiagnosticState 读取、各身份和 Phase 文本构造保持原样；没有跨查询缓存可变状态。下游 SimulationSessionDiagnosticsSnapshot 仍复制并排序，返回结果独立，生产数组在同步调用后不保留。
 - 删除上游 List 对象及扩容中的额外数组／复制，不宣称去掉下游最终快照数组。正式数量直接来自既有 Pass 列表，无新容量配置或临时旁路；按需读取实际频率仍未采样。
 - 编辑前两文件无其它未提交修改，进程扫描无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次构建服务关闭成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未做诊断运行或 Player 分配采样。
+## 2026-09-20 Pass 阶段名称在组装时准备
+
+对应 tasks.md 的 7.15。
+
+- 正式 PassPipelineRuntimeHandle 由两数值域 PassExecutionBackend 创建，接收本次组装 runtimes.AsReadOnly；正式 Ingress／Schedule／Step／Egress 基类 Phase 返回固定阶段。句柄未提供替换 Pass 的运行入口，因此阶段名称可随句柄寿命保存。
+- 两数值域构造新增按 m_Passes.Count 定长的 m_PassPhaseNames，每项初始化时执行原 Phase.ToString，BuildDiagnostics 直接读对应文本。初始化仍允许枚举格式化，运行诊断读取不再逐 Pass 查询枚举名称／装箱；输出文本沿原格式。
+- 存储为每个句柄一个与正式 Pass 数一致的数组，没有按 tick 增长的缓存或新配置。生命周期状态、错误、最新 tick 和诊断条目仍每次读取生成，不缓存动态快照。身份插值、生产与结果数组等仍分配，未声称整个 Diagnostics 无分配。
+- 两文件此前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未运行诊断刷新或 Player 分配采样。

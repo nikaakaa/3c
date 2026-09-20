@@ -116,7 +116,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     writer.WriteString(response.RequesterPeerId);
                     writer.WriteUInt64(response.Tick.Value);
                     writer.WriteString(response.SnapshotHash.Value);
-                    writer.WriteBytes(response.CopySnapshotBytes());
+                    writer.WriteBytes(response.SnapshotBytes);
                     break;
                 case RollbackLeave leave:
                     writer.WriteString(leave.PeerId);
@@ -148,7 +148,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     reader.ReadString(),
                     new SimulationTick(reader.ReadUInt64()),
                     new StableHash(reader.ReadString()),
-                    reader.ReadBytes()),
+                    reader.ReadBytesSegment().AsSpan()),
                 RollbackProtocolMessageKind.Leave => new RollbackLeave(reader.ReadString(), reader.ReadString()),
                 _ => throw new InvalidDataException($"Rollback payload kind '{kind}' is unsupported.")
             };

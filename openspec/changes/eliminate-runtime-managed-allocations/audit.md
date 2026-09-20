@@ -191,3 +191,13 @@
 - RollbackProtocolCodec 的 canonical bundle、输入批次、转发输入和确认批次四类调用切换为片段入口。已核对解码结果只保存独立字符串、数值和输入集合，不保存 reader 或原包引用；借用范围限于同步调用。快照响应字节的读取与持有没有改动。
 - 每个嵌套子项少一次完整 byte[] 创建与复制；reader 对象、解码输入集合、重新编码 writer、哈希及长期结果存储仍有分配。
 - 回滚 portable 连带 Core／Fixed 编译零警告零错误；Unity 当前引用下独立编译 Core，再用新 Core 编译回滚程序集也通过。diff 空白检查通过，按规定构建后 shutdown；未新增测试、未主动刷新 Unity、未做 Player 采样或宣称运行验证完成。
+
+## 2026-09-20 回滚快照响应中转副本清理
+
+对应 tasks.md 的 5.11，与代码同步提交。
+
+- RollbackSnapshotResponse 构造参数改为 ReadOnlySpan<byte>，检查非空后 ToArray 一次保存私有存储。原 byte[] 调用者可直接提供 Span，未新增兼容构造重载；输入 byte[] 为 null 时对应空 Span，仍抛原不完整响应 ArgumentException。
+- 新 SnapshotBytes 只读 Span 供同步编码使用，RollbackProtocolCodec 不再先调用 CopySnapshotBytes 克隆再写流。此视图不能作为普通字段跨异步保存，响应对象仍是字节存储所有者。
+- 解码端从 ReadBytesSegment 直接把片段 Span 传入响应构造，不再先 ReadBytes 复制一份再 Clone。响应构造仍取得一份独立数组，不把网络接收缓冲当作长期快照存储。
+- 已核对另一个 CopySnapshotBytes 消费者位于 RollbackEndpointRuntimeBridge.ReceiveSnapshotResponse。它仍向 SnapshotCodec.Read 传独立副本；本小步保留该真实入口，不修改恢复快照、哈希校验或状态生命周期。
+- Endpoint portable 工程连带 Core／Fixed／Rollback 编译零警告零错误；Unity 当前引用下依次编译 Core、Rollback、Endpoint 也通过。diff 空白检查通过，按规定构建结束 shutdown。未新增测试、未主动刷新 Unity、未做 Player 采样；最终消息数组与快照自身数组仍有分配。

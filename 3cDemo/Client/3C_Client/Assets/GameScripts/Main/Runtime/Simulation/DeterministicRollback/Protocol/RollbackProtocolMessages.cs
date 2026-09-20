@@ -223,17 +223,17 @@ namespace ThirdPersonSimulation.DeterministicRollback
             string requesterPeerId,
             SimulationTick tick,
             StableHash snapshotHash,
-            byte[] snapshotBytes)
+            ReadOnlySpan<byte> snapshotBytes)
         {
             AuthorityPeerId = SimulationIdentity.Require(authorityPeerId, nameof(authorityPeerId));
             RequesterPeerId = SimulationIdentity.Require(requesterPeerId, nameof(requesterPeerId));
             if (string.Equals(AuthorityPeerId, RequesterPeerId, StringComparison.Ordinal))
                 throw new ArgumentException("Rollback snapshot authority and requester must be different Peers.");
-            if (!tick.IsValid || !snapshotHash.IsValid || snapshotBytes == null || snapshotBytes.Length == 0)
+            if (!tick.IsValid || !snapshotHash.IsValid || snapshotBytes.IsEmpty)
                 throw new ArgumentException("Rollback snapshot response is incomplete.");
             Tick = tick;
             SnapshotHash = snapshotHash;
-            m_SnapshotBytes = (byte[])snapshotBytes.Clone();
+            m_SnapshotBytes = snapshotBytes.ToArray();
         }
 
         public RollbackProtocolMessageKind Kind => RollbackProtocolMessageKind.SnapshotResponse;
@@ -241,6 +241,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public string RequesterPeerId { get; }
         public SimulationTick Tick { get; }
         public StableHash SnapshotHash { get; }
+        public ReadOnlySpan<byte> SnapshotBytes => m_SnapshotBytes;
         public byte[] CopySnapshotBytes() => (byte[])m_SnapshotBytes.Clone();
     }
 

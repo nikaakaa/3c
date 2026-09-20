@@ -264,21 +264,62 @@ namespace ZZZ.Rendering.Restored.Editor
                 var data = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(path);
                 if (data == null)
                     throw new InvalidOperationException("URP RendererData 不存在：" + path);
-                var feature = data.rendererFeatures.OfType<CorinRestoredRendererFeature>().SingleOrDefault();
+                var existingFeatures = AssetDatabase.LoadAllAssetsAtPath(path)
+                    .OfType<CorinRestoredRendererFeature>()
+                    .ToArray();
+                if (existingFeatures.Length > 1)
+                    throw new InvalidOperationException("URP RendererData存在重复的CorinRestoredRendererFeature：" + path);
+
+                var feature = existingFeatures.SingleOrDefault();
                 if (feature == null)
                 {
                     feature = ScriptableObject.CreateInstance<CorinRestoredRendererFeature>();
                     feature.name = "CorinRestoredRendererFeature";
                     AssetDatabase.AddObjectToAsset(feature, data);
-                    var serialized = new SerializedObject(data);
-                    var features = serialized.FindProperty("m_RendererFeatures");
-                    var featureMap = serialized.FindProperty("m_RendererFeatureMap");
-                    features.InsertArrayElementAtIndex(features.arraySize);
-                    features.GetArrayElementAtIndex(features.arraySize - 1).objectReferenceValue = feature;
-                    featureMap.InsertArrayElementAtIndex(featureMap.arraySize);
-                    featureMap.GetArrayElementAtIndex(featureMap.arraySize - 1).longValue = feature.GetInstanceID();
-                    serialized.ApplyModifiedPropertiesWithoutUndo();
                 }
+
+                var serialized = new SerializedObject(data);
+                var features = serialized.FindProperty("m_RendererFeatures");
+                var featureMap = serialized.FindProperty("m_RendererFeatureMap");
+                var featureIndex = -1;
+                var missingFeatureIndex = -1;
+                for (var index = 0; index < features.arraySize; index++)
+                {
+                    var reference = features.GetArrayElementAtIndex(index).objectReferenceValue;
+                    if (reference == feature)
+                    {
+                        featureIndex = index;
+                        break;
+                    }
+
+                    if (reference == null)
+                    {
+                        if (missingFeatureIndex >= 0)
+                            throw new InvalidOperationException("URP RendererData存在多个丢失的RendererFeature：" + path);
+                        missingFeatureIndex = index;
+                    }
+                }
+
+                if (featureIndex < 0)
+                {
+                    if (missingFeatureIndex >= 0)
+                    {
+                        featureIndex = missingFeatureIndex;
+                        features.GetArrayElementAtIndex(featureIndex).objectReferenceValue = feature;
+                    }
+                    else
+                    {
+                        featureIndex = features.arraySize;
+                        features.InsertArrayElementAtIndex(featureIndex);
+                        features.GetArrayElementAtIndex(featureIndex).objectReferenceValue = feature;
+                    }
+                }
+
+                if (!AssetDatabase.TryGetGUIDAndLocalFileIdentifier(feature, out _, out long localFileId))
+                    throw new InvalidOperationException("无法取得CorinRestoredRendererFeature的持久文件标识：" + path);
+                featureMap.arraySize = features.arraySize;
+                featureMap.GetArrayElementAtIndex(featureIndex).longValue = localFileId;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
                 feature.Profile = renderProfile;
                 feature.SetActive(true);
                 EditorUtility.SetDirty(feature);

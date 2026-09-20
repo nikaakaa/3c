@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace ThirdPersonSimulation
@@ -16,13 +15,8 @@ namespace ThirdPersonSimulation
 
         public static string Hash(params string[] values)
         {
-            using SHA256 sha = SHA256.Create();
             string joined = string.Join("\u001f", values ?? Array.Empty<string>());
-            byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(joined));
-            var builder = new StringBuilder(bytes.Length * 2);
-            for (int i = 0; i < bytes.Length; i++)
-                builder.Append(bytes[i].ToString("x2", CultureInfo.InvariantCulture));
-            return builder.ToString();
+            return SimulationCanonicalPayloadHash.Compute(Encoding.UTF8.GetBytes(joined)).Value;
         }
     }
 

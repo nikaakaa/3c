@@ -431,6 +431,15 @@
 - 同时检查 SimulationNumericProfile 的 Equals／GetHashCode，当前使用强类型比较和整数枚举参数，没有基于此检查做无证据改动。
 - DeterministicRollback portable 连带 Core／Fixed 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程；未新增测试、未主动刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
 
+## 2026-09-20 公共身份哈希逐字节格式化清理
+
+对应 tasks.md 的 5.40，与代码同步提交。
+
+- SimulationIdentity.Hash 是 StableHash.Compute 和事件身份等路径的共用实现。原 SHA-256 摘要逐个 byte.ToString("x2", InvariantCulture)，产生 32 个两字符字符串，再经 StringBuilder 复制成最终字符串。
+- 现在保留原 string.Join 的 U+001F 分隔符、null 数组按空数组处理以及 Encoding.UTF8.GetBytes，交给既有 SimulationCanonicalPayloadHash.Compute，取得相同原始字节 SHA-256 的小写 Value。统一入口通过 string.Create 填充结果，不再保留另一套哈希格式化实现。
+- 没有改变输入字段、分隔符、编码、摘要算法或身份格式，也不改变事件生成次数和排序。移除逐字节小字符串、builder 及其存储；params 输入数组、joined 字符串、UTF-8 数组、SHA／摘要和最终字符串仍会分配。
+- portable Core 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过；编辑前文件无其它未提交修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity，未做运行哈希对比或 Player 分配采样。
+
 ## 2026-09-20 回滚输入帧来源构造校验统一
 
 对应 tasks.md 的 5.38，与代码同步提交。

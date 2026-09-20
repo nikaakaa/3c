@@ -112,6 +112,7 @@
 - [ ] 4.4.7 治理效果状态创建及各请求／贡献／去重集合的容量，沿正式停止、撤销、完成边界复用存储
 - [ ] 4.4.8 完成 Input、Behavior Designer 与第三方相机正式调用中尚未处理的分配治理
 - [x] 4.4.9 相机 Sequence／Effect／Response／Target 运行请求构造及 IsValid 按四种 Kind 与两种 Lifecycle 正式值域校验，删除每次激活／退役最多四处 Enum.IsDefined 装箱
+- [x] 4.5 角色 locomotion 表现 Plan、FactLineage、PreparedBinding 与 DomainRuntimeFact 集中按五类正式连续枚举值域校验，删除运行有效性读取及事实构造中的六处 Enum.IsDefined 装箱
 
 ## 5. 世界求解、回滚和网络
 

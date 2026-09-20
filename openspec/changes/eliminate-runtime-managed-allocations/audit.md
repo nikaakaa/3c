@@ -1126,3 +1126,12 @@
 - 正式组合现直接表达为 NativeClip 且 index=-1，或 Acl 且 index>=0；未知后端自然失败。source generation、pose source id、owner、提交和释放代次均未改变。
 - 删除物理 Pose 源注册与身份读取中的装箱和枚举元数据查询，不改变 backend 路由、资源索引含义、pending/committed page 或释放流程。
 - 并行 Timeline Camera 合同处于中间状态时首次增量编译被八个非目标错误阻断；对应并行提交闭合后，ThirdPersonClient.Runtime 全依赖编译零错误、三十四个既有警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。
+
+## 2026-09-20 角色 locomotion 表现枚举值域
+
+对应 tasks.md 的 4.5。
+
+- CharacterLocomotionPresentationPlan、FactLineage 和 PreparedBinding 的 IsValid 在表现准备、movement fact 校验及运行绑定读取中重复执行；原分别查询 ClockMode、BodySource、CorrectionMode。CharacterDomainRuntimeFact 构造还查询 Kind 与 State。
+- 新增 CharacterPresentationEnumValues，五类枚举分别按现有正式连续首末成员判断：ClockMode、BodySource、BodyCorrectionMode、DomainFactKind、DomainFactState。未知零值及其它 byte 继续使 IsValid=false 或抛出原异常。
+- 删除三类 locomotion 表现有效性读取与 domain fact 构造中的六处装箱和枚举元数据查询；Plan 身份、movement lineage、body profile、runtime fact 内容及校验顺序不变。
+- 首次编译前检测到 Unity/C# 编译进程并主动跳过；确认进程结束后，ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做表现运行采样。

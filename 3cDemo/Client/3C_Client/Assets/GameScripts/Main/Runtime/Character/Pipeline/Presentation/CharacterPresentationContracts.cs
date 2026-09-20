@@ -35,6 +35,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         SelectedStream = 2
     }
 
+    internal static class CharacterPresentationEnumValues
+    {
+        internal static bool IsValid(CharacterLocomotionClockMode value) =>
+            value >= CharacterLocomotionClockMode.FreeRun &&
+            value <= CharacterLocomotionClockMode.CommittedMovement;
+
+        internal static bool IsValid(CharacterLocomotionBodySource value) =>
+            value >= CharacterLocomotionBodySource.CommittedStream &&
+            value <= CharacterLocomotionBodySource.SelectedStream;
+
+        internal static bool IsValid(CharacterBodyCorrectionMode value) =>
+            value >= CharacterBodyCorrectionMode.Direct &&
+            value <= CharacterBodyCorrectionMode.BoundedCorrection;
+
+        internal static bool IsValid(CharacterDomainRuntimeFactKind value) =>
+            value >= CharacterDomainRuntimeFactKind.Ability &&
+            value <= CharacterDomainRuntimeFactKind.Motion;
+
+        internal static bool IsValid(CharacterDomainRuntimeFactState value) =>
+            value >= CharacterDomainRuntimeFactState.Unavailable &&
+            value <= CharacterDomainRuntimeFactState.Failed;
+    }
+
     [Flags]
     public enum CharacterLocomotionPresentationSourceCapability : byte
     {
@@ -80,8 +103,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             BodySource != 0;
         public bool IsValid =>
             !string.IsNullOrWhiteSpace(Identity) &&
-            Enum.IsDefined(typeof(CharacterLocomotionClockMode), ClockMode) &&
-            Enum.IsDefined(typeof(CharacterLocomotionBodySource), BodySource);
+            CharacterPresentationEnumValues.IsValid(ClockMode) &&
+            CharacterPresentationEnumValues.IsValid(BodySource);
         public bool RequiresMovementFact => ClockMode == CharacterLocomotionClockMode.CommittedMovement;
 
         internal CharacterBodyPresentationSourceMode RuntimeBodySource =>
@@ -113,7 +136,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public string MovementSegmentIdentity { get; }
         public bool IsValid =>
             !string.IsNullOrWhiteSpace(PlanIdentity) &&
-            Enum.IsDefined(typeof(CharacterLocomotionBodySource), BodySource) &&
+            CharacterPresentationEnumValues.IsValid(BodySource) &&
             !string.IsNullOrWhiteSpace(MovementClockIdentity) &&
             LineageGeneration != 0 &&
             !string.IsNullOrWhiteSpace(MovementSegmentIdentity);
@@ -184,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Plan.IsValid &&
             m_BodyProfile &&
             !string.IsNullOrWhiteSpace(BodyProfileIdentity) &&
-            Enum.IsDefined(typeof(CharacterBodyCorrectionMode), CorrectionMode) &&
+            CharacterPresentationEnumValues.IsValid(CorrectionMode) &&
             (!RequiresMovementFact || m_StrictFactLineage.IsValid);
 
         internal CharacterBodyPresentationProfile BodyProfile => m_BodyProfile;
@@ -707,8 +730,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string adoptedIdentity,
             string failureReason)
         {
-            if (!Enum.IsDefined(typeof(CharacterDomainRuntimeFactKind), kind) ||
-                !Enum.IsDefined(typeof(CharacterDomainRuntimeFactState), state))
+            if (!CharacterPresentationEnumValues.IsValid(kind) ||
+                !CharacterPresentationEnumValues.IsValid(state))
                 throw new ArgumentOutOfRangeException(nameof(kind));
             Kind = kind;
             State = state;

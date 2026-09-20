@@ -340,6 +340,8 @@
 
 - [x] 5.86 RollbackOutputCommitter 以正式 registry／tentative workspace 两张 Dictionary 轮换，成功后交换、失败或完成后清空非正式表，删除每次 Commit 的 records Dictionary 克隆分配并保持发布前事务隔离
 
+- [x] 5.87 Rollback output disposition pass 跨 Execute 复用 disposition 组装列表并在 finally 清空，统一 Fixed／Float32 本地 pass 的现有模式，删除每 outer tick 的 List 对象及稳定容量后的增长存储；最终 set 继续独立复制排序
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

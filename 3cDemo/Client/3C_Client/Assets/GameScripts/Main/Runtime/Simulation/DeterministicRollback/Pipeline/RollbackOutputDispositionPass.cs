@@ -35,6 +35,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         FixedPipelinePassRuntimeBase,
         ISimulationEgressPassRuntime<RollbackOutputDispositionReadPorts, RollbackOutputDispositionWritePorts>
     {
+        readonly List<SimulationOutputDisposition> m_Dispositions = new List<SimulationOutputDisposition>();
+
         public RollbackOutputDispositionPassRuntime(SimulationPipelinePassDescriptor descriptor) : base(descriptor) { }
 
         public void Execute(
@@ -43,22 +45,29 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RollbackOutputDispositionWritePorts writePorts)
         {
             RequireExecution();
-            var dispositions = new List<SimulationOutputDisposition>();
-            for (int stepIndex = 0; stepIndex < readPorts.CompletedSteps.Steps.Count; stepIndex++)
+            m_Dispositions.Clear();
+            try
             {
-                FixedCompletedSimulationStep step = readPorts.CompletedSteps.Steps[stepIndex];
-                for (int actorIndex = 0; actorIndex < step.Result.Actors.Count; actorIndex++)
+                for (int stepIndex = 0; stepIndex < readPorts.CompletedSteps.Steps.Count; stepIndex++)
                 {
-                    SimulationActorTickResult actor = step.Result.Actors[actorIndex];
-                    for (int i = 0; i < actor.GameplayFacts.Count; i++)
-                        Add(dispositions, actor.GameplayFacts[i]);
-                    for (int i = 0; i < actor.PresentationCommands.Count; i++)
-                        Add(dispositions, actor.PresentationCommands[i]);
+                    FixedCompletedSimulationStep step = readPorts.CompletedSteps.Steps[stepIndex];
+                    for (int actorIndex = 0; actorIndex < step.Result.Actors.Count; actorIndex++)
+                    {
+                        SimulationActorTickResult actor = step.Result.Actors[actorIndex];
+                        for (int i = 0; i < actor.GameplayFacts.Count; i++)
+                            Add(m_Dispositions, actor.GameplayFacts[i]);
+                        for (int i = 0; i < actor.PresentationCommands.Count; i++)
+                            Add(m_Dispositions, actor.PresentationCommands[i]);
+                    }
                 }
+                writePorts.Dispositions.Write(new SimulationPipelineOutputDispositionSet(
+                    context.TransactionIdentity,
+                    m_Dispositions));
             }
-            writePorts.Dispositions.Write(new SimulationPipelineOutputDispositionSet(
-                context.TransactionIdentity,
-                dispositions));
+            finally
+            {
+                m_Dispositions.Clear();
+            }
         }
 
         static void Add(ICollection<SimulationOutputDisposition> dispositions, GameplayFact fact)

@@ -2004,3 +2004,12 @@
 - committer 现持有正式 m_Records 与 tentative m_RecordWorkspace 两张表。CommitPrepared 先把正式条目复制进空 workspace，全部规划、容量校验与发布仍只作用于 workspace；成功后交换两张表，外层 finally 清空交换后的旧正式表。任意成功前异常则清空 tentative 表，正式 registry 不变。
 - 删除每次 Commit 的 records Dictionary 对象及稳定容量后的桶／entry 数组分配；逐条复制和两张表的峰值常驻容量仍存在，这是保留事务隔离的明确成本。未改为原地修改、撤销日志或兼容路径。
 - ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 output commit 失败注入或 Player 分配采样。
+
+## 2026-09-21 Rollback output disposition 工作区
+
+对应 tasks.md 的 5.87。
+
+- RollbackOutputDispositionPass 每次 outer tick 遍历 completed steps，将 gameplay facts 与 presentation commands 映射为 disposition；原实现每次 Execute 新建 List。下游 SimulationPipelineOutputDispositionSet 会复制并排序为独立最终数组，生产列表不会跨 Execute 保存。
+- pass 现持有一只 disposition 工作列表，Execute 开始清空、填充后交给 set 的公开复制构造，并在 finally 清除。正常写入和任意中途异常都不保留本 tick 内容；实现与 Fixed／Float32 local immediate output pass 的既有工作区模式统一。
+- 删除每个 rollback outer tick 的 List 对象及达到观测峰值后的底层数组重复分配；首次填充和更高事件峰值仍可能扩容，最终 disposition 数组保持必要的独立寿命。
+- ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 disposition 事件峰值或 Player 分配采样。

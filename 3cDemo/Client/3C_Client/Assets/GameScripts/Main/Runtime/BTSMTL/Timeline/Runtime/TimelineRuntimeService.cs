@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BTSMTL.Diagnostics;
@@ -334,7 +335,7 @@ namespace BTSMTL.Timeline.Runtime
             ContentIdentity = playback.Content.Identity;
             ContentRevision = playback.ContentRevision;
             State = playback.State;
-            CursorFrame = playback.CursorFrame;
+            CursorTime = playback.CursorTime;
             Cycle = playback.Cycle;
             SectionId = playback.SectionId;
             ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(playback.ActiveClipIds));
@@ -349,7 +350,7 @@ namespace BTSMTL.Timeline.Runtime
         public string ContentIdentity { get; }
         public string ContentRevision { get; }
         public TimelineRuntimePlaybackState State { get; }
-        public int CursorFrame { get; }
+        public FixedScalar CursorTime { get; }
         public int Cycle { get; }
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds { get; }
@@ -372,7 +373,7 @@ namespace BTSMTL.Timeline.Runtime
             NumericTarget = playback.NumericTarget;
             ContentRevision = playback.ContentRevision;
             State = playback.State;
-            CursorFrame = playback.CursorFrame;
+            CursorTime = playback.CursorTime;
             Cycle = playback.Cycle;
             SectionId = playback.SectionId;
             ActiveClipIds = new ReadOnlyCollection<string>(
@@ -381,7 +382,7 @@ namespace BTSMTL.Timeline.Runtime
             HasStopContext = playback.HasStopContext;
             StopContext = playback.StopContext;
             InitialBoundaryPending = playback.InitialBoundaryPending;
-            FrameCarry = playback.FrameCarry;
+            TimeCarry = playback.TimeCarry;
             TreeDecisionExits = new ReadOnlyCollection<string>(
                 new List<string>(playback.ExitedTreeDecisionClips));
             PendingTreeDecisionExits = new ReadOnlyCollection<string>(
@@ -397,7 +398,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimeNumericTarget numericTarget,
             string contentRevision,
             TimelineRuntimePlaybackState state,
-            int cursorFrame,
+            FixedScalar cursorTime,
             int cycle,
             string sectionId,
             IReadOnlyList<string> activeClipIds,
@@ -405,7 +406,7 @@ namespace BTSMTL.Timeline.Runtime
             bool hasStopContext,
             TimelinePlaybackStopContext stopContext,
             bool initialBoundaryPending,
-            int frameCarry,
+            int timeCarry,
             IReadOnlyList<string> treeDecisionExits,
             IReadOnlyList<string> pendingTreeDecisionExits,
             int tickRate)
@@ -420,7 +421,7 @@ namespace BTSMTL.Timeline.Runtime
             NumericTarget = numericTarget;
             ContentRevision = contentRevision ?? string.Empty;
             State = state;
-            CursorFrame = cursorFrame;
+            CursorTime = cursorTime;
             Cycle = cycle;
             SectionId = sectionId ?? string.Empty;
             ActiveClipIds = new ReadOnlyCollection<string>(new List<string>(activeClipIds ?? Array.Empty<string>()));
@@ -428,7 +429,7 @@ namespace BTSMTL.Timeline.Runtime
             HasStopContext = hasStopContext;
             StopContext = stopContext;
             InitialBoundaryPending = initialBoundaryPending;
-            FrameCarry = frameCarry;
+            TimeCarry = timeCarry;
             TreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(treeDecisionExits ?? Array.Empty<string>()));
             PendingTreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(pendingTreeDecisionExits ?? Array.Empty<string>()));
         }
@@ -442,7 +443,7 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeNumericTarget NumericTarget { get; }
         public string ContentRevision { get; }
         public TimelineRuntimePlaybackState State { get; }
-        public int CursorFrame { get; }
+        public FixedScalar CursorTime { get; }
         public int Cycle { get; }
         public string SectionId { get; }
         public IReadOnlyList<string> ActiveClipIds { get; }
@@ -450,7 +451,7 @@ namespace BTSMTL.Timeline.Runtime
         public bool HasStopContext { get; }
         public TimelinePlaybackStopContext StopContext { get; }
         public bool InitialBoundaryPending { get; }
-        public int FrameCarry { get; }
+        public int TimeCarry { get; }
         public IReadOnlyList<string> TreeDecisionExits { get; }
         public IReadOnlyList<string> PendingTreeDecisionExits { get; }
         public int TickRate { get; }
@@ -499,9 +500,9 @@ namespace BTSMTL.Timeline.Runtime
                 m_Service.TickRate);
             if (!playback.RestoreCommittedState(
                     m_Snapshot.State,
-                    m_Snapshot.CursorFrame,
+                    m_Snapshot.CursorTime,
                     m_Snapshot.Cycle,
-                    m_Snapshot.FrameCarry,
+                    m_Snapshot.TimeCarry,
                     m_Snapshot.SectionId,
                     m_Snapshot.ActiveClipIds,
                     m_Snapshot.ActiveTreeClipAssociations,
@@ -786,7 +787,7 @@ namespace BTSMTL.Timeline.Runtime
             TimelineRuntimePlayback playback = Require(handle);
             TimelineRuntimeAdvanceResult result = TimelineRuntimeStepCoordinator.Step(
                 playback,
-                new TimelineRuntimeAdvanceRequest(logicTick, tickCount),
+                CreateAdvanceRequest(playback, logicTick, tickCount),
                 m_StepConsumer);
             Publish(playback);
             return result;
@@ -798,12 +799,32 @@ namespace BTSMTL.Timeline.Runtime
             int tickCount)
         {
             EnsureAvailable();
+            TimelineRuntimePlayback playback = Require(handle);
             TimelineRuntimeAdvanceResult result = TimelineRuntimeStepCoordinator.Step(
-                Require(handle),
-                new TimelineRuntimeAdvanceRequest(logicTick, tickCount),
+                playback,
+                CreateAdvanceRequest(playback, logicTick, tickCount),
                 m_StepConsumer);
             Publish(Require(handle));
             return result;
+        }
+
+        static TimelineRuntimeAdvanceRequest CreateAdvanceRequest(TimelineRuntimePlayback playback, ulong logicTick, int tickCount)
+        {
+            if (tickCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(tickCount));
+            decimal numerator = (decimal)playback.CursorTime.Raw * playback.TickRate + playback.TimeCarry +
+                (decimal)tickCount * FixedScalar.OneRaw;
+            long parityOffset = (playback.Cycle & 1) * (playback.Content.Duration.Raw & 1);
+            int remainder = checked((int)(numerator % playback.TickRate));
+            long targetRaw = checked((long)((numerator - remainder) / playback.TickRate));
+            long doubledRemainder = (long)remainder * 2;
+            if (doubledRemainder > playback.TickRate ||
+                doubledRemainder == playback.TickRate && ((targetRaw ^ parityOffset) & 1) != 0)
+            {
+                targetRaw = checked(targetRaw + 1);
+                remainder -= playback.TickRate;
+            }
+            return new TimelineRuntimeAdvanceRequest(logicTick, playback.CursorTime, FixedScalar.FromRaw(targetRaw), remainder);
         }
 
         public bool RequestTreeClipExit(TimelineRuntimePlaybackHandle handle, string clipAuthoringId)
@@ -819,7 +840,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             EnsureAvailable();
             TimelineRuntimePlayback playback = Require(handle);
-            var request = new TimelineRuntimeAdvanceRequest(logicTick, tickCount);
+            var request = CreateAdvanceRequest(playback, logicTick, tickCount);
             TimelineRuntimeAdvanceResult result = playback.Advance(request);
             var context = new TimelineRuntimeStepContext(playback, request, result);
             try

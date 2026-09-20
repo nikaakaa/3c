@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.IO;
 using SimulationActionActivationRequestState = ThirdPersonSimulation.SimulationActionActivationRequestState<ThirdPersonSimulation.SimulationActionTargetSnapshot>;
@@ -8,7 +9,7 @@ namespace ThirdPersonSimulation
     public static class Float32CharacterRuntimeStateCodec
     {
         const uint Magic = 0x54535243;
-        const int Version = 7;
+        const int Version = 8;
         const string HashIdentity = "float32-character-runtime-state-hash/7";
         public const string CodecIdentity = "float32-character-runtime-state/7";
 
@@ -190,9 +191,9 @@ namespace ThirdPersonSimulation
             writer.WriteByte((byte)snapshot.PlaybackMode);
             writer.WriteString(snapshot.ContentRevision);
             writer.WriteByte((byte)snapshot.State);
-            writer.WriteInt32(snapshot.CursorFrame);
+            writer.WriteInt64(snapshot.CursorTime.Raw);
             writer.WriteInt32(snapshot.Cycle);
-            writer.WriteInt32(snapshot.FrameCarry);
+            writer.WriteInt32(snapshot.TimeCarry);
             writer.WriteInt32(snapshot.TreeDecisionExits.Count);
             for (int i = 0; i < snapshot.TreeDecisionExits.Count; i++)
                 writer.WriteString(snapshot.TreeDecisionExits[i]);
@@ -236,9 +237,9 @@ namespace ThirdPersonSimulation
             AbilityTimelineSnapshotMode playbackMode = ReadEnum<AbilityTimelineSnapshotMode>(reader.ReadByte());
             string contentRevision = reader.ReadString();
             AbilityTimelineSnapshotState state = ReadEnum<AbilityTimelineSnapshotState>(reader.ReadByte());
-            int cursorFrame = reader.ReadInt32();
+            FixedScalar cursorTime = FixedScalar.FromRaw(reader.ReadInt64());
             int cycle = reader.ReadInt32();
-            int frameCarry = reader.ReadInt32();
+            int timeCarry = reader.ReadInt32();
             int treeDecisionExitCount = ReadCount(reader, 1024, "timeline tree decision exits");
             var treeDecisionExits = new string[treeDecisionExitCount];
             for (int i = 0; i < treeDecisionExitCount; i++)
@@ -300,9 +301,9 @@ namespace ThirdPersonSimulation
                 playbackMode,
                 contentRevision,
                 state,
-                cursorFrame,
+                cursorTime,
                 cycle,
-                frameCarry,
+                timeCarry,
                 treeDecisionExits,
                 pendingTreeDecisionExits,
                 sectionId,

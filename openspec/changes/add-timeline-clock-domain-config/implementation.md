@@ -214,3 +214,13 @@
 - Add Clip菜单通过既有Clip contract按轨道域过滤类型，删除已不允许的Presentation TreeClip创建后分支；不恢复跨域覆盖或空表现图执行。
 - 配置驱动的逻辑tick／素材帧／关闭吸附与显式重新对齐尚未完成，不能因创建弹窗改用秒就勾选8.3／8.6。
 - 编译与域重载于1789881136894完成，观测1789881157099为idle、非Play／编译／导入，错误控制台0条。创建草稿及弹窗源码不再含StartFrame／EndFrame／FrameRate字段；未进行鼠标操作验收，未新增测试。
+
+## 逻辑播放推进与快照秒制迁移
+
+- TimelineRuntimeService 在既有Step／Advance入口计算目标秒数和带符号换算余数，TimelineRuntimeAdvanceRequest改为previous／target秒区间；TimelineRuntimePlayback不再从tick数积分作者帧，只消费区间、处理循环及内容生命周期。候选时间和余数仍随同一Commit／Discard接受。
+- 逻辑游标、AdvanceResult、CommittedEvaluation及Ability／Timeline快照统一为FixedScalar，余数改名TimeCarry。Fixed／Float32角色快照编码写64位raw，格式版本7升8，不保留旧快照兼容读取。
+- TimelineContentUnit保存精确Duration；逻辑边界、Marker、循环分段和Section查询直接比较秒。帧仅暂留在尚待迁移的表现推进及部分诊断／业务输出，未新增第二套内容。
+- RestoreCommittedState先用目标游标与循环校验Tree关联，再安装状态；失败不提前修改当前游标与余数。成功恢复前清空旧的已退出／待退出列表，避免重复恢复累加。
+- 暂停／倍率控制、表现driver自主积分删除、共享采样、持续分配清理仍未完成；0.4／0.7和第5节不提前勾选。
+- 推进计算对整数分子先求商余数，再按最近偶数舍入，循环长度raw的奇偶进入tie判定；带符号余数范围为±tickRate/2。没有用每tick先量化再累加，也不经float算逻辑秒。CharacterTimelineHost.Update的非CoreDriven delta×60旧入口与Presentation driver仍待后续移除。
+- 本批编译重载完成1789881757642，观测1789881770374为idle，错误控制台0条；18个Timeline正式内容发现的Duration与作者精确DurationTime逐项一致。尚无完整Step／恢复运行证据，不把编译和内容发现视为完整回滚验收。

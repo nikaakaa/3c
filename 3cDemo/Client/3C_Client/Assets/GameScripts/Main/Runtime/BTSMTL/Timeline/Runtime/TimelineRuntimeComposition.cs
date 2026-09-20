@@ -156,8 +156,8 @@ namespace BTSMTL.Timeline.Runtime
             Handle = context.Playback.Handle;
             Generation = context.Playback.Generation;
             LogicTick = context.Request.LogicTick;
-            PreviousFrame = context.Advance.PreviousFrame;
-            Frame = context.Advance.Frame;
+            PreviousTime = context.Advance.PreviousTime;
+            Time = context.Advance.Time;
             PreviousCycle = context.Advance.PreviousCycle;
             Cycle = context.Advance.Cycle;
             ContentIdentity = context.Playback.Content.Identity;
@@ -169,8 +169,8 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimePlaybackHandle Handle { get; }
         public ulong Generation { get; }
         public ulong LogicTick { get; }
-        public int PreviousFrame { get; }
-        public int Frame { get; }
+        public FixedScalar PreviousTime { get; }
+        public FixedScalar Time { get; }
         public int PreviousCycle { get; }
         public int Cycle { get; }
         public string ContentIdentity { get; }
@@ -330,7 +330,7 @@ namespace BTSMTL.Timeline.Runtime
             }
 
             var events = new List<TimelineRuntimePresentationEvent>();
-            int maxFrame = Math.Max(0, playback.Content.MaxFrame);
+            int maxFrame = TimelineTimeGrid.CeilingIndex(playback.Content.Duration, playback.Content.FrameRate);
             bool loop = playback.PlaybackMode == TimelinePlaybackMode.Loop;
             float previousFrame = state.CursorFrame;
             int previousCycle = state.Cycle;
@@ -443,7 +443,7 @@ namespace BTSMTL.Timeline.Runtime
             bool includeStartBoundary,
             List<TimelineRuntimePresentationEvent> events)
         {
-            int maxFrame = Math.Max(0, playback.Content.MaxFrame);
+            int maxFrame = TimelineTimeGrid.CeilingIndex(playback.Content.Duration, playback.Content.FrameRate);
             if (maxFrame <= 0)
                 return;
             double previousAbsolute = previousCycle * (double)maxFrame + previousFrame;

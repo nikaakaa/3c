@@ -1264,9 +1264,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 MapSnapshotMode(native.PlaybackMode),
                 native.ContentRevision,
                 MapSnapshotState(native.State),
-                native.CursorFrame,
+                native.CursorTime,
                 native.Cycle,
-                native.FrameCarry,
+                native.TimeCarry,
                 native.TreeDecisionExits,
                 native.PendingTreeDecisionExits,
                 native.SectionId,
@@ -1314,7 +1314,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_NumericTarget,
                 snapshot.ContentRevision,
                 MapPlaybackState(snapshot.State),
-                snapshot.CursorFrame,
+                snapshot.CursorTime,
                 snapshot.Cycle,
                 snapshot.SectionId,
                 snapshot.ActiveClipIds,
@@ -1322,7 +1322,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 snapshot.HasStopContext,
                 new TimelinePlaybackStopContext(stopCause, snapshot.StopLocalLogicTick),
                 snapshot.InitialBoundaryPending,
-                snapshot.FrameCarry,
+                snapshot.TimeCarry,
                 snapshot.TreeDecisionExits,
                 snapshot.PendingTreeDecisionExits,
                 m_TickRate);
@@ -1500,7 +1500,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (!TryGetActivePlayback(evaluation.Handle, out ActivePlayback active))
                 return;
-            float time = evaluation.Frame / (float)TimelineUtility.FrameRate;
+            float time = evaluation.Time.ToSingle();
             PublishTimelineEvent(
                 active,
                 RuntimeTraceDomain.Logic,
@@ -1563,7 +1563,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     evaluation.Handle,
                     evaluation.Generation,
                     evaluation.LogicTick,
-                    evaluation.Frame,
+                    TimelineTimeGrid.NearestIndex(evaluation.Time, TimelineUtility.FrameRate),
                     evaluation.Cycle,
                     evaluation.ExecutionIdentity,
                     evaluation.ContentRevision,
@@ -1684,7 +1684,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 RuntimeSourceElementKey.Timeline(active.Timeline.AuthoringId),
                 "Presented",
                 string.Empty,
-                descriptor.CursorFrame / (float)TimelineUtility.FrameRate,
+                descriptor.CursorTime.ToSingle(),
                 descriptor.Cycle,
                 default,
                 string.Empty);

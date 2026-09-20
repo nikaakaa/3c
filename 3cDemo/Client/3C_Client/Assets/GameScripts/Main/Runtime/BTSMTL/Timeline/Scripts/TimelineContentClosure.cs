@@ -308,7 +308,7 @@ namespace BTSMTL.Timeline
             string rootFingerprint,
             string name,
             int frameRate,
-            int maxFrame,
+            FixedScalar duration,
             bool loop,
             IReadOnlyList<TimelineContentTrack> tracks,
             IReadOnlyList<TimelineContentClip> clips,
@@ -323,7 +323,7 @@ namespace BTSMTL.Timeline
             RootFingerprint = rootFingerprint ?? string.Empty;
             Name = name ?? string.Empty;
             FrameRate = frameRate;
-            MaxFrame = maxFrame;
+            Duration = duration;
             Loop = loop;
             Tracks = new ReadOnlyCollection<TimelineContentTrack>(new List<TimelineContentTrack>(tracks ?? Array.Empty<TimelineContentTrack>()));
             SourceTracks = new ReadOnlyCollection<Track>(new List<Track>(sourceTracks ?? Array.Empty<Track>()));
@@ -339,7 +339,7 @@ namespace BTSMTL.Timeline
         public string RootFingerprint { get; }
         public string Name { get; }
         public int FrameRate { get; }
-        public int MaxFrame { get; }
+        public FixedScalar Duration { get; }
         public bool Loop { get; }
         public IReadOnlyList<TimelineContentTrack> Tracks { get; }
         public IReadOnlyList<Track> SourceTracks { get; }
@@ -352,7 +352,7 @@ namespace BTSMTL.Timeline
             !string.IsNullOrEmpty(ContentHash) &&
             !string.IsNullOrEmpty(RootFingerprint) &&
             FrameRate > 0 &&
-            MaxFrame >= 0;
+            Duration >= FixedScalar.Zero;
     }
 
     public sealed class TimelineContentDiscoveryResult
@@ -392,7 +392,7 @@ namespace BTSMTL.Timeline
             var tracks = new List<TimelineContentTrack>();
             var sections = new List<TimelineContentSection>();
             var closure = new TimelineContentClosureBuilder();
-            int maxFrame = 0;
+            FixedScalar duration = FixedScalar.Zero;
             for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
             {
                 Track track = timeline.Tracks[trackIndex];
@@ -405,14 +405,14 @@ namespace BTSMTL.Timeline
                     if (clip != null)
                         clipAuthoringIds.Add(clip.AuthoringId);
                     if (clip != null)
-                        maxFrame = Math.Max(maxFrame, TimelineTimeGrid.CeilingIndex(clip.EndTime, TimelineUtility.FrameRate));
+                        duration = FixedScalar.Max(duration, clip.EndTime);
                 }
                 for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
                 {
                     TimelineMarker marker = track.Markers[markerIndex];
                     if (marker == null)
                         continue;
-                    maxFrame = Math.Max(maxFrame, Math.Max(1, TimelineTimeGrid.CeilingIndex(marker.Time, TimelineUtility.FrameRate)));
+                    duration = FixedScalar.Max(duration, FixedScalar.Max(FixedScalar.FromRaw(1), marker.Time));
                     if (marker.Graph is not ITimelineTreeGraphAsset markerGraph || !markerGraph.IsTimelineTrigger)
                     {
                         errors.Add($"Timeline Marker '{marker.AuthoringId}' requires a Timeline trigger graph.");
@@ -450,7 +450,7 @@ namespace BTSMTL.Timeline
             {
                 TimelineSection section = timeline.Sections[sectionIndex];
                 if (section != null)
-                    maxFrame = Math.Max(maxFrame, TimelineTimeGrid.CeilingIndex(section.Time, TimelineUtility.FrameRate));
+                    duration = FixedScalar.Max(duration, section.Time);
                 if (section != null)
                     sections.Add(new TimelineContentSection(
                         section.AuthoringId,
@@ -615,7 +615,7 @@ namespace BTSMTL.Timeline
                     rootFingerprint,
                     timeline.Name,
                     TimelineUtility.FrameRate,
-                    maxFrame,
+                    duration,
                     timeline.Loop,
                     tracks,
                     clips,

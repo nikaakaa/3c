@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -607,9 +608,9 @@ namespace ThirdPersonSimulation
             AbilityTimelineSnapshotMode playbackMode,
             string contentRevision,
             AbilityTimelineSnapshotState state,
-            int cursorFrame,
+            FixedScalar cursorTime,
             int cycle,
-            int frameCarry,
+            int timeCarry,
             IReadOnlyList<string> treeDecisionExits,
             IReadOnlyList<string> pendingTreeDecisionExits,
             string sectionId,
@@ -639,13 +640,13 @@ namespace ThirdPersonSimulation
             ContentRevision = SimulationIdentity.Require(contentRevision, nameof(contentRevision));
             if (!Enum.IsDefined(typeof(AbilityTimelineSnapshotState), state))
                 throw new ArgumentOutOfRangeException(nameof(state));
-            if (cursorFrame < 0 || cycle < 0)
-                throw new ArgumentOutOfRangeException(nameof(cursorFrame));
+            if (cursorTime < FixedScalar.Zero || cycle < 0)
+                throw new ArgumentOutOfRangeException(nameof(cursorTime));
             if (treeDecisionExits == null)
                 throw new ArgumentNullException(nameof(treeDecisionExits));
             if (pendingTreeDecisionExits == null)
                 throw new ArgumentNullException(nameof(pendingTreeDecisionExits));
-            FrameCarry = frameCarry;
+            TimeCarry = timeCarry;
             TreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(treeDecisionExits ?? Array.Empty<string>()));
             PendingTreeDecisionExits = new ReadOnlyCollection<string>(new List<string>(pendingTreeDecisionExits ?? Array.Empty<string>()));
             SectionId = sectionId ?? string.Empty;
@@ -669,7 +670,7 @@ namespace ThirdPersonSimulation
             ExecutionInstanceId = executionInstanceId;
             PlaybackMode = playbackMode;
             State = state;
-            CursorFrame = cursorFrame;
+            CursorTime = cursorTime;
             Cycle = cycle;
             HasStopContext = hasStopContext;
             InitialBoundaryPending = initialBoundaryPending;
@@ -686,9 +687,9 @@ namespace ThirdPersonSimulation
         public AbilityTimelineSnapshotMode PlaybackMode { get; }
         public string ContentRevision { get; }
         public AbilityTimelineSnapshotState State { get; }
-        public int CursorFrame { get; }
+        public FixedScalar CursorTime { get; }
         public int Cycle { get; }
-        public int FrameCarry { get; }
+        public int TimeCarry { get; }
         public IReadOnlyList<string> TreeDecisionExits { get; }
         public IReadOnlyList<string> PendingTreeDecisionExits { get; }
         public string SectionId { get; }

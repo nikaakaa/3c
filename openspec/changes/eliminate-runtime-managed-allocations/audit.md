@@ -879,3 +879,11 @@
 - 恢复解码合法集合沿旧 Enum.IsDefined 保留三值，不能复用 2.31 活动执行只接受两值的条件。读取宽度、位置、非法字节 InvalidDataException 类型和文本、后续状态构造及 layout 校验均保持不变。
 - 只迁移运动修正结果的两个实际调用点，不改变保存状态、回放或事务寿命。通用 ReadEnum 仍有动作／作用域／Timeline 等真实消费者，本轮保留，不宣称整个角色 codec 已无反射。
 - 两目标文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做恢复运行或 Player 分配采样。
+## 2026-09-20 角色状态值解码复用分派校验
+
+对应 tasks.md 的 2.36。
+
+- Fixed／Float32 CharacterRuntimeStateCodec.ReadValue 原通过 ReadEnum 校验后 switch 解码。核对 ProgramStateValueKind 当前十一种成员均已有分支，现直接将读取 byte 转成枚举并进入该 switch，未知值在读取任何值载荷前由 default 拒绝，不增加另一份合法成员清单。
+- 默认分支改为原 ReadEnum 实际抛出的类型名／字节 InvalidDataException 文本；保留合法成员包括 ActionTargetSnapshot=24，11 至 23 等缺口仍不接受。十一种具体值的读取、Blackboard token／stamp 和目标快照构造保持原样，不改变恢复状态或 Timeline 数据结构。
+- 运行路径为角色状态恢复中的变量值读取，删除每个读取值的 Enum.ToObject 和 Enum.IsDefined；其它类型仍调用真实存在的通用 ReadEnum，因此该工具尚不能删除，也不宣称完整 codec 无枚举反射。
+- 两文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 各自零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未执行非法字节或状态恢复运行对比及 Player 分配采样。

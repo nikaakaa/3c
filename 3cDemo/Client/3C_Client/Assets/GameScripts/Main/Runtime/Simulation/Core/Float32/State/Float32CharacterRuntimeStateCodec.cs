@@ -695,7 +695,7 @@ namespace ThirdPersonSimulation
 
         static AbilityStateValue ReadValue(CanonicalReader reader)
         {
-            ProgramStateValueKind kind = ReadEnum<ProgramStateValueKind>(reader.ReadByte());
+            ProgramStateValueKind kind = (ProgramStateValueKind)reader.ReadByte();
             return kind switch
             {
                 ProgramStateValueKind.Boolean => AbilityStateValue.FromBoolean(reader.ReadBoolean()),
@@ -709,7 +709,7 @@ namespace ThirdPersonSimulation
                 ProgramStateValueKind.BlackboardOwnerToken => AbilityStateValue.FromBlackboardOwnerToken(ReadBlackboardOwnerToken(reader)),
                 ProgramStateValueKind.BlackboardWriteStamp => AbilityStateValue.FromBlackboardWriteStamp(ReadBlackboardWriteStamp(reader)),
                 ProgramStateValueKind.ActionTargetSnapshot => AbilityStateValue.FromActionTargetSnapshot(ReadTarget(reader)),
-                _ => throw new InvalidDataException($"Unsupported Float32 Character state value kind '{kind}'.")
+                _ => throw new InvalidDataException($"Float32 Character runtime state enum '{nameof(ProgramStateValueKind)}' value '{(byte)kind}' is invalid.")
             };
         }
 

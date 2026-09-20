@@ -676,3 +676,12 @@
 - 已检索到正式生产者：FixedPipelineTransaction、DotRecastWorldSolver、DeterministicKccWorldSolver.Diagnostics、RollbackOutputCommitter 和权威／预测 Pass。记录本身是 struct，本轮不把 struct 的 new 视为对象分配；调用方字符串、发布存储及采样器内部开销仍未治理和实测。
 - 两文件修改前无其它未提交修改，未发现 csc／bee 编译进程。Fixed／Float32 portable 分别零警告零错误，每次 build-server shutdown 成功，本切片 diff 空白检查通过。并行 GraphValueRuntime 已恢复到可编译状态，未由本任务修改，因此 2.21 的 Float32 编译阻断已解除；历史失败证据保留。
 - 未新增测试、未主动刷新或控制共享 Unity、未做运行诊断对比或 Player 分配采样；7.1 等整体验收范围继续未完成。
+## 2026-09-20 Fixed 输入回放哈希中间列表清理
+
+对应 tasks.md 的 7.7。
+
+- FixedCharacterInputTraceModule.Replay 每次取到录制帧后调用 ComputeInputHash(frame.Input)，将结果保存到该帧 ReplayFrameBuilder。原计算先构造 List<string>，填充后 ToArray 交 StableHash.Compute；现按原容量公式直接建立最终数组并用下标填写。
+- 源码逐字段核对：头部 5 项，每个 SimulationInputValue 15 项，每个请求 5 项，数组长度为 5＋Values.Count×15＋Requests.Count×5。字段及遍历顺序、InvariantCulture、布尔文本、空值处理和 StableHash.Compute 均保持原路径，不改变回放推进、证据写入时机或提前计算输入哈希。
+- 每次删除一个 List 对象和其存储到最终数组的复制，保留一个最终字符串数组。数字格式化字符串、params 哈希内部拼接／UTF-8、回放输入重映射和记录增长仍存在。该入口是 Fixed 回放证据链，Float32 输入记录模块没有同名哈希计算，不为了对称增加入口。
+- 同时检查 Float32SimulationDiagnosticsAggregate：发布使用已有按 Actor 索引的字典与有序列表，循环按下标读取；初始化集合不是每次发布创建，本轮不改该正确发布路径。诊断最终存储和容量治理仍需继续追踪。
+- 编辑前目标文件无其它未提交修改，未发现 csc／bee 编译进程。Fixed portable 编译零警告零错误，build-server shutdown 成功，本切片 diff 空白检查通过；未新增测试、未控制或刷新共享 Unity、未运行回放或 Player 分配采样。

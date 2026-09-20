@@ -681,62 +681,58 @@ namespace ThirdPersonSimulation.Fixed
 
         static StableHash ComputeInputHash(SimulationInput input)
         {
-            var values = new List<string>(
-                5 + input.Values.Count * 15 + input.Requests.Count * 5)
-            {
-                input.NumericProfile.ToString(),
-                ((byte)input.TickSource.Kind).ToString(
-                    CultureInfo.InvariantCulture),
-                input.TickSource.ClockId,
-                input.TickSource.SourceTick.ToString(
-                    CultureInfo.InvariantCulture),
-                input.Sequence.ToString(CultureInfo.InvariantCulture)
-            };
+            var values = new string[5 + input.Values.Count * 15 + input.Requests.Count * 5];
+            int index = 0;
+            values[index++] = input.NumericProfile.ToString();
+            values[index++] = ((byte)input.TickSource.Kind).ToString(CultureInfo.InvariantCulture);
+            values[index++] = input.TickSource.ClockId;
+            values[index++] = input.TickSource.SourceTick.ToString(CultureInfo.InvariantCulture);
+            values[index++] = input.Sequence.ToString(CultureInfo.InvariantCulture);
             for (int i = 0; i < input.Values.Count; i++)
             {
                 SimulationInputValue value = input.Values[i];
-                values.Add(value.InputId);
-                values.Add(((byte)value.Kind).ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.Boolean ? "1" : "0");
-                values.Add(value.Scalar.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.Vector2.X.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.Vector2.Y.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.Vector3.X.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.Vector3.Y.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.Vector3.Z.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.Yaw.Degrees.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.ActionTargetSnapshot.TargetId);
-                values.Add(value.ActionTargetSnapshot.Position.X.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.ActionTargetSnapshot.Position.Y.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.ActionTargetSnapshot.Position.Z.Raw.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(value.ActionTargetSnapshot.Yaw.Degrees.Raw.ToString(
-                    CultureInfo.InvariantCulture));
+                values[index++] = value.InputId;
+                values[index++] = ((byte)value.Kind).ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.Boolean ? "1" : "0";
+                values[index++] = value.Scalar.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.Vector2.X.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.Vector2.Y.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.Vector3.X.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.Vector3.Y.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.Vector3.Z.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.Yaw.Degrees.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.ActionTargetSnapshot.TargetId;
+                values[index++] = value.ActionTargetSnapshot.Position.X.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.ActionTargetSnapshot.Position.Y.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.ActionTargetSnapshot.Position.Z.Raw.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = value.ActionTargetSnapshot.Yaw.Degrees.Raw.ToString(
+                    CultureInfo.InvariantCulture);
             }
             for (int i = 0; i < input.Requests.Count; i++)
             {
                 SimulationInputRequest request = input.Requests[i];
-                values.Add(request.RequestId);
-                values.Add(request.Sequence.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(request.SourceTick.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(request.ExpireSimulationTick.ToString(
-                    CultureInfo.InvariantCulture));
-                values.Add(request.Priority.ToString(
-                    CultureInfo.InvariantCulture));
+                values[index++] = request.RequestId;
+                values[index++] = request.Sequence.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = request.SourceTick.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = request.ExpireSimulationTick.ToString(
+                    CultureInfo.InvariantCulture);
+                values[index++] = request.Priority.ToString(
+                    CultureInfo.InvariantCulture);
             }
-            return StableHash.Compute(values.ToArray());
+            return StableHash.Compute(values);
         }
 
         static void RequireIdle()

@@ -69,6 +69,7 @@ namespace BTSMTL.Timeline.Editor
             DocumentGroup = documentGroup;
             WorkspaceGroup = workspaceGroup;
             StatusGroup = statusGroup;
+            Toolbar = toolbar;
             BackButton = backButton;
             DocumentField = documentField;
             SourceSummary = sourceSummary;

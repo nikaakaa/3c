@@ -48,4 +48,4 @@
 
 现行规范已与主链一致：`character-camera-pipeline` 由项目内部求解 CameraFramePlan，Cinemachine 只由 Adapter 落地；C# 作者规范已删除旧目录包；相机 spec 也没有旧 CameraStateResolver/Camera modifier requirement。后续提案只需维护剩余消费者、映射和清理合同，不恢复总包 Projection、旧触发轨道或第二套 Timeline Camera domain。
 
-旧 `btsmtl-compiled-simulation-program` delta 要求相机进入整包 Projection 并等待 Character 全量 Build，已删除；其仍必要的资源转换、依赖检查与身份要求改归相机领域绑定 delta。旧 current spec 的总 Program/Projection 要求由领域运行时迁移任务统一退役，不能借旧文字恢复总包。本次只落规划和 delta，不改写其它任务文件或宣称代码迁移已完成。
+早期相机 delta 曾要求相机进入整包 Projection 并等待 Character 全量 Build，该口径已经退役；仍必要的资源转换、依赖检查与身份要求改归相机领域绑定 delta。当前规范不再保留整角色 Program 索引，不能借历史文字恢复总包。本次只落规划和 delta，不改写其它任务文件或宣称代码迁移已完成。

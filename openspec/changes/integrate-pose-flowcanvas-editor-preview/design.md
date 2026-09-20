@@ -287,7 +287,7 @@ C# authoring任务拥有公共对象遍历、代码输出、生成入口以及�
 | character-animation-presentation-authoring：Presentation Profile必须唯一绑定Pose source；Pipeline Definition 必须引用唯一 Animation Presentation Profile | Profile仍强制保存旧source wrappers和完整低层作者节点清单 | 实施同步改为Profile装配＋Player直接资源＋层／Rig／Montage引用；删除旧authoring消费者，不增加第二来源 |
 | character-animation-layer-runtime：持续Pose与有限Action控制边界必须分离；每类连续性必须只有一个明确owner | 禁止旧Layer catalog有保留价值，但不能误杀新的作者Animation Layer | 保留旧runtime Layer删除结论；新Layer基于现有Linked实现与编译范围，Runtime owner仍唯一 |
 | character-pose-inertialization：Inertialization时间数学必须由触发owner唯一提供；Inertialization必须位于native Pose阶段且早于FootPlacement | 当前限制恰好一个直接owner／Player，与UE下游接收请求不一致 | 实施同步为每请求唯一owner、节点处理有界请求集合；保留局部history、残差与Foot前置阶段 |
-| character-pose-plan-compilation：Typed Lowering／Topology／Family／Source Map相关条款 | 同一Pass链可复用，但作者节点与operation不再一一对应，入口目前依赖Character前端 | 保留唯一Compiler；加入独立动画输入／结果合同，角色Build复用它；内部展开不再依赖技能发现 |
+| native-flowcanvas-pose-runtime／character-pose-graph-runtime-architecture | 当前正式链已直接执行原生作者图，不存在Pose IR、ProgramImage或加载期Compiler | 保留作者拓扑校验、typed输入、阶段结果与单一帧事务；不得恢复隐藏编译运行语言 |
 | 原Document同步、五工具与专属Validator条款 | 与C# authoring r2退役要求冲突 | 本change撤销旧Document delta；删除协议由C# authoring任务承担，保留原Pose领域规则与正式API |
 | graph-authoring-domain-framework／editor-shell：旧GraphView、Details、目录、状态表面 | 实现与组织限制旧 | 既有delta更新为原生角色化表面、调用导航和作者有意义的字段 |
 | character-animation-clip-authoring：原生AnimationClip唯一owner | 与新方案相容 | Montage不复制素材曲线；Sequence Player名称不恢复Sequence包装资产 |

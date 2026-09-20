@@ -1,7 +1,8 @@
 # btsmtl-timeline-direct-runtime Specification
 
 ## Purpose
-TBD - created by archiving change restyle-timeline-editor-slate-style. Update Purpose after archive.
+
+定义 Timeline 正式内容从准备、实例创建、分步推进到提交、丢弃和停止的直接运行合同。Timeline Runtime 直接消费唯一作者数据及其 portable 表示，在技能与非技能调用中复用同一执行链，并把 Gameplay、表现和诊断结果交给各自领域 owner；不生成第二套 Timeline IR、操作表、播放器或提交路径。
 
 ## Requirements
 

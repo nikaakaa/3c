@@ -350,13 +350,13 @@ MCP 五生命周期工具描述已同步为 Document v7；Timeline 的 Slot、Se
 
 Presentation Snapshot 的 Animation Slot 记录现在从 Rig Definition 解析并携带独立 `animationSlotGroupId`；观察与 Document context 不再只能从 SlotId 或 AnimationChannel 推断互斥 Group。该字段使用正式 Rig owner 的 GroupId，未新增运行时路由或第二份组配置。
 
-现行规范对账已完成一轮：`openspec/project.md`、`character-presentation-pose-graph` 和 `character-animation-presentation-authoring` 已同步直接资源 Player、Slot／Group、Control Rig 内部 Goal Assembly、Animation Layer／Control Rig role 和 Document v7 术语；`btsmtl-agent-authoring-document-sync` 已同步 v7 package、退役 Source Slot 语义和严格拒绝规则。未修改 archive 历史文件，也未为规范冲突保留兼容路径。
+现行规范对账已完成一轮：`character-presentation-pose-graph` 和 `character-animation-presentation-authoring` 已同步直接资源 Player、Slot／Group、Control Rig 内部 Goal Assembly、Animation Layer／Control Rig role。作者代码输出继续由 `character-csharp-authoring` 的两个显式入口负责，不恢复旧 Document 同步协议。未修改 archive 历史文件，也未为规范冲突保留兼容路径。
 
 进一步修正了隐藏 operation 的编译顺序：Symbolic Lowering 现在显式插入 Slot 的内部 Action Playback Input 和 Full Body IK 的内部 Goal Assembler，Binding Pass 按相同 sequence 消费并生成 bound operation；Stage Schedule 的 operation 数量、typed dependency 与 SourceMap 不再出现“只在Binding补 operation”的索引错位风险。Unity 编译成功。
 
-本轮继续把通用 Controller synthesis、AI synthesis 和 MCP bridge 的现行规范口径同步为 Document v7，并将 Character Presentation 的旧 Source Slot／Profile Binding描述改为直接资源 Player与Slot／Group owner。运行时仍保留 Action Input 与 Goal Assembler operation 名称，因为它们是内部 ABI，不是作者节点。
+本轮将 Character Presentation 的旧 Source Slot／Profile Binding描述改为直接资源 Player与Slot／Group owner。运行时仍保留 Action Input 与 Goal Assembler operation 名称，因为它们是内部 ABI，不是作者节点；旧 Controller synthesis、AI synthesis 和 Document bridge 不再作为现行规范 owner。
 
-又同步了 `agent-character-controller-synthesis`、`agent-ai-controller-synthesis`、`btsmtl-agent-authoring-mcp-bridge`、`character-pose-plan-compilation`、`character-state-timeline-authoring-loop`、`character-animation-blend-space`、`character-pipeline-definition-authoring` 与 `graph-authoring-domain-framework` 的旧版本或旧 Source Slot 表述，保持当前 spec 与 v7代码链一致。仅修改现行规范，未改变历史 archive。
+又同步了 `character-state-timeline-authoring-loop`、`character-animation-blend-space`、`character-pipeline-definition-authoring` 与 `graph-authoring-domain-framework` 的旧 Source Slot 表述，并把 Pose 运行口径统一到 `native-flowcanvas-pose-runtime`。仅修改现行规范，未改变历史 archive。
 
 补齐了直接资源迁移后的两个编译消费者：Animation Blend Compiler 的 Slot 选择端点现在由 Slot 自身合法 AnimationChannel 与 AllowEmpty 合同生成，不再寻找已删除的 Action Playback 作者端口；Animation Resource Closure Analyzer 现在收集直接 AnimationClip 与 Blend Space sample，不再依赖旧 Source Slot 扫描。Unity 编译成功。
 

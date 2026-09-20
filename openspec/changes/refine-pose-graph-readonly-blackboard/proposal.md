@@ -67,12 +67,12 @@
 - project.md现行Blackboard只读描述的是当前Pose消费表面；不等于禁止EventGraph作者变量Set。本change只更新Pose读取侧，事件执行合同由独立规划按本轮已确认公共基线维护。
 - 现行BlendSpace样本参数聚合和Inertialization响应数学保持不变。若后续实现必须改变它们的正式合同，应明确扩充对应delta，不能以本次任务分离视为已授权算法变更。
 - 旧Document/五工具/专属Validator条款由C# authoring任务退役，本任务删除其调用依赖并保留真实领域规则，不创建中央Validator、整包同步事务或第二Pose模型。人工编辑不自动导出源码，显式生成不自动合并未导出修改，两者不自动Build。
-- 本change不恢复旧Canvas、旧Program或第二IK链。r3接收Pose内部原生运行和Image专属Compiler清理；预览会话、角色/技能Compiler、Host/快照/共享装配壳、总Projection、TrainingEnemy及资源/IK算法仍归各正式owner。
+- 本change不恢复旧Canvas、旧Program、Pose Image或第二IK链。Pose内部继续由原生 FlowCanvas Runtime执行；预览会话、角色/技能编译、Host/快照/共享装配壳、TrainingEnemy及资源/IK算法仍归各正式owner。
 
 ## r3 Current Spec Comparison
 
-现行character-presentation-pose-graph仍要求固定Compiler Pass、ProgramImage、Projection及编译SourceMap；character-pose-plan-compilation与character-pose-graph-runtime-architecture仍规定Image/Workspace/Worker执行。r3明确替换这些执行载体，保留类型、拓扑、资源、帧失败和唯一Writer约束。主方案已持有上述旧要求退役及native-flowcanvas-pose-runtime的通用delta；本任务只补自己的领域准备/阶段接口和已完成输入规则，不复制主方案全套delta或执行清单。
+现行 `character-presentation-pose-graph`、`native-flowcanvas-pose-runtime` 与 `character-pose-graph-runtime-architecture` 已统一为原生图作者、直接执行和角色表现帧事务。旧 Pose IR、ProgramImage、Workspace/Worker Plan 不再是现行能力，也不保留旧能力名索引。本任务只补 Blackboard 只读输入、领域准备接口和已完成输入规则，不重复定义原生图执行链。
 
 主方案的PoseStateMachine草案仍只写Fact/时间，遗漏已完成的动画变量Frame。本任务delta继续保留同次typed变量、短路与作用范围；归并不能用主方案较窄文字覆盖它。D10结果发布者以协调审阅解释为领域owner确认实际采用、主实现汇集；本轮不修改主方案正文。
 
-旧“独立Pose编译”和“每ActorProgramImage执行”属于前一阶段的完成事实，不再约束本次最终运行方式。ACL/数据库/Foot数据等真实资源构建继续由原owner负责；取消图编译不等于删除所有构建或算法校验。
+旧“独立Pose编译”和“每Actor ProgramImage执行”只属于历史实施事实，不再约束现行运行方式。ACL、数据库和Foot数据等真实资源构建继续由原owner负责；原生图直接执行不等于删除资源构建或算法校验。

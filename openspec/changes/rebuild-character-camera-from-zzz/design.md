@@ -205,7 +205,7 @@ Camera Domain Runtime 继续拥有默认轨道、鼠标输入、同帧 Body visi
 | Camera Sequence / Camera Effect owner | 已有有限算法和固定 owner，不是旧 StateResolver/Modifier | 修改现有 requirement，不删除不存在的旧 requirement |
 | Camera debug | 当前快照未覆盖全部期望原因 | 补齐现有合同，不宣称现状已满足 |
 | character-csharp-authoring | 已删除旧 Agent 目录包 | 删除废弃 capability delta，添加相机领域覆盖要求 |
-| btsmtl-compiled-simulation-program / 旧 Camera delta | 总 Program、整包 Projection、全量 Build 与已批准领域基线冲突 | 删除本 change 的旧 compiled-simulation delta；总包退役由领域迁移 owner 处理，相机只提供资源与绑定 |
+| 已退役的整角色 Program / 旧 Camera delta | 总 Program、整包 Projection、全量 Build 与已批准领域基线冲突 | 不恢复旧 compiled-simulation delta；相机只提供资源与绑定，领域运行时直接装配 |
 | replace-character-program-with-domain-runtimes D1/D5/D6/D8 | 技能独立编译，C# 控制、Pose 原生运行，表现按领域绑定 | Camera 接资源/只读绑定和实际采用身份，不创建总包或 Editor 逻辑运行时搬运 |
 | btsmtl-timeline-editor-preview：Continuous Curve | 已包含相机曲线和其它领域完整要求 | 不重复改写该 requirement；动作请求统一由 TreeClip Node 提交，Preview 只观察 Camera Runtime 结果 |
 | source-parity（本 change 新能力） | 原行为证据与项目已写代码不能互相替代 | 保留全范围和缺口，禁止以新增现状页宣布完整移植 |

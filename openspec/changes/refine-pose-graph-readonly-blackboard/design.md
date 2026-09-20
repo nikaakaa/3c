@@ -217,9 +217,9 @@ Image专属删除包括CharacterPoseCompilerModule及只服务其IR/Pass的入�
 
 | 现行/活跃条款 | r3明确替代 | 规范增量owner |
 |---|---|---|
-| character-presentation-pose-graph：固定Compiler Pass、ProgramImage、State平面plan、编译Routing/SourceMap | 原生节点/连接与实际实例绑定，保留类型、递归、readiness、时间与曲线规则 | 主领域运行change持有旧运行条款替代；本delta补输入与领域接口 |
-| character-pose-plan-compilation：独立Pose Compiler、IR、ValueLifetime、Workspace/Worker Plan及Image Seal | 删除专属载体；正式原生图规则、节点缓存和实例缓冲接管实际约束 | 主方案已提供REMOVED/ADDED delta，本任务不复制 |
-| character-pose-graph-runtime-architecture：Program Runtime/Image/ExecutionView与跨ActorWorker | 原生托管图调度，Source/Constraint/Final Publication继续唯一，内部Job由算法owner管理 | 主方案runtime/native-flowcanvas-pose-runtime增量 |
+| character-presentation-pose-graph：原生作者图、typed参数页与正式Mutation | 保持作者数据和输入合同，不恢复编译镜像 | 本delta只补Blackboard输入与领域接口 |
+| 已退役的Pose Compiler／IR／ProgramImage合同 | 不保留旧能力名索引；正式原生图规则、节点缓存和实例缓冲接管实际约束 | native-flowcanvas-pose-runtime |
+| character-pose-graph-runtime-architecture：Actor-local原生图与单一帧事务 | 保持Source、Constraint、Final Publication唯一，内部Job由算法owner管理 | character-pose-graph-runtime-architecture与native-flowcanvas-pose-runtime |
 | 本目录r2：保留原Compiler/独立Pose编译 | 已完成阶段的历史事实保留；r3不再要求该执行方式 | 本目录proposal/design/delta，已完成tasks不重开 |
 | 主方案PoseStateMachine delta仍只有Fact/时间 | 保留本任务已交付的同次typed动画变量条件；不得在归并时丢失 | 本目录完整输入delta；主方案owner需保留该责任指针 |
 | D10“结果发布者”表述与协调审阅R7 | Pose实际安装后发布Adopted；主实现汇集，预览只读 | 本节接口与本delta；不修改主方案文件 |

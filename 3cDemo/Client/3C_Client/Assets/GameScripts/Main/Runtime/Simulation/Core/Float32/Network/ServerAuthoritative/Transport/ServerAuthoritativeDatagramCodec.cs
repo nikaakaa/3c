@@ -100,11 +100,23 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public static byte[] Write(ServerAuthoritativeDatagramPacket packet, int maximumBytes)
         {
+            using var writer = new CanonicalWriter();
+            Write(writer, packet, maximumBytes);
+            return writer.ToArray();
+        }
+
+        public static void RequireFits(ServerAuthoritativeDatagramPacket packet, int maximumBytes)
+        {
+            using var writer = new CanonicalWriter();
+            Write(writer, packet, maximumBytes);
+        }
+
+        static void Write(CanonicalWriter writer, ServerAuthoritativeDatagramPacket packet, int maximumBytes)
+        {
             if (packet == null)
                 throw new ArgumentNullException(nameof(packet));
             if (maximumBytes <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maximumBytes));
-            using var writer = new CanonicalWriter();
             writer.WriteUInt32(Magic);
             writer.WriteInt32(ProtocolVersion);
             writer.WriteByte((byte)packet.Header.Kind);
@@ -114,10 +126,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             writer.WriteString(packet.Header.Identity.ActorId.Value);
             writer.WriteUInt64(packet.Header.PacketSequence);
             writer.WriteBytes(packet.Payload);
-            byte[] bytes = writer.ToArray();
-            if (bytes.Length > maximumBytes)
-                throw new InvalidDataException($"Gameplay datagram size '{bytes.Length}' exceeds budget '{maximumBytes}'.");
-            return bytes;
+            if (writer.Length > maximumBytes)
+                throw new InvalidDataException($"Gameplay datagram size '{writer.Length}' exceeds budget '{maximumBytes}'.");
         }
 
         public static ServerAuthoritativeDatagramPacket Read(ArraySegment<byte> bytes, int maximumBytes)

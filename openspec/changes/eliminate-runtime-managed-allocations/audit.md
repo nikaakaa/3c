@@ -395,3 +395,12 @@
 - 共用 Reader 以片段构造 CanonicalReader，所有基础读取与 RequireComplete 使用片段边界；重新编码仍完整执行，ContentEquals 只比较 bytes.AsSpan() 的实际范围。父消息其它字段或尾部缓冲不能混入输入解析与 canonical 比较。
 - ReadInput 的结果由独立字符串、数值、值数组和请求数组构成，不保存 reader、片段或源字节引用，因此借用结束于同步调用。状态保存恢复两个文件只替换子输入读取调用，不改变事务或存储寿命。ReadBaseline 仍从整个 byte[] 进入统一 Reader，原 null 异常和长期 stateBytes 复制保持不变。
 - 删除每个嵌套输入的一份字节数组；reader、解码对象集合和重新编码 writer 仍分配。ServerAuthoritative.Transport portable 及 Core／Float32／ServerAuthoritative 编译零警告零错误，按规定构建后 shutdown 成功，diff 空白检查通过。编辑前目标文件无其它未提交修改、无 csc／bee 编译进程；未新增测试、未刷新或控制共享 Unity，未做协议运行或 Player 分配采样。
+
+## 2026-09-20 权威快照模型 MTU 检查副本清理
+
+对应 tasks.md 的 5.28，与代码同步提交。
+
+- AuthoritySourceRuntime 发送 delta 快照前调用 GameplayDatagramCodec.Write 后丢弃数组，仅依靠超限异常判断是否进入原全量检查点处理。Endpoint.EnqueueSend 还会按自身预算实际编码；两个入口接收的预算来源不同，因此保留模型检查而非直接删除。
+- codec 的 Write 与新 RequireFits 共用唯一私有写入函数，完成原字段编码后按 writer.Length 检查 maximumBytes。RequireFits 不 ToArray；正式 Write 通过预算检查后才输出独立数组，因此超限写入也不再生成最终数组。原参数异常、MTU 文本和 InvalidDataException 处理保留。
+- 不计算另一套尺寸公式、不缓存可变 payload，也不改变序号、路由、队列、StoreSent 或原超限业务分支。仍执行完整编码，writer／流和编码 CPU 未消除；不宣称此检查无分配。
+- ServerAuthoritative.Transport portable 及全部依赖编译零警告零错误，按规定构建后 shutdown 成功；diff 空白检查通过。编辑前目标文件无其它未提交修改且未发现 csc／bee 编译进程。未新增测试、未主动刷新或控制共享 Unity，未做网络联调或 Player 采样。

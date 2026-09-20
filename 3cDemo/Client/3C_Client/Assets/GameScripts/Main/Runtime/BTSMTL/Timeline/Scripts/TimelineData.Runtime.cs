@@ -21,25 +21,24 @@ namespace BTSMTL.Timeline
         }
         public int Frame => Mathf.RoundToInt(Time * TimelineUtility.FrameRate);
 
-        public int MaxFrame { get; private set; }
-        public float Duration { get; private set; }
+        public int MaxFrame => TimelineTimeGrid.CeilingIndex(DurationTime, TimelineUtility.FrameRate);
+        public FixedScalar DurationTime { get; private set; }
+        public float Duration => DurationTime.ToSingle();
 
         public void Init()
         {
-            MaxFrame = 0;
+            DurationTime = FixedScalar.Zero;
             foreach (var track in m_Tracks)
             {
                 track.Init(this);
-                if (track.MaxFrame > MaxFrame)
-                    MaxFrame = track.MaxFrame;
+                DurationTime = FixedScalar.Max(DurationTime, track.DurationTime);
             }
             for (int i = 0; i < m_Sections.Count; i++)
             {
                 TimelineSection section = m_Sections[i];
                 if (section != null)
-                    MaxFrame = Math.Max(MaxFrame, TimelineTimeGrid.CeilingIndex(section.Time, TimelineUtility.FrameRate));
+                    DurationTime = FixedScalar.Max(DurationTime, section.Time);
             }
-            Duration = (float)MaxFrame / TimelineUtility.FrameRate;
             OnValueChanged?.Invoke();
         }
     }
@@ -87,23 +86,22 @@ namespace BTSMTL.Timeline
         public Action OnMutedStateChanged;
 
         public TimelineData Timeline { get; protected set; }
-        public int MaxFrame { get; protected set; }
+        public FixedScalar DurationTime { get; protected set; }
 
         public virtual void Init(TimelineData timeline)
         {
             Timeline = timeline;
 
-            MaxFrame = 0;
+            DurationTime = FixedScalar.Zero;
             foreach (var clip in m_Clips)
             {
                 clip.Init(this);
-                if (clip.EndFrame > MaxFrame)
-                    MaxFrame = clip.EndFrame;
+                DurationTime = FixedScalar.Max(DurationTime, clip.EndTime);
             }
             foreach (var marker in m_Markers)
             {
                 marker.Init(this);
-                MaxFrame = Mathf.Max(MaxFrame, Mathf.Max(1, TimelineTimeGrid.CeilingIndex(marker.Time, TimelineUtility.FrameRate)));
+                DurationTime = FixedScalar.Max(DurationTime, FixedScalar.Max(FixedScalar.FromRaw(1), marker.Time));
             }
 
         }
@@ -163,8 +161,10 @@ namespace BTSMTL.Timeline
         string m_AuthoringId;
 
         #region Frame
-        public int StartFrame;
-        public int EndFrame;
+        [SerializeField]
+        long m_StartTimeRaw;
+        [SerializeField]
+        long m_EndTimeRaw;
         [SerializeField]
         long m_OtherEaseInTimeRaw;
         [SerializeField]
@@ -176,7 +176,6 @@ namespace BTSMTL.Timeline
         [SerializeField]
         long m_ClipInTimeRaw;
 
-        public int Duration => EndFrame - StartFrame;
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public virtual string ContractKind => string.Empty;
         public TimelineExecutionDomain ExecutionDomain => Track != null
@@ -185,8 +184,8 @@ namespace BTSMTL.Timeline
         #endregion
 
         #region Time
-        public float StartTime { get; private set; }
-        public float EndTime { get; private set; }
+        public FixedScalar StartTime => FixedScalar.FromRaw(m_StartTimeRaw);
+        public FixedScalar EndTime => FixedScalar.FromRaw(m_EndTimeRaw);
         public FixedScalar SelfEaseInTime => FixedScalar.FromRaw(m_SelfEaseInTimeRaw);
         public FixedScalar SelfEaseOutTime => FixedScalar.FromRaw(m_SelfEaseOutTimeRaw);
         public FixedScalar OtherEaseInTime => FixedScalar.FromRaw(m_OtherEaseInTimeRaw);
@@ -194,7 +193,7 @@ namespace BTSMTL.Timeline
         public FixedScalar EaseInTime => OtherEaseInTime.Raw == 0 ? SelfEaseInTime : OtherEaseInTime;
         public FixedScalar EaseOutTime => OtherEaseOutTime.Raw == 0 ? SelfEaseOutTime : OtherEaseOutTime;
         public FixedScalar ClipInTime => FixedScalar.FromRaw(m_ClipInTimeRaw);
-        public float DurationTime { get; private set; }
+        public FixedScalar DurationTime => EndTime - StartTime;
 
         #endregion
 
@@ -208,10 +207,17 @@ namespace BTSMTL.Timeline
         public virtual void Init(Track track)
         {
             Track = track;
-            FrameToTime();
         }
 
 #if UNITY_EDITOR
+        public void ConfigureTimeRange(FixedScalar startTime, FixedScalar endTime)
+        {
+            if (startTime < FixedScalar.Zero || endTime < startTime)
+                throw new ArgumentOutOfRangeException(nameof(startTime));
+            m_StartTimeRaw = startTime.Raw;
+            m_EndTimeRaw = endTime.Raw;
+        }
+
         public void ConfigureEase(FixedScalar easeIn, FixedScalar easeOut)
         {
             if (easeIn < FixedScalar.Zero || easeOut < FixedScalar.Zero)
@@ -247,12 +253,7 @@ namespace BTSMTL.Timeline
             m_AuthoringId = authoringId;
         }
 #endif
-        public void FrameToTime()
-        {
-            StartTime = StartFrame / (float)TimelineUtility.FrameRate;
-            EndTime = EndFrame / (float)TimelineUtility.FrameRate;
-            DurationTime = Duration / (float)TimelineUtility.FrameRate;
-        }
+
     }
 
     public abstract partial class SignalClip : Clip { }
@@ -361,11 +362,11 @@ namespace BTSMTL.Timeline
             m_Tracks.Remove(track);
             Init();
         }
-        public Clip AddClip(TimelineContractCatalog catalog, Track track, int frame)
+        public Clip AddClip(TimelineContractCatalog catalog, Track track, FixedScalar time)
         {
             if (catalog == null)
                 throw new ArgumentNullException(nameof(catalog));
-            Clip clip = track.AddClip(frame);
+            Clip clip = track.AddClip(time);
             try
             {
                 catalog.RequireClipPlacement(track, clip);
@@ -378,11 +379,11 @@ namespace BTSMTL.Timeline
             Init();
             return clip;
         }
-        public Clip AddClip(TimelineContractCatalog catalog, UnityEngine.Object referenceObject, Track track, int frame)
+        public Clip AddClip(TimelineContractCatalog catalog, UnityEngine.Object referenceObject, Track track, FixedScalar time)
         {
             if (catalog == null)
                 throw new ArgumentNullException(nameof(catalog));
-            Clip clip = track.AddClip(referenceObject, frame);
+            Clip clip = track.AddClip(referenceObject, time);
             try
             {
                 catalog.RequireClipPlacement(track, clip);
@@ -516,7 +517,7 @@ namespace BTSMTL.Timeline
                 UpdateSerializedTimeline();
                 action?.Invoke();
                 Init();
-                if (AlignTerminalFrameClips())
+                if (AlignTerminalTimeClips())
                     Init();
                 UnityEditor.EditorUtility.SetDirty(SerializedOwner);
                 UnityEditor.Undo.CollapseUndoOperations(undoGroup);
@@ -530,40 +531,40 @@ namespace BTSMTL.Timeline
             }
         }
 
-        bool AlignTerminalFrameClips()
+        bool AlignTerminalTimeClips()
         {
-            var terminalClips = new List<ITimelineTerminalFrameAlignedClip>();
-            int terminalFrame = 0;
+            var terminalClips = new List<ITimelineTerminalTimeAlignedClip>();
+            FixedScalar terminalTime = FixedScalar.Zero;
             for (int trackIndex = 0; trackIndex < m_Tracks.Count; trackIndex++)
             {
                 Track track = m_Tracks[trackIndex];
                 if (track == null)
                     continue;
                 foreach (TimelineMarker marker in track.Markers)
-                    terminalFrame = Mathf.Max(terminalFrame, Mathf.Max(1, TimelineTimeGrid.CeilingIndex(marker.Time, TimelineUtility.FrameRate)));
+                    terminalTime = FixedScalar.Max(terminalTime, FixedScalar.Max(FixedScalar.FromRaw(1), marker.Time));
                 for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
                 {
                     Clip clip = track.Clips[clipIndex];
                     if (clip == null)
                         continue;
-                    if (clip is ITimelineTerminalFrameAlignedClip terminalClip)
+                    if (clip is ITimelineTerminalTimeAlignedClip terminalClip)
                     {
                         terminalClips.Add(terminalClip);
-                        terminalFrame = Mathf.Max(terminalFrame, clip.StartFrame + 1);
+                        terminalTime = FixedScalar.Max(terminalTime, clip.StartTime + FixedScalar.FromRaw(1));
                     }
                     else
-                        terminalFrame = Mathf.Max(terminalFrame, clip.EndFrame);
+                        terminalTime = FixedScalar.Max(terminalTime, clip.EndTime);
                 }
             }
             for (int sectionIndex = 0; sectionIndex < m_Sections.Count; sectionIndex++)
             {
                 TimelineSection section = m_Sections[sectionIndex];
                 if (section != null)
-                    terminalFrame = Mathf.Max(terminalFrame, TimelineTimeGrid.CeilingIndex(section.Time, TimelineUtility.FrameRate));
+                    terminalTime = FixedScalar.Max(terminalTime, section.Time);
             }
             bool changed = false;
             for (int clipIndex = 0; clipIndex < terminalClips.Count; clipIndex++)
-                changed |= terminalClips[clipIndex].AlignTerminalFrame(terminalFrame);
+                changed |= terminalClips[clipIndex].AlignTerminalTime(terminalTime);
             return changed;
         }
 
@@ -582,14 +583,14 @@ namespace BTSMTL.Timeline
     {
         public virtual Type ClipType => typeof(Clip);
 
-        public virtual Clip AddClip(int frame)
+        public virtual Clip AddClip(FixedScalar time)
         {
-            Clip clip = Activator.CreateInstance(ClipType, this, frame) as Clip;
+            Clip clip = Activator.CreateInstance(ClipType, this, time) as Clip;
             clip.RegenerateAuthoringIdentity();
             m_Clips.Add(clip);
             return clip;
         }
-        public virtual Clip AddClip(UnityEngine.Object referenceObject, int frame)
+        public virtual Clip AddClip(UnityEngine.Object referenceObject, FixedScalar time)
         {
             return null;
         }
@@ -604,7 +605,6 @@ namespace BTSMTL.Timeline
             Clips.ForEach(c => 
             {
                 c.UpdateMix();
-                c.FrameToTime();
             });
             OnUpdateMix?.Invoke();
         }
@@ -630,15 +630,14 @@ namespace BTSMTL.Timeline
         public bool Invalid;
 
         public virtual string Name => GetType().Name;
-        public virtual int Length => EndFrame - StartFrame;
+        public virtual FixedScalar Length => DurationTime;
         public virtual ClipCapabilities Capabilities => ClipCapabilities.None;
 
         public Clip() { }
-        public Clip(Track track, int frame)
+        public Clip(Track track, FixedScalar time)
         {
             Track = track;
-            StartFrame = frame;
-            EndFrame = StartFrame + 3;
+            ConfigureTimeRange(time, time + FixedScalar.FromDecimal(0.05m));
         }
 
         public void UpdateMix()
@@ -653,42 +652,42 @@ namespace BTSMTL.Timeline
             {
                 if (clip != this && !clip.Invalid)
                 {
-                    if (clip.StartFrame < StartFrame && clip.EndFrame > EndFrame)
+                    if (clip.StartTime < StartTime && clip.EndTime > EndTime)
                     {
                         return;
                     }
-                    else if (clip.StartFrame > StartFrame && clip.EndFrame < EndFrame)
+                    else if (clip.StartTime > StartTime && clip.EndTime < EndTime)
                     {
                         return;
                     }
 
-                    if (clip.StartFrame < StartFrame && clip.EndFrame > StartFrame)
+                    if (clip.StartTime < StartTime && clip.EndTime > StartTime)
                     {
-                        m_OtherEaseInTimeRaw = FixedScalar.FromRatio(clip.EndFrame - StartFrame, TimelineUtility.FrameRate).Raw;
+                        m_OtherEaseInTimeRaw = (clip.EndTime - StartTime).Raw;
                     }
-                    if (clip.StartFrame > StartFrame && clip.StartFrame < EndFrame)
+                    if (clip.StartTime > StartTime && clip.StartTime < EndTime)
                     {
-                        m_OtherEaseOutTimeRaw = FixedScalar.FromRatio(EndFrame - clip.StartFrame, TimelineUtility.FrameRate).Raw;
+                        m_OtherEaseOutTimeRaw = (EndTime - clip.StartTime).Raw;
                     }
-                    if (clip.StartFrame == StartFrame)
+                    if (clip.StartTime == StartTime)
                     {
-                        if (clip.EndFrame < EndFrame)
+                        if (clip.EndTime < EndTime)
                         {
-                            m_OtherEaseInTimeRaw = FixedScalar.FromRatio(clip.EndFrame - StartFrame, TimelineUtility.FrameRate).Raw;
+                            m_OtherEaseInTimeRaw = (clip.EndTime - StartTime).Raw;
                         }
-                        else if (clip.EndFrame > EndFrame)
+                        else if (clip.EndTime > EndTime)
                         {
-                            m_OtherEaseOutTimeRaw = FixedScalar.FromRatio(EndFrame - StartFrame, TimelineUtility.FrameRate).Raw;
+                            m_OtherEaseOutTimeRaw = (EndTime - StartTime).Raw;
                         }
                     }
-                    m_SelfEaseInTimeRaw = FixedScalar.Min(SelfEaseInTime, FixedScalar.FromRatio(Duration, TimelineUtility.FrameRate) - OtherEaseOutTime).Raw;
-                    m_SelfEaseOutTimeRaw = FixedScalar.Min(SelfEaseOutTime, FixedScalar.FromRatio(Duration, TimelineUtility.FrameRate) - OtherEaseInTime).Raw;
+                    m_SelfEaseInTimeRaw = FixedScalar.Min(SelfEaseInTime, DurationTime - OtherEaseOutTime).Raw;
+                    m_SelfEaseOutTimeRaw = FixedScalar.Min(SelfEaseOutTime, DurationTime - OtherEaseInTime).Raw;
                 }
             }
         }
-        public bool Contains(float halfFrame)
+        public bool Contains(FixedScalar time)
         {
-            return StartFrame < halfFrame && halfFrame < EndFrame;
+            return StartTime < time && time < EndTime;
         }
 
         public Color Color()
@@ -699,15 +698,15 @@ namespace BTSMTL.Timeline
 
         public string StartTimeText()
         {
-            return $"StartTime:  {StartFrame.ToString("0.00")}S  /  StartFrame:  {StartFrame}F";
+            return $"StartTime:  {StartTime.ToDouble().ToString("0.00")}S";
         }
         public string EndTimeText()
         {
-            return $"EndTime:  {EndTime.ToString("0.00")}S  /  EndFrame:  {EndFrame}F";
+            return $"EndTime:  {EndTime.ToDouble().ToString("0.00")}S";
         }
         public string DurationText()
         {
-            return $"Duration:  {DurationTime.ToString("0.00")}S  /  {Duration}F";
+            return $"Duration:  {DurationTime.ToDouble().ToString("0.00")}S";
         }
 
         public virtual void RebindTimeline()
@@ -739,9 +738,9 @@ namespace BTSMTL.Timeline
 
     public abstract partial class SignalClip
     {
-        protected SignalClip(Track track, int frame) : base(track, frame) 
+        protected SignalClip(Track track, FixedScalar time) : base(track, time)
         {
-            EndFrame = StartFrame + 1;
+            ConfigureTimeRange(time, time + FixedScalar.FromRatio(1, TimelineUtility.FrameRate));
         }
     } 
 #endif

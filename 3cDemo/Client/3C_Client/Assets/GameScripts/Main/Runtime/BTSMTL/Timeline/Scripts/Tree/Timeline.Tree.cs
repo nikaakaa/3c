@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using UnityEngine;
 using TreeDesigner;
@@ -36,16 +37,16 @@ namespace BTSMTL.Timeline
 
         public override Type ClipType => typeof(TreeClip);
 
-        public override Clip AddClip(int frame)
+        public override Clip AddClip(FixedScalar time)
         {
             throw new InvalidOperationException("TreeClip必须绑定正式的Timeline节点图资产。");
         }
 
-        public override Clip AddClip(UnityEngine.Object referenceObject, int frame)
+        public override Clip AddClip(UnityEngine.Object referenceObject, FixedScalar time)
         {
             if (referenceObject is not ScriptableObject asset || asset is not ITimelineTreeGraphAsset graph || !graph.IsTimelineTree)
                 throw new ArgumentException("TreeClip必须绑定正式的Timeline节点图资产。", nameof(referenceObject));
-            var clip = new TreeClip(this, frame, asset);
+            var clip = new TreeClip(this, time, asset);
             clip.RegenerateAuthoringIdentity();
             if (ExecutionDomain == TimelineExecutionDomain.Presentation)
                 clip.SetExitSource(TimelineClipExitSource.FrameBoundary);
@@ -64,7 +65,7 @@ namespace BTSMTL.Timeline
 
     [Serializable]
     [ScriptGuid("31085f11443fe1347b871c5d69db3774"), Color(201, 060, 032)]
-    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource, ITimelineTerminalFrameAlignedClip
+    public partial class TreeClip : Clip, ITimelineOwnedAuthoringIdentity, ITimelineContentClosureSource, ITimelineClipExecutionPhaseSource, ITimelineClipExitSource, ITimelineTerminalTimeAlignedClip
     {
         public override string ContractKind => TimelineContractKinds.TreeClip;
 
@@ -125,17 +126,17 @@ namespace BTSMTL.Timeline
             graph.CollectTimelineContentClosure(builder, $"clip:{AuthoringId}/tree:{graph.AuthoringId}");
         }
 
-        public bool AlignTerminalFrame(int terminalFrame)
+        public bool AlignTerminalTime(FixedScalar terminalTime)
         {
             if (ExecutionDomain != TimelineExecutionDomain.Logic ||
                 m_ExitSource != TimelineClipExitSource.TreeDecision)
             {
                 return false;
             }
-            int endFrame = Mathf.Max(StartFrame + 1, terminalFrame);
-            if (EndFrame == endFrame)
+            FixedScalar endTime = FixedScalar.Max(StartTime + FixedScalar.FromRaw(1), terminalTime);
+            if (EndTime == endTime)
                 return false;
-            EndFrame = endFrame;
+            ConfigureTimeRange(StartTime, endTime);
             return true;
         }
 
@@ -151,11 +152,11 @@ namespace BTSMTL.Timeline
                 ? ClipCapabilities.TickQuantized
                 : ClipCapabilities.Resizable | ClipCapabilities.TickQuantized;
 
-        public TreeClip(Track track, int frame) : base(track, frame)
+        public TreeClip(Track track, FixedScalar time) : base(track, time)
         {
         }
 
-        public TreeClip(Track track, int frame, ScriptableObject assetTree) : base(track, frame)
+        public TreeClip(Track track, FixedScalar time, ScriptableObject assetTree) : base(track, time)
         {
             SetAssetTree(assetTree);
         }

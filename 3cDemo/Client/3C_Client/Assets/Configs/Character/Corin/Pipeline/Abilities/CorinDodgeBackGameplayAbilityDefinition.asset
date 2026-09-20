@@ -120,8 +120,8 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b0ee4319-922b-410e-8c0c-b4fe70eb7504
-        StartFrame: 0
-        EndFrame: 141
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 10093173146
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -214,8 +214,8 @@ MonoBehaviour:
       type: {class: MotionCurveClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: ca9b83e7-d1c4-4224-b62d-a51b4a4b9e0d
-        StartFrame: 0
-        EndFrame: 141
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 10093173146
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -316,8 +316,8 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 180ec5ff-8aca-43b2-93aa-32d2354b4851
-        StartFrame: 6
-        EndFrame: 45
+        m_StartTimeRaw: 429496730
+        m_EndTimeRaw: 10093173146
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -332,8 +332,8 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: b88aeaf5-d4a4-4a9d-a706-d6da6cb8072a
-        StartFrame: 45
-        EndFrame: 141
+        m_StartTimeRaw: 3221225472
+        m_EndTimeRaw: 10093173146
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0

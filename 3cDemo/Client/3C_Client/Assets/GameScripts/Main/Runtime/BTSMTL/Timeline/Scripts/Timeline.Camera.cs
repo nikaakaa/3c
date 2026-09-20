@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -197,12 +198,12 @@ namespace BTSMTL.Timeline
         static bool TrySampleClip(CameraStateClip clip, float timelineTime, out float weight)
         {
             weight = 0f;
-            if (timelineTime < clip.StartTime || timelineTime > clip.EndTime)
+            if (timelineTime < clip.StartTime.ToSingle() || timelineTime > clip.EndTime.ToSingle())
                 return false;
 
-            float duration = Mathf.Max(0.0001f, clip.DurationTime);
-            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
-            float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
+            float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
+            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
+            float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
             float normalizedTime = Mathf.Clamp01(selfTime / duration);
             weight = CameraTimelineSampling.SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, normalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             return weight > 0f;
@@ -249,7 +250,7 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable;
 
-        public CameraStateClip(Track track, int frame) : base(track, frame)
+        public CameraStateClip(Track track, FixedScalar time) : base(track, time)
         {
         }
 #endif
@@ -281,8 +282,8 @@ namespace BTSMTL.Timeline
                     continue;
                 }
 
-                if ((includeStartBoundary && Mathf.Abs(cueClip.StartTime) <= 0.000001f) ||
-                    previousTime < cueClip.StartTime && cueClip.StartTime <= timelineTime)
+                if ((includeStartBoundary && cueClip.StartTime.Raw == 0) ||
+                    previousTime < cueClip.StartTime.ToSingle() && cueClip.StartTime.ToSingle() <= timelineTime)
                 {
                     cues.Add(new TimelineCameraCueSample(
                         sourceId,
@@ -338,7 +339,7 @@ namespace BTSMTL.Timeline
         public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
 #if UNITY_EDITOR
-        public CameraCueClip(Track track, int frame) : base(track, frame)
+        public CameraCueClip(Track track, FixedScalar time) : base(track, time)
         {
         }
 #endif
@@ -387,12 +388,12 @@ namespace BTSMTL.Timeline
         static bool TrySampleClip(CameraResponseClip clip, float timelineTime, out float weight)
         {
             weight = 0f;
-            if (timelineTime < clip.StartTime || timelineTime > clip.EndTime)
+            if (timelineTime < clip.StartTime.ToSingle() || timelineTime > clip.EndTime.ToSingle())
                 return false;
 
-            float duration = Mathf.Max(0.0001f, clip.DurationTime);
-            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
-            float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
+            float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
+            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
+            float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
             float normalizedTime = Mathf.Clamp01(selfTime / duration);
             weight = CameraTimelineSampling.SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, normalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             return weight > 0f;
@@ -433,7 +434,7 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable;
 
-        public CameraResponseClip(Track track, int frame) : base(track, frame)
+        public CameraResponseClip(Track track, FixedScalar time) : base(track, time)
         {
         }
 #endif

@@ -571,13 +571,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             TimelineContractCatalog catalog,
             Track track,
             string identity,
-            int startFrame,
+            decimal startSeconds,
             UnityEngine.Object referenceObject)
         {
             Clip existing = track.Clips.SingleOrDefault(value => value != null && value.AuthoringId == identity);
             if (existing != null)
             {
-                ConfigureClipSegment(existing, startFrame, DefaultEndFrame(existing, startFrame, referenceObject), 0, 0, 0);
+                ConfigureClipSegment(existing, startSeconds, TimelineAuthoringPropertyContract.DefaultEndTime(existing, FixedScalar.FromDecimal(startSeconds), referenceObject).Raw / (decimal)FixedScalar.OneRaw, 0, 0, 0);
                 ConfigureClipExecution(track, existing);
                 return existing;
             }
@@ -586,8 +586,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             timeline.ApplyModify(() =>
             {
                 created = referenceObject
-                    ? timeline.AddClip(catalog, referenceObject, track, startFrame)
-                    : timeline.AddClip(catalog, track, startFrame);
+                    ? timeline.AddClip(catalog, referenceObject, track, FixedScalar.FromDecimal(startSeconds))
+                    : timeline.AddClip(catalog, track, FixedScalar.FromDecimal(startSeconds));
                 created.ConfigureAuthoringIdentity(identity);
                 ConfigureClipExecution(track, created);
                 timeline.Init();
@@ -640,31 +640,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             TimelineContractCatalog catalog,
             Track track,
             string identity,
-            int startFrame,
+            decimal startSeconds,
             UnityEngine.Object referenceObject,
-            int endFrame,
+            decimal endSeconds,
             decimal selfEaseInSeconds,
             decimal selfEaseOutSeconds,
             decimal clipInSeconds)
         {
-            Clip clip = EnsureClip(timeline, catalog, track, identity, startFrame, referenceObject);
-            ConfigureClipSegment(clip, startFrame, endFrame, selfEaseInSeconds, selfEaseOutSeconds, clipInSeconds);
+            Clip clip = EnsureClip(timeline, catalog, track, identity, startSeconds, referenceObject);
+            ConfigureClipSegment(clip, startSeconds, endSeconds, selfEaseInSeconds, selfEaseOutSeconds, clipInSeconds);
             return clip;
         }
 
         public static void ConfigureClipSegment(
             Clip clip,
-            int startFrame,
-            int endFrame,
+            decimal startSeconds,
+            decimal endSeconds,
             decimal selfEaseInSeconds,
             decimal selfEaseOutSeconds,
             decimal clipInSeconds)
         {
-            clip.StartFrame = startFrame;
-            clip.EndFrame = endFrame;
+            clip.ConfigureTimeRange(FixedScalar.FromDecimal(startSeconds), FixedScalar.FromDecimal(endSeconds));
             clip.ConfigureEase(FixedScalar.FromDecimal(selfEaseInSeconds), FixedScalar.FromDecimal(selfEaseOutSeconds));
             clip.ConfigureClipIn(FixedScalar.FromDecimal(clipInSeconds));
-            clip.FrameToTime();
             clip.Track?.UpdateMix();
         }
 
@@ -674,13 +672,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             float sourceStartTime,
             float sourceEndTime) =>
             clip.ConfigureSource(source, sourceStartTime, sourceEndTime);
-
-        static int DefaultEndFrame(Clip clip, int startFrame, UnityEngine.Object referenceObject)
-        {
-            if (referenceObject is UnityEngine.AnimationClip animation)
-                return startFrame + Mathf.RoundToInt(animation.length * TimelineUtility.FrameRate);
-            return startFrame + (clip is SignalClip ? 1 : 3);
-        }
 
         static void ResetNodeDefaults(FlowNode node)
         {

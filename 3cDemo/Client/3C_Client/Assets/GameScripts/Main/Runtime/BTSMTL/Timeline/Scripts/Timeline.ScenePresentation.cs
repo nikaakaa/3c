@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -92,7 +93,7 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.TickQuantized;
 
-        public ScenePresentationParameterCurveClip(Track track, int frame) : base(track, frame)
+        public ScenePresentationParameterCurveClip(Track track, FixedScalar time) : base(track, time)
         {
         }
 #endif
@@ -187,7 +188,7 @@ namespace BTSMTL.Timeline
                 for (int rightIndex = leftIndex + 1; rightIndex < clips.Count; rightIndex++)
                 {
                     ScenePresentationParameterCurveClip right = clips[rightIndex];
-                    if (left.EndFrame <= right.StartFrame || right.EndFrame <= left.StartFrame ||
+                    if (left.EndTime <= right.StartTime || right.EndTime <= left.StartTime ||
                         !string.Equals(left.TargetBindingId, right.TargetBindingId, StringComparison.Ordinal))
                         continue;
                     if (string.Equals(left.ParameterBindingId, right.ParameterBindingId, StringComparison.Ordinal))

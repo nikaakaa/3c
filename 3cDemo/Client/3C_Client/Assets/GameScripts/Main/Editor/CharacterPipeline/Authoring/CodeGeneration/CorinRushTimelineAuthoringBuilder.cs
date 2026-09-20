@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             var section = BtsmtlSkillAuthoringCode.EnsureSection(timeline.Data, sectionId, stateId, 0, string.Empty);
             section.ConfigureBranch(branchId);
             var animationTrack = BtsmtlSkillAuthoringCode.EnsureTrack(timeline.Data, catalog, typeof(AnimationTrack), animationTrackId, "Animation", TimelineExecutionDomain.Presentation);
-            var animationClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, animationTrack, animationClipId, 0, animation, totalFrame, 0, 0, 0);
+            var animationClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, animationTrack, animationClipId, 0m, animation, totalFrame / (decimal)TimelineUtility.FrameRate, 0, 0, 0);
             ((AnimationTrack)animationTrack).SetAnimationChannelId(new AnimationChannelId("FullBodyAction"));
             ((AnimationTrack)animationTrack).SetAnimationSlotId("corin.full-body-action");
             TimelineAuthoringPropertyContract.Apply(timeline.Data, animationClip, new[] { new TimelineAuthoringPropertyValue("blendProfileId", TimelineAuthoringPropertyKind.Text, "corin.animation-rig.action-blend-profile") });
@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             foreach (var cue in cues)
             {
                 string cueClipId = BtsmtlRushStableIdentity($"corin.rush.clip.cue:{stateId}:{cue.CueId}:{cue.Frame}");
-                var cueClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, cueTrack, cueClipId, cue.Frame - 1, null);
+                var cueClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, cueTrack, cueClipId, (cue.Frame - 1) / (decimal)TimelineUtility.FrameRate, null);
                 TimelineAuthoringPropertyContract.Apply(timeline.Data, cueClip, new[] { new TimelineAuthoringPropertyValue("cueId", TimelineAuthoringPropertyKind.Text, cue.CueId), new TimelineAuthoringPropertyValue("cueType", TimelineAuthoringPropertyKind.Text, "AttackProperty") });
                 cueClipIds.Add(cueClipId);
             }
@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 string graphName = $"Boundary {stateId} {boundary.Target} {boundary.Condition} @{boundary.Frame}";
                 string treeClipId = BtsmtlRushStableIdentity($"corin.rush.decision.clip:{stateId}:{boundary.Target}:{boundary.Condition}:{boundary.Frame}");
                 var graph = BtsmtlSkillAuthoringCode.EnsureTimelineGraph(timeline, graphId, graphName);
-                var treeClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, treeTrack, treeClipId, boundary.Frame - 1, graph);
+                var treeClip = BtsmtlSkillAuthoringCode.EnsureClip(timeline.Data, catalog, treeTrack, treeClipId, (boundary.Frame - 1) / (decimal)TimelineUtility.FrameRate, graph);
                 TimelineAuthoringPropertyContract.Apply(timeline.Data, treeClip, new[] { new TimelineAuthoringPropertyValue("executionPhase", TimelineAuthoringPropertyKind.Enum, TimelineTreeExecutionPhase.Decision), new TimelineAuthoringPropertyValue("assetTree", TimelineAuthoringPropertyKind.Object, graph) });
                 treeClipIds.Add(treeClipId);
             }

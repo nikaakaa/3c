@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -65,14 +66,14 @@ namespace BTSMTL.Timeline
                     continue;
                 }
 
-                if ((includeStartBoundary && Mathf.Abs(actionCueClip.StartTime) <= 0.000001f) ||
-                    previousTime < actionCueClip.StartTime && actionCueClip.StartTime <= timelineTime)
+                if ((includeStartBoundary && actionCueClip.StartTime.Raw == 0) ||
+                    previousTime < actionCueClip.StartTime.ToSingle() && actionCueClip.StartTime.ToSingle() <= timelineTime)
                 {
                     string stateId = string.Empty;
                     string branchId = string.Empty;
                     int localFrame = 0;
                     IReadOnlyList<TimelineSection> sections = actionCueClip.Timeline.Sections;
-                    var cueTime = TimelineTimeGrid.Position(actionCueClip.StartFrame, TimelineUtility.FrameRate);
+                    var cueTime = actionCueClip.StartTime;
                     for (int sectionIndex = 0; sectionIndex < sections.Count; sectionIndex++)
                     {
                         TimelineSection section = sections[sectionIndex];
@@ -116,7 +117,7 @@ namespace BTSMTL.Timeline
         public string CueType = "Gameplay";
 
 #if UNITY_EDITOR
-        public ActionCueClip(Track track, int frame) : base(track, frame)
+        public ActionCueClip(Track track, FixedScalar time) : base(track, time)
         {
         }
 #endif

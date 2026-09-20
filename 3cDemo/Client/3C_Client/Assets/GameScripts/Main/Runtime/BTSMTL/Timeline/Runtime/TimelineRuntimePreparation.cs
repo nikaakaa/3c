@@ -1842,14 +1842,14 @@ namespace BTSMTL.Timeline.Runtime
                         {
                             if (motionWarpTrack.Clips[clipIndex] is not MotionWarpClip motionWarpClip ||
                                 !logicClipFilter(motionWarpClip) ||
-                                segment.CurrentTime <= motionWarpClip.StartTime ||
-                                segment.PreviousTime >= motionWarpClip.EndTime)
+                                segment.CurrentTime <= motionWarpClip.StartTime.ToSingle() ||
+                                segment.PreviousTime >= motionWarpClip.EndTime.ToSingle())
                                 continue;
-                            float duration = Mathf.Max(0.0001f, motionWarpClip.DurationTime);
+                            float duration = Mathf.Max(0.0001f, motionWarpClip.DurationTime.ToSingle());
                             float previousNormalized = Mathf.Clamp01(
-                                (segment.PreviousTime - motionWarpClip.StartTime) / duration);
+                                (segment.PreviousTime - motionWarpClip.StartTime.ToSingle()) / duration);
                             float normalized = Mathf.Clamp01(
-                                (segment.CurrentTime - motionWarpClip.StartTime) / duration);
+                                (segment.CurrentTime - motionWarpClip.StartTime.ToSingle()) / duration);
                             motionWarps.Add(new TimelineRuntimeMotionWarpRequest(
                                 motionWarpClip.AuthoringId,
                                 motionWarpClip.SourceMotionClipId,
@@ -1944,10 +1944,10 @@ namespace BTSMTL.Timeline.Runtime
                 {
                     if (track.Clips[clipIndex] is not ScenePresentationParameterCurveClip clip ||
                         !logicClipFilter(clip) ||
-                        currentTime < clip.StartTime || currentTime > clip.EndTime)
+                        currentTime < clip.StartTime.ToSingle() || currentTime > clip.EndTime.ToSingle())
                         continue;
-                    float duration = Mathf.Max(0.0001f, clip.DurationTime);
-                    float local = Mathf.Clamp01((currentTime - clip.StartTime) / duration);
+                    float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
+                    float local = Mathf.Clamp01((currentTime - clip.StartTime.ToSingle()) / duration);
                     scenePresentation.Add(new TimelineRuntimeScenePresentationSample(
                         clip.AuthoringId,
                         clip.TargetBindingId,
@@ -2002,9 +2002,9 @@ namespace BTSMTL.Timeline.Runtime
                         treeClip.ClipExitSource == TimelineClipExitSource.TreeDecision;
                     if (System.Linq.Enumerable.Contains(exitedTreeDecisionClips, treeClip.AuthoringId))
                         continue;
-                    if (currentTime <= treeClip.StartTime)
+                    if (currentTime <= treeClip.StartTime.ToSingle())
                         continue;
-                    if (!treeDecisionExit && currentTime >= treeClip.EndTime)
+                    if (!treeDecisionExit && currentTime >= treeClip.EndTime.ToSingle())
                         continue;
                     if (!TryGetTreeContract(
                             content,
@@ -2012,8 +2012,8 @@ namespace BTSMTL.Timeline.Runtime
                             out string treeGraphId,
                             out string treeGraphRevision))
                         continue;
-                    float duration = Mathf.Max(0.0001f, treeClip.DurationTime);
-                    float local = Mathf.Clamp01((currentTime - treeClip.StartTime) / duration);
+                    float duration = Mathf.Max(0.0001f, treeClip.DurationTime.ToSingle());
+                    float local = Mathf.Clamp01((currentTime - treeClip.StartTime.ToSingle()) / duration);
                     treeClips.Add(new TimelineRuntimeTreeClipRequest(
                         treeClip.AuthoringId,
                         treeTrack.AuthoringId,
@@ -2054,9 +2054,9 @@ namespace BTSMTL.Timeline.Runtime
                     Clip clip = track.Clips[clipIndex];
                     if (clip == null ||
                         !logicClipFilter(clip) ||
-                        currentTime <= clip.StartTime || currentTime >= clip.EndTime)
+                        currentTime <= clip.StartTime.ToSingle() || currentTime >= clip.EndTime.ToSingle())
                         continue;
-                    float duration = Mathf.Max(0.0001f, clip.DurationTime);
+                    float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
                     clipSamples.Add(new TimelineRuntimeClipSample(
                         clip.AuthoringId,
                         track.AuthoringId,
@@ -2064,7 +2064,7 @@ namespace BTSMTL.Timeline.Runtime
                         TimelineRuntimeTreeClipEventKind.Update,
                         FixedScalar.FromRatio(currentFrame, frameRate),
                         currentCycle,
-                        (currentTime - clip.StartTime) / duration));
+                        (currentTime - clip.StartTime.ToSingle()) / duration));
                 }
             }
             return new TimelineRuntimeEvaluationResult(
@@ -2459,12 +2459,12 @@ namespace BTSMTL.Timeline.Runtime
                     {
                         if (sceneTrack.Clips[clipIndex] is not ScenePresentationParameterCurveClip clip ||
                             !presentationClipFilter(clip) ||
-                            currentTime < clip.StartTime || currentTime > clip.EndTime)
+                            currentTime < clip.StartTime.ToSingle() || currentTime > clip.EndTime.ToSingle())
                         {
                             continue;
                         }
-                        float duration = Mathf.Max(0.0001f, clip.DurationTime);
-                        float local = Mathf.Clamp01((currentTime - clip.StartTime) / duration);
+                        float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
+                        float local = Mathf.Clamp01((currentTime - clip.StartTime.ToSingle()) / duration);
                         scenePresentation.Add(new TimelineRuntimeScenePresentationSample(
                             clip.AuthoringId,
                             clip.TargetBindingId,

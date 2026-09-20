@@ -404,8 +404,8 @@ namespace BTSMTL.Timeline
                     Clip clip = track.Clips[clipIndex];
                     if (clip != null)
                         clipAuthoringIds.Add(clip.AuthoringId);
-                    if (clip != null && clip.EndFrame > maxFrame)
-                        maxFrame = clip.EndFrame;
+                    if (clip != null)
+                        maxFrame = Math.Max(maxFrame, TimelineTimeGrid.CeilingIndex(clip.EndTime, TimelineUtility.FrameRate));
                 }
                 for (int markerIndex = 0; markerIndex < track.Markers.Count; markerIndex++)
                 {
@@ -531,8 +531,8 @@ namespace BTSMTL.Timeline
                         track.AuthoringId,
                         TimelineClipExecutionPolicy.FromDomain(
                             track.ExecutionDomain),
-                        TimelineTimeGrid.Position(clip.StartFrame, TimelineUtility.FrameRate),
-                        TimelineTimeGrid.Position(clip.EndFrame, TimelineUtility.FrameRate),
+                        clip.StartTime,
+                        clip.EndTime,
                         executionPhase,
                         exitSource,
                         clipContract.Capabilities,

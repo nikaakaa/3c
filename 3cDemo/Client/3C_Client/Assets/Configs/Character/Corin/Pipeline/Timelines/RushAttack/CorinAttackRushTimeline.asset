@@ -46,8 +46,8 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: a00919f2-e3a4-c306-f4d8-a6ffaa805aa7
-        StartFrame: 0
-        EndFrame: 70
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 5010795179
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -173,8 +173,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: fd987643-1add-fd72-d854-ac32e207cacd
-        StartFrame: 7
-        EndFrame: 8
+        m_StartTimeRaw: 501079518
+        m_EndTimeRaw: 572662306
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -186,8 +186,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 1a5f12c4-3a4b-0a54-62d1-e5f4eb2336a4
-        StartFrame: 9
-        EndFrame: 10
+        m_StartTimeRaw: 644245094
+        m_EndTimeRaw: 715827883
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -199,8 +199,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: e8fa32e6-775b-5450-201b-061cde42c528
-        StartFrame: 11
-        EndFrame: 12
+        m_StartTimeRaw: 787410671
+        m_EndTimeRaw: 858993459
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -212,8 +212,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 46a7e648-90b5-70f2-ed0e-a46e357be7ed
-        StartFrame: 13
-        EndFrame: 14
+        m_StartTimeRaw: 930576247
+        m_EndTimeRaw: 1002159036
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -225,8 +225,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: eb92fc88-27fc-45eb-2c89-0e05e6cd02e4
-        StartFrame: 15
-        EndFrame: 16
+        m_StartTimeRaw: 1073741824
+        m_EndTimeRaw: 1145324612
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -238,8 +238,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 08ab1fe2-5404-99dc-9b8a-c26d00fb0dc8
-        StartFrame: 17
-        EndFrame: 18
+        m_StartTimeRaw: 1216907401
+        m_EndTimeRaw: 1288490189
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -251,8 +251,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 726f7d70-4820-6d3e-051b-56db2e14edb3
-        StartFrame: 19
-        EndFrame: 20
+        m_StartTimeRaw: 1360072977
+        m_EndTimeRaw: 1431655765
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -264,8 +264,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 0d7ec816-5a25-5c47-a9be-1b11ac857510
-        StartFrame: 21
-        EndFrame: 22
+        m_StartTimeRaw: 1503238554
+        m_EndTimeRaw: 1574821342
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -277,8 +277,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 362608d6-a529-a3d2-f1a0-316bacfa70e8
-        StartFrame: 23
-        EndFrame: 24
+        m_StartTimeRaw: 1646404130
+        m_EndTimeRaw: 1717986918
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -290,8 +290,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 8e10bd0c-b370-589c-3f52-41a4c81146f5
-        StartFrame: 25
-        EndFrame: 26
+        m_StartTimeRaw: 1789569707
+        m_EndTimeRaw: 1861152495
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -303,8 +303,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 19b34537-d455-5610-ab17-a4e53bb24f30
-        StartFrame: 27
-        EndFrame: 28
+        m_StartTimeRaw: 1932735283
+        m_EndTimeRaw: 2004318071
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -316,8 +316,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: b6594cbb-d508-01d8-1122-9ddf5c1605d6
-        StartFrame: 29
-        EndFrame: 30
+        m_StartTimeRaw: 2075900860
+        m_EndTimeRaw: 2147483648
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -329,8 +329,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 4df49550-e28b-80b0-6f18-f12436e73a09
-        StartFrame: 31
-        EndFrame: 32
+        m_StartTimeRaw: 2219066436
+        m_EndTimeRaw: 2290649225
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -342,8 +342,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: d2688411-a6f5-4e35-3a44-4f98527455c8
-        StartFrame: 33
-        EndFrame: 34
+        m_StartTimeRaw: 2362232013
+        m_EndTimeRaw: 2433814801
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -355,8 +355,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: cdbccdd4-22cd-53b5-e4ad-26586679481c
-        StartFrame: 35
-        EndFrame: 36
+        m_StartTimeRaw: 2505397589
+        m_EndTimeRaw: 2576980378
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -368,8 +368,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 3917f690-19f3-70bc-d9f9-b6430380a9d2
-        StartFrame: 37
-        EndFrame: 38
+        m_StartTimeRaw: 2648563166
+        m_EndTimeRaw: 2720145954
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -381,8 +381,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: eec04abc-a1fa-f182-d50a-2c402ac8c410
-        StartFrame: 39
-        EndFrame: 40
+        m_StartTimeRaw: 2791728742
+        m_EndTimeRaw: 2863311531
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -394,8 +394,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2ee85b94-bda8-d49d-2129-622b16026162
-        StartFrame: 41
-        EndFrame: 42
+        m_StartTimeRaw: 2934894319
+        m_EndTimeRaw: 3006477107
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -407,8 +407,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 9238291a-aa8d-924c-06b4-e56dc80eb541
-        StartFrame: 43
-        EndFrame: 44
+        m_StartTimeRaw: 3078059895
+        m_EndTimeRaw: 3149642684
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -420,8 +420,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 9f3eb023-970e-3423-4f99-b0bb5524d4fe
-        StartFrame: 45
-        EndFrame: 46
+        m_StartTimeRaw: 3221225472
+        m_EndTimeRaw: 3292808260
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -433,8 +433,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 6d4af305-4830-afb3-7183-60376d0fa633
-        StartFrame: 47
-        EndFrame: 48
+        m_StartTimeRaw: 3364391049
+        m_EndTimeRaw: 3435973837
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -446,8 +446,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: dd405af6-c0a2-5139-8f94-3f4a158b70bc
-        StartFrame: 49
-        EndFrame: 50
+        m_StartTimeRaw: 3507556625
+        m_EndTimeRaw: 3579139413
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -459,8 +459,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 7839fa76-9b32-43d2-7049-adf4fb6dc984
-        StartFrame: 51
-        EndFrame: 52
+        m_StartTimeRaw: 3650722202
+        m_EndTimeRaw: 3722304990
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -472,8 +472,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 2a44f7ea-92b3-c4ec-7741-2624cb2bd101
-        StartFrame: 53
-        EndFrame: 54
+        m_StartTimeRaw: 3793887778
+        m_EndTimeRaw: 3865470566
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -485,8 +485,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 68faefb8-ef55-eaf9-7792-fe7a0e6fd79b
-        StartFrame: 55
-        EndFrame: 56
+        m_StartTimeRaw: 3937053355
+        m_EndTimeRaw: 4008636143
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -498,8 +498,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 5d7ae37e-c83f-c059-d3a5-dd817cf8d78b
-        StartFrame: 57
-        EndFrame: 58
+        m_StartTimeRaw: 4080218931
+        m_EndTimeRaw: 4151801719
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -511,8 +511,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 3e2017e6-720c-d199-47cd-bb175bc45e30
-        StartFrame: 59
-        EndFrame: 60
+        m_StartTimeRaw: 4223384508
+        m_EndTimeRaw: 4294967296
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -524,8 +524,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 40c10557-1d0a-9bc9-da7c-92999b243646
-        StartFrame: 61
-        EndFrame: 62
+        m_StartTimeRaw: 4366550084
+        m_EndTimeRaw: 4438132873
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -537,8 +537,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: fc574b0e-a327-5684-bf55-e6ab681d3950
-        StartFrame: 63
-        EndFrame: 64
+        m_StartTimeRaw: 4509715661
+        m_EndTimeRaw: 4581298449
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -550,8 +550,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: fb58d237-7bba-1f20-cf4e-76ce4679af69
-        StartFrame: 65
-        EndFrame: 66
+        m_StartTimeRaw: 4652881237
+        m_EndTimeRaw: 4724464026
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -563,8 +563,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: c17b026b-513a-0f80-53b1-e77e0d30c377
-        StartFrame: 67
-        EndFrame: 68
+        m_StartTimeRaw: 4796046814
+        m_EndTimeRaw: 4867629602
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -576,8 +576,8 @@ MonoBehaviour:
       type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 99fe21cc-d119-0f8d-819d-bbf468f2927c
-        StartFrame: 69
-        EndFrame: 70
+        m_StartTimeRaw: 4939212390
+        m_EndTimeRaw: 5010795179
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -601,8 +601,8 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: c2a3da4e-bbdf-f341-7b0b-6c311ad5ca08
-        StartFrame: 12
-        EndFrame: 70
+        m_StartTimeRaw: 858993459
+        m_EndTimeRaw: 5010795179
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -615,8 +615,8 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 171a2450-3f84-b361-16c7-5c2697177f23
-        StartFrame: 22
-        EndFrame: 70
+        m_StartTimeRaw: 1574821342
+        m_EndTimeRaw: 5010795179
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -629,8 +629,8 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 02e55207-c6ff-40fa-7f67-39cb89ee183f
-        StartFrame: 69
-        EndFrame: 70
+        m_StartTimeRaw: 4939212390
+        m_EndTimeRaw: 5010795179
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0

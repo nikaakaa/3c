@@ -408,7 +408,8 @@ namespace BTSMTL.Timeline.Editor
                 ReportIssue("当前 Clip 或所属 Track 已锁定，不能切分。");
                 return;
             }
-            if (frame <= formalClip.Source.StartFrame || frame >= formalClip.Source.EndFrame)
+            FixedScalar splitTime = TimelineTimeGrid.Position(frame, FrameRate);
+            if (splitTime <= formalClip.Source.StartTime || splitTime >= formalClip.Source.EndTime)
                 return;
             if (formalClip.Source is not AnimationClip && formalClip.Source is not MotionCurveClip)
             {
@@ -417,25 +418,24 @@ namespace BTSMTL.Timeline.Editor
             }
             ApplyImmediate(() =>
             {
-                int originalStartFrame = formalClip.Source.StartFrame;
-                int originalEndFrame = formalClip.Source.EndFrame;
+                FixedScalar originalStartTime = formalClip.Source.StartTime;
+                FixedScalar originalEndTime = formalClip.Source.EndTime;
                 Clip copy = ManagedReferenceCloneUtility.Clone(formalClip.Source);
                 copy.RegenerateAuthoringIdentity();
                 if (copy is ITimelineOwnedAuthoringIdentity owned)
                     owned.RegenerateOwnedAuthoringIdentity();
-                copy.StartFrame = frame;
-                copy.EndFrame = originalEndFrame;
+                copy.ConfigureTimeRange(splitTime, originalEndTime);
                 if (formalClip.Source is AnimationClip animation && copy is AnimationClip animationCopy)
-                    animationCopy.ConfigureClipIn(animation.ClipInTime + TimelineTimeGrid.Position(frame - originalStartFrame, FrameRate));
+                    animationCopy.ConfigureClipIn(animation.ClipInTime + (splitTime - originalStartTime));
                 if (formalClip.Source is MotionCurveClip motion && copy is MotionCurveClip motionCopy)
                 {
                     float splitSourceTime = motion.SourceStartTime +
-                        (frame - originalStartFrame) / (float)FrameRate;
+                        (splitTime - originalStartTime).ToSingle();
                     float originalSourceEnd = motion.SourceEndTime;
                     motion.ConfigureSource(motion.SourceCurve, motion.SourceStartTime, splitSourceTime);
                     motionCopy.ConfigureSource(motionCopy.SourceCurve, splitSourceTime, originalSourceEnd);
                 }
-                formalClip.Source.EndFrame = frame;
+                formalClip.Source.ConfigureTimeRange(originalStartTime, splitTime);
                 formalClip.Source.ConfigureEase(formalClip.Source.SelfEaseInTime, FixedScalar.Zero);
                 copy.ConfigureEase(FixedScalar.Zero, copy.SelfEaseOutTime);
                 copy.Track = formalClip.Source.Track;
@@ -443,7 +443,7 @@ namespace BTSMTL.Timeline.Editor
                 SplitClipCurves(
                     formalClip.Source,
                     copy,
-                    (frame - originalStartFrame) / (float)Mathf.Max(1, originalEndFrame - originalStartFrame));
+                    ((splitTime - originalStartTime) / (originalEndTime - originalStartTime)).ToSingle());
                 formalClip.Source.Track.UpdateMix();
             }, "Split Timeline Clip");
         }
@@ -529,8 +529,8 @@ namespace BTSMTL.Timeline.Editor
                 clone.RegenerateAuthoringIdentity();
                 if (clone is ITimelineOwnedAuthoringIdentity owned)
                     owned.RegenerateOwnedAuthoringIdentity();
-                clone.StartFrame = Mathf.Max(0, frame);
-                clone.EndFrame = clone.StartFrame + Mathf.Max(1, m_CopiedClip.Duration);
+                FixedScalar startTime = TimelineTimeGrid.Position(Mathf.Max(0, frame), FrameRate);
+                clone.ConfigureTimeRange(startTime, startTime + m_CopiedClip.DurationTime);
                 ContractCatalog.RequireClipPlacement(formalTrack.Source, clone);
                 formalTrack.Source.Clips.Add(clone);
                 formalTrack.Source.UpdateMix();
@@ -916,17 +916,17 @@ namespace BTSMTL.Timeline.Editor
                             treeGraph = TimelineGraphAuthoring.CreateSubAsset(m_Request.SerializedOwner, request.NewTreeGraphName, BtsmtlSkillFlowGraphRole.TimelineBody);
                     }
                     added = request.Kind == TimelineContractKinds.AnimationClip
-                        ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, request.StartFrame)
+                        ? TimelineAuthoringTrackBinding.CreateClip(Timeline, ContractCatalog, track.Source, request.Resource as UnityEngine.AnimationClip, TimelineTimeGrid.Position(request.StartFrame, FrameRate))
                         : request.Kind == TimelineContractKinds.MotionCurveClip
-                            ? Timeline.AddClip(ContractCatalog, request.SourceCurve, track.Source, request.StartFrame)
+                            ? Timeline.AddClip(ContractCatalog, request.SourceCurve, track.Source, TimelineTimeGrid.Position(request.StartFrame, FrameRate))
                         : treeGraph != null
-                            ? Timeline.AddClip(ContractCatalog, treeGraph, track.Source, request.StartFrame)
+                            ? Timeline.AddClip(ContractCatalog, treeGraph, track.Source, TimelineTimeGrid.Position(request.StartFrame, FrameRate))
                         : request.Resource != null
-                            ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, request.StartFrame)
-                            : Timeline.AddClip(ContractCatalog, track.Source, request.StartFrame);
-                    added.EndFrame = terminalLogicTreeClip
+                            ? Timeline.AddClip(ContractCatalog, request.Resource, track.Source, TimelineTimeGrid.Position(request.StartFrame, FrameRate))
+                            : Timeline.AddClip(ContractCatalog, track.Source, TimelineTimeGrid.Position(request.StartFrame, FrameRate));
+                    added.ConfigureTimeRange(added.StartTime, TimelineTimeGrid.Position(terminalLogicTreeClip
                         ? terminalFrame
-                        : Mathf.Max(request.StartFrame + 1, request.EndFrame);
+                        : Mathf.Max(request.StartFrame + 1, request.EndFrame), FrameRate));
                     if (isTreeClip && track.Source.ExecutionDomain == TimelineExecutionDomain.Presentation &&
                         added is TreeClip presentationClip)
                         presentationClip.SetExitSource(TimelineClipExitSource.FrameBoundary);
@@ -1238,8 +1238,8 @@ namespace BTSMTL.Timeline.Editor
                 m_Owner = owner;
                 m_Track = track;
                 Source = source;
-                m_StartTime = source.StartFrame / (float)owner.FrameRate;
-                m_EndTime = source.EndFrame / (float)owner.FrameRate;
+                m_StartTime = source.StartTime.ToSingle();
+                m_EndTime = source.EndTime.ToSingle();
                 m_BlendIn = source.SelfEaseInTime.ToSingle();
                 m_InitialBlendIn = m_BlendIn;
                 m_BlendOut = source.SelfEaseOutTime.ToSingle();
@@ -1409,12 +1409,12 @@ namespace BTSMTL.Timeline.Editor
 
             public bool CommitSource()
             {
-                int startFrame = Mathf.Max(0, Mathf.RoundToInt(StartTime * m_Owner.FrameRate));
-                int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(EndTime * m_Owner.FrameRate));
+                FixedScalar startTime = StartTime == Source.StartTime.ToSingle() ? Source.StartTime : FixedScalar.FromDouble(StartTime);
+                FixedScalar endTime = EndTime == Source.EndTime.ToSingle() ? Source.EndTime : FixedScalar.FromDouble(EndTime);
                 FixedScalar easeIn = m_BlendIn == m_InitialBlendIn ? Source.SelfEaseInTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendIn * m_Owner.FrameRate)), m_Owner.FrameRate);
                 FixedScalar easeOut = m_BlendOut == m_InitialBlendOut ? Source.SelfEaseOutTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendOut * m_Owner.FrameRate)), m_Owner.FrameRate);
-                bool changed = Source.StartFrame != startFrame ||
-                               Source.EndFrame != endFrame ||
+                bool changed = Source.StartTime != startTime ||
+                               Source.EndTime != endTime ||
                                Source.SelfEaseInTime != easeIn ||
                                Source.SelfEaseOutTime != easeOut ||
                                (CanClipIn && Source.ClipInTime != m_ClipInTime);
@@ -1426,8 +1426,7 @@ namespace BTSMTL.Timeline.Editor
                     changed |= ((BtsmtlTimelineCurveBinding)m_Curves[index]).CommitSource();
                 if (!changed)
                     return false;
-                Source.StartFrame = startFrame;
-                Source.EndFrame = endFrame;
+                Source.ConfigureTimeRange(startTime, endTime);
                 Source.ConfigureEase(easeIn, easeOut);
                 m_InitialBlendIn = m_BlendIn;
                 m_InitialBlendOut = m_BlendOut;
@@ -1443,11 +1442,11 @@ namespace BTSMTL.Timeline.Editor
 
             public bool HasChanges()
             {
-                int startFrame = Mathf.Max(0, Mathf.RoundToInt(StartTime * m_Owner.FrameRate));
-                int endFrame = Mathf.Max(startFrame + 1, Mathf.RoundToInt(EndTime * m_Owner.FrameRate));
+                FixedScalar startTime = StartTime == Source.StartTime.ToSingle() ? Source.StartTime : FixedScalar.FromDouble(StartTime);
+                FixedScalar endTime = EndTime == Source.EndTime.ToSingle() ? Source.EndTime : FixedScalar.FromDouble(EndTime);
                 FixedScalar easeIn = m_BlendIn == m_InitialBlendIn ? Source.SelfEaseInTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendIn * m_Owner.FrameRate)), m_Owner.FrameRate);
                 FixedScalar easeOut = m_BlendOut == m_InitialBlendOut ? Source.SelfEaseOutTime : TimelineTimeGrid.Position(Mathf.Max(0, Mathf.RoundToInt(BlendOut * m_Owner.FrameRate)), m_Owner.FrameRate);
-                if (Source.StartFrame != startFrame || Source.EndFrame != endFrame ||
+                if (Source.StartTime != startTime || Source.EndTime != endTime ||
                     Source.SelfEaseInTime != easeIn || Source.SelfEaseOutTime != easeOut ||
                     (CanClipIn && Source.ClipInTime != m_ClipInTime))
                     return true;
@@ -1544,7 +1543,7 @@ namespace BTSMTL.Timeline.Editor
             }
 
             static float CurveDuration(Clip clip, TimelineCurveChannelDescriptor descriptor, int frameRate) =>
-                Mathf.Max(1f / frameRate, clip.Duration / (float)frameRate);
+                Mathf.Max(1f / frameRate, clip.DurationTime.ToSingle());
 
             static AnimationCurve ConvertCurveTime(AnimationCurve source, float duration, bool toNormalized)
             {

@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -23,11 +24,11 @@ namespace BTSMTL.Timeline
             TimelineContractCatalog catalog,
             Track track,
             ScriptableObject assetTree,
-            int startFrame)
+            FixedScalar startTime)
         {
             if (track is not TreeTrack tree)
                 throw new ArgumentException("Timeline Tree authoring binding requires a TreeTrack.", nameof(track));
-            return timeline.AddClip(catalog, assetTree, tree, startFrame);
+            return timeline.AddClip(catalog, assetTree, tree, startTime);
         }
 
         public static TimelineTreeAuthoringClipExport Export(Clip clip)

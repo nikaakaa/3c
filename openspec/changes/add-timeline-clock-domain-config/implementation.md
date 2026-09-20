@@ -189,3 +189,13 @@
 - Unity 编译重载后，18 个 Timeline 内容校验通过，再通过 AssetDatabase 正式重序列化清理旧 Clip 字段。配置资产 Clip 域字段剩余 0；索引仅删除 HEAD 中 256 个旧 Clip 域字段，其它原有资产改动继续保留在工作区。
 - 当前设计和变更规格已同步两域规则；现行 character-animation-pipeline 规格原先仍要求第三域及 Clip 覆盖，已按用户决定修正。上方较早实施记录中的覆盖／双侧投影只作历史，不再是当前目标。
 - 最终重载观测 1789876549152 为 idle，错误控制台 0 条；正式读取 18 个 Timeline、266 个 Clip 的作者属性，executionDomain 属性数为 0，运行枚举仅 Logic／Presentation，内容校验 errors=[]。完整共享采样和 Marker 表现执行尚未完成。
+
+## Clip 起止与精确末端迁移
+
+- Clip 删除 StartFrame／EndFrame 和派生浮点时间副本，保存 m_StartTimeRaw／m_EndTimeRaw；StartTime、EndTime、DurationTime 是 FixedScalar 秒。ConfigureTimeRange 是正式写入入口，创建、混合重叠、分割复制、Inspector、Slate、作者 API 与输出均使用同一秒制区间。
+- Timeline／Track 总时长及逻辑 TreeClip 的终点对齐改为精确秒，避免编辑其它属性时将末端重新凑整到帧。剩余 MaxFrame 只服务尚未迁移的播放游标和编辑显示，后续继续删除运行依赖。
+- 266 个 Clip 已通过 ApplyModify／ConfigureTimeRange 保存；事务内先恢复全部区间，再 Init 建立归属并 UpdateMix。最初在 Init 前 UpdateMix 遇到未绑定 Track，事务回滚；提前 Init 又因未恢复素材区间而失败，最终调整为上述正式顺序。未引入兼容字段或反射写入。
+- 回读 266 个起点全部等于旧帧／60的最近偶数量化值。7 个 MotionCurve 末端补齐至素材精确时长，13 个逻辑 TreeClip 随 Timeline 末端对齐，共20项末端变化；最大增量204 raw，约47.5纳秒。18个 Timeline 内容校验 errors=[]。配置资产旧 StartFrame／EndFrame 字段为零。
+- 索引只纳入266个Clip的起止字段替换及8项混合字段重算，保留其它资产改动。原生成代码147个创建调用换为decimal秒；已按迁移结果同步完整调用的精确末端。素材采样在原float接口边界转换。
+- 角色运动绑定沿上一任务未提交的定点秒映射继续完成：原映射二进制与指纹变更一并收口，绑定构建器直接读取Clip秒值。播放游标、旧Motion catalog字段、共享表现采样、Marker表现执行及0GC仍有未完成项，不据此勾选完整任务。
+- 最终编译重载于1789880567369完成，观测1789880609780为idle、非Play／编译／导入；重载后18个Timeline、266个Clip再次校验errors=[]，错误控制台0条。未新增测试，未声称完整运行或生成重建已验收。

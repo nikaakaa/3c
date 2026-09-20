@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
@@ -131,17 +132,17 @@ namespace BTSMTL.Timeline
             out TimelineMotionCurveContribution contribution)
         {
             contribution = default;
-            if (timelineTime <= clip.StartTime || previousTimelineTime >= clip.EndTime)
+            if (timelineTime <= clip.StartTime.ToSingle() || previousTimelineTime >= clip.EndTime.ToSingle())
                 return false;
 
-            float duration = Mathf.Max(0.0001f, clip.DurationTime);
-            float previousSelfTime = Mathf.Clamp(previousTimelineTime - clip.StartTime, 0f, clip.DurationTime);
-            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
+            float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
+            float previousSelfTime = Mathf.Clamp(previousTimelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
+            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
             if (Mathf.Approximately(previousSelfTime, selfTime))
                 return false;
 
             float weightNormalizedTime = Mathf.Clamp01(selfTime / duration);
-            float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
+            float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
             float weight = SampleWeight(clip.WeightCurve, clip.EaseInCurve, clip.EaseOutCurve, weightNormalizedTime, selfTime, remainTime, clip.EaseInTime.ToSingle(), clip.EaseOutTime.ToSingle());
             if (weight <= 0f)
                 return false;
@@ -194,17 +195,17 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
         public override Type ClipType => typeof(MotionCurveClip);
 
-        public override Clip AddClip(UnityEngine.Object referenceObject, int frame)
+        public override Clip AddClip(UnityEngine.Object referenceObject, FixedScalar time)
         {
             if (referenceObject is not RootMotionCurveAsset source)
                 throw new ArgumentException("MotionCurveClip requires a RootMotionCurveAsset source.", nameof(referenceObject));
-            MotionCurveClip clip = new MotionCurveClip(this, frame, source);
+            MotionCurveClip clip = new MotionCurveClip(this, time, source);
             clip.RegenerateAuthoringIdentity();
             m_Clips.Add(clip);
             return clip;
         }
 
-        public override Clip AddClip(int frame)
+        public override Clip AddClip(FixedScalar time)
         {
             throw new InvalidOperationException("MotionCurveClip requires a RootMotionCurveAsset source.");
         }
@@ -272,7 +273,7 @@ namespace BTSMTL.Timeline
                 contentHash);
         }
 
-        public int CurveEndFrame => StartFrame + Mathf.RoundToInt(SourceDuration * TimelineUtility.FrameRate);
+        public FixedScalar CurveEndTime => StartTime + FixedScalar.FromDouble(SourceDuration);
         public AnimationCurve ProgramPositionX => ProgramCurve(SourcePositionX);
         public AnimationCurve ProgramPositionY => ProgramCurve(SourcePositionY);
         public AnimationCurve ProgramPositionZ => ProgramCurve(SourcePositionZ);
@@ -318,7 +319,7 @@ namespace BTSMTL.Timeline
         public Vector3 EvaluatePositionAtTimelineTime(float timelineTime)
         {
             float sourceTime = Mathf.Clamp(
-                m_SourceStartTime + Mathf.Max(0f, timelineTime - StartTime),
+                m_SourceStartTime + Mathf.Max(0f, timelineTime - StartTime.ToSingle()),
                 m_SourceStartTime,
                 m_SourceEndTime);
             return RequireSource().EvaluatePosition(sourceTime);
@@ -327,7 +328,7 @@ namespace BTSMTL.Timeline
         public float EvaluateYawAtTimelineTime(float timelineTime)
         {
             float sourceTime = Mathf.Clamp(
-                m_SourceStartTime + Mathf.Max(0f, timelineTime - StartTime),
+                m_SourceStartTime + Mathf.Max(0f, timelineTime - StartTime.ToSingle()),
                 m_SourceStartTime,
                 m_SourceEndTime);
             return RequireSource().EvaluateYaw(sourceTime);
@@ -415,8 +416,8 @@ namespace BTSMTL.Timeline
                 m_SourceStartTime < 0f || m_SourceEndTime <= m_SourceStartTime ||
                 m_SourceEndTime > source.Duration)
                 throw new InvalidOperationException($"MotionCurveClip '{CurveId}' has an invalid source range.");
-            if (CurveEndFrame <= StartFrame || CurveEndFrame > EndFrame)
-                throw new InvalidOperationException($"MotionCurveClip '{CurveId}' requires StartFrame < CurveEndFrame <= EndFrame.");
+            if (CurveEndTime <= StartTime || CurveEndTime > EndTime)
+                throw new InvalidOperationException($"MotionCurveClip '{CurveId}' requires StartTime < CurveEndTime <= EndTime.");
         }
 
         AnimationCurve ProgramCurve(AnimationCurve source)
@@ -441,7 +442,7 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable;
 
-        public MotionCurveClip(Track track, int frame, RootMotionCurveAsset source) : base(track, frame)
+        public MotionCurveClip(Track track, FixedScalar time, RootMotionCurveAsset source) : base(track, time)
         {
             if (!source)
                 throw new ArgumentNullException(nameof(source));
@@ -449,7 +450,7 @@ namespace BTSMTL.Timeline
                 throw new InvalidOperationException(error);
             if (source.Duration <= 0f)
                 throw new ArgumentException("MotionCurve source duration must be positive.", nameof(source));
-            EndFrame = StartFrame + Mathf.RoundToInt(source.Duration * TimelineUtility.FrameRate);
+            ConfigureTimeRange(time, time + FixedScalar.FromDouble(source.Duration));
             m_SourceCurve = source;
             m_SourceStartTime = 0f;
             m_SourceEndTime = source.Duration;

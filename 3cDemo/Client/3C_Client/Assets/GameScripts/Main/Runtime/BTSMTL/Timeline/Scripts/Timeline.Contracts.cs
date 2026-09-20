@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -152,9 +153,9 @@ namespace BTSMTL.Timeline
         TimelineClipExitSource ClipExitSource { get; }
     }
 
-    public interface ITimelineTerminalFrameAlignedClip
+    public interface ITimelineTerminalTimeAlignedClip
     {
-        bool AlignTerminalFrame(int terminalFrame);
+        bool AlignTerminalTime(FixedScalar terminalTime);
     }
 
     public delegate void TimelineClipContractValidator(Clip clip, List<string> errors);
@@ -855,7 +856,7 @@ namespace BTSMTL.Timeline
                     {
                         errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' uses unsupported execution domain '{executionDomain}'.");
                     }
-                    if (clip.StartFrame < 0 || clip.EndFrame < clip.StartFrame || clipContract.RequiresPositiveDuration && clip.Duration <= 0)
+                    if (clip.StartTime < FixedScalar.Zero || clip.EndTime < clip.StartTime || clipContract.RequiresPositiveDuration && clip.DurationTime <= FixedScalar.Zero)
                         errors?.Add($"Timeline '{timeline.Name}' clip '{clip.AuthoringId}' has an invalid frame range.");
                     TimelineClipExecutionPhase executionPhase = clipContract.DefaultExecutionPhase;
                     if (clip is ITimelineClipExecutionPhaseSource phaseSource)
@@ -878,7 +879,7 @@ namespace BTSMTL.Timeline
             for (int otherIndex = clipIndex + 1; otherIndex < track.Clips.Count; otherIndex++)
             {
                 Clip other = track.Clips[otherIndex];
-                if (other == null || clip.EndFrame <= other.StartFrame || other.EndFrame <= clip.StartFrame)
+                if (other == null || clip.EndTime <= other.StartTime || other.EndTime <= clip.StartTime)
                     continue;
                 errors?.Add($"Timeline track '{track.AuthoringId}' has forbidden overlap between clips '{clip.AuthoringId}' and '{other.AuthoringId}'.");
             }

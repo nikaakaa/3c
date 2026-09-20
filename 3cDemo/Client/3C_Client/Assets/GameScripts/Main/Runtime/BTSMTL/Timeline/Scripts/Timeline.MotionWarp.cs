@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using UnityEngine;
@@ -141,7 +142,7 @@ namespace BTSMTL.Timeline
 
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable;
 
-        public MotionWarpClip(Track track, int frame) : base(track, frame)
+        public MotionWarpClip(Track track, FixedScalar time) : base(track, time)
         {
         }
 
@@ -320,7 +321,7 @@ namespace BTSMTL.Timeline
                 {
                     MotionWarpClip right = warps[j];
                     if (!string.Equals(left.SourceMotionClipId, right.SourceMotionClipId, StringComparison.Ordinal) ||
-                        left.EndFrame <= right.StartFrame || right.EndFrame <= left.StartFrame)
+                        left.EndTime <= right.StartTime || right.EndTime <= left.StartTime)
                         continue;
                     Add(issues, "motion_warp_window_overlap", $"MotionWarp windows '{left.AuthoringId}' and '{right.AuthoringId}' overlap on source '{left.SourceMotionClipId}'.", left, null);
                     valid = false;
@@ -383,15 +384,15 @@ namespace BTSMTL.Timeline
                     Add(issues, "motion_warp_source_weight_invalid", $"MotionWarp source '{source.AuthoringId}' must use unit Gameplay weight with no ease. Animation blending belongs to Presentation.", warp, source);
                     valid = false;
                 }
-                if (warp.StartFrame < source.StartFrame || warp.EndFrame > source.CurveEndFrame)
+                if (warp.StartTime < source.StartTime || warp.EndTime > source.CurveEndTime)
                 {
-                    Add(issues, "motion_warp_window_outside_source", $"MotionWarp '{warp.AuthoringId}' must stay inside source frames {source.StartFrame}..{source.CurveEndFrame}.", warp, source);
+                    Add(issues, "motion_warp_window_outside_source", $"MotionWarp '{warp.AuthoringId}' must stay inside source seconds {source.StartTime}..{source.CurveEndTime}.", warp, source);
                     valid = false;
                 }
             }
-            if (warp.StartFrame >= warp.EndFrame)
+            if (warp.StartTime >= warp.EndTime)
             {
-                Add(issues, "motion_warp_window_invalid", $"MotionWarp '{warp.AuthoringId}' requires StartFrame < EndFrame.", warp, source);
+                Add(issues, "motion_warp_window_invalid", $"MotionWarp '{warp.AuthoringId}' requires StartTime < EndTime.", warp, source);
                 valid = false;
             }
             valid &= ValidateConfiguration(
@@ -556,19 +557,19 @@ namespace BTSMTL.Timeline
 
         static float SourceWindowPlanarMagnitude(MotionCurveClip source, MotionWarpClip warp)
         {
-            Vector2 start = SourcePosition(source, warp.StartFrame);
-            Vector2 end = SourcePosition(source, warp.EndFrame);
+            Vector2 start = SourcePosition(source, warp.StartTime);
+            Vector2 end = SourcePosition(source, warp.EndTime);
             return (end - start).magnitude;
         }
 
         static float SourceWindowYaw(MotionCurveClip source, MotionWarpClip warp) =>
-            source.EvaluateYawAtTimelineTime(warp.EndFrame / (float)TimelineUtility.FrameRate) -
-            source.EvaluateYawAtTimelineTime(warp.StartFrame / (float)TimelineUtility.FrameRate);
+            source.EvaluateYawAtTimelineTime(warp.EndTime.ToSingle()) -
+            source.EvaluateYawAtTimelineTime(warp.StartTime.ToSingle());
 
-        static Vector2 SourcePosition(MotionCurveClip source, int frame)
+        static Vector2 SourcePosition(MotionCurveClip source, FixedScalar time)
         {
             Vector3 position = source.EvaluatePositionAtTimelineTime(
-                frame / (float)TimelineUtility.FrameRate);
+                time.ToSingle());
             return new Vector2(position.x, position.z);
         }
 

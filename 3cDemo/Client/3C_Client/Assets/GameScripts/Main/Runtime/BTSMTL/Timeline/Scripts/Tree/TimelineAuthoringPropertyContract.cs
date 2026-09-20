@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCamera;
@@ -105,14 +106,14 @@ namespace BTSMTL.Timeline
             return new TimelineAuthoringReferenceValue(null);
         }
 
-        public static int DefaultEndFrame(
+        public static FixedScalar DefaultEndTime(
             Clip clip,
-            int startFrame,
+            FixedScalar startTime,
             UnityEngine.Object referenceObject)
         {
             if (referenceObject is UnityEngine.AnimationClip animation)
-                return startFrame + Mathf.RoundToInt(animation.length * TimelineUtility.FrameRate);
-            return startFrame + (clip is SignalClip ? 1 : 3);
+                return startTime + FixedScalar.FromDouble(animation.length);
+            return startTime + (clip is SignalClip ? FixedScalar.FromRatio(1, TimelineUtility.FrameRate) : FixedScalar.FromDecimal(0.05m));
         }
 
         public static bool NeedsSegmentOverride(
@@ -125,7 +126,7 @@ namespace BTSMTL.Timeline
             {
                 return false;
             }
-            return clip.EndFrame != DefaultEndFrame(clip, clip.StartFrame, referenceObject) ||
+            return clip.EndTime != DefaultEndTime(clip, clip.StartTime, referenceObject) ||
                    clip.SelfEaseInTime.Raw != 0 ||
                    clip.SelfEaseOutTime.Raw != 0 ||
                    clip.ClipInTime.Raw != 0;

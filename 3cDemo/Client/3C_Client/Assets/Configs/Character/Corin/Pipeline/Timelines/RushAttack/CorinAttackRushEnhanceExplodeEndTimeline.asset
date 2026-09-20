@@ -46,8 +46,8 @@ MonoBehaviour:
       type: {class: AnimationClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
       data:
         m_AuthoringId: 93b344ea-7256-d1f6-aaac-ddb3d689ccf8
-        StartFrame: 0
-        EndFrame: 118
+        m_StartTimeRaw: 0
+        m_EndTimeRaw: 8446769015
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0
@@ -151,8 +151,8 @@ MonoBehaviour:
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
         m_AuthoringId: 8be46bce-01b4-7aef-8e75-6eba9d86e91e
-        StartFrame: 117
-        EndFrame: 118
+        m_StartTimeRaw: 8375186227
+        m_EndTimeRaw: 8446769015
         m_OtherEaseInTimeRaw: 0
         m_OtherEaseOutTimeRaw: 0
         m_SelfEaseInTimeRaw: 0

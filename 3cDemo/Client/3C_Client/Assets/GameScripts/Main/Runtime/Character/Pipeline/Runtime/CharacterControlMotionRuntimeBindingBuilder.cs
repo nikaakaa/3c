@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
@@ -55,9 +56,8 @@ namespace ThirdPersonCharacter.Pipeline
                             _ => throw new InvalidOperationException($"MotionCurveClip '{sourceIdentity}' source has an unsupported evaluation mode.")
                         };
                         var mapping = new CharacterControlMotionTimeMapping(
-                            TimelineUtility.FrameRate,
-                            clip.StartFrame,
-                            clip.CurveEndFrame,
+                            clip.StartTime,
+                            clip.CurveEndTime,
                             clip.SourceStartTime,
                             clip.SourceEndTime);
                         StableHash sourceRevision = CharacterControlMotionBinding.ComputeSourceRevision(

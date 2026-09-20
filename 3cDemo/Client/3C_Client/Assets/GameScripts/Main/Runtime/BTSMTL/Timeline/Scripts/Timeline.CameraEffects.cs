@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonCamera;
@@ -68,17 +69,17 @@ namespace BTSMTL.Timeline
             {
                 if (Clips[clipIndex] is not CameraEffectClip clip ||
                     clipFilter != null && !clipFilter(clip) ||
-                    timelineTime < clip.StartTime ||
-                    timelineTime > clip.EndTime)
+                    timelineTime < clip.StartTime.ToSingle() ||
+                    timelineTime > clip.EndTime.ToSingle())
                     continue;
 
                 CameraEffectAsset effect = clip.Effect;
                 if (!effect)
                     continue;
 
-                float duration = Mathf.Max(0.0001f, clip.DurationTime);
-                float selfTime = Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
-                float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
+                float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
+                float selfTime = Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
+                float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
                 float normalizedTime = Mathf.Clamp01(selfTime / duration);
                 float weight = CameraTimelineSampling.SampleWeight(
                     clip.WeightCurve,
@@ -118,11 +119,11 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
         public override Type ClipType => typeof(CameraEffectClip);
 
-        public override Clip AddClip(UnityEngine.Object referenceObject, int frame)
+        public override Clip AddClip(UnityEngine.Object referenceObject, FixedScalar time)
         {
             if (referenceObject is not CameraEffectAsset effect)
                 throw new ArgumentException("Camera effect clip requires a CameraEffectAsset.", nameof(referenceObject));
-            var clip = new CameraEffectClip(this, frame)
+            var clip = new CameraEffectClip(this, time)
             {
                 Effect = effect
             };
@@ -168,7 +169,7 @@ namespace BTSMTL.Timeline
 
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable;
-        public CameraEffectClip(Track track, int frame) : base(track, frame) { }
+        public CameraEffectClip(Track track, FixedScalar time) : base(track, time) { }
 #endif
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -135,37 +136,33 @@ namespace ThirdPersonSimulation
     public readonly struct CharacterControlMotionTimeMapping
     {
         public CharacterControlMotionTimeMapping(
-            int timelineFrameRate,
-            int clipStartFrame,
-            int curveEndFrame,
+            FixedScalar clipStartTime,
+            FixedScalar curveEndTime,
             double sourceStartTime,
             double sourceEndTime)
         {
-            if (timelineFrameRate <= 0 || clipStartFrame < 0 || curveEndFrame <= clipStartFrame ||
+            if (clipStartTime < FixedScalar.Zero || curveEndTime <= clipStartTime ||
                 !IsFinite(sourceStartTime) || !IsFinite(sourceEndTime) || sourceStartTime < 0d || sourceEndTime <= sourceStartTime)
             {
                 throw new ArgumentException("Character control motion time mapping is invalid.");
             }
-            TimelineFrameRate = timelineFrameRate;
-            ClipStartFrame = clipStartFrame;
-            CurveEndFrame = curveEndFrame;
+            ClipStartTime = clipStartTime;
+            CurveEndTime = curveEndTime;
             SourceStartTime = sourceStartTime;
             SourceEndTime = sourceEndTime;
             ContentHash = StableHash.Compute(
-                "character-control-motion-time-mapping/1",
-                timelineFrameRate.ToString(CultureInfo.InvariantCulture),
-                clipStartFrame.ToString(CultureInfo.InvariantCulture),
-                curveEndFrame.ToString(CultureInfo.InvariantCulture),
+                "character-control-motion-time-mapping/2",
+                clipStartTime.Raw.ToString(CultureInfo.InvariantCulture),
+                curveEndTime.Raw.ToString(CultureInfo.InvariantCulture),
                 Format(sourceStartTime),
                 Format(sourceEndTime));
         }
 
-        public int TimelineFrameRate { get; }
-        public int ClipStartFrame { get; }
-        public int CurveEndFrame { get; }
+        public FixedScalar ClipStartTime { get; }
+        public FixedScalar CurveEndTime { get; }
         public double SourceStartTime { get; }
         public double SourceEndTime { get; }
-        public double TimelineDurationSeconds => (CurveEndFrame - ClipStartFrame) / (double)TimelineFrameRate;
+        public double TimelineDurationSeconds => (CurveEndTime - ClipStartTime).ToDouble();
         public StableHash ContentHash { get; }
 
         public double SourceTimeAt(double timelineElapsedSeconds)
@@ -344,8 +341,8 @@ namespace ThirdPersonSimulation
     public static class CharacterControlMotionBindingCodec
     {
         const uint Magic = 0x4d424343;
-        const int Version = 1;
-        public const string CodecIdentity = "character-control-motion-bindings/v1";
+        const int Version = 2;
+        public const string CodecIdentity = "character-control-motion-bindings/v2";
 
         public static byte[] Write(CharacterControlMotionBindingCatalog catalog)
         {
@@ -439,18 +436,16 @@ namespace ThirdPersonSimulation
 
         static void WriteMapping(CanonicalWriter writer, CharacterControlMotionTimeMapping mapping)
         {
-            writer.WriteInt32(mapping.TimelineFrameRate);
-            writer.WriteInt32(mapping.ClipStartFrame);
-            writer.WriteInt32(mapping.CurveEndFrame);
+            writer.WriteInt64(mapping.ClipStartTime.Raw);
+            writer.WriteInt64(mapping.CurveEndTime.Raw);
             writer.WriteDouble(mapping.SourceStartTime);
             writer.WriteDouble(mapping.SourceEndTime);
         }
 
         static CharacterControlMotionTimeMapping ReadMapping(CanonicalReader reader) =>
             new CharacterControlMotionTimeMapping(
-                reader.ReadInt32(),
-                reader.ReadInt32(),
-                reader.ReadInt32(),
+                FixedScalar.FromRaw(reader.ReadInt64()),
+                FixedScalar.FromRaw(reader.ReadInt64()),
                 reader.ReadDouble(),
                 reader.ReadDouble());
 

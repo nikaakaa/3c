@@ -1,4 +1,5 @@
 ﻿using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -185,7 +186,7 @@ namespace BTSMTL.Timeline
                     weight,
                     isLooping,
                     animationClip.ClipInTime.ToSingle(),
-                    animationClip.DurationTime,
+                    animationClip.DurationTime.ToSingle(),
                     cycleIndex));
             }
         }
@@ -196,16 +197,16 @@ namespace BTSMTL.Timeline
             normalizedTime = 0f;
             weight = 0f;
 
-            if (timelineTime < clip.StartTime)
+            if (timelineTime < clip.StartTime.ToSingle())
                 return false;
 
-            bool hold = timelineTime > clip.EndTime && clip.ExtraPolationMode == ExtraPolationMode.Hold;
-            if (timelineTime > clip.EndTime && !hold)
+            bool hold = timelineTime > clip.EndTime.ToSingle() && clip.ExtraPolationMode == ExtraPolationMode.Hold;
+            if (timelineTime > clip.EndTime.ToSingle() && !hold)
                 return false;
 
-            float duration = Mathf.Max(0.0001f, clip.DurationTime);
-            float selfTime = hold ? clip.DurationTime : Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
-            float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
+            float duration = Mathf.Max(0.0001f, clip.DurationTime.ToSingle());
+            float selfTime = hold ? clip.DurationTime.ToSingle() : Mathf.Clamp(timelineTime - clip.StartTime.ToSingle(), 0f, clip.DurationTime.ToSingle());
+            float remainTime = Mathf.Max(0f, clip.EndTime.ToSingle() - timelineTime);
             normalizedTime = Mathf.Clamp01(selfTime / duration);
             clipTime = selfTime + clip.ClipInTime.ToSingle();
 
@@ -230,9 +231,9 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
 
         public override Type ClipType => typeof(AnimationClip);
-        public override Clip AddClip(UnityEngine.Object referenceObject, int frame)
+        public override Clip AddClip(UnityEngine.Object referenceObject, FixedScalar time)
         {
-            AnimationClip clip = new AnimationClip(referenceObject as UnityEngine.AnimationClip, this, frame);
+            AnimationClip clip = new AnimationClip(referenceObject as UnityEngine.AnimationClip, this, time);
             clip.RegenerateAuthoringIdentity();
             m_Clips.Add(clip);
             return clip;
@@ -270,15 +271,15 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
 
         public override string Name => Clip ? Clip.name : base.Name;
-        public override int Length => Clip
-            ? Mathf.RoundToInt(Clip.length * TimelineUtility.FrameRate)
+        public override FixedScalar Length => Clip
+            ? FixedScalar.FromDouble(Clip.length)
             : base.Length;
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable | ClipCapabilities.ClipInable;
-        public AnimationClip(Track track, int frame) : base(track, frame) { }
-        public AnimationClip(UnityEngine.AnimationClip clip, Track track, int frame) : base(track, frame)
+        public AnimationClip(Track track, FixedScalar time) : base(track, time) { }
+        public AnimationClip(UnityEngine.AnimationClip clip, Track track, FixedScalar time) : base(track, time)
         {
             Clip = clip;
-            EndFrame = Length + frame;
+            ConfigureTimeRange(time, time + Length);
         }
         void OnClipChanged()
         {

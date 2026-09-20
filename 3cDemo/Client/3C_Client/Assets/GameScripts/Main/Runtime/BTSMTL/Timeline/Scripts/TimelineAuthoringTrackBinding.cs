@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using ThirdPersonSimulation.Fixed;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonSimulation;
@@ -74,11 +75,11 @@ namespace BTSMTL.Timeline
             TimelineContractCatalog catalog,
             Track track,
             UnityEngine.AnimationClip animationAsset,
-            int startFrame)
+            FixedScalar startTime)
         {
             if (track is AnimationTrack animation)
-                return timeline.AddClip(catalog, animationAsset, animation, startFrame);
-            return timeline.AddClip(catalog, track, startFrame);
+                return timeline.AddClip(catalog, animationAsset, animation, startTime);
+            return timeline.AddClip(catalog, track, startTime);
         }
 
         public static IReadOnlyList<TimelineAuthoringTrackIssue> Validate(

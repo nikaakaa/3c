@@ -919,3 +919,11 @@
 - 完整保留 NoCorrection／RestoreReplay／HardRecovery 及所有正式 reason，零和未知值继续拒绝。baselineTick 有效性、决策与 restoreTick 的关联、回放范围成对有效及先后顺序检查和异常文本不变；不改变修正算法或状态恢复生命周期。
 - ServerAuthoritativePolicy 中初始化策略的枚举检查未因本项修改，遵守初始化允许反射的边界。目标文件此前无其它未提交修改，编辑前无 csc／bee。
 - ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，确认构建及 build-server shutdown 全部结束，diff 空白检查通过；未新增测试、未操作共享 Unity、未做运行决策对比或 Player 采样。决策对象自身仍分配。
+## 2026-09-20 会话诊断按需构造校验
+
+对应 tasks.md 的 7.12。
+
+- Fixed／Float32 PassPipelineRuntimeHandle.Diagnostics getter 直接调用 BuildDiagnostics，每次读取重建组件列表与 SimulationSessionDiagnosticsSnapshot；不是只在句柄构造时生成。条目状态及快照 lifecycle／preparation 原分别 Enum.IsDefined，现按正式 5／5／3 成员直接匹配。
+- 保留合法状态、非法零值拒绝、条目 ArgumentOutOfRangeException 与快照 ArgumentException、sessionId 校验及原检查次序。组件身份规范化、排序、重复检查和只读结果寿命不变，不缓存可变会话快照。
+- 这里只确认按需 Diagnostics 读取会经过构造，尚未确认用户运行场景中的刷新频率，不报告为每帧必经或固定 GC 节省值。BuildDiagnostics 的插值、列表、快照对象以及 Phase.ToString 仍有开销，未纳入本次完成范围。
+- 目标文件此前无其它未提交修改，编辑前无 csc／bee。Core portable 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做诊断刷新运行或 Player 采样。

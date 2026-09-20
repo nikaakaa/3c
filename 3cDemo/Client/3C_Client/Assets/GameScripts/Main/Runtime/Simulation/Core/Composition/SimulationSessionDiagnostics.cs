@@ -21,7 +21,9 @@ namespace ThirdPersonSimulation
             SimulationSessionComponentDiagnosticState state,
             string detail = "")
         {
-            if (!Enum.IsDefined(typeof(SimulationSessionComponentDiagnosticState), state))
+            if (state is not (SimulationSessionComponentDiagnosticState.Pending or SimulationSessionComponentDiagnosticState.Ready or
+                SimulationSessionComponentDiagnosticState.Active or SimulationSessionComponentDiagnosticState.Failed or
+                SimulationSessionComponentDiagnosticState.Disposed))
                 throw new ArgumentOutOfRangeException(nameof(state));
             Component = SimulationIdentity.Require(component, nameof(component));
             Identity = SimulationIdentity.Require(identity, nameof(identity));
@@ -84,8 +86,11 @@ namespace ThirdPersonSimulation
             SimulationSessionFailure failure,
             IEnumerable<SimulationSessionComponentDiagnostic> components)
         {
-            if (!sessionId.IsValid || !Enum.IsDefined(typeof(SimulationSessionLifecycleState), lifecycleState) ||
-                !Enum.IsDefined(typeof(SimulationSessionPreparationStatus), preparationStatus))
+            if (!sessionId.IsValid || lifecycleState is not (SimulationSessionLifecycleState.Uninitialized or
+                    SimulationSessionLifecycleState.Preparing or SimulationSessionLifecycleState.Active or
+                    SimulationSessionLifecycleState.Failed or SimulationSessionLifecycleState.Disposed) ||
+                preparationStatus is not (SimulationSessionPreparationStatus.Pending or
+                    SimulationSessionPreparationStatus.Ready or SimulationSessionPreparationStatus.Failed))
             {
                 throw new ArgumentException("Diagnostics lifecycle state is invalid.");
             }

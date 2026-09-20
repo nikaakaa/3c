@@ -100,6 +100,7 @@
 - [x] 4.2.3 Pose 源每帧 readiness key／entry／page 集中按 PreparationKind 与 Category 正式连续值域校验，删除构造、IsValid、Record、Remove 中五处 Enum.IsDefined 装箱
 - [x] 4.2.4 Pose 源 preparation 转 readiness target 复用 Kind 值域并直接匹配三种 Input、两种 sampling backend，删除构造与 IsValid 中四处 Enum.IsDefined 装箱
 - [x] 4.2.5 物理 Pose 源 metadata 按 NativeClip 对应无资源索引、Acl 对应非负资源索引的正式组合直接校验，删除注册、pending／committed 身份与诊断读取共用的 Enum.IsDefined 装箱
+- [x] 4.2.6 ClipPlayer／BlendSpacePlayer 每帧 SetRelevant 按 Entry 至 TransitionSource 四种 DemandKind 值域校验，删除明确逐帧的 Enum.IsDefined 装箱
 - [ ] 4.3 沿Foot查询、Goal Assembly、FBBIK和最终写入链治理实际managed临时对象、装箱和vendor接口分配，保留查询容量和算法顺序
 - [ ] 4.4 沿Camera目标/效果、Input采样和Behavior Designer正式任务治理已确认分配，保持输入来源和目标身份
 

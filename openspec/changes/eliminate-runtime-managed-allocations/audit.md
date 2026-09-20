@@ -1153,3 +1153,12 @@
 - CharacterControlSourceStateDisposition 正式成员连续为 Prepared=1 至 Restored=4，现直接按闭区间判断；未知零值及其它 byte 继续抛出原 ArgumentOutOfRangeException。Fixed 对应端口已经使用同一正式成员判断，本项补齐 Float32。
 - 不改变 observer 筛选、通知顺序、输入状态捕获／恢复或事务提交语义，只删除运行通知入口的装箱和枚举元数据查询。
 - Float32 portable 编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做输入事务运行回放或 Player 分配采样。
+
+## 2026-09-20 Clip Player 每帧 DemandKind 校验
+
+对应 tasks.md 的 4.2.6。
+
+- CharacterPoseNativeClipPlayerHandler 与 BlendSpacePlayerHandler 的 PrepareFrame 每帧调用 AnimationClipPlayer.SetRelevant(true)。该入口原在 relevant=true 时对 PoseSourceProviderDemandKind 执行 Enum.IsDefined，即使已经处于 relevant 状态也会重复查询。
+- DemandKind 正式成员连续为 Entry=1 至 TransitionSource=4，现直接按闭区间判断；未知零值及其它 byte 继续抛出原 ArgumentOutOfRangeException。相关性切换、source generation、continuity、reset 和释放逻辑不变。
+- 删除 Clip Player 与 BlendSpace Player 每帧准备中的装箱和枚举元数据查询；PrepareFrame 返回的单元素请求数组仍分配，留作独立寿命迁移小步。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Player 分配采样。

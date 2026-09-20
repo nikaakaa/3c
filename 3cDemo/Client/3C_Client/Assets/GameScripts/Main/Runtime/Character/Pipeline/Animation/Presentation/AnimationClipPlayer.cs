@@ -441,7 +441,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             PoseSourceProviderDemandKind demandKind = PoseSourceProviderDemandKind.Active)
         {
             RequireAlive();
-            if (relevant && !Enum.IsDefined(typeof(PoseSourceProviderDemandKind), demandKind))
+            if (relevant &&
+                (demandKind < PoseSourceProviderDemandKind.Entry ||
+                 demandKind > PoseSourceProviderDemandKind.TransitionSource))
                 throw new ArgumentOutOfRangeException(nameof(demandKind));
             if (m_Relevant == relevant)
             {

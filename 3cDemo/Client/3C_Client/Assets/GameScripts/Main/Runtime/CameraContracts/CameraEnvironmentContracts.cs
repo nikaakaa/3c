@@ -36,7 +36,9 @@ namespace ThirdPersonCamera
                 !float.IsFinite(radius) || radius < 0f || !float.IsFinite(nearClipPlane) || nearClipPlane < 0f ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
                 throw new ArgumentOutOfRangeException(nameof(desiredLocation));
-            if (!Enum.IsDefined(typeof(CameraCollisionTriggerMode), triggerMode))
+            if (triggerMode != CameraCollisionTriggerMode.UseGlobal &&
+                triggerMode != CameraCollisionTriggerMode.Ignore &&
+                triggerMode != CameraCollisionTriggerMode.Collide)
                 throw new ArgumentOutOfRangeException(nameof(triggerMode));
             PreviousLocation = previousLocation;
             DesiredLocation = desiredLocation;
@@ -72,7 +74,11 @@ namespace ThirdPersonCamera
             float hitDistance,
             string colliderIdentity)
         {
-            if (!Enum.IsDefined(typeof(CameraCollisionStatus), status) ||
+            if ((status != CameraCollisionStatus.NotEvaluated &&
+                 status != CameraCollisionStatus.Clear &&
+                 status != CameraCollisionStatus.Corrected &&
+                 status != CameraCollisionStatus.StartOverlapped &&
+                 status != CameraCollisionStatus.NoLegalSpace) ||
                 !Finite(safeLocation) || !Finite(hitNormal) || !float.IsFinite(hitDistance) || hitDistance < 0f)
                 throw new ArgumentOutOfRangeException(nameof(status));
             Status = status;
@@ -110,7 +116,11 @@ namespace ThirdPersonCamera
             float correctionDistance,
             string colliderIdentity)
         {
-            if (!Enum.IsDefined(typeof(CameraCollisionStatus), status) ||
+            if ((status != CameraCollisionStatus.NotEvaluated &&
+                 status != CameraCollisionStatus.Clear &&
+                 status != CameraCollisionStatus.Corrected &&
+                 status != CameraCollisionStatus.StartOverlapped &&
+                 status != CameraCollisionStatus.NoLegalSpace) ||
                 !Finite(desiredLocation) || !Finite(constrainedLocation) || !Finite(hitNormal) ||
                 !float.IsFinite(correctionDistance) || correctionDistance < 0f)
                 throw new ArgumentOutOfRangeException(nameof(status));

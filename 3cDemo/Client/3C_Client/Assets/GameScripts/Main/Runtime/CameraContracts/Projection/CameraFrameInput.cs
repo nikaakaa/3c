@@ -34,7 +34,11 @@ public readonly struct CameraFrameInput
             HasLocalAvatarTimeScale = localAvatarTimeScaleAvailable;
             Paused = paused;
             ResetHistory = resetHistory;
-            if (!Enum.IsDefined(typeof(CameraResetReason), resetReason))
+            if (resetReason != CameraResetReason.None &&
+                resetReason != CameraResetReason.Initialization &&
+                resetReason != CameraResetReason.BodyCommittedBranchReplacement &&
+                resetReason != CameraResetReason.BodySelectedStreamReset &&
+                resetReason != CameraResetReason.RuntimeReset)
                 throw new ArgumentOutOfRangeException(nameof(resetReason));
             ResetReason = resetReason;
             Targets = targets ?? Array.Empty<CameraTargetSnapshot>();

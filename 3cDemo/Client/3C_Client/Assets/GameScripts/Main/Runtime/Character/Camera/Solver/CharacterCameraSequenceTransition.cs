@@ -251,7 +251,10 @@ namespace ThirdPersonCamera
             CameraTimeDomain timeDomain,
             in CameraFrameInput input)
         {
-            if (!Enum.IsDefined(typeof(CameraTimeDomain), timeDomain))
+            if (timeDomain != CameraTimeDomain.PresentationScaled &&
+                timeDomain != CameraTimeDomain.PresentationUnscaled &&
+                timeDomain != CameraTimeDomain.OwnerScaled &&
+                timeDomain != CameraTimeDomain.LocalAvatarScaled)
                 throw new InvalidOperationException("Camera Sequence has an invalid time domain.");
             return input.Delta(timeDomain);
         }

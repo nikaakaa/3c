@@ -244,6 +244,7 @@ namespace ThirdPersonSimulation.Fixed
         static ReplayFrameBuilder[] s_ReplayEvidence =
             Array.Empty<ReplayFrameBuilder>();
         static string s_TraceId = string.Empty;
+        static string s_ReplayInputSourceIdentity = string.Empty;
         static string s_Message = string.Empty;
 
         public static FixedCharacterInputTraceStatus Status =>
@@ -342,6 +343,7 @@ namespace ThirdPersonSimulation.Fixed
             s_Replay = trace;
             s_ActorId = targetActorId;
             s_TraceId = trace.TraceId;
+            s_ReplayInputSourceIdentity = $"FixedInputTrace/{trace.TraceId}";
             s_ReplayPauseAfterFrameCount = pauseAfterFrameCount;
             s_ReplayEvidence = new ReplayFrameBuilder[trace.Frames.Count];
             for (int i = 0; i < s_ReplayEvidence.Length; i++)
@@ -615,7 +617,7 @@ namespace ThirdPersonSimulation.Fixed
             return new SimulationInput(
                 FixedSimulationNumericProfile.Value,
                 context.Source,
-                $"FixedInputTrace/{s_Replay.TraceId}",
+                s_ReplayInputSourceIdentity,
                 context.InputSequence,
                 frame.Input.Values,
                 Array.Empty<SimulationInputRequest>());
@@ -645,7 +647,7 @@ namespace ThirdPersonSimulation.Fixed
             return new SimulationInput(
                 FixedSimulationNumericProfile.Value,
                 context.Source,
-                $"FixedInputTrace/{s_Replay.TraceId}",
+                s_ReplayInputSourceIdentity,
                 context.InputSequence,
                 frame.Input.Values,
                 requests);
@@ -757,6 +759,7 @@ namespace ThirdPersonSimulation.Fixed
             s_ContinueAfterReplay = false;
             s_ReplayEvidence = Array.Empty<ReplayFrameBuilder>();
             s_TraceId = string.Empty;
+            s_ReplayInputSourceIdentity = string.Empty;
             s_Message = string.Empty;
             s_RecordingFrames.Clear();
         }

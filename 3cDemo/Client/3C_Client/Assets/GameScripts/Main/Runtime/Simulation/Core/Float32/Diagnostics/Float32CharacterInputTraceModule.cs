@@ -67,6 +67,7 @@ namespace ThirdPersonSimulation
         static int s_ReplayIndex;
         static ulong s_ReplayStartTick;
         static string s_TraceId = string.Empty;
+        static string s_ReplayInputSourceIdentity = string.Empty;
 
         enum Float32CharacterInputTraceMode : byte
         {
@@ -110,6 +111,7 @@ namespace ThirdPersonSimulation
             s_Replay = trace ?? throw new ArgumentNullException(nameof(trace));
             s_ActorId = trace.ActorId;
             s_TraceId = trace.TraceId;
+            s_ReplayInputSourceIdentity = $"Float32InputTrace/{trace.TraceId}";
             s_ReplayIndex = 0;
             s_ReplayStartTick = 0;
             s_Mode = Float32CharacterInputTraceMode.Replaying;
@@ -175,7 +177,7 @@ namespace ThirdPersonSimulation
             return new SimulationInput(
                 Float32SimulationNumericProfile.Value,
                 context.Source,
-                $"Float32InputTrace/{s_Replay.TraceId}",
+                s_ReplayInputSourceIdentity,
                 context.InputSequence,
                 frame.Input.Values,
                 requests);
@@ -202,6 +204,7 @@ namespace ThirdPersonSimulation
             s_ReplayIndex = 0;
             s_ReplayStartTick = 0;
             s_TraceId = string.Empty;
+            s_ReplayInputSourceIdentity = string.Empty;
             s_RecordingFrames.Clear();
         }
     }

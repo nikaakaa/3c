@@ -685,3 +685,12 @@
 - 每次删除一个 List 对象和其存储到最终数组的复制，保留一个最终字符串数组。数字格式化字符串、params 哈希内部拼接／UTF-8、回放输入重映射和记录增长仍存在。该入口是 Fixed 回放证据链，Float32 输入记录模块没有同名哈希计算，不为了对称增加入口。
 - 同时检查 Float32SimulationDiagnosticsAggregate：发布使用已有按 Actor 索引的字典与有序列表，循环按下标读取；初始化集合不是每次发布创建，本轮不改该正确发布路径。诊断最终存储和容量治理仍需继续追踪。
 - 编辑前目标文件无其它未提交修改，未发现 csc／bee 编译进程。Fixed portable 编译零警告零错误，build-server shutdown 成功，本切片 diff 空白检查通过；未新增测试、未控制或刷新共享 Unity、未运行回放或 Player 分配采样。
+## 2026-09-20 回放来源身份按回放寿命复用
+
+对应 tasks.md 的 7.8，源码完成，编译检查受公共依赖阻断。
+
+- Fixed／Float32 的 Remap 原每帧插值数值域前缀和 s_Replay.TraceId，Fixed 的 HoldLastReplayFrame 也重复生成同一字符串。现在 PrepareReplay 在原 trace 校验和绑定后构造 s_ReplayInputSourceIdentity，三个消费者直接传入该字符串；前缀、TraceId 和 SimulationInput 构造校验保持不变。
+- Fixed ResetState 与 Float32 ResetActiveState 清除模块引用。普通结束、停止、清理和下一次准备仍走原入口；Fixed 暂停／保持期间保留本次来源身份。已返回 SimulationInput 持有不可变字符串，不会因模块重置变为空，也不共享可变请求数组。
+- 存储上限是每个既有回放模块一个活动字符串，内容长度来自原 trace 身份，不建立字典缓存或新增配置。只移除重复身份插值；每帧 SimulationInput、请求重映射数组、状态消息和哈希分配仍存在。
+- 编辑前两个目标文件无其它未提交修改，曾观察到 bee_backend PID 35648；等待后该句柄消失，再次进程扫描无 csc／bee 才编辑。Fixed／Float32 portable 均在公共 Core 编译失败，CameraProgramRequestFactory.cs 的 ProgramConstantKind／ProgramConstant／GameplayAbilityExecutionLayout 等类型引用报 8 个错误；未修改该文件或增加编译旁路，两次 build-server shutdown 均成功。
+- 本切片 diff 空白检查通过；未新增测试、未主动刷新或控制共享 Unity，未运行回放或采样。后续需在公共依赖恢复后补齐两数值域编译证据，历史已通过的检查不冒充本次通过。

@@ -1632,6 +1632,7 @@ namespace BTSMTL.Timeline.Runtime
     {
         internal TimelineRuntimePresentationFrame(
             TimelineRuntimePlayback playback,
+            ulong logicTick,
             ulong presentationFrame,
             float presentationDeltaSeconds,
             float interpolationAlpha,
@@ -1645,7 +1646,7 @@ namespace BTSMTL.Timeline.Runtime
                 throw new ArgumentException("Timeline presentation frame is invalid.");
             Handle = playback.Handle;
             Generation = playback.Generation;
-            LogicTick = playback.LastCommittedLogicTick;
+            LogicTick = logicTick;
             PresentationFrame = presentationFrame;
             PresentationDeltaSeconds = presentationDeltaSeconds;
             InterpolationAlpha = interpolationAlpha;

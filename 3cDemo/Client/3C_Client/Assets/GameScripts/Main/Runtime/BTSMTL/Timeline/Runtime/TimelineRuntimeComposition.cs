@@ -255,6 +255,29 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    public readonly struct TimelineRuntimePresentationSample
+    {
+        public TimelineRuntimePresentationSample(ulong generation, ulong logicTick, string contentRevision, FixedScalar time, int cycle, bool allowTraversal)
+        {
+            if (generation == 0 || logicTick == 0 || time < FixedScalar.Zero || cycle < 0)
+                throw new ArgumentException("Timeline presentation sample is invalid.");
+            Generation = generation;
+            LogicTick = logicTick;
+            ContentRevision = contentRevision;
+            Time = time;
+            Cycle = cycle;
+            AllowTraversal = allowTraversal;
+        }
+
+        public ulong Generation { get; }
+        public ulong LogicTick { get; }
+        public FixedScalar Time { get; }
+        public int Cycle { get; }
+        public string ContentRevision { get; }
+        public bool AllowTraversal { get; }
+        public bool IsValid => Generation != 0;
+    }
+
     public sealed class TimelineRuntimePresentationDriver : ITimelineRuntimeEvaluationSink
     {
         static readonly TimelineRuntimePresentationOperations s_EmptyOperations =
@@ -272,6 +295,7 @@ namespace BTSMTL.Timeline.Runtime
         public bool TryPresent(
             TimelineRuntimeService service,
             TimelineRuntimePlaybackHandle handle,
+            in TimelineRuntimePresentationSample sample,
             ulong presentationFrame,
             float presentationDeltaSeconds,
             float interpolationAlpha,
@@ -291,7 +315,15 @@ namespace BTSMTL.Timeline.Runtime
                 return false;
             }
 
+            if (!sample.IsValid || sample.Generation != playback.Generation || sample.Time > playback.Content.Duration ||
+                !string.Equals(sample.ContentRevision, playback.ContentRevision, StringComparison.Ordinal))
+                throw new InvalidOperationException("Timeline presentation sample does not match the prepared playback.");
             bool hasState = m_Playbacks.TryGetValue(handle.Value, out PresentationPlaybackState state);
+            if (hasState && state.Generation != playback.Generation)
+            {
+                m_Playbacks.Remove(handle.Value);
+                hasState = false;
+            }
             if (hasState && state.StopCommitted)
             {
                 m_Playbacks.Remove(handle.Value);
@@ -322,7 +354,7 @@ namespace BTSMTL.Timeline.Runtime
                     throw new InvalidOperationException("Timeline presentation frame moved backward without a generation reset.");
             }
 
-            if (state.Finished)
+            if (state.Finished && sample.Time == state.CursorTime && sample.Cycle == state.Cycle)
             {
                 m_Playbacks.Remove(handle.Value);
                 frame = default;
@@ -334,13 +366,15 @@ namespace BTSMTL.Timeline.Runtime
             bool loop = playback.PlaybackMode == TimelinePlaybackMode.Loop;
             FixedScalar previousTime = state.CursorTime;
             int previousCycle = state.Cycle;
-            AdvanceCursor(
-                state,
-                duration,
-                loop,
-                presentationDeltaSeconds,
-                out FixedScalar currentTime,
-                out int currentCycle);
+            FixedScalar currentTime = sample.Time;
+            int currentCycle = sample.Cycle;
+            bool allowTraversal = sample.AllowTraversal &&
+                (currentCycle > previousCycle || currentCycle == previousCycle && currentTime >= previousTime);
+            if (!allowTraversal)
+            {
+                previousTime = currentTime;
+                previousCycle = currentCycle;
+            }
             TimelineRuntimePresentationOperations operations = TimelineRuntimePresentationEvaluator.Evaluate(
                 playback,
                 previousTime,
@@ -348,8 +382,9 @@ namespace BTSMTL.Timeline.Runtime
                 currentTime,
                 currentCycle,
                 loop,
-                !state.HasPresented);
-            AppendMarkerEvents(
+                allowTraversal && !state.HasPresented);
+            if (allowTraversal)
+                AppendMarkerEvents(
                 playback,
                 state,
                 previousTime,
@@ -362,10 +397,10 @@ namespace BTSMTL.Timeline.Runtime
             state.CursorTime = currentTime;
             state.Cycle = currentCycle;
             state.HasPresented = true;
-            if (!loop && currentTime >= duration)
-                state.Finished = true;
+            state.Finished = !loop && currentTime >= duration;
             frame = new TimelineRuntimePresentationFrame(
                 playback,
+                sample.LogicTick,
                 presentationFrame,
                 presentationDeltaSeconds,
                 interpolationAlpha,
@@ -403,31 +438,6 @@ namespace BTSMTL.Timeline.Runtime
         public void Clear()
         {
             m_Playbacks.Clear();
-        }
-
-        static void AdvanceCursor(
-            PresentationPlaybackState state,
-            FixedScalar duration,
-            bool loop,
-            float deltaSeconds,
-            out FixedScalar currentTime,
-            out int currentCycle)
-        {
-            currentTime = state.CursorTime;
-            currentCycle = state.Cycle;
-            if (duration <= FixedScalar.Zero)
-                return;
-            FixedScalar requested = state.CursorTime + FixedScalar.FromDouble(deltaSeconds);
-            if (loop)
-            {
-                long cycleDelta = requested.Raw / duration.Raw;
-                if (cycleDelta > 4096 || cycleDelta > int.MaxValue - state.Cycle)
-                    throw new InvalidOperationException("Timeline presentation cursor crossed an unsupported cycle range.");
-                currentCycle = state.Cycle + (int)cycleDelta;
-                currentTime = FixedScalar.FromRaw(requested.Raw % duration.Raw);
-                return;
-            }
-            currentTime = FixedScalar.Min(requested, duration);
         }
 
         static void AppendMarkerEvents(

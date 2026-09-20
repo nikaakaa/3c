@@ -381,6 +381,8 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException($"Ability Timeline operation '{m_Access.SourcePath(operation)}' did not return a runtime handle.");
                 m_ControlState.Set(slot, AbilityStateValue.FromInt32(runtimeHandle));
             }
+            if (!m_ActionState.TryGetCurrentSkillExecution(out FixedActionInstanceState sourceAction) || !sourceAction.IsActive)
+                throw new InvalidOperationException("Timeline progress has no owning Action instance.");
             IAbilityTreeClipInvokerHost treeClipInvokerHost = m_TimelineRuntime as IAbilityTreeClipInvokerHost;
             if (treeClipInvokerHost != null && m_TreeClipLink?.Invoker != null)
                 treeClipInvokerHost.PushTreeClipInvoker(m_TreeClipLink.Invoker);
@@ -395,6 +397,15 @@ namespace ThirdPersonSimulation.Fixed
             }
             if (tick.Pending != null)
                 m_TimelinePendingAdvances.Add(tick.Pending);
+            if (tick.Progress.IsValid)
+            {
+                SimulationEventHeader header = m_Presentation.Next(operation);
+                m_Presentation.Add(new PresentationCommand(header, PresentationCommandKind.TimelineProgress,
+                    m_Access.SourcePath(operation),
+                    FixedScalar.Zero, FixedScalar.Zero,
+                    sourceActionInstanceId: sourceAction.InstanceId,
+                    timelineProgress: tick.Progress));
+            }
             return tick.Status switch
             {
                 AbilityTimelineRuntimeStatus.Running => OperationExecutionResult.Running,

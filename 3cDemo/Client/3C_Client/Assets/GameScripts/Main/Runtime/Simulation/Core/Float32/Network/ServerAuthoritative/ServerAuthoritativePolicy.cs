@@ -148,7 +148,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 throw new InvalidOperationException($"ServerAuthoritative replication policy has no producer mapping for '{command.ProducerId}'.");
             if (IsCameraProducer(characterRuntime, command.ProducerId))
                 return false;
-            return command.Kind == PresentationCommandKind.SelectProducer ||
+            return command.Kind == PresentationCommandKind.TimelineProgress ||
+                   command.Kind == PresentationCommandKind.SelectProducer ||
                    command.Kind == PresentationCommandKind.CompleteProducer ||
                    command.Kind == PresentationCommandKind.ReleaseProducer ||
                    command.Kind == PresentationCommandKind.ForceReleaseProducer ||

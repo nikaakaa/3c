@@ -6,6 +6,7 @@ using BTSMTL.Timeline;
 using BTSMTL.Timeline.Runtime;
 using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonGameplay.Tick;
 using TreeDesigner;
 using TimelinePlaybackStatus = BTSMTL.Timeline.TimelinePlaybackStatus;
@@ -480,6 +481,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal RuntimeInstanceKey RuntimeInstance;
             internal RuntimeTimelinePlaybackProvenance Provenance;
             internal bool TerminalPublished;
+            internal TimelineRuntimePresentationSample LocalPresentationSample;
         }
 
         TimelineRuntimeCompositionHost m_Host;
@@ -1492,6 +1494,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         {
             if (!TryGetActivePlayback(evaluation.Handle, out ActivePlayback active))
                 return;
+            if (!active.CoreDriven)
+            {
+                active.LocalPresentationSample = new TimelineRuntimePresentationSample(evaluation.Generation,
+                    evaluation.LogicTick, evaluation.ContentRevision, evaluation.Time, evaluation.Cycle, true);
+                for (int i = 0; i < m_ActivePlaybacks.Count; i++)
+                    if (m_ActivePlaybacks[i].Handle.Value == active.Handle.Value)
+                    {
+                        m_ActivePlaybacks[i] = active;
+                        break;
+                    }
+            }
             float time = evaluation.Time.ToSingle();
             PublishTimelineEvent(
                 active,
@@ -1872,19 +1885,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             }
         }
 
-        public void Present(in GameplayPresentationFrameContext context)
+        internal void Present(in GameplayPresentationFrameContext context, IActionPresentationClockCoordinator clock)
         {
             if (!m_Initialized || m_Host == null || m_ActivePlaybacks.Count == 0)
                 return;
             for (int index = m_ActivePlaybacks.Count - 1; index >= 0; index--)
             {
                 ActivePlayback active = m_ActivePlaybacks[index];
-                bool presented = m_Host.TryPresent(
+                TimelineRuntimePresentationSample sample = active.LocalPresentationSample;
+                bool hasSample = sample.IsValid;
+                if (active.CoreDriven)
+                {
+                    if (clock == null)
+                        throw new InvalidOperationException("Ability Timeline presentation requires its Action clock coordinator.");
+                    hasSample = clock.TrySampleTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
+                        active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId,
+                        context.RenderFrame, context.LocalLogicTick, context.InterpolationAlpha, out sample);
+                }
+                TimelineRuntimePresentationFrame frame = default;
+                bool presented = hasSample && m_Host.TryPresent(
                         active.Handle,
+                        in sample,
                         context.RenderFrame,
                         context.PresentationDeltaSeconds,
                         context.InterpolationAlpha,
-                        out TimelineRuntimePresentationFrame frame);
+                        out frame);
                 if (presented)
                 {
                     if (frame.Events.Count != 0)
@@ -1897,6 +1922,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     status != TimelinePlaybackStatus.Running &&
                     !presented)
                 {
+                    if (active.CoreDriven)
+                        clock.ReleaseTimeline(active.ActionInstanceId, active.Provenance.SourceOperationIndex,
+                            active.Provenance.SourceInvocationPath, active.Timeline.AuthoringId);
                     PresentationPlaybackEnded?.Invoke(new TimelineRuntimePlaybackHandle(active.Handle.Value));
                     m_ActivePlaybacks.RemoveAt(index);
                 }

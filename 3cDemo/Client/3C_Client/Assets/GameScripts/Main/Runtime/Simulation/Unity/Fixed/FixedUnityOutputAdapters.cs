@@ -190,7 +190,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 }
                 if (hasCurrent && hasApplied)
                 {
-                    if (!current.Command.Header.EventId.Equals(applied.Command.Header.EventId))
+                    if (!current.Command.Header.EventId.Equals(applied.Command.Header.EventId) ||
+                        current.Command.Kind == CharacterPresentationCommandKind.TimelineProgress &&
+                        !current.Command.TimelineProgress.Equals(applied.Command.TimelineProgress))
                     {
                         if (current.Command.Kind == CharacterPresentationCommandKind.ForceProducer)
                         {
@@ -470,6 +472,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             switch (command.Kind)
             {
+                case CharacterPresentationCommandKind.TimelineProgress:
+                    key = new PresentationStateKey("timeline-progress", command.ProducerId, command.SourceActionInstanceId);
+                    return true;
                 case CharacterPresentationCommandKind.SelectProducer:
                     key = new PresentationStateKey("animation-selection", command.ProducerId, 0);
                     return true;

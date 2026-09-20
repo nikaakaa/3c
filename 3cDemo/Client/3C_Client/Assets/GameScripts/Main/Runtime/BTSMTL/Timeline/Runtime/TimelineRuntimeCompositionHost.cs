@@ -80,6 +80,7 @@ namespace BTSMTL.Timeline.Runtime
 
         public bool TryPresent(
             TimelineRuntimePlaybackHandle handle,
+            in TimelineRuntimePresentationSample sample,
             ulong presentationFrame,
             float presentationDeltaSeconds,
             float interpolationAlpha,
@@ -89,6 +90,7 @@ namespace BTSMTL.Timeline.Runtime
             return m_PresentationDriver.TryPresent(
                 Service,
                 handle,
+                in sample,
                 presentationFrame,
                 presentationDeltaSeconds,
                 interpolationAlpha,
@@ -97,6 +99,7 @@ namespace BTSMTL.Timeline.Runtime
 
         public bool TryPresent(
             TimelinePlaybackHandle handle,
+            in TimelineRuntimePresentationSample sample,
             ulong presentationFrame,
             float presentationDeltaSeconds,
             float interpolationAlpha,
@@ -104,6 +107,7 @@ namespace BTSMTL.Timeline.Runtime
         {
             return TryPresent(
                 new TimelineRuntimePlaybackHandle(handle.Value),
+                in sample,
                 presentationFrame,
                 presentationDeltaSeconds,
                 interpolationAlpha,

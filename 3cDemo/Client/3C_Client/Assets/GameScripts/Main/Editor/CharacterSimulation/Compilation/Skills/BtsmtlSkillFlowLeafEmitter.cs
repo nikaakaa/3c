@@ -77,6 +77,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             OperationHandle operation = m_Emitter.Emit(sourceLocation, emission, inputs);
             if (CameraProgramOperationSchema.IsCameraPresentationOperation(emission.Code))
                 DeclareCameraProducer(operation, emission.Code, sourceLocation);
+            if (emission.Code == SimulationOperationCode.Timeline)
+            {
+                int producer = m_Builder.DeclareProducer(sourceLocation.DisplayPath, new AnimationChannelId("timeline-progress"),
+                    sourceLocation.TemplateIdentity, ProgramOutputChannelKind.Presentation, sourceLocation);
+                m_Builder.DeclareReference($"{sourceLocation.Identity}/timeline-progress-producer", operation,
+                    ProgramReferenceKind.Producer, producer, sourceLocation.DisplayPath, sourceLocation);
+            }
             return operation;
         }
 

@@ -269,6 +269,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void Publish(CharacterPresentationCommand command)
         {
             RequireActor(command.Header.ActorId);
+            if (command.Kind == CharacterPresentationCommandKind.TimelineProgress)
+            {
+                if (m_PresentationClockCoordinator == null)
+                    throw new InvalidOperationException("Timeline progress requires an installed Action presentation clock.");
+                m_PresentationClockCoordinator.AcceptTimelineProgress(in command);
+                return;
+            }
             if (command.Kind == CharacterPresentationCommandKind.Camera)
             {
                 if (m_Camera == null)
@@ -283,6 +290,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             RequireActor(current.Header.ActorId);
             RequireActor(replacement.Header.ActorId);
+            if (current.Kind == CharacterPresentationCommandKind.TimelineProgress || replacement.Kind == CharacterPresentationCommandKind.TimelineProgress)
+            {
+                if (m_PresentationClockCoordinator == null || current.Kind != replacement.Kind)
+                    throw new InvalidOperationException("Timeline progress replacement has no matching Action clock contract.");
+                m_PresentationClockCoordinator.AcceptTimelineProgress(in replacement);
+                return;
+            }
             if (current.Kind == CharacterPresentationCommandKind.Camera ||
                 replacement.Kind == CharacterPresentationCommandKind.Camera)
             {
@@ -297,6 +311,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void Retire(CharacterPresentationCommand command)
         {
             RequireActor(command.Header.ActorId);
+            if (command.Kind == CharacterPresentationCommandKind.TimelineProgress)
+            {
+                if (m_PresentationClockCoordinator == null)
+                    throw new InvalidOperationException("Timeline progress retirement requires an Action presentation clock.");
+                m_PresentationClockCoordinator.RetireTimelineProgress(in command);
+                return;
+            }
             if (command.Kind == CharacterPresentationCommandKind.Camera)
             {
                 if (m_Camera == null)
@@ -368,7 +389,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
             if (!bodyFrame.IsValid)
                 return;
-            m_TimelineHost?.Present(context);
+            m_TimelineHost?.Present(context, m_PresentationClockCoordinator);
             m_Camera?.Present(bodyFrame, context);
             CharacterPresentationFactFrame factFrame = CreateFactFrame(in bodyFrame, context.RenderFrame);
             CharacterAnimationVariableUpdateResult update = m_EventGraph.Update(

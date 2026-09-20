@@ -791,3 +791,11 @@
 - 删除效果整体封装的一套 writer／流／最终中转数组，以及读取的一个整体字节副本。结果不保存输入片段，聚合状态仍独立；序列化异常沿原外层 using 离开，不发布部分字节。未改变恢复、事务或 Timeline 快照执行逻辑。
 - 角色最终数组／哈希、效果 CopyTo 深拷贝、装备与控制状态封装仍存在，不宣称角色状态全链无分配。目标文件修改前无其它未提交修改，未发现 csc／bee，修改仅限效果分支。
 - Fixed／Float32 portable 各自零警告零错误，逐次 build-server shutdown 成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做哈希字节对比或恢复运行及 Player 分配采样。
+## 2026-09-20 角色状态装备封装直接读写
+
+对应 tasks.md 的 2.25。
+
+- 两数值域 CharacterRuntimeStateCodec 的装备分支统一使用现有角色 writer 预留长度、调用唯一 EquipmentStateAggregateCodec.Write、回填长度；读取用 ReadBytesSegment 构造有限片段 reader，保留 equipmentReader.RequireComplete。删除装备子 writer、MemoryStream、ToArray 中转及读取整体副本。
+- 检查公共 EquipmentStateAggregateCodec.Read：目录 hash、槽位数量／身份、装备贡献、局部状态类型及待定变更均沿原验证；读取产生字符串、数值、数组和 EquipmentStateAggregate，不保存字节片段。没有改变装备对象、安装／撤销流程或事务所有权。
+- 存在标记、长度前缀、字段顺序、角色 Write／ComputeHash 共用 WriteCanonical 均不变。失败沿外层 writer 的原 using 离开，不发布部分结果；不承诺异常后的临时流内容相同。控制状态、Timeline 快照和装备内部 LINQ／集合复制未在本轮修改。
+- 编辑前两目标文件无其它未提交修改，未发现 csc／bee；Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过。未新增测试、未操作共享 Unity，未做字节对比、装备恢复运行或 Player 分配采样。

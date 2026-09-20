@@ -103,7 +103,7 @@ namespace ThirdPersonSimulation
             {
                 if (equipmentLayout == null)
                     throw new InvalidDataException("Float32 Character runtime state contains Equipment state without an installed layout.");
-                var equipmentReader = new CanonicalReader(reader.ReadBytes());
+                var equipmentReader = new CanonicalReader(reader.ReadBytesSegment());
                 equipmentState = EquipmentStateAggregateCodec.Read(equipmentReader, equipmentLayout);
                 equipmentReader.RequireComplete();
             }
@@ -171,9 +171,9 @@ namespace ThirdPersonSimulation
             writer.WriteBoolean(state.EquipmentState != null);
             if (state.EquipmentState != null)
             {
-                using var equipmentWriter = new CanonicalWriter();
-                EquipmentStateAggregateCodec.Write(equipmentWriter, state.EquipmentState);
-                writer.WriteBytes(equipmentWriter.ToArray());
+                long equipmentPrefixPosition = writer.BeginLengthPrefixedBlock();
+                EquipmentStateAggregateCodec.Write(writer, state.EquipmentState);
+                writer.EndLengthPrefixedBlock(equipmentPrefixPosition);
             }
             writer.WriteInt32(state.TimelineSnapshots.Count);
             for (int i = 0; i < state.TimelineSnapshots.Count; i++)

@@ -312,7 +312,8 @@ namespace ThirdPersonSimulation.Fixed
 
         public void NotifyStateDisposition(FixedCharacterControlSourceStateDisposition disposition)
         {
-            if (!Enum.IsDefined(typeof(FixedCharacterControlSourceStateDisposition), disposition))
+            if (disposition is not (FixedCharacterControlSourceStateDisposition.Prepared or FixedCharacterControlSourceStateDisposition.Committed or
+                FixedCharacterControlSourceStateDisposition.Discarded or FixedCharacterControlSourceStateDisposition.Restored))
                 throw new ArgumentOutOfRangeException(nameof(disposition));
             for (int i = 0; i < m_Bindings.Count; i++)
                 m_Bindings[i].ControlSource.NotifyStateDisposition(disposition);

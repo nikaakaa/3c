@@ -848,3 +848,10 @@
 - Fixed／Float32 MotionRuntime.ApplyMotionWarp 经 ApplyMotionWarpCore 读取已有 MotionWarp 状态，ResolveLifecycle 后分 Initialize 与已有状态分支。已有状态分支原每次 Enum.IsDefined 校验 storedState.LimitResult，再排除 PreservedByLimitPolicy；因此该位置会随持续执行进入，不只是内容准备或一次恢复。
 - 正式枚举只有 Applied=0、AppliedClamped=1、PreservedByLimitPolicy=2，现直接匹配前两项，拒绝其它值。保留原 Fail 调用和错误文本、零值合法性、进度读取与后续 EvaluateWarpPose／状态写入；不修改 Timeline 播放身份、生命周期判定或状态存储归属。
 - 两文件编辑前无其它未提交修改，进程扫描无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次 build-server shutdown 成功，diff 空白检查通过。未新增测试、未操作共享 Unity、未做 MotionWarp 运行或 Player 分配采样，实际执行频率和数值收益尚无采样证据。
+## 2026-09-20 Fixed 输入源状态通知枚举校验
+
+对应 tasks.md 的 2.32。
+
+- FixedLocalInputSourcePort.NotifyStateDisposition 原 Enum.IsDefined 校验参数，再依绑定顺序通知各控制源。改为直接接受 Prepared／Committed／Discarded／Restored 全部四成员，其它值仍抛相同 ArgumentOutOfRangeException；没有根据当前调用点缩窄合法集合。
+- 运行链证据：FixedLocalControlInputCheckpoint.Restore 在恢复输入后通知 Discarded，Dispose 在未恢复时通知 Committed；FixedLocalControlInputRestoreTransaction.Apply 恢复替换状态后通知 Restored。这些属于运行中的提交和恢复流程，不是初始化专用路径。
+- 修改仅一处校验，不改检查点、恢复事务、通知消费者或状态数据生命周期。目标文件无其它未提交修改，编辑前无 csc／bee。最终 Fixed portable 编译零警告零错误并关闭构建服务，diff 空白检查通过；未新增测试、未控制共享 Unity、未做提交／恢复运行或 Player 采样。

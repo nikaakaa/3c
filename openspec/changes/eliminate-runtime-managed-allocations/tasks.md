@@ -53,6 +53,8 @@
 
 - [x] 2.31 两数值域 MotionWarp 持续执行的已有状态校验直接匹配 Applied／AppliedClamped，删除运行期 Enum.IsDefined 装箱；保留非法状态错误与原生命周期判断
 
+- [x] 2.32 Fixed 输入源状态通知直接匹配全部四种正式 disposition，删除提交／丢弃／恢复调用中的 Enum.IsDefined 装箱，保留通知顺序和原非法值异常
+
 ## 3. Timeline和事件图
 
 - [ ] 3.1 为播放、活动Clip、决策退出和事件候选设置正式有界工作存储，删除周期List及只读包装分配

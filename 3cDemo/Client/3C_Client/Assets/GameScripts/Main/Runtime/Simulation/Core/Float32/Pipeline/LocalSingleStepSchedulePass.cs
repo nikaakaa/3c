@@ -89,7 +89,7 @@ namespace ThirdPersonSimulation
                 canonical.Inputs,
                 typed.Ingress,
                 ObservedWorldConstraintFrame.Empty(tick));
-            return new SimulationSessionExecutionPlan<Float32SimulationStep>(
+            return SimulationSessionExecutionPlan<Float32SimulationStep>.FromOwnedArrays(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
                 characterRuntime.Runtime.GameplayContentHash,

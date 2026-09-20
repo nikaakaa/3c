@@ -179,7 +179,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 actorInputs,
                 Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>(),
                 ObservedWorldConstraintFrame.Empty(authorityTick));
-            writePorts.ExecutionPlan.Write(new SimulationSessionExecutionPlan<Float32SimulationStep>(
+            writePorts.ExecutionPlan.Write(SimulationSessionExecutionPlan<Float32SimulationStep>.FromOwnedArrays(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
                 readPorts.CharacterRuntime.Runtime.GameplayContentHash,

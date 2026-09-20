@@ -344,6 +344,31 @@ namespace ThirdPersonSimulation
             SimulationRestoreDirective restore,
             IReadOnlyList<TStep> steps,
             SimulationSessionPlanRequirement requirements)
+            : this(
+                status,
+                outerSource,
+                gameplayContentHash,
+                pipelineHash,
+                roster,
+                CopyMappings(sourceMappings),
+                restore,
+                CopySteps(steps),
+                requirements,
+                true)
+        {
+        }
+
+        SimulationSessionExecutionPlan(
+            SimulationSessionExecutionPlanStatus status,
+            SimulationTickSourceIdentity outerSource,
+            GameplayContentHash gameplayContentHash,
+            SimulationPipelineHash pipelineHash,
+            SimulationActorRosterDescriptor roster,
+            SimulationPipelineStepSourceMapping[] sourceMappings,
+            SimulationRestoreDirective restore,
+            TStep[] steps,
+            SimulationSessionPlanRequirement requirements,
+            bool _)
         {
             if ((byte)status < (byte)SimulationSessionExecutionPlanStatus.Pending ||
                 (byte)status > (byte)SimulationSessionExecutionPlanStatus.NoStep ||
@@ -352,11 +377,10 @@ namespace ThirdPersonSimulation
             {
                 throw new ArgumentException("Session ExecutionPlan identity is incomplete.");
             }
-            TStep[] values = MaterializeSteps(steps);
             m_SourceMappings = FreezeMappings(sourceMappings, outerSource.ClockId);
             if (status == SimulationSessionExecutionPlanStatus.Pending)
             {
-                if (restore != null || values.Length != 0 || requirements != SimulationSessionPlanRequirement.None)
+                if (restore != null || steps.Length != 0 || requirements != SimulationSessionPlanRequirement.None)
                     throw new ArgumentException("Pending ExecutionPlan cannot contain restore, steps or execution requirements.");
             }
             else if (status == SimulationSessionExecutionPlanStatus.NoStep)
@@ -364,7 +388,7 @@ namespace ThirdPersonSimulation
                 const SimulationSessionPlanRequirement required =
                     SimulationSessionPlanRequirement.WorkingState |
                     SimulationSessionPlanRequirement.OutputDisposition;
-                if (values.Length != 0 || (requirements & required) != required)
+                if (steps.Length != 0 || (requirements & required) != required)
                     throw new ArgumentException("NoStep ExecutionPlan requires working state and output disposition without ordered Steps.");
             }
             else
@@ -372,19 +396,19 @@ namespace ThirdPersonSimulation
                 const SimulationSessionPlanRequirement required =
                     SimulationSessionPlanRequirement.WorkingState |
                     SimulationSessionPlanRequirement.OutputDisposition;
-                if (values.Length == 0 || (requirements & required) != required)
+                if (steps.Length == 0 || (requirements & required) != required)
                     throw new ArgumentException("Executable ExecutionPlan requires ordered Steps, working state and output disposition.");
-                for (int i = 0; i < values.Length; i++)
+                for (int i = 0; i < steps.Length; i++)
                 {
-                    if (values[i] == null || i > 0 && values[i - 1].Tick.CompareTo(values[i].Tick) >= 0)
+                    if (steps[i] == null || i > 0 && steps[i - 1].Tick.CompareTo(steps[i].Tick) >= 0)
                         throw new ArgumentException("ExecutionPlan Steps must have strictly increasing SimulationTick values.", nameof(steps));
-                    RequireSourceMapping(values[i], m_SourceMappings);
-                    RequireRosterBinding(values[i], roster);
-                    if (i > 0 && values[i - 1].Provenance.PlanSequence >= values[i].Provenance.PlanSequence)
+                    RequireSourceMapping(steps[i], m_SourceMappings);
+                    RequireRosterBinding(steps[i], roster);
+                    if (i > 0 && steps[i - 1].Provenance.PlanSequence >= steps[i].Provenance.PlanSequence)
                         throw new ArgumentException("ExecutionPlan Step provenance sequence must be strictly increasing.", nameof(steps));
                 }
             }
-            if (values.Length > 0 && restore != null && restore.Tick.CompareTo(values[0].Tick) >= 0)
+            if (steps.Length > 0 && restore != null && restore.Tick.CompareTo(steps[0].Tick) >= 0)
                 throw new ArgumentException("Restore Tick must precede the first ExecutionPlan Step.", nameof(restore));
             Status = status;
             OuterSource = outerSource;
@@ -393,8 +417,30 @@ namespace ThirdPersonSimulation
             RosterHash = roster.RosterHash;
             Restore = restore;
             Requirements = requirements;
-            m_Steps = values;
+            m_Steps = steps;
         }
+
+        public static SimulationSessionExecutionPlan<TStep> FromOwnedArrays(
+            SimulationSessionExecutionPlanStatus status,
+            SimulationTickSourceIdentity outerSource,
+            GameplayContentHash gameplayContentHash,
+            SimulationPipelineHash pipelineHash,
+            SimulationActorRosterDescriptor roster,
+            SimulationPipelineStepSourceMapping[] sourceMappings,
+            SimulationRestoreDirective restore,
+            TStep[] steps,
+            SimulationSessionPlanRequirement requirements) =>
+            new SimulationSessionExecutionPlan<TStep>(
+                status,
+                outerSource,
+                gameplayContentHash,
+                pipelineHash,
+                roster,
+                sourceMappings ?? throw new ArgumentNullException(nameof(sourceMappings)),
+                restore,
+                steps ?? throw new ArgumentNullException(nameof(steps)),
+                requirements,
+                true);
 
         public SimulationSessionExecutionPlanStatus Status { get; }
         public SimulationTickSourceIdentity OuterSource { get; }
@@ -406,7 +452,7 @@ namespace ThirdPersonSimulation
         public SimulationSessionPlanRequirement Requirements { get; }
         public IReadOnlyList<TStep> Steps => m_Steps;
 
-        static TStep[] MaterializeSteps(IReadOnlyList<TStep> steps)
+        static TStep[] CopySteps(IReadOnlyList<TStep> steps)
         {
             if (steps == null || steps.Count == 0)
                 return Array.Empty<TStep>();
@@ -416,26 +462,34 @@ namespace ThirdPersonSimulation
             return values;
         }
 
-        static SimulationPipelineStepSourceMapping[] FreezeMappings(
-            IReadOnlyList<SimulationPipelineStepSourceMapping> source,
-            string outerClockId)
+        static SimulationPipelineStepSourceMapping[] CopyMappings(
+            IReadOnlyList<SimulationPipelineStepSourceMapping> source)
         {
             if (source == null || source.Count == 0)
                 return Array.Empty<SimulationPipelineStepSourceMapping>();
             var values = new SimulationPipelineStepSourceMapping[source.Count];
             for (int i = 0; i < values.Length; i++)
                 values[i] = source[i];
-            Array.Sort(values, CompareSourceMappings);
-            for (int i = 0; i < values.Length; i++)
+            return values;
+        }
+
+        static SimulationPipelineStepSourceMapping[] FreezeMappings(
+            SimulationPipelineStepSourceMapping[] sourceMappings,
+            string outerClockId)
+        {
+            Array.Sort(sourceMappings, CompareSourceMappings);
+            for (int i = 0; i < sourceMappings.Length; i++)
             {
-                if (!string.Equals(values[i].OuterClockId, outerClockId, StringComparison.Ordinal) ||
-                    i > 0 && string.Equals(values[i - 1].StepClockId, values[i].StepClockId, StringComparison.Ordinal) &&
-                    values[i - 1].SourceKind == values[i].SourceKind)
+                if (!string.Equals(sourceMappings[i].OuterClockId, outerClockId, StringComparison.Ordinal) ||
+                    i > 0 && string.Equals(sourceMappings[i - 1].StepClockId, sourceMappings[i].StepClockId, StringComparison.Ordinal) &&
+                    sourceMappings[i - 1].SourceKind == sourceMappings[i].SourceKind)
                 {
-                    throw new ArgumentException("ExecutionPlan contains an invalid or duplicate source clock mapping.", nameof(source));
+                    throw new ArgumentException(
+                        "ExecutionPlan contains an invalid or duplicate source clock mapping.",
+                        nameof(sourceMappings));
                 }
             }
-            return values;
+            return sourceMappings;
         }
 
         static int CompareSourceMappings(

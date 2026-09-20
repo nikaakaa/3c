@@ -1941,3 +1941,12 @@
 - 构造输入收窄为 IReadOnlyList。steps 按准确 Count 复制到最终 TStep[]；mappings 按准确 Count 复制到最终数组后原地排序并执行原 outer clock／重复映射校验。空输入继续复用 Array.Empty，计划仍不借用调用方集合。
 - 删除非数组生产者每个计划的第二只 List 及其容量冗余，最终独立数组仍按 plan 寿命存在。数组生产者当前仍由公开构造复制，显式所有权转移需要在各调度器证明数组不再修改后另行处理。
 - 首次 Fixed portable 构建发现局部 values 已收窄为数组但五处校验仍使用 Count，改为 Length 后，Fixed、Float32、DeterministicRollback 与 ServerAuthoritative portable 均编译零警告零错误；构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 schedule 运行对比或 Player 分配采样。
+
+## 2026-09-21 ExecutionPlan 单步数组所有权
+
+对应 tasks.md 的 2.92，收口 2.91 中单步数组生产者仍保留的二次复制。
+
+- Fixed 本地、Float32 本地和 Float32 authority schedule 都在当前方法内分别新建单元素 source mapping 数组与 step 数组，构造 plan 后不再持有或修改。原公开构造为保持通用输入独立性，会再次复制这两只数组。
+- SimulationSessionExecutionPlan 新增 FromOwnedArrays，接管 mappings 后原地执行既有排序与重复映射校验，并直接保存 steps。三条单步生产路径迁移到所有权入口；公开构造仍按 IReadOnlyList 复制，动态列表生产者尚未借用工作区。
+- 每个本地或 authority 单步计划删除一份 mapping 数组克隆和一份 step 数组克隆；原始单元素数组直接成为 plan 最终存储。空计划继续复用 Array.Empty。
+- 首次构建发现 FreezeMappings 异常参数名仍引用重命名前的 source，改为 sourceMappings 后 Fixed 编译通过；Unity 随后启动 Bee 编译，等待退出后 Float32、ServerAuthoritative 与 DeterministicRollback portable 均编译零警告零错误。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做 schedule Player 分配采样。

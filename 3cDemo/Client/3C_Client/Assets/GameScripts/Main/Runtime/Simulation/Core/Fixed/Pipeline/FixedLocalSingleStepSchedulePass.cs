@@ -84,7 +84,7 @@ namespace ThirdPersonSimulation.Fixed
                     replay ? canonical.Inputs[0].Value.Input.InputSourceIdentity : string.Empty),
                 canonical.Inputs,
                 typed.Ingress);
-            return new SimulationSessionExecutionPlan<FixedSimulationStep>(
+            return SimulationSessionExecutionPlan<FixedSimulationStep>.FromOwnedArrays(
                 SimulationSessionExecutionPlanStatus.Executable,
                 context.Source,
                 characterRuntime.Runtime.GameplayContentHash,

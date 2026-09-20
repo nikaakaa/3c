@@ -387,7 +387,12 @@ namespace ThirdPersonSimulation.DeterministicKcc
             }
             m_KccStates = states;
             m_Current = CreateState(request.BeforeWorldState.WorldRevision, bodies, states);
-            return new WorldSolveBatchResult(request, Descriptor.ImplementationId, Descriptor.Version, CloneState(m_Current), results);
+            return WorldSolveBatchResult.FromOwnedResults(
+                request,
+                Descriptor.ImplementationId,
+                Descriptor.Version,
+                CloneState(m_Current),
+                results);
         }
 
     }

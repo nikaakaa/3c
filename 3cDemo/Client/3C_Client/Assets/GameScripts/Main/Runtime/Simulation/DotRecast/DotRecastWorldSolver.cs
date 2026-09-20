@@ -338,7 +338,12 @@ namespace ThirdPersonSimulation.DotRecast
                     out results[i]);
             }
             m_Current = CreateState(request.BeforeWorldState.WorldRevision, bodies);
-            return new WorldSolveBatchResult(request, Descriptor.ImplementationId, Descriptor.Version, CloneState(m_Current), results);
+            return WorldSolveBatchResult.FromOwnedResults(
+                request,
+                Descriptor.ImplementationId,
+                Descriptor.Version,
+                CloneState(m_Current),
+                results);
         }
 
         static int FindContactCandidate(IReadOnlyList<ActorContactCandidate> candidates, ActorId actorId)

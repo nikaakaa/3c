@@ -219,6 +219,16 @@ namespace ThirdPersonSimulation.Fixed
             string solverVersion,
             WorldSimulationState nextWorldState,
             IReadOnlyList<CharacterWorldSolveResult> results)
+            : this(request, solverId, solverVersion, nextWorldState, CopyResults(results))
+        {
+        }
+
+        WorldSolveBatchResult(
+            WorldSolveBatchRequest request,
+            SolverImplementationId solverId,
+            string solverVersion,
+            WorldSimulationState nextWorldState,
+            CharacterWorldSolveResult[] results)
         {
             Request = request ?? throw new ArgumentNullException(nameof(request));
             if (string.IsNullOrEmpty(solverId.Value))
@@ -230,11 +240,7 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("World result state Numeric Profile does not match request.", nameof(nextWorldState));
             if (!nextWorldState.SolverId.Equals(solverId) || !string.Equals(nextWorldState.SolverVersion, SolverVersion, StringComparison.Ordinal))
                 throw new ArgumentException("Next World state does not match Solver identity.", nameof(nextWorldState));
-            var copied = results == null || results.Count == 0
-                ? Array.Empty<CharacterWorldSolveResult>()
-                : new CharacterWorldSolveResult[results.Count];
-            for (int i = 0; i < copied.Length; i++)
-                copied[i] = results[i];
+            CharacterWorldSolveResult[] copied = results ?? Array.Empty<CharacterWorldSolveResult>();
             Array.Sort(copied, (left, right) => left.ActorId.CompareTo(right.ActorId));
             if (copied.Length != request.Requests.Count || copied.Length != nextWorldState.Bodies.Count)
                 throw new ArgumentException("World result must contain exactly one result per request.", nameof(results));
@@ -252,6 +258,14 @@ namespace ThirdPersonSimulation.Fixed
             Summary = new WorldSolveBatchSummary(copied.Length, request.RequestHash, resultHash);
         }
 
+        public static WorldSolveBatchResult FromOwnedResults(
+            WorldSolveBatchRequest request,
+            SolverImplementationId solverId,
+            string solverVersion,
+            WorldSimulationState nextWorldState,
+            CharacterWorldSolveResult[] results) =>
+            new WorldSolveBatchResult(request, solverId, solverVersion, nextWorldState, results);
+
         public WorldSolveBatchRequest Request { get; }
         public SimulationTick Tick => Request.Tick;
         public SolverImplementationId SolverId { get; }
@@ -259,6 +273,16 @@ namespace ThirdPersonSimulation.Fixed
         public WorldSimulationState NextWorldState { get; }
         public IReadOnlyList<CharacterWorldSolveResult> Results => m_Results;
         public WorldSolveBatchSummary Summary { get; }
+
+        static CharacterWorldSolveResult[] CopyResults(IReadOnlyList<CharacterWorldSolveResult> results)
+        {
+            if (results == null || results.Count == 0)
+                return Array.Empty<CharacterWorldSolveResult>();
+            var copied = new CharacterWorldSolveResult[results.Count];
+            for (int i = 0; i < copied.Length; i++)
+                copied[i] = results[i];
+            return copied;
+        }
     }
 
     public sealed class CharacterWorldSolverDescriptor

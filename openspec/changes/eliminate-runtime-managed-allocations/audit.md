@@ -1639,3 +1639,12 @@
 - 两域 Result 构造入口收窄为 IReadOnlyList，按 Count 复制到独立最终数组，在数组上执行原 ActorId 排序、数量、numeric profile、request identity、tick、solver identity、final body 与 next world state 校验；Summary 继续使用最终数量和同一 hash。
 - 删除每批世界求解结果的 List 与 ReadOnlyCollection 两个对象，以最终数组替代原 List 底层存储。solver 输入数组与 Batch 结果数组仍隔离，未引入所有权转移或 solver 后续修改风险。
 - ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority portable 编译零警告零错误；DotRecast portable 编译通过并保留依赖包 RcVec2i／RcVec3i 的两条既有 nullable-context 警告。构建服务逐次关闭。未新增测试、未操作共享 Unity、未做求解运行对比或 Player 分配采样。
+
+## 2026-09-21 WorldSolveBatchResult 结果数组所有权转移
+
+对应 tasks.md 的 5.57，收口 5.56 中保留的 solver 数组到 Batch 数组复制。
+
+- DeterministicKcc、DotRecast、UnityCharacterController 三套正式 solver 的 results 均在 SolveBatch 方法内按 request 数新建，逐项填充后只用于紧接着 return WorldSolveBatchResult，没有缓存、复用或返回后的修改者。
+- 两域 Result 保留公开 IReadOnlyList 构造，其输入继续复制到独立数组；新增显式 FromOwnedResults 入口接管调用方声明转移的数组并进入同一排序、数量、身份、final body 与 summary hash 校验。三套 solver 统一改用该正式入口。
+- 每批世界求解删除第二份 CharacterWorldSolveResult 数组分配与逐项复制，Batch 成为原 solver 数组的唯一持有者。WorldSolveBatchResult 对象、结果元素对象和 hash 分配仍存在。
+- ThirdPersonSimulation.Fixed、Float32、DeterministicKcc、DotRecastAuthority portable 编译零警告零错误；DotRecast portable 编译通过并保留依赖包两条既有 nullable-context 警告；ThirdPersonSimulation.Unity 全依赖构建通过并保留 Unity 包及既有 Editor 代码共十七条警告。构建服务均关闭。未新增测试、未刷新共享 Unity、未做求解运行对比或 Player 分配采样。

@@ -262,6 +262,8 @@
 
 - [x] 5.56 两数值域 WorldSolveBatchResult 按 solver 结果集合 Count 复制到独立最终数组并原地排序校验，删除每批求解结果的 List 与 ReadOnlyCollection 包装；保留 solver 输入数组与 Batch 之间的隔离
 
+- [x] 5.57 WorldSolveBatchResult 提供显式 FromOwnedResults 所有权入口，DeterministicKcc／DotRecast／UnityCharacterController solver 直接转移方法内新建结果数组，删除每批求解的第二份结果数组复制；普通集合构造仍独立复制
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

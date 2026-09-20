@@ -188,7 +188,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
                     WorldStatePersistenceMode.Reconstruct,
                     bodies,
                     Array.Empty<byte>());
-                return new WorldSolveBatchResult(request, Descriptor.ImplementationId, Descriptor.Version, CloneState(m_Current), results);
+                return WorldSolveBatchResult.FromOwnedResults(
+                    request,
+                    Descriptor.ImplementationId,
+                    Descriptor.Version,
+                    CloneState(m_Current),
+                    results);
             }
             catch
             {

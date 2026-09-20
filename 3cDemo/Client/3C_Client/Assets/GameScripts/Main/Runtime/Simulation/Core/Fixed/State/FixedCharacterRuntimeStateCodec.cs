@@ -665,7 +665,7 @@ namespace ThirdPersonSimulation.Fixed
                 reader.ReadScalar(),
                 reader.ReadVector3(),
                 reader.ReadYaw(),
-                ReadEnum<ProgramMotionWarpLimitResult>(reader.ReadByte()),
+                ReadMotionWarpLimitResult(reader.ReadByte()),
                 reader.ReadVector3(),
                 reader.ReadYaw(),
                 reader.ReadScalar(),
@@ -891,6 +891,15 @@ namespace ThirdPersonSimulation.Fixed
             if (count < 0 || count > maximum)
                 throw new InvalidDataException($"{label} count '{count}' is invalid.");
             return count;
+        }
+
+        static ProgramMotionWarpLimitResult ReadMotionWarpLimitResult(byte value)
+        {
+            var result = (ProgramMotionWarpLimitResult)value;
+            if (result is not (ProgramMotionWarpLimitResult.Applied or ProgramMotionWarpLimitResult.AppliedClamped or
+                ProgramMotionWarpLimitResult.PreservedByLimitPolicy))
+                throw new InvalidDataException($"Fixed Character runtime state enum '{nameof(ProgramMotionWarpLimitResult)}' value '{value}' is invalid.");
+            return result;
         }
 
         static T ReadEnum<T>(byte value) where T : struct

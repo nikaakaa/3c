@@ -871,3 +871,11 @@
 - 改为直接匹配 Exact／Interpolation／ConstantVelocityExtrapolation，仍拒绝零及其他成员。保留 Actor 身份、目标和来源 Tick、前后 Body 一致性、来源时序与 contactShapeConfigurationHash 校验以及原异常；没有修改采样算法、预测历史寿命或回滚逻辑。
 - 同轮搜索 CharacterControlAbilityStopRequest：存在类型声明、提交接口和处理者，但当前 Assets／Tools C# 检索没有实际构造调用证据。该入口暂未修改，不将文件名含 Runtime 或存在消费者直接推断为每帧构造。
 - 目标文件修改前无其它未提交修改，编辑前无 csc／bee。ServerAuthoritative portable 连带 Core／Float32 编译零警告零错误，构建服务关闭成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做预测运行或 Player 分配采样。
+## 2026-09-20 MotionWarp 恢复解码成员匹配
+
+对应 tasks.md 的 2.35。
+
+- 两数值域 CharacterRuntimeStateCodec.Read 经 ReadMotionWarpStates／ReadMotionWarpState 读取已保存的运动修正状态，原限制结果调用泛型 ReadEnum。现使用强类型 ReadMotionWarpLimitResult，直接匹配 Applied／AppliedClamped／PreservedByLimitPolicy 三个正式成员，删除该入口的枚举转换与元数据查询装箱。
+- 恢复解码合法集合沿旧 Enum.IsDefined 保留三值，不能复用 2.31 活动执行只接受两值的条件。读取宽度、位置、非法字节 InvalidDataException 类型和文本、后续状态构造及 layout 校验均保持不变。
+- 只迁移运动修正结果的两个实际调用点，不改变保存状态、回放或事务寿命。通用 ReadEnum 仍有动作／作用域／Timeline 等真实消费者，本轮保留，不宣称整个角色 codec 已无反射。
+- 两目标文件修改前无其它未提交修改，编辑前无 csc／bee。Fixed／Float32 portable 分别零警告零错误，逐次关闭构建服务成功，diff 空白检查通过；未新增测试、未操作共享 Unity、未做恢复运行或 Player 分配采样。

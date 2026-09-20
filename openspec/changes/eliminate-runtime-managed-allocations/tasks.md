@@ -336,6 +336,8 @@
 
 - [x] 5.84 RollbackOutputCommitter 跨 Actor/tick 复用 existing slots、current records、seen slots 与 confirmed release 四只工作集合，并在 finally 清空引用，删除每 Actor 三只集合及每次确认释放一只 List 的重复创建
 
+- [x] 5.85 RollbackOutputCommitter 跨 Commit 复用 disposition 索引与 output operation 列表，外层 finally 清空键值和记录引用，删除每次提交的 Dictionary／List 对象及稳定容量后的底层存储分配；records 事务副本保持独立
+
 ## 6. UI、资源、渲染和生命周期
 
 - [ ] 6.1 将状态History等热点getter改为正确寿命的视图，迁移UI刷新消费者，清理重复格式化与每次列表副本

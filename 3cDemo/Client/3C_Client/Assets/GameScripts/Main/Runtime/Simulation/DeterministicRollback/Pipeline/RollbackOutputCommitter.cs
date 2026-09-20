@@ -41,6 +41,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly List<RollbackOutputRecord> m_CurrentRecords = new List<RollbackOutputRecord>();
         readonly HashSet<RollbackOutputSlot> m_SeenSlots = new HashSet<RollbackOutputSlot>();
         readonly List<RollbackOutputSlot> m_ReleaseSlots = new List<RollbackOutputSlot>();
+        readonly Dictionary<EventId, SimulationOutputDisposition> m_DispositionIndex =
+            new Dictionary<EventId, SimulationOutputDisposition>();
+        readonly List<RollbackOutputOperation> m_Operations = new List<RollbackOutputOperation>();
         Dictionary<RollbackOutputSlot, RollbackOutputRecord> m_Records =
             new Dictionary<RollbackOutputSlot, RollbackOutputRecord>();
         ulong m_KeepCount;
@@ -91,10 +94,23 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (batch == null)
                 throw new ArgumentNullException(nameof(batch));
+            m_DispositionIndex.Clear();
+            m_Operations.Clear();
+            try
+            {
+                CommitPrepared(batch);
+            }
+            finally
+            {
+                m_DispositionIndex.Clear();
+                m_Operations.Clear();
+            }
+        }
 
-            Dictionary<EventId, SimulationOutputDisposition> dispositions = IndexDispositions(batch);
+        void CommitPrepared(FixedSimulationCommitBatch batch)
+        {
+            IndexDispositions(batch, m_DispositionIndex);
             var next = new Dictionary<RollbackOutputSlot, RollbackOutputRecord>(m_Records);
-            var operations = new List<RollbackOutputOperation>();
             ulong keeps = 0;
             ulong replacements = 0;
             ulong cancellations = 0;
@@ -111,17 +127,17 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     SimulationActorTickResult actor = step.Result.Actors[actorIndex];
                     ResolveActorTick(
                         next,
-                        operations,
+                        m_Operations,
                         actor,
                         step.Step.ExecutionKind,
-                        dispositions,
+                        m_DispositionIndex,
                         ref keeps,
                         ref replacements,
                         ref cancellations);
                 }
             }
 
-            FlushConfirmed(next, operations, ref confirmations);
+            FlushConfirmed(next, m_Operations, ref confirmations);
             if (next.Count > m_MaximumRecords)
             {
                 throw new InvalidOperationException(
@@ -133,10 +149,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             try
             {
                 m_Output.BeginCommit();
-                for (int i = 0; i < operations.Count; i++)
+                for (int i = 0; i < m_Operations.Count; i++)
                 {
-                    Apply(operations[i]);
-                    PublishDiagnostics(operations[i], next.Count);
+                    Apply(m_Operations[i]);
+                    PublishDiagnostics(m_Operations[i], next.Count);
                 }
                 for (int stepIndex = 0; stepIndex < batch.Steps.Count; stepIndex++)
                 {
@@ -159,9 +175,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             m_ConfirmedOnlyCommitCount = checked(m_ConfirmedOnlyCommitCount + confirmations);
         }
 
-        static Dictionary<EventId, SimulationOutputDisposition> IndexDispositions(FixedSimulationCommitBatch batch)
+        static void IndexDispositions(
+            FixedSimulationCommitBatch batch,
+            Dictionary<EventId, SimulationOutputDisposition> values)
         {
-            var values = new Dictionary<EventId, SimulationOutputDisposition>();
             for (int i = 0; i < batch.OutputDispositions.Dispositions.Count; i++)
             {
                 SimulationOutputDisposition disposition = batch.OutputDispositions.Dispositions[i];
@@ -173,7 +190,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 }
                 values.Add(disposition.SourceEventId, disposition);
             }
-            return values;
         }
 
         void ResolveActorTick(

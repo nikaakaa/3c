@@ -1986,3 +1986,12 @@
 - committer 现持有四只私有工作集合。Actor 解析开始清空并复用，current records 直接填入工作列表后排序；确认释放收集到共用 release slots 后排序删除。两条路径均用 finally 清空，正常、提前异常都不会长期保留 RollbackOutputRecord 引用。
 - 删除每个 Actor/tick 三只集合对象及稳定容量后的底层存储分配，也删除每次确认释放的 List 对象；首次填充或更高输出峰值仍可能扩容。事务 records 副本、disposition 索引与 operation List 保持原独立失败边界，本步未混入。
 - ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 output commit 运行对比或 Player 分配采样。
+
+## 2026-09-21 Rollback output Commit 工作区
+
+对应 tasks.md 的 5.85。
+
+- RollbackOutputCommitter 每次 Commit 都从 disposition batch 新建 EventId 索引 Dictionary，并新建 output operation List；两者只用于当前事务规划和发布，不进入 m_Records 或提交后的业务状态。
+- committer 现持有 disposition index 与 operations 两只提交级工作区。公开 Commit 负责清空、调用 CommitPrepared，并在 finally 再次清空；索引冲突、容量失败、source egress 失败、output Abort 或成功完成均不会保留本批键值和 RollbackOutputRecord 引用。
+- 删除每次 Commit 的 Dictionary 与 List 对象，以及达到观测峰值后的桶／数组重复分配；首次填充和更高峰值仍可能扩容。m_Records 的 tentative 副本继续每次独立创建，成功前不覆盖正式 registry，原事务失败边界保持。
+- ThirdPersonSimulation.DeterministicRollback portable 连同 Core 与 Fixed 依赖编译零警告零错误，构建服务关闭成功。未新增测试、未操作共享 Unity、未做 output commit 失败注入或 Player 分配采样。

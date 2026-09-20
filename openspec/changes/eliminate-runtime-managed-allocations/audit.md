@@ -1225,3 +1225,12 @@
 - 状态机实例构造时现取全部 transition rule 的最大操作数作为三份工作区容量；每次求值前 Clear，重新填充相同 operation identity 映射，并沿原递归、缓存、环检测和短路逻辑执行。
 - 分配从逐候选运行路径移到状态机实例构造；候选规则间不共享值或 visiting 状态，异常后的下一次求值也会先清空。规则图本身仍按候选重新填充 operations 工作区，后续是否预编译不在本小步内。
 - ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做规则命中运行回放或 Player 分配采样。
+
+## 2026-09-21 Pose Graph 运行端口定义缓存
+
+对应 tasks.md 的 4.2.14。
+
+- CharacterPoseNativeGraphRuntime.FindPort 原每次调用 CharacterPoseCanvasNativePorts.GetRuntimeShape；该方法会新建 List、添加静态端口并排序投影动态端口。SpaceConversion 的动态输入读取及 Subgraph 每帧输入绑定都会重复经过此路径。
+- 克隆图通过正式 Validator 后、Evaluator 初始化前，Runtime 现一次建立 NodeId、PortId、Direction 到 CharacterPosePortDefinition 的映射；BindGraphInput 与 ReadInputValue 继续执行原方向、类型及 typed read 校验，但 FindPort 只做值键字典查询。
+- 缓存覆盖克隆图当时的静态和动态端口，并在 Runtime Dispose 时清空；图 revision 生命周期内不支持原地改端口，变更仍通过正式实例重建生效。
+- ThirdPersonClient.Runtime 目标程序集增量编译零错误，存在一个既有未使用字段警告，构建服务关闭成功。未新增测试、未主动刷新 Unity、未做 Subgraph／SpaceConversion 运行采样或 Player 分配采样。

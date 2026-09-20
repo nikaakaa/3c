@@ -38,6 +38,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             HashCode.Combine(NodeId, PortId, (byte)Stage);
     }
 
+    internal readonly struct CharacterPoseNativePortDefinitionKey :
+        IEquatable<CharacterPoseNativePortDefinitionKey>
+    {
+        internal CharacterPoseNativePortDefinitionKey(
+            PoseNodeId nodeId,
+            PosePortId portId,
+            CharacterPosePortDirection direction)
+        {
+            NodeId = nodeId;
+            PortId = portId;
+            Direction = direction;
+        }
+
+        internal PoseNodeId NodeId { get; }
+        internal PosePortId PortId { get; }
+        internal CharacterPosePortDirection Direction { get; }
+        public bool Equals(CharacterPoseNativePortDefinitionKey other) =>
+            NodeId == other.NodeId && PortId == other.PortId && Direction == other.Direction;
+        public override bool Equals(object obj) =>
+            obj is CharacterPoseNativePortDefinitionKey other && Equals(other);
+        public override int GetHashCode() =>
+            HashCode.Combine(NodeId, PortId, (byte)Direction);
+    }
+
     internal interface ICharacterPoseNativeNodeEvaluator : IDisposable
     {
         void Initialize(CharacterPoseNativeGraphRuntime runtime);
@@ -108,6 +132,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new Dictionary<PosePortId, CharacterPoseNativePortValue>();
         readonly HashSet<CharacterPoseNativePortKey> m_Evaluating =
             new HashSet<CharacterPoseNativePortKey>();
+        readonly Dictionary<CharacterPoseNativePortDefinitionKey,
+            CharacterPosePortDefinition> m_PortDefinitions =
+                new Dictionary<CharacterPoseNativePortDefinitionKey,
+                    CharacterPosePortDefinition>();
         CharacterPoseCanvasGraph m_Graph;
         CharacterPoseNativeFrameInput m_FrameInput;
         CharacterPoseNativeFrameLineage m_OpenLineage;
@@ -386,8 +414,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PreparedBinding.GraphAsset,
                 m_Graph,
                 m_PreparedBinding.Boundary);
+            BuildPortDefinitions();
             m_Evaluator.Initialize(this);
             m_Initialized = true;
+        }
+
+        void BuildPortDefinitions()
+        {
+            m_PortDefinitions.Clear();
+            foreach (CharacterPoseCanvasNode node in m_Graph.Nodes)
+            {
+                IReadOnlyList<CharacterPosePortDefinition> shape =
+                    CharacterPoseCanvasNativePorts.GetRuntimeShape(node);
+                for (int i = 0; i < shape.Count; i++)
+                {
+                    CharacterPosePortDefinition port = shape[i];
+                    var key = new CharacterPoseNativePortDefinitionKey(
+                        node.NodeId,
+                        port.PortId,
+                        port.Direction);
+                    if (!m_PortDefinitions.TryAdd(key, port))
+                        throw new InvalidOperationException(
+                            $"Pose node '{node.NodeId}' contains duplicate port '{port.PortId}'.");
+                }
+            }
         }
         internal CharacterPoseNativeFrameLease BeginFrame(
             in CharacterPoseNativeFrameInput input)
@@ -1108,22 +1158,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Pose node '{node.NodeId}' output '{portId}' returned '{value.GetType().Name}', expected '{typeof(T).Name}'.");
 
-        static CharacterPosePortDefinition FindPort(
+        CharacterPosePortDefinition FindPort(
             CharacterPoseCanvasNode node,
             PosePortId portId,
             CharacterPosePortDirection direction)
         {
             if (node == null || !portId.IsValid)
                 return null;
-            IReadOnlyList<CharacterPosePortDefinition> shape =
-                CharacterPoseCanvasNativePorts.GetRuntimeShape(node);
-            for (int i = 0; i < shape.Count; i++)
-            {
-                CharacterPosePortDefinition candidate = shape[i];
-                if (candidate.Direction == direction && candidate.PortId == portId)
-                    return candidate;
-            }
-            return null;
+            var key = new CharacterPoseNativePortDefinitionKey(
+                node.NodeId,
+                portId,
+                direction);
+            return m_PortDefinitions.TryGetValue(key, out CharacterPosePortDefinition definition)
+                ? definition
+                : null;
         }
 
         void RequireLease(CharacterPoseNativeFrameLease lease)
@@ -1183,6 +1231,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittedObservations.Clear();
             m_Evaluating.Clear();
             m_GraphInputs.Clear();
+            m_PortDefinitions.Clear();
             m_Started = false;
             m_Initialized = false;
             m_LastCommittedLineage = default;

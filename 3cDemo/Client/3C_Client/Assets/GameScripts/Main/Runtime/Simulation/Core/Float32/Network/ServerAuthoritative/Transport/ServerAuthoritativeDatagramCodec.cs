@@ -115,17 +115,21 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             kind == ServerAuthoritativeDatagramKind.Command ||
             kind == ServerAuthoritativeDatagramKind.Snapshot;
 
-        public static byte[] Write(ServerAuthoritativeDatagramPacket packet, int maximumBytes)
+        public static int Write(
+            ServerAuthoritativeDatagramPacket packet,
+            CanonicalWriter writer,
+            int maximumBytes)
         {
-            using var writer = new CanonicalWriter();
+            if (packet == null)
+                throw new ArgumentNullException(nameof(packet));
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
+            writer.Reset();
             Write(writer, packet, maximumBytes);
-            return writer.ToArray();
-        }
-
-        public static void RequireFits(ServerAuthoritativeDatagramPacket packet, int maximumBytes)
-        {
-            using var writer = new CanonicalWriter();
-            Write(writer, packet, maximumBytes);
+            int length = checked((int)writer.Length);
+            if (length > maximumBytes)
+                throw new InvalidDataException($"Gameplay datagram size '{length}' exceeds budget '{maximumBytes}'.");
+            return length;
         }
 
         static void Write(CanonicalWriter writer, ServerAuthoritativeDatagramPacket packet, int maximumBytes)

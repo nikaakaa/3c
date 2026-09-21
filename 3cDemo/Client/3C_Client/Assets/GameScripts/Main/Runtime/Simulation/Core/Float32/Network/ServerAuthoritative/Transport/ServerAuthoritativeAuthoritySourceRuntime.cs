@@ -395,7 +395,6 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 ServerAuthoritativeDatagramPacket packet = Packet(route, ServerAuthoritativeDatagramKind.Snapshot, payload);
                 try
                 {
-                    ServerAuthoritativeGameplayDatagramCodec.RequireFits(packet, m_Policy.ModelPolicy.MaxGameplayDatagramBytes);
                     m_Data.EnqueueSend(packet);
                     route.StoreSent(sequence, target);
                     route.RecordDeltaSnapshot(payload.Length);

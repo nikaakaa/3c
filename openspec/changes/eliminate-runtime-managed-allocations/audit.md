@@ -3474,3 +3474,11 @@
 - `ServerAuthoritativeDatagramEndpoint.EnqueueSend` 原先每个数据包都从 route `Clone` 一只远端 `IPEndPoint`。现在 endpoint 按发送队列容量维护 `ConcurrentStack`，入队前租用独立记录并在发送或 Dispose 清队后归还；route 表中的 endpoint 仍长期持有，入队记录不会被调用方复用。
 - 发送失败、短写异常和 Dispose 清队都在既有发送边界同步归还 endpoint；发送队列容量检查、失败语义和 wire 内容不变。本步只治理 endpoint 记录，wire byte[] 复用仍在后续小步。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 Datagram Endpoint 发送 buffer 复用
+
+对应 tasks.md 的 5.5，新增 5.162 作为独立小步；5.5 保持未勾选。
+
+- `ServerAuthoritativeGameplayDatagramCodec.Write` 从返回 `byte[]` 收紧为填充调用方 `CanonicalWriter` 并返回实际长度；旧数组入口无消费者，直接删除。endpoint 按发送线程持有 `ThreadLocal<CanonicalWriter>`，按发送队列容量租用精确 MTU buffer，`WrittenSpan` 复制后入队。snapshot 发送删除前置 `RequireFits` 重复编码，endpoint 有界写入继续在同一 MTU 预算上失败。
+- 发送时用实际长度调用 `SendTo`，发送、短写和 Dispose 清队都在 finally 中归还 buffer 与 endpoint。队列溢出时同步归还本次 buffer 再失败；header、payload、MTU 校验和失败语义不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

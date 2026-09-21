@@ -474,3 +474,4 @@
 - [x] 7.66 执行时间线与历史构建直接接管 SelectEvents 的独立事件 List，删除 BuildCore 的 ordered 复制和 BuildHistory 的 historyEvents 复制；事件排序、边界补充、分组来源和 complete 判定保持不变，Builder 其余临时集合仍未完成
 - [x] 7.67 RuntimeCaptureStore 的 active segment 外层改为 maxSegments+1 环形缓冲，删除淘汰 RemoveAt(0) 前移；归还原池同步扩到 maxSegments+1，覆盖 append 后 trim 的满容量换段峰值，发布顺序、segment 边界、丢弃计数和 Freeze 快照不变
 - [x] 7.68 RuntimeLiveStateStore 的 current、changes 和 recency node 映射按 maxChanges+1 在构造期准备容量；覆盖 active 上限和先入队后出队的瞬时峰值，LRU、淘汰计数、全量同步和读取结果不变
+- [x] 7.69 执行 history 的 tick/frame 事件 List 和 ticks/checkpoints/frames 结果 List 改为 internal 构造直接接管，删除 AsReadOnly 包装和旧 null Array fallback；公开只读接口、排序、checkpoint 去重和 presentation 可用性判断不变

@@ -137,6 +137,16 @@
 - Upsert 的 LRU 顺序、等价状态跳过、淘汰计数和版本推进，Clear 后容量保留，全量读取、增量读取和独立结果数组语义不变。state record、trace payload 字符串和首次节点池填充仍在 7.1 后续边界。
 - 作者可在 Runtime Debug 观察实时状态全量和增量刷新、断开重连或切换 execution branch 后确认状态数量与窗口一致；本步未做分配采样。
 - `BTSMTL.Diagnostics.csproj` 和 `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，均 0 警告 0 错误；每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做实时状态运行对比或 Player 分配采样。
+
+## 2026-09-21 执行历史结果直接接管
+
+对应 tasks.md 的 7.1，新增 7.69 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution history builder 的包装层，不计为 Player 每帧收益。
+
+- `BuildHistory` 每个逻辑 tick 和 presentation frame 原先已排序好的 grouped List 先调用 `AsReadOnly`，再交给 internal record；外层 `ticks`、`checkpoints`、`presentationFrames` 也再次 `AsReadOnly`。现在 internal 构造函数明确接收并直接保存这些 builder 独占 List，公开属性继续保持 `IReadOnlyList`。
+- builder 在构造 record 后不再修改 grouped 或 presentation 的同一 List，checkpoint 第二遍只读取；外层结果 List 构造完成后也不修改。所以读取顺序、排序、checkpoint key 去重和 presentation 可用性判断不变。
+- 旧构造函数里的 `?? Array.Empty` 属于 internal 调用方永远不会进入的 null fallback，本次随直接接管合同删除。类型与容量来源不改变，builder 内部的 List 本身、tick record 里的 14 个 identity List 和最终结果对象仍在 7.1 后续边界处理。
+- 作者可在 Runtime Debug execution history 中确认 tick、checkpoint、presentation frame 和外部结果计数仍一致。本步未做运行采样。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 execution history 运行对比或 Player 分配采样。
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

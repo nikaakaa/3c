@@ -140,11 +140,11 @@ namespace BTSMTL.Diagnostics.Editor
         internal RuntimeExecutionTickRecord(
             ulong tick,
             Guid executionBranchId,
-            IReadOnlyList<RuntimeTraceEvent> events)
+            List<RuntimeTraceEvent> events)
         {
             Tick = tick;
             ExecutionBranchId = executionBranchId;
-            m_Events = events ?? Array.Empty<RuntimeTraceEvent>();
+            m_Events = events;
             var externalResults = new List<RuntimeTraceEvent>();
             var sessionIds = new List<Guid>();
             var executionBranchIds = new List<Guid>();
@@ -267,11 +267,11 @@ namespace BTSMTL.Diagnostics.Editor
         internal RuntimeExecutionPresentationFrame(
             ulong frame,
             Guid executionBranchId,
-            IReadOnlyList<RuntimeTraceEvent> events)
+            List<RuntimeTraceEvent> events)
         {
             Frame = frame;
             ExecutionBranchId = executionBranchId;
-            m_Events = events ?? Array.Empty<RuntimeTraceEvent>();
+            m_Events = events;
         }
 
         public ulong Frame { get; }
@@ -326,9 +326,9 @@ namespace BTSMTL.Diagnostics.Editor
             long evictedEvents,
             bool complete,
             int unmappedEventCount,
-            IReadOnlyList<RuntimeExecutionTickRecord> ticks,
-            IReadOnlyList<RuntimeExecutionCheckpoint> checkpoints,
-            IReadOnlyList<RuntimeExecutionPresentationFrame> presentationFrames)
+            List<RuntimeExecutionTickRecord> ticks,
+            List<RuntimeExecutionCheckpoint> checkpoints,
+            List<RuntimeExecutionPresentationFrame> presentationFrames)
         {
             CaptureId = captureId;
             Channels = channels;
@@ -337,9 +337,9 @@ namespace BTSMTL.Diagnostics.Editor
             EvictedEvents = evictedEvents;
             IsComplete = complete;
             UnmappedEventCount = unmappedEventCount;
-            m_Ticks = ticks ?? Array.Empty<RuntimeExecutionTickRecord>();
-            m_Checkpoints = checkpoints ?? Array.Empty<RuntimeExecutionCheckpoint>();
-            m_PresentationFrames = presentationFrames ?? Array.Empty<RuntimeExecutionPresentationFrame>();
+            m_Ticks = ticks;
+            m_Checkpoints = checkpoints;
+            m_PresentationFrames = presentationFrames;
         }
 
         public Guid CaptureId { get; }
@@ -603,11 +603,10 @@ namespace BTSMTL.Diagnostics.Editor
             foreach (KeyValuePair<TickKey, List<RuntimeTraceEvent>> pair in grouped)
             {
                 pair.Value.Sort(CompareEvents);
-                var eventsForTick = pair.Value.AsReadOnly();
                 var record = new RuntimeExecutionTickRecord(
                     pair.Key.Tick,
                     pair.Key.ExecutionBranchId,
-                    eventsForTick);
+                    pair.Value);
                 complete &= record.HasSimulationTick && record.HasStatePublished;
                 ticks.Add(record);
             }
@@ -640,7 +639,7 @@ namespace BTSMTL.Diagnostics.Editor
                 presentationFrames.Add(new RuntimeExecutionPresentationFrame(
                     pair.Key.Frame,
                     pair.Key.ExecutionBranchId,
-                    pair.Value.AsReadOnly()));
+                    pair.Value));
             }
             return new RuntimeExecutionHistory(
                 capture.CaptureId,
@@ -650,9 +649,9 @@ namespace BTSMTL.Diagnostics.Editor
                 capture.EvictedEvents,
                 historyComplete,
                 unmappedEventCount,
-                ticks.AsReadOnly(),
-                checkpoints.AsReadOnly(),
-                presentationFrames.AsReadOnly());
+                ticks,
+                checkpoints,
+                presentationFrames);
         }
 
         static void AddSessionBoundaryEvents(

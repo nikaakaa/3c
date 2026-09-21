@@ -6,6 +6,9 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- 用户要求停止反复回放，先集中改代码。已停止回放并退出 Play；从日志确认 Shutdown 路径为 FixedCharacterHost.DisposeRegistration → CharacterTimelineHost.Dispose → RuntimeService.Dispose → TreeClip ConsumeStop，此时技能会话已经释放，不能执行依赖当帧 invoker 的逻辑回调。ConsumeStop 对明确 Shutdown 原因只进入正常资源释放，其他停止原因保留 OnDestroy 与 invoker 要求。
+- 本地有限动作此前仍走 FreeRun，而 Timeline 已提供正式提交采样；工厂改为所有带动作通道的非 locomotion 节点使用同一 coordinator policy，locomotion 继续只使用 prepared binding 的原策略。本轮只编译，不用新的回放掩盖尚未分析完的运动/动画问题；跑动闪烁与回退尚未声明修复。
+
 - 越界复跑仍在 1056 tick，完善后的原异常给出 Position=(62.141949604731053,-22.366700786864385,8.9084531820844859)，Height=1.8000000000465661，Bounds=(-150,-22,-105)..(250,38,135)。确定是脚点 Y 掉出下界，X/Z 未越界；该诊断只在已有异常路径格式化字符串。
 - 现有 diagnostic_replay_start 因未编译 character-foot-ik 能力拒绝，未启用旁路。只读比对发现当前场景坡道 AABB 高度为 -3.104..1.042，旧碰撞图元为 -0.113..4.207（顶面 0..4.32）。正式 Baker.Build 的当前哈希 ff6a3f3f4dca27fea3138f7d7141d5c126d302bac4721e2f32f44e82f6d829a2 与已发布 a1b92282048c2067eacb08639ac828b2f7d95e8bdd92b7e193de82bae77699d5 不同，图元均为799。已通过正式 Bake 更新碰撞资产，未改世界范围；重跑请求仍待 Editor 重载恢复，不能视为已修复掉落。
 

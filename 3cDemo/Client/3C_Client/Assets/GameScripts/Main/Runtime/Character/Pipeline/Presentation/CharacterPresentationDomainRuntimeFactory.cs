@@ -173,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         physicsScene,
                         node => node.IsLocomotionParticipant
                             ? locomotionClockPolicy
-                            : presentationRole == CharacterPresentationRole.SimulatedActor && node.AnimationChannelId.IsValid
+                            : node.AnimationChannelId.IsValid
                                 ? presentationClockCoordinator.CreatePolicy()
                                 : FreeRunPresentationClockPolicy.Shared);
                     var createResult = CharacterPoseNativeDomainRuntimeFactory.Create(

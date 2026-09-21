@@ -239,6 +239,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         public void DiscardStep(TimelineRuntimeStepContext context) { }
         public bool ConsumeStop(TimelineRuntimeStopRequest request)
         {
+            if (request.Reason.Cause == TimelinePlaybackStopCause.Shutdown)
+                return true;
             if (!m_ActiveClips.TryGetValue(request.Handle.Value, out List<AbilityTimelineTreeClipState> clips) || clips.Count == 0)
                 return true;
             IAbilityTreeClipInvoker invoker = m_Host.m_ActiveTreeClipInvoker

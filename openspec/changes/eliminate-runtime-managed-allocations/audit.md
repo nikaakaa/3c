@@ -2155,6 +2155,15 @@
 - 每帧只清空、按原 Inbox 顺序填入命令，失效 frame 仍返回空数组；Commit、Discard、lease identity 和命令读取结果保持不变，删除 steady-state 命令数组分配。
 - `ThirdPersonClient.Runtime.csproj` 当前完整编译仍受用户现有删除的 `Timeline.ActionCue.cs` 阻断，生成 csproj 产生 `CS2001`；本步未修改 Inbox 或 Timeline 文件。未新增测试、未操作共享 Unity、未做命令分配采样。
 
+## 2026-09-21 ACL Pose sampling Rig 校验边界
+
+对应 tasks.md 的 7.34。
+
+- Presentation Domain 创建前已由 `CharacterAnimationRigBinding.RequireValid(animationRig)` 完成 Rig schema 与场景 binding 校验，随后同一正式链创建 `CharacterPoseSourceModule` 和 ACL backend。
+- 删除 `CharacterAclPoseSamplingBackend` 构造器的第二次 `rig.RequireValid`；保留 `rigBinding.RequireValid(rig)` 的绑定关系、Animator 归属、PlayableGraph、source/clip/parameter capacity 和 Native 资源形状校验。
+- 不改变 ACL source 注册、frame journal、deferred release 或 backend Commit/Discard；本步只删除静态 Rig 重复遍历。当前完整编译仍受工作区生成 csproj 未刷新阻断。未新增测试、未操作共享 Unity、未做 ACL 分配采样。
+
+
 ## 2026-09-21 SourceCatalog 死接口清理
 
 对应 tasks.md 的 7.29。

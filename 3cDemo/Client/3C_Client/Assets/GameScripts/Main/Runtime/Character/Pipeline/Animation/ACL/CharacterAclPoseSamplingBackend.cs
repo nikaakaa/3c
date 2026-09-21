@@ -46,7 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             if (!animancer || !rigBinding || rig == null || resourceScope == null ||
                 sourceCapacity <= 0 || clipCapacity <= 0 || parameterCapacity <= 0)
                 throw new ArgumentException("ACL pose sampling backend configuration is invalid.");
-            rig.RequireValid();
             rigBinding.RequireValid(rig);
             if (!animancer.Animator || rigBinding.Animator != animancer.Animator)
                 throw new ArgumentException("ACL pose sampling Rig Binding does not belong to the Animancer Animator.");

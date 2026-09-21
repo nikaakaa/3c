@@ -409,3 +409,4 @@
 - [x] 7.31 删除无调用者的旧 CharacterAnimationBlendStackKernel 及其 Unity meta，统一只保留 AnimationBlendStackRuntime 正式 Blend Stack 链；不改变现行实例、source workspace、frame plan 和提交事务
 - [x] 7.32 Blend Stack source binding 按已准备的 EntryCapacity 预分配 Pending、Request 和 source identity 工作集合，删除首个运行帧的扩容分配；保留 source 去重、请求顺序和 ResetFrame 清理语义
 - [x] 7.33 Pose Action command source 按 Inbox 固定容量复用命令工作区，删除每帧命令数组创建；保留读租约、命令顺序、frame identity 和 Commit/Discard 语义
+- [x] 7.34 ACL Pose sampling backend 复用 Presentation 工厂已校验的 Rig，删除 backend 构造阶段重复 Rig schema 遍历；保留 Rig binding、Animator、PlayableGraph 和 Native capacity 校验

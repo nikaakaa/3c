@@ -145,7 +145,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
             RequireOpen();
             if (m_Applied)
                 throw new InvalidOperationException("Rollback Pipeline state restore is already applied.");
-            m_State.RestoreSimulationProjection(m_Snapshot.CopyPayload());
+            m_State.RestoreSimulationProjection(m_Snapshot.Payload);
             m_Applied = true;
         }
 

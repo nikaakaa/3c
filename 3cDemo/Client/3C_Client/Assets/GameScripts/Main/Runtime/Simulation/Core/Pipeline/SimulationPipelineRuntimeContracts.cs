@@ -240,6 +240,7 @@ namespace ThirdPersonSimulation
         public string StateSchemaId { get; }
         public int StateSchemaVersion { get; }
         public StableHash StateHash { get; }
+        public ReadOnlyMemory<byte> Payload => m_Payload;
         public byte[] CopyPayload() => (byte[])m_Payload.Clone();
     }
 

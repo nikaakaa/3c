@@ -733,9 +733,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
         }
 
-        public void RestoreSimulationProjection(byte[] payload)
+        public void RestoreSimulationProjection(ReadOnlyMemory<byte> payload)
         {
-            var reader = new CanonicalReader(payload ?? throw new ArgumentNullException(nameof(payload)));
+            if (payload.IsEmpty)
+                throw new ArgumentException("Rollback simulation projection payload is empty.", nameof(payload));
+            var reader = new CanonicalReader(payload);
             if (reader.ReadUInt32() != 0x50524244 || reader.ReadInt32() != 1 ||
                 !string.Equals(reader.ReadString(), m_Policy.ConfigurationHash.Value, StringComparison.Ordinal) ||
                 !string.Equals(reader.ReadString(), m_RosterHash.Value, StringComparison.Ordinal))

@@ -10,22 +10,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
         const uint PayloadMagic = 0x4C505244;
         const int Version = 8;
 
-        public static byte[] Write(RollbackProtocolEnvelope envelope)
+        public static void Write(CanonicalWriter writer, RollbackProtocolEnvelope envelope)
         {
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
             if (envelope == null)
                 throw new ArgumentNullException(nameof(envelope));
-            using var writer = new CanonicalWriter();
             WriteEnvelope(writer, envelope);
-            return writer.ToArray();
-        }
-
-        public static int GetEncodedLength(RollbackProtocolEnvelope envelope)
-        {
-            if (envelope == null)
-                throw new ArgumentNullException(nameof(envelope));
-            using var writer = new CanonicalWriter();
-            WriteEnvelope(writer, envelope);
-            return checked((int)writer.Length);
         }
 
         static void WriteEnvelope(CanonicalWriter writer, RollbackProtocolEnvelope envelope)

@@ -2407,3 +2407,13 @@
 - 将 SourceCatalog 固定为 ServiceFactory 创建阶段的唯一准备结果；Clip Player 直接按 source index 读取，Foot Motion 直接按 `PresentationPoseSourceIndex` 读取，删除 `FirstOrDefault` 和 `Plans.ToArray` 路径。SourceCatalog 的索引、Rig identity、ACL binding 与 descriptor 校验仍执行一次。
 - 没有改变 source module 创建、resource lease、handler factory、Clip/Foot 运行顺序，也没有改变资源 scope 的唯一注册结果；运行期只保留按索引查找，不再创建中间集合。
 - `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留项目既有警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Pose 实例分配采样。
+
+## 2026-09-21 回滚信封发送编码改有界缓冲
+
+对应 tasks.md 的 5.3，本步只完成发送侧，整项保持未勾选。
+
+- `CanonicalWriter` 从 MemoryStream 改为直接持有托管缓冲：默认构造按 256 字节起步自增扩容，新增 `byte[]` 构造进入有界外部缓冲模式并在容量不足时显式抛错；新增 `Reset`、`Position` 与 `WrittenSpan`。字段编码、UTF-8 分块、长度前缀块、`ContentEquals` 与 `ComputeHash` 的输出字节保持不变，删除无调用方的 MemoryStream 构造与内部流释放。
+- `RollbackProtocolCodec` 删除返回 `byte[]` 的 `Write` 和只为测量长度再完整编码一次的 `GetEncodedLength`，改为写入调用方 writer 的正式入口。
+- `RollbackDatagramChannel` 持有按“单分片预算×最大分片数”准备的有界发送 scratch：`FitsSingleDatagram` 与 `Send` 复用同一 writer，编码后直接从 `WrittenSpan` 切分片，删除每条消息的 writer、MemoryStream、`ToArray` 整份副本；分片包仍自行复制 payload，scratch 不存在跨包别名。超出总容量的 payload 由有界 writer 显式失败，仍会走到单帧超预算的原失败路径。
+- 5.3 剩余：接收解码 canonical 校验的 writer 复用、`ComputeInputHash`/`ComputeBundleHash` 的 writer 复用、`RollbackInputCodec` 旧 `byte[]` 入口与 Editor 诊断消费者迁移。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 与 `ThirdPersonSimulation.Float32.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

@@ -7,57 +7,85 @@ namespace ThirdPersonSimulation
 {
     public sealed class CanonicalWriter : IDisposable
     {
-        readonly MemoryStream m_Stream;
-        readonly bool m_OwnsStream;
+        const int InitialCapacity = 256;
+
+        byte[] m_Buffer;
+        int m_Position;
+        int m_Length;
+        readonly bool m_Bounded;
 
         public CanonicalWriter()
         {
-            m_Stream = new MemoryStream();
-            m_OwnsStream = true;
+            m_Buffer = new byte[InitialCapacity];
         }
 
-        public CanonicalWriter(MemoryStream stream)
+        public CanonicalWriter(byte[] buffer)
         {
-            m_Stream = stream ?? throw new ArgumentNullException(nameof(stream));
+            m_Buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
+            m_Bounded = true;
         }
 
-        public long Length => m_Stream.Length;
-        public void WriteByte(byte value) => m_Stream.WriteByte(value);
+        public long Length => m_Length;
+
+        public long Position
+        {
+            get => m_Position;
+            set
+            {
+                if (value < 0 || value > m_Length)
+                    throw new ArgumentOutOfRangeException(nameof(value));
+                m_Position = checked((int)value);
+            }
+        }
+
+        public void Reset()
+        {
+            m_Position = 0;
+            m_Length = 0;
+        }
+
+        public void WriteByte(byte value)
+        {
+            EnsureCapacity(1);
+            m_Buffer[m_Position++] = value;
+            TrackLength();
+        }
+
         public void WriteBoolean(bool value) => WriteByte(value ? (byte)1 : (byte)0);
 
         public void WriteInt32(int value)
         {
             Span<byte> buffer = stackalloc byte[sizeof(int)];
             BinaryPrimitives.WriteInt32LittleEndian(buffer, value);
-            m_Stream.Write(buffer);
+            WriteRaw(buffer);
         }
 
         public void WriteUInt32(uint value)
         {
             Span<byte> buffer = stackalloc byte[sizeof(uint)];
             BinaryPrimitives.WriteUInt32LittleEndian(buffer, value);
-            m_Stream.Write(buffer);
+            WriteRaw(buffer);
         }
 
         public void WriteUInt16(ushort value)
         {
             Span<byte> buffer = stackalloc byte[sizeof(ushort)];
             BinaryPrimitives.WriteUInt16LittleEndian(buffer, value);
-            m_Stream.Write(buffer);
+            WriteRaw(buffer);
         }
 
         public void WriteInt64(long value)
         {
             Span<byte> buffer = stackalloc byte[sizeof(long)];
             BinaryPrimitives.WriteInt64LittleEndian(buffer, value);
-            m_Stream.Write(buffer);
+            WriteRaw(buffer);
         }
 
         public void WriteUInt64(ulong value)
         {
             Span<byte> buffer = stackalloc byte[sizeof(ulong)];
             BinaryPrimitives.WriteUInt64LittleEndian(buffer, value);
-            m_Stream.Write(buffer);
+            WriteRaw(buffer);
         }
 
         public void WriteDouble(double value)
@@ -85,7 +113,7 @@ namespace ThirdPersonSimulation
                     char.IsLowSurrogate(value[offset + count]))
                     count--;
                 int written = Encoding.UTF8.GetBytes(value.AsSpan(offset, count), buffer);
-                m_Stream.Write(buffer.Slice(0, written));
+                WriteRaw(buffer.Slice(0, written));
                 offset += count;
             }
         }
@@ -94,39 +122,31 @@ namespace ThirdPersonSimulation
         {
             byte[] bytes = value ?? Array.Empty<byte>();
             WriteInt32(bytes.Length);
-            m_Stream.Write(bytes, 0, bytes.Length);
+            WriteRaw(bytes);
         }
 
         public void WriteBytes(ReadOnlySpan<byte> value)
         {
             WriteInt32(value.Length);
-            if (value.Length == 0)
-                return;
-            m_Stream.Write(value);
+            WriteRaw(value);
         }
 
         public long BeginLengthPrefixedBlock()
         {
-            long position = m_Stream.Position;
+            long position = m_Position;
             WriteInt32(0);
             return position;
         }
 
         public void EndLengthPrefixedBlock(long prefixPosition)
         {
-            long end = m_Stream.Position;
+            long end = m_Position;
             if (prefixPosition < 0 || prefixPosition > end - sizeof(int))
                 throw new ArgumentOutOfRangeException(nameof(prefixPosition));
             int length = checked((int)(end - prefixPosition - sizeof(int)));
-            m_Stream.Position = prefixPosition;
-            try
-            {
-                WriteInt32(length);
-            }
-            finally
-            {
-                m_Stream.Position = end;
-            }
+            Position = prefixPosition;
+            WriteInt32(length);
+            Position = end;
         }
 
         public void WriteRawBytes(byte[] value, int offset, int count)
@@ -135,55 +155,62 @@ namespace ThirdPersonSimulation
                 throw new ArgumentNullException(nameof(value));
             if (offset < 0 || count < 0 || offset > value.Length - count)
                 throw new ArgumentOutOfRangeException();
-            m_Stream.Write(value, offset, count);
+            WriteRaw(value.AsSpan(offset, count));
         }
 
-        public void WriteRawBytes(ReadOnlySpan<byte> value) => m_Stream.Write(value);
+        public void WriteRawBytes(ReadOnlySpan<byte> value) => WriteRaw(value);
 
-        public byte[] ToArray() => m_Stream.ToArray();
+        public ReadOnlySpan<byte> WrittenSpan => m_Buffer.AsSpan(0, m_Length);
+
+        public byte[] ToArray()
+        {
+            var result = new byte[m_Length];
+            Buffer.BlockCopy(m_Buffer, 0, result, 0, m_Length);
+            return result;
+        }
 
         public bool ContentEquals(ReadOnlySpan<byte> value)
         {
-            if (m_Stream.Length != value.Length)
+            if (m_Length != value.Length)
                 return false;
-            long position = m_Stream.Position;
-            try
-            {
-                m_Stream.Position = 0;
-                Span<byte> buffer = stackalloc byte[256];
-                int offset = 0;
-                while (offset < value.Length)
-                {
-                    int count = Math.Min(buffer.Length, value.Length - offset);
-                    int read = m_Stream.Read(buffer.Slice(0, count));
-                    if (read == 0 || !buffer.Slice(0, read).SequenceEqual(value.Slice(offset, read)))
-                        return false;
-                    offset += read;
-                }
-                return true;
-            }
-            finally
-            {
-                m_Stream.Position = position;
-            }
+            return m_Buffer.AsSpan(0, m_Length).SequenceEqual(value);
         }
 
         public StableHash ComputeHash()
         {
-            if (m_Stream.TryGetBuffer(out ArraySegment<byte> buffer))
-            {
-                return SimulationCanonicalPayloadHash.Compute(new ArraySegment<byte>(
-                    buffer.Array,
-                    buffer.Offset,
-                    checked((int)m_Stream.Length)));
-            }
-            return SimulationCanonicalPayloadHash.Compute(ToArray());
+            return SimulationCanonicalPayloadHash.Compute(new ArraySegment<byte>(m_Buffer, 0, m_Length));
         }
 
         public void Dispose()
         {
-            if (m_OwnsStream)
-                m_Stream.Dispose();
+        }
+
+        void WriteRaw(ReadOnlySpan<byte> value)
+        {
+            if (value.Length == 0)
+                return;
+            EnsureCapacity(value.Length);
+            value.CopyTo(m_Buffer.AsSpan(m_Position));
+            m_Position += value.Length;
+            TrackLength();
+        }
+
+        void EnsureCapacity(int count)
+        {
+            if (checked(m_Position + count) <= m_Buffer.Length)
+                return;
+            if (m_Bounded)
+                throw new InvalidOperationException("Bounded canonical writer capacity is exhausted.");
+            int next = m_Buffer.Length;
+            while (next < m_Position + count)
+                next = checked(next * 2);
+            Array.Resize(ref m_Buffer, next);
+        }
+
+        void TrackLength()
+        {
+            if (m_Position > m_Length)
+                m_Length = m_Position;
         }
 
     }

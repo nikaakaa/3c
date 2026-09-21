@@ -82,6 +82,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly int m_CompletedHistoryCapacity;
         readonly long m_ResendInterval;
         readonly int m_MaximumFragmentPayloadBytes;
+        readonly CanonicalWriter m_EncodeWriter;
         ulong m_NextDatagramSequence = 1;
         ulong m_NextMessageSequence = 1;
 
@@ -104,6 +105,9 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 m_Definition.SessionId,
                 m_LocalPeerId,
                 m_Definition.MaximumDatagramBytes);
+            int encodeBufferCapacity = checked(
+                m_MaximumFragmentPayloadBytes * m_Definition.MaximumFragmentsPerMessage);
+            m_EncodeWriter = new CanonicalWriter(new byte[encodeBufferCapacity]);
             int messageCapacity = m_Definition.MaximumQueuedMessages;
             m_CompletedHistoryCapacity = checked(messageCapacity * 2);
             int completedStorageCapacity = checked(m_CompletedHistoryCapacity + 1);
@@ -127,8 +131,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
-            encodedPayloadBytes = RollbackProtocolCodec.GetEncodedLength(
+            m_EncodeWriter.Reset();
+            RollbackProtocolCodec.Write(
+                m_EncodeWriter,
                 new RollbackProtocolEnvelope(m_Definition.SessionId, m_LocalPeerId, m_NextMessageSequence, payload));
+            encodedPayloadBytes = checked((int)m_EncodeWriter.Length);
             maximumPayloadBytes = m_MaximumFragmentPayloadBytes;
             return encodedPayloadBytes <= maximumPayloadBytes;
         }
@@ -140,9 +147,14 @@ namespace ThirdPersonSimulation.DeterministicRollback
             if (m_PendingReliable.Count >= m_Definition.MaximumQueuedMessages && reliable)
                 throw new InvalidOperationException("Rollback reliable message capacity is exhausted.");
             ulong messageSequence = NextMessageSequence();
-            byte[] bytes = Encode(payload, messageSequence);
+            m_EncodeWriter.Reset();
+            RollbackProtocolCodec.Write(
+                m_EncodeWriter,
+                new RollbackProtocolEnvelope(m_Definition.SessionId, m_LocalPeerId, messageSequence, payload));
+            int totalBytes = checked((int)m_EncodeWriter.Length);
+            ReadOnlySpan<byte> bytes = m_EncodeWriter.WrittenSpan;
             int fragmentBytes = m_MaximumFragmentPayloadBytes;
-            int fragmentCount = checked((bytes.Length + fragmentBytes - 1) / fragmentBytes);
+            int fragmentCount = checked((totalBytes + fragmentBytes - 1) / fragmentBytes);
             if (!reliable && fragmentCount != 1)
                 throw new InvalidOperationException("Rollback unreliable payload exceeds one datagram.");
             if (fragmentCount > m_Definition.MaximumFragmentsPerMessage)
@@ -161,8 +173,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     reliable,
                     i,
                     fragmentCount,
-                    bytes.Length,
-                    bytes.AsSpan(offset, length));
+                    totalBytes,
+                    bytes.Slice(offset, length));
             }
             Enqueue(packets);
             if (reliable)
@@ -173,10 +185,6 @@ namespace ThirdPersonSimulation.DeterministicRollback
             }
             return messageSequence;
         }
-
-        byte[] Encode(IRollbackProtocolPayload payload, ulong messageSequence) =>
-            RollbackProtocolCodec.Write(
-                new RollbackProtocolEnvelope(m_Definition.SessionId, m_LocalPeerId, messageSequence, payload));
 
         public void Process(RollbackReceivedDatagram received)
         {

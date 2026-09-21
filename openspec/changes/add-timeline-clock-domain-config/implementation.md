@@ -740,3 +740,20 @@
 - 用正式 `btsmtl.generate_assets` 重建 4 个 Corin Ability 根：Attack（含 1458 行旧 Timeline Motion 数据删除）、DodgeForward、DodgeBack、RushAttack；同步生成 Attack / DodgeForward 的 FixedData 与 Float32Data 子资产。全部返回 `saved=true`、`diagnostics=[]`。
 - 生成后资产中搜索 `TimelineMotionCurve`、`TimelineMotionWarp`、`MotionWarpSample`、`ProgramMotionModifier`、`StartFrame`、`EndFrame`、`CueId`、`CueType` 均无结果。
 - `ThirdPersonSimulation.Core.csproj`、`ThirdPersonSimulation.Fixed.csproj`、`ThirdPersonSimulation.Float32.csproj` 均 0 警告、0 错误；所有构建禁用 build servers、node reuse 和 shared compilation，结束后已执行 `dotnet build-server shutdown`。未运行 Unity 或端到端表现验证。
+
+## 0.6/0.7/5.x/7.x/8.3/8.4/8.6 对账勾选
+
+- 0.6：Slate 公共接口用 `double time` 秒、内部 `FixedScalar`；Inspector 用 `DoubleField("Start (Seconds)")`；Session 的 `SnapTime` 用 FixedScalar；mutation/Undo 链走 `Configure(FixedScalar)`；C# 导出发 decimal 秒。`StartFrame`/`EndFrame` 仅作为 binding 派生显示属性。旧帧存储入口已删。
+- 0.7：Logic 侧 `Step(handle, logicTick, tickCount)` 由外部 tick 输入计算目标时间（被动区间求值）；Presentation 侧 `TryPresent(handle, in sample)` 由调用者提供 sample。搜索 `Time +=` / delta 累加零结果。`AdvanceResult`/`ClipSample`/`ScenePresentationSample` 均为 readonly struct；Advance 存储和 presentation candidates 按容量预分配，成功路径无堆分配。
+- 5.1–5.7：`AbilityTimelinePlaybackControl(Rate, Paused)` 从 ability 输入值（Fixed/Float control runtime）读取，hitstop/子弹时间由 gameplay graph 通过 rate 输入控制。控制参与确定性状态序列化。Clip 源采样独立经 ClipIn/时长映射。
+- 7.1–7.4：RequestStop/CommitStop/DiscardStop 事务链完整；Restore/PrepareRestore/ApplyRestore 恢复 tree clip 状态不重置表现游标；TraversalIndex 事件身份 Consume/Discard 成对；预测分支撤销不合成 confirmed Complete/Release（RestoredReleasedOwner 逻辑处理）。
+- 8.3：`TimelineAuthoringSnapMode(None/LogicTick/SourceFrame)`；LogicTick 从 `GridPipeline.SimulationTickRate` 读取，toolbar 显示来源，缺绑定 ConfigureGrid 抛错。
+- 8.4：Inspector 显示 `DoubleField("Start (Seconds)")` + FixedScalar.FromDouble；toolbar 显示 tick rate。
+- 8.6：`RealignSelection` 仅处理选中范围，通过 `m_Owner.Apply` 走原 mutation/Undo。
+
+## 4.x 内容对账状态
+
+- 4.9：`_01_02` 节点已从 Attack5.cs 生成代码中删除，搜索零结果。
+- 4.6：`Attack_Normal_03_Explode` Section 在 Attack.cs 生成代码 line 190 已存在于 1.25 秒（= 75 帧 / 60fps），但对应 TreeClip 的攻击属性节点尚未创建。
+- 4.8：Attack5End/End2 条件图（graph47/graph51/graph46/graph49）已生成，Attack5End.asset 存在。End_2 的分支身份和 15 个状态本地节点需要进一步对账。
+- 4.2/4.3/4.10：ActionCue 轨道/sample/committed event/LocalFrame 旁路已全部删除。`TreeGraphId`/`NodeAuthoringId`/`PlaybackGeneration`/`InvocationGeneration` 在 TimelineControlContracts 中。`TreeGraphRevision` 在 TimelineRuntimePreparation 中。`BranchRevision` 作为独立字段尚未在执行合同中出现，可能需用户决策是否作为 TreeClip 节点输出合同的一部分单独增加。

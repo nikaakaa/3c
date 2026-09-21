@@ -90,6 +90,17 @@ namespace ThirdPersonSimulation
 
     public sealed class Float32SimulationStep : TargetSimulationPipelineStep<Float32StepInput, SimulationIngress>
     {
+        public static Float32SimulationStep FromOwnedInputs(
+            SimulationTick tick,
+            SimulationPipelineStepProvenance provenance,
+            SimulationPipelineActorInput<Float32StepInput>[] inputs,
+            ActorId[] actors,
+            SimulationPipelineTypedIngress<SimulationIngress>[] ingress,
+            ObservedWorldConstraintFrame observedWorldConstraints)
+        {
+            return new Float32SimulationStep(tick, provenance, inputs, actors, ingress, observedWorldConstraints);
+        }
+
         public Float32SimulationStep(
             SimulationTick tick,
             SimulationPipelineStepProvenance provenance,
@@ -97,6 +108,21 @@ namespace ThirdPersonSimulation
             IEnumerable<SimulationPipelineTypedIngress<SimulationIngress>> ingress,
             ObservedWorldConstraintFrame observedWorldConstraints)
             : base(tick, provenance, inputs, ingress)
+        {
+            ObservedWorldConstraints = observedWorldConstraints ??
+                throw new ArgumentNullException(nameof(observedWorldConstraints));
+            if (ObservedWorldConstraints.Tick != tick)
+                throw new ArgumentException("Observed world constraint frame Tick does not match the Step.", nameof(observedWorldConstraints));
+        }
+
+        Float32SimulationStep(
+            SimulationTick tick,
+            SimulationPipelineStepProvenance provenance,
+            SimulationPipelineActorInput<Float32StepInput>[] inputs,
+            ActorId[] actors,
+            SimulationPipelineTypedIngress<SimulationIngress>[] ingress,
+            ObservedWorldConstraintFrame observedWorldConstraints)
+            : base(tick, provenance, inputs, actors, ingress)
         {
             ObservedWorldConstraints = observedWorldConstraints ??
                 throw new ArgumentNullException(nameof(observedWorldConstraints));

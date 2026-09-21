@@ -3586,3 +3586,12 @@
 - `AuthorityTickSchedulePassRuntime` 的 Pending 和 Executable ExecutionPlan 改为直接使用 `Float32CharacterRuntime.RosterDescriptor`。该 descriptor 在 Character Runtime 构造期从同一排序 roster 生成并完成合法性校验，Schedule 不再每 tick 复制 `ActorId[]`、排序、计算 roster hash 和新建 descriptor。
 - Pending 与 Executable 的 roster 身份、Step Actor 输入校验和 ExecutionPlan 绑定语义不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 Authority step inputs owned 数组收口
+
+对应 tasks.md 的 5.5，新增 5.176 作为独立小步；5.5 保持未勾选。
+
+- `Float32SimulationStep` 新增 `FromOwnedInputs`，与 Fixed Step 的所有权入口一致；private 构造直接接收 inputs、owned actors、ingress 和 constraint frame，复用基类的排序、重复 Actor、roster 长度和归属校验。
+- Authority tick schedule 不再把每个 Actor input 先塞进 `List` 再由 Step 构造复制，而是按 roster 数量填充精确 inputs 和 owned Actor 数组后直接转交。原 IEnumerable 构造继续服务仍需从长期 batch 复制的 Local 和 Prediction 路径。
+- Pending 缺输入时不在本轮分配 Step inputs；Executable 诊断循环、Actor 排序、重复校验、roster 绑定和 ExecutionPlan 语义不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

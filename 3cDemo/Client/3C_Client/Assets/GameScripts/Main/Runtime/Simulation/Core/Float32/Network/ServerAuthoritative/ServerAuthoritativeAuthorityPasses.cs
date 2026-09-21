@@ -112,6 +112,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         readonly ServerAuthoritativeModelPolicy m_Policy;
         readonly SortedDictionary<ActorId, HeldAuthorityInput> m_Held =
             new SortedDictionary<ActorId, HeldAuthorityInput>();
+        HeldAuthorityInput[] m_HeldWorkspace = Array.Empty<HeldAuthorityInput>();
 
         public AuthorityTickSchedulePassRuntime(
             SimulationPipelinePassDescriptor descriptor,
@@ -154,29 +155,43 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 SimulationTickSourceKind.Authoritative,
                 context.Source.ClockId,
                 authorityTick.Value);
-            var actorInputs = new List<SimulationPipelineActorInput<Float32StepInput>>();
-            for (int i = 0; i < readPorts.CharacterRuntime.Runtime.Roster.Count; i++)
+            int actorCount = readPorts.CharacterRuntime.Runtime.Roster.Count;
+            if (m_HeldWorkspace.Length != actorCount)
+                m_HeldWorkspace = new HeldAuthorityInput[actorCount];
+            for (int i = 0; i < actorCount; i++)
             {
                 ActorId actorId = readPorts.CharacterRuntime.Runtime.Roster[i].ActorId;
                 if (!m_Held.TryGetValue(actorId, out HeldAuthorityInput held))
                 {
                     writePorts.ExecutionPlan.Write(Pending(context, readPorts.CharacterRuntime));
+                    Array.Clear(m_HeldWorkspace, 0, actorCount);
                     return;
                 }
+                m_HeldWorkspace[i] = held;
+            }
+            var actorInputs = new SimulationPipelineActorInput<Float32StepInput>[actorCount];
+            var actors = new ActorId[actorCount];
+            for (int i = 0; i < actorCount; i++)
+            {
+                HeldAuthorityInput held = m_HeldWorkspace[i];
+                ActorId actorId = held.ActorId;
                 SimulationInput input = BuildInput(held, authoritySource, authorityTick);
-                actorInputs.Add(new SimulationPipelineActorInput<Float32StepInput>(
+                actorInputs[i] = new SimulationPipelineActorInput<Float32StepInput>(
                     actorId,
                     held.InputSequence,
-                    new Float32StepInput(input)));
+                    new Float32StepInput(input));
+                actors[i] = actorId;
                 held.MarkConsumed(authorityTick);
+                m_HeldWorkspace[i] = null;
             }
-            var step = new Float32SimulationStep(
+            var step = Float32SimulationStep.FromOwnedInputs(
                 authorityTick,
                 new SimulationPipelineStepProvenance(
                     SimulationPipelineStepExecutionKind.Authoritative,
                     authoritySource,
                     authorityTick.Value),
                 actorInputs,
+                actors,
                 Array.Empty<SimulationPipelineTypedIngress<SimulationIngress>>(),
                 ObservedWorldConstraintFrame.Empty(authorityTick));
             writePorts.ExecutionPlan.Write(SimulationSessionExecutionPlan<Float32SimulationStep>.FromOwnedArrays(
@@ -199,12 +214,12 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 SimulationSessionPlanRequirement.StateHash));
             if (readPorts.Diagnostics.Sink.IsEnabled)
             {
-                for (int i = 0; i < actorInputs.Count; i++)
+                for (int i = 0; i < actorInputs.Length; i++)
                 {
                     readPorts.Diagnostics.Sink.PublishModel(new SimulationModelTraceRecord(
                         SimulationModelTraceKind.Queue,
                         "authority_schedule",
-                        $"roster={actorInputs.Count};held={m_Held.Count};missingPolicy={m_Policy.MissingInputPolicy};maxLag={m_Policy.MaximumInputLagTicks}",
+                        $"roster={actorInputs.Length};held={m_Held.Count};missingPolicy={m_Policy.MissingInputPolicy};maxLag={m_Policy.MaximumInputLagTicks}",
                         actorInputs[i].ActorId,
                         context.Source.SourceTick,
                         authorityTick.Value,

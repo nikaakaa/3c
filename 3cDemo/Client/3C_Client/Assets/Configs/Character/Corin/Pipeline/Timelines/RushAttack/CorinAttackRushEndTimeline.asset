@@ -17,8 +17,7 @@ MonoBehaviour:
     m_Name: CorinAttackRushEndTimeline
     m_Tracks:
     - rid: 207050555325416083
-    - rid: 207050555325416085
-    - rid: 207050555325416086
+    - rid: 207050624796459019
     m_Sections:
     - m_AuthoringId: bcd0c997-0211-5653-03de-2e1f13f88e29
       m_Name: Attack_Rush_End
@@ -128,25 +127,6 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
         BlendProfileId: corin.animation-rig.action-blend-profile
-    - rid: 207050555325416085
-      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: de06c326-b6b6-9f3c-d32a-679d0e917028
-        Name: AttackProperty
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips: []
-        m_Markers: []
-    - rid: 207050555325416086
-      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: 1eabaf9c-b1d2-35c1-e100-7b54b547aeed
-        Name: StateBoundary
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416087
-        m_Markers: []
     - rid: 207050555325416087
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -161,6 +141,16 @@ MonoBehaviour:
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: 6725826254608866796}
+    - rid: 207050624796459019
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 5bb8a763-a921-77f4-7cc0-6051df3779cf
+        Name: Host_Route / Terminal
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416087
+        m_Markers: []
 --- !u!114 &6725826254608866796
 MonoBehaviour:
   m_ObjectHideFlags: 0

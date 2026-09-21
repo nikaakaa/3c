@@ -243,6 +243,7 @@ MonoBehaviour:
     - rid: 207050624796459009
     - rid: 207050624796459011
     - rid: 207050624796459013
+    - rid: 207050624796459049
     m_Sections: []
     m_ExternalBindings: []
     m_Loop: 0
@@ -459,7 +460,6 @@ MonoBehaviour:
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050624796459014
-        - rid: 207050624796459015
         m_Markers: []
     - rid: 207050624796459014
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -489,3 +489,13 @@ MonoBehaviour:
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: -7785901064648054346}
+    - rid: 207050624796459049
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 00890b6c-bfe3-bf86-4efa-bf6596ca43bd
+        Name: Logic / Decision / Decision RecoveryOpen
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050624796459015
+        m_Markers: []

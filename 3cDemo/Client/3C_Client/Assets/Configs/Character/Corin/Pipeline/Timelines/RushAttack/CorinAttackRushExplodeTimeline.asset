@@ -18,8 +18,8 @@ MonoBehaviour:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
+    _translation: {x: 123.32659, y: 110.4392}
+    _zoomFactor: 0.6315484
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: 7bd96c6f-4480-8426-1abb-438b7c99cec0
@@ -68,8 +68,8 @@ MonoBehaviour:
     _version: 3.42
     _category: 
     _comments: 
-    _translation: {x: 0, y: 0}
-    _zoomFactor: 1
+    _translation: {x: 128.19351, y: 84.321465}
+    _zoomFactor: 0.71380246
   _haltSerialization: 0
   _externalSerializationFile: {fileID: 0}
   m_AuthoringId: 1fb2fbef-c55f-a883-06c3-ca52acc058bc
@@ -92,8 +92,9 @@ MonoBehaviour:
     m_Name: CorinAttackRushExplodeTimeline
     m_Tracks:
     - rid: 207050555325416075
-    - rid: 207050555325416077
-    - rid: 207050555325416079
+    - rid: 207050624796459016
+    - rid: 207050624796459017
+    - rid: 207050624796459018
     m_Sections:
     - m_AuthoringId: 866672da-8a24-aa7c-d040-bc8f3df58e6a
       m_Name: Attack_Rush_Explode
@@ -203,41 +204,6 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
         BlendProfileId: corin.animation-rig.action-blend-profile
-    - rid: 207050555325416077
-      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 810b4902-8724-52c4-675c-89cd66b37cad
-        Name: AttackProperty
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416078
-        m_Markers: []
-    - rid: 207050555325416078
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 31099a02-d207-11b2-3550-590794e251ea
-        m_StartTimeRaw: 0
-        m_EndTimeRaw: 71582788
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_02
-        CueType: AttackProperty
-    - rid: 207050555325416079
-      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: a7a08f21-4b8c-4020-9351-ef7ffe5c300b
-        Name: StateBoundary
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416080
-        - rid: 207050555325416081
-        - rid: 207050555325416082
-        m_Markers: []
     - rid: 207050555325416080
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -280,3 +246,33 @@ MonoBehaviour:
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: -2633343535866875467}
+    - rid: 207050624796459016
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 073f3639-3e8f-48c7-779f-b680c341b53f
+        Name: Attack_Normal_04 / NoHold_Mode4_44
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416080
+        m_Markers: []
+    - rid: 207050624796459017
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 4fbc27b6-eb73-c889-7082-b52b576ba547
+        Name: Attack_Normal_04 / PressAttackA_Mode4_44
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416081
+        m_Markers: []
+    - rid: 207050624796459018
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: d131c171-7262-65d8-e4ea-da5430c4abac
+        Name: Attack_Rush_End / Terminal
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416082
+        m_Markers: []

@@ -14,11 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Data:
     m_AuthoringId: 606351d5-2e51-5730-3083-9e61df7814be
-    m_Name: CorinAttack_RushTimeline
+    m_Name: CorinAttackRushTimeline
     m_Tracks:
     - rid: 207050555325416036
-    - rid: 207050555325416038
-    - rid: 207050555325416071
+    - rid: 207050624796459031
+    - rid: 207050624796459032
+    - rid: 207050624796459033
     m_Sections:
     - m_AuthoringId: 86b751b3-24d8-fc3c-3f0c-1d6dfa88f07e
       m_Name: Attack_Rush
@@ -128,475 +129,6 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
         BlendProfileId: corin.animation-rig.action-blend-profile
-    - rid: 207050555325416038
-      type: {class: ActionCueTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 3ceb5503-90a1-aa13-e3d7-9ef0a42b080e
-        Name: AttackProperty
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416039
-        - rid: 207050555325416040
-        - rid: 207050555325416041
-        - rid: 207050555325416042
-        - rid: 207050555325416043
-        - rid: 207050555325416044
-        - rid: 207050555325416045
-        - rid: 207050555325416046
-        - rid: 207050555325416047
-        - rid: 207050555325416048
-        - rid: 207050555325416049
-        - rid: 207050555325416050
-        - rid: 207050555325416051
-        - rid: 207050555325416052
-        - rid: 207050555325416053
-        - rid: 207050555325416054
-        - rid: 207050555325416055
-        - rid: 207050555325416056
-        - rid: 207050555325416057
-        - rid: 207050555325416058
-        - rid: 207050555325416059
-        - rid: 207050555325416060
-        - rid: 207050555325416061
-        - rid: 207050555325416062
-        - rid: 207050555325416063
-        - rid: 207050555325416064
-        - rid: 207050555325416065
-        - rid: 207050555325416066
-        - rid: 207050555325416067
-        - rid: 207050555325416068
-        - rid: 207050555325416069
-        - rid: 207050555325416070
-        m_Markers: []
-    - rid: 207050555325416039
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: fd987643-1add-fd72-d854-ac32e207cacd
-        m_StartTimeRaw: 501079518
-        m_EndTimeRaw: 572662306
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_01
-        CueType: AttackProperty
-    - rid: 207050555325416040
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 1a5f12c4-3a4b-0a54-62d1-e5f4eb2336a4
-        m_StartTimeRaw: 644245094
-        m_EndTimeRaw: 715827883
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416041
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: e8fa32e6-775b-5450-201b-061cde42c528
-        m_StartTimeRaw: 787410671
-        m_EndTimeRaw: 858993459
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416042
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 46a7e648-90b5-70f2-ed0e-a46e357be7ed
-        m_StartTimeRaw: 930576247
-        m_EndTimeRaw: 1002159036
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416043
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: eb92fc88-27fc-45eb-2c89-0e05e6cd02e4
-        m_StartTimeRaw: 1073741824
-        m_EndTimeRaw: 1145324612
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416044
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 08ab1fe2-5404-99dc-9b8a-c26d00fb0dc8
-        m_StartTimeRaw: 1216907401
-        m_EndTimeRaw: 1288490189
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416045
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 726f7d70-4820-6d3e-051b-56db2e14edb3
-        m_StartTimeRaw: 1360072977
-        m_EndTimeRaw: 1431655765
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416046
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 0d7ec816-5a25-5c47-a9be-1b11ac857510
-        m_StartTimeRaw: 1503238554
-        m_EndTimeRaw: 1574821342
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416047
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 362608d6-a529-a3d2-f1a0-316bacfa70e8
-        m_StartTimeRaw: 1646404130
-        m_EndTimeRaw: 1717986918
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416048
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 8e10bd0c-b370-589c-3f52-41a4c81146f5
-        m_StartTimeRaw: 1789569707
-        m_EndTimeRaw: 1861152495
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416049
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 19b34537-d455-5610-ab17-a4e53bb24f30
-        m_StartTimeRaw: 1932735283
-        m_EndTimeRaw: 2004318071
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416050
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: b6594cbb-d508-01d8-1122-9ddf5c1605d6
-        m_StartTimeRaw: 2075900860
-        m_EndTimeRaw: 2147483648
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416051
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 4df49550-e28b-80b0-6f18-f12436e73a09
-        m_StartTimeRaw: 2219066436
-        m_EndTimeRaw: 2290649225
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416052
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: d2688411-a6f5-4e35-3a44-4f98527455c8
-        m_StartTimeRaw: 2362232013
-        m_EndTimeRaw: 2433814801
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416053
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: cdbccdd4-22cd-53b5-e4ad-26586679481c
-        m_StartTimeRaw: 2505397589
-        m_EndTimeRaw: 2576980378
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416054
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 3917f690-19f3-70bc-d9f9-b6430380a9d2
-        m_StartTimeRaw: 2648563166
-        m_EndTimeRaw: 2720145954
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416055
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: eec04abc-a1fa-f182-d50a-2c402ac8c410
-        m_StartTimeRaw: 2791728742
-        m_EndTimeRaw: 2863311531
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416056
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 2ee85b94-bda8-d49d-2129-622b16026162
-        m_StartTimeRaw: 2934894319
-        m_EndTimeRaw: 3006477107
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416057
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 9238291a-aa8d-924c-06b4-e56dc80eb541
-        m_StartTimeRaw: 3078059895
-        m_EndTimeRaw: 3149642684
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416058
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 9f3eb023-970e-3423-4f99-b0bb5524d4fe
-        m_StartTimeRaw: 3221225472
-        m_EndTimeRaw: 3292808260
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416059
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 6d4af305-4830-afb3-7183-60376d0fa633
-        m_StartTimeRaw: 3364391049
-        m_EndTimeRaw: 3435973837
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416060
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: dd405af6-c0a2-5139-8f94-3f4a158b70bc
-        m_StartTimeRaw: 3507556625
-        m_EndTimeRaw: 3579139413
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416061
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 7839fa76-9b32-43d2-7049-adf4fb6dc984
-        m_StartTimeRaw: 3650722202
-        m_EndTimeRaw: 3722304990
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416062
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 2a44f7ea-92b3-c4ec-7741-2624cb2bd101
-        m_StartTimeRaw: 3793887778
-        m_EndTimeRaw: 3865470566
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416063
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 68faefb8-ef55-eaf9-7792-fe7a0e6fd79b
-        m_StartTimeRaw: 3937053355
-        m_EndTimeRaw: 4008636143
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416064
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 5d7ae37e-c83f-c059-d3a5-dd817cf8d78b
-        m_StartTimeRaw: 4080218931
-        m_EndTimeRaw: 4151801719
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416065
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 3e2017e6-720c-d199-47cd-bb175bc45e30
-        m_StartTimeRaw: 4223384508
-        m_EndTimeRaw: 4294967296
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416066
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 40c10557-1d0a-9bc9-da7c-92999b243646
-        m_StartTimeRaw: 4366550084
-        m_EndTimeRaw: 4438132873
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416067
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: fc574b0e-a327-5684-bf55-e6ab681d3950
-        m_StartTimeRaw: 4509715661
-        m_EndTimeRaw: 4581298449
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416068
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: fb58d237-7bba-1f20-cf4e-76ce4679af69
-        m_StartTimeRaw: 4652881237
-        m_EndTimeRaw: 4724464026
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416069
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: c17b026b-513a-0f80-53b1-e77e0d30c377
-        m_StartTimeRaw: 4796046814
-        m_EndTimeRaw: 4867629602
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416070
-      type: {class: ActionCueClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline}
-      data:
-        m_AuthoringId: 99fe21cc-d119-0f8d-819d-bbf468f2927c
-        m_StartTimeRaw: 4939212390
-        m_EndTimeRaw: 5010795179
-        m_OtherEaseInTimeRaw: 0
-        m_OtherEaseOutTimeRaw: 0
-        m_SelfEaseInTimeRaw: 0
-        m_SelfEaseOutTimeRaw: 0
-        m_ClipInTimeRaw: 0
-        CueId: Corin_Attack_Rush_AttackProperty_01_02
-        CueType: AttackProperty
-    - rid: 207050555325416071
-      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
-      data:
-        m_AuthoringId: 61a4da44-0d82-414b-afff-cc85d62d2a2c
-        Name: StateBoundary
-        m_ExecutionDomain: 1
-        m_PersistentMuted: 0
-        m_Clips:
-        - rid: 207050555325416072
-        - rid: 207050555325416073
-        - rid: 207050555325416074
-        m_Markers: []
     - rid: 207050555325416072
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
       data:
@@ -639,6 +171,36 @@ MonoBehaviour:
         m_ExecutionPhase: 0
         m_ExitSource: 1
         m_AssetTree: {fileID: 8689184226189537461}
+    - rid: 207050624796459031
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 9620bd1e-abfb-def1-b7cc-ecfc8d8c70d1
+        Name: Attack_Rush_Explode / HoldFalse_ClickFalse
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416072
+        m_Markers: []
+    - rid: 207050624796459032
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 5eea8224-9c3b-d3d6-82fd-49c37dfb1a34
+        Name: Attack_Rush_Explode / Trigger_SawExplode
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416073
+        m_Markers: []
+    - rid: 207050624796459033
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: e89dc1f3-318a-7e2b-f053-46226a0aa108
+        Name: Attack_Rush_Explode / Terminal
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050555325416074
+        m_Markers: []
 --- !u!114 &3175398474611344483
 MonoBehaviour:
   m_ObjectHideFlags: 0

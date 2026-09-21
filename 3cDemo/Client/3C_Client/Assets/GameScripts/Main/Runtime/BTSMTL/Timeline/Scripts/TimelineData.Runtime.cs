@@ -397,6 +397,39 @@ namespace BTSMTL.Timeline
             Init();
             return clip;
         }
+        public void SeparateOverlappingClips(TimelineContractCatalog catalog)
+        {
+            Track[] tracks = m_Tracks.ToArray();
+            foreach (Track track in tracks)
+            {
+                int insertionIndex = m_Tracks.IndexOf(track) + 1;
+                if (catalog.RequireTrack(track.ContractKind).OverlapPolicy != TimelineTrackOverlapPolicy.Reject)
+                    continue;
+                for (int clipIndex = 1; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    Clip clip = track.Clips[clipIndex];
+                    bool overlaps = false;
+                    for (int previousIndex = 0; previousIndex < clipIndex; previousIndex++)
+                    {
+                        Clip previous = track.Clips[previousIndex];
+                        overlaps |= clip.StartTime < previous.EndTime && previous.StartTime < clip.EndTime;
+                    }
+                    if (!overlaps)
+                        continue;
+                    AddTrack(track.GetType(), catalog);
+                    Track destination = m_Tracks[m_Tracks.Count - 1];
+                    m_Tracks.RemoveAt(m_Tracks.Count - 1);
+                    m_Tracks.Insert(insertionIndex++, destination);
+                    destination.ConfigureAuthoringIdentity(new Guid(StableHash.Compute("timeline.track", track.AuthoringId, clip.AuthoringId).Value.Substring(0, 32)).ToString("D"));
+                    destination.Name = clip.Name;
+                    destination.ConfigureExecutionDomain(track.ExecutionDomain);
+                    destination.PersistentMuted = track.PersistentMuted;
+                    MoveClip(catalog, clip, destination);
+                    clipIndex--;
+                }
+            }
+        }
+
         public void MoveClip(TimelineContractCatalog catalog, Clip clip, Track destination)
         {
             Track source = clip.Track;

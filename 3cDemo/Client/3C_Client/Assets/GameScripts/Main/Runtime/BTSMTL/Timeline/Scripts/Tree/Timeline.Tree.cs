@@ -90,8 +90,6 @@ namespace BTSMTL.Timeline
                 throw new ArgumentOutOfRangeException(nameof(source), source, "TimelineTree exit source is invalid.");
             if (ExecutionDomain == TimelineExecutionDomain.Logic && source != TimelineClipExitSource.TreeDecision)
                 throw new InvalidOperationException("Logic TreeClip必须由节点图决定退出。");
-            if (ExecutionDomain == TimelineExecutionDomain.Presentation && source != TimelineClipExitSource.FrameBoundary)
-                throw new InvalidOperationException("Presentation TreeClip只能由帧边界结束。");
             m_ExitSource = source;
 #if UNITY_EDITOR
             OnClipChanged();
@@ -126,8 +124,7 @@ namespace BTSMTL.Timeline
 
         public bool AlignTerminalTime(FixedScalar terminalTime)
         {
-            if (ExecutionDomain != TimelineExecutionDomain.Logic ||
-                m_ExitSource != TimelineClipExitSource.TreeDecision)
+            if (m_ExitSource != TimelineClipExitSource.TreeDecision)
             {
                 return false;
             }
@@ -146,7 +143,7 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
         public override string Name => $"{ExecutionDomain} / {m_ExecutionPhase} / {(m_AssetTree ? m_AssetTree.name : "Unbound")}";
         public override ClipCapabilities Capabilities =>
-            TimelineClipExecutionPolicy.FromDomain(ExecutionDomain).IsLogic
+            m_ExitSource == TimelineClipExitSource.TreeDecision
                 ? ClipCapabilities.TickQuantized
                 : ClipCapabilities.Resizable | ClipCapabilities.TickQuantized;
 
@@ -185,7 +182,7 @@ namespace BTSMTL.Timeline
             {
                 new TimelineTrackContract(
                     TimelineContractKinds.TreeTrack,
-                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineTrackOverlapPolicy.Reject,
                     TimelineCapability.Tree,
                     TimelineExecutionDomain.Logic,
                     TimelineOutputKind.GameplayFact,
@@ -227,8 +224,8 @@ namespace BTSMTL.Timeline
                 case TimelineExecutionDomain.Presentation:
                     if (!hasGraph)
                         errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' requires a TimelineBody graph.");
-                    if (treeClip.ClipExitSource != TimelineClipExitSource.FrameBoundary)
-                        errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' must use FrameBoundary exit.");
+                    if (treeClip.ClipExitSource != TimelineClipExitSource.FrameBoundary && treeClip.ClipExitSource != TimelineClipExitSource.TreeDecision)
+                        errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' has an invalid exit source.");
                     if (treeClip.ExecutionPhase != TimelineTreeExecutionPhase.Commit)
                         errors?.Add($"Timeline Presentation TreeClip '{treeClip.AuthoringId}' must use Commit phase.");
                     break;

@@ -30,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             string animationTrackId = BtsmtlRushStableIdentity($"corin.rush.track.animation:{stateId}");
             string animationClipId = BtsmtlRushStableIdentity($"corin.rush.clip.animation:{stateId}");
             var animation = context.ResolveExternalAsset<UnityAnimationClip>(animationPath, 7400000L);
-            var timeline = BtsmtlSkillAuthoringCode.EnsureTimelineRoot(context, timelineId, $"Corin{stateId}Timeline");
+            var timeline = BtsmtlSkillAuthoringCode.EnsureTimelineRoot(context, timelineId, $"Corin{stateId.Replace("_", string.Empty)}Timeline");
             var catalog = TimelineTreeContractComposition.Create();
             var section = BtsmtlSkillAuthoringCode.EnsureSection(timeline.Data, sectionId, stateId, 0, string.Empty);
             section.ConfigureBranch(branchId);

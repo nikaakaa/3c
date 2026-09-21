@@ -69,6 +69,7 @@ MonoBehaviour:
     m_Name: CorinDodgeForwardTimeline
     m_Tracks:
     - rid: 207050438612877382
+    - rid: 207050624796459050
     - rid: 207050438612877385
     - rid: 207050438612877387
     m_Sections: []
@@ -86,7 +87,6 @@ MonoBehaviour:
         m_PersistentMuted: 0
         m_Clips:
         - rid: 207050438612877383
-        - rid: 207050438612877384
         m_Markers: []
     - rid: 207050438612877383
       type: {class: TreeClip, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
@@ -317,6 +317,16 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+    - rid: 207050624796459050
+      type: {class: TreeTrack, ns: BTSMTL.Timeline, asm: BTSMTL.Timeline.Tree}
+      data:
+        m_AuthoringId: 37d5f20e-931b-c859-1243-f37083cf2954
+        Name: Logic / Decision / Decision RecoveryOpen
+        m_ExecutionDomain: 1
+        m_PersistentMuted: 0
+        m_Clips:
+        - rid: 207050438612877384
+        m_Markers: []
 --- !u!114 &-7135324045220957111
 MonoBehaviour:
   m_ObjectHideFlags: 0

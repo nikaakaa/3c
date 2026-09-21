@@ -65,7 +65,7 @@ namespace BTSMTL.Diagnostics.Editor
 
     public sealed class RuntimeExecutionTimeline
     {
-        readonly IReadOnlyList<RuntimeExecutionSpan> m_Spans;
+        readonly RuntimeExecutionSpan[] m_Spans;
 
         internal RuntimeExecutionTimeline(
             Guid captureId,
@@ -75,7 +75,7 @@ namespace BTSMTL.Diagnostics.Editor
             long evictedEvents,
             bool complete,
             int unmappedEventCount,
-            IReadOnlyList<RuntimeExecutionSpan> spans)
+            RuntimeExecutionSpan[] spans)
         {
             CaptureId = captureId;
             Channels = channels;
@@ -84,7 +84,7 @@ namespace BTSMTL.Diagnostics.Editor
             EvictedEvents = evictedEvents;
             IsComplete = complete;
             UnmappedEventCount = unmappedEventCount;
-            m_Spans = spans ?? Array.Empty<RuntimeExecutionSpan>();
+            m_Spans = spans;
         }
 
         public Guid CaptureId { get; }
@@ -335,9 +335,9 @@ namespace BTSMTL.Diagnostics.Editor
 
     public sealed class RuntimeExecutionHistory
     {
-        readonly IReadOnlyList<RuntimeExecutionTickRecord> m_Ticks;
-        readonly IReadOnlyList<RuntimeExecutionCheckpoint> m_Checkpoints;
-        readonly IReadOnlyList<RuntimeExecutionPresentationFrame> m_PresentationFrames;
+        readonly RuntimeExecutionTickRecord[] m_Ticks;
+        readonly RuntimeExecutionCheckpoint[] m_Checkpoints;
+        readonly RuntimeExecutionPresentationFrame[] m_PresentationFrames;
 
         internal RuntimeExecutionHistory(
             Guid captureId,
@@ -347,9 +347,9 @@ namespace BTSMTL.Diagnostics.Editor
             long evictedEvents,
             bool complete,
             int unmappedEventCount,
-            List<RuntimeExecutionTickRecord> ticks,
-            List<RuntimeExecutionCheckpoint> checkpoints,
-            List<RuntimeExecutionPresentationFrame> presentationFrames)
+            RuntimeExecutionTickRecord[] ticks,
+            RuntimeExecutionCheckpoint[] checkpoints,
+            RuntimeExecutionPresentationFrame[] presentationFrames)
         {
             CaptureId = captureId;
             Channels = channels;
@@ -377,7 +377,7 @@ namespace BTSMTL.Diagnostics.Editor
         {
             get
             {
-                for (int i = 0; i < m_Ticks.Count; i++)
+                for (int i = 0; i < m_Ticks.Length; i++)
                     if (m_Ticks[i].HasExternalResult)
                         return true;
                 return false;
@@ -388,12 +388,12 @@ namespace BTSMTL.Diagnostics.Editor
             get
             {
                 int count = 0;
-                for (int i = 0; i < m_Ticks.Count; i++)
+                for (int i = 0; i < m_Ticks.Length; i++)
                     count += m_Ticks[i].ExternalResults.Count;
                 return count;
             }
         }
-        public bool HasPresentationFrames => m_PresentationFrames.Count > 0;
+        public bool HasPresentationFrames => m_PresentationFrames.Length > 0;
     }
 
     internal static class RuntimeExecutionTimelineBuilder
@@ -408,6 +408,10 @@ namespace BTSMTL.Diagnostics.Editor
         static readonly HashSet<Guid> BoundaryBranches = new();
         static readonly List<EventGroup<TickKey>> HistoryGroups = new();
         static readonly List<EventGroup<PresentationFrameKey>> PresentationGroups = new();
+        static readonly List<RuntimeExecutionSpan> SpanResults = new();
+        static readonly List<RuntimeExecutionTickRecord> TickResults = new();
+        static readonly List<RuntimeExecutionCheckpoint> CheckpointResults = new();
+        static readonly List<RuntimeExecutionPresentationFrame> PresentationFrameResults = new();
 
         internal static RuntimeExecutionTimeline Build(
             RuntimeCaptureSnapshot capture,
@@ -448,7 +452,8 @@ namespace BTSMTL.Diagnostics.Editor
 
             Dictionary<SpanKey, PendingSpan> open = Open;
             open.Clear();
-            var spans = new List<RuntimeExecutionSpan>();
+            List<RuntimeExecutionSpan> spans = SpanResults;
+            spans.Clear();
             int unmappedEventCount = 0;
             for (int i = 0; i < selected.Count; i++)
             {
@@ -561,7 +566,7 @@ namespace BTSMTL.Diagnostics.Editor
                             selected.Count != 0 &&
                             unmappedEventCount == 0 &&
                             open.Count == 0;
-            return new RuntimeExecutionTimeline(
+            RuntimeExecutionTimeline timeline = new(
                 capture.CaptureId,
                 capture.Channels,
                 capture.Detail,
@@ -569,7 +574,9 @@ namespace BTSMTL.Diagnostics.Editor
                 capture.EvictedEvents,
                 complete,
                 unmappedEventCount,
-                spans);
+                spans.ToArray());
+            spans.Clear();
+            return timeline;
         }
 
         internal static RuntimeExecutionHistory BuildHistory(
@@ -682,9 +689,12 @@ namespace BTSMTL.Diagnostics.Editor
                     tickGroupIndex++;
             }
 
-            var ticks = new List<RuntimeExecutionTickRecord>(grouped.Count);
-            var checkpoints = new List<RuntimeExecutionCheckpoint>();
-            var presentationFrames = new List<RuntimeExecutionPresentationFrame>(presentation.Count);
+            List<RuntimeExecutionTickRecord> ticks = TickResults;
+            List<RuntimeExecutionCheckpoint> checkpoints = CheckpointResults;
+            List<RuntimeExecutionPresentationFrame> presentationFrames = PresentationFrameResults;
+            ticks.Clear();
+            checkpoints.Clear();
+            presentationFrames.Clear();
             HashSet<CheckpointKey> checkpointKeys = CheckpointKeys;
             checkpointKeys.Clear();
             bool complete = capture.EvictedEvents == 0 && grouped.Count != 0;
@@ -735,11 +745,14 @@ namespace BTSMTL.Diagnostics.Editor
                 capture.EvictedEvents,
                 historyComplete,
                 unmappedEventCount,
-                ticks,
-                checkpoints,
-                presentationFrames);
+                ticks.ToArray(),
+                checkpoints.ToArray(),
+                presentationFrames.ToArray());
             grouped.Clear();
             presentation.Clear();
+            ticks.Clear();
+            checkpoints.Clear();
+            presentationFrames.Clear();
             return history;
         }
 

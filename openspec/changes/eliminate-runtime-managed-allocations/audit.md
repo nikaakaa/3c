@@ -255,6 +255,15 @@
 - 分组外层两个 List 是 builder 静态 scratch，构造前清空、返回前清空，不持有最终数组；静态 builder 仍限定 Editor 同步读取链。source coverage 统计移到数组填充遍历，结果与原遍历条件一致。ticks、checkpoints、presentation frames 和 Timeline spans 的返回 List 仍在后续边界。
 - `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；首次编译暴露数组 `Count`、局部变量重名和 struct 构造字段赋值问题，修正后通过。构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做 history 运行对比或分配采样。
 
+## 2026-09-21 执行结果集合数组化
+
+对应 tasks.md 的 7.1，新增 7.81 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor execution builder 的最终结果集合，不计为 Player 每帧收益。
+
+- `BuildCore` 的 spans 和 `BuildHistory` 的 ticks、checkpoints、presentation frames 原先每次新建结果 List，填充排序后直接交给返回对象。List 对象和扩容数组会随每次 UI 刷新重建。
+- 现在四个结果 List 是 builder 静态 scratch，每次构造前清空并保留容量；构造返回对象前调用 `ToArray` 生成精确数组，返回对象直接持有数组。返回后清空 scratch，避免结果数组别名回到工作集合。
+- `RuntimeExecutionTimeline` 和 `RuntimeExecutionHistory` 内部字段改为数组，公开 `IReadOnlyList` 接口不变；span 排序、未完成 span 输出、checkpoint 去重和 presentation 可用性判断不变。数组是本次结果的正式所有权，scratch 只服务 Editor 同步读取链。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；首次编译暴露 history 数组的三处 `Count` 读取，改为 `Length` 后通过。构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做结果集合运行对比或分配采样。
+
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

@@ -139,9 +139,19 @@ namespace ThirdPersonCamera
             unchecked
             {
                 uint hash = 2166136261u;
-                string value = request.ResourceId + "|" + request.SourceId + "|" + request.EventId;
-                for (int i = 0; i < value.Length; i++)
-                    hash = (hash ^ value[i]) * 16777619u;
+                for (int i = 0; i < request.ResourceId.Length; i++)
+                    hash = (hash ^ request.ResourceId[i]) * 16777619u;
+                hash = (hash ^ '|') * 16777619u;
+                for (int i = 0; i < request.SourceId.Length; i++)
+                    hash = (hash ^ request.SourceId[i]) * 16777619u;
+                hash = (hash ^ '|') * 16777619u;
+                if (request.EventId.IsValid)
+                {
+                    System.Span<char> identity = stackalloc char[64];
+                    request.EventId.Format(identity);
+                    for (int i = 0; i < identity.Length; i++)
+                        hash = (hash ^ identity[i]) * 16777619u;
+                }
                 return hash / (float)uint.MaxValue * Mathf.PI * 2f;
             }
         }

@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,7 +19,7 @@ public readonly struct CameraSequenceRequest
             ulong sourceActionInstanceId,
             CameraSequenceInterruptPolicy interruptPolicy,
             bool isDefault = false,
-            string eventId = "",
+            EventId eventId = default,
             int cycle = 0,
             float sampleTime = 0f)
         {
@@ -35,7 +36,7 @@ public readonly struct CameraSequenceRequest
             SourceActionInstanceId = sourceActionInstanceId;
             InterruptPolicy = interruptPolicy;
             IsDefault = isDefault;
-            EventId = eventId ?? string.Empty;
+            EventId = eventId;
             Cycle = cycle;
             SampleTime = sampleTime;
         }
@@ -51,7 +52,7 @@ public readonly struct CameraSequenceRequest
         public ulong SourceActionInstanceId { get; }
         public CameraSequenceInterruptPolicy InterruptPolicy { get; }
         public bool IsDefault { get; }
-        public string EventId { get; }
+        public EventId EventId { get; }
         public int Cycle { get; }
         public float SampleTime { get; }
         public bool Active => Weight > 0f && !string.IsNullOrWhiteSpace(SequenceId);

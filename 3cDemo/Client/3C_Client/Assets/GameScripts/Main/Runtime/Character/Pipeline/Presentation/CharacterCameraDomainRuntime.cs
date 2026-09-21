@@ -505,7 +505,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 CharacterPresentationCommand command = m_ActiveRequests[i].Command;
                 PresentationCameraRequest payload = command.CameraRequest;
-                string eventId = command.Header.EventId.ToString();
+                EventId eventId = command.Header.EventId;
                 switch (payload.Kind)
                 {
                     case PresentationCameraRequestKind.Sequence:
@@ -591,7 +591,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     break;
                 case PresentationCameraRequestKind.Effect:
                     m_EffectEvaluator.Retire(
-                        command.Header.EventId.ToString(),
+                        command.Header.EventId,
                         command.ProducerGeneration,
                         command.ProducerId,
                         command.SourceActionInstanceId,

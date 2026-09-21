@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -71,7 +72,7 @@ namespace ThirdPersonCamera
         }
 
         public void Retire(
-            string eventId,
+            EventId eventId,
             ulong generation,
             string sourceId,
             ulong sourceActionInstanceId,
@@ -273,7 +274,7 @@ namespace ThirdPersonCamera
                     pending.SourceActionInstanceId == request.SourceActionInstanceId &&
                     pending.Cycle == request.Cycle &&
                     string.Equals(pending.SourceId, request.SourceId, StringComparison.Ordinal) &&
-                    string.Equals(pending.EventId, request.EventId, StringComparison.Ordinal))
+                    pending.EventId.Equals(request.EventId))
                     m_PendingRetirements.RemoveAt(i);
             }
         }
@@ -289,7 +290,7 @@ namespace ThirdPersonCamera
         readonly struct PendingRetirement
         {
             public PendingRetirement(
-                string eventId,
+                EventId eventId,
                 ulong generation,
                 string sourceId,
                 ulong sourceActionInstanceId,
@@ -304,7 +305,7 @@ namespace ThirdPersonCamera
                 Reason = reason;
             }
 
-            public string EventId { get; }
+            public EventId EventId { get; }
             public ulong Generation { get; }
             public string SourceId { get; }
             public ulong SourceActionInstanceId { get; }
@@ -315,20 +316,20 @@ namespace ThirdPersonCamera
         readonly struct CameraEffectEventKey : IEquatable<CameraEffectEventKey>
         {
             public CameraEffectEventKey(
-                string eventId,
+                EventId eventId,
                 ulong generation,
                 string sourceId,
                 ulong sourceActionInstanceId,
                 int cycle)
             {
-                EventId = eventId ?? string.Empty;
+                EventId = eventId;
                 Generation = generation;
                 SourceId = sourceId ?? string.Empty;
                 SourceActionInstanceId = sourceActionInstanceId;
                 Cycle = cycle;
             }
 
-            public string EventId { get; }
+            public EventId EventId { get; }
             public ulong Generation { get; }
             public string SourceId { get; }
             public ulong SourceActionInstanceId { get; }
@@ -346,7 +347,7 @@ namespace ThirdPersonCamera
                 Generation == other.Generation &&
                 SourceActionInstanceId == other.SourceActionInstanceId &&
                 Cycle == other.Cycle &&
-                string.Equals(EventId, other.EventId, StringComparison.Ordinal) &&
+                EventId.Equals(other.EventId) &&
                 string.Equals(SourceId, other.SourceId, StringComparison.Ordinal);
 
             public override bool Equals(object obj) =>
@@ -357,7 +358,7 @@ namespace ThirdPersonCamera
                 unchecked
                 {
                     int hash = 17;
-                    hash = hash * 31 + StringComparer.Ordinal.GetHashCode(EventId);
+                    hash = hash * 31 + EventId.GetHashCode();
                     hash = hash * 31 + Generation.GetHashCode();
                     hash = hash * 31 + StringComparer.Ordinal.GetHashCode(SourceId);
                     hash = hash * 31 + SourceActionInstanceId.GetHashCode();

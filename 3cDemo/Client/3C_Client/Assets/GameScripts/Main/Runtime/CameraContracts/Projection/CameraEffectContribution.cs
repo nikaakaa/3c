@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -17,7 +18,7 @@ public readonly struct CameraEffectContribution
             ulong generation = 0,
             ulong sourceActionInstanceId = 0,
             int cycle = 0,
-            string eventId = "",
+            EventId eventId = default,
             CameraPresentationStopReason stopReason = CameraPresentationStopReason.NaturalComplete)
         {
             Stage = stage;
@@ -30,7 +31,7 @@ public readonly struct CameraEffectContribution
             Generation = generation;
             SourceActionInstanceId = sourceActionInstanceId;
             Cycle = cycle;
-            EventId = eventId ?? string.Empty;
+            EventId = eventId;
             StopReason = stopReason;
         }
 
@@ -44,7 +45,7 @@ public readonly struct CameraEffectContribution
         public ulong Generation { get; }
         public ulong SourceActionInstanceId { get; }
         public int Cycle { get; }
-        public string EventId { get; }
+        public EventId EventId { get; }
         public CameraPresentationStopReason StopReason { get; }
     }
 }

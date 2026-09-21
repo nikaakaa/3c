@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -16,7 +17,7 @@ public readonly struct CameraResponseRequest
             string sourceId,
             ulong generation,
             ulong sourceActionInstanceId,
-            string eventId = "",
+            EventId eventId = default,
             int cycle = 0,
             float sampleTime = 0f)
         {
@@ -31,7 +32,7 @@ public readonly struct CameraResponseRequest
             SourceId = sourceId ?? string.Empty;
             Generation = generation;
             SourceActionInstanceId = sourceActionInstanceId;
-            EventId = eventId ?? string.Empty;
+            EventId = eventId;
             Cycle = cycle;
             SampleTime = sampleTime;
         }
@@ -45,7 +46,7 @@ public readonly struct CameraResponseRequest
         public string SourceId { get; }
         public ulong Generation { get; }
         public ulong SourceActionInstanceId { get; }
-        public string EventId { get; }
+        public EventId EventId { get; }
         public int Cycle { get; }
         public float SampleTime { get; }
         public bool Active => Weight > 0f;

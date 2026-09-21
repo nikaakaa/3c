@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 
@@ -77,7 +78,7 @@ namespace ThirdPersonCamera
                     active.SourceActionInstanceId == request.SourceActionInstanceId &&
                     active.Cycle == request.Cycle &&
                     string.Equals(active.SourceId, request.SourceId, StringComparison.Ordinal) &&
-                    string.Equals(active.EventId, request.EventId, StringComparison.Ordinal))
+                    active.EventId.Equals(request.EventId))
                     return m_Active[i];
             }
             return null;
@@ -99,20 +100,20 @@ namespace ThirdPersonCamera
         }
 
         public void Retire(
-            string eventId,
+            EventId eventId,
             ulong generation,
             string sourceId,
             ulong sourceActionInstanceId,
             int cycle,
             CameraPresentationStopReason reason)
         {
-            bool hasEventId = !string.IsNullOrEmpty(eventId);
+            bool hasEventId = eventId.IsValid;
             bool hasSourceId = !string.IsNullOrEmpty(sourceId);
             for (int i = m_Active.Count - 1; i >= 0; i--)
             {
                 CameraEffectRuntimeState effect = m_Active[i];
                 bool matchesEvent = hasEventId &&
-                    string.Equals(effect.Request.EventId, eventId, StringComparison.Ordinal);
+                    effect.Request.EventId.Equals(eventId);
                 bool matchesSource = hasSourceId &&
                     string.Equals(effect.Request.SourceId, sourceId, StringComparison.Ordinal);
                 bool matchesIdentity = effect.Request.Generation == generation &&
@@ -191,7 +192,7 @@ namespace ThirdPersonCamera
             result = string.CompareOrdinal(right.SourceId, left.SourceId);
             if (result != 0)
                 return result;
-            return string.CompareOrdinal(right.EventId, left.EventId);
+            return right.EventId.CompareTo(left.EventId);
         }
     }
 }

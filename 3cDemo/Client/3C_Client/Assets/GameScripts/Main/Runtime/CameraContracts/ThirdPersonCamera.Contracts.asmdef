@@ -2,7 +2,8 @@
   "name": "ThirdPersonCamera.Contracts",
   "rootNamespace": "ThirdPersonCamera",
   "references": [
-    "Cinemachine"
+    "Cinemachine",
+    "ThirdPersonSimulation.Core"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -185,7 +186,7 @@ namespace ThirdPersonCamera
             int source = string.CompareOrdinal(candidate.SourceId, selected.SourceId);
             return source != 0
                 ? source < 0
-                : string.CompareOrdinal(candidate.EventId, selected.EventId) < 0;
+                : candidate.EventId.CompareTo(selected.EventId) < 0;
         }
 
         static string FirstKey(string first, string second, string third, string fourth = null)
@@ -238,7 +239,7 @@ namespace ThirdPersonCamera
                     0,
                     CameraSequenceInterruptPolicy.BlendOut,
                     true,
-                    string.Empty,
+                    default,
                     0,
                     0f);
         }
@@ -260,7 +261,7 @@ namespace ThirdPersonCamera
             int source = string.CompareOrdinal(candidate.SourceId, selected.SourceId);
             return source != 0
                 ? source < 0
-                : string.CompareOrdinal(candidate.EventId, selected.EventId) < 0;
+                : candidate.EventId.CompareTo(selected.EventId) < 0;
         }
     }
 
@@ -285,7 +286,7 @@ namespace ThirdPersonCamera
                 "camera.default.response",
                 0,
                 0,
-                string.Empty,
+                default,
                 0,
                 0f);
             if (requests == null)
@@ -316,7 +317,7 @@ namespace ThirdPersonCamera
                 return candidate.Cycle > selected.Cycle;
             if (!string.Equals(candidate.SourceId, selected.SourceId, StringComparison.Ordinal))
                 return string.CompareOrdinal(candidate.SourceId, selected.SourceId) < 0;
-            return string.CompareOrdinal(candidate.EventId, selected.EventId) < 0;
+            return candidate.EventId.CompareTo(selected.EventId) < 0;
         }
     }
 }

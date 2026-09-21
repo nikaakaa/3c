@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,7 +22,7 @@ public readonly struct CameraEffectRequest
             int priority,
             string sourceId,
             ulong generation,
-            string eventId,
+            EventId eventId,
             ulong sourceActionInstanceId,
             int cycle = 0,
             float sampleTime = 0f)
@@ -34,7 +35,7 @@ public readonly struct CameraEffectRequest
             Priority = priority;
             SourceId = sourceId ?? string.Empty;
             Generation = generation;
-            EventId = eventId ?? string.Empty;
+            EventId = eventId;
             SourceActionInstanceId = sourceActionInstanceId;
             Cycle = cycle;
             SampleTime = sampleTime;
@@ -46,7 +47,7 @@ public readonly struct CameraEffectRequest
         public int Priority { get; }
         public string SourceId { get; }
         public ulong Generation { get; }
-        public string EventId { get; }
+        public EventId EventId { get; }
         public ulong SourceActionInstanceId { get; }
         public int Cycle { get; }
         public float SampleTime { get; }

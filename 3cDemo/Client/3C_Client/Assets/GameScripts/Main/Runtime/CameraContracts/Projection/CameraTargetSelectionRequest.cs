@@ -1,3 +1,4 @@
+using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -17,7 +18,7 @@ public readonly struct CameraTargetSelectionRequest
             ulong generation,
             ulong sourceActionInstanceId = 0,
             int cycle = 0,
-            string eventId = "")
+            EventId eventId = default)
         {
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
@@ -31,7 +32,7 @@ public readonly struct CameraTargetSelectionRequest
             Generation = generation;
             SourceActionInstanceId = sourceActionInstanceId;
             Cycle = cycle;
-            EventId = eventId ?? string.Empty;
+            EventId = eventId;
         }
 
         public string TargetKey { get; }
@@ -44,7 +45,7 @@ public readonly struct CameraTargetSelectionRequest
         public ulong Generation { get; }
         public ulong SourceActionInstanceId { get; }
         public int Cycle { get; }
-        public string EventId { get; }
+        public EventId EventId { get; }
         public bool Active => Weight > 0f && HasAnyKey;
         public bool HasAnyKey => !string.IsNullOrWhiteSpace(TargetKey) ||
                                  !string.IsNullOrWhiteSpace(AnchorKey) ||

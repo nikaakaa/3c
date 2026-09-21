@@ -6,6 +6,10 @@
 
 ## 2026-09-22 运动采样与测试资产清理
 
+- 用户明确指定本任务接手 CopyPendingMotionWarps。保留既有收集、ActionContext、状态操作映射及模式配置，统一迁移源位置/偏航与累计进度为 FixedScalar 合同。Timeline准备阶段创建源曲线及按模式启用的进度曲线，缓存窗口起止采样；evaluation按定点前后时刻采样，Host不再逐帧查作者Clip或调用AnimationCurve.Evaluate。Fixed求解直接消费定点值，Float32在自身边界转回Float32；作者配置常量仍按原合同转换，未宣称Float32位级不变。
+- Edit模式读取当前18条Timeline，5个真实MotionWarp窗口全部完成Fixed准备；预热128次后，每个窗口执行4096次真实SampleWarp，线程分配均为0字节，窗口末端位置/偏航进度均为1。该证据仅覆盖准备后的采样函数，不覆盖初始化、整个角色Tick或渲染链。
+- 同步修正恒定角速度初始化取样：EvaluateDirectPose显式接受本次sampleTime，前一姿态用PreviousTime、当前姿态用CurrentTime，避免两次都用CurrentTime而吞掉首帧角增量。本轮无replay。
+
 - 代码核查发现 Fixed/Float32 Timeline MotionWarp 初始化后又被旧状态覆盖：Initialize 分支先向 SkillState 写新状态，但局部 storedState 仍为旧值；末尾 storedState.WithProgress 会把 Active/Initialized、起点、目标及 generation 回写为旧值。已改为先更新局部 storedState，完成当帧校正后只提交一次 WithProgress，保持窗口身份和累计进度。该问题独立于尚未完成的 Fixed 曲线取样迁移；未启动 replay。
 
 - 代码核查发现 Pose 状态机子图持久复用，但只同步父图的全局 ResetGeneration，没有状态重入重置；再次进入起步/停步等有限动画会保留上次播放器时间。已增加图级 ResetForStateEntry，复用原 evaluator reset 与缓存清理，不递增父级 reset generation，也不重建图。状态机按上一提交帧的当前状态及过渡目标判断是否重入：过渡目标持续活动时不重置，重新进入已存在的非活动子图才重置。未启动 replay，尚未以运行结果宣称抖动已修复。

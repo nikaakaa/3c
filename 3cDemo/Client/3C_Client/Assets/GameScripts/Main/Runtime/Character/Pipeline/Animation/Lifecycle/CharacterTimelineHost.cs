@@ -475,6 +475,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             internal CharacterTimelinePlaybackSourceKind SourceKind;
             internal bool CoreDriven;
             internal TimelinePlaybackActionContext ActionContext;
+            internal string ActionContextId;
             internal ulong ActionInstanceId;
             internal RuntimeInstanceKey RuntimeInstance;
             internal RuntimeTimelinePlaybackProvenance Provenance;
@@ -1150,6 +1151,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                         ActivePlayback updated = m_ActivePlaybacks[i];
                         updated.SourceKind = CharacterTimelinePlaybackSourceKind.AbilityRuntime;
                         updated.CoreDriven = true;
+                        updated.ActionContextId = actionContext.ContextId;
                         m_ActivePlaybacks[i] = updated;
                     }
                 }
@@ -1242,6 +1244,146 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     contribution.ConsumeLowerChannels));
             }
         }
+
+        public void CopyPendingMotionWarps(
+            int runtimeHandle,
+            AbilityTimelineMotionWarpCatalog motionWarpCatalog,
+            List<AbilityTimelineLogicMotionWarp> results)
+        {
+            if (results == null)
+                throw new ArgumentNullException(nameof(results));
+            results.Clear();
+            if (!m_PendingAdvances.TryGetValue((ulong)runtimeHandle, out CharacterTimelinePendingAdvance pending) ||
+                !pending.Result.IsValid)
+                return;
+            ActivePlayback active = default;
+            for (int index = 0; index < m_ActivePlaybacks.Count; index++)
+            {
+                if (m_ActivePlaybacks[index].Handle.Value == pending.Handle.Value)
+                {
+                    active = m_ActivePlaybacks[index];
+                    break;
+                }
+            }
+            if (active.Handle.Value != pending.Handle.Value || !active.Provenance.HasProgramInvocation)
+                throw new InvalidOperationException($"Timeline motion warp '{pending.Handle.Value}' has no Ability invocation provenance.");
+            if (motionWarpCatalog == null)
+                throw new ArgumentNullException(nameof(motionWarpCatalog));
+            var source = SimulationExecutionSource.FromSkillOperation(
+                new OperationHandle(active.Provenance.SourceOperationIndex),
+                active.Provenance.SourceInvocationPath);
+            TimelineRuntimeSampleView<TimelineRuntimeMotionWarpRequest> requests =
+                pending.Result.Evaluation.MotionWarps;
+            for (int index = 0; index < requests.Count; index++)
+            {
+                TimelineRuntimeMotionWarpRequest request = requests[index];
+                if (string.IsNullOrEmpty(active.ActionContextId))
+                    throw new InvalidOperationException($"Timeline motion warp '{request.ClipAuthoringId}' has no Action Context identity.");
+                Vector2 targetOffset = request.TargetPlanarOffset;
+                results.Add(new AbilityTimelineLogicMotionWarp(
+                    source,
+                    new CharacterSkillId(active.ActionContext.ActionId),
+                    active.ActionContextId,
+                    ResolveMotionWarpStateOperation(
+                        motionWarpCatalog,
+                        active.Timeline.AuthoringId,
+                        request.ClipAuthoringId),
+                    MotionWarpPlaybackGeneration(active.Generation, request.Cycle),
+                    request.Cycle,
+                    request.StartTime,
+                    request.EndTime,
+                    request.PreviousTime,
+                    request.Time,
+                    request.SourceStart.X,
+                    request.SourceStart.Y,
+                    request.SourceStart.Z,
+                    request.SourceStart.Yaw,
+                    request.SourceEnd.X,
+                    request.SourceEnd.Y,
+                    request.SourceEnd.Z,
+                    request.SourceEnd.Yaw,
+                    request.PreviousPosition.X,
+                    request.PreviousPosition.Y,
+                    request.PreviousPosition.Z,
+                    request.PreviousPosition.Yaw,
+                    request.CurrentPosition.X,
+                    request.CurrentPosition.Y,
+                    request.CurrentPosition.Z,
+                    request.CurrentPosition.Yaw,
+                    request.PreviousPositionProgress,
+                    request.PreviousYawProgress,
+                    request.CurrentPositionProgress,
+                    request.CurrentYawProgress,
+                    MapWarpTranslationMode(request.TranslationMode),
+                    MapWarpTargetOffsetSpace(request.TargetOffsetSpace),
+                    MapWarpRotationMode(request.RotationMode),
+                    MapWarpRotationMethod(request.RotationMethod),
+                    targetOffset.x,
+                    targetOffset.y,
+                    request.TargetYawOffsetDegrees,
+                    request.MaxTotalPositionCorrection,
+                    request.MaxTotalYawCorrectionDegrees,
+                    request.MaximumYawRateDegreesPerSecond,
+                    MapWarpLimitPolicy(request.LimitPolicy)));
+            }
+        }
+
+        static OperationHandle ResolveMotionWarpStateOperation(
+            AbilityTimelineMotionWarpCatalog motionWarpCatalog,
+            string timelineId,
+            string clipAuthoringId)
+        {
+            if (!motionWarpCatalog.TryGetOperation(timelineId, clipAuthoringId, out OperationHandle operation))
+            {
+                throw new InvalidOperationException(
+                    $"Timeline motion warp '{timelineId}/{clipAuthoringId}' is not in the state catalog.");
+            }
+            return operation;
+        }
+
+        static ulong MotionWarpPlaybackGeneration(ulong activationGeneration, int cycle) =>
+            MotionWarpRuntimeSemantics.ComposePlaybackGeneration(activationGeneration, cycle);
+
+        static ProgramMotionWarpTranslationMode MapWarpTranslationMode(MotionWarpTranslationMode mode) => mode switch
+        {
+            MotionWarpTranslationMode.Disabled => ProgramMotionWarpTranslationMode.Disabled,
+            MotionWarpTranslationMode.ScaleToTarget => ProgramMotionWarpTranslationMode.ScaleToTarget,
+            MotionWarpTranslationMode.SkewToTarget => ProgramMotionWarpTranslationMode.SkewToTarget,
+            MotionWarpTranslationMode.LinearToTarget => ProgramMotionWarpTranslationMode.LinearToTarget,
+            _ => throw new InvalidOperationException($"Unsupported Timeline motion warp translation mode '{mode}'.")
+        };
+
+        static ProgramMotionWarpTargetOffsetSpace MapWarpTargetOffsetSpace(MotionWarpTargetOffsetSpace space) => space switch
+        {
+            MotionWarpTargetOffsetSpace.TargetLocal => ProgramMotionWarpTargetOffsetSpace.TargetLocal,
+            MotionWarpTargetOffsetSpace.ApproachDirection => ProgramMotionWarpTargetOffsetSpace.ApproachDirection,
+            MotionWarpTargetOffsetSpace.ActorStartLocal => ProgramMotionWarpTargetOffsetSpace.ActorStartLocal,
+            MotionWarpTargetOffsetSpace.World => ProgramMotionWarpTargetOffsetSpace.World,
+            _ => throw new InvalidOperationException($"Unsupported Timeline motion warp target space '{space}'.")
+        };
+
+        static ProgramMotionWarpRotationMode MapWarpRotationMode(MotionWarpRotationMode mode) => mode switch
+        {
+            MotionWarpRotationMode.Disabled => ProgramMotionWarpRotationMode.Disabled,
+            MotionWarpRotationMode.FaceTarget => ProgramMotionWarpRotationMode.FaceTarget,
+            MotionWarpRotationMode.MatchTargetYaw => ProgramMotionWarpRotationMode.MatchTargetYaw,
+            _ => throw new InvalidOperationException($"Unsupported Timeline motion warp rotation mode '{mode}'.")
+        };
+
+        static ProgramMotionWarpRotationMethod MapWarpRotationMethod(MotionWarpRotationMethod method) => method switch
+        {
+            MotionWarpRotationMethod.ProgressCurve => ProgramMotionWarpRotationMethod.ProgressCurve,
+            MotionWarpRotationMethod.ConstantRate => ProgramMotionWarpRotationMethod.ConstantRate,
+            MotionWarpRotationMethod.ScaleSourceYaw => ProgramMotionWarpRotationMethod.ScaleSourceYaw,
+            _ => throw new InvalidOperationException($"Unsupported Timeline motion warp rotation method '{method}'.")
+        };
+
+        static ProgramMotionWarpLimitPolicy MapWarpLimitPolicy(MotionWarpLimitPolicy policy) => policy switch
+        {
+            MotionWarpLimitPolicy.ApplyClamped => ProgramMotionWarpLimitPolicy.ApplyClamped,
+            MotionWarpLimitPolicy.PreserveSource => ProgramMotionWarpLimitPolicy.PreserveSource,
+            _ => throw new InvalidOperationException($"Unsupported Timeline motion warp limit policy '{policy}'.")
+        };
 
         static AbilityTimelineMotionChannel MapMotionChannel(TimelineMotionChannel channel)
         {
@@ -1587,6 +1729,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                     snapshot.ActionContext.PredictionKey,
                     snapshot.InputSequence,
                     snapshot.StartTick.Value),
+                ActionContextId = snapshot.ActionContext.ContextId,
                 ActionInstanceId = snapshot.ActionContext.InstanceId,
                 RuntimeInstance = CreateRuntimeInstance(
                     handle,

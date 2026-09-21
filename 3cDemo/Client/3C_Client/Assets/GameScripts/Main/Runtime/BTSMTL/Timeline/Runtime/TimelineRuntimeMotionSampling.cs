@@ -64,7 +64,7 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
-    internal readonly struct TimelineRuntimeMotionPosition
+    public readonly struct TimelineRuntimeMotionPosition
     {
         public TimelineRuntimeMotionPosition(FixedScalar x, FixedScalar y, FixedScalar z, FixedScalar yaw)
         {
@@ -148,9 +148,52 @@ namespace BTSMTL.Timeline.Runtime
         }
     }
 
+    internal sealed class TimelineRuntimeMotionWarpCurve
+    {
+        readonly MotionWarpClip m_Clip;
+        readonly TimelineRuntimeMotionCurve m_Source;
+        readonly TimelineRuntimeCurve m_PositionProgress;
+        readonly TimelineRuntimeCurve m_YawProgress;
+        readonly TimelineRuntimeMotionPosition m_Start;
+        readonly TimelineRuntimeMotionPosition m_End;
+
+        public TimelineRuntimeMotionWarpCurve(MotionWarpClip clip, TimelineRuntimeMotionCurve source, TimelineRuntimeNumericTarget target)
+        {
+            m_Clip = clip;
+            m_Source = source;
+            m_Start = source.Evaluate(clip.StartTime);
+            m_End = source.Evaluate(clip.EndTime);
+            if (clip.TranslationMode is MotionWarpTranslationMode.SkewToTarget or MotionWarpTranslationMode.LinearToTarget)
+                m_PositionProgress = TimelineRuntimeCurve.Prepare(clip.PositionProgressCurve, target);
+            if (clip.RotationMode != MotionWarpRotationMode.Disabled && clip.RotationMethod == MotionWarpRotationMethod.ProgressCurve)
+                m_YawProgress = TimelineRuntimeCurve.Prepare(clip.YawProgressCurve, target);
+        }
+
+        public TimelineRuntimeMotionWarpRequest Sample(FixedScalar previousTime, FixedScalar time, int cycle)
+        {
+            previousTime = FixedScalar.Max(previousTime, m_Clip.StartTime);
+            time = FixedScalar.Min(time, m_Clip.EndTime);
+            FixedScalar previousNormalized = (previousTime - m_Clip.StartTime) / m_Clip.DurationTime;
+            FixedScalar normalized = (time - m_Clip.StartTime) / m_Clip.DurationTime;
+            return new TimelineRuntimeMotionWarpRequest(
+                m_Clip.AuthoringId, m_Clip.SourceMotionClipId, previousTime, time, cycle,
+                m_Clip.StartTime, m_Clip.EndTime, m_Start, m_End,
+                m_Source.Evaluate(previousTime), m_Source.Evaluate(time),
+                EvaluateProgress(m_PositionProgress, previousNormalized), EvaluateProgress(m_YawProgress, previousNormalized),
+                EvaluateProgress(m_PositionProgress, normalized), EvaluateProgress(m_YawProgress, normalized),
+                m_Clip.TranslationMode, m_Clip.TargetOffsetSpace, m_Clip.RotationMode, m_Clip.RotationMethod,
+                m_Clip.TargetPlanarOffset, m_Clip.TargetYawOffsetDegrees, m_Clip.MaxTotalPositionCorrection,
+                m_Clip.MaxTotalYawCorrectionDegrees, m_Clip.MaximumYawRateDegreesPerSecond, m_Clip.LimitPolicy);
+        }
+
+        static FixedScalar EvaluateProgress(TimelineRuntimeCurve curve, FixedScalar normalized) =>
+            curve == null ? normalized : FixedScalar.Clamp(curve.Evaluate(normalized), FixedScalar.Zero, FixedScalar.One);
+    }
+
     internal sealed class TimelineRuntimeMotionSampling
     {
         readonly Dictionary<string, TimelineRuntimeMotionCurve> m_Curves = new(StringComparer.Ordinal);
+        readonly Dictionary<string, TimelineRuntimeMotionWarpCurve> m_Warps = new(StringComparer.Ordinal);
 
         public TimelineRuntimeMotionSampling(TimelineData timeline, TimelineRuntimeNumericTarget target)
         {
@@ -165,7 +208,29 @@ namespace BTSMTL.Timeline.Runtime
                         m_Curves.Add(clip.AuthoringId, new TimelineRuntimeMotionCurve(clip, target));
                 }
             }
+            for (int trackIndex = 0; trackIndex < timeline.Tracks.Count; trackIndex++)
+            {
+                Track track = timeline.Tracks[trackIndex];
+                if (track is not MotionWarpTrack || track.PersistentMuted || track.ExecutionDomain != TimelineExecutionDomain.Logic)
+                    continue;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    if (track.Clips[clipIndex] is not MotionWarpClip clip)
+                        continue;
+                    if (!m_Curves.TryGetValue(clip.SourceMotionClipId, out TimelineRuntimeMotionCurve source))
+                    {
+                        if (!MotionWarpAuthoring.TryResolveSource(timeline, clip.SourceMotionClipId, out MotionCurveClip sourceClip))
+                            throw new InvalidOperationException($"MotionWarp '{clip.AuthoringId}' has no source curve '{clip.SourceMotionClipId}'.");
+                        source = new TimelineRuntimeMotionCurve(sourceClip, target);
+                        m_Curves.Add(sourceClip.AuthoringId, source);
+                    }
+                    m_Warps.Add(clip.AuthoringId, new TimelineRuntimeMotionWarpCurve(clip, source, target));
+                }
+            }
         }
+
+        public TimelineRuntimeMotionWarpRequest SampleWarp(string clipId, FixedScalar previousTime, FixedScalar time, int cycle) =>
+            m_Warps[clipId].Sample(previousTime, time, cycle);
 
         public void Sample(
             MotionCurveTrack track, FixedScalar previousTime, FixedScalar currentTime,

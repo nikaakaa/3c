@@ -196,26 +196,26 @@ namespace ThirdPersonSimulation
             FixedScalar endTime,
             FixedScalar previousTime,
             FixedScalar currentTime,
-            float sourceStartPositionX,
-            float sourceStartPositionY,
-            float sourceStartPositionZ,
-            float sourceStartYawDegrees,
-            float sourceEndPositionX,
-            float sourceEndPositionY,
-            float sourceEndPositionZ,
-            float sourceEndYawDegrees,
-            float previousPositionX,
-            float previousPositionY,
-            float previousPositionZ,
-            float previousYawDegrees,
-            float currentPositionX,
-            float currentPositionY,
-            float currentPositionZ,
-            float currentYawDegrees,
-            float previousPositionProgress,
-            float previousYawProgress,
-            float currentPositionProgress,
-            float currentYawProgress,
+            FixedScalar sourceStartPositionX,
+            FixedScalar sourceStartPositionY,
+            FixedScalar sourceStartPositionZ,
+            FixedScalar sourceStartYawDegrees,
+            FixedScalar sourceEndPositionX,
+            FixedScalar sourceEndPositionY,
+            FixedScalar sourceEndPositionZ,
+            FixedScalar sourceEndYawDegrees,
+            FixedScalar previousPositionX,
+            FixedScalar previousPositionY,
+            FixedScalar previousPositionZ,
+            FixedScalar previousYawDegrees,
+            FixedScalar currentPositionX,
+            FixedScalar currentPositionY,
+            FixedScalar currentPositionZ,
+            FixedScalar currentYawDegrees,
+            FixedScalar previousPositionProgress,
+            FixedScalar previousYawProgress,
+            FixedScalar currentPositionProgress,
+            FixedScalar currentYawProgress,
             ProgramMotionWarpTranslationMode translationMode,
             ProgramMotionWarpTargetOffsetSpace targetOffsetSpace,
             ProgramMotionWarpRotationMode rotationMode,
@@ -240,13 +240,6 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Timeline motion warp requires an Action Context identity.", nameof(actionContextIdentity));
             if (endTime <= startTime || previousTime < startTime || currentTime > endTime || previousTime > currentTime)
                 throw new ArgumentOutOfRangeException(nameof(previousTime), "Timeline motion warp window is invalid.");
-            if (float.IsNaN(sourceStartPositionX) || float.IsNaN(sourceStartPositionY) || float.IsNaN(sourceStartPositionZ) ||
-                float.IsNaN(sourceStartYawDegrees) || float.IsNaN(sourceEndPositionX) || float.IsNaN(sourceEndPositionY) ||
-                float.IsNaN(sourceEndPositionZ) || float.IsNaN(sourceEndYawDegrees) || float.IsNaN(previousPositionX) ||
-                float.IsNaN(previousPositionY) || float.IsNaN(previousPositionZ) || float.IsNaN(previousYawDegrees) ||
-                float.IsNaN(currentPositionX) || float.IsNaN(currentPositionY) || float.IsNaN(currentPositionZ) ||
-                float.IsNaN(currentYawDegrees))
-                throw new ArgumentOutOfRangeException(nameof(sourceStartPositionX), "Timeline motion warp source samples must be finite.");
             if (translationMode == ProgramMotionWarpTranslationMode.Disabled && rotationMode == ProgramMotionWarpRotationMode.Disabled)
                 throw new ArgumentException("Timeline motion warp cannot disable both position and rotation.");
 
@@ -276,10 +269,10 @@ namespace ThirdPersonSimulation
             CurrentPositionY = currentPositionY;
             CurrentPositionZ = currentPositionZ;
             CurrentYawDegrees = currentYawDegrees;
-            PreviousPositionProgress = Math.Clamp(previousPositionProgress, 0f, 1f);
-            PreviousYawProgress = Math.Clamp(previousYawProgress, 0f, 1f);
-            CurrentPositionProgress = Math.Clamp(currentPositionProgress, 0f, 1f);
-            CurrentYawProgress = Math.Clamp(currentYawProgress, 0f, 1f);
+            PreviousPositionProgress = FixedScalar.Clamp(previousPositionProgress, FixedScalar.Zero, FixedScalar.One);
+            PreviousYawProgress = FixedScalar.Clamp(previousYawProgress, FixedScalar.Zero, FixedScalar.One);
+            CurrentPositionProgress = FixedScalar.Clamp(currentPositionProgress, FixedScalar.Zero, FixedScalar.One);
+            CurrentYawProgress = FixedScalar.Clamp(currentYawProgress, FixedScalar.Zero, FixedScalar.One);
             TranslationMode = translationMode;
             TargetOffsetSpace = targetOffsetSpace;
             RotationMode = rotationMode;
@@ -303,26 +296,26 @@ namespace ThirdPersonSimulation
         public FixedScalar EndTime { get; }
         public FixedScalar PreviousTime { get; }
         public FixedScalar CurrentTime { get; }
-        public float SourceStartPositionX { get; }
-        public float SourceStartPositionY { get; }
-        public float SourceStartPositionZ { get; }
-        public float SourceStartYawDegrees { get; }
-        public float SourceEndPositionX { get; }
-        public float SourceEndPositionY { get; }
-        public float SourceEndPositionZ { get; }
-        public float SourceEndYawDegrees { get; }
-        public float PreviousPositionX { get; }
-        public float PreviousPositionY { get; }
-        public float PreviousPositionZ { get; }
-        public float PreviousYawDegrees { get; }
-        public float CurrentPositionX { get; }
-        public float CurrentPositionY { get; }
-        public float CurrentPositionZ { get; }
-        public float CurrentYawDegrees { get; }
-        public float PreviousPositionProgress { get; }
-        public float PreviousYawProgress { get; }
-        public float CurrentPositionProgress { get; }
-        public float CurrentYawProgress { get; }
+        public FixedScalar SourceStartPositionX { get; }
+        public FixedScalar SourceStartPositionY { get; }
+        public FixedScalar SourceStartPositionZ { get; }
+        public FixedScalar SourceStartYawDegrees { get; }
+        public FixedScalar SourceEndPositionX { get; }
+        public FixedScalar SourceEndPositionY { get; }
+        public FixedScalar SourceEndPositionZ { get; }
+        public FixedScalar SourceEndYawDegrees { get; }
+        public FixedScalar PreviousPositionX { get; }
+        public FixedScalar PreviousPositionY { get; }
+        public FixedScalar PreviousPositionZ { get; }
+        public FixedScalar PreviousYawDegrees { get; }
+        public FixedScalar CurrentPositionX { get; }
+        public FixedScalar CurrentPositionY { get; }
+        public FixedScalar CurrentPositionZ { get; }
+        public FixedScalar CurrentYawDegrees { get; }
+        public FixedScalar PreviousPositionProgress { get; }
+        public FixedScalar PreviousYawProgress { get; }
+        public FixedScalar CurrentPositionProgress { get; }
+        public FixedScalar CurrentYawProgress { get; }
         public ProgramMotionWarpTranslationMode TranslationMode { get; }
         public ProgramMotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
         public ProgramMotionWarpRotationMode RotationMode { get; }

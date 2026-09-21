@@ -1357,10 +1357,19 @@ namespace BTSMTL.Timeline.Runtime
         public TimelineRuntimeMotionWarpRequest(
             string clipAuthoringId,
             string sourceMotionClipId,
+            FixedScalar previousTime,
             FixedScalar time,
             int cycle,
-            float previousNormalizedTime,
-            float normalizedTime,
+            FixedScalar startTime,
+            FixedScalar endTime,
+            TimelineRuntimeMotionPosition sourceStart,
+            TimelineRuntimeMotionPosition sourceEnd,
+            TimelineRuntimeMotionPosition previousPosition,
+            TimelineRuntimeMotionPosition currentPosition,
+            FixedScalar previousPositionProgress,
+            FixedScalar previousYawProgress,
+            FixedScalar currentPositionProgress,
+            FixedScalar currentYawProgress,
             MotionWarpTranslationMode translationMode,
             MotionWarpTargetOffsetSpace targetOffsetSpace,
             MotionWarpRotationMode rotationMode,
@@ -1374,10 +1383,19 @@ namespace BTSMTL.Timeline.Runtime
         {
             ClipAuthoringId = clipAuthoringId ?? string.Empty;
             SourceMotionClipId = sourceMotionClipId ?? string.Empty;
+            PreviousTime = previousTime;
             Time = time;
             Cycle = cycle;
-            PreviousNormalizedTime = Mathf.Clamp01(previousNormalizedTime);
-            NormalizedTime = Mathf.Clamp01(normalizedTime);
+            StartTime = startTime;
+            EndTime = endTime;
+            SourceStart = sourceStart;
+            SourceEnd = sourceEnd;
+            PreviousPosition = previousPosition;
+            CurrentPosition = currentPosition;
+            PreviousPositionProgress = previousPositionProgress;
+            PreviousYawProgress = previousYawProgress;
+            CurrentPositionProgress = currentPositionProgress;
+            CurrentYawProgress = currentYawProgress;
             TranslationMode = translationMode;
             TargetOffsetSpace = targetOffsetSpace;
             RotationMode = rotationMode;
@@ -1392,10 +1410,19 @@ namespace BTSMTL.Timeline.Runtime
 
         public string ClipAuthoringId { get; }
         public string SourceMotionClipId { get; }
+        public FixedScalar PreviousTime { get; }
+        public FixedScalar StartTime { get; }
+        public FixedScalar EndTime { get; }
+        public TimelineRuntimeMotionPosition SourceStart { get; }
+        public TimelineRuntimeMotionPosition SourceEnd { get; }
+        public TimelineRuntimeMotionPosition PreviousPosition { get; }
+        public TimelineRuntimeMotionPosition CurrentPosition { get; }
+        public FixedScalar PreviousPositionProgress { get; }
+        public FixedScalar PreviousYawProgress { get; }
+        public FixedScalar CurrentPositionProgress { get; }
+        public FixedScalar CurrentYawProgress { get; }
         public FixedScalar Time { get; }
         public int Cycle { get; }
-        public float PreviousNormalizedTime { get; }
-        public float NormalizedTime { get; }
         public MotionWarpTranslationMode TranslationMode { get; }
         public MotionWarpTargetOffsetSpace TargetOffsetSpace { get; }
         public MotionWarpRotationMode RotationMode { get; }
@@ -1951,28 +1978,8 @@ namespace BTSMTL.Timeline.Runtime
                                 segment.CurrentTime <= motionWarpClip.StartTime ||
                                 segment.PreviousTime >= motionWarpClip.EndTime)
                                 continue;
-                            float duration = Mathf.Max(0.0001f, motionWarpClip.DurationTime.ToSingle());
-                            float previousNormalized = Mathf.Clamp01(
-                                (segment.PreviousTime - motionWarpClip.StartTime).ToSingle() / duration);
-                            float normalized = Mathf.Clamp01(
-                                (segment.CurrentTime - motionWarpClip.StartTime).ToSingle() / duration);
-                            motionWarps.Add(new TimelineRuntimeMotionWarpRequest(
-                                motionWarpClip.AuthoringId,
-                                motionWarpClip.SourceMotionClipId,
-                                segment.CurrentTime,
-                                segment.Cycle,
-                                previousNormalized,
-                                normalized,
-                                motionWarpClip.TranslationMode,
-                                motionWarpClip.TargetOffsetSpace,
-                                motionWarpClip.RotationMode,
-                                motionWarpClip.RotationMethod,
-                                motionWarpClip.TargetPlanarOffset,
-                                motionWarpClip.TargetYawOffsetDegrees,
-                                motionWarpClip.MaxTotalPositionCorrection,
-                                motionWarpClip.MaxTotalYawCorrectionDegrees,
-                                motionWarpClip.MaximumYawRateDegreesPerSecond,
-                                motionWarpClip.LimitPolicy));
+                            motionWarps.Add(motionSampling.SampleWarp(
+                                motionWarpClip.AuthoringId, segment.PreviousTime, segment.CurrentTime, segment.Cycle));
                         }
                     }
                 }

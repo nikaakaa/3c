@@ -395,7 +395,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Value = value;
         }
 
-        internal CharacterPoseHistoryReadView Value { get; }
+        internal CharacterPoseHistoryReadView Value { get; private set; }
+
+        internal static CharacterPoseNativeHistoryValue Reuse(
+            CharacterPoseNativeHistoryValue value,
+            PoseNodeId producerNodeId,
+            ulong completionIdentity,
+            CharacterPoseHistoryReadView history)
+        {
+            if (value == null)
+                return new CharacterPoseNativeHistoryValue(
+                    producerNodeId,
+                    completionIdentity,
+                    history);
+            value.Refresh(producerNodeId, completionIdentity, history);
+            return value;
+        }
+
+        void Refresh(
+            PoseNodeId producerNodeId,
+            ulong completionIdentity,
+            CharacterPoseHistoryReadView history)
+        {
+            if (!producerNodeId.IsValid || completionIdentity == 0)
+                throw new ArgumentException("Pose native port value identity is invalid.");
+            if (!history.IsValid)
+                throw new ArgumentException("Pose native history value is invalid.");
+            SetIdentity(producerNodeId, completionIdentity);
+            Value = history;
+        }
     }
 
     internal sealed class CharacterPoseNativeTrajectoryValue : CharacterPoseNativePortValue

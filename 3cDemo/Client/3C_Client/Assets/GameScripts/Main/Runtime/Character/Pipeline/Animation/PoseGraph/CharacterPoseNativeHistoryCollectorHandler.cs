@@ -108,8 +108,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!m_HistoryView.IsValid)
                 throw new InvalidOperationException(
                     $"History Collector '{NodeId}' returned an invalid history view.");
-            m_Output = null;
-            m_HistoryOutput = null;
             m_WriteBinding = default;
         }
 
@@ -129,7 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireFrame();
             if (portId.Value == "history.pose")
             {
-                m_HistoryOutput ??= new CharacterPoseNativeHistoryValue(
+                m_HistoryOutput = CharacterPoseNativeHistoryValue.Reuse(
+                    m_HistoryOutput,
                     NodeId,
                     runtime.CurrentLineage.CompletionIdentity,
                     m_HistoryView);
@@ -138,7 +137,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "pose.local")
                 throw new InvalidOperationException(
                     $"History Collector '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             CharacterPoseNativeLocalPoseValue inputValue =
                 runtime.ReadInput<CharacterPoseNativeLocalPoseValue>(
@@ -164,7 +164,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 poses[bone] = input.DenseLocalPoses[bone];
             CharacterPoseNativePoseReadBinding output =
                 new CharacterPoseNativePoseReadBinding(in m_WriteBinding);
-            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
             return m_Output;
         }
 
@@ -224,7 +227,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"History Collector '{NodeId}' has no pending output.");
             CharacterPoseNativePoseReadBinding outputValue = m_Output.Native;
             m_Source.CommitFrame(runtime, in lineage, in outputValue);
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == lineage.CompletionIdentity)
                 m_CommittedPageIndex = m_PageIndex;
             ClearFrame();
         }
@@ -280,8 +284,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_FrameOpen = false;
             m_HistoryView = default;
-            m_Output = null;
-            m_HistoryOutput = null;
             m_WriteBinding = default;
             m_PageIndex = -1;
         }

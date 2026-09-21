@@ -2216,6 +2216,15 @@
 - 不改变 source Evaluate/Commit 顺序、输入布局检查、Native 双页复制、CompletedAt/availability 校验和提交页索引；本步只删除稳态托管包装分配。
 - 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
 
+## 2026-09-21 Inertialization 与 History Collector 输出包装复用
+
+对应 tasks.md 的 7.44。
+
+- Inertialization 原先每次 Native Local 输出完成后创建 wrapper；History Collector 原先同时每帧创建 Local Pose wrapper 和 History wrapper。
+- 两个节点现在复用 `CharacterPoseNativeLocalPoseValue`，History Collector 额外复用 `CharacterPoseNativeHistoryValue`；所有更新先通过 identity、Native binding 和 history view 校验。
+- 不改变 inertialization 的 pending/committed 状态与数组交换、History source Begin/Prepare/Commit/Discard、Native 双页和提交页索引；只删除稳态托管包装分配。
+- 当前完整编译上一轮已通过，未新增测试、未操作共享 Unity、未做运行时分配采样。
+
 ## 2026-09-21 Parameter Resolve、State Machine、Root Orientation Warp 输出包装复用
 
 对应 tasks.md 的 7.43。

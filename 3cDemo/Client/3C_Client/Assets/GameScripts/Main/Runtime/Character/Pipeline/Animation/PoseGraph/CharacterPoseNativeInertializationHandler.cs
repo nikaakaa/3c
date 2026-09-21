@@ -220,7 +220,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PendingLeftFoot = m_CommittedLeftFoot;
             m_PendingRightFoot = m_CommittedRightFoot;
             m_PendingHasFootFeatures = m_CommittedHasFootFeatures;
-            m_Output = null;
             m_WriteBinding = default;
         }
 
@@ -240,7 +239,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (portId.Value != "result")
                 throw new InvalidOperationException(
                     $"Inertialization '{NodeId}' has no output '{portId}'.");
-            if (m_Output != null)
+            if (m_Output != null &&
+                m_Output.CompletionIdentity == runtime.CurrentLineage.CompletionIdentity)
                 return m_Output;
             RequireFrame();
             CharacterPoseNativeLocalPoseValue inputValue =
@@ -271,7 +271,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseNativePoseReadBinding(
                     in m_WriteBinding,
                     CharacterPoseSpace.Local);
-            m_Output = new CharacterPoseNativeLocalPoseValue(NodeId, in output);
+            m_Output = CharacterPoseNativeLocalPoseValue.Reuse(
+                m_Output,
+                NodeId,
+                in output);
             return m_Output;
         }
 
@@ -727,7 +730,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_FrameOpen = false;
             m_PageIndex = -1;
-            m_Output = null;
             m_WriteBinding = default;
         }
 

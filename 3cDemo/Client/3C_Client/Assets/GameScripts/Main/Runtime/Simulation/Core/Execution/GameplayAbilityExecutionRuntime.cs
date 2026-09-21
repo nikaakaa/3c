@@ -228,10 +228,12 @@ namespace ThirdPersonSimulation
         readonly IGameplayAbilityExecutionStorage<TValue> m_Storage;
         GameplayAbilityExecutionAggregate<TValue> m_States;
         GameplayAbilityExecutionFrame<TValue> m_Active;
+        readonly Scope m_Scope;
 
         public GameplayAbilityExecutionManager(IGameplayAbilityExecutionStorage<TValue> storage)
         {
             m_Storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            m_Scope = new Scope(this);
         }
 
         public void BeginEvaluation()
@@ -276,7 +278,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException($"Skill execution frame does not match Action instance '{identity.ActionInstanceId}'.");
             }
             m_Active = frame;
-            return new Scope(this, frame);
+            return m_Scope.Begin(frame);
         }
 
         public bool Remove(ulong actionInstanceId)
@@ -368,13 +370,19 @@ namespace ThirdPersonSimulation
         sealed class Scope : IDisposable
         {
             readonly GameplayAbilityExecutionManager<TValue> m_Owner;
-            readonly GameplayAbilityExecutionFrame<TValue> m_Frame;
+            GameplayAbilityExecutionFrame<TValue> m_Frame;
             bool m_Disposed;
 
-            public Scope(GameplayAbilityExecutionManager<TValue> owner, GameplayAbilityExecutionFrame<TValue> frame)
+            public Scope(GameplayAbilityExecutionManager<TValue> owner)
             {
                 m_Owner = owner;
+            }
+
+            public IDisposable Begin(GameplayAbilityExecutionFrame<TValue> frame)
+            {
                 m_Frame = frame;
+                m_Disposed = false;
+                return this;
             }
 
             public void Dispose()
@@ -383,6 +391,7 @@ namespace ThirdPersonSimulation
                     return;
                 m_Disposed = true;
                 m_Owner.Exit(m_Frame);
+                m_Frame = null;
             }
         }
     }

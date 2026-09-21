@@ -3931,3 +3931,11 @@
 - Fixed 和 Float32 Ability Execution Frame 的 `DiagnosticSequence` 从每次 invocation 新建的 class 改为 struct，并作为 `TraceSink` 的实例字段保存；`Begin` 仍在同一存储槽重置序号，`Next` 继续递增并生成 Trace header。
 - `TraceSink` 的 sequence 字段从 readonly 改为普通字段，避免 mutable struct 方法写入防御副本；Frame、ActorId、tick、generation 解析、诊断开关和记录顺序不变。
 - 每个 invocation 的 Diagnostic Sequence class 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧 class 与 readonly 字段残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Skill execution manager scope 收口
+
+对应 tasks.md 的 5.5，新增 5.219 作为独立小步；5.5 保持未勾选。
+
+- `GameplayAbilityExecutionManager` 的 Scope 从每次 `Enter` 新建改为 manager 构造期创建并长期持有；Fixed 和 Float32 Action State Store 共用同一条通用链路。
+- manager 仍禁止嵌套 Skill execution frame：已有 active frame 时 `Enter` 报错，Scope `Dispose` 调用原 `Exit`、校验 frame、处理 generation 并清空 active。重复 Dispose、跨 evaluation 残留和 unbalanced 状态语义不变。
+- 每次进入 Skill execution 的 Scope class 分配删除；外层 Trace/Skill scope 与 execution frame 生命周期不在本步。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

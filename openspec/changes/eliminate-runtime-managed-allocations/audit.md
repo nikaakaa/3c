@@ -2587,3 +2587,12 @@
 - Endpoint 现在按绑定地址族准备一只长寿命 scratch，接收线程每轮复用；真实来源地址仍在有效 packet 入队前 `Clone`，`RollbackReceivedDatagram` 的所有权边界不变。
 - 每条实际接收记录的 endpoint clone、packet、payload、reassembly 和接收队列对象仍独立分配。无效包或超时轮询不产生新的 endpoint scratch。
 - `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 完整依赖构建已恢复，使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚重组 workspace 池化
+
+对应 tasks.md 的 5.4，本步处理 Datagram Channel 的 FragmentAssembly wrapper 和分片槽位数组，整项保持未勾选。
+
+- Channel 原先每条进入重组的可靠消息都新建 `FragmentAssembly` 和按本条分片数的 `RollbackDatagramPacket[]`；重组完成后整个 wrapper 随即丢弃。
+- Channel 现在按正式 `MaximumQueuedMessages` 持有 reassembly 池。每个 wrapper 固定持有 `MaximumFragmentsPerMessage` 个槽位，实际 fragment count、payload 总长、已收数量和字节数单独维护；首次租用创建，完成后清空 packet 引用并回池。
+- 只有 Channel 内部的重组包装和槽位数组被复用。完整消息仍先复制到独立 `byte[]` 再返回 wrapper；接收 packet、packet payload、协议 envelope 和 payload 对象继续独立分配，不提前复用。重组中途抛错时 wrapper 仍留在现有 reassembly 表中，不进入池。
+- `ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

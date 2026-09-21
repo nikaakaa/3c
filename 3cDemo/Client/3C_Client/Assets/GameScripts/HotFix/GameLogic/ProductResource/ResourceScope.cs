@@ -9,7 +9,6 @@ namespace GameLogic.ProductResource
         private readonly ProductResourceRuntime _runtime;
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private readonly HashSet<long> _leaseIds = new HashSet<long>();
-        private readonly HashSet<long> _instanceIds = new HashSet<long>();
         private long[] _disposeBuffer;
 
         internal ResourceScope(ProductResourceRuntime runtime, ResourceScopeId id, ResourceScopeKind kind, string name)
@@ -32,8 +31,6 @@ namespace GameLogic.ProductResource
         public CancellationToken CancellationToken => _cancellation.Token;
 
         public int LeaseCount => _leaseIds.Count;
-
-        public int LiveInstanceCount => _instanceIds.Count;
 
         public void Dispose()
         {
@@ -60,7 +57,6 @@ namespace GameLogic.ProductResource
         {
             State = ResourceScopeState.Disposed;
             _leaseIds.Clear();
-            _instanceIds.Clear();
             _cancellation.Dispose();
         }
 
@@ -69,19 +65,9 @@ namespace GameLogic.ProductResource
             return State == ResourceScopeState.Active && _leaseIds.Add(leaseId);
         }
 
-        internal bool TryRegisterInstance(long instanceId)
-        {
-            return State == ResourceScopeState.Active && _instanceIds.Add(instanceId);
-        }
-
         internal void RemoveLease(long leaseId)
         {
             _leaseIds.Remove(leaseId);
-        }
-
-        internal void RemoveInstance(long instanceId)
-        {
-            _instanceIds.Remove(instanceId);
         }
 
         internal void CopyLeaseIdsForDispose(out int count)
@@ -89,14 +75,7 @@ namespace GameLogic.ProductResource
             CopyIds(_leaseIds, ref _disposeBuffer, out count);
         }
 
-        internal void CopyInstanceIdsForDispose(out int count)
-        {
-            CopyIds(_instanceIds, ref _disposeBuffer, out count);
-        }
-
         internal long PeekLeaseId(int index) => _disposeBuffer[index];
-
-        internal long PeekInstanceId(int index) => _disposeBuffer[index];
 
         private static void CopyIds(HashSet<long> ids, ref long[] buffer, out int count)
         {

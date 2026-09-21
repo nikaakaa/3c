@@ -18,13 +18,6 @@ namespace GameLogic.ProductResource
             public Object Asset;
         }
 
-        private sealed class InstanceRecord
-        {
-            public ResourceScope Scope;
-            public ResourceIdentity Identity;
-            public GameObject Instance;
-        }
-
         private readonly IResourceModule _resourceModule;
         private readonly IObjectPoolModule _objectPoolModule;
         private readonly List<ObjectPoolBase> _poolMetricsBuffer;
@@ -32,21 +25,18 @@ namespace GameLogic.ProductResource
         private readonly int _historyCapacity;
         private readonly Dictionary<ResourceScopeId, ResourceScope> _scopes = new Dictionary<ResourceScopeId, ResourceScope>();
         private readonly Dictionary<long, LeaseRecord> _leases = new Dictionary<long, LeaseRecord>();
-        private readonly Dictionary<long, InstanceRecord> _instances = new Dictionary<long, InstanceRecord>();
         private readonly Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>> _inFlight = new Dictionary<ResourceIdentity, UniTaskCompletionSource<Object>>();
         private readonly HashSet<ResourceIdentity> _knownPhysicalAssets = new HashSet<ResourceIdentity>();
         private readonly Dictionary<ResourceIdentity, int> _ownedReferenceCounts = new Dictionary<ResourceIdentity, int>();
         private readonly Dictionary<ResourceIdentity, int> _pendingAcquireCounts = new Dictionary<ResourceIdentity, int>();
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
         private readonly Stack<LeaseRecord> _leaseRecordPool = new Stack<LeaseRecord>();
-        private readonly Stack<InstanceRecord> _instanceRecordPool = new Stack<InstanceRecord>();
         private readonly List<ResourceIdentity> _unownedIdentityScratch = new List<ResourceIdentity>();
         private readonly BoundedHistory<ResourceRuntimeSnapshot> _history;
         private readonly CancellationTokenSource _runtimeCancellation = new CancellationTokenSource();
 
         private long _nextScopeId;
         private long _nextLeaseId;
-        private long _nextInstanceId;
         private long _snapshotSequence;
         private long _logicalLoadCount;
         private long _physicalLoadCount;
@@ -150,55 +140,6 @@ namespace GameLogic.ProductResource
             return AcquireAsync(scope, location, typeof(T), cancellationToken);
         }
 
-        public async UniTask<ResourceInstanceLease> InstantiateAsync(ResourceScope scope, string location, Transform parent = null, CancellationToken cancellationToken = default)
-        {
-            ThrowIfDisposed();
-            ValidateActiveScope(scope);
-            var identity = new ResourceIdentity(_packageName, location, typeof(GameObject));
-            _logicalLoadCount++;
-            AddPendingAcquire(identity);
-            PublishSnapshot();
-
-            try
-            {
-                using (CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(scope.CancellationToken, cancellationToken, _runtimeCancellation.Token))
-                {
-                    bool knownPhysicalReuse = _knownPhysicalAssets.Contains(identity);
-                    await EnsurePhysicalAssetAsync(identity).AttachExternalCancellation(linked.Token);
-                    if (knownPhysicalReuse)
-                    {
-                        _cacheHitCount++;
-                    }
-                    GameObject instance = await _resourceModule.LoadGameObjectAsync(identity.Location, parent, linked.Token, identity.PackageName);
-                    if (!instance)
-                    {
-                        throw new InvalidOperationException($"TEngine failed to instantiate prefab '{identity}'.");
-                    }
-
-                    long instanceId = ++_nextInstanceId;
-                    if (!scope.TryRegisterInstance(instanceId))
-                    {
-                        Object.Destroy(instance);
-                        throw new OperationCanceledException($"Resource scope '{scope.Name}' closed before instance commit.", linked.Token);
-                    }
-
-                    InstanceRecord instanceRecord = RentInstanceRecord();
-                    instanceRecord.Scope = scope;
-                    instanceRecord.Identity = identity;
-                    instanceRecord.Instance = instance;
-                    _instances.Add(instanceId, instanceRecord);
-                    AddOwnedReference(identity);
-                    var lease = new ResourceInstanceLease(this, instanceId, scope.Id, identity, instance);
-                    PublishSnapshot();
-                    return lease;
-                }
-            }
-            finally
-            {
-                RemovePendingAcquire(identity);
-            }
-        }
-
         public bool ValidateSceneLocation(string location)
         {
             ThrowIfDisposed();
@@ -284,12 +225,6 @@ namespace GameLogic.ProductResource
                 return;
             }
 
-            scope.CopyInstanceIdsForDispose(out int instanceCount);
-            for (int index = 0; index < instanceCount; index++)
-            {
-                ReleaseInstance(scope.PeekInstanceId(index));
-            }
-
             scope.CopyLeaseIdsForDispose(out int leaseCount);
             for (int index = 0; index < leaseCount; index++)
             {
@@ -317,31 +252,6 @@ namespace GameLogic.ProductResource
             RemoveOwnedReference(record.Identity);
             _resourceModule.UnloadAsset(record.Asset);
             ReturnLeaseRecord(record);
-            if (!_disposed)
-            {
-                PublishSnapshot();
-            }
-
-            return true;
-        }
-
-        internal bool ReleaseInstance(long instanceId)
-        {
-            if (!_instances.TryGetValue(instanceId, out InstanceRecord record))
-            {
-                RecordDuplicateDispose();
-                return false;
-            }
-
-            _instances.Remove(instanceId);
-            record.Scope.RemoveInstance(instanceId);
-            RemoveOwnedReference(record.Identity);
-            if (record.Instance)
-            {
-                Object.Destroy(record.Instance);
-            }
-
-            ReturnInstanceRecord(record);
             if (!_disposed)
             {
                 PublishSnapshot();
@@ -393,19 +303,6 @@ namespace GameLogic.ProductResource
             record.Identity = default;
             record.Asset = null;
             _leaseRecordPool.Push(record);
-        }
-
-        private InstanceRecord RentInstanceRecord()
-        {
-            return _instanceRecordPool.Count > 0 ? _instanceRecordPool.Pop() : new InstanceRecord();
-        }
-
-        private void ReturnInstanceRecord(InstanceRecord record)
-        {
-            record.Scope = null;
-            record.Identity = default;
-            record.Instance = null;
-            _instanceRecordPool.Push(record);
         }
 
         private void ValidateActiveScope(ResourceScope scope)
@@ -557,7 +454,7 @@ namespace GameLogic.ProductResource
             int scopeIndex = 0;
             foreach (ResourceScope scope in _scopes.Values)
             {
-                scopeSnapshots[scopeIndex++] = new ResourceScopeSnapshot(scope.Id, scope.Kind, scope.Name, scope.State, scope.LeaseCount, scope.LiveInstanceCount);
+                scopeSnapshots[scopeIndex++] = new ResourceScopeSnapshot(scope.Id, scope.Kind, scope.Name, scope.State, scope.LeaseCount);
             }
             Array.Sort(scopeSnapshots, (left, right) => left.Id.Value.CompareTo(right.Id.Value));
 
@@ -583,7 +480,6 @@ namespace GameLogic.ProductResource
                 _cacheHitCount,
                 _duplicateDisposeCount,
                 _leases.Count,
-                _instances.Count,
                 _inFlight.Count,
                 poolCount,
                 assetPoolObjects,

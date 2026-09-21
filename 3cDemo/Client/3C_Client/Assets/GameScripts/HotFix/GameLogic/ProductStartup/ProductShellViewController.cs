@@ -400,11 +400,11 @@ namespace GameLogic.ProductStartup
             {
                 _resourceDiagnostics.AppendLine("RESOURCE");
                 _resourceDiagnostics.Append("Logical ").Append(resources.LogicalLoadCount).Append("  Physical preflight ").Append(resources.PhysicalLoadCount).Append("  Join ").Append(resources.InFlightJoinCount).Append("  Known physical reuse ").Append(resources.CacheHitCount).AppendLine();
-                _resourceDiagnostics.Append("Leases ").Append(resources.ActiveLeaseCount).Append("  Instances ").Append(resources.LiveInstanceCount).Append("  TEngine pool ").Append(resources.TEngineAssetPoolObjectCount).Append(" (free ").Append(resources.TEngineAssetPoolReleasableCount).Append(')').AppendLine();
+                _resourceDiagnostics.Append("Leases ").Append(resources.ActiveLeaseCount).Append("  TEngine pool ").Append(resources.TEngineAssetPoolObjectCount).Append(" (free ").Append(resources.TEngineAssetPoolReleasableCount).Append(')').AppendLine();
                 _resourceDiagnostics.Append("Package ").Append(resources.PackageName).Append(" @ ").Append(resources.PackageVersion);
                 foreach (ResourceScopeSnapshot scope in resources.Scopes)
                 {
-                    _resourceDiagnostics.AppendLine().Append('#').Append(scope.Id.Value).Append(' ').Append(scope.Kind).Append(' ').Append(scope.State).Append(" L").Append(scope.LeaseCount).Append(" I").Append(scope.LiveInstanceCount);
+                    _resourceDiagnostics.AppendLine().Append('#').Append(scope.Id.Value).Append(' ').Append(scope.Kind).Append(' ').Append(scope.State).Append(" L").Append(scope.LeaseCount);
                 }
             }
 

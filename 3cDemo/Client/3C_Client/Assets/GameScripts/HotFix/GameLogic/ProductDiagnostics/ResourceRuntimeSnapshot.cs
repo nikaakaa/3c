@@ -6,14 +6,13 @@ namespace GameLogic.ProductDiagnostics
 {
     public sealed class ResourceScopeSnapshot
     {
-        public ResourceScopeSnapshot(ResourceScopeId id, ResourceScopeKind kind, string name, ResourceScopeState state, int leaseCount, int liveInstanceCount)
+        public ResourceScopeSnapshot(ResourceScopeId id, ResourceScopeKind kind, string name, ResourceScopeState state, int leaseCount)
         {
             Id = id;
             Kind = kind;
             Name = name;
             State = state;
             LeaseCount = leaseCount;
-            LiveInstanceCount = liveInstanceCount;
         }
 
         public ResourceScopeId Id { get; }
@@ -21,7 +20,6 @@ namespace GameLogic.ProductDiagnostics
         public string Name { get; }
         public ResourceScopeState State { get; }
         public int LeaseCount { get; }
-        public int LiveInstanceCount { get; }
     }
 
     public sealed class ResourceRuntimeSnapshot
@@ -35,7 +33,6 @@ namespace GameLogic.ProductDiagnostics
             long cacheHitCount,
             long duplicateDisposeCount,
             int activeLeaseCount,
-            int liveInstanceCount,
             int inFlightCount,
             int tEnginePoolCount,
             int tEngineAssetPoolObjectCount,
@@ -54,7 +51,6 @@ namespace GameLogic.ProductDiagnostics
             CacheHitCount = cacheHitCount;
             DuplicateDisposeCount = duplicateDisposeCount;
             ActiveLeaseCount = activeLeaseCount;
-            LiveInstanceCount = liveInstanceCount;
             InFlightCount = inFlightCount;
             TEnginePoolCount = tEnginePoolCount;
             TEngineAssetPoolObjectCount = tEngineAssetPoolObjectCount;
@@ -74,7 +70,6 @@ namespace GameLogic.ProductDiagnostics
         public long CacheHitCount { get; }
         public long DuplicateDisposeCount { get; }
         public int ActiveLeaseCount { get; }
-        public int LiveInstanceCount { get; }
         public int InFlightCount { get; }
         public int TEnginePoolCount { get; }
         public int TEngineAssetPoolObjectCount { get; }

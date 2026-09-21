@@ -7,7 +7,7 @@ namespace GameLogic.ProductDiagnostics
 {
     public sealed class MemoryRuntimeSnapshot
     {
-        public MemoryRuntimeSnapshot(DateTimeOffset capturedAt, bool countersValid, long totalUsedBytes, long totalReservedBytes, long gcUsedBytes, long gcReservedBytes, long textureBytes, long meshBytes, int activeScopeCount, int activeLeaseCount, int liveInstanceCount, string budgetName, long budgetBytes, string configurationError)
+        public MemoryRuntimeSnapshot(DateTimeOffset capturedAt, bool countersValid, long totalUsedBytes, long totalReservedBytes, long gcUsedBytes, long gcReservedBytes, long textureBytes, long meshBytes, int activeScopeCount, int activeLeaseCount, string budgetName, long budgetBytes, string configurationError)
         {
             CapturedAt = capturedAt;
             CountersValid = countersValid;
@@ -19,7 +19,6 @@ namespace GameLogic.ProductDiagnostics
             MeshBytes = meshBytes;
             ActiveScopeCount = activeScopeCount;
             ActiveLeaseCount = activeLeaseCount;
-            LiveInstanceCount = liveInstanceCount;
             BudgetName = budgetName;
             BudgetBytes = budgetBytes;
             ConfigurationError = configurationError;
@@ -35,7 +34,6 @@ namespace GameLogic.ProductDiagnostics
         public long MeshBytes { get; }
         public int ActiveScopeCount { get; }
         public int ActiveLeaseCount { get; }
-        public int LiveInstanceCount { get; }
         public string BudgetName { get; }
         public long BudgetBytes { get; }
         public string ConfigurationError { get; }
@@ -102,7 +100,6 @@ namespace GameLogic.ProductDiagnostics
                 Read(_mesh),
                 resources.Scopes.Count,
                 resources.ActiveLeaseCount,
-                resources.LiveInstanceCount,
                 budgetName,
                 budget,
                 error);

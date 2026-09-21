@@ -2722,6 +2722,15 @@
 - 既有 key 的 LRU 移动、满员时最旧节点替换、淘汰计数、版本推进、变化队列和读取独立数组语义不变。节点池只属于当前 `RuntimeLiveStateStore`，不是全局池；字典和变化队列自身容量、首次填充和事件 payload 仍在后续边界处理。
 - `BTSMTL.Diagnostics.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做分支切换或 Player 分配采样。
 
+## 2026-09-21 删除无调用方实例租约链
+
+对应 tasks.md 的 6.2，新增 6.15 作为独立小步；6.2 保持未勾选。
+
+- 全项目源码搜索确认 `ResourceInstanceLease` 没有消费者，`ProductResourceRuntime.InstantiateAsync` 也没有调用方；这条链路只会为从未使用的实例租约分配 public class、内部 InstanceRecord 和记录池。现在按正式边界整体删除实例入口、lease class、scope 的 instance id 集合、runtime 的 instance 字典和归还栈，不保留恒为空的第二个所有权链。
+- `ResourceScope` 只保留实际运行的 lease 注册和退出复制；`ResourceRuntimeSnapshot`、`MemoryRuntimeSnapshot` 删除 `LiveInstanceCount`，Product Shell 诊断也删除全局与每个 scope 的 instance 输出。快照数据不再把无调用方的空容量报告成运行指标。
+- `PreloadItem.Prefab` 仍走 `AcquireAsync` 加载 GameObject 资产并交给 scope 持有，这是资产租约，不是实例租约；TEngine 的 GameObject 加载接口属于第三方正式 API，不在本轮删除范围。Asset lease、加载异步状态机、linked cancellation source 和 TEngine 生命周期仍在 6.2 后续处理。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。生成工程仍缓存已删除文件名，为不修改 Unity 生成工程或刷新 Editor，验证时临时放一只空源文件满足旧 include，构建后立即删除；业务代码和产物不依赖该占位。未新增测试、未操作共享 Unity、未做资源加载或 Player 分配采样。
+
 ## 2026-09-21 渲染材质块构造期准备
 
 对应 tasks.md 的 6.2、6.3，新增 6.14；确认既有 6.3 链路后关闭 6.3。

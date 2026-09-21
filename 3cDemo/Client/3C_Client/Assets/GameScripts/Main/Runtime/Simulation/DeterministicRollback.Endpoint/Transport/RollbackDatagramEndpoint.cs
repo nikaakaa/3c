@@ -25,6 +25,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         readonly Thread m_ReceiveThread;
         readonly ConcurrentQueue<RollbackReceivedDatagram> m_ReceiveQueue = new ConcurrentQueue<RollbackReceivedDatagram>();
         readonly ConcurrentQueue<PendingSend> m_SendQueue = new ConcurrentQueue<PendingSend>();
+        readonly ConcurrentStack<byte[]> m_SendBuffers = new ConcurrentStack<byte[]>();
+        readonly ThreadLocal<CanonicalWriter> m_SendWriter;
         readonly int m_MaximumDatagramBytes;
         readonly int m_QueueCapacity;
         int m_ReceiveCount;
@@ -47,6 +49,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new ArgumentOutOfRangeException(nameof(maximumDatagramBytes));
             m_MaximumDatagramBytes = maximumDatagramBytes;
             m_QueueCapacity = queueCapacity;
+            m_SendWriter = new ThreadLocal<CanonicalWriter>(() => new CanonicalWriter(new byte[m_MaximumDatagramBytes]));
             m_Socket = new Socket(localEndPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp)
             {
                 ReceiveTimeout = 250,
@@ -78,7 +81,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 throw new ArgumentNullException(nameof(packet));
             if (remoteEndPoint == null)
                 throw new ArgumentNullException(nameof(remoteEndPoint));
-            byte[] bytes = RollbackDatagramCodec.Write(packet, m_MaximumDatagramBytes);
+            CanonicalWriter writer = m_SendWriter.Value;
+            int length = RollbackDatagramCodec.Write(packet, writer, m_MaximumDatagramBytes);
+            byte[] bytes = RentSendBuffer();
+            writer.WrittenSpan.CopyTo(bytes);
             if (Volatile.Read(ref m_SendCount) >= m_QueueCapacity)
                 PumpSend();
             int sendDepth = Interlocked.Increment(ref m_SendCount);
@@ -89,7 +95,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 Fail(new InvalidOperationException("Rollback datagram send queue capacity is exhausted."));
                 ThrowIfUnavailable();
             }
-            m_SendQueue.Enqueue(new PendingSend(bytes, Clone(remoteEndPoint)));
+            m_SendQueue.Enqueue(new PendingSend(bytes, length, Clone(remoteEndPoint)));
         }
 
         public void PumpSend()
@@ -100,9 +106,17 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 Interlocked.Decrement(ref m_SendCount);
                 try
                 {
-                    int sent = m_Socket.SendTo(pending.Bytes, pending.RemoteEndPoint);
-                    if (sent != pending.Bytes.Length)
-                        throw new IOException($"Rollback datagram wrote '{sent}' of '{pending.Bytes.Length}' bytes.");
+                    int sent;
+                    try
+                    {
+                        sent = m_Socket.SendTo(pending.Bytes, 0, pending.Length, SocketFlags.None, pending.RemoteEndPoint);
+                    }
+                    finally
+                    {
+                        ReturnSendBuffer(pending.Bytes);
+                    }
+                    if (sent != pending.Length)
+                        throw new IOException($"Rollback datagram wrote '{sent}' of '{pending.Length}' bytes.");
                     Interlocked.Increment(ref m_TotalSentDatagrams);
                 }
                 catch (Exception exception) when (exception is SocketException || exception is ObjectDisposedException || exception is IOException)
@@ -204,15 +218,30 @@ namespace ThirdPersonSimulation.DeterministicRollback
             while (m_ReceiveQueue.TryDequeue(out _))
             {
             }
-            while (m_SendQueue.TryDequeue(out _))
+            while (m_SendQueue.TryDequeue(out PendingSend pending))
             {
+                ReturnSendBuffer(pending.Bytes);
             }
+            m_SendWriter.Dispose();
             Interlocked.Exchange(ref m_ReceiveCount, 0);
             Interlocked.Exchange(ref m_SendCount, 0);
             m_Socket.Dispose();
         }
 
         static IPEndPoint Clone(IPEndPoint value) => new IPEndPoint(value.Address, value.Port);
+
+        byte[] RentSendBuffer()
+        {
+            if (m_SendBuffers.TryPop(out byte[] buffer))
+                return buffer;
+            return new byte[m_MaximumDatagramBytes];
+        }
+
+        void ReturnSendBuffer(byte[] buffer)
+        {
+            if (m_SendBuffers.Count < m_QueueCapacity)
+                m_SendBuffers.Push(buffer);
+        }
 
         static void UpdateMaximum(ref int maximum, int value)
         {
@@ -228,13 +257,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         readonly struct PendingSend
         {
-            public PendingSend(byte[] bytes, IPEndPoint remoteEndPoint)
+            public PendingSend(byte[] bytes, int length, IPEndPoint remoteEndPoint)
             {
                 Bytes = bytes;
+                Length = length;
                 RemoteEndPoint = remoteEndPoint;
             }
 
             public byte[] Bytes { get; }
+            public int Length { get; }
             public IPEndPoint RemoteEndPoint { get; }
         }
     }

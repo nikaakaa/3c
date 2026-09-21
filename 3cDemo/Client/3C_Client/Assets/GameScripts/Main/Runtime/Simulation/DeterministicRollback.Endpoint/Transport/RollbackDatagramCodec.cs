@@ -181,11 +181,13 @@ namespace ThirdPersonSimulation.DeterministicRollback
             return capacity;
         }
 
-        public static byte[] Write(RollbackDatagramPacket packet, int maximumDatagramBytes)
+        public static int Write(RollbackDatagramPacket packet, CanonicalWriter writer, int maximumDatagramBytes)
         {
             if (packet == null)
                 throw new ArgumentNullException(nameof(packet));
-            using var writer = new CanonicalWriter();
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
+            writer.Reset();
             WriteHeader(
                 writer,
                 packet.Kind,
@@ -198,10 +200,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 packet.FragmentCount,
                 packet.TotalPayloadBytes);
             writer.WriteBytes(packet.Payload);
-            byte[] result = writer.ToArray();
-            if (result.Length > maximumDatagramBytes)
-                throw new InvalidDataException($"Rollback datagram '{result.Length}' exceeds MTU budget '{maximumDatagramBytes}'.");
-            return result;
+            int length = checked((int)writer.Length);
+            if (length > maximumDatagramBytes)
+                throw new InvalidDataException($"Rollback datagram '{length}' exceeds MTU budget '{maximumDatagramBytes}'.");
+            return length;
         }
 
         public static RollbackDatagramPacket Read(ArraySegment<byte> bytes, int maximumDatagramBytes)

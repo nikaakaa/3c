@@ -356,6 +356,7 @@
 - [x] 5.93 Prediction Evidence Drain 按 Module 生命周期复用 baseline／body／sample／event workspace，最终 Observation Batch 继续独立复制排序
 - [x] 5.94 Rollback reliable pending 按 Channel 生命周期池化 wrapper 和最大分片槽位数组，ACK 后清空回池；不可靠路径、packet 本体、payload 和 Endpoint 发送字节仍在后续小步处理
 - [x] 5.95 Rollback reliable pending 的 packet 本体和最大分片 payload 缓冲随 wrapper 复用，Reset 显式携带实际 payload 长度；接收重组、不可靠消息和 ACK packet 继续独立分配
+- [x] 5.96 Rollback Datagram Endpoint 用线程复用 bounded writer 和容量内发送缓冲编码入队，PendingSend 携带实际长度并在发送或 Dispose 后回池；删除无调用方的 byte[] Write 入口
 
 ## 6. UI、资源、渲染和生命周期
 

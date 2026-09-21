@@ -2559,3 +2559,13 @@
 - Reliable pending wrapper 持有自己的 packet 对象和按单分片预算准备的 payload 缓冲。首次发送补建 packet，后续重发只更新身份、元数据和有效 payload；ACK 后释放 packet 引用并回池。Endpoint 入队仍在同步路径复制出独立发送 `byte[]`，不会在队列里别名 pending payload。
 - 接收 `Read` 生成的 packet、重组持有 packet、不可靠消息和 ACK packet 继续独立分配；本步不改变 wire 格式、校验错误、ACK 顺序或重发时间。
 - Endpoint 工程完整构建仍受并行 Timeline 的 `FixedVector3` 缺失阻断。`dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译 Endpoint 成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 回滚 Endpoint 发送编码缓冲复用
+
+对应 tasks.md 的 5.4，本步处理 Datagram Endpoint 的编码 writer、发送字节和发送队列记录长度，整项保持未勾选。
+
+- `RollbackDatagramEndpoint.EnqueueSend` 原先每个 packet 新建默认 `CanonicalWriter`，再 `ToArray` 生成最终 `byte[]`；发送完成后这份字节立即失去消费者。
+- `RollbackDatagramCodec.Write` 删除返回 `byte[]` 的旧入口，改为写入调用方 bounded writer、返回实际长度；当前正式调用只有 Endpoint。MTU 检查、字段顺序、payload 读取和异常语义不变。
+- Endpoint 按线程持有 `MaximumDatagramBytes` 容量的 writer，发送缓冲用 `ConcurrentStack` 在正式 `queueCapacity` 内复用。编码结果复制到租用缓冲，`PendingSend` 记录实际长度；socket 同步发送、容量失败和 Dispose 清队后都归还缓冲。
+- 稳态同线程发送不再分配 writer 本体和最终 `byte[]`。首次触达线程、首次补齐缓冲、`ConcurrentQueue` 内部分段和 `IPEndPoint.Clone` 仍在；接收路径 packet 不属于本步。
+- Endpoint 工程完整构建仍受并行 Timeline 的 `FixedVector3` 缺失阻断。`dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译 Endpoint 成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。

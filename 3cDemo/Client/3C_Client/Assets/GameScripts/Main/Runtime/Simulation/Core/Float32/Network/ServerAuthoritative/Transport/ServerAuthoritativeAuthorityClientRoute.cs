@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using ThirdPersonSimulation;
 
@@ -11,8 +10,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         readonly CanonicalInputSample[] m_Inputs;
         readonly ulong[] m_InputTargetTicks;
         int m_InputCount;
-        readonly SortedDictionary<ulong, NetworkCheckpoint> m_Sent = new SortedDictionary<ulong, NetworkCheckpoint>();
         readonly ulong[] m_SentSequenceOrder;
+        readonly NetworkCheckpoint[] m_SentCheckpoints;
         int m_SentSequenceHead;
         int m_SentSequenceCount;
         CanonicalInputSample m_Held;
@@ -35,6 +34,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
             m_Inputs = new CanonicalInputSample[capacity];
             m_InputTargetTicks = new ulong[capacity];
             m_SentSequenceOrder = new ulong[capacity + 1];
+            m_SentCheckpoints = new NetworkCheckpoint[capacity + 1];
         }
 
         public ServerAuthoritativeRosterEntry Roster { get; }
@@ -180,7 +180,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 return;
             if (latestSnapshot != latestBase || latestSnapshot < AcknowledgedSnapshotSequence)
                 throw new InvalidOperationException("Client snapshot acknowledgement is inconsistent or regressed.");
-            if (!m_Sent.TryGetValue(latestSnapshot, out NetworkCheckpoint checkpoint))
+            if (!TryGetSentCheckpoint(latestSnapshot, out NetworkCheckpoint checkpoint))
                 return;
             AcknowledgedSnapshotSequence = latestSnapshot;
             AcknowledgedCheckpoint = checkpoint;
@@ -190,15 +190,15 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
 
         public void StoreSent(ulong sequence, NetworkCheckpoint checkpoint)
         {
-            m_Sent[sequence] = checkpoint ?? throw new ArgumentNullException(nameof(checkpoint));
-            EnqueueSentSequence(sequence);
-            while (m_Sent.Count > m_Capacity)
+            if (checkpoint == null)
+                throw new ArgumentNullException(nameof(checkpoint));
+            EnqueueSentSequence(sequence, checkpoint);
+            while (m_SentSequenceCount > m_Capacity)
             {
                 ulong sequence = m_SentSequenceOrder[m_SentSequenceHead];
                 if (sequence >= AcknowledgedSnapshotSequence && AcknowledgedSnapshotSequence != 0)
                     throw new InvalidOperationException("Authority snapshot baseline capacity cannot discard an unconfirmed checkpoint.");
                 DequeueSentSequence();
-                m_Sent.Remove(sequence);
             }
         }
 
@@ -271,9 +271,11 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
                 Array.Empty<SimulationInputRequest>());
         }
 
-        void EnqueueSentSequence(ulong sequence)
+        void EnqueueSentSequence(ulong sequence, NetworkCheckpoint checkpoint)
         {
-            m_SentSequenceOrder[(m_SentSequenceHead + m_SentSequenceCount) % m_SentSequenceOrder.Length] = sequence;
+            int index = (m_SentSequenceHead + m_SentSequenceCount) % m_SentSequenceOrder.Length;
+            m_SentSequenceOrder[index] = sequence;
+            m_SentCheckpoints[index] = checkpoint;
             m_SentSequenceCount++;
         }
 
@@ -281,9 +283,25 @@ namespace ThirdPersonSimulation.ServerAuthoritative.Transport
         {
             ulong sequence = m_SentSequenceOrder[m_SentSequenceHead];
             m_SentSequenceOrder[m_SentSequenceHead] = 0;
+            m_SentCheckpoints[m_SentSequenceHead] = null;
             m_SentSequenceHead = (m_SentSequenceHead + 1) % m_SentSequenceOrder.Length;
             m_SentSequenceCount--;
             return sequence;
+        }
+
+        bool TryGetSentCheckpoint(ulong sequence, out NetworkCheckpoint checkpoint)
+        {
+            for (int i = 0; i < m_SentSequenceCount; i++)
+            {
+                int index = (m_SentSequenceHead + i) % m_SentSequenceOrder.Length;
+                if (m_SentSequenceOrder[index] != sequence)
+                    continue;
+                checkpoint = m_SentCheckpoints[index];
+                return true;
+            }
+
+            checkpoint = null;
+            return false;
         }
 
         int FindInputIndex(ulong targetTick)

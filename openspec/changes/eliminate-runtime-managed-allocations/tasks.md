@@ -457,6 +457,7 @@
 - [x] 5.194 Authority route 的过期 input key 改为按队列容量准备的常驻 ulong 数组和显式 count；删除每次 Select 的 List、Add 和 Clear 临时壳
 - [x] 5.195 Authority route 的发送顺序队列改为按 checkpoint 容量加一准备的环形数组；确认、淘汰和未确认保护语义不变
 - [x] 5.196 Authority route 的命令队列改为按容量准备的有序 sample/tick 常驻数组；保留同 tick 替换、过期前缀删除和容量溢出语义
+- [x] 5.197 Authority route 的已发送 checkpoint 索引并入发送顺序环形数组；查找改为有界 ring 扫描，删除 SortedDictionary 和重复索引
 
 ## 6. UI、资源、渲染和生命周期
 

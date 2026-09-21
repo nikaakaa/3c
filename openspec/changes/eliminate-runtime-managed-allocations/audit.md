@@ -3755,3 +3755,11 @@
 - Authority Client Route 的命令队列从 `SortedDictionary<ulong, CanonicalInputSample>` 改为构造期按容量准备的有序 `CanonicalInputSample[] + ulong[]` 加显式 count。入队按 target tick 二分定位，同 tick 保留更高 input sequence，新 tick 用数组移动插入；队列满时继续抛 overflow。
 - Select 用有序前缀一次识别全部过期输入，随后前移保留输入并清空尾部引用；最后一次有效输入、held 输入、exact/late/neutral 计数和异常语义不变。
 - 每个 input tick 的 SortedDictionary 树节点和 5.194 引入的过期 key 中转删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Authority route sent checkpoints ring 收口
+
+对应 tasks.md 的 5.5，新增 5.197 作为独立小步；5.5 保持未勾选。
+
+- Authority Client Route 的已发送 checkpoint 改为与发送顺序同一个环形数组位置一起持有，`StoreSent` 入队 sequence 和 checkpoint，超容量出队时统一清空槽位；容量裁剪、未确认 checkpoint 抛错和确认推进顺序不变。
+- 客户端 snapshot acknowledgement 的精确 sequence 查找改为最多遍历当前发送 count 的 ring 扫描；找到后仍设置 acknowledged 身份并移除更旧 checkpoint。
+- `SortedDictionary`、重复 sequence 索引和 tree node 分配删除。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

@@ -397,13 +397,14 @@ namespace BTSMTL.Timeline
             Init();
             return clip;
         }
-        public void SeparateOverlappingClips(TimelineContractCatalog catalog)
+        public void SeparateOverlappingTreeClips(TimelineContractCatalog catalog)
         {
             Track[] tracks = m_Tracks.ToArray();
             foreach (Track track in tracks)
             {
                 int insertionIndex = m_Tracks.IndexOf(track) + 1;
-                if (catalog.RequireTrack(track.ContractKind).OverlapPolicy != TimelineTrackOverlapPolicy.Reject)
+                TimelineTrackContract contract = catalog.RequireTrack(track.ContractKind);
+                if ((contract.Capabilities & TimelineCapability.Tree) == 0 || contract.OverlapPolicy != TimelineTrackOverlapPolicy.Reject)
                     continue;
                 for (int clipIndex = 1; clipIndex < track.Clips.Count; clipIndex++)
                 {

@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 if (asset is not TimelineAsset timeline)
                     continue;
                 timeline.Data.UpdateSerializedTimeline();
-                timeline.Data.ApplyModify(() => timeline.Data.SeparateOverlappingClips(catalog), "拆分重叠片段为独立轨道");
+                timeline.Data.ApplyModify(() => timeline.Data.SeparateOverlappingTreeClips(catalog), "拆分重叠片段为独立轨道");
             }
             return context.Complete(root);
         }

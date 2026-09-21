@@ -838,7 +838,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     if (!bindings.Contains(binding.AuthoringId))
                         timeline.RemoveExternalBinding(binding);
                 timeline.Init();
-                timeline.SeparateOverlappingClips(TimelineTreeContractComposition.Create());
+                timeline.SeparateOverlappingTreeClips(TimelineTreeContractComposition.Create());
                 BtsmtlSkillOwnedAssets.ReleaseUnreferenced(timeline.SerializedOwner, previous);
             }, "清理Timeline输出");
         }

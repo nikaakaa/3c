@@ -3683,3 +3683,11 @@
 - Prediction pipeline 合并先统计需要保留的非 prediction participants，再分配精确数组；第一遍过滤，第二遍按原顺序填充，最后追加 correction、history 和 journal 三个 prediction states。过滤规则、participant 顺序和 pipeline snapshot 语义不变。
 - 每次 pipeline 合并的 List、内部扩容和 Add 中转删除，替换为一个精确 participant array。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 remote presentation due ticks 收口
+
+对应 tasks.md 的 5.5，新增 5.188 作为独立小步；5.5 保持未勾选。
+
+- Remote Presentation 的 TickQueue 用常驻 `ulong[]` 和显式 count 记录本次已到期的 tick；容量不足时倍增，移除完成后清空使用区间。命令和可靠事件仍按 tick 升序发布，成功后统一移除分组并归还 List 池，事务顺序不变。
+- `List<ulong>`、`Add` 内部扩容和 Clear 临时壳删除；SortedDictionary 的 value List 池保持不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

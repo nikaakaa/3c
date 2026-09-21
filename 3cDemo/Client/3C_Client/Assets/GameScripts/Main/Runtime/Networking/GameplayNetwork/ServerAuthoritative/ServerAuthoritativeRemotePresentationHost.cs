@@ -475,7 +475,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         {
             readonly SortedDictionary<ulong, List<T>> m_Entries = new SortedDictionary<ulong, List<T>>();
             readonly Stack<List<T>> m_FreeValues = new Stack<List<T>>();
-            readonly List<ulong> m_DueTicks = new List<ulong>();
+            ulong[] m_DueTicks = Array.Empty<ulong>();
+            int m_DueTickCount;
 
             public int Count
             {
@@ -502,21 +503,25 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
 
             public void PublishDue(ulong authorityTick, Action<T> publish)
             {
-                m_DueTicks.Clear();
+                m_DueTickCount = 0;
                 foreach (KeyValuePair<ulong, List<T>> pair in m_Entries)
                 {
                     if (pair.Key > authorityTick)
                         break;
                     for (int i = 0; i < pair.Value.Count; i++)
                         publish(pair.Value[i]);
-                    m_DueTicks.Add(pair.Key);
+                    if (m_DueTickCount == m_DueTicks.Length)
+                        GrowDueTicks();
+                    m_DueTicks[m_DueTickCount++] = pair.Key;
                 }
-                for (int i = 0; i < m_DueTicks.Count; i++)
+                for (int i = 0; i < m_DueTickCount; i++)
                 {
                     m_Entries.Remove(m_DueTicks[i], out List<T> values);
                     values.Clear();
                     m_FreeValues.Push(values);
                 }
+                Array.Clear(m_DueTicks, 0, m_DueTickCount);
+                m_DueTickCount = 0;
             }
 
             public void Clear()
@@ -527,7 +532,16 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     m_FreeValues.Push(pair.Value);
                 }
                 m_Entries.Clear();
-                m_DueTicks.Clear();
+                Array.Clear(m_DueTicks, 0, m_DueTickCount);
+                m_DueTickCount = 0;
+            }
+
+            void GrowDueTicks()
+            {
+                int capacity = Math.Max(4, m_DueTicks.Length * 2);
+                var values = new ulong[capacity];
+                Array.Copy(m_DueTicks, values, m_DueTickCount);
+                m_DueTicks = values;
             }
         }
 

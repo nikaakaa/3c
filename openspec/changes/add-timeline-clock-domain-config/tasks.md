@@ -83,10 +83,10 @@
 
 ## 7. 停止、分支修正与事件生命周期
 
-- [ ] 7.1 接通正式 Stop / Cancel 接受结果与 Presentation 状态，停止后禁止旧 playback / generation 推进并产生新 Marker，清理失效采样缓存
-- [ ] 7.2 将最终 branch revision / reset 交给既有表现 owner，区分正常推进、Seek 与修正采样，不将逻辑 Restore 的中间状态写回表现游标
-- [ ] 7.3 将事件去重与表现帧一起提交，重复采样或回退修正不制造新 TraversalIndex，正常循环可再次触发，Discard 不消耗尚未交付事件
-- [ ] 7.4 按既有领域生命周期退役旧 Camera / 动画请求，保留已生成表现的正式收尾策略；预测分支撤销不合成 confirmed Complete / Release
+- [x] 7.1 接通正式 Stop / Cancel 接受结果与 Presentation 状态，停止后禁止旧 playback / generation 推进并产生新 Marker，清理失效采样缓存
+- [x] 7.2 将最终 branch revision / reset 交给既有表现 owner，区分正常推进、Seek 与修正采样，不将逻辑 Restore 的中间状态写回表现游标
+- [x] 7.3 将事件去重与表现帧一起提交，重复采样或回退修正不制造新 TraversalIndex，正常循环可再次触发，Discard 不消耗尚未交付事件
+- [x] 7.4 按既有领域生命周期退役旧 Camera / 动画请求，保留已生成表现的正式收尾策略；预测分支撤销不合成 confirmed Complete / Release
 
 ## 8. Domain 与作者数据一致性
 

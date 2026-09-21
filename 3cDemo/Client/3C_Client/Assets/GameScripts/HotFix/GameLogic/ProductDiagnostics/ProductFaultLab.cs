@@ -110,7 +110,7 @@ namespace GameLogic.ProductDiagnostics
         private readonly IProductDownloadCancellationBoundary _downloadCancellation;
         private readonly IProductCacheFaultBoundary _cacheFaultBoundary;
         private readonly int _historyCapacity;
-        private readonly Queue<ProductFaultEvent> _history;
+        private readonly BoundedHistory<ProductFaultEvent> _history;
         private long _sequence;
 
         public ProductFaultLab(ProductResourceRuntime resources, IProductDownloadCancellationBoundary downloadCancellation, IProductCacheFaultBoundary cacheFaultBoundary, int historyCapacity)
@@ -119,10 +119,10 @@ namespace GameLogic.ProductDiagnostics
             _downloadCancellation = downloadCancellation ?? throw new ArgumentNullException(nameof(downloadCancellation));
             _cacheFaultBoundary = cacheFaultBoundary;
             _historyCapacity = historyCapacity > 0 ? historyCapacity : throw new ArgumentOutOfRangeException(nameof(historyCapacity));
-            _history = new Queue<ProductFaultEvent>(checked(_historyCapacity + 1));
+            _history = new BoundedHistory<ProductFaultEvent>(_historyCapacity);
         }
 
-        public IReadOnlyList<ProductFaultEvent> History => _history.ToArray();
+        public IReadOnlyList<ProductFaultEvent> History => _history;
 
         public bool SupportsCacheCorruption => _cacheFaultBoundary != null;
 
@@ -213,11 +213,7 @@ namespace GameLogic.ProductDiagnostics
         private void Publish(ProductFaultCommand command, bool succeeded, string target, string result)
         {
             var item = new ProductFaultEvent(++_sequence, DateTimeOffset.UtcNow, command, succeeded, target, result);
-            _history.Enqueue(item);
-            while (_history.Count > _historyCapacity)
-            {
-                _history.Dequeue();
-            }
+            _history.Add(item);
             Changed?.Invoke(item);
         }
     }

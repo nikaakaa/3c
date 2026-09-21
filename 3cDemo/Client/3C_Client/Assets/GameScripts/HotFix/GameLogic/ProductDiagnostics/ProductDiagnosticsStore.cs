@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections;
 
 namespace GameLogic.ProductDiagnostics
 {
@@ -31,31 +32,54 @@ namespace GameLogic.ProductDiagnostics
     public sealed class ProductDiagnosticsStore : IProductCheckpointSnapshotSource
     {
         private readonly int _capacity;
-        private readonly Queue<ProductCheckpointSnapshot> _history;
+        private readonly BoundedHistory<ProductCheckpointSnapshot> _history;
 
         public ProductDiagnosticsStore(int capacity)
         {
             _capacity = capacity > 0 ? capacity : throw new ArgumentOutOfRangeException(nameof(capacity));
-            _history = new Queue<ProductCheckpointSnapshot>(checked(_capacity + 1));
+            _history = new BoundedHistory<ProductCheckpointSnapshot>(_capacity);
         }
 
         public ProductCheckpointSnapshot Current { get; private set; }
 
-        public IReadOnlyList<ProductCheckpointSnapshot> History => _history.ToArray();
+        public IReadOnlyList<ProductCheckpointSnapshot> History => _history;
 
         public event Action<ProductCheckpointSnapshot> Changed;
 
         public ProductCheckpointSnapshot Freeze(string checkpoint, ResourceRuntimeSnapshot resources, MemoryRuntimeSnapshot memory, NetworkRuntimeSnapshot network)
         {
             Current = new ProductCheckpointSnapshot(checkpoint, DateTimeOffset.UtcNow, resources, memory, network);
-            _history.Enqueue(Current);
-            while (_history.Count > _capacity)
-            {
-                _history.Dequeue();
-            }
+            _history.Add(Current);
 
             Changed?.Invoke(Current);
             return Current;
         }
+    }
+
+    internal sealed class BoundedHistory<T> : IReadOnlyList<T>
+    {
+        private readonly List<T> _items;
+        private readonly int _capacity;
+
+        public BoundedHistory(int capacity)
+        {
+            _capacity = capacity;
+            _items = new List<T>(checked(capacity + 1));
+        }
+
+        public T this[int index] => _items[index];
+        public int Count => _items.Count;
+
+        public void Add(T item)
+        {
+            _items.Add(item);
+            while (_items.Count > _capacity)
+            {
+                _items.RemoveAt(0);
+            }
+        }
+
+        public IEnumerator<T> GetEnumerator() => _items.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

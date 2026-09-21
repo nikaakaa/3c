@@ -2666,3 +2666,11 @@
 - Datagram Endpoint 构造期新增正式 Session 和 sender 清单；Peer Endpoint 只注册 relay sender，Relay 从已唯一化的 roster 注册全部 sender。这套身份在接收线程启动前准备，因此不存在先收到包再补注册的运行期 fallback。
 - 解码时先比较 Session wire UTF-8，命中后继续在 sender 清单中比较；两者都命中时直接复用 canonical string。Session 或 sender 错配仍解码实际 string，交给 Channel 的原有身份校验抛错，不静默丢包。pooled packet 的 `Release` 继续清空身份引用，下次租用由 Codec 重新绑定。
 - Endpoint 完整依赖构建仍被并行 Timeline 的 CS0050 阻断。`ThirdPersonSimulation.DeterministicRollback.Endpoint.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样。
+
+## 2026-09-21 Product History 只读视图化
+
+对应 tasks.md 的 6.1，本步只处理 startup、checkpoint、fault、resource 四类 History 的 getter 列表副本，整项保持未勾选。
+
+- 四个 owner 原先持有 Queue，每次 `History` 都执行 `ToArray()`；该 getter 的结果只在读取瞬间成立，却在每次访问时新建完整数组。现在新增 internal `BoundedHistory<T>`，owner 持有同一只 List 和只读列表视图，构造时按正式 capacity＋1 预留，发布后用显式 capacity 淘汰最旧项。
+- `History` 返回 owner 长寿命 `IReadOnlyList`，外部不能修改；视图读取的是当前有界历史，不是独立快照。发布、Changed 事件、最新快照和 N 条保留规则不变。当前源码没有发现这些 History 的直接 UI 读取者，接口仍由 Product Shell view model 持有，后续 UI 消费者不再触发 getter 分配。
+- `GameLogic.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做运行时分配采样；6.1 的 UI 刷新迁移和重复格式化清理仍未完成。

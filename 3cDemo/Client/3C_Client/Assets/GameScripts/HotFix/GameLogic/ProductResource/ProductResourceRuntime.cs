@@ -43,7 +43,7 @@ namespace GameLogic.ProductResource
         private readonly Dictionary<ResourceIdentity, int> _ownedReferenceCounts = new Dictionary<ResourceIdentity, int>();
         private readonly Dictionary<ResourceIdentity, int> _pendingAcquireCounts = new Dictionary<ResourceIdentity, int>();
         private readonly HashSet<string> _preparedTags = new HashSet<string>(StringComparer.Ordinal);
-        private readonly Queue<ResourceRuntimeSnapshot> _history;
+        private readonly BoundedHistory<ResourceRuntimeSnapshot> _history;
         private readonly CancellationTokenSource _runtimeCancellation = new CancellationTokenSource();
 
         private long _nextScopeId;
@@ -66,7 +66,7 @@ namespace GameLogic.ProductResource
             _poolMetricsBuffer = new List<ObjectPoolBase>(_objectPoolModule.Count);
             _packageName = string.IsNullOrWhiteSpace(packageName) ? throw new ArgumentException("Package name is required.", nameof(packageName)) : packageName.Trim();
             _historyCapacity = snapshotHistoryCapacity > 0 ? snapshotHistoryCapacity : throw new ArgumentOutOfRangeException(nameof(snapshotHistoryCapacity));
-            _history = new Queue<ResourceRuntimeSnapshot>(checked(_historyCapacity + 1));
+            _history = new BoundedHistory<ResourceRuntimeSnapshot>(_historyCapacity);
             GlobalScope = CreateScopeInternal(ResourceScopeKind.Global, "Global");
             Application.lowMemory += OnLowMemory;
             PublishSnapshot();
@@ -76,7 +76,7 @@ namespace GameLogic.ProductResource
 
         public ResourceRuntimeSnapshot Current { get; private set; }
 
-        public IReadOnlyList<ResourceRuntimeSnapshot> History => _history.ToArray();
+        public IReadOnlyList<ResourceRuntimeSnapshot> History => _history;
 
         public event Action<ResourceRuntimeSnapshot> Changed;
 
@@ -556,11 +556,7 @@ namespace GameLogic.ProductResource
                 scopeSnapshots,
                 _lastMaintenance);
 
-            _history.Enqueue(Current);
-            while (_history.Count > _historyCapacity)
-            {
-                _history.Dequeue();
-            }
+            _history.Add(Current);
 
             Changed?.Invoke(Current);
         }

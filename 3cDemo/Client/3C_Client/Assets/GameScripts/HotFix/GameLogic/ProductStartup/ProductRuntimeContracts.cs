@@ -166,27 +166,23 @@ namespace GameLogic.ProductStartup
     internal sealed class ProductRuntimeSnapshotStore : IProductRuntimeSnapshotSource
     {
         private readonly int _capacity;
-        private readonly Queue<ProductRuntimeSnapshot> _history;
+        private readonly BoundedHistory<ProductRuntimeSnapshot> _history;
         private long _sequence;
 
         public ProductRuntimeSnapshotStore(int capacity)
         {
             _capacity = capacity > 0 ? capacity : throw new ArgumentOutOfRangeException(nameof(capacity));
-            _history = new Queue<ProductRuntimeSnapshot>(checked(_capacity + 1));
+            _history = new BoundedHistory<ProductRuntimeSnapshot>(_capacity);
         }
 
         public ProductRuntimeSnapshot Current { get; private set; }
-        public IReadOnlyList<ProductRuntimeSnapshot> History => _history.ToArray();
+        public IReadOnlyList<ProductRuntimeSnapshot> History => _history;
         public event Action<ProductRuntimeSnapshot> Changed;
 
         public void Publish(ProductRuntimeStage stage, ProductAuthState auth, ProductHomeState home, ProductGameplayState gameplay, string safeError = "")
         {
             Current = new ProductRuntimeSnapshot(++_sequence, DateTimeOffset.UtcNow, stage, auth, home, gameplay, safeError);
-            _history.Enqueue(Current);
-            while (_history.Count > _capacity)
-            {
-                _history.Dequeue();
-            }
+            _history.Add(Current);
 
             Changed?.Invoke(Current);
         }

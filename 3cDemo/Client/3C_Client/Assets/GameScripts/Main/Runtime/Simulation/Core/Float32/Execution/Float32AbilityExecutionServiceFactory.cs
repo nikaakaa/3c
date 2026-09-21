@@ -85,6 +85,7 @@ namespace ThirdPersonSimulation
             IFloat32AbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
             Float32AbilityExecutionFrame frame,
+            Float32AbilityOperationControlRuntime control,
             IFloat32AbilityExecutionSavepointPort savepointPort,
             IFloat32InputRequestStatePort inputRequests,
             Float32AbilityExecutionWorkspace workspace)
@@ -117,7 +118,6 @@ namespace ThirdPersonSimulation
             Float32GameplayEffectOperationRuntime gameplayEffects = domainServices.GameplayEffects;
             Float32EquipmentRuntime equipment = domainServices.Equipment;
 
-            Float32AbilityOperationControlRuntime control = null;
             Float32ActionRuntime actions = new Float32ActionRuntime(
                 access,
                 actionBindings,
@@ -155,7 +155,7 @@ namespace ThirdPersonSimulation
                 values,
                 motion,
                 frame);
-            var treeClipLink = new Float32TreeClipInvokerLink();
+            Float32TreeClipInvokerLink treeClipLink = control.TreeClipLink;
             Float32AbilityExecutionTarget target = new Float32AbilityExecutionTarget(
                 access,
                 controlState,
@@ -185,7 +185,7 @@ namespace ThirdPersonSimulation
                 blackboard,
                 workspace.TimelineAdvances,
                 workspace.TimelineStops);
-            control = new Float32AbilityOperationControlRuntime(executionData, services, treeClipLink);
+            control.Bind(services);
             Float32AbilityDomainRuntime domain = new Float32AbilityDomainRuntime(
                 executionData.Binding,
                 executionServices,

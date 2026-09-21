@@ -89,6 +89,7 @@ namespace ThirdPersonSimulation.Fixed
             IFixedAbilityDomainRuntimeFactory domainRuntimeFactory,
             EquipmentProgramLayout equipmentLayout,
             FixedAbilityExecutionFrame frame,
+            FixedAbilityOperationControlRuntime control,
             IFixedAbilityExecutionSavepointPort savepointPort,
             IFixedInputRequestStatePort inputRequests,
             FixedAbilityExecutionWorkspace workspace)
@@ -120,7 +121,6 @@ namespace ThirdPersonSimulation.Fixed
             FixedGameplayEffectOperationRuntime gameplayEffects = domainServices.GameplayEffects;
             FixedEquipmentRuntime equipment = domainServices.Equipment;
 
-            FixedAbilityOperationControlRuntime control = null;
             FixedActionRuntime actions = new FixedActionRuntime(
                 access,
                 actionBindings,
@@ -158,7 +158,7 @@ namespace ThirdPersonSimulation.Fixed
                 values,
                 motion,
                 frame);
-            var treeClipLink = new FixedTreeClipInvokerLink();
+            FixedTreeClipInvokerLink treeClipLink = control.TreeClipLink;
             FixedAbilityExecutionTarget target = new FixedAbilityExecutionTarget(
                 access,
                 controlState,
@@ -188,7 +188,7 @@ namespace ThirdPersonSimulation.Fixed
                 blackboard,
                 workspace.TimelineAdvances,
                 workspace.TimelineStops);
-            control = new FixedAbilityOperationControlRuntime(executionData, services, treeClipLink);
+            control.Bind(services);
             FixedAbilityDomainRuntime domain = new FixedAbilityDomainRuntime(
                 executionData.Binding,
                 executionServices,

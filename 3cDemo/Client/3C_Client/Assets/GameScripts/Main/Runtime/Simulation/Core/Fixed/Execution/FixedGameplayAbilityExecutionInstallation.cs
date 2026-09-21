@@ -24,6 +24,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedAbilityExecutionContext m_Execution;
         readonly EquipmentProgramLayout m_EquipmentLayout;
+        readonly FixedAbilityOperationControlRuntime m_Control;
 
         internal FixedGameplayAbilityExecutionInstallation(
             FixedGameplayAbilityExecutionData data,
@@ -58,6 +59,7 @@ namespace ThirdPersonSimulation.Fixed
                 data,
                 layout,
                 services);
+            m_Control = new FixedAbilityOperationControlRuntime(data);
         }
 
         public FixedGameplayAbilityExecutionData Data => m_Execution.Data;
@@ -66,6 +68,7 @@ namespace ThirdPersonSimulation.Fixed
         internal EquipmentProgramLayout EquipmentLayout => m_EquipmentLayout;
         internal FixedGameplayAbilityExecutionServices Services => m_Execution.Services;
         internal FixedAbilityExecutionContext Execution => m_Execution;
+        internal FixedAbilityOperationControlRuntime Control => m_Control;
 
         static string[] BuildOperationSourcePaths(GameplayAbilityExecutionLayout layout)
         {

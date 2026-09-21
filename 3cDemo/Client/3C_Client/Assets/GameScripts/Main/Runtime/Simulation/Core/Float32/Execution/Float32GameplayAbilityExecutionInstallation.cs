@@ -23,6 +23,7 @@ namespace ThirdPersonSimulation
     {
         readonly Float32AbilityExecutionContext m_Execution;
         readonly EquipmentProgramLayout m_EquipmentLayout;
+        readonly Float32AbilityOperationControlRuntime m_Control;
 
         internal Float32GameplayAbilityExecutionInstallation(
             Float32GameplayAbilityExecutionData data,
@@ -57,6 +58,7 @@ namespace ThirdPersonSimulation
                 data,
                 layout,
                 services);
+            m_Control = new Float32AbilityOperationControlRuntime(data);
         }
 
         public Float32GameplayAbilityExecutionData Data => m_Execution.Data;
@@ -65,6 +67,7 @@ namespace ThirdPersonSimulation
         internal EquipmentProgramLayout EquipmentLayout => m_EquipmentLayout;
         internal Float32GameplayAbilityExecutionServices Services => m_Execution.Services;
         internal Float32AbilityExecutionContext Execution => m_Execution;
+        internal Float32AbilityOperationControlRuntime Control => m_Control;
 
         static string[] BuildOperationSourcePaths(GameplayAbilityExecutionLayout layout)
         {

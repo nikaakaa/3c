@@ -98,6 +98,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionInput input,
             Float32AbilityBodyFacts bodyFacts,
             Float32AbilityExecutionWorkspace workspace,
+            Float32AbilityOperationControlRuntime control,
             IFloat32AbilityExecutionServiceFactory serviceFactory)
         {
             execution = execution ?? throw new ArgumentNullException(nameof(execution));
@@ -111,6 +112,7 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Float32 Ability invocation identity is incomplete.");
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
+            control = control ?? throw new ArgumentNullException(nameof(control));
             m_SkillState = skillState;
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Frame = new Float32AbilityExecutionFrame(
@@ -136,6 +138,7 @@ namespace ThirdPersonSimulation
                 domainRuntimeFactory,
                 equipmentLayout,
                 m_Frame,
+                control,
                 savepointPort,
                 inputRequests,
                 m_Workspace);

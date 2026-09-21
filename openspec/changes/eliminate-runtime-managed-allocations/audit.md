@@ -3995,3 +3995,11 @@
 - Fixed 和 Float32 Gameplay Effect Execution Scratch 常驻一个 Target；每次 operation evaluation 用 Begin 重绑 savepoint 端口、Effect state、catalog、Actor/tick 和 Handle allocator 委托，再从 committed aggregate 重建 causes。
 - Target 的通用 Control Runtime 和 Admission Runtime 只在 Target 构造时建立，继续绑定同一 Target；`End` 清理 working state、当前 prediction、pending additional、changes、causes、active identity 和事务绑定，Evaluation 成功或异常后仍由 shared scratch 统一 Reset。
 - 每个 Ability invocation 的 Target、generic Control Runtime 和 Admission Runtime 分配删除；shared Effect scratch 的生命周期和 Timeline pending 数据不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Operation control runtime 生命周期收口
+
+对应 tasks.md 的 5.5，新增 5.227 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 Ability Installation 常驻一个 Operation Control Runtime wrapper；TreeClip Link 和 TreeClip entry Dictionary 随 wrapper 保存，Operation Control Runtime 首次 Bind 时按同一 topology 和执行计数上限创建。
+- `OperationControlRuntime` 增加 Rebind target；重绑前检查没有 state execution 和 transient 残留，每次 invocation 仍按原顺序 `BeginEvaluation`，成功或异常后 `EndEvaluation` 并解除 services 引用。
+- 每个 invocation 不再新建 Operation Control Runtime、Cursor、State Machine、Lifecycle、Composite runtime 和 TreeClip Link；Timeline pending list 只继续作为 target 输入，不在本步改变归属。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

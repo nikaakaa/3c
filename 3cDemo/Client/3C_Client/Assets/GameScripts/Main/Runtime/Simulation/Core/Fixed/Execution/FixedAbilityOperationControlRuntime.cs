@@ -19,28 +19,42 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedAbilityOperationControlRuntime : IFixedAbilityOperationControlRuntime, IAbilityTreeClipInvoker
     {
-        readonly IFixedAbilityExecutionServices m_Services;
         readonly Dictionary<(string ClipAuthoringId, int Hook), OperationHandle> m_TreeClipEntries;
         readonly string m_AbilityId;
+        readonly OperationExecutionTopology m_Topology;
+        readonly int m_MaxExecutionCount;
         readonly FixedTreeClipInvokerLink m_TreeClipLink = new FixedTreeClipInvokerLink();
+        IFixedAbilityExecutionServices m_Services;
         OperationControlRuntime<FixedAbilityExecutionTarget> m_Runtime;
 
         public FixedAbilityOperationControlRuntime(
-            FixedGameplayAbilityExecutionData data,
-            IFixedAbilityExecutionServices services,
-            FixedTreeClipInvokerLink treeClipLink)
+            FixedGameplayAbilityExecutionData data)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
-            m_Services = services ?? throw new ArgumentNullException(nameof(services));
-            m_TreeClipLink = treeClipLink ?? throw new ArgumentNullException(nameof(treeClipLink));
-            m_TreeClipLink.Invoker = this;
             m_TreeClipEntries = BuildTreeClipEntries(data);
             m_AbilityId = data.AbilityId.Value;
-            m_Runtime = new OperationControlRuntime<FixedAbilityExecutionTarget>(
-                data.Topology,
-                m_Services.Target,
-                checked(Math.Max(1024, data.Operations.Count * 128)));
+            m_Topology = data.Topology;
+            m_MaxExecutionCount = checked(Math.Max(1024, data.Operations.Count * 128));
+        }
+
+        internal FixedTreeClipInvokerLink TreeClipLink => m_TreeClipLink;
+
+        internal void Bind(IFixedAbilityExecutionServices services)
+        {
+            m_Services = services ?? throw new ArgumentNullException(nameof(services));
+            m_TreeClipLink.Invoker = this;
+            if (m_Runtime == null)
+            {
+                m_Runtime = new OperationControlRuntime<FixedAbilityExecutionTarget>(
+                    m_Topology,
+                    m_Services.Target,
+                    m_MaxExecutionCount);
+            }
+            else
+            {
+                m_Runtime.Rebind(m_Services.Target);
+            }
         }
 
         internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
@@ -48,7 +62,11 @@ namespace ThirdPersonSimulation.Fixed
             m_Services.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
             m_Runtime.BeginEvaluation();
         }
-        internal void EndEvaluation() => m_Services.EndEvaluation();
+        internal void EndEvaluation()
+        {
+            m_Services.EndEvaluation();
+            m_Services = null;
+        }
         public OperationExecutionResult Tick(OperationHandle operation) => m_Runtime.Tick(operation);
 
         public bool InvokeTreeClip(in AbilityTreeClipInvocation invocation)

@@ -8,8 +8,8 @@ namespace ThirdPersonSimulation
         where TTarget : struct, IOperationControlTarget<TTarget>
     {
         readonly OperationExecutionTopology m_Topology;
-        readonly TTarget m_Target;
-        readonly IOperationControlEdgeTraceTarget m_EdgeTrace;
+        TTarget m_Target;
+        IOperationControlEdgeTraceTarget m_EdgeTrace;
         readonly OperationControlCursor<TTarget> m_Cursor;
         readonly OperationStateMachineRuntime<TTarget> m_StateMachine;
         readonly OperationExecutionLifecycleRuntime<TTarget> m_Lifecycle;
@@ -30,6 +30,14 @@ namespace ThirdPersonSimulation
             m_StateMachine = new OperationStateMachineRuntime<TTarget>(this);
             m_Lifecycle = new OperationExecutionLifecycleRuntime<TTarget>(this, m_StateMachine);
             m_Composite = new OperationCompositeRuntime<TTarget>(this);
+        }
+
+        internal void Rebind(TTarget target)
+        {
+            if (m_StateExecution.Count != 0 || m_Lifecycle.HasTransientState)
+                throw new InvalidOperationException("Operation control runtime retained transient execution state across evaluations.");
+            m_Target = target;
+            m_EdgeTrace = target is IOperationControlEdgeTraceTarget edgeTrace ? edgeTrace : null;
         }
 
         public OperationControlCursor<TTarget> Cursor => m_Cursor;

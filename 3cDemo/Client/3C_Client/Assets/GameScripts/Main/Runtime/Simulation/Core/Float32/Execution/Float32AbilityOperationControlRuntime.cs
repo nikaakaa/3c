@@ -21,28 +21,42 @@ namespace ThirdPersonSimulation
 
     internal sealed class Float32AbilityOperationControlRuntime : IFloat32AbilityOperationControlRuntime, IAbilityTreeClipInvoker
     {
-        readonly IFloat32AbilityExecutionServices m_Services;
         readonly Dictionary<(string ClipAuthoringId, int Hook), OperationHandle> m_TreeClipEntries;
         readonly string m_AbilityId;
-        readonly Float32TreeClipInvokerLink m_TreeClipLink;
+        readonly OperationExecutionTopology m_Topology;
+        readonly int m_MaxExecutionCount;
+        readonly Float32TreeClipInvokerLink m_TreeClipLink = new Float32TreeClipInvokerLink();
+        IFloat32AbilityExecutionServices m_Services;
         OperationControlRuntime<Float32AbilityExecutionTarget> m_Runtime;
 
         public Float32AbilityOperationControlRuntime(
-            Float32GameplayAbilityExecutionData data,
-            IFloat32AbilityExecutionServices services,
-            Float32TreeClipInvokerLink treeClipLink)
+            Float32GameplayAbilityExecutionData data)
         {
             if (data == null)
                 throw new ArgumentNullException(nameof(data));
-            m_Services = services ?? throw new ArgumentNullException(nameof(services));
-            m_TreeClipLink = treeClipLink ?? throw new ArgumentNullException(nameof(treeClipLink));
-            m_TreeClipLink.Invoker = this;
             m_TreeClipEntries = BuildTreeClipEntries(data);
             m_AbilityId = data.AbilityId.Value;
-            m_Runtime = new OperationControlRuntime<Float32AbilityExecutionTarget>(
-                data.Topology,
-                m_Services.Target,
-                checked(Math.Max(1024, data.Operations.Count * 128)));
+            m_Topology = data.Topology;
+            m_MaxExecutionCount = checked(Math.Max(1024, data.Operations.Count * 128));
+        }
+
+        internal Float32TreeClipInvokerLink TreeClipLink => m_TreeClipLink;
+
+        internal void Bind(IFloat32AbilityExecutionServices services)
+        {
+            m_Services = services ?? throw new ArgumentNullException(nameof(services));
+            m_TreeClipLink.Invoker = this;
+            if (m_Runtime == null)
+            {
+                m_Runtime = new OperationControlRuntime<Float32AbilityExecutionTarget>(
+                    m_Topology,
+                    m_Services.Target,
+                    m_MaxExecutionCount);
+            }
+            else
+            {
+                m_Runtime.Rebind(m_Services.Target);
+            }
         }
 
         internal void BeginEvaluation(bool diagnosticsEnabled, bool captureValues, bool captureControlFlow)
@@ -51,7 +65,11 @@ namespace ThirdPersonSimulation
             m_Runtime.BeginEvaluation();
         }
 
-        internal void EndEvaluation() => m_Services.EndEvaluation();
+        internal void EndEvaluation()
+        {
+            m_Services.EndEvaluation();
+            m_Services = null;
+        }
         public bool InvokeTreeClip(in AbilityTreeClipInvocation invocation)
         {
             if (!m_TreeClipEntries.TryGetValue((invocation.ClipAuthoringId, (int)invocation.Hook), out OperationHandle entry))

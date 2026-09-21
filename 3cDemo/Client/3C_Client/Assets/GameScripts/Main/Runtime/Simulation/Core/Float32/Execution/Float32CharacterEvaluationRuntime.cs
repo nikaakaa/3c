@@ -98,6 +98,7 @@ namespace ThirdPersonSimulation
                         abilityInput,
                         bodyFacts,
                         new Float32AbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops, valueWorkspaces[i]),
+                        installation.Control,
                         serviceFactory);
                     invocations[invocationCount++] = invocation;
                     invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);

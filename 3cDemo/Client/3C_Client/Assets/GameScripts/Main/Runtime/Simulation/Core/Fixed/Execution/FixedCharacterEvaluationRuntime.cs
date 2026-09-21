@@ -98,6 +98,7 @@ namespace ThirdPersonSimulation.Fixed
                         abilityInput,
                         bodyFacts,
                         new FixedAbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops),
+                        installation.Control,
                         serviceFactory);
                     invocations[invocationCount++] = invocation;
                     invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);

@@ -15,6 +15,7 @@
 - Graph 编译只发布明确 graph owner 的 artifact。Character Definition、Ability、Control、Timeline、Pose、Camera、Motion、Effect 与 Equipment 不会被合并为整角色 `CharacterSimulationProgram`、`ProgramCatalog` 或 `Projection`。
 - Locomotion 由 C# 控制模块执行；Timeline 直接准备和调度正式 `TimelineData`；Pose 直接运行原生 FlowCanvas Graph 与领域资源 binding；Camera、Motion、Effect、Equipment 各自准备、运行并报告采用结果。
 - Animation Profile、Rig、Pose 资源、Foot Placement 配置、Camera Profile 和 Equipment Profile 各自拥有资源语义。作者窗口和 C# authoring API 必须走同一业务定义，不暴露 Unity 序列化字段或运行时对象作为另一条作者链。
+- 配置、枚举和值域由 authoring/content preparation 统一校验并写入正式 binding、payload 或 compiled resource；运行实例消费已经准备好的内容，不在 FBBIK、Pose、Blend 等正式运行构造链重复检查同一份配置。
 
 ### Simulation
 
@@ -47,6 +48,7 @@
 
 - 表现只从 committed Body、Action、Timeline、Effect 与领域事实开始。动画帧保持唯一 `Prepare -> Validate -> Animancer Evaluate Barrier -> Seal` 事务；Barrier 前失败只丢弃 Pending，Barrier 后失败使该 Actor 的动画 runtime 进入 Faulted。
 - Pose 的正式链是 `Presentation Fact -> PoseStateMachine -> state-local source -> AnimationSlot -> Pose stages -> typed Goal Contributions -> Goal Assembly -> FullBodyIK -> FinalAnimationPoseFrame`。每帧最多一次 Foot Placement 事务、一次 Goal Assembly、一次 FBBIK 与一次 final writer。
+- FBBIK、Pose Graph、Blend Stack 的资源 schema、枚举和值域在 authoring/content preparation 通过后才进入正式运行；运行期只保留帧输入、事务血缘、缓冲形状、目标唯一性和求解结果等运行事实校验。
 - Foot Placement、Goal Assembly、FullBodyIK 和 final writer 各有唯一 owner；不得增加第二个 Grounding、Goal Set、FBBIK、骨骼写入或图外修正路径。
 - Motion Matching 的通用能力可以存在，但 Corin 尚未拥有完整的正式 MM 内容 binding；类型或工具存在不等于角色已经接入。第三方 MxM 仅作内容与实现参考，不能进入正式 runtime。
 - AI 已从 BTSMTL 自研链路退役，Opsive Behavior Designer 是唯一 AI 作者与执行插件。它只通过 Character Input、TargetData、Action Request 和只读结果合同接入玩法。

@@ -2058,3 +2058,13 @@
 - 两域现按 `finalizedCount` 直接创建最终 `SimulationActorTickResult[]`，填充后原地排序并执行原 Roster 校验；`SimulationTickResult.FromOwnedActors` 接管该数组并继续生成 OutputEvent 数组。公开 `SimulationTickResult` 构造仍复制一般 `IReadOnlyList`，输入隔离没有放宽。
 - 删除每个 session workspace 的 ActorResult List、底层容量和一轮 List 到最终数组的元素复制；最终 Actor 数组和事件数组仍是跨 completed step 必须保留的结果。workspace 的 ActorState／Egress／CompletedStep 存储及提交寿命不变。
 - 同步收窄 `SessionExecutionWorkspace` 类型参数和 PipelineTransaction 接口／Coordinator，未保留无消费者的 ActorResult 泛型入口。Fixed、Float32、DeterministicRollback、ServerAuthoritative portable 均编译零警告零错误，构建服务逐次关闭；未新增测试、未操作共享 Unity、未做 completed step Player 分配采样。
+
+## 2026-09-21 FBBIK 配置准备边界与重复校验清理
+
+对应 tasks.md 的 7.20。
+
+- `CharacterAnimationPresentationProfile.CollectConfigurationErrors`、Pose authoring/content preparation 负责 Full Body IK Profile 的 schema、Profile identity、revision、枚举和值域；正式运行实例只接收已经装配到 Pose 域的 Profile、Rig 和资源 binding。
+- `CharacterFinalIkFullBodySolver` 删除构造时对 Rig/Profile 的重复 `RequireValid`，删除已通过 `PrepareTuningCandidate` 的 candidate 在 Commit 时的二次校验。`CharacterFinalIkPoseBufferBackend` 的构造和 Biped reference 创建只消费上游已确认的 Rig，不再重复遍历 Rig 配置。
+- FBBIK Profile 与仍用于 runtime tuning 输入的 ActiveTuning 保留原合法成员和范围，但 smoothing 改为显式连续值域判断，删除 `Enum.IsDefined` 装箱；未改变 ApplyTuning、Prepare/Commit/Discard 顺序或 solver 公式。
+- 保留 `Prepare`／`SolvePrepared` 的 pose page、goal workspace、lineage、重复 effector、非有限输出和 solver residual 检查；这些保护当前事务和外部求解结果，不属于静态配置重复校验。
+- `ThirdPersonClient.Runtime.csproj` 使用 `dotnet build --no-restore --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，保留 1 条既有 `CharacterInputValueNodes.cs` CS0414 警告；随后 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未做 Player 分配采样。

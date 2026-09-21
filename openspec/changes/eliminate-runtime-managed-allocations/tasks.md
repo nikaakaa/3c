@@ -384,3 +384,5 @@
 - [x] 7.18 Camera Projection 九类 payload 按 CameraSpace／TimeDomain／Stacking／FovVariation／SequenceStage 五个正式连续 byte 区间直接校验，删除 RequireValid 中十四处 Enum.IsDefined 装箱
 
 - [x] 7.19 Rollback Endpoint diagnostics 按已锁定 Actor 字典准确创建远端快照数组并原地排序，删除 CaptureDiagnostics 的中间 List 与 ToArray 复制；结果仍保持独立数组
+
+- [x] 7.20 FBBIK Profile 在 authoring/content preparation 统一完成 schema、枚举和值域校验；运行 Solver、Pose Buffer Backend 不再重复校验 Rig/Profile，提交已准备 tuning 不再二次校验；保留 tuning 输入、目标血缘、帧缓冲和求解结果校验，删除 FBBIK 枚举装箱

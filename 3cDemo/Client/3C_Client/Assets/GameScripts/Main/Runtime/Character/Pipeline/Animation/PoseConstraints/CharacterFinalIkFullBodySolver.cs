@@ -206,8 +206,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
-            m_Rig.RequireValid();
-            m_Profile.RequireValid();
             m_Backend = new CharacterFinalIkPoseBufferBackend(rig, parentIndices, virtualBones);
             m_References = CharacterFinalIkPoseBufferBackend.CreateBipedReferences(rig);
             m_ActiveTuning = ActiveTuning.FromProfile(m_Profile);
@@ -278,7 +276,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Full Body IK tuning candidate is not prepared.");
             }
-            m_CandidateTuning.RequireValid();
             m_ActiveTuning = m_CandidateTuning;
             m_CandidateTuning = default;
             m_HasTuningCandidate = false;
@@ -1426,8 +1423,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     !IsRange(MaintainRotationWeight, 0f, 1f) ||
                     !IsRange(BendConstraintWeight, 0f, 1f) ||
                     !IsRange(BendClamp, 0f, 1f) ||
-                    !Enum.IsDefined(typeof(CharacterFullBodyIkSmoothing), ReachSmoothing) ||
-                    !Enum.IsDefined(typeof(CharacterFullBodyIkSmoothing), PushSmoothing))
+                    ReachSmoothing < CharacterFullBodyIkSmoothing.None ||
+                    ReachSmoothing > CharacterFullBodyIkSmoothing.Cubic ||
+                    PushSmoothing < CharacterFullBodyIkSmoothing.None ||
+                    PushSmoothing > CharacterFullBodyIkSmoothing.Cubic)
                     throw new InvalidOperationException("Full Body IK limb tuning values are invalid.");
             }
         }

@@ -73,10 +73,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireRange(MaintainRotationWeight, 0f, 1f, limb, nameof(MaintainRotationWeight));
             RequireRange(BendConstraintWeight, 0f, 1f, limb, nameof(BendConstraintWeight));
             RequireRange(BendClamp, 0f, 1f, limb, nameof(BendClamp));
-            if (!Enum.IsDefined(typeof(CharacterFullBodyIkSmoothing), ReachSmoothing) ||
-                !Enum.IsDefined(typeof(CharacterFullBodyIkSmoothing), PushSmoothing))
+            if (!IsSmoothing(ReachSmoothing) || !IsSmoothing(PushSmoothing))
                 throw new InvalidOperationException($"Full Body IK Profile {limb} smoothing is invalid.");
         }
+
+        static bool IsSmoothing(CharacterFullBodyIkSmoothing value) =>
+            value >= CharacterFullBodyIkSmoothing.None &&
+            value <= CharacterFullBodyIkSmoothing.Cubic;
 
         static void RequireRange(float value, float minimum, float maximum, string limb, string field)
         {
@@ -96,7 +99,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string fieldPath)
         {
             if (value.Kind != CharacterPoseTuningValueKind.Enum ||
-                !Enum.IsDefined(typeof(CharacterFullBodyIkSmoothing), value.EnumValue))
+                value.EnumValue < (int)CharacterFullBodyIkSmoothing.None ||
+                value.EnumValue > (int)CharacterFullBodyIkSmoothing.Cubic)
                 throw new InvalidOperationException($"Full Body IK limb tuning field '{fieldPath}' has an invalid smoothing value.");
             return (CharacterFullBodyIkSmoothing)value.EnumValue;
         }

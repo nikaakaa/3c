@@ -77,6 +77,17 @@ G01–G04中的new和Clone要沿完整Evaluate→World→Finalize→Commit/Disca
 
 采样器与格式化落盘独立归因；运行窗口中的后台分配仍计入，只有明确窗口结束后的导出不计常态。没有匹配Player与正式Gate，本轮不旁路搭建采样器，因此 audit.md 只给源码结论。
 
+### 7. 配置校验只在 authoring/content preparation 定型
+
+作者配置、枚举成员和值域属于内容身份，不属于每个运行实例重新推断的状态。Authoring、编译和 content preparation 负责校验 schema、引用、枚举和值域，并把结果写入正式 binding、payload 或 compiled resource；FBBIK Profile、Rig、Pose Graph 和 Blend Policy 通过这一 seam 后，运行构造只读取已定型值。
+
+运行期继续校验会变化的事实：帧输入与输出页、事务血缘、目标槽唯一性、generation、buffer shape、外部资源 readiness、solver residual 和失败后的 discard/fault 状态。这些检查保护的是当前事务，不是重复验证静态内容。
+
+| 同级方案 | 业务收益 | 成本与选择 |
+| --- | --- | --- |
+| preparation 一次校验，runtime 消费 prepared content | 运行实例少反射、装箱和重复遍历；非法内容在发布/准备处定位 | 任何绕过正式 preparation 的入口都不成立；本项目保留唯一正式链路并删除旁路 |
+| 每个 runtime owner 再校验完整配置 | 单个类型看起来更自洽，错误可能更靠近使用点 | 同一 Profile/Rig 在多个 handler、solver、workspace 重复遍历，增加 0 GC 成本和分裂责任；不作为正式链路方案 |
+
 ## Risks / Trade-offs
 
 - 提前复用结果污染回滚/表现 → 按全部消费者完成与generation归还，保留提交隔离。
@@ -98,7 +109,7 @@ G01–G04中的new和Clone要沿完整Evaluate→World→Finalize→Commit/Disca
 | 现行规格或变更 | 关系与处理 |
 | --- | --- |
 | gameplay-simulation-session-composition、gameplay-simulation-pipeline | 保留唯一Session/事务/commit；重用容器不提前暴露Pending |
-| native-flowcanvas-pose-runtime | 已要求实例复用姿态缓冲；G07说明不能因此推断所有managed临时容器已零分配。本次补执行治理，不改原生图/Barrier合同 |
+| native-flowcanvas-pose-runtime | 已要求实例复用姿态缓冲；G07说明不能因此推断所有managed临时容器已零分配。本次补执行治理，并把静态配置校验归入 preparation，不改原生图/Barrier合同 |
 | btsmtl-timeline-direct-runtime | 保留分型Capture/Restore和私有状态；取消每次快照对象分配不能取消快照语义 |
 | deterministic-rollback-network-model、gameplay-network-model-boundary | 保留窗口、确认、重放和输出修正；有界存储必须支持已配置最坏并发 |
 | gameplay-performance-capture-workflow | 本次只ADDED分配证据要求，保留原Request/Gate/Controller/产物链全部条款 |

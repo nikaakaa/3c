@@ -27,7 +27,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
-            rig.RequireValid();
             m_Counts = rig.BoneCounts;
             if (!parentIndices.IsCreated || parentIndices.Length != m_Counts.PoseBoneCount)
                 throw new ArgumentException("FinalIK Pose Buffer parent indices do not match the Animation Rig.", nameof(parentIndices));
@@ -47,7 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
-            rig.RequireValid();
             var spine = new IndexedBoneHandle[rig.OrderedSpinePhysicalBoneIndices.Count];
             for (int i = 0; i < spine.Length; i++)
                 spine[i] = new IndexedBoneHandle(rig.OrderedSpinePhysicalBoneIndices[i]);

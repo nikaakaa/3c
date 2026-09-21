@@ -3,13 +3,6 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    internal interface IFloat32InputPort
-    {
-        bool HasRequest(string requestId, out SimulationInputRequestState state);
-        void ClearRequest(string requestId);
-        SimulationInputValue ReadValue(string inputId, SimulationInputValueKind kind);
-    }
-
     internal interface IFloat32ValueInputReader
     {
         Float32ValueInputLease ReadInputs<TTarget>(

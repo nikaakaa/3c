@@ -9,7 +9,7 @@ namespace ThirdPersonSimulation
 	{
 		readonly Float32AbilityExecutionFrame m_Frame;
 		readonly IFloat32AbilityActionBindingProvider m_ActionBindings;
-		readonly IFloat32InputPort m_InputRuntime;
+		readonly Float32InputRuntime m_InputRuntime;
 		readonly Float32ActionStateStore m_Actions;
 		readonly IFloat32BlackboardPort m_Blackboard;
 		readonly IFloat32GameplayTagQuery m_GameplayTags;
@@ -27,7 +27,7 @@ namespace ThirdPersonSimulation
 			Float32GameplayAbilityExecutionAccess access,
 			IFloat32AbilityActionBindingProvider actionBindings,
 			Float32AbilityExecutionFrame frame,
-			IFloat32InputPort inputRuntime,
+			Float32InputRuntime inputRuntime,
 			Float32ActionStateStore actions,
 			IFloat32BlackboardPort blackboard,
 			IFloat32GameplayTagQuery gameplayTags,
@@ -41,7 +41,7 @@ namespace ThirdPersonSimulation
 		{
 			m_ActionBindings = actionBindings ?? throw new ArgumentNullException(nameof(actionBindings));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_InputRuntime = inputRuntime ?? throw new ArgumentNullException(nameof(inputRuntime));
+            m_InputRuntime = inputRuntime;
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Blackboard = blackboard ?? throw new ArgumentNullException(nameof(blackboard));
             m_GameplayTags = gameplayTags;

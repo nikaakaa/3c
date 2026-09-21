@@ -5,7 +5,7 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32ValueRuntime : Float32GraphValueRuntime
     {
-        readonly IFloat32InputPort m_Input;
+        readonly Float32InputRuntime m_Input;
         readonly IFloat32ActionContextReader m_Actions;
         readonly IFloat32ActionAdmissionQuery m_ActionAdmission;
         readonly IFloat32GameplayTagQuery m_GameplayTags;
@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation
 
         public Float32ValueRuntime(
             Float32GameplayAbilityExecutionAccess access,
-            IFloat32InputPort input,
+            Float32InputRuntime input,
             IFloat32ActionContextReader actions,
             IFloat32ActionAdmissionQuery actionAdmission,
             IFloat32GameplayTagQuery gameplayTags,
@@ -28,7 +28,7 @@ namespace ThirdPersonSimulation
             Float32AbilityExecutionWorkspace workspace)
             : base(access.Data, access.Layout, workspace.Values)
         {
-            m_Input = input ?? throw new ArgumentNullException(nameof(input));
+            m_Input = input;
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_ActionAdmission = actionAdmission ?? throw new ArgumentNullException(nameof(actionAdmission));
             m_GameplayTags = gameplayTags;

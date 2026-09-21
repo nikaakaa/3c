@@ -375,6 +375,7 @@
 - [x] 5.112 CanonicalReader 增加正式 ReadOnlyMemory 入口并要求 array backed segment，KCC state codec 及唯一 Reconstruct 调用直接读取 SolverStatePayload，删除 ToArray 中转；payload 校验、顺序和异常语义不变
 - [x] 5.113 DotRecast 接触候选从 List 改为 solver 生命周期 ActorContactCandidate 数组 scratch，批内用 ArraySegment 暴露 active+observed 有效区间；候选排序改固定比较器，按真实数量复用或扩展存储，稳定 roster 下不再新建 List/扩容/排序闭包。contact solver 和碰撞顺序不变
 - [x] 5.114 KCC 构造期准备精确 m_KccStates 工作数组，Create 和批求解写回同一数组并只把值序列化进 solver payload，删除每批 states 数组；bodies/results 仍由 state/result 独立持有，Reconstruct codec 返回新数组的分配仍在后续小步
+- [x] 5.115 KCC state codec 删除返回数组入口，改为正式原位填充精确 roster 数组；Reconstruct 读入 scratch 并在校验通过后交换当前/scratch 数组，恢复失败不改写当前状态。canonical、identity、数量和 Actor 校验语义保持
 
 ## 6. UI、资源、渲染和生命周期
 

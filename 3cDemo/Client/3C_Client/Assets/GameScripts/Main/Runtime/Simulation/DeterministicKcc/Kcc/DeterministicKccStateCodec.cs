@@ -110,10 +110,11 @@ namespace ThirdPersonSimulation.DeterministicKcc
             return writer.ToArray();
         }
 
-        public static DeterministicKccBodyState[] Read(
+        public static void Read(
             ReadOnlyMemory<byte> bytes,
             StableHash expectedCollisionWorldHash,
-            StableHash expectedConfigurationHash)
+            StableHash expectedConfigurationHash,
+            DeterministicKccBodyState[] states)
         {
             var reader = new CanonicalReader(bytes);
             if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
@@ -125,7 +126,8 @@ namespace ThirdPersonSimulation.DeterministicKcc
             int count = reader.ReadInt32();
             if (count < 0 || count > 100000)
                 throw new InvalidDataException($"Deterministic KCC body count '{count}' is invalid.");
-            var states = new DeterministicKccBodyState[count];
+            if (count != states.Length)
+                throw new InvalidOperationException("Deterministic KCC state roster count is stale.");
             for (int i = 0; i < count; i++)
             {
                 states[i] = new DeterministicKccBodyState(
@@ -145,7 +147,6 @@ namespace ThirdPersonSimulation.DeterministicKcc
                     throw new InvalidDataException("Deterministic KCC state Actor order is not canonical.");
             }
             reader.RequireComplete();
-            return states;
         }
 
         static DeterministicCollisionFeatureId ReadFeature(byte kind, int index)

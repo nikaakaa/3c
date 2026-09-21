@@ -24,6 +24,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
         readonly List<DeterministicActorContactTrace> m_ContactTraces;
 
         DeterministicKccBodyState[] m_KccStates;
+        DeterministicKccBodyState[] m_KccStateScratch;
         WorldSimulationState m_Current;
         bool m_Disposed;
 
@@ -56,6 +57,7 @@ namespace ThirdPersonSimulation.DeterministicKcc
             m_ActorContacts = new DeterministicActorContactCandidate[m_Bindings.Length];
             m_CandidatePositions = new FixedVector3[m_Bindings.Length];
             m_KccStates = new DeterministicKccBodyState[m_Bindings.Length];
+            m_KccStateScratch = new DeterministicKccBodyState[m_Bindings.Length];
             m_Motors = new DeterministicKccMotor[m_Bindings.Length];
             m_PredictionMotors = new DeterministicKccMotor[m_Bindings.Length];
             for (int i = 0; i < m_Motors.Length; i++)
@@ -157,11 +159,15 @@ namespace ThirdPersonSimulation.DeterministicKcc
         {
             RequireAlive();
             ValidateState(state);
-            m_KccStates = DeterministicKccStateCodec.Read(
+            DeterministicKccBodyState[] decodedStates = m_KccStateScratch;
+            DeterministicKccStateCodec.Read(
                 state.SolverStatePayload,
                 m_CollisionWorld.ContentHash,
-                m_Configuration.ConfigurationHash);
-            RequireKccRoster(m_KccStates);
+                m_Configuration.ConfigurationHash,
+                decodedStates);
+            RequireKccRoster(decodedStates);
+            m_KccStateScratch = m_KccStates;
+            m_KccStates = decodedStates;
             m_Current = state;
         }
 

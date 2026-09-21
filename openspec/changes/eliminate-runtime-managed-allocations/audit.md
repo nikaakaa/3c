@@ -3083,6 +3083,14 @@
 - `WorldSimulationState` 不持有 `DeterministicKccBodyState[]`，只持有编码后的 payload，因此当前 state 快照和下一步状态工作数组没有数组别名。`ActorSolveCandidate` 已按值携带 PreviousState，覆盖当前下标不会改写本批求解输入。bodies 和 results 仍每批独立分配，因为分别由 state 和批结果持有；`Reconstruct` 里 `DeterministicKccStateCodec.Read` 仍返回新数组，恢复路径的分配留给 codec 原位读取小步。
 - `ThirdPersonSimulation.DeterministicKcc.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
 
+## 2026-09-21 KCC 状态恢复原位读取
+
+对应 tasks.md 的 5.1，新增 5.115 作为独立小步；5.1 保持未勾选。
+
+- `DeterministicKccStateCodec.Read` 原先每次恢复都新建 `DeterministicKccBodyState[]`。现在删除返回数组入口，改为正式原位填充精确 roster 数组；payload 数量与目标数组不一致时保留原来的 `InvalidOperationException`，canonical 数量范围、identity、Actor 顺序和 `RequireComplete` 检查保持。
+- solver 构造期准备两只精确数组：`m_KccStates` 是正式当前状态，`m_KccStateScratch` 是恢复事务目标。`Reconstruct` 先把 payload 读入 scratch，再通过既有 roster 校验，最后交换两只数组并把不可变 state 设为当前；读入或校验失败时不改写当前状态和 `m_Current`。
+- 交换后旧当前数组成为下一次恢复 scratch，稳定 roster 下恢复不再分配状态数组。`ThirdPersonSimulation.DeterministicKcc.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译通过；随后 `dotnet build-server shutdown`。未新增测试、未操作共享 Unity、未运行 batchmode、未做运行对比或分配采样。
+
 ## 2026-09-21 资源维护身份收集复用
 
 对应 tasks.md 的 6.2，新增 6.13 作为独立小步；6.2 保持未勾选。

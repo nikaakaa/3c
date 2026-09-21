@@ -4,6 +4,13 @@
 
 尚未闭环。本文不是完成通知；早期交接约定保留为历史，其他任务是否开展整理不代表这里的运行验收已经通过。
 
+## 2026-09-22 运动采样与测试资产清理
+
+- `d2fe3fd79` 将实际 MovingTurn 控制运动接入准备好的 Fixed 曲线。实际链为控制模块 SourceCurve 请求 → ControlMotionBindings → FixedCharacterControlMotionRuntime；并不执行独立 MovingTurn Timeline 的 TreeClip，因此独立 Prepare 的缺树结果不是该转身链的运行阻塞。真实绑定 28 帧增量之和与整段采样 raw 值一致，yaw 为 180 度；预热后 4096 次 EvaluateDelta 分配为 0，仅覆盖该采样函数。
+- 相同录制曾推进到 131 个 issued ticks，运动诊断读取已解绑的 Action，报 state slot 574 requires a bound Action instance。`49893d97e` 让运动贡献携带提交时的 SourceGeneration，经运动选择传至诊断，删除帧末再次读取 invocation 的旧路径；Unity 编译通过。尚无完整回放结果。
+- 后续回放遇到 DodgeBack 新增测试 Marker 的表现图未发布。用户明确同意删除该测试内容；正式生成已移除测试轨道与 Marker，但发现孤立子图残留。正在修复正式子资产清理：生成完成后扫描孤立子资产，普通编辑仅释放本次断开的引用，避免清理尚未绑定的新建内容。该清理尚待再次生成与发布核对。
+- 清理修复静态 Editor 构建成功，92 warnings / 0 errors，已关闭构建服务器。随后 Unity 刷新遇到并行改动的 CS0117：Float32PresentationGraphRuntime 仍使用已删除的 CameraResponseRequest / CameraTargetRequest；未修改这些在途文件，停止生成与发布。孤立子图清理和运行回放不能计为通过。
+
 ## 2026-09-21 继续动作闭环
 
 - 当前任务已设置 active goal，沿主目录继续，不创建 worktree、不新增测试。用户确认另一个任务正在小步处理 GC，允许本任务继续；不得覆盖其在途修改。

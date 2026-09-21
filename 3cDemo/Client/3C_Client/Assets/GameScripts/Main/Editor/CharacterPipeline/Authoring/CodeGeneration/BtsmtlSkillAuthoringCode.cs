@@ -107,6 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                 context.ResolveExternalAsset<CharacterPipelineDefinition>(context.DefinitionAssetPath, 0L);
             if (!definition)
                 throw new InvalidOperationException("Character Pipeline Definition is unavailable.");
+            BtsmtlSkillOwnedAssets.ReleaseOrphaned(ability);
             EditorUtility.SetDirty(ability);
             EditorUtility.SetDirty(definition);
             AssetDatabase.SaveAssets();
@@ -812,6 +813,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
             PrepareTimelineMutation(timeline);
             timeline.ApplyModify(() =>
             {
+                var previous = BtsmtlSkillOwnedAssets.Collect(timeline.SerializedOwner);
                 foreach (Track track in timeline.Tracks.ToArray())
                 {
                     if (!tracks.Contains(track.AuthoringId))
@@ -830,6 +832,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.Authoring.CodeGeneration
                     if (!bindings.Contains(binding.AuthoringId))
                         timeline.RemoveExternalBinding(binding);
                 timeline.Init();
+                BtsmtlSkillOwnedAssets.ReleaseUnreferenced(timeline.SerializedOwner, previous);
             }, "清理Timeline输出");
         }
 

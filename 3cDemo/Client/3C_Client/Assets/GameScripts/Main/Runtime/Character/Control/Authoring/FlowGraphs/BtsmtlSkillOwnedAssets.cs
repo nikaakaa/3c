@@ -41,6 +41,8 @@ namespace ThirdPersonCharacter.Control.Authoring
                     {
                         if (child != graph)
                             Visit(child);
+                        foreach (BtsmtlSkillStateMachineFlowNode machineNode in child.allNodes.OfType<BtsmtlSkillStateMachineFlowNode>())
+                            Visit(machineNode.StateMachine);
                         foreach (BtsmtlSkillTimelineFlowNode timeline in child.allNodes.OfType<BtsmtlSkillTimelineFlowNode>())
                             if (AssetDatabase.GetAssetPath(child) == path)
                                 Visit(timeline.TimelineAsset);
@@ -62,6 +64,20 @@ namespace ThirdPersonCharacter.Control.Authoring
                 else
                     throw new InvalidOperationException("私有技能内容必须由正式技能图或Timeline资产拥有。");
             }
+        }
+
+        public static void ReleaseOrphaned(UnityEngine.Object owner)
+        {
+            var previous = new HashSet<UnityEngine.Object>();
+            string path = AssetDatabase.GetAssetPath(owner);
+            UnityEngine.Object root = AssetDatabase.LoadMainAssetAtPath(path);
+            foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                if (asset != root && (asset is BtsmtlSkillFlowGraph ||
+                    asset is BtsmtlSkillNativeStateMachine || asset is TimelineAsset))
+                    previous.Add(asset);
+            }
+            ReleaseUnreferenced(owner, previous);
         }
 
         public static void ReleaseUnreferenced(UnityEngine.Object owner, HashSet<UnityEngine.Object> previous)

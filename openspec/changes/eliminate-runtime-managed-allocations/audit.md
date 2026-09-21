@@ -3570,3 +3570,11 @@
 - `ServerAuthoritativePredictionHistoryCheckpoint` 直接持有精确 `KeyValuePair` 数组；capture、prune、add 和 history 解码从 `SortedDictionary` 一次复制，clear 使用静态 Empty。删除每个 checkpoint 的 `List` 和 `AsReadOnly` 包装。
 - last predicted sequence、last record 和 replay-after 扫描改遍历 `KeyValuePair`，删除 `Values` 视图；replay-after 先统计正式保留数量，再填充精确 record 数组。restore 仍按 checkpoint 重建 `SortedDictionary`，tick 排序、容量、unconfirmed 淘汰检查和 wire 字段顺序不变。
 - 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 Float32 remote body checkpoint 数组收口
+
+对应 tasks.md 的 5.5，新增 5.174 作为独立小步；5.5 保持未勾选。
+
+- Remote body selection frame、timeline checkpoint 和 actor checkpoint 改为 owned array 存储。Select 直接转交本次精确 selections；Capture 按每个 Actor 的 `SortedDictionary` KeyValuePair 填充精确 samples；history 解码继续转交已有精确 actor／sample 数组。
+- 排序逻辑统一为静态类型化 comparison；actor、sample、selection 的重复、归属、tick 和 tick 匹配校验保留。`ToBodySamples` 直接返回精确数组，删除 `Array.AsReadOnly` 包装。采样选择、restore 长期字典重建、容量和 canonical 校验不变。
+- 按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、diff 检查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

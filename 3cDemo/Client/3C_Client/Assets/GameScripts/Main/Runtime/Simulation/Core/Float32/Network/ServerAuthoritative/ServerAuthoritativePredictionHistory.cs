@@ -277,25 +277,26 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     internal sealed class ServerAuthoritativeRemoteBodySelectionFrame
     {
-        readonly IReadOnlyList<ServerAuthoritativeRemoteBodySelection> m_Selections;
+        readonly ServerAuthoritativeRemoteBodySelection[] m_Selections;
+        static readonly Comparison<ServerAuthoritativeRemoteBodySelection> s_CompareByActor =
+            (left, right) => left.ActorId.CompareTo(right.ActorId);
 
         public ServerAuthoritativeRemoteBodySelectionFrame(
             SimulationTick tick,
-            IEnumerable<ServerAuthoritativeRemoteBodySelection> selections)
+            ServerAuthoritativeRemoteBodySelection[] selections)
         {
             if (!tick.IsValid)
                 throw new ArgumentException("Remote body selection frame Tick is invalid.", nameof(tick));
-            var values = selections == null
-                ? throw new ArgumentNullException(nameof(selections))
-                : new List<ServerAuthoritativeRemoteBodySelection>(selections);
-            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            for (int i = 0; i < values.Count; i++)
+            ServerAuthoritativeRemoteBodySelection[] values = selections ??
+                throw new ArgumentNullException(nameof(selections));
+            Array.Sort(values, s_CompareByActor);
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i].TargetTick != tick || i > 0 && values[i - 1].ActorId == values[i].ActorId)
                     throw new ArgumentException("Remote body selection frame contains a duplicate Actor or mismatched Tick.", nameof(selections));
             }
             Tick = tick;
-            m_Selections = values.AsReadOnly();
+            m_Selections = values;
         }
 
         public SimulationTick Tick { get; }
@@ -303,7 +304,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public ObservedWorldConstraintFrame ToObservedWorldConstraints(StableHash contactShapeConfigurationHash)
         {
-            var constraints = new ObservedWorldConstraint[m_Selections.Count];
+            var constraints = new ObservedWorldConstraint[m_Selections.Length];
             for (int i = 0; i < constraints.Length; i++)
                 constraints[i] = m_Selections[i].ToObservedConstraint(contactShapeConfigurationHash);
             return new ObservedWorldConstraintFrame(Tick, constraints);
@@ -311,10 +312,10 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public IReadOnlyList<CharacterBodySample> ToBodySamples()
         {
-            var samples = new CharacterBodySample[m_Selections.Count];
+            var samples = new CharacterBodySample[m_Selections.Length];
             for (int i = 0; i < samples.Length; i++)
                 samples[i] = m_Selections[i].ToBodySample();
-            return Array.AsReadOnly(samples);
+            return samples;
         }
     }
 
@@ -443,11 +444,16 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
         public ServerAuthoritativeRemoteBodyTimelineCheckpoint Capture()
         {
-            var actors = new List<ServerAuthoritativeRemoteBodyActorCheckpoint>(m_LockedActors.Length);
+            var actors = new ServerAuthoritativeRemoteBodyActorCheckpoint[m_LockedActors.Length];
             for (int i = 0; i < m_LockedActors.Length; i++)
             {
                 ActorId actorId = m_LockedActors[i];
-                actors.Add(new ServerAuthoritativeRemoteBodyActorCheckpoint(actorId, m_Samples[actorId].Values));
+                SortedDictionary<ulong, CharacterBodySample> samples = m_Samples[actorId];
+                var values = new CharacterBodySample[samples.Count];
+                int index = 0;
+                foreach (KeyValuePair<ulong, CharacterBodySample> pair in samples)
+                    values[index++] = pair.Value;
+                actors[i] = new ServerAuthoritativeRemoteBodyActorCheckpoint(actorId, values);
             }
             return new ServerAuthoritativeRemoteBodyTimelineCheckpoint(actors);
         }
@@ -521,8 +527,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             CharacterBodySample upper = default;
             bool hasLower = false;
             bool hasUpper = false;
-            foreach (CharacterBodySample sample in samples.Values)
+            foreach (KeyValuePair<ulong, CharacterBodySample> pair in samples)
             {
+                CharacterBodySample sample = pair.Value;
                 if (sample.Tick.Value < targetTick)
                 {
                     lower = sample;
@@ -681,44 +688,51 @@ namespace ThirdPersonSimulation.ServerAuthoritative
 
     internal sealed class ServerAuthoritativeRemoteBodyTimelineCheckpoint
     {
+        readonly ServerAuthoritativeRemoteBodyActorCheckpoint[] m_Actors;
+        static readonly Comparison<ServerAuthoritativeRemoteBodyActorCheckpoint> s_CompareActorsByActor =
+            (left, right) => left.ActorId.CompareTo(right.ActorId);
+
         public ServerAuthoritativeRemoteBodyTimelineCheckpoint(
-            IEnumerable<ServerAuthoritativeRemoteBodyActorCheckpoint> actors)
+            ServerAuthoritativeRemoteBodyActorCheckpoint[] actors)
         {
-            var values = actors == null
-                ? throw new ArgumentNullException(nameof(actors))
-                : new List<ServerAuthoritativeRemoteBodyActorCheckpoint>(actors);
-            values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
-            for (int i = 0; i < values.Count; i++)
+            ServerAuthoritativeRemoteBodyActorCheckpoint[] values = actors ??
+                throw new ArgumentNullException(nameof(actors));
+            Array.Sort(values, s_CompareActorsByActor);
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i] == null || i > 0 && values[i - 1].ActorId == values[i].ActorId)
                     throw new ArgumentException("Remote body checkpoint roster is invalid.", nameof(actors));
             }
-            Actors = values.AsReadOnly();
+            m_Actors = values;
         }
 
-        public IReadOnlyList<ServerAuthoritativeRemoteBodyActorCheckpoint> Actors { get; }
+        public IReadOnlyList<ServerAuthoritativeRemoteBodyActorCheckpoint> Actors => m_Actors;
     }
 
     internal sealed class ServerAuthoritativeRemoteBodyActorCheckpoint
     {
+        readonly CharacterBodySample[] m_Samples;
+        static readonly Comparison<CharacterBodySample> s_CompareSamplesByTick =
+            (left, right) => left.Tick.CompareTo(right.Tick);
+
         public ServerAuthoritativeRemoteBodyActorCheckpoint(
             ActorId actorId,
-            IEnumerable<CharacterBodySample> samples)
+            CharacterBodySample[] samples)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Remote body checkpoint ActorId is invalid.", nameof(actorId));
             ActorId = actorId;
-            var values = samples == null ? new List<CharacterBodySample>() : new List<CharacterBodySample>(samples);
-            values.Sort((left, right) => left.Tick.CompareTo(right.Tick));
-            for (int i = 0; i < values.Count; i++)
+            CharacterBodySample[] values = samples ?? Array.Empty<CharacterBodySample>();
+            Array.Sort(values, s_CompareSamplesByTick);
+            for (int i = 0; i < values.Length; i++)
             {
                 if (values[i].ActorId != actorId || i > 0 && values[i - 1].Tick == values[i].Tick)
                     throw new ArgumentException("Remote body checkpoint sample order is invalid.", nameof(samples));
             }
-            Samples = values.AsReadOnly();
+            m_Samples = values;
         }
 
         public ActorId ActorId { get; }
-        public IReadOnlyList<CharacterBodySample> Samples { get; }
+        public IReadOnlyList<CharacterBodySample> Samples => m_Samples;
     }
 }

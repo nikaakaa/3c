@@ -434,6 +434,7 @@
 - [x] 5.171 Float32 prediction pending request 输出与 correction checkpoint 直接持有精确数组；schedule、ack、baseline、capture 和恢复解码不再经过 Values 视图、List 与 ReadOnlyCollection
 - [x] 5.172 Float32 prediction disposition journal checkpoint 直接持有精确 pair 数组；确认遍历和过期裁剪使用 owner scratch，删除 Values 视图与每次裁剪的临时 key List
 - [x] 5.173 Float32 prediction history checkpoint 直接持有精确 record pair 数组；记录扫描和 replay 输出不再经过 Values 视图或临时 List
+- [x] 5.174 Float32 remote body selection、actor checkpoint 和 timeline checkpoint 改为 owned array 合同；capture、select、restore 解码删除中间 List、Values 视图和只读包装
 
 ## 6. UI、资源、渲染和生命周期
 

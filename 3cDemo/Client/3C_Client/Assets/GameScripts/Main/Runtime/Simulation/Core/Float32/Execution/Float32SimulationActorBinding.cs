@@ -36,6 +36,22 @@ namespace ThirdPersonSimulation
         }
     }
 
+    internal sealed class Float32CharacterEvaluationOutput
+    {
+        public List<GameplayFact> Facts { get; } = new List<GameplayFact>();
+        public List<PresentationCommand> Presentation { get; } = new List<PresentationCommand>();
+        public List<SimulationTraceRecord> Trace { get; } = new List<SimulationTraceRecord>();
+        public List<SimulationTraceRecord> CharacterTrace { get; } = new List<SimulationTraceRecord>();
+
+        public void Clear()
+        {
+            Facts.Clear();
+            Presentation.Clear();
+            Trace.Clear();
+            CharacterTrace.Clear();
+        }
+    }
+
     public sealed class SimulationActorBinding
     {
         readonly Float32CharacterControlMotionRuntime m_ControlMotion;
@@ -45,6 +61,7 @@ namespace ThirdPersonSimulation
         readonly Float32GameplayEffectExecutionScratch m_EffectExecutionScratch = new Float32GameplayEffectExecutionScratch();
         readonly IFloat32AbilityExecutionServiceFactory m_ServiceFactory;
         readonly IFloat32AbilityDomainRuntimeFactory m_DomainRuntimeFactory = new Float32AbilityDomainRuntimeFactory();
+        readonly Float32CharacterEvaluationOutput m_EvaluationOutput = new Float32CharacterEvaluationOutput();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -110,6 +127,7 @@ namespace ThirdPersonSimulation
         internal Float32GameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
         internal IFloat32AbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
         internal IFloat32AbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
+        internal Float32CharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
 
         internal void ClearInvocationScratch(int count)
         {

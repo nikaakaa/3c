@@ -468,6 +468,7 @@
 - [x] 5.205 两数值域 Character Evaluation 的 action runtime lookup 改为 Actor Binding 按 ability installation 容量持有的 Dictionary；每 tick 清空重填，成功和异常路径统一清理，删除每 tick Dictionary 新建
 - [x] 5.206 两数值域 Character Evaluation 的 shared gameplay effect execution scratch 改为 Actor Binding 持有；每 tick 和成功/异常边界统一 Reset，删除每 tick scratch 新建
 - [x] 5.207 两数值域 Ability 的 execution service factory 和 stateless domain runtime factory 改为 Actor Binding 常驻实例；Evaluation 直接复用，删除每 tick 工厂新建
+- [x] 5.208 两数值域 Character Evaluation 的 facts、presentation、trace 和 character trace 聚合外壳改为 Actor Binding 持有；每 tick 与成功/异常边界统一清空，删除四个 List 新建，结果数组合同不变
 
 ## 6. UI、资源、渲染和生命周期
 

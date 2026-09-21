@@ -49,10 +49,12 @@ namespace ThirdPersonSimulation
             var timelineLogicMotionWarps = new List<AbilityTimelineLogicMotionWarp>();
             var timelineAdvances = new List<AbilityTimelineAdvancePending>();
             var timelineStops = new List<AbilityTimelineStopPending>();
-            var facts = new List<GameplayFact>();
-            var presentation = new List<PresentationCommand>();
-            var trace = new List<SimulationTraceRecord>();
-            var characterTrace = new List<SimulationTraceRecord>();
+            Float32CharacterEvaluationOutput evaluationOutput = actor.EvaluationOutput;
+            evaluationOutput.Clear();
+            List<GameplayFact> facts = evaluationOutput.Facts;
+            List<PresentationCommand> presentation = evaluationOutput.Presentation;
+            List<SimulationTraceRecord> trace = evaluationOutput.Trace;
+            List<SimulationTraceRecord> characterTrace = evaluationOutput.CharacterTrace;
             try
             {
                 IFloat32AbilityExecutionServiceFactory serviceFactory = actor.ServiceFactory;
@@ -221,6 +223,7 @@ namespace ThirdPersonSimulation
                 actor.ClearInvocationScratch(invocationCount);
                 actor.ClearActionRuntimes();
                 sharedEffectScratch.Reset();
+                evaluationOutput.Clear();
                 return result;
             }
             catch
@@ -232,6 +235,7 @@ namespace ThirdPersonSimulation
                 actor.ClearInvocationScratch(invocationCount);
                 actor.ClearActionRuntimes();
                 sharedEffectScratch.Reset();
+                evaluationOutput.Clear();
                 actor.ControlMotion.ClearContributions();
                 actor.MotionContributions.Clear();
                 roleState.Dispose();

@@ -37,6 +37,22 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
+    internal sealed class FixedCharacterEvaluationOutput
+    {
+        public List<GameplayFact> Facts { get; } = new List<GameplayFact>();
+        public List<PresentationCommand> Presentation { get; } = new List<PresentationCommand>();
+        public List<SimulationTraceRecord> Trace { get; } = new List<SimulationTraceRecord>();
+        public List<SimulationTraceRecord> CharacterTrace { get; } = new List<SimulationTraceRecord>();
+
+        public void Clear()
+        {
+            Facts.Clear();
+            Presentation.Clear();
+            Trace.Clear();
+            CharacterTrace.Clear();
+        }
+    }
+
     public sealed class SimulationActorBinding
     {
         readonly FixedCharacterControlMotionRuntime m_ControlMotion;
@@ -46,6 +62,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedGameplayEffectExecutionScratch m_EffectExecutionScratch = new FixedGameplayEffectExecutionScratch();
         readonly IFixedAbilityExecutionServiceFactory m_ServiceFactory;
         readonly IFixedAbilityDomainRuntimeFactory m_DomainRuntimeFactory = new FixedAbilityDomainRuntimeFactory();
+        readonly FixedCharacterEvaluationOutput m_EvaluationOutput = new FixedCharacterEvaluationOutput();
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -113,6 +130,7 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedGameplayEffectExecutionScratch EffectExecutionScratch => m_EffectExecutionScratch;
         internal IFixedAbilityExecutionServiceFactory ServiceFactory => m_ServiceFactory;
         internal IFixedAbilityDomainRuntimeFactory DomainRuntimeFactory => m_DomainRuntimeFactory;
+        internal FixedCharacterEvaluationOutput EvaluationOutput => m_EvaluationOutput;
 
         internal void ClearInvocationScratch(int count)
         {

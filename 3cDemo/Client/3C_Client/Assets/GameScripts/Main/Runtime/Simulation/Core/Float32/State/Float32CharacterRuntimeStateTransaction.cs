@@ -7,7 +7,11 @@ namespace ThirdPersonSimulation
     internal sealed class Float32AbilityExecutionSavepoint
         : IFloat32AbilityExecutionSavepoint
     {
-        internal Float32AbilityExecutionSavepoint(
+        Float32AbilityExecutionSavepoint()
+        {
+        }
+
+        internal Float32AbilityExecutionSavepoint Begin(
             int depth,
             GameplayEffectStateAggregate gameplayEffectState,
             EquipmentStateAggregate equipmentState,
@@ -19,13 +23,23 @@ namespace ThirdPersonSimulation
             EquipmentState = equipmentState;
             HandleAllocator = handleAllocator;
             EventSequence = eventSequence;
+            return this;
         }
 
-        public int Depth { get; }
-        internal GameplayEffectStateAggregate GameplayEffectState { get; }
-        internal EquipmentStateAggregate EquipmentState { get; }
-        internal ulong HandleAllocator { get; }
-        internal ulong EventSequence { get; }
+        internal void Clear()
+        {
+            Depth = 0;
+            GameplayEffectState = null;
+            EquipmentState = null;
+            HandleAllocator = 0;
+            EventSequence = 0;
+        }
+
+        public int Depth { get; private set; }
+        internal GameplayEffectStateAggregate GameplayEffectState { get; private set; }
+        internal EquipmentStateAggregate EquipmentState { get; private set; }
+        internal ulong HandleAllocator { get; private set; }
+        internal ulong EventSequence { get; private set; }
     }
 
     internal sealed class Float32CharacterRuntimeStateTransaction : IFloat32AbilityExecutionSavepointPort, IFloat32ControlRuntimeStatePort
@@ -35,6 +49,8 @@ namespace ThirdPersonSimulation
         readonly SimulationTick m_Tick;
         readonly int m_TickRate;
         readonly Stack<Float32AbilityExecutionSavepoint> m_Savepoints =
+            new Stack<Float32AbilityExecutionSavepoint>();
+        readonly Stack<Float32AbilityExecutionSavepoint> m_SavepointPool =
             new Stack<Float32AbilityExecutionSavepoint>();
         readonly Float32CharacterActionRuntimeState m_ActionState;
         readonly Float32CharacterInputRequestState m_InputRequestState;
@@ -141,10 +157,15 @@ namespace ThirdPersonSimulation
         public IFloat32AbilityExecutionSavepoint CreateSavepoint()
         {
             RequireActive();
-            var savepoint = new Float32AbilityExecutionSavepoint(
+            GameplayEffectStateAggregate gameplayEffectState = m_GameplayEffectState.Capture();
+            EquipmentStateAggregate equipmentState = m_EquipmentState.Capture();
+            Float32AbilityExecutionSavepoint savepoint = m_SavepointPool.Count > 0
+                ? m_SavepointPool.Pop()
+                : new Float32AbilityExecutionSavepoint();
+            savepoint.Begin(
                 m_Savepoints.Count + 1,
-                m_GameplayEffectState.Capture(),
-                m_EquipmentState.Capture(),
+                gameplayEffectState,
+                equipmentState,
                 m_HandleAllocatorState.HandleAllocator,
                 m_EventSequenceState.EventSequence);
             m_Savepoints.Push(savepoint);
@@ -159,14 +180,14 @@ namespace ThirdPersonSimulation
             m_EquipmentState.Restore(executionSavepoint.EquipmentState);
             m_HandleAllocatorState.RestoreHandleAllocator(executionSavepoint.HandleAllocator);
             m_EventSequenceState.Restore(executionSavepoint.EventSequence);
-            m_Savepoints.Pop();
+            RecycleTopSavepoint();
         }
 
         public void Release(IFloat32AbilityExecutionSavepoint savepoint)
         {
             RequireActive();
             RequireTopSavepoint(savepoint);
-            m_Savepoints.Pop();
+            RecycleTopSavepoint();
         }
 
         public int SavepointDepth => m_Savepoints.Count;
@@ -175,7 +196,8 @@ namespace ThirdPersonSimulation
         {
             if (m_Disposed)
                 return;
-            m_Savepoints.Clear();
+            while (m_Savepoints.Count > 0)
+                m_Savepoints.Pop().Clear();
             m_ControlState?.Dispose();
             m_InputRequestState.Dispose();
             m_ActionState.Dispose();
@@ -212,6 +234,13 @@ namespace ThirdPersonSimulation
                 m_Savepoints.Count == 0 || !ReferenceEquals(executionSavepoint, m_Savepoints.Peek()))
                 throw new InvalidOperationException("Float32 Ability execution savepoint is stale or unbalanced.");
             return executionSavepoint;
+        }
+
+        void RecycleTopSavepoint()
+        {
+            Float32AbilityExecutionSavepoint savepoint = m_Savepoints.Pop();
+            savepoint.Clear();
+            m_SavepointPool.Push(savepoint);
         }
 
         void RequireActive()

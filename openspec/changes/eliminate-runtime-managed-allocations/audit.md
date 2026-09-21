@@ -3971,3 +3971,11 @@
 - Fixed 和 Float32 Equipment Runtime 为 `MutationScope` 建立归还池；`BeginMutation` 取空闲或新建 scope，再按原顺序创建 execution savepoint、output savepoint 并快照 Skill state。
 - values scratch 按 StateSlots capacity 复用；`Complete` 仍只释放 savepoint，`Dispose` 仍恢复 output、savepoint 和全部 values。有效结束一次后归还池并清空 values 与 frame/savepoint 引用，避免旧状态跨 mutation 保留。
 - pool 天然支持嵌套 mutation；savepoint 自身的 class/capture 生命周期不在本步。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、旧构造残留搜索和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。
+
+## 2026-09-22 State transaction savepoint 收口
+
+对应 tasks.md 的 5.5，新增 5.224 作为独立小步；5.5 保持未勾选。
+
+- Fixed 和 Float32 State Transaction 为 `AbilityExecutionSavepoint` 建立事务内归还池；`CreateSavepoint` 先完成原顺序的 Gameplay Effect、Equipment、Handle Allocator 和 Event Sequence 捕获，再取空闲实例重绑同一份数据。
+- `Restore` 仍完整恢复后才弹出并归还，`Release` 仍只校验并弹出；归还前清空 depth、aggregate、allocator 和 event 引用。异常或 stale savepoint 不改变活动栈，也不会归还。
+- `Dispose` 只清空仍未结束的 savepoint 引用，不把异常中断状态放回复用池；栈顶校验、嵌套顺序、恢复顺序和提交前必须清空 savepoint 的规则不变。按用户要求闭环期间不触发编译和刷新；本步仅做静态修改、路径限定 diff 检查、两域同步复查和路径限定提交，未运行 dotnet build、未刷新 Unity、未做运行时分配采样。

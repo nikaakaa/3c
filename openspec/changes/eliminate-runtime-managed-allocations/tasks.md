@@ -484,6 +484,7 @@
 - [x] 5.221 两数值域 Action State Store 复用 Trace Execution Scope；进入前仍先创建 manager frame 和 trace context，退出时按原顺序 Dispose 并清空引用，禁止嵌套由 manager 单 active frame 保障
 - [x] 5.222 两数值域 Action State Store 按 Skill execution Stack 深度复用 Skill Execution Scope；push 取归还实例并重绑 owner/reference/trace，pop 后归还并清空引用，保留嵌套、unbalanced 和重复 Dispose 保护
 - [x] 5.223 两数值域 Equipment Runtime 按 mutation 深度复用 Mutation Scope 和 values scratch；Begin 仍创建 savepoint/output savepoint，Complete/Dispose 后归还并清空 values，保留 savepoint 栈、restore 顺序和重复结束保护
+- [x] 5.224 两数值域 State Transaction 按 savepoint 弹出顺序复用 Ability Execution Savepoint；归还前清空 depth、aggregate、allocator 和 event 引用，Dispose 只清空未结束 savepoint，保留栈顶校验、Restore/Release 顺序和异常时不归还
 
 ## 6. UI、资源、渲染和生命周期
 

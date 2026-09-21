@@ -22,6 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly Guid m_CharacterRuntimeId;
         readonly HashSet<string> m_NodeIds;
         readonly HashSet<string> m_EdgeIds;
+        readonly List<RuntimeElementDebugState> m_States = new List<RuntimeElementDebugState>();
         readonly Dictionary<string, RuntimeNodeExecutionObservation> m_Nodes = new(StringComparer.Ordinal);
         readonly Dictionary<string, RuntimeElementDebugState> m_Edges = new(StringComparer.Ordinal);
         readonly HashSet<(string Node, string Port)> m_ValuePortIds;
@@ -225,9 +226,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             foreach (RuntimeNodeExecutionObservation state in view.GetGraphExecutionStates(m_GraphId, Instance))
                 if (m_NodeIds.Contains(state.Event.Source.ElementAuthoringId))
                     m_Nodes[state.Event.Source.ElementAuthoringId] = state;
-            foreach (RuntimeElementDebugState state in view.GetGraphStates(m_GraphId, Instance, false))
+            view.CopyGraphStates(m_GraphId, Instance, false, m_States);
+            for (int i = 0; i < m_States.Count; i++)
+            {
+                RuntimeElementDebugState state = m_States[i];
                 if (state.Source.Kind == RuntimeSourceElementKind.Edge && m_EdgeIds.Contains(state.Source.ElementAuthoringId))
                     m_Edges[state.Source.ElementAuthoringId] = state;
+            }
             if (m_CaptureValues)
                 foreach (RuntimeDebugEventView sample in view.GetCurrentEvents(RuntimeTraceChannel.Values))
                 {

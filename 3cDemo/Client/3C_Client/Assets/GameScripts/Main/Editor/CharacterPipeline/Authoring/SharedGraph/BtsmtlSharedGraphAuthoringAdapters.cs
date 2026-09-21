@@ -228,6 +228,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         readonly Dictionary<string, RuntimeDebugViewBinding> m_Bindings =
             new Dictionary<string, RuntimeDebugViewBinding>(
                 StringComparer.Ordinal);
+        readonly List<RuntimeElementDebugState> m_TraceStates =
+            new List<RuntimeElementDebugState>();
+        readonly HashSet<string> m_TraceIdentities =
+            new HashSet<string>(StringComparer.Ordinal);
 
         public BtsmtlSharedGraphDiagnosticsProjection(
             BtsmtlGraphAuthoringCapabilities catalog)
@@ -330,35 +334,50 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !binding.SelectedInstance.IsValid)
                 return Array.Empty<
                     GraphAuthoringRuntimeTraceProjection>();
-            var identities = new HashSet<string>(
-                btsmtl.Graph.Nodes
-                    .Where(value => value != null)
-                    .Select(value => value.GUID)
-                    .Concat(btsmtl.Graph.Edges
-                        .Where(value => value != null)
-                        .Select(value => value.GUID))
-                    .Concat(btsmtl.Graph.PropertyEdges
-                        .Where(value => value != null)
-                        .Select(value => value.GUID)),
-                StringComparer.Ordinal);
-            return view.GetGraphStates(
-                    document.DocumentId,
-                    binding.SelectedInstance,
-                    false)
-                .Where(value =>
-                    identities.Contains(
-                        value.Source.ElementAuthoringId))
-                .OrderBy(value =>
-                    value.Source.ElementAuthoringId,
-                    StringComparer.Ordinal)
-                .Select(value =>
-                    new GraphAuthoringRuntimeTraceProjection(
-                        new GraphAuthoringElementId(
-                            value.Source.ElementAuthoringId),
-                        value.Status,
-                        $"{value.Kind} · {value.Domain} {value.Position} · seq {value.Sequence}",
-                        document.ContentRevision))
-                .ToArray();
+            CollectTraceIdentities(btsmtl);
+            view.CopyGraphStates(
+                document.DocumentId,
+                binding.SelectedInstance,
+                false,
+                m_TraceStates);
+            int selectedCount = 0;
+            for (int i = 0; i < m_TraceStates.Count; i++)
+            {
+                RuntimeElementDebugState value = m_TraceStates[i];
+                if (!m_TraceIdentities.Contains(value.Source.ElementAuthoringId))
+                    continue;
+                if (selectedCount != i)
+                    m_TraceStates[selectedCount] = value;
+                selectedCount++;
+            }
+            if (selectedCount != m_TraceStates.Count)
+                m_TraceStates.RemoveRange(selectedCount, m_TraceStates.Count - selectedCount);
+            m_TraceStates.Sort(TraceStateSort.Instance);
+            var result = new GraphAuthoringRuntimeTraceProjection[m_TraceStates.Count];
+            for (int i = 0; i < m_TraceStates.Count; i++)
+            {
+                RuntimeElementDebugState value = m_TraceStates[i];
+                result[i] = new GraphAuthoringRuntimeTraceProjection(
+                    new GraphAuthoringElementId(value.Source.ElementAuthoringId),
+                    value.Status,
+                    $"{value.Kind} · {value.Domain} {value.Position} · seq {value.Sequence}",
+                    document.ContentRevision);
+            }
+            return result;
+        }
+
+        void CollectTraceIdentities(BtsmtlSharedGraphDocument document)
+        {
+            m_TraceIdentities.Clear();
+            foreach (BaseNode node in document.Graph.Nodes)
+                if (node != null)
+                    m_TraceIdentities.Add(node.GUID);
+            foreach (BaseEdge edge in document.Graph.Edges)
+                if (edge != null)
+                    m_TraceIdentities.Add(edge.GUID);
+            foreach (BaseEdge edge in document.Graph.PropertyEdges)
+                if (edge != null)
+                    m_TraceIdentities.Add(edge.GUID);
         }
 
         public void Dispose()
@@ -378,6 +397,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 GraphAuthoringDiagnosticSeverity.Error,
                 message,
                 elementId);
+
+        sealed class TraceStateSort : IComparer<RuntimeElementDebugState>
+        {
+            public static TraceStateSort Instance { get; } = new TraceStateSort();
+
+            public int Compare(RuntimeElementDebugState left, RuntimeElementDebugState right) =>
+                string.CompareOrdinal(
+                    left.Source.ElementAuthoringId,
+                    right.Source.ElementAuthoringId);
+        }
     }
 
     public sealed class BtsmtlSharedGraphDocument :

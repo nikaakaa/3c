@@ -469,3 +469,4 @@
 - [x] 7.61 RuntimeCaptureStore 按 maxSegments 准备私有 segment 归还池，裁剪后的段和事件列表在同一 capture 内重置复用；Domain/Position 分组、满段丢弃和 Freeze 独立快照不变
 - [x] 7.62 RuntimeCaptureSnapshot 持有不可变 segment 数组和一次组装的事件数组，GetEvents 返回 offset 后缀 span；三个 Editor 消费者迁移到 Length 和下标读取，删除每次读取的 List 重建
 - [x] 7.63 RuntimeLiveStateStore 按 maxChanges 准备私有 recency node 归还池，Clear 后重建优先复用节点并清空旧 key；现有 LRU 顺序、满员替换和状态语义不变
+- [x] 7.64 图状态读取改为调用方 Copy 工作列表，删除 GetGraphStates 返回 List、Tree overlay 的 ToList/OfType LINQ 和 authoring trace 的 LINQ 中转；过滤身份与排序器长期持有，最终 projection 数组仍独立返回，Editor 读取路径不计为 Player 每帧收益

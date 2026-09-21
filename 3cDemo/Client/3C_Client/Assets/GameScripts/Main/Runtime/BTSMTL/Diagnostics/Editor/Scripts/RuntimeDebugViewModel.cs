@@ -402,9 +402,13 @@ namespace BTSMTL.Diagnostics.Editor
                     destination.Add(eventView);
         }
 
-        public IReadOnlyList<RuntimeElementDebugState> GetGraphStates(string graphAuthoringId, RuntimeInstanceKey instance, bool changedOnly)
+        public void CopyGraphStates(
+            string graphAuthoringId,
+            RuntimeInstanceKey instance,
+            bool changedOnly,
+            List<RuntimeElementDebugState> destination)
         {
-            var result = new List<RuntimeElementDebugState>();
+            destination.Clear();
             foreach (KeyValuePair<ElementInstanceKey, RuntimeElementDebugState> pair in m_ElementStates)
             {
                 if (!string.Equals(pair.Key.Source.GraphAuthoringId, graphAuthoringId, StringComparison.Ordinal) ||
@@ -412,9 +416,8 @@ namespace BTSMTL.Diagnostics.Editor
                     continue;
                 if (changedOnly && !m_Changes.AffectsSource(pair.Key.Source))
                     continue;
-                result.Add(pair.Value);
+                destination.Add(pair.Value);
             }
-            return result;
         }
 
         public IReadOnlyList<RuntimeNodeExecutionObservation> GetGraphExecutionStates(string graphAuthoringId, RuntimeInstanceKey instance)

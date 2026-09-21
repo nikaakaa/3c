@@ -88,6 +88,16 @@
 - 初始两笔完成修改文件的独立编译；后四笔沿 Unity 现有编译响应文件引用，独立编译完整 ThirdPersonCamera.Contracts，并使用新合同编译 Character/Camera 运行目录。产物位于系统临时目录，不写入 Unity Library 或 Assets。
 - 编译通过；相机目录仍有既有 `CameraShotRigBinding.m_VirtualCamera` 序列化字段 CS0649 警告。各笔提交前的 `git diff --check` 通过。
 - 上述检查不是完整项目编译或 Player 运行证明。未新增测试、未主动刷新 Editor、未启动性能采样；没有实测 bytes/frame、峰值占用和 GC 停顿数据。
+
+## 2026-09-21 图状态读取工作列表复用
+
+对应 tasks.md 的 7.1，新增 7.64 作为独立小步；7.1 保持未勾选。本条只覆盖 Editor 诊断读取，不计为 Player 每帧收益。
+
+- `RuntimeDebugViewModel.GetGraphStates` 原先每次都新建结果 `List<RuntimeElementDebugState>`，Tree overlay、技能流观察和共享图 authoring trace 都在刷新周期反复分配。现在改为 `CopyGraphStates`，由三个调用方长期持有自己的工作列表；旧返回列表入口删除，状态筛选、`changedOnly` 判断和遍历顺序不变。
+- Tree overlay 把复用列表直接传入同步应用流程，并把边缘遍历从 `edges.ToList().OfType<BaseEdgeView>()` 改成直接枚举和类型判断，删除同一次刷新里的中间 List、OfType 包装和 LINQ 闭包。
+- 技能流观察复用 states 工作列表后按下标消费；共享图 trace 的节点、边、属性边身份集合和 `TraceStateSort` 长期持有，每次刷新只重置身份集合并在 states 工作列表内原地筛选排序。最终 `GraphAuthoringRuntimeTraceProjection[]` 和文本仍独立分配，保证调用方拿到本次 trace 的独立结果。
+- `Payload.Status` 缺失时 `RuntimeElementDebugState.Status` 仍会用 `Kind.ToString()`，采集 store 的 typed 有界存储和显示文本格式化也在 7.1 后续边界处理。作者可在 Live Debug Tree、技能流观察和共享图 runtime trace 面板确认刷新结果仍与选中图和实例一致；本步未做运行采样。
+- `BTSMTL.Diagnostics.Editor.csproj` 使用 `dotnet build --no-restore --no-dependencies --disable-build-servers /nr:false /p:UseSharedCompilation=false` 编译成功，0 警告 0 错误；`BTSMTL.TreeDesigner.Editor.csproj` 和 `ThirdPersonClient.Editor.csproj` 同参数编译成功，分别只有既有 `BaseTreeView` CS0108 和 ACL identity CS0649 警告，0 错误。每次构建后执行 `dotnet build-server shutdown` 成功。未新增测试、未操作共享 Unity、未运行 Unity batchmode、未做分配采样。
 - 源码可以确认这些具体数组、装箱、临时对象和字符串构造入口已删除，不能据此推断第三方相机内部及整条表现链无分配。
 
 ### 仍未完成

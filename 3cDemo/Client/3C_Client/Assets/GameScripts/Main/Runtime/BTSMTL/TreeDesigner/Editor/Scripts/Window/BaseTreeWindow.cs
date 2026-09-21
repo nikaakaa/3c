@@ -427,6 +427,8 @@ namespace TreeDesigner.Editor
         [NonSerialized]
         RuntimeDebugViewModel m_LastView;
         [NonSerialized]
+        List<RuntimeElementDebugState> m_GraphStates = new List<RuntimeElementDebugState>();
+        [NonSerialized]
         RuntimeInstanceKey m_LastInstance;
         [NonSerialized]
         string m_LastGraphAuthoringId = string.Empty;
@@ -573,7 +575,10 @@ namespace TreeDesigner.Editor
                 ClearOverlay();
 
             if (resetOverlay || m_LastRevision != view.Revision)
-                ApplyStates(view.GetGraphStates(tree.GraphAuthoringId, instance, !resetOverlay));
+            {
+                view.CopyGraphStates(tree.GraphAuthoringId, instance, !resetOverlay, m_GraphStates);
+                ApplyStates(m_GraphStates);
+            }
 
             m_LastView = view;
             m_LastInstance = instance;
@@ -685,7 +690,7 @@ namespace TreeDesigner.Editor
             navigationToolbar.Add(m_Toolbar);
         }
 
-        void ApplyStates(IReadOnlyList<RuntimeElementDebugState> states)
+        void ApplyStates(List<RuntimeElementDebugState> states)
         {
             for (int i = 0; i < states.Count; i++)
             {
@@ -703,8 +708,10 @@ namespace TreeDesigner.Editor
                 }
                 else if (state.Source.Kind == RuntimeSourceElementKind.Edge)
                 {
-                    foreach (BaseEdgeView edgeView in m_TreeView.edges.ToList().OfType<BaseEdgeView>())
+                    foreach (GraphElement element in m_TreeView.edges)
                     {
+                        if (element is not BaseEdgeView edgeView)
+                            continue;
                         if (!string.Equals(edgeView.Edge.GUID, state.Source.ElementAuthoringId, StringComparison.Ordinal))
                             continue;
                         edgeView.SetRuntimeDebugState(

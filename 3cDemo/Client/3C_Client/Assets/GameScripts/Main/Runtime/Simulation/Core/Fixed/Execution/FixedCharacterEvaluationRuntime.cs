@@ -39,7 +39,8 @@ namespace ThirdPersonSimulation.Fixed
                 tick,
                 characterRuntime.TickRate,
                 effectCatalog);
-            var invocations = new List<FixedAbilityInvocationRuntime>(actor.AbilityInstallations.Installations.Count);
+            FixedAbilityInvocationRuntime[] invocations = actor.InvocationScratch;
+            int invocationCount = 0;
             var actionRuntimes = new Dictionary<CharacterSkillId, IFixedAbilityActionControlPort>();
             var sharedEffectScratch = new FixedGameplayEffectExecutionScratch();
             var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
@@ -93,7 +94,7 @@ namespace ThirdPersonSimulation.Fixed
                         bodyFacts,
                         new FixedAbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops),
                         serviceFactory);
-                    invocations.Add(invocation);
+                    invocations[invocationCount++] = invocation;
                     invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
@@ -102,7 +103,7 @@ namespace ThirdPersonSimulation.Fixed
                     .ApplyRequests(input.Requests);
 
                 bool effectAdvanced = false;
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
                     ApplyIngress(invocation, ingress, ingressCount, sourceState);
@@ -132,12 +133,12 @@ namespace ThirdPersonSimulation.Fixed
                     controlMotion,
                     characterTraceSink,
                     actionRuntimes,
-                    (skill, window) => IsActionWindowActive(invocations, skill, window),
-                    route => ReadEquipmentActionContext(invocations, route));
+                    (skill, window) => IsActionWindowActive(invocations, invocationCount, skill, window),
+                    route => ReadEquipmentActionContext(invocations, invocationCount, route));
                 control.Tick();
                 controlMotion.CopyContributionsTo(motionContributions);
 
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
                     invocation.Tick();
@@ -151,14 +152,14 @@ namespace ThirdPersonSimulation.Fixed
                         timelineLogicMotion);
                     AppendTimelineMotion(motionContributions, timelineLogicMotion);
                 }
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                     invocations[i].ClearTimelineMotionWarps();
                 for (int advanceIndex = 0; advanceIndex < timelineAdvances.Count; advanceIndex++)
                 {
                     actor.TimelineMotionWarpReader.CopyPendingMotionWarps(
                         timelineAdvances[advanceIndex].RuntimeHandle,
                         timelineLogicMotionWarps);
-                    for (int i = 0; i < invocations.Count; i++)
+                    for (int i = 0; i < invocationCount; i++)
                     {
                         FixedAbilityInvocationRuntime invocation = invocations[i];
                         for (int warpIndex = 0; warpIndex < timelineLogicMotionWarps.Count; warpIndex++)
@@ -175,8 +176,9 @@ namespace ThirdPersonSimulation.Fixed
                     motionContributions.Count,
                     beforeBody.Yaw,
                     invocations,
+                    invocationCount,
                     characterTraceSink);
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                 {
                     FixedAbilityInvocationRuntime invocation = invocations[i];
                     invocation.Complete(facts, presentation, trace);
@@ -204,7 +206,7 @@ namespace ThirdPersonSimulation.Fixed
                     requiredCapabilities);
                 FixedCharacterRuntimeState candidateState = roleState.Commit();
                 roleState.Dispose();
-                return new FixedCharacterEvaluationResult(
+                var result = new FixedCharacterEvaluationResult(
                     actor.ActorId,
                     tick,
                     candidateState,
@@ -214,13 +216,16 @@ namespace ThirdPersonSimulation.Fixed
                     trace.ToArray(),
                     timelineAdvances.ToArray(),
                     timelineStops.ToArray());
+                actor.ClearInvocationScratch(invocationCount);
+                return result;
             }
             catch
             {
                 DiscardTimelineAdvances(actor.TimelineRuntime, timelineAdvances);
                 DiscardTimelineStops(actor.TimelineRuntime, timelineStops);
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                     invocations[i].Dispose();
+                actor.ClearInvocationScratch(invocationCount);
                 actor.ControlMotion.ClearContributions();
                 actor.MotionContributions.Clear();
                 roleState.Dispose();
@@ -305,11 +310,12 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static bool IsActionWindowActive(
-            IReadOnlyList<FixedAbilityInvocationRuntime> invocations,
+            FixedAbilityInvocationRuntime[] invocations,
+            int invocationCount,
             CharacterSkillId skillId,
             string windowType)
         {
-            for (int i = 0; i < invocations.Count; i++)
+            for (int i = 0; i < invocationCount; i++)
             {
                 FixedAbilityInvocationRuntime invocation = invocations[i];
                 if (invocation.AbilityId != skillId)
@@ -320,10 +326,11 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         static (bool Found, EquipmentActionContext Context) ReadEquipmentActionContext(
-            IReadOnlyList<FixedAbilityInvocationRuntime> invocations,
+            FixedAbilityInvocationRuntime[] invocations,
+            int invocationCount,
             EquipmentActionRouteId route)
         {
-            for (int i = 0; i < invocations.Count; i++)
+            for (int i = 0; i < invocationCount; i++)
             {
                 IEquipmentActionContextReader equipment = invocations[i].Equipment;
                 if (equipment == null || !equipment.HasActionRoute(route))
@@ -339,7 +346,8 @@ namespace ThirdPersonSimulation.Fixed
             SimulationMotionContribution[] contributions,
             int contributionCount,
             FixedYaw bodyYaw,
-            IReadOnlyList<FixedAbilityInvocationRuntime> invocations,
+            FixedAbilityInvocationRuntime[] invocations,
+            int invocationCount,
             FixedCharacterTraceSink trace)
         {
             ResolvedMotionChannel locomotion = FixedCharacterMotionResolver.ResolveChannel(
@@ -357,7 +365,7 @@ namespace ThirdPersonSimulation.Fixed
                 contributionCount,
                 bodyYaw,
                 SimulationMotionChannel.GameplayResult);
-            for (int i = 0; i < invocations.Count; i++)
+            for (int i = 0; i < invocationCount; i++)
                 invocations[i].ApplyTimelineMotionWarps(ref action);
             TraceMotionChannel(locomotion, trace);
             TraceMotionChannel(action, trace);

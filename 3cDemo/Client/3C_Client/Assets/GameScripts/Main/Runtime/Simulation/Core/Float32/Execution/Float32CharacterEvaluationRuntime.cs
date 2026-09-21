@@ -39,7 +39,8 @@ namespace ThirdPersonSimulation
                 tick,
                 characterRuntime.TickRate,
                 effectCatalog);
-            var invocations = new List<Float32AbilityInvocationRuntime>(actor.AbilityInstallations.Installations.Count);
+            Float32AbilityInvocationRuntime[] invocations = actor.InvocationScratch;
+            int invocationCount = 0;
             var actionRuntimes = new Dictionary<CharacterSkillId, IFloat32AbilityActionControlPort>();
             var sharedEffectScratch = new Float32GameplayEffectExecutionScratch();
             var timelineLogicMotion = new List<AbilityTimelineLogicMotion>();
@@ -93,7 +94,7 @@ namespace ThirdPersonSimulation
                         bodyFacts,
                         new Float32AbilityExecutionWorkspace(sharedEffectScratch, timelineAdvances, timelineStops, valueWorkspaces[i]),
                         serviceFactory);
-                    invocations.Add(invocation);
+                    invocations[invocationCount++] = invocation;
                     invocation.BeginEvaluation(diagnosticsEnabled, captureValues, captureControlFlow);
                     actionRuntimes.Add(invocation.AbilityId, invocation.Actions);
                 }
@@ -102,7 +103,7 @@ namespace ThirdPersonSimulation
                     .ApplyRequests(input.Requests);
 
                 bool effectAdvanced = false;
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                 {
                     Float32AbilityInvocationRuntime invocation = invocations[i];
                     ApplyIngress(invocation, ingress, ingressCount, sourceState);
@@ -132,12 +133,12 @@ namespace ThirdPersonSimulation
                     controlMotion,
                     characterTraceSink,
                     actionRuntimes,
-                    (skill, window) => IsActionWindowActive(invocations, skill, window),
-                    route => ReadEquipmentActionContext(invocations, route));
+                    (skill, window) => IsActionWindowActive(invocations, invocationCount, skill, window),
+                    route => ReadEquipmentActionContext(invocations, invocationCount, route));
                 control.Tick();
                 controlMotion.CopyContributionsTo(motionContributions);
 
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                 {
                     Float32AbilityInvocationRuntime invocation = invocations[i];
                     invocation.Tick();
@@ -151,14 +152,14 @@ namespace ThirdPersonSimulation
                         timelineLogicMotion);
                     AppendTimelineMotion(motionContributions, timelineLogicMotion);
                 }
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                     invocations[i].ClearTimelineMotionWarps();
                 for (int advanceIndex = 0; advanceIndex < timelineAdvances.Count; advanceIndex++)
                 {
                     actor.TimelineMotionWarpReader.CopyPendingMotionWarps(
                         timelineAdvances[advanceIndex].RuntimeHandle,
                         timelineLogicMotionWarps);
-                    for (int i = 0; i < invocations.Count; i++)
+                    for (int i = 0; i < invocationCount; i++)
                     {
                         Float32AbilityInvocationRuntime invocation = invocations[i];
                         for (int warpIndex = 0; warpIndex < timelineLogicMotionWarps.Count; warpIndex++)
@@ -175,8 +176,9 @@ namespace ThirdPersonSimulation
                     motionContributions.Count,
                     beforeBody.Yaw,
                     invocations,
+                    invocationCount,
                     characterTraceSink);
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                 {
                     Float32AbilityInvocationRuntime invocation = invocations[i];
                     invocation.Complete(facts, presentation, trace);
@@ -204,7 +206,7 @@ namespace ThirdPersonSimulation
                     requiredCapabilities);
                 Float32CharacterRuntimeState candidateState = roleState.Commit();
                 roleState.Dispose();
-                return new Float32CharacterEvaluationResult(
+                var result = new Float32CharacterEvaluationResult(
                     actor.ActorId,
                     tick,
                     candidateState,
@@ -214,13 +216,16 @@ namespace ThirdPersonSimulation
                     actor.TimelineRuntime,
                     timelineAdvances.ToArray(),
                     timelineStops.ToArray());
+                actor.ClearInvocationScratch(invocationCount);
+                return result;
             }
             catch
             {
                 DiscardTimelineAdvances(actor.TimelineRuntime, timelineAdvances);
                 DiscardTimelineStops(actor.TimelineRuntime, timelineStops);
-                for (int i = 0; i < invocations.Count; i++)
+                for (int i = 0; i < invocationCount; i++)
                     invocations[i].Dispose();
+                actor.ClearInvocationScratch(invocationCount);
                 actor.ControlMotion.ClearContributions();
                 actor.MotionContributions.Clear();
                 roleState.Dispose();
@@ -305,11 +310,12 @@ namespace ThirdPersonSimulation
         }
 
         static bool IsActionWindowActive(
-            IReadOnlyList<Float32AbilityInvocationRuntime> invocations,
+            Float32AbilityInvocationRuntime[] invocations,
+            int invocationCount,
             CharacterSkillId skillId,
             string windowType)
         {
-            for (int i = 0; i < invocations.Count; i++)
+            for (int i = 0; i < invocationCount; i++)
             {
                 Float32AbilityInvocationRuntime invocation = invocations[i];
                 if (invocation.AbilityId != skillId)
@@ -320,10 +326,11 @@ namespace ThirdPersonSimulation
         }
 
         static (bool Found, EquipmentActionContext Context) ReadEquipmentActionContext(
-            IReadOnlyList<Float32AbilityInvocationRuntime> invocations,
+            Float32AbilityInvocationRuntime[] invocations,
+            int invocationCount,
             EquipmentActionRouteId route)
         {
-            for (int i = 0; i < invocations.Count; i++)
+            for (int i = 0; i < invocationCount; i++)
             {
                 IEquipmentActionContextReader equipment = invocations[i].Equipment;
                 if (equipment == null || !equipment.HasActionRoute(route))
@@ -339,7 +346,8 @@ namespace ThirdPersonSimulation
             SimulationMotionContribution[] contributions,
             int contributionCount,
             Float32Yaw bodyYaw,
-            IReadOnlyList<Float32AbilityInvocationRuntime> invocations,
+            Float32AbilityInvocationRuntime[] invocations,
+            int invocationCount,
             Float32CharacterTraceSink trace)
         {
             ResolvedMotionChannel locomotion = Float32CharacterMotionResolver.ResolveChannel(
@@ -357,7 +365,7 @@ namespace ThirdPersonSimulation
                 contributionCount,
                 bodyYaw,
                 SimulationMotionChannel.GameplayResult);
-            for (int i = 0; i < invocations.Count; i++)
+            for (int i = 0; i < invocationCount; i++)
                 invocations[i].ApplyTimelineMotionWarps(ref action);
             TraceMotionChannel(locomotion, trace);
             TraceMotionChannel(action, trace);

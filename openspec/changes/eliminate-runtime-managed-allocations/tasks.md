@@ -464,6 +464,7 @@
 - [x] 5.201 两数值域 Character Control Motion 的 per-Actor contributions 由稳定 Actor Binding 持有；每 tick Begin 清空并重绑，scratch 改为数组加显式 count，异常路径统一清理，删除每 tick runtime 新建、List 外壳和 Action 提交委托
 - [x] 5.202 两数值域 Ability invocation 的 motion contributions 改为 execution workspace 内数组加显式 count；Accumulator 直接提交，Evaluation 通过显式复制消费并清空使用区间，删除 List 外壳和只读集合边界
 - [x] 5.203 两数值域 Character Evaluation 的 motion contribution 聚合改为 Actor Binding 持有的常驻数组加显式 count；Control、Ability 和 Timeline 产出直接进入同一 scratch，Resolver 按精确 count 求值，异常路径统一清理
+- [x] 5.204 两数值域 Character Evaluation 的 per-Actor invocations 改为 Actor Binding 按 ability installation 容量持有的数组加显式 count；成功结果构造后清空，异常路径先 Dispose 再清空，删除 List 外壳和只读集合边界
 
 ## 6. UI、资源、渲染和生命周期
 

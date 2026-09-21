@@ -40,6 +40,7 @@ namespace ThirdPersonSimulation
     {
         readonly Float32CharacterControlMotionRuntime m_ControlMotion;
         readonly Float32MotionContributionScratch m_MotionContributions = new Float32MotionContributionScratch();
+        readonly Float32AbilityInvocationRuntime[] m_InvocationScratch;
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -64,6 +65,7 @@ namespace ThirdPersonSimulation
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
                 timelineMotionWarpCatalog);
+            m_InvocationScratch = new Float32AbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
             {
                 Float32GameplayAbilityExecutionData data = AbilityInstallations.Installations[i].Data;
@@ -96,6 +98,13 @@ namespace ThirdPersonSimulation
         public CharacterControlRuntimeBinding ControlRuntimeBinding { get; }
         internal Float32CharacterControlMotionRuntime ControlMotion => m_ControlMotion;
         internal Float32MotionContributionScratch MotionContributions => m_MotionContributions;
+        internal Float32AbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
+
+        internal void ClearInvocationScratch(int count)
+        {
+            Array.Clear(m_InvocationScratch, 0, count);
+        }
+
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }

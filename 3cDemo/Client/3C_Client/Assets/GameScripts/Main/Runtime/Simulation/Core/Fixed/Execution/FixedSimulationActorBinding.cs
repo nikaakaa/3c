@@ -41,6 +41,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         readonly FixedCharacterControlMotionRuntime m_ControlMotion;
         readonly FixedMotionContributionScratch m_MotionContributions = new FixedMotionContributionScratch();
+        readonly FixedAbilityInvocationRuntime[] m_InvocationScratch;
 
         public SimulationActorBinding(
             ActorId actorId,
@@ -66,6 +67,7 @@ namespace ThirdPersonSimulation.Fixed
                 gameplayEffectRuntimeBinding,
                 equipmentRuntimeBinding,
                 timelineMotionWarpCatalog);
+            m_InvocationScratch = new FixedAbilityInvocationRuntime[AbilityInstallations.Installations.Count];
             for (int i = 0; i < AbilityInstallations.Installations.Count; i++)
             {
                 FixedGameplayAbilityExecutionData data = AbilityInstallations.Installations[i].Data;
@@ -99,6 +101,13 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedCharacterControlMotionBindingCatalog ControlMotionBindings { get; }
         internal FixedCharacterControlMotionRuntime ControlMotion => m_ControlMotion;
         internal FixedMotionContributionScratch MotionContributions => m_MotionContributions;
+        internal FixedAbilityInvocationRuntime[] InvocationScratch => m_InvocationScratch;
+
+        internal void ClearInvocationScratch(int count)
+        {
+            Array.Clear(m_InvocationScratch, 0, count);
+        }
+
         public CharacterBodyMotionBinding BodyMotionBinding { get; }
         public CharacterGameplayEffectRuntimeBinding GameplayEffectRuntimeBinding { get; }
         public CharacterEquipmentRuntimeBinding EquipmentRuntimeBinding { get; }
